@@ -520,9 +520,6 @@ class LithiumIonParameters:
         self.T_amb_dim = self.therm.T_amb_dim
         self.T_amb = self.therm.T_amb
 
-        self.emissivity = self.therm.emissivity
-        self.s_b = self.therm.s_b
-
         # SEI parameters
         self.C_sei_reaction_n = (self.j_scale_n / self.m_sei_dimensional) * pybamm.exp(
             -(self.F * self.U_n_ref / (2 * self.R * self.T_ref))
@@ -631,25 +628,22 @@ class LithiumIonParameters:
         self.T_init = self.therm.T_init
         self.c_e_init = self.c_e_init_dimensional / self.c_e_typ
 
-    def chi(self, c_e, T=298.3):
+    def chi(self, c_e):
         """
         Thermodynamic factor:
             (1-2*t_plus) is for Nernst-Planck,
             2*(1-t_plus) for Stefan-Maxwell,
         see Bizeray et al (2016) "Resolving a discrepancy ...".
         """
-        return (2 * (1 - self.t_plus(c_e))) * (self.one_plus_dlnf_dlnc(c_e, T))
+        return (2 * (1 - self.t_plus(c_e))) * (self.one_plus_dlnf_dlnc(c_e))
 
     def t_plus(self, c_e):
         "Dimensionless transference number (i.e. c_e is dimensionless)"
         inputs = {"Electrolyte concentration [mol.m-3]": c_e * self.c_e_typ}
         return pybamm.FunctionParameter("Cation transference number", inputs)
 
-    def one_plus_dlnf_dlnc(self, c_e, T=298.3):
-        inputs = {
-            "Electrolyte concentration [mol.m-3]": c_e * self.c_e_typ,
-            "Temperature [K]": T * self.Delta_T,
-        }
+    def one_plus_dlnf_dlnc(self, c_e):
+        inputs = {"Electrolyte concentration [mol.m-3]": c_e * self.c_e_typ}
         return pybamm.FunctionParameter("1 + dlnf/dlnc", inputs)
 
     def D_e(self, c_e, T):

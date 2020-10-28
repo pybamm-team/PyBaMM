@@ -13,6 +13,8 @@ class TestCrackPropagation(unittest.TestCase):
             "Negative particle crack length": pybamm.Scalar(0),
             "Negative particle concentration": pybamm.Scalar(0),
             "Negative particle surface concentration": pybamm.Scalar(0),
+            "R-averaged negative particle concentration": pybamm.Scalar(0),
+            "X-averaged cell temperature": pybamm.Scalar(0),
         }
         param = pybamm.LithiumIonParameters()
         submodel = pybamm.particle_cracking.CrackPropagation(param, "Negative")

@@ -205,7 +205,6 @@ class BaseBatteryModel(pybamm.BaseModel):
             "sei porosity change": False,
             "working electrode": None,
             "particle cracking": False,
-            "sei-cracks": None,
         }
         # Change the default for cell geometry based on which thermal option is provided
         extra_options = extra_options or {}
@@ -327,7 +326,6 @@ class BaseBatteryModel(pybamm.BaseModel):
             "electron-migration limited",
             "interstitial-diffusion limited",
             "ec reaction limited",
-            "sei on cracks",
         ]:
             raise pybamm.OptionError("Unknown sei model '{}'".format(options["sei"]))
         if options["sei film resistance"] not in [None, "distributed", "average"]:

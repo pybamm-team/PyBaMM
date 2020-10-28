@@ -175,15 +175,6 @@ class ThermalParameters:
         # Initial temperature
         self.T_init = (self.T_init_dim - self.T_ref) / self.Delta_T
 
-        # Cell emissivity for heat radiation
-        self.emissivity = pybamm.Parameter("Cell emissivity")
-        self.s_b = (
-            pybamm.constants.s_b
-            / self.lambda_eff_dim
-            * self.Delta_T ** 3
-            * self.geo.L_x
-        )
-
     def T_amb(self, t):
         "Dimensionless ambient temperature"
         return (self.T_amb_dim(t) - self.T_ref) / self.Delta_T

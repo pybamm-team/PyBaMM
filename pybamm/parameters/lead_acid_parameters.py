@@ -652,7 +652,7 @@ class LeadAcidParameters:
         kappa_scale = self.F ** 2 * self.D_e_typ * self.c_e_typ / (self.R * self.T_ref)
         return self.kappa_e_dimensional(c_e_dimensional, self.T_ref) / kappa_scale
 
-    def chi(self, c_e, T=298.3, c_ox=0, c_hy=0):
+    def chi(self, c_e, c_ox=0, c_hy=0):
         "Thermodynamic factor"
         return (
             self.chi_dimensional(self.c_e_typ * c_e)

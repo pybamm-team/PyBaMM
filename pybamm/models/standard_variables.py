@@ -236,45 +236,6 @@ eps_piecewise_constant = pybamm.Concatenation(
     pybamm.PrimaryBroadcast(eps_p_pc, "positive electrode"),
 )
 
-# active material volume fraction
-am = "active material volume fraction"
-eps_am_n = pybamm.Variable(
-    f"Negative electrode {am}",
-    domain="negative electrode",
-    auxiliary_domains={"secondary": "current collector"},
-    bounds=(0, 1),
-)
-eps_am_s = pybamm.Variable(
-    f"Separator {am}",
-    domain="separator",
-    auxiliary_domains={"secondary": "current collector"},
-    bounds=(0, 1),
-)
-eps_am_p = pybamm.Variable(
-    f"Positive electrode {am}",
-    domain="positive electrode",
-    auxiliary_domains={"secondary": "current collector"},
-    bounds=(0, 1),
-)
-eps_am = pybamm.Concatenation(eps_am_n, eps_am_s, eps_am_p)
-
-# Piecewise constant (for asymptotic models)
-eps_am_n_pc = pybamm.Variable(
-    f"X-averaged negative electrode {am}", domain="current collector", bounds=(0, 1)
-)
-eps_am_s_pc = pybamm.Variable(
-    f"X-averaged separator {am}", domain="current collector", bounds=(0, 1)
-)
-eps_am_p_pc = pybamm.Variable(
-    f"X-averaged positive electrode {am}", domain="current collector", bounds=(0, 1)
-)
-
-eps_am_piecewise_constant = pybamm.Concatenation(
-    pybamm.PrimaryBroadcast(eps_am_n_pc, "negative electrode"),
-    pybamm.PrimaryBroadcast(eps_am_s_pc, "separator"),
-    pybamm.PrimaryBroadcast(eps_am_p_pc, "positive electrode"),
-)
-
 # Temperature
 T_cn = pybamm.Variable(
     "Negative currents collector temperature", domain="current collector"

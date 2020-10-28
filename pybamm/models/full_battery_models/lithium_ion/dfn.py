@@ -136,19 +136,3 @@ class DFN(BaseModel):
                 self.submodels[
                     domain.lower() + " electrolyte conductivity"
                 ] = surf_form.FullAlgebraic(self.param, domain)
-
-    def set_crack_submodel(self):
-        if self.options["particle cracking"] is False:
-            self.submodels[
-                "negative particle cracking"
-            ] = pybamm.particle_cracking.NoCracking(self.param, "Negative")
-            self.submodels[
-                "positive particle cracking"
-            ] = pybamm.particle_cracking.NoCracking(self.param, "Positive")
-        elif self.options["particle cracking"] is True:
-            self.submodels[
-                "negative particle cracking"
-            ] = pybamm.particle_cracking.CrackPropagation(self.param, "Negative")
-            self.submodels[
-                "positive particle cracking"
-            ] = pybamm.particle_cracking.CrackPropagation(self.param, "Positive")

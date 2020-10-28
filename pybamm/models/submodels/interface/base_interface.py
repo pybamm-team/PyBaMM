@@ -38,9 +38,6 @@ class BaseInterface(pybamm.BaseSubModel):
         elif reaction == "sei":
             self.reaction_name = " sei"
             self.Reaction_icd = "Sei interfacial current density"
-        elif reaction == "sei-cracks":
-            self.reaction_name = " sei-cracks"
-            self.reaction_icd = "Sei-cracks interfacial current density"
         self.reaction = reaction
 
     def _get_exchange_current_density(self, variables):
@@ -176,17 +173,17 @@ class BaseInterface(pybamm.BaseSubModel):
         else:
             return pybamm.Scalar(0)
 
-    def _get_surface_area_per_unit_volume_distribution(self, ratio_LAM_n, ratio_LAM_p):
+    def _get_surface_area_per_unit_volume_distribution(self):
         "Returns the distribution of surface area per unit volume in x"
         x_n = pybamm.standard_spatial_vars.x_n
         x_p = pybamm.standard_spatial_vars.x_p
         a_n = self.param.a_n_of_x(x_n)
         a_p = self.param.a_p_of_x(x_p)
-        return a_n * ratio_LAM_n, a_p * ratio_LAM_p
+        return a_n, a_p
 
     def _get_electrolyte_reaction_signed_stoichiometry(self):
         "Returns the number of electrons in the reaction"
-        if self.reaction in ["lithium-ion main", "sei", "sei-cracks"]:
+        if self.reaction in ["lithium-ion main", "sei"]:
             # Both the main reaction current contribute to the electrolyte reaction
             # current
             return pybamm.Scalar(1), pybamm.Scalar(1)
@@ -235,13 +232,14 @@ class BaseInterface(pybamm.BaseSubModel):
         return j_total_average
 
     def _get_standard_interfacial_current_variables(self, j):
-        # dimentionless j_Li from Butler-Volmer equation for the whole cell
+
         i_typ = self.param.i_typ
         L_x = self.param.L_x
         if self.domain == "Negative":
             j_scale = i_typ / (self.param.a_n_dim * L_x)
         elif self.domain == "Positive":
             j_scale = i_typ / (self.param.a_p_dim * L_x)
+
         # Average, and broadcast if necessary
         if j.domain == []:
             j_av = j
@@ -292,6 +290,7 @@ class BaseInterface(pybamm.BaseSubModel):
             j_scale = i_typ / (self.param.a_n_dim * L_x)
         elif self.domain == "Positive":
             j_scale = i_typ / (self.param.a_p_dim * L_x)
+
         variables = {
             "X-averaged "
             + self.domain.lower()
@@ -319,11 +318,6 @@ class BaseInterface(pybamm.BaseSubModel):
         j_n_scale = i_typ / (self.param.a_n_dim * L_x)
         j_p_scale = i_typ / (self.param.a_p_dim * L_x)
 
-        if self.reaction_name == " sei-cracks":
-            roughness_n = variables["Negative electrode roughness ratio"] - 1
-        else:
-            roughness_n = 1
-
         j_n_av = variables[
             "X-averaged negative electrode"
             + self.reaction_name
@@ -342,8 +336,6 @@ class BaseInterface(pybamm.BaseSubModel):
         j_p = variables[
             "Positive electrode" + self.reaction_name + " interfacial current density"
         ]
-        j_n *= roughness_n
-
         j = pybamm.Concatenation(j_n, j_s, j_p)
         j_dim = pybamm.Concatenation(j_n_scale * j_n, j_s, j_p_scale * j_p)
 
@@ -355,11 +347,7 @@ class BaseInterface(pybamm.BaseSubModel):
             }
         )
 
-        ratio_LAM_n = 1
-        ratio_LAM_p = 1
-        a_n, a_p = self._get_surface_area_per_unit_volume_distribution(
-            ratio_LAM_n, ratio_LAM_p
-        )
+        a_n, a_p = self._get_surface_area_per_unit_volume_distribution()
         a = pybamm.Concatenation(
             a_n, pybamm.FullBroadcast(0, "separator", "current collector"), a_p
         )
@@ -526,9 +514,7 @@ class BaseInterface(pybamm.BaseSubModel):
         return variables
 
     def _get_standard_sei_film_overpotential_variables(self, eta_sei):
-        reaction_name = getattr(self, "reaction_name", "")
-        if reaction_name == "":
-            reaction_name = " sei"
+
         pot_scale = self.param.potential_scale
         # Average, and broadcast if necessary
         eta_sei_av = pybamm.x_average(eta_sei)
@@ -541,11 +527,12 @@ class BaseInterface(pybamm.BaseSubModel):
 
         domain = self.domain.lower() + " electrode"
         variables = {
-            f"Inner {domain}{reaction_name} film overpotential": eta_sei,
-            f"X-averaged {domain}{reaction_name} film overpotential": eta_sei_av,
-            f"{domain}{reaction_name} film overpotential [V]": eta_sei * pot_scale,
-            f"X-averaged {domain}{reaction_name}"
-            + " film overpotential [V]": eta_sei_av * pot_scale,
+            self.domain + " electrode sei film overpotential": eta_sei,
+            "X-averaged " + domain + " sei film overpotential": eta_sei_av,
+            self.domain + " electrode sei film overpotential [V]": eta_sei * pot_scale,
+            "X-averaged "
+            + domain
+            + " sei film overpotential [V]": eta_sei_av * pot_scale,
         }
 
         return variables

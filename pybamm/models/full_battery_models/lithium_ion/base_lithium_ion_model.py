@@ -82,13 +82,6 @@ class BaseModel(pybamm.BaseBatteryModel):
                 self.param, "Negative"
             )
 
-        elif self.options["sei"] == "sei on cracks":
-            self.submodels["negative sei"] = pybamm.sei.SolventDiffusionLimited(
-                self.param, "Negative"
-            )
-            # self.submodels["negative sei on cracks"] = pybamm.sei.SEIonCracks(
-            #    self.param, "Negative"
-            # )
         # positive electrode
         self.submodels["positive sei"] = pybamm.sei.NoSEI(self.param, "Positive")
 
@@ -99,3 +92,14 @@ class BaseModel(pybamm.BaseBatteryModel):
         self.submodels["positive oxygen interface"] = pybamm.interface.NoReaction(
             self.param, "Positive", "lithium-ion oxygen"
         )
+
+    def set_crack_submodel(self):
+        if self.options["particle cracking"] is not True:
+            return
+
+        self.submodels[
+            "negative particle cracking"
+        ] = pybamm.particle_cracking.CrackPropagation(self.param, "Negative")
+        self.submodels[
+            "positive particle cracking"
+        ] = pybamm.particle_cracking.CrackPropagation(self.param, "Positive")
