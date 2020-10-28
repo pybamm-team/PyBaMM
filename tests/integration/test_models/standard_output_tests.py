@@ -127,10 +127,10 @@ class VoltageTests(BaseOutputTest):
 
     def test_each_reaction_overpotential(self):
         """Testing that:
-            - discharge: eta_r_n > 0, eta_r_p < 0
-            - charge: eta_r_n < 0, eta_r_p > 0
-            - off: eta_r_n == 0, eta_r_p == 0
-            """
+        - discharge: eta_r_n > 0, eta_r_p < 0
+        - charge: eta_r_n < 0, eta_r_p > 0
+        - off: eta_r_n == 0, eta_r_p == 0
+        """
         tol = 0.01
         t, x_n, x_p = self.t, self.x_n, self.x_p
         if self.operating_condition == "discharge":
@@ -145,9 +145,9 @@ class VoltageTests(BaseOutputTest):
 
     def test_overpotentials(self):
         """Testing that all are:
-            - discharge: . < 0
-            - charge: . > 0
-            - off: . == 0
+        - discharge: . < 0
+        - charge: . > 0
+        - off: . == 0
         """
         tol = 0.001
         if self.operating_condition == "discharge":
@@ -168,10 +168,10 @@ class VoltageTests(BaseOutputTest):
             )
 
     def test_ocps(self):
-        """ Testing that:
-            - discharge: ocp_n increases, ocp_p decreases
-            - charge: ocp_n decreases, ocp_p increases
-            - off: ocp_n, ocp_p constant
+        """Testing that:
+        - discharge: ocp_n increases, ocp_p decreases
+        - charge: ocp_n decreases, ocp_p increases
+        - off: ocp_n, ocp_p constant
         """
         neg_end_vs_start = self.ocp_n_av(self.t[-1]) - self.ocp_n_av(self.t[1])
         pos_end_vs_start = self.ocp_p_av(self.t[-1]) - self.ocp_p_av(self.t[1])
@@ -187,9 +187,9 @@ class VoltageTests(BaseOutputTest):
 
     def test_ocv(self):
         """Testing that:
-            - discharge: ocv decreases
-            - charge: ocv increases
-            - off: ocv constant
+        - discharge: ocv decreases
+        - charge: ocv increases
+        - off: ocv constant
         """
 
         end_vs_start = self.ocv_av(self.t[-1]) - self.ocv_av(self.t[1])
@@ -203,9 +203,9 @@ class VoltageTests(BaseOutputTest):
 
     def test_voltage(self):
         """Testing that:
-            - discharge: voltage decreases
-            - charge: voltage increases
-            - off: voltage constant
+        - discharge: voltage decreases
+        - charge: voltage increases
+        - off: voltage constant
         """
         end_vs_start = self.voltage(self.t[-1]) - self.voltage(self.t[1])
 

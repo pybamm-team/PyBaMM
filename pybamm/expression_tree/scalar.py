@@ -24,9 +24,7 @@ class Scalar(pybamm.Symbol):
     """
 
     def __init__(self, value, name=None, domain=[]):
-        """
-
-        """
+        """"""
         # set default name if not provided
         self.value = value
         if name is None:

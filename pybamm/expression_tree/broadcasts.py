@@ -107,11 +107,15 @@ class PrimaryBroadcast(Broadcast):
                 """Primary broadcast from current collector domain must be to electrode
                 or separator or particle domains"""
             )
-        elif child.domain[0] in [
-            "negative electrode",
-            "separator",
-            "positive electrode",
-        ] and broadcast_domain[0] not in ["negative particle", "positive particle"]:
+        elif (
+            child.domain[0]
+            in [
+                "negative electrode",
+                "separator",
+                "positive electrode",
+            ]
+            and broadcast_domain[0] not in ["negative particle", "positive particle"]
+        ):
             raise pybamm.DomainError(
                 """Primary broadcast from electrode or separator must be to particle
                 domains"""
@@ -203,11 +207,15 @@ class SecondaryBroadcast(Broadcast):
                 """Secondary broadcast from particle domain must be to electrode or
                 separator domains"""
             )
-        elif child.domain[0] in [
-            "negative electrode",
-            "separator",
-            "positive electrode",
-        ] and broadcast_domain != ["current collector"]:
+        elif (
+            child.domain[0]
+            in [
+                "negative electrode",
+                "separator",
+                "positive electrode",
+            ]
+            and broadcast_domain != ["current collector"]
+        ):
             raise pybamm.DomainError(
                 """Secondary broadcast from electrode or separator must be to
                 current collector domains"""

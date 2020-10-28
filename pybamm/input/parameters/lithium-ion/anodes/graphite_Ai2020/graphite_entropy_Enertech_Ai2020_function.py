@@ -7,7 +7,7 @@ def graphite_entropy_Enertech_Ai2020_function(sto, c_n_max):
 
         References
         ----------
-        .. [1] Ai, W., Kraft, L., Sturm, J., Jossen, A., & Wu, B. (2020). 
+        .. [1] Ai, W., Kraft, L., Sturm, J., Jossen, A., & Wu, B. (2020).
         Electrochemical Thermal-Mechanical Modelling of Stress Inhomogeneity in Lithium-Ion Pouch Cells. # noqa
         Journal of The Electrochemical Society, 167(1), 013512. DOI: 10.1149/2.0122001JES # noqa
 

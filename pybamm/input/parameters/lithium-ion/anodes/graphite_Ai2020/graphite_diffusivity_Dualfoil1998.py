@@ -26,7 +26,7 @@ def graphite_diffusivity_Dualfoil1998(sto, T):
     -------
     :class:`pybamm.Symbol`
         Solid diffusivity
-   """
+    """
     theta_n = mechanical_parameters.theta_n
     D_ref = 3.9 * 10 ** (-14)
     E_D_s = 5000
