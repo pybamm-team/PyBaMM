@@ -870,11 +870,13 @@ class FiniteVolume(pybamm.SpatialMethod):
 
         dx0 = nodes[0] - edges[0]
         dx1 = submesh.d_nodes[0]
-        dx2 = submesh.d_nodes[1]
 
         dxN = edges[-1] - nodes[-1]
         dxNm1 = submesh.d_nodes[-1]
-        dxNm2 = submesh.d_nodes[-2]
+
+        if extrap_order == "quadratic":
+            dx2 = submesh.d_nodes[1]
+            dxNm2 = submesh.d_nodes[-2]
 
         child = symbol.child
 
