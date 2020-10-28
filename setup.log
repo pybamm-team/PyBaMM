@@ -330,3 +330,27 @@
 2020-10-28 11:16:39,041 - PyBaMM setup - INFO - Not running on windows
 2020-10-28 11:16:39,054 - PyBaMM setup - INFO - Found CMake.
 2020-10-28 11:16:39,054 - PyBaMM setup - INFO - Could not find PyBind11 directory (/Users/dalonsoa/Documents/Projects/PyBaMM/PyBaMM-GEM/pybind11). Skipping compilation of KLU module.
+2020-10-28 11:49:03,308 - PyBaMM setup - INFO - Starting PyBaMM setup
+2020-10-28 11:49:03,347 - PyBaMM setup - INFO - Not running on windows
+2020-10-28 11:49:03,393 - PyBaMM setup - INFO - Found CMake.
+2020-10-28 11:49:03,394 - PyBaMM setup - INFO - Could not find PyBind11 directory (/Users/dalonsoa/Documents/Projects/PyBaMM/PyBaMM-GEM/pybind11). Skipping compilation of KLU module.
+2020-10-28 11:49:04,255 - PyBaMM setup - INFO - Starting PyBaMM setup
+2020-10-28 11:49:04,281 - PyBaMM setup - INFO - Not running on windows
+2020-10-28 11:49:04,289 - PyBaMM setup - INFO - Found CMake.
+2020-10-28 11:49:04,289 - PyBaMM setup - INFO - Could not find PyBind11 directory (/Users/dalonsoa/Documents/Projects/PyBaMM/PyBaMM-GEM/pybind11). Skipping compilation of KLU module.
+2020-10-28 11:49:05,363 - PyBaMM setup - INFO - Starting PyBaMM setup
+2020-10-28 11:49:05,394 - PyBaMM setup - INFO - Not running on windows
+2020-10-28 11:49:05,404 - PyBaMM setup - INFO - Found CMake.
+2020-10-28 11:49:05,404 - PyBaMM setup - INFO - Could not find PyBind11 directory (/Users/dalonsoa/Documents/Projects/PyBaMM/PyBaMM-GEM/pybind11). Skipping compilation of KLU module.
+2020-10-28 15:16:54,226 - PyBaMM setup - INFO - Starting PyBaMM setup
+2020-10-28 15:16:54,260 - PyBaMM setup - INFO - Not running on windows
+2020-10-28 15:16:54,304 - PyBaMM setup - INFO - Found CMake.
+2020-10-28 15:16:54,305 - PyBaMM setup - INFO - Could not find PyBind11 directory (/Users/dalonsoa/Documents/Projects/PyBaMM/PyBaMM-GEM/pybind11). Skipping compilation of KLU module.
+2020-10-28 15:16:55,235 - PyBaMM setup - INFO - Starting PyBaMM setup
+2020-10-28 15:16:55,268 - PyBaMM setup - INFO - Not running on windows
+2020-10-28 15:16:55,276 - PyBaMM setup - INFO - Found CMake.
+2020-10-28 15:16:55,276 - PyBaMM setup - INFO - Could not find PyBind11 directory (/Users/dalonsoa/Documents/Projects/PyBaMM/PyBaMM-GEM/pybind11). Skipping compilation of KLU module.
+2020-10-28 15:16:56,309 - PyBaMM setup - INFO - Starting PyBaMM setup
+2020-10-28 15:16:56,337 - PyBaMM setup - INFO - Not running on windows
+2020-10-28 15:16:56,345 - PyBaMM setup - INFO - Found CMake.
+2020-10-28 15:16:56,345 - PyBaMM setup - INFO - Could not find PyBind11 directory (/Users/dalonsoa/Documents/Projects/PyBaMM/PyBaMM-GEM/pybind11). Skipping compilation of KLU module.
