@@ -519,7 +519,9 @@ class LithiumIonParameters:
 
         self.T_amb_dim = self.therm.T_amb_dim
         self.T_amb = self.therm.T_amb
-
+        self.emissivity = self.therm.emissivity
+        self.s_b = self.therm.s_b
+        
         # SEI parameters
         self.C_sei_reaction_n = (self.j_scale_n / self.m_sei_dimensional) * pybamm.exp(
             -(self.F * self.U_n_ref / (2 * self.R * self.T_ref))
