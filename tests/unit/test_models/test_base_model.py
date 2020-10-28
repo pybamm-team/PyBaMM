@@ -1,8 +1,13 @@
 #
 # Tests for the base model class
 #
+import casadi
 import pybamm
+import numpy as np
 import unittest
+import os
+import subprocess  # nosec
+import platform
 
 
 class TestBaseModel(unittest.TestCase):
@@ -501,6 +506,118 @@ class TestBaseModel(unittest.TestCase):
         model.initial_conditions[d] = 1
         model.check_well_posedness()
 
+    def test_export_casadi(self):
+        model = pybamm.BaseModel()
+        t = pybamm.t
+        a = pybamm.Variable("a")
+        b = pybamm.Variable("b")
+        p = pybamm.InputParameter("p")
+        q = pybamm.InputParameter("q")
+        model.rhs = {a: -a * p}
+        model.algebraic = {b: a - b}
+        model.initial_conditions = {a: q, b: 1}
+        model.variables = {"a+b": a + b - t}
+
+        out = model.export_casadi_objects(["a+b"])
+
+        # Try making a function from the outputs
+        t, x, z, p = out["t"], out["x"], out["z"], out["inputs"]
+        x0, z0 = out["x0"], out["z0"]
+        rhs, alg = out["rhs"], out["algebraic"]
+        var = out["variables"]["a+b"]
+        jac_rhs, jac_alg = out["jac_rhs"], out["jac_algebraic"]
+        x0_fn = casadi.Function("x0", [p], [x0])
+        z0_fn = casadi.Function("x0", [p], [z0])
+        rhs_fn = casadi.Function("rhs", [t, x, z, p], [rhs])
+        alg_fn = casadi.Function("alg", [t, x, z, p], [alg])
+        jac_rhs_fn = casadi.Function("jac_rhs", [t, x, z, p], [jac_rhs])
+        jac_alg_fn = casadi.Function("jac_alg", [t, x, z, p], [jac_alg])
+        var_fn = casadi.Function("var", [t, x, z, p], [var])
+
+        # Test that function values are as expected
+        self.assertEqual(x0_fn([0, 5]), 5)
+        self.assertEqual(z0_fn([0, 0]), 1)
+        self.assertEqual(rhs_fn(0, 3, 2, [7, 2]), -21)
+        self.assertEqual(alg_fn(0, 3, 2, [7, 2]), 1)
+        np.testing.assert_array_equal(np.array(jac_rhs_fn(5, 6, 7, [8, 9])), [[-8, 0]])
+        np.testing.assert_array_equal(np.array(jac_alg_fn(5, 6, 7, [8, 9])), [[1, -1]])
+        self.assertEqual(var_fn(6, 3, 2, [7, 2]), -1)
+
+        # Now change the order of input parameters
+        out = model.export_casadi_objects(["a+b"], input_parameter_order=["q", "p"])
+
+        # Try making a function from the outputs
+        t, x, z, p = out["t"], out["x"], out["z"], out["inputs"]
+        x0, z0 = out["x0"], out["z0"]
+        rhs, alg = out["rhs"], out["algebraic"]
+        var = out["variables"]["a+b"]
+        jac_rhs, jac_alg = out["jac_rhs"], out["jac_algebraic"]
+        x0_fn = casadi.Function("x0", [p], [x0])
+        z0_fn = casadi.Function("x0", [p], [z0])
+        rhs_fn = casadi.Function("rhs", [t, x, z, p], [rhs])
+        alg_fn = casadi.Function("alg", [t, x, z, p], [alg])
+        jac_rhs_fn = casadi.Function("jac_rhs", [t, x, z, p], [jac_rhs])
+        jac_alg_fn = casadi.Function("jac_alg", [t, x, z, p], [jac_alg])
+        var_fn = casadi.Function("var", [t, x, z, p], [var])
+
+        # Test that function values are as expected
+        self.assertEqual(x0_fn([5, 0]), 5)
+        self.assertEqual(z0_fn([0, 0]), 1)
+        self.assertEqual(rhs_fn(0, 3, 2, [2, 7]), -21)
+        self.assertEqual(alg_fn(0, 3, 2, [2, 7]), 1)
+        np.testing.assert_array_equal(np.array(jac_rhs_fn(5, 6, 7, [9, 8])), [[-8, 0]])
+        np.testing.assert_array_equal(np.array(jac_alg_fn(5, 6, 7, [9, 8])), [[1, -1]])
+        self.assertEqual(var_fn(6, 3, 2, [2, 7]), -1)
+
+        # Test model with external variable runs
+        model_options = {"thermal": "lumped", "external submodels": ["thermal"]}
+        model = pybamm.lithium_ion.SPMe(model_options)
+        sim = pybamm.Simulation(model)
+        sim.build()
+        variable_names = ["Volume-averaged cell temperature"]
+        out = sim.built_model.export_casadi_objects(variable_names)
+
+    @unittest.skipIf(platform.system() == "Windows", "Skipped for Windows")
+    def test_generate_casadi(self):
+        model = pybamm.BaseModel()
+        t = pybamm.t
+        a = pybamm.Variable("a")
+        b = pybamm.Variable("b")
+        p = pybamm.InputParameter("p")
+        q = pybamm.InputParameter("q")
+        model.rhs = {a: -a * p}
+        model.algebraic = {b: a - b}
+        model.initial_conditions = {a: q, b: 1}
+        model.variables = {"a+b": a + b - t}
+
+        # Generate C code
+        model.generate("test.c", ["a+b"])
+
+        # Compile
+        subprocess.run(["gcc", "-fPIC", "-shared", "-o", "test.so", "test.c"])  # nosec
+
+        # Read the generated functions
+        x0_fn = casadi.external("x0", "./test.so")
+        z0_fn = casadi.external("z0", "./test.so")
+        rhs_fn = casadi.external("rhs_", "./test.so")
+        alg_fn = casadi.external("alg_", "./test.so")
+        jac_rhs_fn = casadi.external("jac_rhs", "./test.so")
+        jac_alg_fn = casadi.external("jac_alg", "./test.so")
+        var_fn = casadi.external("variables", "./test.so")
+
+        # Test that function values are as expected
+        self.assertEqual(x0_fn([0, 5]), 5)
+        self.assertEqual(z0_fn([0, 0]), 1)
+        self.assertEqual(rhs_fn(0, 3, 2, [7, 2]), -21)
+        self.assertEqual(alg_fn(0, 3, 2, [7, 2]), 1)
+        np.testing.assert_array_equal(np.array(jac_rhs_fn(5, 6, 7, [8, 9])), [[-8, 0]])
+        np.testing.assert_array_equal(np.array(jac_alg_fn(5, 6, 7, [8, 9])), [[1, -1]])
+        self.assertEqual(var_fn(6, 3, 2, [7, 2]), -1)
+
+        # Remove generated files.
+        os.remove("test.c")
+        os.remove("test.so")
+
 
 class TestStandardBatteryBaseModel(unittest.TestCase):
     def test_default_solver(self):
@@ -536,7 +653,6 @@ class TestStandardBatteryBaseModel(unittest.TestCase):
         )
 
         # change path and try again
-        import os
 
         cwd = os.getcwd()
         os.chdir("..")

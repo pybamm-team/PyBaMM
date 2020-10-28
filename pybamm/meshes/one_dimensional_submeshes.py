@@ -340,8 +340,7 @@ class SpectralVolume1DSubMesh(SubMesh1D):
 
         # default: Spectral Volumes of equal size
         if edges is None:
-            edges = np.linspace(spatial_lims["min"], spatial_lims["max"],
-                                npts + 1)
+            edges = np.linspace(spatial_lims["min"], spatial_lims["max"], npts + 1)
         # check that npts + 1 equals number of user-supplied edges
         elif (npts + 1) != len(edges):
             raise pybamm.GeometryError(
@@ -369,16 +368,30 @@ class SpectralVolume1DSubMesh(SubMesh1D):
 
         coord_sys = spatial_var.coord_sys
 
-        cv_edges = np.array([edges[0]] + [
-            x
-            for (a, b) in zip(edges[:-1], edges[1:])
-            for x in np.flip(
-                a + 0.5 * (b - a) * (1 + np.sin(np.pi * np.array(
-                    [((order + 1) - 1 - 2 * i) / (2 * (order + 1) - 2)
-                     for i in range(order + 1)]
-                )))
-            )[1:]
-        ])
+        cv_edges = np.array(
+            [edges[0]]
+            + [
+                x
+                for (a, b) in zip(edges[:-1], edges[1:])
+                for x in np.flip(
+                    a
+                    + 0.5
+                    * (b - a)
+                    * (
+                        1
+                        + np.sin(
+                            np.pi
+                            * np.array(
+                                [
+                                    ((order + 1) - 1 - 2 * i) / (2 * (order + 1) - 2)
+                                    for i in range(order + 1)
+                                ]
+                            )
+                        )
+                    )
+                )[1:]
+            ]
+        )
 
         self.sv_edges = edges
         self.sv_nodes = (edges[:-1] + edges[1:]) / 2
