@@ -270,7 +270,7 @@ def to_julia(symbol, debug=False):
     return constant_values, "\n".join(variable_lines)
 
 
-def get_julia_function(symbol):
+def get_julia_function(symbol, funcname="f"):
     """
     Converts a pybamm expression tree into pure julia code that will calculate the
     result of calling `evaluate(t, y)` on the given expression tree.
@@ -290,18 +290,26 @@ def get_julia_function(symbol):
     constants, var_str = to_julia(symbol, debug=False)
 
     # extract constants in generated function
-    const_str = ""
+    const_str = "const cs=(\n"
     for symbol_id, const_value in constants.items():
         const_name = id_to_julia_variable(symbol_id, True)
-        const_str = const_str + "{} = {}\n".format(const_name, const_value)
+        const_str += "   {} = {},\n".format(const_name, const_value)
+    const_str += ")\n"
 
     # indent code
     var_str = "   " + var_str
     var_str = var_str.replace("\n", "\n   ")
+    # add "c." to constant names
+    var_str = var_str.replace("const", "c.const")
 
     # add function def and sparse arrays to first line
-    imports = "begin\nusing SparseArrays\n"
-    julia_str = imports + const_str + "\nfunction f_pybamm(t, y, p)\n" + var_str
+    imports = "begin\nusing SparseArrays, LinearAlgebra\n"
+    julia_str = (
+        imports
+        + const_str
+        + f"\nfunction {funcname}_with_consts(dy, y, p, t, c)\n"
+        + var_str
+    )
 
     # calculate the final variable that will output the result
     result_var = id_to_julia_variable(symbol.id, symbol.is_constant())
@@ -309,11 +317,15 @@ def get_julia_function(symbol):
         result_value = symbol.evaluate()
 
     # add return line
-    # two "end"s: one to close the function, one to close the "begin"
     if symbol.is_constant() and isinstance(result_value, numbers.Number):
-        julia_str = julia_str + "\n   return " + str(result_value) + "\nend\nend"
+        julia_str = julia_str + "\n   return " + str(result_value) + "\nend\n"
     else:
-        julia_str = julia_str + "\n   return " + result_var + "\nend\nend"
+        julia_str = julia_str + "\n   return " + result_var + "\nend\n"
+
+    julia_str += f"{funcname}(dy, y, p, t) = {funcname}_with_consts(dy, y, p, t, cs)\n"
+
+    # close the "begin"
+    julia_str += "end"
 
     return julia_str
 
