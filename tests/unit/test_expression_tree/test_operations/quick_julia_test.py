@@ -17,11 +17,11 @@ from collections import OrderedDict
 from julia import Main
 
 
-a = pybamm.StateVector(slice(0, 1))
-b = pybamm.StateVector(slice(1, 2))
+a = pybamm.StateVector(slice(0, 3))
+b = pybamm.StateVector(slice(3, 6))
 
-y_tests = [np.array([[2], [3]]), np.array([[1], [3]])]
-t_tests = [1, 2]
+y_tests = np.array([[2], [3], [4]])
+t_tests = 1
 
 # test a * b
 # expr = a * b
@@ -29,13 +29,15 @@ t_tests = [1, 2]
 # print(evaluator_str)
 
 # test something with a matrix multiplication
-A = pybamm.Matrix([[1, 2], [3, 4]])
-expr = A @ pybamm.StateVector(slice(0, 2))
+A = pybamm.Matrix([[1, 2, 3], [3, 4, 5], [6, 7, 8]])
+B = pybamm.Matrix([[11, 12, 13], [13, 14, 15], [16, 17, 18]])
+C = pybamm.Vector([[21], [22], [23]])
+expr = A @ (B @ pybamm.StateVector(slice(0, 3)) + C)
 evaluator_str = pybamm.get_julia_function(expr)
 print(evaluator_str)
 Main.eval(evaluator_str)
-Main.dy = [0, 0]
-Main.y = [2, 3]
+Main.dy = [0, 0, 0]
+Main.y = [2, 3, 4]
 print(Main.eval("f(dy,y,0,0)"))
 print(Main.dy)
 # # test something with a heaviside

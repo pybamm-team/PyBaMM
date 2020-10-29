@@ -274,11 +274,7 @@ class CasadiSolver(pybamm.BaseSolver):
                     # assign temporary solve time
                     current_step_sol.solve_time = np.nan
                     # append solution from the current step to solution
-                    if solution is None:
-                        solution = current_step_sol
-                    else:
-                        # append solution from the current step to solution
-                        solution.append(current_step_sol)
+                    solution.append(current_step_sol)
                     solution.termination = "event"
                     solution.t_event = t_event
                     solution.y_event = y_event
