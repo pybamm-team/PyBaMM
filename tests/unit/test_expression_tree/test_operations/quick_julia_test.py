@@ -33,7 +33,11 @@ A = pybamm.Matrix([[1, 2], [3, 4]])
 expr = A @ pybamm.StateVector(slice(0, 2))
 evaluator_str = pybamm.get_julia_function(expr)
 print(evaluator_str)
-
+Main.eval(evaluator_str)
+Main.dy = [0, 0]
+Main.y = [2, 3]
+print(Main.eval("f(dy,y,0,0)"))
+print(Main.dy)
 # # test something with a heaviside
 # a = pybamm.Vector([1, 2])
 # expr = a <= pybamm.StateVector(slice(0, 2))
