@@ -29,20 +29,19 @@ class TestTimer(unittest.TestCase):
         self.assertLess(b, a)
 
     def test_timer_format(self):
-        import sys
-
         t = pybamm.Timer()
-        self.assertEqual(t.format(1e-3), "0.001 seconds")
-        self.assertEqual(t.format(0.000123456789), "0.000123456789 seconds")
-        self.assertEqual(t.format(0.123456789), "0.12 seconds")
-        if sys.hexversion < 0x3000000:
-            self.assertEqual(t.format(2), "2.0 seconds")
-        else:
-            self.assertEqual(t.format(2), "2 seconds")
-        self.assertEqual(t.format(2.5), "2.5 seconds")
-        self.assertEqual(t.format(12.5), "12.5 seconds")
-        self.assertEqual(t.format(59.41), "59.41 seconds")
-        self.assertEqual(t.format(59.4126347547), "59.41 seconds")
+        self.assertEqual(t.format(1e-9), "1.000 ns")
+        self.assertEqual(t.format(0.000000123456789), "123.457 ns")
+        self.assertEqual(t.format(1e-6), "1.000 us")
+        self.assertEqual(t.format(0.000123456789), "123.457 us")
+        self.assertEqual(t.format(0.999e-3), "999.000 us")
+        self.assertEqual(t.format(1e-3), "1.000 ms")
+        self.assertEqual(t.format(0.123456789), "123.457 ms")
+        self.assertEqual(t.format(2), "2.000 s")
+        self.assertEqual(t.format(2.5), "2.500 s")
+        self.assertEqual(t.format(12.5), "12.500 s")
+        self.assertEqual(t.format(59.41), "59.410 s")
+        self.assertEqual(t.format(59.4126347547), "59.413 s")
         self.assertEqual(t.format(60.2), "1 minute, 0 seconds")
         self.assertEqual(t.format(61), "1 minute, 1 second")
         self.assertEqual(t.format(121), "2 minutes, 1 second")

@@ -174,8 +174,8 @@ class Symbol(anytree.NodeMixin):
 
     @property
     def auxiliary_domains(self):
-        "Returns domains that are not the primary domain"
-        return {k: v for k, v in self._domains.items() if k != "primary"}
+        "Returns auxiliary domains"
+        return self._auxiliary_domains
 
     @auxiliary_domains.setter
     def auxiliary_domains(self, auxiliary_domains):
@@ -193,6 +193,7 @@ class Symbol(anytree.NodeMixin):
         if len(set(values)) != len(values):
             raise pybamm.DomainError("All auxiliary domains must be different")
 
+        self._auxiliary_domains = auxiliary_domains
         self._domains.update(auxiliary_domains)
 
     @property
@@ -203,10 +204,16 @@ class Symbol(anytree.NodeMixin):
     def copy_domains(self, symbol):
         "Copy the domains from a given symbol, bypassing checks"
         self._domains = symbol.domains
+        self._domain = self._domains["primary"]
+        self._auxiliary_domains = {
+            k: v for k, v in self._domains.items() if k != "primary"
+        }
 
     def clear_domains(self):
         "Clear domains, bypassing checks"
         self._domains = {"primary": []}
+        self._domain = []
+        self._auxiliary_domains = {}
 
     def get_children_auxiliary_domains(self, children):
         "Combine auxiliary domains from children, at all levels"
@@ -727,37 +734,46 @@ class Symbol(anytree.NodeMixin):
         """
         Size of an object, found by evaluating it with appropriate t and y
         """
-        return np.prod(self.shape)
+        try:
+            return self._saved_size
+        except AttributeError:
+            self._saved_size = np.prod(self.shape)
+            return self._saved_size
 
     @property
     def shape(self):
         """
         Shape of an object, found by evaluating it with appropriate t and y.
         """
-        # Default behaviour is to try to evaluate the object directly
-        # Try with some large y, to avoid having to unpack (slow)
         try:
-            y = np.nan * np.ones((1000, 1))
-            evaluated_self = self.evaluate(0, y, y, inputs="shape test")
-        # If that fails, fall back to calculating how big y should really be
-        except ValueError:
-            unpacker = pybamm.SymbolUnpacker(pybamm.StateVector)
-            state_vectors_in_node = unpacker.unpack_symbol(self).values()
-            if state_vectors_in_node == []:
-                y = None
-            else:
-                min_y_size = max(
-                    len(x._evaluation_array) for x in state_vectors_in_node
-                )
-                # Pick a y that won't cause RuntimeWarnings
-                y = np.nan * np.ones((min_y_size, 1))
-            evaluated_self = self.evaluate(0, y, y, inputs="shape test")
+            return self._saved_shape
+        except AttributeError:
+            # Default behaviour is to try to evaluate the object directly
+            # Try with some large y, to avoid having to unpack (slow)
+            try:
+                y = np.nan * np.ones((1000, 1))
+                evaluated_self = self.evaluate(0, y, y, inputs="shape test")
+            # If that fails, fall back to calculating how big y should really be
+            except ValueError:
+                unpacker = pybamm.SymbolUnpacker(pybamm.StateVector)
+                state_vectors_in_node = unpacker.unpack_symbol(self).values()
+                if state_vectors_in_node == []:
+                    y = None
+                else:
+                    min_y_size = max(
+                        len(x._evaluation_array) for x in state_vectors_in_node
+                    )
+                    # Pick a y that won't cause RuntimeWarnings
+                    y = np.nan * np.ones((min_y_size, 1))
+                evaluated_self = self.evaluate(0, y, y, inputs="shape test")
 
-        # Return shape of evaluated object
-        if isinstance(evaluated_self, numbers.Number):
-            return ()
-        else:
-            return evaluated_self.shape
+            # Return shape of evaluated object
+            if isinstance(evaluated_self, numbers.Number):
+                self._saved_shape = ()
+            else:
+                self._saved_shape = evaluated_self.shape
+
+        return self._saved_shape
 
     @property
     def size_for_testing(self):
