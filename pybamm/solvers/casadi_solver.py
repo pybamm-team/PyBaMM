@@ -16,17 +16,17 @@ class CasadiSolver(pybamm.BaseSolver):
     Parameters
     ----------
     mode : str
-            How to solve the model (default is "safe"):
+        How to solve the model (default is "safe"):
 
-            - "fast": perform direct integration, without accounting for events. \
-            Recommended when simulating a drive cycle or other simulation where \
-            no events should be triggered.
-            - "safe": perform step-and-check integration in global steps of size \
-            dt_max, checking whether events have been triggered. Recommended for \
-            simulations of a full charge or discharge.
-            - "safe without grid": perform step-and-check integration step-by-step. \
-            Takes more steps than "safe" mode, but doesn't require creating the grid \
-            each time, so may be faster. Experimental only.
+        - "fast": perform direct integration, without accounting for events. \
+        Recommended when simulating a drive cycle or other simulation where \
+        no events should be triggered.
+        - "safe": perform step-and-check integration in global steps of size \
+        dt_max, checking whether events have been triggered. Recommended for \
+        simulations of a full charge or discharge.
+        - "safe without grid": perform step-and-check integration step-by-step. \
+        Takes more steps than "safe" mode, but doesn't require creating the grid \
+        each time, so may be faster. Experimental only.
     rtol : float, optional
         The relative tolerance for the solver (default is 1e-6).
     atol : float, optional

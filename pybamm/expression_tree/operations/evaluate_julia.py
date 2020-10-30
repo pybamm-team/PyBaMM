@@ -239,9 +239,12 @@ def find_symbols(symbol, constant_symbols, variable_symbols, variable_symbol_siz
 
     # Save the size of the variable
     symbol_shape = symbol.shape
-    if symbol_shape[1] != 1:
-        raise ValueError("expected column vector")
-    variable_symbol_sizes[symbol.id] = symbol_shape[0]
+    if symbol_shape == ():
+        variable_symbol_sizes[symbol.id] = 1
+    elif symbol_shape[1] == 1:
+        variable_symbol_sizes[symbol.id] = symbol_shape[0]
+    else:
+        raise ValueError("expected scalar or column vector")
 
 
 def to_julia(symbol, debug=False):
@@ -344,7 +347,7 @@ def get_julia_function(symbol, funcname="f"):
             var_str += "mul!({}, {})\n".format(julia_var, symbol_line)
         else:
             # inline operation if it can be inlined
-            if any(x in symbol_line for x in inlineable_symbols):
+            if any(x in symbol_line for x in inlineable_symbols) or symbol_line == "t":
                 found_replacement = False
                 # replace all other occurrences of the variable
                 # in the dictionary with the symbol line
@@ -357,10 +360,16 @@ def get_julia_function(symbol, funcname="f"):
                         " * " in next_symbol_line
                         and not symbol_line.startswith("@view")
                     ):
-                        # add brackets so that the order of operations is maintained
-                        var_symbols[next_var_id] = next_symbol_line.replace(
-                            julia_var, "({})".format(symbol_line)
-                        )
+                        if symbol_line != "t":
+                            # add brackets so that the order of operations is maintained
+                            var_symbols[next_var_id] = next_symbol_line.replace(
+                                julia_var, "({})".format(symbol_line)
+                            )
+                        else:
+                            # add brackets so that the order of operations is maintained
+                            var_symbols[next_var_id] = next_symbol_line.replace(
+                                julia_var, symbol_line
+                            )
                         found_replacement = True
                 if not found_replacement:
                     var_str += "{} .= {}\n".format(julia_var, symbol_line)

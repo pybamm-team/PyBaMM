@@ -60,70 +60,78 @@ class TestEvaluate(unittest.TestCase):
         evaluator_str = pybamm.get_julia_function(expr)
         Main.eval(evaluator_str)
         for y in y_tests:
-            Main.dy = 0.0 * y
-            Main, y = y
+            Main.dy = [0.0]
+            Main.y = y
             Main.eval("f(dy,y,0,0)")
             self.assertEqual(Main.dy, expr.evaluate(t=None, y=y))
 
-        # # test something with time
-        # expr = a * pybamm.t
-        # evaluator_str = pybamm.get_julia_function(expr)
-        # Main.eval(evaluator_str)
-        # for t, y in zip(t_tests, y_tests):
-        #     result = evaluator(t, y, None)
-        #     self.assertEqual(Main.dy, expr.evaluate(t=t, y=y))
+        # test something with time
+        expr = a * pybamm.t
+        evaluator_str = pybamm.get_julia_function(expr)
+        Main.eval(evaluator_str)
+        for t, y in zip(t_tests, y_tests):
+            Main.dy = [0.0]
+            Main.y = y
+            Main.t = t
+            Main.eval("f(dy,y,0,t)")
+            self.assertEqual(Main.dy, expr.evaluate(t=t, y=y))
 
-        # # test something with a matrix multiplication
-        # A = pybamm.Matrix([[1, 2], [3, 4]])
-        # expr = A @ pybamm.StateVector(slice(0, 2))
-        # evaluator_str = pybamm.get_julia_function(expr)
-        # Main.eval(evaluator_str)
-        # for t, y in zip(t_tests, y_tests):
-        #     result = evaluator(t, y, None)
-        #     # note 1D arrays are flattened in Julia
-        #     np.testing.assert_allclose(Main.dy, expr.evaluate(t=t, y=y).flatten())
+        # test something with a matrix multiplication
+        A = pybamm.Matrix([[1, 2], [3, 4]])
+        expr = A @ pybamm.StateVector(slice(0, 2))
+        evaluator_str = pybamm.get_julia_function(expr)
+        Main.eval(evaluator_str)
+        for y in y_tests:
+            Main.dy = [0.0, 0.0]
+            Main.y = y
+            Main.eval("f(dy,y,0,0)")
+            # note 1D arrays are flattened in Julia
+            np.testing.assert_allclose(Main.dy, expr.evaluate(y=y).flatten())
 
-        # # test something with a heaviside
-        # a = pybamm.Vector([1, 2])
-        # expr = a <= pybamm.StateVector(slice(0, 2))
-        # evaluator_str = pybamm.get_julia_function(expr)
-        # Main.eval(evaluator_str)
-        # for t, y in zip(t_tests, y_tests):
-        #     result = evaluator(t, y, None)
-        #     # note 1D arrays are flattened in Julia
-        #     np.testing.assert_allclose(Main.dy, expr.evaluate(t=t, y=y).flatten())
+        # test something with a heaviside
+        a = pybamm.Vector([1, 2])
+        expr = a <= pybamm.StateVector(slice(0, 2))
+        evaluator_str = pybamm.get_julia_function(expr)
+        Main.eval(evaluator_str)
+        print(evaluator_str)
+        for y in y_tests:
+            Main.dy = [0.0, 0.0]
+            Main.y = y
+            Main.eval("f(dy,y,0,0)")
+            # note 1D arrays are flattened in Julia
+            np.testing.assert_allclose(Main.dy, expr.evaluate(y=y).flatten())
 
         # expr = a > pybamm.StateVector(slice(0, 2))
         # evaluator_str = pybamm.get_julia_function(expr)
         # Main.eval(evaluator_str)
-        # for t, y in zip(t_tests, y_tests):
+        # for y in y_tests:
         #     result = evaluator(t, y, None)
         #     # note 1D arrays are flattened in Julia
-        #     np.testing.assert_allclose(Main.dy, expr.evaluate(t=t, y=y).flatten())
+        #     np.testing.assert_allclose(Main.dy, expr.evaluate(y=y).flatten())
 
         # # # test something with a minimum or maximum
         # # a = pybamm.Vector([1, 2])
         # # expr = pybamm.minimum(a, pybamm.StateVector(slice(0, 2)))
         # # evaluator_str = pybamm.get_julia_function(expr)
         # # Main.eval(evaluator_str)
-        # # for t, y in zip(t_tests, y_tests):
+        # # for y in y_tests:
         # #     result = evaluator(t,y,None)
-        # #     np.testing.assert_allclose(Main.dy, expr.evaluate(t=t, y=y))
+        # #     np.testing.assert_allclose(Main.dy, expr.evaluate(y=y))
 
         # # expr = pybamm.maximum(a, pybamm.StateVector(slice(0, 2)))
         # # evaluator_str = pybamm.get_julia_function(expr)
         # # Main.eval(evaluator_str)
-        # # for t, y in zip(t_tests, y_tests):
+        # # for y in y_tests:
         # #     result = evaluator(t,y,None)
-        # #     np.testing.assert_allclose(Main.dy, expr.evaluate(t=t, y=y))
+        # #     np.testing.assert_allclose(Main.dy, expr.evaluate(y=y))
 
         # # test something with an index
         # expr = pybamm.Index(A @ pybamm.StateVector(slice(0, 2)), 0)
         # evaluator_str = pybamm.get_julia_function(expr)
         # Main.eval(evaluator_str)
-        # for t, y in zip(t_tests, y_tests):
+        # for y in y_tests:
         #     result = evaluator(t, y, None)
-        #     self.assertEqual(Main.dy, expr.evaluate(t=t, y=y))
+        #     self.assertEqual(Main.dy, expr.evaluate(y=y))
 
         # # test something with a sparse matrix multiplication
         # A = pybamm.Matrix([[1, 2], [3, 4]])
@@ -132,18 +140,18 @@ class TestEvaluate(unittest.TestCase):
         # expr = A @ B @ C @ pybamm.StateVector(slice(0, 2))
         # evaluator_str = pybamm.get_julia_function(expr)
         # Main.eval(evaluator_str)
-        # for t, y in zip(t_tests, y_tests):
+        # for y in y_tests:
         #     result = evaluator(t, y, None)
         #     # note 1D arrays are flattened in Julia
-        #     np.testing.assert_allclose(Main.dy, expr.evaluate(t=t, y=y).flatten())
+        #     np.testing.assert_allclose(Main.dy, expr.evaluate(y=y).flatten())
 
         # expr = B @ pybamm.StateVector(slice(0, 2))
         # evaluator_str = pybamm.get_julia_function(expr)
         # Main.eval(evaluator_str)
-        # for t, y in zip(t_tests, y_tests):
+        # for y in y_tests:
         #     result = evaluator(t, y, None)
         #     # note 1D arrays are flattened in Julia
-        #     np.testing.assert_allclose(Main.dy, expr.evaluate(t=t, y=y).flatten())
+        #     np.testing.assert_allclose(Main.dy, expr.evaluate(y=y).flatten())
 
         # # test numpy concatenation
         # a = pybamm.StateVector(slice(0, 1))
@@ -156,18 +164,18 @@ class TestEvaluate(unittest.TestCase):
         # expr = pybamm.NumpyConcatenation(a, b)
         # evaluator_str = pybamm.get_julia_function(expr)
         # Main.eval(evaluator_str)
-        # for t, y in zip(t_tests, y_tests):
+        # for y in y_tests:
         #     result = evaluator(t, y, None)
         #     # note 1D arrays are flattened in Julia
-        #     np.testing.assert_allclose(Main.dy, expr.evaluate(t=t, y=y).flatten())
+        #     np.testing.assert_allclose(Main.dy, expr.evaluate(y=y).flatten())
 
         # expr = pybamm.NumpyConcatenation(a, c)
         # evaluator_str = pybamm.get_julia_function(expr)
         # Main.eval(evaluator_str)
-        # for t, y in zip(t_tests, y_tests):
+        # for y in y_tests:
         #     result = evaluator(t, y, None)
         #     # note 1D arrays are flattened in Julia
-        #     np.testing.assert_allclose(Main.dy, expr.evaluate(t=t, y=y).flatten())
+        #     np.testing.assert_allclose(Main.dy, expr.evaluate(y=y).flatten())
 
         # # # test sparse stack
         # # A = pybamm.Matrix(scipy.sparse.csr_matrix(np.array([[1, 0], [0, 4]])))
@@ -176,26 +184,26 @@ class TestEvaluate(unittest.TestCase):
         # # expr = pybamm.SparseStack(A, a * B)
         # # evaluator_str = pybamm.get_julia_function(expr)
         # # Main.eval(evaluator_str)
-        # # for t, y in zip(t_tests, y_tests):
+        # # for y in y_tests:
         # #     result = evaluator(t, y, None).toarray()
-        # #     np.testing.assert_allclose(Main.dy, expr.evaluate(t=t, y=y).toarray())
+        # #     np.testing.assert_allclose(Main.dy, expr.evaluate(y=y).toarray())
 
         # # # test Inner
         # # expr = pybamm.Inner(a, b)
         # # evaluator_str = pybamm.get_julia_function(expr)
         # # Main.eval(evaluator_str)
-        # # for t, y in zip(t_tests, y_tests):
+        # # for y in y_tests:
         # #     result = evaluator(t,y,None)
-        # #     np.testing.assert_allclose(Main.dy, expr.evaluate(t=t, y=y))
+        # #     np.testing.assert_allclose(Main.dy, expr.evaluate(y=y))
 
         # # v = pybamm.StateVector(slice(0, 2))
         # # A = pybamm.Matrix(scipy.sparse.csr_matrix(np.array([[1, 0], [0, 4]])))
         # # expr = pybamm.Inner(A, v)
         # # evaluator_str = pybamm.get_julia_function(expr)
         # # Main.eval(evaluator_str)
-        # # for t, y in zip(t_tests, y_tests):
+        # # for y in y_tests:
         # #     result = evaluator(t,y,None).toarray()
-        # #     np.testing.assert_allclose(Main.dy, expr.evaluate(t=t, y=y).toarray())
+        # #     np.testing.assert_allclose(Main.dy, expr.evaluate(y=y).toarray())
 
         # # y_tests = [np.array([[2], [3], [4], [5]]), np.array([[1], [3], [2], [1]])]
         # # t_tests = [1, 2]
@@ -204,9 +212,9 @@ class TestEvaluate(unittest.TestCase):
         # # expr = a * b
         # # evaluator_str = pybamm.get_julia_function(expr)
         # # Main.eval(evaluator_str)
-        # # for t, y in zip(t_tests, y_tests):
+        # # for y in y_tests:
         # #     result = evaluator(t,y,None)
-        # #     np.testing.assert_allclose(Main.dy, expr.evaluate(t=t, y=y))
+        # #     np.testing.assert_allclose(Main.dy, expr.evaluate(y=y))
 
     def test_evaluator_julia_all_functions(self):
         a = pybamm.StateVector(slice(0, 3))
