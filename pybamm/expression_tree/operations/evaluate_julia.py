@@ -162,13 +162,19 @@ def find_symbols(symbol, constant_symbols, variable_symbols, variable_symbol_siz
 
         # don't bother to concatenate if there is only a single child
         if isinstance(symbol, (pybamm.NumpyConcatenation, pybamm.SparseStack)):
-            # return a list of the children variables, which will be converted to a
-            # line by line assignment
-            symbol_str = children_vars
-            # if len(children_vars) == 1:
-            #     symbol_str = children_vars[0]
-            # else:
-            #     symbol_str = "vcat({})".format(",".join(children_vars))
+            if len(children_vars) == 1:
+                symbol_str = children_vars[0]
+            else:
+                # return a list of the children variables, which will be converted to a
+                # line by line assignment
+                # return this as a string so that other functionality still works
+                # also save sizes
+                symbol_str = "["
+                for child in children_vars:
+                    child_id = child[6:].replace("m", "-")
+                    size = variable_symbol_sizes[int(child_id)]
+                    symbol_str += "{}::{}, ".format(size, child)
+                symbol_str = symbol_str[:-2] + "]"
 
         # DomainConcatenation specifies a particular ordering for the concatenation,
         # which we must follow
@@ -318,18 +324,46 @@ def get_julia_function(symbol, funcname="f"):
     while var_symbols:
         var_symbol_id, symbol_line = var_symbols.popitem(last=False)
         julia_var = id_to_julia_variable(var_symbol_id, False)
+        # Look for lists in the variable symbols. These correpsond to concatenations, so
+        # assign the children to the right parts of the vector
+        if symbol_line[0] == "[" and symbol_line[-1] == "]":
+            # convert to actual list
+            symbol_line = symbol_line[1:-1].split(", ")
+            start = 0
+            for child_size_and_name in symbol_line:
+                child_size, child_name = child_size_and_name.split("::")
+                end = start + int(child_size)
+                # add 1 to start to account for julia 1-indexing
+                var_str += "{}[{}:{}] .= {}\n".format(
+                    julia_var, start + 1, end, child_name
+                )
+                start = end
         # use mul! for matrix multiplications (requires LinearAlgebra library)
-        if " * " in symbol_line:
+        elif " * " in symbol_line:
             symbol_line = symbol_line.replace(" * ", ", ")
             var_str += "mul!({}, {})\n".format(julia_var, symbol_line)
         else:
             # inline operation if it can be inlined
             if any(x in symbol_line for x in inlineable_symbols):
+                found_replacement = False
                 # replace all other occurrences of the variable
                 # in the dictionary with the symbol line
-                for key, value in var_symbols.items():
-                    if not ("mul!" in value and not "@view" in symbol_line):
-                        var_symbols[key] = value.replace(julia_var, symbol_line)
+                for next_var_id, next_symbol_line in var_symbols.items():
+                    # don't replace the matrix multiplication cases (which will be
+                    # turned into a mul!), since it is faster to assign to a cache array
+                    # first in that case, unless it is a @view in which case we don't
+                    # need to cache
+                    if julia_var in next_symbol_line and not (
+                        " * " in next_symbol_line
+                        and not symbol_line.startswith("@view")
+                    ):
+                        # add brackets so that the order of operations is maintained
+                        var_symbols[next_var_id] = next_symbol_line.replace(
+                            julia_var, "({})".format(symbol_line)
+                        )
+                        found_replacement = True
+                if not found_replacement:
+                    var_str += "{} .= {}\n".format(julia_var, symbol_line)
 
             # otherwise assign
             else:
@@ -356,14 +390,20 @@ def get_julia_function(symbol, funcname="f"):
     # close the constants and cache string
     const_and_cache_str += ")\n"
 
+    # remove the constant and cache sring if it is empty
+    const_and_cache_str = const_and_cache_str.replace("const cs=(\n)\n", "")
+
     # add function def and sparse arrays to first line
     imports = "begin\nusing SparseArrays, LinearAlgebra\n\n"
-    julia_str = (
-        imports
-        + const_and_cache_str
-        + f"\nfunction {funcname}_with_consts(dy, y, p, t, c)\n"
-        + var_str
-    )
+    if const_and_cache_str == "":
+        julia_str = imports + f"\nfunction {funcname}(dy, y, p, t)\n" + var_str
+    else:
+        julia_str = (
+            imports
+            + const_and_cache_str
+            + f"\nfunction {funcname}_with_consts(dy, y, p, t, c)\n"
+            + var_str
+        )
 
     # calculate the final variable that will output the result
     result_var = id_to_julia_variable(symbol.id, symbol.is_constant())
@@ -379,9 +419,13 @@ def get_julia_function(symbol, funcname="f"):
     # close the function
     julia_str += "end\n\n"
     julia_str = julia_str.replace("\n   end", "\nend")
+    julia_str = julia_str.replace("\n   \n", "\n")
 
     # Return the function with the cached variables passed in
-    julia_str += f"{funcname}(dy, y, p, t) = {funcname}_with_consts(dy, y, p, t, cs)\n"
+    if const_and_cache_str != "":
+        julia_str += (
+            f"{funcname}(dy, y, p, t) = {funcname}_with_consts(dy, y, p, t, cs)\n"
+        )
 
     # close the "begin"
     julia_str += "end"

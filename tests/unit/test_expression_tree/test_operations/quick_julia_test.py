@@ -20,7 +20,7 @@ from julia import Main
 a = pybamm.StateVector(slice(0, 3))
 b = pybamm.StateVector(slice(3, 6))
 
-y_tests = np.array([[2], [3], [4]])
+y_tests = np.array([[2], [3], [4], [5], [6], [7]])
 t_tests = 1
 
 # test a * b
@@ -29,17 +29,19 @@ t_tests = 1
 # print(evaluator_str)
 
 # test something with a matrix multiplication
-A = pybamm.Matrix([[1, 2, 3], [3, 4, 5], [6, 7, 8]])
-B = pybamm.Matrix([[11, 12, 13], [13, 14, 15], [16, 17, 18]])
-C = pybamm.Vector([[21], [22], [23]])
-expr = A @ (B @ pybamm.StateVector(slice(0, 3)) + C)
+# A = pybamm.Matrix([[1, 2, 3], [3, 4, 5], [6, 7, 8]])
+# B = pybamm.Matrix([[11, 12, 13], [13, 14, 15], [16, 17, 18]])
+# C = pybamm.Vector([[21], [22], [23]])
+# expr = A @ (B @ (C * (C + pybamm.StateVector(slice(0, 3)))) + C)
+expr = pybamm.NumpyConcatenation(a, b)
 evaluator_str = pybamm.get_julia_function(expr)
 print(evaluator_str)
 Main.eval(evaluator_str)
-Main.dy = [0, 0, 0]
-Main.y = [2, 3, 4]
+Main.dy = [0, 0, 0, 0, 0, 0]
+Main.y = [2, 3, 4, 5, 6, 7]
 print(Main.eval("f(dy,y,0,0)"))
 print(Main.dy)
+print(expr.evaluate(y=Main.y))
 # # test something with a heaviside
 # a = pybamm.Vector([1, 2])
 # expr = a <= pybamm.StateVector(slice(0, 2))

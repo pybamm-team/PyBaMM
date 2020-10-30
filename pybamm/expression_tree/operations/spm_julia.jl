@@ -1,5 +1,14 @@
 using BenchmarkTools, OrdinaryDiffEq, Sundials, SparseArrays, LinearAlgebra
-using BenchmarkTools, LinearAlgebra
+
+function f(dy, y)
+    dy .= @view y[1] .* y[2]
+end
+y = [2.0,3.0]
+dy = [0.0]
+f(dy,y)
+dy
+
+(@view y[1]) .* (@view y[2])
 
 A = rand(100, 100)
 B = rand(100, 100)
