@@ -5,7 +5,7 @@ Name [units],Value,Reference,Notes
 Positive electrode conductivity [S.m-1],10,Ai 2020,lithium cobalt oxide
 Maximum concentration in positive electrode [mol.m-3],49943,Ai 2020,
 Positive electrode diffusivity [m2.s-1],[function]lico2_diffusivity_Dualfoil1998,,
-Positive electrode OCP [V],[function]lico2_ocp_Ai2020_function,,
+Positive electrode OCP [V],[data]lico2_ocp_Ai2020,,
 ,,,
 # Microstructure,,,
 Positive electrode porosity,0.32,Ai 2020,electrolyte volume fraction

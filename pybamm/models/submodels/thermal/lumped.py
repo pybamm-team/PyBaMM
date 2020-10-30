@@ -119,10 +119,10 @@ class Lumped(BaseThermal):
             T_vol_av: (
                 self.param.B * Q_vol_av
                 + total_cooling_coefficient * (T_vol_av - T_amb)
-                + emissivity_coefficient
+                + emissivity_coefficient * 0
                 * (
-                    (T_vol_av * self.param.Delta_T + self.param.T_ref) ** 4
-                    - (T_amb * self.param.Delta_T + self.param.T_ref) ** 4
+                    (T_vol_av + self.param.T_ref / self.param.Delta_T) ** 4
+                    - (T_amb + self.param.T_ref / self.param.Delta_T) ** 4
                 )
             )
             / (self.param.C_th * self.param.rho)

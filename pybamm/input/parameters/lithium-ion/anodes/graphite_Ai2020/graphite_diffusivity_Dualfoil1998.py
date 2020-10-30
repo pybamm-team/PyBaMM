@@ -20,7 +20,7 @@ def graphite_diffusivity_Dualfoil1998(sto, T):
     sto: :class:`pybamm.Symbol`
         Electrode stochiometry
     T: :class:`pybamm.Symbol`
-        Dimensional temperature
+        Dimensional temperature, [K]
 
     Returns
     -------

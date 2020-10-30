@@ -20,7 +20,6 @@ def dlnf_dlnc_Ai2020(c_e, T, T_ref=298.3, t_plus=0.38):
     t_plus: :class:`pybamm.Symbol`
         Dimensionaless transfer number
 
-
     Returns
     -------
     :class:`pybamm.Symbol`
