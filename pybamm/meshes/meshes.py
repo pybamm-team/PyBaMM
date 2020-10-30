@@ -96,7 +96,7 @@ class Mesh(dict):
                         if isinstance(sym, pybamm.Symbol):
                             try:
                                 sym_eval = sym.evaluate()
-                            except NotImplementedError as e:
+                            except NotImplementedError as error:
                                 if sym.has_symbol_of_classes(pybamm.Parameter):
                                     raise pybamm.DiscretisationError(
                                         "Parameter values have not yet been set for "
@@ -105,7 +105,7 @@ class Mesh(dict):
                                         "run."
                                     )
                                 else:
-                                    raise e
+                                    raise error
                         elif isinstance(sym, numbers.Number):
                             sym_eval = sym
                         geometry[domain][spatial_variable][lim] = sym_eval

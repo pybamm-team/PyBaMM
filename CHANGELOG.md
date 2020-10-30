@@ -9,7 +9,10 @@
 
 ## Optimizations
 
--   Only instantiate the geometric, electrical and thermal parameter classes once
+-   Avoid unnecessary repeated computations in the solvers ([#1222](https://github.com/pybamm-team/PyBaMM/pull/1222))
+-   Rewrite `Symbol.is_constant` to be more efficient ([#1222](https://github.com/pybamm-team/PyBaMM/pull/1222))
+-   Cache shape and size calculations ([#1222](https://github.com/pybamm-team/PyBaMM/pull/1222))
+-   Only instantiate the geometric, electrical and thermal parameter classes once ([#1222](https://github.com/pybamm-team/PyBaMM/pull/1222))
 
 ## Bug fixes
 
