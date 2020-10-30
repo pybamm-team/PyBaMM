@@ -87,6 +87,10 @@ class UnaryOperator(pybamm.Symbol):
         """ See :meth:`pybamm.Symbol.evaluates_on_edges()`. """
         return self.child.evaluates_on_edges(dimension)
 
+    def is_constant(self):
+        """ See :meth:`pybamm.Symbol.is_constant()`. """
+        return self.child.is_constant()
+
 
 class Negate(UnaryOperator):
     """A node in the expression tree representing a `-` negation operator

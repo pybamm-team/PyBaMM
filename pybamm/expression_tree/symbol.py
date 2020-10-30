@@ -602,24 +602,15 @@ class Symbol(anytree.NodeMixin):
 
     def is_constant(self):
         """returns true if evaluating the expression is not dependent on `t` or `y`
-        or `u`
+        or `inputs`
 
         See Also
         --------
         evaluate : evaluate the expression
 
         """
-        # if any of the nodes are instances of any of these types, then the whole
-        # expression depends on either t or y or u
-        search_types = (
-            pybamm.Variable,
-            pybamm.StateVector,
-            pybamm.Time,
-            pybamm.InputParameter,
-        )
-
-        # do the search, return true if no relevent nodes are found
-        return not self.has_symbol_of_classes(search_types)
+        # Default behaviour is False
+        return False
 
     def evaluate_ignoring_errors(self, t=0):
         """
