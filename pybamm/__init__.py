@@ -164,9 +164,12 @@ from .geometry import standard_spatial_vars
 #
 from .parameters.parameter_values import ParameterValues
 from .parameters import constants
-from .parameters.geometric_parameters import GeometricParameters
-from .parameters.electrical_parameters import ElectricalParameters
-from .parameters.thermal_parameters import ThermalParameters
+from .parameters.geometric_parameters import geometric_parameters, GeometricParameters
+from .parameters.electrical_parameters import (
+    electrical_parameters,
+    ElectricalParameters,
+)
+from .parameters.thermal_parameters import thermal_parameters, ThermalParameters
 from .parameters.lithium_ion_parameters import LithiumIonParameters
 from .parameters.lead_acid_parameters import LeadAcidParameters
 from .parameters import parameter_sets

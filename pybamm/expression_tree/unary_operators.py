@@ -1147,14 +1147,14 @@ def x_average(symbol):
         if a.id == b.id == c.id:
             return a
         else:
-            geo = pybamm.GeometricParameters()
+            geo = pybamm.geometric_parameters
             l_n = geo.l_n
             l_s = geo.l_s
             l_p = geo.l_p
             return (l_n * a + l_s * b + l_p * c) / (l_n + l_s + l_p)
     # Otherwise, use Integral to calculate average value
     else:
-        geo = pybamm.GeometricParameters()
+        geo = pybamm.geometric_parameters
         if symbol.domain == ["negative electrode"]:
             x = pybamm.standard_spatial_vars.x_n
             l = geo.l_n
@@ -1214,7 +1214,7 @@ def z_average(symbol):
         return symbol.orphans[0]
     # Otherwise, use Integral to calculate average value
     else:
-        geo = pybamm.GeometricParameters()
+        geo = pybamm.geometric_parameters
         z = pybamm.standard_spatial_vars.z
         l_z = geo.l_z
         return Integral(symbol, z) / l_z
@@ -1251,7 +1251,7 @@ def yz_average(symbol):
         return symbol.orphans[0]
     # Otherwise, use Integral to calculate average value
     else:
-        geo = pybamm.GeometricParameters()
+        geo = pybamm.geometric_parameters
         y = pybamm.standard_spatial_vars.y
         z = pybamm.standard_spatial_vars.z
         l_y = geo.l_y

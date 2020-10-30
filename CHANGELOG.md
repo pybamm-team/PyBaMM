@@ -9,6 +9,7 @@
 
 ## Optimizations
 
+-   Only instantiate the geometric, electrical and thermal parameter classes once
 
 ## Bug fixes
 

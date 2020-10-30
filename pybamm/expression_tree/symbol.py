@@ -297,8 +297,8 @@ class Symbol(anytree.NodeMixin):
             pybamm.logger.error("Please install graphviz>=2.42.2 to use dot exporter")
 
     def relabel_tree(self, symbol, counter):
-        """ Finds all children of a symbol and assigns them a new id so that they can be
-                visualised properly using the graphviz output
+        """Finds all children of a symbol and assigns them a new id so that they can be
+        visualised properly using the graphviz output
         """
         name = symbol.name
         if name == "div":
