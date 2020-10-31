@@ -36,6 +36,10 @@ class InputParameter(pybamm.Symbol):
         "Specify the size that the input parameter should be"
         self._expected_size = size
 
+        # We also need to update the saved size and shape
+        self._saved_size = size
+        self._saved_shape = (size, 1)
+
     def _evaluate_for_shape(self):
         """
         Returns the scalar 'NaN' to represent the shape of a parameter.
