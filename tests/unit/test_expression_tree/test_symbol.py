@@ -150,6 +150,14 @@ class TestSymbol(unittest.TestCase):
         # Change setting back for other tests
         pybamm.settings.heaviside_smoothing = "exact"
 
+    def test_smooth_absolute_value(self):
+        # Test that smooth absolute value is used when the setting is changed
+        a = pybamm.Symbol("a")
+        pybamm.settings.abs_smoothing = 10
+        self.assertEqual(str(abs(a)), str(pybamm.smooth_absolute_value(a, 10)))
+        # Change setting back for other tests
+        pybamm.settings.abs_smoothing = "exact"
+
     def test_multiple_symbols(self):
         a = pybamm.Symbol("a")
         b = pybamm.Symbol("b")

@@ -1347,3 +1347,14 @@ def boundary_value(symbol, side):
 def sign(symbol):
     " Returns a :class:`Sign` object. "
     return Sign(symbol)
+
+
+def smooth_absolute_value(symbol, k):
+    """
+    Smooth approximation to the absolute value function. k is the smoothing parameter,
+    set by `pybamm.settings.abs_smoothing`. The recommended value is k=10.
+    """
+    x = symbol
+    exp = pybamm.exp
+    kx = k * symbol
+    return x * (exp(kx) - exp(-kx)) / (exp(kx) + exp(-kx))

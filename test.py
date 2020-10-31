@@ -45,24 +45,40 @@ import pybamm
 #     # return (v2 - v1) * pybamm.tanh(k * (x - switch)) / 2 + (v1 + v2) / 2
 
 
-def softplus(left, right, k):
-    return pybamm.log(pybamm.exp(k * left) + pybamm.exp(k * right)) / k
+def softabs2(child, k):
+    return pybamm.softplus(0, child, k) + pybamm.softplus(-child, 0, k)
+
+
+def softabs(child, k):
+    # return pybamm.softplus(0, child, k) + pybamm.softplus(-child, 0, k)
+    x = child
+    exp = pybamm.exp
+    kx = k * x
+    return x * (exp(kx) - exp(-kx)) / (exp(kx) + exp(-kx))
+    # return pybamm.sqrt(child ** 2 + 1 / k ** 2)
 
 
 def rhs_exact(x):
-    return pybamm.minimum(x, 1)
+    return abs(x - 1) + 1
 
 
 def rhs_smooth(x, k):
-    return pybamm.softminus(x, 1, k)
+    return pybamm.smooth_absolute_value(x - 1, k) + 1
+
+
+def rhs_smooth2(x, k):
+    return softabs2(x - 1, k) + 1
 
 
 pts = pybamm.linspace(0, 2, 100)
 
 plt.plot(pts.evaluate(), rhs_exact(pts).evaluate())
-plt.plot(pts.evaluate(), rhs_smooth(pts, 1).evaluate(), ":")
 plt.plot(pts.evaluate(), rhs_smooth(pts, 10).evaluate(), ":")
-plt.plot(pts.evaluate(), rhs_smooth(pts, 100).evaluate(), ":")
+plt.plot(pts.evaluate(), rhs_smooth(pts, 20).evaluate(), ":")
+plt.plot(pts.evaluate(), rhs_smooth(pts, 30).evaluate(), ":")
+plt.plot(pts.evaluate(), rhs_smooth2(pts, 10).evaluate(), "--")
+plt.plot(pts.evaluate(), rhs_smooth2(pts, 20).evaluate(), "--")
+plt.plot(pts.evaluate(), rhs_smooth2(pts, 30).evaluate(), "--")
 plt.show()
 
 

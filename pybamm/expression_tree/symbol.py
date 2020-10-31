@@ -481,10 +481,13 @@ class Symbol(anytree.NodeMixin):
         return pybamm.simplify_if_constant(pybamm.Negate(self), keep_domains=True)
 
     def __abs__(self):
-        """return an :class:`AbsoluteValue` object"""
-        return pybamm.simplify_if_constant(
-            pybamm.AbsoluteValue(self), keep_domains=True
-        )
+        """return an :class:`AbsoluteValue` object, or a smooth approximation"""
+        k = pybamm.settings.abs_smoothing
+        if k == "exact":
+            out = pybamm.AbsoluteValue(self)
+        else:
+            out = pybamm.smooth_absolute_value(self, k)
+        return pybamm.simplify_if_constant(out, keep_domains=True)
 
     def __mod__(self, other):
         """return an :class:`Modulo` object"""

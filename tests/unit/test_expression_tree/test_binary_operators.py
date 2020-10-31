@@ -306,17 +306,17 @@ class TestBinaryOperators(unittest.TestCase):
     def test_sigmoid(self):
         a = pybamm.Scalar(1)
         b = pybamm.StateVector(slice(0, 1))
-        heav = pybamm.sigmoid(a, b, 10)
-        self.assertAlmostEqual(heav.evaluate(y=np.array([2]))[0, 0], 1)
-        self.assertEqual(heav.evaluate(y=np.array([1])), 0.5)
-        self.assertAlmostEqual(heav.evaluate(y=np.array([0]))[0, 0], 0)
-        self.assertEqual(str(heav), "1.0 + tanh(10.0 * y[0:1] - 1.0) / 2.0")
+        sigm = pybamm.sigmoid(a, b, 10)
+        self.assertAlmostEqual(sigm.evaluate(y=np.array([2]))[0, 0], 1)
+        self.assertEqual(sigm.evaluate(y=np.array([1])), 0.5)
+        self.assertAlmostEqual(sigm.evaluate(y=np.array([0]))[0, 0], 0)
+        self.assertEqual(str(sigm), "1.0 + tanh(10.0 * y[0:1] - 1.0) / 2.0")
 
-        heav = pybamm.sigmoid(b, a, 10)
-        self.assertAlmostEqual(heav.evaluate(y=np.array([2]))[0, 0], 0)
-        self.assertEqual(heav.evaluate(y=np.array([1])), 0.5)
-        self.assertAlmostEqual(heav.evaluate(y=np.array([0]))[0, 0], 1)
-        self.assertEqual(str(heav), "1.0 + tanh(10.0 * 1.0 - y[0:1]) / 2.0")
+        sigm = pybamm.sigmoid(b, a, 10)
+        self.assertAlmostEqual(sigm.evaluate(y=np.array([2]))[0, 0], 0)
+        self.assertEqual(sigm.evaluate(y=np.array([1])), 0.5)
+        self.assertAlmostEqual(sigm.evaluate(y=np.array([0]))[0, 0], 1)
+        self.assertEqual(str(sigm), "1.0 + tanh(10.0 * 1.0 - y[0:1]) / 2.0")
 
     def test_modulo(self):
         a = pybamm.StateVector(slice(0, 1))
