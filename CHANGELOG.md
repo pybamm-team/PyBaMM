@@ -9,6 +9,7 @@
 
 ## Optimizations
 
+-   Add (optional) smooth approximations for the `minimum`, `maximum`, and `Heaviside` operators ([#1223](https://github.com/pybamm-team/PyBaMM/pull/1223))
 -   Avoid unnecessary repeated computations in the solvers ([#1222](https://github.com/pybamm-team/PyBaMM/pull/1222))
 -   Rewrite `Symbol.is_constant` to be more efficient ([#1222](https://github.com/pybamm-team/PyBaMM/pull/1222))
 -   Cache shape and size calculations ([#1222](https://github.com/pybamm-team/PyBaMM/pull/1222))

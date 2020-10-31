@@ -883,6 +883,7 @@ def smooth_heaviside(left, right, k):
     Sigmoidal approximation to the heaviside function. k is the smoothing parameter,
     set by `pybamm.settings.min_max_heaviside_smoothing_parameter`. The recommended
     value is k=10.
+    Note that "equality" does not apply for this smooth approximation.
     """
     return (1 + pybamm.tanh(k * (right - left))) / 2
 
