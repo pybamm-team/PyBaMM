@@ -45,25 +45,27 @@ import pybamm
 #     # return (v2 - v1) * pybamm.tanh(k * (x - switch)) / 2 + (v1 + v2) / 2
 
 
-# pts = pybamm.linspace(0, 2, 100)
-# plt.plot(pts.evaluate(), rhs_exact(pts).evaluate())
-# plt.plot(pts.evaluate(), rhs_smooth(pts, 10).evaluate())
-# plt.show()
-
-
-def smooth_heaviside(left, right, k):
-    return (1 + pybamm.tanh(k * (right - left))) / 2
+def smooth_maximum(left, right, k):
+    return (left * pybamm.exp(k * left) + right * pybamm.exp(k * right)) / (
+        pybamm.exp(k * left) + pybamm.exp(k * right)
+    )
 
 
 def rhs_exact(x):
-    return (x <= 1) * x + (x > 1) * (2 * x - 1)
+    return pybamm.maximum(x, 1)
 
 
 def rhs_smooth(x, k):
-    return pybamm.smooth_heaviside(x, 1, k) * x + pybamm.smooth_heaviside(1, x, k) * (
-        2 * x - 1
-    )
-    # return (v2 - v1) * pybamm.tanh(k * (x - switch)) / 2 + (v1 + v2) / 2
+    return pybamm.smooth_maximum(x, 1, k)
+
+
+pts = pybamm.linspace(0, 2, 100)
+
+plt.plot(pts.evaluate(), rhs_exact(pts).evaluate())
+plt.plot(pts.evaluate(), rhs_smooth(pts, 1).evaluate(), ":")
+plt.plot(pts.evaluate(), rhs_smooth(pts, 10).evaluate(), ":")
+plt.plot(pts.evaluate(), rhs_smooth(pts, 100).evaluate(), ":")
+plt.show()
 
 
 x = pybamm.Variable("x")
