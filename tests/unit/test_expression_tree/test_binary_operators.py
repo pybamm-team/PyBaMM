@@ -303,6 +303,21 @@ class TestBinaryOperators(unittest.TestCase):
         self.assertEqual(heav.evaluate(y=np.array([0])), 1)
         self.assertEqual(str(heav), "y[0:1] <= 1.0")
 
+    def test_smooth_heaviside(self):
+        a = pybamm.Scalar(1)
+        b = pybamm.StateVector(slice(0, 1))
+        heav = pybamm.smooth_heaviside(a, b, 10)
+        self.assertAlmostEqual(heav.evaluate(y=np.array([2]))[0, 0], 1)
+        self.assertEqual(heav.evaluate(y=np.array([1])), 0.5)
+        self.assertAlmostEqual(heav.evaluate(y=np.array([0]))[0, 0], 0)
+        self.assertEqual(str(heav), "1.0 + function (tanh) / 2.0")
+
+        heav = pybamm.smooth_heaviside(b, a, 10)
+        self.assertAlmostEqual(heav.evaluate(y=np.array([2]))[0, 0], 0)
+        self.assertEqual(heav.evaluate(y=np.array([1])), 0.5)
+        self.assertAlmostEqual(heav.evaluate(y=np.array([0]))[0, 0], 1)
+        self.assertEqual(str(heav), "1.0 + function (tanh) / 2.0")
+
     def test_modulo(self):
         a = pybamm.StateVector(slice(0, 1))
         b = pybamm.Scalar(3)

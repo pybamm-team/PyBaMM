@@ -846,6 +846,15 @@ def maximum(left, right):
     return pybamm.simplify_if_constant(Maximum(left, right), keep_domains=True)
 
 
+def smooth_heaviside(left, right, k):
+    """
+    Sigmoidal approximation to the heaviside function. k is the smoothing parameter,
+    set by `pybamm.settings.min_max_heaviside_smoothing_parameter`. The recommended
+    value is k=10.
+    """
+    return (1 + pybamm.tanh(k * (right - left))) / 2
+
+
 def source(left, right, boundary=False):
     """A convinience function for creating (part of) an expression tree representing
     a source term. This is necessary for spatial methods where the mass matrix
