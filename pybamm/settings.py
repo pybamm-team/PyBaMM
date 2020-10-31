@@ -5,6 +5,7 @@
 
 class Settings(object):
     _debug_mode = False
+    min_max_heaviside_smoothing_parameter = "exact"
 
     @property
     def debug_mode(self):

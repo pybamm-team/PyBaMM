@@ -441,28 +441,40 @@ class Symbol(anytree.NodeMixin):
         return pybamm.simplify_if_constant(pybamm.Power(other, self), keep_domains=True)
 
     def __lt__(self, other):
-        """return a :class:`NotEqualHeaviside` object"""
-        return pybamm.simplify_if_constant(
-            pybamm.NotEqualHeaviside(self, other), keep_domains=True
-        )
+        """return a :class:`NotEqualHeaviside` object, or a smooth approximation"""
+        k = pybamm.settings.min_max_heaviside_smoothing_parameter
+        if k == "exact":
+            out = pybamm.NotEqualHeaviside(self, other)
+        else:
+            out = pybamm.smooth_heaviside(self, other, k)
+        return pybamm.simplify_if_constant(out, keep_domains=True)
 
     def __le__(self, other):
-        """return a :class:`EqualHeaviside` object"""
-        return pybamm.simplify_if_constant(
-            pybamm.EqualHeaviside(self, other), keep_domains=True
-        )
+        """return a :class:`EqualHeaviside` object, or a smooth approximation"""
+        k = pybamm.settings.min_max_heaviside_smoothing_parameter
+        if k == "exact":
+            out = pybamm.EqualHeaviside(self, other)
+        else:
+            out = pybamm.smooth_heaviside(self, other, k)
+        return pybamm.simplify_if_constant(out, keep_domains=True)
 
     def __gt__(self, other):
-        """return a :class:`NotEqualHeaviside` object"""
-        return pybamm.simplify_if_constant(
-            pybamm.NotEqualHeaviside(other, self), keep_domains=True
-        )
+        """return a :class:`NotEqualHeaviside` object, or a smooth approximation"""
+        k = pybamm.settings.min_max_heaviside_smoothing_parameter
+        if k == "exact":
+            out = pybamm.NotEqualHeaviside(other, self)
+        else:
+            out = pybamm.smooth_heaviside(other, self, k)
+        return pybamm.simplify_if_constant(out, keep_domains=True)
 
     def __ge__(self, other):
-        """return a :class:`EqualHeaviside` object"""
-        return pybamm.simplify_if_constant(
-            pybamm.EqualHeaviside(other, self), keep_domains=True
-        )
+        """return a :class:`EqualHeaviside` object, or a smooth approximation"""
+        k = pybamm.settings.min_max_heaviside_smoothing_parameter
+        if k == "exact":
+            out = pybamm.EqualHeaviside(other, self)
+        else:
+            out = pybamm.smooth_heaviside(other, self, k)
+        return pybamm.simplify_if_constant(out, keep_domains=True)
 
     def __neg__(self):
         """return a :class:`Negate` object"""
