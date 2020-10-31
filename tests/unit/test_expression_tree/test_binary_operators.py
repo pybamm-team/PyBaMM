@@ -303,16 +303,16 @@ class TestBinaryOperators(unittest.TestCase):
         self.assertEqual(heav.evaluate(y=np.array([0])), 1)
         self.assertEqual(str(heav), "y[0:1] <= 1.0")
 
-    def test_smooth_heaviside(self):
+    def test_sigmoid(self):
         a = pybamm.Scalar(1)
         b = pybamm.StateVector(slice(0, 1))
-        heav = pybamm.smooth_heaviside(a, b, 10)
+        heav = pybamm.sigmoid(a, b, 10)
         self.assertAlmostEqual(heav.evaluate(y=np.array([2]))[0, 0], 1)
         self.assertEqual(heav.evaluate(y=np.array([1])), 0.5)
         self.assertAlmostEqual(heav.evaluate(y=np.array([0]))[0, 0], 0)
         self.assertEqual(str(heav), "1.0 + tanh(10.0 * y[0:1] - 1.0) / 2.0")
 
-        heav = pybamm.smooth_heaviside(b, a, 10)
+        heav = pybamm.sigmoid(b, a, 10)
         self.assertAlmostEqual(heav.evaluate(y=np.array([2]))[0, 0], 0)
         self.assertEqual(heav.evaluate(y=np.array([1])), 0.5)
         self.assertAlmostEqual(heav.evaluate(y=np.array([0]))[0, 0], 1)
@@ -344,38 +344,36 @@ class TestBinaryOperators(unittest.TestCase):
         self.assertEqual(maximum.evaluate(y=np.array([0])), 1)
         self.assertEqual(str(maximum), "maximum(1.0, y[0:1])")
 
-    def test_smooth_minimum_maximum(self):
+    def test_softminus_softplus(self):
         a = pybamm.Scalar(1)
         b = pybamm.StateVector(slice(0, 1))
 
-        minimum = pybamm.smooth_minimum(a, b, 50)
+        minimum = pybamm.softminus(a, b, 50)
         self.assertAlmostEqual(minimum.evaluate(y=np.array([2]))[0, 0], 1)
-        self.assertEqual(minimum.evaluate(y=np.array([1])), 1)
         self.assertAlmostEqual(minimum.evaluate(y=np.array([0]))[0, 0], 0)
         self.assertEqual(
             str(minimum),
-            "1.9287498479639178e-22 + y[0:1] * exp(-50.0 * y[0:1]) "
-            "/ 1.9287498479639178e-22 + exp(-50.0 * y[0:1])",
+            "log(1.9287498479639178e-22 + exp(-50.0 * y[0:1])) / -50.0",
         )
 
-        maximum = pybamm.smooth_maximum(a, b, 50)
+        maximum = pybamm.softplus(a, b, 50)
         self.assertAlmostEqual(maximum.evaluate(y=np.array([2]))[0, 0], 2)
-        self.assertEqual(maximum.evaluate(y=np.array([1])), 1)
         self.assertAlmostEqual(maximum.evaluate(y=np.array([0]))[0, 0], 1)
         self.assertEqual(
             str(maximum),
-            "5.184705528587072e+21 + y[0:1] * exp(50.0 * y[0:1]) "
-            "/ 5.184705528587072e+21 + exp(50.0 * y[0:1])",
+            "log(5.184705528587072e+21 + exp(50.0 * y[0:1])) / 50.0",
         )
 
         # Test that smooth min/max are used when the setting is changed
-        pybamm.settings.min_max_heaviside_smoothing_parameter = 10
+        pybamm.settings.min_smoothing = 10
+        pybamm.settings.max_smoothing = 10
 
-        self.assertEqual(pybamm.minimum(a, b).id, pybamm.smooth_minimum(a, b, 10).id)
-        self.assertEqual(pybamm.maximum(a, b).id, pybamm.smooth_maximum(a, b, 10).id)
+        self.assertEqual(str(pybamm.minimum(a, b)), str(pybamm.softminus(a, b, 10)))
+        self.assertEqual(str(pybamm.maximum(a, b)), str(pybamm.softplus(a, b, 10)))
 
         # Change setting back for other tests
-        pybamm.settings.min_max_heaviside_smoothing_parameter = "exact"
+        pybamm.settings.min_smoothing = "exact"
+        pybamm.settings.max_smoothing = "exact"
 
 
 class TestIsZero(unittest.TestCase):

@@ -835,11 +835,11 @@ def minimum(left, right):
     Returns the smaller of two objects, possibly with a smoothing approximation.
     Not to be confused with :meth:`pybamm.min`, which returns min function of child.
     """
-    k = pybamm.settings.min_max_heaviside_smoothing_parameter
+    k = pybamm.settings.min_smoothing
     if k == "exact":
         out = Minimum(left, right)
     else:
-        out = pybamm.smooth_minimum(left, right, k)
+        out = pybamm.softminus(left, right, k)
     return pybamm.simplify_if_constant(out, keep_domains=True)
 
 
@@ -848,42 +848,36 @@ def maximum(left, right):
     Returns the larger of two objects, possibly with a smoothing approximation.
     Not to be confused with :meth:`pybamm.max`, which returns max function of child.
     """
-    k = pybamm.settings.min_max_heaviside_smoothing_parameter
+    k = pybamm.settings.max_smoothing
     if k == "exact":
         out = Maximum(left, right)
     else:
-        out = pybamm.smooth_maximum(left, right, k)
+        out = pybamm.softplus(left, right, k)
     return pybamm.simplify_if_constant(out, keep_domains=True)
 
 
-def smooth_minimum(left, right, k):
+def softminus(left, right, k):
     """
-    Smooth approximation to the minimum function. k is the smoothing parameter,
-    set by `pybamm.settings.min_max_heaviside_smoothing_parameter`. The recommended
-    value is k=10.
+    Softplus approximation to the minimum function. k is the smoothing parameter,
+    set by `pybamm.settings.min_smoothing`. The recommended value is k=10.
     """
-    return (left * pybamm.exp(-k * left) + right * pybamm.exp(-k * right)) / (
-        pybamm.exp(-k * left) + pybamm.exp(-k * right)
-    )
+    return pybamm.log(pybamm.exp(-k * left) + pybamm.exp(-k * right)) / -k
 
 
-def smooth_maximum(left, right, k):
+def softplus(left, right, k):
     """
-    Smooth approximation to the maximum function. k is the smoothing parameter,
-    set by `pybamm.settings.min_max_heaviside_smoothing_parameter`. The recommended
-    value is k=10.
+    Softplus approximation to the maximum function. k is the smoothing parameter,
+    set by `pybamm.settings.max_smoothing`. The recommended value is k=10.
     """
-    return (left * pybamm.exp(k * left) + right * pybamm.exp(k * right)) / (
-        pybamm.exp(k * left) + pybamm.exp(k * right)
-    )
+    return pybamm.log(pybamm.exp(k * left) + pybamm.exp(k * right)) / k
 
 
-def smooth_heaviside(left, right, k):
+def sigmoid(left, right, k):
     """
     Sigmoidal approximation to the heaviside function. k is the smoothing parameter,
-    set by `pybamm.settings.min_max_heaviside_smoothing_parameter`. The recommended
-    value is k=10.
-    Note that "equality" does not apply for this smooth approximation.
+    set by `pybamm.settings.heaviside_smoothing`. The recommended value is k=10.
+    Note that the concept of deciding which side to pick when left=right does not apply
+    for this smooth approximation. When left=right, the value is (left+right)/2.
     """
     return (1 + pybamm.tanh(k * (right - left))) / 2
 

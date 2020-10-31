@@ -442,38 +442,38 @@ class Symbol(anytree.NodeMixin):
 
     def __lt__(self, other):
         """return a :class:`NotEqualHeaviside` object, or a smooth approximation"""
-        k = pybamm.settings.min_max_heaviside_smoothing_parameter
+        k = pybamm.settings.heaviside_smoothing
         if k == "exact":
             out = pybamm.NotEqualHeaviside(self, other)
         else:
-            out = pybamm.smooth_heaviside(self, other, k)
+            out = pybamm.sigmoid(self, other, k)
         return pybamm.simplify_if_constant(out, keep_domains=True)
 
     def __le__(self, other):
         """return a :class:`EqualHeaviside` object, or a smooth approximation"""
-        k = pybamm.settings.min_max_heaviside_smoothing_parameter
+        k = pybamm.settings.heaviside_smoothing
         if k == "exact":
             out = pybamm.EqualHeaviside(self, other)
         else:
-            out = pybamm.smooth_heaviside(self, other, k)
+            out = pybamm.sigmoid(self, other, k)
         return pybamm.simplify_if_constant(out, keep_domains=True)
 
     def __gt__(self, other):
         """return a :class:`NotEqualHeaviside` object, or a smooth approximation"""
-        k = pybamm.settings.min_max_heaviside_smoothing_parameter
+        k = pybamm.settings.heaviside_smoothing
         if k == "exact":
             out = pybamm.NotEqualHeaviside(other, self)
         else:
-            out = pybamm.smooth_heaviside(other, self, k)
+            out = pybamm.sigmoid(other, self, k)
         return pybamm.simplify_if_constant(out, keep_domains=True)
 
     def __ge__(self, other):
         """return a :class:`EqualHeaviside` object, or a smooth approximation"""
-        k = pybamm.settings.min_max_heaviside_smoothing_parameter
+        k = pybamm.settings.heaviside_smoothing
         if k == "exact":
             out = pybamm.EqualHeaviside(other, self)
         else:
-            out = pybamm.smooth_heaviside(other, self, k)
+            out = pybamm.sigmoid(other, self, k)
         return pybamm.simplify_if_constant(out, keep_domains=True)
 
     def __neg__(self):

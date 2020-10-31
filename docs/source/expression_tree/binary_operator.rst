@@ -47,10 +47,10 @@ Binary Operators
 
 .. autofunction:: pybamm.maximum
 
-.. autofunction:: pybamm.smooth_minimum
+.. autofunction:: pybamm.softminus
 
-.. autofunction:: pybamm.smooth_maximum
+.. autofunction:: pybamm.softplus
 
-.. autofunction:: pybamm.smooth_heaviside
+.. autofunction:: pybamm.sigmoid
 
 .. autofunction:: pybamm.source

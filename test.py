@@ -41,22 +41,20 @@ import pybamm
 
 
 # def rhs_smooth(x, k):
-#     return smooth_heaviside(x, switch, k) * v1 + smooth_heaviside(switch, x, k) * v2
+#     return sigmoid(x, switch, k) * v1 + sigmoid(switch, x, k) * v2
 #     # return (v2 - v1) * pybamm.tanh(k * (x - switch)) / 2 + (v1 + v2) / 2
 
 
-def smooth_maximum(left, right, k):
-    return (left * pybamm.exp(k * left) + right * pybamm.exp(k * right)) / (
-        pybamm.exp(k * left) + pybamm.exp(k * right)
-    )
+def softplus(left, right, k):
+    return pybamm.log(pybamm.exp(k * left) + pybamm.exp(k * right)) / k
 
 
 def rhs_exact(x):
-    return pybamm.maximum(x, 1)
+    return pybamm.minimum(x, 1)
 
 
 def rhs_smooth(x, k):
-    return pybamm.smooth_maximum(x, 1, k)
+    return pybamm.softminus(x, 1, k)
 
 
 pts = pybamm.linspace(0, 2, 100)
@@ -84,13 +82,13 @@ model_smooth.variables = {"x": x, "rhs": rhs_smooth(x, k)}
 
 pybamm.set_logging_level("INFO")
 # solver = pybamm.ScikitsDaeSolver()
-solver = pybamm.CasadiSolver(extra_options_setup={"print_stats": True})
+solver = pybamm.CasadiSolver(mode="safe", extra_options_setup={"print_stats": True})
 print("Exact-------------------------")
 sols = [solver.solve(model_exact, [0, 2])]
 for k in [1, 10, 50]:
     print(f"Smooth, k={k}-------------------------")
     # solver = pybamm.ScikitsDaeSolver()
-    solver = pybamm.CasadiSolver(extra_options_setup={"print_stats": True})
+    solver = pybamm.CasadiSolver(mode="safe", extra_options_setup={"print_stats": True})
     sol = solver.solve(model_smooth, [0, 2], inputs={"k": k})
     sols.append(sol)
 

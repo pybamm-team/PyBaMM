@@ -135,20 +135,20 @@ class TestSymbol(unittest.TestCase):
         ):
             a + "two"
 
-    def test_smooth_heaviside(self):
+    def test_sigmoid(self):
         # Test that smooth heaviside is used when the setting is changed
         a = pybamm.Symbol("a")
         b = pybamm.Symbol("b")
 
-        pybamm.settings.min_max_heaviside_smoothing_parameter = 10
+        pybamm.settings.heaviside_smoothing = 10
 
-        self.assertEqual((a < b).id, pybamm.smooth_heaviside(a, b, 10).id)
-        self.assertEqual((a <= b).id, pybamm.smooth_heaviside(a, b, 10).id)
-        self.assertEqual((a > b).id, pybamm.smooth_heaviside(b, a, 10).id)
-        self.assertEqual((a >= b).id, pybamm.smooth_heaviside(b, a, 10).id)
+        self.assertEqual(str(a < b), str(pybamm.sigmoid(a, b, 10)))
+        self.assertEqual(str(a <= b), str(pybamm.sigmoid(a, b, 10)))
+        self.assertEqual(str(a > b), str(pybamm.sigmoid(b, a, 10)))
+        self.assertEqual(str(a >= b), str(pybamm.sigmoid(b, a, 10)))
 
         # Change setting back for other tests
-        pybamm.settings.min_max_heaviside_smoothing_parameter = "exact"
+        pybamm.settings.heaviside_smoothing = "exact"
 
     def test_multiple_symbols(self):
         a = pybamm.Symbol("a")
