@@ -147,7 +147,7 @@ class TestSymbol(unittest.TestCase):
         self.assertEqual((a > b).id, pybamm.smooth_heaviside(b, a, 10).id)
         self.assertEqual((a >= b).id, pybamm.smooth_heaviside(b, a, 10).id)
 
-        # Revert setting back for other tests
+        # Change setting back for other tests
         pybamm.settings.min_max_heaviside_smoothing_parameter = "exact"
 
     def test_multiple_symbols(self):
