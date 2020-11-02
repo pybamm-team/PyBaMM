@@ -1,6 +1,11 @@
 #!/bin/bash
 set -e -x
 
+# GitHub runners add "-e LD_LIBRARY_PATH" option to "docker run",
+# overriding default value of LD_LIBRARY_PATH in manylinux image. This
+# causes libcrypt.so.2 to be missing (it lives in /usr/local/lib)
+export LD_LIBRARY_PATH=/usr/local/lib:$LD_LIBRARY_PATH
+
 # CLI arguments
 PY_VERSIONS=$1
 

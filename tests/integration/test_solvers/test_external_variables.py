@@ -3,6 +3,7 @@
 #
 import pybamm
 import numpy as np
+import os
 import unittest
 
 
@@ -49,6 +50,9 @@ class TestExternalVariables(unittest.TestCase):
         inputs = external_variables
         sim.built_model.variables[var].evaluate(t, y, inputs=inputs)
         sim.solution[var](t)
+        # test generate with external variable
+        sim.built_model.generate("test.c", ["Volume-averaged cell temperature"])
+        os.remove("test.c")
 
 
 if __name__ == "__main__":

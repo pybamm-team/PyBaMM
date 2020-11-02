@@ -36,9 +36,9 @@ class LithiumIonParameters:
         self.options = options
 
         # Get geometric, electrical and thermal parameters
-        self.geo = pybamm.GeometricParameters()
-        self.elec = pybamm.ElectricalParameters()
-        self.therm = pybamm.ThermalParameters()
+        self.geo = pybamm.geometric_parameters
+        self.elec = pybamm.electrical_parameters
+        self.therm = pybamm.thermal_parameters
 
         # Set parameters and scales
         self._set_dimensional_parameters()

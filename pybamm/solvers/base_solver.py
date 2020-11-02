@@ -165,14 +165,12 @@ class BaseSolver(object):
         inputs = inputs or {}
 
         # Set model timescale
-        try:
-            model.timescale_eval = model.timescale.evaluate()
-        except KeyError as e:
-            raise pybamm.SolverError(
-                "The model timescale is a function of an input parameter "
-                "(original error: {})".format(e)
-            )
-
+        model.timescale_eval = model.timescale.evaluate(inputs=inputs)
+        # Set model lengthscales
+        model.length_scales_eval = {
+            domain: scale.evaluate(inputs=inputs)
+            for domain, scale in model.length_scales.items()
+        }
         if (
             isinstance(self, (pybamm.CasadiSolver, pybamm.CasadiAlgebraicSolver))
         ) and model.convert_to_format != "casadi":
@@ -565,16 +563,13 @@ class BaseSolver(object):
         # Set up (if not done already)
         if model not in self.models_set_up:
             self.set_up(model, ext_and_inputs, t_eval)
-            set_up_time = timer.time()
             self.models_set_up.update(
                 {model: {"initial conditions": model.concatenated_initial_conditions}}
             )
         else:
             ics_set_up = self.models_set_up[model]["initial conditions"]
             # Check that initial conditions have not been updated
-            if ics_set_up.id == model.concatenated_initial_conditions.id:
-                set_up_time = 0
-            else:
+            if ics_set_up.id != model.concatenated_initial_conditions.id:
                 # If the new initial conditions are different, set up again
                 # Doing the whole setup again might be slow, but no need to prematurely
                 # optimize this
@@ -582,7 +577,7 @@ class BaseSolver(object):
                 self.models_set_up[model][
                     "initial conditions"
                 ] = model.concatenated_initial_conditions
-                set_up_time = timer.time()
+        set_up_time = timer.time()
 
         # (Re-)calculate consistent initial conditions
         self._set_initial_conditions(model, ext_and_inputs, update_rhs=True)
@@ -687,6 +682,10 @@ class BaseSolver(object):
         solution.model = model
         solution.inputs = ext_and_inputs
 
+        # Copy the timescale_eval and lengthscale_evals
+        solution.timescale_eval = model.timescale_eval
+        solution.length_scales_eval = model.length_scales_eval
+
         # Identify the event that caused termination
         termination = self.get_termination_reason(solution, model.events)
 
@@ -775,6 +774,28 @@ class BaseSolver(object):
         inputs = inputs or {}
         ext_and_inputs = {**external_variables, **inputs}
 
+        # Check that any inputs that may affect the scaling have not changed
+        # Set model timescale
+        temp_timescale_eval = model.timescale.evaluate(inputs=inputs)
+        # Set model lengthscales
+        temp_length_scales_eval = {
+            domain: scale.evaluate(inputs=inputs)
+            for domain, scale in model.length_scales.items()
+        }
+        if old_solution is not None:
+            if temp_timescale_eval != old_solution.timescale_eval:
+                raise pybamm.SolverError(
+                    "The model timescale is a function of an input parameter "
+                    "and the value has changed between steps!"
+                )
+            for domain in temp_length_scales_eval.keys():
+                old_dom_eval = old_solution.length_scales_eval[domain]
+                if temp_length_scales_eval[domain] != old_dom_eval:
+                    pybamm.logger.error(
+                        "The {} domain lengthscale is a function of an input "
+                        "parameter and the value has changed between "
+                        "steps!".format(domain)
+                    )
         # Run set up on first step
         if old_solution is None:
             pybamm.logger.info(
@@ -782,12 +803,11 @@ class BaseSolver(object):
             )
             self.set_up(model, ext_and_inputs)
             t = 0.0
-            set_up_time = timer.time()
         else:
             # initialize with old solution
             t = old_solution.t[-1]
             model.y0 = old_solution.y[:, -1]
-            set_up_time = 0
+        set_up_time = timer.time()
 
         # (Re-)calculate consistent initial conditions
         self._set_initial_conditions(model, ext_and_inputs, update_rhs=False)
@@ -808,6 +828,10 @@ class BaseSolver(object):
         # Add model and inputs to solution
         solution.model = model
         solution.inputs = ext_and_inputs
+
+        # Copy the timescale_eval and lengthscale_evals
+        solution.timescale_eval = temp_timescale_eval
+        solution.length_scales_eval = temp_length_scales_eval
 
         # Identify the event that caused termination
         termination = self.get_termination_reason(solution, model.events)

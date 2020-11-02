@@ -17,7 +17,7 @@ class TestBatteryGeometry(unittest.TestCase):
 
     def test_geometry(self):
         var = pybamm.standard_spatial_vars
-        geo = pybamm.GeometricParameters()
+        geo = pybamm.geometric_parameters
         for cc_dimension in [0, 1, 2]:
             geometry = pybamm.battery_geometry(current_collector_dimension=cc_dimension)
             self.assertIsInstance(geometry, pybamm.Geometry)
@@ -42,7 +42,7 @@ class TestReadParameters(unittest.TestCase):
     # This is the most complicated geometry and should test the parameters are
     # all returned for the deepest dict
     def test_read_parameters(self):
-        geo = pybamm.GeometricParameters()
+        geo = pybamm.geometric_parameters
         L_n = geo.L_n
         L_s = geo.L_s
         L_p = geo.L_p

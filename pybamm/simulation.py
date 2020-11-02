@@ -369,7 +369,10 @@ class Simulation:
                         "list [t0, tf] where t0 is the initial time and tf is the "
                         "final time. "
                         "For a constant current (dis)charge the suggested 't_eval'  "
-                        "is [0, 3700/C] where C is the C-rate."
+                        "is [0, 3700/C] where C is the C-rate. "
+                        "For example, run\n\n"
+                        "\tsim.solve([0, 3700])\n\n"
+                        "for a 1C discharge."
                     )
 
             elif self.operating_mode == "drive cycle":
