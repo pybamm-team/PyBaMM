@@ -185,7 +185,10 @@ class TestSymbol(unittest.TestCase):
         self.assertFalse(a.is_constant())
 
         a = pybamm.Parameter("a")
-        self.assertFalse(a.is_constant())
+        self.assertTrue(a.is_constant())
+
+        a = pybamm.Scalar(1) * pybamm.Parameter("a")
+        self.assertTrue(a.is_constant())
 
         a = pybamm.Scalar(1) * pybamm.Variable("a")
         self.assertFalse(a.is_constant())
