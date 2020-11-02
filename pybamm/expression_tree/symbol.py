@@ -299,7 +299,7 @@ class Symbol(anytree.NodeMixin):
             DotExporter(
                 new_node, nodeattrfunc=lambda node: 'label="{}"'.format(node.label)
             ).to_picture(filename)
-        except FileNotFoundError:
+        except FileNotFoundError:  # pragma: no cover
             # raise error but only through logger so that test passes
             pybamm.logger.error("Please install graphviz>=2.42.2 to use dot exporter")
 
@@ -772,14 +772,11 @@ class Symbol(anytree.NodeMixin):
             except ValueError:
                 unpacker = pybamm.SymbolUnpacker(pybamm.StateVector)
                 state_vectors_in_node = unpacker.unpack_symbol(self).values()
-                if state_vectors_in_node == []:
-                    y = None
-                else:
-                    min_y_size = max(
-                        len(x._evaluation_array) for x in state_vectors_in_node
-                    )
-                    # Pick a y that won't cause RuntimeWarnings
-                    y = np.nan * np.ones((min_y_size, 1))
+                min_y_size = max(
+                    max(len(x._evaluation_array) for x in state_vectors_in_node), 1
+                )
+                # Pick a y that won't cause RuntimeWarnings
+                y = np.nan * np.ones((min_y_size, 1))
                 evaluated_self = self.evaluate(0, y, y, inputs="shape test")
 
             # Return shape of evaluated object

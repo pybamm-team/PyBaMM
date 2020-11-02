@@ -159,6 +159,7 @@ class CasadiAlgebraicSolver(pybamm.BaseSolver):
                 ):
                     # update initial guess for the next iteration
                     y0_alg = y_alg_sol
+                    y0 = casadi.vertcat(y0_diff, y0_alg)
                     # update solution array
                     if y_alg is None:
                         y_alg = y_alg_sol
