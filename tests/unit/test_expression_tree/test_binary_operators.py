@@ -144,6 +144,8 @@ class TestBinaryOperators(unittest.TestCase):
         self.assertEqual((a / a).diff(b).evaluate(y=y), 0)
 
     def test_printing(self):
+        # This in not an exhaustive list of all cases. More test cases may need to
+        # be added for specific combinations of binary operators
         a = pybamm.Symbol("a")
         b = pybamm.Symbol("b")
         c = pybamm.Symbol("c")
@@ -151,11 +153,17 @@ class TestBinaryOperators(unittest.TestCase):
         self.assertEqual(str(a + b), "a + b")
         self.assertEqual(str(a + b + c + d), "a + b + c + d")
         self.assertEqual(str((a + b) + (c + d)), "a + b + c + d")
+        self.assertEqual(str(a + b - c), "a + b - c")
+        self.assertEqual(str(a + b - c + d), "a + b - c + d")
+        self.assertEqual(str((a + b) - (c + d)), "a + b - (c + d)")
+        self.assertEqual(str((a + b) - (c - d)), "a + b - (c - d)")
+
         self.assertEqual(str((a + b) * (c + d)), "(a + b) * (c + d)")
         self.assertEqual(str(a * b * (c + d)), "a * b * (c + d)")
         self.assertEqual(str((a * b) * (c + d)), "a * b * (c + d)")
         self.assertEqual(str(a * (b * (c + d))), "a * b * (c + d)")
         self.assertEqual(str((a + b) / (c + d)), "(a + b) / (c + d)")
+        self.assertEqual(str(a + b / (c + d)), "a + b / (c + d)")
         self.assertEqual(str(a * b / (c + d)), "a * b / (c + d)")
         self.assertEqual(str((a * b) / (c + d)), "a * b / (c + d)")
         self.assertEqual(str(a * (b / (c + d))), "a * b / (c + d)")
@@ -380,6 +388,12 @@ class TestBinaryOperators(unittest.TestCase):
 
         self.assertEqual(str(pybamm.minimum(a, b)), str(pybamm.softminus(a, b, 10)))
         self.assertEqual(str(pybamm.maximum(a, b)), str(pybamm.softplus(a, b, 10)))
+
+        # But exact min/max should still be used if both variables are constant
+        a = pybamm.Scalar(1)
+        b = pybamm.Parameter("b")
+        self.assertEqual(str(pybamm.minimum(a, b)), str(pybamm.Minimum(a, b)))
+        self.assertEqual(str(pybamm.maximum(a, b)), str(pybamm.Maximum(a, b)))
 
         # Change setting back for other tests
         pybamm.settings.min_smoothing = "exact"

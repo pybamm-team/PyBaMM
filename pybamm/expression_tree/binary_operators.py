@@ -142,14 +142,14 @@ class BinaryOperator(pybamm.Symbol):
         if isinstance(self.left, pybamm.BinaryOperator) and not (
             (self.left.name == self.name)
             or (self.left.name == "*" and self.name == "/")
+            or (self.left.name == "+" and self.name == "-")
+            or self.name == "+"
         ):
             left_str = "({!s})".format(self.left)
         else:
             left_str = "{!s}".format(self.left)
         if isinstance(self.right, pybamm.BinaryOperator) and not (
-            (self.name == "*" and self.right.name == "*")
-            or (self.name == "+" and self.right.name == "+")
-            or (self.name == "*" and self.right.name == "/")
+            (self.name == "*" and self.right.name in ["*", "/"]) or self.name == "+"
         ):
             right_str = "({!s})".format(self.right)
         else:
@@ -852,7 +852,9 @@ def minimum(left, right):
     Not to be confused with :meth:`pybamm.min`, which returns min function of child.
     """
     k = pybamm.settings.min_smoothing
-    if k == "exact":
+    # Return exact approximation if that is the setting or the outcome is a constant
+    # (i.e. no need for smoothing)
+    if k == "exact" or (left.is_constant() and right.is_constant()):
         out = Minimum(left, right)
     else:
         out = pybamm.softminus(left, right, k)
@@ -865,7 +867,9 @@ def maximum(left, right):
     Not to be confused with :meth:`pybamm.max`, which returns max function of child.
     """
     k = pybamm.settings.max_smoothing
-    if k == "exact":
+    # Return exact approximation if that is the setting or the outcome is a constant
+    # (i.e. no need for smoothing)
+    if k == "exact" or (left.is_constant() and right.is_constant()):
         out = Maximum(left, right)
     else:
         out = pybamm.softplus(left, right, k)
