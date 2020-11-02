@@ -299,7 +299,7 @@ class Symbol(anytree.NodeMixin):
             DotExporter(
                 new_node, nodeattrfunc=lambda node: 'label="{}"'.format(node.label)
             ).to_picture(filename)
-        except FileNotFoundError:
+        except FileNotFoundError:  # pragma: no cover
             # raise error but only through logger so that test passes
             pybamm.logger.error("Please install graphviz>=2.42.2 to use dot exporter")
 
@@ -442,38 +442,46 @@ class Symbol(anytree.NodeMixin):
 
     def __lt__(self, other):
         """return a :class:`NotEqualHeaviside` object, or a smooth approximation"""
-        k = pybamm.settings.min_max_heaviside_smoothing_parameter
-        if k == "exact":
+        k = pybamm.settings.heaviside_smoothing
+        # Return exact approximation if that is the setting or the outcome is a constant
+        # (i.e. no need for smoothing)
+        if k == "exact" or (self.is_constant() and other.is_constant()):
             out = pybamm.NotEqualHeaviside(self, other)
         else:
-            out = pybamm.smooth_heaviside(self, other, k)
+            out = pybamm.sigmoid(self, other, k)
         return pybamm.simplify_if_constant(out, keep_domains=True)
 
     def __le__(self, other):
         """return a :class:`EqualHeaviside` object, or a smooth approximation"""
-        k = pybamm.settings.min_max_heaviside_smoothing_parameter
-        if k == "exact":
+        k = pybamm.settings.heaviside_smoothing
+        # Return exact approximation if that is the setting or the outcome is a constant
+        # (i.e. no need for smoothing)
+        if k == "exact" or (self.is_constant() and other.is_constant()):
             out = pybamm.EqualHeaviside(self, other)
         else:
-            out = pybamm.smooth_heaviside(self, other, k)
+            out = pybamm.sigmoid(self, other, k)
         return pybamm.simplify_if_constant(out, keep_domains=True)
 
     def __gt__(self, other):
         """return a :class:`NotEqualHeaviside` object, or a smooth approximation"""
-        k = pybamm.settings.min_max_heaviside_smoothing_parameter
-        if k == "exact":
+        k = pybamm.settings.heaviside_smoothing
+        # Return exact approximation if that is the setting or the outcome is a constant
+        # (i.e. no need for smoothing)
+        if k == "exact" or (self.is_constant() and other.is_constant()):
             out = pybamm.NotEqualHeaviside(other, self)
         else:
-            out = pybamm.smooth_heaviside(other, self, k)
+            out = pybamm.sigmoid(other, self, k)
         return pybamm.simplify_if_constant(out, keep_domains=True)
 
     def __ge__(self, other):
         """return a :class:`EqualHeaviside` object, or a smooth approximation"""
-        k = pybamm.settings.min_max_heaviside_smoothing_parameter
-        if k == "exact":
+        k = pybamm.settings.heaviside_smoothing
+        # Return exact approximation if that is the setting or the outcome is a constant
+        # (i.e. no need for smoothing)
+        if k == "exact" or (self.is_constant() and other.is_constant()):
             out = pybamm.EqualHeaviside(other, self)
         else:
-            out = pybamm.smooth_heaviside(other, self, k)
+            out = pybamm.sigmoid(other, self, k)
         return pybamm.simplify_if_constant(out, keep_domains=True)
 
     def __neg__(self):
@@ -481,10 +489,15 @@ class Symbol(anytree.NodeMixin):
         return pybamm.simplify_if_constant(pybamm.Negate(self), keep_domains=True)
 
     def __abs__(self):
-        """return an :class:`AbsoluteValue` object"""
-        return pybamm.simplify_if_constant(
-            pybamm.AbsoluteValue(self), keep_domains=True
-        )
+        """return an :class:`AbsoluteValue` object, or a smooth approximation"""
+        k = pybamm.settings.abs_smoothing
+        # Return exact approximation if that is the setting or the outcome is a constant
+        # (i.e. no need for smoothing)
+        if k == "exact" or self.is_constant():
+            out = pybamm.AbsoluteValue(self)
+        else:
+            out = pybamm.smooth_absolute_value(self, k)
+        return pybamm.simplify_if_constant(out, keep_domains=True)
 
     def __mod__(self, other):
         """return an :class:`Modulo` object"""
@@ -765,14 +778,11 @@ class Symbol(anytree.NodeMixin):
             except ValueError:
                 unpacker = pybamm.SymbolUnpacker(pybamm.StateVector)
                 state_vectors_in_node = unpacker.unpack_symbol(self).values()
-                if state_vectors_in_node == []:
-                    y = None
-                else:
-                    min_y_size = max(
-                        len(x._evaluation_array) for x in state_vectors_in_node
-                    )
-                    # Pick a y that won't cause RuntimeWarnings
-                    y = np.nan * np.ones((min_y_size, 1))
+                min_y_size = max(
+                    max(len(x._evaluation_array) for x in state_vectors_in_node), 1
+                )
+                # Pick a y that won't cause RuntimeWarnings
+                y = np.nan * np.ones((min_y_size, 1))
                 evaluated_self = self.evaluate(0, y, y, inputs="shape test")
 
             # Return shape of evaluated object

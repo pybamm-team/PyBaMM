@@ -39,6 +39,18 @@ class TestUnaryOperators(unittest.TestCase):
         absb = pybamm.AbsoluteValue(b)
         self.assertEqual(absb.evaluate(), 4)
 
+    def test_smooth_absolute_value(self):
+        a = pybamm.StateVector(slice(0, 1))
+        expr = pybamm.smooth_absolute_value(a, 10)
+        self.assertAlmostEqual(expr.evaluate(y=np.array([1]))[0, 0], 1)
+        self.assertEqual(expr.evaluate(y=np.array([0])), 0)
+        self.assertAlmostEqual(expr.evaluate(y=np.array([-1]))[0, 0], 1)
+        self.assertEqual(
+            str(expr),
+            "y[0:1] * exp(10.0 * y[0:1]) - exp(-10.0 * y[0:1]) "
+            "/ exp(10.0 * y[0:1]) + exp(-10.0 * y[0:1])",
+        )
+
     def test_sign(self):
         b = pybamm.Scalar(-4)
         signb = pybamm.sign(b)

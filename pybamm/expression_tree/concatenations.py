@@ -34,6 +34,14 @@ class Concatenation(pybamm.Symbol):
             name, children, domain=domain, auxiliary_domains=auxiliary_domains
         )
 
+    def __str__(self):
+        """ See :meth:`pybamm.Symbol.__str__()`. """
+        out = self.name + "("
+        for child in self.children:
+            out += "{!s}, ".format(child)
+        out = out[:-2] + ")"
+        return out
+
     def get_children_domains(self, children):
         # combine domains from children
         domain = []
@@ -134,7 +142,7 @@ class NumpyConcatenation(Concatenation):
                 children[i] = child * pybamm.Vector([1])
         super().__init__(
             *children,
-            name="numpy concatenation",
+            name="numpy_concatenation",
             check_domain=False,
             concat_fun=np.concatenate
         )
@@ -193,7 +201,7 @@ class DomainConcatenation(Concatenation):
         children = list(children)
 
         # Allow the base class to sort the domains into the correct order
-        super().__init__(*children, name="domain concatenation")
+        super().__init__(*children, name="domain_concatenation")
 
         # ensure domain is sorted according to mesh keys
         domain_dict = {d: full_mesh.domain_order.index(d) for d in self.domain}
@@ -353,5 +361,5 @@ class SparseStack(Concatenation):
     def __init__(self, *children):
         children = list(children)
         super().__init__(
-            *children, name="sparse stack", check_domain=False, concat_fun=vstack
+            *children, name="sparse_stack", check_domain=False, concat_fun=vstack
         )

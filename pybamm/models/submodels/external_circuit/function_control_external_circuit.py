@@ -18,7 +18,7 @@ class FunctionControl(BaseModel):
         i_cell = pybamm.Variable("Total current density")
 
         # Update derived variables
-        I = i_cell * abs(param.I_typ)
+        I = i_cell * pybamm.AbsoluteValue(param.I_typ)
         i_cell_dim = I / (param.n_electrodes_parallel * param.A_cc)
 
         variables = {
