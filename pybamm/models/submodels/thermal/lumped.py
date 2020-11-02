@@ -100,7 +100,7 @@ class Lumped(BaseThermal):
                 / cell_volume
                 / (self.param.delta ** 2)
             )
-            
+
         self.rhs = {
             T_vol_av: (
                 self.param.B * Q_vol_av + total_cooling_coefficient * (T_vol_av - T_amb)

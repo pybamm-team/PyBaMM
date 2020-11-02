@@ -628,7 +628,7 @@ class LithiumIonParameters:
         self.T_init = self.therm.T_init
         self.c_e_init = self.c_e_init_dimensional / self.c_e_typ
 
-    def chi(self, c_e, T = 0):
+    def chi(self, c_e, T=0):
         """
         Thermodynamic factor:
             (1-2*t_plus) is for Nernst-Planck,
