@@ -107,6 +107,32 @@ class TestMesh(unittest.TestCase):
         with self.assertRaisesRegex(KeyError, "Points not given"):
             pybamm.Mesh(geometry, submesh_types, var_pts)
 
+        # Not processing geometry parameters
+        geometry = pybamm.battery_geometry()
+
+        var = pybamm.standard_spatial_vars
+        var_pts = {var.x_n: 10, var.x_s: 10, var.x_p: 12, var.r_n: 5, var.r_p: 6}
+
+        submesh_types = {
+            "negative electrode": pybamm.MeshGenerator(pybamm.Uniform1DSubMesh),
+            "separator": pybamm.MeshGenerator(pybamm.Uniform1DSubMesh),
+            "positive electrode": pybamm.MeshGenerator(pybamm.Uniform1DSubMesh),
+            "negative particle": pybamm.MeshGenerator(pybamm.Uniform1DSubMesh),
+            "positive particle": pybamm.MeshGenerator(pybamm.Uniform1DSubMesh),
+            "current collector": pybamm.MeshGenerator(pybamm.SubMesh0D),
+        }
+
+        with self.assertRaisesRegex(pybamm.DiscretisationError, "Parameter values"):
+            pybamm.Mesh(geometry, submesh_types, var_pts)
+
+        # Geometry has an unrecognized variable type
+        var = pybamm.standard_spatial_vars
+        geometry["negative electrode"] = {
+            var.x_n: {"min": 0, "max": pybamm.Variable("var")}
+        }
+        with self.assertRaisesRegex(NotImplementedError, "for symbol var"):
+            pybamm.Mesh(geometry, submesh_types, var_pts)
+
     def test_mesh_sizes(self):
         param = pybamm.ParameterValues(
             values={
