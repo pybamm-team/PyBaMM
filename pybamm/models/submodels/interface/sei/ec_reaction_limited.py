@@ -93,7 +93,8 @@ class EcReactionLimited(BaseModel):
                 + self.domain.lower()
                 + " electrode interfacial current density"
             ]
-        except KeyError:
+        except KeyError as e:
+            print(e)
             j = variables[
                 "X-averaged "
                 + self.domain.lower()

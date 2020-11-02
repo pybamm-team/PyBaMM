@@ -143,12 +143,22 @@ class TestBinaryOperators(unittest.TestCase):
         self.assertEqual((a / a).diff(a).evaluate(y=y), 0)
         self.assertEqual((a / a).diff(b).evaluate(y=y), 0)
 
-    def test_addition_printing(self):
+    def test_printing(self):
         a = pybamm.Symbol("a")
         b = pybamm.Symbol("b")
-        summ = pybamm.Addition(a, b)
-        self.assertEqual(summ.name, "+")
-        self.assertEqual(str(summ), "a + b")
+        c = pybamm.Symbol("c")
+        d = pybamm.Symbol("d")
+        self.assertEqual(str(a + b), "a + b")
+        self.assertEqual(str(a + b + c + d), "a + b + c + d")
+        self.assertEqual(str((a + b) + (c + d)), "a + b + c + d")
+        self.assertEqual(str((a + b) * (c + d)), "(a + b) * (c + d)")
+        self.assertEqual(str(a * b * (c + d)), "a * b * (c + d)")
+        self.assertEqual(str((a * b) * (c + d)), "a * b * (c + d)")
+        self.assertEqual(str(a * (b * (c + d))), "a * b * (c + d)")
+        self.assertEqual(str((a + b) / (c + d)), "(a + b) / (c + d)")
+        self.assertEqual(str(a * b / (c + d)), "a * b / (c + d)")
+        self.assertEqual(str((a * b) / (c + d)), "a * b / (c + d)")
+        self.assertEqual(str(a * (b / (c + d))), "a * b / (c + d)")
 
     def test_id(self):
         a = pybamm.Scalar(4)
@@ -310,13 +320,13 @@ class TestBinaryOperators(unittest.TestCase):
         self.assertAlmostEqual(sigm.evaluate(y=np.array([2]))[0, 0], 1)
         self.assertEqual(sigm.evaluate(y=np.array([1])), 0.5)
         self.assertAlmostEqual(sigm.evaluate(y=np.array([0]))[0, 0], 0)
-        self.assertEqual(str(sigm), "1.0 + tanh(10.0 * y[0:1] - 1.0) / 2.0")
+        self.assertEqual(str(sigm), "(1.0 + tanh(10.0 * (y[0:1] - 1.0))) / 2.0")
 
         sigm = pybamm.sigmoid(b, a, 10)
         self.assertAlmostEqual(sigm.evaluate(y=np.array([2]))[0, 0], 0)
         self.assertEqual(sigm.evaluate(y=np.array([1])), 0.5)
         self.assertAlmostEqual(sigm.evaluate(y=np.array([0]))[0, 0], 1)
-        self.assertEqual(str(sigm), "1.0 + tanh(10.0 * 1.0 - y[0:1]) / 2.0")
+        self.assertEqual(str(sigm), "(1.0 + tanh(10.0 * (1.0 - y[0:1]))) / 2.0")
 
     def test_modulo(self):
         a = pybamm.StateVector(slice(0, 1))

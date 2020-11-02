@@ -138,7 +138,23 @@ class BinaryOperator(pybamm.Symbol):
 
     def __str__(self):
         """ See :meth:`pybamm.Symbol.__str__()`. """
-        return "{!s} {} {!s}".format(self.left, self.name, self.right)
+        # Possibly add brackets for clarity
+        if isinstance(self.left, pybamm.BinaryOperator) and not (
+            (self.left.name == self.name)
+            or (self.left.name == "*" and self.name == "/")
+        ):
+            left_str = "({!s})".format(self.left)
+        else:
+            left_str = "{!s}".format(self.left)
+        if isinstance(self.right, pybamm.BinaryOperator) and not (
+            (self.name == "*" and self.right.name == "*")
+            or (self.name == "+" and self.right.name == "+")
+            or (self.name == "*" and self.right.name == "/")
+        ):
+            right_str = "({!s})".format(self.right)
+        else:
+            right_str = "{!s}".format(self.right)
+        return "{} {} {}".format(left_str, self.name, right_str)
 
     def get_children_domains(self, ldomain, rdomain):
         "Combine domains from children in appropriate way"

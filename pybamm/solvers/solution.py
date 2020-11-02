@@ -53,12 +53,14 @@ class _BaseSolution(object):
             self._model = pybamm.BaseModel()
             self.set_up_time = None
             self.solve_time = None
+            self.integration_time = None
             self.has_symbolic_inputs = False
         else:
             self._inputs = copy.copy(copy_this.inputs)
             self._model = copy_this.model
             self.set_up_time = copy_this.set_up_time
             self.solve_time = copy_this.solve_time
+            self.integration_time = copy_this.integration_time
             self.has_symbolic_inputs = copy_this.has_symbolic_inputs
 
         # initiaize empty variables and data
@@ -396,6 +398,7 @@ class Solution(_BaseSolution):
             self.inputs[name] = np.c_[inp, solution_inp[:, start_index:]]
         # Update solution time
         self.solve_time += solution.solve_time
+        self.integration_time += solution.integration_time
         # Update termination
         self._termination = solution.termination
         self._t_event = solution._t_event
