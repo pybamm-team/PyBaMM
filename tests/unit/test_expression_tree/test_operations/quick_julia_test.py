@@ -33,7 +33,7 @@ t_tests = 1
 # B = pybamm.Matrix([[11, 12, 13], [13, 14, 15], [16, 17, 18]])
 # C = pybamm.Vector([[21], [22], [23]])
 # expr = A @ (B @ (C * (C + pybamm.StateVector(slice(0, 3)))) + C)
-expr = pybamm.NumpyConcatenation(a, b)
+expr = pybamm.Vector([1, 2, 3, 4, 5, 6]) * pybamm.NumpyConcatenation(a, b)
 evaluator_str = pybamm.get_julia_function(expr)
 print(evaluator_str)
 Main.eval(evaluator_str)

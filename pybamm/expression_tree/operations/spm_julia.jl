@@ -281,3 +281,24 @@ solve(prob, CVODE_BDF(), reltol=1e-8, abstol=1e-8, saveat=0.15 / 100);
 # Profile.clear()
 rand(10)
 @btime rand(10);
+
+hh = let es = (x1 = [1,2,3,4,5], x2 = 1)
+    function g_inner(dy, y, p, t, c)
+        dy .= c.x1 .* y
+    end
+    g(dy, y, p, t) = g_inner(dy, y, p, t, es)
+end
+u0 = [1,1,1,1,1]
+tspan = (0, 1)
+prob = ODEProblem(hh, u0, tspan)
+@btime solve(prob, KenCarp47(autodiff=false), reltol=1e-6, abstol=1e-6, saveat=0.1);
+
+function aaa()
+    return 2
+end
+bbb = aaa
+bbb = let xxx = 2
+    xxx^2
+end
+xxx
+bbb()
