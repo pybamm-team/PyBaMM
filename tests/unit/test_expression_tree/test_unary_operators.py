@@ -16,6 +16,9 @@ class TestUnaryOperators(unittest.TestCase):
         self.assertEqual(un.domain, a.domain)
 
         # with number
+        absval = pybamm.AbsoluteValue(-10)
+        self.assertEqual(absval.evaluate(), 10)
+
         log = pybamm.log(10)
         self.assertEqual(log.evaluate(), np.log(10))
 

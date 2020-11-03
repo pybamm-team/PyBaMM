@@ -19,8 +19,15 @@ class TestSettings(unittest.TestCase):
         self.assertEqual(pybamm.settings.abs_smoothing, 10)
         pybamm.settings.set_smoothing_parameters("exact")
 
+        # Test errors
         with self.assertRaisesRegex(ValueError, "strictly positive"):
-            pybamm.settings.set_smoothing_parameters(-10)
+            pybamm.settings.min_smoothing = -10
+        with self.assertRaisesRegex(ValueError, "strictly positive"):
+            pybamm.settings.max_smoothing = -10
+        with self.assertRaisesRegex(ValueError, "strictly positive"):
+            pybamm.settings.heaviside_smoothing = -10
+        with self.assertRaisesRegex(ValueError, "strictly positive"):
+            pybamm.settings.abs_smoothing = -10
 
 
 if __name__ == "__main__":

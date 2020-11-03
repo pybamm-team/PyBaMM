@@ -390,7 +390,7 @@ class TestBinaryOperators(unittest.TestCase):
         self.assertEqual(str(pybamm.maximum(a, b)), str(pybamm.softplus(a, b, 10)))
 
         # But exact min/max should still be used if both variables are constant
-        a = pybamm.Scalar(1)
+        a = 1
         b = pybamm.Parameter("b")
         self.assertEqual(str(pybamm.minimum(a, b)), str(pybamm.Minimum(a, b)))
         self.assertEqual(str(pybamm.maximum(a, b)), str(pybamm.Maximum(a, b)))
