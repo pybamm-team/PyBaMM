@@ -177,16 +177,17 @@ class TestEvaluate(unittest.TestCase):
             np.testing.assert_allclose(Main.dy, expr.evaluate(y=y).flatten())
 
         # test sparse stack
-        # A = pybamm.Matrix(scipy.sparse.csr_matrix(np.array([[1, 0], [0, 4]])))
-        # B = pybamm.Matrix(scipy.sparse.csr_matrix(np.array([[2, 0], [5, 0]])))
-        # expr = pybamm.SparseStack(A, B)
-        # evaluator_str = pybamm.get_julia_function(expr)
-        # Main.eval(evaluator_str)
-        # for y in y_tests:
-        #     Main.dy = [0.0, 0.0]
-        #     Main.y = y
-        #     Main.eval("f(dy,y,0,0)")
-        #     np.testing.assert_allclose(Main.dy, expr.evaluate(y=y).toarray())
+        A = pybamm.Matrix(scipy.sparse.csr_matrix(np.array([[1, 0], [0, 4]])))
+        B = pybamm.Matrix(scipy.sparse.csr_matrix(np.array([[2, 0], [5, 0]])))
+        c = pybamm.StateVector(slice(0, 2))
+        expr = pybamm.SparseStack(A, B) @ c
+        evaluator_str = pybamm.get_julia_function(expr)
+        Main.eval(evaluator_str)
+        for y in y_tests:
+            Main.dy = [0.0, 0.0, 0.0, 0.0]
+            Main.y = y
+            Main.eval("f(dy,y,0,0)")
+            np.testing.assert_allclose(Main.dy, expr.evaluate(y=y).flatten())
 
         # test Inner
         expr = pybamm.Inner(a, b)
@@ -198,42 +199,42 @@ class TestEvaluate(unittest.TestCase):
             Main.eval("f(dy,y,0,0)")
             np.testing.assert_allclose(Main.dy, expr.evaluate(y=y).flatten())
 
-    def test_evaluator_julia_all_functions(self):
-        a = pybamm.StateVector(slice(0, 3))
-        y_test = np.array([1, 2, 3])
+    # def test_evaluator_julia_all_functions(self):
+    #     a = pybamm.StateVector(slice(0, 3))
+    #     y_test = np.array([1, 2, 3])
 
-        for function in [
-            pybamm.arcsinh,
-            pybamm.cos,
-            pybamm.cosh,
-            pybamm.exp,
-            pybamm.log,
-            pybamm.log10,
-            pybamm.sin,
-            pybamm.sinh,
-            pybamm.sqrt,
-            pybamm.tanh,
-            pybamm.arctan,
-        ]:
-            expr = function(a)
-            evaluator_str = pybamm.get_julia_function(expr)
-            Main.eval(evaluator_str)
-            Main.dy = 0.0 * y_test
-            Main.y = y_test
-            Main.eval("f(dy,y,0,0)")
-            np.testing.assert_almost_equal(Main.dy, expr.evaluate(y=y_test).flatten())
+    #     for function in [
+    #         pybamm.arcsinh,
+    #         pybamm.cos,
+    #         pybamm.cosh,
+    #         pybamm.exp,
+    #         pybamm.log,
+    #         pybamm.log10,
+    #         pybamm.sin,
+    #         pybamm.sinh,
+    #         pybamm.sqrt,
+    #         pybamm.tanh,
+    #         pybamm.arctan,
+    #     ]:
+    #         expr = function(a)
+    #         evaluator_str = pybamm.get_julia_function(expr)
+    #         Main.eval(evaluator_str)
+    #         Main.dy = 0.0 * y_test
+    #         Main.y = y_test
+    #         Main.eval("f(dy,y,0,0)")
+    #         np.testing.assert_almost_equal(Main.dy, expr.evaluate(y=y_test).flatten())
 
-        for function in [
-            pybamm.min,
-            pybamm.max,
-        ]:
-            expr = function(a)
-            evaluator_str = pybamm.get_julia_function(expr)
-            Main.eval(evaluator_str)
-            Main.dy = [0.0]
-            Main.y = y_test
-            Main.eval("f(dy,y,0,0)")
-            np.testing.assert_almost_equal(Main.dy, expr.evaluate(y=y_test).flatten())
+    #     for function in [
+    #         pybamm.min,
+    #         pybamm.max,
+    #     ]:
+    #         expr = function(a)
+    #         evaluator_str = pybamm.get_julia_function(expr)
+    #         Main.eval(evaluator_str)
+    #         Main.dy = [0.0]
+    #         Main.y = y_test
+    #         Main.eval("f(dy,y,0,0)")
+    #         np.testing.assert_almost_equal(Main.dy, expr.evaluate(y=y_test).flatten())
 
     # def test_evaluator_julia_discretised_operators(self):
     #     whole_cell = ["negative electrode", "separator", "positive electrode"]
@@ -268,13 +269,15 @@ class TestEvaluate(unittest.TestCase):
     #     y_tests = [nodes ** 2 + 1, np.cos(nodes)]
 
     #     for expr in [grad_eqn_disc, div_eqn_disc]:
+    #         evaluator_str = pybamm.get_julia_function(expr)
+    #         print(evaluator_str)
+    #         Main.eval(evaluator_str)
     #         for y_test in y_tests:
-    #             evaluator_str = pybamm.get_julia_function(expr)
-    #             Main.eval(evaluator_str)
-    #             result = evaluator(None, y_test, None)
-    #             np.testing.assert_almost_equal(
-    #                 result, expr.evaluate(y=y_test).flatten()
-    #             )
+    #             pybamm_eval = expr.evaluate(y=y_test).flatten()
+    #             Main.dy = np.zeros_like(pybamm_eval)
+    #             Main.y = y_test
+    #             Main.eval("f(dy,y,0,0)")
+    #             np.testing.assert_almost_equal(Main.dy, pybamm_eval)
 
     # def test_evaluator_julia_discretised_microscale(self):
     #     # create discretisation
@@ -318,14 +321,16 @@ class TestEvaluate(unittest.TestCase):
     #     )
     #     y_tests = [np.linspace(0, 1, total_npts) ** 2]
 
-    #     for expr in [div_eqn_disc]:
+    #     for expr in [grad_eqn_disc, div_eqn_disc]:
+    #         evaluator_str = pybamm.get_julia_function(expr)
+    #         print(evaluator_str)
+    #         Main.eval(evaluator_str)
     #         for y_test in y_tests:
-    #             evaluator_str = pybamm.get_julia_function(expr)
-    #             Main.eval(evaluator_str)
-    #             result = evaluator(None, y_test, None)
-    #             np.testing.assert_almost_equal(
-    #                 result, expr.evaluate(y=y_test).flatten()
-    #             )
+    #             pybamm_eval = expr.evaluate(y=y_test).flatten()
+    #             Main.dy = np.zeros_like(pybamm_eval)
+    #             Main.y = y_test
+    #             Main.eval("f(dy,y,0,0)")
+    #             np.testing.assert_almost_equal(Main.dy, pybamm_eval)
 
 
 if __name__ == "__main__":
