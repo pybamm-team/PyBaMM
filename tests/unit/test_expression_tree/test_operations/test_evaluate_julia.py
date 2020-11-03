@@ -199,138 +199,136 @@ class TestEvaluate(unittest.TestCase):
             Main.eval("f(dy,y,0,0)")
             np.testing.assert_allclose(Main.dy, expr.evaluate(y=y).flatten())
 
-    # def test_evaluator_julia_all_functions(self):
-    #     a = pybamm.StateVector(slice(0, 3))
-    #     y_test = np.array([1, 2, 3])
+    def test_evaluator_julia_all_functions(self):
+        a = pybamm.StateVector(slice(0, 3))
+        y_test = np.array([1, 2, 3])
 
-    #     for function in [
-    #         pybamm.arcsinh,
-    #         pybamm.cos,
-    #         pybamm.cosh,
-    #         pybamm.exp,
-    #         pybamm.log,
-    #         pybamm.log10,
-    #         pybamm.sin,
-    #         pybamm.sinh,
-    #         pybamm.sqrt,
-    #         pybamm.tanh,
-    #         pybamm.arctan,
-    #     ]:
-    #         expr = function(a)
-    #         evaluator_str = pybamm.get_julia_function(expr)
-    #         Main.eval(evaluator_str)
-    #         Main.dy = 0.0 * y_test
-    #         Main.y = y_test
-    #         Main.eval("f(dy,y,0,0)")
-    #         np.testing.assert_almost_equal(Main.dy, expr.evaluate(y=y_test).flatten())
+        for function in [
+            pybamm.arcsinh,
+            pybamm.cos,
+            pybamm.cosh,
+            pybamm.exp,
+            pybamm.log,
+            pybamm.log10,
+            pybamm.sin,
+            pybamm.sinh,
+            pybamm.sqrt,
+            pybamm.tanh,
+            pybamm.arctan,
+        ]:
+            expr = function(a)
+            evaluator_str = pybamm.get_julia_function(expr)
+            Main.eval(evaluator_str)
+            Main.dy = 0.0 * y_test
+            Main.y = y_test
+            Main.eval("f(dy,y,0,0)")
+            np.testing.assert_almost_equal(Main.dy, expr.evaluate(y=y_test).flatten())
 
-    #     for function in [
-    #         pybamm.min,
-    #         pybamm.max,
-    #     ]:
-    #         expr = function(a)
-    #         evaluator_str = pybamm.get_julia_function(expr)
-    #         Main.eval(evaluator_str)
-    #         Main.dy = [0.0]
-    #         Main.y = y_test
-    #         Main.eval("f(dy,y,0,0)")
-    #         np.testing.assert_almost_equal(Main.dy, expr.evaluate(y=y_test).flatten())
+        for function in [
+            pybamm.min,
+            pybamm.max,
+        ]:
+            expr = function(a)
+            evaluator_str = pybamm.get_julia_function(expr)
+            Main.eval(evaluator_str)
+            Main.dy = [0.0]
+            Main.y = y_test
+            Main.eval("f(dy,y,0,0)")
+            np.testing.assert_almost_equal(Main.dy, expr.evaluate(y=y_test).flatten())
 
-    # def test_evaluator_julia_discretised_operators(self):
-    #     whole_cell = ["negative electrode", "separator", "positive electrode"]
-    #     # create discretisation
-    #     mesh = get_mesh_for_testing()
-    #     spatial_methods = {"macroscale": pybamm.FiniteVolume()}
-    #     disc = pybamm.Discretisation(mesh, spatial_methods)
+    def test_evaluator_julia_discretised_operators(self):
+        whole_cell = ["negative electrode", "separator", "positive electrode"]
+        # create discretisation
+        mesh = get_mesh_for_testing()
+        spatial_methods = {"macroscale": pybamm.FiniteVolume()}
+        disc = pybamm.Discretisation(mesh, spatial_methods)
 
-    #     combined_submesh = mesh.combine_submeshes(*whole_cell)
+        combined_submesh = mesh.combine_submeshes(*whole_cell)
 
-    #     # grad
-    #     var = pybamm.Variable("var", domain=whole_cell)
-    #     grad_eqn = pybamm.grad(var)
-    #     boundary_conditions = {
-    #         var.id: {
-    #             "left": (pybamm.Scalar(1), "Dirichlet"),
-    #             "right": (pybamm.Scalar(2), "Neumann"),
-    #         }
-    #     }
-    #     disc.bcs = boundary_conditions
+        # grad
+        var = pybamm.Variable("var", domain=whole_cell)
+        grad_eqn = pybamm.grad(var)
+        boundary_conditions = {
+            var.id: {
+                "left": (pybamm.Scalar(1), "Dirichlet"),
+                "right": (pybamm.Scalar(2), "Neumann"),
+            }
+        }
+        disc.bcs = boundary_conditions
 
-    #     disc.set_variable_slices([var])
-    #     grad_eqn_disc = disc.process_symbol(grad_eqn)
+        disc.set_variable_slices([var])
+        grad_eqn_disc = disc.process_symbol(grad_eqn)
 
-    #     # div: test on linear y (should have laplacian zero) so change bcs
-    #     div_eqn = pybamm.div(var * grad_eqn)
+        # div: test on linear y (should have laplacian zero) so change bcs
+        div_eqn = pybamm.div(var * grad_eqn)
 
-    #     div_eqn_disc = disc.process_symbol(div_eqn)
+        div_eqn_disc = disc.process_symbol(div_eqn)
 
-    #     # test
-    #     nodes = combined_submesh.nodes
-    #     y_tests = [nodes ** 2 + 1, np.cos(nodes)]
+        # test
+        nodes = combined_submesh.nodes
+        y_tests = [nodes ** 2 + 1, np.cos(nodes)]
 
-    #     for expr in [grad_eqn_disc, div_eqn_disc]:
-    #         evaluator_str = pybamm.get_julia_function(expr)
-    #         print(evaluator_str)
-    #         Main.eval(evaluator_str)
-    #         for y_test in y_tests:
-    #             pybamm_eval = expr.evaluate(y=y_test).flatten()
-    #             Main.dy = np.zeros_like(pybamm_eval)
-    #             Main.y = y_test
-    #             Main.eval("f(dy,y,0,0)")
-    #             np.testing.assert_almost_equal(Main.dy, pybamm_eval)
+        for expr in [grad_eqn_disc, div_eqn_disc]:
+            evaluator_str = pybamm.get_julia_function(expr)
+            Main.eval(evaluator_str)
+            for y_test in y_tests:
+                pybamm_eval = expr.evaluate(y=y_test).flatten()
+                Main.dy = np.zeros_like(pybamm_eval)
+                Main.y = y_test
+                Main.eval("f(dy,y,0,0)")
+                np.testing.assert_almost_equal(Main.dy, pybamm_eval)
 
-    # def test_evaluator_julia_discretised_microscale(self):
-    #     # create discretisation
-    #     mesh = get_1p1d_mesh_for_testing(xpts=5, rpts=5, zpts=2)
-    #     spatial_methods = {"negative particle": pybamm.FiniteVolume()}
-    #     disc = pybamm.Discretisation(mesh, spatial_methods)
+    def test_evaluator_julia_discretised_microscale(self):
+        # create discretisation
+        mesh = get_1p1d_mesh_for_testing(xpts=5, rpts=5, zpts=2)
+        spatial_methods = {"negative particle": pybamm.FiniteVolume()}
+        disc = pybamm.Discretisation(mesh, spatial_methods)
 
-    #     submesh = mesh["negative particle"]
+        submesh = mesh["negative particle"]
 
-    #     # grad
-    #     # grad(r) == 1
-    #     var = pybamm.Variable(
-    #         "var",
-    #         domain=["negative particle"],
-    #         auxiliary_domains={
-    #             "secondary": "negative electrode",
-    #             "tertiary": "current collector",
-    #         },
-    #     )
-    #     grad_eqn = pybamm.grad(var)
-    #     div_eqn = pybamm.div(var * grad_eqn)
+        # grad
+        # grad(r) == 1
+        var = pybamm.Variable(
+            "var",
+            domain=["negative particle"],
+            auxiliary_domains={
+                "secondary": "negative electrode",
+                "tertiary": "current collector",
+            },
+        )
+        grad_eqn = pybamm.grad(var)
+        div_eqn = pybamm.div(var * grad_eqn)
 
-    #     boundary_conditions = {
-    #         var.id: {
-    #             "left": (pybamm.Scalar(1), "Dirichlet"),
-    #             "right": (pybamm.Scalar(2), "Neumann"),
-    #         }
-    #     }
+        boundary_conditions = {
+            var.id: {
+                "left": (pybamm.Scalar(1), "Dirichlet"),
+                "right": (pybamm.Scalar(2), "Neumann"),
+            }
+        }
 
-    #     disc.bcs = boundary_conditions
+        disc.bcs = boundary_conditions
 
-    #     disc.set_variable_slices([var])
-    #     grad_eqn_disc = disc.process_symbol(grad_eqn)
-    #     div_eqn_disc = disc.process_symbol(div_eqn)
+        disc.set_variable_slices([var])
+        grad_eqn_disc = disc.process_symbol(grad_eqn)
+        div_eqn_disc = disc.process_symbol(div_eqn)
 
-    #     # test
-    #     total_npts = (
-    #         submesh.npts
-    #         * mesh["negative electrode"].npts
-    #         * mesh["current collector"].npts
-    #     )
-    #     y_tests = [np.linspace(0, 1, total_npts) ** 2]
+        # test
+        total_npts = (
+            submesh.npts
+            * mesh["negative electrode"].npts
+            * mesh["current collector"].npts
+        )
+        y_tests = [np.linspace(0, 1, total_npts) ** 2]
 
-    #     for expr in [grad_eqn_disc, div_eqn_disc]:
-    #         evaluator_str = pybamm.get_julia_function(expr)
-    #         print(evaluator_str)
-    #         Main.eval(evaluator_str)
-    #         for y_test in y_tests:
-    #             pybamm_eval = expr.evaluate(y=y_test).flatten()
-    #             Main.dy = np.zeros_like(pybamm_eval)
-    #             Main.y = y_test
-    #             Main.eval("f(dy,y,0,0)")
-    #             np.testing.assert_almost_equal(Main.dy, pybamm_eval)
+        for expr in [grad_eqn_disc, div_eqn_disc]:
+            evaluator_str = pybamm.get_julia_function(expr)
+            Main.eval(evaluator_str)
+            for y_test in y_tests:
+                pybamm_eval = expr.evaluate(y=y_test).flatten()
+                Main.dy = np.zeros_like(pybamm_eval)
+                Main.y = y_test
+                Main.eval("f(dy,y,0,0)")
+                np.testing.assert_almost_equal(Main.dy, pybamm_eval)
 
 
 if __name__ == "__main__":

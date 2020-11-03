@@ -359,7 +359,7 @@ def get_julia_function(symbol, funcname="f"):
                     # first in that case, unless it is a @view in which case we don't
                     # need to cache
                     if julia_var in next_symbol_line and not (
-                        [" * " in next_symbol_line or "mul!" in next_symbol_line]
+                        (" * " in next_symbol_line or "mul!" in next_symbol_line)
                         and not symbol_line.startswith("@view")
                     ):
                         if symbol_line != "t":
