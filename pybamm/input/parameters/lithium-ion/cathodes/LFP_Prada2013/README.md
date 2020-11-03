@@ -1,4 +1,4 @@
-# Lithium Cobalt Oxide cathode parameters
+# Lithium Iron Phosphate cathode parameters
 
 Parameters for an LFP cathode, from the paper
 
