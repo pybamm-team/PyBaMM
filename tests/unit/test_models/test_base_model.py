@@ -577,6 +577,12 @@ class TestBaseModel(unittest.TestCase):
         variable_names = ["Volume-averaged cell temperature"]
         out = sim.built_model.export_casadi_objects(variable_names)
 
+        # Test fails if not discretised
+        with self.assertRaisesRegex(
+            pybamm.DiscretisationError, "Cannot automatically discretise model"
+        ):
+            model.export_casadi_objects(["Electrolyte concentration"])
+
     @unittest.skipIf(platform.system() == "Windows", "Skipped for Windows")
     def test_generate_casadi(self):
         model = pybamm.BaseModel()

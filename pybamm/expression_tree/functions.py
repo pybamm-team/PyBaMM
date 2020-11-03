@@ -59,6 +59,14 @@ class Function(pybamm.Symbol):
             name, children=children, domain=domain, auxiliary_domains=auxiliary_domains
         )
 
+    def __str__(self):
+        """ See :meth:`pybamm.Symbol.__str__()`. """
+        out = "{}(".format(self.name[10:-1])
+        for child in self.children:
+            out += "{!s}, ".format(child)
+        out = out[:-2] + ")"
+        return out
+
     def get_children_domains(self, children_list):
         """Obtains the unique domain of the children. If the
         children have different domains then raise an error"""
@@ -173,6 +181,10 @@ class Function(pybamm.Symbol):
     def evaluates_on_edges(self, dimension):
         """ See :meth:`pybamm.Symbol.evaluates_on_edges()`. """
         return any(child.evaluates_on_edges(dimension) for child in self.children)
+
+    def is_constant(self):
+        """ See :meth:`pybamm.Symbol.is_constant()`. """
+        return all(child.is_constant() for child in self.children)
 
     def _evaluate_for_shape(self):
         """
