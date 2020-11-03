@@ -22,7 +22,7 @@ def battery_geometry(include_particles=True, current_collector_dimension=0):
 
     """
     var = pybamm.standard_spatial_vars
-    geo = pybamm.GeometricParameters()
+    geo = pybamm.geometric_parameters
     l_n = geo.l_n
     l_s = geo.l_s
 

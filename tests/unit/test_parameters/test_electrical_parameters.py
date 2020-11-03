@@ -9,7 +9,7 @@ import unittest
 class TestElectricalParameters(unittest.TestCase):
     def test_current_functions(self):
         # create current functions
-        param = pybamm.ElectricalParameters()
+        param = pybamm.electrical_parameters
         dimensional_current = param.dimensional_current_with_time
         dimensional_current_density = param.dimensional_current_density_with_time
         dimensionless_current = param.current_with_time

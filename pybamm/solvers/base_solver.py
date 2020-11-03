@@ -563,16 +563,13 @@ class BaseSolver(object):
         # Set up (if not done already)
         if model not in self.models_set_up:
             self.set_up(model, ext_and_inputs, t_eval)
-            set_up_time = timer.time()
             self.models_set_up.update(
                 {model: {"initial conditions": model.concatenated_initial_conditions}}
             )
         else:
             ics_set_up = self.models_set_up[model]["initial conditions"]
             # Check that initial conditions have not been updated
-            if ics_set_up.id == model.concatenated_initial_conditions.id:
-                set_up_time = 0
-            else:
+            if ics_set_up.id != model.concatenated_initial_conditions.id:
                 # If the new initial conditions are different, set up again
                 # Doing the whole setup again might be slow, but no need to prematurely
                 # optimize this
@@ -580,7 +577,7 @@ class BaseSolver(object):
                 self.models_set_up[model][
                     "initial conditions"
                 ] = model.concatenated_initial_conditions
-                set_up_time = timer.time()
+        set_up_time = timer.time()
 
         # (Re-)calculate consistent initial conditions
         self._set_initial_conditions(model, ext_and_inputs, update_rhs=True)
@@ -806,12 +803,11 @@ class BaseSolver(object):
             )
             self.set_up(model, ext_and_inputs)
             t = 0.0
-            set_up_time = timer.time()
         else:
             # initialize with old solution
             t = old_solution.t[-1]
             model.y0 = old_solution.y[:, -1]
-            set_up_time = 0
+        set_up_time = timer.time()
 
         # (Re-)calculate consistent initial conditions
         self._set_initial_conditions(model, ext_and_inputs, update_rhs=False)
