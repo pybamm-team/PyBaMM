@@ -148,7 +148,7 @@ class MarinescuEtAl2016(BaseModel):
         # Differential equation (8e) in [1]
         dSpdt = k_p * Sp * (S - S_star) / (v * rho_s)
 
-        self.rhs = {S8: dS8dt, S4: dS4dt, S2: dS2dt, S: dSdt, Sp: dSpdt}
+        self.rhs.update({S8: dS8dt, S4: dS4dt, S2: dS2dt, S: dSdt, Sp: dSpdt})
 
         ##############################
         # model variables
@@ -227,3 +227,9 @@ class MarinescuEtAl2016(BaseModel):
             # of current and voltage via the variables dict (see pybamm.Simulation)
             self.algebraic = {I: control_function(self.variables)}
             self.initial_conditions[I] = pybamm.Parameter("Current function [A]")
+
+        # Add variable for discharge capacity
+        Q = pybamm.Variable("Discharge capacity [A.h]")
+        self.variables.update({"Discharge capacity [A.h]": Q})
+        self.rhs.update({Q: I * self.param.timescale / 3600})
+        self.initial_conditions.update({Q: pybamm.Scalar(0)})

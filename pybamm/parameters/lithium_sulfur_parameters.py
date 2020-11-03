@@ -30,10 +30,8 @@ class LithiumSulfurParameters:
         self.EH0 = pybamm.Parameter("Standard Potential H [V]")
         self.EL0 = pybamm.Parameter("Standard Potential L [V]")
 
-        self.voltage_low_cut_dimensional = pybamm.Parameter("Lower voltage cut-off [V]")
-        self.voltage_high_cut_dimensional = pybamm.Parameter(
-            "Upper voltage cut-off [V]"
-        )
+        self.voltage_low_cut = pybamm.Parameter("Lower voltage cut-off [V]")
+        self.voltage_high_cut = pybamm.Parameter("Upper voltage cut-off [V]")
         self.n_cells = pybamm.Parameter(
             "Number of cells connected in series to make a battery"
         )
