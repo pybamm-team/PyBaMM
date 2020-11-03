@@ -281,7 +281,7 @@ class OriginalMarinescuEtAl2016(pybamm.BaseModel):
 
             # represent the step function by a steep logistic curve
             return k_s_discharge + (k_s_charge - k_s_discharge) / (
-                1 + pybamm.exp(-10 * (i_H(data) + i_L(data)))
+                1 + pybamm.exp(10 * (i_H(data) + i_L(data)))
             )
 
         ###################################

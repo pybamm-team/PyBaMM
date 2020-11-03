@@ -71,7 +71,6 @@ class MarinescuEtAl2016(BaseModel):
         ne = param.ne
         ih0 = param.ih0
         il0 = param.il0
-        m_s = param.m_s
         rho_s = param.rho_s
         EH0 = param.EH0
         EL0 = param.EL0
@@ -119,7 +118,12 @@ class MarinescuEtAl2016(BaseModel):
         cth = (3 * ne * F * S8 / (ns8 * Ms) + ne * F * S4 / (ns4 * Ms)) / 3600
 
         # Shuttle coefficient
-        k_s = k_s_charge * (I < 0)
+        # Note: for now we hard-code smooth Heaviside approximation. In the
+        # future this will be handled automatically (see #1219)
+        if self.options["smooth"] is True:
+            k_s = k_s_charge * (1 + pybamm.tanh(-10 * I)) / 2
+        else:
+            k_s = k_s_charge * (I < 0)
 
         ###################################
         # Dynamic model functions
