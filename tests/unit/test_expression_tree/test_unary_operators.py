@@ -47,8 +47,8 @@ class TestUnaryOperators(unittest.TestCase):
         self.assertAlmostEqual(expr.evaluate(y=np.array([-1]))[0, 0], 1)
         self.assertEqual(
             str(expr),
-            "y[0:1] * exp(10.0 * y[0:1]) - exp(-10.0 * y[0:1]) "
-            "/ exp(10.0 * y[0:1]) + exp(-10.0 * y[0:1])",
+            "y[0:1] * (exp(10.0 * y[0:1]) - exp(-10.0 * y[0:1])) "
+            "/ (exp(10.0 * y[0:1]) + exp(-10.0 * y[0:1]))",
         )
 
     def test_sign(self):
