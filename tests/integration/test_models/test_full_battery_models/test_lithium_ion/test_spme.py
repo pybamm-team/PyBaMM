@@ -94,20 +94,38 @@ class TestSPMe(unittest.TestCase):
         modeltest = tests.StandardModelTest(model)
         modeltest.test_all()
 
-    def test_particle_fast_diffusion(self):
-        options = {"particle": "fast diffusion"}
+    def test_particle_uniform(self):
+        options = {"particle": "uniform profile"}
         model = pybamm.lithium_ion.SPMe(options)
         modeltest = tests.StandardModelTest(model)
         modeltest.test_all()
 
-    def test_surface_form_differential(self):
-        options = {"surface form": "differential"}
+    def test_particle_quadratic(self):
+        options = {"particle": "quadratic profile"}
         model = pybamm.lithium_ion.SPMe(options)
         modeltest = tests.StandardModelTest(model)
         modeltest.test_all()
 
-    def test_surface_form_algebraic(self):
-        options = {"surface form": "algebraic"}
+    def test_particle_quartic(self):
+        options = {"particle": "quartic profile"}
+        model = pybamm.lithium_ion.SPMe(options)
+        modeltest = tests.StandardModelTest(model)
+        modeltest.test_all()
+
+    # def test_surface_form_differential(self):
+    #     options = {"surface form": "differential"}
+    #     model = pybamm.lithium_ion.SPMe(options)
+    #     modeltest = tests.StandardModelTest(model)
+    #     modeltest.test_all()
+
+    # def test_surface_form_algebraic(self):
+    #     options = {"surface form": "algebraic"}
+    #     model = pybamm.lithium_ion.SPMe(options)
+    #     modeltest = tests.StandardModelTest(model)
+    #     modeltest.test_all()
+
+    def test_integrated_conductivity(self):
+        options = {"electrolyte conductivity": "integrated"}
         model = pybamm.lithium_ion.SPMe(options)
         modeltest = tests.StandardModelTest(model)
         modeltest.test_all()

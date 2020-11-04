@@ -143,10 +143,16 @@ class TestBaseBatteryModel(unittest.TestCase):
             pybamm.BaseBatteryModel({"convection": "full transverse"})
         with self.assertRaisesRegex(pybamm.OptionError, "particle model"):
             pybamm.BaseBatteryModel({"particle": "bad particle"})
+        with self.assertRaisesRegex(NotImplementedError, "The 'fast diffusion'"):
+            pybamm.BaseBatteryModel({"particle": "fast diffusion"})
         with self.assertRaisesRegex(pybamm.OptionError, "particle shape"):
             pybamm.BaseBatteryModel({"particle shape": "bad particle shape"})
         with self.assertRaisesRegex(pybamm.OptionError, "operating mode"):
             pybamm.BaseBatteryModel({"operating mode": "bad operating mode"})
+        with self.assertRaisesRegex(pybamm.OptionError, "electrolyte conductivity"):
+            pybamm.BaseBatteryModel(
+                {"electrolyte conductivity": "bad electrolyte conductivity"}
+            )
 
         # SEI options
         with self.assertRaisesRegex(pybamm.OptionError, "sei"):

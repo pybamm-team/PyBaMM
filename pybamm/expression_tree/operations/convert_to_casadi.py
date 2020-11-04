@@ -5,6 +5,7 @@ import pybamm
 import casadi
 import numpy as np
 from scipy.interpolate import PchipInterpolator, CubicSpline
+from scipy import special
 
 
 class CasadiConverter(object):
@@ -76,6 +77,8 @@ class CasadiConverter(object):
             converted_left = self.convert(left, t, y, y_dot, inputs)
             converted_right = self.convert(right, t, y, y_dot, inputs)
 
+            if isinstance(symbol, pybamm.Modulo):
+                return casadi.fmod(converted_left, converted_right)
             if isinstance(symbol, pybamm.Minimum):
                 return casadi.fmin(converted_left, converted_right)
             if isinstance(symbol, pybamm.Maximum):
@@ -88,6 +91,10 @@ class CasadiConverter(object):
             converted_child = self.convert(symbol.child, t, y, y_dot, inputs)
             if isinstance(symbol, pybamm.AbsoluteValue):
                 return casadi.fabs(converted_child)
+            if isinstance(symbol, pybamm.Floor):
+                return casadi.floor(converted_child)
+            if isinstance(symbol, pybamm.Ceiling):
+                return casadi.ceil(converted_child)
             return symbol._unary_evaluate(converted_child)
 
         elif isinstance(symbol, pybamm.Function):
@@ -123,6 +130,8 @@ class CasadiConverter(object):
                 return casadi.log(*converted_children)
             elif symbol.function == np.sign:
                 return casadi.sign(*converted_children)
+            elif symbol.function == special.erf:
+                return casadi.erf(*converted_children)
             elif isinstance(symbol.function, (PchipInterpolator, CubicSpline)):
                 return casadi.interpolant("LUT", "bspline", [symbol.x], symbol.y)(
                     *converted_children

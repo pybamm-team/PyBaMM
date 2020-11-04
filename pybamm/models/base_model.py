@@ -1,9 +1,11 @@
 #
 # Base model class
 #
+import casadi
 import numbers
 import pybamm
 import warnings
+from collections import OrderedDict
 
 
 class BaseModel(object):
@@ -660,6 +662,155 @@ class BaseModel(object):
             symbol.print_input_names()
 
         print(div)
+
+    def export_casadi_objects(self, variable_names, input_parameter_order=None):
+        """
+        Export the constituent parts of the model (rhs, algebraic, initial conditions,
+        etc) as casadi objects.
+
+        Parameters
+        ----------
+        variable_names : list
+            Variables to be exported alongside the model structure
+        input_parameter_order : list, optional
+            Order in which the input parameters should be stacked. If None, the order
+            returned by :meth:`BaseModel.input_parameters` is used
+
+        Returns
+        -------
+        casadi_dict : dict
+            Dictionary of {str: casadi object} pairs representing the model in casadi
+            format
+        """
+        # Discretise model if it isn't already discretised
+        # This only works with purely 0D models, as otherwise the mesh and spatial
+        # method should be specified by the user
+        if self.is_discretised is False:
+            try:
+                disc = pybamm.Discretisation()
+                disc.process_model(self)
+            except pybamm.DiscretisationError as e:
+                raise pybamm.DiscretisationError(
+                    "Cannot automatically discretise model, model should be "
+                    "discretised before exporting casadi functions ({})".format(e)
+                )
+
+        # Create casadi functions for the model
+        t_casadi = casadi.MX.sym("t")
+        y_diff = casadi.MX.sym("y_diff", self.concatenated_rhs.size)
+        y_alg = casadi.MX.sym("y_alg", self.concatenated_algebraic.size)
+        y_casadi = casadi.vertcat(y_diff, y_alg)
+
+        # Read inputs
+        inputs_wrong_order = {}
+        for input_param in self.input_parameters:
+            name = input_param.name
+            inputs_wrong_order[name] = casadi.MX.sym(name, input_param._expected_size)
+        # Read external variables
+        external_casadi = {}
+        for external_varaiable in self.external_variables:
+            name = external_varaiable.name
+            ev_size = external_varaiable._evaluate_for_shape().shape[0]
+            external_casadi[name] = casadi.MX.sym(name, ev_size)
+        # Sort according to input_parameter_order
+        if input_parameter_order is None:
+            inputs = inputs_wrong_order
+        else:
+            inputs = {name: inputs_wrong_order[name] for name in input_parameter_order}
+        # Set up external variables and inputs
+        # Put external variables first like the integrator expects
+        ext_and_in = {**external_casadi, **inputs}
+        inputs_stacked = casadi.vertcat(*[p for p in ext_and_in.values()])
+
+        # Convert initial conditions to casadi form
+        y0 = self.concatenated_initial_conditions.to_casadi(
+            t_casadi, y_casadi, inputs=inputs
+        )
+        x0 = y0[: self.concatenated_rhs.size]
+        z0 = y0[self.concatenated_rhs.size :]
+
+        # Convert rhs and algebraic to casadi form and calculate jacobians
+        rhs = self.concatenated_rhs.to_casadi(t_casadi, y_casadi, inputs=ext_and_in)
+        jac_rhs = casadi.jacobian(rhs, y_casadi)
+        algebraic = self.concatenated_algebraic.to_casadi(
+            t_casadi, y_casadi, inputs=inputs
+        )
+        jac_algebraic = casadi.jacobian(algebraic, y_casadi)
+
+        # For specified variables, convert to casadi
+        variables = OrderedDict()
+        for name in variable_names:
+            var = self.variables[name]
+            variables[name] = var.to_casadi(t_casadi, y_casadi, inputs=ext_and_in)
+
+        casadi_dict = {
+            "t": t_casadi,
+            "x": y_diff,
+            "z": y_alg,
+            "inputs": inputs_stacked,
+            "rhs": rhs,
+            "algebraic": algebraic,
+            "jac_rhs": jac_rhs,
+            "jac_algebraic": jac_algebraic,
+            "variables": variables,
+            "x0": x0,
+            "z0": z0,
+        }
+
+        return casadi_dict
+
+    def generate(
+        self, filename, variable_names, input_parameter_order=None, cg_options=None
+    ):
+        """
+        Generate the model in C, using CasADi.
+
+        Parameters
+        ----------
+        filename : str
+            Name of the file to which to save the code
+        variable_names : list
+            Variables to be exported alongside the model structure
+        input_parameter_order : list, optional
+            Order in which the input parameters should be stacked. If None, the order
+            returned by :meth:`BaseModel.input_parameters` is used
+        cg_options : dict
+            Options to pass to the code generator.
+            See https://web.casadi.org/docs/#generating-c-code
+        """
+        model = self.export_casadi_objects(variable_names, input_parameter_order)
+
+        # Read the exported objects
+        t, x, z, p = model["t"], model["x"], model["z"], model["inputs"]
+        x0, z0 = model["x0"], model["z0"]
+        rhs, alg = model["rhs"], model["algebraic"]
+        variables = model["variables"]
+        jac_rhs, jac_alg = model["jac_rhs"], model["jac_algebraic"]
+
+        # Create functions
+        rhs_fn = casadi.Function("rhs_", [t, x, z, p], [rhs])
+        alg_fn = casadi.Function("alg_", [t, x, z, p], [alg])
+        jac_rhs_fn = casadi.Function("jac_rhs", [t, x, z, p], [jac_rhs])
+        jac_alg_fn = casadi.Function("jac_alg", [t, x, z, p], [jac_alg])
+        # Call these functions to initialize initial conditions
+        # (initial conditions are not yet consistent at this stage)
+        x0_fn = casadi.Function("x0", [p], [x0])
+        z0_fn = casadi.Function("z0", [p], [z0])
+        # Variables
+        variables_stacked = casadi.vertcat(*variables.values())
+        variables_fn = casadi.Function("variables", [t, x, z, p], [variables_stacked])
+
+        # Write C files
+        cg_options = cg_options or {}
+        C = casadi.CodeGenerator(filename, cg_options)
+        C.add(rhs_fn)
+        C.add(alg_fn)
+        C.add(jac_rhs_fn)
+        C.add(jac_alg_fn)
+        C.add(x0_fn)
+        C.add(z0_fn)
+        C.add(variables_fn)
+        C.generate()
 
     @property
     def default_parameter_values(self):

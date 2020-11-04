@@ -131,7 +131,9 @@ class ScikitsDaeSolver(pybamm.BaseSolver):
 
         # set up and solve
         dae_solver = scikits_odes.dae(self.method, eqsres, **extra_options)
+        timer = pybamm.Timer()
         sol = dae_solver.solve(t_eval, y0, ydot0)
+        integration_time = timer.time()
 
         # return solution, we need to tranpose y to match scipy's interface
         if sol.flag in [0, 2]:
@@ -145,7 +147,7 @@ class ScikitsDaeSolver(pybamm.BaseSolver):
                 t_root = None
             else:
                 t_root = sol.roots.t
-            return pybamm.Solution(
+            sol = pybamm.Solution(
                 sol.values.t,
                 np.transpose(sol.values.y),
                 t_root,
@@ -154,5 +156,7 @@ class ScikitsDaeSolver(pybamm.BaseSolver):
                 model=model,
                 inputs=inputs_dict,
             )
+            sol.integration_time = integration_time
+            return sol
         else:
             raise pybamm.SolverError(sol.message)

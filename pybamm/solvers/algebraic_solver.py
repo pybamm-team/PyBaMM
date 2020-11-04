@@ -82,6 +82,8 @@ class AlgebraicSolver(pybamm.BaseSolver):
 
         y_alg = np.empty((len(y0_alg), len(t_eval)))
 
+        timer = pybamm.Timer()
+        integration_time = 0
         for idx, t in enumerate(t_eval):
 
             def root_fun(y_alg):
@@ -135,6 +137,7 @@ class AlgebraicSolver(pybamm.BaseSolver):
                         method = self.method[5:]
                     if jac_fn is None:
                         jac_fn = "2-point"
+                    timer.reset()
                     sol = optimize.least_squares(
                         root_fun,
                         y0_alg,
@@ -144,6 +147,7 @@ class AlgebraicSolver(pybamm.BaseSolver):
                         bounds=model.bounds,
                         **self.extra_options,
                     )
+                    integration_time += timer.time()
                 # Methods which use minimize are specified as either "minimize", which
                 # uses the default method, or with "minimize__methodname"
                 elif self.method.startswith("minimize"):
@@ -170,6 +174,7 @@ class AlgebraicSolver(pybamm.BaseSolver):
                             (lb, ub) for lb, ub in zip(model.bounds[0], model.bounds[1])
                         ]
                         extra_options["bounds"] = bounds
+                    timer.reset()
                     sol = optimize.minimize(
                         root_norm,
                         y0_alg,
@@ -178,7 +183,9 @@ class AlgebraicSolver(pybamm.BaseSolver):
                         jac=jac_norm,
                         **extra_options,
                     )
+                    integration_time += timer.time()
                 else:
+                    timer.reset()
                     sol = optimize.root(
                         root_fun,
                         y0_alg,
@@ -187,6 +194,7 @@ class AlgebraicSolver(pybamm.BaseSolver):
                         jac=jac_fn,
                         options=self.extra_options,
                     )
+                    integration_time += timer.time()
 
                 if sol.success and np.all(abs(sol.fun) < self.tol):
                     # update initial guess for the next iteration
@@ -210,7 +218,8 @@ class AlgebraicSolver(pybamm.BaseSolver):
         y_diff = np.r_[[y0_diff] * len(t_eval)].T
         y_sol = np.r_[y_diff, y_alg]
         # Return solution object (no events, so pass None to t_event, y_event)
-        return pybamm.Solution(
+        sol = pybamm.Solution(
             t_eval, y_sol, termination="success", model=model, inputs=inputs_dict
         )
-
+        sol.integration_time = integration_time
+        return sol

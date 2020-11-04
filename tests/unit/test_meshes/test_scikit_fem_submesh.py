@@ -77,7 +77,10 @@ class TestScikitFiniteElement2DSubMesh(unittest.TestCase):
         var = pybamm.standard_spatial_vars
         var_pts = {var.x_n: 10, var.x_s: 10, var.x_p: 10, var.y: 10, var.z: 10}
         # there are parameters in the variables that need to be processed
-        with self.assertRaises(NotImplementedError):
+        with self.assertRaisesRegex(
+            pybamm.DiscretisationError,
+            "Parameter values have not yet been set for geometry",
+        ):
             pybamm.Mesh(geometry, submesh_types, var_pts)
 
         lims = {var.x_n: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)}}

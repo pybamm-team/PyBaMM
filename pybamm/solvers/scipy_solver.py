@@ -32,10 +32,18 @@ class ScipySolver(pybamm.BaseSolver):
     """
 
     def __init__(
-        self, method="BDF", rtol=1e-6, atol=1e-6, extra_options=None, sensitivity=None,
+        self,
+        method="BDF",
+        rtol=1e-6,
+        atol=1e-6,
+        extra_options=None,
+        sensitivity=None,
     ):
         super().__init__(
-            method=method, rtol=rtol, atol=atol, sensitivity=sensitivity,
+            method=method,
+            rtol=rtol,
+            atol=atol,
+            sensitivity=sensitivity,
         )
         self.ode_solver = True
         self.extra_options = extra_options or {}
@@ -95,6 +103,7 @@ class ScipySolver(pybamm.BaseSolver):
             events = [event_wrapper(event) for event in model.terminate_events_eval]
             extra_options.update({"events": events})
 
+        timer = pybamm.Timer()
         sol = it.solve_ivp(
             lambda t, y: model.rhs_eval(t, y, inputs),
             (t_eval[0], t_eval[-1]),
@@ -104,6 +113,7 @@ class ScipySolver(pybamm.BaseSolver):
             dense_output=True,
             **extra_options
         )
+        integration_time = timer.time()
 
         if sol.success:
             # Set the reason for termination
@@ -119,7 +129,7 @@ class ScipySolver(pybamm.BaseSolver):
                 termination = "final time"
                 t_event = None
                 y_event = np.array(None)
-            return pybamm.Solution(
+            sol = pybamm.Solution(
                 sol.t,
                 sol.y,
                 t_event,
@@ -128,5 +138,7 @@ class ScipySolver(pybamm.BaseSolver):
                 model=model,
                 inputs=inputs_dict,
             )
+            sol.integration_time = integration_time
+            return sol
         else:
             raise pybamm.SolverError(sol.message)

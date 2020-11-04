@@ -6,7 +6,8 @@ from .base_sei import BaseModel
 
 
 class ReactionLimited(BaseModel):
-    """Base class for reaction limited SEI growth.
+    """
+    Class for reaction limited SEI growth.
 
     Parameters
     ----------
@@ -26,6 +27,7 @@ class ReactionLimited(BaseModel):
         L_outer = pybamm.standard_variables.L_outer
 
         variables = self._get_standard_thickness_variables(L_inner, L_outer)
+        variables.update(self._get_standard_concentraion_variables(variables))
 
         return variables
 
@@ -39,9 +41,9 @@ class ReactionLimited(BaseModel):
         # it's ok to fall back on the total interfacial current density, j_tot
         # This should only happen when the interface submodel is "InverseButlerVolmer"
         # in which case j = j_tot (uniform) anyway
-        try:
+        if self.domain + " electrode interfacial current density" in variables:
             j = variables[self.domain + " electrode interfacial current density"]
-        except KeyError:
+        else:
             j = variables[
                 "X-averaged "
                 + self.domain.lower()

@@ -104,12 +104,20 @@ class SPM(BaseModel):
             self.submodels["positive particle"] = pybamm.particle.FickianSingleParticle(
                 self.param, "Positive"
             )
-        elif self.options["particle"] == "fast diffusion":
-            self.submodels["negative particle"] = pybamm.particle.FastSingleParticle(
-                self.param, "Negative"
+        elif self.options["particle"] in [
+            "uniform profile",
+            "quadratic profile",
+            "quartic profile",
+        ]:
+            self.submodels[
+                "negative particle"
+            ] = pybamm.particle.PolynomialSingleParticle(
+                self.param, "Negative", self.options["particle"]
             )
-            self.submodels["positive particle"] = pybamm.particle.FastSingleParticle(
-                self.param, "Positive"
+            self.submodels[
+                "positive particle"
+            ] = pybamm.particle.PolynomialSingleParticle(
+                self.param, "Positive", self.options["particle"]
             )
 
     def set_negative_electrode_submodel(self):
@@ -128,6 +136,13 @@ class SPM(BaseModel):
 
         surf_form = pybamm.electrolyte_conductivity.surface_potential_form
 
+        if self.options["electrolyte conductivity"] not in ["default", "leading order"]:
+            raise pybamm.OptionError(
+                "electrolyte conductivity '{}' not suitable for SPM".format(
+                    self.options["electrolyte conductivity"]
+                )
+            )
+
         if self.options["surface form"] is False:
             self.submodels[
                 "leading-order electrolyte conductivity"
@@ -144,6 +159,7 @@ class SPM(BaseModel):
                 self.submodels[
                     "leading-order " + domain.lower() + " electrolyte conductivity"
                 ] = surf_form.LeadingOrderAlgebraic(self.param, domain)
+
         self.submodels[
             "electrolyte diffusion"
         ] = pybamm.electrolyte_diffusion.ConstantConcentration(self.param)

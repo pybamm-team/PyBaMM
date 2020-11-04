@@ -46,7 +46,8 @@ class BaseBatteryModel(pybamm.BaseModel):
                 "potential pair" or "potential pair quite conductive".
             * "particle" : str, optional
                 Sets the submodel to use to describe behaviour within the particle.
-                Can be "Fickian diffusion" (default) or "fast diffusion".
+                Can be "Fickian diffusion" (default), "uniform profile",
+                "quadratic profile", or "quartic profile".
             * "particle shape" : str, optional
                 Sets the model shape of the electrode particles. This is used to
                 calculate the surface area per unit volume. Can be "spherical"
@@ -197,11 +198,13 @@ class BaseBatteryModel(pybamm.BaseModel):
             "current collector": "uniform",
             "particle": "Fickian diffusion",
             "particle shape": "spherical",
+            "electrolyte conductivity": "default",
             "thermal": "isothermal",
             "cell geometry": None,
             "external submodels": [],
             "sei": None,
             "sei porosity change": False,
+            "working electrode": None,
         }
         # Change the default for cell geometry based on which thermal option is provided
         extra_options = extra_options or {}
@@ -347,9 +350,20 @@ class BaseBatteryModel(pybamm.BaseModel):
                 raise pybamm.OptionError(
                     "cannot have transverse convection in 0D model"
                 )
-        if options["particle"] not in ["Fickian diffusion", "fast diffusion"]:
+        if options["particle"] not in [
+            "Fickian diffusion",
+            "fast diffusion",
+            "uniform profile",
+            "quadratic profile",
+            "quartic profile",
+        ]:
             raise pybamm.OptionError(
                 "particle model '{}' not recognised".format(options["particle"])
+            )
+        if options["particle"] == "fast diffusion":
+            raise NotImplementedError(
+                "The 'fast diffusion' option has been renamed. "
+                "Use 'uniform profile' instead."
             )
         if options["particle shape"] not in ["spherical", "user"]:
             raise pybamm.OptionError(
@@ -360,6 +374,19 @@ class BaseBatteryModel(pybamm.BaseModel):
             warnings.warn(
                 "1+1D Thermal models are only valid if both tabs are "
                 "placed at the top of the cell."
+            )
+
+        if options["electrolyte conductivity"] not in [
+            "default",
+            "full",
+            "leading order",
+            "composite",
+            "integrated",
+        ]:
+            raise pybamm.OptionError(
+                "electrolyte conductivity model '{}' not recognised".format(
+                    options["electrolyte conductivity"]
+                )
             )
 
         self._options = options
@@ -635,8 +662,8 @@ class BaseBatteryModel(pybamm.BaseModel):
         elif self.options["thermal"] == "lumped":
             thermal_submodel = pybamm.thermal.Lumped(
                 self.param,
-                self.options["dimensionality"],
-                self.options["cell geometry"],
+                cc_dimension=self.options["dimensionality"],
+                geometry=self.options["cell geometry"],
             )
 
         elif self.options["thermal"] == "x-lumped":
@@ -773,6 +800,10 @@ class BaseBatteryModel(pybamm.BaseModel):
 
         # Battery-wide variables
         V_dim = self.variables["Terminal voltage [V]"]
+        eta_e_av = self.variables.get("X-averaged electrolyte ohmic losses", 0)
+        eta_c_av = self.variables.get(
+            "X-averaged concentration overpotential", 0
+        )
         eta_e_av_dim = self.variables.get("X-averaged electrolyte ohmic losses [V]", 0)
         eta_c_av_dim = self.variables.get(
             "X-averaged concentration overpotential [V]", 0
@@ -780,7 +811,6 @@ class BaseBatteryModel(pybamm.BaseModel):
         num_cells = pybamm.Parameter(
             "Number of cells connected in series to make a battery"
         )
-
         self.variables.update(
             {
                 "X-averaged battery open circuit voltage [V]": ocv_av_dim * num_cells,
@@ -794,6 +824,36 @@ class BaseBatteryModel(pybamm.BaseModel):
                 "X-averaged battery concentration overpotential [V]": eta_c_av_dim
                 * num_cells,
                 "Battery voltage [V]": V_dim * num_cells,
+            }
+        )
+        # Variables for calculating the equivalent circuit model (ECM) resistance
+        # Need to compare OCV to initial value to capture this as an overpotential
+        ocv_init = self.param.U_p(
+            self.param.c_p_init(1), self.param.T_init
+        ) - self.param.U_n(self.param.c_n_init(0), self.param.T_init)
+        ocv_init_dim = (
+            self.param.U_p_ref
+            - self.param.U_n_ref
+            + self.param.potential_scale * ocv_init
+        )
+        eta_ocv = ocv - ocv_init
+        eta_ocv_dim = ocv_dim - ocv_init_dim
+        # Current collector current density for working out euiqvalent resistance
+        # based on Ohm's Law
+        i_cc = self.variables["Current collector current density"]
+        i_cc_dim = self.variables["Current collector current density [A.m-2]"]
+        # Gather all overpotentials
+        v_ecm = -(eta_ocv + eta_r_av + eta_c_av + eta_e_av + delta_phi_s_av)
+        v_ecm_dim = -(eta_ocv_dim + eta_r_av_dim + eta_c_av_dim + eta_e_av_dim +
+                      delta_phi_s_av_dim)
+        # Current collector area for turning resistivity into resistance
+        A_cc = self.param.A_cc
+        self.variables.update(
+            {
+                "Change in measured open circuit voltage": eta_ocv,
+                "Change in measured open circuit voltage [V]": eta_ocv_dim,
+                "Local ECM resistance": v_ecm / (i_cc * A_cc),
+                "Local ECM resistance [Ohm]": v_ecm_dim / (i_cc_dim * A_cc),
             }
         )
 

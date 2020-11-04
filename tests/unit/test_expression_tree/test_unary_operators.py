@@ -16,6 +16,9 @@ class TestUnaryOperators(unittest.TestCase):
         self.assertEqual(un.domain, a.domain)
 
         # with number
+        absval = pybamm.AbsoluteValue(-10)
+        self.assertEqual(absval.evaluate(), 10)
+
         log = pybamm.log(10)
         self.assertEqual(log.evaluate(), np.log(10))
 
@@ -39,6 +42,18 @@ class TestUnaryOperators(unittest.TestCase):
         absb = pybamm.AbsoluteValue(b)
         self.assertEqual(absb.evaluate(), 4)
 
+    def test_smooth_absolute_value(self):
+        a = pybamm.StateVector(slice(0, 1))
+        expr = pybamm.smooth_absolute_value(a, 10)
+        self.assertAlmostEqual(expr.evaluate(y=np.array([1]))[0, 0], 1)
+        self.assertEqual(expr.evaluate(y=np.array([0])), 0)
+        self.assertAlmostEqual(expr.evaluate(y=np.array([-1]))[0, 0], 1)
+        self.assertEqual(
+            str(expr),
+            "y[0:1] * (exp(10.0 * y[0:1]) - exp(-10.0 * y[0:1])) "
+            "/ (exp(10.0 * y[0:1]) + exp(-10.0 * y[0:1]))",
+        )
+
     def test_sign(self):
         b = pybamm.Scalar(-4)
         signb = pybamm.sign(b)
@@ -50,6 +65,34 @@ class TestUnaryOperators(unittest.TestCase):
         np.testing.assert_array_equal(
             np.diag(signb.evaluate().toarray()), [-1, -1, 0, 1, 1]
         )
+
+    def test_floor(self):
+        a = pybamm.Symbol("a")
+        floora = pybamm.Floor(a)
+        self.assertEqual(floora.name, "floor")
+        self.assertEqual(floora.children[0].name, a.name)
+
+        b = pybamm.Scalar(3.5)
+        floorb = pybamm.Floor(b)
+        self.assertEqual(floorb.evaluate(), 3)
+
+        c = pybamm.Scalar(-3.2)
+        floorc = pybamm.Floor(c)
+        self.assertEqual(floorc.evaluate(), -4)
+
+    def test_ceiling(self):
+        a = pybamm.Symbol("a")
+        ceila = pybamm.Ceiling(a)
+        self.assertEqual(ceila.name, "ceil")
+        self.assertEqual(ceila.children[0].name, a.name)
+
+        b = pybamm.Scalar(3.5)
+        ceilb = pybamm.Ceiling(b)
+        self.assertEqual(ceilb.evaluate(), 4)
+
+        c = pybamm.Scalar(-3.2)
+        ceilc = pybamm.Ceiling(c)
+        self.assertEqual(ceilc.evaluate(), -3)
 
     def test_gradient(self):
         # gradient of scalar symbol should fail
@@ -89,7 +132,7 @@ class TestUnaryOperators(unittest.TestCase):
 
         # divergence of variable evaluating on edges should fail
         a = pybamm.PrimaryBroadcast(pybamm.Scalar(1), "test")
-        with self.assertRaisesRegex(TypeError, "evaluates on nodes"):
+        with self.assertRaisesRegex(TypeError, "evaluate on edges"):
             pybamm.Divergence(a)
 
         # divergence of broadcast should return broadcasted zero
@@ -239,6 +282,33 @@ class TestUnaryOperators(unittest.TestCase):
             pybamm.Index(vec, 5)
         pybamm.settings.debug_mode = debug_mode
 
+    def test_upwind_downwind(self):
+        # upwind of scalar symbol should fail
+        a = pybamm.Symbol("a")
+        with self.assertRaisesRegex(
+            pybamm.DomainError, "Cannot upwind 'a' since its domain is empty"
+        ):
+            pybamm.Upwind(a)
+
+        # upwind of variable evaluating on edges should fail
+        a = pybamm.PrimaryBroadcastToEdges(pybamm.Scalar(1), "test")
+        with self.assertRaisesRegex(TypeError, "evaluate on nodes"):
+            pybamm.Upwind(a)
+
+        # otherwise upwind should work
+        a = pybamm.Symbol("a", domain="test domain")
+        upwind = pybamm.upwind(a)
+        self.assertIsInstance(upwind, pybamm.Upwind)
+        self.assertEqual(upwind.children[0].name, a.name)
+        self.assertEqual(upwind.domain, a.domain)
+
+        # also test downwind
+        a = pybamm.Symbol("a", domain="test domain")
+        downwind = pybamm.downwind(a)
+        self.assertIsInstance(downwind, pybamm.Downwind)
+        self.assertEqual(downwind.children[0].name, a.name)
+        self.assertEqual(downwind.domain, a.domain)
+
     def test_diff(self):
         a = pybamm.StateVector(slice(0, 1))
         y = np.array([5])
@@ -255,6 +325,12 @@ class TestUnaryOperators(unittest.TestCase):
 
         # sign
         self.assertEqual((pybamm.sign(a)).diff(a).evaluate(y=y), 0)
+
+        # floor
+        self.assertEqual((pybamm.Floor(a)).diff(a).evaluate(y=y), 0)
+
+        # ceil
+        self.assertEqual((pybamm.Ceiling(a)).diff(a).evaluate(y=y), 0)
 
         # spatial operator (not implemented)
         spatial_a = pybamm.SpatialOperator("name", a)
@@ -300,11 +376,13 @@ class TestUnaryOperators(unittest.TestCase):
         self.assertEqual(boundary_a.child.id, a.id)
 
     def test_evaluates_on_edges(self):
-        a = pybamm.StateVector(slice(0, 10))
+        a = pybamm.StateVector(slice(0, 10), domain="test")
         self.assertFalse(pybamm.Index(a, slice(1)).evaluates_on_edges("primary"))
         self.assertFalse(pybamm.Laplacian(a).evaluates_on_edges("primary"))
         self.assertTrue(pybamm.Gradient_Squared(a).evaluates_on_edges("primary"))
         self.assertFalse(pybamm.BoundaryIntegral(a).evaluates_on_edges("primary"))
+        self.assertTrue(pybamm.Upwind(a).evaluates_on_edges("primary"))
+        self.assertTrue(pybamm.Downwind(a).evaluates_on_edges("primary"))
 
     def test_boundary_value(self):
         a = pybamm.Scalar(1)
@@ -397,7 +475,7 @@ class TestUnaryOperators(unittest.TestCase):
             pybamm.x_average(symbol_on_edges)
 
         # Particle domains
-        geo = pybamm.GeometricParameters()
+        geo = pybamm.geometric_parameters
         l_n = geo.l_n
         l_p = geo.l_p
 

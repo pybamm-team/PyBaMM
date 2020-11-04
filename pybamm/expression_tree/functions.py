@@ -4,6 +4,7 @@
 import autograd
 import numbers
 import numpy as np
+from scipy import special
 import pybamm
 
 
@@ -57,6 +58,14 @@ class Function(pybamm.Symbol):
         super().__init__(
             name, children=children, domain=domain, auxiliary_domains=auxiliary_domains
         )
+
+    def __str__(self):
+        """ See :meth:`pybamm.Symbol.__str__()`. """
+        out = "{}(".format(self.name[10:-1])
+        for child in self.children:
+            out += "{!s}, ".format(child)
+        out = out[:-2] + ")"
+        return out
 
     def get_children_domains(self, children_list):
         """Obtains the unique domain of the children. If the
@@ -172,6 +181,10 @@ class Function(pybamm.Symbol):
     def evaluates_on_edges(self, dimension):
         """ See :meth:`pybamm.Symbol.evaluates_on_edges()`. """
         return any(child.evaluates_on_edges(dimension) for child in self.children)
+
+    def is_constant(self):
+        """ See :meth:`pybamm.Symbol.is_constant()`. """
+        return all(child.is_constant() for child in self.children)
 
     def _evaluate_for_shape(self):
         """
@@ -450,3 +463,24 @@ class Arctan(SpecificFunction):
 def arctan(child):
     " Returns hyperbolic tan function of child. "
     return pybamm.simplify_if_constant(Arctan(child), keep_domains=True)
+
+
+class Erf(SpecificFunction):
+    """ Error function """
+
+    def __init__(self, child):
+        super().__init__(special.erf, child)
+
+    def _function_diff(self, children, idx):
+        """ See :meth:`pybamm.Function._function_diff()`. """
+        return 2 / np.sqrt(np.pi) * Exponential(-children[0] ** 2)
+
+
+def erf(child):
+    " Returns error function of child. "
+    return pybamm.simplify_if_constant(Erf(child), keep_domains=True)
+
+
+def erfc(child):
+    " Returns complementary error function of child. "
+    return pybamm.simplify_if_constant(1 - Erf(child), keep_domains=True)

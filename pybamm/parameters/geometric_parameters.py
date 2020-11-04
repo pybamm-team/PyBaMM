@@ -101,3 +101,6 @@ class GeometricParameters:
         self.l_tab_p = self.L_tab_p / self.L_z
         self.centre_y_tab_p = self.Centre_y_tab_p / self.L_z
         self.centre_z_tab_p = self.Centre_z_tab_p / self.L_z
+
+
+geometric_parameters = GeometricParameters()

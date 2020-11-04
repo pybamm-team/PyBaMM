@@ -129,7 +129,7 @@ class BaseSolver(object):
         new_solver.models_set_up = {}
         return new_solver
 
-    def set_up(self, model, inputs=None):
+    def set_up(self, model, inputs=None, t_eval=None):
         """Unpack model, perform checks, simplify and calculate jacobian.
 
         Parameters
@@ -139,6 +139,8 @@ class BaseSolver(object):
             initial_conditions
         inputs : dict, optional
             Any input parameters to pass to the model when solving
+        t_eval : numeric type, optional
+            The times (in seconds) at which to compute the solution
 
         """
 
@@ -175,14 +177,12 @@ class BaseSolver(object):
         inputs = inputs or {}
 
         # Set model timescale
-        try:
-            model.timescale_eval = model.timescale.evaluate()
-        except KeyError as e:
-            raise pybamm.SolverError(
-                "The model timescale is a function of an input parameter "
-                "(original error: {})".format(e)
-            )
-
+        model.timescale_eval = model.timescale.evaluate(inputs=inputs)
+        # Set model lengthscales
+        model.length_scales_eval = {
+            domain: scale.evaluate(inputs=inputs)
+            for domain, scale in model.length_scales.items()
+        }
         if (
             isinstance(self, (pybamm.CasadiSolver, pybamm.CasadiAlgebraicSolver))
         ) and model.convert_to_format != "casadi":
@@ -366,8 +366,8 @@ class BaseSolver(object):
 
             return func, func_call, jac_call
 
-        # Check for heaviside functions in rhs and algebraic and add discontinuity
-        # events if these exist.
+        # Check for heaviside and modulo functions in rhs and algebraic and add
+        # discontinuity events if these exist.
         # Note: only checks for the case of t < X, t <= X, X < t, or X <= t, but also
         # accounts for the fact that t might be dimensional
         # Only do this for DAE models as ODE models can deal with discontinuities fine
@@ -402,6 +402,32 @@ class BaseSolver(object):
                                 pybamm.EventType.DISCONTINUITY,
                             )
                         )
+                elif isinstance(symbol, pybamm.Modulo):
+                    found_t = False
+                    # Dimensionless
+                    if symbol.left.id == pybamm.t.id:
+                        expr = symbol.right
+                        found_t = True
+                    # Dimensional
+                    elif symbol.left.id == (pybamm.t * model.timescale).id:
+                        expr = symbol.right.new_copy() / symbol.left.right.new_copy()
+                        found_t = True
+
+                    # Update the events if the modulo function depended on t
+                    if found_t:
+                        if t_eval is None:
+                            N_events = 200
+                        else:
+                            N_events = t_eval[-1] // expr.value
+
+                        for i in np.arange(N_events):
+                            model.events.append(
+                                pybamm.Event(
+                                    str(symbol),
+                                    expr.new_copy() * pybamm.Scalar(i + 1),
+                                    pybamm.EventType.DISCONTINUITY,
+                                )
+                            )
 
         # Process initial conditions
         initial_conditions = process(
@@ -654,25 +680,23 @@ class BaseSolver(object):
 
         # Set up (if not done already)
         if model not in self.models_set_up:
-            self.set_up(model, ext_and_inputs)
-            set_up_time = timer.time()
+            self.set_up(model, ext_and_inputs, t_eval)
             self.models_set_up.update(
                 {model: {"initial conditions": model.concatenated_initial_conditions}}
             )
         else:
             ics_set_up = self.models_set_up[model]["initial conditions"]
             # Check that initial conditions have not been updated
-            if ics_set_up.id == model.concatenated_initial_conditions.id:
-                set_up_time = 0
-            else:
+            if ics_set_up.id != model.concatenated_initial_conditions.id:
                 # If the new initial conditions are different, set up again
                 # Doing the whole setup again might be slow, but no need to prematurely
                 # optimize this
-                self.set_up(model, ext_and_inputs)
+                self.set_up(model, ext_and_inputs, t_eval)
                 self.models_set_up[model][
                     "initial conditions"
                 ] = model.concatenated_initial_conditions
-                set_up_time = timer.time()
+        set_up_time = timer.time()
+        timer.reset()
 
         # (Re-)calculate consistent initial conditions
         self._set_initial_conditions(model, ext_and_inputs, update_rhs=True)
@@ -742,7 +766,6 @@ class BaseSolver(object):
                     t_eval_dimensionless[end_index - 1] * model.timescale_eval,
                 )
             )
-            timer.reset()
             new_solution = self._integrate(
                 model, t_eval_dimensionless[start_index:end_index], ext_and_inputs
             )
@@ -766,12 +789,16 @@ class BaseSolver(object):
                         model, t_eval_dimensionless[end_index], ext_and_inputs
                     )
 
-        # restore old y0
-        model.y0 = old_y0
-
         # Assign times
         solution.set_up_time = set_up_time
         solution.solve_time = timer.time()
+
+        # restore old y0
+        model.y0 = old_y0
+
+        # Copy the timescale_eval and lengthscale_evals
+        solution.timescale_eval = model.timescale_eval
+        solution.length_scales_eval = model.length_scales_eval
 
         # Identify the event that caused termination
         termination = self.get_termination_reason(solution, model.events)
@@ -861,6 +888,28 @@ class BaseSolver(object):
         inputs = inputs or {}
         ext_and_inputs = {**external_variables, **inputs}
 
+        # Check that any inputs that may affect the scaling have not changed
+        # Set model timescale
+        temp_timescale_eval = model.timescale.evaluate(inputs=inputs)
+        # Set model lengthscales
+        temp_length_scales_eval = {
+            domain: scale.evaluate(inputs=inputs)
+            for domain, scale in model.length_scales.items()
+        }
+        if old_solution is not None:
+            if temp_timescale_eval != old_solution.timescale_eval:
+                raise pybamm.SolverError(
+                    "The model timescale is a function of an input parameter "
+                    "and the value has changed between steps!"
+                )
+            for domain in temp_length_scales_eval.keys():
+                old_dom_eval = old_solution.length_scales_eval[domain]
+                if temp_length_scales_eval[domain] != old_dom_eval:
+                    pybamm.logger.error(
+                        "The {} domain lengthscale is a function of an input "
+                        "parameter and the value has changed between "
+                        "steps!".format(domain)
+                    )
         # Run set up on first step
         if old_solution is None:
             pybamm.logger.info(
@@ -868,12 +917,11 @@ class BaseSolver(object):
             )
             self.set_up(model, ext_and_inputs)
             t = 0.0
-            set_up_time = timer.time()
         else:
             # initialize with old solution
             t = old_solution.t[-1]
             model.y0 = old_solution.y[:, -1]
-            set_up_time = 0
+        set_up_time = timer.time()
 
         # (Re-)calculate consistent initial conditions
         self._set_initial_conditions(model, ext_and_inputs, update_rhs=False)
@@ -890,6 +938,10 @@ class BaseSolver(object):
         # Assign times
         solution.set_up_time = set_up_time
         solution.solve_time = timer.time()
+
+        # Copy the timescale_eval and lengthscale_evals
+        solution.timescale_eval = temp_timescale_eval
+        solution.length_scales_eval = temp_length_scales_eval
 
         # Identify the event that caused termination
         termination = self.get_termination_reason(solution, model.events)

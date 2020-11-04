@@ -86,6 +86,11 @@ class Simulation:
     ):
         self.parameter_values = parameter_values or model.default_parameter_values
 
+        if isinstance(model, pybamm.lithium_ion.BasicDFNHalfCell):
+            raise NotImplementedError(
+                "BasicDFNHalfCell is not compatible with Simulations yet."
+            )
+
         if experiment is None:
             # Check to see if the current is provided as data (i.e. drive cycle)
             current = self._parameter_values.get("Current function [A]")
@@ -93,8 +98,8 @@ class Simulation:
                 self.operating_mode = "drive cycle"
             elif isinstance(current, tuple):
                 raise NotImplementedError(
-                    "Drive cycle from data has been deprecated. " +
-                    "Define an Interpolant instead."
+                    "Drive cycle from data has been deprecated. "
+                    + "Define an Interpolant instead."
                 )
             else:
                 self.operating_mode = "without experiment"
@@ -345,7 +350,10 @@ class Simulation:
                         "list [t0, tf] where t0 is the initial time and tf is the "
                         "final time. "
                         "For a constant current (dis)charge the suggested 't_eval'  "
-                        "is [0, 3700/C] where C is the C-rate."
+                        "is [0, 3700/C] where C is the C-rate. "
+                        "For example, run\n\n"
+                        "\tsim.solve([0, 3700])\n\n"
+                        "for a 1C discharge."
                     )
 
             elif self.operating_mode == "drive cycle":
@@ -397,7 +405,7 @@ class Simulation:
                 external_variables=external_variables,
                 inputs=inputs,
             )
-            self.t_eval = self._solution.t * self.model.timescale.evaluate()
+            self.t_eval = self._solution.t * self._solution.timescale_eval
 
         elif self.operating_mode == "with experiment":
             if t_eval is not None:
@@ -489,6 +497,8 @@ class Simulation:
             inputs=inputs,
             save=save,
         )
+
+        return self.solution
 
     def get_variable_array(self, *variables):
         """

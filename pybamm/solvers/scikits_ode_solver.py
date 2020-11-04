@@ -148,7 +148,9 @@ class ScikitsOdeSolver(pybamm.BaseSolver):
             extra_options.update({"rootfn": rootfn, "nr_rootfns": len(events)})
 
         ode_solver = scikits_odes.ode(self.method, eqsydot, **extra_options)
+        timer = pybamm.Timer()
         sol = ode_solver.solve(t_eval, y0)
+        integration_time = timer.time()
 
         # return solution, we need to tranpose y to match scipy's ivp interface
         if sol.flag in [0, 2]:
@@ -162,7 +164,7 @@ class ScikitsOdeSolver(pybamm.BaseSolver):
                 t_root = None
             else:
                 t_root = sol.roots.t
-            return pybamm.Solution(
+            sol = pybamm.Solution(
                 sol.values.t,
                 np.transpose(sol.values.y),
                 t_root,
@@ -171,5 +173,7 @@ class ScikitsOdeSolver(pybamm.BaseSolver):
                 model=model,
                 inputs=inputs_dict,
             )
+            sol.integration_time = integration_time
+            return sol
         else:
             raise pybamm.SolverError(sol.message)

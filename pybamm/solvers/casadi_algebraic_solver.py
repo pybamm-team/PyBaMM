@@ -72,6 +72,15 @@ class CasadiAlgebraicSolver(pybamm.BaseSolver):
         symbolic_inputs = casadi.MX.sym("inputs", inputs.shape[0])
 
         y0 = model.y0
+
+        # If y0 already satisfies the tolerance for all t then keep it
+        if has_symbolic_inputs is False and all(
+            np.all(abs(model.casadi_algebraic(t, y0, inputs).full()) < self.tol)
+            for t in t_eval
+        ):
+            pybamm.logger.debug("Keeping same solution at all times")
+            return pybamm.Solution(t_eval, y0, termination="success")
+
         # The casadi algebraic solver can read rhs equations, but leaves them unchanged
         # i.e. the part of the solution vector that corresponds to the differential
         # equations will be equal to the initial condition provided. This allows this
@@ -136,6 +145,8 @@ class CasadiAlgebraicSolver(pybamm.BaseSolver):
 
             self.rootfinders[model] = roots
 
+        timer = pybamm.Timer()
+        integration_time = 0
         for idx, t in enumerate(t_eval):
             # Evaluate algebraic with new t and previous y0, if it's already close
             # enough then keep it
@@ -160,7 +171,9 @@ class CasadiAlgebraicSolver(pybamm.BaseSolver):
                     t_y0_diff_inputs = casadi.vertcat(t, y0_diff, inputs)
                 # Solve
                 try:
+                    timer.reset()
                     y_alg_sol = roots(y0_alg, t_y0_diff_inputs)
+                    integration_time += timer.time()
                     success = True
                     message = None
                     # Check final output
@@ -178,6 +191,7 @@ class CasadiAlgebraicSolver(pybamm.BaseSolver):
                 ):
                     # update initial guess for the next iteration
                     y0_alg = y_alg_sol
+                    y0 = casadi.vertcat(y0_diff, y0_alg)
                     # update solution array
                     if y_alg is None:
                         y_alg = y_alg_sol
@@ -208,6 +222,8 @@ class CasadiAlgebraicSolver(pybamm.BaseSolver):
             # Save the solution, can just reuse and change the inputs
             self.y_sols[model] = y_sol
         # Return solution object (no events, so pass None to t_event, y_event)
-        return pybamm.Solution(
+        sol = pybamm.Solution(
             t_eval, y_sol, termination="success", model=model, inputs=inputs_dict
         )
+        sol.integration_time = integration_time
+        return sol

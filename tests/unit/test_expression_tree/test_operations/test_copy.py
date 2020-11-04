@@ -29,6 +29,7 @@ class TestCopy(unittest.TestCase):
             pybamm.FunctionParameter("function", {"a": a}),
             pybamm.grad(v_n),
             pybamm.div(pybamm.grad(v_n)),
+            pybamm.upwind(v_n),
             pybamm.IndefiniteIntegral(v_n, x_n),
             pybamm.BackwardIndefiniteIntegral(v_n, x_n),
             pybamm.BoundaryValue(v_n, "right"),

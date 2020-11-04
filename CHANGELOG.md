@@ -1,17 +1,59 @@
-# Unreleased
+# [Unreleased](https://github.com/pybamm-team/PyBaMM)
 
 ## Features
 
--   Automatically compute surface area per unit volume based on particle shape for li-ion models ([#1120])(https://github.com/pybamm-team/PyBaMM/pull/1120)
+-   Added a notebook on how to speed up the solver and handle instabilities ([#1223](https://github.com/pybamm-team/PyBaMM/pull/1223))
+-   Improve string printing of `BinaryOperator`, `Function`, and `Concatenation` objects ([#1223](https://github.com/pybamm-team/PyBaMM/pull/1223))
+-   Added `Solution.integration_time`, which is the time taken just by the integration subroutine, without extra setups ([#1223](https://github.com/pybamm-team/PyBaMM/pull/1223))
+-   Added parameter set for an A123 LFP cell ([#1209](https://github.com/pybamm-team/PyBaMM/pull/1209))
+-   Added variables related to equivalent circuit models ([#1204](https://github.com/pybamm-team/PyBaMM/pull/1204))
+-   Added the `Integrated` electrolyte conductivity submodel ([#1188](https://github.com/pybamm-team/PyBaMM/pull/1188))
+-   Added an example script to check conservation of lithium ([#1186](https://github.com/pybamm-team/PyBaMM/pull/1186))
+-   Added `erf` and `erfc` functions ([#1184](https://github.com/pybamm-team/PyBaMM/pull/1184))
+
+## Optimizations
+
+-   Add (optional) smooth approximations for the `Minimum`, `Maximum`, `Heaviside`, and `AbsoluteValue` operators ([#1223](https://github.com/pybamm-team/PyBaMM/pull/1223))
+-   Avoid unnecessary repeated computations in the solvers ([#1222](https://github.com/pybamm-team/PyBaMM/pull/1222))
+-   Rewrite `Symbol.is_constant` to be more efficient ([#1222](https://github.com/pybamm-team/PyBaMM/pull/1222))
+-   Cache shape and size calculations ([#1222](https://github.com/pybamm-team/PyBaMM/pull/1222))
+-   Only instantiate the geometric, electrical and thermal parameter classes once ([#1222](https://github.com/pybamm-team/PyBaMM/pull/1222))
+
+## Bug fixes
+
+-   Fix bug that was slowing down creation of the EC reaction SEI submodel ([#1227](https://github.com/pybamm-team/PyBaMM/pull/1227))
+-   Add missing separator thermal parameters for the Ecker parameter set ([#1226](https://github.com/pybamm-team/PyBaMM/pull/1226))
+-   Raise error if saving to MATLAB with variable names that MATLAB can't read, and give option of providing alternative variable names ([#1206](https://github.com/pybamm-team/PyBaMM/pull/1206))
+-   Raise error if the boundary condition at the origin in a spherical domain is other than no-flux ([#1175](https://github.com/pybamm-team/PyBaMM/pull/1175))
+-   Fix boundary conditions at r = 0 for Creating Models notebooks ([#1173](https://github.com/pybamm-team/PyBaMM/pull/1173))
+-   Make sure simulation solves when evaluated timescale is a function of an input parameter ([#1218](https://github.com/pybamm-team/PyBaMM/pull/1218))
+
+## Breaking changes
+
+
+# [v0.2.4](https://github.com/pybamm-team/PyBaMM/tree/v0.2.4) - 2020-09-07
+
+This release adds new operators for more complex models, some basic sensitivity analysis, and a spectral volumes spatial method, as well as some small bug fixes.
+
+## Features
+
+-   Added variables which track the total amount of lithium in the system ([#1136](https://github.com/pybamm-team/PyBaMM/pull/1136))
+-   Added `Upwind` and `Downwind` operators for convection ([#1134](https://github.com/pybamm-team/PyBaMM/pull/1134))
+-   Added Getting Started notebook on solver options and changing the mesh. Also added a notebook detailing the different thermal options, and a notebook explaining the steps that occur behind the scenes in the `Simulation` class ([#1131](https://github.com/pybamm-team/PyBaMM/pull/1131))
+-   Added particle submodel that use a polynomial approximation to the concentration within the electrode particles ([#1130](https://github.com/pybamm-team/PyBaMM/pull/1130))
+-   Added `Modulo`, `Floor` and `Ceiling` operators ([#1121](https://github.com/pybamm-team/PyBaMM/pull/1121))
+-   Added DFN model for a half cell ([#1121](https://github.com/pybamm-team/PyBaMM/pull/1121))
+-   Automatically compute surface area per unit volume based on particle shape for li-ion models ([#1120](https://github.com/pybamm-team/PyBaMM/pull/1120))
 -   Added "R-averaged particle concentration" variables ([#1118](https://github.com/pybamm-team/PyBaMM/pull/1118))
 -   Added support for sensitivity calculations to the casadi solver ([#1109](https://github.com/pybamm-team/PyBaMM/pull/1109))
 -   Added support for index 1 semi-explicit dae equations and sensitivity calculations to JAX BDF solver ([#1107](https://github.com/pybamm-team/PyBaMM/pull/1107))
 -   Allowed keyword arguments to be passed to `Simulation.plot()` ([#1099](https://github.com/pybamm-team/PyBaMM/pull/1099))
-
-## Optimizations
+-   Added the Spectral Volumes spatial method and the submesh that it works with ([#900](https://github.com/pybamm-team/PyBaMM/pull/900))
 
 ## Bug fixes
 
+-   Fixed bug where some parameters were not being set by the `EcReactionLimited` SEI model ([#1136](https://github.com/pybamm-team/PyBaMM/pull/1136))
+-   Fixed bug on electrolyte potential for `BasicDFNHalfCell` ([#1133](https://github.com/pybamm-team/PyBaMM/pull/1133))
 -   Fixed `r_average` to work with `SecondaryBroadcast` ([#1118](https://github.com/pybamm-team/PyBaMM/pull/1118))
 -   Fixed finite volume discretisation of spherical integrals ([#1118](https://github.com/pybamm-team/PyBaMM/pull/1118))
 -   `t_eval` now gets changed to a `linspace` if a list of length 2 is passed ([#1113](https://github.com/pybamm-team/PyBaMM/pull/1113))
@@ -19,10 +61,17 @@
 
 ## Breaking changes
 
+<<<<<<< HEAD
 -   Changed sensitivity API. Removed `ProcessedSymbolicVariable`, all sensitivity now handled within the solvers and `ProcessedVariable` ()
 -  The modules containing standard parameters are now classes so they can take options
 (e.g. `standard_parameters_lithium_ion` is now `LithiumIonParameters`) ([#1120])(https://github.com/pybamm-team/PyBaMM/pull/1120)
 -  Renamed `quick_plot_vars` to `output_variables` in `Simulation` to be consistent with `QuickPlot`. Passing `quick_plot_vars` to `Simulation.plot()` has been deprecated and `output_variables` should be passed instead ([#1099](https://github.com/pybamm-team/PyBaMM/pull/1099))
+=======
+-   The "fast diffusion" particle option has been renamed "uniform profile" ([#1130](https://github.com/pybamm-team/PyBaMM/pull/1130))
+-   The modules containing standard parameters are now classes so they can take options
+(e.g. `standard_parameters_lithium_ion` is now `LithiumIonParameters`) ([#1120](https://github.com/pybamm-team/PyBaMM/pull/1120))
+-   Renamed `quick_plot_vars` to `output_variables` in `Simulation` to be consistent with `QuickPlot`. Passing `quick_plot_vars` to `Simulation.plot()` has been deprecated and `output_variables` should be passed instead ([#1099](https://github.com/pybamm-team/PyBaMM/pull/1099))
+>>>>>>> develop
 
 # [v0.2.3](https://github.com/pybamm-team/PyBaMM/tree/v0.2.3) - 2020-07-01
 

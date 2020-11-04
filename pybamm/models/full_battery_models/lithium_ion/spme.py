@@ -106,12 +106,20 @@ class SPMe(BaseModel):
             self.submodels["positive particle"] = pybamm.particle.FickianSingleParticle(
                 self.param, "Positive"
             )
-        elif self.options["particle"] == "fast diffusion":
-            self.submodels["negative particle"] = pybamm.particle.FastSingleParticle(
-                self.param, "Negative"
+        elif self.options["particle"] in [
+            "uniform profile",
+            "quadratic profile",
+            "quartic profile",
+        ]:
+            self.submodels[
+                "negative particle"
+            ] = pybamm.particle.PolynomialSingleParticle(
+                self.param, "Negative", self.options["particle"]
             )
-            self.submodels["positive particle"] = pybamm.particle.FastSingleParticle(
-                self.param, "Positive"
+            self.submodels[
+                "positive particle"
+            ] = pybamm.particle.PolynomialSingleParticle(
+                self.param, "Positive", self.options["particle"]
             )
 
     def set_negative_electrode_submodel(self):
@@ -128,9 +136,39 @@ class SPMe(BaseModel):
 
     def set_electrolyte_submodel(self):
 
-        self.submodels[
-            "electrolyte conductivity"
-        ] = pybamm.electrolyte_conductivity.Composite(self.param)
+        if self.options["electrolyte conductivity"] not in [
+            "default",
+            "composite",
+            "integrated",
+        ]:
+            raise pybamm.OptionError(
+                "electrolyte conductivity '{}' not suitable for SPMe".format(
+                    self.options["electrolyte conductivity"]
+                )
+            )
+
+        if self.options["surface form"] is False:
+            if self.options["electrolyte conductivity"] in ["default", "composite"]:
+                self.submodels[
+                    "electrolyte conductivity"
+                ] = pybamm.electrolyte_conductivity.Composite(self.param)
+            elif self.options["electrolyte conductivity"] == "integrated":
+                self.submodels[
+                    "electrolyte conductivity"
+                ] = pybamm.electrolyte_conductivity.Integrated(self.param)
+        elif self.options["surface form"] == "differential":
+            raise NotImplementedError(
+                "surface form '{}' has not been implemented for SPMe yet".format(
+                    self.options["surface form"]
+                )
+            )
+        elif self.options["surface form"] == "algebraic":
+            raise NotImplementedError(
+                "surface form '{}' has not been implemented for SPMe yet".format(
+                    self.options["surface form"]
+                )
+            )
+
         self.submodels["electrolyte diffusion"] = pybamm.electrolyte_diffusion.Full(
             self.param
         )
