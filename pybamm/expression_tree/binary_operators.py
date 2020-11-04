@@ -835,7 +835,7 @@ def minimum(left, right):
     Returns the smaller of two objects. Not to be confused with :meth:`pybamm.min`,
     which returns min function of child.
     """
-    return pybamm.simplify_if_constant(Minimum(left, right), keep_domains=True)
+    return pybamm.simplify_if_constant(Minimum(left, right), clear_domains=False)
 
 
 def maximum(left, right):
@@ -843,7 +843,7 @@ def maximum(left, right):
     Returns the larger of two objects. Not to be confused with :meth:`pybamm.max`,
     which returns max function of child.
     """
-    return pybamm.simplify_if_constant(Maximum(left, right), keep_domains=True)
+    return pybamm.simplify_if_constant(Maximum(left, right), clear_domains=False)
 
 
 def source(left, right, boundary=False):

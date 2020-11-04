@@ -375,109 +375,113 @@ class Symbol(anytree.NodeMixin):
     def __add__(self, other):
         """return an :class:`Addition` object"""
         return pybamm.simplify_if_constant(
-            pybamm.Addition(self, other), keep_domains=True
+            pybamm.Addition(self, other), clear_domains=False
         )
 
     def __radd__(self, other):
         """return an :class:`Addition` object"""
         return pybamm.simplify_if_constant(
-            pybamm.Addition(other, self), keep_domains=True
+            pybamm.Addition(other, self), clear_domains=False
         )
 
     def __sub__(self, other):
         """return a :class:`Subtraction` object"""
         return pybamm.simplify_if_constant(
-            pybamm.Subtraction(self, other), keep_domains=True
+            pybamm.Subtraction(self, other), clear_domains=False
         )
 
     def __rsub__(self, other):
         """return a :class:`Subtraction` object"""
         return pybamm.simplify_if_constant(
-            pybamm.Subtraction(other, self), keep_domains=True
+            pybamm.Subtraction(other, self), clear_domains=False
         )
 
     def __mul__(self, other):
         """return a :class:`Multiplication` object"""
         return pybamm.simplify_if_constant(
-            pybamm.Multiplication(self, other), keep_domains=True
+            pybamm.Multiplication(self, other), clear_domains=False
         )
 
     def __rmul__(self, other):
         """return a :class:`Multiplication` object"""
         return pybamm.simplify_if_constant(
-            pybamm.Multiplication(other, self), keep_domains=True
+            pybamm.Multiplication(other, self), clear_domains=False
         )
 
     def __matmul__(self, other):
         """return a :class:`MatrixMultiplication` object"""
         return pybamm.simplify_if_constant(
-            pybamm.MatrixMultiplication(self, other), keep_domains=True
+            pybamm.MatrixMultiplication(self, other), clear_domains=False
         )
 
     def __rmatmul__(self, other):
         """return a :class:`MatrixMultiplication` object"""
         return pybamm.simplify_if_constant(
-            pybamm.MatrixMultiplication(other, self), keep_domains=True
+            pybamm.MatrixMultiplication(other, self), clear_domains=False
         )
 
     def __truediv__(self, other):
         """return a :class:`Division` object"""
         return pybamm.simplify_if_constant(
-            pybamm.Division(self, other), keep_domains=True
+            pybamm.Division(self, other), clear_domains=False
         )
 
     def __rtruediv__(self, other):
         """return a :class:`Division` object"""
         return pybamm.simplify_if_constant(
-            pybamm.Division(other, self), keep_domains=True
+            pybamm.Division(other, self), clear_domains=False
         )
 
     def __pow__(self, other):
         """return a :class:`Power` object"""
-        return pybamm.simplify_if_constant(pybamm.Power(self, other), keep_domains=True)
+        return pybamm.simplify_if_constant(
+            pybamm.Power(self, other), clear_domains=False
+        )
 
     def __rpow__(self, other):
         """return a :class:`Power` object"""
-        return pybamm.simplify_if_constant(pybamm.Power(other, self), keep_domains=True)
+        return pybamm.simplify_if_constant(
+            pybamm.Power(other, self), clear_domains=False
+        )
 
     def __lt__(self, other):
         """return a :class:`NotEqualHeaviside` object"""
         return pybamm.simplify_if_constant(
-            pybamm.NotEqualHeaviside(self, other), keep_domains=True
+            pybamm.NotEqualHeaviside(self, other), clear_domains=False
         )
 
     def __le__(self, other):
         """return a :class:`EqualHeaviside` object"""
         return pybamm.simplify_if_constant(
-            pybamm.EqualHeaviside(self, other), keep_domains=True
+            pybamm.EqualHeaviside(self, other), clear_domains=False
         )
 
     def __gt__(self, other):
         """return a :class:`NotEqualHeaviside` object"""
         return pybamm.simplify_if_constant(
-            pybamm.NotEqualHeaviside(other, self), keep_domains=True
+            pybamm.NotEqualHeaviside(other, self), clear_domains=False
         )
 
     def __ge__(self, other):
         """return a :class:`EqualHeaviside` object"""
         return pybamm.simplify_if_constant(
-            pybamm.EqualHeaviside(other, self), keep_domains=True
+            pybamm.EqualHeaviside(other, self), clear_domains=False
         )
 
     def __neg__(self):
         """return a :class:`Negate` object"""
-        return pybamm.simplify_if_constant(pybamm.Negate(self), keep_domains=True)
+        return pybamm.simplify_if_constant(pybamm.Negate(self), clear_domains=False)
 
     def __abs__(self):
         """return an :class:`AbsoluteValue` object"""
         return pybamm.simplify_if_constant(
-            pybamm.AbsoluteValue(self), keep_domains=True
+            pybamm.AbsoluteValue(self), clear_domains=False
         )
 
     def __mod__(self, other):
         """return an :class:`Modulo` object"""
         return pybamm.simplify_if_constant(
-            pybamm.Modulo(self, other), keep_domains=True
+            pybamm.Modulo(self, other), clear_domains=False
         )
 
     def diff(self, variable):
@@ -706,9 +710,9 @@ class Symbol(anytree.NodeMixin):
         """
         return any(isinstance(symbol, symbol_classes) for symbol in self.pre_order())
 
-    def simplify(self, simplified_symbols=None):
+    def simplify(self, simplified_symbols=None, clear_domains=True):
         """ Simplify the expression tree. See :class:`pybamm.Simplification`. """
-        return pybamm.Simplification(simplified_symbols).simplify(self)
+        return pybamm.Simplification(simplified_symbols).simplify(self, clear_domains)
 
     def to_casadi(self, t=None, y=None, y_dot=None, inputs=None, casadi_symbols=None):
         """
