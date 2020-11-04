@@ -9,10 +9,12 @@ from collections import OrderedDict
 
 import numbers
 from platform import system
+
 if system() != "Windows":
     import jax
 
     from jax.config import config
+
     config.update("jax_enable_x64", True)
 
 
@@ -95,18 +97,21 @@ def find_symbols(symbol, constant_symbols, variable_symbols, to_dense=False):
             dummy_eval_left = symbol.children[0].evaluate_for_shape()
             dummy_eval_right = symbol.children[1].evaluate_for_shape()
             if not to_dense and scipy.sparse.issparse(dummy_eval_left):
-                symbol_str = "{0}.multiply({1})"\
-                    .format(children_vars[0], children_vars[1])
+                symbol_str = "{0}.multiply({1})".format(
+                    children_vars[0], children_vars[1]
+                )
             elif not to_dense and scipy.sparse.issparse(dummy_eval_right):
-                symbol_str = "{1}.multiply({0})"\
-                    .format(children_vars[0], children_vars[1])
+                symbol_str = "{1}.multiply({0})".format(
+                    children_vars[0], children_vars[1]
+                )
             else:
                 symbol_str = "{0} * {1}".format(children_vars[0], children_vars[1])
         elif isinstance(symbol, pybamm.Division):
             dummy_eval_left = symbol.children[0].evaluate_for_shape()
             if not to_dense and scipy.sparse.issparse(dummy_eval_left):
-                symbol_str = "{0}.multiply(1/{1})"\
-                    .format(children_vars[0], children_vars[1])
+                symbol_str = "{0}.multiply(1/{1})".format(
+                    children_vars[0], children_vars[1]
+                )
             else:
                 symbol_str = "{0} / {1}".format(children_vars[0], children_vars[1])
 
@@ -114,11 +119,13 @@ def find_symbols(symbol, constant_symbols, variable_symbols, to_dense=False):
             dummy_eval_left = symbol.children[0].evaluate_for_shape()
             dummy_eval_right = symbol.children[1].evaluate_for_shape()
             if not to_dense and scipy.sparse.issparse(dummy_eval_left):
-                symbol_str = "{0}.multiply({1})"\
-                    .format(children_vars[0], children_vars[1])
+                symbol_str = "{0}.multiply({1})".format(
+                    children_vars[0], children_vars[1]
+                )
             elif not to_dense and scipy.sparse.issparse(dummy_eval_right):
-                symbol_str = "{1}.multiply({0})"\
-                    .format(children_vars[0], children_vars[1])
+                symbol_str = "{1}.multiply({0})".format(
+                    children_vars[0], children_vars[1]
+                )
             else:
                 symbol_str = "{0} * {1}".format(children_vars[0], children_vars[1])
 
@@ -294,18 +301,20 @@ class EvaluatorPython:
         # extract constants in generated function
         for i, symbol_id in enumerate(constants.keys()):
             const_name = id_to_python_variable(symbol_id, True)
-            python_str = '{} = constants[{}]\n'.format(const_name, i) + python_str
+            python_str = "{} = constants[{}]\n".format(const_name, i) + python_str
 
         # constants passed in as an ordered dict, convert to list
         self._constants = list(constants.values())
 
         # indent code
-        python_str = '   ' + python_str
-        python_str = python_str.replace('\n', '\n   ')
+        python_str = "   " + python_str
+        python_str = python_str.replace("\n", "\n   ")
 
         # add function def to first line
-        python_str = 'def evaluate(constants, t=None, y=None, '\
-            'y_dot=None, inputs=None, known_evals=None):\n' + python_str
+        python_str = (
+            "def evaluate(constants, t=None, y=None, "
+            "y_dot=None, inputs=None, known_evals=None):\n" + python_str
+        )
 
         # calculate the final variable that will output the result of calling `evaluate`
         # on `symbol`
@@ -315,21 +324,18 @@ class EvaluatorPython:
 
         # add return line
         if symbol.is_constant() and isinstance(result_value, numbers.Number):
-            python_str = python_str + '\n   return ' + str(result_value)
+            python_str = python_str + "\n   return " + str(result_value)
         else:
-            python_str = python_str + '\n   return ' + result_var
+            python_str = python_str + "\n   return " + result_var
 
         # store a copy of examine_jaxpr
-        python_str = python_str + \
-            '\nself._evaluate = evaluate'
+        python_str = python_str + "\nself._evaluate = evaluate"
 
         self._python_str = python_str
         self._symbol = symbol
 
         # compile and run the generated python code,
-        compiled_function = compile(
-            python_str, result_var, "exec"
-        )
+        compiled_function = compile(python_str, result_var, "exec")
         exec(compiled_function)
 
     def evaluate(self, t=None, y=None, y_dot=None, inputs=None, known_evals=None):
@@ -377,7 +383,7 @@ class EvaluatorJax:
         constants, python_str = pybamm.to_python(symbol, debug=False, to_dense=True)
 
         # replace numpy function calls to jax numpy calls
-        python_str = python_str.replace('np.', 'jax.numpy.')
+        python_str = python_str.replace("np.", "jax.numpy.")
 
         # convert all numpy constants to device vectors
         for symbol_id in constants:
@@ -387,18 +393,20 @@ class EvaluatorJax:
         # extract constants in generated function
         for i, symbol_id in enumerate(constants.keys()):
             const_name = id_to_python_variable(symbol_id, True)
-            python_str = '{} = constants[{}]\n'.format(const_name, i) + python_str
+            python_str = "{} = constants[{}]\n".format(const_name, i) + python_str
 
         # constants passed in as an ordered dict, convert to list
         self._constants = list(constants.values())
 
         # indent code
-        python_str = '   ' + python_str
-        python_str = python_str.replace('\n', '\n   ')
+        python_str = "   " + python_str
+        python_str = python_str.replace("\n", "\n   ")
 
         # add function def to first line
-        python_str = 'def evaluate_jax(constants, t=None, y=None, '\
-            'y_dot=None, inputs=None, known_evals=None):\n' + python_str
+        python_str = (
+            "def evaluate_jax(constants, t=None, y=None, "
+            "y_dot=None, inputs=None, known_evals=None):\n" + python_str
+        )
 
         # calculate the final variable that will output the result of calling `evaluate`
         # on `symbol`
@@ -408,18 +416,15 @@ class EvaluatorJax:
 
         # add return line
         if symbol.is_constant() and isinstance(result_value, numbers.Number):
-            python_str = python_str + '\n   return ' + str(result_value)
+            python_str = python_str + "\n   return " + str(result_value)
         else:
-            python_str = python_str + '\n   return ' + result_var
+            python_str = python_str + "\n   return " + result_var
 
         # store a copy of examine_jaxpr
-        python_str = python_str + \
-            '\nself._evaluate_jax = evaluate_jax'
+        python_str = python_str + "\nself._evaluate_jax = evaluate_jax"
 
         # compile and run the generated python code,
-        compiled_function = compile(
-            python_str, result_var, "exec"
-        )
+        compiled_function = compile(python_str, result_var, "exec")
         exec(compiled_function)
 
         self._jit_evaluate = jax.jit(self._evaluate_jax, static_argnums=(0, 4, 5))

@@ -6,6 +6,7 @@ import numpy as np
 import pybamm
 import unittest
 from tests import get_mesh_for_testing, get_1p1d_discretisation_for_testing
+from scipy import special
 
 
 class TestCasadiConverter(unittest.TestCase):
@@ -14,6 +15,15 @@ class TestCasadiConverter(unittest.TestCase):
             self.assertTrue((casadi.evalf(a) - casadi.evalf(b)).is_zero())
         else:
             self.assertTrue((a - b).is_zero())
+
+    def assert_casadi_almost_equal(self, a, b, decimal=7, evalf=False):
+        tol = 1.5 * 10**(-decimal)
+        if evalf is True:
+            self.assertTrue(
+                (casadi.fabs(casadi.evalf(a) - casadi.evalf(b)) < tol).is_one()
+            )
+        else:
+            self.assertTrue((casadi.fabs(a - b) < tol).is_one())
 
     def test_convert_scalar_symbols(self):
         a = pybamm.Scalar(0)
@@ -104,6 +114,8 @@ class TestCasadiConverter(unittest.TestCase):
         self.assert_casadi_equal(
             pybamm.Function(np.abs, c).to_casadi(), casadi.MX(3), evalf=True
         )
+
+        # test functions with assert_casadi_equal
         for np_fun in [
             np.sqrt,
             np.tanh,
@@ -119,6 +131,17 @@ class TestCasadiConverter(unittest.TestCase):
         ]:
             self.assert_casadi_equal(
                 pybamm.Function(np_fun, c).to_casadi(), casadi.MX(np_fun(3)), evalf=True
+            )
+
+        # test functions with assert_casadi_almost_equal
+        for np_fun in [
+            special.erf,
+        ]:
+            self.assert_casadi_almost_equal(
+                pybamm.Function(np_fun, c).to_casadi(),
+                casadi.MX(np_fun(3)),
+                decimal=15,
+                evalf=True,
             )
 
     def test_interpolation(self):

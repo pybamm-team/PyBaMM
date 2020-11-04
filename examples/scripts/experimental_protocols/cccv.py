@@ -34,8 +34,8 @@ for i in range(3):
     ax.set_xlim([0, 13])
 ax.legend()
 
-# Save time, voltage, current, discharge capacity and temperature to csv and matlab
-# formats
+# Save time, voltage, current, discharge capacity, temperature, and electrolyte
+# concentration to csv and matlab formats
 sim.solution.save_data(
     "output.mat",
     [
@@ -44,9 +44,19 @@ sim.solution.save_data(
         "Terminal voltage [V]",
         "Discharge capacity [A.h]",
         "X-averaged cell temperature [K]",
+        "Electrolyte concentration [mol.m-3]",
     ],
     to_format="matlab",
+    short_names={
+        "Time [h]": "t",
+        "Current [A]": "I",
+        "Terminal voltage [V]": "V",
+        "Discharge capacity [A.h]": "Q",
+        "X-averaged cell temperature [K]": "T",
+        "Electrolyte concentration [mol.m-3]": "c_e",
+    },
 )
+# We can only save 0D variables to csv
 sim.solution.save_data(
     "output.csv",
     [

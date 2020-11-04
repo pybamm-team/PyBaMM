@@ -8,8 +8,7 @@ import unittest
 
 
 def get_mesh_for_testing(
-    xpts=None, rpts=10, ypts=15, zpts=15, geometry=None, cc_submesh=None,
-    order=2
+    xpts=None, rpts=10, ypts=15, zpts=15, geometry=None, cc_submesh=None, order=2
 ):
     param = pybamm.ParameterValues(
         values={
@@ -33,22 +32,19 @@ def get_mesh_for_testing(
 
     submesh_types = {
         "negative electrode": pybamm.MeshGenerator(
-            pybamm.SpectralVolume1DSubMesh,
-            {"order": order}
+            pybamm.SpectralVolume1DSubMesh, {"order": order}
         ),
-        "separator": pybamm.MeshGenerator(pybamm.SpectralVolume1DSubMesh,
-                                          {"order": order}),
+        "separator": pybamm.MeshGenerator(
+            pybamm.SpectralVolume1DSubMesh, {"order": order}
+        ),
         "positive electrode": pybamm.MeshGenerator(
-            pybamm.SpectralVolume1DSubMesh,
-            {"order": order}
+            pybamm.SpectralVolume1DSubMesh, {"order": order}
         ),
         "negative particle": pybamm.MeshGenerator(
-            pybamm.SpectralVolume1DSubMesh,
-            {"order": order}
+            pybamm.SpectralVolume1DSubMesh, {"order": order}
         ),
         "positive particle": pybamm.MeshGenerator(
-            pybamm.SpectralVolume1DSubMesh,
-            {"order": order}
+            pybamm.SpectralVolume1DSubMesh, {"order": order}
         ),
         "current collector": pybamm.MeshGenerator(pybamm.SubMesh0D),
     }

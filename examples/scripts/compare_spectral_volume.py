@@ -8,8 +8,10 @@ order = 3
 
 # load model
 # don't use new_copy
-models = [pybamm.lithium_ion.DFN(name="Finite Volume"),
-          pybamm.lithium_ion.DFN(name="Spectral Volume")]
+models = [
+    pybamm.lithium_ion.DFN(name="Finite Volume"),
+    pybamm.lithium_ion.DFN(name="Spectral Volume"),
+]
 
 # create geometry
 geometries = [m.default_geometry for m in models]
@@ -24,32 +26,31 @@ for m, p, g in zip(models, params, geometries):
 var = pybamm.standard_spatial_vars
 var_pts = {var.x_n: 1, var.x_s: 1, var.x_p: 1, var.r_n: 1, var.r_p: 1}
 # the Finite Volume method also works on spectral meshes
-meshes = [pybamm.Mesh(
-    geometry,
-    {
-        "negative particle": pybamm.MeshGenerator(
-            pybamm.SpectralVolume1DSubMesh,
-            {"order": order}
-        ),
-        "positive particle": pybamm.MeshGenerator(
-            pybamm.SpectralVolume1DSubMesh,
-            {"order": order}
-        ),
-        "negative electrode": pybamm.MeshGenerator(
-            pybamm.SpectralVolume1DSubMesh,
-            {"order": order}
-        ),
-        "separator": pybamm.MeshGenerator(
-            pybamm.SpectralVolume1DSubMesh,
-            {"order": order}
-        ),
-        "positive electrode": pybamm.MeshGenerator(
-            pybamm.SpectralVolume1DSubMesh,
-            {"order": order}
-        ),
-        "current collector": pybamm.SubMesh0D,
-    },
-    var_pts) for geometry in geometries]
+meshes = [
+    pybamm.Mesh(
+        geometry,
+        {
+            "negative particle": pybamm.MeshGenerator(
+                pybamm.SpectralVolume1DSubMesh, {"order": order}
+            ),
+            "positive particle": pybamm.MeshGenerator(
+                pybamm.SpectralVolume1DSubMesh, {"order": order}
+            ),
+            "negative electrode": pybamm.MeshGenerator(
+                pybamm.SpectralVolume1DSubMesh, {"order": order}
+            ),
+            "separator": pybamm.MeshGenerator(
+                pybamm.SpectralVolume1DSubMesh, {"order": order}
+            ),
+            "positive electrode": pybamm.MeshGenerator(
+                pybamm.SpectralVolume1DSubMesh, {"order": order}
+            ),
+            "current collector": pybamm.SubMesh0D,
+        },
+        var_pts,
+    )
+    for geometry in geometries
+]
 
 # discretise model
 disc_fv = pybamm.Discretisation(meshes[0], models[0].default_spatial_methods)
@@ -61,8 +62,8 @@ disc_sv = pybamm.Discretisation(
         "negative electrode": pybamm.SpectralVolume(order=order),
         "separator": pybamm.SpectralVolume(order=order),
         "positive electrode": pybamm.SpectralVolume(order=order),
-        "current collector": pybamm.ZeroDimensionalSpatialMethod()
-    }
+        "current collector": pybamm.ZeroDimensionalSpatialMethod(),
+    },
 )
 
 disc_fv.process_model(models[0])

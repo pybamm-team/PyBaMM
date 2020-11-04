@@ -6,6 +6,7 @@ import pybamm
 import unittest
 import numpy as np
 from scipy.interpolate import interp1d
+from scipy import special
 
 
 def test_function(arg):
@@ -316,6 +317,38 @@ class TestSpecificFunctions(unittest.TestCase):
             fun.diff(a).evaluate(inputs={"a": 3}),
             (
                 pybamm.tanh(pybamm.Scalar(3 + h)).evaluate()
+                - fun.evaluate(inputs={"a": 3})
+            )
+            / h,
+            places=5,
+        )
+
+    def test_erf(self):
+        a = pybamm.InputParameter("a")
+        fun = pybamm.erf(a)
+        self.assertEqual(fun.evaluate(inputs={"a": 3}), special.erf(3))
+        h = 0.0000001
+        self.assertAlmostEqual(
+            fun.diff(a).evaluate(inputs={"a": 3}),
+            (
+                pybamm.erf(pybamm.Scalar(3 + h)).evaluate()
+                - fun.evaluate(inputs={"a": 3})
+            )
+            / h,
+            places=5,
+        )
+
+    def test_erfc(self):
+        a = pybamm.InputParameter("a")
+        fun = pybamm.erfc(a)
+        self.assertAlmostEqual(
+            fun.evaluate(inputs={"a": 3}), special.erfc(3), places=15
+        )
+        h = 0.0000001
+        self.assertAlmostEqual(
+            fun.diff(a).evaluate(inputs={"a": 3}),
+            (
+                pybamm.erfc(pybamm.Scalar(3 + h)).evaluate()
                 - fun.evaluate(inputs={"a": 3})
             )
             / h,

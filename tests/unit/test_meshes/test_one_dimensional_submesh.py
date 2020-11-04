@@ -277,8 +277,7 @@ class TestSpectralVolume1DSubMesh(unittest.TestCase):
     def test_exceptions(self):
         edges = np.array([0, 0.3, 1])
         submesh_params = {"edges": edges}
-        mesh = pybamm.MeshGenerator(pybamm.SpectralVolume1DSubMesh,
-                                    submesh_params)
+        mesh = pybamm.MeshGenerator(pybamm.SpectralVolume1DSubMesh, submesh_params)
 
         x_n = pybamm.standard_spatial_vars.x_n
 
@@ -306,8 +305,7 @@ class TestSpectralVolume1DSubMesh(unittest.TestCase):
         )
 
         geometry = {
-            "negative particle": {r: {"min": pybamm.Scalar(0),
-                                      "max": pybamm.Scalar(1)}}
+            "negative particle": {r: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)}}
         }
 
         edges = np.array([0, 0.3, 1])
@@ -329,16 +327,17 @@ class TestSpectralVolume1DSubMesh(unittest.TestCase):
 
         # check number of edges and nodes
         self.assertEqual(len(mesh["negative particle"].sv_nodes), var_pts[r])
-        self.assertEqual(len(mesh["negative particle"].nodes),
-                         order * var_pts[r])
+        self.assertEqual(len(mesh["negative particle"].nodes), order * var_pts[r])
         self.assertEqual(
             len(mesh["negative particle"].edges),
             len(mesh["negative particle"].nodes) + 1,
         )
 
         # check Chebyshev subdivision locations
-        for (a, b) in zip(mesh["negative particle"].edges.tolist(),
-                          [0, 0.075, 0.225, 0.3, 0.475, 0.825, 1]):
+        for (a, b) in zip(
+            mesh["negative particle"].edges.tolist(),
+            [0, 0.075, 0.225, 0.3, 0.475, 0.825, 1],
+        ):
             self.assertAlmostEqual(a, b)
 
         # test uniform submesh creation
@@ -352,8 +351,10 @@ class TestSpectralVolume1DSubMesh(unittest.TestCase):
 
         # create mesh
         mesh = pybamm.Mesh(geometry, submesh_types, var_pts)
-        for (a, b) in zip(mesh["negative particle"].edges.tolist(),
-                          [0.0, 0.125, 0.375, 0.5, 0.625, 0.875, 1.0]):
+        for (a, b) in zip(
+            mesh["negative particle"].edges.tolist(),
+            [0.0, 0.125, 0.375, 0.5, 0.625, 0.875, 1.0],
+        ):
             self.assertAlmostEqual(a, b)
 
 
