@@ -59,6 +59,7 @@ class BaseParticle(pybamm.BaseSubModel):
         variables = {
             self.domain + " particle concentration": c_s,
             self.domain + " particle concentration [mol.m-3]": c_s * c_scale,
+            self.domain + " particle concentration [mol.m-3]": c_s * c_scale,
             "X-averaged " + self.domain.lower() + " particle concentration": c_s_xav,
             "X-averaged "
             + self.domain.lower()
@@ -92,6 +93,32 @@ class BaseParticle(pybamm.BaseSubModel):
             "Total lithium in "
             + self.domain.lower()
             + " electrode [mol]": c_s_vol_av * c_scale * L * A,
+            "Minimum "
+            + self.domain.lower()
+            + " particle concentration": pybamm.min(c_s),
+            "Maximum "
+            + self.domain.lower()
+            + " particle concentration": pybamm.max(c_s),
+            "Minimum "
+            + self.domain.lower()
+            + " particle concentration [mol.m-3]": pybamm.min(c_s) * c_scale,
+            "Maximum "
+            + self.domain.lower()
+            + " particle concentration [mol.m-3]": pybamm.max(c_s) * c_scale,
+            "Minimum "
+            + self.domain.lower()
+            + " particle surface concentration": pybamm.min(c_s_surf),
+            "Maximum "
+            + self.domain.lower()
+            + " particle surface concentration": pybamm.max(c_s_surf),
+            "Minimum "
+            + self.domain.lower()
+            + " particle surface concentration [mol.m-3]": pybamm.min(c_s_surf)
+            * c_scale,
+            "Maximum "
+            + self.domain.lower()
+            + " particle surface concentration [mol.m-3]": pybamm.max(c_s_surf)
+            * c_scale,
         }
 
         return variables

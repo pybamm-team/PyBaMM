@@ -138,7 +138,23 @@ class BinaryOperator(pybamm.Symbol):
 
     def __str__(self):
         """ See :meth:`pybamm.Symbol.__str__()`. """
-        return "{!s} {} {!s}".format(self.left, self.name, self.right)
+        # Possibly add brackets for clarity
+        if isinstance(self.left, pybamm.BinaryOperator) and not (
+            (self.left.name == self.name)
+            or (self.left.name == "*" and self.name == "/")
+            or (self.left.name == "+" and self.name == "-")
+            or self.name == "+"
+        ):
+            left_str = "({!s})".format(self.left)
+        else:
+            left_str = "{!s}".format(self.left)
+        if isinstance(self.right, pybamm.BinaryOperator) and not (
+            (self.name == "*" and self.right.name in ["*", "/"]) or self.name == "+"
+        ):
+            right_str = "({!s})".format(self.right)
+        else:
+            right_str = "{!s}".format(self.right)
+        return "{} {} {}".format(left_str, self.name, right_str)
 
     def get_children_domains(self, ldomain, rdomain):
         "Combine domains from children in appropriate way"
@@ -832,22 +848,62 @@ class Maximum(BinaryOperator):
 
 def minimum(left, right):
     """
-    Returns the smaller of two objects. Not to be confused with :meth:`pybamm.min`,
-    which returns min function of child.
+    Returns the smaller of two objects, possibly with a smoothing approximation.
+    Not to be confused with :meth:`pybamm.min`, which returns min function of child.
     """
-    return pybamm.simplify_if_constant(Minimum(left, right), clear_domains=False)
+    k = pybamm.settings.min_smoothing
+    # Return exact approximation if that is the setting or the outcome is a constant
+    # (i.e. no need for smoothing)
+    if k == "exact" or (pybamm.is_constant(left) and pybamm.is_constant(right)):
+        out = Minimum(left, right)
+    else:
+        out = pybamm.softminus(left, right, k)
+    return pybamm.simplify_if_constant(out, clear_domains=False)
 
 
 def maximum(left, right):
     """
-    Returns the larger of two objects. Not to be confused with :meth:`pybamm.max`,
-    which returns max function of child.
+    Returns the larger of two objects, possibly with a smoothing approximation.
+    Not to be confused with :meth:`pybamm.max`, which returns max function of child.
     """
-    return pybamm.simplify_if_constant(Maximum(left, right), clear_domains=False)
+    k = pybamm.settings.max_smoothing
+    # Return exact approximation if that is the setting or the outcome is a constant
+    # (i.e. no need for smoothing)
+    if k == "exact" or (pybamm.is_constant(left) and pybamm.is_constant(right)):
+        out = Maximum(left, right)
+    else:
+        out = pybamm.softplus(left, right, k)
+    return pybamm.simplify_if_constant(out, clear_domains=False)
+
+
+def softminus(left, right, k):
+    """
+    Softplus approximation to the minimum function. k is the smoothing parameter,
+    set by `pybamm.settings.min_smoothing`. The recommended value is k=10.
+    """
+    return pybamm.log(pybamm.exp(-k * left) + pybamm.exp(-k * right)) / -k
+
+
+def softplus(left, right, k):
+    """
+    Softplus approximation to the maximum function. k is the smoothing parameter,
+    set by `pybamm.settings.max_smoothing`. The recommended value is k=10.
+    """
+    return pybamm.log(pybamm.exp(k * left) + pybamm.exp(k * right)) / k
+
+
+def sigmoid(left, right, k):
+    """
+    Sigmoidal approximation to the heaviside function. k is the smoothing parameter,
+    set by `pybamm.settings.heaviside_smoothing`. The recommended value is k=10.
+    Note that the concept of deciding which side to pick when left=right does not apply
+    for this smooth approximation. When left=right, the value is (left+right)/2.
+    """
+    return (1 + pybamm.tanh(k * (right - left))) / 2
 
 
 def source(left, right, boundary=False):
-    """A convinience function for creating (part of) an expression tree representing
+    """A convenience function for creating (part of) an expression tree representing
     a source term. This is necessary for spatial methods where the mass matrix
     is not the identity (e.g. finite element formulation with piecwise linear
     basis functions). The left child is the symbol representing the source term

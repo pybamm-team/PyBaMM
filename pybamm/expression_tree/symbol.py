@@ -61,6 +61,10 @@ def evaluate_for_shape_using_domain(domain, auxiliary_domains=None, typ="vector"
     return create_object_of_size(_domain_size * _auxiliary_domain_sizes, typ)
 
 
+def is_constant(symbol):
+    return isinstance(symbol, numbers.Number) or symbol.is_constant()
+
+
 class Symbol(anytree.NodeMixin):
     """Base node class for the expression tree
 
@@ -445,38 +449,63 @@ class Symbol(anytree.NodeMixin):
         )
 
     def __lt__(self, other):
-        """return a :class:`NotEqualHeaviside` object"""
-        return pybamm.simplify_if_constant(
-            pybamm.NotEqualHeaviside(self, other), clear_domains=False
-        )
+        """return a :class:`NotEqualHeaviside` object, or a smooth approximation"""
+        k = pybamm.settings.heaviside_smoothing
+        # Return exact approximation if that is the setting or the outcome is a constant
+        # (i.e. no need for smoothing)
+        if k == "exact" or (is_constant(self) and is_constant(other)):
+            out = pybamm.NotEqualHeaviside(self, other)
+        else:
+            out = pybamm.sigmoid(self, other, k)
+        return pybamm.simplify_if_constant(out, clear_domains=False)
 
     def __le__(self, other):
-        """return a :class:`EqualHeaviside` object"""
-        return pybamm.simplify_if_constant(
-            pybamm.EqualHeaviside(self, other), clear_domains=False
-        )
+        """return a :class:`EqualHeaviside` object, or a smooth approximation"""
+        k = pybamm.settings.heaviside_smoothing
+        # Return exact approximation if that is the setting or the outcome is a constant
+        # (i.e. no need for smoothing)
+        if k == "exact" or (is_constant(self) and is_constant(other)):
+            out = pybamm.EqualHeaviside(self, other)
+        else:
+            out = pybamm.sigmoid(self, other, k)
+        return pybamm.simplify_if_constant(out, clear_domains=False)
 
     def __gt__(self, other):
-        """return a :class:`NotEqualHeaviside` object"""
-        return pybamm.simplify_if_constant(
-            pybamm.NotEqualHeaviside(other, self), clear_domains=False
-        )
+        """return a :class:`NotEqualHeaviside` object, or a smooth approximation"""
+        k = pybamm.settings.heaviside_smoothing
+        # Return exact approximation if that is the setting or the outcome is a constant
+        # (i.e. no need for smoothing)
+        if k == "exact" or (is_constant(self) and is_constant(other)):
+            out = pybamm.NotEqualHeaviside(other, self)
+        else:
+            out = pybamm.sigmoid(other, self, k)
+        return pybamm.simplify_if_constant(out, clear_domains=False)
 
     def __ge__(self, other):
-        """return a :class:`EqualHeaviside` object"""
-        return pybamm.simplify_if_constant(
-            pybamm.EqualHeaviside(other, self), clear_domains=False
-        )
+        """return a :class:`EqualHeaviside` object, or a smooth approximation"""
+        k = pybamm.settings.heaviside_smoothing
+        # Return exact approximation if that is the setting or the outcome is a constant
+        # (i.e. no need for smoothing)
+        if k == "exact" or (is_constant(self) and is_constant(other)):
+            out = pybamm.EqualHeaviside(other, self)
+        else:
+            out = pybamm.sigmoid(other, self, k)
+        return pybamm.simplify_if_constant(out, clear_domains=False)
 
     def __neg__(self):
         """return a :class:`Negate` object"""
         return pybamm.simplify_if_constant(pybamm.Negate(self), clear_domains=False)
 
     def __abs__(self):
-        """return an :class:`AbsoluteValue` object"""
-        return pybamm.simplify_if_constant(
-            pybamm.AbsoluteValue(self), clear_domains=False
-        )
+        """return an :class:`AbsoluteValue` object, or a smooth approximation"""
+        k = pybamm.settings.abs_smoothing
+        # Return exact approximation if that is the setting or the outcome is a constant
+        # (i.e. no need for smoothing)
+        if k == "exact" or is_constant(self):
+            out = pybamm.AbsoluteValue(self)
+        else:
+            out = pybamm.smooth_absolute_value(self, k)
+        return pybamm.simplify_if_constant(out, clear_domains=False)
 
     def __mod__(self, other):
         """return an :class:`Modulo` object"""

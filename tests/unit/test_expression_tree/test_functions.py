@@ -37,6 +37,7 @@ class TestFunction(unittest.TestCase):
         a = pybamm.Symbol("a")
         funca = pybamm.Function(test_function, a)
         self.assertEqual(funca.name, "function (test_function)")
+        self.assertEqual(str(funca), "test_function(a)")
         self.assertEqual(funca.children[0].name, a.name)
 
         b = pybamm.Scalar(1)
@@ -96,6 +97,7 @@ class TestFunction(unittest.TestCase):
         b = pybamm.Parameter("b")
         func = pybamm.Function(test_multi_var_function, a, b)
         self.assertEqual(func.name, "function (test_multi_var_function)")
+        self.assertEqual(str(func), "test_multi_var_function(a, b)")
         self.assertEqual(func.children[0].name, a.name)
         self.assertEqual(func.children[1].name, b.name)
 
