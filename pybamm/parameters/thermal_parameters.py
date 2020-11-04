@@ -18,7 +18,7 @@ class ThermalParameters:
     def __init__(self):
 
         # Get geometric parameters
-        self.geo = pybamm.GeometricParameters()
+        self.geo = pybamm.geometric_parameters
 
         # Set parameters
         self._set_dimensional_parameters()
@@ -178,3 +178,6 @@ class ThermalParameters:
     def T_amb(self, t):
         "Dimensionless ambient temperature"
         return (self.T_amb_dim(t) - self.T_ref) / self.Delta_T
+
+
+thermal_parameters = ThermalParameters()

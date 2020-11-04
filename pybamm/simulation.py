@@ -405,7 +405,7 @@ class Simulation:
                 external_variables=external_variables,
                 inputs=inputs,
             )
-            self.t_eval = self._solution.t * self.model.timescale.evaluate()
+            self.t_eval = self._solution.t * self._solution.timescale_eval
 
         elif self.operating_mode == "with experiment":
             if t_eval is not None:

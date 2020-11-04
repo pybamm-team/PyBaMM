@@ -107,6 +107,15 @@ class TestCitations(unittest.TestCase):
         pybamm.particle.PolynomialManyParticles(None, "Negative", "quadratic profile")
         self.assertIn("subramanian2005", citations._papers_to_cite)
 
+    def test_brosaplanella_2020(self):
+        # Test that calling relevant bits of code adds the right paper to citations
+        citations = pybamm.citations
+
+        citations._reset()
+        self.assertNotIn("brosaplanella2020TSPMe", citations._papers_to_cite)
+        pybamm.electrolyte_conductivity.Integrated(None)
+        self.assertIn("brosaplanella2020TSPMe", citations._papers_to_cite)
+
     def test_scikit_fem(self):
         citations = pybamm.citations
 

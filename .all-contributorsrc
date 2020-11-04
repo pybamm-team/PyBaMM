@@ -252,6 +252,15 @@
       "contributions": [
         "code"
       ]
+    },
+    {
+      "login": "anandmy",
+      "name": "Anand Mohan Yadav",
+      "avatar_url": "https://avatars1.githubusercontent.com/u/34894671?v=4",
+      "profile": "https://github.com/anandmy",
+      "contributions": [
+        "doc"
+      ]
     }
   ],
   "contributorsPerLine": 7,

@@ -17,7 +17,7 @@ class ElectricalParameters:
     def __init__(self):
 
         # Get geometric parameters
-        self.geo = pybamm.GeometricParameters()
+        self.geo = pybamm.geometric_parameters
 
         # Set parameters
         self._set_dimensional_parameters()
@@ -64,3 +64,6 @@ class ElectricalParameters:
             / self.I_typ
             * pybamm.Function(np.sign, self.I_typ)
         )
+
+
+electrical_parameters = ElectricalParameters()
