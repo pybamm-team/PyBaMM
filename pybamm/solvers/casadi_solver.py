@@ -50,9 +50,10 @@ class CasadiSolver(pybamm.BaseSolver):
     extra_options_setup : dict, optional
         Any options to pass to the CasADi integrator when creating the integrator.
         Please consult `CasADi documentation <https://tinyurl.com/y5rk76os>`_ for
-        details. Some typical options:
+        details. Some useful options:
 
         - "max_num_steps": Maximum number of integrator steps
+        - "print_stats": Print out statistics after integration
 
     extra_options_call : dict, optional
         Any options to pass to the CasADi integrator when calling the integrator.
@@ -152,6 +153,7 @@ class CasadiSolver(pybamm.BaseSolver):
                 # Initialize solution
                 solution = pybamm.Solution(np.array([t]), y0[:, np.newaxis])
                 solution.solve_time = 0
+                solution.integration_time = 0
             else:
                 solution = None
 
@@ -395,11 +397,15 @@ class CasadiSolver(pybamm.BaseSolver):
             # Try solving
             if use_grid is True:
                 # Call the integrator once, with the grid
+                timer = pybamm.Timer()
                 sol = integrator(
                     x0=y0_diff, z0=y0_alg, p=inputs, **self.extra_options_call
                 )
+                integration_time = timer.time()
                 y_sol = np.concatenate([sol["xf"].full(), sol["zf"].full()])
-                return pybamm.Solution(t_eval, y_sol)
+                sol = pybamm.Solution(t_eval, y_sol)
+                sol.integration_time = integration_time
+                return sol
             else:
                 # Repeated calls to the integrator
                 x = y0_diff
@@ -410,19 +416,24 @@ class CasadiSolver(pybamm.BaseSolver):
                     t_min = t_eval[i]
                     t_max = t_eval[i + 1]
                     inputs_with_tlims = casadi.vertcat(inputs, t_min, t_max)
+                    timer = pybamm.Timer()
                     sol = integrator(
                         x0=x, z0=z, p=inputs_with_tlims, **self.extra_options_call
                     )
+                    integration_time = timer.time()
                     x = sol["xf"]
                     z = sol["zf"]
                     y_diff = casadi.horzcat(y_diff, x)
                     if not z.is_empty():
                         y_alg = casadi.horzcat(y_alg, z)
                 if z.is_empty():
-                    return pybamm.Solution(t_eval, y_diff)
+                    sol = pybamm.Solution(t_eval, y_diff)
                 else:
                     y_sol = casadi.vertcat(y_diff, y_alg)
-                    return pybamm.Solution(t_eval, y_sol)
+                    sol = pybamm.Solution(t_eval, y_sol)
+
+                sol.integration_time = integration_time
+                return sol
         except RuntimeError as e:
             # If it doesn't work raise error
             raise pybamm.SolverError(e.args[0])
