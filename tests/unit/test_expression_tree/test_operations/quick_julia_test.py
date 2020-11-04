@@ -17,29 +17,39 @@ from collections import OrderedDict
 # from julia import Main
 
 
-model = pybamm.lithium_ion.SPM()
+model = pybamm.lithium_ion.SPMe()
 sim = pybamm.Simulation(model, solver=pybamm.CasadiSolver(mode="fast"))
 sim.solve([0, 3600])
-sol = sim.solve([0, 3600])
+param = model.default_parameter_values
+timescale = param.evaluate(model.timescale)
+sol = sim.solve(np.linspace(0, 0.15 * timescale, 100))
+print(sol.y[:, -1])
 print(sol.integration_time)
-# sim.build(check_model=False)
-# expr = sim.built_model.concatenated_rhs
+# expr = pybamm.NumpyConcatenation(
+#     sim.built_model.concatenated_rhs, sim.built_model.concatenated_algebraic
+# )
+expr = sim.built_model.concatenated_rhs
 
-# evaluator_str = pybamm.get_julia_function(expr)
+evaluator_str = pybamm.get_julia_function(expr)
+n_rhs = sim.built_model.concatenated_rhs.size
+n_alg = sim.built_model.concatenated_algebraic.size
 # np.set_printoptions(
 #     threshold=max(
 #         np.get_printoptions()["threshold"],
-#         sim.built_model.concatenated_initial_conditions.evaluate().flatten().size,
+#         n_rhs + n_alg,
 #     )
 # )
-# with open("tmp.txt", "w") as f:
-#     f.write(evaluator_str)
-#     f.write(
-#         np.array2string(
-#             sim.built_model.concatenated_initial_conditions.evaluate().flatten(),
-#             separator=",",
-#         )
-#     )
+with open("tmp.txt", "w") as f:
+    f.write(evaluator_str + "\n\n")
+    # f.write(f"u0 = {np.array2string(sol.model.y0, separator=',')}\n")
+    # f.write(f"du0 = zeros({n_rhs + n_alg})\n")
+    # f.write(f"differential_vars=[zeros({n_rhs});zeros({n_alg})]\n")
+
+expr2 = sim.built_model.variables["Terminal voltage [V]"]
+evaluator_str2 = pybamm.get_julia_function(expr2)
+with open("tmp2.txt", "w") as f:
+    f.write(evaluator_str2 + "\n\n")
+
 # Main.eval(evaluator_str)
 # Main.dy = [0, 0, 0, 0, 0, 0]
 # Main.y = [2, 3, 4, 5, 6, 7]
