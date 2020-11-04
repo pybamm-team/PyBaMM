@@ -61,6 +61,10 @@ def evaluate_for_shape_using_domain(domain, auxiliary_domains=None, typ="vector"
     return create_object_of_size(_domain_size * _auxiliary_domain_sizes, typ)
 
 
+def is_constant(symbol):
+    return isinstance(symbol, numbers.Number) or symbol.is_constant()
+
+
 class Symbol(anytree.NodeMixin):
     """Base node class for the expression tree
 
@@ -445,7 +449,7 @@ class Symbol(anytree.NodeMixin):
         k = pybamm.settings.heaviside_smoothing
         # Return exact approximation if that is the setting or the outcome is a constant
         # (i.e. no need for smoothing)
-        if k == "exact" or (self.is_constant() and other.is_constant()):
+        if k == "exact" or (is_constant(self) and is_constant(other)):
             out = pybamm.NotEqualHeaviside(self, other)
         else:
             out = pybamm.sigmoid(self, other, k)
@@ -456,7 +460,7 @@ class Symbol(anytree.NodeMixin):
         k = pybamm.settings.heaviside_smoothing
         # Return exact approximation if that is the setting or the outcome is a constant
         # (i.e. no need for smoothing)
-        if k == "exact" or (self.is_constant() and other.is_constant()):
+        if k == "exact" or (is_constant(self) and is_constant(other)):
             out = pybamm.EqualHeaviside(self, other)
         else:
             out = pybamm.sigmoid(self, other, k)
@@ -467,7 +471,7 @@ class Symbol(anytree.NodeMixin):
         k = pybamm.settings.heaviside_smoothing
         # Return exact approximation if that is the setting or the outcome is a constant
         # (i.e. no need for smoothing)
-        if k == "exact" or (self.is_constant() and other.is_constant()):
+        if k == "exact" or (is_constant(self) and is_constant(other)):
             out = pybamm.NotEqualHeaviside(other, self)
         else:
             out = pybamm.sigmoid(other, self, k)
@@ -478,7 +482,7 @@ class Symbol(anytree.NodeMixin):
         k = pybamm.settings.heaviside_smoothing
         # Return exact approximation if that is the setting or the outcome is a constant
         # (i.e. no need for smoothing)
-        if k == "exact" or (self.is_constant() and other.is_constant()):
+        if k == "exact" or (is_constant(self) and is_constant(other)):
             out = pybamm.EqualHeaviside(other, self)
         else:
             out = pybamm.sigmoid(other, self, k)
@@ -493,7 +497,7 @@ class Symbol(anytree.NodeMixin):
         k = pybamm.settings.abs_smoothing
         # Return exact approximation if that is the setting or the outcome is a constant
         # (i.e. no need for smoothing)
-        if k == "exact" or self.is_constant():
+        if k == "exact" or is_constant(self):
             out = pybamm.AbsoluteValue(self)
         else:
             out = pybamm.smooth_absolute_value(self, k)

@@ -1,6 +1,7 @@
 #
 # Unary operator classes and methods
 #
+import numbers
 import numpy as np
 import pybamm
 from scipy.sparse import issparse, csr_matrix
@@ -24,6 +25,8 @@ class UnaryOperator(pybamm.Symbol):
     """
 
     def __init__(self, name, child, domain=None, auxiliary_domains=None):
+        if isinstance(child, numbers.Number):
+            child = pybamm.Scalar(child)
         if domain is None:
             domain = child.domain
         if auxiliary_domains is None:

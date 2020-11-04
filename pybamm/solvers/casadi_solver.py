@@ -153,6 +153,7 @@ class CasadiSolver(pybamm.BaseSolver):
                 # Initialize solution
                 solution = pybamm.Solution(np.array([t]), y0[:, np.newaxis])
                 solution.solve_time = 0
+                solution.integration_time = 0
             else:
                 solution = None
 

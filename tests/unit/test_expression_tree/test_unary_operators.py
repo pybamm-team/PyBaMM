@@ -16,6 +16,9 @@ class TestUnaryOperators(unittest.TestCase):
         self.assertEqual(un.domain, a.domain)
 
         # with number
+        absval = pybamm.AbsoluteValue(-10)
+        self.assertEqual(absval.evaluate(), 10)
+
         log = pybamm.log(10)
         self.assertEqual(log.evaluate(), np.log(10))
 
@@ -47,8 +50,8 @@ class TestUnaryOperators(unittest.TestCase):
         self.assertAlmostEqual(expr.evaluate(y=np.array([-1]))[0, 0], 1)
         self.assertEqual(
             str(expr),
-            "y[0:1] * exp(10.0 * y[0:1]) - exp(-10.0 * y[0:1]) "
-            "/ exp(10.0 * y[0:1]) + exp(-10.0 * y[0:1])",
+            "y[0:1] * (exp(10.0 * y[0:1]) - exp(-10.0 * y[0:1])) "
+            "/ (exp(10.0 * y[0:1]) + exp(-10.0 * y[0:1]))",
         )
 
     def test_sign(self):
