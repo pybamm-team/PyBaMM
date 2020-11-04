@@ -310,14 +310,19 @@ class CasadiSolver(pybamm.BaseSolver):
         if model in self.integrators:
             # If we're not using the grid, we don't need to change the integrator
             if use_grid is False:
-                return self.integrators[model]
+                return self.integrators[model][0]
             # Otherwise, create new integrator with an updated grid
+            # We don't need to update the grid if reusing the same t_eval
             else:
                 method, problem, options = self.integrator_specs[model]
-                options["grid"] = t_eval
-                integrator = casadi.integrator("F", method, problem, options)
-                self.integrators[model] = (integrator, use_grid)
-                return integrator
+                t_eval_old = options["grid"]
+                if np.array_equal(t_eval_old, t_eval):
+                    return self.integrators[model][0]
+                else:
+                    options["grid"] = t_eval
+                    integrator = casadi.integrator("F", method, problem, options)
+                    self.integrators[model] = (integrator, use_grid)
+                    return integrator
         else:
             y0 = model.y0
             rhs = model.casadi_rhs

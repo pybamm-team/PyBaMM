@@ -154,10 +154,14 @@ class Timer(object):
         """
         if time is None:
             time = self.time()
-        if time < 1e-2:
-            return str(time) + " seconds"
+        if time < 1e-6:
+            return "{:.3f} ns".format(time * 1e9)
+        if time < 1e-3:
+            return "{:.3f} us".format(time * 1e6)
+        if time < 1:
+            return "{:.3f} ms".format(time * 1e3)
         elif time < 60:
-            return str(round(time, 2)) + " seconds"
+            return "{:.3f} s".format(time)
         output = []
         time = int(round(time))
         units = [(604800, "week"), (86400, "day"), (3600, "hour"), (60, "minute")]

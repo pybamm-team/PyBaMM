@@ -219,6 +219,16 @@ primaryClass={physics.app-ph},
   publisher={IOP Publishing}
 }
 
+@article{brosaplanella2020TSPMe,
+title={Systematic derivation and validation of a reduced thermal-electrochemical model for lithium-ion batteries using asymptotic methods}
+journal={Submitted for publication},
+author={Brosa Planella, Ferran and Sheikh, Muhammad and Widanage, Dhammika W},
+year={2020},
+eprint={2011.01611},
+archivePrefix={arXiv},
+primaryClass={physics.chem-ph},
+}
+
 @article{lain2019design,
   title={Design Strategies for High Power vs. High Energy Lithium Ion Cells},
   author={Lain, Michael J and Brandon, James and Kendrick, Emma},

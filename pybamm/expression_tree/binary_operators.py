@@ -218,6 +218,10 @@ class BinaryOperator(pybamm.Symbol):
             dimension
         )
 
+    def is_constant(self):
+        """ See :meth:`pybamm.Symbol.is_constant()`. """
+        return self.left.is_constant() and self.right.is_constant()
+
 
 class Power(BinaryOperator):
     """A node in the expression tree representing a `**` power operator

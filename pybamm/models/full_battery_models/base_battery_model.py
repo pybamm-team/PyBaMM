@@ -198,6 +198,7 @@ class BaseBatteryModel(pybamm.BaseModel):
             "current collector": "uniform",
             "particle": "Fickian diffusion",
             "particle shape": "spherical",
+            "electrolyte conductivity": "default",
             "thermal": "isothermal",
             "cell geometry": None,
             "external submodels": [],
@@ -385,6 +386,19 @@ class BaseBatteryModel(pybamm.BaseModel):
             warnings.warn(
                 "1+1D Thermal models are only valid if both tabs are "
                 "placed at the top of the cell."
+            )
+
+        if options["electrolyte conductivity"] not in [
+            "default",
+            "full",
+            "leading order",
+            "composite",
+            "integrated",
+        ]:
+            raise pybamm.OptionError(
+                "electrolyte conductivity model '{}' not recognised".format(
+                    options["electrolyte conductivity"]
+                )
             )
 
         self._options = options

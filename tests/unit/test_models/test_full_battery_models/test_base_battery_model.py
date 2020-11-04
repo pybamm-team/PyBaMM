@@ -149,6 +149,10 @@ class TestBaseBatteryModel(unittest.TestCase):
             pybamm.BaseBatteryModel({"particle shape": "bad particle shape"})
         with self.assertRaisesRegex(pybamm.OptionError, "operating mode"):
             pybamm.BaseBatteryModel({"operating mode": "bad operating mode"})
+        with self.assertRaisesRegex(pybamm.OptionError, "electrolyte conductivity"):
+            pybamm.BaseBatteryModel(
+                {"electrolyte conductivity": "bad electrolyte conductivity"}
+            )
 
         # SEI options
         with self.assertRaisesRegex(pybamm.OptionError, "sei"):

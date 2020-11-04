@@ -67,7 +67,7 @@ class BaseOutputTest(object):
 
         # Use dimensional time and space
         self.t = solution.t * model.timescale_eval
-        geo = pybamm.GeometricParameters()
+        geo = pybamm.geometric_parameters
 
         L_x = param.evaluate(geo.L_x)
         self.x_n = disc.mesh["negative electrode"].nodes * L_x
