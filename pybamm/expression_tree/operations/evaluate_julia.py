@@ -81,6 +81,7 @@ def find_symbols(symbol, constant_symbols, variable_symbols, variable_symbol_siz
             elif value.shape == (1, 1):
                 # Extract value if array has only one entry
                 constant_symbols[symbol.id] = value[0, 0]
+                variable_symbol_sizes[symbol.id] = 1
             elif value.shape[1] == 1:
                 # Set print options large enough to avoid ellipsis
                 # at least as big as len(row) = len(col) = len(data)
@@ -93,8 +94,10 @@ def find_symbols(symbol, constant_symbols, variable_symbols, variable_symbol_siz
                 constant_symbols[symbol.id] = np.array2string(
                     value.flatten(), separator=","
                 )
+                variable_symbol_sizes[symbol.id] = symbol.shape[0]
             else:
                 constant_symbols[symbol.id] = value
+                # No need to save the size as it will not need to be used
         return
 
     # process children recursively
@@ -182,27 +185,52 @@ def find_symbols(symbol, constant_symbols, variable_symbols, variable_symbol_siz
         # DomainConcatenation specifies a particular ordering for the concatenation,
         # which we must follow
         elif isinstance(symbol, pybamm.DomainConcatenation):
-            slice_starts = []
-            all_child_vectors = []
-            for i in range(symbol.secondary_dimensions_npts):
-                child_vectors = []
-                for child_var, slices in zip(children_vars, symbol._children_slices):
-                    for child_dom, child_slice in slices.items():
-                        slice_starts.append(symbol._slices[child_dom][i].start)
-                        child_vectors.append(
-                            "@view {}[{}:{}]".format(
-                                child_var, child_slice[i].start, child_slice[i].stop
-                            )
-                        )
-                all_child_vectors.extend(
-                    [v for _, v in sorted(zip(slice_starts, child_vectors))]
-                )
-            if len(children_vars) > 1 or symbol.secondary_dimensions_npts > 1:
-                symbol_str = "np.concatenate(({}))".format(",".join(all_child_vectors))
+            if symbol.secondary_dimensions_npts == 1:
+                all_child_vectors = children_vars
+                all_child_sizes = [
+                    variable_symbol_sizes[int(child[6:].replace("m", "-"))]
+                    for child in children_vars
+                ]
             else:
-                symbol_str = "{}".format(",".join(children_vars))
-        else:
-            raise NotImplementedError
+                slice_starts = []
+                all_child_vectors = []
+                all_child_sizes = []
+                for i in range(symbol.secondary_dimensions_npts):
+                    child_vectors = []
+                    child_sizes = []
+                    for child_var, slices in zip(
+                        children_vars, symbol._children_slices
+                    ):
+                        for child_dom, child_slice in slices.items():
+                            slice_starts.append(symbol._slices[child_dom][i].start)
+                            # add 1 to slice start to account for julia indexing
+                            child_vectors.append(
+                                "@view {}[{}:{}]".format(
+                                    child_var,
+                                    child_slice[i].start + 1,
+                                    child_slice[i].stop,
+                                )
+                            )
+                            child_sizes.append(
+                                child_slice[i].stop - child_slice[i].start
+                            )
+                    all_child_vectors.extend(
+                        [v for _, v in sorted(zip(slice_starts, child_vectors))]
+                    )
+                    all_child_sizes.extend(
+                        [v for _, v in sorted(zip(slice_starts, child_sizes))]
+                    )
+            if len(children_vars) > 1 or symbol.secondary_dimensions_npts > 1:
+                # return a list of the children variables, which will be converted to a
+                # line by line assignment
+                # return this as a string so that other functionality still works
+                # also save sizes
+                symbol_str = "["
+                for child, size in zip(all_child_vectors, all_child_sizes):
+                    symbol_str += "{}::{}, ".format(size, child)
+                symbol_str = symbol_str[:-2] + "]"
+            else:
+                raise NotImplementedError
 
     # Note: we assume that y is being passed as a column vector
     elif isinstance(symbol, pybamm.StateVector):
@@ -217,7 +245,13 @@ def find_symbols(symbol, constant_symbols, variable_symbols, variable_symbol_siz
             symbol_str = "@view y[{}:{}]".format(indices[0], indices[-1])
         else:
             indices_array = pybamm.Array(indices)
-            constant_symbols[indices_array.id] = indices
+            # Save the indices as constant by printing to a string
+            # Set print options large enough to avoid ellipsis
+            # at least as big as len(row) = len(col) = len(data)
+            np.set_printoptions(
+                threshold=max(np.get_printoptions()["threshold"], indices.shape[0] + 10)
+            )
+            constant_symbols[indices_array.id] = np.array2string(indices, separator=",")
             index_name = id_to_julia_variable(indices_array.id, True)
             symbol_str = "@view y[{}]".format(index_name)
 

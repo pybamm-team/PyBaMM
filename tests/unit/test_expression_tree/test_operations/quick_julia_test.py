@@ -14,35 +14,38 @@ import numpy as np
 import scipy.sparse
 from collections import OrderedDict
 
-from julia import Main
+# from julia import Main
 
 
-a = pybamm.StateVector(slice(0, 3))
-b = pybamm.StateVector(slice(3, 6))
+model = pybamm.lithium_ion.SPM()
+sim = pybamm.Simulation(model, solver=pybamm.CasadiSolver(mode="fast"))
+sim.solve([0, 3600])
+sol = sim.solve([0, 3600])
+print(sol.integration_time)
+# sim.build(check_model=False)
+# expr = sim.built_model.concatenated_rhs
 
-y_tests = np.array([[2], [3], [4], [5], [6], [7]])
-t_tests = 1
-
-# test a * b
-# expr = a * b
 # evaluator_str = pybamm.get_julia_function(expr)
-# print(evaluator_str)
-
-# test something with a matrix multiplication
-# A = pybamm.Matrix([[1, 2, 3], [3, 4, 5], [6, 7, 8]])
-# B = pybamm.Matrix([[11, 12, 13], [13, 14, 15], [16, 17, 18]])
-# C = pybamm.Vector([[21], [22], [23]])
-# expr = A @ (B @ (C * (C + pybamm.StateVector(slice(0, 3)))) + C)
-v = pybamm.StateVector(slice(0, 6))
-expr = (v * v * v * (v + v)) * pybamm.NumpyConcatenation(a, b)
-evaluator_str = pybamm.get_julia_function(expr)
-print(evaluator_str)
-Main.eval(evaluator_str)
-Main.dy = [0, 0, 0, 0, 0, 0]
-Main.y = [2, 3, 4, 5, 6, 7]
-print(Main.eval("f(dy,y,0,0)"))
-print(Main.dy)
-print(expr.evaluate(y=Main.y))
+# np.set_printoptions(
+#     threshold=max(
+#         np.get_printoptions()["threshold"],
+#         sim.built_model.concatenated_initial_conditions.evaluate().flatten().size,
+#     )
+# )
+# with open("tmp.txt", "w") as f:
+#     f.write(evaluator_str)
+#     f.write(
+#         np.array2string(
+#             sim.built_model.concatenated_initial_conditions.evaluate().flatten(),
+#             separator=",",
+#         )
+#     )
+# Main.eval(evaluator_str)
+# Main.dy = [0, 0, 0, 0, 0, 0]
+# Main.y = [2, 3, 4, 5, 6, 7]
+# print(Main.eval("f(dy,y,0,0)"))
+# print(Main.dy)
+# print(expr.evaluate(y=Main.y))
 # # test something with a heaviside
 # a = pybamm.Vector([1, 2])
 # expr = a <= pybamm.StateVector(slice(0, 2))
