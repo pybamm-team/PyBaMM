@@ -105,6 +105,10 @@ class Array(pybamm.Symbol):
         """ See :meth:`pybamm.Symbol._base_evaluate()`. """
         return self._entries
 
+    def is_constant(self):
+        """ See :meth:`pybamm.Symbol.is_constant()`. """
+        return True
+
 
 def linspace(start, stop, num=50, **kwargs):
     """

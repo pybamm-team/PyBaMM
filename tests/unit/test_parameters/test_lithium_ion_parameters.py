@@ -194,7 +194,7 @@ class TestDimensionlessParameterValues(unittest.TestCase):
         #     values.evaluate(param.tau_th_yz), 1.4762 * 10 ** (3), 2
         # )
 
-        # thermal = pybamm.ThermalParameters()
+        # thermal = pybamm.thermal_parameters
         # np.testing.assert_almost_equal(
         # values.evaluate(thermal.rho_eff_dim), 1.8116 * 10 ** (6), 2
         # )

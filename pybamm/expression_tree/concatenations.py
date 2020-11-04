@@ -103,6 +103,10 @@ class Concatenation(pybamm.Symbol):
                 [child.evaluate_for_shape() for child in self.children]
             )
 
+    def is_constant(self):
+        """ See :meth:`pybamm.Symbol.is_constant()`. """
+        return all(child.is_constant() for child in self.children)
+
 
 class NumpyConcatenation(Concatenation):
     """A node in the expression tree representing a concatenation of equations, when we

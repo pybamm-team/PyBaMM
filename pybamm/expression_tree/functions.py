@@ -174,6 +174,10 @@ class Function(pybamm.Symbol):
         """ See :meth:`pybamm.Symbol.evaluates_on_edges()`. """
         return any(child.evaluates_on_edges(dimension) for child in self.children)
 
+    def is_constant(self):
+        """ See :meth:`pybamm.Symbol.is_constant()`. """
+        return all(child.is_constant() for child in self.children)
+
     def _evaluate_for_shape(self):
         """
         Default behaviour: has same shape as all child
