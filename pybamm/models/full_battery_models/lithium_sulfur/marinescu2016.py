@@ -119,7 +119,7 @@ class MarinescuEtAl2016(BaseModel):
         cth = (3 * ne * F * S8 / (ns8 * Ms) + ne * F * S4 / (ns4 * Ms)) / 3600
 
         # Shuttle coefficient
-        k_s = k_s_charge * (I < 0) + k_s_discharge * (I <= 0)
+        k_s = k_s_charge * (I < 0) + k_s_discharge * (I >= 0)
 
         ###################################
         # Dynamic model functions

@@ -2,19 +2,13 @@ import pybamm
 import numpy as np
 import matplotlib.pyplot as plt
 
-models = [
-    pybamm.lithium_sulfur.MarinescuEtAl2016(name="Original parameters"),
-    pybamm.lithium_sulfur.MarinescuEtAl2016(name="Updated parameters"),
-]
-
-# Update current
-params = [models[0].default_parameter_values, models[0].default_parameter_values]
-params[0].update({"Current function [A]": 1.7})
-params[1].update({"Current function [A]": 1.7})
+model = pybamm.lithium_sulfur.MarinescuEtAl2016()
 
 # Update current and ICs for second model to correspond to initial 2.4V as in ref [2]
-params[1].update(
+params = model.default_parameter_values
+params.update(
     {
+        "Current function [A]": 1.7,
         "Initial Condition for S8 ion [g]": 2.6730,
         "Initial Condition for S4 ion [g]": 0.0128,
         "Initial Condition for S2 ion [g]": 4.3321e-6,
@@ -27,18 +21,10 @@ params[1].update(
     }
 )
 
-# Set up and solve simulations
-sims = []
-for i, model in enumerate(models):
-    sim = pybamm.Simulation(
-        model,
-        parameter_values=params[i],
-        solver=pybamm.ScikitsDaeSolver(
-            atol=1e-6, rtol=1e-6, root_method="lm", root_tol=1e-6
-        ),
-    )
-    sim.solve(np.linspace(0, 6750, 6750))
-    sims.append(sim)
+# Set up simulation
+sim = pybamm.Simulation(
+    model, parameter_values=params, solver=pybamm.ScikitsDaeSolver(atol=1e-6, rtol=1e-3)
+)
 
 # set up figure
 fig, ax = plt.subplots(1, 2, figsize=(15, 4))
@@ -46,24 +32,38 @@ ax[0].set_xlim([0, 3.5])
 ax[0].set_ylim([2.1, 2.4])
 ax[0].set_xlabel("Discharge capacity [A.h]")
 ax[0].set_ylabel("Terminal voltage [V]")
-ax[1].set_xlim([0.85, 1.45])
+ax[1].set_xlim([0.85, 1.15])
 ax[1].set_ylim([0, 0.15])
 ax[1].set_xlabel("Discharge capacity [A.h]")
 ax[1].set_ylabel("Precipitated sulfur [g]")
 
-# extract variables and plot
-for sim in sims:
-    DC = sim.solution["Discharge capacity [A.h]"].entries
-    V = sim.solution["Terminal voltage [V]"].entries
-    S = sim.solution["Precipitated Sulfur [g]"].entries
-    ax[0].plot(DC, V)
-    ax[1].plot(DC, S)
 
-ax[0].legend(["Original parameters", "Updated parameters"])
+# step solution
+tstep = 4000  # going to fix npts = tpts, but not sure this is necessary
+tmin = 10  # minimum step 10s
+
+while tstep > tmin:
+    try:
+        solution = sim.step(tstep, npts=int(tstep))
+        DC = solution["Discharge capacity [A.h]"].entries
+        V = solution["Terminal voltage [V]"].entries
+        ax[0].plot(DC[-1], V[-1], "ro")
+    except pybamm.SolverError:
+        tstep = tstep / 2
+
+# extract variables and plot
+DC = solution["Discharge capacity [A.h]"].entries
+V = solution["Terminal voltage [V]"].entries
+S = solution["Precipitated Sulfur [g]"].entries
+
+print("Final time {}s".format(solution.t[-1]))
+print("Final discharge capacity {} Ah".format(DC[-1]))
+
+ax[0].plot(DC, V)
+ax[1].plot(DC, S)
 
 # plot results for updated parameters
-pybamm.dynamic_plot(
-    sims[1],
+sim.plot(
     [
         ["S8 [g]", "S4 [g]", "S2 [g]", "S [g]", "Precipitated Sulfur [g]"],
         ["High plateau current [A]", "Low plateau current [A]"],
