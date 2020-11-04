@@ -33,7 +33,7 @@ class BaseModel(pybamm.BaseModel):
 
     @options.setter
     def options(self, extra_options):
-        default_options = {"operating mode": "current", "smooth": False}
+        default_options = {"operating mode": "current"}
         extra_options = extra_options or {}
 
         options = pybamm.FuzzyDict(default_options)
