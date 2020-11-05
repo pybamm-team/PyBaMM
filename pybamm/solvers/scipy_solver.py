@@ -83,6 +83,7 @@ class ScipySolver(pybamm.BaseSolver):
             events = [event_wrapper(event) for event in model.terminate_events_eval]
             extra_options.update({"events": events})
 
+        timer = pybamm.Timer()
         sol = it.solve_ivp(
             lambda t, y: model.rhs_eval(t, y, inputs),
             (t_eval[0], t_eval[-1]),
@@ -92,6 +93,7 @@ class ScipySolver(pybamm.BaseSolver):
             dense_output=True,
             **extra_options
         )
+        integration_time = timer.time()
 
         if sol.success:
             # Set the reason for termination
@@ -107,6 +109,8 @@ class ScipySolver(pybamm.BaseSolver):
                 termination = "final time"
                 t_event = None
                 y_event = np.array(None)
-            return pybamm.Solution(sol.t, sol.y, t_event, y_event, termination)
+            sol = pybamm.Solution(sol.t, sol.y, t_event, y_event, termination)
+            sol.integration_time = integration_time
+            return sol
         else:
             raise pybamm.SolverError(sol.message)

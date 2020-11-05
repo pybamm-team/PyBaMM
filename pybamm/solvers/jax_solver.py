@@ -188,10 +188,12 @@ class JaxSolver(pybamm.BaseSolver):
             various diagnostic messages.
 
         """
+        timer = pybamm.Timer()
         if model not in self._cached_solves:
             self._cached_solves[model] = self.create_solve(model, t_eval)
 
         y = self._cached_solves[model](inputs)
+        integration_time = timer.time()
 
         # note - the actual solve is not done until this line!
         y = onp.array(y)
@@ -199,4 +201,6 @@ class JaxSolver(pybamm.BaseSolver):
         termination = "final time"
         t_event = None
         y_event = onp.array(None)
-        return pybamm.Solution(t_eval, y, t_event, y_event, termination)
+        sol = pybamm.Solution(t_eval, y, t_event, y_event, termination)
+        sol.integration_time = integration_time
+        return sol

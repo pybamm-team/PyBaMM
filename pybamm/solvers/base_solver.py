@@ -578,6 +578,7 @@ class BaseSolver(object):
                     "initial conditions"
                 ] = model.concatenated_initial_conditions
         set_up_time = timer.time()
+        timer.reset()
 
         # (Re-)calculate consistent initial conditions
         self._set_initial_conditions(model, ext_and_inputs, update_rhs=True)
@@ -647,7 +648,6 @@ class BaseSolver(object):
                     t_eval_dimensionless[end_index - 1] * model.timescale_eval,
                 )
             )
-            timer.reset()
             new_solution = self._integrate(
                 model, t_eval_dimensionless[start_index:end_index], ext_and_inputs
             )
@@ -671,12 +671,12 @@ class BaseSolver(object):
                         model, t_eval_dimensionless[end_index], ext_and_inputs
                     )
 
-        # restore old y0
-        model.y0 = old_y0
-
         # Assign times
         solution.set_up_time = set_up_time
         solution.solve_time = timer.time()
+
+        # restore old y0
+        model.y0 = old_y0
 
         # Add model and inputs to solution
         solution.model = model
