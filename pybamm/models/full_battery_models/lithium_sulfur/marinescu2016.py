@@ -46,15 +46,9 @@ class MarinescuEtAl2016(BaseModel):
         Sp = pybamm.Variable("Precipitated Sulfur [g]")
 
         #######################################
-        # model parameters
+        # Model parameters as defined in table (1) in [1]. Parameters with 'H' or
+        # 'L' in the name represent the high and low plateau parameter, respectively.
         #######################################
-        """
-        Model parameters as defined in table (1) in [1].
-        We have taken standard pybamm values where possible.
-        Parameters with 'H' or 'L' in the name represent the
-        high and low plateau parameter, respectively.
-        """
-
         param = self.param
 
         # standard parameters
@@ -83,11 +77,6 @@ class MarinescuEtAl2016(BaseModel):
         k_s_charge = param.k_s_charge
         k_s_discharge = param.k_s_discharge
 
-        # computational parameters
-        """
-        These parameters are groupings used for the code specifically, therefore these
-        terms will not be defined as parameters.
-        """
         i_coef = ne * F / (2 * R * T)
         E_H_coef = R * T / (4 * F)
         f_h = (ns4 ** 2) * Ms * v / ns8
@@ -109,7 +98,7 @@ class MarinescuEtAl2016(BaseModel):
         # Low plateau over-potenital [V] as defined by equation (6b) in [1]
         eta_L = V - E_L
 
-        #  High plateau current [A] as defined by equation (5a) in [1]
+        # High plateau current [A] as defined by equation (5a) in [1]
         i_H = -2 * ih0 * ar * pybamm.sinh(i_coef * eta_H)
 
         # Low plateau current [A] as defined by equation (5b) in [1]
@@ -147,11 +136,12 @@ class MarinescuEtAl2016(BaseModel):
         self.rhs.update({S8: dS8dt, S4: dS4dt, S2: dS2dt, S: dSdt, Sp: dSpdt})
 
         ##############################
-        # model variables
+        # Model variables
         #############################
 
         self.variables.update(
             {
+                "Time [s]": pybamm.t * self.timescale,
                 "S8 [g]": S8,
                 "S4 [g]": S4,
                 "S2 [g]": S2,
@@ -172,16 +162,12 @@ class MarinescuEtAl2016(BaseModel):
 
         ######################################
         # Discharge initial condition
+        # The values are found by considering the zero-current
+        # state of the battery. Set S8, S4, and Sp as written
+        # below. Then, solve eta_H = V, eta_L = V, the algebraic
+        # condition, and mass conservation for the remaining values.
         ######################################
-        """
-        Sets the initial species and voltage for discharge
 
-        The values are found by considering the zero-current
-        state of the battery. Set S8, S4, and Sp as written
-        below. Then, solve eta_H = V, eta_L = V, the algebraic
-        condition, and mass conservation for the remaining values.
-
-        """
         self.initial_conditions.update(
             {
                 self.variables["S8 [g]"]: param.S8_initial,
@@ -191,6 +177,30 @@ class MarinescuEtAl2016(BaseModel):
                 self.variables["Precipitated Sulfur [g]"]: param.Sp_initial,
                 self.variables["Terminal voltage [V]"]: param.V_initial,
             }
+        )
+
+        ######################################
+        # Model events
+        ######################################
+        tol = 1e-4
+        self.events.append(
+            pybamm.Event(
+                "Minimum voltage",
+                V - self.param.voltage_low_cut,
+                pybamm.EventType.TERMINATION,
+            )
+        )
+        self.events.append(
+            pybamm.Event(
+                "Maximum voltage",
+                V - self.param.voltage_high_cut,
+                pybamm.EventType.TERMINATION,
+            )
+        )
+        self.events.append(
+            pybamm.Event(
+                "Zero theoretical capacity", cth - tol, pybamm.EventType.TERMINATION
+            )
         )
 
     def set_external_circuit_submodel(self):

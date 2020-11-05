@@ -1,10 +1,10 @@
 import pybamm
 import numpy as np
-import matplotlib.pyplot as plt
 
+pybamm.set_logging_level("INFO")
 model = pybamm.lithium_sulfur.MarinescuEtAl2016()
 
-# Update current and ICs for second model to correspond to initial 2.4V as in ref [2]
+# Update current and ICs to correspond to initial 2.4V as in ref [2]
 params = model.default_parameter_values
 params.update(
     {
@@ -16,7 +16,6 @@ params.update(
         "Initial Condition for Precipitated Sulfur [g]": 2.7e-06,
         "Initial Condition for Terminal Voltage [V]": 2.4,
         "Shuttle rate coefficient during charge [s-1]": 0.0002,
-        # "Shuttle rate coefficient during discharge [s-1]": 1e-10,
         "Shuttle rate coefficient during discharge [s-1]": 0.0002,
     }
 )
@@ -31,19 +30,21 @@ sim = pybamm.Simulation(
 )
 sim.solve(np.linspace(0, 6680, 668))
 
-# plot results for updated parameters
+# Plot results
 sim.plot(
     [
-        ["S8 [g]", "S4 [g]", "S2 [g]", "S [g]", "Precipitated Sulfur [g]"],
-        ["High plateau current [A]", "Low plateau current [A]"],
-        ["High plateau over-potential [V]", "Low plateau over-potential [V]"],
-        [
-            "High plateau potential [V]",
-            "Low plateau potential [V]",
-            "Terminal voltage [V]",
-        ],
+        "S8 [g]",
+        "S4 [g]",
+        "S2 [g]",
+        "S [g]",
+        "Precipitated Sulfur [g]",
+        "High plateau current [A]",
+        "Low plateau current [A]",
+        "High plateau over-potential [V]",
+        "Low plateau over-potential [V]",
+        "High plateau potential [V]",
+        "Low plateau potential [V]",
+        "Terminal voltage [V]",
     ],
     time_unit="seconds",
 )
-
-sim.plot(model.variables)
