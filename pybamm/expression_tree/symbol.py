@@ -8,6 +8,7 @@ import numbers
 import copy
 import numpy as np
 from anytree.exporter import DotExporter
+from scipy.sparse import issparse
 
 
 def domain_size(domain):
@@ -63,6 +64,254 @@ def evaluate_for_shape_using_domain(domain, auxiliary_domains=None, typ="vector"
 
 def is_constant(symbol):
     return isinstance(symbol, numbers.Number) or symbol.is_constant()
+
+
+def preprocess(left, right):
+    if isinstance(left, numbers.Number):
+        left = pybamm.Scalar(left)
+    if isinstance(right, numbers.Number):
+        right = pybamm.Scalar(right)
+
+    # Check both left and right are pybamm Symbols
+    if not (isinstance(left, pybamm.Symbol) and isinstance(right, pybamm.Symbol)):
+        raise NotImplementedError(
+            """Binary operator not implemented for symbols of type {} and {}""".format(
+                type(left), type(right)
+            )
+        )
+
+    return left, right
+
+
+def is_scalar_zero(expr):
+    """
+    Utility function to test if an expression evaluates to a constant scalar zero
+    """
+    if is_constant(expr):
+        if isinstance(expr, numbers.Number):
+            result = expr
+        else:
+            result = expr.evaluate_ignoring_errors(t=None)
+        return isinstance(result, numbers.Number) and result == 0
+    else:
+        return False
+
+
+def is_matrix_zero(expr):
+    """
+    Utility function to test if an expression evaluates to a constant matrix zero
+    """
+
+    if is_constant(expr):
+        if isinstance(expr, numbers.Number):
+            result = expr
+        else:
+            result = expr.evaluate_ignoring_errors(t=None)
+        return (issparse(result) and result.count_nonzero() == 0) or (
+            isinstance(result, np.ndarray) and np.all(result == 0)
+        )
+    else:
+        return False
+
+
+def is_scalar_one(expr):
+    """
+    Utility function to test if an expression evaluates to a constant scalar one
+    """
+    if is_constant(expr):
+        if isinstance(expr, numbers.Number):
+            result = expr
+        else:
+            result = expr.evaluate_ignoring_errors(t=None)
+        return isinstance(result, numbers.Number) and result == 1
+    else:
+        return False
+
+
+def is_matrix_one(expr):
+    """
+    Utility function to test if an expression evaluates to a constant matrix one
+    """
+    from scipy.sparse import issparse
+
+    if is_constant(expr):
+        if isinstance(expr, numbers.Number):
+            result = expr
+        else:
+            result = expr.evaluate_ignoring_errors(t=None)
+        return (issparse(result) and np.all(result.toarray() == 1)) or (
+            isinstance(result, np.ndarray) and np.all(result == 1)
+        )
+    else:
+        return False
+
+
+def zeros_of_shape(shape):
+    """
+    Utility function to create a scalar zero, or a vector or matrix of zeros of
+    the correct shape
+    """
+    if shape == ():
+        return pybamm.Scalar(0)
+    else:
+        if len(shape) == 1 or shape[1] == 1:
+            return pybamm.Vector(np.zeros(shape))
+        else:
+            return pybamm.Matrix(csr_matrix(shape))
+
+
+def simplified_power(left, right):
+    left, right = preprocess(left, right)
+    # anything to the power of zero is one
+    if is_scalar_zero(right):
+        return pybamm.Scalar(1)
+
+    # zero to the power of anything is zero
+    if is_scalar_zero(left):
+        return pybamm.Scalar(0)
+
+    # anything to the power of one is itself
+    if is_scalar_one(right):
+        return left
+
+    return pybamm.simplify_if_constant(pybamm.Power(left, right), clear_domains=False)
+
+
+def simplified_addition(left, right):
+    """
+    Note
+    ----
+    We check for scalars first, then matrices. This is because
+    (Zero Matrix) + (Zero Scalar)
+    should return (Zero Matrix), not (Zero Scalar).
+    """
+    left, right = preprocess(left, right)
+
+    # anything added by a scalar zero returns the other child
+    if is_scalar_zero(left):
+        return right
+    if is_scalar_zero(right):
+        return left
+    # Check matrices after checking scalars
+    if is_matrix_zero(left):
+        if isinstance(right, pybamm.Scalar):
+            return pybamm.Array(
+                right.value * np.ones(left.shape),
+                domain=left.domains,
+                auxiliary_domains=left.auxiliary_domains,
+            )
+        else:
+            return right
+    if is_matrix_zero(right):
+        if isinstance(left, pybamm.Scalar):
+            return pybamm.Array(
+                left.value * np.ones(right.shape),
+                domain=right.domains,
+                auxiliary_domains=right.auxiliary_domains,
+            )
+        else:
+            return left
+
+    return pybamm.simplify_if_constant(
+        pybamm.Addition(left, right), clear_domains=False
+    )
+
+
+def simplified_subtraction(left, right):
+    """
+     Note
+    ----
+    We check for scalars first, then matrices. This is because
+    (Zero Matrix) - (Zero Scalar)
+    should return (Zero Matrix), not -(Zero Scalar).
+    """
+    left, right = preprocess(left, right)
+
+    # anything added by a scalar zero returns the other child
+    if is_scalar_zero(left):
+        return -right
+    if is_scalar_zero(right):
+        return left
+    # Check matrices after checking scalars
+    if is_matrix_zero(left):
+        if isinstance(right, pybamm.Scalar):
+            return pybamm.Array(-right.value * np.ones(left.shape))
+        else:
+            return -right
+    if is_matrix_zero(right):
+        if isinstance(left, pybamm.Scalar):
+            return pybamm.Array(left.value * np.ones(right.shape))
+        else:
+            return left
+
+    return pybamm.simplify_if_constant(
+        pybamm.Subtraction(left, right), clear_domains=False
+    )
+
+
+def simplified_multiplication(left, right):
+    left, right = preprocess(left, right)
+    # simplify multiply by scalar zero, being careful about shape
+    if is_scalar_zero(left):
+        return zeros_of_shape(right.shape_for_testing)
+    if is_scalar_zero(right):
+        return zeros_of_shape(left.shape_for_testing)
+
+    # if one of the children is a zero matrix, we have to be careful about shapes
+    if is_matrix_zero(left) or is_matrix_zero(right):
+        shape = pybamm.Multiplication(left, right).shape_for_testing
+        return zeros_of_shape(shape)
+
+    # anything multiplied by a scalar one returns itself
+    if is_scalar_one(left):
+        return right
+    if is_scalar_one(right):
+        return left
+
+    return pybamm.simplify_if_constant(
+        pybamm.Multiplication(left, right), clear_domains=False
+    )
+
+
+def simplified_division(left, right):
+    left, right = preprocess(left, right)
+    # zero divided by zero returns nan scalar
+    if is_scalar_zero(left) and is_scalar_zero(right):
+        return pybamm.Scalar(np.nan)
+
+    # zero divided by anything returns zero (being careful about shape)
+    if is_scalar_zero(left):
+        return zeros_of_shape(right.shape_for_testing)
+
+    # matrix zero divided by anything returns matrix zero (i.e. itself)
+    if is_matrix_zero(left):
+        return left
+
+    # anything divided by zero returns inf
+    if is_scalar_zero(right):
+        if left.shape_for_testing == ():
+            return pybamm.Scalar(np.inf)
+        else:
+            return pybamm.Array(np.inf * np.ones(left.shape_for_testing))
+
+    # anything divided by one is itself
+    if is_scalar_one(right):
+        return left
+
+    return pybamm.simplify_if_constant(
+        pybamm.Division(left, right), clear_domains=False
+    )
+
+
+def simplified_matrix_multiplication(left, right):
+    left, right = preprocess(left, right)
+    if is_matrix_zero(left) or is_matrix_zero(right):
+        shape = pybamm.MatrixMultiplication(left, right).shape_for_testing
+        return zeros_of_shape(shape)
+
+    return pybamm.simplify_if_constant(
+        pybamm.MatrixMultiplication(left, right), clear_domains=False
+    )
 
 
 class Symbol(anytree.NodeMixin):
@@ -378,75 +627,51 @@ class Symbol(anytree.NodeMixin):
 
     def __add__(self, other):
         """return an :class:`Addition` object"""
-        return pybamm.simplify_if_constant(
-            pybamm.Addition(self, other), clear_domains=False
-        )
+        return simplified_addition(self, other)
 
     def __radd__(self, other):
         """return an :class:`Addition` object"""
-        return pybamm.simplify_if_constant(
-            pybamm.Addition(other, self), clear_domains=False
-        )
+        return simplified_addition(other, self)
 
     def __sub__(self, other):
         """return a :class:`Subtraction` object"""
-        return pybamm.simplify_if_constant(
-            pybamm.Subtraction(self, other), clear_domains=False
-        )
+        return simplified_subtraction(self, other)
 
     def __rsub__(self, other):
         """return a :class:`Subtraction` object"""
-        return pybamm.simplify_if_constant(
-            pybamm.Subtraction(other, self), clear_domains=False
-        )
+        return simplified_subtraction(other, self)
 
     def __mul__(self, other):
         """return a :class:`Multiplication` object"""
-        return pybamm.simplify_if_constant(
-            pybamm.Multiplication(self, other), clear_domains=False
-        )
+        return simplified_multiplication(self, other)
 
     def __rmul__(self, other):
         """return a :class:`Multiplication` object"""
-        return pybamm.simplify_if_constant(
-            pybamm.Multiplication(other, self), clear_domains=False
-        )
+        return simplified_multiplication(other, self)
 
     def __matmul__(self, other):
         """return a :class:`MatrixMultiplication` object"""
-        return pybamm.simplify_if_constant(
-            pybamm.MatrixMultiplication(self, other), clear_domains=False
-        )
+        return simplified_matrix_multiplication(self, other)
 
     def __rmatmul__(self, other):
         """return a :class:`MatrixMultiplication` object"""
-        return pybamm.simplify_if_constant(
-            pybamm.MatrixMultiplication(other, self), clear_domains=False
-        )
+        return simplified_matrix_multiplication(other, self)
 
     def __truediv__(self, other):
         """return a :class:`Division` object"""
-        return pybamm.simplify_if_constant(
-            pybamm.Division(self, other), clear_domains=False
-        )
+        return simplified_division(self, other)
 
     def __rtruediv__(self, other):
         """return a :class:`Division` object"""
-        return pybamm.simplify_if_constant(
-            pybamm.Division(other, self), clear_domains=False
-        )
+        return simplified_division(other, self)
 
     def __pow__(self, other):
         """return a :class:`Power` object"""
-        return pybamm.simplify_if_constant(
-            pybamm.Power(self, other), clear_domains=False
-        )
+        return simplified_power(self, other)
 
     def __rpow__(self, other):
         """return a :class:`Power` object"""
-        return pybamm.simplify_if_constant(
-            pybamm.Power(other, self), clear_domains=False
-        )
+        return simplified_power(other, self)
 
     def __lt__(self, other):
         """return a :class:`NotEqualHeaviside` object, or a smooth approximation"""
