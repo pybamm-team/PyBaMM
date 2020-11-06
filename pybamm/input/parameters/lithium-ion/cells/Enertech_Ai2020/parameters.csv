@@ -13,6 +13,7 @@ Cell cooling surface area [m2],60.484E-4,Ai 2020, pouch
 Cell volume [m3],1.5341E-5,Ai 2020, pouch
 Cell emissivity,0.95,Ai 2020,estimation
 Cell thermal expansion coefficien [m.K-1], 1.1E-6,Ai 2020,
+Flag mechanical effects,1,Ai 2020,flag for mechanical coupled diffusion
 ,,,
 # Current collector properties ,,,
 Negative current collector conductivity [S.m-1],58411000,CRC Handbook,copper

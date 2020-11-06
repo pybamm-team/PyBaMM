@@ -1,4 +1,4 @@
-def graphite_entropy_Enertech_Ai2020_function(sto, c_n_max):
+def graphite_entropy_Enertech_Ai2020_function(sto, T):
     """
         Lithium Cobalt Oxide (LiCO2) entropic change in open circuit potential (OCP) at
         a temperature of 298.15K as a function of the stochiometry. The fit is taken
@@ -15,7 +15,12 @@ def graphite_entropy_Enertech_Ai2020_function(sto, c_n_max):
     ----------
     sto: double
        Stochiometry of material (li-fraction)
-
+    T : :class:`pybamm.Symbol`
+        Temperature [K]
+    Returns
+    -------
+    :class:`pybamm.Symbol`
+        Entropic change [v.K-1]
     """
 
     du_dT = (
@@ -43,4 +48,5 @@ def graphite_entropy_Enertech_Ai2020_function(sto, c_n_max):
             + 165705.8597 * sto ** 8
         )
     )
+    # show no temperature dependence
     return du_dT

@@ -1,9 +1,9 @@
-from pybamm import exp, constants, Parameter
+from pybamm import Parameter
 
 
-def graphite_diffusivity_Dualfoil1998(sto, T):
+def lico2_volume_change_Ai2020(sto):
     """
-    Graphite diffusivity as a function of stochiometry [1, 2, 3].
+    lico2 particle volume change as a function of stochiometry [1, 2].
 
     References
     ----------
@@ -18,17 +18,14 @@ def graphite_diffusivity_Dualfoil1998(sto, T):
     Parameters
     ----------
     sto: :class:`pybamm.Symbol`
-        Electrode stochiometry
-    T: :class:`pybamm.Symbol`
-        Dimensional temperature, [K]
-
+        Electrode stochiometry, dimensionless
+        should be R-averaged particle concentration
     Returns
     -------
-    :class:`pybamm.Symbol`
-        Solid diffusivity [m2.s-1]
+    t_change:class:`pybamm.Symbol`
+        volume change, dimensionless, normalised by particle volume
     """
-    D_ref = 3.9 * 10 ** (-14)
-    E_D_s = 5000
-    T_ref = Parameter("Reference temperature [K]")
-    arrhenius = exp(E_D_s / constants.R * (1 / T_ref - 1 / T))
-    return D_ref * arrhenius
+    omega = Parameter("Positive electrode partial molar volume [m3.mol-1]")
+    c_p_max = Parameter("Maximum concentration in positive electrode [mol.m-3]")
+    t_change = omega * c_p_max * sto
+    return t_change

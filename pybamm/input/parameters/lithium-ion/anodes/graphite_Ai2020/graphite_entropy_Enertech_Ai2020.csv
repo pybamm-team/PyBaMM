@@ -1,5 +1,6 @@
 # Entropy for graphite from Ai2020
-# unit: K,mV/K
+# Just for reference against graphite_entropy_Enertech_Ai2020_function
+# stoichiometry , entropic change [mV.K-1]
 0.0000000e+00,5.2700000e-03
 1.0000000e-02,4.9161311e-02
 2.0000000e-02,1.1269475e-01

@@ -224,6 +224,73 @@ class LithiumIonParameters:
             "Initial concentration in electrolyte [mol.m-3]"
         )
 
+        # mechanical prapmeters
+        if isinstance(self, pybamm.particle_cracking.BaseCracking):
+            self.flag_mechanics = pybamm.Parameter("Flag mechanical effects")
+            # flag: 1 - activate mechanical effects; 0 - disable
+            self.nu_p = pybamm.Parameter("Positive electrode Poisson's ratio")
+            self.E_p = pybamm.Parameter("Positive electrode Young's modulus [Pa]")
+            self.c_p_0 = pybamm.Parameter(
+                "Positive electrode reference concentration for free of deformation [m3.mol-1]"
+            )
+            self.Omega_p = pybamm.Parameter(
+                "Positive electrode partial molar volume [m3.mol-1]"
+            )
+            self.nu_n = pybamm.Parameter("Negative electrode Poisson's ratio")
+            self.E_n = pybamm.Parameter("Negative electrode Young's modulus [Pa]")
+            self.c_n_0 = pybamm.Parameter(
+                "Negative electrode reference concentration for free of deformation [m3.mol-1]"
+            )
+            self.Omega_n = pybamm.Parameter(
+                "Negative electrode partial molar volume [m3.mol-1]"
+            )
+            self.l_cr_p_0 = pybamm.Parameter(
+                "Positive electrode initial crack length [m]"
+            )
+            self.l_cr_n_0 = pybamm.Parameter(
+                "Negative electrode initial crack length [m]"
+            )
+            self.w_cr = pybamm.Parameter("Negative electrode initial crack width [m]")
+            self.rho_cr_n_dim = pybamm.Parameter(
+                "Negative electrode number of cracks per unit area of the particle [m-2]"
+            )
+            self.rho_cr_p_dim = pybamm.Parameter(
+                "Positive electrode number of cracks per unit area of the particle [m-2]"
+            )
+            self.b_cr = pybamm.Parameter("Negative electrode Paris' law constant b")
+            self.m_cr = pybamm.Parameter("Negative electrode Paris' law constant m")
+            self.k_cr = pybamm.Parameter("Negative electrode cracking rate")
+            self.Eac_cr_n = pybamm.Parameter(
+                "Negative electrode activation energy for cracking rate [kJ.mol-1]"
+            )  # noqa
+            self.Eac_cr_p = pybamm.Parameter(
+                "Positive electrode activation energy for cracking rate [kJ.mol-1]"
+            )  # noqa
+            self.alpha_T_cell_dim = pybamm.Parameter(
+                "Cell thermal expansion coefficien [m.K-1]"
+            )
+            self.R_const = pybamm.constants.R
+            self.theta_p_dim = (
+                self.flag_mechanics
+                * self.Omega_p ** 2
+                / self.R_const
+                * 2
+                / 9
+                * self.E_p
+                / (1 - self.nu_p)
+            )
+            # intermediate variable  [K*m^3/mol]
+            self.theta_n_dim = (
+                self.flag_mechanics
+                * self.Omega_n ** 2
+                / self.R_const
+                * 2
+                / 9
+                * self.E_n
+                / (1 - self.nu_n)
+            )
+        # intermediate variable  [K*m^3/mol]
+
     def D_e_dimensional(self, c_e, T):
         "Dimensional diffusivity in electrolyte"
         inputs = {"Electrolyte concentration [mol.m-3]": c_e, "Temperature [K]": T}
@@ -628,7 +695,15 @@ class LithiumIonParameters:
         self.T_init = self.therm.T_init
         self.c_e_init = self.c_e_init_dimensional / self.c_e_typ
 
-    def chi(self, c_e, T=0):
+        # Dimensionless mechanical parameters
+        if isinstance(self, pybamm.particle_cracking.BaseCracking):
+            self.rho_cr_n = self.rho_cr_n_dim * self.l_cr_n_0 * self.w_cr
+            self.rho_cr_p = self.rho_cr_p_dim * self.l_cr_p_0 * self.w_cr
+            self.theta_p = self.theta_p_dim * self.c_p_max / self.T_ref
+            self.theta_n = self.theta_n_dim * self.c_n_max / self.T_ref
+            self.t0_cr = 3600 / self.timescale  # nomarlised typical time for one cycle
+
+    def chi(self, c_e, T):
         """
         Thermodynamic factor:
             (1-2*t_plus) is for Nernst-Planck,
@@ -643,7 +718,7 @@ class LithiumIonParameters:
         inputs = {"Electrolyte concentration [mol.m-3]": c_e * self.c_e_typ}
         return pybamm.FunctionParameter("Cation transference number", inputs)
 
-    def one_plus_dlnf_dlnc(self, c_e, T=298.3):
+    def one_plus_dlnf_dlnc(self, c_e, T):
         inputs = {
             "Electrolyte concentration [mol.m-3]": c_e * self.c_e_typ,
             "Temperature [K]": T * self.Delta_T,
@@ -667,16 +742,32 @@ class LithiumIonParameters:
         "Dimensionless negative particle diffusivity"
         sto = c_s_n
         T_dim = self.Delta_T * T + self.T_ref
-        return self.D_n_dimensional(sto, T_dim) / self.D_n_dimensional(
-            pybamm.Scalar(1), self.T_ref
+        try:
+            mech_effects = (
+                1 + self.theta_n * sto / T_dim * self.T_ref * self.flag_mechanics
+            )
+        except:
+            mech_effects = 1
+        return (
+            self.D_n_dimensional(sto, T_dim)
+            / self.D_n_dimensional(pybamm.Scalar(1), self.T_ref)
+            * mech_effects
         )
 
     def D_p(self, c_s_p, T):
         "Dimensionless positive particle diffusivity"
         sto = c_s_p
         T_dim = self.Delta_T * T + self.T_ref
-        return self.D_p_dimensional(sto, T_dim) / self.D_p_dimensional(
-            pybamm.Scalar(1), self.T_ref
+        try:
+            mech_effects = (
+                1 + self.theta_p * sto / T_dim * self.T_ref * self.flag_mechanics
+            )
+        except:
+            mech_effects = 1
+        return (
+            self.D_p_dimensional(sto, T_dim)
+            / self.D_p_dimensional(pybamm.Scalar(1), self.T_ref)
+            * mech_effects
         )
 
     def j0_n(self, c_e, c_s_surf, T):
@@ -799,6 +890,24 @@ class LithiumIonParameters:
             self.dimensional_current_with_time
             / self.I_typ
             * pybamm.Function(np.sign, self.I_typ)
+        )
+
+    def t_n_change(self, sto):
+        """
+        Dimentionless volume change for the negative particle;
+        sto should be R-averaged
+        """
+        return pybamm.FunctionParameter(
+            "Negative particle volume change", {"Particle stoichiometry": sto}
+        )
+
+    def t_p_change(self, sto):
+        """
+        Dimentionless volume change for the positive particle;
+        sto should be R-averaged
+        """
+        return pybamm.FunctionParameter(
+            "Positive particle volume change", {"Particle stoichiometry": sto}
         )
 
     @property

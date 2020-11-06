@@ -1,4 +1,4 @@
-def lico2_entropic_change_Ai2020_function(sto, c_p_max):
+def lico2_entropic_change_Ai2020_function(sto, T):
     """
         Lithium Cobalt Oxide (LiCO2) entropic change in open circuit potential (OCP) at
         a temperature of 298.15K as a function of the stochiometry. The fit is taken
@@ -16,7 +16,12 @@ def lico2_entropic_change_Ai2020_function(sto, c_p_max):
     ----------
     sto: double
        Stochiometry of material (li-fraction)
-
+    T : :class:`pybamm.Symbol`
+        Temperature [K]
+    Returns
+    -------
+    :class:`pybamm.Symbol`
+        Entropic change [V.K-1]
     """
 
     # Since the equation for LiCo2 from this ref. has the stretch factor,
@@ -40,5 +45,5 @@ def lico2_entropic_change_Ai2020_function(sto, c_p_max):
         + p7 * sto
         + p8
     )
-
+    # show no temperature dependence
     return du_dT

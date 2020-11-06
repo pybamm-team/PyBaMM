@@ -16,6 +16,11 @@ def graphite_ocp_Enertech_Ai2020_function(sto):
     sto: double
        Stochiometry of material (li-fraction)
 
+    Returns
+    -------
+    :class:`pybamm.Symbol`
+        OCP [V]
+
     """
 
     p1 = -2058.29865
