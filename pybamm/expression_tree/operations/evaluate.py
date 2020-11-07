@@ -365,11 +365,6 @@ class EvaluatorJax:
     so any sparse matrices and operations involved sparse matrices are converted to
     their dense equivilents before compilation
 
-    Raises
-    ------
-    RuntimeError
-        if any sparse matrices are present in the expression tree
-
     Parameters
     ----------
 
