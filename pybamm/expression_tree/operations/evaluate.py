@@ -33,7 +33,7 @@ def id_to_python_variable(symbol_id, constant=False):
     return var_format.format(symbol_id).replace("-", "m")
 
 
-def find_symbols(symbol, constant_symbols, variable_symbols, to_dense=False):
+def find_symbols(symbol, constant_symbols, variable_symbols, no_sparse=False):
     """
     This function converts an expression tree to a dictionary of node id's and strings
     specifying valid python code to calculate that nodes value, given y and t.
@@ -44,7 +44,7 @@ def find_symbols(symbol, constant_symbols, variable_symbols, to_dense=False):
     `variable_symbols`
 
     Note that it is important that the arguments `constant_symbols` and
-    `variable_symbols` be and *ordered* dict, since the final ordering of the code lines
+    `variable_symbols` be an *ordered* dict, since the final ordering of the code lines
     are important for the calculations. A dict is specified rather than a list so that
     identical subtrees (which give identical id's) are not recalculated in the code
 
@@ -59,22 +59,27 @@ def find_symbols(symbol, constant_symbols, variable_symbols, to_dense=False):
     variable_symbol: collections.OrderedDict
         The output dictionary of variable (with y or t) symbol ids to lines of code
 
-    to_dense: bool
+    no_sparse: bool
         If True, all constants and expressions are converted to using dense matrices
 
     """
     if symbol.is_constant():
         value = symbol.evaluate()
         if not isinstance(value, numbers.Number):
-            if to_dense and scipy.sparse.issparse(value):
-                constant_symbols[symbol.id] = value.toarray()
+            if no_sparse and scipy.sparse.issparse(value):
+                # convert any remaining sparse matrices to our custom coo matrix
+                scipy_coo = value.tocoo()
+                row = jax.numpy.asarray(scipy_coo.row)
+                col = jax.numpy.asarray(scipy_coo.col)
+                data = jax.numpy.asarray(scipy_coo.data)
+                constant_symbols[symbol.id] = JaxCooMatrix(row, col, data, value.shape)
             else:
                 constant_symbols[symbol.id] = value
         return
 
     # process children recursively
     for child in symbol.children:
-        find_symbols(child, constant_symbols, variable_symbols, to_dense)
+        find_symbols(child, constant_symbols, variable_symbols, no_sparse)
 
     # calculate the variable names that will hold the result of calculating the
     # children variables
@@ -96,36 +101,66 @@ def find_symbols(symbol, constant_symbols, variable_symbols, to_dense=False):
         if isinstance(symbol, pybamm.Multiplication):
             dummy_eval_left = symbol.children[0].evaluate_for_shape()
             dummy_eval_right = symbol.children[1].evaluate_for_shape()
-            if not to_dense and scipy.sparse.issparse(dummy_eval_left):
-                symbol_str = "{0}.multiply({1})".format(
-                    children_vars[0], children_vars[1]
-                )
-            elif not to_dense and scipy.sparse.issparse(dummy_eval_right):
-                symbol_str = "{1}.multiply({0})".format(
-                    children_vars[0], children_vars[1]
-                )
+            if scipy.sparse.issparse(dummy_eval_left):
+                if no_sparse:
+                    print('calling dot_product with', dummy_eval_left, 'and',
+                          dummy_eval_right)
+                    symbol_str = "{0}.dot_product({1})"\
+                        .format(children_vars[0], children_vars[1])
+                else:
+                    symbol_str = "{0}.multiply({1})"\
+                        .format(children_vars[0], children_vars[1])
+            elif scipy.sparse.issparse(dummy_eval_right):
+                if no_sparse:
+                    print('calling dot_product with', dummy_eval_right, 'and',
+                          dummy_eval_left)
+                    symbol_str = "{1}.dot_product({1})"\
+                        .format(children_vars[0], children_vars[1])
+                else:
+                    symbol_str = "{1}.multiply({0})"\
+                        .format(children_vars[0], children_vars[1])
             else:
                 symbol_str = "{0} * {1}".format(children_vars[0], children_vars[1])
         elif isinstance(symbol, pybamm.Division):
             dummy_eval_left = symbol.children[0].evaluate_for_shape()
-            if not to_dense and scipy.sparse.issparse(dummy_eval_left):
-                symbol_str = "{0}.multiply(1/{1})".format(
-                    children_vars[0], children_vars[1]
-                )
+            if scipy.sparse.issparse(dummy_eval_left):
+                if no_sparse:
+                    print('calling dot_product with', dummy_eval_left, 'and 1/',
+                          dummy_eval_right)
+                    symbol_str = "{0}.dot_product(1/{1})"\
+                        .format(children_vars[0], children_vars[1])
+                else:
+                    symbol_str = "{0}.multiply(1/{1})"\
+                        .format(children_vars[0], children_vars[1])
             else:
                 symbol_str = "{0} / {1}".format(children_vars[0], children_vars[1])
 
         elif isinstance(symbol, pybamm.Inner):
             dummy_eval_left = symbol.children[0].evaluate_for_shape()
             dummy_eval_right = symbol.children[1].evaluate_for_shape()
-            if not to_dense and scipy.sparse.issparse(dummy_eval_left):
-                symbol_str = "{0}.multiply({1})".format(
-                    children_vars[0], children_vars[1]
-                )
-            elif not to_dense and scipy.sparse.issparse(dummy_eval_right):
-                symbol_str = "{1}.multiply({0})".format(
-                    children_vars[0], children_vars[1]
-                )
+            if scipy.sparse.issparse(dummy_eval_left):
+                print('XXX - found sparse on left inner')
+            elif scipy.sparse.issparse(dummy_eval_right):
+                print('XXX - found sparse on right inner')
+
+            if scipy.sparse.issparse(dummy_eval_left):
+                if no_sparse:
+                    print('calling dot_product with', dummy_eval_left, 'and',
+                          dummy_eval_right)
+                    symbol_str = "{0}.dot_product({1})"\
+                        .format(children_vars[0], children_vars[1])
+                else:
+                    symbol_str = "{0}.multiply({1})"\
+                        .format(children_vars[0], children_vars[1])
+            elif scipy.sparse.issparse(dummy_eval_right):
+                if no_sparse:
+                    print('calling dot_product with', dummy_eval_right, 'and',
+                          dummy_eval_left)
+                    symbol_str = "{0}.dot_product({1})"\
+                        .format(children_vars[0], children_vars[1])
+                else:
+                    symbol_str = "{1}.multiply({0})"\
+                        .format(children_vars[0], children_vars[1])
             else:
                 symbol_str = "{0} * {1}".format(children_vars[0], children_vars[1])
 
@@ -172,10 +207,13 @@ def find_symbols(symbol, constant_symbols, variable_symbols, to_dense=False):
                 symbol_str = "{}".format(",".join(children_vars))
 
         elif isinstance(symbol, pybamm.SparseStack):
-            if not to_dense and len(children_vars) > 1:
-                symbol_str = "scipy.sparse.vstack(({}))".format(",".join(children_vars))
-            elif len(children_vars) > 1:
-                symbol_str = "np.vstack(({}))".format(",".join(children_vars))
+            if len(children_vars) > 1:
+                if no_sparse:
+                    print('calling jax_coo_vstack with', children_vars)
+                    symbol_str = "jax_coo_vstack(({}))".format(",".join(children_vars))
+                else:
+                    symbol_str = "scipy.sparse.vstack(({}))".format(
+                        ",".join(children_vars))
             else:
                 symbol_str = "{}".format(",".join(children_vars))
 
@@ -230,7 +268,7 @@ def find_symbols(symbol, constant_symbols, variable_symbols, to_dense=False):
     variable_symbols[symbol.id] = symbol_str
 
 
-def to_python(symbol, debug=False, to_dense=False):
+def to_python(symbol, debug=False, no_sparse=False):
     """
     This function converts an expression tree into a dict of constant input values, and
     valid python code that acts like the tree's :func:`pybamm.Symbol.evaluate` function
@@ -250,14 +288,14 @@ def to_python(symbol, debug=False, to_dense=False):
         the expression tree
     str:
         valid python code that will evaluate all the variable nodes in the tree.
-    to_dense: bool
+    no_sparse: bool
         If True, all constants and expressions are converted to using dense matrices
 
     """
 
     constant_values = OrderedDict()
     variable_symbols = OrderedDict()
-    find_symbols(symbol, constant_values, variable_symbols, to_dense)
+    find_symbols(symbol, constant_values, variable_symbols, no_sparse)
 
     line_format = "{} = {}"
 
@@ -355,6 +393,68 @@ class EvaluatorPython:
             return result
 
 
+class JaxCooMatrix:
+    def __init__(self, row, col, data, shape):
+        self.row = row
+        self.col = col
+        self.data = data
+        self.shape = shape
+        self.nnz = len(data)
+
+    @jax.partial(jax.jit, static_argnums=(0,))
+    def dot_product(self, b):
+        print('XXXXXXdot_product', self.shape, b.shape)
+        # assume b is a column vector
+        result = jax.numpy.zeros((self.shape[0], 1), dtype=b.dtype)
+        result = result.at[self.row].add(self.data.reshape(-1, 1) * b[self.col])
+        return result
+
+    @jax.partial(jax.jit, static_argnums=(0,))
+    def __matmul__(self, b):
+        print('XXXXXXmultiply', self.shape, b.shape, b, self.row.shape, self.col.shape,
+              self.data.shape)
+        result = jax.numpy.zeros((self.shape[0], 1), dtype=b.dtype)
+        result = result.at[self.row].add(self.data.reshape(-1, 1) * b[self.col])
+        return result.reshape(self.shape[0])
+
+def jax_coo_vstack(blocks):
+    M = len(blocks)
+    N = 1
+
+    block_mask = np.zeros((M, N), dtype=bool)
+    brow_lengths = np.zeros(M, dtype=np.int64)
+    bcol_lengths = np.zeros(N, dtype=np.int64)
+
+    nnz = sum(block.nnz for block in blocks[block_mask])
+
+    # assume all the same type
+    dtype = blocks[0].data.dtype
+    idx_dtype = blocks[0].row.dtype
+
+    row_offsets = np.append(0, np.cumsum(brow_lengths))
+    col_offsets = np.append(0, np.cumsum(bcol_lengths))
+
+    shape = (row_offsets[-1], col_offsets[-1])
+
+    data = np.empty(nnz, dtype=dtype)
+    row = np.empty(nnz, dtype=idx_dtype)
+    col = np.empty(nnz, dtype=idx_dtype)
+
+    nnz = 0
+    ii, jj = np.nonzero(block_mask)
+    for i, j in zip(ii, jj):
+        B = blocks[i, j]
+        idx = slice(nnz, nnz + B.nnz)
+        data[idx] = B.data
+        row[idx] = B.row + row_offsets[i]
+        col[idx] = B.col + col_offsets[j]
+        nnz += B.nnz
+
+    print('jax_coo_vstack', blocks, row, col, data, shape)
+
+    return JaxCooMatrix(row, col, data, shape)
+
+
 class EvaluatorJax:
     """
     Converts a pybamm expression tree into pure python code that will calculate the
@@ -375,7 +475,7 @@ class EvaluatorJax:
     """
 
     def __init__(self, symbol):
-        constants, python_str = pybamm.to_python(symbol, debug=False, to_dense=True)
+        constants, python_str = pybamm.to_python(symbol, debug=False, no_sparse=True)
 
         # replace numpy function calls to jax numpy calls
         python_str = python_str.replace("np.", "jax.numpy.")
