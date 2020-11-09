@@ -733,7 +733,7 @@ class LithiumIonParameters:
         defined so that the actual particle radius as a function of x is given by
         R*R_of_x (so that R_of_x = 1 gives particles of uniform size in x).
         """
-        inputs = {"Through-cell distance (x_n) [m]": x}
+        inputs = {"Dimensionless through-cell position (x_n)": x}
         return pybamm.FunctionParameter("Negative particle distribution in x", inputs)
 
     def R_p_of_x(self, x):
@@ -742,7 +742,7 @@ class LithiumIonParameters:
         defined so that the actual particle radius as a function of x is given by
         R*R_of_x (so that R_of_x = 1 gives particles of uniform size in x).
         """
-        inputs = {"Through-cell distance (x_p) [m]": x}
+        inputs = {"Dimensionless through-cell position (x_p)": x}
         return pybamm.FunctionParameter("Positive particle distribution in x", inputs)
 
     def a_n_of_x(self, x):
@@ -758,7 +758,7 @@ class LithiumIonParameters:
             # of the particle radius distribution
             return 1 / self.R_n_of_x(x)
         elif self.options["particle shape"] == "user":
-            inputs = {"Through-cell distance (x_n) [m]": x}
+            inputs = {"Dimensionless through-cell position (x_n)": x}
             return pybamm.FunctionParameter(
                 "Negative surface area per unit volume distribution in x", inputs
             )
@@ -776,7 +776,7 @@ class LithiumIonParameters:
             # of the particle radius distribution
             return 1 / self.R_p_of_x(x)
         elif self.options["particle shape"] == "user":
-            inputs = {"Through-cell distance (x_p) [m]": x}
+            inputs = {"Dimensionless through-cell position (x_p)": x}
             return pybamm.FunctionParameter(
                 "Positive surface area per unit volume distribution in x", inputs
             )
