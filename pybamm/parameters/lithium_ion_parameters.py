@@ -225,13 +225,14 @@ class LithiumIonParameters:
         )
 
         # mechanical prapmeters
-        if isinstance(self, pybamm.particle_cracking.BaseCracking):
+        if self.options["particle cracking"] is not None:
             self.flag_mechanics = pybamm.Parameter("Flag mechanical effects")
             # flag: 1 - activate mechanical effects; 0 - disable
             self.nu_p = pybamm.Parameter("Positive electrode Poisson's ratio")
             self.E_p = pybamm.Parameter("Positive electrode Young's modulus [Pa]")
             self.c_p_0 = pybamm.Parameter(
-                "Positive electrode reference concentration for free of deformation [m3.mol-1]"
+                "Positive electrode reference concentration for free of deformation "
+                "[m3.mol-1]"
             )
             self.Omega_p = pybamm.Parameter(
                 "Positive electrode partial molar volume [m3.mol-1]"
@@ -239,7 +240,8 @@ class LithiumIonParameters:
             self.nu_n = pybamm.Parameter("Negative electrode Poisson's ratio")
             self.E_n = pybamm.Parameter("Negative electrode Young's modulus [Pa]")
             self.c_n_0 = pybamm.Parameter(
-                "Negative electrode reference concentration for free of deformation [m3.mol-1]"
+                "Negative electrode reference concentration for free of deformation "
+                "[m3.mol-1]"
             )
             self.Omega_n = pybamm.Parameter(
                 "Negative electrode partial molar volume [m3.mol-1]"
@@ -252,17 +254,18 @@ class LithiumIonParameters:
             )
             self.w_cr = pybamm.Parameter("Negative electrode initial crack width [m]")
             self.rho_cr_n_dim = pybamm.Parameter(
-                "Negative electrode number of cracks per unit area of the particle [m-2]"
+                "Negative electrode number of cracks per unit area [m-2]"
             )
             self.rho_cr_p_dim = pybamm.Parameter(
-                "Positive electrode number of cracks per unit area of the particle [m-2]"
+                "Positive electrode number of cracks per unit area [m-2]"
             )
-            self.b_cr = pybamm.Parameter("Negative electrode Paris' law constant b")
-            self.m_cr = pybamm.Parameter("Negative electrode Paris' law constant m")
-            self.k_cr = pybamm.Parameter("Negative electrode cracking rate")
+            self.b_cr_n = pybamm.Parameter("Negative electrode Paris' law constant b")
+            self.m_cr_n = pybamm.Parameter("Negative electrode Paris' law constant m")
             self.Eac_cr_n = pybamm.Parameter(
                 "Negative electrode activation energy for cracking rate [kJ.mol-1]"
             )  # noqa
+            self.b_cr_p = pybamm.Parameter("Positive electrode Paris' law constant b")
+            self.m_cr_p = pybamm.Parameter("Positive electrode Paris' law constant m")
             self.Eac_cr_p = pybamm.Parameter(
                 "Positive electrode activation energy for cracking rate [kJ.mol-1]"
             )  # noqa
@@ -696,12 +699,13 @@ class LithiumIonParameters:
         self.c_e_init = self.c_e_init_dimensional / self.c_e_typ
 
         # Dimensionless mechanical parameters
-        if isinstance(self, pybamm.particle_cracking.BaseCracking):
+        if self.options["particle cracking"] is not None:
             self.rho_cr_n = self.rho_cr_n_dim * self.l_cr_n_0 * self.w_cr
             self.rho_cr_p = self.rho_cr_p_dim * self.l_cr_p_0 * self.w_cr
             self.theta_p = self.theta_p_dim * self.c_p_max / self.T_ref
             self.theta_n = self.theta_n_dim * self.c_n_max / self.T_ref
-            self.t0_cr = 3600 / self.timescale  # nomarlised typical time for one cycle
+            self.t0_cr = 3600 / self.C_rate / self.timescale
+            # nomarlised typical time for one cycle
 
     def chi(self, c_e, T):
         """
@@ -710,8 +714,7 @@ class LithiumIonParameters:
             2*(1-t_plus) for Stefan-Maxwell,
         see Bizeray et al (2016) "Resolving a discrepancy ...".
         """
-        T_dim = self.Delta_T * T + self.T_ref
-        return (2 * (1 - self.t_plus(c_e))) * (self.one_plus_dlnf_dlnc(c_e, T_dim))
+        return (2 * (1 - self.t_plus(c_e))) * (self.one_plus_dlnf_dlnc(c_e, T))
 
     def t_plus(self, c_e):
         "Dimensionless transference number (i.e. c_e is dimensionless)"
@@ -721,7 +724,7 @@ class LithiumIonParameters:
     def one_plus_dlnf_dlnc(self, c_e, T):
         inputs = {
             "Electrolyte concentration [mol.m-3]": c_e * self.c_e_typ,
-            "Temperature [K]": T * self.Delta_T,
+            "Temperature [K]": self.Delta_T * T + self.T_ref,
         }
         return pybamm.FunctionParameter("1 + dlnf/dlnc", inputs)
 
@@ -742,11 +745,11 @@ class LithiumIonParameters:
         "Dimensionless negative particle diffusivity"
         sto = c_s_n
         T_dim = self.Delta_T * T + self.T_ref
-        try:
+        if self.options["particle cracking"] is not None:
             mech_effects = (
                 1 + self.theta_n * sto / T_dim * self.T_ref * self.flag_mechanics
             )
-        except:
+        else:
             mech_effects = 1
         return (
             self.D_n_dimensional(sto, T_dim)
@@ -758,11 +761,11 @@ class LithiumIonParameters:
         "Dimensionless positive particle diffusivity"
         sto = c_s_p
         T_dim = self.Delta_T * T + self.T_ref
-        try:
+        if self.options["particle cracking"] is not None:
             mech_effects = (
                 1 + self.theta_p * sto / T_dim * self.T_ref * self.flag_mechanics
             )
-        except:
+        else:
             mech_effects = 1
         return (
             self.D_p_dimensional(sto, T_dim)
@@ -894,20 +897,46 @@ class LithiumIonParameters:
 
     def t_n_change(self, sto):
         """
-        Dimentionless volume change for the negative particle;
+        Dimentionless volume change for the negative electrode;
         sto should be R-averaged
         """
         return pybamm.FunctionParameter(
-            "Negative particle volume change", {"Particle stoichiometry": sto}
+            "Negative electrode volume change", {"Particle stoichiometry": sto}
         )
 
     def t_p_change(self, sto):
         """
-        Dimentionless volume change for the positive particle;
+        Dimentionless volume change for the positive electrode;
         sto should be R-averaged
         """
         return pybamm.FunctionParameter(
-            "Positive particle volume change", {"Particle stoichiometry": sto}
+            "Positive electrode volume change", {"Particle stoichiometry": sto}
+        )
+
+    def k_cr_p(self, T):
+        """
+        Dimentionless cracking rate for the positive electrode;
+        """
+        T_dim = self.Delta_T * T + self.T_ref
+        delta_k_cr = self.E_p ** self.m_cr_p * self.l_cr_p_0 ** (self.m_cr_p / 2 - 1)
+        return (
+            pybamm.FunctionParameter(
+                "Positive electrode cracking rate", {"Temperature [K]": T_dim}
+            )
+            * delta_k_cr
+        )
+
+    def k_cr_n(self, T):
+        """
+        Dimentionless cracking rate for the negative electrode;
+        """
+        T_dim = self.Delta_T * T + self.T_ref
+        delta_k_cr = self.E_n ** self.m_cr_n * self.l_cr_n_0 ** (self.m_cr_n / 2 - 1)
+        return (
+            pybamm.FunctionParameter(
+                "Negative electrode cracking rate", {"Temperature [K]": T_dim}
+            )
+            * delta_k_cr
         )
 
     @property
@@ -919,7 +948,7 @@ class LithiumIonParameters:
         extra_options = extra_options or {}
 
         # Default options
-        options = {"particle shape": "spherical"}
+        options = {"particle shape": "spherical", "particle cracking": None}
 
         # All model options get passed to the parameter class, so we just need
         # to update the options in the default options and ignore the rest
@@ -935,4 +964,16 @@ class LithiumIonParameters:
                 "particle shape '{}' not recognised".format(options["particle shape"])
             )
 
+        if options["particle cracking"] not in [
+            None,
+            "no cracking",
+            "cathode",
+            "anode",
+            "both",
+        ]:
+            raise pybamm.OptionError(
+                "particle cracking '{}' not recognised".format(
+                    options["particle cracking"]
+                )
+            )
         self._options = options

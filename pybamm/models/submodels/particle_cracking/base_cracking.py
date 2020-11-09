@@ -132,7 +132,7 @@ class BaseCracking(pybamm.BaseSubModel):
         -------
         variables : dict
         The variables which can be derived from the crack length.
-        """      
+        """
         if self.domain == "Negative":
             a0 = self.param.a_n
             R0 = self.param.R_n

@@ -31,32 +31,20 @@ class CrackPropagation(BaseCracking):
 
     def get_coupled_variables(self, variables):
         variables.update(self._get_mechanical_results(variables))
+        T = variables[self.domain + " electrode temperature"]
         if self.domain == "Negative":
-            l_cr_scale = self.param.l_cr_n_0
-            Eac_cr = self.param.Eac_cr_n
+            k_cr = self.param.k_cr_n(T)
+            m_cr = self.param.m_cr_n
+            b_cr = self.param.b_cr_n
         else:
-            l_cr_scale = self.param.l_cr_p_0
-            Eac_cr = self.param.Eac_cr_p
-        stress_t_surf = variables[
-            self.domain + " particle surface tangential stress [Pa]"
-        ]
+            k_cr = self.param.k_cr_p(T)
+            m_cr = self.param.m_cr_p
+            b_cr = self.param.b_cr_p
+        stress_t_surf = variables[self.domain + " particle surface tangential stress"]
         l_cr = variables[self.domain + " particle crack length"]
-        R_const = self.param.R_const
-        Delta_T = self.param.Delta_T
-        T_dim = variables[self.domain + " electrode temperature [K]"]
-        k_cr = self.param.k_cr * pybamm.exp(
-            Eac_cr / R_const * (1 / T_dim - 1 / self.param.T_ref)
-        )  # cracking rate with temperature dependence
         # # compressive stress will not lead to crack propagation
-        dK_SIF = (
-            stress_t_surf
-            * self.param.b_cr
-            * pybamm.Sqrt(np.pi * l_cr * l_cr_scale)
-            * (stress_t_surf >= 0)
-        )
-        dl_cr = (
-            k_cr * pybamm.Power(dK_SIF, self.param.m_cr) / self.param.t0_cr / l_cr_scale
-        )
+        dK_SIF = stress_t_surf * b_cr * pybamm.Sqrt(np.pi * l_cr) * (stress_t_surf >= 0)
+        dl_cr = k_cr * pybamm.Power(dK_SIF, m_cr) / self.param.t0_cr
         variables.update(
             {
                 self.domain + " particle cracking rate": dl_cr,
