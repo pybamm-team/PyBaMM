@@ -31,6 +31,10 @@ def run_code_tests(executable=False, folder: str = "unit", interpreter="python")
         tests = "tests/" + folder
         if folder == "unit":
             pybamm.settings.debug_mode = True
+    if interpreter == "python":
+        # Make sure to refer to the interpreter for the
+        # currently activated virtual environment
+        interpreter = sys.executable
     if executable is False:
         suite = unittest.defaultTestLoader.discover(tests, pattern="test*.py")
         unittest.TextTestRunner(verbosity=2).run(suite)

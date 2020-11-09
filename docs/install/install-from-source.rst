@@ -128,7 +128,7 @@ Using Tox (recommended)
 	  python -m tox -e windows-dev # (Windows)
 
 
-This creates a virtual environment ``.tox/dev`` inside the ``PyBaMM/`` directory.
+This creates a virtual environment ``.tox/dev`` (or ``windows-dev``) inside the ``PyBaMM/`` directory.
 It comes ready with PyBaMM and some useful development tools like `flake8 <https://flake8.pycqa.org/en/latest/>`_ and `black <https://black.readthedocs.io/en/stable/>`_.
 
 You can now activate the environment with
@@ -137,7 +137,7 @@ You can now activate the environment with
 
 	  source .tox/dev/bin/activate # (GNU/Linux and MacOS)
 	  #
-	  .tox\dev\Scripts\activate.bat # (Windows)
+	  .tox\windows-dev\Scripts\activate.bat # (Windows)
 
 and run the tests to check your installation.
 

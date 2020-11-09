@@ -161,18 +161,18 @@ ext_modules = [idaklu_ext] if compile_KLU() else []
 jax_dependencies = []
 if system() != "Windows":
     jax_dependencies = [
-        "jax>=0.1.68",
-        "jaxlib>=0.1.47",
+        "jax==0.1.75",
+        "jaxlib==0.1.52",
     ]
 
 
 # Load text for description and license
-with open("README.md") as f:
+with open("README.md", encoding="utf-8") as f:
     readme = f.read()
 
 setup(
     name="pybamm",
-    version=load_version(),
+    version=load_version() + ".post2",
     description="Python Battery Mathematical Modelling.",
     long_description=readme,
     long_description_content_type="text/markdown",
