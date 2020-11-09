@@ -103,8 +103,6 @@ def find_symbols(symbol, constant_symbols, variable_symbols, no_sparse=False):
             dummy_eval_right = symbol.children[1].evaluate_for_shape()
             if scipy.sparse.issparse(dummy_eval_left):
                 if no_sparse:
-                    print('calling dot_product with', dummy_eval_left, 'and',
-                          dummy_eval_right)
                     symbol_str = "{0}.dot_product({1})"\
                         .format(children_vars[0], children_vars[1])
                 else:
@@ -112,8 +110,6 @@ def find_symbols(symbol, constant_symbols, variable_symbols, no_sparse=False):
                         .format(children_vars[0], children_vars[1])
             elif scipy.sparse.issparse(dummy_eval_right):
                 if no_sparse:
-                    print('calling dot_product with', dummy_eval_right, 'and',
-                          dummy_eval_left)
                     symbol_str = "{1}.dot_product({1})"\
                         .format(children_vars[0], children_vars[1])
                 else:
@@ -125,8 +121,6 @@ def find_symbols(symbol, constant_symbols, variable_symbols, no_sparse=False):
             dummy_eval_left = symbol.children[0].evaluate_for_shape()
             if scipy.sparse.issparse(dummy_eval_left):
                 if no_sparse:
-                    print('calling dot_product with', dummy_eval_left, 'and 1/',
-                          dummy_eval_right)
                     symbol_str = "{0}.dot_product(1/{1})"\
                         .format(children_vars[0], children_vars[1])
                 else:
@@ -139,14 +133,7 @@ def find_symbols(symbol, constant_symbols, variable_symbols, no_sparse=False):
             dummy_eval_left = symbol.children[0].evaluate_for_shape()
             dummy_eval_right = symbol.children[1].evaluate_for_shape()
             if scipy.sparse.issparse(dummy_eval_left):
-                print('XXX - found sparse on left inner')
-            elif scipy.sparse.issparse(dummy_eval_right):
-                print('XXX - found sparse on right inner')
-
-            if scipy.sparse.issparse(dummy_eval_left):
                 if no_sparse:
-                    print('calling dot_product with', dummy_eval_left, 'and',
-                          dummy_eval_right)
                     symbol_str = "{0}.dot_product({1})"\
                         .format(children_vars[0], children_vars[1])
                 else:
@@ -154,8 +141,6 @@ def find_symbols(symbol, constant_symbols, variable_symbols, no_sparse=False):
                         .format(children_vars[0], children_vars[1])
             elif scipy.sparse.issparse(dummy_eval_right):
                 if no_sparse:
-                    print('calling dot_product with', dummy_eval_right, 'and',
-                          dummy_eval_left)
                     symbol_str = "{0}.dot_product({1})"\
                         .format(children_vars[0], children_vars[1])
                 else:
@@ -209,7 +194,6 @@ def find_symbols(symbol, constant_symbols, variable_symbols, no_sparse=False):
         elif isinstance(symbol, pybamm.SparseStack):
             if len(children_vars) > 1:
                 if no_sparse:
-                    print('calling jax_coo_vstack with', children_vars)
                     symbol_str = "jax_coo_vstack(({}))".format(",".join(children_vars))
                 else:
                     symbol_str = "scipy.sparse.vstack(({}))".format(
@@ -403,7 +387,6 @@ class JaxCooMatrix:
 
     @jax.partial(jax.jit, static_argnums=(0,))
     def dot_product(self, b):
-        print('XXXXXXdot_product', self.shape, b.shape)
         # assume b is a column vector
         result = jax.numpy.zeros((self.shape[0], 1), dtype=b.dtype)
         result = result.at[self.row].add(self.data.reshape(-1, 1) * b[self.col])
@@ -411,11 +394,7 @@ class JaxCooMatrix:
 
     @jax.partial(jax.jit, static_argnums=(0,))
     def __matmul__(self, b):
-        print('XXXXXXmultiply', self.shape, b.shape, b, self.row.shape, self.col.shape,
-              self.data.shape)
-        result = jax.numpy.zeros((self.shape[0], 1), dtype=b.dtype)
-        result = result.at[self.row].add(self.data.reshape(-1, 1) * b[self.col])
-        return result.reshape(self.shape[0])
+        return self.dot_product(b)
 
 def jax_coo_vstack(blocks):
     M = len(blocks)
@@ -449,8 +428,6 @@ def jax_coo_vstack(blocks):
         row[idx] = B.row + row_offsets[i]
         col[idx] = B.col + col_offsets[j]
         nnz += B.nnz
-
-    print('jax_coo_vstack', blocks, row, col, data, shape)
 
     return JaxCooMatrix(row, col, data, shape)
 
@@ -518,6 +495,7 @@ class EvaluatorJax:
         # store a copy of examine_jaxpr
         python_str = python_str + "\nself._evaluate_jax = evaluate_jax"
 
+        print(python_str)
         # compile and run the generated python code,
         compiled_function = compile(python_str, result_var, "exec")
         exec(compiled_function)
