@@ -146,17 +146,6 @@ class QuickPlot(object):
         else:
             raise ValueError("spatial unit '{}' not recognized".format(spatial_unit))
 
-        try:
-            # Set length scales
-            self.length_scales = {
-                domain: scale.evaluate() * self.spatial_factor
-                for domain, scale in models[0].length_scales.items()
-            }
-        except KeyError:
-            # Length scales are probably function of input
-            # Use the evaluated length scales from the first solution
-            self.length_scales = solutions[0].length_scales_eval
-
         # Time parameters
         self.ts_seconds = [
             solution.t * solution.timescale_eval for solution in solutions
