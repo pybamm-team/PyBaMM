@@ -14,6 +14,7 @@ class TestConcatenations(unittest.TestCase):
         c = pybamm.Symbol("c")
         conc = pybamm.Concatenation(a, b, c)
         self.assertEqual(conc.name, "concatenation")
+        self.assertEqual(str(conc), "concatenation(a, b, c)")
         self.assertIsInstance(conc.children[0], pybamm.Symbol)
         self.assertEqual(conc.children[0].name, "a")
         self.assertEqual(conc.children[1].name, "b")
@@ -153,11 +154,15 @@ class TestConcatenations(unittest.TestCase):
         )
         # test size and shape
         self.assertEqual(
-            conc.size, mesh[b_dom[0]].npts + mesh[a_dom[0]].npts + mesh[b_dom[1]].npts
+            conc.size,
+            mesh[b_dom[0]].npts + mesh[a_dom[0]].npts + mesh[b_dom[1]].npts,
         )
         self.assertEqual(
             conc.shape,
-            (mesh[b_dom[0]].npts + mesh[a_dom[0]].npts + mesh[b_dom[1]].npts, 1),
+            (
+                mesh[b_dom[0]].npts + mesh[a_dom[0]].npts + mesh[b_dom[1]].npts,
+                1,
+            ),
         )
 
     def test_domain_concatenation_domains(self):
