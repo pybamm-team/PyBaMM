@@ -68,7 +68,9 @@ def find_symbols(symbol, constant_symbols, variable_symbols, numpy_only=False):
         The output dictionary of variable (with y or t) symbol ids to lines of code
 
     numpy_only: bool
-        If True, only numpy operations will be used in the generated code
+        If True, only numpy operations will be used in the generated code, raises
+        NotImplNotImplementedError if any SparseStack or Mat-Mat multiply operations are
+        used
 
     """
     if symbol.is_constant():
@@ -121,7 +123,6 @@ def find_symbols(symbol, constant_symbols, variable_symbols, numpy_only=False):
                     symbol_str = "{1}.scalar_multiply({0})"\
                         .format(children_vars[0], children_vars[1])
                 else:
-                    print('PUTTING IN MUTULKSADF')
                     symbol_str = "{1}.multiply({0})"\
                         .format(children_vars[0], children_vars[1])
             else:
@@ -203,7 +204,7 @@ def find_symbols(symbol, constant_symbols, variable_symbols, numpy_only=False):
         elif isinstance(symbol, pybamm.SparseStack):
             if len(children_vars) > 1:
                 if numpy_only:
-                    symbol_str = "jax_coo_vstack(({}))".format(",".join(children_vars))
+                    raise NotImplementedError
                 else:
                     symbol_str = "scipy.sparse.vstack(({}))".format(
                         ",".join(children_vars))
@@ -282,7 +283,9 @@ def to_python(symbol, debug=False, numpy_only=False):
     str:
         valid python code that will evaluate all the variable nodes in the tree.
     numpy_only: bool
-        If True, only numpy operations will be used in the generated code
+        If True, only numpy operations will be used in the generated code. Raises
+        NotImplNotImplementedError if any SparseStack or Mat-Mat multiply operations are
+        used
 
     """
 
@@ -420,44 +423,6 @@ class JaxCooMatrix:
     @jax.partial(jax.jit, static_argnums=(0,))
     def __matmul__(self, b):
         return self.dot_product(b)
-
-@jax.partial(jax.jit, static_argnums=(0,))
-def jax_coo_vstack(blocks):
-    """
-    This is based on scipy.sparse.vstack, with minor modifications
-
-    https://github.com/scipy/scipy/blob/v1.5.4/scipy/sparse/construct.py#L470-L501
-    """
-
-    M = len(blocks)
-
-    nnz = sum(block.nnz for block in blocks)
-
-    # assume all the same type
-    dtype = blocks[0].data.dtype
-    idx_dtype = blocks[0].row.dtype
-
-    data = jax.numpy.empty(nnz, dtype=dtype)
-    row = jax.numpy.empty(nnz, dtype=idx_dtype)
-    col = jax.numpy.empty(nnz, dtype=idx_dtype)
-
-    nnz = 0
-    row_offset = 0
-    for i in range(M):
-        B = blocks[i]
-        idx = jax.ops.index[nnz:nnz+B.nnz]
-        print(idx)
-        print(B.data)
-        data = jax.ops.index_update(data, idx, B.data)
-        row = jax.ops.index_update(row, idx, B.row + row_offset)
-        col = jax.ops.index_update(col, idx, B.col)
-        nnz += B.nnz
-        row_offset += B.shape[0]
-
-    shape = (row_offset, blocks[0].shape[1])
-
-    return JaxCooMatrix(row, col, data, shape)
-
 
 class EvaluatorJax:
     """
