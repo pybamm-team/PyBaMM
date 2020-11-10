@@ -17,6 +17,41 @@ if system() != "Windows":
 
     config.update("jax_enable_x64", True)
 
+    class JaxCooMatrix:
+        def __init__(self, row, col, data, shape):
+            self.row = row
+            self.col = col
+            self.data = data
+            self.shape = shape
+            self.nnz = len(data)
+
+        def toarray(self):
+            result = jax.numpy.zeros(self.shape, dtype=self.data.dtype)
+            return result.at[self.row, self.col].add(self.data)
+
+        @jax.partial(jax.jit, static_argnums=(0,))
+        def dot_product(self, b):
+            # assume b is a column vector
+            result = jax.numpy.zeros((self.shape[0], 1), dtype=b.dtype)
+            return result.at[self.row].add(self.data.reshape(-1, 1) * b[self.col])
+
+        @jax.partial(jax.jit, static_argnums=(0,))
+        def scalar_multiply(self, b):
+            # assume b is a scalar or ndarray with 1 element
+            return JaxCooMatrix(
+                self.row, self.col,
+                (self.data * b).reshape(-1),
+                self.shape
+            )
+
+        @jax.partial(jax.jit, static_argnums=(0,))
+        def multiply(self, b):
+            raise NotImplementedError
+
+        @jax.partial(jax.jit, static_argnums=(0,))
+        def __matmul__(self, b):
+            return self.dot_product(b)
+
 
 def id_to_python_variable(symbol_id, constant=False):
     """
@@ -387,42 +422,6 @@ class EvaluatorPython:
             return result, known_evals
         else:
             return result
-
-
-class JaxCooMatrix:
-    def __init__(self, row, col, data, shape):
-        self.row = row
-        self.col = col
-        self.data = data
-        self.shape = shape
-        self.nnz = len(data)
-
-    def toarray(self):
-        result = jax.numpy.zeros(self.shape, dtype=self.data.dtype)
-        return result.at[self.row, self.col].add(self.data)
-
-    @jax.partial(jax.jit, static_argnums=(0,))
-    def dot_product(self, b):
-        # assume b is a column vector
-        result = jax.numpy.zeros((self.shape[0], 1), dtype=b.dtype)
-        return result.at[self.row].add(self.data.reshape(-1, 1) * b[self.col])
-
-    @jax.partial(jax.jit, static_argnums=(0,))
-    def scalar_multiply(self, b):
-        # assume b is a scalar or ndarray with 1 element
-        return JaxCooMatrix(
-            self.row, self.col,
-            (self.data * b).reshape(-1),
-            self.shape
-        )
-
-    @jax.partial(jax.jit, static_argnums=(0,))
-    def multiply(self, b):
-        raise NotImplementedError
-
-    @jax.partial(jax.jit, static_argnums=(0,))
-    def __matmul__(self, b):
-        return self.dot_product(b)
 
 
 class EvaluatorJax:
