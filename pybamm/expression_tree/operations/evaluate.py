@@ -424,6 +424,7 @@ class JaxCooMatrix:
     def __matmul__(self, b):
         return self.dot_product(b)
 
+
 class EvaluatorJax:
     """
     Converts a pybamm expression tree into pure python code that will calculate the
