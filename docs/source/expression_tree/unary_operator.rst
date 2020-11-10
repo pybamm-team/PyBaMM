@@ -87,6 +87,8 @@ Unary Operators
 
 .. autofunction:: pybamm.boundary_value
 
+.. autofunction:: pybamm.smooth_absolute_value
+
 .. autofunction:: pybamm.sign
 
 .. autofunction:: pybamm.upwind

@@ -59,6 +59,14 @@ class Function(pybamm.Symbol):
             name, children=children, domain=domain, auxiliary_domains=auxiliary_domains
         )
 
+    def __str__(self):
+        """ See :meth:`pybamm.Symbol.__str__()`. """
+        out = "{}(".format(self.name[10:-1])
+        for child in self.children:
+            out += "{!s}, ".format(child)
+        out = out[:-2] + ")"
+        return out
+
     def get_children_domains(self, children_list):
         """Obtains the unique domain of the children. If the
         children have different domains then raise an error"""

@@ -37,10 +37,6 @@ jobs:
     - name: Install build-time deps for MacOS
       if: matrix.os == 'macos-latest'
       run: |
-        # Temporary fix for https://github.com/actions/virtual-environments/issues/1811
-        brew untap local/homebrew-openssl
-        brew untap local/homebrew-python2
-        # End of fix
         brew update
         brew install graphviz
         brew install sundials
