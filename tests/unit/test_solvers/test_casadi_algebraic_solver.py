@@ -105,6 +105,26 @@ class TestCasadiAlgebraicSolver(unittest.TestCase):
             sol[1, :],
         )
 
+    def test_model_solver_with_time_not_changing(self):
+        # Create model
+        model = pybamm.BaseModel()
+        var1 = pybamm.Variable("var1")
+        var2 = pybamm.Variable("var2")
+        model.algebraic = {var1: var1 - 3, var2: 2 * var1 - var2}
+        model.initial_conditions = {var1: pybamm.Scalar(1), var2: pybamm.Scalar(4)}
+        model.variables = {"var1": var1, "var2": var2}
+
+        disc = pybamm.Discretisation()
+        disc.process_model(model)
+
+        # Solve
+        t_eval = np.linspace(0, 1)
+        solver = pybamm.CasadiAlgebraicSolver()
+        solution = solver.solve(model, t_eval)
+
+        sol = np.vstack((3 + 0 * t_eval, 6 + 0 * t_eval))
+        np.testing.assert_array_almost_equal(solution.y, sol)
+
     def test_model_solver_with_bounds(self):
         # Note: we need a better test case to test this functionality properly
         # Create model

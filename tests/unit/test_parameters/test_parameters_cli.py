@@ -12,7 +12,7 @@ import unittest
 import platform
 
 
-@unittest.skipUnless(platform.system() != "Windows", "Skipped for Windows")
+@unittest.skipIf(platform.system() == "Windows", "Skipped for Windows")
 class TestParametersCLI(unittest.TestCase):
     def test_add_rm_param(self):
         # Read a parameter file thta is shipped with PyBaMM
