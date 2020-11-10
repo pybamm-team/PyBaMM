@@ -134,11 +134,12 @@ class TestEvaluate(unittest.TestCase):
         constant_symbols = OrderedDict()
         variable_symbols = OrderedDict()
         A = pybamm.Matrix(scipy.sparse.csr_matrix(np.array([[0, 2], [0, 4]])))
-        pybamm.find_symbols(A, constant_symbols, variable_symbols, to_dense=True)
+        pybamm.find_symbols(A, constant_symbols, variable_symbols, numpy_only=True)
         self.assertEqual(len(variable_symbols), 0)
         self.assertEqual(list(constant_symbols.keys())[0], A.id)
+        print(list(constant_symbols.values())[0].toarray())
         np.testing.assert_allclose(
-            list(constant_symbols.values())[0], A.entries.toarray()
+            list(constant_symbols.values())[0].toarray(), A.entries.toarray()
         )
 
         # test numpy concatentate
@@ -576,7 +577,10 @@ class TestEvaluate(unittest.TestCase):
         evaluator = pybamm.EvaluatorJax(expr)
         for t, y in zip(t_tests, y_tests):
             result = evaluator.evaluate(t=t, y=y)
-            np.testing.assert_allclose(result, expr.evaluate(t=t, y=y).toarray())
+            np.testing.assert_allclose(
+                result.toarray(),
+                expr.evaluate(t=t, y=y).toarray()
+            )
 
         # test numpy concatenation
         a = pybamm.Vector(np.array([[1], [2]]))

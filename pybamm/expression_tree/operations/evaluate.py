@@ -33,7 +33,15 @@ def id_to_python_variable(symbol_id, constant=False):
     return var_format.format(symbol_id).replace("-", "m")
 
 
-def find_symbols(symbol, constant_symbols, variable_symbols, no_sparse=False):
+def is_scalar(arg):
+    is_number = isinstance(arg, numbers.Number)
+    if is_number:
+        return True
+    else:
+        return np.all(np.array(arg.shape) == 1)
+
+
+def find_symbols(symbol, constant_symbols, variable_symbols, numpy_only=False):
     """
     This function converts an expression tree to a dictionary of node id's and strings
     specifying valid python code to calculate that nodes value, given y and t.
@@ -59,14 +67,14 @@ def find_symbols(symbol, constant_symbols, variable_symbols, no_sparse=False):
     variable_symbol: collections.OrderedDict
         The output dictionary of variable (with y or t) symbol ids to lines of code
 
-    no_sparse: bool
-        If True, all constants and expressions are converted to using dense matrices
+    numpy_only: bool
+        If True, only numpy operations will be used in the generated code
 
     """
     if symbol.is_constant():
         value = symbol.evaluate()
         if not isinstance(value, numbers.Number):
-            if no_sparse and scipy.sparse.issparse(value):
+            if numpy_only and scipy.sparse.issparse(value):
                 # convert any remaining sparse matrices to our custom coo matrix
                 scipy_coo = value.tocoo()
                 row = jax.numpy.asarray(scipy_coo.row)
@@ -79,7 +87,7 @@ def find_symbols(symbol, constant_symbols, variable_symbols, no_sparse=False):
 
     # process children recursively
     for child in symbol.children:
-        find_symbols(child, constant_symbols, variable_symbols, no_sparse)
+        find_symbols(child, constant_symbols, variable_symbols, numpy_only)
 
     # calculate the variable names that will hold the result of calculating the
     # children variables
@@ -102,17 +110,18 @@ def find_symbols(symbol, constant_symbols, variable_symbols, no_sparse=False):
             dummy_eval_left = symbol.children[0].evaluate_for_shape()
             dummy_eval_right = symbol.children[1].evaluate_for_shape()
             if scipy.sparse.issparse(dummy_eval_left):
-                if no_sparse:
-                    symbol_str = "{0}.dot_product({1})"\
+                if numpy_only and is_scalar(dummy_eval_right):
+                    symbol_str = "{0}.scalar_multiply({1})"\
                         .format(children_vars[0], children_vars[1])
                 else:
                     symbol_str = "{0}.multiply({1})"\
                         .format(children_vars[0], children_vars[1])
             elif scipy.sparse.issparse(dummy_eval_right):
-                if no_sparse:
-                    symbol_str = "{1}.dot_product({1})"\
+                if numpy_only and is_scalar(dummy_eval_left):
+                    symbol_str = "{1}.scalar_multiply({0})"\
                         .format(children_vars[0], children_vars[1])
                 else:
+                    print('PUTTING IN MUTULKSADF')
                     symbol_str = "{1}.multiply({0})"\
                         .format(children_vars[0], children_vars[1])
             else:
@@ -120,8 +129,8 @@ def find_symbols(symbol, constant_symbols, variable_symbols, no_sparse=False):
         elif isinstance(symbol, pybamm.Division):
             dummy_eval_left = symbol.children[0].evaluate_for_shape()
             if scipy.sparse.issparse(dummy_eval_left):
-                if no_sparse:
-                    symbol_str = "{0}.dot_product(1/{1})"\
+                if numpy_only and is_scalar(dummy_eval_right):
+                    symbol_str = "{0}.scalar_multiply(1/{1})"\
                         .format(children_vars[0], children_vars[1])
                 else:
                     symbol_str = "{0}.multiply(1/{1})"\
@@ -133,15 +142,15 @@ def find_symbols(symbol, constant_symbols, variable_symbols, no_sparse=False):
             dummy_eval_left = symbol.children[0].evaluate_for_shape()
             dummy_eval_right = symbol.children[1].evaluate_for_shape()
             if scipy.sparse.issparse(dummy_eval_left):
-                if no_sparse:
-                    symbol_str = "{0}.dot_product({1})"\
+                if numpy_only and isinstance(dummy_eval_right, numbers.Number):
+                    symbol_str = "{0}.scalar_multiply({1})"\
                         .format(children_vars[0], children_vars[1])
                 else:
                     symbol_str = "{0}.multiply({1})"\
                         .format(children_vars[0], children_vars[1])
             elif scipy.sparse.issparse(dummy_eval_right):
-                if no_sparse:
-                    symbol_str = "{0}.dot_product({1})"\
+                if numpy_only and isinstance(dummy_eval_left, numbers.Number):
+                    symbol_str = "{1}.scalar_multiply({0})"\
                         .format(children_vars[0], children_vars[1])
                 else:
                     symbol_str = "{1}.multiply({0})"\
@@ -193,7 +202,7 @@ def find_symbols(symbol, constant_symbols, variable_symbols, no_sparse=False):
 
         elif isinstance(symbol, pybamm.SparseStack):
             if len(children_vars) > 1:
-                if no_sparse:
+                if numpy_only:
                     symbol_str = "jax_coo_vstack(({}))".format(",".join(children_vars))
                 else:
                     symbol_str = "scipy.sparse.vstack(({}))".format(
@@ -252,7 +261,7 @@ def find_symbols(symbol, constant_symbols, variable_symbols, no_sparse=False):
     variable_symbols[symbol.id] = symbol_str
 
 
-def to_python(symbol, debug=False, no_sparse=False):
+def to_python(symbol, debug=False, numpy_only=False):
     """
     This function converts an expression tree into a dict of constant input values, and
     valid python code that acts like the tree's :func:`pybamm.Symbol.evaluate` function
@@ -272,14 +281,14 @@ def to_python(symbol, debug=False, no_sparse=False):
         the expression tree
     str:
         valid python code that will evaluate all the variable nodes in the tree.
-    no_sparse: bool
-        If True, all constants and expressions are converted to using dense matrices
+    numpy_only: bool
+        If True, only numpy operations will be used in the generated code
 
     """
 
     constant_values = OrderedDict()
     variable_symbols = OrderedDict()
-    find_symbols(symbol, constant_values, variable_symbols, no_sparse)
+    find_symbols(symbol, constant_values, variable_symbols, numpy_only)
 
     line_format = "{} = {}"
 
@@ -385,49 +394,67 @@ class JaxCooMatrix:
         self.shape = shape
         self.nnz = len(data)
 
+    def toarray(self):
+        result = jax.numpy.zeros(self.shape, dtype=self.data.dtype)
+        return result.at[self.row, self.col].add(self.data)
+
     @jax.partial(jax.jit, static_argnums=(0,))
     def dot_product(self, b):
         # assume b is a column vector
         result = jax.numpy.zeros((self.shape[0], 1), dtype=b.dtype)
-        result = result.at[self.row].add(self.data.reshape(-1, 1) * b[self.col])
-        return result
+        return result.at[self.row].add(self.data.reshape(-1, 1) * b[self.col])
+
+    @jax.partial(jax.jit, static_argnums=(0,))
+    def scalar_multiply(self, b):
+        # assume b is a scalar or ndarray with 1 element
+        return JaxCooMatrix(
+            self.row, self.col,
+            (self.data * b).reshape(-1),
+            self.shape
+        )
+
+    @jax.partial(jax.jit, static_argnums=(0,))
+    def multiply(self, b):
+        raise NotImplementedError
 
     @jax.partial(jax.jit, static_argnums=(0,))
     def __matmul__(self, b):
         return self.dot_product(b)
 
+@jax.partial(jax.jit, static_argnums=(0,))
 def jax_coo_vstack(blocks):
+    """
+    This is based on scipy.sparse.vstack, with minor modifications
+
+    https://github.com/scipy/scipy/blob/v1.5.4/scipy/sparse/construct.py#L470-L501
+    """
+
     M = len(blocks)
-    N = 1
 
-    block_mask = np.zeros((M, N), dtype=bool)
-    brow_lengths = np.zeros(M, dtype=np.int64)
-    bcol_lengths = np.zeros(N, dtype=np.int64)
-
-    nnz = sum(block.nnz for block in blocks[block_mask])
+    nnz = sum(block.nnz for block in blocks)
 
     # assume all the same type
     dtype = blocks[0].data.dtype
     idx_dtype = blocks[0].row.dtype
 
-    row_offsets = np.append(0, np.cumsum(brow_lengths))
-    col_offsets = np.append(0, np.cumsum(bcol_lengths))
-
-    shape = (row_offsets[-1], col_offsets[-1])
-
-    data = np.empty(nnz, dtype=dtype)
-    row = np.empty(nnz, dtype=idx_dtype)
-    col = np.empty(nnz, dtype=idx_dtype)
+    data = jax.numpy.empty(nnz, dtype=dtype)
+    row = jax.numpy.empty(nnz, dtype=idx_dtype)
+    col = jax.numpy.empty(nnz, dtype=idx_dtype)
 
     nnz = 0
-    ii, jj = np.nonzero(block_mask)
-    for i, j in zip(ii, jj):
-        B = blocks[i, j]
-        idx = slice(nnz, nnz + B.nnz)
-        data[idx] = B.data
-        row[idx] = B.row + row_offsets[i]
-        col[idx] = B.col + col_offsets[j]
+    row_offset = 0
+    for i in range(M):
+        B = blocks[i]
+        idx = jax.ops.index[nnz:nnz+B.nnz]
+        print(idx)
+        print(B.data)
+        data = jax.ops.index_update(data, idx, B.data)
+        row = jax.ops.index_update(row, idx, B.row + row_offset)
+        col = jax.ops.index_update(col, idx, B.col)
         nnz += B.nnz
+        row_offset += B.shape[0]
+
+    shape = (row_offset, blocks[0].shape[1])
 
     return JaxCooMatrix(row, col, data, shape)
 
@@ -452,7 +479,7 @@ class EvaluatorJax:
     """
 
     def __init__(self, symbol):
-        constants, python_str = pybamm.to_python(symbol, debug=False, no_sparse=True)
+        constants, python_str = pybamm.to_python(symbol, debug=False, numpy_only=True)
 
         # replace numpy function calls to jax numpy calls
         python_str = python_str.replace("np.", "jax.numpy.")
@@ -495,7 +522,6 @@ class EvaluatorJax:
         # store a copy of examine_jaxpr
         python_str = python_str + "\nself._evaluate_jax = evaluate_jax"
 
-        print(python_str)
         # compile and run the generated python code,
         compiled_function = compile(python_str, result_var, "exec")
         exec(compiled_function)
