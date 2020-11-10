@@ -52,6 +52,26 @@ if system() != "Windows":
         def __matmul__(self, b):
             return self.dot_product(b)
 
+    def createJaxCooMatrix(value):
+        """
+        Creates a JaxCooMatrix from a scipy.sparse matrix
+
+        Parameters
+        ----------
+
+        value: scipy.sparse matrix
+            the sparse matrix to be converted
+        """
+        scipy_coo = value.tocoo()
+        row = jax.numpy.asarray(scipy_coo.row)
+        col = jax.numpy.asarray(scipy_coo.col)
+        data = jax.numpy.asarray(scipy_coo.data)
+        return JaxCooMatrix(row, col, data, value.shape)
+else:
+
+    def createJaxCooMatrix(value):
+        raise NotImplementedError('Jax is not available on Windows')
+
 
 def id_to_python_variable(symbol_id, constant=False):
     """
@@ -113,11 +133,8 @@ def find_symbols(symbol, constant_symbols, variable_symbols, numpy_only=False):
         if not isinstance(value, numbers.Number):
             if numpy_only and scipy.sparse.issparse(value):
                 # convert any remaining sparse matrices to our custom coo matrix
-                scipy_coo = value.tocoo()
-                row = jax.numpy.asarray(scipy_coo.row)
-                col = jax.numpy.asarray(scipy_coo.col)
-                data = jax.numpy.asarray(scipy_coo.data)
-                constant_symbols[symbol.id] = JaxCooMatrix(row, col, data, value.shape)
+                constant_symbols[symbol.id] = createJaxCooMatrix(value)
+
             else:
                 constant_symbols[symbol.id] = value
         return
