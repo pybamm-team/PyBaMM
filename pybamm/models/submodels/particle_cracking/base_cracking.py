@@ -52,7 +52,7 @@ class BaseCracking(pybamm.BaseSubModel):
 
         if "Cell thickness change [m]" not in variables:
             cell_thickness_change = (
-                T_xav * self.param.alpha_T_cell_dim
+                T_xav * self.param.Delta_T * self.param.alpha_T_cell_dim
             )  # thermal expansion
         else:
             cell_thickness_change = variables["Cell thickness change [m]"]
