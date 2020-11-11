@@ -429,7 +429,7 @@ class TestDiscretise(unittest.TestCase):
     def test_process_complex_expression(self):
         var1 = pybamm.Variable("var1")
         var2 = pybamm.Variable("var2")
-        scal1 = pybamm.Scalar(1)
+        scal1 = pybamm.Scalar(5)
         scal2 = pybamm.Scalar(2)
         scal3 = pybamm.Scalar(3)
         scal4 = pybamm.Scalar(4)
@@ -793,7 +793,10 @@ class TestDiscretise(unittest.TestCase):
             (
                 np.eye(np.size(combined_submesh.nodes)),
                 np.zeros(
-                    (np.size(combined_submesh.nodes), np.size(combined_submesh.nodes),)
+                    (
+                        np.size(combined_submesh.nodes),
+                        np.size(combined_submesh.nodes),
+                    )
                 ),
             )
         )

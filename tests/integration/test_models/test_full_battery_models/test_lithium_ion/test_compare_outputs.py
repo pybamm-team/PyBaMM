@@ -15,7 +15,7 @@ class TestCompareOutputs(unittest.TestCase):
         ]
         model_combos = [
             ([pybamm.lithium_ion.SPM(opt) for opt in options]),
-            ([pybamm.lithium_ion.SPMe(opt) for opt in options]),
+            # ([pybamm.lithium_ion.SPMe(opt) for opt in options]), # not implemented
             ([pybamm.lithium_ion.DFN(opt) for opt in options]),
         ]
 

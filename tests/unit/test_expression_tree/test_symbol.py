@@ -6,6 +6,7 @@ import pybamm
 import unittest
 import numpy as np
 import os
+from scipy.sparse import coo_matrix
 
 
 class TestSymbol(unittest.TestCase):
@@ -131,7 +132,7 @@ class TestSymbol(unittest.TestCase):
 
         # error raising
         with self.assertRaisesRegex(
-            NotImplementedError, "'Addition' not implemented for symbols of type"
+            NotImplementedError, "BinaryOperator not implemented for symbols of type"
         ):
             a + "two"
 
@@ -447,6 +448,29 @@ class TestSymbol(unittest.TestCase):
         y2 = pybamm.StateVector(slice(0, 5))
         with self.assertRaises(pybamm.ShapeError):
             (y1 + y2).test_shape()
+
+
+class TestIsZero(unittest.TestCase):
+    def test_is_scalar_zero(self):
+        a = pybamm.Scalar(0)
+        b = pybamm.Scalar(2)
+        self.assertTrue(pybamm.is_scalar_zero(a))
+        self.assertFalse(pybamm.is_scalar_zero(b))
+
+    def test_is_matrix_zero(self):
+        a = pybamm.Matrix(coo_matrix(np.zeros((10, 10))))
+        b = pybamm.Matrix(coo_matrix(np.ones((10, 10))))
+        c = pybamm.Matrix(coo_matrix(([1], ([0], [0])), shape=(5, 5)))
+        self.assertTrue(pybamm.is_matrix_zero(a))
+        self.assertFalse(pybamm.is_matrix_zero(b))
+        self.assertFalse(pybamm.is_matrix_zero(c))
+
+        a = pybamm.Matrix(np.zeros((10, 10)))
+        b = pybamm.Matrix(np.ones((10, 10)))
+        c = pybamm.Matrix([1, 0, 0])
+        self.assertTrue(pybamm.is_matrix_zero(a))
+        self.assertFalse(pybamm.is_matrix_zero(b))
+        self.assertFalse(pybamm.is_matrix_zero(c))
 
 
 if __name__ == "__main__":

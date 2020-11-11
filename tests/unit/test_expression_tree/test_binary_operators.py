@@ -399,28 +399,66 @@ class TestBinaryOperators(unittest.TestCase):
         pybamm.settings.min_smoothing = "exact"
         pybamm.settings.max_smoothing = "exact"
 
+    def test_binary_simplifications(self):
+        a = pybamm.Scalar(0, domain="domain")
+        b = pybamm.Scalar(1)
+        c = pybamm.Parameter("c")
+        e = pybamm.Scalar(2)
+        v = pybamm.Vector(np.zeros((10, 1)))
 
-class TestIsZero(unittest.TestCase):
-    def test_is_scalar_zero(self):
-        a = pybamm.Scalar(0)
-        b = pybamm.Scalar(2)
-        self.assertTrue(pybamm.is_scalar_zero(a))
-        self.assertFalse(pybamm.is_scalar_zero(b))
+        # addition
+        self.assertIsInstance((a + b), pybamm.Scalar)
+        self.assertEqual((a + b).evaluate(), 1)
+        self.assertIsInstance((b + b), pybamm.Scalar)
+        self.assertEqual((b + b).evaluate(), 2)
+        self.assertIsInstance((b + a), pybamm.Scalar)
+        self.assertEqual((b + a).evaluate(), 1)
 
-    def test_is_matrix_zero(self):
-        a = pybamm.Matrix(coo_matrix(np.zeros((10, 10))))
-        b = pybamm.Matrix(coo_matrix(np.ones((10, 10))))
-        c = pybamm.Matrix(coo_matrix(([1], ([0], [0])), shape=(5, 5)))
-        self.assertTrue(pybamm.is_matrix_zero(a))
-        self.assertFalse(pybamm.is_matrix_zero(b))
-        self.assertFalse(pybamm.is_matrix_zero(c))
+        # subtraction
+        self.assertIsInstance((a - b), pybamm.Scalar)
+        self.assertEqual((a - b).evaluate(), -1)
+        self.assertIsInstance((b - b), pybamm.Scalar)
+        self.assertEqual((b - b).evaluate(), 0)
+        self.assertIsInstance((b - a), pybamm.Scalar)
+        self.assertEqual((b - a).evaluate(), 1)
 
-        a = pybamm.Matrix(np.zeros((10, 10)))
-        b = pybamm.Matrix(np.ones((10, 10)))
-        c = pybamm.Matrix([1, 0, 0])
-        self.assertTrue(pybamm.is_matrix_zero(a))
-        self.assertFalse(pybamm.is_matrix_zero(b))
-        self.assertFalse(pybamm.is_matrix_zero(c))
+        # addition and subtraction with matrix zero
+        self.assertIsInstance((b + v), pybamm.Array)
+        np.testing.assert_array_equal((b + v).evaluate(), np.ones((10, 1)))
+        self.assertIsInstance((v + b), pybamm.Array)
+        np.testing.assert_array_equal((v + b).evaluate(), np.ones((10, 1)))
+        self.assertIsInstance((b - v), pybamm.Array)
+        np.testing.assert_array_equal((b - v).evaluate(), np.ones((10, 1)))
+        self.assertIsInstance((v - b), pybamm.Array)
+        np.testing.assert_array_equal((v - b).evaluate(), -np.ones((10, 1)))
+
+        # multiplication
+        self.assertIsInstance((a * b), pybamm.Scalar)
+        self.assertEqual((a * b).evaluate(), 0)
+        self.assertIsInstance((b * a), pybamm.Scalar)
+        self.assertEqual((b * a).evaluate(), 0)
+        self.assertIsInstance((b * b), pybamm.Scalar)
+        self.assertEqual((b * b).evaluate(), 1)
+        self.assertIsInstance((a * a), pybamm.Scalar)
+        self.assertEqual((a * a).evaluate(), 0)
+
+        # multiplication with matrix zero
+        self.assertIsInstance((b * v), pybamm.Array)
+        np.testing.assert_array_equal((b + v).evaluate(), np.ones((10, 1)))
+        self.assertIsInstance((v * b), pybamm.Array)
+        np.testing.assert_array_equal((v + b).evaluate(), np.ones((10, 1)))
+
+        # test when other node is a parameter
+        self.assertIsInstance((a + c), pybamm.Parameter)
+        self.assertIsInstance((c + a), pybamm.Parameter)
+        self.assertIsInstance((c + b), pybamm.Addition)
+        self.assertIsInstance((b + c), pybamm.Addition)
+        self.assertIsInstance((a * c), pybamm.Scalar)
+        self.assertEqual((a * c).evaluate(), 0)
+        self.assertIsInstance((c * a), pybamm.Scalar)
+        self.assertEqual((c * a).evaluate(), 0)
+        self.assertIsInstance((b * c), pybamm.Parameter)
+        self.assertIsInstance((e * c), pybamm.Multiplication)
 
 
 if __name__ == "__main__":
