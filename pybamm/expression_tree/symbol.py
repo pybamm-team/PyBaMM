@@ -8,7 +8,7 @@ import numbers
 import copy
 import numpy as np
 from anytree.exporter import DotExporter
-from scipy.sparse import issparse
+from scipy.sparse import issparse, csr_matrix
 
 
 def domain_size(domain):
@@ -75,7 +75,7 @@ def preprocess(left, right):
     # Check both left and right are pybamm Symbols
     if not (isinstance(left, pybamm.Symbol) and isinstance(right, pybamm.Symbol)):
         raise NotImplementedError(
-            """Binary operator not implemented for symbols of type {} and {}""".format(
+            """BinaryOperator not implemented for symbols of type {} and {}""".format(
                 type(left), type(right)
             )
         )
@@ -101,10 +101,12 @@ def is_matrix_zero(expr):
     """
     Utility function to test if an expression evaluates to a constant matrix zero
     """
+    if isinstance(expr, pybamm.Broadcast):
+        return is_scalar_zero(expr.child) or is_matrix_zero(expr.child)
 
     if is_constant(expr):
         if isinstance(expr, numbers.Number):
-            result = expr
+            return False
         else:
             result = expr.evaluate_ignoring_errors(t=None)
         return (issparse(result) and result.count_nonzero() == 0) or (
@@ -132,11 +134,12 @@ def is_matrix_one(expr):
     """
     Utility function to test if an expression evaluates to a constant matrix one
     """
-    from scipy.sparse import issparse
+    if isinstance(expr, pybamm.Broadcast):
+        return is_scalar_zero(expr.child) or is_matrix_one(expr.child)
 
     if is_constant(expr):
         if isinstance(expr, numbers.Number):
-            result = expr
+            return False
         else:
             result = expr.evaluate_ignoring_errors(t=None)
         return (issparse(result) and np.all(result.toarray() == 1)) or (
@@ -146,18 +149,54 @@ def is_matrix_one(expr):
         return False
 
 
-def zeros_of_shape(shape):
+def array_zeros_like(symbol):
     """
-    Utility function to create a scalar zero, or a vector or matrix of zeros of
-    the correct shape
+    Returns an array of zeros with the same shape, domain and auxiliary domains as
+    `symbol`
     """
-    if shape == ():
+    if symbol.shape_for_testing == ():
         return pybamm.Scalar(0)
-    else:
-        if len(shape) == 1 or shape[1] == 1:
-            return pybamm.Vector(np.zeros(shape))
+    try:
+        shape = symbol.shape
+        if shape[1] == 1:
+            return pybamm.Vector(
+                np.zeros(shape),
+                domain=symbol.domain,
+                auxiliary_domains=symbol.auxiliary_domains,
+            )
         else:
-            return pybamm.Matrix(csr_matrix(shape))
+            return pybamm.Matrix(
+                csr_matrix(shape),
+                domain=symbol.domain,
+                auxiliary_domains=symbol.auxiliary_domains,
+            )
+    except NotImplementedError:
+        return pybamm.FullBroadcast(0, symbol.domain, symbol.auxiliary_domains)
+
+
+def array_ones_like(symbol):
+    """
+    Returns an array of ones with the same shape, domain and auxiliary domains as
+    `symbol`
+    """
+    if symbol.shape_for_testing == ():
+        return pybamm.Scalar(1)
+    try:
+        shape = symbol.shape
+        if shape[1] == 1:
+            return pybamm.Vector(
+                np.ones(shape),
+                domain=symbol.domain,
+                auxiliary_domains=symbol.auxiliary_domains,
+            )
+        else:
+            return pybamm.Matrix(
+                np.ones(shape),
+                domain=symbol.domain,
+                auxiliary_domains=symbol.auxiliary_domains,
+            )
+    except NotImplementedError:
+        return pybamm.FullBroadcast(1, symbol.domain, symbol.auxiliary_domains)
 
 
 def simplified_power(left, right):
@@ -195,20 +234,12 @@ def simplified_addition(left, right):
     # Check matrices after checking scalars
     if is_matrix_zero(left):
         if isinstance(right, pybamm.Scalar):
-            return pybamm.Array(
-                right.value * np.ones(left.shape),
-                domain=left.domains,
-                auxiliary_domains=left.auxiliary_domains,
-            )
+            return right.value * array_ones_like(left)
         else:
             return right
     if is_matrix_zero(right):
         if isinstance(left, pybamm.Scalar):
-            return pybamm.Array(
-                left.value * np.ones(right.shape),
-                domain=right.domains,
-                auxiliary_domains=right.auxiliary_domains,
-            )
+            return left.value * array_ones_like(right)
         else:
             return left
 
@@ -235,12 +266,12 @@ def simplified_subtraction(left, right):
     # Check matrices after checking scalars
     if is_matrix_zero(left):
         if isinstance(right, pybamm.Scalar):
-            return pybamm.Array(-right.value * np.ones(left.shape))
+            return -right.value * array_ones_like(left)
         else:
             return -right
     if is_matrix_zero(right):
         if isinstance(left, pybamm.Scalar):
-            return pybamm.Array(left.value * np.ones(right.shape))
+            return left.value * array_ones_like(right)
         else:
             return left
 
@@ -253,14 +284,13 @@ def simplified_multiplication(left, right):
     left, right = preprocess(left, right)
     # simplify multiply by scalar zero, being careful about shape
     if is_scalar_zero(left):
-        return zeros_of_shape(right.shape_for_testing)
+        return array_zeros_like(right)
     if is_scalar_zero(right):
-        return zeros_of_shape(left.shape_for_testing)
+        return array_zeros_like(left)
 
     # if one of the children is a zero matrix, we have to be careful about shapes
     if is_matrix_zero(left) or is_matrix_zero(right):
-        shape = pybamm.Multiplication(left, right).shape_for_testing
-        return zeros_of_shape(shape)
+        return array_zeros_like(pybamm.Multiplication(left, right))
 
     # anything multiplied by a scalar one returns itself
     if is_scalar_one(left):
@@ -281,18 +311,18 @@ def simplified_division(left, right):
 
     # zero divided by anything returns zero (being careful about shape)
     if is_scalar_zero(left):
-        return zeros_of_shape(right.shape_for_testing)
+        return array_zeros_like(right)
 
     # matrix zero divided by anything returns matrix zero (i.e. itself)
     if is_matrix_zero(left):
-        return left
+        return array_zeros_like(pybamm.Division(left, right))
 
     # anything divided by zero returns inf
     if is_scalar_zero(right):
         if left.shape_for_testing == ():
             return pybamm.Scalar(np.inf)
         else:
-            return pybamm.Array(np.inf * np.ones(left.shape_for_testing))
+            return np.inf * array_ones_like(left)
 
     # anything divided by one is itself
     if is_scalar_one(right):
@@ -306,8 +336,7 @@ def simplified_division(left, right):
 def simplified_matrix_multiplication(left, right):
     left, right = preprocess(left, right)
     if is_matrix_zero(left) or is_matrix_zero(right):
-        shape = pybamm.MatrixMultiplication(left, right).shape_for_testing
-        return zeros_of_shape(shape)
+        return array_zeros_like(pybamm.MatrixMultiplication(left, right))
 
     return pybamm.simplify_if_constant(
         pybamm.MatrixMultiplication(left, right), clear_domains=False

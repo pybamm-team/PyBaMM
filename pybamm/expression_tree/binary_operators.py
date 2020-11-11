@@ -479,24 +479,6 @@ class Inner(BinaryOperator):
 
     def _binary_simplify(self, left, right):
         """ See :meth:`pybamm.BinaryOperator._binary_simplify()`. """
-
-        # simplify multiply by scalar zero, being careful about shape
-        if is_scalar_zero(left):
-            return zeros_of_shape(right.shape_for_testing)
-        if is_scalar_zero(right):
-            return zeros_of_shape(left.shape_for_testing)
-
-        # if one of the children is a zero matrix, we have to be careful about shapes
-        if is_matrix_zero(left) or is_matrix_zero(right):
-            shape = (left * right).shape
-            return zeros_of_shape(shape)
-
-        # anything multiplied by a scalar one returns itself
-        if is_scalar_one(left):
-            return right
-        if is_scalar_one(right):
-            return left
-
         return pybamm.simplify_multiplication_division(self.__class__, left, right)
 
     def evaluates_on_edges(self, dimension):
@@ -508,7 +490,24 @@ def inner(left, right):
     """
     Return inner product of two symbols.
     """
-    return pybamm.Inner(left, right)
+    left, right = pybamm.preprocess(left, right)
+    # simplify multiply by scalar zero, being careful about shape
+    if pybamm.is_scalar_zero(left):
+        return pybamm.array_zeros_like(right)
+    if pybamm.is_scalar_zero(right):
+        return pybamm.array_zeros_like(left)
+
+    # if one of the children is a zero matrix, we have to be careful about shapes
+    if pybamm.is_matrix_zero(left) or pybamm.is_matrix_zero(right):
+        return pybamm.array_zeros_like(pybamm.Inner(left, right))
+
+    # anything multiplied by a scalar one returns itself
+    if pybamm.is_scalar_one(left):
+        return right
+    if pybamm.is_scalar_one(right):
+        return left
+
+    return pybamm.simplify_if_constant(pybamm.Inner(left, right), clear_domains=False)
 
 
 class Heaviside(BinaryOperator):
