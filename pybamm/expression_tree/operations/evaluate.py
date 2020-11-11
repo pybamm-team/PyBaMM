@@ -96,7 +96,7 @@ def is_scalar(arg):
         return np.all(np.array(arg.shape) == 1)
 
 
-def find_symbols(symbol, constant_symbols, variable_symbols, numpy_only=False):
+def find_symbols(symbol, constant_symbols, variable_symbols, output_jax=False):
     """
     This function converts an expression tree to a dictionary of node id's and strings
     specifying valid python code to calculate that nodes value, given y and t.
@@ -122,16 +122,19 @@ def find_symbols(symbol, constant_symbols, variable_symbols, numpy_only=False):
     variable_symbol: collections.OrderedDict
         The output dictionary of variable (with y or t) symbol ids to lines of code
 
-    numpy_only: bool
-        If True, only numpy operations will be used in the generated code, raises
-        NotImplNotImplementedError if any SparseStack or Mat-Mat multiply operations are
-        used
+    output_jax: bool
+        If True, only numpy and jax operations will be used in the generated code,
+        raises NotImplNotImplementedError if any SparseStack or Mat-Mat multiply
+        operations are used
 
     """
+    # constant symbols that are not numbers are stored in a list of constants, which are
+    # passed into the generated function constant symbols that are numbers are written
+    # directly into the code
     if symbol.is_constant():
         value = symbol.evaluate()
         if not isinstance(value, numbers.Number):
-            if numpy_only and scipy.sparse.issparse(value):
+            if output_jax and scipy.sparse.issparse(value):
                 # convert any remaining sparse matrices to our custom coo matrix
                 constant_symbols[symbol.id] = createJaxCooMatrix(value)
 
@@ -141,7 +144,7 @@ def find_symbols(symbol, constant_symbols, variable_symbols, numpy_only=False):
 
     # process children recursively
     for child in symbol.children:
-        find_symbols(child, constant_symbols, variable_symbols, numpy_only)
+        find_symbols(child, constant_symbols, variable_symbols, output_jax)
 
     # calculate the variable names that will hold the result of calculating the
     # children variables
@@ -164,14 +167,14 @@ def find_symbols(symbol, constant_symbols, variable_symbols, numpy_only=False):
             dummy_eval_left = symbol.children[0].evaluate_for_shape()
             dummy_eval_right = symbol.children[1].evaluate_for_shape()
             if scipy.sparse.issparse(dummy_eval_left):
-                if numpy_only and is_scalar(dummy_eval_right):
+                if output_jax and is_scalar(dummy_eval_right):
                     symbol_str = "{0}.scalar_multiply({1})"\
                         .format(children_vars[0], children_vars[1])
                 else:
                     symbol_str = "{0}.multiply({1})"\
                         .format(children_vars[0], children_vars[1])
             elif scipy.sparse.issparse(dummy_eval_right):
-                if numpy_only and is_scalar(dummy_eval_left):
+                if output_jax and is_scalar(dummy_eval_left):
                     symbol_str = "{1}.scalar_multiply({0})"\
                         .format(children_vars[0], children_vars[1])
                 else:
@@ -182,7 +185,7 @@ def find_symbols(symbol, constant_symbols, variable_symbols, numpy_only=False):
         elif isinstance(symbol, pybamm.Division):
             dummy_eval_left = symbol.children[0].evaluate_for_shape()
             if scipy.sparse.issparse(dummy_eval_left):
-                if numpy_only and is_scalar(dummy_eval_right):
+                if output_jax and is_scalar(dummy_eval_right):
                     symbol_str = "{0}.scalar_multiply(1/{1})"\
                         .format(children_vars[0], children_vars[1])
                 else:
@@ -195,14 +198,14 @@ def find_symbols(symbol, constant_symbols, variable_symbols, numpy_only=False):
             dummy_eval_left = symbol.children[0].evaluate_for_shape()
             dummy_eval_right = symbol.children[1].evaluate_for_shape()
             if scipy.sparse.issparse(dummy_eval_left):
-                if numpy_only and isinstance(dummy_eval_right, numbers.Number):
+                if output_jax and isinstance(dummy_eval_right, numbers.Number):
                     symbol_str = "{0}.scalar_multiply({1})"\
                         .format(children_vars[0], children_vars[1])
                 else:
                     symbol_str = "{0}.multiply({1})"\
                         .format(children_vars[0], children_vars[1])
             elif scipy.sparse.issparse(dummy_eval_right):
-                if numpy_only and isinstance(dummy_eval_left, numbers.Number):
+                if output_jax and isinstance(dummy_eval_left, numbers.Number):
                     symbol_str = "{1}.scalar_multiply({0})"\
                         .format(children_vars[0], children_vars[1])
                 else:
@@ -255,7 +258,7 @@ def find_symbols(symbol, constant_symbols, variable_symbols, numpy_only=False):
 
         elif isinstance(symbol, pybamm.SparseStack):
             if len(children_vars) > 1:
-                if numpy_only:
+                if output_jax:
                     raise NotImplementedError
                 else:
                     symbol_str = "scipy.sparse.vstack(({}))".format(
@@ -314,7 +317,7 @@ def find_symbols(symbol, constant_symbols, variable_symbols, numpy_only=False):
     variable_symbols[symbol.id] = symbol_str
 
 
-def to_python(symbol, debug=False, numpy_only=False):
+def to_python(symbol, debug=False, output_jax=False):
     """
     This function converts an expression tree into a dict of constant input values, and
     valid python code that acts like the tree's :func:`pybamm.Symbol.evaluate` function
@@ -334,16 +337,15 @@ def to_python(symbol, debug=False, numpy_only=False):
         the expression tree
     str:
         valid python code that will evaluate all the variable nodes in the tree.
-    numpy_only: bool
-        If True, only numpy operations will be used in the generated code. Raises
-        NotImplNotImplementedError if any SparseStack or Mat-Mat multiply operations are
-        used
+    output_jax: bool
+        If True, only numpy and jax operations will be used in the generated code.
+        Raises NotImplNotImplementedError if any SparseStack or Mat-Mat multiply
+        operations are used
 
     """
-
     constant_values = OrderedDict()
     variable_symbols = OrderedDict()
-    find_symbols(symbol, constant_values, variable_symbols, numpy_only)
+    find_symbols(symbol, constant_values, variable_symbols, output_jax)
 
     line_format = "{} = {}"
 
@@ -353,7 +355,7 @@ def to_python(symbol, debug=False, numpy_only=False):
                 line_format.format(id_to_python_variable(symbol_id, False), symbol_line)
             )
             + line_format.format(id_to_python_variable(symbol_id, False), symbol_line)
-            + "; print(type({0}),{0}.shape)".format(
+            + "; print(type({0}),np.shape({0}))".format(
                 id_to_python_variable(symbol_id, False)
             )
             for symbol_id, symbol_line in variable_symbols.items()
@@ -461,7 +463,7 @@ class EvaluatorJax:
     """
 
     def __init__(self, symbol):
-        constants, python_str = pybamm.to_python(symbol, debug=False, numpy_only=True)
+        constants, python_str = pybamm.to_python(symbol, debug=False, output_jax=True)
 
         # replace numpy function calls to jax numpy calls
         python_str = python_str.replace("np.", "jax.numpy.")

@@ -130,17 +130,6 @@ class TestEvaluate(unittest.TestCase):
             list(constant_symbols.values())[0].toarray(), A.entries.toarray()
         )
 
-        # test sparse to dense conversion
-        constant_symbols = OrderedDict()
-        variable_symbols = OrderedDict()
-        A = pybamm.Matrix(scipy.sparse.csr_matrix(np.array([[0, 2], [0, 4]])))
-        pybamm.find_symbols(A, constant_symbols, variable_symbols, numpy_only=True)
-        self.assertEqual(len(variable_symbols), 0)
-        self.assertEqual(list(constant_symbols.keys())[0], A.id)
-        np.testing.assert_allclose(
-            list(constant_symbols.values())[0].toarray(), A.entries.toarray()
-        )
-
         # test numpy concatentate
         constant_symbols = OrderedDict()
         variable_symbols = OrderedDict()
@@ -466,6 +455,19 @@ class TestEvaluate(unittest.TestCase):
         for t, y in zip(t_tests, y_tests):
             result = evaluator.evaluate(t=t, y=y)
             np.testing.assert_allclose(result, expr.evaluate(t=t, y=y))
+
+    @unittest.skipIf(system() == "Windows", "JAX not supported on windows")
+    def test_find_symbols_jax(self):
+        # test sparse conversion
+        constant_symbols = OrderedDict()
+        variable_symbols = OrderedDict()
+        A = pybamm.Matrix(scipy.sparse.csr_matrix(np.array([[0, 2], [0, 4]])))
+        pybamm.find_symbols(A, constant_symbols, variable_symbols, output_jax=True)
+        self.assertEqual(len(variable_symbols), 0)
+        self.assertEqual(list(constant_symbols.keys())[0], A.id)
+        np.testing.assert_allclose(
+            list(constant_symbols.values())[0].toarray(), A.entries.toarray()
+        )
 
     @unittest.skipIf(system() == "Windows", "JAX not supported on windows")
     def test_evaluator_jax(self):
