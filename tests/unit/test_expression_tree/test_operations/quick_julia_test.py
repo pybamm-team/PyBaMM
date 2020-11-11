@@ -17,33 +17,37 @@ from collections import OrderedDict
 from julia import Main
 
 
-model = pybamm.lithium_ion.DFN()
-sim = pybamm.Simulation(model, solver=pybamm.CasadiSolver(mode="fast"))
+model = pybamm.lithium_ion.SPM()
+# var = pybamm.standard_spatial_vars
+# var_pts = {var.x_n: 30, var.x_s: 30, var.x_p: 30, var.r_n: 10, var.r_p: 10}
+var_pts = model.default_var_pts
+sim = pybamm.Simulation(model, solver=pybamm.CasadiSolver(mode="fast"), var_pts=var_pts)
 sim.solve([0, 3600])
 param = model.default_parameter_values
 timescale = param.evaluate(model.timescale)
 sol = sim.solve(np.linspace(0, 0.15 * timescale, 100))
 print(sol.y[:, -1])
 print(sol.integration_time)
-expr = pybamm.NumpyConcatenation(
-    sim.built_model.concatenated_rhs, sim.built_model.concatenated_algebraic
-).simplify()
-# expr = sim.built_model.concatenated_rhs.simplify()
+# expr = pybamm.NumpyConcatenation(
+#     sim.built_model.concatenated_rhs, sim.built_model.concatenated_algebraic
+# ).simplify()
+expr = sim.built_model.concatenated_rhs.simplify()
 
 evaluator_str = pybamm.get_julia_function(expr)
 n_rhs = sim.built_model.concatenated_rhs.size
 n_alg = sim.built_model.concatenated_algebraic.size
 # np.set_printoptions(
-#     threshold=max(
-#         np.get_printoptions()["threshold"],
-#         n_rhs + n_alg,
-#     )
+#     threshold=100
+#     # max(
+#     #     np.get_printoptions()["threshold"],
+#     #     n_rhs + n_alg,
+#     # )
 # )
-with open("tmp.txt", "w") as f:
+with open("tmp_SPM_30.txt", "w") as f:
     f.write(evaluator_str + "\n\n")
-    f.write(f"u0 = {np.array2string(sol.model.y0, separator=',')}\n")
-    f.write(f"du0 = zeros({n_rhs + n_alg})\n")
-    f.write(f"differential_vars=[ones({n_rhs});zeros({n_alg})]\n")
+    f.write(f"u0 = {np.array2string(sol.model.y0.full().flatten(), separator=',')}\n")
+    # f.write(f"du0 = zeros({n_rhs + n_alg})\n")
+    # f.write(f"differential_vars=[ones({n_rhs});zeros({n_alg})]\n")
 
 # expr2 = sim.built_model.variables["Terminal voltage [V]"]
 # evaluator_str2 = pybamm.get_julia_function(expr2)
@@ -52,10 +56,12 @@ with open("tmp.txt", "w") as f:
 
 Main.eval(evaluator_str)
 Main.dy = np.zeros(n_rhs + n_alg)
-Main.y = sol.model.y0
+Main.y = sol.model.y0.full().flatten()
 Main.eval("f(dy,y,0,0)")
-print(Main.dy)
-expr.evaluate(y=sol.model.y0)
+# print(Main.dy)
+# expr.evaluate(y=sol.model.y0)
+
+print(Main.dy - expr.evaluate(y=Main.y).T)
 # print(expr.evaluate(y=Main.y))
 # # test something with a heaviside
 # a = pybamm.Vector([1, 2])
