@@ -595,8 +595,8 @@ class CurrentTests(BaseOutputTest):
         self.i_s = solution["Electrode current density"]
         self.i_e = solution["Electrolyte current density"]
 
-        self.a_n = solution["Negative surface area per unit volume distribution in x"]
-        self.a_p = solution["Positive surface area per unit volume distribution in x"]
+        self.a_n = solution["Negative electrode surface area per unit volume"]
+        self.a_p = solution["Positive electrode surface area per unit volume"]
 
     def test_interfacial_current_average(self):
         """Test that average of the surface area density distribution (in x)

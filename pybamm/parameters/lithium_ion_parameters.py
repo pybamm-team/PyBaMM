@@ -110,6 +110,9 @@ class LithiumIonParameters:
         )
 
         # Microscale geometry
+        # Note: the particle radius in the electrodes can be set as a function
+        # of through-cell position, so is defined later as a function, along with
+        # the surface area per unit volume
         inputs = {"Through-cell distance (x_n) [m]": pybamm.standard_spatial_vars.x_n}
         self.epsilon_n = pybamm.FunctionParameter("Negative electrode porosity", inputs)
 
@@ -137,26 +140,6 @@ class LithiumIonParameters:
         self.b_s_n = self.geo.b_s_n
         self.b_s_s = self.geo.b_s_s
         self.b_s_p = self.geo.b_s_p
-
-        self.R_n = self.geo.R_n
-        self.R_p = self.geo.R_p
-
-        if self.options["particle shape"] == "spherical":
-            self.a_n_dim = 3 * self.epsilon_s_n / self.R_n
-            self.a_p_dim = 3 * self.epsilon_s_p / self.R_p
-        elif self.options["particle shape"] == "user":
-            self.a_n_dim = self.geo.a_n_dim
-            self.a_p_dim = self.geo.a_p_dim
-
-        self.a_k_dim = pybamm.Concatenation(
-            pybamm.FullBroadcast(
-                self.a_n_dim, ["negative electrode"], "current collector"
-            ),
-            pybamm.FullBroadcast(0, ["separator"], "current collector"),
-            pybamm.FullBroadcast(
-                self.a_p_dim, ["positive electrode"], "current collector"
-            ),
-        )
 
         # Electrochemical reactions
         self.ne_n = pybamm.Parameter("Negative electrode electrons in reaction")
@@ -310,6 +293,42 @@ class LithiumIonParameters:
             "Positive electrode OCP entropic change [V.K-1]", inputs
         )
 
+    def R_n_dimensional(self, x):
+        "Negative particle radius as a function of through-cell distance"
+        inputs = {"Through-cell distance (x_n) [m]": x}
+        return pybamm.FunctionParameter("Negative particle radius [m]", inputs)
+
+    def R_p_dimensional(self, x):
+        "Positive particle radius as a function of through-cell distance"
+        inputs = {"Through-cell distance (x_p) [m]": x}
+        return pybamm.FunctionParameter("Positive particle radius [m]", inputs)
+
+    def a_n_dimensional(self, x):
+        """
+        Negative electrode surface area per unit volume as a function of
+        through-cell distance
+        """
+        inputs = {"Through-cell distance (x_n) [m]": x}
+        if self.options["particle shape"] == "spherical":
+            return 3 * self.epsilon_s_n / self.R_n_dimensional(x)
+        elif self.options["particle shape"] == "user":
+            return pybamm.FunctionParameter(
+                "Negative electrode surface area to volume ratio [m-1]", inputs
+            )
+
+    def a_p_dimensional(self, x):
+        """
+        Positive electrode surface area per unit volume as a function of
+        through-cell distance
+        """
+        inputs = {"Through-cell distance (x_p) [m]": x}
+        if self.options["particle shape"] == "spherical":
+            return 3 * self.epsilon_s_p / self.R_p_dimensional(x)
+        elif self.options["particle shape"] == "user":
+            return pybamm.FunctionParameter(
+                "Positive electrode surface area to volume ratio [m-1]", inputs
+            )
+
     def c_n_init_dimensional(self, x):
         "Initial concentration as a function of dimensionless position x"
         inputs = {"Dimensionless through-cell position (x_n)": x}
@@ -327,6 +346,12 @@ class LithiumIonParameters:
     def _set_scales(self):
         "Define the scales used in the non-dimensionalisation scheme"
 
+        # Microscale (typical values at electrode/current collector interface)
+        self.R_n_typ = self.R_n_dimensional(0)
+        self.R_p_typ = self.R_p_dimensional(self.L_x)
+        self.a_n_typ = self.a_n_dimensional(0)
+        self.a_p_typ = self.a_p_dimensional(self.L_x)
+
         # Concentration
         self.electrolyte_concentration_scale = self.c_e_typ
         self.negative_particle_concentration_scale = self.c_n_max
@@ -335,8 +360,8 @@ class LithiumIonParameters:
         # Electrical
         self.potential_scale = self.R * self.T_ref / self.F
         self.current_scale = self.i_typ
-        self.j_scale_n = self.i_typ / (self.a_n_dim * self.L_x)
-        self.j_scale_p = self.i_typ / (self.a_p_dim * self.L_x)
+        self.j_scale_n = self.i_typ / (self.a_n_typ * self.L_x)
+        self.j_scale_p = self.i_typ / (self.a_p_typ * self.L_x)
 
         # Reference OCP based on initial concentration at
         # current collector/electrode interface
@@ -367,10 +392,10 @@ class LithiumIonParameters:
 
         # Reaction timescales
         self.tau_r_n = (
-            self.F * self.c_n_max / (self.j0_n_ref_dimensional * self.a_n_dim)
+            self.F * self.c_n_max / (self.j0_n_ref_dimensional * self.a_n_typ)
         )
         self.tau_r_p = (
-            self.F * self.c_p_max / (self.j0_p_ref_dimensional * self.a_p_dim)
+            self.F * self.c_p_max / (self.j0_p_ref_dimensional * self.a_p_typ)
         )
 
         # Electrolyte diffusion timescale
@@ -378,10 +403,10 @@ class LithiumIonParameters:
         self.tau_diffusion_e = self.L_x ** 2 / self.D_e_typ
 
         # Particle diffusion timescales
-        self.tau_diffusion_n = self.R_n ** 2 / self.D_n_dimensional(
+        self.tau_diffusion_n = self.R_n_typ ** 2 / self.D_n_dimensional(
             pybamm.Scalar(1), self.T_ref
         )
-        self.tau_diffusion_p = self.R_p ** 2 / self.D_p_dimensional(
+        self.tau_diffusion_p = self.R_p_typ ** 2 / self.D_p_dimensional(
             pybamm.Scalar(1), self.T_ref
         )
 
@@ -429,11 +454,9 @@ class LithiumIonParameters:
         self.centre_y_tab_p = self.geo.centre_y_tab_p
         self.centre_z_tab_p = self.geo.centre_z_tab_p
 
-        # Microscale geometry, see 'self._set_dimensional_parameters' for the
-        # definition on the dimensional surface area to volume ratio based on
-        # particle shape
-        self.a_n = self.a_n_dim * self.R_n
-        self.a_p = self.a_p_dim * self.R_p
+        # Microscale geometry
+        self.a_R_n = self.a_n_typ * self.R_n_typ
+        self.a_R_p = self.a_p_typ * self.R_p_typ
 
         # Electrode Properties
         self.sigma_cn = (
@@ -616,7 +639,7 @@ class LithiumIonParameters:
                 )
             )
         )
-        self.beta_sei_n = self.a_n_dim * self.L_sei_0_dim * self.Gamma_SEI_n
+        self.beta_sei_n = self.a_n_typ * self.L_sei_0_dim * self.Gamma_SEI_n
 
         # Initial conditions
         self.epsilon_n_init = pybamm.Parameter("Negative electrode porosity")
@@ -719,6 +742,38 @@ class LithiumIonParameters:
         sto = c_s_p
         return self.dUdT_p_dimensional(sto) * self.Delta_T / self.potential_scale
 
+    def R_n(self, x):
+        """
+        Dimensionless negative particle radius as a function of dimensionless
+        position x
+        """
+        x_dim = x * self.L_x
+        return self.R_n_dimensional(x_dim) / self.R_n_typ
+
+    def R_p(self, x):
+        """
+        Dimensionless positive particle radius as a function of dimensionless
+        position x
+        """
+        x_dim = x * self.L_x
+        return self.R_p_dimensional(x_dim) / self.R_p_typ
+
+    def a_n(self, x):
+        """
+        Dimensionless negative electrode surface area per unit volume as a
+        function of dimensionless position x.
+        """
+        x_dim = x * self.L_x
+        return self.a_n_dimensional(x_dim) / self.a_n_typ
+
+    def a_p(self, x):
+        """
+        Dimensionless positive electrode surface area per unit volume as a
+        function of dimensionless position x.
+        """
+        x_dim = x * self.L_x
+        return self.a_p_dimensional(x_dim) / self.a_p_typ
+
     def c_n_init(self, x):
         "Dimensionless initial concentration as a function of dimensionless position x"
         return self.c_n_init_dimensional(x) / self.c_n_max
@@ -726,60 +781,6 @@ class LithiumIonParameters:
     def c_p_init(self, x):
         "Dimensionless initial concentration as a function of dimensionless position x"
         return self.c_p_init_dimensional(x) / self.c_p_max
-
-    def R_n_of_x(self, x):
-        """
-        Dimensionless negative particle distribution in x. The particle distribution is
-        defined so that the actual particle radius as a function of x is given by
-        R*R_of_x (so that R_of_x = 1 gives particles of uniform size in x).
-        """
-        inputs = {"Dimensionless through-cell position (x_n)": x}
-        return pybamm.FunctionParameter("Negative particle distribution in x", inputs)
-
-    def R_p_of_x(self, x):
-        """
-        Dimensionless positive particle distribution in x. The particle distribution is
-        defined so that the actual particle radius as a function of x is given by
-        R*R_of_x (so that R_of_x = 1 gives particles of uniform size in x).
-        """
-        inputs = {"Dimensionless through-cell position (x_p)": x}
-        return pybamm.FunctionParameter("Positive particle distribution in x", inputs)
-
-    def a_n_of_x(self, x):
-        """
-        Dimensionless surface area per unit volume distribution in x. The surface
-        area per unit volume distribution is defined so that the actual surface
-        area per unit volume as a function of x is given by a*a_of_x (so that
-        a_of_x = 1 gives uniform surface area per unit volume in x).
-        """
-        if self.options["particle shape"] == "spherical":
-            # Currently the active material volume fraction is a scalar, so the
-            # distribution of surface are per unit volume is simply the reciprocal
-            # of the particle radius distribution
-            return 1 / self.R_n_of_x(x)
-        elif self.options["particle shape"] == "user":
-            inputs = {"Dimensionless through-cell position (x_n)": x}
-            return pybamm.FunctionParameter(
-                "Negative surface area per unit volume distribution in x", inputs
-            )
-
-    def a_p_of_x(self, x):
-        """
-        Dimensionless surface area per unit volume distribution in x. The surface
-        area per unit volume distribution is defined so that the actual surface
-        area per unit volume as a function of x is given by a*a_of_x (so that
-        a_of_x = 1 gives uniform surface area per unit volume in x).
-        """
-        if self.options["particle shape"] == "spherical":
-            # Currently the active material volume fraction is a scalar, so the
-            # distribution of surface are per unit volume is simply the reciprocal
-            # of the particle radius distribution
-            return 1 / self.R_p_of_x(x)
-        elif self.options["particle shape"] == "user":
-            inputs = {"Dimensionless through-cell position (x_p)": x}
-            return pybamm.FunctionParameter(
-                "Positive surface area per unit volume distribution in x", inputs
-            )
 
     def _set_input_current(self):
         "Set the input current"
