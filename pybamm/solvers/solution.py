@@ -50,14 +50,14 @@ class _BaseSolution(object):
         if copy_this is None:
             # initialize empty inputs and model, to be populated later
             self._inputs = pybamm.FuzzyDict()
-            self._model = pybamm.BaseModel()
+            self.model = pybamm.BaseModel()
             self.set_up_time = None
             self.solve_time = None
             self.integration_time = None
             self.has_symbolic_inputs = False
         else:
             self._inputs = copy.copy(copy_this.inputs)
-            self._model = copy_this.model
+            self.model = copy_this.model
             self.set_up_time = copy_this.set_up_time
             self.solve_time = copy_this.solve_time
             self.integration_time = copy_this.integration_time
@@ -71,20 +71,6 @@ class _BaseSolution(object):
         self._known_evals = defaultdict(dict)
         for time in t:
             self._known_evals[time] = {}
-
-        # Copy the timescale_eval and lengthscale_evals if they exist
-        if hasattr(self._model, "timescale_eval"):
-            self.timescale_eval = self._model.timescale_eval
-        else:
-            self.timescale_eval = self._model.timescale.evaluate()
-        # self.timescale_eval = self._model.timescale_eval
-        if hasattr(self._model, "length_scales_eval"):
-            self.length_scales_eval = self._model.length_scales_eval
-        else:
-            self.length_scales_eval = {
-                domain: scale.evaluate()
-                for domain, scale in self._model.length_scales.items()
-            }
 
     @property
     def t(self):
@@ -102,10 +88,24 @@ class _BaseSolution(object):
         return self._model
 
     @model.setter
-    def model(self, value):
+    def model(self, model):
         "Updates the model"
-        assert isinstance(value, pybamm.BaseModel)
-        self._model = value
+        assert isinstance(model, pybamm.BaseModel)
+        self._model = model
+
+        # Copy the timescale_eval and lengthscale_evals if they exist
+        if hasattr(model, "timescale_eval"):
+            self.timescale_eval = model.timescale_eval
+        else:
+            self.timescale_eval = model.timescale.evaluate()
+        # self.timescale_eval = model.timescale_eval
+        if hasattr(model, "length_scales_eval"):
+            self.length_scales_eval = model.length_scales_eval
+        else:
+            self.length_scales_eval = {
+                domain: scale.evaluate()
+                for domain, scale in model.length_scales.items()
+            }
 
     @property
     def inputs(self):
