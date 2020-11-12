@@ -560,7 +560,7 @@ class TestEvaluate(unittest.TestCase):
             result = evaluator.evaluate(t=t, y=y)
             self.assertEqual(result, expr.evaluate(t=t, y=y))
 
-        # test something with a sparse matrix multiplication
+        # test something with a sparse matrix-vector multiplication
         A = pybamm.Matrix(np.array([[1, 2], [3, 4]]))
         B = pybamm.Matrix(scipy.sparse.csr_matrix(np.array([[1, 0], [0, 4]])))
         C = pybamm.Matrix(scipy.sparse.coo_matrix(np.array([[1, 0], [0, 4]])))
@@ -569,6 +569,18 @@ class TestEvaluate(unittest.TestCase):
         for t, y in zip(t_tests, y_tests):
             result = evaluator.evaluate(t=t, y=y)
             np.testing.assert_allclose(result, expr.evaluate(t=t, y=y))
+
+        # test the sparse-scalar multiplication
+        A = pybamm.Matrix(scipy.sparse.csr_matrix(np.array([[1, 0], [0, 4]])))
+        for expr in [
+                A * pybamm.t @ pybamm.StateVector(slice(0, 2)),
+                pybamm.t * A @ pybamm.StateVector(slice(0, 2)),
+        ]:
+            print('doing ',expr)
+            evaluator = pybamm.EvaluatorJax(expr)
+            for t, y in zip(t_tests, y_tests):
+                result = evaluator.evaluate(t=t, y=y)
+                np.testing.assert_allclose(result, expr.evaluate(t=t, y=y))
 
         # test sparse stack
         A = pybamm.Matrix(scipy.sparse.csr_matrix(np.array([[1, 0], [0, 4]])))
