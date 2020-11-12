@@ -576,11 +576,19 @@ class TestEvaluate(unittest.TestCase):
                 A * pybamm.t @ pybamm.StateVector(slice(0, 2)),
                 pybamm.t * A @ pybamm.StateVector(slice(0, 2)),
         ]:
-            print('doing ',expr)
             evaluator = pybamm.EvaluatorJax(expr)
             for t, y in zip(t_tests, y_tests):
                 result = evaluator.evaluate(t=t, y=y)
                 np.testing.assert_allclose(result, expr.evaluate(t=t, y=y))
+
+        # test the sparse-scalar division
+        A = pybamm.Matrix(scipy.sparse.csr_matrix(np.array([[1, 0], [0, 4]])))
+        expr = A / (1 + pybamm.t) @ pybamm.StateVector(slice(0, 2))
+        evaluator = pybamm.EvaluatorJax(expr)
+        for t, y in zip(t_tests, y_tests):
+            result = evaluator.evaluate(t=t, y=y)
+            np.testing.assert_allclose(result, expr.evaluate(t=t, y=y))
+
 
         # test sparse stack
         A = pybamm.Matrix(scipy.sparse.csr_matrix(np.array([[1, 0], [0, 4]])))

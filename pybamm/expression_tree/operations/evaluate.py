@@ -180,6 +180,7 @@ def find_symbols(symbol, constant_symbols, variable_symbols, output_jax=False):
                 symbol_str = "{0} * {1}".format(children_vars[0], children_vars[1])
         elif isinstance(symbol, pybamm.Division):
             dummy_eval_left = symbol.children[0].evaluate_for_shape()
+            dummy_eval_right = symbol.children[1].evaluate_for_shape()
             if scipy.sparse.issparse(dummy_eval_left):
                 if output_jax and is_scalar(dummy_eval_right):
                     symbol_str = "{0}.scalar_multiply(1/{1})"\
