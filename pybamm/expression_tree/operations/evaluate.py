@@ -48,7 +48,7 @@ if system() != "Windows":
         def __matmul__(self, b):
             return self.dot_product(b)
 
-    def createJaxCooMatrix(value):
+    def create_jax_coo_matrix(value):
         """
         Creates a JaxCooMatrix from a scipy.sparse matrix
 
@@ -65,7 +65,7 @@ if system() != "Windows":
         return JaxCooMatrix(row, col, data, value.shape)
 else:
 
-    def createJaxCooMatrix(value):
+    def create_jax_coo_matrix(value):
         raise NotImplementedError('Jax is not available on Windows')
 
 
@@ -132,7 +132,7 @@ def find_symbols(symbol, constant_symbols, variable_symbols, output_jax=False):
         if not isinstance(value, numbers.Number):
             if output_jax and scipy.sparse.issparse(value):
                 # convert any remaining sparse matrices to our custom coo matrix
-                constant_symbols[symbol.id] = createJaxCooMatrix(value)
+                constant_symbols[symbol.id] = create_jax_coo_matrix(value)
 
             else:
                 constant_symbols[symbol.id] = value
@@ -515,6 +515,9 @@ class EvaluatorJax:
 
         # store a copy of examine_jaxpr
         python_str = python_str + "\nself._evaluate_jax = evaluate_jax"
+
+        # store the final generated code
+        self._python_str = python_str
 
         # compile and run the generated python code,
         compiled_function = compile(python_str, result_var, "exec")

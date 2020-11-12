@@ -474,8 +474,8 @@ class TestEvaluate(unittest.TestCase):
         a = pybamm.StateVector(slice(0, 1))
         b = pybamm.StateVector(slice(1, 2))
 
-        y_tests = [np.array([[2], [3]]), np.array([[1], [3]])]
-        t_tests = [1, 2]
+        y_tests = [np.array([[2.0], [3.0]]), np.array([[1.0], [3.0]])]
+        t_tests = [1.0, 2.0]
 
         # test a * b
         expr = a * b
@@ -583,12 +583,11 @@ class TestEvaluate(unittest.TestCase):
 
         # test the sparse-scalar division
         A = pybamm.Matrix(scipy.sparse.csr_matrix(np.array([[1, 0], [0, 4]])))
-        expr = A / (1 + pybamm.t) @ pybamm.StateVector(slice(0, 2))
+        expr = A / (1.0 + pybamm.t) @ pybamm.StateVector(slice(0, 2))
         evaluator = pybamm.EvaluatorJax(expr)
         for t, y in zip(t_tests, y_tests):
             result = evaluator.evaluate(t=t, y=y)
             np.testing.assert_allclose(result, expr.evaluate(t=t, y=y))
-
 
         # test sparse stack
         A = pybamm.Matrix(scipy.sparse.csr_matrix(np.array([[1, 0], [0, 4]])))
@@ -616,12 +615,17 @@ class TestEvaluate(unittest.TestCase):
             np.testing.assert_allclose(result, expr.evaluate(t=t, y=y))
 
         # test Inner
-        v = pybamm.Vector(np.ones(5), domain="test")
-        w = pybamm.Vector(2 * np.ones(5), domain="test")
-        expr = pybamm.Inner(v, w)
-        evaluator = pybamm.EvaluatorJax(expr)
-        result = evaluator.evaluate()
-        np.testing.assert_allclose(result, expr.evaluate())
+        A = pybamm.Matrix(scipy.sparse.csr_matrix(np.array([[1]])))
+        v = pybamm.StateVector(slice(0, 1))
+        for expr in [
+                pybamm.Inner(A, v) @ v,
+                pybamm.Inner(v, A) @ v,
+                pybamm.Inner(v, v) @ v
+        ]:
+            evaluator = pybamm.EvaluatorJax(expr)
+            for t, y in zip(t_tests, y_tests):
+                result = evaluator.evaluate(t=t, y=y)
+                np.testing.assert_allclose(result, expr.evaluate(t=t, y=y))
 
     @unittest.skipIf(system() == "Windows", "JAX not supported on windows")
     def test_evaluator_jax_jacobian(self):
