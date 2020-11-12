@@ -198,14 +198,14 @@ def find_symbols(symbol, constant_symbols, variable_symbols, output_jax=False):
             dummy_eval_left = symbol.children[0].evaluate_for_shape()
             dummy_eval_right = symbol.children[1].evaluate_for_shape()
             if scipy.sparse.issparse(dummy_eval_left):
-                if output_jax and isinstance(dummy_eval_right, numbers.Number):
+                if output_jax and is_scalar(dummy_eval_right):
                     symbol_str = "{0}.scalar_multiply({1})"\
                         .format(children_vars[0], children_vars[1])
                 else:
                     symbol_str = "{0}.multiply({1})"\
                         .format(children_vars[0], children_vars[1])
             elif scipy.sparse.issparse(dummy_eval_right):
-                if output_jax and isinstance(dummy_eval_left, numbers.Number):
+                if output_jax and is_sparse(dummy_eval_left):
                     symbol_str = "{1}.scalar_multiply({0})"\
                         .format(children_vars[0], children_vars[1])
                 else:
@@ -218,6 +218,20 @@ def find_symbols(symbol, constant_symbols, variable_symbols, output_jax=False):
             symbol_str = "np.minimum({},{})".format(children_vars[0], children_vars[1])
         elif isinstance(symbol, pybamm.Maximum):
             symbol_str = "np.maximum({},{})".format(children_vars[0], children_vars[1])
+
+        elif isinstance(symbol, pybamm.MatrixMultiplication):
+            dummy_eval_left = symbol.children[0].evaluate_for_shape()
+            dummy_eval_right = symbol.children[1].evaluate_for_shape()
+            if output_jax and (
+                    scipy.sparse.issparse(dummy_eval_left) or
+                    scipy.sparse.issparse(dummy_eval_right)
+            ):
+                raise NotImplementedError('mat-mat multiplication not supported for '
+                                          'output_jax == True')
+            else:
+                symbol_str = children_vars[0] + " " \
+                             + symbol.name + " " \
+                             + children_vars[1]
         else:
             symbol_str = children_vars[0] + " " + symbol.name + " " + children_vars[1]
 

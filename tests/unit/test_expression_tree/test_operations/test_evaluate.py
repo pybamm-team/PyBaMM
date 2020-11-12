@@ -578,6 +578,14 @@ class TestEvaluate(unittest.TestCase):
         with self.assertRaises(NotImplementedError):
             evaluator = pybamm.EvaluatorJax(expr)
 
+        # test sparse mat-mat mult
+        A = pybamm.Matrix(scipy.sparse.csr_matrix(np.array([[1, 0], [0, 4]])))
+        B = pybamm.Matrix(scipy.sparse.csr_matrix(np.array([[2, 0], [5, 0]])))
+        a = pybamm.StateVector(slice(0, 1))
+        expr = A @ (a * B)
+        with self.assertRaises(NotImplementedError):
+            evaluator = pybamm.EvaluatorJax(expr)
+
         # test numpy concatenation
         a = pybamm.Vector(np.array([[1], [2]]))
         b = pybamm.Vector(np.array([[3]]))
