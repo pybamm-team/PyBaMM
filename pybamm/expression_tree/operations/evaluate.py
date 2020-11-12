@@ -226,8 +226,8 @@ def find_symbols(symbol, constant_symbols, variable_symbols, output_jax=False):
                     scipy.sparse.issparse(dummy_eval_left) or
                     scipy.sparse.issparse(dummy_eval_right)
             ):
-                raise NotImplementedError('mat-mat multiplication not supported for '
-                                          'output_jax == True')
+                raise NotImplementedError('sparse mat-mat multiplication not supported '
+                                          'for output_jax == True')
             else:
                 symbol_str = children_vars[0] + " " + symbol.name + " " \
                     + children_vars[1]
