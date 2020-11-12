@@ -81,8 +81,8 @@ class BaseOutputTest(object):
         self.x_edge = disc.mesh.combine_submeshes(*whole_cell).edges * L_x
 
         if isinstance(self.model, pybamm.lithium_ion.BaseModel):
-            R_n = param.evaluate(geo.R_n)
-            R_p = param.evaluate(geo.R_p)
+            R_n = param.evaluate(model.param.R_n_typ)
+            R_p = param.evaluate(model.param.R_p_typ)
             self.r_n = disc.mesh["negative particle"].nodes * R_n
             self.r_p = disc.mesh["positive particle"].nodes * R_p
             self.r_n_edge = disc.mesh["negative particle"].edges * R_n
