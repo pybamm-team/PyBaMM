@@ -19,11 +19,11 @@ if system() != "Windows":
 
     class JaxCooMatrix:
         def __init__(self, row, col, data, shape):
-            self.row = row
-            self.col = col
-            self.data = data
+            self.row = jax.numpy.array(row)
+            self.col = jax.numpy.array(col)
+            self.data = jax.numpy.array(data)
             self.shape = shape
-            self.nnz = len(data)
+            self.nnz = len(self.data)
 
         def toarray(self):
             result = jax.numpy.zeros(self.shape, dtype=self.data.dtype)

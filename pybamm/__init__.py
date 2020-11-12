@@ -111,6 +111,7 @@ from .expression_tree.operations.evaluate import (
 
 if system() != "Windows":
     from .expression_tree.operations.evaluate import EvaluatorJax
+    from .expression_tree.operations.evaluate import JaxCooMatrix
 
 from .expression_tree.operations.jacobian import Jacobian
 from .expression_tree.operations.convert_to_casadi import CasadiConverter

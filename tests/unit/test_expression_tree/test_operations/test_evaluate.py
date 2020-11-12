@@ -650,6 +650,17 @@ class TestEvaluate(unittest.TestCase):
         evaluator = pybamm.EvaluatorJax(expr)
         evaluator.debug(y=y_test)
 
+    @unittest.skipIf(system() == "Windows", "JAX not supported on windows")
+    def test_jax_coo_matrix(self):
+        import jax
+        A = pybamm.JaxCooMatrix([0, 1], [0, 1], [1.0, 2.0], (2, 2))
+        Adense = jax.numpy.array([[1.0, 0], [0, 2.0]])
+        v = jax.numpy.array([[2.0], [1.0]])
+
+        np.testing.assert_allclose(A.toarray(), Adense)
+        np.testing.assert_allclose(A @ v, Adense @ v)
+        np.testing.assert_allclose(A.scalar_multiply(3.0).toarray(), Adense * 3.0)
+
 
 if __name__ == "__main__":
     print("Add -v for more debug output")
