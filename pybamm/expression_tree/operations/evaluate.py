@@ -223,7 +223,7 @@ def find_symbols(symbol, constant_symbols, variable_symbols, output_jax=False):
             dummy_eval_left = symbol.children[0].evaluate_for_shape()
             dummy_eval_right = symbol.children[1].evaluate_for_shape()
             if output_jax and (
-                    scipy.sparse.issparse(dummy_eval_left) or
+                    scipy.sparse.issparse(dummy_eval_left) and
                     scipy.sparse.issparse(dummy_eval_right)
             ):
                 raise NotImplementedError('sparse mat-mat multiplication not supported '
