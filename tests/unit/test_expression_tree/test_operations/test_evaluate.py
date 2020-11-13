@@ -662,7 +662,7 @@ class TestEvaluate(unittest.TestCase):
         np.testing.assert_allclose(A.scalar_multiply(3.0).toarray(), Adense * 3.0)
 
         with self.assertRaises(NotImplementedError):
-            a = A.multiply(v)
+            A.multiply(v)
 
 
 if __name__ == "__main__":
