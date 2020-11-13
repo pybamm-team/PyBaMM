@@ -217,9 +217,9 @@ class FullAlgebraic(BaseModel):
         delta_phi = variables[self.domain + " electrode surface potential difference"]
         i_e = variables[self.domain + " electrolyte current density"]
 
-        # Get surface area per unit volume distribution in x (to account for
-        # graded electrodes)
-        a = variables[self.domain + " surface area per unit volume distribution in x"]
+        # Get surface area per unit volume (could be a distribution in x to
+        # account for graded electrodes)
+        a = variables[self.domain + " electrode surface area per unit volume"]
 
         # Variable summing all of the interfacial current densities
         sum_j = variables[
@@ -259,9 +259,9 @@ class FullDifferential(BaseModel):
         delta_phi = variables[self.domain + " electrode surface potential difference"]
         i_e = variables[self.domain + " electrolyte current density"]
 
-        # Get surface area per unit volume distribution in x (to account for
-        # graded electrodes)
-        a = variables[self.domain + " surface area per unit volume distribution in x"]
+        # Get surface area per unit volume (could be a distribution in x to
+        # account for graded electrodes)
+        a = variables[self.domain + " electrode surface area per unit volume"]
 
         # Variable summing all of the interfacial current densities
         sum_j = variables[

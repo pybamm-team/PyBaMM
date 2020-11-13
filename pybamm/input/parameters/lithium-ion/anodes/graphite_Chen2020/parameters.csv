@@ -11,7 +11,6 @@ Negative electrode OCP [V],[data]graphite_LGM50_ocp_Chen2020,Chen 2020,
 Negative electrode porosity,0.25,Chen 2020,
 Negative electrode active material volume fraction,0.75,Chen 2020,
 Negative particle radius [m],5.86E-6,Chen 2020,
-Negative particle distribution in x,1,default,
 Negative electrode Bruggeman coefficient (electrolyte),1.5,Chen 2020,theoretical
 Negative electrode Bruggeman coefficient (electrode),1.5,default,
 ,,,

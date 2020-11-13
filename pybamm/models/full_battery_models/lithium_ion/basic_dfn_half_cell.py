@@ -233,7 +233,7 @@ class BasicDFNHalfCell(BaseModel):
             self.boundary_conditions[c_s_n] = {
                 "left": (pybamm.Scalar(0), "Neumann"),
                 "right": (
-                    -param.C_n * j_n / param.a_n / param.D_n(c_s_surf_n, T),
+                    -param.C_n * j_n / param.a_R_n / param.D_n(c_s_surf_n, T),
                     "Neumann",
                 ),
             }
@@ -269,7 +269,7 @@ class BasicDFNHalfCell(BaseModel):
                 "right": (
                     -param.C_p
                     * j_p
-                    / param.a_p
+                    / param.a_R_p
                     / param.gamma_p
                     / param.D_p(c_s_surf_p, T),
                     "Neumann",

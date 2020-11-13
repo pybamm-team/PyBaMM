@@ -122,15 +122,18 @@ class TestDFN(unittest.TestCase):
     def test_particle_distribution_in_x(self):
         model = pybamm.lithium_ion.DFN()
         param = model.default_parameter_values
+        L_n = model.param.L_n
+        L_p = model.param.L_p
+        L = model.param.L_x
 
-        def negative_distribution(x):
-            return 1 + x
+        def negative_radius(x):
+            return (1 + x / L_n) * 1e-5
 
-        def positive_distribution(x):
-            return 1 + (x - (1 - model.param.l_p))
+        def positive_radius(x):
+            return (1 + (x - L_p) / (L - L_p)) * 1e-5
 
-        param["Negative particle distribution in x"] = negative_distribution
-        param["Positive particle distribution in x"] = positive_distribution
+        param["Negative particle radius [m]"] = negative_radius
+        param["Positive particle radius [m]"] = positive_radius
         modeltest = tests.StandardModelTest(model, parameter_values=param)
         modeltest.test_all()
 
