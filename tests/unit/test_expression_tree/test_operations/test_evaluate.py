@@ -440,11 +440,11 @@ class TestEvaluate(unittest.TestCase):
 
         v = pybamm.StateVector(slice(0, 2))
         A = pybamm.Matrix(scipy.sparse.csr_matrix(np.array([[1, 0], [0, 4]])))
-        expr = pybamm.Inner(A, v)
-        evaluator = pybamm.EvaluatorPython(expr)
-        for t, y in zip(t_tests, y_tests):
-            result = evaluator.evaluate(t=t, y=y).toarray()
-            np.testing.assert_allclose(result, expr.evaluate(t=t, y=y).toarray())
+        for expr in [pybamm.Inner(A, v), pybamm.Inner(v, A)]:
+            evaluator = pybamm.EvaluatorPython(expr)
+            for t, y in zip(t_tests, y_tests):
+                result = evaluator.evaluate(t=t, y=y).toarray()
+                np.testing.assert_allclose(result, expr.evaluate(t=t, y=y).toarray())
 
         y_tests = [np.array([[2], [3], [4], [5]]), np.array([[1], [3], [2], [1]])]
         t_tests = [1, 2]
@@ -660,6 +660,9 @@ class TestEvaluate(unittest.TestCase):
         np.testing.assert_allclose(A.toarray(), Adense)
         np.testing.assert_allclose(A @ v, Adense @ v)
         np.testing.assert_allclose(A.scalar_multiply(3.0).toarray(), Adense * 3.0)
+
+        with self.assertRaises(NotImplementedError):
+            a = A.multiply(v)
 
 
 if __name__ == "__main__":
