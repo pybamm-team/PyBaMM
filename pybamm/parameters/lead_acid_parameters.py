@@ -86,8 +86,8 @@ class LeadAcidParameters:
         )  # pybamm.Parameter("Typical oxygen concentration [mol.m-3]")
 
         # Microstructure
-        self.a_n_dim = self.geo.a_n_dim
-        self.a_p_dim = self.geo.a_p_dim
+        # Note: the surface area per unit volume can be set as a function of
+        # through-cell position, so is defined later as a function
         self.b_e_n = self.geo.b_e_n
         self.b_e_s = self.geo.b_e_s
         self.b_e_p = self.geo.b_e_p
@@ -316,8 +316,32 @@ class LeadAcidParameters:
             "Positive electrode oxygen exchange-current density [A.m-2]", inputs
         )
 
+    def a_n_dimensional(self, x):
+        """
+        Negative electrode surface area per unit volume as a function of
+        through-cell distance
+        """
+        inputs = {"Through-cell distance (x_n) [m]": x}
+        return pybamm.FunctionParameter(
+            "Negative electrode surface area to volume ratio [m-1]", inputs
+        )
+
+    def a_p_dimensional(self, x):
+        """
+        Positive electrode surface area per unit volume as a function of
+        through-cell distance
+        """
+        inputs = {"Through-cell distance (x_p) [m]": x}
+        return pybamm.FunctionParameter(
+            "Positive electrode surface area to volume ratio [m-1]", inputs
+        )
+
     def _set_scales(self):
         "Define the scales used in the non-dimensionalisation scheme"
+
+        # Microscale (typical values at electrode/current collector interface)
+        self.a_n_typ = self.a_n_dimensional(0)
+        self.a_p_typ = self.a_p_dimensional(self.L_x)
 
         # Concentrations
         self.electrolyte_concentration_scale = self.c_e_typ
@@ -325,8 +349,8 @@ class LeadAcidParameters:
         # Electrical
         self.potential_scale = self.R * self.T_ref / self.F
         self.current_scale = self.i_typ
-        self.j_scale_n = self.i_typ / (self.a_n_dim * self.L_x)
-        self.j_scale_p = self.i_typ / (self.a_p_dim * self.L_x)
+        self.j_scale_n = self.i_typ / (self.a_n_typ * self.L_x)
+        self.j_scale_p = self.i_typ / (self.a_p_typ * self.L_x)
 
         # Reaction velocity scale
         self.velocity_scale = self.i_typ / (self.c_e_typ * self.F)
@@ -453,8 +477,8 @@ class LeadAcidParameters:
         self.sigma_p_prime = self.sigma_p * self.delta ** 2
         self.sigma_cn_prime = self.sigma_cn * self.delta ** 2
         self.sigma_cp_prime = self.sigma_cp * self.delta ** 2
-        self.delta_pore_n = 1 / (self.a_n_dim * self.L_x)
-        self.delta_pore_p = 1 / (self.a_p_dim * self.L_x)
+        self.delta_pore_n = 1 / (self.a_n_typ * self.L_x)
+        self.delta_pore_p = 1 / (self.a_p_typ * self.L_x)
         self.Q_n_max = self.Q_n_max_dimensional / (self.c_e_typ * self.F)
         self.Q_p_max = self.Q_p_max_dimensional / (self.c_e_typ * self.F)
         self.beta_U_n = 1 / self.Q_n_max
@@ -711,29 +735,21 @@ class LeadAcidParameters:
         """
         return self.c_e_init
 
-    def a_n_of_x(self, x):
+    def a_n(self, x):
         """
-        Dimensionless surface area per unit volume distribution in x (as a function
-        for consistency with lithium-ion). The surface area per unit volume
-        distribution is defined so that the actual surface area per unit volume
-        as a function of x is given by a*a_of_x (so that a_of_x = 1 gives uniform
-        surface area per unit volume in x).
+        Dimensionless negative electrode surface area per unit volume as a
+        function of dimensionless position x
+        """
+        x_dim = x * self.L_x
+        return self.a_n_dimensional(x_dim) / self.a_n_typ
 
-        Returns 1 to give uniform surface area per unit volume in x.
+    def a_p(self, x):
         """
-        return pybamm.FullBroadcast(1, "negative electrode", "current collector")
-
-    def a_p_of_x(self, x):
+        Dimensionless positive electrode surface area per unit volume as a
+        function of dimensionless position x
         """
-        Dimensionless surface area per unit volume distribution in x (as a function
-        for consistency with lithium-ion). The surface area per unit volume
-        distribution is defined so that the actual surface area per unit volume
-        as a function of x is given by a*a_of_x (so that a_of_x = 1 gives uniform
-        surface area per unit volume in x).
-
-        Returns 1 to give uniform surface area per unit volume in x.
-        """
-        return pybamm.FullBroadcast(1, "positive electrode", "current collector")
+        x_dim = x * self.L_x
+        return self.a_p_dimensional(x_dim) / self.a_p_typ
 
     def _set_input_current(self):
         "Set the input current"

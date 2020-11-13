@@ -185,6 +185,8 @@ setup(
         "install": CustomInstall,
     },
     package_data={"pybamm": pybamm_data},
+    # Python version
+    python_requires=">=3.6,<3.9",
     # List of dependencies
     install_requires=[
         "numpy>=1.16",

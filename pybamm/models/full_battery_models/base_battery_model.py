@@ -801,9 +801,7 @@ class BaseBatteryModel(pybamm.BaseModel):
         # Battery-wide variables
         V_dim = self.variables["Terminal voltage [V]"]
         eta_e_av = self.variables.get("X-averaged electrolyte ohmic losses", 0)
-        eta_c_av = self.variables.get(
-            "X-averaged concentration overpotential", 0
-        )
+        eta_c_av = self.variables.get("X-averaged concentration overpotential", 0)
         eta_e_av_dim = self.variables.get("X-averaged electrolyte ohmic losses [V]", 0)
         eta_c_av_dim = self.variables.get(
             "X-averaged concentration overpotential [V]", 0
@@ -844,8 +842,13 @@ class BaseBatteryModel(pybamm.BaseModel):
         i_cc_dim = self.variables["Current collector current density [A.m-2]"]
         # Gather all overpotentials
         v_ecm = -(eta_ocv + eta_r_av + eta_c_av + eta_e_av + delta_phi_s_av)
-        v_ecm_dim = -(eta_ocv_dim + eta_r_av_dim + eta_c_av_dim + eta_e_av_dim +
-                      delta_phi_s_av_dim)
+        v_ecm_dim = -(
+            eta_ocv_dim
+            + eta_r_av_dim
+            + eta_c_av_dim
+            + eta_e_av_dim
+            + delta_phi_s_av_dim
+        )
         # Current collector area for turning resistivity into resistance
         A_cc = self.param.A_cc
         self.variables.update(
