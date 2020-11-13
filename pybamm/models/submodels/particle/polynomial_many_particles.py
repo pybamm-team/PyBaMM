@@ -37,12 +37,10 @@ class PolynomialManyParticles(BaseParticle):
         pybamm.citations.register("subramanian2005")
 
     def get_fundamental_variables(self):
+        variables = {}
         if self.domain == "Negative":
             # For all orders we solve an equation for the average concentration
             c_s_rav = pybamm.standard_variables.c_s_n_rav
-            x = pybamm.standard_spatial_vars.x_n
-            R = self.param.R_n_of_x(x)
-            variables = {"Negative particle distribution in x": R}
             if self.name == "uniform profile":
                 # The concentration is uniform so the surface value is equal to
                 # the average
@@ -66,9 +64,6 @@ class PolynomialManyParticles(BaseParticle):
         elif self.domain == "Positive":
             # For all orders we solve an equation for the average concentration
             c_s_rav = pybamm.standard_variables.c_s_p_rav
-            x = pybamm.standard_spatial_vars.x_p
-            R = self.param.R_p_of_x(x)
-            variables = {"Positive particle distribution in x": R}
             if self.name == "uniform profile":
                 # The concentration is uniform so the surface value is equal to
                 # the average
@@ -189,13 +184,13 @@ class PolynomialManyParticles(BaseParticle):
             "R-averaged " + self.domain.lower() + " particle concentration"
         ]
         j = variables[self.domain + " electrode interfacial current density"]
-        R = variables[self.domain + " particle distribution in x"]
+        R = variables[self.domain + " particle radius"]
 
         if self.domain == "Negative":
-            self.rhs = {c_s_rav: -3 * j / self.param.a_n / R}
+            self.rhs = {c_s_rav: -3 * j / self.param.a_R_n / R}
 
         elif self.domain == "Positive":
-            self.rhs = {c_s_rav: -3 * j / self.param.a_p / self.param.gamma_p / R}
+            self.rhs = {c_s_rav: -3 * j / self.param.a_R_p / self.param.gamma_p / R}
 
         if self.name == "quartic profile":
             # We solve an extra ODE for the average particle flux
@@ -213,7 +208,7 @@ class PolynomialManyParticles(BaseParticle):
                         * self.param.D_n(c_s_rav, T)
                         * q_s_rav
                         / self.param.C_n
-                        - 45 * j / self.param.a_n / 2
+                        - 45 * j / self.param.a_R_n / 2
                     }
                 )
             elif self.domain == "Positive":
@@ -223,7 +218,7 @@ class PolynomialManyParticles(BaseParticle):
                         * self.param.D_p(c_s_rav, T)
                         * q_s_rav
                         / self.param.C_p
-                        - 45 * j / self.param.a_p / self.param.gamma_p / 2
+                        - 45 * j / self.param.a_R_p / self.param.gamma_p / 2
                     }
                 )
 
@@ -234,7 +229,7 @@ class PolynomialManyParticles(BaseParticle):
         ]
         j = variables[self.domain + " electrode interfacial current density"]
         T = variables[self.domain + " electrode temperature"]
-        R = variables[self.domain + " particle distribution in x"]
+        R = variables[self.domain + " particle radius"]
         if self.name == "uniform profile":
             # No algebraic equations since we only solve for the average concentration
             pass
@@ -243,13 +238,14 @@ class PolynomialManyParticles(BaseParticle):
             if self.domain == "Negative":
                 self.algebraic = {
                     c_s_surf: self.param.D_n(c_s_surf, T) * (c_s_surf - c_s_rav)
-                    + self.param.C_n * (j * R / self.param.a_n / 5)
+                    + self.param.C_n * (j * R / self.param.a_R_n / 5)
                 }
 
             elif self.domain == "Positive":
                 self.algebraic = {
                     c_s_surf: self.param.D_p(c_s_surf, T) * (c_s_surf - c_s_rav)
-                    + self.param.C_p * (j * R / self.param.a_p / self.param.gamma_p / 5)
+                    + self.param.C_p
+                    * (j * R / self.param.a_R_p / self.param.gamma_p / 5)
                 }
         elif self.name == "quartic profile":
             # We solve a different algebraic equation for the surface concentration
@@ -261,14 +257,14 @@ class PolynomialManyParticles(BaseParticle):
                 self.algebraic = {
                     c_s_surf: self.param.D_n(c_s_surf, T)
                     * (35 * (c_s_surf - c_s_rav) - 8 * q_s_rav)
-                    + self.param.C_n * (j * R / self.param.a_n)
+                    + self.param.C_n * (j * R / self.param.a_R_n)
                 }
 
             elif self.domain == "Positive":
                 self.algebraic = {
                     c_s_surf: self.param.D_p(c_s_surf, T)
                     * (35 * (c_s_surf - c_s_rav) - 8 * q_s_rav)
-                    + self.param.C_p * (j * R / self.param.a_p / self.param.gamma_p)
+                    + self.param.C_p * (j * R / self.param.a_R_p / self.param.gamma_p)
                 }
 
     def set_initial_conditions(self, variables):

@@ -16,17 +16,22 @@ models = [
 params = [models[0].default_parameter_values, models[1].default_parameter_values]
 
 
-def negative_distribution(x):
-    return 1 + 2 * x / models[1].param.l_n
+def negative_radius(x):
+    "Negative particle radius as a function of through-cell position (x_n [m])"
+    R_n_0 = params[0]["Negative particle radius [m]"]
+    grading = 1 + 2 * x / models[1].param.L_n
+    return grading * R_n_0
 
 
-def positive_distribution(x):
-    return 1 + 2 * (1 - x) / models[1].param.l_p
+def positive_radius(x):
+    "Positive particle radius as a function of through-cell position (x_p [m])"
+    R_p_0 = params[0]["Positive particle radius [m]"]
+    grading = 1 + 2 * (models[1].param.L_x - x) / models[1].param.L_p
+    return grading * R_p_0
 
 
-params[1]["Negative particle distribution in x"] = negative_distribution
-params[1]["Positive particle distribution in x"] = positive_distribution
-
+params[1]["Negative particle radius [m]"] = negative_radius
+params[1]["Positive particle radius [m]"] = positive_radius
 
 # set up and solve simulations
 t_eval = np.linspace(0, 3600, 100)
@@ -45,8 +50,8 @@ output_variables = [
     "Electrolyte potential [V]",
     "Positive electrode potential [V]",
     "Terminal voltage [V]",
-    "Negative particle distribution in x",
-    "Positive particle distribution in x",
+    "Negative particle radius",
+    "Positive particle radius",
 ]
 
 # plot
