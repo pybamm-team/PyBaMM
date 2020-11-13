@@ -231,7 +231,7 @@ class FickianManyPSDs(BaseParticle):
         c_s_surf_distribution = variables[
             self.domain + " particle surface concentration distribution"
         ]
-        tol = 1e-4
+        tol = 1e-5
 
         self.events.append(
             pybamm.Event(
