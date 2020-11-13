@@ -12,6 +12,8 @@ class TestBaseCracking(unittest.TestCase):
         variables = {
             "Negative particle crack length": pybamm.Scalar(0),
             "Negative particle concentration": pybamm.Scalar(0),
+            "Positive particle crack length": pybamm.Scalar(0),
+            "Positive particle concentration": pybamm.Scalar(0),
         }
         submodel = pybamm.particle_cracking.BaseCracking(None, "Negative")
         std_tests = tests.StandardSubModelTests(submodel, variables)

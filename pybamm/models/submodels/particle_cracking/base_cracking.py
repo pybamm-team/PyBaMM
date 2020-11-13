@@ -46,9 +46,6 @@ class BaseCracking(pybamm.BaseSubModel):
         ]
         c_s_surf = variables[self.domain + " particle surface concentration"]
         T_xav = variables["X-averaged cell temperature"]
-        c_s_rxav = variables[
-            "Average " + self.domain.lower() + " particle concentration"
-        ]
 
         if "Cell thickness change [m]" not in variables:
             cell_thickness_change = (
@@ -58,8 +55,9 @@ class BaseCracking(pybamm.BaseSubModel):
             cell_thickness_change = variables["Cell thickness change [m]"]
 
         if self.domain == "Negative":
+            x = pybamm.standard_spatial_vars.x_n
             Omega = self.param.Omega_n
-            R0 = self.param.R_n
+            R0 = self.param.R_n(x)
             c_scale = self.param.c_n_max
             c_0 = self.param.c_n_0
             E0 = self.param.E_n
@@ -72,8 +70,9 @@ class BaseCracking(pybamm.BaseSubModel):
             ) - self.param.t_n_change(c_init)
 
         elif self.domain == "Positive":
+            x = pybamm.standard_spatial_vars.x_p
             Omega = self.param.Omega_p
-            R0 = self.param.R_p
+            R0 = self.param.R_p(x)
             c_scale = self.param.c_p_max
             c_0 = self.param.c_p_0
             E0 = self.param.E_p
@@ -81,7 +80,9 @@ class BaseCracking(pybamm.BaseSubModel):
             eps_s = self.param.epsilon_s_p
             L0 = self.param.L_p
             c_init = self.param.c_p_init(0)
-            v_change = self.param.t_p_change(c_s_rxav) - self.param.t_p_change(c_init)
+            v_change = pybamm.x_average(
+                self.param.t_p_change(c_s_rav)
+            ) - self.param.t_p_change(c_init)
 
         cell_thickness_change += (
             self.param.n_electrodes_parallel * eps_s * v_change * L0
@@ -134,12 +135,14 @@ class BaseCracking(pybamm.BaseSubModel):
         The variables which can be derived from the crack length.
         """
         if self.domain == "Negative":
-            a0 = self.param.a_n
-            R0 = self.param.R_n
+            x = pybamm.standard_spatial_vars.x_n
+            a0 = self.param.a_n(x)
+            R0 = self.param.R_n(x)
             rho_cr = self.param.rho_cr_n
         elif self.domain == "Positive":
-            a0 = self.param.a_p
-            R0 = self.param.R_p
+            x = pybamm.standard_spatial_vars.x_p
+            a0 = self.param.a_p(x)
+            R0 = self.param.R_p(x)
             rho_cr = self.param.rho_cr_p
         roughness = l_cr * 2 * rho_cr + 1  # the ratio of cracks to normal surface
         a_cr = (roughness - 1) * a0  # normalised crack surface area

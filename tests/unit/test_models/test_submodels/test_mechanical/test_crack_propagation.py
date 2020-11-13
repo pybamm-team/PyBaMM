@@ -9,18 +9,30 @@ import unittest
 
 class TestCrackPropagation(unittest.TestCase):
     def test_public_functions(self):
+        a_n = pybamm.FullBroadcast(
+            pybamm.Scalar(0), ["negative electrode"], "current collector"
+        )
+        a_p = pybamm.FullBroadcast(
+            pybamm.Scalar(0), ["positive electrode"], "current collector"
+        )
+        a = pybamm.Scalar(0)
         variables = {
-            "Negative particle crack length": pybamm.Scalar(0),
-            "Negative particle concentration": pybamm.Scalar(0),
-            "Negative particle surface concentration": pybamm.Scalar(0),
-            "R-averaged negative particle concentration": pybamm.Scalar(0),
-            "Average negative particle concentration": pybamm.Scalar(0),
-            "X-averaged cell temperature": pybamm.Scalar(0),
-            "Negative electrode temperature": pybamm.Scalar(0),
+            "Negative particle crack length": a_n,
+            "Negative particle surface concentration": a_n,
+            "R-averaged negative particle concentration": a_n,
+            "Average negative particle concentration": a,
+            "X-averaged cell temperature": a,
+            "Negative electrode temperature": a_n,
+            "Positive particle crack length": a_p,
+            "Positive particle surface concentration": a_p,
+            "R-averaged positive particle concentration": a_p,
+            "Average positive particle concentration": a,
+            "Positive electrode temperature": a_p,
         }
-        options = {"particle cracking": "both"}
+        options = {"particle": "Fickian diffusion", "particle cracking": "both"}
         param = pybamm.LithiumIonParameters(options)
         submodel = pybamm.particle_cracking.CrackPropagation(param, "Negative")
+        submodel = pybamm.particle_cracking.CrackPropagation(param, "Positive")
         std_tests = tests.StandardSubModelTests(submodel, variables)
         std_tests.test_all()
 
