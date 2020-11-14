@@ -18,6 +18,25 @@ if system() != "Windows":
     config.update("jax_enable_x64", True)
 
     class JaxCooMatrix:
+        """
+        A sparse matrix in COO format, with internal arrays using jax device arrays
+
+        This matrix only has two operations supported, a multiply with a scalar, and a
+        dot product with a dense vector. It can also be converted to a dense 2D jax
+        device array
+
+        Parameters
+        ----------
+
+        row: arraylike
+            1D array holding row indices of non-zero entries
+        col: arraylike
+            1D array holding col indices of non-zero entries
+        data: arraylike
+            1D array holding non-zero entries
+        shape: 2-element tuple (x, y)
+            where x is the number of rows, and y the number of columns of the matrix
+        """
         def __init__(self, row, col, data, shape):
             self.row = jax.numpy.array(row)
             self.col = jax.numpy.array(col)
@@ -26,15 +45,32 @@ if system() != "Windows":
             self.nnz = len(self.data)
 
         def toarray(self):
+            """convert sparse matrix to a dense 2D array"""
             result = jax.numpy.zeros(self.shape, dtype=self.data.dtype)
             return result.at[self.row, self.col].add(self.data)
 
         def dot_product(self, b):
+            """
+            dot product of matrix with a dense column vector b
+
+            Parameters
+            ----------
+            b: jax device array
+                must have shape (n, 1)
+            """
             # assume b is a column vector
             result = jax.numpy.zeros((self.shape[0], 1), dtype=b.dtype)
             return result.at[self.row].add(self.data.reshape(-1, 1) * b[self.col])
 
         def scalar_multiply(self, b):
+            """
+            multiply of matrix with a scalar b
+
+            Parameters
+            ----------
+            b: Number or 1 element jax device array
+                scalar value to multiply
+            """
             # assume b is a scalar or ndarray with 1 element
             return JaxCooMatrix(
                 self.row, self.col,
@@ -43,9 +79,13 @@ if system() != "Windows":
             )
 
         def multiply(self, b):
+            """
+            general matrix multiply not supported
+            """
             raise NotImplementedError
 
         def __matmul__(self, b):
+            """see self.dot_product"""
             return self.dot_product(b)
 
     def create_jax_coo_matrix(value):
