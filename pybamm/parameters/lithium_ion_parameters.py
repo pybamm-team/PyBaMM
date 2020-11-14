@@ -226,12 +226,8 @@ class LithiumIonParameters:
         self.Omega_n = pybamm.Parameter(
             "Negative electrode partial molar volume [m3.mol-1]"
         )
-        self.l_cr_p_0 = pybamm.Parameter(
-            "Positive electrode initial crack length [m]"
-        )
-        self.l_cr_n_0 = pybamm.Parameter(
-            "Negative electrode initial crack length [m]"
-        )
+        self.l_cr_p_0 = pybamm.Parameter("Positive electrode initial crack length [m]")
+        self.l_cr_n_0 = pybamm.Parameter("Negative electrode initial crack length [m]")
         self.w_cr = pybamm.Parameter("Negative electrode initial crack width [m]")
         self.rho_cr_n_dim = pybamm.Parameter(
             "Negative electrode number of cracks per unit area [m-2]"
