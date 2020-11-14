@@ -208,59 +208,58 @@ class LithiumIonParameters:
         )
 
         # mechanical prapmeters
-        if self.options["particle cracking"] is not None:
-            self.nu_p = pybamm.Parameter("Positive electrode Poisson's ratio")
-            self.E_p = pybamm.Parameter("Positive electrode Young's modulus [Pa]")
-            self.c_p_0_dim = pybamm.Parameter(
-                "Positive electrode reference concentration for free of deformation "
-                "[mol.m-3]"
-            )
-            self.Omega_p = pybamm.Parameter(
-                "Positive electrode partial molar volume [m3.mol-1]"
-            )
-            self.nu_n = pybamm.Parameter("Negative electrode Poisson's ratio")
-            self.E_n = pybamm.Parameter("Negative electrode Young's modulus [Pa]")
-            self.c_n_0_dim = pybamm.Parameter(
-                "Negative electrode reference concentration for free of deformation "
-                "[mol.m-3]"
-            )
-            self.Omega_n = pybamm.Parameter(
-                "Negative electrode partial molar volume [m3.mol-1]"
-            )
-            self.l_cr_p_0 = pybamm.Parameter(
-                "Positive electrode initial crack length [m]"
-            )
-            self.l_cr_n_0 = pybamm.Parameter(
-                "Negative electrode initial crack length [m]"
-            )
-            self.w_cr = pybamm.Parameter("Negative electrode initial crack width [m]")
-            self.rho_cr_n_dim = pybamm.Parameter(
-                "Negative electrode number of cracks per unit area [m-2]"
-            )
-            self.rho_cr_p_dim = pybamm.Parameter(
-                "Positive electrode number of cracks per unit area [m-2]"
-            )
-            self.b_cr_n = pybamm.Parameter("Negative electrode Paris' law constant b")
-            self.m_cr_n = pybamm.Parameter("Negative electrode Paris' law constant m")
-            self.Eac_cr_n = pybamm.Parameter(
-                "Negative electrode activation energy for cracking rate [kJ.mol-1]"
-            )  # noqa
-            self.b_cr_p = pybamm.Parameter("Positive electrode Paris' law constant b")
-            self.m_cr_p = pybamm.Parameter("Positive electrode Paris' law constant m")
-            self.Eac_cr_p = pybamm.Parameter(
-                "Positive electrode activation energy for cracking rate [kJ.mol-1]"
-            )  # noqa
-            self.alpha_T_cell_dim = pybamm.Parameter(
-                "Cell thermal expansion coefficien [m.K-1]"
-            )
-            self.R_const = pybamm.constants.R
-            self.theta_p_dim = (
-                self.Omega_p ** 2 / self.R_const * 2 / 9 * self.E_p / (1 - self.nu_p)
-            )
-            # intermediate variable  [K*m^3/mol]
-            self.theta_n_dim = (
-                self.Omega_n ** 2 / self.R_const * 2 / 9 * self.E_n / (1 - self.nu_n)
-            )
+        self.nu_p = pybamm.Parameter("Positive electrode Poisson's ratio")
+        self.E_p = pybamm.Parameter("Positive electrode Young's modulus [Pa]")
+        self.c_p_0_dim = pybamm.Parameter(
+            "Positive electrode reference concentration for free of deformation "
+            "[mol.m-3]"
+        )
+        self.Omega_p = pybamm.Parameter(
+            "Positive electrode partial molar volume [m3.mol-1]"
+        )
+        self.nu_n = pybamm.Parameter("Negative electrode Poisson's ratio")
+        self.E_n = pybamm.Parameter("Negative electrode Young's modulus [Pa]")
+        self.c_n_0_dim = pybamm.Parameter(
+            "Negative electrode reference concentration for free of deformation "
+            "[mol.m-3]"
+        )
+        self.Omega_n = pybamm.Parameter(
+            "Negative electrode partial molar volume [m3.mol-1]"
+        )
+        self.l_cr_p_0 = pybamm.Parameter(
+            "Positive electrode initial crack length [m]"
+        )
+        self.l_cr_n_0 = pybamm.Parameter(
+            "Negative electrode initial crack length [m]"
+        )
+        self.w_cr = pybamm.Parameter("Negative electrode initial crack width [m]")
+        self.rho_cr_n_dim = pybamm.Parameter(
+            "Negative electrode number of cracks per unit area [m-2]"
+        )
+        self.rho_cr_p_dim = pybamm.Parameter(
+            "Positive electrode number of cracks per unit area [m-2]"
+        )
+        self.b_cr_n = pybamm.Parameter("Negative electrode Paris' law constant b")
+        self.m_cr_n = pybamm.Parameter("Negative electrode Paris' law constant m")
+        self.Eac_cr_n = pybamm.Parameter(
+            "Negative electrode activation energy for cracking rate [kJ.mol-1]"
+        )  # noqa
+        self.b_cr_p = pybamm.Parameter("Positive electrode Paris' law constant b")
+        self.m_cr_p = pybamm.Parameter("Positive electrode Paris' law constant m")
+        self.Eac_cr_p = pybamm.Parameter(
+            "Positive electrode activation energy for cracking rate [kJ.mol-1]"
+        )  # noqa
+        self.alpha_T_cell_dim = pybamm.Parameter(
+            "Cell thermal expansion coefficien [m.K-1]"
+        )
+        self.R_const = pybamm.constants.R
+        self.theta_p_dim = (
+            self.Omega_p ** 2 / self.R_const * 2 / 9 * self.E_p / (1 - self.nu_p)
+        )
+        # intermediate variable  [K*m^3/mol]
+        self.theta_n_dim = (
+            self.Omega_n ** 2 / self.R_const * 2 / 9 * self.E_n / (1 - self.nu_n)
+        )
         # intermediate variable  [K*m^3/mol]
 
     def D_e_dimensional(self, c_e, T):
@@ -722,15 +721,14 @@ class LithiumIonParameters:
         self.c_e_init = self.c_e_init_dimensional / self.c_e_typ
 
         # Dimensionless mechanical parameters
-        if self.options["particle cracking"] is not None:
-            self.rho_cr_n = self.rho_cr_n_dim * self.l_cr_n_0 * self.w_cr
-            self.rho_cr_p = self.rho_cr_p_dim * self.l_cr_p_0 * self.w_cr
-            self.theta_p = self.theta_p_dim * self.c_p_max / self.Delta_T
-            self.theta_n = self.theta_n_dim * self.c_n_max / self.Delta_T
-            self.c_p_0 = self.c_p_0_dim / self.c_p_max
-            self.c_n_0 = self.c_n_0_dim / self.c_n_max
-            self.t0_cr = 3600 / self.C_rate / self.timescale
-            # nomarlised typical time for one cycle
+        self.rho_cr_n = self.rho_cr_n_dim * self.l_cr_n_0 * self.w_cr
+        self.rho_cr_p = self.rho_cr_p_dim * self.l_cr_p_0 * self.w_cr
+        self.theta_p = self.theta_p_dim * self.c_p_max / self.Delta_T
+        self.theta_n = self.theta_n_dim * self.c_n_max / self.Delta_T
+        self.c_p_0 = self.c_p_0_dim / self.c_p_max
+        self.c_n_0 = self.c_n_0_dim / self.c_n_max
+        self.t0_cr = 3600 / self.C_rate / self.timescale
+        # nomarlised typical time for one cycle
 
     def chi(self, c_e, T):
         """

@@ -32,6 +32,8 @@ class TestCrackPropagation(unittest.TestCase):
         options = {"particle": "Fickian diffusion", "particle cracking": "both"}
         param = pybamm.LithiumIonParameters(options)
         submodel = pybamm.particle_cracking.CrackPropagation(param, "Negative")
+        std_tests = tests.StandardSubModelTests(submodel, variables)
+        std_tests.test_all()
         submodel = pybamm.particle_cracking.CrackPropagation(param, "Positive")
         std_tests = tests.StandardSubModelTests(submodel, variables)
         std_tests.test_all()
