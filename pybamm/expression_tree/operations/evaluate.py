@@ -65,7 +65,7 @@ if system() != "Windows":
         return JaxCooMatrix(row, col, data, value.shape)
 else:
 
-    def create_jax_coo_matrix(value):
+    def create_jax_coo_matrix(value):  # pragma: no cover
         raise NotImplementedError('Jax is not available on Windows')
 
 
