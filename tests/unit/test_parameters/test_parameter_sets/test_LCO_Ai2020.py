@@ -3,7 +3,6 @@
 #
 import pybamm
 import unittest
-import os
 
 
 class TestAi2020(unittest.TestCase):
