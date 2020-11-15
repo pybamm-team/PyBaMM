@@ -121,6 +121,31 @@ class BaseParticle(pybamm.BaseSubModel):
             * c_scale,
         }
 
+        variables.update(self._get_microstrcuture_variables())
+
+        return variables
+
+    def _get_microstrcuture_variables(self):
+        if self.domain == "Negative":
+            x = pybamm.standard_spatial_vars.x_n
+            R = self.param.R_n(x)
+            R_scale = self.param.R_n_typ
+            a = self.param.a_n(x)
+            a_scale = self.param.a_n_typ
+        elif self.domain == "Positive":
+            x = pybamm.standard_spatial_vars.x_p
+            R = self.param.R_p(x)
+            R_scale = self.param.R_p_typ
+            a = self.param.a_p(x)
+            a_scale = self.param.a_p_typ
+
+        variables = {
+            self.domain + " particle radius": R,
+            self.domain + " particle radius [m]": R * R_scale,
+            self.domain + " electrode surface area per unit volume": a,
+            self.domain + " electrode surface area per unit volume [m-1]": a * a_scale,
+        }
+
         return variables
 
     def _get_standard_flux_variables(self, N_s, N_s_xav):

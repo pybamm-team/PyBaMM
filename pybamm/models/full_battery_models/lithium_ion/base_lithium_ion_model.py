@@ -25,8 +25,8 @@ class BaseModel(pybamm.BaseBatteryModel):
             "negative electrode": self.param.L_x,
             "separator": self.param.L_x,
             "positive electrode": self.param.L_x,
-            "negative particle": self.param.R_n,
-            "positive particle": self.param.R_p,
+            "negative particle": self.param.R_n_typ,
+            "positive particle": self.param.R_p_typ,
             "current collector y": self.param.L_y,
             "current collector z": self.param.L_z,
         }
@@ -40,9 +40,9 @@ class BaseModel(pybamm.BaseBatteryModel):
         self.variables.update(
             {
                 "r_n": var.r_n,
-                "r_n [m]": var.r_n * self.param.R_n,
+                "r_n [m]": var.r_n * self.param.R_n_typ,
                 "r_p": var.r_p,
-                "r_p [m]": var.r_p * self.param.R_p,
+                "r_p [m]": var.r_p * self.param.R_p_typ,
             }
         )
 
