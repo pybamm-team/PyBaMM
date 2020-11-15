@@ -1015,10 +1015,7 @@ class Discretisation(object):
 
         elif isinstance(symbol, pybamm.Concatenation):
             new_children = [self.process_symbol(child) for child in symbol.children]
-            try:
-                new_symbol = spatial_method.concatenation(new_children)
-            except:
-                self._process_symbol(symbol.children[1])
+            new_symbol = spatial_method.concatenation(new_children)
 
             return new_symbol
 
