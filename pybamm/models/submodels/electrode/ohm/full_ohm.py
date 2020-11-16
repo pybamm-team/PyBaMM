@@ -60,9 +60,9 @@ class Full(BaseModel):
         phi_s = variables[self.domain + " electrode potential"]
         i_s = variables[self.domain + " electrode current density"]
 
-        # Get surface area per unit volume distribution in x (to account for
-        # graded electrodes)
-        a = variables[self.domain + " surface area per unit volume distribution in x"]
+        # Get surface area per unit volume (could be a distribution in x to
+        # account for graded electrodes)
+        a = variables[self.domain + " electrode surface area per unit volume"]
 
         # Variable summing all of the interfacial current densities
         sum_j = variables[

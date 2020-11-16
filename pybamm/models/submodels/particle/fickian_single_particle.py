@@ -90,7 +90,7 @@ class FickianSingleParticle(BaseParticle):
             rbc = (
                 -self.param.C_n
                 * j_xav
-                / self.param.a_n
+                / self.param.a_R_n
                 / self.param.D_n(c_s_surf_xav, T_xav)
             )
 
@@ -98,7 +98,7 @@ class FickianSingleParticle(BaseParticle):
             rbc = (
                 -self.param.C_p
                 * j_xav
-                / self.param.a_p
+                / self.param.a_R_p
                 / self.param.gamma_p
                 / self.param.D_p(c_s_surf_xav, T_xav)
             )
