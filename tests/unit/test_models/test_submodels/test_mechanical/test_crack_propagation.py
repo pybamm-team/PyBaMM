@@ -37,6 +37,9 @@ class TestCrackPropagation(unittest.TestCase):
         submodel = pybamm.particle_cracking.CrackPropagation(param, "Positive")
         std_tests = tests.StandardSubModelTests(submodel, variables)
         std_tests.test_all()
+        submodel = pybamm.particle_cracking.NoCracking(param, "Positive")
+        std_tests = tests.StandardSubModelTests(submodel, variables)
+        std_tests.test_all()
 
 
 if __name__ == "__main__":

@@ -207,7 +207,7 @@ class LithiumIonParameters:
             "Initial concentration in electrolyte [mol.m-3]"
         )
 
-        # mechanical prapmeters
+        # mechanical parameters
         self.nu_p = pybamm.Parameter("Positive electrode Poisson's ratio")
         self.E_p = pybamm.Parameter("Positive electrode Young's modulus [Pa]")
         self.c_p_0_dim = pybamm.Parameter(
