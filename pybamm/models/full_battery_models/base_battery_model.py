@@ -205,6 +205,7 @@ class BaseBatteryModel(pybamm.BaseModel):
             "sei": None,
             "sei porosity change": False,
             "working electrode": None,
+            "particle cracking": None,
         }
         # Change the default for cell geometry based on which thermal option is provided
         extra_options = extra_options or {}
@@ -339,6 +340,17 @@ class BaseBatteryModel(pybamm.BaseModel):
                 "Unknown sei porosity change '{}'".format(
                     options["sei porosity change"]
                 )
+            )
+
+        if options["particle cracking"] not in [
+            None,
+            "no cracking",
+            "anode",
+            "cathode",
+            "both",
+        ]:
+            raise pybamm.OptionError(
+                "Unknown particle cracking '{}'".format(options["particle cracking"])
             )
 
         if options["dimensionality"] == 0:

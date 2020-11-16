@@ -11,6 +11,8 @@ class TestDimensionlessParameterValues(unittest.TestCase):
     def test_options(self):
         with self.assertRaisesRegex(pybamm.OptionError, "particle shape"):
             pybamm.LithiumIonParameters({"particle shape": "bad shape"})
+        with self.assertRaisesRegex(pybamm.OptionError, "particle cracking"):
+            pybamm.LithiumIonParameters({"particle cracking": "bad crack"})
 
     def test_lithium_ion(self):
         """This test checks that all the dimensionless parameters are being calculated

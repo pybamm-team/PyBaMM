@@ -144,9 +144,7 @@ class VariableDot(VariableBase):
 
         """
         return Variable(
-            self.name[:-1],
-            domain=self.domain,
-            auxiliary_domains=self.auxiliary_domains,
+            self.name[:-1], domain=self.domain, auxiliary_domains=self.auxiliary_domains
         )
 
     def diff(self, variable):

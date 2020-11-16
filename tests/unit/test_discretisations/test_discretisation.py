@@ -619,8 +619,7 @@ class TestDiscretise(unittest.TestCase):
 
         # mass matrix is identity
         np.testing.assert_array_equal(
-            np.eye(combined_submesh.nodes.shape[0]),
-            model.mass_matrix.entries.toarray(),
+            np.eye(combined_submesh.nodes.shape[0]), model.mass_matrix.entries.toarray()
         )
 
         # Create StateVector to differentiate model with respect to
@@ -793,7 +792,7 @@ class TestDiscretise(unittest.TestCase):
             (
                 np.eye(np.size(combined_submesh.nodes)),
                 np.zeros(
-                    (np.size(combined_submesh.nodes), np.size(combined_submesh.nodes),)
+                    (np.size(combined_submesh.nodes), np.size(combined_submesh.nodes))
                 ),
             )
         )
@@ -1027,10 +1026,7 @@ class TestDiscretise(unittest.TestCase):
         self.assertIsInstance(broad_to_edges_disc.children[1], pybamm.StateVector)
         self.assertEqual(
             broad_to_edges_disc.shape,
-            (
-                mesh["negative particle"].npts * (mesh["negative electrode"].npts + 1),
-                1,
-            ),
+            (mesh["negative particle"].npts * (mesh["negative electrode"].npts + 1), 1),
         )
 
     def test_concatenation(self):
