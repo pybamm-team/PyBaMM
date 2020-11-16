@@ -26,6 +26,7 @@ class CrackPropagation(BaseCracking):
         l_cr = pybamm.Variable(
             self.domain + " particle crack length",
             domain=self.domain.lower() + " electrode",
+            auxiliary_domains={"secondary": "current collector"},
         )
         return self._get_standard_variables(l_cr)
 
