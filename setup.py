@@ -161,8 +161,8 @@ ext_modules = [idaklu_ext] if compile_KLU() else []
 jax_dependencies = []
 if system() != "Windows":
     jax_dependencies = [
-        "jax==0.1.75",
-        "jaxlib==0.1.52",
+        "jax==0.2.5",
+        "jaxlib==0.1.57",
     ]
 
 
