@@ -40,7 +40,7 @@ class TestAi2020(unittest.TestCase):
 
         chemistry = pybamm.parameter_sets.Ai2020
         parameter_values = pybamm.ParameterValues(chemistry=chemistry)
-        options = {"particle": "Fickian diffusion", "particle cracking": "anode"}
+        options = {"particle": "Fickian diffusion", "particle cracking": "both"}
         model = pybamm.lithium_ion.DFN(options)
         sim = pybamm.Simulation(model, parameter_values=parameter_values)
         sim.set_parameters()
