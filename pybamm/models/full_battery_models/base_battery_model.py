@@ -24,26 +24,24 @@ class BaseBatteryModel(pybamm.BaseModel):
                 model with prescribed cell volume and cross-sectional area, and
                 (if thermal effects are included) solves a lumped thermal model
                 with prescribed surface area for cooling.
-            * "dimensionality" : int, optional
-                Sets the dimension of the current collector problem. Can be 0
-                (default), 1 or 2.
-            * "surface form" : bool or str, optional
-                Whether to use the surface formulation of the problem. Can be False
-                (default), "differential" or "algebraic".
             * "convection" : bool or str, optional
                 Whether to include the effects of convection in the model. Can be
                 False (default), "differential" or "algebraic". Must be 'False' for
                 lithium-ion models.
-            * "side reactions" : list, optional
-                Contains a list of any side reactions to include. Default is []. If this
-                list is not empty (i.e. side reactions are included in the model), then
-                "surface form" cannot be 'False'.
-            * "interfacial surface area" : str, optional
-                Sets the model for the interfacial surface area. Can be "constant"
-                (default) or "varying". Not currently implemented in any of the models.
             * "current collector" : str, optional
                 Sets the current collector model to use. Can be "uniform" (default),
                 "potential pair" or "potential pair quite conductive".
+            * "dimensionality" : int, optional
+                Sets the dimension of the current collector problem. Can be 0
+                (default), 1 or 2.
+            * "external submodels" : list
+                A list of the submodels that you would like to supply an external
+                variable for instead of solving in PyBaMM. The entries of the lists
+                are strings that correspond to the submodel names in the keys
+                of `self.submodels`.
+            * "interfacial surface area" : str, optional
+                Sets the model for the interfacial surface area. Can be "constant"
+                (default) or "varying". Not currently implemented in any of the models.
             * "particle" : str, optional
                 Sets the submodel to use to describe behaviour within the particle.
                 Can be "Fickian diffusion" (default), "uniform profile",
@@ -54,14 +52,14 @@ class BaseBatteryModel(pybamm.BaseModel):
                 (default) or "user". For the "user" option the surface area per
                 unit volume can be passed as a parameter, and is therefore not
                 necessarily consistent with the particle shape.
-            * "thermal" : str, optional
-                Sets the thermal model to use. Can be "isothermal" (default), "lumped",
-                "x-lumped", or "x-full".
-            * "external submodels" : list
-                A list of the submodels that you would like to supply an external
-                variable for instead of solving in PyBaMM. The entries of the lists
-                are strings that correspond to the submodel names in the keys
-                of `self.submodels`.
+            * "particle cracking" : str, optional
+                Sets the model to account for mechanical effects and particle
+                cracking. Can be None, "no cracking", "anode", "cathode" or "both".
+                All options other than None account for the effects of swelling
+                of electrode particles, cell thickness change, and stress-assisted
+                diffusion. The options "anode", "cathode" or "both" additionally account
+                for crack propagation in the anode, cathode or both electrodes,
+                respectively.
             * "sei" : str
                 Set the sei submodel to be used. Options are:
 
@@ -103,6 +101,16 @@ class BaseBatteryModel(pybamm.BaseModel):
                         * (\\phi_s - \\phi_e - U - R_{sei} * L_{sei} * \\frac{I}{aL})
             * "sei porosity change" : bool
                 Whether to include porosity change due to SEI formation (default False)
+            * "side reactions" : list, optional
+                Contains a list of any side reactions to include. Default is []. If this
+                list is not empty (i.e. side reactions are included in the model), then
+                "surface form" cannot be 'False'.
+            * "surface form" : bool or str, optional
+                Whether to use the surface formulation of the problem. Can be False
+                (default), "differential" or "algebraic".
+            * "thermal" : str, optional
+                Sets the thermal model to use. Can be "isothermal" (default), "lumped",
+                "x-lumped", or "x-full".
 
     **Extends:** :class:`pybamm.BaseModel`
     """

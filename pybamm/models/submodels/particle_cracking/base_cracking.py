@@ -5,24 +5,35 @@ import pybamm
 
 
 class BaseCracking(pybamm.BaseSubModel):
-    """Base class for particle cracking models.
+    """
+    Base class for particle cracking models. See [1]_ for mechanical model (thickness
+    change) and [2]_ for cracking model.
+
     Parameters
     ----------
     param : parameter class
         The parameters to use for this submodel
     domain : dict, optional
         Dictionary of either the electrode for "Positive" or "Nagative"
-    **Extends:** :class:`pybamm.BaseSubModel`
 
-    Reference
-    Ai, W., Kraft, L., Sturm, J., Jossen, A., & Wu, B. (2019). Electrochemical
-    Thermal-Mechanical Modelling of Stress Inhomogeneity in Lithium-Ion Pouch
-    Cells. Journal of The Electrochemical Society, 167(1), 013512.
+    References
+    ----------
+    .. [1] Ai, W., Kraft, L., Sturm, J., Jossen, A., & Wu, B. (2019). Electrochemical
+           Thermal-Mechanical Modelling of Stress Inhomogeneity in Lithium-Ion Pouch
+           Cells. Journal of The Electrochemical Society, 167(1), 013512.
+    .. [2] Deshpande, R., Verbrugge, M., Cheng, Y. T., Wang, J., & Liu, P. (2012).
+           Battery cycle life prediction with coupled chemical degradation and
+           fatigue mechanics. Journal of the Electrochemical Society, 159(10), A1730.
+
+    **Extends:** :class:`pybamm.BaseSubModel`
     """
 
     def __init__(self, param, domain):
         self.domain = domain
         super().__init__(param)
+
+        pybamm.citations.register("Ai_2019")
+        pybamm.citations.register("deshpande2012battery")
 
     def _get_standard_variables(self, l_cr):
         domain = self.domain.lower() + " particle"
