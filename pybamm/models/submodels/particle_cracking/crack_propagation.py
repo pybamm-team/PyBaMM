@@ -1,10 +1,15 @@
+#
+# Class for cracking
+#
 import pybamm
 from .base_cracking import BaseCracking
 import numpy as np
 
 
 class CrackPropagation(BaseCracking):
-    """cracking behaviour in electrode particles.
+    """
+    Cracking behaviour in electrode particles, from [1]_.
+
     Parameters
     ----------
     param : parameter class
@@ -13,10 +18,13 @@ class CrackPropagation(BaseCracking):
         The domain of the model either 'Negative' or 'Positive'
     requiring the radius, average concantration, surface concantration
 
-    Ref for the crack model: Deshpande, R., Verbrugge, M., Cheng, Y. T.,
-    Wang, J., & Liu, P. (2012). Battery cycle life prediction with coupled
-    chemical degradation and fatigue mechanics. Journal of the Electrochemical
-    Society, 159(10), A1730.
+    References
+    ----------
+    .. [1] Deshpande, R., Verbrugge, M., Cheng, Y. T., Wang, J., & Liu, P. (2012).
+           Battery cycle life prediction with coupled chemical degradation and
+           fatigue mechanics. Journal of the Electrochemical Society, 159(10), A1730.
+
+    **Extends:** :class:`pybamm.particle_cracking.BaseCracking`
     """
 
     def __init__(self, param, domain):
