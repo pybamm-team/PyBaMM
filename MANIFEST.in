@@ -28,6 +28,8 @@ include pybamm/input/parameters/lithium-ion/electrolytes/lipf6_Nyman2008/paramet
 include pybamm/input/parameters/lithium-ion/separators/separator_Kim2011/parameters.csv
 include pybamm/input/parameters/lithium-ion/separators/separator_Chen2020/parameters.csv
 include pybamm/input/parameters/lithium-ion/separators/separator_Marquis2019/parameters.csv
+include pybamm/input/parameters/lithium-ion/mechanicals/lico2_graphite_Ai2020/parameters.csv
+include pybamm/input/parameters/lithium-ion/anodes/graphite_Ai2020/graphite_ocp_Enertech_Ai2020.csv
 include pybamm/input/parameters/lead-acid/anodes/lead_Sulzer2019/lead_ocp_Bode1977.py
 include pybamm/input/parameters/lead-acid/cathodes/lead_dioxide_Sulzer2019/lead_dioxide_ocp_Bode1977.py
 include pybamm/input/parameters/lead-acid/electrolytes/sulfuric_acid_Sulzer2019/diffusivity_Gu1997.py
@@ -82,6 +84,7 @@ include pybamm/input/parameters/lithium-ion/electrolytes/lipf6_Nyman2008/README.
 include pybamm/input/parameters/lithium-ion/separators/separator_Kim2011/README.md
 include pybamm/input/parameters/lithium-ion/separators/separator_Chen2020/README.md
 include pybamm/input/parameters/lithium-ion/separators/separator_Marquis2019/README.md
+include pybamm/input/parameters/lithium-ion/mechanicals/lico2_graphite_Ai2020/README.md
 include pybamm/version
 include pybamm/CITATIONS.txt
 include CMakeBuild.py

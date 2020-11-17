@@ -68,14 +68,14 @@ class TestLandesfeind(unittest.TestCase):
 
             for i, _ in enumerate(T):
                 self.assertAlmostEqual(
-                    sigma_e(c[i], T[i]).value, data_sigma_e[solvent][i], places=5,
+                    sigma_e(c[i], T[i]).value, data_sigma_e[solvent][i], places=5
                 )
                 self.assertAlmostEqual(
-                    D_e(c[i], T[i]).value, data_D_e[solvent][i], places=5,
+                    D_e(c[i], T[i]).value, data_D_e[solvent][i], places=5
                 )
                 self.assertAlmostEqual(TDF(c[i], T[i]), data_TDF[solvent][i], places=5)
                 self.assertAlmostEqual(
-                    tplus(c[i], T[i]), data_tplus[solvent][i], places=5,
+                    tplus(c[i], T[i]), data_tplus[solvent][i], places=5
                 )
 
     def test_standard_lithium_parameters(self):

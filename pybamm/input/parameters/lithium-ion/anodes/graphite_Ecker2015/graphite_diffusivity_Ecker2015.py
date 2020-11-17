@@ -28,7 +28,7 @@ def graphite_diffusivity_Ecker2015(sto, T):
     -------
     :class:`pybamm.Symbol`
         Solid diffusivity
-   """
+    """
 
     D_ref = 8.4e-13 * exp(-11.3 * sto) + 8.2e-15
     E_D_s = 3.03e4
