@@ -192,10 +192,10 @@ class JaxSolver(pybamm.BaseSolver):
         if model not in self._cached_solves:
             self._cached_solves[model] = self.create_solve(model, t_eval)
 
-        y = self._cached_solves[model](inputs)
+        y = self._cached_solves[model](inputs).block_until_ready()
         integration_time = timer.time()
 
-        # note - the actual solve is not done until this line!
+        # convert to a normal numpy array
         y = onp.array(y)
 
         termination = "final time"

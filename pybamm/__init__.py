@@ -111,6 +111,7 @@ from .expression_tree.operations.evaluate_python import (
 
 if system() != "Windows":
     from .expression_tree.operations.evaluate_python import EvaluatorJax
+    from .expression_tree.operations.evaluate_python import JaxCooMatrix
 
 from .expression_tree.operations.jacobian import Jacobian
 from .expression_tree.operations.convert_to_casadi import CasadiConverter
@@ -151,6 +152,7 @@ from .models.submodels import (
     porosity,
     thermal,
     tortuosity,
+    particle_cracking,
 )
 from .models.submodels.interface import sei
 
@@ -177,7 +179,6 @@ from .parameters.thermal_parameters import thermal_parameters, ThermalParameters
 from .parameters.lithium_ion_parameters import LithiumIonParameters
 from .parameters.lead_acid_parameters import LeadAcidParameters
 from .parameters import parameter_sets
-
 
 #
 # Mesh and Discretisation classes

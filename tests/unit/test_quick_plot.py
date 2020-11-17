@@ -457,13 +457,15 @@ class TestQuickPlot(unittest.TestCase):
         parameter_values = pybamm.ParameterValues(chemistry=chemistry)
         model = pybamm.lithium_ion.SPMe()
         parameter_values.update({"Electrode height [m]": "[input]"})
-        solver = pybamm.CasadiSolver(mode='safe')
-        sim1 = pybamm.Simulation(model, parameter_values=parameter_values,
-                                 solver=solver)
+        solver = pybamm.CasadiSolver(mode="safe")
+        sim1 = pybamm.Simulation(
+            model, parameter_values=parameter_values, solver=solver
+        )
         inputs1 = {"Electrode height [m]": 1.00}
         sol1 = sim1.solve(t_eval=np.linspace(0, 1000, 101), inputs=inputs1)
-        sim2 = pybamm.Simulation(model, parameter_values=parameter_values,
-                                 solver=solver)
+        sim2 = pybamm.Simulation(
+            model, parameter_values=parameter_values, solver=solver
+        )
         inputs2 = {"Electrode height [m]": 2.00}
         sol2 = sim2.solve(t_eval=np.linspace(0, 1000, 101), inputs=inputs2)
         output_variables = [
@@ -476,8 +478,9 @@ class TestQuickPlot(unittest.TestCase):
             "Negative particle surface concentration",
             "Positive particle surface concentration",
         ]
-        quick_plot = pybamm.QuickPlot(solutions=[sol1, sol2],
-                                      output_variables=output_variables)
+        quick_plot = pybamm.QuickPlot(
+            solutions=[sol1, sol2], output_variables=output_variables
+        )
         quick_plot.dynamic_plot(testing=True)
         quick_plot.slider_update(1)
         pybamm.close_plots()

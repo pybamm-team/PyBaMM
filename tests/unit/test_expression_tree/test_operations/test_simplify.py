@@ -105,18 +105,12 @@ class TestSimplify(unittest.TestCase):
         self.assertIsInstance(expr.children[1], pybamm.Parameter)
 
         expr = (e * (c / e)).simplify()
-        self.assertIsInstance(expr, pybamm.Multiplication)
-        self.assertIsInstance(expr.children[0], pybamm.Scalar)
-        self.assertEqual(expr.children[0].evaluate(), 1.0)
-        self.assertIsInstance(expr.children[1], pybamm.Parameter)
+        self.assertEqual(expr.id, c.id)
 
         expr = ((e * c) * (c / e)).simplify()
         self.assertIsInstance(expr, pybamm.Multiplication)
-        self.assertIsInstance(expr.children[0], pybamm.Scalar)
-        self.assertEqual(expr.children[0].evaluate(), 1.0)
-        self.assertIsInstance(expr.children[1], pybamm.Multiplication)
-        self.assertIsInstance(expr.children[1].children[0], pybamm.Parameter)
-        self.assertIsInstance(expr.children[1].children[1], pybamm.Parameter)
+        self.assertIsInstance(expr.children[0], pybamm.Parameter)
+        self.assertIsInstance(expr.children[1], pybamm.Parameter)
 
         expr = (e + (e + c)).simplify()
         self.assertIsInstance(expr, pybamm.Addition)

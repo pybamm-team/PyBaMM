@@ -261,6 +261,17 @@
       "contributions": [
         "doc"
       ]
+    },
+    {
+      "login": "weilongai",
+      "name": "WEILONG AI",
+      "avatar_url": "https://avatars1.githubusercontent.com/u/41424174?v=4",
+      "profile": "https://github.com/weilongai",
+      "contributions": [
+        "code",
+        "example",
+        "test"
+      ]
     }
   ],
   "contributorsPerLine": 7,
