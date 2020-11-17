@@ -24,7 +24,6 @@
 
 }
 
-
 @article{doyle1993modeling,
   title={Modeling of galvanostatic charge and discharge of the lithium/polymer/insertion cell},
   author={Doyle, M and Fuller, TF and Newman, J},
@@ -249,4 +248,30 @@ primaryClass={physics.chem-ph},
   pages={A616},
   year={2013},
   publisher={IOP Publishing}
+}
+
+@article{deshpande2012battery,
+  title={Battery cycle life prediction with coupled chemical degradation and fatigue mechanics},
+  author={Deshpande, Rutooj and Verbrugge, Mark and Cheng, Yang-Tse and Wang, John and Liu, Ping},
+  journal={Journal of the Electrochemical Society},
+  volume={159},
+  number={10},
+  pages={A1730},
+  year={2012},
+  publisher={IOP Publishing}
+}
+
+@article{Ai_2019,
+	doi = {10.1149/2.0122001jes},
+	url = {https://doi.org/10.1149%2F2.0122001jes},
+	year = 2019,
+	month = {oct},
+	publisher = {The Electrochemical Society},
+	volume = {167},
+	number = {1},
+	pages = {013512},
+	author = {Weilong Ai and Ludwig Kraft and Johannes Sturm and Andreas Jossen and Billy Wu},
+	title = {Electrochemical Thermal-Mechanical Modelling of Stress Inhomogeneity in Lithium-Ion Pouch Cells},
+	journal = {Journal of The Electrochemical Society},
+	abstract = {Whilst extensive research has been conducted on the effects of temperature in lithium-ion batteries, mechanical effects have not received as much attention despite their importance. In this work, the stress response in electrode particles is investigated through a pseudo-2D model with mechanically coupled diffusion physics. This model can predict the voltage, temperature and thickness change for a lithium cobalt oxide-graphite pouch cell agreeing well with experimental results. Simulations show that the stress level is overestimated by up to 50% using the standard pseudo-2D model (without stress enhanced diffusion), and stresses can accelerate the diffusion in solid phases and increase the discharge cell capacity by 5.4%. The evolution of stresses inside electrode particles and the stress inhomogeneity through the battery electrode have been illustrated. The stress level is determined by the gradients of lithium concentration, and large stresses are generated at the electrode-separator interface when high C-rates are applied, e.g. fast charging. The results can explain the experimental results of particle fragmentation close to the separator and provide novel insights to understand the local aging behaviors of battery cells and to inform improved battery control algorithms for longer lifetimes.}
 }

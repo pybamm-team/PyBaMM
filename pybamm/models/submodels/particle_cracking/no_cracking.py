@@ -1,5 +1,5 @@
 #
-# Class for cracking
+# Class for no cracking
 #
 import pybamm
 from .base_cracking import BaseCracking
@@ -16,7 +16,7 @@ class NoCracking(BaseCracking):
     domain : str
         The domain of the model either 'Negative' or 'Positive'
 
-    **Extends:** :class:`pybamm.BaseSubModel`
+    **Extends:** :class:`pybamm.particle_cracking.BaseCracking`
     """
 
     def __init__(self, param, domain):
