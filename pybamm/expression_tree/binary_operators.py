@@ -493,13 +493,13 @@ def inner(left, right):
     left, right = pybamm.preprocess(left, right)
     # simplify multiply by scalar zero, being careful about shape
     if pybamm.is_scalar_zero(left):
-        return pybamm.array_zeros_like(right)
+        return pybamm.zeros_like(right)
     if pybamm.is_scalar_zero(right):
-        return pybamm.array_zeros_like(left)
+        return pybamm.zeros_like(left)
 
     # if one of the children is a zero matrix, we have to be careful about shapes
     if pybamm.is_matrix_zero(left) or pybamm.is_matrix_zero(right):
-        return pybamm.array_zeros_like(pybamm.Inner(left, right))
+        return pybamm.zeros_like(pybamm.Inner(left, right))
 
     # anything multiplied by a scalar one returns itself
     if pybamm.is_scalar_one(left):

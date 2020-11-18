@@ -458,14 +458,14 @@ class TestUnaryOperators(unittest.TestCase):
 
         # whole electrode domain is different as the divisioni by 1 gets simplified out
         domain = ["negative electrode", "separator", "positive electrode"]
-        a = pybamm.Symbol("a", domain=domain)
+        a = pybamm.Variable("a", domain=domain)
         x = pybamm.SpatialVariable("x", domain)
         av_a = pybamm.x_average(a)
         self.assertIsInstance(av_a, pybamm.Integral)
         self.assertEqual(av_a.integration_variable[0].domain, x.domain)
         self.assertEqual(av_a.domain, [])
 
-        a = pybamm.Symbol("a", domain="new domain")
+        a = pybamm.Variable("a", domain="new domain")
         av_a = pybamm.x_average(a)
         self.assertEqual(av_a.domain, [])
         self.assertIsInstance(av_a, pybamm.Division)

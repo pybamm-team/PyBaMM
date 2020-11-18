@@ -45,7 +45,10 @@ class InputParameter(pybamm.Symbol):
         Returns the scalar 'NaN' to represent the shape of a parameter.
         See :meth:`pybamm.Symbol.evaluate_for_shape()`
         """
-        return np.nan * np.ones((self._expected_size, 1))
+        if self._expected_size == 1:
+            return np.nan
+        else:
+            return np.nan * np.ones((self._expected_size, 1))
 
     def _jac(self, variable):
         """ See :meth:`pybamm.Symbol._jac()`. """
@@ -59,7 +62,7 @@ class InputParameter(pybamm.Symbol):
         if not isinstance(inputs, dict):
             # if the special input "shape test" is passed, just return 1
             if inputs == "shape test":
-                return np.ones((self._expected_size, 1))
+                return self.evaluate_for_shape()
             raise TypeError("inputs should be a dictionary")
         try:
             input_eval = inputs[self.name]
