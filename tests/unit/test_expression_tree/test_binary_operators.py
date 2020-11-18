@@ -407,7 +407,7 @@ class TestBinaryOperators(unittest.TestCase):
         v = pybamm.Vector(np.zeros((10, 1)))
 
         broad0 = pybamm.PrimaryBroadcast(0, "domain")
-        broad1 = pybamm.PrimaryBroadcast(1, "domain")
+        # broad1 = pybamm.PrimaryBroadcast(1, "domain")
 
         # addition
         self.assertIsInstance((a + b), pybamm.Scalar)
