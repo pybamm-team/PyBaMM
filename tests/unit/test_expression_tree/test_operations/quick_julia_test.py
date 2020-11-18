@@ -3,21 +3,12 @@
 #
 import pybamm
 
-from tests import (
-    get_mesh_for_testing,
-    get_1p1d_mesh_for_testing,
-    get_discretisation_for_testing,
-    get_1p1d_discretisation_for_testing,
-)
-import unittest
 import numpy as np
-import scipy.sparse
-from collections import OrderedDict
 
 from julia import Main
 
 
-model = pybamm.lithium_ion.SPM()
+model = pybamm.lithium_ion.DFN()
 # var = pybamm.standard_spatial_vars
 # var_pts = {var.x_n: 30, var.x_s: 30, var.x_p: 30, var.r_n: 10, var.r_p: 10}
 var_pts = model.default_var_pts
@@ -28,25 +19,25 @@ timescale = param.evaluate(model.timescale)
 sol = sim.solve(np.linspace(0, 0.15 * timescale, 100))
 print(sol.y[:, -1])
 print(sol.integration_time)
-# expr = pybamm.NumpyConcatenation(
-#     sim.built_model.concatenated_rhs, sim.built_model.concatenated_algebraic
-# ).simplify()
-expr = sim.built_model.concatenated_rhs.simplify()
+expr = pybamm.NumpyConcatenation(
+    sim.built_model.concatenated_rhs, sim.built_model.concatenated_algebraic
+)  # .simplify()
+# expr = sim.built_model.concatenated_rhs.simplify()
 
+expr = sim.built_model.concatenated_algebraic  # .children[-1]
 evaluator_str = pybamm.get_julia_function(expr)
 n_rhs = sim.built_model.concatenated_rhs.size
 n_alg = sim.built_model.concatenated_algebraic.size
-# np.set_printoptions(
-#     threshold=100
-#     # max(
-#     #     np.get_printoptions()["threshold"],
-#     #     n_rhs + n_alg,
-#     # )
-# )
-with open("tmp_SPM_30.txt", "w") as f:
-    f.write(evaluator_str + "\n\n")
-    f.write(f"u0 = {np.array2string(sol.model.y0.full().flatten(), separator=',')}\n")
-    # f.write(f"du0 = zeros({n_rhs + n_alg})\n")
+np.set_printoptions(
+    threshold=max(
+        np.get_printoptions()["threshold"],
+        n_rhs + n_alg,
+    )
+)
+with open("tmp_debug.jl", "w") as f:
+    f.write(evaluator_str)
+    f.write(f"u0 = {np.array2string(sol.model.y0, separator=',')}\n")
+    f.write(f"du0 = zeros({n_rhs + n_alg})\n")
     # f.write(f"differential_vars=[ones({n_rhs});zeros({n_alg})]\n")
 
 # expr2 = sim.built_model.variables["Terminal voltage [V]"]
@@ -55,8 +46,8 @@ with open("tmp_SPM_30.txt", "w") as f:
 #     f.write(evaluator_str2 + "\n\n")
 
 Main.eval(evaluator_str)
-Main.dy = np.zeros(n_rhs + n_alg)
-Main.y = sol.model.y0.full().flatten()
+Main.dy = np.zeros(expr.shape[0])
+Main.y = sol.model.y0
 Main.eval("f(dy,y,0,0)")
 # print(Main.dy)
 # expr.evaluate(y=sol.model.y0)
