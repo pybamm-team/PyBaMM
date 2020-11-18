@@ -126,7 +126,6 @@ def is_matrix_one(expr):
     Utility function to test if an expression evaluates to a constant matrix one
     """
     if isinstance(expr, pybamm.Broadcast):
-        print("to")
         return is_scalar_one(expr.child) or is_matrix_one(expr.child)
 
     if is_constant(expr):
@@ -236,6 +235,14 @@ def simplified_multiplication(left, right):
         return right
     if is_scalar_one(right):
         return left
+
+    # anything multiplied by a matrix one returns itself if the shapes are the same
+    # (and possibly more generally, but not implemented here)
+    if left.shape_for_testing == right.shape_for_testing:
+        if is_matrix_one(left):
+            return right
+        elif is_matrix_one(right):
+            return left
 
     return pybamm.simplify_if_constant(
         pybamm.Multiplication(left, right), clear_domains=False

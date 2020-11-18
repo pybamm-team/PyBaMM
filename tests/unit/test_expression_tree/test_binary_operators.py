@@ -146,10 +146,10 @@ class TestBinaryOperators(unittest.TestCase):
     def test_printing(self):
         # This in not an exhaustive list of all cases. More test cases may need to
         # be added for specific combinations of binary operators
-        a = pybamm.Symbol("a")
-        b = pybamm.Symbol("b")
-        c = pybamm.Symbol("c")
-        d = pybamm.Symbol("d")
+        a = pybamm.Parameter("a")
+        b = pybamm.Parameter("b")
+        c = pybamm.Parameter("c")
+        d = pybamm.Parameter("d")
         self.assertEqual(str(a + b), "a + b")
         self.assertEqual(str(a + b + c + d), "a + b + c + d")
         self.assertEqual(str((a + b) + (c + d)), "a + b + c + d")
@@ -405,9 +405,11 @@ class TestBinaryOperators(unittest.TestCase):
         c = pybamm.Parameter("c")
         e = pybamm.Scalar(2)
         v = pybamm.Vector(np.zeros((10, 1)))
+        v1 = pybamm.Vector(np.ones((10, 1)))
 
+        var = pybamm.Variable("var", domain="domain")
         broad0 = pybamm.PrimaryBroadcast(0, "domain")
-        # broad1 = pybamm.PrimaryBroadcast(1, "domain")
+        broad1 = pybamm.PrimaryBroadcast(1, "domain")
 
         # addition
         self.assertIsInstance((a + b), pybamm.Scalar)
@@ -456,16 +458,21 @@ class TestBinaryOperators(unittest.TestCase):
 
         # multiplication with matrix zero
         self.assertIsInstance((b * v), pybamm.Array)
-        np.testing.assert_array_equal((b + v).evaluate(), np.ones((10, 1)))
+        np.testing.assert_array_equal((b * v).evaluate(), np.zeros((10, 1)))
         self.assertIsInstance((v * b), pybamm.Array)
-        np.testing.assert_array_equal((v + b).evaluate(), np.ones((10, 1)))
+        np.testing.assert_array_equal((v * b).evaluate(), np.zeros((10, 1)))
+        # multiplication with matrix one
+        self.assertIsInstance((e * v1), pybamm.Array)
+        np.testing.assert_array_equal((e * v1).evaluate(), 2 * np.ones((10, 1)))
+        self.assertIsInstance((v1 * e), pybamm.Array)
+        np.testing.assert_array_equal((v1 * e).evaluate(), 2 * np.ones((10, 1)))
         # multiplication with broadcast one
-        # self.assertIsInstance((e * broad1), pybamm.FullBroadcast)
-        # np.testing.assert_array_equal((e * broad1).child.evaluate(), 2)
-        # np.testing.assert_array_equal((e * broad1).domain, "domain")
-        # self.assertIsInstance((broad1 * e), pybamm.FullBroadcast)
-        # np.testing.assert_array_equal((broad1 * e).child.evaluate(), 2)
-        # np.testing.assert_array_equal((broad1 * e).domain, "domain")
+        self.assertEqual((var * broad1).id, var.id)
+        self.assertEqual((broad1 * var).id, var.id)
+
+        # division with matrix one
+        self.assertIsInstance((e / v1), pybamm.Array)
+        np.testing.assert_array_equal((e / v1).evaluate(), 2 * np.ones((10, 1)))
 
         # test when other node is a parameter
         self.assertIsInstance((a + c), pybamm.Parameter)
