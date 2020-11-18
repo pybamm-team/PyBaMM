@@ -220,6 +220,9 @@ class TimerTime:
         if isinstance(other, numbers.Number):
             return TimerTime(other / self.value)
 
+    def __eq__(self, other):
+        return self.value == other.value
+
 
 def load_function(filename):
     """
