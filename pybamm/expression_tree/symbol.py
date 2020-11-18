@@ -238,11 +238,14 @@ def simplified_multiplication(left, right):
 
     # anything multiplied by a matrix one returns itself if the shapes are the same
     # (and possibly more generally, but not implemented here)
-    if left.shape_for_testing == right.shape_for_testing:
-        if is_matrix_one(left):
-            return right
-        elif is_matrix_one(right):
-            return left
+    try:
+        if left.shape_for_testing == right.shape_for_testing:
+            if is_matrix_one(left):
+                return right
+            elif is_matrix_one(right):
+                return left
+    except NotImplementedError:
+        pass
 
     return pybamm.simplify_if_constant(
         pybamm.Multiplication(left, right), clear_domains=False
@@ -901,9 +904,8 @@ class Symbol(anytree.NodeMixin):
 
         """
         result = self.evaluate_ignoring_errors()
-
         if isinstance(result, numbers.Number) or (
-            isinstance(result, np.ndarray) and np.prod(result.shape) == 1
+            isinstance(result, np.ndarray) and result.shape == ()
         ):
             return True
         else:

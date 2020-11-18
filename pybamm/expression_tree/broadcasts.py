@@ -341,7 +341,7 @@ def full_like(symbols, fill_value):
         sum_symbol += sym
 
     # Just return scalar if symbol shape is scalar
-    if np.prod(sum_symbol.shape_for_testing) == 1:
+    if sum_symbol.evaluates_to_number():
         return pybamm.Scalar(fill_value)
     try:
         shape = sum_symbol.shape
