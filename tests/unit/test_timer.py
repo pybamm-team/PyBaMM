@@ -53,7 +53,7 @@ class TestTimer(unittest.TestCase):
             "2 weeks, 0 days, 3 hours, 1 minute, 4 seconds",
         )
 
-    def test_timer_add(self):
+    def test_timer_operations(self):
         self.assertEqual((pybamm.TimerTime(1) + 2).value, 3)
         self.assertEqual((1 + pybamm.TimerTime(1)).value, 2)
         self.assertEqual((pybamm.TimerTime(1) - 2).value, -1)
@@ -64,6 +64,9 @@ class TestTimer(unittest.TestCase):
         self.assertEqual((pybamm.TimerTime(4) / 2).value, 2)
         self.assertEqual((pybamm.TimerTime(4) / pybamm.TimerTime(2)).value, 2)
         self.assertEqual((2 / pybamm.TimerTime(5)).value, 2 / 5)
+
+        self.assertTrue(pybamm.TimerTime(1) == pybamm.TimerTime(1))
+        self.assertTrue(pybamm.TimerTime(1) != pybamm.TimerTime(2))
 
 
 if __name__ == "__main__":

@@ -337,7 +337,7 @@ def full_like(symbols, fill_value):
     # Make a symbol that combines all the children, to get the right domain
     # that takes all the child symbols into account
     sum_symbol = symbols[0]
-    for sym in symbols:
+    for sym in symbols[1:]:
         sum_symbol += sym
 
     # Just return scalar if symbol shape is scalar

@@ -217,17 +217,16 @@ class TestSymbol(unittest.TestCase):
         self.assertEqual(pybamm.t.evaluate_ignoring_errors(t=0), 0)
         self.assertIsNone(pybamm.Parameter("a").evaluate_ignoring_errors())
         self.assertIsNone(pybamm.StateVector(slice(0, 1)).evaluate_ignoring_errors())
-        self.assertEqual(pybamm.InputParameter("a").evaluate_ignoring_errors(), 1)
+        np.testing.assert_array_equal(
+            pybamm.InputParameter("a").evaluate_ignoring_errors(), np.nan
+        )
 
     def test_symbol_is_constant(self):
         a = pybamm.Variable("a")
         self.assertFalse(a.is_constant())
 
         a = pybamm.Parameter("a")
-        self.assertTrue(a.is_constant())
-
-        a = pybamm.Scalar(1) * pybamm.Parameter("a")
-        self.assertTrue(a.is_constant())
+        self.assertFalse(a.is_constant())
 
         a = pybamm.Scalar(1) * pybamm.Variable("a")
         self.assertFalse(a.is_constant())
@@ -243,7 +242,7 @@ class TestSymbol(unittest.TestCase):
         self.assertTrue(a.evaluates_to_number())
 
         a = pybamm.Parameter("a")
-        self.assertFalse(a.evaluates_to_number())
+        self.assertTrue(a.evaluates_to_number())
 
         a = pybamm.Scalar(3) * pybamm.Time()
         self.assertTrue(a.evaluates_to_number())
@@ -265,9 +264,35 @@ class TestSymbol(unittest.TestCase):
         a = pybamm.StateVector(slice(0, 10))
         self.assertFalse(a.evaluates_to_number())
 
-        # Time variable returns true
+        # Time variable returns false
         a = 3 * pybamm.t + 2
         self.assertTrue(a.evaluates_to_number())
+
+    def test_symbol_evaluates_to_constant_number(self):
+        a = pybamm.Scalar(3)
+        self.assertTrue(a.evaluates_to_constant_number())
+
+        a = pybamm.Parameter("a")
+        self.assertFalse(a.evaluates_to_constant_number())
+
+        a = pybamm.Variable("a")
+        self.assertFalse(a.evaluates_to_constant_number())
+
+        a = pybamm.Scalar(3) - 2
+        self.assertTrue(a.evaluates_to_constant_number())
+
+        a = pybamm.Vector(np.ones(5))
+        self.assertFalse(a.evaluates_to_constant_number())
+
+        a = pybamm.Matrix(np.ones((4, 6)))
+        self.assertFalse(a.evaluates_to_constant_number())
+
+        a = pybamm.StateVector(slice(0, 10))
+        self.assertFalse(a.evaluates_to_constant_number())
+
+        # Time variable returns true
+        a = 3 * pybamm.t + 2
+        self.assertFalse(a.evaluates_to_constant_number())
 
     def test_symbol_repr(self):
         """

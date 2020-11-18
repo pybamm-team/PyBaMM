@@ -205,11 +205,11 @@ class Power(BinaryOperator):
         """ See :meth:`pybamm.BinaryOperator._binary_jac()`. """
         # apply chain rule and power rule
         left, right = self.orphans
-        if left.evaluates_to_number() and right.evaluates_to_number():
+        if left.evaluates_to_constant_number() and right.evaluates_to_constant_number():
             return pybamm.Scalar(0)
-        elif right.evaluates_to_number():
+        elif right.evaluates_to_constant_number():
             return (right * left ** (right - 1)) * left_jac
-        elif left.evaluates_to_number():
+        elif left.evaluates_to_constant_number():
             return (left ** right * pybamm.log(left)) * right_jac
         else:
             return (left ** (right - 1)) * (
@@ -306,11 +306,11 @@ class Multiplication(BinaryOperator):
         """ See :meth:`pybamm.BinaryOperator._binary_jac()`. """
         # apply product rule
         left, right = self.orphans
-        if left.evaluates_to_number() and right.evaluates_to_number():
+        if left.evaluates_to_constant_number() and right.evaluates_to_constant_number():
             return pybamm.Scalar(0)
-        elif left.evaluates_to_number():
+        elif left.evaluates_to_constant_number():
             return left * right_jac
-        elif right.evaluates_to_number():
+        elif right.evaluates_to_constant_number():
             return right * left_jac
         else:
             return right * left_jac + left * right_jac
@@ -398,11 +398,11 @@ class Division(BinaryOperator):
         """ See :meth:`pybamm.BinaryOperator._binary_jac()`. """
         # apply quotient rule
         left, right = self.orphans
-        if left.evaluates_to_number() and right.evaluates_to_number():
+        if left.evaluates_to_constant_number() and right.evaluates_to_constant_number():
             return pybamm.Scalar(0)
-        elif left.evaluates_to_number():
+        elif left.evaluates_to_constant_number():
             return -left / right ** 2 * right_jac
-        elif right.evaluates_to_number():
+        elif right.evaluates_to_constant_number():
             return left_jac / right
         else:
             return (right * left_jac - left * right_jac) / right ** 2
@@ -457,11 +457,11 @@ class Inner(BinaryOperator):
         """ See :meth:`pybamm.BinaryOperator._binary_jac()`. """
         # apply product rule
         left, right = self.orphans
-        if left.evaluates_to_number() and right.evaluates_to_number():
+        if left.evaluates_to_constant_number() and right.evaluates_to_constant_number():
             return pybamm.Scalar(0)
-        elif left.evaluates_to_number():
+        elif left.evaluates_to_constant_number():
             return left * right_jac
-        elif right.evaluates_to_number():
+        elif right.evaluates_to_constant_number():
             return right * left_jac
         else:
             return right * left_jac + left * right_jac
@@ -600,11 +600,11 @@ class Modulo(BinaryOperator):
         """ See :meth:`pybamm.BinaryOperator._binary_jac()`. """
         # apply chain rule and power rule
         left, right = self.orphans
-        if left.evaluates_to_number() and right.evaluates_to_number():
+        if left.evaluates_to_constant_number() and right.evaluates_to_constant_number():
             return pybamm.Scalar(0)
-        elif right.evaluates_to_number():
+        elif right.evaluates_to_constant_number():
             return left_jac
-        elif left.evaluates_to_number():
+        elif left.evaluates_to_constant_number():
             return -right_jac * pybamm.Floor(left / right)
         else:
             return left_jac - right_jac * pybamm.Floor(left / right)

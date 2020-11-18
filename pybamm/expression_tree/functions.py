@@ -143,7 +143,7 @@ class Function(pybamm.Symbol):
     def _function_jac(self, children_jacs):
         """ Calculate the jacobian of a function. """
 
-        if all(child.evaluates_to_number() for child in self.children):
+        if all(child.evaluates_to_constant_number() for child in self.children):
             jacobian = pybamm.Scalar(0)
         else:
             # if at least one child contains variable dependence, then
@@ -151,7 +151,7 @@ class Function(pybamm.Symbol):
             jacobian = None
             children = self.orphans
             for i, child in enumerate(children):
-                if not child.evaluates_to_number():
+                if not child.evaluates_to_constant_number():
                     jac_fun = self._function_diff(children, i) * children_jacs[i]
                     jac_fun.clear_domains()
                     if jacobian is None:

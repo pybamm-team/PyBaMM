@@ -903,13 +903,17 @@ class Symbol(anytree.NodeMixin):
         evaluate : evaluate the expression
 
         """
-        result = self.evaluate_ignoring_errors()
-        if isinstance(result, numbers.Number) or (
-            isinstance(result, np.ndarray) and result.shape == ()
-        ):
-            return True
-        else:
-            return False
+        return self.shape_for_testing == ()
+        # result = self.evaluate_ignoring_errors()
+        # if isinstance(result, numbers.Number) or (
+        #     isinstance(result, np.ndarray) and result.shape == ()
+        # ):
+        #     return True
+        # else:
+        #     return False
+
+    def evaluates_to_constant_number(self):
+        return self.evaluates_to_number() and self.is_constant()
 
     def evaluates_on_edges(self, dimension):
         """
