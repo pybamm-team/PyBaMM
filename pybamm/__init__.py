@@ -149,6 +149,7 @@ from .models.submodels import (
     thermal,
     tortuosity,
     particle_cracking,
+    loss_of_active_materials,
 )
 from .models.submodels.interface import sei
 

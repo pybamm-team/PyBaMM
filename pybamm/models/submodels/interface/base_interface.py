@@ -173,13 +173,15 @@ class BaseInterface(pybamm.BaseSubModel):
         else:
             return pybamm.Scalar(0)
 
-    def _get_surface_area_per_unit_volume(self):
+    def _get_surface_area_per_unit_volume_distribution(
+        self, ratio_LAM_n=1, ratio_LAM_p=1
+    ):
         "Returns the surface area per unit volume (which may depend on position)"
         x_n = pybamm.standard_spatial_vars.x_n
         x_p = pybamm.standard_spatial_vars.x_p
         a_n = self.param.a_n(x_n)
         a_p = self.param.a_p(x_p)
-        return a_n, a_p
+        return a_n * ratio_LAM_n, a_p * ratio_LAM_p
 
     def _get_electrolyte_reaction_signed_stoichiometry(self):
         "Returns the number of electrons in the reaction"
@@ -347,7 +349,15 @@ class BaseInterface(pybamm.BaseSubModel):
             }
         )
 
-        a_n, a_p = self._get_surface_area_per_unit_volume()
+        if "Negative electrode LAM ratio" in variables:
+            ratio_LAM_n = variables["Negative electrode LAM ratio"]
+            ratio_LAM_p = variables["Positive electrode LAM ratio"]
+        else:
+            ratio_LAM_n = 1
+            ratio_LAM_p = 1
+        a_n, a_p = self._get_surface_area_per_unit_volume_distribution(
+            ratio_LAM_n, ratio_LAM_p
+        )
         a = pybamm.Concatenation(
             a_n, pybamm.FullBroadcast(0, "separator", "current collector"), a_p
         )

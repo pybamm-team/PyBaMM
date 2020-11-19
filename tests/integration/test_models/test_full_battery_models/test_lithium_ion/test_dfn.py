@@ -224,6 +224,32 @@ class TestDFNWithCrack(unittest.TestCase):
         modeltest.test_all()
 
 
+class TestDFNWithLAM(unittest.TestCase):
+    def test_well_posed_constant_activa_material(self):
+        options = {
+            "particle": "Fickian diffusion",
+            "particle cracking": "no cracking",
+            "loss of active materials": False,
+        }
+        model = pybamm.lithium_ion.DFN(options)
+        chemistry = pybamm.parameter_sets.Ai2020
+        parameter_values = pybamm.ParameterValues(chemistry=chemistry)
+        modeltest = tests.StandardModelTest(model, parameter_values=parameter_values)
+        modeltest.test_all()
+
+    def test_well_posed_loss_of_activa_material(self):
+        options = {
+            "particle": "Fickian diffusion",
+            "particle cracking": "no cracking",
+            "loss of active materials": True,
+        }
+        model = pybamm.lithium_ion.DFN(options)
+        chemistry = pybamm.parameter_sets.Ai2020
+        parameter_values = pybamm.ParameterValues(chemistry=chemistry)
+        modeltest = tests.StandardModelTest(model, parameter_values=parameter_values)
+        modeltest.test_all()
+
+
 if __name__ == "__main__":
     print("Add -v for more debug output")
     import sys

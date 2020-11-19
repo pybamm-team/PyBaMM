@@ -101,6 +101,9 @@ class BaseBatteryModel(pybamm.BaseModel):
                         * (\\phi_s - \\phi_e - U - R_{sei} * L_{sei} * \\frac{I}{aL})
             * "sei porosity change" : bool
                 Whether to include porosity change due to SEI formation (default False)
+            * "loss of activa materials" : bool
+                Whether to include active material volume change due to stresses
+                (default False)
             * "side reactions" : list, optional
                 Contains a list of any side reactions to include. Default is []. If this
                 list is not empty (i.e. side reactions are included in the model), then
@@ -214,6 +217,7 @@ class BaseBatteryModel(pybamm.BaseModel):
             "sei porosity change": False,
             "working electrode": None,
             "particle cracking": None,
+            "loss of active materials": False,
         }
         # Change the default for cell geometry based on which thermal option is provided
         extra_options = extra_options or {}
@@ -347,6 +351,13 @@ class BaseBatteryModel(pybamm.BaseModel):
             raise pybamm.OptionError(
                 "Unknown sei porosity change '{}'".format(
                     options["sei porosity change"]
+                )
+            )
+
+        if options["loss of active materials"] not in [True, False]:
+            raise pybamm.OptionError(
+                "Unknown loss of active materials '{}'".format(
+                    options["loss of active materials"]
                 )
             )
 

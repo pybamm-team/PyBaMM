@@ -46,6 +46,7 @@ class SPM(BaseModel):
         self.set_current_collector_submodel()
         self.set_crack_submodel()
         self.set_sei_submodel()
+        self.set_loss_of_active_materials_submodels()
 
         if build:
             self.build_model()
@@ -164,3 +165,13 @@ class SPM(BaseModel):
         self.submodels[
             "electrolyte diffusion"
         ] = pybamm.electrolyte_diffusion.ConstantConcentration(self.param)
+
+    def set_loss_of_active_materials_submodels(self):
+        if self.options["loss of active materials"] is False:
+            self.submodels[
+                "loss of active materials"
+            ] = pybamm.loss_of_active_materials.Constant(self.param)
+        elif self.options["loss of active materials"] is True:
+            self.submodels[
+                "loss of active materials"
+            ] = pybamm.loss_of_active_materials.LeadingOrder(self.param)

@@ -220,6 +220,26 @@ class TestSPMWithCrack(unittest.TestCase):
         model.check_well_posedness()
 
 
+class TestSPMWithLAM(unittest.TestCase):
+    def test_well_posed_constant_active_material(self):
+        options = {
+            "particle": "Fickian diffusion",
+            "particle cracking": "no cracking",
+            "loss of active materials": False,
+        }
+        model = pybamm.lithium_ion.SPM(options)
+        model.check_well_posedness()
+
+    def test_well_posed_loss_of_active_material(self):
+        options = {
+            "particle": "Fickian diffusion",
+            "particle cracking": "no cracking",
+            "loss of active materials": True,
+        }
+        model = pybamm.lithium_ion.SPM(options)
+        model.check_well_posedness()
+
+
 if __name__ == "__main__":
     print("Add -v for more debug output")
     import sys

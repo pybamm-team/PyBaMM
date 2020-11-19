@@ -38,24 +38,36 @@ class BaseModel(pybamm.BaseSubModel):
             "X-averaged positive electrode porosity": eps_p_av,
         }
 
-        # activate material volume fractions
-        eps_solid_n = 1 - eps_n - self.param.epsilon_inactive_n
-        eps_solid_s = 1 - eps_s - self.param.epsilon_inactive_s
-        eps_solid_p = 1 - eps_p - self.param.epsilon_inactive_p
-        eps_solid = pybamm.Concatenation(eps_solid_n, eps_solid_s, eps_solid_p)
-
-        am = "active material volume fraction"
-        variables.update(
-            {
-                am.capitalize(): eps_solid,
-                "Negative electrode " + am: eps_solid_n,
-                "Separator " + am: eps_solid,
-                "Positive electrode " + am: eps_solid_p,
-                "X-averaged negative electrode " + am: pybamm.x_average(eps_solid_n),
-                "X-averaged separator " + am: pybamm.x_average(eps_solid),
-                "X-averaged positive electrode " + am: pybamm.x_average(eps_solid_p),
-            }
-        )
+        # # below is not right. active material should not be increased with decreasing
+        # # porosity, but the inactive part should increase instead
+        # # activate material volume fractions
+        if "Activate material volume fractions" not in variables:
+            eps_solid_n = pybamm.FullBroadcast(
+                1 - self.param.epsilon_n_init - self.param.epsilon_inactive_n,
+                "negative electrode",
+                "current collector",
+            )
+            eps_solid_s = pybamm.FullBroadcast(0, "separator", "current collector")
+            eps_solid_p = pybamm.FullBroadcast(
+                1 - self.param.epsilon_p_init - self.param.epsilon_inactive_p,
+                "positive electrode",
+                "current collector",
+            )
+            eps_solid = pybamm.Concatenation(eps_solid_n, eps_solid_s, eps_solid_p)
+            am = "active material volume fraction"
+            variables.update(
+                {
+                    am.capitalize(): eps_solid,
+                    "Negative electrode " + am: eps_solid_n,
+                    "Separator " + am: eps_solid_s,
+                    "Positive electrode " + am: eps_solid_p,
+                    "X-averaged negative electrode "
+                    + am: pybamm.x_average(eps_solid_n),
+                    "X-averaged separator " + am: pybamm.x_average(eps_solid_s),
+                    "X-averaged positive electrode "
+                    + am: pybamm.x_average(eps_solid_p),
+                }
+            )
 
         if set_leading_order is True:
             leading_order_variables = {
