@@ -643,7 +643,7 @@ class BaseSolver(object):
         # object, restarting the solver at each discontinuity (and recalculating a
         # consistent state afterwards if a dae)
         old_y0 = model.y0
-        solution = None
+        solutions = None
         for start_index, end_index in zip(start_indices, end_indices):
             pybamm.logger.info(
                 "Calling solver for {} < t < {}".format(
@@ -651,46 +651,55 @@ class BaseSolver(object):
                     t_eval_dimensionless[end_index - 1] * model.timescale_eval,
                 )
             )
-            new_solution = self._integrate(
-                model, t_eval_dimensionless[start_index:end_index], ext_and_inputs
+            ninputs = len(ext_and_inputs_list)
+            new_solutions = list(
+                map(
+                    self._integrate,
+                    [model] * ninputs,
+                    [t_eval_dimensionless[start_index:end_index]] * ninputs,
+                    ext_and_inputs_list
+                )
             )
-            new_solution.solve_time = timer.time()
-            if solution is None:
-                solution = new_solution
+            new_solutions.solve_time = timer.time()
+            if start_index == start_indices[0]:
+                solutions = [sol for sol in new_solutions]
             else:
-                solution.append(new_solution, start_index=0)
+                for i, new_solution in enumerate(new_solutions):
+                    solutions[i].append(new_solution, start_index=0)
 
-            if solution.termination != "final time":
+            if solutions[0].termination != "final time":
                 break
 
             if end_index != len(t_eval_dimensionless):
                 # setup for next integration subsection
-                last_state = solution.y[:, -1]
+                last_states = [sol.y[:, -1] for sol in solutions]
                 # update y0 (for DAE solvers, this updates the initial guess for the
                 # rootfinder)
-                model.y0 = last_state
                 if len(model.algebraic) > 0:
-                    model.y0 = self.calculate_consistent_state(
-                        model, t_eval_dimensionless[end_index], ext_and_inputs
-                    )
+                    for i, last_state in enumerate(last_states):
+                        model.y0 = last_state
+                        last_states[i] = self.calculate_consistent_state(
+                            model, t_eval_dimensionless[end_index], ext_and_inputs_list[0]
+                        )
+                model.y0 = last_states
 
-        # Assign times
-        solution.set_up_time = set_up_time
-        solution.solve_time = timer.time()
+        for solution in solutions:
+            # Assign times
+            solution.set_up_time = set_up_time
+            solution.solve_time = timer.time()
+            # Add model and inputs to solution
+            solution.model = model
+            solution.inputs = ext_and_inputs_list
+
+            # Copy the timescale_eval and lengthscale_evals
+            solution.timescale_eval = model.timescale_eval
+            solution.length_scales_eval = model.length_scales_eval
+
+        # Identify the event that caused termination
+        termination = self.get_termination_reason(solution[0], model.events)
 
         # restore old y0
         model.y0 = old_y0
-
-        # Add model and inputs to solution
-        solution.model = model
-        solution.inputs = ext_and_inputs
-
-        # Copy the timescale_eval and lengthscale_evals
-        solution.timescale_eval = model.timescale_eval
-        solution.length_scales_eval = model.length_scales_eval
-
-        # Identify the event that caused termination
-        termination = self.get_termination_reason(solution, model.events)
 
         pybamm.logger.info("Finish solving {} ({})".format(model.name, termination))
         pybamm.logger.info(
