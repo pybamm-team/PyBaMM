@@ -651,6 +651,14 @@ class TestEvaluate(unittest.TestCase):
         evaluator.debug(y=y_test)
 
     @unittest.skipIf(system() == "Windows", "JAX not supported on windows")
+    def test_evaluator_jax_inputs(self):
+        a = pybamm.InputParameter('a')
+        expr = a ** 2
+        evaluator = pybamm.EvaluatorJax(expr)
+        result = evaluator.evaluate(inputs={'a': 2})
+        self.assertEqual(result, 4)
+
+    @unittest.skipIf(system() == "Windows", "JAX not supported on windows")
     def test_jax_coo_matrix(self):
         import jax
         A = pybamm.JaxCooMatrix([0, 1], [0, 1], [1.0, 2.0], (2, 2))

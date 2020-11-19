@@ -436,6 +436,7 @@ class EvaluatorPython:
     def __init__(self, symbol):
         constants, python_str = pybamm.to_python(symbol, debug=False)
 
+
         # extract constants in generated function
         for i, symbol_id in enumerate(constants.keys()):
             const_name = id_to_python_variable(symbol_id, True)
@@ -483,6 +484,8 @@ class EvaluatorPython:
         # generated code assumes y is a column vector
         if y is not None and y.ndim == 1:
             y = y.reshape(-1, 1)
+
+        # get all
 
         result = self._evaluate(self._constants, t, y, y_dot, inputs, known_evals)
 
@@ -576,7 +579,7 @@ class EvaluatorJax:
         exec(compiled_function)
 
         n = len(arg_list)
-        static_argnums = tuple(static_argnums) + (3 + n, 4 + n)
+        static_argnums = tuple(static_argnums)
         self._jit_evaluate = jax.jit(self._evaluate_jax,
                                      static_argnums=static_argnums)
 

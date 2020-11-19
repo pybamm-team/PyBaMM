@@ -255,14 +255,13 @@ def _compute_R(order, factor):
 
     return R
 
-
 def _select_initial_conditions(fun, M, t0, y0, tol, scale_y0):
     # identify algebraic variables as zeros on diagonal
-    algebraic_variables = jnp.diag(M == 0.0)
+    algebraic_variables = onp.diag(M) == 0.0
 
     # if all differentiable variables then return y0 (can use normal python if since M
     # is static)
-    if not jnp.any(algebraic_variables):
+    if not onp.any(algebraic_variables):
         return y0, False
 
     # calculate consistent initial conditions via a newton on -J_a @ delta = f_a This
@@ -706,6 +705,7 @@ def _bdf_interpolate(state, t_eval):
     return order_summation
 
 
+@jax.partial(jax.jit, static_argnums=(0,))
 def block_diag(lst):
     def block_fun(i, j, Ai, Aj):
         if i == j:
@@ -846,10 +846,12 @@ def flax_scan(f, init, xs, length=None):  # pragma: no cover
 @jax.partial(jax.jit, static_argnums=(0, 1, 2, 3))
 def _bdf_odeint_wrapper(func, mass, rtol, atol, y0, ts, *args):
     y0, unravel = ravel_pytree(y0)
+    print('MASDFASDFSAD', mass)
     if mass is None:
         mass = onp.identity(y0.shape[0], dtype=y0.dtype)
     else:
         mass = block_diag(tree_flatten(mass)[0])
+    print('MASDFASDFSAD', mass)
     func = ravel_first_arg(func, unravel)
     out = _bdf_odeint(func, mass, rtol, atol, y0, ts, *args)
     return jax.vmap(unravel)(out)
@@ -883,10 +885,10 @@ def _bdf_odeint_rev(func, mass, rtol, atol, res, g):
 
         return (-y_dot, y_bar_dot, *rest)
 
-    algebraic_variables = jnp.diag(mass) == 0.0
+    algebraic_variables = onp.diag(mass) == 0.0
     differentiable_variables = algebraic_variables == False  # noqa: E712
-    mass_is_I = (mass == jnp.eye(mass.shape[0])).all()
-    is_dae = jnp.any(algebraic_variables)
+    mass_is_I = onp.array_equal(mass, onp.eye(mass.shape[0]))
+    is_dae = onp.any(algebraic_variables)
 
     if not mass_is_I:
         M_dd = mass[onp.ix_(differentiable_variables, differentiable_variables)]
@@ -921,7 +923,8 @@ def _bdf_odeint_rev(func, mass, rtol, atol, res, g):
     def arg_to_identity(arg):
         return onp.identity(arg.shape[0] if arg.ndim > 0 else 1, dtype=arg.dtype)
 
-    aug_mass = (mass, mass, jnp.array(1.0), tree_map(arg_to_identity, args))
+    aug_mass = (mass, mass, onp.array(1.0), tree_map(arg_to_identity, args))
+    print('AUG_MASS', aug_mass)
 
     def scan_fun(carry, i):
         y_bar, t0_bar, args_bar = carry
@@ -956,26 +959,29 @@ _bdf_odeint.defvjp(_bdf_odeint_fwd, _bdf_odeint_rev)
 
 @cache()
 def closure_convert(fun, in_tree, in_avals):
-    in_pvals = [pe.PartialVal.unknown(aval) for aval in in_avals]
-    wrapped_fun, out_tree = flatten_fun_nokwargs(lu.wrap_init(fun), in_tree)
-    with core.initial_style_staging():
-        jaxpr, _, consts = pe.trace_to_jaxpr(
-            wrapped_fun, in_pvals, instantiate=True, stage_out=False
-        )
+    if config.omnistaging_enabled:
+        wrapped_fun, out_tree = flatten_fun_nokwargs(lu.wrap_init(fun), in_tree)
+        jaxpr, out_pvals, consts = pe.trace_to_jaxpr_dynamic(wrapped_fun, in_avals)
+    else:
+        in_pvals = [pe.PartialVal.unknown(aval) for aval in in_avals]
+        wrapped_fun, out_tree = flatten_fun_nokwargs(lu.wrap_init(fun), in_tree)
+        with core.initial_style_staging():  # type: ignore
+            jaxpr, out_pvals, consts = pe.trace_to_jaxpr(
+                wrapped_fun, in_pvals, instantiate=True, stage_out=False)  # type: ignore
     out_tree = out_tree()
 
     # We only want to closure convert for constants with respect to which we're
     # differentiating. As a proxy for that, we hoist consts with float dtype.
     # TODO(mattjj): revise this approach
-    (closure_consts, hoisted_consts), merge = partition_list(
-        lambda c: dtypes.issubdtype(dtypes.dtype(c), jnp.inexact), consts
-    )
+    def is_float(c): return dtypes.issubdtype(dtypes.dtype(c), jnp.inexact)
+    (closure_consts, hoisted_consts), merge = partition_list(is_float, consts)
     num_consts = len(hoisted_consts)
 
     def converted_fun(y, t, *hconsts_args):
         hoisted_consts, args = split_list(hconsts_args, [num_consts])
         consts = merge(closure_consts, hoisted_consts)
-        all_args, _ = tree_flatten((y, t, *args))
+        all_args, in_tree2 = tree_flatten((y, t, *args))
+        assert in_tree == in_tree2
         out_flat = core.eval_jaxpr(jaxpr, consts, *all_args)
         return tree_unflatten(out_tree, out_flat)
 
