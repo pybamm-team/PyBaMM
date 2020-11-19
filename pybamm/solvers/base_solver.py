@@ -495,7 +495,7 @@ class BaseSolver(object):
             y0 = y0.flatten()
         return y0
 
-    def solve(self, model, t_eval=None, external_variables=None, inputs=None):
+    def solve(self, model, t_eval=None, external_variables=None, inputs_list=None):
         """
         Execute the solver setup and calculate the solution of the model at
         specified times.
@@ -555,14 +555,17 @@ class BaseSolver(object):
             raise pybamm.SolverError("t_eval must increase monotonically")
 
         # Set up external variables and inputs
-        ext_and_inputs = self._set_up_ext_and_inputs(model, external_variables, inputs)
+        ext_and_inputs_list = [
+            self._set_up_ext_and_inputs(model, external_variables, inputs)
+            for inputs in inputs_list
+        ]
 
         # Set up
         timer = pybamm.Timer()
 
         # Set up (if not done already)
         if model not in self.models_set_up:
-            self.set_up(model, ext_and_inputs, t_eval)
+            self.set_up(model, ext_and_inputs_list[0], t_eval)
             self.models_set_up.update(
                 {model: {"initial conditions": model.concatenated_initial_conditions}}
             )
@@ -573,7 +576,7 @@ class BaseSolver(object):
                 # If the new initial conditions are different, set up again
                 # Doing the whole setup again might be slow, but no need to prematurely
                 # optimize this
-                self.set_up(model, ext_and_inputs, t_eval)
+                self.set_up(model, ext_and_inputs_list[0], t_eval)
                 self.models_set_up[model][
                     "initial conditions"
                 ] = model.concatenated_initial_conditions
@@ -581,14 +584,14 @@ class BaseSolver(object):
         timer.reset()
 
         # (Re-)calculate consistent initial conditions
-        self._set_initial_conditions(model, ext_and_inputs, update_rhs=True)
+        self._set_initial_conditions(model, ext_and_inputs_list[0], update_rhs=True)
 
         # Non-dimensionalise time
         t_eval_dimensionless = t_eval / model.timescale_eval
 
         # Calculate discontinuities
         discontinuities = [
-            event.expression.evaluate(inputs=inputs)
+            event.expression.evaluate(inputs=inputs_list[0])
             for event in model.discontinuity_events_eval
         ]
 
