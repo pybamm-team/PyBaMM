@@ -37,6 +37,7 @@ if system() != "Windows":
         shape: 2-element tuple (x, y)
             where x is the number of rows, and y the number of columns of the matrix
         """
+
         def __init__(self, row, col, data, shape):
             self.row = jax.numpy.array(row)
             self.col = jax.numpy.array(col)
@@ -435,7 +436,6 @@ class EvaluatorPython:
 
     def __init__(self, symbol):
         constants, python_str = pybamm.to_python(symbol, debug=False)
-
 
         # extract constants in generated function
         for i, symbol_id in enumerate(constants.keys()):

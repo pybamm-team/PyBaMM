@@ -13,6 +13,8 @@ from jax.tree_util import tree_map, tree_flatten, tree_unflatten, tree_multimap,
 from jax.interpreters import partial_eval as pe
 from jax import linear_util as lu
 from jax.config import config
+from absl import logging
+logging.set_verbosity(logging.ERROR)
 
 config.update("jax_enable_x64", True)
 
@@ -254,6 +256,7 @@ def _compute_R(order, factor):
     R = jnp.cumprod(M, axis=0)
 
     return R
+
 
 def _select_initial_conditions(fun, M, t0, y0, tol, scale_y0):
     # identify algebraic variables as zeros on diagonal
@@ -705,13 +708,12 @@ def _bdf_interpolate(state, t_eval):
     return order_summation
 
 
-@jax.partial(jax.jit, static_argnums=(0,))
 def block_diag(lst):
     def block_fun(i, j, Ai, Aj):
         if i == j:
             return Ai
         else:
-            return jnp.zeros(
+            return onp.zeros(
                 (
                     Ai.shape[0] if Ai.ndim > 1 else 1,
                     Aj.shape[1] if Aj.ndim > 1 else 1,
@@ -724,7 +726,7 @@ def block_diag(lst):
         for i, Ai in enumerate(lst)
     ]
 
-    return jnp.block(blocks)
+    return onp.block(blocks)
 
 
 # NOTE: the code below (except the docstring on jax_bdf_integrate and other minor
@@ -846,12 +848,10 @@ def flax_scan(f, init, xs, length=None):  # pragma: no cover
 @jax.partial(jax.jit, static_argnums=(0, 1, 2, 3))
 def _bdf_odeint_wrapper(func, mass, rtol, atol, y0, ts, *args):
     y0, unravel = ravel_pytree(y0)
-    print('MASDFASDFSAD', mass)
     if mass is None:
         mass = onp.identity(y0.shape[0], dtype=y0.dtype)
     else:
         mass = block_diag(tree_flatten(mass)[0])
-    print('MASDFASDFSAD', mass)
     func = ravel_first_arg(func, unravel)
     out = _bdf_odeint(func, mass, rtol, atol, y0, ts, *args)
     return jax.vmap(unravel)(out)
@@ -923,8 +923,11 @@ def _bdf_odeint_rev(func, mass, rtol, atol, res, g):
     def arg_to_identity(arg):
         return onp.identity(arg.shape[0] if arg.ndim > 0 else 1, dtype=arg.dtype)
 
-    aug_mass = (mass, mass, onp.array(1.0), tree_map(arg_to_identity, args))
-    print('AUG_MASS', aug_mass)
+    def arg_dicts_to_values(args):
+        return sum((tuple(b.values()) for b in args), ())
+
+    aug_mass = (mass, mass, onp.array(1.0)) + \
+        arg_dicts_to_values(tree_map(arg_to_identity, args))
 
     def scan_fun(carry, i):
         y_bar, t0_bar, args_bar = carry
@@ -967,13 +970,15 @@ def closure_convert(fun, in_tree, in_avals):
         wrapped_fun, out_tree = flatten_fun_nokwargs(lu.wrap_init(fun), in_tree)
         with core.initial_style_staging():  # type: ignore
             jaxpr, out_pvals, consts = pe.trace_to_jaxpr(
-                wrapped_fun, in_pvals, instantiate=True, stage_out=False)  # type: ignore
+                wrapped_fun, in_pvals, instantiate=True, stage_out=False
+            )  # type: ignore
     out_tree = out_tree()
 
     # We only want to closure convert for constants with respect to which we're
     # differentiating. As a proxy for that, we hoist consts with float dtype.
     # TODO(mattjj): revise this approach
-    def is_float(c): return dtypes.issubdtype(dtypes.dtype(c), jnp.inexact)
+    def is_float(c):
+        return dtypes.issubdtype(dtypes.dtype(c), jnp.inexact)
     (closure_consts, hoisted_consts), merge = partition_list(is_float, consts)
     num_consts = len(hoisted_consts)
 
