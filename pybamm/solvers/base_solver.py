@@ -660,7 +660,6 @@ class BaseSolver(object):
                     ext_and_inputs_list
                 )
             )
-            new_solutions.solve_time = timer.time()
             if start_index == start_indices[0]:
                 solutions = [sol for sol in new_solutions]
             else:
