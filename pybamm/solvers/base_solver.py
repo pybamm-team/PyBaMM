@@ -682,13 +682,13 @@ class BaseSolver(object):
                         )
                 model.y0 = last_states
 
-        for solution in solutions:
+        for i, solution in enumerate(solutions):
             # Assign times
             solution.set_up_time = set_up_time
             solution.solve_time = timer.time()
             # Add model and inputs to solution
             solution.model = model
-            solution.inputs = ext_and_inputs_list
+            solution.inputs = ext_and_inputs_list[i]
 
             # Copy the timescale_eval and lengthscale_evals
             solution.timescale_eval = model.timescale_eval
