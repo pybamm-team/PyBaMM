@@ -695,7 +695,7 @@ class BaseSolver(object):
             solution.length_scales_eval = model.length_scales_eval
 
         # Identify the event that caused termination
-        termination = self.get_termination_reason(solution[0], model.events)
+        termination = self.get_termination_reason(solutions[0], model.events)
 
         # restore old y0
         model.y0 = old_y0
@@ -717,7 +717,7 @@ class BaseSolver(object):
                 "Check whether simulation terminated too early."
             )
 
-        return solution
+        return solutions
 
     def step(
         self,
