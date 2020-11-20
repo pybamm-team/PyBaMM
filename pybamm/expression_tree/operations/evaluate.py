@@ -485,8 +485,6 @@ class EvaluatorPython:
         if y is not None and y.ndim == 1:
             y = y.reshape(-1, 1)
 
-        # get all
-
         result = self._evaluate(self._constants, t, y, y_dot, inputs, known_evals)
 
         # don't need known_evals, but need to reproduce Symbol.evaluate signature
