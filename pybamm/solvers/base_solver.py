@@ -8,6 +8,7 @@ import numbers
 import numpy as np
 import sys
 import itertools
+import multiprocessing as mp
 
 
 class BaseSolver(object):
@@ -652,14 +653,16 @@ class BaseSolver(object):
                 )
             )
             ninputs = len(ext_and_inputs_list)
-            new_solutions = list(
-                map(
+            with mp.Pool(processes=2) as p:
+                new_solutions = p.starmap(
                     self._integrate,
-                    [model] * ninputs,
-                    [t_eval_dimensionless[start_index:end_index]] * ninputs,
-                    ext_and_inputs_list
+                    zip(
+                        [model] * ninputs,
+                        [t_eval_dimensionless[start_index:end_index]] * ninputs,
+                        ext_and_inputs_list
+                    )
                 )
-            )
+
             if start_index == start_indices[0]:
                 solutions = [sol for sol in new_solutions]
             else:
