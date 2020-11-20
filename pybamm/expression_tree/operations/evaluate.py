@@ -37,6 +37,7 @@ if system() != "Windows":
         shape: 2-element tuple (x, y)
             where x is the number of rows, and y the number of columns of the matrix
         """
+
         def __init__(self, row, col, data, shape):
             self.row = jax.numpy.array(row)
             self.col = jax.numpy.array(col)
@@ -523,22 +524,34 @@ class EvaluatorJax:
             if isinstance(constants[symbol_id], np.ndarray):
                 constants[symbol_id] = jax.device_put(constants[symbol_id])
 
-        # extract constants in generated function
-        for i, symbol_id in enumerate(constants.keys()):
-            const_name = id_to_python_variable(symbol_id, True)
-            python_str = "{} = constants[{}]\n".format(const_name, i) + python_str
+        # get a list of constant arguments to input to the function
+        arg_list = [
+            id_to_python_variable(symbol_id, True)
+            for symbol_id in constants.keys()
+        ]
 
-        # constants passed in as an ordered dict, convert to list
-        self._constants = list(constants.values())
+        # get a list of hashable arguments to make static
+        # a jax device array is not hashable
+        static_argnums = (
+            i for i, c in enumerate(constants.values())
+            if not (
+                isinstance(c, jax.interpreters.xla.DeviceArray)
+            )
+        )
+
+        # store constants
+        self._constants = tuple(constants.values())
 
         # indent code
         python_str = "   " + python_str
         python_str = python_str.replace("\n", "\n   ")
 
         # add function def to first line
+        args = 't=None, y=None, y_dot=None, inputs=None, known_evals=None'
+        if arg_list:
+            args = ','.join(arg_list) + ', ' + args
         python_str = (
-            "def evaluate_jax(constants, t=None, y=None, "
-            "y_dot=None, inputs=None, known_evals=None):\n" + python_str
+            "def evaluate_jax({}):\n".format(args) + python_str
         )
 
         # calculate the final variable that will output the result of calling `evaluate`
@@ -563,11 +576,15 @@ class EvaluatorJax:
         compiled_function = compile(python_str, result_var, "exec")
         exec(compiled_function)
 
-        self._jit_evaluate = jax.jit(self._evaluate_jax, static_argnums=(0, 4, 5))
+        n = len(arg_list)
+        static_argnums = tuple(static_argnums)
+        self._jit_evaluate = jax.jit(self._evaluate_jax,
+                                     static_argnums=static_argnums)
 
         # store a jit version of evaluate_jax's jacobian
-        jacobian_evaluate = jax.jacfwd(self._evaluate_jax, argnums=2)
-        self._jac_evaluate = jax.jit(jacobian_evaluate, static_argnums=(0, 4, 5))
+        jacobian_evaluate = jax.jacfwd(self._evaluate_jax, argnums=1 + n)
+        self._jac_evaluate = jax.jit(jacobian_evaluate,
+                                     static_argnums=static_argnums)
 
     def get_jacobian(self):
         return EvaluatorJaxJacobian(self._jac_evaluate, self._constants)
@@ -579,7 +596,7 @@ class EvaluatorJax:
 
         # execute code
         jaxpr = jax.make_jaxpr(self._evaluate_jax)(
-            self._constants, t, y, y_dot, inputs, known_evals
+            *self._constants, t, y, y_dot, inputs, known_evals
         ).jaxpr
         print("invars:", jaxpr.invars)
         print("outvars:", jaxpr.outvars)
@@ -597,7 +614,7 @@ class EvaluatorJax:
         if y is not None and y.ndim == 1:
             y = y.reshape(-1, 1)
 
-        result = self._jit_evaluate(self._constants, t, y, y_dot, inputs, known_evals)
+        result = self._jit_evaluate(*self._constants, t, y, y_dot, inputs, known_evals)
 
         # don't need known_evals, but need to reproduce Symbol.evaluate signature
         if known_evals is not None:
@@ -620,7 +637,7 @@ class EvaluatorJaxJacobian:
             y = y.reshape(-1, 1)
 
         # execute code
-        result = self._jac_evaluate(self._constants, t, y, y_dot, inputs, known_evals)
+        result = self._jac_evaluate(*self._constants, t, y, y_dot, inputs, known_evals)
         result = result.reshape(result.shape[0], -1)
 
         # don't need known_evals, but need to reproduce Symbol.evaluate signature
