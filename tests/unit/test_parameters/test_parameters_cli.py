@@ -82,11 +82,7 @@ class TestParametersCLI(unittest.TestCase):
         sandbox_dir = tempfile.TemporaryDirectory()
 
         # Copy temporary dir in package to current working directory
-        cmd = [
-            "pybamm_edit_parameter",
-            "-f",
-            chemistry,
-        ]
+        cmd = ["pybamm_edit_parameter", "-f", chemistry]
         subprocess.run(cmd, cwd=sandbox_dir.name)
 
         # Read and compare copied parameters.csv file

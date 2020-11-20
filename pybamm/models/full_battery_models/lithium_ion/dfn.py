@@ -44,6 +44,7 @@ class DFN(BaseModel):
         self.set_electrolyte_submodel()
         self.set_thermal_submodel()
         self.set_current_collector_submodel()
+        self.set_crack_submodel()
         self.set_sei_submodel()
 
         if build:
