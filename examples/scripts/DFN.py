@@ -9,8 +9,7 @@ pybamm.set_logging_level("INFO")
 
 
 # load model
-model = pybamm.lithium_ion.SPMe()
-model.events = []
+model = pybamm.lithium_ion.DFN()
 
 # create geometry
 geometry = model.default_geometry
@@ -31,13 +30,8 @@ disc.process_model(model)
 
 # solve model
 t_eval = np.linspace(0, 3600, 100)
-#solver = pybamm.CasadiSolver(mode="fast", atol=1e-6, rtol=1e-3)
-model.convert_to_format = 'jax'
-solver = pybamm.JaxSolver(method='BDF', atol=1e-6, rtol=1e-3)
+solver = pybamm.CasadiSolver(mode="fast", atol=1e-6, rtol=1e-3)
 solution = solver.solve(model, t_eval)
-solution = solver.solve(model, t_eval)
-print(solution.solve_time)
-print(solution.integration_time)
 
 # plot
 plot = pybamm.QuickPlot(
