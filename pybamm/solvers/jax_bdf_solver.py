@@ -924,7 +924,10 @@ def _bdf_odeint_rev(func, mass, rtol, atol, res, g):
         return onp.identity(arg.shape[0] if arg.ndim > 0 else 1, dtype=arg.dtype)
 
     def arg_dicts_to_values(args):
-        return sum((tuple(b.values()) for b in args), ())
+        """
+        Note: JAX puts in empty arrays into args for some reason, we remove them here
+        """
+        return sum((tuple(b.values()) for b in args if isinstance(b, dict)), ())
 
     aug_mass = (mass, mass, onp.array(1.0)) + \
         arg_dicts_to_values(tree_map(arg_to_identity, args))
@@ -964,12 +967,12 @@ _bdf_odeint.defvjp(_bdf_odeint_fwd, _bdf_odeint_rev)
 def closure_convert(fun, in_tree, in_avals):
     if config.omnistaging_enabled:
         wrapped_fun, out_tree = flatten_fun_nokwargs(lu.wrap_init(fun), in_tree)
-        jaxpr, out_pvals, consts = pe.trace_to_jaxpr_dynamic(wrapped_fun, in_avals)
+        jaxpr, _, consts = pe.trace_to_jaxpr_dynamic(wrapped_fun, in_avals)
     else:
         in_pvals = [pe.PartialVal.unknown(aval) for aval in in_avals]
         wrapped_fun, out_tree = flatten_fun_nokwargs(lu.wrap_init(fun), in_tree)
         with core.initial_style_staging():  # type: ignore
-            jaxpr, out_pvals, consts = pe.trace_to_jaxpr(
+            jaxpr, _, consts = pe.trace_to_jaxpr(
                 wrapped_fun, in_pvals, instantiate=True, stage_out=False
             )  # type: ignore
     out_tree = out_tree()
@@ -986,7 +989,6 @@ def closure_convert(fun, in_tree, in_avals):
         hoisted_consts, args = split_list(hconsts_args, [num_consts])
         consts = merge(closure_consts, hoisted_consts)
         all_args, in_tree2 = tree_flatten((y, t, *args))
-        assert in_tree == in_tree2
         out_flat = core.eval_jaxpr(jaxpr, consts, *all_args)
         return tree_unflatten(out_tree, out_flat)
 
