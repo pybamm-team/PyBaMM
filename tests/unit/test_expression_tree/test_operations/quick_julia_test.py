@@ -8,9 +8,9 @@ import numpy as np
 from julia import Main
 
 
-model = pybamm.lithium_ion.DFN()
+model = pybamm.lithium_ion.SPMe()
 # var = pybamm.standard_spatial_vars
-# var_pts = {var.x_n: 30, var.x_s: 30, var.x_p: 30, var.r_n: 10, var.r_p: 10}
+# var_pts = {var.x_n: 3, var.x_s: 3, var.x_p: 3, var.r_n: 3, var.r_p: 3}
 var_pts = model.default_var_pts
 sim = pybamm.Simulation(model, solver=pybamm.CasadiSolver(mode="fast"), var_pts=var_pts)
 sim.solve([0, 3600])
@@ -24,21 +24,23 @@ expr = pybamm.NumpyConcatenation(
 )  # .simplify()
 # expr = sim.built_model.concatenated_rhs.simplify()
 
-expr = sim.built_model.concatenated_algebraic  # .children[-1]
+expr = sol["Terminal voltage [V]"].base_variable
+
+# expr = sim.built_model.concatenated_algebraic  # .children[-1]
 evaluator_str = pybamm.get_julia_function(expr)
 n_rhs = sim.built_model.concatenated_rhs.size
 n_alg = sim.built_model.concatenated_algebraic.size
-np.set_printoptions(
-    threshold=max(
-        np.get_printoptions()["threshold"],
-        n_rhs + n_alg,
-    )
-)
+# np.set_printoptions(
+#     threshold=max(
+#         np.get_printoptions()["threshold"],
+#         n_rhs + n_alg,
+#     )
+# )
 with open("tmp_debug.jl", "w") as f:
     f.write(evaluator_str)
-    f.write(f"u0 = {np.array2string(sol.model.y0, separator=',')}\n")
-    f.write(f"du0 = zeros({n_rhs + n_alg})\n")
-    # f.write(f"differential_vars=[ones({n_rhs});zeros({n_alg})]\n")
+#     f.write(f"u0 = {np.array2string(sol.model.y0, separator=',')}\n")
+#     f.write(f"du0 = zeros({n_rhs + n_alg})\n")
+# f.write(f"differential_vars=[ones({n_rhs});zeros({n_alg})]\n")
 
 # expr2 = sim.built_model.variables["Terminal voltage [V]"]
 # evaluator_str2 = pybamm.get_julia_function(expr2)
@@ -47,7 +49,8 @@ with open("tmp_debug.jl", "w") as f:
 
 Main.eval(evaluator_str)
 Main.dy = np.zeros(expr.shape[0])
-Main.y = sol.model.y0
+Main.y = sol.model.y0 + 1e-3
+# Main.y = sim.built_model.concatenated_initial_conditions.evaluate() ** 2
 Main.eval("f(dy,y,0,0)")
 # print(Main.dy)
 # expr.evaluate(y=sol.model.y0)

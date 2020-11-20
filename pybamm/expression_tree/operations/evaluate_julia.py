@@ -146,6 +146,8 @@ def find_symbols(symbol, constant_symbols, variable_symbols, variable_symbol_siz
             symbol_str = "{}[{}:{}]".format(
                 children_vars[0], symbol.slice.start + 1, symbol.slice.stop
             )
+        elif isinstance(symbol, (pybamm.Gradient, pybamm.Divergence)):
+            symbol_str = "D'{}'({})".format(symbol.domain[0], children_vars[0])
         else:
             symbol_str = symbol.name + children_vars[0]
 
@@ -274,16 +276,19 @@ def find_symbols(symbol, constant_symbols, variable_symbols, variable_symbol_siz
 
     variable_symbols[symbol.id] = symbol_str
 
-    # Save the size of the variable
-    if symbol.shape == ():
-        variable_symbol_sizes[symbol.id] = 1
-    elif symbol.shape[1] == 1:
-        variable_symbol_sizes[symbol.id] = symbol.shape[0]
-    else:
-        raise ValueError("expected scalar or column vector")
+    # Save the size of the symbol
+    try:
+        if symbol.shape == ():
+            variable_symbol_sizes[symbol.id] = 1
+        elif symbol.shape[1] == 1:
+            variable_symbol_sizes[symbol.id] = symbol.shape[0]
+        else:
+            raise ValueError("expected scalar or column vector")
+    except NotImplementedError:
+        pass
 
 
-def to_julia(symbol, debug=False):
+def to_julia(symbol):
     """
     This function converts an expression tree into a dict of constant input values, and
     valid julia code that acts like the tree's :func:`pybamm.Symbol.evaluate` function
@@ -308,25 +313,6 @@ def to_julia(symbol, debug=False):
     variable_symbol_sizes = OrderedDict()
     find_symbols(symbol, constant_values, variable_symbols, variable_symbol_sizes)
 
-    # line_format = "{} .= {}"
-
-    # if debug:
-    #     variable_lines = [
-    #         "print('{}'); ".format(
-    #             line_format.format(id_to_julia_variable(symbol_id, False), symbol_line)
-    #         )
-    #         + line_format.format(id_to_julia_variable(symbol_id, False), symbol_line)
-    #         + "; print(type({0}),{0}.shape)".format(
-    #             id_to_julia_variable(symbol_id, False)
-    #         )
-    #         for symbol_id, symbol_line in variable_symbols.items()
-    #     ]
-    # else:
-    #     variable_lines = [
-    #         line_format.format(id_to_julia_variable(symbol_id, False), symbol_line)
-    #         for symbol_id, symbol_line in variable_symbols.items()
-    #     ]
-
     return constant_values, variable_symbols, variable_symbol_sizes
 
 
@@ -347,7 +333,7 @@ def get_julia_function(symbol, funcname="f"):
 
     """
 
-    constants, var_symbols, var_symbol_sizes = to_julia(symbol, debug=False)
+    constants, var_symbols, var_symbol_sizes = to_julia(symbol)
 
     # extract constants in generated function
     const_and_cache_str = "cs = (\n"
@@ -453,8 +439,11 @@ def get_julia_function(symbol, funcname="f"):
         result_value = symbol.evaluate()
 
     # assign the return variable
-    if symbol.is_constant() and isinstance(result_value, numbers.Number):
-        julia_str = julia_str + "\n   dy .= " + str(result_value) + "\n"
+    if symbol.is_constant():
+        if isinstance(result_value, numbers.Number):
+            julia_str = julia_str + "\n   dy .= " + str(result_value) + "\n"
+        else:
+            julia_str = julia_str + "\n   dy .= cs." + result_var + "\n"
     else:
         julia_str = julia_str.replace("cs." + result_var, "dy")
 
@@ -478,7 +467,7 @@ def get_julia_function(symbol, funcname="f"):
     return julia_str
 
 
-def get_julia_mtk_model(model):
+def get_julia_mtk_model(model, geometry=None, tspan=None):
     """
     Converts a pybamm model into a Julia ModelingToolkit model
 
@@ -486,6 +475,10 @@ def get_julia_mtk_model(model):
     ----------
     model : :class:`pybamm.BaseModel`
         The model to be converted
+    geometry : dict, optional
+        Dictionary defining the geometry. Must be provided if the model is a PDE model
+    tspan : array-like, optional
+        Time for which to solve the model. Must be provided if the model is a PDE model
 
     Returns
     -------
@@ -493,36 +486,77 @@ def get_julia_mtk_model(model):
         String of julia code representing a model in MTK,
         to be evaluated by ``julia.Main.eval``
     """
+    # Extract variables
+    variables = {**model.rhs, **model.algebraic}.keys()
+    variable_id_to_number = {var.id: f"u{i+1}" for i, var in enumerate(variables)}
+    all_domains = list(set([dom for var in variables for dom in var.domain]))
+
+    is_pde = bool(all_domains)
+
+    # Check geometry and tspan have been provided if a PDE
+    if is_pde:
+        if geometry is None:
+            raise ValueError("must provide geometry if the model is a PDE model")
+        if tspan is None:
+            raise ValueError("must provide tspan if the model is a PDE model")
+
+    domain_name_to_symbol = {
+        dom: list(geometry[dom].keys())[0].name for i, dom in enumerate(all_domains)
+    }
+
     mtk_str = "begin\n"
-    # Define parameters
-    # Makes a line of the form '@parameters t a b c d'
-    mtk_str += "@parameters t"
+    # Define parameters (including independent variables)
+    # Makes a line of the form '@parameters t x1 x2 x3 a b c d'
+    ind_vars = ["t"] + list(domain_name_to_symbol.values())
+    for dom, number in domain_name_to_symbol.items():
+        mtk_str += f"# '{dom}' -> {number}\n"
+    mtk_str += "@parameters " + " ".join(ind_vars)
     for param in model.input_parameters:
         mtk_str += f" {param.name}"
     mtk_str += "\n"
 
-    # Define variables
-    variables = {**model.rhs, **model.algebraic}.keys()
-    variable_id_to_number = {var.id: f"x{i+1}" for i, var in enumerate(variables)}
-
     # Add a comment with the variable names
     for var in variables:
-        mtk_str += f"# {var.name} -> {variable_id_to_number[var.id]}\n"
-    # Makes a line of the form '@variables x1(t) x2(t)'
+        mtk_str += f"# '{var.name}' -> {variable_id_to_number[var.id]}\n"
+    # Makes a line of the form '@variables u1(t) u2(t)'
+    dep_vars = list(variable_id_to_number.values())
     mtk_str += "@variables"
-    for var in variable_id_to_number.values():
-        mtk_str += f" {var}(t)"
+    for var in variables:
+        if var.domain == []:
+            var_ind_vars = "(t)"
+        else:
+            var_ind_vars = (
+                "(t, "
+                + ", ".join([domain_name_to_symbol[dom] for dom in var.domain])
+                + ")"
+            )
+        mtk_str += f" {variable_id_to_number[var.id]}{var_ind_vars}"
     mtk_str += "\n"
 
     # Define derivatives
-    mtk_str += "@derivatives D'~t\n\n"
+
+    mtk_str += "@derivatives Dt'~t\n"
+    if is_pde:
+        mtk_str += "@derivatives "
+        for domain_symbol in domain_name_to_symbol.values():
+            mtk_str += f"D{domain_symbol}'~{domain_symbol}"
+        mtk_str += "\n"
+    mtk_str += "\n"
 
     # Define equations
     all_eqns_str = ""
     all_constants_str = ""
     all_julia_str = ""
     for var, eqn in {**model.rhs, **model.algebraic}.items():
-        constants, julia_str = to_julia(eqn, debug=False)
+        constants, variable_symbols = to_julia(eqn)[:2]
+        line_format = "{} .= {}"
+
+        julia_str = "\n".join(
+            [
+                f"{id_to_julia_variable(symbol_id)} = {symbol_line}"
+                for symbol_id, symbol_line in variable_symbols.items()
+            ]
+        )
 
         # extract constants in generated function
         for eqn_id, const_value in constants.items():
@@ -547,7 +581,7 @@ def get_julia_mtk_model(model):
             eqn_str = result_var
 
         if var in model.rhs:
-            all_eqns_str += f"   D({variable_id_to_number[var.id]}) ~ {eqn_str},\n"
+            all_eqns_str += f"   Dt({variable_id_to_number[var.id]}) ~ {eqn_str},\n"
         elif var in model.algebraic:
             all_eqns_str += f"   0 ~ {eqn_str},\n"
 
@@ -557,6 +591,11 @@ def get_julia_mtk_model(model):
         all_julia_str = all_julia_str.replace(
             id_to_julia_variable(var_id, False), julia_id
         )
+
+    # Replace independent variables (domain names) in julia strings with the
+    # corresponding symbol
+    for domain, symbol in domain_name_to_symbol.items():
+        all_julia_str = all_julia_str.replace(f"'{domain}'", symbol)
 
     # Replace parameters in the julia strings in the form "inputs[name]"
     # with just "name"
@@ -573,15 +612,41 @@ def get_julia_mtk_model(model):
     # Update the MTK string
     mtk_str += all_constants_str + all_julia_str + "\n" + f"eqs = [\n{all_eqns_str}]\n"
 
-    # Create ODESystem
-    mtk_str += "sys = ODESystem(eqs, t)\n\n"
+    # Create ODESystem or PDESystem
+    if not is_pde:
+        mtk_str += "sys = ODESystem(eqs, t)\n\n"
+    else:
+        # Create domains
+        mtk_str += "\n"
+        mtk_str += f"t_domain = IntervalDomain({tspan[0]}, {tspan[1]})\n"
+        domains = f"domains = [\n   t in t_domain,\n"
+        for domain, symbol in domain_name_to_symbol.items():
+            dom_limits = list(geometry[domain].values())[0]
+            dom_min, dom_max = dom_limits.values()
+            mtk_str += f"{symbol}_domain = IntervalDomain({dom_min}, {dom_max})\n"
+            domains += f"   {symbol} in {symbol}_domain,\n"
+        domains += "]\n"
+
+        mtk_str += "\n"
+        mtk_str += domains
+        mtk_str += "ind_vars = [{}]\n".format(", ".join(ind_vars))
+        mtk_str += "dep_vars = [{}]\n\n".format(", ".join(dep_vars))
+
+        mtk_str += "sys = PDESystem(eqs, bcs, domains, ind_vars, dep_vars)\n\n"
 
     # Create initial conditions
     all_ics_str = ""
     all_constants_str = ""
     all_julia_str = ""
     for var, eqn in model.initial_conditions.items():
-        constants, julia_str = to_julia(eqn, debug=False)
+        constants, variable_symbols = to_julia(eqn)[:2]
+
+        julia_str = "\n".join(
+            [
+                f"{id_to_julia_variable(symbol_id)} = {symbol_line}"
+                for symbol_id, symbol_line in variable_symbols.items()
+            ]
+        )
 
         # extract constants in generated function
         for eqn_id, const_value in constants.items():

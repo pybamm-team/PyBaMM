@@ -55,6 +55,13 @@ class TestEvaluate(unittest.TestCase):
         Main.eval("f(dy,y,0,0)")
         self.assertEqual(Main.dy, 6)
 
+        expr = pybamm.Scalar(2) * pybamm.Vector([1, 2, 3])
+        evaluator_str = pybamm.get_julia_function(expr)
+        Main.eval(evaluator_str)
+        Main.dy = [0.0] * 3
+        Main.eval("f(dy,y,0,0)")
+        np.testing.assert_array_equal(Main.dy, [2, 4, 6])
+
         # test a larger expression
         expr = a * b + b + a ** 2 / b + 2 * a + b / 2 + 4
         evaluator_str = pybamm.get_julia_function(expr)
@@ -349,7 +356,7 @@ class TestEvaluate(unittest.TestCase):
                 Main.dy = np.zeros_like(pybamm_eval)
                 Main.y = y_test
                 Main.eval("f(dy,y,0,0)")
-                np.testing.assert_equal(Main.dy, pybamm_eval)
+                np.testing.assert_almost_equal(Main.dy, pybamm_eval, decimal=7)
 
     def test_evaluator_julia_discretised_microscale(self):
         # create discretisation
@@ -401,7 +408,7 @@ class TestEvaluate(unittest.TestCase):
                 Main.dy = np.zeros_like(pybamm_eval)
                 Main.y = y_test
                 Main.eval("f(dy,y,0,0)")
-                np.testing.assert_almost_equal(Main.dy, pybamm_eval, decimal=15)
+                np.testing.assert_almost_equal(Main.dy, pybamm_eval, decimal=7)
 
 
 if __name__ == "__main__":
