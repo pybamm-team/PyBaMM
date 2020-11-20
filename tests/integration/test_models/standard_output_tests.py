@@ -605,7 +605,7 @@ class CurrentTests(BaseOutputTest):
 
         np.testing.assert_array_almost_equal(
             np.mean(
-                self.a_n(x=self.x_n)
+                self.a_n(t=self.t, x=self.x_n)
                 * (self.j_n(self.t, self.x_n) + self.j_n_sei(self.t, self.x_n)),
                 axis=0,
             ),
@@ -614,7 +614,7 @@ class CurrentTests(BaseOutputTest):
         )
         np.testing.assert_array_almost_equal(
             np.mean(
-                self.a_p(x=self.x_p)
+                self.a_p(t=self.t, x=self.x_p)
                 * (self.j_p(self.t, self.x_p) + self.j_p_sei(self.t, self.x_p)),
                 axis=0,
             ),
