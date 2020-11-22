@@ -79,7 +79,10 @@ class Jacobian(object):
             children_jacs = [
                 self.jac(child, variable) for child in symbol.cached_children
             ]
-            jac = symbol._concatenation_jac(children_jacs)
+            if len(children_jacs) == 1:
+                jac = children_jacs[0]
+            else:
+                jac = symbol._concatenation_jac(children_jacs)
 
         else:
             try:

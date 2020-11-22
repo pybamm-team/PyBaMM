@@ -236,10 +236,16 @@ def simplified_multiplication(left, right):
     if is_scalar_one(right):
         return left
 
-    # anything multiplied by a matrix one returns itself if the shapes are the same
+    # anything multiplied by a matrix one returns itself if
+    # - the shapes are the same
+    # - both left and right evaluate on edges, or both evaluate on nodes, in all
+    # dimensions
     # (and possibly more generally, but not implemented here)
     try:
-        if left.shape_for_testing == right.shape_for_testing:
+        if left.shape_for_testing == right.shape_for_testing and all(
+            left.evaluates_on_edges(dim) == right.evaluates_on_edges(dim)
+            for dim in ["primary", "secondary", "tertiary"]
+        ):
             if is_matrix_one(left):
                 return right
             elif is_matrix_one(right):
