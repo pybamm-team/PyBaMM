@@ -17,7 +17,7 @@ class ElectricalParameters:
     def __init__(self):
 
         # Get geometric parameters
-        self.geo = pybamm.GeometricParameters()
+        self.geo = pybamm.geometric_parameters
 
         # Set parameters
         self._set_dimensional_parameters()
@@ -28,7 +28,7 @@ class ElectricalParameters:
 
         self.I_typ = pybamm.Parameter("Typical current [A]")
         self.Q = pybamm.Parameter("Cell capacity [A.h]")
-        self.C_rate = abs(self.I_typ / self.Q)
+        self.C_rate = pybamm.AbsoluteValue(self.I_typ / self.Q)
         self.n_electrodes_parallel = pybamm.Parameter(
             "Number of electrodes connected in parallel to make a cell"
         )
@@ -64,3 +64,6 @@ class ElectricalParameters:
             / self.I_typ
             * pybamm.Function(np.sign, self.I_typ)
         )
+
+
+electrical_parameters = ElectricalParameters()

@@ -59,6 +59,7 @@ class BaseParticle(pybamm.BaseSubModel):
         variables = {
             self.domain + " particle concentration": c_s,
             self.domain + " particle concentration [mol.m-3]": c_s * c_scale,
+            self.domain + " particle concentration [mol.m-3]": c_s * c_scale,
             "X-averaged " + self.domain.lower() + " particle concentration": c_s_xav,
             "X-averaged "
             + self.domain.lower()
@@ -92,6 +93,57 @@ class BaseParticle(pybamm.BaseSubModel):
             "Total lithium in "
             + self.domain.lower()
             + " electrode [mol]": c_s_vol_av * c_scale * L * A,
+            "Minimum "
+            + self.domain.lower()
+            + " particle concentration": pybamm.min(c_s),
+            "Maximum "
+            + self.domain.lower()
+            + " particle concentration": pybamm.max(c_s),
+            "Minimum "
+            + self.domain.lower()
+            + " particle concentration [mol.m-3]": pybamm.min(c_s) * c_scale,
+            "Maximum "
+            + self.domain.lower()
+            + " particle concentration [mol.m-3]": pybamm.max(c_s) * c_scale,
+            "Minimum "
+            + self.domain.lower()
+            + " particle surface concentration": pybamm.min(c_s_surf),
+            "Maximum "
+            + self.domain.lower()
+            + " particle surface concentration": pybamm.max(c_s_surf),
+            "Minimum "
+            + self.domain.lower()
+            + " particle surface concentration [mol.m-3]": pybamm.min(c_s_surf)
+            * c_scale,
+            "Maximum "
+            + self.domain.lower()
+            + " particle surface concentration [mol.m-3]": pybamm.max(c_s_surf)
+            * c_scale,
+        }
+
+        variables.update(self._get_microstrcuture_variables())
+
+        return variables
+
+    def _get_microstrcuture_variables(self):
+        if self.domain == "Negative":
+            x = pybamm.standard_spatial_vars.x_n
+            R = self.param.R_n(x)
+            R_scale = self.param.R_n_typ
+            a = self.param.a_n(x)
+            a_scale = self.param.a_n_typ
+        elif self.domain == "Positive":
+            x = pybamm.standard_spatial_vars.x_p
+            R = self.param.R_p(x)
+            R_scale = self.param.R_p_typ
+            a = self.param.a_p(x)
+            a_scale = self.param.a_p_typ
+
+        variables = {
+            self.domain + " particle radius": R,
+            self.domain + " particle radius [m]": R * R_scale,
+            self.domain + " electrode surface area per unit volume": a,
+            self.domain + " electrode surface area per unit volume [m-1]": a * a_scale,
         }
 
         return variables

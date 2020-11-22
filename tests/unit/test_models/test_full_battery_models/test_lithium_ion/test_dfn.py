@@ -118,6 +118,11 @@ class TestDFN(unittest.TestCase):
         model = pybamm.lithium_ion.DFN(options)
         model.check_well_posedness()
 
+    def test_electrolyte_options(self):
+        options = {"electrolyte conductivity": "integrated"}
+        with self.assertRaisesRegex(pybamm.OptionError, "electrolyte conductivity"):
+            pybamm.lithium_ion.DFN(options)
+
 
 class TestDFNWithSEI(unittest.TestCase):
     def test_well_posed_constant(self):
@@ -152,6 +157,33 @@ class TestDFNWithSEI(unittest.TestCase):
 
     def test_well_posed_ec_reaction_limited(self):
         options = {"sei": "ec reaction limited", "sei porosity change": True}
+        model = pybamm.lithium_ion.DFN(options)
+        model.check_well_posedness()
+
+
+class TestDFNWithCrack(unittest.TestCase):
+    def test_well_posed_none_crack(self):
+        options = {"particle": "Fickian diffusion", "particle cracking": None}
+        model = pybamm.lithium_ion.DFN(options)
+        model.check_well_posedness()
+
+    def test_well_posed_no_cracking(self):
+        options = {"particle": "Fickian diffusion", "particle cracking": "no cracking"}
+        model = pybamm.lithium_ion.DFN(options)
+        model.check_well_posedness()
+
+    def test_well_posed_anode_cracking(self):
+        options = {"particle": "Fickian diffusion", "particle cracking": "anode"}
+        model = pybamm.lithium_ion.DFN(options)
+        model.check_well_posedness()
+
+    def test_well_posed_cathode_cracking(self):
+        options = {"particle": "Fickian diffusion", "particle cracking": "cathode"}
+        model = pybamm.lithium_ion.DFN(options)
+        model.check_well_posedness()
+
+    def test_well_posed_both_cracking(self):
+        options = {"particle": "Fickian diffusion", "particle cracking": "both"}
         model = pybamm.lithium_ion.DFN(options)
         model.check_well_posedness()
 

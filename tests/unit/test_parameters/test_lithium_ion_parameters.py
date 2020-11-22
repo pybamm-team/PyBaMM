@@ -11,6 +11,8 @@ class TestDimensionlessParameterValues(unittest.TestCase):
     def test_options(self):
         with self.assertRaisesRegex(pybamm.OptionError, "particle shape"):
             pybamm.LithiumIonParameters({"particle shape": "bad shape"})
+        with self.assertRaisesRegex(pybamm.OptionError, "particle cracking"):
+            pybamm.LithiumIonParameters({"particle cracking": "bad crack"})
 
     def test_lithium_ion(self):
         """This test checks that all the dimensionless parameters are being calculated
@@ -23,26 +25,33 @@ class TestDimensionlessParameterValues(unittest.TestCase):
         c_rate = param.i_typ / 24  # roughly for the numbers I used before
 
         "particle geometry"
+        # Note: in general these can be functions, but are constant for this
+        # set, so we just arbitrarily evaluate at 0
+
         # a_n dimensional
         np.testing.assert_almost_equal(
-            values.evaluate(param.a_n_dim), 0.18 * 10 ** (6), 2
+            values.evaluate(param.a_n_dimensional(0)), 0.18 * 10 ** (6), 2
         )
         # R_n dimensional
-        np.testing.assert_almost_equal(values.evaluate(param.R_n), 1 * 10 ** (-5), 2)
+        np.testing.assert_almost_equal(
+            values.evaluate(param.R_n_dimensional(0)), 1 * 10 ** (-5), 2
+        )
 
-        # a_n
-        np.testing.assert_almost_equal(values.evaluate(param.a_n), 1.8, 2)
+        # a_R_n = a_n_typ * R_n_typ
+        np.testing.assert_almost_equal(values.evaluate(param.a_R_n), 1.8, 2)
 
         # a_p dimensional
         np.testing.assert_almost_equal(
-            values.evaluate(param.a_p_dim), 0.15 * 10 ** (6), 2
+            values.evaluate(param.a_p_dimensional(0)), 0.15 * 10 ** (6), 2
         )
 
         # R_p dimensional
-        np.testing.assert_almost_equal(values.evaluate(param.R_n), 1 * 10 ** (-5), 2)
+        np.testing.assert_almost_equal(
+            values.evaluate(param.R_n_dimensional(0)), 1 * 10 ** (-5), 2
+        )
 
-        # a_p
-        np.testing.assert_almost_equal(values.evaluate(param.a_p), 1.5, 2)
+        # a_p = a_p_typ * R_p_typ
+        np.testing.assert_almost_equal(values.evaluate(param.a_R_p), 1.5, 2)
 
         # j0_m
         np.testing.assert_almost_equal(
@@ -194,7 +203,7 @@ class TestDimensionlessParameterValues(unittest.TestCase):
         #     values.evaluate(param.tau_th_yz), 1.4762 * 10 ** (3), 2
         # )
 
-        # thermal = pybamm.ThermalParameters()
+        # thermal = pybamm.thermal_parameters
         # np.testing.assert_almost_equal(
         # values.evaluate(thermal.rho_eff_dim), 1.8116 * 10 ** (6), 2
         # )

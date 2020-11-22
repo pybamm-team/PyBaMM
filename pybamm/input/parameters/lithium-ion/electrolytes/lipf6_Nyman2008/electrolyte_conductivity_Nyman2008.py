@@ -1,6 +1,3 @@
-from pybamm import exp, constants
-
-
 def electrolyte_conductivity_Nyman2008(c_e, T):
     """
     Conductivity of LiPF6 in EC:EMC (3:7) as a function of ion concentration. The data
@@ -27,7 +24,6 @@ def electrolyte_conductivity_Nyman2008(c_e, T):
         0.1297 * (c_e / 1000) ** 3 - 2.51 * (c_e / 1000) ** 1.5 + 3.329 * (c_e / 1000)
     )
 
-    E_k_e = 34700
-    arrhenius = exp(E_k_e / constants.R * (1 / 298.15 - 1 / T))
+    # Nyman et al. (2008) does not provide temperature dependence
 
-    return sigma_e * arrhenius
+    return sigma_e

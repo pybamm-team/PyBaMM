@@ -7,5 +7,5 @@ def process_symbol_test_function(var):
     var: numeric
         Some variable
 
-   """
+    """
     return 123 * var

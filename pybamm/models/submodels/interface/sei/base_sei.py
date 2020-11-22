@@ -112,9 +112,9 @@ class BaseModel(BaseInterface):
             n_outer_scale = self.param.c_ec_0_dim
             v_bar = 1
         else:
-            n_scale = param.L_sei_0_dim * param.a_n_dim / param.V_bar_inner_dimensional
+            n_scale = param.L_sei_0_dim * param.a_n_typ / param.V_bar_inner_dimensional
             n_outer_scale = (
-                param.L_sei_0_dim * param.a_n_dim / param.V_bar_outer_dimensional
+                param.L_sei_0_dim * param.a_n_typ / param.V_bar_outer_dimensional
             )
             v_bar = param.v_bar
 
@@ -181,7 +181,8 @@ class BaseModel(BaseInterface):
                     + " electrode EC surface concentration": c_ec_av,
                     "X-averaged "
                     + self.domain.lower()
-                    + " electrode EC surface concentration": c_ec_av * n_outer_scale,
+                    + " electrode EC surface concentration [mol.m-3]": c_ec_av
+                    * n_outer_scale,
                 }
             )
 

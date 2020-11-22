@@ -1303,7 +1303,7 @@ class TestFiniteVolume(unittest.TestCase):
         r_disc = disc.process_symbol(r)
         self.assertIsInstance(r_disc, pybamm.Vector)
         np.testing.assert_array_equal(
-            r_disc.evaluate(), 3 * disc.mesh["negative particle"].nodes[:, np.newaxis],
+            r_disc.evaluate(), 3 * disc.mesh["negative particle"].nodes[:, np.newaxis]
         )
 
     def test_mass_matrix_shape(self):
@@ -1348,7 +1348,7 @@ class TestFiniteVolume(unittest.TestCase):
         model.rhs = {c: pybamm.div(N)}
         model.initial_conditions = {c: pybamm.Scalar(0)}
         model.boundary_conditions = {
-            c: {"left": (0, "Dirichlet"), "right": (0, "Dirichlet")}
+            c: {"left": (0, "Neumann"), "right": (0, "Dirichlet")}
         }
         model.variables = {"c": c, "N": N}
         mesh = get_p2d_mesh_for_testing()

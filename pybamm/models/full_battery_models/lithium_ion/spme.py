@@ -47,6 +47,7 @@ class SPMe(BaseModel):
         self.set_positive_electrode_submodel()
         self.set_thermal_submodel()
         self.set_current_collector_submodel()
+        self.set_crack_submodel()
         self.set_sei_submodel()
 
         if build:
@@ -136,9 +137,39 @@ class SPMe(BaseModel):
 
     def set_electrolyte_submodel(self):
 
-        self.submodels[
-            "electrolyte conductivity"
-        ] = pybamm.electrolyte_conductivity.Composite(self.param)
+        if self.options["electrolyte conductivity"] not in [
+            "default",
+            "composite",
+            "integrated",
+        ]:
+            raise pybamm.OptionError(
+                "electrolyte conductivity '{}' not suitable for SPMe".format(
+                    self.options["electrolyte conductivity"]
+                )
+            )
+
+        if self.options["surface form"] is False:
+            if self.options["electrolyte conductivity"] in ["default", "composite"]:
+                self.submodels[
+                    "electrolyte conductivity"
+                ] = pybamm.electrolyte_conductivity.Composite(self.param)
+            elif self.options["electrolyte conductivity"] == "integrated":
+                self.submodels[
+                    "electrolyte conductivity"
+                ] = pybamm.electrolyte_conductivity.Integrated(self.param)
+        elif self.options["surface form"] == "differential":
+            raise NotImplementedError(
+                "surface form '{}' has not been implemented for SPMe yet".format(
+                    self.options["surface form"]
+                )
+            )
+        elif self.options["surface form"] == "algebraic":
+            raise NotImplementedError(
+                "surface form '{}' has not been implemented for SPMe yet".format(
+                    self.options["surface form"]
+                )
+            )
+
         self.submodels["electrolyte diffusion"] = pybamm.electrolyte_diffusion.Full(
             self.param
         )

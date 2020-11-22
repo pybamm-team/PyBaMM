@@ -50,10 +50,6 @@ jobs:
     - name: Install MacOS system dependencies
       if: matrix.os == 'macos-latest'
       run: |
-        # Temporary fix for https://github.com/actions/virtual-environments/issues/1811
-        brew untap local/homebrew-openssl
-        brew untap local/homebrew-python2
-        # End of fix
         brew update
         brew install graphviz
         brew install openblas
@@ -87,8 +83,8 @@ jobs:
       if: matrix.os != 'windows-latest'
       run: tox -e examples
         
-    - name: Instal and run coverage
-      if: success() && (matrix.os == 'unbuntu-latest' && matrix.python-version == 3.7)
+    - name: Install and run coverage
+      if: success() && (matrix.os == 'ubuntu-latest' && matrix.python-version == 3.7)
       run: tox -e coverage
 
     - name: Upload coverage report

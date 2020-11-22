@@ -103,8 +103,8 @@ class TestStandardParametersLeadAcid(unittest.TestCase):
         parameters = {
             "D_e_1": param.D_e(pybamm.Scalar(1), pybamm.Scalar(0)),
             "kappa_e_0": param.kappa_e(pybamm.Scalar(0), pybamm.Scalar(0)),
-            "chi_1": param.chi(pybamm.Scalar(1)),
-            "chi_0.5": param.chi(pybamm.Scalar(0.5)),
+            "chi_1": param.chi(pybamm.Scalar(1), pybamm.Scalar(0)),
+            "chi_0.5": param.chi(pybamm.Scalar(0.5), pybamm.Scalar(0)),
             "U_n_1": param.U_n(pybamm.Scalar(1), pybamm.Scalar(0)),
             "U_n_0.5": param.U_n(pybamm.Scalar(0.5), pybamm.Scalar(0)),
             "U_p_1": param.U_p(pybamm.Scalar(1), pybamm.Scalar(0)),

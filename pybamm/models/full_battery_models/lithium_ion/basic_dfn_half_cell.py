@@ -32,9 +32,7 @@ class BasicDFNHalfCell(BaseModel):
     **Extends:** :class:`pybamm.lithium_ion.BaseModel`
     """
 
-    def __init__(
-        self, name="Doyle-Fuller-Newman half cell model", options=None,
-    ):
+    def __init__(self, name="Doyle-Fuller-Newman half cell model", options=None):
         super().__init__({}, name)
         pybamm.citations.register("marquis2019asymptotic")
         # `param` is a class containing all the relevant parameters and functions for
@@ -235,7 +233,7 @@ class BasicDFNHalfCell(BaseModel):
             self.boundary_conditions[c_s_n] = {
                 "left": (pybamm.Scalar(0), "Neumann"),
                 "right": (
-                    -param.C_n * j_n / param.a_n / param.D_n(c_s_surf_n, T),
+                    -param.C_n * j_n / param.a_R_n / param.D_n(c_s_surf_n, T),
                     "Neumann",
                 ),
             }
@@ -271,7 +269,7 @@ class BasicDFNHalfCell(BaseModel):
                 "right": (
                     -param.C_p
                     * j_p
-                    / param.a_p
+                    / param.a_R_p
                     / param.gamma_p
                     / param.D_p(c_s_surf_p, T),
                     "Neumann",
@@ -377,7 +375,7 @@ class BasicDFNHalfCell(BaseModel):
         # Current in the electrolyte
         ######################
         i_e = (param.kappa_e(c_e, T) * tor * param.gamma_e / param.C_e) * (
-            param.chi(c_e) * pybamm.grad(c_e) / c_e - pybamm.grad(phi_e)
+            param.chi(c_e, T) * pybamm.grad(c_e) / c_e - pybamm.grad(phi_e)
         )
         self.algebraic[phi_e] = pybamm.div(i_e) - j
 
@@ -438,8 +436,8 @@ class BasicDFNHalfCell(BaseModel):
             "Negative particle concentration": c_s_n,
             "Negative particle surface concentration [mol.m-3]": param.c_n_max
             * c_s_surf_n,
-            "X-averaged negative particle surface concentration [mol.m-3]":
-            param.c_n_max * c_s_surf_n_av,
+            "X-averaged negative particle surface concentration "
+            "[mol.m-3]": param.c_n_max * c_s_surf_n_av,
             "Negative particle concentration [mol.m-3]": param.c_n_max * c_s_n,
             "Electrolyte concentration": c_e,
             "Electrolyte concentration [mol.m-3]": param.c_e_typ * c_e,
@@ -448,8 +446,8 @@ class BasicDFNHalfCell(BaseModel):
             "Positive particle concentration": c_s_p,
             "Positive particle surface concentration [mol.m-3]": param.c_p_max
             * c_s_surf_p,
-            "X-averaged positive particle surface concentration [mol.m-3]":
-            param.c_p_max * c_s_surf_p_av,
+            "X-averaged positive particle surface concentration "
+            "[mol.m-3]": param.c_p_max * c_s_surf_p_av,
             "Positive particle concentration [mol.m-3]": param.c_p_max * c_s_p,
             "Current [A]": I,
             "Negative electrode potential": phi_s_n,

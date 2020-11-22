@@ -24,26 +24,24 @@ class BaseBatteryModel(pybamm.BaseModel):
                 model with prescribed cell volume and cross-sectional area, and
                 (if thermal effects are included) solves a lumped thermal model
                 with prescribed surface area for cooling.
-            * "dimensionality" : int, optional
-                Sets the dimension of the current collector problem. Can be 0
-                (default), 1 or 2.
-            * "surface form" : bool or str, optional
-                Whether to use the surface formulation of the problem. Can be False
-                (default), "differential" or "algebraic".
             * "convection" : bool or str, optional
                 Whether to include the effects of convection in the model. Can be
                 False (default), "differential" or "algebraic". Must be 'False' for
                 lithium-ion models.
-            * "side reactions" : list, optional
-                Contains a list of any side reactions to include. Default is []. If this
-                list is not empty (i.e. side reactions are included in the model), then
-                "surface form" cannot be 'False'.
-            * "interfacial surface area" : str, optional
-                Sets the model for the interfacial surface area. Can be "constant"
-                (default) or "varying". Not currently implemented in any of the models.
             * "current collector" : str, optional
                 Sets the current collector model to use. Can be "uniform" (default),
                 "potential pair" or "potential pair quite conductive".
+            * "dimensionality" : int, optional
+                Sets the dimension of the current collector problem. Can be 0
+                (default), 1 or 2.
+            * "external submodels" : list
+                A list of the submodels that you would like to supply an external
+                variable for instead of solving in PyBaMM. The entries of the lists
+                are strings that correspond to the submodel names in the keys
+                of `self.submodels`.
+            * "interfacial surface area" : str, optional
+                Sets the model for the interfacial surface area. Can be "constant"
+                (default) or "varying". Not currently implemented in any of the models.
             * "particle" : str, optional
                 Sets the submodel to use to describe behaviour within the particle.
                 Can be "Fickian diffusion" (default), "uniform profile",
@@ -54,14 +52,14 @@ class BaseBatteryModel(pybamm.BaseModel):
                 (default) or "user". For the "user" option the surface area per
                 unit volume can be passed as a parameter, and is therefore not
                 necessarily consistent with the particle shape.
-            * "thermal" : str, optional
-                Sets the thermal model to use. Can be "isothermal" (default), "lumped",
-                "x-lumped", or "x-full".
-            * "external submodels" : list
-                A list of the submodels that you would like to supply an external
-                variable for instead of solving in PyBaMM. The entries of the lists
-                are strings that correspond to the submodel names in the keys
-                of `self.submodels`.
+            * "particle cracking" : str, optional
+                Sets the model to account for mechanical effects and particle
+                cracking. Can be None, "no cracking", "anode", "cathode" or "both".
+                All options other than None account for the effects of swelling
+                of electrode particles, cell thickness change, and stress-assisted
+                diffusion. The options "anode", "cathode" or "both" additionally account
+                for crack propagation in the anode, cathode or both electrodes,
+                respectively.
             * "sei" : str
                 Set the sei submodel to be used. Options are:
 
@@ -103,6 +101,16 @@ class BaseBatteryModel(pybamm.BaseModel):
                         * (\\phi_s - \\phi_e - U - R_{sei} * L_{sei} * \\frac{I}{aL})
             * "sei porosity change" : bool
                 Whether to include porosity change due to SEI formation (default False)
+            * "side reactions" : list, optional
+                Contains a list of any side reactions to include. Default is []. If this
+                list is not empty (i.e. side reactions are included in the model), then
+                "surface form" cannot be 'False'.
+            * "surface form" : bool or str, optional
+                Whether to use the surface formulation of the problem. Can be False
+                (default), "differential" or "algebraic".
+            * "thermal" : str, optional
+                Sets the thermal model to use. Can be "isothermal" (default), "lumped",
+                "x-lumped", or "x-full".
 
     **Extends:** :class:`pybamm.BaseModel`
     """
@@ -198,12 +206,14 @@ class BaseBatteryModel(pybamm.BaseModel):
             "current collector": "uniform",
             "particle": "Fickian diffusion",
             "particle shape": "spherical",
+            "electrolyte conductivity": "default",
             "thermal": "isothermal",
             "cell geometry": None,
             "external submodels": [],
             "sei": None,
             "sei porosity change": False,
             "working electrode": None,
+            "particle cracking": None,
         }
         # Change the default for cell geometry based on which thermal option is provided
         extra_options = extra_options or {}
@@ -340,6 +350,17 @@ class BaseBatteryModel(pybamm.BaseModel):
                 )
             )
 
+        if options["particle cracking"] not in [
+            None,
+            "no cracking",
+            "anode",
+            "cathode",
+            "both",
+        ]:
+            raise pybamm.OptionError(
+                "Unknown particle cracking '{}'".format(options["particle cracking"])
+            )
+
         if options["dimensionality"] == 0:
             if options["current collector"] not in ["uniform"]:
                 raise pybamm.OptionError(
@@ -373,6 +394,19 @@ class BaseBatteryModel(pybamm.BaseModel):
             warnings.warn(
                 "1+1D Thermal models are only valid if both tabs are "
                 "placed at the top of the cell."
+            )
+
+        if options["electrolyte conductivity"] not in [
+            "default",
+            "full",
+            "leading order",
+            "composite",
+            "integrated",
+        ]:
+            raise pybamm.OptionError(
+                "electrolyte conductivity model '{}' not recognised".format(
+                    options["electrolyte conductivity"]
+                )
             )
 
         self._options = options
@@ -786,6 +820,8 @@ class BaseBatteryModel(pybamm.BaseModel):
 
         # Battery-wide variables
         V_dim = self.variables["Terminal voltage [V]"]
+        eta_e_av = self.variables.get("X-averaged electrolyte ohmic losses", 0)
+        eta_c_av = self.variables.get("X-averaged concentration overpotential", 0)
         eta_e_av_dim = self.variables.get("X-averaged electrolyte ohmic losses [V]", 0)
         eta_c_av_dim = self.variables.get(
             "X-averaged concentration overpotential [V]", 0
@@ -793,7 +829,6 @@ class BaseBatteryModel(pybamm.BaseModel):
         num_cells = pybamm.Parameter(
             "Number of cells connected in series to make a battery"
         )
-
         self.variables.update(
             {
                 "X-averaged battery open circuit voltage [V]": ocv_av_dim * num_cells,
@@ -807,6 +842,41 @@ class BaseBatteryModel(pybamm.BaseModel):
                 "X-averaged battery concentration overpotential [V]": eta_c_av_dim
                 * num_cells,
                 "Battery voltage [V]": V_dim * num_cells,
+            }
+        )
+        # Variables for calculating the equivalent circuit model (ECM) resistance
+        # Need to compare OCV to initial value to capture this as an overpotential
+        ocv_init = self.param.U_p(
+            self.param.c_p_init(1), self.param.T_init
+        ) - self.param.U_n(self.param.c_n_init(0), self.param.T_init)
+        ocv_init_dim = (
+            self.param.U_p_ref
+            - self.param.U_n_ref
+            + self.param.potential_scale * ocv_init
+        )
+        eta_ocv = ocv - ocv_init
+        eta_ocv_dim = ocv_dim - ocv_init_dim
+        # Current collector current density for working out euiqvalent resistance
+        # based on Ohm's Law
+        i_cc = self.variables["Current collector current density"]
+        i_cc_dim = self.variables["Current collector current density [A.m-2]"]
+        # Gather all overpotentials
+        v_ecm = -(eta_ocv + eta_r_av + eta_c_av + eta_e_av + delta_phi_s_av)
+        v_ecm_dim = -(
+            eta_ocv_dim
+            + eta_r_av_dim
+            + eta_c_av_dim
+            + eta_e_av_dim
+            + delta_phi_s_av_dim
+        )
+        # Current collector area for turning resistivity into resistance
+        A_cc = self.param.A_cc
+        self.variables.update(
+            {
+                "Change in measured open circuit voltage": eta_ocv,
+                "Change in measured open circuit voltage [V]": eta_ocv_dim,
+                "Local ECM resistance": v_ecm / (i_cc * A_cc),
+                "Local ECM resistance [Ohm]": v_ecm_dim / (i_cc_dim * A_cc),
             }
         )
 

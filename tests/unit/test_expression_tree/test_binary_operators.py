@@ -143,12 +143,30 @@ class TestBinaryOperators(unittest.TestCase):
         self.assertEqual((a / a).diff(a).evaluate(y=y), 0)
         self.assertEqual((a / a).diff(b).evaluate(y=y), 0)
 
-    def test_addition_printing(self):
+    def test_printing(self):
+        # This in not an exhaustive list of all cases. More test cases may need to
+        # be added for specific combinations of binary operators
         a = pybamm.Symbol("a")
         b = pybamm.Symbol("b")
-        summ = pybamm.Addition(a, b)
-        self.assertEqual(summ.name, "+")
-        self.assertEqual(str(summ), "a + b")
+        c = pybamm.Symbol("c")
+        d = pybamm.Symbol("d")
+        self.assertEqual(str(a + b), "a + b")
+        self.assertEqual(str(a + b + c + d), "a + b + c + d")
+        self.assertEqual(str((a + b) + (c + d)), "a + b + c + d")
+        self.assertEqual(str(a + b - c), "a + b - c")
+        self.assertEqual(str(a + b - c + d), "a + b - c + d")
+        self.assertEqual(str((a + b) - (c + d)), "a + b - (c + d)")
+        self.assertEqual(str((a + b) - (c - d)), "a + b - (c - d)")
+
+        self.assertEqual(str((a + b) * (c + d)), "(a + b) * (c + d)")
+        self.assertEqual(str(a * b * (c + d)), "a * b * (c + d)")
+        self.assertEqual(str((a * b) * (c + d)), "a * b * (c + d)")
+        self.assertEqual(str(a * (b * (c + d))), "a * b * (c + d)")
+        self.assertEqual(str((a + b) / (c + d)), "(a + b) / (c + d)")
+        self.assertEqual(str(a + b / (c + d)), "a + b / (c + d)")
+        self.assertEqual(str(a * b / (c + d)), "a * b / (c + d)")
+        self.assertEqual(str((a * b) / (c + d)), "a * b / (c + d)")
+        self.assertEqual(str(a * (b / (c + d))), "a * b / (c + d)")
 
     def test_id(self):
         a = pybamm.Scalar(4)
@@ -303,6 +321,21 @@ class TestBinaryOperators(unittest.TestCase):
         self.assertEqual(heav.evaluate(y=np.array([0])), 1)
         self.assertEqual(str(heav), "y[0:1] <= 1.0")
 
+    def test_sigmoid(self):
+        a = pybamm.Scalar(1)
+        b = pybamm.StateVector(slice(0, 1))
+        sigm = pybamm.sigmoid(a, b, 10)
+        self.assertAlmostEqual(sigm.evaluate(y=np.array([2]))[0, 0], 1)
+        self.assertEqual(sigm.evaluate(y=np.array([1])), 0.5)
+        self.assertAlmostEqual(sigm.evaluate(y=np.array([0]))[0, 0], 0)
+        self.assertEqual(str(sigm), "(1.0 + tanh(10.0 * (y[0:1] - 1.0))) / 2.0")
+
+        sigm = pybamm.sigmoid(b, a, 10)
+        self.assertAlmostEqual(sigm.evaluate(y=np.array([2]))[0, 0], 0)
+        self.assertEqual(sigm.evaluate(y=np.array([1])), 0.5)
+        self.assertAlmostEqual(sigm.evaluate(y=np.array([0]))[0, 0], 1)
+        self.assertEqual(str(sigm), "(1.0 + tanh(10.0 * (1.0 - y[0:1]))) / 2.0")
+
     def test_modulo(self):
         a = pybamm.StateVector(slice(0, 1))
         b = pybamm.Scalar(3)
@@ -328,6 +361,43 @@ class TestBinaryOperators(unittest.TestCase):
         self.assertEqual(maximum.evaluate(y=np.array([1])), 1)
         self.assertEqual(maximum.evaluate(y=np.array([0])), 1)
         self.assertEqual(str(maximum), "maximum(1.0, y[0:1])")
+
+    def test_softminus_softplus(self):
+        a = pybamm.Scalar(1)
+        b = pybamm.StateVector(slice(0, 1))
+
+        minimum = pybamm.softminus(a, b, 50)
+        self.assertAlmostEqual(minimum.evaluate(y=np.array([2]))[0, 0], 1)
+        self.assertAlmostEqual(minimum.evaluate(y=np.array([0]))[0, 0], 0)
+        self.assertEqual(
+            str(minimum),
+            "log(1.9287498479639178e-22 + exp(-50.0 * y[0:1])) / -50.0",
+        )
+
+        maximum = pybamm.softplus(a, b, 50)
+        self.assertAlmostEqual(maximum.evaluate(y=np.array([2]))[0, 0], 2)
+        self.assertAlmostEqual(maximum.evaluate(y=np.array([0]))[0, 0], 1)
+        self.assertEqual(
+            str(maximum),
+            "log(5.184705528587072e+21 + exp(50.0 * y[0:1])) / 50.0",
+        )
+
+        # Test that smooth min/max are used when the setting is changed
+        pybamm.settings.min_smoothing = 10
+        pybamm.settings.max_smoothing = 10
+
+        self.assertEqual(str(pybamm.minimum(a, b)), str(pybamm.softminus(a, b, 10)))
+        self.assertEqual(str(pybamm.maximum(a, b)), str(pybamm.softplus(a, b, 10)))
+
+        # But exact min/max should still be used if both variables are constant
+        a = 1
+        b = pybamm.Parameter("b")
+        self.assertEqual(str(pybamm.minimum(a, b)), str(pybamm.Minimum(a, b)))
+        self.assertEqual(str(pybamm.maximum(a, b)), str(pybamm.Maximum(a, b)))
+
+        # Change setting back for other tests
+        pybamm.settings.min_smoothing = "exact"
+        pybamm.settings.max_smoothing = "exact"
 
 
 class TestIsZero(unittest.TestCase):

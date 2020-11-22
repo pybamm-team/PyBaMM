@@ -619,8 +619,7 @@ class TestDiscretise(unittest.TestCase):
 
         # mass matrix is identity
         np.testing.assert_array_equal(
-            np.eye(combined_submesh.nodes.shape[0]),
-            model.mass_matrix.entries.toarray(),
+            np.eye(combined_submesh.nodes.shape[0]), model.mass_matrix.entries.toarray()
         )
 
         # Create StateVector to differentiate model with respect to
@@ -793,7 +792,7 @@ class TestDiscretise(unittest.TestCase):
             (
                 np.eye(np.size(combined_submesh.nodes)),
                 np.zeros(
-                    (np.size(combined_submesh.nodes), np.size(combined_submesh.nodes),)
+                    (np.size(combined_submesh.nodes), np.size(combined_submesh.nodes))
                 ),
             )
         )
@@ -1027,10 +1026,7 @@ class TestDiscretise(unittest.TestCase):
         self.assertIsInstance(broad_to_edges_disc.children[1], pybamm.StateVector)
         self.assertEqual(
             broad_to_edges_disc.shape,
-            (
-                mesh["negative particle"].npts * (mesh["negative electrode"].npts + 1),
-                1,
-            ),
+            (mesh["negative particle"].npts * (mesh["negative electrode"].npts + 1), 1),
         )
 
     def test_concatenation(self):
@@ -1236,6 +1232,58 @@ class TestDiscretise(unittest.TestCase):
         a_disc = disc.process_symbol(a)
         n = disc.mesh.combine_submeshes(*a.domain).npts
         self.assertEqual(a_disc._expected_size, n)
+
+    def test_bc_symmetry(self):
+        # define model
+        model = pybamm.BaseModel()
+        c = pybamm.Variable("Concentration", domain="negative particle")
+        N = -pybamm.grad(c)
+        dcdt = -pybamm.div(N)
+        model.rhs = {c: dcdt}
+
+        # initial conditions
+        model.initial_conditions = {c: pybamm.Scalar(1)}
+
+        # define geometry
+        r = pybamm.SpatialVariable(
+            "r", domain=["negative particle"], coord_sys="spherical polar"
+        )
+        geometry = {
+            "negative particle": {r: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)}}
+        }
+
+        # mesh
+        submesh_types = {
+            "negative particle": pybamm.MeshGenerator(pybamm.Uniform1DSubMesh)
+        }
+        var_pts = {r: 20}
+        mesh = pybamm.Mesh(geometry, submesh_types, var_pts)
+
+        spatial_methods = {"negative particle": pybamm.FiniteVolume()}
+
+        # boundary conditions (Dirichlet)
+        lbc = pybamm.Scalar(0)
+        rbc = pybamm.Scalar(2)
+        model.boundary_conditions = {
+            c: {"left": (lbc, "Dirichlet"), "right": (rbc, "Neumann")}
+        }
+
+        # discretise
+        disc = pybamm.Discretisation(mesh, spatial_methods)
+        with self.assertRaisesRegex(pybamm.ModelError, "Boundary condition at r = 0"):
+            disc.process_model(model)
+
+        # boundary conditions (non-homog Neumann)
+        lbc = pybamm.Scalar(0)
+        rbc = pybamm.Scalar(2)
+        model.boundary_conditions = {
+            c: {"left": (rbc, "Neumann"), "right": (rbc, "Neumann")}
+        }
+
+        # discretise
+        disc = pybamm.Discretisation(mesh, spatial_methods)
+        with self.assertRaisesRegex(pybamm.ModelError, "Boundary condition at r = 0"):
+            disc.process_model(model)
 
 
 if __name__ == "__main__":
