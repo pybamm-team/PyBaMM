@@ -112,3 +112,4 @@ class BaseModel(pybamm.BaseBatteryModel):
 
         self.submodels["negative particle cracking"] = n
         self.submodels["positive particle cracking"] = p
+        
