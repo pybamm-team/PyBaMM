@@ -44,6 +44,7 @@ class DFN(BaseModel):
         self.set_electrolyte_submodel()
         self.set_thermal_submodel()
         self.set_current_collector_submodel()
+        self.set_crack_submodel()
         self.set_sei_submodel()
 
         if build:
@@ -120,6 +121,13 @@ class DFN(BaseModel):
         self.submodels["electrolyte diffusion"] = pybamm.electrolyte_diffusion.Full(
             self.param
         )
+
+        if self.options["electrolyte conductivity"] not in ["default", "full"]:
+            raise pybamm.OptionError(
+                "electrolyte conductivity '{}' not suitable for DFN".format(
+                    self.options["electrolyte conductivity"]
+                )
+            )
 
         if self.options["surface form"] is False:
             self.submodels[

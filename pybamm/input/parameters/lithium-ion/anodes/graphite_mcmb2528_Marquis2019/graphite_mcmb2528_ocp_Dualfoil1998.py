@@ -3,15 +3,15 @@ from pybamm import exp, tanh
 
 def graphite_mcmb2528_ocp_Dualfoil1998(sto):
     """
-       Graphite MCMB 2528 Open Circuit Potential (OCP) as a function of the
-       stochiometry. The fit is taken from Dualfoil [1]. Dualfoil states that the data
-       was measured by Chris Bogatu at Telcordia and PolyStor materials, 2000. However,
-       we could not find any other records of this measurment.
+    Graphite MCMB 2528 Open Circuit Potential (OCP) as a function of the
+    stochiometry. The fit is taken from Dualfoil [1]. Dualfoil states that the data
+    was measured by Chris Bogatu at Telcordia and PolyStor materials, 2000. However,
+    we could not find any other records of this measurment.
 
-       References
-       ----------
-       .. [1] http://www.cchem.berkeley.edu/jsngrp/fortran.html
-       """
+    References
+    ----------
+    .. [1] http://www.cchem.berkeley.edu/jsngrp/fortran.html
+    """
 
     u_eq = (
         0.194

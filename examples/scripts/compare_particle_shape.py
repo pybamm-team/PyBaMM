@@ -27,8 +27,6 @@ for model, param in zip(models, params):
             {
                 "Negative electrode surface area to volume ratio [m-1]": 170000,
                 "Positive electrode surface area to volume ratio [m-1]": 200000,
-                "Negative surface area per unit volume distribution in x": 1,
-                "Positive surface area per unit volume distribution in x": 1,
             },
             check_already_exists=False,
         )

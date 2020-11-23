@@ -23,7 +23,7 @@ def graphite_diffusivity_Kim2011(sto, T):
     -------
     :class:`pybamm.Symbol`
         Solid diffusivity
-   """
+    """
 
     D_ref = 9 * 10 ** (-14)
     E_D_s = 4e3

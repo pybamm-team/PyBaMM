@@ -3,13 +3,13 @@ import pybamm
 
 def graphite_ocp_PeymanMPM(sto):
     """
-       Graphite Open Circuit Potential (OCP) as a function of the
-       stochiometry. The fit is taken from Peyman MPM [1].
+    Graphite Open Circuit Potential (OCP) as a function of the
+    stochiometry. The fit is taken from Peyman MPM [1].
 
-       References
-       ----------
-       .. [1] Peyman Mohtat et al, MPM (to be submitted)
-       """
+    References
+    ----------
+    .. [1] Peyman Mohtat et al, MPM (to be submitted)
+    """
 
     u_eq = (
         0.063
