@@ -1,4 +1,4 @@
-# [v0.3.0](https://github.com/pybamm-team/PyBaMM)
+# [v0.3.0](https://github.com/pybamm-team/PyBaMM) - 2020-11-22
 
 This release introduces a new aging model for particle swelling and cracking, a new reduced-order model (TSPMe), and a parameter set for A123 LFP cells. Additionally, there have been several backend optimizations to speed up model creation and solving, and other minor features and bug fixes.
 

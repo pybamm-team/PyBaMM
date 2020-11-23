@@ -171,14 +171,34 @@ def simplified_addition(left, right):
         return left
     # Check matrices after checking scalars
     if is_matrix_zero(left):
-        if isinstance(right, pybamm.Scalar):
-            return right.value * pybamm.ones_like(left)
-        else:
+        if right.evaluates_to_number():
+            return right * pybamm.ones_like(left)
+        # If left object is zero and has size smaller than or equal to right object in
+        # all dimensions, we can safely return the right object. For example, adding a
+        # zero vector a matrix, we can just return the matrix
+        elif all(
+            left_dim_size <= right_dim_size
+            for left_dim_size, right_dim_size in zip(
+                left.shape_for_testing, right.shape_for_testing
+            )
+        ) and all(
+            left.evaluates_on_edges(dim) == right.evaluates_on_edges(dim)
+            for dim in ["primary", "secondary", "tertiary"]
+        ):
             return right
     if is_matrix_zero(right):
-        if isinstance(left, pybamm.Scalar):
-            return left.value * pybamm.ones_like(right)
-        else:
+        if left.evaluates_to_number():
+            return left * pybamm.ones_like(right)
+        # See comment above
+        elif all(
+            left_dim_size >= right_dim_size
+            for left_dim_size, right_dim_size in zip(
+                left.shape_for_testing, right.shape_for_testing
+            )
+        ) and all(
+            left.evaluates_on_edges(dim) == right.evaluates_on_edges(dim)
+            for dim in ["primary", "secondary", "tertiary"]
+        ):
             return left
 
     return pybamm.simplify_if_constant(
@@ -203,14 +223,32 @@ def simplified_subtraction(left, right):
         return left
     # Check matrices after checking scalars
     if is_matrix_zero(left):
-        if isinstance(right, pybamm.Scalar):
-            return -right.value * pybamm.ones_like(left)
-        else:
+        if right.evaluates_to_number():
+            return -right * pybamm.ones_like(left)
+        # See comments in simplified_addition
+        elif all(
+            left_dim_size <= right_dim_size
+            for left_dim_size, right_dim_size in zip(
+                left.shape_for_testing, right.shape_for_testing
+            )
+        ) and all(
+            left.evaluates_on_edges(dim) == right.evaluates_on_edges(dim)
+            for dim in ["primary", "secondary", "tertiary"]
+        ):
             return -right
     if is_matrix_zero(right):
-        if isinstance(left, pybamm.Scalar):
-            return left.value * pybamm.ones_like(right)
-        else:
+        if left.evaluates_to_number():
+            return left * pybamm.ones_like(right)
+        # See comments in simplified_addition
+        elif all(
+            left_dim_size >= right_dim_size
+            for left_dim_size, right_dim_size in zip(
+                left.shape_for_testing, right.shape_for_testing
+            )
+        ) and all(
+            left.evaluates_on_edges(dim) == right.evaluates_on_edges(dim)
+            for dim in ["primary", "secondary", "tertiary"]
+        ):
             return left
 
     return pybamm.simplify_if_constant(
