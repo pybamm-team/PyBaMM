@@ -56,7 +56,7 @@ jobs:
         
     - name: Install Windows system dependencies
       if: matrix.os == 'windows-latest'
-      run: choco install graphviz --version 2.42.2
+      run: choco install graphviz --version=2.38.0.20190211
     
     - name: Install standard python dependencies
       run: |
