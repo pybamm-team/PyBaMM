@@ -474,7 +474,11 @@ class TestEvaluate(unittest.TestCase):
         a = pybamm.StateVector(slice(0, 1))
         b = pybamm.StateVector(slice(1, 2))
 
-        y_tests = [np.array([[2.0], [3.0]]), np.array([[1.0], [3.0]])]
+        y_tests = [
+            np.array([[2.0], [3.0]]),
+            np.array([[1.0], [3.0]]),
+            np.array([1.0, 3.0]),
+        ]
         t_tests = [1.0, 2.0]
 
         # test a * b
@@ -630,7 +634,7 @@ class TestEvaluate(unittest.TestCase):
     @unittest.skipIf(system() == "Windows", "JAX not supported on windows")
     def test_evaluator_jax_jacobian(self):
         a = pybamm.StateVector(slice(0, 1))
-        y_tests = [np.array([[2.0]]), np.array([[1.0]])]
+        y_tests = [np.array([[2.0]]), np.array([[1.0]]), np.array([1.0])]
 
         expr = a ** 2
         expr_jac = 2 * a
@@ -649,6 +653,14 @@ class TestEvaluate(unittest.TestCase):
         y_test = np.array([[2.0], [3.0]])
         evaluator = pybamm.EvaluatorJax(expr)
         evaluator.debug(y=y_test)
+
+    @unittest.skipIf(system() == "Windows", "JAX not supported on windows")
+    def test_evaluator_jax_inputs(self):
+        a = pybamm.InputParameter('a')
+        expr = a ** 2
+        evaluator = pybamm.EvaluatorJax(expr)
+        result = evaluator.evaluate(inputs={'a': 2})
+        self.assertEqual(result, 4)
 
     @unittest.skipIf(system() == "Windows", "JAX not supported on windows")
     def test_jax_coo_matrix(self):

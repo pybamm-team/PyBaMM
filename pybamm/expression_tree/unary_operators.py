@@ -582,7 +582,9 @@ class Integral(SpatialOperator):
 
     def _evaluate_for_shape(self):
         """ See :meth:`pybamm.Symbol.evaluate_for_shape_using_domain()` """
-        return pybamm.evaluate_for_shape_using_domain(self.domain)
+        return pybamm.evaluate_for_shape_using_domain(
+            self.domain, self.auxiliary_domains
+        )
 
     def evaluates_on_edges(self, dimension):
         """ See :meth:`pybamm.Symbol.evaluates_on_edges()`. """

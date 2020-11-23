@@ -12,6 +12,7 @@ import timeit
 import pathlib
 import pickle
 import pybamm
+import numbers
 from collections import defaultdict
 
 
@@ -130,30 +131,38 @@ class Timer(object):
     Example
     -------
     timer = pybamm.Timer()
-    print(timer.format(timer.time()))
+    print(timer.time())
 
     """
 
     def __init__(self):
         self._start = timeit.default_timer()
 
-    def format(self, time=None):
+    def reset(self):
+        """
+        Resets this timer's start time.
+        """
+        self._start = timeit.default_timer()
+
+    def time(self):
+        """
+        Returns the time (float, in seconds) since this timer was created,
+        or since meth:`reset()` was last called.
+        """
+        return TimerTime(timeit.default_timer() - self._start)
+
+
+class TimerTime:
+    def __init__(self, value):
+        "A string whose value prints in human-readable form"
+        self.value = value
+
+    def __str__(self):
         """
         Formats a (non-integer) number of seconds, returns a string like
         "5 weeks, 3 days, 1 hour, 4 minutes, 9 seconds", or "0.0019 seconds".
-
-        Arguments
-        ---------
-        time : float, optional
-            The time to be formatted.
-
-        Returns
-        -------
-        string
-            The string representation of ``time`` in human-readable form.
         """
-        if time is None:
-            time = self.time()
+        time = self.value
         if time < 1e-6:
             return "{:.3f} ns".format(time * 1e9)
         if time < 1e-3:
@@ -173,18 +182,46 @@ class Timer(object):
         output.append("1 second" if time == 1 else str(time) + " seconds")
         return ", ".join(output)
 
-    def reset(self):
-        """
-        Resets this timer's start time.
-        """
-        self._start = timeit.default_timer()
+    def __add__(self, other):
+        if isinstance(other, numbers.Number):
+            return TimerTime(self.value + other)
+        else:
+            return TimerTime(self.value + other.value)
 
-    def time(self):
-        """
-        Returns the time (float, in seconds) since this timer was created,
-        or since meth:`reset()` was last called.
-        """
-        return timeit.default_timer() - self._start
+    def __radd__(self, other):
+        return self.__add__(other)
+
+    def __sub__(self, other):
+        if isinstance(other, numbers.Number):
+            return TimerTime(self.value - other)
+        else:
+            return TimerTime(self.value - other.value)
+
+    def __rsub__(self, other):
+        if isinstance(other, numbers.Number):
+            return TimerTime(other - self.value)
+
+    def __mul__(self, other):
+        if isinstance(other, numbers.Number):
+            return TimerTime(self.value * other)
+        else:
+            return TimerTime(self.value * other.value)
+
+    def __rmul__(self, other):
+        return self.__mul__(other)
+
+    def __truediv__(self, other):
+        if isinstance(other, numbers.Number):
+            return TimerTime(self.value / other)
+        else:
+            return TimerTime(self.value / other.value)
+
+    def __rtruediv__(self, other):
+        if isinstance(other, numbers.Number):
+            return TimerTime(other / self.value)
+
+    def __eq__(self, other):
+        return self.value == other.value
 
 
 def load_function(filename):

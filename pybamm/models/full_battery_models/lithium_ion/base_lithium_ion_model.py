@@ -92,3 +92,23 @@ class BaseModel(pybamm.BaseBatteryModel):
         self.submodels["positive oxygen interface"] = pybamm.interface.NoReaction(
             self.param, "Positive", "lithium-ion oxygen"
         )
+
+    def set_crack_submodel(self):
+        if self.options["particle cracking"] is None:
+            return
+
+        if self.options["particle cracking"] == "no cracking":
+            n = pybamm.particle_cracking.NoCracking(self.param, "Negative")
+            p = pybamm.particle_cracking.NoCracking(self.param, "Positive")
+        elif self.options["particle cracking"] == "cathode":
+            n = pybamm.particle_cracking.NoCracking(self.param, "Negative")
+            p = pybamm.particle_cracking.CrackPropagation(self.param, "Positive")
+        elif self.options["particle cracking"] == "anode":
+            n = pybamm.particle_cracking.CrackPropagation(self.param, "Negative")
+            p = pybamm.particle_cracking.NoCracking(self.param, "Positive")
+        else:
+            n = pybamm.particle_cracking.CrackPropagation(self.param, "Negative")
+            p = pybamm.particle_cracking.CrackPropagation(self.param, "Positive")
+
+        self.submodels["negative particle cracking"] = n
+        self.submodels["positive particle cracking"] = p

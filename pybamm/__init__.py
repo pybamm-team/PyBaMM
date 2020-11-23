@@ -63,7 +63,7 @@ PARAMETER_PATH = [
 #
 # Utility classes and methods
 #
-from .util import Timer, FuzzyDict
+from .util import Timer, TimerTime, FuzzyDict
 from .util import root_dir, load_function, rmse, get_infinite_nested_dict, load
 from .util import get_parameters_filepath
 from .logger import logger, set_logging_level
@@ -148,6 +148,7 @@ from .models.submodels import (
     porosity,
     thermal,
     tortuosity,
+    particle_cracking,
 )
 from .models.submodels.interface import sei
 
@@ -174,7 +175,6 @@ from .parameters.thermal_parameters import thermal_parameters, ThermalParameters
 from .parameters.lithium_ion_parameters import LithiumIonParameters
 from .parameters.lead_acid_parameters import LeadAcidParameters
 from .parameters import parameter_sets
-
 
 #
 # Mesh and Discretisation classes

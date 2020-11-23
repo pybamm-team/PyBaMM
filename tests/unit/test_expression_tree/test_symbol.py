@@ -6,6 +6,7 @@ import pybamm
 import unittest
 import numpy as np
 import os
+from scipy.sparse import coo_matrix
 
 
 class TestSymbol(unittest.TestCase):
@@ -131,7 +132,7 @@ class TestSymbol(unittest.TestCase):
 
         # error raising
         with self.assertRaisesRegex(
-            NotImplementedError, "'Addition' not implemented for symbols of type"
+            NotImplementedError, "BinaryOperator not implemented for symbols of type"
         ):
             a + "two"
 
@@ -148,12 +149,12 @@ class TestSymbol(unittest.TestCase):
         self.assertEqual(str(a >= b), str(pybamm.sigmoid(b, a, 10)))
 
         # But exact heavisides should still be used if both variables are constant
-        a = 1
-        b = pybamm.Parameter("b")
-        self.assertEqual(str(a < b), str(pybamm.NotEqualHeaviside(a, b)))
-        self.assertEqual(str(a <= b), str(pybamm.EqualHeaviside(a, b)))
-        self.assertEqual(str(a > b), str(pybamm.NotEqualHeaviside(b, a)))
-        self.assertEqual(str(a >= b), str(pybamm.EqualHeaviside(b, a)))
+        a = pybamm.Scalar(1)
+        b = pybamm.Scalar(2)
+        self.assertEqual(str(a < b), str(pybamm.Scalar(1)))
+        self.assertEqual(str(a <= b), str(pybamm.Scalar(1)))
+        self.assertEqual(str(a > b), str(pybamm.Scalar(0)))
+        self.assertEqual(str(a >= b), str(pybamm.Scalar(0)))
 
         # Change setting back for other tests
         pybamm.settings.heaviside_smoothing = "exact"
@@ -165,10 +166,8 @@ class TestSymbol(unittest.TestCase):
         self.assertEqual(str(abs(a)), str(pybamm.smooth_absolute_value(a, 10)))
 
         # But exact absolute value should still be used for constants
-        a = pybamm.Parameter("a")
-        self.assertEqual(str(abs(a)), str(pybamm.AbsoluteValue(a)))
-        a = -1
-        self.assertEqual(str(abs(a)), "1")
+        a = pybamm.Scalar(-5)
+        self.assertEqual(str(abs(a)), str(pybamm.Scalar(5)))
 
         # Change setting back for other tests
         pybamm.settings.abs_smoothing = "exact"
@@ -216,17 +215,16 @@ class TestSymbol(unittest.TestCase):
         self.assertEqual(pybamm.t.evaluate_ignoring_errors(t=0), 0)
         self.assertIsNone(pybamm.Parameter("a").evaluate_ignoring_errors())
         self.assertIsNone(pybamm.StateVector(slice(0, 1)).evaluate_ignoring_errors())
-        self.assertEqual(pybamm.InputParameter("a").evaluate_ignoring_errors(), 1)
+        np.testing.assert_array_equal(
+            pybamm.InputParameter("a").evaluate_ignoring_errors(), np.nan
+        )
 
     def test_symbol_is_constant(self):
         a = pybamm.Variable("a")
         self.assertFalse(a.is_constant())
 
         a = pybamm.Parameter("a")
-        self.assertTrue(a.is_constant())
-
-        a = pybamm.Scalar(1) * pybamm.Parameter("a")
-        self.assertTrue(a.is_constant())
+        self.assertFalse(a.is_constant())
 
         a = pybamm.Scalar(1) * pybamm.Variable("a")
         self.assertFalse(a.is_constant())
@@ -267,9 +265,35 @@ class TestSymbol(unittest.TestCase):
         a = pybamm.StateVector(slice(0, 10))
         self.assertFalse(a.evaluates_to_number())
 
-        # Time variable returns true
+        # Time variable returns false
         a = 3 * pybamm.t + 2
         self.assertTrue(a.evaluates_to_number())
+
+    def test_symbol_evaluates_to_constant_number(self):
+        a = pybamm.Scalar(3)
+        self.assertTrue(a.evaluates_to_constant_number())
+
+        a = pybamm.Parameter("a")
+        self.assertFalse(a.evaluates_to_constant_number())
+
+        a = pybamm.Variable("a")
+        self.assertFalse(a.evaluates_to_constant_number())
+
+        a = pybamm.Scalar(3) - 2
+        self.assertTrue(a.evaluates_to_constant_number())
+
+        a = pybamm.Vector(np.ones(5))
+        self.assertFalse(a.evaluates_to_constant_number())
+
+        a = pybamm.Matrix(np.ones((4, 6)))
+        self.assertFalse(a.evaluates_to_constant_number())
+
+        a = pybamm.StateVector(slice(0, 10))
+        self.assertFalse(a.evaluates_to_constant_number())
+
+        # Time variable returns true
+        a = 3 * pybamm.t + 2
+        self.assertFalse(a.evaluates_to_constant_number())
 
     def test_symbol_repr(self):
         """
@@ -450,6 +474,29 @@ class TestSymbol(unittest.TestCase):
         y2 = pybamm.StateVector(slice(0, 5))
         with self.assertRaises(pybamm.ShapeError):
             (y1 + y2).test_shape()
+
+
+class TestIsZero(unittest.TestCase):
+    def test_is_scalar_zero(self):
+        a = pybamm.Scalar(0)
+        b = pybamm.Scalar(2)
+        self.assertTrue(pybamm.is_scalar_zero(a))
+        self.assertFalse(pybamm.is_scalar_zero(b))
+
+    def test_is_matrix_zero(self):
+        a = pybamm.Matrix(coo_matrix(np.zeros((10, 10))))
+        b = pybamm.Matrix(coo_matrix(np.ones((10, 10))))
+        c = pybamm.Matrix(coo_matrix(([1], ([0], [0])), shape=(5, 5)))
+        self.assertTrue(pybamm.is_matrix_zero(a))
+        self.assertFalse(pybamm.is_matrix_zero(b))
+        self.assertFalse(pybamm.is_matrix_zero(c))
+
+        a = pybamm.Matrix(np.zeros((10, 10)))
+        b = pybamm.Matrix(np.ones((10, 10)))
+        c = pybamm.Matrix([1, 0, 0])
+        self.assertTrue(pybamm.is_matrix_zero(a))
+        self.assertFalse(pybamm.is_matrix_zero(b))
+        self.assertFalse(pybamm.is_matrix_zero(c))
 
 
 if __name__ == "__main__":

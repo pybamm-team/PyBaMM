@@ -6,6 +6,14 @@ import unittest
 
 
 class TestSettings(unittest.TestCase):
+    def test_simplify(self):
+        self.assertTrue(pybamm.settings.simplify)
+
+        pybamm.settings.simplify = False
+        self.assertFalse(pybamm.settings.simplify)
+
+        pybamm.settings.simplify = True
+
     def test_smoothing_parameters(self):
         self.assertEqual(pybamm.settings.min_smoothing, "exact")
         self.assertEqual(pybamm.settings.max_smoothing, "exact")
