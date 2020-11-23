@@ -8,10 +8,10 @@ import unittest
 class TestCitations(unittest.TestCase):
     def test_citations(self):
         citations = pybamm.citations
-        citations._reset()
         # Default papers should be in both _all_citations dict and in the papers to cite
         self.assertIn("sulzer2020python", citations._all_citations.keys())
         self.assertIn("sulzer2020python", citations._papers_to_cite)
+        self.assertIn("harris2020array", citations._papers_to_cite)
         # Non-default papers should only be in the _all_citations dict
         self.assertIn("sulzer2019physical", citations._all_citations.keys())
         self.assertNotIn("sulzer2019physical", citations._papers_to_cite)
@@ -162,6 +162,11 @@ class TestCitations(unittest.TestCase):
         self.assertNotIn("virtanen2020scipy", citations._papers_to_cite)
         pybamm.AlgebraicSolver()
         self.assertIn("virtanen2020scipy", citations._papers_to_cite)
+
+        citations._reset()
+        self.assertNotIn("jax2018github", citations._papers_to_cite)
+        pybamm.JaxSolver()
+        self.assertIn("jax2018github", citations._papers_to_cite)
 
         if pybamm.have_scikits_odes():
             citations._reset()
