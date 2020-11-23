@@ -59,7 +59,10 @@ def evaluate_for_shape_using_domain(domain, auxiliary_domains=None, typ="vector"
         _auxiliary_domain_sizes = int(
             np.prod([domain_size(dom) for dom in auxiliary_domains.values()])
         )
-    return create_object_of_size(_domain_size * _auxiliary_domain_sizes, typ)
+    if _domain_size == 1 and _auxiliary_domain_sizes == 1:
+        return np.nan
+    else:
+        return create_object_of_size(_domain_size * _auxiliary_domain_sizes, typ)
 
 
 def is_constant(symbol):
