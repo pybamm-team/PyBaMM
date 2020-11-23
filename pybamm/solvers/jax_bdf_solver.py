@@ -14,6 +14,8 @@ from jax.interpreters import partial_eval as pe
 from jax import linear_util as lu
 from jax.config import config
 from absl import logging
+from .jax.linalg import _gmres_solve, _norm_tree, _gmres_qr
+from jax.tree_util import tree_leaves
 logging.set_verbosity(logging.ERROR)
 
 config.update("jax_enable_x64", True)
@@ -43,8 +45,8 @@ def _bdf_odeint(fun, mass, rtol, atol, y0, t_eval, *args):
     func: callable
         function to evaluate the time derivative of the solution `y` at time
         `t` as `func(y, t, *args)`, producing the same shape/structure as `y0`.
-    mass: ndarray
-        diagonal of the mass matrix with shape (n,)
+    mass: callable
+        calculates the action of the mass matrix on a vector
     y0: ndarray
         initial state vector, has shape (n,)
     t_eval: ndarray
@@ -84,7 +86,7 @@ def _bdf_odeint(fun, mass, rtol, atol, y0, t_eval, *args):
     t0 = t_eval[0]
     h0 = t_eval[1] - t0
 
-    stepper = _bdf_init(fun_bind_inputs, jac_bind_inputs, mass, t0, y0, h0, rtol, atol)
+    stepper = _bdf_init(fun_bind_inputs, mass, t0, y0, h0, rtol, atol)
     i = 0
     y_out = jnp.empty((len(t_eval), len(y0)), dtype=y0.dtype)
 
@@ -96,7 +98,7 @@ def _bdf_odeint(fun, mass, rtol, atol, y0, t_eval, *args):
 
     def body_fun(state):
         stepper, t_eval, i, y_out = state
-        stepper = _bdf_step(stepper, fun_bind_inputs, jac_bind_inputs)
+        stepper = _bdf_step(stepper, fun_bind_inputs, mass)
         index = jnp.searchsorted(t_eval, stepper.t)
 
         def for_body(j, y_out):
@@ -112,12 +114,40 @@ def _bdf_odeint(fun, mass, rtol, atol, y0, t_eval, *args):
     stepper, t_eval, i, y_out = jax.lax.while_loop(cond_fun, body_fun, init_state)
     return y_out
 
+def _gmres(A, b, x0=None, *, tol=1e-5, atol=0.0, restart=20, maxiter=None,
+           M=None, qr_mode=False):
+    """
+    GMRES solves the linear system A x = b for x, given A and b. This is a stripped
+    down version of what is in jax to enable jit
+
+    see jax.sparse.linalg._gmres
+    """
+    size = sum(bi.size for bi in tree_leaves(b))
+
+    restart = min(restart, size)
+
+    b_norm = _norm_tree(b)
+    outer_tol = jnp.maximum(tol * b_norm, atol)
+
+    Mb = M(b)
+    Mb_norm = _norm_tree(Mb)
+    inner_tol = Mb_norm * jnp.minimum(1.0, outer_tol / b_norm)
+
+    def _solve(A, b):
+        return _gmres_solve(A, b, x0, outer_tol, inner_tol, restart, maxiter, M,
+                                _gmres_qr)
+
+    x = jax.lax.custom_linear_solve(A, b, solve=_solve, transpose_solve=_solve)
+
+    failed = jnp.isnan(_norm_tree(x))
+    info = jnp.where(failed, x=-1, y=0)
+    return x, info
+
 
 BDFInternalStates = [
     "t",
     "atol",
     "rtol",
-    "M",
     "newton_tol",
     "order",
     "h",
@@ -130,8 +160,6 @@ BDFInternalStates = [
     "alpha",
     "c",
     "error_const",
-    "J",
-    "LU",
     "U",
     "psi",
     "n_function_evals",
@@ -147,7 +175,7 @@ jax.tree_util.register_pytree_node(
 )
 
 
-def _bdf_init(fun, jac, mass, t0, y0, h0, rtol, atol):
+def _bdf_init(fun, mass, t0, y0, h0, rtol, atol):
     """
     Initiation routine for Backward Difference formula (BDF) implicit multistep
     integrator.
@@ -162,11 +190,8 @@ def _bdf_init(fun, jac, mass, t0, y0, h0, rtol, atol):
         function with signature (y, t), where t is a scalar time and y is a ndarray with
         shape (n,), returns the rhs of the system of ODE equations as an nd array with
         shape (n,)
-    jac: callable
-        function with signature (y, t), where t is a scalar time and y is a ndarray with
-        shape (n,), returns the jacobian matrix of fun as an ndarray with shape (n,n)
-    mass: ndarray
-        diagonal of the mass matrix with shape (n,)
+    mass: callable
+        function with signature (y), calculates the action of the mass matrix on y
     t0: float
         initial time
     y0: ndarray
@@ -183,7 +208,6 @@ def _bdf_init(fun, jac, mass, t0, y0, h0, rtol, atol):
     state["t"] = t0
     state["atol"] = atol
     state["rtol"] = rtol
-    state["M"] = mass
     EPS = jnp.finfo(y0.dtype).eps
     state["newton_tol"] = jnp.maximum(10 * EPS / rtol, jnp.minimum(0.03, rtol ** 0.5))
 
@@ -217,11 +241,6 @@ def _bdf_init(fun, jac, mass, t0, y0, h0, rtol, atol):
     state["alpha"] = alpha
     state["c"] = c
     state["error_const"] = error_const
-
-    J = jac(y0, t0)
-    state["J"] = J
-
-    state["LU"] = jax.scipy.linalg.lu_factor(state["M"] - c * J)
 
     state["U"] = _compute_R(order, 1)
     state["psi"] = None
@@ -258,9 +277,13 @@ def _compute_R(order, factor):
     return R
 
 
-def _select_initial_conditions(fun, M, t0, y0, tol, scale_y0):
+def _select_initial_conditions(fun, mass, t0, y0, tol, scale_y0):
     # identify algebraic variables as zeros on diagonal
-    algebraic_variables = onp.diag(M) == 0.0
+    n = y0.shape[0]
+    I = onp.eye(n)
+    algebraic_variables = onp.array(
+        [mass(I[:, i].reshape(-1))[i] == 0.0 for i in range(n)]
+    )
 
     # if all differentiable variables then return y0 (can use normal python if since M
     # is static)
@@ -284,13 +307,10 @@ def _select_initial_conditions(fun, M, t0, y0, tol, scale_y0):
     d = jnp.zeros(y0_a.shape[0], dtype=y0.dtype)
     y_a = jnp.array(y0_a, copy=True)
 
-    # calculate neg jacobian of fun_a
-    J_a = jax.jacfwd(fun_a)(y_a)
-    LU = jax.scipy.linalg.lu_factor(-J_a)
-
     converged = False
     dy_norm_old = -1.0
     k = 0
+    maxiter = 10*n
     while_state = [k, converged, dy_norm_old, d, y_a]
 
     def while_cond(while_state):
@@ -300,7 +320,11 @@ def _select_initial_conditions(fun, M, t0, y0, tol, scale_y0):
     def while_body(while_state):
         k, converged, dy_norm_old, d, y_a = while_state
         f_eval = fun_a(y_a)
-        dy = jax.scipy.linalg.lu_solve(LU, f_eval)
+        dy, _ = _gmres(
+            lambda x: -jax.jvp(fun_a, (y_a,t), (x,t))[1], f_eval,
+            x0=d, tol=1e-5, atol=0.0, restart=20, maxiter=maxiter, M=lambda x: x,
+                    qr_mode=False)
+
         dy_norm = jnp.sqrt(jnp.mean((dy / scale_y0_a) ** 2))
         rate = dy_norm / dy_norm_old
 
@@ -412,10 +436,9 @@ def _update_step_size_and_lu(state, factor):
     state = _update_step_size(state, factor)
 
     # redo lu (c has changed)
-    LU = jax.scipy.linalg.lu_factor(state.M - state.c * state.J)
     n_lu_decompositions = state.n_lu_decompositions + 1
 
-    return state._replace(LU=LU, n_lu_decompositions=n_lu_decompositions)
+    return state._replace(n_lu_decompositions=n_lu_decompositions)
 
 
 def _update_step_size(state, factor):
@@ -462,30 +485,25 @@ def _update_jacobian(state, jac):
     we update the jacobian using J(t_{n+1}, y^0_{n+1})
     following the scipy bdf implementation rather than J(t_n, y_n) as per [1]
     """
-    J = jac(state.y0, state.t + state.h)
     n_jacobian_evals = state.n_jacobian_evals + 1
-    LU = jax.scipy.linalg.lu_factor(state.M - state.c * J)
     n_lu_decompositions = state.n_lu_decompositions + 1
     return state._replace(
-        J=J,
         n_jacobian_evals=n_jacobian_evals,
-        LU=LU,
         n_lu_decompositions=n_lu_decompositions,
     )
 
 
-def _newton_iteration(state, fun):
+def _newton_iteration(state, fun, mass):
     tol = state.newton_tol
     c = state.c
     psi = state.psi
     y0 = state.y0
-    LU = state.LU
-    M = state.M
     scale_y0 = state.scale_y0
     t = state.t + state.h
     d = jnp.zeros(y0.shape, dtype=y0.dtype)
     y = jnp.array(y0, copy=True)
     n_function_evals = state.n_function_evals
+    maxiter = 10*y0.shape[0]
 
     converged = False
     dy_norm_old = -1.0
@@ -500,8 +518,13 @@ def _newton_iteration(state, fun):
         k, converged, dy_norm_old, d, y, n_function_evals = while_state
         f_eval = fun(y, t)
         n_function_evals += 1
-        b = c * f_eval - M @ (psi + d)
-        dy = jax.scipy.linalg.lu_solve(LU, b)
+        b = c * f_eval - mass(psi + d)
+        dy, _ = _gmres(
+            lambda x: mass(x) - state.c * jax.jvp(fun, (y,t), (x,t))[1], b,
+            x0=d, tol=1e-5, atol=0.0, restart=20, maxiter=maxiter,
+            M=lambda x: x, qr_mode=False
+        )
+
         dy_norm = jnp.sqrt(jnp.mean((dy / scale_y0) ** 2))
         rate = dy_norm / dy_norm_old
 
@@ -578,7 +601,7 @@ def _prepare_next_step_order_change(state, d, y, n_iter):
     return new_state
 
 
-def _bdf_step(state, fun, jac):
+def _bdf_step(state, fun, mass):
     # print('bdf_step', state.t, state.h)
     # we will try and use the old jacobian unless convergence of newton iteration
     # fails
@@ -601,7 +624,7 @@ def _bdf_step(state, fun, jac):
         state, step_accepted, updated_jacobian, y, d, n_iter = while_state
 
         # solve BDF equation using y0 as starting point
-        converged, n_iter, y, d, state = _newton_iteration(state, fun)
+        converged, n_iter, y, d, state = _newton_iteration(state, fun, mass)
         not_converged = converged == False  # noqa: E712
 
         # newton iteration did not converge, but jacobian has already been
@@ -623,7 +646,7 @@ def _bdf_step(state, fun, jac):
             partial(
                 jnp.where, not_converged * (updated_jacobian == False)  # noqa: E712
             ),
-            (_update_jacobian(state, jac), True),
+            (_update_jacobian(state, None), True),
             (state, False + updated_jacobian),
         )
 
@@ -748,7 +771,7 @@ def block_diag(lst):
 # governing permissions and limitations under the License.
 
 
-def jax_bdf_integrate(func, y0, t_eval, *args, rtol=1e-6, atol=1e-6, mass=None):
+def jax_bdf_integrate(func, y0, t_eval, *args, rtol=1e-6, atol=1e-6, mass=lambda x:x):
     """
     Backward Difference formula (BDF) implicit multistep integrator. The basic algorithm
     is derived in [2]_. This particular implementation follows that implemented in the
@@ -776,8 +799,8 @@ def jax_bdf_integrate(func, y0, t_eval, *args, rtol=1e-6, atol=1e-6, mass=None):
         relative tolerance for the solver
     atol: (optional) float
         absolute tolerance for the solver
-    mass: (optional) ndarray
-        diagonal of the mass matrix with shape (n,)
+    mass: (optional) callable
+        function calculate the action of the mass matrix on an ndarray
 
     Returns
     -------
@@ -808,7 +831,10 @@ def jax_bdf_integrate(func, y0, t_eval, *args, rtol=1e-6, atol=1e-6, mass=None):
     flat_args, in_tree = tree_flatten((y0, t_eval[0], *args))
     in_avals = tuple(safe_map(abstractify, flat_args))
     converted, consts = closure_convert(func, in_tree, in_avals)
-    return _bdf_odeint_wrapper(converted, mass, rtol, atol, y0, t_eval, *consts, *args)
+    return _bdf_odeint_wrapper(
+        converted, mass, rtol, atol, y0, t_eval, *consts, *args
+    )
+
 
 
 def flax_while_loop(cond_fun, body_fun, init_val):  # pragma: no cover
@@ -848,11 +874,8 @@ def flax_scan(f, init, xs, length=None):  # pragma: no cover
 @jax.partial(jax.jit, static_argnums=(0, 1, 2, 3))
 def _bdf_odeint_wrapper(func, mass, rtol, atol, y0, ts, *args):
     y0, unravel = ravel_pytree(y0)
-    if mass is None:
-        mass = onp.identity(y0.shape[0], dtype=y0.dtype)
-    else:
-        mass = block_diag(tree_flatten(mass)[0])
     func = ravel_first_arg(func, unravel)
+    mass = ravel_first_arg(mass, unravel)
     out = _bdf_odeint(func, mass, rtol, atol, y0, ts, *args)
     return jax.vmap(unravel)(out)
 
@@ -885,13 +908,20 @@ def _bdf_odeint_rev(func, mass, rtol, atol, res, g):
 
         return (-y_dot, y_bar_dot, *rest)
 
-    algebraic_variables = onp.diag(mass) == 0.0
+    def aug_mass(augmented_state):
+        """Original mass augmented with vjp_y, vjp_t and vjp_args."""
+        y, y_bar, *rest = augmented_state
+        return (mass(y), y_bar, *rest)
+
+    # shouldn't matter what vector we pass in
+    M = jax.jaxfwd(mass)(ys)
+    algebraic_variables = onp.diag(M) == 0.0
     differentiable_variables = algebraic_variables == False  # noqa: E712
-    mass_is_I = onp.array_equal(mass, onp.eye(mass.shape[0]))
+    mass_is_I = onp.array_equal(M, onp.eye(M.shape[0]))
     is_dae = onp.any(algebraic_variables)
 
     if not mass_is_I:
-        M_dd = mass[onp.ix_(differentiable_variables, differentiable_variables)]
+        M_dd = M[onp.ix_(differentiable_variables, differentiable_variables)]
         LU_invM_dd = jax.scipy.linalg.lu_factor(M_dd)
 
     def initialise(g0, y0, t0):
@@ -919,18 +949,6 @@ def _bdf_odeint_rev(func, mass, rtol, atol, res, g):
     y_bar = initialise(g[-1], ys[-1], ts[-1])
     ts_bar = []
     t0_bar = 0.0
-
-    def arg_to_identity(arg):
-        return onp.identity(arg.shape[0] if arg.ndim > 0 else 1, dtype=arg.dtype)
-
-    def arg_dicts_to_values(args):
-        """
-        Note: JAX puts in empty arrays into args for some reason, we remove them here
-        """
-        return sum((tuple(b.values()) for b in args if isinstance(b, dict)), ())
-
-    aug_mass = (mass, mass, onp.array(1.0)) + \
-        arg_dicts_to_values(tree_map(arg_to_identity, args))
 
     def scan_fun(carry, i):
         y_bar, t0_bar, args_bar = carry
