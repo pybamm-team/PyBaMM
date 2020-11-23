@@ -1,8 +1,21 @@
 # [Unreleased](https://github.com/pybamm-team/PyBaMM)
 
 ## Features
-
 -   Added composite surface form electrolyte models: `CompositeDifferential` and `CompositeAlgebraic` ([#1207](https://github.com/pybamm-team/PyBaMM/issues/1207))
+
+## Optimizations
+
+## Bug fixes
+
+## Breaking changes
+
+# [v0.3.0](https://github.com/pybamm-team/PyBaMM)
+
+This release introduces a new aging model for particle swelling and cracking, a new reduced-order model (TSPMe), and a parameter set for A123 LFP cells. Additionally, there have been several backend optimizations to speed up model creation and solving, and other minor features and bug fixes.
+
+## Features
+
+-   Added a submodel for particle swelling and cracking ([#1232](https://github.com/pybamm-team/PyBaMM/pull/1232))
 -   Added a notebook on how to speed up the solver and handle instabilities ([#1223](https://github.com/pybamm-team/PyBaMM/pull/1223))
 -   Improve string printing of `BinaryOperator`, `Function`, and `Concatenation` objects ([#1223](https://github.com/pybamm-team/PyBaMM/pull/1223))
 -   Added `Solution.integration_time`, which is the time taken just by the integration subroutine, without extra setups ([#1223](https://github.com/pybamm-team/PyBaMM/pull/1223))
