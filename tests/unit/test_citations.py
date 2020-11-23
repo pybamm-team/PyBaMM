@@ -3,6 +3,7 @@
 #
 import pybamm
 import unittest
+from platform import system
 
 
 class TestCitations(unittest.TestCase):
@@ -163,11 +164,6 @@ class TestCitations(unittest.TestCase):
         pybamm.AlgebraicSolver()
         self.assertIn("virtanen2020scipy", citations._papers_to_cite)
 
-        citations._reset()
-        self.assertNotIn("jax2018github", citations._papers_to_cite)
-        pybamm.JaxSolver()
-        self.assertIn("jax2018github", citations._papers_to_cite)
-
         if pybamm.have_scikits_odes():
             citations._reset()
             self.assertNotIn("scikits-odes", citations._papers_to_cite)
@@ -184,6 +180,14 @@ class TestCitations(unittest.TestCase):
             self.assertNotIn("hindmarsh2005sundials", citations._papers_to_cite)
             pybamm.IDAKLUSolver()
             self.assertIn("hindmarsh2005sundials", citations._papers_to_cite)
+
+    @unittest.skipIf(system() == "Windows", "JAX not supported on windows")
+    def test_jax_citations(self):
+        citations = pybamm.citations
+        citations._reset()
+        self.assertNotIn("jax2018github", citations._papers_to_cite)
+        pybamm.JaxSolver()
+        self.assertIn("jax2018github", citations._papers_to_cite)
 
 
 if __name__ == "__main__":
