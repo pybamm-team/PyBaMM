@@ -337,11 +337,6 @@ class SpatialOperator(UnaryOperator):
     def __init__(self, name, child, domain=None, auxiliary_domains=None):
         super().__init__(name, child, domain, auxiliary_domains)
 
-    def diff(self, variable):
-        """ See :meth:`pybamm.Symbol.diff()`. """
-        # We shouldn't need this
-        raise NotImplementedError
-
     def _unary_simplify(self, simplified_child):
         """ See :meth:`pybamm.UnaryOperator.simplify()`. """
 
