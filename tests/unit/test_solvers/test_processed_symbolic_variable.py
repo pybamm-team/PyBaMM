@@ -165,7 +165,6 @@ class TestProcessedSymbolicVariable(unittest.TestCase):
         var = pybamm.Variable("var", domain=["negative electrode", "separator"])
         x = pybamm.SpatialVariable("x", domain=["negative electrode", "separator"])
         p = pybamm.InputParameter("p", domain=["negative electrode", "separator"])
-        p.set_expected_size(65)
         q = pybamm.InputParameter("q")
         eqn = (var * p) ** 2 + 2 * q
 
