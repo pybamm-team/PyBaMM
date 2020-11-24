@@ -841,20 +841,17 @@ class BaseSolver(object):
         termination = self.get_termination_reason(solution, model.events)
 
         pybamm.logger.debug("Finish stepping {} ({})".format(model.name, termination))
-        if set_up_time:
-            pybamm.logger.debug(
-                (
-                    "Set-up time: {}, Step time: {} (of which integration time: {}), "
-                    "Total time: {}"
-                ).format(
-                    solution.set_up_time,
-                    solution.solve_time,
-                    solution.integration_time,
-                    solution.total_time,
-                )
+        pybamm.logger.debug(
+            (
+                "Set-up time: {}, Step time: {} (of which integration time: {}), "
+                "Total time: {}"
+            ).format(
+                solution.set_up_time,
+                solution.solve_time,
+                solution.integration_time,
+                solution.total_time,
             )
-        else:
-            pybamm.logger.debug("Step time: {}".format(solution.solve_time))
+        )
         if save is False or old_solution is None:
             return solution
         else:

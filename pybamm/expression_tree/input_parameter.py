@@ -39,6 +39,7 @@ class InputParameter(pybamm.Symbol):
         # We also need to update the saved size and shape
         self._saved_size = size
         self._saved_shape = (size, 1)
+        self._saved_evaluate_for_shape = self._evaluate_for_shape()
 
     def _evaluate_for_shape(self):
         """
