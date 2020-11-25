@@ -450,9 +450,7 @@ class Simulation:
                     )
                     break
             pybamm.logger.info(
-                "Finish experiment simulation, took {}".format(
-                    timer.format(timer.time())
-                )
+                "Finish experiment simulation, took {}".format(timer.time())
             )
 
         return self.solution

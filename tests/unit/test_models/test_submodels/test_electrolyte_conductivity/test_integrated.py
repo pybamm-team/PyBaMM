@@ -10,7 +10,7 @@ import unittest
 class TestFull(unittest.TestCase):
     def test_public_functions(self):
         param = pybamm.LithiumIonParameters()
-        a = pybamm.PrimaryBroadcast(0, "current collector")
+        a = pybamm.PrimaryBroadcast(1, "current collector")
         c_e_n = pybamm.standard_variables.c_e_n
         c_e_s = pybamm.standard_variables.c_e_s
         c_e_p = pybamm.standard_variables.c_e_p

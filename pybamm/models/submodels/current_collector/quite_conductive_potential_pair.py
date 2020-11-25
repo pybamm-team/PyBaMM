@@ -67,7 +67,9 @@ class BaseQuiteConductivePotentialPair(BasePotentialPair):
             * pybamm.laplacian(phi_s_cp)
             + pybamm.source(i_boundary_cc_0, phi_s_cp)
             + c * pybamm.PrimaryBroadcast(cc_area, "current collector"),
-            c: pybamm.Integral(i_boundary_cc, z) - applied_current / cc_area + 0 * c,
+            c: pybamm.Integral(i_boundary_cc, z)
+            - applied_current / cc_area
+            + pybamm.Multiplication(0, c),
         }
 
     def set_initial_conditions(self, variables):
