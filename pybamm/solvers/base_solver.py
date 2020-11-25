@@ -692,7 +692,9 @@ class BaseSolver(object):
                     for i, last_state in enumerate(last_states):
                         model.y0 = last_state
                         last_states[i] = self.calculate_consistent_state(
-                            model, t_eval_dimensionless[end_index], ext_and_inputs_list[0]
+                            model,
+                            t_eval_dimensionless[end_index],
+                            ext_and_inputs_list[0],
                         )
                 model.y0 = last_states
 
