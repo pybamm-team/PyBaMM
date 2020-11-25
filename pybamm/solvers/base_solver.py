@@ -496,7 +496,9 @@ class BaseSolver(object):
             y0 = y0.flatten()
         return y0
 
-    def solve(self, model, t_eval=None, external_variables=None, inputs=None):
+    def solve(
+        self, model, t_eval=None, external_variables=None, inputs=None, nproc=None
+    ):
         """
         Execute the solver setup and calculate the solution of the model at
         specified times.
@@ -514,6 +516,9 @@ class BaseSolver(object):
         inputs : dict or list, optional
             A dictionary or list of dictionaries describing any input parameters to
             pass to the model when solving
+        nproc : int, optional
+            Number of processes to use when solving for more than one set of input
+            parameters. Defaults to value returned by "os.cpu_count()".
 
         Raises
         ------
@@ -668,7 +673,7 @@ class BaseSolver(object):
                 )
                 new_solutions = [new_solution]
             else:
-                with mp.Pool(processes=2) as p:
+                with mp.Pool(processes=nproc) as p:
                     new_solutions = p.starmap(
                         self._integrate,
                         zip(
