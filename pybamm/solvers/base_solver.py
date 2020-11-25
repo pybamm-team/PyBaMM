@@ -496,7 +496,7 @@ class BaseSolver(object):
             y0 = y0.flatten()
         return y0
 
-    def solve(self, model, t_eval=None, external_variables=None, inputs_list=None):
+    def solve(self, model, t_eval=None, external_variables=None, inputs=None):
         """
         Execute the solver setup and calculate the solution of the model at
         specified times.
@@ -557,8 +557,12 @@ class BaseSolver(object):
             raise pybamm.SolverError("t_eval must increase monotonically")
 
         # Set up external variables and inputs
-        if not isinstance(inputs_list, list):
-            inputs_list = [inputs_list]
+        #
+        # Argument "inputs" can be either a list of input dicts or
+        # a single dict. The remaining of this function is only working
+        # with variable "input_list", which is a list of dictionaries.
+        # If "inputs" is a single dict, "inputs_list" is a list of only one dict.
+        inputs_list = inputs if isinstance(inputs, list) else [inputs]
         ext_and_inputs_list = [
             self._set_up_ext_and_inputs(model, external_variables, inputs)
             for inputs in inputs_list
@@ -733,7 +737,10 @@ class BaseSolver(object):
                 "Check whether simulation terminated too early."
             )
 
-        return solutions
+        if ninputs == 1:
+            return solutions[0]
+        else:
+            return solutions
 
     def step(
         self,
