@@ -702,10 +702,11 @@ class BaseSolver(object):
                         )
                 model.y0 = last_states
 
+        solve_time = timer.time()
         for i, solution in enumerate(solutions):
             # Assign times
             solution.set_up_time = set_up_time
-            solution.solve_time = timer.time()
+            solution.solve_time = solve_time
             # Add model and inputs to solution
             solution.model = model
             solution.inputs = ext_and_inputs_list[i]
@@ -723,15 +724,15 @@ class BaseSolver(object):
         pybamm.logger.info("Finish solving {} ({})".format(model.name, termination))
         pybamm.logger.info(
             "Set-up time: {}, Solve time: {}, Total time: {}".format(
-                timer.format(solution.set_up_time),
-                timer.format(solution.solve_time),
-                timer.format(solution.total_time),
+                timer.format(solutions[0].set_up_time),
+                timer.format(solutions[0].solve_time),
+                timer.format(solutions[0].total_time),
             )
         )
 
-        # Raise error if solution only contains one timestep (except for algebraic
+        # Raise error if solutions[0] only contains one timestep (except for algebraic
         # solvers, where we may only expect one time in the solution)
-        if self.algebraic_solver is False and len(solution.t) == 1:
+        if self.algebraic_solver is False and len(solutions[0].t) == 1:
             raise pybamm.SolverError(
                 "Solution time vector has length 1. "
                 "Check whether simulation terminated too early."
