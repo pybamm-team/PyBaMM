@@ -511,8 +511,9 @@ class BaseSolver(object):
         external_variables : dict
             A dictionary of external variables and their corresponding
             values at the current time
-        inputs : dict, optional
-            Any input parameters to pass to the model when solving
+        inputs : dict or list, optional
+            A dictionary or list of dictionaries describing any input parameters to
+            pass to the model when solving
 
         Raises
         ------
@@ -556,6 +557,8 @@ class BaseSolver(object):
             raise pybamm.SolverError("t_eval must increase monotonically")
 
         # Set up external variables and inputs
+        if not isinstance(inputs_list, list):
+            inputs_list = [inputs_list]
         ext_and_inputs_list = [
             self._set_up_ext_and_inputs(model, external_variables, inputs)
             for inputs in inputs_list
@@ -653,15 +656,23 @@ class BaseSolver(object):
                 )
             )
             ninputs = len(ext_and_inputs_list)
-            with mp.Pool(processes=2) as p:
-                new_solutions = p.starmap(
-                    self._integrate,
-                    zip(
-                        [model] * ninputs,
-                        [t_eval_dimensionless[start_index:end_index]] * ninputs,
-                        ext_and_inputs_list
-                    )
+            if ninputs == 1:
+                new_solution = self._integrate(
+                    model,
+                    t_eval_dimensionless[start_index:end_index],
+                    ext_and_inputs_list[0],
                 )
+                new_solutions = [new_solution]
+            else:
+                with mp.Pool(processes=2) as p:
+                    new_solutions = p.starmap(
+                        self._integrate,
+                        zip(
+                            [model] * ninputs,
+                            [t_eval_dimensionless[start_index:end_index]] * ninputs,
+                            ext_and_inputs_list,
+                        ),
+                    )
 
             if start_index == start_indices[0]:
                 solutions = [sol for sol in new_solutions]
