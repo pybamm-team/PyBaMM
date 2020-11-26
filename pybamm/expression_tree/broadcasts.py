@@ -4,6 +4,7 @@
 import numbers
 import numpy as np
 import pybamm
+from scipy.sparse import csr_matrix
 
 
 class Broadcast(pybamm.SpatialOperator):
@@ -321,24 +322,73 @@ class FullBroadcastToEdges(FullBroadcast):
         return True
 
 
-def ones_like(*symbols):
+def full_like(symbols, fill_value):
     """
-    Create a symbol with the same shape as the input symbol and with constant value '1',
-    using `FullBroadcast`.
+    Returns an array with the same shape, domain and auxiliary domains as the sum of the
+    input symbols, with a constant value given by `fill_value`.
+
+    Parameters
+    ----------
+    symbols : :class:`Symbol`
+        Symbols whose shape to copy
+    fill_value : number
+        Value to assign
+    """
+    # Make a symbol that combines all the children, to get the right domain
+    # that takes all the child symbols into account
+    sum_symbol = symbols[0]
+    for sym in symbols[1:]:
+        sum_symbol += sym
+
+    # Just return scalar if symbol shape is scalar
+    if sum_symbol.evaluates_to_number():
+        return pybamm.Scalar(fill_value)
+    try:
+        shape = sum_symbol.shape
+        # use vector or matrix
+        if shape[1] == 1:
+            array_type = pybamm.Vector
+        else:
+            array_type = pybamm.Matrix
+        # return dense array, except for a matrix of zeros
+        if shape[1] != 1 and fill_value == 0:
+            entries = csr_matrix(shape)
+        else:
+            entries = fill_value * np.ones(shape)
+
+        return array_type(
+            entries,
+            domain=sum_symbol.domain,
+            auxiliary_domains=sum_symbol.auxiliary_domains,
+        )
+
+    except NotImplementedError:
+        return FullBroadcast(
+            fill_value, sum_symbol.domain, sum_symbol.auxiliary_domains
+        )
+
+
+def zeros_like(*symbols):
+    """
+    Returns an array with the same shape, domain and auxiliary domains as the sum of the
+    input symbols, with each entry equal to zero.
 
     Parameters
     ----------
     symbols : :class:`Symbol`
         Symbols whose shape to copy
     """
-    # Make a symbol that combines all the children, to get the right domain
-    # that takes all the child symbols into account
-    sum_symbol = symbols[0]
-    for sym in symbols:
-        sum_symbol += sym
+    return full_like(symbols, 0)
 
-    # Just return scalar 1 if symbol has no domain (no broadcasting necessary)
-    if sum_symbol.domain == []:
-        return pybamm.Scalar(1)
-    else:
-        return FullBroadcast(1, sum_symbol.domain, sum_symbol.auxiliary_domains)
+
+def ones_like(*symbols):
+    """
+    Returns an array with the same shape, domain and auxiliary domains as the sum of the
+    input symbols, with each entry equal to one.
+
+    Parameters
+    ----------
+    symbols : :class:`Symbol`
+        Symbols whose shape to copy
+    """
+    return full_like(symbols, 1)
