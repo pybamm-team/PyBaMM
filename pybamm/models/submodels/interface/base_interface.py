@@ -173,14 +173,6 @@ class BaseInterface(pybamm.BaseSubModel):
         else:
             return pybamm.Scalar(0)
 
-    def _get_surface_area_per_unit_volume(self):
-        "Returns the surface area per unit volume (which may depend on position)"
-        x_n = pybamm.standard_spatial_vars.x_n
-        x_p = pybamm.standard_spatial_vars.x_p
-        a_n = self.param.a_n(x_n)
-        a_p = self.param.a_p(x_p)
-        return a_n, a_p
-
     def _get_electrolyte_reaction_signed_stoichiometry(self):
         "Returns the number of electrons in the reaction"
         if self.reaction in ["lithium-ion main", "sei"]:
@@ -347,15 +339,10 @@ class BaseInterface(pybamm.BaseSubModel):
             }
         )
 
-        a_n, a_p = self._get_surface_area_per_unit_volume()
+        a_n = variables["Negative electrode surface area per unit volume"]
+        a_p = variables["Positive electrode surface area per unit volume"]
         a = pybamm.Concatenation(
             a_n, pybamm.FullBroadcast(0, "separator", "current collector"), a_p
-        )
-        variables.update(
-            {
-                "Negative electrode surface area per unit volume": a_n,
-                "Positive electrode surface area per unit volume": a_p,
-            }
         )
 
         s_n, s_p = self._get_electrolyte_reaction_signed_stoichiometry()

@@ -35,6 +35,7 @@ class DFN(BaseModel):
 
         self.set_external_circuit_submodel()
         self.set_porosity_submodel()
+        self.set_active_material_submodel()
         self.set_tortuosity_submodels()
         self.set_convection_submodel()
         self.set_interfacial_submodel()
@@ -58,6 +59,23 @@ class DFN(BaseModel):
             self.submodels["porosity"] = pybamm.porosity.Constant(self.param)
         elif self.options["sei porosity change"] is True:
             self.submodels["porosity"] = pybamm.porosity.Full(self.param)
+
+    def set_active_material_submodel(self):
+
+        if self.options["active material change"] is None:
+            self.submodels[
+                "negative active material"
+            ] = pybamm.active_material.Constant(self.param, "Negative", self.options)
+            self.submodels[
+                "positive active material"
+            ] = pybamm.active_material.Constant(self.param, "Positive", self.options)
+        elif self.options["active material change"] == "example":
+            self.submodels["negative active material"] = pybamm.active_material.Full(
+                self.param, "Negative", self.options
+            )
+            self.submodels["positive active material"] = pybamm.active_material.Full(
+                self.param, "Positive", self.options
+            )
 
     def set_convection_submodel(self):
 

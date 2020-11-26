@@ -212,6 +212,7 @@ class BaseBatteryModel(pybamm.BaseModel):
             "external submodels": [],
             "sei": None,
             "sei porosity change": False,
+            "active material change": None,
             "working electrode": None,
             "particle cracking": None,
         }
@@ -347,6 +348,13 @@ class BaseBatteryModel(pybamm.BaseModel):
             raise pybamm.OptionError(
                 "Unknown sei porosity change '{}'".format(
                     options["sei porosity change"]
+                )
+            )
+
+        if options["active material change"] not in [None, "example"]:
+            raise pybamm.OptionError(
+                "Unknown active material change '{}'".format(
+                    options["active material change"]
                 )
             )
 

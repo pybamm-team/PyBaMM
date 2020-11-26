@@ -48,7 +48,6 @@ class BaseCracking(pybamm.BaseSubModel):
             f"X-averaged {domain} crack length": l_cr_av,
             f"X-averaged {domain} crack length [m]": l_cr_av * l_cr0,
         }
-        variables.update(self._get_standard_surface_variables(l_cr))
         return variables
 
     def _get_mechanical_results(self, variables):
@@ -57,6 +56,7 @@ class BaseCracking(pybamm.BaseSubModel):
         ]
         c_s_surf = variables[self.domain + " particle surface concentration"]
         T_xav = variables["X-averaged cell temperature"]
+        eps_s = variables[self.domain + " electrode active material volume fraction"]
 
         if "Cell thickness change [m]" not in variables:
             cell_thickness_change = (
@@ -73,7 +73,6 @@ class BaseCracking(pybamm.BaseSubModel):
             c_0 = self.param.c_n_0
             E0 = self.param.E_n
             nu = self.param.nu_n
-            eps_s = self.param.epsilon_s_n
             L0 = self.param.L_n
             c_init = self.param.c_n_init(1)
             v_change = pybamm.x_average(
@@ -88,7 +87,6 @@ class BaseCracking(pybamm.BaseSubModel):
             c_0 = self.param.c_p_0
             E0 = self.param.E_p
             nu = self.param.nu_p
-            eps_s = self.param.epsilon_s_p
             L0 = self.param.L_p
             c_init = self.param.c_p_init(0)
             v_change = pybamm.x_average(
@@ -132,27 +130,31 @@ class BaseCracking(pybamm.BaseSubModel):
             "Cell thickness change [m]": cell_thickness_change,
         }
 
-    def _get_standard_surface_variables(self, l_cr):
+    def _get_standard_surface_variables(self, variables):
         """
         A private function to obtain the standard variables which
         can be derived from the local particle crack surfaces.
+
         Parameters
         ----------
         l_cr : :class:`pybamm.Symbol`
             The crack length in electrode particles.
+        a0 : :class:`pybamm.Symbol`
+            Smooth surface area to volume ratio.
+
         Returns
         -------
         variables : dict
-        The variables which can be derived from the crack length.
+            The variables which can be derived from the crack length.
         """
+        l_cr = variables[self.domain + " particle crack length"]
+        a0 = variables[self.domain + " electrode surface area to volume ratio"]
         if self.domain == "Negative":
             x = pybamm.standard_spatial_vars.x_n
-            a0 = self.param.a_n(x)
             R0 = self.param.R_n(x)
             rho_cr = self.param.rho_cr_n
         elif self.domain == "Positive":
             x = pybamm.standard_spatial_vars.x_p
-            a0 = self.param.a_p(x)
             R0 = self.param.R_p(x)
             rho_cr = self.param.rho_cr_p
         roughness = l_cr * 2 * rho_cr + 1  # the ratio of cracks to normal surface
