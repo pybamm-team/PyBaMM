@@ -129,8 +129,8 @@ class DFN(BaseModel):
             submod_n = pybamm.electrode.ohm.SurfaceForm(self.param, "Negative")
             submod_p = pybamm.electrode.ohm.SurfaceForm(self.param, "Positive")
 
-        self.submodels["negative electrode"] = submod_n
-        self.submodels["positive electrode"] = submod_p
+        self.submodels["negative electrode potential"] = submod_n
+        self.submodels["positive electrode potential"] = submod_p
 
     def set_electrolyte_submodel(self):
 
