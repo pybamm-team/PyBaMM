@@ -48,7 +48,7 @@ class BaseBatteryModel(pybamm.BaseModel):
                 "quadratic profile", or "quartic profile".
             * "particle shape" : str, optional
                 Sets the model shape of the electrode particles. This is used to
-                calculate the surface area per unit volume. Can be "spherical"
+                calculate the surface area to volume ratio. Can be "spherical"
                 (default) or "user". For the "user" option the surface area per
                 unit volume can be passed as a parameter, and is therefore not
                 necessarily consistent with the particle shape.

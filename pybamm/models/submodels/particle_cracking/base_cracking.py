@@ -76,8 +76,8 @@ class BaseCracking(pybamm.BaseSubModel):
             L0 = self.param.L_n
             c_init = self.param.c_n_init(1)
             v_change = pybamm.x_average(
-                self.param.t_n_change(c_s_rav)
-            ) - self.param.t_n_change(c_init)
+                eps_s * self.param.t_n_change(c_s_rav)
+            ) - pybamm.x_average(eps_s * self.param.t_n_change(c_init))
 
         elif self.domain == "Positive":
             x = pybamm.standard_spatial_vars.x_p
@@ -90,12 +90,10 @@ class BaseCracking(pybamm.BaseSubModel):
             L0 = self.param.L_p
             c_init = self.param.c_p_init(0)
             v_change = pybamm.x_average(
-                self.param.t_p_change(c_s_rav)
-            ) - self.param.t_p_change(c_init)
+                eps_s * self.param.t_p_change(c_s_rav)
+            ) - pybamm.x_average(eps_s * self.param.t_p_change(c_init))
 
-        cell_thickness_change += (
-            self.param.n_electrodes_parallel * eps_s * v_change * L0
-        )
+        cell_thickness_change += self.param.n_electrodes_parallel * v_change * L0
         disp_surf_dim = Omega * R0 / 3 * (c_s_rav - c_0) * c_scale
         # c0 reference concentration for no deformation
         stress_r_surf_dim = 0 * E0

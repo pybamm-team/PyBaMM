@@ -26,7 +26,7 @@ class LithiumIonParameters:
 
             * "particle shape" : str, optional
                 Sets the model shape of the electrode particles. This is used to
-                calculate the surface area per unit volume. Can be "spherical"
+                calculate the surface area to volume ratio. Can be "spherical"
                 (default) or "user". For the "user" option the surface area per
                 unit volume can be passed as a parameter, and is therefore not
                 necessarily consistent with the particle shape.
@@ -112,7 +112,7 @@ class LithiumIonParameters:
         # Microscale geometry
         # Note: the particle radius in the electrodes can be set as a function
         # of through-cell position, so is defined later as a function, along with
-        # the surface area per unit volume
+        # the surface area to volume ratio
         inputs = {
             "Through-cell distance (x_n) [m]": pybamm.standard_spatial_vars.x_n
             * self.L_x
@@ -419,7 +419,7 @@ class LithiumIonParameters:
                 "Negative electrode surface area to volume ratio [m-1]", inputs
             )
             inputs = {"Through-cell distance (x_p) [m]": self.L_x}
-            self.a_n_typ = pybamm.FunctionParameter(
+            self.a_p_typ = pybamm.FunctionParameter(
                 "Positive electrode surface area to volume ratio [m-1]", inputs
             )
 

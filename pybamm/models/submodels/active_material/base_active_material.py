@@ -45,9 +45,9 @@ class BaseModel(pybamm.BaseSubModel):
                 a_typ = self.param.a_p_typ
             variables.update(
                 {
-                    self.domain + " electrode surface area per unit volume": a,
+                    self.domain + " electrode surface area to volume ratio": a,
                     self.domain
-                    + " electrode surface area per unit volume [m-1]": a * a_typ,
+                    + " electrode surface area to volume ratio [m-1]": a * a_typ,
                 }
             )
             return variables
@@ -89,9 +89,9 @@ class BaseModel(pybamm.BaseSubModel):
                 {
                     self.domain + " particle radius": R,
                     self.domain + " particle radius [m]": R * R_typ,
-                    self.domain + " electrode surface area per unit volume": a,
+                    self.domain + " electrode surface area to volume ratio": a,
                     self.domain
-                    + " electrode surface area per unit volume [m-1]": a_dim,
+                    + " electrode surface area to volume ratio [m-1]": a_dim,
                 }
             )
 

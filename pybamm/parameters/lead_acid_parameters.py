@@ -86,7 +86,7 @@ class LeadAcidParameters:
         )  # pybamm.Parameter("Typical oxygen concentration [mol.m-3]")
 
         # Microstructure
-        # Note: the surface area per unit volume can be set as a function of
+        # Note: the surface area to volume ratio can be set as a function of
         # through-cell position, so is defined later as a function
         self.b_e_n = self.geo.b_e_n
         self.b_e_s = self.geo.b_e_s
@@ -318,7 +318,7 @@ class LeadAcidParameters:
 
     def a_n_dimensional(self, x):
         """
-        Negative electrode surface area per unit volume as a function of
+        Negative electrode surface area to volume ratio as a function of
         through-cell distance
         """
         inputs = {"Through-cell distance (x_n) [m]": x}
@@ -328,7 +328,7 @@ class LeadAcidParameters:
 
     def a_p_dimensional(self, x):
         """
-        Positive electrode surface area per unit volume as a function of
+        Positive electrode surface area to volume ratio as a function of
         through-cell distance
         """
         inputs = {"Through-cell distance (x_p) [m]": x}
@@ -757,7 +757,7 @@ class LeadAcidParameters:
 
     def a_n(self, x):
         """
-        Dimensionless negative electrode surface area per unit volume as a
+        Dimensionless negative electrode surface area to volume ratio as a
         function of dimensionless position x
         """
         x_dim = x * self.L_x
@@ -765,7 +765,7 @@ class LeadAcidParameters:
 
     def a_p(self, x):
         """
-        Dimensionless positive electrode surface area per unit volume as a
+        Dimensionless positive electrode surface area to volume ratio as a
         function of dimensionless position x
         """
         x_dim = x * self.L_x
