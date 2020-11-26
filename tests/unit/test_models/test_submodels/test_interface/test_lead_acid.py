@@ -26,6 +26,7 @@ class TestLeadAcid(unittest.TestCase):
             "Negative electrolyte concentration": a_n,
             "Negative particle surface concentration": a_n,
             "Negative electrode temperature": a_n,
+            "Negative electrode surface area to volume ratio": a_n,
         }
         submodel = pybamm.interface.ButlerVolmer(param, "Negative", "lead-acid main")
         std_tests = tests.StandardSubModelTests(submodel, variables)
@@ -42,6 +43,8 @@ class TestLeadAcid(unittest.TestCase):
             "Negative electrode interfacial current density": a_n,
             "Negative electrode exchange current density": a_n,
             "Positive electrode temperature": a_p,
+            "Negative electrode surface area to volume ratio": a_n,
+            "Positive electrode surface area to volume ratio": a_p,
             "X-averaged negative electrode interfacial current density": a,
             "X-averaged positive electrode interfacial current density": a,
             "Sum of electrolyte reaction source terms": 0,

@@ -412,7 +412,7 @@ class LithiumIonParameters:
         self.R_p_typ = self.R_p_dimensional(self.L_x)
         if self.options["particle shape"] == "spherical":
             self.a_n_typ = 3 * self.epsilon_s_n(0) / self.R_n_typ
-            self.a_p_typ = 3 * self.epsilon_s_p(1) / self.R_n_typ
+            self.a_p_typ = 3 * self.epsilon_s_p(1) / self.R_p_typ
         elif self.options["particle shape"] == "user":
             inputs = {"Through-cell distance (x_n) [m]": 0}
             self.a_n_typ = pybamm.FunctionParameter(

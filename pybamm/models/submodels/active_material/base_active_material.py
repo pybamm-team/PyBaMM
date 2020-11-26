@@ -56,17 +56,16 @@ class BaseModel(pybamm.BaseSubModel):
             if self.domain == "Negative":
                 x = pybamm.standard_spatial_vars.x_n
                 R = self.param.R_n(x)
-                R_typ = self.param.R_n_typ
+                R_dim = self.param.R_n_dimensional(x * self.param.L_x)
                 a_typ = self.param.a_n_typ
             elif self.domain == "Positive":
                 x = pybamm.standard_spatial_vars.x_p
                 R = self.param.R_p(x)
-                R_typ = self.param.R_p_typ
+                R_dim = self.param.R_p_dimensional(x * self.param.L_x)
                 a_typ = self.param.a_p_typ
 
             # Compute dimensional particle shape
             if self.options["particle shape"] == "spherical":
-                R_dim = R * R_typ
                 a_dim = 3 * eps_solid / R_dim
             elif self.options["particle shape"] == "user":
                 if self.domain == "Negative":
@@ -88,7 +87,7 @@ class BaseModel(pybamm.BaseSubModel):
             variables.update(
                 {
                     self.domain + " particle radius": R,
-                    self.domain + " particle radius [m]": R * R_typ,
+                    self.domain + " particle radius [m]": R_dim,
                     self.domain + " electrode surface area to volume ratio": a,
                     self.domain
                     + " electrode surface area to volume ratio [m-1]": a_dim,

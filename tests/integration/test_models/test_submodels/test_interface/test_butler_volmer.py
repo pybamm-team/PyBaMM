@@ -50,6 +50,8 @@ class TestButlerVolmer(unittest.TestCase):
             "Current collector current density": pybamm.Scalar(1),
             "Negative electrode temperature": 0,
             "Positive electrode temperature": 0,
+            "Negative electrode surface area to volume ratio": 1 + 0 * self.c_e_n,
+            "Positive electrode surface area to volume ratio": 1 + 0 * self.c_e_p,
             "Sum of electrolyte reaction source terms": pybamm.Scalar(1),
             "Sum of interfacial current densities": pybamm.Scalar(1),
             "Sum of negative electrode interfacial current densities": pybamm.Scalar(1),
