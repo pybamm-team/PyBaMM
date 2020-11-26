@@ -41,11 +41,8 @@ class BaseParticle(pybamm.BaseSubModel):
 
         if self.domain == "Negative":
             c_scale = self.param.c_n_max
-            L = self.param.L_n
         elif self.domain == "Positive":
             c_scale = self.param.c_p_max
-            L = self.param.L_p
-        A = self.param.A_cc
 
         # Get average concentration(s) if not provided as fundamental variable to
         # solve for

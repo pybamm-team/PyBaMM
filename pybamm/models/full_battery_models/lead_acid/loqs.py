@@ -37,6 +37,7 @@ class LOQS(BaseModel):
         self.set_interfacial_submodel()
         self.set_convection_submodel()
         self.set_porosity_submodel()
+        self.set_active_material_submodel()
         self.set_tortuosity_submodels()
         self.set_negative_electrode_submodel()
         self.set_electrolyte_submodel()

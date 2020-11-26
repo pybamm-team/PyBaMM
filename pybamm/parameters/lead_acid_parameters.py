@@ -336,6 +336,26 @@ class LeadAcidParameters:
             "Positive electrode surface area to volume ratio [m-1]", inputs
         )
 
+    def epsilon_s_n(self, x):
+        """
+        Negative electrode active material volume fraction, specified for compatibility
+        with lithium-ion submodels. Note that this does not change even though porosity
+        changes, since the material being created is inactive.
+        """
+        return pybamm.FullBroadcast(
+            1 - self.eps_n_max, "negative electrode", "current collector"
+        )
+
+    def epsilon_s_p(self, x):
+        """
+        Positive electrode active material volume fraction, specified for compatibility
+        with lithium-ion submodels. Note that this does not change even though porosity
+        changes, since the material being created is inactive.
+        """
+        return pybamm.FullBroadcast(
+            1 - self.eps_p_max, "positive electrode", "current collector"
+        )
+
     def _set_scales(self):
         "Define the scales used in the non-dimensionalisation scheme"
 

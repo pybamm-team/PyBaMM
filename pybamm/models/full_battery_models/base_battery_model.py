@@ -393,7 +393,7 @@ class BaseBatteryModel(pybamm.BaseModel):
                 "The 'fast diffusion' option has been renamed. "
                 "Use 'uniform profile' instead."
             )
-        if options["particle shape"] not in ["spherical", "user"]:
+        if options["particle shape"] not in ["spherical", "user", "no particles"]:
             raise pybamm.OptionError(
                 "particle shape '{}' not recognised".format(options["particle shape"])
             )
