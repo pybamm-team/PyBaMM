@@ -60,6 +60,7 @@ class TestTimer(unittest.TestCase):
         self.assertEqual((pybamm.TimerTime(1) - pybamm.TimerTime(2)).value, -1)
         self.assertEqual((1 - pybamm.TimerTime(1)).value, 0)
         self.assertEqual((pybamm.TimerTime(4) * 2).value, 8)
+        self.assertEqual((pybamm.TimerTime(4) * pybamm.TimerTime(2)).value, 8)
         self.assertEqual((2 * pybamm.TimerTime(5)).value, 10)
         self.assertEqual((pybamm.TimerTime(4) / 2).value, 2)
         self.assertEqual((pybamm.TimerTime(4) / pybamm.TimerTime(2)).value, 2)
