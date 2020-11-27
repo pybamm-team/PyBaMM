@@ -629,6 +629,13 @@ class BaseSolver(object):
             pybamm.logger.info(
                 "Discontinuity events found at t = {}".format(discontinuities)
             )
+            if isinstance(inputs, list):
+                with RuntimeError as e:
+                    e.message = (
+                        "Cannot solve for a list of input parameters"
+                        " sets with discontinuities"
+                    )
+                    raise e
         else:
             pybamm.logger.info("No discontinuity events found")
 
@@ -694,18 +701,14 @@ class BaseSolver(object):
 
             if end_index != len(t_eval_dimensionless):
                 # setup for next integration subsection
-                last_states = [sol.y[:, -1] for sol in solutions]
+                last_state = solutions[0].y[:, -1]
                 # update y0 (for DAE solvers, this updates the initial guess for the
                 # rootfinder)
+                model.y0 = last_state
                 if len(model.algebraic) > 0:
-                    for i, last_state in enumerate(last_states):
-                        model.y0 = last_state
-                        last_states[i] = self.calculate_consistent_state(
-                            model,
-                            t_eval_dimensionless[end_index],
-                            ext_and_inputs_list[0],
-                        )
-                model.y0 = last_states
+                    model.y0 = self.calculate_consistent_state(
+                        model, t_eval_dimensionless[end_index], ext_and_inputs_list[0]
+                    )
 
         solve_time = timer.time()
         for i, solution in enumerate(solutions):
