@@ -10,7 +10,7 @@ import unittest
 class TestFull(unittest.TestCase):
     def test_public_functions(self):
         param = pybamm.LithiumIonParameters()
-        a = pybamm.Scalar(0)
+        a = pybamm.Scalar(1)
         surf = "electrode surface area to volume ratio"
         variables = {
             "Electrolyte tortuosity": a,
