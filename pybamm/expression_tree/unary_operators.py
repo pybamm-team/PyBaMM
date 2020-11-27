@@ -1,6 +1,7 @@
 #
 # Unary operator classes and methods
 #
+import numbers
 import numpy as np
 import pybamm
 from scipy.sparse import issparse, csr_matrix
@@ -24,6 +25,8 @@ class UnaryOperator(pybamm.Symbol):
     """
 
     def __init__(self, name, child, domain=None, auxiliary_domains=None):
+        if isinstance(child, numbers.Number):
+            child = pybamm.Scalar(child)
         if domain is None:
             domain = child.domain
         if auxiliary_domains is None:
@@ -86,6 +89,10 @@ class UnaryOperator(pybamm.Symbol):
     def evaluates_on_edges(self, dimension):
         """ See :meth:`pybamm.Symbol.evaluates_on_edges()`. """
         return self.child.evaluates_on_edges(dimension)
+
+    def is_constant(self):
+        """ See :meth:`pybamm.Symbol.is_constant()`. """
+        return self.child.is_constant()
 
 
 class Negate(UnaryOperator):
@@ -164,6 +171,52 @@ class Sign(UnaryOperator):
             return csr_matrix.sign(child)
         else:
             return np.sign(child)
+
+
+class Floor(UnaryOperator):
+    """A node in the expression tree representing an `floor` operator
+
+    **Extends:** :class:`UnaryOperator`
+    """
+
+    def __init__(self, child):
+        """ See :meth:`pybamm.UnaryOperator.__init__()`. """
+        super().__init__("floor", child)
+
+    def diff(self, variable):
+        """ See :meth:`pybamm.Symbol.diff()`. """
+        return pybamm.Scalar(0)
+
+    def _unary_jac(self, child_jac):
+        """ See :meth:`pybamm.UnaryOperator._unary_jac()`. """
+        return pybamm.Scalar(0)
+
+    def _unary_evaluate(self, child):
+        """ See :meth:`UnaryOperator._unary_evaluate()`. """
+        return np.floor(child)
+
+
+class Ceiling(UnaryOperator):
+    """A node in the expression tree representing a `ceil` operator
+
+    **Extends:** :class:`UnaryOperator`
+    """
+
+    def __init__(self, child):
+        """ See :meth:`pybamm.UnaryOperator.__init__()`. """
+        super().__init__("ceil", child)
+
+    def diff(self, variable):
+        """ See :meth:`pybamm.Symbol.diff()`. """
+        return pybamm.Scalar(0)
+
+    def _unary_jac(self, child_jac):
+        """ See :meth:`pybamm.UnaryOperator._unary_jac()`. """
+        return pybamm.Scalar(0)
+
+    def _unary_evaluate(self, child):
+        """ See :meth:`UnaryOperator._unary_evaluate()`. """
+        return np.ceil(child)
 
 
 class Index(UnaryOperator):
@@ -345,7 +398,7 @@ class Divergence(SpatialOperator):
         if child.evaluates_on_edges("primary") is False:
             raise TypeError(
                 "Cannot take divergence of '{}' since it does not ".format(child)
-                + "evaluates on nodes. Usually, a gradient should be taken before the "
+                + "evaluate on edges. Usually, a gradient should be taken before the "
                 "divergence."
             )
         super().__init__("div", child)
@@ -529,7 +582,9 @@ class Integral(SpatialOperator):
 
     def _evaluate_for_shape(self):
         """ See :meth:`pybamm.Symbol.evaluate_for_shape_using_domain()` """
-        return pybamm.evaluate_for_shape_using_domain(self.domain)
+        return pybamm.evaluate_for_shape_using_domain(
+            self.domain, self.auxiliary_domains
+        )
 
     def evaluates_on_edges(self, dimension):
         """ See :meth:`pybamm.Symbol.evaluates_on_edges()`. """
@@ -896,94 +951,152 @@ class BoundaryGradient(BoundaryOperator):
         super().__init__("boundary flux", child, side)
 
 
+class UpwindDownwind(SpatialOperator):
+    """A node in the expression tree representing an upwinding or downwinding operator.
+    Usually to be used for better stability in convection-dominated equations.
+
+    **Extends:** :class:`SpatialOperator`
+    """
+
+    def __init__(self, name, child):
+        if child.domain == []:
+            raise pybamm.DomainError(
+                "Cannot upwind '{}' since its domain is empty. ".format(child)
+                + "Try broadcasting the object first, e.g.\n\n"
+                "\tpybamm.div(pybamm.PrimaryBroadcast(symbol, 'domain'))"
+            )
+        if child.evaluates_on_edges("primary") is True:
+            raise TypeError(
+                "Cannot upwind '{}' since it does not ".format(child)
+                + "evaluate on nodes."
+            )
+        super().__init__(name, child)
+
+    def evaluates_on_edges(self, dimension):
+        """ See :meth:`pybamm.Symbol.evaluates_on_edges()`. """
+        return True
+
+
+class Upwind(UpwindDownwind):
+    """
+    Upwinding operator. To be used if flow velocity is positive (left to right).
+
+    **Extends:** :class:`UpwindDownwind`
+    """
+
+    def __init__(self, child):
+        super().__init__("upwind", child)
+
+
+class Downwind(UpwindDownwind):
+    """
+    Downwinding operator. To be used if flow velocity is negative (right to left).
+
+    **Extends:** :class:`UpwindDownwind`
+    """
+
+    def __init__(self, child):
+        super().__init__("downwind", child)
+
+
 #
 # Methods to call Gradient, Divergence, Laplacian and Gradient_Squared
 #
 
 
-def grad(expression):
+def grad(symbol):
     """convenience function for creating a :class:`Gradient`
 
     Parameters
     ----------
 
-    expression : :class:`Symbol`
-        the gradient will be performed on this sub-expression
+    symbol : :class:`Symbol`
+        the gradient will be performed on this sub-symbol
 
     Returns
     -------
 
     :class:`Gradient`
-        the gradient of ``expression``
+        the gradient of ``symbol``
     """
     # Gradient of a broadcast is zero
-    if isinstance(expression, pybamm.PrimaryBroadcast):
-        new_child = pybamm.PrimaryBroadcast(0, expression.child.domain)
-        return pybamm.PrimaryBroadcastToEdges(new_child, expression.domain)
+    if isinstance(symbol, pybamm.PrimaryBroadcast):
+        new_child = pybamm.PrimaryBroadcast(0, symbol.child.domain)
+        return pybamm.PrimaryBroadcastToEdges(new_child, symbol.domain)
     else:
-        return Gradient(expression)
+        return Gradient(symbol)
 
 
-def div(expression):
+def div(symbol):
     """convenience function for creating a :class:`Divergence`
 
     Parameters
     ----------
 
-    expression : :class:`Symbol`
-        the divergence will be performed on this sub-expression
+    symbol : :class:`Symbol`
+        the divergence will be performed on this sub-symbol
 
     Returns
     -------
 
     :class:`Divergence`
-        the divergence of ``expression``
+        the divergence of ``symbol``
     """
     # Divergence of a broadcast is zero
-    if isinstance(expression, pybamm.PrimaryBroadcastToEdges):
-        new_child = pybamm.PrimaryBroadcast(0, expression.child.domain)
-        return pybamm.PrimaryBroadcast(new_child, expression.domain)
+    if isinstance(symbol, pybamm.PrimaryBroadcastToEdges):
+        new_child = pybamm.PrimaryBroadcast(0, symbol.child.domain)
+        return pybamm.PrimaryBroadcast(new_child, symbol.domain)
     else:
-        return Divergence(expression)
+        return Divergence(symbol)
 
 
-def laplacian(expression):
+def laplacian(symbol):
     """convenience function for creating a :class:`Laplacian`
 
     Parameters
     ----------
 
-    expression : :class:`Symbol`
-        the laplacian will be performed on this sub-expression
+    symbol : :class:`Symbol`
+        the laplacian will be performed on this sub-symbol
 
     Returns
     -------
 
     :class:`Laplacian`
-        the laplacian of ``expression``
+        the laplacian of ``symbol``
     """
 
-    return Laplacian(expression)
+    return Laplacian(symbol)
 
 
-def grad_squared(expression):
+def grad_squared(symbol):
     """convenience function for creating a :class:`Gradient_Squared`
 
     Parameters
     ----------
 
-    expression : :class:`Symbol`
+    symbol : :class:`Symbol`
         the inner product of the gradient with itself will be performed on this
-        sub-expression
+        sub-symbol
 
     Returns
     -------
 
     :class:`Gradient_Squared`
-        inner product of the gradient of ``expression`` with itself
+        inner product of the gradient of ``symbol`` with itself
     """
 
-    return Gradient_Squared(expression)
+    return Gradient_Squared(symbol)
+
+
+def upwind(symbol):
+    "convenience function for creating a :class:`Upwind`"
+    return Upwind(symbol)
+
+
+def downwind(symbol):
+    "convenience function for creating a :class:`Downwind`"
+    return Downwind(symbol)
 
 
 #
@@ -1043,14 +1156,14 @@ def x_average(symbol):
         if a.id == b.id == c.id:
             return a
         else:
-            geo = pybamm.GeometricParameters()
+            geo = pybamm.geometric_parameters
             l_n = geo.l_n
             l_s = geo.l_s
             l_p = geo.l_p
             return (l_n * a + l_s * b + l_p * c) / (l_n + l_s + l_p)
     # Otherwise, use Integral to calculate average value
     else:
-        geo = pybamm.GeometricParameters()
+        geo = pybamm.geometric_parameters
         if symbol.domain == ["negative electrode"]:
             x = pybamm.standard_spatial_vars.x_n
             l = geo.l_n
@@ -1110,7 +1223,7 @@ def z_average(symbol):
         return symbol.orphans[0]
     # Otherwise, use Integral to calculate average value
     else:
-        geo = pybamm.GeometricParameters()
+        geo = pybamm.geometric_parameters
         z = pybamm.standard_spatial_vars.z
         l_z = geo.l_z
         return Integral(symbol, z) / l_z
@@ -1147,7 +1260,7 @@ def yz_average(symbol):
         return symbol.orphans[0]
     # Otherwise, use Integral to calculate average value
     else:
-        geo = pybamm.GeometricParameters()
+        geo = pybamm.geometric_parameters
         y = pybamm.standard_spatial_vars.y
         z = pybamm.standard_spatial_vars.z
         l_y = geo.l_y
@@ -1239,3 +1352,14 @@ def boundary_value(symbol, side):
 def sign(symbol):
     " Returns a :class:`Sign` object. "
     return Sign(symbol)
+
+
+def smooth_absolute_value(symbol, k):
+    """
+    Smooth approximation to the absolute value function. k is the smoothing parameter,
+    set by `pybamm.settings.abs_smoothing`. The recommended value is k=10.
+    """
+    x = symbol
+    exp = pybamm.exp
+    kx = k * symbol
+    return x * (exp(kx) - exp(-kx)) / (exp(kx) + exp(-kx))

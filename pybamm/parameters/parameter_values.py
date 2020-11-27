@@ -313,6 +313,21 @@ class ParameterValues:
                     "Parameters involving 'reaction rate' have been replaced with "
                     "'exchange-current density' ('{}' found)".format(param)
                 )
+        for param in values:
+            if "particle distribution in x" in param:
+                raise ValueError(
+                    "The parameter '{}' has been deprecated".format(param)
+                    + "The particle radius is now set as a function of x directly "
+                    "instead of providing a reference value and a distribution."
+                )
+        for param in values:
+            if "surface area per unit volume distribution in x" in param:
+                raise ValueError(
+                    "The parameter '{}' has been deprecated".format(param)
+                    + "The surface area per unit volume is now set as a function "
+                    "of x directly instead of providing a reference value and a "
+                    "distribution."
+                )
 
     def process_model(self, unprocessed_model, inplace=True):
         """Assign parameter values to a model.
@@ -598,7 +613,7 @@ class ParameterValues:
             The evaluated symbol
         """
         processed_symbol = self.process_symbol(symbol)
-        if processed_symbol.is_constant() and processed_symbol.evaluates_to_number():
+        if processed_symbol.evaluates_to_constant_number():
             return processed_symbol.evaluate()
         else:
             raise ValueError("symbol must evaluate to a constant scalar")

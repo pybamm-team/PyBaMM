@@ -15,7 +15,7 @@ class TestCompareOutputs(unittest.TestCase):
         ]
         model_combos = [
             ([pybamm.lithium_ion.SPM(opt) for opt in options]),
-            ([pybamm.lithium_ion.SPMe(opt) for opt in options]),
+            # ([pybamm.lithium_ion.SPMe(opt) for opt in options]), # not implemented
             ([pybamm.lithium_ion.DFN(opt) for opt in options]),
         ]
 
@@ -137,8 +137,6 @@ class TestCompareOutputs(unittest.TestCase):
                         "Positive electrode surface area to volume ratio [m-1]": 3
                         * eps_s_p
                         / R_p,
-                        "Negative surface area per unit volume distribution in x": 1,
-                        "Positive surface area per unit volume distribution in x": 1,
                     },
                     check_already_exists=False,
                 )

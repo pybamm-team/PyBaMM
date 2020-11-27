@@ -93,7 +93,7 @@ class TestBroadcasts(unittest.TestCase):
             pybamm.FullBroadcast(a, "electrode", None)
 
     def test_ones_like(self):
-        a = pybamm.Variable("a")
+        a = pybamm.Parameter("a")
         ones_like_a = pybamm.ones_like(a)
         self.assertEqual(ones_like_a.id, pybamm.Scalar(1).id)
 

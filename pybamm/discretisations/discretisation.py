@@ -492,6 +492,19 @@ class Discretisation(object):
         for key, bcs in model.boundary_conditions.items():
             processed_bcs[key.id] = {}
 
+            # check if the boundary condition at the origin for sphere domains is other
+            # than no flux
+            if key not in model.external_variables:
+                for subdomain in key.domain:
+                    if self.mesh[subdomain].coord_sys == "spherical polar":
+                        if bcs["left"][0].value != 0 or bcs["left"][1] != "Neumann":
+                            raise pybamm.ModelError(
+                                "Boundary condition at r = 0 must be a homogeneous "
+                                "Neumann condition for {} coordinates".format(
+                                    self.mesh[subdomain].coord_sys
+                                )
+                            )
+
             # Handle any boundary conditions applied on the tabs
             if any("tab" in side for side in list(bcs.keys())):
                 bcs = self.check_tab_conditions(key, bcs)
@@ -927,7 +940,11 @@ class Discretisation(object):
                 return child_spatial_method.boundary_value_or_flux(
                     symbol, disc_child, self.bcs
                 )
-
+            elif isinstance(symbol, pybamm.UpwindDownwind):
+                direction = symbol.name  # upwind or downwind
+                return spatial_method.upwind_or_downwind(
+                    child, disc_child, self.bcs, direction
+                )
             else:
                 return symbol._unary_new_copy(disc_child)
 

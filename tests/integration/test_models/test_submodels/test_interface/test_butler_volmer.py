@@ -199,18 +199,18 @@ class TestButlerVolmer(unittest.TestCase):
         j_n_FD = parameter_values.process_symbol(
             (j_n(c_e + h) - j_n(c_e - h)) / (2 * h)
         )
-        self.assertAlmostEqual(
+        np.testing.assert_almost_equal(
             j_n_diff.evaluate(inputs={"c_e": 0.5}),
             j_n_FD.evaluate(inputs={"c_e": 0.5}),
-            places=5,
+            decimal=5,
         )
         j_p_FD = parameter_values.process_symbol(
             (j_p(c_e + h) - j_p(c_e - h)) / (2 * h)
         )
-        self.assertAlmostEqual(
+        np.testing.assert_almost_equal(
             j_p_diff.evaluate(inputs={"c_e": 0.5}),
             j_p_FD.evaluate(inputs={"c_e": 0.5}),
-            places=5,
+            decimal=5,
         )
 
     def test_diff_delta_phi_e_lead_acid(self):

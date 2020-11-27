@@ -36,6 +36,7 @@ class Composite(BaseElectrolyteDiffusion):
     def get_coupled_variables(self, variables):
 
         tor_0 = variables["Leading-order electrolyte tortuosity"]
+        eps = variables["Leading-order porosity"]
         c_e_0_av = variables["Leading-order x-averaged electrolyte concentration"]
         c_e = variables["Electrolyte concentration"]
         i_e = variables["Electrolyte current density"]
@@ -51,6 +52,7 @@ class Composite(BaseElectrolyteDiffusion):
         N_e = N_e_diffusion + N_e_migration + N_e_convection
 
         variables.update(self._get_standard_flux_variables(N_e))
+        variables.update(self._get_total_concentration_electrolyte(c_e, eps))
 
         return variables
 

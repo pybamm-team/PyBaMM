@@ -234,6 +234,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
         ids = np.concatenate((rhs_ids, alg_ids))
 
         # solve
+        timer = pybamm.Timer()
         sol = idaklu.solve(
             t_eval,
             y0,
@@ -251,6 +252,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
             atol,
             rtol,
         )
+        integration_time = timer.time()
 
         t = sol.t
         number_of_timesteps = t.size
@@ -266,12 +268,14 @@ class IDAKLUSolver(pybamm.BaseSolver):
             elif sol.flag == 2:
                 termination = "event"
 
-            return pybamm.Solution(
+            sol = pybamm.Solution(
                 sol.t,
                 np.transpose(y_out),
                 t[-1],
                 np.transpose(y_out[-1])[:, np.newaxis],
                 termination,
             )
+            sol.integration_time = integration_time
+            return sol
         else:
             raise pybamm.SolverError(sol.message)

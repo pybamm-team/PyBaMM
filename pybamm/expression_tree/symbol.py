@@ -8,6 +8,7 @@ import numbers
 import copy
 import numpy as np
 from anytree.exporter import DotExporter
+from scipy.sparse import issparse
 
 
 def domain_size(domain):
@@ -59,6 +60,280 @@ def evaluate_for_shape_using_domain(domain, auxiliary_domains=None, typ="vector"
             np.prod([domain_size(dom) for dom in auxiliary_domains.values()])
         )
     return create_object_of_size(_domain_size * _auxiliary_domain_sizes, typ)
+
+
+def is_constant(symbol):
+    return isinstance(symbol, numbers.Number) or symbol.is_constant()
+
+
+def preprocess(left, right):
+    if isinstance(left, numbers.Number):
+        left = pybamm.Scalar(left)
+    if isinstance(right, numbers.Number):
+        right = pybamm.Scalar(right)
+
+    # Check both left and right are pybamm Symbols
+    if not (isinstance(left, pybamm.Symbol) and isinstance(right, pybamm.Symbol)):
+        raise NotImplementedError(
+            """BinaryOperator not implemented for symbols of type {} and {}""".format(
+                type(left), type(right)
+            )
+        )
+
+    return left, right
+
+
+def is_scalar_zero(expr):
+    """
+    Utility function to test if an expression evaluates to a constant scalar zero
+    """
+    if is_constant(expr):
+        result = expr.evaluate_ignoring_errors(t=None)
+        return isinstance(result, numbers.Number) and result == 0
+    else:
+        return False
+
+
+def is_matrix_zero(expr):
+    """
+    Utility function to test if an expression evaluates to a constant matrix zero
+    """
+    if isinstance(expr, pybamm.Broadcast):
+        return is_scalar_zero(expr.child) or is_matrix_zero(expr.child)
+
+    if is_constant(expr):
+        result = expr.evaluate_ignoring_errors(t=None)
+        return (issparse(result) and result.count_nonzero() == 0) or (
+            isinstance(result, np.ndarray) and np.all(result == 0)
+        )
+    else:
+        return False
+
+
+def is_scalar_one(expr):
+    """
+    Utility function to test if an expression evaluates to a constant scalar one
+    """
+    if is_constant(expr):
+        result = expr.evaluate_ignoring_errors(t=None)
+        return isinstance(result, numbers.Number) and result == 1
+    else:
+        return False
+
+
+def is_matrix_one(expr):
+    """
+    Utility function to test if an expression evaluates to a constant matrix one
+    """
+    if isinstance(expr, pybamm.Broadcast):
+        return is_scalar_one(expr.child) or is_matrix_one(expr.child)
+
+    if is_constant(expr):
+        result = expr.evaluate_ignoring_errors(t=None)
+        return (issparse(result) and np.all(result.toarray() == 1)) or (
+            isinstance(result, np.ndarray) and np.all(result == 1)
+        )
+    else:
+        return False
+
+
+def simplified_power(left, right):
+    left, right = preprocess(left, right)
+    # anything to the power of zero is one
+    if is_scalar_zero(right):
+        return pybamm.Scalar(1)
+
+    # zero to the power of anything is zero
+    if is_scalar_zero(left):
+        return pybamm.Scalar(0)
+
+    # anything to the power of one is itself
+    if is_scalar_one(right):
+        return left
+
+    return pybamm.simplify_if_constant(pybamm.Power(left, right), clear_domains=False)
+
+
+def simplified_addition(left, right):
+    """
+    Note
+    ----
+    We check for scalars first, then matrices. This is because
+    (Zero Matrix) + (Zero Scalar)
+    should return (Zero Matrix), not (Zero Scalar).
+    """
+    left, right = preprocess(left, right)
+
+    # anything added by a scalar zero returns the other child
+    if is_scalar_zero(left):
+        return right
+    if is_scalar_zero(right):
+        return left
+    # Check matrices after checking scalars
+    if is_matrix_zero(left):
+        if right.evaluates_to_number():
+            return right * pybamm.ones_like(left)
+        # If left object is zero and has size smaller than or equal to right object in
+        # all dimensions, we can safely return the right object. For example, adding a
+        # zero vector a matrix, we can just return the matrix
+        elif all(
+            left_dim_size <= right_dim_size
+            for left_dim_size, right_dim_size in zip(
+                left.shape_for_testing, right.shape_for_testing
+            )
+        ) and all(
+            left.evaluates_on_edges(dim) == right.evaluates_on_edges(dim)
+            for dim in ["primary", "secondary", "tertiary"]
+        ):
+            return right
+    if is_matrix_zero(right):
+        if left.evaluates_to_number():
+            return left * pybamm.ones_like(right)
+        # See comment above
+        elif all(
+            left_dim_size >= right_dim_size
+            for left_dim_size, right_dim_size in zip(
+                left.shape_for_testing, right.shape_for_testing
+            )
+        ) and all(
+            left.evaluates_on_edges(dim) == right.evaluates_on_edges(dim)
+            for dim in ["primary", "secondary", "tertiary"]
+        ):
+            return left
+
+    return pybamm.simplify_if_constant(
+        pybamm.Addition(left, right), clear_domains=False
+    )
+
+
+def simplified_subtraction(left, right):
+    """
+     Note
+    ----
+    We check for scalars first, then matrices. This is because
+    (Zero Matrix) - (Zero Scalar)
+    should return (Zero Matrix), not -(Zero Scalar).
+    """
+    left, right = preprocess(left, right)
+
+    # anything added by a scalar zero returns the other child
+    if is_scalar_zero(left):
+        return -right
+    if is_scalar_zero(right):
+        return left
+    # Check matrices after checking scalars
+    if is_matrix_zero(left):
+        if right.evaluates_to_number():
+            return -right * pybamm.ones_like(left)
+        # See comments in simplified_addition
+        elif all(
+            left_dim_size <= right_dim_size
+            for left_dim_size, right_dim_size in zip(
+                left.shape_for_testing, right.shape_for_testing
+            )
+        ) and all(
+            left.evaluates_on_edges(dim) == right.evaluates_on_edges(dim)
+            for dim in ["primary", "secondary", "tertiary"]
+        ):
+            return -right
+    if is_matrix_zero(right):
+        if left.evaluates_to_number():
+            return left * pybamm.ones_like(right)
+        # See comments in simplified_addition
+        elif all(
+            left_dim_size >= right_dim_size
+            for left_dim_size, right_dim_size in zip(
+                left.shape_for_testing, right.shape_for_testing
+            )
+        ) and all(
+            left.evaluates_on_edges(dim) == right.evaluates_on_edges(dim)
+            for dim in ["primary", "secondary", "tertiary"]
+        ):
+            return left
+
+    return pybamm.simplify_if_constant(
+        pybamm.Subtraction(left, right), clear_domains=False
+    )
+
+
+def simplified_multiplication(left, right):
+    left, right = preprocess(left, right)
+    # simplify multiply by scalar zero, being careful about shape
+    if is_scalar_zero(left):
+        return pybamm.zeros_like(right)
+    if is_scalar_zero(right):
+        return pybamm.zeros_like(left)
+
+    # if one of the children is a zero matrix, we have to be careful about shapes
+    if is_matrix_zero(left) or is_matrix_zero(right):
+        return pybamm.zeros_like(pybamm.Multiplication(left, right))
+
+    # anything multiplied by a scalar one returns itself
+    if is_scalar_one(left):
+        return right
+    if is_scalar_one(right):
+        return left
+
+    # anything multiplied by a matrix one returns itself if
+    # - the shapes are the same
+    # - both left and right evaluate on edges, or both evaluate on nodes, in all
+    # dimensions
+    # (and possibly more generally, but not implemented here)
+    try:
+        if left.shape_for_testing == right.shape_for_testing and all(
+            left.evaluates_on_edges(dim) == right.evaluates_on_edges(dim)
+            for dim in ["primary", "secondary", "tertiary"]
+        ):
+            if is_matrix_one(left):
+                return right
+            elif is_matrix_one(right):
+                return left
+    except NotImplementedError:
+        pass
+
+    return pybamm.simplify_if_constant(
+        pybamm.Multiplication(left, right), clear_domains=False
+    )
+
+
+def simplified_division(left, right):
+    left, right = preprocess(left, right)
+    # zero divided by zero returns nan scalar
+    if is_scalar_zero(left) and is_scalar_zero(right):
+        return pybamm.Scalar(np.nan)
+
+    # zero divided by anything returns zero (being careful about shape)
+    if is_scalar_zero(left):
+        return pybamm.zeros_like(right)
+
+    # matrix zero divided by anything returns matrix zero (i.e. itself)
+    if is_matrix_zero(left):
+        return pybamm.zeros_like(pybamm.Division(left, right))
+
+    # anything divided by zero returns inf
+    if is_scalar_zero(right):
+        if left.shape_for_testing == ():
+            return pybamm.Scalar(np.inf)
+        else:
+            return np.inf * pybamm.ones_like(left)
+
+    # anything divided by one is itself
+    if is_scalar_one(right):
+        return left
+
+    return pybamm.simplify_if_constant(
+        pybamm.Division(left, right), clear_domains=False
+    )
+
+
+def simplified_matrix_multiplication(left, right):
+    left, right = preprocess(left, right)
+    if is_matrix_zero(left) or is_matrix_zero(right):
+        return pybamm.zeros_like(pybamm.MatrixMultiplication(left, right))
+
+    return pybamm.simplify_if_constant(
+        pybamm.MatrixMultiplication(left, right), clear_domains=False
+    )
 
 
 class Symbol(anytree.NodeMixin):
@@ -174,8 +449,8 @@ class Symbol(anytree.NodeMixin):
 
     @property
     def auxiliary_domains(self):
-        "Returns domains that are not the primary domain"
-        return {k: v for k, v in self._domains.items() if k != "primary"}
+        "Returns auxiliary domains"
+        return self._auxiliary_domains
 
     @auxiliary_domains.setter
     def auxiliary_domains(self, auxiliary_domains):
@@ -193,6 +468,7 @@ class Symbol(anytree.NodeMixin):
         if len(set(values)) != len(values):
             raise pybamm.DomainError("All auxiliary domains must be different")
 
+        self._auxiliary_domains = auxiliary_domains
         self._domains.update(auxiliary_domains)
 
     @property
@@ -203,10 +479,16 @@ class Symbol(anytree.NodeMixin):
     def copy_domains(self, symbol):
         "Copy the domains from a given symbol, bypassing checks"
         self._domains = symbol.domains
+        self._domain = self._domains["primary"]
+        self._auxiliary_domains = {
+            k: v for k, v in self._domains.items() if k != "primary"
+        }
 
     def clear_domains(self):
         "Clear domains, bypassing checks"
         self._domains = {"primary": []}
+        self._domain = []
+        self._auxiliary_domains = {}
 
     def get_children_auxiliary_domains(self, children):
         "Combine auxiliary domains from children, at all levels"
@@ -292,13 +574,13 @@ class Symbol(anytree.NodeMixin):
             DotExporter(
                 new_node, nodeattrfunc=lambda node: 'label="{}"'.format(node.label)
             ).to_picture(filename)
-        except FileNotFoundError:
+        except FileNotFoundError:  # pragma: no cover
             # raise error but only through logger so that test passes
             pybamm.logger.error("Please install graphviz>=2.42.2 to use dot exporter")
 
     def relabel_tree(self, symbol, counter):
-        """ Finds all children of a symbol and assigns them a new id so that they can be
-                visualised properly using the graphviz output
+        """Finds all children of a symbol and assigns them a new id so that they can be
+        visualised properly using the graphviz output
         """
         name = symbol.name
         if name == "div":
@@ -367,104 +649,115 @@ class Symbol(anytree.NodeMixin):
 
     def __add__(self, other):
         """return an :class:`Addition` object"""
-        return pybamm.simplify_if_constant(
-            pybamm.Addition(self, other), keep_domains=True
-        )
+        return simplified_addition(self, other)
 
     def __radd__(self, other):
         """return an :class:`Addition` object"""
-        return pybamm.simplify_if_constant(
-            pybamm.Addition(other, self), keep_domains=True
-        )
+        return simplified_addition(other, self)
 
     def __sub__(self, other):
         """return a :class:`Subtraction` object"""
-        return pybamm.simplify_if_constant(
-            pybamm.Subtraction(self, other), keep_domains=True
-        )
+        return simplified_subtraction(self, other)
 
     def __rsub__(self, other):
         """return a :class:`Subtraction` object"""
-        return pybamm.simplify_if_constant(
-            pybamm.Subtraction(other, self), keep_domains=True
-        )
+        return simplified_subtraction(other, self)
 
     def __mul__(self, other):
         """return a :class:`Multiplication` object"""
-        return pybamm.simplify_if_constant(
-            pybamm.Multiplication(self, other), keep_domains=True
-        )
+        return simplified_multiplication(self, other)
 
     def __rmul__(self, other):
         """return a :class:`Multiplication` object"""
-        return pybamm.simplify_if_constant(
-            pybamm.Multiplication(other, self), keep_domains=True
-        )
+        return simplified_multiplication(other, self)
 
     def __matmul__(self, other):
         """return a :class:`MatrixMultiplication` object"""
-        return pybamm.simplify_if_constant(
-            pybamm.MatrixMultiplication(self, other), keep_domains=True
-        )
+        return simplified_matrix_multiplication(self, other)
 
     def __rmatmul__(self, other):
         """return a :class:`MatrixMultiplication` object"""
-        return pybamm.simplify_if_constant(
-            pybamm.MatrixMultiplication(other, self), keep_domains=True
-        )
+        return simplified_matrix_multiplication(other, self)
 
     def __truediv__(self, other):
         """return a :class:`Division` object"""
-        return pybamm.simplify_if_constant(
-            pybamm.Division(self, other), keep_domains=True
-        )
+        return simplified_division(self, other)
 
     def __rtruediv__(self, other):
         """return a :class:`Division` object"""
-        return pybamm.simplify_if_constant(
-            pybamm.Division(other, self), keep_domains=True
-        )
+        return simplified_division(other, self)
 
     def __pow__(self, other):
         """return a :class:`Power` object"""
-        return pybamm.simplify_if_constant(pybamm.Power(self, other), keep_domains=True)
+        return simplified_power(self, other)
 
     def __rpow__(self, other):
         """return a :class:`Power` object"""
-        return pybamm.simplify_if_constant(pybamm.Power(other, self), keep_domains=True)
+        return simplified_power(other, self)
 
     def __lt__(self, other):
-        """return a :class:`NotEqualHeaviside` object"""
-        return pybamm.simplify_if_constant(
-            pybamm.NotEqualHeaviside(self, other), keep_domains=True
-        )
+        """return a :class:`NotEqualHeaviside` object, or a smooth approximation"""
+        k = pybamm.settings.heaviside_smoothing
+        # Return exact approximation if that is the setting or the outcome is a constant
+        # (i.e. no need for smoothing)
+        if k == "exact" or (is_constant(self) and is_constant(other)):
+            out = pybamm.NotEqualHeaviside(self, other)
+        else:
+            out = pybamm.sigmoid(self, other, k)
+        return pybamm.simplify_if_constant(out, clear_domains=False)
 
     def __le__(self, other):
-        """return a :class:`EqualHeaviside` object"""
-        return pybamm.simplify_if_constant(
-            pybamm.EqualHeaviside(self, other), keep_domains=True
-        )
+        """return a :class:`EqualHeaviside` object, or a smooth approximation"""
+        k = pybamm.settings.heaviside_smoothing
+        # Return exact approximation if that is the setting or the outcome is a constant
+        # (i.e. no need for smoothing)
+        if k == "exact" or (is_constant(self) and is_constant(other)):
+            out = pybamm.EqualHeaviside(self, other)
+        else:
+            out = pybamm.sigmoid(self, other, k)
+        return pybamm.simplify_if_constant(out, clear_domains=False)
 
     def __gt__(self, other):
-        """return a :class:`NotEqualHeaviside` object"""
-        return pybamm.simplify_if_constant(
-            pybamm.NotEqualHeaviside(other, self), keep_domains=True
-        )
+        """return a :class:`NotEqualHeaviside` object, or a smooth approximation"""
+        k = pybamm.settings.heaviside_smoothing
+        # Return exact approximation if that is the setting or the outcome is a constant
+        # (i.e. no need for smoothing)
+        if k == "exact" or (is_constant(self) and is_constant(other)):
+            out = pybamm.NotEqualHeaviside(other, self)
+        else:
+            out = pybamm.sigmoid(other, self, k)
+        return pybamm.simplify_if_constant(out, clear_domains=False)
 
     def __ge__(self, other):
-        """return a :class:`EqualHeaviside` object"""
-        return pybamm.simplify_if_constant(
-            pybamm.EqualHeaviside(other, self), keep_domains=True
-        )
+        """return a :class:`EqualHeaviside` object, or a smooth approximation"""
+        k = pybamm.settings.heaviside_smoothing
+        # Return exact approximation if that is the setting or the outcome is a constant
+        # (i.e. no need for smoothing)
+        if k == "exact" or (is_constant(self) and is_constant(other)):
+            out = pybamm.EqualHeaviside(other, self)
+        else:
+            out = pybamm.sigmoid(other, self, k)
+        return pybamm.simplify_if_constant(out, clear_domains=False)
 
     def __neg__(self):
         """return a :class:`Negate` object"""
-        return pybamm.simplify_if_constant(pybamm.Negate(self), keep_domains=True)
+        return pybamm.simplify_if_constant(pybamm.Negate(self), clear_domains=False)
 
     def __abs__(self):
-        """return an :class:`AbsoluteValue` object"""
+        """return an :class:`AbsoluteValue` object, or a smooth approximation"""
+        k = pybamm.settings.abs_smoothing
+        # Return exact approximation if that is the setting or the outcome is a constant
+        # (i.e. no need for smoothing)
+        if k == "exact" or is_constant(self):
+            out = pybamm.AbsoluteValue(self)
+        else:
+            out = pybamm.smooth_absolute_value(self, k)
+        return pybamm.simplify_if_constant(out, clear_domains=False)
+
+    def __mod__(self, other):
+        """return an :class:`Modulo` object"""
         return pybamm.simplify_if_constant(
-            pybamm.AbsoluteValue(self), keep_domains=True
+            pybamm.Modulo(self, other), clear_domains=False
         )
 
     def diff(self, variable):
@@ -596,24 +889,15 @@ class Symbol(anytree.NodeMixin):
 
     def is_constant(self):
         """returns true if evaluating the expression is not dependent on `t` or `y`
-        or `u`
+        or `inputs`
 
         See Also
         --------
         evaluate : evaluate the expression
 
         """
-        # if any of the nodes are instances of any of these types, then the whole
-        # expression depends on either t or y or u
-        search_types = (
-            pybamm.Variable,
-            pybamm.StateVector,
-            pybamm.Time,
-            pybamm.InputParameter,
-        )
-
-        # do the search, return true if no relevent nodes are found
-        return not self.has_symbol_of_classes(search_types)
+        # Default behaviour is False
+        return False
 
     def evaluate_ignoring_errors(self, t=0):
         """
@@ -663,14 +947,10 @@ class Symbol(anytree.NodeMixin):
         evaluate : evaluate the expression
 
         """
-        result = self.evaluate_ignoring_errors()
+        return self.shape_for_testing == ()
 
-        if isinstance(result, numbers.Number) or (
-            isinstance(result, np.ndarray) and np.prod(result.shape) == 1
-        ):
-            return True
-        else:
-            return False
+    def evaluates_to_constant_number(self):
+        return self.evaluates_to_number() and self.is_constant()
 
     def evaluates_on_edges(self, dimension):
         """
@@ -702,9 +982,9 @@ class Symbol(anytree.NodeMixin):
         """
         return any(isinstance(symbol, symbol_classes) for symbol in self.pre_order())
 
-    def simplify(self, simplified_symbols=None):
+    def simplify(self, simplified_symbols=None, clear_domains=True):
         """ Simplify the expression tree. See :class:`pybamm.Simplification`. """
-        return pybamm.Simplification(simplified_symbols).simplify(self)
+        return pybamm.Simplification(simplified_symbols).simplify(self, clear_domains)
 
     def to_casadi(self, t=None, y=None, y_dot=None, inputs=None, casadi_symbols=None):
         """
@@ -730,37 +1010,43 @@ class Symbol(anytree.NodeMixin):
         """
         Size of an object, found by evaluating it with appropriate t and y
         """
-        return np.prod(self.shape)
+        try:
+            return self._saved_size
+        except AttributeError:
+            self._saved_size = np.prod(self.shape)
+            return self._saved_size
 
     @property
     def shape(self):
         """
         Shape of an object, found by evaluating it with appropriate t and y.
         """
-        # Default behaviour is to try to evaluate the object directly
-        # Try with some large y, to avoid having to unpack (slow)
         try:
-            y = np.nan * np.ones((1000, 1))
-            evaluated_self = self.evaluate(0, y, y, inputs="shape test")
-        # If that fails, fall back to calculating how big y should really be
-        except ValueError:
-            unpacker = pybamm.SymbolUnpacker(pybamm.StateVector)
-            state_vectors_in_node = unpacker.unpack_symbol(self).values()
-            if state_vectors_in_node == []:
-                y = None
-            else:
+            return self._saved_shape
+        except AttributeError:
+            # Default behaviour is to try to evaluate the object directly
+            # Try with some large y, to avoid having to unpack (slow)
+            try:
+                y = np.nan * np.ones((1000, 1))
+                evaluated_self = self.evaluate(0, y, y, inputs="shape test")
+            # If that fails, fall back to calculating how big y should really be
+            except ValueError:
+                unpacker = pybamm.SymbolUnpacker(pybamm.StateVector)
+                state_vectors_in_node = unpacker.unpack_symbol(self).values()
                 min_y_size = max(
-                    len(x._evaluation_array) for x in state_vectors_in_node
+                    max(len(x._evaluation_array) for x in state_vectors_in_node), 1
                 )
                 # Pick a y that won't cause RuntimeWarnings
                 y = np.nan * np.ones((min_y_size, 1))
-            evaluated_self = self.evaluate(0, y, y, inputs="shape test")
+                evaluated_self = self.evaluate(0, y, y, inputs="shape test")
 
-        # Return shape of evaluated object
-        if isinstance(evaluated_self, numbers.Number):
-            return ()
-        else:
-            return evaluated_self.shape
+            # Return shape of evaluated object
+            if isinstance(evaluated_self, numbers.Number):
+                self._saved_shape = ()
+            else:
+                self._saved_shape = evaluated_self.shape
+
+        return self._saved_shape
 
     @property
     def size_for_testing(self):

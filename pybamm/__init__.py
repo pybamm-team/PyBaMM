@@ -63,7 +63,7 @@ PARAMETER_PATH = [
 #
 # Utility classes and methods
 #
-from .util import Timer, FuzzyDict
+from .util import Timer, TimerTime, FuzzyDict
 from .util import root_dir, load_function, rmse, get_infinite_nested_dict, load
 from .util import get_parameters_filepath
 from .logger import logger, set_logging_level
@@ -111,6 +111,7 @@ from .expression_tree.operations.evaluate import (
 
 if system() != "Windows":
     from .expression_tree.operations.evaluate import EvaluatorJax
+    from .expression_tree.operations.evaluate import JaxCooMatrix
 
 from .expression_tree.operations.jacobian import Jacobian
 from .expression_tree.operations.convert_to_casadi import CasadiConverter
@@ -147,6 +148,7 @@ from .models.submodels import (
     porosity,
     thermal,
     tortuosity,
+    particle_cracking,
 )
 from .models.submodels.interface import sei
 
@@ -164,13 +166,15 @@ from .geometry import standard_spatial_vars
 #
 from .parameters.parameter_values import ParameterValues
 from .parameters import constants
-from .parameters.geometric_parameters import GeometricParameters
-from .parameters.electrical_parameters import ElectricalParameters
-from .parameters.thermal_parameters import ThermalParameters
+from .parameters.geometric_parameters import geometric_parameters, GeometricParameters
+from .parameters.electrical_parameters import (
+    electrical_parameters,
+    ElectricalParameters,
+)
+from .parameters.thermal_parameters import thermal_parameters, ThermalParameters
 from .parameters.lithium_ion_parameters import LithiumIonParameters
 from .parameters.lead_acid_parameters import LeadAcidParameters
 from .parameters import parameter_sets
-
 
 #
 # Mesh and Discretisation classes
@@ -185,6 +189,7 @@ from .meshes.one_dimensional_submeshes import (
     Exponential1DSubMesh,
     Chebyshev1DSubMesh,
     UserSupplied1DSubMesh,
+    SpectralVolume1DSubMesh,
 )
 from .meshes.scikit_fem_submeshes import (
     ScikitSubMesh2D,
@@ -200,6 +205,7 @@ from .meshes.scikit_fem_submeshes import (
 from .spatial_methods.spatial_method import SpatialMethod
 from .spatial_methods.zero_dimensional_method import ZeroDimensionalSpatialMethod
 from .spatial_methods.finite_volume import FiniteVolume
+from .spatial_methods.spectral_volume import SpectralVolume
 from .spatial_methods.scikit_finite_element import ScikitFiniteElement
 
 #
