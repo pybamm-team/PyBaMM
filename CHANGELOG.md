@@ -2,6 +2,7 @@
 
 ## Features
 
+-   Added submodels for active material ([#1262](https://github.com/pybamm-team/PyBaMM/pull/1262))
 -   Added composite surface form electrolyte models: `CompositeDifferential` and `CompositeAlgebraic` ([#1207](https://github.com/pybamm-team/PyBaMM/issues/1207))
 
 ## Optimizations
