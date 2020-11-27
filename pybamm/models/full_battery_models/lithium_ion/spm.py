@@ -62,22 +62,22 @@ class SPM(BaseModel):
 
     def set_active_material_submodel(self):
 
-        if self.options["active material change"] is None:
+        if self.options["loss of active material"] is None:
             self.submodels[
                 "negative active material"
             ] = pybamm.active_material.Constant(self.param, "Negative", self.options)
             self.submodels[
                 "positive active material"
             ] = pybamm.active_material.Constant(self.param, "Positive", self.options)
-        elif self.options["active material change"] == "example":
+        elif self.options["loss of active material"] == "example":
             self.submodels[
                 "negative active material"
-            ] = pybamm.active_material.LeadingOrder(
+            ] = pybamm.active_material.VaryingUniform(
                 self.param, "Negative", self.options
             )
             self.submodels[
                 "positive active material"
-            ] = pybamm.active_material.LeadingOrder(
+            ] = pybamm.active_material.VaryingUniform(
                 self.param, "Positive", self.options
             )
 

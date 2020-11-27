@@ -103,8 +103,8 @@ class BaseModel(pybamm.BaseSubModel):
         variables = {
             self.domain
             + " electrode active material volume fraction change": deps_solid_dt,
-            "X-averaged negative "
-            + self.domain
+            "X-averaged "
+            + self.domain.lower()
             + " electrode active material volume fraction change": deps_solid_dt_av,
         }
 

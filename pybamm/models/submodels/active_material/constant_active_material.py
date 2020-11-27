@@ -1,5 +1,5 @@
 #
-# Class for constant porosity
+# Class for constant active material
 #
 import pybamm
 
@@ -7,7 +7,7 @@ from .base_active_material import BaseModel
 
 
 class Constant(BaseModel):
-    """Submodel for constant porosity
+    """Submodel for constant active material
 
     Parameters
     ----------
@@ -15,9 +15,10 @@ class Constant(BaseModel):
         The parameters to use for this submodel
     domain : str
         The domain of the model either 'Negative' or 'Positive'
+    options : dict
+        Additional options to pass to the model
 
-
-    **Extends:** :class:`pybamm.porosity.BaseModel`
+    **Extends:** :class:`pybamm.active_material.BaseModel`
     """
 
     def get_fundamental_variables(self):

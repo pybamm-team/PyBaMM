@@ -605,7 +605,7 @@ class CurrentTests(BaseOutputTest):
 
         np.testing.assert_array_almost_equal(
             np.mean(
-                self.a_n(x=self.x_n)
+                self.a_n(self.t, self.x_n)
                 * (self.j_n(self.t, self.x_n) + self.j_n_sei(self.t, self.x_n)),
                 axis=0,
             ),
@@ -614,23 +614,13 @@ class CurrentTests(BaseOutputTest):
         )
         np.testing.assert_array_almost_equal(
             np.mean(
-                self.a_p(x=self.x_p)
+                self.a_p(self.t, self.x_p)
                 * (self.j_p(self.t, self.x_p) + self.j_p_sei(self.t, self.x_p)),
                 axis=0,
             ),
             -self.i_cell / self.l_p,
             decimal=4,
         )
-        # np.testing.assert_array_almost_equal(
-        #    (self.j_n_av(self.t) + self.j_n_sei_av(self.t)),
-        #    self.i_cell / self.l_n,
-        #    decimal=4,
-        # )
-        # np.testing.assert_array_almost_equal(
-        #    self.j_p_av(self.t) + self.j_p_sei_av(self.t),
-        #    -self.i_cell / self.l_p,
-        #    decimal=4,
-        # )
 
     def test_conservation(self):
         """Test sum of electrode and electrolyte current densities give the applied

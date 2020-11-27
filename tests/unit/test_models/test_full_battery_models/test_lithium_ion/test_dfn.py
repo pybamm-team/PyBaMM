@@ -108,6 +108,11 @@ class TestDFN(unittest.TestCase):
         model = pybamm.lithium_ion.DFN(options)
         model.check_well_posedness()
 
+    def test_loss_active_material(self):
+        options = {"loss of active material": "example"}
+        model = pybamm.lithium_ion.DFN(options)
+        model.check_well_posedness()
+
     def test_surface_form_differential(self):
         options = {"surface form": "differential"}
         model = pybamm.lithium_ion.DFN(options)
