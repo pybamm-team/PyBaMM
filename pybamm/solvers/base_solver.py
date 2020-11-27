@@ -689,7 +689,12 @@ class BaseSolver(object):
                             ext_and_inputs_list,
                         ),
                     )
-
+            # Setting the solve time for each segment
+            # Not sure why required here since overall solve time
+            # is set further down
+            solve_time = timer.time()
+            for sol in new_solutions:
+                sol.solve_time = solve_time
             if start_index == start_indices[0]:
                 solutions = [sol for sol in new_solutions]
             else:
