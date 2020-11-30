@@ -6,11 +6,7 @@ import pybamm
 pybamm.set_logging_level("INFO")
 
 # load models
-models = [
-    pybamm.lithium_ion.SPM({"loss of active material": "example"}),
-    pybamm.lithium_ion.SPMe({"loss of active material": "example"}),
-    pybamm.lithium_ion.DFN({"loss of active material": "example"}),
-]
+models = [pybamm.lithium_ion.SPM(), pybamm.lithium_ion.SPMe(), pybamm.lithium_ion.DFN()]
 
 # create and run simulations
 sims = []
