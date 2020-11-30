@@ -68,7 +68,7 @@ class Composite(BaseElectrolyteConductivity):
         kappa_s_av = param.kappa_e(c_e_av, T_av) * tor_s_av
         kappa_p_av = param.kappa_e(c_e_av, T_av) * tor_p_av
 
-        chi_av = param.chi(c_e_av)
+        chi_av = param.chi(c_e_av, T_av)
         chi_av_n = pybamm.PrimaryBroadcast(chi_av, "negative electrode")
         chi_av_s = pybamm.PrimaryBroadcast(chi_av, "separator")
         chi_av_p = pybamm.PrimaryBroadcast(chi_av, "positive electrode")

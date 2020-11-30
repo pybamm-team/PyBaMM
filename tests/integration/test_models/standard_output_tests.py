@@ -81,8 +81,8 @@ class BaseOutputTest(object):
         self.x_edge = disc.mesh.combine_submeshes(*whole_cell).edges * L_x
 
         if isinstance(self.model, pybamm.lithium_ion.BaseModel):
-            R_n = param.evaluate(geo.R_n)
-            R_p = param.evaluate(geo.R_p)
+            R_n = param.evaluate(model.param.R_n_typ)
+            R_p = param.evaluate(model.param.R_p_typ)
             self.r_n = disc.mesh["negative particle"].nodes * R_n
             self.r_p = disc.mesh["positive particle"].nodes * R_p
             self.r_n_edge = disc.mesh["negative particle"].edges * R_n
@@ -595,8 +595,8 @@ class CurrentTests(BaseOutputTest):
         self.i_s = solution["Electrode current density"]
         self.i_e = solution["Electrolyte current density"]
 
-        self.a_n = solution["Negative surface area per unit volume distribution in x"]
-        self.a_p = solution["Positive surface area per unit volume distribution in x"]
+        self.a_n = solution["Negative electrode surface area per unit volume"]
+        self.a_p = solution["Positive electrode surface area per unit volume"]
 
     def test_interfacial_current_average(self):
         """Test that average of the surface area density distribution (in x)

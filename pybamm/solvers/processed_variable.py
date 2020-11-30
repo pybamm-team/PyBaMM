@@ -387,11 +387,15 @@ class ProcessedVariable(object):
             self.second_dimension = "x"
             self.r_sol = first_dim_pts
             self.x_sol = second_dim_pts
-        elif self.domain[0] in [
-            "negative electrode",
-            "separator",
-            "positive electrode",
-        ] and self.auxiliary_domains["secondary"] == ["current collector"]:
+        elif (
+            self.domain[0]
+            in [
+                "negative electrode",
+                "separator",
+                "positive electrode",
+            ]
+            and self.auxiliary_domains["secondary"] == ["current collector"]
+        ):
             self.first_dimension = "x"
             self.second_dimension = "z"
             self.x_sol = first_dim_pts

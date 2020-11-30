@@ -24,7 +24,6 @@
 
 }
 
-
 @article{doyle1993modeling,
   title={Modeling of galvanostatic charge and discharge of the lithium/polymer/insertion cell},
   author={Doyle, M and Fuller, TF and Newman, J},
@@ -35,6 +34,17 @@
   year={1993},
   publisher={The Electrochemical Society},
   note = {\href{ http://dx.doi.org/10.1149/1.2221597}{doi: 10.1149/1.2221597}},
+}
+
+@Article{harris2020array,
+  title={Array programming with NumPy},
+  author={Harris, Charles R and Millman, K Jarrod and van der Walt, St{'e}fan J and Gommers, Ralf and Virtanen, Pauli and Cournapeau, David and Wieser, Eric and Taylor, Julian and Berg, Sebastian and Smith, Nathaniel J and others},
+  journal={Nature},
+  volume={585},
+  number={7825},
+  pages={357--362},
+  year={2020},
+  publisher={Nature Publishing Group}
 }
 
 @techreport{hindmarsh2000pvode,
@@ -54,6 +64,14 @@
   pages={363--396},
   year={2005},
   publisher={ACM New York, NY, USA}
+}
+
+@software{jax2018github,
+  author = {James Bradbury and Roy Frostig and Peter Hawkins and Matthew James Johnson and Chris Leary and Dougal Maclaurin and Skye Wanderman-Milne},
+  title = {{JAX}: composable transformations of {P}ython+{N}um{P}y programs},
+  url = {http://github.com/google/jax},
+  version = {0.2.5},
+  year = {2018},
 }
 
 @article{kim2011multi,
@@ -197,6 +215,17 @@ archivePrefix={arXiv},
 primaryClass={physics.app-ph},
 }
 
+@article{Ai2020JES,
+  title={Electrochemical Thermal-Mechanical Modelling of Stress Inhomogeneity in Lithium-Ion Pouch Cells},
+  author={Ai, Weilong and Kraft, Ludwig and Sturm, Johannes and Jossen, Andreas and Wu, Billy},
+  journal={Journal of The Electrochemical Society},
+  volume={167},
+  number={1},
+  pages={013512},
+  year={2019},
+  publisher={IOP Publishing}
+}
+
 @article{subramanian2005,
   title={Efficient macro-micro scale coupled modeling of batteries},
   author={Subramanian, Venkat R and Diwakar, Vinten D and Tapriyal, Deepak},
@@ -238,4 +267,29 @@ primaryClass={physics.chem-ph},
   pages={A616},
   year={2013},
   publisher={IOP Publishing}
+}
+
+@article{deshpande2012battery,
+  title={Battery cycle life prediction with coupled chemical degradation and fatigue mechanics},
+  author={Deshpande, Rutooj and Verbrugge, Mark and Cheng, Yang-Tse and Wang, John and Liu, Ping},
+  journal={Journal of the Electrochemical Society},
+  volume={159},
+  number={10},
+  pages={A1730},
+  year={2012},
+  publisher={IOP Publishing}
+}
+
+@article{Ai_2019,
+	doi = {10.1149/2.0122001jes},
+	url = {https://doi.org/10.1149%2F2.0122001jes},
+	year = 2019,
+	month = {oct},
+	publisher = {The Electrochemical Society},
+	volume = {167},
+	number = {1},
+	pages = {013512},
+	author = {Weilong Ai and Ludwig Kraft and Johannes Sturm and Andreas Jossen and Billy Wu},
+	title = {Electrochemical Thermal-Mechanical Modelling of Stress Inhomogeneity in Lithium-Ion Pouch Cells},
+	journal = {Journal of The Electrochemical Society},
 }

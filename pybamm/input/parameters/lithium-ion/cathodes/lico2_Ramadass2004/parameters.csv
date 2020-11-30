@@ -11,7 +11,6 @@ Positive electrode OCP [V],[function]lico2_ocp_Ramadass2004,,
 Positive electrode porosity,0.385,Ramadass,electrolyte volume fraction
 Positive electrode active material volume fraction,0.59,Ramadass,
 Positive particle radius [m],2e-06,Ramadass,
-Positive particle distribution in x,1,,
 Positive electrode Bruggeman coefficient (electrolyte),4,Ramadass,
 Positive electrode Bruggeman coefficient (electrode),4,Ramadass,
 ,,,

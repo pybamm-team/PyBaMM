@@ -153,20 +153,6 @@ class _BaseSolution(object):
         for time in t:
             self._known_evals[time] = {}
 
-        # Copy the timescale_eval and lengthscale_evals if they exist
-        if hasattr(self._model, "timescale_eval"):
-            self.timescale_eval = self._model.timescale_eval
-        else:
-            self.timescale_eval = self._model.timescale.evaluate()
-        # self.timescale_eval = self._model.timescale_eval
-        if hasattr(self._model, "length_scales_eval"):
-            self.length_scales_eval = self._model.length_scales_eval
-        else:
-            self.length_scales_eval = {
-                domain: scale.evaluate()
-                for domain, scale in self._model.length_scales.items()
-            }
-
     @property
     def t(self):
         "Times at which the solution is evaluated"
@@ -182,9 +168,25 @@ class _BaseSolution(object):
         "Model used for solution"
         return self._model
 
-    def set_model(self, value):
+    @model.setter
+    def model(self, model):
         "Updates the model"
-        self._model = value
+        assert isinstance(model, pybamm.BaseModel)
+        self._model = model
+
+        # Copy the timescale_eval and lengthscale_evals if they exist
+        if hasattr(model, "timescale_eval"):
+            self.timescale_eval = model.timescale_eval
+        else:
+            self.timescale_eval = model.timescale.evaluate()
+        # self.timescale_eval = model.timescale_eval
+        if hasattr(model, "length_scales_eval"):
+            self.length_scales_eval = model.length_scales_eval
+        else:
+            self.length_scales_eval = {
+                domain: scale.evaluate()
+                for domain, scale in model.length_scales.items()
+            }
 
     @property
     def inputs(self):
