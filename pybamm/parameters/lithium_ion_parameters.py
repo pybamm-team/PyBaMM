@@ -280,7 +280,7 @@ class LithiumIonParameters:
         """Dimensional diffusivity in negative particle. Note this is defined as a
         function of stochiometry"""
         inputs = {"Negative particle stoichiometry": sto, "Temperature [K]": T}
-        if self.options["particle cracking"] is not None:
+        if self.options["particle cracking"] != "none":
             mech_effects = (
                 1 + self.theta_n_dim * (sto * self.c_n_max - self.c_n_0_dim) / T
             )
@@ -295,7 +295,7 @@ class LithiumIonParameters:
         """Dimensional diffusivity in positive particle. Note this is defined as a
         function of stochiometry"""
         inputs = {"Positive particle stoichiometry": sto, "Temperature [K]": T}
-        if self.options["particle cracking"] is not None:
+        if self.options["particle cracking"] != "none":
             mech_effects = (
                 1 + self.theta_p_dim * (sto * self.c_p_max - self.c_p_0_dim) / T
             )
@@ -919,7 +919,7 @@ class LithiumIonParameters:
         extra_options = extra_options or {}
 
         # Default options
-        options = {"particle shape": "spherical", "particle cracking": None}
+        options = {"particle shape": "spherical", "particle cracking": "none"}
 
         # All model options get passed to the parameter class, so we just need
         # to update the options in the default options and ignore the rest
@@ -936,7 +936,7 @@ class LithiumIonParameters:
             )
 
         if options["particle cracking"] not in [
-            None,
+            "none",
             "no cracking",
             "cathode",
             "anode",
