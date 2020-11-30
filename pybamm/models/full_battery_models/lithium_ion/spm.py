@@ -62,7 +62,7 @@ class SPM(BaseModel):
 
     def set_active_material_submodel(self):
 
-        if self.options["loss of active material"] is None:
+        if self.options["loss of active material"] == "none":
             self.submodels[
                 "negative active material"
             ] = pybamm.active_material.Constant(self.param, "Negative", self.options)
