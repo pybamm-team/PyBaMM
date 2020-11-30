@@ -171,7 +171,7 @@ class TestSPMeWithSEI(unittest.TestCase):
 
 class TestSPMeWithCrack(unittest.TestCase):
     def test_well_posed_none_crack(self):
-        options = {"particle": "Fickian diffusion", "particle cracking": None}
+        options = {"particle": "Fickian diffusion", "particle cracking": "none"}
         model = pybamm.lithium_ion.SPMe(options)
         chemistry = pybamm.parameter_sets.Ai2020
         parameter_values = pybamm.ParameterValues(chemistry=chemistry)

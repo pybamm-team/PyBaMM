@@ -200,7 +200,7 @@ class TestSPMWithSEI(unittest.TestCase):
 
 class TestSPMWithCrack(unittest.TestCase):
     def test_well_posed_none_crack(self):
-        options = {"particle": "Fickian diffusion", "particle cracking": None}
+        options = {"particle": "Fickian diffusion", "particle cracking": "none"}
         model = pybamm.lithium_ion.SPM(options)
         model.check_well_posedness()
 
