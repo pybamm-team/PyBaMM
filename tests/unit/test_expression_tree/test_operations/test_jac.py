@@ -213,7 +213,7 @@ class TestJacobian(unittest.TestCase):
         np.testing.assert_array_equal(jacobian, dfunc_dy.toarray())
 
         # when child evaluates to number
-        func = pybamm.sin(const)
+        func = pybamm.Sin(const)
         dfunc_dy = func.jac(y).evaluate(y=y0)
         np.testing.assert_array_equal(0, dfunc_dy)
 
@@ -372,6 +372,20 @@ class TestJacobian(unittest.TestCase):
         np.testing.assert_array_equal(
             np.diag(jac.evaluate(y=y_test).toarray()), np.ceil(y_test)
         )
+
+    def test_jac_of_numpy_concatenation(self):
+        u = pybamm.StateVector(slice(0, 2))
+
+        y0 = np.ones(2)
+
+        # Multiple children
+        func = pybamm.NumpyConcatenation(u, u)
+        jacobian = np.array([[1, 0], [0, 1], [1, 0], [0, 1]])
+        dfunc_dy = func.jac(u).evaluate(y=y0)
+        np.testing.assert_array_equal(jacobian, dfunc_dy.toarray())
+
+        # One child
+        self.assertEqual(u.jac(u).id, pybamm.NumpyConcatenation(u).jac(u).id)
 
     def test_jac_of_domain_concatenation(self):
         # create mesh

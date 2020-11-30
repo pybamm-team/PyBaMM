@@ -171,14 +171,34 @@ def simplified_addition(left, right):
         return left
     # Check matrices after checking scalars
     if is_matrix_zero(left):
-        if isinstance(right, pybamm.Scalar):
-            return right.value * pybamm.ones_like(left)
-        else:
+        if right.evaluates_to_number():
+            return right * pybamm.ones_like(left)
+        # If left object is zero and has size smaller than or equal to right object in
+        # all dimensions, we can safely return the right object. For example, adding a
+        # zero vector a matrix, we can just return the matrix
+        elif all(
+            left_dim_size <= right_dim_size
+            for left_dim_size, right_dim_size in zip(
+                left.shape_for_testing, right.shape_for_testing
+            )
+        ) and all(
+            left.evaluates_on_edges(dim) == right.evaluates_on_edges(dim)
+            for dim in ["primary", "secondary", "tertiary"]
+        ):
             return right
     if is_matrix_zero(right):
-        if isinstance(left, pybamm.Scalar):
-            return left.value * pybamm.ones_like(right)
-        else:
+        if left.evaluates_to_number():
+            return left * pybamm.ones_like(right)
+        # See comment above
+        elif all(
+            left_dim_size >= right_dim_size
+            for left_dim_size, right_dim_size in zip(
+                left.shape_for_testing, right.shape_for_testing
+            )
+        ) and all(
+            left.evaluates_on_edges(dim) == right.evaluates_on_edges(dim)
+            for dim in ["primary", "secondary", "tertiary"]
+        ):
             return left
 
     return pybamm.simplify_if_constant(
@@ -203,14 +223,32 @@ def simplified_subtraction(left, right):
         return left
     # Check matrices after checking scalars
     if is_matrix_zero(left):
-        if isinstance(right, pybamm.Scalar):
-            return -right.value * pybamm.ones_like(left)
-        else:
+        if right.evaluates_to_number():
+            return -right * pybamm.ones_like(left)
+        # See comments in simplified_addition
+        elif all(
+            left_dim_size <= right_dim_size
+            for left_dim_size, right_dim_size in zip(
+                left.shape_for_testing, right.shape_for_testing
+            )
+        ) and all(
+            left.evaluates_on_edges(dim) == right.evaluates_on_edges(dim)
+            for dim in ["primary", "secondary", "tertiary"]
+        ):
             return -right
     if is_matrix_zero(right):
-        if isinstance(left, pybamm.Scalar):
-            return left.value * pybamm.ones_like(right)
-        else:
+        if left.evaluates_to_number():
+            return left * pybamm.ones_like(right)
+        # See comments in simplified_addition
+        elif all(
+            left_dim_size >= right_dim_size
+            for left_dim_size, right_dim_size in zip(
+                left.shape_for_testing, right.shape_for_testing
+            )
+        ) and all(
+            left.evaluates_on_edges(dim) == right.evaluates_on_edges(dim)
+            for dim in ["primary", "secondary", "tertiary"]
+        ):
             return left
 
     return pybamm.simplify_if_constant(
@@ -236,10 +274,16 @@ def simplified_multiplication(left, right):
     if is_scalar_one(right):
         return left
 
-    # anything multiplied by a matrix one returns itself if the shapes are the same
+    # anything multiplied by a matrix one returns itself if
+    # - the shapes are the same
+    # - both left and right evaluate on edges, or both evaluate on nodes, in all
+    # dimensions
     # (and possibly more generally, but not implemented here)
     try:
-        if left.shape_for_testing == right.shape_for_testing:
+        if left.shape_for_testing == right.shape_for_testing and all(
+            left.evaluates_on_edges(dim) == right.evaluates_on_edges(dim)
+            for dim in ["primary", "secondary", "tertiary"]
+        ):
             if is_matrix_one(left):
                 return right
             elif is_matrix_one(right):
@@ -904,13 +948,6 @@ class Symbol(anytree.NodeMixin):
 
         """
         return self.shape_for_testing == ()
-        # result = self.evaluate_ignoring_errors()
-        # if isinstance(result, numbers.Number) or (
-        #     isinstance(result, np.ndarray) and result.shape == ()
-        # ):
-        #     return True
-        # else:
-        #     return False
 
     def evaluates_to_constant_number(self):
         return self.evaluates_to_number() and self.is_constant()

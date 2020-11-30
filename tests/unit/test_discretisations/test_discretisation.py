@@ -1030,9 +1030,9 @@ class TestDiscretise(unittest.TestCase):
         )
 
     def test_concatenation(self):
-        a = pybamm.Symbol("a")
-        b = pybamm.Symbol("b")
-        c = pybamm.Symbol("c")
+        a = pybamm.Parameter("a")
+        b = pybamm.Parameter("b")
+        c = pybamm.Parameter("c")
 
         # create discretisation
         disc = get_discretisation_for_testing()

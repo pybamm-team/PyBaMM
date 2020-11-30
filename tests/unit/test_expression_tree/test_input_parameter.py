@@ -36,6 +36,8 @@ class TestInputParameter(unittest.TestCase):
 
         a.set_expected_size(10)
         self.assertEqual(a.shape, (10, 1))
+        np.testing.assert_equal(a.evaluate_for_shape(), np.nan * np.ones((10, 1)))
+        self.assertEqual(a.evaluate_for_shape().shape, (10, 1))
 
     def test_errors(self):
         a = pybamm.InputParameter("a")

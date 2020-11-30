@@ -149,12 +149,12 @@ class TestSymbol(unittest.TestCase):
         self.assertEqual(str(a >= b), str(pybamm.sigmoid(b, a, 10)))
 
         # But exact heavisides should still be used if both variables are constant
-        a = 1
-        b = pybamm.Parameter("b")
-        self.assertEqual(str(a < b), str(pybamm.NotEqualHeaviside(a, b)))
-        self.assertEqual(str(a <= b), str(pybamm.EqualHeaviside(a, b)))
-        self.assertEqual(str(a > b), str(pybamm.NotEqualHeaviside(b, a)))
-        self.assertEqual(str(a >= b), str(pybamm.EqualHeaviside(b, a)))
+        a = pybamm.Scalar(1)
+        b = pybamm.Scalar(2)
+        self.assertEqual(str(a < b), str(pybamm.Scalar(1)))
+        self.assertEqual(str(a <= b), str(pybamm.Scalar(1)))
+        self.assertEqual(str(a > b), str(pybamm.Scalar(0)))
+        self.assertEqual(str(a >= b), str(pybamm.Scalar(0)))
 
         # Change setting back for other tests
         pybamm.settings.heaviside_smoothing = "exact"
@@ -166,10 +166,8 @@ class TestSymbol(unittest.TestCase):
         self.assertEqual(str(abs(a)), str(pybamm.smooth_absolute_value(a, 10)))
 
         # But exact absolute value should still be used for constants
-        a = pybamm.Parameter("a")
-        self.assertEqual(str(abs(a)), str(pybamm.AbsoluteValue(a)))
-        a = -1
-        self.assertEqual(str(abs(a)), "1")
+        a = pybamm.Scalar(-5)
+        self.assertEqual(str(abs(a)), str(pybamm.Scalar(5)))
 
         # Change setting back for other tests
         pybamm.settings.abs_smoothing = "exact"

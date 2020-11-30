@@ -110,13 +110,13 @@ class TestSPMe(unittest.TestCase):
 
     def test_surface_form_differential(self):
         options = {"surface form": "differential"}
-        with self.assertRaises(NotImplementedError):
-            pybamm.lithium_ion.SPMe(options)
+        model = pybamm.lithium_ion.SPMe(options)
+        model.check_well_posedness()
 
     def test_surface_form_algebraic(self):
         options = {"surface form": "algebraic"}
-        with self.assertRaises(NotImplementedError):
-            pybamm.lithium_ion.SPMe(options)
+        model = pybamm.lithium_ion.SPMe(options)
+        model.check_well_posedness()
 
     def test_integrated_conductivity(self):
         options = {"electrolyte conductivity": "integrated"}
