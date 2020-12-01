@@ -85,7 +85,7 @@ class TestBaseSolver(unittest.TestCase):
     def test_block_symbolic_inputs(self):
         solver = pybamm.BaseSolver(rtol=1e-2, atol=1e-4)
         model = pybamm.BaseModel()
-        a = pybamm.Scalar(0)
+        a = pybamm.Variable("a")
         p = pybamm.InputParameter("p")
         model.rhs = {a: a * p}
         with self.assertRaisesRegex(

@@ -3,7 +3,7 @@
 #
 import pybamm
 from tests import get_discretisation_for_testing
-
+import numpy as np
 import unittest
 
 
@@ -104,14 +104,14 @@ class TestMainReaction(unittest.TestCase):
         j0_n_FD = parameter_values.process_symbol(
             (j0_n(c_e + h) - j0_n(c_e - h)) / (2 * h)
         )
-        self.assertAlmostEqual(
+        np.testing.assert_almost_equal(
             j0_n_diff.evaluate(inputs={"c_e": 0.5}),
             j0_n_FD.evaluate(inputs={"c_e": 0.5}),
         )
         j0_p_FD = parameter_values.process_symbol(
             (j0_p(c_e + h) - j0_p(c_e - h)) / (2 * h)
         )
-        self.assertAlmostEqual(
+        np.testing.assert_almost_equal(
             j0_p_diff.evaluate(inputs={"c_e": 0.5}),
             j0_p_FD.evaluate(inputs={"c_e": 0.5}),
         )

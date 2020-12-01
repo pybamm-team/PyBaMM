@@ -613,7 +613,7 @@ class ParameterValues:
             The evaluated symbol
         """
         processed_symbol = self.process_symbol(symbol)
-        if processed_symbol.is_constant() and processed_symbol.evaluates_to_number():
+        if processed_symbol.evaluates_to_constant_number():
             return processed_symbol.evaluate()
         else:
             raise ValueError("symbol must evaluate to a constant scalar")

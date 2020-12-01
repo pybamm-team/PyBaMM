@@ -23,3 +23,7 @@ Broadcasting Operators
   :members:
 
 .. autofunction:: pybamm.ones_like
+
+.. autofunction:: pybamm.zeros_like
+
+.. autofunction:: pybamm.full_like
