@@ -4,6 +4,7 @@
 
 import pybamm
 import numpy as np
+from pybamm.geometry import half_cell_spatial_vars
 
 pybamm.set_logging_level("INFO")
 
@@ -33,8 +34,9 @@ param.process_model(model)
 param.process_geometry(geometry)
 
 # set mesh
-var = pybamm.standard_spatial_vars
-var_pts = {var.x_n: 30, var.x_s: 30, var.x_p: 30, var.r_n: 10, var.r_p: 10}
+# var = pybamm.standard_spatial_vars
+# var_pts = {var.x_n: 30, var.x_s: 30, var.x_p: 30, var.r_n: 10, var.r_p: 10}
+var_pts = model.default_var_pts
 mesh = pybamm.Mesh(geometry, model.default_submesh_types, var_pts)
 
 # discretise model
@@ -50,14 +52,14 @@ solution = solver.solve(model, t_eval)
 plot = pybamm.QuickPlot(
     solution,
     [
-        "Negative particle surface concentration [mol.m-3]",
+        "Working particle surface concentration [mol.m-3]",
+        # "Working particle concentration [mol.m-3]",
         "Electrolyte concentration [mol.m-3]",
-        "Positive particle surface concentration [mol.m-3]",
         "Current [A]",
-        "Negative electrode potential [V]",
+        "Working electrode potential [V]",
         "Electrolyte potential [V]",
-        "Positive electrode potential [V]",
-        "Terminal voltage [V]",
+        "Total electrolyte concentration",
+        ["Terminal voltage [V]", "Voltage drop in the cell [V]"],
     ],
     time_unit="seconds",
     spatial_unit="um",
