@@ -628,7 +628,9 @@ class Simplification(object):
             new_symbol = symbol._function_simplify(simplified_children)
 
         elif isinstance(symbol, pybamm.Concatenation):
-            new_children = [self.simplify(child) for child in symbol.children]
+            new_children = [
+                self.simplify(child, clear_domains=False) for child in symbol.children
+            ]
             new_symbol = symbol._concatenation_simplify(new_children)
 
         else:

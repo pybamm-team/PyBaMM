@@ -159,6 +159,9 @@ class TestEvaluate(unittest.TestCase):
         )
 
         # test that Concatentation throws
+        a = pybamm.StateVector(slice(0, 1), domain="test a")
+        b = pybamm.StateVector(slice(1, 2), domain="test b")
+
         expr = pybamm.Concatenation(a, b)
         with self.assertRaises(NotImplementedError):
             pybamm.find_symbols(expr, constant_symbols, variable_symbols)
@@ -577,8 +580,8 @@ class TestEvaluate(unittest.TestCase):
         # test the sparse-scalar multiplication
         A = pybamm.Matrix(scipy.sparse.csr_matrix(np.array([[1, 0], [0, 4]])))
         for expr in [
-                A * pybamm.t @ pybamm.StateVector(slice(0, 2)),
-                pybamm.t * A @ pybamm.StateVector(slice(0, 2)),
+            A * pybamm.t @ pybamm.StateVector(slice(0, 2)),
+            pybamm.t * A @ pybamm.StateVector(slice(0, 2)),
         ]:
             evaluator = pybamm.EvaluatorJax(expr)
             for t, y in zip(t_tests, y_tests):
@@ -622,9 +625,9 @@ class TestEvaluate(unittest.TestCase):
         A = pybamm.Matrix(scipy.sparse.csr_matrix(np.array([[1]])))
         v = pybamm.StateVector(slice(0, 1))
         for expr in [
-                pybamm.Inner(A, v) @ v,
-                pybamm.Inner(v, A) @ v,
-                pybamm.Inner(v, v) @ v
+            pybamm.Inner(A, v) @ v,
+            pybamm.Inner(v, A) @ v,
+            pybamm.Inner(v, v) @ v,
         ]:
             evaluator = pybamm.EvaluatorJax(expr)
             for t, y in zip(t_tests, y_tests):
@@ -656,15 +659,16 @@ class TestEvaluate(unittest.TestCase):
 
     @unittest.skipIf(system() == "Windows", "JAX not supported on windows")
     def test_evaluator_jax_inputs(self):
-        a = pybamm.InputParameter('a')
+        a = pybamm.InputParameter("a")
         expr = a ** 2
         evaluator = pybamm.EvaluatorJax(expr)
-        result = evaluator.evaluate(inputs={'a': 2})
+        result = evaluator.evaluate(inputs={"a": 2})
         self.assertEqual(result, 4)
 
     @unittest.skipIf(system() == "Windows", "JAX not supported on windows")
     def test_jax_coo_matrix(self):
         import jax
+
         A = pybamm.JaxCooMatrix([0, 1], [0, 1], [1.0, 2.0], (2, 2))
         Adense = jax.numpy.array([[1.0, 0], [0, 2.0]])
         v = jax.numpy.array([[2.0], [1.0]])
