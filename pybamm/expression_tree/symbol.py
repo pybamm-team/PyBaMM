@@ -982,7 +982,7 @@ class Symbol(anytree.NodeMixin):
         """
         return any(isinstance(symbol, symbol_classes) for symbol in self.pre_order())
 
-    def simplify(self, simplified_symbols=None, clear_domains=True):
+    def simplify(self, simplified_symbols=None, clear_domains=False):
         """ Simplify the expression tree. See :class:`pybamm.Simplification`. """
         return pybamm.Simplification(simplified_symbols).simplify(self, clear_domains)
 

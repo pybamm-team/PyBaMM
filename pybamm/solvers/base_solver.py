@@ -223,8 +223,6 @@ class BaseSolver(object):
                 # Process with pybamm functions
                 if model.use_simplify:
                     report(f"Simplifying {name}")
-                    if name == "event" and isinstance(func, pybamm.Subtraction):
-                        n = 1
                     func = simp.simplify(func)
 
                 if model.convert_to_format == "jax":

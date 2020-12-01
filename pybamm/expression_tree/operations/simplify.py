@@ -8,7 +8,7 @@ import numbers
 from scipy.sparse import issparse, csr_matrix
 
 
-def simplify_if_constant(symbol, clear_domains=True):
+def simplify_if_constant(symbol, clear_domains=False):
     """
     Utility function to simplify an expression tree if it evalutes to a constant
     scalar, vector or matrix
@@ -567,7 +567,7 @@ class Simplification(object):
     def __init__(self, simplified_symbols=None):
         self._simplified_symbols = simplified_symbols or {}
 
-    def simplify(self, symbol, clear_domains=True):
+    def simplify(self, symbol, clear_domains=False):
         """
         This function recurses down the tree, applying any simplifications defined in
         classes derived from pybamm.Symbol. E.g. any expression multiplied by a
@@ -579,7 +579,7 @@ class Simplification(object):
         symbol : :class:`pybamm.Symbol`
             The symbol to simplify
         clear_domains : bool
-            Whether to remove a symbol's domain when simplifying. Default is True.
+            Whether to remove a symbol's domain when simplifying. Default is False.
 
         Returns
         -------
@@ -596,7 +596,7 @@ class Simplification(object):
 
             return simplified_symbol
 
-    def _simplify(self, symbol, clear_domains=True):
+    def _simplify(self, symbol, clear_domains=False):
         """ See :meth:`Simplification.simplify()`. """
         if clear_domains:
             symbol.clear_domains()
