@@ -1,0 +1,4 @@
+[deps]
+DiffEqOperators = "9fdde737-9c7f-55bf-ade8-46b3f136cc48"
+DifferentialEquations = "0c46a032-eb83-5123-abaf-570d42b7fbaa"
+ModelingToolkit = "961ee093-0014-501f-94e3-6117800e7a78"

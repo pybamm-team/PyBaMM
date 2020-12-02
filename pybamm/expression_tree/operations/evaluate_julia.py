@@ -467,6 +467,71 @@ def get_julia_function(symbol, funcname="f"):
     return julia_str
 
 
+def convert_var_and_eqn_to_str(var, eqn, all_constants_str, all_variables_str, typ):
+    """
+    Converts a variable and its equation to a julia string
+
+    Parameters
+    ----------
+    var : :class:`pybamm.Symbol`
+        The variable (key in the dictionary of rhs/algebraic/initial conditions)
+    eqn : :class:`pybamm.Symbol`
+        The equation (value in the dictionary of rhs/algebraic/initial conditions)
+    all_constants_str : str
+        String containing all the constants defined so far
+    all_variables_str : str
+        String containing all the variables defined so far
+    typ : str
+        The type of the variable/equation pair being converted ("equation", "initial
+        condition", or "boundary condition")
+
+    Returns
+    -------
+    all_constants_str : str
+        Updated string of all constants
+    all_variables_str : str
+        Updated string of all variables
+    eqn_str : str
+        The string describing the final equation result, perhaps as a function of some
+        variables and/or constants in all_constants_str and all_variables_str
+
+    """
+    constants, variable_symbols = to_julia(eqn)[:2]
+    line_format = "{} .= {}"
+
+    variables_str = "\n".join(
+        [
+            f"{id_to_julia_variable(symbol_id)} = {symbol_line}"
+            for symbol_id, symbol_line in variable_symbols.items()
+        ]
+    )
+
+    # extract constants in generated function
+    for eqn_id, const_value in constants.items():
+        const_name = id_to_julia_variable(eqn_id, True)
+        all_constants_str += "{} = {}\n".format(const_name, const_value)
+        # TODO: avoid repeated constants definitions
+
+    # add a comment labeling the equation, and the equation itself
+    if variables_str == "":
+        all_variables_str += ""
+    else:
+        all_variables_str += f"# '{var.name}' {typ}\n" + variables_str + "\n"
+
+    # calculate the final variable that will output the result
+    result_var = id_to_julia_variable(eqn.id, eqn.is_constant())
+    if eqn.is_constant():
+        result_value = eqn.evaluate()
+
+    # define the variable that goes into the equation
+    if eqn.is_constant() and isinstance(result_value, numbers.Number):
+        eqn_str = str(result_value)
+    else:
+        eqn_str = result_var
+
+    return all_constants_str, all_variables_str, eqn_str
+
+
 def get_julia_mtk_model(model, geometry=None, tspan=None):
     """
     Converts a pybamm model into a Julia ModelingToolkit model
@@ -521,16 +586,17 @@ def get_julia_mtk_model(model, geometry=None, tspan=None):
     # Makes a line of the form '@variables u1(t) u2(t)'
     dep_vars = list(variable_id_to_number.values())
     mtk_str += "@variables"
+    var_to_ind_vars = {}
     for var in variables:
         if var.domain == []:
-            var_ind_vars = "(t)"
+            var_to_ind_vars[var.id] = "(t)"
         else:
-            var_ind_vars = (
+            var_to_ind_vars[var.id] = (
                 "(t, "
                 + ", ".join([domain_name_to_symbol[dom] for dom in var.domain])
                 + ")"
             )
-        mtk_str += f" {variable_id_to_number[var.id]}{var_ind_vars}"
+        mtk_str += f" {variable_id_to_number[var.id]}(..)"
     mtk_str += "\n"
 
     # Define derivatives
@@ -548,48 +614,25 @@ def get_julia_mtk_model(model, geometry=None, tspan=None):
     all_constants_str = ""
     all_julia_str = ""
     for var, eqn in {**model.rhs, **model.algebraic}.items():
-        constants, variable_symbols = to_julia(eqn)[:2]
-        line_format = "{} .= {}"
-
-        julia_str = "\n".join(
-            [
-                f"{id_to_julia_variable(symbol_id)} = {symbol_line}"
-                for symbol_id, symbol_line in variable_symbols.items()
-            ]
+        all_constants_str, all_julia_str, eqn_str = convert_var_and_eqn_to_str(
+            var, eqn, all_constants_str, all_julia_str, "equation"
         )
-
-        # extract constants in generated function
-        for eqn_id, const_value in constants.items():
-            const_name = id_to_julia_variable(eqn_id, True)
-            all_constants_str += "{} = {}\n".format(const_name, const_value)
-
-        # add a comment labeling the equation, and the equation itself
-        if julia_str == "":
-            all_julia_str = ""
-        else:
-            all_julia_str += f"# '{var.name}' equation\n" + julia_str + "\n"
-
-        # calculate the final variable that will output the result
-        result_var = id_to_julia_variable(eqn.id, eqn.is_constant())
-        if eqn.is_constant():
-            result_value = eqn.evaluate()
-
-        # define the variable that goes into the equation
-        if eqn.is_constant() and isinstance(result_value, numbers.Number):
-            eqn_str = str(result_value)
-        else:
-            eqn_str = result_var
+        # add
 
         if var in model.rhs:
-            all_eqns_str += f"   Dt({variable_id_to_number[var.id]}) ~ {eqn_str},\n"
+            all_eqns_str += (
+                f"   Dt({variable_id_to_number[var.id]}{var_to_ind_vars[var.id]}) "
+                + f"~ {eqn_str},\n"
+            )
         elif var in model.algebraic:
             all_eqns_str += f"   0 ~ {eqn_str},\n"
 
     # Replace variables in the julia strings that correspond to pybamm variables with
     # their julia equivalent
+    # e.g. cache_123456789 gets replaced with u1(t, x)
     for var_id, julia_id in variable_id_to_number.items():
         all_julia_str = all_julia_str.replace(
-            id_to_julia_variable(var_id, False), julia_id
+            id_to_julia_variable(var_id, False), julia_id + var_to_ind_vars[var_id]
         )
 
     # Replace independent variables (domain names) in julia strings with the
@@ -600,7 +643,7 @@ def get_julia_mtk_model(model, geometry=None, tspan=None):
     # Replace parameters in the julia strings in the form "inputs[name]"
     # with just "name"
     for param in model.input_parameters:
-        # Replace 'var_id' with 'paran.name'
+        # Replace 'var_id' with 'param.name'
         all_julia_str = all_julia_str.replace(
             id_to_julia_variable(param.id, False), param.name
         )
@@ -612,11 +655,79 @@ def get_julia_mtk_model(model, geometry=None, tspan=None):
     # Update the MTK string
     mtk_str += all_constants_str + all_julia_str + "\n" + f"eqs = [\n{all_eqns_str}]\n"
 
+    ####################################################################################
+    # Initial and boundary conditions
+    ####################################################################################
+    # Initial conditions
+    all_ic_bc_str = ""
+    all_ic_bc_constants_str = ""
+    all_ic_bc_julia_str = ""
+    for var, eqn in model.initial_conditions.items():
+        (
+            all_ic_bc_constants_str,
+            all_ic_bc_julia_str,
+            eqn_str,
+        ) = convert_var_and_eqn_to_str(
+            var, eqn, all_ic_bc_constants_str, all_ic_bc_julia_str, "initial condition"
+        )
+
+        if not is_pde:
+            all_ic_bc_str += f"   {variable_id_to_number[var.id]}(t) => {eqn_str},\n"
+        else:
+            doms = ", ".join([domain_name_to_symbol[dom] for dom in var.domain])
+            all_ic_bc_str += (
+                f"   {variable_id_to_number[var.id]}(0, {doms}) ~ {eqn_str},\n"
+            )
+    # Boundary conditions
+    if is_pde:
+        for var, eqn_side in model.boundary_conditions.items():
+            for side, (eqn, typ) in eqn_side.items():
+                (
+                    all_ic_bc_constants_str,
+                    all_ic_bc_julia_str,
+                    eqn_str,
+                ) = convert_var_and_eqn_to_str(
+                    var,
+                    eqn,
+                    all_ic_bc_constants_str,
+                    all_ic_bc_julia_str,
+                    "boundary condition",
+                )
+
+                geom = list(geometry[var.domain[0]].values())[0]
+                if side == "left":
+                    limit = geom["min"]
+                elif side == "right":
+                    limit = geom["max"]
+                if typ == "Dirichlet":
+                    pass
+                elif typ == "Neumann":
+                    raise NotImplementedError
+                all_ic_bc_str += (
+                    f"   {variable_id_to_number[var.id]}(t, {limit}) ~ {eqn_str},\n"
+                )
+
+    ####################################################################################
+
     # Create ODESystem or PDESystem
     if not is_pde:
         mtk_str += "sys = ODESystem(eqs, t)\n\n"
+        mtk_str += (
+            all_ic_bc_constants_str
+            + all_ic_bc_julia_str
+            + "\n"
+            + f"u0 = [\n{all_ic_bc_str}]\n"
+        )
     else:
-        # Create domains
+        # Initial and boundary conditions
+        mtk_str += (
+            all_ic_bc_constants_str
+            + all_ic_bc_julia_str
+            + "\n"
+            + f"ics_bcs = [\n{all_ic_bc_str}]\n"
+        )
+
+        # Domains
         mtk_str += "\n"
         mtk_str += f"t_domain = IntervalDomain({tspan[0]}, {tspan[1]})\n"
         domains = f"domains = [\n   t in t_domain,\n"
@@ -629,50 +740,14 @@ def get_julia_mtk_model(model, geometry=None, tspan=None):
 
         mtk_str += "\n"
         mtk_str += domains
+
+        # Independent and dependent variables
         mtk_str += "ind_vars = [{}]\n".format(", ".join(ind_vars))
         mtk_str += "dep_vars = [{}]\n\n".format(", ".join(dep_vars))
 
-        mtk_str += "sys = PDESystem(eqs, bcs, domains, ind_vars, dep_vars)\n\n"
-
-    # Create initial conditions
-    all_ics_str = ""
-    all_constants_str = ""
-    all_julia_str = ""
-    for var, eqn in model.initial_conditions.items():
-        constants, variable_symbols = to_julia(eqn)[:2]
-
-        julia_str = "\n".join(
-            [
-                f"{id_to_julia_variable(symbol_id)} = {symbol_line}"
-                for symbol_id, symbol_line in variable_symbols.items()
-            ]
+        mtk_str += (
+            "pde_system = PDESystem(eqs, ics_bcs, domains, ind_vars, dep_vars)\n\n"
         )
-
-        # extract constants in generated function
-        for eqn_id, const_value in constants.items():
-            const_name = id_to_julia_variable(eqn_id, True)
-            all_constants_str += "{} = {}\n".format(const_name, const_value)
-
-        # add a comment labeling the equation, and the equation itself
-        if julia_str == "":
-            all_julia_str = ""
-        else:
-            all_julia_str += f"# '{var.name}' initial conditions\n" + julia_str + "\n"
-
-        # calculate the final variable that will output the result
-        result_var = id_to_julia_variable(eqn.id, eqn.is_constant())
-        if eqn.is_constant():
-            result_value = eqn.evaluate()
-
-        # define the variable that goes into the equation
-        if eqn.is_constant() and isinstance(result_value, numbers.Number):
-            eqn_str = str(result_value)
-        else:
-            raise pybamm.ModelError
-
-        all_ics_str += f"   {variable_id_to_number[var.id]} => {eqn_str},\n"
-
-    mtk_str += all_constants_str + all_julia_str + "\n" + f"u0 = [\n{all_ics_str}]\n"
 
     mtk_str += "end\n"
 
