@@ -26,7 +26,7 @@ class LithiumIonParameters:
 
             * "particle shape" : str, optional
                 Sets the model shape of the electrode particles. This is used to
-                calculate the surface area per unit volume. Can be "spherical"
+                calculate the surface area to volume ratio. Can be "spherical"
                 (default) or "user". For the "user" option the surface area per
                 unit volume can be passed as a parameter, and is therefore not
                 necessarily consistent with the particle shape.
@@ -112,28 +112,36 @@ class LithiumIonParameters:
         # Microscale geometry
         # Note: the particle radius in the electrodes can be set as a function
         # of through-cell position, so is defined later as a function, along with
-        # the surface area per unit volume
-        inputs = {"Through-cell distance (x_n) [m]": pybamm.standard_spatial_vars.x_n}
+        # the surface area to volume ratio
+        inputs = {
+            "Through-cell distance (x_n) [m]": pybamm.standard_spatial_vars.x_n
+            * self.L_x
+        }
         self.epsilon_n = pybamm.FunctionParameter("Negative electrode porosity", inputs)
 
-        inputs = {"Through-cell distance (x_s) [m]": pybamm.standard_spatial_vars.x_s}
+        inputs = {
+            "Through-cell distance (x_s) [m]": pybamm.standard_spatial_vars.x_s
+            * self.L_x
+        }
         self.epsilon_s = pybamm.FunctionParameter("Separator porosity", inputs)
 
-        inputs = {"Through-cell distance (x_p) [m]": pybamm.standard_spatial_vars.x_p}
+        inputs = {
+            "Through-cell distance (x_p) [m]": pybamm.standard_spatial_vars.x_p
+            * self.L_x
+        }
         self.epsilon_p = pybamm.FunctionParameter("Positive electrode porosity", inputs)
 
         self.epsilon = pybamm.Concatenation(
             self.epsilon_n, self.epsilon_s, self.epsilon_p
         )
-        self.epsilon_s_n = pybamm.Parameter(
-            "Negative electrode active material volume fraction"
+        self.epsilon_inactive_n = (
+            1 - self.epsilon_n - self.epsilon_s_n(pybamm.standard_spatial_vars.x_n)
         )
-        self.epsilon_s_p = pybamm.Parameter(
-            "Positive electrode active material volume fraction"
-        )
-        self.epsilon_inactive_n = 1 - self.epsilon_n - self.epsilon_s_n
         self.epsilon_inactive_s = 1 - self.epsilon_s
-        self.epsilon_inactive_p = 1 - self.epsilon_p - self.epsilon_s_p
+        self.epsilon_inactive_p = (
+            1 - self.epsilon_p - self.epsilon_s_p(pybamm.standard_spatial_vars.x_p)
+        )
+
         self.b_e_n = self.geo.b_e_n
         self.b_e_s = self.geo.b_e_s
         self.b_e_p = self.geo.b_e_p
@@ -272,7 +280,7 @@ class LithiumIonParameters:
         """Dimensional diffusivity in negative particle. Note this is defined as a
         function of stochiometry"""
         inputs = {"Negative particle stoichiometry": sto, "Temperature [K]": T}
-        if self.options["particle cracking"] is not None:
+        if self.options["particle cracking"] != "none":
             mech_effects = (
                 1 + self.theta_n_dim * (sto * self.c_n_max - self.c_n_0_dim) / T
             )
@@ -287,7 +295,7 @@ class LithiumIonParameters:
         """Dimensional diffusivity in positive particle. Note this is defined as a
         function of stochiometry"""
         inputs = {"Positive particle stoichiometry": sto, "Temperature [K]": T}
-        if self.options["particle cracking"] is not None:
+        if self.options["particle cracking"] != "none":
             mech_effects = (
                 1 + self.theta_p_dim * (sto * self.c_p_max - self.c_p_0_dim) / T
             )
@@ -368,31 +376,19 @@ class LithiumIonParameters:
         inputs = {"Through-cell distance (x_p) [m]": x}
         return pybamm.FunctionParameter("Positive particle radius [m]", inputs)
 
-    def a_n_dimensional(self, x):
-        """
-        Negative electrode surface area per unit volume as a function of
-        through-cell distance
-        """
-        inputs = {"Through-cell distance (x_n) [m]": x}
-        if self.options["particle shape"] == "spherical":
-            return 3 * self.epsilon_s_n / self.R_n_dimensional(x)
-        elif self.options["particle shape"] == "user":
-            return pybamm.FunctionParameter(
-                "Negative electrode surface area to volume ratio [m-1]", inputs
-            )
+    def epsilon_s_n(self, x):
+        "Negative electrode active material volume fraction"
+        inputs = {"Through-cell distance (x_n) [m]": x * self.L_x}
+        return pybamm.FunctionParameter(
+            "Negative electrode active material volume fraction", inputs
+        )
 
-    def a_p_dimensional(self, x):
-        """
-        Positive electrode surface area per unit volume as a function of
-        through-cell distance
-        """
-        inputs = {"Through-cell distance (x_p) [m]": x}
-        if self.options["particle shape"] == "spherical":
-            return 3 * self.epsilon_s_p / self.R_p_dimensional(x)
-        elif self.options["particle shape"] == "user":
-            return pybamm.FunctionParameter(
-                "Positive electrode surface area to volume ratio [m-1]", inputs
-            )
+    def epsilon_s_p(self, x):
+        "Positive electrode active material volume fraction"
+        inputs = {"Through-cell distance (x_p) [m]": x * self.L_x}
+        return pybamm.FunctionParameter(
+            "Positive electrode active material volume fraction", inputs
+        )
 
     def c_n_init_dimensional(self, x):
         "Initial concentration as a function of dimensionless position x"
@@ -414,8 +410,18 @@ class LithiumIonParameters:
         # Microscale (typical values at electrode/current collector interface)
         self.R_n_typ = self.R_n_dimensional(0)
         self.R_p_typ = self.R_p_dimensional(self.L_x)
-        self.a_n_typ = self.a_n_dimensional(0)
-        self.a_p_typ = self.a_p_dimensional(self.L_x)
+        if self.options["particle shape"] == "spherical":
+            self.a_n_typ = 3 * self.epsilon_s_n(0) / self.R_n_typ
+            self.a_p_typ = 3 * self.epsilon_s_p(1) / self.R_p_typ
+        elif self.options["particle shape"] == "user":
+            inputs = {"Through-cell distance (x_n) [m]": 0}
+            self.a_n_typ = pybamm.FunctionParameter(
+                "Negative electrode surface area to volume ratio [m-1]", inputs
+            )
+            inputs = {"Through-cell distance (x_p) [m]": self.L_x}
+            self.a_p_typ = pybamm.FunctionParameter(
+                "Positive electrode surface area to volume ratio [m-1]", inputs
+            )
 
         # Concentration
         self.electrolyte_concentration_scale = self.c_e_typ
@@ -836,22 +842,6 @@ class LithiumIonParameters:
         x_dim = x * self.L_x
         return self.R_p_dimensional(x_dim) / self.R_p_typ
 
-    def a_n(self, x):
-        """
-        Dimensionless negative electrode surface area per unit volume as a
-        function of dimensionless position x.
-        """
-        x_dim = x * self.L_x
-        return self.a_n_dimensional(x_dim) / self.a_n_typ
-
-    def a_p(self, x):
-        """
-        Dimensionless positive electrode surface area per unit volume as a
-        function of dimensionless position x.
-        """
-        x_dim = x * self.L_x
-        return self.a_p_dimensional(x_dim) / self.a_p_typ
-
     def c_n_init(self, x):
         "Dimensionless initial concentration as a function of dimensionless position x"
         return self.c_n_init_dimensional(x) / self.c_n_max
@@ -929,7 +919,7 @@ class LithiumIonParameters:
         extra_options = extra_options or {}
 
         # Default options
-        options = {"particle shape": "spherical", "particle cracking": None}
+        options = {"particle shape": "spherical", "particle cracking": "none"}
 
         # All model options get passed to the parameter class, so we just need
         # to update the options in the default options and ignore the rest
@@ -946,7 +936,7 @@ class LithiumIonParameters:
             )
 
         if options["particle cracking"] not in [
-            None,
+            "none",
             "no cracking",
             "cathode",
             "anode",

@@ -37,10 +37,10 @@ class LOQS(BaseModel):
         self.set_interfacial_submodel()
         self.set_convection_submodel()
         self.set_porosity_submodel()
+        self.set_active_material_submodel()
         self.set_tortuosity_submodels()
-        self.set_negative_electrode_submodel()
         self.set_electrolyte_submodel()
-        self.set_positive_electrode_submodel()
+        self.set_electrode_submodels()
         self.set_thermal_submodel()
         self.set_side_reaction_submodels()
         self.set_current_collector_submodel()
@@ -170,16 +170,13 @@ class LOQS(BaseModel):
             ],
         }
 
-    def set_negative_electrode_submodel(self):
+    def set_electrode_submodels(self):
 
         self.submodels[
-            "leading-order negative electrode"
+            "leading-order negative electrode potential"
         ] = pybamm.electrode.ohm.LeadingOrder(self.param, "Negative")
-
-    def set_positive_electrode_submodel(self):
-
         self.submodels[
-            "leading-order positive electrode"
+            "leading-order positive electrode potential"
         ] = pybamm.electrode.ohm.LeadingOrder(self.param, "Positive")
 
     def set_electrolyte_submodel(self):

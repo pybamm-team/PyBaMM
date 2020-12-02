@@ -108,6 +108,11 @@ class TestSPMe(unittest.TestCase):
         model = pybamm.lithium_ion.SPMe(options)
         model.check_well_posedness()
 
+    def test_loss_active_material(self):
+        options = {"loss of active material": "example"}
+        model = pybamm.lithium_ion.SPMe(options)
+        model.check_well_posedness()
+
     def test_surface_form_differential(self):
         options = {"surface form": "differential"}
         model = pybamm.lithium_ion.SPMe(options)
@@ -158,7 +163,7 @@ class TestSPMeWithSEI(unittest.TestCase):
 
 class TestSPMeWithCrack(unittest.TestCase):
     def test_well_posed_none_crack(self):
-        options = {"particle": "Fickian diffusion", "particle cracking": None}
+        options = {"particle": "Fickian diffusion", "particle cracking": "none"}
         model = pybamm.lithium_ion.SPMe(options)
         model.check_well_posedness()
 

@@ -37,6 +37,7 @@ class Full(BaseModel):
         self.set_external_circuit_submodel()
         self.set_interfacial_submodel()
         self.set_porosity_submodel()
+        self.set_active_material_submodel()
         self.set_tortuosity_submodels()
         self.set_convection_submodel()
         self.set_electrolyte_submodel()
@@ -91,8 +92,8 @@ class Full(BaseModel):
             submod_n = pybamm.electrode.ohm.SurfaceForm(self.param, "Negative")
             submod_p = pybamm.electrode.ohm.SurfaceForm(self.param, "Positive")
 
-        self.submodels["negative electrode"] = submod_n
-        self.submodels["positive electrode"] = submod_p
+        self.submodels["negative electrode potential"] = submod_n
+        self.submodels["positive electrode potential"] = submod_p
 
     def set_electrolyte_submodel(self):
 
