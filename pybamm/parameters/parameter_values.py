@@ -321,10 +321,10 @@ class ParameterValues:
                     "instead of providing a reference value and a distribution."
                 )
         for param in values:
-            if "surface area per unit volume distribution in x" in param:
+            if "surface area to volume ratio distribution in x" in param:
                 raise ValueError(
                     "The parameter '{}' has been deprecated".format(param)
-                    + "The surface area per unit volume is now set as a function "
+                    + "The surface area to volume ratio is now set as a function "
                     "of x directly instead of providing a reference value and a "
                     "distribution."
                 )
