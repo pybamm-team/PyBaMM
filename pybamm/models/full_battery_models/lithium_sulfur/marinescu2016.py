@@ -197,11 +197,11 @@ class MarinescuEtAl2016(BaseModel):
                 pybamm.EventType.TERMINATION,
             )
         )
-        self.events.append(
-            pybamm.Event(
-                "Zero theoretical capacity", cth - tol, pybamm.EventType.TERMINATION
-            )
-        )
+        #self.events.append(
+        #    pybamm.Event(
+        #        "Zero theoretical capacity", cth - tol, pybamm.EventType.TERMINATION
+        #    )
+        #)
 
     def set_external_circuit_submodel(self):
         """
