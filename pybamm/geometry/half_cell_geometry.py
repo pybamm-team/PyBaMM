@@ -5,7 +5,9 @@ import pybamm
 from pybamm.geometry import half_cell_spatial_vars
 
 
-def half_cell_geometry(include_particles=True, current_collector_dimension=0, working_electrode="positive"):
+def half_cell_geometry(
+    include_particles=True, current_collector_dimension=0, working_electrode="positive"
+):
     """
     A convenience function to create battery geometries.
 
@@ -46,9 +48,7 @@ def half_cell_geometry(include_particles=True, current_collector_dimension=0, wo
     # Add particle domains
     if include_particles is True:
         geometry.update(
-            {
-                "working particle": {var.r_w: {"min": 0, "max": 1}},
-            }
+            {"working particle": {var.r_w: {"min": 0, "max": 1}}}
         )
 
     if current_collector_dimension == 0:

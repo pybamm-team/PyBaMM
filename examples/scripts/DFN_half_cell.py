@@ -4,7 +4,7 @@
 
 import pybamm
 import numpy as np
-from pybamm.geometry import half_cell_spatial_vars
+# from pybamm.geometry import half_cell_spatial_vars
 
 pybamm.set_logging_level("INFO")
 
