@@ -1,0 +1,298 @@
+import pybamm
+from .base_lithium_sulfur_model import BaseModel
+
+
+class ZhangEtAl2015(BaseModel):
+    """
+    Zero Dimensional model from Marinescu et al (2016) [1]. Includes S8, S4, S2, S,
+    precipitated Li2S (written Sp), and voltage V as direct outputs.
+
+    Parameters
+    ----------
+    options : dict, optional
+        A dictionary of options to be passed to the model.
+    name : str, optional
+        The name of the model.
+
+    References
+    ----------
+    [1] Zhang, T., Marinescu, M., O’Neill, L., Wild, M., & Offer, G. (2015). 
+        Modeling the voltage loss mechanisms in lithium-sulfur cells: The importance 
+        of electrolyte resistance and precipitation kinetics. Physical Chemistry 
+        Chemical Physics, 17(35), 22581–22586. https://doi.org/10.1039/c5cp03566j
+    
+    """
+
+    def __init__(self, options=None, name="Zhang et al. (2015) model"):
+        super().__init__(options, name)
+
+        # set external variables
+        self.set_external_circuit_submodel()
+        V = self.variables["Terminal voltage [V]"]
+        I = self.variables["Current [A]"]
+
+        # set internal variables
+        Sp = pybamm.Variable("Precipitated Sulfur [g]")
+        S8 = pybamm.Variable("S8 [g]")
+        S8 = pybamm.Variable("S6 [g]")
+        S4 = pybamm.Variable("S4 [g]")
+        S2 = pybamm.Variable("S2 [g]")
+        S = pybamm.Variable("S [g]")
+        ep = pybamm.Variable("Cell porosity [-]")
+        eta2 = pybamm.Variable("Reaction 2 Over Potential [V]") 
+        
+
+        #######################################
+        # Model parameters as defined in table (1) in [1]. Parameters with 'H' or
+        # 'L' in the name represent the high and low plateau parameter, respectively.
+        #######################################
+        param = self.param
+
+        # standard parameters
+        R = param.R
+        F = param.F
+        T = param.T_ref
+        N = param.N
+
+        # model-specific known parameters
+        '''
+        For the stochiometric sij paramters, i indicates species of Sulfur and j reaction number.
+        For example, S6 in reaction 3 has s63.
+        '''
+        sS2 = param.sS2
+        s82 = param.s82
+        s83 = param.s83
+        s63 = param.s63
+        s64 = param.s64
+        s44 = param.s44
+        s45 = param.s45
+        s25 = param.s25
+        s26 = param.s26
+        s16 = param.s16
+        
+        E02 = param.E02
+        E03 = param.E03
+        E04 = param.E04
+        E05 = param.E05
+        E06 = param.E06
+        
+        n2 = param.n2
+        n3 = param.n3
+        n4 = param.n4
+        n5 = param.n5
+        n6 = param.n6
+        
+        i02 = param.i02
+        i03 = param.i03
+        i04 = param.i04
+        i05 = param.i05
+        i06 = param.i06
+        
+        A = param.A
+        l = param.l
+        V_Li2S = param.V_Li2S
+        nu0_Li2S = param.nu0_Li2S
+        Li0 = param.Li0
+        k_p = param.k_p
+        K_sp = param.K_sp
+        av0 = param.av0
+        ep0 = param.ep0
+        xi = param.xi
+        
+        #######################################################
+        # Non-dynamic model functions
+        #######################################################
+        
+        # Reduction Potential as given in Equation (14) of [1]
+        E2 = E02 - (R*T/(n2*F))*( sp2*np.ln(Sp) + s82*np.ln(S8) )
+        
+        # Reduction Potential as given in Equation (14) of [1]
+        E3 = E03 - (R*T/(n3*F))*( s83*np.ln(S8) + s63*np.ln(S6) )
+        
+        # Reduction Potential as given in Equation (14) of [1]
+        E4 = E04 - (R*T/(n4*F))*( s64*np.ln(S6) + s44*np.ln(S4) )
+        
+        # Reduction Potential as given in Equation (14) of [1]
+        E5 = E05 - (R*T/(n5*F))*( s45*np.ln(S4) + s25*np.ln(S2) )
+        
+        # Reduction Potential as given in Equation (14) of [1]
+        E6 = E06 - (R*T/(n6*F))*( s26*np.ln(S2) + s16*np.ln(S) )
+        
+        # Overpotential implied by equation (8) in [1]
+        eta3 = E2 + eta2 - E3
+        
+        # Overpotential implied by equation (8) in [1]
+        eta4 = E2 + eta2 - E4
+        
+        # Overpotential implied by equation (8) in [1]
+        eta5 = E2 + eta2 - E5
+        
+        # Overpotential implied by equation (8) in [1]
+        eta6 = E2 + eta2 - E6
+        
+        # Reaction current functions defined in equation (12) in [1]
+        i2 = 2*i02*np.sinh(n2*F*eta2/(2*R*T))
+        
+        # Reaction current functions defined in equation (12) in [1]
+        i3 = 2*i03*np.sinh(n3*F*eta3/(2*R*T))
+        
+        # Reaction current functions defined in equation (12) in [1]
+        i4 = 2*i04*np.sinh(n4*F*eta4/(2*R*T))
+        
+        # Reaction current functions defined in equation (12) in [1]
+        i5 = 2*i05*np.sinh(n5*F*eta5/(2*R*T))
+        
+        # Reaction current functions defined in equation (12) in [1]
+        i6 = 2*i06*np.sinh(n2*F*eta6/(2*R*T))
+        
+        # Volume fraction function of Li2S defined in equation (11) in [1]
+        nu_Li2S = nu0_Li2S - ep
+        
+        # Lithium ion concentration as defined in equation (10) in [1]
+        Li = Li0 + 2*(S8 + S6 + S4 + S2 + S)
+        
+        # Precipitation rate defined in equation (11) in [1]
+        r_p = k_p*nu_Li2S*(Li**2*S - K_sp)
+        
+        # Active surface area as defined in equation (16) in [1]
+        av = av0*(ep/ep0)**xi
+        
+        ###################################
+        # Dynamic model functions
+        ###################################
+
+        # Algebraic constraint on currents as defined by equation (13) in [1]
+        algebraic_condition = av*(i2 + i3 + i4 + i5 + i6) - (I/(A*l))
+        self.algebraic.update({eta2: algebraic_condition})
+        
+        # Differential Equation (11) in [1]
+        depdt = -V_Li2S*r_p
+
+        # Differential equation (9) in [1]
+        dS8dt = (av/(ep*F))*(
+
+        # Differential equation (9) in [1]
+        dS6dt = 
+        
+        # Differential equation (9) in [1]
+        dS4dt = 
+
+        # Differential equation (9) in [1]
+        dS2dt = 
+
+        # Differential equation (9) in [1]
+        dSdt = 
+
+        # Differential equation (9) in [1]
+        dSpdt = 
+        
+        
+
+        self.rhs.update({S8: dS8dt, S4: dS4dt, S2: dS2dt, S: dSdt, Sp: dSpdt, Tc : dTcdt})
+
+        ##############################
+        # Model variables
+        #############################
+
+        self.variables.update(
+            {
+                "Time [s]": pybamm.t * self.timescale,
+                "S8 [g]": S8,
+                "S4 [g]": S4,
+                "S2 [g]": S2,
+                "S [g]": S,
+                "Precipitated Sulfur [g]": Sp,
+                "Cell Temperature [K]" : Tc,
+                "Shuttle coefficient [s-1]": k_s,
+                "Shuttle rate [g-1.s-1]": k_s * S8,
+                "High plateau potential [V]": E_H,
+                "Low plateau potential [V]": E_L,
+                "High plateau over-potential [V]": eta_H,
+                "Low plateau over-potential [V]": eta_L,
+                "High plateau current [A]": i_H,
+                "Low plateau current [A]": i_L,
+                "Theoretical capacity [Ah]": cth,
+                "Algebraic condition": algebraic_condition,
+            }
+        )
+
+        ######################################
+        # Discharge initial condition
+        # The values are found by considering the zero-current
+        # state of the battery. Set S8, S4, and Sp as written
+        # below. Then, solve eta_H = V, eta_L = V, the algebraic
+        # condition, and mass conservation for the remaining values.
+        ######################################
+
+        self.initial_conditions.update(
+            {
+                self.variables["S8 [g]"]: param.S8_initial,
+                self.variables["S4 [g]"]: param.S4_initial,
+                self.variables["S2 [g]"]: param.S2_initial,
+                self.variables["S [g]"]: param.S_initial,
+                self.variables["Precipitated Sulfur [g]"]: param.Sp_initial,
+                self.variables["Terminal voltage [V]"]: param.V_initial,
+                self.variables["Cell Temperature [K]"] : param.T_ref
+            }
+        )
+
+        ######################################
+        # Model events
+        ######################################
+        tol = 1e-4
+        self.events.append(
+            pybamm.Event(
+                "Minimum voltage",
+                V - self.param.voltage_low_cut,
+                pybamm.EventType.TERMINATION,
+            )
+        )
+        self.events.append(
+            pybamm.Event(
+                "Maximum voltage",
+                V - self.param.voltage_high_cut,
+                pybamm.EventType.TERMINATION,
+            )
+        )
+        self.events.append(
+            pybamm.Event(
+                "Zero theoretical capacity", cth - tol, pybamm.EventType.TERMINATION
+            )
+        )
+
+    def set_external_circuit_submodel(self):
+        """
+        Define how the external circuit defines the boundary conditions for the model,
+        e.g. (not necessarily constant-) current, voltage, etc
+        """
+
+        # Set variable for the terminal voltage
+        V = pybamm.Variable("Terminal voltage [V]")
+        self.variables.update({"Terminal voltage [V]": V})
+
+        # Set up current operated. Here the current is just provided as a
+        # parameter
+        if self.options["operating mode"] == "current":
+            I = pybamm.Parameter("Current function [A]")
+            self.variables.update({"Current [A]": I})
+
+        # If the the operating mode of the simulation is "with experiment" the
+        # model option "operating mode" is the callable function
+        # 'constant_current_constant_voltage_constant_power'
+        elif callable(self.options["operating mode"]):
+            # For the experiment we solve an extra algebraic equation
+            # to determine the current
+            I = pybamm.Variable("Current [A]")
+            self.variables.update({"Current [A]": I})
+            control_function = self.options["operating mode"]
+
+            # 'constant_current_constant_voltage_constant_power' is a function
+            # of current and voltage via the variables dict (see pybamm.Simulation)
+            self.algebraic = {I: control_function(self.variables)}
+            self.initial_conditions[I] = pybamm.Parameter("Current function [A]")
+
+        # Add variable for discharge capacity
+        Q = pybamm.Variable("Discharge capacity [A.h]")
+        self.variables.update({"Discharge capacity [A.h]": Q})
+        self.rhs.update({Q: I * self.param.timescale / 3600})
+        self.initial_conditions.update({Q: pybamm.Scalar(0)})
