@@ -1,6 +1,6 @@
-FROM quay.io/pypa/manylinux2010_x86_64:2020-05-29-c06f15c
+FROM quay.io/pypa/manylinux2014_x86_64:2020-11-11-bc8ce45
 
-ENV PLAT manylinux2010_x86_64
+ENV PLAT manylinux2014_x86_64
 
 RUN yum -y update
 RUN yum -y remove cmake
