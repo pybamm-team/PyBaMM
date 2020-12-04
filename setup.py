@@ -172,7 +172,7 @@ with open("README.md", encoding="utf-8") as f:
 
 setup(
     name="pybamm",
-    version=load_version(),
+    version=load_version() + ".post1",
     description="Python Battery Mathematical Modelling.",
     long_description=readme,
     long_description_content_type="text/markdown",
