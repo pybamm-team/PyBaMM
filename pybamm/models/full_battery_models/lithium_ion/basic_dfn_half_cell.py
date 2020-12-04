@@ -52,6 +52,20 @@ class BasicDFNHalfCell(BaseModel):
         self.options.update(options)
         working_electrode = options["working electrode"]
 
+        if working_electrode == "negative":
+            R_w_typ = param.R_n_typ
+        else:
+            R_w_typ = param.R_p_typ
+
+        # Set default length scales
+        self.length_scales = {
+            "working electrode": param.L_x,
+            "separator": param.L_x,
+            "working particle": R_w_typ,
+            "current collector y": param.L_y,
+            "current collector z": param.L_z,
+        }
+
         ######################
         # Variables
         ######################
@@ -142,6 +156,7 @@ class BasicDFNHalfCell(BaseModel):
             c_w_max = param.c_n_max
             U_ref = param.U_n_ref
             phi_s_w_ref = pybamm.Scalar(0)
+            L_w = param.L_n
 
         else:
             # Porosity and Tortuosity
@@ -177,6 +192,7 @@ class BasicDFNHalfCell(BaseModel):
             c_w_max = param.c_p_max
             U_ref = param.U_p_ref
             phi_s_w_ref = param.U_p_ref - param.U_n_ref
+            L_w = param.L_p
 
         eps = pybamm.Concatenation(eps_s, eps_w)
         tor = pybamm.Concatenation(eps_s ** b_e_s, eps_w ** b_e_w)
@@ -309,6 +325,9 @@ class BasicDFNHalfCell(BaseModel):
         c_e_total = pybamm.x_average(eps * c_e)
         c_s_surf_w_av = pybamm.x_average(c_s_surf_w)
 
+        c_s_rav = pybamm.r_average(c_s_w)
+        c_s_vol_av = pybamm.x_average(eps_s_w * c_s_rav)
+
         # The `variables` dictionary contains all variables that might be useful for
         # visualising the solution of the model
         self.variables = {
@@ -320,9 +339,19 @@ class BasicDFNHalfCell(BaseModel):
             "X-averaged working particle surface concentration "
             "[mol.m-3]": c_w_max * c_s_surf_w_av,
             "Working particle concentration [mol.m-3]": c_w_max * c_s_w,
+            "Total lithium in working electrode": c_s_vol_av,
+            "Total lithium in working electrode [mol]": c_s_vol_av
+            * c_w_max
+            * L_w
+            * param.A_cc,
             "Electrolyte concentration": c_e,
             "Electrolyte concentration [mol.m-3]": param.c_e_typ * c_e,
             "Total electrolyte concentration": c_e_total,
+            "Total electrolyte concentration [mol]": c_e_total
+            * param.c_e_typ
+            * L_w
+            * param.L_s
+            * param.A_cc,
             "Current [A]": I,
             "Working electrode potential": phi_s_w,
             "Working electrode potential [V]": phi_s_w_ref + pot * phi_s_w,
@@ -332,9 +361,11 @@ class BasicDFNHalfCell(BaseModel):
             "Electrolyte potential": phi_e,
             "Electrolyte potential [V]": -param.U_n_ref + pot * phi_e,
             "Voltage drop in the cell": vdrop_cell,
-            "Voltage drop in the cell [V]": phi_s_w_ref + U_ref + pot * vdrop_cell,
+            "Voltage drop in the cell [V]": phi_s_w_ref
+            + param.U_n_ref
+            + pot * vdrop_cell,
             "Terminal voltage": voltage,
-            "Terminal voltage [V]": phi_s_w_ref + U_ref + pot * voltage,
+            "Terminal voltage [V]": phi_s_w_ref + param.U_n_ref + pot * voltage,
         }
 
     @property
