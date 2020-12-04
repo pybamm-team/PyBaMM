@@ -15,8 +15,12 @@ class LithiumSulfurParameters:
         self.R = pybamm.constants.R
         self.F = pybamm.constants.F
         self.N = pybamm.constants.R/pybamm.constants.k_b
+<<<<<<< HEAD
         self.T_ref = pybamm.Parameter("Reference Temperature [K]")
         self.Ta = pybamm.Parameter("Ambient Temperature [K]")
+=======
+        self.T_ref = pybamm.Parameter("Reference temperature [K]")
+>>>>>>> 4337fd2b027ae66b6fab035fdf551f0c81bbf838
 
         # Model-specific known parameters
         self.Ms = pybamm.Parameter("Molar mass of S8 [g.mol-1]")

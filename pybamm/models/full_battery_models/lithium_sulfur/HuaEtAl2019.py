@@ -53,7 +53,10 @@ class HuaEtAl2019(BaseModel):
         R = param.R
         F = param.F
         T = param.T_ref
+<<<<<<< HEAD
         Ta = param.Ta
+=======
+>>>>>>> 4337fd2b027ae66b6fab035fdf551f0c81bbf838
         N = param.N
 
         # model-specific known parameters
@@ -126,7 +129,11 @@ class HuaEtAl2019(BaseModel):
         dS8dt = -(ns8 * Ms * i_H / (ne * F)) - k_s * S8
 
         # Differential equation (8b) in [1]
+<<<<<<< HEAD
         dS4dt = (ns8 * Ms * i_H / (ne * F)) + (k_s * S8) - (ns4 * Ms * i_L / (ne * F))
+=======
+        dS4dt = (ns8 * Ms * i_H / (ne * F)) + k_s * S8 - (ns4 * Ms * i_L / (ne * F))
+>>>>>>> 4337fd2b027ae66b6fab035fdf551f0c81bbf838
 
         # Differential equation (8c) in [1]
         dS2dt = ns2 * Ms * i_L / (ne * F)
@@ -138,7 +145,11 @@ class HuaEtAl2019(BaseModel):
         dSpdt = k_p * Sp * (S - S_star) / (v * rho_s)
         
         # Differntial Equation (8g) in [2]
+<<<<<<< HEAD
         dTcdt = ((k_s*ne*F*S8*V/(ns8*Ms)) - h*(Tc-Ta))/(m_c*c_h)
+=======
+        dTcdt = (k_s*ns*F*S8*V/(ns8*Ms) - h*(Tc-T))/(m_c*c_h)
+>>>>>>> 4337fd2b027ae66b6fab035fdf551f0c81bbf838
 
         self.rhs.update({S8: dS8dt, S4: dS4dt, S2: dS2dt, S: dSdt, Sp: dSpdt, Tc : dTcdt})
 

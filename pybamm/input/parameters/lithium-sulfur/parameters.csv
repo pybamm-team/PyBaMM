@@ -27,7 +27,11 @@ Loss rate due to shuttle [s-1], 0.25,,
 Cell heat capacity [J.g-1.K-1], 2,,
 Pre-Exponential factor in Arrhenius Equation [J.mol-1], 8.9712e-20,,
 Cell heat transfer coefficient [W.K-1], 0.2,,
+<<<<<<< HEAD
 Cell mass [kg], 129.0,,
+=======
+Cell mass [kg], 0.129,,
+>>>>>>> 4337fd2b027ae66b6fab035fdf551f0c81bbf838
 Number of cells connected in series to make a battery,1,,
 Current function [A],1,default current function,
 Initial Condition for S8 ion [g], 2.6946000000000003,,
