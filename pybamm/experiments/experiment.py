@@ -40,20 +40,29 @@ class Experiment:
     period : string, optional
         Period (1/frequency) at which to record outputs. Default is 1 minute. Can be
         overwritten by individual operating conditions.
+    drive_cycles : dict
+        Dictionary of drive cycles to use for this experiment.
 
     """
 
-    def __init__(self, operating_conditions, parameters=None, period="1 minute"):
+    def __init__(self, operating_conditions, parameters=None, period="1 minute", drive_cycles={}):
         self.period = self.convert_time_to_seconds(period.split())
         self.operating_conditions_strings = operating_conditions
         self.operating_conditions, self.events = self.read_operating_conditions(
-            operating_conditions
+            operating_conditions, drive_cycles
+            #operating_conditions
         )
         parameters = parameters or {}
         if isinstance(parameters, dict):
             self.parameters = parameters
         else:
             raise TypeError("experimental parameters should be a dictionary")
+        
+        # drive_cycles = drive_cycles or {}
+        # if isinstance(drive_cycles, dict):
+        #     self.drive_cycles = drive_cycles
+        # else:
+        #     raise TypeError("Driving Cycles should be a dictionary")
 
     def __str__(self):
         return str(self.operating_conditions_strings)
@@ -61,7 +70,7 @@ class Experiment:
     def __repr__(self):
         return "pybamm.Experiment({!s})".format(self)
 
-    def read_operating_conditions(self, operating_conditions):
+    def read_operating_conditions(self, operating_conditions,drive_cycles):
         """
         Convert operating conditions to the appropriate format
 
@@ -69,7 +78,8 @@ class Experiment:
         ----------
         operating_conditions : list
             List of operating conditions
-
+        drive_cycles : dictionary
+            Dictionary of Driving Cycles
         Returns
         -------
         operating_conditions : list
@@ -79,7 +89,7 @@ class Experiment:
         events = []
         for cond in operating_conditions:
             if isinstance(cond, str):
-                next_op, next_event = self.read_string(cond)
+                next_op, next_event = self.read_string(cond,drive_cycles)
                 converted_operating_conditions.append(next_op)
                 events.append(next_event)
             else:
@@ -92,7 +102,7 @@ class Experiment:
 
         return converted_operating_conditions, events
 
-    def read_string(self, cond):
+    def read_string(self, cond,drive_cycles):
         """
         Convert a string to a tuple of the right format
 
@@ -134,9 +144,18 @@ class Experiment:
             electric = self.convert_electric(cond_list[:idx])
             time = None
             events = self.convert_electric(cond_list[idx + 1 :])
+        ########################################################################################################################
+        elif "Run" in cond:
+            # e.g. Run US06
+            cond_list = cond.split()
+            electric = (drive_cycles[cond_list[1]][:,1],"A")
+            #time = drive_cycles[cond_list[1]][:,0][-1]  # End Time
+            time = drive_cycles[cond_list[1]][:,0] # List of Time
+            events = None
+        #########################################################################################################################    
         else:
             raise ValueError(
-                """Operating conditions must contain keyword 'for' or 'until'.
+                """Operating conditions must contain keyword 'for' or 'until' or 'Run'.
                 For example: {}""".format(
                     examples
                 )
@@ -177,7 +196,7 @@ class Experiment:
                     sign = -1
                 else:
                     raise ValueError(
-                        """instruction must be 'discharge', 'charge', 'rest' or 'hold'.
+                        """instruction must be 'discharge', 'charge', 'rest', 'hold' or 'Run'.
                         For example: {}""".format(
                             examples
                         )
