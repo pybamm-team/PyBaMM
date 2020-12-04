@@ -95,7 +95,7 @@ class BaseModel(BaseInterface):
         }
         return variables
 
-    def _get_standard_concentraion_variables(self, variables):
+    def _get_standard_concentration_variables(self, variables):
         "Update variables related to the SEI concentration"
         param = self.param
         domain = self.domain.lower() + " electrode"

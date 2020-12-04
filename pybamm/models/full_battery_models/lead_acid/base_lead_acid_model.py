@@ -16,6 +16,9 @@ class BaseModel(pybamm.BaseBatteryModel):
     """
 
     def __init__(self, options=None, name="Unnamed lead-acid model", build=False):
+        options = options or {}
+        # Specify that there are no particles in lead-acid
+        options["particle shape"] = "no particles"
         super().__init__(options, name)
         self.param = pybamm.LeadAcidParameters()
 
@@ -66,6 +69,14 @@ class BaseModel(pybamm.BaseBatteryModel):
             self.variables["Fractional Charge Input"] = fci
             self.rhs[fci] = -self.variables["Total current density"] * 100
             self.initial_conditions[fci] = self.param.q_init * 100
+
+    def set_active_material_submodel(self):
+        self.submodels["negative active material"] = pybamm.active_material.Constant(
+            self.param, "Negative", self.options
+        )
+        self.submodels["positive active material"] = pybamm.active_material.Constant(
+            self.param, "Positive", self.options
+        )
 
     def set_sei_submodel(self):
 

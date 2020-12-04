@@ -105,9 +105,9 @@ class TestParameterValues(unittest.TestCase):
             pybamm.ParameterValues({"Negative reaction rate": 1})
         with self.assertRaisesRegex(ValueError, "particle distribution"):
             pybamm.ParameterValues({"Negative particle distribution in x": 1})
-        with self.assertRaisesRegex(ValueError, "surface area per unit volume"):
+        with self.assertRaisesRegex(ValueError, "surface area to volume ratio"):
             pybamm.ParameterValues(
-                {"Negative electrode surface area per unit volume distribution in x": 1}
+                {"Negative electrode surface area to volume ratio distribution in x": 1}
             )
 
     def test_process_symbol(self):
