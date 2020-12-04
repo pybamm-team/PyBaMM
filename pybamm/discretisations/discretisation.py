@@ -179,7 +179,7 @@ class Discretisation(object):
             model_disc = model
         else:
             # create an empty copy of the original model
-            model_disc = model.new_copy()
+            model_disc = model.new_empty_copy()
 
         # Keep a record of y_slices in the model
         model_disc.y_slices = self.y_slices_explicit
@@ -1166,7 +1166,7 @@ class Discretisation(object):
             == y0.shape[0]
         ), pybamm.ModelError(
             """
-            Concatenation of (rhs, algebraic) and initial_conditions must have the
+            'Concatenation of (rhs, algebraic)' and 'initial_conditions' must have the
             same shape after discretisation but rhs.shape = {}, algebraic.shape = {},
             and initial_conditions.shape = {}.
             """.format(

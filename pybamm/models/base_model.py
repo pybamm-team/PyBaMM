@@ -313,10 +313,12 @@ class BaseModel(object):
     def __getitem__(self, key):
         return self.rhs[key]
 
-    def new_copy(self, build=False):
+    def new_empty_copy(self):
         """
-        Create an empty copy with identical options, or new options if specified.
-        The 'build' parameter is included for compatibility with subclasses, but unused.
+        Create an empty copy of the model with the same name and "parameters"
+        (convert_to_format, etc), but empty equations and variables.
+        This is usually then called by :class:`pybamm.ParameterValues`,
+        :class:`pybamm.Discretisation`, or :class:`pybamm.SymbolReplacer`.
         """
         new_model = self.__class__(name=self.name)
         new_model.use_jacobian = self.use_jacobian
@@ -325,6 +327,14 @@ class BaseModel(object):
         new_model.timescale = self.timescale
         new_model.length_scales = self.length_scales
         return new_model
+
+    def new_copy(self):
+        """
+        Creates an identical copy of the model, using the functionality of
+        :class:`pybamm.SymbolReplacer` but without performing any replacements
+        """
+        replacer = pybamm.SymbolReplacer({})
+        return replacer.process_model(self)
 
     def update(self, *submodels):
         """
