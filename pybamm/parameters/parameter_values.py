@@ -405,13 +405,17 @@ class ParameterValues:
             pybamm.logger.debug(
                 "Processing parameters for event'{}''".format(event.name)
             )
-            event_expression = self.process_symbol(event.expression)
             new_events.append(
                 pybamm.Event(
                     event.name, self.process_symbol(event.expression), event.event_type
                 )
             )
         model.events = new_events
+
+        # Set external variables
+        model.external_variables = [
+            self.process_symbol(var) for var in unprocessed_model.external_variables
+        ]
 
         # Process timescale
         model.timescale = self.process_symbol(unprocessed_model.timescale)

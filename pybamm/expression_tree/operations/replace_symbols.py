@@ -3,10 +3,6 @@
 #
 import pybamm
 
-import numpy as np
-import numbers
-from scipy.sparse import issparse, csr_matrix
-
 
 class SymbolReplacer(object):
     """
@@ -88,13 +84,17 @@ class SymbolReplacer(object):
         new_events = []
         for event in unprocessed_model.events:
             pybamm.logger.debug("Replacing symbols in event'{}''".format(event.name))
-            event_expression = self.process_symbol(event.expression)
             new_events.append(
                 pybamm.Event(
                     event.name, self.process_symbol(event.expression), event.event_type
                 )
             )
         model.events = new_events
+
+        # Set external variables
+        model.external_variables = [
+            self.process_symbol(var) for var in unprocessed_model.external_variables
+        ]
 
         # Process timescale
         model.timescale = self.process_symbol(unprocessed_model.timescale)

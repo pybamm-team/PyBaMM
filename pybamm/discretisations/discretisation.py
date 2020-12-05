@@ -216,6 +216,11 @@ class Discretisation(object):
             processed_events.append(processed_event)
         model_disc.events = processed_events
 
+        # Set external variables
+        model_disc.external_variables = [
+            self.process_symbol(var) for var in model.external_variables
+        ]
+
         # Create mass matrix
         pybamm.logger.info("Create mass matrix for {}".format(model.name))
         model_disc.mass_matrix, model_disc.mass_matrix_inv = self.create_mass_matrix(
