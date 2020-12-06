@@ -148,9 +148,11 @@ class Experiment:
         elif "Run" in cond:
             # e.g. Run US06
             cond_list = cond.split()
-            electric = (drive_cycles[cond_list[1]][:,1],"A")
+            electric = (drive_cycles[cond_list[1]][:,1],"Drive")
+            time=1
+            period=1
             #time = drive_cycles[cond_list[1]][:,0][-1]  # End Time
-            time = drive_cycles[cond_list[1]][:,0] # List of Time
+            #time = drive_cycles[cond_list[1]][:,0] # List of Time
             events = None
         #########################################################################################################################    
         else:
