@@ -174,10 +174,15 @@ class BaseKinetics(BaseInterface):
                 + self.domain.lower()
                 + " electrode interfacial current density variable"
             ]
+            current_at_0 = (
+                pybamm.FunctionParameter("Current function [A]", {"Time [s]": 0})
+                / param.I_typ
+                * pybamm.sign(param.I_typ)
+            )
             if self.domain == "Negative":
-                j_tot_av_init = param.current_with_time / param.l_n
+                j_tot_av_init = current_at_0 / param.l_n
             elif self.domain == "Positive":
-                j_tot_av_init = -param.current_with_time / param.l_p
+                j_tot_av_init = -current_at_0 / param.l_p
 
             self.initial_conditions[j_tot_var] = j_tot_av_init
 
