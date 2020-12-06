@@ -65,11 +65,13 @@ class TestSymbolReplacer(unittest.TestCase):
         )
         replacer.process_model(model)
         # rhs
+        var1 = model.variables["var1"]
         self.assertIsInstance(model.rhs[var1], pybamm.Multiplication)
         self.assertIsInstance(model.rhs[var1].children[0], pybamm.Scalar)
         self.assertIsInstance(model.rhs[var1].children[1], pybamm.Gradient)
         self.assertEqual(model.rhs[var1].children[0].value, 1)
         # algebraic
+        var2 = model.variables["var2"]
         self.assertIsInstance(model.algebraic[var2], pybamm.Multiplication)
         self.assertIsInstance(model.algebraic[var2].children[0], pybamm.Scalar)
         self.assertIsInstance(model.algebraic[var2].children[1], pybamm.Variable)
