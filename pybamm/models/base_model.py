@@ -361,13 +361,14 @@ class BaseModel(object):
 
     def set_initial_conditions_from(self, solution, inplace=True):
         """
-        Update initial conditions with the final states from a solution.
+        Update initial conditions with the final states from a Solution object or from
+        a dictionary.
         This assumes that, for each variable in self.initial_conditions, there is a
         corresponding variable in the solution with the same name and size.
 
         Parameters
         ----------
-        solution : :class:`pybamm.Solution`
+        solution : :class:`pybamm.Solution`, or dict
             The solution to use to initialize the model
         inplace : bool
             Whether to modify the model inplace or create a new model
@@ -380,24 +381,25 @@ class BaseModel(object):
         for var, equation in model.initial_conditions.items():
             if isinstance(var, pybamm.Variable):
                 final_state = solution[var.name]
-                if final_state.dimensions == 0:
-                    model.initial_conditions[var] = pybamm.Scalar(final_state.data[-1])
-                elif final_state.dimensions == 1:
-                    model.initial_conditions[var] = pybamm.Vector(
-                        final_state.data[:, -1]
-                    )
-                elif final_state.dimensions == 2:
-                    model.initial_conditions[var] = pybamm.Vector(
-                        final_state.data[:, :, -1].flatten()
-                    )
+                if isinstance(solution, pybamm.Solution):
+                    final_state = final_state.data
+                if final_state.ndim == 1:
+                    final_state_eval = np.array([final_state[-1]])
+                elif final_state.ndim == 2:
+                    final_state_eval = final_state[:, -1]
+                elif final_state.ndim == 3:
+                    final_state_eval = final_state[:, :, -1].flatten()
                 else:
                     raise NotImplementedError
+                model.initial_conditions[var] = pybamm.Vector(final_state_eval)
             elif isinstance(var, pybamm.Concatenation):
                 children = []
                 for child in var.orphans:
                     final_state = solution[child.name]
-                    if final_state.dimensions == 1:
-                        final_state_eval = final_state.data[:, -1]
+                    if isinstance(solution, pybamm.Solution):
+                        final_state = final_state.data
+                    if final_state.ndim == 2:
+                        final_state_eval = final_state[:, -1]
                     else:
                         raise NotImplementedError
                     children.append(final_state_eval)
