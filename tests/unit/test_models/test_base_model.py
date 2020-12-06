@@ -818,6 +818,39 @@ class TestBaseModel(unittest.TestCase):
             new_model.initial_conditions[var_concat].entries, 5
         )
 
+    def test_set_initial_condition_errors(self):
+        model = pybamm.BaseModel()
+        var = pybamm.Scalar(1)
+        model.rhs = {var: -var}
+        model.initial_conditions = {var: 1}
+        with self.assertRaisesRegex(NotImplementedError, "Variable must have type"):
+            model.set_initial_conditions_from({})
+
+        var = pybamm.Variable(
+            "var",
+            domain="negative particle",
+            auxiliary_domains={
+                "secondary": "negative electrode",
+                "tertiary": "current collector",
+            },
+        )
+        model.rhs = {var: -var}
+        model.initial_conditions = {var: 1}
+        with self.assertRaisesRegex(
+            NotImplementedError, "Variable must be 0D, 1D, or 2D"
+        ):
+            model.set_initial_conditions_from({"var": np.ones((5, 6, 7, 8))})
+
+        var_concat_neg = pybamm.Variable("var_concat_neg", domain="negative electrode")
+        var_concat_sep = pybamm.Variable("var_concat_sep", domain="separator")
+        var_concat = pybamm.Concatenation(var_concat_neg, var_concat_sep)
+        model.algebraic = {var_concat: -var_concat}
+        model.initial_conditions = {var_concat: 1}
+        with self.assertRaisesRegex(
+            NotImplementedError, "Variable in concatenation must be 1D"
+        ):
+            model.set_initial_conditions_from({"var_concat_neg": np.ones((5, 6, 7))})
+
 
 class TestStandardBatteryBaseModel(unittest.TestCase):
     def test_default_solver(self):
