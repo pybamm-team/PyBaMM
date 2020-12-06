@@ -719,6 +719,73 @@ class TestBaseModel(unittest.TestCase):
             self.assertEqual(mdl.initial_conditions[var_concat].shape, (20, 1))
             np.testing.assert_array_equal(mdl.initial_conditions[var_concat].entries, 3)
 
+        # Test updating a new model with a different model
+        new_model = pybamm.BaseModel()
+        new_var_scalar = pybamm.Variable("var_scalar")
+        new_var_1D = pybamm.Variable("var_1D", domain="negative electrode")
+        new_var_2D = pybamm.Variable(
+            "var_2D",
+            domain="negative particle",
+            auxiliary_domains={"secondary": "negative electrode"},
+        )
+        new_var_concat_neg = pybamm.Variable(
+            "var_concat_neg", domain="negative electrode"
+        )
+        new_var_concat_pos = pybamm.Variable("var_concat_pos", domain="separator")
+        new_var_concat = pybamm.Concatenation(new_var_concat_neg, new_var_concat_pos)
+        new_model.rhs = {
+            new_var_scalar: -2 * new_var_scalar,
+            new_var_1D: -2 * new_var_1D,
+        }
+        new_model.algebraic = {
+            new_var_2D: -2 * new_var_2D,
+            new_var_concat: -2 * new_var_concat,
+        }
+        new_model.initial_conditions = {
+            new_var_scalar: 1,
+            new_var_1D: 1,
+            new_var_2D: 1,
+            new_var_concat: 1,
+        }
+        new_model.variables = {
+            "var_scalar": new_var_scalar,
+            "var_1D": new_var_1D,
+            "var_2D": new_var_2D,
+            "var_concat_pos": new_var_concat_neg,
+            "var_concat_neg": new_var_concat_pos,
+            "var_concat": new_var_concat,
+        }
+        new_model.length_scales = {
+            "negative electrode": pybamm.Scalar(1),
+            "separator": pybamm.Scalar(1),
+            "negative particle": pybamm.Scalar(1),
+        }
+
+        # Now update inplace
+        new_model.set_initial_conditions_from(sol)
+
+        # Test new initial conditions (both in place and not)
+        var_scalar = new_model.variables["var_scalar"]
+        self.assertIsInstance(new_model.initial_conditions[var_scalar], pybamm.Scalar)
+        self.assertEqual(new_model.initial_conditions[var_scalar].value, 3)
+
+        var_1D = new_model.variables["var_1D"]
+        self.assertIsInstance(new_model.initial_conditions[var_1D], pybamm.Vector)
+        self.assertEqual(new_model.initial_conditions[var_1D].shape, (10, 1))
+        np.testing.assert_array_equal(new_model.initial_conditions[var_1D].entries, 3)
+
+        var_2D = new_model.variables["var_2D"]
+        self.assertIsInstance(new_model.initial_conditions[var_2D], pybamm.Vector)
+        self.assertEqual(new_model.initial_conditions[var_2D].shape, (50, 1))
+        np.testing.assert_array_equal(new_model.initial_conditions[var_2D].entries, 3)
+
+        var_concat = new_model.variables["var_concat"]
+        self.assertIsInstance(new_model.initial_conditions[var_concat], pybamm.Vector)
+        self.assertEqual(new_model.initial_conditions[var_concat].shape, (20, 1))
+        np.testing.assert_array_equal(
+            new_model.initial_conditions[var_concat].entries, 3
+        )
+
 
 class TestStandardBatteryBaseModel(unittest.TestCase):
     def test_default_solver(self):
