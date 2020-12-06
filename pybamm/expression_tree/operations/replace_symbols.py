@@ -52,7 +52,7 @@ class SymbolReplacer(object):
         new_rhs = {}
         for variable, equation in unprocessed_model.rhs.items():
             pybamm.logger.debug("Replacing symbols in {!r} (rhs)".format(variable))
-            new_rhs[variable] = self.process_symbol(equation)
+            new_rhs[self.process_symbol(variable)] = self.process_symbol(equation)
         model.rhs = new_rhs
 
         new_algebraic = {}
@@ -60,7 +60,7 @@ class SymbolReplacer(object):
             pybamm.logger.debug(
                 "Replacing symbols in {!r} (algebraic)".format(variable)
             )
-            new_algebraic[variable] = self.process_symbol(equation)
+            new_algebraic[self.process_symbol(variable)] = self.process_symbol(equation)
         model.algebraic = new_algebraic
 
         new_initial_conditions = {}
@@ -68,7 +68,9 @@ class SymbolReplacer(object):
             pybamm.logger.debug(
                 "Replacing symbols in {!r} (initial conditions)".format(variable)
             )
-            new_initial_conditions[variable] = self.process_symbol(equation)
+            new_initial_conditions[self.process_symbol(variable)] = self.process_symbol(
+                equation
+            )
         model.initial_conditions = new_initial_conditions
 
         model.boundary_conditions = self.process_boundary_conditions(unprocessed_model)
