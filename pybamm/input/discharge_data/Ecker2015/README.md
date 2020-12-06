@@ -8,4 +8,4 @@ The data were collected from Figure 8 of
 
 > Richardson, Giles, et. al. "Generalised single particle models for high-rate operation of graded lithium-ion electrodes: Systematic derivation and validation." Electrochemica Acta 339 (2020): 135862
 
-using (WebPlotDigitizer)[https://automeris.io/WebPlotDigitizer/].
+using [WebPlotDigitizer](https://automeris.io/WebPlotDigitizer/).
