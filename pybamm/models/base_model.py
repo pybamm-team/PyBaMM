@@ -2,6 +2,7 @@
 # Base model class
 #
 import casadi
+import numpy as np
 import numbers
 import pybamm
 import warnings
@@ -334,7 +335,7 @@ class BaseModel(object):
         :class:`pybamm.SymbolReplacer` but without performing any replacements
         """
         replacer = pybamm.SymbolReplacer({})
-        return replacer.process_model(self)
+        return replacer.process_model(self, inplace=False)
 
     def update(self, *submodels):
         """
@@ -357,6 +358,55 @@ class BaseModel(object):
             )
             self.variables.update(submodel.variables)  # keys are strings so no check
             self._events += submodel.events
+
+    def set_initial_conditions_from(self, solution, inplace=True):
+        """
+        Update initial conditions with the final states from a solution.
+        This assumes that, for each variable in self.initial_conditions, there is a
+        corresponding variable in the solution with the same name and size.
+
+        Parameters
+        ----------
+        solution : :class:`pybamm.Solution`
+            The solution to use to initialize the model
+        inplace : bool
+            Whether to modify the model inplace or create a new model
+        """
+        if inplace is True:
+            model = self
+        else:
+            model = self.new_copy()
+
+        for var, equation in model.initial_conditions.items():
+            if isinstance(var, pybamm.Variable):
+                final_state = solution[var.name]
+                if final_state.dimensions == 0:
+                    model.initial_conditions[var] = pybamm.Scalar(final_state.data[-1])
+                elif final_state.dimensions == 1:
+                    model.initial_conditions[var] = pybamm.Vector(
+                        final_state.data[:, -1]
+                    )
+                elif final_state.dimensions == 2:
+                    model.initial_conditions[var] = pybamm.Vector(
+                        final_state.data[:, :, -1].flatten()
+                    )
+                else:
+                    raise NotImplementedError
+            elif isinstance(var, pybamm.Concatenation):
+                children = []
+                for child in var.orphans:
+                    final_state = solution[child.name]
+                    if final_state.dimensions == 1:
+                        final_state_eval = final_state.data[:, -1]
+                    else:
+                        raise NotImplementedError
+                    children.append(final_state_eval)
+                model.initial_conditions[var] = pybamm.Vector(np.concatenate(children))
+
+            else:
+                raise NotImplementedError
+
+        return model
 
     def check_and_combine_dict(self, dict1, dict2):
         # check that the key ids are distinct
