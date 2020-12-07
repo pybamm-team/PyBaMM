@@ -138,7 +138,7 @@ class SymbolReplacer(object):
                     if err.args[0] in side:
                         pass
                     # do raise error otherwise (e.g. can't process symbol)
-                    else:
+                    else:  # pragma: no cover
                         raise KeyError(err)
 
         return new_boundary_conditions
@@ -170,11 +170,6 @@ class SymbolReplacer(object):
 
     def _process_symbol(self, symbol):
         """ See :meth:`Simplification.process_symbol()`. """
-        if not any(
-            x.id in self._symbol_replacement_map_ids.keys() for x in symbol.pre_order()
-        ):
-            return symbol.new_copy()
-
         if symbol.id in self._symbol_replacement_map_ids.keys():
             return self._symbol_replacement_map_ids[symbol.id]
 
@@ -202,10 +197,8 @@ class SymbolReplacer(object):
             return symbol._concatenation_new_copy(new_children)
 
         else:
-            if not any(
-                x.id in self._symbol_replacement_map_ids.keys()
-                for x in symbol.pre_order()
-            ):
-                return symbol.new_copy()
-            else:
-                raise NotImplementedError
+            # Only other option is that the symbol is a leaf (doesn't have children)
+            # In this case, since we have already ruled out that the symbol is one of
+            # the symbols that needs to be replaced, we can just return a new copy of
+            # the symbol
+            return symbol.new_copy()
