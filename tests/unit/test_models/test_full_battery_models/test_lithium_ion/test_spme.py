@@ -156,7 +156,7 @@ class TestSPMeWithSEI(unittest.TestCase):
         model.check_well_posedness()
 
     def test_well_posed_ec_reaction_limited(self):
-        options = {"sei": "ec reaction limited", "sei porosity change": True}
+        options = {"sei": "ec reaction limited", "sei porosity change": "true"}
         model = pybamm.lithium_ion.SPMe(options)
         model.check_well_posedness()
 

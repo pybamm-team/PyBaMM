@@ -2,6 +2,7 @@
 
 ## Features
 
+-   Added option to make the total interfacial current density a state
 -   Added submodels for active material ([#1262](https://github.com/pybamm-team/PyBaMM/pull/1262))
 -   Added composite surface form electrolyte models: `CompositeDifferential` and `CompositeAlgebraic` ([#1207](https://github.com/pybamm-team/PyBaMM/issues/1207))
 
@@ -13,6 +14,7 @@
 
 ## Breaking changes
 
+-   Boolean model options ('sei porosity change', 'convection') must now be given in string format ('true' or 'false' instead of True or False)
 -   Operations such as `1*x` and `0+x` now directly return `x`. This can be bypassed by explicitly creating the binary operators, e.g. `pybamm.Multiplication(1, x)` ([#1252](https://github.com/pybamm-team/PyBaMM/pull/1252))
 
 # [v0.3.0](https://github.com/pybamm-team/PyBaMM) - 2020-11-22

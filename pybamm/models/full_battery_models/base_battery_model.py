@@ -114,6 +114,11 @@ class BaseBatteryModel(pybamm.BaseModel):
             * "thermal" : str, optional
                 Sets the thermal model to use. Can be "isothermal" (default), "lumped",
                 "x-lumped", or "x-full".
+            * "total interfacial current density as a state" : str, optional
+                Whether to make a state for the total interfacial current density and
+                solve an algebraic equation for it. Default is "false", unless "sei film
+                resistance" is distributed in which case it is automatically set to
+                "true".
 
     **Extends:** :class:`pybamm.BaseModel`
     """
@@ -202,8 +207,8 @@ class BaseBatteryModel(pybamm.BaseModel):
         default_options = {
             "operating mode": "current",
             "dimensionality": 0,
-            "surface form": False,
-            "convection": False,
+            "surface form": "false",
+            "convection": "false",
             "side reactions": [],
             "interfacial surface area": "constant",
             "current collector": "uniform",
@@ -214,10 +219,11 @@ class BaseBatteryModel(pybamm.BaseModel):
             "cell geometry": "none",
             "external submodels": [],
             "sei": "none",
-            "sei porosity change": False,
+            "sei porosity change": "false",
             "loss of active material": "none",
             "working electrode": "none",
             "particle cracking": "none",
+            "total interfacial current density as a state": "false",
         }
         # Change the default for cell geometry based on which thermal option is provided
         extra_options = extra_options or {}
@@ -256,9 +262,23 @@ class BaseBatteryModel(pybamm.BaseModel):
                     )
                 )
 
+        # If "sei film resistance" is "distributed" then "total interfacial current
+        # density as a state" must be "true"
+        if options["sei film resistance"] == "distributed":
+            options["total interfacial current density as a state"] = "true"
+            # Check that extra_options did not try to provide a clashing option
+            if (
+                extra_options.get("total interfacial current density as a state")
+                == "false"
+            ):
+                raise pybamm.OptionError(
+                    "If 'sei film resistance' is 'distributed' then 'total interfacial "
+                    "current density as a state' must be 'true'"
+                )
+
         # Options that are incompatible with models
         if isinstance(self, pybamm.lithium_ion.BaseModel):
-            if options["convection"] is not False:
+            if options["convection"] != "false":
                 raise pybamm.OptionError(
                     "convection not implemented for lithium-ion models"
                 )
@@ -288,7 +308,7 @@ class BaseBatteryModel(pybamm.BaseModel):
             )
         if (
             isinstance(self, (pybamm.lead_acid.LOQS, pybamm.lead_acid.Composite))
-            and options["surface form"] is False
+            and options["surface form"] == "false"
         ):
             if len(options["side reactions"]) > 0:
                 raise pybamm.OptionError(
@@ -297,12 +317,12 @@ class BaseBatteryModel(pybamm.BaseModel):
                         self
                     )
                 )
-        if options["surface form"] not in [False, "differential", "algebraic"]:
+        if options["surface form"] not in ["false", "differential", "algebraic"]:
             raise pybamm.OptionError(
                 "surface form '{}' not recognised".format(options["surface form"])
             )
         if options["convection"] not in [
-            False,
+            "false",
             "uniform transverse",
             "full transverse",
         ]:
@@ -349,7 +369,12 @@ class BaseBatteryModel(pybamm.BaseModel):
                     options["sei film resistance"]
                 )
             )
-        if options["sei porosity change"] not in [True, False]:
+        if options["sei porosity change"] not in ["true", "false"]:
+            if options["sei porosity change"] in [True, False]:
+                raise pybamm.OptionError(
+                    "sei porosity change must now be given in string format "
+                    "('true' or 'false')"
+                )
             raise pybamm.OptionError(
                 "Unknown sei porosity change '{}'".format(
                     options["sei porosity change"]
