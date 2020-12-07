@@ -16,6 +16,7 @@ examples = """
     Charge at 1 C until 4.1V,
     Hold at 4.1 V until 50 mA,
     Hold at 3V until C/50,
+    Run US06,
     """
 
 
@@ -28,7 +29,9 @@ class Experiment:
     hour or until 4.2 V". The instructions can be of the form "(Dis)charge at x A/C/W",
     "Rest", or "Hold at x V". The running time should be a time in seconds, minutes or
     hours, e.g. "10 seconds", "3 minutes" or "1 hour". The stopping conditions should be
-    a circuit state, e.g. "1 A", "C/50" or "3 V".
+    a circuit state, e.g. "1 A", "C/50" or "3 V". The parameter drive_cycles is mandatory
+    to run drive cycle. For example, "Run x", then x must be the key of drive_cycles 
+    dictionary.
 
     Parameters
     ----------
@@ -42,7 +45,6 @@ class Experiment:
         overwritten by individual operating conditions.
     drive_cycles : dict
         Dictionary of drive cycles to use for this experiment.
-
     """
 
     def __init__(self, operating_conditions, parameters=None, period="1 minute", drive_cycles={}):
@@ -50,19 +52,12 @@ class Experiment:
         self.operating_conditions_strings = operating_conditions
         self.operating_conditions, self.events = self.read_operating_conditions(
             operating_conditions, drive_cycles
-            #operating_conditions
         )
         parameters = parameters or {}
         if isinstance(parameters, dict):
             self.parameters = parameters
         else:
             raise TypeError("experimental parameters should be a dictionary")
-        
-        # drive_cycles = drive_cycles or {}
-        # if isinstance(drive_cycles, dict):
-        #     self.drive_cycles = drive_cycles
-        # else:
-        #     raise TypeError("Driving Cycles should be a dictionary")
 
     def __str__(self):
         return str(self.operating_conditions_strings)
@@ -79,7 +74,7 @@ class Experiment:
         operating_conditions : list
             List of operating conditions
         drive_cycles : dictionary
-            Dictionary of Driving Cycles
+            Dictionary of Drive Cycles
         Returns
         -------
         operating_conditions : list
@@ -144,17 +139,14 @@ class Experiment:
             electric = self.convert_electric(cond_list[:idx])
             time = None
             events = self.convert_electric(cond_list[idx + 1 :])
-        ########################################################################################################################
         elif "Run" in cond:
             # e.g. Run US06
             cond_list = cond.split()
             electric = (drive_cycles[cond_list[1]][:,1],"Drive")
-            time=1
-            period=1
-            #time = drive_cycles[cond_list[1]][:,0][-1]  # End Time
-            #time = drive_cycles[cond_list[1]][:,0] # List of Time
-            events = None
-        #########################################################################################################################    
+            # Set time and period to 1 second because drive cycles are sampled at 1Hz frequency 
+            time= 1 
+            period= 1
+            events = None   
         else:
             raise ValueError(
                 """Operating conditions must contain keyword 'for' or 'until' or 'Run'.

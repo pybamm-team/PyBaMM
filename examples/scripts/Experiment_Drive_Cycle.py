@@ -1,7 +1,8 @@
 #
-# Simulate drive cycle loaded from csv file
+# Constant-current constant-voltage charge with US06 Drive Cycle using Experiment Class.
 #
 import pybamm
+import matplotlib.pyplot as plt
 import pandas as pd
 import os
 
@@ -9,63 +10,24 @@ os.chdir(pybamm.__path__[0] + "/..")
 
 pybamm.set_logging_level("INFO")
 
-# load model and update parameters so the input current is the US06 drive cycle
-model = pybamm.lithium_ion.SPMe({"thermal": "lumped"})
-param = model.default_parameter_values
-
-
 # import drive cycle from file
 drive_cycle = pd.read_csv(
     "pybamm/input/drive_cycles/US06.csv", comment="#", header=None
 ).to_numpy()
 
-print(drive_cycle[:,0]) # Time
-print(drive_cycle[:,1]) # Current
-
-# create interpolant
-timescale = param.evaluate(model.timescale)
-current_interpolant = pybamm.Interpolant(drive_cycle, timescale * pybamm.t)
-
-# set drive cycle
-
-#param["Current function [A]"] = current_interpolant
-
-
-#experiment = pybamm.Experiment(["Run US06 for 1 hour"], functions={"US06": US06_function}) #Intention
-
-#experiment = pybamm.Experiment(["Charge at C/2 for 2 minutes"],period="2 minute")
-experiment = pybamm.Experiment(["Run US06"],drive_cycles={"US06": drive_cycle})
-
-#experiment.drive_cycles
-
+experiment = pybamm.Experiment(
+    [
+        "Charge at 1 A until 4.1 V",
+        "Hold at 4.1 V until 50 mA",
+        "Rest for 1 hour",
+        "Run US06",
+        "Rest for 1 hour",
+    ]* 3
+    , drive_cycles={"US06": drive_cycle}
+)
 model = pybamm.lithium_ion.DFN()
 sim = pybamm.Simulation(model, experiment=experiment, solver=pybamm.CasadiSolver())
+sim.solve()
 
-#sim.solve()
-
-
-
-
-
-
-
-
-# create and run simulation using the CasadiSolver in "fast" mode, remembering to
-# pass in the updated parameters
-
-#sim = pybamm.Simulation(model, parameter_values=param, solver=pybamm.CasadiSolver(mode="fast")) ## For DC
-
-
-# sim.plot(
-#     [
-#         "Negative particle surface concentration [mol.m-3]",
-#         "Electrolyte concentration [mol.m-3]",
-#         "Positive particle surface concentration [mol.m-3]",
-#         "Current [A]",
-#         "Negative electrode potential [V]",
-#         "Electrolyte potential [V]",
-#         "Positive electrode potential [V]",
-#         "Terminal voltage [V]",
-#         "X-averaged cell temperature",
-#     ]
-# )
+# Show all plots
+sim.plot()
