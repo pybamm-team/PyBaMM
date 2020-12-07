@@ -29,9 +29,9 @@ class Experiment:
     hour or until 4.2 V". The instructions can be of the form "(Dis)charge at x A/C/W",
     "Rest", or "Hold at x V". The running time should be a time in seconds, minutes or
     hours, e.g. "10 seconds", "3 minutes" or "1 hour". The stopping conditions should be
-    a circuit state, e.g. "1 A", "C/50" or "3 V". The parameter drive_cycles is mandatory
-    to run drive cycle. For example, "Run x", then x must be the key of drive_cycles 
-    dictionary.
+    a circuit state, e.g. "1 A", "C/50" or "3 V". The parameter drive_cycles is
+    mandatory to run drive cycle. For example, "Run x", then x must be the key
+    of drive_cycles dictionary.
 
     Parameters
     ----------
@@ -47,7 +47,11 @@ class Experiment:
         Dictionary of drive cycles to use for this experiment.
     """
 
-    def __init__(self, operating_conditions, parameters=None, period="1 minute", drive_cycles={}):
+    def __init__(self,
+                 operating_conditions,
+                 parameters=None,
+                 period="1 minute",
+                 drive_cycles={}):
         self.period = self.convert_time_to_seconds(period.split())
         self.operating_conditions_strings = operating_conditions
         self.operating_conditions, self.events = self.read_operating_conditions(
@@ -65,7 +69,7 @@ class Experiment:
     def __repr__(self):
         return "pybamm.Experiment({!s})".format(self)
 
-    def read_operating_conditions(self, operating_conditions,drive_cycles):
+    def read_operating_conditions(self, operating_conditions, drive_cycles):
         """
         Convert operating conditions to the appropriate format
 
@@ -84,7 +88,7 @@ class Experiment:
         events = []
         for cond in operating_conditions:
             if isinstance(cond, str):
-                next_op, next_event = self.read_string(cond,drive_cycles)
+                next_op, next_event = self.read_string(cond, drive_cycles)
                 converted_operating_conditions.append(next_op)
                 events.append(next_event)
             else:
@@ -97,7 +101,7 @@ class Experiment:
 
         return converted_operating_conditions, events
 
-    def read_string(self, cond,drive_cycles):
+    def read_string(self, cond, drive_cycles):
         """
         Convert a string to a tuple of the right format
 
@@ -142,11 +146,12 @@ class Experiment:
         elif "Run" in cond:
             # e.g. Run US06
             cond_list = cond.split()
-            electric = (drive_cycles[cond_list[1]][:,1],"Drive")
-            # Set time and period to 1 second because drive cycles are sampled at 1Hz frequency 
-            time= 1 
-            period= 1
-            events = None   
+            electric = (drive_cycles[cond_list[1]][:, 1], "Drive")
+            # Set time and period to 1 second
+            # because drive cycles are sampled at 1Hz frequency
+            time = 1
+            period = 1
+            events = None
         else:
             raise ValueError(
                 """Operating conditions must contain keyword 'for' or 'until' or 'Run'.

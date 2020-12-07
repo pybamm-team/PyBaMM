@@ -2,7 +2,6 @@
 # Constant-current constant-voltage charge with US06 Drive Cycle using Experiment Class.
 #
 import pybamm
-import matplotlib.pyplot as plt
 import pandas as pd
 import os
 
@@ -22,7 +21,7 @@ experiment = pybamm.Experiment(
         "Rest for 1 hour",
         "Run US06",
         "Rest for 1 hour",
-    ]* 3
+    ] * 3
     , drive_cycles={"US06": drive_cycle}
 )
 model = pybamm.lithium_ion.DFN()

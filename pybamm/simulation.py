@@ -213,9 +213,10 @@ class Simulation:
                 }
             elif op[1] == "Drive":
                 # Update inputs for Drive Cycle
-                driving_inputs_list=[]               
+                driving_inputs_list = []
                 for I_drive in op[0]:
-                    # Step though all drive cycle inputs and generate list containing driving_inputs for each step
+                    # Step though all drive cycle inputs and
+                    # generate list containing driving_inputs for each step
                     driving_inputs = {
                         "Current switch": 1,
                         "Voltage switch": 0,
@@ -255,7 +256,7 @@ class Simulation:
                 # Update experiment times
                 dt = op[2]
                 self._experiment_times.append(dt)
-            if op[1] in ["A","V","C","W"]: 
+            if op[1] in ["A", "V", "C", "W"]:
                 # Update period
                 operating_inputs["period"] = op[3]
                 # Update events
@@ -467,12 +468,13 @@ class Simulation:
             ):
                 pybamm.logger.info(self.experiment.operating_conditions_strings[idx])
                 if type(exp_inputs) is list:
-                # If experimental Condition is List, Step through all inputs in that list
-                    for idx2,exp_drive_inputs in enumerate(exp_inputs):
+                    # If experimental Condition is List,
+                    # Step through all inputs in that list
+                    for idx2, exp_drive_inputs in enumerate(exp_inputs):
                         # Make sure we take at least 2 timesteps
                         npts = max(int(round(dt / exp_drive_inputs["period"])) + 1, 2)
                         pybamm.logger.info("Solve Drive Cycle: t='{}' s".format(idx2))
-                        inputs.update(exp_drive_inputs)                
+                        inputs.update(exp_drive_inputs)
                         self.step(
                             dt,
                             solver=solver,
@@ -488,12 +490,12 @@ class Simulation:
                             pybamm.logger.warning(
                                 "\n\n\tExperiment is infeasible: '{}' ".format(
                                     self._solution.termination
-                            )
-                            + "was triggered during '{}'. ".format(
-                                self.experiment.operating_conditions_strings[idx]
-                            )
-                            + "Try reducing current, shortening the time interval, "
-                            "or reducing the period.\n\n"
+                                )
+                                + "was triggered during '{}'. ".format(
+                                    self.experiment.operating_conditions_strings[idx]
+                                )
+                                + "Try reducing current, shortening the time interval, "
+                                "or reducing the period.\n\n"
                             )
                             break
                 else:
