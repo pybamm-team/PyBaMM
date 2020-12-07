@@ -53,7 +53,7 @@ class StandardOutputTests(object):
         if self.chemistry == "Lithium-ion":
             self.run_test_class(ParticleConcentrationTests)
 
-        if self.model.options["convection"] is not False:
+        if self.model.options["convection"] == "true":
             self.run_test_class(VelocityTests)
 
 

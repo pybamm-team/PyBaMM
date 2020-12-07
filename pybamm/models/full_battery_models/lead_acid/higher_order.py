@@ -187,7 +187,7 @@ class BaseHigherOrderModel(BaseModel):
         Update convection submodel, now that we have the spatially heterogeneous
         interfacial current densities
         """
-        if self.options["convection"] is not False:
+        if self.options["convection"] == "true":
             self.submodels[
                 "through-cell convection"
             ] = pybamm.convection.through_cell.Explicit(self.param)
