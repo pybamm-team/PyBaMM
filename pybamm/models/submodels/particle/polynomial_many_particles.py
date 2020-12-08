@@ -176,6 +176,7 @@ class PolynomialManyParticles(BaseParticle):
             N_s_xav = pybamm.x_average(N_s)
 
         variables.update(self._get_standard_flux_variables(N_s, N_s_xav))
+        variables.update(self._get_total_concentration_variables(variables))
 
         return variables
 

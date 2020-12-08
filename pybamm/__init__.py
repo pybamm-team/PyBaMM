@@ -140,6 +140,7 @@ from .models.full_battery_models import lithium_ion
 from .models.submodels.base_submodel import BaseSubModel
 
 from .models.submodels import (
+    active_material,
     convection,
     current_collector,
     electrolyte_conductivity,
