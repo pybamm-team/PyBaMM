@@ -55,6 +55,7 @@ class FickianSingleParticle(BaseParticle):
         N_s = pybamm.SecondaryBroadcast(N_s_xav, [self._domain.lower() + " electrode"])
 
         variables.update(self._get_standard_flux_variables(N_s, N_s_xav))
+        variables.update(self._get_total_concentration_variables(variables))
 
         return variables
 

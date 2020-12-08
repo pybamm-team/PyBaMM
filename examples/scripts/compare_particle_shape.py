@@ -1,8 +1,8 @@
 #
-# Example showing how to prescribe the surface area per unit volume independent of
+# Example showing how to prescribe the surface area to volume ratio independent of
 # the assumed particle shape. Setting the "particle shape" option to "user" returns
 # a model which solves a spherical diffusion problem in the particles, but passes
-# a user supplied surface area per unit volume
+# a user supplied surface area to volume ratio
 #
 
 import pybamm

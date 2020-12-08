@@ -267,10 +267,13 @@ class PolynomialSingleParticle(BaseParticle):
 
         N_s = pybamm.SecondaryBroadcast(N_s_xav, [self._domain.lower() + " electrode"])
 
-        variables = self._get_standard_concentration_variables(
-            c_s, c_s_av=c_s_rxav, c_s_surf=c_s_surf
+        variables.update(
+            self._get_standard_concentration_variables(
+                c_s, c_s_av=c_s_rxav, c_s_surf=c_s_surf
+            )
         )
         variables.update(self._get_standard_flux_variables(N_s, N_s_xav))
+        variables.update(self._get_total_concentration_variables(variables))
 
         return variables
 

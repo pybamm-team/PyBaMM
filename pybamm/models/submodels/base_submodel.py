@@ -46,7 +46,9 @@ class BaseSubModel(pybamm.BaseModel):
         existance of a discontinuity (e.g. discontinuity in the input current)
     """
 
-    def __init__(self, param, domain=None, name="Unnamed submodel", external=False):
+    def __init__(
+        self, param, domain=None, name="Unnamed submodel", external=False, options=None
+    ):
         super().__init__(name)
         self.param = param
 
@@ -55,6 +57,7 @@ class BaseSubModel(pybamm.BaseModel):
         self.name = name
 
         self.external = external
+        self.options = options or {}
 
     @property
     def domain(self):
