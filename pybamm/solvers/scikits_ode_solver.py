@@ -46,13 +46,14 @@ class ScikitsOdeSolver(pybamm.BaseSolver):
         method="cvode",
         rtol=1e-6,
         atol=1e-6,
+        return_event=False,
         linsolver="deprecated",
         extra_options=None,
     ):
         if scikits_odes_spec is None:
             raise ImportError("scikits.odes is not installed")
 
-        super().__init__(method, rtol, atol)
+        super().__init__(method, rtol, atol, return_event=return_event)
         self.extra_options = extra_options or {}
         if linsolver != "deprecated":
             raise ValueError(

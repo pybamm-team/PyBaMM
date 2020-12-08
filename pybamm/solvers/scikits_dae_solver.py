@@ -52,13 +52,16 @@ class ScikitsDaeSolver(pybamm.BaseSolver):
         atol=1e-6,
         root_method="casadi",
         root_tol=1e-6,
+        return_event=False,
         extra_options=None,
         max_steps="deprecated",
     ):
         if scikits_odes_spec is None:
             raise ImportError("scikits.odes is not installed")
 
-        super().__init__(method, rtol, atol, root_method, root_tol, max_steps)
+        super().__init__(
+            method, rtol, atol, root_method, root_tol, return_event, max_steps
+        )
         self.name = "Scikits DAE solver ({})".format(method)
 
         self.extra_options = extra_options or {}

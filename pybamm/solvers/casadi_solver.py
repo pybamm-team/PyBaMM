@@ -69,12 +69,15 @@ class CasadiSolver(pybamm.BaseSolver):
         atol=1e-6,
         root_method="casadi",
         root_tol=1e-6,
+        return_event=False,
         max_step_decrease_count=5,
         dt_max=None,
         extra_options_setup=None,
         extra_options_call=None,
     ):
-        super().__init__("problem dependent", rtol, atol, root_method, root_tol)
+        super().__init__(
+            "problem dependent", rtol, atol, root_method, root_tol, return_event
+        )
         if mode in ["safe", "fast", "safe without grid"]:
             self.mode = mode
         else:
@@ -282,8 +285,8 @@ class CasadiSolver(pybamm.BaseSolver):
                         # append solution from the current step to solution
                         solution.append(current_step_sol)
                     solution.termination = "event"
-                    solution.t_event = t_event
-                    solution.y_event = y_event
+                    solution.t_event = np.array([t_event])
+                    solution.y_event = y_event[:, np.newaxis]
 
                     break
                 else:

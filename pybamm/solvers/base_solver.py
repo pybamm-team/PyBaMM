@@ -39,6 +39,7 @@ class BaseSolver(object):
         atol=1e-6,
         root_method=None,
         root_tol=1e-6,
+        return_event=False,
         max_steps="deprecated",
     ):
         self._method = method
@@ -46,6 +47,7 @@ class BaseSolver(object):
         self._atol = atol
         self.root_tol = root_tol
         self.root_method = root_method
+        self.return_event = return_event
         if max_steps != "deprecated":
             raise ValueError(
                 "max_steps has been deprecated, and should be set using the "
@@ -109,6 +111,14 @@ class BaseSolver(object):
     @root_tol.setter
     def root_tol(self, tol):
         self._root_tol = tol
+
+    @property
+    def return_event(self):
+        return self._return_event
+
+    @return_event.setter
+    def return_event(self, value):
+        self._return_event = value
 
     def copy(self):
         "Returns a copy of the solver"
@@ -890,6 +900,13 @@ class BaseSolver(object):
             termination_event = min(final_event_values, key=final_event_values.get)
             # Add the event to the solution object
             solution.termination = "event: {}".format(termination_event)
+            # Optionally update t, y and inputs to include event time and state
+            if self.return_event is True:
+                solution._t = np.concatenate((solution._t, solution.t_event))
+                solution._y = np.concatenate((solution._y, solution.y_event), axis=1)
+                for name, inp in solution.inputs.items():
+                    solution._inputs[name] = np.c_[inp, inp[:, -1]]
+
             return "the termination event '{}' occurred".format(termination_event)
 
     def _set_up_ext_and_inputs(self, model, external_variables, inputs):
