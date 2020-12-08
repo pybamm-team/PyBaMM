@@ -124,7 +124,7 @@ class Full(BaseModel):
                 self.param
             )
             self.submodels["positive oxygen interface"] = pybamm.interface.ForwardTafel(
-                self.param, "Positive", "lead-acid oxygen"
+                self.param, "Positive", "lead-acid oxygen", self.options
             )
             self.submodels[
                 "negative oxygen interface"
