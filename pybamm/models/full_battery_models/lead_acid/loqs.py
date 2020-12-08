@@ -108,7 +108,7 @@ class LOQS(BaseModel):
 
     def set_convection_submodel(self):
 
-        if self.options["convection"] == "false":
+        if self.options["convection"] == "none":
             self.submodels[
                 "leading-order transverse convection"
             ] = pybamm.convection.transverse.NoConvection(self.param)

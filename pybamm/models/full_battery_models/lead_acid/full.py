@@ -56,7 +56,7 @@ class Full(BaseModel):
         self.submodels["porosity"] = pybamm.porosity.Full(self.param)
 
     def set_convection_submodel(self):
-        if self.options["convection"] == "false":
+        if self.options["convection"] == "none":
             self.submodels[
                 "transverse convection"
             ] = pybamm.convection.transverse.NoConvection(self.param)
