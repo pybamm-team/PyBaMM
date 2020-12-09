@@ -5,7 +5,6 @@ import pybamm
 
 import numpy as np
 import scipy.sparse
-import re
 from collections import OrderedDict
 
 import numbers
@@ -518,7 +517,6 @@ def convert_var_and_eqn_to_str(var, eqn, all_constants_str, all_variables_str, t
 
     """
     constants, variable_symbols = to_julia(eqn)[:2]
-    line_format = "{} .= {}"
 
     variables_str = "\n".join(
         [
@@ -767,7 +765,7 @@ def get_julia_mtk_model(model, geometry=None, tspan=None):
         # Domains
         mtk_str += "\n"
         mtk_str += f"t_domain = IntervalDomain({tspan[0]}, {tspan[1]})\n"
-        domains = f"domains = [\n   t in t_domain,\n"
+        domains = "domains = [\n   t in t_domain,\n"
         for domain, symbol in domain_name_to_symbol.items():
             dom_limits = list(geometry[domain].values())[0]
             dom_min, dom_max = dom_limits.values()

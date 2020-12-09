@@ -3,16 +3,10 @@
 #
 import pybamm
 
-from tests import (
-    get_mesh_for_testing,
-    get_1p1d_mesh_for_testing,
-    get_discretisation_for_testing,
-    get_1p1d_discretisation_for_testing,
-)
+from tests import get_mesh_for_testing, get_1p1d_mesh_for_testing
 import unittest
 import numpy as np
 import scipy.sparse
-from collections import OrderedDict
 
 from julia import Main
 

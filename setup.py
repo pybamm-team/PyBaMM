@@ -197,6 +197,7 @@ setup(
         "scikit-fem>=0.2.0",
         "casadi>=3.5.0",
         *jax_dependencies,
+        "diffeqpy",
         "jupyter",  # For example notebooks
         # Note: Matplotlib is loaded for debug plots, but to ensure pybamm runs
         # on systems without an attached display, it should never be imported

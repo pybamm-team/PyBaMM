@@ -9,10 +9,9 @@ import numpy as np
 # julia imports
 from julia import Main
 from julia import Pkg
+from diffeqpy import de
 
 Pkg.activate(".")
-
-from diffeqpy import de
 
 
 class TestCreateSolveMTKModel(unittest.TestCase):
