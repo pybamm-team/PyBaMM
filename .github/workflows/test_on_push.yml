@@ -42,7 +42,7 @@ jobs:
         python-version: ${{ matrix.python-version }}
   
     - name: Set up Julia 1.5
-      uses: julia-actions/setup-julia@v1.5
+      uses: julia-actions/setup-julia@v1
       with:
         version: 1.5
     
