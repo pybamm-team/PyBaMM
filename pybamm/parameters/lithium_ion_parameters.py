@@ -208,6 +208,19 @@ class LithiumIonParameters:
         self.k_sei_dim = pybamm.Parameter("SEI kinetic rate constant [m.s-1]")
         self.U_sei_dim = pybamm.Parameter("SEI open-circuit potential [V]")
 
+        # Li plating parameters
+
+        self.V_bar_plated_Li = pybamm.Parameter(
+            "Li metal partial molar volume [m3.mol-1]"
+        )
+        self.k_plating = pybamm.Parameter("Li plating kinetic rate constant [m.s-1]")
+        self.c_plated_Li_0_dim = pybamm.Parameter(
+            "Initial plated Li concentration [mol.m-3]"
+        )
+
+        # Exchange current density for scaling
+        self.j0_plating_dimensional = self.F * self.k_plating * self.c_e_typ
+
         # Initial conditions
         # Note: the initial concentration in the electrodes can be set as a function
         # of through-cell position, so is defined later as a function
@@ -615,6 +628,8 @@ class LithiumIonParameters:
         self.T_amb = self.therm.T_amb
 
         # SEI parameters
+        self.alpha = pybamm.Parameter("Inner SEI reaction proportion")  # was 0.5
+
         self.C_sei_reaction_n = (self.j_scale_n / self.m_sei_dimensional) * pybamm.exp(
             -(self.F * self.U_n_ref / (2 * self.R * self.T_ref))
         )
@@ -711,6 +726,17 @@ class LithiumIonParameters:
             )
         )
         self.beta_sei_n = self.a_n_typ * self.L_sei_0_dim * self.Gamma_SEI_n
+
+        # Li plating parameters
+
+        self.C_plating = self.j_scale_n / self.j0_plating_dimensional
+
+        self.c_plated_Li_0 = self.c_plated_Li_0_dim / self.c_e_typ
+
+        # ratio of Li plating reaction scaled to intercalation reaction
+        self.Gamma_plating = (
+            self.a_n_typ * self.j_scale_n * self.tau_discharge
+        ) / (self.F * self.c_e_typ)
 
         # Initial conditions
         self.epsilon_n_init = pybamm.Parameter("Negative electrode porosity")

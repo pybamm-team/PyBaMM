@@ -24,7 +24,7 @@ class BasePlating(BaseInterface):
         reaction = "Li plating"
         super().__init__(param, domain, reaction)
 
-    def _get_standard_concentration_variables(self, c_plated_Li, c_dead_Li):
+    def _get_standard_concentration_variables(self, c_plated_Li):
         """
         A private function to obtain the standard variables which
         can be derived from the local plated Li concentration.
@@ -53,9 +53,6 @@ class BasePlating(BaseInterface):
         L_plated_Li_av = pybamm.x_average(L_plated_Li)
         Q_plated_Li = c_plated_Li_av * param.L_n * param.L_y * param.L_z
 
-        c_dead_Li_av = pybamm.x_average(c_dead_Li)
-        Q_dead_Li = c_dead_Li_av * param.L_n * param.L_y * param.L_z
-
         domain = self.domain.lower() + " electrode"
         Domain = domain.capitalize()
 
@@ -65,17 +62,11 @@ class BasePlating(BaseInterface):
             f"{Domain} X-averaged Li plating concentration": c_plated_Li_av,
             f"X-averaged {domain} Li plating concentration [mol.m-3]": c_plated_Li_av
             * c_scale,
-            f"{Domain} dead Li concentration": c_dead_Li,
-            f"{Domain} dead Li concentration [mol.m-3]": c_dead_Li * c_scale,
-            f"{Domain} X-averaged dead Li concentration": c_dead_Li_av,
-            f"X-averaged {domain} dead Li concentration [mol.m-3]": c_dead_Li_av
-            * c_scale,
             f"{Domain} Li plating thickness [m]": L_plated_Li * L_scale,
             f"X-averaged {domain} Li plating thickness [m]": L_plated_Li_av * L_scale,
-            f"Loss of lithium to {domain} Li plating [mol]": (Q_plated_Li + Q_dead_Li)
-            * c_scale,
-            f"Loss of capacity to {domain} Li plating [A.h]": (Q_plated_Li + Q_dead_Li)
-            * c_scale * param.F / 3600,
+            f"Loss of lithium to {domain} Li plating [mol]": Q_plated_Li * c_scale,
+            f"Loss of capacity to {domain} Li plating [A.h]": Q_plated_Li * c_scale
+            * param.F / 3600,
         }
 
         return variables

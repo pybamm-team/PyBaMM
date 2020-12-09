@@ -1,12 +1,12 @@
 #
-# Class for partially reversible Li plating
+# Class for irreversible Li plating
 #
 import pybamm
 from .base_plating import BasePlating
 
 
-class PartialReversiblePlating(BasePlating):
-    """Base class for reversible Li plating.
+class IrreversiblePlating(BasePlating):
+    """Base class for irreversible Li plating.
     Parameters
     ----------
     param : parameter class
@@ -25,13 +25,8 @@ class PartialReversiblePlating(BasePlating):
             domain=self.domain.lower() + " electrode",
             auxiliary_domains={"secondary": "current collector"},
         )
-        c_dead_Li = pybamm.Variable(
-            "Dead Li concentration",
-            domain=self.domain.lower() + " electrode",
-            auxiliary_domains={"secondary": "current collector"},
-        )
 
-        variables = self._get_standard_concentration_variables(c_plated_Li,c_dead_Li)
+        variables = self._get_standard_concentration_variables(c_plated_Li)
 
         return variables
 
@@ -40,7 +35,6 @@ class PartialReversiblePlating(BasePlating):
         phi_s_n = variables[f"{self.domain} electrode potential"]
         phi_e_n = variables[f"{self.domain} electrolyte potential"]
         c_e_n = variables[f"{self.domain} electrolyte concentration"]
-        c_plated_Li = variables[f"{self.domain} electrode Li plating concentration"]
         C_plating = param.C_plating
         phi_ref = param.U_n_ref / param.potential_scale
 
@@ -50,9 +44,9 @@ class PartialReversiblePlating(BasePlating):
             eta_sei = pybamm.Scalar(0)
 
         # need to revise for thermal case
-        j_stripping = (1 / C_plating) * (
-            c_plated_Li * pybamm.exp(0.5 * (phi_s_n - phi_e_n + phi_ref + eta_sei))
-            - c_e_n * pybamm.exp(-0.5 * (phi_s_n - phi_e_n + phi_ref + eta_sei))
+        # j_stripping is always negative, because there is no stripping, only plating
+        j_stripping = -(1 / C_plating) * c_e_n * (
+            pybamm.exp(-0.5 * (phi_s_n - phi_e_n + phi_ref + eta_sei))
         )
 
         variables.update(self._get_standard_reaction_variables(j_stripping))
@@ -74,19 +68,12 @@ class PartialReversiblePlating(BasePlating):
         j_stripping = variables[
             f"{self.domain} electrode Li plating " f"interfacial current density"
         ]
-        c_dead_Li = variables[f"{self.domain} electrode dead Li concentration"]
         Gamma_plating = self.param.Gamma_plating
-        SEIplating1 = self.param.SEIplating1
 
-        self.rhs = {
-            c_plated_Li: -Gamma_plating * j_stripping - SEIplating1 * c_plated_Li,
-            c_dead_Li: SEIplating1 * c_plated_Li
-        }
+        self.rhs = {c_plated_Li: -Gamma_plating * j_stripping}
 
     def set_initial_conditions(self, variables):
         c_plated_Li = variables[f"{self.domain} electrode Li plating concentration"]
         c_plated_Li_0 = self.param.c_plated_Li_0
-        c_dead_Li = variables[f"{self.domain} electrode dead Li concentration"]
-        zero = pybamm.Scalar(0)
 
-        self.initial_conditions = {c_plated_Li: c_plated_Li_0, c_dead_Li: zero}
+        self.initial_conditions = {c_plated_Li: c_plated_Li_0}

@@ -25,11 +25,8 @@ class ReversiblePlating(BasePlating):
             domain=self.domain.lower() + " electrode",
             auxiliary_domains={"secondary": "current collector"},
         )
-        zero = pybamm.FullBroadcast(
-            pybamm.Scalar(0), self.domain.lower() + " electrode", "current collector"
-        )
 
-        variables = self._get_standard_concentration_variables(c_plated_Li, zero)
+        variables = self._get_standard_concentration_variables(c_plated_Li)
 
         return variables
 
@@ -42,17 +39,15 @@ class ReversiblePlating(BasePlating):
         C_plating = param.C_plating
         phi_ref = param.U_n_ref / param.potential_scale
 
-        """
         if f"{self.domain} electrode sei film overpotential" in variables:
             eta_sei = variables[f"{self.domain} electrode sei film overpotential"]
         else:
             eta_sei = pybamm.Scalar(0)
-        """
 
         # need to revise for thermal case
         j_stripping = (1 / C_plating) * (
-            c_plated_Li * pybamm.exp(0.5 * (phi_s_n - phi_e_n + phi_ref))
-            - c_e_n * pybamm.exp(-0.5 * (phi_s_n - phi_e_n + phi_ref))
+            c_plated_Li * pybamm.exp(0.5 * (phi_s_n - phi_e_n + phi_ref + eta_sei))
+            - c_e_n * pybamm.exp(-0.5 * (phi_s_n - phi_e_n + phi_ref + eta_sei))
         )
 
         variables.update(self._get_standard_reaction_variables(j_stripping))
