@@ -2,6 +2,7 @@
 
 ## Features
 
+-   Added functionality to initialize a model using the solution from another model ([#1278](https://github.com/pybamm-team/PyBaMM/pull/1278))
 -   Added submodels for active material ([#1262](https://github.com/pybamm-team/PyBaMM/pull/1262))
 -   Added composite surface form electrolyte models: `CompositeDifferential` and `CompositeAlgebraic` ([#1207](https://github.com/pybamm-team/PyBaMM/issues/1207))
 
@@ -11,6 +12,7 @@
 
 ## Bug fixes
 
+-   Fixed `Simulation` and `model.new_copy` to fix a bug where changes to the model were overwritten ([#1278](https://github.com/pybamm-team/PyBaMM/pull/1278))
 ## Breaking changes
 
 -   Operations such as `1*x` and `0+x` now directly return `x`. This can be bypassed by explicitly creating the binary operators, e.g. `pybamm.Multiplication(1, x)` ([#1252](https://github.com/pybamm-team/PyBaMM/pull/1252))

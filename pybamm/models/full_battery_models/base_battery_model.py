@@ -625,29 +625,9 @@ class BaseBatteryModel(pybamm.BaseModel):
 
         self._built = True
 
-    def new_copy(self, build=True):
-        """
-        Create a copy of the model. Overwrites the functionality of
-        :class:`pybamm.BaseModel` to make sure that the submodels are updated correctly
-        """
-        # create without building
-        # 'build' is not a keyword argument for the BaseBatteryModel class, but it
-        # should be for all of the subclasses
-        new_model = self.__class__(options=self.options, name=self.name, build=False)
-        # update submodels
-        new_model.submodels = self.submodels
-        # clear submodel equations to avoid weird conflicts
-        for submodel in self.submodels.values():
-            submodel._rhs = {}
-            submodel._algebraic = {}
-            submodel._initial_conditions = {}
-            submodel._boundary_conditions = {}
-            submodel._variables = {}
-            submodel._events = []
-
-        # now build
-        if build:
-            new_model.build_model()
+    def new_empty_copy(self):
+        "See :meth:`pybamm.BaseModel.new_empty_copy()`"
+        new_model = self.__class__(name=self.name, options=self.options, build=False)
         new_model.use_jacobian = self.use_jacobian
         new_model.use_simplify = self.use_simplify
         new_model.convert_to_format = self.convert_to_format
