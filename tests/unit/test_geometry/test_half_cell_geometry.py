@@ -53,7 +53,11 @@ class TestHalfCellGeometry(unittest.TestCase):
 
     def test_geometry_error(self):
         with self.assertRaisesRegex(pybamm.GeometryError, "Invalid current"):
-            pybamm.battery_geometry(current_collector_dimension=4)
+            half_cell_geometry(
+                current_collector_dimension=4, working_electrode="positive"
+            )
+        with self.assertRaisesRegex(ValueError, "The option 'working_electrode'"):
+            half_cell_geometry(working_electrode="bad electrode")
 
 
 class TestReadParameters(unittest.TestCase):
