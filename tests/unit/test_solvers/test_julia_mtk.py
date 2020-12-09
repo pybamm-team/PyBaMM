@@ -106,12 +106,12 @@ class TestCreateSolveMTKModel(unittest.TestCase):
 
     def test_pde_model(self):
         model = pybamm.BaseModel()
-        x = pybamm.Variable("x", domain="line")
+        var = pybamm.Variable("var", domain="line")
 
-        model.rhs = {x: pybamm.div(pybamm.grad(x))}
-        model.initial_conditions = {x: 1.0}
+        model.rhs = {var: pybamm.div(pybamm.grad(var))}
+        model.initial_conditions = {var: 1.0}
         model.boundary_conditions = {
-            x: {"left": (1, "Dirichlet"), "right": (1, "Dirichlet")}
+            var: {"left": (1, "Dirichlet"), "right": (1, "Dirichlet")}
         }
 
         x = pybamm.SpatialVariable("x", domain="line", coord_sys="cartesian")
@@ -135,7 +135,46 @@ class TestCreateSolveMTKModel(unittest.TestCase):
         Main.eval("prob = DiffEqOperators.discretize(pde_system,discretization)")
 
         # Solve PDE problem
-        sol_julia = de.solve(Main.prob, de.Rodas5(), reltol=1e-8, abstol=1e-8)
+        sol_julia = de.solve(Main.prob, de.Tsit5(), reltol=1e-8, abstol=1e-8)
+
+        y_sol_julia = np.hstack(sol_julia.u)
+
+        # Check everything is equal to 1
+        # Just a simple test for now to get started
+        np.testing.assert_equal(y_sol_julia, 1)
+
+    def test_pde_model_spherical_polar(self):
+        model = pybamm.BaseModel()
+        var = pybamm.Variable("var", domain="particle")
+
+        model.rhs = {var: pybamm.div(pybamm.grad(var))}
+        model.initial_conditions = {var: 1.0}
+        model.boundary_conditions = {
+            var: {"left": (1, "Dirichlet"), "right": (1, "Dirichlet")}
+        }
+
+        r = pybamm.SpatialVariable("r", domain="particle", coord_sys="spherical polar")
+        geometry = {"particle": {r: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)}}}
+
+        mtk_str = pybamm.get_julia_mtk_model(
+            model, geometry=geometry, tspan=(0.0, 10.0)
+        )
+
+        # Solve using julia
+        Main.eval("using ModelingToolkit, DiffEqOperators")
+        Main.eval(mtk_str)
+
+        Main.tspan = (0.0, 10.0)
+        # Method of lines discretization
+        Main.dx = 0.1
+        Main.order = 2
+        Main.eval("discretization = MOLFiniteDifference(dx,order)")
+
+        # Convert the PDE problem into an ODE problem
+        Main.eval("prob = DiffEqOperators.discretize(pde_system,discretization)")
+
+        # Solve PDE problem
+        sol_julia = de.solve(Main.prob, de.Tsit5(), reltol=1e-8, abstol=1e-8)
 
         y_sol_julia = np.hstack(sol_julia.u)
 

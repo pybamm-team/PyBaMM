@@ -206,6 +206,24 @@ class TestEvaluate(unittest.TestCase):
             Main.eval("f(dy,y,0,0)")
             np.testing.assert_array_equal(Main.dy, expr.evaluate(y=y).flatten())
 
+    def test_evaluator_julia_input_parameters(self):
+        a = pybamm.StateVector(slice(0, 1))
+        b = pybamm.StateVector(slice(1, 2))
+        c = pybamm.InputParameter("c")
+        d = pybamm.InputParameter("d")
+
+        # test a * c + b * d
+        expr = a * c + b * d
+        evaluator_str = pybamm.get_julia_function(
+            expr, input_parameter_order=["c", "d"]
+        )
+        Main.eval(evaluator_str)
+        Main.dy = [0.0]
+        Main.y = np.array([2.0, 3.0])
+        Main.p = [5, 6]
+        Main.eval("f(dy,y,p,0)")
+        self.assertEqual(Main.dy, 28)
+
     def test_evaluator_julia_all_functions(self):
         a = pybamm.StateVector(slice(0, 3))
         y_test = np.array([1, 2, 3])

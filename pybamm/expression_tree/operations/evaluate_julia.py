@@ -146,8 +146,10 @@ def find_symbols(symbol, constant_symbols, variable_symbols, variable_symbol_siz
             symbol_str = "{}[{}:{}]".format(
                 children_vars[0], symbol.slice.start + 1, symbol.slice.stop
             )
-        elif isinstance(symbol, (pybamm.Gradient, pybamm.Divergence)):
-            symbol_str = "D'{}'({})".format(symbol.domain[0], children_vars[0])
+        elif isinstance(symbol, pybamm.Gradient):
+            symbol_str = "grad_{}({})".format(symbol.domain[0], children_vars[0])
+        elif isinstance(symbol, pybamm.Divergence):
+            symbol_str = "div_{}({})".format(symbol.domain[0], children_vars[0])
         else:
             symbol_str = symbol.name + children_vars[0]
 
@@ -316,7 +318,7 @@ def to_julia(symbol):
     return constant_values, variable_symbols, variable_symbol_sizes
 
 
-def get_julia_function(symbol, funcname="f"):
+def get_julia_function(symbol, funcname="f", input_parameter_order=None):
     """
     Converts a pybamm expression tree into pure julia code that will calculate the
     result of calling `evaluate(t, y)` on the given expression tree.
@@ -325,6 +327,11 @@ def get_julia_function(symbol, funcname="f"):
     ----------
     symbol : :class:`pybamm.Symbol`
         The symbol to convert to julia code
+    funcname : str, optional
+        The name to give to the function (default 'f')
+    input_parameter_order : list, optional
+        List of input parameter names. Defines the order in which the input parameters
+        are extracted from 'p' in the julia function that is created
 
     Returns
     -------
@@ -346,6 +353,7 @@ def get_julia_function(symbol, funcname="f"):
     # occurences instead of assigning them. This "inlining" speeds up the computation
     inlineable_symbols = ["@view", ".+", ".-", ".*", "./"]
     var_str = ""
+    input_parameters = {}
     while var_symbols:
         var_symbol_id, symbol_line = var_symbols.popitem(last=False)
         julia_var = id_to_julia_variable(var_symbol_id, False)
@@ -367,6 +375,9 @@ def get_julia_function(symbol, funcname="f"):
         elif " * " in symbol_line:
             symbol_line = symbol_line.replace(" * ", ", ")
             var_str += "mul!({}, {})\n".format(julia_var, symbol_line)
+        # find input parameters
+        elif symbol_line.startswith("inputs"):
+            input_parameters[julia_var] = symbol_line[8:-2]
         else:
             # inline operation if it can be inlined
             if any(x in symbol_line for x in inlineable_symbols) or symbol_line == "t":
@@ -399,6 +410,9 @@ def get_julia_function(symbol, funcname="f"):
             # otherwise assign
             else:
                 var_str += "{} .= {}\n".format(julia_var, symbol_line)
+    # Replace all input parameter names
+    for input_parameter_id, input_parameter_name in input_parameters.items():
+        var_str = var_str.replace(input_parameter_id, input_parameter_name)
     # add "cs." to constant and cache names
     var_str = var_str.replace("const", "cs.const")
     var_str = var_str.replace("cache", "cs.cache")
@@ -424,12 +438,19 @@ def get_julia_function(symbol, funcname="f"):
     # remove the constant and cache sring if it is empty
     const_and_cache_str = const_and_cache_str.replace("cs = (\n)\n", "")
 
+    # line that extracts the input parameters in the right order
+    if input_parameter_order is None:
+        input_parameter_extraction = ""
+    else:
+        input_parameter_extraction = "   " + ", ".join(input_parameter_order) + " = p\n"
+
     # add function def and sparse arrays to first line
     imports = "begin\nusing SparseArrays, LinearAlgebra\n\n"
     julia_str = (
         imports
         + const_and_cache_str
         + f"\nfunction {funcname}_with_consts(dy, y, p, t)\n"
+        + input_parameter_extraction
         + var_str
     )
 
@@ -568,13 +589,17 @@ def get_julia_mtk_model(model, geometry=None, tspan=None):
     domain_name_to_symbol = {
         dom: list(geometry[dom].keys())[0].name for i, dom in enumerate(all_domains)
     }
+    domain_name_to_coord_sys = {
+        dom: list(geometry[dom].keys())[0].coord_sys
+        for i, dom in enumerate(all_domains)
+    }
 
     mtk_str = "begin\n"
     # Define parameters (including independent variables)
     # Makes a line of the form '@parameters t x1 x2 x3 a b c d'
     ind_vars = ["t"] + list(domain_name_to_symbol.values())
-    for dom, number in domain_name_to_symbol.items():
-        mtk_str += f"# '{dom}' -> {number}\n"
+    for domain_name, domain_symbol in domain_name_to_symbol.items():
+        mtk_str += f"# '{domain_name}' -> {domain_symbol}\n"
     mtk_str += "@parameters " + " ".join(ind_vars)
     for param in model.input_parameters:
         mtk_str += f" {param.name}"
@@ -617,7 +642,6 @@ def get_julia_mtk_model(model, geometry=None, tspan=None):
         all_constants_str, all_julia_str, eqn_str = convert_var_and_eqn_to_str(
             var, eqn, all_constants_str, all_julia_str, "equation"
         )
-        # add
 
         if var in model.rhs:
             all_eqns_str += (
@@ -637,8 +661,21 @@ def get_julia_mtk_model(model, geometry=None, tspan=None):
 
     # Replace independent variables (domain names) in julia strings with the
     # corresponding symbol
-    for domain, symbol in domain_name_to_symbol.items():
-        all_julia_str = all_julia_str.replace(f"'{domain}'", symbol)
+    for domain_name, domain_symbol in domain_name_to_symbol.items():
+        all_julia_str = all_julia_str.replace(
+            f"grad_{domain_name}", f"D{domain_symbol}"
+        )
+        # Different divergence depending on the coordinate system
+        coord_sys = domain_name_to_coord_sys[domain_name]
+        if coord_sys == "cartesian":
+            all_julia_str = all_julia_str.replace(
+                f"div_{domain_name}", f"D{domain_symbol}"
+            )
+        elif coord_sys == "spherical polar":
+            all_julia_str = all_julia_str.replace(
+                f"div_{domain_name}(",
+                f"1 / {domain_symbol}^2 * D{domain_symbol}({domain_symbol}^2 * ",
+            )
 
     # Replace parameters in the julia strings in the form "inputs[name]"
     # with just "name"
