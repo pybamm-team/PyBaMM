@@ -49,8 +49,9 @@ class GeometricParameters:
         self.A_tab_p = self.L_tab_p * self.L_cp  # Area of negative tab
 
         # Microscale geometry
-        # Note: the definition of the surface area to volume ratio is
-        # overwritten in lithium_ion_parameters.py to be computed
+        # Note: parameters related to the particles in li-ion cells are defined
+        # in lithium_ion_parameters.py. The definition of the surface area to
+        # volume ratio is overwritten in lithium_ion_parameters.py to be computed
         # based on the assumed particle shape
         self.a_n_dim = pybamm.Parameter(
             "Negative electrode surface area to volume ratio [m-1]"
@@ -58,8 +59,6 @@ class GeometricParameters:
         self.a_p_dim = pybamm.Parameter(
             "Positive electrode surface area to volume ratio [m-1]"
         )
-        self.R_n = pybamm.Parameter("Negative particle radius [m]")
-        self.R_p = pybamm.Parameter("Positive particle radius [m]")
         self.b_e_n = pybamm.Parameter(
             "Negative electrode Bruggeman coefficient (electrolyte)"
         )

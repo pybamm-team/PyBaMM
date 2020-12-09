@@ -35,7 +35,12 @@ Lithium-ion parameter sets
         P. Ramadass, B. Haran, P. M. Gomadam, R. White, and B. N. Popov. "Development
         of First Principles Capacity Fade Model for Li-Ion Cells." Journal of the
         Electrochemical Society, 151(2), A196-A203 (2004).
-    * Prada2013
+    * Ai 2020 :
+        > Ai, W., Kraft, L., Sturm, J., Jossen, A., & Wu, B. (2020).
+        Electrochemical Thermal-Mechanical Modelling of Stress Inhomogeneity
+        in Lithium-Ion Pouch Cells. Journal of The Electrochemical Society,
+        167(1), 013512. DOI: 10.1149/2.0122001JES.
+    * Prada2013 :
         C.-H. Chen, F. Brosa Planella, K. O’Regan, D. Gastol, W. D. Widanage, and E.
         Kendrick. "Development of Experimental Techniques for Parameterization of
         Multi-scale Lithium-ion Battery Models." Journal of the Electrochemical Society,
@@ -141,6 +146,17 @@ Prada2013 = {
     "electrolyte": "lipf6_Nyman2008",
     "experiment": "4C_discharge_from_full_Prada2013",
     "citation": ["Chen2020", "lain2019design", "prada2013simplified"],
+}
+
+Ai2020 = {
+    "chemistry": "lithium-ion",
+    "cell": "Enertech_Ai2020",
+    "anode": "graphite_Ai2020",
+    "separator": "separator_Ai2020",
+    "cathode": "lico2_Ai2020",
+    "electrolyte": "lipf6_Enertech_Ai2020",
+    "experiment": "1C_discharge_from_full_Ai2020",
+    "citation": "Ai2020JES",
 }
 
 #

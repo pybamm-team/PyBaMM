@@ -17,7 +17,7 @@ class TestCasadiConverter(unittest.TestCase):
             self.assertTrue((a - b).is_zero())
 
     def assert_casadi_almost_equal(self, a, b, decimal=7, evalf=False):
-        tol = 1.5 * 10**(-decimal)
+        tol = 1.5 * 10 ** (-decimal)
         if evalf is True:
             self.assertTrue(
                 (casadi.fabs(casadi.evalf(a) - casadi.evalf(b)) < tol).is_one()
@@ -134,9 +134,7 @@ class TestCasadiConverter(unittest.TestCase):
             )
 
         # test functions with assert_casadi_almost_equal
-        for np_fun in [
-            special.erf,
-        ]:
+        for np_fun in [special.erf]:
             self.assert_casadi_almost_equal(
                 pybamm.Function(np_fun, c).to_casadi(),
                 casadi.MX(np_fun(3)),

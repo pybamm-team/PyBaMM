@@ -240,7 +240,7 @@ def test_notebook(path, executable="python"):
         sys.exit(1)
 
     # Sucessfully run
-    print("ok (" + b.format() + ")")
+    print("ok ({})".format(b.time()))
     return True
 
 
@@ -281,7 +281,7 @@ def test_script(path, executable="python"):
         sys.exit(1)
 
     # Sucessfully run
-    print("ok (" + b.format() + ")")
+    print("ok ({})".format(b.time()))
     return True
 
 

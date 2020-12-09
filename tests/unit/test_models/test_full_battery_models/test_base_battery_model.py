@@ -161,11 +161,21 @@ class TestBaseBatteryModel(unittest.TestCase):
             pybamm.BaseBatteryModel({"sei film resistance": "bad sei film resistance"})
         with self.assertRaisesRegex(pybamm.OptionError, "sei porosity change"):
             pybamm.BaseBatteryModel({"sei porosity change": "bad sei porosity change"})
-        # variable defaults
+        # changing defaults based on other options
         model = pybamm.BaseBatteryModel()
-        self.assertEqual(model.options["sei film resistance"], None)
+        self.assertEqual(model.options["sei film resistance"], "none")
         model = pybamm.BaseBatteryModel({"sei": "constant"})
         self.assertEqual(model.options["sei film resistance"], "distributed")
+
+        # loss of active material model
+        with self.assertRaisesRegex(pybamm.OptionError, "loss of active material"):
+            model = pybamm.BaseBatteryModel(
+                {"loss of active material": "bad LAM model"}
+            )
+
+        # crack model
+        with self.assertRaisesRegex(pybamm.OptionError, "particle cracking"):
+            pybamm.BaseBatteryModel({"particle cracking": "bad particle cracking"})
 
     def test_build_twice(self):
         model = pybamm.lithium_ion.SPM()  # need to pick a model to set vars and build

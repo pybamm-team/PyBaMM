@@ -13,6 +13,9 @@ from jax.tree_util import tree_map, tree_flatten, tree_unflatten, tree_multimap,
 from jax.interpreters import partial_eval as pe
 from jax import linear_util as lu
 from jax.config import config
+from absl import logging
+
+logging.set_verbosity(logging.ERROR)
 
 config.update("jax_enable_x64", True)
 
@@ -258,11 +261,11 @@ def _compute_R(order, factor):
 
 def _select_initial_conditions(fun, M, t0, y0, tol, scale_y0):
     # identify algebraic variables as zeros on diagonal
-    algebraic_variables = jnp.diag(M == 0.0)
+    algebraic_variables = onp.diag(M) == 0.0
 
     # if all differentiable variables then return y0 (can use normal python if since M
     # is static)
-    if not jnp.any(algebraic_variables):
+    if not onp.any(algebraic_variables):
         return y0, False
 
     # calculate consistent initial conditions via a newton on -J_a @ delta = f_a This
@@ -711,7 +714,7 @@ def block_diag(lst):
         if i == j:
             return Ai
         else:
-            return jnp.zeros(
+            return onp.zeros(
                 (
                     Ai.shape[0] if Ai.ndim > 1 else 1,
                     Aj.shape[1] if Aj.ndim > 1 else 1,
@@ -724,7 +727,7 @@ def block_diag(lst):
         for i, Ai in enumerate(lst)
     ]
 
-    return jnp.block(blocks)
+    return onp.block(blocks)
 
 
 # NOTE: the code below (except the docstring on jax_bdf_integrate and other minor
@@ -883,10 +886,10 @@ def _bdf_odeint_rev(func, mass, rtol, atol, res, g):
 
         return (-y_dot, y_bar_dot, *rest)
 
-    algebraic_variables = jnp.diag(mass) == 0.0
+    algebraic_variables = onp.diag(mass) == 0.0
     differentiable_variables = algebraic_variables == False  # noqa: E712
-    mass_is_I = (mass == jnp.eye(mass.shape[0])).all()
-    is_dae = jnp.any(algebraic_variables)
+    mass_is_I = onp.array_equal(mass, onp.eye(mass.shape[0]))
+    is_dae = onp.any(algebraic_variables)
 
     if not mass_is_I:
         M_dd = mass[onp.ix_(differentiable_variables, differentiable_variables)]
@@ -921,7 +924,15 @@ def _bdf_odeint_rev(func, mass, rtol, atol, res, g):
     def arg_to_identity(arg):
         return onp.identity(arg.shape[0] if arg.ndim > 0 else 1, dtype=arg.dtype)
 
-    aug_mass = (mass, mass, jnp.array(1.0), tree_map(arg_to_identity, args))
+    def arg_dicts_to_values(args):
+        """
+        Note: JAX puts in empty arrays into args for some reason, we remove them here
+        """
+        return sum((tuple(b.values()) for b in args if isinstance(b, dict)), ())
+
+    aug_mass = (mass, mass, onp.array(1.0)) + arg_dicts_to_values(
+        tree_map(arg_to_identity, args)
+    )
 
     def scan_fun(carry, i):
         y_bar, t0_bar, args_bar = carry
@@ -956,20 +967,25 @@ _bdf_odeint.defvjp(_bdf_odeint_fwd, _bdf_odeint_rev)
 
 @cache()
 def closure_convert(fun, in_tree, in_avals):
-    in_pvals = [pe.PartialVal.unknown(aval) for aval in in_avals]
-    wrapped_fun, out_tree = flatten_fun_nokwargs(lu.wrap_init(fun), in_tree)
-    with core.initial_style_staging():
-        jaxpr, _, consts = pe.trace_to_jaxpr(
-            wrapped_fun, in_pvals, instantiate=True, stage_out=False
-        )
+    if config.omnistaging_enabled:
+        wrapped_fun, out_tree = flatten_fun_nokwargs(lu.wrap_init(fun), in_tree)
+        jaxpr, _, consts = pe.trace_to_jaxpr_dynamic(wrapped_fun, in_avals)
+    else:
+        in_pvals = [pe.PartialVal.unknown(aval) for aval in in_avals]
+        wrapped_fun, out_tree = flatten_fun_nokwargs(lu.wrap_init(fun), in_tree)
+        with core.initial_style_staging():  # type: ignore
+            jaxpr, _, consts = pe.trace_to_jaxpr(
+                wrapped_fun, in_pvals, instantiate=True, stage_out=False
+            )  # type: ignore
     out_tree = out_tree()
 
     # We only want to closure convert for constants with respect to which we're
     # differentiating. As a proxy for that, we hoist consts with float dtype.
     # TODO(mattjj): revise this approach
-    (closure_consts, hoisted_consts), merge = partition_list(
-        lambda c: dtypes.issubdtype(dtypes.dtype(c), jnp.inexact), consts
-    )
+    def is_float(c):
+        return dtypes.issubdtype(dtypes.dtype(c), jnp.inexact)
+
+    (closure_consts, hoisted_consts), merge = partition_list(is_float, consts)
     num_consts = len(hoisted_consts)
 
     def converted_fun(y, t, *hconsts_args):

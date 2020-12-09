@@ -81,8 +81,8 @@ class BaseOutputTest(object):
         self.x_edge = disc.mesh.combine_submeshes(*whole_cell).edges * L_x
 
         if isinstance(self.model, pybamm.lithium_ion.BaseModel):
-            R_n = param.evaluate(geo.R_n)
-            R_p = param.evaluate(geo.R_p)
+            R_n = param.evaluate(model.param.R_n_typ)
+            R_p = param.evaluate(model.param.R_p_typ)
             self.r_n = disc.mesh["negative particle"].nodes * R_n
             self.r_p = disc.mesh["positive particle"].nodes * R_p
             self.r_n_edge = disc.mesh["negative particle"].edges * R_n
@@ -595,8 +595,8 @@ class CurrentTests(BaseOutputTest):
         self.i_s = solution["Electrode current density"]
         self.i_e = solution["Electrolyte current density"]
 
-        self.a_n = solution["Negative surface area per unit volume distribution in x"]
-        self.a_p = solution["Positive surface area per unit volume distribution in x"]
+        self.a_n = solution["Negative electrode surface area to volume ratio"]
+        self.a_p = solution["Positive electrode surface area to volume ratio"]
 
     def test_interfacial_current_average(self):
         """Test that average of the surface area density distribution (in x)
@@ -605,7 +605,7 @@ class CurrentTests(BaseOutputTest):
 
         np.testing.assert_array_almost_equal(
             np.mean(
-                self.a_n(x=self.x_n)
+                self.a_n(self.t, self.x_n)
                 * (self.j_n(self.t, self.x_n) + self.j_n_sei(self.t, self.x_n)),
                 axis=0,
             ),
@@ -614,23 +614,13 @@ class CurrentTests(BaseOutputTest):
         )
         np.testing.assert_array_almost_equal(
             np.mean(
-                self.a_p(x=self.x_p)
+                self.a_p(self.t, self.x_p)
                 * (self.j_p(self.t, self.x_p) + self.j_p_sei(self.t, self.x_p)),
                 axis=0,
             ),
             -self.i_cell / self.l_p,
             decimal=4,
         )
-        # np.testing.assert_array_almost_equal(
-        #    (self.j_n_av(self.t) + self.j_n_sei_av(self.t)),
-        #    self.i_cell / self.l_n,
-        #    decimal=4,
-        # )
-        # np.testing.assert_array_almost_equal(
-        #    self.j_p_av(self.t) + self.j_p_sei_av(self.t),
-        #    -self.i_cell / self.l_p,
-        #    decimal=4,
-        # )
 
     def test_conservation(self):
         """Test sum of electrode and electrolyte current densities give the applied

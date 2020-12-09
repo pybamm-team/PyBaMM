@@ -34,6 +34,7 @@ class SPM(BaseModel):
 
         self.set_external_circuit_submodel()
         self.set_porosity_submodel()
+        self.set_active_material_submodel()
         self.set_tortuosity_submodels()
         self.set_convection_submodel()
         self.set_interfacial_submodel()
@@ -44,6 +45,7 @@ class SPM(BaseModel):
         self.set_positive_electrode_submodel()
         self.set_thermal_submodel()
         self.set_current_collector_submodel()
+        self.set_crack_submodel()
         self.set_sei_submodel()
 
         if build:
@@ -57,6 +59,27 @@ class SPM(BaseModel):
             self.submodels["porosity"] = pybamm.porosity.Constant(self.param)
         elif self.options["sei porosity change"] is True:
             self.submodels["porosity"] = pybamm.porosity.LeadingOrder(self.param)
+
+    def set_active_material_submodel(self):
+
+        if self.options["loss of active material"] == "none":
+            self.submodels[
+                "negative active material"
+            ] = pybamm.active_material.Constant(self.param, "Negative", self.options)
+            self.submodels[
+                "positive active material"
+            ] = pybamm.active_material.Constant(self.param, "Positive", self.options)
+        elif self.options["loss of active material"] == "example":
+            self.submodels[
+                "negative active material"
+            ] = pybamm.active_material.VaryingUniform(
+                self.param, "Negative", self.options
+            )
+            self.submodels[
+                "positive active material"
+            ] = pybamm.active_material.VaryingUniform(
+                self.param, "Positive", self.options
+            )
 
     def set_convection_submodel(self):
 
@@ -122,15 +145,15 @@ class SPM(BaseModel):
 
     def set_negative_electrode_submodel(self):
 
-        self.submodels["negative electrode"] = pybamm.electrode.ohm.LeadingOrder(
-            self.param, "Negative"
-        )
+        self.submodels[
+            "negative electrode potential"
+        ] = pybamm.electrode.ohm.LeadingOrder(self.param, "Negative")
 
     def set_positive_electrode_submodel(self):
 
-        self.submodels["positive electrode"] = pybamm.electrode.ohm.LeadingOrder(
-            self.param, "Positive"
-        )
+        self.submodels[
+            "positive electrode potential"
+        ] = pybamm.electrode.ohm.LeadingOrder(self.param, "Positive")
 
     def set_electrolyte_submodel(self):
 

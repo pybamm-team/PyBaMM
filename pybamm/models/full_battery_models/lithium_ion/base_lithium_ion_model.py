@@ -25,8 +25,8 @@ class BaseModel(pybamm.BaseBatteryModel):
             "negative electrode": self.param.L_x,
             "separator": self.param.L_x,
             "positive electrode": self.param.L_x,
-            "negative particle": self.param.R_n,
-            "positive particle": self.param.R_p,
+            "negative particle": self.param.R_n_typ,
+            "positive particle": self.param.R_p_typ,
             "current collector y": self.param.L_y,
             "current collector z": self.param.L_z,
         }
@@ -40,16 +40,16 @@ class BaseModel(pybamm.BaseBatteryModel):
         self.variables.update(
             {
                 "r_n": var.r_n,
-                "r_n [m]": var.r_n * self.param.R_n,
+                "r_n [m]": var.r_n * self.param.R_n_typ,
                 "r_p": var.r_p,
-                "r_p [m]": var.r_p * self.param.R_p,
+                "r_p [m]": var.r_p * self.param.R_p_typ,
             }
         )
 
     def set_sei_submodel(self):
 
         # negative electrode SEI
-        if self.options["sei"] is None:
+        if self.options["sei"] == "none":
             self.submodels["negative sei"] = pybamm.sei.NoSEI(self.param, "Negative")
 
         if self.options["sei"] == "constant":
@@ -92,3 +92,23 @@ class BaseModel(pybamm.BaseBatteryModel):
         self.submodels["positive oxygen interface"] = pybamm.interface.NoReaction(
             self.param, "Positive", "lithium-ion oxygen"
         )
+
+    def set_crack_submodel(self):
+        if self.options["particle cracking"] == "none":
+            return
+
+        if self.options["particle cracking"] == "no cracking":
+            n = pybamm.particle_cracking.NoCracking(self.param, "Negative")
+            p = pybamm.particle_cracking.NoCracking(self.param, "Positive")
+        elif self.options["particle cracking"] == "cathode":
+            n = pybamm.particle_cracking.NoCracking(self.param, "Negative")
+            p = pybamm.particle_cracking.CrackPropagation(self.param, "Positive")
+        elif self.options["particle cracking"] == "anode":
+            n = pybamm.particle_cracking.CrackPropagation(self.param, "Negative")
+            p = pybamm.particle_cracking.NoCracking(self.param, "Positive")
+        else:
+            n = pybamm.particle_cracking.CrackPropagation(self.param, "Negative")
+            p = pybamm.particle_cracking.CrackPropagation(self.param, "Positive")
+
+        self.submodels["negative particle cracking"] = n
+        self.submodels["positive particle cracking"] = p

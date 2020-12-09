@@ -1303,7 +1303,7 @@ class TestFiniteVolume(unittest.TestCase):
         r_disc = disc.process_symbol(r)
         self.assertIsInstance(r_disc, pybamm.Vector)
         np.testing.assert_array_equal(
-            r_disc.evaluate(), 3 * disc.mesh["negative particle"].nodes[:, np.newaxis],
+            r_disc.evaluate(), 3 * disc.mesh["negative particle"].nodes[:, np.newaxis]
         )
 
     def test_mass_matrix_shape(self):

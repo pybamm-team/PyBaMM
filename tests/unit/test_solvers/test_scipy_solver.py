@@ -337,9 +337,7 @@ class TestScipySolver(unittest.TestCase):
         model = pybamm.BaseModel()
         var1 = pybamm.Variable("var1")
         model.rhs = {var1: pybamm.InputParameter("rate") * var1}
-        model.initial_conditions = {
-            var1: pybamm.InputParameter("ic 1"),
-        }
+        model.initial_conditions = {var1: pybamm.InputParameter("ic 1")}
 
         # Solve
         solver = pybamm.ScipySolver(rtol=1e-8, atol=1e-8)
