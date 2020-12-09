@@ -242,8 +242,7 @@ class TestScipySolver(unittest.TestCase):
         for i in range(ninputs):
             with self.subTest(i=i):
                 solution = solutions[i]
-                self.assertLess(len(solution.t), len(t_eval))
-                np.testing.assert_array_equal(solution.t, t_eval[: len(solution.t)])
+                np.testing.assert_array_equal(solution.t, t_eval)
                 np.testing.assert_allclose(
                     solution.y[0], np.exp(-0.01 * (i + 1) * solution.t)
                 )
