@@ -292,5 +292,5 @@ class BasicDFN(BaseModel):
             pybamm.Event("Maximum voltage", voltage - param.voltage_high_cut),
         ]
 
-    def new_copy(self, build=False):
-        return pybamm.BaseModel.new_copy(self)
+    def new_empty_copy(self):
+        return pybamm.BaseModel.new_empty_copy(self)

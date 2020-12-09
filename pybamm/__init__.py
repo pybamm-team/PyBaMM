@@ -63,7 +63,7 @@ PARAMETER_PATH = [
 #
 # Utility classes and methods
 #
-from .util import Timer, FuzzyDict
+from .util import Timer, TimerTime, FuzzyDict
 from .util import root_dir, load_function, rmse, get_infinite_nested_dict, load
 from .util import get_parameters_filepath
 from .logger import logger, set_logging_level
@@ -116,6 +116,7 @@ if system() != "Windows":
 from .expression_tree.operations.jacobian import Jacobian
 from .expression_tree.operations.convert_to_casadi import CasadiConverter
 from .expression_tree.operations.unpack_symbols import SymbolUnpacker
+from .expression_tree.operations.replace_symbols import SymbolReplacer
 
 #
 # Model classes
@@ -136,6 +137,7 @@ from .models.full_battery_models import lithium_ion
 from .models.submodels.base_submodel import BaseSubModel
 
 from .models.submodels import (
+    active_material,
     convection,
     current_collector,
     electrolyte_conductivity,

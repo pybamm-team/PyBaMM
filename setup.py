@@ -134,7 +134,7 @@ def compile_KLU():
 # Build the list of package data files to be included in the PyBaMM package.
 # These are mainly the parameter files located in the input/parameters/ subdirectories.
 pybamm_data = []
-for file_ext in ["*.csv", "*.py", "*.md"]:
+for file_ext in ["*.csv", "*.py", "*.md", "*.txt"]:
     # Get all the files ending in file_ext in pybamm/input dir.
     # list_of_files = [
     #    'pybamm/input/drive_cycles/car_current.csv',

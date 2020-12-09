@@ -21,6 +21,9 @@ class TestManyParticles(unittest.TestCase):
         variables = {
             "Negative electrode interfacial current density": a_n,
             "Negative electrode temperature": a_n,
+            "Negative electrode active material volume fraction": a_n,
+            "Negative electrode surface area to volume ratio": a_n,
+            "Negative particle radius": a_n,
         }
 
         submodel = pybamm.particle.PolynomialManyParticles(
@@ -44,6 +47,9 @@ class TestManyParticles(unittest.TestCase):
         variables = {
             "Positive electrode interfacial current density": a_p,
             "Positive electrode temperature": a_p,
+            "Positive electrode active material volume fraction": a_p,
+            "Positive electrode surface area to volume ratio": a_p,
+            "Positive particle radius": a_p,
         }
 
         submodel = pybamm.particle.PolynomialManyParticles(

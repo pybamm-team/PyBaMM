@@ -4,7 +4,7 @@
 import copy
 import numpy as np
 import pybamm
-from scipy.sparse import vstack
+from scipy.sparse import vstack, issparse
 from collections import defaultdict
 
 
@@ -360,6 +360,13 @@ class SparseStack(Concatenation):
 
     def __init__(self, *children):
         children = list(children)
+        if not any(issparse(child.evaluate_for_shape()) for child in children):
+            concatenation_function = np.vstack
+        else:
+            concatenation_function = vstack
         super().__init__(
-            *children, name="sparse_stack", check_domain=False, concat_fun=vstack
+            *children,
+            name="sparse_stack",
+            check_domain=False,
+            concat_fun=concatenation_function
         )

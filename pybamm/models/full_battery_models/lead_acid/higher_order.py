@@ -49,6 +49,7 @@ class BaseHigherOrderModel(BaseModel):
         self.set_full_interface_submodel()
         self.set_full_convection_submodel()
         self.set_full_porosity_submodel()
+        self.set_active_material_submodel()
         self.set_tortuosity_submodels()
         self.set_thermal_submodel()
         self.set_current_collector_submodel()
@@ -134,12 +135,12 @@ class BaseHigherOrderModel(BaseModel):
         )
 
     def set_negative_electrode_submodel(self):
-        self.submodels["negative electrode"] = pybamm.electrode.ohm.Composite(
+        self.submodels["negative electrode potential"] = pybamm.electrode.ohm.Composite(
             self.param, "Negative"
         )
 
     def set_positive_electrode_submodel(self):
-        self.submodels["positive electrode"] = pybamm.electrode.ohm.Composite(
+        self.submodels["positive electrode potential"] = pybamm.electrode.ohm.Composite(
             self.param, "Positive"
         )
 

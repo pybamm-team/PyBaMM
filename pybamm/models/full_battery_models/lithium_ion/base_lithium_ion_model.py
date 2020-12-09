@@ -49,7 +49,7 @@ class BaseModel(pybamm.BaseBatteryModel):
     def set_sei_submodel(self):
 
         # negative electrode SEI
-        if self.options["sei"] is None:
+        if self.options["sei"] == "none":
             self.submodels["negative sei"] = pybamm.sei.NoSEI(self.param, "Negative")
 
         if self.options["sei"] == "constant":
@@ -94,7 +94,7 @@ class BaseModel(pybamm.BaseBatteryModel):
         )
 
     def set_crack_submodel(self):
-        if self.options["particle cracking"] is None:
+        if self.options["particle cracking"] == "none":
             return
 
         if self.options["particle cracking"] == "no cracking":
