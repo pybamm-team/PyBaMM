@@ -4,12 +4,11 @@
 
 import pybamm
 import numpy as np
-# from pybamm.geometry import half_cell_spatial_vars
 
 pybamm.set_logging_level("INFO")
 
 # load model
-options = {"working electrode": "negative"}
+options = {"working electrode": "positive"}
 model = pybamm.lithium_ion.BasicDFNHalfCell(options=options)
 
 # create geometry
@@ -37,16 +36,6 @@ param.process_model(model)
 param.process_geometry(geometry)
 
 # set mesh
-# var = half_cell_spatial_vars
-# var_pts = {
-#     var.x_Li: 20,
-#     var.x_s: 200,
-#     var.x_w: 200,
-#     var.r_w: 30,
-#     var.y: 10,
-#     var.z: 10,
-# }
-
 var_pts = model.default_var_pts
 mesh = pybamm.Mesh(geometry, model.default_submesh_types, var_pts)
 
@@ -63,8 +52,7 @@ solution = solver.solve(model, t_eval)
 plot = pybamm.QuickPlot(
     solution,
     [
-        "Working particle surface concentration [mol.m-3]",
-        # "Working particle concentration [mol.m-3]",
+        "Working particle concentration [mol.m-3]",
         "Electrolyte concentration [mol.m-3]",
         "Current [A]",
         "Working electrode potential [V]",
