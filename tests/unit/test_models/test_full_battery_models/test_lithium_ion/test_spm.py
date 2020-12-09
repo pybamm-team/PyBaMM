@@ -132,12 +132,14 @@ class TestSPM(unittest.TestCase):
     def test_new_model(self):
         model = pybamm.lithium_ion.SPM({"thermal": "x-full"})
         new_model = model.new_copy()
-        self.assertEqual(new_model.submodels, model.submodels)
+        model_T_eqn = model.rhs[model.variables["Cell temperature"]]
+        new_model_T_eqn = new_model.rhs[new_model.variables["Cell temperature"]]
+        self.assertEqual(new_model_T_eqn.id, model_T_eqn.id)
         self.assertEqual(new_model.name, model.name)
         self.assertEqual(new_model.use_jacobian, model.use_jacobian)
         self.assertEqual(new_model.use_simplify, model.use_simplify)
         self.assertEqual(new_model.convert_to_format, model.convert_to_format)
-        self.assertEqual(new_model.timescale, model.timescale)
+        self.assertEqual(new_model.timescale.id, model.timescale.id)
 
         # with custom submodels
         model = pybamm.lithium_ion.SPM({"thermal": "x-full"}, build=False)
@@ -146,7 +148,9 @@ class TestSPM(unittest.TestCase):
         )
         model.build_model()
         new_model = model.new_copy()
-        self.assertEqual(new_model.submodels, model.submodels)
+        new_model_cs_eqn = list(new_model.rhs.values())[1]
+        model_cs_eqn = list(model.rhs.values())[1]
+        self.assertEqual(new_model_cs_eqn.id, model_cs_eqn.id)
 
 
 class TestSPMExternalCircuits(unittest.TestCase):
