@@ -749,6 +749,8 @@ def get_julia_mtk_model(model, geometry=None, tspan=None):
             "pde_system = PDESystem(eqs, ics_bcs, domains, ind_vars, dep_vars)\n\n"
         )
 
-    mtk_str += "end\n"
+    # Need to add 'nothing' to the end of the mtk string to avoid errors in MTK v4
+    # See https://github.com/SciML/diffeqpy/issues/82
+    mtk_str += "nothing\nend\n"
 
     return mtk_str
