@@ -220,7 +220,9 @@ class TestScipySolver(unittest.TestCase):
     def test_model_solver_with_multiple_inputs(self):
         # Create model
         model = pybamm.BaseModel()
-        model.convert_to_format = "python"
+        # Covert to casadi instead of python to avoid pickling of
+        # "EvaluatorPython" objects.
+        model.convert_to_format = "casadi"
         domain = ["negative electrode", "separator", "positive electrode"]
         var = pybamm.Variable("var", domain=domain)
         model.rhs = {var: -pybamm.InputParameter("rate") * var}
