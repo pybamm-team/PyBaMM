@@ -47,6 +47,7 @@ class FickianManyParticles(BaseParticle):
             N_s = -self.param.D_p(c_s, T) * pybamm.grad(c_s)
 
         variables.update(self._get_standard_flux_variables(N_s, N_s))
+        variables.update(self._get_total_concentration_variables(variables))
 
         return variables
 

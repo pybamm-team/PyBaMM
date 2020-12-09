@@ -39,6 +39,7 @@ class CrackPropagation(BaseCracking):
         return self._get_standard_variables(l_cr)
 
     def get_coupled_variables(self, variables):
+        variables.update(self._get_standard_surface_variables(variables))
         variables.update(self._get_mechanical_results(variables))
         T = variables[self.domain + " electrode temperature"]
         if self.domain == "Negative":

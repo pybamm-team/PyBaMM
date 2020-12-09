@@ -37,5 +37,6 @@ class NoCracking(BaseCracking):
         return variables
 
     def get_coupled_variables(self, variables):
+        variables.update(self._get_standard_surface_variables(variables))
         variables.update(self._get_mechanical_results(variables))
         return variables
