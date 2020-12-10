@@ -165,7 +165,6 @@ if system() != "Windows":
         "jaxlib==0.1.57",
     ]
 
-
 # Load text for description and license
 with open("README.md", encoding="utf-8") as f:
     readme = f.read()
@@ -197,7 +196,8 @@ setup(
         "scikit-fem>=0.2.0",
         "casadi>=3.5.0",
         *jax_dependencies,
-        "diffeqpy",
+        "diffeqpy>=1.1.0",  # For julia differential equations, also installs pyjulia.
+        # Can be installed even if julia is not installed
         "jupyter",  # For example notebooks
         # Note: Matplotlib is loaded for debug plots, but to ensure pybamm runs
         # on systems without an attached display, it should never be imported

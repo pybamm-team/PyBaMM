@@ -7,13 +7,16 @@ import unittest
 import numpy as np
 
 # julia imports
-from julia import Main
-from julia import Pkg
-from diffeqpy import de
+have_julia = pybamm.have_julia()
+if have_julia:
+    from julia import Main
+    from julia import Pkg
+    from diffeqpy import de
 
-Pkg.activate(".")
+    Pkg.activate(".")
 
 
+@unittest.skipIf(not have_julia, "Julia not installed")
 class TestCreateSolveMTKModel(unittest.TestCase):
     def test_exponential_decay_model(self):
         model = pybamm.BaseModel()

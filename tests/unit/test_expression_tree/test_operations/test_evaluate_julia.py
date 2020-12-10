@@ -8,9 +8,12 @@ import unittest
 import numpy as np
 import scipy.sparse
 
-from julia import Main
+have_julia = pybamm.have_julia()
+if have_julia:
+    from julia import Main
 
 
+@unittest.skipIf(not have_julia, "Julia not installed")
 class TestEvaluate(unittest.TestCase):
     def test_evaluator_julia(self):
         a = pybamm.StateVector(slice(0, 1))
