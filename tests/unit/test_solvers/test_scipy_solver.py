@@ -235,11 +235,31 @@ class TestScipySolver(unittest.TestCase):
         disc = pybamm.Discretisation(mesh, spatial_methods)
         disc.process_model(model)
 
-        # Solve
         solver = pybamm.ScipySolver(rtol=1e-8, atol=1e-8, method="RK45")
         t_eval = np.linspace(0, 10, 100)
         ninputs = 8
         inputs_list = [{"rate": 0.01 * (i + 1)} for i in range(ninputs)]
+
+        model.events = [
+            pybamm.Event(
+                "discontinuity",
+                pybamm.Scalar(t_eval[-1] / 2),
+                event_type=pybamm.EventType.DISCONTINUITY,
+            )
+        ]
+        with self.assertRaisesRegex(
+            pybamm.SolverError,
+            (
+                "Cannot solve for a list of input parameters"
+                " sets with discontinuities"
+            ),
+        ):
+            solutions = solver.solve(model, t_eval, inputs=inputs_list, nproc=2)
+
+        model.events = []
+        # Must set up model again to update attribute
+        # "discontinuity_events_eval" of object "model".
+        solver.set_up(model, inputs_list[0], t_eval)
         solutions = solver.solve(model, t_eval, inputs=inputs_list, nproc=2)
         for i in range(ninputs):
             with self.subTest(i=i):

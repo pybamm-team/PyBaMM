@@ -630,12 +630,10 @@ class BaseSolver(object):
                 "Discontinuity events found at t = {}".format(discontinuities)
             )
             if isinstance(inputs, list):
-                with RuntimeError as e:
-                    e.message = (
+                raise pybamm.SolverError(
                         "Cannot solve for a list of input parameters"
                         " sets with discontinuities"
                     )
-                    raise e
         else:
             pybamm.logger.info("No discontinuity events found")
 
