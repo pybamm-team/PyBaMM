@@ -52,6 +52,8 @@ class Experiment:
                  parameters=None,
                  period="1 minute",
                  drive_cycles={}):
+        import numpy as np
+        self._np = np
         self.period = self.convert_time_to_seconds(period.split())
         self.operating_conditions_strings = operating_conditions
         self.operating_conditions, self.events = self.read_operating_conditions(
@@ -121,37 +123,67 @@ class Experiment:
         else:
             period = self.period
         # Read instructions
-        if "for" in cond and "or until" in cond:
-            # e.g. for 3 hours or until 4.2 V
+        if "Run" in cond:
             cond_list = cond.split()
-            idx_for = cond_list.index("for")
-            idx_until = cond_list.index("or")
-            electric = self.convert_electric(cond_list[:idx_for])
-            time = self.convert_time_to_seconds(cond_list[idx_for + 1 : idx_until])
-            events = self.convert_electric(cond_list[idx_until + 2 :])
-        elif "for" in cond:
-            # e.g. for 3 hours
-            cond_list = cond.split()
-            idx = cond_list.index("for")
-            electric = self.convert_electric(cond_list[:idx])
-            time = self.convert_time_to_seconds(cond_list[idx + 1 :])
-            events = None
-        elif "until" in cond:
-            # e.g. until 4.2 V
-            cond_list = cond.split()
-            idx = cond_list.index("until")
-            electric = self.convert_electric(cond_list[:idx])
-            time = None
-            events = self.convert_electric(cond_list[idx + 1 :])
-        elif "Run" in cond:
-            # e.g. Run US06
-            cond_list = cond.split()
-            electric = (drive_cycles[cond_list[1]][:, 1], "Drive")
-            # Set time and period to 1 second
-            # because drive cycles are sampled at 1Hz frequency
-            time = 1
-            period = 1
-            events = None
+            # Check for Events
+            if "for" in cond and "or until" in cond:
+                # e.g. for 3 hours or until 4.2 V
+                idx_for = cond_list.index("for")
+                idx_until = cond_list.index("or")
+                end_time = self.convert_time_to_seconds(cond_list[idx_for + 1 : idx_until])
+                ext_drive_cycle = self.extend_drive_cycle(drive_cycles[cond_list[1]], end_time)
+                electric = (ext_drive_cycle[:, 1], "Drive")
+                time = self._np.append(1, self._np.diff(ext_drive_cycle[:, 0]))
+                period = time
+                events = self.convert_electric(cond_list[idx_until + 2 :]) # Single Value 
+            elif "for" in cond:
+                # e.g. for 3 hours
+                idx = cond_list.index("for")
+                end_time = self.convert_time_to_seconds(cond_list[idx + 1 :])
+                ext_drive_cycle = self.extend_drive_cycle(drive_cycles[cond_list[1]], end_time)
+                electric = (ext_drive_cycle[:, 1], "Drive")
+                time = self._np.append(1, self._np.diff(ext_drive_cycle[:, 0]))
+                period = time
+                events = None
+            elif "until" in cond:
+                # e.g. until 4.2 V
+                idx = cond_list.index("until")
+                ext_drive_cycle = self.extend_drive_cycle(drive_cycles[cond_list[1]])
+                electric = (ext_drive_cycle[:, 1], "Drive")
+                time = self._np.append(1, self._np.diff(ext_drive_cycle[:, 0]))
+                period = time
+                events = self.convert_electric(cond_list[idx + 1 :])
+            else:
+                # e.g. Run US06
+                electric = (drive_cycles[cond_list[1]][:, 1], "Drive")
+                # Set time and period to 1 second for first step and
+                # then calculate the difference in consecutive time steps
+                time = self._np.append(1, self._np.diff(drive_cycles[cond_list[1]][:,0]))
+                period = time
+                events = None
+        elif "Run" not in cond:
+            if "for" in cond and "or until" in cond:
+                # e.g. for 3 hours or until 4.2 V
+                cond_list = cond.split()
+                idx_for = cond_list.index("for")
+                idx_until = cond_list.index("or")
+                electric = self.convert_electric(cond_list[:idx_for])
+                time = self.convert_time_to_seconds(cond_list[idx_for + 1 : idx_until])
+                events = self.convert_electric(cond_list[idx_until + 2 :])
+            elif "for" in cond:
+                # e.g. for 3 hours
+                cond_list = cond.split()
+                idx = cond_list.index("for")
+                electric = self.convert_electric(cond_list[:idx])
+                time = self.convert_time_to_seconds(cond_list[idx + 1 :])
+                events = None
+            elif "until" in cond:
+                # e.g. until 4.2 V
+                cond_list = cond.split()
+                idx = cond_list.index("until")
+                electric = self.convert_electric(cond_list[:idx])
+                time = None
+                events = self.convert_electric(cond_list[idx + 1 :])
         else:
             raise ValueError(
                 """Operating conditions must contain keyword 'for' or 'until' or 'Run'.
@@ -160,6 +192,31 @@ class Experiment:
                 )
             )
         return electric + (time,) + (period,), events
+
+    def extend_drive_cycle(self, drive_cycle, end_time = None):
+        "Extends the drive cycle to enable until and for events"
+        temp_time = []
+        temp_time.append(drive_cycle[:,0])
+        loop_end_time = temp_time[0][-1]
+        i=1
+        if end_time is None:
+            # Extend for 1 week.
+            end_time = 7*24*60*60
+        else:
+            while loop_end_time <= end_time:
+                # Extend the drive cycle until the drive cycle time
+                # becomes greater than specified end time
+                temp_time.append(self._np.append(temp_time[i-1], temp_time[0]+temp_time[i-1][-1]+1))
+                loop_end_time = temp_time[i][-1]
+                i += 1
+        time = temp_time[-1]
+        drive_data = self._np.tile(drive_cycle[:, 1], i)
+        # Combine the drive cycle time and data
+        ext_drive_cycle = self._np.column_stack((time, drive_data))
+        # Limit the drive cycle to the specified end_time
+        ext_drive_cycle = ext_drive_cycle[ext_drive_cycle[:,0] <= end_time]
+        del temp_time
+        return ext_drive_cycle
 
     def convert_electric(self, electric):
         "Convert electrical instructions to consistent output"
