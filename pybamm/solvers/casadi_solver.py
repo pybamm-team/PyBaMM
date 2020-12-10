@@ -18,15 +18,15 @@ class CasadiSolver(pybamm.BaseSolver):
     mode : str
         How to solve the model (default is "safe"):
 
-        - "fast": perform direct integration, without accounting for events. \
-        Recommended when simulating a drive cycle or other simulation where \
-        no events should be triggered.
-        - "safe": perform step-and-check integration in global steps of size \
-        dt_max, checking whether events have been triggered. Recommended for \
-        simulations of a full charge or discharge.
-        - "safe without grid": perform step-and-check integration step-by-step. \
-        Takes more steps than "safe" mode, but doesn't require creating the grid \
-        each time, so may be faster. Experimental only.
+            - "fast": perform direct integration, without accounting for events. \
+            Recommended when simulating a drive cycle or other simulation where \
+            no events should be triggered.
+            - "safe": perform step-and-check integration in global steps of size \
+            dt_max, checking whether events have been triggered. Recommended for \
+            simulations of a full charge or discharge.
+            - "safe without grid": perform step-and-check integration step-by-step. \
+            Takes more steps than "safe" mode, but doesn't require creating the grid \
+            each time, so may be faster. Experimental only.
     rtol : float, optional
         The relative tolerance for the solver (default is 1e-6).
     atol : float, optional
@@ -276,7 +276,11 @@ class CasadiSolver(pybamm.BaseSolver):
                     # assign temporary solve time
                     current_step_sol.solve_time = np.nan
                     # append solution from the current step to solution
-                    solution.append(current_step_sol)
+                    if solution is None:
+                        solution = current_step_sol
+                    else:
+                        # append solution from the current step to solution
+                        solution.append(current_step_sol)
                     solution.termination = "event"
                     solution.t_event = t_event
                     solution.y_event = y_event
