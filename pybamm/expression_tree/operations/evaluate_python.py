@@ -313,16 +313,16 @@ def find_symbols(symbol, constant_symbols, variable_symbols, output_jax=False):
 
     elif isinstance(symbol, pybamm.Concatenation):
 
-        # don't bother to concatenate if there is only a single child
+        # no need to concatenate if there is only a single child
         if isinstance(symbol, pybamm.NumpyConcatenation):
             if len(children_vars) == 1:
-                symbol_str = children_vars
+                symbol_str = children_vars[0]
             else:
                 symbol_str = "np.concatenate(({}))".format(",".join(children_vars))
 
         elif isinstance(symbol, pybamm.SparseStack):
             if len(children_vars) == 1:
-                symbol_str = children_vars
+                symbol_str = children_vars[0]
             else:
                 if output_jax:
                     raise NotImplementedError
