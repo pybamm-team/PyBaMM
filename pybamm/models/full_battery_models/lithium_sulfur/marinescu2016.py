@@ -234,6 +234,26 @@ class MarinescuEtAl2016(BaseModel):
             self.algebraic = {I: control_function(self.variables)}
             self.initial_conditions[I] = pybamm.Parameter("Current function [A]")
 
+            # Add events to catch cut-offs defined by experiments
+            self.events.extend(
+                [
+                    pybamm.Event(
+                        "Current cut-off (positive) [A] [experiment]",
+                        I - abs(pybamm.InputParameter("Current cut-off [A]")),
+                    ),
+                    pybamm.Event(
+                        "Current cut-off (negative) [A] [experiment]",
+                        I + abs(pybamm.InputParameter("Current cut-off [A]")),
+                    ),
+                    pybamm.Event(
+                        "Voltage cut-off [V] [experiment]",
+                        V
+                        - pybamm.InputParameter("Voltage cut-off [V]")
+                        / self.param.n_cells,
+                    ),
+                ]
+            )
+
         # Add variable for discharge capacity
         Q = pybamm.Variable("Discharge capacity [A.h]")
         self.variables.update({"Discharge capacity [A.h]": Q})
