@@ -7,18 +7,24 @@ experiment = pybamm.Experiment(
         "Rest for 1 hour",
         "Charge at 1 A until 4.1 V",
         "Hold at 4.1 V until 50 mA",
-        "Rest for 1 hour",
+        #    "Rest for 1 hour",
     ]
-    * 1
+    * 1,
+    period="30 minutes",
 )
 model = pybamm.lithium_ion.DFN()
 sim = pybamm.Simulation(model, experiment=experiment)
 
-solvers = [pybamm.CasadiSolver(), pybamm.CasadiSolver(return_event=True)]
+solvers = [
+    pybamm.CasadiSolver(),
+    # pybamm.CasadiSolver(return_event=True)
+]
 sols = []
 
 for solver in solvers:
     sol = sim.solve(solver=solver)
     sols.append(sol)
+
+c_n = sol["Negative particle surface concentration"]
 
 pybamm.dynamic_plot(sols, ["Negative particle surface concentration"])
