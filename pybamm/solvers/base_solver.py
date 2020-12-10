@@ -584,6 +584,11 @@ class BaseSolver(object):
 
         # Set up (if not done already)
         if model not in self.models_set_up:
+            # It is assumed that when len(inputs_list) > 1, model set
+            # up (initial condition, time-scale and length-scale) does
+            # not depend on input parameters. Thefore only `ext_and_inputs[0]`
+            # is passed to `set_up`.
+            # See https://github.com/pybamm-team/PyBaMM/pull/1261
             self.set_up(model, ext_and_inputs_list[0], t_eval)
             self.models_set_up.update(
                 {model: {"initial conditions": model.concatenated_initial_conditions}}
@@ -603,6 +608,10 @@ class BaseSolver(object):
         timer.reset()
 
         # (Re-)calculate consistent initial conditions
+        # Assuming initial conditions do not depend on input parameters
+        # when len(inputs_list) > 1, only `ext_and_inputs_list[0]`
+        # is passed to `_set_initial_conditions`.
+        # See https://github.com/pybamm-team/PyBaMM/pull/1261
         self._set_initial_conditions(model, ext_and_inputs_list[0], update_rhs=True)
 
         # Non-dimensionalise time
@@ -610,6 +619,10 @@ class BaseSolver(object):
 
         # Calculate discontinuities
         discontinuities = [
+            # Assuming that discontinuities do not depend on
+            # input parameters when len(input_list) > 1, only
+            # `input_list[0]` is passed to `evaluate`.
+            # See https://github.com/pybamm-team/PyBaMM/pull/1261
             event.expression.evaluate(inputs=inputs_list[0])
             for event in model.discontinuity_events_eval
         ]
