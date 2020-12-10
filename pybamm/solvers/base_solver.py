@@ -520,11 +520,11 @@ class BaseSolver(object):
             parameters. Defaults to value returned by "os.cpu_count()".
 
         Returns
-        ------- 
+        -------
         :class:`pybamm.Solution` or list of :class:`pybamm.Solution` objects.
-             If type of `inputs` is `list`, return a list of corresponding 
+             If type of `inputs` is `list`, return a list of corresponding
              :class:`pybamm.Solution` objects.
-            
+
 
         Raises
         ------
@@ -650,9 +650,9 @@ class BaseSolver(object):
             )
             if isinstance(inputs, list):
                 raise pybamm.SolverError(
-                        "Cannot solve for a list of input parameters"
-                        " sets with discontinuities"
-                    )
+                    "Cannot solve for a list of input parameters"
+                    " sets with discontinuities"
+                )
         else:
             pybamm.logger.info("No discontinuity events found")
 
@@ -706,9 +706,9 @@ class BaseSolver(object):
                             ext_and_inputs_list,
                         ),
                     )
-            # Setting the solve time for each segment
-            # Not sure why required here since overall solve time
-            # is set further down
+            # Setting the solve time for each segment.
+            # pybamm.Solution.append assumes attribute
+            # solve_time.
             solve_time = timer.time()
             for sol in new_solutions:
                 sol.solve_time = solve_time
