@@ -6,6 +6,17 @@ import unittest
 
 
 class TestSimulation(unittest.TestCase):
+    def test_simple_model(self):
+        model = pybamm.BaseModel()
+        v = pybamm.Variable("v")
+        a = pybamm.Parameter("a")
+        model.rhs = {v: -a * v}
+        model.initial_conditions = {v: 1}
+        param = pybamm.ParameterValues({"a": 1})
+        sim = pybamm.Simulation(model, parameter_values=param)
+        sol = sim.solve([0, 1])
+        np.testing.assert_array_almost_equal(sol.y[0], np.exp(-sol.t), decimal=5)
+
     def test_basic_ops(self):
 
         model = pybamm.lithium_ion.SPM()

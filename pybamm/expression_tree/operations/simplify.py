@@ -569,10 +569,7 @@ class Simplification(object):
 
     def simplify(self, symbol, clear_domains=True):
         """
-        This function recurses down the tree, applying any simplifications defined in
-        classes derived from pybamm.Symbol. E.g. any expression multiplied by a
-        pybamm.Scalar(0) will be simplified to a pybamm.Scalar(0).
-        If a symbol has already been simplified, the stored value is returned.
+        This function recurses down the tree, applying any simplifications necessary.
 
         Parameters
         ----------
@@ -584,7 +581,7 @@ class Simplification(object):
         Returns
         -------
         :class:`pybamm.Symbol`
-        Simplified symbol
+            Simplified symbol
         """
 
         try:

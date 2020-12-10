@@ -2,6 +2,7 @@
 # Base model class
 #
 import casadi
+import numpy as np
 import numbers
 import pybamm
 import warnings
@@ -313,10 +314,12 @@ class BaseModel(object):
     def __getitem__(self, key):
         return self.rhs[key]
 
-    def new_copy(self, build=False):
+    def new_empty_copy(self):
         """
-        Create an empty copy with identical options, or new options if specified.
-        The 'build' parameter is included for compatibility with subclasses, but unused.
+        Create an empty copy of the model with the same name and "parameters"
+        (convert_to_format, etc), but empty equations and variables.
+        This is usually then called by :class:`pybamm.ParameterValues`,
+        :class:`pybamm.Discretisation`, or :class:`pybamm.SymbolReplacer`.
         """
         new_model = self.__class__(name=self.name)
         new_model.use_jacobian = self.use_jacobian
@@ -325,6 +328,14 @@ class BaseModel(object):
         new_model.timescale = self.timescale
         new_model.length_scales = self.length_scales
         return new_model
+
+    def new_copy(self):
+        """
+        Creates an identical copy of the model, using the functionality of
+        :class:`pybamm.SymbolReplacer` but without performing any replacements
+        """
+        replacer = pybamm.SymbolReplacer({})
+        return replacer.process_model(self, inplace=False)
 
     def update(self, *submodels):
         """
@@ -347,6 +358,61 @@ class BaseModel(object):
             )
             self.variables.update(submodel.variables)  # keys are strings so no check
             self._events += submodel.events
+
+    def set_initial_conditions_from(self, solution, inplace=True):
+        """
+        Update initial conditions with the final states from a Solution object or from
+        a dictionary.
+        This assumes that, for each variable in self.initial_conditions, there is a
+        corresponding variable in the solution with the same name and size.
+
+        Parameters
+        ----------
+        solution : :class:`pybamm.Solution`, or dict
+            The solution to use to initialize the model
+        inplace : bool
+            Whether to modify the model inplace or create a new model
+        """
+        if inplace is True:
+            model = self
+        else:
+            model = self.new_copy()
+
+        for var, equation in model.initial_conditions.items():
+            if isinstance(var, pybamm.Variable):
+                final_state = solution[var.name]
+                if isinstance(solution, pybamm.Solution):
+                    final_state = final_state.data
+                if final_state.ndim == 1:
+                    final_state_eval = np.array([final_state[-1]])
+                elif final_state.ndim == 2:
+                    final_state_eval = final_state[:, -1]
+                elif final_state.ndim == 3:
+                    final_state_eval = final_state[:, :, -1].flatten()
+                else:
+                    raise NotImplementedError("Variable must be 0D, 1D, or 2D")
+                model.initial_conditions[var] = pybamm.Vector(final_state_eval)
+            elif isinstance(var, pybamm.Concatenation):
+                children = []
+                for child in var.orphans:
+                    final_state = solution[child.name]
+                    if isinstance(solution, pybamm.Solution):
+                        final_state = final_state.data
+                    if final_state.ndim == 2:
+                        final_state_eval = final_state[:, -1]
+                    else:
+                        raise NotImplementedError(
+                            "Variable in concatenation must be 1D"
+                        )
+                    children.append(final_state_eval)
+                model.initial_conditions[var] = pybamm.Vector(np.concatenate(children))
+
+            else:
+                raise NotImplementedError(
+                    "Variable must have type 'Variable' or 'Concatenation'"
+                )
+
+        return model
 
     def check_and_combine_dict(self, dict1, dict2):
         # check that the key ids are distinct
