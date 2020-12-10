@@ -499,8 +499,7 @@ class BaseSolver(object):
     def solve(
         self, model, t_eval=None, external_variables=None, inputs=None, nproc=None
     ):
-        """
-        Execute the solver setup and calculate the solution of the model at
+        """Execute the solver setup and calculate the solution of the model at
         specified times.
 
         Parameters
@@ -519,6 +518,13 @@ class BaseSolver(object):
         nproc : int, optional
             Number of processes to use when solving for more than one set of input
             parameters. Defaults to value returned by "os.cpu_count()".
+
+        Returns
+        ------- 
+        :class:`pybamm.Solution` or list of :class:`pybamm.Solution` objects.
+             If type of `inputs` is `list`, return a list of corresponding 
+             :class:`pybamm.Solution` objects.
+            
 
         Raises
         ------
