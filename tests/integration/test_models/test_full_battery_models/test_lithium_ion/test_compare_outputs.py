@@ -11,7 +11,7 @@ class TestCompareOutputs(unittest.TestCase):
     def test_compare_outputs_surface_form(self):
         # load models
         options = [
-            {"surface form": cap} for cap in [False, "differential", "algebraic"]
+            {"surface form": cap} for cap in ["false", "differential", "algebraic"]
         ]
         model_combos = [
             ([pybamm.lithium_ion.SPM(opt) for opt in options]),

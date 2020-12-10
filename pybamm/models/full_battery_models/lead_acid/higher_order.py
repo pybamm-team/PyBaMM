@@ -153,12 +153,16 @@ class BaseHigherOrderModel(BaseModel):
         self.submodels["negative interface"] = pybamm.interface.FirstOrderKinetics(
             self.param,
             "Negative",
-            pybamm.interface.ButlerVolmer(self.param, "Negative", "lead-acid main"),
+            pybamm.interface.ButlerVolmer(
+                self.param, "Negative", "lead-acid main", self.options
+            ),
         )
         self.submodels["positive interface"] = pybamm.interface.FirstOrderKinetics(
             self.param,
             "Positive",
-            pybamm.interface.ButlerVolmer(self.param, "Positive", "lead-acid main"),
+            pybamm.interface.ButlerVolmer(
+                self.param, "Positive", "lead-acid main", self.options
+            ),
         )
 
         # Oxygen
@@ -169,7 +173,7 @@ class BaseHigherOrderModel(BaseModel):
                 self.param,
                 "Positive",
                 pybamm.interface.ForwardTafel(
-                    self.param, "Positive", "lead-acid oxygen"
+                    self.param, "Positive", "lead-acid oxygen", self.options
                 ),
             )
             self.submodels[
@@ -183,7 +187,7 @@ class BaseHigherOrderModel(BaseModel):
         Update convection submodel, now that we have the spatially heterogeneous
         interfacial current densities
         """
-        if self.options["convection"] is not False:
+        if self.options["convection"] != "none":
             self.submodels[
                 "through-cell convection"
             ] = pybamm.convection.through_cell.Explicit(self.param)

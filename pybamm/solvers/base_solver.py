@@ -497,7 +497,14 @@ class BaseSolver(object):
             y0 = y0.flatten()
         return y0
 
-    def solve(self, model, t_eval=None, external_variables=None, inputs=None):
+    def solve(
+        self,
+        model,
+        t_eval=None,
+        external_variables=None,
+        inputs=None,
+        initial_conditions=None,
+    ):
         """
         Execute the solver setup and calculate the solution of the model at
         specified times.
@@ -514,6 +521,10 @@ class BaseSolver(object):
             values at the current time
         inputs : dict, optional
             Any input parameters to pass to the model when solving
+        initial_conditions : :class:`pybamm.Symbol`, optional
+            Initial conditions to use when solving the model. If None (default),
+            `model.concatenated_initial_conditions` is used. Otherwise, must be a symbol
+            of size `len(model.rhs) + len(model.algebraic)`.
 
         Raises
         ------
