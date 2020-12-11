@@ -286,7 +286,7 @@ class TestScipySolver(unittest.TestCase):
                 " sets with discontinuities"
             ),
         ):
-            solutions = solver.solve(model, t_eval, inputs=inputs_list, nproc=2)
+            solver.solve(model, t_eval, inputs=inputs_list, nproc=2)
 
     def test_model_solver_multiple_inputs_initial_conditions_error(self):
         # Create model
@@ -318,7 +318,7 @@ class TestScipySolver(unittest.TestCase):
                 "for initial conditions."
             ),
         ):
-            solutions = solver.solve(model, t_eval, inputs=inputs_list, nproc=2)
+            solver.solve(model, t_eval, inputs=inputs_list, nproc=2)
 
     def test_model_solver_with_external(self):
         # Create model
