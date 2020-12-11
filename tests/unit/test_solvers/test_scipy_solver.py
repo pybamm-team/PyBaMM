@@ -217,7 +217,39 @@ class TestScipySolver(unittest.TestCase):
         np.testing.assert_array_equal(solution.t, t_eval[: len(solution.t)])
         np.testing.assert_allclose(solution.y[0], np.exp(-0.1 * solution.t))
 
-    def test_model_solver_with_multiple_inputs(self):
+    def test_model_solver_multiple_inputs_happy_path(self):
+        # Create model
+        model = pybamm.BaseModel()
+        # Covert to casadi instead of python to avoid pickling of
+        # "EvaluatorPython" objects.
+        model.convert_to_format = "casadi"
+        domain = ["negative electrode", "separator", "positive electrode"]
+        var = pybamm.Variable("var", domain=domain)
+        model.rhs = {var: -pybamm.InputParameter("rate") * var}
+        model.initial_conditions = {var: 1}
+        # No need to set parameters; can use base discretisation (no spatial
+        # operators)
+        # create discretisation
+        mesh = get_mesh_for_testing()
+        spatial_methods = {"macroscale": pybamm.FiniteVolume()}
+        disc = pybamm.Discretisation(mesh, spatial_methods)
+        disc.process_model(model)
+
+        solver = pybamm.ScipySolver(rtol=1e-8, atol=1e-8, method="RK45")
+        t_eval = np.linspace(0, 10, 100)
+        ninputs = 8
+        inputs_list = [{"rate": 0.01 * (i + 1)} for i in range(ninputs)]
+
+        solutions = solver.solve(model, t_eval, inputs=inputs_list, nproc=2)
+        for i in range(ninputs):
+            with self.subTest(i=i):
+                solution = solutions[i]
+                np.testing.assert_array_equal(solution.t, t_eval)
+                np.testing.assert_allclose(
+                    solution.y[0], np.exp(-0.01 * (i + 1) * solution.t)
+                )
+
+    def test_model_solver_multiple_inputs_discontinuity_error(self):
         # Create model
         model = pybamm.BaseModel()
         # Covert to casadi instead of python to avoid pickling of
@@ -256,18 +288,6 @@ class TestScipySolver(unittest.TestCase):
         ):
             solutions = solver.solve(model, t_eval, inputs=inputs_list, nproc=2)
 
-        model.events = []
-        # Must set up model again to update attribute
-        # "discontinuity_events_eval" of object "model".
-        solver.set_up(model, inputs_list[0], t_eval)
-        solutions = solver.solve(model, t_eval, inputs=inputs_list, nproc=2)
-        for i in range(ninputs):
-            with self.subTest(i=i):
-                solution = solutions[i]
-                np.testing.assert_array_equal(solution.t, t_eval)
-                np.testing.assert_allclose(
-                    solution.y[0], np.exp(-0.01 * (i + 1) * solution.t)
-                )
 
     def test_model_solver_with_external(self):
         # Create model
