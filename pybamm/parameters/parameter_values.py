@@ -536,7 +536,19 @@ class ParameterValues:
                 raise TypeError("Cannot process parameter '{}'".format(value))
 
         elif isinstance(symbol, pybamm.FunctionParameter):
-            new_children = [self.process_symbol(child) for child in symbol.children]
+            new_children = []
+            for child in symbol.children:
+                if symbol.diff_variable is not None and any(
+                    x.id == symbol.diff_variable.id for x in child.pre_order()
+                ):
+                    # Add 0 * t to child to avoid simplification, which would stop
+                    # symbolic diff from working properly
+                    new_child = pybamm.Addition(
+                        child.new_copy(), pybamm.Multiplication(0, pybamm.t)
+                    )
+                    new_children.append(self.process_symbol(new_child))
+                else:
+                    new_children.append(self.process_symbol(child))
             function_name = self[symbol.name]
 
             # Create Function or Interpolant or Scalar object
@@ -575,6 +587,9 @@ class ParameterValues:
                 # return differentiated function
                 new_diff_variable = self.process_symbol(symbol.diff_variable)
                 function_out = function.diff(new_diff_variable)
+                # Simplify the function to get rid of potential 0 * t added above
+                if pybamm.settings.simplify is True:
+                    function_out = function_out.simplify()
             # Convert possible float output to a pybamm scalar
             if isinstance(function_out, numbers.Number):
                 return pybamm.Scalar(function_out)
