@@ -622,6 +622,21 @@ class BaseSolver(object):
         # when len(inputs_list) > 1, only `ext_and_inputs_list[0]`
         # is passed to `_set_initial_conditions`.
         # See https://github.com/pybamm-team/PyBaMM/pull/1261
+        if len(inputs_list) > 1:
+            all_inputs_names = set(
+                itertools.chain.from_iterable(
+                    [ext_and_inputs.keys() for ext_and_inputs in ext_and_inputs_list]
+                )
+            )
+            initial_conditions_node_names = set(
+                [it.name for it in model.concatenated_initial_conditions.pre_order()]
+            )
+            if all_inputs_names.issubset(initial_conditions_node_names):
+                raise pybamm.SolverError(
+                    "Input parameters cannot appear in expression "
+                    "for initial conditions."
+                )
+
         self._set_initial_conditions(model, ext_and_inputs_list[0], update_rhs=True)
 
         # Non-dimensionalise time
