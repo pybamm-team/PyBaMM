@@ -34,11 +34,44 @@ class VaryingUniform(BaseModel):
 
     def get_coupled_variables(self, variables):
         domain = self.domain.lower() + " electrode"
-        # This submodel only contains the structure to allow the active material volume
-        # fraction to vary, it does not implement an actual model for LAM.
-        # As a placeholder, we use deps_dt = 0 * j
-        j_xav = variables["X-averaged " + domain + " interfacial current density"]
-        deps_solid_dt_xav = 0 * j_xav
+        # This is loss of active material model by mechanical effects
+        if (
+            "X-averaged " + self.domain.lower() + " particle surface tangential stress"
+            in variables
+        ):
+            stress_t_surf = variables[
+                "X-averaged "
+                + self.domain.lower()
+                + " particle surface tangential stress"
+            ]
+            stress_t_surf *= stress_t_surf > 0
+            stress_r_surf = variables[
+                "X-averaged " + self.domain.lower() + " particle surface radial stress"
+            ]
+            stress_r_surf *= stress_r_surf > 0
+        else:
+            stress_t_surf = pybamm.Scalar(0)
+            stress_r_surf = stress_t_surf
+        if self.domain == "Negative":
+            beta_LAM = self.param.beta_LAM_n
+            stress_critical = self.param.stress_critical_n
+            m_LAM = self.param.m_LAM_n
+        else:
+            beta_LAM = self.param.beta_LAM_p
+            stress_critical = self.param.stress_critical_p
+            m_LAM = self.param.m_LAM_p
+        stress_h_surf = (stress_r_surf + 2 * stress_t_surf) / 3
+        # assuming the minimum hydrostatic stress is zero
+        stress_h_surf_min = stress_h_surf * 0
+        deps_solid_dt_xav = (
+            -beta_LAM
+            * pybamm.Power(
+                (stress_h_surf - stress_h_surf_min) / stress_critical,
+                m_LAM,
+            )
+            / self.param.t0_cr
+        )
+
         deps_solid_dt = pybamm.PrimaryBroadcast(deps_solid_dt_xav, domain)
         variables.update(
             self._get_standard_active_material_change_variables(deps_solid_dt)

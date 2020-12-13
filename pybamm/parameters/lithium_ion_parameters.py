@@ -266,6 +266,18 @@ class LithiumIonParameters:
         )
         # intermediate variable  [K*m^3/mol]
 
+        # loss of active material parameters
+        self.m_LAM_n = pybamm.Parameter("Negative electrode LAM constant m")
+        self.beta_LAM_n = pybamm.Parameter("Negative electrode LAM constant beta")
+        self.stress_critical_n_dim = pybamm.Parameter(
+            "Negative electrode critical stress [Pa]"
+        )
+        self.m_LAM_p = pybamm.Parameter("Positive electrode LAM constant m")
+        self.beta_LAM_p = pybamm.Parameter("Positive electrode LAM constant beta")
+        self.stress_critical_p_dim = pybamm.Parameter(
+            "Positive electrode critical stress [Pa]"
+        )
+
     def D_e_dimensional(self, c_e, T):
         "Dimensional diffusivity in electrolyte"
         inputs = {"Electrolyte concentration [mol.m-3]": c_e, "Temperature [K]": T}
@@ -731,6 +743,8 @@ class LithiumIonParameters:
         self.c_n_0 = self.c_n_0_dim / self.c_n_max
         self.t0_cr = 3600 / self.C_rate / self.timescale
         # nomarlised typical time for one cycle
+        self.stress_critical_n = self.stress_critical_n_dim / self.E_n
+        self.stress_critical_p = self.stress_critical_p_dim / self.E_p
 
     def chi(self, c_e, T):
         """

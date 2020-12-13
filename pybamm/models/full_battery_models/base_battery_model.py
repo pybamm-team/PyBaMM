@@ -383,7 +383,13 @@ class BaseBatteryModel(pybamm.BaseModel):
                 )
             )
 
-        if options["loss of active material"] not in ["none", "example"]:
+        if options["loss of active material"] not in [
+            "none",
+            "example",
+            "anode",
+            "cathode",
+            "both",
+        ]:
             raise pybamm.OptionError(
                 "Unknown loss of active material '{}'".format(
                     options["loss of active material"]
