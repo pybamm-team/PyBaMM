@@ -545,12 +545,6 @@ class BaseSolver(object):
         """
         pybamm.logger.info("Start solving {} with {}".format(model.name, self.name))
 
-        # Cannot use multiprocessing with model in "jax" format
-        if(len(inputs) > 1) and model.convert_to_format == "jax":
-            raise pybamm.SolverError(
-                "Cannot solve list of inputs with multiprocessing "
-                "when model in format \"jax\"."
-            )
         # Make sure model isn't empty
         if len(model.rhs) == 0 and len(model.algebraic) == 0:
             if not isinstance(self, pybamm.DummySolver):
@@ -594,6 +588,13 @@ class BaseSolver(object):
             self._set_up_ext_and_inputs(model, external_variables, inputs)
             for inputs in inputs_list
         ]
+
+        # Cannot use multiprocessing with model in "jax" format
+        if(len(inputs_list) > 1) and model.convert_to_format == "jax":
+            raise pybamm.SolverError(
+                "Cannot solve list of inputs with multiprocessing "
+                "when model in format \"jax\"."
+            )
 
         # Set up
         timer = pybamm.Timer()
