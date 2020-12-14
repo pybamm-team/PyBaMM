@@ -20,6 +20,15 @@ class VaryingUniform(BaseModel):
         Additional options to pass to the model
 
     **Extends:** :class:`pybamm.active_material.BaseModel`
+
+    References
+    ----------
+    .. [1] Ai, W., Kraft, L., Sturm, J., Jossen, A., & Wu, B. (2019). Electrochemical
+           Thermal-Mechanical Modelling of Stress Inhomogeneity in Lithium-Ion Pouch
+           Cells. Journal of The Electrochemical Society, 167(1), 013512.
+    .. [2] Reniers, J. M., Mulder, G., & Howey, D. A. (2019). Review and performance
+           comparison of mechanical-chemical degradation models for lithium-ion
+           batteries. Journal of The Electrochemical Society, 166(14), A3189.
     """
 
     def get_fundamental_variables(self):
