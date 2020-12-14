@@ -2,6 +2,7 @@
 
 ## Features
 
+-   Solver method `solve()` can take a list of inputs as the `inputs` keyword argument, in the form of a list of dictionaries. In this case the model is solved for each element in the list, and `solve()` returns a list of solutions mapping the set of inputs to the solutions of the model. Note that `solve()` can still take a single dictionary as the `inputs` keyword argument. In this case the behaviour is unchanged compared to previous versions.
 -   Added option to make the total interfacial current density a state ([#1280](https://github.com/pybamm-team/PyBaMM/pull/1280))
 -   Added functionality to initialize a model using the solution from another model ([#1278](https://github.com/pybamm-team/PyBaMM/pull/1278))
 -   Added submodels for active material ([#1262](https://github.com/pybamm-team/PyBaMM/pull/1262))
@@ -9,6 +10,7 @@
 
 ## Optimizations
 
+-   If solver method `solve()` is passed a list of inputs as the `inputs` keyword argument, the resolution of the model for each input set is spread acrosss several Python processes, usually running in parallel on different processors. The default number of processes is the number of processors available. `solve()` takes a new keyword argument `nproc` which can be used to set this number a manually.
 -   Operations such as `1*x` and `0+x` now directly return `x` ([#1252](https://github.com/pybamm-team/PyBaMM/pull/1252))
 
 ## Bug fixes
