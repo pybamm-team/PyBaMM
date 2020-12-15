@@ -2,6 +2,7 @@
 
 ## Features
 
+-   Reformatted the `BasicDFNHalfCell` to be consistent with the other models ([#1282](https://github.com/pybamm-team/PyBaMM/pull/1282))
 -   Added option to make the total interfacial current density a state ([#1280](https://github.com/pybamm-team/PyBaMM/pull/1280))
 -   Added functionality to initialize a model using the solution from another model ([#1278](https://github.com/pybamm-team/PyBaMM/pull/1278))
 -   Added submodels for active material ([#1262](https://github.com/pybamm-team/PyBaMM/pull/1262))
@@ -14,6 +15,7 @@
 ## Bug fixes
 
 -   Fixed `Simulation` and `model.new_copy` to fix a bug where changes to the model were overwritten ([#1278](https://github.com/pybamm-team/PyBaMM/pull/1278))
+
 ## Breaking changes
 
 -   Boolean model options ('sei porosity change', 'convection') must now be given in string format ('true' or 'false' instead of True or False) ([#1280](https://github.com/pybamm-team/PyBaMM/pull/1280))
