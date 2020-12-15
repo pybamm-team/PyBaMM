@@ -54,7 +54,7 @@ class TestCompareOutputs(unittest.TestCase):
         """
         # load models
         options = [
-            {"surface form": cap} for cap in [False, "differential", "algebraic"]
+            {"surface form": cap} for cap in ["false", "differential", "algebraic"]
         ]
         model_combos = [
             ([pybamm.lead_acid.LOQS(opt) for opt in options]),

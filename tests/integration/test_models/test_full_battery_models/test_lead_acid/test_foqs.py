@@ -10,15 +10,14 @@ import numpy as np
 
 class TestLeadAcidFOQS(unittest.TestCase):
     def test_basic_processing(self):
-        options = {"thermal": "isothermal", "convection": False}
-        model = pybamm.lead_acid.FOQS(options)
+        model = pybamm.lead_acid.FOQS()
         param = model.default_parameter_values
         param.update({"Current function [A]": 1})
         modeltest = tests.StandardModelTest(model, parameter_values=param)
         modeltest.test_all()
 
     def test_basic_processing_with_convection(self):
-        options = {"thermal": "isothermal", "convection": "uniform transverse"}
+        options = {"convection": "uniform transverse"}
         model = pybamm.lead_acid.FOQS(options)
         param = model.default_parameter_values
         param.update({"Current function [A]": 1})
@@ -26,8 +25,7 @@ class TestLeadAcidFOQS(unittest.TestCase):
         modeltest.test_all()
 
     def test_optimisations(self):
-        options = {"thermal": "isothermal", "convection": False}
-        model = pybamm.lead_acid.FOQS(options)
+        model = pybamm.lead_acid.FOQS()
         optimtest = tests.OptimisationsTest(model)
 
         original = optimtest.evaluate_model()
@@ -41,8 +39,7 @@ class TestLeadAcidFOQS(unittest.TestCase):
         np.testing.assert_array_almost_equal(original, simp_and_python)
 
     def test_set_up(self):
-        options = {"thermal": "isothermal", "convection": False}
-        model = pybamm.lead_acid.FOQS(options)
+        model = pybamm.lead_acid.FOQS()
         optimtest = tests.OptimisationsTest(model)
         optimtest.set_up_model(simplify=False, to_python=True)
         optimtest.set_up_model(simplify=True, to_python=True)
@@ -52,11 +49,7 @@ class TestLeadAcidFOQS(unittest.TestCase):
 
 class TestLeadAcidFOQSSurfaceForm(unittest.TestCase):
     def test_basic_processing_differential(self):
-        options = {
-            "surface form": "differential",
-            "thermal": "isothermal",
-            "convection": False,
-        }
+        options = {"surface form": "differential"}
         model = pybamm.lead_acid.FOQS(options)
         param = model.default_parameter_values
         param.update({"Current function [A]": 1})
@@ -64,11 +57,7 @@ class TestLeadAcidFOQSSurfaceForm(unittest.TestCase):
         modeltest.test_all()
 
     def test_basic_processing_algebraic(self):
-        options = {
-            "surface form": "algebraic",
-            "thermal": "isothermal",
-            "convection": False,
-        }
+        options = {"surface form": "algebraic"}
         model = pybamm.lead_acid.FOQS(options)
         param = model.default_parameter_values
         param.update({"Current function [A]": 1})

@@ -55,9 +55,9 @@ class SPM(BaseModel):
 
     def set_porosity_submodel(self):
 
-        if self.options["sei porosity change"] is False:
+        if self.options["sei porosity change"] == "false":
             self.submodels["porosity"] = pybamm.porosity.Constant(self.param)
-        elif self.options["sei porosity change"] is True:
+        elif self.options["sei porosity change"] == "true":
             self.submodels["porosity"] = pybamm.porosity.LeadingOrder(self.param)
 
     def set_active_material_submodel(self):
@@ -92,7 +92,7 @@ class SPM(BaseModel):
 
     def set_interfacial_submodel(self):
 
-        if self.options["surface form"] is False:
+        if self.options["surface form"] == "false":
             self.submodels["negative interface"] = pybamm.interface.InverseButlerVolmer(
                 self.param, "Negative", "lithium-ion main", self.options
             )
@@ -166,7 +166,7 @@ class SPM(BaseModel):
                 )
             )
 
-        if self.options["surface form"] is False:
+        if self.options["surface form"] == "false":
             self.submodels[
                 "leading-order electrolyte conductivity"
             ] = pybamm.electrolyte_conductivity.LeadingOrder(self.param)
