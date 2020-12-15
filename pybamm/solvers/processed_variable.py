@@ -252,10 +252,6 @@ class ProcessedVariable(object):
                 bounds_error=False,
             )
 
-        import ipdb
-
-        ipdb.set_trace()
-
     def initialise_2D(self):
         """
         Initialise a 2D object that depends on x and r, or x and z.

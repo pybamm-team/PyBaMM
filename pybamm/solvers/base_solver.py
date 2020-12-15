@@ -901,7 +901,12 @@ class BaseSolver(object):
             # Add the event to the solution object
             solution.termination = "event: {}".format(termination_event)
             # Optionally update t, y and inputs to include event time and state
-            if self.return_event is True:
+            # Note: if the final entry of t is equal to the event time to within
+            # the absolute tolerance we skip this (having duplicate entries
+            # causes an error later in ProcessedVariable)
+            if self.return_event is True and (
+                abs(solution._t[-1] - solution.t_event) > self.atol
+            ):
                 solution._t = np.concatenate((solution._t, solution.t_event))
                 solution._y = np.concatenate((solution._y, solution.y_event), axis=1)
                 for name, inp in solution.inputs.items():

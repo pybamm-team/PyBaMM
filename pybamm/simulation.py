@@ -424,6 +424,25 @@ class Simulation:
             ):
                 pybamm.logger.info(self.experiment.operating_conditions_strings[idx])
                 inputs.update(exp_inputs)
+                # If the last time entry was due to an event take a single step
+                # to get the solution back on to the correct reporting period.
+                # e.g. if the period is 30s and an event is triggered at 32s we
+                # return the times [0, 30, 32, 60] instead of [0, 30, 32, 62]
+                if hasattr(self._solution, "t_event"):
+                    if self._solution.t_event is not None and (
+                        self._solution.t_event[0] == self.solution.t[-1]
+                    ):
+                        dt_event = (
+                            exp_inputs["period"]
+                            - (self._solution.t[-1] - self._solution.t[-2])
+                            * self._solution.timescale_eval
+                        )
+                        self.step(
+                            dt_event,
+                            solver=solver,
+                            external_variables=external_variables,
+                            inputs=inputs,
+                        )
                 # Make sure we take at least 2 timesteps
                 npts = max(int(round(dt / exp_inputs["period"])) + 1, 2)
                 self.step(
