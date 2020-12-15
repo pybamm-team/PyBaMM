@@ -282,6 +282,27 @@ class TestBaseSolver(unittest.TestCase):
         with self.assertRaisesRegex(pybamm.SolverError, "The model timescale"):
             sol = solver.step(old_solution=sol, model=model, dt=1.0, inputs={"a": 20})
 
+    def test_return_event(self):
+        # Create model
+        model = pybamm.BaseModel()
+        var1 = pybamm.Variable("var1")
+        model.rhs = {var1: 0.1 * var1}
+        model.initial_conditions = {var1: 1}
+        model.events = [pybamm.Event("var1 = 1.5", pybamm.min(var1 - 1.1))]
+
+        # Solve using with an without return_event
+        t_eval = np.linspace(0, 2.5, 20)
+        solvers = [pybamm.ScipySolver(), pybamm.ScipySolver(return_event=True)]
+        sols = []
+        for solver in solvers:
+            sol = solver.solve(model, t_eval)
+            sols.append(sol)
+        # Second solution should contain an extra entry (the event time)
+        self.assertLess(len(sols[0].t), len(sols[1].t))
+        # Check the final entry of t in the second solution is the event time
+        self.assertEqual(sols[0].t_event, sols[1].t[-1])
+        self.assertEqual(sols[1].t_event, sols[1].t[-1])
+
 
 if __name__ == "__main__":
     print("Add -v for more debug output")

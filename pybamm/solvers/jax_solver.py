@@ -38,6 +38,9 @@ class JaxSolver(pybamm.BaseSolver):
         The relative tolerance for the solver (default is 1e-6).
     atol : float, optional
         The absolute tolerance for the solver (default is 1e-6).
+    return_event : bool, optional
+        Whether to return the event time and state as part of `Solution.t` and
+        `Solution.y`. Default is False.
     extra_options : dict, optional
         Any options to pass to the solver.
         Please consult `JAX documentation

@@ -40,6 +40,9 @@ class CasadiSolver(pybamm.BaseSolver):
         specified by 'root_method' (e.g. "lm", "hybr", ...)
     root_tol : float, optional
         The tolerance for root-finding. Default is 1e-6.
+    return_event : bool, optional
+        Whether to return the event time and state as part of `Solution.t` and
+        `Solution.y`. Default is False.
     max_step_decrease_counts : float, optional
         The maximum number of times step size can be decreased before an error is
         raised. Default is 5.

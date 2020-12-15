@@ -35,7 +35,10 @@ class IDAKLUSolver(pybamm.BaseSolver):
         conditions. Otherwise, the solver uses 'scipy.optimize.root' with method
         specified by 'root_method' (e.g. "lm", "hybr", ...)
     root_tol : float, optional
-        The tolerance for the initial-condition solver (default is 1e-8).
+        The tolerance for the initial-condition solver (default is 1e-6).
+    return_event : bool, optional
+        Whether to return the event time and state as part of `Solution.t` and
+        `Solution.y`. Default is False.
     """
 
     def __init__(
