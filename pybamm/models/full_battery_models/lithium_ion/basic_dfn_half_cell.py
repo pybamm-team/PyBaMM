@@ -97,9 +97,6 @@ class BasicDFNHalfCell(BaseModel):
             "Working electrolyte potential", domain="working electrode"
         )
         phi_e = pybamm.Concatenation(phi_e_s, phi_e_w)
-        # phi_Li = pybamm.Variable(
-        #     "Lithium counter electrode potential", domain="lithium counter electrode"
-        # )
 
         # Constant temperature
         T = param.T_init
