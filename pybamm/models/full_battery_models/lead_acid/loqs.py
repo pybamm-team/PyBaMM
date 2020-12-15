@@ -108,7 +108,7 @@ class LOQS(BaseModel):
 
     def set_convection_submodel(self):
 
-        if self.options["convection"] is False:
+        if self.options["convection"] == "none":
             self.submodels[
                 "leading-order transverse convection"
             ] = pybamm.convection.transverse.NoConvection(self.param)
@@ -130,16 +130,16 @@ class LOQS(BaseModel):
 
     def set_interfacial_submodel(self):
 
-        if self.options["surface form"] is False:
+        if self.options["surface form"] == "false":
             self.submodels[
                 "leading-order negative interface"
             ] = pybamm.interface.InverseButlerVolmer(
-                self.param, "Negative", "lead-acid main"
+                self.param, "Negative", "lead-acid main", self.options
             )
             self.submodels[
                 "leading-order positive interface"
             ] = pybamm.interface.InverseButlerVolmer(
-                self.param, "Positive", "lead-acid main"
+                self.param, "Positive", "lead-acid main", self.options
             )
             self.submodels[
                 "negative interface current"
@@ -154,19 +154,27 @@ class LOQS(BaseModel):
         else:
             self.submodels[
                 "leading-order negative interface"
-            ] = pybamm.interface.ButlerVolmer(self.param, "Negative", "lead-acid main")
+            ] = pybamm.interface.ButlerVolmer(
+                self.param, "Negative", "lead-acid main", self.options
+            )
 
             self.submodels[
                 "leading-order positive interface"
-            ] = pybamm.interface.ButlerVolmer(self.param, "Positive", "lead-acid main")
+            ] = pybamm.interface.ButlerVolmer(
+                self.param, "Positive", "lead-acid main", self.options
+            )
         # always use forward Butler-Volmer for the reaction submodel to be passed to the
         # higher order model
         self.reaction_submodels = {
             "Negative": [
-                pybamm.interface.ButlerVolmer(self.param, "Negative", "lead-acid main")
+                pybamm.interface.ButlerVolmer(
+                    self.param, "Negative", "lead-acid main", self.options
+                )
             ],
             "Positive": [
-                pybamm.interface.ButlerVolmer(self.param, "Positive", "lead-acid main")
+                pybamm.interface.ButlerVolmer(
+                    self.param, "Positive", "lead-acid main", self.options
+                )
             ],
         }
 
@@ -183,7 +191,7 @@ class LOQS(BaseModel):
 
         surf_form = pybamm.electrolyte_conductivity.surface_potential_form
 
-        if self.options["surface form"] is False:
+        if self.options["surface form"] == "false":
             self.submodels[
                 "leading-order electrolyte conductivity"
             ] = pybamm.electrolyte_conductivity.LeadingOrder(self.param)
@@ -212,7 +220,7 @@ class LOQS(BaseModel):
             self.submodels[
                 "leading-order positive oxygen interface"
             ] = pybamm.interface.ForwardTafel(
-                self.param, "Positive", "lead-acid oxygen"
+                self.param, "Positive", "lead-acid oxygen", self.options
             )
             self.submodels[
                 "leading-order negative oxygen interface"
