@@ -2,6 +2,8 @@
 
 ## Features
 
+
+-   Added a solver option to allow the event time and state to be returned as part of `Solution.t` and `Solution.y` ([#1300](https://github.com/pybamm-team/PyBaMM/pull/1300))
 -   Added option to make the total interfacial current density a state ([#1280](https://github.com/pybamm-team/PyBaMM/pull/1280))
 -   Added functionality to initialize a model using the solution from another model ([#1278](https://github.com/pybamm-team/PyBaMM/pull/1278))
 -   Added submodels for active material ([#1262](https://github.com/pybamm-team/PyBaMM/pull/1262))
@@ -55,7 +57,7 @@ This release introduces a new aging model for particle swelling and cracking, a 
 
 ## Breaking changes
 
--    The parameters "Positive/Negative particle distribution in x" and "Positive/Negative surface area to volume ratio distribution in x" have been deprecated. Instead, users can provide "Positive/Negative particle radius [m]" and "Positive/Negative surface area to volume ratio [m-1]" directly as functions of through-cell position (x [m]) ([#1237](https://github.com/pybamm-team/PyBaMM/pull/1237)) 
+-    The parameters "Positive/Negative particle distribution in x" and "Positive/Negative surface area to volume ratio distribution in x" have been deprecated. Instead, users can provide "Positive/Negative particle radius [m]" and "Positive/Negative surface area to volume ratio [m-1]" directly as functions of through-cell position (x [m]) ([#1237](https://github.com/pybamm-team/PyBaMM/pull/1237))
 
 # [v0.2.4](https://github.com/pybamm-team/PyBaMM/tree/v0.2.4) - 2020-09-07
 

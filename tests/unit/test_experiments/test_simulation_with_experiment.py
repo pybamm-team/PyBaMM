@@ -115,6 +115,26 @@ class TestSimulationExperiment(unittest.TestCase):
         sim.solve(inputs={"Dsn": 2})
         np.testing.assert_array_equal(sim.solution.inputs["Dsn"], 2)
 
+    def test_experiment_return_event(self):
+        experiment = pybamm.Experiment(
+            ["Discharge at 1C for 1 hour or until 3.6V", "Rest for 1 hour"],
+            period="5 minutes",
+        )
+        model = pybamm.lithium_ion.SPM()
+        param = pybamm.ParameterValues(chemistry=pybamm.parameter_sets.Marquis2019)
+        param["Negative electrode diffusivity [m2.s-1]"] = (
+            pybamm.InputParameter("Dsn") * 3.9e-14
+        )
+
+        sim = pybamm.Simulation(model, experiment=experiment, parameter_values=param)
+        sim.solve(solver=pybamm.CasadiSolver(return_event=True), inputs={"Dsn": 1})
+
+        # check all times apart the event time are divisible by 300 (5m=300s)
+        times = sim.solution["Time [s]"].entries.tolist()
+        times = np.array([time % 300 for time in times])
+        times[times < 1e-9] = 0
+        self.assertEqual(1, np.count_nonzero(times))
+
 
 if __name__ == "__main__":
     print("Add -v for more debug output")
