@@ -108,7 +108,7 @@ class TestDFN(unittest.TestCase):
         modeltest.test_all()
 
     def test_loss_active_material(self):
-        options = {"particle cracking": "none", "loss of active material": "example"}
+        options = {"particle cracking": "none", "loss of active material": "none"}
         model = pybamm.lithium_ion.DFN(options)
         chemistry = pybamm.parameter_sets.Ai2020
         parameter_values = pybamm.ParameterValues(chemistry=chemistry)

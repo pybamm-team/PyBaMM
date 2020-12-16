@@ -111,8 +111,7 @@ class TestSPM(unittest.TestCase):
 
     def test_loss_active_material(self):
         options = {
-            "particle cracking": "no cracking",
-            "loss of active material": "example",
+            "loss of active material": "none",
         }
         model = pybamm.lithium_ion.SPM(options)
         model.check_well_posedness()

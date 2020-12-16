@@ -267,13 +267,21 @@ class LithiumIonParameters:
         # intermediate variable  [K*m^3/mol]
 
         # loss of active material parameters
-        self.m_LAM_n = pybamm.Parameter("Negative electrode LAM constant m")
-        self.beta_LAM_n = pybamm.Parameter("Negative electrode LAM constant beta")
+        self.m_LAM_n = pybamm.Parameter(
+            "Negative electrode LAM constant exponential term"
+        )
+        self.beta_LAM_n = pybamm.Parameter(
+            "Negative electrode LAM constant propotional term"
+        )
         self.stress_critical_n_dim = pybamm.Parameter(
             "Negative electrode critical stress [Pa]"
         )
-        self.m_LAM_p = pybamm.Parameter("Positive electrode LAM constant m")
-        self.beta_LAM_p = pybamm.Parameter("Positive electrode LAM constant beta")
+        self.m_LAM_p = pybamm.Parameter(
+            "Positive electrode LAM constant exponential term"
+        )
+        self.beta_LAM_p = pybamm.Parameter(
+            "Positive electrode LAM constant propotional term"
+        )
         self.stress_critical_p_dim = pybamm.Parameter(
             "Positive electrode critical stress [Pa]"
         )

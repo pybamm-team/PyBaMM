@@ -90,13 +90,6 @@ class DFN(BaseModel):
             self.submodels[
                 "positive active material"
             ] = pybamm.active_material.VaryingFull(self.param, "Positive", self.options)
-        elif self.options["loss of active material"] == "example":
-            self.submodels[
-                "negative active material"
-            ] = pybamm.active_material.VaryingFull(self.param, "Negative", self.options)
-            self.submodels[
-                "positive active material"
-            ] = pybamm.active_material.VaryingFull(self.param, "Positive", self.options)
 
     def set_convection_submodel(self):
 

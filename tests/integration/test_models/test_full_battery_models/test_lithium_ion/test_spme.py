@@ -113,7 +113,7 @@ class TestSPMe(unittest.TestCase):
         modeltest.test_all()
 
     def test_loss_active_material(self):
-        options = {"loss of active material": "example"}
+        options = {"loss of active material": "none"}
         model = pybamm.lithium_ion.SPMe(options)
         chemistry = pybamm.parameter_sets.Ai2020
         parameter_values = pybamm.ParameterValues(chemistry=chemistry)
@@ -122,8 +122,7 @@ class TestSPMe(unittest.TestCase):
 
     def test_loss_active_material_anode(self):
         options = {
-            "particle cracking": "no cracking",
-            "loss of active material": "anode",
+            "loss of active material": "none",
         }
         model = pybamm.lithium_ion.SPMe(options)
         chemistry = pybamm.parameter_sets.Ai2020
