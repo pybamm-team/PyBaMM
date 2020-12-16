@@ -2,8 +2,7 @@
 
 ## Features
 
-
--   Added a solver option to allow the event time and state to be returned as part of `Solution.t` and `Solution.y` ([#1300](https://github.com/pybamm-team/PyBaMM/pull/1300))
+-   The event time and state are now returned as part of `Solution.t` and `Solution.y` so that the event is accurately captured in the returned solution ([#1300](https://github.com/pybamm-team/PyBaMM/pull/1300))
 -   Added option to make the total interfacial current density a state ([#1280](https://github.com/pybamm-team/PyBaMM/pull/1280))
 -   Added functionality to initialize a model using the solution from another model ([#1278](https://github.com/pybamm-team/PyBaMM/pull/1278))
 -   Added submodels for active material ([#1262](https://github.com/pybamm-team/PyBaMM/pull/1262))
@@ -16,8 +15,10 @@
 ## Bug fixes
 
 -   Fixed `Simulation` and `model.new_copy` to fix a bug where changes to the model were overwritten ([#1278](https://github.com/pybamm-team/PyBaMM/pull/1278))
+
 ## Breaking changes
 
+-   An extra sub-solution is created when an event is triggered during an experiment  ([#1300](https://github.com/pybamm-team/PyBaMM/pull/1300))
 -   Boolean model options ('sei porosity change', 'convection') must now be given in string format ('true' or 'false' instead of True or False) ([#1280](https://github.com/pybamm-team/PyBaMM/pull/1280))
 -   Operations such as `1*x` and `0+x` now directly return `x`. This can be bypassed by explicitly creating the binary operators, e.g. `pybamm.Multiplication(1, x)` ([#1252](https://github.com/pybamm-team/PyBaMM/pull/1252))
 

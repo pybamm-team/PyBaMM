@@ -115,7 +115,7 @@ class TestSimulationExperiment(unittest.TestCase):
         sim.solve(inputs={"Dsn": 2})
         np.testing.assert_array_equal(sim.solution.inputs["Dsn"], 2)
 
-    def test_experiment_return_event(self):
+    def test_experiment_period_with_event(self):
         experiment = pybamm.Experiment(
             ["Discharge at 1C for 1 hour or until 3.6V", "Rest for 1 hour"],
             period="5 minutes",
@@ -127,7 +127,7 @@ class TestSimulationExperiment(unittest.TestCase):
         )
 
         sim = pybamm.Simulation(model, experiment=experiment, parameter_values=param)
-        sim.solve(solver=pybamm.CasadiSolver(return_event=True), inputs={"Dsn": 1})
+        sim.solve(solver=pybamm.CasadiSolver(), inputs={"Dsn": 1})
 
         # check all times apart the event time are divisible by 300 (5m=300s)
         times = sim.solution["Time [s]"].entries.tolist()

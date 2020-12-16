@@ -31,9 +31,6 @@ class ScikitsOdeSolver(pybamm.BaseSolver):
         The relative tolerance for the solver (default is 1e-6).
     atol : float, optional
         The absolute tolerance for the solver (default is 1e-6).
-    return_event : bool, optional
-        Whether to return the event time and state as part of `Solution.t` and
-        `Solution.y`. Default is False.
     extra_options : dict, optional
         Any options to pass to the solver.
         Please consult `scikits.odes documentation
@@ -49,14 +46,13 @@ class ScikitsOdeSolver(pybamm.BaseSolver):
         method="cvode",
         rtol=1e-6,
         atol=1e-6,
-        return_event=False,
         linsolver="deprecated",
         extra_options=None,
     ):
         if scikits_odes_spec is None:
             raise ImportError("scikits.odes is not installed")
 
-        super().__init__(method, rtol, atol, return_event=return_event)
+        super().__init__(method, rtol, atol)
         self.extra_options = extra_options or {}
         if linsolver != "deprecated":
             raise ValueError(

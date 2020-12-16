@@ -30,9 +30,6 @@ class BaseSolver(object):
         specified by 'root_method' (e.g. "lm", "hybr", ...)
     root_tol : float, optional
         The tolerance for the initial-condition solver (default is 1e-6).
-    return_event : bool, optional
-        Whether to return the event time and state as part of `Solution.t` and
-        `Solution.y`. Default is False.
     """
 
     def __init__(
@@ -42,7 +39,6 @@ class BaseSolver(object):
         atol=1e-6,
         root_method=None,
         root_tol=1e-6,
-        return_event=False,
         max_steps="deprecated",
     ):
         self._method = method
@@ -50,7 +46,6 @@ class BaseSolver(object):
         self._atol = atol
         self.root_tol = root_tol
         self.root_method = root_method
-        self.return_event = return_event
         if max_steps != "deprecated":
             raise ValueError(
                 "max_steps has been deprecated, and should be set using the "
@@ -114,14 +109,6 @@ class BaseSolver(object):
     @root_tol.setter
     def root_tol(self, tol):
         self._root_tol = tol
-
-    @property
-    def return_event(self):
-        return self._return_event
-
-    @return_event.setter
-    def return_event(self, value):
-        self._return_event = value
 
     def copy(self):
         "Returns a copy of the solver"
@@ -914,13 +901,11 @@ class BaseSolver(object):
             termination_event = min(final_event_values, key=final_event_values.get)
             # Add the event to the solution object
             solution.termination = "event: {}".format(termination_event)
-            # Optionally update t, y and inputs to include event time and state
+            # Update t, y and inputs to include event time and state
             # Note: if the final entry of t is equal to the event time to within
             # the absolute tolerance we skip this (having duplicate entries
             # causes an error later in ProcessedVariable)
-            if self.return_event is True and (
-                abs(solution._t[-1] - solution.t_event) > self.atol
-            ):
+            if solution.t_event - solution._t[-1] > self.atol:
                 solution._t = np.concatenate((solution._t, solution.t_event))
                 solution._y = np.concatenate((solution._y, solution.y_event), axis=1)
                 for name, inp in solution.inputs.items():

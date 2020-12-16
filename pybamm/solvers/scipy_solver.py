@@ -19,19 +19,14 @@ class ScipySolver(pybamm.BaseSolver):
         The relative tolerance for the solver (default is 1e-6).
     atol : float, optional
         The absolute tolerance for the solver (default is 1e-6).
-    return_event : bool, optional
-        Whether to return the event time and state as part of `Solution.t` and
-        `Solution.y`. Default is False.
     extra_options : dict, optional
         Any options to pass to the solver.
         Please consult `SciPy documentation <https://tinyurl.com/yafgqg9y>`_ for
         details.
     """
 
-    def __init__(
-        self, method="BDF", rtol=1e-6, atol=1e-6, return_event=False, extra_options=None
-    ):
-        super().__init__(method, rtol, atol, return_event=return_event)
+    def __init__(self, method="BDF", rtol=1e-6, atol=1e-6, extra_options=None):
+        super().__init__(method, rtol, atol)
         self.ode_solver = True
         self.extra_options = extra_options or {}
         self.name = "Scipy solver ({})".format(method)

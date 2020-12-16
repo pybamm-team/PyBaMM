@@ -36,9 +36,6 @@ class IDAKLUSolver(pybamm.BaseSolver):
         specified by 'root_method' (e.g. "lm", "hybr", ...)
     root_tol : float, optional
         The tolerance for the initial-condition solver (default is 1e-6).
-    return_event : bool, optional
-        Whether to return the event time and state as part of `Solution.t` and
-        `Solution.y`. Default is False.
     """
 
     def __init__(
@@ -47,16 +44,13 @@ class IDAKLUSolver(pybamm.BaseSolver):
         atol=1e-6,
         root_method="casadi",
         root_tol=1e-6,
-        return_event=False,
         max_steps="deprecated",
     ):
 
         if idaklu_spec is None:
             raise ImportError("KLU is not installed")
 
-        super().__init__(
-            "ida", rtol, atol, root_method, root_tol, return_event, max_steps
-        )
+        super().__init__("ida", rtol, atol, root_method, root_tol, max_steps)
         self.name = "IDA KLU solver"
 
         pybamm.citations.register("hindmarsh2000pvode")

@@ -38,9 +38,6 @@ class JaxSolver(pybamm.BaseSolver):
         The relative tolerance for the solver (default is 1e-6).
     atol : float, optional
         The absolute tolerance for the solver (default is 1e-6).
-    return_event : bool, optional
-        Whether to return the event time and state as part of `Solution.t` and
-        `Solution.y`. Default is False.
     extra_options : dict, optional
         Any options to pass to the solver.
         Please consult `JAX documentation
@@ -49,19 +46,11 @@ class JaxSolver(pybamm.BaseSolver):
     """
 
     def __init__(
-        self,
-        method="RK45",
-        root_method=None,
-        rtol=1e-6,
-        atol=1e-6,
-        return_event=False,
-        extra_options=None,
+        self, method="RK45", root_method=None, rtol=1e-6, atol=1e-6, extra_options=None
     ):
         # note: bdf solver itself calculates consistent initial conditions so can set
         # root_method to none, allow user to override this behavior
-        super().__init__(
-            method, rtol, atol, root_method=root_method, return_event=return_event
-        )
+        super().__init__(method, rtol, atol, root_method=root_method)
         method_options = ["RK45", "BDF"]
         if method not in method_options:
             raise ValueError("method must be one of {}".format(method_options))
