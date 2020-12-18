@@ -988,7 +988,7 @@ class InitialConditions(SolverCallable):
     def __call__(self, inputs):
         if self.form == "casadi":
             if isinstance(inputs, dict):
-                inputs = casadi.vertcat(*[x for x in inputs.values()])
+                inputs = casadi.vertcat(*inputs.values())
             return self._function(0, self.y_dummy, inputs)
         else:
             return self._function(0, self.y_dummy, inputs=inputs).flatten()

@@ -129,6 +129,8 @@ class _BaseSolution(object):
                     inp = inp * np.ones((1, len(self.t)))
                 # Tile a vector
                 else:
+                    if inp.ndim == 1:
+                        inp = inp[:, np.newaxis]
                     inp = np.tile(inp, len(self.t))
                 self._inputs[name] = inp
 

@@ -282,7 +282,11 @@ class FiniteVolume(pybamm.SpatialMethod):
             submesh = self.mesh.combine_submeshes(*domains["primary"])
 
             # Create vector of ones for primary domain submesh
-            vector = submesh.d_edges
+            if not child.evaluates_on_edges("primary"):
+                vector = submesh.d_edges
+            else:
+                subvector = submesh.d_nodes
+                vector = np.concatenate([np.array([0]), subvector, np.array([0])])
 
             if vector_type == "row":
                 vector = vector[np.newaxis, :]
