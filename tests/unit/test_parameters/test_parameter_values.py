@@ -489,6 +489,16 @@ class TestParameterValues(unittest.TestCase):
             decimal=2,
         )
 
+    def test_process_not_constant_one(self):
+        param = pybamm.ParameterValues({})
+
+        a = pybamm.NotConstantOne()
+        self.assertIsInstance(param.process_symbol(a), pybamm.NotConstantOne)
+
+        var = pybamm.Variable("var", domain="test")
+        var_times_a_disc = param.process_symbol(var * a)
+        self.assertEqual(var_times_a_disc.id, (var * a).id)
+
     def test_process_complex_expression(self):
         var1 = pybamm.Variable("var1")
         var2 = pybamm.Variable("var2")

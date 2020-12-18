@@ -541,11 +541,9 @@ class ParameterValues:
                 if symbol.diff_variable is not None and any(
                     x.id == symbol.diff_variable.id for x in child.pre_order()
                 ):
-                    # Add 0 * t to child to avoid simplification, which would stop
-                    # symbolic diff from working properly
-                    new_child = pybamm.Addition(
-                        child.new_copy(), pybamm.Multiplication(0, pybamm.t)
-                    )
+                    # Multiplyb by NotConstantOne to avoid simplification,
+                    # which would stop symbolic diff from working properly
+                    new_child = child.new_copy() * pybamm.NotConstantOne()
                     new_children.append(self.process_symbol(new_child))
                 else:
                     new_children.append(self.process_symbol(child))

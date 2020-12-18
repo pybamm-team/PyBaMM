@@ -212,7 +212,8 @@ class BaseKinetics(BaseInterface):
         # surface potential difference when taking j.diff(c_e) later on
         # use explicit Multiplication instead of * to avoid simplification
         c_e_0 = pybamm.Multiplication(
-            variables["Leading-order x-averaged electrolyte concentration"], 1
+            variables["Leading-order x-averaged electrolyte concentration"],
+            pybamm.NotConstantOne(),
         )
         hacked_variables = {
             **variables,
