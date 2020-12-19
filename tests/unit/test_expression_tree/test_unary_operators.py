@@ -426,14 +426,25 @@ class TestUnaryOperators(unittest.TestCase):
             pybamm.boundary_value(var, "positive tab")
 
     def test_x_average(self):
-        a = pybamm.Scalar(1)
+        a = pybamm.Scalar(4)
         average_a = pybamm.x_average(a)
         self.assertEqual(average_a.id, a.id)
 
+        # average of a broadcast is the child
         average_broad_a = pybamm.x_average(
             pybamm.PrimaryBroadcast(a, ["negative electrode"])
         )
-        self.assertEqual(average_broad_a.evaluate(), np.array([1]))
+        self.assertEqual(average_broad_a.id, pybamm.Scalar(4).id)
+
+        # average of a number times a broadcast is the number times the child
+        average_two_broad_a = pybamm.x_average(
+            2 * pybamm.PrimaryBroadcast(a, ["negative electrode"])
+        )
+        self.assertEqual(average_two_broad_a.id, pybamm.Scalar(8).id)
+        average_t_broad_a = pybamm.x_average(
+            pybamm.t * pybamm.PrimaryBroadcast(a, ["negative electrode"])
+        )
+        self.assertEqual(average_t_broad_a.id, (pybamm.t * pybamm.Scalar(4)).id)
 
         conc_broad = pybamm.Concatenation(
             pybamm.PrimaryBroadcast(1, ["negative electrode"]),
