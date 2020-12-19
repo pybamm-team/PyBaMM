@@ -39,9 +39,6 @@ pb.dynamic_plot(
     sims,
     [
         "Terminal voltage [V]",
-        "Negative particle surface concentration",
-        "X-averaged negative particle surface concentration",
-        "Electrolyte concentration [mol.m-3]",
         "Total negative electrode sei thickness [m]",
         "X-averaged total negative electrode sei thickness [m]",
         "X-averaged total negative electrode sei thickness",
@@ -57,5 +54,28 @@ pb.dynamic_plot(
         ],
         "Sum of x-averaged negative electrode interfacial current densities",
         "X-averaged electrolyte concentration",
+        "Loss of Lithium Inventory [%]",
+        "Total lithium [mol]",
+        ["Total lithium lost [mol]", "Loss of lithium to negative electrode sei [mol]"],
+        "Total lithium lost from particles [mol]",
+        "Total lithium lost from electrolyte [mol]",
+        ["Initial total lithium [mol]", "Total lithium [mol]"],
+        [
+            "Initial total lithium in particles [mol]",
+            "Total lithium in particles [mol]",
+        ],
+        [
+            "Initial total lithium in electrolyte [mol]",
+            "Total lithium in electrolyte [mol]",
+        ],
+        [
+            "eps_n_av_init",
+            "X-averaged negative electrode active material volume fraction",
+        ],
+        [
+            "c_n_av_init",
+            "Negative electrode volume-averaged concentration",
+            "X-averaged negative particle surface concentration",
+        ],
     ],
 )

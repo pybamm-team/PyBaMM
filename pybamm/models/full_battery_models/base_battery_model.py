@@ -639,6 +639,9 @@ class BaseBatteryModel(pybamm.BaseModel):
         pybamm.logger.debug("Setting SoC variables ({})".format(self.name))
         self.set_soc_variables()
 
+        pybamm.logger.debug("Setting degradation variables ({})".format(self.name))
+        self.set_degradation_variables()
+
         # Massive hack for consistent delta_phi = phi_s - phi_e with SPMe
         # This needs to be corrected
         if isinstance(self, pybamm.lithium_ion.SPMe):
@@ -920,6 +923,13 @@ class BaseBatteryModel(pybamm.BaseModel):
         # Power
         I_dim = self.variables["Current [A]"]
         self.variables.update({"Terminal power [W]": I_dim * V_dim})
+
+    def set_degradation_variables(self):
+        """
+        Set variables that quantify degradation.
+        This function is overriden by the base battery models
+        """
+        pass
 
     def set_soc_variables(self):
         """
