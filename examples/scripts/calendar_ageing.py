@@ -59,23 +59,5 @@ pb.dynamic_plot(
         ["Total lithium lost [mol]", "Loss of lithium to negative electrode sei [mol]"],
         "Total lithium lost from particles [mol]",
         "Total lithium lost from electrolyte [mol]",
-        ["Initial total lithium [mol]", "Total lithium [mol]"],
-        [
-            "Initial total lithium in particles [mol]",
-            "Total lithium in particles [mol]",
-        ],
-        [
-            "Initial total lithium in electrolyte [mol]",
-            "Total lithium in electrolyte [mol]",
-        ],
-        [
-            "eps_n_av_init",
-            "X-averaged negative electrode active material volume fraction",
-        ],
-        [
-            "c_n_av_init",
-            "Negative electrode volume-averaged concentration",
-            "X-averaged negative particle surface concentration",
-        ],
     ],
 )

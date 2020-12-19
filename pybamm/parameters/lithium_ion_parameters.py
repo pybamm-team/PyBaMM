@@ -266,6 +266,34 @@ class LithiumIonParameters:
         )
         # intermediate variable  [K*m^3/mol]
 
+        # Electrode capacities
+        x_n = pybamm.standard_spatial_vars.x_n
+        x_p = pybamm.standard_spatial_vars.x_p
+
+        eps_s_n_av = pybamm.x_average(self.epsilon_s_n(x_n))
+        eps_s_p_av = pybamm.x_average(self.epsilon_s_p(x_p))
+        self.C_n_init = eps_s_n_av * self.L_n * self.A_cc * self.c_n_max * self.F / 3600
+        self.C_p_init = eps_s_p_av * self.L_p * self.A_cc * self.c_p_max * self.F / 3600
+
+        # Total lithium
+        eps = pybamm.Concatenation(self.epsilon_n, self.epsilon_s, self.epsilon_p)
+
+        c_e_av = pybamm.x_average(eps) * self.c_e_typ
+        self.n_Li_e_init = c_e_av * self.L_x * self.A_cc
+
+        eps_s_n = self.epsilon_s_n(x_n)
+        c_n = self.c_n_init(x_n)
+        c_n_av = pybamm.x_average(eps_s_n * c_n)
+        self.n_Li_n_init = c_n_av * self.c_n_max * self.L_n * self.A_cc
+
+        eps_s_p = self.epsilon_s_p(x_p)
+        c_p = self.c_p_init(x_p)
+        c_p_av = pybamm.x_average(eps_s_p * c_p)
+        self.n_Li_p_init = c_p_av * self.c_p_max * self.L_p * self.A_cc
+
+        self.n_Li_particles_init = self.n_Li_n_init + self.n_Li_p_init
+        self.n_Li_init = self.n_Li_particles_init + self.n_Li_e_init
+
     def D_e_dimensional(self, c_e, T):
         "Dimensional diffusivity in electrolyte"
         inputs = {"Electrolyte concentration [mol.m-3]": c_e, "Temperature [K]": T}

@@ -126,6 +126,7 @@ class BaseParticle(pybamm.BaseSubModel):
 
         variables.update(
             {
+                self.domain + " electrode SOC": c_s_vol_av,
                 self.domain + " electrode volume-averaged concentration": c_s_vol_av,
                 self.domain
                 + " electrode "

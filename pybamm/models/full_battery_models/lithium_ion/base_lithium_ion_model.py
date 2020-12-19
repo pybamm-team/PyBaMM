@@ -49,24 +49,24 @@ class BaseModel(pybamm.BaseBatteryModel):
     def set_degradation_variables(self):
         """ Sets variables that quantify degradation (LAM, LLI, etc) """
         param = self.param
-        x_n = pybamm.standard_spatial_vars.x_n
-        x_p = pybamm.standard_spatial_vars.x_p
+        # x_n = pybamm.standard_spatial_vars.x_n
+        # x_p = pybamm.standard_spatial_vars.x_p
 
         # LAM
         C_n = self.variables["Negative electrode capacity [A.h]"]
         C_p = self.variables["Positive electrode capacity [A.h]"]
 
-        eps_s_n_av_init = pybamm.x_average(param.epsilon_s_n(x_n))
-        eps_s_p_av_init = pybamm.x_average(param.epsilon_s_p(x_p))
-        C_n_init = (
-            eps_s_n_av_init * param.L_n * param.A_cc * param.c_n_max * param.F / 3600
-        )
-        C_p_init = (
-            eps_s_p_av_init * param.L_p * param.A_cc * param.c_p_max * param.F / 3600
-        )
+        # eps_s_n_av_init = pybamm.x_average(param.epsilon_s_n(x_n))
+        # eps_s_p_av_init = pybamm.x_average(param.epsilon_s_p(x_p))
+        # C_n_init = (
+        #     eps_s_n_av_init * param.L_n * param.A_cc * param.c_n_max * param.F / 3600
+        # )
+        # C_p_init = (
+        #     eps_s_p_av_init * param.L_p * param.A_cc * param.c_p_max * param.F / 3600
+        # )
 
-        LAM_ne = (1 - C_n / C_n_init) * 100
-        LAM_pe = (1 - C_n / C_n_init) * 100
+        LAM_ne = (1 - C_n / param.C_n_init) * 100
+        LAM_pe = (1 - C_p / param.C_p_init) * 100
 
         # LLI
         n_Li_e = self.variables["Total lithium in electrolyte [mol]"]
@@ -75,28 +75,28 @@ class BaseModel(pybamm.BaseBatteryModel):
         n_Li_particles = n_Li_n + n_Li_p
         n_Li = n_Li_particles + n_Li_e
 
-        eps_n_init = param.epsilon_n
-        eps_s_init = param.epsilon_s
-        eps_p_init = param.epsilon_p
-        eps_init = pybamm.Concatenation(eps_n_init, eps_s_init, eps_p_init)
+        # eps_n_init = param.epsilon_n
+        # eps_s_init = param.epsilon_s
+        # eps_p_init = param.epsilon_p
+        # eps_init = pybamm.Concatenation(eps_n_init, eps_s_init, eps_p_init)
 
-        c_e_av_init = pybamm.x_average(eps_init) * param.c_e_typ
-        n_Li_e_init = c_e_av_init * param.L_x * param.A_cc
+        # c_e_av_init = pybamm.x_average(eps_init) * param.c_e_typ
+        # n_Li_e_init = c_e_av_init * param.L_x * param.A_cc
 
-        eps_s_n_init = param.epsilon_s_n(x_n)
-        c_n_init = param.c_n_init(x_n)
-        c_n_av_init = pybamm.x_average(eps_s_n_init * c_n_init)
-        n_Li_n_init = c_n_av_init * param.c_n_max * param.L_n * param.A_cc
+        # eps_s_n_init = param.epsilon_s_n(x_n)
+        # c_n_init = param.c_n_init(x_n)
+        # c_n_av_init = pybamm.x_average(eps_s_n_init * c_n_init)
+        # n_Li_n_init = c_n_av_init * param.c_n_max * param.L_n * param.A_cc
 
-        eps_s_p_init = param.epsilon_s_p(x_p)
-        c_p_init = param.c_p_init(x_p)
-        c_p_av_init = pybamm.x_average(eps_s_p_init * c_p_init)
-        n_Li_p_init = c_p_av_init * param.c_p_max * param.L_p * param.A_cc
+        # eps_s_p_init = param.epsilon_s_p(x_p)
+        # c_p_init = param.c_p_init(x_p)
+        # c_p_av_init = pybamm.x_average(eps_s_p_init * c_p_init)
+        # n_Li_p_init = c_p_av_init * param.c_p_max * param.L_p * param.A_cc
 
-        n_Li_particles_init = n_Li_n_init + n_Li_p_init
-        n_Li_init = n_Li_particles_init + n_Li_e_init
+        # n_Li_particles_init = n_Li_n_init + n_Li_p_init
+        # n_Li_init = n_Li_particles_init + n_Li_e_init
 
-        LLI = (1 - n_Li / n_Li_init) * 100
+        LLI = (1 - n_Li / param.n_Li_init) * 100
 
         self.variables.update(
             {
@@ -108,16 +108,14 @@ class BaseModel(pybamm.BaseBatteryModel):
                 "Total lithium in particles [mol]": n_Li_particles,
                 "Total lithium in electrolyte [mol]": n_Li_e,
                 # Initial total lithium
-                "Initial total lithium [mol]": n_Li_init,
-                "Initial total lithium in particles [mol]": n_Li_particles_init,
-                "Initial total lithium in electrolyte [mol]": n_Li_e_init,
+                # "Initial total lithium [mol]": n_Li_init,
+                # "Initial total lithium in particles [mol]": n_Li_particles_init,
+                # "Initial total lithium in electrolyte [mol]": n_Li_e_init,
                 # Lithium lost
-                "Total lithium lost [mol]": n_Li_init - n_Li,
-                "Total lithium lost from particles [mol]": n_Li_particles_init
+                "Total lithium lost [mol]": param.n_Li_init - n_Li,
+                "Total lithium lost from particles [mol]": param.n_Li_particles_init
                 - n_Li_particles,
-                "Total lithium lost from electrolyte [mol]": n_Li_e_init - n_Li_e,
-                "eps_n_av_init": pybamm.x_average(eps_s_n_init),
-                "c_n_av_init": pybamm.x_average(c_n_init),
+                "Total lithium lost from electrolyte [mol]": param.n_Li_e_init - n_Li_e,
             }
         )
 
