@@ -1153,14 +1153,6 @@ def x_average(symbol):
     # If symbol is a Broadcast, its average value is its child
     elif isinstance(symbol, pybamm.Broadcast):
         return symbol.orphans[0]
-    # If symbol is a number times a Broadcast, its average value is the number times
-    # the child of the broadcast
-    elif (
-        isinstance(symbol, pybamm.Multiplication)
-        and symbol.left.evaluates_to_number()
-        and isinstance(symbol.right, pybamm.Broadcast)
-    ):
-        return symbol.orphans[0] * symbol.right.orphans[0]
     # If symbol is a concatenation of Broadcasts, its average value is its child
     elif (
         isinstance(symbol, pybamm.Concatenation)

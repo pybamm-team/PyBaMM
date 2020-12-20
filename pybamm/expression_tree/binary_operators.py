@@ -839,6 +839,10 @@ def simplified_subtraction(left, right):
         ):
             return left
 
+    # a symbol minus itself is 0s of the same shape
+    if left.id == right.id:
+        return pybamm.zeros_like(left)
+
     return pybamm.simplify_if_constant(
         pybamm.Subtraction(left, right), clear_domains=False
     )
@@ -894,7 +898,7 @@ def simplified_multiplication(left, right):
 def simplified_division(left, right):
     left, right = simplify_elementwise_binary_broadcasts(left, right)
 
-    # Broadcast commutes with power operator
+    # Broadcast commutes with division operator
     if isinstance(left, pybamm.Broadcast) and right.domain == []:
         return left._unary_new_copy(left.orphans[0] / right)
     elif isinstance(right, pybamm.Broadcast) and left.domain == []:
@@ -922,6 +926,10 @@ def simplified_division(left, right):
     # anything divided by one is itself
     if pybamm.is_scalar_one(right):
         return left
+
+    # a symbol divided by itself is 1s of the same shape
+    if left.id == right.id:
+        return pybamm.ones_like(left)
 
     return pybamm.simplify_if_constant(
         pybamm.Division(left, right), clear_domains=False

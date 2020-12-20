@@ -484,6 +484,17 @@ class TestParameterValues(unittest.TestCase):
             decimal=2,
         )
 
+    def test_process_integral_broadcast(self):
+        # Test that the integral of a broadcast, created outside of x-average, gets
+        # processed correctly
+        var = pybamm.Variable("var", domain="test")
+        func = pybamm.x_average(pybamm.FunctionParameter("func", {"var": var}))
+
+        param = pybamm.ParameterValues({"func": 2})
+        func_proc = param.process_symbol(func)
+
+        self.assertEqual(func_proc.id, pybamm.Scalar(2, name="func").id)
+
     def test_process_complex_expression(self):
         var1 = pybamm.Variable("var1")
         var2 = pybamm.Variable("var2")
