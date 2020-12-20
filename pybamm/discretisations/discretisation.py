@@ -852,6 +852,8 @@ class Discretisation(object):
                     )
 
         if isinstance(symbol, pybamm.BinaryOperator):
+            if isinstance(symbol, pybamm.Inner):
+                n = 1
             # Pre-process children
             left, right = symbol.children
             disc_left = self.process_symbol(left)

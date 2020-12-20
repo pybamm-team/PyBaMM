@@ -518,6 +518,25 @@ class TestBinaryOperators(unittest.TestCase):
         self.assertIsInstance((e / v1), pybamm.Array)
         np.testing.assert_array_equal((e / v1).evaluate(), 2 * np.ones((10, 1)))
 
+    def test_advanced_binary_simplifications(self):
+        # MatMul simplifications that often appear when discretising spatial operators
+        A = pybamm.Matrix(np.random.rand(10, 10))
+        B = pybamm.Matrix(np.random.rand(10, 10))
+        var = pybamm.StateVector(slice(0, 10))
+        d = pybamm.Vector(np.random.rand(10))
+
+        # Do A@B first if it is constant
+        expr = A @ (B @ var)
+        self.assertEqual(expr.id, ((A @ B) @ var).id)
+
+        # Distribute the @ operator to a sum if one of the symbols being summed is
+        # constant
+        expr = A @ (var + d)
+        self.assertEqual(expr.id, ((A @ var) + (A @ d)).id)
+
+        expr = A @ ((B @ var) + d)
+        self.assertEqual(expr.id, (((A @ B) @ var) + (A @ d)).id)
+
     def test_inner_simplifications(self):
         a1 = pybamm.Scalar(0)
         M1 = pybamm.Matrix(np.zeros((10, 10)))

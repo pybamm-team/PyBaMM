@@ -1285,12 +1285,6 @@ class TestDiscretise(unittest.TestCase):
         with self.assertRaisesRegex(pybamm.ModelError, "Boundary condition at r = 0"):
             disc.process_model(model)
 
-    def test_times_ones_like_disappears(self):
-        disc = get_discretisation_for_testing()
-        var = pybamm.Variable("var", domain="negative electrode")
-        sym = 2 * pybamm.PrimaryBroadcast(1, var.domain)
-        print(sym)
-
 
 if __name__ == "__main__":
     print("Add -v for more debug output")

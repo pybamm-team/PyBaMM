@@ -480,6 +480,10 @@ class Inner(BinaryOperator):
         else:
             return left * right
 
+    def _binary_new_copy(self, left, right):
+        """ See :meth:`pybamm.BinaryOperator._binary_new_copy()`. """
+        return pybamm.inner(left, right)
+
     def _binary_simplify(self, left, right):
         """ See :meth:`pybamm.BinaryOperator._binary_simplify()`. """
         return pybamm.simplify_multiplication_division(self.__class__, left, right)
@@ -890,6 +894,10 @@ def simplified_multiplication(left, right):
     except NotImplementedError:
         pass
 
+    # Simplify a * (B @ c) to (a * B) @ c if (a * B) is constant
+    # This is a common construction that appears from discretisation of spatial
+    # operators
+
     return pybamm.simplify_if_constant(
         pybamm.Multiplication(left, right), clear_domains=False
     )
@@ -940,6 +948,25 @@ def simplified_matrix_multiplication(left, right):
     left, right = preprocess_binary(left, right)
     if pybamm.is_matrix_zero(left) or pybamm.is_matrix_zero(right):
         return pybamm.zeros_like(pybamm.MatrixMultiplication(left, right))
+
+    # Simplify A @ (B @ c) to (A @ B) @ c if (A @ B) is constant
+    # This is a common construction that appears from discretisation of spatial
+    # operators
+    if isinstance(right, MatrixMultiplication):
+        r_left, r_right = right.orphans
+        new_left = left @ r_left
+        if new_left.is_constant():
+            return new_left @ r_right
+
+    # Simplify A @ (b + c) to (A @ b) + (A @ c) if (A @ b) or (A @ c) is constant
+    # This is a common construction that appears from discretisation of spatial
+    # operators
+    elif isinstance(right, Addition):
+        if (right.left.is_constant() or right.right.is_constant()) and not (
+            right.left.evaluates_to_number() or right.right.evaluates_to_number()
+        ):
+            r_left, r_right = right.orphans
+            return (left @ r_left) + (left @ r_right)
 
     return pybamm.simplify_if_constant(
         pybamm.MatrixMultiplication(left, right), clear_domains=False
