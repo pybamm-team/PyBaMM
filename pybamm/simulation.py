@@ -449,6 +449,16 @@ class Simulation:
                         "or reducing the period.\n\n"
                     )
                     break
+            self.solution.cycles = []
+            for cycle_length in self.experiment.cycle_length:
+                self.solution.cycles.append(
+                    tuple(
+                        [
+                            self.solution.sub_solutions[idx]
+                            for idx in range(cycle_length)
+                        ]
+                    )
+                )
             pybamm.logger.info(
                 "Finish experiment simulation, took {}".format(
                     timer.format(timer.time())
