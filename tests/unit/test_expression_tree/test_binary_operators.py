@@ -410,6 +410,19 @@ class TestBinaryOperators(unittest.TestCase):
         var = pybamm.Variable("var", domain="domain")
         broad0 = pybamm.PrimaryBroadcast(0, "domain")
         broad1 = pybamm.PrimaryBroadcast(1, "domain")
+        broad2 = pybamm.PrimaryBroadcast(2, "domain")
+
+        # power
+        self.assertEqual((c ** a).id, pybamm.Scalar(1).id)
+        self.assertEqual((0 ** c).id, pybamm.Scalar(0).id)
+        self.assertEqual((c ** b).id, c.id)
+        # power with broadcasts
+        self.assertEqual((c ** broad2).id, pybamm.PrimaryBroadcast(c ** 2, "domain").id)
+        self.assertEqual((broad2 ** c).id, pybamm.PrimaryBroadcast(2 ** c, "domain").id)
+        self.assertEqual(
+            (broad2 ** pybamm.PrimaryBroadcast(c, "domain")).id,
+            pybamm.PrimaryBroadcast(2 ** c, "domain").id,
+        )
 
         # addition
         self.assertIsInstance((a + b), pybamm.Scalar)
@@ -420,6 +433,9 @@ class TestBinaryOperators(unittest.TestCase):
         self.assertEqual((b + a).evaluate(), 1)
         self.assertIsInstance((0 + b), pybamm.Scalar)
         self.assertEqual((0 + b).evaluate(), 1)
+        # addition with broadcasts
+        self.assertEqual((c + broad2).id, pybamm.PrimaryBroadcast(c + 2, "domain").id)
+        self.assertEqual((broad2 + c).id, pybamm.PrimaryBroadcast(2 + c, "domain").id)
 
         # subtraction
         self.assertIsInstance((a - b), pybamm.Scalar)
@@ -428,6 +444,9 @@ class TestBinaryOperators(unittest.TestCase):
         self.assertEqual((b - b).evaluate(), 0)
         self.assertIsInstance((b - a), pybamm.Scalar)
         self.assertEqual((b - a).evaluate(), 1)
+        # subtraction with broadcasts
+        self.assertEqual((c - broad2).id, pybamm.PrimaryBroadcast(c - 2, "domain").id)
+        self.assertEqual((broad2 - c).id, pybamm.PrimaryBroadcast(2 - c, "domain").id)
 
         # addition and subtraction with matrix zero
         self.assertIsInstance((b + v), pybamm.Array)
@@ -439,10 +458,10 @@ class TestBinaryOperators(unittest.TestCase):
         self.assertIsInstance((v - b), pybamm.Array)
         np.testing.assert_array_equal((v - b).evaluate(), -np.ones((10, 1)))
         # addition with broadcast zero
-        self.assertIsInstance((b + broad0), pybamm.FullBroadcast)
+        self.assertIsInstance((b + broad0), pybamm.PrimaryBroadcast)
         np.testing.assert_array_equal((b + broad0).child.evaluate(), 1)
         np.testing.assert_array_equal((b + broad0).domain, "domain")
-        self.assertIsInstance((broad0 + b), pybamm.FullBroadcast)
+        self.assertIsInstance((broad0 + b), pybamm.PrimaryBroadcast)
         np.testing.assert_array_equal((broad0 + b).child.evaluate(), 1)
         np.testing.assert_array_equal((broad0 + b).domain, "domain")
 
@@ -455,6 +474,9 @@ class TestBinaryOperators(unittest.TestCase):
         self.assertEqual((b * b).evaluate(), 1)
         self.assertIsInstance((a * a), pybamm.Scalar)
         self.assertEqual((a * a).evaluate(), 0)
+        # multiplication with broadcasts
+        self.assertEqual((c * broad2).id, pybamm.PrimaryBroadcast(c * 2, "domain").id)
+        self.assertEqual((broad2 * c).id, pybamm.PrimaryBroadcast(2 * c, "domain").id)
 
         # multiplication with matrix zero
         self.assertIsInstance((b * v), pybamm.Array)
@@ -466,10 +488,16 @@ class TestBinaryOperators(unittest.TestCase):
         np.testing.assert_array_equal((e * v1).evaluate(), 2 * np.ones((10, 1)))
         self.assertIsInstance((v1 * e), pybamm.Array)
         np.testing.assert_array_equal((v1 * e).evaluate(), 2 * np.ones((10, 1)))
+        # multiplication with broadcast
+        self.assertEqual((var * broad2).id, (var * 2).id)
+        self.assertEqual((broad2 * var).id, (2 * var).id)
         # multiplication with broadcast one
         self.assertEqual((var * broad1).id, var.id)
         self.assertEqual((broad1 * var).id, var.id)
 
+        # multiplication with broadcasts
+        self.assertEqual((c / broad2).id, pybamm.PrimaryBroadcast(c / 2, "domain").id)
+        self.assertEqual((broad2 / c).id, pybamm.PrimaryBroadcast(2 / c, "domain").id)
         # division with matrix one
         self.assertIsInstance((e / v1), pybamm.Array)
         np.testing.assert_array_equal((e / v1).evaluate(), 2 * np.ones((10, 1)))

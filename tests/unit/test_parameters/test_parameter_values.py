@@ -111,31 +111,33 @@ class TestParameterValues(unittest.TestCase):
             )
 
     def test_process_symbol(self):
-        parameter_values = pybamm.ParameterValues({"a": 1, "b": 2, "c": 3})
+        parameter_values = pybamm.ParameterValues({"a": 4, "b": 2, "c": 3})
         # process parameter
         a = pybamm.Parameter("a")
         processed_a = parameter_values.process_symbol(a)
         self.assertIsInstance(processed_a, pybamm.Scalar)
-        self.assertEqual(processed_a.value, 1)
+        self.assertEqual(processed_a.value, 4)
 
         # process binary operation
-        b = pybamm.Parameter("b")
-        add = a + b
+        var = pybamm.Variable("var")
+        add = a + var
         processed_add = parameter_values.process_symbol(add)
         self.assertIsInstance(processed_add, pybamm.Addition)
         self.assertIsInstance(processed_add.children[0], pybamm.Scalar)
-        self.assertIsInstance(processed_add.children[1], pybamm.Scalar)
-        self.assertEqual(processed_add.children[0].value, 1)
-        self.assertEqual(processed_add.children[1].value, 2)
+        self.assertIsInstance(processed_add.children[1], pybamm.Variable)
+        self.assertEqual(processed_add.children[0].value, 4)
+
+        b = pybamm.Parameter("b")
+        add = a + b
+        processed_add = parameter_values.process_symbol(add)
+        self.assertIsInstance(processed_add, pybamm.Scalar)
+        self.assertEqual(processed_add.value, 6)
 
         scal = pybamm.Scalar(34)
         mul = a * scal
         processed_mul = parameter_values.process_symbol(mul)
-        self.assertIsInstance(processed_mul, pybamm.Multiplication)
-        self.assertIsInstance(processed_mul.children[0], pybamm.Scalar)
-        self.assertIsInstance(processed_mul.children[1], pybamm.Scalar)
-        self.assertEqual(processed_mul.children[0].value, 1)
-        self.assertEqual(processed_mul.children[1].value, 34)
+        self.assertIsInstance(processed_mul, pybamm.Scalar)
+        self.assertEqual(processed_mul.value, 136)
 
         # process integral
         aa = pybamm.Parameter("a", domain=["negative electrode"])
@@ -144,7 +146,7 @@ class TestParameterValues(unittest.TestCase):
         processed_integ = parameter_values.process_symbol(integ)
         self.assertIsInstance(processed_integ, pybamm.Integral)
         self.assertIsInstance(processed_integ.children[0], pybamm.Scalar)
-        self.assertEqual(processed_integ.children[0].value, 1)
+        self.assertEqual(processed_integ.children[0].value, 4)
         self.assertEqual(processed_integ.integration_variable[0].id, x.id)
 
         # process unary operation
@@ -162,7 +164,7 @@ class TestParameterValues(unittest.TestCase):
         self.assertEqual(processed_delta_aa.side, "left")
         processed_a = processed_delta_aa.children[0]
         self.assertIsInstance(processed_a, pybamm.Scalar)
-        self.assertEqual(processed_a.value, 1)
+        self.assertEqual(processed_a.value, 4)
 
         # process boundary operator (test for BoundaryValue)
         aa = pybamm.Parameter("a", domain=["negative electrode"])
@@ -173,7 +175,7 @@ class TestParameterValues(unittest.TestCase):
         processed_a = processed_boundary_op.children[0].children[0]
         processed_x = processed_boundary_op.children[0].children[1]
         self.assertIsInstance(processed_a, pybamm.Scalar)
-        self.assertEqual(processed_a.value, 1)
+        self.assertEqual(processed_a.value, 4)
         self.assertEqual(processed_x.id, x.id)
 
         # process broadcast
@@ -183,7 +185,7 @@ class TestParameterValues(unittest.TestCase):
         self.assertIsInstance(processed_broad, pybamm.Broadcast)
         self.assertEqual(processed_broad.domain, whole_cell)
         self.assertIsInstance(processed_broad.children[0], pybamm.Scalar)
-        self.assertEqual(processed_broad.children[0].evaluate(), np.array([1]))
+        self.assertEqual(processed_broad.children[0].evaluate(), 4)
 
         # process concatenation
         conc = pybamm.Concatenation(
@@ -205,7 +207,7 @@ class TestParameterValues(unittest.TestCase):
         b_proc = processed_dom_con.children[1].children[0]
         self.assertIsInstance(a_proc, pybamm.Scalar)
         self.assertIsInstance(b_proc, pybamm.Scalar)
-        self.assertEqual(a_proc.value, 1)
+        self.assertEqual(a_proc.value, 4)
         self.assertEqual(b_proc.value, 2)
 
         # process variable
@@ -545,10 +547,7 @@ class TestParameterValues(unittest.TestCase):
         parameter_values = pybamm.ParameterValues({"a": 1, "b": 2, "c": 3, "d": 42})
         parameter_values.process_model(model)
         # rhs
-        self.assertIsInstance(model.rhs[var1], pybamm.Multiplication)
-        self.assertIsInstance(model.rhs[var1].children[0], pybamm.Scalar)
-        self.assertIsInstance(model.rhs[var1].children[1], pybamm.Gradient)
-        self.assertEqual(model.rhs[var1].children[0].value, 1)
+        self.assertIsInstance(model.rhs[var1], pybamm.Gradient)
         # algebraic
         self.assertIsInstance(model.algebraic[var2], pybamm.Multiplication)
         self.assertIsInstance(model.algebraic[var2].children[0], pybamm.Scalar)

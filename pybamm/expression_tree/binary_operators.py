@@ -8,6 +8,38 @@ import numbers
 from scipy.sparse import issparse, csr_matrix
 
 
+def preprocess_binary(left, right):
+    if isinstance(left, numbers.Number):
+        left = pybamm.Scalar(left)
+    if isinstance(right, numbers.Number):
+        right = pybamm.Scalar(right)
+
+    # Check both left and right are pybamm Symbols
+    if not (isinstance(left, pybamm.Symbol) and isinstance(right, pybamm.Symbol)):
+        raise NotImplementedError(
+            """BinaryOperator not implemented for symbols of type {} and {}""".format(
+                type(left), type(right)
+            )
+        )
+
+    # Do some broadcasting in special cases, to avoid having to do this manually
+    if left.domain != [] and right.domain != []:
+        if (
+            left.domain != right.domain
+            and "secondary" in right.auxiliary_domains
+            and left.domain == right.auxiliary_domains["secondary"]
+        ):
+            left = pybamm.PrimaryBroadcast(left, right.domain)
+        if (
+            right.domain != left.domain
+            and "secondary" in left.auxiliary_domains
+            and right.domain == left.auxiliary_domains["secondary"]
+        ):
+            right = pybamm.PrimaryBroadcast(right, left.domain)
+
+    return left, right
+
+
 class BinaryOperator(pybamm.Symbol):
     """A node in the expression tree representing a binary operator (e.g. `+`, `*`)
 
@@ -28,7 +60,7 @@ class BinaryOperator(pybamm.Symbol):
     """
 
     def __init__(self, name, left, right):
-        left, right = self.format(left, right)
+        left, right = preprocess_binary(left, right)
 
         domain = self.get_children_domains(left.domain, right.domain)
         auxiliary_domains = self.get_children_auxiliary_domains([left, right])
@@ -40,39 +72,6 @@ class BinaryOperator(pybamm.Symbol):
         )
         self.left = self.children[0]
         self.right = self.children[1]
-
-    def format(self, left, right):
-        "Format children left and right into compatible form"
-        # Turn numbers into scalars
-        if isinstance(left, numbers.Number):
-            left = pybamm.Scalar(left)
-        if isinstance(right, numbers.Number):
-            right = pybamm.Scalar(right)
-
-        # Check both left and right are pybamm Symbols
-        if not (isinstance(left, pybamm.Symbol) and isinstance(right, pybamm.Symbol)):
-            raise NotImplementedError(
-                """'{}' not implemented for symbols of type {} and {}""".format(
-                    self.__class__.__name__, type(left), type(right)
-                )
-            )
-
-        # Do some broadcasting in special cases, to avoid having to do this manually
-        if left.domain != [] and right.domain != []:
-            if (
-                left.domain != right.domain
-                and "secondary" in right.auxiliary_domains
-                and left.domain == right.auxiliary_domains["secondary"]
-            ):
-                left = pybamm.PrimaryBroadcast(left, right.domain)
-            if (
-                right.domain != left.domain
-                and "secondary" in left.auxiliary_domains
-                and right.domain == left.auxiliary_domains["secondary"]
-            ):
-                right = pybamm.PrimaryBroadcast(right, left.domain)
-
-        return left, right
 
     def __str__(self):
         """ See :meth:`pybamm.Symbol.__str__()`. """
@@ -126,8 +125,12 @@ class BinaryOperator(pybamm.Symbol):
         return out
 
     def _binary_new_copy(self, left, right):
-        "Default behaviour for new_copy"
-        return self.__class__(left, right)
+        """
+        Default behaviour for new_copy.
+        This copies the behaviour of `_binary_evaluate`, but since `left` and `right`
+        are symbols creates a new symbol instead of returning a value.
+        """
+        return self._binary_evaluate(left, right)
 
     def evaluate(self, t=None, y=None, y_dot=None, inputs=None, known_evals=None):
         """ See :meth:`pybamm.Symbol.evaluate()`. """
@@ -490,7 +493,7 @@ def inner(left, right):
     """
     Return inner product of two symbols.
     """
-    left, right = pybamm.preprocess(left, right)
+    left, right = preprocess_binary(left, right)
     # simplify multiply by scalar zero, being careful about shape
     if pybamm.is_scalar_zero(left):
         return pybamm.zeros_like(right)
@@ -645,6 +648,10 @@ class Minimum(BinaryOperator):
         # don't raise RuntimeWarning for NaNs
         return np.minimum(left, right)
 
+    def _binary_new_copy(self, left, right):
+        "See :meth:`pybamm.BinaryOperator._binary_new_copy()`. "
+        return pybamm.minimum(left, right)
+
 
 class Maximum(BinaryOperator):
     " Returns the smaller of two objects "
@@ -672,6 +679,263 @@ class Maximum(BinaryOperator):
         """ See :meth:`pybamm.BinaryOperator._binary_evaluate()`. """
         # don't raise RuntimeWarning for NaNs
         return np.maximum(left, right)
+
+    def _binary_new_copy(self, left, right):
+        "See :meth:`pybamm.BinaryOperator._binary_new_copy()`. "
+        return pybamm.maximum(left, right)
+
+
+def simplify_elementwise_binary_broadcasts(left, right):
+    left, right = preprocess_binary(left, right)
+
+    # No need to broadcast if the other symbol already has the shape that is being
+    # broadcasted to
+    if (
+        isinstance(left, pybamm.Broadcast)
+        and left.child.domain == []
+        and right.domains == left.domains
+    ):
+        left = left.orphans[0]
+    elif (
+        isinstance(right, pybamm.Broadcast)
+        and right.child.domain == []
+        and left.domains == right.domains
+    ):
+        right = right.orphans[0]
+
+    return left, right
+
+
+def simplified_power(left, right):
+    left, right = simplify_elementwise_binary_broadcasts(left, right)
+
+    # Broadcast commutes with power operator
+    if isinstance(left, pybamm.Broadcast) and right.domain == []:
+        return left._unary_new_copy(left.orphans[0] ** right)
+    elif isinstance(right, pybamm.Broadcast) and left.domain == []:
+        return right._unary_new_copy(left ** right.orphans[0])
+
+    # anything to the power of zero is one
+    if pybamm.is_scalar_zero(right):
+        return pybamm.Scalar(1)
+
+    # zero to the power of anything is zero
+    if pybamm.is_scalar_zero(left):
+        return pybamm.Scalar(0)
+
+    # anything to the power of one is itself
+    if pybamm.is_scalar_one(right):
+        return left
+
+    return pybamm.simplify_if_constant(pybamm.Power(left, right), clear_domains=False)
+
+
+def simplified_addition(left, right):
+    """
+    Note
+    ----
+    We check for scalars first, then matrices. This is because
+    (Zero Matrix) + (Zero Scalar)
+    should return (Zero Matrix), not (Zero Scalar).
+    """
+    left, right = simplify_elementwise_binary_broadcasts(left, right)
+
+    # Broadcast commutes with addition operator
+    if isinstance(left, pybamm.Broadcast) and right.domain == []:
+        return left._unary_new_copy(left.orphans[0] + right)
+    elif isinstance(right, pybamm.Broadcast) and left.domain == []:
+        return right._unary_new_copy(left + right.orphans[0])
+
+    # anything added by a scalar zero returns the other child
+    if pybamm.is_scalar_zero(left):
+        return right
+    if pybamm.is_scalar_zero(right):
+        return left
+    # Check matrices after checking scalars
+    if pybamm.is_matrix_zero(left):
+        if right.evaluates_to_number():
+            return right * pybamm.ones_like(left)
+        # If left object is zero and has size smaller than or equal to right object in
+        # all dimensions, we can safely return the right object. For example, adding a
+        # zero vector a matrix, we can just return the matrix
+        elif all(
+            left_dim_size <= right_dim_size
+            for left_dim_size, right_dim_size in zip(
+                left.shape_for_testing, right.shape_for_testing
+            )
+        ) and all(
+            left.evaluates_on_edges(dim) == right.evaluates_on_edges(dim)
+            for dim in ["primary", "secondary", "tertiary"]
+        ):
+            return right
+    if pybamm.is_matrix_zero(right):
+        if left.evaluates_to_number():
+            return left * pybamm.ones_like(right)
+        # See comment above
+        elif all(
+            left_dim_size >= right_dim_size
+            for left_dim_size, right_dim_size in zip(
+                left.shape_for_testing, right.shape_for_testing
+            )
+        ) and all(
+            left.evaluates_on_edges(dim) == right.evaluates_on_edges(dim)
+            for dim in ["primary", "secondary", "tertiary"]
+        ):
+            return left
+
+    return pybamm.simplify_if_constant(
+        pybamm.Addition(left, right), clear_domains=False
+    )
+
+
+def simplified_subtraction(left, right):
+    """
+     Note
+    ----
+    We check for scalars first, then matrices. This is because
+    (Zero Matrix) - (Zero Scalar)
+    should return (Zero Matrix), not -(Zero Scalar).
+    """
+    left, right = simplify_elementwise_binary_broadcasts(left, right)
+
+    # Broadcast commutes with subtraction operator
+    if isinstance(left, pybamm.Broadcast) and right.domain == []:
+        return left._unary_new_copy(left.orphans[0] - right)
+    elif isinstance(right, pybamm.Broadcast) and left.domain == []:
+        return right._unary_new_copy(left - right.orphans[0])
+
+    # anything added by a scalar zero returns the other child
+    if pybamm.is_scalar_zero(left):
+        return -right
+    if pybamm.is_scalar_zero(right):
+        return left
+    # Check matrices after checking scalars
+    if pybamm.is_matrix_zero(left):
+        if right.evaluates_to_number():
+            return -right * pybamm.ones_like(left)
+        # See comments in simplified_addition
+        elif all(
+            left_dim_size <= right_dim_size
+            for left_dim_size, right_dim_size in zip(
+                left.shape_for_testing, right.shape_for_testing
+            )
+        ) and all(
+            left.evaluates_on_edges(dim) == right.evaluates_on_edges(dim)
+            for dim in ["primary", "secondary", "tertiary"]
+        ):
+            return -right
+    if pybamm.is_matrix_zero(right):
+        if left.evaluates_to_number():
+            return left * pybamm.ones_like(right)
+        # See comments in simplified_addition
+        elif all(
+            left_dim_size >= right_dim_size
+            for left_dim_size, right_dim_size in zip(
+                left.shape_for_testing, right.shape_for_testing
+            )
+        ) and all(
+            left.evaluates_on_edges(dim) == right.evaluates_on_edges(dim)
+            for dim in ["primary", "secondary", "tertiary"]
+        ):
+            return left
+
+    return pybamm.simplify_if_constant(
+        pybamm.Subtraction(left, right), clear_domains=False
+    )
+
+
+def simplified_multiplication(left, right):
+    left, right = simplify_elementwise_binary_broadcasts(left, right)
+
+    # Broadcast commutes with multiplication operator
+    if isinstance(left, pybamm.Broadcast) and right.domain == []:
+        return left._unary_new_copy(left.orphans[0] * right)
+    elif isinstance(right, pybamm.Broadcast) and left.domain == []:
+        return right._unary_new_copy(left * right.orphans[0])
+
+    # simplify multiply by scalar zero, being careful about shape
+    if pybamm.is_scalar_zero(left):
+        return pybamm.zeros_like(right)
+    if pybamm.is_scalar_zero(right):
+        return pybamm.zeros_like(left)
+
+    # if one of the children is a zero matrix, we have to be careful about shapes
+    if pybamm.is_matrix_zero(left) or pybamm.is_matrix_zero(right):
+        return pybamm.zeros_like(pybamm.Multiplication(left, right))
+
+    # anything multiplied by a scalar one returns itself
+    if pybamm.is_scalar_one(left):
+        return right
+    if pybamm.is_scalar_one(right):
+        return left
+
+    # anything multiplied by a matrix one returns itself if
+    # - the shapes are the same
+    # - both left and right evaluate on edges, or both evaluate on nodes, in all
+    # dimensions
+    # (and possibly more generally, but not implemented here)
+    try:
+        if left.shape_for_testing == right.shape_for_testing and all(
+            left.evaluates_on_edges(dim) == right.evaluates_on_edges(dim)
+            for dim in ["primary", "secondary", "tertiary"]
+        ):
+            if pybamm.is_matrix_one(left):
+                return right
+            elif pybamm.is_matrix_one(right):
+                return left
+    except NotImplementedError:
+        pass
+
+    return pybamm.simplify_if_constant(
+        pybamm.Multiplication(left, right), clear_domains=False
+    )
+
+
+def simplified_division(left, right):
+    left, right = simplify_elementwise_binary_broadcasts(left, right)
+
+    # Broadcast commutes with power operator
+    if isinstance(left, pybamm.Broadcast) and right.domain == []:
+        return left._unary_new_copy(left.orphans[0] / right)
+    elif isinstance(right, pybamm.Broadcast) and left.domain == []:
+        return right._unary_new_copy(left / right.orphans[0])
+
+    # zero divided by zero returns nan scalar
+    if pybamm.is_scalar_zero(left) and pybamm.is_scalar_zero(right):
+        return pybamm.Scalar(np.nan)
+
+    # zero divided by anything returns zero (being careful about shape)
+    if pybamm.is_scalar_zero(left):
+        return pybamm.zeros_like(right)
+
+    # matrix zero divided by anything returns matrix zero (i.e. itself)
+    if pybamm.is_matrix_zero(left):
+        return pybamm.zeros_like(pybamm.Division(left, right))
+
+    # anything divided by zero returns inf
+    if pybamm.is_scalar_zero(right):
+        if left.shape_for_testing == ():
+            return pybamm.Scalar(np.inf)
+        else:
+            return np.inf * pybamm.ones_like(left)
+
+    # anything divided by one is itself
+    if pybamm.is_scalar_one(right):
+        return left
+
+    return pybamm.simplify_if_constant(
+        pybamm.Division(left, right), clear_domains=False
+    )
+
+
+def simplified_matrix_multiplication(left, right):
+    left, right = preprocess_binary(left, right)
+    if pybamm.is_matrix_zero(left) or pybamm.is_matrix_zero(right):
+        return pybamm.zeros_like(pybamm.MatrixMultiplication(left, right))
+
+    return pybamm.simplify_if_constant(
+        pybamm.MatrixMultiplication(left, right), clear_domains=False
+    )
 
 
 def minimum(left, right):
