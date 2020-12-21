@@ -459,4 +459,4 @@ class SpatialMethod:
         :class:`pybamm.DomainConcatenation`
             Concatenation of the discretised children
         """
-        return pybamm.DomainConcatenation(disc_children, self.mesh)
+        return pybamm.domain_concatenation(disc_children, self.mesh)

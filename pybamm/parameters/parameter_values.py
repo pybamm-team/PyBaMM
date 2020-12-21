@@ -585,6 +585,25 @@ class ParameterValues:
             # process children
             new_left = self.process_symbol(symbol.left)
             new_right = self.process_symbol(symbol.right)
+            # Special case for averages, which can appear as "integral of a broadcast"
+            # divided by "integral of a broadcast"
+            # this construction seems very specific but can appear often when averaging
+            if (
+                isinstance(symbol, pybamm.Division)
+                # left is integral(Broadcast)
+                and (
+                    isinstance(new_left, pybamm.Integral)
+                    and isinstance(new_left.child, pybamm.Broadcast)
+                    and new_left.child.child.domain == []
+                )
+                # right is integral(Broadcast(1))
+                and (
+                    isinstance(new_right, pybamm.Integral)
+                    and isinstance(new_right.child, pybamm.Broadcast)
+                    and new_right.child.child.id == pybamm.Scalar(1).id
+                )
+            ):
+                return new_left.child.orphans[0]
             # make new symbol, ensure domain remains the same
             new_symbol = symbol._binary_new_copy(new_left, new_right)
             new_symbol.domain = symbol.domain

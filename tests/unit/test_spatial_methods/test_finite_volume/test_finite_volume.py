@@ -483,7 +483,7 @@ class TestFiniteVolume(unittest.TestCase):
             grad_eqn_disc.evaluate(None, constant_y),
             np.zeros_like(combined_submesh.edges[:, np.newaxis]),
         )
-        np.testing.assert_array_equal(
+        np.testing.assert_array_almost_equal(
             div_eqn_disc.evaluate(None, constant_y),
             np.zeros_like(combined_submesh.nodes[:, np.newaxis]),
         )

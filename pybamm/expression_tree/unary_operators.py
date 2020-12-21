@@ -302,8 +302,10 @@ class Index(UnaryOperator):
 
     def _unary_new_copy(self, child):
         """ See :meth:`UnaryOperator._unary_new_copy()`. """
-
-        return self.__class__(child, self.index, check_size=False)
+        new_index = self.__class__(child, self.index, check_size=False)
+        # Keep same domains
+        new_index.copy_domains(self)
+        return new_index
 
     def _evaluate_for_shape(self):
         return self._unary_evaluate(self.children[0].evaluate_for_shape())
@@ -1122,6 +1124,13 @@ def surf(symbol):
     return boundary_value(symbol, "right")
 
 
+def integral(symbol, integration_variable):
+    """
+    Convenience function for creating an integral
+    """
+    return Integral(symbol, integration_variable)
+
+
 def x_average(symbol):
     """convenience function for creating an average in the x-direction
 
@@ -1146,14 +1155,6 @@ def x_average(symbol):
     # If symbol is a Broadcast, its average value is its child
     elif isinstance(symbol, pybamm.Broadcast):
         return symbol.orphans[0]
-    # If symbol is a number times a Broadcast, its average value is the number times
-    # the child of the broadcast
-    elif (
-        isinstance(symbol, pybamm.Multiplication)
-        and symbol.left.evaluates_to_number()
-        and isinstance(symbol.right, pybamm.Broadcast)
-    ):
-        return symbol.orphans[0] * symbol.right.orphans[0]
     # If symbol is a concatenation of Broadcasts, its average value is its child
     elif (
         isinstance(symbol, pybamm.Concatenation)
