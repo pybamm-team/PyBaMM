@@ -1158,7 +1158,7 @@ class FiniteVolume(pybamm.SpatialMethod):
                         or n_edges (number of edges in the mesh)
                         """
                     )
-        return pybamm.DomainConcatenation(disc_children, self.mesh)
+        return pybamm.domain_concatenation(disc_children, self.mesh)
 
     def edge_to_node(self, discretised_symbol, method="arithmetic"):
         """

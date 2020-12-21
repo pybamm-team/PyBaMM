@@ -32,7 +32,6 @@ disc.process_model(model)
 t_eval = np.linspace(0, 3600, 100)
 solver = pybamm.CasadiSolver(mode="fast", atol=1e-6, rtol=1e-3)
 solution = solver.solve(model, t_eval)
-solution = solver.solve(model, t_eval)
 
 # plot
 plot = pybamm.QuickPlot(

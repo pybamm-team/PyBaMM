@@ -537,6 +537,19 @@ class TestBinaryOperators(unittest.TestCase):
         expr = A @ ((B @ var) + d)
         self.assertEqual(expr.id, (((A @ B) @ var) + (A @ d)).id)
 
+        # Do (d*A) first if it is constant
+        expr = d * (A @ var)
+        self.assertEqual(expr.id, ((d * A) @ var).id)
+        expr = (A @ var) * d
+        self.assertEqual(expr.id, ((d * A) @ var).id)
+        # Do (A/d) first if it is constant
+        expr = (A @ var) / d
+        self.assertEqual(expr.id, ((A / d) @ var).id)
+
+        # Reduce (A@var + B@var) to ((A+B)@var)
+        expr = A @ var + B @ var
+        self.assertEqual(expr.id, ((A + B) @ var).id)
+
     def test_inner_simplifications(self):
         a1 = pybamm.Scalar(0)
         M1 = pybamm.Matrix(np.zeros((10, 10)))

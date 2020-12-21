@@ -1,5 +1,7 @@
 #
 # Test for the Simplify class
+# This test file is a little bit out of date now that many simplifications are
+# performed automatically
 #
 import math
 import numpy as np
@@ -385,7 +387,7 @@ class TestSimplify(unittest.TestCase):
         # more complex expression, with simplification
         expr3 = m1 @ (v3 * (m2 @ v2))
         expr3simp = expr3.simplify()
-        self.assertNotEqual(expr3.id, expr3simp.id)
+        self.assertEqual(expr3.id, expr3simp.id)
         np.testing.assert_array_equal(
             expr3.evaluate(y=np.ones(300)), expr3simp.evaluate(y=np.ones(300))
         )
@@ -506,6 +508,9 @@ class TestSimplify(unittest.TestCase):
                 ]
             ),
         )
+
+        # check it works when calling domain_concatenation
+        self.assertIsInstance(pybamm.domain_concatenation([a, b], mesh), pybamm.Vector)
 
     def test_simplify_concatenation_state_vectors(self):
         disc = get_discretisation_for_testing()

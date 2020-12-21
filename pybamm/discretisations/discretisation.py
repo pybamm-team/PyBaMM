@@ -852,8 +852,6 @@ class Discretisation(object):
                     )
 
         if isinstance(symbol, pybamm.BinaryOperator):
-            if isinstance(symbol, pybamm.Inner):
-                n = 1
             # Pre-process children
             left, right = symbol.children
             disc_left = self.process_symbol(left)
@@ -1047,7 +1045,7 @@ class Discretisation(object):
         if sparse:
             return pybamm.SparseStack(*symbols)
         else:
-            return pybamm.NumpyConcatenation(*symbols)
+            return pybamm.numpy_concatenation(*symbols)
 
     def _concatenate_in_order(self, var_eqn_dict, check_complete=False, sparse=False):
         """
