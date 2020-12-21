@@ -256,8 +256,6 @@ class TestEvaluate(unittest.TestCase):
         disc.set_variable_slices([a, b])
         expr = disc.process_symbol(conc)
         self.assertIsInstance(expr, pybamm.DomainConcatenation)
-        a_disc = expr.children[0]
-        b_disc = expr.children[1]
 
         y = np.empty((expr._size, 1))
         for i in range(len(y)):
