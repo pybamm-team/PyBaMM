@@ -590,20 +590,26 @@ class ParameterValues:
             # this construction seems very specific but can appear often when averaging
             if (
                 isinstance(symbol, pybamm.Division)
-                # left is integral(Broadcast)
-                and (
-                    isinstance(new_left, pybamm.Integral)
-                    and isinstance(new_left.child, pybamm.Broadcast)
-                    and new_left.child.child.domain == []
-                )
                 # right is integral(Broadcast(1))
                 and (
                     isinstance(new_right, pybamm.Integral)
                     and isinstance(new_right.child, pybamm.Broadcast)
                     and new_right.child.child.id == pybamm.Scalar(1).id
                 )
+                and isinstance(new_left, pybamm.Integral)
             ):
-                return new_left.child.orphans[0]
+                # left is integral(Broadcast)
+                if (
+                    isinstance(new_left.child, pybamm.Broadcast)
+                    and new_left.child.child.domain == []
+                ):
+                    return new_left.child.orphans[0]
+                # left is "integral of concatenation of broadcasts"
+                elif isinstance(new_left.child, pybamm.Concatenation) and all(
+                    isinstance(child, pybamm.Broadcast)
+                    for child in new_left.child.children
+                ):
+                    return self.process_symbol(pybamm.x_average(new_left.child))
             # make new symbol, ensure domain remains the same
             new_symbol = symbol._binary_new_copy(new_left, new_right)
             new_symbol.domain = symbol.domain
