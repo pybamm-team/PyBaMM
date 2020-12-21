@@ -562,7 +562,10 @@ class ParameterValues:
                 function = function_name * pybamm.ones_like(*new_children)
             elif callable(function_name):
                 # otherwise evaluate the function to create a new PyBaMM object
-                function = function_name(*new_children)
+                try:
+                    function = function_name(*new_children)
+                except:
+                    n = 1
             else:
                 raise TypeError(
                     "Parameter provided for '{}' ".format(symbol.name)
@@ -609,7 +612,7 @@ class ParameterValues:
                     isinstance(child, pybamm.Broadcast)
                     for child in new_left.child.children
                 ):
-                    return pybamm.x_average(new_left.child)
+                    return self.process_symbol(pybamm.x_average(new_left.child))
             # make new symbol, ensure domain remains the same
             new_symbol = symbol._binary_new_copy(new_left, new_right)
             new_symbol.domain = symbol.domain

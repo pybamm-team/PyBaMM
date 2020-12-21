@@ -504,6 +504,30 @@ class TestParameterValues(unittest.TestCase):
 
         self.assertEqual(func_proc.id, pybamm.Scalar(2, name="func").id)
 
+        # special case for integral of concatenations of broadcasts
+        var_n = pybamm.Variable("var_n", domain="negative electrode")
+        var_s = pybamm.Variable("var_s", domain="separator")
+        var_p = pybamm.Variable("var_p", domain="positive electrode")
+        func_n = pybamm.FunctionParameter("func_n", {"var_n": var_n})
+        func_s = pybamm.FunctionParameter("func_s", {"var_s": var_s})
+        func_p = pybamm.FunctionParameter("func_p", {"var_p": var_p})
+
+        func = pybamm.x_average(pybamm.Concatenation(func_n, func_s, func_p))
+        param = pybamm.ParameterValues(
+            {
+                "func_n": 2,
+                "func_s": 3,
+                "func_p": 4,
+                "Negative electrode thickness [m]": 1,
+                "Separator thickness [m]": 1,
+                "Positive electrode thickness [m]": 1,
+            }
+        )
+        func_proc = param.process_symbol(func)
+
+        func_proc.render()
+        self.assertEqual(func_proc.id, pybamm.Scalar(3).id)
+
     def test_process_complex_expression(self):
         var1 = pybamm.Variable("var1")
         var2 = pybamm.Variable("var2")
