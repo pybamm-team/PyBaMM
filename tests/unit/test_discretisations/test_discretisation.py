@@ -35,10 +35,8 @@ class TestDiscretise(unittest.TestCase):
         disc.y_slices = {c.id: [slice(0, 1)], a.id: [slice(2, 3)], b.id: [slice(3, 4)]}
         result = disc._concatenate_in_order(initial_conditions)
 
-        self.assertIsInstance(result, pybamm.NumpyConcatenation)
-        self.assertEqual(result.children[0].evaluate(), 1)
-        self.assertEqual(result.children[1].evaluate(), 2)
-        self.assertEqual(result.children[2].evaluate(), 3)
+        self.assertIsInstance(result, pybamm.Vector)
+        np.testing.assert_array_equal(result.evaluate(), [[1], [2], [3]])
 
         initial_conditions = {a: pybamm.Scalar(2), b: pybamm.Scalar(3)}
         with self.assertRaises(pybamm.ModelError):
@@ -1083,6 +1081,8 @@ class TestDiscretise(unittest.TestCase):
             auxiliary_domains={"secondary": "current collector"},
             bounds=(0, 1),
         )
+
+        # With simplification
         conc = pybamm.Concatenation(a, b, c)
         disc.set_variable_slices([conc])
         self.assertEqual(
@@ -1101,6 +1101,22 @@ class TestDiscretise(unittest.TestCase):
             disc.bounds[1], ([-2] * 40 + [10] * 25 + [1] * 35) * 3
         )
         expr = disc.process_symbol(conc)
+        self.assertIsInstance(expr, pybamm.StateVector)
+
+        # Evaulate
+        y = np.linspace(0, 1, 300)
+        self.assertEqual(expr.evaluate(0, y).shape, (120 + 75 + 105, 1))
+        np.testing.assert_equal(expr.evaluate(0, y), y[:, np.newaxis])
+
+        # Without simplification
+        conc = pybamm.Concatenation(2 * a, 3 * b, 4 * c)
+        np.testing.assert_array_equal(
+            disc.bounds[0], ([-5] * 40 + [6] * 25 + [0] * 35) * 3
+        )
+        np.testing.assert_array_equal(
+            disc.bounds[1], ([-2] * 40 + [10] * 25 + [1] * 35) * 3
+        )
+        expr = disc.process_symbol(conc)
         self.assertIsInstance(expr, pybamm.DomainConcatenation)
 
         # Evaulate
@@ -1108,7 +1124,6 @@ class TestDiscretise(unittest.TestCase):
         self.assertEqual(expr.children[0].evaluate(0, y).shape, (120, 1))
         self.assertEqual(expr.children[1].evaluate(0, y).shape, (75, 1))
         self.assertEqual(expr.children[2].evaluate(0, y).shape, (105, 1))
-        np.testing.assert_equal(expr.evaluate(0, y), y[:, np.newaxis])
 
     def test_exceptions(self):
         c_n = pybamm.Variable("c", domain=["negative electrode"])
@@ -1131,7 +1146,7 @@ class TestDiscretise(unittest.TestCase):
             disc.process_model(model)
 
         # check doesn't raise if concatenation
-        model.variables = {c_n.name: pybamm.Concatenation(c_n, c_s)}
+        model.variables = {c_n.name: pybamm.Concatenation(2 * c_n, 3 * c_s)}
         disc.process_model(model, inplace=False)
 
         # check doesn't raise if broadcast

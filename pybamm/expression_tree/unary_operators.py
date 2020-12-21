@@ -302,8 +302,10 @@ class Index(UnaryOperator):
 
     def _unary_new_copy(self, child):
         """ See :meth:`UnaryOperator._unary_new_copy()`. """
-
-        return self.__class__(child, self.index, check_size=False)
+        new_index = self.__class__(child, self.index, check_size=False)
+        # Keep same domains
+        new_index.copy_domains(self)
+        return new_index
 
     def _evaluate_for_shape(self):
         return self._unary_evaluate(self.children[0].evaluate_for_shape())

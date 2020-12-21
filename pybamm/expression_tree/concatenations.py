@@ -303,7 +303,9 @@ class DomainConcatenation(Concatenation):
 
     def _concatenation_new_copy(self, children):
         """ See :meth:`pybamm.Symbol.new_copy()`. """
-        new_symbol = self.__class__(children, self.full_mesh, self)
+        new_symbol = simplified_domain_concatenation(
+            children, self.full_mesh, copy_this=self
+        )
         return new_symbol
 
     def _concatenation_simplify(self, children):
@@ -372,7 +374,7 @@ def numpy_concatenation(*children):
 def simplified_domain_concatenation(children, mesh, copy_this=None):
     """ Perform simplifications on a domain concatenation """
     # Create the DomainConcatenation to read domain and child domain
-    concat = pybamm.DomainConcatenation(children, mesh, copy_this=copy_this)
+    concat = DomainConcatenation(children, mesh, copy_this=copy_this)
     # Simplify Concatenation of StateVectors to a single StateVector
     # The sum of the evalation arrays of the StateVectors must be exactly 1
     if all([isinstance(child, pybamm.StateVector) for child in children]):

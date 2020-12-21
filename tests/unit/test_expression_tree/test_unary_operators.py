@@ -578,11 +578,10 @@ class TestUnaryOperators(unittest.TestCase):
         z_av_a = pybamm.z_average(a)
         yz_av_a = pybamm.yz_average(a)
 
-        self.assertIsInstance(z_av_a, pybamm.Division)
         self.assertIsInstance(yz_av_a, pybamm.Division)
-        self.assertIsInstance(z_av_a.children[0], pybamm.Integral)
+        self.assertIsInstance(z_av_a, pybamm.Integral)
         self.assertIsInstance(yz_av_a.children[0], pybamm.Integral)
-        self.assertEqual(z_av_a.children[0].integration_variable[0].domain, z.domain)
+        self.assertEqual(z_av_a.integration_variable[0].domain, z.domain)
         self.assertEqual(yz_av_a.children[0].integration_variable[0].domain, y.domain)
         self.assertEqual(yz_av_a.children[0].integration_variable[1].domain, z.domain)
         self.assertEqual(z_av_a.domain, [])

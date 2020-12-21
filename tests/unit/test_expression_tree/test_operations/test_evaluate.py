@@ -252,8 +252,8 @@ class TestEvaluate(unittest.TestCase):
         b_dom = ["separator"]
         a = pybamm.Variable("a", domain=a_dom)
         b = pybamm.Variable("b", domain=b_dom)
-        conc = pybamm.Concatenation(a, b)
-        disc.set_variable_slices([conc])
+        conc = pybamm.Concatenation(2 * a, 3 * b)
+        disc.set_variable_slices([a, b])
         expr = disc.process_symbol(conc)
         self.assertIsInstance(expr, pybamm.DomainConcatenation)
         a_disc = expr.children[0]
@@ -266,10 +266,6 @@ class TestEvaluate(unittest.TestCase):
         constant_symbols = OrderedDict()
         variable_symbols = OrderedDict()
         pybamm.find_symbols(expr, constant_symbols, variable_symbols)
-
-        self.assertEqual(list(variable_symbols.keys())[0], a_disc.id)
-        self.assertEqual(list(variable_symbols.keys())[1], b_disc.id)
-        self.assertEqual(list(variable_symbols.keys())[2], expr.id)
 
         self.assertEqual(len(constant_symbols), 0)
 
