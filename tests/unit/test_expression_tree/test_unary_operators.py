@@ -459,7 +459,7 @@ class TestUnaryOperators(unittest.TestCase):
             ["separator"],
             ["positive electrode"],
         ]:
-            a = pybamm.Symbol("a", domain=domain)
+            a = pybamm.Variable("a", domain=domain)
             x = pybamm.SpatialVariable("x", domain)
             av_a = pybamm.x_average(a)
             self.assertIsInstance(av_a, pybamm.Division)
@@ -472,8 +472,9 @@ class TestUnaryOperators(unittest.TestCase):
         a = pybamm.Variable("a", domain=domain)
         x = pybamm.SpatialVariable("x", domain)
         av_a = pybamm.x_average(a)
-        self.assertIsInstance(av_a, pybamm.Integral)
-        self.assertEqual(av_a.integration_variable[0].domain, x.domain)
+        self.assertIsInstance(av_a, pybamm.Division)
+        self.assertIsInstance(av_a.children[0], pybamm.Integral)
+        self.assertEqual(av_a.children[0].integration_variable[0].domain, x.domain)
         self.assertEqual(av_a.domain, [])
 
         a = pybamm.Variable("a", domain="new domain")
