@@ -17,7 +17,6 @@ class TestElectrodeSOH(unittest.TestCase):
 
         V_min = 3
         V_max = 4.2
-        param
         C_n = parameter_values.evaluate(param.C_n_init)
         C_p = parameter_values.evaluate(param.C_p_init)
         n_Li = parameter_values.evaluate(param.n_Li_particles_init)
@@ -33,13 +32,10 @@ class TestElectrodeSOH(unittest.TestCase):
                 "n_Li": n_Li,
             },
         )
-        x_0 = sol["x_0"].data
-        y_0 = sol["y_0"].data
-        F = parameter_values.evaluate(param.F)
         self.assertAlmostEqual(sol["Up(y_100) - Un(x_100)"].data[0], V_max)
         self.assertAlmostEqual(sol["Up(y_0) - Un(x_0)"].data[0], V_min)
-        self.assertEqual(sol["n_Li"].data, n_Li)
-        self.assertEqual(3600 / F * (x_0 * C_n + y_0 * C_p), n_Li)
+        self.assertEqual(sol["n_Li_100"].data, n_Li)
+        self.assertEqual(sol["n_Li_0"].data, n_Li)
 
 
 if __name__ == "__main__":
