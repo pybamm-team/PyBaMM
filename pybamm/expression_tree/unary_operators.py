@@ -1173,19 +1173,10 @@ def x_average(symbol):
     # Otherwise, use Integral to calculate average value
     else:
         geo = pybamm.geometric_parameters
-        if symbol.domain == ["negative electrode"]:
-            x = pybamm.standard_spatial_vars.x_n
-            l = geo.l_n
-        elif symbol.domain == ["separator"]:
-            x = pybamm.standard_spatial_vars.x_s
-            l = geo.l_s
-        elif symbol.domain == ["positive electrode"]:
-            x = pybamm.standard_spatial_vars.x_p
-            l = geo.l_p
-        elif symbol.domain == ["negative electrode", "separator", "positive electrode"]:
-            x = pybamm.standard_spatial_vars.x
-            l = pybamm.Scalar(1)
-        elif symbol.domain == ["negative particle"]:
+        # Even if domain is "negative electrode", "separator", or
+        # "positive electrode", and we know l, we still compute it as Integral(1, x)
+        # as this will be easier to identify for simplifications later on
+        if symbol.domain == ["negative particle"]:
             x = pybamm.standard_spatial_vars.x_n
             l = geo.l_n
         elif symbol.domain == ["positive particle"]:
