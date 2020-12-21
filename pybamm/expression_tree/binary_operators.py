@@ -119,10 +119,7 @@ class BinaryOperator(pybamm.Symbol):
         new_right = self.right.new_copy()
 
         # make new symbol, ensure domain(s) remain the same
-        try:
-            out = self._binary_new_copy(new_left, new_right)
-        except:
-            self.right.new_copy()
+        out = self._binary_new_copy(new_left, new_right)
         out.copy_domains(self)
 
         return out

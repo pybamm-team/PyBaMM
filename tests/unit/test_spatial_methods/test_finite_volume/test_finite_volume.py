@@ -140,61 +140,6 @@ class TestFiniteVolume(unittest.TestCase):
             eqn_disc = disc.process_symbol(eqn)
             eqn_disc.evaluate(None, y_test)
 
-    def test_binary_operator_simplifications(self):
-        # Set up
-        whole_cell = ["negative electrode", "separator", "positive electrode"]
-
-        # create discretisation
-        mesh = get_mesh_for_testing()
-        spatial_methods = {"macroscale": pybamm.FiniteVolume()}
-        disc = pybamm.Discretisation(mesh, spatial_methods)
-
-        combined_submesh = mesh.combine_submeshes(*whole_cell)
-
-        # Discretise some equations where averaging is needed
-        var = pybamm.Variable("var", domain=whole_cell)
-        disc.set_variable_slices([var])
-        y_test = np.ones_like(combined_submesh.nodes[:, np.newaxis])
-        eqn = pybamm.div(var * pybamm.grad(var))
-
-        # Dirichlet
-        disc.bcs = {
-            var.id: {
-                "left": (pybamm.Scalar(0), "Dirichlet"),
-                "right": (pybamm.Scalar(1), "Dirichlet"),
-            }
-        }
-        eqn_disc = disc.process_symbol(eqn)
-        eqn_disc.render()
-        # Neumann
-        disc.bcs = {
-            var.id: {
-                "left": (pybamm.Scalar(0), "Neumann"),
-                "right": (pybamm.Scalar(1), "Neumann"),
-            }
-        }
-        eqn_disc = disc.process_symbol(eqn)
-        eqn_disc.render()
-        # One of each
-        disc.bcs = {
-            var.id: {
-                "left": (pybamm.Scalar(0), "Dirichlet"),
-                "right": (pybamm.Scalar(1), "Neumann"),
-            }
-        }
-        eqn_disc = disc.process_symbol(eqn)
-        eqn_disc.render()
-        disc.bcs = {
-            var.id: {
-                "left": (pybamm.Scalar(0), "Neumann"),
-                "right": (pybamm.Scalar(1), "Dirichlet"),
-            }
-        }
-        eqn_disc = disc.process_symbol(eqn)
-        eqn_disc.render()
-
-        self.assertEqual(1, 0)
-
     def test_grad_div_shapes_Dirichlet_bcs(self):
         """
         Test grad and div with Dirichlet boundary conditions (applied by grad on var)
