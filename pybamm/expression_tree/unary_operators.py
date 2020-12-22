@@ -1286,7 +1286,11 @@ def r_average(symbol):
         raise ValueError("Can't take the r-average of a symbol that evaluates on edges")
     # Otherwise, if symbol doesn't have a particle domain,
     # its r-averaged value is itself
-    elif symbol.domain not in [["positive particle"], ["negative particle"]]:
+    elif symbol.domain not in [
+        ["positive particle"],
+        ["negative particle"],
+        ["working particle"],
+    ]:
         new_symbol = symbol.new_copy()
         new_symbol.parent = None
         return new_symbol
@@ -1294,7 +1298,7 @@ def r_average(symbol):
     # "positive electrode", take the r-average of the child then broadcast back
     elif isinstance(symbol, pybamm.SecondaryBroadcast) and symbol.domains[
         "secondary"
-    ] in [["positive electrode"], ["negative electrode"]]:
+    ] in [["positive electrode"], ["negative electrode"], ["working electrode"]]:
         child = symbol.orphans[0]
         child_av = pybamm.r_average(child)
         return pybamm.PrimaryBroadcast(child_av, symbol.domains["secondary"])
@@ -1302,6 +1306,7 @@ def r_average(symbol):
     elif isinstance(symbol, pybamm.PrimaryBroadcast) and symbol.domain in [
         ["positive particle"],
         ["negative particle"],
+        ["working particle"],
     ]:
         return symbol.orphans[0]
     else:
