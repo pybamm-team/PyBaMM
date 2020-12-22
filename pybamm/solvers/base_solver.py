@@ -781,6 +781,10 @@ class BaseSolver(object):
                     "Cannot step empty model, use `pybamm.DummySolver` instead"
                 )
 
+        # Make sure dt is positive
+        if dt <= 0:
+            raise pybamm.SolverError("Step time must be positive")
+
         # Set timer
         timer = pybamm.Timer()
 
