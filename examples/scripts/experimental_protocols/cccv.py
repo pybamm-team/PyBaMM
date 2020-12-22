@@ -20,10 +20,13 @@ sim = pybamm.Simulation(model, experiment=experiment, solver=pybamm.CasadiSolver
 sim.solve()
 
 # Plot voltages from the discharge segments only
+# Note: an additional sub-solution is created each time an event is triggered
+# so we need to specify the index for each discharge
+discharge_idx = [0, 7, 14]
 fig, ax = plt.subplots()
-for i in range(3):
+for i, idx in enumerate(discharge_idx):
     # Extract sub solutions
-    sol = sim.solution.sub_solutions[i * 5]
+    sol = sim.solution.sub_solutions[idx]
     # Extract variables
     t = sol["Time [h]"].entries
     V = sol["Terminal voltage [V]"].entries

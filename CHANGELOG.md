@@ -2,6 +2,7 @@
 
 ## Features
 
+-   The event time and state are now returned as part of `Solution.t` and `Solution.y` so that the event is accurately captured in the returned solution ([#1300](https://github.com/pybamm-team/PyBaMM/pull/1300))
 -   Reformatted the `BasicDFNHalfCell` to be consistent with the other models ([#1282](https://github.com/pybamm-team/PyBaMM/pull/1282))
 -   Added option to make the total interfacial current density a state ([#1280](https://github.com/pybamm-team/PyBaMM/pull/1280))
 -   Added functionality to initialize a model using the solution from another model ([#1278](https://github.com/pybamm-team/PyBaMM/pull/1278))
@@ -18,6 +19,7 @@
 
 ## Breaking changes
 
+-   An extra sub-solution is created when an event is triggered during an experiment  ([#1300](https://github.com/pybamm-team/PyBaMM/pull/1300))
 -   Boolean model options ('sei porosity change', 'convection') must now be given in string format ('true' or 'false' instead of True or False) ([#1280](https://github.com/pybamm-team/PyBaMM/pull/1280))
 -   Operations such as `1*x` and `0+x` now directly return `x`. This can be bypassed by explicitly creating the binary operators, e.g. `pybamm.Multiplication(1, x)` ([#1252](https://github.com/pybamm-team/PyBaMM/pull/1252))
 
@@ -57,7 +59,7 @@ This release introduces a new aging model for particle swelling and cracking, a 
 
 ## Breaking changes
 
--    The parameters "Positive/Negative particle distribution in x" and "Positive/Negative surface area to volume ratio distribution in x" have been deprecated. Instead, users can provide "Positive/Negative particle radius [m]" and "Positive/Negative surface area to volume ratio [m-1]" directly as functions of through-cell position (x [m]) ([#1237](https://github.com/pybamm-team/PyBaMM/pull/1237)) 
+-    The parameters "Positive/Negative particle distribution in x" and "Positive/Negative surface area to volume ratio distribution in x" have been deprecated. Instead, users can provide "Positive/Negative particle radius [m]" and "Positive/Negative surface area to volume ratio [m-1]" directly as functions of through-cell position (x [m]) ([#1237](https://github.com/pybamm-team/PyBaMM/pull/1237))
 
 # [v0.2.4](https://github.com/pybamm-team/PyBaMM/tree/v0.2.4) - 2020-09-07
 
