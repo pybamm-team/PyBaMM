@@ -250,39 +250,69 @@ class Simulation:
                     "Voltage input [V]": 0,  # doesn't matter
                     "Power input [W]": P,
                 }
-            # Update period
-            operating_inputs["period"] = op[3]
-            # Update events
-            if events is None:
-                # make current and voltage values that won't be hit
-                operating_inputs.update(
-                    {"Current cut-off [A]": -1e10, "Voltage cut-off [V]": -1e10}
-                )
-            elif events[1] in ["A", "C"]:
-                # update current cut-off, make voltage a value that won't be hit
-                if events[1] == "A":
-                    I = events[0]
-                else:
-                    # Scale C-rate with capacity to obtain current
-                    capacity = self._parameter_values["Cell capacity [A.h]"]
-                    I = events[0] * capacity
-                operating_inputs.update(
-                    {"Current cut-off [A]": I, "Voltage cut-off [V]": -1e10}
-                )
-            elif events[1] == "V":
-                # update voltage cut-off, make current a value that won't be hit
-                V = events[0]
-                operating_inputs.update(
-                    {"Current cut-off [A]": -1e10, "Voltage cut-off [V]": V}
-                )
+            elif op[1] == "Drive":
+                # Update inputs for Drive Cycle
+                driving_inputs_list = []
+                driving_times_list = []
+                for I_drive, time_drive, period_drive in zip(op[0], op[2], op[3]):
+                    # Step though all drive cycle inputs and
+                    # generate list containing driving_inputs for each step
+                    driving_inputs = {
+                        "Current switch": 1,
+                        "Voltage switch": 0,
+                        "Power switch": 0,
+                        "Current input [A]": I_drive,
+                        "Voltage input [V]": 0,  # doesn't matter
+                        "Power input [W]": 0,  # doesn't matter
+                    }
+                    # Update period
+                    driving_inputs["period"] = period_drive
+                    self.update_events(events, driving_inputs)
+                    driving_inputs_list.append(driving_inputs)
+                    driving_times_list.append(time_drive)
+                # Append driving_inputs_list to _experiment_inputs
+                self._experiment_inputs.append(driving_inputs_list)
+                # Update experiment times
+                self._experiment_times.append(driving_times_list)
+            if op[1] in ["A", "V", "C", "W"]:
+                # Update period
+                operating_inputs["period"] = op[3]
+                self.update_events(events, operating_inputs)
+                self._experiment_inputs.append(operating_inputs)
+                # Add time to the experiment times
+                dt = op[2]
+                if dt is None:
+                    # max simulation time: 1 week
+                    dt = 7 * 24 * 3600
+                self._experiment_times.append(dt)
 
-            self._experiment_inputs.append(operating_inputs)
-            # Add time to the experiment times
-            dt = op[2]
-            if dt is None:
-                # max simulation time: 1 week
-                dt = 7 * 24 * 3600
-            self._experiment_times.append(dt)
+    def update_events(self, events, operating_inputs):
+        """
+        A method to update the events in operating inputs.
+        """
+        # Update events
+        if events is None:
+            # make current and voltage values that won't be hit
+            operating_inputs.update(
+                {"Current cut-off [A]": -1e10, "Voltage cut-off [V]": -1e10}
+            )
+        elif events[1] in ["A", "C"]:
+            # update current cut-off, make voltage a value that won't be hit
+            if events[1] == "A":
+                I = events[0]
+            else:
+                # Scale C-rate with capacity to obtain current
+                capacity = self._parameter_values["Cell capacity [A.h]"]
+                I = events[0] * capacity
+            operating_inputs.update(
+                {"Current cut-off [A]": I, "Voltage cut-off [V]": -1e10}
+            )
+        elif events[1] == "V":
+            # update voltage cut-off, make current a value that won't be hit
+            V = events[0]
+            operating_inputs.update(
+                {"Current cut-off [A]": -1e10, "Voltage cut-off [V]": V}
+            )
 
     def set_parameters(self):
         """
@@ -452,27 +482,57 @@ class Simulation:
                 zip(self._experiment_inputs, self._experiment_times)
             ):
                 pybamm.logger.info(self.experiment.operating_conditions_strings[idx])
-                inputs.update(exp_inputs)
-                kwargs["inputs"] = inputs
-                # Make sure we take at least 2 timesteps
-                npts = max(int(round(dt / exp_inputs["period"])) + 1, 2)
-                self.step(dt, solver=solver, npts=npts, **kwargs)
-                # Only allow events specified by experiment
-                if not (
-                    self._solution.termination == "final time"
-                    or "[experiment]" in self._solution.termination
-                ):
-                    pybamm.logger.warning(
-                        "\n\n\tExperiment is infeasible: '{}' ".format(
-                            self._solution.termination
+                if type(exp_inputs) is list:
+                    # If experimental condition is list,
+                    # Step through all inputs in that list
+                    cycle_time = 0
+                    for (exp_drive_inputs, dt) in zip(exp_inputs, dt):
+                        # Make sure we take at least 2 timesteps
+                        npts = max(int(round(dt / exp_drive_inputs["period"])) + 1, 2)
+                        pybamm.logger.info(
+                            "Solve Drive Cycle: t = {} s".format(cycle_time))
+                        cycle_time += dt
+                        inputs.update(exp_drive_inputs)
+                        kwargs["inputs"] = inputs
+                        self.step(dt, solver=solver, npts=npts, **kwargs)
+                        # Only allow events specified by experiment
+                        if not (
+                            self._solution.termination == "final time"
+                            or "[experiment]" in self._solution.termination
+                        ):
+                            pybamm.logger.warning(
+                                "\n\n\tExperiment is infeasible: '{}' ".format(
+                                    self._solution.termination
+                                )
+                                + "was triggered during '{}'. ".format(
+                                    self.experiment.operating_conditions_strings[idx]
+                                )
+                                + "Try reducing current, shortening the time interval, "
+                                "or reducing the period.\n\n"
+                            )
+                            break
+                else:
+                    inputs.update(exp_inputs)
+                    kwargs["inputs"] = inputs
+                    # Make sure we take at least 2 timesteps
+                    npts = max(int(round(dt / exp_inputs["period"])) + 1, 2)
+                    self.step(dt, solver=solver, npts=npts, **kwargs)
+                    # Only allow events specified by experiment
+                    if not (
+                        self._solution.termination == "final time"
+                        or "[experiment]" in self._solution.termination
+                    ):
+                        pybamm.logger.warning(
+                            "\n\n\tExperiment is infeasible: '{}' ".format(
+                                self._solution.termination
+                            )
+                            + "was triggered during '{}'. ".format(
+                                self.experiment.operating_conditions_strings[idx]
+                            )
+                            + "Try reducing current, shortening the time interval, "
+                            "or reducing the period.\n\n"
                         )
-                        + "was triggered during '{}'. ".format(
-                            self.experiment.operating_conditions_strings[idx]
-                        )
-                        + "Try reducing current, shortening the time interval, "
-                        "or reducing the period.\n\n"
-                    )
-                    break
+                        break
             pybamm.logger.info(
                 "Finish experiment simulation, took {}".format(timer.time())
             )
