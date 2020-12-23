@@ -920,7 +920,11 @@ def simplified_multiplication(left, right):
         r_left, r_right = right.orphans
         new_left = left * r_left
         if new_left.is_constant():
-            return new_left @ r_right
+            new_mul = new_left @ r_right
+            # Keep the domain of the old right, since left domain is empty
+            new_mul.copy_domains(right)
+            return new_mul
+
     # Simplify (B @ c) * a to (a * B) @ c if (a * B) is constant
     elif (
         isinstance(left, MatrixMultiplication)
@@ -931,7 +935,10 @@ def simplified_multiplication(left, right):
         l_left, l_right = left.orphans
         new_left = right * l_left
         if new_left.is_constant():
-            return new_left @ l_right
+            new_mul = new_left @ l_right
+            # Keep the domain of the old left, since right domain is empty
+            new_mul.copy_domains(left)
+            return new_mul
 
     return pybamm.simplify_if_constant(
         pybamm.Multiplication(left, right), clear_domains=False
@@ -985,7 +992,10 @@ def simplified_division(left, right):
         l_left, l_right = left.orphans
         new_left = l_left / right
         if new_left.is_constant():
-            return new_left @ l_right
+            new_division = new_left @ l_right
+            # Keep the domain of the old left, since right domain is empty
+            new_division.copy_domains(left)
+            return new_division
 
     return pybamm.simplify_if_constant(
         pybamm.Division(left, right), clear_domains=False
