@@ -10,22 +10,34 @@ os.chdir(pybamm.__path__[0] + "/..")
 pybamm.set_logging_level("INFO")
 
 # import drive cycle from file
-drive_cycle = pd.read_csv(
-    "pybamm/input/drive_cycles/US06.csv", comment="#", header=None
-).to_numpy()
+drive_cycle = pd.read_csv("pybamm/input/drive_cycles/US06.csv",
+                          comment="#",
+                          header=None).to_numpy()
 
-experiment = pybamm.Experiment(
-    [
-        "Charge at 1 A until 4.1 V",
-        "Hold at 4.1 V until 50 mA",
-        "Rest for 1 hour",
-        "Run US06",
-        "Rest for 1 hour",
-    ] * 3
-    , drive_cycles={"US06": drive_cycle}
-)
+experiment = pybamm.Experiment([
+    "Charge at 1 A until 4.1 V",
+    "Hold at 4.1 V until 50 mA",
+    "Rest for 1 hour",
+    "Run US06",
+    "Rest for 1 hour",
+] + [
+    "Charge at 1 A until 4.1 V",
+    "Hold at 4.1 V until 50 mA",
+    "Rest for 1 hour",
+    "Run US06 for 300 seconds",
+    "Rest for 1 hour",
+] + [
+    "Charge at 1 A until 4.1 V",
+    "Hold at 4.1 V until 50 mA",
+    "Rest for 1 hour",
+    "Run US06 for 0.5 hours",
+    "Rest for 1 hour",
+], drive_cycles={"US06": drive_cycle})
+
 model = pybamm.lithium_ion.DFN()
-sim = pybamm.Simulation(model, experiment=experiment, solver=pybamm.CasadiSolver())
+sim = pybamm.Simulation(model,
+                        experiment=experiment,
+                        solver=pybamm.CasadiSolver())
 sim.solve()
 
 # Show all plots
