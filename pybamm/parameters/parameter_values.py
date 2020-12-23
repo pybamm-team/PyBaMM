@@ -596,6 +596,7 @@ class ParameterValues:
                     and isinstance(new_right.child, pybamm.Broadcast)
                     and new_right.child.child.id == pybamm.Scalar(1).id
                 )
+                # left is integral
                 and isinstance(new_left, pybamm.Integral)
             ):
                 # left is integral(Broadcast)
@@ -603,7 +604,20 @@ class ParameterValues:
                     isinstance(new_left.child, pybamm.Broadcast)
                     and new_left.child.child.domain == []
                 ):
-                    return new_left.child.orphans[0]
+                    integrand = new_left.child
+                    if integrand.auxiliary_domains == {}:
+                        return integrand.orphans[0]
+                    else:
+                        domain = integrand.auxiliary_domains["secondary"]
+                        if "tertiary" not in integrand.auxiliary_domains:
+                            return pybamm.PrimaryBroadcast(integrand.orphans[0], domain)
+                        else:
+                            auxiliary_domains = {
+                                "secondary": integrand.auxiliary_domains["tertiary"]
+                            }
+                            return pybamm.FullBroadcast(
+                                integrand.orphans[0], domain, auxiliary_domains
+                            )
                 # left is "integral of concatenation of broadcasts"
                 elif isinstance(new_left.child, pybamm.Concatenation) and all(
                     isinstance(child, pybamm.Broadcast)

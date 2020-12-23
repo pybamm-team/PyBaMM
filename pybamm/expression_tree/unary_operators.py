@@ -1163,13 +1163,28 @@ def x_average(symbol):
     ):
         a, b, c = [orp.orphans[0] for orp in symbol.orphans]
         if a.id == b.id == c.id:
-            return a
+            out = a
         else:
             geo = pybamm.geometric_parameters
             l_n = geo.l_n
             l_s = geo.l_s
             l_p = geo.l_p
-            return (l_n * a + l_s * b + l_p * c) / (l_n + l_s + l_p)
+            out = (l_n * a + l_s * b + l_p * c) / (l_n + l_s + l_p)
+        # To respect domains we may need to broadcast the child back out
+        child = symbol.children[0]
+        # If symbol being returned doesn't have empty domain, return it
+        if out.domain != []:
+            return out
+        # Otherwise we may need to broadcast it
+        elif child.auxiliary_domains == {}:
+            return out
+        else:
+            domain = child.auxiliary_domains["secondary"]
+            if "tertiary" not in child.auxiliary_domains:
+                return pybamm.PrimaryBroadcast(out, domain)
+            else:
+                auxiliary_domains = {"secondary": child.auxiliary_domains["tertiary"]}
+                return pybamm.FullBroadcast(out, domain, auxiliary_domains)
     # Otherwise, use Integral to calculate average value
     else:
         geo = pybamm.geometric_parameters

@@ -485,7 +485,7 @@ class TestParameterValues(unittest.TestCase):
         )
 
     def test_process_integral_broadcast(self):
-        # Test that the integral of a broadcast, created outside of x-average, gets
+        # Test that the x-average of a broadcast, created outside of x-average, gets
         # processed correctly
         var = pybamm.Variable("var", domain="test")
         func = pybamm.x_average(pybamm.FunctionParameter("func", {"var": var}))
@@ -494,6 +494,37 @@ class TestParameterValues(unittest.TestCase):
         func_proc = param.process_symbol(func)
 
         self.assertEqual(func_proc.id, pybamm.Scalar(2, name="func").id)
+
+        # test with auxiliary domains
+        var = pybamm.Variable(
+            "var", domain="test", auxiliary_domains={"secondary": "test sec"}
+        )
+        func = pybamm.x_average(pybamm.FunctionParameter("func", {"var": var}))
+
+        param = pybamm.ParameterValues({"func": 2})
+        func_proc = param.process_symbol(func)
+
+        self.assertEqual(
+            func_proc.id,
+            pybamm.PrimaryBroadcast(pybamm.Scalar(2, name="func"), "test sec").id,
+        )
+
+        var = pybamm.Variable(
+            "var",
+            domain="test",
+            auxiliary_domains={"secondary": "test sec", "tertiary": "test tert"},
+        )
+        func = pybamm.x_average(pybamm.FunctionParameter("func", {"var": var}))
+
+        param = pybamm.ParameterValues({"func": 2})
+        func_proc = param.process_symbol(func)
+
+        self.assertEqual(
+            func_proc.id,
+            pybamm.FullBroadcast(
+                pybamm.Scalar(2, name="func"), "test sec", "test tert"
+            ).id,
+        )
 
         # this should be the case even if the domain is one of the special domains
         var = pybamm.Variable("var", domain="negative electrode")
@@ -525,8 +556,45 @@ class TestParameterValues(unittest.TestCase):
         )
         func_proc = param.process_symbol(func)
 
-        func_proc.render()
         self.assertEqual(func_proc.id, pybamm.Scalar(3).id)
+
+        # with auxiliary domains
+        var_n = pybamm.Variable(
+            "var_n",
+            domain="negative electrode",
+            auxiliary_domains={"secondary": "current collector"},
+        )
+        var_s = pybamm.Variable(
+            "var_s",
+            domain="separator",
+            auxiliary_domains={"secondary": "current collector"},
+        )
+        var_p = pybamm.Variable(
+            "var_p",
+            domain="positive electrode",
+            auxiliary_domains={"secondary": "current collector"},
+        )
+        func_n = pybamm.FunctionParameter("func_n", {"var_n": var_n})
+        func_s = pybamm.FunctionParameter("func_s", {"var_s": var_s})
+        func_p = pybamm.FunctionParameter("func_p", {"var_p": var_p})
+
+        func = pybamm.x_average(pybamm.Concatenation(func_n, func_s, func_p))
+        param = pybamm.ParameterValues(
+            {
+                "func_n": 2,
+                "func_s": 3,
+                "func_p": 4,
+                "Negative electrode thickness [m]": 1,
+                "Separator thickness [m]": 1,
+                "Positive electrode thickness [m]": 1,
+            }
+        )
+        func_proc = param.process_symbol(func)
+
+        self.assertEqual(
+            func_proc.id,
+            pybamm.PrimaryBroadcast(pybamm.Scalar(3), "current collector").id,
+        )
 
     def test_process_complex_expression(self):
         var1 = pybamm.Variable("var1")
