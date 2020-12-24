@@ -117,6 +117,7 @@ class BaseModel(object):
 
         # Model is not initially discretised
         self.is_discretised = False
+        self.y_slices = None
 
         # Default timescale is 1 second
         self.timescale = pybamm.Scalar(1)
@@ -327,6 +328,14 @@ class BaseModel(object):
         new_model.convert_to_format = self.convert_to_format
         new_model.timescale = self.timescale
         new_model.length_scales = self.length_scales
+
+        # Variables from discretisation
+        new_model.is_discretised = self.is_discretised
+        new_model.y_slices = self.y_slices
+        new_model.concatenated_rhs = self.concatenated_rhs
+        new_model.concatenated_algebraic = self.concatenated_algebraic
+        new_model.concatenated_initial_conditions = self.concatenated_initial_conditions
+
         return new_model
 
     def new_copy(self):
@@ -411,6 +420,31 @@ class BaseModel(object):
                 raise NotImplementedError(
                     "Variable must have type 'Variable' or 'Concatenation'"
                 )
+
+        # Also update the concatenated initial conditions if the model is already
+        # discretised
+        if model.is_discretised:
+            # Unpack slices for sorting
+            y_slices = {var.id: slce for var, slce in model.y_slices.items()}
+            slices = []
+            for symbol in model.initial_conditions.keys():
+                if isinstance(symbol, pybamm.Concatenation):
+                    # must append the slice for the whole concatenation, so that equations
+                    # get sorted correctly
+                    slices.append(
+                        slice(
+                            y_slices[symbol.children[0].id][0].start,
+                            y_slices[symbol.children[-1].id][0].stop,
+                        )
+                    )
+                else:
+                    slices.append(y_slices[symbol.id][0])
+            equations = list(model.initial_conditions.values())
+            # sort equations according to slices
+            sorted_equations = [eq for _, eq in sorted(zip(slices, equations))]
+            model.concatenated_initial_conditions = pybamm.NumpyConcatenation(
+                *sorted_equations
+            )
 
         return model
 
