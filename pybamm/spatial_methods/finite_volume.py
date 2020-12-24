@@ -227,7 +227,10 @@ class FiniteVolume(pybamm.SpatialMethod):
         See :meth:`pybamm.SpatialMethod.laplacian`
         """
         grad = self.gradient(symbol, discretised_symbol, boundary_conditions)
-        return self.divergence(grad, grad, boundary_conditions)
+        try:
+            return self.divergence(grad, grad, boundary_conditions)
+        except:
+            grad = self.gradient(symbol, discretised_symbol, boundary_conditions)
 
     def integral(self, child, discretised_child, integration_dimension):
         """Vector-vector dot product to implement the integral operator. """

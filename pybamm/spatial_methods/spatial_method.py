@@ -444,7 +444,7 @@ class SpatialMethod:
             Discretised binary operator
 
         """
-        return bin_op.__class__(disc_left, disc_right)
+        return bin_op._binary_new_copy(disc_left, disc_right)
 
     def concatenation(self, disc_children):
         """Discrete concatenation object.

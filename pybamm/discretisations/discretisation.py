@@ -904,6 +904,11 @@ class Discretisation(object):
                 out = integral_spatial_method.integral(
                     child, disc_child, symbol._integration_dimension
                 )
+                print("start:Integration---------")
+                print(out)
+                print(out.domain)
+                print(symbol.domain)
+                print("end:Integration---------")
                 out.copy_domains(symbol)
                 return out
 

@@ -342,7 +342,6 @@ class MatrixMultiplication(BinaryOperator):
 
     def __init__(self, left, right):
         """ See :meth:`pybamm.BinaryOperator.__init__()`. """
-
         super().__init__("@", left, right)
 
     def diff(self, variable):
@@ -731,6 +730,25 @@ def simplified_power(left, right):
     if pybamm.is_scalar_one(right):
         return left
 
+    if isinstance(left, Multiplication):
+        # Simplify (a * b) ** c to (a ** c) * (b ** c)
+        # if (a ** c) is constant or (b ** c) is constant
+        if left.left.is_constant() or left.right.is_constant():
+            l_left, l_right = left.orphans
+            new_left = l_left ** right
+            new_right = l_right ** right
+            if new_left.is_constant() or new_right.is_constant():
+                return new_left * new_right
+    elif isinstance(left, Division):
+        # Simplify (a / b) ** c to (a ** c) / (b ** c)
+        # if (a ** c) is constant or (b ** c) is constant
+        if left.left.is_constant() or left.right.is_constant():
+            l_left, l_right = left.orphans
+            new_left = l_left ** right
+            new_right = l_right ** right
+            if new_left.is_constant() or new_right.is_constant():
+                return new_left / new_right
+
     return pybamm.simplify_if_constant(pybamm.Power(left, right), clear_domains=False)
 
 
@@ -908,41 +926,81 @@ def simplified_multiplication(left, right):
     except NotImplementedError:
         pass
 
+    # Return constant if both sides are constant
+    if left.is_constant() and right.is_constant():
+        return pybamm.simplify_if_constant(
+            pybamm.Multiplication(left, right), clear_domains=False
+        )
+
     # Simplify a * (B @ c) to (a * B) @ c if (a * B) is constant
     # This is a common construction that appears from discretisation of spatial
     # operators
     if (
         isinstance(right, MatrixMultiplication)
         and left.is_constant()
-        # only do this for objects with empty domain to avoid weird errors
-        and left.domain == []
+        and right.left.is_constant()
     ):
         r_left, r_right = right.orphans
         new_left = left * r_left
-        if new_left.is_constant():
-            new_mul = new_left @ r_right
-            # Keep the domain of the old right, since left domain is empty
-            new_mul.copy_domains(right)
-            return new_mul
+        # be careful about domains to avoid weird errors
+        new_left.clear_domains()
+        new_mul = new_left @ r_right
+        # Keep the domain of the old right
+        new_mul.copy_domains(right)
+        return new_mul
 
     # Simplify (B @ c) * a to (a * B) @ c if (a * B) is constant
     elif (
         isinstance(left, MatrixMultiplication)
         and right.is_constant()
-        # only do this for objects with empty domain to avoid weird errors
-        and right.domain == []
+        and left.left.is_constant()
     ):
         l_left, l_right = left.orphans
         new_left = right * l_left
-        if new_left.is_constant():
-            new_mul = new_left @ l_right
-            # Keep the domain of the old left, since right domain is empty
-            new_mul.copy_domains(left)
-            return new_mul
+        # be careful about domains to avoid weird errors
+        new_left.clear_domains()
+        new_mul = new_left @ l_right
+        # Keep the domain of the old left
+        new_mul.copy_domains(left)
+        return new_mul
 
-    return pybamm.simplify_if_constant(
-        pybamm.Multiplication(left, right), clear_domains=False
-    )
+    if isinstance(left, Multiplication) and right.is_constant():
+        # Simplify (a * b) * c to (a * c) * b if (a * c) is constant
+        if left.left.is_constant():
+            l_left, l_right = left.orphans
+            new_left = l_left * right
+            return new_left * l_right
+        # Simplify (a * b) * c to a * (b * c) if (b * c) is constant
+        elif left.right.is_constant():
+            l_left, l_right = left.orphans
+            new_right = l_right * right
+            return l_left * new_right
+    elif isinstance(left, Division) and right.is_constant():
+        # Simplify (a / b) * c to a * (c / b) if (c / b) is constant
+        if left.right.is_constant():
+            l_left, l_right = left.orphans
+            new_right = right / l_right
+            return l_left * new_right
+
+    if isinstance(right, Multiplication) and left.is_constant():
+        # Simplify a * (b * c) to (a * b) * c if (a * b) is constant
+        if right.left.is_constant():
+            r_left, r_right = right.orphans
+            new_left = left * r_left
+            return new_left * r_right
+        # Simplify a * (b * c) to (a * c) * b if (a * c) is constant
+        elif right.right.is_constant():
+            r_left, r_right = right.orphans
+            new_left = left * r_right
+            return new_left * r_left
+    elif isinstance(right, Division) and left.is_constant():
+        # Simplify a * (b / c) to (a / c) * b if (a / c) is constant
+        if right.right.is_constant():
+            r_left, r_right = right.orphans
+            new_left = left / r_right
+            return new_left * r_left
+
+    return pybamm.Multiplication(left, right)
 
 
 def simplified_division(left, right):
@@ -954,10 +1012,6 @@ def simplified_division(left, right):
     elif isinstance(right, pybamm.Broadcast) and left.domain == []:
         return right._unary_new_copy(left / right.orphans[0])
 
-    # zero divided by zero returns nan scalar
-    if pybamm.is_scalar_zero(left) and pybamm.is_scalar_zero(right):
-        return pybamm.Scalar(np.nan)
-
     # zero divided by anything returns zero (being careful about shape)
     if pybamm.is_scalar_zero(left):
         return pybamm.zeros_like(right)
@@ -966,12 +1020,9 @@ def simplified_division(left, right):
     if pybamm.is_matrix_zero(left):
         return pybamm.zeros_like(pybamm.Division(left, right))
 
-    # anything divided by zero returns inf
+    # anything divided by zero raises error
     if pybamm.is_scalar_zero(right):
-        if left.shape_for_testing == ():
-            return pybamm.Scalar(np.inf)
-        else:
-            return np.inf * pybamm.ones_like(left)
+        raise ZeroDivisionError
 
     # anything divided by one is itself
     if pybamm.is_scalar_one(right):
@@ -983,19 +1034,30 @@ def simplified_division(left, right):
 
     # Simplify (B @ c) / a to (B / a) @ c if (B / a) is constant
     # This is a common construction that appears from discretisation of averages
-    elif (
-        isinstance(left, MatrixMultiplication)
-        and right.is_constant()
-        # only do this for objects with empty domain to avoid weird errors
-        and right.domain == []
-    ):
+    elif isinstance(left, MatrixMultiplication) and right.is_constant():
         l_left, l_right = left.orphans
         new_left = l_left / right
         if new_left.is_constant():
+            # be careful about domains to avoid weird errors
+            new_left.clear_domains()
             new_division = new_left @ l_right
-            # Keep the domain of the old left, since right domain is empty
+            # Keep the domain of the old left
             new_division.copy_domains(left)
             return new_division
+
+    if isinstance(left, Multiplication):
+        # Simplify (a * b) / c to (a / c) * b if (a / c) is constant
+        if left.left.is_constant():
+            l_left, l_right = left.orphans
+            new_left = l_left / right
+            if new_left.is_constant():
+                return new_left * l_right
+        # Simplify (a * b) / c to a * (b / c) if (b / c) is constant
+        elif left.right.is_constant():
+            l_left, l_right = left.orphans
+            new_right = l_right / right
+            if new_right.is_constant():
+                return l_left * new_right
 
     return pybamm.simplify_if_constant(
         pybamm.Division(left, right), clear_domains=False
@@ -1007,18 +1069,66 @@ def simplified_matrix_multiplication(left, right):
     if pybamm.is_matrix_zero(left) or pybamm.is_matrix_zero(right):
         return pybamm.zeros_like(pybamm.MatrixMultiplication(left, right))
 
+    if isinstance(right, Multiplication) and left.is_constant():
+        # Simplify A @ (b * c) to (A * b) @ c if (A * b) is constant
+        if right.left.evaluates_to_constant_number():
+            r_left, r_right = right.orphans
+            new_left = left * r_left
+            return new_left @ r_right
+        # Simplify A @ (b * c) to (A * c) @ b if (A * c) is constant
+        elif right.right.evaluates_to_constant_number():
+            r_left, r_right = right.orphans
+            new_left = left * r_right
+            return new_left @ r_left
+    elif isinstance(right, Division) and left.is_constant():
+        # Simplify A @ (b / c) to (A / c) @ b if (A / c) is constant
+        if right.right.evaluates_to_constant_number():
+            r_left, r_right = right.orphans
+            new_left = left / r_right
+            return new_left @ r_left
+
     # Simplify A @ (B @ c) to (A @ B) @ c if (A @ B) is constant
     # This is a common construction that appears from discretisation of spatial
     # operators
-    if isinstance(right, MatrixMultiplication):
+    if (
+        isinstance(right, MatrixMultiplication)
+        and right.left.is_constant()
+        and left.is_constant()
+    ):
         r_left, r_right = right.orphans
         new_left = left @ r_left
-        if new_left.is_constant():
-            return new_left @ r_right
+        # be careful about domains to avoid weird errors
+        new_left.clear_domains()
+        new_mul = new_left @ r_right
+        # Keep the domain of the old right
+        print("start:MatMul-----")
+        print(new_mul.domain)
+        print(right.domain)
+        print(new_mul)
+        # if right.domain == ["current collector"] or right.domain == [
+        #     "positive electrode"
+        # ]:
+        #     print(left)
+        #     print(left.domain)
+        #     print(right)
+        #     print(right.domain)
+        # if isinstance(right.right, pybamm.Multiplication):
+        #     print("start:innerloop-----")
+        #     print(right.right.left.domain)
+        #     print(right.right.right.domain)
+        #     print("end:innerloop-----")
+        # if new_mul.domain == ["positive particle"] and right.domain == [
+        #     "positive electrode"
+        # ]:
+        #     n = 1
+        new_mul.copy_domains(right)
+        print("end:MatMul-----")
+        return new_mul
 
     # Simplify A @ (b + c) to (A @ b) + (A @ c) if (A @ b) or (A @ c) is constant
     # This is a common construction that appears from discretisation of spatial
     # operators
+    # Don't do this if either b or c is a number as this will lead to matmul errors
     elif isinstance(right, Addition):
         if (right.left.is_constant() or right.right.is_constant()) and not (
             right.left.evaluates_to_number() or right.right.evaluates_to_number()
