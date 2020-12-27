@@ -11,7 +11,7 @@ class TestExplicit(unittest.TestCase):
     def test_public_functions(self):
         param = pybamm.LeadAcidParameters()
 
-        a = pybamm.PrimaryBroadcast(0, "current collector")
+        a = pybamm.PrimaryBroadcast(1, "current collector")
         a_n = pybamm.PrimaryBroadcast(a, ["negative electrode"])
         a_s = pybamm.PrimaryBroadcast(a, ["separator"])
         a_p = pybamm.PrimaryBroadcast(a, ["positive electrode"])

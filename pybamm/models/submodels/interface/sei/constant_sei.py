@@ -33,7 +33,7 @@ class ConstantSEI(BaseModel):
         variables = self._get_standard_thickness_variables(L_inner, L_outer)
 
         # Concentrations (derived from thicknesses)
-        variables.update(self._get_standard_concentraion_variables(variables))
+        variables.update(self._get_standard_concentration_variables(variables))
 
         # Reactions
         zero = pybamm.FullBroadcast(

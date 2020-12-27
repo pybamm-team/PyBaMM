@@ -33,10 +33,12 @@ class TestDDT(unittest.TestCase):
         self.assertEqual(a.name, "a'")
 
         p = pybamm.Parameter("p")
-        a = (1 + p * pybamm.Variable("a")).diff(pybamm.t).simplify()
-        self.assertIsInstance(a, pybamm.Multiplication)
-        self.assertEqual(a.children[0].name, "p")
-        self.assertEqual(a.children[1].name, "a'")
+        a = 1 + p * pybamm.Variable("a")
+        diff_a = a.diff(pybamm.t)
+        diff_a_simp = diff_a.simplify()
+        self.assertIsInstance(diff_a_simp, pybamm.Multiplication)
+        self.assertEqual(diff_a_simp.children[0].name, "p")
+        self.assertEqual(diff_a_simp.children[1].name, "a'")
 
         with self.assertRaises(pybamm.ModelError):
             a = (pybamm.Variable("a")).diff(pybamm.t).diff(pybamm.t)

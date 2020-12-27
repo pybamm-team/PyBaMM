@@ -11,7 +11,6 @@ Positive electrode OCP [V],[function]NMC_ocp_PeymanMPM,,
 Positive electrode porosity,0.3,Peyman MPM,
 Positive electrode active material volume fraction,0.445,Peyman MPM,rest is binder
 Positive particle radius [m],3.5E-06,Peyman MPM,
-Positive particle distribution in x,1,,
 Positive electrode Bruggeman coefficient (electrode),1.5,Peyman MPM,
 Positive electrode Bruggeman coefficient (electrolyte),1.5,Peyman MPM,
 Positive electrode tortuosity,0.16,

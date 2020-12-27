@@ -495,7 +495,14 @@ class BaseSolver(object):
             y0 = y0.flatten()
         return y0
 
-    def solve(self, model, t_eval=None, external_variables=None, inputs=None):
+    def solve(
+        self,
+        model,
+        t_eval=None,
+        external_variables=None,
+        inputs=None,
+        initial_conditions=None,
+    ):
         """
         Execute the solver setup and calculate the solution of the model at
         specified times.
@@ -512,6 +519,10 @@ class BaseSolver(object):
             values at the current time
         inputs : dict, optional
             Any input parameters to pass to the model when solving
+        initial_conditions : :class:`pybamm.Symbol`, optional
+            Initial conditions to use when solving the model. If None (default),
+            `model.concatenated_initial_conditions` is used. Otherwise, must be a symbol
+            of size `len(model.rhs) + len(model.algebraic)`.
 
         Raises
         ------
@@ -691,10 +702,14 @@ class BaseSolver(object):
 
         pybamm.logger.info("Finish solving {} ({})".format(model.name, termination))
         pybamm.logger.info(
-            "Set-up time: {}, Solve time: {}, Total time: {}".format(
-                timer.format(solution.set_up_time),
-                timer.format(solution.solve_time),
-                timer.format(solution.total_time),
+            (
+                "Set-up time: {}, Solve time: {} (of which integration time: {}), "
+                "Total time: {}"
+            ).format(
+                solution.set_up_time,
+                solution.solve_time,
+                solution.integration_time,
+                solution.total_time,
             )
         )
 
@@ -837,18 +852,17 @@ class BaseSolver(object):
         termination = self.get_termination_reason(solution, model.events)
 
         pybamm.logger.debug("Finish stepping {} ({})".format(model.name, termination))
-        if set_up_time:
-            pybamm.logger.debug(
-                "Set-up time: {}, Step time: {}, Total time: {}".format(
-                    timer.format(solution.set_up_time),
-                    timer.format(solution.solve_time),
-                    timer.format(solution.total_time),
-                )
+        pybamm.logger.debug(
+            (
+                "Set-up time: {}, Step time: {} (of which integration time: {}), "
+                "Total time: {}"
+            ).format(
+                solution.set_up_time,
+                solution.solve_time,
+                solution.integration_time,
+                solution.total_time,
             )
-        else:
-            pybamm.logger.debug(
-                "Step time: {}".format(timer.format(solution.solve_time))
-            )
+        )
         if save is False or old_solution is None:
             return solution
         else:

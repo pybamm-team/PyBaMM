@@ -47,7 +47,7 @@ class BaseSubModel(pybamm.BaseModel):
     """
 
     def __init__(
-        self, param, domain=None, name="Unnamed submodel", external=False,
+        self, param, domain=None, name="Unnamed submodel", external=False, options=None
     ):
         super().__init__(name)
         self.param = param
@@ -57,6 +57,7 @@ class BaseSubModel(pybamm.BaseModel):
         self.name = name
 
         self.external = external
+        self.options = options or {}
 
     @property
     def domain(self):

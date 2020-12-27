@@ -19,7 +19,7 @@ class TestCompareBasicModels(unittest.TestCase):
 
         # Solve basic Full mode
         basic_sim = pybamm.Simulation(
-            basic_full, solver=pybamm.CasadiSolver(), parameter_values=parameter_values,
+            basic_full, solver=pybamm.CasadiSolver(), parameter_values=parameter_values
         )
         t_eval = np.linspace(0, 400)
         basic_sim.solve(t_eval)

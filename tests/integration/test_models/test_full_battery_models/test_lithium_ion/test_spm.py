@@ -120,6 +120,12 @@ class TestSPM(unittest.TestCase):
         modeltest = tests.StandardModelTest(model)
         modeltest.test_all()
 
+    def test_loss_active_material(self):
+        options = {"loss of active material": "example"}
+        model = pybamm.lithium_ion.SPM(options)
+        modeltest = tests.StandardModelTest(model)
+        modeltest.test_all()
+
     def test_surface_form_differential(self):
         options = {"surface form": "differential"}
         model = pybamm.lithium_ion.SPM(options)
@@ -159,9 +165,51 @@ class TestSPMWithSEI(unittest.TestCase):
         modeltest.test_all()
 
     def test_well_posed_ec_reaction_limited(self):
-        options = {"sei": "ec reaction limited", "sei porosity change": True}
+        options = {"sei": "ec reaction limited", "sei porosity change": "true"}
         model = pybamm.lithium_ion.SPM(options)
         modeltest = tests.StandardModelTest(model)
+        modeltest.test_all()
+
+
+class TestSPMWithCrack(unittest.TestCase):
+    def test_well_posed_none_crack(self):
+        options = {"particle": "Fickian diffusion", "particle cracking": "none"}
+        model = pybamm.lithium_ion.SPM(options)
+        chemistry = pybamm.parameter_sets.Ai2020
+        parameter_values = pybamm.ParameterValues(chemistry=chemistry)
+        modeltest = tests.StandardModelTest(model, parameter_values=parameter_values)
+        modeltest.test_all()
+
+    def test_well_posed_no_cracking(self):
+        options = {"particle": "Fickian diffusion", "particle cracking": "no cracking"}
+        model = pybamm.lithium_ion.SPM(options)
+        chemistry = pybamm.parameter_sets.Ai2020
+        parameter_values = pybamm.ParameterValues(chemistry=chemistry)
+        modeltest = tests.StandardModelTest(model, parameter_values=parameter_values)
+        modeltest.test_all()
+
+    def test_well_posed_anode_cracking(self):
+        options = {"particle": "Fickian diffusion", "particle cracking": "anode"}
+        model = pybamm.lithium_ion.SPM(options)
+        chemistry = pybamm.parameter_sets.Ai2020
+        parameter_values = pybamm.ParameterValues(chemistry=chemistry)
+        modeltest = tests.StandardModelTest(model, parameter_values=parameter_values)
+        modeltest.test_all()
+
+    def test_well_posed_cathode_cracking(self):
+        options = {"particle": "Fickian diffusion", "particle cracking": "cathode"}
+        model = pybamm.lithium_ion.SPM(options)
+        chemistry = pybamm.parameter_sets.Ai2020
+        parameter_values = pybamm.ParameterValues(chemistry=chemistry)
+        modeltest = tests.StandardModelTest(model, parameter_values=parameter_values)
+        modeltest.test_all()
+
+    def test_well_posed_both_cracking(self):
+        options = {"particle": "Fickian diffusion", "particle cracking": "both"}
+        model = pybamm.lithium_ion.SPM(options)
+        chemistry = pybamm.parameter_sets.Ai2020
+        parameter_values = pybamm.ParameterValues(chemistry=chemistry)
+        modeltest = tests.StandardModelTest(model, parameter_values=parameter_values)
         modeltest.test_all()
 
 

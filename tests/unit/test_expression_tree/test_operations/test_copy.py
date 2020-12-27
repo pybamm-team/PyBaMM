@@ -9,8 +9,8 @@ from tests import get_mesh_for_testing
 
 class TestCopy(unittest.TestCase):
     def test_symbol_new_copy(self):
-        a = pybamm.Scalar(0)
-        b = pybamm.Scalar(1)
+        a = pybamm.Parameter("a")
+        b = pybamm.Parameter("b")
         v_n = pybamm.Variable("v", "negative electrode")
         x_n = pybamm.standard_spatial_vars.x_n
         v_s = pybamm.Variable("v", "separator")

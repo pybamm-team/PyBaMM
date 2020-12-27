@@ -146,16 +146,9 @@ class QuickPlot(object):
         else:
             raise ValueError("spatial unit '{}' not recognized".format(spatial_unit))
 
-        # Set length scales
-        self.length_scales = {
-            domain: scale.evaluate() * self.spatial_factor
-            for domain, scale in models[0].length_scales.items()
-        }
-
         # Time parameters
-        model_timescale_in_seconds = models[0].timescale_eval
         self.ts_seconds = [
-            solution.t * model_timescale_in_seconds for solution in solutions
+            solution.t * solution.timescale_eval for solution in solutions
         ]
         min_t = np.min([t[0] for t in self.ts_seconds])
         max_t = np.max([t[-1] for t in self.ts_seconds])
