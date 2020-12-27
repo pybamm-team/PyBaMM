@@ -40,6 +40,9 @@ class ProcessedVariable(object):
         variable. Note that this can be any kind of node in the expression tree, not
         just a :class:`pybamm.Variable`.
         When evaluated, returns an array of size (m,n)
+    base_variable_casadi : :class:`casadi.Function`
+        A casadi function. When evaluated, returns the same thing as
+        `base_Variable.evaluate` (but more efficiently).
     solution : :class:`pybamm.Solution`
         The solution object to be used to create the processed variables
     warn : bool, optional
@@ -47,8 +50,9 @@ class ProcessedVariable(object):
         Default is True.
     """
 
-    def __init__(self, base_variable, solution, warn=True):
+    def __init__(self, base_variable, base_variable_casadi, solution, warn=True):
         self.base_variable = base_variable
+        self.base_variable_casadi = base_variable_casadi
         self.t_sol = solution.t
         self.u_sol = solution.y
         self.mesh = base_variable.mesh
@@ -56,22 +60,6 @@ class ProcessedVariable(object):
         self.domain = base_variable.domain
         self.auxiliary_domains = base_variable.auxiliary_domains
         self.warn = warn
-
-        # Convert variable to casadi
-        t_MX = casadi.MX.sym("t")
-        y_MX = casadi.MX.sym("y", solution.y.shape[0])
-        # Make all inputs symbolic first for converting to casadi
-        all_inputs_as_MX_dict = {}
-        for key, value in solution.inputs.items():
-            all_inputs_as_MX_dict[key] = casadi.MX.sym("input")
-
-        all_inputs_as_MX = casadi.vertcat(*[p for p in all_inputs_as_MX_dict.values()])
-        all_inputs = casadi.vertcat(*[p for p in solution.inputs.values()])
-        var = base_variable.to_casadi(t_MX, y_MX, inputs=all_inputs_as_MX_dict)
-
-        self.base_variable_casadi = casadi.Function(
-            "variable", [t_MX, y_MX, all_inputs_as_MX], [var]
-        )
 
         # Set timescale
         self.timescale = solution.timescale_eval
@@ -82,10 +70,9 @@ class ProcessedVariable(object):
             self.length_scales = solution.length_scales_eval
 
         # Evaluate base variable at initial time
+        inputs = casadi.vertcat(*[inp[:, 0] for inp in self.inputs.values()])
         self.base_eval = self.base_variable_casadi(
-            solution.t[0],
-            solution.y[:, 0],
-            all_inputs,
+            solution.t[0], solution.y[:, 0], inputs
         ).full()
 
         # handle 2D (in space) finite element variables differently

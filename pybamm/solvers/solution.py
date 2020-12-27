@@ -40,10 +40,10 @@ class _BaseSolution(object):
     def __init__(
         self, t, y, t_event=None, y_event=None, termination="final time", copy_this=None
     ):
-        self._t = t
+        self.t = t
         if isinstance(y, casadi.DM):
-            y = y.full()
-        self._y = y
+            yå = y.full()
+        self.y = y
         self._t_event = t_event
         self._y_event = y_event
         self._termination = termination
@@ -72,10 +72,20 @@ class _BaseSolution(object):
         "Times at which the solution is evaluated"
         return self._t
 
+    @t.setter
+    def t(self, t):
+        self._t = t
+        self._t_MX = casadi.MX.sym("t")
+
     @property
     def y(self):
         "Values of the solution"
         return self._y
+
+    @y.setter
+    def y(self, y):
+        self._y = y
+        self._y_MX = casadi.MX.sym("y", y.shape[0])
 
     @property
     def model(self):
@@ -126,6 +136,13 @@ class _BaseSolution(object):
                 else:
                     inp = np.tile(inp, len(self.t))
                 self._inputs[name] = inp
+        self._all_inputs_as_MX_dict = {}
+        for key, value in self._inputs.items():
+            self._all_inputs_as_MX_dict[key] = casadi.MX.sym("input", value.shape[0])
+
+        self._all_inputs_as_MX = casadi.vertcat(
+            *[p for p in self._all_inputs_as_MX_dict.values()]
+        )
 
     @property
     def t_event(self):
@@ -176,7 +193,25 @@ class _BaseSolution(object):
 
             # Otherwise a standard ProcessedVariable is ok
             else:
-                var = pybamm.ProcessedVariable(self.model.variables[key], self)
+                var_pybamm = self.model.variables[key]
+
+                if key in self.model._variables_casadi:
+                    var_casadi = self.model._variables_casadi[key]
+                else:
+                    # Convert variable to casadi
+                    # Make all inputs symbolic first for converting to casadi
+                    var_sym = var_pybamm.to_casadi(
+                        self._t_MX, self._y_MX, inputs=self._all_inputs_as_MX_dict
+                    )
+
+                    var_casadi = casadi.Function(
+                        "variable",
+                        [self._t_MX, self._y_MX, self._all_inputs_as_MX],
+                        [var_sym],
+                    )
+                    self.model._variables_casadi[key] = var_casadi
+
+                var = pybamm.ProcessedVariable(var_pybamm, var_casadi, self)
 
             # Save variable and data
             self._variables[key] = var
@@ -227,6 +262,13 @@ class _BaseSolution(object):
         """Save the whole solution using pickle"""
         # No warning here if len(self.data)==0 as solution can be loaded
         # and used to process new variables
+
+        # Remove casadi objects for pickling, will be computed again automatically
+        self._t_MX = None
+        self._y_MX = None
+        self._all_inputs_as_MX = None
+        self._all_inputs_as_MX_dict = None
+        # Pickle
         with open(filename, "wb") as f:
             pickle.dump(self, f, pickle.HIGHEST_PROTOCOL)
 

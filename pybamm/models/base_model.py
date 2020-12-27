@@ -109,6 +109,7 @@ class BaseModel(object):
         self.external_variables = []
         self._parameters = None
         self._input_parameters = None
+        self._variables_casadi = {}
 
         # Default behaviour is to use the jacobian and simplify
         self.use_jacobian = True
