@@ -67,11 +67,6 @@ class _BaseSolution(object):
         self._variables = pybamm.FuzzyDict()
         self.data = pybamm.FuzzyDict()
 
-        # initialize empty known evals
-        self._known_evals = defaultdict(dict)
-        for time in t:
-            self._known_evals[time] = {}
-
     @property
     def t(self):
         "Times at which the solution is evaluated"
@@ -181,13 +176,7 @@ class _BaseSolution(object):
 
             # Otherwise a standard ProcessedVariable is ok
             else:
-                var = pybamm.ProcessedVariable(
-                    self.model.variables[key], self, self._known_evals
-                )
-
-                # Update known_evals in order to process any other variables faster
-                for t in var.known_evals:
-                    self._known_evals[t].update(var.known_evals[t])
+                var = pybamm.ProcessedVariable(self.model.variables[key], self)
 
             # Save variable and data
             self._variables[key] = var
@@ -404,9 +393,6 @@ class Solution(_BaseSolution):
         self._t_event = solution._t_event
         self._y_event = solution._y_event
 
-        # Update known_evals
-        for t, evals in solution._known_evals.items():
-            self._known_evals[t].update(evals)
         # Recompute existing variables
         for var in self._variables.keys():
             self.update(var)

@@ -922,10 +922,7 @@ class BaseModel(object):
     @property
     def default_solver(self):
         "Return default solver based on whether model is ODE model or DAE model"
-        if len(self.algebraic) == 0:
-            return pybamm.ScipySolver()
-        else:
-            return pybamm.CasadiSolver(mode="safe")
+        return pybamm.CasadiSolver(mode="safe")
 
 
 # helper functions for finding symbols

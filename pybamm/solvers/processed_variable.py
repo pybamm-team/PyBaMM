@@ -1,6 +1,7 @@
 #
 # Processed Variable class
 #
+import casadi
 import numbers
 import numpy as np
 import pybamm
@@ -41,14 +42,12 @@ class ProcessedVariable(object):
         When evaluated, returns an array of size (m,n)
     solution : :class:`pybamm.Solution`
         The solution object to be used to create the processed variables
-    known_evals : dict
-        Dictionary of known evaluations, to be used to speed up finding the solution
     warn : bool, optional
         Whether to raise warnings when trying to evaluate time and length scales.
         Default is True.
     """
 
-    def __init__(self, base_variable, solution, known_evals=None, warn=True):
+    def __init__(self, base_variable, solution, warn=True):
         self.base_variable = base_variable
         self.t_sol = solution.t
         self.u_sol = solution.y
@@ -56,8 +55,23 @@ class ProcessedVariable(object):
         self.inputs = solution.inputs
         self.domain = base_variable.domain
         self.auxiliary_domains = base_variable.auxiliary_domains
-        self.known_evals = known_evals
         self.warn = warn
+
+        # Convert variable to casadi
+        t_MX = casadi.MX.sym("t")
+        y_MX = casadi.MX.sym("y", solution.y.shape[0])
+        # Make all inputs symbolic first for converting to casadi
+        all_inputs_as_MX_dict = {}
+        for key, value in solution.inputs.items():
+            all_inputs_as_MX_dict[key] = casadi.MX.sym("input")
+
+        all_inputs_as_MX = casadi.vertcat(*[p for p in all_inputs_as_MX_dict.values()])
+        all_inputs = casadi.vertcat(*[p for p in solution.inputs.values()])
+        var = base_variable.to_casadi(t_MX, y_MX, inputs=all_inputs_as_MX_dict)
+
+        self.base_variable_casadi = casadi.Function(
+            "variable", [t_MX, y_MX, all_inputs_as_MX], [var]
+        )
 
         # Set timescale
         self.timescale = solution.timescale_eval
@@ -68,19 +82,11 @@ class ProcessedVariable(object):
             self.length_scales = solution.length_scales_eval
 
         # Evaluate base variable at initial time
-        if self.known_evals:
-            self.base_eval, self.known_evals[solution.t[0]] = base_variable.evaluate(
-                solution.t[0],
-                solution.y[:, 0],
-                inputs={name: inp[:, 0] for name, inp in solution.inputs.items()},
-                known_evals=self.known_evals[solution.t[0]],
-            )
-        else:
-            self.base_eval = base_variable.evaluate(
-                solution.t[0],
-                solution.y[:, 0],
-                inputs={name: inp[:, 0] for name, inp in solution.inputs.items()},
-            )
+        self.base_eval = self.base_variable_casadi(
+            solution.t[0],
+            solution.y[:, 0],
+            all_inputs,
+        ).full()
 
         # handle 2D (in space) finite element variables differently
         if (
@@ -128,13 +134,8 @@ class ProcessedVariable(object):
         for idx in range(len(self.t_sol)):
             t = self.t_sol[idx]
             u = self.u_sol[:, idx]
-            inputs = {name: inp[:, idx] for name, inp in self.inputs.items()}
-            if self.known_evals:
-                entries[idx], self.known_evals[t] = self.base_variable.evaluate(
-                    t, u, inputs=inputs, known_evals=self.known_evals[t]
-                )
-            else:
-                entries[idx] = self.base_variable.evaluate(t, u, inputs=inputs)
+            inputs = casadi.vertcat(*[inp[:, idx] for inp in self.inputs.values()])
+            entries[idx] = self.base_variable_casadi(t, u, inputs).full()[0, 0]
 
         # set up interpolation
         if len(self.t_sol) == 1:
@@ -164,15 +165,8 @@ class ProcessedVariable(object):
         for idx in range(len(self.t_sol)):
             t = self.t_sol[idx]
             u = self.u_sol[:, idx]
-            inputs = {name: inp[:, idx] for name, inp in self.inputs.items()}
-            if self.known_evals:
-                eval_and_known_evals = self.base_variable.evaluate(
-                    t, u, inputs=inputs, known_evals=self.known_evals[t]
-                )
-                entries[:, idx] = eval_and_known_evals[0][:, 0]
-                self.known_evals[t] = eval_and_known_evals[1]
-            else:
-                entries[:, idx] = self.base_variable.evaluate(t, u, inputs=inputs)[:, 0]
+            inputs = casadi.vertcat(*[inp[:, idx] for inp in self.inputs.values()])
+            entries[:, idx] = self.base_variable_casadi(t, u, inputs).full()[:, 0]
 
         # Get node and edge values
         nodes = self.mesh.nodes
@@ -274,23 +268,12 @@ class ProcessedVariable(object):
         for idx in range(len(self.t_sol)):
             t = self.t_sol[idx]
             u = self.u_sol[:, idx]
-            inputs = {name: inp[:, idx] for name, inp in self.inputs.items()}
-            if self.known_evals:
-                eval_and_known_evals = self.base_variable.evaluate(
-                    t, u, inputs=inputs, known_evals=self.known_evals[t]
-                )
-                entries[:, :, idx] = np.reshape(
-                    eval_and_known_evals[0],
-                    [first_dim_size, second_dim_size],
-                    order="F",
-                )
-                self.known_evals[t] = eval_and_known_evals[1]
-            else:
-                entries[:, :, idx] = np.reshape(
-                    self.base_variable.evaluate(t, u, inputs=inputs),
-                    [first_dim_size, second_dim_size],
-                    order="F",
-                )
+            inputs = casadi.vertcat(*[inp[:, idx] for inp in self.inputs.values()])
+            entries[:, :, idx] = np.reshape(
+                self.base_variable_casadi(t, u, inputs).full(),
+                [first_dim_size, second_dim_size],
+                order="F",
+            )
 
         # add points outside first dimension domain for extrapolation to
         # boundaries
@@ -427,22 +410,13 @@ class ProcessedVariable(object):
         for idx in range(len(self.t_sol)):
             t = self.t_sol[idx]
             u = self.u_sol[:, idx]
-            inputs = {name: inp[:, idx] for name, inp in self.inputs.items()}
+            inputs = casadi.vertcat(*[inp[:, idx] for inp in self.inputs.values()])
 
-            if self.known_evals:
-                eval_and_known_evals = self.base_variable.evaluate(
-                    t, u, inputs=inputs, known_evals=self.known_evals[t]
-                )
-                entries[:, :, idx] = np.reshape(
-                    eval_and_known_evals[0], [len_y, len_z], order="F"
-                )
-                self.known_evals[t] = eval_and_known_evals[1]
-            else:
-                entries[:, :, idx] = np.reshape(
-                    self.base_variable.evaluate(t, u, inputs=inputs),
-                    [len_y, len_z],
-                    order="F",
-                )
+            entries[:, :, idx] = np.reshape(
+                self.base_variable_casadi(t, u, inputs).full(),
+                [len_y, len_z],
+                order="F",
+            )
 
         # assign attributes for reference
         self.entries = entries

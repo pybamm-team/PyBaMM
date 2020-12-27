@@ -5,11 +5,11 @@
 import pybamm
 import numpy as np
 
-pybamm.set_logging_level("INFO")
+pybamm.set_logging_level("DEBUG")
 
 
 # load model
-model = pybamm.lithium_ion.DFN()
+model = pybamm.lithium_ion.SPMe()
 
 # create geometry
 geometry = model.default_geometry
@@ -43,8 +43,8 @@ plot = pybamm.QuickPlot(
         "Current [A]",
         "Negative electrode potential [V]",
         "Electrolyte potential [V]",
-        "Positive electrode potential [V]",
         "Terminal voltage [V]",
+        "Positive electrode potential [V]",
     ],
     time_unit="seconds",
     spatial_unit="um",
