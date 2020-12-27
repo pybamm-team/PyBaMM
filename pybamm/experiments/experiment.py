@@ -46,12 +46,12 @@ class Experiment:
     def __init__(self, operating_conditions, parameters=None, period="1 minute"):
         self.period = self.convert_time_to_seconds(period.split())
         if all([isinstance(cycle, tuple) for cycle in operating_conditions]):
-            self.cycle_length = [len(cycle) for cycle in operating_conditions]
+            self.cycle_lengths = [len(cycle) for cycle in operating_conditions]
             operating_conditions = [
                 cond for cycle in operating_conditions for cond in cycle
             ]
         elif all([isinstance(cond, str) for cond in operating_conditions]):
-            self.cycle_length = [len(operating_conditions)]
+            self.cycle_lengths = [len(operating_conditions)]
         self.operating_conditions_strings = operating_conditions
         self.operating_conditions, self.events = self.read_operating_conditions(
             operating_conditions
