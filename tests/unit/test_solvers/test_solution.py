@@ -73,16 +73,15 @@ class TestSolution(unittest.TestCase):
         model = pybamm.lithium_ion.DFN()
         experiment = pybamm.Experiment(
             [
-                ("Discharge at C/20 for 0.5 hours", "Charge at C/5 for 45 minutes"),
-                ("Discharge at C/20 for 0.5 hours", "Charge at C/5 for 45 minutes"),
+                ("Discharge at C/20 for 0.5 hours", "Charge at C/20 for 15 minutes"),
+                ("Discharge at C/20 for 0.5 hours", "Charge at C/20 for 15 minutes"),
             ]
         )
         sim = pybamm.Simulation(model, experiment=experiment)
         sim.solve()
-        solution = sim.solution
         num_cycles = len(experiment.cycle_lengths)
-        for idx, sub_solution in enumerate(solution.sub_solutions):
-            cycle_sub_solution = solution.cycles[idx//num_cycles][idx%num_cycles]
+        for idx, sub_solution in enumerate(sim.solution.sub_solutions):
+            cycle_sub_solution = sim.solution.cycles[idx//num_cycles][idx%num_cycles]
             self.assertEqual(cycle_sub_solution, sub_solution)
 
     def test_total_time(self):
