@@ -8,7 +8,6 @@ import unittest
 import os
 import subprocess  # nosec
 import platform
-from tests import get_discretisation_for_testing
 
 
 class TestBaseModel(unittest.TestCase):

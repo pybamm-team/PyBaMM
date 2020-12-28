@@ -8,7 +8,6 @@ import numpy as np
 import pickle
 import pybamm
 import pandas as pd
-from collections import defaultdict
 from scipy.io import savemat
 
 

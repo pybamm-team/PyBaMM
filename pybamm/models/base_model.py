@@ -430,8 +430,8 @@ class BaseModel(object):
             slices = []
             for symbol in model.initial_conditions.keys():
                 if isinstance(symbol, pybamm.Concatenation):
-                    # must append the slice for the whole concatenation, so that equations
-                    # get sorted correctly
+                    # must append the slice for the whole concatenation, so that
+                    # equations get sorted correctly
                     slices.append(
                         slice(
                             y_slices[symbol.children[0].id][0].start,
