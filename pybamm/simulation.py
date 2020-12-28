@@ -394,7 +394,7 @@ class Simulation:
                 # For drive cycles (current provided as data) we perform additional
                 # tests on t_eval (if provided) to ensure the returned solution
                 # captures the input.
-                time_data = self._parameter_values["Current function [A]"].data[:, 0]
+                time_data = self._parameter_values["Current function [A]"].x[0]
                 # If no t_eval is provided, we use the times provided in the data.
                 if t_eval is None:
                     pybamm.logger.info("Setting t_eval as specified by the data")

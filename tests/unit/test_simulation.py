@@ -333,16 +333,17 @@ class TestSimulation(unittest.TestCase):
             comment="#",
             skip_blank_lines=True,
             header=None,
-        )
+        ).to_numpy()
 
         timescale = param.evaluate(model.timescale)
+
         current_interpolant = pybamm.Interpolant(
-            drive_cycle.to_numpy(), timescale * pybamm.t
+            drive_cycle[:, 0], drive_cycle[:, 1], timescale * pybamm.t
         )
 
         param["Current function [A]"] = current_interpolant
 
-        time_data = drive_cycle.values[:, 0]
+        time_data = drive_cycle[:, 0]
 
         sim = pybamm.Simulation(model, parameter_values=param)
 
