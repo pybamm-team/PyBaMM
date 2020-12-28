@@ -53,12 +53,7 @@ class _BaseSolution(object):
         inputs=None,
     ):
         self.t = t
-        if isinstance(y, casadi.DM):
-            y = y.full()
-
-        # if inputs are None, initialize empty, to be populated later
-        inputs = inputs or pybamm.FuzzyDict()
-        self.set_inputs(inputs)
+        self.inputs = inputs
 
         # If the model has been provided, split up y into solution and sensitivity
         # Don't do this if the sensitivity equations have not been computed (i.e. if
@@ -107,8 +102,12 @@ class _BaseSolution(object):
             #   tn_xn_p0, tn_xn_p1, ..., tn_xn_pn
             # 1, Extract rhs and alg sensitivities and reshape into 3D matrices
             # with shape (n_p, n_states, n_t)
-            ode_sens = y[n_rhs:len_rhs_and_sens, :].reshape(n_p, n_rhs, n_t)
-            alg_sens = y[len_rhs_and_sens + n_alg :, :].reshape(n_p, n_alg, n_t)
+            if isinstance(y, casadi.DM):
+                y_full = y.full()
+            else:
+                y_full = y
+            ode_sens = y_full[n_rhs:len_rhs_and_sens, :].reshape(n_p, n_rhs, n_t)
+            alg_sens = y_full[len_rhs_and_sens + n_alg :, :].reshape(n_p, n_alg, n_t)
             # 2. Concatenate into a single 3D matrix with shape (n_p, n_states, n_t)
             # i.e. along first axis
             full_sens_matrix = np.concatenate([ode_sens, alg_sens], axis=1)
@@ -163,8 +162,16 @@ class _BaseSolution(object):
 
     @y.setter
     def y(self, y):
-        self._y = y
-        self._y_MX = casadi.MX.sym("y", y.shape[0])
+        if isinstance(y, casadi.Function):
+            self._y_fn = None
+            inputs_stacked = casadi.vertcat(*self.inputs.values())
+            self._y = y(inputs_stacked)
+            self._y_sym = y(self._symbolic_inputs)
+        else:
+            self._y = y
+            self._y_fn = None
+            self._y_sym = None
+        self._y_MX = casadi.MX.sym("y", self._y.shape[0])
 
     @property
     def model(self):
@@ -196,8 +203,12 @@ class _BaseSolution(object):
         "Values of the inputs"
         return self._inputs
 
-    def set_inputs(self, inputs):
+    @inputs.setter
+    def inputs(self, inputs):
         "Updates the input values"
+        # if inputs are None, initialize empty, to be populated later
+        inputs = inputs or pybamm.FuzzyDict()
+
         # self._inputs = {}
         # for name, inp in inputs.items():
         #     # Convert number to vector of the right shape
@@ -233,13 +244,13 @@ class _BaseSolution(object):
                         inp = inp[:, np.newaxis]
                     inp = np.tile(inp, len(self.t))
                 self._inputs[name] = inp
-        self._all_inputs_as_MX_dict = {}
-        for key, value in self._inputs.items():
-            self._all_inputs_as_MX_dict[key] = casadi.MX.sym("input", value.shape[0])
+        self._symbolic_inputs_dict = {
+            name: casadi.MX.sym(name, value.shape[0])
+            for name, value in self.inputs.items()
+        }
 
-        self._all_inputs_as_MX = casadi.vertcat(
-            *[p for p in self._all_inputs_as_MX_dict.values()]
-        )
+        # The symbolic_inputs will be used for sensitivity
+        self._symbolic_inputs = casadi.vertcat(*self._symbolic_inputs_dict.values())
 
     @property
     def t_event(self):
@@ -298,12 +309,12 @@ class _BaseSolution(object):
                     # Convert variable to casadi
                     # Make all inputs symbolic first for converting to casadi
                     var_sym = var_pybamm.to_casadi(
-                        self._t_MX, self._y_MX, inputs=self._all_inputs_as_MX_dict
+                        self._t_MX, self._y_MX, inputs=self._symbolic_inputs_dict
                     )
 
                     var_casadi = casadi.Function(
                         "variable",
-                        [self._t_MX, self._y_MX, self._all_inputs_as_MX],
+                        [self._t_MX, self._y_MX, self._symbolic_inputs],
                         [var_sym],
                     )
                     self.model._variables_casadi[key] = var_casadi
@@ -359,8 +370,8 @@ class _BaseSolution(object):
         "Remove casadi objects for pickling, will be computed again automatically"
         self._t_MX = None
         self._y_MX = None
-        self._all_inputs_as_MX = None
-        self._all_inputs_as_MX_dict = None
+        self._symbolic_inputs = None
+        self._symbolic_inputs_dict = None
 
     def save(self, filename):
         """Save the whole solution using pickle"""

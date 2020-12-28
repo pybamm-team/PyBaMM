@@ -73,7 +73,7 @@ class CasadiAlgebraicSolver(pybamm.BaseSolver):
         y0 = model.y0
 
         # If y0 already satisfies the tolerance for all t then keep it
-        if all(
+        if self.sensitivity != "casadi" and all(
             np.all(abs(model.casadi_algebraic(t, y0, inputs).full()) < self.tol)
             for t in t_eval
         ):

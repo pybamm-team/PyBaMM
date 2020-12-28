@@ -54,47 +54,20 @@ class ProcessedVariable(object):
         self.base_variable = base_variable
         self.base_variable_casadi = base_variable_casadi
         self.t_sol = solution.t
-        self.u_sol = solution.y
         self.mesh = base_variable.mesh
-        self.inputs = solution.inputs
         self.domain = base_variable.domain
         self.auxiliary_domains = base_variable.auxiliary_domains
         self.warn = warn
 
+        self.inputs = solution.inputs
+        self.symbolic_inputs = solution._symbolic_inputs
+
+        self.u_sol = solution.y
+        self.y_sym = solution._y_sym
+
         # Sensitivity starts off uninitialized, only set when called
         self._sensitivity = None
         self.solution_sensitivity = solution.sensitivity
-
-        # Special case: symbolic solution, with casadi
-        if isinstance(solution.y, casadi.Function):
-            # Evaluate solution at specific inputs value
-            inputs_stacked = casadi.vertcat(*solution.inputs.values())
-            self.u_sol = solution.y(inputs_stacked).full()
-            # Convert variable to casadi
-            t_MX = casadi.MX.sym("t")
-            y_MX = casadi.MX.sym("y", self.u_sol.shape[0])
-            # Make all inputs symbolic first for converting to casadi
-            symbolic_inputs_dict = {
-                name: casadi.MX.sym(name, value.shape[0])
-                for name, value in solution.inputs.items()
-            }
-
-            # The symbolic_inputs will be used for sensitivity
-            symbolic_inputs = casadi.vertcat(*symbolic_inputs_dict.values())
-            var_casadi = base_variable.to_casadi(
-                t_MX, y_MX, inputs=symbolic_inputs_dict
-            )
-            self.base_variable_sym = casadi.Function(
-                "variable", [t_MX, y_MX, symbolic_inputs], [var_casadi]
-            )
-            # Store symbolic inputs for sensitivity
-            self.symbolic_inputs = symbolic_inputs
-            self.y_sym = solution.y(symbolic_inputs)
-        else:
-            self.u_sol = solution.y
-            self.base_variable_sym = None
-            self.symbolic_inputs = None
-            self.y_sym = None
 
         # Set timescale
         self.timescale = solution.timescale_eval
@@ -565,17 +538,16 @@ class ProcessedVariable(object):
             return {}
         # Otherwise initialise and return sensitivity
         if self._sensitivity is None:
-            # Check that we can compute sensitivities
-            if self.base_variable_sym is None and self.solution_sensitivity == {}:
+            if self.solution_sensitivity != {}:
+                self.initialise_sensitivity_explicit_forward()
+            elif self.y_sym is not None:
+                self.initialise_sensitivity_casadi()
+            else:
                 raise ValueError(
                     "Cannot compute sensitivities. The 'sensitivity' argument of the "
                     "solver should be changed from 'None' to allow sensitivity "
                     "calculations. Check solver documentation for details."
                 )
-            if self.base_variable_sym is None:
-                self.initialise_sensitivity_explicit_forward()
-            else:
-                self.initialise_sensitivity_casadi()
         return self._sensitivity
 
     def initialise_sensitivity_explicit_forward(self):
@@ -639,7 +611,7 @@ class ProcessedVariable(object):
             for idx in range(len(self.t_sol)):
                 t = self.t_sol[idx]
                 u = self.y_sym[:, idx]
-                next_entries = self.base_variable_sym(t, u, self.symbolic_inputs)
+                next_entries = self.base_variable_casadi(t, u, self.symbolic_inputs)
                 if idx == 0:
                     entries = next_entries
                 else:
@@ -653,7 +625,7 @@ class ProcessedVariable(object):
             for idx in range(len(self.t_sol)):
                 t = self.t_sol[idx]
                 u = self.y_sym[:, idx]
-                next_entries = self.base_variable_sym(t, u, self.symbolic_inputs)
+                next_entries = self.base_variable_casadi(t, u, self.symbolic_inputs)
                 if idx == 0:
                     entries = next_entries
                 else:
@@ -662,7 +634,7 @@ class ProcessedVariable(object):
             return entries
 
         inputs_stacked = casadi.vertcat(*self.inputs.values())
-        self.base_eval = self.base_variable_sym(
+        self.base_eval = self.base_variable_casadi(
             self.t_sol[0], self.u_sol[:, 0], inputs_stacked
         )
         if (
