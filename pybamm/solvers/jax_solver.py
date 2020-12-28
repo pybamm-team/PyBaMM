@@ -203,7 +203,7 @@ class JaxSolver(pybamm.BaseSolver):
         t_event = None
         y_event = onp.array(None)
         sol = pybamm.Solution(
-            t_eval, y, t_event, y_event, termination, model=model, inputs=inputs_dict
+            t_eval, y, t_event, y_event, termination, model=model, inputs=inputs
         )
         sol.integration_time = integration_time
         return sol

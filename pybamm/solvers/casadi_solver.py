@@ -155,8 +155,6 @@ class CasadiSolver(pybamm.BaseSolver):
             return solution
         elif self.mode in ["safe", "safe without grid"]:
             y0 = model.y0
-            if isinstance(y0, casadi.DM):
-                y0 = y0.full().flatten()
             # Step-and-check
             t = t_eval[0]
             t_f = t_eval[-1]
@@ -174,7 +172,7 @@ class CasadiSolver(pybamm.BaseSolver):
                 self.create_integrator(model, inputs_dict)
                 # Initialize solution
                 solution = pybamm.Solution(
-                    np.array([t]), y0[:, np.newaxis], model=model, inputs=inputs_dict
+                    np.array([t]), y0, model=model, inputs=inputs_dict
                 )
                 solution.solve_time = 0
                 solution.integration_time = 0
@@ -457,7 +455,7 @@ class CasadiSolver(pybamm.BaseSolver):
                     x0=y0_diff, z0=y0_alg, p=inputs_eval, **self.extra_options_call
                 )
                 integration_time = timer.time()
-                y_sol = np.concatenate([sol["xf"].full(), sol["zf"].full()])
+                y_sol = casadi.vertcat(sol["xf"], sol["zf"])
                 sol = pybamm.Solution(t_eval, y_sol)
                 sol.integration_time = integration_time
                 return sol

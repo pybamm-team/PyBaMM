@@ -72,7 +72,7 @@ class TestSolution(unittest.TestCase):
         )
 
     def test_total_time(self):
-        sol = pybamm.Solution([], None)
+        sol = pybamm.Solution(np.array([0]), np.array([[1, 2]]))
         sol.set_up_time = 0.5
         sol.solve_time = 1.2
         self.assertEqual(sol.total_time, 1.7)

@@ -96,14 +96,8 @@ class TestCasadiAlgebraicSolver(unittest.TestCase):
 
         sol = np.vstack((3 * t_eval, 6 * t_eval))
         np.testing.assert_array_almost_equal(solution.y, sol)
-        np.testing.assert_array_almost_equal(
-            model.variables["var1"].evaluate(t=t_eval, y=solution.y).flatten(),
-            sol[0, :],
-        )
-        np.testing.assert_array_almost_equal(
-            model.variables["var2"].evaluate(t=t_eval, y=solution.y).flatten(),
-            sol[1, :],
-        )
+        np.testing.assert_array_almost_equal(solution["var1"].data.flatten(), sol[0, :])
+        np.testing.assert_array_almost_equal(solution["var2"].data.flatten(), sol[1, :])
 
     def test_model_solver_with_time_not_changing(self):
         # Create model
@@ -137,9 +131,7 @@ class TestCasadiAlgebraicSolver(unittest.TestCase):
         # Solve
         solver = pybamm.CasadiAlgebraicSolver(tol=1e-12)
         solution = solver.solve(model)
-        np.testing.assert_array_almost_equal(
-            model.variables["var1"].evaluate(t=None, y=solution.y), 3 * np.pi / 2
-        )
+        np.testing.assert_array_almost_equal(solution["var1"].data, 3 * np.pi / 2)
 
     def test_solve_with_input(self):
         # Simple system: a single algebraic equation
