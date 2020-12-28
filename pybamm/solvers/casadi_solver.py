@@ -456,7 +456,7 @@ class CasadiSolver(pybamm.BaseSolver):
                 )
                 integration_time = timer.time()
                 y_sol = casadi.vertcat(sol["xf"], sol["zf"])
-                sol = pybamm.Solution(t_eval, y_sol)
+                sol = pybamm.Solution(t_eval, y_sol, model=model, inputs=inputs_dict)
                 sol.integration_time = integration_time
                 return sol
             else:
@@ -489,7 +489,7 @@ class CasadiSolver(pybamm.BaseSolver):
                 # Save the solution, can just reuse and change the inputs
                 self.y_sols[model] = y_sol
 
-            sol = pybamm.Solution(t_eval, y_sol)
+            sol = pybamm.Solution(t_eval, y_sol, model=model, inputs=inputs_dict)
             sol.integration_time = integration_time
             return sol
         except RuntimeError as e:

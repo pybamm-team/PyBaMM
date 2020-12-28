@@ -402,10 +402,12 @@ class TestScipySolverWithSensitivity(unittest.TestCase):
         )
         np.testing.assert_allclose(solution.y[0], -1 + 0.2 * solution.t)
         np.testing.assert_allclose(
-            solution.sensitivity["p"], (2 * solution.t)[:, np.newaxis],
+            solution.sensitivity["p"],
+            (2 * solution.t)[:, np.newaxis],
         )
         np.testing.assert_allclose(
-            solution.sensitivity["q"], (0.1 * solution.t)[:, np.newaxis],
+            solution.sensitivity["q"],
+            (0.1 * solution.t)[:, np.newaxis],
         )
         np.testing.assert_allclose(solution.sensitivity["r"], 1)
         np.testing.assert_allclose(solution.sensitivity["s"], 0)
@@ -468,7 +470,9 @@ class TestScipySolverWithSensitivity(unittest.TestCase):
         t_eval = np.linspace(0, 1)
         solution = solver.solve(model, t_eval, inputs={"param": 7})
         np.testing.assert_array_almost_equal(
-            solution["var"].data, np.tile(2 * np.exp(-7 * t_eval), (n, 1)), decimal=4,
+            solution["var"].data,
+            np.tile(2 * np.exp(-7 * t_eval), (n, 1)),
+            decimal=4,
         )
         np.testing.assert_array_almost_equal(
             solution["var"].sensitivity["param"],
@@ -504,10 +508,12 @@ class TestScipySolverWithSensitivity(unittest.TestCase):
         )
         np.testing.assert_allclose(solution.y, np.tile(-1 + 0.2 * solution.t, (n, 1)))
         np.testing.assert_allclose(
-            solution.sensitivity["p"], np.repeat(2 * solution.t, n)[:, np.newaxis],
+            solution.sensitivity["p"],
+            np.repeat(2 * solution.t, n)[:, np.newaxis],
         )
         np.testing.assert_allclose(
-            solution.sensitivity["q"], np.repeat(0.1 * solution.t, n)[:, np.newaxis],
+            solution.sensitivity["q"],
+            np.repeat(0.1 * solution.t, n)[:, np.newaxis],
         )
         np.testing.assert_allclose(solution.sensitivity["r"], 1)
         np.testing.assert_allclose(solution.sensitivity["s"], 0)
@@ -550,7 +556,7 @@ class TestScipySolverWithSensitivity(unittest.TestCase):
             ),
         )
 
-    def test_solve_sensitivity_scalar_var_vector_input(self):
+    def test_solve_sensitivity_vector_var_vector_input(self):
         var = pybamm.Variable("var", "negative electrode")
         model = pybamm.BaseModel()
         # Set length scales to avoid warning
@@ -579,7 +585,9 @@ class TestScipySolverWithSensitivity(unittest.TestCase):
         solution = solver.solve(model, t_eval, inputs={"param": 7 * np.ones(n)})
         l_n = mesh["negative electrode"].edges[-1]
         np.testing.assert_array_almost_equal(
-            solution["var"].data, np.tile(2 * np.exp(-7 * t_eval), (n, 1)), decimal=4,
+            solution["var"].data,
+            np.tile(2 * np.exp(-7 * t_eval), (n, 1)),
+            decimal=4,
         )
 
         np.testing.assert_array_almost_equal(
@@ -587,7 +595,9 @@ class TestScipySolverWithSensitivity(unittest.TestCase):
             np.vstack([np.eye(n) * -2 * t * np.exp(-7 * t) for t in t_eval]),
         )
         np.testing.assert_array_almost_equal(
-            solution["integral of var"].data, 2 * np.exp(-7 * t_eval) * l_n, decimal=4,
+            solution["integral of var"].data,
+            2 * np.exp(-7 * t_eval) * l_n,
+            decimal=4,
         )
         np.testing.assert_array_almost_equal(
             solution["integral of var"].sensitivity["param"],

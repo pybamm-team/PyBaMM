@@ -63,7 +63,6 @@ class CasadiAlgebraicSolver(pybamm.BaseSolver):
         inputs : dict, optional
             Any input parameters to pass to the model when solving.
         """
-        # Record whether there are any symbolic inputs
         inputs_dict = inputs or {}
         # Create casadi objects for the root-finder
         inputs = casadi.vertcat(*[v for v in inputs_dict.values()])
@@ -74,12 +73,14 @@ class CasadiAlgebraicSolver(pybamm.BaseSolver):
         y0 = model.y0
 
         # If y0 already satisfies the tolerance for all t then keep it
-        if has_symbolic_inputs is False and all(
+        if all(
             np.all(abs(model.casadi_algebraic(t, y0, inputs).full()) < self.tol)
             for t in t_eval
         ):
             pybamm.logger.debug("Keeping same solution at all times")
-            return pybamm.Solution(t_eval, y0, termination="success")
+            return pybamm.Solution(
+                t_eval, y0, termination="success", model=model, inputs=inputs_dict
+            )
 
         # The casadi algebraic solver can read rhs equations, but leaves them unchanged
         # i.e. the part of the solution vector that corresponds to the differential

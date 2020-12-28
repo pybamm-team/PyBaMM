@@ -129,8 +129,7 @@ class _BaseSolution(object):
                 start = end
             self.sensitivity = sensitivity
 
-        model = model or pybamm.BaseModel()
-        self.set_model(model)
+        self.model = model
         self._t_event = t_event
         self._y_event = y_event
         self._termination = termination
@@ -230,6 +229,8 @@ class _BaseSolution(object):
                     inp = inp * np.ones((1, len(self.t)))
                 # Tile a vector
                 else:
+                    if inp.ndim == 1:
+                        inp = inp[:, np.newaxis]
                     inp = np.tile(inp, len(self.t))
                 self._inputs[name] = inp
         self._all_inputs_as_MX_dict = {}

@@ -199,6 +199,8 @@ class QuickPlot(object):
                     "Electrolyte potential [V]",
                     "Terminal voltage [V]",
                 ]
+            else:
+                raise NotImplementedError(models)
 
         # Prepare dictionary of variables
         # output_variables is a list of strings or lists, e.g.
