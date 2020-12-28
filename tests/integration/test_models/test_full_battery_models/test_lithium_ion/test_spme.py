@@ -112,17 +112,23 @@ class TestSPMe(unittest.TestCase):
         modeltest = tests.StandardModelTest(model)
         modeltest.test_all()
 
-    # def test_surface_form_differential(self):
-    #     options = {"surface form": "differential"}
-    #     model = pybamm.lithium_ion.SPMe(options)
-    #     modeltest = tests.StandardModelTest(model)
-    #     modeltest.test_all()
+    def test_loss_active_material(self):
+        options = {"loss of active material": "example"}
+        model = pybamm.lithium_ion.SPMe(options)
+        modeltest = tests.StandardModelTest(model)
+        modeltest.test_all()
 
-    # def test_surface_form_algebraic(self):
-    #     options = {"surface form": "algebraic"}
-    #     model = pybamm.lithium_ion.SPMe(options)
-    #     modeltest = tests.StandardModelTest(model)
-    #     modeltest.test_all()
+    def test_surface_form_differential(self):
+        options = {"surface form": "differential"}
+        model = pybamm.lithium_ion.SPMe(options)
+        modeltest = tests.StandardModelTest(model)
+        modeltest.test_all()
+
+    def test_surface_form_algebraic(self):
+        options = {"surface form": "algebraic"}
+        model = pybamm.lithium_ion.SPMe(options)
+        modeltest = tests.StandardModelTest(model)
+        modeltest.test_all()
 
     def test_integrated_conductivity(self):
         options = {"electrolyte conductivity": "integrated"}
@@ -157,7 +163,7 @@ class TestSPMeWithSEI(unittest.TestCase):
         modeltest.test_all()
 
     def test_well_posed_ec_reaction_limited(self):
-        options = {"sei": "ec reaction limited", "sei porosity change": True}
+        options = {"sei": "ec reaction limited", "sei porosity change": "true"}
         model = pybamm.lithium_ion.SPMe(options)
         modeltest = tests.StandardModelTest(model)
         modeltest.test_all()
@@ -165,7 +171,7 @@ class TestSPMeWithSEI(unittest.TestCase):
 
 class TestSPMeWithCrack(unittest.TestCase):
     def test_well_posed_none_crack(self):
-        options = {"particle": "Fickian diffusion", "particle cracking": None}
+        options = {"particle": "Fickian diffusion", "particle cracking": "none"}
         model = pybamm.lithium_ion.SPMe(options)
         chemistry = pybamm.parameter_sets.Ai2020
         parameter_values = pybamm.ParameterValues(chemistry=chemistry)

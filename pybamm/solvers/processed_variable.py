@@ -379,9 +379,11 @@ class ProcessedVariable(object):
         if self.domain[0] in [
             "negative particle",
             "positive particle",
+            "working particle",
         ] and self.auxiliary_domains["secondary"][0] in [
             "negative electrode",
             "positive electrode",
+            "working electrode",
         ]:
             self.first_dimension = "r"
             self.second_dimension = "x"

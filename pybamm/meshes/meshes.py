@@ -62,7 +62,7 @@ class Mesh(dict):
                             and var.domain[0] in geometry.keys()
                         ):
                             raise KeyError(
-                                "Points not given for a variable in domain {}".format(
+                                "Points not given for a variable in domain '{}'".format(
                                     domain
                                 )
                             )

@@ -28,9 +28,9 @@ class TestDimensionlessParameterValues(unittest.TestCase):
         # Note: in general these can be functions, but are constant for this
         # set, so we just arbitrarily evaluate at 0
 
-        # a_n dimensional
+        # a_n_typ
         np.testing.assert_almost_equal(
-            values.evaluate(param.a_n_dimensional(0)), 0.18 * 10 ** (6), 2
+            values.evaluate(param.a_n_typ), 0.18 * 10 ** (6), 2
         )
         # R_n dimensional
         np.testing.assert_almost_equal(
@@ -40,9 +40,9 @@ class TestDimensionlessParameterValues(unittest.TestCase):
         # a_R_n = a_n_typ * R_n_typ
         np.testing.assert_almost_equal(values.evaluate(param.a_R_n), 1.8, 2)
 
-        # a_p dimensional
+        # a_p_typ
         np.testing.assert_almost_equal(
-            values.evaluate(param.a_p_dimensional(0)), 0.15 * 10 ** (6), 2
+            values.evaluate(param.a_p_typ), 0.15 * 10 ** (6), 2
         )
 
         # R_p dimensional

@@ -28,6 +28,10 @@ class TestCrackPropagation(unittest.TestCase):
             "R-averaged positive particle concentration": a_p,
             "Average positive particle concentration": a,
             "Positive electrode temperature": a_p,
+            "Negative electrode active material volume fraction": a_n,
+            "Negative electrode surface area to volume ratio": a_n,
+            "Positive electrode active material volume fraction": a_p,
+            "Positive electrode surface area to volume ratio": a_p,
         }
         options = {"particle": "Fickian diffusion", "particle cracking": "both"}
         param = pybamm.LithiumIonParameters(options)
