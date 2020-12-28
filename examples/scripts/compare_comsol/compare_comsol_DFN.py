@@ -82,22 +82,26 @@ def get_interp_fun(variable_name, domain):
     pybamm_x = mesh.combine_submeshes(*domain).nodes * L_x
     variable = interp.interp1d(comsol_x, variable, axis=0)(pybamm_x)
 
-    def myinterp(t):
-        try:
-            return interp.interp1d(
-                comsol_t, variable, fill_value="extrapolate", bounds_error=False
-            )(t)[:, np.newaxis]
-        except ValueError as err:
-            raise ValueError(
-                (
-                    "Failed to interpolate '{}' with time range [{}, {}] at time {}."
-                    + "Original error: {}"
-                ).format(variable_name, comsol_t[0], comsol_t[-1], t, err)
-            )
+    # def myinterp(t):
+    #     try:
+    #         return interp.interp1d(
+    #             comsol_t, variable, fill_value="extrapolate", bounds_error=False
+    #         )(t)[:, np.newaxis]
+    #     except ValueError as err:
+    #         raise ValueError(
+    #             (
+    #                 "Failed to interpolate '{}' with time range [{}, {}] at time {}."
+    #                 + "Original error: {}"
+    #             ).format(variable_name, comsol_t[0], comsol_t[-1], t, err)
+    #         )
 
-    # Make sure to use dimensional time
-    fun = pybamm.Function(
-        myinterp,
+    # # Make sure to use dimensional time
+    # fun = pybamm.Function(
+    #     myinterp,
+    #     pybamm.t * pybamm_model.timescale.evaluate(),
+    #     name=variable_name + "_comsol",
+    # )
+    fun = pybamm.Interpolant(
         pybamm.t * pybamm_model.timescale.evaluate(),
         name=variable_name + "_comsol",
     )

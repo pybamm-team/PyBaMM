@@ -72,7 +72,6 @@ class _BaseSolution(object):
     @t.setter
     def t(self, t):
         self._t = t
-        self._t_MX = casadi.MX.sym("t")
 
     @property
     def y(self):
@@ -82,7 +81,6 @@ class _BaseSolution(object):
     @y.setter
     def y(self, y):
         self._y = y
-        self._y_MX = casadi.MX.sym("y", y.shape[0])
 
     @property
     def model(self):
@@ -139,13 +137,6 @@ class _BaseSolution(object):
                 else:
                     inp = np.tile(inp, len(self.t))
                 self._inputs[name] = inp
-        self._all_inputs_as_MX_dict = {}
-        for key, value in self._inputs.items():
-            self._all_inputs_as_MX_dict[key] = casadi.MX.sym("input", value.shape[0])
-
-        self._all_inputs_as_MX = casadi.vertcat(
-            *[p for p in self._all_inputs_as_MX_dict.values()]
-        )
 
     @property
     def t_event(self):
@@ -201,15 +192,25 @@ class _BaseSolution(object):
                 if key in self.model._variables_casadi:
                     var_casadi = self.model._variables_casadi[key]
                 else:
+                    self._t_MX = casadi.MX.sym("t")
+                    self._y_MX = casadi.MX.sym("y", self.y.shape[0])
+                    self._symbolic_inputs_dict = {
+                        key: casadi.MX.sym("input", value.shape[0])
+                        for key, value in self._inputs.items()
+                    }
+                    self._symbolic_inputs = casadi.vertcat(
+                        *[p for p in self._symbolic_inputs_dict.values()]
+                    )
+
                     # Convert variable to casadi
                     # Make all inputs symbolic first for converting to casadi
                     var_sym = var_pybamm.to_casadi(
-                        self._t_MX, self._y_MX, inputs=self._all_inputs_as_MX_dict
+                        self._t_MX, self._y_MX, inputs=self._symbolic_inputs_dict
                     )
 
                     var_casadi = casadi.Function(
                         "variable",
-                        [self._t_MX, self._y_MX, self._all_inputs_as_MX],
+                        [self._t_MX, self._y_MX, self._symbolic_inputs],
                         [var_sym],
                     )
                     self.model._variables_casadi[key] = var_casadi
@@ -265,8 +266,8 @@ class _BaseSolution(object):
         "Remove casadi objects for pickling, will be computed again automatically"
         self._t_MX = None
         self._y_MX = None
-        self._all_inputs_as_MX = None
-        self._all_inputs_as_MX_dict = None
+        self._symbolic_inputs = None
+        self._symbolic_inputs_dict = None
 
     def save(self, filename):
         """Save the whole solution using pickle"""
