@@ -81,7 +81,9 @@ class TestSolution(unittest.TestCase):
         sim.solve()
         num_cycles = len(experiment.cycle_lengths)
         for idx, sub_solution in enumerate(sim.solution.sub_solutions):
-            cycle_sub_solution = sim.solution.cycles[idx//num_cycles][idx%num_cycles]
+            cycle_sub_solution = sim.solution.cycles[idx // num_cycles][
+                idx % num_cycles
+            ]
             self.assertEqual(cycle_sub_solution, sub_solution)
 
     def test_total_time(self):
