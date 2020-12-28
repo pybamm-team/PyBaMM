@@ -46,9 +46,7 @@ class TestExternalVariables(unittest.TestCase):
             sim.step(dt, external_variables=external_variables)
         var = "Terminal voltage [V]"
         t = sim.solution.t[-1]
-        y = sim.solution.y[:, -1]
-        inputs = external_variables
-        sim.built_model.variables[var].evaluate(t, y, inputs=inputs)
+        sim.solution[var].data
         sim.solution[var](t)
         # test generate with external variable
         sim.built_model.generate("test.c", ["Volume-averaged cell temperature"])
