@@ -38,7 +38,6 @@ class ProcessedSymbolicVariable(object):
                 symbolic_inputs_dict[key] = value
 
         all_inputs_as_MX = casadi.vertcat(*[p for p in all_inputs_as_MX_dict.values()])
-        all_inputs = casadi.vertcat(*[p for p in solution.inputs.values()])
         # The symbolic_inputs dictionary will be used for sensitivity
         symbolic_inputs = casadi.vertcat(*[p for p in symbolic_inputs_dict.values()])
         var = base_variable.to_casadi(t_MX, y_MX, inputs=all_inputs_as_MX_dict)
@@ -52,10 +51,13 @@ class ProcessedSymbolicVariable(object):
         self.mesh = base_variable.mesh
         self.symbolic_inputs_dict = symbolic_inputs_dict
         self.symbolic_inputs_total_shape = symbolic_inputs.shape[0]
-        self.inputs = all_inputs
+        self.inputs = solution.inputs
         self.domain = base_variable.domain
 
-        self.base_eval = self.base_variable(solution.t[0], solution.y[:, 0], all_inputs)
+        self.inputs = casadi.vertcat(*[p for p in solution.inputs.values()])
+        self.base_eval = self.base_variable(
+            solution.t[0], solution.y[:, 0], self.inputs
+        )
 
         if (
             isinstance(self.base_eval, numbers.Number)

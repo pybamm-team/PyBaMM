@@ -532,17 +532,16 @@ class Simulation:
             arrays.
         """
 
-        variable_arrays = [
-            self.built_model.variables[var].evaluate(
-                self.solution.t[-1], self.solution.y[:, -1]
-            )
-            for var in variables
-        ]
-
-        if len(variable_arrays) == 1:
-            return variable_arrays[0]
-        else:
-            return tuple(variable_arrays)
+        variable_arrays = {}
+        for var in variables:
+            processed_var = self.solution[var].data
+            if processed_var.ndim == 1:
+                variable_arrays[var] = processed_var[-1]
+            elif processed_var.ndim == 2:
+                variable_arrays[var] = processed_var[:, -1]
+            elif processed_var.ndim == 3:
+                variable_arrays[var] = processed_var[:, :, -1]
+        return variable_arrays
 
     def plot(self, output_variables=None, quick_plot_vars=None, **kwargs):
         """
@@ -693,6 +692,8 @@ class Simulation:
             and self._solver.integrator_specs != {}
         ):
             self._solver.integrator_specs = {}
+        if self.solution is not None:
+            self.solution.clear_casadi_attributes()
         with open(filename, "wb") as f:
             pickle.dump(self, f, pickle.HIGHEST_PROTOCOL)
 

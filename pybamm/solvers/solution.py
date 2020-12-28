@@ -41,8 +41,6 @@ class _BaseSolution(object):
         self, t, y, t_event=None, y_event=None, termination="final time", copy_this=None
     ):
         self.t = t
-        if isinstance(y, casadi.DM):
-            yå = y.full()
         self.y = y
         self._t_event = t_event
         self._y_event = y_event
@@ -123,7 +121,13 @@ class _BaseSolution(object):
         # If there are symbolic inputs, just store them as given
         if any(isinstance(v, casadi.MX) for v in inputs.values()):
             self.has_symbolic_inputs = True
-            self._inputs = inputs
+            self._inputs = {}
+            for name, inp in inputs.items():
+                if isinstance(inp, numbers.Number):
+                    self._inputs[name] = casadi.DM([inp])
+                else:
+                    self._inputs[name] = inp
+
         # Otherwise, make them the same size as the time vector
         else:
             self.has_symbolic_inputs = False
@@ -258,16 +262,19 @@ class _BaseSolution(object):
         """
         return pybamm.dynamic_plot(self, output_variables=output_variables, **kwargs)
 
+    def clear_casadi_attributes(self):
+        "Remove casadi objects for pickling, will be computed again automatically"
+        self._t_MX = None
+        self._y_MX = None
+        self._all_inputs_as_MX = None
+        self._all_inputs_as_MX_dict = None
+
     def save(self, filename):
         """Save the whole solution using pickle"""
         # No warning here if len(self.data)==0 as solution can be loaded
         # and used to process new variables
 
-        # Remove casadi objects for pickling, will be computed again automatically
-        self._t_MX = None
-        self._y_MX = None
-        self._all_inputs_as_MX = None
-        self._all_inputs_as_MX_dict = None
+        self.clear_casadi_attributes()
         # Pickle
         with open(filename, "wb") as f:
             pickle.dump(self, f, pickle.HIGHEST_PROTOCOL)
@@ -423,7 +430,10 @@ class Solution(_BaseSolution):
 
         # Update t, y and inputs
         self._t = np.concatenate((self._t, solution.t[start_index:]))
-        self._y = np.concatenate((self._y, solution.y[:, start_index:]), axis=1)
+        if isinstance(self.y, casadi.DM) and isinstance(solution.y, casadi.DM):
+            self._y = casadi.horzcat(self.y, solution.y[:, start_index:])
+        else:
+            self._y = np.hstack((self._y, solution.y[:, start_index:]))
         for name, inp in self.inputs.items():
             solution_inp = solution.inputs[name]
             self.inputs[name] = np.c_[inp, solution_inp[:, start_index:]]

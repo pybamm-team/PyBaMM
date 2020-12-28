@@ -686,6 +686,7 @@ class TestBaseModel(unittest.TestCase):
         y = np.tile(3 * t, (1 + 30 + 50, 1))
         sol = pybamm.Solution(t, y)
         sol.model = model_disc
+        sol.inputs = {}
 
         # Update out-of-place first, since otherwise we'll have already modified the
         # model
@@ -935,16 +936,12 @@ class TestBaseModel(unittest.TestCase):
 class TestStandardBatteryBaseModel(unittest.TestCase):
     def test_default_solver(self):
         model = pybamm.BaseBatteryModel()
-        self.assertIsInstance(
-            model.default_solver, (pybamm.ScipySolver, pybamm.ScikitsOdeSolver)
-        )
+        self.assertIsInstance(model.default_solver, pybamm.CasadiSolver)
 
         # check that default_solver gives you a new solver, not an internal object
         solver = model.default_solver
         solver = pybamm.BaseModel()
-        self.assertIsInstance(
-            model.default_solver, (pybamm.ScipySolver, pybamm.ScikitsOdeSolver)
-        )
+        self.assertIsInstance(model.default_solver, pybamm.CasadiSolver)
         self.assertIsInstance(solver, pybamm.BaseModel)
 
         # check that adding algebraic variables gives DAE solver

@@ -5,11 +5,11 @@
 import pybamm
 import numpy as np
 
-pybamm.set_logging_level("DEBUG")
+pybamm.set_logging_level("INFO")
 
 
 # load model
-model = pybamm.lithium_ion.SPMe()
+model = pybamm.lithium_ion.DFN()
 
 # create geometry
 geometry = model.default_geometry
@@ -30,7 +30,7 @@ disc.process_model(model)
 
 # solve model
 t_eval = np.linspace(0, 3600, 100)
-solver = pybamm.CasadiSolver(mode="fast", atol=1e-6, rtol=1e-3)
+solver = pybamm.CasadiSolver(mode="safe", atol=1e-6, rtol=1e-3)
 solution = solver.solve(model, t_eval)
 
 # plot
@@ -43,8 +43,8 @@ plot = pybamm.QuickPlot(
         "Current [A]",
         "Negative electrode potential [V]",
         "Electrolyte potential [V]",
-        "Terminal voltage [V]",
         "Positive electrode potential [V]",
+        "Terminal voltage [V]",
     ],
     time_unit="seconds",
     spatial_unit="um",
