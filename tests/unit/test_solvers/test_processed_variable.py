@@ -13,16 +13,16 @@ def to_casadi(var_pybamm, y, inputs=None):
     t_MX = casadi.MX.sym("t")
     y_MX = casadi.MX.sym("y", y.shape[0])
 
-    all_inputs_as_MX_dict = {}
+    symbolic_inputs_dict = {}
     inputs = inputs or {}
     for key, value in inputs.items():
-        all_inputs_as_MX_dict[key] = casadi.MX.sym("input", value.shape[0])
+        symbolic_inputs_dict[key] = casadi.MX.sym("input", value.shape[0])
 
-    all_inputs_as_MX = casadi.vertcat(*[p for p in all_inputs_as_MX_dict.values()])
+    symbolic_inputs = casadi.vertcat(*[p for p in symbolic_inputs_dict.values()])
 
-    var_sym = var_pybamm.to_casadi(t_MX, y_MX, inputs=all_inputs_as_MX_dict)
+    var_sym = var_pybamm.to_casadi(t_MX, y_MX, inputs=symbolic_inputs_dict)
 
-    var_casadi = casadi.Function("variable", [t_MX, y_MX, all_inputs_as_MX], [var_sym])
+    var_casadi = casadi.Function("variable", [t_MX, y_MX, symbolic_inputs], [var_sym])
     return var_casadi
 
 

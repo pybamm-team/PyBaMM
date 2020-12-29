@@ -153,7 +153,6 @@ class _BaseSolution(object):
     @t.setter
     def t(self, t):
         self._t = t
-        self._t_MX = casadi.MX.sym("t")
 
     @property
     def y(self):
@@ -171,7 +170,6 @@ class _BaseSolution(object):
             self._y = y
             self._y_fn = None
             self._y_sym = None
-        self._y_MX = casadi.MX.sym("y", self._y.shape[0])
 
     @property
     def model(self):
@@ -244,13 +242,6 @@ class _BaseSolution(object):
                         inp = inp[:, np.newaxis]
                     inp = np.tile(inp, len(self.t))
                 self._inputs[name] = inp
-        self._symbolic_inputs_dict = {
-            name: casadi.MX.sym(name, value.shape[0])
-            for name, value in self.inputs.items()
-        }
-
-        # The symbolic_inputs will be used for sensitivity
-        self._symbolic_inputs = casadi.vertcat(*self._symbolic_inputs_dict.values())
 
     @property
     def t_event(self):
@@ -306,6 +297,16 @@ class _BaseSolution(object):
                 if key in self.model._variables_casadi:
                     var_casadi = self.model._variables_casadi[key]
                 else:
+                    self._t_MX = casadi.MX.sym("t")
+                    self._y_MX = casadi.MX.sym("y", self.y.shape[0])
+                    self._symbolic_inputs_dict = {
+                        key: casadi.MX.sym("input", value.shape[0])
+                        for key, value in self._inputs.items()
+                    }
+                    self._symbolic_inputs = casadi.vertcat(
+                        *[p for p in self._symbolic_inputs_dict.values()]
+                    )
+
                     # Convert variable to casadi
                     # Make all inputs symbolic first for converting to casadi
                     var_sym = var_pybamm.to_casadi(
