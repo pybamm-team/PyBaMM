@@ -343,14 +343,14 @@ class AlternativeEffectiveResistance2D(pybamm.BaseModel):
 
         # Governing equations -- we impose that the average of f_p is zero
         # by introducing a Lagrange multiplier
-        c = pybamm.Variable("Lagrange multiplier", domain="current collector")
+        c = pybamm.Variable("Lagrange multiplier")
 
         self.algebraic = {
             f_n: pybamm.laplacian(f_n) + pybamm.source(1, f_n),
-            c: pybamm.laplacian(f_p)
+            f_p: pybamm.laplacian(f_p)
             - pybamm.source(1, f_p)
             + c * pybamm.DefiniteIntegralVector(f_p, vector_type="column"),
-            f_p: pybamm.yz_average(f_p) + 0 * c,
+            c: pybamm.yz_average(f_p) + pybamm.Multiplication(0, c),
         }
 
         # Boundary conditons
