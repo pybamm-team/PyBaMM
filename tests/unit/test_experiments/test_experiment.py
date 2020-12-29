@@ -86,7 +86,8 @@ class TestExperiment(unittest.TestCase):
         experiment = pybamm.Experiment(
             [
                 ("Discharge at C/20 for 0.5 hours", "Charge at C/5 for 45 minutes"),
-                ("Discharge at C/20 for 0.5 hours", "Charge at C/5 for 45 minutes"),
+                ("Discharge at C/20 for 0.5 hours"),
+                "Charge at C/5 for 45 minutes",
             ]
         )
         self.assertEqual(
@@ -98,7 +99,7 @@ class TestExperiment(unittest.TestCase):
                 (-0.2, "C", 2700.0, 60.0),
             ],
         )
-        self.assertEqual(experiment.cycle_lengths, [2, 2])
+        self.assertEqual(experiment.cycle_lengths, [2, 1, 1])
 
     def test_str_repr(self):
         conds = ["Discharge at 1 C for 20 seconds", "Charge at 0.5 W for 10 minutes"]
@@ -112,9 +113,13 @@ class TestExperiment(unittest.TestCase):
 
     def test_bad_strings(self):
         with self.assertRaisesRegex(
-            TypeError, "Operating conditions should be strings"
+            TypeError, "Operating conditions should be strings or tuples of strings"
         ):
             pybamm.Experiment([1, 2, 3])
+        with self.assertRaisesRegex(
+            TypeError, "Operating conditions should be strings or tuples of strings"
+        ):
+            pybamm.Experiment([(1, 2, 3)])
         with self.assertRaisesRegex(ValueError, "Operating conditions must contain"):
             pybamm.Experiment(["Discharge at 1 A at 2 hours"])
         with self.assertRaisesRegex(ValueError, "instruction must be"):
