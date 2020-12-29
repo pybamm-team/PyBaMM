@@ -474,6 +474,7 @@ class Simulation:
                     )
                     break
             if hasattr(self.solution, "_sub_solutions"):
+                # Construct solution.cycles (a list of tuples) from sub_solutions
                 self.solution.cycles = []
                 for cycle_num, cycle_length in enumerate(self.experiment.cycle_lengths):
                     cycle_start_idx = sum(self.experiment.cycle_lengths[0:cycle_num])
