@@ -27,23 +27,23 @@ class ProcessedSymbolicVariable(object):
         t_MX = casadi.MX.sym("t")
         y_MX = casadi.MX.sym("y", solution.y.shape[0])
         # Make all inputs symbolic first for converting to casadi
-        symbolic_inputs_dict = {}
+        all_inputs_as_MX_dict = {}
         symbolic_inputs_dict = {}
         for key, value in solution.inputs.items():
             if not isinstance(value, casadi.MX):
-                symbolic_inputs_dict[key] = casadi.MX.sym("input")
+                all_inputs_as_MX_dict[key] = casadi.MX.sym("input")
             else:
-                symbolic_inputs_dict[key] = value
+                all_inputs_as_MX_dict[key] = value
                 # Only add symbolic inputs to the "symbolic_inputs" dict
                 symbolic_inputs_dict[key] = value
 
-        symbolic_inputs = casadi.vertcat(*[p for p in symbolic_inputs_dict.values()])
+        all_inputs_as_MX = casadi.vertcat(*[p for p in all_inputs_as_MX_dict.values()])
         # The symbolic_inputs dictionary will be used for sensitivity
         symbolic_inputs = casadi.vertcat(*[p for p in symbolic_inputs_dict.values()])
-        var = base_variable.to_casadi(t_MX, y_MX, inputs=symbolic_inputs_dict)
+        var = base_variable.to_casadi(t_MX, y_MX, inputs=all_inputs_as_MX_dict)
 
         self.base_variable = casadi.Function(
-            "variable", [t_MX, y_MX, symbolic_inputs], [var]
+            "variable", [t_MX, y_MX, all_inputs_as_MX], [var]
         )
         # Store some attributes
         self.t_sol = solution.t
