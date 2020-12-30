@@ -60,7 +60,7 @@ class Experiment:
                     badly_typed_conditions = [
                         cond for cond in cycle if not isinstance(cond, str)
                     ]
-                except:
+                except TypeError:
                     # Cycle is not a tuple or string
                     badly_typed_conditions = []
                 badly_typed_conditions = badly_typed_conditions or [cycle]
