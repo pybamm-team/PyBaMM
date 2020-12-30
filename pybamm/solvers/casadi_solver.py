@@ -166,7 +166,8 @@ class CasadiSolver(pybamm.BaseSolver):
                             extrap_event_names.append(event.name[12:])
 
                     raise pybamm.SolverError(
-                        "CasADI solver failed because the following interpolation bounds were exceeded: {}".format(
+                        "CasADI solver failed because the following interpolation"
+                        " bounds were exceeded: {}".format(
                             extrap_event_names
                         )
                     )
@@ -268,7 +269,8 @@ class CasadiSolver(pybamm.BaseSolver):
                                 extrap_event_names.append(event.name[12:])
 
                         raise pybamm.SolverError(
-                            "CasADI solver failed because the following interpolation bounds were exceeded: {}".format(
+                            "CasADI solver failed because the following interpolation"
+                            " bounds were exceeded: {}".format(
                                 extrap_event_names
                             )
                         )

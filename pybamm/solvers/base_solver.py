@@ -382,7 +382,9 @@ class BaseSolver(object):
         model.jac_algebraic_eval = jac_algebraic
         model.terminate_events_eval = terminate_events_eval
         model.discontinuity_events_eval = discontinuity_events_eval
-        model.interpolant_extrapolation_events_eval = interpolant_extrapolation_events_eval
+        model.interpolant_extrapolation_events_eval = (
+            interpolant_extrapolation_events_eval
+        )
 
         # Calculate initial conditions
         model.y0 = init_eval(inputs)
