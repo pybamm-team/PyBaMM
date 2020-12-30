@@ -1,3 +1,64 @@
+# [Unreleased](https://github.com/pybamm-team/PyBaMM)
+
+## Features
+
+-   Reformatted the `BasicDFNHalfCell` to be consistent with the other models ([#1282](https://github.com/pybamm-team/PyBaMM/pull/1282))
+-   Added option to make the total interfacial current density a state ([#1280](https://github.com/pybamm-team/PyBaMM/pull/1280))
+-   Added functionality to initialize a model using the solution from another model ([#1278](https://github.com/pybamm-team/PyBaMM/pull/1278))
+-   Added submodels for active material ([#1262](https://github.com/pybamm-team/PyBaMM/pull/1262))
+-   Added composite surface form electrolyte models: `CompositeDifferential` and `CompositeAlgebraic` ([#1207](https://github.com/pybamm-team/PyBaMM/issues/1207))
+
+## Optimizations
+
+-   Operations such as `1*x` and `0+x` now directly return `x` ([#1252](https://github.com/pybamm-team/PyBaMM/pull/1252))
+
+## Bug fixes
+
+-   Fixed `Simulation` and `model.new_copy` to fix a bug where changes to the model were overwritten ([#1278](https://github.com/pybamm-team/PyBaMM/pull/1278))
+
+## Breaking changes
+
+-   Boolean model options ('sei porosity change', 'convection') must now be given in string format ('true' or 'false' instead of True or False) ([#1280](https://github.com/pybamm-team/PyBaMM/pull/1280))
+-   Operations such as `1*x` and `0+x` now directly return `x`. This can be bypassed by explicitly creating the binary operators, e.g. `pybamm.Multiplication(1, x)` ([#1252](https://github.com/pybamm-team/PyBaMM/pull/1252))
+
+# [v0.3.0](https://github.com/pybamm-team/PyBaMM) - 2020-11-22
+
+This release introduces a new aging model for particle swelling and cracking, a new reduced-order model (TSPMe), and a parameter set for A123 LFP cells. Additionally, there have been several backend optimizations to speed up model creation and solving, and other minor features and bug fixes.
+
+## Features
+
+-   Added a submodel for particle swelling and cracking ([#1232](https://github.com/pybamm-team/PyBaMM/pull/1232))
+-   Added a notebook on how to speed up the solver and handle instabilities ([#1223](https://github.com/pybamm-team/PyBaMM/pull/1223))
+-   Improve string printing of `BinaryOperator`, `Function`, and `Concatenation` objects ([#1223](https://github.com/pybamm-team/PyBaMM/pull/1223))
+-   Added `Solution.integration_time`, which is the time taken just by the integration subroutine, without extra setups ([#1223](https://github.com/pybamm-team/PyBaMM/pull/1223))
+-   Added parameter set for an A123 LFP cell ([#1209](https://github.com/pybamm-team/PyBaMM/pull/1209))
+-   Added variables related to equivalent circuit models ([#1204](https://github.com/pybamm-team/PyBaMM/pull/1204))
+-   Added the `Integrated` electrolyte conductivity submodel ([#1188](https://github.com/pybamm-team/PyBaMM/pull/1188))
+-   Added an example script to check conservation of lithium ([#1186](https://github.com/pybamm-team/PyBaMM/pull/1186))
+-   Added `erf` and `erfc` functions ([#1184](https://github.com/pybamm-team/PyBaMM/pull/1184))
+
+## Optimizations
+
+-   Add (optional) smooth approximations for the `Minimum`, `Maximum`, `Heaviside`, and `AbsoluteValue` operators ([#1223](https://github.com/pybamm-team/PyBaMM/pull/1223))
+-   Avoid unnecessary repeated computations in the solvers ([#1222](https://github.com/pybamm-team/PyBaMM/pull/1222))
+-   Rewrite `Symbol.is_constant` to be more efficient ([#1222](https://github.com/pybamm-team/PyBaMM/pull/1222))
+-   Cache shape and size calculations ([#1222](https://github.com/pybamm-team/PyBaMM/pull/1222))
+-   Only instantiate the geometric, electrical and thermal parameter classes once ([#1222](https://github.com/pybamm-team/PyBaMM/pull/1222))
+
+## Bug fixes
+
+-   Quickplot now works when timescale or lengthscale is a function of an input parameter ([#1234](https://github.com/pybamm-team/PyBaMM/pull/1234))
+-   Fix bug that was slowing down creation of the EC reaction SEI submodel ([#1227](https://github.com/pybamm-team/PyBaMM/pull/1227))
+-   Add missing separator thermal parameters for the Ecker parameter set ([#1226](https://github.com/pybamm-team/PyBaMM/pull/1226))
+-   Make sure simulation solves when evaluated timescale is a function of an input parameter ([#1218](https://github.com/pybamm-team/PyBaMM/pull/1218))
+-   Raise error if saving to MATLAB with variable names that MATLAB can't read, and give option of providing alternative variable names ([#1206](https://github.com/pybamm-team/PyBaMM/pull/1206))
+-   Raise error if the boundary condition at the origin in a spherical domain is other than no-flux ([#1175](https://github.com/pybamm-team/PyBaMM/pull/1175))
+-   Fix boundary conditions at r = 0 for Creating Models notebooks ([#1173](https://github.com/pybamm-team/PyBaMM/pull/1173))
+
+## Breaking changes
+
+-    The parameters "Positive/Negative particle distribution in x" and "Positive/Negative surface area to volume ratio distribution in x" have been deprecated. Instead, users can provide "Positive/Negative particle radius [m]" and "Positive/Negative surface area to volume ratio [m-1]" directly as functions of through-cell position (x [m]) ([#1237](https://github.com/pybamm-team/PyBaMM/pull/1237)) 
+
 # [v0.2.4](https://github.com/pybamm-team/PyBaMM/tree/v0.2.4) - 2020-09-07
 
 This release adds new operators for more complex models, some basic sensitivity analysis, and a spectral volumes spatial method, as well as some small bug fixes.
@@ -10,7 +71,7 @@ This release adds new operators for more complex models, some basic sensitivity 
 -   Added particle submodel that use a polynomial approximation to the concentration within the electrode particles ([#1130](https://github.com/pybamm-team/PyBaMM/pull/1130))
 -   Added `Modulo`, `Floor` and `Ceiling` operators ([#1121](https://github.com/pybamm-team/PyBaMM/pull/1121))
 -   Added DFN model for a half cell ([#1121](https://github.com/pybamm-team/PyBaMM/pull/1121))
--   Automatically compute surface area per unit volume based on particle shape for li-ion models ([#1120](https://github.com/pybamm-team/PyBaMM/pull/1120))
+-   Automatically compute surface area to volume ratio based on particle shape for li-ion models ([#1120](https://github.com/pybamm-team/PyBaMM/pull/1120))
 -   Added "R-averaged particle concentration" variables ([#1118](https://github.com/pybamm-team/PyBaMM/pull/1118))
 -   Added support for sensitivity calculations to the casadi solver ([#1109](https://github.com/pybamm-team/PyBaMM/pull/1109))
 -   Added support for index 1 semi-explicit dae equations and sensitivity calculations to JAX BDF solver ([#1107](https://github.com/pybamm-team/PyBaMM/pull/1107))

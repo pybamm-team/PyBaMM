@@ -47,7 +47,7 @@ class EcReactionLimited(BaseModel):
     def get_coupled_variables(self, variables):
 
         # Get variables related to the concentration
-        variables.update(self._get_standard_concentraion_variables(variables))
+        variables.update(self._get_standard_concentration_variables(variables))
 
         # Update whole cell variables, which also updates the "sum of" variables
         if (
@@ -87,13 +87,18 @@ class EcReactionLimited(BaseModel):
         # it's ok to fall back on the total interfacial current density, j_tot
         # This should only happen when the interface submodel is "InverseButlerVolmer"
         # in which case j = j_tot (uniform) anyway
-        try:
+        if (
+            "Total "
+            + self.domain.lower()
+            + " electrode interfacial current density variable"
+            in variables
+        ):
             j = variables[
                 "Total "
                 + self.domain.lower()
-                + " electrode interfacial current density"
+                + " electrode interfacial current density variable"
             ]
-        except KeyError:
+        else:
             j = variables[
                 "X-averaged "
                 + self.domain.lower()

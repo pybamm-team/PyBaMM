@@ -62,7 +62,7 @@ class Mesh(dict):
                             and var.domain[0] in geometry.keys()
                         ):
                             raise KeyError(
-                                "Points not given for a variable in domain {}".format(
+                                "Points not given for a variable in domain '{}'".format(
                                     domain
                                 )
                             )
@@ -94,7 +94,18 @@ class Mesh(dict):
                 else:
                     for lim, sym in spatial_limits.items():
                         if isinstance(sym, pybamm.Symbol):
-                            sym_eval = sym.evaluate()
+                            try:
+                                sym_eval = sym.evaluate()
+                            except NotImplementedError as error:
+                                if sym.has_symbol_of_classes(pybamm.Parameter):
+                                    raise pybamm.DiscretisationError(
+                                        "Parameter values have not yet been set for "
+                                        "geometry. Make sure that something like "
+                                        "`param.process_geometry(geometry)` has been "
+                                        "run."
+                                    )
+                                else:
+                                    raise error
                         elif isinstance(sym, numbers.Number):
                             sym_eval = sym
                         geometry[domain][spatial_variable][lim] = sym_eval

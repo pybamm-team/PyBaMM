@@ -109,6 +109,11 @@ class TestSPM(unittest.TestCase):
         model = pybamm.lithium_ion.SPM(options)
         model.check_well_posedness()
 
+    def test_loss_active_material(self):
+        options = {"loss of active material": "example"}
+        model = pybamm.lithium_ion.SPM(options)
+        model.check_well_posedness()
+
     def test_surface_form_differential(self):
         options = {"surface form": "differential"}
         model = pybamm.lithium_ion.SPM(options)
@@ -119,15 +124,22 @@ class TestSPM(unittest.TestCase):
         model = pybamm.lithium_ion.SPM(options)
         model.check_well_posedness()
 
+    def test_electrolyte_options(self):
+        options = {"electrolyte conductivity": "full"}
+        with self.assertRaisesRegex(pybamm.OptionError, "electrolyte conductivity"):
+            pybamm.lithium_ion.SPM(options)
+
     def test_new_model(self):
         model = pybamm.lithium_ion.SPM({"thermal": "x-full"})
         new_model = model.new_copy()
-        self.assertEqual(new_model.submodels, model.submodels)
+        model_T_eqn = model.rhs[model.variables["Cell temperature"]]
+        new_model_T_eqn = new_model.rhs[new_model.variables["Cell temperature"]]
+        self.assertEqual(new_model_T_eqn.id, model_T_eqn.id)
         self.assertEqual(new_model.name, model.name)
         self.assertEqual(new_model.use_jacobian, model.use_jacobian)
         self.assertEqual(new_model.use_simplify, model.use_simplify)
         self.assertEqual(new_model.convert_to_format, model.convert_to_format)
-        self.assertEqual(new_model.timescale, model.timescale)
+        self.assertEqual(new_model.timescale.id, model.timescale.id)
 
         # with custom submodels
         model = pybamm.lithium_ion.SPM({"thermal": "x-full"}, build=False)
@@ -136,7 +148,9 @@ class TestSPM(unittest.TestCase):
         )
         model.build_model()
         new_model = model.new_copy()
-        self.assertEqual(new_model.submodels, model.submodels)
+        new_model_cs_eqn = list(new_model.rhs.values())[1]
+        model_cs_eqn = list(model.rhs.values())[1]
+        self.assertEqual(new_model_cs_eqn.id, model_cs_eqn.id)
 
 
 class TestSPMExternalCircuits(unittest.TestCase):
@@ -183,7 +197,34 @@ class TestSPMWithSEI(unittest.TestCase):
         model.check_well_posedness()
 
     def test_well_posed_ec_reaction_limited(self):
-        options = {"sei": "ec reaction limited", "sei porosity change": True}
+        options = {"sei": "ec reaction limited", "sei porosity change": "true"}
+        model = pybamm.lithium_ion.SPM(options)
+        model.check_well_posedness()
+
+
+class TestSPMWithCrack(unittest.TestCase):
+    def test_well_posed_none_crack(self):
+        options = {"particle": "Fickian diffusion", "particle cracking": "none"}
+        model = pybamm.lithium_ion.SPM(options)
+        model.check_well_posedness()
+
+    def test_well_posed_no_cracking(self):
+        options = {"particle": "Fickian diffusion", "particle cracking": "no cracking"}
+        model = pybamm.lithium_ion.SPM(options)
+        model.check_well_posedness()
+
+    def test_well_posed_anode_cracking(self):
+        options = {"particle": "Fickian diffusion", "particle cracking": "anode"}
+        model = pybamm.lithium_ion.SPM(options)
+        model.check_well_posedness()
+
+    def test_well_posed_cathode_cracking(self):
+        options = {"particle": "Fickian diffusion", "particle cracking": "cathode"}
+        model = pybamm.lithium_ion.SPM(options)
+        model.check_well_posedness()
+
+    def test_well_posed_both_cracking(self):
+        options = {"particle": "Fickian diffusion", "particle cracking": "both"}
         model = pybamm.lithium_ion.SPM(options)
         model.check_well_posedness()
 

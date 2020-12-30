@@ -1,5 +1,5 @@
 #
-# Tests for the jacobian methods
+# Tests for the symbol unpacker
 #
 import pybamm
 import unittest

@@ -3,15 +3,16 @@
 #
 import pybamm
 import unittest
+from platform import system
 
 
 class TestCitations(unittest.TestCase):
     def test_citations(self):
         citations = pybamm.citations
-        citations._reset()
         # Default papers should be in both _all_citations dict and in the papers to cite
         self.assertIn("sulzer2020python", citations._all_citations.keys())
         self.assertIn("sulzer2020python", citations._papers_to_cite)
+        self.assertIn("harris2020array", citations._papers_to_cite)
         # Non-default papers should only be in the _all_citations dict
         self.assertIn("sulzer2019physical", citations._all_citations.keys())
         self.assertNotIn("sulzer2019physical", citations._papers_to_cite)
@@ -107,6 +108,15 @@ class TestCitations(unittest.TestCase):
         pybamm.particle.PolynomialManyParticles(None, "Negative", "quadratic profile")
         self.assertIn("subramanian2005", citations._papers_to_cite)
 
+    def test_brosaplanella_2020(self):
+        # Test that calling relevant bits of code adds the right paper to citations
+        citations = pybamm.citations
+
+        citations._reset()
+        self.assertNotIn("brosaplanella2020TSPMe", citations._papers_to_cite)
+        pybamm.electrolyte_conductivity.Integrated(None)
+        self.assertIn("brosaplanella2020TSPMe", citations._papers_to_cite)
+
     def test_scikit_fem(self):
         citations = pybamm.citations
 
@@ -170,6 +180,14 @@ class TestCitations(unittest.TestCase):
             self.assertNotIn("hindmarsh2005sundials", citations._papers_to_cite)
             pybamm.IDAKLUSolver()
             self.assertIn("hindmarsh2005sundials", citations._papers_to_cite)
+
+    @unittest.skipIf(system() == "Windows", "JAX not supported on windows")
+    def test_jax_citations(self):
+        citations = pybamm.citations
+        citations._reset()
+        self.assertNotIn("jax2018github", citations._papers_to_cite)
+        pybamm.JaxSolver()
+        self.assertIn("jax2018github", citations._papers_to_cite)
 
 
 if __name__ == "__main__":

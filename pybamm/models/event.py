@@ -58,10 +58,6 @@ class Event:
     def expression(self):
         return self._expression
 
-    @expression.setter
-    def expression(self, value):
-        self._expression = value
-
     @property
     def event_type(self):
         return self._event_type

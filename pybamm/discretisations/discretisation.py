@@ -179,7 +179,7 @@ class Discretisation(object):
             model_disc = model
         else:
             # create an empty copy of the original model
-            model_disc = model.new_copy()
+            model_disc = model.new_empty_copy()
 
         # Keep a record of y_slices in the model
         model_disc.y_slices = self.y_slices_explicit
@@ -215,6 +215,11 @@ class Discretisation(object):
             )
             processed_events.append(processed_event)
         model_disc.events = processed_events
+
+        # Set external variables
+        model_disc.external_variables = [
+            self.process_symbol(var) for var in model.external_variables
+        ]
 
         # Create mass matrix
         pybamm.logger.info("Create mass matrix for {}".format(model.name))
@@ -491,6 +496,19 @@ class Discretisation(object):
         # in discrisation of other boundary conditions
         for key, bcs in model.boundary_conditions.items():
             processed_bcs[key.id] = {}
+
+            # check if the boundary condition at the origin for sphere domains is other
+            # than no flux
+            if key not in model.external_variables:
+                for subdomain in key.domain:
+                    if self.mesh[subdomain].coord_sys == "spherical polar":
+                        if bcs["left"][0].value != 0 or bcs["left"][1] != "Neumann":
+                            raise pybamm.ModelError(
+                                "Boundary condition at r = 0 must be a homogeneous "
+                                "Neumann condition for {} coordinates".format(
+                                    self.mesh[subdomain].coord_sys
+                                )
+                            )
 
             # Handle any boundary conditions applied on the tabs
             if any("tab" in side for side in list(bcs.keys())):
@@ -1153,7 +1171,7 @@ class Discretisation(object):
             == y0.shape[0]
         ), pybamm.ModelError(
             """
-            Concatenation of (rhs, algebraic) and initial_conditions must have the
+            'Concatenation of (rhs, algebraic)' and 'initial_conditions' must have the
             same shape after discretisation but rhs.shape = {}, algebraic.shape = {},
             and initial_conditions.shape = {}.
             """.format(

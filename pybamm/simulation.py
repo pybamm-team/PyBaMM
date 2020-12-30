@@ -57,8 +57,7 @@ class Simulation:
     submesh_types: dict (optional)
         A dictionary of the types of submesh to use on each subdomain
     var_pts: dict (optional)
-        A dictionary of the number of points used by each spatial
-        variable
+        A dictionary of the number of points used by each spatial variable
     spatial_methods: dict (optional)
         A dictionary of the types of spatial method to use on each
         domain (e.g. pybamm.FiniteVolume)
@@ -67,8 +66,7 @@ class Simulation:
     output_variables: list (optional)
         A list of variables to plot automatically
     C_rate: float (optional)
-        The C_rate at which you would like to run a constant current
-        (dis)charge at.
+        The C-rate at which you would like to run a constant current (dis)charge.
     """
 
     def __init__(
@@ -147,17 +145,58 @@ class Simulation:
         """
         self.operating_mode = "with experiment"
 
-        # Update model
-        new_model = model.new_copy(build=False)
-        new_model.submodels[
-            "external circuit"
-        ] = pybamm.external_circuit.FunctionControl(
-            new_model.param, constant_current_constant_voltage_constant_power
+        # Create a new model where the current density is now a variable
+        # To do so, we replace all instances of the current density in the
+        # model with a current density variable, which is obtained from the
+        # FunctionControl submodel
+        # create the FunctionControl submodel and extract variables
+        external_circuit_variables = pybamm.external_circuit.FunctionControl(
+            model.param, None
+        ).get_fundamental_variables()
+
+        # Perform the replacement
+        symbol_replacement_map = {
+            model.variables[name]: variable
+            for name, variable in external_circuit_variables.items()
+        }
+        replacer = pybamm.SymbolReplacer(symbol_replacement_map)
+        new_model = replacer.process_model(model, inplace=False)
+
+        # Update the algebraic equation and initial conditions for FunctionControl
+        # This creates an algebraic equation for the current to allow current, voltage,
+        # or power control, together with the appropriate guess for the
+        # initial condition.
+        # External circuit submodels are always equations on the current
+        # The external circuit function should fix either the current, or the voltage,
+        # or a combination (e.g. I*V for power control)
+        i_cell = new_model.variables["Total current density"]
+        new_model.initial_conditions[i_cell] = new_model.param.current_with_time
+        new_model.algebraic[i_cell] = constant_current_constant_voltage_constant_power(
+            new_model.variables
         )
-        new_model.submodels[
-            "experiment events"
-        ] = pybamm.external_circuit.ExperimentEvents(new_model.param)
-        new_model.build_model()
+
+        # add current and voltage events to the model
+        # current events both negative and positive to catch specification
+        new_model.events.extend(
+            [
+                pybamm.Event(
+                    "Current cut-off (positive) [A] [experiment]",
+                    new_model.variables["Current [A]"]
+                    - abs(pybamm.InputParameter("Current cut-off [A]")),
+                ),
+                pybamm.Event(
+                    "Current cut-off (negative) [A] [experiment]",
+                    new_model.variables["Current [A]"]
+                    + abs(pybamm.InputParameter("Current cut-off [A]")),
+                ),
+                pybamm.Event(
+                    "Voltage cut-off [V] [experiment]",
+                    new_model.variables["Terminal voltage [V]"]
+                    - pybamm.InputParameter("Voltage cut-off [V]")
+                    / model.param.n_cells,
+                ),
+            ]
+        )
         self._unprocessed_model = new_model
         self.model = new_model
 
@@ -295,9 +334,8 @@ class Simulation:
         self,
         t_eval=None,
         solver=None,
-        external_variables=None,
-        inputs=None,
         check_model=True,
+        **kwargs,
     ):
         """
         A method to solve the model. This method will automatically build
@@ -323,16 +361,12 @@ class Simulation:
             provided in the data.
         solver : :class:`pybamm.BaseSolver`
             The solver to use to solve the model.
-        external_variables : dict
-            A dictionary of external variables and their corresponding
-            values at the current time. The variables must correspond to
-            the variables that would normally be found by solving the
-            submodels that have been made external.
-        inputs : dict, optional
-            Any input parameters to pass to the model when solving
         check_model : bool, optional
             If True, model checks are performed after discretisation (see
             :meth:`pybamm.Discretisation.process_model`). Default is True.
+        **kwargs
+            Additional key-word arguments passed to `solver.solve`.
+            See :meth:`pybamm.BaseSolver.solve`.
         """
         # Setup
         self.build(check_model=check_model)
@@ -350,7 +384,10 @@ class Simulation:
                         "list [t0, tf] where t0 is the initial time and tf is the "
                         "final time. "
                         "For a constant current (dis)charge the suggested 't_eval'  "
-                        "is [0, 3700/C] where C is the C-rate."
+                        "is [0, 3700/C] where C is the C-rate. "
+                        "For example, run\n\n"
+                        "\tsim.solve([0, 3700])\n\n"
+                        "for a 1C discharge."
                     )
 
             elif self.operating_mode == "drive cycle":
@@ -396,13 +433,8 @@ class Simulation:
                             pybamm.SolverWarning,
                         )
 
-            self._solution = solver.solve(
-                self.built_model,
-                t_eval,
-                external_variables=external_variables,
-                inputs=inputs,
-            )
-            self.t_eval = self._solution.t * self.model.timescale.evaluate()
+            self._solution = solver.solve(self.built_model, t_eval, **kwargs)
+            self.t_eval = self._solution.t * self._solution.timescale_eval
 
         elif self.operating_mode == "with experiment":
             if t_eval is not None:
@@ -413,7 +445,7 @@ class Simulation:
             # inputs without having to build the simulation again
             self._solution = None
             # Step through all experimental conditions
-            inputs = inputs or {}
+            inputs = kwargs.get("inputs", {})
             pybamm.logger.info("Start running experiment")
             timer = pybamm.Timer()
             for idx, (exp_inputs, dt) in enumerate(
@@ -421,15 +453,10 @@ class Simulation:
             ):
                 pybamm.logger.info(self.experiment.operating_conditions_strings[idx])
                 inputs.update(exp_inputs)
+                kwargs["inputs"] = inputs
                 # Make sure we take at least 2 timesteps
                 npts = max(int(round(dt / exp_inputs["period"])) + 1, 2)
-                self.step(
-                    dt,
-                    solver=solver,
-                    npts=npts,
-                    external_variables=external_variables,
-                    inputs=inputs,
-                )
+                self.step(dt, solver=solver, npts=npts, **kwargs)
                 # Only allow events specified by experiment
                 if not (
                     self._solution.termination == "final time"
@@ -447,16 +474,12 @@ class Simulation:
                     )
                     break
             pybamm.logger.info(
-                "Finish experiment simulation, took {}".format(
-                    timer.format(timer.time())
-                )
+                "Finish experiment simulation, took {}".format(timer.time())
             )
 
         return self.solution
 
-    def step(
-        self, dt, solver=None, npts=2, external_variables=None, inputs=None, save=True
-    ):
+    def step(self, dt, solver=None, npts=2, save=True, **kwargs):
         """
         A method to step the model forward one timestep. This method will
         automatically build and set the model parameters if not already done so.
@@ -470,15 +493,11 @@ class Simulation:
         npts : int, optional
             The number of points at which the solution will be returned during
             the step dt. Default is 2 (returns the solution at t0 and t0 + dt).
-        external_variables : dict
-            A dictionary of external variables and their corresponding
-            values at the current time. The variables must correspond to
-            the variables that would normally be found by solving the
-            submodels that have been made external.
-        inputs : dict, optional
-            Any input parameters to pass to the model when solving
         save : bool
             Turn on to store the solution of all previous timesteps
+        **kwargs
+            Additional key-word arguments passed to `solver.solve`.
+            See :meth:`pybamm.BaseSolver.step`.
         """
         self.build()
 
@@ -490,9 +509,8 @@ class Simulation:
             self.built_model,
             dt,
             npts=npts,
-            external_variables=external_variables,
-            inputs=inputs,
             save=save,
+            **kwargs,
         )
 
         return self.solution

@@ -134,7 +134,7 @@ def compile_KLU():
 # Build the list of package data files to be included in the PyBaMM package.
 # These are mainly the parameter files located in the input/parameters/ subdirectories.
 pybamm_data = []
-for file_ext in ["*.csv", "*.py", "*.md"]:
+for file_ext in ["*.csv", "*.py", "*.md", "*.txt"]:
     # Get all the files ending in file_ext in pybamm/input dir.
     # list_of_files = [
     #    'pybamm/input/drive_cycles/car_current.csv',
@@ -161,18 +161,18 @@ ext_modules = [idaklu_ext] if compile_KLU() else []
 jax_dependencies = []
 if system() != "Windows":
     jax_dependencies = [
-        "jax>=0.1.68",
-        "jaxlib>=0.1.47",
+        "jax==0.2.5",
+        "jaxlib==0.1.57",
     ]
 
 
 # Load text for description and license
-with open("README.md") as f:
+with open("README.md", encoding="utf-8") as f:
     readme = f.read()
 
 setup(
     name="pybamm",
-    version=load_version(),
+    version=load_version() + "-beta",
     description="Python Battery Mathematical Modelling.",
     long_description=readme,
     long_description_content_type="text/markdown",
@@ -185,6 +185,8 @@ setup(
         "install": CustomInstall,
     },
     package_data={"pybamm": pybamm_data},
+    # Python version
+    python_requires=">=3.6,<3.9",
     # List of dependencies
     install_requires=[
         "numpy>=1.16",

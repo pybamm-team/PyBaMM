@@ -60,15 +60,12 @@ class ProcessedVariable(object):
         self.warn = warn
 
         # Set timescale
-        self.timescale = solution.model.timescale.evaluate()
+        self.timescale = solution.timescale_eval
         self.t_pts = self.t_sol * self.timescale
 
         # Store length scales
         if solution.model:
-            self.length_scales = {
-                domain: scale.evaluate()
-                for domain, scale in solution.model.length_scales.items()
-            }
+            self.length_scales = solution.length_scales_eval
 
         # Evaluate base variable at initial time
         if self.known_evals:
@@ -346,19 +343,25 @@ class ProcessedVariable(object):
         if self.domain[0] in [
             "negative particle",
             "positive particle",
+            "working particle",
         ] and self.auxiliary_domains["secondary"][0] in [
             "negative electrode",
             "positive electrode",
+            "working electrode",
         ]:
             self.first_dimension = "r"
             self.second_dimension = "x"
             self.r_sol = first_dim_pts
             self.x_sol = second_dim_pts
-        elif self.domain[0] in [
-            "negative electrode",
-            "separator",
-            "positive electrode",
-        ] and self.auxiliary_domains["secondary"] == ["current collector"]:
+        elif (
+            self.domain[0]
+            in [
+                "negative electrode",
+                "separator",
+                "positive electrode",
+            ]
+            and self.auxiliary_domains["secondary"] == ["current collector"]
+        ):
             self.first_dimension = "x"
             self.second_dimension = "z"
             self.x_sol = first_dim_pts

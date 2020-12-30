@@ -31,6 +31,10 @@ def run_code_tests(executable=False, folder: str = "unit", interpreter="python")
         tests = "tests/" + folder
         if folder == "unit":
             pybamm.settings.debug_mode = True
+    if interpreter == "python":
+        # Make sure to refer to the interpreter for the
+        # currently activated virtual environment
+        interpreter = sys.executable
     if executable is False:
         suite = unittest.defaultTestLoader.discover(tests, pattern="test*.py")
         unittest.TextTestRunner(verbosity=2).run(suite)
@@ -236,7 +240,7 @@ def test_notebook(path, executable="python"):
         sys.exit(1)
 
     # Sucessfully run
-    print("ok (" + b.format() + ")")
+    print("ok ({})".format(b.time()))
     return True
 
 
@@ -277,7 +281,7 @@ def test_script(path, executable="python"):
         sys.exit(1)
 
     # Sucessfully run
-    print("ok (" + b.format() + ")")
+    print("ok ({})".format(b.time()))
     return True
 
 

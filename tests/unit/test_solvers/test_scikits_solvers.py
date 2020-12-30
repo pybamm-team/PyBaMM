@@ -263,13 +263,13 @@ class TestScikitsSolvers(unittest.TestCase):
         discontinuity = 0.6
 
         def nonsmooth_rate(t):
-            return 0.1 * int(t < discontinuity) + 0.1
+            return 0.1 * (t < discontinuity) + 0.1
 
         def nonsmooth_mult(t):
-            return int(t < discontinuity) + 1.0
+            return (t < discontinuity) + 1.0
 
-        rate = pybamm.Function(nonsmooth_rate, pybamm.t)
-        mult = pybamm.Function(nonsmooth_mult, pybamm.t)
+        rate = nonsmooth_rate(pybamm.t)
+        mult = nonsmooth_mult(pybamm.t)
         # put in an extra heaviside with no time dependence, this should be ignored by
         # the solver i.e. no extra discontinuities added
         model.rhs = {var1: rate * var1 + (var1 < 0)}
@@ -353,10 +353,7 @@ class TestScikitsSolvers(unittest.TestCase):
         ]
         for discontinuity in discontinuities:
             model.events.append(
-                pybamm.Event(
-                    "nonsmooth rate",
-                    pybamm.Scalar(discontinuity),
-                )
+                pybamm.Event("nonsmooth rate", pybamm.Scalar(discontinuity))
             )
         disc = get_discretisation_for_testing()
         disc.process_model(model)
@@ -760,10 +757,7 @@ class TestScikitsSolvers(unittest.TestCase):
         ]
         for discontinuity in discontinuities:
             model.events.append(
-                pybamm.Event(
-                    "nonsmooth rate",
-                    pybamm.Scalar(discontinuity),
-                )
+                pybamm.Event("nonsmooth rate", pybamm.Scalar(discontinuity))
             )
         disc = get_discretisation_for_testing()
         disc.process_model(model)
@@ -781,12 +775,8 @@ class TestScikitsSolvers(unittest.TestCase):
         np.testing.assert_array_less(step_solution.y[-1], 1.2)
         var1_soln = (step_solution.t % a) ** 2 / 2 + a ** 2 / 2 * (step_solution.t // a)
         var2_soln = 2 * var1_soln
-        np.testing.assert_array_almost_equal(
-            step_solution.y[0], var1_soln, decimal=5
-        )
-        np.testing.assert_array_almost_equal(
-            step_solution.y[-1], var2_soln, decimal=5
-        )
+        np.testing.assert_array_almost_equal(step_solution.y[0], var1_soln, decimal=5)
+        np.testing.assert_array_almost_equal(step_solution.y[-1], var2_soln, decimal=5)
 
     def test_model_solver_dae_nonsmooth(self):
         whole_cell = ["negative electrode", "separator", "positive electrode"]

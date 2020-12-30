@@ -6,6 +6,17 @@ import unittest
 
 
 class TestSimulation(unittest.TestCase):
+    def test_simple_model(self):
+        model = pybamm.BaseModel()
+        v = pybamm.Variable("v")
+        a = pybamm.Parameter("a")
+        model.rhs = {v: -a * v}
+        model.initial_conditions = {v: 1}
+        param = pybamm.ParameterValues({"a": 1})
+        sim = pybamm.Simulation(model, parameter_values=param)
+        sol = sim.solve([0, 1])
+        np.testing.assert_array_almost_equal(sol.y[0], np.exp(-sol.t), decimal=5)
+
     def test_basic_ops(self):
 
         model = pybamm.lithium_ion.SPM()
@@ -386,6 +397,18 @@ class TestSimulation(unittest.TestCase):
         # tets list gets turned into np.linspace(t0, tf, 100)
         sim.solve(t_eval=[0, 10])
         np.testing.assert_array_almost_equal(sim.t_eval, np.linspace(0, 10, 100))
+
+    def test_battery_model_with_input_height(self):
+        # load model
+        model = pybamm.lithium_ion.SPM()
+        # load parameter values and process model and geometry
+        param = model.default_parameter_values
+        param.update({"Electrode height [m]": "[input]"})
+        # solve model for 1 minute
+        t_eval = np.linspace(0, 60, 11)
+        inputs = {"Electrode height [m]": 0.2}
+        sim = pybamm.Simulation(model=model, parameter_values=param)
+        sim.solve(t_eval=t_eval, inputs=inputs)
 
 
 if __name__ == "__main__":

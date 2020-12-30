@@ -104,7 +104,7 @@ class PolynomialSingleParticle(BaseParticle):
                 c_s_surf_xav = c_s_rxav - self.param.C_n * (
                     j_xav
                     / 5
-                    / self.param.a_n
+                    / self.param.a_R_n
                     / self.param.D_n(c_s_rxav, pybamm.surf(T_xav))
                 )
 
@@ -113,7 +113,7 @@ class PolynomialSingleParticle(BaseParticle):
                 c_s_surf_xav = c_s_rxav - self.param.C_p * (
                     j_xav
                     / 5
-                    / self.param.a_p
+                    / self.param.a_R_p
                     / self.param.gamma_p
                     / self.param.D_p(c_s_rxav, pybamm.surf(T_xav))
                 )
@@ -133,7 +133,7 @@ class PolynomialSingleParticle(BaseParticle):
                     * (
                         j_xav
                         / 35
-                        / self.param.a_n
+                        / self.param.a_R_n
                         / self.param.D_n(c_s_rxav, pybamm.surf(T_xav))
                     )
                 )
@@ -147,7 +147,7 @@ class PolynomialSingleParticle(BaseParticle):
                     * (
                         j_xav
                         / 35
-                        / self.param.a_p
+                        / self.param.a_R_p
                         / self.param.gamma_p
                         / self.param.D_p(c_s_rxav, pybamm.surf(T_xav))
                     )
@@ -267,10 +267,13 @@ class PolynomialSingleParticle(BaseParticle):
 
         N_s = pybamm.SecondaryBroadcast(N_s_xav, [self._domain.lower() + " electrode"])
 
-        variables = self._get_standard_concentration_variables(
-            c_s, c_s_av=c_s_rxav, c_s_surf=c_s_surf
+        variables.update(
+            self._get_standard_concentration_variables(
+                c_s, c_s_av=c_s_rxav, c_s_surf=c_s_surf
+            )
         )
         variables.update(self._get_standard_flux_variables(N_s, N_s_xav))
+        variables.update(self._get_total_concentration_variables(variables))
 
         return variables
 
@@ -286,10 +289,10 @@ class PolynomialSingleParticle(BaseParticle):
         ]
 
         if self.domain == "Negative":
-            self.rhs = {c_s_rxav: -3 * j_xav / self.param.a_n}
+            self.rhs = {c_s_rxav: -3 * j_xav / self.param.a_R_n}
 
         elif self.domain == "Positive":
-            self.rhs = {c_s_rxav: -3 * j_xav / self.param.a_p / self.param.gamma_p}
+            self.rhs = {c_s_rxav: -3 * j_xav / self.param.a_R_p / self.param.gamma_p}
 
         if self.name == "quartic profile":
             # We solve an extra ODE for the average particle concentration gradient
@@ -309,7 +312,7 @@ class PolynomialSingleParticle(BaseParticle):
                         * self.param.D_n(c_s_surf_xav, T_xav)
                         * q_s_rxav
                         / self.param.C_n
-                        - 45 * j_xav / self.param.a_n / 2
+                        - 45 * j_xav / self.param.a_R_n / 2
                     }
                 )
             elif self.domain == "Positive":
@@ -319,7 +322,7 @@ class PolynomialSingleParticle(BaseParticle):
                         * self.param.D_p(c_s_surf_xav, T_xav)
                         * q_s_rxav
                         / self.param.C_p
-                        - 45 * j_xav / self.param.a_p / self.param.gamma_p / 2
+                        - 45 * j_xav / self.param.a_R_p / self.param.gamma_p / 2
                     }
                 )
 

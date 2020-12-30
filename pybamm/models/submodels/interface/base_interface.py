@@ -173,14 +173,6 @@ class BaseInterface(pybamm.BaseSubModel):
         else:
             return pybamm.Scalar(0)
 
-    def _get_surface_area_per_unit_volume_distribution(self):
-        "Returns the distribution of surface area per unit volume in x"
-        x_n = pybamm.standard_spatial_vars.x_n
-        x_p = pybamm.standard_spatial_vars.x_p
-        a_n = self.param.a_n_of_x(x_n)
-        a_p = self.param.a_p_of_x(x_p)
-        return a_n, a_p
-
     def _get_electrolyte_reaction_signed_stoichiometry(self):
         "Returns the number of electrons in the reaction"
         if self.reaction in ["lithium-ion main", "sei"]:
@@ -236,9 +228,9 @@ class BaseInterface(pybamm.BaseSubModel):
         i_typ = self.param.i_typ
         L_x = self.param.L_x
         if self.domain == "Negative":
-            j_scale = i_typ / (self.param.a_n_dim * L_x)
+            j_scale = i_typ / (self.param.a_n_typ * L_x)
         elif self.domain == "Positive":
-            j_scale = i_typ / (self.param.a_p_dim * L_x)
+            j_scale = i_typ / (self.param.a_p_typ * L_x)
 
         # Average, and broadcast if necessary
         if j.domain == []:
@@ -287,9 +279,9 @@ class BaseInterface(pybamm.BaseSubModel):
         i_typ = self.param.i_typ
         L_x = self.param.L_x
         if self.domain == "Negative":
-            j_scale = i_typ / (self.param.a_n_dim * L_x)
+            j_scale = i_typ / (self.param.a_n_typ * L_x)
         elif self.domain == "Positive":
-            j_scale = i_typ / (self.param.a_p_dim * L_x)
+            j_scale = i_typ / (self.param.a_p_typ * L_x)
 
         variables = {
             "X-averaged "
@@ -315,8 +307,8 @@ class BaseInterface(pybamm.BaseSubModel):
         """
         i_typ = self.param.i_typ
         L_x = self.param.L_x
-        j_n_scale = i_typ / (self.param.a_n_dim * L_x)
-        j_p_scale = i_typ / (self.param.a_p_dim * L_x)
+        j_n_scale = i_typ / (self.param.a_n_typ * L_x)
+        j_p_scale = i_typ / (self.param.a_p_typ * L_x)
 
         j_n_av = variables[
             "X-averaged negative electrode"
@@ -347,15 +339,10 @@ class BaseInterface(pybamm.BaseSubModel):
             }
         )
 
-        a_n, a_p = self._get_surface_area_per_unit_volume_distribution()
+        a_n = variables["Negative electrode surface area to volume ratio"]
+        a_p = variables["Positive electrode surface area to volume ratio"]
         a = pybamm.Concatenation(
             a_n, pybamm.FullBroadcast(0, "separator", "current collector"), a_p
-        )
-        variables.update(
-            {
-                "Negative surface area per unit volume distribution in x": a_n,
-                "Positive surface area per unit volume distribution in x": a_p,
-            }
         )
 
         s_n, s_p = self._get_electrolyte_reaction_signed_stoichiometry()
@@ -396,9 +383,9 @@ class BaseInterface(pybamm.BaseSubModel):
         i_typ = self.param.i_typ
         L_x = self.param.L_x
         if self.domain == "Negative":
-            j_scale = i_typ / (self.param.a_n_dim * L_x)
+            j_scale = i_typ / (self.param.a_n_typ * L_x)
         elif self.domain == "Positive":
-            j_scale = i_typ / (self.param.a_p_dim * L_x)
+            j_scale = i_typ / (self.param.a_p_typ * L_x)
 
         # Average, and broadcast if necessary
         if j0.domain == []:
@@ -448,8 +435,8 @@ class BaseInterface(pybamm.BaseSubModel):
 
         i_typ = self.param.i_typ
         L_x = self.param.L_x
-        j_n_scale = i_typ / (self.param.a_n_dim * L_x)
-        j_p_scale = i_typ / (self.param.a_p_dim * L_x)
+        j_n_scale = i_typ / (self.param.a_n_typ * L_x)
+        j_p_scale = i_typ / (self.param.a_p_typ * L_x)
 
         j0_n = variables[
             "Negative electrode" + self.reaction_name + " exchange current density"

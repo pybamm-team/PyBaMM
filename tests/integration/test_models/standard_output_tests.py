@@ -53,7 +53,7 @@ class StandardOutputTests(object):
         if self.chemistry == "Lithium-ion":
             self.run_test_class(ParticleConcentrationTests)
 
-        if self.model.options["convection"] is not False:
+        if self.model.options["convection"] != "none":
             self.run_test_class(VelocityTests)
 
 
@@ -67,7 +67,7 @@ class BaseOutputTest(object):
 
         # Use dimensional time and space
         self.t = solution.t * model.timescale_eval
-        geo = pybamm.GeometricParameters()
+        geo = pybamm.geometric_parameters
 
         L_x = param.evaluate(geo.L_x)
         self.x_n = disc.mesh["negative electrode"].nodes * L_x
@@ -81,8 +81,8 @@ class BaseOutputTest(object):
         self.x_edge = disc.mesh.combine_submeshes(*whole_cell).edges * L_x
 
         if isinstance(self.model, pybamm.lithium_ion.BaseModel):
-            R_n = param.evaluate(geo.R_n)
-            R_p = param.evaluate(geo.R_p)
+            R_n = param.evaluate(model.param.R_n_typ)
+            R_p = param.evaluate(model.param.R_p_typ)
             self.r_n = disc.mesh["negative particle"].nodes * R_n
             self.r_p = disc.mesh["positive particle"].nodes * R_p
             self.r_n_edge = disc.mesh["negative particle"].edges * R_n
@@ -127,10 +127,10 @@ class VoltageTests(BaseOutputTest):
 
     def test_each_reaction_overpotential(self):
         """Testing that:
-            - discharge: eta_r_n > 0, eta_r_p < 0
-            - charge: eta_r_n < 0, eta_r_p > 0
-            - off: eta_r_n == 0, eta_r_p == 0
-            """
+        - discharge: eta_r_n > 0, eta_r_p < 0
+        - charge: eta_r_n < 0, eta_r_p > 0
+        - off: eta_r_n == 0, eta_r_p == 0
+        """
         tol = 0.01
         t, x_n, x_p = self.t, self.x_n, self.x_p
         if self.operating_condition == "discharge":
@@ -145,9 +145,9 @@ class VoltageTests(BaseOutputTest):
 
     def test_overpotentials(self):
         """Testing that all are:
-            - discharge: . < 0
-            - charge: . > 0
-            - off: . == 0
+        - discharge: . < 0
+        - charge: . > 0
+        - off: . == 0
         """
         tol = 0.001
         if self.operating_condition == "discharge":
@@ -168,10 +168,10 @@ class VoltageTests(BaseOutputTest):
             )
 
     def test_ocps(self):
-        """ Testing that:
-            - discharge: ocp_n increases, ocp_p decreases
-            - charge: ocp_n decreases, ocp_p increases
-            - off: ocp_n, ocp_p constant
+        """Testing that:
+        - discharge: ocp_n increases, ocp_p decreases
+        - charge: ocp_n decreases, ocp_p increases
+        - off: ocp_n, ocp_p constant
         """
         neg_end_vs_start = self.ocp_n_av(self.t[-1]) - self.ocp_n_av(self.t[1])
         pos_end_vs_start = self.ocp_p_av(self.t[-1]) - self.ocp_p_av(self.t[1])
@@ -187,9 +187,9 @@ class VoltageTests(BaseOutputTest):
 
     def test_ocv(self):
         """Testing that:
-            - discharge: ocv decreases
-            - charge: ocv increases
-            - off: ocv constant
+        - discharge: ocv decreases
+        - charge: ocv increases
+        - off: ocv constant
         """
 
         end_vs_start = self.ocv_av(self.t[-1]) - self.ocv_av(self.t[1])
@@ -203,9 +203,9 @@ class VoltageTests(BaseOutputTest):
 
     def test_voltage(self):
         """Testing that:
-            - discharge: voltage decreases
-            - charge: voltage increases
-            - off: voltage constant
+        - discharge: voltage decreases
+        - charge: voltage increases
+        - off: voltage constant
         """
         end_vs_start = self.voltage(self.t[-1]) - self.voltage(self.t[1])
 
@@ -595,8 +595,8 @@ class CurrentTests(BaseOutputTest):
         self.i_s = solution["Electrode current density"]
         self.i_e = solution["Electrolyte current density"]
 
-        self.a_n = solution["Negative surface area per unit volume distribution in x"]
-        self.a_p = solution["Positive surface area per unit volume distribution in x"]
+        self.a_n = solution["Negative electrode surface area to volume ratio"]
+        self.a_p = solution["Positive electrode surface area to volume ratio"]
 
     def test_interfacial_current_average(self):
         """Test that average of the surface area density distribution (in x)
@@ -605,7 +605,7 @@ class CurrentTests(BaseOutputTest):
 
         np.testing.assert_array_almost_equal(
             np.mean(
-                self.a_n(x=self.x_n)
+                self.a_n(self.t, self.x_n)
                 * (self.j_n(self.t, self.x_n) + self.j_n_sei(self.t, self.x_n)),
                 axis=0,
             ),
@@ -614,23 +614,13 @@ class CurrentTests(BaseOutputTest):
         )
         np.testing.assert_array_almost_equal(
             np.mean(
-                self.a_p(x=self.x_p)
+                self.a_p(self.t, self.x_p)
                 * (self.j_p(self.t, self.x_p) + self.j_p_sei(self.t, self.x_p)),
                 axis=0,
             ),
             -self.i_cell / self.l_p,
             decimal=4,
         )
-        # np.testing.assert_array_almost_equal(
-        #    (self.j_n_av(self.t) + self.j_n_sei_av(self.t)),
-        #    self.i_cell / self.l_n,
-        #    decimal=4,
-        # )
-        # np.testing.assert_array_almost_equal(
-        #    self.j_p_av(self.t) + self.j_p_sei_av(self.t),
-        #    -self.i_cell / self.l_p,
-        #    decimal=4,
-        # )
 
     def test_conservation(self):
         """Test sum of electrode and electrolyte current densities give the applied

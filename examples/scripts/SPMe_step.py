@@ -27,7 +27,7 @@ disc.process_model(model)
 
 # solve model
 t_eval = np.linspace(0, 3600, 100)
-solver = model.default_solver
+solver = pybamm.CasadiSolver()
 solution = solver.solve(model, t_eval)
 
 # step model
@@ -35,7 +35,7 @@ dt = 500
 time = 0
 timescale = model.timescale_eval
 end_time = solution.t[-1] * timescale
-step_solver = model.default_solver
+step_solver = pybamm.CasadiSolver()
 step_solution = None
 while time < end_time:
     step_solution = step_solver.step(step_solution, model, dt=dt, npts=10)

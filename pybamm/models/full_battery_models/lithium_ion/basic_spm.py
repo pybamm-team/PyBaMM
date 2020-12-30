@@ -89,14 +89,18 @@ class BasicSPM(BaseModel):
         self.boundary_conditions[c_s_n] = {
             "left": (pybamm.Scalar(0), "Neumann"),
             "right": (
-                -param.C_n * j_n / param.a_n / param.D_n(c_s_surf_n, T),
+                -param.C_n * j_n / param.a_R_n / param.D_n(c_s_surf_n, T),
                 "Neumann",
             ),
         }
         self.boundary_conditions[c_s_p] = {
             "left": (pybamm.Scalar(0), "Neumann"),
             "right": (
-                -param.C_p * j_p / param.a_p / param.gamma_p / param.D_p(c_s_surf_p, T),
+                -param.C_p
+                * j_p
+                / param.a_R_p
+                / param.gamma_p
+                / param.D_p(c_s_surf_p, T),
                 "Neumann",
             ),
         }
@@ -168,6 +172,5 @@ class BasicSPM(BaseModel):
             pybamm.Event("Maximum voltage", V - param.voltage_high_cut),
         ]
 
-    def new_copy(self, build=False):
-        return pybamm.BaseModel.new_copy(self)
-
+    def new_empty_copy(self):
+        return pybamm.BaseModel.new_empty_copy(self)

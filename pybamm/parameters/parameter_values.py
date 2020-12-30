@@ -313,6 +313,21 @@ class ParameterValues:
                     "Parameters involving 'reaction rate' have been replaced with "
                     "'exchange-current density' ('{}' found)".format(param)
                 )
+        for param in values:
+            if "particle distribution in x" in param:
+                raise ValueError(
+                    "The parameter '{}' has been deprecated".format(param)
+                    + "The particle radius is now set as a function of x directly "
+                    "instead of providing a reference value and a distribution."
+                )
+        for param in values:
+            if "surface area to volume ratio distribution in x" in param:
+                raise ValueError(
+                    "The parameter '{}' has been deprecated".format(param)
+                    + "The surface area to volume ratio is now set as a function "
+                    "of x directly instead of providing a reference value and a "
+                    "distribution."
+                )
 
     def process_model(self, unprocessed_model, inplace=True):
         """Assign parameter values to a model.
@@ -339,12 +354,12 @@ class ParameterValues:
 
         # set up inplace vs not inplace
         if inplace:
-            # any changes to model_disc attributes will change model attributes
+            # any changes to unprocessed_model attributes will change model attributes
             # since they point to the same object
             model = unprocessed_model
         else:
             # create a blank model of the same class
-            model = unprocessed_model.new_copy()
+            model = unprocessed_model.new_empty_copy()
 
         if (
             len(unprocessed_model.rhs) == 0
@@ -353,42 +368,63 @@ class ParameterValues:
         ):
             raise pybamm.ModelError("Cannot process parameters for empty model")
 
-        for variable, equation in model.rhs.items():
+        new_rhs = {}
+        for variable, equation in unprocessed_model.rhs.items():
             pybamm.logger.debug("Processing parameters for {!r} (rhs)".format(variable))
-            model.rhs[variable] = self.process_symbol(equation)
+            new_rhs[variable] = self.process_symbol(equation)
+        model.rhs = new_rhs
 
-        for variable, equation in model.algebraic.items():
+        new_algebraic = {}
+        for variable, equation in unprocessed_model.algebraic.items():
             pybamm.logger.debug(
                 "Processing parameters for {!r} (algebraic)".format(variable)
             )
-            model.algebraic[variable] = self.process_symbol(equation)
+            new_algebraic[variable] = self.process_symbol(equation)
+        model.algebraic = new_algebraic
 
-        for variable, equation in model.initial_conditions.items():
+        new_initial_conditions = {}
+        for variable, equation in unprocessed_model.initial_conditions.items():
             pybamm.logger.debug(
                 "Processing parameters for {!r} (initial conditions)".format(variable)
             )
-            model.initial_conditions[variable] = self.process_symbol(equation)
+            new_initial_conditions[variable] = self.process_symbol(equation)
+        model.initial_conditions = new_initial_conditions
 
-        model.boundary_conditions = self.process_boundary_conditions(model)
+        model.boundary_conditions = self.process_boundary_conditions(unprocessed_model)
 
-        for variable, equation in model.variables.items():
+        new_variables = {}
+        for variable, equation in unprocessed_model.variables.items():
             pybamm.logger.debug(
                 "Processing parameters for {!r} (variables)".format(variable)
             )
-            model.variables[variable] = self.process_symbol(equation)
+            new_variables[variable] = self.process_symbol(equation)
+        model.variables = new_variables
 
-        for event in model.events:
+        new_events = []
+        for event in unprocessed_model.events:
             pybamm.logger.debug(
                 "Processing parameters for event'{}''".format(event.name)
             )
-            event.expression = self.process_symbol(event.expression)
+            new_events.append(
+                pybamm.Event(
+                    event.name, self.process_symbol(event.expression), event.event_type
+                )
+            )
+        model.events = new_events
+
+        # Set external variables
+        model.external_variables = [
+            self.process_symbol(var) for var in unprocessed_model.external_variables
+        ]
 
         # Process timescale
-        model.timescale = self.process_symbol(model.timescale)
+        model.timescale = self.process_symbol(unprocessed_model.timescale)
 
         # Process length scales
-        for domain, scale in model.length_scales.items():
-            model.length_scales[domain] = self.process_symbol(scale)
+        new_length_scales = {}
+        for domain, scale in unprocessed_model.length_scales.items():
+            new_length_scales[domain] = self.process_symbol(scale)
+        model.length_scales = new_length_scales
 
         pybamm.logger.info("Finish setting parameters for {}".format(model.name))
 
@@ -598,7 +634,7 @@ class ParameterValues:
             The evaluated symbol
         """
         processed_symbol = self.process_symbol(symbol)
-        if processed_symbol.is_constant() and processed_symbol.evaluates_to_number():
+        if processed_symbol.evaluates_to_constant_number():
             return processed_symbol.evaluate()
         else:
             raise ValueError("symbol must evaluate to a constant scalar")

@@ -12,7 +12,7 @@ class SymbolUnpacker(object):
     ----------
     classes_to_find : list of pybamm classes
         Classes to identify in the equations
-    unpacked_symbols: dict {variable ids -> :class:`pybamm.Symbol`}
+    unpacked_symbols: dict {variable ids -> :class:`pybamm.Symbol`}, optional
         cached unpacked equations
     """
 
