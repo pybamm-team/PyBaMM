@@ -83,6 +83,7 @@ class ParameterValues:
 
         # Initialise empty _processed_symbols dict (for caching)
         self._processed_symbols = {}
+        self.parameter_events = []
 
     def __getitem__(self, key):
         return self._dict_items[key]
@@ -410,6 +411,17 @@ class ParameterValues:
                     event.name, self.process_symbol(event.expression), event.event_type
                 )
             )
+
+        for event in self.parameter_events:
+            pybamm.logger.debug(
+                "Processing parameters for event'{}''".format(event.name)
+            )
+            new_events.append(
+                pybamm.Event(
+                    event.name, self.process_symbol(event.expression), event.event_type
+                )
+            )
+
         model.events = new_events
 
         # Set external variables
@@ -545,6 +557,23 @@ class ParameterValues:
                 # to create an Interpolant
                 name, data = function_name
                 function = pybamm.Interpolant(data, *new_children, name=name)
+                # Define event to catch extrapolation. In these events the sign is
+                # important: it should be positive inside of the range and negative
+                # outside of it
+                self.parameter_events.append(
+                    pybamm.Event(
+                    "Interpolant {} lower bound".format(name),
+                    new_children[0] - min(function.x),
+                    pybamm.EventType.INTERPOLANT_EXTRAPOLATION,
+                    )
+                )
+                self.parameter_events.append(
+                    pybamm.Event(
+                    "Interpolant {} upper bound".format(name),
+                    max(function.x) - new_children[0],
+                    pybamm.EventType.INTERPOLANT_EXTRAPOLATION,
+                    )
+                )
             elif isinstance(function_name, numbers.Number):
                 # If the "function" is provided is actually a scalar, return a Scalar
                 # object instead of throwing an error.

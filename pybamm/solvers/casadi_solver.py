@@ -71,6 +71,7 @@ class CasadiSolver(pybamm.BaseSolver):
         root_tol=1e-6,
         max_step_decrease_count=5,
         dt_max=None,
+        extrap_tol=1e-3,
         extra_options_setup=None,
         extra_options_call=None,
     ):
@@ -88,6 +89,7 @@ class CasadiSolver(pybamm.BaseSolver):
 
         self.extra_options_setup = extra_options_setup or {}
         self.extra_options_call = extra_options_call or {}
+        self.extrap_tol = extrap_tol
 
         self.name = "CasADi solver with '{}' mode".format(mode)
 
@@ -143,6 +145,32 @@ class CasadiSolver(pybamm.BaseSolver):
                     [event(t, y0, inputs) for event in model.terminate_events_eval]
                 )
             )
+
+            extrap_event = [
+                event(t, y0, inputs)
+                for event in model.interpolant_extrapolation_events_eval
+            ]
+
+            if extrap_event:
+                if (np.concatenate(extrap_event) < self.extrap_tol).any():
+                    extrap_event_names = []
+                    for event in model.events:
+                        if (
+                            event.event_type
+                            == pybamm.EventType.INTERPOLANT_EXTRAPOLATION
+                            and (
+                                event.expression.evaluate(t, y0, inputs=inputs,)
+                                < self.extrap_tol
+                            ).any()
+                        ):
+                            extrap_event_names.append(event.name[12:])
+
+                    raise pybamm.SolverError(
+                        "CasADI solver failed because the following interpolation bounds were exceeded: {}".format(
+                            extrap_event_names
+                        )
+                    )
+
             pybamm.logger.info("Start solving {} with {}".format(model.name, self.name))
 
             if self.mode == "safe without grid":
@@ -217,6 +245,34 @@ class CasadiSolver(pybamm.BaseSolver):
                         ]
                     )
                 )
+
+                extrap_event = [
+                    event(t, current_step_sol.y[:, -1], inputs=inputs)
+                    for event in model.interpolant_extrapolation_events_eval
+                ]
+
+                if extrap_event:
+                    if (np.concatenate(extrap_event) < self.extrap_tol).any():
+                        extrap_event_names = []
+                        for event in model.events:
+                            if (
+                                event.event_type
+                                == pybamm.EventType.INTERPOLANT_EXTRAPOLATION
+                                and (
+                                    event.expression.evaluate(
+                                        t, current_step_sol.y[:, -1], inputs=inputs
+                                    )
+                                    < self.extrap_tol
+                                ).any()
+                            ):
+                                extrap_event_names.append(event.name[12:])
+
+                        raise pybamm.SolverError(
+                            "CasADI solver failed because the following interpolation bounds were exceeded: {}".format(
+                                extrap_event_names
+                            )
+                        )
+
                 # Exit loop if the sign of an event changes
                 # Locate the event time using a root finding algorithm and
                 # event state using interpolation. The solution is then truncated

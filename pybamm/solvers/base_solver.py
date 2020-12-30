@@ -361,6 +361,12 @@ class BaseSolver(object):
             if event.event_type == pybamm.EventType.TERMINATION
         ]
 
+        interpolant_extrapolation_events_eval = [
+            process(event.expression, "event", use_jacobian=False)[1]
+            for event in model.events
+            if event.event_type == pybamm.EventType.INTERPOLANT_EXTRAPOLATION
+        ]
+
         # discontinuity events are evaluated before the solver is called, so don't need
         # to process them
         discontinuity_events_eval = [
@@ -376,6 +382,7 @@ class BaseSolver(object):
         model.jac_algebraic_eval = jac_algebraic
         model.terminate_events_eval = terminate_events_eval
         model.discontinuity_events_eval = discontinuity_events_eval
+        model.interpolant_extrapolation_events_eval = interpolant_extrapolation_events_eval
 
         # Calculate initial conditions
         model.y0 = init_eval(inputs)
