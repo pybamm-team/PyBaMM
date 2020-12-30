@@ -51,8 +51,8 @@ class Experiment:
             if (isinstance(cycle, tuple) or isinstance(cycle, str)) and all(
                 [isinstance(cond, str) for cond in cycle]
             ):
-                operating_conditions_cycles.extend(
-                    [cycle if isinstance(cycle, tuple) else (cycle,)]
+                operating_conditions_cycles.append(
+                    cycle if isinstance(cycle, tuple) else (cycle,)
                 )
             else:
                 try:
