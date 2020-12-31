@@ -330,13 +330,7 @@ class Simulation:
                 self._model_with_set_params, inplace=False, check_model=check_model
             )
 
-    def solve(
-        self,
-        t_eval=None,
-        solver=None,
-        check_model=True,
-        **kwargs,
-    ):
+    def solve(self, t_eval=None, solver=None, check_model=True, **kwargs):
         """
         A method to solve the model. This method will automatically build
         and set the model parameters if not already done so.
@@ -518,12 +512,7 @@ class Simulation:
             solver = self.solver
 
         self._solution = solver.step(
-            self._solution,
-            self.built_model,
-            dt,
-            npts=npts,
-            save=save,
-            **kwargs,
+            self._solution, self.built_model, dt, npts=npts, save=save, **kwargs
         )
 
         return self.solution
