@@ -1,4 +1,4 @@
-def graphite_entropic_change_PeymanMPM(sto, c_n_max):
+def graphite_entropic_change_PeymanMPM(sto):
     """
     Graphite entropic change in open circuit potential (OCP) at a temperature of
     298.15K as a function of the stochiometry taken from [1]
@@ -8,10 +8,10 @@ def graphite_entropic_change_PeymanMPM(sto, c_n_max):
     .. [1] K.E. Thomas, J. Newman, "Heats of mixing and entropy in porous insertion
            electrode", J. of Power Sources 119 (2003) 844-849
 
-      Parameters
-      ----------
-      sto : :class:`pybamm.Symbol`
-           Stochiometry of material (li-fraction)
+    Parameters
+    ----------
+    sto : :class:`pybamm.Symbol`
+        Stochiometry of material (li-fraction)
 
     """
 
