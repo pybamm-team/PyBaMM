@@ -575,6 +575,7 @@ class ParameterValues:
                         max(function.x) - new_children[0],
                         pybamm.EventType.INTERPOLANT_EXTRAPOLATION,
                     )
+                )
             elif isinstance(function_name, numbers.Number):
                 # If the "function" is provided is actually a scalar, return a Scalar
                 # object instead of throwing an error.
