@@ -911,7 +911,11 @@ class BaseSolver(object):
             # causes an error later in ProcessedVariable)
             if solution.t_event - solution._t[-1] > self.atol:
                 solution._t = np.concatenate((solution._t, solution.t_event))
-                solution._y = np.concatenate((solution._y, solution.y_event), axis=1)
+                if isinstance(solution.y, casadi.DM):
+                    solution._y = casadi.horzcat(solution.y, solution.y_event)
+                else:
+                    solution._y = np.hstack((solution._y, solution.y_event))
+
                 for name, inp in solution.inputs.items():
                     solution._inputs[name] = np.c_[inp, inp[:, -1]]
 
@@ -956,7 +960,6 @@ class SolverCallable:
         self.timescale = self.model.timescale_eval
 
     def __call__(self, t, y, inputs):
-        y = y.reshape(-1, 1)
         if self.name in ["RHS", "algebraic", "residuals"]:
             pybamm.logger.debug(
                 "Evaluating {} for {} at t={}".format(

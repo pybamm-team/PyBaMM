@@ -13,6 +13,7 @@
 
 ## Optimizations
 
+-   Variables are now post-processed using CasADi ([#1316](https://github.com/pybamm-team/PyBaMM/pull/1316))
 -   Operations such as `1*x` and `0+x` now directly return `x` ([#1252](https://github.com/pybamm-team/PyBaMM/pull/1252))
 
 ## Bug fixes

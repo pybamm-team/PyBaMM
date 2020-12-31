@@ -8,7 +8,6 @@ import numpy as np
 import pickle
 import pybamm
 import pandas as pd
-from collections import defaultdict
 from scipy.io import savemat
 
 
@@ -40,10 +39,8 @@ class _BaseSolution(object):
     def __init__(
         self, t, y, t_event=None, y_event=None, termination="final time", copy_this=None
     ):
-        self._t = t
-        if isinstance(y, casadi.DM):
-            y = y.full()
-        self._y = y
+        self.t = t
+        self.y = y
         self._t_event = t_event
         self._y_event = y_event
         self._termination = termination
@@ -67,20 +64,23 @@ class _BaseSolution(object):
         self._variables = pybamm.FuzzyDict()
         self.data = pybamm.FuzzyDict()
 
-        # initialize empty known evals
-        self._known_evals = defaultdict(dict)
-        for time in t:
-            self._known_evals[time] = {}
-
     @property
     def t(self):
         "Times at which the solution is evaluated"
         return self._t
 
+    @t.setter
+    def t(self, t):
+        self._t = t
+
     @property
     def y(self):
         "Values of the solution"
         return self._y
+
+    @y.setter
+    def y(self, y):
+        self._y = y
 
     @property
     def model(self):
@@ -118,7 +118,13 @@ class _BaseSolution(object):
         # If there are symbolic inputs, just store them as given
         if any(isinstance(v, casadi.MX) for v in inputs.values()):
             self.has_symbolic_inputs = True
-            self._inputs = inputs
+            self._inputs = {}
+            for name, inp in inputs.items():
+                if isinstance(inp, numbers.Number):
+                    self._inputs[name] = casadi.DM([inp])
+                else:
+                    self._inputs[name] = inp
+
         # Otherwise, make them the same size as the time vector
         else:
             self.has_symbolic_inputs = False
@@ -181,13 +187,35 @@ class _BaseSolution(object):
 
             # Otherwise a standard ProcessedVariable is ok
             else:
-                var = pybamm.ProcessedVariable(
-                    self.model.variables[key], self, self._known_evals
-                )
+                var_pybamm = self.model.variables[key]
 
-                # Update known_evals in order to process any other variables faster
-                for t in var.known_evals:
-                    self._known_evals[t].update(var.known_evals[t])
+                if key in self.model._variables_casadi:
+                    var_casadi = self.model._variables_casadi[key]
+                else:
+                    self._t_MX = casadi.MX.sym("t")
+                    self._y_MX = casadi.MX.sym("y", self.y.shape[0])
+                    self._symbolic_inputs_dict = {
+                        key: casadi.MX.sym("input", value.shape[0])
+                        for key, value in self._inputs.items()
+                    }
+                    self._symbolic_inputs = casadi.vertcat(
+                        *[p for p in self._symbolic_inputs_dict.values()]
+                    )
+
+                    # Convert variable to casadi
+                    # Make all inputs symbolic first for converting to casadi
+                    var_sym = var_pybamm.to_casadi(
+                        self._t_MX, self._y_MX, inputs=self._symbolic_inputs_dict
+                    )
+
+                    var_casadi = casadi.Function(
+                        "variable",
+                        [self._t_MX, self._y_MX, self._symbolic_inputs],
+                        [var_sym],
+                    )
+                    self.model._variables_casadi[key] = var_casadi
+
+                var = pybamm.ProcessedVariable(var_pybamm, var_casadi, self)
 
             # Save variable and data
             self._variables[key] = var
@@ -234,10 +262,20 @@ class _BaseSolution(object):
         """
         return pybamm.dynamic_plot(self, output_variables=output_variables, **kwargs)
 
+    def clear_casadi_attributes(self):
+        "Remove casadi objects for pickling, will be computed again automatically"
+        self._t_MX = None
+        self._y_MX = None
+        self._symbolic_inputs = None
+        self._symbolic_inputs_dict = None
+
     def save(self, filename):
         """Save the whole solution using pickle"""
         # No warning here if len(self.data)==0 as solution can be loaded
         # and used to process new variables
+
+        self.clear_casadi_attributes()
+        # Pickle
         with open(filename, "wb") as f:
             pickle.dump(self, f, pickle.HIGHEST_PROTOCOL)
 
@@ -392,7 +430,10 @@ class Solution(_BaseSolution):
 
         # Update t, y and inputs
         self._t = np.concatenate((self._t, solution.t[start_index:]))
-        self._y = np.concatenate((self._y, solution.y[:, start_index:]), axis=1)
+        if isinstance(self.y, casadi.DM) and isinstance(solution.y, casadi.DM):
+            self._y = casadi.horzcat(self.y, solution.y[:, start_index:])
+        else:
+            self._y = np.hstack((self._y, solution.y[:, start_index:]))
         for name, inp in self.inputs.items():
             solution_inp = solution.inputs[name]
             self.inputs[name] = np.c_[inp, solution_inp[:, start_index:]]
@@ -404,9 +445,6 @@ class Solution(_BaseSolution):
         self._t_event = solution._t_event
         self._y_event = solution._y_event
 
-        # Update known_evals
-        for t, evals in solution._known_evals.items():
-            self._known_evals[t].update(evals)
         # Recompute existing variables
         for var in self._variables.keys():
             self.update(var)

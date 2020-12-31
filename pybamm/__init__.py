@@ -56,6 +56,7 @@ from .util import root_dir
 
 ABSOLUTE_PATH = root_dir()
 PARAMETER_PATH = [
+    root_dir(),
     os.getcwd(),
     os.path.join(root_dir(), "pybamm", "input", "parameters"),
 ]
