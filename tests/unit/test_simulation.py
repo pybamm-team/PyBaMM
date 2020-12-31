@@ -140,24 +140,6 @@ class TestSimulation(unittest.TestCase):
         self.assertEqual(sim.parameter_values["Current function [A]"], 2 * current_1C)
         self.assertEqual(sim.C_rate, 2)
 
-    def test_get_variable_array(self):
-
-        sim = pybamm.Simulation(pybamm.lithium_ion.SPM())
-        sim.solve([0, 600])
-
-        phi_s_n = sim.get_variable_array("Negative electrode potential")[
-            "Negative electrode potential"
-        ]
-
-        self.assertIsInstance(phi_s_n, np.ndarray)
-
-        c_s_n_surf, c_e = sim.get_variable_array(
-            "Negative particle surface concentration", "Electrolyte concentration"
-        ).values()
-
-        self.assertIsInstance(c_s_n_surf, np.ndarray)
-        self.assertIsInstance(c_e, np.ndarray)
-
     def test_set_external_variable(self):
         model_options = {
             "thermal": "lumped",

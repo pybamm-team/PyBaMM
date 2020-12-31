@@ -528,34 +528,6 @@ class Simulation:
 
         return self.solution
 
-    def get_variable_array(self, *variables):
-        """
-        A helper function to easily obtain a dictionary of arrays of values
-        for a list of variables at the latest timestep.
-
-        Parameters
-        ----------
-        variable: str
-            The name of the variable/variables you wish to obtain the arrays for.
-
-        Returns
-        -------
-        variable_arrays: dict
-            A dictionary of the variable names and their corresponding
-            arrays.
-        """
-
-        variable_arrays = {}
-        for var in variables:
-            processed_var = self.solution[var].data
-            if processed_var.ndim == 1:
-                variable_arrays[var] = processed_var[-1]
-            elif processed_var.ndim == 2:
-                variable_arrays[var] = processed_var[:, -1]
-            elif processed_var.ndim == 3:
-                variable_arrays[var] = processed_var[:, :, -1]
-        return variable_arrays
-
     def plot(self, output_variables=None, quick_plot_vars=None, **kwargs):
         """
         A method to quickly plot the outputs of the simulation. Creates a
