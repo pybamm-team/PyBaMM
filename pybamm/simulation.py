@@ -473,6 +473,19 @@ class Simulation:
                         "or reducing the period.\n\n"
                     )
                     break
+            if hasattr(self.solution, "_sub_solutions"):
+                # Construct solution.cycles (a list of tuples) from sub_solutions
+                self.solution.cycles = []
+                for cycle_num, cycle_length in enumerate(self.experiment.cycle_lengths):
+                    cycle_start_idx = sum(self.experiment.cycle_lengths[0:cycle_num])
+                    self.solution.cycles.append(
+                        tuple(
+                            [
+                                self.solution.sub_solutions[cycle_start_idx + idx]
+                                for idx in range(cycle_length)
+                            ]
+                        )
+                    )
             pybamm.logger.info(
                 "Finish experiment simulation, took {}".format(timer.time())
             )
