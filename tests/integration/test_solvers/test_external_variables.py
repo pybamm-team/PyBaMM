@@ -44,7 +44,6 @@ class TestExternalVariables(unittest.TestCase):
             external_variables = {"Volume-averaged cell temperature": T_av}
             T_av += 1
             sim.step(dt, external_variables=external_variables)
-        var = "Terminal voltage [V]"
         V = sim.solution["Terminal voltage [V]"].data
         np.testing.assert_array_less(np.diff(V), 0)
         # test generate with external variable
