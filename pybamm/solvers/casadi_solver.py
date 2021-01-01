@@ -157,7 +157,7 @@ class CasadiSolver(pybamm.BaseSolver):
                             event.event_type
                             == pybamm.EventType.INTERPOLANT_EXTRAPOLATION
                             and (
-                                event.expression.evaluate(t, y0, inputs=inputs,)
+                                event.expression.evaluate(t, y0.full(), inputs=inputs,)
                                 < self.extrap_tol
                             ).any()
                         ):
@@ -165,9 +165,7 @@ class CasadiSolver(pybamm.BaseSolver):
 
                     raise pybamm.SolverError(
                         "CasADI solver failed because the following interpolation"
-                        " bounds were exceeded: {}".format(
-                            extrap_event_names
-                        )
+                        " bounds were exceeded: {}".format(extrap_event_names)
                     )
 
             pybamm.logger.info("Start solving {} with {}".format(model.name, self.name))
@@ -259,7 +257,9 @@ class CasadiSolver(pybamm.BaseSolver):
                                 == pybamm.EventType.INTERPOLANT_EXTRAPOLATION
                                 and (
                                     event.expression.evaluate(
-                                        t, current_step_sol.y[:, -1], inputs=inputs
+                                        t,
+                                        current_step_sol.y[:, -1].full(),
+                                        inputs=inputs,
                                     )
                                     < self.extrap_tol
                                 ).any()
@@ -268,9 +268,7 @@ class CasadiSolver(pybamm.BaseSolver):
 
                         raise pybamm.SolverError(
                             "CasADI solver failed because the following interpolation"
-                            " bounds were exceeded: {}".format(
-                                extrap_event_names
-                            )
+                            " bounds were exceeded: {}".format(extrap_event_names)
                         )
 
                 # Exit loop if the sign of an event changes

@@ -565,14 +565,14 @@ class ParameterValues:
                 self.parameter_events.append(
                     pybamm.Event(
                         "Interpolant {} lower bound".format(name),
-                        new_children[0] - min(function.x),
+                        new_children[0] - min(data[:, 0]),
                         pybamm.EventType.INTERPOLANT_EXTRAPOLATION,
                     )
                 )
                 self.parameter_events.append(
                     pybamm.Event(
                         "Interpolant {} upper bound".format(name),
-                        max(function.x) - new_children[0],
+                        max(data[:, 0]) - new_children[0],
                         pybamm.EventType.INTERPOLANT_EXTRAPOLATION,
                     )
                 )
