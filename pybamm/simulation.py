@@ -330,13 +330,7 @@ class Simulation:
                 self._model_with_set_params, inplace=False, check_model=check_model
             )
 
-    def solve(
-        self,
-        t_eval=None,
-        solver=None,
-        check_model=True,
-        **kwargs,
-    ):
+    def solve(self, t_eval=None, solver=None, check_model=True, **kwargs):
         """
         A method to solve the model. This method will automatically build
         and set the model parameters if not already done so.
@@ -394,7 +388,7 @@ class Simulation:
                 # For drive cycles (current provided as data) we perform additional
                 # tests on t_eval (if provided) to ensure the returned solution
                 # captures the input.
-                time_data = self._parameter_values["Current function [A]"].data[:, 0]
+                time_data = self._parameter_values["Current function [A]"].x[0]
                 # If no t_eval is provided, we use the times provided in the data.
                 if t_eval is None:
                     pybamm.logger.info("Setting t_eval as specified by the data")
@@ -473,6 +467,19 @@ class Simulation:
                         "or reducing the period.\n\n"
                     )
                     break
+            if hasattr(self.solution, "_sub_solutions"):
+                # Construct solution.cycles (a list of tuples) from sub_solutions
+                self.solution.cycles = []
+                for cycle_num, cycle_length in enumerate(self.experiment.cycle_lengths):
+                    cycle_start_idx = sum(self.experiment.cycle_lengths[0:cycle_num])
+                    self.solution.cycles.append(
+                        tuple(
+                            [
+                                self.solution.sub_solutions[cycle_start_idx + idx]
+                                for idx in range(cycle_length)
+                            ]
+                        )
+                    )
             pybamm.logger.info(
                 "Finish experiment simulation, took {}".format(timer.time())
             )
@@ -505,12 +512,7 @@ class Simulation:
             solver = self.solver
 
         self._solution = solver.step(
-            self._solution,
-            self.built_model,
-            dt,
-            npts=npts,
-            save=save,
-            **kwargs,
+            self._solution, self.built_model, dt, npts=npts, save=save, **kwargs
         )
 
         return self.solution
