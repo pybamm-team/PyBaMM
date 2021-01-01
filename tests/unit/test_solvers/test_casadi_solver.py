@@ -446,7 +446,10 @@ class TestCasadiSolver(unittest.TestCase):
             parameter_values=param,
             experiment=experiment,
             solver=pybamm.CasadiSolver(
-                mode="safe", dt_max=0.001, extra_options_setup={"max_num_steps": 500}
+                mode="safe",
+                dt_max=0.001,
+                extrap_tol=1e-3,
+                extra_options_setup={"max_num_steps": 500},
             ),
         )
         with self.assertRaisesRegex(pybamm.SolverError, "interpolation bounds"):

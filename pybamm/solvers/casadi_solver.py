@@ -48,7 +48,7 @@ class CasadiSolver(pybamm.BaseSolver):
         the default value corresponds to a non-dimensional time of 0.01
         (i.e. ``0.01 * model.timescale_eval``).
     extrap_tol : float, optional
-        The tolerance to assert whether extrapolation occurs or not. Default is 1e-3.
+        The tolerance to assert whether extrapolation occurs or not. Default is 0.
     extra_options_setup : dict, optional
         Any options to pass to the CasADi integrator when creating the integrator.
         Please consult `CasADi documentation <https://tinyurl.com/y5rk76os>`_ for
@@ -73,7 +73,7 @@ class CasadiSolver(pybamm.BaseSolver):
         root_tol=1e-6,
         max_step_decrease_count=5,
         dt_max=None,
-        extrap_tol=1e-3,
+        extrap_tol=0,
         extra_options_setup=None,
         extra_options_call=None,
     ):
