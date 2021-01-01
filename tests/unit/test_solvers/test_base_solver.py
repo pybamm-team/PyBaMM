@@ -171,7 +171,7 @@ class TestBaseSolver(unittest.TestCase):
         np.testing.assert_array_almost_equal(init_cond, vec)
         # with casadi
         init_cond = solver_with_casadi.calculate_consistent_state(model)
-        np.testing.assert_array_almost_equal(init_cond, vec)
+        np.testing.assert_array_almost_equal(init_cond.full().flatten(), vec)
 
         # With jacobian
         def jac_dense(t, y, inputs):
