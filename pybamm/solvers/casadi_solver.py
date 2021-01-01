@@ -47,6 +47,8 @@ class CasadiSolver(pybamm.BaseSolver):
         The maximum global step size (in seconds) used in "safe" mode. If None
         the default value corresponds to a non-dimensional time of 0.01
         (i.e. ``0.01 * model.timescale_eval``).
+    extrap_tol : float, optional
+        The tolerance to assert whether extrapolation occurs or not. Default is 1e-3.
     extra_options_setup : dict, optional
         Any options to pass to the CasADi integrator when creating the integrator.
         Please consult `CasADi documentation <https://tinyurl.com/y5rk76os>`_ for
