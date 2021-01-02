@@ -404,7 +404,7 @@ class ParameterValues:
         new_events = []
         for event in unprocessed_model.events:
             pybamm.logger.debug(
-                "Processing parameters for event'{}''".format(event.name)
+                "Processing parameters for event '{}''".format(event.name)
             )
             new_events.append(
                 pybamm.Event(
@@ -414,7 +414,7 @@ class ParameterValues:
 
         for event in self.parameter_events:
             pybamm.logger.debug(
-                "Processing parameters for event'{}''".format(event.name)
+                "Processing parameters for event '{}''".format(event.name)
             )
             new_events.append(
                 pybamm.Event(
