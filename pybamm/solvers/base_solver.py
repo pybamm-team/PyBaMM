@@ -781,6 +781,10 @@ class BaseSolver(object):
                     "Cannot step empty model, use `pybamm.DummySolver` instead"
                 )
 
+        # Make sure dt is positive
+        if dt <= 0:
+            raise pybamm.SolverError("Step time must be positive")
+
         # Set timer
         timer = pybamm.Timer()
 
@@ -901,6 +905,20 @@ class BaseSolver(object):
             termination_event = min(final_event_values, key=final_event_values.get)
             # Add the event to the solution object
             solution.termination = "event: {}".format(termination_event)
+            # Update t, y and inputs to include event time and state
+            # Note: if the final entry of t is equal to the event time to within
+            # the absolute tolerance we skip this (having duplicate entries
+            # causes an error later in ProcessedVariable)
+            if solution.t_event - solution._t[-1] > self.atol:
+                solution._t = np.concatenate((solution._t, solution.t_event))
+                if isinstance(solution.y, casadi.DM):
+                    solution._y = casadi.horzcat(solution.y, solution.y_event)
+                else:
+                    solution._y = np.hstack((solution._y, solution.y_event))
+
+                for name, inp in solution.inputs.items():
+                    solution._inputs[name] = np.c_[inp, inp[:, -1]]
+
             return "the termination event '{}' occurred".format(termination_event)
 
     def _set_up_ext_and_inputs(self, model, external_variables, inputs):
@@ -942,7 +960,6 @@ class SolverCallable:
         self.timescale = self.model.timescale_eval
 
     def __call__(self, t, y, inputs):
-        y = y.reshape(-1, 1)
         if self.name in ["RHS", "algebraic", "residuals"]:
             pybamm.logger.debug(
                 "Evaluating {} for {} at t={}".format(
