@@ -77,7 +77,9 @@ class CasadiSolver(pybamm.BaseSolver):
         extra_options_setup=None,
         extra_options_call=None,
     ):
-        super().__init__("problem dependent", rtol, atol, root_method, root_tol)
+        super().__init__(
+            "problem dependent", rtol, atol, root_method, root_tol, extrap_tol
+        )
         if mode in ["safe", "fast", "safe without grid"]:
             self.mode = mode
         else:
