@@ -291,10 +291,8 @@ class TestBaseSolver(unittest.TestCase):
         # Make sure the extrapolation warnings work
         model = pybamm.BaseModel()
         v = pybamm.Variable("v")
-        u = pybamm.Variable("u")
         model.rhs = {v: -1}
-        model.algebraic = {u: u - 2 * v}
-        model.initial_conditions = {v: 1, u: 2}
+        model.initial_conditions = {v: 1}
         model.events.append(
             pybamm.Event(
                 "Triggered event", v - 0.5, pybamm.EventType.INTERPOLANT_EXTRAPOLATION,
@@ -305,7 +303,7 @@ class TestBaseSolver(unittest.TestCase):
                 "Ignored event", v + 10, pybamm.EventType.INTERPOLANT_EXTRAPOLATION,
             )
         )
-        solver = pybamm.ScikitsDaeSolver()
+        solver = pybamm.ScipySolver()
         solver.set_up(model)
 
         with self.assertWarns(pybamm.SolverWarning):
