@@ -1,5 +1,4 @@
 import pybamm
-import numpy as np
 import os
 import pickle
 import scipy.interpolate as interp
@@ -78,29 +77,17 @@ def get_interp_fun(variable_name, domain):
         comsol_x = comsol_variables["x_p"]
     elif domain == whole_cell:
         comsol_x = comsol_variables["x"]
+
     # Make sure to use dimensional space
     pybamm_x = mesh.combine_submeshes(*domain).nodes * L_x
     variable = interp.interp1d(comsol_x, variable, axis=0)(pybamm_x)
 
-    def myinterp(t):
-        try:
-            return interp.interp1d(
-                comsol_t, variable, fill_value="extrapolate", bounds_error=False
-            )(t)[:, np.newaxis]
-        except ValueError as err:
-            raise ValueError(
-                (
-                    "Failed to interpolate '{}' with time range [{}, {}] at time {}."
-                    + "Original error: {}"
-                ).format(variable_name, comsol_t[0], comsol_t[-1], t, err)
-            )
-
-    # Make sure to use dimensional time
-    fun = pybamm.Function(
-        myinterp,
+    fun = pybamm.Interpolant(
+        comsol_t,
+        variable.T,
         pybamm.t * pybamm_model.timescale.evaluate(),
-        name=variable_name + "_comsol",
     )
+
     fun.domain = domain
     fun.mesh = mesh.combine_submeshes(*domain)
     fun.secondary_mesh = None
@@ -113,15 +100,12 @@ comsol_c_p_surf = get_interp_fun("c_p_surf", ["positive electrode"])
 comsol_phi_n = get_interp_fun("phi_n", ["negative electrode"])
 comsol_phi_e = get_interp_fun("phi_e", whole_cell)
 comsol_phi_p = get_interp_fun("phi_p", ["positive electrode"])
-comsol_voltage = pybamm.Function(
-    interp.interp1d(
-        comsol_t,
-        comsol_variables["voltage"],
-        fill_value="extrapolate",
-        bounds_error=False,
-    ),
+comsol_voltage = pybamm.Interpolant(
+    comsol_t,
+    comsol_variables["voltage"],
     pybamm.t * pybamm_model.timescale.evaluate(),
 )
+
 comsol_voltage.mesh = None
 comsol_voltage.secondary_mesh = None
 

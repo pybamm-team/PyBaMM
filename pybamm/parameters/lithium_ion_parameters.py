@@ -345,10 +345,7 @@ class LithiumIonParameters:
         Dimensional entropic change of the negative electrode open-circuit
         potential [V.K-1]
         """
-        inputs = {
-            "Negative particle stoichiometry": sto,
-            "Max negative particle concentration [mol.m-3]": self.c_n_max,
-        }
+        inputs = {"Negative particle stoichiometry": sto}
         return pybamm.FunctionParameter(
             "Negative electrode OCP entropic change [V.K-1]", inputs
         )
@@ -358,10 +355,7 @@ class LithiumIonParameters:
         Dimensional entropic change of the positive electrode open-circuit
         potential [V.K-1]
         """
-        inputs = {
-            "Positive particle stoichiometry": sto,
-            "Max positive particle concentration [mol.m-3]": self.c_p_max,
-        }
+        inputs = {"Positive particle stoichiometry": sto}
         return pybamm.FunctionParameter(
             "Positive electrode OCP entropic change [V.K-1]", inputs
         )

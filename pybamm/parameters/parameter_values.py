@@ -544,7 +544,9 @@ class ParameterValues:
                 # If function_name is a tuple then it should be (name, data) and we need
                 # to create an Interpolant
                 name, data = function_name
-                function = pybamm.Interpolant(data, *new_children, name=name)
+                function = pybamm.Interpolant(
+                    data[:, 0], data[:, 1], *new_children, name=name
+                )
             elif isinstance(function_name, numbers.Number):
                 # If the "function" is provided is actually a scalar, return a Scalar
                 # object instead of throwing an error.
@@ -563,6 +565,8 @@ class ParameterValues:
             elif callable(function_name):
                 # otherwise evaluate the function to create a new PyBaMM object
                 function = function_name(*new_children)
+            elif isinstance(function_name, pybamm.Interpolant):
+                function = function_name
             else:
                 raise TypeError(
                     "Parameter provided for '{}' ".format(symbol.name)
