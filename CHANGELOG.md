@@ -2,6 +2,7 @@
 
 ## Features
 
+-   Added temperature dependence to the transference number (`t_plus`) ([1317](https://github.com/pybamm-team/PyBaMM/pull/1317))
 -   Added new functionality for `Interpolant` ([#1312](https://github.com/pybamm-team/PyBaMM/pull/1312))
 -   Added option to express experiments (and extract solutions) in terms of cycles of operating condition ([#1309](https://github.com/pybamm-team/PyBaMM/pull/1309))
 -   The event time and state are now returned as part of `Solution.t` and `Solution.y` so that the event is accurately captured in the returned solution ([#1300](https://github.com/pybamm-team/PyBaMM/pull/1300))

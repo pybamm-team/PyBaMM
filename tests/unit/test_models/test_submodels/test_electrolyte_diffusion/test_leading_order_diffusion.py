@@ -24,6 +24,7 @@ class TestLeadingOrder(unittest.TestCase):
             "Sum of x-averaged negative electrode electrolyte reaction source terms": a,
             "Sum of x-averaged positive electrode electrolyte reaction source terms": a,
             "X-averaged separator transverse volume-averaged acceleration": a,
+            "X-averaged cell temperature": a,
         }
         submodel = pybamm.electrolyte_diffusion.LeadingOrder(param)
         std_tests = tests.StandardSubModelTests(submodel, variables)

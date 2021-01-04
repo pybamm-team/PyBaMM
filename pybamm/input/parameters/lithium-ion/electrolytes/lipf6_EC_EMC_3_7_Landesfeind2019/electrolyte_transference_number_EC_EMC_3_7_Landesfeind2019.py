@@ -4,7 +4,7 @@ from electrolyte_base_Landesfeind2019 import (
 import numpy as np
 
 
-def electrolyte_transference_number_EC_EMC_3_7_Landesfeind2019(c_e, T=298.15):
+def electrolyte_transference_number_EC_EMC_3_7_Landesfeind2019(c_e, T):
     """
     Transference number of LiPF6 in EC:EMC (3:7 w:w) as a function of ion
     concentration and temperature. The data comes from [1].
