@@ -31,6 +31,8 @@ class ScikitsOdeSolver(pybamm.BaseSolver):
         The relative tolerance for the solver (default is 1e-6).
     atol : float, optional
         The absolute tolerance for the solver (default is 1e-6).
+    extrap_tol : float, optional
+        The tolerance to assert whether extrapolation occurs or not (default is 0).
     extra_options : dict, optional
         Any options to pass to the solver.
         Please consult `scikits.odes documentation
@@ -46,13 +48,14 @@ class ScikitsOdeSolver(pybamm.BaseSolver):
         method="cvode",
         rtol=1e-6,
         atol=1e-6,
+        extrap_tol=0,
         linsolver="deprecated",
         extra_options=None,
     ):
         if scikits_odes_spec is None:
             raise ImportError("scikits.odes is not installed")
 
-        super().__init__(method, rtol, atol)
+        super().__init__(method, rtol, atol, extrap_tol=extrap_tol)
         self.extra_options = extra_options or {}
         if linsolver != "deprecated":
             raise ValueError(

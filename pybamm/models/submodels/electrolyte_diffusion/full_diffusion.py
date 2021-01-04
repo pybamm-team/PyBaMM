@@ -43,7 +43,7 @@ class Full(BaseElectrolyteDiffusion):
         param = self.param
 
         N_e_diffusion = -tor * param.D_e(c_e, T) * pybamm.grad(c_e)
-        N_e_migration = param.C_e * param.t_plus(c_e) * i_e / param.gamma_e
+        N_e_migration = param.C_e * param.t_plus(c_e, T) * i_e / param.gamma_e
         N_e_convection = param.C_e * c_e * v_box
 
         N_e = N_e_diffusion + N_e_migration + N_e_convection
