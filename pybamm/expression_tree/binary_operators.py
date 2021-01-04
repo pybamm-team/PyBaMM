@@ -40,6 +40,25 @@ def preprocess_binary(left, right):
     return left, right
 
 
+def get_binary_children_domains(ldomain, rdomain):
+    "Combine domains from children in appropriate way"
+    if ldomain == rdomain:
+        return ldomain
+    elif ldomain == []:
+        return rdomain
+    elif rdomain == []:
+        return ldomain
+    else:
+        raise pybamm.DomainError(
+            """
+            children must have same (or empty) domains, but left.domain is '{}'
+            and right.domain is '{}'
+            """.format(
+                ldomain, rdomain
+            )
+        )
+
+
 class BinaryOperator(pybamm.Symbol):
     """A node in the expression tree representing a binary operator (e.g. `+`, `*`)
 
@@ -62,7 +81,7 @@ class BinaryOperator(pybamm.Symbol):
     def __init__(self, name, left, right):
         left, right = preprocess_binary(left, right)
 
-        domain = self.get_children_domains(left.domain, right.domain)
+        domain = get_binary_children_domains(left.domain, right.domain)
         auxiliary_domains = self.get_children_auxiliary_domains([left, right])
         super().__init__(
             name,
@@ -92,24 +111,6 @@ class BinaryOperator(pybamm.Symbol):
         else:
             right_str = "{!s}".format(self.right)
         return "{} {} {}".format(left_str, self.name, right_str)
-
-    def get_children_domains(self, ldomain, rdomain):
-        "Combine domains from children in appropriate way"
-        if ldomain == rdomain:
-            return ldomain
-        elif ldomain == []:
-            return rdomain
-        elif rdomain == []:
-            return ldomain
-        else:
-            raise pybamm.DomainError(
-                """
-                children must have same (or empty) domains, but left.domain is '{}'
-                and right.domain is '{}'
-                """.format(
-                    ldomain, rdomain
-                )
-            )
 
     def new_copy(self):
         """ See :meth:`pybamm.Symbol.new_copy()`. """
@@ -769,12 +770,12 @@ def simplified_addition(left, right):
         return right._unary_new_copy(left + right.orphans[0])
 
     # anything added by a scalar zero returns the other child
-    if pybamm.is_scalar_zero(left):
+    elif pybamm.is_scalar_zero(left):
         return right
-    if pybamm.is_scalar_zero(right):
+    elif pybamm.is_scalar_zero(right):
         return left
     # Check matrices after checking scalars
-    if pybamm.is_matrix_zero(left):
+    elif pybamm.is_matrix_zero(left):
         if right.evaluates_to_number():
             return right * pybamm.ones_like(left)
         # If left object is zero and has size smaller than or equal to right object in
@@ -790,7 +791,7 @@ def simplified_addition(left, right):
             for dim in ["primary", "secondary", "tertiary"]
         ):
             return right
-    if pybamm.is_matrix_zero(right):
+    elif pybamm.is_matrix_zero(right):
         if left.evaluates_to_number():
             return left * pybamm.ones_like(right)
         # See comment above
@@ -808,7 +809,7 @@ def simplified_addition(left, right):
     # Simplify A @ c + B @ c to (A + B) @ c if (A + B) is constant
     # This is a common construction that appears from discretisation of spatial
     # operators
-    if (
+    elif (
         isinstance(left, MatrixMultiplication)
         and isinstance(right, MatrixMultiplication)
         and left.right.id == right.right.id
