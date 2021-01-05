@@ -738,6 +738,8 @@ class BaseSolver(object):
                             ext_and_inputs_list,
                         ),
                     )
+                    p.close()
+                    p.join()
             # Setting the solve time for each segment.
             # pybamm.Solution.append assumes attribute
             # solve_time.
