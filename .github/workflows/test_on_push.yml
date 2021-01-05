@@ -50,7 +50,6 @@ jobs:
     - name: Install MacOS system dependencies
       if: matrix.os == 'macos-latest'
       run: |
-#       rm -f /usr/local/bin/2to3
         brew update
         brew install graphviz
         brew install openblas
