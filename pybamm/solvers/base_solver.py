@@ -589,6 +589,13 @@ class BaseSolver(object):
             for inputs in inputs_list
         ]
 
+        # Cannot use multiprocessing with model in "jax" format
+        if(len(inputs_list) > 1) and model.convert_to_format == "jax":
+            raise pybamm.SolverError(
+                "Cannot solve list of inputs with multiprocessing "
+                "when model in format \"jax\"."
+            )
+
         # Set up
         timer = pybamm.Timer()
 
@@ -731,6 +738,8 @@ class BaseSolver(object):
                             ext_and_inputs_list,
                         ),
                     )
+                    p.close()
+                    p.join()
             # Setting the solve time for each segment.
             # pybamm.Solution.append assumes attribute
             # solve_time.
