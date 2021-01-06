@@ -200,10 +200,9 @@ class TestScipySolver(unittest.TestCase):
         var = pybamm.Variable("var", domain=domain)
         model.rhs = {var: -pybamm.InputParameter("rate") * var}
         model.initial_conditions = {var: 1}
-        model.events = [pybamm.Event("var=0.5", pybamm.min(var - 0.5))]
         # No need to set parameters; can use base discretisation (no spatial
         # operators)
-
+        model.events = [pybamm.Event("var=0.5", pybamm.min(var - 0.5))]
         # create discretisation
         mesh = get_mesh_for_testing()
         spatial_methods = {"macroscale": pybamm.FiniteVolume()}
@@ -221,15 +220,11 @@ class TestScipySolver(unittest.TestCase):
         for convert_to_format in ["python", "casadi"]:
             # Create model
             model = pybamm.BaseModel()
-            # Covert to casadi instead of python to avoid pickling of
-            # "EvaluatorPython" objects.
             model.convert_to_format = convert_to_format
             domain = ["negative electrode", "separator", "positive electrode"]
             var = pybamm.Variable("var", domain=domain)
             model.rhs = {var: -pybamm.InputParameter("rate") * var}
             model.initial_conditions = {var: 1}
-            # No need to set parameters; can use base discretisation (no spatial
-            # operators)
             # create discretisation
             mesh = get_mesh_for_testing()
             spatial_methods = {"macroscale": pybamm.FiniteVolume()}
@@ -253,15 +248,11 @@ class TestScipySolver(unittest.TestCase):
     def test_model_solver_multiple_inputs_discontinuity_error(self):
         # Create model
         model = pybamm.BaseModel()
-        # Covert to casadi instead of python to avoid pickling of
-        # "EvaluatorPython" objects.
         model.convert_to_format = "casadi"
         domain = ["negative electrode", "separator", "positive electrode"]
         var = pybamm.Variable("var", domain=domain)
         model.rhs = {var: -pybamm.InputParameter("rate") * var}
         model.initial_conditions = {var: 1}
-        # No need to set parameters; can use base discretisation (no spatial
-        # operators)
         # create discretisation
         mesh = get_mesh_for_testing()
         spatial_methods = {"macroscale": pybamm.FiniteVolume()}
@@ -292,15 +283,11 @@ class TestScipySolver(unittest.TestCase):
     def test_model_solver_multiple_inputs_initial_conditions_error(self):
         # Create model
         model = pybamm.BaseModel()
-        # Covert to casadi instead of python to avoid pickling of
-        # "EvaluatorPython" objects.
         model.convert_to_format = "casadi"
         domain = ["negative electrode", "separator", "positive electrode"]
         var = pybamm.Variable("var", domain=domain)
         model.rhs = {var: -pybamm.InputParameter("rate") * var}
         model.initial_conditions = {var: 2 * pybamm.InputParameter("rate")}
-        # No need to set parameters; can use base discretisation (no spatial
-        # operators)
         # create discretisation
         mesh = get_mesh_for_testing()
         spatial_methods = {"macroscale": pybamm.FiniteVolume()}
@@ -321,8 +308,6 @@ class TestScipySolver(unittest.TestCase):
     def test_model_solver_multiple_inputs_jax_format_error(self):
         # Create model
         model = pybamm.BaseModel()
-        # Covert to casadi instead of python to avoid pickling of
-        # "EvaluatorPython" objects.
         model.convert_to_format = "jax"
         domain = ["negative electrode", "separator", "positive electrode"]
         var = pybamm.Variable("var", domain=domain)
