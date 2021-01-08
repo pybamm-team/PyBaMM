@@ -43,15 +43,6 @@ class TestSolution(unittest.TestCase):
                 step_solution.update("Terminal voltage")
             old_t = t
 
-        # Step solution should have been updated as we go along so be quicker to
-        # calculate
-        timer = pybamm.Timer()
-        step_solution.update("Terminal voltage")
-        step_sol_time = timer.time()
-        timer.reset()
-        solution.update("Terminal voltage")
-        sol_time = timer.time()
-        self.assertLess(step_sol_time.value, sol_time.value)
         # Check both give the same answer
         np.testing.assert_array_almost_equal(
             solution["Terminal voltage"](solution.t[:-1] * model.timescale_eval),

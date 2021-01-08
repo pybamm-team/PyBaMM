@@ -99,7 +99,7 @@ class TestScipySolver(unittest.TestCase):
         t_eval = np.linspace(0, 10, 100)
         solution = solver.solve(model, t_eval)
         self.assertLess(len(solution.t), len(t_eval))
-        np.testing.assert_array_equal(solution.t, t_eval[: len(solution.t)])
+        np.testing.assert_array_equal(solution.t[:-1], t_eval[: len(solution.t) - 1])
         np.testing.assert_allclose(solution.y[0], np.exp(-0.1 * solution.t))
 
     def test_model_solver_ode_with_jacobian_python(self):
@@ -213,7 +213,7 @@ class TestScipySolver(unittest.TestCase):
         t_eval = np.linspace(0, 10, 100)
         solution = solver.solve(model, t_eval, inputs={"rate": 0.1})
         self.assertLess(len(solution.t), len(t_eval))
-        np.testing.assert_array_equal(solution.t, t_eval[: len(solution.t)])
+        np.testing.assert_array_equal(solution.t[:-1], t_eval[: len(solution.t) - 1])
         np.testing.assert_allclose(solution.y[0], np.exp(-0.1 * solution.t))
 
     def test_model_solver_multiple_inputs_happy_path(self):
@@ -390,7 +390,9 @@ class TestScipySolver(unittest.TestCase):
             t_eval = np.linspace(0, 10, 100)
             solution = solver.solve(model_disc, t_eval)
             self.assertLess(len(solution.t), len(t_eval))
-            np.testing.assert_array_equal(solution.t, t_eval[: len(solution.t)])
+            np.testing.assert_array_equal(
+                solution.t[:-1], t_eval[: len(solution.t) - 1]
+            )
             np.testing.assert_allclose(solution.y[0], np.exp(-0.1 * solution.t))
 
     def test_model_solver_with_inputs_with_casadi(self):
@@ -415,7 +417,7 @@ class TestScipySolver(unittest.TestCase):
         t_eval = np.linspace(0, 10, 100)
         solution = solver.solve(model, t_eval, inputs={"rate": 0.1})
         self.assertLess(len(solution.t), len(t_eval))
-        np.testing.assert_array_equal(solution.t, t_eval[: len(solution.t)])
+        np.testing.assert_array_equal(solution.t[:-1], t_eval[: len(solution.t) - 1])
         np.testing.assert_allclose(solution.y[0], np.exp(-0.1 * solution.t))
 
     def test_model_solver_inputs_in_initial_conditions(self):

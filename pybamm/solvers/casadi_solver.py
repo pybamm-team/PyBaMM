@@ -47,6 +47,8 @@ class CasadiSolver(pybamm.BaseSolver):
         The maximum global step size (in seconds) used in "safe" mode. If None
         the default value corresponds to a non-dimensional time of 0.01
         (i.e. ``0.01 * model.timescale_eval``).
+    extrap_tol : float, optional
+        The tolerance to assert whether extrapolation occurs or not. Default is 0.
     extra_options_setup : dict, optional
         Any options to pass to the CasADi integrator when creating the integrator.
         Please consult `CasADi documentation <https://tinyurl.com/y5rk76os>`_ for
@@ -71,10 +73,13 @@ class CasadiSolver(pybamm.BaseSolver):
         root_tol=1e-6,
         max_step_decrease_count=5,
         dt_max=None,
+        extrap_tol=0,
         extra_options_setup=None,
         extra_options_call=None,
     ):
-        super().__init__("problem dependent", rtol, atol, root_method, root_tol)
+        super().__init__(
+            "problem dependent", rtol, atol, root_method, root_tol, extrap_tol
+        )
         if mode in ["safe", "fast", "safe without grid"]:
             self.mode = mode
         else:
@@ -88,6 +93,7 @@ class CasadiSolver(pybamm.BaseSolver):
 
         self.extra_options_setup = extra_options_setup or {}
         self.extra_options_call = extra_options_call or {}
+        self.extrap_tol = extrap_tol
 
         self.name = "CasADi solver with '{}' mode".format(mode)
 
@@ -133,16 +139,46 @@ class CasadiSolver(pybamm.BaseSolver):
             return solution
         elif self.mode in ["safe", "safe without grid"]:
             y0 = model.y0
-            if isinstance(y0, casadi.DM):
-                y0 = y0.full().flatten()
             # Step-and-check
             t = t_eval[0]
             t_f = t_eval[-1]
-            init_event_signs = np.sign(
-                np.concatenate(
-                    [event(t, y0, inputs) for event in model.terminate_events_eval]
+            if model.terminate_events_eval:
+                init_event_signs = np.sign(
+                    np.concatenate(
+                        [event(t, y0, inputs) for event in model.terminate_events_eval]
+                    )
                 )
-            )
+            else:
+                init_event_signs = np.sign([])
+
+            if model.interpolant_extrapolation_events_eval:
+                extrap_event = [
+                    event(t, y0, inputs)
+                    for event in model.interpolant_extrapolation_events_eval
+                ]
+                if extrap_event:
+                    if (np.concatenate(extrap_event) < self.extrap_tol).any():
+                        extrap_event_names = []
+                        for event in model.events:
+                            if (
+                                event.event_type
+                                == pybamm.EventType.INTERPOLANT_EXTRAPOLATION
+                                and (
+                                    event.expression.evaluate(
+                                        t, y0.full(), inputs=inputs,
+                                    )
+                                    < self.extrap_tol
+                                ).any()
+                            ):
+                                extrap_event_names.append(event.name[12:])
+
+                        raise pybamm.SolverError(
+                            "CasADI solver failed because the following interpolation "
+                            "bounds were exceeded at the initial conditions: {}. "
+                            "You may need to provide additional interpolation points "
+                            "outside these bounds.".format(extrap_event_names)
+                        )
+
             pybamm.logger.info("Start solving {} with {}".format(model.name, self.name))
 
             if self.mode == "safe without grid":
@@ -151,7 +187,7 @@ class CasadiSolver(pybamm.BaseSolver):
                 # to avoid having to create several times
                 self.create_integrator(model, inputs)
                 # Initialize solution
-                solution = pybamm.Solution(np.array([t]), y0[:, np.newaxis])
+                solution = pybamm.Solution(np.array([t]), y0)
                 solution.solve_time = 0
                 solution.integration_time = 0
             else:
@@ -209,14 +245,49 @@ class CasadiSolver(pybamm.BaseSolver):
                             )
                         )
                 # Check most recent y to see if any events have been crossed
-                new_event_signs = np.sign(
-                    np.concatenate(
-                        [
-                            event(t, current_step_sol.y[:, -1], inputs)
-                            for event in model.terminate_events_eval
-                        ]
+                if model.terminate_events_eval:
+                    new_event_signs = np.sign(
+                        np.concatenate(
+                            [
+                                event(t, current_step_sol.y[:, -1], inputs)
+                                for event in model.terminate_events_eval
+                            ]
+                        )
                     )
-                )
+                else:
+                    new_event_signs = np.sign([])
+
+                if model.interpolant_extrapolation_events_eval:
+                    extrap_event = [
+                        event(t, current_step_sol.y[:, -1], inputs=inputs)
+                        for event in model.interpolant_extrapolation_events_eval
+                    ]
+
+                    if extrap_event:
+                        if (np.concatenate(extrap_event) < self.extrap_tol).any():
+                            extrap_event_names = []
+                            for event in model.events:
+                                if (
+                                    event.event_type
+                                    == pybamm.EventType.INTERPOLANT_EXTRAPOLATION
+                                    and (
+                                        event.expression.evaluate(
+                                            t,
+                                            current_step_sol.y[:, -1].full(),
+                                            inputs=inputs,
+                                        )
+                                        < self.extrap_tol
+                                    ).any()
+                                ):
+                                    extrap_event_names.append(event.name[12:])
+
+                            raise pybamm.SolverError(
+                                "CasADI solver failed because the following "
+                                "interpolation bounds were exceeded: {}. You may need "
+                                "to provide additional interpolation points outside "
+                                "these bounds.".format(extrap_event_names)
+                            )
+
                 # Exit loop if the sign of an event changes
                 # Locate the event time using a root finding algorithm and
                 # event state using interpolation. The solution is then truncated
@@ -282,8 +353,8 @@ class CasadiSolver(pybamm.BaseSolver):
                         # append solution from the current step to solution
                         solution.append(current_step_sol)
                     solution.termination = "event"
-                    solution.t_event = t_event
-                    solution.y_event = y_event
+                    solution.t_event = np.array([t_event])
+                    solution.y_event = y_event[:, np.newaxis]
 
                     break
                 else:
@@ -402,7 +473,7 @@ class CasadiSolver(pybamm.BaseSolver):
                     x0=y0_diff, z0=y0_alg, p=inputs, **self.extra_options_call
                 )
                 integration_time = timer.time()
-                y_sol = np.concatenate([sol["xf"].full(), sol["zf"].full()])
+                y_sol = casadi.vertcat(sol["xf"], sol["zf"])
                 sol = pybamm.Solution(t_eval, y_sol)
                 sol.integration_time = integration_time
                 return sol

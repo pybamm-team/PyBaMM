@@ -244,7 +244,7 @@ class BasicFull(BaseModel):
         ######################
         N_e = (
             -tor * param.D_e(c_e, T) * pybamm.grad(c_e)
-            + param.C_e * param.t_plus(c_e) * i_e / param.gamma_e
+            + param.C_e * param.t_plus(c_e, T) * i_e / param.gamma_e
             + param.C_e * c_e * v
         )
         s = pybamm.Concatenation(
