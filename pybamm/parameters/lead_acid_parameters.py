@@ -762,15 +762,15 @@ class LeadAcidParameters:
         x_dim = x * self.L_x
         return self.a_p_dimensional(x_dim) / self.a_p_typ
 
-    def rho(self, T):
-        "Dimensionless effective volumetric heat capacity"
-        return (
-            self.rho_cn(T) * self.l_cn
-            + self.rho_n(T) * self.l_n
-            + self.rho_s(T) * self.l_s
-            + self.rho_p(T) * self.l_p
-            + self.rho_cp(T) * self.l_cp
-        ) / self.l
+    # def rho(self, T):
+    #     "Dimensionless effective volumetric heat capacity"
+    #     return (
+    #         self.rho_cn(T) * self.l_cn
+    #         + self.rho_n(T) * self.l_n
+    #         + self.rho_s(T) * self.l_s
+    #         + self.rho_p(T) * self.l_p
+    #         + self.rho_cp(T) * self.l_cp
+    #     ) / self.l
 
     def _set_input_current(self):
         "Set the input current"
