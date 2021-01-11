@@ -2,6 +2,7 @@
 
 ## Features
 
+-   Added temperature dependence to density, heat capacity and thermal conductivity ([1323](https://github.com/pybamm-team/PyBaMM/pull/1323))
 -   Added temperature dependence to the transference number (`t_plus`) ([1317](https://github.com/pybamm-team/PyBaMM/pull/1317))
 -   Added new functionality for `Interpolant` ([#1312](https://github.com/pybamm-team/PyBaMM/pull/1312))
 -   Added option to express experiments (and extract solutions) in terms of cycles of operating condition ([#1309](https://github.com/pybamm-team/PyBaMM/pull/1309))
