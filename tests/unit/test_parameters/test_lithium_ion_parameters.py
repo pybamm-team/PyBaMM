@@ -177,11 +177,11 @@ class TestDimensionlessParameterValues(unittest.TestCase):
         np.testing.assert_almost_equal(values.evaluate(param.rho_cp(T)), 1.3403, 2)
 
         # Thermal conductivity
-        np.testing.assert_almost_equal(values.evaluate(param.lambda_cn), 6.7513, 2)
-        np.testing.assert_almost_equal(values.evaluate(param.lambda_n), 0.0296, 2)
-        np.testing.assert_almost_equal(values.evaluate(param.lambda_s), 0.0027, 2)
-        np.testing.assert_almost_equal(values.evaluate(param.lambda_p), 0.0354, 2)
-        np.testing.assert_almost_equal(values.evaluate(param.lambda_cp), 3.9901, 2)
+        np.testing.assert_almost_equal(values.evaluate(param.lambda_cn(T)), 6.7513, 2)
+        np.testing.assert_almost_equal(values.evaluate(param.lambda_n(T)), 0.0296, 2)
+        np.testing.assert_almost_equal(values.evaluate(param.lambda_s(T)), 0.0027, 2)
+        np.testing.assert_almost_equal(values.evaluate(param.lambda_p(T)), 0.0354, 2)
+        np.testing.assert_almost_equal(values.evaluate(param.lambda_cp(T)), 3.9901, 2)
 
         # other thermal parameters
 
