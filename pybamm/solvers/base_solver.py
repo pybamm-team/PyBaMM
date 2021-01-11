@@ -940,10 +940,9 @@ class BaseSolver(object):
             # Add the event to the solution object
             solution.termination = "event: {}".format(termination_event)
             # Update t, y and inputs to include event time and state
-            # Note: if the final entry of t is equal to the event time to within
-            # the absolute tolerance we skip this (having duplicate entries
-            # causes an error later in ProcessedVariable)
-            if solution.t_event - solution._t[-1] > self.atol:
+            # Note: if the final entry of t is equal to the event time we skip
+            # this (having duplicate entries causes an error later in ProcessedVariable)
+            if solution.t_event != solution._t[-1]:
                 solution._t = np.concatenate((solution._t, solution.t_event))
                 if isinstance(solution.y, casadi.DM):
                     solution._y = casadi.horzcat(solution.y, solution.y_event)
