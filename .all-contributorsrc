@@ -272,6 +272,17 @@
         "example",
         "test"
       ]
+    },
+    {
+      "login": "lonnbornj",
+      "name": "lonnbornj",
+      "avatar_url": "https://avatars2.githubusercontent.com/u/35983543?v=4",
+      "profile": "https://github.com/lonnbornj",
+      "contributions": [
+        "code",
+        "test",
+        "example"
+      ]
     }
   ],
   "contributorsPerLine": 7,

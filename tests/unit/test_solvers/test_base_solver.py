@@ -71,6 +71,11 @@ class TestBaseSolver(unittest.TestCase):
         ):
             solver.solve(model, np.array([1, 2, 3, 2]))
 
+        # Check stepping with negative step size
+        dt = -1
+        with self.assertRaisesRegex(pybamm.SolverError, "Step time must be positive"):
+            solver.step(None, model, dt)
+
     def test_solution_time_length_fail(self):
         model = pybamm.BaseModel()
         v = pybamm.Scalar(1)
@@ -166,7 +171,7 @@ class TestBaseSolver(unittest.TestCase):
         np.testing.assert_array_almost_equal(init_cond, vec)
         # with casadi
         init_cond = solver_with_casadi.calculate_consistent_state(model)
-        np.testing.assert_array_almost_equal(init_cond, vec)
+        np.testing.assert_array_almost_equal(init_cond.full().flatten(), vec)
 
         # With jacobian
         def jac_dense(t, y, inputs):
@@ -281,6 +286,31 @@ class TestBaseSolver(unittest.TestCase):
         sol = solver.step(old_solution=None, model=model, dt=1.0, inputs={"a": 10})
         with self.assertRaisesRegex(pybamm.SolverError, "The model timescale"):
             sol = solver.step(old_solution=sol, model=model, dt=1.0, inputs={"a": 20})
+
+    def test_extrapolation_warnings(self):
+        # Make sure the extrapolation warnings work
+        model = pybamm.BaseModel()
+        v = pybamm.Variable("v")
+        model.rhs = {v: -1}
+        model.initial_conditions = {v: 1}
+        model.events.append(
+            pybamm.Event(
+                "Triggered event", v - 0.5, pybamm.EventType.INTERPOLANT_EXTRAPOLATION,
+            )
+        )
+        model.events.append(
+            pybamm.Event(
+                "Ignored event", v + 10, pybamm.EventType.INTERPOLANT_EXTRAPOLATION,
+            )
+        )
+        solver = pybamm.ScipySolver()
+        solver.set_up(model)
+
+        with self.assertWarns(pybamm.SolverWarning):
+            solver.step(old_solution=None, model=model, dt=1.0)
+
+        with self.assertWarns(pybamm.SolverWarning):
+            solver.solve(model, t_eval=[0, 1])
 
 
 if __name__ == "__main__":
