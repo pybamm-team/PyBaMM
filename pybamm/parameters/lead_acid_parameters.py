@@ -617,14 +617,12 @@ class LeadAcidParameters:
         self.rho_s = self.therm.rho_s
         self.rho_p = self.therm.rho_p
         self.rho_cp = self.therm.rho_cp
-        self.rho_k = self.therm.rho_k
 
         self.lambda_cn = self.therm.lambda_cn
         self.lambda_n = self.therm.lambda_n
         self.lambda_s = self.therm.lambda_s
         self.lambda_p = self.therm.lambda_p
         self.lambda_cp = self.therm.lambda_cp
-        self.lambda_k = self.therm.lambda_k
 
         self.Theta = self.therm.Theta
 

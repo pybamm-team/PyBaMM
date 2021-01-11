@@ -255,18 +255,6 @@ class ThermalParameters:
         "Dimensionless positive current collector density"
         return self.rho_cp_dim(T) * self.c_p_cp_dim(T) / self.rho_eff_dim(self.T_ref)
 
-    def rho_k(self, T):
-        "Concatenated dimensionless density"
-        return pybamm.Concatenation(
-            pybamm.FullBroadcast(
-                self.rho_n(T), ["negative electrode"], "current collector"
-            ),
-            pybamm.FullBroadcast(self.rho_s(T), ["separator"], "current collector"),
-            pybamm.FullBroadcast(
-                self.rho_p(T), ["positive electrode"], "current collector"
-            ),
-        )
-
     def lambda_cn(self, T):
         "Dimensionless negative current collector thermal conductivity"
         return self.lambda_cn_dim(T) / self.lambda_eff_dim(self.T_ref)
@@ -286,18 +274,6 @@ class ThermalParameters:
     def lambda_cp(self, T):
         "Dimensionless positive current collector thermal conductivity"
         return self.lambda_cp_dim(T) / self.lambda_eff_dim(self.T_ref)
-
-    def lambda_k(self, T):
-        "Concatenated dimensionless thermal conductivity"
-        return pybamm.Concatenation(
-            pybamm.FullBroadcast(
-                self.lambda_n, ["negative electrode"], "current collector"
-            ),
-            pybamm.FullBroadcast(self.lambda_s, ["separator"], "current collector"),
-            pybamm.FullBroadcast(
-                self.lambda_p, ["positive electrode"], "current collector"
-            ),
-        )
 
 
 thermal_parameters = ThermalParameters()
