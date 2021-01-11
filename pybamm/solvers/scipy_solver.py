@@ -19,14 +19,18 @@ class ScipySolver(pybamm.BaseSolver):
         The relative tolerance for the solver (default is 1e-6).
     atol : float, optional
         The absolute tolerance for the solver (default is 1e-6).
+    extrap_tol : float, optional
+        The tolerance to assert whether extrapolation occurs or not (default is 0).
     extra_options : dict, optional
         Any options to pass to the solver.
         Please consult `SciPy documentation <https://tinyurl.com/yafgqg9y>`_ for
         details.
     """
 
-    def __init__(self, method="BDF", rtol=1e-6, atol=1e-6, extra_options=None):
-        super().__init__(method, rtol, atol)
+    def __init__(
+        self, method="BDF", rtol=1e-6, atol=1e-6, extrap_tol=0, extra_options=None
+    ):
+        super().__init__(method, rtol, atol, extrap_tol=extrap_tol)
         self.ode_solver = True
         self.extra_options = extra_options or {}
         self.name = "Scipy solver ({})".format(method)

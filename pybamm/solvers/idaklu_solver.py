@@ -35,7 +35,9 @@ class IDAKLUSolver(pybamm.BaseSolver):
         conditions. Otherwise, the solver uses 'scipy.optimize.root' with method
         specified by 'root_method' (e.g. "lm", "hybr", ...)
     root_tol : float, optional
-        The tolerance for the initial-condition solver (default is 1e-8).
+        The tolerance for the initial-condition solver (default is 1e-6).
+    extrap_tol : float, optional
+        The tolerance to assert whether extrapolation occurs or not (default is 0).
     """
 
     def __init__(
@@ -44,13 +46,16 @@ class IDAKLUSolver(pybamm.BaseSolver):
         atol=1e-6,
         root_method="casadi",
         root_tol=1e-6,
+        extrap_tol=0,
         max_steps="deprecated",
     ):
 
         if idaklu_spec is None:
             raise ImportError("KLU is not installed")
 
-        super().__init__("ida", rtol, atol, root_method, root_tol, max_steps)
+        super().__init__(
+            "ida", rtol, atol, root_method, root_tol, extrap_tol, max_steps
+        )
         self.name = "IDA KLU solver"
 
         pybamm.citations.register("hindmarsh2000pvode")

@@ -31,7 +31,7 @@ class TestCasadiSolver(unittest.TestCase):
         solution = solver.solve(model_disc, t_eval)
         np.testing.assert_array_equal(solution.t, t_eval)
         np.testing.assert_array_almost_equal(
-            solution.y[0], np.exp(0.1 * solution.t), decimal=5
+            solution.y.full()[0], np.exp(0.1 * solution.t), decimal=5
         )
 
         # Safe mode (enforce events that won't be triggered)
@@ -41,7 +41,7 @@ class TestCasadiSolver(unittest.TestCase):
         solution = solver.solve(model, t_eval)
         np.testing.assert_array_equal(solution.t, t_eval)
         np.testing.assert_array_almost_equal(
-            solution.y[0], np.exp(0.1 * solution.t), decimal=5
+            solution.y.full()[0], np.exp(0.1 * solution.t), decimal=5
         )
 
         # Safe mode, without grid (enforce events that won't be triggered)
@@ -49,7 +49,7 @@ class TestCasadiSolver(unittest.TestCase):
         solution = solver.solve(model, t_eval)
         np.testing.assert_array_equal(solution.t, t_eval)
         np.testing.assert_array_almost_equal(
-            solution.y[0], np.exp(0.1 * solution.t), decimal=5
+            solution.y.full()[0], np.exp(0.1 * solution.t), decimal=5
         )
 
     def test_model_solver_python(self):
@@ -71,7 +71,7 @@ class TestCasadiSolver(unittest.TestCase):
         solution = solver.solve(model, t_eval)
         np.testing.assert_array_equal(solution.t, t_eval)
         np.testing.assert_array_almost_equal(
-            solution.y[0], np.exp(0.1 * solution.t), decimal=5
+            solution.y.full()[0], np.exp(0.1 * solution.t), decimal=5
         )
         pybamm.set_logging_level("WARNING")
 
@@ -121,13 +121,13 @@ class TestCasadiSolver(unittest.TestCase):
         solver = pybamm.CasadiSolver(mode="safe", rtol=1e-8, atol=1e-8)
         t_eval = np.linspace(0, 5, 100)
         solution = solver.solve(model, t_eval)
-        np.testing.assert_array_less(solution.y[0], 1.5)
-        np.testing.assert_array_less(solution.y[-1], 2.5 + 1e-10)
+        np.testing.assert_array_less(solution.y.full()[0], 1.5)
+        np.testing.assert_array_less(solution.y.full()[-1], 2.5 + 1e-10)
         np.testing.assert_array_almost_equal(
-            solution.y[0], np.exp(0.1 * solution.t), decimal=5
+            solution.y.full()[0], np.exp(0.1 * solution.t), decimal=5
         )
         np.testing.assert_array_almost_equal(
-            solution.y[-1], 2 * np.exp(0.1 * solution.t), decimal=5
+            solution.y.full()[-1], 2 * np.exp(0.1 * solution.t), decimal=5
         )
 
         # Solve using "safe" mode with debug off
@@ -135,15 +135,15 @@ class TestCasadiSolver(unittest.TestCase):
         solver = pybamm.CasadiSolver(mode="safe", rtol=1e-8, atol=1e-8, dt_max=1)
         t_eval = np.linspace(0, 5, 100)
         solution = solver.solve(model, t_eval)
-        np.testing.assert_array_less(solution.y[0], 1.5)
-        np.testing.assert_array_less(solution.y[-1], 2.5 + 1e-10)
+        np.testing.assert_array_less(solution.y.full()[0], 1.5)
+        np.testing.assert_array_less(solution.y.full()[-1], 2.5 + 1e-10)
         # test the last entry is exactly 2.5
         np.testing.assert_array_almost_equal(solution.y[-1, -1], 2.5, decimal=2)
         np.testing.assert_array_almost_equal(
-            solution.y[0], np.exp(0.1 * solution.t), decimal=5
+            solution.y.full()[0], np.exp(0.1 * solution.t), decimal=5
         )
         np.testing.assert_array_almost_equal(
-            solution.y[-1], 2 * np.exp(0.1 * solution.t), decimal=5
+            solution.y.full()[-1], 2 * np.exp(0.1 * solution.t), decimal=5
         )
         pybamm.settings.debug_mode = True
 
@@ -151,13 +151,13 @@ class TestCasadiSolver(unittest.TestCase):
         solver = pybamm.CasadiSolver(dt_max=0, rtol=1e-8, atol=1e-8)
         t_eval = np.linspace(0, 5, 100)
         solution = solver.solve(model, t_eval)
-        np.testing.assert_array_less(solution.y[0], 1.5)
-        np.testing.assert_array_less(solution.y[-1], 2.5)
+        np.testing.assert_array_less(solution.y.full()[0], 1.5)
+        np.testing.assert_array_less(solution.y.full()[-1], 2.5)
         np.testing.assert_array_almost_equal(
-            solution.y[0], np.exp(0.1 * solution.t), decimal=5
+            solution.y.full()[0], np.exp(0.1 * solution.t), decimal=5
         )
         np.testing.assert_array_almost_equal(
-            solution.y[-1], 2 * np.exp(0.1 * solution.t), decimal=5
+            solution.y.full()[-1], 2 * np.exp(0.1 * solution.t), decimal=5
         )
 
         # Test when an event returns nan
@@ -173,7 +173,7 @@ class TestCasadiSolver(unittest.TestCase):
         disc.process_model(model)
         solver = pybamm.CasadiSolver(rtol=1e-8, atol=1e-8)
         solution = solver.solve(model, t_eval)
-        np.testing.assert_array_less(solution.y[0], 1.02 + 1e-10)
+        np.testing.assert_array_less(solution.y.full()[0], 1.02 + 1e-10)
         np.testing.assert_array_almost_equal(solution.y[0, -1], 1.02, decimal=2)
 
     def test_model_step(self):
@@ -197,7 +197,9 @@ class TestCasadiSolver(unittest.TestCase):
         dt = 1
         step_sol = solver.step(None, model, dt)
         np.testing.assert_array_equal(step_sol.t, [0, dt])
-        np.testing.assert_array_almost_equal(step_sol.y[0], np.exp(0.1 * step_sol.t))
+        np.testing.assert_array_almost_equal(
+            step_sol.y.full()[0], np.exp(0.1 * step_sol.t)
+        )
 
         # Step again (return 5 points)
         step_sol_2 = solver.step(step_sol, model, dt, npts=5)
@@ -205,13 +207,13 @@ class TestCasadiSolver(unittest.TestCase):
             step_sol_2.t, np.concatenate([np.array([0]), np.linspace(dt, 2 * dt, 5)])
         )
         np.testing.assert_array_almost_equal(
-            step_sol_2.y[0], np.exp(0.1 * step_sol_2.t)
+            step_sol_2.y.full()[0], np.exp(0.1 * step_sol_2.t)
         )
 
         # Check steps give same solution as solve
         t_eval = step_sol.t
         solution = solver.solve(model, t_eval)
-        np.testing.assert_array_almost_equal(solution.y[0], step_sol.y[0])
+        np.testing.assert_array_almost_equal(solution.y.full()[0], step_sol.y.full()[0])
 
     def test_model_step_with_input(self):
         # Create model
@@ -233,7 +235,7 @@ class TestCasadiSolver(unittest.TestCase):
         dt = 0.1
         step_sol = solver.step(None, model, dt, npts=5, inputs={"a": 0.1})
         np.testing.assert_array_equal(step_sol.t, np.linspace(0, dt, 5))
-        np.testing.assert_allclose(step_sol.y[0], np.exp(0.1 * step_sol.t))
+        np.testing.assert_allclose(step_sol.y.full()[0], np.exp(0.1 * step_sol.t))
 
         # Step again with different inputs
         step_sol_2 = solver.step(step_sol, model, dt, npts=5, inputs={"a": -1})
@@ -242,7 +244,7 @@ class TestCasadiSolver(unittest.TestCase):
             step_sol_2["a"].entries, np.array([0.1, 0.1, 0.1, 0.1, 0.1, -1, -1, -1, -1])
         )
         np.testing.assert_allclose(
-            step_sol_2.y[0],
+            step_sol_2.y.full()[0],
             np.concatenate(
                 [
                     np.exp(0.1 * step_sol.t[:5]),
@@ -275,13 +277,13 @@ class TestCasadiSolver(unittest.TestCase):
         while time < end_time:
             step_solution = step_solver.step(step_solution, model, dt=dt, npts=10)
             time += dt
-        np.testing.assert_array_less(step_solution.y[0], 1.5)
-        np.testing.assert_array_less(step_solution.y[-1], 2.5001)
+        np.testing.assert_array_less(step_solution.y.full()[0], 1.5)
+        np.testing.assert_array_less(step_solution.y.full()[-1], 2.5001)
         np.testing.assert_array_almost_equal(
-            step_solution.y[0], np.exp(0.1 * step_solution.t), decimal=5
+            step_solution.y.full()[0], np.exp(0.1 * step_solution.t), decimal=5
         )
         np.testing.assert_array_almost_equal(
-            step_solution.y[-1], 2 * np.exp(0.1 * step_solution.t), decimal=4
+            step_solution.y.full()[-1], 2 * np.exp(0.1 * step_solution.t), decimal=4
         )
 
     def test_model_solver_with_inputs(self):
@@ -305,17 +307,23 @@ class TestCasadiSolver(unittest.TestCase):
         t_eval = np.linspace(0, 10, 100)
         solution = solver.solve(model, t_eval, inputs={"rate": 0.1})
         self.assertLess(len(solution.t), len(t_eval))
-        np.testing.assert_allclose(solution.y[0], np.exp(-0.1 * solution.t), rtol=1e-04)
+        np.testing.assert_allclose(
+            solution.y.full()[0], np.exp(-0.1 * solution.t), rtol=1e-04
+        )
 
         # Without grid
         solver = pybamm.CasadiSolver(mode="safe without grid", rtol=1e-8, atol=1e-8)
         t_eval = np.linspace(0, 10, 100)
         solution = solver.solve(model, t_eval, inputs={"rate": 0.1})
         self.assertLess(len(solution.t), len(t_eval))
-        np.testing.assert_allclose(solution.y[0], np.exp(-0.1 * solution.t), rtol=1e-04)
+        np.testing.assert_allclose(
+            solution.y.full()[0], np.exp(-0.1 * solution.t), rtol=1e-04
+        )
         solution = solver.solve(model, t_eval, inputs={"rate": 1.1})
         self.assertLess(len(solution.t), len(t_eval))
-        np.testing.assert_allclose(solution.y[0], np.exp(-1.1 * solution.t), rtol=1e-04)
+        np.testing.assert_allclose(
+            solution.y.full()[0], np.exp(-1.1 * solution.t), rtol=1e-04
+        )
 
     def test_model_solver_dae_inputs_in_initial_conditions(self):
         # Create model
@@ -336,10 +344,10 @@ class TestCasadiSolver(unittest.TestCase):
             model, t_eval, inputs={"rate": -1, "ic 1": 0.1, "ic 2": 2}
         )
         np.testing.assert_array_almost_equal(
-            solution.y[0], 0.1 * np.exp(-solution.t), decimal=5
+            solution.y.full()[0], 0.1 * np.exp(-solution.t), decimal=5
         )
         np.testing.assert_array_almost_equal(
-            solution.y[-1], 0.1 * np.exp(-solution.t), decimal=5
+            solution.y.full()[-1], 0.1 * np.exp(-solution.t), decimal=5
         )
 
         # Solve again with different initial conditions
@@ -347,10 +355,10 @@ class TestCasadiSolver(unittest.TestCase):
             model, t_eval, inputs={"rate": -0.1, "ic 1": 1, "ic 2": 3}
         )
         np.testing.assert_array_almost_equal(
-            solution.y[0], 1 * np.exp(-0.1 * solution.t), decimal=5
+            solution.y.full()[0], 1 * np.exp(-0.1 * solution.t), decimal=5
         )
         np.testing.assert_array_almost_equal(
-            solution.y[-1], 1 * np.exp(-0.1 * solution.t), decimal=5
+            solution.y.full()[-1], 1 * np.exp(-0.1 * solution.t), decimal=5
         )
 
     def test_model_solver_with_external(self):
@@ -375,7 +383,9 @@ class TestCasadiSolver(unittest.TestCase):
         solver = pybamm.CasadiSolver(rtol=1e-8, atol=1e-8)
         t_eval = np.linspace(0, 10, 100)
         solution = solver.solve(model, t_eval, external_variables={"var2": 0.5})
-        np.testing.assert_allclose(solution.y[0], 1 - 0.5 * solution.t, rtol=1e-06)
+        np.testing.assert_allclose(
+            solution.y.full()[0], 1 - 0.5 * solution.t, rtol=1e-06
+        )
 
     def test_model_solver_with_non_identity_mass(self):
         model = pybamm.BaseModel()
@@ -403,8 +413,8 @@ class TestCasadiSolver(unittest.TestCase):
         t_eval = np.linspace(0, 1, 100)
         solution = solver.solve(model, t_eval)
         np.testing.assert_array_equal(solution.t, t_eval)
-        np.testing.assert_allclose(solution.y[0], np.exp(0.1 * solution.t))
-        np.testing.assert_allclose(solution.y[-1], 2 * np.exp(0.1 * solution.t))
+        np.testing.assert_allclose(solution.y.full()[0], np.exp(0.1 * solution.t))
+        np.testing.assert_allclose(solution.y.full()[-1], 2 * np.exp(0.1 * solution.t))
 
     def test_dae_solver_algebraic_model(self):
         model = pybamm.BaseModel()
@@ -421,6 +431,62 @@ class TestCasadiSolver(unittest.TestCase):
             pybamm.SolverError, "Cannot use CasadiSolver to solve algebraic model"
         ):
             solver.solve(model, t_eval)
+
+    def test_interpolant_extrapolate(self):
+        model = pybamm.lithium_ion.DFN()
+        param = pybamm.ParameterValues(chemistry=pybamm.parameter_sets.Chen2020)
+        experiment = pybamm.Experiment(
+            ["Charge at 1C until 4.6 V"], period="10 seconds"
+        )
+
+        param["Upper voltage cut-off [V]"] = 4.8
+
+        sim = pybamm.Simulation(
+            model,
+            parameter_values=param,
+            experiment=experiment,
+            solver=pybamm.CasadiSolver(
+                mode="safe",
+                dt_max=0.001,
+                extrap_tol=1e-3,
+                extra_options_setup={"max_num_steps": 500},
+            ),
+        )
+        with self.assertRaisesRegex(pybamm.SolverError, "interpolation bounds"):
+            sim.solve()
+
+        ci = param["Initial concentration in positive electrode [mol.m-3]"]
+        param["Initial concentration in positive electrode [mol.m-3]"] = 0.8 * ci
+
+        sim = pybamm.Simulation(
+            model,
+            parameter_values=param,
+            experiment=experiment,
+            solver=pybamm.CasadiSolver(mode="safe", dt_max=0.05),
+        )
+        with self.assertRaisesRegex(pybamm.SolverError, "interpolation bounds"):
+            sim.solve()
+
+    def test_casadi_safe_no_termination(self):
+        model = pybamm.BaseModel()
+        v = pybamm.Variable("v")
+        model.rhs = {v: -1}
+        model.initial_conditions = {v: 1}
+        model.events.append(
+            pybamm.Event(
+                "Triggered event", v - 0.5, pybamm.EventType.INTERPOLANT_EXTRAPOLATION,
+            )
+        )
+        model.events.append(
+            pybamm.Event(
+                "Ignored event", v + 10, pybamm.EventType.INTERPOLANT_EXTRAPOLATION,
+            )
+        )
+        solver = pybamm.CasadiSolver(mode="safe")
+        solver.set_up(model)
+
+        with self.assertRaisesRegex(pybamm.SolverError, "interpolation bounds"):
+            solver.solve(model, t_eval=[0, 1])
 
 
 class TestCasadiSolverSensitivity(unittest.TestCase):
