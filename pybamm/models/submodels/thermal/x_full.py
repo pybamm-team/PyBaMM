@@ -46,20 +46,22 @@ class OneDimensionalX(BaseThermal):
 
     def set_rhs(self, variables):
         T = variables["Cell temperature"]
+        T_n, T_s, T_p = T.orphans
+
         Q = variables["Total heating"]
 
         # Define volumetric heat capacity
         rho_k = pybamm.Concatenation(
-            self.param.rho_n(pybamm.standard_variables.T_n),
-            self.param.rho_s(pybamm.standard_variables.T_s),
-            self.param.rho_p(pybamm.standard_variables.T_p),
+            self.param.rho_n(T_n),
+            self.param.rho_s(T_s),
+            self.param.rho_p(T_p),
         )
 
         # Devine thermal conductivity
         lambda_k = pybamm.Concatenation(
-            self.param.lambda_n(pybamm.standard_variables.T_n),
-            self.param.lambda_s(pybamm.standard_variables.T_s),
-            self.param.lambda_p(pybamm.standard_variables.T_p),
+            self.param.lambda_n(T_n),
+            self.param.lambda_s(T_s),
+            self.param.lambda_p(T_p),
         )
 
         # Fourier's law for heat flux
