@@ -52,7 +52,7 @@ class ElectrodeSOH(pybamm.BaseModel):
         }
         self.initial_conditions = {
             x_100: 1,
-            C: C_p,
+            C: param.Q,
         }
         self.variables = {
             "x_100": x_100,

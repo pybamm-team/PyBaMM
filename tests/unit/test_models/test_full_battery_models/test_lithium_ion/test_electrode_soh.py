@@ -11,7 +11,7 @@ class TestElectrodeSOH(unittest.TestCase):
 
         param = pybamm.LithiumIonParameters()
         parameter_values = pybamm.ParameterValues(
-            chemistry=pybamm.parameter_sets.Mohtat2020
+            chemistry=pybamm.parameter_sets.Marquis2019
         )
         sim = pybamm.Simulation(model, parameter_values=parameter_values)
 
@@ -34,8 +34,8 @@ class TestElectrodeSOH(unittest.TestCase):
         )
         self.assertAlmostEqual(sol["Up(y_100) - Un(x_100)"].data[0], V_max)
         self.assertAlmostEqual(sol["Up(y_0) - Un(x_0)"].data[0], V_min)
-        self.assertEqual(sol["n_Li_100"].data, n_Li)
-        self.assertEqual(sol["n_Li_0"].data, n_Li)
+        self.assertAlmostEqual(sol["n_Li_100"].data[0], n_Li)
+        self.assertAlmostEqual(sol["n_Li_0"].data[0], n_Li)
 
 
 if __name__ == "__main__":
