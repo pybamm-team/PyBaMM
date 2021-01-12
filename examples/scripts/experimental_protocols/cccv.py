@@ -7,11 +7,13 @@ import matplotlib.pyplot as plt
 pybamm.set_logging_level("INFO")
 experiment = pybamm.Experiment(
     [
-        "Discharge at C/10 for 10 hours or until 3.3 V",
-        "Rest for 1 hour",
-        "Charge at 1 A until 4.1 V",
-        "Hold at 4.1 V until 50 mA",
-        "Rest for 1 hour",
+        (
+            "Discharge at C/10 for 10 hours or until 3.3 V",
+            "Rest for 1 hour",
+            "Charge at 1 A until 4.1 V",
+            "Hold at 4.1 V until 50 mA",
+            "Rest for 1 hour",
+        ),
     ]
     * 3
 )
@@ -20,13 +22,10 @@ sim = pybamm.Simulation(model, experiment=experiment, solver=pybamm.CasadiSolver
 sim.solve()
 
 # Plot voltages from the discharge segments only
-# Note: an additional sub-solution is created each time an event is triggered
-# so we need to specify the index for each discharge
-discharge_idx = [0, 7, 14]
 fig, ax = plt.subplots()
-for i, idx in enumerate(discharge_idx):
+for i in range(3):
     # Extract sub solutions
-    sol = sim.solution.sub_solutions[idx]
+    sol = sim.solution.cycles[i][0]
     # Extract variables
     t = sol["Time [h]"].entries
     V = sol["Terminal voltage [V]"].entries

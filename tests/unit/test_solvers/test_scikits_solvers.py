@@ -79,7 +79,7 @@ class TestScikitsSolvers(unittest.TestCase):
         solver.set_up(model)
         solver._set_initial_conditions(model, {}, True)
         # check y0
-        np.testing.assert_array_equal(model.y0, [0, 0])
+        np.testing.assert_array_equal(model.y0.full().flatten(), [0, 0])
         # check dae solutions
         solution = solver.solve(model, t_eval)
         np.testing.assert_array_equal(solution.t, t_eval)

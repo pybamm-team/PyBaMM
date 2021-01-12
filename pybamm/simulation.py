@@ -388,7 +388,7 @@ class Simulation:
                 # For drive cycles (current provided as data) we perform additional
                 # tests on t_eval (if provided) to ensure the returned solution
                 # captures the input.
-                time_data = self._parameter_values["Current function [A]"].data[:, 0]
+                time_data = self._parameter_values["Current function [A]"].x[0]
                 # If no t_eval is provided, we use the times provided in the data.
                 if t_eval is None:
                     pybamm.logger.info("Setting t_eval as specified by the data")
@@ -467,6 +467,19 @@ class Simulation:
                         "or reducing the period.\n\n"
                     )
                     break
+            if hasattr(self.solution, "_sub_solutions"):
+                # Construct solution.cycles (a list of tuples) from sub_solutions
+                self.solution.cycles = []
+                for cycle_num, cycle_length in enumerate(self.experiment.cycle_lengths):
+                    cycle_start_idx = sum(self.experiment.cycle_lengths[0:cycle_num])
+                    self.solution.cycles.append(
+                        tuple(
+                            [
+                                self.solution.sub_solutions[cycle_start_idx + idx]
+                                for idx in range(cycle_length)
+                            ]
+                        )
+                    )
             pybamm.logger.info(
                 "Finish experiment simulation, took {}".format(timer.time())
             )
@@ -503,35 +516,6 @@ class Simulation:
         )
 
         return self.solution
-
-    def get_variable_array(self, *variables):
-        """
-        A helper function to easily obtain a dictionary of arrays of values
-        for a list of variables at the latest timestep.
-
-        Parameters
-        ----------
-        variable: str
-            The name of the variable/variables you wish to obtain the arrays for.
-
-        Returns
-        -------
-        variable_arrays: dict
-            A dictionary of the variable names and their corresponding
-            arrays.
-        """
-
-        variable_arrays = [
-            self.built_model.variables[var].evaluate(
-                self.solution.t[-1], self.solution.y[:, -1]
-            )
-            for var in variables
-        ]
-
-        if len(variable_arrays) == 1:
-            return variable_arrays[0]
-        else:
-            return tuple(variable_arrays)
 
     def plot(self, output_variables=None, quick_plot_vars=None, **kwargs):
         """
@@ -682,6 +666,8 @@ class Simulation:
             and self._solver.integrator_specs != {}
         ):
             self._solver.integrator_specs = {}
+        if self.solution is not None:
+            self.solution.clear_casadi_attributes()
         with open(filename, "wb") as f:
             pickle.dump(self, f, pickle.HIGHEST_PROTOCOL)
 

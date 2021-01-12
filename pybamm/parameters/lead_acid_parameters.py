@@ -225,7 +225,7 @@ class LeadAcidParameters:
         self.R_sei_dimensional = pybamm.Scalar(0)
         self.beta_sei_n = pybamm.Scalar(0)
 
-    def t_plus(self, c_e):
+    def t_plus(self, c_e, T):
         "Dimensionless transference number (i.e. c_e is dimensionless)"
         inputs = {"Electrolyte concentration [mol.m-3]": c_e * self.c_e_typ}
         return pybamm.FunctionParameter("Cation transference number", inputs)
@@ -440,7 +440,7 @@ class LeadAcidParameters:
             self.c_e_typ
             * self.M_e
             / self.rho_typ
-            * (self.t_plus(1) + self.M_minus / self.M_e)
+            * (self.t_plus(1, self.T_ref) + self.M_minus / self.M_e)
         )
         # Migrative kinematic relationship coefficient (electrolyte)
         self.omega_c_e = (
@@ -700,7 +700,7 @@ class LeadAcidParameters:
         "Thermodynamic factor"
         return (
             self.chi_dimensional(self.c_e_typ * c_e)
-            * (2 * (1 - self.t_plus(c_e)))
+            * (2 * (1 - self.t_plus(c_e, T)))
             / (
                 self.V_w
                 * self.c_T(self.c_e_typ * c_e, self.c_e_typ * c_ox, self.c_e_typ * c_hy)

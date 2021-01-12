@@ -373,10 +373,7 @@ class LithiumIonParameters:
         Dimensional entropic change of the negative electrode open-circuit
         potential [V.K-1]
         """
-        inputs = {
-            "Negative particle stoichiometry": sto,
-            "Max negative particle concentration [mol.m-3]": self.c_n_max,
-        }
+        inputs = {"Negative particle stoichiometry": sto}
         return pybamm.FunctionParameter(
             "Negative electrode OCP entropic change [V.K-1]", inputs
         )
@@ -386,10 +383,7 @@ class LithiumIonParameters:
         Dimensional entropic change of the positive electrode open-circuit
         potential [V.K-1]
         """
-        inputs = {
-            "Positive particle stoichiometry": sto,
-            "Max positive particle concentration [mol.m-3]": self.c_p_max,
-        }
+        inputs = {"Positive particle stoichiometry": sto}
         return pybamm.FunctionParameter(
             "Positive electrode OCP entropic change [V.K-1]", inputs
         )
@@ -767,14 +761,18 @@ class LithiumIonParameters:
             2*(1-t_plus) for Stefan-Maxwell,
         see Bizeray et al (2016) "Resolving a discrepancy ...".
         """
-        return (2 * (1 - self.t_plus(c_e))) * (self.one_plus_dlnf_dlnc(c_e, T))
+        return (2 * (1 - self.t_plus(c_e, T))) * (self.one_plus_dlnf_dlnc(c_e, T))
 
-    def t_plus(self, c_e):
-        "Dimensionless transference number (i.e. c_e is dimensionless)"
-        inputs = {"Electrolyte concentration [mol.m-3]": c_e * self.c_e_typ}
+    def t_plus(self, c_e, T):
+        "Cation transference number (dimensionless)"
+        inputs = {
+            "Electrolyte concentration [mol.m-3]": c_e * self.c_e_typ,
+            "Temperature [K]": self.Delta_T * T + self.T_ref,
+        }
         return pybamm.FunctionParameter("Cation transference number", inputs)
 
     def one_plus_dlnf_dlnc(self, c_e, T):
+        "Thermodynamic factor (dimensionless)"
         inputs = {
             "Electrolyte concentration [mol.m-3]": c_e * self.c_e_typ,
             "Temperature [K]": self.Delta_T * T + self.T_ref,

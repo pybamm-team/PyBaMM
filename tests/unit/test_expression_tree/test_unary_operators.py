@@ -16,11 +16,10 @@ class TestUnaryOperators(unittest.TestCase):
         self.assertEqual(un.domain, a.domain)
 
         # with number
-        absval = pybamm.AbsoluteValue(-10)
-        self.assertEqual(absval.evaluate(), 10)
-
-        log = pybamm.log(10)
-        self.assertEqual(log.evaluate(), np.log(10))
+        a = pybamm.InputParameter("a")
+        absval = pybamm.AbsoluteValue(-a)
+        self.assertEqual(absval.evaluate(inputs={"a": 10}), 10)
+        self.assertEqual(absval.evaluate(inputs={"a": 10}, known_evals={})[0], 10)
 
     def test_negation(self):
         a = pybamm.Symbol("a")
