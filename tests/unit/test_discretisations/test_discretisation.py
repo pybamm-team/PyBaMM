@@ -914,6 +914,19 @@ class TestDiscretise(unittest.TestCase):
         )
         discretised_model.check_well_posedness()
 
+    def test_initial_condition_bounds(self):
+        # concatenation of variables as the key
+        c = pybamm.Variable("c", bounds=(0, 1))
+        model = pybamm.BaseModel()
+        model.rhs = {c: 1}
+        model.initial_conditions = {c: pybamm.Scalar(3)}
+
+        disc = pybamm.Discretisation()
+        with self.assertRaisesRegex(
+            pybamm.ModelError, "initial condition is outside of variable bounds"
+        ):
+            disc.process_model(model)
+
     def test_process_empty_model(self):
         model = pybamm.BaseModel()
         disc = pybamm.Discretisation()
