@@ -237,43 +237,67 @@ class ThermalParameters:
 
     def rho_cn(self, T):
         "Dimensionless negative current collector density"
-        return self.rho_cn_dim(T) * self.c_p_cn_dim(T) / self.rho_eff_dim(self.T_ref)
+        T_dim = self.Delta_T * T + self.T_ref
+        return (
+            self.rho_cn_dim(T_dim)
+            * self.c_p_cn_dim(T_dim)
+            / self.rho_eff_dim(self.T_ref)
+        )
 
     def rho_n(self, T):
         "Dimensionless negative electrode density"
-        return self.rho_n_dim(T) * self.c_p_n_dim(T) / self.rho_eff_dim(self.T_ref)
+        T_dim = self.Delta_T * T + self.T_ref
+        return (
+            self.rho_n_dim(T_dim) * self.c_p_n_dim(T_dim) / self.rho_eff_dim(self.T_ref)
+        )
 
     def rho_s(self, T):
         "Dimensionless separator density"
-        return self.rho_s_dim(T) * self.c_p_s_dim(T) / self.rho_eff_dim(self.T_ref)
+        T_dim = self.Delta_T * T + self.T_ref
+        return (
+            self.rho_s_dim(T_dim) * self.c_p_s_dim(T_dim) / self.rho_eff_dim(self.T_ref)
+        )
 
     def rho_p(self, T):
         "Dimensionless positive electrode density"
-        return self.rho_p_dim(T) * self.c_p_p_dim(T) / self.rho_eff_dim(self.T_ref)
+        T_dim = self.Delta_T * T + self.T_ref
+        return (
+            self.rho_p_dim(T_dim) * self.c_p_p_dim(T_dim) / self.rho_eff_dim(self.T_ref)
+        )
 
     def rho_cp(self, T):
         "Dimensionless positive current collector density"
-        return self.rho_cp_dim(T) * self.c_p_cp_dim(T) / self.rho_eff_dim(self.T_ref)
+        T_dim = self.Delta_T * T + self.T_ref
+        return (
+            self.rho_cp_dim(T_dim)
+            * self.c_p_cp_dim(T_dim)
+            / self.rho_eff_dim(self.T_ref)
+        )
 
     def lambda_cn(self, T):
         "Dimensionless negative current collector thermal conductivity"
-        return self.lambda_cn_dim(T) / self.lambda_eff_dim(self.T_ref)
+        T_dim = self.Delta_T * T + self.T_ref
+        return self.lambda_cn_dim(T_dim) / self.lambda_eff_dim(self.T_ref)
 
     def lambda_n(self, T):
         "Dimensionless negative electrode thermal conductivity"
-        return self.lambda_n_dim(T) / self.lambda_eff_dim(self.T_ref)
+        T_dim = self.Delta_T * T + self.T_ref
+        return self.lambda_n_dim(T_dim) / self.lambda_eff_dim(self.T_ref)
 
     def lambda_s(self, T):
         "Dimensionless separator thermal conductivity"
-        return self.lambda_s_dim(T) / self.lambda_eff_dim(self.T_ref)
+        T_dim = self.Delta_T * T + self.T_ref
+        return self.lambda_s_dim(T_dim) / self.lambda_eff_dim(self.T_ref)
 
     def lambda_p(self, T):
         "Dimensionless positive electrode thermal conductivity"
-        return self.lambda_p_dim(T) / self.lambda_eff_dim(self.T_ref)
+        T_dim = self.Delta_T * T + self.T_ref
+        return self.lambda_p_dim(T_dim) / self.lambda_eff_dim(self.T_ref)
 
     def lambda_cp(self, T):
         "Dimensionless positive current collector thermal conductivity"
-        return self.lambda_cp_dim(T) / self.lambda_eff_dim(self.T_ref)
+        T_dim = self.Delta_T * T + self.T_ref
+        return self.lambda_cp_dim(T_dim) / self.lambda_eff_dim(self.T_ref)
 
 
 thermal_parameters = ThermalParameters()
