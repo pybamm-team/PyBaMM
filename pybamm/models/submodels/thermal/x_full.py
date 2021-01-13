@@ -46,15 +46,31 @@ class OneDimensionalX(BaseThermal):
 
     def set_rhs(self, variables):
         T = variables["Cell temperature"]
+        T_n, T_s, T_p = T.orphans
+
         Q = variables["Total heating"]
 
+        # Define volumetric heat capacity
+        rho_k = pybamm.Concatenation(
+            self.param.rho_n(T_n),
+            self.param.rho_s(T_s),
+            self.param.rho_p(T_p),
+        )
+
+        # Devine thermal conductivity
+        lambda_k = pybamm.Concatenation(
+            self.param.lambda_n(T_n),
+            self.param.lambda_s(T_s),
+            self.param.lambda_p(T_p),
+        )
+
         # Fourier's law for heat flux
-        q = -self.param.lambda_k * pybamm.grad(T)
+        q = -lambda_k * pybamm.grad(T)
 
         # N.B only y-z surface cooling is implemented for this model
         self.rhs = {
             T: (-pybamm.div(q) / self.param.delta ** 2 + self.param.B * Q)
-            / (self.param.C_th * self.param.rho_k)
+            / (self.param.C_th * rho_k)
         }
 
     def set_boundary_conditions(self, variables):
@@ -68,11 +84,15 @@ class OneDimensionalX(BaseThermal):
         self.boundary_conditions = {
             T: {
                 "left": (
-                    self.param.h_cn * (T_n_left - T_amb) / self.param.lambda_n,
+                    self.param.h_cn
+                    * (T_n_left - T_amb)
+                    / self.param.lambda_n(T_n_left),
                     "Neumann",
                 ),
                 "right": (
-                    -self.param.h_cp * (T_p_right - T_amb) / self.param.lambda_p,
+                    -self.param.h_cp
+                    * (T_p_right - T_amb)
+                    / self.param.lambda_p(T_p_right),
                     "Neumann",
                 ),
             }
