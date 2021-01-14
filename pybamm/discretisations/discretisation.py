@@ -1154,21 +1154,12 @@ class Discretisation(object):
                     "{} for variable '{}'.".format(bounds, var)
                 )
 
-        # Concatenated
-        if not isinstance(y0.evaluate(t=0, inputs="shape test"), np.ndarray):
-            raise pybamm.ModelError(
-                "Concatenated initial_conditions must be numpy array after "
-                "discretisation but they are {}.".format(
-                    type(y0.evaluate(t=0, inputs="shape test"))
-                )
-            )
-
         # Check initial conditions and model equations have the same shape
         # Individual
         for var in model.rhs.keys():
             if model.rhs[var].shape != model.initial_conditions[var].shape:
                 raise pybamm.ModelError(
-                    "rhs and initial_conditions must have the same shape after "
+                    "rhs and initial conditions must have the same shape after "
                     "discretisation but rhs.shape = "
                     "{} and initial_conditions.shape = {} for variable '{}'.".format(
                         model.rhs[var].shape, model.initial_conditions[var].shape, var
@@ -1177,7 +1168,7 @@ class Discretisation(object):
         for var in model.algebraic.keys():
             if model.algebraic[var].shape != model.initial_conditions[var].shape:
                 raise pybamm.ModelError(
-                    "algebraic and initial_conditions must have the same shape after "
+                    "algebraic and initial conditions must have the same shape after "
                     "discretisation but algebraic.shape = "
                     "{} and initial_conditions.shape = {} for variable '{}'.".format(
                         model.algebraic[var].shape,
@@ -1185,22 +1176,6 @@ class Discretisation(object):
                         var,
                     )
                 )
-        # Concatenated
-        if (
-            model.concatenated_rhs.shape[0] + model.concatenated_algebraic.shape[0]
-            != y0.shape[0]
-        ):
-            raise pybamm.ModelError(
-                (
-                    "'Concatenation of (rhs, algebraic)' and 'initial_conditions' must "
-                    "have the same shape after discretisation but rhs.shape = {}, "
-                    "algebraic.shape = {}, and initial_conditions.shape = {}."
-                ).format(
-                    model.concatenated_rhs.shape,
-                    model.concatenated_algebraic.shape,
-                    y0.shape,
-                )
-            )
 
     def check_variables(self, model):
         """

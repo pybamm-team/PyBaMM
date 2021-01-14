@@ -1298,6 +1298,29 @@ class TestDiscretise(unittest.TestCase):
         with self.assertRaisesRegex(pybamm.ModelError, "Boundary condition at r = 0"):
             disc.process_model(model)
 
+    def test_check_model_errors(self):
+        disc = pybamm.Discretisation()
+        model = pybamm.BaseModel()
+        var = pybamm.Variable("var")
+        model.rhs = {var: pybamm.Vector([1, 1])}
+        model.initial_conditions = {var: 1}
+        with self.assertRaisesRegex(
+            pybamm.ModelError, "initial conditions must be numpy array"
+        ):
+            disc.check_model(model)
+        model.initial_conditions = {var: pybamm.Vector([1, 1, 1])}
+        with self.assertRaisesRegex(
+            pybamm.ModelError, "rhs and initial conditions must have the same shape"
+        ):
+            disc.check_model(model)
+        model.rhs = {}
+        model.algebraic = {var: pybamm.Vector([1, 1])}
+        with self.assertRaisesRegex(
+            pybamm.ModelError,
+            "algebraic and initial conditions must have the same shape",
+        ):
+            disc.check_model(model)
+
 
 if __name__ == "__main__":
     print("Add -v for more debug output")
