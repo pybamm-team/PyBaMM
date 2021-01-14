@@ -1124,7 +1124,6 @@ class Discretisation(object):
     def check_initial_conditions(self, model):
 
         # Check initial conditions are a numpy array
-        y0 = model.concatenated_initial_conditions
         # Individual
         for var, eqn in model.initial_conditions.items():
             ic_eval = eqn.evaluate(t=0, inputs="shape test")
