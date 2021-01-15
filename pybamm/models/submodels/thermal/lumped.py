@@ -105,7 +105,7 @@ class Lumped(BaseThermal):
             T_vol_av: (
                 self.param.B * Q_vol_av + total_cooling_coefficient * (T_vol_av - T_amb)
             )
-            / (self.param.C_th * self.param.rho)
+            / (self.param.C_th * self.param.rho(T_vol_av))
         }
 
     def set_initial_conditions(self, variables):

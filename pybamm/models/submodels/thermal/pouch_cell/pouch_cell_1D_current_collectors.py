@@ -85,7 +85,7 @@ class CurrentCollector1D(BaseThermal):
                 + self.param.B * Q_av
                 + total_cooling_coefficient * (T_av - T_amb)
             )
-            / (self.param.C_th * self.param.rho)
+            / (self.param.C_th * self.param.rho(T_av))
         }
 
     def set_boundary_conditions(self, variables):
