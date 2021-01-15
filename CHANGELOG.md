@@ -2,9 +2,10 @@
 
 ## Features
 
-
+-   Added error message if initial conditions are outside the bounds of a variable ([#1326](https://github.com/pybamm-team/PyBaMM/pull/1326))
+-   Added temperature dependence to density, heat capacity and thermal conductivity ([#1323](https://github.com/pybamm-team/PyBaMM/pull/1323))
 -   Updated solvers' method `solve()` so it can take a list of inputs dictionaries as the `inputs` keyword argument. In this case the model is solved for each input set in the list, and a list of solutions mapping the set of inputs to the solutions is returned. Note that `solve()` can still take a single dictionary as the `inputs` keyword argument. In this case the behaviour is unchanged compared to previous versions.
--   Added temperature dependence to the transference number (`t_plus`) ([1317](https://github.com/pybamm-team/PyBaMM/pull/1317))
+-   Added temperature dependence to the transference number (`t_plus`) ([#1317](https://github.com/pybamm-team/PyBaMM/pull/1317))
 -   Added new functionality for `Interpolant` ([#1312](https://github.com/pybamm-team/PyBaMM/pull/1312))
 -   Added option to express experiments (and extract solutions) in terms of cycles of operating condition ([#1309](https://github.com/pybamm-team/PyBaMM/pull/1309))
 -   The event time and state are now returned as part of `Solution.t` and `Solution.y` so that the event is accurately captured in the returned solution ([#1300](https://github.com/pybamm-team/PyBaMM/pull/1300))
