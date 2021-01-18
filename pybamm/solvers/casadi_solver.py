@@ -165,7 +165,7 @@ class CasadiSolver(pybamm.BaseSolver):
                                 == pybamm.EventType.INTERPOLANT_EXTRAPOLATION
                                 and (
                                     event.expression.evaluate(
-                                        t, y0.full(), inputs=inputs,
+                                        t, y0.full(), inputs=inputs
                                     )
                                     < self.extrap_tol
                                 ).any()
@@ -297,9 +297,21 @@ class CasadiSolver(pybamm.BaseSolver):
                     event_ind = np.where(new_event_signs != init_event_signs)[0]
                     active_events = [model.terminate_events_eval[i] for i in event_ind]
 
+                    # solve again with a more dense t_window
+                    if len(t_window) < 10:
+                        t_window_dense = np.linspace(t_window[0], t_window[-1], 10)
+                        if self.mode == "safe":
+                            self.create_integrator(model, inputs, t_window_dense)
+                        current_step_sol = self._run_integrator(
+                            model, y0, inputs, t_window_dense
+                        )
+                    integration_time = current_step_sol.integration_time
+
                     # create interpolant to evaluate y in the current integration
                     # window
-                    y_sol = interp1d(current_step_sol.t, current_step_sol.y)
+                    y_sol = interp1d(
+                        current_step_sol.t, current_step_sol.y, kind="cubic"
+                    )
 
                     # loop over events to compute the time at which they were triggered
                     t_events = [None] * len(active_events)
@@ -332,21 +344,16 @@ class CasadiSolver(pybamm.BaseSolver):
                     t_event = np.nanmin(t_events)
                     y_event = y_sol(t_event)
 
-                    # solve again until the event time
-                    # See comments above on creating t_window
+                    # call interpolant at times in t_eval and create solution
                     t_window = np.concatenate(
                         ([t], t_eval[(t_eval > t) & (t_eval < t_event)])
                     )
-                    if len(t_window) == 1:
-                        t_window = np.array([t, t_event])
-
-                    if self.mode == "safe":
-                        self.create_integrator(model, inputs, t_window)
-                    current_step_sol = self._run_integrator(model, y0, inputs, t_window)
-
+                    y_sol_casadi = casadi.DM(y_sol(t_window))
+                    current_step_sol = pybamm.Solution(t_window, y_sol_casadi)
+                    current_step_sol.integration_time = integration_time
                     # assign temporary solve time
                     current_step_sol.solve_time = np.nan
-                    # append solution from the current step to solution
+
                     if solution is None:
                         solution = current_step_sol
                     else:
