@@ -18,7 +18,7 @@ class BasePlating(BaseInterface):
     References
     ----------
     .. [1] SEJ O'Kane, ID Campbell, MWJ Marzook, GJ Offer and M Marinescu. "Physical
-           Origin of the Differential Voltage Minimum Associated with Li Plating in 
+           Origin of the Differential Voltage Minimum Associated with Li Plating in
            Lithium-Ion Batteries". Journal of The Electrochemical Society,
            167:090540, 2019
 
@@ -74,24 +74,26 @@ class BasePlating(BaseInterface):
             f"{Domain} Li plating thickness [m]": L_plated_Li * L_scale,
             f"X-averaged {domain} Li plating thickness [m]": L_plated_Li_av * L_scale,
             f"Loss of lithium to {domain} Li plating [mol]": Q_plated_Li * c_scale,
-            f"Loss of capacity to {domain} Li plating [A.h]": Q_plated_Li * c_scale
-            * param.F / 3600,
+            f"Loss of capacity to {domain} Li plating [A.h]": Q_plated_Li
+            * c_scale
+            * param.F
+            / 3600,
         }
 
         return variables
 
     def _get_standard_reaction_variables(self, j_stripping):
         """
-            A private function to obtain the standard variables which
-            can be derived from the Li stripping interfacial reaction current
-            Parameters
-            ----------
-            j_stripping : :class:`pybamm.Symbol`
-                The net Li stripping interfacial reaction current.
-            Returns
-            -------
-            variables : dict
-                The variables which can be derived from the plated Li thickness.
+        A private function to obtain the standard variables which
+        can be derived from the Li stripping interfacial reaction current
+        Parameters
+        ----------
+        j_stripping : :class:`pybamm.Symbol`
+            The net Li stripping interfacial reaction current.
+        Returns
+        -------
+        variables : dict
+            The variables which can be derived from the plated Li thickness.
         """
         # Set scales to one for the "no plating" model so that they are not required
         # by parameter values in general

@@ -18,7 +18,7 @@ class ReversiblePlating(BasePlating):
     References
     ----------
     .. [1] SEJ O'Kane, ID Campbell, MWJ Marzook, GJ Offer and M Marinescu. "Physical
-           Origin of the Differential Voltage Minimum Associated with Li Plating in 
+           Origin of the Differential Voltage Minimum Associated with Li Plating in
            Lithium-Ion Batteries". Journal of The Electrochemical Society,
            167:090540, 2019
 

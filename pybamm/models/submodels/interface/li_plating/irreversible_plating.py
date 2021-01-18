@@ -18,7 +18,7 @@ class IrreversiblePlating(BasePlating):
     References
     ----------
     .. [1] SEJ O'Kane, ID Campbell, MWJ Marzook, GJ Offer and M Marinescu. "Physical
-           Origin of the Differential Voltage Minimum Associated with Li Plating in 
+           Origin of the Differential Voltage Minimum Associated with Li Plating in
            Lithium-Ion Batteries". Journal of The Electrochemical Society,
            167:090540, 2019
 
@@ -50,8 +50,10 @@ class IrreversiblePlating(BasePlating):
 
         # need to revise for thermal case
         # j_stripping is always negative, because there is no stripping, only plating
-        j_stripping = -(1 / C_plating) * c_e_n * (
-            pybamm.exp(-0.5 * (phi_s_n - phi_e_n + phi_ref + eta_sei))
+        j_stripping = (
+            -(1 / C_plating)
+            * c_e_n
+            * (pybamm.exp(-0.5 * (phi_s_n - phi_e_n + phi_ref + eta_sei)))
         )
 
         variables.update(self._get_standard_reaction_variables(j_stripping))
