@@ -467,6 +467,27 @@ class TestCasadiSolver(unittest.TestCase):
         with self.assertRaisesRegex(pybamm.SolverError, "interpolation bounds"):
             sim.solve()
 
+    def test_casadi_safe_no_termination(self):
+        model = pybamm.BaseModel()
+        v = pybamm.Variable("v")
+        model.rhs = {v: -1}
+        model.initial_conditions = {v: 1}
+        model.events.append(
+            pybamm.Event(
+                "Triggered event", v - 0.5, pybamm.EventType.INTERPOLANT_EXTRAPOLATION,
+            )
+        )
+        model.events.append(
+            pybamm.Event(
+                "Ignored event", v + 10, pybamm.EventType.INTERPOLANT_EXTRAPOLATION,
+            )
+        )
+        solver = pybamm.CasadiSolver(mode="safe")
+        solver.set_up(model)
+
+        with self.assertRaisesRegex(pybamm.SolverError, "interpolation bounds"):
+            solver.solve(model, t_eval=[0, 1])
+
 
 class TestCasadiSolverSensitivity(unittest.TestCase):
     def test_solve_with_symbolic_input(self):

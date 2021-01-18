@@ -97,6 +97,26 @@ class TestStandardParametersLeadAcid(unittest.TestCase):
         )
         self.assertEqual(dimensionless_current_density_eval.evaluate(t=3), 1)
 
+    def test_thermal_parameters(self):
+        values = pybamm.lead_acid.BaseModel().default_parameter_values
+        param = pybamm.LeadAcidParameters()
+        T = 1   # dummy temperature as the values are constant
+
+        # Density
+        self.assertAlmostEqual(values.evaluate(param.rho_cn(T)), 0.8810, places=2)
+        self.assertAlmostEqual(values.evaluate(param.rho_n(T)), 0.8810, places=2)
+        self.assertAlmostEqual(values.evaluate(param.rho_s(T)), 0.7053, places=2)
+        self.assertAlmostEqual(values.evaluate(param.rho_p(T)), 1.4393, places=2)
+        self.assertAlmostEqual(values.evaluate(param.rho_cp(T)), 1.4393, places=2)
+        self.assertAlmostEqual(values.evaluate(param.rho(T)), 1.7102, places=2)
+
+        # Thermal conductivity
+        self.assertAlmostEqual(values.evaluate(param.lambda_cn(T)), 1.6963, places=2)
+        self.assertAlmostEqual(values.evaluate(param.lambda_n(T)), 1.6963, places=2)
+        self.assertAlmostEqual(values.evaluate(param.lambda_s(T)), 0.0019, places=2)
+        self.assertAlmostEqual(values.evaluate(param.lambda_p(T)), 1.6963, places=2)
+        self.assertAlmostEqual(values.evaluate(param.lambda_cp(T)), 1.6963, places=2)
+
     def test_functions_lead_acid(self):
         # Load parameters to be tested
         param = pybamm.LeadAcidParameters()
