@@ -42,6 +42,9 @@ class BaseBatteryModel(pybamm.BaseModel):
             * "interfacial surface area" : str, optional
                 Sets the model for the interfacial surface area. Can be "constant"
                 (default) or "varying". Not currently implemented in any of the models.
+            * "Li plating" : str, optional
+                Sets the model for Li plating. Can be "none" (default), "reversible" or
+                "irreversible".
             * "loss of active material" : str, optional
                 Sets the model for loss of active material. Can be "none" (default) or
                 "example", which is a placeholder for LAM models.
@@ -215,6 +218,7 @@ class BaseBatteryModel(pybamm.BaseModel):
             "external submodels": [],
             "sei": "none",
             "sei porosity change": False,
+            "Li plating": "none",
             "loss of active material": "none",
             "working electrode": "none",
             "particle cracking": "none",
@@ -277,6 +281,8 @@ class BaseBatteryModel(pybamm.BaseModel):
                 )
             if options["sei"] != "none" or options["sei film resistance"] != "none":
                 raise pybamm.OptionError("Lead-acid models cannot have SEI formation")
+            if options["Li plating"] != "none":
+                raise pybamm.OptionError("Lead-acid models cannot have Li plating")
 
         # Some standard checks to make sure options are compatible
         if not (
@@ -354,6 +360,11 @@ class BaseBatteryModel(pybamm.BaseModel):
                 "Unknown sei porosity change '{}'".format(
                     options["sei porosity change"]
                 )
+            )
+
+        if options["Li plating"] not in ["none", "reversible", "irreversible"]:
+            raise pybamm.OptionError(
+                "Unknown Li plating model '{}'".format(options["Li plating"])
             )
 
         if options["loss of active material"] not in ["none", "example"]:

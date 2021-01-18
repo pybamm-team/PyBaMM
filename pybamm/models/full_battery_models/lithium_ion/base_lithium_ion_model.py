@@ -85,6 +85,25 @@ class BaseModel(pybamm.BaseBatteryModel):
         # positive electrode
         self.submodels["positive sei"] = pybamm.sei.NoSEI(self.param, "Positive")
 
+    def set_li_plating_submodel(self):
+
+        # negative electrode
+        if self.options["Li plating"] == "none":
+            self.submodels["negative Li plating"] = pybamm.sei.NoPlating(
+                self.param, "Negative"
+            )
+
+        elif self.options["Li plating"] == "reversible":
+            self.submodels["negative Li plating"] = pybamm.li_plating.ReversiblePlating(self.param, "Negative")
+
+        elif self.options["Li plating"] == "irreversible":
+            self.submodels["negative Li plating"] = pybamm.li_plating.IrreversiblePlating(self.param, "Negative")
+
+        # positive electrode
+        self.submodels["positive Li plating"] = pybamm.li_plating.NoPlating(
+            self.param, "Positive"
+        )
+
     def set_other_reaction_submodels_to_zero(self):
         self.submodels["negative oxygen interface"] = pybamm.interface.NoReaction(
             self.param, "Negative", "lithium-ion oxygen"

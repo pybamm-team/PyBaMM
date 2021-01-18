@@ -7,12 +7,21 @@ from .base_plating import BasePlating
 
 class IrreversiblePlating(BasePlating):
     """Base class for irreversible Li plating.
+
     Parameters
     ----------
     param : parameter class
         The parameters to use for this submodel
     domain : str
         The domain of the model either 'Negative' or 'Positive'
+
+    References
+    ----------
+    .. [1] SEJ O'Kane, ID Campbell, MWJ Marzook, GJ Offer and M Marinescu. "Physical
+           Origin of the Differential Voltage Minimum Associated with Li Plating in 
+           Lithium-Ion Batteries". Journal of The Electrochemical Society,
+           167:090540, 2019
+
     **Extends:** :class:`pybamm.li_plating.BasePlating`
     """
 
@@ -35,13 +44,9 @@ class IrreversiblePlating(BasePlating):
         phi_s_n = variables[f"{self.domain} electrode potential"]
         phi_e_n = variables[f"{self.domain} electrolyte potential"]
         c_e_n = variables[f"{self.domain} electrolyte concentration"]
+        eta_sei = variables[f"{self.domain} electrode sei film overpotential"]
         C_plating = param.C_plating
         phi_ref = param.U_n_ref / param.potential_scale
-
-        if f"{self.domain} electrode sei film overpotential" in variables:
-            eta_sei = variables[f"{self.domain} electrode sei film overpotential"]
-        else:
-            eta_sei = pybamm.Scalar(0)
 
         # need to revise for thermal case
         # j_stripping is always negative, because there is no stripping, only plating
@@ -66,7 +71,7 @@ class IrreversiblePlating(BasePlating):
     def set_rhs(self, variables):
         c_plated_Li = variables[f"{self.domain} electrode Li plating concentration"]
         j_stripping = variables[
-            f"{self.domain} electrode Li plating " f"interfacial current density"
+            f"{self.domain} electrode Li plating interfacial current density"
         ]
         Gamma_plating = self.param.Gamma_plating
 

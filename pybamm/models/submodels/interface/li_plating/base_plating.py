@@ -7,13 +7,22 @@ from ..base_interface import BaseInterface
 
 class BasePlating(BaseInterface):
     """Base class for Li plating models.
+
     Parameters
     ----------
     param : parameter class
         The parameters to use for this submodel
     reactions : dict, optional
         Dictionary of reaction terms
-    **Extends:** :class:`pybamm.interface.BaseInterface`
+
+    References
+    ----------
+    .. [1] SEJ O'Kane, ID Campbell, MWJ Marzook, GJ Offer and M Marinescu. "Physical
+           Origin of the Differential Voltage Minimum Associated with Li Plating in 
+           Lithium-Ion Batteries". Journal of The Electrochemical Society,
+           167:090540, 2019
+
+    **Extends:** :class:`pybamm.li_plating.BasePlating`
     """
 
     def __init__(self, param, domain):

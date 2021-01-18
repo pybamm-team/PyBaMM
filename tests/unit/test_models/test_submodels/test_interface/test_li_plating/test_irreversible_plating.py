@@ -1,5 +1,5 @@
 #
-# Test reversible Li plating submodel
+# Test irreversible Li plating submodel
 #
 
 import pybamm
@@ -7,13 +7,13 @@ import tests
 import unittest
 
 
-class TestReversiblePlating(unittest.TestCase):
+class TestIreversiblePlating(unittest.TestCase):
     def test_not_implemented(self):
         with self.assertRaisesRegex(
             NotImplementedError,
             "Li plating models are not implemented for the positive electrode",
         ):
-            pybamm.li_plating.ReversiblePlating(None, "Positive")
+            pybamm.li_plating.IreversiblePlating(None, "Positive")
 
     def test_public_functions(self):
         param = pybamm.LithiumIonParameters()
@@ -27,7 +27,7 @@ class TestReversiblePlating(unittest.TestCase):
             "Negative electrolyte concentration": a_n,
             "Negative electrode sei film overpotential": a_n,
         }
-        submodel = pybamm.li_plating.ReversiblePlating(param, "Negative")
+        submodel = pybamm.li_plating.IreversiblePlating(param, "Negative")
         std_tests = tests.StandardSubModelTests(submodel, variables)
 
         std_tests.test_all()

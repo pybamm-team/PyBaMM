@@ -47,6 +47,7 @@ class SPM(BaseModel):
         self.set_current_collector_submodel()
         self.set_crack_submodel()
         self.set_sei_submodel()
+        self.set_li_plating_submodel()
 
         if build:
             self.build_model()
