@@ -38,18 +38,44 @@ jobs:
         run: |
           asv machine --machine "GitHubRunner"
           asv run --machine "GitHubRunner"
-      - name: Checkout pybamm-bench to push the new results
+      - name: Upload results as artifact
+        uses: actions/upload-artifact@v2
+        with:
+          name: asv_new_results
+          path: results
+
+  publish-results:
+    name: Push and publish results
+    needs: benchmarks
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set up Python 3.8
+        uses: actions/setup-python@v2
+        with:
+          python-version: 3.8
+      - name: Install asv
+        run: pip install asv
+      - name: Checkout pybamm-bench repo
         uses: actions/checkout@v2
         with:
           repository: tlestang/pybamm-bench
           token: ${{ secrets.BENCH_PAT }}
-      - name: Setup tmate session
-        uses: mxschmitt/action-tmate@v3
-      # - name: Setup tmate session
-      # uses: mxschmitt/action-tmate@v3
-      # - name: Push new results
-      #   run: |
-      #     git config --global user.email "thibault.lestang@cs.ox.ac.uk"
-      #     git config --global user.name "Thibault Lestang"
-
-
+      - name: Download results artifact
+        uses: actions/download-artifact@v2
+        with:
+          name: asv_new_results
+          path: new_results
+      - name: Copy new results and push to pybamm-bench repo
+        run: |
+          cp -vr new_results/* results
+          git config --global user.email "thibault.lestang@cs.ox.ac.uk"
+          git config --global user.name "Thibault Lestang"
+          git add results
+          git commit -am "Add new results"
+          git push
+      - name: Publish results
+        run:
+          |
+            asv publish
+            git fetch origin gh-pages:gh-pages
+            asv gh-pages
