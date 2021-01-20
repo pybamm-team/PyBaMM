@@ -247,8 +247,8 @@ class TestCasadiSolver(unittest.TestCase):
             step_sol_2.y.full()[0],
             np.concatenate(
                 [
-                    np.exp(0.1 * step_sol.t[:5]),
-                    np.exp(0.1 * step_sol.t[4]) * np.exp(-(step_sol.t[5:] - dt)),
+                    np.exp(0.1 * step_sol_2.t[:5]),
+                    np.exp(0.1 * step_sol_2.t[4]) * np.exp(-(step_sol_2.t[5:] - dt)),
                 ]
             ),
         )
@@ -474,12 +474,16 @@ class TestCasadiSolver(unittest.TestCase):
         model.initial_conditions = {v: 1}
         model.events.append(
             pybamm.Event(
-                "Triggered event", v - 0.5, pybamm.EventType.INTERPOLANT_EXTRAPOLATION,
+                "Triggered event",
+                v - 0.5,
+                pybamm.EventType.INTERPOLANT_EXTRAPOLATION,
             )
         )
         model.events.append(
             pybamm.Event(
-                "Ignored event", v + 10, pybamm.EventType.INTERPOLANT_EXTRAPOLATION,
+                "Ignored event",
+                v + 10,
+                pybamm.EventType.INTERPOLANT_EXTRAPOLATION,
             )
         )
         solver = pybamm.CasadiSolver(mode="safe")
@@ -646,6 +650,7 @@ class TestCasadiSolverSensitivity(unittest.TestCase):
         solver = pybamm.CasadiSolver(atol=1e-10, rtol=1e-10)
         t_eval = np.linspace(0, 1)
         solution = solver.solve(model, t_eval)
+        solution["var"]
         np.testing.assert_array_almost_equal(
             solution["var"].value({"param": 7}), 7 * np.exp(-t_eval)[np.newaxis, :]
         )

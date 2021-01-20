@@ -683,9 +683,7 @@ class TestBaseModel(unittest.TestCase):
         model_disc = disc.process_model(model, inplace=False)
         t = np.linspace(0, 1)
         y = np.tile(3 * t, (1 + 30 + 50, 1))
-        sol = pybamm.Solution(t, y)
-        sol.model = model_disc
-        sol.inputs = {}
+        sol = pybamm.Solution(t, y, model_disc, {})
 
         # Update out-of-place first, since otherwise we'll have already modified the
         # model
