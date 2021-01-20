@@ -100,11 +100,8 @@ class ProcessedSymbolicVariable(object):
         "Create a 0D variable"
         # Evaluate the base_variable index-by-index
         idx = 0
-        for outer_idx in range(len(self.all_ts)):
-            ts = self.all_ts[outer_idx]
-            ys = self.all_ys[outer_idx]
-            inputs = self.all_inputs_casadi[outer_idx]
-            for inner_idx in range(len(ts)):
+        for ts, ys, inputs in zip(self.all_ts, self.all_ys, self.all_inputs_casadi):
+            for inner_idx, t in enumerate(ts):
                 t = ts[inner_idx]
                 y = ys[:, inner_idx]
                 next_entries = self.base_variable(t, y, inputs)
@@ -124,11 +121,8 @@ class ProcessedSymbolicVariable(object):
 
         # Evaluate the base_variable index-by-index
         idx = 0
-        for outer_idx in range(len(self.all_ts)):
-            ts = self.all_ts[outer_idx]
-            ys = self.all_ys[outer_idx]
-            inputs = self.all_inputs_casadi[outer_idx]
-            for inner_idx in range(len(ts)):
+        for ts, ys, inputs in zip(self.all_ts, self.all_ys, self.all_inputs_casadi):
+            for inner_idx, t in enumerate(ts):
                 t = ts[inner_idx]
                 y = ys[:, inner_idx]
                 next_entries = self.base_variable(t, y, inputs)

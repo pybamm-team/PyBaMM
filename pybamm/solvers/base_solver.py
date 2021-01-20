@@ -1058,12 +1058,10 @@ class BaseSolver(object):
                 # events extrapolate
                 extrap_events[event.name] = False
                 # This might be a little bit slow but is ok for now
-                for outer_idx in range(len(solution.all_ts)):
-                    ts = solution.all_ts[outer_idx]
-                    ys = solution.all_ys[outer_idx]
-                    inputs = solution.all_inputs[outer_idx]
-                    for inner_idx in range(len(ts)):
-                        t = ts[inner_idx]
+                for ts, ys, inputs in zip(
+                    solution.all_ts, solution.all_ys, solution.all_inputs
+                ):
+                    for inner_idx, t in enumerate(ts):
                         y = ys[:, inner_idx]
                         if isinstance(y, casadi.DM):
                             y = y.full()

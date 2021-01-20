@@ -30,7 +30,7 @@ class TestSolution(unittest.TestCase):
         with self.assertRaisesRegex(
             ValueError, "Solution time vector must be strictly increasing"
         ):
-            sol.t
+            sol.set_t()
 
     def test_add_solutions(self):
         # Set up first solution

@@ -119,11 +119,8 @@ class ProcessedVariable(object):
         entries = np.empty(len(self.t_pts))
         idx = 0
         # Evaluate the base_variable index-by-index
-        for outer_idx in range(len(self.all_ts)):
-            ts = self.all_ts[outer_idx]
-            ys = self.all_ys[outer_idx]
-            inputs = self.all_inputs_casadi[outer_idx]
-            for inner_idx in range(len(ts)):
+        for ts, ys, inputs in zip(self.all_ts, self.all_ys, self.all_inputs_casadi):
+            for inner_idx, t in enumerate(ts):
                 t = ts[inner_idx]
                 y = ys[:, inner_idx]
                 entries[idx] = self.base_variable_casadi(t, y, inputs).full()[0, 0]
@@ -155,11 +152,8 @@ class ProcessedVariable(object):
 
         # Evaluate the base_variable index-by-index
         idx = 0
-        for outer_idx in range(len(self.all_ts)):
-            ts = self.all_ts[outer_idx]
-            ys = self.all_ys[outer_idx]
-            inputs = self.all_inputs_casadi[outer_idx]
-            for inner_idx in range(len(ts)):
+        for ts, ys, inputs in zip(self.all_ts, self.all_ys, self.all_inputs_casadi):
+            for inner_idx, t in enumerate(ts):
                 t = ts[inner_idx]
                 y = ys[:, inner_idx]
                 entries[:, idx] = self.base_variable_casadi(t, y, inputs).full()[:, 0]
@@ -263,11 +257,8 @@ class ProcessedVariable(object):
 
         # Evaluate the base_variable index-by-index
         idx = 0
-        for outer_idx in range(len(self.all_ts)):
-            ts = self.all_ts[outer_idx]
-            ys = self.all_ys[outer_idx]
-            inputs = self.all_inputs_casadi[outer_idx]
-            for inner_idx in range(len(ts)):
+        for ts, ys, inputs in zip(self.all_ts, self.all_ys, self.all_inputs_casadi):
+            for inner_idx, t in enumerate(ts):
                 t = ts[inner_idx]
                 y = ys[:, inner_idx]
                 entries[:, :, idx] = np.reshape(
@@ -410,11 +401,8 @@ class ProcessedVariable(object):
 
         # Evaluate the base_variable index-by-index
         idx = 0
-        for outer_idx in range(len(self.all_ts)):
-            ts = self.all_ts[outer_idx]
-            ys = self.all_ys[outer_idx]
-            inputs = self.all_inputs_casadi[outer_idx]
-            for inner_idx in range(len(ts)):
+        for ts, ys, inputs in zip(self.all_ts, self.all_ys, self.all_inputs_casadi):
+            for inner_idx, t in enumerate(ts):
                 t = ts[inner_idx]
                 y = ys[:, inner_idx]
                 entries[:, :, idx] = np.reshape(

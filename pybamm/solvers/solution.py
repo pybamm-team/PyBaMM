@@ -112,10 +112,13 @@ class Solution(object):
         try:
             return self._t
         except AttributeError:
-            self._t = np.concatenate(self.all_ts)
-            if any(np.diff(self._t) <= 0):
-                raise ValueError("Solution time vector must be strictly increasing")
+            self.set_t()
             return self._t
+
+    def set_t(self):
+        self._t = np.concatenate(self.all_ts)
+        if any(np.diff(self._t) <= 0):
+            raise ValueError("Solution time vector must be strictly increasing")
 
     @property
     def y(self):
@@ -123,11 +126,14 @@ class Solution(object):
         try:
             return self._y
         except AttributeError:
-            if isinstance(self.all_ys[0], (casadi.DM, casadi.MX)):
-                self._y = casadi.horzcat(*self.all_ys)
-            else:
-                self._y = np.hstack(self.all_ys)
+            self.set_y()
             return self._y
+
+    def set_y(self):
+        if isinstance(self.all_ys[0], (casadi.DM, casadi.MX)):
+            self._y = casadi.horzcat(*self.all_ys)
+        else:
+            self._y = np.hstack(self.all_ys)
 
     @property
     def model(self):
