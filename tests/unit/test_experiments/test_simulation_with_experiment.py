@@ -109,11 +109,11 @@ class TestSimulationExperiment(unittest.TestCase):
         # Solve a first time
         sim = pybamm.Simulation(model, experiment=experiment, parameter_values=param)
         sim.solve(inputs={"Dsn": 1})
-        np.testing.assert_array_equal(sim.solution.inputs["Dsn"], 1)
+        np.testing.assert_array_equal(sim.solution.all_inputs[0]["Dsn"], 1)
 
         # Solve again, input should change
         sim.solve(inputs={"Dsn": 2})
-        np.testing.assert_array_equal(sim.solution.inputs["Dsn"], 2)
+        np.testing.assert_array_equal(sim.solution.all_inputs[0]["Dsn"], 2)
 
 
 if __name__ == "__main__":

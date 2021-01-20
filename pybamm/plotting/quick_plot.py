@@ -428,6 +428,13 @@ class QuickPlot(object):
                 self.axis_limits[key] = [x_min, x_max, var_min, var_max]
             else:
                 self.variable_limits[key] = (var_min, var_max)
+            if (
+                var_min is not None
+                and var_max is not None
+                and (np.isnan(var_min) or np.isnan(var_max))
+            ):
+                variable_lists[0][0]._interpolation_function(0, 0)
+                raise ValueError(f"Axis limits cannot be NaN for variables '{key}'")
 
     def plot(self, t):
         """Produces a quick plot with the internal states at time t.
@@ -676,7 +683,7 @@ class QuickPlot(object):
                         var = variable(
                             time_in_seconds,
                             **self.spatial_variable_dict[key],
-                            warn=False
+                            warn=False,
                         )
                         plot[i][j].set_ydata(var)
                         var_min = min(var_min, np.nanmin(var))

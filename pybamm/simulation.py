@@ -428,7 +428,6 @@ class Simulation:
                         )
 
             self._solution = solver.solve(self.built_model, t_eval, **kwargs)
-            self.t_eval = self._solution.t * self._solution.timescale_eval
 
         elif self.operating_mode == "with experiment":
             if t_eval is not None:
@@ -438,10 +437,13 @@ class Simulation:
             # Re-initialize solution, e.g. for solving multiple times with different
             # inputs without having to build the simulation again
             self._solution = None
+            previous_num_subsolutions = 0
             # Step through all experimental conditions
             inputs = kwargs.get("inputs", {})
             pybamm.logger.info("Start running experiment")
             timer = pybamm.Timer()
+
+            phases = []
             for idx, (exp_inputs, dt) in enumerate(
                 zip(self._experiment_inputs, self._experiment_times)
             ):
@@ -451,6 +453,25 @@ class Simulation:
                 # Make sure we take at least 2 timesteps
                 npts = max(int(round(dt / exp_inputs["period"])) + 1, 2)
                 self.step(dt, solver=solver, npts=npts, **kwargs)
+
+                # Extract the new parts of the solution to construct the entire "phase"
+                sol = self.solution
+                new_num_subsolutions = len(sol.sub_solutions)
+                diff_num_subsolutions = new_num_subsolutions - previous_num_subsolutions
+                previous_num_subsolutions = new_num_subsolutions
+
+                phase_solution = pybamm.Solution(
+                    sol.all_ts[-diff_num_subsolutions:],
+                    sol.all_ys[-diff_num_subsolutions:],
+                    sol.model,
+                    sol.all_inputs[-diff_num_subsolutions:],
+                    sol.t_event,
+                    sol.y_event,
+                    sol.termination,
+                )
+                phase_solution.solve_time = 0
+                phase_solution.integration_time = 0
+                phases.append(phase_solution)
                 # Only allow events specified by experiment
                 if not (
                     self._solution.termination == "final time"
@@ -467,19 +488,18 @@ class Simulation:
                         "or reducing the period.\n\n"
                     )
                     break
-            if hasattr(self.solution, "_sub_solutions"):
-                # Construct solution.cycles (a list of tuples) from sub_solutions
-                self.solution.cycles = []
-                for cycle_num, cycle_length in enumerate(self.experiment.cycle_lengths):
-                    cycle_start_idx = sum(self.experiment.cycle_lengths[0:cycle_num])
-                    self.solution.cycles.append(
-                        tuple(
-                            [
-                                self.solution.sub_solutions[cycle_start_idx + idx]
-                                for idx in range(cycle_length)
-                            ]
-                        )
-                    )
+            # Construct solution.cycles (a list of solutions corresponding to
+            # cycles) from sub_solutions
+            self.solution.cycles = []
+            for cycle_num, cycle_length in enumerate(self.experiment.cycle_lengths):
+                cycle_start_idx = sum(self.experiment.cycle_lengths[0:cycle_num])
+                cycle_solution = phases[cycle_start_idx]
+                for idx in range(cycle_length - 1):
+                    cycle_solution = cycle_solution + phases[cycle_start_idx + idx + 1]
+                cycle_solution.phases = phases[
+                    cycle_start_idx : cycle_start_idx + cycle_length
+                ]
+                self.solution.cycles.append(cycle_solution)
             pybamm.logger.info(
                 "Finish experiment simulation, took {}".format(timer.time())
             )
