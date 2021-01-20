@@ -1,0 +1,55 @@
+# This workflow periodically runs the benchmarks suite in benchmarks/
+# using asv and publish the results, effectively updating
+# the display website hosted in the pybamm-bench repo
+
+# Steps:
+# - Benchmark all commits since the last one that was benchmarked
+# - Push results to pybamm-bench repo
+# - Publish website
+name: Benchmarks
+on:
+  # Everyday at 3 am UTC
+  schedule:
+    - cron: "0 3 * * *"
+jobs:
+  benchmarks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Set up Python 3.8
+        uses: actions/setup-python@v2
+        with:
+          python-version: 3.8
+      # - name: Install PybaMM dependencies
+      #   run: |
+      #   sudo apt install gfortran gcc libopenblas-dev graphviz
+      #   sudo apt install python${{ matrix.python-version }}.dev
+      - name: Install tox and asv
+        run: pip install -U pip tox asv
+      # - name: Install SuiteSparse and Sundials
+      #   run: tox -e pybamm-requires
+      - name: Fetch master branch
+        # Not required when worklow trigerred
+        # on default branch, but useful when
+        # experimenting/developing on another one.
+        run: |
+          git fetch origin master:master
+      - name: Run benchmarks
+        run: |
+          asv machine --machine "GitHubRunner"
+          asv run --machine "GitHubRunner"
+      - name: Checkout pybamm-bench to push the new results
+        uses: actions/checkout@v2
+        with:
+          repository: tlestang/pybamm-bench
+          token: ${{ secrets.BENCH_PAT }}
+      - name: Setup tmate session
+        uses: mxschmitt/action-tmate@v3
+      # - name: Setup tmate session
+      # uses: mxschmitt/action-tmate@v3
+      # - name: Push new results
+      #   run: |
+      #     git config --global user.email "thibault.lestang@cs.ox.ac.uk"
+      #     git config --global user.name "Thibault Lestang"
+
+
