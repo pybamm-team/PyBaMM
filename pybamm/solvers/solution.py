@@ -2,7 +2,6 @@
 # Solution class
 #
 import casadi
-import copy
 import numbers
 import numpy as np
 import pickle
@@ -11,7 +10,7 @@ import pandas as pd
 from scipy.io import savemat
 
 
-class _BaseSolution(object):
+class Solution(object):
     """
     (Semi-private) class containing the solution of, and various attributes associated
     with, a PyBaMM model. This class is automatically created by the `Solution` class,
@@ -19,11 +18,21 @@ class _BaseSolution(object):
 
     Parameters
     ----------
-    t : :class:`numpy.array`, size (n,)
-        A one-dimensional array containing the times at which the solution is evaluated
-    y : :class:`numpy.array`, size (m, n)
+    all_ts : :class:`numpy.array`, size (n,) (or list of these)
+        A one-dimensional array containing the times at which the solution is evaluated.
+        A list of times can be provided instead to initialize a solution with
+        sub-solutions.
+    all_ys : :class:`numpy.array`, size (m, n) (or list of these)
         A two-dimensional array containing the values of the solution. y[i, :] is the
         vector of solutions at time t[i].
+        A list of ys can be provided instead to initialize a solution with
+        sub-solutions.
+    model : :class:`pybamm.BaseModel`
+        The model that was used to calculate the solution
+    all_inputs : dict (or list of these)
+        The inputs that were used to calculate the solution
+        A list of inputs can be provided instead to initialize a solution with
+        sub-solutions.
     t_event : :class:`numpy.array`, size (1,)
         A zero-dimensional array containing the time at which the event happens.
     y_event : :class:`numpy.array`, size (m,)
@@ -31,155 +40,37 @@ class _BaseSolution(object):
         the event happens.
     termination : str
         String to indicate why the solution terminated
-    copy_this : :class:`pybamm.Solution`, optional
-        A solution to copy, if provided. Default is None.
-    model : a pybamm model, optional
-        Model from which the solution was obtained. Default is None, in which case
-        :class:`pybamm.BaseModel` is used.
-    inputs : dict, optional
-        Inputs for the solution. Default is None (empty dict)
 
     """
 
     def __init__(
         self,
-        t,
-        y,
+        all_ts,
+        all_ys,
+        model,
+        all_inputs,
         t_event=None,
         y_event=None,
         termination="final time",
-        copy_this=None,
-        model=None,
-        inputs=None,
     ):
-        self.t = t
-        self.inputs = inputs
+        if not isinstance(all_ts, list):
+            all_ts = [all_ts]
+        if not isinstance(all_ys, list):
+            all_ys = [all_ys]
+        self.all_ts = all_ts
 
-        # If the model has been provided, split up y into solution and sensitivity
-        # Don't do this if the sensitivity equations have not been computed (i.e. if
-        # y only has the shape or the rhs and alg solution)
-        # Don't do this if y is symbolic (sensitivities will be calculated a different
-        # way)
-        if (
-            model is None
-            or isinstance(y, casadi.Function)
-            or model.len_rhs_and_alg == y.shape[0]
-            or model.len_rhs_and_alg == 0  # for the dummy solver
-        ):
-            self.y = y
-            self.sensitivity = {}
-        else:
-            n_states = model.len_rhs_and_alg
-            n_rhs = model.len_rhs
-            n_alg = model.len_alg
-            n_t = len(t)
-            n_p = np.vstack(list(inputs.values())).size
-            # Get the point where the algebraic equations start
-            len_rhs_and_sens = (n_p + 1) * model.len_rhs
-            # self._y gets the part of the solution vector that correspond to the
-            # actual ODE/DAE solution
-            self.y = np.vstack(
-                [
-                    y[: model.len_rhs, :],
-                    y[len_rhs_and_sens : len_rhs_and_sens + model.len_alg, :],
-                ]
-            )
-            # save sensitivities as a dictionary
-            # first save the whole sensitivity matrix
-            # reshape using Fortran order to get the right array:
-            #   t0_x0_p0, t0_x0_p1, ..., t0_x0_pn
-            #   t0_x1_p0, t0_x1_p1, ..., t0_x1_pn
-            #   ...
-            #   t0_xn_p0, t0_xn_p1, ..., t0_xn_pn
-            #   t1_x0_p0, t1_x0_p1, ..., t1_x0_pn
-            #   t1_x1_p0, t1_x1_p1, ..., t1_x1_pn
-            #   ...
-            #   t1_xn_p0, t1_xn_p1, ..., t1_xn_pn
-            #   ...
-            #   tn_x0_p0, tn_x0_p1, ..., tn_x0_pn
-            #   tn_x1_p0, tn_x1_p1, ..., tn_x1_pn
-            #   ...
-            #   tn_xn_p0, tn_xn_p1, ..., tn_xn_pn
-            # 1, Extract rhs and alg sensitivities and reshape into 3D matrices
-            # with shape (n_p, n_states, n_t)
-            if isinstance(y, casadi.DM):
-                y_full = y.full()
-            else:
-                y_full = y
-            ode_sens = y_full[n_rhs:len_rhs_and_sens, :].reshape(n_p, n_rhs, n_t)
-            alg_sens = y_full[len_rhs_and_sens + n_alg :, :].reshape(n_p, n_alg, n_t)
-            # 2. Concatenate into a single 3D matrix with shape (n_p, n_states, n_t)
-            # i.e. along first axis
-            full_sens_matrix = np.concatenate([ode_sens, alg_sens], axis=1)
-            # Transpose and reshape into a (n_states * n_t, n_p) matrix
-            full_sens_matrix = full_sens_matrix.transpose(2, 1, 0).reshape(
-                n_t * n_states, n_p
-            )
+        # Set up inputs
+        if not isinstance(all_inputs, list):
+            for key, value in all_inputs.items():
+                if isinstance(value, numbers.Number):
+                    all_inputs[key] = np.array([value])
+            all_inputs = [all_inputs]
+        self.all_inputs = all_inputs
+        self.has_symbolic_inputs = any(
+            isinstance(v, casadi.MX) for v in all_inputs[0].values()
+        )
 
-            # Save the full sensitivity matrix
-            sensitivity = {"all": full_sens_matrix}
-            # also save the sensitivity wrt each parameter (read the columns of the
-            # sensitivity matrix)
-            start = 0
-            for i, (name, inp) in enumerate(self.inputs.items()):
-                input_size = inp.shape[0]
-                end = start + input_size
-                sensitivity[name] = full_sens_matrix[:, start:end]
-                start = end
-            self.sensitivity = sensitivity
-
-        self.model = model
-        self._t_event = t_event
-        self._y_event = y_event
-        self._termination = termination
-        if copy_this is None:
-            self.set_up_time = None
-            self.solve_time = None
-            self.integration_time = None
-        else:
-            self.set_up_time = copy_this.set_up_time
-            self.solve_time = copy_this.solve_time
-            self.integration_time = copy_this.integration_time
-
-        # initiaize empty variables and data
-        self._variables = pybamm.FuzzyDict()
-        self.data = pybamm.FuzzyDict()
-
-    @property
-    def t(self):
-        "Times at which the solution is evaluated"
-        return self._t
-
-    @t.setter
-    def t(self, t):
-        self._t = t
-
-    @property
-    def y(self):
-        "Values of the solution"
-        return self._y
-
-    @y.setter
-    def y(self, y):
-        if isinstance(y, casadi.Function):
-            self._y_fn = None
-            inputs_stacked = casadi.vertcat(*self.inputs.values())
-            self._y = y(inputs_stacked)
-            self._y_sym = y(self._symbolic_inputs)
-        else:
-            self._y = y
-            self._y_fn = None
-            self._y_sym = None
-
-    @property
-    def model(self):
-        "Model used for solution"
-        return self._model
-
-    @model.setter
-    def model(self, model):
-        "Updates the model"
-        assert isinstance(model, pybamm.BaseModel)
+        # Set up model
         self._model = model
 
         # Copy the timescale_eval and lengthscale_evals if they exist
@@ -196,52 +87,156 @@ class _BaseSolution(object):
                 for domain, scale in model.length_scales.items()
             }
 
-    @property
-    def inputs(self):
-        "Values of the inputs"
-        return self._inputs
-
-    @inputs.setter
-    def inputs(self, inputs):
-        "Updates the input values"
-        # if inputs are None, initialize empty, to be populated later
-        inputs = inputs or pybamm.FuzzyDict()
-
-        # self._inputs = {}
-        # for name, inp in inputs.items():
-        #     # Convert number to vector of the right shape
-        #     if isinstance(inp, numbers.Number):
-        #         inp = inp * np.ones((1, len(self.t)))
-        #     # Otherwise, tile a vector
-        #     elif inp.ndim == 1:
-        #         inp = np.tile(inp, (len(self.t), 1)).T
-        #     elif inp.shape[1] != len(self.t):
-        #         inp = np.tile(inp, len(self.t))
-        #     self._inputs[name] = inp
-        # If there are symbolic inputs, just store them as given
-        if any(isinstance(v, casadi.MX) for v in inputs.values()):
-            self.has_symbolic_inputs = True
-            self._inputs = {}
-            for name, inp in inputs.items():
-                if isinstance(inp, numbers.Number):
-                    self._inputs[name] = casadi.DM([inp])
-                else:
-                    self._inputs[name] = inp
-
-        # Otherwise, make them the same size as the time vector
+        # If the model has been provided, split up y into solution and sensitivity
+        # Don't do this if the sensitivity equations have not been computed (i.e. if
+        # y only has the shape or the rhs and alg solution)
+        # Don't do this if y is symbolic (sensitivities will be calculated a different
+        # way)
+        if (
+            model is None
+            or isinstance(all_ys[0], casadi.Function)
+            or model.len_rhs_and_alg == all_ys[0].shape[0]
+            or model.len_rhs_and_alg == 0  # for the dummy solver
+        ):
+            self.all_ys = all_ys
+            self.sensitivity = {}
         else:
-            self.has_symbolic_inputs = False
-            self._inputs = {}
-            for name, inp in inputs.items():
-                # Convert number to vector of the right shape
-                if isinstance(inp, numbers.Number):
-                    inp = inp * np.ones((1, len(self.t)))
-                # Tile a vector
+            n_states = model.len_rhs_and_alg
+            n_rhs = model.len_rhs
+            n_alg = model.len_alg
+            n_p = self.all_inputs_casadi[0].size
+            # Get the point where the algebraic equations start
+            len_rhs_and_sens = (n_p + 1) * model.len_rhs
+            for idx, y in enumerate(all_ys):
+                n_t = len(self.all_ts[idx])
+                # y gets the part of the solution vector that correspond to the
+                # actual ODE/DAE solution
+                all_ys[idx] = np.vstack(
+                    [
+                        y[: model.len_rhs, :],
+                        y[len_rhs_and_sens : len_rhs_and_sens + model.len_alg, :],
+                    ]
+                )
+                # save sensitivities as a dictionary
+                # first save the whole sensitivity matrix
+                # reshape using Fortran order to get the right array:
+                #   t0_x0_p0, t0_x0_p1, ..., t0_x0_pn
+                #   t0_x1_p0, t0_x1_p1, ..., t0_x1_pn
+                #   ...
+                #   t0_xn_p0, t0_xn_p1, ..., t0_xn_pn
+                #   t1_x0_p0, t1_x0_p1, ..., t1_x0_pn
+                #   t1_x1_p0, t1_x1_p1, ..., t1_x1_pn
+                #   ...
+                #   t1_xn_p0, t1_xn_p1, ..., t1_xn_pn
+                #   ...
+                #   tn_x0_p0, tn_x0_p1, ..., tn_x0_pn
+                #   tn_x1_p0, tn_x1_p1, ..., tn_x1_pn
+                #   ...
+                #   tn_xn_p0, tn_xn_p1, ..., tn_xn_pn
+                # 1, Extract rhs and alg sensitivities and reshape into 3D matrices
+                # with shape (n_p, n_states, n_t)
+                if isinstance(y, casadi.DM):
+                    y_full = y.full()
                 else:
-                    if inp.ndim == 1:
-                        inp = inp[:, np.newaxis]
-                    inp = np.tile(inp, len(self.t))
-                self._inputs[name] = inp
+                    y_full = y
+                ode_sens = y_full[n_rhs:len_rhs_and_sens, :].reshape(n_p, n_rhs, n_t)
+                alg_sens = y_full[len_rhs_and_sens + n_alg :, :].reshape(
+                    n_p, n_alg, n_t
+                )
+                # 2. Concatenate into a single 3D matrix with shape (n_p, n_states, n_t)
+                # i.e. along first axis
+                full_sens_matrix = np.concatenate([ode_sens, alg_sens], axis=1)
+                # Transpose and reshape into a (n_states * n_t, n_p) matrix
+                full_sens_matrix = full_sens_matrix.transpose(2, 1, 0).reshape(
+                    n_t * n_states, n_p
+                )
+
+                # Save the full sensitivity matrix
+                sensitivity = {"all": full_sens_matrix}
+                # also save the sensitivity wrt each parameter (read the columns of the
+                # sensitivity matrix)
+                start = 0
+                for i, (name, inp) in enumerate(self.all_inputs[0].items()):
+                    input_size = inp.shape[0]
+                    end = start + input_size
+                    sensitivity[name] = full_sens_matrix[:, start:end]
+                    start = end
+                self.all_sensitivities[idx] = sensitivity
+
+        # Events
+        self._t_event = t_event
+        self._y_event = y_event
+        self._termination = termination
+
+        # Initialize times
+        self.set_up_time = None
+        self.solve_time = None
+        self.integration_time = None
+
+        # initiaize empty variables and data
+        self._variables = pybamm.FuzzyDict()
+        self.data = pybamm.FuzzyDict()
+
+        # Add self as sub-solution for compatibility with ProcessedVariable
+        self._sub_solutions = [self]
+
+        # Solution now uses CasADi
+        pybamm.citations.register("Andersson2019")
+
+    @property
+    def t(self):
+        "Times at which the solution is evaluated"
+        try:
+            return self._t
+        except AttributeError:
+            self.set_t()
+            return self._t
+
+    def set_t(self):
+        self._t = np.concatenate(self.all_ts)
+        if any(np.diff(self._t) <= 0):
+            raise ValueError("Solution time vector must be strictly increasing")
+
+    @property
+    def y(self):
+        "Values of the solution"
+        try:
+            return self._y
+        except AttributeError:
+            self.set_y()
+            return self._y
+
+    # @y.setter
+    # def y(self, y):
+    #     if isinstance(y, casadi.Function):
+    #         self._y_fn = None
+    #         inputs_stacked = casadi.vertcat(*self.inputs.values())
+    #         self._y = y(inputs_stacked)
+    #         self._y_sym = y(self._symbolic_inputs)
+    #     else:
+    #         self._y = y
+    #         self._y_fn = None
+    #         self._y_sym = None
+    def set_y(self):
+        if isinstance(self.all_ys[0], (casadi.DM, casadi.MX)):
+            self._y = casadi.horzcat(*self.all_ys)
+        else:
+            self._y = np.hstack(self.all_ys)
+
+    @property
+    def model(self):
+        "Model used for solution"
+        return self._model
+
+    @property
+    def all_inputs_casadi(self):
+        try:
+            return self._all_inputs_casadi
+        except AttributeError:
+            self._all_inputs_casadi = [
+                casadi.vertcat(*inp.values()) for inp in self.all_inputs
+            ]
+            return self._all_inputs_casadi
 
     @property
     def t_event(self):
@@ -298,10 +293,10 @@ class _BaseSolution(object):
                     var_casadi = self.model._variables_casadi[key]
                 else:
                     self._t_MX = casadi.MX.sym("t")
-                    self._y_MX = casadi.MX.sym("y", self.y.shape[0])
+                    self._y_MX = casadi.MX.sym("y", self.all_ys[0].shape[0])
                     self._symbolic_inputs_dict = {
                         key: casadi.MX.sym("input", value.shape[0])
-                        for key, value in self._inputs.items()
+                        for key, value in self.all_inputs[0].items()
                     }
                     self._symbolic_inputs = casadi.vertcat(
                         *[p for p in self._symbolic_inputs_dict.values()]
@@ -477,107 +472,72 @@ class _BaseSolution(object):
         else:
             raise ValueError("format '{}' not recognised".format(to_format))
 
-
-class Solution(_BaseSolution):
-    """
-    Class extending the base solution, with additional functionality for concatenating
-    different solutions together
-
-    **Extends**: :class:`_BaseSolution`
-
-    """
-
-    def __init__(
-        self,
-        t,
-        y,
-        t_event=None,
-        y_event=None,
-        termination="final time",
-        model=None,
-        inputs=None,
-    ):
-        super().__init__(
-            t, y, t_event, y_event, termination, model=model, inputs=inputs
-        )
-        self.base_solution_class = _BaseSolution
-
     @property
     def sub_solutions(self):
         "List of sub solutions that have been concatenated to form the full solution"
-        try:
-            return self._sub_solutions
-        except AttributeError:
-            raise AttributeError(
-                "sub solutions are only created once other solutions have been appended"
-            )
+        return self._sub_solutions
 
     def __add__(self, other):
-        "See :meth:`Solution.append`"
-        self.append(other, create_sub_solutions=True)
-        return self
+        """ Adds two solutions together, e.g. when stepping """
+        # Special case: new solution only has one timestep and it is already in the
+        # existing solution. In this case, return a copy of the existing solution
+        if (
+            len(other.all_ts) == 1
+            and len(other.all_ts[0]) == 1
+            and other.all_ts[0][0] == self.all_ts[-1][-1]
+        ):
+            return self.copy()
 
-    def append(self, solution, start_index=1, create_sub_solutions=False):
-        """
-        Appends solution.t and solution.y onto self.t and self.y.
-
-        Note: by default this process removes the initial time and state of solution to
-        avoid duplicate times and states being stored (self.t[-1] is equal to
-        solution.t[0], and self.y[:, -1] is equal to solution.y[:, 0]). Set the optional
-        argument ``start_index`` to override this behavior
-        """
-        # Create sub-solutions if necessary
-        # sub-solutions are 'BaseSolution' objects, which have slightly reduced
-        # functionality compared to normal solutions (can't append other solutions)
-        if create_sub_solutions and not hasattr(self, "_sub_solutions"):
-            self._sub_solutions = [
-                self.base_solution_class(
-                    self.t,
-                    self.y,
-                    self.t_event,
-                    self.y_event,
-                    self.termination,
-                    copy_this=self,
-                    model=self.model,
-                    inputs=copy.copy(self.inputs),
-                )
-            ]
-
-        # (Create and) update sub-solutions
-        # Create a list of sub-solutions, which are simpler BaseSolution classes
-
-        # Update t, y and inputs
-        self._t = np.concatenate((self._t, solution.t[start_index:]))
-        if isinstance(self.y, casadi.DM) and isinstance(solution.y, casadi.DM):
-            self._y = casadi.horzcat(self.y, solution.y[:, start_index:])
+        # Update list of sub-solutions
+        if other.all_ts[0][0] == self.all_ts[-1][-1]:
+            # Skip first time step if it is repeated
+            all_ts = self.all_ts + [other.all_ts[0][1:]] + other.all_ts[1:]
+            all_ys = self.all_ys + [other.all_ys[0][:, 1:]] + other.all_ys[1:]
         else:
-            self._y = np.hstack((self._y, solution.y[:, start_index:]))
-        for name, inp in self.inputs.items():
-            solution_inp = solution.inputs[name]
-            self.inputs[name] = np.c_[inp, solution_inp[:, start_index:]]
-        # Update solution time
-        self.solve_time += solution.solve_time
-        self.integration_time += solution.integration_time
-        # Update termination
-        self._termination = solution.termination
-        self._t_event = solution._t_event
-        self._y_event = solution._y_event
+            all_ts = self.all_ts + other.all_ts
+            all_ys = self.all_ys + other.all_ys
 
-        # Recompute existing variables
-        for var in self._variables.keys():
-            self.update(var)
+        new_sol = Solution(
+            all_ts,
+            all_ys,
+            self.model,
+            self.all_inputs + other.all_inputs,
+            self.t_event,
+            self.y_event,
+            self.termination,
+        )
 
-        # Append sub_solutions
-        if create_sub_solutions:
-            self._sub_solutions.append(
-                self.base_solution_class(
-                    solution.t,
-                    solution.y,
-                    solution.t_event,
-                    solution.y_event,
-                    solution.termination,
-                    copy_this=solution,
-                    model=self.model,
-                    inputs=copy.copy(solution.inputs),
-                )
-            )
+        new_sol._all_inputs_casadi = self.all_inputs_casadi + other.all_inputs_casadi
+
+        # Set solution time
+        new_sol.solve_time = self.solve_time + other.solve_time
+        new_sol.integration_time = self.integration_time + other.integration_time
+
+        # Update termination using the latter solution
+        new_sol._termination = other.termination
+        new_sol._t_event = other._t_event
+        new_sol._y_event = other._y_event
+
+        # Set sub_solutions
+        new_sol._sub_solutions = self.sub_solutions + other.sub_solutions
+
+        return new_sol
+
+    def copy(self):
+        new_sol = Solution(
+            self.all_ts,
+            self.all_ys,
+            self.model,
+            self.all_inputs,
+            self.t_event,
+            self.y_event,
+            self.termination,
+        )
+        new_sol._all_inputs_casadi = self.all_inputs_casadi
+        new_sol._sub_solutions = self.sub_solutions
+
+        new_sol.solve_time = self.solve_time
+        new_sol.integration_time = self.integration_time
+        new_sol.set_up_time = self.set_up_time
+
+        return new_sol

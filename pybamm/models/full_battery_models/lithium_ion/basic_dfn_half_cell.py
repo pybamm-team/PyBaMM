@@ -265,10 +265,11 @@ class BasicDFNHalfCell(BaseModel):
         ######################
         N_e = -tor * param.D_e(c_e, T) * pybamm.grad(c_e)
         self.rhs[c_e] = (1 / eps) * (
-            -pybamm.div(N_e) / param.C_e + (1 - param.t_plus(c_e)) * j / param.gamma_e
+            -pybamm.div(N_e) / param.C_e
+            + (1 - param.t_plus(c_e, T)) * j / param.gamma_e
         )
         dce_dx = (
-            -(1 - param.t_plus(c_e))
+            -(1 - param.t_plus(c_e, T))
             * i_cell
             * param.C_e
             / (tor * param.gamma_e * param.D_e(c_e, T))

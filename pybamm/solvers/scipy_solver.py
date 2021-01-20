@@ -19,6 +19,8 @@ class ScipySolver(pybamm.BaseSolver):
         The relative tolerance for the solver (default is 1e-6).
     atol : float, optional
         The absolute tolerance for the solver (default is 1e-6).
+    extrap_tol : float, optional
+        The tolerance to assert whether extrapolation occurs or not (default is 0).
     extra_options : dict, optional
         Any options to pass to the solver.
         Please consult `SciPy documentation <https://tinyurl.com/yafgqg9y>`_ for
@@ -36,6 +38,7 @@ class ScipySolver(pybamm.BaseSolver):
         method="BDF",
         rtol=1e-6,
         atol=1e-6,
+        extrap_tol=0,
         extra_options=None,
         sensitivity=None,
     ):
@@ -43,6 +46,7 @@ class ScipySolver(pybamm.BaseSolver):
             method=method,
             rtol=rtol,
             atol=atol,
+            extrap_tol=extrap_tol,
             sensitivity=sensitivity,
         )
         self.ode_solver = True
@@ -50,7 +54,7 @@ class ScipySolver(pybamm.BaseSolver):
         self.name = "Scipy solver ({})".format(method)
         pybamm.citations.register("virtanen2020scipy")
 
-    def _integrate(self, model, t_eval, inputs=None):
+    def _integrate(self, model, t_eval, inputs_dict=None):
         """
         Solve a model defined by dydt with initial conditions y0.
 
@@ -60,7 +64,7 @@ class ScipySolver(pybamm.BaseSolver):
             The model whose solution to calculate.
         t_eval : :class:`numpy.array`, size (k,)
             The times at which to compute the solution
-        inputs : dict, optional
+        inputs_dict : dict, optional
             Any input parameters to pass to the model when solving
 
         Returns
@@ -71,9 +75,11 @@ class ScipySolver(pybamm.BaseSolver):
 
         """
         # Save inputs dictionary, and if necessary convert inputs to a casadi vector
-        inputs_dict = inputs
+        inputs_dict = inputs_dict or {}
         if model.convert_to_format == "casadi":
             inputs = casadi.vertcat(*[x for x in inputs_dict.values()])
+        else:
+            inputs = inputs_dict
 
         extra_options = {**self.extra_options, "rtol": self.rtol, "atol": self.atol}
 
@@ -130,13 +136,7 @@ class ScipySolver(pybamm.BaseSolver):
                 t_event = None
                 y_event = np.array(None)
             sol = pybamm.Solution(
-                sol.t,
-                sol.y,
-                t_event,
-                y_event,
-                termination,
-                model=model,
-                inputs=inputs_dict,
+                sol.t, sol.y, model, inputs_dict, t_event, y_event, termination
             )
             sol.integration_time = integration_time
             return sol

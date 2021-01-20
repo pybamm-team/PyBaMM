@@ -45,6 +45,35 @@ class Experiment:
 
     def __init__(self, operating_conditions, parameters=None, period="1 minute"):
         self.period = self.convert_time_to_seconds(period.split())
+        operating_conditions_cycles = []
+        for cycle in operating_conditions:
+            # Check types and convert strings to 1-tuples
+            if (isinstance(cycle, tuple) or isinstance(cycle, str)) and all(
+                [isinstance(cond, str) for cond in cycle]
+            ):
+                operating_conditions_cycles.append(
+                    cycle if isinstance(cycle, tuple) else (cycle,)
+                )
+            else:
+                try:
+                    # Condition is not a string
+                    badly_typed_conditions = [
+                        cond for cond in cycle if not isinstance(cond, str)
+                    ]
+                except TypeError:
+                    # Cycle is not a tuple or string
+                    badly_typed_conditions = []
+                badly_typed_conditions = badly_typed_conditions or [cycle]
+                raise TypeError(
+                    """Operating conditions should be strings or tuples of strings, not {}. For example: {}
+                """.format(
+                        type(badly_typed_conditions[0]), examples
+                    )
+                )
+        self.cycle_lengths = [len(cycle) for cycle in operating_conditions_cycles]
+        operating_conditions = [
+            cond for cycle in operating_conditions_cycles for cond in cycle
+        ]
         self.operating_conditions_strings = operating_conditions
         self.operating_conditions, self.events = self.read_operating_conditions(
             operating_conditions
@@ -78,17 +107,9 @@ class Experiment:
         converted_operating_conditions = []
         events = []
         for cond in operating_conditions:
-            if isinstance(cond, str):
-                next_op, next_event = self.read_string(cond)
-                converted_operating_conditions.append(next_op)
-                events.append(next_event)
-            else:
-                raise TypeError(
-                    """Operating conditions should be strings, not {}. For example: {}
-                    """.format(
-                        type(cond), examples
-                    )
-                )
+            next_op, next_event = self.read_string(cond)
+            converted_operating_conditions.append(next_op)
+            events.append(next_event)
 
         return converted_operating_conditions, events
 

@@ -91,6 +91,9 @@ class TestExternalVariable(unittest.TestCase):
 
         a_test = 2 * np.ones((10, 1))
         np.testing.assert_array_equal(a.evaluate(inputs={"a": a_test}), a_test)
+        np.testing.assert_array_equal(
+            a.evaluate(inputs={"a": a_test.flatten()}), a_test
+        )
 
         np.testing.assert_array_equal(a.evaluate(inputs={"a": 2}), a_test)
 

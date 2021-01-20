@@ -485,6 +485,7 @@ class EvaluatorPython:
         python_str = python_str + "\nself._evaluate = evaluate"
 
         self._python_str = python_str
+        self._result_var = result_var
         self._symbol = symbol
 
         # compile and run the generated python code,
@@ -506,6 +507,23 @@ class EvaluatorPython:
             return result, known_evals
         else:
             return result
+
+    def __getstate__(self):
+        # Control the state of instances of EvaluatorPython
+        # before pickling. Method "_evaluate" cannot be pickled.
+        # See https://github.com/pybamm-team/PyBaMM/issues/1283
+        state = self.__dict__.copy()
+        del state["_evaluate"]
+        return state
+
+    def __setstate__(self, state):
+        # Restore pickled attributes and
+        # compile code from "python_str"
+        # Execution of bytecode (re)adds attribute
+        # "_method"
+        self.__dict__.update(state)
+        compiled_function = compile(self._python_str, self._result_var, "exec")
+        exec(compiled_function)
 
 
 class EvaluatorJax:

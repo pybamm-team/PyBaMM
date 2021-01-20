@@ -330,13 +330,7 @@ class Simulation:
                 self._model_with_set_params, inplace=False, check_model=check_model
             )
 
-    def solve(
-        self,
-        t_eval=None,
-        solver=None,
-        check_model=True,
-        **kwargs,
-    ):
+    def solve(self, t_eval=None, solver=None, check_model=True, **kwargs):
         """
         A method to solve the model. This method will automatically build
         and set the model parameters if not already done so.
@@ -434,7 +428,6 @@ class Simulation:
                         )
 
             self._solution = solver.solve(self.built_model, t_eval, **kwargs)
-            self.t_eval = self._solution.t * self._solution.timescale_eval
 
         elif self.operating_mode == "with experiment":
             if t_eval is not None:
@@ -444,10 +437,13 @@ class Simulation:
             # Re-initialize solution, e.g. for solving multiple times with different
             # inputs without having to build the simulation again
             self._solution = None
+            previous_num_subsolutions = 0
             # Step through all experimental conditions
             inputs = kwargs.get("inputs", {})
             pybamm.logger.info("Start running experiment")
             timer = pybamm.Timer()
+
+            phases = []
             for idx, (exp_inputs, dt) in enumerate(
                 zip(self._experiment_inputs, self._experiment_times)
             ):
@@ -457,6 +453,25 @@ class Simulation:
                 # Make sure we take at least 2 timesteps
                 npts = max(int(round(dt / exp_inputs["period"])) + 1, 2)
                 self.step(dt, solver=solver, npts=npts, **kwargs)
+
+                # Extract the new parts of the solution to construct the entire "phase"
+                sol = self.solution
+                new_num_subsolutions = len(sol.sub_solutions)
+                diff_num_subsolutions = new_num_subsolutions - previous_num_subsolutions
+                previous_num_subsolutions = new_num_subsolutions
+
+                phase_solution = pybamm.Solution(
+                    sol.all_ts[-diff_num_subsolutions:],
+                    sol.all_ys[-diff_num_subsolutions:],
+                    sol.model,
+                    sol.all_inputs[-diff_num_subsolutions:],
+                    sol.t_event,
+                    sol.y_event,
+                    sol.termination,
+                )
+                phase_solution.solve_time = 0
+                phase_solution.integration_time = 0
+                phases.append(phase_solution)
                 # Only allow events specified by experiment
                 if not (
                     self._solution.termination == "final time"
@@ -473,6 +488,18 @@ class Simulation:
                         "or reducing the period.\n\n"
                     )
                     break
+            # Construct solution.cycles (a list of solutions corresponding to
+            # cycles) from sub_solutions
+            self.solution.cycles = []
+            for cycle_num, cycle_length in enumerate(self.experiment.cycle_lengths):
+                cycle_start_idx = sum(self.experiment.cycle_lengths[0:cycle_num])
+                cycle_solution = phases[cycle_start_idx]
+                for idx in range(cycle_length - 1):
+                    cycle_solution = cycle_solution + phases[cycle_start_idx + idx + 1]
+                cycle_solution.phases = phases[
+                    cycle_start_idx : cycle_start_idx + cycle_length
+                ]
+                self.solution.cycles.append(cycle_solution)
             pybamm.logger.info(
                 "Finish experiment simulation, took {}".format(timer.time())
             )
@@ -505,43 +532,10 @@ class Simulation:
             solver = self.solver
 
         self._solution = solver.step(
-            self._solution,
-            self.built_model,
-            dt,
-            npts=npts,
-            save=save,
-            **kwargs,
+            self._solution, self.built_model, dt, npts=npts, save=save, **kwargs
         )
 
         return self.solution
-
-    def get_variable_array(self, *variables):
-        """
-        A helper function to easily obtain a dictionary of arrays of values
-        for a list of variables at the latest timestep.
-
-        Parameters
-        ----------
-        variable: str
-            The name of the variable/variables you wish to obtain the arrays for.
-
-        Returns
-        -------
-        variable_arrays: dict
-            A dictionary of the variable names and their corresponding
-            arrays.
-        """
-
-        variable_arrays = {}
-        for var in variables:
-            processed_var = self.solution[var].data
-            if processed_var.ndim == 1:
-                variable_arrays[var] = processed_var[-1]
-            elif processed_var.ndim == 2:
-                variable_arrays[var] = processed_var[:, -1]
-            elif processed_var.ndim == 3:
-                variable_arrays[var] = processed_var[:, :, -1]
-        return variable_arrays
 
     def plot(self, output_variables=None, quick_plot_vars=None, **kwargs):
         """

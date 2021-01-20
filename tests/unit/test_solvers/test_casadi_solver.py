@@ -151,7 +151,7 @@ class TestCasadiSolver(unittest.TestCase):
         t_eval = np.linspace(0, 5, 100)
         solution = solver.solve(model, t_eval)
         np.testing.assert_array_less(solution.y.full()[0], 1.5)
-        np.testing.assert_array_less(solution.y.full()[-1], 2.5)
+        np.testing.assert_array_less(solution.y.full()[-1], 2.5 + 1e-10)
         np.testing.assert_array_almost_equal(
             solution.y.full()[0], np.exp(0.1 * solution.t), decimal=5
         )
@@ -246,8 +246,8 @@ class TestCasadiSolver(unittest.TestCase):
             step_sol_2.y.full()[0],
             np.concatenate(
                 [
-                    np.exp(0.1 * step_sol.t[:5]),
-                    np.exp(0.1 * step_sol.t[4]) * np.exp(-(step_sol.t[5:] - dt)),
+                    np.exp(0.1 * step_sol_2.t[:5]),
+                    np.exp(0.1 * step_sol_2.t[4]) * np.exp(-(step_sol_2.t[5:] - dt)),
                 ]
             ),
         )
@@ -430,6 +430,66 @@ class TestCasadiSolver(unittest.TestCase):
             pybamm.SolverError, "Cannot use CasadiSolver to solve algebraic model"
         ):
             solver.solve(model, t_eval)
+
+    def test_interpolant_extrapolate(self):
+        model = pybamm.lithium_ion.DFN()
+        param = pybamm.ParameterValues(chemistry=pybamm.parameter_sets.Chen2020)
+        experiment = pybamm.Experiment(
+            ["Charge at 1C until 4.6 V"], period="10 seconds"
+        )
+
+        param["Upper voltage cut-off [V]"] = 4.8
+
+        sim = pybamm.Simulation(
+            model,
+            parameter_values=param,
+            experiment=experiment,
+            solver=pybamm.CasadiSolver(
+                mode="safe",
+                dt_max=0.001,
+                extrap_tol=1e-3,
+                extra_options_setup={"max_num_steps": 500},
+            ),
+        )
+        with self.assertRaisesRegex(pybamm.SolverError, "interpolation bounds"):
+            sim.solve()
+
+        ci = param["Initial concentration in positive electrode [mol.m-3]"]
+        param["Initial concentration in positive electrode [mol.m-3]"] = 0.8 * ci
+
+        sim = pybamm.Simulation(
+            model,
+            parameter_values=param,
+            experiment=experiment,
+            solver=pybamm.CasadiSolver(mode="safe", dt_max=0.05),
+        )
+        with self.assertRaisesRegex(pybamm.SolverError, "interpolation bounds"):
+            sim.solve()
+
+    def test_casadi_safe_no_termination(self):
+        model = pybamm.BaseModel()
+        v = pybamm.Variable("v")
+        model.rhs = {v: -1}
+        model.initial_conditions = {v: 1}
+        model.events.append(
+            pybamm.Event(
+                "Triggered event",
+                v - 0.5,
+                pybamm.EventType.INTERPOLANT_EXTRAPOLATION,
+            )
+        )
+        model.events.append(
+            pybamm.Event(
+                "Ignored event",
+                v + 10,
+                pybamm.EventType.INTERPOLANT_EXTRAPOLATION,
+            )
+        )
+        solver = pybamm.CasadiSolver(mode="safe")
+        solver.set_up(model)
+
+        with self.assertRaisesRegex(pybamm.SolverError, "interpolation bounds"):
+            solver.solve(model, t_eval=[0, 1])
 
 
 class TestCasadiSolverSensitivity(unittest.TestCase):

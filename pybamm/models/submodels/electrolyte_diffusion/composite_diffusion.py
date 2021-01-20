@@ -46,7 +46,7 @@ class Composite(BaseElectrolyteDiffusion):
         param = self.param
 
         N_e_diffusion = -tor_0 * param.D_e(c_e_0_av, T_0) * pybamm.grad(c_e)
-        N_e_migration = param.C_e * param.t_plus(c_e) * i_e / param.gamma_e
+        N_e_migration = param.C_e * param.t_plus(c_e, T_0) * i_e / param.gamma_e
         N_e_convection = param.C_e * c_e_0_av * v_box_0
 
         N_e = N_e_diffusion + N_e_migration + N_e_convection

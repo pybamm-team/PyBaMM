@@ -83,6 +83,7 @@ class ParameterValues:
 
         # Initialise empty _processed_symbols dict (for caching)
         self._processed_symbols = {}
+        self.parameter_events = []
 
     def __getitem__(self, key):
         return self._dict_items[key]
@@ -403,13 +404,24 @@ class ParameterValues:
         new_events = []
         for event in unprocessed_model.events:
             pybamm.logger.debug(
-                "Processing parameters for event'{}''".format(event.name)
+                "Processing parameters for event '{}''".format(event.name)
             )
             new_events.append(
                 pybamm.Event(
                     event.name, self.process_symbol(event.expression), event.event_type
                 )
             )
+
+        for event in self.parameter_events:
+            pybamm.logger.debug(
+                "Processing parameters for event '{}''".format(event.name)
+            )
+            new_events.append(
+                pybamm.Event(
+                    event.name, self.process_symbol(event.expression), event.event_type
+                )
+            )
+
         model.events = new_events
 
         # Set external variables
@@ -546,6 +558,23 @@ class ParameterValues:
                 name, data = function_name
                 function = pybamm.Interpolant(
                     data[:, 0], data[:, 1], *new_children, name=name
+                )
+                # Define event to catch extrapolation. In these events the sign is
+                # important: it should be positive inside of the range and negative
+                # outside of it
+                self.parameter_events.append(
+                    pybamm.Event(
+                        "Interpolant {} lower bound".format(name),
+                        pybamm.min(new_children[0] - min(data[:, 0])),
+                        pybamm.EventType.INTERPOLANT_EXTRAPOLATION,
+                    )
+                )
+                self.parameter_events.append(
+                    pybamm.Event(
+                        "Interpolant {} upper bound".format(name),
+                        pybamm.min(max(data[:, 0]) - new_children[0]),
+                        pybamm.EventType.INTERPOLANT_EXTRAPOLATION,
+                    )
                 )
             elif isinstance(function_name, numbers.Number):
                 # If the "function" is provided is actually a scalar, return a Scalar

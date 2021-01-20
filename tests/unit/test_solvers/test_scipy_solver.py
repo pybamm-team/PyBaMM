@@ -99,7 +99,7 @@ class TestScipySolver(unittest.TestCase):
         t_eval = np.linspace(0, 10, 100)
         solution = solver.solve(model, t_eval)
         self.assertLess(len(solution.t), len(t_eval))
-        np.testing.assert_array_equal(solution.t, t_eval[: len(solution.t)])
+        np.testing.assert_array_equal(solution.t[:-1], t_eval[: len(solution.t) - 1])
         np.testing.assert_allclose(solution.y[0], np.exp(-0.1 * solution.t))
 
     def test_model_solver_ode_with_jacobian_python(self):
@@ -200,10 +200,9 @@ class TestScipySolver(unittest.TestCase):
         var = pybamm.Variable("var", domain=domain)
         model.rhs = {var: -pybamm.InputParameter("rate") * var}
         model.initial_conditions = {var: 1}
-        model.events = [pybamm.Event("var=0.5", pybamm.min(var - 0.5))]
         # No need to set parameters; can use base discretisation (no spatial
         # operators)
-
+        model.events = [pybamm.Event("var=0.5", pybamm.min(var - 0.5))]
         # create discretisation
         mesh = get_mesh_for_testing()
         spatial_methods = {"macroscale": pybamm.FiniteVolume()}
@@ -214,8 +213,127 @@ class TestScipySolver(unittest.TestCase):
         t_eval = np.linspace(0, 10, 100)
         solution = solver.solve(model, t_eval, inputs={"rate": 0.1})
         self.assertLess(len(solution.t), len(t_eval))
-        np.testing.assert_array_equal(solution.t, t_eval[: len(solution.t)])
+        np.testing.assert_array_equal(solution.t[:-1], t_eval[: len(solution.t) - 1])
         np.testing.assert_allclose(solution.y[0], np.exp(-0.1 * solution.t))
+
+    def test_model_solver_multiple_inputs_happy_path(self):
+        for convert_to_format in ["python", "casadi"]:
+            # Create model
+            model = pybamm.BaseModel()
+            model.convert_to_format = convert_to_format
+            domain = ["negative electrode", "separator", "positive electrode"]
+            var = pybamm.Variable("var", domain=domain)
+            model.rhs = {var: -pybamm.InputParameter("rate") * var}
+            model.initial_conditions = {var: 1}
+            # create discretisation
+            mesh = get_mesh_for_testing()
+            spatial_methods = {"macroscale": pybamm.FiniteVolume()}
+            disc = pybamm.Discretisation(mesh, spatial_methods)
+            disc.process_model(model)
+
+            solver = pybamm.ScipySolver(rtol=1e-8, atol=1e-8, method="RK45")
+            t_eval = np.linspace(0, 10, 100)
+            ninputs = 8
+            inputs_list = [{"rate": 0.01 * (i + 1)} for i in range(ninputs)]
+
+            solutions = solver.solve(model, t_eval, inputs=inputs_list, nproc=2)
+            for i in range(ninputs):
+                with self.subTest(i=i):
+                    solution = solutions[i]
+                    np.testing.assert_array_equal(solution.t, t_eval)
+                    np.testing.assert_allclose(
+                        solution.y[0], np.exp(-0.01 * (i + 1) * solution.t)
+                    )
+
+    def test_model_solver_multiple_inputs_discontinuity_error(self):
+        # Create model
+        model = pybamm.BaseModel()
+        model.convert_to_format = "casadi"
+        domain = ["negative electrode", "separator", "positive electrode"]
+        var = pybamm.Variable("var", domain=domain)
+        model.rhs = {var: -pybamm.InputParameter("rate") * var}
+        model.initial_conditions = {var: 1}
+        # create discretisation
+        mesh = get_mesh_for_testing()
+        spatial_methods = {"macroscale": pybamm.FiniteVolume()}
+        disc = pybamm.Discretisation(mesh, spatial_methods)
+        disc.process_model(model)
+
+        solver = pybamm.ScipySolver(rtol=1e-8, atol=1e-8, method="RK45")
+        t_eval = np.linspace(0, 10, 100)
+        ninputs = 8
+        inputs_list = [{"rate": 0.01 * (i + 1)} for i in range(ninputs)]
+
+        model.events = [
+            pybamm.Event(
+                "discontinuity",
+                pybamm.Scalar(t_eval[-1] / 2),
+                event_type=pybamm.EventType.DISCONTINUITY,
+            )
+        ]
+        with self.assertRaisesRegex(
+            pybamm.SolverError,
+            (
+                "Cannot solve for a list of input parameters"
+                " sets with discontinuities"
+            ),
+        ):
+            solver.solve(model, t_eval, inputs=inputs_list, nproc=2)
+
+    def test_model_solver_multiple_inputs_initial_conditions_error(self):
+        # Create model
+        model = pybamm.BaseModel()
+        model.convert_to_format = "casadi"
+        domain = ["negative electrode", "separator", "positive electrode"]
+        var = pybamm.Variable("var", domain=domain)
+        model.rhs = {var: -pybamm.InputParameter("rate") * var}
+        model.initial_conditions = {var: 2 * pybamm.InputParameter("rate")}
+        # create discretisation
+        mesh = get_mesh_for_testing()
+        spatial_methods = {"macroscale": pybamm.FiniteVolume()}
+        disc = pybamm.Discretisation(mesh, spatial_methods)
+        disc.process_model(model)
+
+        solver = pybamm.ScipySolver(rtol=1e-8, atol=1e-8, method="RK45")
+        t_eval = np.linspace(0, 10, 100)
+        ninputs = 8
+        inputs_list = [{"rate": 0.01 * (i + 1)} for i in range(ninputs)]
+
+        with self.assertRaisesRegex(
+            pybamm.SolverError,
+            ("Input parameters cannot appear in expression " "for initial conditions."),
+        ):
+            solver.solve(model, t_eval, inputs=inputs_list, nproc=2)
+
+    def test_model_solver_multiple_inputs_jax_format_error(self):
+        # Create model
+        model = pybamm.BaseModel()
+        model.convert_to_format = "jax"
+        domain = ["negative electrode", "separator", "positive electrode"]
+        var = pybamm.Variable("var", domain=domain)
+        model.rhs = {var: -pybamm.InputParameter("rate") * var}
+        model.initial_conditions = {var: 2 * pybamm.InputParameter("rate")}
+        # No need to set parameters; can use base discretisation (no spatial
+        # operators)
+        # create discretisation
+        mesh = get_mesh_for_testing()
+        spatial_methods = {"macroscale": pybamm.FiniteVolume()}
+        disc = pybamm.Discretisation(mesh, spatial_methods)
+        disc.process_model(model)
+
+        solver = pybamm.ScipySolver(rtol=1e-8, atol=1e-8, method="RK45")
+        t_eval = np.linspace(0, 10, 100)
+        ninputs = 8
+        inputs_list = [{"rate": 0.01 * (i + 1)} for i in range(ninputs)]
+
+        with self.assertRaisesRegex(
+            pybamm.SolverError,
+            (
+                "Cannot solve list of inputs with multiprocessing "
+                'when model in format "jax".'
+            ),
+        ):
+            solver.solve(model, t_eval, inputs=inputs_list, nproc=2)
 
     def test_model_solver_with_external(self):
         # Create model
@@ -272,7 +390,9 @@ class TestScipySolver(unittest.TestCase):
             t_eval = np.linspace(0, 10, 100)
             solution = solver.solve(model_disc, t_eval)
             self.assertLess(len(solution.t), len(t_eval))
-            np.testing.assert_array_equal(solution.t, t_eval[: len(solution.t)])
+            np.testing.assert_array_equal(
+                solution.t[:-1], t_eval[: len(solution.t) - 1]
+            )
             np.testing.assert_allclose(solution.y[0], np.exp(-0.1 * solution.t))
 
     def test_model_solver_with_inputs_with_casadi(self):
@@ -297,7 +417,7 @@ class TestScipySolver(unittest.TestCase):
         t_eval = np.linspace(0, 10, 100)
         solution = solver.solve(model, t_eval, inputs={"rate": 0.1})
         self.assertLess(len(solution.t), len(t_eval))
-        np.testing.assert_array_equal(solution.t, t_eval[: len(solution.t)])
+        np.testing.assert_array_equal(solution.t[:-1], t_eval[: len(solution.t) - 1])
         np.testing.assert_allclose(solution.y[0], np.exp(-0.1 * solution.t))
 
     def test_model_solver_inputs_in_initial_conditions(self):
