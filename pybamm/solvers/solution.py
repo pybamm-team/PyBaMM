@@ -385,6 +385,15 @@ class Solution(object):
 
     def __add__(self, other):
         """ Adds two solutions together, e.g. when stepping """
+        # Special case: new solution only has one timestep and it is already in the
+        # existing solution. In this case, return a copy of the existing solution
+        if (
+            len(other.all_ts) == 1
+            and len(other.all_ts[0]) == 1
+            and other.all_ts[0][0] == self.all_ts[-1][-1]
+        ):
+            return self.copy()
+
         # Update list of sub-solutions
         if other.all_ts[0][0] == self.all_ts[-1][-1]:
             # Skip first time step if it is repeated

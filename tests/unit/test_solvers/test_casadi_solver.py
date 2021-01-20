@@ -152,7 +152,7 @@ class TestCasadiSolver(unittest.TestCase):
         t_eval = np.linspace(0, 5, 100)
         solution = solver.solve(model, t_eval)
         np.testing.assert_array_less(solution.y.full()[0], 1.5)
-        np.testing.assert_array_less(solution.y.full()[-1], 2.5)
+        np.testing.assert_array_less(solution.y.full()[-1], 2.5 + 1e-10)
         np.testing.assert_array_almost_equal(
             solution.y.full()[0], np.exp(0.1 * solution.t), decimal=5
         )
@@ -650,7 +650,6 @@ class TestCasadiSolverSensitivity(unittest.TestCase):
         solver = pybamm.CasadiSolver(atol=1e-10, rtol=1e-10)
         t_eval = np.linspace(0, 1)
         solution = solver.solve(model, t_eval)
-        solution["var"]
         np.testing.assert_array_almost_equal(
             solution["var"].value({"param": 7}), 7 * np.exp(-t_eval)[np.newaxis, :]
         )

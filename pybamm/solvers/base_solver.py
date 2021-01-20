@@ -1017,24 +1017,24 @@ class BaseSolver(object):
             # Add the event to the solution object
             solution.termination = "event: {}".format(termination_event)
             # Update t, y and inputs to include event time and state
-            # Note: if the final entry of t is equal to the event time to within
-            # the absolute tolerance we skip this (having duplicate entries
-            # causes an error later in ProcessedVariable)
-            if solution.t_event - solution.all_ts[-1][-1] > self.atol:
-                event_sol = pybamm.Solution(
-                    solution.t_event,
-                    solution.y_event,
-                    solution.model,
-                    solution.all_inputs[-1],
-                    solution.t_event,
-                    solution.y_event,
-                    solution.termination,
-                )
-                event_sol.solve_time = 0
-                event_sol.integration_time = 0
-                solution = solution + event_sol
-
-            return "the termination event '{}' occurred".format(termination_event)
+            # Note: if the final entry of t is equal to the event time we skip
+            # this (having duplicate entries causes an error later in ProcessedVariable)
+            try:
+                if solution.t_event != solution.all_ts[-1][-1]:
+                    event_sol = pybamm.Solution(
+                        solution.t_event,
+                        solution.y_event,
+                        solution.model,
+                        solution.all_inputs[-1],
+                        solution.t_event,
+                        solution.y_event,
+                        solution.termination,
+                    )
+                    event_sol.solve_time = 0
+                    event_sol.integration_time = 0
+                    solution = solution + event_sol
+            except:
+                n = 1
 
     def check_extrapolation(self, solution, events):
         """

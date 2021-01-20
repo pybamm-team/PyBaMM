@@ -66,6 +66,31 @@ class TestSolution(unittest.TestCase):
         self.assertEqual(sol_sum.sub_solutions[1].model, sol2.model)
         np.testing.assert_array_equal(sol_sum.sub_solutions[1].all_inputs[0]["a"], 2)
 
+        # Add solution already contained in existing solution
+        t3 = np.array([2])
+        y3 = np.ones((20, 1))
+        sol3 = pybamm.Solution(t3, y3, pybamm.BaseModel(), {"a": 3})
+        self.assertEqual((sol_sum + sol3).all_ts, sol_sum.copy().all_ts)
+
+    def test_copy(self):
+        # Set up first solution
+        t1 = [np.linspace(0, 1), np.linspace(1, 2, 5)]
+        y1 = [np.tile(t1[0], (20, 1)), np.tile(t1[1], (20, 1))]
+        sol1 = pybamm.Solution(t1, y1, pybamm.BaseModel(), [{"a": 1}, {"a": 2}])
+
+        sol1.set_up_time = 0.5
+        sol1.solve_time = 1.5
+        sol1.integration_time = 0.3
+
+        sol_copy = sol1.copy()
+        self.assertEqual(sol_copy.all_ts, sol1.all_ts)
+        self.assertEqual(sol_copy.all_ys, sol1.all_ys)
+        self.assertEqual(sol_copy.all_inputs, sol1.all_inputs)
+        self.assertEqual(sol_copy.all_inputs_casadi, sol1.all_inputs_casadi)
+        self.assertEqual(sol_copy.set_up_time, sol1.set_up_time)
+        self.assertEqual(sol_copy.solve_time, sol1.solve_time)
+        self.assertEqual(sol_copy.integration_time, sol1.integration_time)
+
     def test_cycles(self):
         model = pybamm.lithium_ion.SPM()
         experiment = pybamm.Experiment(
