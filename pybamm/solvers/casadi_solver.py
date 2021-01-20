@@ -185,7 +185,9 @@ class CasadiSolver(pybamm.BaseSolver):
                             "outside these bounds.".format(extrap_event_names)
                         )
 
-            pybamm.logger.info("Start solving {} with {}".format(model.name, self.name))
+            pybamm.logger.debug(
+                "Start solving {} with {}".format(model.name, self.name)
+            )
 
             if self.mode == "safe without grid":
                 # in "safe without grid" mode,

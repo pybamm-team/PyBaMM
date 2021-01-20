@@ -455,11 +455,11 @@ class Simulation:
                 self.step(dt, solver=solver, npts=npts, **kwargs)
 
                 # Extract the new parts of the solution to construct the entire "phase"
-                new_num_subsolutions = len(self.solution.sub_solutions)
+                sol = self.solution
+                new_num_subsolutions = len(sol.sub_solutions)
                 diff_num_subsolutions = new_num_subsolutions - previous_num_subsolutions
                 previous_num_subsolutions = new_num_subsolutions
 
-                sol = self.solution
                 phase_solution = pybamm.Solution(
                     sol.all_ts[-diff_num_subsolutions:],
                     sol.all_ys[-diff_num_subsolutions:],
@@ -496,6 +496,9 @@ class Simulation:
                 cycle_solution = phases[cycle_start_idx]
                 for idx in range(cycle_length - 1):
                     cycle_solution = cycle_solution + phases[cycle_start_idx + idx + 1]
+                cycle_solution.phases = phases[
+                    cycle_start_idx : cycle_start_idx + cycle_length
+                ]
                 self.solution.cycles.append(cycle_solution)
             pybamm.logger.info(
                 "Finish experiment simulation, took {}".format(timer.time())

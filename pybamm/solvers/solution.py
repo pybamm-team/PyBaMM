@@ -446,6 +446,7 @@ class Solution(object):
             self.termination,
         )
         new_sol._all_inputs_casadi = self.all_inputs_casadi
+        new_sol._sub_solutions = self.sub_solutions
 
         new_sol.solve_time = self.solve_time
         new_sol.integration_time = self.integration_time

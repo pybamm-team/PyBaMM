@@ -495,7 +495,7 @@ class BaseSolver(object):
             of the algebraic equations). If self.root_method == None then returns
             model.y0.
         """
-        pybamm.logger.info("Start calculating consistent states")
+        pybamm.logger.debug("Start calculating consistent states")
         if self.root_method is None:
             return model.y0
         try:
@@ -504,7 +504,7 @@ class BaseSolver(object):
             raise pybamm.SolverError(
                 "Could not find consistent states: {}".format(e.args[0])
             )
-        pybamm.logger.info("Found consistent states")
+        pybamm.logger.debug("Found consistent states")
         y0 = root_sol.all_ys[0]
         if isinstance(y0, np.ndarray):
             y0 = y0.flatten()
@@ -945,7 +945,12 @@ class BaseSolver(object):
 
         # Step
         t_eval = np.linspace(t, t + dt_dimensionless, npts)
-        pybamm.logger.info("Calling solver")
+        pybamm.logger.info(
+            "Stepping for {:.0f} < t < {:.0f}".format(
+                t * model.timescale_eval,
+                (t + dt_dimensionless) * model.timescale_eval,
+            )
+        )
         timer.reset()
         solution = self._integrate(model, t_eval, ext_and_inputs)
 
@@ -966,8 +971,8 @@ class BaseSolver(object):
         # Identify the event that caused termination
         termination = self.get_termination_reason(solution, model.events)
 
-        pybamm.logger.debug("Finish stepping {} ({})".format(model.name, termination))
-        pybamm.logger.debug(
+        pybamm.logger.info("Finish stepping {} ({})".format(model.name, termination))
+        pybamm.logger.info(
             (
                 "Set-up time: {}, Step time: {} (of which integration time: {}), "
                 "Total time: {}"
@@ -1032,6 +1037,8 @@ class BaseSolver(object):
                 event_sol.solve_time = 0
                 event_sol.integration_time = 0
                 solution = solution + event_sol
+
+            return solution.termination
 
     def check_extrapolation(self, solution, events):
         """
