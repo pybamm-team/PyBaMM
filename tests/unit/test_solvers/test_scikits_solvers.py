@@ -46,6 +46,7 @@ class TestScikitsSolvers(unittest.TestCase):
             y0 = np.array([0.0, 1.0])
             terminate_events_eval = []
             timescale_eval = 1
+            length_scales = {}
             convert_to_format = "python"
 
             def residuals_eval(self, t, y, ydot, inputs):
@@ -96,6 +97,7 @@ class TestScikitsSolvers(unittest.TestCase):
             y0 = np.array([0.0, 0.0])
             terminate_events_eval = []
             timescale_eval = 1
+            length_scales = {}
             convert_to_format = "python"
 
             def residuals_eval(self, t, y, ydot, inputs):

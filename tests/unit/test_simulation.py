@@ -198,7 +198,9 @@ class TestSimulation(unittest.TestCase):
         param.update({"Current function [A]": "[input]"})
         sim = pybamm.Simulation(model, parameter_values=param)
         sim.solve(t_eval=[0, 600], inputs={"Current function [A]": 1})
-        np.testing.assert_array_equal(sim.solution.inputs["Current function [A]"], 1)
+        np.testing.assert_array_equal(
+            sim.solution.all_inputs[0]["Current function [A]"], 1
+        )
 
     def test_step_with_inputs(self):
         dt = 0.001
@@ -214,7 +216,9 @@ class TestSimulation(unittest.TestCase):
         self.assertEqual(sim.solution.y.full()[0, :].size, 2)
         self.assertEqual(sim.solution.t[0], 0)
         self.assertEqual(sim.solution.t[1], dt / tau)
-        np.testing.assert_array_equal(sim.solution.inputs["Current function [A]"], 1)
+        np.testing.assert_array_equal(
+            sim.solution.all_inputs[0]["Current function [A]"], 1
+        )
         sim.step(
             dt, inputs={"Current function [A]": 2}
         )  # automatically append the next step
@@ -224,7 +228,7 @@ class TestSimulation(unittest.TestCase):
         self.assertEqual(sim.solution.t[1], dt / tau)
         self.assertEqual(sim.solution.t[2], 2 * dt / tau)
         np.testing.assert_array_equal(
-            sim.solution.inputs["Current function [A]"], np.array([[1, 1, 2]])
+            sim.solution.all_inputs[1]["Current function [A]"], 2
         )
 
     def test_save_load(self):
@@ -381,7 +385,9 @@ class TestSimulation(unittest.TestCase):
 
         # tets list gets turned into np.linspace(t0, tf, 100)
         sim.solve(t_eval=[0, 10])
-        np.testing.assert_array_almost_equal(sim.t_eval, np.linspace(0, 10, 100))
+        np.testing.assert_array_almost_equal(
+            sim.solution.t * sim.solution.timescale_eval, np.linspace(0, 10, 100)
+        )
 
     def test_battery_model_with_input_height(self):
         # load model
