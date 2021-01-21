@@ -40,12 +40,12 @@ jobs:
         # on develop, but useful when
         # experimenting/developing on another branch.
         run: |
-          git fetch origin master:master
+          git fetch origin develop:develop
       - name: Run benchmarks
         run: |
           asv machine --machine "GitHubRunner"
           asv run -m "GitHubRunner" -s ${{ github.event.inputs.ncommits }} \
-          ${{ github.event.inputs.commit_start }}..${{ github.events.inputs.commit_end }}
+          ${{ github.event.inputs.commit_start }}..${{ github.event.inputs.commit_end }}
       - name: Upload results as artifact
         uses: actions/upload-artifact@v2
         with:

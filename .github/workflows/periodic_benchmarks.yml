@@ -28,12 +28,12 @@ jobs:
         run: pip install -U pip tox asv
       # - name: Install SuiteSparse and Sundials
       #   run: tox -e pybamm-requires
-      - name: Fetch master branch
+      - name: Fetch develop branch
         # Not required when worklow trigerred
-        # on default branch, but useful when
+        # on develop, but useful when
         # experimenting/developing on another one.
         run: |
-          git fetch origin master:master
+          git fetch origin develop:develop
       - name: Run benchmarks
         run: |
           asv machine --machine "GitHubRunner"
