@@ -443,7 +443,7 @@ class Simulation:
             pybamm.logger.info("Start running experiment")
             timer = pybamm.Timer()
 
-            phases = []
+            steps = []
             for idx, (exp_inputs, dt) in enumerate(
                 zip(self._experiment_inputs, self._experiment_times)
             ):
@@ -454,13 +454,13 @@ class Simulation:
                 npts = max(int(round(dt / exp_inputs["period"])) + 1, 2)
                 self.step(dt, solver=solver, npts=npts, **kwargs)
 
-                # Extract the new parts of the solution to construct the entire "phase"
+                # Extract the new parts of the solution to construct the entire "step"
                 sol = self.solution
                 new_num_subsolutions = len(sol.sub_solutions)
                 diff_num_subsolutions = new_num_subsolutions - previous_num_subsolutions
                 previous_num_subsolutions = new_num_subsolutions
 
-                phase_solution = pybamm.Solution(
+                step_solution = pybamm.Solution(
                     sol.all_ts[-diff_num_subsolutions:],
                     sol.all_ys[-diff_num_subsolutions:],
                     sol.model,
@@ -469,9 +469,9 @@ class Simulation:
                     sol.y_event,
                     sol.termination,
                 )
-                phase_solution.solve_time = 0
-                phase_solution.integration_time = 0
-                phases.append(phase_solution)
+                step_solution.solve_time = 0
+                step_solution.integration_time = 0
+                steps.append(step_solution)
                 # Only allow events specified by experiment
                 if not (
                     self._solution.termination == "final time"
@@ -493,10 +493,10 @@ class Simulation:
             self.solution.cycles = []
             for cycle_num, cycle_length in enumerate(self.experiment.cycle_lengths):
                 cycle_start_idx = sum(self.experiment.cycle_lengths[0:cycle_num])
-                cycle_solution = phases[cycle_start_idx]
+                cycle_solution = steps[cycle_start_idx]
                 for idx in range(cycle_length - 1):
-                    cycle_solution = cycle_solution + phases[cycle_start_idx + idx + 1]
-                cycle_solution.phases = phases[
+                    cycle_solution = cycle_solution + steps[cycle_start_idx + idx + 1]
+                cycle_solution.steps = steps[
                     cycle_start_idx : cycle_start_idx + cycle_length
                 ]
                 self.solution.cycles.append(cycle_solution)
