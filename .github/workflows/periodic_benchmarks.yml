@@ -37,7 +37,7 @@ jobs:
       - name: Run benchmarks
         run: |
           asv machine --machine "GitHubRunner"
-          asv run --machine "GitHubRunner"
+          asv run --machine "GitHubRunner" NEW
       - name: Upload results as artifact
         uses: actions/upload-artifact@v2
         with:
