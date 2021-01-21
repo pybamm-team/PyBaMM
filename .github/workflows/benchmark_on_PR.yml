@@ -21,13 +21,17 @@ jobs:
         run: |
           asv machine --machine "GitHubRunner"
           # Get IDs of branch and PR commits
-          BRANCH_COMMIT_SHA=$(git rev-parse $GITHUB_BASE_REF)
-          echo $BRANCH_COMMIT_SHA | tee -a commits_to_compare.txt
-          echo $GITHUB_SHA | tee -a commit_to_compare.txt
-          asv run HASHFILE:commit_to_compare.txt --m "GitHubRunner" --show-stderr
+          BASE_COMMIT=$(git rev-parse $GITHUB_BASE_REF)
+          HEAD_COMMIT=$(git rev-parse $GITHUB_HEAD_REF)
+          echo $BASE_COMMIT | tee commits_to_compare.txt
+          echo $HEAD_COMMIT | tee -a commits_to_compare.txt
+          asv run HASHFILE:commits_to_compare.txt --m "GitHubRunner" --show-stderr
       - name: Compare commits' benchmark results
         run: |
-          BRANCH_COMMIT_SHA=$(head -1 commits_to_compare.txt)
-          asv compare $BRANCH_COMMIT_SHA $GITHUB_SHA
+          cat commits_to_compare.txt
+          BASE_COMMIT=$(head -1 commits_to_compare.txt)
+          HEAD_COMMIT=$(tail -1 commits_to_compare.txt)
+          asv compare $BASE_COMMIT $HEAD_COMMIT
+
 
     
