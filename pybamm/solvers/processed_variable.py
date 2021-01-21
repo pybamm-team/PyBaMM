@@ -63,7 +63,6 @@ class ProcessedVariable(object):
         self.auxiliary_domains = base_variable.auxiliary_domains
         self.warn = warn
 
-        self.inputs = solution.inputs
         self.symbolic_inputs = solution._symbolic_inputs
 
         self.u_sol = solution.y
@@ -71,7 +70,7 @@ class ProcessedVariable(object):
 
         # Sensitivity starts off uninitialized, only set when called
         self._sensitivity = None
-        self.solution_sensitivity = solution.sensitivity
+        self.all_sensitivities = solution.all_sensitivities
 
         # Set timescale
         self.timescale = solution.timescale_eval
