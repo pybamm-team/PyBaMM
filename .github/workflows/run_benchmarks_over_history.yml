@@ -27,14 +27,8 @@ jobs:
         uses: actions/setup-python@v2
         with:
           python-version: 3.8
-      # - name: Install PybaMM dependencies
-      #   run: |
-      #   sudo apt install gfortran gcc libopenblas-dev graphviz
-      #   sudo apt install python${{ matrix.python-version }}.dev
       - name: Install tox and asv
         run: pip install -U pip tox asv
-      # - name: Install SuiteSparse and Sundials
-      #   run: tox -e pybamm-requires
       - name: Fetch develop branch
         # Not required when worklow trigerred
         # on develop, but useful when
