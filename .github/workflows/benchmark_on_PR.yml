@@ -1,0 +1,33 @@
+name: Run benchmarks on PR
+on:
+  pull_request:
+
+jobs:
+  benchmarks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Set up Python 3.8
+        uses: actions/setup-python@v2
+        with:
+          python-version: 3.8
+      - name: Install asv
+        run: pip install -U pip virtualenv asv
+      - name: Fetch base branch
+        run: |
+          git fetch origin $GITHUB_BASE_REF:$GITHUB_BASE_REF
+          git fetch origin $GITHUB_HEAD_REF:$GITHUB_HEAD_REF
+      - name: Run benchmarks
+        run: |
+          asv machine --machine "GitHubRunner"
+          # Get IDs of branch and PR commits
+          BRANCH_COMMIT_SHA=$(git rev-parse $GITHUB_BASE_REF)
+          echo $BRANCH_COMMIT_SHA | tee -a commits_to_compare.txt
+          echo $GITHUB_SHA | tee -a commit_to_compare.txt
+          asv run HASHFILE:commit_to_compare.txt --m "GitHubRunner" --show-stderr
+      - name: Compare commits' benchmark results
+        run: |
+          BRANCH_COMMIT_SHA=$(head -1 commits_to_compare.txt)
+          asv compare $BRANCH_COMMIT_SHA $GITHUB_SHA
+
+    
