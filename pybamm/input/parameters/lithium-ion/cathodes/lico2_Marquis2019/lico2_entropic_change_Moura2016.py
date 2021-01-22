@@ -1,7 +1,7 @@
-from pybamm import cosh
+from pybamm import cosh, Parameter
 
 
-def lico2_entropic_change_Moura2016(sto, c_p_max):
+def lico2_entropic_change_Moura2016(sto):
     """
     Lithium Cobalt Oxide (LiCO2) entropic change in open circuit potential (OCP) at
     a temperature of 298.15K as a function of the stochiometry. The fit is taken
@@ -11,12 +11,13 @@ def lico2_entropic_change_Moura2016(sto, c_p_max):
     ----------
     .. [1] https://github.com/scott-moura/fastDFN
 
-      Parameters
-      ----------
-      sto : :class:`pybamm.Symbol`
-           Stochiometry of material (li-fraction)
+    Parameters
+    ----------
+    sto : :class:`pybamm.Symbol`
+        Stochiometry of material (li-fraction)
 
     """
+    c_p_max = Parameter("Maximum concentration in positive electrode [mol.m-3]")
 
     # Since the equation for LiCo2 from this ref. has the stretch factor,
     # should this too? If not, the "bumps" in the OCV don't line up.

@@ -109,7 +109,33 @@ class TestSPMe(unittest.TestCase):
         model.check_well_posedness()
 
     def test_loss_active_material(self):
-        options = {"loss of active material": "example"}
+        options = {
+            "loss of active material": "none",
+        }
+        model = pybamm.lithium_ion.SPMe(options)
+        model.check_well_posedness()
+
+    def test_loss_active_material_anode(self):
+        options = {
+            "particle cracking": "no cracking",
+            "loss of active material": "anode",
+        }
+        model = pybamm.lithium_ion.SPMe(options)
+        model.check_well_posedness()
+
+    def test_loss_active_material_cathode(self):
+        options = {
+            "particle cracking": "no cracking",
+            "loss of active material": "cathode",
+        }
+        model = pybamm.lithium_ion.SPMe(options)
+        model.check_well_posedness()
+
+    def test_loss_active_material_both(self):
+        options = {
+            "particle cracking": "no cracking",
+            "loss of active material": "both",
+        }
         model = pybamm.lithium_ion.SPMe(options)
         model.check_well_posedness()
 
@@ -156,7 +182,7 @@ class TestSPMeWithSEI(unittest.TestCase):
         model.check_well_posedness()
 
     def test_well_posed_ec_reaction_limited(self):
-        options = {"sei": "ec reaction limited", "sei porosity change": True}
+        options = {"sei": "ec reaction limited", "sei porosity change": "true"}
         model = pybamm.lithium_ion.SPMe(options)
         model.check_well_posedness()
 
