@@ -28,10 +28,21 @@ jobs:
           asv run HASHFILE:commits_to_compare.txt --m "GitHubRunner" --show-stderr
       - name: Compare commits' benchmark results
         run: |
-          cat commits_to_compare.txt
           BASE_COMMIT=$(head -1 commits_to_compare.txt)
           HEAD_COMMIT=$(tail -1 commits_to_compare.txt)
-          asv compare $BASE_COMMIT $HEAD_COMMIT
+          echo "SUMMARY OF CHANGES"
+          echo "=================="
+          asv compare --only-changed $BASE_COMMIT $HEAD_COMMIT | tee compare_result.txt
+          REGRESSIONS=$(grep "+" compare_result.txt)
+          if [ ! -z "$REGRESSIONS" ]; \
+          then \
+          echo "REGRESSIONS FOUND"; \
+          echo "================="; \
+          echo "$REGRESSIONS"; \
+          echo "================="; \
+          printf "Found %d regression(s)\n" $(echo "$REGRESSIONS" | wc -l); \
+          exit 1; \
+          fi
 
 
     
