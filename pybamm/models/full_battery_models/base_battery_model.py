@@ -43,7 +43,6 @@ class BaseBatteryModel(pybamm.BaseModel):
             * "interfacial surface area" : str
                 Sets the model for the interfacial surface area. Can be "constant"
                 (default) or "varying". Not currently implemented in any of the models.
-<<<<<<< HEAD
             * "lithium plating" : str, optional
                 Sets the model for lithium plating. Can be "none" (default),
                 "reversible" or "irreversible".
@@ -51,12 +50,10 @@ class BaseBatteryModel(pybamm.BaseModel):
                 Sets the model for loss of active material. Can be "none" (default) or
                 "example", which is a placeholder for LAM models.
             * "particle" : str, optional
-=======
             * "loss of active material" : str
                 Sets the model for loss of active material. Can be "none" (default),
                 "cathode", "anode" or "both" to enable it for the specific electrode.
             * "particle" : str
->>>>>>> 810ee7935af68181ff447fda79acfcb9cdb0ff24
                 Sets the submodel to use to describe behaviour within the particle.
                 Can be "Fickian diffusion" (default), "uniform profile",
                 "quadratic profile", or "quartic profile".
@@ -231,12 +228,8 @@ class BaseBatteryModel(pybamm.BaseModel):
             "cell geometry": "none",
             "external submodels": [],
             "sei": "none",
-<<<<<<< HEAD
-            "sei porosity change": False,
             "lithium plating": "none",
-=======
             "sei porosity change": "false",
->>>>>>> 810ee7935af68181ff447fda79acfcb9cdb0ff24
             "loss of active material": "none",
             "working electrode": "none",
             "particle cracking": "none",
@@ -400,21 +393,17 @@ class BaseBatteryModel(pybamm.BaseModel):
                 )
             )
 
-<<<<<<< HEAD
         if options["lithium plating"] not in ["none", "reversible", "irreversible"]:
             raise pybamm.OptionError(
                 "Unknown lithium plating model '{}'".format(options["lithium plating"])
             )
 
-        if options["loss of active material"] not in ["none", "example"]:
-=======
         if options["loss of active material"] not in [
             "none",
             "anode",
             "cathode",
             "both",
         ]:
->>>>>>> 810ee7935af68181ff447fda79acfcb9cdb0ff24
             raise pybamm.OptionError(
                 "Unknown loss of active material '{}'".format(
                     options["loss of active material"]
