@@ -1,12 +1,12 @@
 #
-# Base class for Li plating models.
+# Base class for lithium plating models.
 #
 import pybamm
 from ..base_interface import BaseInterface
 
 
 class BasePlating(BaseInterface):
-    """Base class for Li plating models.
+    """Base class for lithium plating models.
 
     Parameters
     ----------
@@ -22,35 +22,37 @@ class BasePlating(BaseInterface):
            Lithium-Ion Batteries". Journal of The Electrochemical Society,
            167:090540, 2019
 
-    **Extends:** :class:`pybamm.li_plating.BasePlating`
+    **Extends:** :class:`pybamm.interface.BaseInterface`
     """
 
     def __init__(self, param, domain):
-        if domain == "Positive" and not isinstance(self, pybamm.li_plating.NoPlating):
+        if domain == "Positive" and not isinstance(
+            self, pybamm.lithium_plating.NoPlating
+        ):
             raise NotImplementedError(
-                "Li plating models are not implemented for the positive electrode"
+                "Lithium plating models are not implemented for the positive electrode"
             )
-        reaction = "Li plating"
+        reaction = "lithium plating"
         super().__init__(param, domain, reaction)
 
     def _get_standard_concentration_variables(self, c_plated_Li):
         """
         A private function to obtain the standard variables which
-        can be derived from the local plated Li concentration.
+        can be derived from the local plated lithium concentration.
         Parameters
         ----------
         c_plated_Li : :class:`pybamm.Symbol`
-            The plated Li concentration.
+            The plated lithium concentration.
         Returns
         -------
         variables : dict
-            The variables which can be derived from the plated Li thickness.
+            The variables which can be derived from the plated lithium thickness.
         """
         param = self.param
 
         # Set scales to one for the "no plating" model so that they are not required
         # by parameter values in general
-        if isinstance(self, pybamm.li_plating.NoPlating):
+        if isinstance(self, pybamm.lithium_plating.NoPlating):
             c_scale = 1
             L_scale = 1
         else:
@@ -66,18 +68,17 @@ class BasePlating(BaseInterface):
         Domain = domain.capitalize()
 
         variables = {
-            f"{Domain} Li plating concentration": c_plated_Li,
-            f"{Domain} Li plating concentration [mol.m-3]": c_plated_Li * c_scale,
-            f"{Domain} X-averaged Li plating concentration": c_plated_Li_av,
-            f"X-averaged {domain} Li plating concentration [mol.m-3]": c_plated_Li_av
-            * c_scale,
-            f"{Domain} Li plating thickness [m]": L_plated_Li * L_scale,
-            f"X-averaged {domain} Li plating thickness [m]": L_plated_Li_av * L_scale,
-            f"Loss of lithium to {domain} Li plating [mol]": Q_plated_Li * c_scale,
-            f"Loss of capacity to {domain} Li plating [A.h]": Q_plated_Li
-            * c_scale
-            * param.F
-            / 3600,
+            f"{Domain} lithium plating concentration": c_plated_Li,
+            f"{Domain} lithium plating concentration [mol.m-3]": c_plated_Li * c_scale,
+            f"{Domain} X-averaged lithium plating concentration": c_plated_Li_av,
+            f"X-averaged {domain} lithium plating concentration [mol.m-3]":
+            c_plated_Li_av * c_scale,
+            f"{Domain} lithium plating thickness [m]": L_plated_Li * L_scale,
+            f"X-averaged {domain} lithium plating thickness [m]": L_plated_Li_av
+            * L_scale,
+            f"Loss of Li to {domain} lithium plating [mol]": Q_plated_Li * c_scale,
+            f"Loss of capacity to {domain} lithium plating [A.h]": Q_plated_Li
+            * c_scale * param.F / 3600,
         }
 
         return variables
@@ -85,15 +86,15 @@ class BasePlating(BaseInterface):
     def _get_standard_reaction_variables(self, j_stripping):
         """
         A private function to obtain the standard variables which
-        can be derived from the Li stripping interfacial reaction current
+        can be derived from the lithum stripping interfacial reaction current
         Parameters
         ----------
         j_stripping : :class:`pybamm.Symbol`
-            The net Li stripping interfacial reaction current.
+            The net lithium stripping interfacial reaction current.
         Returns
         -------
         variables : dict
-            The variables which can be derived from the plated Li thickness.
+            The variables which can be derived from the plated lithium thickness.
         """
         # Set scales to one for the "no plating" model so that they are not required
         # by parameter values in general
@@ -108,12 +109,12 @@ class BasePlating(BaseInterface):
         Domain = domain.capitalize()
 
         variables = {
-            f"{Domain} Li plating interfacial current density": j_stripping,
-            f"{Domain} Li plating interfacial "
+            f"{Domain} lithium plating interfacial current density": j_stripping,
+            f"{Domain} lithium plating interfacial "
             f"current density [A.m-2]": j_stripping * j_scale,
-            f"X-averaged {domain} Li plating "
+            f"X-averaged {domain} lithium plating "
             f"interfacial current density": j_stripping_av,
-            f"X-averaged {domain} Li plating "
+            f"X-averaged {domain} lithium plating "
             f"interfacial current density [A.m-2]": j_stripping_av * j_scale,
         }
 

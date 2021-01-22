@@ -6,7 +6,7 @@ from .base_plating import BasePlating
 
 
 class NoPlating(BasePlating):
-    """Base class for no Li plating/stripping.
+    """Base class for no lithium plating/stripping.
 
     Parameters
     ----------
@@ -22,7 +22,7 @@ class NoPlating(BasePlating):
            Lithium-Ion Batteries". Journal of The Electrochemical Society,
            167:090540, 2019
 
-    **Extends:** :class:`pybamm.li_plating.BasePlating`
+    **Extends:** :class:`pybamm.lithium_plating.BasePlating`
     """
 
     def __init__(self, param, domain):
@@ -39,9 +39,11 @@ class NoPlating(BasePlating):
     def get_coupled_variables(self, variables):
         # Update whole cell variables, which also updates the "sum of" variables
         if (
-            "Negative electrode Li plating interfacial current density" in variables
-            and "Positive electrode Li plating interfacial current density" in variables
-            and "Li plating interfacial current density" not in variables
+            "Negative electrode lithium plating interfacial current density"
+            in variables
+            and "Positive electrode lithium plating interfacial current density"
+            in variables
+            and "Lithium plating interfacial current density" not in variables
         ):
             variables.update(
                 self._get_standard_whole_cell_interfacial_current_variables(variables)

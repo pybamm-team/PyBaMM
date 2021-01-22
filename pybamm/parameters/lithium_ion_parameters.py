@@ -211,11 +211,13 @@ class LithiumIonParameters:
         # Li plating parameters
 
         self.V_bar_plated_Li = pybamm.Parameter(
-            "Li metal partial molar volume [m3.mol-1]"
+            "Lithium metal partial molar volume [m3.mol-1]"
         )
-        self.k_plating = pybamm.Parameter("Li plating kinetic rate constant [m.s-1]")
+        self.k_plating = pybamm.Parameter(
+            "Lithium plating kinetic rate constant [m.s-1]"
+        )
         self.c_plated_Li_0_dim = pybamm.Parameter(
-            "Initial plated Li concentration [mol.m-3]"
+            "Initial plated lithium concentration [mol.m-3]"
         )
 
         # Exchange current density for scaling
@@ -725,13 +727,13 @@ class LithiumIonParameters:
         )
         self.beta_sei_n = self.a_n_typ * self.L_sei_0_dim * self.Gamma_SEI_n
 
-        # Li plating parameters
+        # lithium plating parameters
 
         self.C_plating = self.j_scale_n / self.j0_plating_dimensional
 
         self.c_plated_Li_0 = self.c_plated_Li_0_dim / self.c_e_typ
 
-        # ratio of Li plating reaction scaled to intercalation reaction
+        # ratio of lithium plating reaction scaled to intercalation reaction
         self.Gamma_plating = (
             self.a_n_typ * self.j_scale_n * self.tau_discharge
         ) / (self.F * self.c_e_typ)
