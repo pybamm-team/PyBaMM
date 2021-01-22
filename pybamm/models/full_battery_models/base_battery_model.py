@@ -44,8 +44,8 @@ class BaseBatteryModel(pybamm.BaseModel):
                 Sets the model for the interfacial surface area. Can be "constant"
                 (default) or "varying". Not currently implemented in any of the models.
             * "loss of active material" : str
-                Sets the model for loss of active material. Can be "none" (default) or
-                "example", which is a placeholder for LAM models.
+                Sets the model for loss of active material. Can be "none" (default),
+                "cathode", "anode" or "both" to enable it for the specific electrode.
             * "particle" : str
                 Sets the submodel to use to describe behaviour within the particle.
                 Can be "Fickian diffusion" (default), "uniform profile",
@@ -383,7 +383,12 @@ class BaseBatteryModel(pybamm.BaseModel):
                 )
             )
 
-        if options["loss of active material"] not in ["none", "example"]:
+        if options["loss of active material"] not in [
+            "none",
+            "anode",
+            "cathode",
+            "both",
+        ]:
             raise pybamm.OptionError(
                 "Unknown loss of active material '{}'".format(
                     options["loss of active material"]

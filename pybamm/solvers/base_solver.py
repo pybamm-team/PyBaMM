@@ -8,6 +8,7 @@ import numbers
 import numpy as np
 import sys
 import itertools
+import multiprocessing as mp
 import warnings
 
 
@@ -130,7 +131,7 @@ class BaseSolver(object):
         model : :class:`pybamm.BaseModel`
             The model whose solution to calculate. Must have attributes rhs and
             initial_conditions
-        inputs : dict, optional
+        inputs_dict : dict, optional
             Any input parameters to pass to the model when solving
         t_eval : numeric type, optional
             The times (in seconds) at which to compute the solution
@@ -484,7 +485,7 @@ class BaseSolver(object):
             The model for which to calculate initial conditions.
         time : float
             The time at which to calculate the states
-        inputs : dict, optional
+        inputs_dict : dict, optional
             Any input parameters to pass to the model when solving
 
         Returns
@@ -494,7 +495,7 @@ class BaseSolver(object):
             of the algebraic equations). If self.root_method == None then returns
             model.y0.
         """
-        pybamm.logger.info("Start calculating consistent states")
+        pybamm.logger.debug("Start calculating consistent states")
         if self.root_method is None:
             return model.y0
         try:
@@ -503,8 +504,8 @@ class BaseSolver(object):
             raise pybamm.SolverError(
                 "Could not find consistent states: {}".format(e.args[0])
             )
-        pybamm.logger.info("Found consistent states")
-        y0 = root_sol.y
+        pybamm.logger.debug("Found consistent states")
+        y0 = root_sol.all_ys[0]
         if isinstance(y0, np.ndarray):
             y0 = y0.flatten()
         return y0
@@ -516,6 +517,7 @@ class BaseSolver(object):
         external_variables=None,
         inputs=None,
         initial_conditions=None,
+        nproc=None,
     ):
         """
         Execute the solver setup and calculate the solution of the model at
@@ -531,12 +533,22 @@ class BaseSolver(object):
         external_variables : dict
             A dictionary of external variables and their corresponding
             values at the current time
-        inputs : dict, optional
-            Any input parameters to pass to the model when solving
+        inputs : dict or list, optional
+            A dictionary or list of dictionaries describing any input parameters to
+            pass to the model when solving
         initial_conditions : :class:`pybamm.Symbol`, optional
             Initial conditions to use when solving the model. If None (default),
             `model.concatenated_initial_conditions` is used. Otherwise, must be a symbol
             of size `len(model.rhs) + len(model.algebraic)`.
+        nproc : int, optional
+            Number of processes to use when solving for more than one set of input
+            parameters. Defaults to value returned by "os.cpu_count()".
+
+        Returns
+        -------
+        :class:`pybamm.Solution` or list of :class:`pybamm.Solution` objects.
+             If type of `inputs` is `list`, return a list of corresponding
+             :class:`pybamm.Solution` objects.
 
         Raises
         ------
@@ -580,14 +592,35 @@ class BaseSolver(object):
             raise pybamm.SolverError("t_eval must increase monotonically")
 
         # Set up external variables and inputs
-        ext_and_inputs = self._set_up_ext_and_inputs(model, external_variables, inputs)
+        #
+        # Argument "inputs" can be either a list of input dicts or
+        # a single dict. The remaining of this function is only working
+        # with variable "input_list", which is a list of dictionaries.
+        # If "inputs" is a single dict, "inputs_list" is a list of only one dict.
+        inputs_list = inputs if isinstance(inputs, list) else [inputs]
+        ext_and_inputs_list = [
+            self._set_up_ext_and_inputs(model, external_variables, inputs)
+            for inputs in inputs_list
+        ]
+
+        # Cannot use multiprocessing with model in "jax" format
+        if (len(inputs_list) > 1) and model.convert_to_format == "jax":
+            raise pybamm.SolverError(
+                "Cannot solve list of inputs with multiprocessing "
+                'when model in format "jax".'
+            )
 
         # Set up
         timer = pybamm.Timer()
 
         # Set up (if not done already)
         if model not in self.models_set_up:
-            self.set_up(model, ext_and_inputs, t_eval)
+            # It is assumed that when len(inputs_list) > 1, model set
+            # up (initial condition, time-scale and length-scale) does
+            # not depend on input parameters. Thefore only `ext_and_inputs[0]`
+            # is passed to `set_up`.
+            # See https://github.com/pybamm-team/PyBaMM/pull/1261
+            self.set_up(model, ext_and_inputs_list[0], t_eval)
             self.models_set_up.update(
                 {model: {"initial conditions": model.concatenated_initial_conditions}}
             )
@@ -598,7 +631,7 @@ class BaseSolver(object):
                 # If the new initial conditions are different, set up again
                 # Doing the whole setup again might be slow, but no need to prematurely
                 # optimize this
-                self.set_up(model, ext_and_inputs, t_eval)
+                self.set_up(model, ext_and_inputs_list[0], t_eval)
                 self.models_set_up[model][
                     "initial conditions"
                 ] = model.concatenated_initial_conditions
@@ -606,14 +639,37 @@ class BaseSolver(object):
         timer.reset()
 
         # (Re-)calculate consistent initial conditions
-        self._set_initial_conditions(model, ext_and_inputs, update_rhs=True)
+        # Assuming initial conditions do not depend on input parameters
+        # when len(inputs_list) > 1, only `ext_and_inputs_list[0]`
+        # is passed to `_set_initial_conditions`.
+        # See https://github.com/pybamm-team/PyBaMM/pull/1261
+        if len(inputs_list) > 1:
+            all_inputs_names = set(
+                itertools.chain.from_iterable(
+                    [ext_and_inputs.keys() for ext_and_inputs in ext_and_inputs_list]
+                )
+            )
+            initial_conditions_node_names = set(
+                [it.name for it in model.concatenated_initial_conditions.pre_order()]
+            )
+            if all_inputs_names.issubset(initial_conditions_node_names):
+                raise pybamm.SolverError(
+                    "Input parameters cannot appear in expression "
+                    "for initial conditions."
+                )
+
+        self._set_initial_conditions(model, ext_and_inputs_list[0], update_rhs=True)
 
         # Non-dimensionalise time
         t_eval_dimensionless = t_eval / model.timescale_eval
 
         # Calculate discontinuities
         discontinuities = [
-            event.expression.evaluate(inputs=inputs)
+            # Assuming that discontinuities do not depend on
+            # input parameters when len(input_list) > 1, only
+            # `input_list[0]` is passed to `evaluate`.
+            # See https://github.com/pybamm-team/PyBaMM/pull/1261
+            event.expression.evaluate(inputs=inputs_list[0])
             for event in model.discontinuity_events_eval
         ]
 
@@ -638,6 +694,11 @@ class BaseSolver(object):
             pybamm.logger.info(
                 "Discontinuity events found at t = {}".format(discontinuities)
             )
+            if isinstance(inputs, list):
+                raise pybamm.SolverError(
+                    "Cannot solve for a list of input parameters"
+                    " sets with discontinuities"
+                )
         else:
             pybamm.logger.info("No discontinuity events found")
 
@@ -665,7 +726,7 @@ class BaseSolver(object):
         # object, restarting the solver at each discontinuity (and recalculating a
         # consistent state afterwards if a dae)
         old_y0 = model.y0
-        solution = None
+        solutions = None
         for start_index, end_index in zip(start_indices, end_indices):
             pybamm.logger.info(
                 "Calling solver for {} < t < {}".format(
@@ -673,43 +734,57 @@ class BaseSolver(object):
                     t_eval_dimensionless[end_index - 1] * model.timescale_eval,
                 )
             )
-            new_solution = self._integrate(
-                model, t_eval_dimensionless[start_index:end_index], ext_and_inputs
-            )
-            new_solution.solve_time = timer.time()
-            if solution is None:
-                solution = new_solution
+            ninputs = len(ext_and_inputs_list)
+            if ninputs == 1:
+                new_solution = self._integrate(
+                    model,
+                    t_eval_dimensionless[start_index:end_index],
+                    ext_and_inputs_list[0],
+                )
+                new_solutions = [new_solution]
             else:
-                solution.append(new_solution, start_index=0)
+                with mp.Pool(processes=nproc) as p:
+                    new_solutions = p.starmap(
+                        self._integrate,
+                        zip(
+                            [model] * ninputs,
+                            [t_eval_dimensionless[start_index:end_index]] * ninputs,
+                            ext_and_inputs_list,
+                        ),
+                    )
+                    p.close()
+                    p.join()
+            # Setting the solve time for each segment.
+            # pybamm.Solution.append assumes attribute
+            # solve_time.
+            solve_time = timer.time()
+            for sol in new_solutions:
+                sol.solve_time = solve_time
+            if start_index == start_indices[0]:
+                solutions = [sol for sol in new_solutions]
+            else:
+                for i, new_solution in enumerate(new_solutions):
+                    solutions[i] = solutions[i] + new_solution
 
-            if solution.termination != "final time":
+            if solutions[0].termination != "final time":
                 break
 
             if end_index != len(t_eval_dimensionless):
                 # setup for next integration subsection
-                last_state = solution.y[:, -1]
+                last_state = solutions[0].y[:, -1]
                 # update y0 (for DAE solvers, this updates the initial guess for the
                 # rootfinder)
                 model.y0 = last_state
                 if len(model.algebraic) > 0:
                     model.y0 = self.calculate_consistent_state(
-                        model, t_eval_dimensionless[end_index], ext_and_inputs
+                        model, t_eval_dimensionless[end_index], ext_and_inputs_list[0]
                     )
 
-        # Assign times
-        solution.set_up_time = set_up_time
-        solution.solve_time = timer.time()
-
-        # restore old y0
-        model.y0 = old_y0
-
-        # Add model and inputs to solution
-        solution.model = model
-        solution.inputs = ext_and_inputs
-
-        # Copy the timescale_eval and lengthscale_evals
-        solution.timescale_eval = model.timescale_eval
-        solution.length_scales_eval = model.length_scales_eval
+        solve_time = timer.time()
+        for i, solution in enumerate(solutions):
+            # Assign times
+            solution.set_up_time = set_up_time
+            solution.solve_time = solve_time
 
         # Check if extrapolation occurred
         extrapolation = self.check_extrapolation(solution, model.events)
@@ -722,7 +797,10 @@ class BaseSolver(object):
             )
 
         # Identify the event that caused termination
-        termination = self.get_termination_reason(solution, model.events)
+        termination = self.get_termination_reason(solutions[0], model.events)
+
+        # restore old y0
+        model.y0 = old_y0
 
         pybamm.logger.info("Finish solving {} ({})".format(model.name, termination))
         pybamm.logger.info(
@@ -730,22 +808,29 @@ class BaseSolver(object):
                 "Set-up time: {}, Solve time: {} (of which integration time: {}), "
                 "Total time: {}"
             ).format(
-                solution.set_up_time,
-                solution.solve_time,
-                solution.integration_time,
-                solution.total_time,
+                solutions[0].set_up_time,
+                solutions[0].solve_time,
+                solutions[0].integration_time,
+                solutions[0].total_time,
             )
         )
 
-        # Raise error if solution only contains one timestep (except for algebraic
+        # Raise error if solutions[0] only contains one timestep (except for algebraic
         # solvers, where we may only expect one time in the solution)
-        if self.algebraic_solver is False and len(solution.t) == 1:
+        if (
+            self.algebraic_solver is False
+            and len(solution.all_ts) == 1
+            and len(solution.all_ts[0]) == 1
+        ):
             raise pybamm.SolverError(
                 "Solution time vector has length 1. "
                 "Check whether simulation terminated too early."
             )
 
-        return solution
+        if ninputs == 1:
+            return solutions[0]
+        else:
+            return solutions
 
     def step(
         self,
@@ -777,7 +862,7 @@ class BaseSolver(object):
         external_variables : dict
             A dictionary of external variables and their corresponding
             values at the current time
-        inputs : dict, optional
+        inputs_dict : dict, optional
             Any input parameters to pass to the model when solving
         save : bool
             Turn on to store the solution of all previous timesteps
@@ -848,8 +933,8 @@ class BaseSolver(object):
             t = 0.0
         else:
             # initialize with old solution
-            t = old_solution.t[-1]
-            model.y0 = old_solution.y[:, -1]
+            t = old_solution.all_ts[-1][-1]
+            model.y0 = old_solution.all_ys[-1][:, -1]
         set_up_time = timer.time()
 
         # (Re-)calculate consistent initial conditions
@@ -860,21 +945,18 @@ class BaseSolver(object):
 
         # Step
         t_eval = np.linspace(t, t + dt_dimensionless, npts)
-        pybamm.logger.info("Calling solver")
+        pybamm.logger.info(
+            "Stepping for {:.0f} < t < {:.0f}".format(
+                t * model.timescale_eval,
+                (t + dt_dimensionless) * model.timescale_eval,
+            )
+        )
         timer.reset()
         solution = self._integrate(model, t_eval, ext_and_inputs)
 
         # Assign times
         solution.set_up_time = set_up_time
         solution.solve_time = timer.time()
-
-        # Add model and inputs to solution
-        solution.model = model
-        solution.inputs = ext_and_inputs
-
-        # Copy the timescale_eval and lengthscale_evals
-        solution.timescale_eval = temp_timescale_eval
-        solution.length_scales_eval = temp_length_scales_eval
 
         # Check if extrapolation occurred
         extrapolation = self.check_extrapolation(solution, model.events)
@@ -889,8 +971,8 @@ class BaseSolver(object):
         # Identify the event that caused termination
         termination = self.get_termination_reason(solution, model.events)
 
-        pybamm.logger.debug("Finish stepping {} ({})".format(model.name, termination))
-        pybamm.logger.debug(
+        pybamm.logger.info("Finish stepping {} ({})".format(model.name, termination))
+        pybamm.logger.info(
             (
                 "Set-up time: {}, Step time: {} (of which integration time: {}), "
                 "Total time: {}"
@@ -933,27 +1015,30 @@ class BaseSolver(object):
                         event.expression.evaluate(
                             solution.t_event,
                             solution.y_event,
-                            inputs={k: v[:, -1] for k, v in solution.inputs.items()},
+                            inputs=solution.all_inputs[-1],
                         )
                     )
             termination_event = min(final_event_values, key=final_event_values.get)
             # Add the event to the solution object
             solution.termination = "event: {}".format(termination_event)
             # Update t, y and inputs to include event time and state
-            # Note: if the final entry of t is equal to the event time to within
-            # the absolute tolerance we skip this (having duplicate entries
-            # causes an error later in ProcessedVariable)
-            if solution.t_event - solution._t[-1] > self.atol:
-                solution._t = np.concatenate((solution._t, solution.t_event))
-                if isinstance(solution.y, casadi.DM):
-                    solution._y = casadi.horzcat(solution.y, solution.y_event)
-                else:
-                    solution._y = np.hstack((solution._y, solution.y_event))
+            # Note: if the final entry of t is equal to the event time we skip
+            # this (having duplicate entries causes an error later in ProcessedVariable)
+            if solution.t_event != solution.all_ts[-1][-1]:
+                event_sol = pybamm.Solution(
+                    solution.t_event,
+                    solution.y_event,
+                    solution.model,
+                    solution.all_inputs[-1],
+                    solution.t_event,
+                    solution.y_event,
+                    solution.termination,
+                )
+                event_sol.solve_time = 0
+                event_sol.integration_time = 0
+                solution = solution + event_sol
 
-                for name, inp in solution.inputs.items():
-                    solution._inputs[name] = np.c_[inp, inp[:, -1]]
-
-            return "the termination event '{}' occurred".format(termination_event)
+            return solution.termination
 
     def check_extrapolation(self, solution, events):
         """
@@ -973,24 +1058,22 @@ class BaseSolver(object):
 
         for event in events:
             if event.event_type == pybamm.EventType.INTERPOLANT_EXTRAPOLATION:
+                # First set to False, then loop through and change to True if any
+                # events extrapolate
                 extrap_events[event.name] = False
-
-        try:
-            y_full = solution.y.full()
-        except AttributeError:
-            y_full = solution.y
-
-        for event in events:
-            if event.event_type == pybamm.EventType.INTERPOLANT_EXTRAPOLATION:
-                if (
-                    event.expression.evaluate(
-                        solution.t,
-                        y_full,
-                        inputs={k: v for k, v in solution.inputs.items()},
-                    )
-                    < self.extrap_tol
-                ).any():
-                    extrap_events[event.name] = True
+                # This might be a little bit slow but is ok for now
+                for ts, ys, inputs in zip(
+                    solution.all_ts, solution.all_ys, solution.all_inputs
+                ):
+                    for inner_idx, t in enumerate(ts):
+                        y = ys[:, inner_idx]
+                        if isinstance(y, casadi.DM):
+                            y = y.full()
+                        if (
+                            event.expression.evaluate(t, y, inputs=inputs)
+                            < self.extrap_tol
+                        ):
+                            extrap_events[event.name] = True
 
         # Add the event dictionaryto the solution object
         solution.extrap_events = extrap_events
