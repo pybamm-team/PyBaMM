@@ -959,8 +959,8 @@ class LithiumIonParameters:
         if options["particle cracking"] not in [
             "none",
             "no cracking",
-            "cathode",
-            "anode",
+            "positive",
+            "negative",
             "both",
         ]:
             raise pybamm.OptionError(

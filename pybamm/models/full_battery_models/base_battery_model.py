@@ -45,7 +45,8 @@ class BaseBatteryModel(pybamm.BaseModel):
                 (default) or "varying". Not currently implemented in any of the models.
             * "loss of active material" : str
                 Sets the model for loss of active material. Can be "none" (default),
-                "cathode", "anode" or "both" to enable it for the specific electrode.
+                "positive", "negative" or "both" to enable it for the specific
+                electrode.
             * "particle" : str
                 Sets the submodel to use to describe behaviour within the particle.
                 Can be "Fickian diffusion" (default), "uniform profile",
@@ -58,12 +59,13 @@ class BaseBatteryModel(pybamm.BaseModel):
                 necessarily consistent with the particle shape.
             * "particle cracking" : str
                 Sets the model to account for mechanical effects and particle
-                cracking. Can be "none", "no cracking", "anode", "cathode" or "both".
+                cracking. Can be "none", "no cracking", "negative", "positive" or
+                "both".
                 All options other than "none" account for the effects of swelling
                 of electrode particles, cell thickness change, and stress-assisted
-                diffusion. The options "anode", "cathode" or "both" additionally account
-                for crack propagation in the anode, cathode or both electrodes,
-                respectively.
+                diffusion. The options "negative", "positive" or "both" additionally
+                account for crack propagation in the negative, positive or both
+                electrodes, respectively.
             * "sei" : str
                 Set the sei submodel to be used. Options are:
 
@@ -385,8 +387,8 @@ class BaseBatteryModel(pybamm.BaseModel):
 
         if options["loss of active material"] not in [
             "none",
-            "anode",
-            "cathode",
+            "negative",
+            "positive",
             "both",
         ]:
             raise pybamm.OptionError(
@@ -398,8 +400,8 @@ class BaseBatteryModel(pybamm.BaseModel):
         if options["particle cracking"] not in [
             "none",
             "no cracking",
-            "anode",
-            "cathode",
+            "negative",
+            "positive",
             "both",
         ]:
             raise pybamm.OptionError(

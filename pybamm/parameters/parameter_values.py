@@ -25,13 +25,14 @@ class ParameterValues:
         Dict of strings for default chemistries. Must be of the form:
         {"base chemistry": base_chemistry,
         "cell": cell_properties_authorYear,
-        "anode": anode_chemistry_authorYear,
+        "negative electrode": negative_electrode_chemistry_authorYear,
         "separator": separator_chemistry_authorYear,
-        "cathode": cathode_chemistry_authorYear,
+        "positive electrode": positive_electrode_chemistry_authorYear,
         "electrolyte": electrolyte_chemistry_authorYear,
         "experiment": experimental_conditions_authorYear}.
-        Then the anode chemistry is loaded from the file
-        inputs/parameters/base_chemistry/anodes/anode_chemistry_authorYear, etc.
+        Then the negative electrode chemistry is loaded from the file
+        inputs/parameters/base_chemistry/negative electrodes/
+        negative_electrode_chemistry_authorYear, etc.
         Parameters in "cell" should include geometry and current collector properties.
         Parameters in "experiment" should include parameters relating to experimental
         conditions, such as initial conditions and currents.
