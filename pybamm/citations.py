@@ -98,7 +98,8 @@ class Citations:
                 citations += self._all_citations[key] + "\n"
         else:
             raise pybamm.OptionError(
-                "Output format {} not recognised. It should be 'text' or 'bibtex'.".format(
+                "Output format {} not recognised."
+                "It should be 'text' or 'bibtex'.".format(
                     output_format
                 )
             )
