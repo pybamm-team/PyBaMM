@@ -467,7 +467,8 @@ class Simulation:
                     npts = max(int(round(dt / exp_inputs["period"])) + 1, 2)
                     self.step(dt, solver=solver, npts=npts, **kwargs)
 
-                    # Extract the new parts of the solution to construct the entire "step"
+                    # Extract the new parts of the solution
+                    # to construct the entire "step"
                     sol = self.solution
                     new_num_subsolutions = len(sol.sub_solutions)
                     diff_num_subsolutions = (
