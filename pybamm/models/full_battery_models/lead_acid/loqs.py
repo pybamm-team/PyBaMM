@@ -52,7 +52,7 @@ class LOQS(BaseModel):
         if self.options["dimensionality"] == 0:
             self.use_jacobian = False
 
-        pybamm.citations.register("sulzer2019asymptotic")
+        pybamm.citations.register("Sulzer2019asymptotic")
 
     def set_external_circuit_submodel(self):
         """

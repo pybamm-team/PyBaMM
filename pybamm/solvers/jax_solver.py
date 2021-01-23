@@ -70,7 +70,7 @@ class JaxSolver(pybamm.BaseSolver):
         self.extra_options = extra_options or {}
         self.name = "JAX solver ({})".format(method)
         self._cached_solves = dict()
-        pybamm.citations.register("jax2018github")
+        pybamm.citations.register("jax2018")
 
     def get_solve(self, model, t_eval):
         """

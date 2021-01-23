@@ -68,9 +68,9 @@ class ScikitsDaeSolver(pybamm.BaseSolver):
 
         self.extra_options = extra_options or {}
 
-        pybamm.citations.register("scikits-odes")
-        pybamm.citations.register("hindmarsh2000pvode")
-        pybamm.citations.register("hindmarsh2005sundials")
+        pybamm.citations.register("Malengier2018")
+        pybamm.citations.register("Hindmarsh2000")
+        pybamm.citations.register("Hindmarsh2005")
 
     def _integrate(self, model, t_eval, inputs_dict=None):
         """
