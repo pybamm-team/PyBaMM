@@ -1,6 +1,6 @@
-# Lithium Nickel Cobalt Oxide cathode parameters
+# Lithium Nickel Cobalt Oxide positive electrode parameters
 
-Parameters for a Lithium Nickel Cobalt Oxide cathode, from the papers
+Parameters for a Lithium Nickel Cobalt Oxide positive electrode, from the papers
 
 > Ecker, Madeleine, et al. "Parameterization of a physico-chemical model of a lithium-ion battery i. determination of parameters." Journal of the Electrochemical Society 162.9 (2015): A1836-A1848.
 

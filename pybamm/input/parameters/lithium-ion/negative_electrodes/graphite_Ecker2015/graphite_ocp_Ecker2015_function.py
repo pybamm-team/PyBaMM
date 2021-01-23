@@ -28,7 +28,7 @@ def graphite_ocp_Ecker2015_function(sto):
         Open circuit potential
     """
 
-    # Graphite Anode from Ecker, Kabitz, Laresgoiti et al.
+    # Graphite negative electrode from Ecker, Kabitz, Laresgoiti et al.
     # Analytical fit (WebPlotDigitizer + gnuplot)
     a = 0.716502
     b = 369.028

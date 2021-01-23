@@ -1,6 +1,6 @@
-# Graphite anode parameters
+# Graphite negative electrode parameters
 
-Parameters for a graphite anode, from the papers:
+Parameters for a graphite negative electrode, from the papers:
 
 > Ecker, Madeleine, et al. "Parameterization of a physico-chemical model of a lithium-ion battery I. determination of parameters." Journal of the Electrochemical Society 162.9 (2015): A1836-A1848.
 

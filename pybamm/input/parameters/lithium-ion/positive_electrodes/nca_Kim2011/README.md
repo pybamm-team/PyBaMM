@@ -1,6 +1,6 @@
-# Nickel Cobalt Aluminium (NCA) cathode parameters
+# Nickel Cobalt Aluminium (NCA) positive electrode parameters
 
-Parameters for an NCA cathode, from the paper
+Parameters for an NCA positive electrode, from the paper
 
 > Kim, G. H., Smith, K., Lee, K. J., Santhanagopalan, S., & Pesaran, A. (2011). Multi-domain modeling of lithium-ion batteries encompassing multi-physics in varied length scales. Journal of The Electrochemical Society, 158(8), A955-A969.
 

@@ -1,6 +1,6 @@
-# Enertech Graphite anode parameters
+# Enertech Graphite negative electrode parameters
 
-Parameters for a graphite anode, from the paper
+Parameters for a graphite negative electrode, from the paper
 
 > Ai, W., Kraft, L., Sturm, J., Jossen, A., & Wu, B. (2020). Electrochemical Thermal-Mechanical Modelling of Stress Inhomogeneity in Lithium-Ion Pouch Cells. Journal of The Electrochemical Society, 167(1), 013512. DOI: 10.1149/2.0122001JES.
 
