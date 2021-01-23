@@ -21,7 +21,7 @@ For an example of how the parameter values work, see the
 Adding a set of parameters values
 ---------------------------------
 
-Parameter sets are split by material into ``anodes``, ``separators``, ``cathodes``, ``electrolytes``, ``cells`` (for cell geometries and thermal properties) and ``experiments`` (for initial conditions and charge/discharge rates).
+Parameter sets are split by material into ``negative_electrodes``, ``separators``, ``positive_electrodes``, ``electrolytes``, ``cells`` (for cell geometries and thermal properties) and ``experiments`` (for initial conditions and charge/discharge rates).
 To add a new parameter set in one of these subcategories, first create a new folder in the appropriate chemistry folder: for example, to add a new anode chemistry for lithium-ion, add a subfolder ``input/parameters/lithium-ion/anodes/new_anode_chemistry_AuthorYear``. 
 This subfolder should then contain:
 
@@ -112,9 +112,9 @@ If you have added a whole new set of parameters, then you can create a new param
     AuthorYear = {
         "chemistry": "lithium-ion",
         "cell": "new_cell_AuthorYear",
-        "anode": "new_anode_AuthorYear",
+        "negative electrode": "new_negative_electrode_AuthorYear",
         "separator": "new_separator_AuthorYear",
-        "cathode": "new_cathode_AuthorYear",
+        "positive electrode": "new_positive_electrode_AuthorYear",
         "electrolyte": "new_electrolyte_AuthorYear",
         "experiment": "new_experiment_AuthorYear",
     }
@@ -135,9 +135,9 @@ It's also possible to add parameters for a single material (e.g. anode) and then
         chemistry={
             "chemistry": "lithium-ion",
             "cell": "kokam_Marquis2019",
-            "anode": "new_anode_chemistry_AuthorYear",
+            "negative electrode": "new_anode_chemistry_AuthorYear",
             "separator": "separator_Marquis2019",
-            "cathode": "lico2_Marquis2019",
+            "positive electrode": "lico2_Marquis2019",
             "electrolyte": "lipf6_Marquis2019",
             "experiment": "1C_discharge_from_full_Marquis2019",
         }

@@ -140,8 +140,8 @@ class ParameterValues:
 
         component_groups = [
             "cell",
-            "anode",
-            "cathode",
+            "negative electrode",
+            "positive electrode",
             "separator",
             "electrolyte",
             "experiment",
@@ -163,7 +163,7 @@ class ParameterValues:
                 )
             # Create path to component and load values
             component_path = os.path.join(
-                base_chemistry, component_group + "s", component
+                base_chemistry, component_group.replace(" ", "_") + "s", component
             )
             file_path = self.find_parameter(
                 os.path.join(component_path, "parameters.csv")

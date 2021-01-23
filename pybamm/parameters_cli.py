@@ -39,11 +39,11 @@ def get_parser(description):
     parser.add_argument(
         "component",
         choices=[
-            "anodes",
-            "cathodes",
             "cells",
             "electrolytes",
             "experiments",
+            "negative_electrodes",
+            "positive_electrodes",
             "separators",
         ],
     )
