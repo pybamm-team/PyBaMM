@@ -13,6 +13,17 @@ class TestLogger(unittest.TestCase):
         self.assertEqual(logger.level, 20)
         pybamm.set_logging_level("ERROR")
         self.assertEqual(logger.level, 40)
+        pybamm.set_logging_level("SPAM")
+        self.assertEqual(logger.level, 5)
+        pybamm.set_logging_level("VERBOSE")
+        self.assertEqual(logger.level, 15)
+        pybamm.set_logging_level("NOTICE")
+        self.assertEqual(logger.level, 25)
+        pybamm.set_logging_level("SUCCESS")
+        self.assertEqual(logger.level, 35)
+
+        # reset
+        pybamm.set_logging_level("WARNING")
 
 
 if __name__ == "__main__":

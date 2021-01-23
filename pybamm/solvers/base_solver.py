@@ -137,6 +137,7 @@ class BaseSolver(object):
             The times (in seconds) at which to compute the solution
 
         """
+        pybamm.logger.info("Start solver set-up")
 
         # Check model.algebraic for ode solvers
         if self.ode_solver is True and len(model.algebraic) > 0:
@@ -221,7 +222,7 @@ class BaseSolver(object):
             def report(string):
                 # don't log event conversion
                 if "event" not in string:
-                    pybamm.logger.info(string)
+                    pybamm.logger.verbose(string)
 
             if use_jacobian is None:
                 use_jacobian = model.use_jacobian
@@ -691,7 +692,7 @@ class BaseSolver(object):
         discontinuities = [v for v in discontinuities if v < t_eval_dimensionless[-1]]
 
         if len(discontinuities) > 0:
-            pybamm.logger.info(
+            pybamm.logger.verbose(
                 "Discontinuity events found at t = {}".format(discontinuities)
             )
             if isinstance(inputs, list):
@@ -700,7 +701,7 @@ class BaseSolver(object):
                     " sets with discontinuities"
                 )
         else:
-            pybamm.logger.info("No discontinuity events found")
+            pybamm.logger.verbose("No discontinuity events found")
 
         # insert time points around discontinuities in t_eval
         # keep track of sub sections to integrate by storing start and end indices
@@ -728,7 +729,7 @@ class BaseSolver(object):
         old_y0 = model.y0
         solutions = None
         for start_index, end_index in zip(start_indices, end_indices):
-            pybamm.logger.info(
+            pybamm.logger.verbose(
                 "Calling solver for {} < t < {}".format(
                     t_eval_dimensionless[start_index] * model.timescale_eval,
                     t_eval_dimensionless[end_index - 1] * model.timescale_eval,
@@ -926,7 +927,7 @@ class BaseSolver(object):
                     )
         # Run set up on first step
         if old_solution is None:
-            pybamm.logger.info(
+            pybamm.logger.verbose(
                 "Start stepping {} with {}".format(model.name, self.name)
             )
             self.set_up(model, ext_and_inputs)
@@ -945,7 +946,7 @@ class BaseSolver(object):
 
         # Step
         t_eval = np.linspace(t, t + dt_dimensionless, npts)
-        pybamm.logger.info(
+        pybamm.logger.verbose(
             "Stepping for {:.0f} < t < {:.0f}".format(
                 t * model.timescale_eval,
                 (t + dt_dimensionless) * model.timescale_eval,
@@ -971,8 +972,8 @@ class BaseSolver(object):
         # Identify the event that caused termination
         termination = self.get_termination_reason(solution, model.events)
 
-        pybamm.logger.info("Finish stepping {} ({})".format(model.name, termination))
-        pybamm.logger.info(
+        pybamm.logger.verbose("Finish stepping {} ({})".format(model.name, termination))
+        pybamm.logger.verbose(
             (
                 "Set-up time: {}, Step time: {} (of which integration time: {}), "
                 "Total time: {}"
