@@ -30,8 +30,8 @@ class Integrated(BaseElectrolyteConductivity):
     """
 
     def __init__(self, param, domain=None):
-        pybamm.citations.register("BrosaPlanella2020")
         super().__init__(param, domain)
+        pybamm.citations.register("BrosaPlanella2020")
 
     def _higher_order_macinnes_function(self, x):
         return pybamm.log(x)

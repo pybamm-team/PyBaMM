@@ -5,6 +5,7 @@
 #
 import pybamm
 import os
+import pybtex
 
 
 class Citations:
@@ -74,7 +75,7 @@ class Citations:
             raise KeyError("'{}' is not a known citation".format(key))
         self._papers_to_cite.add(key)
 
-    def print(self, filename=None):
+    def print(self, filename=None, output_format="text"):
         """Print all citations that were used for running simulations.
 
         Parameters
@@ -84,8 +85,24 @@ class Citations:
             terminal.
         """
         citations = ""
-        for key in self._papers_to_cite:
-            citations += self._all_citations[key] + "\n"
+        citations_file = os.path.join(pybamm.root_dir(), "pybamm", "CITATIONS.txt")
+        if output_format == "text":
+            citations = pybtex.format_from_file(
+                citations_file,
+                "plain",
+                citations=self._papers_to_cite,
+                output_backend="plaintext",
+            )
+        elif output_format == "bibtex":
+            for key in self._papers_to_cite:
+                citations += self._all_citations[key] + "\n"
+        else:
+            raise pybamm.OptionError(
+                "Output format {} not recognised. It should be 'text' or 'bibtex'.".format(
+                    output_format
+                )
+            )
+
         if filename is None:
             print(citations)
         else:
@@ -93,9 +110,9 @@ class Citations:
                 f.write(citations)
 
 
-def print_citations(filename=None):
+def print_citations(filename=None, output_format="text"):
     "See :meth:`Citations.print`"
-    pybamm.citations.print(filename)
+    pybamm.citations.print(filename, output_format)
 
 
 citations = Citations()

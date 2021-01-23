@@ -23,9 +23,12 @@ class TestCitations(unittest.TestCase):
 
     def test_print_citations(self):
         pybamm.citations._reset()
-        pybamm.print_citations("test_citations.txt")
+        pybamm.print_citations("test_citations.txt", "text")
+        pybamm.print_citations("test_citations.txt", "bibtex")
         pybamm.citations._papers_to_cite = set()
         pybamm.print_citations()
+        with self.assertRaisesRegex(pybamm.OptionError, "'text' or 'bibtex'"):
+            pybamm.print_citations("test_citations.txt", "bad format")
 
     def test_andersson_2019(self):
         citations = pybamm.citations
