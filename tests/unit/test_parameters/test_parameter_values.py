@@ -29,7 +29,7 @@ class TestParameterValues(unittest.TestCase):
                 "input",
                 "parameters",
                 "lithium-ion",
-                "cathodes",
+                "positive_electrodes",
                 "lico2_Marquis2019",
                 "parameters.csv",
             )
@@ -46,7 +46,7 @@ class TestParameterValues(unittest.TestCase):
 
         # from file
         param = pybamm.ParameterValues(
-            "lithium-ion/cathodes/lico2_Marquis2019/" + "parameters.csv"
+            "lithium-ion/positive_electrodes/lico2_Marquis2019/" + "parameters.csv"
         )
         self.assertEqual(param["Positive electrode porosity"], 0.3)
 
@@ -453,7 +453,7 @@ class TestParameterValues(unittest.TestCase):
                 "input",
                 "parameters",
                 "lithium-ion",
-                "cathodes",
+                "positive_electrodes",
                 "lico2_Marquis2019",
             ),
             check_already_exists=False,
