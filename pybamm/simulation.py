@@ -446,9 +446,11 @@ class Simulation:
             all_cycle_solutions = []
 
             idx = 0
+            num_cycles = len(self.experiment.cycle_lengths)
             for cycle_num, cycle_length in enumerate(self.experiment.cycle_lengths):
                 pybamm.logger.info(
-                    f"Cycle {cycle_num+1} ---------------------------------------------"
+                    f"Cycle {cycle_num+1}/{num_cycles} ({timer.time()} elapsed) "
+                    + "-" * 20
                 )
                 steps = []
                 cycle_solution = None
@@ -458,7 +460,8 @@ class Simulation:
                     # Use 1-indexing for printing cycle number as it is more
                     # human-intuitive
                     pybamm.logger.info(
-                        f"Cycle {cycle_num+1}, step {step_num+1}: "
+                        f"Cycle {cycle_num+1}/{num_cycles}, "
+                        f"step {step_num+1}/{cycle_length}: "
                         f"{self.experiment.operating_conditions_strings[idx]}"
                     )
                     inputs.update(exp_inputs)
