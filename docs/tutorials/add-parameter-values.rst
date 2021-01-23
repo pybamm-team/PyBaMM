@@ -22,7 +22,7 @@ Adding a set of parameters values
 ---------------------------------
 
 Parameter sets are split by material into ``negative_electrodes``, ``separators``, ``positive_electrodes``, ``electrolytes``, ``cells`` (for cell geometries and thermal properties) and ``experiments`` (for initial conditions and charge/discharge rates).
-To add a new parameter set in one of these subcategories, first create a new folder in the appropriate chemistry folder: for example, to add a new anode chemistry for lithium-ion, add a subfolder ``input/parameters/lithium-ion/anodes/new_anode_chemistry_AuthorYear``. 
+To add a new parameter set in one of these subcategories, first create a new folder in the appropriate chemistry folder: for example, to add a new negative electrode chemistry for lithium-ion, add a subfolder ``input/parameters/lithium-ion/negative_electrodes/new_negative_electrode_chemistry_AuthorYear``. 
 This subfolder should then contain:
 
 - a csv file ``parameters.csv`` with all the relevant scalar parameters. The expected structure of the csv file is:
@@ -39,14 +39,14 @@ Empty lines, and lines starting with ``#``, will be ignored.
 - python files for any functions, which should be referenced from the ``parameters.csv`` file (see ``Adding a Function`` below)
 - csv files for any data to be interpolated, which should be referenced from the ``parameters.csv`` file (see ``Adding data for interpolation`` below)
 
-The easiest way to start is to copy an existing file (e.g. ````input/parameters/lithium-ion/anodes/graphite_mcmb2528_Marquis2019``) and replace all entries in all files as appropriate
+The easiest way to start is to copy an existing file (e.g. ````input/parameters/lithium-ion/negative_electrodes/graphite_mcmb2528_Marquis2019``) and replace all entries in all files as appropriate
 
 Adding a function
 -----------------
 
 Functions should be added as Python functions under a file with the same name in the appropriate chemistry folder in ``input/parameters/``.
 These Python functions should be documented with references explaining where they were obtained.
-For example, we would put the following Python function in a file ``input/parameters/lithium_ion/anodes/new_anode_chemistry_AuthorYear/diffusivity_AuthorYear.py``
+For example, we would put the following Python function in a file ``input/parameters/lithium_ion/negative_electrodes/new_negative_electrode_chemistry_AuthorYear/diffusivity_AuthorYear.py``
 
 .. code-block:: python
 
@@ -76,7 +76,7 @@ Adding data for interpolation
 -----------------------------
 
 Data should be added as as csv file in the appropriate chemistry folder in ``input/parameters/``.
-For example, we would put the following data in a file ``input/parameters/lithium_ion/anodes/new_anode_chemistry_AuthorYear/diffusivity_AuthorYear.csv``
+For example, we would put the following data in a file ``input/parameters/lithium_ion/negative_electrodes/new_negative_electrode_chemistry_AuthorYear/diffusivity_AuthorYear.csv``
 
 +--------------------------+--------------------------+
 | # concentration [mol/m3] | Diffusivity [m2/s]       |
@@ -127,7 +127,7 @@ Then, to use these new parameters, use:
 
 Note that you can re-use existing parameter subsets instead of creating new ones (for example, you could just replace "experiment": "new_experiment_AuthorYear" with "experiment": "1C_discharge_from_full_Marquis2019" in the above dictionary).
 
-It's also possible to add parameters for a single material (e.g. anode) and then re-use existing parameters for the other materials, without adding a parameter set to ``pybamm/parameters/parameter_sets.py``.
+It's also possible to add parameters for a single material (e.g. negative electrode) and then re-use existing parameters for the other materials, without adding a parameter set to ``pybamm/parameters/parameter_sets.py``.
 
 .. code-block:: python
 
@@ -135,7 +135,7 @@ It's also possible to add parameters for a single material (e.g. anode) and then
         chemistry={
             "chemistry": "lithium-ion",
             "cell": "kokam_Marquis2019",
-            "negative electrode": "new_anode_chemistry_AuthorYear",
+            "negative electrode": "new_negative_electrode_chemistry_AuthorYear",
             "separator": "separator_Marquis2019",
             "positive electrode": "lico2_Marquis2019",
             "electrolyte": "lipf6_Marquis2019",
@@ -143,14 +143,14 @@ It's also possible to add parameters for a single material (e.g. anode) and then
         }
     )
 
-or, equivalently in this case (since the only difference from the standard parameters from Marquis et al. is the set of anode parameters),
+or, equivalently in this case (since the only difference from the standard parameters from Marquis et al. is the set of negative electrode parameters),
 
 .. code-block:: python
 
     param = pybamm.ParameterValues(
         chemistry={
             **pybamm.parameter_sets.Marquis2019,
-            "anode": "new_anode_chemistry_AuthorYear",
+            "negative electrode": "new_negative_electrode_chemistry_AuthorYear",
         }
     )
 
