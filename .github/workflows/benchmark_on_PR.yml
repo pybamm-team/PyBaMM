@@ -32,7 +32,7 @@ jobs:
           HEAD_COMMIT=$(tail -1 commits_to_compare.txt)
           echo "SUMMARY OF CHANGES"
           echo "=================="
-          asv compare --only-changed $BASE_COMMIT $HEAD_COMMIT | tee compare_result.txt
+          asv compare $BASE_COMMIT $HEAD_COMMIT | tee compare_result.txt
           REGRESSIONS=$(grep "+" compare_result.txt)
           if [ ! -z "$REGRESSIONS" ]; \
           then \
@@ -43,6 +43,4 @@ jobs:
           printf "Found %d regression(s)\n" $(echo "$REGRESSIONS" | wc -l); \
           exit 1; \
           fi
-
-
     
