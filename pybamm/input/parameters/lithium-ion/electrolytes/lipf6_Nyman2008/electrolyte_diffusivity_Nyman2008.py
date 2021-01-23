@@ -1,6 +1,3 @@
-from pybamm import exp, constants, Scalar
-
-
 def electrolyte_diffusivity_Nyman2008(c_e, T):
     """
     Diffusivity of LiPF6 in EC:EMC (3:7) as a function of ion concentration. The data
@@ -24,7 +21,7 @@ def electrolyte_diffusivity_Nyman2008(c_e, T):
     """
 
     D_c_e = 8.794e-11 * (c_e / 1000) ** 2 - 3.972e-10 * (c_e / 1000) + 4.862e-10
-    E_D_e = Scalar(37040, "[J.mol-1]")
-    arrhenius = exp(E_D_e / constants.R * (1 / Scalar(298.15, "[K]") - 1 / T))
 
-    return D_c_e * arrhenius
+    # Nyman et al. (2008) does not provide temperature dependence
+
+    return D_c_e

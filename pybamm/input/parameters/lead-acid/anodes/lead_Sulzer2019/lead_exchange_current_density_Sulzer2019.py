@@ -1,4 +1,4 @@
-from pybamm import standard_parameters_lead_acid, Scalar
+from pybamm import Parameter, Scalar
 
 
 def lead_exchange_current_density_Sulzer2019(c_e, T):
@@ -27,6 +27,7 @@ def lead_exchange_current_density_Sulzer2019(c_e, T):
 
     """
     j0_ref = Scalar(0.06, "[A.m-2]")  # srinivasan2003mathematical
-    j0 = j0_ref * (c_e / standard_parameters_lead_acid.c_e_typ)
+    c_e_typ = Parameter("Typical electrolyte concentration [mol.m-3]")
+    j0 = j0_ref * (c_e / c_e_typ)
 
     return j0

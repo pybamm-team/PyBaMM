@@ -7,6 +7,7 @@
 #
 import sys
 import os
+from platform import system
 
 #
 # Version info
@@ -50,12 +51,20 @@ def version(formatted=False):
 FLOAT_FORMAT = "{: .17e}"
 # Absolute path to the PyBaMM repo
 script_path = os.path.abspath(__file__)
-ABSOLUTE_PATH = os.path.join(os.path.split(script_path)[0], "..")
+
+from .util import root_dir
+
+ABSOLUTE_PATH = root_dir()
+PARAMETER_PATH = [
+    root_dir(),
+    os.getcwd(),
+    os.path.join(root_dir(), "pybamm", "input", "parameters"),
+]
 
 #
 # Utility classes and methods
 #
-from .util import Timer, FuzzyDict
+from .util import Timer, TimerTime, FuzzyDict
 from .util import root_dir, load_function, rmse, get_infinite_nested_dict, load
 from .util import get_parameters_filepath
 from .logger import logger, set_logging_level
@@ -69,7 +78,7 @@ from .expression_tree.units import Units
 from .expression_tree.symbol import *
 from .expression_tree.binary_operators import *
 from .expression_tree.concatenations import *
-from .expression_tree.array import Array
+from .expression_tree.array import Array, linspace, meshgrid
 from .expression_tree.matrix import Matrix
 from .expression_tree.unary_operators import *
 from .expression_tree.functions import *
@@ -94,15 +103,22 @@ from .expression_tree.operations.simplify import (
     simplify_addition_subtraction,
     simplify_multiplication_division,
 )
+
 from .expression_tree.operations.evaluate import (
     find_symbols,
     id_to_python_variable,
     to_python,
     EvaluatorPython,
 )
+
+if system() != "Windows":
+    from .expression_tree.operations.evaluate import EvaluatorJax
+    from .expression_tree.operations.evaluate import JaxCooMatrix
+
 from .expression_tree.operations.jacobian import Jacobian
 from .expression_tree.operations.convert_to_casadi import CasadiConverter
 from .expression_tree.operations.unpack_symbols import SymbolUnpacker
+from .expression_tree.operations.replace_symbols import SymbolReplacer
 
 #
 # Model classes
@@ -123,6 +139,7 @@ from .models.full_battery_models import lithium_ion
 from .models.submodels.base_submodel import BaseSubModel
 
 from .models.submodels import (
+    active_material,
     convection,
     current_collector,
     electrolyte_conductivity,
@@ -135,40 +152,33 @@ from .models.submodels import (
     porosity,
     thermal,
     tortuosity,
-    sei,
+    particle_cracking,
 )
+from .models.submodels.interface import sei
 
 #
 # Geometry
 #
-from .geometry.geometry import (
-    Geometry,
-    Geometry1DMacro,
-    Geometry3DMacro,
-    Geometry1DMicro,
-    Geometry1p1DMicro,
-    Geometryxp1DMacro,
-    Geometryxp0p1DMicro,
-    Geometryxp1p1DMicro,
-    Geometry2DCurrentCollector,
-)
+from .geometry.geometry import Geometry
+from .geometry.battery_geometry import battery_geometry
 
 from .expression_tree.independent_variable import KNOWN_COORD_SYS
 from .geometry import standard_spatial_vars
 
 #
-# Parameters class and methods
+# Parameter classes and methods
 #
 from .parameters.parameter_values import ParameterValues
 from .parameters import constants
-from .parameters import geometric_parameters
-from .parameters import electrical_parameters
-from .parameters import thermal_parameters
-from .parameters import standard_parameters_lithium_ion, standard_parameters_lead_acid
-from .parameters import sei_parameters
-from .parameters.print_parameters import print_parameters, print_evaluated_parameters
+from .parameters.geometric_parameters import geometric_parameters, GeometricParameters
+from .parameters.electrical_parameters import (
+    electrical_parameters,
+    ElectricalParameters,
+)
+from .parameters.thermal_parameters import thermal_parameters, ThermalParameters
+from .parameters.lithium_ion_parameters import LithiumIonParameters
+from .parameters.lead_acid_parameters import LeadAcidParameters
 from .parameters import parameter_sets
-
 
 #
 # Mesh and Discretisation classes
@@ -183,6 +193,7 @@ from .meshes.one_dimensional_submeshes import (
     Exponential1DSubMesh,
     Chebyshev1DSubMesh,
     UserSupplied1DSubMesh,
+    SpectralVolume1DSubMesh,
 )
 from .meshes.scikit_fem_submeshes import (
     ScikitSubMesh2D,
@@ -198,12 +209,13 @@ from .meshes.scikit_fem_submeshes import (
 from .spatial_methods.spatial_method import SpatialMethod
 from .spatial_methods.zero_dimensional_method import ZeroDimensionalSpatialMethod
 from .spatial_methods.finite_volume import FiniteVolume
+from .spatial_methods.spectral_volume import SpectralVolume
 from .spatial_methods.scikit_finite_element import ScikitFiniteElement
 
 #
 # Solver classes
 #
-from .solvers.solution import Solution, _BaseSolution
+from .solvers.solution import Solution
 from .solvers.processed_variable import ProcessedVariable
 from .solvers.processed_symbolic_variable import ProcessedSymbolicVariable
 from .solvers.base_solver import BaseSolver
@@ -214,6 +226,12 @@ from .solvers.casadi_algebraic_solver import CasadiAlgebraicSolver
 from .solvers.scikits_dae_solver import ScikitsDaeSolver
 from .solvers.scikits_ode_solver import ScikitsOdeSolver, have_scikits_odes
 from .solvers.scipy_solver import ScipySolver
+
+# Jax not supported under windows
+if system() != "Windows":
+    from .solvers.jax_solver import JaxSolver
+    from .solvers.jax_bdf_solver import jax_bdf_integrate
+
 from .solvers.idaklu_solver import IDAKLUSolver, have_idaklu
 
 #
@@ -223,10 +241,16 @@ from .experiments.experiment import Experiment
 from . import experiments
 
 #
-# other
+# Plotting
 #
-from .quick_plot import QuickPlot, dynamic_plot, ax_min, ax_max
+from .plotting.quick_plot import QuickPlot, close_plots
+from .plotting.plot import plot
+from .plotting.plot2D import plot2D
+from .plotting.dynamic_plot import dynamic_plot
 
+#
+# Simulation
+#
 from .simulation import Simulation, load_sim, is_notebook
 
 #

@@ -34,6 +34,8 @@ class SPM(BaseModel):
 
         self.set_external_circuit_submodel()
         self.set_porosity_submodel()
+        self.set_crack_submodel()
+        self.set_active_material_submodel()
         self.set_tortuosity_submodels()
         self.set_convection_submodel()
         self.set_interfacial_submodel()
@@ -44,6 +46,7 @@ class SPM(BaseModel):
         self.set_positive_electrode_submodel()
         self.set_thermal_submodel()
         self.set_current_collector_submodel()
+
         self.set_sei_submodel()
 
         if build:
@@ -53,7 +56,49 @@ class SPM(BaseModel):
 
     def set_porosity_submodel(self):
 
-        self.submodels["porosity"] = pybamm.porosity.Constant(self.param)
+        if self.options["sei porosity change"] == "false":
+            self.submodels["porosity"] = pybamm.porosity.Constant(self.param)
+        elif self.options["sei porosity change"] == "true":
+            self.submodels["porosity"] = pybamm.porosity.LeadingOrder(self.param)
+
+    def set_active_material_submodel(self):
+
+        if self.options["loss of active material"] == "none":
+            self.submodels[
+                "negative active material"
+            ] = pybamm.active_material.Constant(self.param, "Negative", self.options)
+            self.submodels[
+                "positive active material"
+            ] = pybamm.active_material.Constant(self.param, "Positive", self.options)
+        elif self.options["loss of active material"] == "both":
+            self.submodels[
+                "negative active material"
+            ] = pybamm.active_material.VaryingUniform(
+                self.param, "Negative", self.options
+            )
+            self.submodels[
+                "positive active material"
+            ] = pybamm.active_material.VaryingUniform(
+                self.param, "Positive", self.options
+            )
+        elif self.options["loss of active material"] == "anode":
+            self.submodels[
+                "negative active material"
+            ] = pybamm.active_material.VaryingUniform(
+                self.param, "Negative", self.options
+            )
+            self.submodels[
+                "positive active material"
+            ] = pybamm.active_material.Constant(self.param, "Positive", self.options)
+        elif self.options["loss of active material"] == "cathode":
+            self.submodels[
+                "negative active material"
+            ] = pybamm.active_material.Constant(self.param, "Negative", self.options)
+            self.submodels[
+                "positive active material"
+            ] = pybamm.active_material.VaryingUniform(
+                self.param, "Positive", self.options
+            )
 
     def set_convection_submodel(self):
 
@@ -66,20 +111,30 @@ class SPM(BaseModel):
 
     def set_interfacial_submodel(self):
 
-        if self.options["surface form"] is False:
+        if self.options["surface form"] == "false":
             self.submodels["negative interface"] = pybamm.interface.InverseButlerVolmer(
-                self.param, "Negative", "lithium-ion main"
+                self.param, "Negative", "lithium-ion main", self.options
             )
             self.submodels["positive interface"] = pybamm.interface.InverseButlerVolmer(
+                self.param, "Positive", "lithium-ion main", self.options
+            )
+            self.submodels[
+                "negative interface current"
+            ] = pybamm.interface.CurrentForInverseButlerVolmer(
+                self.param, "Negative", "lithium-ion main"
+            )
+            self.submodels[
+                "positive interface current"
+            ] = pybamm.interface.CurrentForInverseButlerVolmer(
                 self.param, "Positive", "lithium-ion main"
             )
         else:
             self.submodels["negative interface"] = pybamm.interface.ButlerVolmer(
-                self.param, "Negative", "lithium-ion main"
+                self.param, "Negative", "lithium-ion main", self.options
             )
 
             self.submodels["positive interface"] = pybamm.interface.ButlerVolmer(
-                self.param, "Positive", "lithium-ion main"
+                self.param, "Positive", "lithium-ion main", self.options
             )
 
     def set_particle_submodel(self):
@@ -91,31 +146,46 @@ class SPM(BaseModel):
             self.submodels["positive particle"] = pybamm.particle.FickianSingleParticle(
                 self.param, "Positive"
             )
-        elif self.options["particle"] == "fast diffusion":
-            self.submodels["negative particle"] = pybamm.particle.FastSingleParticle(
-                self.param, "Negative"
+        elif self.options["particle"] in [
+            "uniform profile",
+            "quadratic profile",
+            "quartic profile",
+        ]:
+            self.submodels[
+                "negative particle"
+            ] = pybamm.particle.PolynomialSingleParticle(
+                self.param, "Negative", self.options["particle"]
             )
-            self.submodels["positive particle"] = pybamm.particle.FastSingleParticle(
-                self.param, "Positive"
+            self.submodels[
+                "positive particle"
+            ] = pybamm.particle.PolynomialSingleParticle(
+                self.param, "Positive", self.options["particle"]
             )
 
     def set_negative_electrode_submodel(self):
 
-        self.submodels["negative electrode"] = pybamm.electrode.ohm.LeadingOrder(
-            self.param, "Negative"
-        )
+        self.submodels[
+            "negative electrode potential"
+        ] = pybamm.electrode.ohm.LeadingOrder(self.param, "Negative")
 
     def set_positive_electrode_submodel(self):
 
-        self.submodels["positive electrode"] = pybamm.electrode.ohm.LeadingOrder(
-            self.param, "Positive"
-        )
+        self.submodels[
+            "positive electrode potential"
+        ] = pybamm.electrode.ohm.LeadingOrder(self.param, "Positive")
 
     def set_electrolyte_submodel(self):
 
         surf_form = pybamm.electrolyte_conductivity.surface_potential_form
 
-        if self.options["surface form"] is False:
+        if self.options["electrolyte conductivity"] not in ["default", "leading order"]:
+            raise pybamm.OptionError(
+                "electrolyte conductivity '{}' not suitable for SPM".format(
+                    self.options["electrolyte conductivity"]
+                )
+            )
+
+        if self.options["surface form"] == "false":
             self.submodels[
                 "leading-order electrolyte conductivity"
             ] = pybamm.electrolyte_conductivity.LeadingOrder(self.param)
@@ -131,16 +201,7 @@ class SPM(BaseModel):
                 self.submodels[
                     "leading-order " + domain.lower() + " electrolyte conductivity"
                 ] = surf_form.LeadingOrderAlgebraic(self.param, domain)
+
         self.submodels[
             "electrolyte diffusion"
         ] = pybamm.electrolyte_diffusion.ConstantConcentration(self.param)
-
-    @property
-    def default_geometry(self):
-        dimensionality = self.options["dimensionality"]
-        if dimensionality == 0:
-            return pybamm.Geometry("1D macro", "1D micro")
-        elif dimensionality == 1:
-            return pybamm.Geometry("1+1D macro", "(1+0)+1D micro")
-        elif dimensionality == 2:
-            return pybamm.Geometry("2+1D macro", "(2+0)+1D micro")

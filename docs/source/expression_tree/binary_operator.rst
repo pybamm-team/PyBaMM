@@ -34,6 +34,9 @@ Binary Operators
 .. autoclass:: pybamm.NotEqualHeaviside
   :members:
 
+.. autoclass:: pybamm.Modulo
+  :members:
+
 .. autoclass:: pybamm.Minimum
   :members:
 
@@ -43,5 +46,11 @@ Binary Operators
 .. autofunction:: pybamm.minimum
 
 .. autofunction:: pybamm.maximum
+
+.. autofunction:: pybamm.softminus
+
+.. autofunction:: pybamm.softplus
+
+.. autofunction:: pybamm.sigmoid
 
 .. autofunction:: pybamm.source

@@ -9,8 +9,8 @@ import unittest
 
 class TestFull(unittest.TestCase):
     def test_public_functions(self):
-        param = pybamm.standard_parameters_lithium_ion
-        a = pybamm.Scalar(0)
+        param = pybamm.LithiumIonParameters()
+        a = pybamm.Scalar(1)
         full = pybamm.FullBroadcast(
             a,
             ["negative electrode", "separator", "positive electrode"],

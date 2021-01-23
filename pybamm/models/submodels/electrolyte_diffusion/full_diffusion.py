@@ -34,6 +34,7 @@ class Full(BaseElectrolyteDiffusion):
     def get_coupled_variables(self, variables):
 
         tor = variables["Electrolyte tortuosity"]
+        eps = variables["Porosity"]
         c_e = variables["Electrolyte concentration"]
         i_e = variables["Electrolyte current density"]
         v_box = variables["Volume-averaged velocity"]
@@ -42,12 +43,13 @@ class Full(BaseElectrolyteDiffusion):
         param = self.param
 
         N_e_diffusion = -tor * param.D_e(c_e, T) * pybamm.grad(c_e)
-        N_e_migration = param.C_e * param.t_plus(c_e) * i_e / param.gamma_e
+        N_e_migration = param.C_e * param.t_plus(c_e, T) * i_e / param.gamma_e
         N_e_convection = param.C_e * c_e * v_box
 
         N_e = N_e_diffusion + N_e_migration + N_e_convection
 
         variables.update(self._get_standard_flux_variables(N_e))
+        variables.update(self._get_total_concentration_electrolyte(c_e, eps))
 
         return variables
 

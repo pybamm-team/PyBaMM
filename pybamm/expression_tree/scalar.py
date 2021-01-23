@@ -74,3 +74,7 @@ class Scalar(pybamm.Symbol):
     def new_copy(self):
         """ See :meth:`pybamm.Symbol.new_copy()`. """
         return Scalar(self.value, units=self.units, name=self.name, domain=self.domain)
+
+    def is_constant(self):
+        """ See :meth:`pybamm.Symbol.is_constant()`. """
+        return True

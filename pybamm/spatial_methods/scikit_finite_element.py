@@ -35,8 +35,7 @@ class ScikitFiniteElement(pybamm.SpatialMethod):
         super().build(mesh)
         # add npts_for_broadcast to mesh domains for this particular discretisation
         for dom in mesh.keys():
-            for i in range(len(mesh[dom])):
-                mesh[dom][i].npts_for_broadcast_to_nodes = mesh[dom][i].npts
+            mesh[dom].npts_for_broadcast_to_nodes = mesh[dom].npts
 
     def spatial_variable(self, symbol):
         """
@@ -56,11 +55,11 @@ class ScikitFiniteElement(pybamm.SpatialMethod):
         symbol_mesh = self.mesh
         if symbol.name == "y":
             vector = pybamm.Vector(
-                symbol_mesh["current collector"][0].coordinates[0, :][:, np.newaxis]
+                symbol_mesh["current collector"].coordinates[0, :][:, np.newaxis]
             )
         elif symbol.name == "z":
             vector = pybamm.Vector(
-                symbol_mesh["current collector"][0].coordinates[1, :][:, np.newaxis]
+                symbol_mesh["current collector"].coordinates[1, :][:, np.newaxis]
             )
         else:
             raise pybamm.GeometryError(
@@ -94,7 +93,7 @@ class ScikitFiniteElement(pybamm.SpatialMethod):
             to the z component of the gradient.
         """
         domain = symbol.domain[0]
-        mesh = self.mesh[domain][0]
+        mesh = self.mesh[domain]
 
         # get gradient matrix
         grad_y_matrix, grad_z_matrix = self.gradient_matrix(symbol, boundary_conditions)
@@ -103,8 +102,8 @@ class ScikitFiniteElement(pybamm.SpatialMethod):
         # boundary conditions are already accounted for in the governing pde
         # for the symbol we are taking the gradient of. we just want to get the
         # correct weights)
-        @skfem.bilinear_form
-        def mass_form(u, du, v, dv, w):
+        @skfem.BilinearForm
+        def mass_form(u, v, w):
             return u * v
 
         mass = skfem.asm(mass_form, mesh.basis)
@@ -150,17 +149,17 @@ class ScikitFiniteElement(pybamm.SpatialMethod):
         """
         # get primary domain mesh
         domain = symbol.domain[0]
-        mesh = self.mesh[domain][0]
+        mesh = self.mesh[domain]
 
         # make form for the gradient in the y direction
-        @skfem.bilinear_form
-        def gradient_dy(u, du, v, dv, w):
-            return du[0] * v[0]
+        @skfem.BilinearForm
+        def gradient_dy(u, v, w):
+            return u.grad[0] * v
 
         # make form for the gradient in the z direction
-        @skfem.bilinear_form
-        def gradient_dz(u, du, v, dv, w):
-            return du[1] * v[1]
+        @skfem.BilinearForm
+        def gradient_dz(u, v, w):
+            return u.grad[1] * v
 
         # assemble the matrices
         grad_y = skfem.asm(gradient_dy, mesh.basis)
@@ -194,7 +193,7 @@ class ScikitFiniteElement(pybamm.SpatialMethod):
             the child discretised_symbol
         """
         domain = symbol.domain[0]
-        mesh = self.mesh[domain][0]
+        mesh = self.mesh[domain]
 
         stiffness_matrix = self.stiffness_matrix(symbol, boundary_conditions)
 
@@ -207,8 +206,8 @@ class ScikitFiniteElement(pybamm.SpatialMethod):
         # assemble boundary load if Neumann boundary conditions
         if "Neumann" in [neg_bc_type, pos_bc_type]:
             # make form for unit load over the boundary
-            @skfem.linear_form
-            def unit_bc_load_form(v, dv, w):
+            @skfem.LinearForm
+            def unit_bc_load_form(v, w):
                 return v
 
         if neg_bc_type == "Neumann":
@@ -266,12 +265,12 @@ class ScikitFiniteElement(pybamm.SpatialMethod):
         """
         # get primary domain mesh
         domain = symbol.domain[0]
-        mesh = self.mesh[domain][0]
+        mesh = self.mesh[domain]
 
         # make form for the stiffness
-        @skfem.bilinear_form
-        def stiffness_form(u, du, v, dv, w):
-            return sum(du * dv)
+        @skfem.BilinearForm
+        def stiffness_form(u, v, w):
+            return sum(u.grad * v.grad)
 
         # assemble the stifnness matrix
         stiffness = skfem.asm(stiffness_form, mesh.basis)
@@ -293,18 +292,18 @@ class ScikitFiniteElement(pybamm.SpatialMethod):
 
         return pybamm.Matrix(stiffness)
 
-    def integral(self, child, discretised_child):
+    def integral(self, child, discretised_child, integration_dimension):
         """Vector-vector dot product to implement the integral operator.
         See :meth:`pybamm.SpatialMethod.integral`
         """
         # Calculate integration vector
-        integration_vector = self.definite_integral_matrix(child.domain[0])
+        integration_vector = self.definite_integral_matrix(child)
 
         out = integration_vector @ discretised_child
 
         return out
 
-    def definite_integral_matrix(self, domain, vector_type="row"):
+    def definite_integral_matrix(self, child, vector_type="row"):
         """
         Matrix for finite-element implementation of the definite integral over
         the entire domain
@@ -316,8 +315,8 @@ class ScikitFiniteElement(pybamm.SpatialMethod):
 
         Parameters
         ----------
-        domain : list
-            The domain(s) of integration
+        child : :class:`pybamm.Symbol`
+            The symbol being integrated
         vector_type : str, optional
             Whether to return a row or column vector (default is row)
 
@@ -327,13 +326,14 @@ class ScikitFiniteElement(pybamm.SpatialMethod):
             The finite element integral vector for the domain
         """
         # get primary domain mesh
+        domain = child.domains["primary"]
         if isinstance(domain, list):
             domain = domain[0]
-        mesh = self.mesh[domain][0]
+        mesh = self.mesh[domain]
 
         # make form for the integral
-        @skfem.linear_form
-        def integral_form(v, dv, w):
+        @skfem.LinearForm
+        def integral_form(v, w):
             return v
 
         # assemble
@@ -344,7 +344,7 @@ class ScikitFiniteElement(pybamm.SpatialMethod):
         elif vector_type == "column":
             return pybamm.Matrix(vector[:, np.newaxis])
 
-    def indefinite_integral(self, child, discretised_child):
+    def indefinite_integral(self, child, discretised_child, direction):
         """Implementation of the indefinite integral operator. The
         input discretised child must be defined on the internal mesh edges.
         See :meth:`pybamm.SpatialMethod.indefinite_integral`
@@ -393,11 +393,11 @@ class ScikitFiniteElement(pybamm.SpatialMethod):
         # get primary domain mesh
         if isinstance(domain, list):
             domain = domain[0]
-        mesh = self.mesh[domain][0]
+        mesh = self.mesh[domain]
 
         # make form for the boundary integral
-        @skfem.linear_form
-        def integral_form(v, dv, w):
+        @skfem.LinearForm
+        def integral_form(v, w):
             return v
 
         if region == "entire":
@@ -511,11 +511,11 @@ class ScikitFiniteElement(pybamm.SpatialMethod):
         """
         # get primary domain mesh
         domain = symbol.domain[0]
-        mesh = self.mesh[domain][0]
+        mesh = self.mesh[domain]
 
         # create form for mass
-        @skfem.bilinear_form
-        def mass_form(u, du, v, dv, w):
+        @skfem.BilinearForm
+        def mass_form(u, v, w):
             return u * v
 
         # assemble mass matrix

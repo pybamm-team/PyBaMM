@@ -1,4 +1,4 @@
-from pybamm import exp, constants, standard_parameters_lithium_ion, Scalar
+from pybamm import exp, constants, Parameter, Scalar
 
 
 def graphite_LGM50_electrolyte_exchange_current_density_Chen2020(c_e, c_s_surf, T):
@@ -10,8 +10,8 @@ def graphite_LGM50_electrolyte_exchange_current_density_Chen2020(c_e, c_s_surf, 
     ----------
     .. [1] Chang-Hui Chen, Ferran Brosa Planella, Kieran O’Regan, Dominika Gastol, W.
     Dhammika Widanage, and Emma Kendrick. "Development of Experimental Techniques for
-    Parameterization of Multi-scale Lithium-ion Battery Models." Submitted for
-    publication (2020).
+    Parameterization of Multi-scale Lithium-ion Battery Models." Journal of the
+    Electrochemical Society 167 (2020): 080534.
 
     Parameters
     ----------
@@ -34,7 +34,7 @@ def graphite_LGM50_electrolyte_exchange_current_density_Chen2020(c_e, c_s_surf, 
     E_r = Scalar(35000, "[J.mol-1]")
     arrhenius = exp(E_r / constants.R * (1 / Scalar(298.15, "[K]") - 1 / T))
 
-    c_n_max = standard_parameters_lithium_ion.c_n_max
+    c_n_max = Parameter("Maximum concentration in negative electrode [mol.m-3]")
 
     return (
         m_ref * arrhenius * c_e ** 0.5 * c_s_surf ** 0.5 * (c_n_max - c_s_surf) ** 0.5

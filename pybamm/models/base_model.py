@@ -1,20 +1,12 @@
 #
 # Base model class
 #
-import inspect
+import casadi
+import numpy as np
 import numbers
 import pybamm
 import warnings
-
-
-class ParamClass:
-    """Class for converting a module of parameters into a class. For pickling."""
-
-    def __init__(self, methods):
-        for k, v in methods.__dict__.items():
-            # don't save module attributes (e.g. pybamm, numpy)
-            if not (k.startswith("__") or inspect.ismodule(v)):
-                self.__dict__[k] = v
+from collections import OrderedDict
 
 
 class BaseModel(object):
@@ -101,12 +93,12 @@ class BaseModel(object):
         self.options = {}
 
         # Initialise empty model
-        self.rhs = {}
-        self.algebraic = {}
-        self.initial_conditions = {}
-        self.boundary_conditions = {}
-        self.variables = {}
-        self.events = []
+        self._rhs = {}
+        self._algebraic = {}
+        self._initial_conditions = {}
+        self._boundary_conditions = {}
+        self._variables = {}
+        self._events = []
         self._concatenated_rhs = None
         self._concatenated_algebraic = None
         self._concatenated_initial_conditions = None
@@ -115,7 +107,9 @@ class BaseModel(object):
         self._jacobian = None
         self._jacobian_algebraic = None
         self.external_variables = []
+        self._parameters = None
         self._input_parameters = None
+        self._variables_casadi = {}
 
         # Default behaviour is to use the jacobian and simplify
         self.use_jacobian = True
@@ -124,9 +118,11 @@ class BaseModel(object):
 
         # Model is not initially discretised
         self.is_discretised = False
+        self.y_slices = None
 
         # Default timescale is 1 second
         self.timescale = pybamm.Scalar(1)
+        self.length_scales = {}
 
     @property
     def name(self):
@@ -259,12 +255,7 @@ class BaseModel(object):
 
     @param.setter
     def param(self, values):
-        if values is None:
-            self._param = None
-        else:
-            # convert module into a class
-            # (StackOverflow: https://tinyurl.com/yk3euon3)
-            self._param = ParamClass(values)
+        self._param = values
 
     @property
     def options(self):
@@ -283,6 +274,25 @@ class BaseModel(object):
     def timescale(self, value):
         "Set the timescale"
         self._timescale = value
+
+    @property
+    def parameters(self):
+        "Returns all the parameters in the model"
+        if self._parameters is None:
+            self._parameters = self._find_parameters()
+        return self._parameters
+
+    def _find_parameters(self):
+        "Find all the parameters in the model"
+        unpacker = pybamm.SymbolUnpacker((pybamm.Parameter, pybamm.InputParameter))
+        all_parameters = unpacker.unpack_list_of_symbols(
+            list(self.rhs.values())
+            + list(self.algebraic.values())
+            + list(self.initial_conditions.values())
+            + list(self.variables.values())
+            + [event.expression for event in self.events]
+        )
+        return list(all_parameters.values())
 
     @property
     def input_parameters(self):
@@ -306,16 +316,36 @@ class BaseModel(object):
     def __getitem__(self, key):
         return self.rhs[key]
 
-    def new_copy(self, options=None):
-        "Create an empty copy with identical options, or new options if specified"
-        options = options or self.options
-        new_model = self.__class__(options)
-        new_model.name = self.name
+    def new_empty_copy(self):
+        """
+        Create an empty copy of the model with the same name and "parameters"
+        (convert_to_format, etc), but empty equations and variables.
+        This is usually then called by :class:`pybamm.ParameterValues`,
+        :class:`pybamm.Discretisation`, or :class:`pybamm.SymbolReplacer`.
+        """
+        new_model = self.__class__(name=self.name)
         new_model.use_jacobian = self.use_jacobian
         new_model.use_simplify = self.use_simplify
         new_model.convert_to_format = self.convert_to_format
         new_model.timescale = self.timescale
+        new_model.length_scales = self.length_scales
+
+        # Variables from discretisation
+        new_model.is_discretised = self.is_discretised
+        new_model.y_slices = self.y_slices
+        new_model.concatenated_rhs = self.concatenated_rhs
+        new_model.concatenated_algebraic = self.concatenated_algebraic
+        new_model.concatenated_initial_conditions = self.concatenated_initial_conditions
+
         return new_model
+
+    def new_copy(self):
+        """
+        Creates an identical copy of the model, using the functionality of
+        :class:`pybamm.SymbolReplacer` but without performing any replacements
+        """
+        replacer = pybamm.SymbolReplacer({})
+        return replacer.process_model(self, inplace=False)
 
     def update(self, *submodels):
         """
@@ -327,7 +357,6 @@ class BaseModel(object):
             The submodels from which to create new model
         """
         for submodel in submodels:
-
             # check and then update dicts
             self.check_and_combine_dict(self._rhs, submodel.rhs)
             self.check_and_combine_dict(self._algebraic, submodel.algebraic)
@@ -339,6 +368,86 @@ class BaseModel(object):
             )
             self.variables.update(submodel.variables)  # keys are strings so no check
             self._events += submodel.events
+
+    def set_initial_conditions_from(self, solution, inplace=True):
+        """
+        Update initial conditions with the final states from a Solution object or from
+        a dictionary.
+        This assumes that, for each variable in self.initial_conditions, there is a
+        corresponding variable in the solution with the same name and size.
+
+        Parameters
+        ----------
+        solution : :class:`pybamm.Solution`, or dict
+            The solution to use to initialize the model
+        inplace : bool
+            Whether to modify the model inplace or create a new model
+        """
+        if inplace is True:
+            model = self
+        else:
+            model = self.new_copy()
+
+        for var, equation in model.initial_conditions.items():
+            if isinstance(var, pybamm.Variable):
+                final_state = solution[var.name]
+                if isinstance(solution, pybamm.Solution):
+                    final_state = final_state.data
+                if final_state.ndim == 1:
+                    final_state_eval = np.array([final_state[-1]])
+                elif final_state.ndim == 2:
+                    final_state_eval = final_state[:, -1]
+                elif final_state.ndim == 3:
+                    final_state_eval = final_state[:, :, -1].flatten()
+                else:
+                    raise NotImplementedError("Variable must be 0D, 1D, or 2D")
+                model.initial_conditions[var] = pybamm.Vector(final_state_eval)
+            elif isinstance(var, pybamm.Concatenation):
+                children = []
+                for child in var.orphans:
+                    final_state = solution[child.name]
+                    if isinstance(solution, pybamm.Solution):
+                        final_state = final_state.data
+                    if final_state.ndim == 2:
+                        final_state_eval = final_state[:, -1]
+                    else:
+                        raise NotImplementedError(
+                            "Variable in concatenation must be 1D"
+                        )
+                    children.append(final_state_eval)
+                model.initial_conditions[var] = pybamm.Vector(np.concatenate(children))
+
+            else:
+                raise NotImplementedError(
+                    "Variable must have type 'Variable' or 'Concatenation'"
+                )
+
+        # Also update the concatenated initial conditions if the model is already
+        # discretised
+        if model.is_discretised:
+            # Unpack slices for sorting
+            y_slices = {var.id: slce for var, slce in model.y_slices.items()}
+            slices = []
+            for symbol in model.initial_conditions.keys():
+                if isinstance(symbol, pybamm.Concatenation):
+                    # must append the slice for the whole concatenation, so that
+                    # equations get sorted correctly
+                    slices.append(
+                        slice(
+                            y_slices[symbol.children[0].id][0].start,
+                            y_slices[symbol.children[-1].id][0].stop,
+                        )
+                    )
+                else:
+                    slices.append(y_slices[symbol.id][0])
+            equations = list(model.initial_conditions.values())
+            # sort equations according to slices
+            sorted_equations = [eq for _, eq in sorted(zip(slices, equations))]
+            model.concatenated_initial_conditions = pybamm.NumpyConcatenation(
+                *sorted_equations
+            )
+
+        return model
 
     def check_and_combine_dict(self, dict1, dict2):
         # check that the key ids are distinct
@@ -372,6 +481,7 @@ class BaseModel(object):
         self.check_algebraic_equations(post_discretisation)
         self.check_ics_bcs()
         self.check_default_variables_dictionaries()
+        self.check_no_repeated_keys()
         # Can't check variables after discretising, since Variable objects get replaced
         # by StateVector objects
         # Checking variables is slow, so only do it in debug mode
@@ -600,6 +710,21 @@ class BaseModel(object):
                     )
                 )
 
+    def check_no_repeated_keys(self):
+        "Check that no equation keys are repeated"
+        rhs_alg = {**self.rhs, **self.algebraic}
+        rhs_alg_keys = []
+
+        for var in rhs_alg.keys():
+            # Check the variable has not already been defined
+            if var.id in rhs_alg_keys:
+                raise pybamm.ModelError(
+                    "Multiple equations specified for variable {!r}".format(var)
+                )
+            # Update list of variables
+            else:
+                rhs_alg_keys.append(var.id)
+
     def info(self, symbol_name):
         """
         Provides helpful summary information for a symbol.
@@ -626,6 +751,155 @@ class BaseModel(object):
 
         print(div)
 
+    def export_casadi_objects(self, variable_names, input_parameter_order=None):
+        """
+        Export the constituent parts of the model (rhs, algebraic, initial conditions,
+        etc) as casadi objects.
+
+        Parameters
+        ----------
+        variable_names : list
+            Variables to be exported alongside the model structure
+        input_parameter_order : list, optional
+            Order in which the input parameters should be stacked. If None, the order
+            returned by :meth:`BaseModel.input_parameters` is used
+
+        Returns
+        -------
+        casadi_dict : dict
+            Dictionary of {str: casadi object} pairs representing the model in casadi
+            format
+        """
+        # Discretise model if it isn't already discretised
+        # This only works with purely 0D models, as otherwise the mesh and spatial
+        # method should be specified by the user
+        if self.is_discretised is False:
+            try:
+                disc = pybamm.Discretisation()
+                disc.process_model(self)
+            except pybamm.DiscretisationError as e:
+                raise pybamm.DiscretisationError(
+                    "Cannot automatically discretise model, model should be "
+                    "discretised before exporting casadi functions ({})".format(e)
+                )
+
+        # Create casadi functions for the model
+        t_casadi = casadi.MX.sym("t")
+        y_diff = casadi.MX.sym("y_diff", self.concatenated_rhs.size)
+        y_alg = casadi.MX.sym("y_alg", self.concatenated_algebraic.size)
+        y_casadi = casadi.vertcat(y_diff, y_alg)
+
+        # Read inputs
+        inputs_wrong_order = {}
+        for input_param in self.input_parameters:
+            name = input_param.name
+            inputs_wrong_order[name] = casadi.MX.sym(name, input_param._expected_size)
+        # Read external variables
+        external_casadi = {}
+        for external_varaiable in self.external_variables:
+            name = external_varaiable.name
+            ev_size = external_varaiable._evaluate_for_shape().shape[0]
+            external_casadi[name] = casadi.MX.sym(name, ev_size)
+        # Sort according to input_parameter_order
+        if input_parameter_order is None:
+            inputs = inputs_wrong_order
+        else:
+            inputs = {name: inputs_wrong_order[name] for name in input_parameter_order}
+        # Set up external variables and inputs
+        # Put external variables first like the integrator expects
+        ext_and_in = {**external_casadi, **inputs}
+        inputs_stacked = casadi.vertcat(*[p for p in ext_and_in.values()])
+
+        # Convert initial conditions to casadi form
+        y0 = self.concatenated_initial_conditions.to_casadi(
+            t_casadi, y_casadi, inputs=inputs
+        )
+        x0 = y0[: self.concatenated_rhs.size]
+        z0 = y0[self.concatenated_rhs.size :]
+
+        # Convert rhs and algebraic to casadi form and calculate jacobians
+        rhs = self.concatenated_rhs.to_casadi(t_casadi, y_casadi, inputs=ext_and_in)
+        jac_rhs = casadi.jacobian(rhs, y_casadi)
+        algebraic = self.concatenated_algebraic.to_casadi(
+            t_casadi, y_casadi, inputs=inputs
+        )
+        jac_algebraic = casadi.jacobian(algebraic, y_casadi)
+
+        # For specified variables, convert to casadi
+        variables = OrderedDict()
+        for name in variable_names:
+            var = self.variables[name]
+            variables[name] = var.to_casadi(t_casadi, y_casadi, inputs=ext_and_in)
+
+        casadi_dict = {
+            "t": t_casadi,
+            "x": y_diff,
+            "z": y_alg,
+            "inputs": inputs_stacked,
+            "rhs": rhs,
+            "algebraic": algebraic,
+            "jac_rhs": jac_rhs,
+            "jac_algebraic": jac_algebraic,
+            "variables": variables,
+            "x0": x0,
+            "z0": z0,
+        }
+
+        return casadi_dict
+
+    def generate(
+        self, filename, variable_names, input_parameter_order=None, cg_options=None
+    ):
+        """
+        Generate the model in C, using CasADi.
+
+        Parameters
+        ----------
+        filename : str
+            Name of the file to which to save the code
+        variable_names : list
+            Variables to be exported alongside the model structure
+        input_parameter_order : list, optional
+            Order in which the input parameters should be stacked. If None, the order
+            returned by :meth:`BaseModel.input_parameters` is used
+        cg_options : dict
+            Options to pass to the code generator.
+            See https://web.casadi.org/docs/#generating-c-code
+        """
+        model = self.export_casadi_objects(variable_names, input_parameter_order)
+
+        # Read the exported objects
+        t, x, z, p = model["t"], model["x"], model["z"], model["inputs"]
+        x0, z0 = model["x0"], model["z0"]
+        rhs, alg = model["rhs"], model["algebraic"]
+        variables = model["variables"]
+        jac_rhs, jac_alg = model["jac_rhs"], model["jac_algebraic"]
+
+        # Create functions
+        rhs_fn = casadi.Function("rhs_", [t, x, z, p], [rhs])
+        alg_fn = casadi.Function("alg_", [t, x, z, p], [alg])
+        jac_rhs_fn = casadi.Function("jac_rhs", [t, x, z, p], [jac_rhs])
+        jac_alg_fn = casadi.Function("jac_alg", [t, x, z, p], [jac_alg])
+        # Call these functions to initialize initial conditions
+        # (initial conditions are not yet consistent at this stage)
+        x0_fn = casadi.Function("x0", [p], [x0])
+        z0_fn = casadi.Function("z0", [p], [z0])
+        # Variables
+        variables_stacked = casadi.vertcat(*variables.values())
+        variables_fn = casadi.Function("variables", [t, x, z, p], [variables_stacked])
+
+        # Write C files
+        cg_options = cg_options or {}
+        C = casadi.CodeGenerator(filename, cg_options)
+        C.add(rhs_fn)
+        C.add(alg_fn)
+        C.add(jac_rhs_fn)
+        C.add(jac_alg_fn)
+        C.add(x0_fn)
+        C.add(z0_fn)
+        C.add(variables_fn)
+        C.generate()
+
     @property
     def default_parameter_values(self):
         return pybamm.ParameterValues({})
@@ -649,10 +923,7 @@ class BaseModel(object):
     @property
     def default_solver(self):
         "Return default solver based on whether model is ODE model or DAE model"
-        if len(self.algebraic) == 0:
-            return pybamm.ScipySolver()
-        else:
-            return pybamm.CasadiSolver(mode="safe")
+        return pybamm.CasadiSolver(mode="safe")
 
 
 # helper functions for finding symbols

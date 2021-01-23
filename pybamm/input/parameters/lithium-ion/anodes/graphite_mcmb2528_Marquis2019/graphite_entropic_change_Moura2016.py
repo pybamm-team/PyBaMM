@@ -1,22 +1,23 @@
-from pybamm import exp, cosh, Scalar
+from pybamm import exp, cosh, Parameter, Scalar
 
 
-def graphite_entropic_change_Moura2016(sto, c_n_max):
+def graphite_entropic_change_Moura2016(sto):
     """
-        Graphite entropic change in open circuit potential (OCP) at a temperature of
-        298.15K as a function of the stochiometry taken from Scott Moura's FastDFN code
-        [1].
+    Graphite entropic change in open circuit potential (OCP) at a temperature of
+    298.15K as a function of the stochiometry taken from Scott Moura's FastDFN code
+    [1].
 
-        References
-        ----------
-        .. [1] https://github.com/scott-moura/fastDFN
+    References
+    ----------
+    .. [1] https://github.com/scott-moura/fastDFN
 
-          Parameters
-          ----------
-          sto : :class:`pybamm.Symbol`
-               Stochiometry of material (li-fraction)
+    Parameters
+    ----------
+    sto : :class:`pybamm.Symbol`
+        Stochiometry of material (li-fraction)
 
     """
+    c_n_max = Parameter("Maximum concentration in negative electrode [mol.m-3]")
 
     c_n_max /= Scalar(1, "[mol.m-3]")
     du_dT = (

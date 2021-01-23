@@ -1,4 +1,4 @@
-from pybamm import exp, constants, standard_parameters_lithium_ion, Scalar
+from pybamm import exp, constants, Parameter, Scalar
 
 
 def NMC_electrolyte_exchange_current_density_PeymanMPM(c_e, c_s_surf, T):
@@ -30,7 +30,7 @@ def NMC_electrolyte_exchange_current_density_PeymanMPM(c_e, c_s_surf, T):
     E_r = Scalar(39570, "[J.mol-1]")
     arrhenius = exp(E_r / constants.R * (1 / Scalar(298.15, "[K]") - 1 / T))
 
-    c_p_max = standard_parameters_lithium_ion.c_p_max
+    c_p_max = Parameter("Maximum concentration in positive electrode [mol.m-3]")
 
     return (
         m_ref * arrhenius * c_e ** 0.5 * c_s_surf ** 0.5 * (c_p_max - c_s_surf) ** 0.5

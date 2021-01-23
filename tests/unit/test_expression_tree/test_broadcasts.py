@@ -55,6 +55,9 @@ class TestBroadcasts(unittest.TestCase):
             {"secondary": ["negative electrode"], "tertiary": ["current collector"]},
         )
 
+        a = pybamm.Symbol("a")
+        with self.assertRaisesRegex(TypeError, "empty domain"):
+            pybamm.SecondaryBroadcast(a, "current collector")
         a = pybamm.Symbol("a", domain="negative particle")
         with self.assertRaisesRegex(
             pybamm.DomainError, "Secondary broadcast from particle"
@@ -90,7 +93,7 @@ class TestBroadcasts(unittest.TestCase):
             pybamm.FullBroadcast(a, "electrode", None)
 
     def test_ones_like(self):
-        a = pybamm.Variable("a")
+        a = pybamm.Parameter("a")
         ones_like_a = pybamm.ones_like(a)
         self.assertEqual(ones_like_a.id, pybamm.Scalar(1).id)
 
@@ -118,7 +121,7 @@ class TestBroadcasts(unittest.TestCase):
         self.assertEqual(broad_a.name, "broadcast to edges")
         self.assertEqual(broad_a.children[0].name, a.name)
         self.assertEqual(broad_a.domain, ["negative electrode"])
-        self.assertTrue(broad_a.evaluates_on_edges())
+        self.assertTrue(broad_a.evaluates_on_edges("primary"))
 
         a = pybamm.Symbol(
             "a",
@@ -131,7 +134,7 @@ class TestBroadcasts(unittest.TestCase):
             broad_a.auxiliary_domains,
             {"secondary": ["negative electrode"], "tertiary": ["current collector"]},
         )
-        self.assertTrue(broad_a.evaluates_on_edges())
+        self.assertTrue(broad_a.evaluates_on_edges("primary"))
 
         a = pybamm.Symbol("a")
         broad_a = pybamm.FullBroadcastToEdges(
@@ -139,7 +142,7 @@ class TestBroadcasts(unittest.TestCase):
         )
         self.assertEqual(broad_a.domain, ["negative electrode"])
         self.assertEqual(broad_a.auxiliary_domains["secondary"], ["current collector"])
-        self.assertTrue(broad_a.evaluates_on_edges())
+        self.assertTrue(broad_a.evaluates_on_edges("primary"))
 
 
 if __name__ == "__main__":

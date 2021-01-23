@@ -91,6 +91,9 @@ class BaseThermal(pybamm.BaseSubModel):
         T = variables["Cell temperature"]
         T_n, _, T_p = T.orphans
 
+        a_n = variables["Negative electrode surface area to volume ratio"]
+        a_p = variables["Positive electrode surface area to volume ratio"]
+
         j_n = variables["Negative electrode interfacial current density"]
         j_p = variables["Positive electrode interfacial current density"]
 
@@ -133,8 +136,8 @@ class BaseThermal(pybamm.BaseSubModel):
         Q_ohm = Q_ohm_s + Q_ohm_e
 
         # Irreversible electrochemical heating
-        Q_rxn_n = j_n * eta_r_n
-        Q_rxn_p = j_p * eta_r_p
+        Q_rxn_n = a_n * j_n * eta_r_n
+        Q_rxn_p = a_p * j_p * eta_r_p
         Q_rxn = pybamm.Concatenation(
             *[
                 Q_rxn_n,
@@ -144,8 +147,8 @@ class BaseThermal(pybamm.BaseSubModel):
         )
 
         # Reversible electrochemical heating
-        Q_rev_n = j_n * (param.Theta ** (-1) + T_n) * dUdT_n
-        Q_rev_p = j_p * (param.Theta ** (-1) + T_p) * dUdT_p
+        Q_rev_n = a_n * j_n * (param.Theta ** (-1) + T_n) * dUdT_n
+        Q_rev_p = a_p * j_p * (param.Theta ** (-1) + T_p) * dUdT_p
         Q_rev = pybamm.Concatenation(
             *[
                 Q_rev_n,
@@ -255,9 +258,7 @@ class BaseThermal(pybamm.BaseSubModel):
         "Computes the y-z average"
         # TODO: change the behaviour of z_average and yz_average so the if statement
         # can be removed
-        if self.cc_dimension == 0:
-            return var
-        elif self.cc_dimension == 1:
+        if self.cc_dimension in [0, 1]:
             return pybamm.z_average(var)
         elif self.cc_dimension == 2:
             return pybamm.yz_average(var)

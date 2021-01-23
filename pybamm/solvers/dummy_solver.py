@@ -12,7 +12,7 @@ class DummySolver(pybamm.BaseSolver):
         super().__init__()
         self.name = "Dummy solver"
 
-    def _integrate(self, model, t_eval, inputs=None):
+    def _integrate(self, model, t_eval, inputs_dict=None):
         """
         Solve an empty model.
 
@@ -22,15 +22,19 @@ class DummySolver(pybamm.BaseSolver):
             The model whose solution to calculate.
         t_eval : :class:`numpy.array`, size (k,)
             The times at which to compute the solution
-        inputs : dict, optional
+        inputs_dict : dict, optional
             Any input parameters to pass to the model when solving
 
         Returns
         -------
-        object
-            An object containing the times and values of the solution, as well as
-            various diagnostic messages.
+        :class:`pybamm.Solution`
+            A Solution object containing the times and values of the solution,
+            as well as various diagnostic messages.
 
         """
         y_sol = np.zeros((1, t_eval.size))
-        return pybamm.Solution(t_eval, y_sol, termination="final time")
+        sol = pybamm.Solution(
+            t_eval, y_sol, model, inputs_dict, termination="final time"
+        )
+        sol.integration_time = 0
+        return sol

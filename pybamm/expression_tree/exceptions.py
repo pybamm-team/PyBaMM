@@ -17,8 +17,8 @@ class OptionError(Exception):
 
 class GeometryError(Exception):
     """
-        Geometry error: Raised if the an unimplemented geometry is used.
-     """
+    Geometry error: Raised if the an unimplemented geometry is used.
+    """
 
     pass
 

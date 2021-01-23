@@ -20,12 +20,15 @@ class ForwardTafel(BaseKinetics):
         The domain to implement the model, either: 'Negative' or 'Positive'.
     reaction : str
         The name of the reaction being implemented
+    options: dict
+        A dictionary of options to be passed to the model.
+        See :class:`pybamm.BaseBatteryModel`
 
     **Extends:** :class:`pybamm.interface.kinetics.BaseKinetics`
     """
 
-    def __init__(self, param, domain, reaction):
-        super().__init__(param, domain, reaction)
+    def __init__(self, param, domain, reaction, options):
+        super().__init__(param, domain, reaction, options)
 
     def _get_kinetics(self, j0, ne, eta_r, T):
         return j0 * pybamm.exp((ne / (2 * (1 + self.param.Theta * T))) * eta_r)
@@ -74,8 +77,8 @@ class BackwardTafel(BaseKinetics):
     **Extends:** :class:`pybamm.interface.kinetics.BaseKinetics`
     """
 
-    def __init__(self, param, domain, reaction):
-        super().__init__(param, domain, reaction)
+    def __init__(self, param, domain, reaction, options):
+        super().__init__(param, domain, reaction, options)
 
     def _get_kinetics(self, j0, ne, eta_r, T):
         return -j0 * pybamm.exp(-(ne / (2 * (1 + self.param.Theta * T))) * eta_r)

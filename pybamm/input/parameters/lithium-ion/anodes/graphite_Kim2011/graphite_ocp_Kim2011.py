@@ -3,15 +3,15 @@ from pybamm import exp, tanh, Scalar
 
 def graphite_ocp_Kim2011(sto):
     """
-       Graphite Open Circuit Potential (OCP) as a function of the stochiometry [1].
+    Graphite Open Circuit Potential (OCP) as a function of the stochiometry [1].
 
-       References
-       ----------
-       .. [1] Kim, G. H., Smith, K., Lee, K. J., Santhanagopalan, S., & Pesaran, A.
-       (2011). Multi-domain modeling of lithium-ion batteries encompassing
-       multi-physics in varied length scales. Journal of The Electrochemical
-       Society, 158(8), A955-A969.
-       """
+    References
+    ----------
+    .. [1] Kim, G. H., Smith, K., Lee, K. J., Santhanagopalan, S., & Pesaran, A.
+    (2011). Multi-domain modeling of lithium-ion batteries encompassing
+    multi-physics in varied length scales. Journal of The Electrochemical
+    Society, 158(8), A955-A969.
+    """
 
     u_eq = (
         0.124

@@ -27,26 +27,27 @@ disc.process_model(model)
 
 # solve model
 t_eval = np.linspace(0, 3600, 100)
-solver = model.default_solver
+solver = pybamm.CasadiSolver()
 solution = solver.solve(model, t_eval)
 
 # step model
 dt = 500
 time = 0
-end_time = solution.t[-1]
-step_solver = model.default_solver
+timescale = model.timescale_eval
+end_time = solution.t[-1] * timescale
+step_solver = pybamm.CasadiSolver()
 step_solution = None
 while time < end_time:
     step_solution = step_solver.step(step_solution, model, dt=dt, npts=10)
     time += dt
 
 # plot
-voltage = solution["Terminal voltage [V]"]
-step_voltage = step_solution["Terminal voltage [V]"]
-plt.plot(solution.t, voltage(solution.t), "b-", label="SPMe (continuous solve)")
-plt.plot(
-    step_solution.t, step_voltage(step_solution.t), "ro", label="SPMe (stepped solve)"
-)
+time_in_seconds = solution["Time [s]"].entries
+step_time_in_seconds = step_solution["Time [s]"].entries
+voltage = solution["Terminal voltage [V]"].entries
+step_voltage = step_solution["Terminal voltage [V]"].entries
+plt.plot(time_in_seconds, voltage, "b-", label="SPMe (continuous solve)")
+plt.plot(step_time_in_seconds, step_voltage, "ro", label="SPMe (stepped solve)")
 plt.xlabel(r"$t$")
 plt.ylabel("Terminal voltage [V]")
 plt.legend()

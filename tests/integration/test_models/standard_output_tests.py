@@ -53,7 +53,7 @@ class StandardOutputTests(object):
         if self.chemistry == "Lithium-ion":
             self.run_test_class(ParticleConcentrationTests)
 
-        if self.model.options["convection"] is not False:
+        if self.model.options["convection"] != "none":
             self.run_test_class(VelocityTests)
 
 
@@ -64,36 +64,37 @@ class BaseOutputTest(object):
         self.disc = disc
         self.solution = solution
         self.operating_condition = operating_condition
-        self.t = solution.t
 
-        self.x_n = disc.mesh["negative electrode"][0].nodes
-        self.x_s = disc.mesh["separator"][0].nodes
-        self.x_p = disc.mesh["positive electrode"][0].nodes
+        # Use dimensional time and space
+        self.t = solution.t * model.timescale_eval
+        geo = pybamm.geometric_parameters
+
+        L_x = param.evaluate(geo.L_x)
+        self.x_n = disc.mesh["negative electrode"].nodes * L_x
+        self.x_s = disc.mesh["separator"].nodes * L_x
+        self.x_p = disc.mesh["positive electrode"].nodes * L_x
         whole_cell = ["negative electrode", "separator", "positive electrode"]
-        self.x = disc.mesh.combine_submeshes(*whole_cell)[0].nodes
-        self.x_n_edge = disc.mesh["negative electrode"][0].edges
-        self.x_s_edge = disc.mesh["separator"][0].edges
-        self.x_p_edge = disc.mesh["positive electrode"][0].edges
-        self.x_edge = disc.mesh.combine_submeshes(*whole_cell)[0].edges
+        self.x = disc.mesh.combine_submeshes(*whole_cell).nodes * L_x
+        self.x_n_edge = disc.mesh["negative electrode"].edges * L_x
+        self.x_s_edge = disc.mesh["separator"].edges * L_x
+        self.x_p_edge = disc.mesh["positive electrode"].edges * L_x
+        self.x_edge = disc.mesh.combine_submeshes(*whole_cell).edges * L_x
 
         if isinstance(self.model, pybamm.lithium_ion.BaseModel):
-            self.r_n = disc.mesh["negative particle"][0].nodes
-            self.r_p = disc.mesh["positive particle"][0].nodes
-            self.r_n_edge = disc.mesh["negative particle"][0].edges
-            self.r_p_edge = disc.mesh["positive particle"][0].edges
+            R_n = param.evaluate(model.param.R_n_typ)
+            R_p = param.evaluate(model.param.R_p_typ)
+            self.r_n = disc.mesh["negative particle"].nodes * R_n
+            self.r_p = disc.mesh["positive particle"].nodes * R_p
+            self.r_n_edge = disc.mesh["negative particle"].edges * R_n
+            self.r_p_edge = disc.mesh["positive particle"].edges * R_p
 
         # Useful parameters
-        self.l_n = param.evaluate(pybamm.geometric_parameters.l_n)
-        self.l_p = param.evaluate(pybamm.geometric_parameters.l_p)
+        self.l_n = param.evaluate(geo.l_n)
+        self.l_p = param.evaluate(geo.l_p)
 
-        if isinstance(self.model, pybamm.lithium_ion.BaseModel):
-            current_param = pybamm.standard_parameters_lithium_ion.current_with_time
-        elif isinstance(self.model, pybamm.lead_acid.BaseModel):
-            current_param = pybamm.standard_parameters_lead_acid.current_with_time
-        else:
-            current_param = pybamm.electrical_parameters.current_with_time
+        current_param = self.model.param.current_with_time
 
-        self.i_cell = param.process_symbol(current_param).evaluate(self.t)
+        self.i_cell = param.process_symbol(current_param).evaluate(solution.t)
 
 
 class VoltageTests(BaseOutputTest):
@@ -110,6 +111,8 @@ class VoltageTests(BaseOutputTest):
         ]
         self.eta_r_av = solution["X-averaged reaction overpotential [V]"]
 
+        self.eta_sei_av = solution["X-averaged sei film overpotential [V]"]
+
         self.eta_e_av = solution["X-averaged electrolyte overpotential [V]"]
         self.delta_phi_s_av = solution["X-averaged solid phase ohmic losses [V]"]
 
@@ -124,10 +127,10 @@ class VoltageTests(BaseOutputTest):
 
     def test_each_reaction_overpotential(self):
         """Testing that:
-            - discharge: eta_r_n > 0, eta_r_p < 0
-            - charge: eta_r_n < 0, eta_r_p > 0
-            - off: eta_r_n == 0, eta_r_p == 0
-            """
+        - discharge: eta_r_n > 0, eta_r_p < 0
+        - charge: eta_r_n < 0, eta_r_p > 0
+        - off: eta_r_n == 0, eta_r_p == 0
+        """
         tol = 0.01
         t, x_n, x_p = self.t, self.x_n, self.x_p
         if self.operating_condition == "discharge":
@@ -142,9 +145,9 @@ class VoltageTests(BaseOutputTest):
 
     def test_overpotentials(self):
         """Testing that all are:
-            - discharge: . < 0
-            - charge: . > 0
-            - off: . == 0
+        - discharge: . < 0
+        - charge: . > 0
+        - off: . == 0
         """
         tol = 0.001
         if self.operating_condition == "discharge":
@@ -165,10 +168,10 @@ class VoltageTests(BaseOutputTest):
             )
 
     def test_ocps(self):
-        """ Testing that:
-            - discharge: ocp_n increases, ocp_p decreases
-            - charge: ocp_n decreases, ocp_p increases
-            - off: ocp_n, ocp_p constant
+        """Testing that:
+        - discharge: ocp_n increases, ocp_p decreases
+        - charge: ocp_n decreases, ocp_p increases
+        - off: ocp_n, ocp_p constant
         """
         neg_end_vs_start = self.ocp_n_av(self.t[-1]) - self.ocp_n_av(self.t[1])
         pos_end_vs_start = self.ocp_p_av(self.t[-1]) - self.ocp_p_av(self.t[1])
@@ -184,9 +187,9 @@ class VoltageTests(BaseOutputTest):
 
     def test_ocv(self):
         """Testing that:
-            - discharge: ocv decreases
-            - charge: ocv increases
-            - off: ocv constant
+        - discharge: ocv decreases
+        - charge: ocv increases
+        - off: ocv constant
         """
 
         end_vs_start = self.ocv_av(self.t[-1]) - self.ocv_av(self.t[1])
@@ -200,9 +203,9 @@ class VoltageTests(BaseOutputTest):
 
     def test_voltage(self):
         """Testing that:
-            - discharge: voltage decreases
-            - charge: voltage increases
-            - off: voltage constant
+        - discharge: voltage decreases
+        - charge: voltage increases
+        - off: voltage constant
         """
         end_vs_start = self.voltage(self.t[-1]) - self.voltage(self.t[1])
 
@@ -229,7 +232,8 @@ class VoltageTests(BaseOutputTest):
             self.ocv_av(self.t)
             + self.eta_r_av(self.t)
             + self.eta_e_av(self.t)
-            + self.delta_phi_s_av(self.t),
+            + self.delta_phi_s_av(self.t)
+            + self.eta_sei_av(self.t),
             decimal=2,
         )
 
@@ -249,11 +253,24 @@ class ParticleConcentrationTests(BaseOutputTest):
         self.c_s_n = solution["Negative particle concentration"]
         self.c_s_p = solution["Positive particle concentration"]
 
+        self.c_s_n_rav = solution["R-averaged negative particle concentration"]
+        self.c_s_p_rav = solution["R-averaged positive particle concentration"]
+
         self.c_s_n_surf = solution["Negative particle surface concentration"]
         self.c_s_p_surf = solution["Positive particle surface concentration"]
 
+        self.c_s_n_tot = solution["Total lithium in negative electrode [mol]"]
+        self.c_s_p_tot = solution["Total lithium in positive electrode [mol]"]
+
         self.N_s_n = solution["Negative particle flux"]
         self.N_s_p = solution["Positive particle flux"]
+
+        self.n_SEI_n_av = solution[
+            "X-averaged negative electrode sei concentration [mol.m-3]"
+        ]
+        self.n_SEI_p_av = solution[
+            "X-averaged positive electrode sei concentration [mol.m-3]"
+        ]
 
     def test_concentration_increase_decrease(self):
         """Test all concentrations in negative particles decrease and all
@@ -261,8 +278,19 @@ class ParticleConcentrationTests(BaseOutputTest):
 
         t, x_n, x_p, r_n, r_p = self.t, self.x_n, self.x_p, self.r_n, self.r_p
 
-        neg_end_vs_start = self.c_s_n(t[1:], x_n, r_n) - self.c_s_n(t[:-1], x_n, r_n)
-        pos_end_vs_start = self.c_s_p(t[1:], x_p, r_p) - self.c_s_p(t[:-1], x_p, r_p)
+        if self.model.options["particle"] in ["quadratic profile", "quartic profile"]:
+            # For the assumed polynomial concentration profiles the values
+            # can increase/decrease within the particle as the polynomial shifts,
+            # so we just check the average instead
+            neg_end_vs_start = self.c_s_n_rav(t[1:], x_n) - self.c_s_n_rav(t[:-1], x_n)
+            pos_end_vs_start = self.c_s_p_rav(t[1:], x_p) - self.c_s_p_rav(t[:-1], x_p)
+        else:
+            neg_end_vs_start = self.c_s_n(t[1:], x_n, r_n) - self.c_s_n(
+                t[:-1], x_n, r_n
+            )
+            pos_end_vs_start = self.c_s_p(t[1:], x_p, r_p) - self.c_s_p(
+                t[:-1], x_p, r_p
+            )
 
         if self.operating_condition == "discharge":
             np.testing.assert_array_less(neg_end_vs_start, 0)
@@ -285,8 +313,22 @@ class ParticleConcentrationTests(BaseOutputTest):
         np.testing.assert_array_less(self.c_s_p(t, x_p, r_p), 1)
 
     def test_conservation(self):
-        "Test amount of lithium stored across all particles is constant."
-        # TODO: add an output for total lithium in particles
+        """Test amount of lithium stored across all particles and in SEI layers is
+        constant."""
+        L_n = self.param["Negative electrode thickness [m]"]
+        L_p = self.param["Positive electrode thickness [m]"]
+        L_y = self.param["Electrode width [m]"]
+        L_z = self.param["Electrode height [m]"]
+        A = L_y * L_z
+
+        self.c_s_tot = (
+            self.c_s_n_tot(self.solution.t)
+            + self.c_s_p_tot(self.solution.t)
+            + self.n_SEI_n_av(self.solution.t) * L_n * A
+            + self.n_SEI_p_av(self.solution.t) * L_p * A
+        )
+        diff = (self.c_s_tot[1:] - self.c_s_tot[:-1]) / self.c_s_tot[:-1]
+        np.testing.assert_array_almost_equal(diff, 0)
 
     def test_concentration_profile(self):
         """Test that the concentration in the centre of the negative particles is
@@ -300,25 +342,29 @@ class ParticleConcentrationTests(BaseOutputTest):
         """Test that no flux holds in the centre of the particle. Test that surface
         flux in the negative particles is greater than zero and that the flux in the
         positive particles is less than zero during a discharge."""
-        # At the moment the zero flux is Broadcasted onto cell centres, not edges
-        # in the case of fast diffusion. This should be fixed by allowing Broadcasting
-        # to edges. For now, evaluate on r nodes for "fast diffusion" in particles
-        if self.model.options["particle"] == "fast diffusion":
-            t, x_n, x_p, r_n, r_p = self.t, self.x_n, self.x_p, self.r_n, self.r_p
+
+        t, x_n, x_p, r_n, r_p = (
+            self.t,
+            self.x_n,
+            self.x_p,
+            self.r_n_edge,
+            self.r_p_edge,
+        )
+        if self.model.options["particle"] == "uniform profile":
+            # Fluxes are zero everywhere since the concentration is uniform
             np.testing.assert_array_almost_equal(self.N_s_n(t, x_n, r_n), 0)
             np.testing.assert_array_almost_equal(self.N_s_p(t, x_p, r_p), 0)
         else:
-            t, x_n, x_p, r_n, r_p = (
-                self.t,
-                self.x_n,
-                self.x_p,
-                self.r_n_edge,
-                self.r_p_edge,
-            )
-
             if self.operating_condition == "discharge":
-                np.testing.assert_array_less(0, self.N_s_n(t[1:], x_n, r_n[1:]))
-                np.testing.assert_array_less(self.N_s_p(t[1:], x_p, r_p[1:]), 0)
+                if self.model.options["particle"] == "quartic profile":
+                    # quartic profile has a transient at the beginning where
+                    # the concentration "rearranges" giving flux of the opposite
+                    # sign, so ignore first two times
+                    np.testing.assert_array_less(0, self.N_s_n(t[2:], x_n, r_n[1:]))
+                    np.testing.assert_array_less(self.N_s_p(t[2:], x_p, r_p[1:]), 0)
+                else:
+                    np.testing.assert_array_less(0, self.N_s_n(t[1:], x_n, r_n[1:]))
+                    np.testing.assert_array_less(self.N_s_p(t[1:], x_p, r_p[1:]), 0)
             if self.operating_condition == "charge":
                 np.testing.assert_array_less(self.N_s_n(t[1:], x_n, r_n[1:]), 0)
                 np.testing.assert_array_less(0, self.N_s_p(t[1:], x_p, r_p[1:]))
@@ -326,8 +372,8 @@ class ParticleConcentrationTests(BaseOutputTest):
                 np.testing.assert_array_almost_equal(self.N_s_n(t, x_n, r_n), 0)
                 np.testing.assert_array_almost_equal(self.N_s_p(t, x_p, r_p), 0)
 
-            np.testing.assert_array_equal(0, self.N_s_n(t, x_n, r_n[0]))
-            np.testing.assert_array_equal(0, self.N_s_p(t, x_p, r_p[0]))
+        np.testing.assert_array_almost_equal(0, self.N_s_n(t, x_n, r_n[0]), decimal=4)
+        np.testing.assert_array_almost_equal(0, self.N_s_p(t, x_p, r_p[0]), decimal=4)
 
     def test_all(self):
         self.test_concentration_increase_decrease()
@@ -347,11 +393,11 @@ class ElectrolyteConcentrationTests(BaseOutputTest):
         self.c_e_s = solution["Separator electrolyte concentration"]
         self.c_e_p = solution["Positive electrolyte concentration"]
 
-        # TODO: output average electrolyte concentration
-        # self.c_e_av = solution["X-averaged electrolyte concentration"]
-        # self.c_e_n_av = solution["X-averaged negative electrolyte concentration"]
-        # self.c_e_s_av = solution["X-averaged separator electrolyte concentration"]
-        # self.c_e_p_av = solution["X-averaged positive electrolyte concentration"]
+        self.c_e_av = solution["X-averaged electrolyte concentration"]
+        self.c_e_n_av = solution["X-averaged negative electrolyte concentration"]
+        self.c_e_s_av = solution["X-averaged separator electrolyte concentration"]
+        self.c_e_p_av = solution["X-averaged positive electrolyte concentration"]
+        self.c_e_tot = solution["Total concentration in electrolyte [mol]"]
 
         self.N_e_hat = solution["Electrolyte flux"]
         # self.N_e_hat = solution["Reduced cation flux"]
@@ -364,8 +410,10 @@ class ElectrolyteConcentrationTests(BaseOutputTest):
         "Test conservation of species in the electrolyte."
         # sufficient to check average concentration is constant
 
-        # diff = self.c_e_av.entries[:, 1:] - self.c_e_av.entries[:, :-1]
-        # np.testing.assert_array_almost_equal(diff, 0)
+        diff = (
+            self.c_e_tot(self.solution.t[1:]) - self.c_e_tot(self.solution.t[:-1])
+        ) / self.c_e_tot(self.solution.t[:-1])
+        np.testing.assert_array_almost_equal(diff, 0)
 
     def test_concentration_profile(self):
         """Test continuity of the concentration profile. Test average concentration is
@@ -530,6 +578,14 @@ class CurrentTests(BaseOutputTest):
         self.j_p_av = solution[
             "X-averaged positive electrode interfacial current density"
         ]
+        self.j_n_sei = solution["Negative electrode sei interfacial current density"]
+        self.j_p_sei = solution["Positive electrode sei interfacial current density"]
+        self.j_n_sei_av = solution[
+            "X-averaged negative electrode sei interfacial current density"
+        ]
+        self.j_p_sei_av = solution[
+            "X-averaged positive electrode sei interfacial current density"
+        ]
 
         self.j0_n = solution["Negative electrode exchange current density"]
         self.j0_p = solution["Positive electrode exchange current density"]
@@ -539,14 +595,31 @@ class CurrentTests(BaseOutputTest):
         self.i_s = solution["Electrode current density"]
         self.i_e = solution["Electrolyte current density"]
 
+        self.a_n = solution["Negative electrode surface area to volume ratio"]
+        self.a_p = solution["Positive electrode surface area to volume ratio"]
+
     def test_interfacial_current_average(self):
-        """Test that average of the interfacial current density is equal to the true
+        """Test that average of the surface area density distribution (in x)
+        multiplied by the interfacial current density is equal to the true
         value."""
+
         np.testing.assert_array_almost_equal(
-            self.j_n_av(self.t), self.i_cell / self.l_n, decimal=4
+            np.mean(
+                self.a_n(self.t, self.x_n)
+                * (self.j_n(self.t, self.x_n) + self.j_n_sei(self.t, self.x_n)),
+                axis=0,
+            ),
+            self.i_cell / self.l_n,
+            decimal=4,
         )
         np.testing.assert_array_almost_equal(
-            self.j_p_av(self.t), -self.i_cell / self.l_p, decimal=4
+            np.mean(
+                self.a_p(self.t, self.x_p)
+                * (self.j_p(self.t, self.x_p) + self.j_p_sei(self.t, self.x_p)),
+                axis=0,
+            ),
+            -self.i_cell / self.l_p,
+            decimal=4,
         )
 
     def test_conservation(self):
@@ -554,12 +627,7 @@ class CurrentTests(BaseOutputTest):
         current density"""
         t, x_n, x_s, x_p = self.t, self.x_n, self.x_s, self.x_p
 
-        if isinstance(self.model, pybamm.lithium_ion.BaseModel):
-            current_param = pybamm.standard_parameters_lithium_ion.current_with_time
-        elif isinstance(self.model, pybamm.lead_acid.BaseModel):
-            current_param = pybamm.standard_parameters_lead_acid.current_with_time
-        else:
-            current_param = pybamm.electrical_parameters.current_with_time
+        current_param = self.model.param.current_with_time
 
         i_cell = self.param.process_symbol(current_param).evaluate(t=t)
         for x in [x_n, x_s, x_p]:
@@ -577,12 +645,7 @@ class CurrentTests(BaseOutputTest):
         """Test the boundary values of the current densities"""
         t, x_n, x_p = self.t, self.x_n_edge, self.x_p_edge
 
-        if isinstance(self.model, pybamm.lithium_ion.BaseModel):
-            current_param = pybamm.standard_parameters_lithium_ion.current_with_time
-        elif isinstance(self.model, pybamm.lead_acid.BaseModel):
-            current_param = pybamm.standard_parameters_lead_acid.current_with_time
-        else:
-            current_param = pybamm.electrical_parameters.current_with_time
+        current_param = self.model.param.current_with_time
 
         i_cell = self.param.process_symbol(current_param).evaluate(t=t)
         np.testing.assert_array_almost_equal(self.i_s_n(t, x_n[0]), i_cell, decimal=2)
@@ -609,22 +672,24 @@ class VelocityTests(BaseOutputTest):
 
     def test_velocity_boundaries(self):
         """Test the boundary values of the current densities"""
+        L_x = self.x_edge[-1]
         np.testing.assert_array_almost_equal(self.v_box(self.t, 0), 0, decimal=4)
-        np.testing.assert_array_almost_equal(self.v_box(self.t, 1), 0, decimal=4)
+        np.testing.assert_array_almost_equal(self.v_box(self.t, L_x), 0, decimal=4)
 
     def test_vertical_velocity(self):
         """Test the boundary values of the current densities"""
+        L_x = self.x_edge[-1]
         np.testing.assert_array_equal(self.dVbox_dz(self.t, 0), 0)
-        np.testing.assert_array_less(self.dVbox_dz(self.t, 0.5), 0)
-        np.testing.assert_array_equal(self.dVbox_dz(self.t, 1), 0)
+        np.testing.assert_array_less(self.dVbox_dz(self.t, 0.5 * L_x), 0)
+        np.testing.assert_array_equal(self.dVbox_dz(self.t, L_x), 0)
 
     def test_velocity_vs_current(self):
         """Test the boundary values of the current densities"""
         t, x_n, x_p = self.t, self.x_n, self.x_p
 
-        beta_n = pybamm.standard_parameters_lead_acid.beta_n
+        beta_n = self.model.param.beta_n
         beta_n = self.param.evaluate(beta_n)
-        beta_p = pybamm.standard_parameters_lead_acid.beta_p
+        beta_p = self.model.param.beta_p
         beta_p = self.param.evaluate(beta_p)
 
         np.testing.assert_array_almost_equal(

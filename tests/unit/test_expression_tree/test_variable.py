@@ -33,6 +33,18 @@ class TestVariable(unittest.TestCase):
         self.assertNotEqual(a1.id, a3.id)
         self.assertNotEqual(a1.id, a4.id)
 
+    def test_variable_bounds(self):
+        var = pybamm.Variable("var")
+        self.assertEqual(var.bounds, (-np.inf, np.inf))
+
+        var = pybamm.Variable("var", bounds=(0, 1))
+        self.assertEqual(var.bounds, (0, 1))
+
+        with self.assertRaisesRegex(ValueError, "Invalid bounds"):
+            pybamm.Variable("var", bounds=(1, 0))
+        with self.assertRaisesRegex(ValueError, "Invalid bounds"):
+            pybamm.Variable("var", bounds=(1, 1))
+
 
 class TestVariableDot(unittest.TestCase):
     def test_variable_init(self):
@@ -79,6 +91,9 @@ class TestExternalVariable(unittest.TestCase):
 
         a_test = 2 * np.ones((10, 1))
         np.testing.assert_array_equal(a.evaluate(inputs={"a": a_test}), a_test)
+        np.testing.assert_array_equal(
+            a.evaluate(inputs={"a": a_test.flatten()}), a_test
+        )
 
         np.testing.assert_array_equal(a.evaluate(inputs={"a": 2}), a_test)
 

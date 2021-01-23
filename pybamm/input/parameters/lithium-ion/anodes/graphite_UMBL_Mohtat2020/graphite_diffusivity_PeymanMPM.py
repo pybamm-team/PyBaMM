@@ -21,7 +21,7 @@ def graphite_diffusivity_PeymanMPM(sto, T):
     -------
     :class:`pybamm.Symbol`
         Solid diffusivity
-   """
+    """
 
     D_ref = Scalar(5.0 * 10 ** (-15), "[m2.s-1]")
     E_D_s = Scalar(42770, "[J.mol-1]")

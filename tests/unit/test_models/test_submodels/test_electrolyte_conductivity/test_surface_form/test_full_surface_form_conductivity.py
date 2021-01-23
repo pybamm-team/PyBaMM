@@ -9,14 +9,14 @@ import unittest
 
 class TestFull(unittest.TestCase):
     def test_public_functions(self):
-        param = pybamm.standard_parameters_lithium_ion
-        a = pybamm.Scalar(0)
+        param = pybamm.LithiumIonParameters()
+        a = pybamm.Scalar(1)
         a_n = pybamm.FullBroadcast(
-            pybamm.Scalar(0), ["negative electrode"], "current collector"
+            pybamm.Scalar(1), ["negative electrode"], "current collector"
         )
-        a_s = pybamm.FullBroadcast(pybamm.Scalar(0), ["separator"], "current collector")
+        a_s = pybamm.FullBroadcast(pybamm.Scalar(1), ["separator"], "current collector")
         a_p = pybamm.FullBroadcast(
-            pybamm.Scalar(0), ["positive electrode"], "current collector"
+            pybamm.Scalar(1), ["positive electrode"], "current collector"
         )
         variables = {
             "Current collector current density": pybamm.PrimaryBroadcast(
@@ -25,6 +25,7 @@ class TestFull(unittest.TestCase):
             "Negative electrode porosity": a_n,
             "Negative electrolyte tortuosity": a_n,
             "Negative electrode tortuosity": a_n,
+            "Negative electrode surface area to volume ratio": a_n,
             "Negative electrolyte concentration": a_n,
             "Sum of negative electrode interfacial current densities": a_n,
             "Electrolyte potential": pybamm.Concatenation(a_n, a_s, a_p),
@@ -54,6 +55,7 @@ class TestFull(unittest.TestCase):
             "Positive electrode porosity": a_p,
             "Positive electrolyte tortuosity": a_p,
             "Positive electrode tortuosity": a_p,
+            "Positive electrode surface area to volume ratio": a_p,
             "Positive electrolyte concentration": a_p,
             "Sum of positive electrode interfacial current densities": a_p,
             "Positive electrode temperature": a_p,

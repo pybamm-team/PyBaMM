@@ -18,18 +18,6 @@ class TestSimplify(unittest.TestCase):
         g = pybamm.Variable("g")
         gdot = pybamm.VariableDot("g'")
 
-        # negate
-        self.assertIsInstance((-a).simplify(), pybamm.Scalar)
-        self.assertEqual((-a).simplify().evaluate(), 0)
-        self.assertIsInstance((-b).simplify(), pybamm.Scalar)
-        self.assertEqual((-b).simplify().evaluate(), -1)
-
-        # absolute value
-        self.assertIsInstance((abs(a)).simplify(), pybamm.Scalar)
-        self.assertEqual((abs(a)).simplify().evaluate(), 0)
-        self.assertIsInstance((abs(d)).simplify(), pybamm.Scalar)
-        self.assertEqual((abs(d)).simplify().evaluate(), 1)
-
         # function
         def sin(x):
             return math.sin(x)
@@ -72,8 +60,19 @@ class TestSimplify(unittest.TestCase):
 
         # Integral
         self.assertIsInstance(
-            (pybamm.Integral(a, pybamm.t)).simplify(), pybamm.Integral
+            (
+                pybamm.Integral(a, pybamm.SpatialVariable("x", domain="domain"))
+            ).simplify(),
+            pybamm.Integral,
         )
+
+        def_int = (pybamm.DefiniteIntegralVector(a, vector_type="column")).simplify()
+        self.assertIsInstance(def_int, pybamm.DefiniteIntegralVector)
+        self.assertEqual(def_int.vector_type, "column")
+
+        bound_int = (pybamm.BoundaryIntegral(a, region="negative tab")).simplify()
+        self.assertIsInstance(bound_int, pybamm.BoundaryIntegral)
+        self.assertEqual(bound_int.region, "negative tab")
 
         # BoundaryValue
         v_neg = pybamm.Variable("v", domain=["negative electrode"])
@@ -87,55 +86,7 @@ class TestSimplify(unittest.TestCase):
             pybamm.DeltaFunction,
         )
 
-        # addition
-        self.assertIsInstance((a + b).simplify(), pybamm.Scalar)
-        self.assertEqual((a + b).simplify().evaluate(), 1)
-        self.assertIsInstance((b + b).simplify(), pybamm.Scalar)
-        self.assertEqual((b + b).simplify().evaluate(), 2)
-        self.assertIsInstance((b + a).simplify(), pybamm.Scalar)
-        self.assertEqual((b + a).simplify().evaluate(), 1)
-
-        # subtraction
-        self.assertIsInstance((a - b).simplify(), pybamm.Scalar)
-        self.assertEqual((a - b).simplify().evaluate(), -1)
-        self.assertIsInstance((b - b).simplify(), pybamm.Scalar)
-        self.assertEqual((b - b).simplify().evaluate(), 0)
-        self.assertIsInstance((b - a).simplify(), pybamm.Scalar)
-        self.assertEqual((b - a).simplify().evaluate(), 1)
-
-        # addition and subtraction with matrix zero
-        v = pybamm.Vector(np.zeros((10, 1)))
-        self.assertIsInstance((b + v).simplify(), pybamm.Array)
-        np.testing.assert_array_equal((b + v).simplify().evaluate(), np.ones((10, 1)))
-        self.assertIsInstance((v + b).simplify(), pybamm.Array)
-        np.testing.assert_array_equal((v + b).simplify().evaluate(), np.ones((10, 1)))
-        self.assertIsInstance((b - v).simplify(), pybamm.Array)
-        np.testing.assert_array_equal((b - v).simplify().evaluate(), np.ones((10, 1)))
-        self.assertIsInstance((v - b).simplify(), pybamm.Array)
-        np.testing.assert_array_equal((v - b).simplify().evaluate(), -np.ones((10, 1)))
-
-        # multiplication
-        self.assertIsInstance((a * b).simplify(), pybamm.Scalar)
-        self.assertEqual((a * b).simplify().evaluate(), 0)
-        self.assertIsInstance((b * a).simplify(), pybamm.Scalar)
-        self.assertEqual((b * a).simplify().evaluate(), 0)
-        self.assertIsInstance((b * b).simplify(), pybamm.Scalar)
-        self.assertEqual((b * b).simplify().evaluate(), 1)
-        self.assertIsInstance((a * a).simplify(), pybamm.Scalar)
-        self.assertEqual((a * a).simplify().evaluate(), 0)
-
-        # test when other node is a parameter
-        self.assertIsInstance((a + c).simplify(), pybamm.Parameter)
-        self.assertIsInstance((c + a).simplify(), pybamm.Parameter)
-        self.assertIsInstance((c + b).simplify(), pybamm.Addition)
-        self.assertIsInstance((b + c).simplify(), pybamm.Addition)
-        self.assertIsInstance((a * c).simplify(), pybamm.Scalar)
-        self.assertEqual((a * c).simplify().evaluate(), 0)
-        self.assertIsInstance((c * a).simplify(), pybamm.Scalar)
-        self.assertEqual((c * a).simplify().evaluate(), 0)
-        self.assertIsInstance((b * c).simplify(), pybamm.Parameter)
-        self.assertIsInstance((e * c).simplify(), pybamm.Multiplication)
-
+        # More complex expressions
         expr = (e * (e * c)).simplify()
         self.assertIsInstance(expr, pybamm.Multiplication)
         self.assertIsInstance(expr.children[0], pybamm.Scalar)
@@ -154,18 +105,12 @@ class TestSimplify(unittest.TestCase):
         self.assertIsInstance(expr.children[1], pybamm.Parameter)
 
         expr = (e * (c / e)).simplify()
-        self.assertIsInstance(expr, pybamm.Multiplication)
-        self.assertIsInstance(expr.children[0], pybamm.Scalar)
-        self.assertEqual(expr.children[0].evaluate(), 1.0)
-        self.assertIsInstance(expr.children[1], pybamm.Parameter)
+        self.assertEqual(expr.id, c.id)
 
         expr = ((e * c) * (c / e)).simplify()
         self.assertIsInstance(expr, pybamm.Multiplication)
-        self.assertIsInstance(expr.children[0], pybamm.Scalar)
-        self.assertEqual(expr.children[0].evaluate(), 1.0)
-        self.assertIsInstance(expr.children[1], pybamm.Multiplication)
-        self.assertIsInstance(expr.children[1].children[0], pybamm.Parameter)
-        self.assertIsInstance(expr.children[1].children[1], pybamm.Parameter)
+        self.assertIsInstance(expr.children[0], pybamm.Parameter)
+        self.assertIsInstance(expr.children[1], pybamm.Parameter)
 
         expr = (e + (e + c)).simplify()
         self.assertIsInstance(expr, pybamm.Addition)
@@ -325,7 +270,7 @@ class TestSimplify(unittest.TestCase):
         b = pybamm.Matrix(np.ones((2, 2)))
 
         # matrix multiplication
-        A = pybamm.Matrix(np.array([[1, 0], [0, 1]]))
+        A = pybamm.Matrix([[1, 0], [0, 1]])
         self.assertIsInstance((a @ A).simplify(), pybamm.Matrix)
         np.testing.assert_array_equal(
             (a @ A).simplify().evaluate().toarray(), np.zeros((2, 2))
@@ -336,8 +281,8 @@ class TestSimplify(unittest.TestCase):
         )
 
         # matrix * matrix
-        m1 = pybamm.Matrix(np.array([[2, 0], [0, 2]]))
-        m2 = pybamm.Matrix(np.array([[3, 0], [0, 3]]))
+        m1 = pybamm.Matrix([[2, 0], [0, 2]])
+        m2 = pybamm.Matrix([[3, 0], [0, 3]])
         v = pybamm.StateVector(slice(0, 2))
         v2 = pybamm.StateVector(slice(2, 4))
 
@@ -401,8 +346,8 @@ class TestSimplify(unittest.TestCase):
             )
 
         # matrix * vector
-        m1 = pybamm.Matrix(np.array([[2, 0], [0, 2]]))
-        v1 = pybamm.Vector(np.array([1, 1]))
+        m1 = pybamm.Matrix([[2, 0], [0, 2]])
+        v1 = pybamm.Vector([1, 1])
 
         for expr in [(m1 @ v1).simplify()]:
             self.assertIsInstance(expr, pybamm.Vector)
@@ -544,8 +489,8 @@ class TestSimplify(unittest.TestCase):
 
         a_dom = ["negative electrode"]
         b_dom = ["positive electrode"]
-        a = 2 * pybamm.Vector(np.ones_like(mesh[a_dom[0]][0].nodes), domain=a_dom)
-        b = pybamm.Vector(np.ones_like(mesh[b_dom[0]][0].nodes), domain=b_dom)
+        a = 2 * pybamm.Vector(np.ones_like(mesh[a_dom[0]].nodes), domain=a_dom)
+        b = pybamm.Vector(np.ones_like(mesh[b_dom[0]].nodes), domain=b_dom)
 
         conc = pybamm.DomainConcatenation([a, b], mesh)
         conc_simp = conc.simplify()
@@ -556,8 +501,8 @@ class TestSimplify(unittest.TestCase):
             conc_simp.evaluate(),
             np.concatenate(
                 [
-                    np.full((mesh[a_dom[0]][0].npts, 1), 2),
-                    np.full((mesh[b_dom[0]][0].npts, 1), 1),
+                    np.full((mesh[a_dom[0]].npts, 1), 2),
+                    np.full((mesh[b_dom[0]].npts, 1), 1),
                 ]
             ),
         )
@@ -574,7 +519,7 @@ class TestSimplify(unittest.TestCase):
         conc_disc = disc.process_symbol(conc)
         conc_simp = conc_disc.simplify()
 
-        y = mesh.combine_submeshes(*conc.domain)[0].nodes ** 2
+        y = mesh.combine_submeshes(*conc.domain).nodes ** 2
         self.assertIsInstance(conc_simp, pybamm.StateVector)
         self.assertEqual(len(conc_simp.y_slices), 1)
         self.assertEqual(conc_simp.y_slices[0].start, 0)
@@ -595,29 +540,11 @@ class TestSimplify(unittest.TestCase):
 
     def test_simplify_inner(self):
         a1 = pybamm.Scalar(0)
-        M1 = pybamm.Matrix(np.zeros((10, 10)))
-        v1 = pybamm.Vector(np.ones(10))
-        a2 = pybamm.Scalar(1)
         M2 = pybamm.Matrix(np.ones((10, 10)))
-        a3 = pybamm.Scalar(3)
 
-        np.testing.assert_array_equal(
-            pybamm.inner(a1, M2).simplify().evaluate().toarray(), M1.entries
-        )
-        self.assertEqual(pybamm.inner(a1, a2).simplify().evaluate(), 0)
-        np.testing.assert_array_equal(
-            pybamm.inner(M2, a1).simplify().evaluate().toarray(), M1.entries
-        )
-        self.assertEqual(pybamm.inner(a2, a1).simplify().evaluate(), 0)
-        np.testing.assert_array_equal(
-            pybamm.inner(M1, a3).simplify().evaluate().toarray(), M1.entries
-        )
-        np.testing.assert_array_equal(
-            pybamm.inner(v1, a3).simplify().evaluate(), 3 * v1.entries
-        )
-        self.assertEqual(pybamm.inner(a2, a3).simplify().evaluate(), 3)
-        self.assertEqual(pybamm.inner(a3, a2).simplify().evaluate(), 3)
-        self.assertEqual(pybamm.inner(a3, a3).simplify().evaluate(), 9)
+        expr = pybamm.Inner(a1, M2).simplify()
+        self.assertIsInstance(expr, pybamm.Matrix)
+        np.testing.assert_array_equal(expr.entries.toarray(), np.zeros((10, 10)))
 
 
 if __name__ == "__main__":

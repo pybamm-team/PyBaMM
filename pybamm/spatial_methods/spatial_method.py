@@ -37,9 +37,26 @@ class SpatialMethod:
     def build(self, mesh):
         # add npts_for_broadcast to mesh domains for this particular discretisation
         for dom in mesh.keys():
-            for i in range(len(mesh[dom])):
-                mesh[dom][i].npts_for_broadcast_to_nodes = mesh[dom][i].npts
+            mesh[dom].npts_for_broadcast_to_nodes = mesh[dom].npts
         self._mesh = mesh
+
+    def _get_auxiliary_domain_repeats(self, auxiliary_domains, tertiary_only=False):
+        """
+        Helper method to read the 'auxiliary_domain' meshes
+        """
+        if tertiary_only is False and "secondary" in auxiliary_domains:
+            sec_mesh_npts = self.mesh.combine_submeshes(
+                *auxiliary_domains["secondary"]
+            ).npts
+        else:
+            sec_mesh_npts = 1
+        if "tertiary" in auxiliary_domains:
+            tert_mesh_npts = self.mesh.combine_submeshes(
+                *auxiliary_domains["tertiary"]
+            ).npts
+        else:
+            tert_mesh_npts = 1
+        return sec_mesh_npts * tert_mesh_npts
 
     @property
     def mesh(self):
@@ -62,10 +79,11 @@ class SpatialMethod:
             Contains the discretised spatial variable
         """
         symbol_mesh = self.mesh.combine_submeshes(*symbol.domain)
-        if symbol.evaluates_on_edges():
-            entries = np.concatenate([mesh.edges for mesh in symbol_mesh])
+        repeats = self._get_auxiliary_domain_repeats(symbol.auxiliary_domains)
+        if symbol.evaluates_on_edges("primary"):
+            entries = np.tile(symbol_mesh.edges, repeats)
         else:
-            entries = np.concatenate([mesh.nodes for mesh in symbol_mesh])
+            entries = np.tile(symbol_mesh.nodes, repeats)
         return pybamm.Vector(
             entries, domain=symbol.domain, auxiliary_domains=symbol.auxiliary_domains
         )
@@ -80,6 +98,8 @@ class SpatialMethod:
             The symbol to be broadcasted
         domain : iterable of strings
             The domain to broadcast to
+        auxiliary_domains : dict of strings
+            The auxiliary domains for broadcasting
         broadcast_type : str
             The type of broadcast: 'primary to node', 'primary to edges', 'secondary to
             nodes', 'secondary to edges', 'full to nodes' or 'full to edges'
@@ -91,22 +111,15 @@ class SpatialMethod:
         """
 
         primary_domain_size = sum(
-            self.mesh[dom][0].npts_for_broadcast_to_nodes for dom in domain
+            self.mesh[dom].npts_for_broadcast_to_nodes for dom in domain
         )
-        secondary_domain_size = sum(
-            self.mesh[dom][0].npts_for_broadcast_to_nodes
-            for dom in auxiliary_domains.get("secondary", [])
-        )  # returns empty list if auxiliary_domains doesn't have "secondary" key
-        full_domain_size = sum(
-            subdom.npts_for_broadcast_to_nodes
-            for dom in domain
-            for subdom in self.mesh[dom]
-        )
+        secondary_domain_size = self._get_auxiliary_domain_repeats(auxiliary_domains)
+        full_domain_size = primary_domain_size * secondary_domain_size
         if broadcast_type.endswith("to edges"):
             # add one point to each domain for broadcasting to edges
             primary_domain_size += 1
+            full_domain_size = primary_domain_size * secondary_domain_size
             secondary_domain_size += 1
-            full_domain_size += 1
 
         if broadcast_type.startswith("primary"):
             # Make copies of the child stacked on top of each other
@@ -119,14 +132,9 @@ class SpatialMethod:
                 out = pybamm.Matrix(matrix) @ symbol
             out.domain = domain
         elif broadcast_type.startswith("secondary"):
-            kron_size = full_domain_size // primary_domain_size
-            # Symbol may be on edges so need to calculate size carefully
-            symbol_primary_size = symbol.shape[0] // kron_size
             # Make copies of the child stacked on top of each other
-            identity = eye(symbol_primary_size)
-            sub_matrix = vstack([identity for _ in range(secondary_domain_size)])
-            # Repeat for secondary points
-            matrix = csr_matrix(kron(eye(kron_size), sub_matrix))
+            identity = eye(symbol.shape[0])
+            matrix = vstack([identity for _ in range(secondary_domain_size)])
             out = pybamm.Matrix(matrix) @ symbol
         elif broadcast_type.startswith("full"):
             out = symbol * pybamm.Vector(np.ones(full_domain_size), domain=domain)
@@ -223,7 +231,7 @@ class SpatialMethod:
         """
         raise NotImplementedError
 
-    def integral(self, child, discretised_child):
+    def integral(self, child, discretised_child, integration_dimension):
         """
         Implements the integral for a spatial method.
 
@@ -233,6 +241,8 @@ class SpatialMethod:
             The symbol to which is being integrated
         discretised_child: :class:`pybamm.Symbol`
             The discretised symbol of the correct size
+        integration_dimension : str, optional
+            The dimension in which to integrate (default is "primary")
 
         Returns
         -------
@@ -242,7 +252,7 @@ class SpatialMethod:
         """
         raise NotImplementedError
 
-    def indefinite_integral(self, child, discretised_child):
+    def indefinite_integral(self, child, discretised_child, direction):
         """
         Implements the indefinite integral for a spatial method.
 
@@ -252,6 +262,8 @@ class SpatialMethod:
             The symbol to which is being integrated
         discretised_child: :class:`pybamm.Symbol`
             The discretised symbol of the correct size
+        direction : str
+            The direction of integration
 
         Returns
         -------
@@ -349,11 +361,11 @@ class SpatialMethod:
 
         if bcs is None:
             bcs = {}
-        if any(len(self.mesh[dom]) > 1 for dom in discretised_child.domain):
+        if self._get_auxiliary_domain_repeats(discretised_child.auxiliary_domains) > 1:
             raise NotImplementedError("Cannot process 2D symbol in base spatial method")
         if isinstance(symbol, pybamm.BoundaryGradient):
             raise TypeError("Cannot process BoundaryGradient in base spatial method")
-        n = sum(self.mesh[dom][0].npts for dom in discretised_child.domain)
+        n = sum(self.mesh[dom].npts for dom in discretised_child.domain)
         if symbol.side == "left":
             # coo_matrix takes inputs (data, (row, col)) and puts data[i] at the point
             # (row[i], col[i]) for each index of data. Here we just want a single point
@@ -397,16 +409,16 @@ class SpatialMethod:
         submesh = self.mesh.combine_submeshes(*symbol.domain)
 
         # Get number of points in primary dimension
-        n = submesh[0].npts
+        n = submesh.npts
 
         # Create mass matrix for primary dimension
         prim_mass = eye(n)
 
         # Get number of points in secondary dimension
-        sec_pts = len(submesh)
+        second_dim_repeats = self._get_auxiliary_domain_repeats(symbol.domains)
 
         # Convert to csr_matrix as required by some solvers
-        mass = csr_matrix(kron(eye(sec_pts), prim_mass))
+        mass = csr_matrix(kron(eye(second_dim_repeats), prim_mass))
         return pybamm.Matrix(mass)
 
     def process_binary_operators(self, bin_op, left, right, disc_left, disc_right):

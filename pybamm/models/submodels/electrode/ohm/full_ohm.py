@@ -60,12 +60,16 @@ class Full(BaseModel):
         phi_s = variables[self.domain + " electrode potential"]
         i_s = variables[self.domain + " electrode current density"]
 
+        # Get surface area to volume ratio (could be a distribution in x to
+        # account for graded electrodes)
+        a = variables[self.domain + " electrode surface area to volume ratio"]
+
         # Variable summing all of the interfacial current densities
         sum_j = variables[
             "Sum of " + self.domain.lower() + " electrode interfacial current densities"
         ]
 
-        self.algebraic[phi_s] = pybamm.div(i_s) + sum_j
+        self.algebraic[phi_s] = pybamm.div(i_s) + a * sum_j
 
     def set_boundary_conditions(self, variables):
 

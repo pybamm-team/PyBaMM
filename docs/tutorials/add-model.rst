@@ -130,7 +130,7 @@ Events will stop the solver whenever they return 0.
 
 Setting defaults
 ~~~~~~~~~~~~~~~~
-It can be useful for testing, and quickly running a model to have a default setup. Each of the defaults listed above should adhere to the API requirements but in short, we require ``self.default_geometry`` to be an instance of :class:`pybamm.Geometry`, ``self.default_solver`` to be an instance of :class:`pybamm.BaseSolver`, and
+It can be useful for testing, and quickly running a model to have a default setup. Each of the defaults listed above should adhere to the API requirements but in short, we require ``self.default_geometry`` to be a dictionary of the right format (see :meth:`pybamm.battery_geometry`), ``self.default_solver`` to be an instance of :class:`pybamm.BaseSolver`, and
 ``self.default_parameter_values`` to be an instance of :class:`pybamm.ParameterValues`. We also require that ``self.default_submesh_types`` is a dictionary with keys which are strings corresponding to the regions of the battery (e.g. "negative electrode") and values which are an instance of :class:`pybamm.SubMesh1D`. The ``self.default_spatial_methods`` attribute is also required to be a dictionary with keys corresponding to the regions of the battery but with values which are an instance of
 :class:`pybamm.SpatialMethod`. Finally, ``self.default_var_pts`` is required to be a dictionary with keys which are an instance of :class:`pybamm.SpatialVariable` and values which are integers.
 
@@ -142,10 +142,11 @@ The inbuilt models in PyBaMM do not add all the model attributes within their ow
 In addition to calling submodels, common sets of variables and parameters found in
 lithium-ion and lead acid batteries are provided in
 `standard_variables.py`,
-`standard_parameters_lithium_ion.py`,
-`standard_parameters_lead_acid.py`,
+`lithium_ion_parameters.py`,
+`lead_acid_parameters.py`,
 `electrical_parameters.py`,
 `geometric_parameters.py`,
+`thermal_parameters.py`,
 and `standard_spatial_vars.py`
 which we encourage use of to save redefining the same parameters and variables in
 every model and submodel.
