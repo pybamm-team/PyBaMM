@@ -193,17 +193,17 @@ def test_notebook(path, executable="python"):
             print("-" * 70)
             return False
 
-        if "pybamm.print_citations()" not in f.read():
-            # print error and exit
-            print("\n" + "-" * 70)
-            print("ERROR")
-            print("-" * 70)
-            print(
-                "Print citations command 'pybamm.print_citations()' not found in "
-                "notebook"
-            )
-            print("-" * 70)
-            return False
+        # if "pybamm.print_citations()" not in f.read():
+        #     # print error and exit
+        #     print("\n" + "-" * 70)
+        #     print("ERROR")
+        #     print("-" * 70)
+        #     print(
+        #         "Print citations command 'pybamm.print_citations()' not found in "
+        #         "notebook"
+        #     )
+        #     print("-" * 70)
+        #     return False
 
     # Load notebook, convert to python
     e = nbconvert.exporters.PythonExporter()
