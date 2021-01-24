@@ -297,3 +297,15 @@ primaryClass = {physics.app-ph},
   publisher = {The Electrochemical Society},
   doi = {10.1149/2.0122001JES},
 }
+
+@article{Reniers2019,
+  title = {Review and performance comparison of mechanical-chemical degradation models for lithium-ion batteries},
+  author = {Reniers, Jorn M. and Mulder, Grietus and Howey, David A.},
+  journal = {Journal of The Electrochemical Society},
+  volume = {166},
+  number = {14},
+  pages = {A3189},
+  year = {2019},
+  publisher = {The Electrochemical Society},
+  doi = {10.1149/2.0281914jes},
+}
