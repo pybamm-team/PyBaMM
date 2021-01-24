@@ -97,6 +97,16 @@ class TestCitations(unittest.TestCase):
         pybamm.current_collector.AlternativeEffectiveResistance2D()
         self.assertIn("Timms2020", citations._papers_to_cite)
 
+        citations._reset()
+        self.assertNotIn("Timms2020", citations._papers_to_cite)
+        pybamm.thermal.pouch_cell.CurrentCollector1D(param=None)
+        self.assertIn("Timms2020", citations._papers_to_cite)
+
+        citations._reset()
+        self.assertNotIn("Timms2020", citations._papers_to_cite)
+        pybamm.thermal.pouch_cell.CurrentCollector2D(param=None)
+        self.assertIn("Timms2020", citations._papers_to_cite)
+
     def test_subramanian_2005(self):
         # Test that calling relevant bits of code adds the right paper to citations
         citations = pybamm.citations
@@ -127,6 +137,15 @@ class TestCitations(unittest.TestCase):
         self.assertNotIn("Gustafsson2020", citations._papers_to_cite)
         pybamm.ScikitFiniteElement()
         self.assertIn("Gustafsson2020", citations._papers_to_cite)
+
+    def test_reniers_2019(self):
+        # Test that calling relevant bits of code adds the right paper to citations
+        citations = pybamm.citations
+
+        citations._reset()
+        self.assertNotIn("Reniers2019", citations._papers_to_cite)
+        pybamm.active_material.VaryingFull(None, None, None)
+        self.assertIn("Reniers2019", citations._papers_to_cite)
 
     def test_parameter_citations(self):
         citations = pybamm.citations
