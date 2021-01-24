@@ -140,7 +140,7 @@
 
 @article{Sulzer2019physical,
   title = {{Faster Lead-Acid Battery Simulations from Porous-Electrode Theory: Part I. Physical Model}},
-  author = {{Sulzer, Valentin and Chapman, S. Jon and Please, Colin P. and Howey, David A. and Monroe, Charles W.}},
+  author = {Sulzer, Valentin and Chapman, S. Jon and Please, Colin P. and Howey, David A. and Monroe, Charles W.},
   journal = {Journal of The Electrochemical Society},
   volume = {166},
   number = {12},
