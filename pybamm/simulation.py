@@ -491,6 +491,14 @@ class Simulation:
                     step_solution.solve_time = 0
                     step_solution.integration_time = 0
                     steps.append(step_solution)
+
+                    # Construct cycle solutions (a list of solutions corresponding to
+                    # cycles) from sub_solutions
+                    if step_num == 0:
+                        cycle_solution = step_solution
+                    else:
+                        cycle_solution = cycle_solution + step_solution
+
                     # Only allow events specified by experiment
                     if not (
                         self._solution.termination == "final time"
@@ -507,13 +515,6 @@ class Simulation:
                             "or reducing the period.\n\n"
                         )
                         break
-
-                    # Construct cycle solutions (a list of solutions corresponding to
-                    # cycles) from sub_solutions
-                    if step_num == 0:
-                        cycle_solution = step_solution
-                    else:
-                        cycle_solution = cycle_solution + step_solution
 
                     # Increment index for next iteration
                     idx += 1
