@@ -65,11 +65,11 @@ class ScikitsOdeSolver(pybamm.BaseSolver):
         self.ode_solver = True
         self.name = "Scikits ODE solver ({})".format(method)
 
-        pybamm.citations.register("scikits-odes")
-        pybamm.citations.register("hindmarsh2000pvode")
-        pybamm.citations.register("hindmarsh2005sundials")
+        pybamm.citations.register("Malengier2018")
+        pybamm.citations.register("Hindmarsh2000")
+        pybamm.citations.register("Hindmarsh2005")
 
-    def _integrate(self, model, t_eval, inputs=None):
+    def _integrate(self, model, t_eval, inputs_dict=None):
         """
         Solve a model defined by dydt with initial conditions y0.
 
@@ -79,12 +79,14 @@ class ScikitsOdeSolver(pybamm.BaseSolver):
             The model whose solution to calculate.
         t_eval : numeric type
             The times at which to compute the solution
-        inputs : dict, optional
+        inputs_dict : dict, optional
             Any input parameters to pass to the model when solving
 
         """
         if model.rhs_eval.form == "casadi":
-            inputs = casadi.vertcat(*[x for x in inputs.values()])
+            inputs = casadi.vertcat(*[x for x in inputs_dict.values()])
+        else:
+            inputs = inputs_dict
 
         y0 = model.y0
         if isinstance(y0, casadi.DM):
@@ -169,6 +171,8 @@ class ScikitsOdeSolver(pybamm.BaseSolver):
             sol = pybamm.Solution(
                 sol.values.t,
                 np.transpose(sol.values.y),
+                model,
+                inputs_dict,
                 t_root,
                 np.transpose(sol.roots.y),
                 termination,

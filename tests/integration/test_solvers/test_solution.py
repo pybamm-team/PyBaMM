@@ -93,23 +93,20 @@ class TestSolution(unittest.TestCase):
                 sol_step, model, dt, external_variables=external_variables
             )
         np.testing.assert_array_equal(
-            sol_step.inputs["Volume-averaged cell temperature"],
-            np.zeros((1, len(sol_step.t))),
+            sol_step.all_inputs[0]["Volume-averaged cell temperature"], 0
         )
         np.testing.assert_array_equal(
-            sol_step.inputs["X-averaged negative particle concentration"],
-            np.ones((mesh["negative particle"].npts, len(sol_step.t))) * 0.6,
+            sol_step.all_inputs[0]["X-averaged negative particle concentration"], 0.6
         )
 
         # Solve
         t_eval = np.linspace(0, 3600)
         sol = solver.solve(model, t_eval, external_variables=external_variables)
         np.testing.assert_array_equal(
-            sol.inputs["Volume-averaged cell temperature"], np.zeros((1, len(sol.t)))
+            sol.all_inputs[0]["Volume-averaged cell temperature"], 0
         )
         np.testing.assert_array_equal(
-            sol.inputs["X-averaged negative particle concentration"],
-            np.ones((mesh["negative particle"].npts, len(sol.t))) * 0.6,
+            sol.all_inputs[0]["X-averaged negative particle concentration"], 0.6
         )
 
 

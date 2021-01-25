@@ -44,8 +44,8 @@ class BaseBatteryModel(pybamm.BaseModel):
                 Sets the model for the interfacial surface area. Can be "constant"
                 (default) or "varying". Not currently implemented in any of the models.
             * "loss of active material" : str
-                Sets the model for loss of active material. Can be "none" (default) or
-                "example", which is a placeholder for LAM models.
+                Sets the model for loss of active material. Can be "none" (default),
+                "cathode", "anode" or "both" to enable it for the specific electrode.
             * "particle" : str
                 Sets the submodel to use to describe behaviour within the particle.
                 Can be "Fickian diffusion" (default), "uniform profile",
@@ -383,7 +383,12 @@ class BaseBatteryModel(pybamm.BaseModel):
                 )
             )
 
-        if options["loss of active material"] not in ["none", "example"]:
+        if options["loss of active material"] not in [
+            "none",
+            "anode",
+            "cathode",
+            "both",
+        ]:
             raise pybamm.OptionError(
                 "Unknown loss of active material '{}'".format(
                     options["loss of active material"]
@@ -624,7 +629,7 @@ class BaseBatteryModel(pybamm.BaseModel):
                 `model.update` instead."""
             )
 
-        pybamm.logger.info("Building {}".format(self.name))
+        pybamm.logger.info("Start building {}".format(self.name))
 
         if self._built_fundamental_and_external is False:
             self.build_fundamental_and_external()
@@ -651,6 +656,7 @@ class BaseBatteryModel(pybamm.BaseModel):
                 self.variables.update(var)
 
         self._built = True
+        pybamm.logger.info("Finish building {}".format(self.name))
 
     def new_empty_copy(self):
         "See :meth:`pybamm.BaseModel.new_empty_copy()`"

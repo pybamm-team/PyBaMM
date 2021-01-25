@@ -198,6 +198,7 @@ setup(
         "casadi>=3.5.0",
         *jax_dependencies,
         "jupyter",  # For example notebooks
+        "pybtex",
         # Note: Matplotlib is loaded for debug plots, but to ensure pybamm runs
         # on systems without an attached display, it should never be imported
         # outside of plot() methods.

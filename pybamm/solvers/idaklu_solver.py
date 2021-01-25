@@ -58,8 +58,8 @@ class IDAKLUSolver(pybamm.BaseSolver):
         )
         self.name = "IDA KLU solver"
 
-        pybamm.citations.register("hindmarsh2000pvode")
-        pybamm.citations.register("hindmarsh2005sundials")
+        pybamm.citations.register("Hindmarsh2000")
+        pybamm.citations.register("Hindmarsh2005")
 
     def set_atol_by_variable(self, variables_with_tols, model):
         """
@@ -148,7 +148,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
 
         return atol
 
-    def _integrate(self, model, t_eval, inputs=None):
+    def _integrate(self, model, t_eval, inputs_dict=None):
         """
         Solve a DAE model defined by residuals with initial conditions y0.
 
@@ -158,10 +158,14 @@ class IDAKLUSolver(pybamm.BaseSolver):
             The model whose solution to calculate.
         t_eval : numeric type
             The times at which to compute the solution
+        inputs_dict : dict, optional
+            Any external variables or input parameters to pass to the model when solving
         """
         if model.rhs_eval.form == "casadi":
             # stack inputs
-            inputs = casadi.vertcat(*[x for x in inputs.values()])
+            inputs = casadi.vertcat(*[x for x in inputs_dict.values()])
+        else:
+            inputs = inputs_dict
 
         if model.jacobian_eval is None:
             raise pybamm.SolverError("KLU requires the Jacobian to be provided")
@@ -276,6 +280,8 @@ class IDAKLUSolver(pybamm.BaseSolver):
             sol = pybamm.Solution(
                 sol.t,
                 np.transpose(y_out),
+                model,
+                inputs_dict,
                 t[-1],
                 np.transpose(y_out[-1])[:, np.newaxis],
                 termination,

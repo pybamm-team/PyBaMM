@@ -603,14 +603,10 @@ class CurrentTests(BaseOutputTest):
         multiplied by the interfacial current density is equal to the true
         value."""
 
-        # The final time corresponds to an event (voltage cut-off). At this time
-        # the average property is satisfied but to a lesser degree of accuracy
-        t = self.t[:-1]
-
         np.testing.assert_array_almost_equal(
             np.mean(
-                self.a_n(t, self.x_n)
-                * (self.j_n(t, self.x_n) + self.j_n_sei(t, self.x_n)),
+                self.a_n(self.t, self.x_n)
+                * (self.j_n(self.t, self.x_n) + self.j_n_sei(self.t, self.x_n)),
                 axis=0,
             ),
             self.i_cell / self.l_n,
@@ -618,8 +614,8 @@ class CurrentTests(BaseOutputTest):
         )
         np.testing.assert_array_almost_equal(
             np.mean(
-                self.a_p(t, self.x_p)
-                * (self.j_p(t, self.x_p) + self.j_p_sei(t, self.x_p)),
+                self.a_p(self.t, self.x_p)
+                * (self.j_p(self.t, self.x_p) + self.j_p_sei(self.t, self.x_p)),
                 axis=0,
             ),
             -self.i_cell / self.l_p,

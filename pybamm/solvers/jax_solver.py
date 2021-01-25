@@ -70,7 +70,7 @@ class JaxSolver(pybamm.BaseSolver):
         self.extra_options = extra_options or {}
         self.name = "JAX solver ({})".format(method)
         self._cached_solves = dict()
-        pybamm.citations.register("jax2018github")
+        pybamm.citations.register("jax2018")
 
     def get_solve(self, model, t_eval):
         """
@@ -179,7 +179,7 @@ class JaxSolver(pybamm.BaseSolver):
         else:
             return jax.jit(solve_model_bdf)
 
-    def _integrate(self, model, t_eval, inputs=None):
+    def _integrate(self, model, t_eval, inputs_dict=None):
         """
         Solve a model defined by dydt with initial conditions y0.
 
@@ -189,7 +189,7 @@ class JaxSolver(pybamm.BaseSolver):
             The model whose solution to calculate.
         t_eval : :class:`numpy.array`, size (k,)
             The times at which to compute the solution
-        inputs : dict, optional
+        inputs_dict : dict, optional
             Any input parameters to pass to the model when solving
 
         Returns
@@ -203,7 +203,7 @@ class JaxSolver(pybamm.BaseSolver):
         if model not in self._cached_solves:
             self._cached_solves[model] = self.create_solve(model, t_eval)
 
-        y = self._cached_solves[model](inputs).block_until_ready()
+        y = self._cached_solves[model](inputs_dict).block_until_ready()
         integration_time = timer.time()
 
         # convert to a normal numpy array
@@ -212,6 +212,8 @@ class JaxSolver(pybamm.BaseSolver):
         termination = "final time"
         t_event = None
         y_event = onp.array(None)
-        sol = pybamm.Solution(t_eval, y, t_event, y_event, termination)
+        sol = pybamm.Solution(
+            t_eval, y, model, inputs_dict, t_event, y_event, termination
+        )
         sol.integration_time = integration_time
         return sol

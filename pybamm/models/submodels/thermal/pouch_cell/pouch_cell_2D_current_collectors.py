@@ -30,6 +30,7 @@ class CurrentCollector2D(BaseThermal):
 
     def __init__(self, param):
         super().__init__(param, cc_dimension=2)
+        pybamm.citations.register("Timms2020")
 
     def get_fundamental_variables(self):
 
@@ -84,7 +85,7 @@ class CurrentCollector2D(BaseThermal):
                 - edge_cooling_coefficient
                 * pybamm.source(T_av - T_amb, T_av, boundary=True)
             )
-            / (self.param.C_th * self.param.rho)
+            / (self.param.C_th * self.param.rho(T_av))
         }
 
         # TODO: Make h_edge a function of position to have bottom/top/side cooled cells.

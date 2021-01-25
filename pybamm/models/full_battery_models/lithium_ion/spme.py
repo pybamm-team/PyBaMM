@@ -37,6 +37,7 @@ class SPMe(BaseModel):
 
         self.set_external_circuit_submodel()
         self.set_porosity_submodel()
+        self.set_crack_submodel()
         self.set_active_material_submodel()
         self.set_tortuosity_submodels()
         self.set_convection_submodel()
@@ -48,13 +49,12 @@ class SPMe(BaseModel):
         self.set_positive_electrode_submodel()
         self.set_thermal_submodel()
         self.set_current_collector_submodel()
-        self.set_crack_submodel()
         self.set_sei_submodel()
 
         if build:
             self.build_model()
 
-        pybamm.citations.register("marquis2019asymptotic")
+        pybamm.citations.register("Marquis2019")
 
     def set_porosity_submodel(self):
 
@@ -72,12 +72,30 @@ class SPMe(BaseModel):
             self.submodels[
                 "positive active material"
             ] = pybamm.active_material.Constant(self.param, "Positive", self.options)
-        elif self.options["loss of active material"] == "example":
+        elif self.options["loss of active material"] == "both":
             self.submodels[
                 "negative active material"
             ] = pybamm.active_material.VaryingUniform(
                 self.param, "Negative", self.options
             )
+            self.submodels[
+                "positive active material"
+            ] = pybamm.active_material.VaryingUniform(
+                self.param, "Positive", self.options
+            )
+        elif self.options["loss of active material"] == "anode":
+            self.submodels[
+                "negative active material"
+            ] = pybamm.active_material.VaryingUniform(
+                self.param, "Negative", self.options
+            )
+            self.submodels[
+                "positive active material"
+            ] = pybamm.active_material.Constant(self.param, "Positive", self.options)
+        elif self.options["loss of active material"] == "cathode":
+            self.submodels[
+                "negative active material"
+            ] = pybamm.active_material.Constant(self.param, "Negative", self.options)
             self.submodels[
                 "positive active material"
             ] = pybamm.active_material.VaryingUniform(
