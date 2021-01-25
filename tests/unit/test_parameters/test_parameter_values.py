@@ -649,7 +649,6 @@ class TestParameterValues(unittest.TestCase):
         self.assertEqual(df[1]["b"], "[function]some_function")
         self.assertEqual(df[1]["c"], "[data]some_data")
 
-
     def test_deprecate_anode_cathode(self):
         chemistry = pybamm.parameter_sets.Ecker2015
         chemistry["anode"] = chemistry["negative electrode"]
@@ -660,6 +659,7 @@ class TestParameterValues(unittest.TestCase):
         chemistry["cathode"] = chemistry["positive electrode"]
         with self.assertWarnsRegex(DeprecationWarning, "cathode"):
             pybamm.ParameterValues(chemistry=chemistry)
+
 
 if __name__ == "__main__":
     print("Add -v for more debug output")
