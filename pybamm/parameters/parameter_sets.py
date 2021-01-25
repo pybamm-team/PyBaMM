@@ -74,7 +74,7 @@ NCA_Kim2011 = {
     "electrolyte": "lipf6_Kim2011",
     "experiment": "1C_discharge_from_full_Kim2011",
     "sei": "example",
-    "citation": "kim2011multi",
+    "citation": "Kim2011",
 }
 
 Ecker2015 = {
@@ -86,7 +86,7 @@ Ecker2015 = {
     "electrolyte": "lipf6_Ecker2015",
     "experiment": "1C_discharge_from_full_Ecker2015",
     "sei": "example",
-    "citation": ["ecker2015i", "ecker2015ii", "richardson2020"],
+    "citation": ["Ecker2015i", "Ecker2015ii", "Richardson2020"],
 }
 
 Marquis2019 = {
@@ -98,7 +98,7 @@ Marquis2019 = {
     "electrolyte": "lipf6_Marquis2019",
     "experiment": "1C_discharge_from_full_Marquis2019",
     "sei": "example",
-    "citation": "marquis2019asymptotic",
+    "citation": "Marquis2019",
 }
 
 Chen2020 = {
@@ -122,7 +122,7 @@ Mohtat2020 = {
     "electrolyte": "LiPF6_Mohtat2020",
     "experiment": "1C_charge_from_empty_Mohtat2020",
     "sei": "example",
-    "citation": "mohtat2020differential",
+    "citation": "Mohtat2020",
 }
 
 Ramadass2004 = {
@@ -134,7 +134,7 @@ Ramadass2004 = {
     "electrolyte": "lipf6_Ramadass2004",
     "experiment": "1C_discharge_from_full_Ramadass2004",
     "sei": "ramadass2004",
-    "citation": "marquis2019asymptotic",
+    "citation": "Marquis2019",
 }
 
 Prada2013 = {
@@ -145,7 +145,7 @@ Prada2013 = {
     "cathode": "LFP_Prada2013",
     "electrolyte": "lipf6_Nyman2008",
     "experiment": "4C_discharge_from_full_Prada2013",
-    "citation": ["Chen2020", "lain2019design", "prada2013simplified"],
+    "citation": ["Chen2020", "Lain2019", "Prada2013"],
 }
 
 Ai2020 = {
@@ -157,7 +157,7 @@ Ai2020 = {
     "electrolyte": "lipf6_Enertech_Ai2020",
     "experiment": "1C_discharge_from_full_Ai2020",
     "sei": "example",
-    "citation": "Ai2020JES",
+    "citation": "Ai2019",
 }
 
 #
@@ -171,5 +171,5 @@ Sulzer2019 = {
     "cathode": "lead_dioxide_Sulzer2019",
     "electrolyte": "sulfuric_acid_Sulzer2019",
     "experiment": "1C_discharge_from_full",
-    "citation": "sulzer2019physical",
+    "citation": "Sulzer2019physical",
 }

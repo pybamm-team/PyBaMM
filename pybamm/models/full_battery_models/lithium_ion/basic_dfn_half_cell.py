@@ -36,7 +36,7 @@ class BasicDFNHalfCell(BaseModel):
 
     def __init__(self, name="Doyle-Fuller-Newman half cell model", options=None):
         super().__init__({}, name)
-        pybamm.citations.register("marquis2019asymptotic")
+        pybamm.citations.register("Marquis2019")
         # `param` is a class containing all the relevant parameters and functions for
         # this model. These are purely symbolic at this stage, and will be set by the
         # `ParameterValues` class when the model is processed.

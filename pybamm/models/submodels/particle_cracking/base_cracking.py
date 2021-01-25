@@ -32,8 +32,8 @@ class BaseCracking(pybamm.BaseSubModel):
         self.domain = domain
         super().__init__(param)
 
-        pybamm.citations.register("Ai_2019")
-        pybamm.citations.register("deshpande2012battery")
+        pybamm.citations.register("Ai2019")
+        pybamm.citations.register("Deshpande2012")
 
     def _get_standard_variables(self, l_cr):
         domain = self.domain.lower() + " particle"
