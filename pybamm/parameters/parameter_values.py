@@ -372,13 +372,15 @@ class ParameterValues:
 
         new_rhs = {}
         for variable, equation in unprocessed_model.rhs.items():
-            pybamm.logger.debug("Processing parameters for {!r} (rhs)".format(variable))
+            pybamm.logger.verbose(
+                "Processing parameters for {!r} (rhs)".format(variable)
+            )
             new_rhs[variable] = self.process_symbol(equation)
         model.rhs = new_rhs
 
         new_algebraic = {}
         for variable, equation in unprocessed_model.algebraic.items():
-            pybamm.logger.debug(
+            pybamm.logger.verbose(
                 "Processing parameters for {!r} (algebraic)".format(variable)
             )
             new_algebraic[variable] = self.process_symbol(equation)
@@ -386,7 +388,7 @@ class ParameterValues:
 
         new_initial_conditions = {}
         for variable, equation in unprocessed_model.initial_conditions.items():
-            pybamm.logger.debug(
+            pybamm.logger.verbose(
                 "Processing parameters for {!r} (initial conditions)".format(variable)
             )
             new_initial_conditions[variable] = self.process_symbol(equation)
@@ -396,7 +398,7 @@ class ParameterValues:
 
         new_variables = {}
         for variable, equation in unprocessed_model.variables.items():
-            pybamm.logger.debug(
+            pybamm.logger.verbose(
                 "Processing parameters for {!r} (variables)".format(variable)
             )
             new_variables[variable] = self.process_symbol(equation)
@@ -404,7 +406,7 @@ class ParameterValues:
 
         new_events = []
         for event in unprocessed_model.events:
-            pybamm.logger.debug(
+            pybamm.logger.verbose(
                 "Processing parameters for event '{}''".format(event.name)
             )
             new_events.append(
@@ -414,7 +416,7 @@ class ParameterValues:
             )
 
         for event in self.parameter_events:
-            pybamm.logger.debug(
+            pybamm.logger.verbose(
                 "Processing parameters for event '{}''".format(event.name)
             )
             new_events.append(
@@ -459,7 +461,7 @@ class ParameterValues:
             for side in sides:
                 try:
                     bc, typ = bcs[side]
-                    pybamm.logger.debug(
+                    pybamm.logger.verbose(
                         "Processing parameters for {!r} ({} bc)".format(variable, side)
                     )
                     processed_bc = (self.process_symbol(bc), typ)

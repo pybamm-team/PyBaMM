@@ -30,6 +30,10 @@ class VaryingFull(BaseModel):
            batteries. Journal of The Electrochemical Society, 166(14), A3189.
     """
 
+    def __init__(self, param, domain, options):
+        super().__init__(param, domain, options=options)
+        pybamm.citations.register("Reniers2019")
+
     def get_fundamental_variables(self):
         eps_solid = pybamm.Variable(
             self.domain + " electrode active material volume fraction",

@@ -443,64 +443,89 @@ class Simulation:
             pybamm.logger.info("Start running experiment")
             timer = pybamm.Timer()
 
-            steps = []
-            for idx, (exp_inputs, dt) in enumerate(
-                zip(self._experiment_inputs, self._experiment_times)
-            ):
-                pybamm.logger.info(self.experiment.operating_conditions_strings[idx])
-                inputs.update(exp_inputs)
-                kwargs["inputs"] = inputs
-                # Make sure we take at least 2 timesteps
-                npts = max(int(round(dt / exp_inputs["period"])) + 1, 2)
-                self.step(dt, solver=solver, npts=npts, **kwargs)
+            all_cycle_solutions = []
 
-                # Extract the new parts of the solution to construct the entire "step"
-                sol = self.solution
-                new_num_subsolutions = len(sol.sub_solutions)
-                diff_num_subsolutions = new_num_subsolutions - previous_num_subsolutions
-                previous_num_subsolutions = new_num_subsolutions
-
-                step_solution = pybamm.Solution(
-                    sol.all_ts[-diff_num_subsolutions:],
-                    sol.all_ys[-diff_num_subsolutions:],
-                    sol.model,
-                    sol.all_inputs[-diff_num_subsolutions:],
-                    sol.t_event,
-                    sol.y_event,
-                    sol.termination,
-                )
-                step_solution.solve_time = 0
-                step_solution.integration_time = 0
-                steps.append(step_solution)
-                # Only allow events specified by experiment
-                if not (
-                    self._solution.termination == "final time"
-                    or "[experiment]" in self._solution.termination
-                ):
-                    pybamm.logger.warning(
-                        "\n\n\tExperiment is infeasible: '{}' ".format(
-                            self._solution.termination
-                        )
-                        + "was triggered during '{}'. ".format(
-                            self.experiment.operating_conditions_strings[idx]
-                        )
-                        + "Try reducing current, shortening the time interval, "
-                        "or reducing the period.\n\n"
-                    )
-                    break
-            # Construct solution.cycles (a list of solutions corresponding to
-            # cycles) from sub_solutions
-            self.solution.cycles = []
+            idx = 0
+            num_cycles = len(self.experiment.cycle_lengths)
             for cycle_num, cycle_length in enumerate(self.experiment.cycle_lengths):
-                cycle_start_idx = sum(self.experiment.cycle_lengths[0:cycle_num])
-                cycle_solution = steps[cycle_start_idx]
-                for idx in range(cycle_length - 1):
-                    cycle_solution = cycle_solution + steps[cycle_start_idx + idx + 1]
-                cycle_solution.steps = steps[
-                    cycle_start_idx : cycle_start_idx + cycle_length
-                ]
-                self.solution.cycles.append(cycle_solution)
-            pybamm.logger.info(
+                pybamm.logger.info(
+                    f"Cycle {cycle_num+1}/{num_cycles} ({timer.time()} elapsed) "
+                    + "-" * 20
+                )
+                steps = []
+                cycle_solution = None
+                for step_num in range(cycle_length):
+                    exp_inputs = self._experiment_inputs[idx]
+                    dt = self._experiment_times[idx]
+                    # Use 1-indexing for printing cycle number as it is more
+                    # human-intuitive
+                    pybamm.logger.info(
+                        f"Cycle {cycle_num+1}/{num_cycles}, "
+                        f"step {step_num+1}/{cycle_length}: "
+                        f"{self.experiment.operating_conditions_strings[idx]}"
+                    )
+                    inputs.update(exp_inputs)
+                    kwargs["inputs"] = inputs
+                    # Make sure we take at least 2 timesteps
+                    npts = max(int(round(dt / exp_inputs["period"])) + 1, 2)
+                    self.step(dt, solver=solver, npts=npts, **kwargs)
+
+                    # Extract the new parts of the solution
+                    # to construct the entire "step"
+                    sol = self.solution
+                    new_num_subsolutions = len(sol.sub_solutions)
+                    diff_num_subsolutions = (
+                        new_num_subsolutions - previous_num_subsolutions
+                    )
+                    previous_num_subsolutions = new_num_subsolutions
+
+                    step_solution = pybamm.Solution(
+                        sol.all_ts[-diff_num_subsolutions:],
+                        sol.all_ys[-diff_num_subsolutions:],
+                        sol.model,
+                        sol.all_inputs[-diff_num_subsolutions:],
+                        sol.t_event,
+                        sol.y_event,
+                        sol.termination,
+                    )
+                    step_solution.solve_time = 0
+                    step_solution.integration_time = 0
+                    steps.append(step_solution)
+
+                    # Construct cycle solutions (a list of solutions corresponding to
+                    # cycles) from sub_solutions
+                    if step_num == 0:
+                        cycle_solution = step_solution
+                    else:
+                        cycle_solution = cycle_solution + step_solution
+
+                    # Only allow events specified by experiment
+                    if not (
+                        self._solution.termination == "final time"
+                        or "[experiment]" in self._solution.termination
+                    ):
+                        pybamm.logger.warning(
+                            "\n\n\tExperiment is infeasible: '{}' ".format(
+                                self._solution.termination
+                            )
+                            + "was triggered during '{}'. ".format(
+                                self.experiment.operating_conditions_strings[idx]
+                            )
+                            + "Try reducing current, shortening the time interval, "
+                            "or reducing the period.\n\n"
+                        )
+                        break
+
+                    # Increment index for next iteration
+                    idx += 1
+
+                # At the final step of the inner loop we save the cycle
+                cycle_solution.steps = steps
+                all_cycle_solutions.append(cycle_solution)
+
+            self.solution.cycles = all_cycle_solutions
+
+            pybamm.logger.notice(
                 "Finish experiment simulation, took {}".format(timer.time())
             )
 

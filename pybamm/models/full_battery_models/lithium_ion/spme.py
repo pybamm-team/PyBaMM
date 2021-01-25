@@ -54,7 +54,7 @@ class SPMe(BaseModel):
         if build:
             self.build_model()
 
-        pybamm.citations.register("marquis2019asymptotic")
+        pybamm.citations.register("Marquis2019")
 
     def set_porosity_submodel(self):
 

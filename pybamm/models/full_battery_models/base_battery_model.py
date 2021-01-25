@@ -631,7 +631,7 @@ class BaseBatteryModel(pybamm.BaseModel):
                 `model.update` instead."""
             )
 
-        pybamm.logger.info("Building {}".format(self.name))
+        pybamm.logger.info("Start building {}".format(self.name))
 
         if self._built_fundamental_and_external is False:
             self.build_fundamental_and_external()
@@ -658,6 +658,7 @@ class BaseBatteryModel(pybamm.BaseModel):
                 self.variables.update(var)
 
         self._built = True
+        pybamm.logger.info("Finish building {}".format(self.name))
 
     def new_empty_copy(self):
         "See :meth:`pybamm.BaseModel.new_empty_copy()`"
