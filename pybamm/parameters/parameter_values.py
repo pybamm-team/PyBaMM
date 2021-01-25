@@ -5,6 +5,7 @@ import pybamm
 import pandas as pd
 import os
 import numbers
+import warnings
 from pprint import pformat
 from collections import defaultdict
 
@@ -151,6 +152,28 @@ class ParameterValues:
         # add sei parameters if provided
         if "sei" in chemistry:
             component_groups += ["sei"]
+
+        if "anode" in chemistry.keys():
+            chemistry["negative electrode"] = chemistry["anode"]
+            warnings.warn(
+                "the 'anode' component notation will be deprecated in the next "
+                "release, as it has now been renamed to 'negative electrode'. "
+                "Simulation will continue passing the 'anode' component as 'negative "
+                "electrode' (it might overwrite any existing definition of the "
+                "component).",
+                DeprecationWarning,
+            )
+
+        if "cathode" in chemistry.keys():
+            chemistry["positive electrode"] = chemistry["cathode"]
+            warnings.warn(
+                "the 'cathode' component notation will be deprecated in the next "
+                "release, as it has now been renamed to 'positive electrode'. "
+                "Simulation will continue passing the 'cathode' component as 'positive "
+                "electrode' (it might overwrite any existing definition of the "
+                "component).",
+                DeprecationWarning,
+            )
 
         for component_group in component_groups:
             # Make sure component is provided
