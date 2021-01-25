@@ -33,7 +33,9 @@ jobs:
           echo "SUMMARY OF CHANGES"
           echo "=================="
           asv compare $BASE_COMMIT $HEAD_COMMIT | tee compare_result.txt
-          REGRESSIONS=$(grep "+" compare_result.txt)
+          # Make sure grep returns error code 0 even if code 1 is
+          # returned because no match is found
+          REGRESSIONS=$({ grep "+" compare_result.txt || test $? = 1; })
           if [ ! -z "$REGRESSIONS" ]; \
           then \
           echo "REGRESSIONS FOUND"; \
@@ -43,4 +45,3 @@ jobs:
           printf "Found %d regression(s)\n" $(echo "$REGRESSIONS" | wc -l); \
           exit 1; \
           fi
-    
