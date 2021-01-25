@@ -7,7 +7,7 @@ from .base_thermal import BaseThermal
 
 
 class Lumped(BaseThermal):
-    """Class for lumped thermal submodel
+    """Class for lumped thermal submodel. For more information see [1]_.
 
     Parameters
     ----------
@@ -18,6 +18,11 @@ class Lumped(BaseThermal):
     geometry: string, optional
         The geometry for the lumped thermal submodel. Can be "arbitrary" (default) or
         pouch.
+
+    References
+    ----------
+    .. [1] R Timms, SG Marquis, V Sulzer, CP Please and SJ Chapman. “Asymptotic
+           Reduction of a Lithium-ion Pouch Cell Model”. In preparation, 2020.
 
     **Extends:** :class:`pybamm.thermal.BaseThermal`
     """

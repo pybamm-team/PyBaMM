@@ -107,6 +107,16 @@ class TestCitations(unittest.TestCase):
         pybamm.thermal.pouch_cell.CurrentCollector2D(param=None)
         self.assertIn("Timms2020", citations._papers_to_cite)
 
+        citations._reset()
+        self.assertNotIn("Timms2020", citations._papers_to_cite)
+        pybamm.thermal.Lumped(param=None)
+        self.assertIn("Timms2020", citations._papers_to_cite)
+
+        citations._reset()
+        self.assertNotIn("Timms2020", citations._papers_to_cite)
+        pybamm.thermal.OneDimensionalX(param=None)
+        self.assertIn("Timms2020", citations._papers_to_cite)
+
     def test_subramanian_2005(self):
         # Test that calling relevant bits of code adds the right paper to citations
         citations = pybamm.citations
