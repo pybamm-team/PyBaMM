@@ -2,7 +2,7 @@
 
 ## Features
 
-
+-   Added functionality to `Citations` to print formatted citations ([#1340](https://github.com/pybamm-team/PyBaMM/pull/1340))
 -   Updated the way events are handled in `CasadiSolver` for more accurate event location ([#1328](https://github.com/pybamm-team/PyBaMM/pull/1328))
 -   Added error message if initial conditions are outside the bounds of a variable ([#1326](https://github.com/pybamm-team/PyBaMM/pull/1326))
 -   Added temperature dependence to density, heat capacity and thermal conductivity ([#1323](https://github.com/pybamm-team/PyBaMM/pull/1323))
@@ -19,7 +19,8 @@
 
 ## Optimizations
 
--   If solver method `solve()` is passed a list of inputs as the `inputs` keyword argument, the resolution of the model for each input set is spread acrosss several Python processes, usually running in parallel on different processors. The default number of processes is the number of processors available. `solve()` takes a new keyword argument `nproc` which can be used to set this number a manually.
+-   The `Solution` class now only creates the concatenated `y` when the user asks for it. This is an optimization step as the concatenation can be slow, especially with larger experiments ([#1331](https://github.com/pybamm-team/PyBaMM/pull/1331))
+-   If solver method `solve()` is passed a list of inputs as the `inputs` keyword argument, the resolution of the model for each input set is spread across several Python processes, usually running in parallel on different processors. The default number of processes is the number of processors available. `solve()` takes a new keyword argument `nproc` which can be used to set this number a manually.
 -   Variables are now post-processed using CasADi ([#1316](https://github.com/pybamm-team/PyBaMM/pull/1316))
 -   Operations such as `1*x` and `0+x` now directly return `x` ([#1252](https://github.com/pybamm-team/PyBaMM/pull/1252))
 
@@ -31,6 +32,7 @@
 
 ## Breaking changes
 
+-   All example notebooks in PyBaMM's GitHub repository must now include the command `pybamm.print_citations()`, otherwise the tests will fail. This is to encourage people to use this command to cite the relevant papers ([#1340](https://github.com/pybamm-team/PyBaMM/pull/1340))
 -   `Interpolant` now takes `x` and `y` instead of a single `data` entry ([#1312](https://github.com/pybamm-team/PyBaMM/pull/1312))
 -   Boolean model options ('sei porosity change', 'convection') must now be given in string format ('true' or 'false' instead of True or False) ([#1280](https://github.com/pybamm-team/PyBaMM/pull/1280))
 -   Operations such as `1*x` and `0+x` now directly return `x`. This can be bypassed by explicitly creating the binary operators, e.g. `pybamm.Multiplication(1, x)` ([#1252](https://github.com/pybamm-team/PyBaMM/pull/1252))

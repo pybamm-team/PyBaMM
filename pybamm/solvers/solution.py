@@ -12,9 +12,8 @@ from scipy.io import savemat
 
 class Solution(object):
     """
-    (Semi-private) class containing the solution of, and various attributes associated
-    with, a PyBaMM model. This class is automatically created by the `Solution` class,
-    and should never be called from outside the `Solution` class.
+    Class containing the solution of, and various attributes associated with, a PyBaMM
+    model.
 
     Parameters
     ----------

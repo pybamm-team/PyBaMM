@@ -432,8 +432,7 @@ class QuickPlot(object):
                 var_min is not None
                 and var_max is not None
                 and (np.isnan(var_min) or np.isnan(var_max))
-            ):
-                variable_lists[0][0]._interpolation_function(0, 0)
+            ):  # pragma: no cover
                 raise ValueError(f"Axis limits cannot be NaN for variables '{key}'")
 
     def plot(self, t):
