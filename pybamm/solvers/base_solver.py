@@ -612,10 +612,8 @@ class BaseSolver(object):
                 'when model in format "jax".'
             )
 
-        # Set up
-        timer = pybamm.Timer()
-
         # Set up (if not done already)
+        timer = pybamm.Timer()
         if model not in self.models_set_up:
             # It is assumed that when len(inputs_list) > 1, model set
             # up (initial condition, time-scale and length-scale) does
@@ -724,9 +722,9 @@ class BaseSolver(object):
                 )
         end_indices.append(len(t_eval_dimensionless))
 
-        # integrate separately over each time segment and accumulate into the solution
+        # Integrate separately over each time segment and accumulate into the solution
         # object, restarting the solver at each discontinuity (and recalculating a
-        # consistent state afterwards if a dae)
+        # consistent state afterwards if a DAE)
         old_y0 = model.y0
         solutions = None
         for start_index, end_index in zip(start_indices, end_indices):
@@ -780,49 +778,59 @@ class BaseSolver(object):
                     model.y0 = self.calculate_consistent_state(
                         model, t_eval_dimensionless[end_index], ext_and_inputs_list[0]
                     )
-
         solve_time = timer.time()
+
         for i, solution in enumerate(solutions):
-            # Assign times
-            solution.set_up_time = set_up_time
-            solution.solve_time = solve_time
-
-        # Check if extrapolation occurred
-        extrapolation = self.check_extrapolation(solution, model.events)
-        if extrapolation:
-            warnings.warn(
-                "While solving {} extrapolation occurred for {}".format(
-                    model.name, extrapolation
-                ),
-                pybamm.SolverWarning,
+            # Check if extrapolation occurred
+            extrapolation = self.check_extrapolation(solution, model.events)
+            if extrapolation:
+                warnings.warn(
+                    "While solving {} extrapolation occurred for {}".format(
+                        model.name, extrapolation
+                    ),
+                    pybamm.SolverWarning,
+                )
+            # Identify the event that caused termination and update the solution to
+            # include the event time and state
+            solutions[i], termination = self.get_termination_reason(
+                solution, model.events
             )
-
-        # Identify the event that caused termination and update the solution to
-        # include the event time and state
-        # TODO: when solving with a list of inputs each solution may terminate due
-        # to a different event - this isn't captured here (or in the logger info)
-        solutions[0], termination = self.get_termination_reason(
-            solutions[0], model.events
-        )
-
-        # Assign setup time
-        solutions[0].set_up_time = set_up_time
+            # Assign times
+            solutions[i].set_up_time = set_up_time
+            # all solutions get the same solve time, but their integration time
+            # will be different (see https://github.com/pybamm-team/PyBaMM/pull/1261)
+            solutions[i].solve_time = solve_time
 
         # Restore old y0
         model.y0 = old_y0
 
-        pybamm.logger.info("Finish solving {} ({})".format(model.name, termination))
-        pybamm.logger.info(
-            (
-                "Set-up time: {}, Solve time: {} (of which integration time: {}), "
-                "Total time: {}"
-            ).format(
-                solutions[0].set_up_time,
-                solutions[0].solve_time,
-                solutions[0].integration_time,
-                solutions[0].total_time,
+        # Report times
+        if len(solutions) == 1:
+            pybamm.logger.info("Finish solving {} ({})".format(model.name, termination))
+            pybamm.logger.info(
+                (
+                    "Set-up time: {}, Solve time: {} (of which integration time: {}), "
+                    "Total time: {}"
+                ).format(
+                    solutions[0].set_up_time,
+                    solutions[0].solve_time,
+                    solutions[0].integration_time,
+                    solutions[0].total_time,
+                )
             )
-        )
+        else:
+            pybamm.logger.info("Finish solving {} for all inputs".format(model.name))
+            pybamm.logger.info(
+                (
+                    "Set-up time: {}, Solve time: {} (of which integration time: {}), "
+                    "Total time: {}"
+                ).format(
+                    solutions[0].set_up_time,
+                    sum([sol.solve_time for sol in solutions]),
+                    sum([sol.integration_time for sol in solutions]),
+                    sum([sol.total_time for sol in solutions]),
+                )
+            )
 
         # Raise error if solutions[0] only contains one timestep (except for algebraic
         # solvers, where we may only expect one time in the solution)
@@ -836,6 +844,7 @@ class BaseSolver(object):
                 "Check whether simulation terminated too early."
             )
 
+        # Return solution(s)
         if ninputs == 1:
             return solutions[0]
         else:
@@ -933,6 +942,7 @@ class BaseSolver(object):
                         "parameter and the value has changed between "
                         "steps!".format(domain)
                     )
+
         # Run set up on first step
         if old_solution is None:
             pybamm.logger.verbose(
@@ -981,6 +991,7 @@ class BaseSolver(object):
         # Assign setup time
         solution.set_up_time = set_up_time
 
+        # Report times
         pybamm.logger.verbose("Finish stepping {} ({})".format(model.name, termination))
         pybamm.logger.verbose(
             (
@@ -993,6 +1004,8 @@ class BaseSolver(object):
                 solution.total_time,
             )
         )
+
+        # Return solution
         if save is False or old_solution is None:
             return solution
         else:
