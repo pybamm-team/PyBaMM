@@ -15,7 +15,7 @@ class TestSimulation(unittest.TestCase):
         param = pybamm.ParameterValues({"a": 1})
         sim = pybamm.Simulation(model, parameter_values=param)
         sol = sim.solve([0, 1])
-        np.testing.assert_array_almost_equal(sol.y[0], np.exp(-sol.t), decimal=5)
+        np.testing.assert_array_almost_equal(sol.y.full()[0], np.exp(-sol.t), decimal=5)
 
     def test_basic_ops(self):
 
@@ -140,22 +140,6 @@ class TestSimulation(unittest.TestCase):
         self.assertEqual(sim.parameter_values["Current function [A]"], 2 * current_1C)
         self.assertEqual(sim.C_rate, 2)
 
-    def test_get_variable_array(self):
-
-        sim = pybamm.Simulation(pybamm.lithium_ion.SPM())
-        sim.solve([0, 600])
-
-        phi_s_n = sim.get_variable_array("Negative electrode potential")
-
-        self.assertIsInstance(phi_s_n, np.ndarray)
-
-        c_s_n_surf, c_e = sim.get_variable_array(
-            "Negative particle surface concentration", "Electrolyte concentration"
-        )
-
-        self.assertIsInstance(c_s_n_surf, np.ndarray)
-        self.assertIsInstance(c_e, np.ndarray)
-
     def test_set_external_variable(self):
         model_options = {
             "thermal": "lumped",
@@ -193,18 +177,18 @@ class TestSimulation(unittest.TestCase):
         sim.step(dt)  # 1 step stores first two points
         tau = sim.model.timescale.evaluate()
         self.assertEqual(sim.solution.t.size, 2)
-        self.assertEqual(sim.solution.y[0, :].size, 2)
+        self.assertEqual(sim.solution.y.full()[0, :].size, 2)
         self.assertEqual(sim.solution.t[0], 0)
         self.assertEqual(sim.solution.t[1], dt / tau)
         sim.step(dt)  # automatically append the next step
         self.assertEqual(sim.solution.t.size, 3)
-        self.assertEqual(sim.solution.y[0, :].size, 3)
+        self.assertEqual(sim.solution.y.full()[0, :].size, 3)
         self.assertEqual(sim.solution.t[0], 0)
         self.assertEqual(sim.solution.t[1], dt / tau)
         self.assertEqual(sim.solution.t[2], 2 * dt / tau)
         sim.step(dt, save=False)  # now only store the two end step points
         self.assertEqual(sim.solution.t.size, 2)
-        self.assertEqual(sim.solution.y[0, :].size, 2)
+        self.assertEqual(sim.solution.y.full()[0, :].size, 2)
         self.assertEqual(sim.solution.t[0], 2 * dt / tau)
         self.assertEqual(sim.solution.t[1], 3 * dt / tau)
 
@@ -214,7 +198,9 @@ class TestSimulation(unittest.TestCase):
         param.update({"Current function [A]": "[input]"})
         sim = pybamm.Simulation(model, parameter_values=param)
         sim.solve(t_eval=[0, 600], inputs={"Current function [A]": 1})
-        np.testing.assert_array_equal(sim.solution.inputs["Current function [A]"], 1)
+        np.testing.assert_array_equal(
+            sim.solution.all_inputs[0]["Current function [A]"], 1
+        )
 
     def test_step_with_inputs(self):
         dt = 0.001
@@ -227,20 +213,22 @@ class TestSimulation(unittest.TestCase):
         )  # 1 step stores first two points
         tau = sim.model.timescale.evaluate()
         self.assertEqual(sim.solution.t.size, 2)
-        self.assertEqual(sim.solution.y[0, :].size, 2)
+        self.assertEqual(sim.solution.y.full()[0, :].size, 2)
         self.assertEqual(sim.solution.t[0], 0)
         self.assertEqual(sim.solution.t[1], dt / tau)
-        np.testing.assert_array_equal(sim.solution.inputs["Current function [A]"], 1)
+        np.testing.assert_array_equal(
+            sim.solution.all_inputs[0]["Current function [A]"], 1
+        )
         sim.step(
             dt, inputs={"Current function [A]": 2}
         )  # automatically append the next step
         self.assertEqual(sim.solution.t.size, 3)
-        self.assertEqual(sim.solution.y[0, :].size, 3)
+        self.assertEqual(sim.solution.y.full()[0, :].size, 3)
         self.assertEqual(sim.solution.t[0], 0)
         self.assertEqual(sim.solution.t[1], dt / tau)
         self.assertEqual(sim.solution.t[2], 2 * dt / tau)
         np.testing.assert_array_equal(
-            sim.solution.inputs["Current function [A]"], np.array([[1, 1, 2]])
+            sim.solution.all_inputs[1]["Current function [A]"], 2
         )
 
     def test_save_load(self):
@@ -397,7 +385,9 @@ class TestSimulation(unittest.TestCase):
 
         # tets list gets turned into np.linspace(t0, tf, 100)
         sim.solve(t_eval=[0, 10])
-        np.testing.assert_array_almost_equal(sim.t_eval, np.linspace(0, 10, 100))
+        np.testing.assert_array_almost_equal(
+            sim.solution.t * sim.solution.timescale_eval, np.linspace(0, 10, 100)
+        )
 
     def test_battery_model_with_input_height(self):
         # load model

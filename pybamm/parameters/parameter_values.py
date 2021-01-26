@@ -83,6 +83,7 @@ class ParameterValues:
 
         # Initialise empty _processed_symbols dict (for caching)
         self._processed_symbols = {}
+        self.parameter_events = []
 
     def __getitem__(self, key):
         return self._dict_items[key]
@@ -370,13 +371,15 @@ class ParameterValues:
 
         new_rhs = {}
         for variable, equation in unprocessed_model.rhs.items():
-            pybamm.logger.debug("Processing parameters for {!r} (rhs)".format(variable))
+            pybamm.logger.verbose(
+                "Processing parameters for {!r} (rhs)".format(variable)
+            )
             new_rhs[variable] = self.process_symbol(equation)
         model.rhs = new_rhs
 
         new_algebraic = {}
         for variable, equation in unprocessed_model.algebraic.items():
-            pybamm.logger.debug(
+            pybamm.logger.verbose(
                 "Processing parameters for {!r} (algebraic)".format(variable)
             )
             new_algebraic[variable] = self.process_symbol(equation)
@@ -384,7 +387,7 @@ class ParameterValues:
 
         new_initial_conditions = {}
         for variable, equation in unprocessed_model.initial_conditions.items():
-            pybamm.logger.debug(
+            pybamm.logger.verbose(
                 "Processing parameters for {!r} (initial conditions)".format(variable)
             )
             new_initial_conditions[variable] = self.process_symbol(equation)
@@ -394,7 +397,7 @@ class ParameterValues:
 
         new_variables = {}
         for variable, equation in unprocessed_model.variables.items():
-            pybamm.logger.debug(
+            pybamm.logger.verbose(
                 "Processing parameters for {!r} (variables)".format(variable)
             )
             new_variables[variable] = self.process_symbol(equation)
@@ -402,14 +405,25 @@ class ParameterValues:
 
         new_events = []
         for event in unprocessed_model.events:
-            pybamm.logger.debug(
-                "Processing parameters for event'{}''".format(event.name)
+            pybamm.logger.verbose(
+                "Processing parameters for event '{}''".format(event.name)
             )
             new_events.append(
                 pybamm.Event(
                     event.name, self.process_symbol(event.expression), event.event_type
                 )
             )
+
+        for event in self.parameter_events:
+            pybamm.logger.verbose(
+                "Processing parameters for event '{}''".format(event.name)
+            )
+            new_events.append(
+                pybamm.Event(
+                    event.name, self.process_symbol(event.expression), event.event_type
+                )
+            )
+
         model.events = new_events
 
         # Set external variables
@@ -446,7 +460,7 @@ class ParameterValues:
             for side in sides:
                 try:
                     bc, typ = bcs[side]
-                    pybamm.logger.debug(
+                    pybamm.logger.verbose(
                         "Processing parameters for {!r} ({} bc)".format(variable, side)
                     )
                     processed_bc = (self.process_symbol(bc), typ)
@@ -556,6 +570,23 @@ class ParameterValues:
                 name, data = function_name
                 function = pybamm.Interpolant(
                     data[:, 0], data[:, 1], *new_children, name=name
+                )
+                # Define event to catch extrapolation. In these events the sign is
+                # important: it should be positive inside of the range and negative
+                # outside of it
+                self.parameter_events.append(
+                    pybamm.Event(
+                        "Interpolant {} lower bound".format(name),
+                        pybamm.min(new_children[0] - min(data[:, 0])),
+                        pybamm.EventType.INTERPOLANT_EXTRAPOLATION,
+                    )
+                )
+                self.parameter_events.append(
+                    pybamm.Event(
+                        "Interpolant {} upper bound".format(name),
+                        pybamm.min(max(data[:, 0]) - new_children[0]),
+                        pybamm.EventType.INTERPOLANT_EXTRAPOLATION,
+                    )
                 )
             elif isinstance(function_name, numbers.Number):
                 # If the "function" is provided is actually a scalar, return a Scalar

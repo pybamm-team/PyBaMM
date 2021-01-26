@@ -167,20 +167,21 @@ class TestDimensionlessParameterValues(unittest.TestCase):
         values = pybamm.lithium_ion.BaseModel().default_parameter_values
         param = pybamm.LithiumIonParameters()
         c_rate = param.i_typ / 24
+        T = 1   # dummy temperature as the values are constant
 
         # Density
-        np.testing.assert_almost_equal(values.evaluate(param.rho_cn), 1.9019, 2)
-        np.testing.assert_almost_equal(values.evaluate(param.rho_n), 0.6403, 2)
-        np.testing.assert_almost_equal(values.evaluate(param.rho_s), 0.1535, 2)
-        np.testing.assert_almost_equal(values.evaluate(param.rho_p), 1.2605, 2)
-        np.testing.assert_almost_equal(values.evaluate(param.rho_cp), 1.3403, 2)
+        np.testing.assert_almost_equal(values.evaluate(param.rho_cn(T)), 1.9019, 2)
+        np.testing.assert_almost_equal(values.evaluate(param.rho_n(T)), 0.6403, 2)
+        np.testing.assert_almost_equal(values.evaluate(param.rho_s(T)), 0.1535, 2)
+        np.testing.assert_almost_equal(values.evaluate(param.rho_p(T)), 1.2605, 2)
+        np.testing.assert_almost_equal(values.evaluate(param.rho_cp(T)), 1.3403, 2)
 
         # Thermal conductivity
-        np.testing.assert_almost_equal(values.evaluate(param.lambda_cn), 6.7513, 2)
-        np.testing.assert_almost_equal(values.evaluate(param.lambda_n), 0.0296, 2)
-        np.testing.assert_almost_equal(values.evaluate(param.lambda_s), 0.0027, 2)
-        np.testing.assert_almost_equal(values.evaluate(param.lambda_p), 0.0354, 2)
-        np.testing.assert_almost_equal(values.evaluate(param.lambda_cp), 3.9901, 2)
+        np.testing.assert_almost_equal(values.evaluate(param.lambda_cn(T)), 6.7513, 2)
+        np.testing.assert_almost_equal(values.evaluate(param.lambda_n(T)), 0.0296, 2)
+        np.testing.assert_almost_equal(values.evaluate(param.lambda_s(T)), 0.0027, 2)
+        np.testing.assert_almost_equal(values.evaluate(param.lambda_p(T)), 0.0354, 2)
+        np.testing.assert_almost_equal(values.evaluate(param.lambda_cp(T)), 3.9901, 2)
 
         # other thermal parameters
 
