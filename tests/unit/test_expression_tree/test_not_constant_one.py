@@ -1,7 +1,6 @@
 #
 # Tests for the NotConstantOne class
 #
-import numbers
 import pybamm
 import unittest
 

@@ -2,8 +2,6 @@
 # Special class for a symbol that should not be treated as a constant, and evaluates
 # to 1
 #
-import numbers
-import numpy as np
 import pybamm
 
 
