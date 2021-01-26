@@ -671,6 +671,7 @@ class TestParameterValues(unittest.TestCase):
         with self.assertRaisesRegex(KeyError, "both 'cathode' and 'positive"):
             pybamm.ParameterValues(chemistry=chemistry)
 
+
 if __name__ == "__main__":
     print("Add -v for more debug output")
     import sys
