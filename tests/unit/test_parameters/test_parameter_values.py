@@ -8,6 +8,7 @@ import unittest
 
 import numpy as np
 import pandas as pd
+import copy
 
 import pybamm
 import tests.shared as shared
@@ -650,16 +651,25 @@ class TestParameterValues(unittest.TestCase):
         self.assertEqual(df[1]["c"], "[data]some_data")
 
     def test_deprecate_anode_cathode(self):
-        chemistry = pybamm.parameter_sets.Ecker2015
-        chemistry["anode"] = chemistry["negative electrode"]
+        chemistry = copy.deepcopy(pybamm.parameter_sets.Ecker2015)
+        chemistry["anode"] = chemistry.pop("negative electrode")
         with self.assertWarnsRegex(DeprecationWarning, "anode"):
             pybamm.ParameterValues(chemistry=chemistry)
 
-        chemistry = pybamm.parameter_sets.Ecker2015
-        chemistry["cathode"] = chemistry["positive electrode"]
+        chemistry = copy.deepcopy(pybamm.parameter_sets.Ecker2015)
+        chemistry["cathode"] = chemistry.pop("positive electrode")
         with self.assertWarnsRegex(DeprecationWarning, "cathode"):
             pybamm.ParameterValues(chemistry=chemistry)
 
+        chemistry = copy.deepcopy(pybamm.parameter_sets.Ecker2015)
+        chemistry["anode"] = None
+        with self.assertRaisesRegex(KeyError, "both 'anode' and 'negative"):
+            pybamm.ParameterValues(chemistry=chemistry)
+
+        chemistry = copy.deepcopy(pybamm.parameter_sets.Ecker2015)
+        chemistry["cathode"] = None
+        with self.assertRaisesRegex(KeyError, "both 'cathode' and 'positive"):
+            pybamm.ParameterValues(chemistry=chemistry)
 
 if __name__ == "__main__":
     print("Add -v for more debug output")

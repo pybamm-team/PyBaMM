@@ -154,26 +154,40 @@ class ParameterValues:
             component_groups += ["sei"]
 
         if "anode" in chemistry.keys():
-            chemistry["negative electrode"] = chemistry["anode"]
-            warnings.warn(
-                "the 'anode' component notation will be deprecated in the next "
-                "release, as it has now been renamed to 'negative electrode'. "
-                "Simulation will continue passing the 'anode' component as 'negative "
-                "electrode' (it might overwrite any existing definition of the "
-                "component).",
-                DeprecationWarning,
-            )
+            if "negative electrode" in chemistry.keys():
+                raise KeyError(
+                    "both 'anode' and 'negative electrode' keys provided in the "
+                    "chemistry. The 'anode' notation will be deprecated in the next "
+                    "release so 'negative electrode' should be used instead."
+                )
+            else:
+                chemistry["negative electrode"] = chemistry["anode"]
+                warnings.warn(
+                    "the 'anode' component notation will be deprecated in the next "
+                    "release, as it has now been renamed to 'negative electrode'. "
+                    "Simulation will continue passing the 'anode' component as "
+                    "'negative electrode' (it might overwrite any existing definition "
+                    "of the component).",
+                    DeprecationWarning,
+                )
 
         if "cathode" in chemistry.keys():
-            chemistry["positive electrode"] = chemistry["cathode"]
-            warnings.warn(
-                "the 'cathode' component notation will be deprecated in the next "
-                "release, as it has now been renamed to 'positive electrode'. "
-                "Simulation will continue passing the 'cathode' component as 'positive "
-                "electrode' (it might overwrite any existing definition of the "
-                "component).",
-                DeprecationWarning,
-            )
+            if "positive electrode" in chemistry.keys():
+                raise KeyError(
+                    "both 'cathode' and 'positive electrode' keys provided in the "
+                    "chemistry. The 'cathode' notation will be deprecated in the next "
+                    "release so 'positive electrode' should be used instead."
+                )
+            else:
+                chemistry["positive electrode"] = chemistry["cathode"]
+                warnings.warn(
+                    "the 'cathode' component notation will be deprecated in the next "
+                    "release, as it has now been renamed to 'positive electrode'. "
+                    "Simulation will continue passing the 'cathode' component as "
+                    "'positive electrode' (it might overwrite any existing definition "
+                    "of the component).",
+                    DeprecationWarning,
+                )
 
         for component_group in component_groups:
             # Make sure component is provided
