@@ -7,12 +7,15 @@ import unittest
 
 class TestLFPPrada2013(unittest.TestCase):
     def test_load_params(self):
-        cathode = pybamm.ParameterValues({}).read_parameters_csv(
+        positive_electrode = pybamm.ParameterValues({}).read_parameters_csv(
             pybamm.get_parameters_filepath(
-                "input/parameters/lithium-ion/cathodes/LFP_Prada2013/parameters.csv"
+                "input/parameters/lithium-ion/positive_electrodes/LFP_Prada2013/"
+                "parameters.csv"
             )
         )
-        self.assertEqual(cathode["Positive electrode porosity"], "0.12728395")
+        self.assertEqual(
+            positive_electrode["Positive electrode porosity"], "0.12728395"
+        )
 
         cell = pybamm.ParameterValues({}).read_parameters_csv(
             pybamm.get_parameters_filepath(

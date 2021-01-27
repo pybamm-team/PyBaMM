@@ -7,19 +7,21 @@ import unittest
 
 class TestChen(unittest.TestCase):
     def test_load_params(self):
-        anode = pybamm.ParameterValues({}).read_parameters_csv(
+        negative_electrode = pybamm.ParameterValues({}).read_parameters_csv(
             pybamm.get_parameters_filepath(
-                "input/parameters/lithium-ion/anodes/graphite_Chen2020/parameters.csv"
+                "input/parameters/lithium-ion/negative_electrodes/graphite_Chen2020/"
+                "parameters.csv"
             )
         )
-        self.assertEqual(anode["Negative electrode porosity"], "0.25")
+        self.assertEqual(negative_electrode["Negative electrode porosity"], "0.25")
 
-        cathode = pybamm.ParameterValues({}).read_parameters_csv(
+        positive_electrode = pybamm.ParameterValues({}).read_parameters_csv(
             pybamm.get_parameters_filepath(
-                "input/parameters/lithium-ion/cathodes/nmc_Chen2020/parameters.csv"
+                "input/parameters/lithium-ion/positive_electrodes/nmc_Chen2020/"
+                "parameters.csv"
             )
         )
-        self.assertEqual(cathode["Positive electrode porosity"], "0.335")
+        self.assertEqual(positive_electrode["Positive electrode porosity"], "0.335")
 
         electrolyte = pybamm.ParameterValues({}).read_parameters_csv(
             pybamm.get_parameters_filepath(
