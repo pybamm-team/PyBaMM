@@ -68,45 +68,45 @@ Lead-acid parameter sets
 NCA_Kim2011 = {
     "chemistry": "lithium-ion",
     "cell": "Kim2011",
-    "anode": "graphite_Kim2011",
+    "negative electrode": "graphite_Kim2011",
     "separator": "separator_Kim2011",
-    "cathode": "nca_Kim2011",
+    "positive electrode": "nca_Kim2011",
     "electrolyte": "lipf6_Kim2011",
     "experiment": "1C_discharge_from_full_Kim2011",
     "sei": "example",
-    "citation": "kim2011multi",
+    "citation": "Kim2011",
 }
 
 Ecker2015 = {
     "chemistry": "lithium-ion",
     "cell": "kokam_Ecker2015",
-    "anode": "graphite_Ecker2015",
+    "negative electrode": "graphite_Ecker2015",
     "separator": "separator_Ecker2015",
-    "cathode": "LiNiCoO2_Ecker2015",
+    "positive electrode": "LiNiCoO2_Ecker2015",
     "electrolyte": "lipf6_Ecker2015",
     "experiment": "1C_discharge_from_full_Ecker2015",
     "sei": "example",
-    "citation": ["ecker2015i", "ecker2015ii", "richardson2020"],
+    "citation": ["Ecker2015i", "Ecker2015ii", "Richardson2020"],
 }
 
 Marquis2019 = {
     "chemistry": "lithium-ion",
     "cell": "kokam_Marquis2019",
-    "anode": "graphite_mcmb2528_Marquis2019",
+    "negative electrode": "graphite_mcmb2528_Marquis2019",
     "separator": "separator_Marquis2019",
-    "cathode": "lico2_Marquis2019",
+    "positive electrode": "lico2_Marquis2019",
     "electrolyte": "lipf6_Marquis2019",
     "experiment": "1C_discharge_from_full_Marquis2019",
     "sei": "example",
-    "citation": "marquis2019asymptotic",
+    "citation": "Marquis2019",
 }
 
 Chen2020 = {
     "chemistry": "lithium-ion",
     "cell": "LGM50_Chen2020",
-    "anode": "graphite_Chen2020",
+    "negative electrode": "graphite_Chen2020",
     "separator": "separator_Chen2020",
-    "cathode": "nmc_Chen2020",
+    "positive electrode": "nmc_Chen2020",
     "electrolyte": "lipf6_Nyman2008",
     "experiment": "1C_discharge_from_full_Chen2020",
     "sei": "example",
@@ -116,47 +116,48 @@ Chen2020 = {
 Mohtat2020 = {
     "chemistry": "lithium-ion",
     "cell": "UMBL_Mohtat2020",
-    "anode": "graphite_UMBL_Mohtat2020",
+    "negative electrode": "graphite_UMBL_Mohtat2020",
     "separator": "separator_Mohtat2020",
-    "cathode": "NMC_UMBL_Mohtat2020",
+    "positive electrode": "NMC_UMBL_Mohtat2020",
     "electrolyte": "LiPF6_Mohtat2020",
     "experiment": "1C_charge_from_empty_Mohtat2020",
     "sei": "example",
-    "citation": "mohtat2020differential",
+    "citation": "Mohtat2020",
 }
 
 Ramadass2004 = {
     "chemistry": "lithium-ion",
     "cell": "sony_Ramadass2004",
-    "anode": "graphite_Ramadass2004",
+    "negative electrode": "graphite_Ramadass2004",
     "separator": "separator_Ecker2015",  # no values found, relevance?
-    "cathode": "lico2_Ramadass2004",
+    "positive electrode": "lico2_Ramadass2004",
     "electrolyte": "lipf6_Ramadass2004",
     "experiment": "1C_discharge_from_full_Ramadass2004",
     "sei": "ramadass2004",
-    "citation": "marquis2019asymptotic",
+    "citation": "Marquis2019",
 }
 
 Prada2013 = {
     "chemistry": "lithium-ion",
     "cell": "A123_Lain2019",
-    "anode": "graphite_Chen2020",
+    "negative electrode": "graphite_Chen2020",
     "separator": "separator_Chen2020",
-    "cathode": "LFP_Prada2013",
+    "positive electrode": "LFP_Prada2013",
     "electrolyte": "lipf6_Nyman2008",
     "experiment": "4C_discharge_from_full_Prada2013",
-    "citation": ["Chen2020", "lain2019design", "prada2013simplified"],
+    "citation": ["Chen2020", "Lain2019", "Prada2013"],
 }
 
 Ai2020 = {
     "chemistry": "lithium-ion",
     "cell": "Enertech_Ai2020",
-    "anode": "graphite_Ai2020",
+    "negative electrode": "graphite_Ai2020",
     "separator": "separator_Ai2020",
-    "cathode": "lico2_Ai2020",
+    "positive electrode": "lico2_Ai2020",
     "electrolyte": "lipf6_Enertech_Ai2020",
     "experiment": "1C_discharge_from_full_Ai2020",
-    "citation": "Ai2020JES",
+    "sei": "example",
+    "citation": "Ai2019",
 }
 
 #
@@ -165,10 +166,10 @@ Ai2020 = {
 Sulzer2019 = {
     "chemistry": "lead-acid",
     "cell": "BBOXX_Sulzer2019",
-    "anode": "lead_Sulzer2019",
+    "negative electrode": "lead_Sulzer2019",
     "separator": "agm_Sulzer2019",
-    "cathode": "lead_dioxide_Sulzer2019",
+    "positive electrode": "lead_dioxide_Sulzer2019",
     "electrolyte": "sulfuric_acid_Sulzer2019",
     "experiment": "1C_discharge_from_full",
-    "citation": "sulzer2019physical",
+    "citation": "Sulzer2019physical",
 }
