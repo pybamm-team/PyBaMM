@@ -5,6 +5,8 @@ import subprocess
 from pathlib import Path
 from platform import system
 import wheel.bdist_wheel as orig
+import site
+import shutil
 
 try:
     from setuptools import setup, find_packages, Extension
@@ -221,3 +223,9 @@ setup(
         ]
     },
 )
+
+# pybtex adds a folder "tests" to the site packages, so we manually remove this
+path_to_sitepackages = site.getsitepackages()[0]
+path_to_tests_dir = os.path.join(path_to_sitepackages, "tests")
+if os.path.exists(path_to_tests_dir):
+    shutil.rmtree(path_to_tests_dir)
