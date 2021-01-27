@@ -574,6 +574,7 @@ class BaseSolver(object):
                 t_eval = np.array([0])
             else:
                 raise ValueError("t_eval cannot be None")
+
         # If t_eval is provided as [t0, tf] return the solution at 100 points
         elif isinstance(t_eval, list):
             if len(t_eval) == 1 and self.algebraic_solver is True:
@@ -611,10 +612,8 @@ class BaseSolver(object):
                 'when model in format "jax".'
             )
 
-        # Set up
-        timer = pybamm.Timer()
-
         # Set up (if not done already)
+        timer = pybamm.Timer()
         if model not in self.models_set_up:
             # It is assumed that when len(inputs_list) > 1, model set
             # up (initial condition, time-scale and length-scale) does
@@ -723,9 +722,9 @@ class BaseSolver(object):
                 )
         end_indices.append(len(t_eval_dimensionless))
 
-        # integrate separately over each time segment and accumulate into the solution
+        # Integrate separately over each time segment and accumulate into the solution
         # object, restarting the solver at each discontinuity (and recalculating a
-        # consistent state afterwards if a dae)
+        # consistent state afterwards if a DAE)
         old_y0 = model.y0
         solutions = None
         for start_index, end_index in zip(start_indices, end_indices):
@@ -756,8 +755,7 @@ class BaseSolver(object):
                     p.close()
                     p.join()
             # Setting the solve time for each segment.
-            # pybamm.Solution.append assumes attribute
-            # solve_time.
+            # pybamm.Solution.__add__ assumes attribute solve_time.
             solve_time = timer.time()
             for sol in new_solutions:
                 sol.solve_time = solve_time
@@ -780,41 +778,55 @@ class BaseSolver(object):
                     model.y0 = self.calculate_consistent_state(
                         model, t_eval_dimensionless[end_index], ext_and_inputs_list[0]
                     )
-
         solve_time = timer.time()
+
         for i, solution in enumerate(solutions):
-            # Assign times
-            solution.set_up_time = set_up_time
-            solution.solve_time = solve_time
-
-        # Check if extrapolation occurred
-        extrapolation = self.check_extrapolation(solution, model.events)
-        if extrapolation:
-            warnings.warn(
-                "While solving {} extrapolation occurred for {}".format(
-                    model.name, extrapolation
-                ),
-                pybamm.SolverWarning,
+            # Check if extrapolation occurred
+            extrapolation = self.check_extrapolation(solution, model.events)
+            if extrapolation:
+                warnings.warn(
+                    "While solving {} extrapolation occurred for {}".format(
+                        model.name, extrapolation
+                    ),
+                    pybamm.SolverWarning,
+                )
+            # Identify the event that caused termination and update the solution to
+            # include the event time and state
+            solutions[i], termination = self.get_termination_reason(
+                solution, model.events
             )
+            # Assign times
+            solutions[i].set_up_time = set_up_time
+            # all solutions get the same solve time, but their integration time
+            # will be different (see https://github.com/pybamm-team/PyBaMM/pull/1261)
+            solutions[i].solve_time = solve_time
 
-        # Identify the event that caused termination
-        termination = self.get_termination_reason(solutions[0], model.events)
-
-        # restore old y0
+        # Restore old y0
         model.y0 = old_y0
 
-        pybamm.logger.info("Finish solving {} ({})".format(model.name, termination))
-        pybamm.logger.info(
-            (
-                "Set-up time: {}, Solve time: {} (of which integration time: {}), "
-                "Total time: {}"
-            ).format(
-                solutions[0].set_up_time,
-                solutions[0].solve_time,
-                solutions[0].integration_time,
-                solutions[0].total_time,
+        # Report times
+        if len(solutions) == 1:
+            pybamm.logger.info("Finish solving {} ({})".format(model.name, termination))
+            pybamm.logger.info(
+                (
+                    "Set-up time: {}, Solve time: {} (of which integration time: {}), "
+                    "Total time: {}"
+                ).format(
+                    solutions[0].set_up_time,
+                    solutions[0].solve_time,
+                    solutions[0].integration_time,
+                    solutions[0].total_time,
+                )
             )
-        )
+        else:
+            pybamm.logger.info("Finish solving {} for all inputs".format(model.name))
+            pybamm.logger.info(
+                ("Set-up time: {}, Solve time: {}, Total time: {}").format(
+                    solutions[0].set_up_time,
+                    solutions[0].solve_time,
+                    solutions[0].total_time,
+                )
+            )
 
         # Raise error if solutions[0] only contains one timestep (except for algebraic
         # solvers, where we may only expect one time in the solution)
@@ -828,6 +840,7 @@ class BaseSolver(object):
                 "Check whether simulation terminated too early."
             )
 
+        # Return solution(s)
         if ninputs == 1:
             return solutions[0]
         else:
@@ -925,6 +938,7 @@ class BaseSolver(object):
                         "parameter and the value has changed between "
                         "steps!".format(domain)
                     )
+
         # Run set up on first step
         if old_solution is None:
             pybamm.logger.verbose(
@@ -954,9 +968,6 @@ class BaseSolver(object):
         )
         timer.reset()
         solution = self._integrate(model, t_eval, ext_and_inputs)
-
-        # Assign times
-        solution.set_up_time = set_up_time
         solution.solve_time = timer.time()
 
         # Check if extrapolation occurred
@@ -969,9 +980,14 @@ class BaseSolver(object):
                 pybamm.SolverWarning,
             )
 
-        # Identify the event that caused termination
-        termination = self.get_termination_reason(solution, model.events)
+        # Identify the event that caused termination and update the solution to
+        # include the event time and state
+        solution, termination = self.get_termination_reason(solution, model.events)
 
+        # Assign setup time
+        solution.set_up_time = set_up_time
+
+        # Report times
         pybamm.logger.verbose("Finish stepping {} ({})".format(model.name, termination))
         pybamm.logger.verbose(
             (
@@ -984,6 +1000,8 @@ class BaseSolver(object):
                 solution.total_time,
             )
         )
+
+        # Return solution
         if save is False or old_solution is None:
             return solution
         else:
@@ -992,7 +1010,8 @@ class BaseSolver(object):
     def get_termination_reason(self, solution, events):
         """
         Identify the cause for termination. In particular, if the solver terminated
-        due to an event, (try to) pinpoint which event was responsible.
+        due to an event, (try to) pinpoint which event was responsible. If an event
+        occurs the event time and state are added to the solution object.
         Note that the current approach (evaluating all the events and then finding which
         one is smallest at the final timestep) is pretty crude, but is the easiest one
         that works for all the different solvers.
@@ -1005,7 +1024,10 @@ class BaseSolver(object):
             Dictionary of events
         """
         if solution.termination == "final time":
-            return "the solver successfully reached the end of the integration interval"
+            return (
+                solution,
+                "the solver successfully reached the end of the integration interval",
+            )
         elif solution.termination == "event":
             # Get final event value
             final_event_values = {}
@@ -1039,7 +1061,9 @@ class BaseSolver(object):
                 event_sol.integration_time = 0
                 solution = solution + event_sol
 
-            return solution.termination
+            return solution, solution.termination
+        elif solution.termination == "success":
+            return solution, solution.termination
 
     def check_extrapolation(self, solution, events):
         """
