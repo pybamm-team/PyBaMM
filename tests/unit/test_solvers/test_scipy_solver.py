@@ -101,6 +101,8 @@ class TestScipySolver(unittest.TestCase):
         self.assertLess(len(solution.t), len(t_eval))
         np.testing.assert_array_equal(solution.t[:-1], t_eval[: len(solution.t) - 1])
         np.testing.assert_allclose(solution.y[0], np.exp(-0.1 * solution.t))
+        np.testing.assert_equal(solution.t_event[0], solution.t[-1])
+        np.testing.assert_array_equal(solution.y_event[:, 0], solution.y[:, -1])
 
     def test_model_solver_ode_with_jacobian_python(self):
         # Create model

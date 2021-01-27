@@ -58,8 +58,8 @@ class IDAKLUSolver(pybamm.BaseSolver):
         )
         self.name = "IDA KLU solver"
 
-        pybamm.citations.register("hindmarsh2000pvode")
-        pybamm.citations.register("hindmarsh2005sundials")
+        pybamm.citations.register("Hindmarsh2000")
+        pybamm.citations.register("Hindmarsh2005")
 
     def set_atol_by_variable(self, variables_with_tols, model):
         """

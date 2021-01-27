@@ -84,6 +84,8 @@ class BaseModel(pybamm.BaseSubModel):
             # Surface area to volume ratio is scaled with a_typ, so that it is equal to
             # 1 when eps_solid and R are uniform in space and time
             a = a_dim / a_typ
+            a_dim_av = pybamm.x_average(a_dim)
+            a_av = a_dim_av / a_typ
             variables.update(
                 {
                     self.domain + " particle radius": R,
@@ -91,6 +93,12 @@ class BaseModel(pybamm.BaseSubModel):
                     self.domain + " electrode surface area to volume ratio": a,
                     self.domain
                     + " electrode surface area to volume ratio [m-1]": a_dim,
+                    "X-averaged "
+                    + self.domain.lower()
+                    + " electrode surface area to volume ratio": a_av,
+                    "X-averaged "
+                    + self.domain.lower()
+                    + " electrode surface area to volume ratio [m-1]": a_dim_av,
                 }
             )
 

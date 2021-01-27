@@ -120,8 +120,10 @@ class TestCasadiSolver(unittest.TestCase):
         solver = pybamm.CasadiSolver(mode="safe", rtol=1e-8, atol=1e-8)
         t_eval = np.linspace(0, 5, 100)
         solution = solver.solve(model, t_eval)
-        np.testing.assert_array_less(solution.y.full()[0], 1.5)
-        np.testing.assert_array_less(solution.y.full()[-1], 2.5 + 1e-10)
+        np.testing.assert_array_less(solution.y.full()[0, :-1], 1.5)
+        np.testing.assert_array_less(solution.y.full()[-1, :-1], 2.5)
+        np.testing.assert_equal(solution.t_event[0], solution.t[-1])
+        np.testing.assert_array_equal(solution.y_event[:, 0], solution.y.full()[:, -1])
         np.testing.assert_array_almost_equal(
             solution.y.full()[0], np.exp(0.1 * solution.t), decimal=5
         )
@@ -276,8 +278,12 @@ class TestCasadiSolver(unittest.TestCase):
         while time < end_time:
             step_solution = step_solver.step(step_solution, model, dt=dt, npts=10)
             time += dt
-        np.testing.assert_array_less(step_solution.y.full()[0], 1.5)
-        np.testing.assert_array_less(step_solution.y.full()[-1], 2.5001)
+        np.testing.assert_array_less(step_solution.y.full()[0, :-1], 1.5)
+        np.testing.assert_array_less(step_solution.y.full()[-1, :-1], 2.5)
+        np.testing.assert_equal(step_solution.t_event[0], step_solution.t[-1])
+        np.testing.assert_array_equal(
+            step_solution.y_event[:, 0], step_solution.y.full()[:, -1]
+        )
         np.testing.assert_array_almost_equal(
             step_solution.y.full()[0], np.exp(0.1 * step_solution.t), decimal=5
         )
