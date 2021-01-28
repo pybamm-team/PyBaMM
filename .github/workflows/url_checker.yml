@@ -22,8 +22,11 @@ jobs:
         # Choose whether to include file with no URLs in the prints.
         print_all: false
 
-        # Timeout in 10 seconds if url is not reached
-        timeout: 10
+        # Timeout in 15 seconds if url is not reached
+        timeout: 15
 
         # How many times to retry a failed request (each is logged, defaults to 1)
         retry_count: 3
+
+        # A comma separated patterns to exclude during URL checks
+        exclude_patterns: http://www.w3.org,http://purl.org/dc
