@@ -908,11 +908,6 @@ class Discretisation(object):
                 out = integral_spatial_method.integral(
                     child, disc_child, symbol._integration_dimension
                 )
-                print("start:Integration---------")
-                print(out)
-                print(out.domain)
-                print(symbol.domain)
-                print("end:Integration---------")
                 out.copy_domains(symbol)
                 return out
 
@@ -930,15 +925,15 @@ class Discretisation(object):
                 # Broadcast new_child to the domain specified by symbol.domain
                 # Different discretisations may broadcast differently
                 if symbol.domain == []:
-                    symbol = disc_child * pybamm.Vector([1])
+                    out = disc_child * pybamm.Vector([1])
                 else:
-                    symbol = spatial_method.broadcast(
+                    out = spatial_method.broadcast(
                         disc_child,
                         symbol.domain,
                         symbol.auxiliary_domains,
                         symbol.broadcast_type,
                     )
-                return symbol
+                return out
 
             elif isinstance(symbol, pybamm.DeltaFunction):
                 return spatial_method.delta_function(symbol, disc_child)

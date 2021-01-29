@@ -139,7 +139,7 @@ class SpatialMethod:
         elif broadcast_type.startswith("full"):
             out = symbol * pybamm.Vector(np.ones(full_domain_size), domain=domain)
 
-        out.auxiliary_domains = auxiliary_domains
+        out.auxiliary_domains = auxiliary_domains.copy()
         return out
 
     def gradient(self, symbol, discretised_symbol, boundary_conditions):

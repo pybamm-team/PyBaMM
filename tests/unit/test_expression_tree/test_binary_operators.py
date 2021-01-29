@@ -411,6 +411,7 @@ class TestBinaryOperators(unittest.TestCase):
         broad0 = pybamm.PrimaryBroadcast(0, "domain")
         broad1 = pybamm.PrimaryBroadcast(1, "domain")
         broad2 = pybamm.PrimaryBroadcast(2, "domain")
+        broad2_edge = pybamm.PrimaryBroadcastToEdges(2, "domain")
 
         # power
         self.assertEqual((c ** a).id, pybamm.Scalar(1).id)
@@ -423,6 +424,10 @@ class TestBinaryOperators(unittest.TestCase):
             (broad2 ** pybamm.PrimaryBroadcast(c, "domain")).id,
             pybamm.PrimaryBroadcast(2 ** c, "domain").id,
         )
+        # power with broadcasts to edge
+        self.assertIsInstance(var ** broad2_edge, pybamm.Power)
+        self.assertEqual((var ** broad2_edge).left.id, var.id)
+        self.assertEqual((var ** broad2_edge).right.id, broad2_edge.id)
 
         # addition
         self.assertIsInstance((a + b), pybamm.Scalar)

@@ -694,18 +694,14 @@ def simplify_elementwise_binary_broadcasts(left, right):
 
     # No need to broadcast if the other symbol already has the shape that is being
     # broadcasted to
-    if (
-        isinstance(left, pybamm.Broadcast)
-        and left.child.domain == []
-        and right.domains == left.domains
+    if left.domains == right.domains and all(
+        left.evaluates_on_edges(dim) == right.evaluates_on_edges(dim)
+        for dim in ["primary", "secondary", "tertiary"]
     ):
-        left = left.orphans[0]
-    elif (
-        isinstance(right, pybamm.Broadcast)
-        and right.child.domain == []
-        and left.domains == right.domains
-    ):
-        right = right.orphans[0]
+        if isinstance(left, pybamm.Broadcast) and left.child.domain == []:
+            left = left.orphans[0]
+        elif isinstance(right, pybamm.Broadcast) and right.child.domain == []:
+            right = right.orphans[0]
 
     return left, right
 
@@ -1102,28 +1098,7 @@ def simplified_matrix_multiplication(left, right):
         new_left.clear_domains()
         new_mul = new_left @ r_right
         # Keep the domain of the old right
-        print("start:MatMul-----")
-        print(new_mul.domain)
-        print(right.domain)
-        print(new_mul)
-        # if right.domain == ["current collector"] or right.domain == [
-        #     "positive electrode"
-        # ]:
-        #     print(left)
-        #     print(left.domain)
-        #     print(right)
-        #     print(right.domain)
-        # if isinstance(right.right, pybamm.Multiplication):
-        #     print("start:innerloop-----")
-        #     print(right.right.left.domain)
-        #     print(right.right.right.domain)
-        #     print("end:innerloop-----")
-        # if new_mul.domain == ["positive particle"] and right.domain == [
-        #     "positive electrode"
-        # ]:
-        #     n = 1
         new_mul.copy_domains(right)
-        print("end:MatMul-----")
         return new_mul
 
     # Simplify A @ (b + c) to (A @ b) + (A @ c) if (A @ b) or (A @ c) is constant

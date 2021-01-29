@@ -1151,7 +1151,7 @@ class TestFiniteVolume(unittest.TestCase):
         # constant case
         phi_exact = np.ones_like(combined_submesh.nodes)
         phi_approx = int_int_phi_disc.evaluate(None, phi_exact)
-        np.testing.assert_array_equal(x_end ** 2 / 2, phi_approx)
+        np.testing.assert_array_almost_equal(x_end ** 2 / 2, phi_approx)
 
         # linear case
         phi_exact = combined_submesh.nodes[:, np.newaxis]

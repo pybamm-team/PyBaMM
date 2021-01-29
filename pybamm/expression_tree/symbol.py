@@ -264,17 +264,19 @@ class Symbol(anytree.NodeMixin):
 
     def copy_domains(self, symbol):
         "Copy the domains from a given symbol, bypassing checks"
-        self._domains = symbol.domains
+        self._domains = symbol.domains.copy()
         self._domain = self._domains["primary"]
         self._auxiliary_domains = {
             k: v for k, v in self._domains.items() if k != "primary"
         }
+        self.set_id()
 
     def clear_domains(self):
         "Clear domains, bypassing checks"
         self._domains = {"primary": []}
         self._domain = []
         self._auxiliary_domains = {}
+        self.set_id()
 
     def get_children_auxiliary_domains(self, children):
         "Combine auxiliary domains from children, at all levels"
