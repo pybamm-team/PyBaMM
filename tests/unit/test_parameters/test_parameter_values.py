@@ -326,6 +326,13 @@ class TestParameterValues(unittest.TestCase):
         processed_diff_func = parameter_values.process_symbol(diff_func)
         self.assertEqual(processed_diff_func.evaluate(inputs={"a": 3}), 123)
 
+        # make sure diff works, despite simplifications, when the child is constant
+        a_const = pybamm.Scalar(3)
+        func_const = pybamm.FunctionParameter("func", {"a": a_const})
+        diff_func_const = func_const.diff(a_const)
+        processed_diff_func_const = parameter_values.process_symbol(diff_func_const)
+        self.assertEqual(processed_diff_func_const.evaluate(), 123)
+
         # function parameter that returns a python float
         func = pybamm.FunctionParameter("float_func", {"a": a})
         processed_func = parameter_values.process_symbol(func)
@@ -377,16 +384,16 @@ class TestParameterValues(unittest.TestCase):
 
         parameter_values = pybamm.ParameterValues({"Diffusivity": D})
 
-        a = pybamm.InputParameter("a")
+        a = pybamm.Scalar(3)
         func = pybamm.FunctionParameter("Diffusivity", {"a": a})
 
         processed_func = parameter_values.process_symbol(func)
-        self.assertEqual(processed_func.evaluate(inputs={"a": 3}), 9)
+        self.assertEqual(processed_func.evaluate(), 9)
 
         # process differentiated function parameter
         diff_func = func.diff(a)
         processed_diff_func = parameter_values.process_symbol(diff_func)
-        self.assertEqual(processed_diff_func.evaluate(inputs={"a": 3}), 6)
+        self.assertEqual(processed_diff_func.evaluate(), 6)
 
     def test_multi_var_function_with_parameters(self):
         def D(a, b):
@@ -462,15 +469,15 @@ class TestParameterValues(unittest.TestCase):
             check_already_exists=False,
         )
 
-        a = pybamm.InputParameter("a")
+        a = pybamm.Scalar(0.6)
         func = pybamm.FunctionParameter("function", {"a": a})
         interp = pybamm.FunctionParameter("interpolation", {"a": a})
 
         processed_func = parameter_values.process_symbol(func)
         processed_interp = parameter_values.process_symbol(interp)
         np.testing.assert_array_almost_equal(
-            processed_func.evaluate(inputs={"a": 0.6}),
-            processed_interp.evaluate(inputs={"a": 0.6}),
+            processed_func.evaluate(),
+            processed_interp.evaluate(),
             decimal=4,
         )
 
@@ -480,8 +487,8 @@ class TestParameterValues(unittest.TestCase):
         processed_diff_func = parameter_values.process_symbol(diff_func)
         processed_diff_interp = parameter_values.process_symbol(diff_interp)
         np.testing.assert_array_almost_equal(
-            processed_diff_func.evaluate(inputs={"a": 0.6}),
-            processed_diff_interp.evaluate(inputs={"a": 0.6}),
+            processed_diff_func.evaluate(),
+            processed_diff_interp.evaluate(),
             decimal=2,
         )
 
@@ -596,6 +603,16 @@ class TestParameterValues(unittest.TestCase):
             func_proc.id,
             pybamm.PrimaryBroadcast(pybamm.Scalar(3), "current collector").id,
         )
+
+    def test_process_not_constant_one(self):
+        param = pybamm.ParameterValues({})
+
+        a = pybamm.NotConstantOne()
+        self.assertIsInstance(param.process_symbol(a), pybamm.NotConstantOne)
+
+        var = pybamm.Variable("var", domain="test")
+        var_times_a_disc = param.process_symbol(var * a)
+        self.assertEqual(var_times_a_disc.id, (var * a).id)
 
     def test_process_complex_expression(self):
         var1 = pybamm.Variable("var1")

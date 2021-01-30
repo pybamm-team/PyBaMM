@@ -254,7 +254,7 @@ class Symbol(anytree.NodeMixin):
         if len(set(values)) != len(values):
             raise pybamm.DomainError("All auxiliary domains must be different")
 
-        self._auxiliary_domains = auxiliary_domains
+        self._auxiliary_domains = auxiliary_domains.copy()
         self._domains.update(auxiliary_domains)
 
     @property

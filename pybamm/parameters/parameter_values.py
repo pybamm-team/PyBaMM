@@ -588,7 +588,17 @@ class ParameterValues:
                 raise TypeError("Cannot process parameter '{}'".format(value))
 
         elif isinstance(symbol, pybamm.FunctionParameter):
-            new_children = [self.process_symbol(child) for child in symbol.children]
+            new_children = []
+            for child in symbol.children:
+                if symbol.diff_variable is not None and any(
+                    x.id == symbol.diff_variable.id for x in child.pre_order()
+                ):
+                    # Multiply by NotConstantOne to avoid simplification,
+                    # which would stop symbolic diff from working properly
+                    new_child = child.new_copy() * pybamm.NotConstantOne()
+                    new_children.append(self.process_symbol(new_child))
+                else:
+                    new_children.append(self.process_symbol(child))
             function_name = self[symbol.name]
 
             # Create Function or Interpolant or Scalar object

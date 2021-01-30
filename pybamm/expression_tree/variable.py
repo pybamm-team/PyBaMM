@@ -50,6 +50,7 @@ class VariableBase(pybamm.Symbol):
 
     def new_copy(self):
         """ See :meth:`pybamm.Symbol.new_copy()`. """
+
         return self.__class__(
             self.name, self.domain, self.auxiliary_domains, self.bounds
         )
