@@ -81,7 +81,7 @@ class SPM(BaseModel):
             ] = pybamm.active_material.VaryingUniform(
                 self.param, "Positive", self.options
             )
-        elif self.options["loss of active material"] == "anode":
+        elif self.options["loss of active material"] == "negative":
             self.submodels[
                 "negative active material"
             ] = pybamm.active_material.VaryingUniform(
@@ -90,7 +90,7 @@ class SPM(BaseModel):
             self.submodels[
                 "positive active material"
             ] = pybamm.active_material.Constant(self.param, "Positive", self.options)
-        elif self.options["loss of active material"] == "cathode":
+        elif self.options["loss of active material"] == "positive":
             self.submodels[
                 "negative active material"
             ] = pybamm.active_material.Constant(self.param, "Negative", self.options)

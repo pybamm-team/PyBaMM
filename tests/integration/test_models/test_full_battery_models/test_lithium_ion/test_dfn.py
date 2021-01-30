@@ -115,10 +115,10 @@ class TestDFN(unittest.TestCase):
         modeltest = tests.StandardModelTest(model, parameter_values=parameter_values)
         modeltest.test_all()
 
-    def test_loss_active_material_anode(self):
+    def test_loss_active_material_negative(self):
         options = {
             "particle cracking": "no cracking",
-            "loss of active material": "anode",
+            "loss of active material": "negative",
         }
         model = pybamm.lithium_ion.DFN(options)
         chemistry = pybamm.parameter_sets.Ai2020
@@ -126,10 +126,10 @@ class TestDFN(unittest.TestCase):
         modeltest = tests.StandardModelTest(model, parameter_values=parameter_values)
         modeltest.test_all()
 
-    def test_loss_active_material_cathode(self):
+    def test_loss_active_material_positive(self):
         options = {
             "particle cracking": "no cracking",
-            "loss of active material": "cathode",
+            "loss of active material": "positive",
         }
         model = pybamm.lithium_ion.DFN(options)
         chemistry = pybamm.parameter_sets.Ai2020
@@ -240,16 +240,16 @@ class TestDFNWithCrack(unittest.TestCase):
         modeltest = tests.StandardModelTest(model, parameter_values=parameter_values)
         modeltest.test_all()
 
-    def test_well_posed_anode_cracking(self):
-        options = {"particle": "Fickian diffusion", "particle cracking": "anode"}
+    def test_well_posed_negative_cracking(self):
+        options = {"particle": "Fickian diffusion", "particle cracking": "negative"}
         model = pybamm.lithium_ion.DFN(options)
         chemistry = pybamm.parameter_sets.Ai2020
         parameter_values = pybamm.ParameterValues(chemistry=chemistry)
         modeltest = tests.StandardModelTest(model, parameter_values=parameter_values)
         modeltest.test_all()
 
-    def test_well_posed_cathode_cracking(self):
-        options = {"particle": "Fickian diffusion", "particle cracking": "cathode"}
+    def test_well_posed_positive_cracking(self):
+        options = {"particle": "Fickian diffusion", "particle cracking": "positive"}
         model = pybamm.lithium_ion.DFN(options)
         chemistry = pybamm.parameter_sets.Ai2020
         parameter_values = pybamm.ParameterValues(chemistry=chemistry)

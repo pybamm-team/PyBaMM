@@ -821,14 +821,10 @@ class BaseSolver(object):
         else:
             pybamm.logger.info("Finish solving {} for all inputs".format(model.name))
             pybamm.logger.info(
-                (
-                    "Set-up time: {}, Solve time: {} (of which integration time: {}), "
-                    "Total time: {}"
-                ).format(
+                ("Set-up time: {}, Solve time: {}, Total time: {}").format(
                     solutions[0].set_up_time,
-                    sum([sol.solve_time for sol in solutions]),
-                    sum([sol.integration_time for sol in solutions]),
-                    sum([sol.total_time for sol in solutions]),
+                    solutions[0].solve_time,
+                    solutions[0].total_time,
                 )
             )
 

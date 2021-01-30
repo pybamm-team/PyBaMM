@@ -5,6 +5,7 @@ import pybamm
 import pandas as pd
 import os
 import numbers
+import warnings
 from pprint import pformat
 from collections import defaultdict
 
@@ -25,13 +26,14 @@ class ParameterValues:
         Dict of strings for default chemistries. Must be of the form:
         {"base chemistry": base_chemistry,
         "cell": cell_properties_authorYear,
-        "anode": anode_chemistry_authorYear,
+        "negative electrode": negative_electrode_chemistry_authorYear,
         "separator": separator_chemistry_authorYear,
-        "cathode": cathode_chemistry_authorYear,
+        "positive electrode": positive_electrode_chemistry_authorYear,
         "electrolyte": electrolyte_chemistry_authorYear,
         "experiment": experimental_conditions_authorYear}.
-        Then the anode chemistry is loaded from the file
-        inputs/parameters/base_chemistry/anodes/anode_chemistry_authorYear, etc.
+        Then the negative electrode chemistry is loaded from the file
+        inputs/parameters/base_chemistry/negative electrodes/
+        negative_electrode_chemistry_authorYear, etc.
         Parameters in "cell" should include geometry and current collector properties.
         Parameters in "experiment" should include parameters relating to experimental
         conditions, such as initial conditions and currents.
@@ -140,8 +142,8 @@ class ParameterValues:
 
         component_groups = [
             "cell",
-            "anode",
-            "cathode",
+            "negative electrode",
+            "positive electrode",
             "separator",
             "electrolyte",
             "experiment",
@@ -150,6 +152,42 @@ class ParameterValues:
         # add sei parameters if provided
         if "sei" in chemistry:
             component_groups += ["sei"]
+
+        if "anode" in chemistry.keys():
+            if "negative electrode" in chemistry.keys():
+                raise KeyError(
+                    "both 'anode' and 'negative electrode' keys provided in the "
+                    "chemistry. The 'anode' notation will be deprecated in the next "
+                    "release so 'negative electrode' should be used instead."
+                )
+            else:
+                chemistry["negative electrode"] = chemistry["anode"]
+                warnings.warn(
+                    "the 'anode' component notation will be deprecated in the next "
+                    "release, as it has now been renamed to 'negative electrode'. "
+                    "Simulation will continue passing the 'anode' component as "
+                    "'negative electrode' (it might overwrite any existing definition "
+                    "of the component).",
+                    DeprecationWarning,
+                )
+
+        if "cathode" in chemistry.keys():
+            if "positive electrode" in chemistry.keys():
+                raise KeyError(
+                    "both 'cathode' and 'positive electrode' keys provided in the "
+                    "chemistry. The 'cathode' notation will be deprecated in the next "
+                    "release so 'positive electrode' should be used instead."
+                )
+            else:
+                chemistry["positive electrode"] = chemistry["cathode"]
+                warnings.warn(
+                    "the 'cathode' component notation will be deprecated in the next "
+                    "release, as it has now been renamed to 'positive electrode'. "
+                    "Simulation will continue passing the 'cathode' component as "
+                    "'positive electrode' (it might overwrite any existing definition "
+                    "of the component).",
+                    DeprecationWarning,
+                )
 
         for component_group in component_groups:
             # Make sure component is provided
@@ -163,7 +201,7 @@ class ParameterValues:
                 )
             # Create path to component and load values
             component_path = os.path.join(
-                base_chemistry, component_group + "s", component
+                base_chemistry, component_group.replace(" ", "_") + "s", component
             )
             file_path = self.find_parameter(
                 os.path.join(component_path, "parameters.csv")
