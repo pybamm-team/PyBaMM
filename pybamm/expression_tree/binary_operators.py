@@ -1107,7 +1107,7 @@ def simplified_matrix_multiplication(left, right):
     # Don't do this if either b or c is a number as this will lead to matmul errors
     elif isinstance(right, Addition):
         if (right.left.is_constant() or right.right.is_constant()) and not (
-            right.left.evaluates_to_number() or right.right.evaluates_to_number()
+            right.left.size_for_testing == 1 or right.right.size_for_testing == 1
         ):
             r_left, r_right = right.orphans
             return (left @ r_left) + (left @ r_right)
