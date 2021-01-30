@@ -1246,10 +1246,10 @@ class TestDiscretise(unittest.TestCase):
         n = disc.mesh.combine_submeshes(*a.domain).npts
         self.assertEqual(a_disc._expected_size, n)
 
-    def test_process_not_constant_one(self):
+    def test_process_not_constant(self):
         disc = pybamm.Discretisation()
 
-        a = pybamm.NotConstantOne()
+        a = pybamm.NotConstant(pybamm.Scalar(1))
         self.assertEqual(disc.process_symbol(a).id, pybamm.Scalar(1).id)
         self.assertEqual(disc.process_symbol(2 * a).id, pybamm.Scalar(2).id)
 

@@ -606,6 +606,15 @@ class TestUnaryOperators(unittest.TestCase):
         self.assertIsInstance((abs(d)), pybamm.Scalar)
         self.assertEqual((abs(d)).evaluate(), 1)
 
+    def test_not_constant(self):
+        a = pybamm.NotConstant(pybamm.Scalar(1))
+        self.assertEqual(a.name, "not_constant")
+        self.assertEqual(a.domain, [])
+        self.assertEqual(a.evaluate(), 1)
+        self.assertEqual(a.jac(pybamm.StateVector(slice(0, 1))).evaluate(), 0)
+        self.assertFalse(a.is_constant())
+        self.assertFalse((2 * a).is_constant())
+
 
 if __name__ == "__main__":
     print("Add -v for more debug output")
