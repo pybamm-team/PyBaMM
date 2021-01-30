@@ -604,15 +604,12 @@ class TestParameterValues(unittest.TestCase):
             pybamm.PrimaryBroadcast(pybamm.Scalar(3), "current collector").id,
         )
 
-    def test_process_not_constant_one(self):
-        param = pybamm.ParameterValues({})
+    def test_process_not_constant(self):
+        param = pybamm.ParameterValues({"a": 4})
 
-        a = pybamm.NotConstantOne()
-        self.assertIsInstance(param.process_symbol(a), pybamm.NotConstantOne)
-
-        var = pybamm.Variable("var", domain="test")
-        var_times_a_disc = param.process_symbol(var * a)
-        self.assertEqual(var_times_a_disc.id, (var * a).id)
+        a = pybamm.NotConstant(pybamm.Parameter("a"))
+        self.assertIsInstance(param.process_symbol(a), pybamm.NotConstant)
+        self.assertEqual(param.process_symbol(a).evaluate(), 4)
 
     def test_process_complex_expression(self):
         var1 = pybamm.Variable("var1")

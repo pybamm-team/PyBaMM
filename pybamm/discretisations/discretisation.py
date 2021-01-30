@@ -956,6 +956,9 @@ class Discretisation(object):
                 return spatial_method.upwind_or_downwind(
                     child, disc_child, self.bcs, direction
                 )
+            elif isinstance(symbol, pybamm.NotConstant):
+                # After discretisation, we can make the symbol constant
+                return disc_child
             else:
                 return symbol._unary_new_copy(disc_child)
 
@@ -1037,10 +1040,6 @@ class Discretisation(object):
             new_input_parameter = symbol.new_copy()
             new_input_parameter.set_expected_size(expected_size)
             return new_input_parameter
-
-        elif isinstance(symbol, pybamm.NotConstantOne):
-            # After discretisation, we can make the symbol constant
-            return pybamm.Scalar(1)
 
         else:
             # Backup option: return new copy of the object
