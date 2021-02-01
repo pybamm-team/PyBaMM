@@ -37,7 +37,10 @@ class TestProcessedVariable(unittest.TestCase):
         y_sol = np.array([np.linspace(0, 5)])
         var_casadi = to_casadi(var, y_sol)
         processed_var = pybamm.ProcessedVariable(
-            var, var_casadi, pybamm.Solution(t_sol, y_sol), warn=False
+            var,
+            var_casadi,
+            pybamm.Solution(t_sol, y_sol, pybamm.BaseModel(), {}),
+            warn=False,
         )
         np.testing.assert_array_equal(processed_var.entries, t_sol * y_sol[0])
 
@@ -48,7 +51,10 @@ class TestProcessedVariable(unittest.TestCase):
         y_sol = np.array([1])[:, np.newaxis]
         var_casadi = to_casadi(var, y_sol)
         processed_var = pybamm.ProcessedVariable(
-            var, var_casadi, pybamm.Solution(t_sol, y_sol), warn=False
+            var,
+            var_casadi,
+            pybamm.Solution(t_sol, y_sol, pybamm.BaseModel(), {}),
+            warn=False,
         )
         np.testing.assert_array_equal(processed_var.entries, y_sol[0])
 
@@ -69,13 +75,19 @@ class TestProcessedVariable(unittest.TestCase):
 
         var_casadi = to_casadi(var_sol, y_sol)
         processed_var = pybamm.ProcessedVariable(
-            var_sol, var_casadi, pybamm.Solution(t_sol, y_sol), warn=False
+            var_sol,
+            var_casadi,
+            pybamm.Solution(t_sol, y_sol, pybamm.BaseModel(), {}),
+            warn=False,
         )
         np.testing.assert_array_equal(processed_var.entries, y_sol)
         np.testing.assert_array_equal(processed_var(t_sol, x_sol), y_sol)
         eqn_casadi = to_casadi(eqn_sol, y_sol)
         processed_eqn = pybamm.ProcessedVariable(
-            eqn_sol, eqn_casadi, pybamm.Solution(t_sol, y_sol), warn=False
+            eqn_sol,
+            eqn_casadi,
+            pybamm.Solution(t_sol, y_sol, pybamm.BaseModel(), {}),
+            warn=False,
         )
         np.testing.assert_array_equal(
             processed_eqn(t_sol, x_sol), t_sol * y_sol + x_sol[:, np.newaxis]
@@ -92,7 +104,10 @@ class TestProcessedVariable(unittest.TestCase):
         x_s_edge.mesh = disc.mesh["separator"]
         x_s_casadi = to_casadi(x_s_edge, y_sol)
         processed_x_s_edge = pybamm.ProcessedVariable(
-            x_s_edge, x_s_casadi, pybamm.Solution(t_sol, y_sol), warn=False
+            x_s_edge,
+            x_s_casadi,
+            pybamm.Solution(t_sol, y_sol, pybamm.BaseModel(), {}),
+            warn=False,
         )
         np.testing.assert_array_equal(
             x_s_edge.entries[:, 0], processed_x_s_edge.entries[:, 0]
@@ -105,7 +120,10 @@ class TestProcessedVariable(unittest.TestCase):
         y_sol = np.ones_like(x_sol)[:, np.newaxis]
         eqn_casadi = to_casadi(eqn_sol, y_sol)
         processed_eqn2 = pybamm.ProcessedVariable(
-            eqn_sol, eqn_casadi, pybamm.Solution(t_sol, y_sol), warn=False
+            eqn_sol,
+            eqn_casadi,
+            pybamm.Solution(t_sol, y_sol, pybamm.BaseModel(), {}),
+            warn=False,
         )
         np.testing.assert_array_equal(
             processed_eqn2.entries, y_sol + x_sol[:, np.newaxis]
@@ -127,6 +145,8 @@ class TestProcessedVariable(unittest.TestCase):
         solution = pybamm.Solution(
             np.linspace(0, 1, nt),
             y_sol,
+            pybamm.BaseModel(),
+            {},
             np.linspace(0, 1, 1),
             np.zeros((var_pts[x])),
             "test",
@@ -162,7 +182,10 @@ class TestProcessedVariable(unittest.TestCase):
 
         var_casadi = to_casadi(var_sol, y_sol)
         processed_var = pybamm.ProcessedVariable(
-            var_sol, var_casadi, pybamm.Solution(t_sol, y_sol), warn=False
+            var_sol,
+            var_casadi,
+            pybamm.Solution(t_sol, y_sol, pybamm.BaseModel(), {}),
+            warn=False,
         )
         np.testing.assert_array_equal(
             processed_var.entries,
@@ -194,7 +217,10 @@ class TestProcessedVariable(unittest.TestCase):
 
         var_casadi = to_casadi(var_sol, y_sol)
         processed_var = pybamm.ProcessedVariable(
-            var_sol, var_casadi, pybamm.Solution(t_sol, y_sol), warn=False
+            var_sol,
+            var_casadi,
+            pybamm.Solution(t_sol, y_sol, pybamm.BaseModel(), {}),
+            warn=False,
         )
         np.testing.assert_array_equal(
             processed_var.entries,
@@ -211,7 +237,10 @@ class TestProcessedVariable(unittest.TestCase):
         x_s_edge.secondary_mesh = disc.mesh["current collector"]
         x_s_casadi = to_casadi(x_s_edge, y_sol)
         processed_x_s_edge = pybamm.ProcessedVariable(
-            x_s_edge, x_s_casadi, pybamm.Solution(t_sol, y_sol), warn=False
+            x_s_edge,
+            x_s_casadi,
+            pybamm.Solution(t_sol, y_sol, pybamm.BaseModel(), {}),
+            warn=False,
         )
         np.testing.assert_array_equal(
             x_s_edge.entries.flatten(), processed_x_s_edge.entries[:, :, 0].T.flatten()
@@ -242,7 +271,10 @@ class TestProcessedVariable(unittest.TestCase):
 
         var_casadi = to_casadi(var_sol, y_sol)
         processed_var = pybamm.ProcessedVariable(
-            var_sol, var_casadi, pybamm.Solution(t_sol, y_sol), warn=False
+            var_sol,
+            var_casadi,
+            pybamm.Solution(t_sol, y_sol, pybamm.BaseModel(), {}),
+            warn=False,
         )
         np.testing.assert_array_equal(
             processed_var.entries,
@@ -263,7 +295,10 @@ class TestProcessedVariable(unittest.TestCase):
 
         var_casadi = to_casadi(var_sol, u_sol)
         processed_var = pybamm.ProcessedVariable(
-            var_sol, var_casadi, pybamm.Solution(t_sol, u_sol), warn=False
+            var_sol,
+            var_casadi,
+            pybamm.Solution(t_sol, u_sol, pybamm.BaseModel(), {}),
+            warn=False,
         )
         np.testing.assert_array_equal(
             processed_var.entries, np.reshape(u_sol, [len(y), len(z), len(t_sol)])
@@ -283,7 +318,10 @@ class TestProcessedVariable(unittest.TestCase):
 
         var_casadi = to_casadi(var_sol, u_sol)
         processed_var = pybamm.ProcessedVariable(
-            var_sol, var_casadi, pybamm.Solution(t_sol, u_sol), warn=False
+            var_sol,
+            var_casadi,
+            pybamm.Solution(t_sol, u_sol, pybamm.BaseModel(), {}),
+            warn=False,
         )
         np.testing.assert_array_equal(
             processed_var.entries, np.reshape(u_sol, [len(y), len(z), len(t_sol)])
@@ -302,7 +340,10 @@ class TestProcessedVariable(unittest.TestCase):
         y_sol = np.array([np.linspace(0, 5, 1000)])
         var_casadi = to_casadi(var, y_sol)
         processed_var = pybamm.ProcessedVariable(
-            var, var_casadi, pybamm.Solution(t_sol, y_sol), warn=False
+            var,
+            var_casadi,
+            pybamm.Solution(t_sol, y_sol, pybamm.BaseModel(), {}),
+            warn=False,
         )
         # vector
         np.testing.assert_array_equal(processed_var(t_sol), y_sol[0])
@@ -312,7 +353,10 @@ class TestProcessedVariable(unittest.TestCase):
 
         eqn_casadi = to_casadi(eqn, y_sol)
         processed_eqn = pybamm.ProcessedVariable(
-            eqn, eqn_casadi, pybamm.Solution(t_sol, y_sol), warn=False
+            eqn,
+            eqn_casadi,
+            pybamm.Solution(t_sol, y_sol, pybamm.BaseModel(), {}),
+            warn=False,
         )
         np.testing.assert_array_equal(processed_eqn(t_sol), t_sol * y_sol[0])
         np.testing.assert_array_almost_equal(processed_eqn(0.5), 0.5 * 2.5)
@@ -333,7 +377,10 @@ class TestProcessedVariable(unittest.TestCase):
         y_sol = np.array([[100]])
         eqn_casadi = to_casadi(eqn, y_sol)
         processed_var = pybamm.ProcessedVariable(
-            eqn, eqn_casadi, pybamm.Solution(t_sol, y_sol), warn=False
+            eqn,
+            eqn_casadi,
+            pybamm.Solution(t_sol, y_sol, pybamm.BaseModel(), {}),
+            warn=False,
         )
 
         np.testing.assert_array_equal(processed_var(), 200)
@@ -354,7 +401,10 @@ class TestProcessedVariable(unittest.TestCase):
 
         var_casadi = to_casadi(var_sol, y_sol)
         processed_var = pybamm.ProcessedVariable(
-            var_sol, var_casadi, pybamm.Solution(t_sol, y_sol), warn=False
+            var_sol,
+            var_casadi,
+            pybamm.Solution(t_sol, y_sol, pybamm.BaseModel(), {}),
+            warn=False,
         )
         # 2 vectors
         np.testing.assert_array_almost_equal(processed_var(t_sol, x_sol), y_sol)
@@ -371,7 +421,10 @@ class TestProcessedVariable(unittest.TestCase):
         )
         eqn_casadi = to_casadi(eqn_sol, y_sol)
         processed_eqn = pybamm.ProcessedVariable(
-            eqn_sol, eqn_casadi, pybamm.Solution(t_sol, y_sol), warn=False
+            eqn_sol,
+            eqn_casadi,
+            pybamm.Solution(t_sol, y_sol, pybamm.BaseModel(), {}),
+            warn=False,
         )
         # 2 vectors
         np.testing.assert_array_almost_equal(
@@ -388,7 +441,10 @@ class TestProcessedVariable(unittest.TestCase):
         x_casadi = to_casadi(x_disc, y_sol)
 
         processed_x = pybamm.ProcessedVariable(
-            x_disc, x_casadi, pybamm.Solution(t_sol, y_sol), warn=False
+            x_disc,
+            x_casadi,
+            pybamm.Solution(t_sol, y_sol, pybamm.BaseModel(), {}),
+            warn=False,
         )
         np.testing.assert_array_almost_equal(processed_x(x=x_sol), x_sol[:, np.newaxis])
 
@@ -399,7 +455,10 @@ class TestProcessedVariable(unittest.TestCase):
         r_n.mesh = disc.mesh["negative particle"]
         r_n_casadi = to_casadi(r_n, y_sol)
         processed_r_n = pybamm.ProcessedVariable(
-            r_n, r_n_casadi, pybamm.Solution(t_sol, y_sol), warn=False
+            r_n,
+            r_n_casadi,
+            pybamm.Solution(t_sol, y_sol, pybamm.BaseModel(), {}),
+            warn=False,
         )
         np.testing.assert_array_equal(r_n.entries[:, 0], processed_r_n.entries[:, 0])
         np.testing.assert_array_almost_equal(
@@ -420,7 +479,10 @@ class TestProcessedVariable(unittest.TestCase):
 
         eqn_casadi = to_casadi(eqn_sol, y_sol)
         processed_var = pybamm.ProcessedVariable(
-            eqn_sol, eqn_casadi, pybamm.Solution(t_sol, y_sol), warn=False
+            eqn_sol,
+            eqn_casadi,
+            pybamm.Solution(t_sol, y_sol, pybamm.BaseModel(), {}),
+            warn=False,
         )
 
         # vector
@@ -455,7 +517,10 @@ class TestProcessedVariable(unittest.TestCase):
 
         var_casadi = to_casadi(var_sol, y_sol)
         processed_var = pybamm.ProcessedVariable(
-            var_sol, var_casadi, pybamm.Solution(t_sol, y_sol), warn=False
+            var_sol,
+            var_casadi,
+            pybamm.Solution(t_sol, y_sol, pybamm.BaseModel(), {}),
+            warn=False,
         )
         # 3 vectors
         np.testing.assert_array_equal(
@@ -500,7 +565,10 @@ class TestProcessedVariable(unittest.TestCase):
 
         var_casadi = to_casadi(var_sol, y_sol)
         processed_var = pybamm.ProcessedVariable(
-            var_sol, var_casadi, pybamm.Solution(t_sol, y_sol), warn=False
+            var_sol,
+            var_casadi,
+            pybamm.Solution(t_sol, y_sol, pybamm.BaseModel(), {}),
+            warn=False,
         )
         # 3 vectors
         np.testing.assert_array_equal(
@@ -532,7 +600,10 @@ class TestProcessedVariable(unittest.TestCase):
 
         var_casadi = to_casadi(var_sol, y_sol)
         processed_var = pybamm.ProcessedVariable(
-            var_sol, var_casadi, pybamm.Solution(t_sol, y_sol), warn=False
+            var_sol,
+            var_casadi,
+            pybamm.Solution(t_sol, y_sol, pybamm.BaseModel(), {}),
+            warn=False,
         )
         # 2 vectors
         np.testing.assert_array_equal(processed_var(x=x_sol, r=r_sol).shape, (10, 40))
@@ -558,7 +629,10 @@ class TestProcessedVariable(unittest.TestCase):
 
         var_casadi = to_casadi(var_sol, y_sol)
         processed_var = pybamm.ProcessedVariable(
-            var_sol, var_casadi, pybamm.Solution(t_sol, y_sol), warn=False
+            var_sol,
+            var_casadi,
+            pybamm.Solution(t_sol, y_sol, pybamm.BaseModel(), {}),
+            warn=False,
         )
         # 3 vectors
         np.testing.assert_array_equal(
@@ -594,7 +668,10 @@ class TestProcessedVariable(unittest.TestCase):
 
         var_casadi = to_casadi(var_sol, y_sol)
         processed_var = pybamm.ProcessedVariable(
-            var_sol, var_casadi, pybamm.Solution(t_sol, y_sol), warn=False
+            var_sol,
+            var_casadi,
+            pybamm.Solution(t_sol, y_sol, pybamm.BaseModel(), {}),
+            warn=False,
         )
         # 3 vectors
         np.testing.assert_array_equal(
@@ -615,7 +692,10 @@ class TestProcessedVariable(unittest.TestCase):
 
         var_casadi = to_casadi(var_sol, u_sol)
         processed_var = pybamm.ProcessedVariable(
-            var_sol, var_casadi, pybamm.Solution(t_sol, u_sol), warn=False
+            var_sol,
+            var_casadi,
+            pybamm.Solution(t_sol, u_sol, pybamm.BaseModel(), {}),
+            warn=False,
         )
         # 3 vectors
         np.testing.assert_array_equal(
@@ -656,7 +736,10 @@ class TestProcessedVariable(unittest.TestCase):
 
         var_casadi = to_casadi(var_sol, u_sol)
         processed_var = pybamm.ProcessedVariable(
-            var_sol, var_casadi, pybamm.Solution(t_sol, u_sol), warn=False
+            var_sol,
+            var_casadi,
+            pybamm.Solution(t_sol, u_sol, pybamm.BaseModel(), {}),
+            warn=False,
         )
         # 2 vectors
         np.testing.assert_array_equal(processed_var(y=y_sol, z=z_sol).shape, (15, 15))
@@ -682,6 +765,11 @@ class TestProcessedVariable(unittest.TestCase):
         # set up and solve model
         whole_cell = ["negative electrode", "separator", "positive electrode"]
         model = pybamm.BaseBatteryModel()
+        model.length_scales = {
+            "negative electrode": pybamm.Scalar(1),
+            "separator": pybamm.Scalar(1),
+            "positive electrode": pybamm.Scalar(1),
+        }
         c = pybamm.Variable("conc", domain=whole_cell)
         c_s = pybamm.Variable(
             "particle conc",
@@ -725,7 +813,10 @@ class TestProcessedVariable(unittest.TestCase):
 
         var_casadi = to_casadi(var_sol, y_sol)
         processed_var = pybamm.ProcessedVariable(
-            var_sol, var_casadi, pybamm.Solution(t_sol, y_sol), warn=False
+            var_sol,
+            var_casadi,
+            pybamm.Solution(t_sol, y_sol, pybamm.BaseModel(), {}),
+            warn=False,
         )
         with self.assertRaisesRegex(ValueError, "x cannot be None"):
             processed_var(0)
@@ -745,7 +836,10 @@ class TestProcessedVariable(unittest.TestCase):
 
         var_casadi = to_casadi(var_sol, y_sol)
         processed_var = pybamm.ProcessedVariable(
-            var_sol, var_casadi, pybamm.Solution(t_sol, y_sol), warn=False
+            var_sol,
+            var_casadi,
+            pybamm.Solution(t_sol, y_sol, pybamm.BaseModel(), {}),
+            warn=False,
         )
         with self.assertRaisesRegex(ValueError, "r cannot be None"):
             processed_var(0)
@@ -772,7 +866,10 @@ class TestProcessedVariable(unittest.TestCase):
 
         with self.assertRaisesRegex(NotImplementedError, "Shape not recognized"):
             pybamm.ProcessedVariable(
-                var_sol, var_casadi, pybamm.Solution(t_sol, u_sol), warn=False
+                var_sol,
+                var_casadi,
+                pybamm.Solution(t_sol, u_sol, pybamm.BaseModel(), {}),
+                warn=False,
             )
 
 

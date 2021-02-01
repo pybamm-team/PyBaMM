@@ -935,6 +935,10 @@ class BoundaryValue(BoundaryOperator):
     def __init__(self, child, side):
         super().__init__("boundary value", child, side)
 
+    def _unary_new_copy(self, child):
+        """ See :meth:`UnaryOperator._unary_new_copy()`. """
+        return boundary_value(child, self.side)
+
 
 class BoundaryGradient(BoundaryOperator):
     """A node in the expression tree which gets the boundary flux of a variable.
@@ -999,6 +1003,34 @@ class Downwind(UpwindDownwind):
 
     def __init__(self, child):
         super().__init__("downwind", child)
+
+
+class NotConstant(UnaryOperator):
+    """Special class to wrap a symbol that should not be treated as a constant"""
+
+    def __init__(self, child):
+        super().__init__("not_constant", child)
+
+    def _unary_new_copy(self, child):
+        """ See :meth:`pybamm.Symbol.new_copy()`. """
+        return NotConstant(child)
+
+    def _diff(self, variable):
+        """ See :meth:`pybamm.Symbol._diff()`. """
+        return self.child.diff(variable)
+
+    def _unary_jac(self, child_jac):
+        """ See :meth:`pybamm.UnaryOperator._unary_jac()`. """
+        return child_jac
+
+    def _unary_evaluate(self, child):
+        """ See :meth:`UnaryOperator._unary_evaluate()`. """
+        return child
+
+    def is_constant(self):
+        """ See :meth:`pybamm.Symbol.is_constant()`. """
+        # This symbol is not constant
+        return False
 
 
 #
@@ -1163,13 +1195,28 @@ def x_average(symbol):
     ):
         a, b, c = [orp.orphans[0] for orp in symbol.orphans]
         if a.id == b.id == c.id:
-            return a
+            out = a
         else:
             geo = pybamm.geometric_parameters
             l_n = geo.l_n
             l_s = geo.l_s
             l_p = geo.l_p
-            return (l_n * a + l_s * b + l_p * c) / (l_n + l_s + l_p)
+            out = (l_n * a + l_s * b + l_p * c) / (l_n + l_s + l_p)
+        # To respect domains we may need to broadcast the child back out
+        child = symbol.children[0]
+        # If symbol being returned doesn't have empty domain, return it
+        if out.domain != []:
+            return out
+        # Otherwise we may need to broadcast it
+        elif child.auxiliary_domains == {}:
+            return out
+        else:
+            domain = child.auxiliary_domains["secondary"]
+            if "tertiary" not in child.auxiliary_domains:
+                return pybamm.PrimaryBroadcast(out, domain)
+            else:
+                auxiliary_domains = {"secondary": child.auxiliary_domains["tertiary"]}
+                return pybamm.FullBroadcast(out, domain, auxiliary_domains)
     # Otherwise, use Integral to calculate average value
     else:
         geo = pybamm.geometric_parameters

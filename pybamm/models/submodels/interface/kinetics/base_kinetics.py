@@ -207,12 +207,13 @@ class BaseKinetics(BaseInterface):
         return j.diff(delta_phi)
 
     def _get_interface_variables_for_first_order(self, variables):
-        # This is a bit of a hack, but we need to multiply electrolyte concentration by
-        # one to differentiate it from the electrolyte concentration inside the
+        # This is a bit of a hack, but we need to wrap electrolyte concentration with
+        # the NotConstant class
+        # to differentiate it from the electrolyte concentration inside the
         # surface potential difference when taking j.diff(c_e) later on
         # use explicit Multiplication instead of * to avoid simplification
-        c_e_0 = pybamm.Multiplication(
-            variables["Leading-order x-averaged electrolyte concentration"], 1
+        c_e_0 = pybamm.NotConstant(
+            variables["Leading-order x-averaged electrolyte concentration"]
         )
         hacked_variables = {
             **variables,

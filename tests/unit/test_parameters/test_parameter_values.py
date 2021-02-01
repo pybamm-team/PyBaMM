@@ -8,6 +8,7 @@ import unittest
 
 import numpy as np
 import pandas as pd
+import copy
 
 import pybamm
 import tests.shared as shared
@@ -29,7 +30,7 @@ class TestParameterValues(unittest.TestCase):
                 "input",
                 "parameters",
                 "lithium-ion",
-                "cathodes",
+                "positive_electrodes",
                 "lico2_Marquis2019",
                 "parameters.csv",
             )
@@ -46,7 +47,7 @@ class TestParameterValues(unittest.TestCase):
 
         # from file
         param = pybamm.ParameterValues(
-            "lithium-ion/cathodes/lico2_Marquis2019/" + "parameters.csv"
+            "lithium-ion/positive_electrodes/lico2_Marquis2019/" + "parameters.csv"
         )
         self.assertEqual(param["Positive electrode porosity"], 0.3)
 
@@ -325,6 +326,13 @@ class TestParameterValues(unittest.TestCase):
         processed_diff_func = parameter_values.process_symbol(diff_func)
         self.assertEqual(processed_diff_func.evaluate(inputs={"a": 3}), 123)
 
+        # make sure diff works, despite simplifications, when the child is constant
+        a_const = pybamm.Scalar(3)
+        func_const = pybamm.FunctionParameter("func", {"a": a_const})
+        diff_func_const = func_const.diff(a_const)
+        processed_diff_func_const = parameter_values.process_symbol(diff_func_const)
+        self.assertEqual(processed_diff_func_const.evaluate(), 123)
+
         # function parameter that returns a python float
         func = pybamm.FunctionParameter("float_func", {"a": a})
         processed_func = parameter_values.process_symbol(func)
@@ -376,16 +384,16 @@ class TestParameterValues(unittest.TestCase):
 
         parameter_values = pybamm.ParameterValues({"Diffusivity": D})
 
-        a = pybamm.InputParameter("a")
+        a = pybamm.Scalar(3)
         func = pybamm.FunctionParameter("Diffusivity", {"a": a})
 
         processed_func = parameter_values.process_symbol(func)
-        self.assertEqual(processed_func.evaluate(inputs={"a": 3}), 9)
+        self.assertEqual(processed_func.evaluate(), 9)
 
         # process differentiated function parameter
         diff_func = func.diff(a)
         processed_diff_func = parameter_values.process_symbol(diff_func)
-        self.assertEqual(processed_diff_func.evaluate(inputs={"a": 3}), 6)
+        self.assertEqual(processed_diff_func.evaluate(), 6)
 
     def test_multi_var_function_with_parameters(self):
         def D(a, b):
@@ -455,21 +463,21 @@ class TestParameterValues(unittest.TestCase):
                 "input",
                 "parameters",
                 "lithium-ion",
-                "cathodes",
+                "positive_electrodes",
                 "lico2_Marquis2019",
             ),
             check_already_exists=False,
         )
 
-        a = pybamm.InputParameter("a")
+        a = pybamm.Scalar(0.6)
         func = pybamm.FunctionParameter("function", {"a": a})
         interp = pybamm.FunctionParameter("interpolation", {"a": a})
 
         processed_func = parameter_values.process_symbol(func)
         processed_interp = parameter_values.process_symbol(interp)
         np.testing.assert_array_almost_equal(
-            processed_func.evaluate(inputs={"a": 0.6}),
-            processed_interp.evaluate(inputs={"a": 0.6}),
+            processed_func.evaluate(),
+            processed_interp.evaluate(),
             decimal=4,
         )
 
@@ -479,13 +487,13 @@ class TestParameterValues(unittest.TestCase):
         processed_diff_func = parameter_values.process_symbol(diff_func)
         processed_diff_interp = parameter_values.process_symbol(diff_interp)
         np.testing.assert_array_almost_equal(
-            processed_diff_func.evaluate(inputs={"a": 0.6}),
-            processed_diff_interp.evaluate(inputs={"a": 0.6}),
+            processed_diff_func.evaluate(),
+            processed_diff_interp.evaluate(),
             decimal=2,
         )
 
     def test_process_integral_broadcast(self):
-        # Test that the integral of a broadcast, created outside of x-average, gets
+        # Test that the x-average of a broadcast, created outside of x-average, gets
         # processed correctly
         var = pybamm.Variable("var", domain="test")
         func = pybamm.x_average(pybamm.FunctionParameter("func", {"var": var}))
@@ -494,6 +502,37 @@ class TestParameterValues(unittest.TestCase):
         func_proc = param.process_symbol(func)
 
         self.assertEqual(func_proc.id, pybamm.Scalar(2, name="func").id)
+
+        # test with auxiliary domains
+        var = pybamm.Variable(
+            "var", domain="test", auxiliary_domains={"secondary": "test sec"}
+        )
+        func = pybamm.x_average(pybamm.FunctionParameter("func", {"var": var}))
+
+        param = pybamm.ParameterValues({"func": 2})
+        func_proc = param.process_symbol(func)
+
+        self.assertEqual(
+            func_proc.id,
+            pybamm.PrimaryBroadcast(pybamm.Scalar(2, name="func"), "test sec").id,
+        )
+
+        var = pybamm.Variable(
+            "var",
+            domain="test",
+            auxiliary_domains={"secondary": "test sec", "tertiary": "test tert"},
+        )
+        func = pybamm.x_average(pybamm.FunctionParameter("func", {"var": var}))
+
+        param = pybamm.ParameterValues({"func": 2})
+        func_proc = param.process_symbol(func)
+
+        self.assertEqual(
+            func_proc.id,
+            pybamm.FullBroadcast(
+                pybamm.Scalar(2, name="func"), "test sec", "test tert"
+            ).id,
+        )
 
         # this should be the case even if the domain is one of the special domains
         var = pybamm.Variable("var", domain="negative electrode")
@@ -525,8 +564,52 @@ class TestParameterValues(unittest.TestCase):
         )
         func_proc = param.process_symbol(func)
 
-        func_proc.render()
         self.assertEqual(func_proc.id, pybamm.Scalar(3).id)
+
+        # with auxiliary domains
+        var_n = pybamm.Variable(
+            "var_n",
+            domain="negative electrode",
+            auxiliary_domains={"secondary": "current collector"},
+        )
+        var_s = pybamm.Variable(
+            "var_s",
+            domain="separator",
+            auxiliary_domains={"secondary": "current collector"},
+        )
+        var_p = pybamm.Variable(
+            "var_p",
+            domain="positive electrode",
+            auxiliary_domains={"secondary": "current collector"},
+        )
+        func_n = pybamm.FunctionParameter("func_n", {"var_n": var_n})
+        func_s = pybamm.FunctionParameter("func_s", {"var_s": var_s})
+        func_p = pybamm.FunctionParameter("func_p", {"var_p": var_p})
+
+        func = pybamm.x_average(pybamm.Concatenation(func_n, func_s, func_p))
+        param = pybamm.ParameterValues(
+            {
+                "func_n": 2,
+                "func_s": 3,
+                "func_p": 4,
+                "Negative electrode thickness [m]": 1,
+                "Separator thickness [m]": 1,
+                "Positive electrode thickness [m]": 1,
+            }
+        )
+        func_proc = param.process_symbol(func)
+
+        self.assertEqual(
+            func_proc.id,
+            pybamm.PrimaryBroadcast(pybamm.Scalar(3), "current collector").id,
+        )
+
+    def test_process_not_constant(self):
+        param = pybamm.ParameterValues({"a": 4})
+
+        a = pybamm.NotConstant(pybamm.Parameter("a"))
+        self.assertIsInstance(param.process_symbol(a), pybamm.NotConstant)
+        self.assertEqual(param.process_symbol(a).evaluate(), 4)
 
     def test_process_complex_expression(self):
         var1 = pybamm.Variable("var1")
@@ -691,6 +774,27 @@ class TestParameterValues(unittest.TestCase):
         self.assertEqual(df[1]["a"], "0.1")
         self.assertEqual(df[1]["b"], "[function]some_function")
         self.assertEqual(df[1]["c"], "[data]some_data")
+
+    def test_deprecate_anode_cathode(self):
+        chemistry = copy.deepcopy(pybamm.parameter_sets.Ecker2015)
+        chemistry["anode"] = chemistry.pop("negative electrode")
+        with self.assertWarnsRegex(DeprecationWarning, "anode"):
+            pybamm.ParameterValues(chemistry=chemistry)
+
+        chemistry = copy.deepcopy(pybamm.parameter_sets.Ecker2015)
+        chemistry["cathode"] = chemistry.pop("positive electrode")
+        with self.assertWarnsRegex(DeprecationWarning, "cathode"):
+            pybamm.ParameterValues(chemistry=chemistry)
+
+        chemistry = copy.deepcopy(pybamm.parameter_sets.Ecker2015)
+        chemistry["anode"] = None
+        with self.assertRaisesRegex(KeyError, "both 'anode' and 'negative"):
+            pybamm.ParameterValues(chemistry=chemistry)
+
+        chemistry = copy.deepcopy(pybamm.parameter_sets.Ecker2015)
+        chemistry["cathode"] = None
+        with self.assertRaisesRegex(KeyError, "both 'cathode' and 'positive"):
+            pybamm.ParameterValues(chemistry=chemistry)
 
 
 if __name__ == "__main__":

@@ -360,11 +360,11 @@ class TestDiscretise(unittest.TestCase):
         np.testing.assert_array_equal(mat_disc.entries, mat.entries)
 
         # binary operator
-        bin = var + scal
-        bin_disc = disc.process_symbol(bin)
-        self.assertIsInstance(bin_disc, pybamm.Addition)
-        self.assertIsInstance(bin_disc.children[0], pybamm.StateVector)
-        self.assertIsInstance(bin_disc.children[1], pybamm.Scalar)
+        binary = var + scal
+        binary_disc = disc.process_symbol(binary)
+        self.assertIsInstance(binary_disc, pybamm.Addition)
+        self.assertIsInstance(binary_disc.children[0], pybamm.StateVector)
+        self.assertIsInstance(binary_disc.children[1], pybamm.Scalar)
 
         bin2 = scal + var
         bin2_disc = disc.process_symbol(bin2)
@@ -912,6 +912,19 @@ class TestDiscretise(unittest.TestCase):
         )
         discretised_model.check_well_posedness()
 
+    def test_initial_condition_bounds(self):
+        # concatenation of variables as the key
+        c = pybamm.Variable("c", bounds=(0, 1))
+        model = pybamm.BaseModel()
+        model.rhs = {c: 1}
+        model.initial_conditions = {c: pybamm.Scalar(3)}
+
+        disc = pybamm.Discretisation()
+        with self.assertRaisesRegex(
+            pybamm.ModelError, "initial condition is outside of variable bounds"
+        ):
+            disc.process_model(model)
+
     def test_process_empty_model(self):
         model = pybamm.BaseModel()
         disc = pybamm.Discretisation()
@@ -1248,6 +1261,13 @@ class TestDiscretise(unittest.TestCase):
         n = disc.mesh.combine_submeshes(*a.domain).npts
         self.assertEqual(a_disc._expected_size, n)
 
+    def test_process_not_constant(self):
+        disc = pybamm.Discretisation()
+
+        a = pybamm.NotConstant(pybamm.Scalar(1))
+        self.assertEqual(disc.process_symbol(a).id, pybamm.Scalar(1).id)
+        self.assertEqual(disc.process_symbol(2 * a).id, pybamm.Scalar(2).id)
+
     def test_bc_symmetry(self):
         # define model
         model = pybamm.BaseModel()
@@ -1299,6 +1319,29 @@ class TestDiscretise(unittest.TestCase):
         disc = pybamm.Discretisation(mesh, spatial_methods)
         with self.assertRaisesRegex(pybamm.ModelError, "Boundary condition at r = 0"):
             disc.process_model(model)
+
+    def test_check_model_errors(self):
+        disc = pybamm.Discretisation()
+        model = pybamm.BaseModel()
+        var = pybamm.Variable("var")
+        model.rhs = {var: pybamm.Vector([1, 1])}
+        model.initial_conditions = {var: 1}
+        with self.assertRaisesRegex(
+            pybamm.ModelError, "initial conditions must be numpy array"
+        ):
+            disc.check_model(model)
+        model.initial_conditions = {var: pybamm.Vector([1, 1, 1])}
+        with self.assertRaisesRegex(
+            pybamm.ModelError, "rhs and initial conditions must have the same shape"
+        ):
+            disc.check_model(model)
+        model.rhs = {}
+        model.algebraic = {var: pybamm.Vector([1, 1])}
+        with self.assertRaisesRegex(
+            pybamm.ModelError,
+            "algebraic and initial conditions must have the same shape",
+        ):
+            disc.check_model(model)
 
 
 if __name__ == "__main__":

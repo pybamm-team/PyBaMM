@@ -155,10 +155,10 @@ class BaseModel(pybamm.BaseBatteryModel):
         if self.options["particle cracking"] == "no cracking":
             n = pybamm.particle_cracking.NoCracking(self.param, "Negative")
             p = pybamm.particle_cracking.NoCracking(self.param, "Positive")
-        elif self.options["particle cracking"] == "cathode":
+        elif self.options["particle cracking"] == "positive":
             n = pybamm.particle_cracking.NoCracking(self.param, "Negative")
             p = pybamm.particle_cracking.CrackPropagation(self.param, "Positive")
-        elif self.options["particle cracking"] == "anode":
+        elif self.options["particle cracking"] == "negative":
             n = pybamm.particle_cracking.CrackPropagation(self.param, "Negative")
             p = pybamm.particle_cracking.NoCracking(self.param, "Positive")
         else:

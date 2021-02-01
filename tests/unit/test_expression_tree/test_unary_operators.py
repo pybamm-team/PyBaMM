@@ -445,6 +445,7 @@ class TestUnaryOperators(unittest.TestCase):
         )
         self.assertEqual(average_t_broad_a.id, (pybamm.t * pybamm.Scalar(4)).id)
 
+        # x-average of concatenation of broadcasts
         conc_broad = pybamm.Concatenation(
             pybamm.PrimaryBroadcast(1, ["negative electrode"]),
             pybamm.PrimaryBroadcast(2, ["separator"]),
@@ -452,7 +453,58 @@ class TestUnaryOperators(unittest.TestCase):
         )
         average_conc_broad = pybamm.x_average(conc_broad)
         self.assertIsInstance(average_conc_broad, pybamm.Division)
+        self.assertEqual(average_conc_broad.domain, [])
+        # with auxiliary domains
+        conc_broad = pybamm.Concatenation(
+            pybamm.FullBroadcast(
+                1,
+                ["negative electrode"],
+                auxiliary_domains={"secondary": "current collector"},
+            ),
+            pybamm.FullBroadcast(
+                2, ["separator"], auxiliary_domains={"secondary": "current collector"}
+            ),
+            pybamm.FullBroadcast(
+                3,
+                ["positive electrode"],
+                auxiliary_domains={"secondary": "current collector"},
+            ),
+        )
+        average_conc_broad = pybamm.x_average(conc_broad)
+        self.assertIsInstance(average_conc_broad, pybamm.PrimaryBroadcast)
+        self.assertEqual(average_conc_broad.domain, ["current collector"])
+        conc_broad = pybamm.Concatenation(
+            pybamm.FullBroadcast(
+                1,
+                ["negative electrode"],
+                auxiliary_domains={
+                    "secondary": "current collector",
+                    "tertiary": "test",
+                },
+            ),
+            pybamm.FullBroadcast(
+                2,
+                ["separator"],
+                auxiliary_domains={
+                    "secondary": "current collector",
+                    "tertiary": "test",
+                },
+            ),
+            pybamm.FullBroadcast(
+                3,
+                ["positive electrode"],
+                auxiliary_domains={
+                    "secondary": "current collector",
+                    "tertiary": "test",
+                },
+            ),
+        )
+        average_conc_broad = pybamm.x_average(conc_broad)
+        self.assertIsInstance(average_conc_broad, pybamm.FullBroadcast)
+        self.assertEqual(average_conc_broad.domain, ["current collector"])
+        self.assertEqual(average_conc_broad.auxiliary_domains, {"secondary": ["test"]})
 
+        # x-average of broadcast
         for domain in [
             ["negative electrode"],
             ["separator"],
@@ -616,6 +668,15 @@ class TestUnaryOperators(unittest.TestCase):
         self.assertEqual((abs(a)).evaluate(), 0)
         self.assertIsInstance((abs(d)), pybamm.Scalar)
         self.assertEqual((abs(d)).evaluate(), 1)
+
+    def test_not_constant(self):
+        a = pybamm.NotConstant(pybamm.Scalar(1))
+        self.assertEqual(a.name, "not_constant")
+        self.assertEqual(a.domain, [])
+        self.assertEqual(a.evaluate(), 1)
+        self.assertEqual(a.jac(pybamm.StateVector(slice(0, 1))).evaluate(), 0)
+        self.assertFalse(a.is_constant())
+        self.assertFalse((2 * a).is_constant())
 
 
 if __name__ == "__main__":

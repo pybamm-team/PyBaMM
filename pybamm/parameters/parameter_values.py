@@ -5,6 +5,7 @@ import pybamm
 import pandas as pd
 import os
 import numbers
+import warnings
 from pprint import pformat
 from collections import defaultdict
 
@@ -25,13 +26,14 @@ class ParameterValues:
         Dict of strings for default chemistries. Must be of the form:
         {"base chemistry": base_chemistry,
         "cell": cell_properties_authorYear,
-        "anode": anode_chemistry_authorYear,
+        "negative electrode": negative_electrode_chemistry_authorYear,
         "separator": separator_chemistry_authorYear,
-        "cathode": cathode_chemistry_authorYear,
+        "positive electrode": positive_electrode_chemistry_authorYear,
         "electrolyte": electrolyte_chemistry_authorYear,
         "experiment": experimental_conditions_authorYear}.
-        Then the anode chemistry is loaded from the file
-        inputs/parameters/base_chemistry/anodes/anode_chemistry_authorYear, etc.
+        Then the negative electrode chemistry is loaded from the file
+        inputs/parameters/base_chemistry/negative electrodes/
+        negative_electrode_chemistry_authorYear, etc.
         Parameters in "cell" should include geometry and current collector properties.
         Parameters in "experiment" should include parameters relating to experimental
         conditions, such as initial conditions and currents.
@@ -140,8 +142,8 @@ class ParameterValues:
 
         component_groups = [
             "cell",
-            "anode",
-            "cathode",
+            "negative electrode",
+            "positive electrode",
             "separator",
             "electrolyte",
             "experiment",
@@ -150,6 +152,42 @@ class ParameterValues:
         # add sei parameters if provided
         if "sei" in chemistry:
             component_groups += ["sei"]
+
+        if "anode" in chemistry.keys():
+            if "negative electrode" in chemistry.keys():
+                raise KeyError(
+                    "both 'anode' and 'negative electrode' keys provided in the "
+                    "chemistry. The 'anode' notation will be deprecated in the next "
+                    "release so 'negative electrode' should be used instead."
+                )
+            else:
+                chemistry["negative electrode"] = chemistry["anode"]
+                warnings.warn(
+                    "the 'anode' component notation will be deprecated in the next "
+                    "release, as it has now been renamed to 'negative electrode'. "
+                    "Simulation will continue passing the 'anode' component as "
+                    "'negative electrode' (it might overwrite any existing definition "
+                    "of the component).",
+                    DeprecationWarning,
+                )
+
+        if "cathode" in chemistry.keys():
+            if "positive electrode" in chemistry.keys():
+                raise KeyError(
+                    "both 'cathode' and 'positive electrode' keys provided in the "
+                    "chemistry. The 'cathode' notation will be deprecated in the next "
+                    "release so 'positive electrode' should be used instead."
+                )
+            else:
+                chemistry["positive electrode"] = chemistry["cathode"]
+                warnings.warn(
+                    "the 'cathode' component notation will be deprecated in the next "
+                    "release, as it has now been renamed to 'positive electrode'. "
+                    "Simulation will continue passing the 'cathode' component as "
+                    "'positive electrode' (it might overwrite any existing definition "
+                    "of the component).",
+                    DeprecationWarning,
+                )
 
         for component_group in component_groups:
             # Make sure component is provided
@@ -163,7 +201,7 @@ class ParameterValues:
                 )
             # Create path to component and load values
             component_path = os.path.join(
-                base_chemistry, component_group + "s", component
+                base_chemistry, component_group.replace(" ", "_") + "s", component
             )
             file_path = self.find_parameter(
                 os.path.join(component_path, "parameters.csv")
@@ -371,13 +409,15 @@ class ParameterValues:
 
         new_rhs = {}
         for variable, equation in unprocessed_model.rhs.items():
-            pybamm.logger.debug("Processing parameters for {!r} (rhs)".format(variable))
+            pybamm.logger.verbose(
+                "Processing parameters for {!r} (rhs)".format(variable)
+            )
             new_rhs[variable] = self.process_symbol(equation)
         model.rhs = new_rhs
 
         new_algebraic = {}
         for variable, equation in unprocessed_model.algebraic.items():
-            pybamm.logger.debug(
+            pybamm.logger.verbose(
                 "Processing parameters for {!r} (algebraic)".format(variable)
             )
             new_algebraic[variable] = self.process_symbol(equation)
@@ -385,7 +425,7 @@ class ParameterValues:
 
         new_initial_conditions = {}
         for variable, equation in unprocessed_model.initial_conditions.items():
-            pybamm.logger.debug(
+            pybamm.logger.verbose(
                 "Processing parameters for {!r} (initial conditions)".format(variable)
             )
             new_initial_conditions[variable] = self.process_symbol(equation)
@@ -395,7 +435,7 @@ class ParameterValues:
 
         new_variables = {}
         for variable, equation in unprocessed_model.variables.items():
-            pybamm.logger.debug(
+            pybamm.logger.verbose(
                 "Processing parameters for {!r} (variables)".format(variable)
             )
             new_variables[variable] = self.process_symbol(equation)
@@ -403,7 +443,7 @@ class ParameterValues:
 
         new_events = []
         for event in unprocessed_model.events:
-            pybamm.logger.debug(
+            pybamm.logger.verbose(
                 "Processing parameters for event '{}''".format(event.name)
             )
             new_events.append(
@@ -413,7 +453,7 @@ class ParameterValues:
             )
 
         for event in self.parameter_events:
-            pybamm.logger.debug(
+            pybamm.logger.verbose(
                 "Processing parameters for event '{}''".format(event.name)
             )
             new_events.append(
@@ -458,9 +498,14 @@ class ParameterValues:
             for side in sides:
                 try:
                     bc, typ = bcs[side]
-                    pybamm.logger.debug(
+                    pybamm.logger.verbose(
                         "Processing parameters for {!r} ({} bc)".format(variable, side)
                     )
+                    if (
+                        variable.name == "Positive electrode potential"
+                        and side == "right"
+                    ):
+                        n = 1
                     processed_bc = (self.process_symbol(bc), typ)
                     new_boundary_conditions[processed_variable][side] = processed_bc
                 except KeyError as err:
@@ -528,7 +573,7 @@ class ParameterValues:
         except KeyError:
             processed_symbol = self._process_symbol(symbol)
 
-            self._processed_symbols[symbol.id] = processed_symbol
+            # self._processed_symbols[symbol.id] = processed_symbol
             return processed_symbol
 
     def _process_symbol(self, symbol):
@@ -548,7 +593,17 @@ class ParameterValues:
                 raise TypeError("Cannot process parameter '{}'".format(value))
 
         elif isinstance(symbol, pybamm.FunctionParameter):
-            new_children = [self.process_symbol(child) for child in symbol.children]
+            new_children = []
+            for child in symbol.children:
+                if symbol.diff_variable is not None and any(
+                    x.id == symbol.diff_variable.id for x in child.pre_order()
+                ):
+                    # Wrap with NotConstant to avoid simplification,
+                    # which would stop symbolic diff from working properly
+                    new_child = pybamm.NotConstant(child.new_copy())
+                    new_children.append(self.process_symbol(new_child))
+                else:
+                    new_children.append(self.process_symbol(child))
             function_name = self[symbol.name]
 
             # Create Function or Interpolant or Scalar object
@@ -565,14 +620,14 @@ class ParameterValues:
                 self.parameter_events.append(
                     pybamm.Event(
                         "Interpolant {} lower bound".format(name),
-                        new_children[0] - min(data[:, 0]),
+                        pybamm.min(new_children[0] - min(data[:, 0])),
                         pybamm.EventType.INTERPOLANT_EXTRAPOLATION,
                     )
                 )
                 self.parameter_events.append(
                     pybamm.Event(
                         "Interpolant {} upper bound".format(name),
-                        max(data[:, 0]) - new_children[0],
+                        pybamm.min(max(data[:, 0]) - new_children[0]),
                         pybamm.EventType.INTERPOLANT_EXTRAPOLATION,
                     )
                 )
@@ -629,6 +684,7 @@ class ParameterValues:
                     and isinstance(new_right.child, pybamm.Broadcast)
                     and new_right.child.child.id == pybamm.Scalar(1).id
                 )
+                # left is integral
                 and isinstance(new_left, pybamm.Integral)
             ):
                 # left is integral(Broadcast)
@@ -636,7 +692,20 @@ class ParameterValues:
                     isinstance(new_left.child, pybamm.Broadcast)
                     and new_left.child.child.domain == []
                 ):
-                    return new_left.child.orphans[0]
+                    integrand = new_left.child
+                    if integrand.auxiliary_domains == {}:
+                        return integrand.orphans[0]
+                    else:
+                        domain = integrand.auxiliary_domains["secondary"]
+                        if "tertiary" not in integrand.auxiliary_domains:
+                            return pybamm.PrimaryBroadcast(integrand.orphans[0], domain)
+                        else:
+                            auxiliary_domains = {
+                                "secondary": integrand.auxiliary_domains["tertiary"]
+                            }
+                            return pybamm.FullBroadcast(
+                                integrand.orphans[0], domain, auxiliary_domains
+                            )
                 # left is "integral of concatenation of broadcasts"
                 elif isinstance(new_left.child, pybamm.Concatenation) and all(
                     isinstance(child, pybamm.Broadcast)

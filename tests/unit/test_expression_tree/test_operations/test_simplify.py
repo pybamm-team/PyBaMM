@@ -197,12 +197,11 @@ class TestSimplify(unittest.TestCase):
         # division
         self.assertIsInstance((a / b).simplify(), pybamm.Scalar)
         self.assertEqual((a / b).simplify().evaluate(), 0)
-        self.assertIsInstance((b / a).simplify(), pybamm.Scalar)
-        self.assertEqual((b / a).simplify().evaluate(), np.inf)
-        self.assertIsInstance((a / a).simplify(), pybamm.Scalar)
-        self.assertTrue(np.isnan((a / a).simplify().evaluate()))
         self.assertIsInstance((b / b).simplify(), pybamm.Scalar)
         self.assertEqual((b / b).simplify().evaluate(), 1)
+
+        with self.assertRaises(ZeroDivisionError):
+            b / a
 
         # not implemented for Symbol
         sym = pybamm.Symbol("sym")
@@ -471,11 +470,6 @@ class TestSimplify(unittest.TestCase):
         self.assertIsInstance(expr1, pybamm.Matrix)
         self.assertEqual(expr1.shape, m.shape)
         np.testing.assert_array_equal(expr1.evaluate().toarray(), np.zeros((30, 20)))
-
-        expr2 = (m / zero).simplify()
-        self.assertIsInstance(expr2, pybamm.Matrix)
-        self.assertEqual(expr2.shape, m.shape)
-        np.testing.assert_array_equal(expr2.evaluate(), np.inf)
 
         m = pybamm.Matrix(np.zeros((10, 10)))
         a = pybamm.Scalar(7)

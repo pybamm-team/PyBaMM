@@ -116,6 +116,7 @@ class TestBaseSolver(unittest.TestCase):
                 self.rhs = {}
                 self.jac_algebraic_eval = None
                 self.timescale_eval = 1
+                self.length_scales = {}
                 t = casadi.MX.sym("t")
                 y = casadi.MX.sym("y")
                 p = casadi.MX.sym("p")
@@ -151,6 +152,7 @@ class TestBaseSolver(unittest.TestCase):
                 self.concatenated_rhs = np.array([1])
                 self.jac_algebraic_eval = None
                 self.timescale_eval = 1
+                self.length_scales = {}
                 t = casadi.MX.sym("t")
                 y = casadi.MX.sym("y", vec.size)
                 p = casadi.MX.sym("p")
@@ -198,6 +200,7 @@ class TestBaseSolver(unittest.TestCase):
                 self.rhs = {}
                 self.jac_algebraic_eval = None
                 self.timescale_eval = 1
+                self.length_scales = {}
                 t = casadi.MX.sym("t")
                 y = casadi.MX.sym("y")
                 p = casadi.MX.sym("p")
@@ -295,12 +298,16 @@ class TestBaseSolver(unittest.TestCase):
         model.initial_conditions = {v: 1}
         model.events.append(
             pybamm.Event(
-                "Triggered event", v - 0.5, pybamm.EventType.INTERPOLANT_EXTRAPOLATION,
+                "Triggered event",
+                v - 0.5,
+                pybamm.EventType.INTERPOLANT_EXTRAPOLATION,
             )
         )
         model.events.append(
             pybamm.Event(
-                "Ignored event", v + 10, pybamm.EventType.INTERPOLANT_EXTRAPOLATION,
+                "Ignored event",
+                v + 10,
+                pybamm.EventType.INTERPOLANT_EXTRAPOLATION,
             )
         )
         solver = pybamm.ScipySolver()
