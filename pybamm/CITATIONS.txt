@@ -319,5 +319,5 @@ primaryClass = {physics.app-ph},
   pages = {210--251},
   year = {2002},
   publisher = {Elsevier Science (USA)},
-  doi = {doi:10.1006/jcph.2002.7041},
+  doi = {10.1006/jcph.2002.7041},
 }
