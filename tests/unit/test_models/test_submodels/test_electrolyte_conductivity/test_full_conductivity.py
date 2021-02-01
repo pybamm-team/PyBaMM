@@ -12,13 +12,13 @@ class TestFull(unittest.TestCase):
         param = pybamm.LithiumIonParameters()
         a = pybamm.Scalar(1)
         surf = "electrode surface area to volume ratio"
+        a_n = pybamm.FullBroadcast(a, "negative electrode", "current collector")
+        a_s = pybamm.FullBroadcast(a, "separator", "current collector")
+        a_p = pybamm.FullBroadcast(a, "positive electrode", "current collector")
+        
         variables = {
             "Electrolyte tortuosity": a,
-            "Electrolyte concentration": pybamm.FullBroadcast(
-                a,
-                ["negative electrode", "separator", "positive electrode"],
-                "current collector",
-            ),
+            "Electrolyte concentration": pybamm.Concatenation(a_n, a_s, a_p),
             "Negative "
             + surf: pybamm.FullBroadcast(a, "negative electrode", "current collector"),
             "Positive "
@@ -28,7 +28,7 @@ class TestFull(unittest.TestCase):
                 ["negative electrode", "separator", "positive electrode"],
                 "current collector",
             ),
-            "Cell temperature": a,
+            "Cell temperature": pybamm.Concatenation(a_n, a_s, a_p),
         }
         submodel = pybamm.electrolyte_conductivity.Full(param)
         std_tests = tests.StandardSubModelTests(submodel, variables)
