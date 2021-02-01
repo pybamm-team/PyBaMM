@@ -935,6 +935,10 @@ class BoundaryValue(BoundaryOperator):
     def __init__(self, child, side):
         super().__init__("boundary value", child, side)
 
+    def _unary_new_copy(self, child):
+        """ See :meth:`UnaryOperator._unary_new_copy()`. """
+        return boundary_value(child, self.side)
+
 
 class BoundaryGradient(BoundaryOperator):
     """A node in the expression tree which gets the boundary flux of a variable.

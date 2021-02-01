@@ -501,6 +501,11 @@ class ParameterValues:
                     pybamm.logger.verbose(
                         "Processing parameters for {!r} ({} bc)".format(variable, side)
                     )
+                    if (
+                        variable.name == "Positive electrode potential"
+                        and side == "right"
+                    ):
+                        n = 1
                     processed_bc = (self.process_symbol(bc), typ)
                     new_boundary_conditions[processed_variable][side] = processed_bc
                 except KeyError as err:
@@ -568,7 +573,7 @@ class ParameterValues:
         except KeyError:
             processed_symbol = self._process_symbol(symbol)
 
-            self._processed_symbols[symbol.id] = processed_symbol
+            # self._processed_symbols[symbol.id] = processed_symbol
             return processed_symbol
 
     def _process_symbol(self, symbol):
