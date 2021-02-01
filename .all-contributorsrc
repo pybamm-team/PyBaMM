@@ -283,6 +283,15 @@
         "test",
         "example"
       ]
+    },
+    {
+      "login": "priyanshuone6",
+      "name": "Priyanshu Agarwal",
+      "avatar_url": "https://avatars.githubusercontent.com/u/64051212?v=4",
+      "profile": "https://github.com/priyanshuone6",
+      "contributions": [
+        "test"
+      ]
     }
   ],
   "contributorsPerLine": 7,
