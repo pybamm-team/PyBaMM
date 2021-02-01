@@ -15,7 +15,7 @@ class TestFull(unittest.TestCase):
         a_n = pybamm.FullBroadcast(a, "negative electrode", "current collector")
         a_s = pybamm.FullBroadcast(a, "separator", "current collector")
         a_p = pybamm.FullBroadcast(a, "positive electrode", "current collector")
-        
+
         variables = {
             "Electrolyte tortuosity": a,
             "Electrolyte concentration": pybamm.Concatenation(a_n, a_s, a_p),
