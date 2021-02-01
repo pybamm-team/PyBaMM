@@ -34,7 +34,7 @@ class PolynomialSingleParticle(BaseParticle):
         super().__init__(param, domain)
         self.name = name
 
-        pybamm.citations.register("subramanian2005")
+        pybamm.citations.register("Subramanian2005")
 
     def get_fundamental_variables(self):
         # For all orders we solve an equation for the average concentration
