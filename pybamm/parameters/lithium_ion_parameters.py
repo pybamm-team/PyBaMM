@@ -267,8 +267,12 @@ class LithiumIonParameters:
         # intermediate variable  [K*m^3/mol]
 
         # Electrode capacities
-        x_n = pybamm.standard_spatial_vars.x_n
-        x_p = pybamm.standard_spatial_vars.x_p
+        x_n = pybamm.SpatialVariable(
+            "x_n", domain=["negative electrode"], coord_sys="cartesian"
+        )
+        x_p = pybamm.SpatialVariable(
+            "x_p", domain=["positive electrode"], coord_sys="cartesian"
+        )
 
         eps_s_n_av = pybamm.x_average(self.epsilon_s_n(x_n))
         eps_s_p_av = pybamm.x_average(self.epsilon_s_p(x_p))

@@ -68,4 +68,9 @@ class ElectrodeSOH(pybamm.BaseModel):
             "Up(y_0) - Un(x_0)": Up(y_0, T_ref) - Un(x_0, T_ref),
             "n_Li_100": 3600 / param.F * (y_100 * C_p + x_100 * C_n),
             "n_Li_0": 3600 / param.F * (y_0 * C_p + x_0 * C_n),
+            "n_Li": n_Li,
+            "C_n": C_n,
+            "C_p": C_p,
+            "C_n * (x_100 - x_0)": C_n * (x_100 - x_0),
+            "C_p * (x_100 - x_0)": C_p * (y_0 - y_100),
         }
