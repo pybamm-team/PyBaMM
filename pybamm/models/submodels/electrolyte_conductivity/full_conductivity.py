@@ -50,13 +50,25 @@ class Full(BaseElectrolyteConductivity):
 
         # concentration overpotential
         indef_integral_n = pybamm.IndefiniteIntegral(
-            param.chi(c_e_n, T_n) * (1 + param.Theta * T_n) * pybamm.grad(c_e_n) / c_e_n, pybamm.standard_spatial_vars.x_n
+            param.chi(c_e_n, T_n)
+            * (1 + param.Theta * T_n)
+            * pybamm.grad(c_e_n)
+            / c_e_n,
+            pybamm.standard_spatial_vars.x_n,
         )
         indef_integral_s = pybamm.IndefiniteIntegral(
-            param.chi(c_e_s, T_s) * (1 + param.Theta * T_s) * pybamm.grad(c_e_s) / c_e_s, pybamm.standard_spatial_vars.x_s
+            param.chi(c_e_s, T_s)
+            * (1 + param.Theta * T_s)
+            * pybamm.grad(c_e_s)
+            / c_e_s,
+            pybamm.standard_spatial_vars.x_s,
         )
         indef_integral_p = pybamm.IndefiniteIntegral(
-            param.chi(c_e_p, T_p) * (1 + param.Theta * T_p) * pybamm.grad(c_e_p) / c_e_p, pybamm.standard_spatial_vars.x_p
+            param.chi(c_e_p, T_p)
+            * (1 + param.Theta * T_p)
+            * pybamm.grad(c_e_p)
+            / c_e_p,
+            pybamm.standard_spatial_vars.x_p,
         )
 
         integral_n = indef_integral_n
