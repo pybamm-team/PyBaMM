@@ -39,14 +39,6 @@ class SpectralVolume(pybamm.FiniteVolume):
     mesh : :class:`pybamm.Mesh`
         Contains all the submeshes for discretisation
 
-    References
-    ----------
-    .. [2] Z. J. Wang.
-           “Spectral (Finite) Volume Method for Conservation Laws
-           on Unstructured Grids”.
-           Journal of Computational Physics,
-           178:210–251, 2002
-
     **Extends:"": :class:`pybamm.FiniteVolume`
     """
 
