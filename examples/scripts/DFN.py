@@ -5,11 +5,12 @@
 import pybamm
 import numpy as np
 
-pybamm.set_logging_level("INFO")
+# pybamm.set_logging_level("INFO")
 
 
 # load model
-model = pybamm.lithium_ion.DFN()
+# model = pybamm.lithium_ion.DFN()
+model = pybamm.lead_acid.FOQS()
 
 # create geometry
 geometry = model.default_geometry
