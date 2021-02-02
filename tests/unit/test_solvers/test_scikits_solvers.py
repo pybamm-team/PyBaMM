@@ -151,8 +151,10 @@ class TestScikitsSolvers(unittest.TestCase):
         t_eval = np.linspace(0, 10, 100)
         solution = solver.solve(model, t_eval)
         np.testing.assert_allclose(solution.y[0], np.exp(0.1 * solution.t))
-        np.testing.assert_array_less(solution.y[0], 1.5 + 1e-6)
-        np.testing.assert_array_less(solution.y[0], 1.25 + 1e-6)
+        np.testing.assert_array_less(solution.y[0, :-1], 1.5)
+        np.testing.assert_array_less(solution.y[0, :-1], 1.25)
+        np.testing.assert_equal(solution.t_event[0], solution.t[-1])
+        np.testing.assert_array_equal(solution.y_event[:, 0], solution.y[:, -1])
 
     def test_model_solver_ode_jacobian_python(self):
         model = pybamm.BaseModel()
@@ -251,10 +253,12 @@ class TestScikitsSolvers(unittest.TestCase):
         solver = pybamm.ScikitsDaeSolver(rtol=1e-8, atol=1e-8, root_method="lm")
         t_eval = np.linspace(0, 5, 100)
         solution = solver.solve(model, t_eval)
-        np.testing.assert_array_less(solution.y[0], 1.5 + 1e-6)
-        np.testing.assert_array_less(solution.y[-1], 2.5 + 1e-6)
+        np.testing.assert_array_less(solution.y[0, :-1], 1.5)
+        np.testing.assert_array_less(solution.y[-1, :-1], 2.5)
         np.testing.assert_allclose(solution.y[0], np.exp(0.1 * solution.t))
         np.testing.assert_allclose(solution.y[-1], 2 * np.exp(0.1 * solution.t))
+        np.testing.assert_equal(solution.t_event[0], solution.t[-1])
+        np.testing.assert_array_equal(solution.y_event[:, 0], solution.y[:, -1])
 
     def test_model_solver_dae_nonsmooth_python(self):
         model = pybamm.BaseModel()
@@ -323,8 +327,8 @@ class TestScikitsSolvers(unittest.TestCase):
 
         # check solution
         for solution in [solution1, solution2]:
-            np.testing.assert_array_less(solution.y[0], 1.5 + 1e-6)
-            np.testing.assert_array_less(solution.y[-1], 2.5 + 1e-6)
+            np.testing.assert_array_less(solution.y[0, :-1], 1.5)
+            np.testing.assert_array_less(solution.y[-1, :-1], 2.5)
             var1_soln = np.exp(0.2 * solution.t)
             y0 = np.exp(0.2 * discontinuity)
             var1_soln[solution.t > discontinuity] = y0 * np.exp(
@@ -390,8 +394,8 @@ class TestScikitsSolvers(unittest.TestCase):
 
         # check solution
         for solution in [solution1, solution2]:
-            np.testing.assert_array_less(solution.y[0], 0.55 + 1e-6)
-            np.testing.assert_array_less(solution.y[-1], 1.2 + 1e-6)
+            np.testing.assert_array_less(solution.y[0, :-1], 0.55)
+            np.testing.assert_array_less(solution.y[-1, :-1], 1.2)
             var1_soln = (solution.t % a) ** 2 / 2 + a ** 2 / 2 * (solution.t // a)
             var2_soln = 2 * var1_soln
             np.testing.assert_allclose(solution.y[0], var1_soln, rtol=1e-06)
@@ -571,8 +575,10 @@ class TestScikitsSolvers(unittest.TestCase):
         t_eval = np.linspace(0, 10, 100)
         solution = solver.solve(model, t_eval)
         np.testing.assert_allclose(solution.y[0], np.exp(0.1 * solution.t))
-        np.testing.assert_array_less(solution.y[0], 1.5 + 1e-6)
-        np.testing.assert_array_less(solution.y[0], 1.25 + 1e-6)
+        np.testing.assert_array_less(solution.y[0:, -1], 1.5)
+        np.testing.assert_array_less(solution.y[0:, -1], 1.25 + 1e-6)
+        np.testing.assert_equal(solution.t_event[0], solution.t[-1])
+        np.testing.assert_array_equal(solution.y_event[:, 0], solution.y[:, -1])
 
     def test_model_solver_dae_events_casadi(self):
         # Create model
@@ -597,8 +603,10 @@ class TestScikitsSolvers(unittest.TestCase):
             solver = pybamm.ScikitsDaeSolver(rtol=1e-8, atol=1e-8)
             t_eval = np.linspace(0, 5, 100)
             solution = solver.solve(model_disc, t_eval)
-            np.testing.assert_array_less(solution.y[0], 1.5 + 1e-6)
-            np.testing.assert_array_less(solution.y[-1], 2.5 + 1e-6)
+            np.testing.assert_array_less(solution.y[0, :-1], 1.5)
+            np.testing.assert_array_less(solution.y[-1, :-1], 2.5)
+            np.testing.assert_equal(solution.t_event[0], solution.t[-1])
+            np.testing.assert_array_equal(solution.y_event[:, 0], solution.y[:, -1])
             np.testing.assert_allclose(solution.y[0], np.exp(0.1 * solution.t))
             np.testing.assert_allclose(solution.y[-1], 2 * np.exp(0.1 * solution.t))
 
@@ -627,8 +635,11 @@ class TestScikitsSolvers(unittest.TestCase):
                 solver = pybamm.ScikitsDaeSolver(rtol=1e-8, atol=1e-8)
             t_eval = np.linspace(0, 5, 100)
             solution = solver.solve(model, t_eval, inputs={"rate 1": 0.1, "rate 2": 2})
-            np.testing.assert_array_less(solution.y[0], 1.5 + 1e-6)
-            np.testing.assert_array_less(solution.y[-1], 2.5 + 1e-6)
+            np.testing.assert_array_less(solution.y[0, :-1], 1.5)
+            np.testing.assert_array_less(solution.y[-1, :-1], 2.5)
+            np.testing.assert_array_equal(solution.y_event[:, 0], solution.y[:, -1])
+            np.testing.assert_equal(solution.t_event[0], solution.t[-1])
+
             np.testing.assert_allclose(solution.y[0], np.exp(0.1 * solution.t))
             np.testing.assert_allclose(solution.y[-1], 2 * np.exp(0.1 * solution.t))
 
@@ -732,8 +743,12 @@ class TestScikitsSolvers(unittest.TestCase):
         while time < end_time:
             step_solution = step_solver.step(step_solution, model, dt=dt, npts=10)
             time += dt
-        np.testing.assert_array_less(step_solution.y[0], 1.5 + 1e-6)
-        np.testing.assert_array_less(step_solution.y[-1], 2.5 + 1e-6)
+        np.testing.assert_array_less(step_solution.y[0, :-1], 1.5)
+        np.testing.assert_array_less(step_solution.y[-1, :-1], 2.5)
+        np.testing.assert_equal(step_solution.t_event[0], step_solution.t[-1])
+        np.testing.assert_array_equal(
+            step_solution.y_event[:, 0], step_solution.y[:, -1]
+        )
         np.testing.assert_array_almost_equal(
             step_solution.y[0], np.exp(0.1 * step_solution.t), decimal=5
         )
@@ -773,8 +788,12 @@ class TestScikitsSolvers(unittest.TestCase):
         while time < end_time:
             step_solution = step_solver.step(step_solution, model, dt=dt, npts=10)
             time += dt
-        np.testing.assert_array_less(step_solution.y[0], 0.55 + 1e-6)
-        np.testing.assert_array_less(step_solution.y[-1], 1.2 + 1e-6)
+        np.testing.assert_array_less(step_solution.y[0, :-1], 0.55)
+        np.testing.assert_array_less(step_solution.y[-1, :-1], 1.2)
+        np.testing.assert_equal(step_solution.t_event[0], step_solution.t[-1])
+        np.testing.assert_array_equal(
+            step_solution.y_event[:, 0], step_solution.y[:, -1]
+        )
         var1_soln = (step_solution.t % a) ** 2 / 2 + a ** 2 / 2 * (step_solution.t // a)
         var2_soln = 2 * var1_soln
         np.testing.assert_array_almost_equal(step_solution.y[0], var1_soln, decimal=5)
@@ -856,8 +875,10 @@ class TestScikitsSolvers(unittest.TestCase):
 
             # check solution
             for solution in [solution1, solution2]:
-                np.testing.assert_array_less(solution.y[0], 1.5 + 1e-6)
-                np.testing.assert_array_less(solution.y[-1], 2.5 + 1e-6)
+                np.testing.assert_array_less(solution.y[0, :-1], 1.5)
+                np.testing.assert_array_less(solution.y[-1, :-1], 2.5)
+                np.testing.assert_equal(solution.t_event[0], solution.t[-1])
+                np.testing.assert_array_equal(solution.y_event[:, 0], solution.y[:, -1])
                 var1_soln = np.exp(0.2 * solution.t)
                 y0 = np.exp(0.2 * discontinuity)
                 var1_soln[solution.t > discontinuity] = y0 * np.exp(

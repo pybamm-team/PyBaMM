@@ -158,7 +158,7 @@ class Discretisation(object):
                     )
 
         # Set the y split for variables
-        pybamm.logger.info("Set variable slices for {}".format(model.name))
+        pybamm.logger.verbose("Set variable slices for {}".format(model.name))
         self.set_variable_slices(variables)
 
         # now add extrapolated external variables to the boundary conditions
@@ -167,9 +167,13 @@ class Discretisation(object):
         self.set_external_variables(model)
 
         # set boundary conditions (only need key ids for boundary_conditions)
-        pybamm.logger.info("Discretise boundary conditions for {}".format(model.name))
+        pybamm.logger.verbose(
+            "Discretise boundary conditions for {}".format(model.name)
+        )
         self.bcs = self.process_boundary_conditions(model)
-        pybamm.logger.info("Set internal boundary conditions for {}".format(model.name))
+        pybamm.logger.verbose(
+            "Set internal boundary conditions for {}".format(model.name)
+        )
         self.set_internal_boundary_conditions(model)
 
         # set up inplace vs not inplace
@@ -188,7 +192,7 @@ class Discretisation(object):
 
         model_disc.bcs = self.bcs
 
-        pybamm.logger.info("Discretise initial conditions for {}".format(model.name))
+        pybamm.logger.verbose("Discretise initial conditions for {}".format(model.name))
         ics, concat_ics = self.process_initial_conditions(model)
         model_disc.initial_conditions = ics
         model_disc.concatenated_initial_conditions = concat_ics
@@ -196,18 +200,18 @@ class Discretisation(object):
         # Discretise variables (applying boundary conditions)
         # Note that we **do not** discretise the keys of model.rhs,
         # model.initial_conditions and model.boundary_conditions
-        pybamm.logger.info("Discretise variables for {}".format(model.name))
+        pybamm.logger.verbose("Discretise variables for {}".format(model.name))
         model_disc.variables = self.process_dict(model.variables)
 
         # Process parabolic and elliptic equations
-        pybamm.logger.info("Discretise model equations for {}".format(model.name))
+        pybamm.logger.verbose("Discretise model equations for {}".format(model.name))
         rhs, concat_rhs, alg, concat_alg = self.process_rhs_and_algebraic(model)
         model_disc.rhs, model_disc.concatenated_rhs = rhs, concat_rhs
         model_disc.algebraic, model_disc.concatenated_algebraic = alg, concat_alg
 
         # Process events
         processed_events = []
-        pybamm.logger.info("Discretise events for {}".format(model.name))
+        pybamm.logger.verbose("Discretise events for {}".format(model.name))
         for event in model.events:
             pybamm.logger.debug("Discretise event '{}'".format(event.name))
             processed_event = pybamm.Event(
@@ -222,14 +226,14 @@ class Discretisation(object):
         ]
 
         # Create mass matrix
-        pybamm.logger.info("Create mass matrix for {}".format(model.name))
+        pybamm.logger.verbose("Create mass matrix for {}".format(model.name))
         model_disc.mass_matrix, model_disc.mass_matrix_inv = self.create_mass_matrix(
             model_disc
         )
 
         # Check that resulting model makes sense
         if check_model:
-            pybamm.logger.info("Performing model checks for {}".format(model.name))
+            pybamm.logger.verbose("Performing model checks for {}".format(model.name))
             self.check_model(model_disc)
 
         pybamm.logger.info("Finish discretising {}".format(model.name))

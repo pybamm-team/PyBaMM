@@ -7,19 +7,21 @@ import unittest
 
 class TestAi2020(unittest.TestCase):
     def test_load_params(self):
-        anode = pybamm.ParameterValues({}).read_parameters_csv(
+        negative_electrode = pybamm.ParameterValues({}).read_parameters_csv(
             pybamm.get_parameters_filepath(
-                "input/parameters/lithium-ion/anodes/graphite_Ai2020/parameters.csv"
+                "input/parameters/lithium-ion/negative_electrodes/graphite_Ai2020/"
+                "parameters.csv"
             )
         )
-        self.assertEqual(anode["Negative electrode porosity"], "0.33")
+        self.assertEqual(negative_electrode["Negative electrode porosity"], "0.33")
 
-        cathode = pybamm.ParameterValues({}).read_parameters_csv(
+        positive_electrode = pybamm.ParameterValues({}).read_parameters_csv(
             pybamm.get_parameters_filepath(
-                "input/parameters/lithium-ion/cathodes/lico2_Ai2020/parameters.csv"
+                "input/parameters/lithium-ion/positive_electrodes/lico2_Ai2020/"
+                "parameters.csv"
             )
         )
-        self.assertEqual(cathode["Positive electrode porosity"], "0.32")
+        self.assertEqual(positive_electrode["Positive electrode porosity"], "0.32")
 
         electrolyte = pybamm.ParameterValues({}).read_parameters_csv(
             pybamm.get_parameters_filepath(

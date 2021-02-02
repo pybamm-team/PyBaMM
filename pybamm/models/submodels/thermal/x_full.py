@@ -12,17 +12,24 @@ class OneDimensionalX(BaseThermal):
     in the current collectors, so that the contribution to the Ohmic heating
     from the current collectors is zero and the boundary conditions are applied
     at the edges of the electrodes (at x=0 and x=1, in non-dimensional coordinates).
+    For more information see [1]_.
 
     Parameters
     ----------
     param : parameter class
         The parameters to use for this submodel
 
+    References
+    ----------
+    .. [1] R Timms, SG Marquis, V Sulzer, CP Please and SJ Chapman. “Asymptotic
+           Reduction of a Lithium-ion Pouch Cell Model”. In preparation, 2020.
+
     **Extends:** :class:`pybamm.thermal.BaseThermal`
     """
 
     def __init__(self, param):
         super().__init__(param)
+        pybamm.citations.register("Timms2020")
 
     def get_fundamental_variables(self):
         T_n = pybamm.standard_variables.T_n
