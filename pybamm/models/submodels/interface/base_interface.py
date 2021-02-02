@@ -554,7 +554,6 @@ class BaseInterface(pybamm.BaseSubModel):
             delta_phi_av_dim = ocp_ref + delta_phi_av * pot_scale
             delta_phi_dim = ocp_ref + delta_phi * pot_scale
 
-        delta_phi * pot_scale
         variables = {
             self.domain + " electrode surface potential difference": delta_phi,
             "X-averaged "

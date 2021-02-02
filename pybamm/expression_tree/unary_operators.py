@@ -1403,7 +1403,7 @@ def boundary_value(symbol, side):
 
 def sign(symbol):
     " Returns a :class:`Sign` object. "
-    return Sign(symbol)
+    return pybamm.simplify_if_constant(Sign(symbol), clear_domains=False)
 
 
 def smooth_absolute_value(symbol, k):
