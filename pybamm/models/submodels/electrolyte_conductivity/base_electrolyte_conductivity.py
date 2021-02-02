@@ -289,8 +289,9 @@ class BaseElectrolyteConductivity(pybamm.BaseSubModel):
         c_e_s = variables["Separator electrolyte concentration"]
         c_e_p = variables["Positive electrolyte concentration"]
 
-        T = variables["Cell temperature"]
-        T_n, T_s, T_p = T.orphans
+        T_n = variables["Negative electrode temperature"]
+        T_s = variables["Separator temperature"]
+        T_p = variables["Positive electrode temperature"]
 
         # concentration overpotential
         indef_integral_n = pybamm.IndefiniteIntegral(
