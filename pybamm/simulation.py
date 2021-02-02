@@ -330,13 +330,7 @@ class Simulation:
                 self._model_with_set_params, inplace=False, check_model=check_model
             )
 
-    def solve(
-        self,
-        t_eval=None,
-        solver=None,
-        check_model=True,
-        **kwargs,
-    ):
+    def solve(self, t_eval=None, solver=None, check_model=True, **kwargs):
         """
         A method to solve the model. This method will automatically build
         and set the model parameters if not already done so.
@@ -394,7 +388,7 @@ class Simulation:
                 # For drive cycles (current provided as data) we perform additional
                 # tests on t_eval (if provided) to ensure the returned solution
                 # captures the input.
-                time_data = self._parameter_values["Current function [A]"].data[:, 0]
+                time_data = self._parameter_values["Current function [A]"].x[0]
                 # If no t_eval is provided, we use the times provided in the data.
                 if t_eval is None:
                     pybamm.logger.info("Setting t_eval as specified by the data")
@@ -434,7 +428,6 @@ class Simulation:
                         )
 
             self._solution = solver.solve(self.built_model, t_eval, **kwargs)
-            self.t_eval = self._solution.t * self._solution.timescale_eval
 
         elif self.operating_mode == "with experiment":
             if t_eval is not None:
@@ -444,36 +437,95 @@ class Simulation:
             # Re-initialize solution, e.g. for solving multiple times with different
             # inputs without having to build the simulation again
             self._solution = None
+            previous_num_subsolutions = 0
             # Step through all experimental conditions
             inputs = kwargs.get("inputs", {})
             pybamm.logger.info("Start running experiment")
             timer = pybamm.Timer()
-            for idx, (exp_inputs, dt) in enumerate(
-                zip(self._experiment_inputs, self._experiment_times)
-            ):
-                pybamm.logger.info(self.experiment.operating_conditions_strings[idx])
-                inputs.update(exp_inputs)
-                kwargs["inputs"] = inputs
-                # Make sure we take at least 2 timesteps
-                npts = max(int(round(dt / exp_inputs["period"])) + 1, 2)
-                self.step(dt, solver=solver, npts=npts, **kwargs)
-                # Only allow events specified by experiment
-                if not (
-                    self._solution.termination == "final time"
-                    or "[experiment]" in self._solution.termination
-                ):
-                    pybamm.logger.warning(
-                        "\n\n\tExperiment is infeasible: '{}' ".format(
-                            self._solution.termination
-                        )
-                        + "was triggered during '{}'. ".format(
-                            self.experiment.operating_conditions_strings[idx]
-                        )
-                        + "Try reducing current, shortening the time interval, "
-                        "or reducing the period.\n\n"
+
+            all_cycle_solutions = []
+
+            idx = 0
+            num_cycles = len(self.experiment.cycle_lengths)
+            for cycle_num, cycle_length in enumerate(self.experiment.cycle_lengths):
+                pybamm.logger.info(
+                    f"Cycle {cycle_num+1}/{num_cycles} ({timer.time()} elapsed) "
+                    + "-" * 20
+                )
+                steps = []
+                cycle_solution = None
+                for step_num in range(cycle_length):
+                    exp_inputs = self._experiment_inputs[idx]
+                    dt = self._experiment_times[idx]
+                    # Use 1-indexing for printing cycle number as it is more
+                    # human-intuitive
+                    pybamm.logger.info(
+                        f"Cycle {cycle_num+1}/{num_cycles}, "
+                        f"step {step_num+1}/{cycle_length}: "
+                        f"{self.experiment.operating_conditions_strings[idx]}"
                     )
-                    break
-            pybamm.logger.info(
+                    inputs.update(exp_inputs)
+                    kwargs["inputs"] = inputs
+                    # Make sure we take at least 2 timesteps
+                    npts = max(int(round(dt / exp_inputs["period"])) + 1, 2)
+                    self.step(dt, solver=solver, npts=npts, **kwargs)
+
+                    # Extract the new parts of the solution
+                    # to construct the entire "step"
+                    sol = self.solution
+                    new_num_subsolutions = len(sol.sub_solutions)
+                    diff_num_subsolutions = (
+                        new_num_subsolutions - previous_num_subsolutions
+                    )
+                    previous_num_subsolutions = new_num_subsolutions
+
+                    step_solution = pybamm.Solution(
+                        sol.all_ts[-diff_num_subsolutions:],
+                        sol.all_ys[-diff_num_subsolutions:],
+                        sol.model,
+                        sol.all_inputs[-diff_num_subsolutions:],
+                        sol.t_event,
+                        sol.y_event,
+                        sol.termination,
+                    )
+                    step_solution.solve_time = 0
+                    step_solution.integration_time = 0
+                    steps.append(step_solution)
+
+                    # Construct cycle solutions (a list of solutions corresponding to
+                    # cycles) from sub_solutions
+                    if step_num == 0:
+                        cycle_solution = step_solution
+                    else:
+                        cycle_solution = cycle_solution + step_solution
+
+                    # Only allow events specified by experiment
+                    if not (
+                        self._solution.termination == "final time"
+                        or "[experiment]" in self._solution.termination
+                    ):
+                        pybamm.logger.warning(
+                            "\n\n\tExperiment is infeasible: '{}' ".format(
+                                self._solution.termination
+                            )
+                            + "was triggered during '{}'. ".format(
+                                self.experiment.operating_conditions_strings[idx]
+                            )
+                            + "Try reducing current, shortening the time interval, "
+                            "or reducing the period.\n\n"
+                        )
+                        break
+
+                    # Increment index for next iteration
+                    idx += 1
+
+                # At the final step of the inner loop we save the cycle
+                cycle_solution.steps = steps
+                all_cycle_solutions.append(cycle_solution)
+
+            self.solution.cycles = all_cycle_solutions
+
+            pybamm.logger.notice(
                 "Finish experiment simulation, took {}".format(timer.time())
             )
 
@@ -505,44 +557,10 @@ class Simulation:
             solver = self.solver
 
         self._solution = solver.step(
-            self._solution,
-            self.built_model,
-            dt,
-            npts=npts,
-            save=save,
-            **kwargs,
+            self._solution, self.built_model, dt, npts=npts, save=save, **kwargs
         )
 
         return self.solution
-
-    def get_variable_array(self, *variables):
-        """
-        A helper function to easily obtain a dictionary of arrays of values
-        for a list of variables at the latest timestep.
-
-        Parameters
-        ----------
-        variable: str
-            The name of the variable/variables you wish to obtain the arrays for.
-
-        Returns
-        -------
-        variable_arrays: dict
-            A dictionary of the variable names and their corresponding
-            arrays.
-        """
-
-        variable_arrays = [
-            self.built_model.variables[var].evaluate(
-                self.solution.t[-1], self.solution.y[:, -1]
-            )
-            for var in variables
-        ]
-
-        if len(variable_arrays) == 1:
-            return variable_arrays[0]
-        else:
-            return tuple(variable_arrays)
 
     def plot(self, output_variables=None, quick_plot_vars=None, **kwargs):
         """
@@ -693,6 +711,8 @@ class Simulation:
             and self._solver.integrator_specs != {}
         ):
             self._solver.integrator_specs = {}
+        if self.solution is not None:
+            self.solution.clear_casadi_attributes()
         with open(filename, "wb") as f:
             pickle.dump(self, f, pickle.HIGHEST_PROTOCOL)
 

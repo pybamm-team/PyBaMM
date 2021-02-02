@@ -19,21 +19,19 @@ class BaseKinetics(BaseInterface):
     reaction : str
         The name of the reaction being implemented
     options: dict
-        A dictionary of options to be passed to the model. In this case "sei film
-        resistance" is the important option. See :class:`pybamm.BaseBatteryModel`
+        A dictionary of options to be passed to the model.
+        See :class:`pybamm.BaseBatteryModel`
 
     **Extends:** :class:`pybamm.interface.BaseInterface`
     """
 
-    def __init__(self, param, domain, reaction, options=None):
+    def __init__(self, param, domain, reaction, options):
         super().__init__(param, domain, reaction)
-        if options is None:
-            options = {"sei film resistance": "none"}
         self.options = options
 
     def get_fundamental_variables(self):
         if (
-            self.options["sei film resistance"] == "distributed"
+            self.options["total interfacial current density as a state"] == "true"
             and "main" in self.reaction
         ):
             j = pybamm.Variable(
@@ -146,7 +144,7 @@ class BaseKinetics(BaseInterface):
 
     def set_algebraic(self, variables):
         if (
-            self.options["sei film resistance"] == "distributed"
+            self.options["total interfacial current density as a state"] == "true"
             and "main" in self.reaction
         ):
             j_tot_var = variables[
@@ -165,7 +163,7 @@ class BaseKinetics(BaseInterface):
 
     def set_initial_conditions(self, variables):
         if (
-            self.options["sei film resistance"] == "distributed"
+            self.options["total interfacial current density as a state"] == "true"
             and "main" in self.reaction
         ):
             param = self.param

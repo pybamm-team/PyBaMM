@@ -7,7 +7,7 @@ from .base_thermal import BaseThermal
 
 
 class Lumped(BaseThermal):
-    """Class for lumped thermal submodel
+    """Class for lumped thermal submodel. For more information see [1]_.
 
     Parameters
     ----------
@@ -19,12 +19,18 @@ class Lumped(BaseThermal):
         The geometry for the lumped thermal submodel. Can be "arbitrary" (default) or
         pouch.
 
+    References
+    ----------
+    .. [1] R Timms, SG Marquis, V Sulzer, CP Please and SJ Chapman. “Asymptotic
+           Reduction of a Lithium-ion Pouch Cell Model”. In preparation, 2020.
+
     **Extends:** :class:`pybamm.thermal.BaseThermal`
     """
 
     def __init__(self, param, cc_dimension=0, geometry="arbitrary"):
         self.geometry = geometry
         super().__init__(param, cc_dimension)
+        pybamm.citations.register("Timms2020")
 
     def get_fundamental_variables(self):
 
@@ -105,7 +111,7 @@ class Lumped(BaseThermal):
             T_vol_av: (
                 self.param.B * Q_vol_av + total_cooling_coefficient * (T_vol_av - T_amb)
             )
-            / (self.param.C_th * self.param.rho)
+            / (self.param.C_th * self.param.rho(T_vol_av))
         }
 
     def set_initial_conditions(self, variables):

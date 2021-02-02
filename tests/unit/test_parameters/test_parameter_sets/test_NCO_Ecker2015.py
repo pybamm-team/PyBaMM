@@ -7,18 +7,24 @@ import unittest
 
 class TestEcker(unittest.TestCase):
     def test_load_params(self):
-        anode = pybamm.ParameterValues({}).read_parameters_csv(
+        negative_electrode = pybamm.ParameterValues({}).read_parameters_csv(
             pybamm.get_parameters_filepath(
-                "input/parameters/lithium-ion/anodes/graphite_Ecker2015/parameters.csv"
+                "input/parameters/lithium-ion/negative_electrodes/graphite_Ecker2015/"
+                "parameters.csv"
             )
         )
-        self.assertEqual(anode["Negative electrode porosity"], "0.329")
+        self.assertEqual(negative_electrode["Negative electrode porosity"], "0.329")
 
-        path = "input/parameters/lithium-ion/cathodes/LiNiCoO2_Ecker2015/parameters.csv"
-        cathode = pybamm.ParameterValues({}).read_parameters_csv(
+        path = (
+            "input/parameters/lithium-ion/positive_electrodes/LiNiCoO2_Ecker2015/"
+            "parameters.csv"
+        )
+        positive_electrode = pybamm.ParameterValues({}).read_parameters_csv(
             pybamm.get_parameters_filepath(path)
         )
-        self.assertEqual(cathode["Positive electrode conductivity [S.m-1]"], "68.1")
+        self.assertEqual(
+            positive_electrode["Positive electrode conductivity [S.m-1]"], "68.1"
+        )
 
         electrolyte = pybamm.ParameterValues({}).read_parameters_csv(
             pybamm.get_parameters_filepath(

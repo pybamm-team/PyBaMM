@@ -35,7 +35,9 @@ class IDAKLUSolver(pybamm.BaseSolver):
         conditions. Otherwise, the solver uses 'scipy.optimize.root' with method
         specified by 'root_method' (e.g. "lm", "hybr", ...)
     root_tol : float, optional
-        The tolerance for the initial-condition solver (default is 1e-8).
+        The tolerance for the initial-condition solver (default is 1e-6).
+    extrap_tol : float, optional
+        The tolerance to assert whether extrapolation occurs or not (default is 0).
     """
 
     def __init__(
@@ -44,17 +46,20 @@ class IDAKLUSolver(pybamm.BaseSolver):
         atol=1e-6,
         root_method="casadi",
         root_tol=1e-6,
+        extrap_tol=0,
         max_steps="deprecated",
     ):
 
         if idaklu_spec is None:
             raise ImportError("KLU is not installed")
 
-        super().__init__("ida", rtol, atol, root_method, root_tol, max_steps)
+        super().__init__(
+            "ida", rtol, atol, root_method, root_tol, extrap_tol, max_steps
+        )
         self.name = "IDA KLU solver"
 
-        pybamm.citations.register("hindmarsh2000pvode")
-        pybamm.citations.register("hindmarsh2005sundials")
+        pybamm.citations.register("Hindmarsh2000")
+        pybamm.citations.register("Hindmarsh2005")
 
     def set_atol_by_variable(self, variables_with_tols, model):
         """
@@ -143,7 +148,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
 
         return atol
 
-    def _integrate(self, model, t_eval, inputs=None):
+    def _integrate(self, model, t_eval, inputs_dict=None):
         """
         Solve a DAE model defined by residuals with initial conditions y0.
 
@@ -153,10 +158,14 @@ class IDAKLUSolver(pybamm.BaseSolver):
             The model whose solution to calculate.
         t_eval : numeric type
             The times at which to compute the solution
+        inputs_dict : dict, optional
+            Any external variables or input parameters to pass to the model when solving
         """
         if model.rhs_eval.form == "casadi":
             # stack inputs
-            inputs = casadi.vertcat(*[x for x in inputs.values()])
+            inputs = casadi.vertcat(*[x for x in inputs_dict.values()])
+        else:
+            inputs = inputs_dict
 
         if model.jacobian_eval is None:
             raise pybamm.SolverError("KLU requires the Jacobian to be provided")
@@ -271,6 +280,8 @@ class IDAKLUSolver(pybamm.BaseSolver):
             sol = pybamm.Solution(
                 sol.t,
                 np.transpose(y_out),
+                model,
+                inputs_dict,
                 t[-1],
                 np.transpose(y_out[-1])[:, np.newaxis],
                 termination,

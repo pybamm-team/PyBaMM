@@ -5,6 +5,7 @@ import pybamm
 import pandas as pd
 import os
 import numbers
+import warnings
 from pprint import pformat
 from collections import defaultdict
 
@@ -25,13 +26,14 @@ class ParameterValues:
         Dict of strings for default chemistries. Must be of the form:
         {"base chemistry": base_chemistry,
         "cell": cell_properties_authorYear,
-        "anode": anode_chemistry_authorYear,
+        "negative electrode": negative_electrode_chemistry_authorYear,
         "separator": separator_chemistry_authorYear,
-        "cathode": cathode_chemistry_authorYear,
+        "positive electrode": positive_electrode_chemistry_authorYear,
         "electrolyte": electrolyte_chemistry_authorYear,
         "experiment": experimental_conditions_authorYear}.
-        Then the anode chemistry is loaded from the file
-        inputs/parameters/base_chemistry/anodes/anode_chemistry_authorYear, etc.
+        Then the negative electrode chemistry is loaded from the file
+        inputs/parameters/base_chemistry/negative electrodes/
+        negative_electrode_chemistry_authorYear, etc.
         Parameters in "cell" should include geometry and current collector properties.
         Parameters in "experiment" should include parameters relating to experimental
         conditions, such as initial conditions and currents.
@@ -83,6 +85,7 @@ class ParameterValues:
 
         # Initialise empty _processed_symbols dict (for caching)
         self._processed_symbols = {}
+        self.parameter_events = []
 
     def __getitem__(self, key):
         return self._dict_items[key]
@@ -139,8 +142,8 @@ class ParameterValues:
 
         component_groups = [
             "cell",
-            "anode",
-            "cathode",
+            "negative electrode",
+            "positive electrode",
             "separator",
             "electrolyte",
             "experiment",
@@ -149,6 +152,42 @@ class ParameterValues:
         # add sei parameters if provided
         if "sei" in chemistry:
             component_groups += ["sei"]
+
+        if "anode" in chemistry.keys():
+            if "negative electrode" in chemistry.keys():
+                raise KeyError(
+                    "both 'anode' and 'negative electrode' keys provided in the "
+                    "chemistry. The 'anode' notation will be deprecated in the next "
+                    "release so 'negative electrode' should be used instead."
+                )
+            else:
+                chemistry["negative electrode"] = chemistry["anode"]
+                warnings.warn(
+                    "the 'anode' component notation will be deprecated in the next "
+                    "release, as it has now been renamed to 'negative electrode'. "
+                    "Simulation will continue passing the 'anode' component as "
+                    "'negative electrode' (it might overwrite any existing definition "
+                    "of the component).",
+                    DeprecationWarning,
+                )
+
+        if "cathode" in chemistry.keys():
+            if "positive electrode" in chemistry.keys():
+                raise KeyError(
+                    "both 'cathode' and 'positive electrode' keys provided in the "
+                    "chemistry. The 'cathode' notation will be deprecated in the next "
+                    "release so 'positive electrode' should be used instead."
+                )
+            else:
+                chemistry["positive electrode"] = chemistry["cathode"]
+                warnings.warn(
+                    "the 'cathode' component notation will be deprecated in the next "
+                    "release, as it has now been renamed to 'positive electrode'. "
+                    "Simulation will continue passing the 'cathode' component as "
+                    "'positive electrode' (it might overwrite any existing definition "
+                    "of the component).",
+                    DeprecationWarning,
+                )
 
         for component_group in component_groups:
             # Make sure component is provided
@@ -162,7 +201,7 @@ class ParameterValues:
                 )
             # Create path to component and load values
             component_path = os.path.join(
-                base_chemistry, component_group + "s", component
+                base_chemistry, component_group.replace(" ", "_") + "s", component
             )
             file_path = self.find_parameter(
                 os.path.join(component_path, "parameters.csv")
@@ -370,13 +409,15 @@ class ParameterValues:
 
         new_rhs = {}
         for variable, equation in unprocessed_model.rhs.items():
-            pybamm.logger.debug("Processing parameters for {!r} (rhs)".format(variable))
+            pybamm.logger.verbose(
+                "Processing parameters for {!r} (rhs)".format(variable)
+            )
             new_rhs[variable] = self.process_symbol(equation)
         model.rhs = new_rhs
 
         new_algebraic = {}
         for variable, equation in unprocessed_model.algebraic.items():
-            pybamm.logger.debug(
+            pybamm.logger.verbose(
                 "Processing parameters for {!r} (algebraic)".format(variable)
             )
             new_algebraic[variable] = self.process_symbol(equation)
@@ -384,7 +425,7 @@ class ParameterValues:
 
         new_initial_conditions = {}
         for variable, equation in unprocessed_model.initial_conditions.items():
-            pybamm.logger.debug(
+            pybamm.logger.verbose(
                 "Processing parameters for {!r} (initial conditions)".format(variable)
             )
             new_initial_conditions[variable] = self.process_symbol(equation)
@@ -394,7 +435,7 @@ class ParameterValues:
 
         new_variables = {}
         for variable, equation in unprocessed_model.variables.items():
-            pybamm.logger.debug(
+            pybamm.logger.verbose(
                 "Processing parameters for {!r} (variables)".format(variable)
             )
             new_variables[variable] = self.process_symbol(equation)
@@ -402,14 +443,25 @@ class ParameterValues:
 
         new_events = []
         for event in unprocessed_model.events:
-            pybamm.logger.debug(
-                "Processing parameters for event'{}''".format(event.name)
+            pybamm.logger.verbose(
+                "Processing parameters for event '{}''".format(event.name)
             )
             new_events.append(
                 pybamm.Event(
                     event.name, self.process_symbol(event.expression), event.event_type
                 )
             )
+
+        for event in self.parameter_events:
+            pybamm.logger.verbose(
+                "Processing parameters for event '{}''".format(event.name)
+            )
+            new_events.append(
+                pybamm.Event(
+                    event.name, self.process_symbol(event.expression), event.event_type
+                )
+            )
+
         model.events = new_events
 
         # Set external variables
@@ -446,7 +498,7 @@ class ParameterValues:
             for side in sides:
                 try:
                     bc, typ = bcs[side]
-                    pybamm.logger.debug(
+                    pybamm.logger.verbose(
                         "Processing parameters for {!r} ({} bc)".format(variable, side)
                     )
                     processed_bc = (self.process_symbol(bc), typ)
@@ -544,7 +596,26 @@ class ParameterValues:
                 # If function_name is a tuple then it should be (name, data) and we need
                 # to create an Interpolant
                 name, data = function_name
-                function = pybamm.Interpolant(data, *new_children, name=name)
+                function = pybamm.Interpolant(
+                    data[:, 0], data[:, 1], *new_children, name=name
+                )
+                # Define event to catch extrapolation. In these events the sign is
+                # important: it should be positive inside of the range and negative
+                # outside of it
+                self.parameter_events.append(
+                    pybamm.Event(
+                        "Interpolant {} lower bound".format(name),
+                        pybamm.min(new_children[0] - min(data[:, 0])),
+                        pybamm.EventType.INTERPOLANT_EXTRAPOLATION,
+                    )
+                )
+                self.parameter_events.append(
+                    pybamm.Event(
+                        "Interpolant {} upper bound".format(name),
+                        pybamm.min(max(data[:, 0]) - new_children[0]),
+                        pybamm.EventType.INTERPOLANT_EXTRAPOLATION,
+                    )
+                )
             elif isinstance(function_name, numbers.Number):
                 # If the "function" is provided is actually a scalar, return a Scalar
                 # object instead of throwing an error.
@@ -563,6 +634,8 @@ class ParameterValues:
             elif callable(function_name):
                 # otherwise evaluate the function to create a new PyBaMM object
                 function = function_name(*new_children)
+            elif isinstance(function_name, pybamm.Interpolant):
+                function = function_name
             else:
                 raise TypeError(
                     "Parameter provided for '{}' ".format(symbol.name)

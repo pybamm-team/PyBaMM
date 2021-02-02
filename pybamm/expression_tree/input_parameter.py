@@ -61,7 +61,7 @@ class InputParameter(pybamm.Symbol):
         if inputs is None:
             inputs = {}
         if not isinstance(inputs, dict):
-            # if the special input "shape test" is passed, just return 1
+            # if the special input "shape test" is passed, just return NaN
             if inputs == "shape test":
                 return self.evaluate_for_shape()
             raise TypeError("inputs should be a dictionary")

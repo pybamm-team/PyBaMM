@@ -28,13 +28,15 @@ param.update(
     check_already_exists=False,
 )
 
+param["Initial concentration in negative electrode [mol.m-3]"] = 1000
+param["Current function [A]"] = 2.5
+
 # process model and geometry
 param.process_model(model)
 param.process_geometry(geometry)
 
 # set mesh
-var = pybamm.standard_spatial_vars
-var_pts = {var.x_n: 30, var.x_s: 30, var.x_p: 30, var.r_n: 10, var.r_p: 10}
+var_pts = model.default_var_pts
 mesh = pybamm.Mesh(geometry, model.default_submesh_types, var_pts)
 
 # discretise model
@@ -42,22 +44,23 @@ disc = pybamm.Discretisation(mesh, model.default_spatial_methods)
 disc.process_model(model)
 
 # solve model
-t_eval = np.linspace(0, 3800, 1000)
-solver = pybamm.CasadiSolver(mode="fast", atol=1e-6, rtol=1e-3)
+t_eval = np.linspace(0, 7200, 1000)
+solver = pybamm.CasadiSolver(mode="safe", atol=1e-6, rtol=1e-3)
 solution = solver.solve(model, t_eval)
 
 # plot
 plot = pybamm.QuickPlot(
     solution,
     [
-        "Negative particle surface concentration [mol.m-3]",
+        "Working particle concentration [mol.m-3]",
         "Electrolyte concentration [mol.m-3]",
-        "Positive particle surface concentration [mol.m-3]",
         "Current [A]",
-        "Negative electrode potential [V]",
+        "Working electrode potential [V]",
         "Electrolyte potential [V]",
-        "Positive electrode potential [V]",
-        "Terminal voltage [V]",
+        "Total electrolyte concentration",
+        "Total lithium in working electrode [mol]",
+        "Working electrode open circuit potential [V]",
+        ["Terminal voltage [V]", "Voltage drop in the cell [V]"],
     ],
     time_unit="seconds",
     spatial_unit="um",

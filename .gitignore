@@ -107,3 +107,5 @@ setup.log
 # tox
 .tox/
 
+# julia
+Manifest.toml

@@ -8,6 +8,7 @@ import unittest
 
 import numpy as np
 import pandas as pd
+import copy
 
 import pybamm
 import tests.shared as shared
@@ -29,7 +30,7 @@ class TestParameterValues(unittest.TestCase):
                 "input",
                 "parameters",
                 "lithium-ion",
-                "cathodes",
+                "positive_electrodes",
                 "lico2_Marquis2019",
                 "parameters.csv",
             )
@@ -46,7 +47,7 @@ class TestParameterValues(unittest.TestCase):
 
         # from file
         param = pybamm.ParameterValues(
-            "lithium-ion/cathodes/lico2_Marquis2019/" + "parameters.csv"
+            "lithium-ion/positive_electrodes/lico2_Marquis2019/" + "parameters.csv"
         )
         self.assertEqual(param["Positive electrode porosity"], 0.3)
 
@@ -431,12 +432,12 @@ class TestParameterValues(unittest.TestCase):
         self.assertEqual(processed_diff_func.evaluate(), 2)
 
         # interpolant defined up front
-        interp2 = pybamm.Interpolant(data, a)
+        interp2 = pybamm.Interpolant(data[:, 0], data[:, 1], a)
         processed_interp2 = parameter_values.process_symbol(interp2)
         self.assertEqual(processed_interp2.evaluate(), 6.02)
 
         data3 = np.hstack([x, 3 * x])
-        interp3 = pybamm.Interpolant(data3, a)
+        interp3 = pybamm.Interpolant(data3[:, 0], data3[:, 1], a)
         processed_interp3 = parameter_values.process_symbol(interp3)
         self.assertEqual(processed_interp3.evaluate(), 9.03)
 
@@ -453,7 +454,7 @@ class TestParameterValues(unittest.TestCase):
                 "input",
                 "parameters",
                 "lithium-ion",
-                "cathodes",
+                "positive_electrodes",
                 "lico2_Marquis2019",
             ),
             check_already_exists=False,
@@ -648,6 +649,27 @@ class TestParameterValues(unittest.TestCase):
         self.assertEqual(df[1]["a"], "0.1")
         self.assertEqual(df[1]["b"], "[function]some_function")
         self.assertEqual(df[1]["c"], "[data]some_data")
+
+    def test_deprecate_anode_cathode(self):
+        chemistry = copy.deepcopy(pybamm.parameter_sets.Ecker2015)
+        chemistry["anode"] = chemistry.pop("negative electrode")
+        with self.assertWarnsRegex(DeprecationWarning, "anode"):
+            pybamm.ParameterValues(chemistry=chemistry)
+
+        chemistry = copy.deepcopy(pybamm.parameter_sets.Ecker2015)
+        chemistry["cathode"] = chemistry.pop("positive electrode")
+        with self.assertWarnsRegex(DeprecationWarning, "cathode"):
+            pybamm.ParameterValues(chemistry=chemistry)
+
+        chemistry = copy.deepcopy(pybamm.parameter_sets.Ecker2015)
+        chemistry["anode"] = None
+        with self.assertRaisesRegex(KeyError, "both 'anode' and 'negative"):
+            pybamm.ParameterValues(chemistry=chemistry)
+
+        chemistry = copy.deepcopy(pybamm.parameter_sets.Ecker2015)
+        chemistry["cathode"] = None
+        with self.assertRaisesRegex(KeyError, "both 'cathode' and 'positive"):
+            pybamm.ParameterValues(chemistry=chemistry)
 
 
 if __name__ == "__main__":
