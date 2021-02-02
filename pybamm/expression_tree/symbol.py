@@ -167,6 +167,8 @@ class Symbol(anytree.NodeMixin):
         # Set domain (and hence id)
         self.domain = domain
 
+        self._saved_evaluates_on_edges = {}
+
         # Test shape on everything but nodes that contain the base Symbol class or
         # the base BinaryOperator class
         if pybamm.settings.debug_mode is True:
@@ -744,6 +746,7 @@ class Symbol(anytree.NodeMixin):
         """
         Returns True if a symbol evaluates on an edge, i.e. symbol contains a gradient
         operator, but not a divergence operator, and is not an IndefiniteIntegral.
+        Caches the solution for faster results
 
         Parameters
         ----------
@@ -757,6 +760,14 @@ class Symbol(anytree.NodeMixin):
             Whether the symbol evaluates on edges (in the finite volume discretisation
             sense)
         """
+        try:
+            return self._saved_evaluates_on_edges[dimension]
+        except KeyError:
+            eval_on_edges = self._evaluates_on_edges(dimension)
+            self._saved_evaluates_on_edges[dimension] = eval_on_edges
+            return eval_on_edges
+
+    def _evaluates_on_edges(self, dimension):
         # Default behaviour: return False
         return False
 

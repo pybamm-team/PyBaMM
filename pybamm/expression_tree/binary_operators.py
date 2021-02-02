@@ -172,8 +172,8 @@ class BinaryOperator(pybamm.Symbol):
         """ Perform binary operation on nodes 'left' and 'right'. """
         raise NotImplementedError
 
-    def evaluates_on_edges(self, dimension):
-        """ See :meth:`pybamm.Symbol.evaluates_on_edges()`. """
+    def _evaluates_on_edges(self, dimension):
+        """ See :meth:`pybamm.Symbol._evaluates_on_edges()`. """
         return self.left.evaluates_on_edges(dimension) or self.right.evaluates_on_edges(
             dimension
         )
@@ -490,8 +490,8 @@ class Inner(BinaryOperator):
         """ See :meth:`pybamm.BinaryOperator._binary_simplify()`. """
         return pybamm.simplify_multiplication_division(self.__class__, left, right)
 
-    def evaluates_on_edges(self, dimension):
-        """ See :meth:`pybamm.Symbol.evaluates_on_edges()`. """
+    def _evaluates_on_edges(self, dimension):
+        """ See :meth:`pybamm.Symbol._evaluates_on_edges()`. """
         return False
 
 

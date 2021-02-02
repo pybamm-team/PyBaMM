@@ -405,7 +405,8 @@ class TestParameterValues(unittest.TestCase):
         func = pybamm.Function(D, a, b)
 
         processed_func = parameter_values.process_symbol(func)
-        self.assertIsInstance(processed_func, pybamm.Function)
+        # Function of scalars gets automatically simplified
+        self.assertIsInstance(processed_func, pybamm.Scalar)
         self.assertEqual(processed_func.evaluate(), 3)
 
     def test_multi_var_function_parameter(self):
