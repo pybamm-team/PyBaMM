@@ -40,7 +40,7 @@ class Full(BaseElectrolyteConductivity):
         phi_e = variables["Electrolyte potential"]
 
         c_e_n, c_e_s, c_e_p = c_e.orphans
-        phi_e_n, phi_e_s, phi_e_p = phi_e.orphans
+        phi_e_n, _, phi_e_p = phi_e.orphans
         T_n, T_s, T_p = T.orphans
 
         i_e = (param.kappa_e(c_e, T) * tor * param.gamma_e / param.C_e) * (
