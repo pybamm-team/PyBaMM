@@ -369,6 +369,11 @@ class Symbol(anytree.NodeMixin):
         if children is None:
             children = []
 
+        # Store "orphans", which are separate from children as they do not have a
+        # parent node, so they do not cause tree corruption errors when used again
+        # in a different part of the tree
+        self._orphans = children
+
         for child in children:
             # copy child before adding
             # this also adds copy.copy(child) to self.children
@@ -541,7 +546,7 @@ class Symbol(anytree.NodeMixin):
         Returning new copies of the children, with parents removed to avoid corrupting
         the expression tree internal data
         """
-        return tuple([child.new_copy() for child in self.children])
+        return self._orphans
 
     def render(self):  # pragma: no cover
         """print out a visual representation of the tree (this node and its
