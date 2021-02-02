@@ -338,8 +338,8 @@ class ParameterValues:
         if "C-rate" in values:
             raise ValueError(
                 "The 'C-rate' parameter has been deprecated, "
-                "use 'Current function [A]' instead. The cell capacity can be accessed "
-                "as 'Cell capacity [A.h]', and used to calculate current from C-rate."
+                "use 'Current function [A]' instead. The Nominal cell capacity can be accessed "
+                "as 'Nominal cell capacity [A.h]', and used to calculate current from C-rate."
             )
         for param in values:
             if "surface area density" in param:
@@ -791,7 +791,7 @@ class ParameterValues:
         # Calculate parameters for each C-rate
         for Crate in [1, 10]:
             # Update Crate
-            capacity = self.get("Cell capacity [A.h]")
+            capacity = self.get("Nominal cell capacity [A.h]")
             if capacity is not None:
                 self.update(
                     {"Current function [A]": Crate * capacity},
