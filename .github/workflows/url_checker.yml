@@ -29,4 +29,7 @@ jobs:
 
         # A comma separated patterns to exclude during URL checks
         exclude_patterns: http://www.w3.org,http://purl.org/dc,http://127.0.0.1
+
+        # A comma separated list of file patterns (direct paths work as well) to exclude
+        exclude_files: CHANGELOG.md
         
