@@ -883,54 +883,14 @@ def simplified_subtraction(left, right):
     )
 
 
-def isolate_orphans_left(left, right):
-    return left._unary_new_copy(left.orphans[0] * right)
-
-
-def isolate_orphans_right(left, right):
-    return right._unary_new_copy(left * right.orphans[0])
-
-
-def get_orphans_1(symbol):
-    return symbol.orphans
-
-
-def get_orphans_2(symbol):
-    return symbol.orphans
-
-
-def get_orphans_3(symbol):
-    return symbol.orphans
-
-
-def get_orphans_4(symbol):
-    return symbol.orphans
-
-
-def get_orphans_5(symbol):
-    return symbol.orphans
-
-
-def get_orphans_6(symbol):
-    return symbol.orphans
-
-
-def get_orphans_7(symbol):
-    return symbol.orphans
-
-
-def get_orphans_8(symbol):
-    return symbol.orphans
-
-
 def simplified_multiplication(left, right):
     left, right = simplify_elementwise_binary_broadcasts(left, right)
 
     # Broadcast commutes with multiplication operator
     if isinstance(left, pybamm.Broadcast) and right.domain == []:
-        return isolate_orphans_left(left, right)
+        return left._unary_new_copy(left.orphans[0] * right)
     elif isinstance(right, pybamm.Broadcast) and left.domain == []:
-        return isolate_orphans_right(left, right)
+        return right._unary_new_copy(left * right.orphans[0])
 
     # simplify multiply by scalar zero, being careful about shape
     if pybamm.is_scalar_zero(left):
@@ -979,7 +939,7 @@ def simplified_multiplication(left, right):
         and right.is_constant()
         and left.left.is_constant()
     ):
-        l_left, l_right = get_orphans_1(left)
+        l_left, l_right = left.orphans
         new_left = right * l_left
         # be careful about domains to avoid weird errors
         new_left.clear_domains()
@@ -991,18 +951,18 @@ def simplified_multiplication(left, right):
     elif isinstance(left, Multiplication) and right.is_constant():
         # Simplify (a * b) * c to (a * c) * b if (a * c) is constant
         if left.left.is_constant():
-            l_left, l_right = get_orphans_2(left)
+            l_left, l_right = left.orphans
             new_left = l_left * right
             return new_left * l_right
         # Simplify (a * b) * c to a * (b * c) if (b * c) is constant
         elif left.right.is_constant():
-            l_left, l_right = get_orphans_3(left)
+            l_left, l_right = left.orphans
             new_right = l_right * right
             return l_left * new_right
     elif isinstance(left, Division) and right.is_constant():
         # Simplify (a / b) * c to a * (c / b) if (c / b) is constant
         if left.right.is_constant():
-            l_left, l_right = get_orphans_4(left)
+            l_left, l_right = left.orphans
             new_right = right / l_right
             return l_left * new_right
 
@@ -1012,7 +972,7 @@ def simplified_multiplication(left, right):
         and left.is_constant()
         and right.left.is_constant()
     ):
-        r_left, r_right = get_orphans_5(right)
+        r_left, r_right = right.orphans
         new_left = left * r_left
         # be careful about domains to avoid weird errors
         new_left.clear_domains()
@@ -1024,18 +984,18 @@ def simplified_multiplication(left, right):
     elif isinstance(right, Multiplication) and left.is_constant():
         # Simplify a * (b * c) to (a * b) * c if (a * b) is constant
         if right.left.is_constant():
-            r_left, r_right = get_orphans_6(right)
+            r_left, r_right = right.orphans
             new_left = left * r_left
             return new_left * r_right
         # Simplify a * (b * c) to (a * c) * b if (a * c) is constant
         elif right.right.is_constant():
-            r_left, r_right = get_orphans_7(right)
+            r_left, r_right = right.orphans
             new_left = left * r_right
             return new_left * r_left
     elif isinstance(right, Division) and left.is_constant():
         # Simplify a * (b / c) to (a / c) * b if (a / c) is constant
         if right.right.is_constant():
-            r_left, r_right = get_orphans_8(right)
+            r_left, r_right = right.orphans
             new_left = left / r_right
             return new_left * r_left
 
