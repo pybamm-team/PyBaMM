@@ -19,6 +19,12 @@ class TestFull(unittest.TestCase):
         variables = {
             "Electrolyte tortuosity": a,
             "Electrolyte concentration": pybamm.Concatenation(a_n, a_s, a_p),
+            "Negative electrolyte concentration": a_n,
+            "Separator electrolyte concentration": a_s,
+            "Positive electrolyte concentration": a_p,
+            "Negative electrode temperature": a_n,
+            "Separator temperature": a_s,
+            "Positive electrode temperature": a_p,
             "Negative "
             + surf: pybamm.FullBroadcast(a, "negative electrode", "current collector"),
             "Positive "

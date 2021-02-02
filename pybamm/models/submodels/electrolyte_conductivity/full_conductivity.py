@@ -39,50 +39,13 @@ class Full(BaseElectrolyteConductivity):
         c_e = variables["Electrolyte concentration"]
         phi_e = variables["Electrolyte potential"]
 
-        c_e_n, c_e_s, c_e_p = c_e.orphans
-        phi_e_n, _, phi_e_p = phi_e.orphans
-        T_n, T_s, T_p = T.orphans
-
         i_e = (param.kappa_e(c_e, T) * tor * param.gamma_e / param.C_e) * (
             param.chi(c_e, T) * (1 + param.Theta * T) * pybamm.grad(c_e) / c_e
             - pybamm.grad(phi_e)
         )
 
-        # concentration overpotential
-        indef_integral_n = pybamm.IndefiniteIntegral(
-            param.chi(c_e_n, T_n)
-            * (1 + param.Theta * T_n)
-            * pybamm.grad(c_e_n)
-            / c_e_n,
-            pybamm.standard_spatial_vars.x_n,
-        )
-        indef_integral_s = pybamm.IndefiniteIntegral(
-            param.chi(c_e_s, T_s)
-            * (1 + param.Theta * T_s)
-            * pybamm.grad(c_e_s)
-            / c_e_s,
-            pybamm.standard_spatial_vars.x_s,
-        )
-        indef_integral_p = pybamm.IndefiniteIntegral(
-            param.chi(c_e_p, T_p)
-            * (1 + param.Theta * T_p)
-            * pybamm.grad(c_e_p)
-            / c_e_p,
-            pybamm.standard_spatial_vars.x_p,
-        )
-
-        integral_n = indef_integral_n
-        integral_s = indef_integral_s + pybamm.boundary_value(integral_n, "right")
-        integral_p = indef_integral_p + pybamm.boundary_value(integral_s, "right")
-
-        eta_c_av = pybamm.x_average(integral_p) - pybamm.x_average(integral_n)
-
-        delta_phi_e_av = (
-            pybamm.x_average(phi_e_p) - pybamm.x_average(phi_e_n) - eta_c_av
-        )
-
         variables.update(self._get_standard_current_variables(i_e))
-        variables.update(self._get_split_overpotential(eta_c_av, delta_phi_e_av))
+        variables.update(self._get_electrolyte_overpotentials(variables))
 
         return variables
 

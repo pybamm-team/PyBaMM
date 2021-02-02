@@ -274,7 +274,6 @@ class BaseElectrolyteConductivity(pybamm.BaseSubModel):
             The variables including the whole-cell electrolyte potentials
             and currents.
         """
-        param = self.param
 
         phi_e_n = variables["Negative electrolyte potential"]
         phi_e_s = variables["Separator electrolyte potential"]
@@ -284,6 +283,36 @@ class BaseElectrolyteConductivity(pybamm.BaseSubModel):
         i_e_s = variables["Separator electrolyte current density"]
         i_e_p = variables["Positive electrolyte current density"]
         i_e = pybamm.Concatenation(i_e_n, i_e_s, i_e_p)
+
+        variables.update(
+            self._get_standard_potential_variables(phi_e_n, phi_e_s, phi_e_p)
+        )
+        variables.update(self._get_standard_current_variables(i_e))
+
+        return variables
+
+    def _get_electrolyte_overpotentials(self, variables):
+        """
+        A private function to obtain the electrolyte overpotential and Ohmic losses.
+        Note: requires 'variables' to contain the potential, electrolyte concentration
+        and temperature the subdomains: 'negative electrode', 'separator', and
+        'positive electrode'.
+
+        Parameters
+        ----------
+        variables : dict
+            The variables that have been set in the rest of the model.
+
+        Returns
+        -------
+        variables : dict
+            The variables including the whole-cell electrolyte potentials
+            and currents.
+        """
+        param = self.param
+
+        phi_e_n = variables["Negative electrolyte potential"]
+        phi_e_p = variables["Positive electrolyte potential"]
 
         c_e_n = variables["Negative electrolyte concentration"]
         c_e_s = variables["Separator electrolyte concentration"]
@@ -326,10 +355,6 @@ class BaseElectrolyteConductivity(pybamm.BaseSubModel):
             pybamm.x_average(phi_e_p) - pybamm.x_average(phi_e_n) - eta_c_av
         )
 
-        variables.update(
-            self._get_standard_potential_variables(phi_e_n, phi_e_s, phi_e_p)
-        )
-        variables.update(self._get_standard_current_variables(i_e))
         variables.update(self._get_split_overpotential(eta_c_av, delta_phi_e_av))
 
         return variables
