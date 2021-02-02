@@ -567,8 +567,8 @@ class ParameterValues:
             return self._processed_symbols[symbol.id]
         except KeyError:
             processed_symbol = self._process_symbol(symbol)
+            self._processed_symbols[symbol.id] = processed_symbol
 
-            # self._processed_symbols[symbol.id] = processed_symbol
             return processed_symbol
 
     def _process_symbol(self, symbol):
