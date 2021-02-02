@@ -215,12 +215,15 @@ class Function(pybamm.Symbol):
             : :pybamm.Function
             A new copy of the function
         """
-        return pybamm.Function(
-            self.function,
-            *children,
-            name=self.name,
-            derivative=self.derivative,
-            differentiated_function=self.differentiated_function
+        return pybamm.simplify_if_constant(
+            pybamm.Function(
+                self.function,
+                *children,
+                name=self.name,
+                derivative=self.derivative,
+                differentiated_function=self.differentiated_function
+            ),
+            clear_domains=False,
         )
 
     def _function_simplify(self, simplified_children):

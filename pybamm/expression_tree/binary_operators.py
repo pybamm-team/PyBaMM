@@ -719,7 +719,7 @@ def simplified_power(left, right):
 
     # anything to the power of zero is one
     if pybamm.is_scalar_zero(right):
-        return pybamm.Scalar(1)
+        return pybamm.ones_like(left)
 
     # zero to the power of anything is zero
     if pybamm.is_scalar_zero(left):
