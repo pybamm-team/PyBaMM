@@ -27,6 +27,7 @@ class IrreversiblePlating(BasePlating):
 
     def __init__(self, param, domain):
         super().__init__(param, domain)
+        pybamm.citations.register("OKane2020")
 
     def get_fundamental_variables(self):
         c_plated_Li = pybamm.Variable(

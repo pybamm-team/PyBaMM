@@ -310,7 +310,7 @@ primaryClass = {physics.app-ph},
   doi = {10.1149/2.0281914jes},
 }
 
-@article{OKane_2020,
+@article{OKane2020,
 	doi = {10.1149/1945-7111/ab90ac},
 	url = {https://doi.org/10.1149/1945-7111/ab90ac},
 	year = 2020,
