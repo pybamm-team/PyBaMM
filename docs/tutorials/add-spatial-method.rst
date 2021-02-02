@@ -10,7 +10,7 @@ In particular, start by creating an issue to discuss what you want to do - this 
 The role of spatial methods
 ---------------------------
 
-All models in PyBaMM are implemented as `expression trees <https://github.com/pybamm-team/PyBaMM/blob/master/examples/notebooks/expression-tree.ipynb>`_.
+All models in PyBaMM are implemented as `expression trees <https://github.com/pybamm-team/PyBaMM/blob/develop/examples/notebooks/expression_tree/expression-tree.ipynb>`_.
 After it has been created and parameters have been set, the model is passed to the :class:`pybamm.Discretisation` class,
 which converts it into a linear algebra form.
 For example, the object:
@@ -74,7 +74,7 @@ Unit tests for the new class
 ----------------------------
 
 For the new spatial method to be added to PyBaMM, you must add unit tests to demonstrate that it behaves as expected
-(see, for example, the `Finite Volume unit tests <https://github.com/pybamm-team/PyBaMM/blob/master/tests/unit/test_spatial_methods/test_finite_volume.py>`_).
+(see, for example, the `Finite Volume unit tests <https://github.com/pybamm-team/PyBaMM/blob/develop/tests/unit/test_spatial_methods/test_finite_volume/test_finite_volume.py>`_).
 The best way to get started would be to create a file ``test_my_fast_method.py`` in ``tests/unit/test_spatial_methods/`` that performs at least the
 following checks:
 

@@ -306,10 +306,10 @@ class BaseSolver(object):
                         expr = symbol.right
                         found_t = True
                     # Dimensional
-                    elif symbol.right.id == (pybamm.t * model.timescale).id:
+                    elif symbol.right.id == (pybamm.t * model.timescale_eval).id:
                         expr = symbol.left.new_copy() / symbol.right.right.new_copy()
                         found_t = True
-                    elif symbol.left.id == (pybamm.t * model.timescale).id:
+                    elif symbol.left.id == (pybamm.t * model.timescale_eval).id:
                         expr = symbol.right.new_copy() / symbol.left.right.new_copy()
                         found_t = True
 
@@ -329,7 +329,7 @@ class BaseSolver(object):
                         expr = symbol.right
                         found_t = True
                     # Dimensional
-                    elif symbol.left.id == (pybamm.t * model.timescale).id:
+                    elif symbol.left.id == (pybamm.t * model.timescale_eval).id:
                         expr = symbol.right.new_copy() / symbol.left.right.new_copy()
                         found_t = True
 

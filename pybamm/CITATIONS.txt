@@ -309,3 +309,15 @@ primaryClass = {physics.app-ph},
   publisher = {The Electrochemical Society},
   doi = {10.1149/2.0281914jes},
 }
+
+@article{Wang2002,
+  title = {Spectral (Finite) Volume Method for Conservation Laws on Unstructured Grids},
+  author = {Wang, Z. J.},
+  journal = {Journal of Computational Physics},
+  volume = {178},
+  number = {1},
+  pages = {210--251},
+  year = {2002},
+  publisher = {Elsevier Science (USA)},
+  doi = {10.1006/jcph.2002.7041},
+}
