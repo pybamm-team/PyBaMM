@@ -353,10 +353,10 @@ class ParameterValues:
             else:
                 values["Nominal cell capacity [A.h]"] = values["Cell capacity [A.h]"]
                 warnings.warn(
-                    "the 'Cell capacity [A.h]' component notation will be "
+                    "the 'Cell capacity [A.h]' notation will be "
                     "deprecated in the next release, as it has now been renamed "
                     "to 'Nominal cell capacity [A.h]'. Simulation will continue "
-                    "passing the 'Cell capacity [A.h]' component as 'Nominal cell "
+                    "passing the 'Cell capacity [A.h]' as 'Nominal cell "
                     "capacity [A.h]' (it might overwrite any existing definition "
                     "of the component)"
                 )
