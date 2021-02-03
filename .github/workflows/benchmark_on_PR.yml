@@ -1,6 +1,6 @@
 name: Run benchmarks on PR
 on:
-  pull_request:
+  push:
 
 jobs:
   benchmarks:
