@@ -310,6 +310,32 @@ primaryClass = {physics.app-ph},
   doi = {10.1149/2.0281914jes},
 }
 
+@article{OKane2020,
+	doi = {10.1149/1945-7111/ab90ac},
+	url = {https://doi.org/10.1149/1945-7111/ab90ac},
+	year = {2020},
+	month = {may},
+	publisher = {The Electrochemical Society},
+	volume = {167},
+	number = {9},
+	pages = {090540},
+	author = {Simon E. J. O'Kane and Ian D. Campbell and Mohamed W. J. Marzook and Gregory J. Offer and Monica Marinescu},
+	title = {Physical Origin of the Differential Voltage Minimum Associated with Lithium Plating in Li-Ion Batteries},
+	journal = {Journal of The Electrochemical Society}
+}
+
+@article{Ren2018,
+author={Ren, Dongsheng and Smith, Kandler and Guo, Dongxu and Han, Xuebing and Feng, Xuning and Lu, Languang and Ouyang, Minggao},
+title={Investigation of Lithium Plating-Stripping Process in Li-Ion Batteries at Low Temperature Using an Electrochemical Model},
+journal={Journal of the Electrochemistry Society},
+year={2018},
+volume={165},
+pages={A2167-A2178},
+publisher={The Electrochemical Society},
+doi={10.1149/2.0661810jes}
+}
+
+
 @article{Wang2002,
   title = {Spectral (Finite) Volume Method for Conservation Laws on Unstructured Grids},
   author = {Wang, Z. J.},
