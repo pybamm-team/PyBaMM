@@ -95,6 +95,7 @@ class BaseModel(BaseElectrolyteConductivity):
 
         if self.domain == "Positive":
             variables.update(self._get_whole_cell_variables(variables))
+            variables.update(self._get_electrolyte_overpotentials(variables))
 
         return variables
 
