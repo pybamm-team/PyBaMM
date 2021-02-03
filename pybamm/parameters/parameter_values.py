@@ -358,7 +358,8 @@ class ParameterValues:
                     "to 'Nominal cell capacity [A.h]'. Simulation will continue "
                     "passing the 'Cell capacity [A.h]' as 'Nominal cell "
                     "capacity [A.h]' (it might overwrite any existing definition "
-                    "of the component)"
+                    "of the component)",
+                    DeprecationWarning,
                 )
         for param in values:
             if "surface area density" in param:
