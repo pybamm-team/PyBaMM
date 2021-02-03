@@ -211,7 +211,6 @@ class BaseKinetics(BaseInterface):
         # the NotConstant class
         # to differentiate it from the electrolyte concentration inside the
         # surface potential difference when taking j.diff(c_e) later on
-        # use explicit Multiplication instead of * to avoid simplification
         c_e_0 = pybamm.NotConstant(
             variables["Leading-order x-averaged electrolyte concentration"]
         )
