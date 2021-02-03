@@ -324,6 +324,18 @@ primaryClass = {physics.app-ph},
 	journal = {Journal of The Electrochemical Society}
 }
 
+@article{Ren2018,
+author={Ren, Dongsheng and Smith, Kandler and Guo, Dongxu and Han, Xuebing and Feng, Xuning and Lu, Languang and Ouyang, Minggao},
+title={Investigation of Lithium Plating-Stripping Process in Li-Ion Batteries at Low Temperature Using an Electrochemical Model},
+journal={Journal of the Electrochemistry Society},
+year={2018},
+volume={165},
+pages={A2167-A2178},
+publisher={The Electrochemical Society},
+doi={10.1149/2.0661810jes}
+}
+
+
 @article{Wang2002,
   title = {Spectral (Finite) Volume Method for Conservation Laws on Unstructured Grids},
   author = {Wang, Z. J.},
