@@ -97,7 +97,7 @@ class TestParameterValues(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "Cell capacity"):
             pybamm.ParameterValues({"Cell capacity [A.h]": 1,
                                     "Nominal cell capacity [A.h]": 1})
-        with self.assertWarnsRegex(DeprecationWarning, "Cell capacity [A.h]"):
+        with self.assertWarnsRegex(DeprecationWarning, "Cell capacity"):
             pybamm.ParameterValues({"Cell capacity [A.h]": 1})
         # Can't provide a current density of 0, as this will cause a ZeroDivision error
         with self.assertRaisesRegex(ValueError, "Typical current"):
