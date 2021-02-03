@@ -12,7 +12,7 @@ on:
 jobs:
   
   style:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v2
     - name: Setup python
@@ -31,7 +31,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-20.04, macos-latest, windows-latest]
+        os: [ubuntu-latest, macos-latest, windows-latest]
         python-version: [3.7, 3.8, 3.9]
 
     steps:
@@ -42,7 +42,7 @@ jobs:
         python-version: ${{ matrix.python-version }}
     
     - name: Install Linux system dependencies
-      if: matrix.os == 'ubuntu-20.04'
+      if: matrix.os == 'ubuntu-latest'
       run: |
         sudo apt install gfortran gcc libopenblas-dev graphviz
     
@@ -90,10 +90,10 @@ jobs:
       run: tox -e examples
         
     - name: Install and run coverage
-      if: success() && (matrix.os == 'ubuntu-20.04' && matrix.python-version == 3.7)
+      if: success() && (matrix.os == 'ubuntu-latest' && matrix.python-version == 3.7)
       run: tox -e coverage
 
     - name: Upload coverage report
-      if: matrix.os == 'ubuntu-20.04' && matrix.python-version == 3.7
+      if: matrix.os == 'ubuntu-latest' && matrix.python-version == 3.7
       uses: codecov/codecov-action@v1
 
