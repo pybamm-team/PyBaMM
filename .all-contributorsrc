@@ -292,6 +292,18 @@
       "contributions": [
         "test"
       ]
+    },
+    {
+      "login": "DrSOKane",
+      "name": "DrSOKane",
+      "avatar_url": "https://avatars.githubusercontent.com/u/42972513?v=4",
+      "profile": "https://github.com/DrSOKane",
+      "contributions": [
+        "code",
+        "example",
+        "doc",
+        "test"
+      ]
     }
   ],
   "contributorsPerLine": 7,
