@@ -46,6 +46,7 @@ class Full(BaseModel):
         self.set_side_reaction_submodels()
         self.set_current_collector_submodel()
         self.set_sei_submodel()
+        self.set_lithium_plating_submodel()
 
         if build:
             self.build_model()
