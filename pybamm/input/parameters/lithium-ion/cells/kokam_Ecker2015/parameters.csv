@@ -13,6 +13,6 @@ Cell cooling surface area [m2],1.72E-2,,pouch (single layer)
 Cell volume [m3],1.61E-6,,pouch (single layer)
 ,,,
 # Electrical,,,
-Cell capacity [A.h], 0.15625, 7.5/48 (parameter set for a single layer cell),
+Nominal cell capacity [A.h], 0.15625, 7.5/48 (parameter set for a single layer cell),
 Typical current [A], 0.15652,,
 Current function [A],0.15652,default current function,
