@@ -255,6 +255,23 @@ class TestSPMWithCrack(unittest.TestCase):
         model.check_well_posedness()
 
 
+class TestSPMeWithPlating(unittest.TestCase):
+    def test_well_posed_none_plating(self):
+        options = {"lithium plating": "none"}
+        model = pybamm.lithium_ion.SPM(options)
+        model.check_well_posedness()
+
+    def test_well_posed_reversible_plating(self):
+        options = {"lithium plating": "reversible"}
+        model = pybamm.lithium_ion.SPM(options)
+        model.check_well_posedness()
+
+    def test_well_posed_irreversible_plating(self):
+        options = {"lithium plating": "irreversible"}
+        model = pybamm.lithium_ion.SPM(options)
+        model.check_well_posedness()
+
+
 if __name__ == "__main__":
     print("Add -v for more debug output")
     import sys
