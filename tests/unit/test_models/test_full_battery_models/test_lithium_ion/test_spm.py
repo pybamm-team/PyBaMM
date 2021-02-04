@@ -255,7 +255,7 @@ class TestSPMWithCrack(unittest.TestCase):
         model.check_well_posedness()
 
 
-class TestSPMeWithPlating(unittest.TestCase):
+class TestSPMWithPlating(unittest.TestCase):
     def test_well_posed_none_plating(self):
         options = {"lithium plating": "none"}
         model = pybamm.lithium_ion.SPM(options)
