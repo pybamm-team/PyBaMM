@@ -63,7 +63,7 @@ pipx install tox # (Using this, tox can automatically be accessed in your virtau
 
 This can be acieved by forking the repository and cloning it in your machine.
 
-4. Navigate to the clonned repository and create a virtual environment using the commands below:
+4. Navigate to the cloned repository and create a virtual environment using the commands below:
 ```bash
 tox -e dev # (GNU/Linux and MacOS)
 #
@@ -104,9 +104,10 @@ env\Scripts\activate.bat
 # (This whole step can be ignored if you don't want a virtual environment)
 ```
 
-2. Installing PyBaMM
+3. Installing PyBaMM
 
 This can be acieved by forking the repository and cloning it in your machine.
+
 Or type:
 ```bash
 pip install pybamm
@@ -198,12 +199,16 @@ This allows people to (1) use PyBaMM without ever importing Matplotlib and (2) c
 
 All code requires testing. We use the [unittest](https://docs.python.org/3.3/library/unittest.html) package for our tests. (These tests typically just check that the code runs without error, and so, are more _debugging_ than _testing_ in a strict sense. Nevertheless, they are very useful to have!)
 
-To run quick tests, type
+If you have tox installed, to run quick tests, type
 
 ```bash
 tox -e quick # (GNU/Linux and MacOS)
 #
-python -m tox -e windows-quick (Windows)
+python -m tox -e windows-quick # (Windows)
+```
+else, type
+```bash
+python run-tests.py --unit
 ```
 
 ### Writing tests
