@@ -1156,13 +1156,6 @@ def surf(symbol):
     return boundary_value(symbol, "right")
 
 
-def integral(symbol, integration_variable):
-    """
-    Convenience function for creating an integral
-    """
-    return Integral(symbol, integration_variable)
-
-
 def x_average(symbol):
     """convenience function for creating an average in the x-direction
 

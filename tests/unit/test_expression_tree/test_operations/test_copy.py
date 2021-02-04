@@ -48,6 +48,14 @@ class TestCopy(unittest.TestCase):
             pybamm.t,
             pybamm.Index(vec, 1),
             pybamm.NotConstant(a),
+            pybamm.ExternalVariable(
+                "external variable",
+                20,
+                domain="test",
+                auxiliary_domains={"secondary": "test2"},
+            ),
+            pybamm.minimum(a, b),
+            pybamm.maximum(a, b),
         ]:
             self.assertEqual(symbol.id, symbol.new_copy().id)
 
