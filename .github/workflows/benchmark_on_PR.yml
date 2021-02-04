@@ -1,4 +1,4 @@
-name: Run benchmarks on PR
+name: Run benchmarks on push
 on:
   push:
 
