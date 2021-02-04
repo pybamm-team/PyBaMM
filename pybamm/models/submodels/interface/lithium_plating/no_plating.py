@@ -15,13 +15,6 @@ class NoPlating(BasePlating):
     domain : str
         The domain of the model either 'Negative' or 'Positive'
 
-    References
-    ----------
-    .. [1] SEJ O'Kane, ID Campbell, MWJ Marzook, GJ Offer and M Marinescu. "Physical
-           Origin of the Differential Voltage Minimum Associated with Li Plating in
-           Lithium-Ion Batteries". Journal of The Electrochemical Society,
-           167:090540, 2019
-
     **Extends:** :class:`pybamm.lithium_plating.BasePlating`
     """
 

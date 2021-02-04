@@ -816,7 +816,9 @@ def simplified_addition(left, right):
         r_left = right.orphans[0]
         new_left = l_left + r_left
         if new_left.is_constant():
-            return new_left @ l_right
+            new_sum = new_left @ l_right
+            new_sum.copy_domains(pybamm.Addition(left, right))
+            return new_sum
 
     return pybamm.simplify_if_constant(
         pybamm.Addition(left, right), clear_domains=False
