@@ -224,14 +224,6 @@ class TestDFNWithSEI(unittest.TestCase):
 
 
 class TestDFNWithCrack(unittest.TestCase):
-    def test_well_posed_none_crack(self):
-        options = {"particle": "Fickian diffusion", "particle cracking": "none"}
-        model = pybamm.lithium_ion.DFN(options)
-        chemistry = pybamm.parameter_sets.Ai2020
-        parameter_values = pybamm.ParameterValues(chemistry=chemistry)
-        modeltest = tests.StandardModelTest(model, parameter_values=parameter_values)
-        modeltest.test_all()
-
     def test_well_posed_no_cracking(self):
         options = {"particle": "Fickian diffusion", "particle cracking": "no cracking"}
         model = pybamm.lithium_ion.DFN(options)

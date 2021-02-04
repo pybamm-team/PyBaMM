@@ -68,23 +68,6 @@ def is_constant(symbol):
     return isinstance(symbol, numbers.Number) or symbol.is_constant()
 
 
-def preprocess(left, right):
-    if isinstance(left, numbers.Number):
-        left = pybamm.Scalar(left)
-    if isinstance(right, numbers.Number):
-        right = pybamm.Scalar(right)
-
-    # Check both left and right are pybamm Symbols
-    if not (isinstance(left, pybamm.Symbol) and isinstance(right, pybamm.Symbol)):
-        raise NotImplementedError(
-            """BinaryOperator not implemented for symbols of type {} and {}""".format(
-                type(left), type(right)
-            )
-        )
-
-    return left, right
-
-
 def is_scalar_zero(expr):
     """
     Utility function to test if an expression evaluates to a constant scalar zero
@@ -139,205 +122,6 @@ def is_matrix_one(expr):
         return False
 
 
-def simplified_power(left, right):
-    left, right = preprocess(left, right)
-    # anything to the power of zero is one
-    if is_scalar_zero(right):
-        return pybamm.Scalar(1)
-
-    # zero to the power of anything is zero
-    if is_scalar_zero(left):
-        return pybamm.Scalar(0)
-
-    # anything to the power of one is itself
-    if is_scalar_one(right):
-        return left
-
-    return pybamm.simplify_if_constant(pybamm.Power(left, right), clear_domains=False)
-
-
-def simplified_addition(left, right):
-    """
-    Note
-    ----
-    We check for scalars first, then matrices. This is because
-    (Zero Matrix) + (Zero Scalar)
-    should return (Zero Matrix), not (Zero Scalar).
-    """
-    left, right = preprocess(left, right)
-
-    # anything added by a scalar zero returns the other child
-    if is_scalar_zero(left):
-        return right
-    if is_scalar_zero(right):
-        return left
-    # Check matrices after checking scalars
-    if is_matrix_zero(left):
-        if right.evaluates_to_number():
-            return right * pybamm.ones_like(left)
-        # If left object is zero and has size smaller than or equal to right object in
-        # all dimensions, we can safely return the right object. For example, adding a
-        # zero vector a matrix, we can just return the matrix
-        elif all(
-            left_dim_size <= right_dim_size
-            for left_dim_size, right_dim_size in zip(
-                left.shape_for_testing, right.shape_for_testing
-            )
-        ) and all(
-            left.evaluates_on_edges(dim) == right.evaluates_on_edges(dim)
-            for dim in ["primary", "secondary", "tertiary"]
-        ):
-            return right
-    if is_matrix_zero(right):
-        if left.evaluates_to_number():
-            return left * pybamm.ones_like(right)
-        # See comment above
-        elif all(
-            left_dim_size >= right_dim_size
-            for left_dim_size, right_dim_size in zip(
-                left.shape_for_testing, right.shape_for_testing
-            )
-        ) and all(
-            left.evaluates_on_edges(dim) == right.evaluates_on_edges(dim)
-            for dim in ["primary", "secondary", "tertiary"]
-        ):
-            return left
-
-    return pybamm.simplify_if_constant(
-        pybamm.Addition(left, right), clear_domains=False
-    )
-
-
-def simplified_subtraction(left, right):
-    """
-     Note
-    ----
-    We check for scalars first, then matrices. This is because
-    (Zero Matrix) - (Zero Scalar)
-    should return (Zero Matrix), not -(Zero Scalar).
-    """
-    left, right = preprocess(left, right)
-
-    # anything added by a scalar zero returns the other child
-    if is_scalar_zero(left):
-        return -right
-    if is_scalar_zero(right):
-        return left
-    # Check matrices after checking scalars
-    if is_matrix_zero(left):
-        if right.evaluates_to_number():
-            return -right * pybamm.ones_like(left)
-        # See comments in simplified_addition
-        elif all(
-            left_dim_size <= right_dim_size
-            for left_dim_size, right_dim_size in zip(
-                left.shape_for_testing, right.shape_for_testing
-            )
-        ) and all(
-            left.evaluates_on_edges(dim) == right.evaluates_on_edges(dim)
-            for dim in ["primary", "secondary", "tertiary"]
-        ):
-            return -right
-    if is_matrix_zero(right):
-        if left.evaluates_to_number():
-            return left * pybamm.ones_like(right)
-        # See comments in simplified_addition
-        elif all(
-            left_dim_size >= right_dim_size
-            for left_dim_size, right_dim_size in zip(
-                left.shape_for_testing, right.shape_for_testing
-            )
-        ) and all(
-            left.evaluates_on_edges(dim) == right.evaluates_on_edges(dim)
-            for dim in ["primary", "secondary", "tertiary"]
-        ):
-            return left
-
-    return pybamm.simplify_if_constant(
-        pybamm.Subtraction(left, right), clear_domains=False
-    )
-
-
-def simplified_multiplication(left, right):
-    left, right = preprocess(left, right)
-    # simplify multiply by scalar zero, being careful about shape
-    if is_scalar_zero(left):
-        return pybamm.zeros_like(right)
-    if is_scalar_zero(right):
-        return pybamm.zeros_like(left)
-
-    # if one of the children is a zero matrix, we have to be careful about shapes
-    if is_matrix_zero(left) or is_matrix_zero(right):
-        return pybamm.zeros_like(pybamm.Multiplication(left, right))
-
-    # anything multiplied by a scalar one returns itself
-    if is_scalar_one(left):
-        return right
-    if is_scalar_one(right):
-        return left
-
-    # anything multiplied by a matrix one returns itself if
-    # - the shapes are the same
-    # - both left and right evaluate on edges, or both evaluate on nodes, in all
-    # dimensions
-    # (and possibly more generally, but not implemented here)
-    try:
-        if left.shape_for_testing == right.shape_for_testing and all(
-            left.evaluates_on_edges(dim) == right.evaluates_on_edges(dim)
-            for dim in ["primary", "secondary", "tertiary"]
-        ):
-            if is_matrix_one(left):
-                return right
-            elif is_matrix_one(right):
-                return left
-    except NotImplementedError:
-        pass
-
-    return pybamm.simplify_if_constant(
-        pybamm.Multiplication(left, right), clear_domains=False
-    )
-
-
-def simplified_division(left, right):
-    left, right = preprocess(left, right)
-    # zero divided by zero returns nan scalar
-    if is_scalar_zero(left) and is_scalar_zero(right):
-        return pybamm.Scalar(np.nan)
-
-    # zero divided by anything returns zero (being careful about shape)
-    if is_scalar_zero(left):
-        return pybamm.zeros_like(right)
-
-    # matrix zero divided by anything returns matrix zero (i.e. itself)
-    if is_matrix_zero(left):
-        return pybamm.zeros_like(pybamm.Division(left, right))
-
-    # anything divided by zero returns inf
-    if is_scalar_zero(right):
-        if left.shape_for_testing == ():
-            return pybamm.Scalar(np.inf)
-        else:
-            return np.inf * pybamm.ones_like(left)
-
-    # anything divided by one is itself
-    if is_scalar_one(right):
-        return left
-
-    return pybamm.simplify_if_constant(
-        pybamm.Division(left, right), clear_domains=False
-    )
-
-
-def simplified_matrix_multiplication(left, right):
-    left, right = preprocess(left, right)
-    if is_matrix_zero(left) or is_matrix_zero(right):
-        return pybamm.zeros_like(pybamm.MatrixMultiplication(left, right))
-
-    return pybamm.simplify_if_constant(
-        pybamm.MatrixMultiplication(left, right), clear_domains=False
-    )
-
-
 class Symbol(anytree.NodeMixin):
     """Base node class for the expression tree
 
@@ -369,6 +153,11 @@ class Symbol(anytree.NodeMixin):
         if children is None:
             children = []
 
+        # Store "orphans", which are separate from children as they do not have a
+        # parent node, so they do not cause tree corruption errors when used again
+        # in a different part of the tree
+        self._orphans = children
+
         for child in children:
             # copy child before adding
             # this also adds copy.copy(child) to self.children
@@ -382,6 +171,8 @@ class Symbol(anytree.NodeMixin):
         self.auxiliary_domains = auxiliary_domains
         # Set domain (and hence id)
         self.domain = domain
+
+        self._saved_evaluates_on_edges = {}
 
         # Test shape on everything but nodes that contain the base Symbol class or
         # the base BinaryOperator class
@@ -485,12 +276,14 @@ class Symbol(anytree.NodeMixin):
         self._auxiliary_domains = {
             k: v for k, v in self._domains.items() if k != "primary"
         }
+        self.set_id()
 
     def clear_domains(self):
         "Clear domains, bypassing checks"
         self._domains = {"primary": []}
         self._domain = []
         self._auxiliary_domains = {}
+        self.set_id()
 
     def get_children_auxiliary_domains(self, children):
         "Combine auxiliary domains from children, at all levels"
@@ -541,7 +334,7 @@ class Symbol(anytree.NodeMixin):
         Returning new copies of the children, with parents removed to avoid corrupting
         the expression tree internal data
         """
-        return tuple([child.new_copy() for child in self.children])
+        return self._orphans
 
     def render(self):  # pragma: no cover
         """print out a visual representation of the tree (this node and its
@@ -651,51 +444,51 @@ class Symbol(anytree.NodeMixin):
 
     def __add__(self, other):
         """return an :class:`Addition` object"""
-        return simplified_addition(self, other)
+        return pybamm.simplified_addition(self, other)
 
     def __radd__(self, other):
         """return an :class:`Addition` object"""
-        return simplified_addition(other, self)
+        return pybamm.simplified_addition(other, self)
 
     def __sub__(self, other):
         """return a :class:`Subtraction` object"""
-        return simplified_subtraction(self, other)
+        return pybamm.simplified_subtraction(self, other)
 
     def __rsub__(self, other):
         """return a :class:`Subtraction` object"""
-        return simplified_subtraction(other, self)
+        return pybamm.simplified_subtraction(other, self)
 
     def __mul__(self, other):
         """return a :class:`Multiplication` object"""
-        return simplified_multiplication(self, other)
+        return pybamm.simplified_multiplication(self, other)
 
     def __rmul__(self, other):
         """return a :class:`Multiplication` object"""
-        return simplified_multiplication(other, self)
+        return pybamm.simplified_multiplication(other, self)
 
     def __matmul__(self, other):
         """return a :class:`MatrixMultiplication` object"""
-        return simplified_matrix_multiplication(self, other)
+        return pybamm.simplified_matrix_multiplication(self, other)
 
     def __rmatmul__(self, other):
         """return a :class:`MatrixMultiplication` object"""
-        return simplified_matrix_multiplication(other, self)
+        return pybamm.simplified_matrix_multiplication(other, self)
 
     def __truediv__(self, other):
         """return a :class:`Division` object"""
-        return simplified_division(self, other)
+        return pybamm.simplified_division(self, other)
 
     def __rtruediv__(self, other):
         """return a :class:`Division` object"""
-        return simplified_division(other, self)
+        return pybamm.simplified_division(other, self)
 
     def __pow__(self, other):
         """return a :class:`Power` object"""
-        return simplified_power(self, other)
+        return pybamm.simplified_power(self, other)
 
     def __rpow__(self, other):
         """return a :class:`Power` object"""
-        return simplified_power(other, self)
+        return pybamm.simplified_power(other, self)
 
     def __lt__(self, other):
         """return a :class:`NotEqualHeaviside` object, or a smooth approximation"""
@@ -958,6 +751,7 @@ class Symbol(anytree.NodeMixin):
         """
         Returns True if a symbol evaluates on an edge, i.e. symbol contains a gradient
         operator, but not a divergence operator, and is not an IndefiniteIntegral.
+        Caches the solution for faster results
 
         Parameters
         ----------
@@ -971,6 +765,14 @@ class Symbol(anytree.NodeMixin):
             Whether the symbol evaluates on edges (in the finite volume discretisation
             sense)
         """
+        try:
+            return self._saved_evaluates_on_edges[dimension]
+        except KeyError:
+            eval_on_edges = self._evaluates_on_edges(dimension)
+            self._saved_evaluates_on_edges[dimension] = eval_on_edges
+            return eval_on_edges
+
+    def _evaluates_on_edges(self, dimension):
         # Default behaviour: return False
         return False
 
