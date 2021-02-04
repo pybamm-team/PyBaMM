@@ -62,6 +62,7 @@ pipx install tox # (Using this, tox can automatically be accessed in your virtau
 3. Installing PyBaMM
 
 This can be acieved by forking the repository and cloning it in your machine.
+
 4. Navigate to the clonned repository and create a virtual environment using the commands below:
 ```bash
 tox -e dev # (GNU/Linux and MacOS)
@@ -72,7 +73,9 @@ python -m tox -e windows-dev # (Windows)
 This will
 
 a. Create a virtual environment located at `.tox/dev`.
+
 b. Install all the dependencies for PyBaMM, including the ones for documentation and development.
+
 c. Tell Python to use your local pybamm files when you use `import pybamm` anywhere on your system.
 
 5. Finally, activate your environment.
@@ -107,6 +110,11 @@ This can be acieved by forking the repository and cloning it in your machine.
 Or type:
 ```bash
 pip install pybamm
+```
+
+Additionally you can install sundials on mac using:
+```bash
+brew install sundials
 ```
 
 
