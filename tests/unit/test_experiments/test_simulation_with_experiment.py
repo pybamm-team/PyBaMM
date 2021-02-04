@@ -22,7 +22,7 @@ class TestSimulationExperiment(unittest.TestCase):
         self.assertEqual(sim.experiment, experiment)
         self.assertEqual(
             sim._experiment_inputs[0]["Current input [A]"],
-            1 / 20 * model.default_parameter_values["Cell capacity [A.h]"],
+            1 / 20 * model.default_parameter_values["Nominal cell capacity [A.h]"],
         )
         self.assertEqual(sim._experiment_inputs[0]["Current switch"], 1)
         self.assertEqual(sim._experiment_inputs[0]["Voltage switch"], 0)

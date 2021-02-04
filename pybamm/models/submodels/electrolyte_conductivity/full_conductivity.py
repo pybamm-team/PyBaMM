@@ -45,6 +45,7 @@ class Full(BaseElectrolyteConductivity):
         )
 
         variables.update(self._get_standard_current_variables(i_e))
+        variables.update(self._get_electrolyte_overpotentials(variables))
 
         return variables
 

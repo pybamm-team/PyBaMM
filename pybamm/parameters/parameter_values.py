@@ -338,9 +338,29 @@ class ParameterValues:
         if "C-rate" in values:
             raise ValueError(
                 "The 'C-rate' parameter has been deprecated, "
-                "use 'Current function [A]' instead. The cell capacity can be accessed "
-                "as 'Cell capacity [A.h]', and used to calculate current from C-rate."
+                "use 'Current function [A]' instead. The Nominal "
+                "cell capacity can be accessed as 'Nominal cell "
+                "capacity [A.h]', and used to calculate current from C-rate."
             )
+        if "Cell capacity [A.h]" in values:
+            if "Nominal cell capacity [A.h]" in values:
+                raise ValueError(
+                    "both 'Cell capacity [A.h]' and 'Nominal cell capacity [A.h]' "
+                    "provided in values. The 'Cell capacity [A.h]' notation will be "
+                    "deprecated in the next release so 'Nominal cell capacity [A.h]' "
+                    "should be used instead."
+                )
+            else:
+                values["Nominal cell capacity [A.h]"] = values["Cell capacity [A.h]"]
+                warnings.warn(
+                    "the 'Cell capacity [A.h]' notation will be "
+                    "deprecated in the next release, as it has now been renamed "
+                    "to 'Nominal cell capacity [A.h]'. Simulation will continue "
+                    "passing the 'Cell capacity [A.h]' as 'Nominal cell "
+                    "capacity [A.h]' (it might overwrite any existing definition "
+                    "of the component)",
+                    DeprecationWarning,
+                )
         for param in values:
             if "surface area density" in param:
                 raise ValueError(
@@ -588,7 +608,17 @@ class ParameterValues:
                 raise TypeError("Cannot process parameter '{}'".format(value))
 
         elif isinstance(symbol, pybamm.FunctionParameter):
-            new_children = [self.process_symbol(child) for child in symbol.children]
+            new_children = []
+            for child in symbol.children:
+                if symbol.diff_variable is not None and any(
+                    x.id == symbol.diff_variable.id for x in child.pre_order()
+                ):
+                    # Wrap with NotConstant to avoid simplification,
+                    # which would stop symbolic diff from working properly
+                    new_child = pybamm.NotConstant(child.new_copy())
+                    new_children.append(self.process_symbol(new_child))
+                else:
+                    new_children.append(self.process_symbol(child))
             function_name = self[symbol.name]
 
             # Create Function or Interpolant or Scalar object
@@ -791,7 +821,7 @@ class ParameterValues:
         # Calculate parameters for each C-rate
         for Crate in [1, 10]:
             # Update Crate
-            capacity = self.get("Cell capacity [A.h]")
+            capacity = self.get("Nominal cell capacity [A.h]")
             if capacity is not None:
                 self.update(
                     {"Current function [A]": Crate * capacity},

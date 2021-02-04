@@ -24,7 +24,7 @@ class TestExperiments(unittest.TestCase):
         np.testing.assert_array_almost_equal(
             sim._solution["Time [h]"].entries, np.linspace(0, 3, 13)
         )
-        cap = model.default_parameter_values["Cell capacity [A.h]"]
+        cap = model.default_parameter_values["Nominal cell capacity [A.h]"]
         np.testing.assert_array_almost_equal(
             sim._solution["Current [A]"].entries,
             [cap / 2] * 5 + [0] * 4 + [-cap / 2] * 4,
@@ -62,7 +62,7 @@ class TestExperiments(unittest.TestCase):
         np.testing.assert_array_almost_equal(
             sim._solution["Time [h]"].entries, np.arange(0, 20.01, 0.1)
         )
-        cap = model.default_parameter_values["Cell capacity [A.h]"]
+        cap = model.default_parameter_values["Nominal cell capacity [A.h]"]
         np.testing.assert_array_almost_equal(
             sim._solution["Current [A]"].entries,
             [cap / 20] * 11 + [0] * 10 + ([cap / 20] * 10 + [0] * 10) * 9,

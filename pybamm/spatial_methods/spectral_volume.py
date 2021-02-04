@@ -45,6 +45,7 @@ class SpectralVolume(pybamm.FiniteVolume):
     def __init__(self, options=None, order=2):
         self.order = order
         super().__init__(options)
+        pybamm.citations.register("Wang2002")
 
     def chebyshev_collocation_points(self, noe, a=-1.0, b=1.0):
         """
