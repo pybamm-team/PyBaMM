@@ -19,7 +19,7 @@ class TestStandardParametersLeadAcid(unittest.TestCase):
         output_file = "lead_acid_parameters.txt"
         parameter_values.print_parameters(parameters, output_file)
         # test print_parameters with dict and without C-rate
-        del parameter_values["Cell capacity [A.h]"]
+        del parameter_values["Nominal cell capacity [A.h]"]
         parameters = {"C_e": parameters.C_e, "sigma_n": parameters.sigma_n}
         parameter_values.print_parameters(parameters)
 

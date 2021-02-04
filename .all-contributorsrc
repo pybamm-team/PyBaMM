@@ -292,6 +292,28 @@
       "contributions": [
         "test"
       ]
+    },
+    {
+      "login": "DrSOKane",
+      "name": "DrSOKane",
+      "avatar_url": "https://avatars.githubusercontent.com/u/42972513?v=4",
+      "profile": "https://github.com/DrSOKane",
+      "contributions": [
+        "code",
+        "example",
+        "doc",
+        "test",
+      ]
+    },
+    {
+      "login": "Saransh-cpp",
+      "name": "Saransh Chopra",
+      "avatar_url": "https://avatars.githubusercontent.com/u/74055102?v=4",
+      "profile": "https://github.com/Saransh-cpp",
+      "contributions": [
+        "code",
+        "test"
+      ]
     }
   ],
   "contributorsPerLine": 7,

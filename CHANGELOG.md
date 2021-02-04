@@ -2,6 +2,7 @@
 
 ## Features
 
+-   Added the electrolyte overpotential and Ohmic losses for full conductivity, including surface form ([#1350](https://github.com/pybamm-team/PyBaMM/pull/1350))
 -   Added functionality to `Citations` to print formatted citations ([#1340](https://github.com/pybamm-team/PyBaMM/pull/1340))
 -   Updated the way events are handled in `CasadiSolver` for more accurate event location ([#1328](https://github.com/pybamm-team/PyBaMM/pull/1328))
 -   Added error message if initial conditions are outside the bounds of a variable ([#1326](https://github.com/pybamm-team/PyBaMM/pull/1326))
@@ -27,6 +28,7 @@
 
 ## Bug fixes
 
+-   Differentiation now works even when the differentiation variable is a constant ([#1294](https://github.com/pybamm-team/PyBaMM/pull/1294))
 -   Fixed a bug where the event time and state were no longer returned as part of the solution ([#1344](https://github.com/pybamm-team/PyBaMM/pull/1344))
 -   Fixed a bug in `CasadiSolver` safe mode which crashed when there were extrapolation events but no termination events ([#1321](https://github.com/pybamm-team/PyBaMM/pull/1321))
 -   When an `Interpolant` is extrapolated an error is raised for `CasadiSolver` (and a warning is raised for the other solvers) ([#1315](https://github.com/pybamm-team/PyBaMM/pull/1315))
@@ -39,6 +41,7 @@
 -   `Interpolant` now takes `x` and `y` instead of a single `data` entry ([#1312](https://github.com/pybamm-team/PyBaMM/pull/1312))
 -   Boolean model options ('sei porosity change', 'convection') must now be given in string format ('true' or 'false' instead of True or False) ([#1280](https://github.com/pybamm-team/PyBaMM/pull/1280))
 -   Operations such as `1*x` and `0+x` now directly return `x`. This can be bypassed by explicitly creating the binary operators, e.g. `pybamm.Multiplication(1, x)` ([#1252](https://github.com/pybamm-team/PyBaMM/pull/1252))
+-   `'Cell capacity [A.h]'` has been renamed to `'Nominal cell capacity [A.h]'`. `'Cell capacity [A.h]'` will be deprecated in the next release. ([#1352](https://github.com/pybamm-team/PyBaMM/pull/1352))
 
 # [v0.3.0](https://github.com/pybamm-team/PyBaMM) - 2020-11-22
 

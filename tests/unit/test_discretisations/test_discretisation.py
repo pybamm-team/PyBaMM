@@ -362,11 +362,11 @@ class TestDiscretise(unittest.TestCase):
         np.testing.assert_array_equal(mat_disc.entries, mat.entries)
 
         # binary operator
-        bin = var + scal
-        bin_disc = disc.process_symbol(bin)
-        self.assertIsInstance(bin_disc, pybamm.Addition)
-        self.assertIsInstance(bin_disc.children[0], pybamm.StateVector)
-        self.assertIsInstance(bin_disc.children[1], pybamm.Scalar)
+        binary = var + scal
+        binary_disc = disc.process_symbol(binary)
+        self.assertIsInstance(binary_disc, pybamm.Addition)
+        self.assertIsInstance(binary_disc.children[0], pybamm.StateVector)
+        self.assertIsInstance(binary_disc.children[1], pybamm.Scalar)
 
         bin2 = scal + var
         bin2_disc = disc.process_symbol(bin2)
@@ -1245,6 +1245,13 @@ class TestDiscretise(unittest.TestCase):
         a_disc = disc.process_symbol(a)
         n = disc.mesh.combine_submeshes(*a.domain).npts
         self.assertEqual(a_disc._expected_size, n)
+
+    def test_process_not_constant(self):
+        disc = pybamm.Discretisation()
+
+        a = pybamm.NotConstant(pybamm.Scalar(1))
+        self.assertEqual(disc.process_symbol(a).id, pybamm.Scalar(1).id)
+        self.assertEqual(disc.process_symbol(2 * a).id, pybamm.Scalar(2).id)
 
     def test_bc_symmetry(self):
         # define model

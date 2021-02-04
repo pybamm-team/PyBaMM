@@ -47,6 +47,7 @@ class TestCopy(unittest.TestCase):
             pybamm.SpatialVariable("x", ["negative electrode"]),
             pybamm.t,
             pybamm.Index(vec, 1),
+            pybamm.NotConstant(a),
         ]:
             self.assertEqual(symbol.id, symbol.new_copy().id)
 

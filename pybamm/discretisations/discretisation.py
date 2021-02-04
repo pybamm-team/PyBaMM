@@ -861,7 +861,9 @@ class Discretisation(object):
             disc_left = self.process_symbol(left)
             disc_right = self.process_symbol(right)
             if symbol.domain == []:
-                return symbol._binary_new_copy(disc_left, disc_right)
+                return pybamm.simplify_if_constant(
+                    symbol._binary_new_copy(disc_left, disc_right), clear_domains=False
+                )
             else:
                 return spatial_method.process_binary_operators(
                     symbol, left, right, disc_left, disc_right
@@ -954,6 +956,9 @@ class Discretisation(object):
                 return spatial_method.upwind_or_downwind(
                     child, disc_child, self.bcs, direction
                 )
+            elif isinstance(symbol, pybamm.NotConstant):
+                # After discretisation, we can make the symbol constant
+                return disc_child
             else:
                 return symbol._unary_new_copy(disc_child)
 
