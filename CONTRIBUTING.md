@@ -46,8 +46,22 @@ Finally, if you really, really, _really_ love developing PyBaMM, have a look at 
 
 ## Installation
 
-To install PyBaMM with all developer options, type:
+To install PyBaMM with all developer options you can follow any one of the two steps described below:
 
+### 1. Using a virtual environment
+1. Install virtual environment using the command below:
+```bash
+pip install virtualenv
+```
+2. Install tox using the commands below:
+```bash
+pip install tox # (Using this, you will need to additionally install tox in your virtual environment as decribed below)
+# or
+pipx install tox # (Using this, tox can automatically be accessed in your virtaul environment)
+```
+3. Installing PyBaMM
+This can be acieved by forking the repository and cloning it in your machine.
+4. Navigate to the clonned repository and create a virtual environment using the commands below:
 ```bash
 tox -e dev # (GNU/Linux and MacOS)
 #
@@ -60,7 +74,7 @@ This will
 2. Install all the dependencies for PyBaMM, including the ones for documentation and development.
 3. Tell Python to use your local pybamm files when you use `import pybamm` anywhere on your system.
 
-Finally, activate your environment.
+5. Finally, activate your environment.
 
 
 ```bash
@@ -68,7 +82,12 @@ source .tox/dev/bin/activate # (GNU/Linux and MacOS)
 #
 .tox\dev\Scripts\activate.bat # (Windows)
 ```
+6. Inside the virtual environment, type:
+```bash
+pip install tox # (Skip this step if you used pipx above)
+```
 
+Full documentation with an installation guide can be found [here](https://pybamm.readthedocs.io/en/latest/)
 
 ## Coding style guidelines
 
