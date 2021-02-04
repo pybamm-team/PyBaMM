@@ -172,8 +172,8 @@ class BinaryOperator(pybamm.Symbol):
         """ Perform binary operation on nodes 'left' and 'right'. """
         raise NotImplementedError
 
-    def evaluates_on_edges(self, dimension):
-        """ See :meth:`pybamm.Symbol.evaluates_on_edges()`. """
+    def _evaluates_on_edges(self, dimension):
+        """ See :meth:`pybamm.Symbol._evaluates_on_edges()`. """
         return self.left.evaluates_on_edges(dimension) or self.right.evaluates_on_edges(
             dimension
         )
@@ -490,8 +490,8 @@ class Inner(BinaryOperator):
         """ See :meth:`pybamm.BinaryOperator._binary_simplify()`. """
         return pybamm.simplify_multiplication_division(self.__class__, left, right)
 
-    def evaluates_on_edges(self, dimension):
-        """ See :meth:`pybamm.Symbol.evaluates_on_edges()`. """
+    def _evaluates_on_edges(self, dimension):
+        """ See :meth:`pybamm.Symbol._evaluates_on_edges()`. """
         return False
 
 
@@ -719,7 +719,7 @@ def simplified_power(left, right):
 
     # anything to the power of zero is one
     if pybamm.is_scalar_zero(right):
-        return pybamm.Scalar(1)
+        return pybamm.ones_like(left)
 
     # zero to the power of anything is zero
     if pybamm.is_scalar_zero(left):
@@ -816,7 +816,9 @@ def simplified_addition(left, right):
         r_left = right.orphans[0]
         new_left = l_left + r_left
         if new_left.is_constant():
-            return new_left @ l_right
+            new_sum = new_left @ l_right
+            new_sum.copy_domains(pybamm.Addition(left, right))
+            return new_sum
 
     return pybamm.simplify_if_constant(
         pybamm.Addition(left, right), clear_domains=False
@@ -931,25 +933,10 @@ def simplified_multiplication(left, right):
             pybamm.Multiplication(left, right), clear_domains=False
         )
 
-    # Simplify a * (B @ c) to (a * B) @ c if (a * B) is constant
+    # Simplify (B @ c) * a to (a * B) @ c if (a * B) is constant
     # This is a common construction that appears from discretisation of spatial
     # operators
     if (
-        isinstance(right, MatrixMultiplication)
-        and left.is_constant()
-        and right.left.is_constant()
-    ):
-        r_left, r_right = right.orphans
-        new_left = left * r_left
-        # be careful about domains to avoid weird errors
-        new_left.clear_domains()
-        new_mul = new_left @ r_right
-        # Keep the domain of the old right
-        new_mul.copy_domains(right)
-        return new_mul
-
-    # Simplify (B @ c) * a to (a * B) @ c if (a * B) is constant
-    elif (
         isinstance(left, MatrixMultiplication)
         and right.is_constant()
         and left.left.is_constant()
@@ -963,7 +950,7 @@ def simplified_multiplication(left, right):
         new_mul.copy_domains(left)
         return new_mul
 
-    if isinstance(left, Multiplication) and right.is_constant():
+    elif isinstance(left, Multiplication) and right.is_constant():
         # Simplify (a * b) * c to (a * c) * b if (a * c) is constant
         if left.left.is_constant():
             l_left, l_right = left.orphans
@@ -981,7 +968,22 @@ def simplified_multiplication(left, right):
             new_right = right / l_right
             return l_left * new_right
 
-    if isinstance(right, Multiplication) and left.is_constant():
+    # Simplify a * (B @ c) to (a * B) @ c if (a * B) is constant
+    if (
+        isinstance(right, MatrixMultiplication)
+        and left.is_constant()
+        and right.left.is_constant()
+    ):
+        r_left, r_right = right.orphans
+        new_left = left * r_left
+        # be careful about domains to avoid weird errors
+        new_left.clear_domains()
+        new_mul = new_left @ r_right
+        # Keep the domain of the old right
+        new_mul.copy_domains(right)
+        return new_mul
+
+    elif isinstance(right, Multiplication) and left.is_constant():
         # Simplify a * (b * c) to (a * b) * c if (a * b) is constant
         if right.left.is_constant():
             r_left, r_right = right.orphans

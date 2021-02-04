@@ -79,7 +79,7 @@ class CMakeBuild(build_ext):
                 "cmake configuration steps encountered errors, and the idaklu module"
                 " could not be built. Make sure dependencies are correctly "
                 "installed. See "
-                "https://github.com/pybamm-team/PyBaMM/blob/develop/"
+                "https://github.com/pybamm-team/PyBaMM/tree/develop"
                 "INSTALL-LINUX-MAC.md"
             )
             raise RuntimeError(msg)

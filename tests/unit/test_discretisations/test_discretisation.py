@@ -392,10 +392,10 @@ class TestDiscretise(unittest.TestCase):
         self.assertIsInstance(func_disc, pybamm.Function)
         self.assertIsInstance(func_disc.children[0], pybamm.StateVector)
 
+        # function of a scalar gets simplified
         func = pybamm.Function(myfun, scal)
         func_disc = disc.process_symbol(func)
-        self.assertIsInstance(func_disc, pybamm.Function)
-        self.assertIsInstance(func_disc.children[0], pybamm.Scalar)
+        self.assertIsInstance(func_disc, pybamm.Scalar)
 
         # function of multiple variables
         def myfun(x, y):

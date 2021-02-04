@@ -153,6 +153,11 @@ class Symbol(anytree.NodeMixin):
         if children is None:
             children = []
 
+        # Store "orphans", which are separate from children as they do not have a
+        # parent node, so they do not cause tree corruption errors when used again
+        # in a different part of the tree
+        self._orphans = children
+
         for child in children:
             # copy child before adding
             # this also adds copy.copy(child) to self.children
@@ -166,6 +171,8 @@ class Symbol(anytree.NodeMixin):
         self.auxiliary_domains = auxiliary_domains
         # Set domain (and hence id)
         self.domain = domain
+
+        self._saved_evaluates_on_edges = {}
 
         # Test shape on everything but nodes that contain the base Symbol class or
         # the base BinaryOperator class
@@ -327,7 +334,7 @@ class Symbol(anytree.NodeMixin):
         Returning new copies of the children, with parents removed to avoid corrupting
         the expression tree internal data
         """
-        return tuple([child.new_copy() for child in self.children])
+        return self._orphans
 
     def render(self):  # pragma: no cover
         """print out a visual representation of the tree (this node and its
@@ -744,6 +751,7 @@ class Symbol(anytree.NodeMixin):
         """
         Returns True if a symbol evaluates on an edge, i.e. symbol contains a gradient
         operator, but not a divergence operator, and is not an IndefiniteIntegral.
+        Caches the solution for faster results
 
         Parameters
         ----------
@@ -757,6 +765,14 @@ class Symbol(anytree.NodeMixin):
             Whether the symbol evaluates on edges (in the finite volume discretisation
             sense)
         """
+        try:
+            return self._saved_evaluates_on_edges[dimension]
+        except KeyError:
+            eval_on_edges = self._evaluates_on_edges(dimension)
+            self._saved_evaluates_on_edges[dimension] = eval_on_edges
+            return eval_on_edges
+
+    def _evaluates_on_edges(self, dimension):
         # Default behaviour: return False
         return False
 

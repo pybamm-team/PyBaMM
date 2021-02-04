@@ -10,7 +10,7 @@ In particular, start by creating an issue to discuss what you want to do - this 
 The role of parameter values
 ----------------------------
 
-All models in PyBaMM are implemented as `expression trees <https://github.com/pybamm-team/PyBaMM/blob/master/examples/notebooks/expression-tree.ipynb>`_.
+All models in PyBaMM are implemented as `expression trees <https://github.com/pybamm-team/PyBaMM/blob/develop/examples/notebooks/expression_tree/expression-tree.ipynb>`_.
 At the stage of creating a model, we use :class:`pybamm.Parameter` and :class:`pybamm.FunctionParameter` objects to represent parameters and functions respectively.
 
 We then create a :class:`ParameterValues` class, using a specific set of parameters, to iterate through the model and replace any :class:`pybamm.Parameter` objects with a :class:`pybamm.Scalar` and any :class:`pybamm.FunctionParameter` objects with a :class:`pybamm.Function`.
@@ -154,13 +154,13 @@ or, equivalently in this case (since the only difference from the standard param
         }
     )
 
-See the `"Getting Started" tutorial <https://github.com/pybamm-team/PyBaMM/blob/master/examples/notebooks/Getting%20Started/Tutorial%202%20-%20Setting%20Parameter%20Values.ipynb>`_ for examples of setting parameters in action.
+See the `"Getting Started" tutorial <https://github.com/pybamm-team/PyBaMM/blob/develop/examples/notebooks/Getting%20Started/Tutorial%204%20-%20Setting%20parameter%20values.ipynb>`_ for examples of setting parameters in action.
 
 Unit tests for the new class
 ----------------------------
 
 You might want to add some unit tests to show that the parameters combine as expected
-(see e.g. `lithium-ion parameter tests <https://github.com/pybamm-team/PyBaMM/blob/master/tests/unit/test_parameters/test_dimensionless_parameter_values_lithium_ion.py>`_), but this is not crucial.
+(see e.g. `lithium-ion parameter tests <https://github.com/pybamm-team/PyBaMM/blob/develop/tests/unit/test_parameters/test_lithium_ion_parameters.py>`_), but this is not crucial.
 
 Test on the models
 ------------------
