@@ -470,7 +470,7 @@ class Symbol(anytree.NodeMixin):
         if len(set(values)) != len(values):
             raise pybamm.DomainError("All auxiliary domains must be different")
 
-        self._auxiliary_domains = auxiliary_domains
+        self._auxiliary_domains = auxiliary_domains.copy()
         self._domains.update(auxiliary_domains)
 
     @property
@@ -480,7 +480,7 @@ class Symbol(anytree.NodeMixin):
 
     def copy_domains(self, symbol):
         "Copy the domains from a given symbol, bypassing checks"
-        self._domains = symbol.domains
+        self._domains = symbol.domains.copy()
         self._domain = self._domains["primary"]
         self._auxiliary_domains = {
             k: v for k, v in self._domains.items() if k != "primary"

@@ -999,6 +999,34 @@ class Downwind(UpwindDownwind):
         super().__init__("downwind", child)
 
 
+class NotConstant(UnaryOperator):
+    """Special class to wrap a symbol that should not be treated as a constant"""
+
+    def __init__(self, child):
+        super().__init__("not_constant", child)
+
+    def _unary_new_copy(self, child):
+        """ See :meth:`pybamm.Symbol.new_copy()`. """
+        return NotConstant(child)
+
+    def _diff(self, variable):
+        """ See :meth:`pybamm.Symbol._diff()`. """
+        return self.child.diff(variable)
+
+    def _unary_jac(self, child_jac):
+        """ See :meth:`pybamm.UnaryOperator._unary_jac()`. """
+        return child_jac
+
+    def _unary_evaluate(self, child):
+        """ See :meth:`UnaryOperator._unary_evaluate()`. """
+        return child
+
+    def is_constant(self):
+        """ See :meth:`pybamm.Symbol.is_constant()`. """
+        # This symbol is not constant
+        return False
+
+
 #
 # Methods to call Gradient, Divergence, Laplacian and Gradient_Squared
 #
