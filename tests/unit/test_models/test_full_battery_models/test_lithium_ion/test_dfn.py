@@ -219,7 +219,7 @@ class TestDFNWithCrack(unittest.TestCase):
         model.check_well_posedness()
 
 
-class TestSPMeWithPlating(unittest.TestCase):
+class TestDFNWithPlating(unittest.TestCase):
     def test_well_posed_none_plating(self):
         options = {"lithium plating": "none"}
         model = pybamm.lithium_ion.DFN(options)
