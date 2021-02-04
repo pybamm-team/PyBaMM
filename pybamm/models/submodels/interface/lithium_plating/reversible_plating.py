@@ -31,7 +31,7 @@ class ReversiblePlating(BasePlating):
 
     def get_fundamental_variables(self):
         c_plated_Li = pybamm.Variable(
-            "Plated lithium concentration",
+            f"{self.domain.capitalize()} electrode lithium plating concentration",
             domain=self.domain.lower() + " electrode",
             auxiliary_domains={"secondary": "current collector"},
         )
