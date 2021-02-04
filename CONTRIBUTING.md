@@ -48,7 +48,7 @@ Finally, if you really, really, _really_ love developing PyBaMM, have a look at 
 
 To install PyBaMM with all developer options you can follow any one of the two steps described below:
 
-### 1. Using a virtual environment
+### 1. Using tox
 1. Install virtual environment using the command below:
 ```bash
 pip install virtualenv
@@ -60,6 +60,7 @@ pip install tox # (Using this, you will need to additionally install tox in your
 pipx install tox # (Using this, tox can automatically be accessed in your virtaul environment)
 ```
 3. Installing PyBaMM
+
 This can be acieved by forking the repository and cloning it in your machine.
 4. Navigate to the clonned repository and create a virtual environment using the commands below:
 ```bash
@@ -70,9 +71,9 @@ python -m tox -e windows-dev # (Windows)
 
 This will
 
-1. Create a virtual environment located at `.tox/dev`.
-2. Install all the dependencies for PyBaMM, including the ones for documentation and development.
-3. Tell Python to use your local pybamm files when you use `import pybamm` anywhere on your system.
+a. Create a virtual environment located at `.tox/dev`.
+b. Install all the dependencies for PyBaMM, including the ones for documentation and development.
+c. Tell Python to use your local pybamm files when you use `import pybamm` anywhere on your system.
 
 5. Finally, activate your environment.
 
@@ -80,12 +81,34 @@ This will
 ```bash
 source .tox/dev/bin/activate # (GNU/Linux and MacOS)
 #
-.tox\dev\Scripts\activate.bat # (Windows)
+.tox\windows-dev\Scripts\activate.bat # (Windows)
 ```
 6. Inside the virtual environment, type:
 ```bash
 pip install tox # (Skip this step if you used pipx above)
 ```
+
+### 2. Without using tox
+1. Install virtual environment using the command below:
+```bash
+pip install virtualenv
+```
+2. Create a virtual environment `env` within your current directory using the command below:
+```bash
+python -m venv env 
+# (You can then “activate” the environment using the command below)
+env\Scripts\activate.bat
+# (This whole step can be ignored if you don't want a virtual environment)
+```
+
+2. Installing PyBaMM
+
+This can be acieved by forking the repository and cloning it in your machine.
+Or type:
+```bash
+pip install pybamm
+```
+
 
 Full documentation with an installation guide can be found [here](https://pybamm.readthedocs.io/en/latest/)
 
