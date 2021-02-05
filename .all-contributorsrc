@@ -323,6 +323,15 @@
       "contributions": [
         "bug"
       ]
+    },
+    {
+      "login": "maurosgroi",
+      "name": "maurosgroi",
+      "avatar_url": "https://avatars.githubusercontent.com/u/37576773?v=4",
+      "profile": "https://github.com/maurosgroi",
+      "contributions": [
+        "ideas"
+      ]
     }
   ],
   "contributorsPerLine": 7,
