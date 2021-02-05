@@ -715,10 +715,7 @@ def block_diag(lst):
             return Ai
         else:
             return onp.zeros(
-                (
-                    Ai.shape[0] if Ai.ndim > 1 else 1,
-                    Aj.shape[1] if Aj.ndim > 1 else 1,
-                ),
+                (Ai.shape[0] if Ai.ndim > 1 else 1, Aj.shape[1] if Aj.ndim > 1 else 1,),
                 dtype=Ai.dtype,
             )
 

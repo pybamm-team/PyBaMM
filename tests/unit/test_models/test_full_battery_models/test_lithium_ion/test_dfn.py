@@ -109,7 +109,33 @@ class TestDFN(unittest.TestCase):
         model.check_well_posedness()
 
     def test_loss_active_material(self):
-        options = {"loss of active material": "example"}
+        options = {
+            "loss of active material": "none",
+        }
+        model = pybamm.lithium_ion.DFN(options)
+        model.check_well_posedness()
+
+    def test_loss_active_material_negative(self):
+        options = {
+            "particle cracking": "no cracking",
+            "loss of active material": "negative",
+        }
+        model = pybamm.lithium_ion.DFN(options)
+        model.check_well_posedness()
+
+    def test_loss_active_material_positive(self):
+        options = {
+            "particle cracking": "no cracking",
+            "loss of active material": "positive",
+        }
+        model = pybamm.lithium_ion.DFN(options)
+        model.check_well_posedness()
+
+    def test_loss_active_material_both(self):
+        options = {
+            "particle cracking": "no cracking",
+            "loss of active material": "both",
+        }
         model = pybamm.lithium_ion.DFN(options)
         model.check_well_posedness()
 
@@ -177,18 +203,35 @@ class TestDFNWithCrack(unittest.TestCase):
         model = pybamm.lithium_ion.DFN(options)
         model.check_well_posedness()
 
-    def test_well_posed_anode_cracking(self):
-        options = {"particle": "Fickian diffusion", "particle cracking": "anode"}
+    def test_well_posed_negative_cracking(self):
+        options = {"particle": "Fickian diffusion", "particle cracking": "negative"}
         model = pybamm.lithium_ion.DFN(options)
         model.check_well_posedness()
 
-    def test_well_posed_cathode_cracking(self):
-        options = {"particle": "Fickian diffusion", "particle cracking": "cathode"}
+    def test_well_posed_positive_cracking(self):
+        options = {"particle": "Fickian diffusion", "particle cracking": "positive"}
         model = pybamm.lithium_ion.DFN(options)
         model.check_well_posedness()
 
     def test_well_posed_both_cracking(self):
         options = {"particle": "Fickian diffusion", "particle cracking": "both"}
+        model = pybamm.lithium_ion.DFN(options)
+        model.check_well_posedness()
+
+
+class TestDFNWithPlating(unittest.TestCase):
+    def test_well_posed_none_plating(self):
+        options = {"lithium plating": "none"}
+        model = pybamm.lithium_ion.DFN(options)
+        model.check_well_posedness()
+
+    def test_well_posed_reversible_plating(self):
+        options = {"lithium plating": "reversible"}
+        model = pybamm.lithium_ion.DFN(options)
+        model.check_well_posedness()
+
+    def test_well_posed_irreversible_plating(self):
+        options = {"lithium plating": "irreversible"}
         model = pybamm.lithium_ion.DFN(options)
         model.check_well_posedness()
 

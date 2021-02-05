@@ -39,48 +39,41 @@ class ProcessedVariable(object):
         variable. Note that this can be any kind of node in the expression tree, not
         just a :class:`pybamm.Variable`.
         When evaluated, returns an array of size (m,n)
+    base_variable_casadi : :class:`casadi.Function`
+        A casadi function. When evaluated, returns the same thing as
+        `base_Variable.evaluate` (but more efficiently).
     solution : :class:`pybamm.Solution`
         The solution object to be used to create the processed variables
-    known_evals : dict
-        Dictionary of known evaluations, to be used to speed up finding the solution
     warn : bool, optional
         Whether to raise warnings when trying to evaluate time and length scales.
         Default is True.
     """
 
-    def __init__(self, base_variable, solution, known_evals=None, warn=True):
+    def __init__(self, base_variable, base_variable_casadi, solution, warn=True):
         self.base_variable = base_variable
-        self.t_sol = solution.t
-        self.u_sol = solution.y
+        self.base_variable_casadi = base_variable_casadi
+
+        self.all_ts = solution.all_ts
+        self.all_ys = solution.all_ys
+        self.all_inputs_casadi = solution.all_inputs_casadi
+
         self.mesh = base_variable.mesh
-        self.inputs = solution.inputs
         self.domain = base_variable.domain
         self.auxiliary_domains = base_variable.auxiliary_domains
-        self.known_evals = known_evals
         self.warn = warn
 
         # Set timescale
         self.timescale = solution.timescale_eval
-        self.t_pts = self.t_sol * self.timescale
+        self.t_pts = solution.t * self.timescale
 
         # Store length scales
         if solution.model:
             self.length_scales = solution.length_scales_eval
 
         # Evaluate base variable at initial time
-        if self.known_evals:
-            self.base_eval, self.known_evals[solution.t[0]] = base_variable.evaluate(
-                solution.t[0],
-                solution.y[:, 0],
-                inputs={name: inp[:, 0] for name, inp in solution.inputs.items()},
-                known_evals=self.known_evals[solution.t[0]],
-            )
-        else:
-            self.base_eval = base_variable.evaluate(
-                solution.t[0],
-                solution.y[:, 0],
-                inputs={name: inp[:, 0] for name, inp in solution.inputs.items()},
-            )
+        self.base_eval = self.base_variable_casadi(
+            self.all_ts[0][0], self.all_ys[0][:, 0], self.all_inputs_casadi[0]
+        ).full()
 
         # handle 2D (in space) finite element variables differently
         if (
@@ -123,21 +116,18 @@ class ProcessedVariable(object):
 
     def initialise_0D(self):
         # initialise empty array of the correct size
-        entries = np.empty(len(self.t_sol))
+        entries = np.empty(len(self.t_pts))
+        idx = 0
         # Evaluate the base_variable index-by-index
-        for idx in range(len(self.t_sol)):
-            t = self.t_sol[idx]
-            u = self.u_sol[:, idx]
-            inputs = {name: inp[:, idx] for name, inp in self.inputs.items()}
-            if self.known_evals:
-                entries[idx], self.known_evals[t] = self.base_variable.evaluate(
-                    t, u, inputs=inputs, known_evals=self.known_evals[t]
-                )
-            else:
-                entries[idx] = self.base_variable.evaluate(t, u, inputs=inputs)
+        for ts, ys, inputs in zip(self.all_ts, self.all_ys, self.all_inputs_casadi):
+            for inner_idx, t in enumerate(ts):
+                t = ts[inner_idx]
+                y = ys[:, inner_idx]
+                entries[idx] = self.base_variable_casadi(t, y, inputs).full()[0, 0]
+                idx += 1
 
         # set up interpolation
-        if len(self.t_sol) == 1:
+        if len(self.t_pts) == 1:
             # Variable is just a scalar value, but we need to create a callable
             # function to be consitent with other processed variables
             def fun(t):
@@ -158,21 +148,16 @@ class ProcessedVariable(object):
 
     def initialise_1D(self, fixed_t=False):
         len_space = self.base_eval.shape[0]
-        entries = np.empty((len_space, len(self.t_sol)))
+        entries = np.empty((len_space, len(self.t_pts)))
 
         # Evaluate the base_variable index-by-index
-        for idx in range(len(self.t_sol)):
-            t = self.t_sol[idx]
-            u = self.u_sol[:, idx]
-            inputs = {name: inp[:, idx] for name, inp in self.inputs.items()}
-            if self.known_evals:
-                eval_and_known_evals = self.base_variable.evaluate(
-                    t, u, inputs=inputs, known_evals=self.known_evals[t]
-                )
-                entries[:, idx] = eval_and_known_evals[0][:, 0]
-                self.known_evals[t] = eval_and_known_evals[1]
-            else:
-                entries[:, idx] = self.base_variable.evaluate(t, u, inputs=inputs)[:, 0]
+        idx = 0
+        for ts, ys, inputs in zip(self.all_ts, self.all_ys, self.all_inputs_casadi):
+            for inner_idx, t in enumerate(ts):
+                t = ts[inner_idx]
+                y = ys[:, inner_idx]
+                entries[:, idx] = self.base_variable_casadi(t, y, inputs).full()[:, 0]
+                idx += 1
 
         # Get node and edge values
         nodes = self.mesh.nodes
@@ -223,7 +208,7 @@ class ProcessedVariable(object):
         self.first_dim_pts = edges * length_scale
 
         # set up interpolation
-        if len(self.t_sol) == 1:
+        if len(self.t_pts) == 1:
             # function of space only
             interpolant = interp.interp1d(
                 pts_for_interp,
@@ -268,29 +253,20 @@ class ProcessedVariable(object):
         second_dim_pts = second_dim_nodes
         first_dim_size = len(first_dim_pts)
         second_dim_size = len(second_dim_pts)
-        entries = np.empty((first_dim_size, second_dim_size, len(self.t_sol)))
+        entries = np.empty((first_dim_size, second_dim_size, len(self.t_pts)))
 
         # Evaluate the base_variable index-by-index
-        for idx in range(len(self.t_sol)):
-            t = self.t_sol[idx]
-            u = self.u_sol[:, idx]
-            inputs = {name: inp[:, idx] for name, inp in self.inputs.items()}
-            if self.known_evals:
-                eval_and_known_evals = self.base_variable.evaluate(
-                    t, u, inputs=inputs, known_evals=self.known_evals[t]
-                )
+        idx = 0
+        for ts, ys, inputs in zip(self.all_ts, self.all_ys, self.all_inputs_casadi):
+            for inner_idx, t in enumerate(ts):
+                t = ts[inner_idx]
+                y = ys[:, inner_idx]
                 entries[:, :, idx] = np.reshape(
-                    eval_and_known_evals[0],
+                    self.base_variable_casadi(t, y, inputs).full(),
                     [first_dim_size, second_dim_size],
                     order="F",
                 )
-                self.known_evals[t] = eval_and_known_evals[1]
-            else:
-                entries[:, :, idx] = np.reshape(
-                    self.base_variable.evaluate(t, u, inputs=inputs),
-                    [first_dim_size, second_dim_size],
-                    order="F",
-                )
+                idx += 1
 
         # add points outside first dimension domain for extrapolation to
         # boundaries
@@ -390,7 +366,7 @@ class ProcessedVariable(object):
         self.second_dim_pts = second_dim_edges * second_length_scale
 
         # set up interpolation
-        if len(self.t_sol) == 1:
+        if len(self.t_pts) == 1:
             # function of space only. Note the order of the points is the reverse
             # of what you'd expect
             interpolant = interp.interp2d(
@@ -421,28 +397,20 @@ class ProcessedVariable(object):
         len_y = len(y_sol)
         z_sol = self.mesh.edges["z"]
         len_z = len(z_sol)
-        entries = np.empty((len_y, len_z, len(self.t_sol)))
+        entries = np.empty((len_y, len_z, len(self.t_pts)))
 
         # Evaluate the base_variable index-by-index
-        for idx in range(len(self.t_sol)):
-            t = self.t_sol[idx]
-            u = self.u_sol[:, idx]
-            inputs = {name: inp[:, idx] for name, inp in self.inputs.items()}
-
-            if self.known_evals:
-                eval_and_known_evals = self.base_variable.evaluate(
-                    t, u, inputs=inputs, known_evals=self.known_evals[t]
-                )
+        idx = 0
+        for ts, ys, inputs in zip(self.all_ts, self.all_ys, self.all_inputs_casadi):
+            for inner_idx, t in enumerate(ts):
+                t = ts[inner_idx]
+                y = ys[:, inner_idx]
                 entries[:, :, idx] = np.reshape(
-                    eval_and_known_evals[0], [len_y, len_z], order="F"
-                )
-                self.known_evals[t] = eval_and_known_evals[1]
-            else:
-                entries[:, :, idx] = np.reshape(
-                    self.base_variable.evaluate(t, u, inputs=inputs),
+                    self.base_variable_casadi(t, y, inputs).full(),
                     [len_y, len_z],
                     order="F",
                 )
+                idx += 1
 
         # assign attributes for reference
         self.entries = entries
@@ -455,7 +423,7 @@ class ProcessedVariable(object):
         self.second_dim_pts = z_sol * self.get_spatial_scale("z", "current collector")
 
         # set up interpolation
-        if len(self.t_sol) == 1:
+        if len(self.t_pts) == 1:
             # function of space only. Note the order of the points is the reverse
             # of what you'd expect
             interpolant = interp.interp2d(
@@ -544,7 +512,7 @@ class ProcessedVariable(object):
             else:
                 return self.length_scales[domain]
         except KeyError:
-            if self.warn:
+            if self.warn:  # pragma: no cover
                 pybamm.logger.warning(
                     "No length scale set for {}. "
                     "Using default of 1 [m].".format(domain)

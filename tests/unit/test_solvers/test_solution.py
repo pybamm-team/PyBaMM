@@ -13,64 +13,107 @@ class TestSolution(unittest.TestCase):
     def test_init(self):
         t = np.linspace(0, 1)
         y = np.tile(t, (20, 1))
-        sol = pybamm.Solution(t, y)
+        sol = pybamm.Solution(t, y, pybamm.BaseModel(), {})
         np.testing.assert_array_equal(sol.t, t)
         np.testing.assert_array_equal(sol.y, y)
         self.assertEqual(sol.t_event, None)
         self.assertEqual(sol.y_event, None)
         self.assertEqual(sol.termination, "final time")
-        self.assertEqual(sol.inputs, {})
+        self.assertEqual(sol.all_inputs, [{}])
         self.assertIsInstance(sol.model, pybamm.BaseModel)
 
-        with self.assertRaisesRegex(AttributeError, "sub solutions"):
-            print(sol.sub_solutions)
+    def test_errors(self):
+        bad_ts = [np.array([1, 2, 3]), np.array([3, 4, 5])]
+        sol = pybamm.Solution(
+            bad_ts, [np.ones((1, 3)), np.ones((1, 3))], pybamm.BaseModel(), {}
+        )
+        with self.assertRaisesRegex(
+            ValueError, "Solution time vector must be strictly increasing"
+        ):
+            sol.set_t()
 
-    def test_append(self):
+    def test_add_solutions(self):
         # Set up first solution
         t1 = np.linspace(0, 1)
         y1 = np.tile(t1, (20, 1))
-        sol1 = pybamm.Solution(t1, y1)
+        sol1 = pybamm.Solution(t1, y1, pybamm.BaseModel(), {"a": 1})
         sol1.solve_time = 1.5
         sol1.integration_time = 0.3
-        sol1.model = pybamm.BaseModel()
-        sol1.inputs = {"a": 1}
 
         # Set up second solution
         t2 = np.linspace(1, 2)
         y2 = np.tile(t2, (20, 1))
-        sol2 = pybamm.Solution(t2, y2)
+        sol2 = pybamm.Solution(t2, y2, pybamm.BaseModel(), {"a": 2})
         sol2.solve_time = 1
         sol2.integration_time = 0.5
-        sol2.inputs = {"a": 2}
-        sol1.append(sol2, create_sub_solutions=True)
+        sol_sum = sol1 + sol2
 
         # Test
-        self.assertEqual(sol1.solve_time, 2.5)
-        self.assertEqual(sol1.integration_time, 0.8)
-        np.testing.assert_array_equal(sol1.t, np.concatenate([t1, t2[1:]]))
-        np.testing.assert_array_equal(sol1.y, np.concatenate([y1, y2[:, 1:]], axis=1))
+        self.assertEqual(sol_sum.solve_time, 2.5)
+        self.assertEqual(sol_sum.integration_time, 0.8)
+        np.testing.assert_array_equal(sol_sum.t, np.concatenate([t1, t2[1:]]))
         np.testing.assert_array_equal(
-            sol1.inputs["a"],
-            np.concatenate([1 * np.ones_like(t1), 2 * np.ones_like(t2[1:])])[
-                np.newaxis, :
-            ],
+            sol_sum.y, np.concatenate([y1, y2[:, 1:]], axis=1)
         )
+        np.testing.assert_array_equal(sol_sum.all_inputs, [{"a": 1}, {"a": 2}])
 
         # Test sub-solutions
-        self.assertEqual(len(sol1.sub_solutions), 2)
-        np.testing.assert_array_equal(sol1.sub_solutions[0].t, t1)
-        np.testing.assert_array_equal(sol1.sub_solutions[1].t, t2)
-        self.assertEqual(sol1.sub_solutions[0].model, sol1.model)
-        np.testing.assert_array_equal(
-            sol1.sub_solutions[0].inputs["a"], 1 * np.ones_like(t1)[np.newaxis, :]
+        self.assertEqual(len(sol_sum.sub_solutions), 2)
+        np.testing.assert_array_equal(sol_sum.sub_solutions[0].t, t1)
+        np.testing.assert_array_equal(sol_sum.sub_solutions[1].t, t2)
+        self.assertEqual(sol_sum.sub_solutions[0].model, sol_sum.model)
+        np.testing.assert_array_equal(sol_sum.sub_solutions[0].all_inputs[0]["a"], 1)
+        self.assertEqual(sol_sum.sub_solutions[1].model, sol2.model)
+        np.testing.assert_array_equal(sol_sum.sub_solutions[1].all_inputs[0]["a"], 2)
+
+        # Add solution already contained in existing solution
+        t3 = np.array([2])
+        y3 = np.ones((20, 1))
+        sol3 = pybamm.Solution(t3, y3, pybamm.BaseModel(), {"a": 3})
+        self.assertEqual((sol_sum + sol3).all_ts, sol_sum.copy().all_ts)
+
+    def test_copy(self):
+        # Set up first solution
+        t1 = [np.linspace(0, 1), np.linspace(1, 2, 5)]
+        y1 = [np.tile(t1[0], (20, 1)), np.tile(t1[1], (20, 1))]
+        sol1 = pybamm.Solution(t1, y1, pybamm.BaseModel(), [{"a": 1}, {"a": 2}])
+
+        sol1.set_up_time = 0.5
+        sol1.solve_time = 1.5
+        sol1.integration_time = 0.3
+
+        sol_copy = sol1.copy()
+        self.assertEqual(sol_copy.all_ts, sol1.all_ts)
+        self.assertEqual(sol_copy.all_ys, sol1.all_ys)
+        self.assertEqual(sol_copy.all_inputs, sol1.all_inputs)
+        self.assertEqual(sol_copy.all_inputs_casadi, sol1.all_inputs_casadi)
+        self.assertEqual(sol_copy.set_up_time, sol1.set_up_time)
+        self.assertEqual(sol_copy.solve_time, sol1.solve_time)
+        self.assertEqual(sol_copy.integration_time, sol1.integration_time)
+
+    def test_cycles(self):
+        model = pybamm.lithium_ion.SPM()
+        experiment = pybamm.Experiment(
+            [
+                ("Discharge at C/20 for 0.5 hours", "Charge at C/20 for 15 minutes"),
+                ("Discharge at C/20 for 0.5 hours", "Charge at C/20 for 15 minutes"),
+            ]
         )
-        self.assertEqual(sol1.sub_solutions[1].model, sol2.model)
-        np.testing.assert_array_equal(
-            sol1.sub_solutions[1].inputs["a"], 2 * np.ones_like(t2)[np.newaxis, :]
-        )
+        sim = pybamm.Simulation(model, experiment=experiment)
+        sol = sim.solve()
+        self.assertEqual(len(sol.cycles), 2)
+        len_cycle_1 = len(sol.cycles[0].t)
+
+        self.assertIsInstance(sol.cycles[0], pybamm.Solution)
+        np.testing.assert_array_equal(sol.cycles[0].t, sol.t[:len_cycle_1])
+        np.testing.assert_array_equal(sol.cycles[0].y, sol.y[:, :len_cycle_1])
+
+        self.assertIsInstance(sol.cycles[1], pybamm.Solution)
+        np.testing.assert_array_equal(sol.cycles[1].t, sol.t[len_cycle_1:])
+        np.testing.assert_array_equal(sol.cycles[1].y, sol.y[:, len_cycle_1:])
 
     def test_total_time(self):
-        sol = pybamm.Solution([], None)
+        sol = pybamm.Solution(np.array([0]), np.array([[1, 2]]), pybamm.BaseModel(), {})
         sol.set_up_time = 0.5
         sol.solve_time = 1.2
         self.assertEqual(sol.total_time, 1.7)

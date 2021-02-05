@@ -36,7 +36,7 @@ class BasicDFNHalfCell(BaseModel):
 
     def __init__(self, name="Doyle-Fuller-Newman half cell model", options=None):
         super().__init__({}, name)
-        pybamm.citations.register("marquis2019asymptotic")
+        pybamm.citations.register("Marquis2019")
         # `param` is a class containing all the relevant parameters and functions for
         # this model. These are purely symbolic at this stage, and will be set by the
         # `ParameterValues` class when the model is processed.
@@ -62,7 +62,7 @@ class BasicDFNHalfCell(BaseModel):
             "working electrode": param.L_x,
             "separator": param.L_x,
             "working particle": R_w_typ,
-            "current collector y": param.L_y,
+            "current collector y": param.L_z,
             "current collector z": param.L_z,
         }
 
@@ -222,7 +222,7 @@ class BasicDFNHalfCell(BaseModel):
         # derivatives
         self.boundary_conditions[c_s_w] = {
             "left": (pybamm.Scalar(0), "Neumann"),
-            "right": (-C_w * j_w / a_R_w / gamma_w / D_w(c_s_surf_w, T), "Neumann",),
+            "right": (-C_w * j_w / a_R_w / gamma_w / D_w(c_s_surf_w, T), "Neumann"),
         }
 
         # c_w_init can in general be a function of x
@@ -249,10 +249,7 @@ class BasicDFNHalfCell(BaseModel):
         i_s_w = -sigma_eff_w * pybamm.grad(phi_s_w)
         self.boundary_conditions[phi_s_w] = {
             "left": (pybamm.Scalar(0), "Neumann"),
-            "right": (
-                i_cell / pybamm.boundary_value(-sigma_eff_w, "right"),
-                "Neumann",
-            ),
+            "right": (i_cell / pybamm.boundary_value(-sigma_eff_w, "right"), "Neumann"),
         }
         self.algebraic[phi_s_w] = pybamm.div(i_s_w) + j_w
         # Initial conditions must also be provided for algebraic equations, as an
@@ -265,10 +262,11 @@ class BasicDFNHalfCell(BaseModel):
         ######################
         N_e = -tor * param.D_e(c_e, T) * pybamm.grad(c_e)
         self.rhs[c_e] = (1 / eps) * (
-            -pybamm.div(N_e) / param.C_e + (1 - param.t_plus(c_e)) * j / param.gamma_e
+            -pybamm.div(N_e) / param.C_e
+            + (1 - param.t_plus(c_e, T)) * j / param.gamma_e
         )
         dce_dx = (
-            -(1 - param.t_plus(c_e))
+            -(1 - param.t_plus(c_e, T))
             * i_cell
             * param.C_e
             / (tor * param.gamma_e * param.D_e(c_e, T))

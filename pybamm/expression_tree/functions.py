@@ -178,8 +178,8 @@ class Function(pybamm.Symbol):
             ]
             return self._function_evaluate(evaluated_children)
 
-    def evaluates_on_edges(self, dimension):
-        """ See :meth:`pybamm.Symbol.evaluates_on_edges()`. """
+    def _evaluates_on_edges(self, dimension):
+        """ See :meth:`pybamm.Symbol._evaluates_on_edges()`. """
         return any(child.evaluates_on_edges(dimension) for child in self.children)
 
     def is_constant(self):
@@ -215,12 +215,15 @@ class Function(pybamm.Symbol):
             : :pybamm.Function
             A new copy of the function
         """
-        return pybamm.Function(
-            self.function,
-            *children,
-            name=self.name,
-            derivative=self.derivative,
-            differentiated_function=self.differentiated_function
+        return pybamm.simplify_if_constant(
+            pybamm.Function(
+                self.function,
+                *children,
+                name=self.name,
+                derivative=self.derivative,
+                differentiated_function=self.differentiated_function
+            ),
+            clear_domains=False,
         )
 
     def _function_simplify(self, simplified_children):

@@ -225,7 +225,7 @@ class LeadAcidParameters:
         self.R_sei_dimensional = pybamm.Scalar(0)
         self.beta_sei_n = pybamm.Scalar(0)
 
-    def t_plus(self, c_e):
+    def t_plus(self, c_e, T):
         "Dimensionless transference number (i.e. c_e is dimensionless)"
         inputs = {"Electrolyte concentration [mol.m-3]": c_e * self.c_e_typ}
         return pybamm.FunctionParameter("Cation transference number", inputs)
@@ -440,7 +440,7 @@ class LeadAcidParameters:
             self.c_e_typ
             * self.M_e
             / self.rho_typ
-            * (self.t_plus(1) + self.M_minus / self.M_e)
+            * (self.t_plus(1, self.T_ref) + self.M_minus / self.M_e)
         )
         # Migrative kinematic relationship coefficient (electrolyte)
         self.omega_c_e = (
@@ -617,21 +617,12 @@ class LeadAcidParameters:
         self.rho_s = self.therm.rho_s
         self.rho_p = self.therm.rho_p
         self.rho_cp = self.therm.rho_cp
-        self.rho_k = self.therm.rho_k
-        self.rho = (
-            self.rho_cn * self.l_cn
-            + self.rho_n * self.l_n
-            + self.rho_s * self.l_s
-            + self.rho_p * self.l_p
-            + self.rho_cp * self.l_cp
-        ) / self.l  # effective volumetric heat capacity
 
         self.lambda_cn = self.therm.lambda_cn
         self.lambda_n = self.therm.lambda_n
         self.lambda_s = self.therm.lambda_s
         self.lambda_p = self.therm.lambda_p
         self.lambda_cp = self.therm.lambda_cp
-        self.lambda_k = self.therm.lambda_k
 
         self.Theta = self.therm.Theta
 
@@ -647,7 +638,7 @@ class LeadAcidParameters:
             * self.R
             * self.T_ref
             * self.tau_th_yz
-            / (self.therm.rho_eff_dim * self.F * self.Delta_T * self.L_x)
+            / (self.therm.rho_eff_dim(self.T_ref) * self.F * self.Delta_T * self.L_x)
         )
 
         self.T_amb_dim = self.therm.T_amb_dim
@@ -700,7 +691,7 @@ class LeadAcidParameters:
         "Thermodynamic factor"
         return (
             self.chi_dimensional(self.c_e_typ * c_e)
-            * (2 * (1 - self.t_plus(c_e)))
+            * (2 * (1 - self.t_plus(c_e, T)))
             / (
                 self.V_w
                 * self.c_T(self.c_e_typ * c_e, self.c_e_typ * c_ox, self.c_e_typ * c_hy)
@@ -770,6 +761,16 @@ class LeadAcidParameters:
         """
         x_dim = x * self.L_x
         return self.a_p_dimensional(x_dim) / self.a_p_typ
+
+    def rho(self, T):
+        "Dimensionless effective volumetric heat capacity"
+        return (
+            self.rho_cn(T) * self.l_cn
+            + self.rho_n(T) * self.l_n
+            + self.rho_s(T) * self.l_s
+            + self.rho_p(T) * self.l_p
+            + self.rho_cp(T) * self.l_cp
+        ) / self.l
 
     def _set_input_current(self):
         "Set the input current"

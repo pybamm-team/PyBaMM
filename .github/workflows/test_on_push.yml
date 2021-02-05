@@ -69,23 +69,23 @@ jobs:
         python -m pip install tox
 
     - name: Install SuiteSparse and Sundials
-      if: matrix.os != 'windows-latest'
+      if: matrix.os == 'ubuntu-latest'
       run: tox -e pybamm-requires
 
-    - name: Run unit tests for GNU/Linux and MacOS
-      if: matrix.os != 'windows-latest'
-      run: python -m tox -e tests-julia-scikits.odes
+    - name: Run unit tests for GNU/Linux
+      if: matrix.os == 'ubuntu-latest'
+      run: python -m tox -e tests
 
-    - name: Run unit tests for Windows
-      if: matrix.os == 'windows-latest'
-      run: python -m tox -e windows-tests-julia
+    - name: Run unit tests for Windows and MacOS
+      if: matrix.os != 'ubuntu-latest'
+      run: python -m tox -e mac-windows-tests
 
     - name: Install docs dependencies and run doctests
-      if: matrix.os != 'windows-latest'
+      if: matrix.os == 'ubuntu-latest'
       run: tox -e doctests
     
     - name: Install dev dependencies and run example tests
-      if: matrix.os != 'windows-latest'
+      if: matrix.os == 'ubuntu-latest'
       run: tox -e examples
         
     - name: Install and run coverage
