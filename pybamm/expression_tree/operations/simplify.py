@@ -640,7 +640,9 @@ class Simplification(object):
 
         new_symbol = simplify_if_constant(new_symbol)
 
-        if not clear_domains:
+        if clear_domains:
+            new_symbol.clear_domains()
+        else:
             new_symbol.copy_domains(symbol)
 
         return new_symbol

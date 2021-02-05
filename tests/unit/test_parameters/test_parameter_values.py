@@ -93,6 +93,13 @@ class TestParameterValues(unittest.TestCase):
             param.update({"b": 1})
 
     def test_check_parameter_values(self):
+        # Cell capacity [A.h] deprecated
+        with self.assertRaisesRegex(ValueError, "Cell capacity"):
+            pybamm.ParameterValues(
+                {"Cell capacity [A.h]": 1, "Nominal cell capacity [A.h]": 1}
+            )
+        with self.assertWarnsRegex(DeprecationWarning, "Cell capacity"):
+            pybamm.ParameterValues({"Cell capacity [A.h]": 1})
         # Can't provide a current density of 0, as this will cause a ZeroDivision error
         with self.assertRaisesRegex(ValueError, "Typical current"):
             pybamm.ParameterValues({"Typical current [A]": 0})
@@ -112,12 +119,12 @@ class TestParameterValues(unittest.TestCase):
             )
 
     def test_process_symbol(self):
-        parameter_values = pybamm.ParameterValues({"a": 1, "b": 2, "c": 3, "d [m]": 5})
+        parameter_values = pybamm.ParameterValues({"a": 4, "b": 2, "c": 3, "d [m]": 5})
         # process parameter
         a = pybamm.Parameter("a")
         processed_a = parameter_values.process_symbol(a)
         self.assertIsInstance(processed_a, pybamm.Scalar)
-        self.assertEqual(processed_a.value, 1)
+        self.assertEqual(processed_a.value, 4)
 
         # parameter with units
         d = pybamm.Parameter("d [m]")
@@ -125,23 +132,25 @@ class TestParameterValues(unittest.TestCase):
         self.assertEqual(str(processed_d.units), "[m]")
 
         # process binary operation
-        b = pybamm.Parameter("b")
-        add = a + b
+        var = pybamm.Variable("var")
+        add = a + var
         processed_add = parameter_values.process_symbol(add)
         self.assertIsInstance(processed_add, pybamm.Addition)
         self.assertIsInstance(processed_add.children[0], pybamm.Scalar)
-        self.assertIsInstance(processed_add.children[1], pybamm.Scalar)
-        self.assertEqual(processed_add.children[0].value, 1)
-        self.assertEqual(processed_add.children[1].value, 2)
+        self.assertIsInstance(processed_add.children[1], pybamm.Variable)
+        self.assertEqual(processed_add.children[0].value, 4)
+
+        b = pybamm.Parameter("b")
+        add = a + b
+        processed_add = parameter_values.process_symbol(add)
+        self.assertIsInstance(processed_add, pybamm.Scalar)
+        self.assertEqual(processed_add.value, 6)
 
         scal = pybamm.Scalar(34)
         mul = a * scal
         processed_mul = parameter_values.process_symbol(mul)
-        self.assertIsInstance(processed_mul, pybamm.Multiplication)
-        self.assertIsInstance(processed_mul.children[0], pybamm.Scalar)
-        self.assertIsInstance(processed_mul.children[1], pybamm.Scalar)
-        self.assertEqual(processed_mul.children[0].value, 1)
-        self.assertEqual(processed_mul.children[1].value, 34)
+        self.assertIsInstance(processed_mul, pybamm.Scalar)
+        self.assertEqual(processed_mul.value, 136)
 
         # process integral
         aa = pybamm.Parameter("a", domain=["negative electrode"])
@@ -150,7 +159,7 @@ class TestParameterValues(unittest.TestCase):
         processed_integ = parameter_values.process_symbol(integ)
         self.assertIsInstance(processed_integ, pybamm.Integral)
         self.assertIsInstance(processed_integ.children[0], pybamm.Scalar)
-        self.assertEqual(processed_integ.children[0].value, 1)
+        self.assertEqual(processed_integ.children[0].value, 4)
         self.assertEqual(processed_integ.integration_variable[0].id, x.id)
 
         # process unary operation
@@ -168,7 +177,7 @@ class TestParameterValues(unittest.TestCase):
         self.assertEqual(processed_delta_aa.side, "left")
         processed_a = processed_delta_aa.children[0]
         self.assertIsInstance(processed_a, pybamm.Scalar)
-        self.assertEqual(processed_a.value, 1)
+        self.assertEqual(processed_a.value, 4)
 
         # process boundary operator (test for BoundaryValue)
         aa = pybamm.Parameter("a", domain=["negative electrode"])
@@ -179,7 +188,7 @@ class TestParameterValues(unittest.TestCase):
         processed_a = processed_boundary_op.children[0].children[0]
         processed_x = processed_boundary_op.children[0].children[1]
         self.assertIsInstance(processed_a, pybamm.Scalar)
-        self.assertEqual(processed_a.value, 1)
+        self.assertEqual(processed_a.value, 4)
         self.assertEqual(processed_x.id, x.id)
 
         # process broadcast
@@ -189,7 +198,7 @@ class TestParameterValues(unittest.TestCase):
         self.assertIsInstance(processed_broad, pybamm.Broadcast)
         self.assertEqual(processed_broad.domain, whole_cell)
         self.assertIsInstance(processed_broad.children[0], pybamm.Scalar)
-        self.assertEqual(processed_broad.children[0].evaluate(), np.array([1]))
+        self.assertEqual(processed_broad.children[0].evaluate(), 4)
 
         # process concatenation
         conc = pybamm.Concatenation(
@@ -211,7 +220,7 @@ class TestParameterValues(unittest.TestCase):
         b_proc = processed_dom_con.children[1].children[0]
         self.assertIsInstance(a_proc, pybamm.Scalar)
         self.assertIsInstance(b_proc, pybamm.Scalar)
-        self.assertEqual(a_proc.value, 1)
+        self.assertEqual(a_proc.value, 4)
         self.assertEqual(b_proc.value, 2)
 
         # process variable
@@ -339,6 +348,13 @@ class TestParameterValues(unittest.TestCase):
         processed_diff_func = parameter_values.process_symbol(diff_func)
         self.assertEqual(processed_diff_func.evaluate(inputs={"a": 3}), 123)
 
+        # make sure diff works, despite simplifications, when the child is constant
+        a_const = pybamm.Scalar(3)
+        func_const = pybamm.FunctionParameter("func", {"a": a_const})
+        diff_func_const = func_const.diff(a_const)
+        processed_diff_func_const = parameter_values.process_symbol(diff_func_const)
+        self.assertEqual(processed_diff_func_const.evaluate(), 123)
+
         # function parameter that returns a python float
         func = pybamm.FunctionParameter("float_func", {"a": a})
         processed_func = parameter_values.process_symbol(func)
@@ -393,16 +409,16 @@ class TestParameterValues(unittest.TestCase):
 
         parameter_values = pybamm.ParameterValues({"Diffusivity": D})
 
-        a = pybamm.InputParameter("a")
+        a = pybamm.Scalar(3)
         func = pybamm.FunctionParameter("Diffusivity", {"a": a})
 
         processed_func = parameter_values.process_symbol(func)
-        self.assertEqual(processed_func.evaluate(inputs={"a": 3}), 9)
+        self.assertEqual(processed_func.evaluate(), 9)
 
         # process differentiated function parameter
         diff_func = func.diff(a)
         processed_diff_func = parameter_values.process_symbol(diff_func)
-        self.assertEqual(processed_diff_func.evaluate(inputs={"a": 3}), 6)
+        self.assertEqual(processed_diff_func.evaluate(), 6)
 
     def test_multi_var_function_with_parameters(self):
         def D(a, b):
@@ -414,7 +430,8 @@ class TestParameterValues(unittest.TestCase):
         func = pybamm.Function(D, a, b)
 
         processed_func = parameter_values.process_symbol(func)
-        self.assertIsInstance(processed_func, pybamm.Function)
+        # Function of scalars gets automatically simplified
+        self.assertIsInstance(processed_func, pybamm.Scalar)
         self.assertEqual(processed_func.evaluate(), 3)
 
     def test_multi_var_function_parameter(self):
@@ -478,15 +495,15 @@ class TestParameterValues(unittest.TestCase):
             check_already_exists=False,
         )
 
-        a = pybamm.InputParameter("a")
+        a = pybamm.Scalar(0.6)
         func = pybamm.FunctionParameter("function [V]", {"a": a})
         interp = pybamm.FunctionParameter("interpolation [V]", {"a": a})
 
         processed_func = parameter_values.process_symbol(func)
         processed_interp = parameter_values.process_symbol(interp)
         np.testing.assert_array_almost_equal(
-            processed_func.evaluate(inputs={"a": 0.6}),
-            processed_interp.evaluate(inputs={"a": 0.6}),
+            processed_func.evaluate(),
+            processed_interp.evaluate(),
             decimal=4,
         )
 
@@ -496,10 +513,129 @@ class TestParameterValues(unittest.TestCase):
         processed_diff_func = parameter_values.process_symbol(diff_func)
         processed_diff_interp = parameter_values.process_symbol(diff_interp)
         np.testing.assert_array_almost_equal(
-            processed_diff_func.evaluate(inputs={"a": 0.6}),
-            processed_diff_interp.evaluate(inputs={"a": 0.6}),
+            processed_diff_func.evaluate(),
+            processed_diff_interp.evaluate(),
             decimal=2,
         )
+
+    def test_process_integral_broadcast(self):
+        # Test that the x-average of a broadcast, created outside of x-average, gets
+        # processed correctly
+        var = pybamm.Variable("var", domain="test")
+        func = pybamm.x_average(pybamm.FunctionParameter("func", {"var": var}))
+
+        param = pybamm.ParameterValues({"func": 2})
+        func_proc = param.process_symbol(func)
+
+        self.assertEqual(func_proc.id, pybamm.Scalar(2, name="func").id)
+
+        # test with auxiliary domains
+        var = pybamm.Variable(
+            "var", domain="test", auxiliary_domains={"secondary": "test sec"}
+        )
+        func = pybamm.x_average(pybamm.FunctionParameter("func", {"var": var}))
+
+        param = pybamm.ParameterValues({"func": 2})
+        func_proc = param.process_symbol(func)
+
+        self.assertEqual(
+            func_proc.id,
+            pybamm.PrimaryBroadcast(pybamm.Scalar(2, name="func"), "test sec").id,
+        )
+
+        var = pybamm.Variable(
+            "var",
+            domain="test",
+            auxiliary_domains={"secondary": "test sec", "tertiary": "test tert"},
+        )
+        func = pybamm.x_average(pybamm.FunctionParameter("func", {"var": var}))
+
+        param = pybamm.ParameterValues({"func": 2})
+        func_proc = param.process_symbol(func)
+
+        self.assertEqual(
+            func_proc.id,
+            pybamm.FullBroadcast(
+                pybamm.Scalar(2, name="func"), "test sec", "test tert"
+            ).id,
+        )
+
+        # this should be the case even if the domain is one of the special domains
+        var = pybamm.Variable("var", domain="negative electrode")
+        func = pybamm.x_average(pybamm.FunctionParameter("func", {"var": var}))
+
+        param = pybamm.ParameterValues({"func": 2})
+        func_proc = param.process_symbol(func)
+
+        self.assertEqual(func_proc.id, pybamm.Scalar(2, name="func").id)
+
+        # special case for integral of concatenations of broadcasts
+        var_n = pybamm.Variable("var_n", domain="negative electrode")
+        var_s = pybamm.Variable("var_s", domain="separator")
+        var_p = pybamm.Variable("var_p", domain="positive electrode")
+        func_n = pybamm.FunctionParameter("func_n", {"var_n": var_n})
+        func_s = pybamm.FunctionParameter("func_s", {"var_s": var_s})
+        func_p = pybamm.FunctionParameter("func_p", {"var_p": var_p})
+
+        func = pybamm.x_average(pybamm.Concatenation(func_n, func_s, func_p))
+        param = pybamm.ParameterValues(
+            {
+                "func_n": 2,
+                "func_s": 3,
+                "func_p": 4,
+                "Negative electrode thickness [m]": 1,
+                "Separator thickness [m]": 1,
+                "Positive electrode thickness [m]": 1,
+            }
+        )
+        func_proc = param.process_symbol(func)
+
+        self.assertEqual(func_proc.id, pybamm.Scalar(3).id)
+
+        # with auxiliary domains
+        var_n = pybamm.Variable(
+            "var_n",
+            domain="negative electrode",
+            auxiliary_domains={"secondary": "current collector"},
+        )
+        var_s = pybamm.Variable(
+            "var_s",
+            domain="separator",
+            auxiliary_domains={"secondary": "current collector"},
+        )
+        var_p = pybamm.Variable(
+            "var_p",
+            domain="positive electrode",
+            auxiliary_domains={"secondary": "current collector"},
+        )
+        func_n = pybamm.FunctionParameter("func_n", {"var_n": var_n})
+        func_s = pybamm.FunctionParameter("func_s", {"var_s": var_s})
+        func_p = pybamm.FunctionParameter("func_p", {"var_p": var_p})
+
+        func = pybamm.x_average(pybamm.Concatenation(func_n, func_s, func_p))
+        param = pybamm.ParameterValues(
+            {
+                "func_n": 2,
+                "func_s": 3,
+                "func_p": 4,
+                "Negative electrode thickness [m]": 1,
+                "Separator thickness [m]": 1,
+                "Positive electrode thickness [m]": 1,
+            }
+        )
+        func_proc = param.process_symbol(func)
+
+        self.assertEqual(
+            func_proc.id,
+            pybamm.PrimaryBroadcast(pybamm.Scalar(3), "current collector").id,
+        )
+
+    def test_process_not_constant(self):
+        param = pybamm.ParameterValues({"a": 4})
+
+        a = pybamm.NotConstant(pybamm.Parameter("a"))
+        self.assertIsInstance(param.process_symbol(a), pybamm.NotConstant)
+        self.assertEqual(param.process_symbol(a).evaluate(), 4)
 
     def test_process_complex_expression(self):
         var1 = pybamm.Variable("var1")
@@ -564,10 +700,7 @@ class TestParameterValues(unittest.TestCase):
         parameter_values = pybamm.ParameterValues({"a": 1, "b": 2, "c": 3, "d": 42})
         parameter_values.process_model(model)
         # rhs
-        self.assertIsInstance(model.rhs[var1], pybamm.Multiplication)
-        self.assertIsInstance(model.rhs[var1].children[0], pybamm.Scalar)
-        self.assertIsInstance(model.rhs[var1].children[1], pybamm.Gradient)
-        self.assertEqual(model.rhs[var1].children[0].value, 1)
+        self.assertIsInstance(model.rhs[var1], pybamm.Gradient)
         # algebraic
         self.assertIsInstance(model.algebraic[var2], pybamm.Multiplication)
         self.assertIsInstance(model.algebraic[var2].children[0], pybamm.Scalar)

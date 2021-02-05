@@ -90,8 +90,8 @@ class UnaryOperator(pybamm.Symbol):
         """
         return self.children[0].evaluate_for_shape()
 
-    def evaluates_on_edges(self, dimension):
-        """ See :meth:`pybamm.Symbol.evaluates_on_edges()`. """
+    def _evaluates_on_edges(self, dimension):
+        """ See :meth:`pybamm.Symbol._evaluates_on_edges()`. """
         return self.child.evaluates_on_edges(dimension)
 
     def is_constant(self):
@@ -306,14 +306,16 @@ class Index(UnaryOperator):
 
     def _unary_new_copy(self, child):
         """ See :meth:`UnaryOperator._unary_new_copy()`. """
-
-        return self.__class__(child, self.index, check_size=False)
+        new_index = self.__class__(child, self.index, check_size=False)
+        # Keep same domains
+        new_index.copy_domains(self)
+        return new_index
 
     def _evaluate_for_shape(self):
         return self._unary_evaluate(self.children[0].evaluate_for_shape())
 
-    def evaluates_on_edges(self, dimension):
-        """ See :meth:`pybamm.Symbol.evaluates_on_edges()`. """
+    def _evaluates_on_edges(self, dimension):
+        """ See :meth:`pybamm.Symbol._evaluates_on_edges()`. """
         return False
 
 
@@ -379,8 +381,8 @@ class Gradient(SpatialOperator):
             )
         super().__init__("grad", child)
 
-    def evaluates_on_edges(self, dimension):
-        """ See :meth:`pybamm.Symbol.evaluates_on_edges()`. """
+    def _evaluates_on_edges(self, dimension):
+        """ See :meth:`pybamm.Symbol._evaluates_on_edges()`. """
         return True
 
 
@@ -407,8 +409,8 @@ class Divergence(SpatialOperator):
             )
         super().__init__("div", child)
 
-    def evaluates_on_edges(self, dimension):
-        """ See :meth:`pybamm.Symbol.evaluates_on_edges()`. """
+    def _evaluates_on_edges(self, dimension):
+        """ See :meth:`pybamm.Symbol._evaluates_on_edges()`. """
         return False
 
 
@@ -422,8 +424,8 @@ class Laplacian(SpatialOperator):
     def __init__(self, child):
         super().__init__("laplacian", child)
 
-    def evaluates_on_edges(self, dimension):
-        """ See :meth:`pybamm.Symbol.evaluates_on_edges()`. """
+    def _evaluates_on_edges(self, dimension):
+        """ See :meth:`pybamm.Symbol._evaluates_on_edges()`. """
         return False
 
 
@@ -438,8 +440,8 @@ class Gradient_Squared(SpatialOperator):
     def __init__(self, child):
         super().__init__("grad squared", child)
 
-    def evaluates_on_edges(self, dimension):
-        """ See :meth:`pybamm.Symbol.evaluates_on_edges()`. """
+    def _evaluates_on_edges(self, dimension):
+        """ See :meth:`pybamm.Symbol._evaluates_on_edges()`. """
         return True
 
 
@@ -590,8 +592,8 @@ class Integral(SpatialOperator):
             self.domain, self.auxiliary_domains
         )
 
-    def evaluates_on_edges(self, dimension):
-        """ See :meth:`pybamm.Symbol.evaluates_on_edges()`. """
+    def _evaluates_on_edges(self, dimension):
+        """ See :meth:`pybamm.Symbol._evaluates_on_edges()`. """
         return False
 
 
@@ -623,7 +625,7 @@ class BaseIndefiniteIntegral(Integral):
     def _evaluate_for_shape(self):
         return self.children[0].evaluate_for_shape()
 
-    def evaluates_on_edges(self, dimension):
+    def _evaluates_on_edges(self, dimension):
         # If child evaluates on edges, indefinite integral doesn't
         # If child doesn't evaluate on edges, indefinite integral does
         return not self.child.evaluates_on_edges(dimension)
@@ -798,8 +800,8 @@ class BoundaryIntegral(SpatialOperator):
         """ See :meth:`pybamm.Symbol.evaluate_for_shape_using_domain()` """
         return pybamm.evaluate_for_shape_using_domain(self.domain)
 
-    def evaluates_on_edges(self, dimension):
-        """ See :meth:`pybamm.Symbol.evaluates_on_edges()`. """
+    def _evaluates_on_edges(self, dimension):
+        """ See :meth:`pybamm.Symbol._evaluates_on_edges()`. """
         return False
 
 
@@ -834,8 +836,8 @@ class DeltaFunction(SpatialOperator):
             + tuple([(k, tuple(v)) for k, v in self.auxiliary_domains.items()])
         )
 
-    def evaluates_on_edges(self, dimension):
-        """ See :meth:`pybamm.Symbol.evaluates_on_edges()`. """
+    def _evaluates_on_edges(self, dimension):
+        """ See :meth:`pybamm.Symbol._evaluates_on_edges()`. """
         return False
 
     def _unary_simplify(self, simplified_child):
@@ -937,6 +939,10 @@ class BoundaryValue(BoundaryOperator):
     def __init__(self, child, side):
         super().__init__("boundary value", child, side)
 
+    def _unary_new_copy(self, child):
+        """ See :meth:`UnaryOperator._unary_new_copy()`. """
+        return boundary_value(child, self.side)
+
 
 class BoundaryGradient(BoundaryOperator):
     """A node in the expression tree which gets the boundary flux of a variable.
@@ -976,8 +982,8 @@ class UpwindDownwind(SpatialOperator):
             )
         super().__init__(name, child)
 
-    def evaluates_on_edges(self, dimension):
-        """ See :meth:`pybamm.Symbol.evaluates_on_edges()`. """
+    def _evaluates_on_edges(self, dimension):
+        """ See :meth:`pybamm.Symbol._evaluates_on_edges()`. """
         return True
 
 
@@ -1001,6 +1007,34 @@ class Downwind(UpwindDownwind):
 
     def __init__(self, child):
         super().__init__("downwind", child)
+
+
+class NotConstant(UnaryOperator):
+    """Special class to wrap a symbol that should not be treated as a constant"""
+
+    def __init__(self, child):
+        super().__init__("not_constant", child)
+
+    def _unary_new_copy(self, child):
+        """ See :meth:`pybamm.Symbol.new_copy()`. """
+        return NotConstant(child)
+
+    def _diff(self, variable):
+        """ See :meth:`pybamm.Symbol._diff()`. """
+        return self.child.diff(variable)
+
+    def _unary_jac(self, child_jac):
+        """ See :meth:`pybamm.UnaryOperator._unary_jac()`. """
+        return child_jac
+
+    def _unary_evaluate(self, child):
+        """ See :meth:`UnaryOperator._unary_evaluate()`. """
+        return child
+
+    def is_constant(self):
+        """ See :meth:`pybamm.Symbol.is_constant()`. """
+        # This symbol is not constant
+        return False
 
 
 #
@@ -1158,29 +1192,35 @@ def x_average(symbol):
     ):
         a, b, c = [orp.orphans[0] for orp in symbol.orphans]
         if a.id == b.id == c.id:
-            return a
+            out = a
         else:
             geo = pybamm.geometric_parameters
             l_n = geo.l_n
             l_s = geo.l_s
             l_p = geo.l_p
-            return (l_n * a + l_s * b + l_p * c) / (l_n + l_s + l_p)
+            out = (l_n * a + l_s * b + l_p * c) / (l_n + l_s + l_p)
+        # To respect domains we may need to broadcast the child back out
+        child = symbol.children[0]
+        # If symbol being returned doesn't have empty domain, return it
+        if out.domain != []:
+            return out
+        # Otherwise we may need to broadcast it
+        elif child.auxiliary_domains == {}:
+            return out
+        else:
+            domain = child.auxiliary_domains["secondary"]
+            if "tertiary" not in child.auxiliary_domains:
+                return pybamm.PrimaryBroadcast(out, domain)
+            else:
+                auxiliary_domains = {"secondary": child.auxiliary_domains["tertiary"]}
+                return pybamm.FullBroadcast(out, domain, auxiliary_domains)
     # Otherwise, use Integral to calculate average value
     else:
         geo = pybamm.geometric_parameters
-        if symbol.domain == ["negative electrode"]:
-            x = pybamm.standard_spatial_vars.x_n
-            l = geo.l_n
-        elif symbol.domain == ["separator"]:
-            x = pybamm.standard_spatial_vars.x_s
-            l = geo.l_s
-        elif symbol.domain == ["positive electrode"]:
-            x = pybamm.standard_spatial_vars.x_p
-            l = geo.l_p
-        elif symbol.domain == ["negative electrode", "separator", "positive electrode"]:
-            x = pybamm.standard_spatial_vars.x
-            l = pybamm.Scalar(1)
-        elif symbol.domain == ["negative particle"]:
+        # Even if domain is "negative electrode", "separator", or
+        # "positive electrode", and we know l, we still compute it as Integral(1, x)
+        # as this will be easier to identify for simplifications later on
+        if symbol.domain == ["negative particle"]:
             x = pybamm.standard_spatial_vars.x_n
             l = geo.l_n
         elif symbol.domain == ["positive particle"]:
@@ -1360,7 +1400,7 @@ def boundary_value(symbol, side):
 
 def sign(symbol):
     " Returns a :class:`Sign` object. "
-    return Sign(symbol)
+    return pybamm.simplify_if_constant(Sign(symbol), clear_domains=False)
 
 
 def smooth_absolute_value(symbol, k):
