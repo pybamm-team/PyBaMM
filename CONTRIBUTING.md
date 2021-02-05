@@ -46,18 +46,21 @@ Finally, if you really, really, _really_ love developing PyBaMM, have a look at 
 
 ## Installation
 
-To install PyBaMM with all developer options you can follow any one of the two steps described below:
+To install PyBaMM with all developer options follow the steps below:
 
-### 1. Using tox
-1. Install virtual environment using the command below:
-```bash
-pip install virtualenv
-```
-2. Install tox using the commands below:
+
+1. Install tox using the commands below:
 ```bash
 pip install tox # (Using this, you will need to additionally install tox in your virtual environment as decribed below)
 # or
 pipx install tox # (Using this, tox can automatically be accessed in your virtaul environment)
+```
+2. Install sundials using the command below:
+```bash
+# (Skip this step for Windows installation)
+brew install sundials # (MacOS)
+#
+tox -e pybamm-requires # (GNU/Linux)
 ```
 3. Installing PyBaMM
 
@@ -89,33 +92,6 @@ source .tox/dev/bin/activate # (GNU/Linux and MacOS)
 6. Inside the virtual environment, type:
 ```bash
 pip install tox # (Skip this step if you used pipx above)
-```
-
-### 2. Without using tox
-1. Install virtual environment using the command below:
-```bash
-pip install virtualenv
-```
-2. Create a virtual environment `env` within your current directory using the command below:
-```bash
-python -m venv env 
-# (You can then “activate” the environment using the command below)
-env\Scripts\activate.bat
-# (This whole step can be ignored if you don't want a virtual environment)
-```
-
-3. Installing PyBaMM
-
-This can be acieved by forking the repository and cloning it in your machine.
-
-Or type:
-```bash
-pip install pybamm
-```
-
-Additionally you can install sundials on mac using:
-```bash
-brew install sundials
 ```
 
 
