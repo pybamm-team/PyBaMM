@@ -679,7 +679,6 @@ class BaseBatteryModel(pybamm.BaseModel):
         "See :meth:`pybamm.BaseModel.new_empty_copy()`"
         new_model = self.__class__(name=self.name, options=self.options, build=False)
         new_model.use_jacobian = self.use_jacobian
-        new_model.use_simplify = self.use_simplify
         new_model.convert_to_format = self.convert_to_format
         new_model.timescale = self.timescale
         new_model.length_scales = self.length_scales
