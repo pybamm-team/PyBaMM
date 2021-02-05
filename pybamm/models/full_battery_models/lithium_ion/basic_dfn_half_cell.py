@@ -62,7 +62,7 @@ class BasicDFNHalfCell(BaseModel):
             "working electrode": param.L_x,
             "separator": param.L_x,
             "working particle": R_w_typ,
-            "current collector y": param.L_y,
+            "current collector y": param.L_z,
             "current collector z": param.L_z,
         }
 
@@ -222,7 +222,7 @@ class BasicDFNHalfCell(BaseModel):
         # derivatives
         self.boundary_conditions[c_s_w] = {
             "left": (pybamm.Scalar(0), "Neumann"),
-            "right": (-C_w * j_w / a_R_w / gamma_w / D_w(c_s_surf_w, T), "Neumann",),
+            "right": (-C_w * j_w / a_R_w / gamma_w / D_w(c_s_surf_w, T), "Neumann"),
         }
 
         # c_w_init can in general be a function of x
@@ -249,10 +249,7 @@ class BasicDFNHalfCell(BaseModel):
         i_s_w = -sigma_eff_w * pybamm.grad(phi_s_w)
         self.boundary_conditions[phi_s_w] = {
             "left": (pybamm.Scalar(0), "Neumann"),
-            "right": (
-                i_cell / pybamm.boundary_value(-sigma_eff_w, "right"),
-                "Neumann",
-            ),
+            "right": (i_cell / pybamm.boundary_value(-sigma_eff_w, "right"), "Neumann"),
         }
         self.algebraic[phi_s_w] = pybamm.div(i_s_w) + j_w
         # Initial conditions must also be provided for algebraic equations, as an
