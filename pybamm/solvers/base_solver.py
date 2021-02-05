@@ -124,7 +124,7 @@ class BaseSolver(object):
         return new_solver
 
     def set_up(self, model, inputs=None, t_eval=None):
-        """Unpack model, perform checks, simplify and calculate jacobian.
+        """Unpack model, perform checks, and calculate jacobian.
 
         Parameters
         ----------
@@ -199,7 +199,6 @@ class BaseSolver(object):
             model.convert_to_format = "casadi"
 
         if model.convert_to_format != "casadi":
-            simp = pybamm.Simplification()
             # Create Jacobian from concatenated rhs and algebraic
             y = pybamm.StateVector(slice(0, model.concatenated_initial_conditions.size))
             # set up Jacobian object, for re-use of dict
@@ -228,9 +227,6 @@ class BaseSolver(object):
                 use_jacobian = model.use_jacobian
             if model.convert_to_format != "casadi":
                 # Process with pybamm functions
-                if model.use_simplify:
-                    report(f"Simplifying {name}")
-                    func = simp.simplify(func)
 
                 if model.convert_to_format == "jax":
                     report(f"Converting {name} to jax")
@@ -239,9 +235,6 @@ class BaseSolver(object):
                 if use_jacobian:
                     report(f"Calculating jacobian for {name}")
                     jac = jacobian.jac(func, y)
-                    if model.use_simplify:
-                        report(f"Simplifying jacobian for {name}")
-                        jac = simp.simplify(jac)
                     if model.convert_to_format == "python":
                         report(f"Converting jacobian for {name} to python")
                         jac = pybamm.EvaluatorPython(jac)
