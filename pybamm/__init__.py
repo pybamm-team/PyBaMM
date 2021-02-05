@@ -154,6 +154,7 @@ from .models.submodels import (
     particle_cracking,
 )
 from .models.submodels.interface import sei
+from .models.submodels.interface import lithium_plating
 
 #
 # Geometry

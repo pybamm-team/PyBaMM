@@ -325,6 +325,11 @@ class TestConcatenations(unittest.TestCase):
             pybamm.NumpyConcatenation(a, pybamm.NumpyConcatenation(b, c)).simplify().id,
             pybamm.NumpyConcatenation(a, b, c).id,
         )
+        # check it works when calling numpy_concatenation
+        self.assertEqual(
+            pybamm.numpy_concatenation(pybamm.numpy_concatenation(a, b), c).id,
+            pybamm.NumpyConcatenation(a, b, c).id,
+        )
 
 
 if __name__ == "__main__":

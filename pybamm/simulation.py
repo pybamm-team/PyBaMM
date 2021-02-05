@@ -106,7 +106,7 @@ class Simulation:
                     self._parameter_values.update(
                         {
                             "Current function [A]": self.C_rate
-                            * self._parameter_values["Cell capacity [A.h]"]
+                            * self._parameter_values["Nominal cell capacity [A.h]"]
                         }
                     )
 
@@ -218,7 +218,7 @@ class Simulation:
                     I = op[0]
                 else:
                     # Scale C-rate with capacity to obtain current
-                    capacity = self._parameter_values["Cell capacity [A.h]"]
+                    capacity = self._parameter_values["Nominal cell capacity [A.h]"]
                     I = op[0] * capacity
                 operating_inputs = {
                     "Current switch": 1,
@@ -264,7 +264,7 @@ class Simulation:
                     I = events[0]
                 else:
                     # Scale C-rate with capacity to obtain current
-                    capacity = self._parameter_values["Cell capacity [A.h]"]
+                    capacity = self._parameter_values["Nominal cell capacity [A.h]"]
                     I = events[0] * capacity
                 operating_inputs.update(
                     {"Current cut-off [A]": I, "Voltage cut-off [V]": -1e10}

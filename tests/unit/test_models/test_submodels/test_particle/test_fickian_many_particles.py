@@ -12,10 +12,10 @@ class TestManyParticles(unittest.TestCase):
         param = pybamm.LithiumIonParameters()
 
         a_n = pybamm.FullBroadcast(
-            pybamm.Scalar(0), "negative electrode", {"secondary": "current collector"}
+            pybamm.Scalar(1), "negative electrode", {"secondary": "current collector"}
         )
         a_p = pybamm.FullBroadcast(
-            pybamm.Scalar(0), "positive electrode", {"secondary": "current collector"}
+            pybamm.Scalar(1), "positive electrode", {"secondary": "current collector"}
         )
 
         variables = {

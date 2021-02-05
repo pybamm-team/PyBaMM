@@ -30,7 +30,7 @@ class BaseModel(pybamm.BaseBatteryModel):
             "negative electrode": self.param.L_x,
             "separator": self.param.L_x,
             "positive electrode": self.param.L_x,
-            "current collector y": self.param.L_y,
+            "current collector y": self.param.L_z,
             "current collector z": self.param.L_z,
         }
 
@@ -82,3 +82,12 @@ class BaseModel(pybamm.BaseBatteryModel):
 
         self.submodels["negative sei"] = pybamm.sei.NoSEI(self.param, "Negative")
         self.submodels["positive sei"] = pybamm.sei.NoSEI(self.param, "Positive")
+
+    def set_lithium_plating_submodel(self):
+
+        self.submodels["negative lithium plating"] = pybamm.lithium_plating.NoPlating(
+            self.param, "Negative"
+        )
+        self.submodels["positive lithium plating"] = pybamm.lithium_plating.NoPlating(
+            self.param, "Positive"
+        )

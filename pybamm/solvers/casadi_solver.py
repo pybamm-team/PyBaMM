@@ -176,34 +176,6 @@ class CasadiSolver(pybamm.BaseSolver):
             else:
                 init_event_signs = np.sign([])
 
-            if model.interpolant_extrapolation_events_eval:
-                extrap_event = [
-                    event(t, y0, inputs)
-                    for event in model.interpolant_extrapolation_events_eval
-                ]
-                if extrap_event:
-                    if (np.concatenate(extrap_event) < self.extrap_tol).any():
-                        extrap_event_names = []
-                        for event in model.events:
-                            if (
-                                event.event_type
-                                == pybamm.EventType.INTERPOLANT_EXTRAPOLATION
-                                and (
-                                    event.expression.evaluate(
-                                        t, y0.full(), inputs=inputs
-                                    )
-                                    < self.extrap_tol
-                                ).any()
-                            ):
-                                extrap_event_names.append(event.name[12:])
-
-                        raise pybamm.SolverError(
-                            "CasADI solver failed because the following interpolation "
-                            "bounds were exceeded at the initial conditions: {}. "
-                            "You may need to provide additional interpolation points "
-                            "outside these bounds.".format(extrap_event_names)
-                        )
-
             pybamm.logger.debug(
                 "Start solving {} with {}".format(model.name, self.name)
             )
@@ -537,7 +509,7 @@ class CasadiSolver(pybamm.BaseSolver):
                     x0=y0_diff, z0=y0_alg, p=inputs_eval, **self.extra_options_call
                 )
                 integration_time = timer.time()
-                y_sol = casadi.vertcat(sol["xf"], sol["zf"])
+                y_sol = casadi.vertcat(casadi_sol["xf"], casadi_sol["zf"])
                 sol = pybamm.Solution(t_eval, y_sol, model, inputs_dict)
                 sol.integration_time = integration_time
                 return sol
@@ -552,12 +524,12 @@ class CasadiSolver(pybamm.BaseSolver):
                     t_max = t_eval[i + 1]
                     inputs_with_tlims = casadi.vertcat(inputs_eval, t_min, t_max)
                     timer = pybamm.Timer()
-                    sol = integrator(
+                    casadi_sol = integrator(
                         x0=x, z0=z, p=inputs_with_tlims, **self.extra_options_call
                     )
                     integration_time = timer.time()
-                    x = sol["xf"]
-                    z = sol["zf"]
+                    x = casadi_sol["xf"]
+                    z = casadi_sol["zf"]
                     y_diff = casadi.horzcat(y_diff, x)
                     if not z.is_empty():
                         y_alg = casadi.horzcat(y_alg, z)
