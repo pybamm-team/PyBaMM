@@ -395,14 +395,8 @@ class LeadAcidParameters:
         self.mu_typ = self.mu_dimensional(self.c_e_typ)
 
         # Reference OCP
-        inputs = {"Electrolyte concentration [mol.m-3]": pybamm.Scalar(1)}
-        self.U_n_ref = pybamm.FunctionParameter(
-            "Negative electrode open-circuit potential [V]", inputs
-        )
-        inputs = {"Electrolyte concentration [mol.m-3]": pybamm.Scalar(1)}
-        self.U_p_ref = pybamm.FunctionParameter(
-            "Positive electrode open-circuit potential [V]", inputs
-        )
+        self.U_n_ref = self.U_n_dimensional(self.c_e_typ, self.T_ref)
+        self.U_p_ref = self.U_p_dimensional(self.c_e_typ, self.T_ref)
 
     def _set_dimensionless_parameters(self):
         "Defines the dimensionless parameters"
@@ -447,7 +441,7 @@ class LeadAcidParameters:
             self.c_e_typ
             * self.M_e
             / self.rho_typ
-            * (1 - self.M_w * self.V_e / self.V_w * self.M_e)
+            * (1 - self.M_w * self.V_e / (self.V_w * self.M_e))
         )
         self.C_e = self.tau_diffusion_e / self.tau_discharge
         # Ratio of viscous pressure scale to osmotic pressure scale (electrolyte)
@@ -469,7 +463,7 @@ class LeadAcidParameters:
             self.c_e_typ
             * self.M_ox
             / self.rho_typ
-            * (1 - self.M_w * self.V_ox / self.V_w * self.M_ox)
+            * (1 - self.M_w * self.V_ox / (self.V_w * self.M_ox))
         )
         # Hydrogen
         self.curlyD_hy = self.D_hy_dimensional / self.D_e_typ
@@ -477,7 +471,7 @@ class LeadAcidParameters:
             self.c_e_typ
             * self.M_hy
             / self.rho_typ
-            * (1 - self.M_w * self.V_hy / self.V_w * self.M_hy)
+            * (1 - self.M_w * self.V_hy / (self.V_w * self.M_hy))
         )
 
         # Electrode Properties

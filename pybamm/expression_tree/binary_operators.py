@@ -926,9 +926,10 @@ def simplified_multiplication(left, right):
         return pybamm.zeros_like(pybamm.Multiplication(left, right))
 
     # anything multiplied by a scalar one returns itself
-    if pybamm.is_scalar_one(left):
+    # unless it changes the units
+    if pybamm.is_scalar_one(left) and left.units.units_str == "[-]":
         return right
-    if pybamm.is_scalar_one(right):
+    if pybamm.is_scalar_one(right) and right.units.units_str == "[-]":
         return left
 
     # anything multiplied by a matrix one returns itself if
@@ -1035,7 +1036,8 @@ def simplified_division(left, right):
         return right._unary_new_copy(left / right.orphans[0])
 
     # zero divided by anything returns zero (being careful about shape)
-    if pybamm.is_scalar_zero(left):
+    # don't simplify if the division affects the units
+    if pybamm.is_scalar_zero(left) and left.units.units_str == "[-]":
         return pybamm.zeros_like(right)
 
     # matrix zero divided by anything returns matrix zero (i.e. itself)
@@ -1047,7 +1049,8 @@ def simplified_division(left, right):
         raise ZeroDivisionError
 
     # anything divided by one is itself
-    if pybamm.is_scalar_one(right):
+    # don't simplify if the division affects the units
+    if pybamm.is_scalar_one(right) and right.units.units_str == "[-]":
         return left
 
     # a symbol divided by itself is 1s of the same shape

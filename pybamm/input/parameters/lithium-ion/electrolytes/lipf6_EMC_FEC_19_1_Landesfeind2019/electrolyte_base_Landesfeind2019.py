@@ -97,6 +97,8 @@ def electrolyte_TDF_base_Landesfeind2019(c_e, T, coeffs):
         Electrolyte thermodynamic factor
     """
     c = c_e / 1000  # mol.m-3 -> mol.l
+    # c = c / pybamm.Scalar(1, "[mol.m-3]")  # remove units
+    # T = T / pybamm.Scalar(1, "[K]")  # remove units
     p1, p2, p3, p4, p5, p6, p7, p8, p9 = coeffs
     tdf = (
         p1
@@ -139,6 +141,8 @@ def electrolyte_transference_number_base_Landesfeind2019(c_e, T, coeffs):
         Electrolyte transference number
     """
     c = c_e / 1000  # mol.m-3 -> mol.l
+    # c = c / pybamm.Scalar(1, "[mol.m-3]")  # remove units
+    # T = T / pybamm.Scalar(1, "[K]")  # remove units
     p1, p2, p3, p4, p5, p6, p7, p8, p9 = coeffs
     tplus = (
         p1

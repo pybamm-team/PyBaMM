@@ -336,17 +336,15 @@ def full_like(symbols, fill_value):
     """
     # Make a symbol that combines all the children, to get the right domain
     # that takes all the child symbols into account
-    sum_symbol = symbols[0]
+    product_symbol = symbols[0]
     for sym in symbols[1:]:
-        # ignore units
-        sym.units = None
-        sum_symbol += sym
+        product_symbol *= sym
 
     # Just return scalar if symbol shape is scalar
-    if sum_symbol.evaluates_to_number():
+    if product_symbol.evaluates_to_number():
         return pybamm.Scalar(fill_value)
     try:
-        shape = sum_symbol.shape
+        shape = product_symbol.shape
         # use vector or matrix
         if shape[1] == 1:
             array_type = pybamm.Vector
@@ -360,13 +358,13 @@ def full_like(symbols, fill_value):
 
         return array_type(
             entries,
-            domain=sum_symbol.domain,
-            auxiliary_domains=sum_symbol.auxiliary_domains,
+            domain=product_symbol.domain,
+            auxiliary_domains=product_symbol.auxiliary_domains,
         )
 
     except NotImplementedError:
         return FullBroadcast(
-            fill_value, sum_symbol.domain, sum_symbol.auxiliary_domains
+            fill_value, product_symbol.domain, product_symbol.auxiliary_domains
         )
 
 

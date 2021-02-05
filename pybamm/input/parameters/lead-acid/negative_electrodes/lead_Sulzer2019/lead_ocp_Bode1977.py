@@ -14,7 +14,7 @@ def lead_ocp_Bode1977(m):
     .. [1] H Bode. Lead-acid batteries. John Wiley and Sons, Inc., New York, NY, 1977.
 
     """
-    m /= Scalar(1, "[mol.kg-1]")
+    m = m / Scalar(1, "[mol.kg-1]")
     U = (
         -0.294
         - 0.074 * log10(m)

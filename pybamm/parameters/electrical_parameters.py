@@ -35,9 +35,7 @@ class ElectricalParameters:
         self.n_cells = pybamm.Parameter(
             "Number of cells connected in series to make a battery"
         )
-        self.i_typ = pybamm.Function(
-            np.abs, self.I_typ / (self.n_electrodes_parallel * self.geo.A_cc)
-        )
+        self.i_typ = abs(self.I_typ / (self.n_electrodes_parallel * self.geo.A_cc))
         self.voltage_low_cut_dimensional = pybamm.Parameter("Lower voltage cut-off [V]")
         self.voltage_high_cut_dimensional = pybamm.Parameter(
             "Upper voltage cut-off [V]"

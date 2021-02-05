@@ -21,6 +21,7 @@ KNOWN_UNITS = [
     "F",
     "C",
     "Ohm",
+    "Pa",
 ]
 
 
@@ -167,6 +168,11 @@ class Units:
             num_Ohm = units_dict.pop("Ohm")
             units_dict["V"] += num_Ohm
             units_dict["A"] -= num_Ohm
+        if "Pa" in units_dict:
+            num_Pa = units_dict.pop("Pa")
+            units_dict["kg"] += num_Pa
+            units_dict["m"] -= num_Pa
+            units_dict["s"] -= 2 * num_Pa
         return units_dict
 
     def __add__(self, other):

@@ -261,12 +261,12 @@ class LithiumIonParameters:
         self.b_cr_n = pybamm.Parameter("Negative electrode Paris' law constant b")
         self.m_cr_n = pybamm.Parameter("Negative electrode Paris' law constant m")
         self.Eac_cr_n = pybamm.Parameter(
-            "Negative electrode activation energy for cracking rate [kJ.mol-1]"
+            "Negative electrode activation energy for cracking rate [J.mol-1]"
         )  # noqa
         self.b_cr_p = pybamm.Parameter("Positive electrode Paris' law constant b")
         self.m_cr_p = pybamm.Parameter("Positive electrode Paris' law constant m")
         self.Eac_cr_p = pybamm.Parameter(
-            "Positive electrode activation energy for cracking rate [kJ.mol-1]"
+            "Positive electrode activation energy for cracking rate [J.mol-1]"
         )  # noqa
         self.alpha_T_cell_dim = pybamm.Parameter(
             "Cell thermal expansion coefficien [m.K-1]"
@@ -739,9 +739,9 @@ class LithiumIonParameters:
         self.c_plated_Li_0 = self.c_plated_Li_0_dim / self.c_e_typ
 
         # ratio of lithium plating reaction scaled to intercalation reaction
-        self.Gamma_plating = (
-            self.a_n_typ * self.j_scale_n * self.tau_discharge
-        ) / (self.F * self.c_e_typ)
+        self.Gamma_plating = (self.a_n_typ * self.j_scale_n * self.tau_discharge) / (
+            self.F * self.c_e_typ
+        )
 
         # Initial conditions
         self.epsilon_n_init = pybamm.Parameter("Negative electrode porosity")
