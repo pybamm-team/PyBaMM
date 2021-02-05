@@ -8,7 +8,7 @@ import numbers
 import copy
 import numpy as np
 from anytree.exporter import DotExporter
-from scipy.sparse import issparse
+from scipy.sparse import issparse, csr_matrix
 
 
 def domain_size(domain):
@@ -824,7 +824,7 @@ class Symbol(anytree.NodeMixin):
 
     def simplify(self, simplified_symbols=None, clear_domains=True):
         """ Simplify the expression tree. See :class:`pybamm.Simplification`. """
-        raise pybamm.ModelError(".simplify() has been deprecated as it now has no effect")
+        raise pybamm.ModelError(".simplify() is deprecated as it now has no effect")
 
     def to_casadi(self, t=None, y=None, y_dot=None, inputs=None, casadi_symbols=None):
         """
