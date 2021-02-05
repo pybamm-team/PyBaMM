@@ -163,7 +163,6 @@ class TestSPM(unittest.TestCase):
         self.assertEqual(new_model_T_eqn.id, model_T_eqn.id)
         self.assertEqual(new_model.name, model.name)
         self.assertEqual(new_model.use_jacobian, model.use_jacobian)
-        self.assertEqual(new_model.use_simplify, model.use_simplify)
         self.assertEqual(new_model.convert_to_format, model.convert_to_format)
         self.assertEqual(new_model.timescale.id, model.timescale.id)
 
