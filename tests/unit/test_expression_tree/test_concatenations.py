@@ -311,7 +311,15 @@ class TestConcatenations(unittest.TestCase):
         b = pybamm.Symbol("b")
         with self.assertRaisesRegex(pybamm.DomainError, "domain cannot be empty"):
             pybamm.DomainConcatenation([a, b], None)
-
+    
+    def test_numpy_concatenation(self):
+         a = pybamm.Variable("a")
+         b = pybamm.Variable("b")
+         c = pybamm.Variable("c")
+         self.assertEqual(
+             pybamm.numpy_concatenation(pybamm.numpy_concatenation(a, b), c).id,
+             pybamm.NumpyConcatenation(a, b, c).id,
+         )
 
 if __name__ == "__main__":
     print("Add -v for more debug output")
