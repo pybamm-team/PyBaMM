@@ -50,19 +50,15 @@ class TestLeadAcidLoqsSurfaceForm(unittest.TestCase):
 
         original = optimtest.evaluate_model()
         using_known_evals = optimtest.evaluate_model(use_known_evals=True)
-        simp_and_known = optimtest.evaluate_model(use_known_evals=True)
-        simp_and_python = optimtest.evaluate_model(to_python=True)
+        to_python = optimtest.evaluate_model(to_python=True)
         np.testing.assert_array_almost_equal(original, using_known_evals)
-        np.testing.assert_array_almost_equal(original, simp_and_known, decimal=5)
-        np.testing.assert_array_almost_equal(original, simp_and_python, decimal=5)
+        np.testing.assert_array_almost_equal(original, to_python, decimal=5)
 
     def test_set_up(self):
         options = {"surface form": "differential"}
         model = pybamm.lead_acid.LOQS(options)
         optimtest = tests.OptimisationsTest(model)
         optimtest.set_up_model(to_python=True)
-        optimtest.set_up_model(to_python=True)
-        optimtest.set_up_model(to_python=False)
         optimtest.set_up_model(to_python=False)
 
 
