@@ -1,3 +1,5 @@
+![PyBaMM_logo](https://user-images.githubusercontent.com/20817509/107091287-8ad46a80-67cf-11eb-86f5-7ebef7c72a1e.png)
+
 # PyBaMM
 
 [![Build](https://github.com/pybamm-team/PyBaMM/workflows/PyBaMM/badge.svg)](https://github.com/pybamm-team/PyBaMM/actions?query=workflow%3APyBaMM+branch%3Adevelop)
@@ -26,11 +28,11 @@ or simulate an experiment such as CCCV:
 import pybamm
 experiment = pybamm.Experiment(
     [
-        "Discharge at C/10 for 10 hours or until 3.3 V",
+        ("Discharge at C/10 for 10 hours or until 3.3 V",
         "Rest for 1 hour",
         "Charge at 1 A until 4.1 V",
         "Hold at 4.1 V until 50 mA",
-        "Rest for 1 hour",
+        "Rest for 1 hour")
     ]
     * 3,
 )
