@@ -42,7 +42,7 @@ class EffectiveResistance(pybamm.BaseModel):
 
         # Set default length scales
         self.length_scales = {
-            "current collector y": self.param.L_y,
+            "current collector y": self.param.L_z,
             "current collector z": self.param.L_z,
         }
 
@@ -318,7 +318,7 @@ class AlternativeEffectiveResistance2D(pybamm.BaseModel):
 
         # Set default length scales
         self.length_scales = {
-            "current collector y": self.param.L_y,
+            "current collector y": self.param.L_z,
             "current collector z": self.param.L_z,
         }
 
