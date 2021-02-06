@@ -53,8 +53,10 @@ To install PyBaMM with all developer options follow the steps below:
 ```bash
 pip install tox # (Using this, you will need to additionally install tox in your virtual environment as decribed below)
 # or
+pip install pipx # (For installing pipx)
 pipx install tox # (Using this, tox can automatically be accessed in your virtaul environment)
 ```
+You can also explore and install pipx from their [GitHub repository](https://github.com/pipxproject/pipx)
 2. Install sundials using the command below:
 ```bash
 # (Skip this step for Windows installation)
@@ -95,7 +97,7 @@ pip install tox # (Skip this step if you used pipx above)
 ```
 
 
-Full documentation with an installation guide can be found [here](https://pybamm.readthedocs.io/en/latest/)
+Full documentation with an installation guide can be found [here](https://pybamm.readthedocs.io/en/latest/install/install-from-source.html)
 
 ## Coding style guidelines
 

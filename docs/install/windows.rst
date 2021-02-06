@@ -32,7 +32,7 @@ type:
 
 .. code:: bash
 
-   python -m venv env
+   python -m virtualenv env
 
 You can then “activate” the environment using:
 
