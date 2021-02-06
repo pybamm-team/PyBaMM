@@ -21,7 +21,9 @@ drive_cycle = pd.read_csv(
 
 # create interpolant
 timescale = param.evaluate(model.timescale)
-current_interpolant = pybamm.Interpolant(drive_cycle, timescale * pybamm.t)
+current_interpolant = pybamm.Interpolant(
+    drive_cycle[:, 0], drive_cycle[:, 1], timescale * pybamm.t
+)
 
 # set drive cycle
 param["Current function [A]"] = current_interpolant

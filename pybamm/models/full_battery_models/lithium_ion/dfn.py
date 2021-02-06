@@ -35,6 +35,8 @@ class DFN(BaseModel):
 
         self.set_external_circuit_submodel()
         self.set_porosity_submodel()
+        self.set_crack_submodel()
+        self.set_active_material_submodel()
         self.set_tortuosity_submodels()
         self.set_convection_submodel()
         self.set_interfacial_submodel()
@@ -44,20 +46,51 @@ class DFN(BaseModel):
         self.set_electrolyte_submodel()
         self.set_thermal_submodel()
         self.set_current_collector_submodel()
-        self.set_crack_submodel()
         self.set_sei_submodel()
+        self.set_lithium_plating_submodel()
 
         if build:
             self.build_model()
 
-        pybamm.citations.register("doyle1993modeling")
+        pybamm.citations.register("Doyle1993")
 
     def set_porosity_submodel(self):
 
-        if self.options["sei porosity change"] is False:
+        if self.options["sei porosity change"] == "false":
             self.submodels["porosity"] = pybamm.porosity.Constant(self.param)
-        elif self.options["sei porosity change"] is True:
+        elif self.options["sei porosity change"] == "true":
             self.submodels["porosity"] = pybamm.porosity.Full(self.param)
+
+    def set_active_material_submodel(self):
+
+        if self.options["loss of active material"] == "none":
+            self.submodels[
+                "negative active material"
+            ] = pybamm.active_material.Constant(self.param, "Negative", self.options)
+            self.submodels[
+                "positive active material"
+            ] = pybamm.active_material.Constant(self.param, "Positive", self.options)
+        elif self.options["loss of active material"] == "both":
+            self.submodels[
+                "negative active material"
+            ] = pybamm.active_material.VaryingFull(self.param, "Negative", self.options)
+            self.submodels[
+                "positive active material"
+            ] = pybamm.active_material.VaryingFull(self.param, "Positive", self.options)
+        elif self.options["loss of active material"] == "negative":
+            self.submodels[
+                "negative active material"
+            ] = pybamm.active_material.VaryingFull(self.param, "Negative", self.options)
+            self.submodels[
+                "positive active material"
+            ] = pybamm.active_material.Constant(self.param, "Positive", self.options)
+        elif self.options["loss of active material"] == "positive":
+            self.submodels[
+                "negative active material"
+            ] = pybamm.active_material.Constant(self.param, "Negative", self.options)
+            self.submodels[
+                "positive active material"
+            ] = pybamm.active_material.VaryingFull(self.param, "Positive", self.options)
 
     def set_convection_submodel(self):
 
@@ -104,15 +137,15 @@ class DFN(BaseModel):
 
     def set_solid_submodel(self):
 
-        if self.options["surface form"] is False:
+        if self.options["surface form"] == "false":
             submod_n = pybamm.electrode.ohm.Full(self.param, "Negative")
             submod_p = pybamm.electrode.ohm.Full(self.param, "Positive")
         else:
             submod_n = pybamm.electrode.ohm.SurfaceForm(self.param, "Negative")
             submod_p = pybamm.electrode.ohm.SurfaceForm(self.param, "Positive")
 
-        self.submodels["negative electrode"] = submod_n
-        self.submodels["positive electrode"] = submod_p
+        self.submodels["negative electrode potential"] = submod_n
+        self.submodels["positive electrode potential"] = submod_p
 
     def set_electrolyte_submodel(self):
 
@@ -129,7 +162,7 @@ class DFN(BaseModel):
                 )
             )
 
-        if self.options["surface form"] is False:
+        if self.options["surface form"] == "false":
             self.submodels[
                 "electrolyte conductivity"
             ] = pybamm.electrolyte_conductivity.Full(self.param)

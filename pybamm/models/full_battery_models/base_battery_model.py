@@ -16,22 +16,23 @@ class BaseBatteryModel(pybamm.BaseModel):
     options: dict
         A dictionary of options to be passed to the model. The options that can
         be set are listed below. Note that not all of the options are compatible with
-        each other and with all of the models implemented in PyBaMM.
+        each other and with all of the models implemented in PyBaMM. Each option is
+        optional and takes a default value if not provided.
 
-            * "cell geometry" : str, optional
+            * "cell geometry" : str
                 Sets the geometry of the cell. Can be "pouch" (default) or
                 "arbitrary". The arbitrary geometry option solves a 1D electrochemical
                 model with prescribed cell volume and cross-sectional area, and
                 (if thermal effects are included) solves a lumped thermal model
                 with prescribed surface area for cooling.
-            * "convection" : bool or str, optional
+            * "convection" : str
                 Whether to include the effects of convection in the model. Can be
-                False (default), "differential" or "algebraic". Must be 'False' for
-                lithium-ion models.
-            * "current collector" : str, optional
+                "none" (default), "uniform transverse" or "full transverse".
+                Must be "none" for lithium-ion models.
+            * "current collector" : str
                 Sets the current collector model to use. Can be "uniform" (default),
                 "potential pair" or "potential pair quite conductive".
-            * "dimensionality" : int, optional
+            * "dimensionality" : int
                 Sets the dimension of the current collector problem. Can be 0
                 (default), 1 or 2.
             * "external submodels" : list
@@ -39,31 +40,43 @@ class BaseBatteryModel(pybamm.BaseModel):
                 variable for instead of solving in PyBaMM. The entries of the lists
                 are strings that correspond to the submodel names in the keys
                 of `self.submodels`.
-            * "interfacial surface area" : str, optional
+            * "interfacial surface area" : str
                 Sets the model for the interfacial surface area. Can be "constant"
                 (default) or "varying". Not currently implemented in any of the models.
+            * "lithium plating" : str, optional
+                Sets the model for lithium plating. Can be "none" (default),
+                "reversible" or "irreversible".
+            * "loss of active material" : str, optional
+                Sets the model for loss of active material. Can be "none" (default) or
+                "example", which is a placeholder for LAM models.
             * "particle" : str, optional
+            * "loss of active material" : str
+                Sets the model for loss of active material. Can be "none" (default),
+                "positive", "negative" or "both" to enable it for the specific
+                electrode.
+            * "particle" : str
                 Sets the submodel to use to describe behaviour within the particle.
                 Can be "Fickian diffusion" (default), "uniform profile",
                 "quadratic profile", or "quartic profile".
-            * "particle shape" : str, optional
+            * "particle shape" : str
                 Sets the model shape of the electrode particles. This is used to
-                calculate the surface area per unit volume. Can be "spherical"
+                calculate the surface area to volume ratio. Can be "spherical"
                 (default) or "user". For the "user" option the surface area per
                 unit volume can be passed as a parameter, and is therefore not
                 necessarily consistent with the particle shape.
-            * "particle cracking" : str, optional
+            * "particle cracking" : str
                 Sets the model to account for mechanical effects and particle
-                cracking. Can be None, "no cracking", "anode", "cathode" or "both".
-                All options other than None account for the effects of swelling
+                cracking. Can be "none", "no cracking", "negative", "positive" or
+                "both".
+                All options other than "none" account for the effects of swelling
                 of electrode particles, cell thickness change, and stress-assisted
-                diffusion. The options "anode", "cathode" or "both" additionally account
-                for crack propagation in the anode, cathode or both electrodes,
-                respectively.
+                diffusion. The options "negative", "positive" or "both" additionally
+                account for crack propagation in the negative, positive or both
+                electrodes, respectively.
             * "sei" : str
                 Set the sei submodel to be used. Options are:
 
-                - None: :class:`pybamm.sei.NoSEI` (no SEI growth)
+                - "none": :class:`pybamm.sei.NoSEI` (no SEI growth)
                 - "constant": :class:`pybamm.sei.Constant` (constant SEI thickness)
                 - "reaction limited": :class:`pybamm.sei.ReactionLimited`
                 - "solvent-diffusion limited": \
@@ -76,12 +89,12 @@ class BaseBatteryModel(pybamm.BaseModel):
                     :class:`pybamm.sei.EcReactionLimited`
             * "sei film resistance" : str
                 Set the submodel for additional term in the overpotential due to SEI.
-                The default value is "None" if the "sei" option is "None", and
+                The default value is "none" if the "sei" option is "none", and
                 "distributed" otherwise. This is because the "distributed" model is more
                 complex than the model with no additional resistance, which adds
                 unnecessary complexity if there is no SEI in the first place
 
-                - None: no additional resistance\
+                - "none": no additional resistance\
 
                     .. math::
                         \\eta_r = \\frac{F}{RT} * (\\phi_s - \\phi_e - U)
@@ -99,18 +112,24 @@ class BaseBatteryModel(pybamm.BaseModel):
                     .. math::
                         \\eta_r = \\frac{F}{RT}
                         * (\\phi_s - \\phi_e - U - R_{sei} * L_{sei} * \\frac{I}{aL})
-            * "sei porosity change" : bool
-                Whether to include porosity change due to SEI formation (default False)
-            * "side reactions" : list, optional
+            * "sei porosity change" : str
+                Whether to include porosity change due to SEI formation, can be "false"
+                (default) or "true".
+            * "side reactions" : list
                 Contains a list of any side reactions to include. Default is []. If this
                 list is not empty (i.e. side reactions are included in the model), then
-                "surface form" cannot be 'False'.
-            * "surface form" : bool or str, optional
-                Whether to use the surface formulation of the problem. Can be False
+                "surface form" cannot be 'false'.
+            * "surface form" : str
+                Whether to use the surface formulation of the problem. Can be "false"
                 (default), "differential" or "algebraic".
-            * "thermal" : str, optional
+            * "thermal" : str
                 Sets the thermal model to use. Can be "isothermal" (default), "lumped",
                 "x-lumped", or "x-full".
+            * "total interfacial current density as a state" : str
+                Whether to make a state for the total interfacial current density and
+                solve an algebraic equation for it. Default is "false", unless "sei film
+                resistance" is distributed in which case it is automatically set to
+                "true".
 
     **Extends:** :class:`pybamm.BaseModel`
     """
@@ -199,8 +218,8 @@ class BaseBatteryModel(pybamm.BaseModel):
         default_options = {
             "operating mode": "current",
             "dimensionality": 0,
-            "surface form": False,
-            "convection": False,
+            "surface form": "false",
+            "convection": "none",
             "side reactions": [],
             "interfacial surface area": "constant",
             "current collector": "uniform",
@@ -208,19 +227,22 @@ class BaseBatteryModel(pybamm.BaseModel):
             "particle shape": "spherical",
             "electrolyte conductivity": "default",
             "thermal": "isothermal",
-            "cell geometry": None,
+            "cell geometry": "none",
             "external submodels": [],
-            "sei": None,
-            "sei porosity change": False,
-            "working electrode": None,
-            "particle cracking": None,
+            "sei": "none",
+            "lithium plating": "none",
+            "sei porosity change": "false",
+            "loss of active material": "none",
+            "working electrode": "none",
+            "particle cracking": "none",
+            "total interfacial current density as a state": "false",
         }
         # Change the default for cell geometry based on which thermal option is provided
         extra_options = extra_options or {}
         thermal_option = extra_options.get(
-            "thermal", None
-        )  # return None if option not given
-        if thermal_option is None or thermal_option in ["isothermal", "lumped"]:
+            "thermal", "none"
+        )  # return "none" if option not given
+        if thermal_option in ["none", "isothermal", "lumped"]:
             default_options["cell geometry"] = "arbitrary"
         else:
             default_options["cell geometry"] = "pouch"
@@ -230,9 +252,11 @@ class BaseBatteryModel(pybamm.BaseModel):
         # Change the default for SEI film resistance based on which sei option is
         # provided
         # extra_options = extra_options or {}
-        sei_option = extra_options.get("sei", None)  # return None if option not given
-        if sei_option is None:
-            default_options["sei film resistance"] = None
+        sei_option = extra_options.get(
+            "sei", "none"
+        )  # return "none" if option not given
+        if sei_option == "none":
+            default_options["sei film resistance"] = "none"
         else:
             default_options["sei film resistance"] = "distributed"
         # The "sei film resistance" option will still be overridden by extra_options if
@@ -250,9 +274,23 @@ class BaseBatteryModel(pybamm.BaseModel):
                     )
                 )
 
+        # If "sei film resistance" is "distributed" then "total interfacial current
+        # density as a state" must be "true"
+        if options["sei film resistance"] == "distributed":
+            options["total interfacial current density as a state"] = "true"
+            # Check that extra_options did not try to provide a clashing option
+            if (
+                extra_options.get("total interfacial current density as a state")
+                == "false"
+            ):
+                raise pybamm.OptionError(
+                    "If 'sei film resistance' is 'distributed' then 'total interfacial "
+                    "current density as a state' must be 'true'"
+                )
+
         # Options that are incompatible with models
         if isinstance(self, pybamm.lithium_ion.BaseModel):
-            if options["convection"] is not False:
+            if options["convection"] != "none":
                 raise pybamm.OptionError(
                     "convection not implemented for lithium-ion models"
                 )
@@ -269,8 +307,10 @@ class BaseBatteryModel(pybamm.BaseModel):
                     "Lead-acid models can only have thermal "
                     "effects if dimensionality is 0."
                 )
-            if options["sei"] is not None or options["sei film resistance"] is not None:
+            if options["sei"] != "none" or options["sei film resistance"] != "none":
                 raise pybamm.OptionError("Lead-acid models cannot have SEI formation")
+            if options["lithium plating"] != "none":
+                raise pybamm.OptionError("Lead-acid models cannot have lithium plating")
 
         # Some standard checks to make sure options are compatible
         if not (
@@ -282,7 +322,7 @@ class BaseBatteryModel(pybamm.BaseModel):
             )
         if (
             isinstance(self, (pybamm.lead_acid.LOQS, pybamm.lead_acid.Composite))
-            and options["surface form"] is False
+            and options["surface form"] == "false"
         ):
             if len(options["side reactions"]) > 0:
                 raise pybamm.OptionError(
@@ -291,12 +331,12 @@ class BaseBatteryModel(pybamm.BaseModel):
                         self
                     )
                 )
-        if options["surface form"] not in [False, "differential", "algebraic"]:
+        if options["surface form"] not in ["false", "differential", "algebraic"]:
             raise pybamm.OptionError(
                 "surface form '{}' not recognised".format(options["surface form"])
             )
         if options["convection"] not in [
-            False,
+            "none",
             "uniform transverse",
             "full transverse",
         ]:
@@ -328,7 +368,7 @@ class BaseBatteryModel(pybamm.BaseModel):
                 "Unknown geometry '{}'".format(options["cell geometry"])
             )
         if options["sei"] not in [
-            None,
+            "none",
             "constant",
             "reaction limited",
             "solvent-diffusion limited",
@@ -337,24 +377,46 @@ class BaseBatteryModel(pybamm.BaseModel):
             "ec reaction limited",
         ]:
             raise pybamm.OptionError("Unknown sei model '{}'".format(options["sei"]))
-        if options["sei film resistance"] not in [None, "distributed", "average"]:
+        if options["sei film resistance"] not in ["none", "distributed", "average"]:
             raise pybamm.OptionError(
                 "Unknown sei film resistance model '{}'".format(
                     options["sei film resistance"]
                 )
             )
-        if options["sei porosity change"] not in [True, False]:
+        if options["sei porosity change"] not in ["true", "false"]:
+            if options["sei porosity change"] in [True, False]:
+                raise pybamm.OptionError(
+                    "sei porosity change must now be given in string format "
+                    "('true' or 'false')"
+                )
             raise pybamm.OptionError(
                 "Unknown sei porosity change '{}'".format(
                     options["sei porosity change"]
                 )
             )
 
+        if options["lithium plating"] not in ["none", "reversible", "irreversible"]:
+            raise pybamm.OptionError(
+                "Unknown lithium plating model '{}'".format(options["lithium plating"])
+            )
+
+        if options["loss of active material"] not in [
+            "none",
+            "negative",
+            "positive",
+            "both",
+        ]:
+            raise pybamm.OptionError(
+                "Unknown loss of active material '{}'".format(
+                    options["loss of active material"]
+                )
+            )
+
         if options["particle cracking"] not in [
-            None,
+            "none",
             "no cracking",
-            "anode",
-            "cathode",
+            "negative",
+            "positive",
             "both",
         ]:
             raise pybamm.OptionError(
@@ -385,7 +447,7 @@ class BaseBatteryModel(pybamm.BaseModel):
                 "The 'fast diffusion' option has been renamed. "
                 "Use 'uniform profile' instead."
             )
-        if options["particle shape"] not in ["spherical", "user"]:
+        if options["particle shape"] not in ["spherical", "user", "no particles"]:
             raise pybamm.OptionError(
                 "particle shape '{}' not recognised".format(options["particle shape"])
             )
@@ -584,7 +646,7 @@ class BaseBatteryModel(pybamm.BaseModel):
                 `model.update` instead."""
             )
 
-        pybamm.logger.info("Building {}".format(self.name))
+        pybamm.logger.info("Start building {}".format(self.name))
 
         if self._built_fundamental_and_external is False:
             self.build_fundamental_and_external()
@@ -611,30 +673,11 @@ class BaseBatteryModel(pybamm.BaseModel):
                 self.variables.update(var)
 
         self._built = True
+        pybamm.logger.info("Finish building {}".format(self.name))
 
-    def new_copy(self, build=True):
-        """
-        Create a copy of the model. Overwrites the functionality of
-        :class:`pybamm.BaseModel` to make sure that the submodels are updated correctly
-        """
-        # create without building
-        # 'build' is not a keyword argument for the BaseBatteryModel class, but it
-        # should be for all of the subclasses
-        new_model = self.__class__(options=self.options, name=self.name, build=False)
-        # update submodels
-        new_model.submodels = self.submodels
-        # clear submodel equations to avoid weird conflicts
-        for submodel in self.submodels.values():
-            submodel._rhs = {}
-            submodel._algebraic = {}
-            submodel._initial_conditions = {}
-            submodel._boundary_conditions = {}
-            submodel._variables = {}
-            submodel._events = []
-
-        # now build
-        if build:
-            new_model.build_model()
+    def new_empty_copy(self):
+        "See :meth:`pybamm.BaseModel.new_empty_copy()`"
+        new_model = self.__class__(name=self.name, options=self.options, build=False)
         new_model.use_jacobian = self.use_jacobian
         new_model.use_simplify = self.use_simplify
         new_model.convert_to_format = self.convert_to_format
@@ -820,12 +863,10 @@ class BaseBatteryModel(pybamm.BaseModel):
 
         # Battery-wide variables
         V_dim = self.variables["Terminal voltage [V]"]
-        eta_e_av = self.variables.get("X-averaged electrolyte ohmic losses", 0)
-        eta_c_av = self.variables.get("X-averaged concentration overpotential", 0)
-        eta_e_av_dim = self.variables.get("X-averaged electrolyte ohmic losses [V]", 0)
-        eta_c_av_dim = self.variables.get(
-            "X-averaged concentration overpotential [V]", 0
-        )
+        eta_e_av = self.variables["X-averaged electrolyte ohmic losses"]
+        eta_c_av = self.variables["X-averaged concentration overpotential"]
+        eta_e_av_dim = self.variables["X-averaged electrolyte ohmic losses [V]"]
+        eta_c_av_dim = self.variables["X-averaged concentration overpotential [V]"]
         num_cells = pybamm.Parameter(
             "Number of cells connected in series to make a battery"
         )
@@ -871,12 +912,25 @@ class BaseBatteryModel(pybamm.BaseModel):
         )
         # Current collector area for turning resistivity into resistance
         A_cc = self.param.A_cc
+
+        # Hack to avoid division by zero if i_cc is exactly zero
+        # If i_cc is zero, i_cc_not_zero becomes 1. But multiplying by sign(i_cc) makes
+        # the local resistance 'zero' (really, it's not defined when i_cc is zero)
+        i_cc_not_zero = ((i_cc > 0) + (i_cc < 0)) * i_cc + (i_cc >= 0) * (i_cc <= 0)
+        i_cc_dim_not_zero = ((i_cc_dim > 0) + (i_cc_dim < 0)) * i_cc_dim + (
+            i_cc_dim >= 0
+        ) * (i_cc_dim <= 0)
+
         self.variables.update(
             {
                 "Change in measured open circuit voltage": eta_ocv,
                 "Change in measured open circuit voltage [V]": eta_ocv_dim,
-                "Local ECM resistance": v_ecm / (i_cc * A_cc),
-                "Local ECM resistance [Ohm]": v_ecm_dim / (i_cc_dim * A_cc),
+                "Local ECM resistance": pybamm.sign(i_cc)
+                * v_ecm
+                / (i_cc_not_zero * A_cc),
+                "Local ECM resistance [Ohm]": pybamm.sign(i_cc)
+                * v_ecm_dim
+                / (i_cc_dim_not_zero * A_cc),
             }
         )
 

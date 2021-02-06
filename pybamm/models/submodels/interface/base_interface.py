@@ -38,6 +38,9 @@ class BaseInterface(pybamm.BaseSubModel):
         elif reaction == "sei":
             self.reaction_name = " sei"
             self.Reaction_icd = "Sei interfacial current density"
+        elif reaction == "lithium plating":
+            self.reaction_name = " lithium plating"
+            self.Reaction_icd = "Lithium plating interfacial current density"
         self.reaction = reaction
 
     def _get_exchange_current_density(self, variables):
@@ -173,17 +176,9 @@ class BaseInterface(pybamm.BaseSubModel):
         else:
             return pybamm.Scalar(0)
 
-    def _get_surface_area_per_unit_volume(self):
-        "Returns the surface area per unit volume (which may depend on position)"
-        x_n = pybamm.standard_spatial_vars.x_n
-        x_p = pybamm.standard_spatial_vars.x_p
-        a_n = self.param.a_n(x_n)
-        a_p = self.param.a_p(x_p)
-        return a_n, a_p
-
     def _get_electrolyte_reaction_signed_stoichiometry(self):
         "Returns the number of electrons in the reaction"
-        if self.reaction in ["lithium-ion main", "sei"]:
+        if self.reaction in ["lithium-ion main", "sei", "lithium plating"]:
             # Both the main reaction current contribute to the electrolyte reaction
             # current
             return pybamm.Scalar(1), pybamm.Scalar(1)
@@ -347,15 +342,10 @@ class BaseInterface(pybamm.BaseSubModel):
             }
         )
 
-        a_n, a_p = self._get_surface_area_per_unit_volume()
+        a_n = variables["Negative electrode surface area to volume ratio"]
+        a_p = variables["Positive electrode surface area to volume ratio"]
         a = pybamm.Concatenation(
             a_n, pybamm.FullBroadcast(0, "separator", "current collector"), a_p
-        )
-        variables.update(
-            {
-                "Negative electrode surface area per unit volume": a_n,
-                "Positive electrode surface area per unit volume": a_p,
-            }
         )
 
         s_n, s_p = self._get_electrolyte_reaction_signed_stoichiometry()
@@ -548,27 +538,34 @@ class BaseInterface(pybamm.BaseSubModel):
         # Average, and broadcast if necessary
         if delta_phi.domain == []:
             delta_phi_av = delta_phi
+            delta_phi_av_dim = ocp_ref + delta_phi_av * pot_scale
             delta_phi = pybamm.FullBroadcast(
-                delta_phi, self.domain_for_broadcast, "current collector"
+                delta_phi_av, self.domain_for_broadcast, "current collector"
+            )
+            delta_phi_dim = pybamm.FullBroadcast(
+                delta_phi_av_dim, self.domain_for_broadcast, "current collector"
             )
         elif delta_phi.domain == ["current collector"]:
             delta_phi_av = delta_phi
-            delta_phi = pybamm.PrimaryBroadcast(delta_phi, self.domain_for_broadcast)
+            delta_phi_av_dim = ocp_ref + delta_phi * pot_scale
+            delta_phi = pybamm.PrimaryBroadcast(delta_phi_av, self.domain_for_broadcast)
+            delta_phi_dim = pybamm.PrimaryBroadcast(
+                delta_phi_av_dim, self.domain_for_broadcast
+            )
         else:
             delta_phi_av = pybamm.x_average(delta_phi)
+            delta_phi_av_dim = ocp_ref + delta_phi_av * pot_scale
+            delta_phi_dim = ocp_ref + delta_phi * pot_scale
 
         variables = {
             self.domain + " electrode surface potential difference": delta_phi,
             "X-averaged "
             + self.domain.lower()
             + " electrode surface potential difference": delta_phi_av,
-            self.domain
-            + " electrode surface potential difference [V]": ocp_ref
-            + delta_phi * pot_scale,
+            self.domain + " electrode surface potential difference [V]": delta_phi_dim,
             "X-averaged "
             + self.domain.lower()
-            + " electrode surface potential difference [V]": ocp_ref
-            + delta_phi_av * pot_scale,
+            + " electrode surface potential difference [V]": delta_phi_av_dim,
         }
 
         return variables

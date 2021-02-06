@@ -30,7 +30,7 @@ class InverseButlerVolmer(BaseInterface):
     def __init__(self, param, domain, reaction, options=None):
         super().__init__(param, domain, reaction)
         if options is None:
-            options = {"sei film resistance": None}
+            options = {"sei film resistance": "none"}
         self.options = options
 
     def get_coupled_variables(self, variables):
@@ -62,7 +62,7 @@ class InverseButlerVolmer(BaseInterface):
         eta_r = self._get_overpotential(j_tot, j0, ne, T)
 
         # With SEI resistance (distributed and averaged have the same effect here)
-        if self.options["sei film resistance"] is not None:
+        if self.options["sei film resistance"] != "none":
             if self.domain == "Negative":
                 R_sei = self.param.R_sei_n
             elif self.domain == "Positive":
@@ -136,7 +136,10 @@ class CurrentForInverseButlerVolmer(BaseInterface):
             + " electrode total interfacial current density"
         ]
         j_sei = variables[self.domain + " electrode sei interfacial current density"]
-        j = j_tot - j_sei
+        j_stripping = variables[
+            self.domain + " electrode lithium plating interfacial current density"
+        ]
+        j = j_tot - j_sei - j_stripping
 
         variables.update(self._get_standard_interfacial_current_variables(j))
 

@@ -56,6 +56,7 @@ from .util import root_dir
 
 ABSOLUTE_PATH = root_dir()
 PARAMETER_PATH = [
+    root_dir(),
     os.getcwd(),
     os.path.join(root_dir(), "pybamm", "input", "parameters"),
 ]
@@ -116,6 +117,7 @@ if system() != "Windows":
 from .expression_tree.operations.jacobian import Jacobian
 from .expression_tree.operations.convert_to_casadi import CasadiConverter
 from .expression_tree.operations.unpack_symbols import SymbolUnpacker
+from .expression_tree.operations.replace_symbols import SymbolReplacer
 
 #
 # Model classes
@@ -136,6 +138,7 @@ from .models.full_battery_models import lithium_ion
 from .models.submodels.base_submodel import BaseSubModel
 
 from .models.submodels import (
+    active_material,
     convection,
     current_collector,
     electrolyte_conductivity,
@@ -151,6 +154,7 @@ from .models.submodels import (
     particle_cracking,
 )
 from .models.submodels.interface import sei
+from .models.submodels.interface import lithium_plating
 
 #
 # Geometry
@@ -211,7 +215,7 @@ from .spatial_methods.scikit_finite_element import ScikitFiniteElement
 #
 # Solver classes
 #
-from .solvers.solution import Solution, _BaseSolution
+from .solvers.solution import Solution
 from .solvers.processed_variable import ProcessedVariable
 from .solvers.processed_symbolic_variable import ProcessedSymbolicVariable
 from .solvers.base_solver import BaseSolver

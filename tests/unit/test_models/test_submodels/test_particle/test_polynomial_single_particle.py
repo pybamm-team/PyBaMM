@@ -17,6 +17,8 @@ class TestSingleParticle(unittest.TestCase):
             "Current collector current density": a,
             "X-averaged negative electrode interfacial current density": a,
             "X-averaged negative electrode temperature": a,
+            "Negative electrode active material volume fraction": a,
+            "Negative electrode surface area to volume ratio": a,
         }
 
         submodel = pybamm.particle.PolynomialSingleParticle(
@@ -41,6 +43,8 @@ class TestSingleParticle(unittest.TestCase):
             "Current collector current density": a,
             "X-averaged positive electrode interfacial current density": a,
             "X-averaged positive electrode temperature": a,
+            "Positive electrode active material volume fraction": a,
+            "Positive electrode surface area to volume ratio": a,
         }
 
         submodel = pybamm.particle.PolynomialSingleParticle(

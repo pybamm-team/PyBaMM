@@ -50,6 +50,7 @@ class VariableBase(pybamm.Symbol):
 
     def new_copy(self):
         """ See :meth:`pybamm.Symbol.new_copy()`. """
+
         return self.__class__(
             self.name, self.domain, self.auxiliary_domains, self.bounds
         )
@@ -187,6 +188,12 @@ class ExternalVariable(Variable):
     @property
     def size(self):
         return self._size
+
+    def new_copy(self):
+        """ See :meth:`pybamm.Symbol.new_copy()`. """
+        return ExternalVariable(
+            self.name, self.size, self.domain, self.auxiliary_domains
+        )
 
     def _evaluate_for_shape(self):
         """ See :meth:`pybamm.Symbol.evaluate_for_shape_using_domain()` """

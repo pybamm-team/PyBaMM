@@ -60,6 +60,8 @@ class LeadingOrder(BaseElectrolyteDiffusion):
 
         c_e_av = variables["X-averaged electrolyte concentration"]
 
+        T_av = variables["X-averaged cell temperature"]
+
         eps_n_av = variables["X-averaged negative electrode porosity"]
         eps_s_av = variables["X-averaged separator porosity"]
         eps_p_av = variables["X-averaged positive electrode porosity"]
@@ -84,8 +86,8 @@ class LeadingOrder(BaseElectrolyteDiffusion):
             "Sum of x-averaged positive electrode electrolyte reaction source terms"
         ]
         source_terms = (
-            param.l_n * (sum_s_j_n_0 - param.t_plus(c_e_av) * sum_j_n_0)
-            + param.l_p * (sum_s_j_p_0 - param.t_plus(c_e_av) * sum_j_p_0)
+            param.l_n * (sum_s_j_n_0 - param.t_plus(c_e_av, T_av) * sum_j_n_0)
+            + param.l_p * (sum_s_j_p_0 - param.t_plus(c_e_av, T_av) * sum_j_p_0)
         ) / param.gamma_e
 
         self.rhs = {

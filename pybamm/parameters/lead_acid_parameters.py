@@ -86,7 +86,7 @@ class LeadAcidParameters:
         )  # pybamm.Parameter("Typical oxygen concentration [mol.m-3]")
 
         # Microstructure
-        # Note: the surface area per unit volume can be set as a function of
+        # Note: the surface area to volume ratio can be set as a function of
         # through-cell position, so is defined later as a function
         self.b_e_n = self.geo.b_e_n
         self.b_e_s = self.geo.b_e_s
@@ -225,7 +225,7 @@ class LeadAcidParameters:
         self.R_sei_dimensional = pybamm.Scalar(0)
         self.beta_sei_n = pybamm.Scalar(0)
 
-    def t_plus(self, c_e):
+    def t_plus(self, c_e, T):
         "Dimensionless transference number (i.e. c_e is dimensionless)"
         inputs = {"Electrolyte concentration [mol.m-3]": c_e * self.c_e_typ}
         return pybamm.FunctionParameter("Cation transference number", inputs)
@@ -318,7 +318,7 @@ class LeadAcidParameters:
 
     def a_n_dimensional(self, x):
         """
-        Negative electrode surface area per unit volume as a function of
+        Negative electrode surface area to volume ratio as a function of
         through-cell distance
         """
         inputs = {"Through-cell distance (x_n) [m]": x}
@@ -328,12 +328,32 @@ class LeadAcidParameters:
 
     def a_p_dimensional(self, x):
         """
-        Positive electrode surface area per unit volume as a function of
+        Positive electrode surface area to volume ratio as a function of
         through-cell distance
         """
         inputs = {"Through-cell distance (x_p) [m]": x}
         return pybamm.FunctionParameter(
             "Positive electrode surface area to volume ratio [m-1]", inputs
+        )
+
+    def epsilon_s_n(self, x):
+        """
+        Negative electrode active material volume fraction, specified for compatibility
+        with lithium-ion submodels. Note that this does not change even though porosity
+        changes, since the material being created is inactive.
+        """
+        return pybamm.FullBroadcast(
+            1 - self.eps_n_max, "negative electrode", "current collector"
+        )
+
+    def epsilon_s_p(self, x):
+        """
+        Positive electrode active material volume fraction, specified for compatibility
+        with lithium-ion submodels. Note that this does not change even though porosity
+        changes, since the material being created is inactive.
+        """
+        return pybamm.FullBroadcast(
+            1 - self.eps_p_max, "positive electrode", "current collector"
         )
 
     def _set_scales(self):
@@ -420,7 +440,7 @@ class LeadAcidParameters:
             self.c_e_typ
             * self.M_e
             / self.rho_typ
-            * (self.t_plus(1) + self.M_minus / self.M_e)
+            * (self.t_plus(1, self.T_ref) + self.M_minus / self.M_e)
         )
         # Migrative kinematic relationship coefficient (electrolyte)
         self.omega_c_e = (
@@ -597,21 +617,12 @@ class LeadAcidParameters:
         self.rho_s = self.therm.rho_s
         self.rho_p = self.therm.rho_p
         self.rho_cp = self.therm.rho_cp
-        self.rho_k = self.therm.rho_k
-        self.rho = (
-            self.rho_cn * self.l_cn
-            + self.rho_n * self.l_n
-            + self.rho_s * self.l_s
-            + self.rho_p * self.l_p
-            + self.rho_cp * self.l_cp
-        ) / self.l  # effective volumetric heat capacity
 
         self.lambda_cn = self.therm.lambda_cn
         self.lambda_n = self.therm.lambda_n
         self.lambda_s = self.therm.lambda_s
         self.lambda_p = self.therm.lambda_p
         self.lambda_cp = self.therm.lambda_cp
-        self.lambda_k = self.therm.lambda_k
 
         self.Theta = self.therm.Theta
 
@@ -627,7 +638,7 @@ class LeadAcidParameters:
             * self.R
             * self.T_ref
             * self.tau_th_yz
-            / (self.therm.rho_eff_dim * self.F * self.Delta_T * self.L_x)
+            / (self.therm.rho_eff_dim(self.T_ref) * self.F * self.Delta_T * self.L_x)
         )
 
         self.T_amb_dim = self.therm.T_amb_dim
@@ -680,7 +691,7 @@ class LeadAcidParameters:
         "Thermodynamic factor"
         return (
             self.chi_dimensional(self.c_e_typ * c_e)
-            * (2 * (1 - self.t_plus(c_e)))
+            * (2 * (1 - self.t_plus(c_e, T)))
             / (
                 self.V_w
                 * self.c_T(self.c_e_typ * c_e, self.c_e_typ * c_ox, self.c_e_typ * c_hy)
@@ -737,7 +748,7 @@ class LeadAcidParameters:
 
     def a_n(self, x):
         """
-        Dimensionless negative electrode surface area per unit volume as a
+        Dimensionless negative electrode surface area to volume ratio as a
         function of dimensionless position x
         """
         x_dim = x * self.L_x
@@ -745,11 +756,21 @@ class LeadAcidParameters:
 
     def a_p(self, x):
         """
-        Dimensionless positive electrode surface area per unit volume as a
+        Dimensionless positive electrode surface area to volume ratio as a
         function of dimensionless position x
         """
         x_dim = x * self.L_x
         return self.a_p_dimensional(x_dim) / self.a_p_typ
+
+    def rho(self, T):
+        "Dimensionless effective volumetric heat capacity"
+        return (
+            self.rho_cn(T) * self.l_cn
+            + self.rho_n(T) * self.l_n
+            + self.rho_s(T) * self.l_s
+            + self.rho_p(T) * self.l_p
+            + self.rho_cp(T) * self.l_cp
+        ) / self.l
 
     def _set_input_current(self):
         "Set the input current"

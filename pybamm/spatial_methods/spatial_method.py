@@ -139,7 +139,7 @@ class SpatialMethod:
         elif broadcast_type.startswith("full"):
             out = symbol * pybamm.Vector(np.ones(full_domain_size), domain=domain)
 
-        out.auxiliary_domains = auxiliary_domains
+        out.auxiliary_domains = auxiliary_domains.copy()
         return out
 
     def gradient(self, symbol, discretised_symbol, boundary_conditions):
@@ -444,7 +444,7 @@ class SpatialMethod:
             Discretised binary operator
 
         """
-        return bin_op.__class__(disc_left, disc_right)
+        return bin_op._binary_new_copy(disc_left, disc_right)
 
     def concatenation(self, disc_children):
         """Discrete concatenation object.
@@ -459,4 +459,4 @@ class SpatialMethod:
         :class:`pybamm.DomainConcatenation`
             Concatenation of the discretised children
         """
-        return pybamm.DomainConcatenation(disc_children, self.mesh)
+        return pybamm.domain_concatenation(disc_children, self.mesh)

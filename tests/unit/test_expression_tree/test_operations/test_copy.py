@@ -9,8 +9,8 @@ from tests import get_mesh_for_testing
 
 class TestCopy(unittest.TestCase):
     def test_symbol_new_copy(self):
-        a = pybamm.Scalar(0)
-        b = pybamm.Scalar(1)
+        a = pybamm.Parameter("a")
+        b = pybamm.Parameter("b")
         v_n = pybamm.Variable("v", "negative electrode")
         x_n = pybamm.standard_spatial_vars.x_n
         v_s = pybamm.Variable("v", "separator")
@@ -47,6 +47,15 @@ class TestCopy(unittest.TestCase):
             pybamm.SpatialVariable("x", ["negative electrode"]),
             pybamm.t,
             pybamm.Index(vec, 1),
+            pybamm.NotConstant(a),
+            pybamm.ExternalVariable(
+                "external variable",
+                20,
+                domain="test",
+                auxiliary_domains={"secondary": "test2"},
+            ),
+            pybamm.minimum(a, b),
+            pybamm.maximum(a, b),
         ]:
             self.assertEqual(symbol.id, symbol.new_copy().id)
 

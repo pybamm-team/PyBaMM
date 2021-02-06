@@ -19,21 +19,19 @@ class BaseKinetics(BaseInterface):
     reaction : str
         The name of the reaction being implemented
     options: dict
-        A dictionary of options to be passed to the model. In this case "sei film
-        resistance" is the important option. See :class:`pybamm.BaseBatteryModel`
+        A dictionary of options to be passed to the model.
+        See :class:`pybamm.BaseBatteryModel`
 
     **Extends:** :class:`pybamm.interface.BaseInterface`
     """
 
-    def __init__(self, param, domain, reaction, options=None):
+    def __init__(self, param, domain, reaction, options):
         super().__init__(param, domain, reaction)
-        if options is None:
-            options = {"sei film resistance": None}
         self.options = options
 
     def get_fundamental_variables(self):
         if (
-            self.options["sei film resistance"] == "distributed"
+            self.options["total interfacial current density as a state"] == "true"
             and "main" in self.reaction
         ):
             j = pybamm.Variable(
@@ -146,7 +144,7 @@ class BaseKinetics(BaseInterface):
 
     def set_algebraic(self, variables):
         if (
-            self.options["sei film resistance"] == "distributed"
+            self.options["total interfacial current density as a state"] == "true"
             and "main" in self.reaction
         ):
             j_tot_var = variables[
@@ -165,7 +163,7 @@ class BaseKinetics(BaseInterface):
 
     def set_initial_conditions(self, variables):
         if (
-            self.options["sei film resistance"] == "distributed"
+            self.options["total interfacial current density as a state"] == "true"
             and "main" in self.reaction
         ):
             param = self.param
@@ -174,10 +172,15 @@ class BaseKinetics(BaseInterface):
                 + self.domain.lower()
                 + " electrode interfacial current density variable"
             ]
+            current_at_0 = (
+                pybamm.FunctionParameter("Current function [A]", {"Time [s]": 0})
+                / param.I_typ
+                * pybamm.sign(param.I_typ)
+            )
             if self.domain == "Negative":
-                j_tot_av_init = param.current_with_time / param.l_n
+                j_tot_av_init = current_at_0 / param.l_n
             elif self.domain == "Positive":
-                j_tot_av_init = -param.current_with_time / param.l_p
+                j_tot_av_init = -current_at_0 / param.l_p
 
             self.initial_conditions[j_tot_var] = j_tot_av_init
 
@@ -204,12 +207,12 @@ class BaseKinetics(BaseInterface):
         return j.diff(delta_phi)
 
     def _get_interface_variables_for_first_order(self, variables):
-        # This is a bit of a hack, but we need to multiply electrolyte concentration by
-        # one to differentiate it from the electrolyte concentration inside the
+        # This is a bit of a hack, but we need to wrap electrolyte concentration with
+        # the NotConstant class
+        # to differentiate it from the electrolyte concentration inside the
         # surface potential difference when taking j.diff(c_e) later on
-        # use explicit Multiplication instead of * to avoid simplification
-        c_e_0 = pybamm.Multiplication(
-            variables["Leading-order x-averaged electrolyte concentration"], 1
+        c_e_0 = pybamm.NotConstant(
+            variables["Leading-order x-averaged electrolyte concentration"]
         )
         hacked_variables = {
             **variables,

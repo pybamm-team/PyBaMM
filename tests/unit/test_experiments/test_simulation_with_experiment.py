@@ -22,7 +22,7 @@ class TestSimulationExperiment(unittest.TestCase):
         self.assertEqual(sim.experiment, experiment)
         self.assertEqual(
             sim._experiment_inputs[0]["Current input [A]"],
-            1 / 20 * model.default_parameter_values["Cell capacity [A.h]"],
+            1 / 20 * model.default_parameter_values["Nominal cell capacity [A.h]"],
         )
         self.assertEqual(sim._experiment_inputs[0]["Current switch"], 1)
         self.assertEqual(sim._experiment_inputs[0]["Voltage switch"], 0)
@@ -109,11 +109,11 @@ class TestSimulationExperiment(unittest.TestCase):
         # Solve a first time
         sim = pybamm.Simulation(model, experiment=experiment, parameter_values=param)
         sim.solve(inputs={"Dsn": 1})
-        np.testing.assert_array_equal(sim.solution.inputs["Dsn"], 1)
+        np.testing.assert_array_equal(sim.solution.all_inputs[0]["Dsn"], 1)
 
         # Solve again, input should change
         sim.solve(inputs={"Dsn": 2})
-        np.testing.assert_array_equal(sim.solution.inputs["Dsn"], 2)
+        np.testing.assert_array_equal(sim.solution.all_inputs[0]["Dsn"], 2)
 
 
 if __name__ == "__main__":

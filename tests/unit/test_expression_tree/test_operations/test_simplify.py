@@ -1,5 +1,7 @@
 #
 # Test for the Simplify class
+# This test file is a little bit out of date now that many simplifications are
+# performed automatically
 #
 import math
 import numpy as np
@@ -195,12 +197,11 @@ class TestSimplify(unittest.TestCase):
         # division
         self.assertIsInstance((a / b).simplify(), pybamm.Scalar)
         self.assertEqual((a / b).simplify().evaluate(), 0)
-        self.assertIsInstance((b / a).simplify(), pybamm.Scalar)
-        self.assertEqual((b / a).simplify().evaluate(), np.inf)
-        self.assertIsInstance((a / a).simplify(), pybamm.Scalar)
-        self.assertTrue(np.isnan((a / a).simplify().evaluate()))
         self.assertIsInstance((b / b).simplify(), pybamm.Scalar)
         self.assertEqual((b / b).simplify().evaluate(), 1)
+
+        with self.assertRaises(ZeroDivisionError):
+            b / a
 
         # not implemented for Symbol
         sym = pybamm.Symbol("sym")
@@ -385,7 +386,7 @@ class TestSimplify(unittest.TestCase):
         # more complex expression, with simplification
         expr3 = m1 @ (v3 * (m2 @ v2))
         expr3simp = expr3.simplify()
-        self.assertNotEqual(expr3.id, expr3simp.id)
+        self.assertEqual(expr3.id, expr3simp.id)
         np.testing.assert_array_equal(
             expr3.evaluate(y=np.ones(300)), expr3simp.evaluate(y=np.ones(300))
         )
@@ -470,11 +471,6 @@ class TestSimplify(unittest.TestCase):
         self.assertEqual(expr1.shape, m.shape)
         np.testing.assert_array_equal(expr1.evaluate().toarray(), np.zeros((30, 20)))
 
-        expr2 = (m / zero).simplify()
-        self.assertIsInstance(expr2, pybamm.Matrix)
-        self.assertEqual(expr2.shape, m.shape)
-        np.testing.assert_array_equal(expr2.evaluate(), np.inf)
-
         m = pybamm.Matrix(np.zeros((10, 10)))
         a = pybamm.Scalar(7)
         expr3 = (m / a).simplify()
@@ -506,6 +502,9 @@ class TestSimplify(unittest.TestCase):
                 ]
             ),
         )
+
+        # check it works when calling domain_concatenation
+        self.assertIsInstance(pybamm.domain_concatenation([a, b], mesh), pybamm.Vector)
 
     def test_simplify_concatenation_state_vectors(self):
         disc = get_discretisation_for_testing()
