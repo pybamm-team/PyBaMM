@@ -54,14 +54,6 @@ class UnaryOperator(pybamm.Symbol):
         """ Calculate the jacobian of a unary operator. """
         raise NotImplementedError
 
-    def _unary_simplify(self, simplified_child):
-        """
-        Simplify a unary operator. Default behaviour is to make a new copy, with
-        simplified child.
-        """
-
-        return self._unary_new_copy(simplified_child)
-
     def _unary_evaluate(self, child):
         """Perform unary operation on a child. """
         raise NotImplementedError
@@ -344,19 +336,6 @@ class SpatialOperator(UnaryOperator):
         # We shouldn't need this
         raise NotImplementedError
 
-    def _unary_simplify(self, simplified_child):
-        """ See :meth:`pybamm.UnaryOperator.simplify()`. """
-
-        # if there are none of these nodes in the child tree, then this expression
-        # does not depend on space, and therefore the spatial operator result is zero
-        search_types = (pybamm.Variable, pybamm.StateVector, pybamm.SpatialVariable)
-
-        # do the search, return a scalar zero node if no relevent nodes are found
-        if not self.has_symbol_of_classes(search_types):
-            return pybamm.Scalar(0)
-        else:
-            return self.__class__(simplified_child)
-
 
 class Gradient(SpatialOperator):
     """A node in the expression tree representing a grad operator
@@ -572,11 +551,6 @@ class Integral(SpatialOperator):
             + tuple(self.domain)
         )
 
-    def _unary_simplify(self, simplified_child):
-        """ See :meth:`UnaryOperator._unary_simplify()`. """
-
-        return self.__class__(simplified_child, self.integration_variable)
-
     def _unary_new_copy(self, child):
         """ See :meth:`UnaryOperator._unary_new_copy()`. """
 
@@ -721,11 +695,6 @@ class DefiniteIntegralVector(SpatialOperator):
             + tuple(self.domain)
         )
 
-    def _unary_simplify(self, simplified_child):
-        """ See :meth:`UnaryOperator._unary_simplify()`. """
-
-        return self.__class__(simplified_child, vector_type=self.vector_type)
-
     def _unary_new_copy(self, child):
         """ See :meth:`UnaryOperator._unary_new_copy()`. """
 
@@ -782,11 +751,6 @@ class BoundaryIntegral(SpatialOperator):
             (self.__class__, self.name) + (self.children[0].id,) + tuple(self.domain)
         )
 
-    def _unary_simplify(self, simplified_child):
-        """ See :meth:`UnaryOperator._unary_simplify()`. """
-
-        return self.__class__(simplified_child, region=self.region)
-
     def _unary_new_copy(self, child):
         """ See :meth:`UnaryOperator._unary_new_copy()`. """
 
@@ -835,10 +799,6 @@ class DeltaFunction(SpatialOperator):
     def _evaluates_on_edges(self, dimension):
         """ See :meth:`pybamm.Symbol._evaluates_on_edges()`. """
         return False
-
-    def _unary_simplify(self, simplified_child):
-        """ See :meth:`UnaryOperator._unary_simplify()`. """
-        return self.__class__(simplified_child, self.side, self.domain)
 
     def _unary_new_copy(self, child):
         """ See :meth:`UnaryOperator._unary_new_copy()`. """
@@ -903,10 +863,6 @@ class BoundaryOperator(SpatialOperator):
             + tuple(self.domain)
             + tuple([(k, tuple(v)) for k, v in self.auxiliary_domains.items()])
         )
-
-    def _unary_simplify(self, simplified_child):
-        """ See :meth:`UnaryOperator._unary_simplify()`. """
-        return self.__class__(simplified_child, self.side)
 
     def _unary_new_copy(self, child):
         """ See :meth:`UnaryOperator._unary_new_copy()`. """
