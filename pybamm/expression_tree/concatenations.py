@@ -149,12 +149,6 @@ class NumpyConcatenation(Concatenation):
         else:
             return SparseStack(*children_jacs)
 
-    def _concatenation_simplify(self, children):
-        """ See :meth:`pybamm.Concatenation._concatenation_simplify()`. """
-        new_symbol = simplified_numpy_concatenation(*children)
-        new_symbol.clear_domains()
-        return new_symbol
-
 
 class DomainConcatenation(Concatenation):
     """A node in the expression tree representing a concatenation of symbols, being
@@ -300,17 +294,6 @@ class DomainConcatenation(Concatenation):
         new_symbol = simplified_domain_concatenation(
             children, self.full_mesh, copy_this=self
         )
-        return new_symbol
-
-    def _concatenation_simplify(self, children):
-        """ See :meth:`pybamm.Concatenation._concatenation_simplify()`. """
-        new_symbol = simplified_domain_concatenation(
-            children, self.full_mesh, copy_this=self
-        )
-        # TODO: this should not be needed, but somehow we are still getting domains in
-        # the simplified children
-        new_symbol.clear_domains()
-
         return new_symbol
 
 
