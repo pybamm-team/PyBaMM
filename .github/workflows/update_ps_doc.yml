@@ -4,6 +4,7 @@ on:
   push:
     paths:
     - 'pybamm/parameters/parameter_sets.py'
+    - 'pybamm/parameters/CITATIONS.txt'
 
 jobs:
   build:
@@ -25,13 +26,14 @@ jobs:
         pip install pybamm
         pip install pybtex
     - name: Update docstring
-      run: python .github/update_ps_doc.py
+      run: python update_ps_doc.py
     - name: Create Pull Request
       uses: peter-evans/create-pull-request@v3
       with:
         delete-branch: true
+        branch-suffix: short-commit-hash
         commit-message: update parameter_sets
         title: Update parameter_sets
         body: |
             Update parameter_sets.py
-            Auto-generated
+            Auto-generated pull request
