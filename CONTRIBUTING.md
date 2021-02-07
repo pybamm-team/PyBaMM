@@ -57,6 +57,7 @@ pip install pipx # (For installing pipx)
 pipx install tox # (Using this, tox can automatically be accessed in your virtaul environment)
 ```
 You can also explore and install pipx from their [GitHub repository](https://github.com/pipxproject/pipx)
+
 2. Install sundials using the command below:
 ```bash
 # (Skip this step for Windows installation)
