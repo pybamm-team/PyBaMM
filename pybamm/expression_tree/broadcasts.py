@@ -59,10 +59,6 @@ class Broadcast(pybamm.SpatialOperator):
         self.broadcast_domain = broadcast_domain
         super().__init__(name, child, domain, auxiliary_domains)
 
-    def _unary_simplify(self, simplified_child):
-        """ See :meth:`pybamm.UnaryOperator.simplify()`. """
-        return self._unary_new_copy(simplified_child)
-
 
 class PrimaryBroadcast(Broadcast):
     """A node in the expression tree representing a primary broadcasting operator.

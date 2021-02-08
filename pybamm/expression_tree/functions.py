@@ -225,22 +225,6 @@ class Function(pybamm.Symbol):
             ),
         )
 
-    def _function_simplify(self, simplified_children):
-        """
-        Simplifies the function.
-
-        Inputs
-        ------
-        simplified_children: : list
-            A list of simplified children of the function
-
-        Returns
-        -------
-         :: pybamm.Scalar() if no children
-         :: pybamm.Function if there are children
-        """
-        return self._function_new_copy(simplified_children)
-
 
 class SpecificFunction(Function):
     """
@@ -261,11 +245,7 @@ class SpecificFunction(Function):
 
     def _function_new_copy(self, children):
         """ See :meth:`pybamm.Function._function_new_copy()` """
-        return self.__class__(*children)
-
-    def _function_simplify(self, simplified_children):
-        """ See :meth:`pybamm.Function._function_simplify()` """
-        return self.__class__(*simplified_children)
+        return pybamm.simplify_if_constant(self.__class__(*children))
 
 
 class Arcsinh(SpecificFunction):
