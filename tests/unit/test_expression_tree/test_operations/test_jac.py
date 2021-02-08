@@ -51,7 +51,7 @@ class TestJacobian(unittest.TestCase):
         A = pybamm.Matrix(2 * eye(2))
         func = A @ u
         jacobian = np.array([[2, 0, 0, 0], [0, 2, 0, 0]])
-        dfunc_dy = func.jac(y).simplify().evaluate(y=y0)
+        dfunc_dy = func.jac(y).evaluate(y=y0)
         np.testing.assert_array_equal(jacobian, dfunc_dy.toarray())
 
         func = u @ pybamm.StateVector(slice(0, 1))

@@ -261,7 +261,7 @@ class TestSpectralVolume(unittest.TestCase):
             * mesh["current collector"].npts
         )
         constant_y = np.ones((total_npts, 1))
-        np.testing.assert_array_equal(
+        np.testing.assert_array_almost_equal(
             grad_eqn_disc.evaluate(None, constant_y), np.zeros((total_npts_edges, 1))
         )
 
@@ -351,7 +351,9 @@ class TestSpectralVolume(unittest.TestCase):
         grad_eval = grad_eqn_disc.evaluate(None, constant_y)
         grad_eval = np.reshape(grad_eval, [sec_pts, prim_pts + 1])
 
-        np.testing.assert_array_equal(grad_eval, np.zeros([sec_pts, prim_pts + 1]))
+        np.testing.assert_array_almost_equal(
+            grad_eval, np.zeros([sec_pts, prim_pts + 1])
+        )
 
         # div
         # div (grad r^2) = 6, N_left = N_right = 0
@@ -562,7 +564,9 @@ class TestSpectralVolume(unittest.TestCase):
         grad_eval = grad_eqn_disc.evaluate(None, constant_y)
         grad_eval = np.reshape(grad_eval, [sec_pts, prim_pts + 1])
 
-        np.testing.assert_array_equal(grad_eval, np.zeros([sec_pts, prim_pts + 1]))
+        np.testing.assert_array_almost_equal(
+            grad_eval, np.zeros([sec_pts, prim_pts + 1])
+        )
 
         # div
         # div (grad r^2) = 6, N_left = N_right = 0

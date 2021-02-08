@@ -927,15 +927,15 @@ class Discretisation(object):
                 # Broadcast new_child to the domain specified by symbol.domain
                 # Different discretisations may broadcast differently
                 if symbol.domain == []:
-                    symbol = disc_child * pybamm.Vector([1])
+                    out = disc_child * pybamm.Vector([1])
                 else:
-                    symbol = spatial_method.broadcast(
+                    out = spatial_method.broadcast(
                         disc_child,
                         symbol.domain,
                         symbol.auxiliary_domains,
                         symbol.broadcast_type,
                     )
-                return symbol
+                return out
 
             elif isinstance(symbol, pybamm.DeltaFunction):
                 return spatial_method.delta_function(symbol, disc_child)
@@ -1054,7 +1054,7 @@ class Discretisation(object):
         if sparse:
             return pybamm.SparseStack(*symbols)
         else:
-            return pybamm.NumpyConcatenation(*symbols)
+            return pybamm.numpy_concatenation(*symbols)
 
     def _concatenate_in_order(self, var_eqn_dict, check_complete=False, sparse=False):
         """

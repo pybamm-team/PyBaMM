@@ -679,7 +679,6 @@ class BaseBatteryModel(pybamm.BaseModel):
         "See :meth:`pybamm.BaseModel.new_empty_copy()`"
         new_model = self.__class__(name=self.name, options=self.options, build=False)
         new_model.use_jacobian = self.use_jacobian
-        new_model.use_simplify = self.use_simplify
         new_model.convert_to_format = self.convert_to_format
         new_model.timescale = self.timescale
         new_model.length_scales = self.length_scales
@@ -912,12 +911,25 @@ class BaseBatteryModel(pybamm.BaseModel):
         )
         # Current collector area for turning resistivity into resistance
         A_cc = self.param.A_cc
+
+        # Hack to avoid division by zero if i_cc is exactly zero
+        # If i_cc is zero, i_cc_not_zero becomes 1. But multiplying by sign(i_cc) makes
+        # the local resistance 'zero' (really, it's not defined when i_cc is zero)
+        i_cc_not_zero = ((i_cc > 0) + (i_cc < 0)) * i_cc + (i_cc >= 0) * (i_cc <= 0)
+        i_cc_dim_not_zero = ((i_cc_dim > 0) + (i_cc_dim < 0)) * i_cc_dim + (
+            i_cc_dim >= 0
+        ) * (i_cc_dim <= 0)
+
         self.variables.update(
             {
                 "Change in measured open circuit voltage": eta_ocv,
                 "Change in measured open circuit voltage [V]": eta_ocv_dim,
-                "Local ECM resistance": v_ecm / (i_cc * A_cc),
-                "Local ECM resistance [Ohm]": v_ecm_dim / (i_cc_dim * A_cc),
+                "Local ECM resistance": pybamm.sign(i_cc)
+                * v_ecm
+                / (i_cc_not_zero * A_cc),
+                "Local ECM resistance [Ohm]": pybamm.sign(i_cc)
+                * v_ecm_dim
+                / (i_cc_dim_not_zero * A_cc),
             }
         )
 
