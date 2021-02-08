@@ -32,7 +32,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
-        python-version: [3.6, 3.7, 3.8]
+        python-version: [3.7, 3.8, 3.9]
 
     steps:
     - uses: actions/checkout@v2
@@ -45,7 +45,6 @@ jobs:
       if: matrix.os == 'ubuntu-latest'
       run: |
         sudo apt install gfortran gcc libopenblas-dev graphviz
-        sudo apt install python${{ matrix.python-version }}.dev
     
     - name: Install MacOS system dependencies
       if: matrix.os == 'macos-latest'

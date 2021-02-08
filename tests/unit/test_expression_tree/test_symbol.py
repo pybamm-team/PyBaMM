@@ -292,6 +292,14 @@ class TestSymbol(unittest.TestCase):
         a = 3 * pybamm.t + 2
         self.assertFalse(a.evaluates_to_constant_number())
 
+    def test_simplify(self):
+        a = pybamm.Parameter("A")
+        #test error
+        with self.assertRaisesRegex(
+            pybamm.ModelError, "simplify is deprecated as it now has no effect"
+        ):
+            (a + a).simplify()
+
     def test_symbol_repr(self):
         """
         test that __repr___ returns the string

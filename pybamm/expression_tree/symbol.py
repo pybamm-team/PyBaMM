@@ -8,7 +8,7 @@ import numbers
 import copy
 import numpy as np
 from anytree.exporter import DotExporter
-from scipy.sparse import issparse
+from scipy.sparse import issparse, csr_matrix
 
 
 def domain_size(domain):
@@ -120,6 +120,38 @@ def is_matrix_one(expr):
         )
     else:
         return False
+
+
+def simplify_if_constant(symbol):
+    """
+    Utility function to simplify an expression tree if it evalutes to a constant
+    scalar, vector or matrix
+    """
+    domain = symbol.domain
+    auxiliary_domains = symbol.auxiliary_domains
+    if symbol.is_constant():
+        result = symbol.evaluate_ignoring_errors()
+        if result is not None:
+            if (
+                isinstance(result, numbers.Number)
+                or (isinstance(result, np.ndarray) and result.ndim == 0)
+                or isinstance(result, np.bool_)
+            ):
+                return pybamm.Scalar(result)
+            elif isinstance(result, np.ndarray) or issparse(result):
+                if result.ndim == 1 or result.shape[1] == 1:
+                    return pybamm.Vector(
+                        result, domain=domain, auxiliary_domains=auxiliary_domains
+                    )
+                else:
+                    # Turn matrix of zeros into sparse matrix
+                    if isinstance(result, np.ndarray) and np.all(result == 0):
+                        result = csr_matrix(result)
+                    return pybamm.Matrix(
+                        result, domain=domain, auxiliary_domains=auxiliary_domains
+                    )
+
+    return symbol
 
 
 class Symbol(anytree.NodeMixin):
@@ -499,7 +531,7 @@ class Symbol(anytree.NodeMixin):
             out = pybamm.NotEqualHeaviside(self, other)
         else:
             out = pybamm.sigmoid(self, other, k)
-        return pybamm.simplify_if_constant(out, clear_domains=False)
+        return pybamm.simplify_if_constant(out)
 
     def __le__(self, other):
         """return a :class:`EqualHeaviside` object, or a smooth approximation"""
@@ -510,7 +542,7 @@ class Symbol(anytree.NodeMixin):
             out = pybamm.EqualHeaviside(self, other)
         else:
             out = pybamm.sigmoid(self, other, k)
-        return pybamm.simplify_if_constant(out, clear_domains=False)
+        return pybamm.simplify_if_constant(out)
 
     def __gt__(self, other):
         """return a :class:`NotEqualHeaviside` object, or a smooth approximation"""
@@ -521,7 +553,7 @@ class Symbol(anytree.NodeMixin):
             out = pybamm.NotEqualHeaviside(other, self)
         else:
             out = pybamm.sigmoid(other, self, k)
-        return pybamm.simplify_if_constant(out, clear_domains=False)
+        return pybamm.simplify_if_constant(out)
 
     def __ge__(self, other):
         """return a :class:`EqualHeaviside` object, or a smooth approximation"""
@@ -532,11 +564,11 @@ class Symbol(anytree.NodeMixin):
             out = pybamm.EqualHeaviside(other, self)
         else:
             out = pybamm.sigmoid(other, self, k)
-        return pybamm.simplify_if_constant(out, clear_domains=False)
+        return pybamm.simplify_if_constant(out)
 
     def __neg__(self):
         """return a :class:`Negate` object"""
-        return pybamm.simplify_if_constant(pybamm.Negate(self), clear_domains=False)
+        return pybamm.simplify_if_constant(pybamm.Negate(self))
 
     def __abs__(self):
         """return an :class:`AbsoluteValue` object, or a smooth approximation"""
@@ -547,13 +579,11 @@ class Symbol(anytree.NodeMixin):
             out = pybamm.AbsoluteValue(self)
         else:
             out = pybamm.smooth_absolute_value(self, k)
-        return pybamm.simplify_if_constant(out, clear_domains=False)
+        return pybamm.simplify_if_constant(out)
 
     def __mod__(self, other):
         """return an :class:`Modulo` object"""
-        return pybamm.simplify_if_constant(
-            pybamm.Modulo(self, other), clear_domains=False
-        )
+        return pybamm.simplify_if_constant(pybamm.Modulo(self, other))
 
     def diff(self, variable):
         """
@@ -786,9 +816,9 @@ class Symbol(anytree.NodeMixin):
         """
         return any(isinstance(symbol, symbol_classes) for symbol in self.pre_order())
 
-    def simplify(self, simplified_symbols=None, clear_domains=False):
-        """ Simplify the expression tree. See :class:`pybamm.Simplification`. """
-        return pybamm.Simplification(simplified_symbols).simplify(self, clear_domains)
+    def simplify(self, simplified_symbols=None, clear_domains=True):
+        """ `simplify()` has now been removed. """
+        raise pybamm.ModelError("simplify is deprecated as it now has no effect")
 
     def to_casadi(self, t=None, y=None, y_dot=None, inputs=None, casadi_symbols=None):
         """

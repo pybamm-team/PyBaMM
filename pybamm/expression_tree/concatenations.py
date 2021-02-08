@@ -98,12 +98,6 @@ class Concatenation(pybamm.Symbol):
         """ Calculate the jacobian of a concatenation """
         return NotImplementedError
 
-    def _concatenation_simplify(self, children):
-        """ See :meth:`pybamm.Symbol.simplify()`. """
-        new_symbol = self.__class__(*children)
-        new_symbol.clear_domains()
-        return new_symbol
-
     def _evaluate_for_shape(self):
         """ See :meth:`pybamm.Symbol.evaluate_for_shape` """
         if len(self.children) == 0:
@@ -158,12 +152,6 @@ class NumpyConcatenation(Concatenation):
             return pybamm.Scalar(0)
         else:
             return SparseStack(*children_jacs)
-
-    def _concatenation_simplify(self, children):
-        """ See :meth:`pybamm.Concatenation._concatenation_simplify()`. """
-        new_symbol = simplified_numpy_concatenation(*children)
-        new_symbol.clear_domains()
-        return new_symbol
 
 
 class DomainConcatenation(Concatenation):
@@ -302,17 +290,6 @@ class DomainConcatenation(Concatenation):
         )
         return new_symbol
 
-    def _concatenation_simplify(self, children):
-        """ See :meth:`pybamm.Concatenation._concatenation_simplify()`. """
-        new_symbol = simplified_domain_concatenation(
-            children, self.full_mesh, copy_this=self
-        )
-        # TODO: this should not be needed, but somehow we are still getting domains in
-        # the simplified children
-        new_symbol.clear_domains()
-
-        return new_symbol
-
 
 class SparseStack(Concatenation):
     """A node in the expression tree representing a concatenation of sparse
@@ -354,9 +331,7 @@ def simplified_numpy_concatenation(*children):
             new_children.extend(child.orphans)
         else:
             new_children.append(child)
-    return pybamm.simplify_if_constant(
-        NumpyConcatenation(*new_children), clear_domains=False
-    )
+    return pybamm.simplify_if_constant(NumpyConcatenation(*new_children))
 
 
 def numpy_concatenation(*children):
@@ -392,10 +367,7 @@ def simplified_domain_concatenation(children, mesh, copy_this=None):
                 auxiliary_domains=concat.auxiliary_domains,
             )
 
-    return pybamm.simplify_if_constant(
-        concat,
-        clear_domains=False,
-    )
+    return pybamm.simplify_if_constant(concat)
 
 
 def domain_concatenation(children, mesh):
