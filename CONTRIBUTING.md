@@ -54,7 +54,7 @@ To install PyBaMM with all developer options follow the steps below:
 pip install tox # (Using this, you will need to additionally install tox in your virtual environment as decribed below)
 # or
 pip install pipx # (For installing pipx)
-pipx install tox # (Using this, tox can automatically be accessed in your virtaul environment)
+pipx install tox # (Using this, tox can automatically be accessed in your virtual environment)
 ```
 You can also explore and install pipx from their [GitHub repository](https://github.com/pipxproject/pipx)
 
@@ -67,7 +67,7 @@ tox -e pybamm-requires # (GNU/Linux)
 ```
 3. Installing PyBaMM
 
-This can be acieved by forking the repository and cloning it in your machine.
+This can be achieved by forking the repository and cloning it in your machine.
 
 4. Navigate to the cloned repository and create a virtual environment using the commands below:
 ```bash
