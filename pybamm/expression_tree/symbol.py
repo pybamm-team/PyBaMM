@@ -8,7 +8,7 @@ import numbers
 import copy
 import numpy as np
 from anytree.exporter import DotExporter
-from scipy.sparse import issparse
+from scipy.sparse import issparse, csr_matrix
 
 
 def domain_size(domain):
@@ -120,6 +120,42 @@ def is_matrix_one(expr):
         )
     else:
         return False
+
+
+def simplify_if_constant(symbol, clear_domains=True):
+    """
+    Utility function to simplify an expression tree if it evalutes to a constant
+    scalar, vector or matrix
+    """
+    if clear_domains is True:
+        domain = None
+        auxiliary_domains = None
+    else:
+        domain = symbol.domain
+        auxiliary_domains = symbol.auxiliary_domains
+    if symbol.is_constant():
+        result = symbol.evaluate_ignoring_errors()
+        if result is not None:
+            if (
+                isinstance(result, numbers.Number)
+                or (isinstance(result, np.ndarray) and result.ndim == 0)
+                or isinstance(result, np.bool_)
+            ):
+                return pybamm.Scalar(result)
+            elif isinstance(result, np.ndarray) or issparse(result):
+                if result.ndim == 1 or result.shape[1] == 1:
+                    return pybamm.Vector(
+                        result, domain=domain, auxiliary_domains=auxiliary_domains
+                    )
+                else:
+                    # Turn matrix of zeros into sparse matrix
+                    if isinstance(result, np.ndarray) and np.all(result == 0):
+                        result = csr_matrix(result)
+                    return pybamm.Matrix(
+                        result, domain=domain, auxiliary_domains=auxiliary_domains
+                    )
+
+    return symbol
 
 
 class Symbol(anytree.NodeMixin):
@@ -787,8 +823,8 @@ class Symbol(anytree.NodeMixin):
         return any(isinstance(symbol, symbol_classes) for symbol in self.pre_order())
 
     def simplify(self, simplified_symbols=None, clear_domains=True):
-        """ Simplify the expression tree. See :class:`pybamm.Simplification`. """
-        return pybamm.Simplification(simplified_symbols).simplify(self, clear_domains)
+        """ `simplify()` has now been removed. """
+        raise pybamm.ModelError("simplify is deprecated as it now has no effect")
 
     def to_casadi(self, t=None, y=None, y_dot=None, inputs=None, casadi_symbols=None):
         """
