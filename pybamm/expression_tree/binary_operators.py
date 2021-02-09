@@ -203,9 +203,7 @@ class Power(BinaryOperator):
         """ See :meth:`pybamm.BinaryOperator._binary_jac()`. """
         # apply chain rule and power rule
         left, right = self.orphans
-        if left.evaluates_to_constant_number() and right.evaluates_to_constant_number():
-            return pybamm.Scalar(0)
-        elif right.evaluates_to_constant_number():
+        if right.evaluates_to_constant_number():
             return (right * left ** (right - 1)) * left_jac
         elif left.evaluates_to_constant_number():
             return (left ** right * pybamm.log(left)) * right_jac
@@ -292,9 +290,7 @@ class Multiplication(BinaryOperator):
         """ See :meth:`pybamm.BinaryOperator._binary_jac()`. """
         # apply product rule
         left, right = self.orphans
-        if left.evaluates_to_constant_number() and right.evaluates_to_constant_number():
-            return pybamm.Scalar(0)
-        elif left.evaluates_to_constant_number():
+        if left.evaluates_to_constant_number():
             return left * right_jac
         elif right.evaluates_to_constant_number():
             return right * left_jac
@@ -375,9 +371,7 @@ class Division(BinaryOperator):
         """ See :meth:`pybamm.BinaryOperator._binary_jac()`. """
         # apply quotient rule
         left, right = self.orphans
-        if left.evaluates_to_constant_number() and right.evaluates_to_constant_number():
-            return pybamm.Scalar(0)
-        elif left.evaluates_to_constant_number():
+        if left.evaluates_to_constant_number():
             return -left / right ** 2 * right_jac
         elif right.evaluates_to_constant_number():
             return left_jac / right
@@ -430,9 +424,7 @@ class Inner(BinaryOperator):
         """ See :meth:`pybamm.BinaryOperator._binary_jac()`. """
         # apply product rule
         left, right = self.orphans
-        if left.evaluates_to_constant_number() and right.evaluates_to_constant_number():
-            return pybamm.Scalar(0)
-        elif left.evaluates_to_constant_number():
+        if left.evaluates_to_constant_number():
             return left * right_jac
         elif right.evaluates_to_constant_number():
             return right * left_jac
@@ -480,7 +472,7 @@ def inner(left, right):
     if pybamm.is_scalar_one(right):
         return left
 
-    return pybamm.simplify_if_constant(pybamm.Inner(left, right), clear_domains=False)
+    return pybamm.simplify_if_constant(pybamm.Inner(left, right))
 
 
 class Heaviside(BinaryOperator):
@@ -573,9 +565,7 @@ class Modulo(BinaryOperator):
         """ See :meth:`pybamm.BinaryOperator._binary_jac()`. """
         # apply chain rule and power rule
         left, right = self.orphans
-        if left.evaluates_to_constant_number() and right.evaluates_to_constant_number():
-            return pybamm.Scalar(0)
-        elif right.evaluates_to_constant_number():
+        if right.evaluates_to_constant_number():
             return left_jac
         elif left.evaluates_to_constant_number():
             return -right_jac * pybamm.Floor(left / right)
@@ -712,7 +702,7 @@ def simplified_power(left, right):
             if new_left.is_constant() or new_right.is_constant():
                 return new_left / new_right
 
-    return pybamm.simplify_if_constant(pybamm.Power(left, right), clear_domains=False)
+    return pybamm.simplify_if_constant(pybamm.Power(left, right))
 
 
 def simplified_addition(left, right):
@@ -784,9 +774,7 @@ def simplified_addition(left, right):
             new_sum.copy_domains(pybamm.Addition(left, right))
             return new_sum
 
-    return pybamm.simplify_if_constant(
-        pybamm.Addition(left, right), clear_domains=False
-    )
+    return pybamm.simplify_if_constant(pybamm.Addition(left, right))
 
 
 def simplified_subtraction(left, right):
@@ -844,9 +832,7 @@ def simplified_subtraction(left, right):
     if left.id == right.id:
         return pybamm.zeros_like(left)
 
-    return pybamm.simplify_if_constant(
-        pybamm.Subtraction(left, right), clear_domains=False
-    )
+    return pybamm.simplify_if_constant(pybamm.Subtraction(left, right))
 
 
 def simplified_multiplication(left, right):
@@ -893,9 +879,7 @@ def simplified_multiplication(left, right):
 
     # Return constant if both sides are constant
     if left.is_constant() and right.is_constant():
-        return pybamm.simplify_if_constant(
-            pybamm.Multiplication(left, right), clear_domains=False
-        )
+        return pybamm.simplify_if_constant(pybamm.Multiplication(left, right))
 
     # Simplify (B @ c) * a to (a * B) @ c if (a * B) is constant
     # This is a common construction that appears from discretisation of spatial
@@ -1024,9 +1008,7 @@ def simplified_division(left, right):
             if new_right.is_constant():
                 return l_left * new_right
 
-    return pybamm.simplify_if_constant(
-        pybamm.Division(left, right), clear_domains=False
-    )
+    return pybamm.simplify_if_constant(pybamm.Division(left, right))
 
 
 def simplified_matrix_multiplication(left, right):
@@ -1080,9 +1062,7 @@ def simplified_matrix_multiplication(left, right):
             r_left, r_right = right.orphans
             return (left @ r_left) + (left @ r_right)
 
-    return pybamm.simplify_if_constant(
-        pybamm.MatrixMultiplication(left, right), clear_domains=False
-    )
+    return pybamm.simplify_if_constant(pybamm.MatrixMultiplication(left, right))
 
 
 def minimum(left, right):
@@ -1097,7 +1077,7 @@ def minimum(left, right):
         out = Minimum(left, right)
     else:
         out = pybamm.softminus(left, right, k)
-    return pybamm.simplify_if_constant(out, clear_domains=False)
+    return pybamm.simplify_if_constant(out)
 
 
 def maximum(left, right):
@@ -1112,7 +1092,7 @@ def maximum(left, right):
         out = Maximum(left, right)
     else:
         out = pybamm.softplus(left, right, k)
-    return pybamm.simplify_if_constant(out, clear_domains=False)
+    return pybamm.simplify_if_constant(out)
 
 
 def softminus(left, right, k):

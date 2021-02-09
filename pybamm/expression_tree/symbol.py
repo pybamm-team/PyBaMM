@@ -122,17 +122,13 @@ def is_matrix_one(expr):
         return False
 
 
-def simplify_if_constant(symbol, clear_domains=True):
+def simplify_if_constant(symbol):
     """
     Utility function to simplify an expression tree if it evalutes to a constant
     scalar, vector or matrix
     """
-    if clear_domains is True:
-        domain = None
-        auxiliary_domains = None
-    else:
-        domain = symbol.domain
-        auxiliary_domains = symbol.auxiliary_domains
+    domain = symbol.domain
+    auxiliary_domains = symbol.auxiliary_domains
     if symbol.is_constant():
         result = symbol.evaluate_ignoring_errors()
         if result is not None:
@@ -535,7 +531,7 @@ class Symbol(anytree.NodeMixin):
             out = pybamm.NotEqualHeaviside(self, other)
         else:
             out = pybamm.sigmoid(self, other, k)
-        return pybamm.simplify_if_constant(out, clear_domains=False)
+        return pybamm.simplify_if_constant(out)
 
     def __le__(self, other):
         """return a :class:`EqualHeaviside` object, or a smooth approximation"""
@@ -546,7 +542,7 @@ class Symbol(anytree.NodeMixin):
             out = pybamm.EqualHeaviside(self, other)
         else:
             out = pybamm.sigmoid(self, other, k)
-        return pybamm.simplify_if_constant(out, clear_domains=False)
+        return pybamm.simplify_if_constant(out)
 
     def __gt__(self, other):
         """return a :class:`NotEqualHeaviside` object, or a smooth approximation"""
@@ -557,7 +553,7 @@ class Symbol(anytree.NodeMixin):
             out = pybamm.NotEqualHeaviside(other, self)
         else:
             out = pybamm.sigmoid(other, self, k)
-        return pybamm.simplify_if_constant(out, clear_domains=False)
+        return pybamm.simplify_if_constant(out)
 
     def __ge__(self, other):
         """return a :class:`EqualHeaviside` object, or a smooth approximation"""
@@ -568,11 +564,11 @@ class Symbol(anytree.NodeMixin):
             out = pybamm.EqualHeaviside(other, self)
         else:
             out = pybamm.sigmoid(other, self, k)
-        return pybamm.simplify_if_constant(out, clear_domains=False)
+        return pybamm.simplify_if_constant(out)
 
     def __neg__(self):
         """return a :class:`Negate` object"""
-        return pybamm.simplify_if_constant(pybamm.Negate(self), clear_domains=False)
+        return pybamm.simplify_if_constant(pybamm.Negate(self))
 
     def __abs__(self):
         """return an :class:`AbsoluteValue` object, or a smooth approximation"""
@@ -583,13 +579,11 @@ class Symbol(anytree.NodeMixin):
             out = pybamm.AbsoluteValue(self)
         else:
             out = pybamm.smooth_absolute_value(self, k)
-        return pybamm.simplify_if_constant(out, clear_domains=False)
+        return pybamm.simplify_if_constant(out)
 
     def __mod__(self, other):
         """return an :class:`Modulo` object"""
-        return pybamm.simplify_if_constant(
-            pybamm.Modulo(self, other), clear_domains=False
-        )
+        return pybamm.simplify_if_constant(pybamm.Modulo(self, other))
 
     def diff(self, variable):
         """

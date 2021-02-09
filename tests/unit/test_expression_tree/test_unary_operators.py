@@ -362,7 +362,15 @@ class TestUnaryOperators(unittest.TestCase):
         delta_a = pybamm.DeltaFunction(a, "right", "some domain")
         self.assertEqual(delta_a.side, "right")
         self.assertEqual(delta_a.child.id, a.id)
+        self.assertEqual(delta_a.domain, ["some domain"])
         self.assertFalse(delta_a.evaluates_on_edges("primary"))
+
+        a = pybamm.Symbol("a", domain="some domain")
+        delta_a = pybamm.DeltaFunction(a, "left", "another domain")
+        self.assertEqual(delta_a.side, "left")
+        self.assertEqual(delta_a.domain, ["another domain"])
+        self.assertEqual(delta_a.auxiliary_domains, {"secondary": ["some domain"]})
+
         with self.assertRaisesRegex(
             pybamm.DomainError, "Delta function domain cannot be None"
         ):

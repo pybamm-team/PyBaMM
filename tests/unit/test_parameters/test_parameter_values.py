@@ -196,7 +196,8 @@ class TestParameterValues(unittest.TestCase):
 
         # process concatenation
         conc = pybamm.Concatenation(
-            pybamm.Vector(np.ones(10)), pybamm.Vector(2 * np.ones(15))
+            pybamm.Vector(np.ones(10), domain="test"),
+            pybamm.Vector(2 * np.ones(15), domain="test 2"),
         )
         processed_conc = parameter_values.process_symbol(conc)
         self.assertIsInstance(processed_conc.children[0], pybamm.Vector)

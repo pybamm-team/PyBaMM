@@ -49,10 +49,14 @@ class Concatenation(pybamm.Symbol):
             if not isinstance(child, pybamm.Symbol):
                 raise TypeError("{} is not a pybamm symbol".format(child))
             child_domain = child.domain
+            if child_domain == []:
+                raise pybamm.DomainError(
+                    "Cannot concatenate child '{}' with empty domain".format(child)
+                )
             if set(domain).isdisjoint(child_domain):
                 domain += child_domain
             else:
-                raise pybamm.DomainError("""domain of children must be disjoint""")
+                raise pybamm.DomainError("domain of children must be disjoint")
         return domain
 
     def _concatenation_evaluate(self, children_eval):
@@ -191,16 +195,6 @@ class DomainConcatenation(Concatenation):
             # store mesh
             self._full_mesh = full_mesh
 
-            # Check that there is a domain, otherwise the functionality won't work
-            # and we should raise a DomainError
-            if self.domain == []:
-                raise pybamm.DomainError(
-                    """
-                    domain cannot be empty for a DomainConcatenation.
-                    Perhaps the children should have been Broadcasted first?
-                    """
-                )
-
             # create dict of domain => slice of final vector
             self.secondary_dimensions_npts = self._get_auxiliary_domain_repeats(
                 self.domains
@@ -337,9 +331,7 @@ def simplified_numpy_concatenation(*children):
             new_children.extend(child.orphans)
         else:
             new_children.append(child)
-    return pybamm.simplify_if_constant(
-        NumpyConcatenation(*new_children), clear_domains=False
-    )
+    return pybamm.simplify_if_constant(NumpyConcatenation(*new_children))
 
 
 def numpy_concatenation(*children):
@@ -375,10 +367,7 @@ def simplified_domain_concatenation(children, mesh, copy_this=None):
                 auxiliary_domains=concat.auxiliary_domains,
             )
 
-    return pybamm.simplify_if_constant(
-        concat,
-        clear_domains=False,
-    )
+    return pybamm.simplify_if_constant(concat)
 
 
 def domain_concatenation(children, mesh):
