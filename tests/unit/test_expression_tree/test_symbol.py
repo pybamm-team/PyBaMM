@@ -295,6 +295,14 @@ class TestSymbol(unittest.TestCase):
         a = 3 * pybamm.t + 2
         self.assertFalse(a.evaluates_to_constant_number())
 
+    def test_simplify(self):
+        a = pybamm.Parameter("A")
+        #test error
+        with self.assertRaisesRegex(
+            pybamm.ModelError, "simplify is deprecated as it now has no effect"
+        ):
+            (a + a).simplify()
+
     def test_symbol_repr(self):
         """
         test that __repr___ returns the string
@@ -433,7 +441,8 @@ class TestSymbol(unittest.TestCase):
         self.assertEqual(scal.shape_for_testing, scal.shape)
         self.assertEqual(scal.size_for_testing, scal.size)
 
-        state = pybamm.StateVector(slice(10, 25))
+        state = pybamm.StateVector(slice(10, 25), domain="test")
+        state2 = pybamm.StateVector(slice(10, 25), domain="test 2")
         self.assertEqual(state.shape_for_testing, state.shape)
 
         param = pybamm.Parameter("a")
@@ -444,7 +453,7 @@ class TestSymbol(unittest.TestCase):
 
         concat = pybamm.Concatenation()
         self.assertEqual(concat.shape_for_testing, (0,))
-        concat = pybamm.Concatenation(state, state)
+        concat = pybamm.Concatenation(state, state2)
         self.assertEqual(concat.shape_for_testing, (30, 1))
         self.assertEqual(concat.size_for_testing, 30)
 

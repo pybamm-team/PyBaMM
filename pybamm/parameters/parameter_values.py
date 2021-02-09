@@ -338,9 +338,29 @@ class ParameterValues:
         if "C-rate" in values:
             raise ValueError(
                 "The 'C-rate' parameter has been deprecated, "
-                "use 'Current function [A]' instead. The cell capacity can be accessed "
-                "as 'Cell capacity [A.h]', and used to calculate current from C-rate."
+                "use 'Current function [A]' instead. The Nominal "
+                "cell capacity can be accessed as 'Nominal cell "
+                "capacity [A.h]', and used to calculate current from C-rate."
             )
+        if "Cell capacity [A.h]" in values:
+            if "Nominal cell capacity [A.h]" in values:
+                raise ValueError(
+                    "both 'Cell capacity [A.h]' and 'Nominal cell capacity [A.h]' "
+                    "provided in values. The 'Cell capacity [A.h]' notation will be "
+                    "deprecated in the next release so 'Nominal cell capacity [A.h]' "
+                    "should be used instead."
+                )
+            else:
+                values["Nominal cell capacity [A.h]"] = values["Cell capacity [A.h]"]
+                warnings.warn(
+                    "the 'Cell capacity [A.h]' notation will be "
+                    "deprecated in the next release, as it has now been renamed "
+                    "to 'Nominal cell capacity [A.h]'. Simulation will continue "
+                    "passing the 'Cell capacity [A.h]' as 'Nominal cell "
+                    "capacity [A.h]' (it might overwrite any existing definition "
+                    "of the component)",
+                    DeprecationWarning,
+                )
         for param in values:
             if "surface area density" in param:
                 raise ValueError(
@@ -567,8 +587,8 @@ class ParameterValues:
             return self._processed_symbols[symbol.id]
         except KeyError:
             processed_symbol = self._process_symbol(symbol)
-
             self._processed_symbols[symbol.id] = processed_symbol
+
             return processed_symbol
 
     def _process_symbol(self, symbol):
@@ -588,7 +608,17 @@ class ParameterValues:
                 raise TypeError("Cannot process parameter '{}'".format(value))
 
         elif isinstance(symbol, pybamm.FunctionParameter):
-            new_children = [self.process_symbol(child) for child in symbol.children]
+            new_children = []
+            for child in symbol.children:
+                if symbol.diff_variable is not None and any(
+                    x.id == symbol.diff_variable.id for x in child.pre_order()
+                ):
+                    # Wrap with NotConstant to avoid simplification,
+                    # which would stop symbolic diff from working properly
+                    new_child = pybamm.NotConstant(child.new_copy())
+                    new_children.append(self.process_symbol(new_child))
+                else:
+                    new_children.append(self.process_symbol(child))
             function_name = self[symbol.name]
 
             # Create Function or Interpolant or Scalar object
@@ -658,6 +688,45 @@ class ParameterValues:
             # process children
             new_left = self.process_symbol(symbol.left)
             new_right = self.process_symbol(symbol.right)
+            # Special case for averages, which can appear as "integral of a broadcast"
+            # divided by "integral of a broadcast"
+            # this construction seems very specific but can appear often when averaging
+            if (
+                isinstance(symbol, pybamm.Division)
+                # right is integral(Broadcast(1))
+                and (
+                    isinstance(new_right, pybamm.Integral)
+                    and isinstance(new_right.child, pybamm.Broadcast)
+                    and new_right.child.child.id == pybamm.Scalar(1).id
+                )
+                # left is integral
+                and isinstance(new_left, pybamm.Integral)
+            ):
+                # left is integral(Broadcast)
+                if (
+                    isinstance(new_left.child, pybamm.Broadcast)
+                    and new_left.child.child.domain == []
+                ):
+                    integrand = new_left.child
+                    if integrand.auxiliary_domains == {}:
+                        return integrand.orphans[0]
+                    else:
+                        domain = integrand.auxiliary_domains["secondary"]
+                        if "tertiary" not in integrand.auxiliary_domains:
+                            return pybamm.PrimaryBroadcast(integrand.orphans[0], domain)
+                        else:
+                            auxiliary_domains = {
+                                "secondary": integrand.auxiliary_domains["tertiary"]
+                            }
+                            return pybamm.FullBroadcast(
+                                integrand.orphans[0], domain, auxiliary_domains
+                            )
+                # left is "integral of concatenation of broadcasts"
+                elif isinstance(new_left.child, pybamm.Concatenation) and all(
+                    isinstance(child, pybamm.Broadcast)
+                    for child in new_left.child.children
+                ):
+                    return self.process_symbol(pybamm.x_average(new_left.child))
             # make new symbol, ensure domain remains the same
             new_symbol = symbol._binary_new_copy(new_left, new_right)
             new_symbol.domain = symbol.domain
@@ -791,7 +860,7 @@ class ParameterValues:
         # Calculate parameters for each C-rate
         for Crate in [1, 10]:
             # Update Crate
-            capacity = self.get("Cell capacity [A.h]")
+            capacity = self.get("Nominal cell capacity [A.h]")
             if capacity is not None:
                 self.update(
                     {"Current function [A]": Crate * capacity},

@@ -49,10 +49,14 @@ class Concatenation(pybamm.Symbol):
             if not isinstance(child, pybamm.Symbol):
                 raise TypeError("{} is not a pybamm symbol".format(child))
             child_domain = child.domain
+            if child_domain == []:
+                raise pybamm.DomainError(
+                    "Cannot concatenate child '{}' with empty domain".format(child)
+                )
             if set(domain).isdisjoint(child_domain):
                 domain += child_domain
             else:
-                raise pybamm.DomainError("""domain of children must be disjoint""")
+                raise pybamm.DomainError("domain of children must be disjoint")
         return domain
 
     def _concatenation_evaluate(self, children_eval):
@@ -93,12 +97,6 @@ class Concatenation(pybamm.Symbol):
     def _concatenation_jac(self, children_jacs):
         """ Calculate the jacobian of a concatenation """
         return NotImplementedError
-
-    def _concatenation_simplify(self, children):
-        """ See :meth:`pybamm.Symbol.simplify()`. """
-        new_symbol = self.__class__(*children)
-        new_symbol.clear_domains()
-        return new_symbol
 
     def _evaluate_for_shape(self):
         """ See :meth:`pybamm.Symbol.evaluate_for_shape` """
@@ -155,20 +153,6 @@ class NumpyConcatenation(Concatenation):
         else:
             return SparseStack(*children_jacs)
 
-    def _concatenation_simplify(self, children):
-        """ See :meth:`pybamm.Symbol.simplify()`. """
-        # Turn a concatenation of concatenations into a single concatenation
-        new_children = []
-        for child in children:
-            # extract any children from numpy concatenation
-            if isinstance(child, NumpyConcatenation):
-                new_children.extend(child.orphans)
-            else:
-                new_children.append(child)
-        new_symbol = NumpyConcatenation(*new_children)
-        new_symbol.clear_domains()
-        return new_symbol
-
 
 class DomainConcatenation(Concatenation):
     """A node in the expression tree representing a concatenation of symbols, being
@@ -210,16 +194,6 @@ class DomainConcatenation(Concatenation):
         if copy_this is None:
             # store mesh
             self._full_mesh = full_mesh
-
-            # Check that there is a domain, otherwise the functionality won't work
-            # and we should raise a DomainError
-            if self.domain == []:
-                raise pybamm.DomainError(
-                    """
-                    domain cannot be empty for a DomainConcatenation.
-                    Perhaps the children should have been Broadcasted first?
-                    """
-                )
 
             # create dict of domain => slice of final vector
             self.secondary_dimensions_npts = self._get_auxiliary_domain_repeats(
@@ -311,34 +285,9 @@ class DomainConcatenation(Concatenation):
 
     def _concatenation_new_copy(self, children):
         """ See :meth:`pybamm.Symbol.new_copy()`. """
-        new_symbol = self.__class__(children, self.full_mesh, self)
-        return new_symbol
-
-    def _concatenation_simplify(self, children):
-        """ See :meth:`pybamm.Symbol.simplify()`. """
-        # Simplify Concatenation of StateVectors to a single StateVector
-        # The sum of the evalation arrays of the StateVectors must be exactly 1
-        if all([isinstance(child, pybamm.StateVector) for child in children]):
-            longest_eval_array = len(children[-1]._evaluation_array)
-            eval_arrays = {}
-            for child in children:
-                eval_arrays[child] = np.concatenate(
-                    [
-                        child.evaluation_array,
-                        np.zeros(longest_eval_array - len(child.evaluation_array)),
-                    ]
-                )
-            if all(sum(array for array in eval_arrays.values()) == 1):
-                return pybamm.StateVector(
-                    slice(children[0].y_slices[0].start, children[-1].y_slices[-1].stop)
-                )
-
-        new_symbol = self.__class__(children, self.full_mesh, self)
-
-        # TODO: this should not be needed, but somehow we are still getting domains in
-        # the simplified children
-        new_symbol.clear_domains()
-
+        new_symbol = simplified_domain_concatenation(
+            children, self.full_mesh, copy_this=self
+        )
         return new_symbol
 
 
@@ -370,3 +319,58 @@ class SparseStack(Concatenation):
             check_domain=False,
             concat_fun=concatenation_function
         )
+
+
+def simplified_numpy_concatenation(*children):
+    """ Perform simplifications on a numpy concatenation """
+    # Turn a concatenation of concatenations into a single concatenation
+    new_children = []
+    for child in children:
+        # extract any children from numpy concatenation
+        if isinstance(child, NumpyConcatenation):
+            new_children.extend(child.orphans)
+        else:
+            new_children.append(child)
+    return pybamm.simplify_if_constant(NumpyConcatenation(*new_children))
+
+
+def numpy_concatenation(*children):
+    """ Helper function to create numpy concatenations """
+    # TODO: add option to turn off simplifications
+    return simplified_numpy_concatenation(*children)
+
+
+def simplified_domain_concatenation(children, mesh, copy_this=None):
+    """ Perform simplifications on a domain concatenation """
+    # Create the DomainConcatenation to read domain and child domain
+    concat = DomainConcatenation(children, mesh, copy_this=copy_this)
+    # Simplify Concatenation of StateVectors to a single StateVector
+    # The sum of the evalation arrays of the StateVectors must be exactly 1
+    if all([isinstance(child, pybamm.StateVector) for child in children]):
+        longest_eval_array = len(children[-1]._evaluation_array)
+        eval_arrays = {}
+        for child in children:
+            eval_arrays[child] = np.concatenate(
+                [
+                    child.evaluation_array,
+                    np.zeros(longest_eval_array - len(child.evaluation_array)),
+                ]
+            )
+        first_start = children[0].y_slices[0].start
+        last_stop = children[-1].y_slices[-1].stop
+        if all(
+            sum(array for array in eval_arrays.values())[first_start:last_stop] == 1
+        ):
+            return pybamm.StateVector(
+                slice(first_start, last_stop),
+                domain=concat.domain,
+                auxiliary_domains=concat.auxiliary_domains,
+            )
+
+    return pybamm.simplify_if_constant(concat)
+
+
+def domain_concatenation(children, mesh):
+    """ Helper function to create domain concatenations """
+    # TODO: add option to turn off simplifications
+    return simplified_domain_concatenation(children, mesh)

@@ -861,7 +861,9 @@ class Discretisation(object):
             disc_left = self.process_symbol(left)
             disc_right = self.process_symbol(right)
             if symbol.domain == []:
-                return symbol._binary_new_copy(disc_left, disc_right)
+                return pybamm.simplify_if_constant(
+                    symbol._binary_new_copy(disc_left, disc_right)
+                )
             else:
                 return spatial_method.process_binary_operators(
                     symbol, left, right, disc_left, disc_right
@@ -925,15 +927,15 @@ class Discretisation(object):
                 # Broadcast new_child to the domain specified by symbol.domain
                 # Different discretisations may broadcast differently
                 if symbol.domain == []:
-                    symbol = disc_child * pybamm.Vector([1])
+                    out = disc_child * pybamm.Vector([1])
                 else:
-                    symbol = spatial_method.broadcast(
+                    out = spatial_method.broadcast(
                         disc_child,
                         symbol.domain,
                         symbol.auxiliary_domains,
                         symbol.broadcast_type,
                     )
-                return symbol
+                return out
 
             elif isinstance(symbol, pybamm.DeltaFunction):
                 return spatial_method.delta_function(symbol, disc_child)
@@ -954,6 +956,9 @@ class Discretisation(object):
                 return spatial_method.upwind_or_downwind(
                     child, disc_child, self.bcs, direction
                 )
+            elif isinstance(symbol, pybamm.NotConstant):
+                # After discretisation, we can make the symbol constant
+                return disc_child
             else:
                 return symbol._unary_new_copy(disc_child)
 
@@ -1051,7 +1056,7 @@ class Discretisation(object):
         if sparse:
             return pybamm.SparseStack(*symbols)
         else:
-            return pybamm.NumpyConcatenation(*symbols)
+            return pybamm.numpy_concatenation(*symbols)
 
     def _concatenate_in_order(self, var_eqn_dict, check_complete=False, sparse=False):
         """

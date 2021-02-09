@@ -43,6 +43,13 @@ class BaseBatteryModel(pybamm.BaseModel):
             * "interfacial surface area" : str
                 Sets the model for the interfacial surface area. Can be "constant"
                 (default) or "varying". Not currently implemented in any of the models.
+            * "lithium plating" : str, optional
+                Sets the model for lithium plating. Can be "none" (default),
+                "reversible" or "irreversible".
+            * "loss of active material" : str, optional
+                Sets the model for loss of active material. Can be "none" (default) or
+                "example", which is a placeholder for LAM models.
+            * "particle" : str, optional
             * "loss of active material" : str
                 Sets the model for loss of active material. Can be "none" (default),
                 "positive", "negative" or "both" to enable it for the specific
@@ -223,6 +230,7 @@ class BaseBatteryModel(pybamm.BaseModel):
             "cell geometry": "none",
             "external submodels": [],
             "sei": "none",
+            "lithium plating": "none",
             "sei porosity change": "false",
             "loss of active material": "none",
             "working electrode": "none",
@@ -301,6 +309,8 @@ class BaseBatteryModel(pybamm.BaseModel):
                 )
             if options["sei"] != "none" or options["sei film resistance"] != "none":
                 raise pybamm.OptionError("Lead-acid models cannot have SEI formation")
+            if options["lithium plating"] != "none":
+                raise pybamm.OptionError("Lead-acid models cannot have lithium plating")
 
         # Some standard checks to make sure options are compatible
         if not (
@@ -383,6 +393,11 @@ class BaseBatteryModel(pybamm.BaseModel):
                 "Unknown sei porosity change '{}'".format(
                     options["sei porosity change"]
                 )
+            )
+
+        if options["lithium plating"] not in ["none", "reversible", "irreversible"]:
+            raise pybamm.OptionError(
+                "Unknown lithium plating model '{}'".format(options["lithium plating"])
             )
 
         if options["loss of active material"] not in [
@@ -666,7 +681,6 @@ class BaseBatteryModel(pybamm.BaseModel):
         "See :meth:`pybamm.BaseModel.new_empty_copy()`"
         new_model = self.__class__(name=self.name, options=self.options, build=False)
         new_model.use_jacobian = self.use_jacobian
-        new_model.use_simplify = self.use_simplify
         new_model.convert_to_format = self.convert_to_format
         new_model.timescale = self.timescale
         new_model.length_scales = self.length_scales
@@ -850,12 +864,10 @@ class BaseBatteryModel(pybamm.BaseModel):
 
         # Battery-wide variables
         V_dim = self.variables["Terminal voltage [V]"]
-        eta_e_av = self.variables.get("X-averaged electrolyte ohmic losses", 0)
-        eta_c_av = self.variables.get("X-averaged concentration overpotential", 0)
-        eta_e_av_dim = self.variables.get("X-averaged electrolyte ohmic losses [V]", 0)
-        eta_c_av_dim = self.variables.get(
-            "X-averaged concentration overpotential [V]", 0
-        )
+        eta_e_av = self.variables["X-averaged electrolyte ohmic losses"]
+        eta_c_av = self.variables["X-averaged concentration overpotential"]
+        eta_e_av_dim = self.variables["X-averaged electrolyte ohmic losses [V]"]
+        eta_c_av_dim = self.variables["X-averaged concentration overpotential [V]"]
         num_cells = pybamm.Parameter(
             "Number of cells connected in series to make a battery"
         )
@@ -901,12 +913,25 @@ class BaseBatteryModel(pybamm.BaseModel):
         )
         # Current collector area for turning resistivity into resistance
         A_cc = self.param.A_cc
+
+        # Hack to avoid division by zero if i_cc is exactly zero
+        # If i_cc is zero, i_cc_not_zero becomes 1. But multiplying by sign(i_cc) makes
+        # the local resistance 'zero' (really, it's not defined when i_cc is zero)
+        i_cc_not_zero = ((i_cc > 0) + (i_cc < 0)) * i_cc + (i_cc >= 0) * (i_cc <= 0)
+        i_cc_dim_not_zero = ((i_cc_dim > 0) + (i_cc_dim < 0)) * i_cc_dim + (
+            i_cc_dim >= 0
+        ) * (i_cc_dim <= 0)
+
         self.variables.update(
             {
                 "Change in measured open circuit voltage": eta_ocv,
                 "Change in measured open circuit voltage [V]": eta_ocv_dim,
-                "Local ECM resistance": v_ecm / (i_cc * A_cc),
-                "Local ECM resistance [Ohm]": v_ecm_dim / (i_cc_dim * A_cc),
+                "Local ECM resistance": pybamm.sign(i_cc)
+                * v_ecm
+                / (i_cc_not_zero * A_cc),
+                "Local ECM resistance [Ohm]": pybamm.sign(i_cc)
+                * v_ecm_dim
+                / (i_cc_dim_not_zero * A_cc),
             }
         )
 

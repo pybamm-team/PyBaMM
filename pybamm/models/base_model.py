@@ -70,10 +70,6 @@ class BaseModel(object):
         solver set up
     use_jacobian : bool
         Whether to use the Jacobian when solving the model (default is True)
-    use_simplify : bool
-        Whether to simplify the expression tress representing the rhs and
-        algebraic equations, Jacobain (if using) and events, before solving the
-        model (default is True)
     convert_to_format : str
         Whether to convert the expression trees representing the rhs and
         algebraic equations, Jacobain (if using) and events into a different format:
@@ -111,9 +107,8 @@ class BaseModel(object):
         self._input_parameters = None
         self._variables_casadi = {}
 
-        # Default behaviour is to use the jacobian and simplify
+        # Default behaviour is to use the jacobian
         self.use_jacobian = True
-        self.use_simplify = True
         self.convert_to_format = "casadi"
 
         # Model is not initially discretised
@@ -325,7 +320,6 @@ class BaseModel(object):
         """
         new_model = self.__class__(name=self.name)
         new_model.use_jacobian = self.use_jacobian
-        new_model.use_simplify = self.use_simplify
         new_model.convert_to_format = self.convert_to_format
         new_model.timescale = self.timescale
         new_model.length_scales = self.length_scales

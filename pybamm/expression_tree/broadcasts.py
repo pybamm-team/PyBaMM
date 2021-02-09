@@ -59,10 +59,6 @@ class Broadcast(pybamm.SpatialOperator):
         self.broadcast_domain = broadcast_domain
         super().__init__(name, child, domain, auxiliary_domains)
 
-    def _unary_simplify(self, simplified_child):
-        """ See :meth:`pybamm.UnaryOperator.simplify()`. """
-        return self._unary_new_copy(simplified_child)
-
 
 class PrimaryBroadcast(Broadcast):
     """A node in the expression tree representing a primary broadcasting operator.
@@ -155,7 +151,7 @@ class PrimaryBroadcastToEdges(PrimaryBroadcast):
         super().__init__(child, broadcast_domain, name)
         self.broadcast_type = "primary to edges"
 
-    def evaluates_on_edges(self, dimension):
+    def _evaluates_on_edges(self, dimension):
         return True
 
 
@@ -257,7 +253,7 @@ class SecondaryBroadcastToEdges(SecondaryBroadcast):
         super().__init__(child, broadcast_domain, name)
         self.broadcast_type = "secondary to edges"
 
-    def evaluates_on_edges(self, dimension):
+    def _evaluates_on_edges(self, dimension):
         return True
 
 
@@ -318,7 +314,7 @@ class FullBroadcastToEdges(FullBroadcast):
         super().__init__(child, broadcast_domain, auxiliary_domains, name)
         self.broadcast_type = "full to edges"
 
-    def evaluates_on_edges(self, dimension):
+    def _evaluates_on_edges(self, dimension):
         return True
 
 

@@ -28,7 +28,7 @@ You now have everything you need to start making changes!
 
 ### B. Writing your code
 
-5. PyBaMM is developed in [Python](https://en.wikipedia.org/wiki/Python_(programming_language)), and makes heavy use of [NumPy](https://en.wikipedia.org/wiki/NumPy) (see also [NumPy for MatLab users](https://docs.scipy.org/doc/numpy-dev/user/numpy-for-matlab-users.html) and [Python for R users](http://blog.hackerearth.com/how-can-r-users-learn-python-for-data-science)).
+5. PyBaMM is developed in [Python](https://en.wikipedia.org/wiki/Python_(programming_language)), and makes heavy use of [NumPy](https://en.wikipedia.org/wiki/NumPy) (see also [NumPy for MatLab users](https://numpy.org/doc/stable/user/numpy-for-matlab-users.html) and [Python for R users](http://blog.hackerearth.com/how-can-r-users-learn-python-for-data-science)).
 6. Make sure to follow our [coding style guidelines](#coding-style-guidelines).
 7. Commit your changes to your branch with [useful, descriptive commit messages](https://chris.beams.io/posts/git-commit/): Remember these are publicly visible and should still make sense a few months ahead in time. While developing, you can keep using the GitHub issue you're working on as a place for discussion. [Refer to your commits](https://stackoverflow.com/questions/8910271/how-can-i-reference-a-commit-in-an-issue-comment-on-github) when discussing specific lines of code.
 8. If you want to add a dependency on another library, or re-use code you found somewhere else, have a look at [these guidelines](#dependencies-and-reusing-code).
@@ -46,8 +46,30 @@ Finally, if you really, really, _really_ love developing PyBaMM, have a look at 
 
 ## Installation
 
-To install PyBaMM with all developer options, type:
+To install PyBaMM with all developer options follow the steps below:
 
+
+1. Install tox using the commands below:
+```bash
+pip install tox # (Using this, you will need to additionally install tox in your virtual environment as decribed below)
+# or
+pip install pipx # (For installing pipx)
+pipx install tox # (Using this, tox can automatically be accessed in your virtual environment)
+```
+You can also explore and install pipx from their [GitHub repository](https://github.com/pipxproject/pipx)
+
+2. Install sundials using the command below:
+```bash
+# (Skip this step for Windows installation)
+brew install sundials # (MacOS)
+#
+tox -e pybamm-requires # (GNU/Linux)
+```
+3. Installing PyBaMM
+
+This can be achieved by forking the repository and cloning it in your machine.
+
+4. Navigate to the cloned repository and create a virtual environment using the commands below:
 ```bash
 tox -e dev # (GNU/Linux and MacOS)
 #
@@ -56,19 +78,27 @@ python -m tox -e windows-dev # (Windows)
 
 This will
 
-1. Create a virtual environment located at `.tox/dev`.
-2. Install all the dependencies for PyBaMM, including the ones for documentation and development.
-3. Tell Python to use your local pybamm files when you use `import pybamm` anywhere on your system.
+a. Create a virtual environment located at `.tox/dev`.
 
-Finally, activate your environment.
+b. Install all the dependencies for PyBaMM, including the ones for documentation and development.
+
+c. Tell Python to use your local pybamm files when you use `import pybamm` anywhere on your system.
+
+5. Finally, activate your environment.
 
 
 ```bash
 source .tox/dev/bin/activate # (GNU/Linux and MacOS)
 #
-.tox\dev\Scripts\activate.bat # (Windows)
+.tox\windows-dev\Scripts\activate.bat # (Windows)
+```
+6. Inside the virtual environment, type:
+```bash
+pip install tox # (Skip this step if you used pipx above)
 ```
 
+
+Full documentation with an installation guide can be found [here](https://pybamm.readthedocs.io/en/latest/install/install-from-source.html)
 
 ## Coding style guidelines
 
@@ -148,12 +178,16 @@ This allows people to (1) use PyBaMM without ever importing Matplotlib and (2) c
 
 All code requires testing. We use the [unittest](https://docs.python.org/3.3/library/unittest.html) package for our tests. (These tests typically just check that the code runs without error, and so, are more _debugging_ than _testing_ in a strict sense. Nevertheless, they are very useful to have!)
 
-To run quick tests, type
+If you have tox installed, to run quick tests, type
 
 ```bash
 tox -e quick # (GNU/Linux and MacOS)
 #
-python -m tox -e windows-quick (Windows)
+python -m tox -e windows-quick # (Windows)
+```
+else, type
+```bash
+python run-tests.py --unit
 ```
 
 ### Writing tests
@@ -300,7 +334,7 @@ And then visit the webpage served at http://127.0.0.1:8000. Each time a change t
 
 Major PyBaMM features are showcased in [Jupyter notebooks](https://jupyter.org/) stored in the [examples directory](examples/notebooks). Which features are "major" is of course wholly subjective, so please discuss on GitHub first!
 
-All example notebooks should be listed in [examples/README.md](https://github.com/pybamm-team/PyBaMM/examples/notebooks/README.md). Please follow the (naming and writing) style of existing notebooks where possible.
+All example notebooks should be listed in [examples/README.md](https://github.com/pybamm-team/PyBaMM/blob/develop/examples/notebooks/README.md). Please follow the (naming and writing) style of existing notebooks where possible.
 
 Where possible, notebooks are tested daily. A list of slow notebooks (which time-out and fail tests) is maintained in `.slow-books`, these notebooks will be excluded from daily testing.
 

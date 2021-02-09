@@ -246,13 +246,11 @@ class TestBaseModel(unittest.TestCase):
             d: {"left": (0, "Dirichlet"), "right": (0, "Dirichlet")},
         }
         model.use_jacobian = False
-        model.use_simplify = False
         model.convert_to_format = "python"
 
         new_model = model.new_copy()
         self.assertEqual(new_model.name, model.name)
         self.assertEqual(new_model.use_jacobian, model.use_jacobian)
-        self.assertEqual(new_model.use_simplify, model.use_simplify)
         self.assertEqual(new_model.convert_to_format, model.convert_to_format)
         self.assertEqual(new_model.timescale.id, model.timescale.id)
 

@@ -1135,9 +1135,7 @@ class FiniteVolume(pybamm.SpatialMethod):
                 method = "arithmetic"
             disc_left = self.node_to_edge(disc_left, method=method)
         # Return new binary operator with appropriate class
-        out = pybamm.simplify_if_constant(
-            bin_op.__class__(disc_left, disc_right), clear_domains=False
-        )
+        out = pybamm.simplify_if_constant(bin_op.__class__(disc_left, disc_right))
 
         return out
 
@@ -1164,7 +1162,7 @@ class FiniteVolume(pybamm.SpatialMethod):
                         or n_edges (number of edges in the mesh)
                         """
                     )
-        return pybamm.DomainConcatenation(disc_children, self.mesh)
+        return pybamm.domain_concatenation(disc_children, self.mesh)
 
     def edge_to_node(self, discretised_symbol, method="arithmetic"):
         """
