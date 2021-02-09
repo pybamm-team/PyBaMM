@@ -23,6 +23,7 @@ jobs:
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
+        pip install wheel
         pip install --editable .
         pip install pybtex
     - name: Update docstring
@@ -33,7 +34,8 @@ jobs:
         delete-branch: true
         branch-suffix: short-commit-hash
         commit-message: update parameter_sets
-        title: Update parameter_sets
+        title: Update parameter_sets.py docstring
         body: |
-            Update parameter_sets.py
+            Update docstring of parameter_sets.py
+
             Auto-generated pull request
