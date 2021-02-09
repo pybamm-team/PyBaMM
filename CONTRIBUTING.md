@@ -46,8 +46,30 @@ Finally, if you really, really, _really_ love developing PyBaMM, have a look at 
 
 ## Installation
 
-To install PyBaMM with all developer options, type:
+To install PyBaMM with all developer options follow the steps below:
 
+
+1. Install tox using the commands below:
+```bash
+pip install tox # (Using this, you will need to additionally install tox in your virtual environment as decribed below)
+# or
+pip install pipx # (For installing pipx)
+pipx install tox # (Using this, tox can automatically be accessed in your virtual environment)
+```
+You can also explore and install pipx from their [GitHub repository](https://github.com/pipxproject/pipx)
+
+2. Install sundials using the command below:
+```bash
+# (Skip this step for Windows installation)
+brew install sundials # (MacOS)
+#
+tox -e pybamm-requires # (GNU/Linux)
+```
+3. Installing PyBaMM
+
+This can be achieved by forking the repository and cloning it in your machine.
+
+4. Navigate to the cloned repository and create a virtual environment using the commands below:
 ```bash
 tox -e dev # (GNU/Linux and MacOS)
 #
@@ -56,19 +78,27 @@ python -m tox -e windows-dev # (Windows)
 
 This will
 
-1. Create a virtual environment located at `.tox/dev`.
-2. Install all the dependencies for PyBaMM, including the ones for documentation and development.
-3. Tell Python to use your local pybamm files when you use `import pybamm` anywhere on your system.
+a. Create a virtual environment located at `.tox/dev`.
 
-Finally, activate your environment.
+b. Install all the dependencies for PyBaMM, including the ones for documentation and development.
+
+c. Tell Python to use your local pybamm files when you use `import pybamm` anywhere on your system.
+
+5. Finally, activate your environment.
 
 
 ```bash
 source .tox/dev/bin/activate # (GNU/Linux and MacOS)
 #
-.tox\dev\Scripts\activate.bat # (Windows)
+.tox\windows-dev\Scripts\activate.bat # (Windows)
+```
+6. Inside the virtual environment, type:
+```bash
+pip install tox # (Skip this step if you used pipx above)
 ```
 
+
+Full documentation with an installation guide can be found [here](https://pybamm.readthedocs.io/en/latest/install/install-from-source.html)
 
 ## Coding style guidelines
 
@@ -148,12 +178,16 @@ This allows people to (1) use PyBaMM without ever importing Matplotlib and (2) c
 
 All code requires testing. We use the [unittest](https://docs.python.org/3.3/library/unittest.html) package for our tests. (These tests typically just check that the code runs without error, and so, are more _debugging_ than _testing_ in a strict sense. Nevertheless, they are very useful to have!)
 
-To run quick tests, type
+If you have tox installed, to run quick tests, type
 
 ```bash
 tox -e quick # (GNU/Linux and MacOS)
 #
-python -m tox -e windows-quick (Windows)
+python -m tox -e windows-quick # (Windows)
+```
+else, type
+```bash
+python run-tests.py --unit
 ```
 
 ### Writing tests
