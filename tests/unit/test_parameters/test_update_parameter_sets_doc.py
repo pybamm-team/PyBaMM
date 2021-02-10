@@ -25,12 +25,11 @@ Lithium-ion parameter sets
         Madeleine Ecker, Thi Kim Dung Tran, Philipp Dechent, Stefan Käbitz, Alexander
         Warnecke, and Dirk Uwe Sauer. Parameterization of a Physico-Chemical Model of a
         Lithium-Ion Battery: I. Determination of Parameters. Journal of the
-        Electrochemical Society, 162(9):A1836–A1848, 2015.
-        doi:10.1149/2.0551509jes.Giles Richardson, Ivan Korotkin, Rahifa Ranom, Michael
-        Castle, and Jamie M. Foster. Generalised single particle models for high-rate
-        operation of graded lithium-ion electrodes: systematic derivation and
-        validation. Electrochimica Acta, 339:135862, 2020.
-        doi:10.1016/j.electacta.2020.135862.
+        Electrochemical Society, 162(9):A1836–A1848, 2015. doi:10.1149/2.0551509jes.
+        Giles Richardson, Ivan Korotkin, Rahifa Ranom, Michael Castle, and Jamie M.
+        Foster. Generalised single particle models for high-rate operation of graded
+        lithium-ion electrodes: systematic derivation and validation. Electrochimica
+        Acta, 339:135862, 2020. doi:10.1016/j.electacta.2020.135862.
     * NCA_Kim2011 :
         Gi-Heon Kim, Kandler Smith, Kyu-Jin Lee, Shriram Santhanagopalan, and Ahmad
         Pesaran. Multi-domain modeling of lithium-ion batteries encompassing
