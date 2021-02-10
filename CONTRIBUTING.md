@@ -360,7 +360,7 @@ wherever code is called that uses that citation (for example, in functions or in
 
 ## Benchmarks
 
-A benchmark suite is located in the `benchmarks` directory at the root of the PyBaMM project. These benchamrks can be run using [airspeed velocity](https://asv.readthedocs.io/en/stable/)
+A benchmark suite is located in the `benchmarks` directory at the root of the PyBaMM project. These benchmarks can be run using [airspeed velocity](https://asv.readthedocs.io/en/stable/) (`asv`).
 
 ### Running the benchmarks
 First of all, you'll need `asv` installed:
@@ -372,27 +372,26 @@ To run the benchmarks for the latest commit on the `develop` branch, simply ente
 ```shell
 asv run
 ```
-If it's the first time you run `asv`, you will be prompted for information about your machine (e.g. its name, operating system, architecture...).
+If it is the first time you run `asv`, you will be prompted for information about your machine (e.g. its name, operating system, architecture...).
 
 Running the benchmarks can take a while, as all benchmarks are repeated several times to ensure statistically significant results. If accuracy isn't an issue, use the `--quick` option to avoid repeating each benchmark multiple times.
 ```shell
 asv run --quick
 ```
 
-Benchmarks can also be run over a range of commits. For instance, the following runs the benchmark suite over every commit between version `0.3` and the tip of the
-`develop` branch:
+Benchmarks can also be run over a range of commits. For instance, the following command runs the benchmark suite over every commit between version `0.3` and the tip of the `develop` branch:
 ```shell
 asv run v0.3..develop
 ```
 Further information on how to run benchmarks with `asv` can be found in the documentation at [Using airspeed velocity](https://asv.readthedocs.io/en/stable/using.html).
 
-The benchmark configuration file is named `asv.conf.json` and can be found at the root of the PyBaMM project, see the [asv reference](https://asv.readthedocs.io/en/stable/reference.html) for details on available settings and options.
+`asv` is configured using a file `asv.conf.json` located at the root of the PyBaMM repository. See the [asv reference](https://asv.readthedocs.io/en/stable/reference.html) for details on available settings and options.
 
 Benchmark results are stored in a directory `results/` at the location of the configuration file. There is one result file per commit, per machine.
 
 ### Visualising benchmark results
 
-`asv` is able to generate a static website with a visualisation of the benchmarks results, i.e. the benchmark duration as a function of the commit hash.
+`asv` is able to generate a static website with a visualisation of the benchmarks results, i.e. the benchmark's duration as a function of the commit hash.
 To generate the website, use
 ```shell
 asv publish
@@ -436,10 +435,9 @@ class TimeSPM:
 
 Similarly, a `teardown` method will be run after the benchmark. Note that, unless the `--quick` option is used, benchmarks are executed several times for accuracy, and both the `setup` and `teardown` function are executed before/after each repetition.
 
-Running benchmarks can take a while, and by default encountered exceptions will not
-be shown. When developing benchmarks, it is often convenient to use the following command instead of `asv run`:
+Running benchmarks can take a while, and by default encountered exceptions will not be shown. When developing benchmarks, it is often convenient to use the following command instead of `asv run`:
 ```shell
-as dev
+asv dev
 ```
 
 `asv dev` implies options `--quick`, `--show-stderr`, and `--dry-run` (to avoid updating the `results` directory).
@@ -462,9 +460,9 @@ Note that this file must be kept in sync with the version number in [pybamm/__in
 
 Each change pushed to the PyBaMM GitHub repository will trigger the test and benchmark suites to be run, using [GitHub actions](https://github.com/features/actions).
 
-Tests are run for different operating systems, and for all python versions officially supported by PyBaMM. If you opened a Pull Request, feedback is directly available on your PR's page. If all tests pass, a green tick will be displayed next to the corresponding test run. If one or more test(s) fail, a red cross will be displayed instead.
+Tests are run for different operating systems, and for all python versions officially supported by PyBaMM. If you opened a Pull Request, feedback is directly available on the corresponding page. If all tests pass, a green tick will be displayed next to the corresponding test run. If one or more test(s) fail, a red cross will be displayed instead.
 
-Similarly, the benchmark suite is automatically run for the most recently pushed commit. Benchmarks results are compared to the results available for the latest commit on the `develop` branch. Should any significant performance regression be found, a red cross will be displayed next to the benchmark run.
+Similarly, the benchmark suite is automatically run for the most recently pushed commit. Benchmark results are compared to the results available for the latest commit on the `develop` branch. Should any significant performance regression be found, a red cross will be displayed next to the benchmark run.
 
 In all cases, more details can be obtained by clicking on a specific run.
 
