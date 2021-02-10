@@ -458,23 +458,17 @@ setup.py
 
 Note that this file must be kept in sync with the version number in [pybamm/__init__.py](pybamm/__init__.py).
 
-### Travis CI
+### Continuous Integration using GitHub actions
 
-All committed code is tested using [Travis CI](https://travis-ci.org/), tests are published on https://travis-ci.org/pybamm-team/PyBaMM.
+Each change pushed to the PyBaMM GitHub repository will trigger the test and benchmark suites to be run, using [GitHub actions](https://github.com/features/actions).
 
-Configuration files:
+Tests are run for different operating systems, and for all python versions officially supported by PyBaMM. If you opened a Pull Request, feedback is directly available on your PR's page. If all tests pass, a green tick will be displayed next to the corresponding test run. If one or more test(s) fail, a red cross will be displayed instead.
 
-```
-.travis.yaml
-```
+Similarly, the benchmark suite is automatically run for the most recently pushed commit. Benchmarks results are compared to the results available for the latest commit on the `develop` branch. Should any significant performance regression be found, a red cross will be displayed next to the benchmark run.
 
-For every commit, Travis runs unit tests, integration tests, doc tests, flake8 and notebook tests.
-<!-- Unit tests and flake8 testing is done for every commit. A nightly cronjob also tests the notebooks. Notebooks listed in `.slow-books` are excluded from these tests. -->
+In all cases, more details can be obtained by clicking on a specific run.
 
-<!-- ### Appveyor
-
- -->
-
+Configuration files for various GitHub actions workflow can be found in `.github/worklfows`.
 
 ### Codecov
 
@@ -483,7 +477,7 @@ Code coverage (how much of our code is actually seen by the (linux) unit tests) 
 Configuration files:
 
 ```
-.coveragerc
+tox.ini
 ```
 
 ### Read the Docs
