@@ -15,8 +15,7 @@ jobs:
         run: pip install -U pip virtualenv asv
       - name: Fetch base branch
         run: |
-          git fetch origin $GITHUB_BASE_REF:$GITHUB_BASE_REF
-          git fetch origin $GITHUB_HEAD_REF:$GITHUB_HEAD_REF
+          git fetch origin develop:develop
       - name: Run benchmarks
         run: |
           asv machine --machine "GitHubRunner"
