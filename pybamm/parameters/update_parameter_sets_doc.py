@@ -65,11 +65,19 @@ def generate_ps_doc(parameter_set_dict):
                 nocite=True,
             )
             # Remove citation labels "[3]"
-            citations = re.sub(r"(?:^|\n)(\[\d+\]\s)", "", citations)
-            # Break line at the first space before 80 characters
-            citations = re.findall(r"(.{1,80})(?:\s|$)", citations)
-            citations = "\n".join(map(lambda x: " " * 8 + x, citations))
-            ps_doc = f"    * {ps_name:} :\n{citations}"
+            citations = re.split(r"(?:^|\n)\[\d+\]\s", citations)
+            # Remove empty strings
+            citations = filter(bool, citations)
+            fmt_citations = []
+            for citation in citations:
+                # Break line at the first space before 80 characters
+                citation = re.findall(r"(.{1,80})(?:\s|$)", citation)
+                # Join to create a single citation paragraph
+                citation = "\n".join(map(lambda x: " " * 8 + x, citation))
+                fmt_citations.append(citation)
+
+            fmt_citations = "\n".join(fmt_citations)
+            ps_doc = f"    * {ps_name:} :\n{fmt_citations}"
             output_list.append(ps_doc)
 
     output = "\n".join(output_list)
