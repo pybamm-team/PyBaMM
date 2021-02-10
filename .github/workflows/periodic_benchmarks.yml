@@ -11,6 +11,10 @@ on:
   # Everyday at 3 am UTC
   schedule:
     - cron: "0 3 * * *"
+  # Make it possible to trigger the
+  # workflow manually
+  workflow_dispatch:
+
 jobs:
   benchmarks:
     runs-on: ubuntu-latest
