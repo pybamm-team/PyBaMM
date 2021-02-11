@@ -5,12 +5,11 @@ import pybamm
 import numpy as np
 import sys
 
-class TimeSolveStandardModels:
-    models = [pybamm.lithium_ion.SPM(), pybamm.lithium_ion.SPMe(), pybamm.lithium_ion.DFN()]
-    solve_first = [True, False]
-    params = (models, solve_first)
+class TimeSolveSPM:
+    params = [True, False]
 
-    def setup(self, model, solve_first):
+    def setup(self, solve_first):
+        self.model = pybamm.lithium_ion.SPM()
         geometry = self.model.default_geometry
 
         # load parameter values and process model and geometry
@@ -45,7 +44,9 @@ class TimeSolveStandardModels:
             solver.solve(self.model, t_eval=t_eval)
 
 
-    def time_solve_model(self, model, solve_first):
+    def time_solve_model(self, solve_first):
         solver = pybamm.CasadiSolver()
         t_eval = np.linspace(0, self.tmax, self.nb_points)
         solver.solve(self.model, t_eval=t_eval)
+
+    
