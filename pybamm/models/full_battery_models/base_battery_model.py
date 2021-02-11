@@ -861,9 +861,8 @@ class BaseBatteryModel(pybamm.BaseModel):
         )
 
         # Battery-wide variables
+        V = self.variables["Terminal voltage"]
         V_dim = self.variables["Terminal voltage [V]"]
-        eta_e_av = self.variables["X-averaged electrolyte ohmic losses"]
-        eta_c_av = self.variables["X-averaged concentration overpotential"]
         eta_e_av_dim = self.variables["X-averaged electrolyte ohmic losses [V]"]
         eta_c_av_dim = self.variables["X-averaged concentration overpotential [V]"]
         num_cells = pybamm.Parameter(
@@ -900,9 +899,9 @@ class BaseBatteryModel(pybamm.BaseModel):
         # based on Ohm's Law
         i_cc = self.variables["Current collector current density"]
         i_cc_dim = self.variables["Current collector current density [A.m-2]"]
-        # Gather all overpotentials
-        v_ecm = -(eta_r_av + eta_c_av + eta_e_av + delta_phi_s_av)
-        v_ecm_dim = -(eta_r_av_dim + eta_c_av_dim + eta_e_av_dim + delta_phi_s_av_dim)
+        # ECM overvoltage is OCV minus terminal voltage
+        v_ecm = ocv - V
+        v_ecm_dim = ocv_dim - V_dim
         # Current collector area for turning resistivity into resistance
         A_cc = self.param.A_cc
 
@@ -928,18 +927,17 @@ class BaseBatteryModel(pybamm.BaseModel):
         )
 
         # Cut-off voltage
-        voltage = self.variables["Terminal voltage"]
         self.events.append(
             pybamm.Event(
                 "Minimum voltage",
-                voltage - self.param.voltage_low_cut,
+                V - self.param.voltage_low_cut,
                 pybamm.EventType.TERMINATION,
             )
         )
         self.events.append(
             pybamm.Event(
                 "Maximum voltage",
-                voltage - self.param.voltage_high_cut,
+                V - self.param.voltage_high_cut,
                 pybamm.EventType.TERMINATION,
             )
         )
