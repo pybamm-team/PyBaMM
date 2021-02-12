@@ -20,7 +20,7 @@ class GeometricParameters:
         self._set_dimensionless_parameters()
 
     def _set_dimensional_parameters(self):
-        "Defines the dimensional parameters"
+        """Defines the dimensional parameters."""
 
         # Macroscale geometry
         self.L_cn = pybamm.Parameter("Negative current collector thickness [m]")
@@ -76,7 +76,7 @@ class GeometricParameters:
         )
 
     def _set_dimensionless_parameters(self):
-        "Defines the dimensionless parameters"
+        """Defines the dimensionless parameters."""
 
         # Macroscale Geometry
         self.l_cn = self.L_cn / self.L_x
