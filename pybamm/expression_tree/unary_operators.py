@@ -51,7 +51,7 @@ class UnaryOperator(pybamm.Symbol):
         return self.__class__(child)
 
     def _unary_jac(self, child_jac):
-        """ Calculate the jacobian of a unary operator. """
+        """Calculate the jacobian of a unary operator."""
         raise NotImplementedError
 
     def _unary_evaluate(self, child):
@@ -1080,12 +1080,12 @@ def grad_squared(symbol):
 
 
 def upwind(symbol):
-    "convenience function for creating a :class:`Upwind`"
+    """convenience function for creating a :class:`Upwind`"""
     return Upwind(symbol)
 
 
 def downwind(symbol):
-    "convenience function for creating a :class:`Downwind`"
+    """convenience function for creating a :class:`Downwind`"""
     return Downwind(symbol)
 
 
@@ -1351,7 +1351,7 @@ def boundary_value(symbol, side):
 
 
 def sign(symbol):
-    " Returns a :class:`Sign` object. "
+    """ Returns a :class:`Sign` object. """
     return pybamm.simplify_if_constant(Sign(symbol))
 
 

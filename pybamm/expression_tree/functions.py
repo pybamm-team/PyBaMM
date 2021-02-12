@@ -249,7 +249,7 @@ class SpecificFunction(Function):
 
 
 class Arcsinh(SpecificFunction):
-    """ Arcsinh function """
+    """Arcsinh function."""
 
     def __init__(self, child):
         super().__init__(np.arcsinh, child)
@@ -260,12 +260,12 @@ class Arcsinh(SpecificFunction):
 
 
 def arcsinh(child):
-    " Returns arcsinh function of child. "
+    """Returns arcsinh function of child."""
     return pybamm.simplify_if_constant(Arcsinh(child))
 
 
 class Cos(SpecificFunction):
-    """ Cosine function """
+    """Cosine function."""
 
     def __init__(self, child):
         super().__init__(np.cos, child)
@@ -276,12 +276,12 @@ class Cos(SpecificFunction):
 
 
 def cos(child):
-    " Returns cosine function of child. "
+    """Returns cosine function of child."""
     return pybamm.simplify_if_constant(Cos(child))
 
 
 class Cosh(SpecificFunction):
-    """ Hyberbolic cosine function """
+    """Hyberbolic cosine function."""
 
     def __init__(self, child):
         super().__init__(np.cosh, child)
@@ -292,12 +292,12 @@ class Cosh(SpecificFunction):
 
 
 def cosh(child):
-    " Returns hyperbolic cosine function of child. "
+    """Returns hyperbolic cosine function of child."""
     return pybamm.simplify_if_constant(Cosh(child))
 
 
 class Exponential(SpecificFunction):
-    """ Exponential function """
+    """Exponential function."""
 
     def __init__(self, child):
         super().__init__(np.exp, child)
@@ -308,12 +308,12 @@ class Exponential(SpecificFunction):
 
 
 def exp(child):
-    " Returns exponential function of child. "
+    """Returns exponential function of child."""
     return pybamm.simplify_if_constant(Exponential(child))
 
 
 class Log(SpecificFunction):
-    """ Logarithmic function """
+    """Logarithmic function."""
 
     def __init__(self, child):
         super().__init__(np.log, child)
@@ -329,7 +329,7 @@ class Log(SpecificFunction):
 
 
 def log(child, base="e"):
-    " Returns logarithmic function of child (any base, default 'e'). "
+    """Returns logarithmic function of child (any base, default 'e')."""
     if base == "e":
         return pybamm.simplify_if_constant(Log(child))
     else:
@@ -337,7 +337,7 @@ def log(child, base="e"):
 
 
 def log10(child):
-    " Returns logarithmic function of child, with base 10. "
+    """Returns logarithmic function of child, with base 10."""
     return log(child, base=10)
 
 
@@ -358,12 +358,12 @@ def min(child):
 
 
 def sech(child):
-    " Returns hyperbolic sec function of child. "
+    """Returns hyperbolic sec function of child."""
     return pybamm.simplify_if_constant(1 / Cosh(child))
 
 
 class Sin(SpecificFunction):
-    """ Sine function """
+    """Sine function."""
 
     def __init__(self, child):
         super().__init__(np.sin, child)
@@ -374,12 +374,12 @@ class Sin(SpecificFunction):
 
 
 def sin(child):
-    " Returns sine function of child. "
+    """Returns sine function of child."""
     return pybamm.simplify_if_constant(Sin(child))
 
 
 class Sinh(SpecificFunction):
-    """ Hyperbolic sine function """
+    """Hyperbolic sine function."""
 
     def __init__(self, child):
         super().__init__(np.sinh, child)
@@ -390,12 +390,12 @@ class Sinh(SpecificFunction):
 
 
 def sinh(child):
-    " Returns hyperbolic sine function of child. "
+    """Returns hyperbolic sine function of child."""
     return pybamm.simplify_if_constant(Sinh(child))
 
 
 class Sqrt(SpecificFunction):
-    """ Square root function """
+    """Square root function."""
 
     def __init__(self, child):
         super().__init__(np.sqrt, child)
@@ -411,12 +411,12 @@ class Sqrt(SpecificFunction):
 
 
 def sqrt(child):
-    " Returns square root function of child. "
+    """Returns square root function of child."""
     return pybamm.simplify_if_constant(Sqrt(child))
 
 
 class Tanh(SpecificFunction):
-    """ Hyperbolic tan function """
+    """Hyperbolic tan function."""
 
     def __init__(self, child):
         super().__init__(np.tanh, child)
@@ -427,12 +427,12 @@ class Tanh(SpecificFunction):
 
 
 def tanh(child):
-    " Returns hyperbolic tan function of child. "
+    """Returns hyperbolic tan function of child."""
     return pybamm.simplify_if_constant(Tanh(child))
 
 
 class Arctan(SpecificFunction):
-    """ Arctan function """
+    """Arctan function."""
 
     def __init__(self, child):
         super().__init__(np.arctan, child)
@@ -443,12 +443,12 @@ class Arctan(SpecificFunction):
 
 
 def arctan(child):
-    " Returns hyperbolic tan function of child. "
+    """Returns hyperbolic tan function of child."""
     return pybamm.simplify_if_constant(Arctan(child))
 
 
 class Erf(SpecificFunction):
-    """ Error function """
+    """Error function."""
 
     def __init__(self, child):
         super().__init__(special.erf, child)
@@ -459,10 +459,10 @@ class Erf(SpecificFunction):
 
 
 def erf(child):
-    " Returns error function of child. "
+    """Returns error function of child."""
     return pybamm.simplify_if_constant(Erf(child))
 
 
 def erfc(child):
-    " Returns complementary error function of child. "
+    """Returns complementary error function of child."""
     return pybamm.simplify_if_constant(1 - Erf(child))

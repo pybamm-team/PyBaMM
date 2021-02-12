@@ -306,7 +306,7 @@ class Discretisation(object):
         self._discretised_symbols = {}
 
     def _get_variable_size(self, variable):
-        "Helper function to determine what size a variable should be"
+        """Helper function to determine what size a variable should be"""
         # If domain is empty then variable has size 1
         if variable.domain == []:
             return 1

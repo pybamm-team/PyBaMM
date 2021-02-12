@@ -262,23 +262,23 @@ class BaseModel(object):
 
     @property
     def timescale(self):
-        "Timescale of model, to be used for non-dimensionalising time when solving"
+        """Timescale of model, to be used for non-dimensionalising time when solving"""
         return self._timescale
 
     @timescale.setter
     def timescale(self, value):
-        "Set the timescale"
+        """Set the timescale"""
         self._timescale = value
 
     @property
     def parameters(self):
-        "Returns all the parameters in the model"
+        """Returns all the parameters in the model"""
         if self._parameters is None:
             self._parameters = self._find_parameters()
         return self._parameters
 
     def _find_parameters(self):
-        "Find all the parameters in the model"
+        """Find all the parameters in the model"""
         unpacker = pybamm.SymbolUnpacker((pybamm.Parameter, pybamm.InputParameter))
         all_parameters = unpacker.unpack_list_of_symbols(
             list(self.rhs.values())
@@ -291,13 +291,13 @@ class BaseModel(object):
 
     @property
     def input_parameters(self):
-        "Returns all the input parameters in the model"
+        """Returns all the input parameters in the model"""
         if self._input_parameters is None:
             self._input_parameters = self._find_input_parameters()
         return self._input_parameters
 
     def _find_input_parameters(self):
-        "Find all the input parameters in the model"
+        """Find all the input parameters in the model"""
         unpacker = pybamm.SymbolUnpacker(pybamm.InputParameter)
         all_input_parameters = unpacker.unpack_list_of_symbols(
             list(self.rhs.values())
@@ -512,7 +512,7 @@ class BaseModel(object):
                     )
 
     def check_well_determined(self, post_discretisation):
-        """ Check that the model is not under- or over-determined. """
+        """Check that the model is not under- or over-determined."""
         # Equations (differential and algebraic)
         # Get all the variables from differential and algebraic equations
         vars_in_rhs_keys = set()
@@ -627,7 +627,7 @@ class BaseModel(object):
                     )
 
     def check_ics_bcs(self):
-        """ Check that the initial and boundary conditions are well-posed. """
+        """Check that the initial and boundary conditions are well-posed."""
         # Initial conditions
         for var in self.rhs.keys():
             if var not in self.initial_conditions.keys():
@@ -655,7 +655,7 @@ class BaseModel(object):
                     )
 
     def check_default_variables_dictionaries(self):
-        """ Chec that the right variables are provided. """
+        """Check that the right variables are provided."""
         missing_vars = []
         for output, expression in self._variables.items():
             if expression is None:
@@ -705,7 +705,7 @@ class BaseModel(object):
                 )
 
     def check_no_repeated_keys(self):
-        "Check that no equation keys are repeated"
+        """Check that no equation keys are repeated."""
         rhs_alg = {**self.rhs, **self.algebraic}
         rhs_alg_keys = []
 
@@ -916,7 +916,7 @@ class BaseModel(object):
 
     @property
     def default_solver(self):
-        "Return default solver based on whether model is ODE model or DAE model"
+        """Return default solver based on whether model is ODE model or DAE model."""
         return pybamm.CasadiSolver(mode="safe")
 
 
@@ -953,7 +953,7 @@ class EquationDict(dict):
         super().__init__(equations)
 
     def __setitem__(self, key, value):
-        "Call the update functionality when doing a setitem"
+        """Call the update functionality when doing a setitem."""
         self.update({key: value})
 
     def update(self, equations):
@@ -1009,7 +1009,7 @@ class BoundaryConditionsDict(dict):
         super().__init__(bcs)
 
     def __setitem__(self, key, value):
-        "Call the update functionality when doing a setitem"
+        """Call the update functionality when doing a setitem."""
         self.update({key: value})
 
     def update(self, bcs):
@@ -1017,7 +1017,7 @@ class BoundaryConditionsDict(dict):
         super().update(bcs)
 
     def check_and_convert_bcs(self, boundary_conditions):
-        """ Convert any scalar bcs in dict to 'pybamm.Scalar', and check types """
+        """Convert any scalar bcs in dict to 'pybamm.Scalar', and check types."""
         # Convert any numbers to a pybamm.Scalar
         for var, bcs in boundary_conditions.items():
             for side, bc in bcs.items():

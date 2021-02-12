@@ -117,7 +117,7 @@ class BaseSolver(object):
         self._root_tol = tol
 
     def copy(self):
-        "Returns a copy of the solver"
+        """Returns a copy of the solver"""
         new_solver = copy.copy(self)
         # clear models_set_up
         new_solver.models_set_up = {}
@@ -1099,7 +1099,7 @@ class BaseSolver(object):
         return [k for k, v in extrap_events.items() if v]
 
     def _set_up_ext_and_inputs(self, model, external_variables, inputs):
-        "Set up external variables and input parameters"
+        """Set up external variables and input parameters"""
         inputs = inputs or {}
 
         # Go through all input parameters that can be found in the model
@@ -1124,7 +1124,7 @@ class BaseSolver(object):
 
 
 class SolverCallable:
-    "A class that will be called by the solver when integrating"
+    """A class that will be called by the solver when integrating"""
 
     def __init__(self, function, name, model):
         self._function = function
@@ -1160,7 +1160,7 @@ class SolverCallable:
 
 
 class Residuals(SolverCallable):
-    "Returns information about residuals at time t and state y"
+    """Returns information about residuals at time t and state y"""
 
     def __init__(self, function, name, model):
         super().__init__(function, name, model)
@@ -1173,7 +1173,7 @@ class Residuals(SolverCallable):
 
 
 class InitialConditions(SolverCallable):
-    "Returns initial conditions given inputs"
+    """Returns initial conditions given inputs"""
 
     def __init__(self, function, model):
         super().__init__(function, "initial conditions", model)

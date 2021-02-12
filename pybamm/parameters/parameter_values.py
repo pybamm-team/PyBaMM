@@ -91,14 +91,14 @@ class ParameterValues:
         return self._dict_items[key]
 
     def get(self, key, default=None):
-        "Return item correspoonding to key if it exists, otherwise return default"
+        """Return item correspoonding to key if it exists, otherwise return default"""
         try:
             return self._dict_items[key]
         except KeyError:
             return default
 
     def __setitem__(self, key, value):
-        "Call the update functionality when doing a setitem"
+        """Call the update functionality when doing a setitem"""
         self.update({key: value})
 
     def __delitem__(self, key):
@@ -108,15 +108,15 @@ class ParameterValues:
         return pformat(self._dict_items, width=1)
 
     def keys(self):
-        "Get the keys of the dictionary"
+        """Get the keys of the dictionary"""
         return self._dict_items.keys()
 
     def values(self):
-        "Get the values of the dictionary"
+        """Get the values of the dictionary"""
         return self._dict_items.values()
 
     def items(self):
-        "Get the items of the dictionary"
+        """Get the items of the dictionary"""
         return self._dict_items.items()
 
     def copy(self):
