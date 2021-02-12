@@ -99,9 +99,7 @@ class Citations:
         else:
             raise pybamm.OptionError(
                 "Output format {} not recognised."
-                "It should be 'text' or 'bibtex'.".format(
-                    output_format
-                )
+                "It should be 'text' or 'bibtex'.".format(output_format)
             )
 
         if filename is None:

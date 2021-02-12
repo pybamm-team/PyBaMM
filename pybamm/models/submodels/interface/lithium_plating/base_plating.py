@@ -78,7 +78,9 @@ class BasePlating(BaseInterface):
             * L_scale,
             f"Loss of Li to {domain} lithium plating [mol]": Q_plated_Li * c_scale,
             f"Loss of capacity to {domain} lithium plating [A.h]": Q_plated_Li
-            * c_scale * param.F / 3600,
+            * c_scale
+            * param.F
+            / 3600,
         }
 
         return variables
