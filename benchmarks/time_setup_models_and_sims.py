@@ -45,3 +45,30 @@ class TimeBuildDFN:
         self.model = pybamm.lithium_ion.DFN()
         self.param.process_model(self.model)
         compute_discretisation(self.model, self.param).process_model(self.model)
+
+
+class TimeBuildSPMSimulation:
+    def __init__(self):
+        self.param = pybamm.ParameterValues(chemistry=pybamm.parameter_sets.Marquis2019)
+
+    def time_setup_SPM_simulation(self):
+        self.model = pybamm.lithium_ion.SPM()
+        pybamm.Simulation(self.model, parameter_values=self.param, C_rate=1)
+
+
+class TimeBuildSPMeSimulation:
+    def __init__(self):
+        self.param = pybamm.ParameterValues(chemistry=pybamm.parameter_sets.Marquis2019)
+
+    def time_setup_SPMe_simulation(self):
+        self.model = pybamm.lithium_ion.SPMe()
+        pybamm.Simulation(self.model, parameter_values=self.param, C_rate=1)
+
+
+class TimeBuildDFNSimulation:
+    def __init__(self):
+        self.param = pybamm.ParameterValues(chemistry=pybamm.parameter_sets.Marquis2019)
+
+    def time_setup_DFN_simulation(self):
+        self.model = pybamm.lithium_ion.DFN()
+        pybamm.Simulation(self.model, parameter_values=self.param, C_rate=1)
