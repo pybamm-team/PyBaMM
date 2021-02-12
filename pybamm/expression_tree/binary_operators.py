@@ -41,7 +41,7 @@ def preprocess_binary(left, right):
 
 
 def get_binary_children_domains(ldomain, rdomain):
-    "Combine domains from children in appropriate way"
+    """Combine domains from children in appropriate way."""
     if ldomain == rdomain:
         return ldomain
     elif ldomain == []:
@@ -452,9 +452,7 @@ class Inner(BinaryOperator):
 
 
 def inner(left, right):
-    """
-    Return inner product of two symbols.
-    """
+    """Return inner product of two symbols."""
     left, right = preprocess_binary(left, right)
     # simplify multiply by scalar zero, being careful about shape
     if pybamm.is_scalar_zero(left):
@@ -509,7 +507,7 @@ class Heaviside(BinaryOperator):
 
 
 class EqualHeaviside(Heaviside):
-    "A heaviside function with equality (return 1 when left = right)"
+    """A heaviside function with equality (return 1 when left = right)"""
 
     def __init__(self, left, right):
         """ See :meth:`pybamm.BinaryOperator.__init__()`. """
@@ -527,7 +525,7 @@ class EqualHeaviside(Heaviside):
 
 
 class NotEqualHeaviside(Heaviside):
-    "A heaviside function without equality (return 0 when left = right)"
+    """A heaviside function without equality (return 0 when left = right)"""
 
     def __init__(self, left, right):
         super().__init__("<", left, right)
@@ -544,7 +542,7 @@ class NotEqualHeaviside(Heaviside):
 
 
 class Modulo(BinaryOperator):
-    "Calculates the remainder of an integer division"
+    """Calculates the remainder of an integer division."""
 
     def __init__(self, left, right):
         super().__init__("%", left, right)
@@ -582,7 +580,7 @@ class Modulo(BinaryOperator):
 
 
 class Minimum(BinaryOperator):
-    " Returns the smaller of two objects "
+    """Returns the smaller of two objects."""
 
     def __init__(self, left, right):
         super().__init__("minimum", left, right)
@@ -614,7 +612,7 @@ class Minimum(BinaryOperator):
 
 
 class Maximum(BinaryOperator):
-    " Returns the smaller of two objects "
+    """Returns the smaller of two objects."""
 
     def __init__(self, left, right):
         super().__init__("maximum", left, right)
