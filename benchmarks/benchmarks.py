@@ -52,3 +52,39 @@ class TimeSolveSPM:
 
     def time_solve_model(self, solve_first):
         TimeSolveSPM.solver.solve(self.model, t_eval=self.t_eval)
+
+
+class TimeSolveSPMe:
+    params = [True, False]
+    solver = pybamm.CasadiSolver()
+
+    def setup(self, solve_first):
+        self.model = pybamm.lithium_ion.SPMe()
+        c_rate = 1
+        tmax = 4000 / c_rate
+        nb_points = 500
+        self.t_eval = np.linspace(0, tmax, nb_points)
+        prepare_model(self.model)
+        if solve_first:
+            solve_model_once(self.model, TimeSolveSPMe.solver, self.t_eval)
+
+    def time_solve_model(self, solve_first):
+        TimeSolveSPMe.solver.solve(self.model, t_eval=self.t_eval)
+
+
+class TimeSolveDFN:
+    params = [True, False]
+    solver = pybamm.CasadiSolver()
+
+    def setup(self, solve_first):
+        self.model = pybamm.lithium_ion.DFN()
+        c_rate = 1
+        tmax = 4000 / c_rate
+        nb_points = 500
+        self.t_eval = np.linspace(0, tmax, nb_points)
+        prepare_model(self.model)
+        if solve_first:
+            solve_model_once(self.model, TimeSolveDFN.solver, self.t_eval)
+
+    def time_solve_model(self, solve_first):
+        TimeSolveDFN.solver.solve(self.model, t_eval=self.t_eval)
