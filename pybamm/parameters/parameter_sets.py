@@ -175,6 +175,7 @@ Ai2020 = {
 #
 # Lead-acid
 #
+
 Sulzer2019 = {
     "chemistry": "lead-acid",
     "cell": "BBOXX_Sulzer2019",

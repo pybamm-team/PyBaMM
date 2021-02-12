@@ -739,9 +739,9 @@ class LithiumIonParameters:
         self.c_plated_Li_0 = self.c_plated_Li_0_dim / self.c_e_typ
 
         # ratio of lithium plating reaction scaled to intercalation reaction
-        self.Gamma_plating = (
-            self.a_n_typ * self.j_scale_n * self.tau_discharge
-        ) / (self.F * self.c_e_typ)
+        self.Gamma_plating = (self.a_n_typ * self.j_scale_n * self.tau_discharge) / (
+            self.F * self.c_e_typ
+        )
 
         # Initial conditions
         self.epsilon_n_init = pybamm.Parameter("Negative electrode porosity")
