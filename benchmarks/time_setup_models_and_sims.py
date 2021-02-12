@@ -48,27 +48,60 @@ class TimeBuildDFN:
 
 
 class TimeBuildSPMSimulation:
+    # with_experiment
+    params = [False, True]
+
     def __init__(self):
         self.param = pybamm.ParameterValues(chemistry=pybamm.parameter_sets.Marquis2019)
 
-    def time_setup_SPM_simulation(self):
+    def time_setup_SPM_simulation(self, with_experiment):
         self.model = pybamm.lithium_ion.SPM()
-        pybamm.Simulation(self.model, parameter_values=self.param, C_rate=1)
+        if with_experiment:
+            exp = pybamm.Experiment(
+                [
+                    "Discharge at 0.1C until 3.105 V",
+                ]
+            )
+            pybamm.Simulation(self.model, parameter_values=self.param, experiment=exp)
+        else:
+            pybamm.Simulation(self.model, parameter_values=self.param, C_rate=1)
 
 
 class TimeBuildSPMeSimulation:
+    # with_experiment
+    params = [False, True]
+
     def __init__(self):
         self.param = pybamm.ParameterValues(chemistry=pybamm.parameter_sets.Marquis2019)
 
-    def time_setup_SPMe_simulation(self):
+    def time_setup_SPMe_simulation(self, with_experiment):
         self.model = pybamm.lithium_ion.SPMe()
-        pybamm.Simulation(self.model, parameter_values=self.param, C_rate=1)
+        if with_experiment:
+            exp = pybamm.Experiment(
+                [
+                    "Discharge at 0.1C until 3.105 V",
+                ]
+            )
+            pybamm.Simulation(self.model, parameter_values=self.param, experiment=exp)
+        else:
+            pybamm.Simulation(self.model, parameter_values=self.param, C_rate=1)
 
 
 class TimeBuildDFNSimulation:
+    # with_experiment
+    params = [False, True]
+
     def __init__(self):
         self.param = pybamm.ParameterValues(chemistry=pybamm.parameter_sets.Marquis2019)
 
-    def time_setup_DFN_simulation(self):
+    def time_setup_DFN_simulation(self, with_experiment):
         self.model = pybamm.lithium_ion.DFN()
-        pybamm.Simulation(self.model, parameter_values=self.param, C_rate=1)
+        if with_experiment:
+            exp = pybamm.Experiment(
+                [
+                    "Discharge at 0.1C until 3.105 V",
+                ]
+            )
+            pybamm.Simulation(self.model, parameter_values=self.param, experiment=exp)
+        else:
+            pybamm.Simulation(self.model, parameter_values=self.param, C_rate=1)
