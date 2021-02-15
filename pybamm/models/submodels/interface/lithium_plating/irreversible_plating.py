@@ -45,16 +45,18 @@ class IrreversiblePlating(BasePlating):
         phi_s_n = variables[f"{self.domain} electrode potential"]
         phi_e_n = variables[f"{self.domain} electrolyte potential"]
         c_e_n = variables[f"{self.domain} electrolyte concentration"]
+        T = variables[f"{self.domain} electrode temperature"]
         eta_sei = variables[f"{self.domain} electrode sei film overpotential"]
-        C_plating = param.C_plating
+        c_plated_Li = variables[
+            f"{self.domain} electrode lithium plating concentration"
+        ]
+        j0_plating = param.j0_plating(c_e_n, c_plated_Li, T)
         phi_ref = param.U_n_ref / param.potential_scale
 
         # need to revise for thermal case
         # j_stripping is always negative, because there is no stripping, only plating
-        j_stripping = (
-            -(1 / C_plating)
-            * c_e_n
-            * (pybamm.exp(-0.5 * (phi_s_n - phi_e_n + phi_ref + eta_sei)))
+        j_stripping = -j0_plating * (
+            pybamm.exp(-0.5 * (phi_s_n - phi_e_n + phi_ref + eta_sei))
         )
 
         variables.update(self._get_standard_reaction_variables(j_stripping))

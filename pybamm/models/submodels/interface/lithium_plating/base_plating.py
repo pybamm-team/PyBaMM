@@ -56,7 +56,7 @@ class BasePlating(BaseInterface):
             c_scale = 1
             L_scale = 1
         else:
-            c_scale = param.c_e_typ
+            c_scale = param.c_Li_typ
             L_scale = param.V_bar_plated_Li * c_scale / param.a_n_typ
 
         c_plated_Li_av = pybamm.x_average(c_plated_Li)
@@ -71,8 +71,8 @@ class BasePlating(BaseInterface):
             f"{Domain} lithium plating concentration": c_plated_Li,
             f"{Domain} lithium plating concentration [mol.m-3]": c_plated_Li * c_scale,
             f"{Domain} X-averaged lithium plating concentration": c_plated_Li_av,
-            f"X-averaged {domain} lithium plating concentration [mol.m-3]":
-            c_plated_Li_av * c_scale,
+            f"X-averaged {domain} lithium plating concentration"
+            " [mol.m-3]": c_plated_Li_av * c_scale,
             f"{Domain} lithium plating thickness [m]": L_plated_Li * L_scale,
             f"X-averaged {domain} lithium plating thickness [m]": L_plated_Li_av
             * L_scale,
@@ -89,10 +89,12 @@ class BasePlating(BaseInterface):
         """
         A private function to obtain the standard variables which
         can be derived from the lithum stripping interfacial reaction current
+
         Parameters
         ----------
         j_stripping : :class:`pybamm.Symbol`
             The net lithium stripping interfacial reaction current.
+
         Returns
         -------
         variables : dict

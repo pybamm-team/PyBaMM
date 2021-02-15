@@ -139,7 +139,7 @@ Chen2020_plating = {
     "electrolyte": "lipf6_Nyman2008",
     "experiment": "1C_discharge_from_full_Chen2020",
     "sei": "example",
-    "citation": "Chen2020",
+    "citation": ["Chen2020", "OKane2020"],
 }
 
 Mohtat2020 = {
