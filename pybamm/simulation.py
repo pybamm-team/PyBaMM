@@ -175,6 +175,12 @@ class Simulation:
             new_model.variables
         )
 
+        # Remove upper and lower voltage cut-offs that are *not* part of the experiment
+        new_model.events = [
+            event
+            for event in model.events
+            if event.name not in ["Minimum voltage", "Maximum voltage"]
+        ]
         # add current and voltage events to the model
         # current events both negative and positive to catch specification
         new_model.events.extend(
@@ -330,7 +336,9 @@ class Simulation:
                 self._model_with_set_params, inplace=False, check_model=check_model
             )
 
-    def solve(self, t_eval=None, solver=None, check_model=True, **kwargs):
+    def solve(
+        self, t_eval=None, solver=None, check_model=True, save_at_cycles=None, **kwargs
+    ):
         """
         A method to solve the model. This method will automatically build
         and set the model parameters if not already done so.
@@ -353,11 +361,13 @@ class Simulation:
             If None and the parameter "Current function [A]" is read from data
             (i.e. drive cycle simulation) the model will be solved at the times
             provided in the data.
-        solver : :class:`pybamm.BaseSolver`
-            The solver to use to solve the model.
+        solver : :class:`pybamm.BaseSolver`, optional
+            The solver to use to solve the model. If None, Simulation.solver is used
         check_model : bool, optional
             If True, model checks are performed after discretisation (see
             :meth:`pybamm.Discretisation.process_model`). Default is True.
+        save_at_cycles : int or list of ints, optional
+            Which cycles to save the full sub-solutions for.
         **kwargs
             Additional key-word arguments passed to `solver.solve`.
             See :meth:`pybamm.BaseSolver.solve`.
@@ -368,6 +378,11 @@ class Simulation:
             solver = self.solver
 
         if self.operating_mode in ["without experiment", "drive cycle"]:
+            if save_at_cycles is not None:
+                raise ValueError(
+                    "'save_at_cycles' option should only be used to simulate "
+                    "experiments"
+                )
 
             if self.operating_mode == "without experiment":
                 if t_eval is None:
@@ -445,6 +460,12 @@ class Simulation:
 
             all_cycle_solutions = []
 
+            # Set up eSOH model (for summary variables)
+            esoh_model = pybamm.lithium_ion.ElectrodeSOH()
+            esoh_sim = pybamm.Simulation(
+                esoh_model, parameter_values=self.parameter_values
+            )
+
             idx = 0
             num_cycles = len(self.experiment.cycle_lengths)
             for cycle_num, cycle_length in enumerate(self.experiment.cycle_lengths):
@@ -492,13 +513,6 @@ class Simulation:
                     step_solution.integration_time = 0
                     steps.append(step_solution)
 
-                    # Construct cycle solutions (a list of solutions corresponding to
-                    # cycles) from sub_solutions
-                    if step_num == 0:
-                        cycle_solution = step_solution
-                    else:
-                        cycle_solution = cycle_solution + step_solution
-
                     # Only allow events specified by experiment
                     if not (
                         self._solution.termination == "final time"
@@ -520,7 +534,7 @@ class Simulation:
                     idx += 1
 
                 # At the final step of the inner loop we save the cycle
-                cycle_solution.steps = steps
+                cycle_solution = pybamm.make_cycle_solution(steps, esoh_sim)
                 all_cycle_solutions.append(cycle_solution)
 
             self.solution.cycles = all_cycle_solutions

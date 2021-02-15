@@ -385,8 +385,7 @@ class Solution(object):
 
     @property
     def sub_solutions(self):
-        """List of sub solutions that have been concatenated to form the full solution
-        """
+        """List of sub solutions that have been concatenated to form the full solution"""
         return self._sub_solutions
 
     def __add__(self, other):
@@ -436,7 +435,7 @@ class Solution(object):
         return new_sol
 
     def copy(self):
-        new_sol = Solution(
+        new_sol = self.__class__(
             self.all_ts,
             self.all_ys,
             self.model,
@@ -453,3 +452,69 @@ class Solution(object):
         new_sol.set_up_time = self.set_up_time
 
         return new_sol
+
+
+class CycleSolution(Solution):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+    def set_summary_variables(self, esoh_sim):
+        Q = self["Discharge capacity [A.h]"].data
+        min_Q = np.min(Q)
+        max_Q = np.max(Q)
+
+        summary_variables = {
+            "Minimum discharge capacity [A.h]": min_Q,
+            "Maximum discharge capacity [A.h]": max_Q,
+            "Measured capacity [A.h]": max_Q - min_Q,
+        }
+
+        V_min = esoh_sim.parameter_values["Lower voltage cut-off [V]"]
+        V_max = esoh_sim.parameter_values["Upper voltage cut-off [V]"]
+        C_n = self["Negative electrode capacity [A.h]"].data[-1]
+        C_p = self["Positive electrode capacity [A.h]"].data[-1]
+        n_Li = self["Total lithium in particles [mol]"].data[-1]
+
+        # Solve the esoh model and add outputs to the summary variables
+        esoh_sol = esoh_sim.solve(
+            [0],
+            inputs={
+                "V_min": V_min,
+                "V_max": V_max,
+                "C_n": C_n,
+                "C_p": C_p,
+                "n_Li": n_Li,
+            },
+        )
+        for var in esoh_sol.model.variables:
+            summary_variables[var] = esoh_sol[var].data[0]
+
+        self.summary_variables = summary_variables
+
+
+def make_cycle_solution(step_solutions, esoh_sim):
+    sum_sols = step_solutions[0].copy()
+    for step_solution in step_solutions[1:]:
+        sum_sols = sum_sols + step_solution
+
+    cycle_solution = CycleSolution(
+        sum_sols.all_ts,
+        sum_sols.all_ys,
+        sum_sols.model,
+        sum_sols.all_inputs,
+        sum_sols.t_event,
+        sum_sols.y_event,
+        sum_sols.termination,
+    )
+    cycle_solution._all_inputs_casadi = sum_sols.all_inputs_casadi
+    cycle_solution._sub_solutions = sum_sols.sub_solutions
+
+    cycle_solution.solve_time = sum_sols.solve_time
+    cycle_solution.integration_time = sum_sols.integration_time
+    cycle_solution.set_up_time = sum_sols.set_up_time
+
+    cycle_solution.steps = step_solutions
+
+    cycle_solution.set_summary_variables(esoh_sim)
+
+    return cycle_solution
