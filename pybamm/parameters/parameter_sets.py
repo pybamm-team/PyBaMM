@@ -31,6 +31,11 @@ Lithium-ion parameter sets
         Dhammika Widanage, and Emma Kendrick. Development of Experimental Techniques for
         Parameterization of Multi-scale Lithium-ion Battery Models. Journal of The
         Electrochemical Society, 167(8):080534, 2020. doi:10.1149/1945-7111/ab9050.
+      - Simon E. J. O'Kane, Ian D. Campbell, Mohamed W. J. Marzook, Gregory J. Offer,
+        and Monica Marinescu. Physical origin of the differential voltage minimum
+        associated with lithium plating in li-ion batteries. Journal of The
+        Electrochemical Society, 167(9):090540, may 2020. URL:
+        https://doi.org/10.1149/1945-7111/ab90ac, doi:10.1149/1945-7111/ab90ac.
     * Ecker2015 :
       - Madeleine Ecker, Stefan Käbitz, Izaro Laresgoiti, and Dirk Uwe Sauer.
         Parameterization of a Physico-Chemical Model of a Lithium-Ion Battery: II. Model
