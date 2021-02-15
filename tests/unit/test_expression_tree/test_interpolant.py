@@ -123,7 +123,6 @@ class TestInterpolant(unittest.TestCase):
         interp = pybamm.Interpolant(x, 2 * x, y)
 
         self.assertEqual(interp.id, interp.new_copy().id)
-        self.assertEqual(interp.id, interp.simplify().id)
 
 
 if __name__ == "__main__":

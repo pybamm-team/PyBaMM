@@ -6,7 +6,7 @@ import numpy as np
 
 
 class StandardOutputTests(object):
-    "Calls all the tests on the standard output variables."
+    """Calls all the tests on the standard output variables."""
 
     def __init__(self, model, parameter_values, disc, solution):
         # Assign attributes
@@ -34,7 +34,7 @@ class StandardOutputTests(object):
         return
 
     def run_test_class(self, ClassName):
-        "Run all tests from a class 'ClassName'"
+        """Run all tests from a class 'ClassName'"""
         tests = ClassName(
             self.model,
             self.parameter_values,
@@ -300,7 +300,7 @@ class ParticleConcentrationTests(BaseOutputTest):
             np.testing.assert_array_almost_equal(pos_end_vs_start, 0)
 
     def test_concentration_limits(self):
-        "Test that concentrations do not go below 0 or exceed the maximum."
+        """Test that concentrations do not go below 0 or exceed the maximum."""
         t, x_n, x_p, r_n, r_p = self.t, self.x_n, self.x_p, self.r_n, self.r_p
 
         np.testing.assert_array_less(-self.c_s_n(t, x_n, r_n), 0)
@@ -394,11 +394,11 @@ class ElectrolyteConcentrationTests(BaseOutputTest):
         # self.N_e_hat = solution["Reduced cation flux"]
 
     def test_concentration_limit(self):
-        "Test that the electrolyte concentration is always greater than zero."
+        """Test that the electrolyte concentration is always greater than zero."""
         np.testing.assert_array_less(-self.c_e(self.t, self.x), 0)
 
     def test_conservation(self):
-        "Test conservation of species in the electrolyte."
+        """Test conservation of species in the electrolyte."""
         # sufficient to check average concentration is constant
 
         diff = (

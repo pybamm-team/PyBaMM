@@ -27,7 +27,7 @@ class Citations:
         self._reset()
 
     def _reset(self):
-        "Reset citations to default only (only for testing purposes)"
+        """Reset citations to default only (only for testing purposes)"""
         # Initialize empty papers to cite
         self._papers_to_cite = set()
         # Register the PyBaMM paper and the numpy paper
@@ -35,7 +35,7 @@ class Citations:
         self.register("Harris2020")
 
     def read_citations(self):
-        "Read the citations text file"
+        """Read the citations text file"""
         self._all_citations = {}
 
         citations_file = os.path.join(pybamm.root_dir(), "pybamm", "CITATIONS.txt")
@@ -99,9 +99,7 @@ class Citations:
         else:
             raise pybamm.OptionError(
                 "Output format {} not recognised."
-                "It should be 'text' or 'bibtex'.".format(
-                    output_format
-                )
+                "It should be 'text' or 'bibtex'.".format(output_format)
             )
 
         if filename is None:
@@ -112,7 +110,7 @@ class Citations:
 
 
 def print_citations(filename=None, output_format="text"):
-    "See :meth:`Citations.print`"
+    """ See :meth:`Citations.print` """
     pybamm.citations.print(filename, output_format)
 
 
