@@ -9,10 +9,10 @@ your simulation, add the line "pybamm.print_citations()" to your script.
 Lead-acid parameter sets
 ------------------------
     * Sulzer2019 :
-       - Valentin Sulzer, S. Jon Chapman, Colin P. Please, David A. Howey, and Charles W.
-         Monroe. Faster Lead-Acid Battery Simulations from Porous-Electrode Theory: Part
-         I. Physical Model. Journal of The Electrochemical Society, 166(12):A2363–A2371,
-         2019. doi:10.1149/2.0301910jes.
+       - Valentin Sulzer, S. Jon Chapman, Colin P. Please, David A. Howey, and Charles
+         W. Monroe. Faster Lead-Acid Battery Simulations from Porous-Electrode Theory:
+         Part I. Physical Model. Journal of The Electrochemical Society,
+         166(12):A2363–A2371, 2019. doi:10.1149/2.0301910jes.
 
 Lithium-ion parameter sets
 --------------------------
@@ -23,19 +23,19 @@ Lithium-ion parameter sets
          2019. doi:10.1149/2.0122001JES.
     * Chen2020 :
        - Chang-Hui Chen, Ferran Brosa Planella, Kieran O'Regan, Dominika Gastol, W.
-         Dhammika Widanage, and Emma Kendrick. Development of Experimental Techniques for
-         Parameterization of Multi-scale Lithium-ion Battery Models. Journal of The
+         Dhammika Widanage, and Emma Kendrick. Development of Experimental Techniques
+         for Parameterization of Multi-scale Lithium-ion Battery Models. Journal of The
          Electrochemical Society, 167(8):080534, 2020. doi:10.1149/1945-7111/ab9050.
     * Chen2020_plating :
        - Chang-Hui Chen, Ferran Brosa Planella, Kieran O'Regan, Dominika Gastol, W.
-         Dhammika Widanage, and Emma Kendrick. Development of Experimental Techniques for
-         Parameterization of Multi-scale Lithium-ion Battery Models. Journal of The
+         Dhammika Widanage, and Emma Kendrick. Development of Experimental Techniques
+         for Parameterization of Multi-scale Lithium-ion Battery Models. Journal of The
          Electrochemical Society, 167(8):080534, 2020. doi:10.1149/1945-7111/ab9050.
     * Ecker2015 :
        - Madeleine Ecker, Stefan Käbitz, Izaro Laresgoiti, and Dirk Uwe Sauer.
-         Parameterization of a Physico-Chemical Model of a Lithium-Ion Battery: II. Model
-         Validation. Journal of The Electrochemical Society, 162(9):A1849–A1857, 2015.
-         doi:10.1149/2.0541509jes.
+         Parameterization of a Physico-Chemical Model of a Lithium-Ion Battery: II.
+         Model Validation. Journal of The Electrochemical Society, 162(9):A1849–A1857,
+         2015. doi:10.1149/2.0541509jes.
        - Madeleine Ecker, Thi Kim Dung Tran, Philipp Dechent, Stefan Käbitz, Alexander
          Warnecke, and Dirk Uwe Sauer. Parameterization of a Physico-Chemical Model of a
          Lithium-Ion Battery: I. Determination of Parameters. Journal of the
@@ -61,8 +61,8 @@ Lithium-ion parameter sets
          158(8):A955–A969, 2011. doi:10.1149/1.3597614.
     * Prada2013 :
        - Chang-Hui Chen, Ferran Brosa Planella, Kieran O'Regan, Dominika Gastol, W.
-         Dhammika Widanage, and Emma Kendrick. Development of Experimental Techniques for
-         Parameterization of Multi-scale Lithium-ion Battery Models. Journal of The
+         Dhammika Widanage, and Emma Kendrick. Development of Experimental Techniques
+         for Parameterization of Multi-scale Lithium-ion Battery Models. Journal of The
          Electrochemical Society, 167(8):080534, 2020. doi:10.1149/1945-7111/ab9050.
        - Michael J. Lain, James Brandon, and Emma Kendrick. Design strategies for high
          power vs. high energy lithium ion cells. Batteries, 5(4):64, 2019.

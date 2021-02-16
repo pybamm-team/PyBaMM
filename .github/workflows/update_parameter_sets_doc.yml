@@ -35,7 +35,7 @@ jobs:
       with:
         delete-branch: true
         branch-suffix: short-commit-hash
-        commit-message: update parameter_sets
+        commit-message: update parameter_sets docstring
         title: Update parameter_sets.py docstring
         body: |
             Update docstring of parameter_sets.py
