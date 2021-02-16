@@ -2,6 +2,8 @@ name: Update parameter_sets.py docstring
 
 on:
   push:
+    branches:
+    - develop
     paths:
     - 'pybamm/parameters/parameter_sets.py'
     - 'pybamm/parameters/CITATIONS.txt'
