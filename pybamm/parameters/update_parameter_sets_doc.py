@@ -71,7 +71,7 @@ def generate_ps_doc(parameter_set_dict):
             fmt_citations = []
             for citation in citations:
                 # Break line at the first space before 80 characters
-                citation_parts = re.findall(r"(.{1,80})(?:\s|$)", citation)
+                citation_parts = re.findall(r"(.{1,79})(?:\s|$)", citation)
                 # first_line = citation.split('\n')
 
                 indent_citation_parts = []
@@ -80,7 +80,7 @@ def generate_ps_doc(parameter_set_dict):
                         citation_part = "- " + citation_part
                     else:
                         citation_part = "  " + citation_part
-                    indent_citation_parts.append(" " * 6 + citation_part)
+                    indent_citation_parts.append(" " * 7 + citation_part)
 
                 # Join to create a single citation paragraph
                 citation = "\n".join(indent_citation_parts)
