@@ -80,7 +80,7 @@ def generate_ps_doc(parameter_set_dict):
                         citation_part = "- " + citation_part
                     else:
                         citation_part = "  " + citation_part
-                    indent_citation_parts.append(" " * 6 + citation_part)
+                    indent_citation_parts.append(" " * 7 + citation_part)
 
                 # Join to create a single citation paragraph
                 citation = "\n".join(indent_citation_parts)
