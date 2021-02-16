@@ -14,25 +14,25 @@ your simulation, add the line "pybamm.print_citations()" to your script.
 Lead-acid parameter sets
 ------------------------
     * Sulzer2019 :
-      - Valentin Sulzer, S. Jon Chapman, Colin P. Please, David A. Howey, and Charles W.
-        Monroe. Faster Lead-Acid Battery Simulations from Porous-Electrode Theory: Part
-        I. Physical Model. Journal of The Electrochemical Society, 166(12):A2363–A2371,
-        2019. doi:10.1149/2.0301910jes.
+       - Valentin Sulzer, S. Jon Chapman, Colin P. Please, David A. Howey, and Charles
+         W. Monroe. Faster Lead-Acid Battery Simulations from Porous-Electrode Theory:
+         Part I. Physical Model. Journal of The Electrochemical Society,
+         166(12):A2363–A2371, 2019. doi:10.1149/2.0301910jes.
 
 Lithium-ion parameter sets
 --------------------------
     * Prada2013 :
-      - Chang-Hui Chen, Ferran Brosa Planella, Kieran O'Regan, Dominika Gastol, W.
-        Dhammika Widanage, and Emma Kendrick. Development of Experimental Techniques for
-        Parameterization of Multi-scale Lithium-ion Battery Models. Journal of The
-        Electrochemical Society, 167(8):080534, 2020. doi:10.1149/1945-7111/ab9050.
-      - Michael J. Lain, James Brandon, and Emma Kendrick. Design strategies for high
-        power vs. high energy lithium ion cells. Batteries, 5(4):64, 2019.
-        doi:10.3390/batteries5040064.
-      - Eric Prada, D. Di Domenico, Y. Creff, J. Bernard, Valérie Sauvant-Moynot, and
-        François Huet. A simplified electrochemical and thermal aging model of
-        LiFePO4-graphite Li-ion batteries: power and capacity fade simulations. Journal
-        of The Electrochemical Society, 160(4):A616, 2013. doi:10.1149/2.053304jes.
+       - Chang-Hui Chen, Ferran Brosa Planella, Kieran O'Regan, Dominika Gastol, W.
+         Dhammika Widanage, and Emma Kendrick. Development of Experimental Techniques
+         for Parameterization of Multi-scale Lithium-ion Battery Models. Journal of The
+         Electrochemical Society, 167(8):080534, 2020. doi:10.1149/1945-7111/ab9050.
+       - Michael J. Lain, James Brandon, and Emma Kendrick. Design strategies for high
+         power vs. high energy lithium ion cells. Batteries, 5(4):64, 2019.
+         doi:10.3390/batteries5040064.
+       - Eric Prada, D. Di Domenico, Y. Creff, J. Bernard, Valérie Sauvant-Moynot, and
+         François Huet. A simplified electrochemical and thermal aging model of
+         LiFePO4-graphite Li-ion batteries: power and capacity fade simulations. Journal
+         of The Electrochemical Society, 160(4):A616, 2013. doi:10.1149/2.053304jes.
 """
 
 AUTHOR_YEAR_DICT = {
