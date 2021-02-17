@@ -89,6 +89,21 @@ Ecker2015 = {
     "citation": ["Ecker2015i", "Ecker2015ii", "Richardson2020"],
 }
 
+Yang2017 = {
+    "chemistry": "lithium-ion",
+    "cell": "Yang2017",
+    "negative electrode": "graphite_Yang2017",
+    "separator": "separator_Ecker2015",
+    "positive electrode": "LiNiCoO2_Ecker2015",
+    "electrolyte": "lipf6_Ecker2015",
+    "experiment": "1C_discharge_from_full_Ecker2015",
+    "sei": "yang2017_sei",
+    "lithium plating": "yang2017_Li_plating",
+    "citation": ["Yang2017", "Ecker2015i"],
+}
+
+
+
 Marquis2019 = {
     "chemistry": "lithium-ion",
     "cell": "kokam_Marquis2019",

@@ -232,6 +232,7 @@ class BaseBatteryModel(pybamm.BaseModel):
             "sei": "none",
             "lithium plating": "none",
             "sei porosity change": "false",
+            "lithium plating porosity change": "false",
             "loss of active material": "none",
             "working electrode": "none",
             "particle cracking": "none",
@@ -398,6 +399,19 @@ class BaseBatteryModel(pybamm.BaseModel):
         if options["lithium plating"] not in ["none", "reversible", "irreversible"]:
             raise pybamm.OptionError(
                 "Unknown lithium plating model '{}'".format(options["lithium plating"])
+            )
+            
+            
+        if options["lithium plating porosity change"] not in ["true", "false"]:
+            if options["lithium plating porosity change"] in [True, False]:
+                raise pybamm.OptionError(
+                    "lithium plating porosity change must now be given in string format "
+                    "('true' or 'false')"
+                )
+            raise pybamm.OptionError(
+                "Unknown lithium plating porosity change '{}'".format(
+                    options["sei porosity change"]
+                )
             )
 
         if options["loss of active material"] not in [
