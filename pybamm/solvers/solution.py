@@ -102,6 +102,9 @@ class Solution(object):
         # Add self as sub-solution for compatibility with ProcessedVariable
         self._sub_solutions = [self]
 
+        # initialize empty cycles
+        self.cycles = []
+
         # Solution now uses CasADi
         pybamm.citations.register("Andersson2019")
 
@@ -385,8 +388,7 @@ class Solution(object):
 
     @property
     def sub_solutions(self):
-        """List of sub solutions that have been concatenated to form the full solution
-        """
+        """List of sub solutions that have been concatenated to form the full solution"""
         return self._sub_solutions
 
     def __add__(self, other):

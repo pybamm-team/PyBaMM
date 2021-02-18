@@ -78,6 +78,12 @@ class TestSimulation(unittest.TestCase):
             if val.size > 1:
                 self.assertTrue(val.has_symbol_of_classes(pybamm.Matrix))
 
+        with self.assertRaisesRegex(
+            ValueError,
+            "starting_solution can only be provided if simulating an Experiment",
+        ):
+            sim.solve([0, 600], starting_solution=sim.solution)
+
     def test_solve_non_battery_model(self):
 
         model = pybamm.BaseModel()
@@ -174,23 +180,37 @@ class TestSimulation(unittest.TestCase):
         dt = 0.001
         model = pybamm.lithium_ion.SPM()
         sim = pybamm.Simulation(model)
+
         sim.step(dt)  # 1 step stores first two points
         tau = sim.model.timescale.evaluate()
         self.assertEqual(sim.solution.t.size, 2)
         self.assertEqual(sim.solution.y.full()[0, :].size, 2)
         self.assertEqual(sim.solution.t[0], 0)
         self.assertEqual(sim.solution.t[1], dt / tau)
+        saved_sol = sim.solution
+
         sim.step(dt)  # automatically append the next step
         self.assertEqual(sim.solution.t.size, 3)
         self.assertEqual(sim.solution.y.full()[0, :].size, 3)
         self.assertEqual(sim.solution.t[0], 0)
         self.assertEqual(sim.solution.t[1], dt / tau)
         self.assertEqual(sim.solution.t[2], 2 * dt / tau)
+
         sim.step(dt, save=False)  # now only store the two end step points
         self.assertEqual(sim.solution.t.size, 2)
         self.assertEqual(sim.solution.y.full()[0, :].size, 2)
         self.assertEqual(sim.solution.t[0], 2 * dt / tau)
         self.assertEqual(sim.solution.t[1], 3 * dt / tau)
+
+        # Start from saved solution
+        sim.step(
+            dt, starting_solution=saved_sol
+        )  # now only store the two end step points
+        self.assertEqual(sim.solution.t.size, 3)
+        self.assertEqual(sim.solution.y.full()[0, :].size, 3)
+        self.assertEqual(sim.solution.t[0], 0)
+        self.assertEqual(sim.solution.t[1], dt / tau)
+        self.assertEqual(sim.solution.t[2], 2 * dt / tau)
 
     def test_solve_with_inputs(self):
         model = pybamm.lithium_ion.SPM()

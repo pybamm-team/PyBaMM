@@ -72,16 +72,24 @@ class TestSimulationExperiment(unittest.TestCase):
     def test_run_experiment(self):
         experiment = pybamm.Experiment(
             [
-                "Discharge at C/20 for 1 hour",
-                "Charge at 1 A until 4.1 V",
-                "Hold at 4.1 V until C/2",
-                "Discharge at 2 W for 1 hour",
+                (
+                    "Discharge at C/20 for 1 hour",
+                    "Charge at 1 A until 4.1 V",
+                    "Hold at 4.1 V until C/2",
+                    "Discharge at 2 W for 1 hour",
+                )
             ]
         )
         model = pybamm.lithium_ion.SPM()
         sim = pybamm.Simulation(model, experiment=experiment)
-        sim.solve(solver=pybamm.CasadiSolver())
-        self.assertEqual(sim._solution.termination, "final time")
+        solution1 = sim.solve(solver=pybamm.CasadiSolver())
+        self.assertEqual(solution1.termination, "final time")
+        self.assertEqual(len(solution1.cycles), 1)
+
+        # run again with starting solution
+        solution2 = sim.solve(starting_solution=solution1)
+        self.assertEqual(solution2.cycles[0], solution1.cycles[0])
+        self.assertEqual(len(solution2.cycles), 2)
 
     def test_run_experiment_breaks_early(self):
         experiment = pybamm.Experiment(["Discharge at 2 C for 1 hour"])
