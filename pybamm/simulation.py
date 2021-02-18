@@ -337,7 +337,12 @@ class Simulation:
             )
 
     def solve(
-        self, t_eval=None, solver=None, check_model=True, save_at_cycles=None, **kwargs
+        self,
+        t_eval=None,
+        solver=None,
+        check_model=True,
+        save_at_cycles=None,
+        starting_solution=None,
     ):
         """
         A method to solve the model. This method will automatically build
@@ -368,6 +373,9 @@ class Simulation:
             :meth:`pybamm.Discretisation.process_model`). Default is True.
         save_at_cycles : int or list of ints, optional
             Which cycles to save the full sub-solutions for.
+        starting_solution : :class:`pybamm.Solution`
+            The solution to start stepping from. If None (default), then self._solution
+            is used. Must be None if not using an experiment.
         **kwargs
             Additional key-word arguments passed to `solver.solve`.
             See :meth:`pybamm.BaseSolver.solve`.
@@ -380,10 +388,13 @@ class Simulation:
         if self.operating_mode in ["without experiment", "drive cycle"]:
             if save_at_cycles is not None:
                 raise ValueError(
-                    "'save_at_cycles' option should only be used to simulate "
-                    "experiments"
+                    "'save_at_cycles' option can only be used if simulating an "
+                    "Experiment "
                 )
-
+            if starting_solution is not None:
+                raise ValueError(
+                    "starting_solution can only be provided if simulating an Experiment"
+                )
             if self.operating_mode == "without experiment":
                 if t_eval is None:
                     raise pybamm.SolverError(
@@ -451,14 +462,16 @@ class Simulation:
                 )
             # Re-initialize solution, e.g. for solving multiple times with different
             # inputs without having to build the simulation again
-            self._solution = None
-            previous_num_subsolutions = 0
+            self._solution = starting_solution
             # Step through all experimental conditions
             inputs = kwargs.get("inputs", {})
             pybamm.logger.info("Start running experiment")
             timer = pybamm.Timer()
 
-            all_cycle_solutions = []
+            if starting_solution is None:
+                all_cycle_solutions = []
+            else:
+                all_cycle_solutions = starting_solution.cycles
 
             # Set up eSOH model (for summary variables)
             esoh_model = pybamm.lithium_ion.ElectrodeSOH()
@@ -529,7 +542,9 @@ class Simulation:
 
         return self.solution
 
-    def step(self, dt, solver=None, npts=2, save=True, **kwargs):
+    def step(
+        self, dt, solver=None, npts=2, save=True, starting_solution=None, **kwargs
+    ):
         """
         A method to step the model forward one timestep. This method will
         automatically build and set the model parameters if not already done so.
@@ -545,6 +560,9 @@ class Simulation:
             the step dt. Default is 2 (returns the solution at t0 and t0 + dt).
         save : bool
             Turn on to store the solution of all previous timesteps
+        starting_solution : :class:`pybamm.Solution`
+            The solution to start stepping from. If None (default), then self._solution
+            is used
         **kwargs
             Additional key-word arguments passed to `solver.solve`.
             See :meth:`pybamm.BaseSolver.step`.
@@ -554,8 +572,11 @@ class Simulation:
         if solver is None:
             solver = self.solver
 
+        if starting_solution is None:
+            starting_solution = self._solution
+
         self._solution = solver.step(
-            self._solution, self.built_model, dt, npts=npts, save=save, **kwargs
+            starting_solution, self.built_model, dt, npts=npts, save=save, **kwargs
         )
 
         return self.solution

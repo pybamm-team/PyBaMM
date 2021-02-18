@@ -102,6 +102,9 @@ class Solution(object):
         # Add self as sub-solution for compatibility with ProcessedVariable
         self._sub_solutions = [self]
 
+        # initialize empty cycles
+        self.cycles = []
+
         # Initialize empty summary variables
         self._summary_variables = None
 
