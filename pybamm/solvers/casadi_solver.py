@@ -80,13 +80,13 @@ class CasadiSolver(pybamm.BaseSolver):
         super().__init__(
             "problem dependent", rtol, atol, root_method, root_tol, extrap_tol
         )
-        if mode in ["safe", "fast", "safe without grid"]:
+        if mode in ["safe", "fast", "fast with events", "safe without grid"]:
             self.mode = mode
         else:
             raise ValueError(
                 "invalid mode '{}'. Must be 'safe', for solving with events, "
-                "'fast', for solving quickly without events, or 'safe without grid' "
-                "(experimental)".format(mode)
+                "'fast', for solving quickly without events, or 'safe without grid' or "
+                "'fast with events' (both experimental)".format(mode)
             )
         self.max_step_decrease_count = max_step_decrease_count
         self.dt_max = dt_max
@@ -138,6 +138,15 @@ class CasadiSolver(pybamm.BaseSolver):
                 pybamm.logger.info("No events found, running fast mode")
             # Create an integrator with the grid (we just need to do this once)
             self.create_integrator(model, inputs, t_eval)
+            solution = self._run_integrator(
+                model, model.y0, inputs_dict, inputs, t_eval
+            )
+            solution.termination = "final time"
+            return solution
+        elif self.mode == "fast with events":
+            # This is not working but keeping in case we can find a way to make it
+            # work
+            self.create_integrator(model, inputs, t_eval, use_event_switch=True)
             solution = self._run_integrator(
                 model, model.y0, inputs_dict, inputs, t_eval
             )
@@ -360,7 +369,7 @@ class CasadiSolver(pybamm.BaseSolver):
                     y0 = solution.all_ys[-1][:, -1]
             return solution
 
-    def create_integrator(self, model, inputs, t_eval=None):
+    def create_integrator(self, model, inputs, t_eval=None, use_event_switch=False):
         """
         Method to create a casadi integrator object.
         If t_eval is provided, the integrator uses t_eval to make the grid.
@@ -410,6 +419,8 @@ class CasadiSolver(pybamm.BaseSolver):
             t = casadi.MX.sym("t")
             p = casadi.MX.sym("p", inputs.shape[0])
             y_diff = casadi.MX.sym("y_diff", rhs(0, y0, p).shape[0])
+            y_alg = casadi.MX.sym("y_alg", algebraic(0, y0, p).shape[0])
+            y_full = casadi.vertcat(y_diff, y_alg)
 
             if use_grid is False:
                 # rescale time
@@ -426,21 +437,29 @@ class CasadiSolver(pybamm.BaseSolver):
                 t_scaled = t
                 p_with_tlims = p
 
-            problem = {"t": t, "x": y_diff, "p": p_with_tlims}
+            # define the event switch as the point when an event is crossed
+            # see #1082
+            event_switch = 1
+            if use_event_switch is True:
+                for event in model.casadi_terminate_events:
+                    event_switch *= event(t_scaled, y_full, p)
+
+            problem = {
+                "t": t,
+                "x": y_diff,
+                # rescale rhs by (t_max - t_min)
+                "ode": (t_max - t_min) * rhs(t_scaled, y_full, p) * event_switch,
+                "p": p_with_tlims,
+            }
             if algebraic(0, y0, p).is_empty():
                 method = "cvodes"
-                # rescale rhs by (t_max - t_min)
-                problem.update({"ode": (t_max - t_min) * rhs(t_scaled, y_diff, p)})
             else:
                 method = "idas"
-                y_alg = casadi.MX.sym("y_alg", algebraic(0, y0, p).shape[0])
-                y_full = casadi.vertcat(y_diff, y_alg)
-                # rescale rhs by (t_max - t_min)
                 problem.update(
                     {
-                        "ode": (t_max - t_min) * rhs(t_scaled, y_full, p),
                         "z": y_alg,
-                        "alg": algebraic(t_scaled, y_full, p),
+                        "alg": algebraic(t_scaled, y_full, p) * event_switch
+                        + y_alg * (1 - event_switch),
                     }
                 )
             integrator = casadi.integrator("F", method, problem, options)

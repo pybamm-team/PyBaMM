@@ -4,21 +4,23 @@
 import pybamm
 import matplotlib.pyplot as plt
 
-pybamm.set_logging_level("INFO")
+pybamm.set_logging_level("VERBOSE")
 experiment = pybamm.Experiment(
     [
         (
             "Discharge at C/5 for 10 hours or until 3.3 V",
             "Rest for 1 hour",
             "Charge at 1 A until 4.1 V",
-            "Hold at 4.1 V until 50 mA",
-            "Rest for 1 hour",
+            # "Hold at 4.1 V until 50 mA",
+            # "Rest for 1 hour",
         ),
     ]
-    * 3
+    # * 3
 )
-model = pybamm.lithium_ion.DFN()
-sim = pybamm.Simulation(model, experiment=experiment, solver=pybamm.CasadiSolver())
+model = pybamm.lithium_ion.SPM()
+sim = pybamm.Simulation(
+    model, experiment=experiment, solver=pybamm.CasadiSolver(dt_max=1e4)
+)
 sim.solve()
 
 # Plot voltages from the discharge segments only

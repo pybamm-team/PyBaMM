@@ -131,7 +131,7 @@ class BaseSolver(object):
         model : :class:`pybamm.BaseModel`
             The model whose solution to calculate. Must have attributes rhs and
             initial_conditions
-        inputs_dict : dict, optional
+        inputs : dict, optional
             Any input parameters to pass to the model when solving
         t_eval : numeric type, optional
             The times (in seconds) at which to compute the solution
@@ -170,6 +170,7 @@ class BaseSolver(object):
                 )
 
         inputs = inputs or {}
+        inputs_stacked = casadi.vertcat(*[p for p in inputs.values()])
 
         # Set model timescale
         model.timescale_eval = model.timescale.evaluate(inputs=inputs)
@@ -355,39 +356,56 @@ class BaseSolver(object):
         algebraic, algebraic_eval, jac_algebraic = process(
             model.concatenated_algebraic, "algebraic"
         )
-        terminate_events_eval = [
-            process(event.expression, "event", use_jacobian=False)[1]
-            for event in model.events
-            if event.event_type == pybamm.EventType.TERMINATION
-        ]
 
-        interpolant_extrapolation_events_eval = [
-            process(event.expression, "event", use_jacobian=False)[1]
-            for event in model.events
-            if event.event_type == pybamm.EventType.INTERPOLANT_EXTRAPOLATION
-        ]
+        # Calculate initial conditions
+        model.y0 = init_eval(inputs)
 
-        # discontinuity events are evaluated before the solver is called, so don't need
-        # to process them
-        discontinuity_events_eval = [
-            event
-            for event in model.events
-            if event.event_type == pybamm.EventType.DISCONTINUITY
-        ]
+        casadi_terminate_events = []
+        terminate_events_eval = []
+        interpolant_extrapolation_events_eval = []
+        discontinuity_events_eval = []
+        for n, event in enumerate(model.events):
+            if event.event_type == pybamm.EventType.DISCONTINUITY:
+                # discontinuity events are evaluated before the solver is called,
+                # so don't need to process them
+                discontinuity_events_eval.append(event)
+            else:
+                event_eval = process(event.expression, "event", use_jacobian=False)[1]
+                if event.event_type == pybamm.EventType.TERMINATION:
+
+                    terminate_events_eval.append(event_eval)
+                    # Save some events to casadi_terminate_events for the 'fast with
+                    # events' mode of the casadi solver
+                    # see #1082
+                    k = 20
+                    if (
+                        event.name in ["Minimum voltage", "Maximum voltage"]
+                        or "[experiment]" in event.name
+                    ):
+                        init_sign = float(
+                            np.sign(event_eval(0, model.y0, inputs_stacked))
+                        )
+                        event_sigmoid = pybamm.sigmoid(
+                            0, init_sign * event.expression, k
+                        )
+                        event_casadi = process(
+                            event_sigmoid, "event", use_jacobian=False
+                        )[0]
+                        casadi_terminate_events.append(event_casadi)
+                elif event.event_type == pybamm.EventType.INTERPOLANT_EXTRAPOLATION:
+                    interpolant_extrapolation_events_eval.append(event_eval)
 
         # Add the solver attributes
         model.init_eval = init_eval
         model.rhs_eval = rhs_eval
         model.algebraic_eval = algebraic_eval
         model.jac_algebraic_eval = jac_algebraic
+        model.casadi_terminate_events = casadi_terminate_events
         model.terminate_events_eval = terminate_events_eval
         model.discontinuity_events_eval = discontinuity_events_eval
         model.interpolant_extrapolation_events_eval = (
             interpolant_extrapolation_events_eval
         )
-
-        # Calculate initial conditions
-        model.y0 = init_eval(inputs)
 
         # Save CasADi functions for the CasADi solver
         # Note: when we pass to casadi the ode part of the problem must be in explicit
