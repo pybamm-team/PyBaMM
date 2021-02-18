@@ -102,6 +102,9 @@ class Solution(object):
         # Add self as sub-solution for compatibility with ProcessedVariable
         self._sub_solutions = [self]
 
+        # Initialize empty summary variables
+        self._summary_variables = None
+
         # Solution now uses CasADi
         pybamm.citations.register("Andersson2019")
 
@@ -182,6 +185,27 @@ class Solution(object):
     @property
     def total_time(self):
         return self.set_up_time + self.solve_time
+
+    @property
+    def cycles(self):
+        return self._cycles
+
+    @cycles.setter
+    def cycles(self, cycles):
+        self._cycles = cycles
+        summary_variables = {var: [] for var in cycles[0].cycle_summary_variables}
+        for cycle in cycles:
+            for name, value in cycle.cycle_summary_variables.items():
+                summary_variables[name].append(value)
+
+        summary_variables["Cycle number"] = range(1, len(cycles) + 1)
+        self._summary_variables = {
+            name: np.array(value) for name, value in summary_variables.items()
+        }
+
+    @property
+    def summary_variables(self):
+        return self._summary_variables
 
     def update(self, variables):
         """Add ProcessedVariables to the dictionary of variables in the solution"""
@@ -434,6 +458,16 @@ class Solution(object):
 
         return new_sol
 
+    def __radd__(self, other):
+        """
+        Right-side adding with special handling for the case None + Solution (returns
+        Solution)
+        """
+        if other is None:
+            return self
+        else:
+            return other + self
+
     def copy(self):
         new_sol = self.__class__(
             self.all_ts,
@@ -458,12 +492,12 @@ class CycleSolution(Solution):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-    def set_summary_variables(self, esoh_sim):
+    def set_cycle_summary_variables(self, esoh_sim):
         Q = self["Discharge capacity [A.h]"].data
         min_Q = np.min(Q)
         max_Q = np.max(Q)
 
-        summary_variables = {
+        cycle_summary_variables = {
             "Minimum discharge capacity [A.h]": min_Q,
             "Maximum discharge capacity [A.h]": max_Q,
             "Measured capacity [A.h]": max_Q - min_Q,
@@ -476,6 +510,7 @@ class CycleSolution(Solution):
         n_Li = self["Total lithium in particles [mol]"].data[-1]
 
         # Solve the esoh model and add outputs to the summary variables
+        # temporarily turn off logger
         esoh_sol = esoh_sim.solve(
             [0],
             inputs={
@@ -486,10 +521,13 @@ class CycleSolution(Solution):
                 "n_Li": n_Li,
             },
         )
-        for var in esoh_sol.model.variables:
-            summary_variables[var] = esoh_sol[var].data[0]
+        # Update initial conditions for the next cycle
+        esoh_sim.built_model.set_initial_conditions_from(esoh_sol)
 
-        self.summary_variables = summary_variables
+        for var in esoh_sol.model.variables:
+            cycle_summary_variables[var] = esoh_sol[var].data[0]
+
+        self.cycle_summary_variables = cycle_summary_variables
 
 
 def make_cycle_solution(step_solutions, esoh_sim):
@@ -515,6 +553,6 @@ def make_cycle_solution(step_solutions, esoh_sim):
 
     cycle_solution.steps = step_solutions
 
-    cycle_solution.set_summary_variables(esoh_sim)
+    cycle_solution.set_cycle_summary_variables(esoh_sim)
 
     return cycle_solution

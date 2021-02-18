@@ -4,7 +4,7 @@
 import pybamm
 import matplotlib.pyplot as plt
 
-pybamm.set_logging_level("INFO")
+pybamm.set_logging_level("NOTICE")
 experiment = pybamm.Experiment(
     [
         (

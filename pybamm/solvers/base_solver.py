@@ -995,7 +995,7 @@ class BaseSolver(object):
         )
 
         # Return solution
-        if save is False or old_solution is None:
+        if save is False:
             return solution
         else:
             return old_solution + solution

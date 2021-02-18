@@ -469,7 +469,7 @@ class Simulation:
             idx = 0
             num_cycles = len(self.experiment.cycle_lengths)
             for cycle_num, cycle_length in enumerate(self.experiment.cycle_lengths):
-                pybamm.logger.info(
+                pybamm.logger.notice(
                     f"Cycle {cycle_num+1}/{num_cycles} ({timer.time()} elapsed) "
                     + "-" * 20
                 )
@@ -480,7 +480,7 @@ class Simulation:
                     dt = self._experiment_times[idx]
                     # Use 1-indexing for printing cycle number as it is more
                     # human-intuitive
-                    pybamm.logger.info(
+                    pybamm.logger.notice(
                         f"Cycle {cycle_num+1}/{num_cycles}, "
                         f"step {step_num+1}/{cycle_length}: "
                         f"{self.experiment.operating_conditions_strings[idx]}"
@@ -489,29 +489,12 @@ class Simulation:
                     kwargs["inputs"] = inputs
                     # Make sure we take at least 2 timesteps
                     npts = max(int(round(dt / exp_inputs["period"])) + 1, 2)
-                    self.step(dt, solver=solver, npts=npts, **kwargs)
-
-                    # Extract the new parts of the solution
-                    # to construct the entire "step"
-                    sol = self.solution
-                    new_num_subsolutions = len(sol.sub_solutions)
-                    diff_num_subsolutions = (
-                        new_num_subsolutions - previous_num_subsolutions
+                    current_solution = self._solution
+                    step_solution = self.step(
+                        dt, solver=solver, npts=npts, save=False, **kwargs
                     )
-                    previous_num_subsolutions = new_num_subsolutions
-
-                    step_solution = pybamm.Solution(
-                        sol.all_ts[-diff_num_subsolutions:],
-                        sol.all_ys[-diff_num_subsolutions:],
-                        sol.model,
-                        sol.all_inputs[-diff_num_subsolutions:],
-                        sol.t_event,
-                        sol.y_event,
-                        sol.termination,
-                    )
-                    step_solution.solve_time = 0
-                    step_solution.integration_time = 0
                     steps.append(step_solution)
+                    self._solution = current_solution + step_solution
 
                     # Only allow events specified by experiment
                     if not (
@@ -537,6 +520,7 @@ class Simulation:
                 cycle_solution = pybamm.make_cycle_solution(steps, esoh_sim)
                 all_cycle_solutions.append(cycle_solution)
 
+            self.solution = full_solution
             self.solution.cycles = all_cycle_solutions
 
             pybamm.logger.notice(
