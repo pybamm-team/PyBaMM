@@ -482,15 +482,9 @@ tox.ini
 
 Documentation is built using https://readthedocs.org/ and published on http://pybamm.readthedocs.io/.
 
-### Binder
+### Google Colab
 
-Editable notebooks are made available using [Binder](mybinder.readthedocs.io) at https://mybinder.org/v2/gh/pybamm-team/PyBaMM/master.
-
-Configuration files:
-
-```
-postBuild
-```
+Editable notebooks are made available using [Google Colab](https://colab.research.google.com/notebooks/intro.ipynb) [here](https://colab.research.google.com/github/pybamm-team/PyBaMM/blob/master/).
 
 ### GitHub
 
