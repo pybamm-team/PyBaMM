@@ -57,5 +57,6 @@ sim.plot(
         "X-averaged negative electrode porosity",
         "Negative electrode SEI interfacial current density [A.m-2]",
         "X-averaged total negative electrode SEI thickness [m]",
+        "Loss of lithium to negative electrode SEI [mol]",
     ]
 )
