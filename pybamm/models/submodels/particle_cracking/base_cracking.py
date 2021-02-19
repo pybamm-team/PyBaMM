@@ -29,8 +29,7 @@ class BaseCracking(pybamm.BaseSubModel):
     """
 
     def __init__(self, param, domain):
-        self.domain = domain
-        super().__init__(param)
+        super().__init__(param, domain)
 
         pybamm.citations.register("Ai2019")
         pybamm.citations.register("Deshpande2012")

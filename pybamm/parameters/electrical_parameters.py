@@ -24,10 +24,10 @@ class ElectricalParameters:
         self._set_dimensionless_parameters()
 
     def _set_dimensional_parameters(self):
-        "Defines the dimensional parameters"
+        """Defines the dimensional parameters."""
 
         self.I_typ = pybamm.Parameter("Typical current [A]")
-        self.Q = pybamm.Parameter("Cell capacity [A.h]")
+        self.Q = pybamm.Parameter("Nominal cell capacity [A.h]")
         self.C_rate = pybamm.AbsoluteValue(self.I_typ / self.Q)
         self.n_electrodes_parallel = pybamm.Parameter(
             "Number of electrodes connected in parallel to make a cell"
@@ -57,7 +57,7 @@ class ElectricalParameters:
         )
 
     def _set_dimensionless_parameters(self):
-        "Defines the dimensionless parameters"
+        """Defines the dimensionless parameters."""
 
         self.current_with_time = (
             self.dimensional_current_with_time

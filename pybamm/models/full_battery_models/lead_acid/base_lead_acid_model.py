@@ -30,7 +30,7 @@ class BaseModel(pybamm.BaseBatteryModel):
             "negative electrode": self.param.L_x,
             "separator": self.param.L_x,
             "positive electrode": self.param.L_x,
-            "current collector y": self.param.L_y,
+            "current collector y": self.param.L_z,
             "current collector z": self.param.L_z,
         }
 
@@ -54,7 +54,7 @@ class BaseModel(pybamm.BaseBatteryModel):
         return {var.x_n: 25, var.x_s: 41, var.x_p: 34, var.y: 10, var.z: 10}
 
     def set_soc_variables(self):
-        "Set variables relating to the state of charge."
+        """Set variables relating to the state of charge."""
         # State of Charge defined as function of dimensionless electrolyte concentration
         z = pybamm.standard_spatial_vars.z
         soc = (
@@ -82,3 +82,12 @@ class BaseModel(pybamm.BaseBatteryModel):
 
         self.submodels["negative sei"] = pybamm.sei.NoSEI(self.param, "Negative")
         self.submodels["positive sei"] = pybamm.sei.NoSEI(self.param, "Positive")
+
+    def set_lithium_plating_submodel(self):
+
+        self.submodels["negative lithium plating"] = pybamm.lithium_plating.NoPlating(
+            self.param, "Negative"
+        )
+        self.submodels["positive lithium plating"] = pybamm.lithium_plating.NoPlating(
+            self.param, "Positive"
+        )

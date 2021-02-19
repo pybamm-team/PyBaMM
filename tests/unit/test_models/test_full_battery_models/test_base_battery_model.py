@@ -191,6 +191,10 @@ class TestBaseBatteryModel(unittest.TestCase):
         with self.assertRaisesRegex(pybamm.OptionError, "particle cracking"):
             pybamm.BaseBatteryModel({"particle cracking": "bad particle cracking"})
 
+        # plating model
+        with self.assertRaisesRegex(pybamm.OptionError, "lithium plating"):
+            pybamm.BaseBatteryModel({"lithium plating": "bad plating"})
+
     def test_build_twice(self):
         model = pybamm.lithium_ion.SPM()  # need to pick a model to set vars and build
         with self.assertRaisesRegex(pybamm.ModelError, "Model already built"):
