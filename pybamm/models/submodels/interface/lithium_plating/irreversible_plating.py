@@ -45,7 +45,7 @@ class IrreversiblePlating(BasePlating):
         phi_s_n = variables[f"{self.domain} electrode potential"]
         phi_e_n = variables[f"{self.domain} electrolyte potential"]
         c_e_n = variables[f"{self.domain} electrolyte concentration"]
-        eta_sei = variables[f"{self.domain} electrode sei film overpotential"]
+        eta_sei = variables[f"{self.domain} electrode SEI film overpotential"]
         C_plating = param.C_plating
         phi_ref = param.U_n_ref / param.potential_scale
 

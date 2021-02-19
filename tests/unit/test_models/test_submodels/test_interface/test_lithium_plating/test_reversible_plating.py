@@ -26,7 +26,7 @@ class TestReversiblePlating(unittest.TestCase):
             "Negative electrolyte potential": a_n,
             "Negative electrolyte concentration": a_n,
             "Negative electrode lithium plating concentration": a_n,
-            "Negative electrode sei film overpotential": a_n,
+            "Negative electrode SEI film overpotential": a_n,
         }
         submodel = pybamm.lithium_plating.ReversiblePlating(param, "Negative")
         std_tests = tests.StandardSubModelTests(submodel, variables)

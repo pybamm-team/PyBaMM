@@ -34,9 +34,9 @@ class NoSEI(BaseModel):
     def get_coupled_variables(self, variables):
         # Update whole cell variables, which also updates the "sum of" variables
         if (
-            "Negative electrode sei interfacial current density" in variables
-            and "Positive electrode sei interfacial current density" in variables
-            and "Sei interfacial current density" not in variables
+            "Negative electrode SEI interfacial current density" in variables
+            and "Positive electrode SEI interfacial current density" in variables
+            and "SEI interfacial current density" not in variables
         ):
             variables.update(
                 self._get_standard_whole_cell_interfacial_current_variables(variables)
