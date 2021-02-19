@@ -186,7 +186,7 @@ class TestDFNWithSEI(unittest.TestCase):
         modeltest.test_all()
 
     def test_well_posed_reaction_limited_average_film_resistance(self):
-        options = {"sei": "reaction limited", "sei film resistance": "average"}
+        options = {"sei": "reaction limited", "SEI film resistance": "average"}
         model = pybamm.lithium_ion.DFN(options)
         modeltest = tests.StandardModelTest(model)
         modeltest.test_all()

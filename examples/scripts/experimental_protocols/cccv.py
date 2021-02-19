@@ -15,26 +15,26 @@ experiment = pybamm.Experiment(
             "Rest for 1 hour",
         ),
     ]
-    * 3
+    * 20
 )
 model = pybamm.lithium_ion.SPM()
 sim = pybamm.Simulation(model, experiment=experiment, solver=pybamm.CasadiSolver())
-sim.solve()
+sim.solve(save_at_cycles=5)
 
 # Plot voltages from the discharge segments only
-fig, ax = plt.subplots()
-for i in range(3):
-    # Extract sub solutions
-    sol = sim.solution.cycles[i]
-    # Extract variables
-    t = sol["Time [h]"].entries
-    V = sol["Terminal voltage [V]"].entries
-    # Plot
-    ax.plot(t - t[0], V, label="Discharge {}".format(i + 1))
-    ax.set_xlabel("Time [h]")
-    ax.set_ylabel("Voltage [V]")
-    ax.set_xlim([0, 10])
-ax.legend(loc="lower left")
+# fig, ax = plt.subplots()
+# for i in range(3):
+#     # Extract sub solutions
+#     sol = sim.solution.cycles[i]
+#     # Extract variables
+#     t = sol["Time [h]"].entries
+#     V = sol["Terminal voltage [V]"].entries
+#     # Plot
+#     ax.plot(t - t[0], V, label="Discharge {}".format(i + 1))
+#     ax.set_xlabel("Time [h]")
+#     ax.set_ylabel("Voltage [V]")
+#     ax.set_xlim([0, 10])
+# ax.legend(loc="lower left")
 
 # Save time, voltage, current, discharge capacity, temperature, and electrolyte
 # concentration to csv and matlab formats

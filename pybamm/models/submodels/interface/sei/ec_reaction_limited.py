@@ -34,7 +34,7 @@ class EcReactionLimited(BaseModel):
             0, self.domain.lower() + " electrode", "current collector"
         )
         j_outer = pybamm.Variable(
-            "Outer " + self.domain + " electrode sei interfacial current density",
+            "Outer " + self.domain + " electrode SEI interfacial current density",
             domain=self.domain.lower() + " electrode",
             auxiliary_domains={"secondary": "current collector"},
         )
@@ -51,9 +51,9 @@ class EcReactionLimited(BaseModel):
 
         # Update whole cell variables, which also updates the "sum of" variables
         if (
-            "Negative electrode sei interfacial current density" in variables
-            and "Positive electrode sei interfacial current density" in variables
-            and "Sei interfacial current density" not in variables
+            "Negative electrode SEI interfacial current density" in variables
+            and "Positive electrode SEI interfacial current density" in variables
+            and "SEI interfacial current density" not in variables
         ):
             variables.update(
                 self._get_standard_whole_cell_interfacial_current_variables(variables)
@@ -63,8 +63,8 @@ class EcReactionLimited(BaseModel):
 
     def set_rhs(self, variables):
         domain = self.domain.lower() + " electrode"
-        L_sei = variables["Outer " + domain + " sei thickness"]
-        j_sei = variables["Outer " + domain + " sei interfacial current density"]
+        L_sei = variables["Outer " + domain + " SEI thickness"]
+        j_sei = variables["Outer " + domain + " SEI interfacial current density"]
 
         if self.domain == "Negative":
             Gamma_SEI = self.param.Gamma_SEI_n
@@ -77,9 +77,9 @@ class EcReactionLimited(BaseModel):
         j_sei = variables[
             "Outer "
             + self.domain.lower()
-            + " electrode sei interfacial current density"
+            + " electrode SEI interfacial current density"
         ]
-        L_sei = variables["Outer " + self.domain.lower() + " electrode sei thickness"]
+        L_sei = variables["Outer " + self.domain.lower() + " electrode SEI thickness"]
         c_ec = variables[self.domain + " electrode EC surface concentration"]
 
         # Look for current that contributes to the -IR drop
@@ -118,11 +118,11 @@ class EcReactionLimited(BaseModel):
         }
 
     def set_initial_conditions(self, variables):
-        L_sei = variables["Outer " + self.domain.lower() + " electrode sei thickness"]
+        L_sei = variables["Outer " + self.domain.lower() + " electrode SEI thickness"]
         j_sei = variables[
             "Outer "
             + self.domain.lower()
-            + " electrode sei interfacial current density"
+            + " electrode SEI interfacial current density"
         ]
 
         L_sei_0 = pybamm.Scalar(1)

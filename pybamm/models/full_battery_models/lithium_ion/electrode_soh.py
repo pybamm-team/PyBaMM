@@ -51,7 +51,7 @@ class ElectrodeSOH(pybamm.BaseModel):
             C: Up(y_0, T_ref) - Un(x_0, T_ref) - V_min,
         }
         self.initial_conditions = {
-            x_100: 1,
+            x_100: 0.9,
             C: param.Q,
         }
         self.variables = {
@@ -72,5 +72,5 @@ class ElectrodeSOH(pybamm.BaseModel):
             "C_n": C_n,
             "C_p": C_p,
             "C_n * (x_100 - x_0)": C_n * (x_100 - x_0),
-            "C_p * (x_100 - x_0)": C_p * (y_0 - y_100),
+            "C_p * (y_100 - y_0)": C_p * (y_0 - y_100),
         }

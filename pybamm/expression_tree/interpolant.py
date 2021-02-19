@@ -106,9 +106,7 @@ class Interpolant(pybamm.Function):
         else:
             raise ValueError("interpolator '{}' not recognised".format(interpolator))
         # Set name
-        if name is not None and not name.startswith("interpolating function"):
-            name = "interpolating function ({})".format(name)
-        else:
+        if name is None:
             name = "interpolating function"
         self.x = x
         self.y = y
@@ -140,7 +138,9 @@ class Interpolant(pybamm.Function):
     def set_id(self):
         """ See :meth:`pybamm.Symbol.set_id()`. """
         self._id = hash(
-            (self.__class__, self.name, self.entries_string) + tuple(self.domain)
+            (self.__class__, self.name, self.entries_string)
+            + tuple([child.id for child in self.children])
+            + tuple(self.domain)
         )
 
     def _function_new_copy(self, children):

@@ -343,6 +343,7 @@ class Simulation:
         check_model=True,
         save_at_cycles=None,
         starting_solution=None,
+        **kwargs,
     ):
         """
         A method to solve the model. This method will automatically build
@@ -372,7 +373,9 @@ class Simulation:
             If True, model checks are performed after discretisation (see
             :meth:`pybamm.Discretisation.process_model`). Default is True.
         save_at_cycles : int or list of ints, optional
-            Which cycles to save the full sub-solutions for.
+            Which cycles to save the full sub-solutions for. If None, all cycles are
+            saved. If int, every multiple of save_at_cycles is saved. If list, every
+            cycle in the list is saved.
         starting_solution : :class:`pybamm.Solution`
             The solution to start stepping from. If None (default), then self._solution
             is used. Must be None if not using an experiment.
@@ -469,9 +472,18 @@ class Simulation:
             timer = pybamm.Timer()
 
             if starting_solution is None:
-                all_cycle_solutions = []
+                starting_solution_cycles = []
+                starting_solution_summary_variables = []
             else:
-                all_cycle_solutions = starting_solution.cycles
+                starting_solution_cycles = starting_solution.cycles
+                starting_solution_summary_variables = (
+                    starting_solution.all_summary_variables
+                )
+
+            cycle_offset = len(starting_solution_cycles)
+            all_cycle_solutions = starting_solution_cycles
+            all_summary_variables = starting_solution_summary_variables
+            current_solution = starting_solution
 
             # Set up eSOH model (for summary variables)
             esoh_model = pybamm.lithium_ion.ElectrodeSOH()
@@ -481,37 +493,63 @@ class Simulation:
 
             idx = 0
             num_cycles = len(self.experiment.cycle_lengths)
-            for cycle_num, cycle_length in enumerate(self.experiment.cycle_lengths):
+            for cycle_num, cycle_length in enumerate(
+                self.experiment.cycle_lengths, start=1
+            ):
                 pybamm.logger.notice(
-                    f"Cycle {cycle_num+1}/{num_cycles} ({timer.time()} elapsed) "
-                    + "-" * 20
+                    f"Cycle {cycle_num+cycle_offset}/{num_cycles+cycle_offset} "
+                    f"({timer.time()} elapsed) " + "-" * 20
                 )
                 steps = []
                 cycle_solution = None
-                for step_num in range(cycle_length):
+
+                # Decide whether we should save this cycle
+                save_this_cycle = (
+                    # None: save all cycles
+                    save_at_cycles is None
+                    # list: save all cycles in the list
+                    or (
+                        isinstance(save_at_cycles, list)
+                        and cycle_num + cycle_offset in save_at_cycles
+                    )
+                    # int: save all multiples
+                    or (
+                        isinstance(save_at_cycles, int)
+                        and (cycle_num + cycle_offset) % save_at_cycles == 0
+                    )
+                )
+                for step_num in range(1, cycle_length + 1):
                     exp_inputs = self._experiment_inputs[idx]
                     dt = self._experiment_times[idx]
                     # Use 1-indexing for printing cycle number as it is more
                     # human-intuitive
                     pybamm.logger.notice(
-                        f"Cycle {cycle_num+1}/{num_cycles}, "
-                        f"step {step_num+1}/{cycle_length}: "
+                        f"Cycle {cycle_num+cycle_offset}/{num_cycles+cycle_offset}, "
+                        f"step {step_num}/{cycle_length}: "
                         f"{self.experiment.operating_conditions_strings[idx]}"
                     )
                     inputs.update(exp_inputs)
                     kwargs["inputs"] = inputs
                     # Make sure we take at least 2 timesteps
                     npts = max(int(round(dt / exp_inputs["period"])) + 1, 2)
-                    current_solution = self._solution
-                    step_solution = self.step(
-                        dt, solver=solver, npts=npts, save=False, **kwargs
+                    step_solution = solver.step(
+                        current_solution,
+                        self.built_model,
+                        dt,
+                        npts=npts,
+                        save=False,
+                        **kwargs,
                     )
                     steps.append(step_solution)
-                    self._solution = current_solution + step_solution
+                    current_solution = step_solution
+
+                    if save_this_cycle:
+                        self._solution = self._solution + step_solution
 
                     # Only allow events specified by experiment
                     if not (
-                        self._solution.termination == "final time"
+                        self._solution is None
+                        or self._solution.termination == "final time"
                         or "[experiment]" in self._solution.termination
                     ):
                         pybamm.logger.warning(
@@ -530,11 +568,14 @@ class Simulation:
                     idx += 1
 
                 # At the final step of the inner loop we save the cycle
-                cycle_solution = pybamm.make_cycle_solution(steps, esoh_sim)
+                cycle_solution, cycle_summary_variables = pybamm.make_cycle_solution(
+                    steps, esoh_sim, save_this_cycle
+                )
                 all_cycle_solutions.append(cycle_solution)
+                all_summary_variables.append(cycle_summary_variables)
 
-            self.solution = full_solution
             self.solution.cycles = all_cycle_solutions
+            self.solution.set_summary_variables(all_summary_variables)
 
             pybamm.logger.notice(
                 "Finish experiment simulation, took {}".format(timer.time())

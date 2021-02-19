@@ -36,8 +36,8 @@ class BaseInterface(pybamm.BaseSubModel):
             self.reaction_name = " oxygen"
             self.Reaction_icd = "Oxygen interfacial current density"
         elif reaction == "sei":
-            self.reaction_name = " sei"
-            self.Reaction_icd = "Sei interfacial current density"
+            self.reaction_name = " SEI"
+            self.Reaction_icd = "SEI interfacial current density"
         elif reaction == "lithium plating":
             self.reaction_name = " lithium plating"
             self.Reaction_icd = "Lithium plating interfacial current density"
@@ -209,7 +209,7 @@ class BaseInterface(pybamm.BaseSubModel):
         for the DFN model. In the DFN, the correct average interfacial current density
         is computed in 'base_kinetics.py' by averaging the actual interfacial current
         density. The approximation here is only used to get the approximate constant
-        additional resistance term for the "average" sei film resistance model
+        additional resistance term for the "average" SEI film resistance model
         (if using), where only negligible errors will be introduced.
 
         For "leading-order" and "composite" submodels (as used in the SPM and SPMe)
@@ -517,12 +517,12 @@ class BaseInterface(pybamm.BaseSubModel):
 
         domain = self.domain.lower() + " electrode"
         variables = {
-            self.domain + " electrode sei film overpotential": eta_sei,
-            "X-averaged " + domain + " sei film overpotential": eta_sei_av,
-            self.domain + " electrode sei film overpotential [V]": eta_sei * pot_scale,
+            self.domain + " electrode SEI film overpotential": eta_sei,
+            "X-averaged " + domain + " SEI film overpotential": eta_sei_av,
+            self.domain + " electrode SEI film overpotential [V]": eta_sei * pot_scale,
             "X-averaged "
             + domain
-            + " sei film overpotential [V]": eta_sei_av * pot_scale,
+            + " SEI film overpotential [V]": eta_sei_av * pot_scale,
         }
 
         return variables

@@ -52,10 +52,10 @@ sim.plot(
         "Discharge capacity [A.h]",
         "Electrolyte potential [V]",
         "Electrolyte concentration [mol.m-3]",
-        "Total negative electrode sei thickness",
+        "Total negative electrode SEI thickness",
         "Negative electrode porosity",
         "X-averaged negative electrode porosity",
-        "Negative electrode sei interfacial current density [A.m-2]",
-        "X-averaged total negative electrode sei thickness [m]",
+        "Negative electrode SEI interfacial current density [A.m-2]",
+        "X-averaged total negative electrode SEI thickness [m]",
     ]
 )

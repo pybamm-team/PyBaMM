@@ -78,11 +78,6 @@ class BaseModel(pybamm.BaseBatteryModel):
                 # Total lithium
                 "Total lithium [mol]": n_Li,
                 "Total lithium in particles [mol]": n_Li_particles,
-                "Total lithium in electrolyte [mol]": n_Li_e,
-                # Initial total lithium
-                # "Initial total lithium [mol]": n_Li_init,
-                # "Initial total lithium in particles [mol]": n_Li_particles_init,
-                # "Initial total lithium in electrolyte [mol]": n_Li_e_init,
                 # Lithium lost
                 "Total lithium lost [mol]": param.n_Li_init - n_Li,
                 "Total lithium lost from particles [mol]": param.n_Li_particles_init
@@ -93,12 +88,23 @@ class BaseModel(pybamm.BaseBatteryModel):
 
         # Lithium lost to side reactions
         # Different way of measuring LLI but should give same value
-        LLI_sei_n = self.variables["Loss of lithium to negative electrode sei [mol]"]
-        LLI_sei_p = self.variables["Loss of lithium to positive electrode sei [mol]"]
+        LLI_sei_n = self.variables["Loss of lithium to negative electrode SEI [mol]"]
+        LLI_sei_p = self.variables["Loss of lithium to positive electrode SEI [mol]"]
+        LLI_pl_n = self.variables[
+            "Loss of lithium to negative electrode lithium plating [mol]"
+        ]
+        LLI_pl_p = self.variables[
+            "Loss of lithium to positive electrode lithium plating [mol]"
+        ]
 
-        LLI_reactions = LLI_sei_n + LLI_sei_p
+        LLI_reactions = LLI_sei_n + LLI_sei_p + LLI_pl_n + LLI_pl_p
         self.variables.update(
-            {"Total lithium lost to side reactions [mol]": LLI_reactions}
+            {
+                "Total lithium lost to side reactions [mol]": LLI_reactions,
+                "Total capacity lost to side reactions [A.h]": LLI_reactions
+                * param.F
+                / 3600,
+            }
         )
 
     def set_sei_submodel(self):

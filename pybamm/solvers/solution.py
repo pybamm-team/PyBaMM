@@ -103,7 +103,7 @@ class Solution(object):
         self._sub_solutions = [self]
 
         # initialize empty cycles
-        self.cycles = []
+        self._cycles = []
 
         # Initialize empty summary variables
         self._summary_variables = None
@@ -196,19 +196,22 @@ class Solution(object):
     @cycles.setter
     def cycles(self, cycles):
         self._cycles = cycles
-        summary_variables = {var: [] for var in cycles[0].cycle_summary_variables}
-        for cycle in cycles:
-            for name, value in cycle.cycle_summary_variables.items():
-                summary_variables[name].append(value)
-
-        summary_variables["Cycle number"] = range(1, len(cycles) + 1)
-        self._summary_variables = {
-            name: np.array(value) for name, value in summary_variables.items()
-        }
 
     @property
     def summary_variables(self):
         return self._summary_variables
+
+    def set_summary_variables(self, all_summary_variables):
+        summary_variables = {var: [] for var in all_summary_variables[0]}
+        for sum_vars in all_summary_variables:
+            for name, value in sum_vars.items():
+                summary_variables[name].append(value)
+
+        summary_variables["Cycle number"] = range(1, len(all_summary_variables) + 1)
+        self.all_summary_variables = all_summary_variables
+        self._summary_variables = {
+            name: np.array(value) for name, value in summary_variables.items()
+        }
 
     def update(self, variables):
         """Add ProcessedVariables to the dictionary of variables in the solution"""
@@ -491,54 +494,32 @@ class Solution(object):
         return new_sol
 
 
-class CycleSolution(Solution):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+def make_cycle_solution(step_solutions, esoh_sim, save_this_cycle):
+    """
+    Function to create a Solution for an entire cycle, and associated summary variables
 
-    def set_cycle_summary_variables(self, esoh_sim):
-        Q = self["Discharge capacity [A.h]"].data
-        min_Q = np.min(Q)
-        max_Q = np.max(Q)
+    Parameters
+    ----------
+    step_solutions : list of :class:`Solution`
+        Step solutions that form the entire cycle
+    esoh_sim : :class:`pybamm.Simulation`
+        A simulation, whose model should be a :class:`pybamm.lithium_ion.ElectrodeSOH`
+        model, which is used to calculate some of the summary variables
+    save_this_cycle : bool
+        Whether to save the entire cycle variables or just the summary variables
 
-        cycle_summary_variables = {
-            "Minimum discharge capacity [A.h]": min_Q,
-            "Maximum discharge capacity [A.h]": max_Q,
-            "Measured capacity [A.h]": max_Q - min_Q,
-        }
-
-        V_min = esoh_sim.parameter_values["Lower voltage cut-off [V]"]
-        V_max = esoh_sim.parameter_values["Upper voltage cut-off [V]"]
-        C_n = self["Negative electrode capacity [A.h]"].data[-1]
-        C_p = self["Positive electrode capacity [A.h]"].data[-1]
-        n_Li = self["Total lithium in particles [mol]"].data[-1]
-
-        # Solve the esoh model and add outputs to the summary variables
-        # temporarily turn off logger
-        esoh_sol = esoh_sim.solve(
-            [0],
-            inputs={
-                "V_min": V_min,
-                "V_max": V_max,
-                "C_n": C_n,
-                "C_p": C_p,
-                "n_Li": n_Li,
-            },
-        )
-        # Update initial conditions for the next cycle
-        esoh_sim.built_model.set_initial_conditions_from(esoh_sol)
-
-        for var in esoh_sol.model.variables:
-            cycle_summary_variables[var] = esoh_sol[var].data[0]
-
-        self.cycle_summary_variables = cycle_summary_variables
-
-
-def make_cycle_solution(step_solutions, esoh_sim):
+    Returns
+    -------
+    cycle_solution : :class:`pybamm.Solution` or None
+        The Solution object for this cycle, or None (if save_this_cycle is False)
+    cycle_summary_variables : dict
+        Dictionary of summary variables for this cycle
+    """
     sum_sols = step_solutions[0].copy()
     for step_solution in step_solutions[1:]:
         sum_sols = sum_sols + step_solution
 
-    cycle_solution = CycleSolution(
+    cycle_solution = Solution(
         sum_sols.all_ts,
         sum_sols.all_ys,
         sum_sols.model,
@@ -556,6 +537,90 @@ def make_cycle_solution(step_solutions, esoh_sim):
 
     cycle_solution.steps = step_solutions
 
-    cycle_solution.set_cycle_summary_variables(esoh_sim)
+    cycle_summary_variables = get_cycle_summary_variables(cycle_solution, esoh_sim)
 
-    return cycle_solution
+    if save_this_cycle:
+        cycle_solution.cycle_summary_variables = cycle_summary_variables
+    else:
+        cycle_solution = None
+
+    return cycle_solution, cycle_summary_variables
+
+
+def get_cycle_summary_variables(cycle_solution, esoh_sim):
+    Q = cycle_solution["Discharge capacity [A.h]"].data
+    min_Q = np.min(Q)
+    max_Q = np.max(Q)
+
+    cycle_summary_variables = pybamm.FuzzyDict(
+        {
+            "Minimum measured discharge capacity [A.h]": min_Q,
+            "Maximum measured discharge capacity [A.h]": max_Q,
+            "Measured capacity [A.h]": max_Q - min_Q,
+        }
+    )
+
+    # Some of the variables here only require evaluating at two timesteps, so
+    # creating the entire data matrix might be inefficient. Only need to fix this if
+    # it becomes a bottleneck
+    degradation_variables = [
+        "Negative electrode capacity [A.h]",
+        "Positive electrode capacity [A.h]",
+        # LAM, LLI
+        "Loss of Active Material in negative electrode [%]",
+        "Loss of Active Material in positive electrode [%]",
+        "Loss of Lithium Inventory [%]",
+        "Loss of Lithium Inventory, including electrolyte [%]",
+        # Total lithium
+        "Total lithium [mol]",
+        "Total lithium in electrolyte [mol]",
+        "Total lithium in positive electrode [mol]",
+        "Total lithium in negative electrode [mol]",
+        "Total lithium in particles [mol]",
+        # Lithium lost
+        "Total lithium lost [mol]",
+        "Total lithium lost from particles [mol]",
+        "Total lithium lost from electrolyte [mol]",
+        "Loss of lithium to negative electrode SEI [mol]",
+        "Loss of lithium to positive electrode SEI [mol]",
+        "Loss of lithium to negative electrode lithium plating [mol]",
+        "Loss of lithium to positive electrode lithium plating [mol]",
+        "Loss of capacity to negative electrode SEI [A.h]",
+        "Loss of capacity to positive electrode SEI [A.h]",
+        "Loss of capacity to negative electrode lithium plating [A.h]",
+        "Loss of capacity to positive electrode lithium plating [A.h]",
+        "Total lithium lost to side reactions [mol]",
+        "Total capacity lost to side reactions [A.h]",
+    ]
+    for var in degradation_variables:
+        data = cycle_solution[var].data
+        cycle_summary_variables[var] = data[-1]
+        cycle_summary_variables["Change in " + var.lower()] = data[-1] - data[0]
+
+    V_min = esoh_sim.parameter_values["Lower voltage cut-off [V]"]
+    V_max = esoh_sim.parameter_values["Upper voltage cut-off [V]"]
+    C_n = cycle_solution["Negative electrode capacity [A.h]"].data[-1]
+    C_p = cycle_solution["Positive electrode capacity [A.h]"].data[-1]
+    n_Li = cycle_solution["Total lithium in particles [mol]"].data[-1]
+
+    # Solve the esoh model and add outputs to the summary variables
+    # temporarily turn off logger
+    esoh_sol = esoh_sim.solve(
+        [0],
+        inputs={
+            "V_min": V_min,
+            "V_max": V_max,
+            "C_n": C_n,
+            "C_p": C_p,
+            "n_Li": n_Li,
+        },
+    )
+    # Update initial conditions for the next cycle
+    esoh_sim.built_model.set_initial_conditions_from(esoh_sol)
+
+    for var in esoh_sol.model.variables:
+        cycle_summary_variables[var] = esoh_sol[var].data[0]
+
+    cycle_summary_variables["Theoretical capacity [A.h]"] = cycle_summary_variables["C"]
+
+    return cycle_summary_variables

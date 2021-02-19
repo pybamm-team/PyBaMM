@@ -112,7 +112,7 @@ class VoltageTests(BaseOutputTest):
         ]
         self.eta_r_av = solution["X-averaged reaction overpotential [V]"]
 
-        self.eta_sei_av = solution["X-averaged sei film overpotential [V]"]
+        self.eta_sei_av = solution["X-averaged SEI film overpotential [V]"]
 
         self.eta_e_av = solution["X-averaged electrolyte overpotential [V]"]
         self.delta_phi_s_av = solution["X-averaged solid phase ohmic losses [V]"]
@@ -266,8 +266,8 @@ class ParticleConcentrationTests(BaseOutputTest):
         self.N_s_n = solution["Negative particle flux"]
         self.N_s_p = solution["Positive particle flux"]
 
-        self.Q_SEI_n_av = solution["Loss of lithium to negative electrode sei [mol]"]
-        self.Q_SEI_p_av = solution["Loss of lithium to positive electrode sei [mol]"]
+        self.Q_SEI_n_av = solution["Loss of lithium to negative electrode SEI [mol]"]
+        self.Q_SEI_p_av = solution["Loss of lithium to positive electrode SEI [mol]"]
 
     def test_concentration_increase_decrease(self):
         """Test all concentrations in negative particles decrease and all
@@ -569,13 +569,13 @@ class CurrentTests(BaseOutputTest):
         self.j_p_av = solution[
             "X-averaged positive electrode interfacial current density"
         ]
-        self.j_n_sei = solution["Negative electrode sei interfacial current density"]
-        self.j_p_sei = solution["Positive electrode sei interfacial current density"]
+        self.j_n_sei = solution["Negative electrode SEI interfacial current density"]
+        self.j_p_sei = solution["Positive electrode SEI interfacial current density"]
         self.j_n_sei_av = solution[
-            "X-averaged negative electrode sei interfacial current density"
+            "X-averaged negative electrode SEI interfacial current density"
         ]
         self.j_p_sei_av = solution[
-            "X-averaged positive electrode sei interfacial current density"
+            "X-averaged positive electrode SEI interfacial current density"
         ]
 
         self.j0_n = solution["Negative electrode exchange current density"]
