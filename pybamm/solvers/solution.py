@@ -537,7 +537,9 @@ def make_cycle_solution(step_solutions, esoh_sim, save_this_cycle):
 
     cycle_solution.steps = step_solutions
 
-    cycle_summary_variables = get_cycle_summary_variables(cycle_solution, esoh_sim)
+    cycle_summary_variables = (
+        None  # get_cycle_summary_variables(cycle_solution, esoh_sim)
+    )
 
     if save_this_cycle:
         cycle_solution.cycle_summary_variables = cycle_summary_variables

@@ -13,7 +13,7 @@ Edge heat transfer coefficient [W.m-2.K-1],0.3,,
 # Electrical
 Number of electrodes connected in parallel to make a cell,1,,
 Number of cells connected in series to make a battery,1,,
-Lower voltage cut-off [V],2,,
+Lower voltage cut-off [V],2.8,,
 Upper voltage cut-off [V],4.2,,
 ,,,
 # Initial conditions

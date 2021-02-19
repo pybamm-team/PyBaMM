@@ -575,7 +575,7 @@ class Simulation:
                 all_summary_variables.append(cycle_summary_variables)
 
             self.solution.cycles = all_cycle_solutions
-            self.solution.set_summary_variables(all_summary_variables)
+            # self.solution.set_summary_variables(all_summary_variables)
 
             pybamm.logger.notice(
                 "Finish experiment simulation, took {}".format(timer.time())
