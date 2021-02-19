@@ -35,7 +35,7 @@ class BaseInterface(pybamm.BaseSubModel):
         elif reaction == "lithium-ion oxygen":
             self.reaction_name = " oxygen"
             self.Reaction_icd = "Oxygen interfacial current density"
-        elif reaction == "sei":
+        elif reaction == "SEI":
             self.reaction_name = " SEI"
             self.Reaction_icd = "SEI interfacial current density"
         elif reaction == "lithium plating":
@@ -178,7 +178,7 @@ class BaseInterface(pybamm.BaseSubModel):
 
     def _get_electrolyte_reaction_signed_stoichiometry(self):
         """Returns the number of electrons in the reaction."""
-        if self.reaction in ["lithium-ion main", "sei", "lithium plating"]:
+        if self.reaction in ["lithium-ion main", "SEI", "lithium plating"]:
             # Both the main reaction current contribute to the electrolyte reaction
             # current
             return pybamm.Scalar(1), pybamm.Scalar(1)

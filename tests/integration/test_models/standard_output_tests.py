@@ -266,8 +266,12 @@ class ParticleConcentrationTests(BaseOutputTest):
         self.N_s_n = solution["Negative particle flux"]
         self.N_s_p = solution["Positive particle flux"]
 
-        self.Q_SEI_n_av = solution["Loss of lithium to negative electrode SEI [mol]"]
-        self.Q_SEI_p_av = solution["Loss of lithium to positive electrode SEI [mol]"]
+        self.n_SEI_n_av = solution[
+            "X-averaged negative electrode SEI concentration [mol.m-3]"
+        ]
+        self.n_SEI_p_av = solution[
+            "X-averaged positive electrode SEI concentration [mol.m-3]"
+        ]
 
     def test_concentration_increase_decrease(self):
         """Test all concentrations in negative particles decrease and all

@@ -4,15 +4,15 @@ import numpy as np
 pb.set_logging_level("INFO")
 
 models = [
-    pb.lithium_ion.SPM({"sei": "reaction limited"}),
-    pb.lithium_ion.SPMe({"sei": "reaction limited"}),
+    pb.lithium_ion.SPM({"SEI": "reaction limited"}),
+    pb.lithium_ion.SPMe({"SEI": "reaction limited"}),
     pb.lithium_ion.SPM(
-        {"sei": "reaction limited", "surface form": "algebraic"}, name="Algebraic SPM"
+        {"SEI": "reaction limited", "surface form": "algebraic"}, name="Algebraic SPM"
     ),
     pb.lithium_ion.SPMe(
-        {"sei": "reaction limited", "surface form": "algebraic"}, name="Algebraic SPMe"
+        {"SEI": "reaction limited", "surface form": "algebraic"}, name="Algebraic SPMe"
     ),
-    pb.lithium_ion.DFN({"sei": "reaction limited"}),
+    pb.lithium_ion.DFN({"SEI": "reaction limited"}),
 ]
 
 sims = []
@@ -39,6 +39,9 @@ pb.dynamic_plot(
     sims,
     [
         "Terminal voltage [V]",
+        "Negative particle surface concentration",
+        "X-averaged negative particle surface concentration",
+        "Electrolyte concentration [mol.m-3]",
         "Total negative electrode SEI thickness [m]",
         "X-averaged total negative electrode SEI thickness [m]",
         "X-averaged total negative electrode SEI thickness",

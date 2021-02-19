@@ -90,7 +90,7 @@ NCA_Kim2011 = {
     "positive electrode": "nca_Kim2011",
     "electrolyte": "lipf6_Kim2011",
     "experiment": "1C_discharge_from_full_Kim2011",
-    "sei": "example",
+    "SEI": "example",
     "citation": "Kim2011",
 }
 
@@ -102,7 +102,7 @@ Ecker2015 = {
     "positive electrode": "LiNiCoO2_Ecker2015",
     "electrolyte": "lipf6_Ecker2015",
     "experiment": "1C_discharge_from_full_Ecker2015",
-    "sei": "example",
+    "SEI": "example",
     "citation": ["Ecker2015i", "Ecker2015ii", "Richardson2020"],
 }
 
@@ -114,7 +114,7 @@ Marquis2019 = {
     "positive electrode": "lico2_Marquis2019",
     "electrolyte": "lipf6_Marquis2019",
     "experiment": "1C_discharge_from_full_Marquis2019",
-    "sei": "example",
+    "SEI": "example",
     "citation": "Marquis2019",
 }
 
@@ -126,7 +126,7 @@ Chen2020 = {
     "positive electrode": "nmc_Chen2020",
     "electrolyte": "lipf6_Nyman2008",
     "experiment": "1C_discharge_from_full_Chen2020",
-    "sei": "example",
+    "SEI": "example",
     "citation": "Chen2020",
 }
 
@@ -138,7 +138,7 @@ Chen2020_plating = {
     "positive electrode": "nmc_Chen2020",
     "electrolyte": "lipf6_Nyman2008",
     "experiment": "1C_discharge_from_full_Chen2020",
-    "sei": "example",
+    "SEI": "example",
     "citation": "Chen2020",
 }
 
@@ -150,7 +150,7 @@ Mohtat2020 = {
     "positive electrode": "NMC_UMBL_Mohtat2020",
     "electrolyte": "LiPF6_Mohtat2020",
     "experiment": "1C_charge_from_empty_Mohtat2020",
-    "sei": "example",
+    "SEI": "example",
     "citation": "Mohtat2020",
 }
 
@@ -162,7 +162,7 @@ Ramadass2004 = {
     "positive electrode": "lico2_Ramadass2004",
     "electrolyte": "lipf6_Ramadass2004",
     "experiment": "1C_discharge_from_full_Ramadass2004",
-    "sei": "ramadass2004",
+    "SEI": "ramadass2004",
     "citation": "Marquis2019",
 }
 
@@ -185,7 +185,7 @@ Ai2020 = {
     "positive electrode": "lico2_Ai2020",
     "electrolyte": "lipf6_Enertech_Ai2020",
     "experiment": "1C_discharge_from_full_Ai2020",
-    "sei": "example",
+    "SEI": "example",
     "citation": "Ai2019",
 }
 

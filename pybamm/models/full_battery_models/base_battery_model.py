@@ -73,8 +73,8 @@ class BaseBatteryModel(pybamm.BaseModel):
                 diffusion. The options "negative", "positive" or "both" additionally
                 account for crack propagation in the negative, positive or both
                 electrodes, respectively.
-            * "sei" : str
-                Set the sei submodel to be used. Options are:
+            * "SEI" : str
+                Set the SEI submodel to be used. Options are:
 
                 - "none": :class:`pybamm.sei.NoSEI` (no SEI growth)
                 - "constant": :class:`pybamm.sei.Constant` (constant SEI thickness)
@@ -89,7 +89,7 @@ class BaseBatteryModel(pybamm.BaseModel):
                     :class:`pybamm.sei.EcReactionLimited`
             * "SEI film resistance" : str
                 Set the submodel for additional term in the overpotential due to SEI.
-                The default value is "none" if the "sei" option is "none", and
+                The default value is "none" if the "SEI" option is "none", and
                 "distributed" otherwise. This is because the "distributed" model is more
                 complex than the model with no additional resistance, which adds
                 unnecessary complexity if there is no SEI in the first place
@@ -112,7 +112,7 @@ class BaseBatteryModel(pybamm.BaseModel):
                     .. math::
                         \\eta_r = \\frac{F}{RT}
                         * (\\phi_s - \\phi_e - U - R_{sei} * L_{sei} * \\frac{I}{aL})
-            * "sei porosity change" : str
+            * "SEI porosity change" : str
                 Whether to include porosity change due to SEI formation, can be "false"
                 (default) or "true".
             * "side reactions" : list
@@ -229,9 +229,9 @@ class BaseBatteryModel(pybamm.BaseModel):
             "thermal": "isothermal",
             "cell geometry": "none",
             "external submodels": [],
-            "sei": "none",
+            "SEI": "none",
             "lithium plating": "none",
-            "sei porosity change": "false",
+            "SEI porosity change": "false",
             "loss of active material": "none",
             "working electrode": "none",
             "particle cracking": "none",
@@ -249,11 +249,11 @@ class BaseBatteryModel(pybamm.BaseModel):
         # The "cell geometry" option will still be overridden by extra_options if
         # provided
 
-        # Change the default for SEI film resistance based on which sei option is
+        # Change the default for SEI film resistance based on which SEI option is
         # provided
         # extra_options = extra_options or {}
         sei_option = extra_options.get(
-            "sei", "none"
+            "SEI", "none"
         )  # return "none" if option not given
         if sei_option == "none":
             default_options["SEI film resistance"] = "none"
@@ -307,7 +307,7 @@ class BaseBatteryModel(pybamm.BaseModel):
                     "Lead-acid models can only have thermal "
                     "effects if dimensionality is 0."
                 )
-            if options["sei"] != "none" or options["SEI film resistance"] != "none":
+            if options["SEI"] != "none" or options["SEI film resistance"] != "none":
                 raise pybamm.OptionError("Lead-acid models cannot have SEI formation")
             if options["lithium plating"] != "none":
                 raise pybamm.OptionError("Lead-acid models cannot have lithium plating")
@@ -367,7 +367,7 @@ class BaseBatteryModel(pybamm.BaseModel):
             raise pybamm.OptionError(
                 "Unknown geometry '{}'".format(options["cell geometry"])
             )
-        if options["sei"] not in [
+        if options["SEI"] not in [
             "none",
             "constant",
             "reaction limited",
@@ -376,22 +376,22 @@ class BaseBatteryModel(pybamm.BaseModel):
             "interstitial-diffusion limited",
             "ec reaction limited",
         ]:
-            raise pybamm.OptionError("Unknown sei model '{}'".format(options["sei"]))
+            raise pybamm.OptionError("Unknown SEI model '{}'".format(options["SEI"]))
         if options["SEI film resistance"] not in ["none", "distributed", "average"]:
             raise pybamm.OptionError(
                 "Unknown SEI film resistance model '{}'".format(
                     options["SEI film resistance"]
                 )
             )
-        if options["sei porosity change"] not in ["true", "false"]:
-            if options["sei porosity change"] in [True, False]:
+        if options["SEI porosity change"] not in ["true", "false"]:
+            if options["SEI porosity change"] in [True, False]:
                 raise pybamm.OptionError(
-                    "sei porosity change must now be given in string format "
+                    "SEI porosity change must now be given in string format "
                     "('true' or 'false')"
                 )
             raise pybamm.OptionError(
-                "Unknown sei porosity change '{}'".format(
-                    options["sei porosity change"]
+                "Unknown SEI porosity change '{}'".format(
+                    options["SEI porosity change"]
                 )
             )
 
