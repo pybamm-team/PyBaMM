@@ -2,6 +2,10 @@
 
 yum -y update
 yum -y install wget openblas-devel
+
+yum -y remove cmake
+python -m pip install cmake
+
 mkdir /deps
 wget https://github.com/DrTimothyAldenDavis/SuiteSparse/archive/v5.7.2.tar.gz .
 wget https://computing.llnl.gov/projects/sundials/download/sundials-5.3.0.tar.gz .
