@@ -7,8 +7,8 @@ yum -y remove cmake
 python -m pip install cmake
 
 mkdir /deps
-wget https://github.com/DrTimothyAldenDavis/SuiteSparse/archive/v5.7.2.tar.gz .
-wget https://computing.llnl.gov/projects/sundials/download/sundials-5.3.0.tar.gz .
+wget -q https://github.com/DrTimothyAldenDavis/SuiteSparse/archive/v5.7.2.tar.gz .
+wget -q https://computing.llnl.gov/projects/sundials/download/sundials-5.3.0.tar.gz .
 tar -xf v5.7.2.tar.gz --directory /deps
 tar -xf sundials-5.3.0.tar.gz --directory /deps
 
