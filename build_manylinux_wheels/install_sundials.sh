@@ -1,12 +1,12 @@
 #!/bin/bash
 
+yum -y update
+yum -y install wget openblas-devel
 mkdir /deps
 wget https://github.com/DrTimothyAldenDavis/SuiteSparse/archive/v5.7.2.tar.gz .
 wget https://computing.llnl.gov/projects/sundials/download/sundials-5.3.0.tar.gz .
 tar -xf v5.7.2.tar.gz --directory /deps
 tar -xf sundials-5.3.0.tar.gz --directory /deps
-rm v5.7.2.tar.gz
-rm sundials-5.3.0.tar.gz
 
 SUITESPARSE_DIR=/deps/SuiteSparse-5.7.2
 SUNDIALS_DIR=/deps/sundials-5.3.0
