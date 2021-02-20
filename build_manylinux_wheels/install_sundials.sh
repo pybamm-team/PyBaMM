@@ -50,10 +50,8 @@ extract $SUNDIALS_ARCHIVE_NAME
 SUITESPARSE_DIR=SuiteSparse-$SUITESPARSE_VERSION
 for dir in SuiteSparse_config AMD COLAMD BTF KLU
 do
-    cd $SUITESPARSE_DIR/$dir;
-    make library
-    make install INSTALL=/usr
-    cd ../
+    make -C $SUITESPARSE_DIR/$dir library
+    make -C $SUITESPARSE_DIR/$dir install INSTALL=/usr
 done
 
 ### Compile and install SUNDIALS ###
