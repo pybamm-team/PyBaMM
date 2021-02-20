@@ -108,21 +108,19 @@ class BaseModel(BaseInterface):
             v_bar = 1
             L_inner_0 = 0
             L_outer_0 = 0
-        # Set scales for the "EC Reaction Limited" model
-        elif isinstance(self, pybamm.sei.EcReactionLimited):
-            n_scale = 1
-            n_outer_scale = self.param.c_ec_0_dim
-            v_bar = 1
-            L_inner_0 = 0
-            L_outer_0 = 1
         else:
             n_scale = param.L_sei_0_dim * param.a_n_typ / param.V_bar_inner_dimensional
             n_outer_scale = (
                 param.L_sei_0_dim * param.a_n_typ / param.V_bar_outer_dimensional
             )
             v_bar = param.v_bar
-            L_inner_0 = param.L_inner_0
-            L_outer_0 = param.L_outer_0
+            # Set scales for the "EC Reaction Limited" model
+            if isinstance(self, pybamm.sei.EcReactionLimited):
+                L_inner_0 = 0
+                L_outer_0 = 1
+            else:
+                L_inner_0 = param.L_inner_0
+                L_outer_0 = param.L_outer_0
 
         L_inner = variables["Inner " + domain + " SEI thickness"]
         L_outer = variables["Outer " + domain + " SEI thickness"]
@@ -168,19 +166,21 @@ class BaseModel(BaseInterface):
 
             c_ec = pybamm.Scalar(1) + j_outer * L_outer * C_ec
             c_ec_av = pybamm.x_average(c_ec)
+            c_ec_scale = self.param.c_ec_0_dim
+
             variables.update(
                 {
                     self.domain + " electrode EC surface concentration": c_ec,
                     self.domain
                     + " electrode EC surface concentration [mol.m-3]": c_ec
-                    * n_outer_scale,
+                    * c_ec_scale,
                     "X-averaged "
                     + self.domain.lower()
                     + " electrode EC surface concentration": c_ec_av,
                     "X-averaged "
                     + self.domain.lower()
                     + " electrode EC surface concentration [mol.m-3]": c_ec_av
-                    * n_outer_scale,
+                    * c_ec_scale,
                 }
             )
 
