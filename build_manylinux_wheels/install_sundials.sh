@@ -3,8 +3,12 @@
 yum -y update
 yum -y install wget openblas-devel
 
-yum -y remove cmake
+python_bin_dir_cmd="print(os.path.split(sys.executable)[0])"
+python_bin_dir=$(python -c "import sys, os;$python_bin_dir_cmd")
+export PATH=$python_bin_dir:$PATH
 python -m pip install cmake
+
+echo CMAKE_VERSION: $(cmake --version)
 
 mkdir /deps
 wget -q https://github.com/DrTimothyAldenDavis/SuiteSparse/archive/v5.7.2.tar.gz .
