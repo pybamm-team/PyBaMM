@@ -39,7 +39,8 @@ jobs:
         if: matrix.os == 'ubuntu-20.04'
         run: python -m cibuildwheel --output-dir wheelhouse
         env:
-          CIBW_BEFORE_ALL: bash build_manylinux_wheels/install_sundials.sh
+          CIBW_BEFORE_ALL: "bash build_manylinux_wheels/install_sundials.sh"
+          CIBW_BEFORE_BUILD: "python -m pip install cmake"
 
       - uses: actions/upload-artifact@v2
         with:
