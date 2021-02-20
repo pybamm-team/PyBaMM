@@ -537,9 +537,7 @@ def make_cycle_solution(step_solutions, esoh_sim, save_this_cycle):
 
     cycle_solution.steps = step_solutions
 
-    cycle_summary_variables = (
-        None  # get_cycle_summary_variables(cycle_solution, esoh_sim)
-    )
+    cycle_summary_variables = get_cycle_summary_variables(cycle_solution, esoh_sim)
 
     if save_this_cycle:
         cycle_solution.cycle_summary_variables = cycle_summary_variables
@@ -597,7 +595,8 @@ def get_cycle_summary_variables(cycle_solution, esoh_sim):
     for var in degradation_variables:
         data = cycle_solution[var].data
         cycle_summary_variables[var] = data[-1]
-        cycle_summary_variables["Change in " + var.lower()] = data[-1] - data[0]
+        var_lowercase = var[0].lower() + var[1:]
+        cycle_summary_variables["Change in " + var_lowercase] = data[-1] - data[0]
 
     V_min = esoh_sim.parameter_values["Lower voltage cut-off [V]"]
     V_max = esoh_sim.parameter_values["Upper voltage cut-off [V]"]

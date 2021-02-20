@@ -437,7 +437,7 @@ class BaseModel(object):
             equations = list(model.initial_conditions.values())
             # sort equations according to slices
             sorted_equations = [eq for _, eq in sorted(zip(slices, equations))]
-            model.concatenated_initial_conditions = pybamm.NumpyConcatenation(
+            model.concatenated_initial_conditions = pybamm.numpy_concatenation(
                 *sorted_equations
             )
 

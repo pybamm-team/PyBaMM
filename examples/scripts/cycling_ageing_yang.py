@@ -60,6 +60,7 @@ sim.plot(
         [
             "Total lithium lost [mol]",
             "Loss of lithium to negative electrode SEI [mol]",
+            # "Loss of lithium to positive electrode SEI [mol]",
         ],
     ]
 )
