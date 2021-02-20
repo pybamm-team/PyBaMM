@@ -108,20 +108,19 @@ class BaseModel(BaseInterface):
             v_bar = 1
             L_inner_0 = 0
             L_outer_0 = 0
-        # Set scales for the "EC Reaction Limited" model
         else:
             n_scale = param.L_sei_0_dim * param.a_n_typ / param.V_bar_inner_dimensional
             n_outer_scale = (
                 param.L_sei_0_dim * param.a_n_typ / param.V_bar_outer_dimensional
             )
-        if isinstance(self, pybamm.sei.EcReactionLimited):
-            v_bar = 1
-            L_inner_0 = 0
-            L_outer_0 = 1
-        else:
             v_bar = param.v_bar
-            L_inner_0 = param.L_inner_0
-            L_outer_0 = param.L_outer_0
+            # Set scales for the "EC Reaction Limited" model
+            if isinstance(self, pybamm.sei.EcReactionLimited):
+                L_inner_0 = 0
+                L_outer_0 = 1
+            else:
+                L_inner_0 = param.L_inner_0
+                L_outer_0 = param.L_outer_0
 
         L_inner = variables["Inner " + domain + " SEI thickness"]
         L_outer = variables["Outer " + domain + " SEI thickness"]
