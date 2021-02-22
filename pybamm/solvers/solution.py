@@ -606,6 +606,14 @@ def get_cycle_summary_variables(cycle_solution, esoh_sim):
 
     # Solve the esoh model and add outputs to the summary variables
     # temporarily turn off logger
+    # Update initial conditions using the cycle solution
+    esoh_sim.build()
+    esoh_sim.built_model.set_initial_conditions_from(
+        {
+            "x_100": np.max(cycle_solution["Negative electrode SOC"].data),
+            "C": max_Q - min_Q,
+        }
+    )
     esoh_sol = esoh_sim.solve(
         [0],
         inputs={
@@ -616,8 +624,6 @@ def get_cycle_summary_variables(cycle_solution, esoh_sim):
             "n_Li": n_Li,
         },
     )
-    # Update initial conditions for the next cycle
-    esoh_sim.built_model.set_initial_conditions_from(esoh_sol)
 
     for var in esoh_sol.model.variables:
         cycle_summary_variables[var] = esoh_sol[var].data[0]

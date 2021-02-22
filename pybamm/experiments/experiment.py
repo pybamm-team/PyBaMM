@@ -40,10 +40,14 @@ class Experiment:
     period : string, optional
         Period (1/frequency) at which to record outputs. Default is 1 minute. Can be
         overwritten by individual operating conditions.
+    termination : list, optional
+        List of conditions under which to terminate the experiment. Default is None.
 
     """
 
-    def __init__(self, operating_conditions, parameters=None, period="1 minute"):
+    def __init__(
+        self, operating_conditions, parameters=None, period="1 minute", termination=None
+    ):
         self.period = self.convert_time_to_seconds(period.split())
         operating_conditions_cycles = []
         for cycle in operating_conditions:
@@ -83,6 +87,8 @@ class Experiment:
             self.parameters = parameters
         else:
             raise TypeError("experimental parameters should be a dictionary")
+
+        self.termination = termination
 
     def __str__(self):
         return str(self.operating_conditions_strings)
