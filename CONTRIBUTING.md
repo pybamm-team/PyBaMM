@@ -204,7 +204,7 @@ If you want to check integration tests as well as unit tests, type
 ```bash
 tox -e tests # (GNU/Linux and MacOS)
 #
-python -m tox -e windows-tests (Windows)
+python -m tox -e windows-tests # (Windows)
 ```
 
 When you commit anything to PyBaMM, these checks will also be run automatically (see [infrastructure](#infrastructure)).
@@ -216,7 +216,7 @@ To test all example scripts and notebooks, type
 ```bash
 tox -e examples # (GNU/Linux and MacOS)
 #
-python -m tox -e windows-examples (Windows)
+python -m tox -e windows-examples # (Windows)
 ```
 
 If notebooks fail because of changes to pybamm, it can be a bit of a hassle to debug. In these cases, you can create a temporary export of a notebook's Python content using
@@ -340,7 +340,7 @@ Where possible, notebooks are tested daily. A list of slow notebooks (which time
 
 ## Citations
 
-We aim to recognize all contributions by automatically generating citations to the relevant papers on which different parts of the code are built. 
+We aim to recognize all contributions by automatically generating citations to the relevant papers on which different parts of the code are built.
 These will change depending on what models and solvers you use.
 Adding the command
 
