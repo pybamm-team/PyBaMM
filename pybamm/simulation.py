@@ -175,6 +175,12 @@ class Simulation:
             new_model.variables
         )
 
+        # Remove upper and lower voltage cut-offs that are *not* part of the experiment
+        new_model.events = [
+            event
+            for event in model.events
+            if event.name not in ["Minimum voltage", "Maximum voltage"]
+        ]
         # add current and voltage events to the model
         # current events both negative and positive to catch specification
         new_model.events.extend(
@@ -330,7 +336,15 @@ class Simulation:
                 self._model_with_set_params, inplace=False, check_model=check_model
             )
 
-    def solve(self, t_eval=None, solver=None, check_model=True, **kwargs):
+    def solve(
+        self,
+        t_eval=None,
+        solver=None,
+        check_model=True,
+        save_at_cycles=None,
+        starting_solution=None,
+        **kwargs,
+    ):
         """
         A method to solve the model. This method will automatically build
         and set the model parameters if not already done so.
@@ -353,11 +367,18 @@ class Simulation:
             If None and the parameter "Current function [A]" is read from data
             (i.e. drive cycle simulation) the model will be solved at the times
             provided in the data.
-        solver : :class:`pybamm.BaseSolver`
-            The solver to use to solve the model.
+        solver : :class:`pybamm.BaseSolver`, optional
+            The solver to use to solve the model. If None, Simulation.solver is used
         check_model : bool, optional
             If True, model checks are performed after discretisation (see
             :meth:`pybamm.Discretisation.process_model`). Default is True.
+        save_at_cycles : int or list of ints, optional
+            Which cycles to save the full sub-solutions for. If None, all cycles are
+            saved. If int, every multiple of save_at_cycles is saved. If list, every
+            cycle in the list is saved.
+        starting_solution : :class:`pybamm.Solution`
+            The solution to start stepping from. If None (default), then self._solution
+            is used. Must be None if not using an experiment.
         **kwargs
             Additional key-word arguments passed to `solver.solve`.
             See :meth:`pybamm.BaseSolver.solve`.
@@ -368,7 +389,15 @@ class Simulation:
             solver = self.solver
 
         if self.operating_mode in ["without experiment", "drive cycle"]:
-
+            if save_at_cycles is not None:
+                raise ValueError(
+                    "'save_at_cycles' option can only be used if simulating an "
+                    "Experiment "
+                )
+            if starting_solution is not None:
+                raise ValueError(
+                    "starting_solution can only be provided if simulating an Experiment"
+                )
             if self.operating_mode == "without experiment":
                 if t_eval is None:
                     raise pybamm.SolverError(
@@ -436,99 +465,82 @@ class Simulation:
                 )
             # Re-initialize solution, e.g. for solving multiple times with different
             # inputs without having to build the simulation again
-            self._solution = None
-            previous_num_subsolutions = 0
+            self._solution = starting_solution
             # Step through all experimental conditions
             inputs = kwargs.get("inputs", {})
             pybamm.logger.info("Start running experiment")
             timer = pybamm.Timer()
 
-            all_cycle_solutions = []
+            if starting_solution is None:
+                starting_solution_cycles = []
+            else:
+                starting_solution_cycles = starting_solution.cycles
+
+            cycle_offset = len(starting_solution_cycles)
+            all_cycle_solutions = starting_solution_cycles
+            current_solution = starting_solution
 
             idx = 0
             num_cycles = len(self.experiment.cycle_lengths)
-            feasible = True  # simulation will stop if experiment is infeasible
-            for cycle_num, cycle_length in enumerate(self.experiment.cycle_lengths):
-                pybamm.logger.info(
-                    f"Cycle {cycle_num+1}/{num_cycles} ({timer.time()} elapsed) "
-                    + "-" * 20
+            for cycle_num, cycle_length in enumerate(
+                self.experiment.cycle_lengths, start=1
+            ):
+                pybamm.logger.notice(
+                    f"Cycle {cycle_num+cycle_offset}/{num_cycles+cycle_offset} "
+                    f"({timer.time()} elapsed) " + "-" * 20
                 )
                 steps = []
                 cycle_solution = None
-                for step_num in range(cycle_length):
+
+                for step_num in range(1, cycle_length + 1):
                     exp_inputs = self._experiment_inputs[idx]
                     dt = self._experiment_times[idx]
                     # Use 1-indexing for printing cycle number as it is more
                     # human-intuitive
-                    pybamm.logger.info(
-                        f"Cycle {cycle_num+1}/{num_cycles}, "
-                        f"step {step_num+1}/{cycle_length}: "
+                    pybamm.logger.notice(
+                        f"Cycle {cycle_num+cycle_offset}/{num_cycles+cycle_offset}, "
+                        f"step {step_num}/{cycle_length}: "
                         f"{self.experiment.operating_conditions_strings[idx]}"
                     )
                     inputs.update(exp_inputs)
                     kwargs["inputs"] = inputs
                     # Make sure we take at least 2 timesteps
                     npts = max(int(round(dt / exp_inputs["period"])) + 1, 2)
-                    self.step(dt, solver=solver, npts=npts, **kwargs)
-
-                    # Extract the new parts of the solution
-                    # to construct the entire "step"
-                    sol = self.solution
-                    new_num_subsolutions = len(sol.sub_solutions)
-                    diff_num_subsolutions = (
-                        new_num_subsolutions - previous_num_subsolutions
+                    step_solution = solver.step(
+                        current_solution,
+                        self.built_model,
+                        dt,
+                        npts=npts,
+                        save=False,
+                        **kwargs,
                     )
-                    previous_num_subsolutions = new_num_subsolutions
-
-                    step_solution = pybamm.Solution(
-                        sol.all_ts[-diff_num_subsolutions:],
-                        sol.all_ys[-diff_num_subsolutions:],
-                        sol.model,
-                        sol.all_inputs[-diff_num_subsolutions:],
-                        sol.t_event,
-                        sol.y_event,
-                        sol.termination,
-                    )
-                    step_solution.solve_time = 0
-                    step_solution.integration_time = 0
                     steps.append(step_solution)
+                    current_solution = step_solution
 
-                    # Construct cycle solutions (a list of solutions corresponding to
-                    # cycles) from sub_solutions
-                    if step_num == 0:
-                        cycle_solution = step_solution
-                    else:
-                        cycle_solution = cycle_solution + step_solution
+                    self._solution = self.solution + current_solution
 
                     # Only allow events specified by experiment
                     if not (
-                        self._solution.termination == "final time"
+                        self._solution is None
+                        or self._solution.termination == "final time"
                         or "[experiment]" in self._solution.termination
                     ):
-                        feasible = False
+                        pybamm.logger.warning(
+                            "\n\n\tExperiment is infeasible: '{}' ".format(
+                                self._solution.termination
+                            )
+                            + "was triggered during '{}'. ".format(
+                                self.experiment.operating_conditions_strings[idx]
+                            )
+                            + "Try reducing current, shortening the time interval, "
+                            "or reducing the period.\n\n"
+                        )
                         break
 
                     # Increment index for next iteration
                     idx += 1
 
-                # Break if the experiment is infeasible
-                if feasible is False:
-                    pybamm.logger.warning(
-                        "\n\n\tExperiment is infeasible: '{}' ".format(
-                            self._solution.termination
-                        )
-                        + "was triggered during '{}'. ".format(
-                            self.experiment.operating_conditions_strings[idx]
-                        )
-                        + "The returned solution only contains the first "
-                        "{} cycles. ".format(cycle_num)
-                        + "Try reducing the current, shortening the time interval, "
-                        "or reducing the period.\n\n"
-                    )
-                    break
-
                 # At the final step of the inner loop we save the cycle
-                cycle_solution.steps = steps
                 all_cycle_solutions.append(cycle_solution)
 
             self.solution.cycles = all_cycle_solutions
@@ -539,7 +551,9 @@ class Simulation:
 
         return self.solution
 
-    def step(self, dt, solver=None, npts=2, save=True, **kwargs):
+    def step(
+        self, dt, solver=None, npts=2, save=True, starting_solution=None, **kwargs
+    ):
         """
         A method to step the model forward one timestep. This method will
         automatically build and set the model parameters if not already done so.
@@ -555,6 +569,9 @@ class Simulation:
             the step dt. Default is 2 (returns the solution at t0 and t0 + dt).
         save : bool
             Turn on to store the solution of all previous timesteps
+        starting_solution : :class:`pybamm.Solution`
+            The solution to start stepping from. If None (default), then self._solution
+            is used
         **kwargs
             Additional key-word arguments passed to `solver.solve`.
             See :meth:`pybamm.BaseSolver.step`.
@@ -564,8 +581,11 @@ class Simulation:
         if solver is None:
             solver = self.solver
 
+        if starting_solution is None:
+            starting_solution = self._solution
+
         self._solution = solver.step(
-            self._solution, self.built_model, dt, npts=npts, save=save, **kwargs
+            starting_solution, self.built_model, dt, npts=npts, save=save, **kwargs
         )
 
         return self.solution

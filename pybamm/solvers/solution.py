@@ -385,8 +385,7 @@ class Solution(object):
 
     @property
     def sub_solutions(self):
-        """List of sub solutions that have been concatenated to form the full solution
-        """
+        """List of sub solutions that have been concatenated to form the full solution"""
         return self._sub_solutions
 
     def __add__(self, other):
@@ -434,6 +433,15 @@ class Solution(object):
         new_sol._sub_solutions = self.sub_solutions + other.sub_solutions
 
         return new_sol
+
+    def __radd__(self, other):
+        """
+        Function to deal with the case `None + Solution` (returns `Solution`)
+        """
+        if other is None:
+            return self.copy()
+        else:
+            return other + self
 
     def copy(self):
         new_sol = Solution(
