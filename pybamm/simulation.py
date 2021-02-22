@@ -511,22 +511,18 @@ class Simulation:
                     or (
                         isinstance(save_at_cycles, list)
                         and cycle_num + cycle_offset in save_at_cycles
-                    )
                     # int: save all multiples
                     or (
                         isinstance(save_at_cycles, int)
                         and (cycle_num + cycle_offset) % save_at_cycles == 0
                     )
                 )
-                for step_num in range(1, cycle_length + 1):
                     exp_inputs = self._experiment_inputs[idx]
                     dt = self._experiment_times[idx]
                     # Use 1-indexing for printing cycle number as it is more
                     # human-intuitive
                     pybamm.logger.notice(
                         f"Cycle {cycle_num+cycle_offset}/{num_cycles+cycle_offset}, "
-                        f"step {step_num}/{cycle_length}: "
-                        f"{self.experiment.operating_conditions_strings[idx]}"
                     )
                     inputs.update(exp_inputs)
                     kwargs["inputs"] = inputs

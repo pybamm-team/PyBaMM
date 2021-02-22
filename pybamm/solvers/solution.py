@@ -470,7 +470,7 @@ class Solution(object):
         Solution)
         """
         if other is None:
-            return self
+            return self.copy()
         else:
             return other + self
 
