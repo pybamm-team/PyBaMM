@@ -108,6 +108,7 @@ class BaseModel(BaseInterface):
             v_bar = 1
             L_inner_0 = 0
             L_outer_0 = 0
+            li_mols_per_sei_mols = 1
         else:
             n_scale = param.L_sei_0_dim * param.a_n_typ / param.V_bar_inner_dimensional
             n_outer_scale = (
@@ -118,9 +119,11 @@ class BaseModel(BaseInterface):
             if isinstance(self, pybamm.sei.EcReactionLimited):
                 L_inner_0 = 0
                 L_outer_0 = 1
+                li_mols_per_sei_mols = 2
             else:
                 L_inner_0 = param.L_inner_0
                 L_outer_0 = param.L_outer_0
+                li_mols_per_sei_mols = 1
 
         L_inner = variables["Inner " + domain + " SEI thickness"]
         L_outer = variables["Outer " + domain + " SEI thickness"]
@@ -135,7 +138,13 @@ class BaseModel(BaseInterface):
         n_SEI_av = pybamm.x_average(n_SEI)
         delta_n_SEI = n_SEI_av - (L_inner_0 + L_outer_0 / v_bar)
 
-        Q_sei = delta_n_SEI * self.param.L_n * self.param.L_y * self.param.L_z
+        Q_sei = (
+            li_mols_per_sei_mols
+            * delta_n_SEI
+            * self.param.L_n
+            * self.param.L_y
+            * self.param.L_z
+        )
 
         variables.update(
             {
