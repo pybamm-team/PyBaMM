@@ -447,6 +447,7 @@ class Simulation:
 
             idx = 0
             num_cycles = len(self.experiment.cycle_lengths)
+            feasible = True  # simulation will stop if experiment is infeasible
             for cycle_num, cycle_length in enumerate(self.experiment.cycle_lengths):
                 pybamm.logger.info(
                     f"Cycle {cycle_num+1}/{num_cycles} ({timer.time()} elapsed) "
@@ -504,20 +505,27 @@ class Simulation:
                         self._solution.termination == "final time"
                         or "[experiment]" in self._solution.termination
                     ):
-                        pybamm.logger.warning(
-                            "\n\n\tExperiment is infeasible: '{}' ".format(
-                                self._solution.termination
-                            )
-                            + "was triggered during '{}'. ".format(
-                                self.experiment.operating_conditions_strings[idx]
-                            )
-                            + "Try reducing current, shortening the time interval, "
-                            "or reducing the period.\n\n"
-                        )
+                        feasible = False
                         break
 
                     # Increment index for next iteration
                     idx += 1
+
+                # Break if the experiment is infeasible
+                if feasible is False:
+                    pybamm.logger.warning(
+                        "\n\n\tExperiment is infeasible: '{}' ".format(
+                            self._solution.termination
+                        )
+                        + "was triggered during '{}'. ".format(
+                            self.experiment.operating_conditions_strings[idx]
+                        )
+                        + "The returned solution only contains the first "
+                        "{} cycles. ".format(cycle_num)
+                        + "Try reducing the current, shortening the time interval, "
+                        "or reducing the period.\n\n"
+                    )
+                    break
 
                 # At the final step of the inner loop we save the cycle
                 cycle_solution.steps = steps
