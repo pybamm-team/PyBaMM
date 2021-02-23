@@ -938,6 +938,9 @@ class BaseSolver(object):
                 "Start stepping {} with {}".format(model.name, self.name)
             )
             self.set_up(model, ext_and_inputs)
+            self.models_set_up.update(
+                {model: {"initial conditions": model.concatenated_initial_conditions}}
+            )
             t = 0.0
         elif model not in self.models_set_up:
             # Run set up if the model has changed
