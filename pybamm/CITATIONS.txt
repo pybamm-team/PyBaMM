@@ -347,3 +347,14 @@ doi={10.1149/2.0661810jes}
   publisher = {Elsevier Science (USA)},
   doi = {10.1006/jcph.2002.7041},
 }
+
+@article{Newman1962,
+  title={Theoretical analysis of current distribution in porous electrodes},
+  author={Newman, John S and Tobias, Charles W},
+  journal={Journal of The Electrochemical Society},
+  volume={109},
+  number={12},
+  pages={1183},
+  year={1962},
+  publisher={IOP Publishing}
+}
