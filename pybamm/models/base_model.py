@@ -384,7 +384,14 @@ class BaseModel(object):
 
         for var, equation in model.initial_conditions.items():
             if isinstance(var, pybamm.Variable):
-                final_state = solution[var.name]
+                try:
+                    final_state = solution[var.name]
+                except KeyError as e:
+                    raise pybamm.ModelError(
+                        "To update a model from a solution, each variable in "
+                        "model.initial_conditions must appear in the solution with "
+                        f"the same key as the variable name. Here, {e.args[0]}"
+                    )
                 if isinstance(solution, pybamm.Solution):
                     final_state = final_state.data
                 if final_state.ndim == 1:
@@ -399,7 +406,14 @@ class BaseModel(object):
             elif isinstance(var, pybamm.Concatenation):
                 children = []
                 for child in var.orphans:
-                    final_state = solution[child.name]
+                    try:
+                        final_state = solution[child.name]
+                    except KeyError as e:
+                        raise pybamm.ModelError(
+                            "To update a model from a solution, each variable in "
+                            "model.initial_conditions must appear in the solution "
+                            f"with the same key as the variable name. Here, {e.args[0]}"
+                        )
                     if isinstance(solution, pybamm.Solution):
                         final_state = final_state.data
                     if final_state.ndim == 2:

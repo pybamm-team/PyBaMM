@@ -72,6 +72,10 @@ class TestSolution(unittest.TestCase):
         sol3 = pybamm.Solution(t3, y3, pybamm.BaseModel(), {"a": 3})
         self.assertEqual((sol_sum + sol3).all_ts, sol_sum.copy().all_ts)
 
+        # radd
+        sol4 = None + sol3
+        self.assertEqual(sol3.all_ys, sol4.all_ys)
+
     def test_copy(self):
         # Set up first solution
         t1 = [np.linspace(0, 1), np.linspace(1, 2, 5)]

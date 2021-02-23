@@ -145,67 +145,6 @@ class Simulation:
         """
         self.operating_mode = "with experiment"
 
-        # Create a new model where the current density is now a variable
-        # To do so, we replace all instances of the current density in the
-        # model with a current density variable, which is obtained from the
-        # FunctionControl submodel
-        # create the FunctionControl submodel and extract variables
-        external_circuit_variables = pybamm.external_circuit.FunctionControl(
-            model.param, None
-        ).get_fundamental_variables()
-
-        # Perform the replacement
-        symbol_replacement_map = {
-            model.variables[name]: variable
-            for name, variable in external_circuit_variables.items()
-        }
-        replacer = pybamm.SymbolReplacer(symbol_replacement_map)
-        new_model = replacer.process_model(model, inplace=False)
-
-        # Update the algebraic equation and initial conditions for FunctionControl
-        # This creates an algebraic equation for the current to allow current, voltage,
-        # or power control, together with the appropriate guess for the
-        # initial condition.
-        # External circuit submodels are always equations on the current
-        # The external circuit function should fix either the current, or the voltage,
-        # or a combination (e.g. I*V for power control)
-        i_cell = new_model.variables["Total current density"]
-        new_model.initial_conditions[i_cell] = new_model.param.current_with_time
-        new_model.algebraic[i_cell] = constant_current_constant_voltage_constant_power(
-            new_model.variables
-        )
-
-        # Remove upper and lower voltage cut-offs that are *not* part of the experiment
-        new_model.events = [
-            event
-            for event in model.events
-            if event.name not in ["Minimum voltage", "Maximum voltage"]
-        ]
-        # add current and voltage events to the model
-        # current events both negative and positive to catch specification
-        new_model.events.extend(
-            [
-                pybamm.Event(
-                    "Current cut-off (positive) [A] [experiment]",
-                    new_model.variables["Current [A]"]
-                    - abs(pybamm.InputParameter("Current cut-off [A]")),
-                ),
-                pybamm.Event(
-                    "Current cut-off (negative) [A] [experiment]",
-                    new_model.variables["Current [A]"]
-                    + abs(pybamm.InputParameter("Current cut-off [A]")),
-                ),
-                pybamm.Event(
-                    "Voltage cut-off [V] [experiment]",
-                    new_model.variables["Terminal voltage [V]"]
-                    - pybamm.InputParameter("Voltage cut-off [V]")
-                    / model.param.n_cells,
-                ),
-            ]
-        )
-        self._unprocessed_model = new_model
-        self.model = new_model
-
         if not isinstance(experiment, pybamm.Experiment):
             raise TypeError("experiment must be a pybamm `Experiment` instance")
 
@@ -289,6 +228,67 @@ class Simulation:
                 # max simulation time: 1 week
                 dt = 7 * 24 * 3600
             self._experiment_times.append(dt)
+
+        # Create a new model where the current density is now a variable
+        # To do so, we replace all instances of the current density in the
+        # model with a current density variable, which is obtained from the
+        # FunctionControl submodel
+        # create the FunctionControl submodel and extract variables
+        external_circuit_variables = pybamm.external_circuit.FunctionControl(
+            model.param, None
+        ).get_fundamental_variables()
+
+        # Perform the replacement
+        symbol_replacement_map = {
+            model.variables[name]: variable
+            for name, variable in external_circuit_variables.items()
+        }
+        replacer = pybamm.SymbolReplacer(symbol_replacement_map)
+        new_model = replacer.process_model(model, inplace=False)
+
+        # Update the algebraic equation and initial conditions for FunctionControl
+        # This creates an algebraic equation for the current to allow current, voltage,
+        # or power control, together with the appropriate guess for the
+        # initial condition.
+        # External circuit submodels are always equations on the current
+        # The external circuit function should fix either the current, or the voltage,
+        # or a combination (e.g. I*V for power control)
+        i_cell = new_model.variables["Total current density"]
+        new_model.initial_conditions[i_cell] = new_model.param.current_with_time
+        new_model.algebraic[i_cell] = constant_current_constant_voltage_constant_power(
+            new_model.variables
+        )
+
+        # Remove upper and lower voltage cut-offs that are *not* part of the experiment
+        new_model.events = [
+            event
+            for event in model.events
+            if event.name not in ["Minimum voltage", "Maximum voltage"]
+        ]
+        # add current and voltage events to the model
+        # current events both negative and positive to catch specification
+        new_model.events.extend(
+            [
+                pybamm.Event(
+                    "Current cut-off (positive) [A] [experiment]",
+                    new_model.variables["Current [A]"]
+                    - abs(pybamm.InputParameter("Current cut-off [A]")),
+                ),
+                pybamm.Event(
+                    "Current cut-off (negative) [A] [experiment]",
+                    new_model.variables["Current [A]"]
+                    + abs(pybamm.InputParameter("Current cut-off [A]")),
+                ),
+                pybamm.Event(
+                    "Voltage cut-off [V] [experiment]",
+                    new_model.variables["Terminal voltage [V]"]
+                    - pybamm.InputParameter("Voltage cut-off [V]")
+                    / model.param.n_cells,
+                ),
+            ]
+        )
+        self._unprocessed_model = new_model
+        self.model = new_model
 
     def set_parameters(self):
         """
@@ -517,7 +517,7 @@ class Simulation:
                     steps.append(step_solution)
                     current_solution = step_solution
 
-                    self._solution = self.solution + current_solution
+                    cycle_solution = cycle_solution + step_solution
 
                     # Only allow events specified by experiment
                     if not (
@@ -541,6 +541,8 @@ class Simulation:
                     idx += 1
 
                 # At the final step of the inner loop we save the cycle
+                self._solution = self.solution + cycle_solution
+                cycle_solution.steps = steps
                 all_cycle_solutions.append(cycle_solution)
 
             self.solution.cycles = all_cycle_solutions

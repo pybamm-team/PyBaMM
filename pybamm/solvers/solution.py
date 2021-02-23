@@ -26,8 +26,10 @@ class Solution(object):
         vector of solutions at time t[i].
         A list of ys can be provided instead to initialize a solution with
         sub-solutions.
-    model : :class:`pybamm.BaseModel`
-        The model that was used to calculate the solution
+    all_models : :class:`pybamm.BaseModel`
+        The model that was used to calculate the solution.
+        A list of models can be provided instead to initialize a solution with
+        sub-solutions that have been calculated using those models.
     all_inputs : dict (or list of these)
         The inputs that were used to calculate the solution
         A list of inputs can be provided instead to initialize a solution with
@@ -46,7 +48,7 @@ class Solution(object):
         self,
         all_ts,
         all_ys,
-        model,
+        all_models,
         all_inputs,
         t_event=None,
         y_event=None,
@@ -56,8 +58,11 @@ class Solution(object):
             all_ts = [all_ts]
         if not isinstance(all_ys, list):
             all_ys = [all_ys]
-        self.all_ts = all_ts
-        self.all_ys = all_ys
+        if not isinstance(all_models, list):
+            all_models = [all_models]
+        self._all_ts = all_ts
+        self._all_ys = all_ys
+        self._all_models = all_models
 
         self._t_event = t_event
         self._y_event = y_event
@@ -74,21 +79,18 @@ class Solution(object):
             isinstance(v, casadi.MX) for v in all_inputs[0].values()
         )
 
-        # Set up model
-        self._model = model
-
         # Copy the timescale_eval and lengthscale_evals if they exist
-        if hasattr(model, "timescale_eval"):
-            self.timescale_eval = model.timescale_eval
+        if hasattr(all_models[0], "timescale_eval"):
+            self.timescale_eval = all_models[0].timescale_eval
         else:
-            self.timescale_eval = model.timescale.evaluate()
-        # self.timescale_eval = model.timescale_eval
-        if hasattr(model, "length_scales_eval"):
-            self.length_scales_eval = model.length_scales_eval
+            self.timescale_eval = all_models[0].timescale.evaluate()
+
+        if hasattr(all_models[0], "length_scales_eval"):
+            self.length_scales_eval = all_models[0].length_scales_eval
         else:
             self.length_scales_eval = {
                 domain: scale.evaluate()
-                for domain, scale in model.length_scales.items()
+                for domain, scale in all_models[0].length_scales.items()
             }
 
         self.set_up_time = None
@@ -129,15 +131,29 @@ class Solution(object):
             return self._y
 
     def set_y(self):
-        if isinstance(self.all_ys[0], (casadi.DM, casadi.MX)):
-            self._y = casadi.horzcat(*self.all_ys)
-        else:
-            self._y = np.hstack(self.all_ys)
+        try:
+            if isinstance(self.all_ys[0], (casadi.DM, casadi.MX)):
+                self._y = casadi.horzcat(*self.all_ys)
+            else:
+                self._y = np.hstack(self.all_ys)
+        except ValueError:
+            raise pybamm.SolutionError(
+                "The solution is made up from different models, so `y` cannot be "
+                "computed explicitly."
+            )
 
     @property
-    def model(self):
-        """Model used for solution"""
-        return self._model
+    def all_ts(self):
+        return self._all_ts
+
+    @property
+    def all_ys(self):
+        return self._all_ys
+
+    @property
+    def all_models(self):
+        """Model(s) used for solution"""
+        return self._all_models
 
     @property
     def all_inputs_casadi(self):
@@ -194,39 +210,46 @@ class Solution(object):
             # If there are symbolic inputs then we need to make a
             # ProcessedSymbolicVariable
             if self.has_symbolic_inputs is True:
-                var = pybamm.ProcessedSymbolicVariable(self.model.variables[key], self)
+                var = pybamm.ProcessedSymbolicVariable(
+                    self.all_models[0].variables[key], self
+                )
 
             # Otherwise a standard ProcessedVariable is ok
             else:
-                var_pybamm = self.model.variables[key]
+                vars_pybamm = [model.variables[key] for model in self.all_models]
 
-                if key in self.model._variables_casadi:
-                    var_casadi = self.model._variables_casadi[key]
-                else:
-                    self._t_MX = casadi.MX.sym("t")
-                    self._y_MX = casadi.MX.sym("y", self.all_ys[0].shape[0])
-                    self._symbolic_inputs_dict = {
-                        key: casadi.MX.sym("input", value.shape[0])
-                        for key, value in self.all_inputs[0].items()
-                    }
-                    self._symbolic_inputs = casadi.vertcat(
-                        *[p for p in self._symbolic_inputs_dict.values()]
-                    )
+                # Iterate through all models, some may be in the list several times and
+                # therefore only get set up once
+                vars_casadi = []
+                for model, var_pybamm in zip(self.all_models, vars_pybamm):
+                    if key in model._variables_casadi:
+                        var_casadi = model._variables_casadi[key]
+                    else:
+                        self._t_MX = casadi.MX.sym("t")
+                        self._y_MX = casadi.MX.sym("y", self.all_ys[0].shape[0])
+                        self._symbolic_inputs_dict = {
+                            key: casadi.MX.sym("input", value.shape[0])
+                            for key, value in self.all_inputs[0].items()
+                        }
+                        self._symbolic_inputs = casadi.vertcat(
+                            *[p for p in self._symbolic_inputs_dict.values()]
+                        )
 
-                    # Convert variable to casadi
-                    # Make all inputs symbolic first for converting to casadi
-                    var_sym = var_pybamm.to_casadi(
-                        self._t_MX, self._y_MX, inputs=self._symbolic_inputs_dict
-                    )
+                        # Convert variable to casadi
+                        # Make all inputs symbolic first for converting to casadi
+                        var_sym = var_pybamm.to_casadi(
+                            self._t_MX, self._y_MX, inputs=self._symbolic_inputs_dict
+                        )
 
-                    var_casadi = casadi.Function(
-                        "variable",
-                        [self._t_MX, self._y_MX, self._symbolic_inputs],
-                        [var_sym],
-                    )
-                    self.model._variables_casadi[key] = var_casadi
+                        var_casadi = casadi.Function(
+                            "variable",
+                            [self._t_MX, self._y_MX, self._symbolic_inputs],
+                            [var_sym],
+                        )
+                        model._variables_casadi[key] = var_casadi
+                    vars_casadi.append(var_casadi)
 
-                var = pybamm.ProcessedVariable(var_pybamm, var_casadi, self)
+                var = pybamm.ProcessedVariable(vars_pybamm, vars_casadi, self)
 
             # Save variable and data
             self._variables[key] = var
@@ -411,7 +434,7 @@ class Solution(object):
         new_sol = Solution(
             all_ts,
             all_ys,
-            self.model,
+            self.all_models + other.all_models,
             self.all_inputs + other.all_inputs,
             self.t_event,
             self.y_event,
@@ -447,7 +470,7 @@ class Solution(object):
         new_sol = Solution(
             self.all_ts,
             self.all_ys,
-            self.model,
+            self.all_models,
             self.all_inputs,
             self.t_event,
             self.y_event,
