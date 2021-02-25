@@ -1,6 +1,8 @@
 name: Build
 
-on: push
+on:
+  push:
+    branches: master
 
 jobs:
   build_wheels:
@@ -36,4 +38,23 @@ jobs:
 
       - uses: actions/upload-artifact@v2
         with:
+          name: wheels
           path: ./wheelhouse/*.whl
+
+
+  publish-pypi:
+    name: Upload wheels to PyPI
+    needs: build_wheels
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download wheels
+        uses: actions/download-artifact@v1
+        with:
+          name: wheels
+
+      - name: Publish wheels on PyPI
+        uses: pypa/gh-action-pypi-publish@master
+        with:
+          user: __token__
+          password: ${{ secrets.PYPI_TOKEN }}
+          packages_dir: wheelhouse/
