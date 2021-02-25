@@ -48,7 +48,14 @@ class NewmanTobias(BaseModel):
                     options["particle"]
                 )
             )
-
+        # currently not available as a "2+1D" model (see #1399)
+        dimensionality_option = options.get(
+            "dimensionality", "none"
+        )  # return "none" if option not given
+        if dimensionality_option == "2":
+            raise pybamm.OptionError(
+                "Newman-Tobias model does not current support 2D current collectors"
+            )
         super().__init__(options, name)
 
         self.set_external_circuit_submodel()

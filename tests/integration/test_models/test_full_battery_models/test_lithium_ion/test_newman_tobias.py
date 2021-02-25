@@ -33,21 +33,23 @@ class TestNewmanTobias(unittest.TestCase):
         modeltest = tests.StandardModelTest(model, var_pts=var_pts)
         modeltest.test_all(skip_output_tests=True)
 
-    def test_basic_processing_2plus1D(self):
-        options = {"current collector": "potential pair", "dimensionality": 2}
-        model = pybamm.lithium_ion.NewmanTobias(options)
-        var = pybamm.standard_spatial_vars
-        var_pts = {
-            var.x_n: 5,
-            var.x_s: 5,
-            var.x_p: 5,
-            var.r_n: 5,
-            var.r_p: 5,
-            var.y: 5,
-            var.z: 5,
-        }
-        modeltest = tests.StandardModelTest(model, var_pts=var_pts)
-        modeltest.test_all(skip_output_tests=True)
+    # Not currently compatible (see issue #1399)
+    # def test_basic_processing_2plus1D(self):
+    #    options = {"current collector": "potential pair", "dimensionality": 2}
+    #    model = pybamm.lithium_ion.NewmanTobias(options)
+    #    var = pybamm.standard_spatial_vars
+    #    var_pts = {
+    #        var.x_n: 5,
+    #        var.x_s: 5,
+    #        var.x_p: 5,
+    #        var.r_n: 5,
+    #        var.r_p: 5,
+    #        var.y: 5,
+    #        var.z: 5,
+    #    }
+    #    modeltest = tests.StandardModelTest(model, var_pts=var_pts)
+    #    solver = model.default_solver
+    #    modeltest.test_all(skip_output_tests=True)
 
     def test_optimisations(self):
         options = {"thermal": "isothermal"}
@@ -133,24 +135,6 @@ class TestNewmanTobias(unittest.TestCase):
         options = {"surface form": "algebraic"}
         model = pybamm.lithium_ion.NewmanTobias(options)
         modeltest = tests.StandardModelTest(model)
-        modeltest.test_all()
-
-    def test_particle_distribution_in_x(self):
-        model = pybamm.lithium_ion.NewmanTobias()
-        param = model.default_parameter_values
-        L_n = model.param.L_n
-        L_p = model.param.L_p
-        L = model.param.L_x
-
-        def negative_radius(x):
-            return (1 + x / L_n) * 1e-5
-
-        def positive_radius(x):
-            return (1 + (x - L_p) / (L - L_p)) * 1e-5
-
-        param["Negative particle radius [m]"] = negative_radius
-        param["Positive particle radius [m]"] = positive_radius
-        modeltest = tests.StandardModelTest(model, parameter_values=param)
         modeltest.test_all()
 
 
