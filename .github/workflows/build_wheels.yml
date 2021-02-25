@@ -63,7 +63,7 @@ jobs:
         with:
           user: __token__
           password: ${{ secrets.PYPI_TOKEN }}
-          packages_dir: wheelhouse/
+          packages_dir: wheels/
 
       - name: Publish wheels on TestPyPI
         if: ${{ github.events.inputs.target }} == 'testpypi'
@@ -71,5 +71,5 @@ jobs:
         with:
           user: __token__
           password: ${{ secrets.TESTPYPI_TOKEN }}
-          packages_dir: wheelhouse/
+          packages_dir: wheels/
           repository_url: https://test.pypi.org/legacy/
