@@ -16,7 +16,7 @@ class BaseModel(pybamm.BaseSubModel):
     **Extends:** :class:`pybamm.BaseSubModel`
     """
 
-    def __init__(self, param,options):
+    def __init__(self, param, options):
         super().__init__(param)
 
     def _get_standard_porosity_variables(
