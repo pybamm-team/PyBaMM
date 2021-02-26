@@ -196,6 +196,35 @@ class Solution(object):
         self._termination = value
 
     @property
+    def last_state(self):
+        """
+        A Solution object that only contains the final state. This is faster to evaluate
+        than the full solution when only the final state is needed (e.g. to initialize
+        a model with the solution)
+        """
+        try:
+            return self._last_state
+        except AttributeError:
+            new_sol = Solution(
+                self.all_ts[-1][-1:],
+                self.all_ys[-1][:, -1:],
+                self.all_models[-1:],
+                self.all_inputs[-1:],
+                self.t_event,
+                self.y_event,
+                self.termination,
+            )
+            new_sol._all_inputs_casadi = self.all_inputs_casadi[-1:]
+            new_sol._sub_solutions = self.sub_solutions
+
+            new_sol.solve_time = 0
+            new_sol.integration_time = 0
+            new_sol.set_up_time = 0
+
+            self._last_state = new_sol
+            return self._last_state
+
+    @property
     def total_time(self):
         return self.set_up_time + self.solve_time
 

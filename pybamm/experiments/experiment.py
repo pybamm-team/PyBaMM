@@ -43,7 +43,6 @@ class Experiment:
     use_simulation_setup_type : str
         Whether to use the "new" (default) or "old" simulation set-up type. "new" is
         faster at simulating individual steps but has higher set-up overhead
-
     """
 
     def __init__(

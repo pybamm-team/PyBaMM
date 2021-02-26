@@ -15,9 +15,9 @@ experiment = pybamm.Experiment(
             "Rest for 1 hour",
         ),
     ]
-    * 3
+    * 3,
 )
-model = pybamm.lithium_ion.DFN()
+model = pybamm.lithium_ion.SPM()
 sim = pybamm.Simulation(model, experiment=experiment, solver=pybamm.CasadiSolver())
 sim.solve()
 
