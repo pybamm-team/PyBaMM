@@ -79,13 +79,13 @@ class BaseBatteryModel(pybamm.BaseModel):
                 - "none": :class:`pybamm.sei.NoSEI` (no SEI growth)
                 - "constant": :class:`pybamm.sei.Constant` (constant SEI thickness)
                 - "reaction limited": :class:`pybamm.sei.ReactionLimited`
-                - "solvent-diffusion limited":
+                - "solvent-diffusion limited":\
                     :class:`pybamm.sei.SolventDiffusionLimited`
-                - "electron-migration limited":
+                - "electron-migration limited": \
                     :class:`pybamm.sei.ElectronMigrationLimited`
-                - "interstitial-diffusion limited":
+                - "interstitial-diffusion limited": \
                     :class:`pybamm.sei.InterstitialDiffusionLimited`
-                - "ec reaction limited":
+                - "ec reaction limited": \
                     :class:`pybamm.sei.EcReactionLimited`
             * "sei film resistance" : str
                 Set the submodel for additional term in the overpotential due to SEI.
@@ -105,8 +105,8 @@ class BaseBatteryModel(pybamm.BaseModel):
                         \\eta_r = \\frac{F}{RT}
                         * (\\phi_s - \\phi_e - U - R_{sei} * L_{sei} * j)
 
-                - "average": constant additional resistance term (approximation to the
-                    true model). This model can give similar results to the
+                - "average": constant additional resistance term (approximation to the \
+                    true model). This model can give similar results to the \
                     "distributed" case without needing to make j an algebraic state\
 
                     .. math::
