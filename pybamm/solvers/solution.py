@@ -250,15 +250,17 @@ class Solution(object):
                 # Iterate through all models, some may be in the list several times and
                 # therefore only get set up once
                 vars_casadi = []
-                for model, var_pybamm in zip(self.all_models, vars_pybamm):
+                for model, ys, inputs, var_pybamm in zip(
+                    self.all_models, self.all_ys, self.all_inputs, vars_pybamm
+                ):
                     if key in model._variables_casadi:
                         var_casadi = model._variables_casadi[key]
                     else:
                         self._t_MX = casadi.MX.sym("t")
-                        self._y_MX = casadi.MX.sym("y", self.all_ys[0].shape[0])
+                        self._y_MX = casadi.MX.sym("y", ys.shape[0])
                         self._symbolic_inputs_dict = {
                             key: casadi.MX.sym("input", value.shape[0])
-                            for key, value in self.all_inputs[0].items()
+                            for key, value in inputs.items()
                         }
                         self._symbolic_inputs = casadi.vertcat(
                             *[p for p in self._symbolic_inputs_dict.values()]
