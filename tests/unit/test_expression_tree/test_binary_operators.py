@@ -522,6 +522,9 @@ class TestBinaryOperators(unittest.TestCase):
         # division with matrix one
         self.assertIsInstance((e / v1), pybamm.Array)
         np.testing.assert_array_equal((e / v1).evaluate(), 2 * np.ones((10, 1)))
+        # division by zero
+        with self.assertRaises(ZeroDivisionError):
+            b / a
 
     def test_advanced_binary_simplifications(self):
         # MatMul simplifications that often appear when discretising spatial operators

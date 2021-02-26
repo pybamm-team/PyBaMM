@@ -97,13 +97,6 @@ from .expression_tree.state_vector import StateVectorBase, StateVector, StateVec
 from .expression_tree.exceptions import *
 
 # Operations
-from .expression_tree.operations.simplify import (
-    Simplification,
-    simplify_if_constant,
-    simplify_addition_subtraction,
-    simplify_multiplication_division,
-)
-
 from .expression_tree.operations.evaluate_python import (
     find_symbols,
     id_to_python_variable,

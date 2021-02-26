@@ -306,7 +306,7 @@ class Discretisation(object):
         self._discretised_symbols = {}
 
     def _get_variable_size(self, variable):
-        "Helper function to determine what size a variable should be"
+        """Helper function to determine what size a variable should be"""
         # If domain is empty then variable has size 1
         if variable.domain == []:
             return 1
@@ -862,7 +862,7 @@ class Discretisation(object):
             disc_right = self.process_symbol(right)
             if symbol.domain == []:
                 return pybamm.simplify_if_constant(
-                    symbol._binary_new_copy(disc_left, disc_right), clear_domains=False
+                    symbol._binary_new_copy(disc_left, disc_right)
                 )
             else:
                 return spatial_method.process_binary_operators(

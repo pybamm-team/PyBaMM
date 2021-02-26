@@ -223,24 +223,7 @@ class Function(pybamm.Symbol):
                 derivative=self.derivative,
                 differentiated_function=self.differentiated_function
             ),
-            clear_domains=False,
         )
-
-    def _function_simplify(self, simplified_children):
-        """
-        Simplifies the function.
-
-        Inputs
-        ------
-        simplified_children: : list
-            A list of simplified children of the function
-
-        Returns
-        -------
-         :: pybamm.Scalar() if no children
-         :: pybamm.Function if there are children
-        """
-        return self._function_new_copy(simplified_children)
 
     @property
     def julia_name(self):
@@ -269,11 +252,7 @@ class SpecificFunction(Function):
 
     def _function_new_copy(self, children):
         """ See :meth:`pybamm.Function._function_new_copy()` """
-        return self.__class__(*children)
-
-    def _function_simplify(self, simplified_children):
-        """ See :meth:`pybamm.Function._function_simplify()` """
-        return self.__class__(*simplified_children)
+        return pybamm.simplify_if_constant(self.__class__(*children))
 
     @property
     def julia_name(self):
@@ -284,7 +263,7 @@ class SpecificFunction(Function):
 
 
 class Arcsinh(SpecificFunction):
-    """ Arcsinh function """
+    """Arcsinh function."""
 
     def __init__(self, child):
         super().__init__(np.arcsinh, child)
@@ -300,12 +279,12 @@ class Arcsinh(SpecificFunction):
 
 
 def arcsinh(child):
-    " Returns arcsinh function of child. "
-    return pybamm.simplify_if_constant(Arcsinh(child), clear_domains=False)
+    """Returns arcsinh function of child."""
+    return pybamm.simplify_if_constant(Arcsinh(child))
 
 
 class Cos(SpecificFunction):
-    """ Cosine function """
+    """Cosine function."""
 
     def __init__(self, child):
         super().__init__(np.cos, child)
@@ -316,12 +295,12 @@ class Cos(SpecificFunction):
 
 
 def cos(child):
-    " Returns cosine function of child. "
-    return pybamm.simplify_if_constant(Cos(child), clear_domains=False)
+    """Returns cosine function of child."""
+    return pybamm.simplify_if_constant(Cos(child))
 
 
 class Cosh(SpecificFunction):
-    """ Hyberbolic cosine function """
+    """Hyberbolic cosine function."""
 
     def __init__(self, child):
         super().__init__(np.cosh, child)
@@ -332,12 +311,12 @@ class Cosh(SpecificFunction):
 
 
 def cosh(child):
-    " Returns hyperbolic cosine function of child. "
-    return pybamm.simplify_if_constant(Cosh(child), clear_domains=False)
+    """Returns hyperbolic cosine function of child."""
+    return pybamm.simplify_if_constant(Cosh(child))
 
 
 class Exponential(SpecificFunction):
-    """ Exponential function """
+    """Exponential function."""
 
     def __init__(self, child):
         super().__init__(np.exp, child)
@@ -348,12 +327,12 @@ class Exponential(SpecificFunction):
 
 
 def exp(child):
-    " Returns exponential function of child. "
-    return pybamm.simplify_if_constant(Exponential(child), clear_domains=False)
+    """Returns exponential function of child."""
+    return pybamm.simplify_if_constant(Exponential(child))
 
 
 class Log(SpecificFunction):
-    """ Logarithmic function """
+    """Logarithmic function."""
 
     def __init__(self, child):
         super().__init__(np.log, child)
@@ -369,15 +348,15 @@ class Log(SpecificFunction):
 
 
 def log(child, base="e"):
-    " Returns logarithmic function of child (any base, default 'e'). "
+    """Returns logarithmic function of child (any base, default 'e')."""
     if base == "e":
-        return pybamm.simplify_if_constant(Log(child), clear_domains=False)
+        return pybamm.simplify_if_constant(Log(child))
     else:
         return Log(child) / np.log(base)
 
 
 def log10(child):
-    " Returns logarithmic function of child, with base 10. "
+    """Returns logarithmic function of child, with base 10."""
     return log(child, base=10)
 
 
@@ -398,7 +377,7 @@ def max(child):
     Returns max function of child. Not to be confused with :meth:`pybamm.maximum`, which
     returns the larger of two objects.
     """
-    return pybamm.simplify_if_constant(Max(child), clear_domains=False)
+    return pybamm.simplify_if_constant(Max(child))
 
 
 class Min(SpecificFunction):
@@ -418,16 +397,16 @@ def min(child):
     Returns min function of child. Not to be confused with :meth:`pybamm.minimum`, which
     returns the smaller of two objects.
     """
-    return pybamm.simplify_if_constant(Min(child), clear_domains=False)
+    return pybamm.simplify_if_constant(Min(child))
 
 
 def sech(child):
-    " Returns hyperbolic sec function of child. "
-    return pybamm.simplify_if_constant(1 / Cosh(child), clear_domains=False)
+    """Returns hyperbolic sec function of child."""
+    return pybamm.simplify_if_constant(1 / Cosh(child))
 
 
 class Sin(SpecificFunction):
-    """ Sine function """
+    """Sine function."""
 
     def __init__(self, child):
         super().__init__(np.sin, child)
@@ -438,12 +417,12 @@ class Sin(SpecificFunction):
 
 
 def sin(child):
-    " Returns sine function of child. "
-    return pybamm.simplify_if_constant(Sin(child), clear_domains=False)
+    """Returns sine function of child."""
+    return pybamm.simplify_if_constant(Sin(child))
 
 
 class Sinh(SpecificFunction):
-    """ Hyperbolic sine function """
+    """Hyperbolic sine function."""
 
     def __init__(self, child):
         super().__init__(np.sinh, child)
@@ -454,12 +433,12 @@ class Sinh(SpecificFunction):
 
 
 def sinh(child):
-    " Returns hyperbolic sine function of child. "
-    return pybamm.simplify_if_constant(Sinh(child), clear_domains=False)
+    """Returns hyperbolic sine function of child."""
+    return pybamm.simplify_if_constant(Sinh(child))
 
 
 class Sqrt(SpecificFunction):
-    """ Square root function """
+    """Square root function."""
 
     def __init__(self, child):
         super().__init__(np.sqrt, child)
@@ -475,12 +454,12 @@ class Sqrt(SpecificFunction):
 
 
 def sqrt(child):
-    " Returns square root function of child. "
-    return pybamm.simplify_if_constant(Sqrt(child), clear_domains=False)
+    """Returns square root function of child."""
+    return pybamm.simplify_if_constant(Sqrt(child))
 
 
 class Tanh(SpecificFunction):
-    """ Hyperbolic tan function """
+    """Hyperbolic tan function."""
 
     def __init__(self, child):
         super().__init__(np.tanh, child)
@@ -491,12 +470,12 @@ class Tanh(SpecificFunction):
 
 
 def tanh(child):
-    " Returns hyperbolic tan function of child. "
-    return pybamm.simplify_if_constant(Tanh(child), clear_domains=False)
+    """Returns hyperbolic tan function of child."""
+    return pybamm.simplify_if_constant(Tanh(child))
 
 
 class Arctan(SpecificFunction):
-    """ Arctan function """
+    """Arctan function."""
 
     def __init__(self, child):
         super().__init__(np.arctan, child)
@@ -512,12 +491,12 @@ class Arctan(SpecificFunction):
 
 
 def arctan(child):
-    " Returns hyperbolic tan function of child. "
-    return pybamm.simplify_if_constant(Arctan(child), clear_domains=False)
+    """Returns hyperbolic tan function of child."""
+    return pybamm.simplify_if_constant(Arctan(child))
 
 
 class Erf(SpecificFunction):
-    """ Error function """
+    """Error function."""
 
     def __init__(self, child):
         super().__init__(special.erf, child)
@@ -528,10 +507,10 @@ class Erf(SpecificFunction):
 
 
 def erf(child):
-    " Returns error function of child. "
-    return pybamm.simplify_if_constant(Erf(child), clear_domains=False)
+    """Returns error function of child."""
+    return pybamm.simplify_if_constant(Erf(child))
 
 
 def erfc(child):
-    " Returns complementary error function of child. "
-    return pybamm.simplify_if_constant(1 - Erf(child), clear_domains=False)
+    """Returns complementary error function of child."""
+    return pybamm.simplify_if_constant(1 - Erf(child))

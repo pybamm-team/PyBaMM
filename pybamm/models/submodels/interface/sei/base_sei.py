@@ -74,7 +74,7 @@ class BaseModel(BaseInterface):
         return variables
 
     def _get_standard_total_thickness_variables(self, L_sei):
-        "Update variables related to total SEI thickness"
+        """Update variables related to total SEI thickness."""
         domain = self.domain.lower() + " electrode"
         if isinstance(self, pybamm.sei.NoSEI):
             L_scale = 1
@@ -96,7 +96,7 @@ class BaseModel(BaseInterface):
         return variables
 
     def _get_standard_concentration_variables(self, variables):
-        "Update variables related to the SEI concentration"
+        """Update variables related to the SEI concentration."""
         param = self.param
         domain = self.domain.lower() + " electrode"
 
@@ -239,7 +239,7 @@ class BaseModel(BaseInterface):
         return variables
 
     def _get_standard_total_reaction_variables(self, j_sei):
-        "Update variables related to total SEI interfacial current density"
+        """Update variables related to total SEI interfacial current density."""
         if self.domain == "Negative":
             j_scale = self.param.j_scale_n
         elif self.domain == "Positive":

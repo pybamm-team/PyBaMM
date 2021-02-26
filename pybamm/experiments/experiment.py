@@ -165,7 +165,7 @@ class Experiment:
         return electric + (time,) + (period,), events
 
     def convert_electric(self, electric):
-        "Convert electrical instructions to consistent output"
+        """Convert electrical instructions to consistent output"""
         # Rest == zero current
         if electric[0].lower() == "rest":
             return (0, "A")
@@ -254,7 +254,7 @@ class Experiment:
                 )
 
     def convert_time_to_seconds(self, time_and_units):
-        "Convert a time in seconds, minutes or hours to a time in seconds"
+        """Convert a time in seconds, minutes or hours to a time in seconds"""
         time, units = time_and_units
         if units in ["second", "seconds", "s", "sec"]:
             time_in_seconds = float(time)

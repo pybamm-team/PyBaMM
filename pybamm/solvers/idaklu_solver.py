@@ -85,20 +85,8 @@ class IDAKLUSolver(pybamm.BaseSolver):
             variable = model.variables[var]
             if isinstance(variable, pybamm.StateVector):
                 atol = self.set_state_vec_tol(atol, variable, tol)
-            elif isinstance(variable, pybamm.Concatenation):
-                for child in variable.children:
-                    if isinstance(child, pybamm.StateVector):
-                        atol = self.set_state_vec_tol(atol, child, tol)
-                    else:
-                        raise pybamm.SolverError(
-                            """Can only set tolerances for state variables
-                            or concatenations of state variables"""
-                        )
             else:
-                raise pybamm.SolverError(
-                    """Can only set tolerances for state variables or
-                    concatenations of state variables"""
-                )
+                raise pybamm.SolverError("Can only set tolerances for state variables")
 
         model.atol = atol
 

@@ -49,10 +49,14 @@ class Concatenation(pybamm.Symbol):
             if not isinstance(child, pybamm.Symbol):
                 raise TypeError("{} is not a pybamm symbol".format(child))
             child_domain = child.domain
+            if child_domain == []:
+                raise pybamm.DomainError(
+                    "Cannot concatenate child '{}' with empty domain".format(child)
+                )
             if set(domain).isdisjoint(child_domain):
                 domain += child_domain
             else:
-                raise pybamm.DomainError("""domain of children must be disjoint""")
+                raise pybamm.DomainError("domain of children must be disjoint")
         return domain
 
     def _concatenation_evaluate(self, children_eval):
@@ -93,12 +97,6 @@ class Concatenation(pybamm.Symbol):
     def _concatenation_jac(self, children_jacs):
         """ Calculate the jacobian of a concatenation """
         return NotImplementedError
-
-    def _concatenation_simplify(self, children):
-        """ See :meth:`pybamm.Symbol.simplify()`. """
-        new_symbol = self.__class__(*children)
-        new_symbol.clear_domains()
-        return new_symbol
 
     def _evaluate_for_shape(self):
         """ See :meth:`pybamm.Symbol.evaluate_for_shape` """
@@ -155,12 +153,6 @@ class NumpyConcatenation(Concatenation):
         else:
             return SparseStack(*children_jacs)
 
-    def _concatenation_simplify(self, children):
-        """ See :meth:`pybamm.Concatenation._concatenation_simplify()`. """
-        new_symbol = simplified_numpy_concatenation(*children)
-        new_symbol.clear_domains()
-        return new_symbol
-
 
 class DomainConcatenation(Concatenation):
     """A node in the expression tree representing a concatenation of symbols, being
@@ -202,16 +194,6 @@ class DomainConcatenation(Concatenation):
         if copy_this is None:
             # store mesh
             self._full_mesh = full_mesh
-
-            # Check that there is a domain, otherwise the functionality won't work
-            # and we should raise a DomainError
-            if self.domain == []:
-                raise pybamm.DomainError(
-                    """
-                    domain cannot be empty for a DomainConcatenation.
-                    Perhaps the children should have been Broadcasted first?
-                    """
-                )
 
             # create dict of domain => slice of final vector
             self.secondary_dimensions_npts = self._get_auxiliary_domain_repeats(
@@ -308,17 +290,6 @@ class DomainConcatenation(Concatenation):
         )
         return new_symbol
 
-    def _concatenation_simplify(self, children):
-        """ See :meth:`pybamm.Concatenation._concatenation_simplify()`. """
-        new_symbol = simplified_domain_concatenation(
-            children, self.full_mesh, copy_this=self
-        )
-        # TODO: this should not be needed, but somehow we are still getting domains in
-        # the simplified children
-        new_symbol.clear_domains()
-
-        return new_symbol
-
 
 class SparseStack(Concatenation):
     """A node in the expression tree representing a concatenation of sparse
@@ -360,9 +331,7 @@ def simplified_numpy_concatenation(*children):
             new_children.extend(child.orphans)
         else:
             new_children.append(child)
-    return pybamm.simplify_if_constant(
-        NumpyConcatenation(*new_children), clear_domains=False
-    )
+    return pybamm.simplify_if_constant(NumpyConcatenation(*new_children))
 
 
 def numpy_concatenation(*children):
@@ -398,10 +367,7 @@ def simplified_domain_concatenation(children, mesh, copy_this=None):
                 auxiliary_domains=concat.auxiliary_domains,
             )
 
-    return pybamm.simplify_if_constant(
-        concat,
-        clear_domains=False,
-    )
+    return pybamm.simplify_if_constant(concat)
 
 
 def domain_concatenation(children, mesh):

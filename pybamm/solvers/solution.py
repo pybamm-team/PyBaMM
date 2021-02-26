@@ -107,7 +107,7 @@ class Solution(object):
 
     @property
     def t(self):
-        "Times at which the solution is evaluated"
+        """Times at which the solution is evaluated"""
         try:
             return self._t
         except AttributeError:
@@ -121,7 +121,7 @@ class Solution(object):
 
     @property
     def y(self):
-        "Values of the solution"
+        """Values of the solution"""
         try:
             return self._y
         except AttributeError:
@@ -136,7 +136,7 @@ class Solution(object):
 
     @property
     def model(self):
-        "Model used for solution"
+        """Model used for solution"""
         return self._model
 
     @property
@@ -151,32 +151,32 @@ class Solution(object):
 
     @property
     def t_event(self):
-        "Time at which the event happens"
+        """Time at which the event happens"""
         return self._t_event
 
     @t_event.setter
     def t_event(self, value):
-        "Updates the event time"
+        """Updates the event time"""
         self._t_event = value
 
     @property
     def y_event(self):
-        "Value of the solution at the time of the event"
+        """Value of the solution at the time of the event"""
         return self._y_event
 
     @y_event.setter
     def y_event(self, value):
-        "Updates the solution at the time of the event"
+        """Updates the solution at the time of the event"""
         self._y_event = value
 
     @property
     def termination(self):
-        "Reason for termination"
+        """Reason for termination"""
         return self._termination
 
     @termination.setter
     def termination(self, value):
-        "Updates the reason for termination"
+        """Updates the reason for termination"""
         self._termination = value
 
     @property
@@ -274,7 +274,7 @@ class Solution(object):
         return pybamm.dynamic_plot(self, output_variables=output_variables, **kwargs)
 
     def clear_casadi_attributes(self):
-        "Remove casadi objects for pickling, will be computed again automatically"
+        """Remove casadi objects for pickling, will be computed again automatically"""
         self._t_MX = None
         self._y_MX = None
         self._symbolic_inputs = None
@@ -385,7 +385,8 @@ class Solution(object):
 
     @property
     def sub_solutions(self):
-        "List of sub solutions that have been concatenated to form the full solution"
+        """List of sub solutions that have been concatenated to form the full solution
+        """
         return self._sub_solutions
 
     def __add__(self, other):

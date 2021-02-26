@@ -100,7 +100,7 @@ class TestStandardParametersLeadAcid(unittest.TestCase):
     def test_thermal_parameters(self):
         values = pybamm.lead_acid.BaseModel().default_parameter_values
         param = pybamm.LeadAcidParameters()
-        T = 1   # dummy temperature as the values are constant
+        T = 1  # dummy temperature as the values are constant
 
         # Density
         self.assertAlmostEqual(values.evaluate(param.rho_cn(T)), 0.8810, places=2)
