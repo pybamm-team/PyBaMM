@@ -79,13 +79,13 @@ class BaseBatteryModel(pybamm.BaseModel):
                 - "none": :class:`pybamm.sei.NoSEI` (no SEI growth)
                 - "constant": :class:`pybamm.sei.Constant` (constant SEI thickness)
                 - "reaction limited": :class:`pybamm.sei.ReactionLimited`
-                - "solvent-diffusion limited": \
+                - "solvent-diffusion limited":
                     :class:`pybamm.sei.SolventDiffusionLimited`
-                - "electron-migration limited": \
+                - "electron-migration limited":
                     :class:`pybamm.sei.ElectronMigrationLimited`
-                - "interstitial-diffusion limited": \
+                - "interstitial-diffusion limited":
                     :class:`pybamm.sei.InterstitialDiffusionLimited`
-                - "ec reaction limited": \
+                - "ec reaction limited":
                     :class:`pybamm.sei.EcReactionLimited`
             * "sei film resistance" : str
                 Set the submodel for additional term in the overpotential due to SEI.
@@ -105,8 +105,8 @@ class BaseBatteryModel(pybamm.BaseModel):
                         \\eta_r = \\frac{F}{RT}
                         * (\\phi_s - \\phi_e - U - R_{sei} * L_{sei} * j)
 
-                - "average": constant additional resistance term (approximation to the \
-                    true model). This model can give similar results to the \
+                - "average": constant additional resistance term (approximation to the
+                    true model). This model can give similar results to the
                     "distributed" case without needing to make j an algebraic state\
 
                     .. math::
@@ -130,6 +130,13 @@ class BaseBatteryModel(pybamm.BaseModel):
                 solve an algebraic equation for it. Default is "false", unless "sei film
                 resistance" is distributed in which case it is automatically set to
                 "true".
+            * "operating mode" : str
+                Sets the operating mode for the model. Can be "current" (default),
+                "voltage" or "power". Alternatively, the operating mode can be
+                controlled with an arbitrary function by passing the function directly
+                as the option. In this case the function must define the residual of
+                an algebraic equation. The applied current will be solved for such
+                that the algebraic constraint is satisfied.
 
     **Extends:** :class:`pybamm.BaseModel`
     """
