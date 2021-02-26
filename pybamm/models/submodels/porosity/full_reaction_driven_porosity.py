@@ -42,7 +42,7 @@ class Full(BaseModel):
             beta_sei_n = self.param.beta_sei_n
             deps_n_dt += beta_sei_n * j_sei_n
 
-        elif self.options["lithium plating porosity change"] == "true":
+        if self.options["lithium plating porosity change"] == "true":
 
             j_plating = variables[
                 "Negative electrode lithium plating interfacial current density"

@@ -38,26 +38,20 @@ class LeadingOrder(BaseModel):
 
         j_n = variables["X-averaged negative electrode interfacial current density"]
         j_p = variables["X-averaged positive electrode interfacial current density"]
+        deps_n_dt = pybamm.PrimaryBroadcast(
+            -self.param.beta_surf_n * j_n, ["negative electrode"]
+        )
 
-        if (
-            self.options["sei porosity change"] == "true"
-            and self.options["lithium plating porosity change"] == "false"
-        ):
+        if self.options["sei porosity change"] == "true":
 
             j_sei_n = variables[
                 "X-averaged negative electrode sei interfacial current density"
             ]
 
             beta_sei_n = self.param.beta_sei_n
-            deps_n_dt = pybamm.PrimaryBroadcast(
-                -self.param.beta_surf_n * j_n + beta_sei_n * j_sei_n,
-                ["negative electrode"],
-            )
+            deps_n_dt += j_sei_n * beta_sei_n
 
-        elif (
-            self.options["lithium plating porosity change"] == "true"
-            and self.options["sei porosity change"] == "false"
-        ):
+        if self.options["lithium plating porosity change"] == "true":
 
             j_plating = variables[
                 "X-averaged negative electrode lithium plating interfacial current density"
@@ -65,33 +59,7 @@ class LeadingOrder(BaseModel):
 
             beta_plating = self.param.beta_plating
 
-            deps_n_dt = pybamm.PrimaryBroadcast(
-                -self.param.beta_surf_n * j_n + beta_plating * j_plating,
-                ["negative electrode"],
-            )
-
-        elif (
-            self.options["lithium plating porosity change"] == "true"
-            and self.options["sei porosity change"] == "true"
-        ):
-
-            j_plating = variables[
-                "X-averaged negative electrode lithium plating interfacial current density"
-            ]
-
-            j_sei_n = variables[
-                "X-averaged negative electrode sei interfacial current density"
-            ]
-
-            beta_plating = self.param.beta_plating
-            beta_sei_n = self.param.beta_sei_n
-
-            deps_n_dt = pybamm.PrimaryBroadcast(
-                -self.param.beta_surf_n * j_n
-                + beta_plating * j_plating
-                + beta_sei_n * j_sei_n,
-                ["negative electrode"],
-            )
+            deps_n_dt += beta_plating * j_plating
 
         deps_s_dt = pybamm.FullBroadcast(
             0, "separator", auxiliary_domains={"secondary": "current collector"}
