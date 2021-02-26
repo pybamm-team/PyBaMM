@@ -305,7 +305,8 @@ def load_function(filename):
 
 
 def rmse(x, y):
-    """Calculate the root-mean-square-error between two vectors x and y, ignoring NaNs"""
+    """Calculate the root-mean-square-error between
+    two vectors x and y, ignoring NaNs"""
     # Check lengths
     if len(x) != len(y):
         raise ValueError("Vectors must have the same length")

@@ -54,7 +54,8 @@ class LeadingOrder(BaseModel):
         if self.options["lithium plating porosity change"] == "true":
 
             j_plating = variables[
-                "X-averaged negative electrode lithium plating interfacial current density"
+                "X-averaged negative electrode lithium \
+                plating interfacial current density"
             ]
 
             beta_plating = self.param.beta_plating
