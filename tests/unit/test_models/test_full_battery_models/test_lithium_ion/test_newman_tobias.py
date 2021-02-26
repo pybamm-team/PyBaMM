@@ -16,9 +16,10 @@ class TestNewmanTobias(unittest.TestCase):
         model = pybamm.lithium_ion.NewmanTobias(options)
         model.check_well_posedness()
 
-        options = {"current collector": "potential pair", "dimensionality": 2}
-        model = pybamm.lithium_ion.NewmanTobias(options)
-        model.check_well_posedness()
+        # Not currently compatible (see issue #1399)
+        with self.assertRaises(pybamm.OptionError):
+            options = {"current collector": "potential pair", "dimensionality": 2}
+            pybamm.lithium_ion.NewmanTobias(options)
 
         options = {"bc_options": {"dimensionality": 5}}
         with self.assertRaises(pybamm.OptionError):
@@ -61,14 +62,14 @@ class TestNewmanTobias(unittest.TestCase):
         model = pybamm.lithium_ion.NewmanTobias(options)
         model.check_well_posedness()
 
-    def test_lumped_thermal_2plus1D(self):
-        options = {
-            "current collector": "potential pair",
-            "dimensionality": 2,
-            "thermal": "lumped",
-        }
-        model = pybamm.lithium_ion.NewmanTobias(options)
-        model.check_well_posedness()
+    # def test_lumped_thermal_2plus1D(self):
+    #    options = {
+    #        "current collector": "potential pair",
+    #        "dimensionality": 2,
+    #        "thermal": "lumped",
+    #    }
+    #    model = pybamm.lithium_ion.NewmanTobias(options)
+    #    model.check_well_posedness()
 
     def test_thermal_1plus1D(self):
         options = {
@@ -79,14 +80,14 @@ class TestNewmanTobias(unittest.TestCase):
         model = pybamm.lithium_ion.NewmanTobias(options)
         model.check_well_posedness()
 
-    def test_thermal_2plus1D(self):
-        options = {
-            "current collector": "potential pair",
-            "dimensionality": 2,
-            "thermal": "x-lumped",
-        }
-        model = pybamm.lithium_ion.NewmanTobias(options)
-        model.check_well_posedness()
+    # def test_thermal_2plus1D(self):
+    #    options = {
+    #        "current collector": "potential pair",
+    #        "dimensionality": 2,
+    #        "thermal": "x-lumped",
+    #    }
+    #    model = pybamm.lithium_ion.NewmanTobias(options)
+    #    model.check_well_posedness()
 
     def test_particle_uniform(self):
         options = {"particle": "uniform profile"}

@@ -8,10 +8,10 @@ from .base_lithium_ion_model import BaseModel
 class NewmanTobias(BaseModel):
     """
     Newman-Tobias model of a lithium-ion battery based on the formulation in [1]_.
-    This model ignores concentration gradients in the electrolyte, and tracks the
-    average concentration in the solid phase in each electrode (i.e. the
-    concentration in the solid phase is governed by a single ordinary differential
-    equation in each electrode).
+    This model assumes a uniform concentration profile in the electrolyte.
+    Unlike the model posed in [1]_, this models accounts for nonlinear Butler-Volmer
+    kinetics, and tracks the average concentration in the solid phase in each electrode.
+    This is analagous to including an equation for the state of charge as in [2]_.
 
     Parameters
     ----------
@@ -30,6 +30,10 @@ class NewmanTobias(BaseModel):
     .. [1] JS Newman and CW Tobias. "Theoretical Analysis of Current Distribution
            in Porous Electrodes". Journal of The Electrochemical Society,
            109(12):A1183-A1191, 1962
+    .. [2] HN Chu, SU Kim, SK Rahimian, JB Siegel and CW Monroe. "Parameterization
+           of prismatic lithium–iron–phosphate cells through a streamlined
+           thermal/electrochemical model". Journal of Power Sources, 453, p.227787,
+           2020
 
     **Extends:** :class:`pybamm.lithium_ion.BaseModel`
     """
@@ -52,7 +56,7 @@ class NewmanTobias(BaseModel):
         dimensionality_option = options.get(
             "dimensionality", "none"
         )  # return "none" if option not given
-        if dimensionality_option == "2":
+        if dimensionality_option == 2:
             raise pybamm.OptionError(
                 "Newman-Tobias model does not current support 2D current collectors"
             )
@@ -78,6 +82,7 @@ class NewmanTobias(BaseModel):
             self.build_model()
 
         pybamm.citations.register("Newman1962")
+        pybamm.citations.register("Chu2020")
 
     def set_porosity_submodel(self):
 
