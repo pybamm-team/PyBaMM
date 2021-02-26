@@ -79,7 +79,7 @@ class BaseBatteryModel(pybamm.BaseModel):
                 - "none": :class:`pybamm.sei.NoSEI` (no SEI growth)
                 - "constant": :class:`pybamm.sei.Constant` (constant SEI thickness)
                 - "reaction limited": :class:`pybamm.sei.ReactionLimited`
-                - "solvent-diffusion limited": \
+                - "solvent-diffusion limited":\
                     :class:`pybamm.sei.SolventDiffusionLimited`
                 - "electron-migration limited": \
                     :class:`pybamm.sei.ElectronMigrationLimited`
@@ -130,6 +130,13 @@ class BaseBatteryModel(pybamm.BaseModel):
                 solve an algebraic equation for it. Default is "false", unless "sei film
                 resistance" is distributed in which case it is automatically set to
                 "true".
+            * "operating mode" : str
+                Sets the operating mode for the model. Can be "current" (default),
+                "voltage" or "power". Alternatively, the operating mode can be
+                controlled with an arbitrary function by passing the function directly
+                as the option. In this case the function must define the residual of
+                an algebraic equation. The applied current will be solved for such
+                that the algebraic constraint is satisfied.
 
     **Extends:** :class:`pybamm.BaseModel`
     """
