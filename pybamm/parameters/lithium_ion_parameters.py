@@ -755,8 +755,6 @@ class LithiumIonParameters:
         self.beta_plating = self.Gamma_plating * self.V_bar_plated_Li * self.c_Li_typ
             
             
-        
-
         # Initial conditions
         self.epsilon_n_init = pybamm.Parameter("Negative electrode porosity")
         self.epsilon_s_init = pybamm.Parameter("Separator porosity")

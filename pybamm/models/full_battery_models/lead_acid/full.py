@@ -54,7 +54,7 @@ class Full(BaseModel):
         pybamm.citations.register("Sulzer2019physical")
 
     def set_porosity_submodel(self):
-        self.submodels["porosity"] = pybamm.porosity.Full(self.param)
+        self.submodels["porosity"] = pybamm.porosity.Full(self.param, self.options)
 
     def set_convection_submodel(self):
         if self.options["convection"] == "none":
