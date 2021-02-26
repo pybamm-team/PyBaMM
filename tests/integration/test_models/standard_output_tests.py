@@ -359,9 +359,9 @@ class ParticleConcentrationTests(BaseOutputTest):
                 if self.model.options["particle"] == "quartic profile":
                     # quartic profile has a transient at the beginning where
                     # the concentration "rearranges" giving flux of the opposite
-                    # sign, so ignore first two times
-                    np.testing.assert_array_less(0, self.N_s_n(t[2:], x_n, r_n[1:]))
-                    np.testing.assert_array_less(self.N_s_p(t[2:], x_p, r_p[1:]), 0)
+                    # sign, so ignore first few times
+                    np.testing.assert_array_less(0, self.N_s_n(t[3:], x_n, r_n[1:]))
+                    np.testing.assert_array_less(self.N_s_p(t[3:], x_p, r_p[1:]), 0)
                 else:
                     np.testing.assert_array_less(0, self.N_s_n(t[1:], x_n, r_n[1:]))
                     np.testing.assert_array_less(self.N_s_p(t[1:], x_p, r_p[1:]), 0)

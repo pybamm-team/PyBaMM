@@ -2,10 +2,10 @@
 # Newman Tobias Model
 #
 import pybamm
-from .base_lithium_ion_model import BaseModel
+from .dfn import DFN
 
 
-class NewmanTobias(BaseModel):
+class NewmanTobias(DFN):
     """
     Newman-Tobias model of a lithium-ion battery based on the formulation in [1]_.
     This model assumes a uniform concentration profile in the electrolyte.
@@ -35,11 +35,13 @@ class NewmanTobias(BaseModel):
            thermal/electrochemical model". Journal of Power Sources, 453, p.227787,
            2020
 
-    **Extends:** :class:`pybamm.lithium_ion.BaseModel`
+
+    **Extends:** :class:`pybamm.lithium_ion.DFN`
     """
 
     def __init__(self, options=None, name="Newman-Tobias model", build=True):
 
+        # check options
         options = options or {}
         # set option to "uniform profile" if not provided
         if "particle" not in options:
@@ -60,85 +62,11 @@ class NewmanTobias(BaseModel):
             raise pybamm.OptionError(
                 "Newman-Tobias model does not current support 2D current collectors"
             )
-        super().__init__(options, name)
 
-        self.set_external_circuit_submodel()
-        self.set_porosity_submodel()
-        self.set_crack_submodel()
-        self.set_active_material_submodel()
-        self.set_tortuosity_submodels()
-        self.set_convection_submodel()
-        self.set_interfacial_submodel()
-        self.set_other_reaction_submodels_to_zero()
-        self.set_particle_submodel()
-        self.set_solid_submodel()
-        self.set_electrolyte_submodel()
-        self.set_thermal_submodel()
-        self.set_current_collector_submodel()
-        self.set_sei_submodel()
-        self.set_lithium_plating_submodel()
-
-        if build:
-            self.build_model()
+        super().__init__(options, name, build)
 
         pybamm.citations.register("Newman1962")
         pybamm.citations.register("Chu2020")
-
-    def set_porosity_submodel(self):
-
-        if self.options["sei porosity change"] == "false":
-            self.submodels["porosity"] = pybamm.porosity.Constant(self.param)
-        elif self.options["sei porosity change"] == "true":
-            self.submodels["porosity"] = pybamm.porosity.Full(self.param)
-
-    def set_active_material_submodel(self):
-
-        if self.options["loss of active material"] == "none":
-            self.submodels[
-                "negative active material"
-            ] = pybamm.active_material.Constant(self.param, "Negative", self.options)
-            self.submodels[
-                "positive active material"
-            ] = pybamm.active_material.Constant(self.param, "Positive", self.options)
-        elif self.options["loss of active material"] == "both":
-            self.submodels[
-                "negative active material"
-            ] = pybamm.active_material.VaryingFull(self.param, "Negative", self.options)
-            self.submodels[
-                "positive active material"
-            ] = pybamm.active_material.VaryingFull(self.param, "Positive", self.options)
-        elif self.options["loss of active material"] == "negative":
-            self.submodels[
-                "negative active material"
-            ] = pybamm.active_material.VaryingFull(self.param, "Negative", self.options)
-            self.submodels[
-                "positive active material"
-            ] = pybamm.active_material.Constant(self.param, "Positive", self.options)
-        elif self.options["loss of active material"] == "positive":
-            self.submodels[
-                "negative active material"
-            ] = pybamm.active_material.Constant(self.param, "Negative", self.options)
-            self.submodels[
-                "positive active material"
-            ] = pybamm.active_material.VaryingFull(self.param, "Positive", self.options)
-
-    def set_convection_submodel(self):
-
-        self.submodels[
-            "transverse convection"
-        ] = pybamm.convection.transverse.NoConvection(self.param)
-        self.submodels[
-            "through-cell convection"
-        ] = pybamm.convection.through_cell.NoConvection(self.param)
-
-    def set_interfacial_submodel(self):
-
-        self.submodels["negative interface"] = pybamm.interface.ButlerVolmer(
-            self.param, "Negative", "lithium-ion main", self.options
-        )
-        self.submodels["positive interface"] = pybamm.interface.ButlerVolmer(
-            self.param, "Positive", "lithium-ion main", self.options
-        )
 
     def set_particle_submodel(self):
 
@@ -148,18 +76,6 @@ class NewmanTobias(BaseModel):
         self.submodels["positive particle"] = pybamm.particle.PolynomialSingleParticle(
             self.param, "Positive", "uniform profile"
         )
-
-    def set_solid_submodel(self):
-
-        if self.options["surface form"] == "false":
-            submod_n = pybamm.electrode.ohm.Full(self.param, "Negative")
-            submod_p = pybamm.electrode.ohm.Full(self.param, "Positive")
-        else:
-            submod_n = pybamm.electrode.ohm.SurfaceForm(self.param, "Negative")
-            submod_p = pybamm.electrode.ohm.SurfaceForm(self.param, "Positive")
-
-        self.submodels["negative electrode potential"] = submod_n
-        self.submodels["positive electrode potential"] = submod_p
 
     def set_electrolyte_submodel(self):
 

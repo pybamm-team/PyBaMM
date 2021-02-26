@@ -45,13 +45,13 @@ class TestNewmanTobias(unittest.TestCase):
         with self.assertRaises(NotImplementedError):
             pybamm.lithium_ion.NewmanTobias(options)
         # 2plus1D
-        options = {
-            "current collector": "potential pair",
-            "dimensionality": 2,
-            "thermal": "x-full",
-        }
-        with self.assertRaises(NotImplementedError):
-            pybamm.lithium_ion.NewmanTobias(options)
+        # options = {
+        #    "current collector": "potential pair",
+        #    "dimensionality": 2,
+        #    "thermal": "x-full",
+        # }
+        # with self.assertRaises(NotImplementedError):
+        #    pybamm.lithium_ion.NewmanTobias(options)
 
     def test_lumped_thermal_1plus1D(self):
         options = {
