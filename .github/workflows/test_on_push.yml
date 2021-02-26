@@ -32,7 +32,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
-        python-version: [3.6, 3.7, 3.8]
+        python-version: [3.7, 3.8, 3.9]
 
     steps:
     - uses: actions/checkout@v2
@@ -45,19 +45,11 @@ jobs:
       if: matrix.os == 'ubuntu-latest'
       run: |
         sudo apt install gfortran gcc libopenblas-dev graphviz
-        sudo apt install python${{ matrix.python-version }}.dev
     
-    # Added fixes to homebrew installs:
-    # rm -f /usr/local/bin/2to3 
-    # (see https://github.com/actions/virtual-environments/issues/2322)
-    # brew unlink gcc@8 gcc@9
-    # (see https://github.com/actions/virtual-environments/issues/2391)
     - name: Install MacOS system dependencies
       if: matrix.os == 'macos-latest'
       run: |
-        rm -f /usr/local/bin/2to3
         brew update
-        brew unlink gcc@8 gcc@9
         brew install graphviz
         brew install openblas
         
@@ -71,23 +63,23 @@ jobs:
         python -m pip install tox
 
     - name: Install SuiteSparse and Sundials
-      if: matrix.os != 'windows-latest'
+      if: matrix.os == 'ubuntu-latest'
       run: tox -e pybamm-requires
 
-    - name: Run unit tests for GNU/Linux and MacOS
-      if: matrix.os != 'windows-latest'
+    - name: Run unit tests for GNU/Linux
+      if: matrix.os == 'ubuntu-latest'
       run: python -m tox -e tests
 
-    - name: Run unit tests for Windows
-      if: matrix.os == 'windows-latest'
-      run: python -m tox -e windows-tests
+    - name: Run unit tests for Windows and MacOS
+      if: matrix.os != 'ubuntu-latest'
+      run: python -m tox -e mac-windows-tests
 
     - name: Install docs dependencies and run doctests
-      if: matrix.os != 'windows-latest'
+      if: matrix.os == 'ubuntu-latest'
       run: tox -e doctests
     
     - name: Install dev dependencies and run example tests
-      if: matrix.os != 'windows-latest'
+      if: matrix.os == 'ubuntu-latest'
       run: tox -e examples
         
     - name: Install and run coverage

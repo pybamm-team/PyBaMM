@@ -483,12 +483,12 @@ class ProcessedVariable(object):
         return out
 
     def call_1D(self, t, x, r, z):
-        "Evaluate a 1D variable"
+        """Evaluate a 1D variable"""
         spatial_var = eval_dimension_name(self.first_dimension, x, r, None, z)
         return self._interpolation_function(t, spatial_var)
 
     def call_2D(self, t, x, r, y, z):
-        "Evaluate a 2D variable"
+        """Evaluate a 2D variable"""
         first_dim = eval_dimension_name(self.first_dimension, x, r, y, z)
         second_dim = eval_dimension_name(self.second_dimension, x, r, y, z)
         if isinstance(first_dim, np.ndarray):
@@ -503,7 +503,7 @@ class ProcessedVariable(object):
         return self._interpolation_function((first_dim, second_dim, t))
 
     def get_spatial_scale(self, name, domain):
-        "Returns the spatial scale for a named spatial variable"
+        """Returns the spatial scale for a named spatial variable"""
         try:
             if name == "y" and domain == "current collector":
                 return self.length_scales["current collector y"]
@@ -521,7 +521,7 @@ class ProcessedVariable(object):
 
     @property
     def data(self):
-        "Same as entries, but different name"
+        """Same as entries, but different name"""
         return self.entries
 
 

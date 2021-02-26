@@ -27,7 +27,7 @@ class BaseModel(pybamm.BaseBatteryModel):
             "positive electrode": self.param.L_x,
             "negative particle": self.param.R_n_typ,
             "positive particle": self.param.R_p_typ,
-            "current collector y": self.param.L_y,
+            "current collector y": self.param.L_z,
             "current collector z": self.param.L_z,
         }
         self.set_standard_output_variables()

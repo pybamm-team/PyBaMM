@@ -12,3 +12,7 @@ Concatenations
 
 .. autoclass:: pybamm.SparseStack
   :members:
+
+.. autofunction:: pybamm.numpy_concatenation
+
+.. autofunction:: pybamm.domain_concatenation

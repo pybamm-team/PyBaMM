@@ -362,7 +362,15 @@ class TestUnaryOperators(unittest.TestCase):
         delta_a = pybamm.DeltaFunction(a, "right", "some domain")
         self.assertEqual(delta_a.side, "right")
         self.assertEqual(delta_a.child.id, a.id)
+        self.assertEqual(delta_a.domain, ["some domain"])
         self.assertFalse(delta_a.evaluates_on_edges("primary"))
+
+        a = pybamm.Symbol("a", domain="some domain")
+        delta_a = pybamm.DeltaFunction(a, "left", "another domain")
+        self.assertEqual(delta_a.side, "left")
+        self.assertEqual(delta_a.domain, ["another domain"])
+        self.assertEqual(delta_a.auxiliary_domains, {"secondary": ["some domain"]})
+
         with self.assertRaisesRegex(
             pybamm.DomainError, "Delta function domain cannot be None"
         ):
@@ -425,15 +433,27 @@ class TestUnaryOperators(unittest.TestCase):
             pybamm.boundary_value(var, "positive tab")
 
     def test_x_average(self):
-        a = pybamm.Scalar(1)
+        a = pybamm.Scalar(4)
         average_a = pybamm.x_average(a)
         self.assertEqual(average_a.id, a.id)
 
+        # average of a broadcast is the child
         average_broad_a = pybamm.x_average(
             pybamm.PrimaryBroadcast(a, ["negative electrode"])
         )
-        self.assertEqual(average_broad_a.evaluate(), np.array([1]))
+        self.assertEqual(average_broad_a.id, pybamm.Scalar(4).id)
 
+        # average of a number times a broadcast is the number times the child
+        average_two_broad_a = pybamm.x_average(
+            2 * pybamm.PrimaryBroadcast(a, ["negative electrode"])
+        )
+        self.assertEqual(average_two_broad_a.id, pybamm.Scalar(8).id)
+        average_t_broad_a = pybamm.x_average(
+            pybamm.t * pybamm.PrimaryBroadcast(a, ["negative electrode"])
+        )
+        self.assertEqual(average_t_broad_a.id, (pybamm.t * pybamm.Scalar(4)).id)
+
+        # x-average of concatenation of broadcasts
         conc_broad = pybamm.Concatenation(
             pybamm.PrimaryBroadcast(1, ["negative electrode"]),
             pybamm.PrimaryBroadcast(2, ["separator"]),
@@ -441,13 +461,64 @@ class TestUnaryOperators(unittest.TestCase):
         )
         average_conc_broad = pybamm.x_average(conc_broad)
         self.assertIsInstance(average_conc_broad, pybamm.Division)
+        self.assertEqual(average_conc_broad.domain, [])
+        # with auxiliary domains
+        conc_broad = pybamm.Concatenation(
+            pybamm.FullBroadcast(
+                1,
+                ["negative electrode"],
+                auxiliary_domains={"secondary": "current collector"},
+            ),
+            pybamm.FullBroadcast(
+                2, ["separator"], auxiliary_domains={"secondary": "current collector"}
+            ),
+            pybamm.FullBroadcast(
+                3,
+                ["positive electrode"],
+                auxiliary_domains={"secondary": "current collector"},
+            ),
+        )
+        average_conc_broad = pybamm.x_average(conc_broad)
+        self.assertIsInstance(average_conc_broad, pybamm.PrimaryBroadcast)
+        self.assertEqual(average_conc_broad.domain, ["current collector"])
+        conc_broad = pybamm.Concatenation(
+            pybamm.FullBroadcast(
+                1,
+                ["negative electrode"],
+                auxiliary_domains={
+                    "secondary": "current collector",
+                    "tertiary": "test",
+                },
+            ),
+            pybamm.FullBroadcast(
+                2,
+                ["separator"],
+                auxiliary_domains={
+                    "secondary": "current collector",
+                    "tertiary": "test",
+                },
+            ),
+            pybamm.FullBroadcast(
+                3,
+                ["positive electrode"],
+                auxiliary_domains={
+                    "secondary": "current collector",
+                    "tertiary": "test",
+                },
+            ),
+        )
+        average_conc_broad = pybamm.x_average(conc_broad)
+        self.assertIsInstance(average_conc_broad, pybamm.FullBroadcast)
+        self.assertEqual(average_conc_broad.domain, ["current collector"])
+        self.assertEqual(average_conc_broad.auxiliary_domains, {"secondary": ["test"]})
 
+        # x-average of broadcast
         for domain in [
             ["negative electrode"],
             ["separator"],
             ["positive electrode"],
         ]:
-            a = pybamm.Symbol("a", domain=domain)
+            a = pybamm.Variable("a", domain=domain)
             x = pybamm.SpatialVariable("x", domain)
             av_a = pybamm.x_average(a)
             self.assertIsInstance(av_a, pybamm.Division)
@@ -460,8 +531,9 @@ class TestUnaryOperators(unittest.TestCase):
         a = pybamm.Variable("a", domain=domain)
         x = pybamm.SpatialVariable("x", domain)
         av_a = pybamm.x_average(a)
-        self.assertIsInstance(av_a, pybamm.Integral)
-        self.assertEqual(av_a.integration_variable[0].domain, x.domain)
+        self.assertIsInstance(av_a, pybamm.Division)
+        self.assertIsInstance(av_a.children[0], pybamm.Integral)
+        self.assertEqual(av_a.children[0].integration_variable[0].domain, x.domain)
         self.assertEqual(av_a.domain, [])
 
         a = pybamm.Variable("a", domain="new domain")
@@ -566,11 +638,10 @@ class TestUnaryOperators(unittest.TestCase):
         z_av_a = pybamm.z_average(a)
         yz_av_a = pybamm.yz_average(a)
 
-        self.assertIsInstance(z_av_a, pybamm.Division)
         self.assertIsInstance(yz_av_a, pybamm.Division)
-        self.assertIsInstance(z_av_a.children[0], pybamm.Integral)
+        self.assertIsInstance(z_av_a, pybamm.Integral)
         self.assertIsInstance(yz_av_a.children[0], pybamm.Integral)
-        self.assertEqual(z_av_a.children[0].integration_variable[0].domain, z.domain)
+        self.assertEqual(z_av_a.integration_variable[0].domain, z.domain)
         self.assertEqual(yz_av_a.children[0].integration_variable[0].domain, y.domain)
         self.assertEqual(yz_av_a.children[0].integration_variable[1].domain, z.domain)
         self.assertEqual(z_av_a.domain, [])

@@ -1,3 +1,5 @@
+![PyBaMM_logo](https://user-images.githubusercontent.com/20817509/107091287-8ad46a80-67cf-11eb-86f5-7ebef7c72a1e.png)
+
 # PyBaMM
 
 [![Build](https://github.com/pybamm-team/PyBaMM/workflows/PyBaMM/badge.svg)](https://github.com/pybamm-team/PyBaMM/actions?query=workflow%3APyBaMM+branch%3Adevelop)
@@ -6,7 +8,7 @@
 [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/pybamm-team/PyBaMM/blob/master/)
 [![black_code_style](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/ambv/black)
 <!-- ALL-CONTRIBUTORS-BADGE:START - Do not remove or modify this section -->
-[![All Contributors](https://img.shields.io/badge/all_contributors-26-orange.svg?style=flat-square)](#contributors-)
+[![All Contributors](https://img.shields.io/badge/all_contributors-29-orange.svg?style=flat-square)](#contributors-)
 <!-- ALL-CONTRIBUTORS-BADGE:END -->
 
 PyBaMM (Python Battery Mathematical Modelling) solves physics-based electrochemical DAE models by using state-of-the-art automatic differentiation and numerical solvers. The Doyle-Fuller-Newman model can be solved in under 0.1 seconds, while the reduced-order Single Particle Model and Single Particle Model with electrolyte can be solved in just a few milliseconds. Additional physics can easily be included such as thermal effects, fast particle diffusion, 3D effects, and more. All models are implemented in a flexible manner, and a wide range of models and parameter sets (NCA, NMC, LiCoO2, ...) are available. There is also functionality to simulate any set of experimental instructions, such as CCCV or GITT, or specify drive cycles.
@@ -26,11 +28,11 @@ or simulate an experiment such as CCCV:
 import pybamm
 experiment = pybamm.Experiment(
     [
-        "Discharge at C/10 for 10 hours or until 3.3 V",
+        ("Discharge at C/10 for 10 hours or until 3.3 V",
         "Rest for 1 hour",
         "Charge at 1 A until 4.1 V",
         "Hold at 4.1 V until 50 mA",
-        "Rest for 1 hour",
+        "Rest for 1 hour")
     ]
     * 3,
 )
@@ -143,9 +145,14 @@ Thanks goes to these wonderful people ([emoji key](https://allcontributors.org/d
   <tr>
     <td align="center"><a href="https://github.com/weilongai"><img src="https://avatars1.githubusercontent.com/u/41424174?v=4?s=100" width="100px;" alt=""/><br /><sub><b>WEILONG AI</b></sub></a><br /><a href="https://github.com/pybamm-team/PyBaMM/commits?author=weilongai" title="Code">💻</a> <a href="#example-weilongai" title="Examples">💡</a> <a href="https://github.com/pybamm-team/PyBaMM/commits?author=weilongai" title="Tests">⚠️</a></td>
     <td align="center"><a href="https://github.com/lonnbornj"><img src="https://avatars2.githubusercontent.com/u/35983543?v=4?s=100" width="100px;" alt=""/><br /><sub><b>lonnbornj</b></sub></a><br /><a href="https://github.com/pybamm-team/PyBaMM/commits?author=lonnbornj" title="Code">💻</a> <a href="https://github.com/pybamm-team/PyBaMM/commits?author=lonnbornj" title="Tests">⚠️</a> <a href="#example-lonnbornj" title="Examples">💡</a></td>
-    <td align="center"><a href="https://github.com/priyanshuone6"><img src="https://avatars.githubusercontent.com/u/64051212?v=4?s=100" width="100px;" alt=""/><br /><sub><b>Priyanshu Agarwal</b></sub></a><br /><a href="https://github.com/pybamm-team/PyBaMM/commits?author=priyanshuone6" title="Tests">⚠️</a></td>
+    <td align="center"><a href="https://github.com/priyanshuone6"><img src="https://avatars.githubusercontent.com/u/64051212?v=4?s=100" width="100px;" alt=""/><br /><sub><b>Priyanshu Agarwal</b></sub></a><br /><a href="https://github.com/pybamm-team/PyBaMM/commits?author=priyanshuone6" title="Tests">⚠️</a> <a href="https://github.com/pybamm-team/PyBaMM/commits?author=priyanshuone6" title="Code">💻</a></td>
     <td align="center"><a href="https://github.com/DrSOKane"><img src="https://avatars.githubusercontent.com/u/42972513?v=4?s=100" width="100px;" alt=""/><br /><sub><b>DrSOKane</b></sub></a><br /><a href="https://github.com/pybamm-team/PyBaMM/commits?author=DrSOKane" title="Code">💻</a> <a href="#example-DrSOKane" title="Examples">💡</a> <a href="https://github.com/pybamm-team/PyBaMM/commits?author=DrSOKane" title="Documentation">📖</a> <a href="https://github.com/pybamm-team/PyBaMM/commits?author=DrSOKane" title="Tests">⚠️</a></td>
-    <td align="center"><a href="https://github.com/Saransh-cpp"><img src="https://avatars.githubusercontent.com/u/74055102?v=4?s=100" width="100px;" alt=""/><br /><sub><b>Saransh Chopra</b></sub></a><br /><a href="https://github.com/pybamm-team/PyBaMM/commits?author=Saransh-cpp" title="Code">💻</a> <a href="https://github.com/pybamm-team/PyBaMM/commits?author=Saransh-cpp" title="Tests">⚠️</a></td>
+    <td align="center"><a href="https://github.com/Saransh-cpp"><img src="https://avatars.githubusercontent.com/u/74055102?v=4?s=100" width="100px;" alt=""/><br /><sub><b>Saransh Chopra</b></sub></a><br /><a href="https://github.com/pybamm-team/PyBaMM/commits?author=Saransh-cpp" title="Code">💻</a> <a href="https://github.com/pybamm-team/PyBaMM/commits?author=Saransh-cpp" title="Tests">⚠️</a> <a href="https://github.com/pybamm-team/PyBaMM/commits?author=Saransh-cpp" title="Documentation">📖</a></td>
+    <td align="center"><a href="https://github.com/DavidMStraub"><img src="https://avatars.githubusercontent.com/u/10965193?v=4?s=100" width="100px;" alt=""/><br /><sub><b>David Straub</b></sub></a><br /><a href="https://github.com/pybamm-team/PyBaMM/issues?q=author%3ADavidMStraub" title="Bug reports">🐛</a> <a href="https://github.com/pybamm-team/PyBaMM/commits?author=DavidMStraub" title="Code">💻</a></td>
+    <td align="center"><a href="https://github.com/maurosgroi"><img src="https://avatars.githubusercontent.com/u/37576773?v=4?s=100" width="100px;" alt=""/><br /><sub><b>maurosgroi</b></sub></a><br /><a href="#ideas-maurosgroi" title="Ideas, Planning, & Feedback">🤔</a></td>
+  </tr>
+  <tr>
+    <td align="center"><a href="https://github.com/asinghgaba"><img src="https://avatars.githubusercontent.com/u/77078706?v=4?s=100" width="100px;" alt=""/><br /><sub><b>Amarjit Singh Gaba</b></sub></a><br /><a href="https://github.com/pybamm-team/PyBaMM/commits?author=asinghgaba" title="Code">💻</a></td>
   </tr>
 </table>
 

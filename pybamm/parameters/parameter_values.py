@@ -91,14 +91,14 @@ class ParameterValues:
         return self._dict_items[key]
 
     def get(self, key, default=None):
-        "Return item correspoonding to key if it exists, otherwise return default"
+        """Return item correspoonding to key if it exists, otherwise return default"""
         try:
             return self._dict_items[key]
         except KeyError:
             return default
 
     def __setitem__(self, key, value):
-        "Call the update functionality when doing a setitem"
+        """Call the update functionality when doing a setitem"""
         self.update({key: value})
 
     def __delitem__(self, key):
@@ -108,15 +108,15 @@ class ParameterValues:
         return pformat(self._dict_items, width=1)
 
     def keys(self):
-        "Get the keys of the dictionary"
+        """Get the keys of the dictionary"""
         return self._dict_items.keys()
 
     def values(self):
-        "Get the values of the dictionary"
+        """Get the values of the dictionary"""
         return self._dict_items.values()
 
     def items(self):
-        "Get the items of the dictionary"
+        """Get the items of the dictionary"""
         return self._dict_items.items()
 
     def copy(self):
@@ -591,8 +591,8 @@ class ParameterValues:
             return self._processed_symbols[symbol.id]
         except KeyError:
             processed_symbol = self._process_symbol(symbol)
-
             self._processed_symbols[symbol.id] = processed_symbol
+
             return processed_symbol
 
     def _process_symbol(self, symbol):
@@ -692,6 +692,45 @@ class ParameterValues:
             # process children
             new_left = self.process_symbol(symbol.left)
             new_right = self.process_symbol(symbol.right)
+            # Special case for averages, which can appear as "integral of a broadcast"
+            # divided by "integral of a broadcast"
+            # this construction seems very specific but can appear often when averaging
+            if (
+                isinstance(symbol, pybamm.Division)
+                # right is integral(Broadcast(1))
+                and (
+                    isinstance(new_right, pybamm.Integral)
+                    and isinstance(new_right.child, pybamm.Broadcast)
+                    and new_right.child.child.id == pybamm.Scalar(1).id
+                )
+                # left is integral
+                and isinstance(new_left, pybamm.Integral)
+            ):
+                # left is integral(Broadcast)
+                if (
+                    isinstance(new_left.child, pybamm.Broadcast)
+                    and new_left.child.child.domain == []
+                ):
+                    integrand = new_left.child
+                    if integrand.auxiliary_domains == {}:
+                        return integrand.orphans[0]
+                    else:
+                        domain = integrand.auxiliary_domains["secondary"]
+                        if "tertiary" not in integrand.auxiliary_domains:
+                            return pybamm.PrimaryBroadcast(integrand.orphans[0], domain)
+                        else:
+                            auxiliary_domains = {
+                                "secondary": integrand.auxiliary_domains["tertiary"]
+                            }
+                            return pybamm.FullBroadcast(
+                                integrand.orphans[0], domain, auxiliary_domains
+                            )
+                # left is "integral of concatenation of broadcasts"
+                elif isinstance(new_left.child, pybamm.Concatenation) and all(
+                    isinstance(child, pybamm.Broadcast)
+                    for child in new_left.child.children
+                ):
+                    return self.process_symbol(pybamm.x_average(new_left.child))
             # make new symbol, ensure domain remains the same
             new_symbol = symbol._binary_new_copy(new_left, new_right)
             new_symbol.domain = symbol.domain
