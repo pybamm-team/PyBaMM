@@ -103,7 +103,6 @@ Yang2017 = {
 }
 
 
-
 Marquis2019 = {
     "chemistry": "lithium-ion",
     "cell": "kokam_Marquis2019",

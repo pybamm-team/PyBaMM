@@ -1,4 +1,4 @@
-from pybamm import constants, Parameter,Scalar
+from pybamm import constants, Parameter, Scalar
 
 
 def plating_exchange_current_density_OKane2020(c_e, c_Li, T):
@@ -23,5 +23,5 @@ def plating_exchange_current_density_OKane2020(c_e, c_Li, T):
     :class:`pybamm.Symbol`
         Exchange-current density [A.m-2]
     """
-   # k_plating = Parameter("Lithium plating kinetic rate constant [m.s-1]")
+    # k_plating = Parameter("Lithium plating kinetic rate constant [m.s-1]")
     return Scalar(0.001)

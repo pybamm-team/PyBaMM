@@ -400,8 +400,7 @@ class BaseBatteryModel(pybamm.BaseModel):
             raise pybamm.OptionError(
                 "Unknown lithium plating model '{}'".format(options["lithium plating"])
             )
-            
-            
+
         if options["lithium plating porosity change"] not in ["true", "false"]:
             if options["lithium plating porosity change"] in [True, False]:
                 raise pybamm.OptionError(
