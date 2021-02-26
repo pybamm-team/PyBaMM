@@ -167,7 +167,7 @@ class TestDimensionlessParameterValues(unittest.TestCase):
         values = pybamm.lithium_ion.BaseModel().default_parameter_values
         param = pybamm.LithiumIonParameters()
         c_rate = param.i_typ / 24
-        T = 1   # dummy temperature as the values are constant
+        T = 1  # dummy temperature as the values are constant
 
         # Density
         np.testing.assert_almost_equal(values.evaluate(param.rho_cn(T)), 1.9019, 2)

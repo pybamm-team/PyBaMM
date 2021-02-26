@@ -6,7 +6,7 @@ import numpy as np
 
 
 class StandardOutputComparison(object):
-    "Calls all the tests comparing standard output variables."
+    """Calls all the tests comparing standard output variables."""
 
     def __init__(self, solutions):
         self.solutions = solutions
@@ -38,7 +38,7 @@ class StandardOutputComparison(object):
         return t_common * timescale
 
     def run_test_class(self, ClassName, skip_first_timestep=False):
-        "Run all tests from a class 'ClassName'"
+        """Run all tests from a class 'ClassName'"""
         if skip_first_timestep:
             t = self.t[1:]
         else:
@@ -65,7 +65,7 @@ class BaseOutputComparison(object):
         self.solutions = solutions
 
     def compare(self, var, tol=1e-2):
-        "Compare variables from different models"
+        """Compare variables from different models"""
         # Get variable for each model
         model_variables = [solution[var] for solution in self.solutions]
         var0 = model_variables[0]
@@ -91,7 +91,7 @@ class BaseOutputComparison(object):
 
 
 class AveragesComparison(BaseOutputComparison):
-    "Compare variables whose average value should be the same across all models"
+    """Compare variables whose average value should be the same across all models"""
 
     def __init__(self, time, solutions):
         super().__init__(time, solutions)
@@ -111,7 +111,7 @@ class AveragesComparison(BaseOutputComparison):
 
 
 class VariablesComparison(BaseOutputComparison):
-    "Compare variables across models"
+    """Compare variables across models"""
 
     def __init__(self, time, solutions):
         super().__init__(time, solutions)

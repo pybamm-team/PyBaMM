@@ -57,7 +57,7 @@ class Composite(BaseElectrolyteDiffusion):
         return variables
 
     def set_rhs(self, variables):
-        "Composite reaction-diffusion with source terms from leading order"
+        """Composite reaction-diffusion with source terms from leading order."""
 
         param = self.param
 
