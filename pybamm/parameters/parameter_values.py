@@ -150,8 +150,8 @@ class ParameterValues:
         ]
 
         # add SEI parameters if provided
-        if "SEI" in chemistry:
-            component_groups += ["SEI"]
+        if "sei" in chemistry:
+            component_groups += ["sei"]
 
         if "anode" in chemistry.keys():
             if "negative electrode" in chemistry.keys():

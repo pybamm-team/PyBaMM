@@ -34,13 +34,16 @@ class ProcessedVariable(object):
 
     Parameters
     ----------
-    base_variable : :class:`pybamm.Symbol`
-        A base variable with a method `evaluate(t,y)` that returns the value of that
-        variable. Note that this can be any kind of node in the expression tree, not
+    base_variables : list of :class:`pybamm.Symbol`
+        A list of base variables with a method `evaluate(t,y)`, each entry of which
+        returns the value of that variable for that particular sub-solution.
+        A Solution can be comprised of sub-solutions which are the solutions of
+        different models.
+        Note that this can be any kind of node in the expression tree, not
         just a :class:`pybamm.Variable`.
         When evaluated, returns an array of size (m,n)
-    base_variable_casadi : :class:`casadi.Function`
-        A casadi function. When evaluated, returns the same thing as
+    base_variable_casadis : list of :class:`casadi.Function`
+        A list of casadi functions. When evaluated, returns the same thing as
         `base_Variable.evaluate` (but more efficiently).
     solution : :class:`pybamm.Solution`
         The solution object to be used to create the processed variables
@@ -49,17 +52,17 @@ class ProcessedVariable(object):
         Default is True.
     """
 
-    def __init__(self, base_variable, base_variable_casadi, solution, warn=True):
-        self.base_variable = base_variable
-        self.base_variable_casadi = base_variable_casadi
+    def __init__(self, base_variables, base_variables_casadi, solution, warn=True):
+        self.base_variables = base_variables
+        self.base_variables_casadi = base_variables_casadi
 
         self.all_ts = solution.all_ts
         self.all_ys = solution.all_ys
         self.all_inputs_casadi = solution.all_inputs_casadi
 
-        self.mesh = base_variable.mesh
-        self.domain = base_variable.domain
-        self.auxiliary_domains = base_variable.auxiliary_domains
+        self.mesh = base_variables[0].mesh
+        self.domain = base_variables[0].domain
+        self.auxiliary_domains = base_variables[0].auxiliary_domains
         self.warn = warn
 
         # Set timescale
@@ -67,11 +70,10 @@ class ProcessedVariable(object):
         self.t_pts = solution.t * self.timescale
 
         # Store length scales
-        if solution.model:
-            self.length_scales = solution.length_scales_eval
+        self.length_scales = solution.length_scales_eval
 
         # Evaluate base variable at initial time
-        self.base_eval = self.base_variable_casadi(
+        self.base_eval = self.base_variables_casadi[0](
             self.all_ts[0][0], self.all_ys[0][:, 0], self.all_inputs_casadi[0]
         ).full()
 
@@ -101,7 +103,7 @@ class ProcessedVariable(object):
                     # Try some shapes that could make the variable a 2D variable
                     first_dim_nodes = self.mesh.nodes
                     first_dim_edges = self.mesh.edges
-                    second_dim_pts = self.base_variable.secondary_mesh.nodes
+                    second_dim_pts = self.base_variables[0].secondary_mesh.nodes
                     if self.base_eval.size // len(second_dim_pts) in [
                         len(first_dim_nodes),
                         len(first_dim_edges),
@@ -110,7 +112,7 @@ class ProcessedVariable(object):
                     else:
                         # Raise error for 3D variable
                         raise NotImplementedError(
-                            "Shape not recognized for {} ".format(base_variable)
+                            "Shape not recognized for {} ".format(base_variables[0])
                             + "(note processing of 3D variables is not yet implemented)"
                         )
 
@@ -119,11 +121,13 @@ class ProcessedVariable(object):
         entries = np.empty(len(self.t_pts))
         idx = 0
         # Evaluate the base_variable index-by-index
-        for ts, ys, inputs in zip(self.all_ts, self.all_ys, self.all_inputs_casadi):
+        for ts, ys, inputs, base_var_casadi in zip(
+            self.all_ts, self.all_ys, self.all_inputs_casadi, self.base_variables_casadi
+        ):
             for inner_idx, t in enumerate(ts):
                 t = ts[inner_idx]
                 y = ys[:, inner_idx]
-                entries[idx] = self.base_variable_casadi(t, y, inputs).full()[0, 0]
+                entries[idx] = base_var_casadi(t, y, inputs).full()[0, 0]
                 idx += 1
 
         # set up interpolation
@@ -152,11 +156,13 @@ class ProcessedVariable(object):
 
         # Evaluate the base_variable index-by-index
         idx = 0
-        for ts, ys, inputs in zip(self.all_ts, self.all_ys, self.all_inputs_casadi):
+        for ts, ys, inputs, base_var_casadi in zip(
+            self.all_ts, self.all_ys, self.all_inputs_casadi, self.base_variables_casadi
+        ):
             for inner_idx, t in enumerate(ts):
                 t = ts[inner_idx]
                 y = ys[:, inner_idx]
-                entries[:, idx] = self.base_variable_casadi(t, y, inputs).full()[:, 0]
+                entries[:, idx] = base_var_casadi(t, y, inputs).full()[:, 0]
                 idx += 1
 
         # Get node and edge values
@@ -243,8 +249,8 @@ class ProcessedVariable(object):
         """
         first_dim_nodes = self.mesh.nodes
         first_dim_edges = self.mesh.edges
-        second_dim_nodes = self.base_variable.secondary_mesh.nodes
-        second_dim_edges = self.base_variable.secondary_mesh.edges
+        second_dim_nodes = self.base_variables[0].secondary_mesh.nodes
+        second_dim_edges = self.base_variables[0].secondary_mesh.edges
         if self.base_eval.size // len(second_dim_nodes) == len(first_dim_nodes):
             first_dim_pts = first_dim_nodes
         elif self.base_eval.size // len(second_dim_nodes) == len(first_dim_edges):
@@ -257,12 +263,14 @@ class ProcessedVariable(object):
 
         # Evaluate the base_variable index-by-index
         idx = 0
-        for ts, ys, inputs in zip(self.all_ts, self.all_ys, self.all_inputs_casadi):
+        for ts, ys, inputs, base_var_casadi in zip(
+            self.all_ts, self.all_ys, self.all_inputs_casadi, self.base_variables_casadi
+        ):
             for inner_idx, t in enumerate(ts):
                 t = ts[inner_idx]
                 y = ys[:, inner_idx]
                 entries[:, :, idx] = np.reshape(
-                    self.base_variable_casadi(t, y, inputs).full(),
+                    base_var_casadi(t, y, inputs).full(),
                     [first_dim_size, second_dim_size],
                     order="F",
                 )
@@ -401,12 +409,14 @@ class ProcessedVariable(object):
 
         # Evaluate the base_variable index-by-index
         idx = 0
-        for ts, ys, inputs in zip(self.all_ts, self.all_ys, self.all_inputs_casadi):
+        for ts, ys, inputs, base_var_casadi in zip(
+            self.all_ts, self.all_ys, self.all_inputs_casadi, self.base_variables_casadi
+        ):
             for inner_idx, t in enumerate(ts):
                 t = ts[inner_idx]
                 y = ys[:, inner_idx]
                 entries[:, :, idx] = np.reshape(
-                    self.base_variable_casadi(t, y, inputs).full(),
+                    base_var_casadi(t, y, inputs).full(),
                     [len_y, len_z],
                     order="F",
                 )
@@ -462,11 +472,11 @@ class ProcessedVariable(object):
         if t is None:
             if len(self.t_pts) == 1:
                 t = self.t_pts
-            elif self.base_variable.is_constant():
+            elif len(self.base_variables) == 1 and self.base_variables[0].is_constant():
                 t = self.t_pts[0]
             else:
                 raise ValueError(
-                    "t cannot be None for variable {}".format(self.base_variable)
+                    "t cannot be None for variable {}".format(self.base_variables)
                 )
 
         # Call interpolant of correct spatial dimension

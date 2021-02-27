@@ -42,11 +42,19 @@ class Experiment:
         overwritten by individual operating conditions.
     termination : list, optional
         List of conditions under which to terminate the experiment. Default is None.
+    use_simulation_setup_type : str
+        Whether to use the "new" (default) or "old" simulation set-up type. "new" is
+        faster at simulating individual steps but has higher set-up overhead
 
     """
 
     def __init__(
-        self, operating_conditions, parameters=None, period="1 minute", termination=None
+        self,
+        operating_conditions,
+        parameters=None,
+        period="1 minute",
+        termination=None,
+        use_simulation_setup_type="new",
     ):
         self.period = self.convert_time_to_seconds(period.split())
         operating_conditions_cycles = []
@@ -89,6 +97,7 @@ class Experiment:
             raise TypeError("experimental parameters should be a dictionary")
 
         self.termination = termination
+        self.use_simulation_setup_type = use_simulation_setup_type
 
     def __str__(self):
         return str(self.operating_conditions_strings)

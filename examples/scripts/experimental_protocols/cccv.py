@@ -15,11 +15,11 @@ experiment = pybamm.Experiment(
             "Rest for 1 hour",
         ),
     ]
-    * 20
+    * 3,
 )
 model = pybamm.lithium_ion.SPM()
 sim = pybamm.Simulation(model, experiment=experiment, solver=pybamm.CasadiSolver())
-sim.solve(save_at_cycles=5)
+sim.solve()
 
 # Plot voltages from the discharge segments only
 # fig, ax = plt.subplots()
