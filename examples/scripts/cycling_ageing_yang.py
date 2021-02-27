@@ -12,7 +12,7 @@ experiment = pb.Experiment(
             "Rest for 5 minutes",
             "Discharge at 2 C until 2.8 V",
             "Rest for 5 minutes",
-        ),
+        )
     ]
     * 2
     + [
