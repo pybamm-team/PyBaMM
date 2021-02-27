@@ -202,6 +202,35 @@ class Solution(object):
         self._termination = value
 
     @property
+    def first_state(self):
+        """
+        A Solution object that only contains the first state. This is faster to evaluate
+        than the full solution when only the first state is needed (e.g. to initialize
+        a model with the solution)
+        """
+        try:
+            return self._first_state
+        except AttributeError:
+            new_sol = Solution(
+                self.all_ts[0][:1],
+                self.all_ys[0][:, :1],
+                self.all_models[:1],
+                self.all_inputs[:1],
+                None,
+                None,
+                "success",
+            )
+            new_sol._all_inputs_casadi = self.all_inputs_casadi[:1]
+            new_sol._sub_solutions = self.sub_solutions[:1]
+
+            new_sol.solve_time = 0
+            new_sol.integration_time = 0
+            new_sol.set_up_time = 0
+
+            self._first_state = new_sol
+            return self._first_state
+
+    @property
     def last_state(self):
         """
         A Solution object that only contains the final state. This is faster to evaluate
@@ -221,7 +250,7 @@ class Solution(object):
                 self.termination,
             )
             new_sol._all_inputs_casadi = self.all_inputs_casadi[-1:]
-            new_sol._sub_solutions = self.sub_solutions
+            new_sol._sub_solutions = self.sub_solutions[-1:]
 
             new_sol.solve_time = 0
             new_sol.integration_time = 0
@@ -614,9 +643,6 @@ def get_cycle_summary_variables(cycle_solution, esoh_sim):
         }
     )
 
-    # Some of the variables here only require evaluating at two timesteps, so
-    # creating the entire data matrix might be inefficient. Only need to fix this if
-    # it becomes a bottleneck
     degradation_variables = [
         "Negative electrode capacity [A.h]",
         "Positive electrode capacity [A.h]",
@@ -646,17 +672,22 @@ def get_cycle_summary_variables(cycle_solution, esoh_sim):
         "Total lithium lost to side reactions [mol]",
         "Total capacity lost to side reactions [A.h]",
     ]
+    first_state = cycle_solution.first_state
+    last_state = cycle_solution.last_state
     for var in degradation_variables:
-        data = cycle_solution[var].data
-        cycle_summary_variables[var] = data[-1]
+        data_first = first_state[var].data
+        data_last = last_state[var].data
+        cycle_summary_variables[var] = data_last[0]
         var_lowercase = var[0].lower() + var[1:]
-        cycle_summary_variables["Change in " + var_lowercase] = data[-1] - data[0]
+        cycle_summary_variables["Change in " + var_lowercase] = (
+            data_last[0] - data_first[0]
+        )
 
     V_min = esoh_sim.parameter_values["Lower voltage cut-off [V]"]
     V_max = esoh_sim.parameter_values["Upper voltage cut-off [V]"]
-    C_n = cycle_solution["Negative electrode capacity [A.h]"].data[-1]
-    C_p = cycle_solution["Positive electrode capacity [A.h]"].data[-1]
-    n_Li = cycle_solution["Total lithium in particles [mol]"].data[-1]
+    C_n = last_state["Negative electrode capacity [A.h]"].data[0]
+    C_p = last_state["Positive electrode capacity [A.h]"].data[0]
+    n_Li = last_state["Total lithium in particles [mol]"].data[0]
 
     # Solve the esoh model and add outputs to the summary variables
     # temporarily turn off logger
