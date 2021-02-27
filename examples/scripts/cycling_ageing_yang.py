@@ -1,7 +1,7 @@
 import pybamm as pb
 
 pb.set_logging_level("INFO")
-options = {"sei": "ec reaction limited", "sei porosity change": "true"}
+options = {"SEI": "ec reaction limited", "SEI porosity change": "true"}
 param = pb.ParameterValues(chemistry=pb.parameter_sets.Ramadass2004)
 model = pb.lithium_ion.DFN(options)
 experiment = pb.Experiment(
@@ -52,10 +52,11 @@ sim.plot(
         "Discharge capacity [A.h]",
         "Electrolyte potential [V]",
         "Electrolyte concentration [mol.m-3]",
-        "Total negative electrode sei thickness",
+        "Total negative electrode SEI thickness",
         "Negative electrode porosity",
         "X-averaged negative electrode porosity",
-        "Negative electrode sei interfacial current density [A.m-2]",
-        "X-averaged total negative electrode sei thickness [m]",
+        "Negative electrode SEI interfacial current density [A.m-2]",
+        "X-averaged total negative electrode SEI thickness [m]",
+        "Loss of lithium to negative electrode SEI [mol]",
     ]
 )

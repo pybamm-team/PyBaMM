@@ -45,7 +45,7 @@ class ReversiblePlating(BasePlating):
         phi_s_n = variables[f"{self.domain} electrode potential"]
         phi_e_n = variables[f"{self.domain} electrolyte potential"]
         c_e_n = variables[f"{self.domain} electrolyte concentration"]
-        eta_sei = variables[f"{self.domain} electrode sei film overpotential"]
+        eta_sei = variables[f"{self.domain} electrode SEI film overpotential"]
         c_plated_Li = variables[
             f"{self.domain} electrode lithium plating concentration"
         ]
