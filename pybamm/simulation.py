@@ -334,12 +334,12 @@ class Simulation:
         """
         self.op_conds_to_model_and_param = {}
         self.op_conds_to_built_models = None
-        for op_str, op_inputs in zip(
-            self.experiment.operating_conditions_strings, self._experiment_inputs
+        for op_cond, op_inputs in zip(
+            self.experiment.operating_conditions, self._experiment_inputs
         ):
             # Create model for this operating condition if it has not already been seen
             # before
-            if op_str not in self.op_conds_to_model_and_param:
+            if op_cond[:2] not in self.op_conds_to_model_and_param:
                 if op_inputs["Current switch"] == 1:
                     # Current control
                     # Make a new copy of the model (we will update events later))
@@ -438,7 +438,7 @@ class Simulation:
                         check_already_exists=False,
                     )
 
-                self.op_conds_to_model_and_param[op_str] = (
+                self.op_conds_to_model_and_param[op_cond[:2]] = (
                     new_model,
                     new_parameter_values,
                 )
@@ -687,13 +687,14 @@ class Simulation:
                 for step_num in range(1, cycle_length + 1):
                     exp_inputs = self._experiment_inputs[idx]
                     dt = self._experiment_times[idx]
-                    op_conds = self.experiment.operating_conditions_strings[idx]
-                    model = self.op_conds_to_built_models[op_conds]
+                    op_conds_str = self.experiment.operating_conditions_strings[idx]
+                    op_conds_elec = self.experiment.operating_conditions[idx][:2]
+                    model = self.op_conds_to_built_models[op_conds_elec]
                     # Use 1-indexing for printing cycle number as it is more
                     # human-intuitive
                     pybamm.logger.notice(
                         f"Cycle {cycle_num+cycle_offset}/{num_cycles+cycle_offset}, "
-                        f"step {step_num}/{cycle_length}: {op_conds}"
+                        f"step {step_num}/{cycle_length}: {op_conds_str}"
                     )
                     inputs.update(exp_inputs)
                     kwargs["inputs"] = inputs

@@ -34,7 +34,9 @@ class EcReactionLimited(BaseModel):
             0, self.domain.lower() + " electrode", "current collector"
         )
         j_outer = pybamm.Variable(
-            "Outer " + self.domain + " electrode SEI interfacial current density",
+            "Outer "
+            + self.domain.lower()
+            + " electrode SEI interfacial current density",
             domain=self.domain.lower() + " electrode",
             auxiliary_domains={"secondary": "current collector"},
         )

@@ -392,7 +392,7 @@ class BaseModel(object):
                     raise pybamm.ModelError(
                         "To update a model from a solution, each variable in "
                         "model.initial_conditions must appear in the solution with "
-                        f"the same key as the variable name. Here, {e.args[0]}"
+                        f"the same key as the variable name. In solution, {e.args[0]}"
                     )
                 if isinstance(solution, pybamm.Solution):
                     final_state = final_state.data
