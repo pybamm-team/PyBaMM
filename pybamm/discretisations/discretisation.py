@@ -966,12 +966,6 @@ class Discretisation(object):
             disc_children = [self.process_symbol(child) for child in symbol.children]
             return symbol._function_new_copy(disc_children)
 
-        elif isinstance(symbol, pybamm.FunctionParameter):
-            disc_children = [self.process_symbol(child) for child in symbol.children]
-            return symbol._function_parameter_new_copy(
-                symbol._input_names, disc_children
-            )
-
         elif isinstance(symbol, pybamm.VariableDot):
             return pybamm.StateVectorDot(
                 *self.y_slices[symbol.get_variable().id],

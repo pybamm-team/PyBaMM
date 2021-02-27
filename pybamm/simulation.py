@@ -342,14 +342,8 @@ class Simulation:
             if op_str not in self.op_conds_to_model_and_param:
                 if op_inputs["Current switch"] == 1:
                     # Current control
-                    # Make a new copy of the model and update events
+                    # Make a new copy of the model (we will update events later))
                     new_model = model.new_copy()
-
-                    # Update parameter values
-                    new_parameter_values = self.parameter_values.copy()
-                    new_parameter_values.update(
-                        {"Current function [A]": op_inputs["Current input [A]"]}
-                    )
                 else:
                     # Voltage or power control
                     # Create a new model where the current density is now a variable
@@ -401,11 +395,13 @@ class Simulation:
                     )
                     if op_inputs["Voltage switch"] == 1:
                         new_model.algebraic[i_cell] = constant_voltage(
-                            new_model.variables, op_inputs["Voltage input [V]"]
+                            new_model.variables,
+                            pybamm.Parameter("Voltage function [V]"),
                         )
                     elif op_inputs["Power switch"] == 1:
                         new_model.algebraic[i_cell] = constant_power(
-                            new_model.variables, op_inputs["Power input [V]"]
+                            new_model.variables,
+                            pybamm.Parameter("Power function [W]"),
                         )
 
                 # add voltage events to the model
@@ -424,6 +420,23 @@ class Simulation:
                     for event in new_model.events
                     if event.name not in ["Minimum voltage", "Maximum voltage"]
                 ]
+
+                # Update parameter values
+                new_parameter_values = self.parameter_values.copy()
+                if op_inputs["Current switch"] == 1:
+                    new_parameter_values.update(
+                        {"Current function [A]": op_inputs["Current input [A]"]}
+                    )
+                elif op_inputs["Voltage switch"] == 1:
+                    new_parameter_values.update(
+                        {"Voltage function [V]": op_inputs["Voltage input [V]"]},
+                        check_already_exists=False,
+                    )
+                elif op_inputs["Power switch"] == 1:
+                    new_parameter_values.update(
+                        {"Power function [W]": op_inputs["Power input [W]"]},
+                        check_already_exists=False,
+                    )
 
                 self.op_conds_to_model_and_param[op_str] = (
                     new_model,

@@ -37,7 +37,7 @@ class BaseKinetics(BaseInterface):
             j = pybamm.Variable(
                 "Total "
                 + self.domain.lower()
-                + " electrode interfacial current density",
+                + " electrode interfacial current density variable",
                 domain=self.domain.lower() + " electrode",
                 auxiliary_domains={"secondary": "current collector"},
             )
