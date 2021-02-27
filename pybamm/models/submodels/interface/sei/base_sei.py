@@ -166,33 +166,6 @@ class BaseModel(BaseInterface):
             }
         )
 
-        # Also set variables for EC surface concentration
-        if isinstance(self, pybamm.sei.EcReactionLimited):
-            j_outer = variables["Outer " + domain + " SEI interfacial current density"]
-            # concentration of EC on graphite surface, base case = 1
-            if self.domain == "Negative":
-                C_ec = self.param.C_ec_n
-
-            c_ec = pybamm.Scalar(1) + j_outer * L_outer * C_ec
-            c_ec_av = pybamm.x_average(c_ec)
-            c_ec_scale = self.param.c_ec_0_dim
-
-            variables.update(
-                {
-                    self.domain + " electrode EC surface concentration": c_ec,
-                    self.domain
-                    + " electrode EC surface concentration [mol.m-3]": c_ec
-                    * c_ec_scale,
-                    "X-averaged "
-                    + self.domain.lower()
-                    + " electrode EC surface concentration": c_ec_av,
-                    "X-averaged "
-                    + self.domain.lower()
-                    + " electrode EC surface concentration [mol.m-3]": c_ec_av
-                    * c_ec_scale,
-                }
-            )
-
         return variables
 
     def _get_standard_reaction_variables(self, j_inner, j_outer):
