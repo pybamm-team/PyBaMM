@@ -365,13 +365,14 @@ class Simulation:
                     replacer = pybamm.SymbolReplacer(symbol_replacement_map)
                     new_model = replacer.process_model(model, inplace=False)
 
-                    # Update the algebraic equation and initial conditions for FunctionControl
-                    # This creates an algebraic equation for the current to allow current, voltage,
-                    # or power control, together with the appropriate guess for the
-                    # initial condition.
+                    # Update the algebraic equation and initial conditions for
+                    # FunctionControl
+                    # This creates an algebraic equation for the current to allow
+                    # current, voltage, or power control, together with the appropriate
+                    # guess for the initial condition.
                     # External circuit submodels are always equations on the current
-                    # The external circuit function should fix either the current, or the voltage,
-                    # or a combination (e.g. I*V for power control)
+                    # The external circuit function should fix either the current, or
+                    # the voltage, or a combination (e.g. I*V for power control)
                     i_cell = new_model.variables["Total current density"]
                     new_model.initial_conditions[
                         i_cell
@@ -414,7 +415,8 @@ class Simulation:
                         )
                     )
 
-                # Remove upper and lower voltage cut-offs that are *not* part of the experiment
+                # Remove upper and lower voltage cut-offs that are *not* part of the
+                # experiment
                 new_model.events = [
                     event
                     for event in new_model.events
