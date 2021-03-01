@@ -93,7 +93,7 @@ class BaseModel(object):
         self._algebraic = {}
         self._initial_conditions = {}
         self._boundary_conditions = {}
-        self._variables = {}
+        self._variables = pybamm.FuzzyDict({})
         self._events = []
         self._concatenated_rhs = None
         self._concatenated_algebraic = None
@@ -384,6 +384,8 @@ class BaseModel(object):
 
         if isinstance(solution, pybamm.Solution):
             solution = solution.last_state
+        else:
+            solution = pybamm.FuzzyDict(solution)
         for var, equation in model.initial_conditions.items():
             if isinstance(var, pybamm.Variable):
                 try:
@@ -392,7 +394,8 @@ class BaseModel(object):
                     raise pybamm.ModelError(
                         "To update a model from a solution, each variable in "
                         "model.initial_conditions must appear in the solution with "
-                        f"the same key as the variable name. In solution, {e.args[0]}"
+                        "the same key as the variable name. In the solution provided, "
+                        f"{e.args[0]}"
                     )
                 if isinstance(solution, pybamm.Solution):
                     final_state = final_state.data
@@ -413,8 +416,9 @@ class BaseModel(object):
                     except KeyError as e:
                         raise pybamm.ModelError(
                             "To update a model from a solution, each variable in "
-                            "model.initial_conditions must appear in the solution "
-                            f"with the same key as the variable name. Here, {e.args[0]}"
+                            "model.initial_conditions must appear in the solution with "
+                            "the same key as the variable name. In the solution "
+                            f"provided, {e.args[0]}"
                         )
                     if isinstance(solution, pybamm.Solution):
                         final_state = final_state.data

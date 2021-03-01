@@ -319,8 +319,8 @@ class Simulation:
         self.model = new_model
 
         self.op_conds_to_model_and_param = {
-            op_cond: (new_model, self.parameter_values)
-            for op_cond in set(self.experiment.operating_conditions_strings)
+            op_cond[:2]: (new_model, self.parameter_values)
+            for op_cond in set(self.experiment.operating_conditions)
         }
         self.op_conds_to_built_models = None
 
