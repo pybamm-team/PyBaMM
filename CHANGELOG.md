@@ -31,6 +31,8 @@
 
 ## Bug fixes
 
+-   Fixed a sign error in the positive electrode ohmic losses ([#1407](https://github.com/pybamm-team/PyBaMM/pull/1407))
+-   Fixed the formulation of the EC reaction SEI model ([#1397](https://github.com/pybamm-team/PyBaMM/pull/1397))
 -   Simulations now stop when an experiment becomes infeasible ([#1395](https://github.com/pybamm-team/PyBaMM/pull/1395))
 -   Added a check for domains in `Concatenation` ([#1368](https://github.com/pybamm-team/PyBaMM/pull/1368))
 -   Differentiation now works even when the differentiation variable is a constant ([#1294](https://github.com/pybamm-team/PyBaMM/pull/1294))
