@@ -198,7 +198,7 @@ setup(
         "scikit-fem>=0.2.0",
         "casadi>=3.5.0",
         *jax_dependencies,
-        "diffeqpy>=1.1.0",  # For julia differential equations, also installs pyjulia.
+        "julia>=0.5.6",
         # Can be installed even if julia is not installed
         "jupyter",  # For example notebooks
         "pybtex",
