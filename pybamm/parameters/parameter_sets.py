@@ -163,7 +163,7 @@ Ramadass2004 = {
     "electrolyte": "lipf6_Ramadass2004",
     "experiment": "1C_discharge_from_full_Ramadass2004",
     "sei": "ramadass2004",
-    "citation": "Marquis2019",
+    "citation": "Ramadass2004",
 }
 
 Prada2013 = {

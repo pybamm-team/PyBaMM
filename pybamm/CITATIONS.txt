@@ -347,3 +347,15 @@ doi={10.1149/2.0661810jes}
   publisher = {Elsevier Science (USA)},
   doi = {10.1006/jcph.2002.7041},
 }
+
+@article{Ramadass2004,
+  title={Development of first principles capacity fade model for Li-ion cells},
+  author={Ramadass, P and Haran, Bala and Gomadam, Parthasarathy M and White, Ralph and Popov, Branko N},
+  journal={Journal of the Electrochemical Society},
+  volume={151},
+  number={2},
+  pages={A196},
+  year={2004},
+  publisher={IOP Publishing},
+  doi={10.1149/1.1634273},
+}
