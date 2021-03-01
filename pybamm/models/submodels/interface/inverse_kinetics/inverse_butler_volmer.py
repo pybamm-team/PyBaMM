@@ -20,7 +20,7 @@ class InverseButlerVolmer(BaseInterface):
     reaction : str
         The name of the reaction being implemented
     options: dict
-        A dictionary of options to be passed to the model. In this case "sei film
+        A dictionary of options to be passed to the model. In this case "SEI film
         resistance" is the important option. See :class:`pybamm.BaseBatteryModel`
 
     **Extends:** :class:`pybamm.interface.BaseInterface`
@@ -30,7 +30,7 @@ class InverseButlerVolmer(BaseInterface):
     def __init__(self, param, domain, reaction, options=None):
         super().__init__(param, domain, reaction)
         if options is None:
-            options = {"sei film resistance": "none"}
+            options = {"SEI film resistance": "none"}
         self.options = options
 
     def get_coupled_variables(self, variables):
@@ -62,13 +62,13 @@ class InverseButlerVolmer(BaseInterface):
         eta_r = self._get_overpotential(j_tot, j0, ne, T)
 
         # With SEI resistance (distributed and averaged have the same effect here)
-        if self.options["sei film resistance"] != "none":
+        if self.options["SEI film resistance"] != "none":
             if self.domain == "Negative":
                 R_sei = self.param.R_sei_n
             elif self.domain == "Positive":
                 R_sei = self.param.R_sei_p
             L_sei = variables[
-                "Total " + self.domain.lower() + " electrode sei thickness"
+                "Total " + self.domain.lower() + " electrode SEI thickness"
             ]
             eta_sei = -j_tot * L_sei * R_sei
         # Without SEI resistance
@@ -135,7 +135,7 @@ class CurrentForInverseButlerVolmer(BaseInterface):
             + self.domain.lower()
             + " electrode total interfacial current density"
         ]
-        j_sei = variables[self.domain + " electrode sei interfacial current density"]
+        j_sei = variables[self.domain + " electrode SEI interfacial current density"]
         j_stripping = variables[
             self.domain + " electrode lithium plating interfacial current density"
         ]

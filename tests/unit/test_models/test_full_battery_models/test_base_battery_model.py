@@ -155,28 +155,28 @@ class TestBaseBatteryModel(unittest.TestCase):
             )
 
         # SEI options
-        with self.assertRaisesRegex(pybamm.OptionError, "sei"):
-            pybamm.BaseBatteryModel({"sei": "bad sei"})
-        with self.assertRaisesRegex(pybamm.OptionError, "sei film resistance"):
-            pybamm.BaseBatteryModel({"sei film resistance": "bad sei film resistance"})
-        with self.assertRaisesRegex(pybamm.OptionError, "sei porosity change"):
-            pybamm.BaseBatteryModel({"sei porosity change": "bad sei porosity change"})
+        with self.assertRaisesRegex(pybamm.OptionError, "SEI"):
+            pybamm.BaseBatteryModel({"SEI": "bad sei"})
+        with self.assertRaisesRegex(pybamm.OptionError, "SEI film resistance"):
+            pybamm.BaseBatteryModel({"SEI film resistance": "bad SEI film resistance"})
+        with self.assertRaisesRegex(pybamm.OptionError, "SEI porosity change"):
+            pybamm.BaseBatteryModel({"SEI porosity change": "bad SEI porosity change"})
         with self.assertRaisesRegex(
-            pybamm.OptionError, "sei porosity change must now be given in string format"
+            pybamm.OptionError, "SEI porosity change must now be given in string format"
         ):
-            pybamm.BaseBatteryModel({"sei porosity change": True})
+            pybamm.BaseBatteryModel({"SEI porosity change": True})
         # changing defaults based on other options
         model = pybamm.BaseBatteryModel()
-        self.assertEqual(model.options["sei film resistance"], "none")
-        model = pybamm.BaseBatteryModel({"sei": "constant"})
-        self.assertEqual(model.options["sei film resistance"], "distributed")
+        self.assertEqual(model.options["SEI film resistance"], "none")
+        model = pybamm.BaseBatteryModel({"SEI": "constant"})
+        self.assertEqual(model.options["SEI film resistance"], "distributed")
         self.assertEqual(
             model.options["total interfacial current density as a state"], "true"
         )
         with self.assertRaisesRegex(pybamm.OptionError, "must be 'true'"):
             model = pybamm.BaseBatteryModel(
                 {
-                    "sei film resistance": "distributed",
+                    "SEI film resistance": "distributed",
                     "total interfacial current density as a state": "false",
                 }
             )

@@ -38,7 +38,7 @@ class LeadingOrder(BaseModel):
         j_n = variables["X-averaged negative electrode interfacial current density"]
         j_p = variables["X-averaged positive electrode interfacial current density"]
         j_sei_n = variables[
-            "X-averaged negative electrode sei interfacial current density"
+            "X-averaged negative electrode SEI interfacial current density"
         ]
         beta_sei_n = self.param.beta_sei_n
 
