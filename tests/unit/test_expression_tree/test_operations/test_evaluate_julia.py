@@ -7,6 +7,7 @@ from tests import get_mesh_for_testing, get_1p1d_mesh_for_testing
 import unittest
 import numpy as np
 import scipy.sparse
+from platform import system
 
 have_julia = pybamm.have_julia()
 if have_julia:
@@ -14,6 +15,7 @@ if have_julia:
 
 
 @unittest.skipIf(not have_julia, "Julia not installed")
+@unittest.skipIf(system() == "Windows", "Julia not supported on windows")
 class TestEvaluate(unittest.TestCase):
     def test_evaluator_julia(self):
         a = pybamm.StateVector(slice(0, 1))

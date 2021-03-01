@@ -4,6 +4,7 @@
 import pybamm
 
 import unittest
+from platform import system
 
 # import numpy as np
 
@@ -19,6 +20,7 @@ have_julia = pybamm.have_julia()
 
 
 @unittest.skipIf(not have_julia, "Julia not installed")
+@unittest.skipIf(system() == "Windows", "Julia not supported on windows")
 class TestCreateSolveMTKModel(unittest.TestCase):
     def test_exponential_decay_model(self):
         model = pybamm.BaseModel()
