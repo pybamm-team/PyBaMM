@@ -77,6 +77,39 @@ class TestSolution(unittest.TestCase):
         sol4 = None + sol3
         self.assertEqual(sol3.all_ys, sol4.all_ys)
 
+        # radd failure
+        with self.assertRaisesRegex(
+            pybamm.SolverError, "Only a Solution or None can be added to a Solution"
+        ):
+            sol3 + 2
+        with self.assertRaisesRegex(
+            pybamm.SolverError, "Only a Solution or None can be added to a Solution"
+        ):
+            2 + sol3
+
+    def test_add_solutions_different_models(self):
+        # Set up first solution
+        t1 = np.linspace(0, 1)
+        y1 = np.tile(t1, (20, 1))
+        sol1 = pybamm.Solution(t1, y1, pybamm.BaseModel(), {"a": 1})
+        sol1.solve_time = 1.5
+        sol1.integration_time = 0.3
+
+        # Set up second solution
+        t2 = np.linspace(1, 2)
+        y2 = np.tile(t2, (10, 1))
+        sol2 = pybamm.Solution(t2, y2, pybamm.BaseModel(), {"a": 2})
+        sol2.solve_time = 1
+        sol2.integration_time = 0.5
+        sol_sum = sol1 + sol2
+
+        # Test
+        np.testing.assert_array_equal(sol_sum.t, np.concatenate([t1, t2[1:]]))
+        with self.assertRaisesRegex(
+            pybamm.SolverError, "The solution is made up from different models"
+        ):
+            sol_sum.y
+
     def test_copy(self):
         # Set up first solution
         t1 = [np.linspace(0, 1), np.linspace(1, 2, 5)]
