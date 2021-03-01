@@ -305,7 +305,9 @@ def load_function(filename):
 
 
 def rmse(x, y):
-    """Calculate the root-mean-square-error between two vectors x and y, ignoring NaNs"""
+    """
+    Calculate the root-mean-square-error between two vectors x and y, ignoring NaNs
+    """
     # Check lengths
     if len(x) != len(y):
         raise ValueError("Vectors must have the same length")
@@ -360,11 +362,6 @@ def have_julia():
     FNULL = open(os.devnull, "w")
     try:
         subprocess.call(["julia", "--version"], stdout=FNULL, stderr=subprocess.STDOUT)
-        try:
-            import julia
-
-            return True
-        except ImportError as e:
-            return False
+        return True
     except subprocess.CalledProcessError:
         return False
