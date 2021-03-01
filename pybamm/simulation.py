@@ -717,9 +717,9 @@ class Simulation:
 
                     # Only allow events specified by experiment
                     if not (
-                        self._solution is None
-                        or self._solution.termination == "final time"
-                        or "[experiment]" in self._solution.termination
+                        cycle_solution is None
+                        or cycle_solution.termination == "final time"
+                        or "[experiment]" in cycle_solution.termination
                     ):
                         feasible = False
                         break
@@ -731,13 +731,13 @@ class Simulation:
                 if feasible is False:
                     pybamm.logger.warning(
                         "\n\n\tExperiment is infeasible: '{}' ".format(
-                            self._solution.termination
+                            cycle_solution.termination
                         )
                         + "was triggered during '{}'. ".format(
                             self.experiment.operating_conditions_strings[idx]
                         )
                         + "The returned solution only contains the first "
-                        "{} cycles. ".format(cycle_num + cycle_offset)
+                        "{} cycles. ".format(cycle_num - 1 + cycle_offset)
                         + "Try reducing the current, shortening the time interval, "
                         "or reducing the period.\n\n"
                     )
@@ -748,7 +748,8 @@ class Simulation:
                 cycle_solution.steps = steps
                 all_cycle_solutions.append(cycle_solution)
 
-            self.solution.cycles = all_cycle_solutions
+            if self.solution is not None:
+                self.solution.cycles = all_cycle_solutions
 
             pybamm.logger.notice(
                 "Finish experiment simulation, took {}".format(timer.time())

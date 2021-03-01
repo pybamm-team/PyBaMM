@@ -11,9 +11,9 @@ class StandardOutputComparison(object):
     def __init__(self, solutions):
         self.solutions = solutions
 
-        if isinstance(solutions[0].model, pybamm.lithium_ion.BaseModel):
+        if isinstance(solutions[0].all_models[0], pybamm.lithium_ion.BaseModel):
             self.chemistry = "Lithium-ion"
-        elif isinstance(solutions[0].model, pybamm.lead_acid.BaseModel):
+        elif isinstance(solutions[0].all_models[0], pybamm.lead_acid.BaseModel):
             self.chemistry = "Lead acid"
 
         self.t = self.get_output_times()
@@ -33,7 +33,7 @@ class StandardOutputComparison(object):
             np.testing.assert_array_equal(t_common, solution.t[:max_index])
 
         # Get timescale
-        timescale = self.solutions[0].model.timescale_eval
+        timescale = self.solutions[0].timescale_eval
 
         return t_common * timescale
 

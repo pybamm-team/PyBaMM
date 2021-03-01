@@ -52,17 +52,19 @@ class TestSimulationExperiment(unittest.TestCase):
             sim._experiment_times, [3600, 7 * 24 * 3600, 7 * 24 * 3600, 3600]
         )
 
+        model_I = sim.op_conds_to_model_and_param[(-1.0, "A")][0]
+        model_V = sim.op_conds_to_model_and_param[(4.1, "V")][0]
         self.assertIn(
             "Current cut-off (positive) [A] [experiment]",
-            [event.name for event in sim.model.events],
+            [event.name for event in model_V.events],
         )
         self.assertIn(
             "Current cut-off (negative) [A] [experiment]",
-            [event.name for event in sim.model.events],
+            [event.name for event in model_V.events],
         )
         self.assertIn(
             "Voltage cut-off [V] [experiment]",
-            [event.name for event in sim.model.events],
+            [event.name for event in model_I.events],
         )
 
         # fails if trying to set up with something that isn't an experiment
@@ -92,7 +94,7 @@ class TestSimulationExperiment(unittest.TestCase):
         t_eval = [0, 1]
         sim.solve(t_eval, solver=pybamm.CasadiSolver())
         pybamm.set_logging_level("WARNING")
-        self.assertIn("event", sim._solution.termination)
+        self.assertEqual(sim._solution, None)
 
     def test_inputs(self):
         experiment = pybamm.Experiment(
