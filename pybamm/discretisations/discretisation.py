@@ -1039,8 +1039,6 @@ class Discretisation(object):
             expected_size = self._get_variable_size(symbol)
             new_input_parameter = symbol.new_copy()
             new_input_parameter.set_expected_size(expected_size)
-            if expected_size > 1 or symbol.name == "Lambda Distribution [-]":
-                n = 1
             return new_input_parameter
 
         else:

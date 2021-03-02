@@ -636,8 +636,6 @@ class BaseBatteryModel(pybamm.BaseModel):
                         submodel_name, self.name
                     )
                 )
-                # if submodel_name == "cathode oxygen":
-                #     n = 1
                 submodel.set_initial_conditions(self.variables)
                 submodel.set_events(self.variables)
                 pybamm.logger.debug(

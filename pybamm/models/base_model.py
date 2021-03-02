@@ -991,7 +991,9 @@ class EquationDict(dict):
                 equations[var] = pybamm.Scalar(eqn)
             if not (var.domain == eqn.domain or var.domain == [] or eqn.domain == []):
                 raise pybamm.DomainError(
-                    "variable and equation must have the same domain".format(self.name)
+                    "variable and equation in '{}' must have the same domain".format(
+                        self.name
+                    )
                 )
 
         # For initial conditions, check that the equation doesn't contain any

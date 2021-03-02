@@ -1131,8 +1131,8 @@ def x_average(symbol):
         the new averaged symbol
     """
     # Can't take average if the symbol evaluates on edges
-    # if symbol.evaluates_on_edges("primary"):
-    #     raise ValueError("Can't take the x-average of a symbol that evaluates on edges")
+    if symbol.evaluates_on_edges("primary"):
+        raise ValueError("Can't take the x-average of a symbol that evaluates on edges")
     # If symbol doesn't have a domain, its average value is itself
     if symbol.domain in [[], ["current collector"]]:
         new_symbol = symbol.new_copy()
