@@ -722,9 +722,14 @@ class ParameterValues:
                                 integrand.orphans[0], domain, auxiliary_domains
                             )
                 # left is "integral of concatenation of broadcasts"
-                elif isinstance(new_left.child, pybamm.Concatenation) and all(
-                    isinstance(child, pybamm.Broadcast)
-                    for child in new_left.child.children
+                elif (
+                    isinstance(new_left.child, pybamm.Concatenation)
+                    and all(
+                        isinstance(child, pybamm.Broadcast)
+                        for child in new_left.child.children
+                    )
+                    and new_left.child.domain
+                    == ["negative electrode", "separator", "positive electrode"]
                 ):
                     return self.process_symbol(pybamm.x_average(new_left.child))
             # make new symbol, ensure domain remains the same

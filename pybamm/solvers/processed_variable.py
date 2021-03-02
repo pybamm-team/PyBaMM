@@ -325,9 +325,9 @@ class ProcessedVariable(object):
             self.first_dimension = first_spatial_variable
             setattr(self, first_spatial_variable + "_sol", first_dim_pts)
 
-        second_spatial_variable_names = (
-            self.base_variable.secondary_mesh.spatial_variable_names
-        )
+        second_spatial_variable_names = self.base_variables[
+            0
+        ].secondary_mesh.spatial_variable_names
         if len(second_spatial_variable_names) != 1:
             raise ValueError("Found too many spatial variables for a 1D variable")
         else:
