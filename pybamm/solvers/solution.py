@@ -143,7 +143,7 @@ class Solution(object):
             else:
                 self._y = np.hstack(self.all_ys)
         except ValueError:
-            raise pybamm.SolutionError(
+            raise pybamm.SolverError(
                 "The solution is made up from different models, so `y` cannot be "
                 "computed explicitly."
             )
@@ -498,11 +498,17 @@ class Solution(object):
 
     @property
     def sub_solutions(self):
-        """List of sub solutions that have been concatenated to form the full solution"""
+        """
+        List of sub solutions that have been concatenated to form the full solution
+        """
         return self._sub_solutions
 
     def __add__(self, other):
         """ Adds two solutions together, e.g. when stepping """
+        if not isinstance(other, Solution):
+            raise pybamm.SolverError(
+                "Only a Solution or None can be added to a Solution"
+            )
         # Special case: new solution only has one timestep and it is already in the
         # existing solution. In this case, return a copy of the existing solution
         if (
@@ -555,7 +561,9 @@ class Solution(object):
         if other is None:
             return self.copy()
         else:
-            return other + self
+            raise pybamm.SolverError(
+                "Only a Solution or None can be added to a Solution"
+            )
 
     def copy(self):
         new_sol = self.__class__(

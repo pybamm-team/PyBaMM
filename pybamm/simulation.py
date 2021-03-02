@@ -319,8 +319,8 @@ class Simulation:
         self.model = new_model
 
         self.op_conds_to_model_and_param = {
-            op_cond: (new_model, self.parameter_values)
-            for op_cond in set(self.experiment.operating_conditions_strings)
+            op_cond[:2]: (new_model, self.parameter_values)
+            for op_cond in set(self.experiment.operating_conditions)
         }
         self.op_conds_to_built_models = None
 
@@ -365,13 +365,14 @@ class Simulation:
                     replacer = pybamm.SymbolReplacer(symbol_replacement_map)
                     new_model = replacer.process_model(model, inplace=False)
 
-                    # Update the algebraic equation and initial conditions for FunctionControl
-                    # This creates an algebraic equation for the current to allow current, voltage,
-                    # or power control, together with the appropriate guess for the
-                    # initial condition.
+                    # Update the algebraic equation and initial conditions for
+                    # FunctionControl
+                    # This creates an algebraic equation for the current to allow
+                    # current, voltage, or power control, together with the appropriate
+                    # guess for the initial condition.
                     # External circuit submodels are always equations on the current
-                    # The external circuit function should fix either the current, or the voltage,
-                    # or a combination (e.g. I*V for power control)
+                    # The external circuit function should fix either the current, or
+                    # the voltage, or a combination (e.g. I*V for power control)
                     i_cell = new_model.variables["Total current density"]
                     new_model.initial_conditions[
                         i_cell
@@ -414,7 +415,8 @@ class Simulation:
                         )
                     )
 
-                # Remove upper and lower voltage cut-offs that are *not* part of the experiment
+                # Remove upper and lower voltage cut-offs that are *not* part of the
+                # experiment
                 new_model.events = [
                     event
                     for event in new_model.events
@@ -742,9 +744,9 @@ class Simulation:
 
                     # Only allow events specified by experiment
                     if not (
-                        self._solution is None
-                        or self._solution.termination == "final time"
-                        or "[experiment]" in self._solution.termination
+                        cycle_solution is None
+                        or cycle_solution.termination == "final time"
+                        or "[experiment]" in cycle_solution.termination
                     ):
                         feasible = False
                         break
@@ -756,13 +758,13 @@ class Simulation:
                 if feasible is False:
                     pybamm.logger.warning(
                         "\n\n\tExperiment is infeasible: '{}' ".format(
-                            self._solution.termination
+                            cycle_solution.termination
                         )
                         + "was triggered during '{}'. ".format(
                             self.experiment.operating_conditions_strings[idx]
                         )
                         + "The returned solution only contains the first "
-                        "{} cycles. ".format(cycle_num + cycle_offset)
+                        "{} cycles. ".format(cycle_num - 1 + cycle_offset)
                         + "Try reducing the current, shortening the time interval, "
                         "or reducing the period.\n\n"
                     )
@@ -775,8 +777,9 @@ class Simulation:
                 all_cycle_solutions.append(cycle_solution)
                 all_summary_variables.append(cycle_summary_variables)
 
-            self.solution.cycles = all_cycle_solutions
-            self.solution.set_summary_variables(all_summary_variables)
+            if self.solution is not None:
+                self.solution.cycles = all_cycle_solutions
+                self.solution.set_summary_variables(all_summary_variables)
 
             pybamm.logger.notice(
                 "Finish experiment simulation, took {}".format(timer.time())

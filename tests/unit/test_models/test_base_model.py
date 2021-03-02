@@ -927,6 +927,21 @@ class TestBaseModel(unittest.TestCase):
         ):
             model.set_initial_conditions_from({"var_concat_neg": np.ones((5, 6, 7))})
 
+        # Inconsistent model and variable names
+        model = pybamm.BaseModel()
+        var = pybamm.Variable("var")
+        model.rhs = {var: -var}
+        model.initial_conditions = {var: pybamm.Scalar(1)}
+        with self.assertRaisesRegex(pybamm.ModelError, "must appear in the solution"):
+            model.set_initial_conditions_from({"wrong var": 2})
+        var = pybamm.Concatenation(
+            pybamm.Variable("var", "test"), pybamm.Variable("var2", "test2")
+        )
+        model.rhs = {var: -var}
+        model.initial_conditions = {var: pybamm.Scalar(1)}
+        with self.assertRaisesRegex(pybamm.ModelError, "must appear in the solution"):
+            model.set_initial_conditions_from({"wrong var": 2})
+
 
 class TestStandardBatteryBaseModel(unittest.TestCase):
     def test_default_solver(self):
