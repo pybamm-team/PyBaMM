@@ -932,17 +932,34 @@ class BaseSolver(object):
                         "steps!".format(domain)
                     )
 
-        # Run set up on first step
         if old_solution is None:
+            # Run set up on first step
             pybamm.logger.verbose(
                 "Start stepping {} with {}".format(model.name, self.name)
             )
             self.set_up(model, ext_and_inputs)
+            self.models_set_up.update(
+                {model: {"initial conditions": model.concatenated_initial_conditions}}
+            )
             t = 0.0
-        else:
-            # initialize with old solution
+        elif model not in self.models_set_up:
+            # Run set up if the model has changed
+            self.set_up(model, ext_and_inputs)
+            self.models_set_up.update(
+                {model: {"initial conditions": model.concatenated_initial_conditions}}
+            )
+
+        if old_solution is not None:
             t = old_solution.all_ts[-1][-1]
-            model.y0 = old_solution.all_ys[-1][:, -1]
+            if old_solution.all_models[-1] == model:
+                # initialize with old solution
+                model.y0 = old_solution.all_ys[-1][:, -1]
+            else:
+                model.y0 = (
+                    model.set_initial_conditions_from(old_solution)
+                    .concatenated_initial_conditions.evaluate(0, inputs=ext_and_inputs)
+                    .flatten()
+                )
         set_up_time = timer.time()
 
         # (Re-)calculate consistent initial conditions
@@ -995,7 +1012,7 @@ class BaseSolver(object):
         )
 
         # Return solution
-        if save is False or old_solution is None:
+        if save is False:
             return solution
         else:
             return old_solution + solution
@@ -1044,7 +1061,7 @@ class BaseSolver(object):
                 event_sol = pybamm.Solution(
                     solution.t_event,
                     solution.y_event,
-                    solution.model,
+                    solution.all_models[-1],
                     solution.all_inputs[-1],
                     solution.t_event,
                     solution.y_event,
