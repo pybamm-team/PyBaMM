@@ -3,7 +3,6 @@
 #
 
 import pybamm
-import numpy as np
 
 pybamm.set_logging_level("INFO")
 
