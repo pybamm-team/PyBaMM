@@ -10,7 +10,7 @@ from platform import system
 
 # julia imports
 have_julia = pybamm.have_julia()
-# if have_julia:
+# if have_julia and system() != "Windows":
 #     from julia import Main
 
 # from julia import Pkg

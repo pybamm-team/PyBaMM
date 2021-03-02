@@ -10,7 +10,7 @@ import scipy.sparse
 from platform import system
 
 have_julia = pybamm.have_julia()
-if have_julia:
+if have_julia and system() != "Windows":
     from julia import Main
 
 
