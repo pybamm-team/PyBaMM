@@ -73,13 +73,13 @@ class BaseBatteryModel(pybamm.BaseModel):
                 diffusion. The options "negative", "positive" or "both" additionally
                 account for crack propagation in the negative, positive or both
                 electrodes, respectively.
-            * "sei" : str
-                Set the sei submodel to be used. Options are:
+            * "SEI" : str
+                Set the SEI submodel to be used. Options are:
 
                 - "none": :class:`pybamm.sei.NoSEI` (no SEI growth)
                 - "constant": :class:`pybamm.sei.Constant` (constant SEI thickness)
                 - "reaction limited": :class:`pybamm.sei.ReactionLimited`
-                - "solvent-diffusion limited": \
+                - "solvent-diffusion limited":\
                     :class:`pybamm.sei.SolventDiffusionLimited`
                 - "electron-migration limited": \
                     :class:`pybamm.sei.ElectronMigrationLimited`
@@ -87,9 +87,9 @@ class BaseBatteryModel(pybamm.BaseModel):
                     :class:`pybamm.sei.InterstitialDiffusionLimited`
                 - "ec reaction limited": \
                     :class:`pybamm.sei.EcReactionLimited`
-            * "sei film resistance" : str
+            * "SEI film resistance" : str
                 Set the submodel for additional term in the overpotential due to SEI.
-                The default value is "none" if the "sei" option is "none", and
+                The default value is "none" if the "SEI" option is "none", and
                 "distributed" otherwise. This is because the "distributed" model is more
                 complex than the model with no additional resistance, which adds
                 unnecessary complexity if there is no SEI in the first place
@@ -112,7 +112,7 @@ class BaseBatteryModel(pybamm.BaseModel):
                     .. math::
                         \\eta_r = \\frac{F}{RT}
                         * (\\phi_s - \\phi_e - U - R_{sei} * L_{sei} * \\frac{I}{aL})
-            * "sei porosity change" : str
+            * "SEI porosity change" : str
                 Whether to include porosity change due to SEI formation, can be "false"
                 (default) or "true".
             * "side reactions" : list
@@ -127,9 +127,16 @@ class BaseBatteryModel(pybamm.BaseModel):
                 "x-lumped", or "x-full".
             * "total interfacial current density as a state" : str
                 Whether to make a state for the total interfacial current density and
-                solve an algebraic equation for it. Default is "false", unless "sei film
+                solve an algebraic equation for it. Default is "false", unless "SEI film
                 resistance" is distributed in which case it is automatically set to
                 "true".
+            * "operating mode" : str
+                Sets the operating mode for the model. Can be "current" (default),
+                "voltage" or "power". Alternatively, the operating mode can be
+                controlled with an arbitrary function by passing the function directly
+                as the option. In this case the function must define the residual of
+                an algebraic equation. The applied current will be solved for such
+                that the algebraic constraint is satisfied.
 
     **Extends:** :class:`pybamm.BaseModel`
     """
@@ -229,9 +236,9 @@ class BaseBatteryModel(pybamm.BaseModel):
             "thermal": "isothermal",
             "cell geometry": "none",
             "external submodels": [],
-            "sei": "none",
+            "SEI": "none",
             "lithium plating": "none",
-            "sei porosity change": "false",
+            "SEI porosity change": "false",
             "loss of active material": "none",
             "working electrode": "none",
             "particle cracking": "none",
@@ -249,17 +256,17 @@ class BaseBatteryModel(pybamm.BaseModel):
         # The "cell geometry" option will still be overridden by extra_options if
         # provided
 
-        # Change the default for SEI film resistance based on which sei option is
+        # Change the default for SEI film resistance based on which SEI option is
         # provided
         # extra_options = extra_options or {}
         sei_option = extra_options.get(
-            "sei", "none"
+            "SEI", "none"
         )  # return "none" if option not given
         if sei_option == "none":
-            default_options["sei film resistance"] = "none"
+            default_options["SEI film resistance"] = "none"
         else:
-            default_options["sei film resistance"] = "distributed"
-        # The "sei film resistance" option will still be overridden by extra_options if
+            default_options["SEI film resistance"] = "distributed"
+        # The "SEI film resistance" option will still be overridden by extra_options if
         # provided
 
         options = pybamm.FuzzyDict(default_options)
@@ -274,9 +281,9 @@ class BaseBatteryModel(pybamm.BaseModel):
                     )
                 )
 
-        # If "sei film resistance" is "distributed" then "total interfacial current
+        # If "SEI film resistance" is "distributed" then "total interfacial current
         # density as a state" must be "true"
-        if options["sei film resistance"] == "distributed":
+        if options["SEI film resistance"] == "distributed":
             options["total interfacial current density as a state"] = "true"
             # Check that extra_options did not try to provide a clashing option
             if (
@@ -307,7 +314,7 @@ class BaseBatteryModel(pybamm.BaseModel):
                     "Lead-acid models can only have thermal "
                     "effects if dimensionality is 0."
                 )
-            if options["sei"] != "none" or options["sei film resistance"] != "none":
+            if options["SEI"] != "none" or options["SEI film resistance"] != "none":
                 raise pybamm.OptionError("Lead-acid models cannot have SEI formation")
             if options["lithium plating"] != "none":
                 raise pybamm.OptionError("Lead-acid models cannot have lithium plating")
@@ -367,7 +374,7 @@ class BaseBatteryModel(pybamm.BaseModel):
             raise pybamm.OptionError(
                 "Unknown geometry '{}'".format(options["cell geometry"])
             )
-        if options["sei"] not in [
+        if options["SEI"] not in [
             "none",
             "constant",
             "reaction limited",
@@ -376,22 +383,22 @@ class BaseBatteryModel(pybamm.BaseModel):
             "interstitial-diffusion limited",
             "ec reaction limited",
         ]:
-            raise pybamm.OptionError("Unknown sei model '{}'".format(options["sei"]))
-        if options["sei film resistance"] not in ["none", "distributed", "average"]:
+            raise pybamm.OptionError("Unknown SEI model '{}'".format(options["SEI"]))
+        if options["SEI film resistance"] not in ["none", "distributed", "average"]:
             raise pybamm.OptionError(
-                "Unknown sei film resistance model '{}'".format(
-                    options["sei film resistance"]
+                "Unknown SEI film resistance model '{}'".format(
+                    options["SEI film resistance"]
                 )
             )
-        if options["sei porosity change"] not in ["true", "false"]:
-            if options["sei porosity change"] in [True, False]:
+        if options["SEI porosity change"] not in ["true", "false"]:
+            if options["SEI porosity change"] in [True, False]:
                 raise pybamm.OptionError(
-                    "sei porosity change must now be given in string format "
+                    "SEI porosity change must now be given in string format "
                     "('true' or 'false')"
                 )
             raise pybamm.OptionError(
-                "Unknown sei porosity change '{}'".format(
-                    options["sei porosity change"]
+                "Unknown SEI porosity change '{}'".format(
+                    options["SEI porosity change"]
                 )
             )
 
@@ -678,7 +685,7 @@ class BaseBatteryModel(pybamm.BaseModel):
         pybamm.logger.info("Finish building {}".format(self.name))
 
     def new_empty_copy(self):
-        "See :meth:`pybamm.BaseModel.new_empty_copy()`"
+        """ See :meth:`pybamm.BaseModel.new_empty_copy()` """
         new_model = self.__class__(name=self.name, options=self.options, build=False)
         new_model.use_jacobian = self.use_jacobian
         new_model.convert_to_format = self.convert_to_format
@@ -831,16 +838,16 @@ class BaseBatteryModel(pybamm.BaseModel):
 
         # SEI film overpotential
         eta_sei_n_av = self.variables[
-            "X-averaged negative electrode sei film overpotential"
+            "X-averaged negative electrode SEI film overpotential"
         ]
         eta_sei_p_av = self.variables[
-            "X-averaged positive electrode sei film overpotential"
+            "X-averaged positive electrode SEI film overpotential"
         ]
         eta_sei_n_av_dim = self.variables[
-            "X-averaged negative electrode sei film overpotential [V]"
+            "X-averaged negative electrode SEI film overpotential [V]"
         ]
         eta_sei_p_av_dim = self.variables[
-            "X-averaged positive electrode sei film overpotential [V]"
+            "X-averaged positive electrode SEI film overpotential [V]"
         ]
         eta_sei_av = eta_sei_n_av + eta_sei_p_av
         eta_sei_av_dim = eta_sei_n_av_dim + eta_sei_p_av_dim
@@ -855,17 +862,16 @@ class BaseBatteryModel(pybamm.BaseModel):
                 "Measured open circuit voltage [V]": ocv_dim,
                 "X-averaged reaction overpotential": eta_r_av,
                 "X-averaged reaction overpotential [V]": eta_r_av_dim,
-                "X-averaged sei film overpotential": eta_sei_av,
-                "X-averaged sei film overpotential [V]": eta_sei_av_dim,
+                "X-averaged SEI film overpotential": eta_sei_av,
+                "X-averaged SEI film overpotential [V]": eta_sei_av_dim,
                 "X-averaged solid phase ohmic losses": delta_phi_s_av,
                 "X-averaged solid phase ohmic losses [V]": delta_phi_s_av_dim,
             }
         )
 
         # Battery-wide variables
+        V = self.variables["Terminal voltage"]
         V_dim = self.variables["Terminal voltage [V]"]
-        eta_e_av = self.variables["X-averaged electrolyte ohmic losses"]
-        eta_c_av = self.variables["X-averaged concentration overpotential"]
         eta_e_av_dim = self.variables["X-averaged electrolyte ohmic losses [V]"]
         eta_c_av_dim = self.variables["X-averaged concentration overpotential [V]"]
         num_cells = pybamm.Parameter(
@@ -902,15 +908,9 @@ class BaseBatteryModel(pybamm.BaseModel):
         # based on Ohm's Law
         i_cc = self.variables["Current collector current density"]
         i_cc_dim = self.variables["Current collector current density [A.m-2]"]
-        # Gather all overpotentials
-        v_ecm = -(eta_ocv + eta_r_av + eta_c_av + eta_e_av + delta_phi_s_av)
-        v_ecm_dim = -(
-            eta_ocv_dim
-            + eta_r_av_dim
-            + eta_c_av_dim
-            + eta_e_av_dim
-            + delta_phi_s_av_dim
-        )
+        # ECM overvoltage is OCV minus terminal voltage
+        v_ecm = ocv - V
+        v_ecm_dim = ocv_dim - V_dim
         # Current collector area for turning resistivity into resistance
         A_cc = self.param.A_cc
 
@@ -936,18 +936,17 @@ class BaseBatteryModel(pybamm.BaseModel):
         )
 
         # Cut-off voltage
-        voltage = self.variables["Terminal voltage"]
         self.events.append(
             pybamm.Event(
                 "Minimum voltage",
-                voltage - self.param.voltage_low_cut,
+                V - self.param.voltage_low_cut,
                 pybamm.EventType.TERMINATION,
             )
         )
         self.events.append(
             pybamm.Event(
                 "Maximum voltage",
-                voltage - self.param.voltage_high_cut,
+                V - self.param.voltage_high_cut,
                 pybamm.EventType.TERMINATION,
             )
         )

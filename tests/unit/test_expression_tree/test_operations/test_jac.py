@@ -236,7 +236,7 @@ class TestJacobian(unittest.TestCase):
         np.testing.assert_array_equal(jac, np.array([[0, 0, 0, 0, 0]]))
 
     def test_jac_of_number(self):
-        "Jacobian of a number should be zero"
+        """Jacobian of a number should be zero"""
         a = pybamm.Scalar(1)
         b = pybamm.Scalar(2)
 

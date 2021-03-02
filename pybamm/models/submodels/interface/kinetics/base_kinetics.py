@@ -37,7 +37,7 @@ class BaseKinetics(BaseInterface):
             j = pybamm.Variable(
                 "Total "
                 + self.domain.lower()
-                + " electrode interfacial current density",
+                + " electrode interfacial current density variable",
                 domain=self.domain.lower() + " electrode",
                 auxiliary_domains={"secondary": "current collector"},
             )
@@ -71,13 +71,13 @@ class BaseKinetics(BaseInterface):
         # j = j_tot_av + (j - pybamm.x_average(j))  # enforce true average
 
         # Add SEI resistance
-        if self.options["sei film resistance"] == "distributed":
+        if self.options["SEI film resistance"] == "distributed":
             if self.domain == "Negative":
                 R_sei = self.param.R_sei_n
             elif self.domain == "Positive":
                 R_sei = self.param.R_sei_p
             L_sei = variables[
-                "Total " + self.domain.lower() + " electrode sei thickness"
+                "Total " + self.domain.lower() + " electrode SEI thickness"
             ]
             j_tot = variables[
                 "Total "
@@ -85,13 +85,13 @@ class BaseKinetics(BaseInterface):
                 + " electrode interfacial current density variable"
             ]
             eta_sei = -j_tot * L_sei * R_sei
-        elif self.options["sei film resistance"] == "average":
+        elif self.options["SEI film resistance"] == "average":
             if self.domain == "Negative":
                 R_sei = self.param.R_sei_n
             elif self.domain == "Positive":
                 R_sei = self.param.R_sei_p
             L_sei = variables[
-                "Total " + self.domain.lower() + " electrode sei thickness"
+                "Total " + self.domain.lower() + " electrode SEI thickness"
             ]
             eta_sei = -j_tot_av * L_sei * R_sei
         else:

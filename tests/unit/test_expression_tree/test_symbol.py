@@ -297,7 +297,7 @@ class TestSymbol(unittest.TestCase):
 
     def test_simplify(self):
         a = pybamm.Parameter("A")
-        #test error
+        # test error
         with self.assertRaisesRegex(
             pybamm.ModelError, "simplify is deprecated as it now has no effect"
         ):

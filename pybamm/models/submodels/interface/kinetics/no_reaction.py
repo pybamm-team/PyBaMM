@@ -24,7 +24,7 @@ class NoReaction(BaseKinetics):
 
     def __init__(self, param, domain, reaction):
         options = {
-            "sei film resistance": "none",
+            "SEI film resistance": "none",
             "total interfacial current density as a state": "false",
         }
         super().__init__(param, domain, reaction, options)

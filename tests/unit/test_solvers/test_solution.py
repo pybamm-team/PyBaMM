@@ -20,7 +20,7 @@ class TestSolution(unittest.TestCase):
         self.assertEqual(sol.y_event, None)
         self.assertEqual(sol.termination, "final time")
         self.assertEqual(sol.all_inputs, [{}])
-        self.assertIsInstance(sol.model, pybamm.BaseModel)
+        self.assertIsInstance(sol.all_models[0], pybamm.BaseModel)
 
     def test_errors(self):
         bad_ts = [np.array([1, 2, 3]), np.array([3, 4, 5])]
@@ -61,9 +61,10 @@ class TestSolution(unittest.TestCase):
         self.assertEqual(len(sol_sum.sub_solutions), 2)
         np.testing.assert_array_equal(sol_sum.sub_solutions[0].t, t1)
         np.testing.assert_array_equal(sol_sum.sub_solutions[1].t, t2)
-        self.assertEqual(sol_sum.sub_solutions[0].model, sol_sum.model)
+        self.assertEqual(sol_sum.sub_solutions[0].all_models[0], sol_sum.all_models[0])
         np.testing.assert_array_equal(sol_sum.sub_solutions[0].all_inputs[0]["a"], 1)
-        self.assertEqual(sol_sum.sub_solutions[1].model, sol2.model)
+        self.assertEqual(sol_sum.sub_solutions[1].all_models[0], sol2.all_models[0])
+        self.assertEqual(sol_sum.all_models[1], sol2.all_models[0])
         np.testing.assert_array_equal(sol_sum.sub_solutions[1].all_inputs[0]["a"], 2)
 
         # Add solution already contained in existing solution
@@ -71,6 +72,43 @@ class TestSolution(unittest.TestCase):
         y3 = np.ones((20, 1))
         sol3 = pybamm.Solution(t3, y3, pybamm.BaseModel(), {"a": 3})
         self.assertEqual((sol_sum + sol3).all_ts, sol_sum.copy().all_ts)
+
+        # radd
+        sol4 = None + sol3
+        self.assertEqual(sol3.all_ys, sol4.all_ys)
+
+        # radd failure
+        with self.assertRaisesRegex(
+            pybamm.SolverError, "Only a Solution or None can be added to a Solution"
+        ):
+            sol3 + 2
+        with self.assertRaisesRegex(
+            pybamm.SolverError, "Only a Solution or None can be added to a Solution"
+        ):
+            2 + sol3
+
+    def test_add_solutions_different_models(self):
+        # Set up first solution
+        t1 = np.linspace(0, 1)
+        y1 = np.tile(t1, (20, 1))
+        sol1 = pybamm.Solution(t1, y1, pybamm.BaseModel(), {"a": 1})
+        sol1.solve_time = 1.5
+        sol1.integration_time = 0.3
+
+        # Set up second solution
+        t2 = np.linspace(1, 2)
+        y2 = np.tile(t2, (10, 1))
+        sol2 = pybamm.Solution(t2, y2, pybamm.BaseModel(), {"a": 2})
+        sol2.solve_time = 1
+        sol2.integration_time = 0.5
+        sol_sum = sol1 + sol2
+
+        # Test
+        np.testing.assert_array_equal(sol_sum.t, np.concatenate([t1, t2[1:]]))
+        with self.assertRaisesRegex(
+            pybamm.SolverError, "The solution is made up from different models"
+        ):
+            sol_sum.y
 
     def test_copy(self):
         # Set up first solution
@@ -91,6 +129,26 @@ class TestSolution(unittest.TestCase):
         self.assertEqual(sol_copy.solve_time, sol1.solve_time)
         self.assertEqual(sol_copy.integration_time, sol1.integration_time)
 
+    def test_last_state(self):
+        # Set up first solution
+        t1 = [np.linspace(0, 1), np.linspace(1, 2, 5)]
+        y1 = [np.tile(t1[0], (20, 1)), np.tile(t1[1], (20, 1))]
+        sol1 = pybamm.Solution(t1, y1, pybamm.BaseModel(), [{"a": 1}, {"a": 2}])
+
+        sol1.set_up_time = 0.5
+        sol1.solve_time = 1.5
+        sol1.integration_time = 0.3
+
+        sol_last_state = sol1.last_state
+        self.assertEqual(sol_last_state.all_ts[0], 2)
+        np.testing.assert_array_equal(sol_last_state.all_ys[0], 2)
+        self.assertEqual(sol_last_state.all_inputs, sol1.all_inputs[-1:])
+        self.assertEqual(sol_last_state.all_inputs_casadi, sol1.all_inputs_casadi[-1:])
+        self.assertEqual(sol_last_state.all_models, sol1.all_models[-1:])
+        self.assertEqual(sol_last_state.set_up_time, 0)
+        self.assertEqual(sol_last_state.solve_time, 0)
+        self.assertEqual(sol_last_state.integration_time, 0)
+
     def test_cycles(self):
         model = pybamm.lithium_ion.SPM()
         experiment = pybamm.Experiment(
@@ -109,8 +167,8 @@ class TestSolution(unittest.TestCase):
         np.testing.assert_array_equal(sol.cycles[0].y, sol.y[:, :len_cycle_1])
 
         self.assertIsInstance(sol.cycles[1], pybamm.Solution)
-        np.testing.assert_array_equal(sol.cycles[1].t, sol.t[len_cycle_1:])
-        np.testing.assert_array_equal(sol.cycles[1].y, sol.y[:, len_cycle_1:])
+        np.testing.assert_array_equal(sol.cycles[1].t, sol.t[len_cycle_1 - 1 :])
+        np.testing.assert_array_equal(sol.cycles[1].y, sol.y[:, len_cycle_1 - 1 :])
 
     def test_total_time(self):
         sol = pybamm.Solution(np.array([0]), np.array([[1, 2]]), pybamm.BaseModel(), {})
@@ -216,7 +274,7 @@ class TestSolution(unittest.TestCase):
         # test save whole solution
         solution.save("test.pickle")
         solution_load = pybamm.load("test.pickle")
-        self.assertEqual(solution.model.name, solution_load.model.name)
+        self.assertEqual(solution.all_models[0].name, solution_load.all_models[0].name)
         np.testing.assert_array_equal(solution["c"].entries, solution_load["c"].entries)
         np.testing.assert_array_equal(solution["d"].entries, solution_load["d"].entries)
 

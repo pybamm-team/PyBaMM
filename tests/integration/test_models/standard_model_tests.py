@@ -128,9 +128,7 @@ class OptimisationsTest(object):
 
         self.model = model
 
-    def evaluate_model(
-        self, use_known_evals=False, to_python=False, to_jax=False
-    ):
+    def evaluate_model(self, use_known_evals=False, to_python=False, to_jax=False):
         result = np.empty((0, 1))
         for eqn in [self.model.concatenated_rhs, self.model.concatenated_algebraic]:
 

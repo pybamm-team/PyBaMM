@@ -42,7 +42,7 @@ def domain_size(domain):
 
 
 def create_object_of_size(size, typ="vector"):
-    "Return object, consisting of NaNs, of the right shape"
+    """Return object, consisting of NaNs, of the right shape."""
     if typ == "vector":
         return np.nan * np.ones((size, 1))
     elif typ == "matrix":
@@ -277,7 +277,7 @@ class Symbol(anytree.NodeMixin):
 
     @property
     def auxiliary_domains(self):
-        "Returns auxiliary domains"
+        """Returns auxiliary domains"""
         return self._auxiliary_domains
 
     @auxiliary_domains.setter
@@ -301,11 +301,11 @@ class Symbol(anytree.NodeMixin):
 
     @property
     def secondary_domain(self):
-        "Helper function to get the secondary domain of a symbol"
+        """Helper function to get the secondary domain of a symbol"""
         return self.auxiliary_domains["secondary"]
 
     def copy_domains(self, symbol):
-        "Copy the domains from a given symbol, bypassing checks"
+        """Copy the domains from a given symbol, bypassing checks"""
         self._domains = symbol.domains.copy()
         self._domain = self._domains["primary"]
         self._auxiliary_domains = {
@@ -314,14 +314,14 @@ class Symbol(anytree.NodeMixin):
         self.set_id()
 
     def clear_domains(self):
-        "Clear domains, bypassing checks"
+        """Clear domains, bypassing checks"""
         self._domains = {"primary": []}
         self._domain = []
         self._auxiliary_domains = {}
         self.set_id()
 
     def get_children_auxiliary_domains(self, children):
-        "Combine auxiliary domains from children, at all levels"
+        """Combine auxiliary domains from children, at all levels"""
         aux_domains = {}
         for child in children:
             for level in child.auxiliary_domains.keys():
@@ -613,7 +613,8 @@ class Symbol(anytree.NodeMixin):
             return pybamm.Scalar(0)
 
     def _diff(self, variable):
-        "Default behaviour for differentiation, overriden by Binary and Unary Operators"
+        """Default behaviour for differentiation, overriden by Binary and Unary Operators
+        """
         raise NotImplementedError
 
     def jac(self, variable, known_jacs=None, clear_domain=True):

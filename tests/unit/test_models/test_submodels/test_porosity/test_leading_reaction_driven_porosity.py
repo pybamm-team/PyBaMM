@@ -13,7 +13,7 @@ class TestLeadingOrder(unittest.TestCase):
         a = pybamm.PrimaryBroadcast(pybamm.Scalar(0), "current collector")
         variables = {
             "X-averaged negative electrode interfacial current density": a,
-            "X-averaged negative electrode sei interfacial current density": a,
+            "X-averaged negative electrode SEI interfacial current density": a,
             "X-averaged positive electrode interfacial current density": a,
         }
         submodel = pybamm.porosity.LeadingOrder(param)
