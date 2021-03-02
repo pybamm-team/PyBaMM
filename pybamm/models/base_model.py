@@ -93,7 +93,7 @@ class BaseModel(object):
         self._algebraic = {}
         self._initial_conditions = {}
         self._boundary_conditions = {}
-        self._variables = {}
+        self._variables = pybamm.FuzzyDict({})
         self._events = []
         self._concatenated_rhs = None
         self._concatenated_algebraic = None
@@ -382,13 +382,25 @@ class BaseModel(object):
         else:
             model = self.new_copy()
 
+        if isinstance(solution, pybamm.Solution):
+            solution = solution.last_state
+        else:
+            solution = pybamm.FuzzyDict(solution)
         for var, equation in model.initial_conditions.items():
             if isinstance(var, pybamm.Variable):
-                final_state = solution[var.name]
+                try:
+                    final_state = solution[var.name]
+                except KeyError as e:
+                    raise pybamm.ModelError(
+                        "To update a model from a solution, each variable in "
+                        "model.initial_conditions must appear in the solution with "
+                        "the same key as the variable name. In the solution provided, "
+                        f"{e.args[0]}"
+                    )
                 if isinstance(solution, pybamm.Solution):
                     final_state = final_state.data
                 if final_state.ndim == 1:
-                    final_state_eval = np.array([final_state[-1]])
+                    final_state_eval = final_state[-1:]
                 elif final_state.ndim == 2:
                     final_state_eval = final_state[:, -1]
                 elif final_state.ndim == 3:
@@ -399,7 +411,15 @@ class BaseModel(object):
             elif isinstance(var, pybamm.Concatenation):
                 children = []
                 for child in var.orphans:
-                    final_state = solution[child.name]
+                    try:
+                        final_state = solution[child.name]
+                    except KeyError as e:
+                        raise pybamm.ModelError(
+                            "To update a model from a solution, each variable in "
+                            "model.initial_conditions must appear in the solution with "
+                            "the same key as the variable name. In the solution "
+                            f"provided, {e.args[0]}"
+                        )
                     if isinstance(solution, pybamm.Solution):
                         final_state = final_state.data
                     if final_state.ndim == 2:

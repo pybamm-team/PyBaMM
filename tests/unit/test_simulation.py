@@ -71,12 +71,18 @@ class TestSimulation(unittest.TestCase):
 
         # test solve without check
         sim = pybamm.Simulation(pybamm.lithium_ion.SPM())
-        sim.solve(t_eval=[0, 600], check_model=False)
+        sol = sim.solve(t_eval=[0, 600], check_model=False)
         for val in list(sim.built_model.rhs.values()):
             self.assertFalse(val.has_symbol_of_classes(pybamm.Parameter))
             # skip test for scalar variables (e.g. discharge capacity)
             if val.size > 1:
                 self.assertTrue(val.has_symbol_of_classes(pybamm.Matrix))
+
+        # Test options that are only available when simulating an experiment
+        with self.assertRaisesRegex(ValueError, "save_at_cycles"):
+            sim.solve(save_at_cycles=2)
+        with self.assertRaisesRegex(ValueError, "starting_solution"):
+            sim.solve(starting_solution=sol)
 
     def test_solve_non_battery_model(self):
 
