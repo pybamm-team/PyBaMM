@@ -72,10 +72,10 @@ Lithium-ion parameter sets
          LiFePO4-graphite Li-ion batteries: power and capacity fade simulations. Journal
          of The Electrochemical Society, 160(4):A616, 2013. doi:10.1149/2.053304jes.
     * Ramadass2004 :
-       - Scott G. Marquis, Valentin Sulzer, Robert Timms, Colin P. Please, and S. Jon
-         Chapman. An asymptotic derivation of a single particle model with electrolyte.
-         Journal of The Electrochemical Society, 166(15):A3693–A3706, 2019.
-         doi:10.1149/2.0341915jes.
+       - P Ramadass, Bala Haran, Parthasarathy M Gomadam, Ralph White, and Branko N
+         Popov. Development of first principles capacity fade model for li-ion cells.
+         Journal of the Electrochemical Society, 151(2):A196, 2004.
+         doi:10.1149/1.1634273.
 """
 
 #
@@ -163,7 +163,7 @@ Ramadass2004 = {
     "electrolyte": "lipf6_Ramadass2004",
     "experiment": "1C_discharge_from_full_Ramadass2004",
     "sei": "ramadass2004",
-    "citation": "Marquis2019",
+    "citation": "Ramadass2004",
 }
 
 Prada2013 = {

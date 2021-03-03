@@ -1112,8 +1112,14 @@ def surf(symbol):
     return boundary_value(symbol, "right")
 
 
+#
+# Methods for averaging
+#
+
+
 def x_average(symbol):
-    """convenience function for creating an average in the x-direction
+    """
+    convenience function for creating an average in the x-direction
 
     Parameters
     ----------
@@ -1219,10 +1225,13 @@ def z_average(symbol):
         return symbol.orphans[0]
     # Otherwise, use Integral to calculate average value
     else:
-        geo = pybamm.geometric_parameters
+        # We compute the length as Integral(1, z) as this will be easier to identify
+        # for simplifications later on and it gives the correct behaviour when using
+        # ZeroDimensionalSpatialMethod
         z = pybamm.standard_spatial_vars.z
-        l_z = geo.l_z
-        return Integral(symbol, z) / l_z
+        v = pybamm.ones_like(symbol)
+        l = pybamm.Integral(v, z)
+        return Integral(symbol, z) / l
 
 
 def yz_average(symbol):
@@ -1256,12 +1265,14 @@ def yz_average(symbol):
         return symbol.orphans[0]
     # Otherwise, use Integral to calculate average value
     else:
-        geo = pybamm.geometric_parameters
+        # We compute the area as Integral(1, [y,z]) as this will be easier to identify
+        # for simplifications later on and it gives the correct behaviour when using
+        # ZeroDimensionalSpatialMethod
         y = pybamm.standard_spatial_vars.y
         z = pybamm.standard_spatial_vars.z
-        l_y = geo.l_y
-        l_z = geo.l_z
-        return Integral(symbol, [y, z]) / (l_y * l_z)
+        v = pybamm.ones_like(symbol)
+        A = pybamm.Integral(v, [y, z])
+        return Integral(symbol, [y, z]) / A
 
 
 def r_average(symbol):

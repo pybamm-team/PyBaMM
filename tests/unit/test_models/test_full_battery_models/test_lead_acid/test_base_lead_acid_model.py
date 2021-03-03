@@ -25,7 +25,7 @@ class TestBaseLeadAcidModel(unittest.TestCase):
         ):
             pybamm.lead_acid.BaseModel({"dimensionality": 1, "thermal": "x-full"})
         with self.assertRaisesRegex(pybamm.OptionError, "SEI"):
-            pybamm.lead_acid.BaseModel({"sei": "constant"})
+            pybamm.lead_acid.BaseModel({"SEI": "constant"})
         with self.assertRaisesRegex(pybamm.OptionError, "lithium plating"):
             pybamm.lead_acid.BaseModel({"lithium plating": "reversible"})
 
