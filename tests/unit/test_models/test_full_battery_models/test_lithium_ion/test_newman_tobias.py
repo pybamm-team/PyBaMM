@@ -16,10 +16,9 @@ class TestNewmanTobias(unittest.TestCase):
         model = pybamm.lithium_ion.NewmanTobias(options)
         model.check_well_posedness()
 
-        # Not currently compatible (see issue #1399)
-        with self.assertRaises(pybamm.OptionError):
-            options = {"current collector": "potential pair", "dimensionality": 2}
-            pybamm.lithium_ion.NewmanTobias(options)
+        options = {"current collector": "potential pair", "dimensionality": 2}
+        pybamm.lithium_ion.NewmanTobias(options)
+        model.check_well_posedness()
 
         options = {"bc_options": {"dimensionality": 5}}
         with self.assertRaises(pybamm.OptionError):
@@ -45,13 +44,13 @@ class TestNewmanTobias(unittest.TestCase):
         with self.assertRaises(NotImplementedError):
             pybamm.lithium_ion.NewmanTobias(options)
         # 2plus1D
-        # options = {
-        #    "current collector": "potential pair",
-        #    "dimensionality": 2,
-        #    "thermal": "x-full",
-        # }
-        # with self.assertRaises(NotImplementedError):
-        #    pybamm.lithium_ion.NewmanTobias(options)
+        options = {
+            "current collector": "potential pair",
+            "dimensionality": 2,
+            "thermal": "x-full",
+        }
+        with self.assertRaises(NotImplementedError):
+            pybamm.lithium_ion.NewmanTobias(options)
 
     def test_lumped_thermal_1plus1D(self):
         options = {
@@ -62,14 +61,14 @@ class TestNewmanTobias(unittest.TestCase):
         model = pybamm.lithium_ion.NewmanTobias(options)
         model.check_well_posedness()
 
-    # def test_lumped_thermal_2plus1D(self):
-    #    options = {
-    #        "current collector": "potential pair",
-    #        "dimensionality": 2,
-    #        "thermal": "lumped",
-    #    }
-    #    model = pybamm.lithium_ion.NewmanTobias(options)
-    #    model.check_well_posedness()
+    def test_lumped_thermal_2plus1D(self):
+        options = {
+            "current collector": "potential pair",
+            "dimensionality": 2,
+            "thermal": "lumped",
+        }
+        model = pybamm.lithium_ion.NewmanTobias(options)
+        model.check_well_posedness()
 
     def test_thermal_1plus1D(self):
         options = {
@@ -80,29 +79,29 @@ class TestNewmanTobias(unittest.TestCase):
         model = pybamm.lithium_ion.NewmanTobias(options)
         model.check_well_posedness()
 
-    # def test_thermal_2plus1D(self):
-    #    options = {
-    #        "current collector": "potential pair",
-    #        "dimensionality": 2,
-    #        "thermal": "x-lumped",
-    #    }
-    #    model = pybamm.lithium_ion.NewmanTobias(options)
-    #    model.check_well_posedness()
+    def test_thermal_2plus1D(self):
+        options = {
+            "current collector": "potential pair",
+            "dimensionality": 2,
+            "thermal": "x-lumped",
+        }
+        model = pybamm.lithium_ion.NewmanTobias(options)
+        model.check_well_posedness()
 
-    def test_particle_uniform(self):
-        options = {"particle": "uniform profile"}
+    def test_particle_fickian(self):
+        options = {"particle": "Fickian diffusion"}
         model = pybamm.lithium_ion.NewmanTobias(options)
         model.check_well_posedness()
 
     def test_particle_quadratic(self):
         options = {"particle": "quadratic profile"}
-        with self.assertRaisesRegex(pybamm.OptionError, "Newman-Tobias model"):
-            pybamm.lithium_ion.NewmanTobias(options)
+        model = pybamm.lithium_ion.NewmanTobias(options)
+        model.check_well_posedness()
 
     def test_particle_quartic(self):
         options = {"particle": "quartic profile"}
-        with self.assertRaisesRegex(pybamm.OptionError, "Newman-Tobias model"):
-            pybamm.lithium_ion.NewmanTobias(options)
+        model = pybamm.lithium_ion.NewmanTobias(options)
+        model.check_well_posedness()
 
     def test_particle_shape_user(self):
         options = {"particle shape": "user"}
@@ -158,37 +157,37 @@ class TestNewmanTobias(unittest.TestCase):
 
 class TestNewmanTobiasWithSEI(unittest.TestCase):
     def test_well_posed_constant(self):
-        options = {"sei": "constant"}
+        options = {"SEI": "constant"}
         model = pybamm.lithium_ion.NewmanTobias(options)
         model.check_well_posedness()
 
     def test_well_posed_reaction_limited(self):
-        options = {"sei": "reaction limited"}
+        options = {"SEI": "reaction limited"}
         model = pybamm.lithium_ion.NewmanTobias(options)
         model.check_well_posedness()
 
     def test_well_posed_reaction_limited_average_film_resistance(self):
-        options = {"sei": "reaction limited", "sei film resistance": "average"}
+        options = {"SEI": "reaction limited", "SEI film resistance": "average"}
         model = pybamm.lithium_ion.NewmanTobias(options)
         model.check_well_posedness()
 
     def test_well_posed_solvent_diffusion_limited(self):
-        options = {"sei": "solvent-diffusion limited"}
+        options = {"SEI": "solvent-diffusion limited"}
         model = pybamm.lithium_ion.NewmanTobias(options)
         model.check_well_posedness()
 
     def test_well_posed_electron_migration_limited(self):
-        options = {"sei": "electron-migration limited"}
+        options = {"SEI": "electron-migration limited"}
         model = pybamm.lithium_ion.NewmanTobias(options)
         model.check_well_posedness()
 
     def test_well_posed_interstitial_diffusion_limited(self):
-        options = {"sei": "interstitial-diffusion limited"}
+        options = {"SEI": "interstitial-diffusion limited"}
         model = pybamm.lithium_ion.NewmanTobias(options)
         model.check_well_posedness()
 
     def test_well_posed_ec_reaction_limited(self):
-        options = {"sei": "ec reaction limited", "sei porosity change": "true"}
+        options = {"SEI": "ec reaction limited", "SEI porosity change": "true"}
         model = pybamm.lithium_ion.NewmanTobias(options)
         model.check_well_posedness()
 

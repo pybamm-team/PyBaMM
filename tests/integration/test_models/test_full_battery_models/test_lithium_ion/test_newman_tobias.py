@@ -33,23 +33,21 @@ class TestNewmanTobias(unittest.TestCase):
         modeltest = tests.StandardModelTest(model, var_pts=var_pts)
         modeltest.test_all(skip_output_tests=True)
 
-    # Not currently compatible (see issue #1399)
-    # def test_basic_processing_2plus1D(self):
-    #    options = {"current collector": "potential pair", "dimensionality": 2}
-    #    model = pybamm.lithium_ion.NewmanTobias(options)
-    #    var = pybamm.standard_spatial_vars
-    #    var_pts = {
-    #        var.x_n: 5,
-    #        var.x_s: 5,
-    #        var.x_p: 5,
-    #        var.r_n: 5,
-    #        var.r_p: 5,
-    #        var.y: 5,
-    #        var.z: 5,
-    #    }
-    #    modeltest = tests.StandardModelTest(model, var_pts=var_pts)
-    #    solver = model.default_solver
-    #    modeltest.test_all(skip_output_tests=True)
+    def test_basic_processing_2plus1D(self):
+        options = {"current collector": "potential pair", "dimensionality": 2}
+        model = pybamm.lithium_ion.NewmanTobias(options)
+        var = pybamm.standard_spatial_vars
+        var_pts = {
+            var.x_n: 5,
+            var.x_s: 5,
+            var.x_p: 5,
+            var.r_n: 5,
+            var.r_p: 5,
+            var.y: 5,
+            var.z: 5,
+        }
+        modeltest = tests.StandardModelTest(model, var_pts=var_pts)
+        modeltest.test_all(skip_output_tests=True)
 
     def test_optimisations(self):
         options = {"thermal": "isothermal"}
@@ -67,6 +65,24 @@ class TestNewmanTobias(unittest.TestCase):
         optimtest = tests.OptimisationsTest(model)
         optimtest.set_up_model(to_python=True)
         optimtest.set_up_model(to_python=False)
+
+    def test_particle_fickian(self):
+        options = {"particle": "Fickian diffusion"}
+        model = pybamm.lithium_ion.NewmanTobias(options)
+        modeltest = tests.StandardModelTest(model)
+        modeltest.test_all()
+
+    def test_particle_quadratic(self):
+        options = {"particle": "quadratic profile"}
+        model = pybamm.lithium_ion.NewmanTobias(options)
+        modeltest = tests.StandardModelTest(model)
+        modeltest.test_all()
+
+    def test_particle_quartic(self):
+        options = {"particle": "quartic profile"}
+        model = pybamm.lithium_ion.NewmanTobias(options)
+        modeltest = tests.StandardModelTest(model)
+        modeltest.test_all()
 
     def test_full_thermal(self):
         options = {"thermal": "x-full"}
@@ -140,43 +156,43 @@ class TestNewmanTobias(unittest.TestCase):
 
 class TestNewmanTobiasWithSEI(unittest.TestCase):
     def test_well_posed_constant(self):
-        options = {"sei": "constant"}
+        options = {"SEI": "constant"}
         model = pybamm.lithium_ion.NewmanTobias(options)
         modeltest = tests.StandardModelTest(model)
         modeltest.test_all()
 
     def test_well_posed_reaction_limited(self):
-        options = {"sei": "reaction limited"}
+        options = {"SEI": "reaction limited"}
         model = pybamm.lithium_ion.NewmanTobias(options)
         modeltest = tests.StandardModelTest(model)
         modeltest.test_all()
 
     def test_well_posed_reaction_limited_average_film_resistance(self):
-        options = {"sei": "reaction limited", "sei film resistance": "average"}
+        options = {"SEI": "reaction limited", "SEI film resistance": "average"}
         model = pybamm.lithium_ion.NewmanTobias(options)
         modeltest = tests.StandardModelTest(model)
         modeltest.test_all()
 
     def test_well_posed_solvent_diffusion_limited(self):
-        options = {"sei": "solvent-diffusion limited"}
+        options = {"SEI": "solvent-diffusion limited"}
         model = pybamm.lithium_ion.NewmanTobias(options)
         modeltest = tests.StandardModelTest(model)
         modeltest.test_all()
 
     def test_well_posed_electron_migration_limited(self):
-        options = {"sei": "electron-migration limited"}
+        options = {"SEI": "electron-migration limited"}
         model = pybamm.lithium_ion.NewmanTobias(options)
         modeltest = tests.StandardModelTest(model)
         modeltest.test_all()
 
     def test_well_posed_interstitial_diffusion_limited(self):
-        options = {"sei": "interstitial-diffusion limited"}
+        options = {"SEI": "interstitial-diffusion limited"}
         model = pybamm.lithium_ion.NewmanTobias(options)
         modeltest = tests.StandardModelTest(model)
         modeltest.test_all()
 
     def test_well_posed_ec_reaction_limited(self):
-        options = {"sei": "ec reaction limited", "sei porosity change": "true"}
+        options = {"SEI": "ec reaction limited", "SEI porosity change": "true"}
         model = pybamm.lithium_ion.NewmanTobias(options)
         modeltest = tests.StandardModelTest(model)
         modeltest.test_all()

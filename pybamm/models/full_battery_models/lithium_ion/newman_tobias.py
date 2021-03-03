@@ -12,6 +12,8 @@ class NewmanTobias(DFN):
     Unlike the model posed in [1]_, this models accounts for nonlinear Butler-Volmer
     kinetics, and tracks the average concentration in the solid phase in each electrode.
     This is analagous to including an equation for the state of charge as in [2]_.
+    The user can pass the "particle" option (as documented in `pybamm.BaseBatteryModel`)
+    to include mass transport in the particles.
 
     Parameters
     ----------
@@ -41,27 +43,12 @@ class NewmanTobias(DFN):
 
     def __init__(self, options=None, name="Newman-Tobias model", build=True):
 
-        # check options
+        # Set default option for particle submodel. Other default options are
+        # those given in `pybamm.BaseBatteryModel`
         options = options or {}
-        # set option to "uniform profile" if not provided
+        # Set option to the default "uniform profile" if not provided
         if "particle" not in options:
             options["particle"] = "uniform profile"
-        # raise error if any other particle option is selected
-        if options["particle"] != "uniform profile":
-            raise pybamm.OptionError(
-                "Newman-Tobias model cannot model mass transport within the particles. "
-                "The 'particle' option must be 'uniform profile' but is {}.".format(
-                    options["particle"]
-                )
-            )
-        # currently not available as a "2+1D" model (see #1399)
-        dimensionality_option = options.get(
-            "dimensionality", "none"
-        )  # return "none" if option not given
-        if dimensionality_option == 2:
-            raise pybamm.OptionError(
-                "Newman-Tobias model does not current support 2D current collectors"
-            )
 
         super().__init__(options, name, build)
 
@@ -70,12 +57,28 @@ class NewmanTobias(DFN):
 
     def set_particle_submodel(self):
 
-        self.submodels["negative particle"] = pybamm.particle.PolynomialSingleParticle(
-            self.param, "Negative", "uniform profile"
-        )
-        self.submodels["positive particle"] = pybamm.particle.PolynomialSingleParticle(
-            self.param, "Positive", "uniform profile"
-        )
+        if self.options["particle"] == "Fickian diffusion":
+            self.submodels["negative particle"] = pybamm.particle.FickianSingleParticle(
+                self.param, "Negative"
+            )
+            self.submodels["positive particle"] = pybamm.particle.FickianSingleParticle(
+                self.param, "Positive"
+            )
+        elif self.options["particle"] in [
+            "uniform profile",
+            "quadratic profile",
+            "quartic profile",
+        ]:
+            self.submodels[
+                "negative particle"
+            ] = pybamm.particle.PolynomialSingleParticle(
+                self.param, "Negative", self.options["particle"]
+            )
+            self.submodels[
+                "positive particle"
+            ] = pybamm.particle.PolynomialSingleParticle(
+                self.param, "Positive", self.options["particle"]
+            )
 
     def set_electrolyte_submodel(self):
 
