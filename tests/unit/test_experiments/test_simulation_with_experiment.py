@@ -94,14 +94,18 @@ class TestSimulationExperiment(unittest.TestCase):
         self.assertGreater(sol2.t[-1], sol.t[-1])
         self.assertEqual(sol2.cycles[0], sol.cycles[0])
         self.assertEqual(len(sol2.cycles), 2)
+        # Check starting solution is unchanged
+        self.assertEqual(len(sol.cycles), 1)
 
     def test_run_experiment_old_setup_type(self):
         experiment = pybamm.Experiment(
             [
-                "Discharge at C/20 for 1 hour",
-                "Charge at 1 A until 4.1 V",
-                "Hold at 4.1 V until C/2",
-                "Discharge at 2 W for 1 hour",
+                (
+                    "Discharge at C/20 for 1 hour",
+                    "Charge at 1 A until 4.1 V",
+                    "Hold at 4.1 V until C/2",
+                    "Discharge at 2 W for 1 hour",
+                ),
             ],
             use_simulation_setup_type="old",
         )
@@ -109,12 +113,6 @@ class TestSimulationExperiment(unittest.TestCase):
         sim = pybamm.Simulation(model, experiment=experiment)
         solution1 = sim.solve(solver=pybamm.CasadiSolver())
         self.assertEqual(solution1.termination, "final time")
-        self.assertEqual(len(solution1.cycles), 1)
-
-        # run again with starting solution
-        solution2 = sim.solve(starting_solution=solution1)
-        self.assertEqual(solution2.cycles[0], solution1.cycles[0])
-        self.assertEqual(len(solution2.cycles), 2)
 
     def test_run_experiment_breaks_early(self):
         experiment = pybamm.Experiment(["Discharge at 2 C for 1 hour"])

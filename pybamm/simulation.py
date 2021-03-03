@@ -668,9 +668,9 @@ class Simulation:
                 starting_solution_cycles = []
                 starting_solution_summary_variables = []
             else:
-                starting_solution_cycles = starting_solution.cycles
+                starting_solution_cycles = starting_solution.cycles.copy()
                 starting_solution_summary_variables = (
-                    starting_solution.all_summary_variables
+                    starting_solution.all_summary_variables.copy()
                 )
 
             cycle_offset = len(starting_solution_cycles)
@@ -744,9 +744,9 @@ class Simulation:
 
                     # Only allow events specified by experiment
                     if not (
-                        cycle_solution is None
-                        or cycle_solution.termination == "final time"
-                        or "[experiment]" in cycle_solution.termination
+                        step_solution is None
+                        or step_solution.termination == "final time"
+                        or "[experiment]" in step_solution.termination
                     ):
                         feasible = False
                         break
@@ -758,7 +758,7 @@ class Simulation:
                 if feasible is False:
                     pybamm.logger.warning(
                         "\n\n\tExperiment is infeasible: '{}' ".format(
-                            cycle_solution.termination
+                            step_solution.termination
                         )
                         + "was triggered during '{}'. ".format(
                             self.experiment.operating_conditions_strings[idx]
