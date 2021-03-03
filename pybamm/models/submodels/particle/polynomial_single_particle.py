@@ -278,7 +278,7 @@ class PolynomialSingleParticle(BaseParticle):
         return variables
 
     def set_rhs(self, variables):
-        # Note: we have to use `pybamm.source(rhs, var)`` in the rhs dict so that
+        # Note: we have to use `pybamm.source(rhs, var)` in the rhs dict so that
         # the scalar source term gets multplied by the correct mass matrix when
         # using this model with 2D current collectors with the finite element
         # method (see #1399)

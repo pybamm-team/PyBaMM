@@ -1265,7 +1265,7 @@ def yz_average(symbol):
         return symbol.orphans[0]
     # Otherwise, use Integral to calculate average value
     else:
-        # We compute the are as Integral(1, [y,z]) as this will be easier to identify
+        # We compute the area as Integral(1, [y,z]) as this will be easier to identify
         # for simplifications later on and it gives the correct behaviour when using
         # ZeroDimensionalSpatialMethod
         y = pybamm.standard_spatial_vars.y
