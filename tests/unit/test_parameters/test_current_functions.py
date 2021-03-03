@@ -20,7 +20,7 @@ class TestCurrentFunctions(unittest.TestCase):
             }
         )
         processed_current = parameter_values.process_symbol(current)
-        self.assertIsInstance(processed_current.simplify(), pybamm.Scalar)
+        self.assertIsInstance(processed_current, pybamm.Scalar)
 
     def test_get_current_data(self):
         # test process parameters

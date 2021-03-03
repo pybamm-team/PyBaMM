@@ -14,7 +14,7 @@ class TestFull(unittest.TestCase):
         a_p = pybamm.PrimaryBroadcast(pybamm.Scalar(0), ["positive electrode"])
         variables = {
             "Negative electrode interfacial current density": a_n,
-            "Negative electrode sei interfacial current density": a_n,
+            "Negative electrode SEI interfacial current density": a_n,
             "Positive electrode interfacial current density": a_p,
         }
         submodel = pybamm.porosity.Full(param)

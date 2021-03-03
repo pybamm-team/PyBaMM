@@ -54,26 +54,20 @@ class TestSPM(unittest.TestCase):
         optimtest = tests.OptimisationsTest(model)
 
         original = optimtest.evaluate_model()
-        simplified = optimtest.evaluate_model(simplify=True)
         using_known_evals = optimtest.evaluate_model(use_known_evals=True)
-        simp_and_known = optimtest.evaluate_model(simplify=True, use_known_evals=True)
-        simp_and_python = optimtest.evaluate_model(simplify=True, to_python=True)
-        np.testing.assert_array_almost_equal(original, simplified)
+        to_python = optimtest.evaluate_model(to_python=True)
         np.testing.assert_array_almost_equal(original, using_known_evals)
-        np.testing.assert_array_almost_equal(original, simp_and_known)
-        np.testing.assert_array_almost_equal(original, simp_and_python)
+        np.testing.assert_array_almost_equal(original, to_python)
 
         if system() != "Windows":
-            simp_and_jax = optimtest.evaluate_model(simplify=True, to_jax=True)
-            np.testing.assert_array_almost_equal(original, simp_and_jax)
+            to_jax = optimtest.evaluate_model(to_jax=True)
+            np.testing.assert_array_almost_equal(original, to_jax)
 
     def test_set_up(self):
         model = pybamm.lithium_ion.SPM()
         optimtest = tests.OptimisationsTest(model)
-        optimtest.set_up_model(simplify=False, to_python=True)
-        optimtest.set_up_model(simplify=True, to_python=True)
-        optimtest.set_up_model(simplify=False, to_python=False)
-        optimtest.set_up_model(simplify=True, to_python=False)
+        optimtest.set_up_model(to_python=True)
+        optimtest.set_up_model(to_python=False)
 
     def test_charge(self):
         options = {"thermal": "isothermal"}
@@ -178,31 +172,31 @@ class TestSPM(unittest.TestCase):
 
 class TestSPMWithSEI(unittest.TestCase):
     def test_well_posed_reaction_limited(self):
-        options = {"sei": "reaction limited"}
+        options = {"SEI": "reaction limited"}
         model = pybamm.lithium_ion.SPM(options)
         modeltest = tests.StandardModelTest(model)
         modeltest.test_all()
 
     def test_well_posed_solvent_diffusion_limited(self):
-        options = {"sei": "solvent-diffusion limited"}
+        options = {"SEI": "solvent-diffusion limited"}
         model = pybamm.lithium_ion.SPM(options)
         modeltest = tests.StandardModelTest(model)
         modeltest.test_all()
 
     def test_well_posed_electron_migration_limited(self):
-        options = {"sei": "electron-migration limited"}
+        options = {"SEI": "electron-migration limited"}
         model = pybamm.lithium_ion.SPM(options)
         modeltest = tests.StandardModelTest(model)
         modeltest.test_all()
 
     def test_well_posed_interstitial_diffusion_limited(self):
-        options = {"sei": "interstitial-diffusion limited"}
+        options = {"SEI": "interstitial-diffusion limited"}
         model = pybamm.lithium_ion.SPM(options)
         modeltest = tests.StandardModelTest(model)
         modeltest.test_all()
 
     def test_well_posed_ec_reaction_limited(self):
-        options = {"sei": "ec reaction limited", "sei porosity change": "true"}
+        options = {"SEI": "ec reaction limited", "SEI porosity change": "true"}
         model = pybamm.lithium_ion.SPM(options)
         modeltest = tests.StandardModelTest(model)
         modeltest.test_all()

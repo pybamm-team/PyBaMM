@@ -19,7 +19,7 @@ class TestStandardParametersLeadAcid(unittest.TestCase):
         output_file = "lead_acid_parameters.txt"
         parameter_values.print_parameters(parameters, output_file)
         # test print_parameters with dict and without C-rate
-        del parameter_values["Cell capacity [A.h]"]
+        del parameter_values["Nominal cell capacity [A.h]"]
         parameters = {"C_e": parameters.C_e, "sigma_n": parameters.sigma_n}
         parameter_values.print_parameters(parameters)
 
@@ -100,7 +100,7 @@ class TestStandardParametersLeadAcid(unittest.TestCase):
     def test_thermal_parameters(self):
         values = pybamm.lead_acid.BaseModel().default_parameter_values
         param = pybamm.LeadAcidParameters()
-        T = 1   # dummy temperature as the values are constant
+        T = 1  # dummy temperature as the values are constant
 
         # Density
         self.assertAlmostEqual(values.evaluate(param.rho_cn(T)), 0.8810, places=2)

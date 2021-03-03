@@ -47,9 +47,7 @@ def half_cell_geometry(
     }
     # Add particle domains
     if include_particles is True:
-        geometry.update(
-            {"working particle": {var.r_w: {"min": 0, "max": 1}}}
-        )
+        geometry.update({"working particle": {var.r_w: {"min": 0, "max": 1}}})
 
     if current_collector_dimension == 0:
         geometry["current collector"] = {var.z: {"position": 1}}

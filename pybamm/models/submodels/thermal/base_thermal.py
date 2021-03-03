@@ -208,7 +208,7 @@ class BaseThermal(pybamm.BaseSubModel):
         return variables
 
     def _current_collector_heating(self, variables):
-        "Compute Ohmic heating in current collectors"
+        """Compute Ohmic heating in current collectors."""
         # TODO: implement grad in 0D to return a scalar zero
         # TODO: implement grad_squared in other spatial methods so that the if
         # statement can be removed
@@ -255,7 +255,7 @@ class BaseThermal(pybamm.BaseSubModel):
         return out
 
     def _yz_average(self, var):
-        "Computes the y-z average"
+        """Computes the y-z average."""
         # TODO: change the behaviour of z_average and yz_average so the if statement
         # can be removed
         if self.cc_dimension in [0, 1]:

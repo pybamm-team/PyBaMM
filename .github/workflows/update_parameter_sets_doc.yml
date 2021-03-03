@@ -1,0 +1,43 @@
+name: Update parameter_sets.py docstring
+
+on:
+  push:
+    branches:
+    - develop
+    paths:
+    - 'pybamm/parameters/parameter_sets.py'
+    - 'pybamm/parameters/CITATIONS.txt'
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: [3.8]
+
+    steps:
+    - uses: actions/checkout@v2
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v2
+      with:
+        python-version: ${{ matrix.python-version }}
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install wheel
+        pip install --editable .
+        pip install pybtex
+    - name: Update docstring
+      run: python pybamm/parameters/update_parameter_sets_doc.py
+    - name: Create Pull Request
+      uses: peter-evans/create-pull-request@v3
+      with:
+        delete-branch: true
+        branch-suffix: short-commit-hash
+        commit-message: update parameter_sets docstring
+        title: Update parameter_sets.py docstring
+        body: |
+            Update docstring of parameter_sets.py
+
+            Auto-generated pull request

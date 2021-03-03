@@ -22,7 +22,7 @@ class TestSimulationExperiment(unittest.TestCase):
         self.assertEqual(sim.experiment, experiment)
         self.assertEqual(
             sim._experiment_inputs[0]["Current input [A]"],
-            1 / 20 * model.default_parameter_values["Cell capacity [A.h]"],
+            1 / 20 * model.default_parameter_values["Nominal cell capacity [A.h]"],
         )
         self.assertEqual(sim._experiment_inputs[0]["Current switch"], 1)
         self.assertEqual(sim._experiment_inputs[0]["Voltage switch"], 0)
@@ -52,17 +52,19 @@ class TestSimulationExperiment(unittest.TestCase):
             sim._experiment_times, [3600, 7 * 24 * 3600, 7 * 24 * 3600, 3600]
         )
 
+        model_I = sim.op_conds_to_model_and_param[(-1.0, "A")][0]
+        model_V = sim.op_conds_to_model_and_param[(4.1, "V")][0]
         self.assertIn(
             "Current cut-off (positive) [A] [experiment]",
-            [event.name for event in sim.model.events],
+            [event.name for event in model_V.events],
         )
         self.assertIn(
             "Current cut-off (negative) [A] [experiment]",
-            [event.name for event in sim.model.events],
+            [event.name for event in model_V.events],
         )
         self.assertIn(
             "Voltage cut-off [V] [experiment]",
-            [event.name for event in sim.model.events],
+            [event.name for event in model_I.events],
         )
 
         # fails if trying to set up with something that isn't an experiment
@@ -72,11 +74,36 @@ class TestSimulationExperiment(unittest.TestCase):
     def test_run_experiment(self):
         experiment = pybamm.Experiment(
             [
+                (
+                    "Discharge at C/20 for 1 hour",
+                    "Charge at 1 A until 4.1 V",
+                    "Hold at 4.1 V until C/2",
+                    "Discharge at 2 W for 1 hour",
+                )
+            ]
+        )
+        model = pybamm.lithium_ion.SPM()
+        sim = pybamm.Simulation(model, experiment=experiment)
+        sol = sim.solve()
+        self.assertEqual(sol.termination, "final time")
+        self.assertEqual(len(sol.cycles), 1)
+
+        # Solve again starting from solution
+        sol2 = sim.solve(starting_solution=sol)
+        self.assertEqual(sol2.termination, "final time")
+        self.assertGreater(sol2.t[-1], sol.t[-1])
+        self.assertEqual(sol2.cycles[0], sol.cycles[0])
+        self.assertEqual(len(sol2.cycles), 2)
+
+    def test_run_experiment_old_setup_type(self):
+        experiment = pybamm.Experiment(
+            [
                 "Discharge at C/20 for 1 hour",
                 "Charge at 1 A until 4.1 V",
                 "Hold at 4.1 V until C/2",
                 "Discharge at 2 W for 1 hour",
-            ]
+            ],
+            use_simulation_setup_type="old",
         )
         model = pybamm.lithium_ion.SPM()
         sim = pybamm.Simulation(model, experiment=experiment)
@@ -92,7 +119,7 @@ class TestSimulationExperiment(unittest.TestCase):
         t_eval = [0, 1]
         sim.solve(t_eval, solver=pybamm.CasadiSolver())
         pybamm.set_logging_level("WARNING")
-        self.assertIn("event", sim._solution.termination)
+        self.assertEqual(sim._solution, None)
 
     def test_inputs(self):
         experiment = pybamm.Experiment(

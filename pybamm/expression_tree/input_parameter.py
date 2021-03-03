@@ -33,7 +33,7 @@ class InputParameter(pybamm.Symbol):
         return new_input_parameter
 
     def set_expected_size(self, size):
-        "Specify the size that the input parameter should be"
+        """Specify the size that the input parameter should be."""
         self._expected_size = size
 
         # We also need to update the saved size and shape
