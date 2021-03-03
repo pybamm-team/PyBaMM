@@ -94,6 +94,7 @@ class TestSimulationExperiment(unittest.TestCase):
         self.assertGreater(sol2.t[-1], sol.t[-1])
         self.assertEqual(sol2.cycles[0], sol.cycles[0])
         self.assertEqual(len(sol2.cycles), 2)
+        self.assertEqual(len(sol.cycles), 1)
 
     def test_run_experiment_old_setup_type(self):
         experiment = pybamm.Experiment(
