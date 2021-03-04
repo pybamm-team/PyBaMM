@@ -85,7 +85,7 @@ class CMakeBuild(build_ext):
             raise RuntimeError(msg)
         else:
             print("-" * 10, "Building idaklu module", "-" * 40)
-            subprocess.run(["cmake", "--build", "."], cwd=self.build_temp)
+            subprocess.run(["cmake", "--build", ".", "--config", "Release"], cwd=self.build_temp)
 
             # Move from build temp to final position
             for ext in self.extensions:
