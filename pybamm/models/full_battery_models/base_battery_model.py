@@ -46,14 +46,17 @@ class BaseBatteryModel(pybamm.BaseModel):
             * "lithium plating" : str, optional
                 Sets the model for lithium plating. Can be "none" (default),
                 "reversible" or "irreversible".
-            * "loss of active material" : str, optional
-                Sets the model for loss of active material. Can be "none" (default) or
-                "example", which is a placeholder for LAM models.
-            * "particle" : str, optional
             * "loss of active material" : str
                 Sets the model for loss of active material. Can be "none" (default),
                 "positive", "negative" or "both" to enable it for the specific
                 electrode.
+            * "operating mode" : str
+                Sets the operating mode for the model. Can be "current" (default),
+                "voltage" or "power". Alternatively, the operating mode can be
+                controlled with an arbitrary function by passing the function directly
+                as the option. In this case the function must define the residual of
+                an algebraic equation. The applied current will be solved for such
+                that the algebraic constraint is satisfied.
             * "particle" : str
                 Sets the submodel to use to describe behaviour within the particle.
                 Can be "Fickian diffusion" (default), "uniform profile",
@@ -130,13 +133,6 @@ class BaseBatteryModel(pybamm.BaseModel):
                 solve an algebraic equation for it. Default is "false", unless "SEI film
                 resistance" is distributed in which case it is automatically set to
                 "true".
-            * "operating mode" : str
-                Sets the operating mode for the model. Can be "current" (default),
-                "voltage" or "power". Alternatively, the operating mode can be
-                controlled with an arbitrary function by passing the function directly
-                as the option. In this case the function must define the residual of
-                an algebraic equation. The applied current will be solved for such
-                that the algebraic constraint is satisfied.
 
     **Extends:** :class:`pybamm.BaseModel`
     """
