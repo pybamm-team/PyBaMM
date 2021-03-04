@@ -241,6 +241,11 @@ from .plotting.plot import plot
 from .plotting.plot2D import plot2D
 from .plotting.dynamic_plot import dynamic_plot
 
+# Define the plot-style string
+default_plot_style = "pybamm/plotting/pybamm.mplstyle"
+import matplotlib.pyplot as plt
+
+plt.style.use(default_plot_style)
 #
 # Simulation
 #
