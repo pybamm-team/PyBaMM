@@ -1,4 +1,20 @@
 cmake_minimum_required(VERSION 3.10)
+
+if(DEFINED ENV{VCPKG_ROOT_DIR} AND NOT DEFINED VCPKG_ROOT_DIR)
+  set(VCPKG_ROOT_DIR "$ENV{VCPKG_ROOT_DIR}"
+    CACHE STRING "Vcpkg root directory")
+endif()
+
+if(DEFINED VCPKG_ROOT_DIR)
+  set(CMAKE_TOOLCHAIN_FILE ${VCPKG_ROOT_DIR}/scripts/buildsystems/vcpkg.cmake
+    CACHE STRING "Vcpkg toolchain file")
+endif()
+
+if(DEFINED ENV{VCPKG_DEFAULT_TRIPLET} AND NOT DEFINED VCPKG_TARGET_TRIPLET)
+  set(VCPKG_TARGET_TRIPLET "$ENV{VCPKG_DEFAULT_TRIPLET}"
+    CACHE STRING "Vcpkg target triplet")
+endif()
+
 project(idaklu)
 
 set (CMAKE_CXX_STANDARD 11)
