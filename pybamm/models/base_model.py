@@ -384,8 +384,6 @@ class BaseModel(object):
 
         if isinstance(solution, pybamm.Solution):
             solution = solution.last_state
-        else:
-            solution = pybamm.FuzzyDict(solution)
         for var, equation in model.initial_conditions.items():
             if isinstance(var, pybamm.Variable):
                 try:
@@ -404,7 +402,7 @@ class BaseModel(object):
                 elif final_state.ndim == 2:
                     final_state_eval = final_state[:, -1]
                 elif final_state.ndim == 3:
-                    final_state_eval = final_state[:, :, -1].flatten()
+                    final_state_eval = final_state[:, :, -1].flatten(order="F")
                 else:
                     raise NotImplementedError("Variable must be 0D, 1D, or 2D")
                 model.initial_conditions[var] = pybamm.Vector(final_state_eval)
