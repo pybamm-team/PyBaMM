@@ -32,11 +32,11 @@ solution = model.default_solver.solve(model, t_eval)
 
 # plot
 plot = pybamm.QuickPlot(
-    [solution] * 2,
+    solution,
     [
-        # "Negative particle concentration [mol.m-3]",
+        "Negative particle concentration [mol.m-3]",
         "Electrolyte concentration [mol.m-3]",
-        # "Positive particle concentration [mol.m-3]",
+        "Positive particle concentration [mol.m-3]",
         "Current [A]",
         "Negative electrode potential [V]",
         "Electrolyte potential [V]",
@@ -45,9 +45,5 @@ plot = pybamm.QuickPlot(
     ],
     time_unit="seconds",
     spatial_unit="um",
-    variable_limits="tight",
 )
-plot.plot(0)  # dynamic_plot()
-import matplotlib.pyplot as plt
-
-plt.show()
+plot.dynamic_plot()

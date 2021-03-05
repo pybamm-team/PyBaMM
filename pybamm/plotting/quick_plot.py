@@ -75,6 +75,9 @@ class QuickPlot(object):
         The linestyles to loop over when plotting. Defaults to ["-", ":", "--", "-."]
     figsize : tuple of floats, optional
         The size of the figure to make
+    n_rows : int, optional
+        The number of rows to use. If None (default), floor(n // sqrt(n)) is used where
+        n = len(output_variables) so that the plot is as square as possible
     time_unit : str, optional
         Format for the time output ("hours", "minutes", or "seconds")
     spatial_unit : str, optional
@@ -98,6 +101,7 @@ class QuickPlot(object):
         colors=None,
         linestyles=None,
         figsize=None,
+        n_rows=None,
         time_unit=None,
         spatial_unit="um",
         variable_limits="fixed",
@@ -137,7 +141,38 @@ class QuickPlot(object):
         else:
             self.colors = LoopList(colors)
         self.linestyles = LoopList(linestyles or ["-", ":", "--", "-."])
-        self.figsize = figsize or (15, 8)
+
+        # Default output variables for lead-acid and lithium-ion
+        if output_variables is None:
+            if isinstance(models[0], pybamm.lithium_ion.BaseModel):
+                output_variables = [
+                    "Negative particle surface concentration [mol.m-3]",
+                    "Electrolyte concentration [mol.m-3]",
+                    "Positive particle surface concentration [mol.m-3]",
+                    "Current [A]",
+                    "Negative electrode potential [V]",
+                    "Electrolyte potential [V]",
+                    "Positive electrode potential [V]",
+                    "Terminal voltage [V]",
+                ]
+            elif isinstance(models[0], pybamm.lead_acid.BaseModel):
+                output_variables = [
+                    "Interfacial current density [A.m-2]",
+                    "Electrolyte concentration [mol.m-3]",
+                    "Current [A]",
+                    "Porosity",
+                    "Electrolyte potential [V]",
+                    "Terminal voltage [V]",
+                ]
+
+        self.n_rows = n_rows or int(
+            len(output_variables) // np.sqrt(len(output_variables))
+        )
+        self.n_cols = int(np.ceil(len(output_variables) / self.n_rows))
+
+        figwidth_default = min(15, 4 * self.n_cols)
+        figheight_default = min(8, 1 + 3 * self.n_rows)
+        self.figsize = figsize or (figwidth_default, figheight_default)
 
         # Spatial scales (default to 1 if information not in model)
         if spatial_unit == "m":
@@ -182,29 +217,6 @@ class QuickPlot(object):
         self.time_scaling_factor = time_scaling_factor
         self.min_t = min_t / time_scaling_factor
         self.max_t = max_t / time_scaling_factor
-
-        # Default output variables for lead-acid and lithium-ion
-        if output_variables is None:
-            if isinstance(models[0], pybamm.lithium_ion.BaseModel):
-                output_variables = [
-                    "Negative particle surface concentration [mol.m-3]",
-                    "Electrolyte concentration [mol.m-3]",
-                    "Positive particle surface concentration [mol.m-3]",
-                    "Current [A]",
-                    "Negative electrode potential [V]",
-                    "Electrolyte potential [V]",
-                    "Positive electrode potential [V]",
-                    "Terminal voltage [V]",
-                ]
-            elif isinstance(models[0], pybamm.lead_acid.BaseModel):
-                output_variables = [
-                    "Interfacial current density [A.m-2]",
-                    "Electrolyte concentration [mol.m-3]",
-                    "Current [A]",
-                    "Porosity",
-                    "Electrolyte potential [V]",
-                    "Terminal voltage [V]",
-                ]
 
         # Prepare dictionary of variables
         # output_variables is a list of strings or lists, e.g.
@@ -254,8 +266,6 @@ class QuickPlot(object):
 
         # Calculate subplot positions based on number of variables supplied
         self.subplot_positions = {}
-        self.n_rows = int(len(output_variables) // np.sqrt(len(output_variables)))
-        self.n_cols = int(np.ceil(len(output_variables) / self.n_rows))
 
         for k, variable_tuple in enumerate(output_variables):
             # Prepare list of variables
