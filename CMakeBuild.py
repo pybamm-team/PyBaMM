@@ -99,16 +99,22 @@ class CMakeBuild(build_ext):
         if os.path.isfile(os.path.join(build_dir, "CMakeError.log")):
             os.remove(os.path.join(build_dir, "CMakeError.log"))
 
+        build_env = os.environ
         if os.getenv("PYBAMM_USE_VCPKG"):
             (
                 vcpkg_root_dir,
                 vcpkg_default_triplet,
                 vcpkg_feature_flags,
             ) = set_vcpkg_environment_variables()
+            build_env["vcpkg_root_dir"] = vcpkg_root_dir
+            build_env["vcpkg_default_triplet"] = vcpkg_default_triplet
+            build_env["vcpkg_feature_flags"] = vcpkg_feature_flags
 
         cmake_list_dir = os.path.abspath(os.path.dirname(__file__))
         print("-" * 10, "Running CMake for idaklu solver", "-" * 40)
-        subprocess.run(["cmake", cmake_list_dir] + cmake_args, cwd=build_dir)
+        subprocess.run(
+            ["cmake", cmake_list_dir] + cmake_args, cwd=build_dir, env=build_env
+        )
 
         if os.path.isfile(os.path.join(build_dir, "CMakeError.log")):
             msg = (
@@ -122,7 +128,9 @@ class CMakeBuild(build_ext):
         else:
             print("-" * 10, "Building idaklu module", "-" * 40)
             subprocess.run(
-                ["cmake", "--build", ".", "--config", "Release"], cwd=build_dir
+                ["cmake", "--build", ".", "--config", "Release"],
+                cwd=build_dir,
+                env=build_env,
             )
 
             # Move from build temp to final position
