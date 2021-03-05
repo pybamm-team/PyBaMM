@@ -14,6 +14,24 @@ default_lib_dir = (
 )
 
 
+def set_vcpkg_environment_variables():
+    if not os.getenv("VCPKG_ROOT_DIR"):
+        raise EnvironmentError("Environment variable 'VCPKG_ROOT_DIR' is undefined.")
+    if not os.getenv("VCPKG_DEFAULT_TRIPLET"):
+        raise EnvironmentError(
+            "Environment variable 'VCPKG_DEFAULT_TRIPLET' is undefined."
+        )
+    if not os.getenv("VCPKG_FEATURE_FLAGS"):
+        raise EnvironmentError(
+            "Environment variable 'VCPKG_FEATURE_FLAGS' is undefined."
+        )
+    return (
+        os.getenv("VCPKG_ROOT_DIR"),
+        os.getenv("VCPKG_DEFAULT_TRIPLET"),
+        os.getenv("VCPKG_FEATURE_FLAGS"),
+    )
+
+
 class CMakeBuild(build_ext):
     user_options = build_ext.user_options + [
         ("suitesparse-root=", None, "suitesparse source location"),
@@ -80,6 +98,13 @@ class CMakeBuild(build_ext):
         # So must make sure this file does not remain from a previous failed build.
         if os.path.isfile(os.path.join(build_dir, "CMakeError.log")):
             os.remove(os.path.join(build_dir, "CMakeError.log"))
+
+        if os.getenv("PYBAMM_USE_VCPKG"):
+            (
+                vcpkg_root_dir,
+                vcpkg_default_triplet,
+                vcpkg_feature_flags,
+            ) = set_vcpkg_environment_variables()
 
         cmake_list_dir = os.path.abspath(os.path.dirname(__file__))
         print("-" * 10, "Running CMake for idaklu solver", "-" * 40)
