@@ -21,7 +21,7 @@ class TestFull(unittest.TestCase):
         }
         variables = {
             "Negative electrode interfacial current density": a_n,
-            "Negative electrode sei interfacial current density": a_n,
+            "Negative electrode SEI interfacial current density": a_n,
             "Positive electrode interfacial current density": a_p,
             "Negative electrode lithium plating interfacial current density": a_n,
         }

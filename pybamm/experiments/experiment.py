@@ -40,10 +40,18 @@ class Experiment:
     period : string, optional
         Period (1/frequency) at which to record outputs. Default is 1 minute. Can be
         overwritten by individual operating conditions.
-
+    use_simulation_setup_type : str
+        Whether to use the "new" (default) or "old" simulation set-up type. "new" is
+        faster at simulating individual steps but has higher set-up overhead
     """
 
-    def __init__(self, operating_conditions, parameters=None, period="1 minute"):
+    def __init__(
+        self,
+        operating_conditions,
+        parameters=None,
+        period="1 minute",
+        use_simulation_setup_type="new",
+    ):
         self.period = self.convert_time_to_seconds(period.split())
         operating_conditions_cycles = []
         for cycle in operating_conditions:
@@ -83,6 +91,8 @@ class Experiment:
             self.parameters = parameters
         else:
             raise TypeError("experimental parameters should be a dictionary")
+
+        self.use_simulation_setup_type = use_simulation_setup_type
 
     def __str__(self):
         return str(self.operating_conditions_strings)

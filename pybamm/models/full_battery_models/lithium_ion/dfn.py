@@ -68,6 +68,10 @@ class DFN(BaseModel):
             or self.options["lithium plating porosity change"] == "true"
         ):
             self.submodels["porosity"] = pybamm.porosity.Full(self.param, self.options)
+        if self.options["SEI porosity change"] == "false":
+            self.submodels["porosity"] = pybamm.porosity.Constant(self.param)
+        elif self.options["SEI porosity change"] == "true":
+            self.submodels["porosity"] = pybamm.porosity.Full(self.param)
 
     def set_active_material_submodel(self):
 

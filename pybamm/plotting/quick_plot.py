@@ -7,8 +7,12 @@ from collections import defaultdict
 
 
 class LoopList(list):
+
     """A list which loops over itself when accessing an
     index so that it never runs out"""
+    """
+    A list which loops over itself when accessing an index so that it never runs out
+    """
 
     def __getitem__(self, i):
         # implement looping by calling "(i) modulo (length of list)"
@@ -114,7 +118,7 @@ class QuickPlot(object):
                 # attribute
                 solutions[idx] = sol.solution
 
-        models = [solution.model for solution in solutions]
+        models = [solution.all_models[0] for solution in solutions]
 
         # Set labels
         if labels is None:

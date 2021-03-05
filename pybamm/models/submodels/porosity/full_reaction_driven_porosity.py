@@ -50,6 +50,8 @@ class Full(BaseModel):
             beta_plating = self.param.beta_plating
 
             deps_n_dt += beta_plating * j_plating
+        j_sei_n = variables["Negative electrode SEI interfacial current density"]
+        beta_sei_n = self.param.beta_sei_n
 
         deps_s_dt = pybamm.FullBroadcast(
             0, "separator", auxiliary_domains={"secondary": "current collector"}

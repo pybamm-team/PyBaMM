@@ -149,7 +149,7 @@ class ParameterValues:
             "experiment",
         ]
 
-        # add sei parameters if provided
+        # add SEI parameters if provided
         if "sei" in chemistry:
             component_groups += ["sei"]
 
