@@ -130,7 +130,7 @@ def compile_KLU():
         )
         logger.info(msg)
 
-    return CMakeFound and PyBind11Found and (not windows)
+    return CMakeFound and PyBind11Found
 
 
 # Build the list of package data files to be included in the PyBaMM package.
