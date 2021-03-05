@@ -34,6 +34,12 @@ target_include_directories(idaklu PRIVATE ${SUNDIALS_INCLUDE_DIR})
 target_link_libraries(idaklu PRIVATE ${SUNDIALS_LIBRARIES})
 
 # link suitesparse
-find_package(SuiteSparse OPTIONAL_COMPONENTS KLU AMD COLAMD BTF)
+# if using vcpkg, use config mode to
+# find suitesparse. Otherwise, use FindSuiteSparse module
+if(DEFINED VCPKG_ROOT_DIR)
+  find_package(SuiteSparse CONFIG REQUIRED)
+else()
+  find_package(SuiteSparse REQUIRED)
+endif()
 include_directories(${SuiteSparse_INCLUDE_DIRS})
 target_link_libraries(idaklu PRIVATE ${SuiteSparse_LIBRARIES})
