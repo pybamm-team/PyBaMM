@@ -667,7 +667,7 @@ class Simulation:
             if starting_solution is None:
                 starting_solution_cycles = []
             else:
-                starting_solution_cycles = starting_solution.cycles
+                starting_solution_cycles = starting_solution.cycles.copy()
 
             cycle_offset = len(starting_solution_cycles)
             all_cycle_solutions = starting_solution_cycles
