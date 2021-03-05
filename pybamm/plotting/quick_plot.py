@@ -34,8 +34,9 @@ def ax_max(data):
         return 1.04 * data_max
 
 
-def split_long_string(title, max_words=4):
+def split_long_string(title, max_words=None):
     """Get title in a nice format"""
+    max_words = max_words or pybamm.settings.max_words_in_line
     words = title.split()
     # Don't split if fits on one line, don't split just for units
     if len(words) <= max_words or words[max_words].startswith("["):
@@ -440,7 +441,7 @@ class QuickPlot(object):
             ):  # pragma: no cover
                 raise ValueError(f"Axis limits cannot be NaN for variables '{key}'")
 
-    def plot(self, t):
+    def plot(self, t, dynamic=False):
         """Produces a quick plot with the internal states at time t.
 
         Parameters
@@ -598,11 +599,26 @@ class QuickPlot(object):
                 )
 
         # Set global legend
-        if len(solution_handles) > 0:
-            self.fig.legend(solution_handles, self.labels, loc="lower right")
+        if len(self.labels) > 1:
+            fig_legend = self.fig.legend(
+                solution_handles, self.labels, loc="lower right"
+            )
+            # Get the position of the top of the legend in relative figure units
+            # There may be a better way ...
+            legend_top_inches = fig_legend.get_window_extent(
+                renderer=self.fig.canvas.get_renderer()
+            ).get_points()[1, 1]
+            fig_height_inches = (self.fig.get_size_inches() * self.fig.dpi)[1]
+            legend_top = legend_top_inches / fig_height_inches
+        else:
+            legend_top = 0
 
         # Fix layout
-        bottom = 0.05 + 0.03 * max((len(self.labels) - 2), 0)
+        if dynamic:
+            slider_top = 0.05
+        else:
+            slider_top = 0
+        bottom = max(legend_top, slider_top)
         self.gridspec.tight_layout(self.fig, rect=[0, bottom, 1, 1])
 
     def dynamic_plot(self, testing=False, step=None):
@@ -623,7 +639,7 @@ class QuickPlot(object):
 
             step = step or self.max_t / 100
             widgets.interact(
-                self.plot,
+                lambda t: self.plot(t, dynamic=False),
                 t=widgets.FloatSlider(min=0, max=self.max_t, step=step, value=0),
                 continuous_update=False,
             )
@@ -632,7 +648,7 @@ class QuickPlot(object):
             from matplotlib.widgets import Slider
 
             # create an initial plot at time 0
-            self.plot(0)
+            self.plot(0, dynamic=True)
 
             axcolor = "lightgoldenrodyellow"
             ax_slider = plt.axes([0.315, 0.02, 0.37, 0.03], facecolor=axcolor)

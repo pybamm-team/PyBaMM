@@ -1,7 +1,6 @@
 #
 # Method for plotting voltage components
 #
-import pybamm
 import numpy as np
 
 
