@@ -83,10 +83,10 @@ jobs:
       run: tox -e examples
         
     - name: Install and run coverage
-      if: success() && (matrix.os == 'ubuntu-latest' && matrix.python-version == 3.7)
+      if: success() && (matrix.os == 'ubuntu-latest' && matrix.python-version == 3.9)
       run: tox -e coverage
 
     - name: Upload coverage report
-      if: matrix.os == 'ubuntu-latest' && matrix.python-version == 3.7
+      if: matrix.os == 'ubuntu-latest' && matrix.python-version == 3.9
       uses: codecov/codecov-action@v1
 

@@ -33,7 +33,7 @@ class TestButlerVolmer(unittest.TestCase):
             "Negative",
             "lithium-ion main",
             {
-                "sei film resistance": "none",
+                "SEI film resistance": "none",
                 "total interfacial current density as a state": "false",
             },
         )
@@ -73,7 +73,7 @@ class TestButlerVolmer(unittest.TestCase):
             "Positive",
             "lithium-ion main",
             {
-                "sei film resistance": "none",
+                "SEI film resistance": "none",
                 "total interfacial current density as a state": "false",
             },
         )

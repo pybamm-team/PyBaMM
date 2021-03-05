@@ -143,9 +143,9 @@ class Options(pybamm.FuzzyDict):
             "thermal": "isothermal",
             "cell geometry": "none",
             "external submodels": [],
-            "sei": "none",
+            "SEI": "none",
             "lithium plating": "none",
-            "sei porosity change": "false",
+            "SEI porosity change": "false",
             "loss of active material": "none",
             "working electrode": "none",
             "particle cracking": "none",
@@ -163,17 +163,17 @@ class Options(pybamm.FuzzyDict):
         # The "cell geometry" option will still be overridden by extra_options if
         # provided
 
-        # Change the default for SEI film resistance based on which sei option is
+        # Change the default for SEI film resistance based on which SEI option is
         # provided
         # extra_options = extra_options or {}
         sei_option = extra_options.get(
-            "sei", "none"
+            "SEI", "none"
         )  # return "none" if option not given
         if sei_option == "none":
-            default_options["sei film resistance"] = "none"
+            default_options["SEI film resistance"] = "none"
         else:
-            default_options["sei film resistance"] = "distributed"
-        # The "sei film resistance" option will still be overridden by extra_options if
+            default_options["SEI film resistance"] = "distributed"
+        # The "SEI film resistance" option will still be overridden by extra_options if
         # provided
 
         options = pybamm.FuzzyDict(default_options)
@@ -188,9 +188,9 @@ class Options(pybamm.FuzzyDict):
                     )
                 )
 
-        # If "sei film resistance" is "distributed" then "total interfacial current
+        # If "SEI film resistance" is "distributed" then "total interfacial current
         # density as a state" must be "true"
-        if options["sei film resistance"] == "distributed":
+        if options["SEI film resistance"] == "distributed":
             options["total interfacial current density as a state"] = "true"
             # Check that extra_options did not try to provide a clashing option
             if (
@@ -247,7 +247,7 @@ class Options(pybamm.FuzzyDict):
             raise pybamm.OptionError(
                 "Unknown geometry '{}'".format(options["cell geometry"])
             )
-        if options["sei"] not in [
+        if options["SEI"] not in [
             "none",
             "constant",
             "reaction limited",
@@ -256,22 +256,22 @@ class Options(pybamm.FuzzyDict):
             "interstitial-diffusion limited",
             "ec reaction limited",
         ]:
-            raise pybamm.OptionError("Unknown sei model '{}'".format(options["sei"]))
-        if options["sei film resistance"] not in ["none", "distributed", "average"]:
+            raise pybamm.OptionError("Unknown SEI model '{}'".format(options["SEI"]))
+        if options["SEI film resistance"] not in ["none", "distributed", "average"]:
             raise pybamm.OptionError(
-                "Unknown sei film resistance model '{}'".format(
-                    options["sei film resistance"]
+                "Unknown SEI film resistance model '{}'".format(
+                    options["SEI film resistance"]
                 )
             )
-        if options["sei porosity change"] not in ["true", "false"]:
-            if options["sei porosity change"] in [True, False]:
+        if options["SEI porosity change"] not in ["true", "false"]:
+            if options["SEI porosity change"] in [True, False]:
                 raise pybamm.OptionError(
-                    "sei porosity change must now be given in string format "
+                    "SEI porosity change must now be given in string format "
                     "('true' or 'false')"
                 )
             raise pybamm.OptionError(
-                "Unknown sei porosity change '{}'".format(
-                    options["sei porosity change"]
+                "Unknown SEI porosity change '{}'".format(
+                    options["SEI porosity change"]
                 )
             )
 
@@ -838,16 +838,16 @@ class BaseBatteryModel(pybamm.BaseModel):
 
         # SEI film overpotential
         eta_sei_n_av = self.variables[
-            "X-averaged negative electrode sei film overpotential"
+            "X-averaged negative electrode SEI film overpotential"
         ]
         eta_sei_p_av = self.variables[
-            "X-averaged positive electrode sei film overpotential"
+            "X-averaged positive electrode SEI film overpotential"
         ]
         eta_sei_n_av_dim = self.variables[
-            "X-averaged negative electrode sei film overpotential [V]"
+            "X-averaged negative electrode SEI film overpotential [V]"
         ]
         eta_sei_p_av_dim = self.variables[
-            "X-averaged positive electrode sei film overpotential [V]"
+            "X-averaged positive electrode SEI film overpotential [V]"
         ]
         eta_sei_av = eta_sei_n_av + eta_sei_p_av
         eta_sei_av_dim = eta_sei_n_av_dim + eta_sei_p_av_dim
@@ -862,8 +862,8 @@ class BaseBatteryModel(pybamm.BaseModel):
                 "Measured open circuit voltage [V]": ocv_dim,
                 "X-averaged reaction overpotential": eta_r_av,
                 "X-averaged reaction overpotential [V]": eta_r_av_dim,
-                "X-averaged sei film overpotential": eta_sei_av,
-                "X-averaged sei film overpotential [V]": eta_sei_av_dim,
+                "X-averaged SEI film overpotential": eta_sei_av,
+                "X-averaged SEI film overpotential [V]": eta_sei_av_dim,
                 "X-averaged solid phase ohmic losses": delta_phi_s_av,
                 "X-averaged solid phase ohmic losses [V]": delta_phi_s_av_dim,
             }
