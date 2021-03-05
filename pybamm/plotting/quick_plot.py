@@ -615,8 +615,12 @@ class QuickPlot(object):
             )
             # Get the position of the top of the legend in relative figure units
             # There may be a better way ...
+            try:
+                renderer = self.fig.canvas.get_renderer()
+            except AttributeError:
+                renderer = None
             legend_top_inches = fig_legend.get_window_extent(
-                renderer=self.fig.canvas.get_renderer()
+                renderer=renderer
             ).get_points()[1, 1]
             fig_height_inches = (self.fig.get_size_inches() * self.fig.dpi)[1]
             legend_top = legend_top_inches / fig_height_inches

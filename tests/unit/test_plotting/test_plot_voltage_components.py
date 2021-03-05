@@ -14,7 +14,7 @@ class TestPlotVoltageComponents(unittest.TestCase):
         np.testing.assert_array_equal(t, sol["Time [h]"].data)
         np.testing.assert_array_equal(V, sol["Battery voltage [V]"].data)
 
-        fig, ax = plt.subplots()
+        _, ax = plt.subplots()
         ax_out = pybamm.plot_voltage_components(sol, ax=ax, show_legend=True)
         self.assertEqual(ax_out, ax)
 
