@@ -70,7 +70,7 @@ class QuickPlot(object):
         Labels for the different models. Defaults to model names
     colors : list of str, optional
         The colors to loop over when plotting. Defaults to None, in which case the
-        default color loop defined by matplotlib settings is used.
+        default color loop defined by matplotlib style sheet or rcParams is used.
     linestyles : list of str, optional
         The linestyles to loop over when plotting. Defaults to ["-", ":", "--", "-."]
     figsize : tuple of floats, optional
