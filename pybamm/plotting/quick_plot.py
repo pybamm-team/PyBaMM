@@ -68,16 +68,16 @@ class QuickPlot(object):
     labels : list of str, optional
         Labels for the different models. Defaults to model names
     colors : list of str, optional
-        The colors to loop over when plotting. Defaults to
-        ["r", "b", "k", "g", "m", "c"]
+        The colors to loop over when plotting. Defaults to None, in which case the
+        default color loop defined by matplotlib settings is used.
     linestyles : list of str, optional
         The linestyles to loop over when plotting. Defaults to ["-", ":", "--", "-."]
     figsize : tuple of floats, optional
         The size of the figure to make
     time_unit : str, optional
-        Format for the time output ("hours", "minutes" or "seconds")
+        Format for the time output ("hours", "minutes", or "seconds")
     spatial_unit : str, optional
-        Format for the spatial axes ("m", "mm" or "um")
+        Format for the spatial axes ("m", "mm", or "um")
     variable_limits : str or dict of str, optional
         How to set the axis limits (for 0D or 1D variables) or colorbar limits (for 2D
         variables). Options are:
