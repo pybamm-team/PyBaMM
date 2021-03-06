@@ -8,122 +8,129 @@ import warnings
 
 class Options(pybamm.FuzzyDict):
     """
-    A dictionary of options to be passed to the model. The options that can
-    be set are listed below. Note that not all of the options are compatible with
-    each other and with all of the models implemented in PyBaMM. Each option is
-    optional and takes a default value if not provided.
+    Attributes
+    ----------
 
-    * "cell geometry" : str
-        Sets the geometry of the cell. Can be "pouch" (default) or
-        "arbitrary". The arbitrary geometry option solves a 1D electrochemical
-        model with prescribed cell volume and cross-sectional area, and
-        (if thermal effects are included) solves a lumped thermal model
-        with prescribed surface area for cooling.
-    * "convection" : str
-        Whether to include the effects of convection in the model. Can be
-        "none" (default), "uniform transverse" or "full transverse".
-        Must be "none" for lithium-ion models.
-    * "current collector" : str
-        Sets the current collector model to use. Can be "uniform" (default),
-        "potential pair" or "potential pair quite conductive".
-    * "dimensionality" : int
-        Sets the dimension of the current collector problem. Can be 0
-        (default), 1 or 2.
-    * "external submodels" : list
-        A list of the submodels that you would like to supply an external
-        variable for instead of solving in PyBaMM. The entries of the lists
-        are strings that correspond to the submodel names in the keys
-        of `self.submodels`.
-    * "interfacial surface area" : str
-        Sets the model for the interfacial surface area. Can be "constant"
-        (default) or "varying". Not currently implemented in any of the models.
-    * "lithium plating" : str, optional
-        Sets the model for lithium plating. Can be "none" (default),
-        "reversible" or "irreversible".
-    * "loss of active material" : str, optional
-        Sets the model for loss of active material. Can be "none" (default) or
-        "example", which is a placeholder for LAM models.
-    * "particle" : str, optional
-    * "loss of active material" : str
-        Sets the model for loss of active material. Can be "none" (default),
-        "positive", "negative" or "both" to enable it for the specific
-        electrode.
-    * "particle" : str
-        Sets the submodel to use to describe behaviour within the particle.
-        Can be "Fickian diffusion" (default), "uniform profile",
-        "quadratic profile", or "quartic profile".
-    * "particle shape" : str
-        Sets the model shape of the electrode particles. This is used to
-        calculate the surface area to volume ratio. Can be "spherical"
-        (default) or "user". For the "user" option the surface area per
-        unit volume can be passed as a parameter, and is therefore not
-        necessarily consistent with the particle shape.
-    * "particle cracking" : str
-        Sets the model to account for mechanical effects and particle
-        cracking. Can be "none", "no cracking", "negative", "positive" or
-        "both".
-        All options other than "none" account for the effects of swelling
-        of electrode particles, cell thickness change, and stress-assisted
-        diffusion. The options "negative", "positive" or "both" additionally
-        account for crack propagation in the negative, positive or both
-        electrodes, respectively.
-    * "sei" : str
-        Set the sei submodel to be used. Options are:
+    options: dict
+        A dictionary of options to be passed to the model. The options that can
+        be set are listed below. Note that not all of the options are compatible with
+        each other and with all of the models implemented in PyBaMM. Each option is
+        optional and takes a default value if not provided.
 
-        - "none": :class:`pybamm.sei.NoSEI` (no SEI growth)
-        - "constant": :class:`pybamm.sei.Constant` (constant SEI thickness)
-        - "reaction limited": :class:`pybamm.sei.ReactionLimited`
-        - "solvent-diffusion limited": \
-            :class:`pybamm.sei.SolventDiffusionLimited`
-        - "electron-migration limited": \
-            :class:`pybamm.sei.ElectronMigrationLimited`
-        - "interstitial-diffusion limited": \
-            :class:`pybamm.sei.InterstitialDiffusionLimited`
-        - "ec reaction limited": \
-            :class:`pybamm.sei.EcReactionLimited`
-    * "sei film resistance" : str
-        Set the submodel for additional term in the overpotential due to SEI.
-        The default value is "none" if the "sei" option is "none", and
-        "distributed" otherwise. This is because the "distributed" model is more
-        complex than the model with no additional resistance, which adds
-        unnecessary complexity if there is no SEI in the first place
+            * "cell geometry" : str
+                Sets the geometry of the cell. Can be "pouch" (default) or
+                "arbitrary". The arbitrary geometry option solves a 1D electrochemical
+                model with prescribed cell volume and cross-sectional area, and
+                (if thermal effects are included) solves a lumped thermal model
+                with prescribed surface area for cooling.
+            * "convection" : str
+                Whether to include the effects of convection in the model. Can be
+                "none" (default), "uniform transverse" or "full transverse".
+                Must be "none" for lithium-ion models.
+            * "current collector" : str
+                Sets the current collector model to use. Can be "uniform" (default),
+                "potential pair" or "potential pair quite conductive".
+            * "dimensionality" : int
+                Sets the dimension of the current collector problem. Can be 0
+                (default), 1 or 2.
+            * "external submodels" : list
+                A list of the submodels that you would like to supply an external
+                variable for instead of solving in PyBaMM. The entries of the lists
+                are strings that correspond to the submodel names in the keys
+                of `self.submodels`.
+            * "interfacial surface area" : str
+                Sets the model for the interfacial surface area. Can be "constant"
+                (default) or "varying". Not currently implemented in any of the models.
+            * "lithium plating" : str, optional
+                Sets the model for lithium plating. Can be "none" (default),
+                "reversible" or "irreversible".
+            * "loss of active material" : str
+                Sets the model for loss of active material. Can be "none" (default),
+                "positive", "negative" or "both" to enable it for the specific
+                electrode.
+            * "operating mode" : str
+                Sets the operating mode for the model. Can be "current" (default),
+                "voltage" or "power". Alternatively, the operating mode can be
+                controlled with an arbitrary function by passing the function directly
+                as the option. In this case the function must define the residual of
+                an algebraic equation. The applied current will be solved for such
+                that the algebraic constraint is satisfied.
+            * "particle" : str
+                Sets the submodel to use to describe behaviour within the particle.
+                Can be "Fickian diffusion" (default), "uniform profile",
+                "quadratic profile", or "quartic profile".
+            * "particle shape" : str
+                Sets the model shape of the electrode particles. This is used to
+                calculate the surface area to volume ratio. Can be "spherical"
+                (default) or "user". For the "user" option the surface area per
+                unit volume can be passed as a parameter, and is therefore not
+                necessarily consistent with the particle shape.
+            * "particle cracking" : str
+                Sets the model to account for mechanical effects and particle
+                cracking. Can be "none", "no cracking", "negative", "positive" or
+                "both".
+                All options other than "none" account for the effects of swelling
+                of electrode particles, cell thickness change, and stress-assisted
+                diffusion. The options "negative", "positive" or "both" additionally
+                account for crack propagation in the negative, positive or both
+                electrodes, respectively.
+            * "SEI" : str
+                Set the SEI submodel to be used. Options are:
 
-        - "none": no additional resistance\
+                - "none": :class:`pybamm.sei.NoSEI` (no SEI growth)
+                - "constant": :class:`pybamm.sei.Constant` (constant SEI thickness)
+                - "reaction limited": :class:`pybamm.sei.ReactionLimited`
+                - "solvent-diffusion limited":\
+                    :class:`pybamm.sei.SolventDiffusionLimited`
+                - "electron-migration limited": \
+                    :class:`pybamm.sei.ElectronMigrationLimited`
+                - "interstitial-diffusion limited": \
+                    :class:`pybamm.sei.InterstitialDiffusionLimited`
+                - "ec reaction limited": \
+                    :class:`pybamm.sei.EcReactionLimited`
+            * "SEI film resistance" : str
+                Set the submodel for additional term in the overpotential due to SEI.
+                The default value is "none" if the "SEI" option is "none", and
+                "distributed" otherwise. This is because the "distributed" model is more
+                complex than the model with no additional resistance, which adds
+                unnecessary complexity if there is no SEI in the first place
 
-            .. math::
-                \\eta_r = \\frac{F}{RT} * (\\phi_s - \\phi_e - U)
+                - "none": no additional resistance\
 
-        - "distributed": properly included additional resistance term\
+                    .. math::
+                        \\eta_r = \\frac{F}{RT} * (\\phi_s - \\phi_e - U)
 
-            .. math::
-                \\eta_r = \\frac{F}{RT}
-                * (\\phi_s - \\phi_e - U - R_{sei} * L_{sei} * j)
+                - "distributed": properly included additional resistance term\
 
-        - "average": constant additional resistance term (approximation to the \
-            true model). This model can give similar results to the \
-            "distributed" case without needing to make j an algebraic state\
+                    .. math::
+                        \\eta_r = \\frac{F}{RT}
+                        * (\\phi_s - \\phi_e - U - R_{sei} * L_{sei} * j)
 
-            .. math::
-                \\eta_r = \\frac{F}{RT}
-                * (\\phi_s - \\phi_e - U - R_{sei} * L_{sei} * \\frac{I}{aL})
-    * "sei porosity change" : str
-        Whether to include porosity change due to SEI formation, can be "false"
-        (default) or "true".
-    * "side reactions" : list
-        Contains a list of any side reactions to include. Default is []. If this
-        list is not empty (i.e. side reactions are included in the model), then
-        "surface form" cannot be 'false'.
-    * "surface form" : str
-        Whether to use the surface formulation of the problem. Can be "false"
-        (default), "differential" or "algebraic".
-    * "thermal" : str
-        Sets the thermal model to use. Can be "isothermal" (default), "lumped",
-        "x-lumped", or "x-full".
-    * "total interfacial current density as a state" : str
-        Whether to make a state for the total interfacial current density and
-        solve an algebraic equation for it. Default is "false", unless "sei film
-        resistance" is distributed in which case it is automatically set to
-        "true".
+                - "average": constant additional resistance term (approximation to the \
+                    true model). This model can give similar results to the \
+                    "distributed" case without needing to make j an algebraic state\
+
+                    .. math::
+                        \\eta_r = \\frac{F}{RT}
+                        * (\\phi_s - \\phi_e - U - R_{sei} * L_{sei} * \\frac{I}{aL})
+            * "SEI porosity change" : str
+                Whether to include porosity change due to SEI formation, can be "false"
+                (default) or "true".
+            * "side reactions" : list
+                Contains a list of any side reactions to include. Default is []. If this
+                list is not empty (i.e. side reactions are included in the model), then
+                "surface form" cannot be 'false'.
+            * "surface form" : str
+                Whether to use the surface formulation of the problem. Can be "false"
+                (default), "differential" or "algebraic".
+            * "thermal" : str
+                Sets the thermal model to use. Can be "isothermal" (default), "lumped",
+                "x-lumped", or "x-full".
+            * "total interfacial current density as a state" : str
+                Whether to make a state for the total interfacial current density and
+                solve an algebraic equation for it. Default is "false", unless "SEI film
+                resistance" is distributed in which case it is automatically set to
+                "true".
 
     **Extends:** :class:`dict`
     """
@@ -353,11 +360,16 @@ class Options(pybamm.FuzzyDict):
 
         super().__init__(options.items())
 
+    def print_options(self):
+        print(self.items())
+
+    def print_detailed_options(self):
+        print(self.__doc__)
+
 
 class BaseBatteryModel(pybamm.BaseModel):
     """
     Base model class with some default settings and required variables
-
     **Extends:** :class:`pybamm.BaseModel`
     """
 
@@ -463,7 +475,7 @@ class BaseBatteryModel(pybamm.BaseModel):
                     "Lead-acid models can only have thermal "
                     "effects if dimensionality is 0."
                 )
-            if options["sei"] != "none" or options["sei film resistance"] != "none":
+            if options["SEI"] != "none" or options["SEI film resistance"] != "none":
                 raise pybamm.OptionError("Lead-acid models cannot have SEI formation")
             if options["lithium plating"] != "none":
                 raise pybamm.OptionError("Lead-acid models cannot have lithium plating")
