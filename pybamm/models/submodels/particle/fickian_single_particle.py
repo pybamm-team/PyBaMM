@@ -75,12 +75,9 @@ class FickianSingleParticle(BaseParticle):
         c_s_xav = variables[
             "X-averaged " + self.domain.lower() + " particle concentration"
         ]
-        c_s_surf_xav = variables[
-            "X-averaged " + self.domain.lower() + " particle surface concentration"
-        ]
         T_xav = pybamm.PrimaryBroadcast(
             variables["X-averaged " + self.domain.lower() + " electrode temperature"],
-            c_s_xav.domain[0]
+            c_s_xav.domain[0],
         )
         j_xav = variables[
             "X-averaged "

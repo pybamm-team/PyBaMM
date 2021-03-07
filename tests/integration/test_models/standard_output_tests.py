@@ -370,11 +370,19 @@ class ParticleConcentrationTests(BaseOutputTest):
                     np.testing.assert_array_less(0, self.N_s_n(t[3:], x_n, r_n[1:]))
                     np.testing.assert_array_less(self.N_s_p(t[3:], x_p, r_p[1:]), 0)
                 else:
-                    np.testing.assert_equal(np.any(self.N_s_n(t[1:], x_n, r_n[1:]) >= 0), True)
-                    np.testing.assert_equal(np.any(self.N_s_p(t[1:], x_p, r_p[1:]) <= 0), True)
+                    np.testing.assert_equal(
+                        np.any(self.N_s_n(t[1:], x_n, r_n[1:]) >= 0), True
+                    )
+                    np.testing.assert_equal(
+                        np.any(self.N_s_p(t[1:], x_p, r_p[1:]) <= 0), True
+                    )
             if self.operating_condition == "charge":
-                    np.testing.assert_equal(np.any(self.N_s_n(t[1:], x_n, r_n[1:]) <= 0), True)
-                    np.testing.assert_equal(np.any(self.N_s_p(t[1:], x_p, r_p[1:]) >= 0), True)
+                np.testing.assert_equal(
+                    np.any(self.N_s_n(t[1:], x_n, r_n[1:]) <= 0), True
+                )
+                np.testing.assert_equal(
+                    np.any(self.N_s_p(t[1:], x_p, r_p[1:]) >= 0), True
+                )
             if self.operating_condition == "off":
                 np.testing.assert_array_almost_equal(self.N_s_n(t, x_n, r_n), 0)
                 np.testing.assert_array_almost_equal(self.N_s_p(t, x_p, r_p), 0)

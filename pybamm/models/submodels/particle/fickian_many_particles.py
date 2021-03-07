@@ -65,7 +65,6 @@ class FickianManyParticles(BaseParticle):
     def set_boundary_conditions(self, variables):
 
         c_s = variables[self.domain + " particle concentration"]
-        c_s_surf = variables[self.domain + " particle surface concentration"]
         T = pybamm.PrimaryBroadcast(
             variables[self.domain + " electrode temperature"],
             c_s.domain,
@@ -75,7 +74,11 @@ class FickianManyParticles(BaseParticle):
 
         if self.domain == "Negative":
             rbc = (
-                -self.param.C_n * j * R / self.param.a_R_n / pybamm.surf(self.param.D_n(c_s, T))
+                -self.param.C_n
+                * j
+                * R
+                / self.param.a_R_n
+                / pybamm.surf(self.param.D_n(c_s, T))
             )
 
         elif self.domain == "Positive":
