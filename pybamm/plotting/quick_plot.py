@@ -10,6 +10,7 @@ class LoopList(list):
 
     """A list which loops over itself when accessing an
     index so that it never runs out"""
+
     """
     A list which loops over itself when accessing an index so that it never runs out
     """
