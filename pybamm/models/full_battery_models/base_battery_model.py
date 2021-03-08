@@ -212,11 +212,11 @@ class Options(pybamm.FuzzyDict):
             "particle cracking": "none",
             "total interfacial current density as a state": "false",
         }
+
         # Change the default for cell geometry based on which thermal option is provided
         extra_options = extra_options or {}
-        thermal_option = extra_options.get(
-            "thermal", "none"
-        )  # return "none" if option not given
+        thermal_option = extra_options.get("thermal", "none")
+        # return "none" if option not given
         if thermal_option in ["none", "isothermal", "lumped"]:
             default_options["cell geometry"] = "arbitrary"
         else:
@@ -227,9 +227,8 @@ class Options(pybamm.FuzzyDict):
         # Change the default for SEI film resistance based on which SEI option is
         # provided
         # extra_options = extra_options or {}
-        sei_option = extra_options.get(
-            "SEI", "none"
-        )  # return "none" if option not given
+        sei_option = extra_options.get("SEI", "none")
+        # return "none" if option not given
         if sei_option == "none":
             default_options["SEI film resistance"] = "none"
         else:
@@ -264,24 +263,10 @@ class Options(pybamm.FuzzyDict):
                 )
 
         # Some standard checks to make sure options are compatible
-        if not (
-            options["operating mode"] in ["current", "voltage", "power"]
-            or callable(options["operating mode"])
-        ):
+        if options["SEI porosity change"] in [True, False]:
             raise pybamm.OptionError(
-                "operating mode '{}' not recognised".format(options["operating mode"])
-            )
-
-        if options["SEI porosity change"] not in ["true", "false"]:
-            if options["SEI porosity change"] in [True, False]:
-                raise pybamm.OptionError(
-                    "SEI porosity change must now be given in string format "
-                    "('true' or 'false')"
-                )
-            raise pybamm.OptionError(
-                "Unknown SEI porosity change '{}'".format(
-                    options["SEI porosity change"]
-                )
+                "SEI porosity change must now be given in string format "
+                "('true' or 'false')"
             )
 
         if options["dimensionality"] == 0:
@@ -313,7 +298,9 @@ class Options(pybamm.FuzzyDict):
                 or option == "working electrode"
             ):
                 pass
-            elif value not in self.possible_options[option]:
+            elif value not in self.possible_options[option] or (
+                option == "operating mode" and callable(value)
+            ):
                 raise pybamm.OptionError(
                     f"'{value}' is not recognized in option '{option}'. "
                     f"Possible values are {self.possible_options[option]}"

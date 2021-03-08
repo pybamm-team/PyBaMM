@@ -121,12 +121,12 @@ class TestBaseBatteryModel(unittest.TestCase):
             pybamm.BaseBatteryModel({"bad option": "bad option"})
         with self.assertRaisesRegex(pybamm.OptionError, "current collector model"):
             pybamm.BaseBatteryModel({"current collector": "bad current collector"})
-        with self.assertRaisesRegex(pybamm.OptionError, "thermal model"):
+        with self.assertRaisesRegex(pybamm.OptionError, "thermal"):
             pybamm.BaseBatteryModel({"thermal": "bad thermal"})
-        with self.assertRaisesRegex(pybamm.OptionError, "Unknown geometry"):
+        with self.assertRaisesRegex(pybamm.OptionError, "cell geometry"):
             pybamm.BaseBatteryModel({"cell geometry": "bad geometry"})
         with self.assertRaisesRegex(
-            pybamm.OptionError, "Dimension of current collectors"
+            pybamm.OptionError, "dimensionality"
         ):
             pybamm.BaseBatteryModel({"dimensionality": 5})
         with self.assertRaisesRegex(pybamm.OptionError, "current collector"):
@@ -135,13 +135,13 @@ class TestBaseBatteryModel(unittest.TestCase):
             )
         with self.assertRaisesRegex(pybamm.OptionError, "surface form"):
             pybamm.BaseBatteryModel({"surface form": "bad surface form"})
-        with self.assertRaisesRegex(pybamm.OptionError, "convection option"):
+        with self.assertRaisesRegex(pybamm.OptionError, "convection"):
             pybamm.BaseBatteryModel({"convection": "bad convection"})
         with self.assertRaisesRegex(
             pybamm.OptionError, "cannot have transverse convection in 0D model"
         ):
             pybamm.BaseBatteryModel({"convection": "full transverse"})
-        with self.assertRaisesRegex(pybamm.OptionError, "particle model"):
+        with self.assertRaisesRegex(pybamm.OptionError, "particle"):
             pybamm.BaseBatteryModel({"particle": "bad particle"})
         with self.assertRaisesRegex(NotImplementedError, "The 'fast diffusion'"):
             pybamm.BaseBatteryModel({"particle": "fast diffusion"})
