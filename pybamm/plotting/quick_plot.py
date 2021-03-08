@@ -34,8 +34,9 @@ def ax_max(data):
         return 1.04 * data_max
 
 
-def split_long_string(title, max_words=4):
+def split_long_string(title, max_words=None):
     """Get title in a nice format"""
+    max_words = max_words or pybamm.settings.max_words_in_line
     words = title.split()
     # Don't split if fits on one line, don't split just for units
     if len(words) <= max_words or words[max_words].startswith("["):
@@ -68,16 +69,19 @@ class QuickPlot(object):
     labels : list of str, optional
         Labels for the different models. Defaults to model names
     colors : list of str, optional
-        The colors to loop over when plotting. Defaults to
-        ["r", "b", "k", "g", "m", "c"]
+        The colors to loop over when plotting. Defaults to None, in which case the
+        default color loop defined by matplotlib style sheet or rcParams is used.
     linestyles : list of str, optional
         The linestyles to loop over when plotting. Defaults to ["-", ":", "--", "-."]
     figsize : tuple of floats, optional
         The size of the figure to make
+    n_rows : int, optional
+        The number of rows to use. If None (default), floor(n // sqrt(n)) is used where
+        n = len(output_variables) so that the plot is as square as possible
     time_unit : str, optional
-        Format for the time output ("hours", "minutes" or "seconds")
+        Format for the time output ("hours", "minutes", or "seconds")
     spatial_unit : str, optional
-        Format for the spatial axes ("m", "mm" or "um")
+        Format for the spatial axes ("m", "mm", or "um")
     variable_limits : str or dict of str, optional
         How to set the axis limits (for 0D or 1D variables) or colorbar limits (for 2D
         variables). Options are:
@@ -97,6 +101,7 @@ class QuickPlot(object):
         colors=None,
         linestyles=None,
         figsize=None,
+        n_rows=None,
         time_unit=None,
         spatial_unit="um",
         variable_limits="fixed",
@@ -131,9 +136,43 @@ class QuickPlot(object):
 
         # Set colors, linestyles, figsize, axis limits
         # call LoopList to make sure list index never runs out
-        self.colors = LoopList(colors or ["r", "b", "k", "g", "m", "c"])
+        if colors is None:
+            self.colors = LoopList([None])
+        else:
+            self.colors = LoopList(colors)
         self.linestyles = LoopList(linestyles or ["-", ":", "--", "-."])
-        self.figsize = figsize or (15, 8)
+
+        # Default output variables for lead-acid and lithium-ion
+        if output_variables is None:
+            if isinstance(models[0], pybamm.lithium_ion.BaseModel):
+                output_variables = [
+                    "Negative particle surface concentration [mol.m-3]",
+                    "Electrolyte concentration [mol.m-3]",
+                    "Positive particle surface concentration [mol.m-3]",
+                    "Current [A]",
+                    "Negative electrode potential [V]",
+                    "Electrolyte potential [V]",
+                    "Positive electrode potential [V]",
+                    "Terminal voltage [V]",
+                ]
+            elif isinstance(models[0], pybamm.lead_acid.BaseModel):
+                output_variables = [
+                    "Interfacial current density [A.m-2]",
+                    "Electrolyte concentration [mol.m-3]",
+                    "Current [A]",
+                    "Porosity",
+                    "Electrolyte potential [V]",
+                    "Terminal voltage [V]",
+                ]
+
+        self.n_rows = n_rows or int(
+            len(output_variables) // np.sqrt(len(output_variables))
+        )
+        self.n_cols = int(np.ceil(len(output_variables) / self.n_rows))
+
+        figwidth_default = min(15, 4 * self.n_cols)
+        figheight_default = min(8, 1 + 3 * self.n_rows)
+        self.figsize = figsize or (figwidth_default, figheight_default)
 
         # Spatial scales (default to 1 if information not in model)
         if spatial_unit == "m":
@@ -178,29 +217,6 @@ class QuickPlot(object):
         self.time_scaling_factor = time_scaling_factor
         self.min_t = min_t / time_scaling_factor
         self.max_t = max_t / time_scaling_factor
-
-        # Default output variables for lead-acid and lithium-ion
-        if output_variables is None:
-            if isinstance(models[0], pybamm.lithium_ion.BaseModel):
-                output_variables = [
-                    "Negative particle surface concentration [mol.m-3]",
-                    "Electrolyte concentration [mol.m-3]",
-                    "Positive particle surface concentration [mol.m-3]",
-                    "Current [A]",
-                    "Negative electrode potential [V]",
-                    "Electrolyte potential [V]",
-                    "Positive electrode potential [V]",
-                    "Terminal voltage [V]",
-                ]
-            elif isinstance(models[0], pybamm.lead_acid.BaseModel):
-                output_variables = [
-                    "Interfacial current density [A.m-2]",
-                    "Electrolyte concentration [mol.m-3]",
-                    "Current [A]",
-                    "Porosity",
-                    "Electrolyte potential [V]",
-                    "Terminal voltage [V]",
-                ]
 
         # Prepare dictionary of variables
         # output_variables is a list of strings or lists, e.g.
@@ -250,8 +266,6 @@ class QuickPlot(object):
 
         # Calculate subplot positions based on number of variables supplied
         self.subplot_positions = {}
-        self.n_rows = int(len(output_variables) // np.sqrt(len(output_variables)))
-        self.n_cols = int(np.ceil(len(output_variables) / self.n_rows))
 
         for k, variable_tuple in enumerate(output_variables):
             # Prepare list of variables
@@ -437,7 +451,7 @@ class QuickPlot(object):
             ):  # pragma: no cover
                 raise ValueError(f"Axis limits cannot be NaN for variables '{key}'")
 
-    def plot(self, t):
+    def plot(self, t, dynamic=False):
         """Produces a quick plot with the internal states at time t.
 
         Parameters
@@ -462,11 +476,6 @@ class QuickPlot(object):
         # initialize empty handles, to be created only if the appropriate plots are made
         solution_handles = []
 
-        if self.n_cols == 1:
-            fontsize = 30
-        else:
-            fontsize = 42 // self.n_cols
-
         for k, (key, variable_lists) in enumerate(self.variables.items()):
             ax = self.fig.add_subplot(self.gridspec[k])
             self.axes.append(ax)
@@ -480,7 +489,7 @@ class QuickPlot(object):
             # Set labels for the first subplot only (avoid repetition)
             if variable_lists[0][0].dimensions == 0:
                 # 0D plot: plot as a function of time, indicating time t with a line
-                ax.set_xlabel("Time [{}]".format(self.time_unit), fontsize=fontsize)
+                ax.set_xlabel("Time [{}]".format(self.time_unit))
                 for i, variable_list in enumerate(variable_lists):
                     for j, variable in enumerate(variable_list):
                         if len(variable_list) == 1:
@@ -494,8 +503,7 @@ class QuickPlot(object):
                         (self.plots[key][i][j],) = ax.plot(
                             full_t / self.time_scaling_factor,
                             variable(full_t, warn=False),
-                            lw=2,
-                            color=self.colors[i],
+                            # color=self.colors[i],
                             linestyle=linestyle,
                         )
                         variable_handles.append(self.plots[key][0][j])
@@ -509,6 +517,7 @@ class QuickPlot(object):
                     ],
                     [y_min, y_max],
                     "k--",
+                    lw=1.5,
                 )
             elif variable_lists[0][0].dimensions == 1:
                 # 1D plot: plot as a function of x at time t
@@ -517,7 +526,6 @@ class QuickPlot(object):
                 spatial_var_name = list(spatial_vars.keys())[0]
                 ax.set_xlabel(
                     "{} [{}]".format(spatial_var_name, self.spatial_unit),
-                    fontsize=fontsize,
                 )
                 for i, variable_list in enumerate(variable_lists):
                     for j, variable in enumerate(variable_list):
@@ -531,25 +539,16 @@ class QuickPlot(object):
                         (self.plots[key][i][j],) = ax.plot(
                             self.first_dimensional_spatial_variable[key],
                             variable(t_in_seconds, **spatial_vars, warn=False),
-                            lw=2,
-                            color=self.colors[i],
+                            # color=self.colors[i],
                             linestyle=linestyle,
                             zorder=10,
                         )
                         variable_handles.append(self.plots[key][0][j])
                     solution_handles.append(self.plots[key][i][0])
-                # add dashed lines for boundaries between subdomains
-                y_min, y_max = ax.get_ylim()
-                ax.set_ylim(y_min, y_max)
+                # add lines for boundaries between subdomains
                 for boundary in variable_lists[0][0].internal_boundaries:
                     boundary_scaled = boundary * self.spatial_factor
-                    ax.plot(
-                        [boundary_scaled, boundary_scaled],
-                        [y_min, y_max],
-                        color="0.5",
-                        lw=1,
-                        zorder=0,
-                    )
+                    ax.axvline(boundary_scaled, color="0.5", lw=1, zorder=0)
             elif variable_lists[0][0].dimensions == 2:
                 # Read dictionary of spatial variables
                 spatial_vars = self.spatial_variable_dict[key]
@@ -572,12 +571,8 @@ class QuickPlot(object):
                         var = variable(t_in_seconds, **spatial_vars, warn=False)
                     else:
                         var = variable(t_in_seconds, **spatial_vars, warn=False).T
-                ax.set_xlabel(
-                    "{} [{}]".format(x_name, self.spatial_unit), fontsize=fontsize
-                )
-                ax.set_ylabel(
-                    "{} [{}]".format(y_name, self.spatial_unit), fontsize=fontsize
-                )
+                ax.set_xlabel("{} [{}]".format(x_name, self.spatial_unit))
+                ax.set_ylabel("{} [{}]".format(y_name, self.spatial_unit))
                 vmin, vmax = self.variable_limits[key]
                 # store the plot and the var data (for testing) as cant access
                 # z data from QuadMesh or QuadContourSet object
@@ -588,42 +583,58 @@ class QuickPlot(object):
                         var,
                         vmin=vmin,
                         vmax=vmax,
-                        cmap="coolwarm",
-                        shading="gouraud",
                     )
                 else:
                     self.plots[key][0][0] = ax.contourf(
-                        x, y, var, levels=100, vmin=vmin, vmax=vmax, cmap="coolwarm"
+                        x, y, var, levels=100, vmin=vmin, vmax=vmax
                     )
                 self.plots[key][0][1] = var
                 if vmin is None and vmax is None:
                     vmin = ax_min(var)
                     vmax = ax_max(var)
                 self.colorbars[key] = self.fig.colorbar(
-                    cm.ScalarMappable(
-                        colors.Normalize(vmin=vmin, vmax=vmax), cmap="coolwarm"
-                    ),
+                    cm.ScalarMappable(colors.Normalize(vmin=vmin, vmax=vmax)),
                     ax=ax,
                 )
             # Set either y label or legend entries
             if len(key) == 1:
                 title = split_long_string(key[0])
-                ax.set_title(title, fontsize=fontsize)
+                ax.set_title(title)
             else:
                 ax.legend(
                     variable_handles,
                     [split_long_string(s, 6) for s in key],
                     bbox_to_anchor=(0.5, 1),
-                    fontsize=8,
                     loc="lower center",
                 )
 
         # Set global legend
-        if len(solution_handles) > 0:
-            self.fig.legend(solution_handles, self.labels, loc="lower right")
+        if len(self.labels) > 1:
+            fig_legend = self.fig.legend(
+                solution_handles, self.labels, loc="lower right"
+            )
+            # Get the position of the top of the legend in relative figure units
+            # There may be a better way ...
+            try:
+                legend_top_inches = fig_legend.get_window_extent(
+                    renderer=self.fig.canvas.get_renderer()
+                ).get_points()[1, 1]
+                fig_height_inches = (self.fig.get_size_inches() * self.fig.dpi)[1]
+                legend_top = legend_top_inches / fig_height_inches
+            except AttributeError:  # pragma: no cover
+                # When testing the examples we set the matplotlib backend to "Template"
+                # which means that the above code doesn't work. Since this is just for
+                # that particular test we can just skip it
+                legend_top = 0
+        else:
+            legend_top = 0
 
         # Fix layout
-        bottom = 0.05 + 0.03 * max((len(self.labels) - 2), 0)
+        if dynamic:
+            slider_top = 0.05
+        else:
+            slider_top = 0
+        bottom = max(legend_top, slider_top)
         self.gridspec.tight_layout(self.fig, rect=[0, bottom, 1, 1])
 
     def dynamic_plot(self, testing=False, step=None):
@@ -644,7 +655,7 @@ class QuickPlot(object):
 
             step = step or self.max_t / 100
             widgets.interact(
-                self.plot,
+                lambda t: self.plot(t, dynamic=False),
                 t=widgets.FloatSlider(min=0, max=self.max_t, step=step, value=0),
                 continuous_update=False,
             )
@@ -653,12 +664,17 @@ class QuickPlot(object):
             from matplotlib.widgets import Slider
 
             # create an initial plot at time 0
-            self.plot(0)
+            self.plot(0, dynamic=True)
 
             axcolor = "lightgoldenrodyellow"
             ax_slider = plt.axes([0.315, 0.02, 0.37, 0.03], facecolor=axcolor)
             self.slider = Slider(
-                ax_slider, "Time [{}]".format(self.time_unit), 0, self.max_t, valinit=0
+                ax_slider,
+                "Time [{}]".format(self.time_unit),
+                0,
+                self.max_t,
+                valinit=0,
+                color="#1f77b4",
             )
             self.slider.on_changed(self.slider_update)
 
@@ -694,15 +710,6 @@ class QuickPlot(object):
                 if y_min is None and y_max is None:
                     y_min, y_max = ax_min(var_min), ax_max(var_max)
                     ax.set_ylim(y_min, y_max)
-                    for boundary in self.variables[key][0][0].internal_boundaries:
-                        boundary_scaled = boundary * self.spatial_factor
-                        ax.plot(
-                            [boundary_scaled, boundary_scaled],
-                            [y_min, y_max],
-                            color="0.5",
-                            lw=1,
-                            zorder=0,
-                        )
             elif self.variables[key][0][0].dimensions == 2:
                 # 2D plot: plot as a function of x and y at time t
                 # Read dictionary of spatial variables
@@ -731,12 +738,10 @@ class QuickPlot(object):
                         var,
                         vmin=vmin,
                         vmax=vmax,
-                        cmap="coolwarm",
-                        shading="gouraud",
                     )
                 else:
                     self.plots[key][0][0] = ax.contourf(
-                        x, y, var, levels=100, vmin=vmin, vmax=vmax, cmap="coolwarm"
+                        x, y, var, levels=100, vmin=vmin, vmax=vmax
                     )
                 self.plots[key][0][1] = var
                 if (vmin, vmax) == (None, None):
@@ -744,9 +749,7 @@ class QuickPlot(object):
                     vmax = ax_max(var)
                     cb = self.colorbars[key]
                     cb.update_normal(
-                        cm.ScalarMappable(
-                            colors.Normalize(vmin=vmin, vmax=vmax), cmap="coolwarm"
-                        )
+                        cm.ScalarMappable(colors.Normalize(vmin=vmin, vmax=vmax))
                     )
 
         self.fig.canvas.draw_idle()
