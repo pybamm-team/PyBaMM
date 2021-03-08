@@ -178,6 +178,15 @@ class TestDFN(unittest.TestCase):
         modeltest = tests.StandardModelTest(model, parameter_values=param)
         modeltest.test_all()
 
+    def test_well_posed_irreversible_plating_with_porosity(self):
+        options = {
+            "lithium plating": "irreversible",
+            "lithium plating porosity change": "true",
+        }
+        model = pybamm.lithium_ion.DFN(options)
+        modeltest = tests.StandardModelTest(model)
+        modeltest.test_all()
+
 
 class TestDFNWithSEI(unittest.TestCase):
     def test_well_posed_constant(self):

@@ -153,6 +153,10 @@ class ParameterValues:
         if "sei" in chemistry:
             component_groups += ["sei"]
 
+        # add lithium plating parameters if provided
+        if "lithium plating" in chemistry:
+            component_groups += ["lithium plating"]
+
         if "anode" in chemistry.keys():
             if "negative electrode" in chemistry.keys():
                 raise KeyError(

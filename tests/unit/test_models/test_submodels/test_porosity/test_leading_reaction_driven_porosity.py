@@ -15,8 +15,17 @@ class TestLeadingOrder(unittest.TestCase):
             "X-averaged negative electrode interfacial current density": a,
             "X-averaged negative electrode sei interfacial current density": a,
             "X-averaged positive electrode interfacial current density": a,
+            "X-averaged negative electrode lithium plating"
+            "interfacial current density": a,
         }
-        submodel = pybamm.porosity.LeadingOrder(param)
+        options = {
+            "sei": "ec reaction limited",
+            "sei film resistance": "distributed",
+            "sei porosity change": "true",
+            "lithium plating": "irreversible",
+            "lithium plating porosity change": "true",
+        }
+        submodel = pybamm.porosity.LeadingOrder(param, options)
         std_tests = tests.StandardSubModelTests(submodel, variables)
         std_tests.test_all()
 

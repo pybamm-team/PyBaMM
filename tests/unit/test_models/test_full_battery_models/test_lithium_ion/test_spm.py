@@ -178,6 +178,14 @@ class TestSPM(unittest.TestCase):
         model_cs_eqn = list(model.rhs.values())[1]
         self.assertEqual(new_model_cs_eqn.id, model_cs_eqn.id)
 
+    def test_well_posed_reversible_plating_with_porosity(self):
+        options = {
+            "lithium plating": "reversible",
+            "lithium plating porosity change": "true",
+        }
+        model = pybamm.lithium_ion.SPM(options)
+        model.check_well_posedness()
+
 
 class TestSPMExternalCircuits(unittest.TestCase):
     def test_well_posed_voltage(self):

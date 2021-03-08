@@ -95,8 +95,9 @@ class TestParameterValues(unittest.TestCase):
     def test_check_parameter_values(self):
         # Cell capacity [A.h] deprecated
         with self.assertRaisesRegex(ValueError, "Cell capacity"):
-            pybamm.ParameterValues({"Cell capacity [A.h]": 1,
-                                    "Nominal cell capacity [A.h]": 1})
+            pybamm.ParameterValues(
+                {"Cell capacity [A.h]": 1, "Nominal cell capacity [A.h]": 1}
+            )
         with self.assertWarnsRegex(DeprecationWarning, "Cell capacity"):
             pybamm.ParameterValues({"Cell capacity [A.h]": 1})
         # Can't provide a current density of 0, as this will cause a ZeroDivision error

@@ -249,6 +249,14 @@ class TestSPMWithCrack(unittest.TestCase):
         modeltest = tests.StandardModelTest(model, parameter_values=parameter_values)
         modeltest.test_all()
 
+    def test_well_posed_reversible_plating_with_porosity(self):
+        options = {
+            "lithium plating": "reversible",
+            "lithium plating porosity change": "true",
+        }
+        model = pybamm.lithium_ion.DFN(options)
+        model.check_well_posedness()
+
 
 if __name__ == "__main__":
     print("Add -v for more debug output")

@@ -347,3 +347,17 @@ doi={10.1149/2.0661810jes}
   publisher = {Elsevier Science (USA)},
   doi = {10.1006/jcph.2002.7041},
 }
+
+
+@article{Yang2017,
+  author = {Yang, Xiao-Guang and Leng, Yungjun and Zhang, Guangsheng
+            and Ge, Shanhai and Wang, Chao-Yang},
+  title = {Modeling of lithium plating induced aging of lithium-ion batteries: 
+  Transition from linear to nonlinear aging},
+  journal = {Power Sources},
+  volume = {360},
+  pages = {28--40},
+  year = {2017},
+  publisher = {Elsevier},
+  url = https://doi.org/10.1016/j.jpowsour.2017.05.110
+}

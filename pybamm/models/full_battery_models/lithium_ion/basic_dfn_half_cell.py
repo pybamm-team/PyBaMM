@@ -222,7 +222,10 @@ class BasicDFNHalfCell(BaseModel):
         # derivatives
         self.boundary_conditions[c_s_w] = {
             "left": (pybamm.Scalar(0), "Neumann"),
-            "right": (-C_w * j_w / a_R_w / gamma_w / D_w(c_s_surf_w, T), "Neumann",),
+            "right": (
+                -C_w * j_w / a_R_w / gamma_w / D_w(c_s_surf_w, T),
+                "Neumann",
+            ),
         }
 
         # c_w_init can in general be a function of x

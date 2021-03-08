@@ -154,6 +154,22 @@ class TestDFN(unittest.TestCase):
         with self.assertRaisesRegex(pybamm.OptionError, "electrolyte conductivity"):
             pybamm.lithium_ion.DFN(options)
 
+    def test_well_posed_reversible_plating_with_porosity(self):
+        options = {
+            "lithium plating": "reversible",
+            "lithium plating porosity change": "true",
+        }
+        model = pybamm.lithium_ion.DFN(options)
+        model.check_well_posedness()
+
+    def test_well_posed_irreversible_plating_with_porosity(self):
+        options = {
+            "lithium plating": "irreversible",
+            "lithium plating porosity change": "true",
+        }
+        model = pybamm.lithium_ion.DFN(options)
+        model.check_well_posedness()
+
 
 class TestDFNWithSEI(unittest.TestCase):
     def test_well_posed_constant(self):
