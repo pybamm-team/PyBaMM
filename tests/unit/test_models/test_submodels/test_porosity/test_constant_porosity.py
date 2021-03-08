@@ -17,6 +17,15 @@ class TestConstantPorosity(unittest.TestCase):
             "lithium plating porosity change": "true",
         }
         param = pybamm.LithiumIonParameters()
+
+        options = {
+            "SEI": "ec reaction limited",
+            "SEI film resistance": "distributed",
+            "SEI porosity change": "true",
+            "lithium plating": "irreversible",
+            "lithium plating porosity change": "true",
+        }
+
         submodel = pybamm.porosity.Constant(param, options)
         std_tests = tests.StandardSubModelTests(submodel)
         std_tests.test_all()

@@ -6,7 +6,7 @@ import numpy as np
 
 
 class StandardOutputTests(object):
-    "Calls all the tests on the standard output variables."
+    """Calls all the tests on the standard output variables."""
 
     def __init__(self, model, parameter_values, disc, solution):
         # Assign attributes
@@ -34,7 +34,7 @@ class StandardOutputTests(object):
         return
 
     def run_test_class(self, ClassName):
-        "Run all tests from a class 'ClassName'"
+        """Run all tests from a class 'ClassName'"""
         tests = ClassName(
             self.model,
             self.parameter_values,
@@ -111,7 +111,7 @@ class VoltageTests(BaseOutputTest):
         ]
         self.eta_r_av = solution["X-averaged reaction overpotential [V]"]
 
-        self.eta_sei_av = solution["X-averaged sei film overpotential [V]"]
+        self.eta_sei_av = solution["X-averaged SEI film overpotential [V]"]
 
         self.eta_e_av = solution["X-averaged electrolyte overpotential [V]"]
         self.delta_phi_s_av = solution["X-averaged solid phase ohmic losses [V]"]
@@ -266,10 +266,10 @@ class ParticleConcentrationTests(BaseOutputTest):
         self.N_s_p = solution["Positive particle flux"]
 
         self.n_SEI_n_av = solution[
-            "X-averaged negative electrode sei concentration [mol.m-3]"
+            "X-averaged negative electrode SEI concentration [mol.m-3]"
         ]
         self.n_SEI_p_av = solution[
-            "X-averaged positive electrode sei concentration [mol.m-3]"
+            "X-averaged positive electrode SEI concentration [mol.m-3]"
         ]
 
     def test_concentration_increase_decrease(self):
@@ -303,7 +303,7 @@ class ParticleConcentrationTests(BaseOutputTest):
             np.testing.assert_array_almost_equal(pos_end_vs_start, 0)
 
     def test_concentration_limits(self):
-        "Test that concentrations do not go below 0 or exceed the maximum."
+        """Test that concentrations do not go below 0 or exceed the maximum."""
         t, x_n, x_p, r_n, r_p = self.t, self.x_n, self.x_p, self.r_n, self.r_p
 
         np.testing.assert_array_less(-self.c_s_n(t, x_n, r_n), 0)
@@ -403,11 +403,11 @@ class ElectrolyteConcentrationTests(BaseOutputTest):
         # self.N_e_hat = solution["Reduced cation flux"]
 
     def test_concentration_limit(self):
-        "Test that the electrolyte concentration is always greater than zero."
+        """Test that the electrolyte concentration is always greater than zero."""
         np.testing.assert_array_less(-self.c_e(self.t, self.x), 0)
 
     def test_conservation(self):
-        "Test conservation of species in the electrolyte."
+        """Test conservation of species in the electrolyte."""
         # sufficient to check average concentration is constant
 
         diff = (
@@ -578,13 +578,13 @@ class CurrentTests(BaseOutputTest):
         self.j_p_av = solution[
             "X-averaged positive electrode interfacial current density"
         ]
-        self.j_n_sei = solution["Negative electrode sei interfacial current density"]
-        self.j_p_sei = solution["Positive electrode sei interfacial current density"]
+        self.j_n_sei = solution["Negative electrode SEI interfacial current density"]
+        self.j_p_sei = solution["Positive electrode SEI interfacial current density"]
         self.j_n_sei_av = solution[
-            "X-averaged negative electrode sei interfacial current density"
+            "X-averaged negative electrode SEI interfacial current density"
         ]
         self.j_p_sei_av = solution[
-            "X-averaged positive electrode sei interfacial current density"
+            "X-averaged positive electrode SEI interfacial current density"
         ]
 
         self.j0_n = solution["Negative electrode exchange current density"]

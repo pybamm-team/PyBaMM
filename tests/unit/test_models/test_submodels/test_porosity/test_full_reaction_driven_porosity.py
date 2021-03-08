@@ -13,16 +13,24 @@ class TestFull(unittest.TestCase):
         a_n = pybamm.PrimaryBroadcast(pybamm.Scalar(0), ["negative electrode"])
         a_p = pybamm.PrimaryBroadcast(pybamm.Scalar(0), ["positive electrode"])
 
-        variables = {
-            "Negative electrode interfacial current density": a_n,
-            "Negative electrode sei interfacial current density": a_n,
-            "Positive electrode interfacial current density": a_p,
-            "Negative electrode lithium plating interfacial current density": a_n,
-        }
         options = {
             "sei": "ec reaction limited",
             "sei film resistance": "distributed",
             "sei porosity change": "true",
+            "lithium plating": "irreversible",
+            "lithium plating porosity change": "true",
+        }
+
+        variables = {
+            "Negative electrode interfacial current density": a_n,
+            "Negative electrode SEI interfacial current density": a_n,
+            "Positive electrode interfacial current density": a_p,
+            "Negative electrode lithium plating interfacial current density": a_n,
+        }
+        options = {
+            "SEI": "ec reaction limited",
+            "SEI film resistance": "distributed",
+            "SEI porosity change": "true",
             "lithium plating": "irreversible",
             "lithium plating porosity change": "true",
         }

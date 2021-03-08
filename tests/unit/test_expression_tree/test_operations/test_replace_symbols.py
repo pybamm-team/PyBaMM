@@ -57,7 +57,7 @@ class TestSymbolReplacer(unittest.TestCase):
 
         replacer = pybamm.SymbolReplacer(
             {
-                pybamm.Parameter("a"): pybamm.Scalar(1),
+                pybamm.Parameter("a"): pybamm.Scalar(4),
                 pybamm.Parameter("b"): pybamm.Scalar(2),
                 pybamm.Parameter("c"): pybamm.Scalar(3),
                 pybamm.Parameter("d"): pybamm.Scalar(42),
@@ -69,7 +69,7 @@ class TestSymbolReplacer(unittest.TestCase):
         self.assertIsInstance(model.rhs[var1], pybamm.Multiplication)
         self.assertIsInstance(model.rhs[var1].children[0], pybamm.Scalar)
         self.assertIsInstance(model.rhs[var1].children[1], pybamm.Gradient)
-        self.assertEqual(model.rhs[var1].children[0].value, 1)
+        self.assertEqual(model.rhs[var1].children[0].value, 4)
         # algebraic
         var2 = model.variables["var2"]
         self.assertIsInstance(model.algebraic[var2], pybamm.Multiplication)

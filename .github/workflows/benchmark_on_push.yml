@@ -1,6 +1,6 @@
-name: Run benchmarks on PR
+name: Run benchmarks on push
 on:
-  pull_request:
+  push:
 
 jobs:
   benchmarks:
@@ -15,14 +15,19 @@ jobs:
         run: pip install -U pip virtualenv asv
       - name: Fetch base branch
         run: |
-          git fetch origin $GITHUB_BASE_REF:$GITHUB_BASE_REF
-          git fetch origin $GITHUB_HEAD_REF:$GITHUB_HEAD_REF
+          # This workflow also runs for merge commits
+          # on develop. In this case, we don't want to be
+          # fetching the develop branch.
+          current_branch=$(git rev-parse --abbrev-ref HEAD)
+          if [ $current_branch != "develop" ]; then
+              git fetch origin develop:develop
+          fi
       - name: Run benchmarks
         run: |
           asv machine --machine "GitHubRunner"
           # Get IDs of branch and PR commits
-          BASE_COMMIT=$(git rev-parse $GITHUB_BASE_REF)
-          HEAD_COMMIT=$(git rev-parse $GITHUB_HEAD_REF)
+          BASE_COMMIT=$(git rev-parse develop)
+          HEAD_COMMIT=$(git rev-parse HEAD)
           echo $BASE_COMMIT | tee commits_to_compare.txt
           echo $HEAD_COMMIT | tee -a commits_to_compare.txt
           asv run HASHFILE:commits_to_compare.txt --m "GitHubRunner" --show-stderr

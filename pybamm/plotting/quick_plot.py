@@ -7,7 +7,13 @@ from collections import defaultdict
 
 
 class LoopList(list):
-    "A list which loops over itself when accessing an index so that it never runs out."
+
+    """A list which loops over itself when accessing an
+    index so that it never runs out"""
+
+    """
+    A list which loops over itself when accessing an index so that it never runs out
+    """
 
     def __getitem__(self, i):
         # implement looping by calling "(i) modulo (length of list)"
@@ -15,7 +21,7 @@ class LoopList(list):
 
 
 def ax_min(data):
-    "Calculate appropriate minimum axis value for plotting"
+    """Calculate appropriate minimum axis value for plotting"""
     data_min = np.nanmin(data)
     if data_min <= 0:
         return 1.04 * data_min
@@ -24,7 +30,7 @@ def ax_min(data):
 
 
 def ax_max(data):
-    "Calculate appropriate maximum axis value for plotting"
+    """Calculate appropriate maximum axis value for plotting"""
     data_max = np.nanmax(data)
     if data_max <= 0:
         return 0.96 * data_max
@@ -33,7 +39,7 @@ def ax_max(data):
 
 
 def split_long_string(title, max_words=4):
-    "Get title in a nice format"
+    """Get title in a nice format"""
     words = title.split()
     # Don't split if fits on one line, don't split just for units
     if len(words) <= max_words or words[max_words].startswith("["):
@@ -45,7 +51,7 @@ def split_long_string(title, max_words=4):
 
 
 def close_plots():
-    "Close all open figures"
+    """Close all open figures"""
     import matplotlib.pyplot as plt
 
     plt.close("all")
@@ -113,7 +119,7 @@ class QuickPlot(object):
                 # attribute
                 solutions[idx] = sol.solution
 
-        models = [solution.model for solution in solutions]
+        models = [solution.all_models[0] for solution in solutions]
 
         # Set labels
         if labels is None:
@@ -344,7 +350,7 @@ class QuickPlot(object):
             self.subplot_positions[variable_tuple] = (self.n_rows, self.n_cols, k + 1)
 
     def get_spatial_var(self, key, variable, dimension):
-        "Return the appropriate spatial variable(s)"
+        """Return the appropriate spatial variable(s)"""
 
         # Extract name and dimensionless value
         # Special case for current collector, which is 2D but in a weird way (both

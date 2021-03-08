@@ -117,14 +117,14 @@ class BaseSolver(object):
         self._root_tol = tol
 
     def copy(self):
-        "Returns a copy of the solver"
+        """Returns a copy of the solver"""
         new_solver = copy.copy(self)
         # clear models_set_up
         new_solver.models_set_up = {}
         return new_solver
 
     def set_up(self, model, inputs=None, t_eval=None):
-        """Unpack model, perform checks, simplify and calculate jacobian.
+        """Unpack model, perform checks, and calculate jacobian.
 
         Parameters
         ----------
@@ -199,7 +199,6 @@ class BaseSolver(object):
             model.convert_to_format = "casadi"
 
         if model.convert_to_format != "casadi":
-            simp = pybamm.Simplification()
             # Create Jacobian from concatenated rhs and algebraic
             y = pybamm.StateVector(slice(0, model.concatenated_initial_conditions.size))
             # set up Jacobian object, for re-use of dict
@@ -228,9 +227,6 @@ class BaseSolver(object):
                 use_jacobian = model.use_jacobian
             if model.convert_to_format != "casadi":
                 # Process with pybamm functions
-                if model.use_simplify:
-                    report(f"Simplifying {name}")
-                    func = simp.simplify(func)
 
                 if model.convert_to_format == "jax":
                     report(f"Converting {name} to jax")
@@ -239,9 +235,6 @@ class BaseSolver(object):
                 if use_jacobian:
                     report(f"Calculating jacobian for {name}")
                     jac = jacobian.jac(func, y)
-                    if model.use_simplify:
-                        report(f"Simplifying jacobian for {name}")
-                        jac = simp.simplify(jac)
                     if model.convert_to_format == "python":
                         report(f"Converting jacobian for {name} to python")
                         jac = pybamm.EvaluatorPython(jac)
@@ -939,17 +932,34 @@ class BaseSolver(object):
                         "steps!".format(domain)
                     )
 
-        # Run set up on first step
         if old_solution is None:
+            # Run set up on first step
             pybamm.logger.verbose(
                 "Start stepping {} with {}".format(model.name, self.name)
             )
             self.set_up(model, ext_and_inputs)
+            self.models_set_up.update(
+                {model: {"initial conditions": model.concatenated_initial_conditions}}
+            )
             t = 0.0
-        else:
-            # initialize with old solution
+        elif model not in self.models_set_up:
+            # Run set up if the model has changed
+            self.set_up(model, ext_and_inputs)
+            self.models_set_up.update(
+                {model: {"initial conditions": model.concatenated_initial_conditions}}
+            )
+
+        if old_solution is not None:
             t = old_solution.all_ts[-1][-1]
-            model.y0 = old_solution.all_ys[-1][:, -1]
+            if old_solution.all_models[-1] == model:
+                # initialize with old solution
+                model.y0 = old_solution.all_ys[-1][:, -1]
+            else:
+                model.y0 = (
+                    model.set_initial_conditions_from(old_solution)
+                    .concatenated_initial_conditions.evaluate(0, inputs=ext_and_inputs)
+                    .flatten()
+                )
         set_up_time = timer.time()
 
         # (Re-)calculate consistent initial conditions
@@ -1002,7 +1012,7 @@ class BaseSolver(object):
         )
 
         # Return solution
-        if save is False or old_solution is None:
+        if save is False:
             return solution
         else:
             return old_solution + solution
@@ -1051,7 +1061,7 @@ class BaseSolver(object):
                 event_sol = pybamm.Solution(
                     solution.t_event,
                     solution.y_event,
-                    solution.model,
+                    solution.all_models[-1],
                     solution.all_inputs[-1],
                     solution.t_event,
                     solution.y_event,
@@ -1106,7 +1116,7 @@ class BaseSolver(object):
         return [k for k, v in extrap_events.items() if v]
 
     def _set_up_ext_and_inputs(self, model, external_variables, inputs):
-        "Set up external variables and input parameters"
+        """Set up external variables and input parameters"""
         inputs = inputs or {}
 
         # Go through all input parameters that can be found in the model
@@ -1131,7 +1141,7 @@ class BaseSolver(object):
 
 
 class SolverCallable:
-    "A class that will be called by the solver when integrating"
+    """A class that will be called by the solver when integrating"""
 
     def __init__(self, function, name, model):
         self._function = function
@@ -1167,7 +1177,7 @@ class SolverCallable:
 
 
 class Residuals(SolverCallable):
-    "Returns information about residuals at time t and state y"
+    """Returns information about residuals at time t and state y"""
 
     def __init__(self, function, name, model):
         super().__init__(function, name, model)
@@ -1180,7 +1190,7 @@ class Residuals(SolverCallable):
 
 
 class InitialConditions(SolverCallable):
-    "Returns initial conditions given inputs"
+    """Returns initial conditions given inputs"""
 
     def __init__(self, function, model):
         super().__init__(function, "initial conditions", model)

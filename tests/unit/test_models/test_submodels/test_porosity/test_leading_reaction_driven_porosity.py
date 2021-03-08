@@ -13,15 +13,17 @@ class TestLeadingOrder(unittest.TestCase):
         a = pybamm.PrimaryBroadcast(pybamm.Scalar(0), "current collector")
         variables = {
             "X-averaged negative electrode interfacial current density": a,
-            "X-averaged negative electrode sei interfacial current density": a,
+            "X-averaged negative electrode SEI interfacial current density": a,
             "X-averaged positive electrode interfacial current density": a,
             "X-averaged negative electrode lithium plating"
             "interfacial current density": a,
+            "X-averaged negative electrode lithium"
+            "plating interfacial current density": a,
         }
         options = {
-            "sei": "ec reaction limited",
-            "sei film resistance": "distributed",
-            "sei porosity change": "true",
+            "SEI": "ec reaction limited",
+            "SEI film resistance": "distributed",
+            "SEI porosity change": "true",
             "lithium plating": "irreversible",
             "lithium plating porosity change": "true",
         }
