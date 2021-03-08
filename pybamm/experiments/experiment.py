@@ -96,7 +96,7 @@ class Experiment:
         else:
             raise TypeError("experimental parameters should be a dictionary")
 
-        self.termination = termination
+        self.termination = self.read_termination(termination)
         self.use_simulation_setup_type = use_simulation_setup_type
 
     def __str__(self):
@@ -285,3 +285,38 @@ class Experiment:
                 )
             )
         return time_in_seconds
+
+    def read_termination(self, termination):
+        """
+        Read the termination reason. If this condition is hit, the experiment will stop.
+        """
+        if termination is None:
+            return {}
+        elif isinstance(termination, str):
+            termination = [termination]
+
+        termination_dict = {}
+        for term in termination:
+            term_list = term.split()
+            if term_list[-1] == "capacity":
+                end_discharge = "".join(term_list[:-1])
+                if end_discharge.endswith("%"):
+                    end_discharge_percent = end_discharge.split("%")[0]
+                    termination_dict["capacity"] = (int(end_discharge_percent), "%")
+                elif end_discharge.endswith("Ah"):
+                    end_discharge_Ah = end_discharge.split("Ah")[0]
+                    termination_dict["capacity"] = (int(end_discharge_Ah), "Ah")
+                elif end_discharge.endswith("A.h"):
+                    end_discharge_Ah = end_discharge.split("A.h")[0]
+                    termination_dict["capacity"] = (int(end_discharge_Ah), "Ah")
+                else:
+                    raise ValueError(
+                        "Capacity termination must be given in the form "
+                        "'80%', '4Ah', or '4A.h'"
+                    )
+            else:
+                raise ValueError(
+                    "Only capacity can be provided as a termination reason, "
+                    "e.g. '80% capacity' or '4 Ah capacity'"
+                )
+        return termination_dict

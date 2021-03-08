@@ -777,6 +777,14 @@ class Simulation:
                 all_cycle_solutions.append(cycle_solution)
                 all_summary_variables.append(cycle_summary_variables)
 
+                if capacity_stop is not None:
+                    capacity_now = cycle_summary_variables["C"]
+                    pybamm.logger.notice(
+                        f"Capacity is now {capacity_now}Ah "
+                        f"(originally {capacity_start}Ah, "
+                        f"will stop at {capacity_stop}Ah"
+                    )
+
             if self.solution is not None:
                 self.solution.cycles = all_cycle_solutions
                 self.solution.set_summary_variables(all_summary_variables)

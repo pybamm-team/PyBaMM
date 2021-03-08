@@ -137,6 +137,41 @@ class TestExperiment(unittest.TestCase):
         ):
             pybamm.Experiment([], "not a dictionary")
 
+    def test_termination(self):
+        experiment = pybamm.Experiment(["Discharge at 1 C for 20 seconds"])
+        self.assertEqual(experiment.termination, {})
+
+        experiment = pybamm.Experiment(
+            ["Discharge at 1 C for 20 seconds"], termination="80% capacity"
+        )
+        self.assertEqual(experiment.termination, {"capacity": (80, "%")})
+        experiment = pybamm.Experiment(
+            ["Discharge at 1 C for 20 seconds"], termination="80 % capacity"
+        )
+        self.assertEqual(experiment.termination, {"capacity": (80, "%")})
+
+        experiment = pybamm.Experiment(
+            ["Discharge at 1 C for 20 seconds"], termination="4Ah capacity"
+        )
+        self.assertEqual(experiment.termination, {"capacity": (4, "Ah")})
+        experiment = pybamm.Experiment(
+            ["Discharge at 1 C for 20 seconds"], termination="4 A.h capacity"
+        )
+        self.assertEqual(experiment.termination, {"capacity": (4, "Ah")})
+
+        with self.assertRaisesRegex(ValueError, "Only capacity"):
+            experiment = pybamm.Experiment(
+                ["Discharge at 1 C for 20 seconds"], termination="bla bla capacity bla"
+            )
+        with self.assertRaisesRegex(ValueError, "Only capacity"):
+            experiment = pybamm.Experiment(
+                ["Discharge at 1 C for 20 seconds"], termination="4 A.h something else"
+            )
+        with self.assertRaisesRegex(ValueError, "Capacity termination"):
+            experiment = pybamm.Experiment(
+                ["Discharge at 1 C for 20 seconds"], termination="1 capacity"
+            )
+
 
 if __name__ == "__main__":
     print("Add -v for more debug output")
