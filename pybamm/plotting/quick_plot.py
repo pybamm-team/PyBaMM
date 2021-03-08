@@ -738,12 +738,10 @@ class QuickPlot(object):
                         var,
                         vmin=vmin,
                         vmax=vmax,
-                        cmap="coolwarm",
-                        shading="gouraud",
                     )
                 else:
                     self.plots[key][0][0] = ax.contourf(
-                        x, y, var, levels=100, vmin=vmin, vmax=vmax, cmap="coolwarm"
+                        x, y, var, levels=100, vmin=vmin, vmax=vmax
                     )
                 self.plots[key][0][1] = var
                 if (vmin, vmax) == (None, None):
@@ -751,9 +749,7 @@ class QuickPlot(object):
                     vmax = ax_max(var)
                     cb = self.colorbars[key]
                     cb.update_normal(
-                        cm.ScalarMappable(
-                            colors.Normalize(vmin=vmin, vmax=vmax), cmap="coolwarm"
-                        )
+                        cm.ScalarMappable(colors.Normalize(vmin=vmin, vmax=vmax))
                     )
 
         self.fig.canvas.draw_idle()
