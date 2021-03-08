@@ -1,0 +1,22 @@
+# Plot style based on seaborn-paper
+axes.labelsize: 11
+axes.titlesize: 12
+xtick.labelsize: 9
+ytick.labelsize: 9
+legend.fontsize: 9
+
+axes.prop_cycle: cycler('color', ["r", "b", "k", "g", "m", "c"])
+grid.linewidth: 0.8
+lines.linewidth: 1.8
+patch.linewidth: 0.24
+
+xtick.major.width: 0.8
+ytick.major.width: 0.8
+xtick.minor.width: 0.4
+ytick.minor.width: 0.4
+
+xtick.major.pad: 5.6
+ytick.major.pad: 5.6
+
+image.cmap: coolwarm
+pcolor.shading: gouraud

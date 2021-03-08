@@ -1,6 +1,7 @@
 #
 # Test setting up a simulation with an experiment
 #
+import casadi
 import pybamm
 import numpy as np
 import unittest
@@ -82,11 +83,21 @@ class TestSimulationExperiment(unittest.TestCase):
                 )
             ]
         )
-        model = pybamm.lithium_ion.SPM()
+        model = pybamm.lithium_ion.DFN()
         sim = pybamm.Simulation(model, experiment=experiment)
         sol = sim.solve()
         self.assertEqual(sol.termination, "final time")
         self.assertEqual(len(sol.cycles), 1)
+
+        for i, step in enumerate(sol.cycles[0].steps[:-1]):
+            len_rhs = sol.all_models[0].concatenated_rhs.size
+            y_left = step.all_ys[-1][:len_rhs, -1]
+            if isinstance(y_left, casadi.DM):
+                y_left = y_left.full()
+            y_right = sol.cycles[0].steps[i + 1].all_ys[0][:len_rhs, 0]
+            if isinstance(y_right, casadi.DM):
+                y_right = y_right.full()
+            np.testing.assert_array_equal(y_left.flatten(), y_right.flatten())
 
         # Solve again starting from solution
         sol2 = sim.solve(starting_solution=sol)
