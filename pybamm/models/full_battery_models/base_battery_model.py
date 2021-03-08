@@ -62,8 +62,8 @@ class Options(pybamm.FuzzyDict):
             * "particle shape" : str
                 Sets the model shape of the electrode particles. This is used to
                 calculate the surface area to volume ratio. Can be "spherical"
-                (default) or "user". For the "user" option the surface area per
-                unit volume can be passed as a parameter, and is therefore not
+                (default), "user" or "no particles". For the "user" option the surface
+                area per unit volume can be passed as a parameter, and is therefore not
                 necessarily consistent with the particle shape.
             * "particle cracking" : str
                 Sets the model to account for mechanical effects and particle
@@ -131,11 +131,65 @@ class Options(pybamm.FuzzyDict):
                 solve an algebraic equation for it. Default is "false", unless "SEI film
                 resistance" is distributed in which case it is automatically set to
                 "true".
+            * "electrolyte conductivity" : str
+                Can be "default" (default), "full", "leading order", "composite" or
+                "integrated"
 
     **Extends:** :class:`dict`
     """
 
     def __init__(self, extra_options):
+        self.possible_options = {
+            "surface form": ["false", "differential", "algebraic"],
+            "convection": ["none", "uniform transverse", "full transverse"],
+            "current collector": [
+                "uniform",
+                "potential pair",
+                "potential pair quite conductive",
+            ],
+            "dimensionality": [0, 1, 2],
+            "interfacial surface area": ["constant", "varying"],
+            "thermal": ["isothermal", "lumped", "x-lumped", "x-full"],
+            "cell geometry": ["arbitrary", "pouch"],
+            "SEI": [
+                "none",
+                "constant",
+                "reaction limited",
+                "solvent-diffusion limited",
+                "electron-migration limited",
+                "interstitial-diffusion limited",
+                "ec reaction limited",
+            ],
+            "SEI film resistance": ["none", "distributed", "average"],
+            "SEI porosity change": ["true", "false"],
+            "lithium plating": ["none", "reversible", "irreversible"],
+            "loss of active material": ["none", "negative", "positive", "both"],
+            "operating mode": ["current", "voltage", "power"],
+            "particle cracking": [
+                "none",
+                "no cracking",
+                "negative",
+                "positive",
+                "both",
+            ],
+            "particle": [
+                "Fickian diffusion",
+                "fast diffusion",
+                "uniform profile",
+                "quadratic profile",
+                "quartic profile",
+            ],
+            "particle shape": ["spherical", "user", "no particles"],
+            "electrolyte conductivity": [
+                "default",
+                "full",
+                "leading order",
+                "composite",
+                "integrated",
+            ],
+            "total interfacial current density as a state": ["true", "false"],
+        }
+
         default_options = {
             "operating mode": "current",
             "dimensionality": 0,
@@ -218,58 +272,6 @@ class Options(pybamm.FuzzyDict):
                 "operating mode '{}' not recognised".format(options["operating mode"])
             )
 
-        if options["surface form"] not in ["false", "differential", "algebraic"]:
-            raise pybamm.OptionError(
-                "surface form '{}' not recognised".format(options["surface form"])
-            )
-        if options["convection"] not in [
-            "none",
-            "uniform transverse",
-            "full transverse",
-        ]:
-            raise pybamm.OptionError(
-                "convection option '{}' not recognised".format(options["convection"])
-            )
-        if options["current collector"] not in [
-            "uniform",
-            "potential pair",
-            "potential pair quite conductive",
-        ]:
-            raise pybamm.OptionError(
-                "current collector model '{}' not recognised".format(
-                    options["current collector"]
-                )
-            )
-        if options["dimensionality"] not in [0, 1, 2]:
-            raise pybamm.OptionError(
-                "Dimension of current collectors must be 0, 1, or 2, not {}".format(
-                    options["dimensionality"]
-                )
-            )
-        if options["thermal"] not in ["isothermal", "lumped", "x-lumped", "x-full"]:
-            raise pybamm.OptionError(
-                "Unknown thermal model '{}'".format(options["thermal"])
-            )
-        if options["cell geometry"] not in ["arbitrary", "pouch"]:
-            raise pybamm.OptionError(
-                "Unknown geometry '{}'".format(options["cell geometry"])
-            )
-        if options["SEI"] not in [
-            "none",
-            "constant",
-            "reaction limited",
-            "solvent-diffusion limited",
-            "electron-migration limited",
-            "interstitial-diffusion limited",
-            "ec reaction limited",
-        ]:
-            raise pybamm.OptionError("Unknown SEI model '{}'".format(options["SEI"]))
-        if options["SEI film resistance"] not in ["none", "distributed", "average"]:
-            raise pybamm.OptionError(
-                "Unknown SEI film resistance model '{}'".format(
-                    options["SEI film resistance"]
-                )
-            )
         if options["SEI porosity change"] not in ["true", "false"]:
             if options["SEI porosity change"] in [True, False]:
                 raise pybamm.OptionError(
@@ -282,34 +284,6 @@ class Options(pybamm.FuzzyDict):
                 )
             )
 
-        if options["lithium plating"] not in ["none", "reversible", "irreversible"]:
-            raise pybamm.OptionError(
-                "Unknown lithium plating model '{}'".format(options["lithium plating"])
-            )
-
-        if options["loss of active material"] not in [
-            "none",
-            "negative",
-            "positive",
-            "both",
-        ]:
-            raise pybamm.OptionError(
-                "Unknown loss of active material '{}'".format(
-                    options["loss of active material"]
-                )
-            )
-
-        if options["particle cracking"] not in [
-            "none",
-            "no cracking",
-            "negative",
-            "positive",
-            "both",
-        ]:
-            raise pybamm.OptionError(
-                "Unknown particle cracking '{}'".format(options["particle cracking"])
-            )
-
         if options["dimensionality"] == 0:
             if options["current collector"] not in ["uniform"]:
                 raise pybamm.OptionError(
@@ -319,24 +293,11 @@ class Options(pybamm.FuzzyDict):
                 raise pybamm.OptionError(
                     "cannot have transverse convection in 0D model"
                 )
-        if options["particle"] not in [
-            "Fickian diffusion",
-            "fast diffusion",
-            "uniform profile",
-            "quadratic profile",
-            "quartic profile",
-        ]:
-            raise pybamm.OptionError(
-                "particle model '{}' not recognised".format(options["particle"])
-            )
+
         if options["particle"] == "fast diffusion":
             raise NotImplementedError(
                 "The 'fast diffusion' option has been renamed. "
                 "Use 'uniform profile' instead."
-            )
-        if options["particle shape"] not in ["spherical", "user", "no particles"]:
-            raise pybamm.OptionError(
-                "particle shape '{}' not recognised".format(options["particle shape"])
             )
 
         if options["thermal"] == "x-lumped" and options["dimensionality"] == 1:
@@ -345,23 +306,27 @@ class Options(pybamm.FuzzyDict):
                 "placed at the top of the cell."
             )
 
-        if options["electrolyte conductivity"] not in [
-            "default",
-            "full",
-            "leading order",
-            "composite",
-            "integrated",
-        ]:
-            raise pybamm.OptionError(
-                "electrolyte conductivity model '{}' not recognised".format(
-                    options["electrolyte conductivity"]
+        for option, value in options.items():
+            if (
+                option == "side reactions"
+                or option == "external submodels"
+                or option == "working electrode"
+            ):
+                pass
+            elif value not in self.possible_options[option]:
+                raise pybamm.OptionError(
+                    f"'{value}' is not recognized in option '{option}'. "
+                    f"Possible values are {self.possible_options[option]}"
                 )
-            )
 
         super().__init__(options.items())
 
     def print_options(self):
-        print(self.items())
+        for key, value in self.items():
+            if key in self.possible_options.keys():
+                print(f"{key!r}: {value!r} (possible: {self.possible_options[key]!r})")
+            else:
+                print(f"{key!r}: {value!r}")
 
     def print_detailed_options(self):
         print(self.__doc__)
