@@ -79,7 +79,7 @@ class ParameterValues:
                 path = os.path.split(file_path)[0]
                 values = self.read_parameters_csv(file_path)
             else:
-                path = None
+                path = ""
             # Don't check parameter already exists when first creating it
             self.update(values, check_already_exists=False, path=path)
 
