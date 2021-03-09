@@ -5,8 +5,8 @@ from .dfn import DFN
 class Yang2017(DFN):
     def __init__(self, options=None, name="Yang2017", build=True):
         options = {
-            "sei": "ec reaction limited",
-            "sei film resistance": "distributed",
+            "SEI": "ec reaction limited",
+            "SEI film resistance": "distributed",
             "SEI porosity change": "true",
             "lithium plating": "irreversible",
             "lithium plating porosity change": "true",
@@ -17,7 +17,3 @@ class Yang2017(DFN):
     @property
     def default_parameter_values(self):
         return pybamm.ParameterValues(chemistry=pybamm.parameter_sets.Yang2017)
-
-
-
-

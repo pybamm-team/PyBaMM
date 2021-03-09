@@ -248,7 +248,7 @@ class TestSPMWithCrack(unittest.TestCase):
             "lithium plating": "reversible",
             "lithium plating porosity change": "true",
         }
-        model = pybamm.lithium_ion.DFN(options)
+        model = pybamm.lithium_ion.SPM(options)
         model.check_well_posedness()
 
 

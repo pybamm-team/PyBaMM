@@ -9,17 +9,10 @@ import unittest
 
 class TestFull(unittest.TestCase):
     def test_public_functions(self):
-        param = pybamm.LeadAcidParameters()
+        # param = pybamm.LeadAcidParameters()
+        param = pybamm.LithiumIonParameters()
         a_n = pybamm.PrimaryBroadcast(pybamm.Scalar(0), ["negative electrode"])
         a_p = pybamm.PrimaryBroadcast(pybamm.Scalar(0), ["positive electrode"])
-
-        options = {
-            "sei": "ec reaction limited",
-            "sei film resistance": "distributed",
-            "sei porosity change": "true",
-            "lithium plating": "irreversible",
-            "lithium plating porosity change": "true",
-        }
 
         variables = {
             "Negative electrode interfacial current density": a_n,

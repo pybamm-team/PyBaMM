@@ -72,7 +72,6 @@ class SPM(BaseModel):
                 self.param, self.options
             )
 
-
     def set_active_material_submodel(self):
 
         if self.options["loss of active material"] == "none":

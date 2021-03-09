@@ -42,14 +42,12 @@ class IrreversiblePlating(BasePlating):
         phi_e_n = variables[f"{self.domain} electrolyte potential"]
         c_e_n = variables[f"{self.domain} electrolyte concentration"]
         T = variables[f"{self.domain} electrode temperature"]
-        eta_sei = variables[f"{self.domain} electrode sei film overpotential"]
         c_plated_Li = variables[
             f"{self.domain} electrode lithium plating concentration"
         ]
         j0_plating = param.j0_plating(c_e_n, c_plated_Li, T)
 
         eta_sei = variables[f"{self.domain} electrode SEI film overpotential"]
-        #C_plating = param.C_plating
 
         phi_ref = param.U_n_ref / param.potential_scale
 

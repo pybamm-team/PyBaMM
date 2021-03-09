@@ -9,16 +9,15 @@ import unittest
 
 class TestLeadingOrder(unittest.TestCase):
     def test_public_functions(self):
-        param = pybamm.LeadAcidParameters()
+        # param = pybamm.LeadAcidParameters()
+        param = pybamm.LithiumIonParameters()
         a = pybamm.PrimaryBroadcast(pybamm.Scalar(0), "current collector")
         variables = {
             "X-averaged negative electrode interfacial current density": a,
             "X-averaged negative electrode SEI interfacial current density": a,
             "X-averaged positive electrode interfacial current density": a,
-            "X-averaged negative electrode lithium plating"
+            "X-averaged negative electrode lithium plating "
             "interfacial current density": a,
-            "X-averaged negative electrode lithium"
-            "plating interfacial current density": a,
         }
         options = {
             "SEI": "ec reaction limited",
