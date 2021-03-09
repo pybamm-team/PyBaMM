@@ -298,13 +298,12 @@ class Options(pybamm.FuzzyDict):
                 or option == "working electrode"
             ):
                 pass
-            elif value not in self.possible_options[option] or (
-                option == "operating mode" and callable(value)
-            ):
-                raise pybamm.OptionError(
-                    f"'{value}' is not recognized in option '{option}'. "
-                    f"Possible values are {self.possible_options[option]}"
-                )
+            elif value not in self.possible_options[option]:
+                if not (option == "operating mode" and callable(value)):
+                    raise pybamm.OptionError(
+                        f"\n'{value}' is not recognized in option '{option}'. "
+                        f"Possible values are {self.possible_options[option]}"
+                    )
 
         super().__init__(options.items())
 
