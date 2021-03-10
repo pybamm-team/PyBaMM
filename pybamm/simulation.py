@@ -777,13 +777,36 @@ class Simulation:
                 all_cycle_solutions.append(cycle_solution)
                 all_summary_variables.append(cycle_summary_variables)
 
+                # Calculate capacity_start using the first cycle
+                if cycle_num == 1:
+                    if "capacity" in self.experiment.termination:
+                        # Note capacity_start could be defined as
+                        # self.parameter_values["Nominal cell capacity [A.h]"] instead
+                        capacity_start = all_summary_variables[0][
+                            "Theoretical capacity [A.h]"
+                        ]
+                        value, typ = self.experiment.termination["capacity"]
+                        if typ == "Ah":
+                            capacity_stop = value
+                        elif typ == "%":
+                            capacity_stop = value / 100 * capacity_start
+                    else:
+                        capacity_stop = None
+
                 if capacity_stop is not None:
-                    capacity_now = cycle_summary_variables["C"]
-                    pybamm.logger.notice(
-                        f"Capacity is now {capacity_now}Ah "
-                        f"(originally {capacity_start}Ah, "
-                        f"will stop at {capacity_stop}Ah"
-                    )
+                    capacity_now = cycle_summary_variables["Theoretical capacity [A.h]"]
+                    if capacity_now > capacity_stop:
+                        pybamm.logger.notice(
+                            f"Capacity is now {capacity_now:.3f} Ah "
+                            f"(originally {capacity_start:.3f} Ah, "
+                            f"will stop at {capacity_stop:.3f} Ah)"
+                        )
+                    else:
+                        pybamm.logger.notice(
+                            f"Stopping experiment since capacity ({capacity_now:.3f} Ah) "
+                            f"is below stopping capacity ({capacity_stop:.3f} Ah)."
+                        )
+                        break
 
             if self.solution is not None:
                 self.solution.cycles = all_cycle_solutions
