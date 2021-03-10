@@ -459,7 +459,6 @@ class BaseBatteryModel(pybamm.BaseModel):
         # Spatial
         var = pybamm.standard_spatial_vars
         L_x = self.param.L_x
-        L_y = self.param.L_y
         L_z = self.param.L_z
         self.variables.update(
             {
