@@ -168,7 +168,7 @@ class TestDFN(unittest.TestCase):
 
         param["Negative particle radius [m]"] = negative_radius
         param["Positive particle radius [m]"] = positive_radius
-        # Only get 3dp of accuracy in some tests at 1C
+        # Only get 3dp of accuracy in some tests at 1C with particle distribution
         # TODO: investigate if there is a bug or some way to improve the
         # implementation
         param["Current function [A]"] = 0.5 * param["Nominal cell capacity [A.h]"]
