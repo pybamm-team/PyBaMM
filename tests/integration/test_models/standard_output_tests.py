@@ -290,18 +290,10 @@ class ParticleConcentrationTests(BaseOutputTest):
             neg_end_vs_start = self.c_s_n_rav(t[-1], x_n) - self.c_s_n_rav(t[0], x_n)
             pos_end_vs_start = self.c_s_p_rav(t[-1], x_p) - self.c_s_p_rav(t[0], x_p)
         else:
-            neg_diff = self.c_s_n(t[1:], x_n, r_n) - self.c_s_n(
-                t[:-1], x_n, r_n
-            )
-            pos_diff = self.c_s_p(t[1:], x_p, r_p) - self.c_s_p(
-                t[:-1], x_p, r_p
-            )
-            neg_end_vs_start = self.c_s_n(t[-1], x_n, r_n) - self.c_s_n(
-                t[0], x_n, r_n
-            )
-            pos_end_vs_start = self.c_s_p(t[-1], x_p, r_p) - self.c_s_p(
-                t[0], x_p, r_p
-            )
+            neg_diff = self.c_s_n(t[1:], x_n, r_n) - self.c_s_n(t[:-1], x_n, r_n)
+            pos_diff = self.c_s_p(t[1:], x_p, r_p) - self.c_s_p(t[:-1], x_p, r_p)
+            neg_end_vs_start = self.c_s_n(t[-1], x_n, r_n) - self.c_s_n(t[0], x_n, r_n)
+            pos_end_vs_start = self.c_s_p(t[-1], x_p, r_p) - self.c_s_p(t[0], x_p, r_p)
 
         if self.operating_condition == "discharge":
             np.testing.assert_array_less(neg_diff, 1e-16)
@@ -389,7 +381,7 @@ class ParticleConcentrationTests(BaseOutputTest):
                     np.testing.assert_array_less(self.N_s_p(t[1:], x_p, r_p[1:]), 1e-16)
             if self.operating_condition == "charge":
                 np.testing.assert_array_less(self.N_s_n(t[1:], x_n, r_n[1:]), 1e-16)
-                np.testing.assert_array less(-1e-16, self.N_s_p(t[1:], x_p, r_p[1:]))
+                np.testing.assert_array_less(-1e-16, self.N_s_p(t[1:], x_p, r_p[1:]))
             if self.operating_condition == "off":
                 np.testing.assert_array_almost_equal(self.N_s_n(t, x_n, r_n), 0)
                 np.testing.assert_array_almost_equal(self.N_s_p(t, x_p, r_p), 0)
