@@ -265,11 +265,14 @@ class ParticleConcentrationTests(BaseOutputTest):
         self.N_s_n = solution["Negative particle flux"]
         self.N_s_p = solution["Positive particle flux"]
 
-        self.n_SEI_n_av = solution[
-            "X-averaged negative electrode SEI concentration [mol.m-3]"
+        self.c_SEI_n_tot = solution["Loss of lithium to negative electrode SEI [mol]"]
+        self.c_SEI_p_tot = solution["Loss of lithium to positive electrode SEI [mol]"]
+
+        self.c_Li_n_tot = solution[
+            "Loss of lithium to negative electrode lithium plating [mol]"
         ]
-        self.n_SEI_p_av = solution[
-            "X-averaged positive electrode SEI concentration [mol.m-3]"
+        self.c_Li_p_tot = solution[
+            "Loss of lithium to positive electrode lithium plating [mol]"
         ]
 
     def test_concentration_increase_decrease(self):
@@ -293,11 +296,11 @@ class ParticleConcentrationTests(BaseOutputTest):
             )
 
         if self.operating_condition == "discharge":
-            np.testing.assert_equal(np.any(neg_end_vs_start <= 0), True)
-            np.testing.assert_equal(np.any(pos_end_vs_start >= 0), True)
+            np.testing.assert_array_less(neg_end_vs_start, 1e-16)
+            np.testing.assert_array_less(-1e-16, pos_end_vs_start)
         elif self.operating_condition == "charge":
-            np.testing.assert_equal(np.any(neg_end_vs_start >= 0), True)
-            np.testing.assert_equal(np.any(pos_end_vs_start <= 0), True)
+            np.testing.assert_array_less(-1e-16, neg_end_vs_start)
+            np.testing.assert_array_less(pos_end_vs_start, 1e-16)
         elif self.operating_condition == "off":
             np.testing.assert_array_almost_equal(neg_end_vs_start, 0)
             np.testing.assert_array_almost_equal(pos_end_vs_start, 0)
@@ -315,17 +318,13 @@ class ParticleConcentrationTests(BaseOutputTest):
     def test_conservation(self):
         """Test amount of lithium stored across all particles and in SEI layers is
         constant."""
-        L_n = self.param["Negative electrode thickness [m]"]
-        L_p = self.param["Positive electrode thickness [m]"]
-        L_y = self.param["Electrode width [m]"]
-        L_z = self.param["Electrode height [m]"]
-        A = L_y * L_z
-
         self.c_s_tot = (
             self.c_s_n_tot(self.solution.t)
             + self.c_s_p_tot(self.solution.t)
-            + self.n_SEI_n_av(self.solution.t) * L_n * A
-            + self.n_SEI_p_av(self.solution.t) * L_p * A
+            + self.c_SEI_n_tot(self.solution.t)
+            + self.c_SEI_p_tot(self.solution.t)
+            + self.c_Li_n_tot(self.solution.t)
+            + self.c_Li_p_tot(self.solution.t)
         )
         diff = (self.c_s_tot[1:] - self.c_s_tot[:-1]) / self.c_s_tot[:-1]
         if "profile" in self.model.options["particle"]:
@@ -333,7 +332,7 @@ class ParticleConcentrationTests(BaseOutputTest):
         elif self.model.options["surface form"] == "differential":
             np.testing.assert_array_almost_equal(diff, 0, decimal=10)
         elif self.model.options["SEI"] == "ec reaction limited":
-            np.testing.assert_array_almost_equal(diff, 0, decimal=8)
+            np.testing.assert_array_almost_equal(diff, 0, decimal=12)
         else:
             np.testing.assert_array_almost_equal(diff, 0, decimal=15)
 
@@ -370,19 +369,13 @@ class ParticleConcentrationTests(BaseOutputTest):
                     np.testing.assert_array_less(0, self.N_s_n(t[3:], x_n, r_n[1:]))
                     np.testing.assert_array_less(self.N_s_p(t[3:], x_p, r_p[1:]), 0)
                 else:
-                    np.testing.assert_equal(
-                        np.any(self.N_s_n(t[1:], x_n, r_n[1:]) >= 0), True
+                    np.testing.assert_array_less(
+                        -1e-16, self.N_s_n(t[1:], x_n, r_n[1:])
                     )
-                    np.testing.assert_equal(
-                        np.any(self.N_s_p(t[1:], x_p, r_p[1:]) <= 0), True
-                    )
+                    np.testing.assert_array_less(self.N_s_p(t[1:], x_p, r_p[1:]), 1e-16)
             if self.operating_condition == "charge":
-                np.testing.assert_equal(
-                    np.any(self.N_s_n(t[1:], x_n, r_n[1:]) <= 0), True
-                )
-                np.testing.assert_equal(
-                    np.any(self.N_s_p(t[1:], x_p, r_p[1:]) >= 0), True
-                )
+                np.testing.assert_equal(self.N_s_n(t[1:], x_n, r_n[1:]), 1e-16)
+                np.testing.assert_equal(-1e-16, self.N_s_p(t[1:], x_p, r_p[1:]))
             if self.operating_condition == "off":
                 np.testing.assert_array_almost_equal(self.N_s_n(t, x_n, r_n), 0)
                 np.testing.assert_array_almost_equal(self.N_s_p(t, x_p, r_p), 0)
