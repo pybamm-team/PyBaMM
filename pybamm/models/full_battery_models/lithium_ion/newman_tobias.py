@@ -9,11 +9,11 @@ class NewmanTobias(DFN):
     """
     Newman-Tobias model of a lithium-ion battery based on the formulation in [1]_.
     This model assumes a uniform concentration profile in the electrolyte.
-    Unlike the model posed in [1]_, this models accounts for nonlinear Butler-Volmer
-    kinetics, and tracks the average concentration in the solid phase in each electrode.
-    This is analagous to including an equation for the state of charge as in [2]_.
-    The user can pass the "particle" option (as documented in `pybamm.BaseBatteryModel`)
-    to include mass transport in the particles.
+    Unlike the model posed in [1]_, this model accounts for nonlinear Butler-Volmer
+    kinetics. It also tracks the average concentration in the solid phase in each
+    electrode, which is equivalent to including an equation for the local state of
+    charge as in [2]_. The user can pass the "particle" option to include mass
+    transport in the particles.
 
     Parameters
     ----------
@@ -43,10 +43,10 @@ class NewmanTobias(DFN):
 
     def __init__(self, options=None, name="Newman-Tobias model", build=True):
 
-        # Set default option for particle submodel. Other default options are
-        # those given in `pybamm.BaseBatteryModel`
+        # Set default option "uniform profile" for particle submodel. Other
+        # default options are those given in `pybamm.Options` defined in
+        # `base_battery_model.py`.
         options = options or {}
-        # Set option to the default "uniform profile" if not provided
         if "particle" not in options:
             options["particle"] = "uniform profile"
 
