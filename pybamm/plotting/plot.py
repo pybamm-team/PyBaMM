@@ -23,6 +23,8 @@ def plot(x, y, xlabel=None, ylabel=None, title=None, testing=False, **kwargs):
         The label for the y axis
     testing : bool, optional
         Whether to actually make the plot (turned off for unit tests)
+    kwargs
+        Keyword arguments, passed to plt.plot
 
     """
     import matplotlib.pyplot as plt
