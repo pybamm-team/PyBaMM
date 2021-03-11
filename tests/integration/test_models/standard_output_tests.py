@@ -338,7 +338,9 @@ class ParticleConcentrationTests(BaseOutputTest):
         elif self.model.options["surface form"] == "differential":
             np.testing.assert_array_almost_equal(diff, 0, decimal=10)
         elif self.model.options["SEI"] == "ec reaction limited":
-            np.testing.assert_array_almost_equal(diff, 0, decimal=12)
+            np.testing.assert_array_almost_equal(diff, 0, decimal=11)
+        elif self.model.options["lithium plating"] == "irreversible":
+            np.testing.assert_array_almost_equal(diff, 0, decimal=14)
         else:
             np.testing.assert_array_almost_equal(diff, 0, decimal=15)
 
