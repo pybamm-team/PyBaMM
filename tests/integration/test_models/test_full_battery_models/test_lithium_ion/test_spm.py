@@ -12,7 +12,9 @@ class TestSPM(unittest.TestCase):
     def test_basic_processing(self):
         options = {"thermal": "isothermal"}
         model = pybamm.lithium_ion.SPM(options)
-        modeltest = tests.StandardModelTest(model)
+        # use Ecker parameters for nonlinear diffusion
+        param = pybamm.ParameterValues(chemistry=pybamm.parameter_sets.Ecker2015)
+        modeltest = tests.StandardModelTest(model, parameter_values=param)
         modeltest.test_all()
 
     def test_basic_processing_1plus1D(self):

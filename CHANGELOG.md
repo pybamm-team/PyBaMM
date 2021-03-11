@@ -2,6 +2,8 @@
 
 ## Features
 
+-   Added `plot_voltage_components` to easily plot the component overpotentials that make up the voltage ([#1419](https://github.com/pybamm-team/PyBaMM/pull/1419))
+-   Made `QuickPlot` more customizable and added an example ([#1419](https://github.com/pybamm-team/PyBaMM/pull/1419))
 -   `Solution` objects can now be created by stepping *different* models ([#1408](https://github.com/pybamm-team/PyBaMM/pull/1408))
 -   Added support for Python 3.9 and dropped support for Python 3.6. Python 3.6 may still work but is now untested ([#1370](https://github.com/pybamm-team/PyBaMM/pull/1370))
 -   Added the electrolyte overpotential and Ohmic losses for full conductivity, including surface form ([#1350](https://github.com/pybamm-team/PyBaMM/pull/1350))
@@ -33,6 +35,7 @@
 
 ## Bug fixes
 
+-   Fixed a bug on the boundary conditions of `FickianSingleParticle` and `FickianManyParticles` to ensure mass is conserved ([#1421](https://github.com/pybamm-team/PyBaMM/pull/1421))
 -   Fixed a bug where the `PolynomialSingleParticle` submodel gave incorrect results with "dimensionality" equal to 2 ([#1411](https://github.com/pybamm-team/PyBaMM/pull/1411))
 -   Fixed a bug where volume averaging in 0D gave the wrong result ([#1411](https://github.com/pybamm-team/PyBaMM/pull/1411))
 -   Fixed a sign error in the positive electrode ohmic losses ([#1407](https://github.com/pybamm-team/PyBaMM/pull/1407))

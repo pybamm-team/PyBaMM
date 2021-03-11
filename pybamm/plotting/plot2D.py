@@ -52,7 +52,6 @@ def plot2D(x, y, z, xlabel=None, ylabel=None, title=None, testing=False, **kwarg
         z.entries,
         vmin=ax_min(z.entries),
         vmax=ax_max(z.entries),
-        cmap="coolwarm",
         **kwargs
     )
     plt.xlabel(xlabel)
