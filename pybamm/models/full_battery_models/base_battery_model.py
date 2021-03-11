@@ -481,7 +481,6 @@ class BaseBatteryModel(pybamm.BaseModel):
 
         options = Options(extra_options)
 
-
         # Options that are incompatible with models
         if isinstance(self, pybamm.lithium_ion.BaseModel):
             if options["convection"] != "none":
