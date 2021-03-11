@@ -81,3 +81,14 @@ class Full(BaseElectrolyteDiffusion):
         c_e = variables["Electrolyte concentration"]
 
         self.initial_conditions = {c_e: self.param.c_e_init}
+
+    def set_boundary_conditions(self, variables):
+
+        c_e = variables["Electrolyte concentration"]
+
+        self.boundary_conditions = {
+            c_e: {
+                "left": (pybamm.Scalar(0), "Neumann"),
+                "right": (pybamm.Scalar(0), "Neumann"),
+            }
+        }

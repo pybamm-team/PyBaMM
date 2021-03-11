@@ -134,17 +134,6 @@ class BaseElectrolyteDiffusion(pybamm.BaseSubModel):
 
         return variables
 
-    def set_boundary_conditions(self, variables):
-
-        c_e = variables["Electrolyte concentration"]
-
-        self.boundary_conditions = {
-            c_e: {
-                "left": (pybamm.Scalar(0), "Neumann"),
-                "right": (pybamm.Scalar(0), "Neumann"),
-            }
-        }
-
     def set_events(self, variables):
         c_e = variables["Electrolyte concentration"]
         self.events.append(
