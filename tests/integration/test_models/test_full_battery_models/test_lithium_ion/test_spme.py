@@ -164,13 +164,15 @@ class TestSPMe(unittest.TestCase):
         modeltest = tests.StandardModelTest(model)
         modeltest.test_all()
 
-    def test_well_posed_reversible_plating_with_porosity(self):
+    def test_well_posed_irreversible_plating_with_porosity(self):
         options = {
-            "lithium plating": "reversible",
+            "lithium plating": "irreversible",
             "lithium plating porosity change": "true",
         }
         model = pybamm.lithium_ion.SPMe(options)
-        model.check_well_posedness()
+        param = pybamm.ParameterValues(chemistry=pybamm.parameter_sets.Yang2017)
+        modeltest = tests.StandardModelTest(model, parameter_values=param)
+        modeltest.test_all()
 
 
 class TestSPMeWithSEI(unittest.TestCase):

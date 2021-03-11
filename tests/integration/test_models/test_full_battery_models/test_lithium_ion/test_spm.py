@@ -166,7 +166,18 @@ class TestSPM(unittest.TestCase):
     def test_surface_form_algebraic(self):
         options = {"surface form": "algebraic"}
         model = pybamm.lithium_ion.SPM(options)
-        modeltest = tests.StandardModelTest(model)
+        param = pybamm.ParameterValues(chemistry=pybamm.parameter_sets.Yang2017)
+        modeltest = tests.StandardModelTest(model, parameter_values=param)
+        modeltest.test_all()
+
+    def test_well_posed_irreversible_plating_with_porosity(self):
+        options = {
+            "lithium plating": "irreversible",
+            "lithium plating porosity change": "true",
+        }
+        model = pybamm.lithium_ion.SPM(options)
+        param = pybamm.ParameterValues(chemistry=pybamm.parameter_sets.Yang2017)
+        modeltest = tests.StandardModelTest(model, parameter_values=param)
         modeltest.test_all()
 
 
@@ -242,14 +253,6 @@ class TestSPMWithCrack(unittest.TestCase):
         parameter_values = pybamm.ParameterValues(chemistry=chemistry)
         modeltest = tests.StandardModelTest(model, parameter_values=parameter_values)
         modeltest.test_all()
-
-    def test_well_posed_reversible_plating_with_porosity(self):
-        options = {
-            "lithium plating": "reversible",
-            "lithium plating porosity change": "true",
-        }
-        model = pybamm.lithium_ion.SPM(options)
-        model.check_well_posedness()
 
 
 if __name__ == "__main__":
