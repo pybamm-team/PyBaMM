@@ -126,11 +126,14 @@ class TestQuickPlot(unittest.TestCase):
             linestyles=["-", "--"],
             figsize=(1, 2),
             labels=["sol 1", "sol 2"],
+            n_rows=2,
         )
         self.assertEqual(quick_plot.colors, ["r", "g", "b"])
         self.assertEqual(quick_plot.linestyles, ["-", "--"])
         self.assertEqual(quick_plot.figsize, (1, 2))
         self.assertEqual(quick_plot.labels, ["sol 1", "sol 2"])
+        self.assertEqual(quick_plot.n_rows, 2)
+        self.assertEqual(quick_plot.n_cols, 1)
 
         # Test different time units
         quick_plot = pybamm.QuickPlot(solution, ["a"])
