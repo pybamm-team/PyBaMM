@@ -359,3 +359,24 @@ doi={10.1149/2.0661810jes}
   publisher={IOP Publishing},
   doi={10.1149/1.1634273},
 }
+
+@article{Newman1962,
+  title={Theoretical analysis of current distribution in porous electrodes},
+  author={Newman, John S and Tobias, Charles W},
+  journal={Journal of The Electrochemical Society},
+  volume={109},
+  number={12},
+  pages={1183},
+  year={1962},
+  publisher={IOP Publishing}
+}
+
+@article{Chu2020,
+  title={Parameterization of prismatic lithium--iron--phosphate cells through a streamlined thermal/electrochemical model},
+  author={Chu, Howie N and Kim, Sun Ung and Rahimian, Saeed Khaleghi and Siegel, Jason B and Monroe, Charles W},
+  journal={Journal of Power Sources},
+  volume={453},
+  pages={227787},
+  year={2020},
+  publisher={Elsevier}
+}

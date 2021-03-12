@@ -624,7 +624,7 @@ class CurrentTests(BaseOutputTest):
                 axis=0,
             ),
             self.i_cell / self.l_n,
-            decimal=3,
+            decimal=4,
         )
         np.testing.assert_array_almost_equal(
             np.mean(
@@ -633,7 +633,7 @@ class CurrentTests(BaseOutputTest):
                 axis=0,
             ),
             -self.i_cell / self.l_p,
-            decimal=3,
+            decimal=4,
         )
 
     def test_conservation(self):
