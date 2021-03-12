@@ -763,6 +763,22 @@ class BaseModel(object):
 
         print(div)
 
+    def check_discretised_or_discretise_inplace_if_0D(self):
+        """
+        Discretise model if it isn't already discretised
+        This only works with purely 0D models, as otherwise the mesh and spatial
+        method should be specified by the user
+        """
+        if self.is_discretised is False:
+            try:
+                disc = pybamm.Discretisation()
+                disc.process_model(self)
+            except pybamm.DiscretisationError as e:
+                raise pybamm.DiscretisationError(
+                    "Cannot automatically discretise model, model should be "
+                    "discretised before exporting casadi functions ({})".format(e)
+                )
+
     def export_casadi_objects(self, variable_names, input_parameter_order=None):
         """
         Export the constituent parts of the model (rhs, algebraic, initial conditions,
@@ -782,18 +798,7 @@ class BaseModel(object):
             Dictionary of {str: casadi object} pairs representing the model in casadi
             format
         """
-        # Discretise model if it isn't already discretised
-        # This only works with purely 0D models, as otherwise the mesh and spatial
-        # method should be specified by the user
-        if self.is_discretised is False:
-            try:
-                disc = pybamm.Discretisation()
-                disc.process_model(self)
-            except pybamm.DiscretisationError as e:
-                raise pybamm.DiscretisationError(
-                    "Cannot automatically discretise model, model should be "
-                    "discretised before exporting casadi functions ({})".format(e)
-                )
+        self.check_discretised_or_discretise_inplace_if_0D()
 
         # Create casadi functions for the model
         t_casadi = casadi.MX.sym("t")
@@ -911,6 +916,43 @@ class BaseModel(object):
         C.add(z0_fn)
         C.add(variables_fn)
         C.generate()
+
+    def generate_julia_diffeq(self, input_parameter_order=None):
+        """
+        Generate a Julia representation of the model, ready to be solved by Julia's
+        DifferentialEquations library.
+        Currently only implemented for ODE models.
+
+        Parameters
+        ----------
+        input_parameter_order : list, optional
+            Order in which input parameters will be provided when solving the model
+
+        Returns
+        -------
+        rhs_str : str
+            The Julia-compatible equations for the model in string format,
+            to be evaluated by eval(Meta.parse(...))
+        ics_array : array-like
+            Array of initial conditions
+        """
+        self.check_discretised_or_discretise_inplace_if_0D()
+
+        # Check that there are no algebraic equations in the model
+        if self.algebraic != {}:
+            raise pybamm.ModelError(
+                "Cannot generate Julia DiffEq model for a DAE model"
+            )
+
+        name = self.name.replace(" ", "_")
+        rhs_str = pybamm.get_julia_function(
+            self.concatenated_rhs,
+            funcname=name,
+            input_parameter_order=input_parameter_order,
+        )
+        ics_array = self.concatenated_initial_conditions.evaluate(t=0).flatten()
+
+        return rhs_str, ics_array
 
     @property
     def default_parameter_values(self):

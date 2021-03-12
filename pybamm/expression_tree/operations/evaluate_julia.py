@@ -25,6 +25,22 @@ def id_to_julia_variable(symbol_id, constant=False):
     return var_format.format(symbol_id).replace("-", "m")
 
 
+def is_constant_and_can_evaluate(symbol):
+    """
+    Returns True if symbol is constant and evaluation does not raise any errors.
+    Returns False otherwise.
+    An example of a constant symbol that cannot be "evaluated" is PrimaryBroadcast(0).
+    """
+    if symbol.is_constant():
+        try:
+            symbol.evaluate()
+            return True
+        except NotImplementedError:
+            return False
+    else:
+        return False
+
+
 def find_symbols(symbol, constant_symbols, variable_symbols, variable_symbol_sizes):
     """
     This function converts an expression tree to a dictionary of node id's and strings
@@ -56,7 +72,7 @@ def find_symbols(symbol, constant_symbols, variable_symbols, variable_symbol_siz
         variable, for caching
 
     """
-    if symbol.is_constant():
+    if is_constant_and_can_evaluate(symbol):
         value = symbol.evaluate()
         if not isinstance(value, numbers.Number):
             if scipy.sparse.issparse(value):
@@ -107,7 +123,7 @@ def find_symbols(symbol, constant_symbols, variable_symbols, variable_symbol_siz
     # children variables
     children_vars = []
     for child in symbol.children:
-        if child.is_constant():
+        if is_constant_and_can_evaluate(child):
             child_eval = child.evaluate()
             if isinstance(child_eval, numbers.Number):
                 children_vars.append(str(child_eval))
@@ -149,6 +165,9 @@ def find_symbols(symbol, constant_symbols, variable_symbols, variable_symbol_siz
             symbol_str = "grad_{}({})".format(symbol.domain[0], children_vars[0])
         elif isinstance(symbol, pybamm.Divergence):
             symbol_str = "div_{}({})".format(symbol.domain[0], children_vars[0])
+        elif isinstance(symbol, pybamm.Broadcast):
+            # ignore broadcasts for now
+            symbol_str = children_vars[0]
         else:
             symbol_str = symbol.name + children_vars[0]
 
@@ -539,8 +558,10 @@ def convert_var_and_eqn_to_str(var, eqn, all_constants_str, all_variables_str, t
 
     # calculate the final variable that will output the result
     result_var = id_to_julia_variable(eqn.id, eqn.is_constant())
-    if eqn.is_constant():
+    if is_constant_and_can_evaluate(eqn):
         result_value = eqn.evaluate()
+    else:
+        result_value = None
 
     # define the variable that goes into the equation
     if eqn.is_constant() and isinstance(result_value, numbers.Number):
@@ -626,9 +647,9 @@ def get_julia_mtk_model(model, geometry=None, tspan=None):
 
     mtk_str += "@derivatives Dt'~t\n"
     if is_pde:
-        mtk_str += "@derivatives "
+        mtk_str += "@derivatives"
         for domain_symbol in domain_name_to_symbol.values():
-            mtk_str += f"D{domain_symbol}'~{domain_symbol}"
+            mtk_str += f" D{domain_symbol}'~{domain_symbol}"
         mtk_str += "\n"
     mtk_str += "\n"
 
@@ -716,31 +737,32 @@ def get_julia_mtk_model(model, geometry=None, tspan=None):
     # Boundary conditions
     if is_pde:
         for var, eqn_side in model.boundary_conditions.items():
-            for side, (eqn, typ) in eqn_side.items():
-                (
-                    all_ic_bc_constants_str,
-                    all_ic_bc_julia_str,
-                    eqn_str,
-                ) = convert_var_and_eqn_to_str(
-                    var,
-                    eqn,
-                    all_ic_bc_constants_str,
-                    all_ic_bc_julia_str,
-                    "boundary condition",
-                )
+            if isinstance(var, pybamm.Variable):
+                for side, (eqn, typ) in eqn_side.items():
+                    (
+                        all_ic_bc_constants_str,
+                        all_ic_bc_julia_str,
+                        eqn_str,
+                    ) = convert_var_and_eqn_to_str(
+                        var,
+                        eqn,
+                        all_ic_bc_constants_str,
+                        all_ic_bc_julia_str,
+                        "boundary condition",
+                    )
 
-                geom = list(geometry[var.domain[0]].values())[0]
-                if side == "left":
-                    limit = geom["min"]
-                elif side == "right":
-                    limit = geom["max"]
-                if typ == "Dirichlet":
-                    pass
-                elif typ == "Neumann":
-                    raise NotImplementedError
-                all_ic_bc_str += (
-                    f"   {variable_id_to_number[var.id]}(t, {limit}) ~ {eqn_str},\n"
-                )
+                    geom = list(geometry[var.domain[0]].values())[0]
+                    if side == "left":
+                        limit = geom["min"]
+                    elif side == "right":
+                        limit = geom["max"]
+
+                    bc = f"{variable_id_to_number[var.id]}(t, {limit})"
+                    if typ == "Dirichlet":
+                        pass
+                    elif typ == "Neumann":
+                        bc = f"D{domain_name_to_symbol[var.domain[0]]}({bc})"
+                    all_ic_bc_str += f"   {bc} ~ {eqn_str},\n"
 
     ####################################################################################
 
