@@ -113,6 +113,10 @@ class Negate(UnaryOperator):
         """ See :meth:`UnaryOperator._unary_evaluate()`. """
         return -child
 
+    def _unary_new_copy(self, child):
+        """ See :meth:`UnaryOperator._unary_new_copy()`. """
+        return -child
+
 
 class AbsoluteValue(UnaryOperator):
     """A node in the expression tree representing an `abs` operator

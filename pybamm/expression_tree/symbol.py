@@ -568,18 +568,30 @@ class Symbol(anytree.NodeMixin):
 
     def __neg__(self):
         """return a :class:`Negate` object"""
-        return pybamm.simplify_if_constant(pybamm.Negate(self))
+        if isinstance(self, pybamm.Broadcast):
+            # Move negation inside the broadcast
+            # Apply recursively
+            neg_self_not_broad = pybamm.simplify_if_constant(-self.orphans[0])
+            return self._unary_new_copy(neg_self_not_broad)
+        else:
+            return pybamm.simplify_if_constant(pybamm.Negate(self))
 
     def __abs__(self):
         """return an :class:`AbsoluteValue` object, or a smooth approximation"""
-        k = pybamm.settings.abs_smoothing
-        # Return exact approximation if that is the setting or the outcome is a constant
-        # (i.e. no need for smoothing)
-        if k == "exact" or is_constant(self):
-            out = pybamm.AbsoluteValue(self)
+        if isinstance(self, pybamm.Broadcast):
+            # Move absolute value inside the broadcast
+            # Apply recursively
+            abs_self_not_broad = pybamm.simplify_if_constant(abs(self.orphans[0]))
+            return self._unary_new_copy(abs_self_not_broad)
         else:
-            out = pybamm.smooth_absolute_value(self, k)
-        return pybamm.simplify_if_constant(out)
+            k = pybamm.settings.abs_smoothing
+            # Return exact approximation if that is the setting or the outcome is a
+            # constant (i.e. no need for smoothing)
+            if k == "exact" or is_constant(self):
+                out = pybamm.AbsoluteValue(self)
+            else:
+                out = pybamm.smooth_absolute_value(self, k)
+            return pybamm.simplify_if_constant(out)
 
     def __mod__(self, other):
         """return an :class:`Modulo` object"""
@@ -610,8 +622,7 @@ class Symbol(anytree.NodeMixin):
             return pybamm.Scalar(0)
 
     def _diff(self, variable):
-        """Default behaviour for differentiation, overriden by Binary and Unary Operators
-        """
+        """Default behaviour for differentiation, overriden by Binary and Unary Operators"""
         raise NotImplementedError
 
     def jac(self, variable, known_jacs=None, clear_domain=True):

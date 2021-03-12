@@ -145,6 +145,23 @@ class TestSpecificFunctions(unittest.TestCase):
             places=5,
         )
 
+        # Test broadcast gets switched
+        broad_a = pybamm.PrimaryBroadcast(a, "test")
+        fun_broad = pybamm.arcsinh(broad_a)
+        self.assertEqual(fun_broad.id, pybamm.PrimaryBroadcast(fun, "test").id)
+
+        broad_a = pybamm.FullBroadcast(a, "test", "test2")
+        fun_broad = pybamm.arcsinh(broad_a)
+        self.assertEqual(fun_broad.id, pybamm.FullBroadcast(fun, "test", "test2").id)
+
+        # Test recursion
+        broad_a = pybamm.PrimaryBroadcast(pybamm.PrimaryBroadcast(a, "test"), "test2")
+        fun_broad = pybamm.arcsinh(broad_a)
+        self.assertEqual(
+            fun_broad.id,
+            pybamm.PrimaryBroadcast(pybamm.PrimaryBroadcast(fun, "test"), "test2").id,
+        )
+
     def test_arctan(self):
         a = pybamm.InputParameter("a")
         fun = pybamm.arctan(a)

@@ -648,14 +648,28 @@ def simplify_elementwise_binary_broadcasts(left, right):
 
     # No need to broadcast if the other symbol already has the shape that is being
     # broadcasted to
-    if left.domains == right.domains and all(
-        left.evaluates_on_edges(dim) == right.evaluates_on_edges(dim)
-        for dim in ["primary", "secondary", "tertiary"]
-    ):
-        if isinstance(left, pybamm.Broadcast) and left.child.domain == []:
-            left = left.orphans[0]
-        elif isinstance(right, pybamm.Broadcast) and right.child.domain == []:
-            right = right.orphans[0]
+    # Also check for broadcast of a broadcast
+    if left.domains == right.domains:
+        #      and all(
+        #     left.evaluates_on_edges(dim) == right.evaluates_on_edges(dim)
+        #     for dim in ["primary", "secondary", "tertiary"]
+        # ):
+        if isinstance(left, pybamm.Broadcast):
+            if left.child.domain == []:
+                left = left.orphans[0]
+            elif (
+                isinstance(left.child, pybamm.Broadcast)
+                and left.child.child.domain == []
+            ):
+                left = left.orphans[0].orphans[0]
+        elif isinstance(right, pybamm.Broadcast):
+            if right.child.domain == []:
+                right = right.orphans[0]
+            elif (
+                isinstance(right.child, pybamm.Broadcast)
+                and right.child.child.domain == []
+            ):
+                right = right.orphans[0].orphans[0]
 
     return left, right
 
@@ -858,6 +872,12 @@ def simplified_multiplication(left, right):
     if pybamm.is_scalar_one(right):
         return left
 
+    # anything multiplied by a scalar negative one returns negative itself
+    if pybamm.is_scalar_one(-left):
+        return -right
+    if pybamm.is_scalar_one(-right):
+        return -left
+
     # anything multiplied by a matrix one returns itself if
     # - the shapes are the same
     # - both left and right evaluate on edges, or both evaluate on nodes, in all
@@ -872,6 +892,11 @@ def simplified_multiplication(left, right):
                 return right
             elif pybamm.is_matrix_one(right):
                 return left
+            # also check for negative one
+            if pybamm.is_matrix_one(-left):
+                return -right
+            elif pybamm.is_matrix_one(-right):
+                return -left
     except NotImplementedError:
         pass
 

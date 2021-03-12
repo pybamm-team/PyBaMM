@@ -31,6 +31,23 @@ class TestUnaryOperators(unittest.TestCase):
         negb = pybamm.Negate(b)
         self.assertEqual(negb.evaluate(), -4)
 
+        # Test broadcast gets switched
+        broad_a = pybamm.PrimaryBroadcast(a, "test")
+        neg_broad = -broad_a
+        self.assertEqual(neg_broad.id, pybamm.PrimaryBroadcast(nega, "test").id)
+
+        broad_a = pybamm.FullBroadcast(a, "test", "test2")
+        neg_broad = -broad_a
+        self.assertEqual(neg_broad.id, pybamm.FullBroadcast(nega, "test", "test2").id)
+
+        # Test recursion
+        broad_a = pybamm.PrimaryBroadcast(pybamm.PrimaryBroadcast(a, "test"), "test2")
+        neg_broad = -broad_a
+        self.assertEqual(
+            neg_broad.id,
+            pybamm.PrimaryBroadcast(pybamm.PrimaryBroadcast(nega, "test"), "test2").id,
+        )
+
     def test_absolute(self):
         a = pybamm.Symbol("a")
         absa = pybamm.AbsoluteValue(a)
@@ -40,6 +57,23 @@ class TestUnaryOperators(unittest.TestCase):
         b = pybamm.Scalar(-4)
         absb = pybamm.AbsoluteValue(b)
         self.assertEqual(absb.evaluate(), 4)
+
+        # Test broadcast gets switched
+        broad_a = pybamm.PrimaryBroadcast(a, "test")
+        abs_broad = abs(broad_a)
+        self.assertEqual(abs_broad.id, pybamm.PrimaryBroadcast(absa, "test").id)
+
+        broad_a = pybamm.FullBroadcast(a, "test", "test2")
+        abs_broad = abs(broad_a)
+        self.assertEqual(abs_broad.id, pybamm.FullBroadcast(absa, "test", "test2").id)
+
+        # Test recursion
+        broad_a = pybamm.PrimaryBroadcast(pybamm.PrimaryBroadcast(a, "test"), "test2")
+        abs_broad = abs(broad_a)
+        self.assertEqual(
+            abs_broad.id,
+            pybamm.PrimaryBroadcast(pybamm.PrimaryBroadcast(absa, "test"), "test2").id,
+        )
 
     def test_smooth_absolute_value(self):
         a = pybamm.StateVector(slice(0, 1))
