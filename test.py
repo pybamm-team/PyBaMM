@@ -1,0 +1,12 @@
+import pybamm
+
+model = pybamm.lithium_ion.SPM(name="SPM")
+sim = pybamm.Simulation(model)
+sim.set_parameters()
+
+model = sim.model
+
+mtk_str = pybamm.get_julia_mtk_model(
+    model, geometry=model.default_geometry, tspan=(0, 3600)
+)
+print(mtk_str)
