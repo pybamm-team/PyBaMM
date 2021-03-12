@@ -832,6 +832,8 @@ class Simulation:
             self._solution, output_variables=output_variables, **kwargs
         )
 
+        return self.quick_plot
+
     @property
     def model(self):
         return self._model
