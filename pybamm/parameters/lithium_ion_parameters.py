@@ -1,3 +1,4 @@
+#
 # Standard parameters for lithium-ion battery models
 #
 import pybamm
@@ -7,6 +8,7 @@ import numpy as np
 class LithiumIonParameters:
     """
     Standard parameters for lithium-ion battery models
+
     Layout:
         1. Dimensional Parameters
         2. Dimensional Functions
@@ -14,11 +16,14 @@ class LithiumIonParameters:
         4. Dimensionless Parameters
         5. Dimensionless Functions
         6. Input Current
+
     Parameters
     ----------
+
     options : dict, optional
         A dictionary of options to be passed to the parameters. The options that
         can be set are listed below.
+
             * "particle shape" : str, optional
                 Sets the model shape of the electrode particles. This is used to
                 calculate the surface area to volume ratio. Can be "spherical"
