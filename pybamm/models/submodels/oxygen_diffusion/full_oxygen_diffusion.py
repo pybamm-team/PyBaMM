@@ -60,7 +60,6 @@ class Full(BaseModel):
         c_ox_s_p = pybamm.concatenation(c_ox_s, c_ox_p)
         variables = {"Separator and positive electrode oxygen concentration": c_ox_s_p}
 
-        c_ox = pybamm.concatenation(c_ox_n, c_ox_s, c_ox_p)
         variables.update(
             self._get_standard_concentration_variables(c_ox_n, c_ox_s, c_ox_p)
         )
