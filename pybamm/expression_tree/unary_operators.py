@@ -1146,9 +1146,18 @@ def x_average(symbol):
         new_symbol = symbol.new_copy()
         new_symbol.parent = None
         return new_symbol
-    # If symbol is a Broadcast, its average value is its child
-    elif isinstance(symbol, pybamm.Broadcast):
+    # If symbol is a primary broadcast, or a full broadcast without auxiliary domains,
+    # its average value is its child
+    if isinstance(symbol, pybamm.PrimaryBroadcast) or (
+        isinstance(symbol, pybamm.FullBroadcast) and symbol.auxiliary_domains == {}
+    ):
         return symbol.orphans[0]
+    # If symbol is a full broadcast, its average value is a primary broadcast of its
+    # child in its secondary dimension
+    if isinstance(symbol, pybamm.FullBroadcast):
+        return pybamm.PrimaryBroadcast(
+            symbol.orphans[0], symbol.auxiliary_domains["secondary"]
+        )
     # If symbol is a concatenation of Broadcasts, its average value is its child
     elif (
         isinstance(symbol, pybamm.Concatenation)

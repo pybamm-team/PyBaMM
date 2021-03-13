@@ -88,8 +88,8 @@ class BaseThermal(pybamm.BaseSubModel):
 
         param = self.param
 
-        T = variables["Cell temperature"]
-        T_n, _, T_p = T.orphans
+        T_n = variables["Negative electrode temperature"]
+        T_p = variables["Positive electrode temperature"]
 
         a_n = variables["Negative electrode surface area to volume ratio"]
         a_p = variables["Positive electrode surface area to volume ratio"]
@@ -105,6 +105,9 @@ class BaseThermal(pybamm.BaseSubModel):
 
         i_e = variables["Electrolyte current density"]
         phi_e = variables["Electrolyte potential"]
+        phi_e_n = variables["Negative electrolyte potential"]
+        phi_e_s = variables["Separator electrolyte potential"]
+        phi_e_p = variables["Positive electrolyte potential"]
 
         i_s_n = variables["Negative electrode current density"]
         i_s_p = variables["Positive electrode current density"]
@@ -124,7 +127,6 @@ class BaseThermal(pybamm.BaseSubModel):
         if isinstance(i_e, pybamm.Concatenation):
             # compute by domain if possible
             i_e_n, i_e_s, i_e_p = i_e.orphans
-            phi_e_n, phi_e_s, phi_e_p = phi_e.orphans
             Q_ohm_e_n = -pybamm.inner(i_e_n, pybamm.grad(phi_e_n))
             Q_ohm_e_s = -pybamm.inner(i_e_s, pybamm.grad(phi_e_s))
             Q_ohm_e_p = -pybamm.inner(i_e_p, pybamm.grad(phi_e_p))

@@ -70,7 +70,9 @@ class FirstOrder(BaseModel):
         c_ox = pybamm.concatenation(
             param.C_e * c_ox_n_1, param.C_e * c_ox_s_1, param.C_e * c_ox_p_1
         )
-        variables.update(self._get_standard_concentration_variables(c_ox))
+        variables.update(
+            self._get_standard_concentration_variables(c_ox_n, c_ox_s, c_ox_p)
+        )
 
         N_ox = pybamm.concatenation(
             param.C_e * N_ox_n_1, param.C_e * N_ox_s_1, param.C_e * N_ox_p_1
