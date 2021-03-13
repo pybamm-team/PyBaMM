@@ -364,6 +364,10 @@ class Gradient(SpatialOperator):
         """ See :meth:`pybamm.Symbol._evaluates_on_edges()`. """
         return True
 
+    def _unary_new_copy(self, child):
+        """ See :meth:`UnaryOperator._unary_new_copy()`. """
+        return grad(child)
+
 
 class Divergence(SpatialOperator):
     """A node in the expression tree representing a div operator
@@ -391,6 +395,10 @@ class Divergence(SpatialOperator):
     def _evaluates_on_edges(self, dimension):
         """ See :meth:`pybamm.Symbol._evaluates_on_edges()`. """
         return False
+
+    def _unary_new_copy(self, child):
+        """ See :meth:`UnaryOperator._unary_new_copy()`. """
+        return div(child)
 
 
 class Laplacian(SpatialOperator):
@@ -1017,6 +1025,8 @@ def grad(symbol):
     if isinstance(symbol, pybamm.PrimaryBroadcast):
         new_child = pybamm.PrimaryBroadcast(0, symbol.child.domain)
         return pybamm.PrimaryBroadcastToEdges(new_child, symbol.domain)
+    elif isinstance(symbol, pybamm.FullBroadcast):
+        return pybamm.FullBroadcastToEdges(0, symbol.domain, symbol.auxiliary_domains)
     else:
         return Gradient(symbol)
 
@@ -1146,18 +1156,9 @@ def x_average(symbol):
         new_symbol = symbol.new_copy()
         new_symbol.parent = None
         return new_symbol
-    # If symbol is a primary broadcast, or a full broadcast without auxiliary domains,
-    # its average value is its child
-    if isinstance(symbol, pybamm.PrimaryBroadcast) or (
-        isinstance(symbol, pybamm.FullBroadcast) and symbol.auxiliary_domains == {}
-    ):
-        return symbol.orphans[0]
-    # If symbol is a full broadcast, its average value is a primary broadcast of its
-    # child in its secondary dimension
-    if isinstance(symbol, pybamm.FullBroadcast):
-        return pybamm.PrimaryBroadcast(
-            symbol.orphans[0], symbol.auxiliary_domains["secondary"]
-        )
+    # If symbol is a primary or full broadcast, reduce by one dimension
+    if isinstance(symbol, (pybamm.PrimaryBroadcast, pybamm.FullBroadcast)):
+        return symbol.reduce_one_dimension()
     # If symbol is a concatenation of Broadcasts, its average value is its child
     elif (
         isinstance(symbol, pybamm.Concatenation)
@@ -1355,23 +1356,20 @@ def boundary_value(symbol, side):
     :class:`BoundaryValue`
         the new integrated expression tree
     """
+    # Can't take boundary value if the symbol evaluates on edges
+    if symbol.evaluates_on_edges("primary"):
+        raise ValueError(
+            "Can't take the boundary value of a symbol that evaluates on edges"
+        )
+
     # If symbol doesn't have a domain, its boundary value is itself
     if symbol.domain == []:
         new_symbol = symbol.new_copy()
         new_symbol.parent = None
         return new_symbol
-    # If symbol is a primary broadcast, or a full broadcast without auxiliary domains,
-    # its boundary value is its child
-    if isinstance(symbol, pybamm.PrimaryBroadcast) or (
-        isinstance(symbol, pybamm.FullBroadcast) and symbol.auxiliary_domains == {}
-    ):
-        return symbol.orphans[0]
-    # If symbol is a full broadcast, its boundary value is a primary broadcast of its
-    # child in its secondary dimension
-    if isinstance(symbol, pybamm.FullBroadcast):
-        return pybamm.PrimaryBroadcast(
-            symbol.orphans[0], symbol.auxiliary_domains["secondary"]
-        )
+    # If symbol is a primary or full broadcast, reduce by one dimension
+    if isinstance(symbol, (pybamm.PrimaryBroadcast, pybamm.FullBroadcast)):
+        return symbol.reduce_one_dimension()
     # If symbol is a secondary broadcast, its boundary value is a primary broadcast of
     # the boundary value of its child
     if isinstance(symbol, pybamm.SecondaryBroadcast):

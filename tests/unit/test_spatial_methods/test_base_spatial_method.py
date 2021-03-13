@@ -70,11 +70,7 @@ class TestSpatialMethod(unittest.TestCase):
 
         # Just tertiary domain
         repeats = spatial_method._get_auxiliary_domain_repeats(
-            {
-                "secondary": ["negative electrode", "separator"],
-                "tertiary": ["current collector"],
-            },
-            tertiary_only=True,
+            {"tertiary": ["current collector"]},
         )
         self.assertEqual(repeats, mesh["current collector"].npts)
 

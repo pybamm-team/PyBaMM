@@ -314,7 +314,7 @@ class FiniteVolume(pybamm.SpatialMethod):
 
             # repeat matrix for each node in secondary dimensions
             third_dim_repeats = self._get_auxiliary_domain_repeats(
-                domains, tertiary_only=True
+                {k: v for k, v in domains.items() if k == "tertiary"}
             )
             # generate full matrix from the submatrix
             matrix = kron(eye(third_dim_repeats), int_matrix)
