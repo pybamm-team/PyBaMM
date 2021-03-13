@@ -44,7 +44,7 @@ class Composite(Full):
         # Note: no convection because c_ox_0 = 0 (at leading order)
         N_ox = N_ox_diffusion
         # Flux in the negative electrode is zero
-        N_ox = pybamm.Concatenation(
+        N_ox = pybamm.concatenation(
             pybamm.FullBroadcast(0, "negative electrode", "current collector"), N_ox
         )
 
@@ -74,7 +74,7 @@ class Composite(Full):
             pos_reactions = param.s_ox_Ox * j_ox_0
         sep_reactions = pybamm.FullBroadcast(0, "separator", "current collector")
         source_terms_0 = (
-            pybamm.Concatenation(sep_reactions, pos_reactions) / param.gamma_e
+            pybamm.concatenation(sep_reactions, pos_reactions) / param.gamma_e
         )
 
         self.rhs = {

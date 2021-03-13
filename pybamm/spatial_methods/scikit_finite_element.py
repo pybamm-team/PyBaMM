@@ -115,7 +115,7 @@ class ScikitFiniteElement(pybamm.SpatialMethod):
         grad_z = mass_inv @ (grad_z_matrix @ discretised_symbol)
 
         # create concatenation
-        grad = pybamm.Concatenation(
+        grad = pybamm.concatenation(
             grad_y, grad_z, check_domain=False, concat_fun=np.hstack
         )
         grad.domain = domain

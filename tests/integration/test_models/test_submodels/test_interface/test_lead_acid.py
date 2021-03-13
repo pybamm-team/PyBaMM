@@ -12,11 +12,11 @@ class TestMainReaction(unittest.TestCase):
         c_e_n = pybamm.Variable("concentration", domain=["negative electrode"])
         c_e_s = pybamm.Variable("concentration", domain=["separator"])
         c_e_p = pybamm.Variable("concentration", domain=["positive electrode"])
-        self.c_e = pybamm.Concatenation(c_e_n, c_e_s, c_e_p)
+        self.c_e = pybamm.concatenation(c_e_n, c_e_s, c_e_p)
         T_n = pybamm.Variable("temperature", domain=["negative electrode"])
         T_s = pybamm.Variable("temperature", domain=["separator"])
         T_p = pybamm.Variable("temperature", domain=["positive electrode"])
-        self.T = pybamm.Concatenation(T_n, T_s, T_p)
+        self.T = pybamm.concatenation(T_n, T_s, T_p)
         self.variables = {
             "Negative electrolyte concentration": c_e_n,
             "Positive electrolyte concentration": c_e_p,

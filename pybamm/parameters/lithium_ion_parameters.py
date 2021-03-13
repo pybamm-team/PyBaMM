@@ -131,7 +131,7 @@ class LithiumIonParameters:
         }
         self.epsilon_p = pybamm.FunctionParameter("Positive electrode porosity", inputs)
 
-        self.epsilon = pybamm.Concatenation(
+        self.epsilon = pybamm.concatenation(
             self.epsilon_n, self.epsilon_s, self.epsilon_p
         )
         self.epsilon_inactive_n = (
@@ -747,7 +747,7 @@ class LithiumIonParameters:
         self.epsilon_n_init = pybamm.Parameter("Negative electrode porosity")
         self.epsilon_s_init = pybamm.Parameter("Separator porosity")
         self.epsilon_p_init = pybamm.Parameter("Positive electrode porosity")
-        self.epsilon_init = pybamm.Concatenation(
+        self.epsilon_init = pybamm.concatenation(
             self.epsilon_n, self.epsilon_s, self.epsilon_p
         )
         self.T_init = self.therm.T_init
@@ -880,12 +880,14 @@ class LithiumIonParameters:
         return self.R_p_dimensional(x_dim) / self.R_p_typ
 
     def c_n_init(self, x):
-        """Dimensionless initial concentration as a function of dimensionless position x
+        """
+        Dimensionless initial concentration as a function of dimensionless position x
         """
         return self.c_n_init_dimensional(x) / self.c_n_max
 
     def c_p_init(self, x):
-        """Dimensionless initial concentration as a function of dimensionless position x
+        """
+        Dimensionless initial concentration as a function of dimensionless position x
         """
         return self.c_p_init_dimensional(x) / self.c_p_max
 

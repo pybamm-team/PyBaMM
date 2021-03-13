@@ -51,7 +51,7 @@ class TestDiscretise(unittest.TestCase):
         c_e_n = pybamm.PrimaryBroadcast(0, ["negative electrode"])
         c_e_s = pybamm.PrimaryBroadcast(0, ["separator"])
         c_e_p = pybamm.PrimaryBroadcast(0, ["positive electrode"])
-        c_e = pybamm.Concatenation(c_e_n, c_e_s, c_e_p)
+        c_e = pybamm.concatenation(c_e_n, c_e_s, c_e_p)
         lbc = (pybamm.Scalar(0), "Neumann")
         rbc = (pybamm.Scalar(0), "Neumann")
         model.boundary_conditions = {c_e: {"left": lbc, "right": rbc}}
@@ -151,7 +151,7 @@ class TestDiscretise(unittest.TestCase):
         a = pybamm.Variable("a", domain=["test", "test1"])
         b1 = pybamm.Variable("b", domain=["test"])
         b2 = pybamm.Variable("c", domain=["test1"])
-        b = pybamm.Concatenation(b1, b2)
+        b = pybamm.concatenation(b1, b2)
 
         model.rhs = {a: a * b}
         model.boundary_conditions = {
@@ -231,7 +231,7 @@ class TestDiscretise(unittest.TestCase):
             domain="separator",
             auxiliary_domains={"secondary": "current collector"},
         )
-        b = pybamm.Concatenation(b1, b2)
+        b = pybamm.concatenation(b1, b2)
 
         model.rhs = {a: a * b}
         model.initial_conditions = {a: 0}
@@ -289,7 +289,7 @@ class TestDiscretise(unittest.TestCase):
         # Variables with a concatenation
         js = pybamm.Variable("js", domain=["separator"])
         jp = pybamm.Variable("jp", domain=["positive electrode"])
-        j = pybamm.Concatenation(jn, js, jp)
+        j = pybamm.concatenation(jn, js, jp)
         variables = [c, d, j]
         disc.set_variable_slices(variables)
         self.assertEqual(
@@ -854,7 +854,7 @@ class TestDiscretise(unittest.TestCase):
         cn = pybamm.Variable("c", domain=["negative electrode"])
         cs = pybamm.Variable("c", domain=["separator"])
         cp = pybamm.Variable("c", domain=["positive electrode"])
-        c = pybamm.Concatenation(cn, cs, cp)
+        c = pybamm.concatenation(cn, cs, cp)
         N = pybamm.grad(c)
         model = pybamm.BaseModel()
         model.rhs = {c: pybamm.div(N)}
@@ -1063,7 +1063,7 @@ class TestDiscretise(unittest.TestCase):
         variables = [pybamm.Variable("var", domain=whole_cell)]
         disc.set_variable_slices(variables)
 
-        eqn = pybamm.Concatenation(a, b)
+        eqn = pybamm.concatenation(a, b)
         eqn_disc = disc.process_symbol(eqn)
         expected_vector = np.concatenate(
             [
@@ -1096,7 +1096,7 @@ class TestDiscretise(unittest.TestCase):
         )
 
         # With simplification
-        conc = pybamm.Concatenation(a, b, c)
+        conc = pybamm.concatenation(a, b, c)
         disc.set_variable_slices([conc])
         self.assertEqual(
             disc.y_slices[a.id], [slice(0, 40), slice(100, 140), slice(200, 240)]
@@ -1122,7 +1122,7 @@ class TestDiscretise(unittest.TestCase):
         np.testing.assert_equal(expr.evaluate(0, y), y[:, np.newaxis])
 
         # Without simplification
-        conc = pybamm.Concatenation(2 * a, 3 * b, 4 * c)
+        conc = pybamm.concatenation(2 * a, 3 * b, 4 * c)
         np.testing.assert_array_equal(
             disc.bounds[0], ([-5] * 40 + [6] * 25 + [0] * 35) * 3
         )
@@ -1159,7 +1159,7 @@ class TestDiscretise(unittest.TestCase):
             disc.process_model(model)
 
         # check doesn't raise if concatenation
-        model.variables = {c_n.name: pybamm.Concatenation(2 * c_n, 3 * c_s)}
+        model.variables = {c_n.name: pybamm.concatenation(2 * c_n, 3 * c_s)}
         disc.process_model(model, inplace=False)
 
         # check doesn't raise if broadcast

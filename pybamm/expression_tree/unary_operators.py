@@ -1040,6 +1040,9 @@ def div(symbol):
     if isinstance(symbol, pybamm.PrimaryBroadcastToEdges):
         new_child = pybamm.PrimaryBroadcast(0, symbol.child.domain)
         return pybamm.PrimaryBroadcast(new_child, symbol.domain)
+    # Divergence commutes with Negate operator
+    if isinstance(symbol, pybamm.Negate):
+        return -div(symbol.orphans[0])
     else:
         return Divergence(symbol)
 
@@ -1348,9 +1351,18 @@ def boundary_value(symbol, side):
         new_symbol = symbol.new_copy()
         new_symbol.parent = None
         return new_symbol
-    # If symbol is a primary or full broadcast, its boundary value is its child
-    if isinstance(symbol, (pybamm.PrimaryBroadcast, pybamm.FullBroadcast)):
+    # If symbol is a primary broadcast, or a full broadcast without auxiliary domains,
+    # its boundary value is its child
+    if isinstance(symbol, pybamm.PrimaryBroadcast) or (
+        isinstance(symbol, pybamm.FullBroadcast) and symbol.auxiliary_domains == {}
+    ):
         return symbol.orphans[0]
+    # If symbol is a full broadcast, its boundary value is a primary broadcast of its
+    # child in its secondary dimension
+    if isinstance(symbol, pybamm.FullBroadcast):
+        return pybamm.PrimaryBroadcast(
+            symbol.orphans[0], symbol.auxiliary_domains["secondary"]
+        )
     # If symbol is a secondary broadcast, its boundary value is a primary broadcast of
     # the boundary value of its child
     if isinstance(symbol, pybamm.SecondaryBroadcast):

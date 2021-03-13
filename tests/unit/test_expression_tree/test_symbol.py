@@ -362,7 +362,7 @@ class TestSymbol(unittest.TestCase):
         zero_s = pybamm.FullBroadcast(0, ["separator"], "current collector")
         zero_p = pybamm.FullBroadcast(0, ["positive electrode"], "current collector")
 
-        zero_nsp = pybamm.Concatenation(zero_n, zero_s, zero_p)
+        zero_nsp = pybamm.concatenation(zero_n, zero_s, zero_p)
 
         v_box = pybamm.Scalar(0)
 
@@ -374,8 +374,8 @@ class TestSymbol(unittest.TestCase):
             "Volume-averaged velocity": v_box,
             "Interfacial current density": zero_nsp,
             "Oxygen interfacial current density": zero_nsp,
-            "Cell temperature": pybamm.Concatenation(zero_n, zero_s, zero_p),
-            "Transverse volume-averaged acceleration": pybamm.Concatenation(
+            "Cell temperature": pybamm.concatenation(zero_n, zero_s, zero_p),
+            "Transverse volume-averaged acceleration": pybamm.concatenation(
                 zero_n, zero_s, zero_p
             ),
             "Sum of electrolyte reaction source terms": zero_nsp,
@@ -448,9 +448,9 @@ class TestSymbol(unittest.TestCase):
         func = pybamm.FunctionParameter("func", {"state": state})
         self.assertEqual(func.shape_for_testing, state.shape_for_testing)
 
-        concat = pybamm.Concatenation()
+        concat = pybamm.concatenation()
         self.assertEqual(concat.shape_for_testing, (0,))
-        concat = pybamm.Concatenation(state, state2)
+        concat = pybamm.concatenation(state, state2)
         self.assertEqual(concat.shape_for_testing, (30, 1))
         self.assertEqual(concat.size_for_testing, 30)
 

@@ -646,14 +646,21 @@ class Maximum(BinaryOperator):
 def simplify_elementwise_binary_broadcasts(left, right):
     left, right = preprocess_binary(left, right)
 
+    # def unpack_broadcast_recursive(symbol):
+    #     if isinstance(symbol, pybamm.Broadcast):
+    #         if symbol.child.domain == []:
+    #             return symbol.orphans[0]
+    #         elif isinstance(symbol.child, pybamm.Broadcast):
+    #             return unpack_broadcast_recursive(symbol.child)
+    #     return symbol
+
     # No need to broadcast if the other symbol already has the shape that is being
     # broadcasted to
     # Also check for broadcast of a broadcast
-    if left.domains == right.domains:
-        #      and all(
-        #     left.evaluates_on_edges(dim) == right.evaluates_on_edges(dim)
-        #     for dim in ["primary", "secondary", "tertiary"]
-        # ):
+    if left.domains == right.domains and all(
+        left.evaluates_on_edges(dim) == right.evaluates_on_edges(dim)
+        for dim in ["primary", "secondary", "tertiary"]
+    ):
         if isinstance(left, pybamm.Broadcast):
             if left.child.domain == []:
                 left = left.orphans[0]
@@ -661,7 +668,7 @@ def simplify_elementwise_binary_broadcasts(left, right):
                 isinstance(left.child, pybamm.Broadcast)
                 and left.child.child.domain == []
             ):
-                left = left.orphans[0].orphans[0]
+                left = left.child.orphans[0]
         elif isinstance(right, pybamm.Broadcast):
             if right.child.domain == []:
                 right = right.orphans[0]
@@ -669,7 +676,7 @@ def simplify_elementwise_binary_broadcasts(left, right):
                 isinstance(right.child, pybamm.Broadcast)
                 and right.child.child.domain == []
             ):
-                right = right.orphans[0].orphans[0]
+                right = right.child.orphans[0]
 
     return left, right
 

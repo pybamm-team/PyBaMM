@@ -181,6 +181,11 @@ class TestUnaryOperators(unittest.TestCase):
         div = pybamm.Divergence(pybamm.Gradient(a))
         self.assertEqual(div.domain, a.domain)
 
+        # check div commutes with negation
+        a = pybamm.Symbol("a", domain="test domain")
+        div = pybamm.div(-pybamm.Gradient(a))
+        self.assertEqual(div.id, (-pybamm.Divergence(pybamm.Gradient(a))).id)
+
     def test_integral(self):
         # space integral
         a = pybamm.Symbol("a", domain=["negative electrode"])
@@ -488,7 +493,7 @@ class TestUnaryOperators(unittest.TestCase):
         self.assertEqual(average_t_broad_a.id, (pybamm.t * pybamm.Scalar(4)).id)
 
         # x-average of concatenation of broadcasts
-        conc_broad = pybamm.Concatenation(
+        conc_broad = pybamm.concatenation(
             pybamm.PrimaryBroadcast(1, ["negative electrode"]),
             pybamm.PrimaryBroadcast(2, ["separator"]),
             pybamm.PrimaryBroadcast(3, ["positive electrode"]),
@@ -497,7 +502,7 @@ class TestUnaryOperators(unittest.TestCase):
         self.assertIsInstance(average_conc_broad, pybamm.Division)
         self.assertEqual(average_conc_broad.domain, [])
         # with auxiliary domains
-        conc_broad = pybamm.Concatenation(
+        conc_broad = pybamm.concatenation(
             pybamm.FullBroadcast(
                 1,
                 ["negative electrode"],
@@ -515,7 +520,7 @@ class TestUnaryOperators(unittest.TestCase):
         average_conc_broad = pybamm.x_average(conc_broad)
         self.assertIsInstance(average_conc_broad, pybamm.PrimaryBroadcast)
         self.assertEqual(average_conc_broad.domain, ["current collector"])
-        conc_broad = pybamm.Concatenation(
+        conc_broad = pybamm.concatenation(
             pybamm.FullBroadcast(
                 1,
                 ["negative electrode"],

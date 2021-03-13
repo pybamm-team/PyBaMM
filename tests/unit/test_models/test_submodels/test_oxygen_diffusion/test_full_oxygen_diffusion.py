@@ -12,17 +12,17 @@ class TestFull(unittest.TestCase):
         param = pybamm.LeadAcidParameters()
         a = pybamm.Scalar(0)
         variables = {
-            "Porosity": pybamm.Concatenation(
+            "Porosity": pybamm.concatenation(
                 pybamm.FullBroadcast(a, "negative electrode", "current collector"),
                 pybamm.FullBroadcast(a, "separator", "current collector"),
                 pybamm.FullBroadcast(a, "positive electrode", "current collector"),
             ),
-            "Electrolyte tortuosity": pybamm.Concatenation(
+            "Electrolyte tortuosity": pybamm.concatenation(
                 pybamm.FullBroadcast(a, "negative electrode", "current collector"),
                 pybamm.FullBroadcast(a, "separator", "current collector"),
                 pybamm.FullBroadcast(a, "positive electrode", "current collector"),
             ),
-            "Porosity change": pybamm.Concatenation(
+            "Porosity change": pybamm.concatenation(
                 pybamm.FullBroadcast(a, "negative electrode", "current collector"),
                 pybamm.FullBroadcast(a, "separator", "current collector"),
                 pybamm.FullBroadcast(a, "positive electrode", "current collector"),

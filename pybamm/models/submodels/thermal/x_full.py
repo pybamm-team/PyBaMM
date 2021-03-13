@@ -38,7 +38,7 @@ class OneDimensionalX(BaseThermal):
         T_cn = pybamm.BoundaryValue(T_n, "left")
         T_cp = pybamm.BoundaryValue(T_p, "right")
 
-        T = pybamm.Concatenation(T_n, T_s, T_p)
+        T = pybamm.concatenation(T_n, T_s, T_p)
         T_x_av = self._x_average(T, T_cn, T_cp)
         T_vol_av = self._yz_average(T_x_av)
 
@@ -58,14 +58,14 @@ class OneDimensionalX(BaseThermal):
         Q = variables["Total heating"]
 
         # Define volumetric heat capacity
-        rho_k = pybamm.Concatenation(
+        rho_k = pybamm.concatenation(
             self.param.rho_n(T_n),
             self.param.rho_s(T_s),
             self.param.rho_p(T_p),
         )
 
         # Devine thermal conductivity
-        lambda_k = pybamm.Concatenation(
+        lambda_k = pybamm.concatenation(
             self.param.lambda_n(T_n),
             self.param.lambda_s(T_s),
             self.param.lambda_p(T_p),

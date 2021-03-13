@@ -20,7 +20,7 @@ def separator_and_positive_only(variable):
         Concatenation of variables in separator and positive only
     """
     _, var_s, var_p = variable.orphans
-    return pybamm.Concatenation(var_s, var_p)
+    return pybamm.concatenation(var_s, var_p)
 
 
 class Full(BaseModel):
@@ -57,10 +57,10 @@ class Full(BaseModel):
             domain="positive electrode",
             auxiliary_domains={"secondary": "current collector"},
         )
-        c_ox_s_p = pybamm.Concatenation(c_ox_s, c_ox_p)
+        c_ox_s_p = pybamm.concatenation(c_ox_s, c_ox_p)
         variables = {"Separator and positive electrode oxygen concentration": c_ox_s_p}
 
-        c_ox = pybamm.Concatenation(c_ox_n, c_ox_s, c_ox_p)
+        c_ox = pybamm.concatenation(c_ox_n, c_ox_s, c_ox_p)
         variables.update(self._get_standard_concentration_variables(c_ox))
 
         return variables
@@ -78,7 +78,7 @@ class Full(BaseModel):
 
         N_ox = N_ox_diffusion + param.C_e * c_ox * v_box
         # Flux in the negative electrode is zero
-        N_ox = pybamm.Concatenation(
+        N_ox = pybamm.concatenation(
             pybamm.FullBroadcast(0, "negative electrode", "current collector"), N_ox
         )
 
@@ -96,7 +96,7 @@ class Full(BaseModel):
         N_ox = variables["Oxygen flux"].orphans[1]
 
         j_ox = variables["Positive electrode oxygen interfacial current density"]
-        source_terms = pybamm.Concatenation(
+        source_terms = pybamm.concatenation(
             pybamm.FullBroadcast(0, "separator", "current collector"),
             param.s_ox_Ox * j_ox,
         )

@@ -36,13 +36,14 @@ class Array(pybamm.Symbol):
         auxiliary_domains=None,
         entries_string=None,
     ):
+        # if
         if isinstance(entries, list):
             entries = np.array(entries)
         if entries.ndim == 1:
             entries = entries[:, np.newaxis]
         if name is None:
             name = "Array of shape {!s}".format(entries.shape)
-        self._entries = entries
+        self._entries = entries.astype(float)
         # Use known entries string to avoid re-hashing, where possible
         self.entries_string = entries_string
         super().__init__(name, domain=domain, auxiliary_domains=auxiliary_domains)

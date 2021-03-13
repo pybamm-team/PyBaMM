@@ -196,7 +196,7 @@ class TestParameterValues(unittest.TestCase):
         self.assertEqual(processed_broad.children[0].evaluate(), 4)
 
         # process concatenation
-        conc = pybamm.Concatenation(
+        conc = pybamm.concatenation(
             pybamm.Vector(np.ones(10), domain="test"),
             pybamm.Vector(2 * np.ones(15), domain="test 2"),
         )
@@ -560,7 +560,7 @@ class TestParameterValues(unittest.TestCase):
         func_s = pybamm.FunctionParameter("func_s", {"var_s": var_s})
         func_p = pybamm.FunctionParameter("func_p", {"var_p": var_p})
 
-        func = pybamm.x_average(pybamm.Concatenation(func_n, func_s, func_p))
+        func = pybamm.x_average(pybamm.concatenation(func_n, func_s, func_p))
         param = pybamm.ParameterValues(
             {
                 "func_n": 2,
@@ -595,7 +595,7 @@ class TestParameterValues(unittest.TestCase):
         func_s = pybamm.FunctionParameter("func_s", {"var_s": var_s})
         func_p = pybamm.FunctionParameter("func_p", {"var_p": var_p})
 
-        func = pybamm.x_average(pybamm.Concatenation(func_n, func_s, func_p))
+        func = pybamm.x_average(pybamm.concatenation(func_n, func_s, func_p))
         param = pybamm.ParameterValues(
             {
                 "func_n": 2,

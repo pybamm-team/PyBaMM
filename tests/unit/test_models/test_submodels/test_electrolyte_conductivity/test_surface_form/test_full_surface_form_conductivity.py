@@ -28,7 +28,7 @@ class TestFull(unittest.TestCase):
             "Negative electrode surface area to volume ratio": a_n,
             "Negative electrolyte concentration": a_n,
             "Sum of negative electrode interfacial current densities": a_n,
-            "Electrolyte potential": pybamm.Concatenation(a_n, a_s, a_p),
+            "Electrolyte potential": pybamm.concatenation(a_n, a_s, a_p),
             "Negative electrode temperature": a_n,
             "Separator temperature": a_s,
             "Separator electrolyte concentration": a_s,

@@ -67,12 +67,12 @@ class FirstOrder(BaseModel):
         )
 
         # Update variables
-        c_ox = pybamm.Concatenation(
+        c_ox = pybamm.concatenation(
             param.C_e * c_ox_n_1, param.C_e * c_ox_s_1, param.C_e * c_ox_p_1
         )
         variables.update(self._get_standard_concentration_variables(c_ox))
 
-        N_ox = pybamm.Concatenation(
+        N_ox = pybamm.concatenation(
             param.C_e * N_ox_n_1, param.C_e * N_ox_s_1, param.C_e * N_ox_p_1
         )
         variables.update(self._get_standard_flux_variables(N_ox))
