@@ -933,8 +933,9 @@ class BaseModel(object):
         rhs_str : str
             The Julia-compatible equations for the model in string format,
             to be evaluated by eval(Meta.parse(...))
-        ics_array : array-like
-            Array of initial conditions
+        ics_str : str
+            The Julia-compatible initial conditions for the model in string format,
+            to be evaluated by eval(Meta.parse(...))
         """
         self.check_discretised_or_discretise_inplace_if_0D()
 
@@ -945,14 +946,23 @@ class BaseModel(object):
             )
 
         name = self.name.replace(" ", "_")
+
         rhs_str = pybamm.get_julia_function(
             self.concatenated_rhs,
             funcname=name,
             input_parameter_order=input_parameter_order,
         )
-        ics_array = self.concatenated_initial_conditions.evaluate(t=0).flatten()
 
-        return rhs_str, ics_array
+        ics_str = pybamm.get_julia_function(
+            self.concatenated_initial_conditions,
+            funcname=name + "_u0",
+            input_parameter_order=input_parameter_order,
+        )
+        # Change the string to a form for u0
+        ics_str = ics_str.replace("(dy, y, p, t)", "(u0, p)")
+        ics_str = ics_str.replace("dy", "u0")
+
+        return rhs_str, ics_str
 
     @property
     def default_parameter_values(self):

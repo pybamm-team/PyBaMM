@@ -30,20 +30,20 @@ class TestEvaluate(unittest.TestCase):
         Main.eval(evaluator_str)
         Main.dy = [0.0]
         Main.y = np.array([2.0, 3.0])
-        Main.eval("f(dy,y,0,0)")
+        Main.eval("f!(dy,y,0,0)")
         self.assertEqual(Main.dy, 6)
         Main.dy = [0.0]
         Main.y = np.array([1.0, 3.0])
-        Main.eval("f(dy,y,0,0)")
+        Main.eval("f!(dy,y,0,0)")
         self.assertEqual(Main.dy, 3)
 
         # test function(a*b)
         expr = pybamm.cos(a * b)
-        evaluator_str = pybamm.get_julia_function(expr)
+        evaluator_str = pybamm.get_julia_function(expr, funcname="g")
         Main.eval(evaluator_str)
         Main.dy = [0.0]
         Main.y = np.array([2.0, 3.0])
-        Main.eval("f(dy,y,0,0)")
+        Main.eval("g!(dy,y,0,0)")
         self.assertAlmostEqual(Main.dy[0], np.cos(6), places=15)
 
         # test a constant expression
@@ -51,14 +51,14 @@ class TestEvaluate(unittest.TestCase):
         evaluator_str = pybamm.get_julia_function(expr)
         Main.eval(evaluator_str)
         Main.dy = [0.0]
-        Main.eval("f(dy,y,0,0)")
+        Main.eval("f!(dy,y,0,0)")
         self.assertEqual(Main.dy, 6)
 
         expr = pybamm.Scalar(2) * pybamm.Vector([1, 2, 3])
         evaluator_str = pybamm.get_julia_function(expr)
         Main.eval(evaluator_str)
         Main.dy = [0.0] * 3
-        Main.eval("f(dy,y,0,0)")
+        Main.eval("f!(dy,y,0,0)")
         np.testing.assert_array_equal(Main.dy, [2, 4, 6])
 
         # test a larger expression
@@ -68,7 +68,7 @@ class TestEvaluate(unittest.TestCase):
         for y in y_tests:
             Main.dy = [0.0]
             Main.y = y
-            Main.eval("f(dy,y,0,0)")
+            Main.eval("f!(dy,y,0,0)")
             self.assertEqual(Main.dy, expr.evaluate(t=None, y=y))
 
         # test something with time
@@ -79,7 +79,7 @@ class TestEvaluate(unittest.TestCase):
             Main.dy = [0.0]
             Main.y = y
             Main.t = t
-            Main.eval("f(dy,y,0,t)")
+            Main.eval("f!(dy,y,0,t)")
             self.assertEqual(Main.dy, expr.evaluate(t=t, y=y))
 
         # test something with a matrix multiplication
@@ -90,7 +90,7 @@ class TestEvaluate(unittest.TestCase):
         for y in y_tests:
             Main.dy = [0.0, 0.0]
             Main.y = y
-            Main.eval("f(dy,y,0,0)")
+            Main.eval("f!(dy,y,0,0)")
             # note 1D arrays are flattened in Julia
             np.testing.assert_array_equal(Main.dy, expr.evaluate(y=y).flatten())
 
@@ -102,7 +102,7 @@ class TestEvaluate(unittest.TestCase):
         for y in y_tests:
             Main.dy = [0.0, 0.0]
             Main.y = y
-            Main.eval("f(dy,y,0,0)")
+            Main.eval("f!(dy,y,0,0)")
             # note 1D arrays are flattened in Julia
             np.testing.assert_array_equal(Main.dy, expr.evaluate(y=y).flatten())
 
@@ -117,7 +117,7 @@ class TestEvaluate(unittest.TestCase):
             for y in y_tests:
                 Main.dy = [0.0, 0.0]
                 Main.y = y
-                Main.eval("f(dy,y,0,0)")
+                Main.eval("f!(dy,y,0,0)")
                 np.testing.assert_array_equal(Main.dy, expr.evaluate(y=y).flatten())
 
         # test something with an index
@@ -127,7 +127,7 @@ class TestEvaluate(unittest.TestCase):
         for y in y_tests:
             Main.dy = [0.0]
             Main.y = y
-            Main.eval("f(dy,y,0,0)")
+            Main.eval("f!(dy,y,0,0)")
             np.testing.assert_array_equal(Main.dy, expr.evaluate(y=y).flatten())
 
         # test something with a sparse matrix multiplication
@@ -140,7 +140,7 @@ class TestEvaluate(unittest.TestCase):
         for y in y_tests:
             Main.dy = [0.0, 0.0]
             Main.y = y
-            Main.eval("f(dy,y,0,0)")
+            Main.eval("f!(dy,y,0,0)")
             # note 1D arrays are flattened in Julia
             np.testing.assert_array_equal(Main.dy, expr.evaluate(y=y).flatten())
 
@@ -150,7 +150,7 @@ class TestEvaluate(unittest.TestCase):
         for y in y_tests:
             Main.dy = [0.0, 0.0]
             Main.y = y
-            Main.eval("f(dy,y,0,0)")
+            Main.eval("f!(dy,y,0,0)")
             # note 1D arrays are flattened in Julia
             np.testing.assert_array_equal(Main.dy, expr.evaluate(y=y).flatten())
 
@@ -168,7 +168,7 @@ class TestEvaluate(unittest.TestCase):
         for y in y_tests:
             Main.dy = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
             Main.y = y
-            Main.eval("f(dy,y,0,0)")
+            Main.eval("f!(dy,y,0,0)")
             # note 1D arrays are flattened in Julia
             np.testing.assert_array_equal(Main.dy, expr.evaluate(y=y).flatten())
 
@@ -178,7 +178,7 @@ class TestEvaluate(unittest.TestCase):
         for y in y_tests:
             Main.dy = [0.0, 0.0, 0.0, 0.0]
             Main.y = y
-            Main.eval("f(dy,y,0,0)")
+            Main.eval("f!(dy,y,0,0)")
             # note 1D arrays are flattened in Julia
             np.testing.assert_array_equal(Main.dy, expr.evaluate(y=y).flatten())
 
@@ -192,7 +192,7 @@ class TestEvaluate(unittest.TestCase):
         for y in y_tests:
             Main.dy = [0.0, 0.0, 0.0, 0.0]
             Main.y = y
-            Main.eval("f(dy,y,0,0)")
+            Main.eval("f!(dy,y,0,0)")
             np.testing.assert_array_equal(Main.dy, expr.evaluate(y=y).flatten())
 
         # test Inner
@@ -202,7 +202,7 @@ class TestEvaluate(unittest.TestCase):
         for y in y_tests:
             Main.dy = [0.0, 0.0]
             Main.y = y
-            Main.eval("f(dy,y,0,0)")
+            Main.eval("f!(dy,y,0,0)")
             np.testing.assert_array_equal(Main.dy, expr.evaluate(y=y).flatten())
 
     def test_evaluator_julia_input_parameters(self):
@@ -211,7 +211,17 @@ class TestEvaluate(unittest.TestCase):
         c = pybamm.InputParameter("c")
         d = pybamm.InputParameter("d")
 
-        # test a * c + b * d
+        # test one input parameter: a * c
+        expr = a * c
+        evaluator_str = pybamm.get_julia_function(expr, input_parameter_order=["c"])
+        Main.eval(evaluator_str)
+        Main.dy = [0.0]
+        Main.y = np.array([2.0, 3.0])
+        Main.p = [5]
+        Main.eval("f!(dy,y,p,0)")
+        self.assertEqual(Main.dy, 10)
+
+        # test several input parameters: a * c + b * d
         expr = a * c + b * d
         evaluator_str = pybamm.get_julia_function(
             expr, input_parameter_order=["c", "d"]
@@ -220,7 +230,7 @@ class TestEvaluate(unittest.TestCase):
         Main.dy = [0.0]
         Main.y = np.array([2.0, 3.0])
         Main.p = [5, 6]
-        Main.eval("f(dy,y,p,0)")
+        Main.eval("f!(dy,y,p,0)")
         self.assertEqual(Main.dy, 28)
 
     def test_evaluator_julia_all_functions(self):
@@ -245,7 +255,7 @@ class TestEvaluate(unittest.TestCase):
             Main.eval(evaluator_str)
             Main.dy = 0.0 * y_test
             Main.y = y_test
-            Main.eval("f(dy,y,0,0)")
+            Main.eval("f!(dy,y,0,0)")
             np.testing.assert_almost_equal(
                 Main.dy, expr.evaluate(y=y_test).flatten(), decimal=15
             )
@@ -259,7 +269,7 @@ class TestEvaluate(unittest.TestCase):
             Main.eval(evaluator_str)
             Main.dy = [0.0]
             Main.y = y_test
-            Main.eval("f(dy,y,0,0)")
+            Main.eval("f!(dy,y,0,0)")
             np.testing.assert_equal(Main.dy, expr.evaluate(y=y_test).flatten())
 
     def test_evaluator_julia_domain_concatenation(self):
@@ -289,7 +299,7 @@ class TestEvaluate(unittest.TestCase):
             pybamm_eval = c_disc.evaluate(y=y_test).flatten()
             Main.dy = np.zeros_like(pybamm_eval)
             Main.y = y_test
-            Main.eval("f(dy,y,0,0)")
+            Main.eval("f!(dy,y,0,0)")
             np.testing.assert_equal(Main.dy, pybamm_eval)
 
     def test_evaluator_julia_domain_concatenation_2D(self):
@@ -330,7 +340,7 @@ class TestEvaluate(unittest.TestCase):
             pybamm_eval = c_disc.evaluate(y=y_test).flatten()
             Main.dy = np.zeros_like(pybamm_eval)
             Main.y = y_test
-            Main.eval("f(dy,y,0,0)")
+            Main.eval("f!(dy,y,0,0)")
             np.testing.assert_equal(Main.dy, pybamm_eval)
 
     def test_evaluator_julia_discretised_operators(self):
@@ -372,7 +382,7 @@ class TestEvaluate(unittest.TestCase):
                 pybamm_eval = expr.evaluate(y=y_test).flatten()
                 Main.dy = np.zeros_like(pybamm_eval)
                 Main.y = y_test
-                Main.eval("f(dy,y,0,0)")
+                Main.eval("f!(dy,y,0,0)")
                 np.testing.assert_almost_equal(Main.dy, pybamm_eval, decimal=7)
 
     def test_evaluator_julia_discretised_microscale(self):
@@ -424,7 +434,7 @@ class TestEvaluate(unittest.TestCase):
                 pybamm_eval = expr.evaluate(y=y_test).flatten()
                 Main.dy = np.zeros_like(pybamm_eval)
                 Main.y = y_test
-                Main.eval("f(dy,y,0,0)")
+                Main.eval("f!(dy,y,0,0)")
                 np.testing.assert_almost_equal(Main.dy, pybamm_eval, decimal=7)
 
 

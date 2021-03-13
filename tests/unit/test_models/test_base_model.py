@@ -633,10 +633,12 @@ class TestBaseModel(unittest.TestCase):
         model.initial_conditions = {a: 1, b: 2}
 
         # Generate rhs and ics for the Julia model
-        rhs_str, ics_array = model.generate_julia_diffeq()
+        rhs_str, ics_str = model.generate_julia_diffeq()
         self.assertIsInstance(rhs_str, str)
         self.assertIn("ode_test_model", rhs_str)
-        np.testing.assert_array_equal(ics_array, [1, 2])
+        self.assertIsInstance(ics_str, str)
+        self.assertIn("ode_test_model_u0", ics_str)
+        self.assertIn("(u0, p)", ics_str)
 
         # ODE model with input parameters
         model = pybamm.BaseModel(name="ode test model 2")
@@ -645,17 +647,18 @@ class TestBaseModel(unittest.TestCase):
         b = pybamm.Variable("b")
         p = pybamm.InputParameter("p")
         q = pybamm.InputParameter("q")
-        model.rhs = {a: -a * p, b: a - b - q}
-        model.initial_conditions = {a: 1, b: 2}
+        model.rhs = {a: -a * p, b: a - b}
+        model.initial_conditions = {a: q, b: 2}
 
         # Generate rhs and ics for the Julia model
-        rhs_str, ics_array = model.generate_julia_diffeq(
-            input_parameter_order=["p", "q"]
-        )
+        rhs_str, ics_str = model.generate_julia_diffeq(input_parameter_order=["p", "q"])
         self.assertIsInstance(rhs_str, str)
         self.assertIn("ode_test_model_2", rhs_str)
         self.assertIn("p, q = p", rhs_str)
-        np.testing.assert_array_equal(ics_array, [1, 2])
+
+        self.assertIsInstance(ics_str, str)
+        self.assertIn("ode_test_model_2_u0", ics_str)
+        self.assertIn("p, q = p", ics_str)
 
     def test_set_initial_conditions(self):
         # Set up model

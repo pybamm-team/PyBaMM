@@ -459,7 +459,11 @@ def get_julia_function(symbol, funcname="f", input_parameter_order=None):
     # line that extracts the input parameters in the right order
     if input_parameter_order is None:
         input_parameter_extraction = ""
+    elif len(input_parameter_order) == 1:
+        # extract the single parameter
+        input_parameter_extraction = "   " + input_parameter_order[0] + " = p[1]\n"
     else:
+        # extract all parameters
         input_parameter_extraction = "   " + ", ".join(input_parameter_order) + " = p\n"
 
     # add function def and sparse arrays to first line
@@ -467,7 +471,7 @@ def get_julia_function(symbol, funcname="f", input_parameter_order=None):
     julia_str = (
         imports
         + const_and_cache_str
-        + f"\nfunction {funcname}_with_consts(dy, y, p, t)\n"
+        + f"\nfunction {funcname}_with_consts!(dy, y, p, t)\n"
         + input_parameter_extraction
         + var_str
     )
@@ -492,11 +496,11 @@ def get_julia_function(symbol, funcname="f", input_parameter_order=None):
     julia_str = julia_str.replace("\n   \n", "\n")
 
     if const_and_cache_str == "":
-        julia_str += f"{funcname} = {funcname}_with_consts\n"
+        julia_str += f"{funcname}! = {funcname}_with_consts!\n"
     else:
         # Use a let block for the cached variables
         # open the let block
-        julia_str = julia_str.replace("cs = (", f"{funcname} = let cs = (")
+        julia_str = julia_str.replace("cs = (", f"{funcname}! = let cs = (")
         # close the let block
         julia_str += "end\n"
 
