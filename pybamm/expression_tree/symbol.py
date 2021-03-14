@@ -109,7 +109,7 @@ def is_matrix_x(expr, x):
 
     if is_constant(expr):
         result = expr.evaluate_ignoring_errors(t=None)
-        return (issparse(result) and np.all(result.toarray() == x)) or (
+        return (issparse(result) and np.all(result.__dict__["data"] == x)) or (
             isinstance(result, np.ndarray) and np.all(result == x)
         )
     else:
