@@ -657,23 +657,22 @@ def simplify_elementwise_binary_broadcasts(left, right):
     # No need to broadcast if the other symbol already has the shape that is being
     # broadcasted to
     # Also check for broadcast of a broadcast
-    if left.domains == right.domains and all(
-        left.evaluates_on_edges(dim) == right.evaluates_on_edges(dim)
-        for dim in ["primary", "secondary", "tertiary"]
-    ):
-        if isinstance(left, pybamm.Broadcast):
+    if left.domains == right.domains:
+        if isinstance(left, pybamm.Broadcast) and left.broadcasts_to_nodes:
             if left.child.domain == []:
                 left = left.orphans[0]
             elif (
                 isinstance(left.child, pybamm.Broadcast)
+                and left.child.broadcasts_to_nodes
                 and left.child.child.domain == []
             ):
                 left = left.child.orphans[0]
-        elif isinstance(right, pybamm.Broadcast):
+        elif isinstance(right, pybamm.Broadcast) and right.broadcasts_to_nodes:
             if right.child.domain == []:
                 right = right.orphans[0]
             elif (
                 isinstance(right.child, pybamm.Broadcast)
+                and right.child.broadcasts_to_nodes
                 and right.child.child.domain == []
             ):
                 right = right.child.orphans[0]
@@ -777,6 +776,10 @@ def simplified_addition(left, right):
         ):
             return left
 
+    # Return constant if both sides are constant
+    if left.is_constant() and right.is_constant():
+        return pybamm.simplify_if_constant(pybamm.Addition(left, right))
+
     # Simplify A @ c + B @ c to (A + B) @ c if (A + B) is constant
     # This is a common construction that appears from discretisation of spatial
     # operators
@@ -792,6 +795,25 @@ def simplified_addition(left, right):
             new_sum = new_left @ l_right
             new_sum.copy_domains(pybamm.Addition(left, right))
             return new_sum
+
+    if isinstance(right, pybamm.Addition) and left.is_constant():
+        # Simplify a + (b + c) to (a + b) + c if (a + b) is constant
+        if right.left.is_constant():
+            r_left, r_right = right.orphans
+            return (left + r_left) + r_right
+        # Simplify a + (b + c) to (a + c) + b if (a + c) is constant
+        elif right.right.is_constant():
+            r_left, r_right = right.orphans
+            return (left + r_right) + r_left
+    if isinstance(left, pybamm.Addition) and right.is_constant():
+        # Simplify (a + b) + c to a + (b + c) if (b + c) is constant
+        if left.right.is_constant():
+            l_left, l_right = left.orphans
+            return l_left + (l_right + right)
+        # Simplify (a + b) + c to (a + c) + b if (a + c) is constant
+        elif left.left.is_constant():
+            l_left, l_right = left.orphans
+            return (l_left + right) + l_right
 
     return pybamm.simplify_if_constant(pybamm.Addition(left, right))
 
@@ -988,6 +1010,33 @@ def simplified_multiplication(left, right):
             new_left = left / r_right
             return new_left * r_left
 
+    # Simplify a * (b + c) to (a * b) + (a * c) if (a * b) or (a * c) is constant
+    # This is a common construction that appears from discretisation of spatial
+    # operators
+    # Also do this for cases like a * (b @ c + d) where (a * b) is constant
+    elif isinstance(right, Addition):
+        mul_classes = (
+            pybamm.Multiplication,
+            pybamm.MatrixMultiplication,
+            pybamm.Division,
+        )
+        if (
+            right.left.is_constant()
+            or right.right.is_constant()
+            or (isinstance(right.left, mul_classes) and right.left.left.is_constant())
+            or (isinstance(right.right, mul_classes) and right.right.left.is_constant())
+        ):
+            r_left, r_right = right.orphans
+            return (left * r_left) + (left * r_right)
+
+    # Negation simplifications
+    if isinstance(left, pybamm.Negate) and right.is_constant():
+        # Simplify (-a) * b to a * (-b) if (-b) is constant
+        return left.orphans[0] * (-right)
+    elif isinstance(right, pybamm.Negate) and left.is_constant():
+        # Simplify a * (-b) to (-a) * b if (-a) is constant
+        return (-left) * right.orphans[0]
+
     return pybamm.Multiplication(left, right)
 
 
@@ -1046,6 +1095,14 @@ def simplified_division(left, right):
             new_right = l_right / right
             if new_right.is_constant():
                 return l_left * new_right
+
+    # Negation simplifications
+    elif isinstance(left, pybamm.Negate) and right.is_constant():
+        # Simplify (-a) / b to a / (-b) if (-b) is constant
+        return left.orphans[0] / (-right)
+    elif isinstance(right, pybamm.Negate) and left.is_constant():
+        # Simplify a / (-b) to (-a) / b if (-a) is constant
+        return (-left) / right.orphans[0]
 
     return pybamm.simplify_if_constant(pybamm.Division(left, right))
 

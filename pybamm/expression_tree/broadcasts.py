@@ -59,6 +59,13 @@ class Broadcast(pybamm.SpatialOperator):
         self.broadcast_domain = broadcast_domain
         super().__init__(name, child, domain, auxiliary_domains)
 
+    @property
+    def broadcasts_to_nodes(self):
+        if self.broadcast_type.endswith("nodes"):
+            return True
+        else:
+            return False
+
     def reduce_one_dimension(self):
         """
         Reduce the broadcast by one dimension. See specific broadcast classes
