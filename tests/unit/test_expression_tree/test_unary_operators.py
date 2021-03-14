@@ -425,7 +425,7 @@ class TestUnaryOperators(unittest.TestCase):
         a = pybamm.StateVector(slice(0, 10), domain="test")
         self.assertFalse(pybamm.Index(a, slice(1)).evaluates_on_edges("primary"))
         self.assertFalse(pybamm.Laplacian(a).evaluates_on_edges("primary"))
-        self.assertTrue(pybamm.GradientSquared(a).evaluates_on_edges("primary"))
+        self.assertFalse(pybamm.GradientSquared(a).evaluates_on_edges("primary"))
         self.assertFalse(pybamm.BoundaryIntegral(a).evaluates_on_edges("primary"))
         self.assertTrue(pybamm.Upwind(a).evaluates_on_edges("primary"))
         self.assertTrue(pybamm.Downwind(a).evaluates_on_edges("primary"))
