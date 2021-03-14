@@ -140,6 +140,17 @@ class TestCitations(unittest.TestCase):
         pybamm.electrolyte_conductivity.Integrated(None)
         self.assertIn("BrosaPlanella2020", citations._papers_to_cite)
 
+    def test_newman_tobias(self):
+        # Test that calling relevant bits of code adds the right paper to citations
+        citations = pybamm.citations
+
+        citations._reset()
+        self.assertNotIn("Newman1962", citations._papers_to_cite)
+        self.assertNotIn("Chu2020", citations._papers_to_cite)
+        pybamm.lithium_ion.NewmanTobias()
+        self.assertIn("Newman1962", citations._papers_to_cite)
+        self.assertIn("Chu2020", citations._papers_to_cite)
+
     def test_scikit_fem(self):
         citations = pybamm.citations
 

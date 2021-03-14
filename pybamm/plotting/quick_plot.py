@@ -616,14 +616,16 @@ class QuickPlot(object):
             # Get the position of the top of the legend in relative figure units
             # There may be a better way ...
             try:
-                renderer = self.fig.canvas.get_renderer()
-            except AttributeError:
-                renderer = None
-            legend_top_inches = fig_legend.get_window_extent(
-                renderer=renderer
-            ).get_points()[1, 1]
-            fig_height_inches = (self.fig.get_size_inches() * self.fig.dpi)[1]
-            legend_top = legend_top_inches / fig_height_inches
+                legend_top_inches = fig_legend.get_window_extent(
+                    renderer=self.fig.canvas.get_renderer()
+                ).get_points()[1, 1]
+                fig_height_inches = (self.fig.get_size_inches() * self.fig.dpi)[1]
+                legend_top = legend_top_inches / fig_height_inches
+            except AttributeError:  # pragma: no cover
+                # When testing the examples we set the matplotlib backend to "Template"
+                # which means that the above code doesn't work. Since this is just for
+                # that particular test we can just skip it
+                legend_top = 0
         else:
             legend_top = 0
 
@@ -736,12 +738,10 @@ class QuickPlot(object):
                         var,
                         vmin=vmin,
                         vmax=vmax,
-                        cmap="coolwarm",
-                        shading="gouraud",
                     )
                 else:
                     self.plots[key][0][0] = ax.contourf(
-                        x, y, var, levels=100, vmin=vmin, vmax=vmax, cmap="coolwarm"
+                        x, y, var, levels=100, vmin=vmin, vmax=vmax
                     )
                 self.plots[key][0][1] = var
                 if (vmin, vmax) == (None, None):
@@ -749,9 +749,7 @@ class QuickPlot(object):
                     vmax = ax_max(var)
                     cb = self.colorbars[key]
                     cb.update_normal(
-                        cm.ScalarMappable(
-                            colors.Normalize(vmin=vmin, vmax=vmax), cmap="coolwarm"
-                        )
+                        cm.ScalarMappable(colors.Normalize(vmin=vmin, vmax=vmax))
                     )
 
         self.fig.canvas.draw_idle()
