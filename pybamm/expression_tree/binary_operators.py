@@ -880,9 +880,9 @@ def simplified_multiplication(left, right):
         return left
 
     # anything multiplied by a scalar negative one returns negative itself
-    if pybamm.is_scalar_one(-left):
+    if pybamm.is_scalar_minus_one(left):
         return -right
-    if pybamm.is_scalar_one(-right):
+    if pybamm.is_scalar_minus_one(right):
         return -left
 
     # anything multiplied by a matrix one returns itself if
@@ -900,10 +900,11 @@ def simplified_multiplication(left, right):
             elif pybamm.is_matrix_one(right):
                 return left
             # also check for negative one
-            if pybamm.is_matrix_one(-left):
+            if pybamm.is_matrix_minus_one(left):
                 return -right
-            elif pybamm.is_matrix_one(-right):
+            elif pybamm.is_matrix_minus_one(right):
                 return -left
+
     except NotImplementedError:
         pass
 

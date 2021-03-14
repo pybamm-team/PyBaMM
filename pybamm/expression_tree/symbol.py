@@ -68,13 +68,50 @@ def is_constant(symbol):
     return isinstance(symbol, numbers.Number) or symbol.is_constant()
 
 
+def is_scalar_x(expr, x):
+    """
+    Utility function to test if an expression evaluates to a constant scalar value
+    """
+    if is_constant(expr):
+        result = expr.evaluate_ignoring_errors(t=None)
+        return isinstance(result, numbers.Number) and result == x
+    else:
+        return False
+
+
 def is_scalar_zero(expr):
     """
     Utility function to test if an expression evaluates to a constant scalar zero
     """
+    return is_scalar_x(expr, 0)
+
+
+def is_scalar_one(expr):
+    """
+    Utility function to test if an expression evaluates to a constant scalar one
+    """
+    return is_scalar_x(expr, 1)
+
+
+def is_scalar_minus_one(expr):
+    """
+    Utility function to test if an expression evaluates to a constant scalar minus one
+    """
+    return is_scalar_x(expr, -1)
+
+
+def is_matrix_x(expr, x):
+    """
+    Utility function to test if an expression evaluates to a constant matrix value
+    """
+    if isinstance(expr, pybamm.Broadcast):
+        return is_scalar_x(expr.child, x) or is_matrix_x(expr.child, x)
+
     if is_constant(expr):
         result = expr.evaluate_ignoring_errors(t=None)
-        return isinstance(result, numbers.Number) and result == 0
+        return (issparse(result) and np.all(result.toarray() == x)) or (
+            isinstance(result, np.ndarray) and np.all(result == x)
+        )
     else:
         return False
 
@@ -83,43 +120,21 @@ def is_matrix_zero(expr):
     """
     Utility function to test if an expression evaluates to a constant matrix zero
     """
-    if isinstance(expr, pybamm.Broadcast):
-        return is_scalar_zero(expr.child) or is_matrix_zero(expr.child)
-
-    if is_constant(expr):
-        result = expr.evaluate_ignoring_errors(t=None)
-        return (issparse(result) and result.count_nonzero() == 0) or (
-            isinstance(result, np.ndarray) and np.all(result == 0)
-        )
-    else:
-        return False
-
-
-def is_scalar_one(expr):
-    """
-    Utility function to test if an expression evaluates to a constant scalar one
-    """
-    if is_constant(expr):
-        result = expr.evaluate_ignoring_errors(t=None)
-        return isinstance(result, numbers.Number) and result == 1
-    else:
-        return False
+    return is_matrix_x(expr, 0)
 
 
 def is_matrix_one(expr):
     """
     Utility function to test if an expression evaluates to a constant matrix one
     """
-    if isinstance(expr, pybamm.Broadcast):
-        return is_scalar_one(expr.child) or is_matrix_one(expr.child)
+    return is_matrix_x(expr, 1)
 
-    if is_constant(expr):
-        result = expr.evaluate_ignoring_errors(t=None)
-        return (issparse(result) and np.all(result.toarray() == 1)) or (
-            isinstance(result, np.ndarray) and np.all(result == 1)
-        )
-    else:
-        return False
+
+def is_matrix_minus_one(expr):
+    """
+    Utility function to test if an expression evaluates to a constant matrix minus one
+    """
+    return is_matrix_x(expr, -1)
 
 
 def simplify_if_constant(symbol):
@@ -566,17 +581,22 @@ class Symbol(anytree.NodeMixin):
 
     def __neg__(self):
         """return a :class:`Negate` object"""
-        if isinstance(self, pybamm.Broadcast):
+        if isinstance(self, pybamm.Negate):
+            # Double negative is a positive
+            return self.orphans[0]
+        elif isinstance(self, pybamm.Broadcast):
             # Move negation inside the broadcast
             # Apply recursively
-            neg_self_not_broad = pybamm.simplify_if_constant(-self.orphans[0])
-            return self._unary_new_copy(neg_self_not_broad)
+            return self._unary_new_copy(-self.orphans[0])
         else:
             return pybamm.simplify_if_constant(pybamm.Negate(self))
 
     def __abs__(self):
         """return an :class:`AbsoluteValue` object, or a smooth approximation"""
-        if isinstance(self, pybamm.Broadcast):
+        if isinstance(self, pybamm.AbsoluteValue):
+            # No need to apply abs a second time
+            return self
+        elif isinstance(self, pybamm.Broadcast):
             # Move absolute value inside the broadcast
             # Apply recursively
             abs_self_not_broad = pybamm.simplify_if_constant(abs(self.orphans[0]))

@@ -94,6 +94,10 @@ class TestSymbol(unittest.TestCase):
         # unary
         self.assertIsInstance(-a, pybamm.Negate)
         self.assertIsInstance(abs(a), pybamm.AbsoluteValue)
+        # special cases
+        self.assertEqual(-(-a), a)
+        abs_a = abs(a)
+        self.assertEqual(abs(abs_a), abs_a)
 
         # binary - two symbols
         self.assertIsInstance(a + b, pybamm.Addition)

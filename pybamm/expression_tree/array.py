@@ -76,14 +76,19 @@ class Array(pybamm.Symbol):
         else:
             entries = self._entries
             if issparse(entries):
-                self._entries_string = str(entries.__dict__)
+                dct = entries.__dict__
+                self._entries_string = ["shape", str(dct["_shape"])]
+                for key in ["data", "indices", "indptr"]:
+                    self._entries_string += [key, dct[key].tobytes()]
+                self._entries_string = tuple(self._entries_string)
+                # self._entries_string = str(entries.__dict__)
             else:
-                self._entries_string = entries.tobytes()
+                self._entries_string = (entries.tobytes(),)
 
     def set_id(self):
         """ See :meth:`pybamm.Symbol.set_id()`. """
         self._id = hash(
-            (self.__class__, self.name, self.entries_string) + tuple(self.domain)
+            (self.__class__, self.name) + self.entries_string + tuple(self.domain)
         )
 
     def _jac(self, variable):
