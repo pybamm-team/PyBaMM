@@ -48,9 +48,9 @@ class TestDiscretise(unittest.TestCase):
 
     def test_add_internal_boundary_conditions(self):
         model = pybamm.BaseModel()
-        c_e_n = pybamm.PrimaryBroadcast(0, ["negative electrode"])
-        c_e_s = pybamm.PrimaryBroadcast(0, ["separator"])
-        c_e_p = pybamm.PrimaryBroadcast(0, ["positive electrode"])
+        c_e_n = pybamm.Variable("c_e_n", ["negative electrode"])
+        c_e_s = pybamm.Variable("c_e_s", ["separator"])
+        c_e_p = pybamm.Variable("c_e_p", ["positive electrode"])
         c_e = pybamm.concatenation(c_e_n, c_e_s, c_e_p)
         lbc = (pybamm.Scalar(0), "Neumann")
         rbc = (pybamm.Scalar(0), "Neumann")
@@ -60,6 +60,7 @@ class TestDiscretise(unittest.TestCase):
         spatial_methods = {"macroscale": SpatialMethodForTesting()}
 
         disc = pybamm.Discretisation(mesh, spatial_methods)
+        disc.set_variable_slices([c_e_n, c_e_s, c_e_p])
         disc.bcs = disc.process_boundary_conditions(model)
         disc.set_internal_boundary_conditions(model)
 

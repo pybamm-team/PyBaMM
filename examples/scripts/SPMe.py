@@ -6,20 +6,16 @@ import pybamm
 import numpy as np
 
 pybamm.set_logging_level("INFO")
-pybamm.settings.debug_mode = True
 
 # load model
-model = pybamm.lithium_ion.DFN()
+model = pybamm.lithium_ion.SPMe()
 model.convert_to_format = "python"
 
 # create geometry
 geometry = model.default_geometry
 
 # load parameter values and process model and geometry
-chemistry = pybamm.parameter_sets.Chen2020
-param = pybamm.ParameterValues(chemistry=chemistry)
-
-# param = model.default_parameter_values
+param = model.default_parameter_values
 param.process_model(model)
 param.process_geometry(geometry)
 

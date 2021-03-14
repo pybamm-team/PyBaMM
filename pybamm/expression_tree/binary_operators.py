@@ -925,6 +925,7 @@ def simplified_multiplication(left, right):
         new_left.clear_domains()
         new_mul = new_left @ l_right
         # Keep the domain of the old left
+        new_left.copy_domains(left)
         new_mul.copy_domains(left)
         return new_mul
 
@@ -958,6 +959,7 @@ def simplified_multiplication(left, right):
         new_left.clear_domains()
         new_mul = new_left @ r_right
         # Keep the domain of the old right
+        new_left.copy_domains(left)
         new_mul.copy_domains(right)
         return new_mul
 
@@ -1021,6 +1023,7 @@ def simplified_division(left, right):
             new_left.clear_domains()
             new_division = new_left @ l_right
             # Keep the domain of the old left
+            new_left.copy_domains(left)
             new_division.copy_domains(left)
             return new_division
 
@@ -1078,6 +1081,7 @@ def simplified_matrix_multiplication(left, right):
         new_left.clear_domains()
         new_mul = new_left @ r_right
         # Keep the domain of the old right
+        new_left.copy_domains(left)
         new_mul.copy_domains(right)
         return new_mul
 

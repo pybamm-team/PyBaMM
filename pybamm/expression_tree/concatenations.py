@@ -327,7 +327,7 @@ def simplified_concatenation(*children):
     concat = Concatenation(*children)
     # Simplify concatenation of broadcasts all with the same child to a single
     # broadcast across all domains
-    if all(
+    if len(children) >= 1 and all(
         isinstance(child, pybamm.Broadcast) and child.child.id == children[0].child.id
         for child in children
     ):
