@@ -1,5 +1,5 @@
 
-.. _CONTRIBUTING.md: https://github.com/pybamm-team/PyBaMM/blob/master/CONTRIBUTING.md
+.. _CONTRIBUTING.md: https://github.com/pybamm-team/PyBaMM/blob/develop/CONTRIBUTING.md
 
 
 Adding a Model

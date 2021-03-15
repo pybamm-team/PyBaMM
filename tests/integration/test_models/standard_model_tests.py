@@ -72,7 +72,7 @@ class StandardModelTest(object):
 
         Crate = abs(
             self.parameter_values["Current function [A]"]
-            * self.parameter_values["Nominal cell capacity [A.h]"]
+            / self.parameter_values["Nominal cell capacity [A.h]"]
         )
         # don't allow zero C-rate
         if Crate == 0:

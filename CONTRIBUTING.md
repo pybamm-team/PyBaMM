@@ -272,7 +272,7 @@ Figuring out where to start the debugger is the real challenge. Some good ways t
   warnings.simplefilter("error")
   ```
   Then you can use a try-except block, as in a., but with, for example, `RuntimeWarning` instead of `ValueError`.
-  c. Stepping through the expression tree. Most calls in PyBaMM are operations on [expression trees](https://github.com/pybamm-team/PyBaMM/blob/master/examples/notebooks/expression_tree/expression-tree.ipynb). To view an expression tree in ipython, you can use the `render` command:
+  c. Stepping through the expression tree. Most calls in PyBaMM are operations on [expression trees](https://github.com/pybamm-team/PyBaMM/blob/develop/examples/notebooks/expression_tree/expression-tree.ipynb). To view an expression tree in ipython, you can use the `render` command:
   ```python
   expression_tree.render()
   ```
@@ -484,7 +484,7 @@ Documentation is built using https://readthedocs.org/ and published on http://py
 
 ### Google Colab
 
-Editable notebooks are made available using [Google Colab](https://colab.research.google.com/notebooks/intro.ipynb) [here](https://colab.research.google.com/github/pybamm-team/PyBaMM/blob/master/).
+Editable notebooks are made available using [Google Colab](https://colab.research.google.com/notebooks/intro.ipynb) [here](https://colab.research.google.com/github/pybamm-team/PyBaMM/blob/develop/).
 
 ### GitHub
 
