@@ -32,6 +32,7 @@ sim = pybamm.Simulation(
 sim.solve(np.linspace(0, 6680, 668))
 
 # Plot results
+# sim.plot()
 sim.plot(
     [
         "S8 [g]",

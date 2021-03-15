@@ -164,6 +164,9 @@ class QuickPlot(object):
                     "Electrolyte potential [V]",
                     "Terminal voltage [V]",
                 ]
+            elif isinstance(models[0], pybamm.lithium_sulfur.BaseModel):
+                # TODO: set other standard output variables
+                output_variables = ["Current [A]", "Terminal voltage [V]"]
 
         self.n_rows = n_rows or int(
             len(output_variables) // np.sqrt(len(output_variables))
@@ -218,44 +221,6 @@ class QuickPlot(object):
         self.min_t = min_t / time_scaling_factor
         self.max_t = max_t / time_scaling_factor
 
-<<<<<<< HEAD
-        # Default output variables for lead-acid and lithium-ion
-        if output_variables is None:
-            if isinstance(models[0], pybamm.lithium_ion.BaseModel):
-                output_variables = [
-                    "Negative particle surface concentration [mol.m-3]",
-                    "Electrolyte concentration [mol.m-3]",
-                    "Positive particle surface concentration [mol.m-3]",
-                    "Current [A]",
-                    "Negative electrode potential [V]",
-                    "Electrolyte potential [V]",
-                    "Positive electrode potential [V]",
-                    "Terminal voltage [V]",
-                ]
-            elif isinstance(models[0], pybamm.lead_acid.BaseModel):
-                output_variables = [
-                    "Interfacial current density [A.m-2]",
-                    "Electrolyte concentration [mol.m-3]",
-                    "Current [A]",
-                    "Porosity",
-                    "Electrolyte potential [V]",
-                    "Terminal voltage [V]",
-                ]
-            # Note: the OriginalMarinescuEtAl2016 is an instance of a
-            # pybamm.BaseModel since I wanted to leave it unchanged. It can be
-            # removed once you're happy the MarinescuEtAl2016 model works.
-            elif isinstance(
-                models[0],
-                (
-                    pybamm.lithium_sulfur.OriginalMarinescuEtAl2016,
-                    pybamm.lithium_sulfur.BaseModel,
-                ),
-            ):
-                # TODO: set other standard output variables
-                output_variables = ["Current [A]", "Terminal voltage [V]"]
-
-=======
->>>>>>> develop
         # Prepare dictionary of variables
         # output_variables is a list of strings or lists, e.g.
         # ["var 1", ["variable 2", "var 3"]]

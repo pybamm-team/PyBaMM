@@ -158,42 +158,6 @@ class Simulation:
         """
         self.operating_mode = "with experiment"
 
-<<<<<<< HEAD
-        # Update model
-        # Note: we handle lithium-sulfur models differently for now since they
-        # don't currently use the submodel structure
-        # Also note: the OriginalMarinescuEtAl2016 is an instance of a
-        # pybamm.BaseModel since I wanted to leave it unchanged. It can be removed
-        # once you're happy the MarinescuEtAl2016 model works.
-        if isinstance(
-            model,
-            (
-                pybamm.lithium_sulfur.OriginalMarinescuEtAl2016,
-                pybamm.lithium_sulfur.BaseModel,
-            ),
-        ):
-            new_model = model.new_copy(
-                options={
-                    **model.options,
-                    "operating mode": constant_current_constant_voltage_constant_power,
-                }
-            )
-        else:
-            new_model = model.new_copy(build=False)
-            new_model.submodels[
-                "external circuit"
-            ] = pybamm.external_circuit.FunctionControl(
-                new_model.param, constant_current_constant_voltage_constant_power
-            )
-            new_model.submodels[
-                "experiment events"
-            ] = pybamm.external_circuit.ExperimentEvents(new_model.param)
-            new_model.build_model()
-        self._unprocessed_model = new_model
-        self.model = new_model
-
-=======
->>>>>>> develop
         if not isinstance(experiment, pybamm.Experiment):
             raise TypeError("experiment must be a pybamm `Experiment` instance")
 
