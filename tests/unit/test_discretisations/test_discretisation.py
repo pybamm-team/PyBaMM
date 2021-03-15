@@ -35,10 +35,8 @@ class TestDiscretise(unittest.TestCase):
         disc.y_slices = {c.id: [slice(0, 1)], a.id: [slice(2, 3)], b.id: [slice(3, 4)]}
         result = disc._concatenate_in_order(initial_conditions)
 
-        self.assertIsInstance(result, pybamm.NumpyConcatenation)
-        self.assertEqual(result.children[0].evaluate(), 1)
-        self.assertEqual(result.children[1].evaluate(), 2)
-        self.assertEqual(result.children[2].evaluate(), 3)
+        self.assertIsInstance(result, pybamm.Vector)
+        np.testing.assert_array_equal(result.evaluate(), [[1], [2], [3]])
 
         initial_conditions = {a: pybamm.Scalar(2), b: pybamm.Scalar(3)}
         with self.assertRaises(pybamm.ModelError):
@@ -362,11 +360,11 @@ class TestDiscretise(unittest.TestCase):
         np.testing.assert_array_equal(mat_disc.entries, mat.entries)
 
         # binary operator
-        bin = var + scal
-        bin_disc = disc.process_symbol(bin)
-        self.assertIsInstance(bin_disc, pybamm.Addition)
-        self.assertIsInstance(bin_disc.children[0], pybamm.StateVector)
-        self.assertIsInstance(bin_disc.children[1], pybamm.Scalar)
+        binary = var + scal
+        binary_disc = disc.process_symbol(binary)
+        self.assertIsInstance(binary_disc, pybamm.Addition)
+        self.assertIsInstance(binary_disc.children[0], pybamm.StateVector)
+        self.assertIsInstance(binary_disc.children[1], pybamm.Scalar)
 
         bin2 = scal + var
         bin2_disc = disc.process_symbol(bin2)
@@ -394,10 +392,10 @@ class TestDiscretise(unittest.TestCase):
         self.assertIsInstance(func_disc, pybamm.Function)
         self.assertIsInstance(func_disc.children[0], pybamm.StateVector)
 
+        # function of a scalar gets simplified
         func = pybamm.Function(myfun, scal)
         func_disc = disc.process_symbol(func)
-        self.assertIsInstance(func_disc, pybamm.Function)
-        self.assertIsInstance(func_disc.children[0], pybamm.Scalar)
+        self.assertIsInstance(func_disc, pybamm.Scalar)
 
         # function of multiple variables
         def myfun(x, y):
@@ -429,7 +427,7 @@ class TestDiscretise(unittest.TestCase):
     def test_process_complex_expression(self):
         var1 = pybamm.Variable("var1")
         var2 = pybamm.Variable("var2")
-        scal1 = pybamm.Scalar(1)
+        scal1 = pybamm.Scalar(5)
         scal2 = pybamm.Scalar(2)
         scal3 = pybamm.Scalar(3)
         scal4 = pybamm.Scalar(4)
@@ -619,8 +617,7 @@ class TestDiscretise(unittest.TestCase):
 
         # mass matrix is identity
         np.testing.assert_array_equal(
-            np.eye(combined_submesh.nodes.shape[0]),
-            model.mass_matrix.entries.toarray(),
+            np.eye(combined_submesh.nodes.shape[0]), model.mass_matrix.entries.toarray()
         )
 
         # Create StateVector to differentiate model with respect to
@@ -793,7 +790,7 @@ class TestDiscretise(unittest.TestCase):
             (
                 np.eye(np.size(combined_submesh.nodes)),
                 np.zeros(
-                    (np.size(combined_submesh.nodes), np.size(combined_submesh.nodes),)
+                    (np.size(combined_submesh.nodes), np.size(combined_submesh.nodes))
                 ),
             )
         )
@@ -915,6 +912,19 @@ class TestDiscretise(unittest.TestCase):
         )
         discretised_model.check_well_posedness()
 
+    def test_initial_condition_bounds(self):
+        # concatenation of variables as the key
+        c = pybamm.Variable("c", bounds=(0, 1))
+        model = pybamm.BaseModel()
+        model.rhs = {c: 1}
+        model.initial_conditions = {c: pybamm.Scalar(3)}
+
+        disc = pybamm.Discretisation()
+        with self.assertRaisesRegex(
+            pybamm.ModelError, "initial condition is outside of variable bounds"
+        ):
+            disc.process_model(model)
+
     def test_process_empty_model(self):
         model = pybamm.BaseModel()
         disc = pybamm.Discretisation()
@@ -1027,16 +1037,13 @@ class TestDiscretise(unittest.TestCase):
         self.assertIsInstance(broad_to_edges_disc.children[1], pybamm.StateVector)
         self.assertEqual(
             broad_to_edges_disc.shape,
-            (
-                mesh["negative particle"].npts * (mesh["negative electrode"].npts + 1),
-                1,
-            ),
+            (mesh["negative particle"].npts * (mesh["negative electrode"].npts + 1), 1),
         )
 
     def test_concatenation(self):
-        a = pybamm.Symbol("a")
-        b = pybamm.Symbol("b")
-        c = pybamm.Symbol("c")
+        a = pybamm.Parameter("a")
+        b = pybamm.Parameter("b")
+        c = pybamm.Parameter("c")
 
         # create discretisation
         disc = get_discretisation_for_testing()
@@ -1087,6 +1094,8 @@ class TestDiscretise(unittest.TestCase):
             auxiliary_domains={"secondary": "current collector"},
             bounds=(0, 1),
         )
+
+        # With simplification
         conc = pybamm.Concatenation(a, b, c)
         disc.set_variable_slices([conc])
         self.assertEqual(
@@ -1105,6 +1114,22 @@ class TestDiscretise(unittest.TestCase):
             disc.bounds[1], ([-2] * 40 + [10] * 25 + [1] * 35) * 3
         )
         expr = disc.process_symbol(conc)
+        self.assertIsInstance(expr, pybamm.StateVector)
+
+        # Evaulate
+        y = np.linspace(0, 1, 300)
+        self.assertEqual(expr.evaluate(0, y).shape, (120 + 75 + 105, 1))
+        np.testing.assert_equal(expr.evaluate(0, y), y[:, np.newaxis])
+
+        # Without simplification
+        conc = pybamm.Concatenation(2 * a, 3 * b, 4 * c)
+        np.testing.assert_array_equal(
+            disc.bounds[0], ([-5] * 40 + [6] * 25 + [0] * 35) * 3
+        )
+        np.testing.assert_array_equal(
+            disc.bounds[1], ([-2] * 40 + [10] * 25 + [1] * 35) * 3
+        )
+        expr = disc.process_symbol(conc)
         self.assertIsInstance(expr, pybamm.DomainConcatenation)
 
         # Evaulate
@@ -1112,7 +1137,6 @@ class TestDiscretise(unittest.TestCase):
         self.assertEqual(expr.children[0].evaluate(0, y).shape, (120, 1))
         self.assertEqual(expr.children[1].evaluate(0, y).shape, (75, 1))
         self.assertEqual(expr.children[2].evaluate(0, y).shape, (105, 1))
-        np.testing.assert_equal(expr.evaluate(0, y), y[:, np.newaxis])
 
     def test_exceptions(self):
         c_n = pybamm.Variable("c", domain=["negative electrode"])
@@ -1135,7 +1159,7 @@ class TestDiscretise(unittest.TestCase):
             disc.process_model(model)
 
         # check doesn't raise if concatenation
-        model.variables = {c_n.name: pybamm.Concatenation(c_n, c_s)}
+        model.variables = {c_n.name: pybamm.Concatenation(2 * c_n, 3 * c_s)}
         disc.process_model(model, inplace=False)
 
         # check doesn't raise if broadcast
@@ -1237,6 +1261,13 @@ class TestDiscretise(unittest.TestCase):
         n = disc.mesh.combine_submeshes(*a.domain).npts
         self.assertEqual(a_disc._expected_size, n)
 
+    def test_process_not_constant(self):
+        disc = pybamm.Discretisation()
+
+        a = pybamm.NotConstant(pybamm.Scalar(1))
+        self.assertEqual(disc.process_symbol(a).id, pybamm.Scalar(1).id)
+        self.assertEqual(disc.process_symbol(2 * a).id, pybamm.Scalar(2).id)
+
     def test_bc_symmetry(self):
         # define model
         model = pybamm.BaseModel()
@@ -1288,6 +1319,29 @@ class TestDiscretise(unittest.TestCase):
         disc = pybamm.Discretisation(mesh, spatial_methods)
         with self.assertRaisesRegex(pybamm.ModelError, "Boundary condition at r = 0"):
             disc.process_model(model)
+
+    def test_check_model_errors(self):
+        disc = pybamm.Discretisation()
+        model = pybamm.BaseModel()
+        var = pybamm.Variable("var")
+        model.rhs = {var: pybamm.Vector([1, 1])}
+        model.initial_conditions = {var: 1}
+        with self.assertRaisesRegex(
+            pybamm.ModelError, "initial conditions must be numpy array"
+        ):
+            disc.check_model(model)
+        model.initial_conditions = {var: pybamm.Vector([1, 1, 1])}
+        with self.assertRaisesRegex(
+            pybamm.ModelError, "rhs and initial conditions must have the same shape"
+        ):
+            disc.check_model(model)
+        model.rhs = {}
+        model.algebraic = {var: pybamm.Vector([1, 1])}
+        with self.assertRaisesRegex(
+            pybamm.ModelError,
+            "algebraic and initial conditions must have the same shape",
+        ):
+            disc.check_model(model)
 
 
 if __name__ == "__main__":

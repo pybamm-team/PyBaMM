@@ -4,11 +4,15 @@ import numpy as np
 pb.set_logging_level("INFO")
 
 models = [
-    pb.lithium_ion.SPM({"sei": "reaction limited"}),
+    pb.lithium_ion.SPM({"SEI": "reaction limited"}),
+    pb.lithium_ion.SPMe({"SEI": "reaction limited"}),
     pb.lithium_ion.SPM(
-        {"sei": "reaction limited", "surface form": "algebraic"}, name="Algebraic SPM",
+        {"SEI": "reaction limited", "surface form": "algebraic"}, name="Algebraic SPM"
     ),
-    pb.lithium_ion.DFN({"sei": "reaction limited"}),
+    pb.lithium_ion.SPMe(
+        {"SEI": "reaction limited", "surface form": "algebraic"}, name="Algebraic SPMe"
+    ),
+    pb.lithium_ion.DFN({"SEI": "reaction limited"}),
 ]
 
 sims = []
@@ -38,17 +42,17 @@ pb.dynamic_plot(
         "Negative particle surface concentration",
         "X-averaged negative particle surface concentration",
         "Electrolyte concentration [mol.m-3]",
-        "Total negative electrode sei thickness [m]",
-        "X-averaged total negative electrode sei thickness [m]",
-        "X-averaged total negative electrode sei thickness",
-        "X-averaged negative electrode sei concentration [mol.m-3]",
-        "Loss of lithium to negative electrode sei [mol]",
+        "Total negative electrode SEI thickness [m]",
+        "X-averaged total negative electrode SEI thickness [m]",
+        "X-averaged total negative electrode SEI thickness",
+        "X-averaged negative electrode SEI concentration [mol.m-3]",
+        "Loss of lithium to negative electrode SEI [mol]",
         [
-            "Negative electrode sei interfacial current density [A.m-2]",
+            "Negative electrode SEI interfacial current density [A.m-2]",
             "Negative electrode interfacial current density [A.m-2]",
         ],
         [
-            "X-averaged negative electrode sei interfacial current density [A.m-2]",
+            "X-averaged negative electrode SEI interfacial current density [A.m-2]",
             "X-averaged negative electrode interfacial current density [A.m-2]",
         ],
         "Sum of x-averaged negative electrode interfacial current densities",

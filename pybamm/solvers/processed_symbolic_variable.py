@@ -25,11 +25,11 @@ class ProcessedSymbolicVariable(object):
     def __init__(self, base_variable, solution):
         # Convert variable to casadi
         t_MX = casadi.MX.sym("t")
-        y_MX = casadi.MX.sym("y", solution.y.shape[0])
+        y_MX = casadi.MX.sym("y", solution.all_ys[0].shape[0])
         # Make all inputs symbolic first for converting to casadi
         all_inputs_as_MX_dict = {}
         symbolic_inputs_dict = {}
-        for key, value in solution.inputs.items():
+        for key, value in solution.all_inputs[0].items():
             if not isinstance(value, casadi.MX):
                 all_inputs_as_MX_dict[key] = casadi.MX.sym("input")
             else:
@@ -38,7 +38,6 @@ class ProcessedSymbolicVariable(object):
                 symbolic_inputs_dict[key] = value
 
         all_inputs_as_MX = casadi.vertcat(*[p for p in all_inputs_as_MX_dict.values()])
-        all_inputs = casadi.vertcat(*[p for p in solution.inputs.values()])
         # The symbolic_inputs dictionary will be used for sensitivity
         symbolic_inputs = casadi.vertcat(*[p for p in symbolic_inputs_dict.values()])
         var = base_variable.to_casadi(t_MX, y_MX, inputs=all_inputs_as_MX_dict)
@@ -47,15 +46,19 @@ class ProcessedSymbolicVariable(object):
             "variable", [t_MX, y_MX, all_inputs_as_MX], [var]
         )
         # Store some attributes
-        self.t_sol = solution.t
-        self.u_sol = solution.y
+        self.t_pts = solution.t
+        self.all_ts = solution.all_ts
+        self.all_ys = solution.all_ys
         self.mesh = base_variable.mesh
+        self.all_inputs_casadi = solution.all_inputs_casadi
+
         self.symbolic_inputs_dict = symbolic_inputs_dict
         self.symbolic_inputs_total_shape = symbolic_inputs.shape[0]
-        self.inputs = all_inputs
         self.domain = base_variable.domain
 
-        self.base_eval = self.base_variable(solution.t[0], solution.y[:, 0], all_inputs)
+        self.base_eval = self.base_variable(
+            self.all_ts[0][0], self.all_ys[0][:, 0], self.all_inputs_casadi[0]
+        )
 
         if (
             isinstance(self.base_eval, numbers.Number)
@@ -94,34 +97,40 @@ class ProcessedSymbolicVariable(object):
             )
 
     def initialise_0D(self):
-        "Create a 0D variable"
+        """Create a 0D variable"""
         # Evaluate the base_variable index-by-index
-        for idx in range(len(self.t_sol)):
-            t = self.t_sol[idx]
-            u = self.u_sol[:, idx]
-            next_entries = self.base_variable(t, u, self.inputs)
-            if idx == 0:
-                entries = next_entries
-            else:
-                entries = casadi.horzcat(entries, next_entries)
+        idx = 0
+        for ts, ys, inputs in zip(self.all_ts, self.all_ys, self.all_inputs_casadi):
+            for inner_idx, t in enumerate(ts):
+                t = ts[inner_idx]
+                y = ys[:, inner_idx]
+                next_entries = self.base_variable(t, y, inputs)
+                if idx == 0:
+                    entries = next_entries
+                else:
+                    entries = casadi.horzcat(entries, next_entries)
+                idx += 1
 
         self.entries = entries
         self.dimensions = 0
 
     def initialise_1D(self):
-        "Create a 1D variable"
+        """Create a 1D variable"""
         len_space = self.base_eval.shape[0]
-        entries = np.empty((len_space, len(self.t_sol)))
+        entries = np.empty((len_space, len(self.t_pts)))
 
         # Evaluate the base_variable index-by-index
-        for idx in range(len(self.t_sol)):
-            t = self.t_sol[idx]
-            u = self.u_sol[:, idx]
-            next_entries = self.base_variable(t, u, self.inputs)
-            if idx == 0:
-                entries = next_entries
-            else:
-                entries = casadi.vertcat(entries, next_entries)
+        idx = 0
+        for ts, ys, inputs in zip(self.all_ts, self.all_ys, self.all_inputs_casadi):
+            for inner_idx, t in enumerate(ts):
+                t = ts[inner_idx]
+                y = ys[:, inner_idx]
+                next_entries = self.base_variable(t, y, inputs)
+                if idx == 0:
+                    entries = next_entries
+                else:
+                    entries = casadi.vertcat(entries, next_entries)
+                idx += 1
 
         self.entries = entries
 
@@ -191,7 +200,7 @@ class ProcessedSymbolicVariable(object):
         )
 
     def _check_and_transform(self, inputs_dict):
-        "Check dictionary has the right inputs, and convert to a vector"
+        """Check dictionary has the right inputs, and convert to a vector"""
         # Convert dict to casadi vector
         if not isinstance(inputs_dict, dict):
             raise TypeError("inputs should be 'dict' but are {}".format(inputs_dict))
@@ -219,5 +228,5 @@ class ProcessedSymbolicVariable(object):
 
     @property
     def data(self):
-        "Same as entries, but different name"
+        """Same as entries, but different name"""
         return self.entries

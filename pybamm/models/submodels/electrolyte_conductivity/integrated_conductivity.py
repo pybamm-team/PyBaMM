@@ -30,8 +30,8 @@ class Integrated(BaseElectrolyteConductivity):
     """
 
     def __init__(self, param, domain=None):
-        pybamm.citations.register("brosaplanella2020TSPMe")
         super().__init__(param, domain)
+        pybamm.citations.register("BrosaPlanella2020")
 
     def _higher_order_macinnes_function(self, x):
         return pybamm.log(x)
@@ -68,7 +68,7 @@ class Integrated(BaseElectrolyteConductivity):
         x_n_edge = pybamm.standard_spatial_vars.x_n_edge
         x_p_edge = pybamm.standard_spatial_vars.x_p_edge
 
-        chi_av = param.chi(c_e_av)
+        chi_av = param.chi(c_e_av, T_av)
         chi_av_n = pybamm.PrimaryBroadcast(chi_av, "negative electrode")
         chi_av_s = pybamm.PrimaryBroadcast(chi_av, "separator")
         chi_av_p = pybamm.PrimaryBroadcast(chi_av, "positive electrode")

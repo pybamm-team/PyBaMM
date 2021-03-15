@@ -135,11 +135,7 @@ def main(arguments=None):
     )
 
     # Check is sundials is already installed
-    SUNDIALS_LIB_DIRS = [
-        join(os.getenv("HOME"), ".local"),
-        "/usr/local",
-        "/usr",
-    ]
+    SUNDIALS_LIB_DIRS = [join(os.getenv("HOME"), ".local"), "/usr/local", "/usr"]
 
     if args.sundials_libs:
         SUNDIALS_LIB_DIRS.insert(0, args.sundials_libs)

@@ -56,6 +56,7 @@ from .util import root_dir
 
 ABSOLUTE_PATH = root_dir()
 PARAMETER_PATH = [
+    root_dir(),
     os.getcwd(),
     os.path.join(root_dir(), "pybamm", "input", "parameters"),
 ]
@@ -63,7 +64,7 @@ PARAMETER_PATH = [
 #
 # Utility classes and methods
 #
-from .util import Timer, FuzzyDict
+from .util import Timer, TimerTime, FuzzyDict
 from .util import root_dir, load_function, rmse, get_infinite_nested_dict, load
 from .util import get_parameters_filepath
 from .logger import logger, set_logging_level
@@ -95,13 +96,6 @@ from .expression_tree.state_vector import StateVectorBase, StateVector, StateVec
 from .expression_tree.exceptions import *
 
 # Operations
-from .expression_tree.operations.simplify import (
-    Simplification,
-    simplify_if_constant,
-    simplify_addition_subtraction,
-    simplify_multiplication_division,
-)
-
 from .expression_tree.operations.evaluate import (
     find_symbols,
     id_to_python_variable,
@@ -111,10 +105,12 @@ from .expression_tree.operations.evaluate import (
 
 if system() != "Windows":
     from .expression_tree.operations.evaluate import EvaluatorJax
+    from .expression_tree.operations.evaluate import JaxCooMatrix
 
 from .expression_tree.operations.jacobian import Jacobian
 from .expression_tree.operations.convert_to_casadi import CasadiConverter
 from .expression_tree.operations.unpack_symbols import SymbolUnpacker
+from .expression_tree.operations.replace_symbols import SymbolReplacer
 
 #
 # Model classes
@@ -136,6 +132,7 @@ from .models.full_battery_models import lithium_sulfur
 from .models.submodels.base_submodel import BaseSubModel
 
 from .models.submodels import (
+    active_material,
     convection,
     current_collector,
     electrolyte_conductivity,
@@ -148,8 +145,10 @@ from .models.submodels import (
     porosity,
     thermal,
     tortuosity,
+    particle_cracking,
 )
 from .models.submodels.interface import sei
+from .models.submodels.interface import lithium_plating
 
 #
 # Geometry
@@ -175,7 +174,6 @@ from .parameters.lithium_ion_parameters import LithiumIonParameters
 from .parameters.lead_acid_parameters import LeadAcidParameters
 from .parameters.lithium_sulfur_parameters import LithiumSulfurParameters
 from .parameters import parameter_sets
-
 
 #
 # Mesh and Discretisation classes
@@ -212,7 +210,7 @@ from .spatial_methods.scikit_finite_element import ScikitFiniteElement
 #
 # Solver classes
 #
-from .solvers.solution import Solution, _BaseSolution
+from .solvers.solution import Solution
 from .solvers.processed_variable import ProcessedVariable
 from .solvers.processed_symbolic_variable import ProcessedSymbolicVariable
 from .solvers.base_solver import BaseSolver
@@ -243,8 +241,15 @@ from . import experiments
 from .plotting.quick_plot import QuickPlot, close_plots
 from .plotting.plot import plot
 from .plotting.plot2D import plot2D
+from .plotting.plot_voltage_components import plot_voltage_components
 from .plotting.dynamic_plot import dynamic_plot
 
+# Define the plot-style string and set the default plotting style (can be overwritten
+# in a specific script)
+default_plot_style = os.path.join(root_dir(), "pybamm/plotting/pybamm.mplstyle")
+import matplotlib.pyplot as plt
+
+plt.style.use(default_plot_style)
 #
 # Simulation
 #

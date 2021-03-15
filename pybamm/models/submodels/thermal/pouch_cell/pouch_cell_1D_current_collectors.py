@@ -30,6 +30,7 @@ class CurrentCollector1D(BaseThermal):
 
     def __init__(self, param):
         super().__init__(param, cc_dimension=1)
+        pybamm.citations.register("Timms2020")
 
     def get_fundamental_variables(self):
 
@@ -85,7 +86,7 @@ class CurrentCollector1D(BaseThermal):
                 + self.param.B * Q_av
                 + total_cooling_coefficient * (T_av - T_amb)
             )
-            / (self.param.C_th * self.param.rho)
+            / (self.param.C_th * self.param.rho(T_av))
         }
 
     def set_boundary_conditions(self, variables):

@@ -1,8 +1,8 @@
 #
-# Example showing how to prescribe the surface area per unit volume independent of
+# Example showing how to prescribe the surface area to volume ratio independent of
 # the assumed particle shape. Setting the "particle shape" option to "user" returns
 # a model which solves a spherical diffusion problem in the particles, but passes
-# a user supplied surface area per unit volume
+# a user supplied surface area to volume ratio
 #
 
 import pybamm
@@ -27,8 +27,6 @@ for model, param in zip(models, params):
             {
                 "Negative electrode surface area to volume ratio [m-1]": 170000,
                 "Positive electrode surface area to volume ratio [m-1]": 200000,
-                "Negative surface area per unit volume distribution in x": 1,
-                "Positive surface area per unit volume distribution in x": 1,
             },
             check_already_exists=False,
         )

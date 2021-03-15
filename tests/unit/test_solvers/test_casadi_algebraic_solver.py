@@ -56,9 +56,11 @@ class TestCasadiAlgebraicSolver(unittest.TestCase):
             t = casadi.MX.sym("t")
             y = casadi.MX.sym("y")
             p = casadi.MX.sym("p")
+            length_scales = {}
             rhs = {}
             casadi_algebraic = casadi.Function("alg", [t, y, p], [y ** 2 + 1])
             bounds = (np.array([-np.inf]), np.array([np.inf]))
+            interpolant_extrapolation_events_eval = []
 
             def algebraic_eval(self, t, y, inputs):
                 # algebraic equation has no real root
@@ -74,6 +76,28 @@ class TestCasadiAlgebraicSolver(unittest.TestCase):
         solver = pybamm.CasadiAlgebraicSolver(extra_options={"error_on_fail": False})
         with self.assertRaisesRegex(
             pybamm.SolverError, "Could not find acceptable solution: solver terminated"
+        ):
+            solver._integrate(model, np.array([0]), {})
+
+        # Model returns Nan
+        class NaNModel:
+            y0 = np.array([-2])
+            t = casadi.MX.sym("t")
+            y = casadi.MX.sym("y")
+            p = casadi.MX.sym("p")
+            rhs = {}
+            casadi_algebraic = casadi.Function("alg", [t, y, p], [y ** 0.5])
+            bounds = (np.array([-np.inf]), np.array([np.inf]))
+            interpolant_extrapolation_events_eval = []
+
+            def algebraic_eval(self, t, y, inputs):
+                # algebraic equation has no real root
+                return y ** 0.5
+
+        model = NaNModel()
+        with self.assertRaisesRegex(
+            pybamm.SolverError,
+            "Could not find acceptable solution: solver returned NaNs",
         ):
             solver._integrate(model, np.array([0]), {})
 
@@ -96,14 +120,8 @@ class TestCasadiAlgebraicSolver(unittest.TestCase):
 
         sol = np.vstack((3 * t_eval, 6 * t_eval))
         np.testing.assert_array_almost_equal(solution.y, sol)
-        np.testing.assert_array_almost_equal(
-            model.variables["var1"].evaluate(t=t_eval, y=solution.y).flatten(),
-            sol[0, :],
-        )
-        np.testing.assert_array_almost_equal(
-            model.variables["var2"].evaluate(t=t_eval, y=solution.y).flatten(),
-            sol[1, :],
-        )
+        np.testing.assert_array_almost_equal(solution["var1"].data.flatten(), sol[0, :])
+        np.testing.assert_array_almost_equal(solution["var2"].data.flatten(), sol[1, :])
 
     def test_model_solver_with_time_not_changing(self):
         # Create model
@@ -137,9 +155,7 @@ class TestCasadiAlgebraicSolver(unittest.TestCase):
         # Solve
         solver = pybamm.CasadiAlgebraicSolver(tol=1e-12)
         solution = solver.solve(model)
-        np.testing.assert_array_almost_equal(
-            model.variables["var1"].evaluate(t=None, y=solution.y), 3 * np.pi / 2
-        )
+        np.testing.assert_array_almost_equal(solution["var1"].data, 3 * np.pi / 2)
 
     def test_solve_with_input(self):
         # Simple system: a single algebraic equation

@@ -62,7 +62,7 @@ Once you are comfortable with the expression tree structure, a good starting poi
 
 - [Full porous-electrode](https://pybamm.readthedocs.io/en/latest/source/models/lead_acid/full.html)
 - [Leading-Order Quasi-Static](https://pybamm.readthedocs.io/en/latest/source/models/lead_acid/loqs.html)
-- [Composite](https://pybamm.readthedocs.io/en/latest/source/models/lead_acid/composite.html)
+- [Higher-Order](https://pybamm.readthedocs.io/en/latest/source/models/lead_acid/higher_order.html)
 
 ### Spatial Methods
 

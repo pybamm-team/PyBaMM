@@ -45,3 +45,19 @@ class ConstantConcentration(BaseElectrolyteDiffusion):
         variables.update(self._get_total_concentration_electrolyte(c_e, eps))
 
         return variables
+
+    def set_boundary_conditions(self, variables):
+        """
+        We provide boundary conditions even though the concentration is constant
+        so that the gradient of the concentration has the correct shape after
+        discretisation.
+        """
+
+        c_e = variables["Electrolyte concentration"]
+
+        self.boundary_conditions = {
+            c_e: {
+                "left": (pybamm.Scalar(0), "Neumann"),
+                "right": (pybamm.Scalar(0), "Neumann"),
+            }
+        }

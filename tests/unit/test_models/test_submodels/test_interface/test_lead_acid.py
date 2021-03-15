@@ -26,8 +26,17 @@ class TestLeadAcid(unittest.TestCase):
             "Negative electrolyte concentration": a_n,
             "Negative particle surface concentration": a_n,
             "Negative electrode temperature": a_n,
+            "Negative electrode surface area to volume ratio": a_n,
         }
-        submodel = pybamm.interface.ButlerVolmer(param, "Negative", "lead-acid main")
+        submodel = pybamm.interface.ButlerVolmer(
+            param,
+            "Negative",
+            "lead-acid main",
+            {
+                "SEI film resistance": "none",
+                "total interfacial current density as a state": "false",
+            },
+        )
         std_tests = tests.StandardSubModelTests(submodel, variables)
 
         std_tests.test_all()
@@ -42,6 +51,8 @@ class TestLeadAcid(unittest.TestCase):
             "Negative electrode interfacial current density": a_n,
             "Negative electrode exchange current density": a_n,
             "Positive electrode temperature": a_p,
+            "Negative electrode surface area to volume ratio": a_n,
+            "Positive electrode surface area to volume ratio": a_p,
             "X-averaged negative electrode interfacial current density": a,
             "X-averaged positive electrode interfacial current density": a,
             "Sum of electrolyte reaction source terms": 0,
@@ -57,7 +68,15 @@ class TestLeadAcid(unittest.TestCase):
             "Sum of x-averaged negative electrode interfacial current densities": 0,
             "Sum of x-averaged positive electrode interfacial current densities": 0,
         }
-        submodel = pybamm.interface.ButlerVolmer(param, "Positive", "lead-acid main")
+        submodel = pybamm.interface.ButlerVolmer(
+            param,
+            "Positive",
+            "lead-acid main",
+            {
+                "SEI film resistance": "none",
+                "total interfacial current density as a state": "false",
+            },
+        )
         std_tests = tests.StandardSubModelTests(submodel, variables)
         std_tests.test_all()
 

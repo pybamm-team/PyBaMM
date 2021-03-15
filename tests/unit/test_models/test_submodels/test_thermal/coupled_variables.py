@@ -10,6 +10,8 @@ a_p = pybamm.FullBroadcast(
 b = pybamm.PrimaryBroadcast(pybamm.Scalar(1), "current collector")
 
 coupled_variables = {
+    "Negative electrode surface area to volume ratio": a_n,
+    "Positive electrode surface area to volume ratio": a_p,
     "Negative electrode interfacial current density": a_n,
     "Positive electrode interfacial current density": a_p,
     "Negative electrode reaction overpotential": a_n,

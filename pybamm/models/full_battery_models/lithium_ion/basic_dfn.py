@@ -29,7 +29,7 @@ class BasicDFN(BaseModel):
 
     def __init__(self, name="Doyle-Fuller-Newman model"):
         super().__init__({}, name)
-        pybamm.citations.register("marquis2019asymptotic")
+        pybamm.citations.register("Marquis2019")
         # `param` is a class containing all the relevant parameters and functions for
         # this model. These are purely symbolic at this stage, and will be set by the
         # `ParameterValues` class when the model is processed.
@@ -167,14 +167,18 @@ class BasicDFN(BaseModel):
         self.boundary_conditions[c_s_n] = {
             "left": (pybamm.Scalar(0), "Neumann"),
             "right": (
-                -param.C_n * j_n / param.a_n / param.D_n(c_s_surf_n, T),
+                -param.C_n * j_n / param.a_R_n / param.D_n(c_s_surf_n, T),
                 "Neumann",
             ),
         }
         self.boundary_conditions[c_s_p] = {
             "left": (pybamm.Scalar(0), "Neumann"),
             "right": (
-                -param.C_p * j_p / param.a_p / param.gamma_p / param.D_p(c_s_surf_p, T),
+                -param.C_p
+                * j_p
+                / param.a_R_p
+                / param.gamma_p
+                / param.D_p(c_s_surf_p, T),
                 "Neumann",
             ),
         }
@@ -240,7 +244,7 @@ class BasicDFN(BaseModel):
         # Current in the electrolyte
         ######################
         i_e = (param.kappa_e(c_e, T) * tor * param.gamma_e / param.C_e) * (
-            param.chi(c_e) * pybamm.grad(c_e) / c_e - pybamm.grad(phi_e)
+            param.chi(c_e, T) * pybamm.grad(c_e) / c_e - pybamm.grad(phi_e)
         )
         self.algebraic[phi_e] = pybamm.div(i_e) - j
         self.boundary_conditions[phi_e] = {
@@ -254,7 +258,8 @@ class BasicDFN(BaseModel):
         ######################
         N_e = -tor * param.D_e(c_e, T) * pybamm.grad(c_e)
         self.rhs[c_e] = (1 / eps) * (
-            -pybamm.div(N_e) / param.C_e + (1 - param.t_plus(c_e)) * j / param.gamma_e
+            -pybamm.div(N_e) / param.C_e
+            + (1 - param.t_plus(c_e, T)) * j / param.gamma_e
         )
         self.boundary_conditions[c_e] = {
             "left": (pybamm.Scalar(0), "Neumann"),
@@ -288,5 +293,5 @@ class BasicDFN(BaseModel):
             pybamm.Event("Maximum voltage", voltage - param.voltage_high_cut),
         ]
 
-    def new_copy(self, build=False):
-        return pybamm.BaseModel.new_copy(self)
+    def new_empty_copy(self):
+        return pybamm.BaseModel.new_empty_copy(self)

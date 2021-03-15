@@ -38,7 +38,7 @@ class LeadingOrder(BaseModel):
         j_n = variables["X-averaged negative electrode interfacial current density"]
         j_p = variables["X-averaged positive electrode interfacial current density"]
         j_sei_n = variables[
-            "X-averaged negative electrode sei interfacial current density"
+            "X-averaged negative electrode SEI interfacial current density"
         ]
         beta_sei_n = self.param.beta_sei_n
 
@@ -73,6 +73,8 @@ class LeadingOrder(BaseModel):
         eps_s_av = variables["X-averaged separator porosity"]
         eps_p_av = variables["X-averaged positive electrode porosity"]
 
-        self.initial_conditions = {eps_n_av: self.param.epsilon_n_init}
-        self.initial_conditions.update({eps_s_av: self.param.epsilon_s_init})
-        self.initial_conditions.update({eps_p_av: self.param.epsilon_p_init})
+        self.initial_conditions = {
+            eps_n_av: self.param.epsilon_n_init,
+            eps_s_av: self.param.epsilon_s_init,
+            eps_p_av: self.param.epsilon_p_init,
+        }

@@ -25,7 +25,8 @@ sim = pybamm.Simulation(
     model,
     parameter_values=params,
     solver=pybamm.CasadiSolver(
-        atol=1e-6, rtol=1e-3, extra_options_setup={"max_step_size": 0.1}
+        atol=1e-6,
+        rtol=1e-3,
     ),
 )
 sim.solve(np.linspace(0, 6680, 668))
