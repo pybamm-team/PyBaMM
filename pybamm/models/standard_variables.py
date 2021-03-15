@@ -265,18 +265,18 @@ T_vol_av = pybamm.Variable("Volume-averaged cell temperature")
 
 # SEI variables
 L_inner_av = pybamm.Variable(
-    "X-averaged inner SEI thickness", domain="current collector"
+    "X-averaged inner negative electrode SEI thickness", domain="current collector"
 )
 L_inner = pybamm.Variable(
-    "Inner SEI thickness",
+    "Inner negative electrode SEI thickness",
     domain=["negative electrode"],
     auxiliary_domains={"secondary": "current collector"},
 )
 L_outer_av = pybamm.Variable(
-    "X-averaged outer SEI thickness", domain="current collector"
+    "X-averaged outer negative electrode SEI thickness", domain="current collector"
 )
 L_outer = pybamm.Variable(
-    "Outer SEI thickness",
+    "Outer negative electrode SEI thickness",
     domain=["negative electrode"],
     auxiliary_domains={"secondary": "current collector"},
 )

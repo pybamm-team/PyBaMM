@@ -204,7 +204,7 @@ If you want to check integration tests as well as unit tests, type
 ```bash
 tox -e tests # (GNU/Linux and MacOS)
 #
-python -m tox -e windows-tests (Windows)
+python -m tox -e windows-tests # (Windows)
 ```
 
 When you commit anything to PyBaMM, these checks will also be run automatically (see [infrastructure](#infrastructure)).
@@ -216,7 +216,7 @@ To test all example scripts and notebooks, type
 ```bash
 tox -e examples # (GNU/Linux and MacOS)
 #
-python -m tox -e windows-examples (Windows)
+python -m tox -e windows-examples # (Windows)
 ```
 
 If notebooks fail because of changes to pybamm, it can be a bit of a hassle to debug. In these cases, you can create a temporary export of a notebook's Python content using
@@ -272,7 +272,7 @@ Figuring out where to start the debugger is the real challenge. Some good ways t
   warnings.simplefilter("error")
   ```
   Then you can use a try-except block, as in a., but with, for example, `RuntimeWarning` instead of `ValueError`.
-  c. Stepping through the expression tree. Most calls in PyBaMM are operations on [expression trees](https://github.com/pybamm-team/PyBaMM/blob/master/examples/notebooks/expression_tree/expression-tree.ipynb). To view an expression tree in ipython, you can use the `render` command:
+  c. Stepping through the expression tree. Most calls in PyBaMM are operations on [expression trees](https://github.com/pybamm-team/PyBaMM/blob/develop/examples/notebooks/expression_tree/expression-tree.ipynb). To view an expression tree in ipython, you can use the `render` command:
   ```python
   expression_tree.render()
   ```
@@ -340,7 +340,7 @@ Where possible, notebooks are tested daily. A list of slow notebooks (which time
 
 ## Citations
 
-We aim to recognize all contributions by automatically generating citations to the relevant papers on which different parts of the code are built. 
+We aim to recognize all contributions by automatically generating citations to the relevant papers on which different parts of the code are built.
 These will change depending on what models and solvers you use.
 Adding the command
 
@@ -482,15 +482,9 @@ tox.ini
 
 Documentation is built using https://readthedocs.org/ and published on http://pybamm.readthedocs.io/.
 
-### Binder
+### Google Colab
 
-Editable notebooks are made available using [Binder](mybinder.readthedocs.io) at https://mybinder.org/v2/gh/pybamm-team/PyBaMM/master.
-
-Configuration files:
-
-```
-postBuild
-```
+Editable notebooks are made available using [Google Colab](https://colab.research.google.com/notebooks/intro.ipynb) [here](https://colab.research.google.com/github/pybamm-team/PyBaMM/blob/develop/).
 
 ### GitHub
 

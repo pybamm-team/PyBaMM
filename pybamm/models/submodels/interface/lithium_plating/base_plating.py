@@ -76,7 +76,7 @@ class BasePlating(BaseInterface):
             f"{Domain} lithium plating thickness [m]": L_plated_Li * L_scale,
             f"X-averaged {domain} lithium plating thickness [m]": L_plated_Li_av
             * L_scale,
-            f"Loss of Li to {domain} lithium plating [mol]": Q_plated_Li * c_scale,
+            f"Loss of lithium to {domain} lithium plating [mol]": Q_plated_Li * c_scale,
             f"Loss of capacity to {domain} lithium plating [A.h]": Q_plated_Li
             * c_scale
             * param.F

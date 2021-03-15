@@ -68,6 +68,22 @@ class TestExperiments(unittest.TestCase):
             [cap / 20] * 11 + [0] * 10 + ([cap / 20] * 10 + [0] * 10) * 9,
         )
 
+    def test_infeasible(self):
+        experiment = pybamm.Experiment(
+            [
+                ("Discharge at 1C for 0.5 hours",),
+            ]
+            * 4
+        )
+        model = pybamm.lithium_ion.SPM()
+        sim = pybamm.Simulation(
+            model, experiment=experiment, solver=pybamm.CasadiSolver()
+        )
+        sol = sim.solve()
+        # this experiment fails during the third cycle (i.e. is infeasible)
+        # so we should just return the successful cycles (2 in this case)
+        self.assertEqual(len(sol.cycles), 2)
+
 
 if __name__ == "__main__":
     print("Add -v for more debug output")

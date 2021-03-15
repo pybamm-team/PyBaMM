@@ -10,6 +10,7 @@ class Settings(object):
     _max_smoothing = "exact"
     _heaviside_smoothing = "exact"
     _abs_smoothing = "exact"
+    max_words_in_line = 4
 
     @property
     def debug_mode(self):

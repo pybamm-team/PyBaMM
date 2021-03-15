@@ -79,7 +79,7 @@ class ParameterValues:
                 path = os.path.split(file_path)[0]
                 values = self.read_parameters_csv(file_path)
             else:
-                path = None
+                path = ""
             # Don't check parameter already exists when first creating it
             self.update(values, check_already_exists=False, path=path)
 
@@ -149,7 +149,7 @@ class ParameterValues:
             "experiment",
         ]
 
-        # add sei parameters if provided
+        # add SEI parameters if provided
         if "sei" in chemistry:
             component_groups += ["sei"]
 
