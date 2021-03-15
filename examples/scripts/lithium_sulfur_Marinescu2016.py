@@ -20,7 +20,7 @@ params.update(
     }
 )
 
-# Set up and solve simulation
+# Set up and solve constant current discharge simulation ----------------------
 sim = pybamm.Simulation(
     model,
     parameter_values=params,
@@ -32,7 +32,6 @@ sim = pybamm.Simulation(
 sim.solve(np.linspace(0, 6680, 668))
 
 # Plot results
-# sim.plot()
 sim.plot(
     [
         "S8 [g]",
@@ -50,3 +49,29 @@ sim.plot(
     ],
     time_unit="seconds",
 )
+
+# Set up and solve experiment -------------------------------------------------
+experiment = pybamm.Experiment(
+    [
+        (
+            "Discharge at 1.1 A for 3 hours or until 2.3 V",
+            "Rest for 1 hour",
+            "Charge at 1.1 A for 3 hours or until 2.4 V",
+            "Rest for 1 hour",
+        ),
+    ]
+    * 3,
+)
+sim2 = pybamm.Simulation(
+    model,
+    experiment=experiment,
+    parameter_values=params,
+    solver=pybamm.CasadiSolver(
+        atol=1e-6,
+        rtol=1e-3,
+    ),
+)
+sim2.solve()
+
+# Plot results
+sim2.plot()

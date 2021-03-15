@@ -243,10 +243,65 @@ class Simulation:
             self._experiment_times.append(dt)
 
         # Set up model for experiment
-        if experiment.use_simulation_setup_type == "old":
+        if isinstance(model, pybamm.lithium_sulfur.BaseModel):
+            self.set_up_model_for_experiment_li_s(model)
+        elif experiment.use_simulation_setup_type == "old":
             self.set_up_model_for_experiment_old(model)
         elif experiment.use_simulation_setup_type == "new":
             self.set_up_model_for_experiment_new(model)
+
+    def set_up_model_for_experiment_li_s(self, model):
+        """
+        Set up self.model to be able to run the experiment with li-s models.
+        In this version, a single model is created which can then be called with
+        different inputs for current-control, voltage-control, or power-control.
+
+        This reduces set-up time since only one model needs to be processed, but
+        increases simulation time since the model formulation is inefficient
+        """
+        new_model = model.new_copy(
+            options={
+                **model.options,
+                "operating mode": constant_current_constant_voltage_constant_power,
+            }
+        )
+
+        # Remove upper and lower voltage cut-offs that are *not* part of the experiment
+        new_model.events = [
+            event
+            for event in model.events
+            if event.name not in ["Minimum voltage", "Maximum voltage"]
+        ]
+        # add current and voltage events to the model
+        # current events both negative and positive to catch specification
+        new_model.events.extend(
+            [
+                pybamm.Event(
+                    "Current cut-off (positive) [A] [experiment]",
+                    new_model.variables["Current [A]"]
+                    - abs(pybamm.InputParameter("Current cut-off [A]")),
+                ),
+                pybamm.Event(
+                    "Current cut-off (negative) [A] [experiment]",
+                    new_model.variables["Current [A]"]
+                    + abs(pybamm.InputParameter("Current cut-off [A]")),
+                ),
+                pybamm.Event(
+                    "Voltage cut-off [V] [experiment]",
+                    new_model.variables["Terminal voltage [V]"]
+                    - pybamm.InputParameter("Voltage cut-off [V]")
+                    / model.param.n_cells,
+                ),
+            ]
+        )
+
+        self.model = new_model
+
+        self.op_conds_to_model_and_param = {
+            op_cond[:2]: (new_model, self.parameter_values)
+            for op_cond in set(self.experiment.operating_conditions)
+        }
+        self.op_conds_to_built_models = None
 
     def set_up_model_for_experiment_old(self, model):
         """

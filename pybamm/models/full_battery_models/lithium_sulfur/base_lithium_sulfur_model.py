@@ -21,10 +21,47 @@ class BaseModel(pybamm.BaseModel):
         self.options = options
         self.param = pybamm.LithiumSulfurParameters()
 
+    def set_external_circuit_submodel(self):
+        """
+        Define how the external circuit defines the boundary conditions for the model,
+        e.g. (not necessarily constant-) current, voltage, etc
+        """
+
+        # Set variable for the terminal voltage
+        V = pybamm.Variable("Terminal voltage [V]")
+        self.variables.update({"Terminal voltage [V]": V})
+
+        # Set up current operated. Here the current is just provided as a
+        # parameter
+        if self.options["operating mode"] == "current":
+            I = pybamm.Parameter("Current function [A]")
+            self.variables.update({"Current [A]": I})
+
+        # If the the operating mode of the simulation is "with experiment" the
+        # model option "operating mode" is the callable function
+        # 'constant_current_constant_voltage_constant_power'
+        elif callable(self.options["operating mode"]):
+            # For the experiment we solve an extra algebraic equation
+            # to determine the current
+            I = pybamm.Variable("Current [A]")
+            self.variables.update({"Current [A]": I})
+            control_function = self.options["operating mode"]
+
+            # 'constant_current_constant_voltage_constant_power' is a function
+            # of current and voltage via the variables dict (see pybamm.Simulation)
+            self.algebraic = {I: control_function(self.variables)}
+            self.initial_conditions[I] = pybamm.Parameter("Current function [A]")
+
+        # Add variable for discharge capacity
+        Q = pybamm.Variable("Discharge capacity [A.h]")
+        self.variables.update({"Discharge capacity [A.h]": Q})
+        self.rhs.update({Q: I * self.param.timescale / 3600})
+        self.initial_conditions.update({Q: pybamm.Scalar(0)})
+
     @property
     def default_parameter_values(self):
-        # TODO: separate parameters out by component (if possible?) and create
-        # parameter set that can be called (see pybamm/parameters/parameter_sets.py)
+        # TODO: separate parameters out by component and create a parameter set
+        # that can be called (see pybamm/parameters/parameter_sets.py)
         return pybamm.ParameterValues(values="lithium-sulfur/parameters.csv")
 
     @property
@@ -64,7 +101,6 @@ class BaseModel(pybamm.BaseModel):
         options = options or self.options
         new_model = self.__class__(options=options, name=self.name)
         new_model.use_jacobian = self.use_jacobian
-        new_model.use_simplify = self.use_simplify
         new_model.convert_to_format = self.convert_to_format
         new_model.timescale = self.timescale
         new_model.length_scales = self.length_scales
