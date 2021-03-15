@@ -14,7 +14,7 @@ class Broadcast(pybamm.SpatialOperator):
 
     For an example of broadcasts in action, see
     `this example notebook
-    <https://github.com/pybamm-team/PyBaMM/blob/master/examples/notebooks/expression_tree/broadcasts.ipynb>`_
+    <https://github.com/pybamm-team/PyBaMM/blob/develop/examples/notebooks/expression_tree/broadcasts.ipynb>`_
 
     Parameters
     ----------
