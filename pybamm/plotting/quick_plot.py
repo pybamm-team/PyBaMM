@@ -11,10 +11,6 @@ class LoopList(list):
     """A list which loops over itself when accessing an
     index so that it never runs out"""
 
-    """
-    A list which loops over itself when accessing an index so that it never runs out
-    """
-
     def __getitem__(self, i):
         # implement looping by calling "(i) modulo (length of list)"
         return super().__getitem__(i % len(self))

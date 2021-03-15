@@ -441,9 +441,7 @@ class Solution(object):
     def sub_solutions(self):
         """List of sub solutions that have been
         concatenated to form the full solution"""
-        """
-        List of sub solutions that have been concatenated to form the full solution
-        """
+
         return self._sub_solutions
 
     def __add__(self, other):
