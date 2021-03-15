@@ -141,6 +141,7 @@ Chen2020 = {
     "electrolyte": "lipf6_Nyman2008",
     "experiment": "1C_discharge_from_full_Chen2020",
     "sei": "example",
+    "lithium plating": "okane2020_Li_plating",
     "citation": "Chen2020",
 }
 

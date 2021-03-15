@@ -245,9 +245,9 @@ from .plotting.dynamic_plot import dynamic_plot
 # Define the plot-style string and set the default plotting style (can be overwritten
 # in a specific script)
 default_plot_style = os.path.join(root_dir(), "pybamm/plotting/pybamm.mplstyle")
-import matplotlib.pyplot as plt
+#import matplotlib.pyplot as plt
 
-plt.style.use(default_plot_style)
+#plt.style.use(default_plot_style)
 #
 # Simulation
 #
