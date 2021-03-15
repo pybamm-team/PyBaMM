@@ -33,6 +33,9 @@ class Options(pybamm.FuzzyDict):
             * "dimensionality" : int
                 Sets the dimension of the current collector problem. Can be 0
                 (default), 1 or 2.
+            * "electrolyte conductivity" : str
+                Can be "default" (default), "full", "leading order", "composite" or
+                "integrated".
             * "external submodels" : list
                 A list of the submodels that you would like to supply an external
                 variable for instead of solving in PyBaMM. The entries of the lists
@@ -131,9 +134,6 @@ class Options(pybamm.FuzzyDict):
                 solve an algebraic equation for it. Default is "false", unless "SEI film
                 resistance" is distributed in which case it is automatically set to
                 "true".
-            * "electrolyte conductivity" : str
-                Can be "default" (default), "full", "leading order", "composite" or
-                "integrated"
 
     **Extends:** :class:`dict`
     """
@@ -467,7 +467,6 @@ class BaseBatteryModel(pybamm.BaseModel):
         # Spatial
         var = pybamm.standard_spatial_vars
         L_x = self.param.L_x
-        L_y = self.param.L_y
         L_z = self.param.L_z
         self.variables.update(
             {
@@ -484,8 +483,9 @@ class BaseBatteryModel(pybamm.BaseModel):
         if self.options["dimensionality"] == 1:
             self.variables.update({"z": var.z, "z [m]": var.z * L_z})
         elif self.options["dimensionality"] == 2:
+            # Note: both y and z are scaled with L_z
             self.variables.update(
-                {"y": var.y, "y [m]": var.y * L_y, "z": var.z, "z [m]": var.z * L_z}
+                {"y": var.y, "y [m]": var.y * L_z, "z": var.z, "z [m]": var.z * L_z}
             )
 
         # Initialize "total reaction" variables
@@ -519,7 +519,7 @@ class BaseBatteryModel(pybamm.BaseModel):
             )
             self.variables.update(submodel.get_fundamental_variables())
 
-        # set the submodels that are external
+        # Set the submodels that are external
         for sub in self.options["external submodels"]:
             self.submodels[sub].external = True
 
