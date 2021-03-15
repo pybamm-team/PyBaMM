@@ -86,9 +86,10 @@ for libdir in ["SuiteSparse_config", "AMD", "COLAMD", "BTF", "KLU"]:
 # 2 --- Download SUNDIALS
 sundials_version = "5.1.0"
 sundials_url = (
-    "https://computing.llnl.gov/"
-    + "projects/sundials/download/sundials-{}.tar.gz".format(sundials_version)
+    "https://github.com/LLNL/sundials/"
+    + f"releases/download/v{sundials_version}/sundials-{sundials_version}.tar.gz"
 )
+
 download_extract_library(sundials_url, download_dir)
 
 # Set install dir for SuiteSparse libs
