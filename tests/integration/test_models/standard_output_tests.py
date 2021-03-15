@@ -631,7 +631,7 @@ class CurrentTests(BaseOutputTest):
                 axis=0,
             ),
             self.i_cell / self.l_n,
-            decimal=4,
+            decimal=3,
         )
         np.testing.assert_array_almost_equal(
             np.mean(
