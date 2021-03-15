@@ -503,7 +503,7 @@ class QuickPlot(object):
                         (self.plots[key][i][j],) = ax.plot(
                             full_t / self.time_scaling_factor,
                             variable(full_t, warn=False),
-                            # color=self.colors[i],
+                            color=self.colors[i],
                             linestyle=linestyle,
                         )
                         variable_handles.append(self.plots[key][0][j])
@@ -539,7 +539,7 @@ class QuickPlot(object):
                         (self.plots[key][i][j],) = ax.plot(
                             self.first_dimensional_spatial_variable[key],
                             variable(t_in_seconds, **spatial_vars, warn=False),
-                            # color=self.colors[i],
+                            color=self.colors[i],
                             linestyle=linestyle,
                             zorder=10,
                         )
