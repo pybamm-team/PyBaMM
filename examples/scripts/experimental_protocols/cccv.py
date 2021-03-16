@@ -11,7 +11,7 @@ experiment = pybamm.Experiment(
             "Discharge at C/5 for 10 hours or until 3.3 V",
             "Rest for 1 hour",
             "Charge at 1 A until 4.1 V",
-            "Hold at 4.1 V until 50 mA",
+            "Hold at 4.1 V until 10 mA",
             "Rest for 1 hour",
         ),
     ]
@@ -80,4 +80,15 @@ sim.solve()
 # )
 
 # Show all plots
-sim.plot()
+sim.plot(
+    [
+        "Negative particle surface concentration [mol.m-3]",
+        "Electrolyte concentration [mol.m-3]",
+        "Positive particle surface concentration [mol.m-3]",
+        "Current [A]",
+        "Negative electrode potential [V]",
+        "Electrolyte potential [V]",
+        "Positive electrode potential [V]",
+        ["Terminal voltage [V]", "Measured open circuit voltage [V]"],
+    ]
+)

@@ -171,7 +171,6 @@ class CasadiSolver(pybamm.BaseSolver):
             # Check if the sign of an event changes, if so find an accurate
             # termination point and exit
             solution = self._solve_for_event(solution, init_event_signs)
-            # solution.termination = "final time"
             return solution
         elif self.mode in ["safe", "safe without grid"]:
             y0 = model.y0
@@ -325,7 +324,7 @@ class CasadiSolver(pybamm.BaseSolver):
                             for event in model.terminate_events_eval
                         ]
                     )
-                    - 1e-6
+                    - 1e-5
                 )
             else:
                 crossed_events = np.sign([])
@@ -353,12 +352,12 @@ class CasadiSolver(pybamm.BaseSolver):
                     try:
                         return f_eval[idx]
                     except KeyError:
-                        # We take away 1e-6 to deal with the case where the event sits
+                        # We take away 1e-5 to deal with the case where the event sits
                         # exactly on zero, as can happen when the event switch is used
                         # (fast with events mode)
                         f_eval[idx] = (
                             init_event_sign * event(sol.t[idx], sol.y[:, idx], inputs)
-                            - 1e-6
+                            - 1e-5
                         )
                         return f_eval[idx]
 
