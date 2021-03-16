@@ -5,7 +5,6 @@ import casadi
 import pybamm
 import numpy as np
 from scipy.interpolate import interp1d
-from scipy.optimize import root_scalar
 
 
 class CasadiSolver(pybamm.BaseSolver):
@@ -282,7 +281,7 @@ class CasadiSolver(pybamm.BaseSolver):
         # Check for interpolant extrapolations
         if model.interpolant_extrapolation_events_eval:
             extrap_event = [
-                event(t, coarse_solution.y[:, -1], inputs=inputs)
+                event(coarse_solution.t[-1], coarse_solution.y[:, -1], inputs=inputs)
                 for event in model.interpolant_extrapolation_events_eval
             ]
 
@@ -295,7 +294,7 @@ class CasadiSolver(pybamm.BaseSolver):
                             == pybamm.EventType.INTERPOLANT_EXTRAPOLATION
                             and (
                                 event.expression.evaluate(
-                                    t,
+                                    coarse_solution.t[-1],
                                     coarse_solution.y[:, -1].full(),
                                     inputs=inputs,
                                 )

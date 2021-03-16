@@ -888,11 +888,15 @@ class LithiumIonParameters:
         return self.R_p_dimensional(x_dim) / self.R_p_typ
 
     def c_n_init(self, x):
-        """Dimensionless initial concentration as a function of dimensionless position x"""
+        """
+        Dimensionless initial concentration as a function of dimensionless position x.
+        """
         return self.c_n_init_dimensional(x) / self.c_n_max
 
     def c_p_init(self, x):
-        """Dimensionless initial concentration as a function of dimensionless position x"""
+        """
+        Dimensionless initial concentration as a function of dimensionless position x.
+        """
         return self.c_p_init_dimensional(x) / self.c_p_max
 
     def rho(self, T):
