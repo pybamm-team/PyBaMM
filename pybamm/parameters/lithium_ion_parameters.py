@@ -301,6 +301,9 @@ class LithiumIonParameters:
             "Positive electrode critical stress [Pa]"
         )
 
+        # composite anode parameters
+        
+
     def D_e_dimensional(self, c_e, T):
         """Dimensional diffusivity in electrolyte"""
         inputs = {"Electrolyte concentration [mol.m-3]": c_e, "Temperature [K]": T}
