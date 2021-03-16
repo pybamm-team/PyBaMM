@@ -94,14 +94,13 @@ class CMakeBuild(build_ext):
     def move_output(self, ext):
         # Copy built module to dist/ directory
         build_temp = Path(self.build_temp).resolve()
-        source_path = build_temp / self.get_ext_filename(ext.name)
         # Get destination location
         # self.get_ext_fullpath(ext.name) -->
         # build/lib.linux-x86_64-3.5/idaklu.cpython-37m-x86_64-linux-gnu.so
         # using resolve() with python < 3.6 will result in a FileNotFoundError
         # since the location does not yet exists.
         dest_path = Path(self.get_ext_fullpath(ext.name)).resolve()
-        source_path = build_temp / self.get_ext_filename(ext.name)
+        source_path = build_temp / os.path.basename(self.get_ext_filename(ext.name))
         dest_directory = dest_path.parents[0]
         dest_directory.mkdir(parents=True, exist_ok=True)
         self.copy_file(source_path, dest_path)

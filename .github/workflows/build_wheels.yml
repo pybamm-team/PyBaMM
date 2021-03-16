@@ -1,0 +1,75 @@
+name: Build
+
+on:
+  push:
+    branches: master
+  workflow_dispatch:
+    inputs:
+      target:
+        description: 'Deployment target. Can be "pypi" or "testpypi"'
+        default: 'pypi'
+
+jobs:
+  build_wheels:
+    name: Build wheels on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [macOS-10.15, ubuntu-20.04]
+
+    steps:
+      - uses: actions/checkout@v2
+
+      # Used to host cibuildwheel
+      - uses: actions/setup-python@v2
+
+      - name: Install cibuildwheel
+        run: python -m pip install cibuildwheel==1.9.0
+
+      - name: Install sundials on macOS
+        if: matrix.os == 'macOS-10.15'
+        run: |
+          brew update
+          brew install sundials
+
+      - name: Clone pybind11 repo
+        run: git clone https://github.com/pybind/pybind11.git
+
+      - name: Build wheels
+        run: python -m cibuildwheel --output-dir wheelhouse
+        env:
+          CIBW_BEFORE_ALL_LINUX: "bash build_manylinux_wheels/install_sundials.sh 5.8.1 5.7.0"
+          CIBW_BEFORE_BUILD_LINUX: "python -m pip install cmake"
+
+      - uses: actions/upload-artifact@v2
+        with:
+          name: wheels
+          path: ./wheelhouse/*.whl
+
+
+  publish-pypi:
+    name: Upload wheels to PyPI
+    needs: build_wheels
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download wheels
+        uses: actions/download-artifact@v1
+        with:
+          name: wheels
+
+      - name: Publish wheels on PyPI
+        if: ${{ github.events.inputs.target }} == 'pypi'
+        uses: pypa/gh-action-pypi-publish@master
+        with:
+          user: __token__
+          password: ${{ secrets.PYPI_TOKEN }}
+          packages_dir: wheels/
+
+      - name: Publish wheels on TestPyPI
+        if: ${{ github.events.inputs.target }} == 'testpypi'
+        uses: pypa/gh-action-pypi-publish@master
+        with:
+          user: __token__
+          password: ${{ secrets.TESTPYPI_TOKEN }}
+          packages_dir: wheels/
+          repository_url: https://test.pypi.org/legacy/
