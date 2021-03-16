@@ -378,15 +378,17 @@ class BaseSolver(object):
                     # events' mode of the casadi solver
                     # see #1082
                     k = 20
-                    if (
-                        event.name in ["Minimum voltage", "Maximum voltage"]
-                        or "[experiment]" in event.name
-                    ):
+                    if "voltage" in event.name.lower():
                         init_sign = float(
                             np.sign(event_eval(0, model.y0, inputs_stacked))
                         )
-                        event_sigmoid = pybamm.sigmoid(
-                            0, init_sign * event.expression, k
+                        # We create a sigmoid for each event which will multiply the
+                        # rhs. Doing * 2 - 1 ensures that when the event is crossed,
+                        # the sigmoid is zero. Hence the rhs is zero and the solution
+                        # stays constant for the rest of the simulation period
+                        # We can then cut off the part after the event was crossed
+                        event_sigmoid = (
+                            pybamm.sigmoid(0, init_sign * event.expression, k) * 2 - 1
                         )
                         event_casadi = process(
                             event_sigmoid, "event", use_jacobian=False

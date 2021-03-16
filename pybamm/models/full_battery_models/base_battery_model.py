@@ -899,13 +899,13 @@ class BaseBatteryModel(pybamm.BaseModel):
         )
 
         # Cut-off voltage
-        # self.events.append(
-        #     pybamm.Event(
-        #         "Minimum voltage",
-        #         V - self.param.voltage_low_cut,
-        #         pybamm.EventType.TERMINATION,
-        #     )
-        # )
+        self.events.append(
+            pybamm.Event(
+                "Minimum voltage",
+                V - self.param.voltage_low_cut,
+                pybamm.EventType.TERMINATION,
+            )
+        )
         self.events.append(
             pybamm.Event(
                 "Maximum voltage",
