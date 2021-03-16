@@ -8,14 +8,14 @@ import numpy as np
 pybamm.set_logging_level("INFO")
 
 # load model
-model = pybamm.lithium_ion.DFN()  # {"operating mode": "power"})
+model = pybamm.lithium_ion.SPM()  # {"operating mode": "power"})
 # create geometry
 geometry = model.default_geometry
 
 # load parameter values and process model and geometry
 param = model.default_parameter_values
 # param.update({"Power function [W]": 3.5}, check_already_exists=False)
-param["Current function [A]"] /= 10
+# param["Current function [A]"] /= 10
 param.process_geometry(geometry)
 param.process_model(model)
 
@@ -29,7 +29,7 @@ disc = pybamm.Discretisation(mesh, model.default_spatial_methods)
 disc.process_model(model)
 
 # solve model
-t_eval = np.linspace(0, 5000 * 10, 100)
+t_eval = np.linspace(0, 4000, 100)
 solver = pybamm.CasadiSolver(mode="safe", atol=1e-6, rtol=1e-6)
 solution1 = solver.solve(model, t_eval)
 solver = pybamm.CasadiSolver(mode="fast with events", atol=1e-6, rtol=1e-6)

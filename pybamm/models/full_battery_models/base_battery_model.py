@@ -914,6 +914,23 @@ class BaseBatteryModel(pybamm.BaseModel):
             )
         )
 
+        # Cut-off open-circuit voltage (for event switch with casadi 'fast with events'
+        # mode)
+        self.events.append(
+            pybamm.Event(
+                "Minimum open circuit voltage",
+                ocv - self.param.voltage_low_cut,
+                pybamm.EventType.SWITCH,
+            )
+        )
+        self.events.append(
+            pybamm.Event(
+                "Maximum open circuit voltage",
+                ocv - self.param.voltage_high_cut,
+                pybamm.EventType.SWITCH,
+            )
+        )
+
         # Power
         I_dim = self.variables["Current [A]"]
         self.variables.update({"Terminal power [W]": I_dim * V_dim})

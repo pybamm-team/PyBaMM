@@ -374,26 +374,24 @@ class BaseSolver(object):
                 if event.event_type == pybamm.EventType.TERMINATION:
 
                     terminate_events_eval.append(event_eval)
+                elif event.event_type == pybamm.EventType.SWITCH:
                     # Save some events to casadi_terminate_events for the 'fast with
                     # events' mode of the casadi solver
                     # see #1082
                     k = 20
-                    if "voltage" in event.name.lower():
-                        init_sign = float(
-                            np.sign(event_eval(0, model.y0, inputs_stacked))
-                        )
-                        # We create a sigmoid for each event which will multiply the
-                        # rhs. Doing * 2 - 1 ensures that when the event is crossed,
-                        # the sigmoid is zero. Hence the rhs is zero and the solution
-                        # stays constant for the rest of the simulation period
-                        # We can then cut off the part after the event was crossed
-                        event_sigmoid = (
-                            pybamm.sigmoid(0, init_sign * event.expression, k) * 2 - 1
-                        )
-                        event_casadi = process(
-                            event_sigmoid, "event", use_jacobian=False
-                        )[0]
-                        casadi_terminate_events.append(event_casadi)
+                    init_sign = float(np.sign(event_eval(0, model.y0, inputs_stacked)))
+                    # We create a sigmoid for each event which will multiply the
+                    # rhs. Doing * 2 - 1 ensures that when the event is crossed,
+                    # the sigmoid is zero. Hence the rhs is zero and the solution
+                    # stays constant for the rest of the simulation period
+                    # We can then cut off the part after the event was crossed
+                    event_sigmoid = (
+                        pybamm.sigmoid(0, init_sign * event.expression, k) * 2 - 1
+                    )
+                    event_casadi = process(event_sigmoid, "event", use_jacobian=False)[
+                        0
+                    ]
+                    casadi_terminate_events.append(event_casadi)
                 elif event.event_type == pybamm.EventType.INTERPOLANT_EXTRAPOLATION:
                     interpolant_extrapolation_events_eval.append(event_eval)
 

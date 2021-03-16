@@ -5,7 +5,7 @@ import casadi
 import pybamm
 import numpy as np
 from scipy.interpolate import interp1d
-from scipy.optimize import brentq
+from scipy.optimize import root_scalar
 
 
 class CasadiSolver(pybamm.BaseSolver):
@@ -308,7 +308,7 @@ class CasadiSolver(pybamm.BaseSolver):
                         "these bounds.".format(extrap_event_names)
                     )
 
-        def find_t_event(sol, interpolant_kind):
+        def find_t_event(sol, typ):
 
             # Check most recent y to see if any events have been crossed
             if model.terminate_events_eval:
@@ -332,56 +332,94 @@ class CasadiSolver(pybamm.BaseSolver):
             event_ind = np.where(new_event_signs != init_event_signs)[0]
             active_events = [model.terminate_events_eval[i] for i in event_ind]
 
-            # create interpolant to evaluate y in the current integration
-            # window
-            y_sol = interp1d(sol.t, sol.y, kind=interpolant_kind)
-
             # loop over events to compute the time at which they were triggered
             t_events = [None] * len(active_events)
             for i, event in enumerate(active_events):
+                # Implement our own bisection algorithm for speed
+                # This is used to find the time range in which the event is triggered
+                # Evaluations of the "event" function are (relatively) expensive
                 init_event_sign = init_event_signs[event_ind[i]][0]
 
-                def event_fun(t):
-                    # We take away 1e-5 to deal with the case where the event sits
-                    # exactly on zero, as can happen when the event switch is used
-                    # (fast with events mode)
-                    return init_event_sign * event(t, y_sol(t), inputs) - 1e-5
+                f_eval = {}
 
-                if np.isnan(event_fun(sol.t[-1])[0]):
-                    # bracketed search fails if f(a) or f(b) is NaN, so we
-                    # need to find the times for which we can evaluate the event
-                    times = [t for t in sol.t if event_fun(t)[0] == event_fun(t)[0]]
-                else:
-                    times = sol.t
-                # skip if sign hasn't changed
-                if np.sign(event_fun(times[0])) != np.sign(event_fun(times[-1])):
-                    t_events[i] = brentq(lambda t: event_fun(t), times[0], times[-1])
-                else:
-                    t_events[i] = np.nan
+                def f(idx):
+                    idx = int(idx)
+                    try:
+                        return f_eval[idx]
+                    except KeyError:
+                        # We take away 1e-5 to deal with the case where the event sits
+                        # exactly on zero, as can happen when the event switch is used
+                        # (fast with events mode)
+                        f_eval[idx] = (
+                            init_event_sign * event(sol.t[idx], sol.y[:, idx], inputs)
+                            - 1e-5
+                        )
+                        return f_eval[idx]
 
-            # t_event is the earliest event triggered
-            t_event = np.nanmin(t_events)
-            y_event = y_sol(t_event)
+                def integer_bisect():
+                    a_n = 0
+                    b_n = len(sol.t) - 1
+                    for _ in range(len(sol.t)):
+                        if a_n + 1 == b_n:
+                            assert f(a_n) > 0 and f(b_n) < 0
+                            return (a_n, b_n)
+                        m_n = (a_n + b_n) // 2
+                        f_m_n = f(m_n)
+                        if np.isnan(f_m_n):
+                            a_n = a_n
+                            b_n = m_n
+                        elif f_m_n < 0:
+                            a_n = a_n
+                            b_n = m_n
+                        elif f_m_n > 0:
+                            a_n = m_n
+                            b_n = b_n
 
-            return t_event, y_event
+                event_idx_lower, event_idx_upper = integer_bisect()
+                if typ == "window":
+                    return (event_idx_lower, event_idx_upper), None
+                elif typ == "exact":
+                    # Linear interpolation between the two indices to find the root time
+                    # We could do cubic interpolation here instead but it would be
+                    # slower
+                    t_lower = sol.t[event_idx_lower]
+                    t_upper = sol.t[event_idx_upper]
+                    event_lower = abs(f(event_idx_lower))
+                    event_upper = abs(f(event_idx_upper))
+
+                    t_events[i] = (event_lower * t_upper + event_upper * t_lower) / (
+                        event_lower + event_upper
+                    )
+
+                    # t_event is the earliest event triggered
+                    t_event = np.nanmin(t_events)
+                    # create interpolant to evaluate y in the current integration
+                    # window
+                    y_sol = interp1d(sol.t, sol.y, kind="linear")
+                    y_event = y_sol(t_event)
+
+                    return t_event, y_event
 
         # Find the interval in which the event was triggered
-        t_event_coarse, _ = find_t_event(coarse_solution, "linear")
+        idx_window_event, _ = find_t_event(coarse_solution, "window")
 
         # Return the existing solution if no events have been triggered
-        if t_event_coarse is None:
+        if idx_window_event is None:
             # Flag "final time" for termination
             coarse_solution.termination = "final time"
             return coarse_solution
 
         # If events have been triggered, we solve for a dense window in the interval
         # where the event was triggered, then find the precise location of the event
-        event_idx = np.where(coarse_solution.t > t_event_coarse)[0][0] - 1
-        t_window_event = coarse_solution.t[event_idx : event_idx + 2]
+        event_idx = idx_window_event[0]
 
-        # Solve again with a more dense t_window, starting from the start of the
+        # Solve again with a more dense idx_window, starting from the start of the
         # window where the event was triggered
-        t_window_event_dense = np.linspace(t_window_event[-2], t_window_event[-1], 100)
+        t_window_event_dense = np.linspace(
+            coarse_solution.t[idx_window_event[0]],
+            coarse_solution.t[idx_window_event[1]],
+            100,
+        )
         if self.mode in ["safe", "fast with events"]:
             self.create_integrator(model, inputs, t_window_event_dense)
 
@@ -391,7 +429,7 @@ class CasadiSolver(pybamm.BaseSolver):
         )
 
         # Find the exact time at which the event was triggered
-        t_event, y_event = find_t_event(dense_step_sol, "cubic")
+        t_event, y_event = find_t_event(dense_step_sol, "exact")
 
         # Return solution truncated at the first coarse event time
         # Also assign t_event
@@ -406,7 +444,9 @@ class CasadiSolver(pybamm.BaseSolver):
             y_event[:, np.newaxis],
             "event",
         )
-        solution.integration_time = coarse_solution.integration_time
+        solution.integration_time = (
+            coarse_solution.integration_time + dense_step_sol.integration_time
+        )
 
         # Flag "True" for termination
         return solution

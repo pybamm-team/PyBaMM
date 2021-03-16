@@ -243,10 +243,10 @@ class Simulation:
                 if op[1] in ["A", "C"]:
                     # Current control: max simulation time: 3 * max simulation time
                     # based on C-rate
-                    dt = 3 / abs(Crate)
+                    dt = 3 / abs(Crate) * 3600  # seconds
                 else:
                     # max simulation time: 1 week
-                    dt = 7 * 24 * 3600
+                    dt = 7 * 24 * 3600  # seconds
             self._experiment_times.append(dt)
 
         # Set up model for experiment
