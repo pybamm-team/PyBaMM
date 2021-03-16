@@ -4,7 +4,7 @@
 import pybamm
 import matplotlib.pyplot as plt
 
-pybamm.set_logging_level("INFO")
+pybamm.set_logging_level("NOTICE")
 experiment = pybamm.Experiment(
     [
         (
@@ -17,9 +17,15 @@ experiment = pybamm.Experiment(
     ]
     * 3
 )
-model = pybamm.lithium_ion.SPM()
+model = pybamm.lithium_ion.DFN()
+var = pybamm.standard_spatial_vars
+var_pts = {var.x_n: 30, var.x_s: 30, var.x_p: 30, var.r_n: 10, var.r_p: 10}
+
 sim = pybamm.Simulation(
-    model, experiment=experiment, solver=pybamm.CasadiSolver("fast with events")
+    model,
+    var_pts=var_pts,
+    experiment=experiment,
+    solver=pybamm.CasadiSolver("fast with events"),  # , rtol=1e-3, atol=1e-3),
 )
 sim.solve()
 
@@ -40,38 +46,38 @@ sim.solve()
 
 # Save time, voltage, current, discharge capacity, temperature, and electrolyte
 # concentration to csv and matlab formats
-sim.solution.save_data(
-    "output.mat",
-    [
-        "Time [h]",
-        "Current [A]",
-        "Terminal voltage [V]",
-        "Discharge capacity [A.h]",
-        "X-averaged cell temperature [K]",
-        "Electrolyte concentration [mol.m-3]",
-    ],
-    to_format="matlab",
-    short_names={
-        "Time [h]": "t",
-        "Current [A]": "I",
-        "Terminal voltage [V]": "V",
-        "Discharge capacity [A.h]": "Q",
-        "X-averaged cell temperature [K]": "T",
-        "Electrolyte concentration [mol.m-3]": "c_e",
-    },
-)
-# We can only save 0D variables to csv
-sim.solution.save_data(
-    "output.csv",
-    [
-        "Time [h]",
-        "Current [A]",
-        "Terminal voltage [V]",
-        "Discharge capacity [A.h]",
-        "X-averaged cell temperature [K]",
-    ],
-    to_format="csv",
-)
+# sim.solution.save_data(
+#     "output.mat",
+#     [
+#         "Time [h]",
+#         "Current [A]",
+#         "Terminal voltage [V]",
+#         "Discharge capacity [A.h]",
+#         "X-averaged cell temperature [K]",
+#         "Electrolyte concentration [mol.m-3]",
+#     ],
+#     to_format="matlab",
+#     short_names={
+#         "Time [h]": "t",
+#         "Current [A]": "I",
+#         "Terminal voltage [V]": "V",
+#         "Discharge capacity [A.h]": "Q",
+#         "X-averaged cell temperature [K]": "T",
+#         "Electrolyte concentration [mol.m-3]": "c_e",
+#     },
+# )
+# # We can only save 0D variables to csv
+# sim.solution.save_data(
+#     "output.csv",
+#     [
+#         "Time [h]",
+#         "Current [A]",
+#         "Terminal voltage [V]",
+#         "Discharge capacity [A.h]",
+#         "X-averaged cell temperature [K]",
+#     ],
+#     to_format="csv",
+# )
 
 # Show all plots
 sim.plot()

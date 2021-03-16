@@ -371,10 +371,11 @@ class BaseSolver(object):
                 discontinuity_events_eval.append(event)
             else:
                 event_eval = process(event.expression, "event", use_jacobian=False)[1]
-                if event.event_type == pybamm.EventType.TERMINATION:
-
-                    terminate_events_eval.append(event_eval)
-                elif event.event_type == pybamm.EventType.SWITCH:
+                if event.event_type == pybamm.EventType.SWITCH:
+                    #      or (
+                    #     event.event_type == pybamm.EventType.TERMINATION
+                    #     and "[experiment]" in event.name
+                    # ):
                     # Save some events to casadi_terminate_events for the 'fast with
                     # events' mode of the casadi solver
                     # see #1082
@@ -392,6 +393,9 @@ class BaseSolver(object):
                         0
                     ]
                     casadi_terminate_events.append(event_casadi)
+                elif event.event_type == pybamm.EventType.TERMINATION:
+
+                    terminate_events_eval.append(event_eval)
                 elif event.event_type == pybamm.EventType.INTERPOLANT_EXTRAPOLATION:
                     interpolant_extrapolation_events_eval.append(event_eval)
 
@@ -1057,6 +1061,7 @@ class BaseSolver(object):
                 "the solver successfully reached the end of the integration interval",
             )
         elif solution.termination == "event":
+            pybamm.logger.debug("Start post-processing events")
             # Get final event value
             final_event_values = {}
 
@@ -1089,6 +1094,7 @@ class BaseSolver(object):
                 event_sol.integration_time = 0
                 solution = solution + event_sol
 
+            pybamm.logger.debug("Finish post-processing events")
             return solution, solution.termination
         elif solution.termination == "success":
             return solution, solution.termination

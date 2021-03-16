@@ -245,8 +245,8 @@ class Simulation:
                     # based on C-rate
                     dt = 3 / abs(Crate) * 3600  # seconds
                 else:
-                    # max simulation time: 1 week
-                    dt = 7 * 24 * 3600  # seconds
+                    # max simulation time: 1 day
+                    dt = 24 * 3600  # seconds
             self._experiment_times.append(dt)
 
         # Set up model for experiment
