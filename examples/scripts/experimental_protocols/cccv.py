@@ -17,7 +17,7 @@ experiment = pybamm.Experiment(
     ]
     * 3
 )
-model = pybamm.lithium_ion.DFN()
+model = pybamm.lithium_ion.SPM()
 var = pybamm.standard_spatial_vars
 var_pts = {var.x_n: 30, var.x_s: 30, var.x_p: 30, var.r_n: 10, var.r_p: 10}
 

@@ -371,11 +371,7 @@ class BaseSolver(object):
                 discontinuity_events_eval.append(event)
             else:
                 event_eval = process(event.expression, "event", use_jacobian=False)[1]
-                if event.event_type == pybamm.EventType.SWITCH or (
-                    event.event_type == pybamm.EventType.TERMINATION
-                    and "[experiment]" in event.name
-                    and "voltage" in event.name.lower()
-                ):
+                if event.event_type == pybamm.EventType.SWITCH:
                     # Save some events to casadi_terminate_events for the 'fast with
                     # events' mode of the casadi solver
                     # see #1082
@@ -393,7 +389,7 @@ class BaseSolver(object):
                         0
                     ]
                     casadi_terminate_events.append(event_casadi)
-                if event.event_type == pybamm.EventType.TERMINATION:
+                elif event.event_type == pybamm.EventType.TERMINATION:
                     terminate_events_eval.append(event_eval)
                 elif event.event_type == pybamm.EventType.INTERPOLANT_EXTRAPOLATION:
                     interpolant_extrapolation_events_eval.append(event_eval)

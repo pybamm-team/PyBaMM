@@ -29,9 +29,9 @@ disc = pybamm.Discretisation(mesh, model.default_spatial_methods)
 disc.process_model(model)
 
 # solve model
-t_eval = np.linspace(0, 4000, 100)
-# solver = pybamm.CasadiSolver(mode="safe", atol=1e-3, rtol=1e-3)
-# solution1 = solver.solve(model, t_eval)
+t_eval = np.linspace(0, 5000, 100)
+solver = pybamm.CasadiSolver(mode="safe", atol=1e-3, rtol=1e-3)
+solution1 = solver.solve(model, t_eval)
 # solver = pybamm.CasadiSolver(mode="fast", atol=1e-3, rtol=1e-3)
 # solution1 = solver.solve(model, t_eval)
 solver = pybamm.CasadiSolver(mode="fast with events", atol=1e-3, rtol=1e-3)
@@ -39,7 +39,7 @@ solution2 = solver.solve(model, t_eval)
 
 # plot
 plot = pybamm.QuickPlot(
-    solution2,
+    [solution1, solution2],
     [
         # "Negative particle concentration [mol.m-3]",
         "Electrolyte concentration [mol.m-3]",

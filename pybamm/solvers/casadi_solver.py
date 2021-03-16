@@ -334,7 +334,7 @@ class CasadiSolver(pybamm.BaseSolver):
                 return None, None
 
             # get the index of the events that have been crossed
-            event_ind = np.where(crossed_events == -1)[0]
+            event_ind = np.where(crossed_events != 1)[0]
             active_events = [model.terminate_events_eval[i] for i in event_ind]
 
             # loop over events to compute the time at which they were triggered
