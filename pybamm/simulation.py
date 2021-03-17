@@ -422,13 +422,14 @@ class Simulation:
                         )
                     )
 
-                # Remove upper and lower voltage cut-offs that are *not* part of the
+                # Keep the min and max voltages as safeguards but add some tolerances
+                # so that they are not triggered before the voltage limits in the
                 # experiment
-                new_model.events = [
-                    event
-                    for event in new_model.events
-                    if event.name not in ["Minimum voltage", "Maximum voltage"]
-                ]
+                for event in new_model.events:
+                    if event.name == "Minimum voltage":
+                        event._expression += 1
+                    elif event.name == "Maximum voltage":
+                        event._expression -= 1
 
                 # Update parameter values
                 new_parameter_values = self.parameter_values.copy()

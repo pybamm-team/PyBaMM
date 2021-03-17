@@ -338,6 +338,7 @@ class CasadiSolver(pybamm.BaseSolver):
 
             # loop over events to compute the time at which they were triggered
             t_events = [None] * len(active_events)
+            event_idcs_lower = [None] * len(active_events)
             for i, event in enumerate(active_events):
                 # Implement our own bisection algorithm for speed
                 # This is used to find the time range in which the event is triggered
@@ -347,7 +348,6 @@ class CasadiSolver(pybamm.BaseSolver):
                 f_eval = {}
 
                 def f(idx):
-                    idx = int(idx)
                     try:
                         return f_eval[idx]
                     except KeyError:
@@ -365,8 +365,7 @@ class CasadiSolver(pybamm.BaseSolver):
                     b_n = len(sol.t) - 1
                     for _ in range(len(sol.t)):
                         if a_n + 1 == b_n:
-                            assert f(a_n) > 0 and f(b_n) < 0
-                            return (a_n, b_n)
+                            return a_n
                         m_n = (a_n + b_n) // 2
                         f_m_n = f(m_n)
                         if np.isnan(f_m_n):
@@ -379,57 +378,63 @@ class CasadiSolver(pybamm.BaseSolver):
                             a_n = m_n
                             b_n = b_n
 
-                event_idx_lower, event_idx_upper = integer_bisect()
+                event_idx_lower = integer_bisect()
                 if typ == "window":
-                    return (event_idx_lower, event_idx_upper), None
+                    event_idcs_lower[i] = event_idx_lower
                 elif typ == "exact":
                     # Linear interpolation between the two indices to find the root time
                     # We could do cubic interpolation here instead but it would be
                     # slower
                     t_lower = sol.t[event_idx_lower]
-                    t_upper = sol.t[event_idx_upper]
+                    t_upper = sol.t[event_idx_lower + 1]
                     event_lower = abs(f(event_idx_lower))
-                    event_upper = abs(f(event_idx_upper))
+                    event_upper = abs(f(event_idx_lower + 1))
 
                     t_events[i] = (event_lower * t_upper + event_upper * t_lower) / (
                         event_lower + event_upper
                     )
 
-                    # t_event is the earliest event triggered
-                    t_event = np.nanmin(t_events)
-                    # create interpolant to evaluate y in the current integration
-                    # window
-                    y_sol = interp1d(sol.t, sol.y, kind="linear")
-                    y_event = y_sol(t_event)
+            if typ == "window":
+                event_idx_lower = np.nanmin(event_idx_lower)
+                return event_idx_lower, None
+            elif typ == "exact":
+                # t_event is the earliest event triggered
+                t_event = np.nanmin(t_events)
+                # create interpolant to evaluate y in the current integration
+                # window
+                y_sol = interp1d(sol.t, sol.y, kind="linear")
+                y_event = y_sol(t_event)
 
-                    return t_event, y_event
+                return t_event, y_event
 
         # Find the interval in which the event was triggered
-        idx_window_event, _ = find_t_event(coarse_solution, "window")
+        event_idx_lower, _ = find_t_event(coarse_solution, "window")
 
         # Return the existing solution if no events have been triggered
-        if idx_window_event is None:
+        if event_idx_lower is None:
             # Flag "final time" for termination
             coarse_solution.termination = "final time"
             return coarse_solution
 
         # If events have been triggered, we solve for a dense window in the interval
         # where the event was triggered, then find the precise location of the event
-        event_idx = idx_window_event[0]
-
         # Solve again with a more dense idx_window, starting from the start of the
         # window where the event was triggered
         t_window_event_dense = np.linspace(
-            coarse_solution.t[idx_window_event[0]],
-            coarse_solution.t[idx_window_event[1]],
+            coarse_solution.t[event_idx_lower],
+            coarse_solution.t[event_idx_lower + 1],
             100,
         )
-        if self.mode in ["safe", "fast with events"]:
-            self.create_integrator(model, inputs, t_window_event_dense)
 
-        y0 = coarse_solution.y[:, event_idx]
+        if self.mode == "safe without grid":
+            use_grid = False
+        else:
+            self.create_integrator(model, inputs, t_window_event_dense)
+            use_grid = True
+
+        y0 = coarse_solution.y[:, event_idx_lower]
         dense_step_sol = self._run_integrator(
-            model, y0, inputs_dict, inputs, t_window_event_dense
+            model, y0, inputs_dict, inputs, t_window_event_dense, use_grid=use_grid
         )
 
         # Find the exact time at which the event was triggered
@@ -437,8 +442,8 @@ class CasadiSolver(pybamm.BaseSolver):
 
         # Return solution truncated at the first coarse event time
         # Also assign t_event
-        t_sol = coarse_solution.t[: event_idx + 1]
-        y_sol = coarse_solution.y[:, : event_idx + 1]
+        t_sol = coarse_solution.t[: event_idx_lower + 1]
+        y_sol = coarse_solution.y[:, : event_idx_lower + 1]
         solution = pybamm.Solution(
             t_sol,
             y_sol,
@@ -452,7 +457,6 @@ class CasadiSolver(pybamm.BaseSolver):
             coarse_solution.integration_time + dense_step_sol.integration_time
         )
 
-        # Flag "True" for termination
         return solution
 
     def create_integrator(self, model, inputs, t_eval=None, use_event_switch=False):
@@ -464,8 +468,9 @@ class CasadiSolver(pybamm.BaseSolver):
         pybamm.logger.debug("Creating CasADi integrator")
         # Use grid if t_eval is given
         use_grid = not (t_eval is None)
-        t_eval_shifted = t_eval - t_eval[0]
-        t_eval_shifted_rounded = np.round(t_eval_shifted, decimals=12).tobytes()
+        if use_grid is True:
+            t_eval_shifted = t_eval - t_eval[0]
+            t_eval_shifted_rounded = np.round(t_eval_shifted, decimals=12).tobytes()
         # Only set up problem once
         if model in self.integrators:
             # If we're not using the grid, we don't need to change the integrator
@@ -564,9 +569,9 @@ class CasadiSolver(pybamm.BaseSolver):
 
     def _run_integrator(self, model, y0, inputs_dict, inputs, t_eval, use_grid=True):
         pybamm.logger.debug("Running CasADi integrator")
-        t_eval_shifted = t_eval - t_eval[0]
-        t_eval_shifted_rounded = np.round(t_eval_shifted, decimals=12).tobytes()
         if use_grid is True:
+            t_eval_shifted = t_eval - t_eval[0]
+            t_eval_shifted_rounded = np.round(t_eval_shifted, decimals=12).tobytes()
             integrator = self.integrators[model][t_eval_shifted_rounded]
         else:
             integrator = self.integrators[model]["no grid"]

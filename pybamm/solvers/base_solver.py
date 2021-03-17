@@ -1070,6 +1070,13 @@ class BaseSolver(object):
                         )
                     )
             termination_event = min(final_event_values, key=final_event_values.get)
+
+            # Check that it's actually an event
+            if abs(final_event_values[termination_event]) > 0.1:
+                raise pybamm.SolverError(
+                    "Could not determine which event was triggered "
+                    "(possibly due to NaNs)"
+                )
             # Add the event to the solution object
             solution.termination = "event: {}".format(termination_event)
             # Update t, y and inputs to include event time and state
