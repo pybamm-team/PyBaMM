@@ -363,7 +363,7 @@ class CasadiSolver(pybamm.BaseSolver):
                     )
 
             if typ == "window":
-                event_idx_lower = np.nanmin(event_idx_lower)
+                event_idx_lower = np.nanmin(event_idcs_lower)
                 return event_idx_lower, None
             elif typ == "exact":
                 # t_event is the earliest event triggered
