@@ -54,11 +54,12 @@ class BaseHigherOrderModel(BaseModel):
         self.set_thermal_submodel()
         self.set_current_collector_submodel()
         self.set_sei_submodel()
+        self.set_lithium_plating_submodel()
 
         if build:
             self.build_model()
 
-        pybamm.citations.register("sulzer2019asymptotic")
+        pybamm.citations.register("Sulzer2019asymptotic")
 
     def set_current_collector_submodel(self):
         cc = pybamm.current_collector

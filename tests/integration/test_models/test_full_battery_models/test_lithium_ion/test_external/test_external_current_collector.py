@@ -7,7 +7,6 @@ import numpy as np
 
 
 class TestExternalCC(unittest.TestCase):
-    @unittest.skipIf(not pybamm.have_idaklu(), "idaklu solver is not installed")
     def test_2p1d(self):
         model_options = {
             "current collector": "potential pair",
@@ -25,8 +24,7 @@ class TestExternalCC(unittest.TestCase):
             pybamm.standard_spatial_vars.y: yz_pts,
             pybamm.standard_spatial_vars.z: yz_pts,
         }
-        solver = pybamm.IDAKLUSolver()
-        sim = pybamm.Simulation(model, var_pts=var_pts, solver=solver)
+        sim = pybamm.Simulation(model, var_pts=var_pts)
 
         # Simulate 100 seconds
         t_eval = np.linspace(0, 100, 3)
@@ -45,7 +43,7 @@ class TestExternalCC(unittest.TestCase):
             sim.step(dt, external_variables=external_variables)
 
             # obtain phi_s_n from the pybamm solution at the current time
-            phi_s_p = sim.get_variable_array("Positive current collector potential")
+            phi_s_p = sim.solution["Positive current collector potential"].data[:, -1]
 
         self.assertTrue(phi_s_p.shape, (yz_pts ** 2, 1))
 

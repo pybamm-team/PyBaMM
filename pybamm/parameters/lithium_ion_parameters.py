@@ -49,7 +49,7 @@ class LithiumIonParameters:
         self._set_input_current()
 
     def _set_dimensional_parameters(self):
-        "Defines the dimensional parameters"
+        """Defines the dimensional parameters"""
 
         # Physical constants
         self.R = pybamm.constants.R
@@ -208,6 +208,21 @@ class LithiumIonParameters:
         self.k_sei_dim = pybamm.Parameter("SEI kinetic rate constant [m.s-1]")
         self.U_sei_dim = pybamm.Parameter("SEI open-circuit potential [V]")
 
+        # Li plating parameters
+
+        self.V_bar_plated_Li = pybamm.Parameter(
+            "Lithium metal partial molar volume [m3.mol-1]"
+        )
+        self.k_plating = pybamm.Parameter(
+            "Lithium plating kinetic rate constant [m.s-1]"
+        )
+        self.c_plated_Li_0_dim = pybamm.Parameter(
+            "Initial plated lithium concentration [mol.m-3]"
+        )
+
+        # Exchange current density for scaling
+        self.j0_plating_dimensional = self.F * self.k_plating * self.c_e_typ
+
         # Initial conditions
         # Note: the initial concentration in the electrodes can be set as a function
         # of through-cell position, so is defined later as a function
@@ -266,13 +281,33 @@ class LithiumIonParameters:
         )
         # intermediate variable  [K*m^3/mol]
 
+        # loss of active material parameters
+        self.m_LAM_n = pybamm.Parameter(
+            "Negative electrode LAM constant exponential term"
+        )
+        self.beta_LAM_n = pybamm.Parameter(
+            "Negative electrode LAM constant propotional term"
+        )
+        self.stress_critical_n_dim = pybamm.Parameter(
+            "Negative electrode critical stress [Pa]"
+        )
+        self.m_LAM_p = pybamm.Parameter(
+            "Positive electrode LAM constant exponential term"
+        )
+        self.beta_LAM_p = pybamm.Parameter(
+            "Positive electrode LAM constant propotional term"
+        )
+        self.stress_critical_p_dim = pybamm.Parameter(
+            "Positive electrode critical stress [Pa]"
+        )
+
     def D_e_dimensional(self, c_e, T):
-        "Dimensional diffusivity in electrolyte"
+        """Dimensional diffusivity in electrolyte"""
         inputs = {"Electrolyte concentration [mol.m-3]": c_e, "Temperature [K]": T}
         return pybamm.FunctionParameter("Electrolyte diffusivity [m2.s-1]", inputs)
 
     def kappa_e_dimensional(self, c_e, T):
-        "Dimensional electrolyte conductivity"
+        """Dimensional electrolyte conductivity"""
         inputs = {"Electrolyte concentration [mol.m-3]": c_e, "Temperature [K]": T}
         return pybamm.FunctionParameter("Electrolyte conductivity [S.m-1]", inputs)
 
@@ -307,7 +342,7 @@ class LithiumIonParameters:
         )
 
     def j0_n_dimensional(self, c_e, c_s_surf, T):
-        "Dimensional negative exchange-current density [A.m-2]"
+        """Dimensional negative exchange-current density [A.m-2]"""
         inputs = {
             "Electrolyte concentration [mol.m-3]": c_e,
             "Negative particle surface concentration [mol.m-3]": c_s_surf,
@@ -318,7 +353,7 @@ class LithiumIonParameters:
         )
 
     def j0_p_dimensional(self, c_e, c_s_surf, T):
-        "Dimensional negative exchange-current density [A.m-2]"
+        """Dimensional negative exchange-current density [A.m-2]"""
         inputs = {
             "Electrolyte concentration [mol.m-3]": c_e,
             "Positive particle surface concentration [mol.m-3]": c_s_surf,
@@ -329,13 +364,13 @@ class LithiumIonParameters:
         )
 
     def U_n_dimensional(self, sto, T):
-        "Dimensional open-circuit potential in the negative electrode [V]"
+        """Dimensional open-circuit potential in the negative electrode [V]"""
         inputs = {"Negative particle stoichiometry": sto}
         u_ref = pybamm.FunctionParameter("Negative electrode OCP [V]", inputs)
         return u_ref + (T - self.T_ref) * self.dUdT_n_dimensional(sto)
 
     def U_p_dimensional(self, sto, T):
-        "Dimensional open-circuit potential in the positive electrode [V]"
+        """Dimensional open-circuit potential in the positive electrode [V]"""
         inputs = {"Positive particle stoichiometry": sto}
         u_ref = pybamm.FunctionParameter("Positive electrode OCP [V]", inputs)
         return u_ref + (T - self.T_ref) * self.dUdT_p_dimensional(sto)
@@ -345,10 +380,7 @@ class LithiumIonParameters:
         Dimensional entropic change of the negative electrode open-circuit
         potential [V.K-1]
         """
-        inputs = {
-            "Negative particle stoichiometry": sto,
-            "Max negative particle concentration [mol.m-3]": self.c_n_max,
-        }
+        inputs = {"Negative particle stoichiometry": sto}
         return pybamm.FunctionParameter(
             "Negative electrode OCP entropic change [V.K-1]", inputs
         )
@@ -358,54 +390,51 @@ class LithiumIonParameters:
         Dimensional entropic change of the positive electrode open-circuit
         potential [V.K-1]
         """
-        inputs = {
-            "Positive particle stoichiometry": sto,
-            "Max positive particle concentration [mol.m-3]": self.c_p_max,
-        }
+        inputs = {"Positive particle stoichiometry": sto}
         return pybamm.FunctionParameter(
             "Positive electrode OCP entropic change [V.K-1]", inputs
         )
 
     def R_n_dimensional(self, x):
-        "Negative particle radius as a function of through-cell distance"
+        """Negative particle radius as a function of through-cell distance"""
         inputs = {"Through-cell distance (x_n) [m]": x}
         return pybamm.FunctionParameter("Negative particle radius [m]", inputs)
 
     def R_p_dimensional(self, x):
-        "Positive particle radius as a function of through-cell distance"
+        """Positive particle radius as a function of through-cell distance"""
         inputs = {"Through-cell distance (x_p) [m]": x}
         return pybamm.FunctionParameter("Positive particle radius [m]", inputs)
 
     def epsilon_s_n(self, x):
-        "Negative electrode active material volume fraction"
+        """Negative electrode active material volume fraction"""
         inputs = {"Through-cell distance (x_n) [m]": x * self.L_x}
         return pybamm.FunctionParameter(
             "Negative electrode active material volume fraction", inputs
         )
 
     def epsilon_s_p(self, x):
-        "Positive electrode active material volume fraction"
+        """Positive electrode active material volume fraction"""
         inputs = {"Through-cell distance (x_p) [m]": x * self.L_x}
         return pybamm.FunctionParameter(
             "Positive electrode active material volume fraction", inputs
         )
 
     def c_n_init_dimensional(self, x):
-        "Initial concentration as a function of dimensionless position x"
+        """Initial concentration as a function of dimensionless position x"""
         inputs = {"Dimensionless through-cell position (x_n)": x}
         return pybamm.FunctionParameter(
             "Initial concentration in negative electrode [mol.m-3]", inputs
         )
 
     def c_p_init_dimensional(self, x):
-        "Initial concentration as a function of dimensionless position x"
+        """Initial concentration as a function of dimensionless position x"""
         inputs = {"Dimensionless through-cell position (x_p)": x}
         return pybamm.FunctionParameter(
             "Initial concentration in positive electrode [mol.m-3]", inputs
         )
 
     def _set_scales(self):
-        "Define the scales used in the non-dimensionalisation scheme"
+        """Define the scales used in the non-dimensionalisation scheme"""
 
         # Microscale (typical values at electrode/current collector interface)
         self.R_n_typ = self.R_n_dimensional(0)
@@ -488,7 +517,7 @@ class LithiumIonParameters:
         self.timescale = self.tau_discharge
 
     def _set_dimensionless_parameters(self):
-        "Defines the dimensionless parameters"
+        """Defines the dimensionless parameters"""
 
         # Timescale ratios
         self.C_n = self.tau_diffusion_n / self.tau_discharge
@@ -578,21 +607,12 @@ class LithiumIonParameters:
         self.rho_s = self.therm.rho_s
         self.rho_p = self.therm.rho_p
         self.rho_cp = self.therm.rho_cp
-        self.rho_k = self.therm.rho_k
-        self.rho = (
-            self.rho_cn * self.l_cn
-            + self.rho_n * self.l_n
-            + self.rho_s * self.l_s
-            + self.rho_p * self.l_p
-            + self.rho_cp * self.l_cp
-        ) / self.l  # effective volumetric heat capacity
 
         self.lambda_cn = self.therm.lambda_cn
         self.lambda_n = self.therm.lambda_n
         self.lambda_s = self.therm.lambda_s
         self.lambda_p = self.therm.lambda_p
         self.lambda_cp = self.therm.lambda_cp
-        self.lambda_k = self.therm.lambda_k
 
         self.Theta = self.therm.Theta
 
@@ -608,7 +628,7 @@ class LithiumIonParameters:
             * self.R
             * self.T_ref
             * self.tau_th_yz
-            / (self.therm.rho_eff_dim * self.F * self.Delta_T * self.L_x)
+            / (self.therm.rho_eff_dim(self.T_ref) * self.F * self.Delta_T * self.L_x)
         )
 
         self.T_amb_dim = self.therm.T_amb_dim
@@ -712,6 +732,17 @@ class LithiumIonParameters:
         )
         self.beta_sei_n = self.a_n_typ * self.L_sei_0_dim * self.Gamma_SEI_n
 
+        # lithium plating parameters
+
+        self.C_plating = self.j_scale_n / self.j0_plating_dimensional
+
+        self.c_plated_Li_0 = self.c_plated_Li_0_dim / self.c_e_typ
+
+        # ratio of lithium plating reaction scaled to intercalation reaction
+        self.Gamma_plating = (self.a_n_typ * self.j_scale_n * self.tau_discharge) / (
+            self.F * self.c_e_typ
+        )
+
         # Initial conditions
         self.epsilon_n_init = pybamm.Parameter("Negative electrode porosity")
         self.epsilon_s_init = pybamm.Parameter("Separator porosity")
@@ -730,7 +761,9 @@ class LithiumIonParameters:
         self.c_p_0 = self.c_p_0_dim / self.c_p_max
         self.c_n_0 = self.c_n_0_dim / self.c_n_max
         self.t0_cr = 3600 / self.C_rate / self.timescale
-        # nomarlised typical time for one cycle
+        # normalised typical time for one cycle
+        self.stress_critical_n = self.stress_critical_n_dim / self.E_n
+        self.stress_critical_p = self.stress_critical_p_dim / self.E_p
 
     def chi(self, c_e, T):
         """
@@ -739,14 +772,18 @@ class LithiumIonParameters:
             2*(1-t_plus) for Stefan-Maxwell,
         see Bizeray et al (2016) "Resolving a discrepancy ...".
         """
-        return (2 * (1 - self.t_plus(c_e))) * (self.one_plus_dlnf_dlnc(c_e, T))
+        return (2 * (1 - self.t_plus(c_e, T))) * (self.one_plus_dlnf_dlnc(c_e, T))
 
-    def t_plus(self, c_e):
-        "Dimensionless transference number (i.e. c_e is dimensionless)"
-        inputs = {"Electrolyte concentration [mol.m-3]": c_e * self.c_e_typ}
+    def t_plus(self, c_e, T):
+        """Cation transference number (dimensionless)"""
+        inputs = {
+            "Electrolyte concentration [mol.m-3]": c_e * self.c_e_typ,
+            "Temperature [K]": self.Delta_T * T + self.T_ref,
+        }
         return pybamm.FunctionParameter("Cation transference number", inputs)
 
     def one_plus_dlnf_dlnc(self, c_e, T):
+        """Thermodynamic factor (dimensionless)"""
         inputs = {
             "Electrolyte concentration [mol.m-3]": c_e * self.c_e_typ,
             "Temperature [K]": self.Delta_T * T + self.T_ref,
@@ -754,20 +791,20 @@ class LithiumIonParameters:
         return pybamm.FunctionParameter("1 + dlnf/dlnc", inputs)
 
     def D_e(self, c_e, T):
-        "Dimensionless electrolyte diffusivity"
+        """Dimensionless electrolyte diffusivity"""
         c_e_dimensional = c_e * self.c_e_typ
         T_dim = self.Delta_T * T + self.T_ref
         return self.D_e_dimensional(c_e_dimensional, T_dim) / self.D_e_typ
 
     def kappa_e(self, c_e, T):
-        "Dimensionless electrolyte conductivity"
+        """Dimensionless electrolyte conductivity"""
         c_e_dimensional = c_e * self.c_e_typ
         kappa_scale = self.F ** 2 * self.D_e_typ * self.c_e_typ / (self.R * self.T_ref)
         T_dim = self.Delta_T * T + self.T_ref
         return self.kappa_e_dimensional(c_e_dimensional, T_dim) / kappa_scale
 
     def D_n(self, c_s_n, T):
-        "Dimensionless negative particle diffusivity"
+        """Dimensionless negative particle diffusivity"""
         sto = c_s_n
         T_dim = self.Delta_T * T + self.T_ref
         return self.D_n_dimensional(sto, T_dim) / self.D_n_dimensional(
@@ -775,7 +812,7 @@ class LithiumIonParameters:
         )
 
     def D_p(self, c_s_p, T):
-        "Dimensionless positive particle diffusivity"
+        """Dimensionless positive particle diffusivity"""
         sto = c_s_p
         T_dim = self.Delta_T * T + self.T_ref
         return self.D_p_dimensional(sto, T_dim) / self.D_p_dimensional(
@@ -783,7 +820,7 @@ class LithiumIonParameters:
         )
 
     def j0_n(self, c_e, c_s_surf, T):
-        "Dimensionless negative exchange-current density"
+        """Dimensionless negative exchange-current density"""
         c_e_dim = c_e * self.c_e_typ
         c_s_surf_dim = c_s_surf * self.c_n_max
         T_dim = self.Delta_T * T + self.T_ref
@@ -794,7 +831,7 @@ class LithiumIonParameters:
         )
 
     def j0_p(self, c_e, c_s_surf, T):
-        "Dimensionless positive exchange-current density"
+        """Dimensionless positive exchange-current density"""
         c_e_dim = c_e * self.c_e_typ
         c_s_surf_dim = c_s_surf * self.c_p_max
         T_dim = self.Delta_T * T + self.T_ref
@@ -805,24 +842,24 @@ class LithiumIonParameters:
         )
 
     def U_n(self, c_s_n, T):
-        "Dimensionless open-circuit potential in the negative electrode"
+        """Dimensionless open-circuit potential in the negative electrode"""
         sto = c_s_n
         T_dim = self.Delta_T * T + self.T_ref
         return (self.U_n_dimensional(sto, T_dim) - self.U_n_ref) / self.potential_scale
 
     def U_p(self, c_s_p, T):
-        "Dimensionless open-circuit potential in the positive electrode"
+        """Dimensionless open-circuit potential in the positive electrode"""
         sto = c_s_p
         T_dim = self.Delta_T * T + self.T_ref
         return (self.U_p_dimensional(sto, T_dim) - self.U_p_ref) / self.potential_scale
 
     def dUdT_n(self, c_s_n):
-        "Dimensionless entropic change in negative open-circuit potential"
+        """Dimensionless entropic change in negative open-circuit potential"""
         sto = c_s_n
         return self.dUdT_n_dimensional(sto) * self.Delta_T / self.potential_scale
 
     def dUdT_p(self, c_s_p):
-        "Dimensionless entropic change in positive open-circuit potential"
+        """Dimensionless entropic change in positive open-circuit potential"""
         sto = c_s_p
         return self.dUdT_p_dimensional(sto) * self.Delta_T / self.potential_scale
 
@@ -843,15 +880,27 @@ class LithiumIonParameters:
         return self.R_p_dimensional(x_dim) / self.R_p_typ
 
     def c_n_init(self, x):
-        "Dimensionless initial concentration as a function of dimensionless position x"
+        """Dimensionless initial concentration as a function of dimensionless position x
+        """
         return self.c_n_init_dimensional(x) / self.c_n_max
 
     def c_p_init(self, x):
-        "Dimensionless initial concentration as a function of dimensionless position x"
+        """Dimensionless initial concentration as a function of dimensionless position x
+        """
         return self.c_p_init_dimensional(x) / self.c_p_max
 
+    def rho(self, T):
+        """Dimensionless effective volumetric heat capacity"""
+        return (
+            self.rho_cn(T) * self.l_cn
+            + self.rho_n(T) * self.l_n
+            + self.rho_s(T) * self.l_s
+            + self.rho_p(T) * self.l_p
+            + self.rho_cp(T) * self.l_cp
+        ) / self.l
+
     def _set_input_current(self):
-        "Set the input current"
+        """Set the input current"""
 
         self.dimensional_current_with_time = pybamm.FunctionParameter(
             "Current function [A]", {"Time [s]": pybamm.t * self.timescale}
@@ -938,8 +987,8 @@ class LithiumIonParameters:
         if options["particle cracking"] not in [
             "none",
             "no cracking",
-            "cathode",
-            "anode",
+            "positive",
+            "negative",
             "both",
         ]:
             raise pybamm.OptionError(

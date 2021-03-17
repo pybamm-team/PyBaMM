@@ -35,7 +35,7 @@ class LeadAcidParameters:
         self._set_input_current()
 
     def _set_dimensional_parameters(self):
-        "Defines the dimensional parameters"
+        """Defines the dimensional parameters."""
 
         # Physical constants
         self.R = pybamm.constants.R
@@ -225,18 +225,18 @@ class LeadAcidParameters:
         self.R_sei_dimensional = pybamm.Scalar(0)
         self.beta_sei_n = pybamm.Scalar(0)
 
-    def t_plus(self, c_e):
-        "Dimensionless transference number (i.e. c_e is dimensionless)"
+    def t_plus(self, c_e, T):
+        """Dimensionless transference number (i.e. c_e is dimensionless)"""
         inputs = {"Electrolyte concentration [mol.m-3]": c_e * self.c_e_typ}
         return pybamm.FunctionParameter("Cation transference number", inputs)
 
     def D_e_dimensional(self, c_e, T):
-        "Dimensional diffusivity in electrolyte"
+        """Dimensional diffusivity in electrolyte."""
         inputs = {"Electrolyte concentration [mol.m-3]": c_e}
         return pybamm.FunctionParameter("Electrolyte diffusivity [m2.s-1]", inputs)
 
     def kappa_e_dimensional(self, c_e, T):
-        "Dimensional electrolyte conductivity"
+        """Dimensional electrolyte conductivity."""
         inputs = {"Electrolyte concentration [mol.m-3]": c_e}
         return pybamm.FunctionParameter("Electrolyte conductivity [S.m-1]", inputs)
 
@@ -282,35 +282,35 @@ class LeadAcidParameters:
         return pybamm.FunctionParameter("Electrolyte viscosity [kg.m-1.s-1]", inputs)
 
     def U_n_dimensional(self, c_e, T):
-        "Dimensional open-circuit voltage in the negative electrode [V]"
+        """Dimensional open-circuit voltage in the negative electrode [V]"""
         inputs = {"Electrolyte molar mass [mol.kg-1]": self.m_dimensional(c_e)}
         return pybamm.FunctionParameter(
             "Negative electrode open-circuit potential [V]", inputs
         )
 
     def U_p_dimensional(self, c_e, T):
-        "Dimensional open-circuit voltage in the positive electrode [V]"
+        """Dimensional open-circuit voltage in the positive electrode [V]"""
         inputs = {"Electrolyte molar mass [mol.kg-1]": self.m_dimensional(c_e)}
         return pybamm.FunctionParameter(
             "Positive electrode open-circuit potential [V]", inputs
         )
 
     def j0_n_dimensional(self, c_e, T):
-        "Dimensional negative electrode exchange-current density [A.m-2]"
+        """Dimensional negative electrode exchange-current density [A.m-2]"""
         inputs = {"Electrolyte concentration [mol.m-3]": c_e, "Temperature [K]": T}
         return pybamm.FunctionParameter(
             "Negative electrode exchange-current density [A.m-2]", inputs
         )
 
     def j0_p_dimensional(self, c_e, T):
-        "Dimensional positive electrode exchange-current density [A.m-2]"
+        """Dimensional positive electrode exchange-current density [A.m-2]"""
         inputs = {"Electrolyte concentration [mol.m-3]": c_e, "Temperature [K]": T}
         return pybamm.FunctionParameter(
             "Positive electrode exchange-current density [A.m-2]", inputs
         )
 
     def j0_p_Ox_dimensional(self, c_e, T):
-        "Dimensional oxygen positive electrode exchange-current density [A.m-2]"
+        """Dimensional oxygen positive electrode exchange-current density [A.m-2]"""
         inputs = {"Electrolyte concentration [mol.m-3]": c_e, "Temperature [K]": T}
         return pybamm.FunctionParameter(
             "Positive electrode oxygen exchange-current density [A.m-2]", inputs
@@ -357,7 +357,7 @@ class LeadAcidParameters:
         )
 
     def _set_scales(self):
-        "Define the scales used in the non-dimensionalisation scheme"
+        """Define the scales used in the non-dimensionalisation scheme"""
 
         # Microscale (typical values at electrode/current collector interface)
         self.a_n_typ = self.a_n_dimensional(0)
@@ -405,7 +405,7 @@ class LeadAcidParameters:
         )
 
     def _set_dimensionless_parameters(self):
-        "Defines the dimensionless parameters"
+        """Defines the dimensionless parameters"""
 
         # Timescale ratios
         self.C_th = self.tau_th_yz / self.tau_discharge
@@ -440,7 +440,7 @@ class LeadAcidParameters:
             self.c_e_typ
             * self.M_e
             / self.rho_typ
-            * (self.t_plus(1) + self.M_minus / self.M_e)
+            * (self.t_plus(1, self.T_ref) + self.M_minus / self.M_e)
         )
         # Migrative kinematic relationship coefficient (electrolyte)
         self.omega_c_e = (
@@ -617,21 +617,12 @@ class LeadAcidParameters:
         self.rho_s = self.therm.rho_s
         self.rho_p = self.therm.rho_p
         self.rho_cp = self.therm.rho_cp
-        self.rho_k = self.therm.rho_k
-        self.rho = (
-            self.rho_cn * self.l_cn
-            + self.rho_n * self.l_n
-            + self.rho_s * self.l_s
-            + self.rho_p * self.l_p
-            + self.rho_cp * self.l_cp
-        ) / self.l  # effective volumetric heat capacity
 
         self.lambda_cn = self.therm.lambda_cn
         self.lambda_n = self.therm.lambda_n
         self.lambda_s = self.therm.lambda_s
         self.lambda_p = self.therm.lambda_p
         self.lambda_cp = self.therm.lambda_cp
-        self.lambda_k = self.therm.lambda_k
 
         self.Theta = self.therm.Theta
 
@@ -647,7 +638,7 @@ class LeadAcidParameters:
             * self.R
             * self.T_ref
             * self.tau_th_yz
-            / (self.therm.rho_eff_dim * self.F * self.Delta_T * self.L_x)
+            / (self.therm.rho_eff_dim(self.T_ref) * self.F * self.Delta_T * self.L_x)
         )
 
         self.T_amb_dim = self.therm.T_amb_dim
@@ -686,21 +677,21 @@ class LeadAcidParameters:
         )
 
     def D_e(self, c_e, T):
-        "Dimensionless electrolyte diffusivity"
+        """Dimensionless electrolyte diffusivity"""
         c_e_dimensional = c_e * self.c_e_typ
         return self.D_e_dimensional(c_e_dimensional, self.T_ref) / self.D_e_typ
 
     def kappa_e(self, c_e, T):
-        "Dimensionless electrolyte conductivity"
+        """Dimensionless electrolyte conductivity"""
         c_e_dimensional = c_e * self.c_e_typ
         kappa_scale = self.F ** 2 * self.D_e_typ * self.c_e_typ / (self.R * self.T_ref)
         return self.kappa_e_dimensional(c_e_dimensional, self.T_ref) / kappa_scale
 
     def chi(self, c_e, T, c_ox=0, c_hy=0):
-        "Thermodynamic factor"
+        """Thermodynamic factor"""
         return (
             self.chi_dimensional(self.c_e_typ * c_e)
-            * (2 * (1 - self.t_plus(c_e)))
+            * (2 * (1 - self.t_plus(c_e, T)))
             / (
                 self.V_w
                 * self.c_T(self.c_e_typ * c_e, self.c_e_typ * c_ox, self.c_e_typ * c_hy)
@@ -708,7 +699,7 @@ class LeadAcidParameters:
         )
 
     def U_n(self, c_e_n, T):
-        "Dimensionless open-circuit voltage in the negative electrode"
+        """Dimensionless open-circuit voltage in the negative electrode"""
         c_e_n_dimensional = c_e_n * self.c_e_typ
         T_dim = self.Delta_T * T + self.T_ref
         return (
@@ -716,7 +707,7 @@ class LeadAcidParameters:
         ) / self.potential_scale
 
     def U_p(self, c_e_p, T):
-        "Dimensionless open-circuit voltage in the positive electrode"
+        """Dimensionless open-circuit voltage in the positive electrode"""
         c_e_p_dimensional = c_e_p * self.c_e_typ
         T_dim = self.Delta_T * T + self.T_ref
         return (
@@ -724,19 +715,19 @@ class LeadAcidParameters:
         ) / self.potential_scale
 
     def j0_n(self, c_e, T):
-        "Dimensionless exchange-current density in the negative electrode"
+        """Dimensionless exchange-current density in the negative electrode"""
         c_e_dim = c_e * self.c_e_typ
         T_dim = self.Delta_T * T + self.T_ref
         return self.j0_n_dimensional(c_e_dim, T_dim) / self.j_scale_n
 
     def j0_p(self, c_e, T):
-        "Dimensionless exchange-current density in the positive electrode"
+        """Dimensionless exchange-current density in the positive electrode"""
         c_e_dim = c_e * self.c_e_typ
         T_dim = self.Delta_T * T + self.T_ref
         return self.j0_p_dimensional(c_e_dim, T_dim) / self.j_scale_p
 
     def j0_p_Ox(self, c_e, T):
-        "Dimensionless oxygen exchange-current density in the positive electrode"
+        """Dimensionless oxygen exchange-current density in the positive electrode"""
         c_e_dim = c_e * self.c_e_typ
         T_dim = self.Delta_T * T + self.T_ref
         return self.j0_p_Ox_dimensional(c_e_dim, T_dim) / self.j_scale_p
@@ -771,8 +762,18 @@ class LeadAcidParameters:
         x_dim = x * self.L_x
         return self.a_p_dimensional(x_dim) / self.a_p_typ
 
+    def rho(self, T):
+        """Dimensionless effective volumetric heat capacity"""
+        return (
+            self.rho_cn(T) * self.l_cn
+            + self.rho_n(T) * self.l_n
+            + self.rho_s(T) * self.l_s
+            + self.rho_p(T) * self.l_p
+            + self.rho_cp(T) * self.l_cp
+        ) / self.l
+
     def _set_input_current(self):
-        "Set the input current"
+        """Set the input current"""
 
         self.dimensional_current_with_time = pybamm.FunctionParameter(
             "Current function [A]", {"Time [s]": pybamm.t * self.timescale}

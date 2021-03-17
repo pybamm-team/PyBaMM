@@ -5,6 +5,8 @@ import subprocess
 from pathlib import Path
 from platform import system
 import wheel.bdist_wheel as orig
+import site
+import shutil
 
 try:
     from setuptools import setup, find_packages, Extension
@@ -154,8 +156,12 @@ for file_ext in ["*.csv", "*.py", "*.md", "*.txt"]:
     )
 pybamm_data.append("./version")
 pybamm_data.append("./CITATIONS.txt")
+pybamm_data.append("./plotting/pybamm.mplstyle")
 
-idaklu_ext = Extension("idaklu", ["pybamm/solvers/c_solvers/idaklu.cpp"])
+idaklu_ext = Extension(
+    "pybamm.solvers.idaklu",
+    ["pybamm/solvers/c_solvers/idaklu.cpp"]
+)
 ext_modules = [idaklu_ext] if compile_KLU() else []
 
 jax_dependencies = []
@@ -186,7 +192,7 @@ setup(
     },
     package_data={"pybamm": pybamm_data},
     # Python version
-    python_requires=">=3.6,<3.9",
+    python_requires=">=3.6,<3.10",
     # List of dependencies
     install_requires=[
         "numpy>=1.16",
@@ -198,6 +204,7 @@ setup(
         "casadi>=3.5.0",
         *jax_dependencies,
         "jupyter",  # For example notebooks
+        "pybtex",
         # Note: Matplotlib is loaded for debug plots, but to ensure pybamm runs
         # on systems without an attached display, it should never be imported
         # outside of plot() methods.
@@ -220,3 +227,9 @@ setup(
         ]
     },
 )
+
+# pybtex adds a folder "tests" to the site packages, so we manually remove this
+path_to_sitepackages = site.getsitepackages()[0]
+path_to_tests_dir = os.path.join(path_to_sitepackages, "tests")
+if os.path.exists(path_to_tests_dir):
+    shutil.rmtree(path_to_tests_dir)

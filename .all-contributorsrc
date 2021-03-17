@@ -272,6 +272,79 @@
         "example",
         "test"
       ]
+    },
+    {
+      "login": "lonnbornj",
+      "name": "lonnbornj",
+      "avatar_url": "https://avatars2.githubusercontent.com/u/35983543?v=4",
+      "profile": "https://github.com/lonnbornj",
+      "contributions": [
+        "code",
+        "test",
+        "example"
+      ]
+    },
+    {
+      "login": "priyanshuone6",
+      "name": "Priyanshu Agarwal",
+      "avatar_url": "https://avatars.githubusercontent.com/u/64051212?v=4",
+      "profile": "https://github.com/priyanshuone6",
+      "contributions": [
+        "test",
+        "code",
+        "bug"
+      ]
+    },
+    {
+      "login": "DrSOKane",
+      "name": "DrSOKane",
+      "avatar_url": "https://avatars.githubusercontent.com/u/42972513?v=4",
+      "profile": "https://github.com/DrSOKane",
+      "contributions": [
+        "code",
+        "example",
+        "doc",
+        "test"
+      ]
+    },
+    {
+      "login": "Saransh-cpp",
+      "name": "Saransh Chopra",
+      "avatar_url": "https://avatars.githubusercontent.com/u/74055102?v=4",
+      "profile": "https://github.com/Saransh-cpp",
+      "contributions": [
+        "code",
+        "test",
+        "doc"
+      ]
+    },
+    {
+      "login": "DavidMStraub",
+      "name": "David Straub",
+      "avatar_url": "https://avatars.githubusercontent.com/u/10965193?v=4",
+      "profile": "https://github.com/DavidMStraub",
+      "contributions": [
+        "bug",
+        "code"
+      ]
+    },
+    {
+      "login": "maurosgroi",
+      "name": "maurosgroi",
+      "avatar_url": "https://avatars.githubusercontent.com/u/37576773?v=4",
+      "profile": "https://github.com/maurosgroi",
+      "contributions": [
+        "ideas"
+      ]
+    },
+    {
+      "login": "asinghgaba",
+      "name": "Amarjit Singh Gaba",
+      "avatar_url": "https://avatars.githubusercontent.com/u/77078706?v=4",
+      "profile": "https://github.com/asinghgaba",
+      "contributions": [
+        "code"
+      ]
     }
   ],
   "contributorsPerLine": 7,

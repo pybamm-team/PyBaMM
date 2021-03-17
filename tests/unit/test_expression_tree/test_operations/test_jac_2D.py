@@ -79,7 +79,7 @@ class TestJacobian(unittest.TestCase):
                 [0, 0, 0, 0, 0, 2, 0, 0],
             ]
         )
-        dfunc_dy = func.jac(y).simplify().evaluate(y=y0)
+        dfunc_dy = func.jac(y).evaluate(y=y0)
         np.testing.assert_array_equal(jacobian, dfunc_dy.toarray())
 
         # when differentiating by independent part of the state vector

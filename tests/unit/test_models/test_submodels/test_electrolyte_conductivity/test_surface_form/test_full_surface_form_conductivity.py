@@ -31,9 +31,11 @@ class TestFull(unittest.TestCase):
             "Electrolyte potential": pybamm.Concatenation(a_n, a_s, a_p),
             "Negative electrode temperature": a_n,
             "Separator temperature": a_s,
+            "Separator electrolyte concentration": a_s,
             "Positive electrode temperature": a_p,
             "Negative electrode potential": a_n,
             "Positive electrode potential": a_p,
+            "Positive electrolyte concentration": a_p,
         }
 
         spf = pybamm.electrolyte_conductivity.surface_potential_form
@@ -50,8 +52,12 @@ class TestFull(unittest.TestCase):
             ),
             "Negative electrolyte potential": a_n,
             "Negative electrolyte current density": a_n,
+            "Negative electrolyte concentration": a_n,
+            "Negative electrode temperature": a_n,
             "Separator electrolyte potential": a_s,
             "Separator electrolyte current density": a_s,
+            "Separator electrolyte concentration": a_s,
+            "Separator temperature": a_s,
             "Positive electrode porosity": a_p,
             "Positive electrolyte tortuosity": a_p,
             "Positive electrode tortuosity": a_p,

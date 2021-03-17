@@ -9,63 +9,108 @@ import numpy as np
 
 class TestInterpolant(unittest.TestCase):
     def test_errors(self):
-        with self.assertRaisesRegex(ValueError, "data should have exactly two columns"):
-            pybamm.Interpolant(np.ones(10), None)
+        with self.assertRaisesRegex(ValueError, "x1"):
+            pybamm.Interpolant(np.ones(10), np.ones(11), pybamm.Symbol("a"))
+        with self.assertRaisesRegex(ValueError, "x2"):
+            pybamm.Interpolant(
+                (np.ones(10), np.ones(11)), np.ones((10, 12)), pybamm.Symbol("a")
+            )
+        with self.assertRaisesRegex(ValueError, "y should"):
+            pybamm.Interpolant(
+                (np.ones(10), np.ones(11)), np.ones(10), pybamm.Symbol("a")
+            )
         with self.assertRaisesRegex(ValueError, "interpolator 'bla' not recognised"):
-            pybamm.Interpolant(np.ones((10, 2)), None, interpolator="bla")
+            pybamm.Interpolant(
+                np.ones(10), np.ones(10), pybamm.Symbol("a"), interpolator="bla"
+            )
+        with self.assertRaisesRegex(ValueError, "child should have size 1"):
+            pybamm.Interpolant(
+                np.ones(10), np.ones((10, 11)), pybamm.StateVector(slice(0, 2))
+            )
+        with self.assertRaisesRegex(ValueError, "should equal"):
+            pybamm.Interpolant(
+                (np.ones(10), np.ones(12)), np.ones((10, 12)), pybamm.Symbol("a")
+            )
+        with self.assertRaisesRegex(ValueError, "interpolator should be 'linear'"):
+            pybamm.Interpolant(
+                (np.ones(10), np.ones(12)),
+                np.ones((10, 12)),
+                (pybamm.Symbol("a"), pybamm.Symbol("b")),
+                interpolator="cubic spline",
+            )
 
     def test_interpolation(self):
-        x = np.linspace(0, 1)[:, np.newaxis]
+        x = np.linspace(0, 1, 200)
         y = pybamm.StateVector(slice(0, 2))
         # linear
-        linear = np.hstack([x, 2 * x])
-        for interpolator in ["pchip", "cubic spline"]:
-            interp = pybamm.Interpolant(linear, y, interpolator=interpolator)
+        for interpolator in ["linear", "pchip", "cubic spline"]:
+            interp = pybamm.Interpolant(x, 2 * x, y, interpolator=interpolator)
             np.testing.assert_array_almost_equal(
                 interp.evaluate(y=np.array([0.397, 1.5]))[:, 0], np.array([0.794, 3])
             )
         # square
-        square = np.hstack([x, x ** 2])
         y = pybamm.StateVector(slice(0, 1))
-        for interpolator in ["pchip", "cubic spline"]:
-            interp = pybamm.Interpolant(square, y, interpolator=interpolator)
+        for interpolator in ["linear", "pchip", "cubic spline"]:
+            interp = pybamm.Interpolant(x, x ** 2, y, interpolator=interpolator)
             np.testing.assert_array_almost_equal(
                 interp.evaluate(y=np.array([0.397]))[:, 0], np.array([0.397 ** 2])
             )
 
         # with extrapolation set to False
-        for interpolator in ["pchip", "cubic spline"]:
+        for interpolator in ["linear", "pchip", "cubic spline"]:
             interp = pybamm.Interpolant(
-                square, y, interpolator=interpolator, extrapolate=False
+                x, x ** 2, y, interpolator=interpolator, extrapolate=False
             )
             np.testing.assert_array_equal(
                 interp.evaluate(y=np.array([2]))[:, 0], np.array([np.nan])
             )
 
+    def test_interpolation_1_x_2d_y(self):
+        x = np.linspace(0, 1, 200)
+        y = np.tile(2 * x, (10, 1)).T
+        var = pybamm.StateVector(slice(0, 1))
+        # linear
+        for interpolator in ["linear", "pchip", "cubic spline"]:
+            interp = pybamm.Interpolant(x, y, var, interpolator=interpolator)
+            np.testing.assert_array_almost_equal(
+                interp.evaluate(y=np.array([0.397])), 0.794 * np.ones((10, 1))
+            )
+
+    def test_interpolation_2_x_2d_y(self):
+        x = (np.arange(-5.01, 5.01, 0.05), np.arange(-5.01, 5.01, 0.05))
+        xx, yy = np.meshgrid(x[0], x[1])
+        z = np.sin(xx ** 2 + yy ** 2)
+        var1 = pybamm.StateVector(slice(0, 1))
+        var2 = pybamm.StateVector(slice(1, 2))
+        # linear
+        interp = pybamm.Interpolant(x, z, (var1, var2), interpolator="linear")
+        np.testing.assert_array_almost_equal(
+            interp.evaluate(y=np.array([0, 0])), 0, decimal=3
+        )
+
     def test_name(self):
         a = pybamm.Symbol("a")
-        x = np.linspace(0, 1)[:, np.newaxis]
-        interp = pybamm.Interpolant(np.hstack([x, x]), a, "name")
+        x = np.linspace(0, 1, 200)
+        interp = pybamm.Interpolant(x, x, a, "name")
         self.assertEqual(interp.name, "interpolating function (name)")
 
     def test_diff(self):
-        x = np.linspace(0, 1)[:, np.newaxis]
+        x = np.linspace(0, 1, 200)
         y = pybamm.StateVector(slice(0, 2))
         # linear (derivative should be 2)
-        linear = np.hstack([x, 2 * x])
+        # linear interpolator cannot be differentiated
         for interpolator in ["pchip", "cubic spline"]:
-            interp_diff = pybamm.Interpolant(linear, y, interpolator=interpolator).diff(
-                y
-            )
+            interp_diff = pybamm.Interpolant(
+                x, 2 * x, y, interpolator=interpolator
+            ).diff(y)
             np.testing.assert_array_almost_equal(
                 interp_diff.evaluate(y=np.array([0.397, 1.5]))[:, 0], np.array([2, 2])
             )
         # square (derivative should be 2*x)
-        square = np.hstack([x, x ** 2])
         for interpolator in ["pchip", "cubic spline"]:
-            interp_diff = pybamm.Interpolant(square, y, interpolator=interpolator).diff(
-                y
-            )
+            interp_diff = pybamm.Interpolant(
+                x, x ** 2, y, interpolator=interpolator
+            ).diff(y)
             np.testing.assert_array_almost_equal(
                 interp_diff.evaluate(y=np.array([0.397, 0.806]))[:, 0],
                 np.array([0.794, 1.612]),
@@ -73,13 +118,11 @@ class TestInterpolant(unittest.TestCase):
             )
 
     def test_processing(self):
-        x = np.linspace(0, 1)[:, np.newaxis]
+        x = np.linspace(0, 1, 200)
         y = pybamm.StateVector(slice(0, 2))
-        linear = np.hstack([x, 2 * x])
-        interp = pybamm.Interpolant(linear, y)
+        interp = pybamm.Interpolant(x, 2 * x, y)
 
         self.assertEqual(interp.id, interp.new_copy().id)
-        self.assertEqual(interp.id, interp.simplify().id)
 
 
 if __name__ == "__main__":

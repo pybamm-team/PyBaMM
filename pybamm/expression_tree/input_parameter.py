@@ -33,7 +33,7 @@ class InputParameter(pybamm.Symbol):
         return new_input_parameter
 
     def set_expected_size(self, size):
-        "Specify the size that the input parameter should be"
+        """Specify the size that the input parameter should be."""
         self._expected_size = size
 
         # We also need to update the saved size and shape
@@ -61,7 +61,7 @@ class InputParameter(pybamm.Symbol):
         if inputs is None:
             inputs = {}
         if not isinstance(inputs, dict):
-            # if the special input "shape test" is passed, just return 1
+            # if the special input "shape test" is passed, just return NaN
             if inputs == "shape test":
                 return self.evaluate_for_shape()
             raise TypeError("inputs should be a dictionary")

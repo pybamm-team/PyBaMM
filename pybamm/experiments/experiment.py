@@ -54,6 +54,7 @@ class Experiment:
         faster at simulating individual steps but has higher set-up overhead
     drive_cycles : dict
         Dictionary of drive cycles to use for this experiment.
+
     """
 
     def __init__(
@@ -67,6 +68,7 @@ class Experiment:
 
         import numpy as np
         self._np = np
+
         self.period = self.convert_time_to_seconds(period.split())
         operating_conditions_cycles = []
         for cycle in operating_conditions:

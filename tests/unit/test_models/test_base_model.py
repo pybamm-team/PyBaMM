@@ -246,13 +246,11 @@ class TestBaseModel(unittest.TestCase):
             d: {"left": (0, "Dirichlet"), "right": (0, "Dirichlet")},
         }
         model.use_jacobian = False
-        model.use_simplify = False
         model.convert_to_format = "python"
 
         new_model = model.new_copy()
         self.assertEqual(new_model.name, model.name)
         self.assertEqual(new_model.use_jacobian, model.use_jacobian)
-        self.assertEqual(new_model.use_simplify, model.use_simplify)
         self.assertEqual(new_model.convert_to_format, model.convert_to_format)
         self.assertEqual(new_model.timescale.id, model.timescale.id)
 
@@ -660,7 +658,7 @@ class TestBaseModel(unittest.TestCase):
         self.assertEqual(model.initial_conditions[var_2D].value, 1)
         self.assertEqual(model.initial_conditions[var_concat].value, 1)
 
-        # Update initial conditions
+        # Discretise
         var = pybamm.standard_spatial_vars
         geometry = {
             "negative electrode": {var.x_n: {"min": 0, "max": 1}},
@@ -683,17 +681,20 @@ class TestBaseModel(unittest.TestCase):
         model_disc = disc.process_model(model, inplace=False)
         t = np.linspace(0, 1)
         y = np.tile(3 * t, (1 + 30 + 50, 1))
-        sol = pybamm.Solution(t, y)
-        sol.model = model_disc
+        sol = pybamm.Solution(t, y, model_disc, {})
 
         # Update out-of-place first, since otherwise we'll have already modified the
         # model
         new_model = model.set_initial_conditions_from(sol, inplace=False)
         # Make sure original model is unchanged
-        self.assertEqual(model.initial_conditions[var_scalar].value, 1)
-        self.assertEqual(model.initial_conditions[var_1D].value, 1)
-        self.assertEqual(model.initial_conditions[var_2D].value, 1)
-        self.assertEqual(model.initial_conditions[var_concat].value, 1)
+        np.testing.assert_array_equal(
+            model.initial_conditions[var_scalar].evaluate(), 1
+        )
+        np.testing.assert_array_equal(model.initial_conditions[var_1D].evaluate(), 1)
+        np.testing.assert_array_equal(model.initial_conditions[var_2D].evaluate(), 1)
+        np.testing.assert_array_equal(
+            model.initial_conditions[var_concat].evaluate(), 1
+        )
 
         # Now update inplace
         model.set_initial_conditions_from(sol)
@@ -718,6 +719,43 @@ class TestBaseModel(unittest.TestCase):
             self.assertIsInstance(mdl.initial_conditions[var_concat], pybamm.Vector)
             self.assertEqual(mdl.initial_conditions[var_concat].shape, (20, 1))
             np.testing.assert_array_equal(mdl.initial_conditions[var_concat].entries, 3)
+
+        # Test updating a discretised model (out-of-place)
+        new_model_disc = model_disc.set_initial_conditions_from(sol, inplace=False)
+
+        # Test new initial conditions
+        var_scalar = list(new_model_disc.initial_conditions.keys())[0]
+        self.assertIsInstance(
+            new_model_disc.initial_conditions[var_scalar], pybamm.Vector
+        )
+        self.assertEqual(new_model_disc.initial_conditions[var_scalar].entries, 3)
+
+        var_1D = list(new_model_disc.initial_conditions.keys())[1]
+        self.assertIsInstance(new_model_disc.initial_conditions[var_1D], pybamm.Vector)
+        self.assertEqual(new_model_disc.initial_conditions[var_1D].shape, (10, 1))
+        np.testing.assert_array_equal(
+            new_model_disc.initial_conditions[var_1D].entries, 3
+        )
+
+        var_2D = list(new_model_disc.initial_conditions.keys())[2]
+        self.assertIsInstance(new_model_disc.initial_conditions[var_2D], pybamm.Vector)
+        self.assertEqual(new_model_disc.initial_conditions[var_2D].shape, (50, 1))
+        np.testing.assert_array_equal(
+            new_model_disc.initial_conditions[var_2D].entries, 3
+        )
+
+        var_concat = list(new_model_disc.initial_conditions.keys())[3]
+        self.assertIsInstance(
+            new_model_disc.initial_conditions[var_concat], pybamm.Vector
+        )
+        self.assertEqual(new_model_disc.initial_conditions[var_concat].shape, (20, 1))
+        np.testing.assert_array_equal(
+            new_model_disc.initial_conditions[var_concat].entries, 3
+        )
+
+        np.testing.assert_array_equal(
+            new_model_disc.concatenated_initial_conditions.evaluate(), 3
+        )
 
         # Test updating a new model with a different model
         new_model = pybamm.BaseModel()
@@ -818,6 +856,44 @@ class TestBaseModel(unittest.TestCase):
             new_model.initial_conditions[var_concat].entries, 5
         )
 
+        # Test updating a discretised model (out-of-place)
+        model_disc = disc.process_model(model, inplace=False)
+        new_model_disc = model_disc.set_initial_conditions_from(sol_dict, inplace=False)
+
+        # Test new initial conditions
+        var_scalar = list(new_model_disc.initial_conditions.keys())[0]
+        self.assertIsInstance(
+            new_model_disc.initial_conditions[var_scalar], pybamm.Vector
+        )
+        self.assertEqual(new_model_disc.initial_conditions[var_scalar].entries, 5)
+
+        var_1D = list(new_model_disc.initial_conditions.keys())[1]
+        self.assertIsInstance(new_model_disc.initial_conditions[var_1D], pybamm.Vector)
+        self.assertEqual(new_model_disc.initial_conditions[var_1D].shape, (10, 1))
+        np.testing.assert_array_equal(
+            new_model_disc.initial_conditions[var_1D].entries, 5
+        )
+
+        var_2D = list(new_model_disc.initial_conditions.keys())[2]
+        self.assertIsInstance(new_model_disc.initial_conditions[var_2D], pybamm.Vector)
+        self.assertEqual(new_model_disc.initial_conditions[var_2D].shape, (50, 1))
+        np.testing.assert_array_equal(
+            new_model_disc.initial_conditions[var_2D].entries, 5
+        )
+
+        var_concat = list(new_model_disc.initial_conditions.keys())[3]
+        self.assertIsInstance(
+            new_model_disc.initial_conditions[var_concat], pybamm.Vector
+        )
+        self.assertEqual(new_model_disc.initial_conditions[var_concat].shape, (20, 1))
+        np.testing.assert_array_equal(
+            new_model_disc.initial_conditions[var_concat].entries, 5
+        )
+
+        np.testing.assert_array_equal(
+            new_model_disc.concatenated_initial_conditions.evaluate(), 5
+        )
+
     def test_set_initial_condition_errors(self):
         model = pybamm.BaseModel()
         var = pybamm.Scalar(1)
@@ -851,20 +927,31 @@ class TestBaseModel(unittest.TestCase):
         ):
             model.set_initial_conditions_from({"var_concat_neg": np.ones((5, 6, 7))})
 
+        # Inconsistent model and variable names
+        model = pybamm.BaseModel()
+        var = pybamm.Variable("var")
+        model.rhs = {var: -var}
+        model.initial_conditions = {var: pybamm.Scalar(1)}
+        with self.assertRaisesRegex(pybamm.ModelError, "must appear in the solution"):
+            model.set_initial_conditions_from({"wrong var": 2})
+        var = pybamm.Concatenation(
+            pybamm.Variable("var", "test"), pybamm.Variable("var2", "test2")
+        )
+        model.rhs = {var: -var}
+        model.initial_conditions = {var: pybamm.Scalar(1)}
+        with self.assertRaisesRegex(pybamm.ModelError, "must appear in the solution"):
+            model.set_initial_conditions_from({"wrong var": 2})
+
 
 class TestStandardBatteryBaseModel(unittest.TestCase):
     def test_default_solver(self):
         model = pybamm.BaseBatteryModel()
-        self.assertIsInstance(
-            model.default_solver, (pybamm.ScipySolver, pybamm.ScikitsOdeSolver)
-        )
+        self.assertIsInstance(model.default_solver, pybamm.CasadiSolver)
 
         # check that default_solver gives you a new solver, not an internal object
         solver = model.default_solver
         solver = pybamm.BaseModel()
-        self.assertIsInstance(
-            model.default_solver, (pybamm.ScipySolver, pybamm.ScikitsOdeSolver)
-        )
+        self.assertIsInstance(model.default_solver, pybamm.CasadiSolver)
         self.assertIsInstance(solver, pybamm.BaseModel)
 
         # check that adding algebraic variables gives DAE solver

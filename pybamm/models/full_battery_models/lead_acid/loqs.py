@@ -45,6 +45,7 @@ class LOQS(BaseModel):
         self.set_side_reaction_submodels()
         self.set_current_collector_submodel()
         self.set_sei_submodel()
+        self.set_lithium_plating_submodel()
 
         if build:
             self.build_model()
@@ -52,7 +53,7 @@ class LOQS(BaseModel):
         if self.options["dimensionality"] == 0:
             self.use_jacobian = False
 
-        pybamm.citations.register("sulzer2019asymptotic")
+        pybamm.citations.register("Sulzer2019asymptotic")
 
     def set_external_circuit_submodel(self):
         """

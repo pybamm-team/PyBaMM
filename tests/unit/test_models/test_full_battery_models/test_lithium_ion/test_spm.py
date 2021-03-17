@@ -110,7 +110,33 @@ class TestSPM(unittest.TestCase):
         model.check_well_posedness()
 
     def test_loss_active_material(self):
-        options = {"loss of active material": "example"}
+        options = {
+            "loss of active material": "none",
+        }
+        model = pybamm.lithium_ion.SPM(options)
+        model.check_well_posedness()
+
+    def test_loss_active_material_negative(self):
+        options = {
+            "particle cracking": "no cracking",
+            "loss of active material": "negative",
+        }
+        model = pybamm.lithium_ion.SPM(options)
+        model.check_well_posedness()
+
+    def test_loss_active_material_positive(self):
+        options = {
+            "particle cracking": "no cracking",
+            "loss of active material": "positive",
+        }
+        model = pybamm.lithium_ion.SPM(options)
+        model.check_well_posedness()
+
+    def test_loss_active_material_both(self):
+        options = {
+            "particle cracking": "no cracking",
+            "loss of active material": "both",
+        }
         model = pybamm.lithium_ion.SPM(options)
         model.check_well_posedness()
 
@@ -137,7 +163,6 @@ class TestSPM(unittest.TestCase):
         self.assertEqual(new_model_T_eqn.id, model_T_eqn.id)
         self.assertEqual(new_model.name, model.name)
         self.assertEqual(new_model.use_jacobian, model.use_jacobian)
-        self.assertEqual(new_model.use_simplify, model.use_simplify)
         self.assertEqual(new_model.convert_to_format, model.convert_to_format)
         self.assertEqual(new_model.timescale.id, model.timescale.id)
 
@@ -177,27 +202,27 @@ class TestSPMExternalCircuits(unittest.TestCase):
 
 class TestSPMWithSEI(unittest.TestCase):
     def test_well_posed_reaction_limited(self):
-        options = {"sei": "reaction limited"}
+        options = {"SEI": "reaction limited"}
         model = pybamm.lithium_ion.SPM(options)
         model.check_well_posedness()
 
     def test_well_posed_solvent_diffusion_limited(self):
-        options = {"sei": "solvent-diffusion limited"}
+        options = {"SEI": "solvent-diffusion limited"}
         model = pybamm.lithium_ion.SPM(options)
         model.check_well_posedness()
 
     def test_well_posed_electron_migration_limited(self):
-        options = {"sei": "electron-migration limited"}
+        options = {"SEI": "electron-migration limited"}
         model = pybamm.lithium_ion.SPM(options)
         model.check_well_posedness()
 
     def test_well_posed_interstitial_diffusion_limited(self):
-        options = {"sei": "interstitial-diffusion limited"}
+        options = {"SEI": "interstitial-diffusion limited"}
         model = pybamm.lithium_ion.SPM(options)
         model.check_well_posedness()
 
     def test_well_posed_ec_reaction_limited(self):
-        options = {"sei": "ec reaction limited", "sei porosity change": "true"}
+        options = {"SEI": "ec reaction limited", "SEI porosity change": "true"}
         model = pybamm.lithium_ion.SPM(options)
         model.check_well_posedness()
 
@@ -213,18 +238,35 @@ class TestSPMWithCrack(unittest.TestCase):
         model = pybamm.lithium_ion.SPM(options)
         model.check_well_posedness()
 
-    def test_well_posed_anode_cracking(self):
-        options = {"particle": "Fickian diffusion", "particle cracking": "anode"}
+    def test_well_posed_negative_cracking(self):
+        options = {"particle": "Fickian diffusion", "particle cracking": "negative"}
         model = pybamm.lithium_ion.SPM(options)
         model.check_well_posedness()
 
-    def test_well_posed_cathode_cracking(self):
-        options = {"particle": "Fickian diffusion", "particle cracking": "cathode"}
+    def test_well_posed_positive_cracking(self):
+        options = {"particle": "Fickian diffusion", "particle cracking": "positive"}
         model = pybamm.lithium_ion.SPM(options)
         model.check_well_posedness()
 
     def test_well_posed_both_cracking(self):
         options = {"particle": "Fickian diffusion", "particle cracking": "both"}
+        model = pybamm.lithium_ion.SPM(options)
+        model.check_well_posedness()
+
+
+class TestSPMWithPlating(unittest.TestCase):
+    def test_well_posed_none_plating(self):
+        options = {"lithium plating": "none"}
+        model = pybamm.lithium_ion.SPM(options)
+        model.check_well_posedness()
+
+    def test_well_posed_reversible_plating(self):
+        options = {"lithium plating": "reversible"}
+        model = pybamm.lithium_ion.SPM(options)
+        model.check_well_posedness()
+
+    def test_well_posed_irreversible_plating(self):
+        options = {"lithium plating": "irreversible"}
         model = pybamm.lithium_ion.SPM(options)
         model.check_well_posedness()
 

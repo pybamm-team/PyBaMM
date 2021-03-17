@@ -23,7 +23,6 @@ class TestFunctionControl(unittest.TestCase):
 
         # First model: 1A charge
         params[0]["Current function [A]"] = -1
-        params[1]["Current function [A]"] = -1
 
         # set parameters and discretise models
         for i, model in enumerate(models):
