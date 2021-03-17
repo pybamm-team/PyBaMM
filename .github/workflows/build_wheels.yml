@@ -15,7 +15,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [macOS-10.15, ubuntu-20.04]
+        os: [macOS-10.15, ubuntu-20.04, windows-2019]
 
     steps:
       - uses: actions/checkout@v2
@@ -35,11 +35,18 @@ jobs:
       - name: Clone pybind11 repo
         run: git clone https://github.com/pybind/pybind11.git
 
-      - name: Build wheels
+      - name: Build wheels on manylinux and macos
+        if: matrix.os != 'windows-2019'
         run: python -m cibuildwheel --output-dir wheelhouse
         env:
           CIBW_BEFORE_ALL_LINUX: "bash build_manylinux_wheels/install_sundials.sh 5.8.1 5.7.0"
           CIBW_BEFORE_BUILD_LINUX: "python -m pip install cmake"
+
+      - name: Build wheels on windows
+        if: matrix.os == 'windows-2019'
+        run: |
+          python -m pip install wheel
+          python -m pip wheel --no-deps --wheel-dir wheelhouse .
 
       - uses: actions/upload-artifact@v2
         with:
