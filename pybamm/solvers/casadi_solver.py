@@ -278,38 +278,6 @@ class CasadiSolver(pybamm.BaseSolver):
         inputs_dict = coarse_solution.all_inputs[-1]
         inputs = casadi.vertcat(*[x for x in inputs_dict.values()])
 
-        # Check for interpolant extrapolations
-        if model.interpolant_extrapolation_events_eval:
-            extrap_event = [
-                event(coarse_solution.t[-1], coarse_solution.y[:, -1], inputs=inputs)
-                for event in model.interpolant_extrapolation_events_eval
-            ]
-
-            if extrap_event:
-                if (np.concatenate(extrap_event) < self.extrap_tol).any():
-                    extrap_event_names = []
-                    for event in model.events:
-                        if (
-                            event.event_type
-                            == pybamm.EventType.INTERPOLANT_EXTRAPOLATION
-                            and (
-                                event.expression.evaluate(
-                                    coarse_solution.t[-1],
-                                    coarse_solution.y[:, -1].full(),
-                                    inputs=inputs,
-                                )
-                                < self.extrap_tol
-                            ).any()
-                        ):
-                            extrap_event_names.append(event.name[12:])
-
-                    raise pybamm.SolverError(
-                        "CasADI solver failed because the following "
-                        "interpolation bounds were exceeded: {}. You may need "
-                        "to provide additional interpolation points outside "
-                        "these bounds.".format(extrap_event_names)
-                    )
-
         def find_t_event(sol, typ):
 
             # Check most recent y to see if any events have been crossed
@@ -456,6 +424,38 @@ class CasadiSolver(pybamm.BaseSolver):
         solution.integration_time = (
             coarse_solution.integration_time + dense_step_sol.integration_time
         )
+
+        # Check for interpolant extrapolations
+        if model.interpolant_extrapolation_events_eval:
+            extrap_event = [
+                event(solution.t[-1], solution.y[:, -1], inputs=inputs)
+                for event in model.interpolant_extrapolation_events_eval
+            ]
+
+            if extrap_event:
+                if (np.concatenate(extrap_event) < self.extrap_tol).any():
+                    extrap_event_names = []
+                    for event in model.events:
+                        if (
+                            event.event_type
+                            == pybamm.EventType.INTERPOLANT_EXTRAPOLATION
+                            and (
+                                event.expression.evaluate(
+                                    solution.t[-1],
+                                    solution.y[:, -1].full(),
+                                    inputs=inputs,
+                                )
+                                < self.extrap_tol
+                            ).any()
+                        ):
+                            extrap_event_names.append(event.name[12:])
+
+                    raise pybamm.SolverError(
+                        "CasADi solver failed because the following "
+                        "interpolation bounds were exceeded: {}. You may need "
+                        "to provide additional interpolation points outside "
+                        "these bounds.".format(extrap_event_names)
+                    )
 
         return solution
 
