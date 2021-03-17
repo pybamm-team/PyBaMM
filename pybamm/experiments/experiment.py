@@ -20,6 +20,9 @@ examples = """
     Run US06 for 20 seconds,
     Run US06 for 45 minutes,
     Run US06 for 2 hours,
+    Run US06 until 4.1V,
+    Run US06 until 50 mA,
+    Run US06 until C/50,
     """
 
 
@@ -46,18 +49,54 @@ class Experiment:
     period : string, optional
         Period (1/frequency) at which to record outputs. Default is 1 minute. Can be
         overwritten by individual operating conditions.
+    use_simulation_setup_type : str
+        Whether to use the "new" (default) or "old" simulation set-up type. "new" is
+        faster at simulating individual steps but has higher set-up overhead
     drive_cycles : dict
         Dictionary of drive cycles to use for this experiment.
     """
 
-    def __init__(self,
-                 operating_conditions,
-                 parameters=None,
-                 period="1 minute",
-                 drive_cycles={}):
+    def __init__(
+        self,
+        operating_conditions,
+        parameters=None,
+        period="1 minute",
+        use_simulation_setup_type="new",
+        drive_cycles={},
+    ):
+
         import numpy as np
         self._np = np
         self.period = self.convert_time_to_seconds(period.split())
+        operating_conditions_cycles = []
+        for cycle in operating_conditions:
+            # Check types and convert strings to 1-tuples
+            if (isinstance(cycle, tuple) or isinstance(cycle, str)) and all(
+                [isinstance(cond, str) for cond in cycle]
+            ):
+                operating_conditions_cycles.append(
+                    cycle if isinstance(cycle, tuple) else (cycle,)
+                )
+            else:
+                try:
+                    # Condition is not a string
+                    badly_typed_conditions = [
+                        cond for cond in cycle if not isinstance(cond, str)
+                    ]
+                except TypeError:
+                    # Cycle is not a tuple or string
+                    badly_typed_conditions = []
+                badly_typed_conditions = badly_typed_conditions or [cycle]
+                raise TypeError(
+                    """Operating conditions should be strings or tuples of strings, not {}. For example: {}
+                """.format(
+                        type(badly_typed_conditions[0]), examples
+                    )
+                )
+        self.cycle_lengths = [len(cycle) for cycle in operating_conditions_cycles]
+        operating_conditions = [
+            cond for cycle in operating_conditions_cycles for cond in cycle
+        ]
         self.operating_conditions_strings = operating_conditions
         self.operating_conditions, self.events = self.read_operating_conditions(
             operating_conditions, drive_cycles
@@ -67,6 +106,8 @@ class Experiment:
             self.parameters = parameters
         else:
             raise TypeError("experimental parameters should be a dictionary")
+
+        self.use_simulation_setup_type = use_simulation_setup_type
 
     def __str__(self):
         return str(self.operating_conditions_strings)
@@ -84,6 +125,7 @@ class Experiment:
             List of operating conditions
         drive_cycles : dictionary
             Dictionary of Drive Cycles
+
         Returns
         -------
         operating_conditions : list
@@ -92,17 +134,9 @@ class Experiment:
         converted_operating_conditions = []
         events = []
         for cond in operating_conditions:
-            if isinstance(cond, str):
-                next_op, next_event = self.read_string(cond, drive_cycles)
-                converted_operating_conditions.append(next_op)
-                events.append(next_event)
-            else:
-                raise TypeError(
-                    """Operating conditions should be strings, not {}. For example: {}
-                    """.format(
-                        type(cond), examples
-                    )
-                )
+            next_op, next_event = self.read_string(cond)
+            converted_operating_conditions.append(next_op)
+            events.append(next_event)
 
         return converted_operating_conditions, events
 
@@ -233,7 +267,7 @@ class Experiment:
         return ext_drive_cycle
 
     def convert_electric(self, electric):
-        "Convert electrical instructions to consistent output"
+        """Convert electrical instructions to consistent output"""
         # Rest == zero current
         if electric[0].lower() == "rest":
             return (0, "A")
@@ -322,7 +356,7 @@ class Experiment:
                 )
 
     def convert_time_to_seconds(self, time_and_units):
-        "Convert a time in seconds, minutes or hours to a time in seconds"
+        """Convert a time in seconds, minutes or hours to a time in seconds"""
         time, units = time_and_units
         if units in ["second", "seconds", "s", "sec"]:
             time_in_seconds = float(time)
