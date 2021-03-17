@@ -939,8 +939,9 @@ def simplified_multiplication(left, right):
     # operators
     if (
         isinstance(left, MatrixMultiplication)
-        and right.is_constant()
         and left.left.is_constant()
+        and right.is_constant()
+        and not (right.ndim_for_testing == 2 and right.shape_for_testing[1] > 1)
     ):
         l_left, l_right = left.orphans
         new_left = right * l_left
@@ -976,8 +977,9 @@ def simplified_multiplication(left, right):
     # Simplify a * (B @ c) to (a * B) @ c if (a * B) is constant
     if (
         isinstance(right, MatrixMultiplication)
-        and left.is_constant()
         and right.left.is_constant()
+        and left.is_constant()
+        and not (left.ndim_for_testing == 2 and left.shape_for_testing[1] > 1)
     ):
         r_left, r_right = right.orphans
         new_left = left * r_left
@@ -1027,6 +1029,8 @@ def simplified_multiplication(left, right):
             or (isinstance(right.right, mul_classes) and right.right.left.is_constant())
         ):
             r_left, r_right = right.orphans
+            r_left.copy_domains(right)
+            r_right.copy_domains(right)
             return (left * r_left) + (left * r_right)
 
     # Negation simplifications

@@ -934,6 +934,14 @@ class Symbol(anytree.NodeMixin):
         else:
             return evaluated_self.shape
 
+    @property
+    def ndim_for_testing(self):
+        """
+        Number of dimensions of an object,
+        found by evaluating it with appropriate t and y
+        """
+        return len(self.shape_for_testing)
+
     def test_shape(self):
         """
         Check that the discretised self has a pybamm `shape`, i.e. can be evaluated
