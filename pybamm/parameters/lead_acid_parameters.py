@@ -508,7 +508,7 @@ class LeadAcidParameters:
         # Main
         self.s_plus_n_S = self.s_plus_n_S_dim / self.ne_n_S
         self.s_plus_p_S = self.s_plus_p_S_dim / self.ne_p_S
-        self.s_plus_S = pybamm.Concatenation(
+        self.s_plus_S = pybamm.concatenation(
             pybamm.FullBroadcast(
                 self.s_plus_n_S, ["negative electrode"], "current collector"
             ),
@@ -553,7 +553,7 @@ class LeadAcidParameters:
         self.beta_surf_p = (
             -self.c_e_typ * self.DeltaVsurf_p / self.ne_p_S
         )  # Molar volume change (lead dioxide)
-        self.beta_surf = pybamm.Concatenation(
+        self.beta_surf = pybamm.concatenation(
             pybamm.FullBroadcast(
                 self.beta_surf_n, ["negative electrode"], "current collector"
             ),
@@ -574,7 +574,7 @@ class LeadAcidParameters:
         self.beta_p = (self.beta_surf_p + self.beta_liq_p) * pybamm.Parameter(
             "Volume change factor"
         )
-        self.beta = pybamm.Concatenation(
+        self.beta = pybamm.concatenation(
             pybamm.FullBroadcast(
                 self.beta_n, "negative electrode", "current collector"
             ),
@@ -658,7 +658,7 @@ class LeadAcidParameters:
             self.eps_p_max
             + self.beta_surf_p * self.Q_e_max / self.l_p * (1 - self.q_init)
         )
-        self.epsilon_init = pybamm.Concatenation(
+        self.epsilon_init = pybamm.concatenation(
             pybamm.FullBroadcast(
                 self.epsilon_n_init, ["negative electrode"], "current collector"
             ),

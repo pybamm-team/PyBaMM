@@ -26,7 +26,7 @@ class BaseModel(pybamm.BaseSubModel):
         eps_n_av = pybamm.x_average(eps_n)
         eps_s_av = pybamm.x_average(eps_s)
         eps_p_av = pybamm.x_average(eps_p)
-        eps = pybamm.Concatenation(eps_n, eps_s, eps_p)
+        eps = pybamm.concatenation(eps_n, eps_s, eps_p)
 
         variables = {
             "Porosity": eps,
@@ -53,7 +53,7 @@ class BaseModel(pybamm.BaseSubModel):
         deps_n_dt_av = pybamm.x_average(deps_n_dt)
         deps_s_dt_av = pybamm.x_average(deps_s_dt)
         deps_p_dt_av = pybamm.x_average(deps_p_dt)
-        deps_dt = pybamm.Concatenation(deps_n_dt, deps_s_dt, deps_p_dt)
+        deps_dt = pybamm.concatenation(deps_n_dt, deps_s_dt, deps_p_dt)
 
         variables = {
             "Porosity change": deps_dt,

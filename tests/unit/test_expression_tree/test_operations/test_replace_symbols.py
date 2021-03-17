@@ -26,11 +26,11 @@ class TestSymbolReplacer(unittest.TestCase):
         var1 = pybamm.Variable("var 1", domain="dom 1")
         var2 = pybamm.Variable("var 2", domain="dom 2")
         var3 = pybamm.Variable("var 3", domain="dom 1")
-        conc = pybamm.Concatenation(var1, var2)
+        conc = pybamm.concatenation(var1, var2)
 
         replacer = pybamm.SymbolReplacer({var1: var3})
         replaced_symbol = replacer.process_symbol(conc)
-        self.assertEqual(replaced_symbol.id, pybamm.Concatenation(var3, var2).id)
+        self.assertEqual(replaced_symbol.id, pybamm.concatenation(var3, var2).id)
 
     def test_process_model(self):
         model = pybamm.BaseModel()

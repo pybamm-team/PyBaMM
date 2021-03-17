@@ -38,7 +38,7 @@ class BaseThermal(pybamm.BaseSubModel):
         # The variable T is the concatenation of the temperature in the negative
         # electrode, separator and positive electrode, for use the electrochemical
         # models
-        T = pybamm.Concatenation(T_n, T_s, T_p)
+        T = pybamm.concatenation(T_n, T_s, T_p)
 
         # Compute averaged temperatures by domain
         T_n_av = pybamm.x_average(T_n)
@@ -88,8 +88,8 @@ class BaseThermal(pybamm.BaseSubModel):
 
         param = self.param
 
-        T = variables["Cell temperature"]
-        T_n, _, T_p = T.orphans
+        T_n = variables["Negative electrode temperature"]
+        T_p = variables["Positive electrode temperature"]
 
         a_n = variables["Negative electrode surface area to volume ratio"]
         a_p = variables["Positive electrode surface area to volume ratio"]
@@ -105,6 +105,9 @@ class BaseThermal(pybamm.BaseSubModel):
 
         i_e = variables["Electrolyte current density"]
         phi_e = variables["Electrolyte potential"]
+        phi_e_n = variables["Negative electrolyte potential"]
+        phi_e_s = variables["Separator electrolyte potential"]
+        phi_e_p = variables["Positive electrolyte potential"]
 
         i_s_n = variables["Negative electrode current density"]
         i_s_p = variables["Positive electrode current density"]
@@ -116,7 +119,7 @@ class BaseThermal(pybamm.BaseSubModel):
         Q_ohm_s_n = -pybamm.inner(i_s_n, pybamm.grad(phi_s_n))
         Q_ohm_s_s = pybamm.FullBroadcast(0, ["separator"], "current collector")
         Q_ohm_s_p = -pybamm.inner(i_s_p, pybamm.grad(phi_s_p))
-        Q_ohm_s = pybamm.Concatenation(Q_ohm_s_n, Q_ohm_s_s, Q_ohm_s_p)
+        Q_ohm_s = pybamm.concatenation(Q_ohm_s_n, Q_ohm_s_s, Q_ohm_s_p)
 
         # Ohmic heating in electrolyte
         # TODO: change full stefan-maxwell conductivity so that i_e is always
@@ -124,11 +127,10 @@ class BaseThermal(pybamm.BaseSubModel):
         if isinstance(i_e, pybamm.Concatenation):
             # compute by domain if possible
             i_e_n, i_e_s, i_e_p = i_e.orphans
-            phi_e_n, phi_e_s, phi_e_p = phi_e.orphans
             Q_ohm_e_n = -pybamm.inner(i_e_n, pybamm.grad(phi_e_n))
             Q_ohm_e_s = -pybamm.inner(i_e_s, pybamm.grad(phi_e_s))
             Q_ohm_e_p = -pybamm.inner(i_e_p, pybamm.grad(phi_e_p))
-            Q_ohm_e = pybamm.Concatenation(Q_ohm_e_n, Q_ohm_e_s, Q_ohm_e_p)
+            Q_ohm_e = pybamm.concatenation(Q_ohm_e_n, Q_ohm_e_s, Q_ohm_e_p)
         else:
             Q_ohm_e = -pybamm.inner(i_e, pybamm.grad(phi_e))
 
@@ -138,7 +140,7 @@ class BaseThermal(pybamm.BaseSubModel):
         # Irreversible electrochemical heating
         Q_rxn_n = a_n * j_n * eta_r_n
         Q_rxn_p = a_p * j_p * eta_r_p
-        Q_rxn = pybamm.Concatenation(
+        Q_rxn = pybamm.concatenation(
             *[
                 Q_rxn_n,
                 pybamm.FullBroadcast(0, ["separator"], "current collector"),
@@ -149,7 +151,7 @@ class BaseThermal(pybamm.BaseSubModel):
         # Reversible electrochemical heating
         Q_rev_n = a_n * j_n * (param.Theta ** (-1) + T_n) * dUdT_n
         Q_rev_p = a_p * j_p * (param.Theta ** (-1) + T_p) * dUdT_p
-        Q_rev = pybamm.Concatenation(
+        Q_rev = pybamm.concatenation(
             *[
                 Q_rev_n,
                 pybamm.FullBroadcast(0, ["separator"], "current collector"),

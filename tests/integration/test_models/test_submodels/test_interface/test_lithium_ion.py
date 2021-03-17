@@ -13,7 +13,7 @@ class TestExchangeCurrentDensity(unittest.TestCase):
         c_e_n = pybamm.Variable("concentration", domain=["negative electrode"])
         c_e_s = pybamm.Variable("concentration", domain=["separator"])
         c_e_p = pybamm.Variable("concentration", domain=["positive electrode"])
-        self.c_e = pybamm.Concatenation(c_e_n, c_e_s, c_e_p)
+        self.c_e = pybamm.concatenation(c_e_n, c_e_s, c_e_p)
         self.c_s_n_surf = pybamm.surf(
             pybamm.Variable("particle conc", domain=["negative particle"])
         )

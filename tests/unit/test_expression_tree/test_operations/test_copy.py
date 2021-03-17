@@ -37,7 +37,7 @@ class TestCopy(unittest.TestCase):
             pybamm.PrimaryBroadcast(a, "domain"),
             pybamm.SecondaryBroadcast(v_n, "current collector"),
             pybamm.FullBroadcast(a, "domain", {"secondary": "other domain"}),
-            pybamm.Concatenation(v_n, v_s),
+            pybamm.concatenation(v_n, v_s),
             pybamm.NumpyConcatenation(a, b, v_s),
             pybamm.DomainConcatenation([v_n, v_s], mesh),
             pybamm.Parameter("param"),

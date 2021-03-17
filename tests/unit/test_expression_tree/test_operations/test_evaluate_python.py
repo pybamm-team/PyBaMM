@@ -162,7 +162,7 @@ class TestEvaluate(unittest.TestCase):
         a = pybamm.StateVector(slice(0, 1), domain="test a")
         b = pybamm.StateVector(slice(1, 2), domain="test b")
 
-        expr = pybamm.Concatenation(a, b)
+        expr = pybamm.concatenation(a, b)
         with self.assertRaises(NotImplementedError):
             pybamm.find_symbols(expr, constant_symbols, variable_symbols)
 
@@ -255,7 +255,7 @@ class TestEvaluate(unittest.TestCase):
         b_dom = ["separator"]
         a = pybamm.Variable("a", domain=a_dom)
         b = pybamm.Variable("b", domain=b_dom)
-        conc = pybamm.Concatenation(2 * a, 3 * b)
+        conc = pybamm.concatenation(2 * a, 3 * b)
         disc.set_variable_slices([a, b])
         expr = disc.process_symbol(conc)
         self.assertIsInstance(expr, pybamm.DomainConcatenation)
@@ -275,7 +275,7 @@ class TestEvaluate(unittest.TestCase):
         np.testing.assert_allclose(result, expr.evaluate(y=y))
 
         # check that concatenating a single domain is consistent
-        expr = disc.process_symbol(pybamm.Concatenation(a))
+        expr = disc.process_symbol(pybamm.concatenation(a))
         evaluator = pybamm.EvaluatorPython(expr)
         result = evaluator.evaluate(y=y)
         np.testing.assert_allclose(result, expr.evaluate(y=y))

@@ -52,7 +52,7 @@ class BasicDFN(BaseModel):
         )
         # Concatenations combine several variables into a single variable, to simplify
         # implementing equations that hold over several domains
-        c_e = pybamm.Concatenation(c_e_n, c_e_s, c_e_p)
+        c_e = pybamm.concatenation(c_e_n, c_e_s, c_e_p)
 
         # Electrolyte potential
         phi_e_n = pybamm.Variable(
@@ -62,7 +62,7 @@ class BasicDFN(BaseModel):
         phi_e_p = pybamm.Variable(
             "Positive electrolyte potential", domain="positive electrode"
         )
-        phi_e = pybamm.Concatenation(phi_e_n, phi_e_s, phi_e_p)
+        phi_e = pybamm.concatenation(phi_e_n, phi_e_s, phi_e_p)
 
         # Electrode potential
         phi_s_n = pybamm.Variable(
@@ -107,14 +107,14 @@ class BasicDFN(BaseModel):
         eps_p = pybamm.PrimaryBroadcast(
             pybamm.Parameter("Positive electrode porosity"), "positive electrode"
         )
-        eps = pybamm.Concatenation(eps_n, eps_s, eps_p)
+        eps = pybamm.concatenation(eps_n, eps_s, eps_p)
 
         # Active material volume fraction (eps + eps_s + eps_inactive = 1)
         eps_s_n = pybamm.Parameter("Negative electrode active material volume fraction")
         eps_s_p = pybamm.Parameter("Positive electrode active material volume fraction")
 
         # Tortuosity
-        tor = pybamm.Concatenation(
+        tor = pybamm.concatenation(
             eps_n ** param.b_e_n, eps_s ** param.b_e_s, eps_p ** param.b_e_p
         )
 
@@ -141,7 +141,7 @@ class BasicDFN(BaseModel):
                 param.ne_p / 2 * (phi_s_p - phi_e_p - param.U_p(c_s_surf_p, T))
             )
         )
-        j = pybamm.Concatenation(j_n, j_s, j_p)
+        j = pybamm.concatenation(j_n, j_s, j_p)
 
         ######################
         # State of Charge

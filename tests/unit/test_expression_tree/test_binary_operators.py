@@ -442,6 +442,11 @@ class TestBinaryOperators(unittest.TestCase):
         self.assertIsInstance((c + a), pybamm.Parameter)
         self.assertIsInstance((c + b), pybamm.Addition)
         self.assertIsInstance((b + c), pybamm.Addition)
+        # rearranging additions
+        self.assertEqual(((c + 1) + 2).id, (c + 3).id)
+        self.assertEqual(((1 + c) + 2).id, (3 + c).id)
+        self.assertEqual((2 + (c + 1)).id, (3 + c).id)
+        self.assertEqual((2 + (1 + c)).id, (3 + c).id)
         # addition with broadcast zero
         self.assertIsInstance((b + broad0), pybamm.PrimaryBroadcast)
         np.testing.assert_array_equal((b + broad0).child.evaluate(), 1)
@@ -492,6 +497,12 @@ class TestBinaryOperators(unittest.TestCase):
         self.assertEqual((c * a).evaluate(), 0)
         self.assertIsInstance((b * c), pybamm.Parameter)
         self.assertIsInstance((e * c), pybamm.Multiplication)
+        # multiplication with -1
+        self.assertEqual((c * -1).id, (-c).id)
+        self.assertEqual((-1 * c).id, (-c).id)
+        # multiplication with a negation
+        self.assertEqual((-c * 4).id, (c * -4).id)
+        self.assertEqual((4 * -c).id, (-4 * c).id)
         # multiplication with broadcasts
         self.assertEqual((c * broad2).id, pybamm.PrimaryBroadcast(c * 2, "domain").id)
         self.assertEqual((broad2 * c).id, pybamm.PrimaryBroadcast(2 * c, "domain").id)
@@ -512,10 +523,16 @@ class TestBinaryOperators(unittest.TestCase):
         # multiplication with broadcast one
         self.assertEqual((var * broad1).id, var.id)
         self.assertEqual((broad1 * var).id, var.id)
+        # multiplication with broadcast minus one
+        self.assertEqual((var * -broad1).id, (-var).id)
+        self.assertEqual((-broad1 * var).id, (-var).id)
 
         # division by itself
         self.assertEqual((c / c).id, pybamm.Scalar(1).id)
         self.assertEqual((broad2 / broad2).id, broad1.id)
+        # division with a negation
+        self.assertEqual((-c / 4).id, (c / -4).id)
+        self.assertEqual((4 / -c).id, (-4 / c).id)
         # division with broadcasts
         self.assertEqual((c / broad2).id, pybamm.PrimaryBroadcast(c / 2, "domain").id)
         self.assertEqual((broad2 / c).id, pybamm.PrimaryBroadcast(2 / c, "domain").id)

@@ -191,7 +191,7 @@ class TestSpectralVolume(unittest.TestCase):
             domain=["positive electrode"],
             auxiliary_domains={"secondary": "current collector"},
         )
-        var = pybamm.Concatenation(a, b, c)
+        var = pybamm.concatenation(a, b, c)
         boundary_conditions = {
             var.id: {
                 "left": (pybamm.Vector(np.linspace(0, 1, 15)), "Neumann"),
