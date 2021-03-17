@@ -26,4 +26,4 @@ def plating_exchange_current_density_OKane2020(c_e, c_Li, T):
 
     k_plating = 1e-10
 
-    return constants.F * k_plating * c_e ** 0.5
+    return constants.F * k_plating * c_e
