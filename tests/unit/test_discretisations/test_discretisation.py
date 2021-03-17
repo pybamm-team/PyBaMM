@@ -432,7 +432,7 @@ class TestDiscretise(unittest.TestCase):
         scal2 = pybamm.Scalar(2)
         scal3 = pybamm.Scalar(3)
         scal4 = pybamm.Scalar(4)
-        expression = (scal1 * (scal3 + var2)) / ((var1 - scal4) + scal2)
+        expression = (scal1 * (scal3 ** var2)) / ((var1 - scal4) + scal2)
 
         # create discretisation
         disc = get_discretisation_for_testing()
@@ -443,7 +443,7 @@ class TestDiscretise(unittest.TestCase):
         # left side
         self.assertIsInstance(exp_disc.children[0], pybamm.Multiplication)
         self.assertIsInstance(exp_disc.children[0].children[0], pybamm.Scalar)
-        self.assertIsInstance(exp_disc.children[0].children[1], pybamm.Addition)
+        self.assertIsInstance(exp_disc.children[0].children[1], pybamm.Power)
         self.assertTrue(
             isinstance(exp_disc.children[0].children[1].children[0], pybamm.Scalar)
         )

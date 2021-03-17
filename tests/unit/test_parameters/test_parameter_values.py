@@ -627,7 +627,7 @@ class TestParameterValues(unittest.TestCase):
         par2 = pybamm.Parameter("par2")
         scal1 = pybamm.Scalar(3)
         scal2 = pybamm.Scalar(4)
-        expression = (scal1 * (par1 + var2)) / ((var1 - par2) + scal2)
+        expression = (scal1 * (par1 ** var2)) / ((var1 - par2) + scal2)
 
         param = pybamm.ParameterValues(values={"par1": 1, "par2": 2})
         exp_param = param.process_symbol(expression)
@@ -635,7 +635,7 @@ class TestParameterValues(unittest.TestCase):
         # left side
         self.assertIsInstance(exp_param.children[0], pybamm.Multiplication)
         self.assertIsInstance(exp_param.children[0].children[0], pybamm.Scalar)
-        self.assertIsInstance(exp_param.children[0].children[1], pybamm.Addition)
+        self.assertIsInstance(exp_param.children[0].children[1], pybamm.Power)
         self.assertTrue(
             isinstance(exp_param.children[0].children[1].children[0], pybamm.Scalar)
         )

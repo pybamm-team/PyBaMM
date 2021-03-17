@@ -1376,7 +1376,7 @@ class FiniteVolume(pybamm.SpatialMethod):
                 raise ValueError("shift key '{}' not recognised".format(shift_key))
 
         # If discretised_symbol evaluates to number there is no need to average
-        if discretised_symbol.evaluates_to_number():
+        if discretised_symbol.size == 1:
             out = discretised_symbol
         elif method == "arithmetic":
             out = arithmetic_mean(discretised_symbol)
