@@ -957,4 +957,3 @@ class Simulation:
 def load_sim(filename):
     """Load a saved simulation"""
     return pybamm.load(filename)
-    
