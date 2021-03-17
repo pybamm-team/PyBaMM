@@ -56,6 +56,7 @@ def constant_power(variables, P_applied):
 
 class Simulation:
     """A Simulation class for easy building and running of PyBaMM simulations.
+
     Parameters
     ----------
     model : :class:`pybamm.BaseModel`
@@ -252,6 +253,7 @@ class Simulation:
         Set up self.model to be able to run the experiment (old version).
         In this version, a single model is created which can then be called with
         different inputs for current-control, voltage-control, or power-control.
+
         This reduces set-up time since only one model needs to be processed, but
         increases simulation time since the model formulation is inefficient
         """
@@ -326,6 +328,7 @@ class Simulation:
         """
         Set up self.model to be able to run the experiment (new version).
         In this version, a new model is created for each step.
+
         This increases set-up time since several models to be processed, but
         reduces simulation time since the model formulation is efficient.
         """
@@ -468,6 +471,7 @@ class Simulation:
         solved then this function will have no effect.
         This method will automatically set the parameters
         if they have not already been set.
+
         Parameters
         ----------
         check_model : bool, optional
@@ -536,6 +540,7 @@ class Simulation:
         """
         A method to solve the model. This method will automatically build
         and set the model parameters if not already done so.
+
         Parameters
         ----------
         t_eval : numeric type, optional
@@ -544,10 +549,13 @@ class Simulation:
             list `[t0, tf]` where `t0` is the initial time and `tf` is the final time.
             If provided as a list the solution is returned at 100 points within the
             interval `[t0, tf]`.
+
             If not using an experiment or running a drive cycle simulation (current
             provided as data) `t_eval` *must* be provided.
+
             If running an experiment the values in `t_eval` are ignored, and the
             solution times are specified by the experiment.
+
             If None and the parameter "Current function [A]" is read from data
             (i.e. drive cycle simulation) the model will be solved at the times
             provided in the data.
@@ -755,6 +763,7 @@ class Simulation:
         """
         A method to step the model forward one timestep. This method will
         automatically build and set the model parameters if not already done so.
+
         Parameters
         ----------
         dt : numeric type
@@ -793,6 +802,7 @@ class Simulation:
         A method to quickly plot the outputs of the simulation. Creates a
         :class:`pybamm.QuickPlot` object (with keyword arguments 'kwargs') and
         then calls :meth:`pybamm.QuickPlot.dynamic_plot`.
+
         Parameters
         ----------
         output_variables: list, optional
