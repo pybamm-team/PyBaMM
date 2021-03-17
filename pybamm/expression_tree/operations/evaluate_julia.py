@@ -357,7 +357,6 @@ def get_julia_function(symbol, funcname="f", input_parameter_order=None):
         String of julia code, to be evaluated by ``julia.Main.eval``
 
     """
-
     constants, var_symbols, var_symbol_sizes = to_julia(symbol)
 
     # extract constants in generated function
@@ -539,6 +538,10 @@ def convert_var_and_eqn_to_str(var, eqn, all_constants_str, all_variables_str, t
         variables and/or constants in all_constants_str and all_variables_str
 
     """
+    if isinstance(eqn, pybamm.Broadcast):
+        # ignore broadcasts for now
+        eqn = eqn.child
+
     constants, variable_symbols = to_julia(eqn)[:2]
 
     variables_str = "\n".join(
@@ -734,9 +737,14 @@ def get_julia_mtk_model(model, geometry=None, tspan=None):
         if not is_pde:
             all_ic_bc_str += f"   {variable_id_to_number[var.id]}(t) => {eqn_str},\n"
         else:
-            doms = ", ".join([domain_name_to_symbol[dom] for dom in var.domain])
+            if var.domain == []:
+                doms = ""
+            else:
+                doms = ", " + ", ".join(
+                    [domain_name_to_symbol[dom] for dom in var.domain]
+                )
             all_ic_bc_str += (
-                f"   {variable_id_to_number[var.id]}(0, {doms}) ~ {eqn_str},\n"
+                f"   {variable_id_to_number[var.id]}(0{doms}) ~ {eqn_str},\n"
             )
     # Boundary conditions
     if is_pde:
@@ -763,7 +771,7 @@ def get_julia_mtk_model(model, geometry=None, tspan=None):
 
                     bc = f"{variable_id_to_number[var.id]}(t, {limit})"
                     if typ == "Dirichlet":
-                        pass
+                        bc = bc
                     elif typ == "Neumann":
                         bc = f"D{domain_name_to_symbol[var.domain[0]]}({bc})"
                     all_ic_bc_str += f"   {bc} ~ {eqn_str},\n"
