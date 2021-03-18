@@ -4,7 +4,7 @@ Parameters for a LiPF6 electrolyte, from the papers
 
 > Ecker, Madeleine, et al. "Parameterization of a physico-chemical model of a lithium-ion battery i. determination of parameters." Journal of the Electrochemical Society 162.9 (2015): A1836-A1848.
 
->Ecker, Madeleine, et al. "Parameterization of a physico-chemical model of a lithium-ion battery II. Model validation." Journal of The Electrochemical Society 162.9 (2015): A1849-A1857.
+> Ecker, Madeleine, et al. "Parameterization of a physico-chemical model of a lithium-ion battery II. Model validation." Journal of The Electrochemical Society 162.9 (2015): A1849-A1857.
 
 The fits to data for the electrode and electrolyte properties are those provided
 by Dr. Simon O’Kane in the paper:
