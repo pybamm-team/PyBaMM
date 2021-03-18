@@ -544,12 +544,13 @@ def convert_var_and_eqn_to_str(var, eqn, all_constants_str, all_variables_str, t
 
     constants, variable_symbols = to_julia(eqn)[:2]
 
-    variables_str = "\n".join(
-        [
-            f"{id_to_julia_variable(symbol_id)} = {symbol_line}"
-            for symbol_id, symbol_line in variable_symbols.items()
-        ]
-    )
+    # Replace .+, .* etc with regular +, *, etc
+    replace_ops = ["+", "-", "*", "/"]
+    variables_str = ""
+    for symbol_id, symbol_line in variable_symbols.items():
+        for op in replace_ops:
+            symbol_line = symbol_line.replace("." + op, op)
+        variables_str += f"{id_to_julia_variable(symbol_id)} = {symbol_line}\n"
 
     # extract constants in generated function
     for eqn_id, const_value in constants.items():
@@ -613,7 +614,8 @@ def get_julia_mtk_model(model, geometry=None, tspan=None):
             raise ValueError("must provide tspan if the model is a PDE model")
 
     domain_name_to_symbol = {
-        dom: list(geometry[dom].keys())[0].name for i, dom in enumerate(all_domains)
+        dom: list(geometry[dom].keys())[0].name.replace("_", "")
+        for i, dom in enumerate(all_domains)
     }
     domain_name_to_coord_sys = {
         dom: list(geometry[dom].keys())[0].coord_sys
@@ -652,12 +654,10 @@ def get_julia_mtk_model(model, geometry=None, tspan=None):
 
     # Define derivatives
 
-    mtk_str += "@derivatives Dt'~t\n"
+    mtk_str += "Dt = Derivative(t)\n"
     if is_pde:
-        mtk_str += "@derivatives"
         for domain_symbol in domain_name_to_symbol.values():
-            mtk_str += f" D{domain_symbol}'~{domain_symbol}"
-        mtk_str += "\n"
+            mtk_str += f"D{domain_symbol} = Derivative({domain_symbol})\n"
     mtk_str += "\n"
 
     # Define equations
