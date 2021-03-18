@@ -254,6 +254,11 @@ def find_symbols(symbol, constant_symbols, variable_symbols, variable_symbol_siz
             else:
                 raise NotImplementedError
 
+        else:
+            # A regular Concatenation for the MTK model
+            # Not sure how to deal with this yet so leaving as a "concatenation"
+            symbol_str = "concatenation(" + ", ".join(children_vars) + ")"
+
     # Note: we assume that y is being passed as a column vector
     elif isinstance(symbol, pybamm.StateVector):
         indices = np.argwhere(symbol.evaluation_array).reshape(-1).astype(np.int32)
@@ -286,6 +291,9 @@ def find_symbols(symbol, constant_symbols, variable_symbols, variable_symbol_siz
     elif isinstance(symbol, pybamm.Variable):
         # No need to do anything if a Variable is found
         return
+
+    elif isinstance(symbol, pybamm.SpatialVariable):
+        symbol_str = symbol.name.replace("_", "")
 
     else:
         raise NotImplementedError(
