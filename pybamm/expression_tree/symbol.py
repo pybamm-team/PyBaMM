@@ -588,6 +588,10 @@ class Symbol(anytree.NodeMixin):
             # Move negation inside the broadcast
             # Apply recursively
             return self._unary_new_copy(-self.orphans[0])
+        elif isinstance(self, pybamm.Concatenation) and all(
+            child.is_constant() for child in self.children
+        ):
+            return pybamm.concatenation(*[-child for child in self.orphans])
         else:
             return pybamm.simplify_if_constant(pybamm.Negate(self))
 

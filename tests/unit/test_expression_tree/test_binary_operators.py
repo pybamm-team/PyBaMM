@@ -543,6 +543,29 @@ class TestBinaryOperators(unittest.TestCase):
         with self.assertRaises(ZeroDivisionError):
             b / a
 
+    def test_binary_simplifications_concatenations(self):
+        def conc_broad(x, y, z):
+            return pybamm.concatenation(
+                pybamm.PrimaryBroadcast(x, "negative electrode"),
+                pybamm.PrimaryBroadcast(y, "separator"),
+                pybamm.PrimaryBroadcast(z, "positive electrode"),
+            )
+
+        # Test that concatenations get simplified correctly
+        a = conc_broad(1, 2, 3)
+        b = conc_broad(11, 12, 13)
+        self.assertEqual((a + 4).id, conc_broad(5, 6, 7).id)
+        self.assertEqual((4 + a).id, conc_broad(5, 6, 7).id)
+        self.assertEqual((a + b).id, conc_broad(12, 14, 16).id)
+
+        # No simplifications if there are Variable or StateVector objects
+        v = pybamm.concatenation(
+            pybamm.Variable("x", "negative electrode"),
+            pybamm.Variable("y", "separator"),
+            pybamm.Variable("z", "positive electrode"),
+        )
+        self.assertIsInstance((a * v), pybamm.Multiplication)
+
     def test_advanced_binary_simplifications(self):
         # MatMul simplifications that often appear when discretising spatial operators
         A = pybamm.Matrix(np.random.rand(10, 10))
