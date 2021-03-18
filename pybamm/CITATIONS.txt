@@ -380,3 +380,25 @@ doi={10.1149/2.0661810jes}
   year={2020},
   publisher={Elsevier}
 }
+
+@article{Marinescu2016,
+  title={A zero dimensional model of lithium--sulfur batteries during charge and discharge},
+  author={Marinescu, Monica and Zhang, Teng and Offer, Gregory J},
+  journal={Physical Chemistry Chemical Physics},
+  volume={18},
+  number={1},
+  pages={584--593},
+  year={2016},
+  publisher={Royal Society of Chemistry}
+}
+
+@article{Marinescu2018,
+  title={Irreversible vs reversible capacity fade of lithium-sulfur batteries during cycling: the effects of precipitation and shuttle},
+  author={Marinescu, Monica and O’Neill, Laura and Zhang, Teng and Walus, Sylwia and Wilson, Timothy E and Offer, Gregory J},
+  journal={Journal of The Electrochemical Society},
+  volume={165},
+  number={1},
+  pages={6107--6118},
+  year={2018},
+  publisher={IOP Publishing}
+}

@@ -33,6 +33,10 @@ class MarinescuEtAl2016(BaseModel):
     def __init__(self, options=None, name="Marinescu et al. (2016) model"):
         super().__init__(options, name)
 
+        # register the relevant citations
+        pybamm.citations.register("Marinescu2016")
+        pybamm.citations.register("Marinescu2018")
+
         # set external circuit model (e.g. volatge or current control)
         self.set_external_circuit_submodel()
         V = self.variables["Terminal voltage [V]"]
