@@ -321,25 +321,67 @@ class SparseStack(Concatenation):
         )
 
 
+class ConcatenationVariable(Concatenation):
+    """
+    A Variable representing a concatenation of variables
+    """
+
+    def __init__(self, *children):
+        # Name is the intersection of the children names (should usually make sense
+        # if the children have been named consistently)
+        name = intersect(children[0].name, children[1].name)
+        for child in children[2:]:
+            name = intersect(name, child.name)
+        name = name.capitalize()
+        if name == "":
+            name = None
+        super().__init__(*children, name=name)
+        # Overly tight bounds, can edit later if required
+        self.bounds = (
+            np.max([child.bounds[0] for child in children]),
+            np.min([child.bounds[1] for child in children]),
+        )
+
+
+def substrings(s):
+    for i in range(len(s)):
+        for j in range(i, len(s)):
+            yield s[i : j + 1]
+
+
+def intersect(s1, s2):
+    # find all the common strings between two strings
+    all_intersects = set(substrings(s1)) & set(substrings(s2))
+    # intersect is the longest such intercept
+    if len(all_intersects) == 0:
+        return ""
+    intersect = max(all_intersects, key=len)
+    # lstrip removes leading white space
+    return intersect.lstrip()
+
+
 def simplified_concatenation(*children):
     """ Perform simplifications on a concatenation """
     # Create Concatenation to easily read domains
     concat = Concatenation(*children)
     # Simplify concatenation of broadcasts all with the same child to a single
     # broadcast across all domains
-    if len(children) >= 1 and all(
-        isinstance(child, pybamm.Broadcast) and child.child.id == children[0].child.id
-        for child in children
-    ):
-        unique_child = children[0].orphans[0]
-        if isinstance(children[0], pybamm.PrimaryBroadcast):
-            return pybamm.PrimaryBroadcast(unique_child, concat.domain)
-        else:
-            return pybamm.FullBroadcast(
-                unique_child, concat.domain, concat.auxiliary_domains
-            )
-    else:
-        return concat
+    if len(children) >= 1:
+        if all(
+            isinstance(child, pybamm.Broadcast)
+            and child.child.id == children[0].child.id
+            for child in children
+        ):
+            unique_child = children[0].orphans[0]
+            if isinstance(children[0], pybamm.PrimaryBroadcast):
+                return pybamm.PrimaryBroadcast(unique_child, concat.domain)
+            else:
+                return pybamm.FullBroadcast(
+                    unique_child, concat.domain, concat.auxiliary_domains
+                )
+        elif all(isinstance(child, pybamm.Variable) for child in children):
+            return pybamm.ConcatenationVariable(*children)
+    return concat
 
 
 def concatenation(*children):
