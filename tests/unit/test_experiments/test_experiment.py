@@ -41,14 +41,18 @@ class TestExperiment(unittest.TestCase):
             {"test": "test"}, drive_cycles={"US06": drive_cycle},
             period="20 seconds",
         )
-
-        time_0 = numpy.append(1, numpy.diff(drive_cycle[:, 0]))
+        
+        # Calculation for operating conditions of drive cycle
+        time_0 = drive_cycle[:, 0][-1]
+        period_0 = numpy.min(numpy.diff(drive_cycle[:, 0]))
         drive_cycle_1 = experiment.extend_drive_cycle(
-            drive_cycle, end_time=300)
-        time_1 = numpy.append(1, numpy.diff(drive_cycle_1[:, 0]))
+            drive_cycle, end_time= 300)
+        time_1 = drive_cycle_1[:, 0][-1]
+        period_1 = numpy.min(numpy.diff(drive_cycle_1[:, 0]))
         drive_cycle_2 = experiment.extend_drive_cycle(
             drive_cycle, end_time=1800)
-        time_2 = numpy.append(1, numpy.diff(drive_cycle_2[:, 0]))
+        time_2 = drive_cycle_2[:, 0][-1]
+        period_2 = numpy.min(numpy.diff(drive_cycle_2[:, 0]))
 
         self.assertEqual(
             experiment.operating_conditions[:-3],
@@ -66,23 +70,22 @@ class TestExperiment(unittest.TestCase):
                 (4.1, "V", None, 20.0),
                 (3, "V", None, 20.0),
                 (1 / 3, "C", 7200.0, 20.0),
-
             ],
         )
-
+        # Check drive cycle operating conditions
         self.assertTrue(
             ((experiment.operating_conditions[-3][0] == drive_cycle[:, 1]).all() & (
                 experiment.operating_conditions[-3][1] == "Drive") & (
                 experiment.operating_conditions[-3][2] == time_0).all() & (
-                experiment.operating_conditions[-3][3] == time_0).all() & (
+                experiment.operating_conditions[-3][3] == period_0).all() & (
                 experiment.operating_conditions[-2][0] == drive_cycle_1[:, 1]).all() & (
                 experiment.operating_conditions[-2][1] == "Drive") & (
                 experiment.operating_conditions[-2][2] == time_1).all() & (
-                experiment.operating_conditions[-2][3] == time_1).all() & (
+                experiment.operating_conditions[-2][3] == period_1).all() & (
                 experiment.operating_conditions[-1][0] == drive_cycle_2[:, 1]).all() & (
                 experiment.operating_conditions[-1][1] == "Drive") & (
                 experiment.operating_conditions[-1][2] == time_2).all() & (
-                experiment.operating_conditions[-1][3] == time_2).all())
+                experiment.operating_conditions[-1][3] == period_2).all())
         )
         self.assertEqual(
             experiment.events,

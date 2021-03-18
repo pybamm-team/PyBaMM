@@ -172,18 +172,6 @@ class Experiment:
                     )
                 )
                 # Check for Events
-            elif "for" in cond and "or until" in cond:
-                # e.g. for 3 hours or until 4.2 V
-                idx_for = cond_list.index("for")
-                idx_until = cond_list.index("or")
-                end_time = self.convert_time_to_seconds(
-                    cond_list[idx_for + 1:idx_until])
-                ext_drive_cycle = self.extend_drive_cycle(drive_cycles[cond_list[1]],
-                                                          end_time)
-                electric = (ext_drive_cycle[:, 1], "Drive")
-                time = self._np.append(1, self._np.diff(ext_drive_cycle[:, 0]))
-                period = time
-                events = self.convert_electric(cond_list[idx_until + 2 :])
             elif "for" in cond:
                 # e.g. for 3 hours
                 idx = cond_list.index("for")
@@ -191,25 +179,16 @@ class Experiment:
                 ext_drive_cycle = self.extend_drive_cycle(drive_cycles[cond_list[1]],
                                                           end_time)
                 electric = (ext_drive_cycle[:, 1], "Drive")
-                time = self._np.append(1, self._np.diff(ext_drive_cycle[:, 0]))
-                period = time
+                time = ext_drive_cycle[:, 0][-1]
+                period = self._np.min(self._np.diff(ext_drive_cycle[:, 0]))
                 events = None
-            elif "until" in cond:
-                # e.g. until 4.2 V
-                idx = cond_list.index("until")
-                ext_drive_cycle = self.extend_drive_cycle(drive_cycles[cond_list[1]])
-                electric = (ext_drive_cycle[:, 1], "Drive")
-                time = self._np.append(1, self._np.diff(ext_drive_cycle[:, 0]))
-                period = time
-                events = self.convert_electric(cond_list[idx + 1 :])
             else:
                 # e.g. Run US06
                 electric = (drive_cycles[cond_list[1]][:, 1], "Drive")
                 # Set time and period to 1 second for first step and
                 # then calculate the difference in consecutive time steps
-                time = self._np.append(1,
-                                       self._np.diff(drive_cycles[cond_list[1]][:, 0]))
-                period = time
+                time = drive_cycles[cond_list[1]][:, 0][-1]
+                period = self._np.min(self._np.diff(drive_cycles[cond_list[1]][:, 0]))
                 events = None
         elif "Run" not in cond:
             if "for" in cond and "or until" in cond:
