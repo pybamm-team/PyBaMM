@@ -41,12 +41,12 @@ class TestExperiment(unittest.TestCase):
             {"test": "test"}, drive_cycles={"US06": drive_cycle},
             period="20 seconds",
         )
-        
+
         # Calculation for operating conditions of drive cycle
         time_0 = drive_cycle[:, 0][-1]
         period_0 = numpy.min(numpy.diff(drive_cycle[:, 0]))
         drive_cycle_1 = experiment.extend_drive_cycle(
-            drive_cycle, end_time= 300)
+            drive_cycle, end_time=300)
         time_1 = drive_cycle_1[:, 0][-1]
         period_1 = numpy.min(numpy.diff(drive_cycle_1[:, 0]))
         drive_cycle_2 = experiment.extend_drive_cycle(
