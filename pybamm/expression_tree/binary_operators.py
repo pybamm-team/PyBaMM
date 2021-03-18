@@ -680,14 +680,57 @@ def simplify_elementwise_binary_broadcasts(left, right):
     return left, right
 
 
+def simplified_binary_broadcast_concatenation(left, right, operator):
+    """
+    Check if there are concatenations or broadcasts that we can commute the operator
+    with
+    """
+    # Broadcast commutes with elementwise operators
+    if isinstance(left, pybamm.Broadcast) and right.domain == []:
+        return left._unary_new_copy(operator(left.orphans[0], right))
+    elif isinstance(right, pybamm.Broadcast) and left.domain == []:
+        return right._unary_new_copy(operator(left, right.orphans[0]))
+
+    # Concatenation commutes with elementwise operators
+    # If one of the sides is constant then commute concatenation with the operator
+    # Don't do this if left has any Variable or StateVector objects as these will
+    # be simplified differently later on
+    if isinstance(left, pybamm.Concatenation) and not any(
+        isinstance(child, (pybamm.Variable, pybamm.StateVector))
+        for child in left.children
+    ):
+        if right.evaluates_to_constant_number():
+            return pybamm.concatenation(
+                *[operator(child, right) for child in left.orphans]
+            )
+        elif (
+            isinstance(right, pybamm.Concatenation)
+            and all(child.is_constant() for child in left.children)
+            and all(child.is_constant() for child in right.children)
+        ):
+            return pybamm.concatenation(
+                *[
+                    operator(left_child, right_child)
+                    for left_child, right_child in zip(left.orphans, right.orphans)
+                ]
+            )
+    if isinstance(right, pybamm.Concatenation) and not any(
+        isinstance(child, (pybamm.Variable, pybamm.StateVector))
+        for child in right.children
+    ):
+        if left.evaluates_to_constant_number():
+            return pybamm.concatenation(
+                *[operator(left, child) for child in right.orphans]
+            )
+
+
 def simplified_power(left, right):
     left, right = simplify_elementwise_binary_broadcasts(left, right)
 
-    # Broadcast commutes with power operator
-    if isinstance(left, pybamm.Broadcast) and right.domain == []:
-        return left._unary_new_copy(left.orphans[0] ** right)
-    elif isinstance(right, pybamm.Broadcast) and left.domain == []:
-        return right._unary_new_copy(left ** right.orphans[0])
+    # Check for Concatenations and Broadcasts
+    out = simplified_binary_broadcast_concatenation(left, right, simplified_power)
+    if out is not None:
+        return out
 
     # anything to the power of zero is one
     if pybamm.is_scalar_zero(right):
@@ -733,11 +776,10 @@ def simplified_addition(left, right):
     """
     left, right = simplify_elementwise_binary_broadcasts(left, right)
 
-    # Broadcast commutes with addition operator
-    if isinstance(left, pybamm.Broadcast) and right.domain == []:
-        return left._unary_new_copy(left.orphans[0] + right)
-    elif isinstance(right, pybamm.Broadcast) and left.domain == []:
-        return right._unary_new_copy(left + right.orphans[0])
+    # Check for Concatenations and Broadcasts
+    out = simplified_binary_broadcast_concatenation(left, right, simplified_addition)
+    if out is not None:
+        return out
 
     # anything added by a scalar zero returns the other child
     elif pybamm.is_scalar_zero(left):
@@ -828,11 +870,10 @@ def simplified_subtraction(left, right):
     """
     left, right = simplify_elementwise_binary_broadcasts(left, right)
 
-    # Broadcast commutes with subtraction operator
-    if isinstance(left, pybamm.Broadcast) and right.domain == []:
-        return left._unary_new_copy(left.orphans[0] - right)
-    elif isinstance(right, pybamm.Broadcast) and left.domain == []:
-        return right._unary_new_copy(left - right.orphans[0])
+    # Check for Concatenations and Broadcasts
+    out = simplified_binary_broadcast_concatenation(left, right, simplified_subtraction)
+    if out is not None:
+        return out
 
     # anything added by a scalar zero returns the other child
     if pybamm.is_scalar_zero(left):
@@ -879,11 +920,12 @@ def simplified_subtraction(left, right):
 def simplified_multiplication(left, right):
     left, right = simplify_elementwise_binary_broadcasts(left, right)
 
-    # Broadcast commutes with multiplication operator
-    if isinstance(left, pybamm.Broadcast) and right.domain == []:
-        return left._unary_new_copy(left.orphans[0] * right)
-    elif isinstance(right, pybamm.Broadcast) and left.domain == []:
-        return right._unary_new_copy(left * right.orphans[0])
+    # Check for Concatenations and Broadcasts
+    out = simplified_binary_broadcast_concatenation(
+        left, right, simplified_multiplication
+    )
+    if out is not None:
+        return out
 
     # simplify multiply by scalar zero, being careful about shape
     if pybamm.is_scalar_zero(left):
@@ -1048,11 +1090,10 @@ def simplified_multiplication(left, right):
 def simplified_division(left, right):
     left, right = simplify_elementwise_binary_broadcasts(left, right)
 
-    # Broadcast commutes with division operator
-    if isinstance(left, pybamm.Broadcast) and right.domain == []:
-        return left._unary_new_copy(left.orphans[0] / right)
-    elif isinstance(right, pybamm.Broadcast) and left.domain == []:
-        return right._unary_new_copy(left / right.orphans[0])
+    # Check for Concatenations and Broadcasts
+    out = simplified_binary_broadcast_concatenation(left, right, simplified_division)
+    if out is not None:
+        return out
 
     # zero divided by anything returns zero (being careful about shape)
     if pybamm.is_scalar_zero(left):
