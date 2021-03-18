@@ -111,7 +111,7 @@ Yang2017 = {
     "cell": "Yang2017",
     "negative electrode": "graphite_Yang2017",
     "separator": "separator_Ecker2015",
-    "positive electrode": "LiNiCoO2_Ecker2015",
+    "positive electrode": "nmc_Yang2017",
     "electrolyte": "lipf6_Ecker2015",
     "experiment": "1C_discharge_from_full_Ecker2015",
     "sei": "yang2017_sei",
