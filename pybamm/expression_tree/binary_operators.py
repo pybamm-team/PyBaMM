@@ -1029,9 +1029,10 @@ def simplified_multiplication(left, right):
             or (isinstance(right.right, mul_classes) and right.right.left.is_constant())
         ):
             r_left, r_right = right.orphans
-            r_left.copy_domains(right)
-            r_right.copy_domains(right)
-            return (left * r_left) + (left * r_right)
+            if (r_left.domain == right.domain or r_left.domain == []) and (
+                r_right.domain == right.domain or r_right.domain == []
+            ):
+                return (left * r_left) + (left * r_right)
 
     # Negation simplifications
     if isinstance(left, pybamm.Negate) and right.is_constant():
