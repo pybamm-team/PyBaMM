@@ -693,34 +693,32 @@ def simplified_binary_broadcast_concatenation(left, right, operator):
 
     # Concatenation commutes with elementwise operators
     # If one of the sides is constant then commute concatenation with the operator
-    # Don't do this if left has any Variable or StateVector objects as these will
+    # Don't do this for ConcatenationVariable objects as these will
     # be simplified differently later on
-    if isinstance(left, pybamm.Concatenation) and not any(
-        isinstance(child, (pybamm.Variable, pybamm.StateVector))
-        for child in left.children
+    if isinstance(left, pybamm.Concatenation) and not isinstance(
+        left, pybamm.ConcatenationVariable
     ):
         if right.evaluates_to_constant_number():
-            return pybamm.concatenation(
-                *[operator(child, right) for child in left.orphans]
+            return left._concatenation_new_copy(
+                [operator(child, right) for child in left.orphans]
             )
         elif (
             isinstance(right, pybamm.Concatenation)
             and all(child.is_constant() for child in left.children)
             and all(child.is_constant() for child in right.children)
         ):
-            return pybamm.concatenation(
-                *[
+            return left._concatenation_new_copy(
+                [
                     operator(left_child, right_child)
                     for left_child, right_child in zip(left.orphans, right.orphans)
                 ]
             )
-    if isinstance(right, pybamm.Concatenation) and not any(
-        isinstance(child, (pybamm.Variable, pybamm.StateVector))
-        for child in right.children
+    if isinstance(right, pybamm.Concatenation) and not isinstance(
+        right, pybamm.ConcatenationVariable
     ):
         if left.evaluates_to_constant_number():
-            return pybamm.concatenation(
-                *[operator(left, child) for child in right.orphans]
+            return right._concatenation_new_copy(
+                [operator(left, child) for child in right.orphans]
             )
 
 
