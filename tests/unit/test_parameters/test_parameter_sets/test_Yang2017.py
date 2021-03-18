@@ -43,7 +43,7 @@ class TestYang2017(unittest.TestCase):
         chemistry = pybamm.parameter_sets.Yang2017
         parameter_values = pybamm.ParameterValues(chemistry=chemistry)
 
-        model = pybamm.lithium_ion.DFN()
+        model = pybamm.lithium_ion.Yang2017()
         sim = pybamm.Simulation(model, parameter_values=parameter_values)
         sim.set_parameters()
         sim.build()

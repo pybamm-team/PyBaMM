@@ -10,6 +10,14 @@ class TestYang2017(unittest.TestCase):
         model = pybamm.lithium_ion.Yang2017()
         model.check_well_posedness()
 
+    def test_default_parameter_values(self):
+        model = pybamm.lithium_ion.Yang2017()
+        chemistry = pybamm.parameter_sets.Yang2017
+        parameter_values = pybamm.ParameterValues(chemistry=chemistry)
+        self.assertDictEqual(
+            parameter_values._dict_items, model.default_parameter_values._dict_items
+        )
+
 
 if __name__ == "__main__":
     print("Add -v for more debug output")
