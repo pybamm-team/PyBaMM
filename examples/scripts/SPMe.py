@@ -9,18 +9,21 @@ pybamm.set_logging_level("INFO")
 
 # load model
 model = pybamm.lithium_ion.SPMe()
-model.convert_to_format = "python"
+# model.convert_to_format = "python"
 
 # create geometry
 geometry = model.default_geometry
 
 # load parameter values and process model and geometry
 param = model.default_parameter_values
+param["Electrolyte diffusivity [m2.s-1]"] = 1e-10
 param.process_model(model)
 param.process_geometry(geometry)
 
 # set mesh
-mesh = pybamm.Mesh(geometry, model.default_submesh_types, model.default_var_pts)
+var = pybamm.standard_spatial_vars
+var_pts = {var.x_n: 20, var.x_s: 20, var.x_p: 20, var.r_n: 30, var.r_p: 30}
+mesh = pybamm.Mesh(geometry, model.default_submesh_types, var_pts)
 
 # discretise model
 disc = pybamm.Discretisation(mesh, model.default_spatial_methods)
@@ -28,7 +31,9 @@ disc.process_model(model)
 
 # solve model for 1 hour
 t_eval = np.linspace(0, 3600, 100)
-solution = model.default_solver.solve(model, t_eval)
+solver = pybamm.CasadiSolver(mode="fast", rtol=1e-6, atol=1e-6)
+solution = solver.solve(model, t_eval)
+solution = solver.solve(model, t_eval)
 
 # plot
 plot = pybamm.QuickPlot(
