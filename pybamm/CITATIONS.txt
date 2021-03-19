@@ -371,7 +371,7 @@ doi={10.1149/2.0661810jes}
   year={2004},
   publisher={IOP Publishing},
   doi={10.1149/1.1634273},
-  }
+}
 
 
 @article{Newman1962,
@@ -394,4 +394,3 @@ doi={10.1149/2.0661810jes}
   year={2020},
   publisher={Elsevier}
 }
-
