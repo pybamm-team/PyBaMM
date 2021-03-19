@@ -3,7 +3,7 @@ import unittest
 import tests
 
 
-class TestYANG2017(unittest.TestCase):
+class TestYang2017(unittest.TestCase):
     def test_basic_processing(self):
         model = pybamm.lithium_ion.Yang2017()
         modeltest = tests.StandardModelTest(model)
