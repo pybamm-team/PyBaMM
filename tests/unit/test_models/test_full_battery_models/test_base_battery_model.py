@@ -237,12 +237,6 @@ class TestBaseBatteryModel(unittest.TestCase):
                 }
             )
 
-        with self.assertRaisesRegex(
-            pybamm.OptionError,
-            "lithium plating porosity change must now be given in string format",
-        ):
-            pybamm.BaseBatteryModel({"lithium plating porosity change": True})
-
     def test_build_twice(self):
         model = pybamm.lithium_ion.SPM()  # need to pick a model to set vars and build
         with self.assertRaisesRegex(pybamm.ModelError, "Model already built"):
