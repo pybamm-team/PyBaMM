@@ -231,7 +231,7 @@ class Experiment:
             # Extend the drive cycle until the drive cycle time
             # becomes greater than specified end time
             temp_time.append(np.append(temp_time[i - 1],
-                                             temp_time[0] + temp_time[i - 1][-1] + 1))
+                                        temp_time[0] + temp_time[i - 1][-1] + 1))
             loop_end_time = temp_time[i][-1]
             i += 1
         time = temp_time[-1]
