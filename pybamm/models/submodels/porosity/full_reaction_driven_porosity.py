@@ -19,7 +19,6 @@ class Full(BaseModel):
 
     def __init__(self, param, options):
         super().__init__(param, options)
-        self.options = options
 
     def get_fundamental_variables(self):
 
