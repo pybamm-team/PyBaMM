@@ -2,6 +2,8 @@
 # Experiment class
 #
 
+import numpy as np
+
 examples = """
 
     Discharge at 1C for 0.5 hours,
@@ -66,7 +68,6 @@ class Experiment:
         drive_cycles={},
     ):
 
-        import numpy as np
         self._np = np
 
         self.period = self.convert_time_to_seconds(period.split())
@@ -222,15 +223,12 @@ class Experiment:
                 )
         return electric + (time,) + (period,), events
 
-    def extend_drive_cycle(self, drive_cycle, end_time=None):
-        "Extends the drive cycle to enable until and for events"
+    def extend_drive_cycle(self, drive_cycle, end_time):
+        "Extends the drive cycle to enable for event"
         temp_time = []
         temp_time.append(drive_cycle[:, 0])
         loop_end_time = temp_time[0][-1]
         i = 1
-        if end_time is None:
-            # Extend for 1 week.
-            end_time = 7 * 24 * 60 * 60
         while loop_end_time <= end_time:
             # Extend the drive cycle until the drive cycle time
             # becomes greater than specified end time
