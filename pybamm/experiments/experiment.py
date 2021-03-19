@@ -68,8 +68,6 @@ class Experiment:
         drive_cycles={},
     ):
 
-        self._np = np
-
         self.period = self.convert_time_to_seconds(period.split())
         operating_conditions_cycles = []
         for cycle in operating_conditions:
@@ -181,7 +179,7 @@ class Experiment:
                                                           end_time)
                 electric = (ext_drive_cycle[:, 1], "Drive")
                 time = ext_drive_cycle[:, 0][-1]
-                period = self._np.min(self._np.diff(ext_drive_cycle[:, 0]))
+                period = np.min(np.diff(ext_drive_cycle[:, 0]))
                 events = None
             else:
                 # e.g. Run US06
@@ -189,7 +187,7 @@ class Experiment:
                 # Set time and period to 1 second for first step and
                 # then calculate the difference in consecutive time steps
                 time = drive_cycles[cond_list[1]][:, 0][-1]
-                period = self._np.min(self._np.diff(drive_cycles[cond_list[1]][:, 0]))
+                period = np.min(np.diff(drive_cycles[cond_list[1]][:, 0]))
                 events = None
         elif "Run" not in cond:
             if "for" in cond and "or until" in cond:
@@ -232,14 +230,14 @@ class Experiment:
         while loop_end_time <= end_time:
             # Extend the drive cycle until the drive cycle time
             # becomes greater than specified end time
-            temp_time.append(self._np.append(temp_time[i - 1],
+            temp_time.append(np.append(temp_time[i - 1],
                                              temp_time[0] + temp_time[i - 1][-1] + 1))
             loop_end_time = temp_time[i][-1]
             i += 1
         time = temp_time[-1]
-        drive_data = self._np.tile(drive_cycle[:, 1], i)
+        drive_data = np.tile(drive_cycle[:, 1], i)
         # Combine the drive cycle time and data
-        ext_drive_cycle = self._np.column_stack((time, drive_data))
+        ext_drive_cycle = np.column_stack((time, drive_data))
         # Limit the drive cycle to the specified end_time
         ext_drive_cycle = ext_drive_cycle[ext_drive_cycle[:, 0] <= end_time]
         del temp_time
