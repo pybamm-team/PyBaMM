@@ -271,12 +271,6 @@ class Options(pybamm.FuzzyDict):
                 "('true' or 'false')"
             )
 
-        if options["lithium plating porosity change"] in [True, False]:
-            raise pybamm.OptionError(
-                "lithium plating porosity change must now be given in string format "
-                "('true' or 'false')"
-            )
-
         if options["dimensionality"] == 0:
             if options["current collector"] not in ["uniform"]:
                 raise pybamm.OptionError(
