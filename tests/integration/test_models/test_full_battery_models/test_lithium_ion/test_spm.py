@@ -168,8 +168,7 @@ class TestSPM(unittest.TestCase):
     def test_surface_form_algebraic(self):
         options = {"surface form": "algebraic"}
         model = pybamm.lithium_ion.SPM(options)
-        param = pybamm.ParameterValues(chemistry=pybamm.parameter_sets.Yang2017)
-        modeltest = tests.StandardModelTest(model, parameter_values=param)
+        modeltest = tests.StandardModelTest(model)
         modeltest.test_all()
 
     def test_well_posed_irreversible_plating_with_porosity(self):
