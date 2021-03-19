@@ -1,3 +1,4 @@
+#
 # Class for irreversible lithium plating
 #
 import pybamm
