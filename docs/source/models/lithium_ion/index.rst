@@ -8,3 +8,4 @@ Lithium-ion Models
   spme
   dfn
   newman_tobias
+  yang2017

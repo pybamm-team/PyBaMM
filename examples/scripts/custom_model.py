@@ -16,7 +16,7 @@ model.submodels["external circuit"] = pybamm.external_circuit.CurrentControl(
 )
 model.submodels["current collector"] = pybamm.current_collector.Uniform(model.param)
 model.submodels["thermal"] = pybamm.thermal.isothermal.Isothermal(model.param)
-model.submodels["porosity"] = pybamm.porosity.Constant(model.param)
+model.submodels["porosity"] = pybamm.porosity.Constant(model.param, model.options)
 model.submodels["negative active material"] = pybamm.active_material.Constant(
     model.param, "Negative", model.options
 )
