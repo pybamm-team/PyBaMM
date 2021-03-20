@@ -76,6 +76,15 @@ Lithium-ion parameter sets
          Popov. Development of first principles capacity fade model for li-ion cells.
          Journal of the Electrochemical Society, 151(2):A196, 2004.
          doi:10.1149/1.1634273.
+    * Yang2017 :
+       - Madeleine Ecker, Thi Kim Dung Tran, Philipp Dechent, Stefan Käbitz, Alexander
+         Warnecke, and Dirk Uwe Sauer. Parameterization of a Physico-Chemical Model of a
+         Lithium-Ion Battery: I. Determination of Parameters. Journal of the
+         Electrochemical Society, 162(9):A1836–A1848, 2015. doi:10.1149/2.0551509jes.
+       - Xiao Guang Yang, Yongjun Leng, Guangsheng Zhang, Shanhai Ge, and Chao Yang
+         Wang. Modeling of lithium plating induced aging of lithium-ion batteries:
+         transition from linear to nonlinear aging. Journal of Power Sources, 360:28–40,
+         2017. doi:10.1016/j.jpowsour.2017.05.110.
 """
 
 #
