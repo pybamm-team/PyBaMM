@@ -52,6 +52,14 @@ class TestCasadiSolver(unittest.TestCase):
             solution.y.full()[0], np.exp(0.1 * solution.t), decimal=5
         )
 
+        # Fast with events
+        solver = pybamm.CasadiSolver(mode="fast with events", rtol=1e-8, atol=1e-8)
+        solution = solver.solve(model, t_eval)
+        np.testing.assert_array_equal(solution.t, t_eval)
+        np.testing.assert_array_almost_equal(
+            solution.y.full()[0], np.exp(0.1 * solution.t), decimal=5
+        )
+
     def test_model_solver_python(self):
         # Create model
         pybamm.set_logging_level("ERROR")
@@ -116,6 +124,21 @@ class TestCasadiSolver(unittest.TestCase):
         ]
         disc = get_discretisation_for_testing()
         disc.process_model(model)
+
+        # Solve using "fast with events" mode
+        solver = pybamm.CasadiSolver(mode="fast with events", rtol=1e-8, atol=1e-8)
+        t_eval = np.linspace(0, 5, 100)
+        solution = solver.solve(model, t_eval)
+        np.testing.assert_array_less(solution.y.full()[0, :-1], 1.5)
+        np.testing.assert_array_less(solution.y.full()[-1, :-1], 2.5)
+        np.testing.assert_equal(solution.t_event[0], solution.t[-1])
+        np.testing.assert_array_equal(solution.y_event[:, 0], solution.y.full()[:, -1])
+        np.testing.assert_array_almost_equal(
+            solution.y.full()[0], np.exp(0.1 * solution.t), decimal=5
+        )
+        np.testing.assert_array_almost_equal(
+            solution.y.full()[-1], 2 * np.exp(0.1 * solution.t), decimal=5
+        )
 
         # Solve using "safe" mode
         solver = pybamm.CasadiSolver(mode="safe", rtol=1e-8, atol=1e-8)

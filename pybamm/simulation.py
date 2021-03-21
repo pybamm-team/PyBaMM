@@ -172,12 +172,14 @@ class Simulation:
         for op, events in zip(experiment.operating_conditions, experiment.events):
             if op[1] in ["A", "C"]:
                 # Update inputs for constant current
+                capacity = self._parameter_values["Nominal cell capacity [A.h]"]
                 if op[1] == "A":
                     I = op[0]
+                    Crate = I / capacity
                 else:
                     # Scale C-rate with capacity to obtain current
-                    capacity = self._parameter_values["Nominal cell capacity [A.h]"]
-                    I = op[0] * capacity
+                    Crate = op[0]
+                    I = Crate * capacity
                 operating_inputs = {
                     "Current switch": 1,
                     "Voltage switch": 0,
@@ -238,8 +240,13 @@ class Simulation:
             # Add time to the experiment times
             dt = op[2]
             if dt is None:
-                # max simulation time: 1 week
-                dt = 7 * 24 * 3600
+                if op[1] in ["A", "C"]:
+                    # Current control: max simulation time: 3 * max simulation time
+                    # based on C-rate
+                    dt = 3 / abs(Crate) * 3600  # seconds
+                else:
+                    # max simulation time: 1 day
+                    dt = 24 * 3600  # seconds
             self._experiment_times.append(dt)
 
         # Set up model for experiment
@@ -415,13 +422,14 @@ class Simulation:
                         )
                     )
 
-                # Remove upper and lower voltage cut-offs that are *not* part of the
+                # Keep the min and max voltages as safeguards but add some tolerances
+                # so that they are not triggered before the voltage limits in the
                 # experiment
-                new_model.events = [
-                    event
-                    for event in new_model.events
-                    if event.name not in ["Minimum voltage", "Maximum voltage"]
-                ]
+                for event in new_model.events:
+                    if event.name == "Minimum voltage":
+                        event._expression += 1
+                    elif event.name == "Maximum voltage":
+                        event._expression -= 1
 
                 # Update parameter values
                 new_parameter_values = self.parameter_values.copy()
