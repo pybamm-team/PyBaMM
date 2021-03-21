@@ -18,7 +18,9 @@ experiment = pybamm.Experiment(
     * 3
 )
 model = pybamm.lithium_ion.SPM()
-sim = pybamm.Simulation(model, experiment=experiment, solver=pybamm.CasadiSolver())
+sim = pybamm.Simulation(
+    model, experiment=experiment, solver=pybamm.CasadiSolver("fast with events")
+)
 sim.solve()
 
 # Plot voltages from the discharge segments only
