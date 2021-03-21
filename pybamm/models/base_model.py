@@ -917,11 +917,12 @@ class BaseModel(object):
         C.add(variables_fn)
         C.generate()
 
-    def generate_julia_diffeq(self, input_parameter_order=None):
+    def generate_julia_diffeq(
+        self, input_parameter_order=None, get_consistent_ics_solver=None
+    ):
         """
         Generate a Julia representation of the model, ready to be solved by Julia's
         DifferentialEquations library.
-        Currently only implemented for ODE models.
 
         Parameters
         ----------
@@ -930,7 +931,7 @@ class BaseModel(object):
 
         Returns
         -------
-        rhs_str : str
+        eqn_str : str
             The Julia-compatible equations for the model in string format,
             to be evaluated by eval(Meta.parse(...))
         ics_str : str
@@ -939,22 +940,25 @@ class BaseModel(object):
         """
         self.check_discretised_or_discretise_inplace_if_0D()
 
-        # Check that there are no algebraic equations in the model
-        if self.algebraic != {}:
-            raise pybamm.ModelError(
-                "Cannot generate Julia DiffEq model for a DAE model"
-            )
-
         name = self.name.replace(" ", "_")
 
-        rhs_str = pybamm.get_julia_function(
-            self.concatenated_rhs,
+        eqn_str = pybamm.get_julia_function(
+            pybamm.numpy_concatenation(
+                self.concatenated_rhs, self.concatenated_algebraic
+            ),
             funcname=name,
             input_parameter_order=input_parameter_order,
         )
 
+        if get_consistent_ics_solver is None or self.algebraic == {}:
+            ics = self.concatenated_initial_conditions
+        else:
+            get_consistent_ics_solver.set_up(self)
+            get_consistent_ics_solver._set_initial_conditions(self, {}, False)
+            ics = pybamm.Vector(self.y0.full())
+
         ics_str = pybamm.get_julia_function(
-            self.concatenated_initial_conditions,
+            ics,
             funcname=name + "_u0",
             input_parameter_order=input_parameter_order,
         )
@@ -962,7 +966,7 @@ class BaseModel(object):
         ics_str = ics_str.replace("(dy, y, p, t)", "(u0, p)")
         ics_str = ics_str.replace("dy", "u0")
 
-        return rhs_str, ics_str
+        return eqn_str, ics_str
 
     @property
     def default_parameter_values(self):

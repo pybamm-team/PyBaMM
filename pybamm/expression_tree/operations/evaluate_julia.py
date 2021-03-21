@@ -137,21 +137,20 @@ def find_symbols(symbol, constant_symbols, variable_symbols, variable_symbol_siz
         # TODO: we can pass through a dummy y and t to get the type and then hardcode
         # the right line, avoiding these checks
         if isinstance(symbol, pybamm.MatrixMultiplication):
-            symbol_str = "{0} * {1}".format(children_vars[0], children_vars[1])
+            symbol_str = "{0} @ {1}".format(children_vars[0], children_vars[1])
         elif isinstance(symbol, pybamm.Inner):
-            symbol_str = "{0} .* {1}".format(children_vars[0], children_vars[1])
+            symbol_str = "{0} * {1}".format(children_vars[0], children_vars[1])
         elif isinstance(symbol, pybamm.Minimum):
-            symbol_str = "min.({},{})".format(children_vars[0], children_vars[1])
+            symbol_str = "min({},{})".format(children_vars[0], children_vars[1])
         elif isinstance(symbol, pybamm.Maximum):
-            symbol_str = "max.({},{})".format(children_vars[0], children_vars[1])
+            symbol_str = "max({},{})".format(children_vars[0], children_vars[1])
         elif isinstance(symbol, pybamm.Power):
             # julia uses ^ instead of ** for power
             # include dot for elementwise operations
-            symbol_str = children_vars[0] + " .^ " + children_vars[1]
+            symbol_str = children_vars[0] + " ^ " + children_vars[1]
         else:
             # all other operations use the same symbol
-            # include dot: all other operations should be elementwise
-            symbol_str = children_vars[0] + " ." + symbol.name + " " + children_vars[1]
+            symbol_str = children_vars[0] + " " + symbol.name + " " + children_vars[1]
 
     elif isinstance(symbol, pybamm.UnaryOperator):
         # Index has a different syntax than other univariate operations
@@ -162,9 +161,9 @@ def find_symbols(symbol, constant_symbols, variable_symbols, variable_symbol_siz
                 children_vars[0], symbol.slice.start + 1, symbol.slice.stop
             )
         elif isinstance(symbol, pybamm.Gradient):
-            symbol_str = "grad_{}({})".format(symbol.domain[0], children_vars[0])
+            symbol_str = "grad_{}({})".format(tuple(symbol.domain), children_vars[0])
         elif isinstance(symbol, pybamm.Divergence):
-            symbol_str = "div_{}({})".format(symbol.domain[0], children_vars[0])
+            symbol_str = "div_{}({})".format(tuple(symbol.domain), children_vars[0])
         elif isinstance(symbol, pybamm.Broadcast):
             # ignore broadcasts for now
             symbol_str = children_vars[0]
@@ -180,11 +179,11 @@ def find_symbols(symbol, constant_symbols, variable_symbols, variable_symbol_siz
                 children_str += ", " + child_var
         # write functions directly
         julia_name = symbol.julia_name
-        # add a . to allow elementwise operations
-        if isinstance(symbol, (pybamm.Min, pybamm.Max)):
-            symbol_str = "{}({})".format(julia_name, children_str)
-        else:
-            symbol_str = "{}.({})".format(julia_name, children_str)
+        symbol_str = "{}({})".format(julia_name, children_str)
+
+    elif isinstance(symbol, (pybamm.Variable, pybamm.ConcatenationVariable)):
+        # No need to do anything if a Variable is found
+        return
 
     elif isinstance(symbol, pybamm.Concatenation):
 
@@ -288,10 +287,6 @@ def find_symbols(symbol, constant_symbols, variable_symbols, variable_symbol_siz
     elif isinstance(symbol, pybamm.InputParameter):
         symbol_str = "inputs['{}']".format(symbol.name)
 
-    elif isinstance(symbol, pybamm.Variable):
-        # No need to do anything if a Variable is found
-        return
-
     elif isinstance(symbol, pybamm.SpatialVariable):
         symbol_str = symbol.name.replace("_", "")
 
@@ -376,7 +371,7 @@ def get_julia_function(symbol, funcname="f", input_parameter_order=None):
     # Pop (get and remove) items from the dictionary of symbols one by one
     # If they are simple operations (@view, .+, .-, .*, ./), replace all future
     # occurences instead of assigning them. This "inlining" speeds up the computation
-    inlineable_symbols = ["@view", ".+", ".-", ".*", "./"]
+    inlineable_symbols = ["@view", "+", "-", "*", "/"]
     var_str = ""
     input_parameters = {}
     while var_symbols:
@@ -392,13 +387,13 @@ def get_julia_function(symbol, funcname="f", input_parameter_order=None):
                 child_size, child_name = child_size_and_name.split("::")
                 end = start + int(child_size)
                 # add 1 to start to account for julia 1-indexing
-                var_str += "{}[{}:{}] .= {}\n".format(
+                var_str += "@. {}[{}:{}] = {}\n".format(
                     julia_var, start + 1, end, child_name
                 )
                 start = end
         # use mul! for matrix multiplications (requires LinearAlgebra library)
-        elif " * " in symbol_line:
-            symbol_line = symbol_line.replace(" * ", ", ")
+        elif " @ " in symbol_line:
+            symbol_line = symbol_line.replace(" @ ", ", ")
             var_str += "mul!({}, {})\n".format(julia_var, symbol_line)
         # find input parameters
         elif symbol_line.startswith("inputs"):
@@ -415,7 +410,7 @@ def get_julia_function(symbol, funcname="f", input_parameter_order=None):
                     # first in that case, unless it is a @view in which case we don't
                     # need to cache
                     if julia_var in next_symbol_line and not (
-                        (" * " in next_symbol_line or "mul!" in next_symbol_line)
+                        (" @ " in next_symbol_line or "mul!" in next_symbol_line)
                         and not symbol_line.startswith("@view")
                     ):
                         if symbol_line != "t":
@@ -430,11 +425,11 @@ def get_julia_function(symbol, funcname="f", input_parameter_order=None):
                             )
                         found_replacement = True
                 if not found_replacement:
-                    var_str += "{} .= {}\n".format(julia_var, symbol_line)
+                    var_str += "@. {} = {}\n".format(julia_var, symbol_line)
 
             # otherwise assign
             else:
-                var_str += "{} .= {}\n".format(julia_var, symbol_line)
+                var_str += "@. {} = {}\n".format(julia_var, symbol_line)
     # Replace all input parameter names
     for input_parameter_id, input_parameter_name in input_parameters.items():
         var_str = var_str.replace(input_parameter_id, input_parameter_name)
@@ -497,9 +492,8 @@ def get_julia_function(symbol, funcname="f", input_parameter_order=None):
     else:
         julia_str = julia_str.replace("cs." + result_var, "dy")
 
-    # close the function
-    julia_str += "end\n\n"
-    julia_str = julia_str.replace("\n   end", "\nend")
+    # close the function, with a 'nothing' to avoid allocations
+    julia_str += "nothing\nend\n\n"
     julia_str = julia_str.replace("\n   \n", "\n")
 
     if const_and_cache_str == "":
@@ -552,12 +546,8 @@ def convert_var_and_eqn_to_str(var, eqn, all_constants_str, all_variables_str, t
 
     constants, variable_symbols = to_julia(eqn)[:2]
 
-    # Replace .+, .* etc with regular +, *, etc
-    replace_ops = ["+", "-", "*", "/"]
     variables_str = ""
     for symbol_id, symbol_line in variable_symbols.items():
-        for op in replace_ops:
-            symbol_line = symbol_line.replace("." + op, op)
         variables_str += f"{id_to_julia_variable(symbol_id)} = {symbol_line}\n"
 
     # extract constants in generated function
@@ -610,7 +600,7 @@ def get_julia_mtk_model(model, geometry=None, tspan=None):
     # Extract variables
     variables = {**model.rhs, **model.algebraic}.keys()
     variable_id_to_number = {var.id: f"u{i+1}" for i, var in enumerate(variables)}
-    all_domains = list(set([dom for var in variables for dom in var.domain]))
+    all_domains = [var.domain for var in variables if var.domain != []]
 
     is_pde = bool(all_domains)
 
@@ -621,13 +611,19 @@ def get_julia_mtk_model(model, geometry=None, tspan=None):
         if tspan is None:
             raise ValueError("must provide tspan if the model is a PDE model")
 
-    domain_name_to_symbol = {
-        dom: list(geometry[dom].keys())[0].name.replace("_", "")
-        for i, dom in enumerate(all_domains)
-    }
+    domain_name_to_symbol = {}
+    for dom in all_domains:
+        # Read domain name from geometry
+        domain_symbol = list(geometry[dom[0]].keys())[0].name.replace("_", "")
+        if len(dom) > 1:
+            # For multi-domain variables keep only the first letter of the domain
+            domain_name_to_symbol[tuple(dom)] = domain_symbol[0]
+        else:
+            # Otherwise keep the whole domain
+            domain_name_to_symbol[tuple(dom)] = domain_symbol
+
     domain_name_to_coord_sys = {
-        dom: list(geometry[dom].keys())[0].coord_sys
-        for i, dom in enumerate(all_domains)
+        tuple(dom): list(geometry[dom[0]].keys())[0].coord_sys for dom in all_domains
     }
 
     mtk_str = "begin\n"
@@ -652,16 +648,11 @@ def get_julia_mtk_model(model, geometry=None, tspan=None):
         if var.domain == []:
             var_to_ind_vars[var.id] = "(t)"
         else:
-            var_to_ind_vars[var.id] = (
-                "(t, "
-                + ", ".join([domain_name_to_symbol[dom] for dom in var.domain])
-                + ")"
-            )
+            var_to_ind_vars[var.id] = f"(t, {domain_name_to_symbol[tuple(var.domain)]})"
         mtk_str += f" {variable_id_to_number[var.id]}(..)"
     mtk_str += "\n"
 
     # Define derivatives
-
     mtk_str += "Dt = Derivative(t)\n"
     if is_pde:
         for domain_symbol in domain_name_to_symbol.values():
@@ -748,16 +739,15 @@ def get_julia_mtk_model(model, geometry=None, tspan=None):
             if var.domain == []:
                 doms = ""
             else:
-                doms = ", " + ", ".join(
-                    [domain_name_to_symbol[dom] for dom in var.domain]
-                )
+                doms = ", " + domain_name_to_symbol[tuple(var.domain)]
+
             all_ic_bc_str += (
                 f"   {variable_id_to_number[var.id]}(0{doms}) ~ {eqn_str},\n"
             )
     # Boundary conditions
     if is_pde:
         for var, eqn_side in model.boundary_conditions.items():
-            if isinstance(var, pybamm.Variable):
+            if isinstance(var, (pybamm.Variable, pybamm.ConcatenationVariable)):
                 for side, (eqn, typ) in eqn_side.items():
                     (
                         all_ic_bc_constants_str,
@@ -771,17 +761,18 @@ def get_julia_mtk_model(model, geometry=None, tspan=None):
                         "boundary condition",
                     )
 
-                    geom = list(geometry[var.domain[0]].values())[0]
                     if side == "left":
+                        geom = list(geometry[var.domain[0]].values())[0]
                         limit = geom["min"]
                     elif side == "right":
+                        geom = list(geometry[var.domain[-1]].values())[0]
                         limit = geom["max"]
 
                     bc = f"{variable_id_to_number[var.id]}(t, {limit})"
                     if typ == "Dirichlet":
                         bc = bc
                     elif typ == "Neumann":
-                        bc = f"D{domain_name_to_symbol[var.domain[0]]}({bc})"
+                        bc = f"D{domain_name_to_symbol[tuple(var.domain)]}({bc})"
                     all_ic_bc_str += f"   {bc} ~ {eqn_str},\n"
 
     ####################################################################################
@@ -809,8 +800,9 @@ def get_julia_mtk_model(model, geometry=None, tspan=None):
         mtk_str += f"t_domain = IntervalDomain({tspan[0]}, {tspan[1]})\n"
         domains = "domains = [\n   t in t_domain,\n"
         for domain, symbol in domain_name_to_symbol.items():
-            dom_limits = list(geometry[domain].values())[0]
-            dom_min, dom_max = dom_limits.values()
+            dom_min, _ = list(geometry[domain[0]].values())[0].values()
+            _, dom_max = list(geometry[domain[-1]].values())[0].values()
+
             mtk_str += f"{symbol}_domain = IntervalDomain({dom_min}, {dom_max})\n"
             domains += f"   {symbol} in {symbol}_domain,\n"
         domains += "]\n"
