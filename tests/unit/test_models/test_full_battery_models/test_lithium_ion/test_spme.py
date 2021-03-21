@@ -159,6 +159,14 @@ class TestSPMe(unittest.TestCase):
         with self.assertRaisesRegex(pybamm.OptionError, "electrolyte conductivity"):
             pybamm.lithium_ion.SPMe(options)
 
+    def test_well_posed_reversible_plating_with_porosity(self):
+        options = {
+            "lithium plating": "reversible",
+            "lithium plating porosity change": "true",
+        }
+        model = pybamm.lithium_ion.SPMe(options)
+        model.check_well_posedness()
+
 
 class TestSPMeWithSEI(unittest.TestCase):
     def test_well_posed_reaction_limited(self):

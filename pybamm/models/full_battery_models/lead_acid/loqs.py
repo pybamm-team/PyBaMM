@@ -96,7 +96,7 @@ class LOQS(BaseModel):
     def set_porosity_submodel(self):
 
         self.submodels["leading-order porosity"] = pybamm.porosity.LeadingOrder(
-            self.param
+            self.param, self.options
         )
 
     def set_tortuosity_submodels(self):

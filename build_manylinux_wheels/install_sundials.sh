@@ -30,8 +30,8 @@ function extract {
 SUITESPARSE_VERSION=$1
 SUNDIALS_VERSION=$2
 
-SUITESPARSE_ROOT_ADDR=https://github.com/LLNL/sundials/releases/download/v$SUNDIALS_VERSION
-SUNDIALS_ROOT_ADDR=https://computing.llnl.gov/projects/sundials/download
+SUITESPARSE_ROOT_ADDR=https://github.com/DrTimothyAldenDavis/SuiteSparse/archive
+SUNDIALS_ROOT_ADDR=https://github.com/LLNL/sundials/releases/download/v$SUNDIALS_VERSION
 
 SUITESPARSE_ARCHIVE_NAME=v$SUITESPARSE_VERSION.tar.gz
 SUNDIALS_ARCHIVE_NAME=sundials-$SUNDIALS_VERSION.tar.gz

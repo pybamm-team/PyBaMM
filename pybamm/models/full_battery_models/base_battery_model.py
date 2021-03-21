@@ -172,6 +172,7 @@ class Options(pybamm.FuzzyDict):
                 "positive",
                 "both",
             ],
+            "lithium plating porosity change": ["true", "false"],
             "particle": [
                 "Fickian diffusion",
                 "fast diffusion",
@@ -207,6 +208,7 @@ class Options(pybamm.FuzzyDict):
             "SEI": "none",
             "lithium plating": "none",
             "SEI porosity change": "false",
+            "lithium plating porosity change": "false",
             "loss of active material": "none",
             "working electrode": "none",
             "particle cracking": "none",

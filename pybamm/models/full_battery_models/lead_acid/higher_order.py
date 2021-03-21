@@ -198,7 +198,7 @@ class BaseHigherOrderModel(BaseModel):
         Update porosity submodel, now that we have the spatially heterogeneous
         interfacial current densities
         """
-        self.submodels["full porosity"] = pybamm.porosity.Full(self.param)
+        self.submodels["full porosity"] = pybamm.porosity.Full(self.param, self.options)
 
 
 class FOQS(BaseHigherOrderModel):
@@ -269,7 +269,7 @@ class Composite(BaseHigherOrderModel):
         Update porosity submodel, now that we have the spatially heterogeneous
         interfacial current densities
         """
-        self.submodels["full porosity"] = pybamm.porosity.Full(self.param)
+        self.submodels["full porosity"] = pybamm.porosity.Full(self.param, self.options)
 
 
 class CompositeExtended(Composite):

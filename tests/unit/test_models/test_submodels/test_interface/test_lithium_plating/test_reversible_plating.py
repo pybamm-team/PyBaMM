@@ -23,6 +23,7 @@ class TestReversiblePlating(unittest.TestCase):
         )
         variables = {
             "Negative electrode potential": a_n,
+            "Negative electrode temperature": a_n,
             "Negative electrolyte potential": a_n,
             "Negative electrolyte concentration": a_n,
             "Negative electrode lithium plating concentration": a_n,
