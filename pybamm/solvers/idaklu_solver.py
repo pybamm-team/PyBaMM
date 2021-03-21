@@ -8,7 +8,7 @@ import scipy.sparse as sparse
 
 import importlib
 
-idaklu_spec = importlib.util.find_spec("idaklu")
+idaklu_spec = importlib.util.find_spec("pybamm.solvers.idaklu")
 if idaklu_spec is not None:
     idaklu = importlib.util.module_from_spec(idaklu_spec)
     idaklu_spec.loader.exec_module(idaklu)

@@ -339,7 +339,9 @@ class ParticleConcentrationTests(BaseOutputTest):
         elif self.model.options["surface form"] == "differential":
             np.testing.assert_array_almost_equal(diff, 0, decimal=10)
         elif self.model.options["SEI"] == "ec reaction limited":
-            np.testing.assert_array_almost_equal(diff, 0, decimal=12)
+            np.testing.assert_array_almost_equal(diff, 0, decimal=11)
+        elif self.model.options["lithium plating"] == "irreversible":
+            np.testing.assert_array_almost_equal(diff, 0, decimal=14)
         else:
             np.testing.assert_array_almost_equal(diff, 0, decimal=15)
 
@@ -375,6 +377,11 @@ class ParticleConcentrationTests(BaseOutputTest):
                     # sign, so ignore first three times
                     np.testing.assert_array_less(0, self.N_s_n(t[3:], x_n, r_n[1:]))
                     np.testing.assert_array_less(self.N_s_p(t[3:], x_p, r_p[1:]), 0)
+                elif self.model.name == "Yang2017":
+                    np.testing.assert_array_less(
+                        -1e-16, self.N_s_n(t[1:], x_n, r_n[2:])
+                    )
+                    np.testing.assert_array_less(self.N_s_p(t[1:], x_p, r_p[1:]), 1e-16)
                 else:
                     np.testing.assert_array_less(
                         -1e-16, self.N_s_n(t[1:], x_n, r_n[1:])
@@ -625,7 +632,7 @@ class CurrentTests(BaseOutputTest):
                 axis=0,
             ),
             self.i_cell / self.l_n,
-            decimal=4,
+            decimal=3,
         )
         np.testing.assert_array_almost_equal(
             np.mean(
