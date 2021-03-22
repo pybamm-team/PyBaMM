@@ -5,23 +5,45 @@ import pybamm
 import matplotlib.pyplot as plt
 
 pybamm.set_logging_level("NOTICE")
+
+Vmin = 3.0
+Vmax = 4.2
 experiment = pybamm.Experiment(
     [
         (
-            "Discharge at C/5 for 10 hours or until 3.3 V",
+            f"Discharge at 1C until {Vmin}V",
             "Rest for 1 hour",
-            "Charge at 1 A until 4.1 V",
-            "Hold at 4.1 V until 10 mA",
-            "Rest for 1 hour",
-        ),
-    ]
-    * 3
+            f"Charge at 1C until {Vmax}V",
+            f"Hold at {Vmax}V until C/50",
+        )
+    ],
+    termination="80% capacity",
 )
-model = pybamm.lithium_ion.SPM()
+parameter_values = pybamm.ParameterValues(chemistry=pybamm.parameter_sets.Mohtat2020)
+parameter_values.update(
+    {
+        "Exchange-current density for plating [A.m-2]": 0.001,
+        "Initial plated lithium concentration [mol.m-3]": 0,
+        "Lithium metal partial molar volume [m3.mol-1]": 1.3e-5,
+        "SEI kinetic rate constant [m.s-1]": 1e-15,
+        "SEI resistivity [Ohm.m]": 0,
+    },
+)
+spm = pybamm.lithium_ion.SPM(
+    {
+        "SEI": "ec reaction limited",
+        "SEI film resistance": "none",
+        "lithium plating": "irreversible",
+    }
+)
 sim = pybamm.Simulation(
-    model, experiment=experiment, solver=pybamm.CasadiSolver("fast with events")
+    spm,
+    experiment=experiment,
+    parameter_values=parameter_values,
+    solver=pybamm.CasadiSolver("safe"),
 )
-sim.solve()
+starting_sol = pybamm.load("spm_sol_100.sav")
+sim.solve(starting_solution=starting_sol)
 
 # Plot voltages from the discharge segments only
 # fig, ax = plt.subplots()
