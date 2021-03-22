@@ -12,7 +12,7 @@ model = pybamm.lithium_ion.SPM(
     {
         "SEI": "ec reaction limited",
         "SEI film resistance": "none",
-        "lithium plating": "reversible",
+        "lithium plating": "irreversible",
     }
 )
 model.convert_to_format = "python"
@@ -32,7 +32,7 @@ parameter_values.update(
 )
 param = model.param
 
-Vmin = 2.5
+Vmin = 3.0
 Vmax = 4.2
 Cn = parameter_values.evaluate(param.C_n_init)
 Cp = parameter_values.evaluate(param.C_p_init)
@@ -47,6 +47,8 @@ esoh_sol = esoh_sim.solve(
     inputs={"V_min": Vmin, "V_max": Vmax, "C_n": Cn, "C_p": Cp, "n_Li": n_Li_init},
 )
 
+for var in esoh_model.variables:
+    print(var, esoh_sol[var].data)
 parameter_values.update(
     {
         "Initial concentration in negative electrode [mol.m-3]": esoh_sol["x_100"].data[
@@ -73,7 +75,7 @@ disc = pybamm.Discretisation(mesh, model.default_spatial_methods)
 disc.process_model(model)
 
 # solve model for 1 hour
-t_eval = np.linspace(0, 3300, 100)
+t_eval = np.linspace(0, 3600, 100)
 solution = model.default_solver.solve(model, t_eval)
 
 # plot

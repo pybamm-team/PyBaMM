@@ -417,7 +417,7 @@ class LithiumIonParameters:
         # add a term to ensure that the OCP goes to infinity at 0 and -infinity at 1
         # this will not affect the OCP for most values of sto
         # see #1435
-        u_ref -= 1e-6 * pybamm.log(sto / (1 - sto))
+        u_ref = u_ref - 1e-6 * (1 / sto + 1 / (sto - 1))
         return u_ref + (T - self.T_ref) * self.dUdT_n_dimensional(sto)
 
     def U_p_dimensional(self, sto, T):
@@ -427,7 +427,7 @@ class LithiumIonParameters:
         # add a term to ensure that the OCP goes to infinity at 0 and -infinity at 1
         # this will not affect the OCP for most values of sto
         # see #1435
-        u_ref -= 1e-6 * pybamm.log(sto / (1 - sto))
+        u_ref = u_ref - 1e-6 * (1 / sto + 1 / (sto - 1))
         return u_ref + (T - self.T_ref) * self.dUdT_p_dimensional(sto)
 
     def dUdT_n_dimensional(self, sto):
@@ -952,10 +952,7 @@ class LithiumIonParameters:
 
     def c_n_init(self, x):
         """
-        <<<<<<< HEAD
-                Dimensionless initial concentration as a function of dimensionless position x.
-        =======
-                Dimensionless initial concentration as a function of dimensionless position x
+        Dimensionless initial concentration as a function of dimensionless position x.
         >>>>>>> develop
         """
         return self.c_n_init_dimensional(x) / self.c_n_max

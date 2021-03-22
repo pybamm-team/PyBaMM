@@ -13,7 +13,7 @@ def graphite_ocp_PeymanMPM(sto):
 
     u_eq = (
         0.063
-        + 0.8 * pybamm.exp(-75 * (sto + 0.007))
+        + 0.8 * pybamm.exp(-75 * (sto + 0.001))
         - 0.0120 * pybamm.tanh((sto - 0.127) / 0.016)
         - 0.0118 * pybamm.tanh((sto - 0.155) / 0.016)
         - 0.0035 * pybamm.tanh((sto - 0.220) / 0.020)
@@ -26,6 +26,12 @@ def graphite_ocp_PeymanMPM(sto):
 
 
 if __name__ == "__main__":  # pragma: no cover
+    import matplotlib.pyplot as plt
+
     x = pybamm.linspace(1e-10, 1 - 1e-10, 1000)
-    # pybamm.plot(x, graphite_ocp_PeymanMPM(x))
-    pybamm.plot(x, -1e-8 * pybamm.log(x / (1 - x)))
+    plt.plot(x.evaluate(), graphite_ocp_PeymanMPM(x).evaluate())
+    plt.plot(
+        x.evaluate(),
+        (graphite_ocp_PeymanMPM(x) - 1e-6 * pybamm.log(x / (1 - x))).evaluate(),
+    )
+    plt.show()
