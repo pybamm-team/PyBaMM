@@ -408,6 +408,13 @@ class CasadiSolver(pybamm.BaseSolver):
 
         # Find the exact time at which the event was triggered
         t_event, y_event = find_t_event(dense_step_sol, "exact")
+        # If this returns None, no event was crossed in dense_step_sol. This can happen
+        # if the event crossing was right at the end of the interval in the coarse
+        # solution. In this case, return the t and y from the end of the interval
+        # (i.e. next point in the coarse solution)
+        if y_event is None:
+            t_event = coarse_solution.t[event_idx_lower + 1]
+            y_event = coarse_solution.y[:, event_idx_lower + 1].full().flatten()
 
         # Return solution truncated at the first coarse event time
         # Also assign t_event
