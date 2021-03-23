@@ -6,7 +6,11 @@ import matplotlib.pyplot as plt
 
 pybamm.set_logging_level("NOTICE")
 
-Vmin = 3.0
+yang = pybamm.lithium_ion.Yang2017()
+dfn = pybamm.lithium_ion.DFN()
+parameter_values = pybamm.ParameterValues(chemistry=pybamm.parameter_sets.Yang2017)
+
+Vmin = 2.5
 Vmax = 4.2
 experiment = pybamm.Experiment(
     [
@@ -17,34 +21,34 @@ experiment = pybamm.Experiment(
             f"Hold at {Vmax}V until C/50",
         )
     ],
-    termination="80% capacity",
+    # period="10 seconds",
 )
-parameter_values = pybamm.ParameterValues(chemistry=pybamm.parameter_sets.Mohtat2020)
-parameter_values.update(
-    {
-        "Exchange-current density for plating [A.m-2]": 0.001,
-        "Initial plated lithium concentration [mol.m-3]": 0,
-        "Lithium metal partial molar volume [m3.mol-1]": 1.3e-5,
-        "SEI kinetic rate constant [m.s-1]": 1e-15,
-        "SEI resistivity [Ohm.m]": 0,
-    },
-)
-spm = pybamm.lithium_ion.SPM(
-    {
-        "SEI": "ec reaction limited",
-        "SEI film resistance": "none",
-        "lithium plating": "irreversible",
-    }
-)
-sim = pybamm.Simulation(
-    spm,
-    experiment=experiment,
-    parameter_values=parameter_values,
-    solver=pybamm.CasadiSolver("safe"),
-)
-starting_sol = pybamm.load("spm_sol_100.sav")
-sim.solve(starting_solution=starting_sol)
 
+sim1 = pybamm.Simulation(
+    yang, experiment=experiment, solver=pybamm.CasadiSolver("fast with events")
+)  # , parameter_values=parameter_values)
+sol1 = sim1.solve()
+
+sim2 = pybamm.Simulation(
+    dfn,
+    experiment=experiment,
+    solver=pybamm.CasadiSolver("fast with events"),
+    parameter_values=parameter_values,
+)
+sol2 = sim2.solve()
+
+
+pybamm.dynamic_plot(
+    [sol1, sol2],
+    [
+        "Terminal voltage [V]",
+        "Current [A]",
+        "X-averaged negative electrode interfacial current density",
+        "X-averaged negative electrode SEI interfacial current density",
+        "X-averaged negative electrode lithium plating interfacial current density",
+        "X-averaged negative electrode SEI film overpotential [V]",
+    ],
+)
 # Plot voltages from the discharge segments only
 # fig, ax = plt.subplots()
 # for i in range(3):
