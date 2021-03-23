@@ -25,12 +25,20 @@ class EcReactionLimited(BaseModel):
 
     def get_fundamental_variables(self):
 
-        L_inner = pybamm.FullBroadcast(
+        c_sei_inner = pybamm.FullBroadcast(
             0, self.domain.lower() + " electrode", "current collector"
         )
-        L_outer = pybamm.standard_variables.L_outer
+        c_sei_outer = pybamm.Variable(
+            "SEI concentration",
+            domain=["negative electrode"],
+            auxiliary_domains={"secondary": "current collector"},
+        )
 
-        variables = self._get_standard_thickness_variables(L_inner, L_outer)
+        # Thickness and concentration are the same in dimensionless form
+        L_sei_inner = c_sei_inner
+        L_sei_outer = c_sei_outer
+
+        variables = self._get_standard_thickness_variables(L_sei_inner, L_sei_outer)
         variables.update(self._get_standard_concentration_variables(variables))
 
         return variables
@@ -113,16 +121,18 @@ class EcReactionLimited(BaseModel):
 
     def set_rhs(self, variables):
         domain = self.domain.lower() + " electrode"
-        L_sei = variables["Outer " + domain + " SEI thickness"]
+        c_sei = variables["Outer " + domain + " SEI concentration"]
         j_sei = variables["Outer " + domain + " SEI interfacial current density"]
 
         if self.domain == "Negative":
             Gamma_SEI = self.param.Gamma_SEI_n
 
-        self.rhs = {L_sei: -Gamma_SEI * j_sei / 2}
+        self.rhs = {c_sei: -Gamma_SEI * j_sei / 2}
 
     def set_initial_conditions(self, variables):
-        L_sei = variables["Outer " + self.domain.lower() + " electrode SEI thickness"]
-        L_sei_0 = pybamm.Scalar(1)
+        c_sei = variables[
+            "Outer " + self.domain.lower() + " electrode SEI concentration"
+        ]
+        c_sei_0 = self.param.c_sei_init
 
-        self.initial_conditions = {L_sei: L_sei_0}
+        self.initial_conditions = {c_sei: c_sei_0}

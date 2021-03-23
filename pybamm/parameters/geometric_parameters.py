@@ -70,7 +70,6 @@ class GeometricParameters:
         self.b_s_n = pybamm.Parameter(
             "Negative electrode Bruggeman coefficient (electrode)"
         )
-        self.b_s_s = pybamm.Parameter("Separator Bruggeman coefficient (electrode)")
         self.b_s_p = pybamm.Parameter(
             "Positive electrode Bruggeman coefficient (electrode)"
         )
