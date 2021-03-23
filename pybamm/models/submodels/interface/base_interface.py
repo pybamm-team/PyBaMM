@@ -41,6 +41,9 @@ class BaseInterface(pybamm.BaseSubModel):
         elif reaction == "lithium plating":
             self.reaction_name = " lithium plating"
             self.Reaction_icd = "Lithium plating interfacial current density"
+        elif reaction == "composite particle":
+            self.reaction_name = " composite particle"
+            self.Reaction_icd = "Composite particle interfacial current density"
         self.reaction = reaction
 
     def _get_exchange_current_density(self, variables):

@@ -158,7 +158,9 @@ class SPMe(BaseModel):
                 self.param, "Positive"
             )
         elif self.options["particle"] == "Negative composite":
-            self.submodels["negative particle"] = pybamm.particle_composite.FickianSingleParticleComposite(
+            self.submodels[
+                "negative particle"
+            ] = pybamm.particle_composite.FickianSingleParticleComposite(
                 self.param, "Negative"
             )
             self.submodels["positive particle"] = pybamm.particle.FickianSingleParticle(
