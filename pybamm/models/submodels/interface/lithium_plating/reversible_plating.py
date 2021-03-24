@@ -52,9 +52,9 @@ class ReversiblePlating(BasePlating):
         eta_stripping = delta_phi + phi_ref + eta_sei
         eta_plating = -eta_stripping
         prefactor = 1 / (2 * (1 + self.param.Theta * T))
-        j_stripping = (j0_stripping * pybamm.exp(prefactor * eta_stripping)
-            - j0_plating * pybamm.exp(prefactor * eta_plating)
-        )
+        j_stripping = j0_stripping * pybamm.exp(
+            prefactor * eta_stripping
+        ) - j0_plating * pybamm.exp(prefactor * eta_plating)
 
         variables.update(self._get_standard_reaction_variables(j_stripping))
 
