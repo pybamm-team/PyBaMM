@@ -36,11 +36,14 @@ class FickianManyParticlesComposite(BaseParticleComposite):
         variables.update(
             self._get_standard_concentration_variables(c_s, phase="phase 2")
         )
+        variables.update(
+            self._get_standard_concentration_variables(c_s)
+        )
         return variables
 
     def get_coupled_variables(self, variables):
         if self.domain == "Negative":
-            p1_name = " of " + self.param.n_p1_name
+            p1_name = " of " + eval(self.param.n_p1_name)
             p2_name = " of " + self.param.n_p2_name
         elif self.domain == "Positive":
             p1_name = " of " + self.param.p_p1_name
@@ -56,20 +59,20 @@ class FickianManyParticlesComposite(BaseParticleComposite):
         if self.domain == "Negative":
             N_s_p1 = -self.param.D_n(c_s_p1, T, "phase 1") * pybamm.grad(c_s_p1)
             N_s_p2 = -self.param.D_n(c_s_p2, T, "phase 2") * pybamm.grad(c_s_p2)
+            N_s = N_s_p1 * self.param.V_n_p1 + N_s_p2 * self.param.V_n_p2
         elif self.domain == "Positive":
             N_s_p1 = -self.param.D_p(c_s_p1, T, "phase 1") * pybamm.grad(c_s_p1)
             N_s_p2 = -self.param.D_p(c_s_p2, T, "phase 2") * pybamm.grad(c_s_p2)
-        N_s_p1_xav = pybammm.x_average(N_s_p1)
-        N_s_p2_xav = pybammm.x_average(N_s_p2)
+            N_s = N_s_p1 * self.param.V_p_p1 + N_s_p2 * self.param.V_p_p2
 
         variables.update(
-            self._get_standard_flux_variables(N_s_p1, N_s_p1_xav, phase="phase 1")
+            self._get_standard_flux_variables(N_s_p1, N_s_p1, phase="phase 1")
         )
         variables.update(
-            self._get_standard_flux_variables(N_s_p2, N_s_p2_xav, phase="phase 2")
+            self._get_standard_flux_variables(N_s_p2, N_s_p2, phase="phase 2")
         )
         variables.update(
-            self._get_standard_flux_variables(N_s_p1 + N_s_p2, N_s_p1_xav + N_s_p2_xav)
+            self._get_standard_flux_variables(N_s, N_s)
         )
         variables.update(
             self._get_total_concentration_variables(variables, phase="phase 1")

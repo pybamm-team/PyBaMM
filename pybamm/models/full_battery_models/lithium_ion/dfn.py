@@ -119,13 +119,31 @@ class DFN(BaseModel):
             self.submodels["positive particle"] = pybamm.particle.FickianManyParticles(
                 self.param, "Positive"
             )
-        elif self.options["particle"] == "Negative composite":
+        elif self.options["particle"] == "negative composite":
             self.submodels[
                 "negative particle"
             ] = pybamm.particle_composite.FickianManyParticlesComposite(
                 self.param, "Negative"
             )
             self.submodels["positive particle"] = pybamm.particle.FickianManyParticles(
+                self.param, "Positive"
+            )
+        elif self.options["particle"] == "positive composite":
+            self.submodels[
+                "negative particle"
+            ] = pybamm.particle_composite.FickianManyParticles(
+                self.param, "Negative"
+            )
+            self.submodels["positive particle"] = pybamm.particle.FickianManyParticlesComposite(
+                self.param, "Positive"
+            )
+        elif self.options["particle"] == "both composite":
+            self.submodels[
+                "negative particle"
+            ] = pybamm.particle_composite.FickianManyParticlesComposite(
+                self.param, "Negative"
+            )
+            self.submodels["positive particle"] = pybamm.particle.FickianManyParticlesComposite(
                 self.param, "Positive"
             )
         elif self.options["particle"] in [

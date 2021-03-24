@@ -178,6 +178,9 @@ class Options(pybamm.FuzzyDict):
                 "uniform profile",
                 "quadratic profile",
                 "quartic profile",
+                "negative composite",
+                "positive composite",
+                "both composite",
             ],
             "particle shape": ["spherical", "user", "no particles"],
             "electrolyte conductivity": [

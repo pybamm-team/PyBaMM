@@ -355,12 +355,8 @@ class LithiumIonParameters:
         self.rho_p_p2 = pybamm.Parameter(
             "Positive electrode density of phase 2 [kg.m-3]"
         )
-        self.p_p1_name = pybamm.Parameter(
-            "Name of positive electrode phase 1"
-        )
-        self.p_p2_name = pybamm.Parameter(
-            "Name of positive electrode phase 2"
-        )
+        self.p_p1_name = pybamm.Parameter("Name of positive electrode phase 1")
+        self.p_p2_name = pybamm.Parameter("Name of positive electrode phase 2")
 
     def D_e_dimensional(self, c_e, T):
         """Dimensional diffusivity in electrolyte"""
@@ -377,22 +373,19 @@ class LithiumIonParameters:
         function of stochiometry"""
         inputs = {"Negative particle stoichiometry": sto, "Temperature [K]": T}
         if phase == "phase 1":
-            p_name = " of " + self.param.n_p1_name
+            p_name = " of " + self.n_p1_name
             c_max = self.c_n_p1_max
-            c_0_dim = self.c_n_0_p1_dim
-            theta_dim = self.theta_n_p1_dim
+            theta_dim = self.theta_n_dim
         elif phase == "phase 2":
-            p_name = " of " + self.param.n_p2_name
+            p_name = " of " + self.n_p2_name
             c_max = self.c_n_p2_max
-            c_0_dim = self.c_n_0_p2_dim
-            theta_dim = self.theta_n_p2_dim
+            theta_dim = self.theta_n_dim
         else:
             p_name = ""
             c_max = self.c_n_max
-            c_0_dim = self.c_n_0_dim
             theta_dim = self.theta_n_dim
         if self.options["particle cracking"] != "none":
-            mech_effects = 1 + theta_dim * (sto * c_max - c_0_dim) / T
+            mech_effects = 1 + theta_dim * (sto * c_max - self.c_n_0_dim) / T
         else:
             mech_effects = 1
         return (
@@ -407,22 +400,19 @@ class LithiumIonParameters:
         function of stochiometry"""
         inputs = {"Positive particle stoichiometry": sto, "Temperature [K]": T}
         if phase == "phase 1":
-            p_name = " of " + self.param.p_p1_name
+            p_name = " of " + self.p_p1_name
             c_max = self.c_p_p1_max
-            c_0_dim = self.c_p_0_p1_dim
-            theta_dim = self.theta_p_p1_dim
+            theta_dim = self.theta_p_dim
         elif phase == "phase 2":
-            p_name = " of " + self.param.p_p2_name
+            p_name = " of " + self.p_p2_name
             c_max = self.c_p_p2_max
-            c_0_dim = self.c_p_0_p2_dim
-            theta_dim = self.theta_p_p2_dim
+            theta_dim = self.theta_p_dim
         else:
             p_name = ""
             c_max = self.c_p_max
-            c_0_dim = self.c_p_0_dim
             theta_dim = self.theta_p_dim
         if self.options["particle cracking"] != "none":
-            mech_effects = 1 + theta_dim * (sto * c_max - c_0_dim) / T
+            mech_effects = 1 + theta_dim * (sto * c_max - self.c_p_0_dim) / T
         else:
             mech_effects = 1
         return (
@@ -457,9 +447,9 @@ class LithiumIonParameters:
     def U_n_dimensional(self, sto, T, phase=None):
         """Dimensional open-circuit potential in the negative electrode [V]"""
         if phase == "phase 1":
-            p_name = " of " + self.param.n_p1_name
+            p_name = " of " + self.n_p1_name
         elif phase == "phase 2":
-            p_name = " of " + self.param.n_p2_name
+            p_name = " of " + self.n_p2_name
         else:
             p_name = ""
         inputs = {"Negative particle stoichiometry": sto}
@@ -469,9 +459,9 @@ class LithiumIonParameters:
     def U_p_dimensional(self, sto, T, phase=None):
         """Dimensional open-circuit potential in the positive electrode [V]"""
         if phase == "phase 1":
-            p_name = " of " + self.param.p_p1_name
+            p_name = " of " + self.p_p1_name
         elif phase == "phase 2":
-            p_name = " of " + self.param.p_p2_name
+            p_name = " of " + self.p_p2_name
         else:
             p_name = ""
         inputs = {"Positive particle stoichiometry": sto}
@@ -484,9 +474,9 @@ class LithiumIonParameters:
         potential [V.K-1]
         """
         if phase == "phase 1":
-            p_name = " of " + self.param.p_p1_name
+            p_name = " of " + self.p_p1_name
         elif phase == "phase 2":
-            p_name = " of " + self.param.p_p2_name
+            p_name = " of " + self.p_p2_name
         else:
             p_name = ""
         inputs = {"Negative particle stoichiometry": sto}
@@ -500,9 +490,9 @@ class LithiumIonParameters:
         potential [V.K-1]
         """
         if phase == "phase 1":
-            p_name = " of " + self.param.p_p1_name
+            p_name = " of " + self.p_p1_name
         elif phase == "phase 2":
-            p_name = " of " + self.param.p_p2_name
+            p_name = " of " + self.p_p2_name
         else:
             p_name = ""
         inputs = {"Positive particle stoichiometry": sto}
@@ -513,9 +503,9 @@ class LithiumIonParameters:
     def R_n_dimensional(self, x, phase=None):
         """Negative particle radius as a function of through-cell distance"""
         if phase == "phase 1":
-            p_name = " of " + self.param.n_p1_name
+            p_name = " of " + self.n_p1_name
         elif phase == "phase 2":
-            p_name = " of " + self.param.n_p2_name
+            p_name = " of " + self.n_p2_name
         else:
             p_name = ""
         inputs = {"Through-cell distance (x_n) [m]": x}
@@ -524,9 +514,9 @@ class LithiumIonParameters:
     def R_p_dimensional(self, x, phase=None):
         """Positive particle radius as a function of through-cell distance"""
         if phase == "phase 1":
-            p_name = " of " + self.param.p_p1_name
+            p_name = " of " + self.p_p1_name
         elif phase == "phase 2":
-            p_name = " of " + self.param.p_p2_name
+            p_name = " of " + self.p_p2_name
         else:
             p_name = ""
         inputs = {"Through-cell distance (x_p) [m]": x}
@@ -550,9 +540,9 @@ class LithiumIonParameters:
         """Initial concentration as a function of dimensionless position x"""
         inputs = {"Dimensionless through-cell position (x_n)": x}
         if phase == "phase 1":
-            p_name = " of " + self.param.n_p1_name
+            p_name = " of " + self.n_p1_name
         elif phase == "phase 2":
-            p_name = " of " + self.param.n_p2_name
+            p_name = " of " + self.n_p2_name
         else:
             p_name = ""
         return pybamm.FunctionParameter(
@@ -563,9 +553,9 @@ class LithiumIonParameters:
         """Initial concentration as a function of dimensionless position x"""
         inputs = {"Dimensionless through-cell position (x_p)": x}
         if phase == "phase 1":
-            p_name = " of " + self.param.n_p1_name
+            p_name = " of " + self.n_p1_name
         elif phase == "phase 2":
-            p_name = " of " + self.param.n_p2_name
+            p_name = " of " + self.n_p2_name
         else:
             p_name = ""
         return pybamm.FunctionParameter(

@@ -41,6 +41,11 @@ class FickianSingleParticleComposite(BaseParticleComposite):
                 c_s, c_s_xav=c_s_xav, phase="phase 2"
             )
         )
+        variables.update(
+            self._get_standard_concentration_variables(
+                c_s, c_s_xav=c_s_xav
+            )
+        )
         return variables
 
     def get_coupled_variables(self, variables):
@@ -69,6 +74,7 @@ class FickianSingleParticleComposite(BaseParticleComposite):
             N_s_xav_p2 = -self.param.D_n(c_s_xav_p2, T_xav, "phase 2") * pybamm.grad(
                 c_s_xav_p2
             )
+            N_s_xav = N_s_xav_p1 * self.param.V_n_p1 + N_s_xav_p2 * self.param.V_n_p2
         elif self.domain == "Positive":
             N_s_xav_p1 = -self.param.D_p(c_s_xav_p1, T_xav, "phase 1") * pybamm.grad(
                 c_s_xav_p1
@@ -76,12 +82,14 @@ class FickianSingleParticleComposite(BaseParticleComposite):
             N_s_xav_p2 = -self.param.D_p(c_s_xav_p2, T_xav), "phase 2" * pybamm.grad(
                 c_s_xav_p2
             )
+            N_s_xav = N_s_xav_p1 * self.param.V_p_p1 + N_s_xav_p2 * self.param.V_p_p2
         N_s_p1 = pybamm.SecondaryBroadcast(
             N_s_xav_p1, [self._domain.lower() + " electrode"]
         )
         N_s_p2 = pybamm.SecondaryBroadcast(
             N_s_xav_p2, [self._domain.lower() + " electrode"]
         )
+        N_s = N_s_p1 * self.param.V_p_p1 + N_s_p2 * self.param.V_p_p2
 
         variables.update(
             self._get_standard_flux_variables(N_s_p1, N_s_xav_p1, phase="phase 1")
@@ -89,9 +97,9 @@ class FickianSingleParticleComposite(BaseParticleComposite):
         variables.update(
             self._get_standard_flux_variables(N_s_p2, N_s_xav_p2, phase="phase 2")
         )
-        # variables.update(
-        #     self._get_standard_flux_variables(N_s_p1 + N_s_p2, N_s_p1_xav + N_s_p2_xav)
-        # ) # may not be right to sum them directly
+        variables.update(
+            self._get_standard_flux_variables(N_s, N_s_xav)
+        )
         variables.update(
             self._get_total_concentration_variables(variables, phase="phase 1")
         )
