@@ -1,3 +1,6 @@
+#
+# Example for printing the (dimensional and dimensionless) parameters of a parameter set
+#
 import pybamm
 
 parameters = pybamm.LithiumIonParameters()
