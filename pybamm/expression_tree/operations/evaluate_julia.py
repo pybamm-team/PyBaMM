@@ -72,6 +72,9 @@ def find_symbols(symbol, constant_symbols, variable_symbols, variable_symbol_siz
         variable, for caching
 
     """
+    # ignore broadcasts for now
+    if isinstance(symbol, pybamm.Broadcast):
+        symbol = symbol.child
     if is_constant_and_can_evaluate(symbol):
         value = symbol.evaluate()
         if not isinstance(value, numbers.Number):
@@ -123,6 +126,8 @@ def find_symbols(symbol, constant_symbols, variable_symbols, variable_symbol_siz
     # children variables
     children_vars = []
     for child in symbol.children:
+        if isinstance(child, pybamm.Broadcast):
+            child = child.child
         if is_constant_and_can_evaluate(child):
             child_eval = child.evaluate()
             if isinstance(child_eval, numbers.Number):
@@ -255,7 +260,7 @@ def find_symbols(symbol, constant_symbols, variable_symbols, variable_symbol_siz
 
         else:
             # A regular Concatenation for the MTK model
-            # Not sure how to deal with this yet so leaving as a "concatenation"
+            # We will define the concatenation function separately
             symbol_str = "concatenation(" + ", ".join(children_vars) + ")"
 
     # Note: we assume that y is being passed as a column vector
@@ -369,7 +374,7 @@ def get_julia_function(symbol, funcname="f", input_parameter_order=None):
         const_and_cache_str += "   {} = {},\n".format(const_name, const_value)
 
     # Pop (get and remove) items from the dictionary of symbols one by one
-    # If they are simple operations (@view, .+, .-, .*, ./), replace all future
+    # If they are simple operations (@view, +, -, *, /), replace all future
     # occurences instead of assigning them. This "inlining" speeds up the computation
     inlineable_symbols = ["@view", "+", "-", "*", "/"]
     var_str = ""
@@ -413,15 +418,15 @@ def get_julia_function(symbol, funcname="f", input_parameter_order=None):
                         (" @ " in next_symbol_line or "mul!" in next_symbol_line)
                         and not symbol_line.startswith("@view")
                     ):
-                        if symbol_line != "t":
-                            # add brackets so that the order of operations is maintained
+                        if symbol_line == "t":
+                            # no brackets needed
                             var_symbols[next_var_id] = next_symbol_line.replace(
-                                julia_var, "({})".format(symbol_line)
+                                julia_var, symbol_line
                             )
                         else:
                             # add brackets so that the order of operations is maintained
                             var_symbols[next_var_id] = next_symbol_line.replace(
-                                julia_var, symbol_line
+                                julia_var, "({})".format(symbol_line)
                             )
                         found_replacement = True
                 if not found_replacement:
@@ -544,11 +549,49 @@ def convert_var_and_eqn_to_str(var, eqn, all_constants_str, all_variables_str, t
         # ignore broadcasts for now
         eqn = eqn.child
 
-    constants, variable_symbols = to_julia(eqn)[:2]
+    constants, var_symbols = to_julia(eqn)[:2]
 
-    variables_str = ""
-    for symbol_id, symbol_line in variable_symbols.items():
-        variables_str += f"{id_to_julia_variable(symbol_id)} = {symbol_line}\n"
+    # var_str = ""
+    # for symbol_id, symbol_line in var_symbols.items():
+    #     var_str += f"{id_to_julia_variable(symbol_id)} = {symbol_line}\n"
+    # Pop (get and remove) items from the dictionary of symbols one by one
+    # If they are simple operations (+, -, *, /), replace all future
+    # occurences instead of assigning them.
+    inlineable_symbols = [" + ", " - ", " * ", " / "]
+    var_str = ""
+    input_parameters = {}
+    while var_symbols:
+        var_symbol_id, symbol_line = var_symbols.popitem(last=False)
+        julia_var = id_to_julia_variable(var_symbol_id, False)
+        # inline operation if it can be inlined
+        if "concatenation" not in symbol_line:
+            found_replacement = False
+            # replace all other occurrences of the variable
+            # in the dictionary with the symbol line
+            for next_var_id, next_symbol_line in var_symbols.items():
+                if (
+                    symbol_line == "t"
+                    or " " not in symbol_line
+                    or symbol_line.startswith("grad")
+                    or next_symbol_line.startswith("concatenation")
+                    or not any(x in next_symbol_line for x in inlineable_symbols)
+                ):
+                    # cases that don't need brackets
+                    var_symbols[next_var_id] = next_symbol_line.replace(
+                        julia_var, symbol_line
+                    )
+                else:
+                    # add brackets so that the order of operations is maintained
+                    var_symbols[next_var_id] = next_symbol_line.replace(
+                        julia_var, "({})".format(symbol_line)
+                    )
+                found_replacement = True
+            if not found_replacement:
+                var_str += "{} = {}\n".format(julia_var, symbol_line)
+
+        # otherwise assign
+        else:
+            var_str += "{} = {}\n".format(julia_var, symbol_line)
 
     # extract constants in generated function
     for eqn_id, const_value in constants.items():
@@ -556,11 +599,26 @@ def convert_var_and_eqn_to_str(var, eqn, all_constants_str, all_variables_str, t
         all_constants_str += "{} = {}\n".format(const_name, const_value)
         # TODO: avoid repeated constants definitions
 
+    # If we have created a concatenation we need to define it
+    # Hardcoded to the negative electrode, separator, positive electrode case for now
+    if "concatenation" in var_str and "function concatenation" not in all_variables_str:
+        concatenation_def = (
+            "\nfunction concatenation(n, s, p)\n"
+            + "   # A concatenation in the electrolyte domain\n"
+            + "   IfElse.ifelse(\n"
+            + "      x < neg_width, n, IfElse.ifelse(\n"
+            + "         x < neg_plus_sep_width, s, p\n"
+            + "      )\n"
+            + "   )\n"
+            + "end\n\n"
+        )
+        var_str = concatenation_def + var_str
+
     # add a comment labeling the equation, and the equation itself
-    if variables_str == "":
+    if var_str == "":
         all_variables_str += ""
     else:
-        all_variables_str += f"# '{var.name}' {typ}\n" + variables_str + "\n"
+        all_variables_str += f"# '{var.name}' {typ}\n" + var_str + "\n"
 
     # calculate the final variable that will output the result
     result_var = id_to_julia_variable(eqn.id, eqn.is_constant())
@@ -612,12 +670,18 @@ def get_julia_mtk_model(model, geometry=None, tspan=None):
             raise ValueError("must provide tspan if the model is a PDE model")
 
     domain_name_to_symbol = {}
+    long_domain_symbol_to_short = {}
     for dom in all_domains:
         # Read domain name from geometry
         domain_symbol = list(geometry[dom[0]].keys())[0].name.replace("_", "")
         if len(dom) > 1:
+            domain_symbol = domain_symbol[0]
             # For multi-domain variables keep only the first letter of the domain
-            domain_name_to_symbol[tuple(dom)] = domain_symbol[0]
+            domain_name_to_symbol[tuple(dom)] = domain_symbol
+            # Record which domain symbols we shortened
+            for d in dom:
+                long = list(geometry[d].keys())[0].name.replace("_", "")
+                long_domain_symbol_to_short[long] = domain_symbol
         else:
             # Otherwise keep the whole domain
             domain_name_to_symbol[tuple(dom)] = domain_symbol
@@ -701,6 +765,20 @@ def get_julia_mtk_model(model, geometry=None, tspan=None):
                 f"div_{domain_name}(",
                 f"1 / {domain_symbol}^2 * D{domain_symbol}({domain_symbol}^2 * ",
             )
+
+    # Replace any long domain symbols with the short version
+    # e.g. "xn" gets replaced with "x"
+    for long, short in long_domain_symbol_to_short.items():
+        # we need to add a space to avoid accidentally replacing 'exp' with 'ex'
+        all_julia_str = all_julia_str.replace(" " + long, " " + short)
+
+    # Replace the thicknesses in the concatenation with the actual thickness from the
+    # geometrt
+    var = pybamm.standard_spatial_vars
+    x_n = geometry["negative electrode"][var.x_n]["max"].evaluate()
+    x_s = geometry["separator"][var.x_s]["max"].evaluate()
+    all_julia_str = all_julia_str.replace("neg_width", str(x_n))
+    all_julia_str = all_julia_str.replace("neg_plus_sep_width", str(x_s))
 
     # Replace parameters in the julia strings in the form "inputs[name]"
     # with just "name"
