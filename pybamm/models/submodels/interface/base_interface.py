@@ -480,25 +480,15 @@ class BaseInterface(pybamm.BaseSubModel):
         elif eta_r.domain == ["current collector"]:
             eta_r = pybamm.PrimaryBroadcast(eta_r, self.domain_for_broadcast)
 
+        domain_reaction = (
+            self.domain + " electrode" + self.reaction_name + " reaction overpotential"
+        )
+
         variables = {
-            self.domain
-            + " electrode"
-            + self.reaction_name
-            + " reaction overpotential": eta_r,
-            "X-averaged "
-            + self.domain.lower()
-            + " electrode"
-            + self.reaction_name
-            + " reaction overpotential": eta_r_av,
-            self.domain
-            + " electrode"
-            + self.reaction_name
-            + " reaction overpotential [V]": eta_r * pot_scale,
-            "X-averaged "
-            + self.domain.lower()
-            + " electrode"
-            + self.reaction_name
-            + " reaction overpotential [V]": eta_r_av * pot_scale,
+            domain_reaction: eta_r,
+            "X-averaged " + domain_reaction.lower(): eta_r_av,
+            domain_reaction + " [V]": eta_r * pot_scale,
+            "X-averaged " + domain_reaction.lower() + " [V]": eta_r_av * pot_scale,
         }
 
         return variables
@@ -517,9 +507,9 @@ class BaseInterface(pybamm.BaseSubModel):
 
         domain = self.domain.lower() + " electrode"
         variables = {
-            self.domain + " electrode SEI film overpotential": eta_sei,
+            domain + " SEI film overpotential": eta_sei,
             "X-averaged " + domain + " SEI film overpotential": eta_sei_av,
-            self.domain + " electrode SEI film overpotential [V]": eta_sei * pot_scale,
+            domain + " SEI film overpotential [V]": eta_sei * pot_scale,
             "X-averaged "
             + domain
             + " SEI film overpotential [V]": eta_sei_av * pot_scale,
