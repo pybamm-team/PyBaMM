@@ -16,7 +16,6 @@ geometry = model.default_geometry
 
 # load parameter values and process model and geometry
 param = model.default_parameter_values
-param["Electrolyte diffusivity [m2.s-1]"] = 1e-10
 param.process_model(model)
 param.process_geometry(geometry)
 

@@ -172,6 +172,8 @@ def find_symbols(symbol, constant_symbols, variable_symbols, variable_symbol_siz
         elif isinstance(symbol, pybamm.Broadcast):
             # ignore broadcasts for now
             symbol_str = children_vars[0]
+        elif isinstance(symbol, pybamm.BoundaryValue):
+            symbol_str = "boundary_value_{}({})".format(symbol.side, children_vars[0])
         else:
             symbol_str = symbol.name + children_vars[0]
 
@@ -717,10 +719,10 @@ def get_julia_mtk_model(model, geometry=None, tspan=None):
     mtk_str += "\n"
 
     # Define derivatives
-    mtk_str += "Dt = Derivative(t)\n"
+    mtk_str += "Dt = Differential(t)\n"
     if is_pde:
         for domain_symbol in domain_name_to_symbol.values():
-            mtk_str += f"D{domain_symbol} = Derivative({domain_symbol})\n"
+            mtk_str += f"D{domain_symbol} = Differential({domain_symbol})\n"
     mtk_str += "\n"
 
     # Define equations

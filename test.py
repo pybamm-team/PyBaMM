@@ -1,16 +1,14 @@
 import pybamm
 
-model = pybamm.lithium_ion.DFN(name="DFN")
-var = pybamm.standard_spatial_vars
-var_pts = {var.x_n: 10, var.x_s: 10, var.x_p: 10, var.r_n: 10, var.r_p: 10}
-sim = pybamm.Simulation(model, var_pts=var_pts)
+model = pybamm.lithium_ion.DFN()
+sim = pybamm.Simulation(model)
 sim.set_parameters()
-
-# list(sim.model.rhs.values())[-1].render()
-
 mtk_str = pybamm.get_julia_mtk_model(sim.model, geometry=sim.geometry, tspan=(0, 3600))
+
+
 print(mtk_str)
 
+# list(sim.model.rhs.values())[1].render()
 # sim.build()
 
 # rhs_str, u0_str = sim.built_model.generate_julia_diffeq(
