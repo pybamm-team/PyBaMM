@@ -103,16 +103,17 @@ class BaseModel(BaseInterface):
         # Set scales to one for the "no SEI" model so that they are not required
         # by parameter values in general
         if isinstance(self, pybamm.sei.NoSEI):
-            c_sei_scale = 1
-            c_sei_outer_scale = 1
+            n_scale = 1
+            n_outer_scale = 1
             v_bar = 1
             L_inner_0 = 0
             L_outer_0 = 0
             li_mols_per_sei_mols = 1
         else:
-            c_sei_scale = param.c_sei_scale
-            c_sei_outer_scale = param.c_sei_outer_scale
-
+            n_scale = param.L_sei_0_dim * param.a_n_typ / param.V_bar_inner_dimensional
+            n_outer_scale = (
+                param.L_sei_0_dim * param.a_n_typ / param.V_bar_outer_dimensional
+            )
             v_bar = param.v_bar
             # Set scales for the "EC Reaction Limited" model
             if isinstance(self, pybamm.sei.EcReactionLimited):
@@ -127,19 +128,19 @@ class BaseModel(BaseInterface):
         L_inner = variables["Inner " + domain + " SEI thickness"]
         L_outer = variables["Outer " + domain + " SEI thickness"]
 
-        c_sei_inner = L_inner  # inner SEI concentration
-        c_sei_outer = L_outer  # outer SEI concentration
+        n_inner = L_inner  # inner SEI concentration
+        n_outer = L_outer  # outer SEI concentration
 
-        c_sei_inner_av = pybamm.x_average(L_inner)
-        c_sei_outer_av = pybamm.x_average(L_outer)
+        n_inner_av = pybamm.x_average(L_inner)
+        n_outer_av = pybamm.x_average(L_outer)
 
-        c_SEI = c_sei_inner + c_sei_outer / v_bar  # SEI concentration
-        c_SEI_av = pybamm.x_average(c_SEI)
-        delta_c_SEI = c_SEI_av - (L_inner_0 + L_outer_0 / v_bar)
+        n_SEI = n_inner + n_outer / v_bar  # SEI concentration
+        n_SEI_av = pybamm.x_average(n_SEI)
+        delta_n_SEI = n_SEI_av - (L_inner_0 + L_outer_0 / v_bar)
 
         Q_sei = (
             li_mols_per_sei_mols
-            * delta_c_SEI
+            * delta_n_SEI
             * self.param.L_n
             * self.param.L_y
             * self.param.L_z
@@ -147,24 +148,21 @@ class BaseModel(BaseInterface):
 
         variables.update(
             {
-                "Inner "
-                + domain
-                + " SEI concentration [mol.m-3]": c_sei_inner * c_sei_scale,
+                "Inner " + domain + " SEI concentration [mol.m-3]": n_inner * n_scale,
                 "X-averaged inner "
                 + domain
-                + " SEI concentration [mol.m-3]": c_sei_inner_av * c_sei_scale,
-                "Outer " + domain + " SEI concentration": c_sei_outer,
+                + " SEI concentration [mol.m-3]": n_inner_av * n_scale,
                 "Outer "
                 + domain
-                + " SEI concentration [mol.m-3]": c_sei_outer * c_sei_outer_scale,
+                + " SEI concentration [mol.m-3]": n_outer * n_outer_scale,
                 "X-averaged outer "
                 + domain
-                + " SEI concentration [mol.m-3]": c_sei_outer_av * c_sei_outer_scale,
-                self.domain + " SEI concentration [mol.m-3]": c_SEI * c_sei_scale,
+                + " SEI concentration [mol.m-3]": n_outer_av * n_outer_scale,
+                self.domain + " SEI concentration [mol.m-3]": n_SEI * n_scale,
                 "X-averaged "
                 + domain
-                + " SEI concentration [mol.m-3]": c_SEI_av * c_sei_scale,
-                "Loss of lithium to " + domain + " SEI [mol]": Q_sei * c_sei_scale,
+                + " SEI concentration [mol.m-3]": n_SEI_av * n_scale,
+                "Loss of lithium to " + domain + " SEI [mol]": Q_sei * n_scale,
             }
         )
 

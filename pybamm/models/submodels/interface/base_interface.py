@@ -505,11 +505,13 @@ class BaseInterface(pybamm.BaseSubModel):
         elif eta_sei.domain == ["current collector"]:
             eta_sei = pybamm.PrimaryBroadcast(eta_sei, self.domain_for_broadcast)
 
-        domain = self.domain.lower() + " electrode"
+        Domain = self.domain + " electrode"
+        domain = Domain.lower()
+
         variables = {
-            domain + " SEI film overpotential": eta_sei,
+            Domain + " SEI film overpotential": eta_sei,
             "X-averaged " + domain + " SEI film overpotential": eta_sei_av,
-            domain + " SEI film overpotential [V]": eta_sei * pot_scale,
+            Domain + " SEI film overpotential [V]": eta_sei * pot_scale,
             "X-averaged "
             + domain
             + " SEI film overpotential [V]": eta_sei_av * pot_scale,
