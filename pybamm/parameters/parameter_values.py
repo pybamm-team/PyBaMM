@@ -8,6 +8,7 @@ import numbers
 import warnings
 from pprint import pformat
 from collections import defaultdict
+import inspect
 
 
 class ParameterValues:
@@ -686,9 +687,26 @@ class ParameterValues:
                     and symbol.short_name is not None
                     and symbol.diff_variable is None
                 ):
-                    return pybamm.FunctionParameter(
+                    # Special trick for printing in Julia ModelingToolkit format
+                    out = pybamm.FunctionParameter(
                         symbol.short_name, dict(zip(symbol.input_names, new_children))
                     )
+
+                    out.arg_names = inspect.getfullargspec(function_name)[0]
+                    out.callable = self.process_symbol(
+                        function_name(
+                            *[
+                                pybamm.Variable(
+                                    arg_name,
+                                    domain=child.domain,
+                                    auxiliary_domains=child.auxiliary_domains,
+                                )
+                                for arg_name, child in zip(out.arg_names, new_children)
+                            ]
+                        )
+                    )
+
+                    return out
             elif isinstance(function_name, pybamm.Interpolant):
                 function = function_name
             else:

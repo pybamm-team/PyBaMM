@@ -341,6 +341,13 @@ class ConcatenationVariable(Concatenation):
             np.min([child.bounds[1] for child in children]),
         )
 
+        short_name = intersect(children[0].short_name, children[1].short_name)
+        for child in children[2:]:
+            short_name = intersect(short_name, child.short_name)
+        if short_name.endswith("_"):
+            short_name = short_name[:-1]
+        self.short_name = short_name
+
 
 def substrings(s):
     for i in range(len(s)):

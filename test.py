@@ -10,7 +10,7 @@ mtk_str = pybamm.get_julia_mtk_model(sim.model, geometry=sim.geometry, tspan=(0,
 
 print(mtk_str)
 
-list(sim.model.rhs.values())[3].render()
+# list(sim.model.rhs.values())[3].render()
 # sim.build()
 
 # rhs_str, u0_str = sim.built_model.generate_julia_diffeq(
