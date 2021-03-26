@@ -91,8 +91,7 @@ class Concatenation(pybamm.Symbol):
 
     def _concatenation_new_copy(self, children):
         """ See :meth:`pybamm.Symbol.new_copy()`. """
-        new_symbol = self.__class__(*children)
-        return new_symbol
+        return simplified_concatenation(*children)
 
     def _concatenation_jac(self, children_jacs):
         """ Calculate the jacobian of a concatenation """
