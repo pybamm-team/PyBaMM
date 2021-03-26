@@ -91,7 +91,7 @@ class Concatenation(pybamm.Symbol):
 
     def _concatenation_new_copy(self, children):
         """ See :meth:`pybamm.Symbol.new_copy()`. """
-        return simplified_concatenation(*children)
+        return concatenation(*children)
 
     def _concatenation_jac(self, children_jacs):
         """ Calculate the jacobian of a concatenation """
@@ -151,6 +151,10 @@ class NumpyConcatenation(Concatenation):
             return pybamm.Scalar(0)
         else:
             return SparseStack(*children_jacs)
+
+    def _concatenation_new_copy(self, children):
+        """ See :meth:`pybamm.Symbol.new_copy()`. """
+        return numpy_concatenation(*children)
 
 
 class DomainConcatenation(Concatenation):
@@ -318,6 +322,10 @@ class SparseStack(Concatenation):
             check_domain=False,
             concat_fun=concatenation_function
         )
+
+    def _concatenation_new_copy(self, children):
+        """ See :meth:`pybamm.Symbol.new_copy()`. """
+        return SparseStack(*children)
 
 
 def simplified_concatenation(*children):
