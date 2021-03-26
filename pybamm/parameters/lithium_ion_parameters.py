@@ -146,7 +146,6 @@ class LithiumIonParameters:
         self.b_e_s = self.geo.b_e_s
         self.b_e_p = self.geo.b_e_p
         self.b_s_n = self.geo.b_s_n
-        self.b_s_s = self.geo.b_s_s
         self.b_s_p = self.geo.b_s_p
 
         # Electrochemical reactions
@@ -209,19 +208,12 @@ class LithiumIonParameters:
         self.U_sei_dim = pybamm.Parameter("SEI open-circuit potential [V]")
 
         # Li plating parameters
-
         self.V_bar_plated_Li = pybamm.Parameter(
             "Lithium metal partial molar volume [m3.mol-1]"
-        )
-        self.k_plating = pybamm.Parameter(
-            "Lithium plating kinetic rate constant [m.s-1]"
         )
         self.c_plated_Li_0_dim = pybamm.Parameter(
             "Initial plated lithium concentration [mol.m-3]"
         )
-
-        # Exchange current density for scaling
-        self.j0_plating_dimensional = self.F * self.k_plating * self.c_e_typ
 
         # Initial conditions
         # Note: the initial concentration in the electrodes can be set as a function
@@ -361,6 +353,28 @@ class LithiumIonParameters:
         }
         return pybamm.FunctionParameter(
             "Positive electrode exchange-current density [A.m-2]", inputs
+        )
+
+    def j0_stripping_dimensional(self, c_e, c_Li, T):
+        """Dimensional exchange-current density for stripping [A.m-2]"""
+        inputs = {
+            "Electrolyte concentration [mol.m-3]": c_e,
+            "Plated lithium concentration [mol.m-3]": c_Li,
+            "Temperature [K]": T,
+        }
+        return pybamm.FunctionParameter(
+            "Exchange-current density for stripping [A.m-2]", inputs
+        )
+
+    def j0_plating_dimensional(self, c_e, c_Li, T):
+        """Dimensional exchange-current density for plating [A.m-2]"""
+        inputs = {
+            "Electrolyte concentration [mol.m-3]": c_e,
+            "Plated lithium concentration [mol.m-3]": c_Li,
+            "Temperature [K]": T,
+        }
+        return pybamm.FunctionParameter(
+            "Exchange-current density for plating [A.m-2]", inputs
         )
 
     def U_n_dimensional(self, sto, T):
@@ -697,6 +711,12 @@ class LithiumIonParameters:
         )
 
         self.v_bar = self.V_bar_outer_dimensional / self.V_bar_inner_dimensional
+        self.c_sei_scale = (
+            self.L_sei_0_dim * self.a_n_typ / self.V_bar_inner_dimensional
+        )
+        self.c_sei_outer_scale = (
+            self.L_sei_0_dim * self.a_n_typ / self.V_bar_outer_dimensional
+        )
 
         self.L_inner_0 = self.L_inner_0_dim / self.L_sei_0_dim
         self.L_outer_0 = self.L_outer_0_dim / self.L_sei_0_dim
@@ -731,17 +751,18 @@ class LithiumIonParameters:
             )
         )
         self.beta_sei_n = self.a_n_typ * self.L_sei_0_dim * self.Gamma_SEI_n
+        self.c_sei_init = self.c_ec_0_dim / self.c_sei_outer_scale
 
         # lithium plating parameters
-
-        self.C_plating = self.j_scale_n / self.j0_plating_dimensional
-
-        self.c_plated_Li_0 = self.c_plated_Li_0_dim / self.c_e_typ
+        self.c_Li_typ = self.c_e_typ
+        self.c_plated_Li_0 = self.c_plated_Li_0_dim / self.c_Li_typ
 
         # ratio of lithium plating reaction scaled to intercalation reaction
         self.Gamma_plating = (self.a_n_typ * self.j_scale_n * self.tau_discharge) / (
-            self.F * self.c_e_typ
+            self.F * self.c_Li_typ
         )
+
+        self.beta_plating = self.Gamma_plating * self.V_bar_plated_Li * self.c_Li_typ
 
         # Initial conditions
         self.epsilon_n_init = pybamm.Parameter("Negative electrode porosity")
@@ -840,6 +861,22 @@ class LithiumIonParameters:
             self.j0_p_dimensional(c_e_dim, c_s_surf_dim, T_dim)
             / self.j0_p_ref_dimensional
         )
+
+    def j0_stripping(self, c_e, c_Li, T):
+        """Dimensionless exchange-current density for stripping"""
+        c_e_dim = c_e * self.c_e_typ
+        c_Li_dim = c_Li * self.c_Li_typ
+        T_dim = self.Delta_T * T + self.T_ref
+
+        return self.j0_stripping_dimensional(c_e_dim, c_Li_dim, T_dim) / self.j_scale_n
+
+    def j0_plating(self, c_e, c_Li, T):
+        """Dimensionless reverse plating current"""
+        c_e_dim = c_e * self.c_e_typ
+        c_Li_dim = c_Li * self.c_Li_typ
+        T_dim = self.Delta_T * T + self.T_ref
+
+        return self.j0_plating_dimensional(c_e_dim, c_Li_dim, T_dim) / self.j_scale_n
 
     def U_n(self, c_s_n, T):
         """Dimensionless open-circuit potential in the negative electrode"""

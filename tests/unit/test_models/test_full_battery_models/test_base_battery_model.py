@@ -30,6 +30,7 @@ PRINT_OPTIONS_OUTPUT = """\
 'SEI': 'none' (possible: ['none', 'constant', 'reaction limited', 'solvent-diffusion limited', 'electron-migration limited', 'interstitial-diffusion limited', 'ec reaction limited'])
 'lithium plating': 'none' (possible: ['none', 'reversible', 'irreversible'])
 'SEI porosity change': 'false' (possible: ['true', 'false'])
+'lithium plating porosity change': 'false' (possible: ['true', 'false'])
 'loss of active material': 'negative' (possible: ['none', 'negative', 'positive', 'both'])
 'working electrode': 'none'
 'particle cracking': 'none' (possible: ['none', 'no cracking', 'negative', 'positive', 'both'])
@@ -225,6 +226,16 @@ class TestBaseBatteryModel(unittest.TestCase):
         # plating model
         with self.assertRaisesRegex(pybamm.OptionError, "lithium plating"):
             pybamm.BaseBatteryModel({"lithium plating": "bad plating"})
+
+        with self.assertRaisesRegex(
+            pybamm.OptionError, "lithium plating porosity change"
+        ):
+            pybamm.BaseBatteryModel(
+                {
+                    "lithium plating porosity change": "bad lithium "
+                    "plating porosity change"
+                }
+            )
 
     def test_build_twice(self):
         model = pybamm.lithium_ion.SPM()  # need to pick a model to set vars and build

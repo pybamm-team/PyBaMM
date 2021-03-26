@@ -947,7 +947,7 @@ def _bdf_odeint_rev(func, mass, rtol, atol, res, g):
             *args,
             mass=aug_mass,
             rtol=rtol,
-            atol=atol
+            atol=atol,
         )
         y_bar, t0_bar, args_bar = tree_map(op.itemgetter(1), (y_bar, t0_bar, args_bar))
         # Add gradient from current output

@@ -18,6 +18,7 @@ class TestIrreversiblePlating(unittest.TestCase):
             "Negative electrode potential": a_n,
             "Negative electrolyte potential": a_n,
             "Negative electrolyte concentration": a_n,
+            "Negative electrode temperature": a_n,
             "Negative electrode SEI film overpotential": a_n,
         }
         submodel = pybamm.lithium_plating.IrreversiblePlating(param, "Negative")
