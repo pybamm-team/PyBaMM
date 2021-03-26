@@ -92,7 +92,6 @@ class LeadAcidParameters:
         self.b_e_s = self.geo.b_e_s
         self.b_e_p = self.geo.b_e_p
         self.b_s_n = self.geo.b_s_n
-        self.b_s_s = self.geo.b_s_s
         self.b_s_p = self.geo.b_s_p
         self.xi_n = pybamm.Parameter("Negative electrode morphological parameter")
         self.xi_p = pybamm.Parameter("Positive electrode morphological parameter")
