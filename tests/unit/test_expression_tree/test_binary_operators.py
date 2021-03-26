@@ -554,16 +554,23 @@ class TestBinaryOperators(unittest.TestCase):
         # Test that concatenations get simplified correctly
         a = conc_broad(1, 2, 3)
         b = conc_broad(11, 12, 13)
+        c = conc_broad(
+            pybamm.InputParameter("x"),
+            pybamm.InputParameter("y"),
+            pybamm.InputParameter("z"),
+        )
         self.assertEqual((a + 4).id, conc_broad(5, 6, 7).id)
         self.assertEqual((4 + a).id, conc_broad(5, 6, 7).id)
         self.assertEqual((a + b).id, conc_broad(12, 14, 16).id)
+        self.assertIsInstance((a + c), pybamm.Concatenation)
 
-        # No simplifications if there are Variable or StateVector objects
+        # No simplifications if are Variable or StateVector objects
         v = pybamm.concatenation(
             pybamm.Variable("x", "negative electrode"),
             pybamm.Variable("y", "separator"),
             pybamm.Variable("z", "positive electrode"),
         )
+        self.assertIsInstance((v * v), pybamm.Multiplication)
         self.assertIsInstance((a * v), pybamm.Multiplication)
 
     def test_advanced_binary_simplifications(self):
