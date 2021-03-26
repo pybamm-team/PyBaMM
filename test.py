@@ -1,6 +1,6 @@
 import pybamm
 
-model = pybamm.lithium_ion.DFN()
+model = pybamm.lithium_ion.SPMe(name="SPMe")
 parameter_values = model.default_parameter_values
 parameter_values._replace_callable_function_parameters = False
 sim = pybamm.Simulation(model, parameter_values=parameter_values)

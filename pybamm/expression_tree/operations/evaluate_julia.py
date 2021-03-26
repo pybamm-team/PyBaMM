@@ -798,9 +798,14 @@ def get_julia_mtk_model(model, geometry=None, tspan=None):
     mtk_str = "begin\n"
     # Define parameters (including independent variables)
     # Makes a line of the form '@parameters t x1 x2 x3 a b c d'
-    ind_vars = ["t"] + list(domain_name_to_symbol.values())
+    ind_vars = ["t"] + [
+        sym
+        for dom, sym in domain_name_to_symbol.items()
+        if domain_name_to_limits[dom] is not None
+    ]
     for domain_name, domain_symbol in domain_name_to_symbol.items():
-        mtk_str += f"# {domain_name} -> {domain_symbol}\n"
+        if domain_name_to_limits[domain_name] is not None:
+            mtk_str += f"# {domain_name} -> {domain_symbol}\n"
     mtk_str += "@parameters " + " ".join(ind_vars)
     for param in model.input_parameters:
         mtk_str += f" {param.name}"
@@ -818,10 +823,8 @@ def get_julia_mtk_model(model, geometry=None, tspan=None):
     mtk_str += "\n"
 
     # Define derivatives
-    mtk_str += "Dt = Differential(t)\n"
-    if is_pde:
-        for domain_symbol in domain_name_to_symbol.values():
-            mtk_str += f"D{domain_symbol} = Differential({domain_symbol})\n"
+    for domain_symbol in ind_vars:
+        mtk_str += f"D{domain_symbol} = Differential({domain_symbol})\n"
     mtk_str += "\n"
 
     # Define equations
@@ -1014,8 +1017,10 @@ def get_julia_mtk_model(model, geometry=None, tspan=None):
         mtk_str += "ind_vars = [{}]\n".format(", ".join(ind_vars))
         mtk_str += "dep_vars = [{}]\n\n".format(", ".join(dep_vars))
 
+        name = model.name.replace(" ", "_").replace("-", "_")
         mtk_str += (
-            "pde_system = PDESystem(eqs, ics_bcs, domains, ind_vars, dep_vars)\n\n"
+            name
+            + "_pde_system = PDESystem(eqs, ics_bcs, domains, ind_vars, dep_vars)\n\n"
         )
 
     # Need to add 'nothing' to the end of the mtk string to avoid errors in MTK v4
