@@ -1,4 +1,4 @@
-from pybamm import constants
+from pybamm import constants, Parameter
 
 
 def stripping_exchange_current_density_OKane2020(c_e, c_Li, T):
@@ -30,6 +30,6 @@ def stripping_exchange_current_density_OKane2020(c_e, c_Li, T):
         Exchange-current density [A.m-2]
     """
 
-    k_plating = 1e-10
+    k_plating = Parameter("Lithium plating kinetic rate constant [m.s-1]")
 
     return constants.F * k_plating * c_Li

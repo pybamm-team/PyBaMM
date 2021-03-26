@@ -39,8 +39,7 @@ class ReversiblePlating(BasePlating):
 
     def get_coupled_variables(self, variables):
         param = self.param
-        phi_s_n = variables[f"{self.domain} electrode potential"]
-        phi_e_n = variables[f"{self.domain} electrolyte potential"]
+        delta_phi = variables[f"{self.domain} electrode surface potential difference"]
         c_e_n = variables[f"{self.domain} electrolyte concentration"]
         T = variables[f"{self.domain} electrode temperature"]
         eta_sei = variables[f"{self.domain} electrode SEI film overpotential"]
@@ -50,11 +49,12 @@ class ReversiblePlating(BasePlating):
         j0_stripping = param.j0_stripping(c_e_n, c_plated_Li, T)
         j0_plating = param.j0_plating(c_e_n, c_plated_Li, T)
         phi_ref = param.U_n_ref / param.potential_scale
-
-        # need to revise for thermal case
+        eta_stripping = delta_phi + phi_ref + eta_sei
+        eta_plating = -eta_stripping
+        prefactor = 1 / (2 * (1 + self.param.Theta * T))
         j_stripping = j0_stripping * pybamm.exp(
-            0.5 * (phi_s_n - phi_e_n + phi_ref + eta_sei)
-        ) - j0_plating * pybamm.exp(-0.5 * (phi_s_n - phi_e_n + phi_ref + eta_sei))
+            prefactor * eta_stripping
+        ) - j0_plating * pybamm.exp(prefactor * eta_plating)
 
         variables.update(self._get_standard_reaction_variables(j_stripping))
 
