@@ -87,6 +87,10 @@ class ParameterValues:
         self._processed_symbols = {}
         self.parameter_events = []
 
+        # Don't touch this parameter unless you know what you are doing
+        # This is for the conversion to Julia (ModelingToolkit)
+        self._replace_callable_function_parameters = True
+
     def __getitem__(self, key):
         return self._dict_items[key]
 
@@ -122,7 +126,11 @@ class ParameterValues:
     def copy(self):
         """Returns a copy of the parameter values. Makes sure to copy the internal
         dictionary."""
-        return ParameterValues(values=self._dict_items.copy())
+        new_copy = ParameterValues(values=self._dict_items.copy())
+        new_copy._replace_callable_function_parameters = (
+            self._replace_callable_function_parameters
+        )
+        return new_copy
 
     def search(self, key, print_values=True):
         """
@@ -570,6 +578,8 @@ class ParameterValues:
                             geometry[domain][spatial_variable][
                                 lim
                             ] = self.process_symbol(sym)
+                        elif isinstance(sym, numbers.Number):
+                            geometry[domain][spatial_variable][lim] = pybamm.Scalar(sym)
 
     def process_symbol(self, symbol):
         """Walk through the symbol and replace any Parameter with a Value.
@@ -668,6 +678,17 @@ class ParameterValues:
             elif callable(function_name):
                 # otherwise evaluate the function to create a new PyBaMM object
                 function = function_name(*new_children)
+                if (
+                    self._replace_callable_function_parameters is False
+                    and not isinstance(
+                        self.process_symbol(function), (pybamm.Scalar, pybamm.Broadcast)
+                    )
+                    and symbol.short_name is not None
+                    and symbol.diff_variable is None
+                ):
+                    return pybamm.FunctionParameter(
+                        symbol.short_name, dict(zip(symbol.input_names, new_children))
+                    )
             elif isinstance(function_name, pybamm.Interpolant):
                 function = function_name
             else:

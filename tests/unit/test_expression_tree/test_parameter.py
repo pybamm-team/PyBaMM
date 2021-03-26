@@ -74,6 +74,25 @@ class TestFunctionParameter(unittest.TestCase):
             new_input_names = [var]
             func.input_names = new_input_names
 
+    def test_short_name(self):
+        def myfun(x):
+            return pybamm.FunctionParameter("my function", {"x": x})
+
+        def myfun_dim(x):
+            return pybamm.FunctionParameter("my function", {"x": x})
+
+        def myfun_dimensional(x):
+            return pybamm.FunctionParameter("my function", {"x": x})
+
+        def _myfun(x):
+            return pybamm.FunctionParameter("my function", {"x": x})
+
+        x = pybamm.Scalar(1)
+        self.assertEqual(myfun(x).short_name, "myfun")
+        self.assertEqual(myfun_dim(x).short_name, "myfun")
+        self.assertEqual(myfun_dimensional(x).short_name, "myfun")
+        self.assertEqual(_myfun(x).short_name, None)
+
 
 if __name__ == "__main__":
     print("Add -v for more debug output")

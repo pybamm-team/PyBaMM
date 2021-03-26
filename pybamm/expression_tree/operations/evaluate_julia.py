@@ -178,15 +178,8 @@ def find_symbols(symbol, constant_symbols, variable_symbols, variable_symbol_siz
             symbol_str = symbol.name + children_vars[0]
 
     elif isinstance(symbol, pybamm.Function):
-        children_str = ""
-        for child_var in children_vars:
-            if children_str == "":
-                children_str = child_var
-            else:
-                children_str += ", " + child_var
         # write functions directly
-        julia_name = symbol.julia_name
-        symbol_str = "{}({})".format(julia_name, children_str)
+        symbol_str = "{}({})".format(symbol.julia_name, ", ".join(children_vars))
 
     elif isinstance(symbol, (pybamm.Variable, pybamm.ConcatenationVariable)):
         # No need to do anything if a Variable is found
@@ -296,6 +289,9 @@ def find_symbols(symbol, constant_symbols, variable_symbols, variable_symbol_siz
 
     elif isinstance(symbol, pybamm.SpatialVariable):
         symbol_str = symbol.name.replace("_", "")
+
+    elif isinstance(symbol, pybamm.FunctionParameter):
+        symbol_str = "{}({})".format(symbol.name, ", ".join(children_vars))
 
     else:
         raise NotImplementedError(
@@ -659,9 +655,26 @@ def get_julia_mtk_model(model, geometry=None, tspan=None):
     """
     # Extract variables
     variables = {**model.rhs, **model.algebraic}.keys()
-    variable_id_to_number = {var.id: f"u{i+1}" for i, var in enumerate(variables)}
-    all_domains = [var.domain for var in variables if var.domain != []]
+    variable_id_to_number = {}
+    for i, var in enumerate(variables):
+        variable_id_to_number[var.id] = f"u{i+1}"
+        if isinstance(var, pybamm.ConcatenationVariable):
+            for child in var.children:
+                variable_id_to_number[child.id] = f"u{i+1}"
 
+    # Extract domain and auxiliary domains
+    all_domains = set([tuple(var.domain) for var in variables if var.domain != []])
+    for aux_dim in ["secondary", "tertiary"]:
+        all_domains.update(
+            set(
+                [
+                    tuple(var.auxiliary_domains[aux_dim])
+                    for var in variables
+                    if aux_dim in var.auxiliary_domains
+                    and var.auxiliary_domains[aux_dim] != []
+                ]
+            )
+        )
     is_pde = bool(all_domains)
 
     # Check geometry and tspan have been provided if a PDE
@@ -671,6 +684,7 @@ def get_julia_mtk_model(model, geometry=None, tspan=None):
         if tspan is None:
             raise ValueError("must provide tspan if the model is a PDE model")
 
+    # Read domain names
     domain_name_to_symbol = {}
     long_domain_symbol_to_short = {}
     for dom in all_domains:
@@ -688,9 +702,62 @@ def get_julia_mtk_model(model, geometry=None, tspan=None):
             # Otherwise keep the whole domain
             domain_name_to_symbol[tuple(dom)] = domain_symbol
 
+    # Read coordinate systems
     domain_name_to_coord_sys = {
         tuple(dom): list(geometry[dom[0]].keys())[0].coord_sys for dom in all_domains
     }
+
+    # Read domain limits
+    domain_name_to_limits = {}
+    for dom in all_domains:
+        limits = list(geometry[dom[0]].values())[0].values()
+        if len(limits) > 1:
+            lower_limit, _ = list(geometry[dom[0]].values())[0].values()
+            _, upper_limit = list(geometry[dom[-1]].values())[0].values()
+            domain_name_to_limits[tuple(dom)] = (
+                lower_limit.evaluate(),
+                upper_limit.evaluate(),
+            )
+        else:
+            # Don't record limits for variables that have "limits" of length 1 i.e.
+            # a zero-dimensional domain
+            domain_name_to_limits[tuple(dom)] = None
+
+    # Define independent variables for each variable
+    var_to_ind_vars = {}
+    var_to_ind_vars_left_boundary = {}
+    var_to_ind_vars_right_boundary = {}
+    for var in variables:
+        if var.domain == []:
+            var_to_ind_vars[var.id] = "(t)"
+        else:
+            # all independent variables e.g. (t, x) or (t, rn, xn)
+            domain_symbols = ", ".join(
+                domain_name_to_symbol[tuple(dom)]
+                for dom in var.domains.values()
+                if domain_name_to_limits[tuple(dom)] is not None
+            )
+            var_to_ind_vars[var.id] = f"(t, {domain_symbols})"
+            if isinstance(var, pybamm.ConcatenationVariable):
+                for child in var.children:
+                    var_to_ind_vars[child.id] = f"(t, {domain_symbols})"
+            aux_domain_symbols = ", ".join(
+                domain_name_to_symbol[tuple(dom)]
+                for dom in var.auxiliary_domains.values()
+                if domain_name_to_limits[tuple(dom)] is not None
+            )
+            if aux_domain_symbols != "":
+                aux_domain_symbols = ", " + aux_domain_symbols
+
+            limits = domain_name_to_limits[tuple(var.domain)]
+            # left bc e.g. (t, 0) or (t, 0, xn)
+            var_to_ind_vars_left_boundary[
+                var.id
+            ] = f"(t, {limits[0]}{aux_domain_symbols})"
+            # right bc e.g. (t, 1) or (t, 1, xn)
+            var_to_ind_vars_right_boundary[
+                var.id
+            ] = f"(t, {limits[1]}{aux_domain_symbols})"
 
     mtk_str = "begin\n"
     # Define parameters (including independent variables)
@@ -707,15 +774,11 @@ def get_julia_mtk_model(model, geometry=None, tspan=None):
     for var in variables:
         mtk_str += f"# '{var.name}' -> {variable_id_to_number[var.id]}\n"
     # Makes a line of the form '@variables u1(t) u2(t)'
-    dep_vars = list(variable_id_to_number.values())
+    dep_vars = []
     mtk_str += "@variables"
-    var_to_ind_vars = {}
     for var in variables:
-        if var.domain == []:
-            var_to_ind_vars[var.id] = "(t)"
-        else:
-            var_to_ind_vars[var.id] = f"(t, {domain_name_to_symbol[tuple(var.domain)]})"
         mtk_str += f" {variable_id_to_number[var.id]}(..)"
+        dep_vars.append(variable_id_to_number[var.id])
     mtk_str += "\n"
 
     # Define derivatives
@@ -742,12 +805,25 @@ def get_julia_mtk_model(model, geometry=None, tspan=None):
         elif var in model.algebraic:
             all_eqns_str += f"   0 ~ {eqn_str},\n"
 
+    # Replace any long domain symbols with the short version
+    # e.g. "xn" gets replaced with "x"
+    for long, short in long_domain_symbol_to_short.items():
+        # we need to add a space to avoid accidentally replacing 'exp' with 'ex'
+        all_julia_str = all_julia_str.replace(" " + long, " " + short)
+
     # Replace variables in the julia strings that correspond to pybamm variables with
     # their julia equivalent
-    # e.g. cache_123456789 gets replaced with u1(t, x)
     for var_id, julia_id in variable_id_to_number.items():
+        # e.g. boundary_value_right(cache_123456789) gets replaced with u1(t, 1)
+        cache_var_id = id_to_julia_variable(var_id, False)
+        if f"boundary_value_right({cache_var_id})" in all_julia_str:
+            all_julia_str = all_julia_str.replace(
+                f"boundary_value_right({cache_var_id})",
+                julia_id + var_to_ind_vars_right_boundary[var_id],
+            )
+        # e.g. cache_123456789 gets replaced with u1(t, x)
         all_julia_str = all_julia_str.replace(
-            id_to_julia_variable(var_id, False), julia_id + var_to_ind_vars[var_id]
+            cache_var_id, julia_id + var_to_ind_vars[var_id]
         )
 
     # Replace independent variables (domain names) in julia strings with the
@@ -768,14 +844,8 @@ def get_julia_mtk_model(model, geometry=None, tspan=None):
                 f"1 / {domain_symbol}^2 * D{domain_symbol}({domain_symbol}^2 * ",
             )
 
-    # Replace any long domain symbols with the short version
-    # e.g. "xn" gets replaced with "x"
-    for long, short in long_domain_symbol_to_short.items():
-        # we need to add a space to avoid accidentally replacing 'exp' with 'ex'
-        all_julia_str = all_julia_str.replace(" " + long, " " + short)
-
     # Replace the thicknesses in the concatenation with the actual thickness from the
-    # geometrt
+    # geometry
     var = pybamm.standard_spatial_vars
     x_n = geometry["negative electrode"][var.x_n]["max"].evaluate()
     x_s = geometry["separator"][var.x_s]["max"].evaluate()
@@ -842,18 +912,31 @@ def get_julia_mtk_model(model, geometry=None, tspan=None):
                     )
 
                     if side == "left":
-                        geom = list(geometry[var.domain[0]].values())[0]
-                        limit = geom["min"]
+                        limit = var_to_ind_vars_left_boundary[var.id]
                     elif side == "right":
-                        geom = list(geometry[var.domain[-1]].values())[0]
-                        limit = geom["max"]
+                        limit = var_to_ind_vars_right_boundary[var.id]
 
-                    bc = f"{variable_id_to_number[var.id]}(t, {limit})"
+                    bc = f"{variable_id_to_number[var.id]}{limit}"
                     if typ == "Dirichlet":
                         bc = bc
                     elif typ == "Neumann":
                         bc = f"D{domain_name_to_symbol[tuple(var.domain)]}({bc})"
                     all_ic_bc_str += f"   {bc} ~ {eqn_str},\n"
+
+    # Replace variables in the julia strings that correspond to pybamm variables with
+    # their julia equivalent
+    for var_id, julia_id in variable_id_to_number.items():
+        # e.g. boundary_value_right(cache_123456789) gets replaced with u1(t, 1)
+        cache_var_id = id_to_julia_variable(var_id, False)
+        if f"boundary_value_right({cache_var_id})" in all_ic_bc_julia_str:
+            all_ic_bc_julia_str = all_ic_bc_julia_str.replace(
+                f"boundary_value_right({cache_var_id})",
+                julia_id + var_to_ind_vars_right_boundary[var_id],
+            )
+        # e.g. cache_123456789 gets replaced with u1(t, x)
+        all_ic_bc_julia_str = all_ic_bc_julia_str.replace(
+            cache_var_id, julia_id + var_to_ind_vars[var_id]
+        )
 
     ####################################################################################
 
@@ -880,11 +963,10 @@ def get_julia_mtk_model(model, geometry=None, tspan=None):
         mtk_str += f"t_domain = IntervalDomain({tspan[0]}, {tspan[1]})\n"
         domains = "domains = [\n   t in t_domain,\n"
         for domain, symbol in domain_name_to_symbol.items():
-            dom_min, _ = list(geometry[domain[0]].values())[0].values()
-            _, dom_max = list(geometry[domain[-1]].values())[0].values()
-
-            mtk_str += f"{symbol}_domain = IntervalDomain({dom_min}, {dom_max})\n"
-            domains += f"   {symbol} in {symbol}_domain,\n"
+            limits = domain_name_to_limits[tuple(domain)]
+            if limits is not None:
+                mtk_str += f"{symbol}_domain = IntervalDomain{limits}\n"
+                domains += f"   {symbol} in {symbol}_domain,\n"
         domains += "]\n"
 
         mtk_str += "\n"

@@ -4,6 +4,7 @@
 import numbers
 import numpy as np
 import pybamm
+import inspect
 
 
 class Parameter(pybamm.Symbol):
@@ -90,6 +91,19 @@ class FunctionParameter(pybamm.Symbol):
 
         self.input_names = list(inputs.keys())
 
+        # Use the inspect module to find the function's "short name" from the
+        # Parameters module that called it
+        short_name = inspect.stack()[1][3]
+        if short_name.startswith("_"):
+            self.short_name = None
+        else:
+            if short_name.endswith("_dimensional"):
+                self.short_name = short_name[: -len("_dimensional")]
+            elif short_name.endswith("_dim"):
+                self.short_name = short_name[: -len("_dim")]
+            else:
+                self.short_name = short_name
+
     @property
     def input_names(self):
         return self._input_names
@@ -159,7 +173,9 @@ class FunctionParameter(pybamm.Symbol):
 
     def new_copy(self):
         """ See :meth:`pybamm.Symbol.new_copy()`. """
-        return self._function_parameter_new_copy(self._input_names, self.orphans)
+        out = self._function_parameter_new_copy(self._input_names, self.orphans)
+        out.short_name = self.short_name
+        return out
 
     def _function_parameter_new_copy(self, input_names, children):
         """Returns a new copy of the function parameter.
