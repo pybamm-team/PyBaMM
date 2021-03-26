@@ -4,7 +4,7 @@ This release introduces:
 - several new models, including reversible and irreversible plating submodels, submodels for loss of active material, Yang et al.'s (2017) coupled SEI/plating/pore clogging model, and the Newman-Tobias model
 - internal optimizations for solving models, particularly for simulating experiments, with more accurate event detection and more efficient numerical methods and post-processing
 - parallel solutions of a model with different inputs
-- a cleaner installation process for Mac, no longer requiring a Homebrew installation of Sundials
+- a cleaner installation process for Mac when installing from PyPI, no longer requiring a Homebrew installation of Sundials
 - improved plotting functionality, including adding a new 'voltage component' plot
 - several other new features, optimizations, and bug fixes, summarized below
 
