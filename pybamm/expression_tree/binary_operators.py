@@ -646,36 +646,25 @@ class Maximum(BinaryOperator):
 def simplify_elementwise_binary_broadcasts(left, right):
     left, right = preprocess_binary(left, right)
 
-    # def unpack_broadcast_recursive(symbol):
-    #     if isinstance(symbol, pybamm.Broadcast):
-    #         if symbol.child.domain == []:
-    #             return symbol.orphans[0]
-    #         elif isinstance(symbol.child, pybamm.Broadcast):
-    #             return unpack_broadcast_recursive(symbol.child)
-    #     return symbol
+    def unpack_broadcast_recursive(symbol):
+        if isinstance(symbol, pybamm.Broadcast):
+            if symbol.child.domain == []:
+                return symbol.orphans[0]
+            elif (
+                isinstance(symbol.child, pybamm.Broadcast)
+                and symbol.child.broadcasts_to_nodes
+            ):
+                return unpack_broadcast_recursive(symbol.child)
+        return symbol
 
     # No need to broadcast if the other symbol already has the shape that is being
     # broadcasted to
-    # Also check for broadcast of a broadcast
+    # Do this recursively
     if left.domains == right.domains:
         if isinstance(left, pybamm.Broadcast) and left.broadcasts_to_nodes:
-            if left.child.domain == []:
-                left = left.orphans[0]
-            elif (
-                isinstance(left.child, pybamm.Broadcast)
-                and left.child.broadcasts_to_nodes
-                and left.child.child.domain == []
-            ):
-                left = left.child.orphans[0]
+            left = unpack_broadcast_recursive(left)
         elif isinstance(right, pybamm.Broadcast) and right.broadcasts_to_nodes:
-            if right.child.domain == []:
-                right = right.orphans[0]
-            elif (
-                isinstance(right.child, pybamm.Broadcast)
-                and right.child.broadcasts_to_nodes
-                and right.child.child.domain == []
-            ):
-                right = right.child.orphans[0]
+            right = unpack_broadcast_recursive(right)
 
     return left, right
 
