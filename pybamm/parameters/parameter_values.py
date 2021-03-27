@@ -847,6 +847,7 @@ class ParameterValues:
             "print_function",
             "unicode_literals",
             "pybamm",
+            "_options",
             "constants",
             "np",
             "geo",
@@ -870,16 +871,28 @@ class ParameterValues:
                     {"Current function [A]": Crate * capacity},
                     check_already_exists=False,
                 )
+
+            # Turn to regular dictionary for faster KeyErrors
+            self._dict_items = dict(self._dict_items)
+
             for name, symbol in parameters.items():
                 if not callable(symbol):
-                    proc_symbol = self.process_symbol(symbol)
+                    try:
+                        proc_symbol = self.process_symbol(symbol)
+                    except KeyError:
+                        # skip parameters that don't have a value in that parameter set
+                        proc_symbol = None
                     if not (
                         callable(proc_symbol)
+                        or proc_symbol is None
                         or proc_symbol.has_symbol_of_classes(
                             (pybamm.Concatenation, pybamm.Broadcast)
                         )
                     ):
                         evaluated_parameters[name].append(proc_symbol.evaluate(t=0))
+
+            # Turn back to FuzzyDict
+            self._dict_items = pybamm.FuzzyDict(self._dict_items)
 
         # Calculate C-dependence of the parameters based on the difference between the
         # value at 1C and the value at C / 10

@@ -256,26 +256,24 @@ class Solution(object):
                     if key in model._variables_casadi:
                         var_casadi = model._variables_casadi[key]
                     else:
-                        self._t_MX = casadi.MX.sym("t")
-                        self._y_MX = casadi.MX.sym("y", ys.shape[0])
-                        self._symbolic_inputs_dict = {
+                        t_MX = casadi.MX.sym("t")
+                        y_MX = casadi.MX.sym("y", ys.shape[0])
+                        symbolic_inputs_dict = {
                             key: casadi.MX.sym("input", value.shape[0])
                             for key, value in inputs.items()
                         }
-                        self._symbolic_inputs = casadi.vertcat(
-                            *[p for p in self._symbolic_inputs_dict.values()]
+                        symbolic_inputs = casadi.vertcat(
+                            *[p for p in symbolic_inputs_dict.values()]
                         )
 
                         # Convert variable to casadi
                         # Make all inputs symbolic first for converting to casadi
                         var_sym = var_pybamm.to_casadi(
-                            self._t_MX, self._y_MX, inputs=self._symbolic_inputs_dict
+                            t_MX, y_MX, inputs=symbolic_inputs_dict
                         )
 
                         var_casadi = casadi.Function(
-                            "variable",
-                            [self._t_MX, self._y_MX, self._symbolic_inputs],
-                            [var_sym],
+                            "variable", [t_MX, y_MX, symbolic_inputs], [var_sym]
                         )
                         model._variables_casadi[key] = var_casadi
                     vars_casadi.append(var_casadi)
@@ -329,10 +327,11 @@ class Solution(object):
 
     def clear_casadi_attributes(self):
         """Remove casadi objects for pickling, will be computed again automatically"""
-        self._t_MX = None
-        self._y_MX = None
-        self._symbolic_inputs = None
-        self._symbolic_inputs_dict = None
+        # t_MX = None
+        # y_MX = None
+        # symbolic_inputs = None
+        # symbolic_inputs_dict = None
+        pass
 
     def save(self, filename):
         """Save the whole solution using pickle"""

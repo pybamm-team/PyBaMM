@@ -4,6 +4,7 @@
 import casadi
 import pybamm
 import numpy as np
+import os
 import unittest
 
 
@@ -107,6 +108,12 @@ class TestSimulationExperiment(unittest.TestCase):
         self.assertEqual(sol2.cycles[0], sol.cycles[0])
         self.assertEqual(len(sol2.cycles), 2)
         self.assertEqual(len(sol.cycles), 1)
+
+        # save
+        sol2.save("test_experiment.sav")
+        sol3 = pybamm.load("test_experiment.sav")
+        self.assertEqual(len(sol3.cycles), 2)
+        os.remove("test_experiment.sav")
 
     def test_run_experiment_old_setup_type(self):
         experiment = pybamm.Experiment(
