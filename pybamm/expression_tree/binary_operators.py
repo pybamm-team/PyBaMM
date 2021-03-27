@@ -1108,6 +1108,10 @@ def simplified_division(left, right):
     if left.id == right.id:
         return pybamm.ones_like(left)
 
+    # Return constant if both sides are constant
+    if left.is_constant() and right.is_constant():
+        return pybamm.simplify_if_constant(pybamm.Division(left, right))
+
     # Simplify (B @ c) / a to (B / a) @ c if (B / a) is constant
     # This is a common construction that appears from discretisation of averages
     elif isinstance(left, MatrixMultiplication) and right.is_constant():
