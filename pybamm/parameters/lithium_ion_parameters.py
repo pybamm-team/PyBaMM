@@ -146,7 +146,6 @@ class LithiumIonParameters:
         self.b_e_s = self.geo.b_e_s
         self.b_e_p = self.geo.b_e_p
         self.b_s_n = self.geo.b_s_n
-        self.b_s_s = self.geo.b_s_s
         self.b_s_p = self.geo.b_s_p
 
         # Electrochemical reactions
@@ -209,7 +208,6 @@ class LithiumIonParameters:
         self.U_sei_dim = pybamm.Parameter("SEI open-circuit potential [V]")
 
         # Li plating parameters
-
         self.V_bar_plated_Li = pybamm.Parameter(
             "Lithium metal partial molar volume [m3.mol-1]"
         )
@@ -752,6 +750,12 @@ class LithiumIonParameters:
         )
 
         self.v_bar = self.V_bar_outer_dimensional / self.V_bar_inner_dimensional
+        self.c_sei_scale = (
+            self.L_sei_0_dim * self.a_n_typ / self.V_bar_inner_dimensional
+        )
+        self.c_sei_outer_scale = (
+            self.L_sei_0_dim * self.a_n_typ / self.V_bar_outer_dimensional
+        )
 
         self.L_inner_0 = self.L_inner_0_dim / self.L_sei_0_dim
         self.L_outer_0 = self.L_outer_0_dim / self.L_sei_0_dim
@@ -786,6 +790,7 @@ class LithiumIonParameters:
             )
         )
         self.beta_sei_n = self.a_n_typ * self.L_sei_0_dim * self.Gamma_SEI_n
+        self.c_sei_init = self.c_ec_0_dim / self.c_sei_outer_scale
 
         # lithium plating parameters
         self.c_Li_typ = self.c_e_typ
@@ -953,7 +958,6 @@ class LithiumIonParameters:
     def c_n_init(self, x):
         """
         Dimensionless initial concentration as a function of dimensionless position x.
-        >>>>>>> develop
         """
         return self.c_n_init_dimensional(x) / self.c_n_max
 

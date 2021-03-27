@@ -176,20 +176,10 @@ class Solution(object):
         """Time at which the event happens"""
         return self._t_event
 
-    @t_event.setter
-    def t_event(self, value):
-        """Updates the event time"""
-        self._t_event = value
-
     @property
     def y_event(self):
         """Value of the solution at the time of the event"""
         return self._y_event
-
-    @y_event.setter
-    def y_event(self, value):
-        """Updates the solution at the time of the event"""
-        self._y_event = value
 
     @property
     def termination(self):

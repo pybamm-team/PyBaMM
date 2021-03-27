@@ -25,13 +25,7 @@ def graphite_ocp_PeymanMPM(sto):
     return u_eq
 
 
-if __name__ == "__main__":  # pragma: no cover
-    import matplotlib.pyplot as plt
-
-    x = pybamm.linspace(1e-10, 1 - 1e-10, 1000)
-    plt.plot(x.evaluate(), graphite_ocp_PeymanMPM(x).evaluate())
-    plt.plot(
-        x.evaluate(),
-        (graphite_ocp_PeymanMPM(x) - 1e-6 * pybamm.log(x / (1 - x))).evaluate(),
-    )
-    plt.show()
+# if __name__ == "__main__":  # pragma: no cover
+#     x = pybamm.linspace(1e-10, 1 - 1e-10, 1000)
+#     # pybamm.plot(x, graphite_ocp_PeymanMPM(x))
+#     pybamm.plot(x, -1e-8 * pybamm.log(x / (1 - x)))

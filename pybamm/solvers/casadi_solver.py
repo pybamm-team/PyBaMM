@@ -412,7 +412,9 @@ class CasadiSolver(pybamm.BaseSolver):
         # if the event crossing was right at the end of the interval in the coarse
         # solution. In this case, return the t and y from the end of the interval
         # (i.e. next point in the coarse solution)
-        if y_event is None:
+        if y_event is None:  # pragma: no cover
+            # This is extremely rare, it's difficult to find a test that triggers this
+            # hence no coverage check
             t_event = coarse_solution.t[event_idx_lower + 1]
             y_event = coarse_solution.y[:, event_idx_lower + 1].full().flatten()
 
