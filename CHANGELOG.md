@@ -1,3 +1,13 @@
+# [Unreleased](https://github.com/pybamm-team/PyBaMM)
+
+## Features
+
+-   Added "fast with events" mode for the CasADi solver, which solves a model and finds events more efficiently than "safe" mode. As of PR #1450 this feature is still being tested and "safe" mode remains the default ([#1450](https://github.com/pybamm-team/PyBaMM/pull/1450))
+
+## Optimizations
+
+-   Improved how the CasADi solver's "safe" mode finds events ([#1450](https://github.com/pybamm-team/PyBaMM/pull/1450))
+
 # [v0.4.0](https://github.com/pybamm-team/PyBaMM/tree/v0.4.0) - 2021-03-27
 
 This release introduces:

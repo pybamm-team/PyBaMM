@@ -170,7 +170,6 @@ class BaseSolver(object):
                 )
 
         inputs = inputs or {}
-        inputs_stacked = casadi.vertcat(*[p for p in inputs.values()])
 
         # Set model timescale
         model.timescale_eval = model.timescale.evaluate(inputs=inputs)
@@ -380,7 +379,9 @@ class BaseSolver(object):
                     # We only need to do this if the model is a DAE model
                     # see #1082
                     k = 20
-                    init_sign = float(np.sign(event_eval(0, model.y0, inputs_stacked)))
+                    init_sign = float(
+                        np.sign(event.evaluate(0, model.y0.full(), inputs=inputs))
+                    )
                     # We create a sigmoid for each event which will multiply the
                     # rhs. Doing * 2 - 1 ensures that when the event is crossed,
                     # the sigmoid is zero. Hence the rhs is zero and the solution
@@ -389,14 +390,16 @@ class BaseSolver(object):
                     event_sigmoid = (
                         pybamm.sigmoid(0, init_sign * event.expression, k) * 2 - 1
                     )
-                    event_casadi = process(event_sigmoid, "event", use_jacobian=False)[
-                        0
-                    ]
+                    event_casadi = process(
+                        event_sigmoid, f"event_{n}", use_jacobian=False
+                    )[0]
                     # use the actual casadi object as this will go into the rhs
                     casadi_terminate_events.append(event_casadi)
             else:
                 # use the function call
-                event_eval = process(event.expression, "event", use_jacobian=False)[1]
+                event_eval = process(
+                    event.expression, f"event_{n}", use_jacobian=False
+                )[1]
                 if event.event_type == pybamm.EventType.TERMINATION:
                     terminate_events_eval.append(event_eval)
                 elif event.event_type == pybamm.EventType.INTERPOLANT_EXTRAPOLATION:
@@ -1080,7 +1083,8 @@ class BaseSolver(object):
             termination_event = min(final_event_values, key=final_event_values.get)
 
             # Check that it's actually an event
-            if abs(final_event_values[termination_event]) > 0.1:
+            if abs(final_event_values[termination_event]) > 0.1:  # pragma: no cover
+                # Hard to test this
                 raise pybamm.SolverError(
                     "Could not determine which event was triggered "
                     "(possibly due to NaNs)"
