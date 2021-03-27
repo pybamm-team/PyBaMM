@@ -292,9 +292,10 @@ class BaseSolver(object):
         if not ics_only:
             # Check for heaviside and modulo functions in rhs and algebraic and add
             # discontinuity events if these exist.
-            # Note: only checks for the case of t < X, t <= X, X < t, or X <= t, but also
-            # accounts for the fact that t might be dimensional
-            # Only do this for DAE models as ODE models can deal with discontinuities fine
+            # Note: only checks for the case of t < X, t <= X, X < t, or X <= t,
+            # but also accounts for the fact that t might be dimensional
+            # Only do this for DAE models as ODE models can deal with discontinuities
+            # fine
             if len(model.algebraic) > 0:
                 for symbol in itertools.chain(
                     model.concatenated_rhs.pre_order(),
@@ -422,8 +423,8 @@ class BaseSolver(object):
             )
 
             # Save CasADi functions for the CasADi solver
-            # Note: when we pass to casadi the ode part of the problem must be in explicit
-            # form so we pre-multiply by the inverse of the mass matrix
+            # Note: when we pass to casadi the ode part of the problem must be in
+            # explicit form so we pre-multiply by the inverse of the mass matrix
             if isinstance(self.root_method, pybamm.CasadiAlgebraicSolver) or isinstance(
                 self, (pybamm.CasadiSolver, pybamm.CasadiAlgebraicSolver)
             ):

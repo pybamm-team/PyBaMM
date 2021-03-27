@@ -33,7 +33,7 @@ class TestExternalVariables(unittest.TestCase):
         )
         sim.solve(t_eval=np.linspace(0, 3600, 100), inputs=inputs)
 
-    def test_external_variables_SPMe(self):
+    def test_external_variables_SPMe_thermal(self):
         model_options = {"thermal": "lumped", "external submodels": ["thermal"]}
         model = pybamm.lithium_ion.SPMe(model_options)
         sim = pybamm.Simulation(model)
@@ -49,6 +49,14 @@ class TestExternalVariables(unittest.TestCase):
         # test generate with external variable
         sim.built_model.generate("test.c", ["Volume-averaged cell temperature"])
         os.remove("test.c")
+
+    def test_external_variables_SPMe_concentration(self):
+        model_options = {"external submodels": ["electrolyte diffusion"]}
+        model = pybamm.lithium_ion.SPMe(model_options)
+        self.assertEqual(
+            model.external_variables[0].id,
+            model.variables["Electrolyte concentration"].id,
+        )
 
 
 if __name__ == "__main__":

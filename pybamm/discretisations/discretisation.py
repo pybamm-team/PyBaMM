@@ -828,6 +828,7 @@ class Discretisation(object):
             discretised_symbol = self._process_symbol(symbol)
             self._discretised_symbols[symbol.id] = discretised_symbol
             discretised_symbol.test_shape()
+
             # Assign mesh as an attribute to the processed variable
             if symbol.domain != []:
                 discretised_symbol.mesh = self.mesh.combine_submeshes(*symbol.domain)
@@ -883,7 +884,7 @@ class Discretisation(object):
             elif isinstance(symbol, pybamm.Laplacian):
                 return child_spatial_method.laplacian(child, disc_child, self.bcs)
 
-            elif isinstance(symbol, pybamm.Gradient_Squared):
+            elif isinstance(symbol, pybamm.GradientSquared):
                 return child_spatial_method.gradient_squared(
                     child, disc_child, self.bcs
                 )
@@ -1030,7 +1031,6 @@ class Discretisation(object):
         elif isinstance(symbol, pybamm.Concatenation):
             new_children = [self.process_symbol(child) for child in symbol.children]
             new_symbol = spatial_method.concatenation(new_children)
-
             return new_symbol
 
         elif isinstance(symbol, pybamm.InputParameter):

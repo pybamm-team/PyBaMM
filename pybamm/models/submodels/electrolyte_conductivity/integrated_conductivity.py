@@ -77,7 +77,7 @@ class Integrated(BaseElectrolyteConductivity):
         i_e_n = i_boundary_cc_0 * x_n / l_n
         i_e_s = pybamm.PrimaryBroadcast(i_boundary_cc_0, "separator")
         i_e_p = i_boundary_cc_0 * (1 - x_p) / l_p
-        i_e = pybamm.Concatenation(i_e_n, i_e_s, i_e_p)
+        i_e = pybamm.concatenation(i_e_n, i_e_s, i_e_p)
 
         i_e_n_edge = i_boundary_cc_0 * x_n_edge / l_n
         i_e_s_edge = pybamm.PrimaryBroadcastToEdges(i_boundary_cc_0, "separator")

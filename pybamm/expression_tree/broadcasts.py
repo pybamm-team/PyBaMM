@@ -59,6 +59,13 @@ class Broadcast(pybamm.SpatialOperator):
         self.broadcast_domain = broadcast_domain
         super().__init__(name, child, domain, auxiliary_domains)
 
+    @property
+    def broadcasts_to_nodes(self):
+        if self.broadcast_type.endswith("nodes"):
+            return True
+        else:
+            return False
+
 
 class PrimaryBroadcast(Broadcast):
     """A node in the expression tree representing a primary broadcasting operator.
@@ -141,6 +148,10 @@ class PrimaryBroadcast(Broadcast):
         child_eval = self.children[0].evaluate_for_shape()
         vec = pybamm.evaluate_for_shape_using_domain(self.domain)
         return np.outer(child_eval, vec).reshape(-1, 1)
+
+    def reduce_one_dimension(self):
+        """ Reduce the broadcast by one dimension. """
+        return self.orphans[0]
 
 
 class PrimaryBroadcastToEdges(PrimaryBroadcast):
@@ -244,6 +255,10 @@ class SecondaryBroadcast(Broadcast):
         vec = pybamm.evaluate_for_shape_using_domain(self.domain)
         return np.outer(vec, child_eval).reshape(-1, 1)
 
+    def reduce_one_dimension(self):
+        """ Reduce the broadcast by one dimension. """
+        raise NotImplementedError
+
 
 class SecondaryBroadcastToEdges(SecondaryBroadcast):
     """A secondary broadcast onto the edges of a domain."""
@@ -288,7 +303,7 @@ class FullBroadcast(Broadcast):
 
     def _unary_new_copy(self, child):
         """ See :meth:`pybamm.UnaryOperator._unary_new_copy()`. """
-        return FullBroadcast(child, self.broadcast_domain, self.auxiliary_domains)
+        return self.__class__(child, self.broadcast_domain, self.auxiliary_domains)
 
     def _evaluate_for_shape(self):
         """
@@ -301,6 +316,21 @@ class FullBroadcast(Broadcast):
         )
 
         return child_eval * vec
+
+    def reduce_one_dimension(self):
+        """ Reduce the broadcast by one dimension. """
+        if self.auxiliary_domains == {}:
+            return self.orphans[0]
+        elif "tertiary" not in self.auxiliary_domains:
+            return PrimaryBroadcast(
+                self.orphans[0], self.auxiliary_domains["secondary"]
+            )
+        elif "tertiary" in self.auxiliary_domains:
+            return FullBroadcast(
+                self.orphans[0],
+                self.auxiliary_domains["secondary"],
+                {"secondary": self.auxiliary_domains["tertiary"]},
+            )
 
 
 class FullBroadcastToEdges(FullBroadcast):
@@ -316,6 +346,21 @@ class FullBroadcastToEdges(FullBroadcast):
 
     def _evaluates_on_edges(self, dimension):
         return True
+
+    def reduce_one_dimension(self):
+        """ Reduce the broadcast by one dimension. """
+        if self.auxiliary_domains == {}:
+            return self.orphans[0]
+        elif "tertiary" not in self.auxiliary_domains:
+            return PrimaryBroadcastToEdges(
+                self.orphans[0], self.auxiliary_domains["secondary"]
+            )
+        elif "tertiary" in self.auxiliary_domains:
+            return FullBroadcastToEdges(
+                self.orphans[0],
+                self.auxiliary_domains["secondary"],
+                {"secondary": self.auxiliary_domains["tertiary"]},
+            )
 
 
 def full_like(symbols, fill_value):
@@ -359,9 +404,14 @@ def full_like(symbols, fill_value):
         )
 
     except NotImplementedError:
-        return FullBroadcast(
-            fill_value, sum_symbol.domain, sum_symbol.auxiliary_domains
-        )
+        if sum_symbol.evaluates_on_edges("primary"):
+            return FullBroadcastToEdges(
+                fill_value, sum_symbol.domain, sum_symbol.auxiliary_domains
+            )
+        else:
+            return FullBroadcast(
+                fill_value, sum_symbol.domain, sum_symbol.auxiliary_domains
+            )
 
 
 def zeros_like(*symbols):

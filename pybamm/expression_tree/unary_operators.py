@@ -113,6 +113,10 @@ class Negate(UnaryOperator):
         """ See :meth:`UnaryOperator._unary_evaluate()`. """
         return -child
 
+    def _unary_new_copy(self, child):
+        """ See :meth:`UnaryOperator._unary_new_copy()`. """
+        return -child
+
 
 class AbsoluteValue(UnaryOperator):
     """A node in the expression tree representing an `abs` operator
@@ -360,6 +364,10 @@ class Gradient(SpatialOperator):
         """ See :meth:`pybamm.Symbol._evaluates_on_edges()`. """
         return True
 
+    def _unary_new_copy(self, child):
+        """ See :meth:`UnaryOperator._unary_new_copy()`. """
+        return grad(child)
+
 
 class Divergence(SpatialOperator):
     """A node in the expression tree representing a div operator
@@ -388,6 +396,10 @@ class Divergence(SpatialOperator):
         """ See :meth:`pybamm.Symbol._evaluates_on_edges()`. """
         return False
 
+    def _unary_new_copy(self, child):
+        """ See :meth:`UnaryOperator._unary_new_copy()`. """
+        return div(child)
+
 
 class Laplacian(SpatialOperator):
     """A node in the expression tree representing a laplacian operator. This is
@@ -404,7 +416,7 @@ class Laplacian(SpatialOperator):
         return False
 
 
-class Gradient_Squared(SpatialOperator):
+class GradientSquared(SpatialOperator):
     """A node in the expression tree representing a the inner product of the grad
     operator with itself. In particular, this is useful in the finite element
     formualtion where we only require the (sclar valued) square of the gradient,
@@ -417,7 +429,7 @@ class Gradient_Squared(SpatialOperator):
 
     def _evaluates_on_edges(self, dimension):
         """ See :meth:`pybamm.Symbol._evaluates_on_edges()`. """
-        return True
+        return False
 
 
 class Mass(SpatialOperator):
@@ -990,7 +1002,7 @@ class NotConstant(UnaryOperator):
 
 
 #
-# Methods to call Gradient, Divergence, Laplacian and Gradient_Squared
+# Methods to call Gradient, Divergence, Laplacian and GradientSquared
 #
 
 
@@ -1013,6 +1025,8 @@ def grad(symbol):
     if isinstance(symbol, pybamm.PrimaryBroadcast):
         new_child = pybamm.PrimaryBroadcast(0, symbol.child.domain)
         return pybamm.PrimaryBroadcastToEdges(new_child, symbol.domain)
+    elif isinstance(symbol, pybamm.FullBroadcast):
+        return pybamm.FullBroadcastToEdges(0, symbol.domain, symbol.auxiliary_domains)
     else:
         return Gradient(symbol)
 
@@ -1036,6 +1050,9 @@ def div(symbol):
     if isinstance(symbol, pybamm.PrimaryBroadcastToEdges):
         new_child = pybamm.PrimaryBroadcast(0, symbol.child.domain)
         return pybamm.PrimaryBroadcast(new_child, symbol.domain)
+    # Divergence commutes with Negate operator
+    if isinstance(symbol, pybamm.Negate):
+        return -div(symbol.orphans[0])
     else:
         return Divergence(symbol)
 
@@ -1060,7 +1077,7 @@ def laplacian(symbol):
 
 
 def grad_squared(symbol):
-    """convenience function for creating a :class:`Gradient_Squared`
+    """convenience function for creating a :class:`GradientSquared`
 
     Parameters
     ----------
@@ -1072,11 +1089,11 @@ def grad_squared(symbol):
     Returns
     -------
 
-    :class:`Gradient_Squared`
+    :class:`GradientSquared`
         inner product of the gradient of ``symbol`` with itself
     """
 
-    return Gradient_Squared(symbol)
+    return GradientSquared(symbol)
 
 
 def upwind(symbol):
@@ -1139,9 +1156,9 @@ def x_average(symbol):
         new_symbol = symbol.new_copy()
         new_symbol.parent = None
         return new_symbol
-    # If symbol is a Broadcast, its average value is its child
-    elif isinstance(symbol, pybamm.Broadcast):
-        return symbol.orphans[0]
+    # If symbol is a primary or full broadcast, reduce by one dimension
+    if isinstance(symbol, (pybamm.PrimaryBroadcast, pybamm.FullBroadcast)):
+        return symbol.reduce_one_dimension()
     # If symbol is a concatenation of Broadcasts, its average value is its child
     elif (
         isinstance(symbol, pybamm.Concatenation)
@@ -1149,14 +1166,11 @@ def x_average(symbol):
         and symbol.domain == ["negative electrode", "separator", "positive electrode"]
     ):
         a, b, c = [orp.orphans[0] for orp in symbol.orphans]
-        if a.id == b.id == c.id:
-            out = a
-        else:
-            geo = pybamm.geometric_parameters
-            l_n = geo.l_n
-            l_s = geo.l_s
-            l_p = geo.l_p
-            out = (l_n * a + l_s * b + l_p * c) / (l_n + l_s + l_p)
+        geo = pybamm.geometric_parameters
+        l_n = geo.l_n
+        l_s = geo.l_s
+        l_p = geo.l_p
+        out = (l_n * a + l_s * b + l_p * c) / (l_n + l_s + l_p)
         # To respect domains we may need to broadcast the child back out
         child = symbol.children[0]
         # If symbol being returned doesn't have empty domain, return it
@@ -1339,14 +1353,20 @@ def boundary_value(symbol, side):
     :class:`BoundaryValue`
         the new integrated expression tree
     """
+    # Can't take boundary value if the symbol evaluates on edges
+    if symbol.evaluates_on_edges("primary"):
+        raise ValueError(
+            "Can't take the boundary value of a symbol that evaluates on edges"
+        )
+
     # If symbol doesn't have a domain, its boundary value is itself
     if symbol.domain == []:
         new_symbol = symbol.new_copy()
         new_symbol.parent = None
         return new_symbol
-    # If symbol is a primary or full broadcast, its boundary value is its child
+    # If symbol is a primary or full broadcast, reduce by one dimension
     if isinstance(symbol, (pybamm.PrimaryBroadcast, pybamm.FullBroadcast)):
-        return symbol.orphans[0]
+        return symbol.reduce_one_dimension()
     # If symbol is a secondary broadcast, its boundary value is a primary broadcast of
     # the boundary value of its child
     if isinstance(symbol, pybamm.SecondaryBroadcast):

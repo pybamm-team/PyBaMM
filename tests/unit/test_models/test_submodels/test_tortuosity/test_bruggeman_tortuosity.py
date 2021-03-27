@@ -10,15 +10,16 @@ import unittest
 class TestBruggeman(unittest.TestCase):
     def test_public_functions(self):
         param = pybamm.LithiumIonParameters()
-        a = pybamm.Concatenation(
-            pybamm.FullBroadcast(0, ["negative electrode"], "current collector"),
-            pybamm.FullBroadcast(0, ["separator"], "current collector"),
-            pybamm.FullBroadcast(0, ["positive electrode"], "current collector"),
-        )
+        a_n = pybamm.FullBroadcast(0, ["negative electrode"], "current collector")
+        a_s = pybamm.FullBroadcast(0, ["separator"], "current collector")
+        a_p = pybamm.FullBroadcast(0, ["positive electrode"], "current collector")
+
         variables = {
-            "Porosity": a,
-            "Negative electrode active material volume fraction": a.orphans[0],
-            "Positive electrode active material volume fraction": a.orphans[2],
+            "Negative electrode porosity": a_n,
+            "Separator porosity": a_s,
+            "Positive electrode porosity": a_p,
+            "Negative electrode active material volume fraction": a_n,
+            "Positive electrode active material volume fraction": a_p,
         }
         submodel = pybamm.tortuosity.Bruggeman(param, "Electrolyte")
         std_tests = tests.StandardSubModelTests(submodel, variables)

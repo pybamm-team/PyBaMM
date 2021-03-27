@@ -7,6 +7,8 @@
 ## Optimizations
 
 -   Improved how the CasADi solver's "safe" mode finds events ([#1450](https://github.com/pybamm-team/PyBaMM/pull/1450))
+-   Perform more automatic simplifications of the expression tree ([#1449](https://github.com/pybamm-team/PyBaMM/pull/1449))
+-   Reduce time taken to hash a sparse `Matrix` object ([#1449](https://github.com/pybamm-team/PyBaMM/pull/1449))
 
 # [v0.4.0](https://github.com/pybamm-team/PyBaMM/tree/v0.4.0) - 2021-03-27
 

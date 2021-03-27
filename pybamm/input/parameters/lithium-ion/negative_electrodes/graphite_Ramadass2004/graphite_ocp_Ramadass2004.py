@@ -24,9 +24,3 @@ def graphite_ocp_Ramadass2004(sto):
     )
 
     return u_eq
-
-
-# import pybamm
-
-# sto = pybamm.linspace(0, 1,1000)
-# pybamm.plot(sto, graphite_ocp_Ramadass2004(sto))

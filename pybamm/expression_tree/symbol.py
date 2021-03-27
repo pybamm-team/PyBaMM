@@ -68,13 +68,50 @@ def is_constant(symbol):
     return isinstance(symbol, numbers.Number) or symbol.is_constant()
 
 
+def is_scalar_x(expr, x):
+    """
+    Utility function to test if an expression evaluates to a constant scalar value
+    """
+    if is_constant(expr):
+        result = expr.evaluate_ignoring_errors(t=None)
+        return isinstance(result, numbers.Number) and result == x
+    else:
+        return False
+
+
 def is_scalar_zero(expr):
     """
     Utility function to test if an expression evaluates to a constant scalar zero
     """
+    return is_scalar_x(expr, 0)
+
+
+def is_scalar_one(expr):
+    """
+    Utility function to test if an expression evaluates to a constant scalar one
+    """
+    return is_scalar_x(expr, 1)
+
+
+def is_scalar_minus_one(expr):
+    """
+    Utility function to test if an expression evaluates to a constant scalar minus one
+    """
+    return is_scalar_x(expr, -1)
+
+
+def is_matrix_x(expr, x):
+    """
+    Utility function to test if an expression evaluates to a constant matrix value
+    """
+    if isinstance(expr, pybamm.Broadcast):
+        return is_scalar_x(expr.child, x) or is_matrix_x(expr.child, x)
+
     if is_constant(expr):
         result = expr.evaluate_ignoring_errors(t=None)
-        return isinstance(result, numbers.Number) and result == 0
+        return (issparse(result) and np.all(result.__dict__["data"] == x)) or (
+            isinstance(result, np.ndarray) and np.all(result == x)
+        )
     else:
         return False
 
@@ -83,43 +120,21 @@ def is_matrix_zero(expr):
     """
     Utility function to test if an expression evaluates to a constant matrix zero
     """
-    if isinstance(expr, pybamm.Broadcast):
-        return is_scalar_zero(expr.child) or is_matrix_zero(expr.child)
-
-    if is_constant(expr):
-        result = expr.evaluate_ignoring_errors(t=None)
-        return (issparse(result) and result.count_nonzero() == 0) or (
-            isinstance(result, np.ndarray) and np.all(result == 0)
-        )
-    else:
-        return False
-
-
-def is_scalar_one(expr):
-    """
-    Utility function to test if an expression evaluates to a constant scalar one
-    """
-    if is_constant(expr):
-        result = expr.evaluate_ignoring_errors(t=None)
-        return isinstance(result, numbers.Number) and result == 1
-    else:
-        return False
+    return is_matrix_x(expr, 0)
 
 
 def is_matrix_one(expr):
     """
     Utility function to test if an expression evaluates to a constant matrix one
     """
-    if isinstance(expr, pybamm.Broadcast):
-        return is_scalar_one(expr.child) or is_matrix_one(expr.child)
+    return is_matrix_x(expr, 1)
 
-    if is_constant(expr):
-        result = expr.evaluate_ignoring_errors(t=None)
-        return (issparse(result) and np.all(result.toarray() == 1)) or (
-            isinstance(result, np.ndarray) and np.all(result == 1)
-        )
-    else:
-        return False
+
+def is_matrix_minus_one(expr):
+    """
+    Utility function to test if an expression evaluates to a constant matrix minus one
+    """
+    return is_matrix_x(expr, -1)
 
 
 def simplify_if_constant(symbol):
@@ -304,7 +319,6 @@ class Symbol(anytree.NodeMixin):
     def copy_domains(self, symbol):
         """Copy the domains from a given symbol, bypassing checks"""
         self._domains = symbol.domains.copy()
-        self._domain = self._domains["primary"]
         self._auxiliary_domains = {
             k: v for k, v in self._domains.items() if k != "primary"
         }
@@ -313,7 +327,6 @@ class Symbol(anytree.NodeMixin):
     def clear_domains(self):
         """Clear domains, bypassing checks"""
         self._domains = {"primary": []}
-        self._domain = []
         self._auxiliary_domains = {}
         self.set_id()
 
@@ -568,18 +581,39 @@ class Symbol(anytree.NodeMixin):
 
     def __neg__(self):
         """return a :class:`Negate` object"""
-        return pybamm.simplify_if_constant(pybamm.Negate(self))
+        if isinstance(self, pybamm.Negate):
+            # Double negative is a positive
+            return self.orphans[0]
+        elif isinstance(self, pybamm.Broadcast):
+            # Move negation inside the broadcast
+            # Apply recursively
+            return self._unary_new_copy(-self.orphans[0])
+        elif isinstance(self, pybamm.Concatenation) and all(
+            child.is_constant() for child in self.children
+        ):
+            return pybamm.concatenation(*[-child for child in self.orphans])
+        else:
+            return pybamm.simplify_if_constant(pybamm.Negate(self))
 
     def __abs__(self):
         """return an :class:`AbsoluteValue` object, or a smooth approximation"""
-        k = pybamm.settings.abs_smoothing
-        # Return exact approximation if that is the setting or the outcome is a constant
-        # (i.e. no need for smoothing)
-        if k == "exact" or is_constant(self):
-            out = pybamm.AbsoluteValue(self)
+        if isinstance(self, pybamm.AbsoluteValue):
+            # No need to apply abs a second time
+            return self
+        elif isinstance(self, pybamm.Broadcast):
+            # Move absolute value inside the broadcast
+            # Apply recursively
+            abs_self_not_broad = pybamm.simplify_if_constant(abs(self.orphans[0]))
+            return self._unary_new_copy(abs_self_not_broad)
         else:
-            out = pybamm.smooth_absolute_value(self, k)
-        return pybamm.simplify_if_constant(out)
+            k = pybamm.settings.abs_smoothing
+            # Return exact approximation if that is the setting or the outcome is a
+            # constant (i.e. no need for smoothing)
+            if k == "exact" or is_constant(self):
+                out = pybamm.AbsoluteValue(self)
+            else:
+                out = pybamm.smooth_absolute_value(self, k)
+            return pybamm.simplify_if_constant(out)
 
     def __mod__(self, other):
         """return an :class:`Modulo` object"""
@@ -610,8 +644,9 @@ class Symbol(anytree.NodeMixin):
             return pybamm.Scalar(0)
 
     def _diff(self, variable):
-        """Default behaviour for differentiation, overriden by Binary
-        and Unary Operators"""
+        """
+        Default behaviour for differentiation, overriden by Binary and Unary Operators
+        """
         raise NotImplementedError
 
     def jac(self, variable, known_jacs=None, clear_domain=True):
@@ -902,6 +937,14 @@ class Symbol(anytree.NodeMixin):
             return ()
         else:
             return evaluated_self.shape
+
+    @property
+    def ndim_for_testing(self):
+        """
+        Number of dimensions of an object,
+        found by evaluating it with appropriate t and y
+        """
+        return len(self.shape_for_testing)
 
     def test_shape(self):
         """

@@ -811,7 +811,8 @@ class Simulation:
                         )
                     else:
                         pybamm.logger.notice(
-                            f"Stopping experiment since capacity ({capacity_now:.3f} Ah) "
+                            "Stopping experiment since capacity "
+                            f"({capacity_now:.3f} Ah) "
                             f"is below stopping capacity ({capacity_stop:.3f} Ah)."
                         )
                         break
