@@ -926,11 +926,7 @@ class LithiumIonParameters:
 
     def c_n_init(self, x):
         """
-        <<<<<<< HEAD
-                Dimensionless initial concentration as a function of dimensionless position x.
-        =======
-                Dimensionless initial concentration as a function of dimensionless position x
-        >>>>>>> develop
+        Dimensionless initial concentration as a function of dimensionless position x.
         """
         return self.c_n_init_dimensional(x) / self.c_n_max
 
