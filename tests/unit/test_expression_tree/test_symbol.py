@@ -95,7 +95,8 @@ class TestSymbol(unittest.TestCase):
         self.assertIsInstance(-a, pybamm.Negate)
         self.assertIsInstance(abs(a), pybamm.AbsoluteValue)
         # special cases
-        self.assertEqual(-(-a), a)
+        neg_a = -a
+        self.assertEqual(-neg_a, a)
         abs_a = abs(a)
         self.assertEqual(abs(abs_a), abs_a)
 

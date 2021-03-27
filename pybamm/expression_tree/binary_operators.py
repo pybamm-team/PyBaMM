@@ -1112,6 +1112,25 @@ def simplified_division(left, right):
     if left.id == right.id:
         return pybamm.ones_like(left)
 
+    # anything multiplied by a matrix one returns itself if
+    # - the shapes are the same
+    # - both left and right evaluate on edges, or both evaluate on nodes, in all
+    # dimensions
+    # (and possibly more generally, but not implemented here)
+    try:
+        if left.shape_for_testing == right.shape_for_testing and all(
+            left.evaluates_on_edges(dim) == right.evaluates_on_edges(dim)
+            for dim in ["primary", "secondary", "tertiary"]
+        ):
+            if pybamm.is_matrix_one(right):
+                return left
+            # also check for negative one
+            if pybamm.is_matrix_minus_one(right):
+                return -left
+
+    except NotImplementedError:
+        pass
+
     # Return constant if both sides are constant
     if left.is_constant() and right.is_constant():
         return pybamm.simplify_if_constant(pybamm.Division(left, right))
