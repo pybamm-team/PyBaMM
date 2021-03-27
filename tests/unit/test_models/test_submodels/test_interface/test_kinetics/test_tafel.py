@@ -33,7 +33,7 @@ class TestTafel(unittest.TestCase):
             "Negative",
             "lithium-ion main",
             {
-                "sei film resistance": "none",
+                "SEI film resistance": "none",
                 "total interfacial current density as a state": "false",
             },
         )
@@ -74,7 +74,7 @@ class TestTafel(unittest.TestCase):
             "Positive",
             "lithium-ion main",
             {
-                "sei film resistance": "none",
+                "SEI film resistance": "none",
                 "total interfacial current density as a state": "false",
             },
         )

@@ -9,9 +9,9 @@ import unittest
 
 class TestConcatenations(unittest.TestCase):
     def test_base_concatenation(self):
-        a = pybamm.Symbol("a")
-        b = pybamm.Symbol("b")
-        c = pybamm.Symbol("c")
+        a = pybamm.Symbol("a", domain="test a")
+        b = pybamm.Symbol("b", domain="test b")
+        c = pybamm.Symbol("c", domain="test c")
         conc = pybamm.Concatenation(a, b, c)
         self.assertEqual(conc.name, "concatenation")
         self.assertEqual(str(conc), "concatenation(a, b, c)")
@@ -19,9 +19,9 @@ class TestConcatenations(unittest.TestCase):
         self.assertEqual(conc.children[0].name, "a")
         self.assertEqual(conc.children[1].name, "b")
         self.assertEqual(conc.children[2].name, "c")
-        d = pybamm.Vector([2])
-        e = pybamm.Vector([1])
-        f = pybamm.Vector([3])
+        d = pybamm.Vector([2], domain="test a")
+        e = pybamm.Vector([1], domain="test b")
+        f = pybamm.Vector([3], domain="test c")
         conc2 = pybamm.Concatenation(d, e, f)
         with self.assertRaises(TypeError):
             conc2.evaluate()
@@ -309,23 +309,15 @@ class TestConcatenations(unittest.TestCase):
     def test_domain_error(self):
         a = pybamm.Symbol("a")
         b = pybamm.Symbol("b")
-        with self.assertRaisesRegex(pybamm.DomainError, "domain cannot be empty"):
+        with self.assertRaisesRegex(
+            pybamm.DomainError, "Cannot concatenate child 'a' with empty domain"
+        ):
             pybamm.DomainConcatenation([a, b], None)
 
-    def test_numpy_concatenation_simplify(self):
+    def test_numpy_concatenation(self):
         a = pybamm.Variable("a")
         b = pybamm.Variable("b")
         c = pybamm.Variable("c")
-        # simplifying flattens the concatenations into a single concatenation
-        self.assertEqual(
-            pybamm.NumpyConcatenation(pybamm.NumpyConcatenation(a, b), c).simplify().id,
-            pybamm.NumpyConcatenation(a, b, c).id,
-        )
-        self.assertEqual(
-            pybamm.NumpyConcatenation(a, pybamm.NumpyConcatenation(b, c)).simplify().id,
-            pybamm.NumpyConcatenation(a, b, c).id,
-        )
-        # check it works when calling numpy_concatenation
         self.assertEqual(
             pybamm.numpy_concatenation(pybamm.numpy_concatenation(a, b), c).id,
             pybamm.NumpyConcatenation(a, b, c).id,

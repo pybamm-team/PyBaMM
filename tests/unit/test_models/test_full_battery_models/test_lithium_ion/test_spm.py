@@ -163,7 +163,6 @@ class TestSPM(unittest.TestCase):
         self.assertEqual(new_model_T_eqn.id, model_T_eqn.id)
         self.assertEqual(new_model.name, model.name)
         self.assertEqual(new_model.use_jacobian, model.use_jacobian)
-        self.assertEqual(new_model.use_simplify, model.use_simplify)
         self.assertEqual(new_model.convert_to_format, model.convert_to_format)
         self.assertEqual(new_model.timescale.id, model.timescale.id)
 
@@ -177,6 +176,14 @@ class TestSPM(unittest.TestCase):
         new_model_cs_eqn = list(new_model.rhs.values())[1]
         model_cs_eqn = list(model.rhs.values())[1]
         self.assertEqual(new_model_cs_eqn.id, model_cs_eqn.id)
+
+    def test_well_posed_reversible_plating_with_porosity(self):
+        options = {
+            "lithium plating": "reversible",
+            "lithium plating porosity change": "true",
+        }
+        model = pybamm.lithium_ion.SPM(options)
+        model.check_well_posedness()
 
 
 class TestSPMExternalCircuits(unittest.TestCase):
@@ -203,27 +210,27 @@ class TestSPMExternalCircuits(unittest.TestCase):
 
 class TestSPMWithSEI(unittest.TestCase):
     def test_well_posed_reaction_limited(self):
-        options = {"sei": "reaction limited"}
+        options = {"SEI": "reaction limited"}
         model = pybamm.lithium_ion.SPM(options)
         model.check_well_posedness()
 
     def test_well_posed_solvent_diffusion_limited(self):
-        options = {"sei": "solvent-diffusion limited"}
+        options = {"SEI": "solvent-diffusion limited"}
         model = pybamm.lithium_ion.SPM(options)
         model.check_well_posedness()
 
     def test_well_posed_electron_migration_limited(self):
-        options = {"sei": "electron-migration limited"}
+        options = {"SEI": "electron-migration limited"}
         model = pybamm.lithium_ion.SPM(options)
         model.check_well_posedness()
 
     def test_well_posed_interstitial_diffusion_limited(self):
-        options = {"sei": "interstitial-diffusion limited"}
+        options = {"SEI": "interstitial-diffusion limited"}
         model = pybamm.lithium_ion.SPM(options)
         model.check_well_posedness()
 
     def test_well_posed_ec_reaction_limited(self):
-        options = {"sei": "ec reaction limited", "sei porosity change": "true"}
+        options = {"SEI": "ec reaction limited", "SEI porosity change": "true"}
         model = pybamm.lithium_ion.SPM(options)
         model.check_well_posedness()
 

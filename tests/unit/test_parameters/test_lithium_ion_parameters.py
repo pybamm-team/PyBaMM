@@ -14,6 +14,16 @@ class TestDimensionlessParameterValues(unittest.TestCase):
         with self.assertRaisesRegex(pybamm.OptionError, "particle cracking"):
             pybamm.LithiumIonParameters({"particle cracking": "bad crack"})
 
+    def test_print_parameters(self):
+        parameters = pybamm.LithiumIonParameters()
+        parameter_values = pybamm.lithium_ion.BaseModel().default_parameter_values
+        output_file = "lithium_ion_parameters.txt"
+        parameter_values.print_parameters(parameters, output_file)
+        # test print_parameters with dict and without C-rate
+        del parameter_values["Nominal cell capacity [A.h]"]
+        parameters = {"C_e": parameters.C_e, "sigma_n": parameters.sigma_n}
+        parameter_values.print_parameters(parameters)
+
     def test_lithium_ion(self):
         """This test checks that all the dimensionless parameters are being calculated
         correctly for the specific set of parameters for LCO from dualfoil. The values
@@ -167,7 +177,7 @@ class TestDimensionlessParameterValues(unittest.TestCase):
         values = pybamm.lithium_ion.BaseModel().default_parameter_values
         param = pybamm.LithiumIonParameters()
         c_rate = param.i_typ / 24
-        T = 1   # dummy temperature as the values are constant
+        T = 1  # dummy temperature as the values are constant
 
         # Density
         np.testing.assert_almost_equal(values.evaluate(param.rho_cn(T)), 1.9019, 2)

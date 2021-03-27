@@ -70,10 +70,6 @@ class BaseModel(object):
         solver set up
     use_jacobian : bool
         Whether to use the Jacobian when solving the model (default is True)
-    use_simplify : bool
-        Whether to simplify the expression tress representing the rhs and
-        algebraic equations, Jacobain (if using) and events, before solving the
-        model (default is True)
     convert_to_format : str
         Whether to convert the expression trees representing the rhs and
         algebraic equations, Jacobain (if using) and events into a different format:
@@ -97,7 +93,7 @@ class BaseModel(object):
         self._algebraic = {}
         self._initial_conditions = {}
         self._boundary_conditions = {}
-        self._variables = {}
+        self._variables = pybamm.FuzzyDict({})
         self._events = []
         self._concatenated_rhs = None
         self._concatenated_algebraic = None
@@ -111,9 +107,8 @@ class BaseModel(object):
         self._input_parameters = None
         self._variables_casadi = {}
 
-        # Default behaviour is to use the jacobian and simplify
+        # Default behaviour is to use the jacobian
         self.use_jacobian = True
-        self.use_simplify = True
         self.convert_to_format = "casadi"
 
         # Model is not initially discretised
@@ -267,12 +262,12 @@ class BaseModel(object):
 
     @property
     def timescale(self):
-        "Timescale of model, to be used for non-dimensionalising time when solving"
+        """Timescale of model, to be used for non-dimensionalising time when solving"""
         return self._timescale
 
     @timescale.setter
     def timescale(self, value):
-        "Set the timescale"
+        """Set the timescale"""
         self._timescale = value
 
     @property
@@ -290,13 +285,13 @@ class BaseModel(object):
 
     @property
     def parameters(self):
-        "Returns all the parameters in the model"
+        """Returns all the parameters in the model"""
         if self._parameters is None:
             self._parameters = self._find_parameters()
         return self._parameters
 
     def _find_parameters(self):
-        "Find all the parameters in the model"
+        """Find all the parameters in the model"""
         unpacker = pybamm.SymbolUnpacker((pybamm.Parameter, pybamm.InputParameter))
         all_parameters = unpacker.unpack_list_of_symbols(
             list(self.rhs.values())
@@ -309,13 +304,13 @@ class BaseModel(object):
 
     @property
     def input_parameters(self):
-        "Returns all the input parameters in the model"
+        """Returns all the input parameters in the model"""
         if self._input_parameters is None:
             self._input_parameters = self._find_input_parameters()
         return self._input_parameters
 
     def _find_input_parameters(self):
-        "Find all the input parameters in the model"
+        """Find all the input parameters in the model"""
         unpacker = pybamm.SymbolUnpacker(pybamm.InputParameter)
         all_input_parameters = unpacker.unpack_list_of_symbols(
             list(self.rhs.values())
@@ -338,7 +333,6 @@ class BaseModel(object):
         """
         new_model = self.__class__(name=self.name)
         new_model.use_jacobian = self.use_jacobian
-        new_model.use_simplify = self.use_simplify
         new_model.convert_to_format = self.convert_to_format
         new_model.timescale = self.timescale
         new_model.length_scales = self.length_scales
@@ -401,24 +395,42 @@ class BaseModel(object):
         else:
             model = self.new_copy()
 
+        if isinstance(solution, pybamm.Solution):
+            solution = solution.last_state
         for var, equation in model.initial_conditions.items():
             if isinstance(var, pybamm.Variable):
-                final_state = solution[var.name]
+                try:
+                    final_state = solution[var.name]
+                except KeyError as e:
+                    raise pybamm.ModelError(
+                        "To update a model from a solution, each variable in "
+                        "model.initial_conditions must appear in the solution with "
+                        "the same key as the variable name. In the solution provided, "
+                        f"{e.args[0]}"
+                    )
                 if isinstance(solution, pybamm.Solution):
                     final_state = final_state.data
                 if final_state.ndim == 1:
-                    final_state_eval = np.array([final_state[-1]])
+                    final_state_eval = final_state[-1:]
                 elif final_state.ndim == 2:
                     final_state_eval = final_state[:, -1]
                 elif final_state.ndim == 3:
-                    final_state_eval = final_state[:, :, -1].flatten()
+                    final_state_eval = final_state[:, :, -1].flatten(order="F")
                 else:
                     raise NotImplementedError("Variable must be 0D, 1D, or 2D")
                 model.initial_conditions[var] = pybamm.Vector(final_state_eval)
             elif isinstance(var, pybamm.Concatenation):
                 children = []
                 for child in var.orphans:
-                    final_state = solution[child.name]
+                    try:
+                        final_state = solution[child.name]
+                    except KeyError as e:
+                        raise pybamm.ModelError(
+                            "To update a model from a solution, each variable in "
+                            "model.initial_conditions must appear in the solution with "
+                            "the same key as the variable name. In the solution "
+                            f"provided, {e.args[0]}"
+                        )
                     if isinstance(solution, pybamm.Solution):
                         final_state = final_state.data
                     if final_state.ndim == 2:
@@ -531,7 +543,7 @@ class BaseModel(object):
                     )
 
     def check_well_determined(self, post_discretisation):
-        """ Check that the model is not under- or over-determined. """
+        """Check that the model is not under- or over-determined."""
         # Equations (differential and algebraic)
         # Get all the variables from differential and algebraic equations
         vars_in_rhs_keys = set()
@@ -646,7 +658,7 @@ class BaseModel(object):
                     )
 
     def check_ics_bcs(self):
-        """ Check that the initial and boundary conditions are well-posed. """
+        """Check that the initial and boundary conditions are well-posed."""
         # Initial conditions
         for var in self.rhs.keys():
             if var not in self.initial_conditions.keys():
@@ -674,7 +686,7 @@ class BaseModel(object):
                     )
 
     def check_default_variables_dictionaries(self):
-        """ Chec that the right variables are provided. """
+        """Check that the right variables are provided."""
         missing_vars = []
         for output, expression in self._variables.items():
             if expression is None:
@@ -724,7 +736,7 @@ class BaseModel(object):
                 )
 
     def check_no_repeated_keys(self):
-        "Check that no equation keys are repeated"
+        """Check that no equation keys are repeated."""
         rhs_alg = {**self.rhs, **self.algebraic}
         rhs_alg_keys = []
 
@@ -935,7 +947,7 @@ class BaseModel(object):
 
     @property
     def default_solver(self):
-        "Return default solver based on whether model is ODE model or DAE model"
+        """Return default solver based on whether model is ODE model or DAE model."""
         return pybamm.CasadiSolver(mode="safe")
 
 
@@ -972,7 +984,7 @@ class EquationDict(dict):
         super().__init__(equations)
 
     def __setitem__(self, key, value):
-        "Call the update functionality when doing a setitem"
+        """Call the update functionality when doing a setitem."""
         self.update({key: value})
 
     def update(self, equations):
@@ -1028,7 +1040,7 @@ class BoundaryConditionsDict(dict):
         super().__init__(bcs)
 
     def __setitem__(self, key, value):
-        "Call the update functionality when doing a setitem"
+        """Call the update functionality when doing a setitem."""
         self.update({key: value})
 
     def update(self, bcs):
@@ -1036,7 +1048,7 @@ class BoundaryConditionsDict(dict):
         super().update(bcs)
 
     def check_and_convert_bcs(self, boundary_conditions):
-        """ Convert any scalar bcs in dict to 'pybamm.Scalar', and check types """
+        """Convert any scalar bcs in dict to 'pybamm.Scalar', and check types."""
         # Convert any numbers to a pybamm.Scalar
         for var, bcs in boundary_conditions.items():
             for side, bc in bcs.items():

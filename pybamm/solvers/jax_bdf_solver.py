@@ -715,7 +715,10 @@ def block_diag(lst):
             return Ai
         else:
             return onp.zeros(
-                (Ai.shape[0] if Ai.ndim > 1 else 1, Aj.shape[1] if Aj.ndim > 1 else 1,),
+                (
+                    Ai.shape[0] if Ai.ndim > 1 else 1,
+                    Aj.shape[1] if Aj.ndim > 1 else 1,
+                ),
                 dtype=Ai.dtype,
             )
 
@@ -944,7 +947,7 @@ def _bdf_odeint_rev(func, mass, rtol, atol, res, g):
             *args,
             mass=aug_mass,
             rtol=rtol,
-            atol=atol
+            atol=atol,
         )
         y_bar, t0_bar, args_bar = tree_map(op.itemgetter(1), (y_bar, t0_bar, args_bar))
         # Add gradient from current output

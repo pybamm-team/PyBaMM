@@ -61,7 +61,7 @@ class FuzzyDict(dict):
         return ratio
 
     def get_best_matches(self, key):
-        "Get best matches from keys"
+        """Get best matches from keys"""
         key = key.lower()
         best_three = []
         lowest_score = 0
@@ -154,7 +154,7 @@ class Timer(object):
 
 class TimerTime:
     def __init__(self, value):
-        "A string whose value prints in human-readable form"
+        """A string whose value prints in human-readable form"""
         self.value = value
 
     def __str__(self):
@@ -305,7 +305,8 @@ def load_function(filename):
 
 
 def rmse(x, y):
-    "Calculate the root-mean-square-error between two vectors x and y, ignoring NaNs"
+    """Calculate the root-mean-square-error between
+    two vectors x and y, ignoring NaNs"""
     # Check lengths
     if len(x) != len(y):
         raise ValueError("Vectors must have the same length")
@@ -335,7 +336,7 @@ def get_infinite_nested_dict():
 
 
 def load(filename):
-    "Load a saved object"
+    """Load a saved object"""
     with open(filename, "rb") as f:
         obj = pickle.load(f)
     return obj

@@ -40,10 +40,18 @@ class Experiment:
     period : string, optional
         Period (1/frequency) at which to record outputs. Default is 1 minute. Can be
         overwritten by individual operating conditions.
-
+    use_simulation_setup_type : str
+        Whether to use the "new" (default) or "old" simulation set-up type. "new" is
+        faster at simulating individual steps but has higher set-up overhead
     """
 
-    def __init__(self, operating_conditions, parameters=None, period="1 minute"):
+    def __init__(
+        self,
+        operating_conditions,
+        parameters=None,
+        period="1 minute",
+        use_simulation_setup_type="new",
+    ):
         self.period = self.convert_time_to_seconds(period.split())
         operating_conditions_cycles = []
         for cycle in operating_conditions:
@@ -83,6 +91,8 @@ class Experiment:
             self.parameters = parameters
         else:
             raise TypeError("experimental parameters should be a dictionary")
+
+        self.use_simulation_setup_type = use_simulation_setup_type
 
     def __str__(self):
         return str(self.operating_conditions_strings)
@@ -165,7 +175,7 @@ class Experiment:
         return electric + (time,) + (period,), events
 
     def convert_electric(self, electric):
-        "Convert electrical instructions to consistent output"
+        """Convert electrical instructions to consistent output"""
         # Rest == zero current
         if electric[0].lower() == "rest":
             return (0, "A")
@@ -254,7 +264,7 @@ class Experiment:
                 )
 
     def convert_time_to_seconds(self, time_and_units):
-        "Convert a time in seconds, minutes or hours to a time in seconds"
+        """Convert a time in seconds, minutes or hours to a time in seconds"""
         time, units = time_and_units
         if units in ["second", "seconds", "s", "sec"]:
             time_in_seconds = float(time)

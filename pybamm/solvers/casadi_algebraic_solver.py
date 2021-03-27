@@ -260,6 +260,8 @@ class CasadiAlgebraicSolver(pybamm.BaseSolver):
             # Save the solution, can just reuse and change the inputs
             self.y_sols[model] = y_sol
         # Return solution object (no events, so pass None to t_event, y_event)
-        sol = pybamm.Solution(t_eval, y_sol, model, inputs_dict, termination="success")
+        sol = pybamm.Solution(
+            [t_eval], y_sol, model, inputs_dict, termination="success"
+        )
         sol.integration_time = integration_time
         return sol
