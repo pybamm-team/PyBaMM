@@ -49,7 +49,7 @@ class ReactionLimited(BaseModel):
                 + self.domain.lower()
                 + " electrode total interfacial current density"
             ]
-        L_sei = variables["Total " + self.domain.lower() + " electrode sei thickness"]
+        L_sei = variables["Total " + self.domain.lower() + " electrode SEI thickness"]
 
         if self.domain == "Negative":
             R_sei = self.param.R_sei_n
@@ -70,9 +70,9 @@ class ReactionLimited(BaseModel):
 
         # Update whole cell variables, which also updates the "sum of" variables
         if (
-            "Negative electrode sei interfacial current density" in variables
-            and "Positive electrode sei interfacial current density" in variables
-            and "Sei interfacial current density" not in variables
+            "Negative electrode SEI interfacial current density" in variables
+            and "Positive electrode SEI interfacial current density" in variables
+            and "SEI interfacial current density" not in variables
         ):
             variables.update(
                 self._get_standard_whole_cell_interfacial_current_variables(variables)
@@ -82,10 +82,10 @@ class ReactionLimited(BaseModel):
 
     def set_rhs(self, variables):
         domain = self.domain.lower() + " electrode"
-        L_inner = variables["Inner " + domain + " sei thickness"]
-        L_outer = variables["Outer " + domain + " sei thickness"]
-        j_inner = variables["Inner " + domain + " sei interfacial current density"]
-        j_outer = variables["Outer " + domain + " sei interfacial current density"]
+        L_inner = variables["Inner " + domain + " SEI thickness"]
+        L_outer = variables["Outer " + domain + " SEI thickness"]
+        j_inner = variables["Inner " + domain + " SEI interfacial current density"]
+        j_outer = variables["Outer " + domain + " SEI interfacial current density"]
 
         v_bar = self.param.v_bar
         if self.domain == "Negative":
@@ -98,8 +98,8 @@ class ReactionLimited(BaseModel):
 
     def set_initial_conditions(self, variables):
         domain = self.domain.lower() + " electrode"
-        L_inner = variables["Inner " + domain + " sei thickness"]
-        L_outer = variables["Outer " + domain + " sei thickness"]
+        L_inner = variables["Inner " + domain + " SEI thickness"]
+        L_outer = variables["Outer " + domain + " SEI thickness"]
 
         L_inner_0 = self.param.L_inner_0
         L_outer_0 = self.param.L_outer_0

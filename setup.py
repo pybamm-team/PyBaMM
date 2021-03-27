@@ -156,8 +156,9 @@ for file_ext in ["*.csv", "*.py", "*.md", "*.txt"]:
     )
 pybamm_data.append("./version")
 pybamm_data.append("./CITATIONS.txt")
+pybamm_data.append("./plotting/pybamm.mplstyle")
 
-idaklu_ext = Extension("idaklu", ["pybamm/solvers/c_solvers/idaklu.cpp"])
+idaklu_ext = Extension("pybamm.solvers.idaklu", ["pybamm/solvers/c_solvers/idaklu.cpp"])
 ext_modules = [idaklu_ext] if compile_KLU() else []
 
 jax_dependencies = []
@@ -174,7 +175,7 @@ with open("README.md", encoding="utf-8") as f:
 
 setup(
     name="pybamm",
-    version=load_version() + "-beta",
+    version=load_version(),
     description="Python Battery Mathematical Modelling.",
     long_description=readme,
     long_description_content_type="text/markdown",
@@ -188,7 +189,7 @@ setup(
     },
     package_data={"pybamm": pybamm_data},
     # Python version
-    python_requires=">=3.6,<3.9",
+    python_requires=">=3.6,<3.10",
     # List of dependencies
     install_requires=[
         "numpy>=1.16",

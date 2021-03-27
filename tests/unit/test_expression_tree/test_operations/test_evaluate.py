@@ -159,6 +159,9 @@ class TestEvaluate(unittest.TestCase):
         )
 
         # test that Concatentation throws
+        a = pybamm.StateVector(slice(0, 1), domain="test a")
+        b = pybamm.StateVector(slice(1, 2), domain="test b")
+
         expr = pybamm.Concatenation(a, b)
         with self.assertRaises(NotImplementedError):
             pybamm.find_symbols(expr, constant_symbols, variable_symbols)

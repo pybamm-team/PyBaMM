@@ -246,13 +246,11 @@ class TestBaseModel(unittest.TestCase):
             d: {"left": (0, "Dirichlet"), "right": (0, "Dirichlet")},
         }
         model.use_jacobian = False
-        model.use_simplify = False
         model.convert_to_format = "python"
 
         new_model = model.new_copy()
         self.assertEqual(new_model.name, model.name)
         self.assertEqual(new_model.use_jacobian, model.use_jacobian)
-        self.assertEqual(new_model.use_simplify, model.use_simplify)
         self.assertEqual(new_model.convert_to_format, model.convert_to_format)
         self.assertEqual(new_model.timescale.id, model.timescale.id)
 
@@ -928,6 +926,21 @@ class TestBaseModel(unittest.TestCase):
             NotImplementedError, "Variable in concatenation must be 1D"
         ):
             model.set_initial_conditions_from({"var_concat_neg": np.ones((5, 6, 7))})
+
+        # Inconsistent model and variable names
+        model = pybamm.BaseModel()
+        var = pybamm.Variable("var")
+        model.rhs = {var: -var}
+        model.initial_conditions = {var: pybamm.Scalar(1)}
+        with self.assertRaisesRegex(pybamm.ModelError, "must appear in the solution"):
+            model.set_initial_conditions_from({"wrong var": 2})
+        var = pybamm.Concatenation(
+            pybamm.Variable("var", "test"), pybamm.Variable("var2", "test2")
+        )
+        model.rhs = {var: -var}
+        model.initial_conditions = {var: pybamm.Scalar(1)}
+        with self.assertRaisesRegex(pybamm.ModelError, "must appear in the solution"):
+            model.set_initial_conditions_from({"wrong var": 2})
 
 
 class TestStandardBatteryBaseModel(unittest.TestCase):

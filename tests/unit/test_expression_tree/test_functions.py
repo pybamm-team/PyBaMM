@@ -185,11 +185,6 @@ class TestSpecificFunctions(unittest.TestCase):
             places=5,
         )
 
-        # test simplify
-        y = pybamm.StateVector(slice(0, 1))
-        fun = pybamm.cos(y)
-        self.assertEqual(fun.id, fun.simplify().id)
-
     def test_cosh(self):
         a = pybamm.InputParameter("a")
         fun = pybamm.cosh(a)

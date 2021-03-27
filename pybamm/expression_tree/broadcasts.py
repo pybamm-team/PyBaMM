@@ -14,7 +14,7 @@ class Broadcast(pybamm.SpatialOperator):
 
     For an example of broadcasts in action, see
     `this example notebook
-    <https://github.com/pybamm-team/PyBaMM/blob/master/examples/notebooks/expression_tree/broadcasts.ipynb>`_
+    <https://github.com/pybamm-team/PyBaMM/blob/develop/examples/notebooks/expression_tree/broadcasts.ipynb>`_
 
     Parameters
     ----------
@@ -58,10 +58,6 @@ class Broadcast(pybamm.SpatialOperator):
         self.broadcast_type = broadcast_type
         self.broadcast_domain = broadcast_domain
         super().__init__(name, child, domain, auxiliary_domains)
-
-    def _unary_simplify(self, simplified_child):
-        """ See :meth:`pybamm.UnaryOperator.simplify()`. """
-        return self._unary_new_copy(simplified_child)
 
 
 class PrimaryBroadcast(Broadcast):
@@ -148,7 +144,7 @@ class PrimaryBroadcast(Broadcast):
 
 
 class PrimaryBroadcastToEdges(PrimaryBroadcast):
-    "A primary broadcast onto the edges of the domain"
+    """A primary broadcast onto the edges of the domain."""
 
     def __init__(self, child, broadcast_domain, name=None):
         name = name or "broadcast to edges"
@@ -188,7 +184,7 @@ class SecondaryBroadcast(Broadcast):
     def check_and_set_domains(
         self, child, broadcast_type, broadcast_domain, broadcast_auxiliary_domains
     ):
-        "See :meth:`Broadcast.check_and_set_domains`"
+        """ See :meth:`Broadcast.check_and_set_domains` """
         if child.domain == []:
             raise TypeError(
                 "Cannot take SecondaryBroadcast of an object with empty domain. "
@@ -250,7 +246,7 @@ class SecondaryBroadcast(Broadcast):
 
 
 class SecondaryBroadcastToEdges(SecondaryBroadcast):
-    "A secondary broadcast onto the edges of a domain"
+    """A secondary broadcast onto the edges of a domain."""
 
     def __init__(self, child, broadcast_domain, name=None):
         name = name or "broadcast to edges"
@@ -262,7 +258,7 @@ class SecondaryBroadcastToEdges(SecondaryBroadcast):
 
 
 class FullBroadcast(Broadcast):
-    "A class for full broadcasts"
+    """A class for full broadcasts."""
 
     def __init__(self, child, broadcast_domain, auxiliary_domains, name=None):
         if isinstance(auxiliary_domains, str):
@@ -278,7 +274,7 @@ class FullBroadcast(Broadcast):
     def check_and_set_domains(
         self, child, broadcast_type, broadcast_domain, broadcast_auxiliary_domains
     ):
-        "See :meth:`Broadcast.check_and_set_domains`"
+        """ See :meth:`Broadcast.check_and_set_domains` """
 
         # Variables on the current collector can only be broadcast to 'primary'
         if child.domain == ["current collector"]:

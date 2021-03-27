@@ -290,7 +290,9 @@
       "avatar_url": "https://avatars.githubusercontent.com/u/64051212?v=4",
       "profile": "https://github.com/priyanshuone6",
       "contributions": [
-        "test"
+        "test",
+        "code",
+        "bug"
       ]
     },
     {
@@ -312,7 +314,8 @@
       "profile": "https://github.com/Saransh-cpp",
       "contributions": [
         "code",
-        "test"
+        "test",
+        "doc"
       ]
     },
     {
@@ -321,7 +324,36 @@
       "avatar_url": "https://avatars.githubusercontent.com/u/10965193?v=4",
       "profile": "https://github.com/DavidMStraub",
       "contributions": [
-        "bug"
+        "bug",
+        "code"
+      ]
+    },
+    {
+      "login": "maurosgroi",
+      "name": "maurosgroi",
+      "avatar_url": "https://avatars.githubusercontent.com/u/37576773?v=4",
+      "profile": "https://github.com/maurosgroi",
+      "contributions": [
+        "ideas"
+      ]
+    },
+    {
+      "login": "asinghgaba",
+      "name": "Amarjit Singh Gaba",
+      "avatar_url": "https://avatars.githubusercontent.com/u/77078706?v=4",
+      "profile": "https://github.com/asinghgaba",
+      "contributions": [
+        "code"
+      ]
+    },
+    {
+      "login": "KennethNwanoro",
+      "name": "KennethNwanoro",
+      "avatar_url": "https://avatars.githubusercontent.com/u/78538806?v=4",
+      "profile": "https://github.com/KennethNwanoro",
+      "contributions": [
+        "code",
+        "test"
       ]
     }
   ],

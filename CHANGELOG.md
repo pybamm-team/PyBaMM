@@ -1,8 +1,22 @@
-# [Unreleased](https://github.com/pybamm-team/PyBaMM)
+-   Added `Units` object as an attribute to all symbols; units must be consistent
+-   Scalars that represent dimensional numbers must be provided with units
+# [v0.4.0](https://github.com/pybamm-team/PyBaMM/tree/v0.4.0) - 2021-03-27
+
+This release introduces:
+- several new models, including reversible and irreversible plating submodels, submodels for loss of active material, Yang et al.'s (2017) coupled SEI/plating/pore clogging model, and the Newman-Tobias model
+- internal optimizations for solving models, particularly for simulating experiments, with more accurate event detection and more efficient numerical methods and post-processing
+- parallel solutions of a model with different inputs
+- a cleaner installation process for Mac when installing from PyPI, no longer requiring a Homebrew installation of Sundials
+- improved plotting functionality, including adding a new 'voltage component' plot
+- several other new features, optimizations, and bug fixes, summarized below
 
 ## Features
-
--   Added `Units` object as an attribute to all symbols; units must be consistent
+-   Added `NewmanTobias` li-ion battery model ([#1423](https://github.com/pybamm-team/PyBaMM/pull/1423))
+-   Added `plot_voltage_components` to easily plot the component overpotentials that make up the voltage ([#1419](https://github.com/pybamm-team/PyBaMM/pull/1419))
+-   Made `QuickPlot` more customizable and added an example ([#1419](https://github.com/pybamm-team/PyBaMM/pull/1419))
+-   `Solution` objects can now be created by stepping *different* models ([#1408](https://github.com/pybamm-team/PyBaMM/pull/1408))
+-   Added Yang et al 2017 model that couples irreversible lithium plating, SEI growth and change in porosity which produces a transition from linear to nonlinear degradation pattern of lithium-ion battery over extended cycles([#1398](https://github.com/pybamm-team/PyBaMM/pull/1398))
+-   Added support for Python 3.9 and dropped support for Python 3.6. Python 3.6 may still work but is now untested ([#1370](https://github.com/pybamm-team/PyBaMM/pull/1370))
 -   Added the electrolyte overpotential and Ohmic losses for full conductivity, including surface form ([#1350](https://github.com/pybamm-team/PyBaMM/pull/1350))
 -   Added functionality to `Citations` to print formatted citations ([#1340](https://github.com/pybamm-team/PyBaMM/pull/1340))
 -   Updated the way events are handled in `CasadiSolver` for more accurate event location ([#1328](https://github.com/pybamm-team/PyBaMM/pull/1328))
@@ -22,6 +36,8 @@
 
 ## Optimizations
 
+-   Improved the way an `Experiment` is simulated to reduce solve time (at the cost of slightly higher set-up time) ([#1408](https://github.com/pybamm-team/PyBaMM/pull/1408))
+-   Add script and workflow to automatically update parameter_sets.py docstrings ([#1371](https://github.com/pybamm-team/PyBaMM/pull/1371))
 -   Add URLs checker in workflows ([#1347](https://github.com/pybamm-team/PyBaMM/pull/1347))
 -   The `Solution` class now only creates the concatenated `y` when the user asks for it. This is an optimization step as the concatenation can be slow, especially with larger experiments ([#1331](https://github.com/pybamm-team/PyBaMM/pull/1331))
 -   If solver method `solve()` is passed a list of inputs as the `inputs` keyword argument, the resolution of the model for each input set is spread across several Python processes, usually running in parallel on different processors. The default number of processes is the number of processors available. `solve()` takes a new keyword argument `nproc` which can be used to set this number a manually.
@@ -30,6 +46,13 @@
 
 ## Bug fixes
 
+-   Fixed a bug on the boundary conditions of `FickianSingleParticle` and `FickianManyParticles` to ensure mass is conserved ([#1421](https://github.com/pybamm-team/PyBaMM/pull/1421))
+-   Fixed a bug where the `PolynomialSingleParticle` submodel gave incorrect results with "dimensionality" equal to 2 ([#1411](https://github.com/pybamm-team/PyBaMM/pull/1411))
+-   Fixed a bug where volume averaging in 0D gave the wrong result ([#1411](https://github.com/pybamm-team/PyBaMM/pull/1411))
+-   Fixed a sign error in the positive electrode ohmic losses ([#1407](https://github.com/pybamm-team/PyBaMM/pull/1407))
+-   Fixed the formulation of the EC reaction SEI model ([#1397](https://github.com/pybamm-team/PyBaMM/pull/1397))
+-   Simulations now stop when an experiment becomes infeasible ([#1395](https://github.com/pybamm-team/PyBaMM/pull/1395))
+-   Added a check for domains in `Concatenation` ([#1368](https://github.com/pybamm-team/PyBaMM/pull/1368))
 -   Differentiation now works even when the differentiation variable is a constant ([#1294](https://github.com/pybamm-team/PyBaMM/pull/1294))
 -   Fixed a bug where the event time and state were no longer returned as part of the solution ([#1344](https://github.com/pybamm-team/PyBaMM/pull/1344))
 -   Fixed a bug in `CasadiSolver` safe mode which crashed when there were extrapolation events but no termination events ([#1321](https://github.com/pybamm-team/PyBaMM/pull/1321))
@@ -38,7 +61,7 @@
 
 ## Breaking changes
 
--   Scalars that represent dimensional numbers must be provided with units
+-   Removed `Simplification` class and `.simplify()` function ([#1369](https://github.com/pybamm-team/PyBaMM/pull/1369))
 -   All example notebooks in PyBaMM's GitHub repository must now include the command `pybamm.print_citations()`, otherwise the tests will fail. This is to encourage people to use this command to cite the relevant papers ([#1340](https://github.com/pybamm-team/PyBaMM/pull/1340))
 -   Notation has been homogenised to use positive and negative electrode (instead of cathode and anode). This applies to the parameter folders (now called `'positive_electrodes'` and `'negative_electrodes'`) and the options of `active_material` and `particle_cracking` submodels (now called `'positive'` and `'negative'`) ([#1337](https://github.com/pybamm-team/PyBaMM/pull/1337))
 -   `Interpolant` now takes `x` and `y` instead of a single `data` entry ([#1312](https://github.com/pybamm-team/PyBaMM/pull/1312))
@@ -46,7 +69,7 @@
 -   Operations such as `1*x` and `0+x` now directly return `x`. This can be bypassed by explicitly creating the binary operators, e.g. `pybamm.Multiplication(1, x)` ([#1252](https://github.com/pybamm-team/PyBaMM/pull/1252))
 -   `'Cell capacity [A.h]'` has been renamed to `'Nominal cell capacity [A.h]'`. `'Cell capacity [A.h]'` will be deprecated in the next release. ([#1352](https://github.com/pybamm-team/PyBaMM/pull/1352))
 
-# [v0.3.0](https://github.com/pybamm-team/PyBaMM) - 2020-11-22
+# [v0.3.0](https://github.com/pybamm-team/PyBaMM/tree/v0.3.0) - 2020-12-01
 
 This release introduces a new aging model for particle swelling and cracking, a new reduced-order model (TSPMe), and a parameter set for A123 LFP cells. Additionally, there have been several backend optimizations to speed up model creation and solving, and other minor features and bug fixes.
 
@@ -122,7 +145,7 @@ This release adds new operators for more complex models, some basic sensitivity 
 
 # [v0.2.3](https://github.com/pybamm-team/PyBaMM/tree/v0.2.3) - 2020-07-01
 
-This release enables the use of [Google Colab](https://colab.research.google.com/github/pybamm-team/PyBaMM/blob/master/) for running example notebooks, and adds some small new features and bug fixes.
+This release enables the use of [Google Colab](https://colab.research.google.com/github/pybamm-team/PyBaMM/blob/main/) for running example notebooks, and adds some small new features and bug fixes.
 
 ## Features
 
@@ -351,7 +374,7 @@ This release introduces many new features and optimizations. All models can now 
 -   Removed `Outer` and `Kron` nodes as no longer used ([#777](https://github.com/pybamm-team/PyBaMM/pull/777))
 -   Moved `results` to separate repositories ([#761](https://github.com/pybamm-team/PyBaMM/pull/761))
 -   The parameters "Bruggeman coefficient" must now be specified separately as "Bruggeman coefficient (electrolyte)" and "Bruggeman coefficient (electrode)"
--   The current classes (`GetConstantCurrent`, `GetUserCurrent` and `GetUserData`) have now been removed. Please refer to the [`change-input-current` notebook](https://github.com/pybamm-team/PyBaMM/blob/master/examples/notebooks/change-input-current.ipynb) for information on how to specify an input current
+-   The current classes (`GetConstantCurrent`, `GetUserCurrent` and `GetUserData`) have now been removed. Please refer to the [`change-input-current` notebook](https://github.com/pybamm-team/PyBaMM/blob/main/examples/notebooks/change-input-current.ipynb) for information on how to specify an input current
 -   Parameter functions must now use pybamm functions instead of numpy functions (e.g. `pybamm.exp` instead of `numpy.exp`), as these are then used to construct the expression tree directly. Generally, pybamm syntax follows numpy syntax; please get in touch if a function you need is missing.
 -   The current must now be updated by changing "Current function [A]" or "C-rate" instead of "Typical current [A]"
 

@@ -164,7 +164,6 @@ class TestScipySolver(unittest.TestCase):
         var = pybamm.Variable("var", domain=domain)
         model.rhs = {var: 0.1 * var}
         model.initial_conditions = {var: 1}
-        # No need to set parameters; can use base discretisation (no spatial operators)
 
         # create discretisation
         mesh = get_mesh_for_testing()
@@ -193,6 +192,44 @@ class TestScipySolver(unittest.TestCase):
         t_eval = step_sol.t
         solution = solver.solve(model, t_eval)
         np.testing.assert_array_almost_equal(solution.y[0], step_sol.y[0])
+
+    def test_step_different_model(self):
+        disc = pybamm.Discretisation()
+
+        # Create and discretise model1
+        model1 = pybamm.BaseModel()
+        var = pybamm.Variable("var")
+        var2 = pybamm.Variable("var2")
+        model1.rhs = {var: 0.1 * var}
+        model1.initial_conditions = {var: 1}
+        model1.variables = {"var": var, "mul_var": 2 * var, "var2": var}
+        disc.process_model(model1)
+
+        # Create and discretise model2, which is slightly different
+        model2 = pybamm.BaseModel()
+        var = pybamm.Variable("var")
+        var2 = pybamm.Variable("var2")
+        model2.rhs = {var: 0.2 * var, var2: -0.5 * var2}
+        model2.initial_conditions = {var: 1, var2: 1}
+        model2.variables = {"var": var, "mul_var": 3 * var, "var2": var2}
+        disc.process_model(model2)
+
+        solver = pybamm.ScipySolver(rtol=1e-8, atol=1e-8, method="RK45")
+
+        # Step once
+        dt = 1
+        step_sol1 = solver.step(None, model1, dt)
+        np.testing.assert_array_equal(step_sol1.t, [0, dt])
+        np.testing.assert_array_almost_equal(step_sol1.y[0], np.exp(0.1 * step_sol1.t))
+
+        # Step again, the model has changed
+        step_sol2 = solver.step(step_sol1, model2, dt)
+        np.testing.assert_array_equal(step_sol2.t, [0, dt, 2 * dt])
+        np.testing.assert_array_almost_equal(
+            step_sol2.all_ys[0][0], np.exp(0.1 * step_sol1.t)
+        )
+        print(step_sol2.all_ys)
+        print(step_sol2["mul_var"].data)
 
     def test_model_solver_with_inputs(self):
         # Create model

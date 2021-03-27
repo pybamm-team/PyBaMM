@@ -97,7 +97,7 @@ class ProcessedSymbolicVariable(object):
             )
 
     def initialise_0D(self):
-        "Create a 0D variable"
+        """Create a 0D variable"""
         # Evaluate the base_variable index-by-index
         idx = 0
         for ts, ys, inputs in zip(self.all_ts, self.all_ys, self.all_inputs_casadi):
@@ -115,7 +115,7 @@ class ProcessedSymbolicVariable(object):
         self.dimensions = 0
 
     def initialise_1D(self):
-        "Create a 1D variable"
+        """Create a 1D variable"""
         len_space = self.base_eval.shape[0]
         entries = np.empty((len_space, len(self.t_pts)))
 
@@ -200,7 +200,7 @@ class ProcessedSymbolicVariable(object):
         )
 
     def _check_and_transform(self, inputs_dict):
-        "Check dictionary has the right inputs, and convert to a vector"
+        """Check dictionary has the right inputs, and convert to a vector"""
         # Convert dict to casadi vector
         if not isinstance(inputs_dict, dict):
             raise TypeError("inputs should be 'dict' but are {}".format(inputs_dict))
@@ -228,5 +228,5 @@ class ProcessedSymbolicVariable(object):
 
     @property
     def data(self):
-        "Same as entries, but different name"
+        """Same as entries, but different name"""
         return self.entries

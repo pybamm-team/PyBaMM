@@ -278,6 +278,10 @@ class PolynomialSingleParticle(BaseParticle):
         return variables
 
     def set_rhs(self, variables):
+        # Note: we have to use `pybamm.source(rhs, var)` in the rhs dict so that
+        # the scalar source term gets multplied by the correct mass matrix when
+        # using this model with 2D current collectors with the finite element
+        # method (see #1399)
 
         c_s_rxav = variables[
             "Average " + self.domain.lower() + " particle concentration"
@@ -289,10 +293,16 @@ class PolynomialSingleParticle(BaseParticle):
         ]
 
         if self.domain == "Negative":
-            self.rhs = {c_s_rxav: -3 * j_xav / self.param.a_R_n}
+            self.rhs = {
+                c_s_rxav: pybamm.source(-3 * j_xav / self.param.a_R_n, c_s_rxav)
+            }
 
         elif self.domain == "Positive":
-            self.rhs = {c_s_rxav: -3 * j_xav / self.param.a_R_p / self.param.gamma_p}
+            self.rhs = {
+                c_s_rxav: pybamm.source(
+                    -3 * j_xav / self.param.a_R_p / self.param.gamma_p, c_s_rxav
+                )
+            }
 
         if self.name == "quartic profile":
             # We solve an extra ODE for the average particle concentration gradient
@@ -308,21 +318,27 @@ class PolynomialSingleParticle(BaseParticle):
             if self.domain == "Negative":
                 self.rhs.update(
                     {
-                        q_s_rxav: -30
-                        * self.param.D_n(c_s_surf_xav, T_xav)
-                        * q_s_rxav
-                        / self.param.C_n
-                        - 45 * j_xav / self.param.a_R_n / 2
+                        q_s_rxav: pybamm.source(
+                            -30
+                            * self.param.D_n(c_s_surf_xav, T_xav)
+                            * q_s_rxav
+                            / self.param.C_n
+                            - 45 * j_xav / self.param.a_R_n / 2,
+                            q_s_rxav,
+                        )
                     }
                 )
             elif self.domain == "Positive":
                 self.rhs.update(
                     {
-                        q_s_rxav: -30
-                        * self.param.D_p(c_s_surf_xav, T_xav)
-                        * q_s_rxav
-                        / self.param.C_p
-                        - 45 * j_xav / self.param.a_R_p / self.param.gamma_p / 2
+                        q_s_rxav: pybamm.source(
+                            -30
+                            * self.param.D_p(c_s_surf_xav, T_xav)
+                            * q_s_rxav
+                            / self.param.C_p
+                            - 45 * j_xav / self.param.a_R_p / self.param.gamma_p / 2,
+                            q_s_rxav,
+                        )
                     }
                 )
 

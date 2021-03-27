@@ -11,6 +11,10 @@ on:
   # Everyday at 3 am UTC
   schedule:
     - cron: "0 3 * * *"
+  # Make it possible to trigger the
+  # workflow manually
+  workflow_dispatch:
+
 jobs:
   benchmarks:
     runs-on: ubuntu-latest
@@ -22,12 +26,6 @@ jobs:
           python-version: 3.8
       - name: Install tox and asv
         run: pip install -U pip tox asv
-      - name: Fetch develop branch
-        # Not required when worklow trigerred
-        # on develop, but useful when
-        # experimenting/developing on another one.
-        run: |
-          git fetch origin develop:develop
       - name: Run benchmarks
         run: |
           asv machine --machine "GitHubRunner"
@@ -60,10 +58,13 @@ jobs:
           name: asv_new_results
           path: new_results
       - name: Copy new results and push to pybamm-bench repo
+        env:
+          PUSH_BENCH_EMAIL: ${{ secrets.PUSH_BENCH_EMAIL }}
+          PUSH_BENCH_NAME: ${{ secrets.PUSH_BENCH_NAME }}
         run: |
           cp -vr new_results/* results
-          git config --global user.email ${{ secrets.PUSH_BENCH_EMAIL }}
-          git config --global user.name ${{ secrets.PUSH_BENCH_NAME }}
+          git config --global user.email "$PUSH_BENCH_EMAIL"
+          git config --global user.name "$PUSH_BENCH_NAME"
           git add results
           git commit -am "Add new results"
           git push

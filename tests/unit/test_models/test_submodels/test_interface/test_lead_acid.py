@@ -33,7 +33,7 @@ class TestLeadAcid(unittest.TestCase):
             "Negative",
             "lead-acid main",
             {
-                "sei film resistance": "none",
+                "SEI film resistance": "none",
                 "total interfacial current density as a state": "false",
             },
         )
@@ -73,7 +73,7 @@ class TestLeadAcid(unittest.TestCase):
             "Positive",
             "lead-acid main",
             {
-                "sei film resistance": "none",
+                "SEI film resistance": "none",
                 "total interfacial current density as a state": "false",
             },
         )
