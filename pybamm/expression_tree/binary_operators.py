@@ -654,7 +654,9 @@ def simplify_elementwise_binary_broadcasts(left, right):
                 isinstance(symbol.child, pybamm.Broadcast)
                 and symbol.child.broadcasts_to_nodes
             ):
-                return unpack_broadcast_recursive(symbol.child)
+                out = unpack_broadcast_recursive(symbol.orphans[0])
+                if out.domain == []:
+                    return out
         return symbol
 
     # No need to broadcast if the other symbol already has the shape that is being
