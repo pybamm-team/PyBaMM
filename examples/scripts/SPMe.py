@@ -5,11 +5,11 @@
 import pybamm
 import numpy as np
 
-pybamm.set_logging_level("INFO")
+# pybamm.set_logging_level("INFO")
 
 # load model
 model = pybamm.lithium_ion.SPMe()
-model.convert_to_format = "python"
+# model.convert_to_format = "python"
 
 # create geometry
 geometry = model.default_geometry
@@ -28,7 +28,8 @@ disc.process_model(model)
 
 # solve model for 1 hour
 t_eval = np.linspace(0, 3600, 100)
-solution = model.default_solver.solve(model, t_eval)
+solver = pybamm.ScipySolver()
+solution = solver.solve(model, t_eval)
 
 # plot
 plot = pybamm.QuickPlot(

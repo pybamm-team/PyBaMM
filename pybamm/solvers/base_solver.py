@@ -369,11 +369,15 @@ class BaseSolver(object):
                 # discontinuity events are evaluated before the solver is called,
                 # so don't need to process them
                 discontinuity_events_eval.append(event)
-            else:
-                event_eval = process(event.expression, "event", use_jacobian=False)[1]
-                if event.event_type == pybamm.EventType.SWITCH:
+            elif event.event_type == pybamm.EventType.SWITCH:
+                if (
+                    isinstance(self, pybamm.CasadiSolver)
+                    and self.mode == "fast with events"
+                    and model.algebraic != {}
+                ):
                     # Save some events to casadi_terminate_events for the 'fast with
                     # events' mode of the casadi solver
+                    # We only need to do this if the model is a DAE model
                     # see #1082
                     k = 20
                     init_sign = float(np.sign(event_eval(0, model.y0, inputs_stacked)))
@@ -388,8 +392,12 @@ class BaseSolver(object):
                     event_casadi = process(event_sigmoid, "event", use_jacobian=False)[
                         0
                     ]
+                    # use the actual casadi object as this will go into the rhs
                     casadi_terminate_events.append(event_casadi)
-                elif event.event_type == pybamm.EventType.TERMINATION:
+            else:
+                # use the function call
+                event_eval = process(event.expression, "event", use_jacobian=False)[1]
+                if event.event_type == pybamm.EventType.TERMINATION:
                     terminate_events_eval.append(event_eval)
                 elif event.event_type == pybamm.EventType.INTERPOLANT_EXTRAPOLATION:
                     interpolant_extrapolation_events_eval.append(event_eval)
