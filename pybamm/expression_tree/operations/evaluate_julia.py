@@ -259,16 +259,20 @@ def find_symbols(symbol, constant_symbols, variable_symbols, variable_symbol_siz
             symbol_str = "concatenation(" + ", ".join(children_vars) + ")"
 
     # Note: we assume that y is being passed as a column vector
-    elif isinstance(symbol, pybamm.StateVector):
+    elif isinstance(symbol, pybamm.StateVectorBase):
+        if isinstance(symbol, pybamm.StateVector):
+            name = "@view y"
+        elif isinstance(symbol, pybamm.StateVectorDot):
+            name = "@view dy"
         indices = np.argwhere(symbol.evaluation_array).reshape(-1).astype(np.int32)
         # add 1 since julia uses 1-indexing
         indices += 1
         consecutive = np.all(indices[1:] - indices[:-1] == 1)
         if len(indices) == 1:
-            symbol_str = "@view y[{}]".format(indices[0])
+            symbol_str = "{}[{}]".format(name, indices[0])
         elif consecutive:
             # julia does include the final value
-            symbol_str = "@view y[{}:{}]".format(indices[0], indices[-1])
+            symbol_str = "{}[{}:{}]".format(name, indices[0], indices[-1])
         else:
             indices_array = pybamm.Array(indices)
             # Save the indices as constant by printing to a string
@@ -279,7 +283,7 @@ def find_symbols(symbol, constant_symbols, variable_symbols, variable_symbol_siz
             )
             constant_symbols[indices_array.id] = np.array2string(indices, separator=",")
             index_name = id_to_julia_variable(indices_array.id, True)
-            symbol_str = "@view y[{}]".format(index_name)
+            symbol_str = "{}[{}]".format(name, index_name)
 
     elif isinstance(symbol, pybamm.Time):
         symbol_str = "t"
@@ -342,7 +346,7 @@ def to_julia(symbol):
     return constant_values, variable_symbols, variable_symbol_sizes
 
 
-def get_julia_function(symbol, funcname="f", input_parameter_order=None):
+def get_julia_function(symbol, funcname="f", input_parameter_order=None, len_rhs=None):
     """
     Converts a pybamm expression tree into pure julia code that will calculate the
     result of calling `evaluate(t, y)` on the given expression tree.
@@ -363,6 +367,24 @@ def get_julia_function(symbol, funcname="f", input_parameter_order=None):
         String of julia code, to be evaluated by ``julia.Main.eval``
 
     """
+    if len_rhs is None:
+        typ = "ode"
+    else:
+        typ = "dae"
+        # Take away dy from the differential states
+        # we will return a function of the form
+        # out[] = .. - dy[] for the differential states
+        # out[] = .. for the algebraic states
+        symbol_minus_dy = []
+        end = 0
+        for child in symbol.orphans:
+            start = end
+            end += child.size
+            if end <= len_rhs:
+                symbol_minus_dy.append(child - pybamm.StateVectorDot(slice(start, end)))
+            else:
+                symbol_minus_dy.append(child)
+        symbol = pybamm.numpy_concatenation(*symbol_minus_dy)
     constants, var_symbols, var_symbol_sizes = to_julia(symbol)
 
     # extract constants in generated function
@@ -473,10 +495,14 @@ def get_julia_function(symbol, funcname="f", input_parameter_order=None):
 
     # add function def and sparse arrays to first line
     imports = "begin\nusing SparseArrays, LinearAlgebra\n\n"
+    if typ == "ode":
+        function_def = f"\nfunction {funcname}_with_consts!(dy, y, p, t)\n"
+    elif typ == "dae":
+        function_def = f"\nfunction {funcname}_with_consts!(out, dy, y, p, t)\n"
     julia_str = (
         imports
         + const_and_cache_str
-        + f"\nfunction {funcname}_with_consts!(dy, y, p, t)\n"
+        + function_def
         + input_parameter_extraction
         + var_str
     )
@@ -493,7 +519,10 @@ def get_julia_function(symbol, funcname="f", input_parameter_order=None):
         else:
             julia_str = julia_str + "\n   dy .= cs." + result_var + "\n"
     else:
-        julia_str = julia_str.replace("cs." + result_var, "dy")
+        if typ == "ode":
+            julia_str = julia_str.replace("cs." + result_var, "dy")
+        elif typ == "dae":
+            julia_str = julia_str.replace("cs." + result_var, "out")
 
     # close the function, with a 'nothing' to avoid allocations
     julia_str += "nothing\nend\n\n"
@@ -910,7 +939,7 @@ def get_julia_mtk_model(model, geometry=None, tspan=None):
     # Initial and boundary conditions
     ####################################################################################
     # Initial conditions
-    all_ic_bc_str = ""
+    all_ic_bc_str = "   # initial conditions\n"
     all_ic_bc_constants_str = ""
     all_ic_bc_julia_str = ""
     for var, eqn in model.initial_conditions.items():
@@ -937,6 +966,7 @@ def get_julia_mtk_model(model, geometry=None, tspan=None):
             )
     # Boundary conditions
     if is_pde:
+        all_ic_bc_str += "   # boundary conditions\n"
         for var, eqn_side in model.boundary_conditions.items():
             if isinstance(var, (pybamm.Variable, pybamm.ConcatenationVariable)):
                 for side, (eqn, typ) in eqn_side.items():

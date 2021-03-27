@@ -942,13 +942,23 @@ class BaseModel(object):
 
         name = self.name.replace(" ", "_")
 
-        eqn_str = pybamm.get_julia_function(
-            pybamm.numpy_concatenation(
-                self.concatenated_rhs, self.concatenated_algebraic
-            ),
-            funcname=name,
-            input_parameter_order=input_parameter_order,
-        )
+        if self.algebraic == {}:
+            # ODE model: form dy[] = ...
+            eqn_str = pybamm.get_julia_function(
+                self.concatenated_rhs,
+                funcname=name,
+                input_parameter_order=input_parameter_order,
+            )
+        else:
+            # DAE model: form out[] = ... - dy[]
+            eqn_str = pybamm.get_julia_function(
+                pybamm.numpy_concatenation(
+                    self.concatenated_rhs, self.concatenated_algebraic
+                ),
+                funcname=name,
+                input_parameter_order=input_parameter_order,
+                len_rhs=self.concatenated_rhs.size,
+            )
 
         if get_consistent_ics_solver is None or self.algebraic == {}:
             ics = self.concatenated_initial_conditions
