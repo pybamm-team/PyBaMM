@@ -1,6 +1,6 @@
 import pybamm
 
-model = pybamm.lithium_ion.DFN({"particle": "uniform profile"}, name="DFN_no_r")
+model = pybamm.lithium_ion.DFN(name="DFN")
 # model = pybamm.BaseModel(name="DFN_no_r")
 # var1 = pybamm.Variable("var1")
 # var2 = pybamm.Variable("var2")
@@ -8,14 +8,16 @@ model = pybamm.lithium_ion.DFN({"particle": "uniform profile"}, name="DFN_no_r")
 # model.algebraic = {var2: 2 * var1 - var2}
 # model.initial_conditions = {var1: 1, var2: 2}
 parameter_values = model.default_parameter_values
-parameter_values["Electrolyte diffusivity [m2.s-1]"] = 1e-10
+# parameter_values["Electrolyte diffusivity [m2.s-1]"] = 1e-10
 # parameter_values["Electrolyte conductivity [S.m-1]"] = 1
-parameter_values["Negative electrode OCP [V]"] = 0.5
-parameter_values["Positive electrode OCP [V]"] = 4
+# parameter_values["Negative electrode exchange-current density [A.m-2]"] = 1e-6
+# parameter_values["Positive electrode exchange-current density [A.m-2]"] = 1e-6
+# parameter_values["Negative electrode OCP [V]"] = 0.5
+# parameter_values["Positive electrode OCP [V]"] = 4
 # parameter_values._replace_callable_function_parameters = False
 
 var = pybamm.standard_spatial_vars
-var_pts = {var.x_n: 3, var.x_s: 3, var.x_p: 3, var.r_n: 3, var.r_p: 3}
+var_pts = {var.x_n: 10, var.x_s: 10, var.x_p: 10, var.r_n: 10, var.r_p: 10}
 
 sim = pybamm.Simulation(model, var_pts=var_pts, parameter_values=parameter_values)
 # sim.set_parameters()
@@ -32,3 +34,8 @@ rhs_str, u0_str = sim.built_model.generate_julia_diffeq(
 )
 print(rhs_str)
 print(u0_str)
+
+V_str = pybamm.get_julia_function(
+    sim.built_model.variables["Terminal voltage [V]"], funcname="V"
+)
+print(V_str)

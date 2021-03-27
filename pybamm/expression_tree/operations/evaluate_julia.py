@@ -362,6 +362,11 @@ def get_julia_function(symbol, funcname="f", input_parameter_order=None, len_rhs
     input_parameter_order : list, optional
         List of input parameter names. Defines the order in which the input parameters
         are extracted from 'p' in the julia function that is created
+    len_rhs : int, optional
+        The number of ODEs in the discretized differential equations. This also
+        determines whether the model has any algebraic equations: if None (default),
+        the model is assume to have no algebraic parts and ``julia_str`` is compatible
+        with an ODE solver. If not None, ``julia_str`` is compatible with a DAE solver
 
     Returns
     -------
@@ -426,20 +431,27 @@ def get_julia_function(symbol, funcname="f", input_parameter_order=None, len_rhs
         elif symbol_line.startswith("inputs"):
             input_parameters[julia_var] = symbol_line[8:-2]
         else:
+            # don't replace the matrix multiplication cases (which will be
+            # turned into a mul!), since it is faster to assign to a cache array
+            # first in that case, unless it is a @view in which case we don't
+            # need to cache
+            any_matmuls = any(
+                julia_var in next_symbol_line
+                and (
+                    (" @ " in next_symbol_line or "mul!" in next_symbol_line)
+                    and not symbol_line.startswith("@view")
+                )
+                for next_symbol_line in var_symbols.values()
+            )
             # inline operation if it can be inlined
-            if any(x in symbol_line for x in inlineable_symbols) or symbol_line == "t":
+            if (
+                any(x in symbol_line for x in inlineable_symbols) or symbol_line == "t"
+            ) and not any_matmuls:
                 found_replacement = False
                 # replace all other occurrences of the variable
                 # in the dictionary with the symbol line
                 for next_var_id, next_symbol_line in var_symbols.items():
-                    # don't replace the matrix multiplication cases (which will be
-                    # turned into a mul!), since it is faster to assign to a cache array
-                    # first in that case, unless it is a @view in which case we don't
-                    # need to cache
-                    if julia_var in next_symbol_line and not (
-                        (" @ " in next_symbol_line or "mul!" in next_symbol_line)
-                        and not symbol_line.startswith("@view")
-                    ):
+                    if julia_var in next_symbol_line:
                         if symbol_line == "t":
                             # no brackets needed
                             var_symbols[next_var_id] = next_symbol_line.replace(
@@ -472,8 +484,13 @@ def get_julia_function(symbol, funcname="f", input_parameter_order=None, len_rhs
         # Skip caching the result variable since this is provided as dy
         # Also skip caching the result variable if it doesn't appear in the var_str,
         # since it has been inlined and does not need to be assigned to
+        # make sure that the variable appears at the start of a line in var_str
         julia_var = id_to_julia_variable(var_symbol_id, False)
-        if var_symbol_id != symbol.id and julia_var in var_str:
+        if (
+            var_symbol_id != symbol.id
+            and "mul!(cs." + julia_var in var_str
+            or "@. cs." + julia_var in var_str
+        ):
             cache_name = id_to_julia_variable(var_symbol_id, False)
             const_and_cache_str += "   {} = zeros({}),\n".format(
                 cache_name, var_symbol_size
