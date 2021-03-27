@@ -146,21 +146,21 @@ class BaseParticle(pybamm.BaseSubModel):
 
         return variables
 
-    def set_events(self, variables):
-        c_s_surf = variables[self.domain + " particle surface concentration"]
+    # def set_events(self, variables):
+    #     c_s_surf = variables[self.domain + " particle surface concentration"]
 
-        self.events.append(
-            pybamm.Event(
-                "Minumum " + self.domain.lower() + " particle surface concentration",
-                pybamm.min(c_s_surf),
-                pybamm.EventType.TERMINATION,
-            )
-        )
+    #     self.events.append(
+    #         pybamm.Event(
+    #             "Minumum " + self.domain.lower() + " particle surface concentration",
+    #             pybamm.min(c_s_surf),
+    #             pybamm.EventType.TERMINATION,
+    #         )
+    #     )
 
-        self.events.append(
-            pybamm.Event(
-                "Maximum " + self.domain.lower() + " particle surface concentration",
-                pybamm.max(c_s_surf),
-                pybamm.EventType.TERMINATION,
-            )
-        )
+    #     self.events.append(
+    #         pybamm.Event(
+    #             "Maximum " + self.domain.lower() + " particle surface concentration",
+    #             pybamm.max(c_s_surf),
+    #             pybamm.EventType.TERMINATION,
+    #         )
+    #     )

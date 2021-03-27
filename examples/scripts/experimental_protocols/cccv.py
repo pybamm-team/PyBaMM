@@ -20,19 +20,25 @@ experiment = pybamm.Experiment(
             f"Charge at 1C until {Vmax}V",
             f"Hold at {Vmax}V until C/50",
         )
-    ],
+    ]
+    * 10,
     # period="10 seconds",
 )
-
+var = pybamm.standard_spatial_vars
+var_pts = {var.x_n: 10, var.x_s: 10, var.x_p: 10, var.r_n: 10, var.r_p: 10}
 sim1 = pybamm.Simulation(
-    yang, experiment=experiment, solver=pybamm.CasadiSolver("fast with events")
+    yang,
+    experiment=experiment,
+    var_pts=var_pts,
+    solver=pybamm.CasadiSolver("fast with events", atol=1e-6, rtol=1e-3),
 )  # , parameter_values=parameter_values)
 sol1 = sim1.solve()
 
 sim2 = pybamm.Simulation(
     dfn,
     experiment=experiment,
-    solver=pybamm.CasadiSolver("fast with events"),
+    var_pts=var_pts,
+    solver=pybamm.CasadiSolver("fast with events", atol=1e-6, rtol=1e-3),
     parameter_values=parameter_values,
 )
 sol2 = sim2.solve()

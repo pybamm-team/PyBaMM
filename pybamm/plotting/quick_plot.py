@@ -656,24 +656,26 @@ class QuickPlot(object):
             step = step or self.max_t / 100
             widgets.interact(
                 lambda t: self.plot(t, dynamic=False),
-                t=widgets.FloatSlider(min=0, max=self.max_t, step=step, value=0),
+                t=widgets.FloatSlider(
+                    min=self.min_t, max=self.max_t, step=step, value=self.min_t
+                ),
                 continuous_update=False,
             )
         else:
             import matplotlib.pyplot as plt
             from matplotlib.widgets import Slider
 
-            # create an initial plot at time 0
-            self.plot(0, dynamic=True)
+            # create an initial plot at time self.min_t
+            self.plot(self.min_t, dynamic=True)
 
             axcolor = "lightgoldenrodyellow"
             ax_slider = plt.axes([0.315, 0.02, 0.37, 0.03], facecolor=axcolor)
             self.slider = Slider(
                 ax_slider,
                 "Time [{}]".format(self.time_unit),
-                0,
+                self.min_t,
                 self.max_t,
-                valinit=0,
+                valinit=self.min_t,
                 color="#1f77b4",
             )
             self.slider.on_changed(self.slider_update)
