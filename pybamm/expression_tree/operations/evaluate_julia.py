@@ -87,6 +87,8 @@ def find_symbols(symbol, constant_symbols, variable_symbols, variable_symbol_siz
                 np.set_printoptions(
                     threshold=max(np.get_printoptions()["threshold"], len(row) + 10)
                 )
+                # increase precision for printing
+                np.set_printoptions(precision=20)
                 # add 1 to correct for 1-indexing in Julia
                 # use array2string so that commas are included
                 constant_symbols[symbol.id] = "sparse({}, {}, {}, {}, {})".format(
