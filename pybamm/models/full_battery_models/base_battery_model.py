@@ -923,7 +923,7 @@ class BaseBatteryModel(pybamm.BaseModel):
         # mode)
         # A tolerance of 1 is sufficiently small since the dimensionless voltage is
         # scaled with the thermal voltage (0.025V) and hence has a range of around 60
-        tol = 1
+        tol = 5
         self.events.append(
             pybamm.Event(
                 "Minimum voltage switch",

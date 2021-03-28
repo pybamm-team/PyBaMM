@@ -19,19 +19,15 @@ class LoopList(list):
 def ax_min(data):
     """Calculate appropriate minimum axis value for plotting"""
     data_min = np.nanmin(data)
-    if data_min <= 0:
-        return 1.04 * data_min
-    else:
-        return 0.96 * data_min
+    data_max = np.nanmax(data)
+    return data_max - 1.05 * (data_max - data_min)
 
 
 def ax_max(data):
     """Calculate appropriate maximum axis value for plotting"""
+    data_min = np.nanmin(data)
     data_max = np.nanmax(data)
-    if data_max <= 0:
-        return 0.96 * data_max
-    else:
-        return 1.04 * data_max
+    return data_min + 1.05 * (data_max - data_min)
 
 
 def split_long_string(title, max_words=None):
@@ -503,7 +499,7 @@ class QuickPlot(object):
                         (self.plots[key][i][j],) = ax.plot(
                             full_t / self.time_scaling_factor,
                             variable(full_t, warn=False),
-                            # color=self.colors[i],
+                            color=self.colors[i],
                             linestyle=linestyle,
                         )
                         variable_handles.append(self.plots[key][0][j])
@@ -539,7 +535,7 @@ class QuickPlot(object):
                         (self.plots[key][i][j],) = ax.plot(
                             self.first_dimensional_spatial_variable[key],
                             variable(t_in_seconds, **spatial_vars, warn=False),
-                            # color=self.colors[i],
+                            color=self.colors[i],
                             linestyle=linestyle,
                             zorder=10,
                         )
@@ -705,13 +701,12 @@ class QuickPlot(object):
                             warn=False,
                         )
                         plot[i][j].set_ydata(var)
-                        var_min = min(var_min, np.nanmin(var))
-                        var_max = max(var_max, np.nanmax(var))
+                        var_min = min(var_min, ax_min(var))
+                        var_max = max(var_max, ax_max(var))
                 # update boundaries between subdomains
                 y_min, y_max = self.axis_limits[key][2:]
                 if y_min is None and y_max is None:
-                    y_min, y_max = ax_min(var_min), ax_max(var_max)
-                    ax.set_ylim(y_min, y_max)
+                    ax.set_ylim(var_min, var_max)
             elif self.variables[key][0][0].dimensions == 2:
                 # 2D plot: plot as a function of x and y at time t
                 # Read dictionary of spatial variables

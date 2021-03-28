@@ -48,11 +48,14 @@ class IrreversiblePlating(BasePlating):
         ]
         j0_plating = param.j0_plating(c_e_n, c_plated_Li, T)
         phi_ref = param.U_n_ref / param.potential_scale
-        eta_plating = -(delta_phi + phi_ref + eta_sei)
+
+        eta_stripping = delta_phi + phi_ref + eta_sei
+        eta_plating = -eta_stripping
         prefactor = 1 / (2 * (1 + self.param.Theta * T))
         # j_stripping is always negative, because there is no stripping, only plating
         j_stripping = -j0_plating * pybamm.exp(prefactor * eta_plating)
 
+        variables.update(self._get_standard_overpotential_variables(eta_stripping))
         variables.update(self._get_standard_reaction_variables(j_stripping))
 
         # Update whole cell variables, which also updates the "sum of" variables

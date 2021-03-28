@@ -385,7 +385,7 @@ class BaseModel(object):
         if isinstance(solution, pybamm.Solution):
             solution = solution.last_state
         for var, equation in model.initial_conditions.items():
-            if isinstance(var, pybamm.Variable):
+            if isinstance(var, (pybamm.Variable, pybamm.ConcatenationVariable)):
                 try:
                     final_state = solution[var.name]
                 except KeyError as e:

@@ -56,6 +56,7 @@ class ReversiblePlating(BasePlating):
             prefactor * eta_stripping
         ) - j0_plating * pybamm.exp(prefactor * eta_plating)
 
+        variables.update(self._get_standard_overpotential_variables(eta_stripping))
         variables.update(self._get_standard_reaction_variables(j_stripping))
 
         # Update whole cell variables, which also updates the "sum of" variables

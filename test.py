@@ -4,41 +4,40 @@ import numpy as np
 
 pybamm.set_logging_level("NOTICE")
 
-parameter_values = pybamm.ParameterValues(chemistry=pybamm.parameter_sets.Chen2020)
-parameter_values.update(
-    {
-        "SEI kinetic rate constant [m.s-1]": 1e-15,
-        "SEI resistivity [Ohm.m]": 0,
-    }
-)
-spm = pybamm.lithium_ion.SPM()  # {"SEI": "ec reaction limited"})
+# parameter_values = pybamm.ParameterValues(chemistry=pybamm.parameter_sets.Chen2020)
+# parameter_values.update(
+#     {
+#         "SEI kinetic rate constant [m.s-1]": 1e-15,
+#         "SEI resistivity [Ohm.m]": 0,
+#     }
+# )
+# spm = pybamm.lithium_ion.SPM()  # {"SEI": "ec reaction limited"})
+spm = pybamm.lithium_ion.Yang2017()
 param = spm.param
+
+
+# experiment = pybamm.Experiment(
+#     [
+#         (
+#             f"Discharge at 1C until {Vmin}V",
+#             "Rest for 1 hour",
+#             f"Charge at 1C until {Vmax}V",
+#             f"Hold at {Vmax}V until C/50",
+#         )
+#     ]
+#     * 200,
+#     termination="80% capacity",
+# )
+# sim = pybamm.Simulation(
+#     spm,
+#     experiment=experiment,
+#     parameter_values=parameter_values,
+#     solver=pybamm.CasadiSolver("fast with events"),
+# )
+# sim.solve()
 
 Vmin = 2.5
 Vmax = 4.2
-Cn = parameter_values.evaluate(param.C_n_init)
-Cp = parameter_values.evaluate(param.C_p_init)
-
-experiment = pybamm.Experiment(
-    [
-        (
-            f"Discharge at 1C until {Vmin}V",
-            "Rest for 1 hour",
-            f"Charge at 1C until {Vmax}V",
-            f"Hold at {Vmax}V until C/50",
-        )
-    ]
-    * 200,
-    termination="80% capacity",
-)
-sim = pybamm.Simulation(
-    spm,
-    experiment=experiment,
-    parameter_values=parameter_values,
-    solver=pybamm.CasadiSolver("fast with events"),
-)
-sim.solve()
-
 experiment = pybamm.Experiment(
     [
         (
@@ -50,11 +49,12 @@ experiment = pybamm.Experiment(
     ]
 )
 
+parameter_values = spm.default_parameter_values
 esoh_model = pybamm.lithium_ion.ElectrodeSOH()
 esoh_sim = pybamm.Simulation(esoh_model, parameter_values=parameter_values)
 
 sim_acc = pybamm.Simulation(
-    spm, experiment=experiment, parameter_values=parameter_values
+    spm, experiment=experiment, solver=pybamm.CasadiSolver("fast with events")
 )
 sim_acc.build_for_experiment()
 
@@ -62,8 +62,10 @@ sol_acc = []
 cycle_nums = []
 cycle = 0
 n_cycles_step = 20
+Cn = parameter_values.evaluate(param.C_n_init)
+Cp = parameter_values.evaluate(param.C_p_init)
 
-while cycle < 200:
+while cycle < 101:
     print(cycle)
     # Simulate one cycle
     sol = sim_acc.solve()

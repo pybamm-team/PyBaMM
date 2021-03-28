@@ -418,7 +418,8 @@ class Simulation:
                         pybamm.Event(
                             "Voltage cut-off [V] [experiment]",
                             new_model.variables["Terminal voltage [V]"]
-                            - op_inputs["Voltage cut-off [V]"] / model.param.n_cells,
+                            - pybamm.InputParameter("Voltage cut-off [V]")
+                            / model.param.n_cells,
                         )
                     )
 
@@ -817,7 +818,7 @@ class Simulation:
                         )
                         break
 
-            if self.solution is not None:
+            if self.solution is not None and len(all_cycle_solutions) > 0:
                 self.solution.cycles = all_cycle_solutions
                 self.solution.set_summary_variables(all_summary_variables)
 
