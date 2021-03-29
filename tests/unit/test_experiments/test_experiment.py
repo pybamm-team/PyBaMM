@@ -2,11 +2,23 @@
 # Test the base experiment class
 #
 import pybamm
+import numpy
 import unittest
+import pandas as pd
+import os
 
 
 class TestExperiment(unittest.TestCase):
     def test_read_strings(self):
+        # Import drive cycle from file
+        drive_cycle = pd.read_csv(
+            pybamm.get_parameters_filepath(
+                os.path.join("input", "drive_cycles", "US06.csv")
+            ),
+            comment="#",
+            header=None,
+        ).to_numpy()
+
         experiment = pybamm.Experiment(
             [
                 "Discharge at 1C for 0.5 hours",
@@ -22,12 +34,28 @@ class TestExperiment(unittest.TestCase):
                 "Hold at 4.1 V until 50mA",
                 "Hold at 3V until C/50",
                 "Discharge at C/3 for 2 hours or until 2.5 V",
+                "Run US06",
+                "Run US06 for 5 minutes",
+                "Run US06 for 0.5 hours",
             ],
-            {"test": "test"},
+            {"test": "test"}, drive_cycles={"US06": drive_cycle},
             period="20 seconds",
         )
+
+        # Calculation for operating conditions of drive cycle
+        time_0 = drive_cycle[:, 0][-1]
+        period_0 = numpy.min(numpy.diff(drive_cycle[:, 0]))
+        drive_cycle_1 = experiment.extend_drive_cycle(
+            drive_cycle, end_time=300)
+        time_1 = drive_cycle_1[:, 0][-1]
+        period_1 = numpy.min(numpy.diff(drive_cycle_1[:, 0]))
+        drive_cycle_2 = experiment.extend_drive_cycle(
+            drive_cycle, end_time=1800)
+        time_2 = drive_cycle_2[:, 0][-1]
+        period_2 = numpy.min(numpy.diff(drive_cycle_2[:, 0]))
+
         self.assertEqual(
-            experiment.operating_conditions,
+            experiment.operating_conditions[:-3],
             [
                 (1, "C", 1800.0, 20.0),
                 (0.05, "C", 1800.0, 20.0),
@@ -43,6 +71,21 @@ class TestExperiment(unittest.TestCase):
                 (3, "V", None, 20.0),
                 (1 / 3, "C", 7200.0, 20.0),
             ],
+        )
+        # Check drive cycle operating conditions
+        self.assertTrue(
+            ((experiment.operating_conditions[-3][0] == drive_cycle[:, 1]).all() & (
+                experiment.operating_conditions[-3][1] == "Drive") & (
+                experiment.operating_conditions[-3][2] == time_0).all() & (
+                experiment.operating_conditions[-3][3] == period_0).all() & (
+                experiment.operating_conditions[-2][0] == drive_cycle_1[:, 1]).all() & (
+                experiment.operating_conditions[-2][1] == "Drive") & (
+                experiment.operating_conditions[-2][2] == time_1).all() & (
+                experiment.operating_conditions[-2][3] == period_1).all() & (
+                experiment.operating_conditions[-1][0] == drive_cycle_2[:, 1]).all() & (
+                experiment.operating_conditions[-1][1] == "Drive") & (
+                experiment.operating_conditions[-1][2] == time_2).all() & (
+                experiment.operating_conditions[-1][3] == period_2).all())
         )
         self.assertEqual(
             experiment.events,
@@ -60,6 +103,9 @@ class TestExperiment(unittest.TestCase):
                 (0.05, "A"),
                 (0.02, "C"),
                 (2.5, "V"),
+                None,
+                None,
+                None,
             ],
         )
         self.assertEqual(experiment.parameters, {"test": "test"})
@@ -122,10 +168,10 @@ class TestExperiment(unittest.TestCase):
             pybamm.Experiment([(1, 2, 3)])
         with self.assertRaisesRegex(ValueError, "Operating conditions must contain"):
             pybamm.Experiment(["Discharge at 1 A at 2 hours"])
-        with self.assertRaisesRegex(ValueError, "instruction must be"):
+        with self.assertRaisesRegex(ValueError, "Instruction must be"):
             pybamm.Experiment(["Run at 1 A for 2 hours"])
         with self.assertRaisesRegex(
-            ValueError, "Instruction 'Run at at 1 A' not recognized"
+            ValueError, "Instruction must be"
         ):
             pybamm.Experiment(["Run at at 1 A for 2 hours"])
         with self.assertRaisesRegex(ValueError, "units must be"):
