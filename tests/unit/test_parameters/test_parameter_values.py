@@ -196,7 +196,7 @@ class TestParameterValues(unittest.TestCase):
         self.assertEqual(processed_broad.children[0].evaluate(), 4)
 
         # process concatenation
-        conc = pybamm.Concatenation(
+        conc = pybamm.concatenation(
             pybamm.Vector(np.ones(10), domain="test"),
             pybamm.Vector(2 * np.ones(15), domain="test 2"),
         )
@@ -560,7 +560,7 @@ class TestParameterValues(unittest.TestCase):
         func_s = pybamm.FunctionParameter("func_s", {"var_s": var_s})
         func_p = pybamm.FunctionParameter("func_p", {"var_p": var_p})
 
-        func = pybamm.x_average(pybamm.Concatenation(func_n, func_s, func_p))
+        func = pybamm.x_average(pybamm.concatenation(func_n, func_s, func_p))
         param = pybamm.ParameterValues(
             {
                 "func_n": 2,
@@ -595,7 +595,7 @@ class TestParameterValues(unittest.TestCase):
         func_s = pybamm.FunctionParameter("func_s", {"var_s": var_s})
         func_p = pybamm.FunctionParameter("func_p", {"var_p": var_p})
 
-        func = pybamm.x_average(pybamm.Concatenation(func_n, func_s, func_p))
+        func = pybamm.x_average(pybamm.concatenation(func_n, func_s, func_p))
         param = pybamm.ParameterValues(
             {
                 "func_n": 2,
@@ -627,7 +627,7 @@ class TestParameterValues(unittest.TestCase):
         par2 = pybamm.Parameter("par2")
         scal1 = pybamm.Scalar(3)
         scal2 = pybamm.Scalar(4)
-        expression = (scal1 * (par1 + var2)) / ((var1 - par2) + scal2)
+        expression = (scal1 * (par1 ** var2)) / ((var1 - par2) + scal2)
 
         param = pybamm.ParameterValues(values={"par1": 1, "par2": 2})
         exp_param = param.process_symbol(expression)
@@ -635,7 +635,7 @@ class TestParameterValues(unittest.TestCase):
         # left side
         self.assertIsInstance(exp_param.children[0], pybamm.Multiplication)
         self.assertIsInstance(exp_param.children[0].children[0], pybamm.Scalar)
-        self.assertIsInstance(exp_param.children[0].children[1], pybamm.Addition)
+        self.assertIsInstance(exp_param.children[0].children[1], pybamm.Power)
         self.assertTrue(
             isinstance(exp_param.children[0].children[1].children[0], pybamm.Scalar)
         )

@@ -133,13 +133,13 @@ class FirstOrder(BaseElectrolyteDiffusion):
             }
         )
 
-        N_e = pybamm.Concatenation(
+        N_e = pybamm.concatenation(
             param.C_e * N_e_n_1, param.C_e * N_e_s_1, param.C_e * N_e_p_1
         )
         variables.update(self._get_standard_flux_variables(N_e))
 
-        c_e = pybamm.Concatenation(c_e_n, c_e_s, c_e_p)
-        eps = pybamm.Concatenation(
+        c_e = pybamm.concatenation(c_e_n, c_e_s, c_e_p)
+        eps = pybamm.concatenation(
             pybamm.PrimaryBroadcast(eps_n_0, "negative electrode"),
             pybamm.PrimaryBroadcast(eps_s_0, "separator"),
             pybamm.PrimaryBroadcast(eps_p_0, "positive electrode"),

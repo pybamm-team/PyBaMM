@@ -403,9 +403,9 @@ class TestBinaryOperators(unittest.TestCase):
         a = pybamm.Scalar(0, domain="domain")
         b = pybamm.Scalar(1)
         c = pybamm.Parameter("c")
-        e = pybamm.Scalar(2)
         v = pybamm.Vector(np.zeros((10, 1)))
         v1 = pybamm.Vector(np.ones((10, 1)))
+        f = pybamm.StateVector(slice(0, 10))
 
         var = pybamm.Variable("var", domain="domain")
         broad0 = pybamm.PrimaryBroadcast(0, "domain")
@@ -442,6 +442,11 @@ class TestBinaryOperators(unittest.TestCase):
         self.assertIsInstance((c + a), pybamm.Parameter)
         self.assertIsInstance((c + b), pybamm.Addition)
         self.assertIsInstance((b + c), pybamm.Addition)
+        # rearranging additions
+        self.assertEqual(((c + 1) + 2).id, (c + 3).id)
+        self.assertEqual(((1 + c) + 2).id, (3 + c).id)
+        self.assertEqual((2 + (c + 1)).id, (3 + c).id)
+        self.assertEqual((2 + (1 + c)).id, (3 + c).id)
         # addition with broadcast zero
         self.assertIsInstance((b + broad0), pybamm.PrimaryBroadcast)
         np.testing.assert_array_equal((b + broad0).child.evaluate(), 1)
@@ -491,7 +496,13 @@ class TestBinaryOperators(unittest.TestCase):
         self.assertIsInstance((c * a), pybamm.Scalar)
         self.assertEqual((c * a).evaluate(), 0)
         self.assertIsInstance((b * c), pybamm.Parameter)
-        self.assertIsInstance((e * c), pybamm.Multiplication)
+        self.assertIsInstance((2 * c), pybamm.Multiplication)
+        # multiplication with -1
+        self.assertEqual((c * -1).id, (-c).id)
+        self.assertEqual((-1 * c).id, (-c).id)
+        # multiplication with a negation
+        self.assertEqual((-c * 4).id, (c * -4).id)
+        self.assertEqual((4 * -c).id, (-4 * c).id)
         # multiplication with broadcasts
         self.assertEqual((c * broad2).id, pybamm.PrimaryBroadcast(c * 2, "domain").id)
         self.assertEqual((broad2 * c).id, pybamm.PrimaryBroadcast(2 * c, "domain").id)
@@ -502,29 +513,66 @@ class TestBinaryOperators(unittest.TestCase):
         self.assertIsInstance((v * b), pybamm.Array)
         np.testing.assert_array_equal((v * b).evaluate(), np.zeros((10, 1)))
         # multiplication with matrix one
-        self.assertIsInstance((e * v1), pybamm.Array)
-        np.testing.assert_array_equal((e * v1).evaluate(), 2 * np.ones((10, 1)))
-        self.assertIsInstance((v1 * e), pybamm.Array)
-        np.testing.assert_array_equal((v1 * e).evaluate(), 2 * np.ones((10, 1)))
+        self.assertEqual((f * v1), f)
+        self.assertEqual((v1 * f), f)
+        # multiplication with matrix minus one
+        self.assertEqual((f * (-v1)).id, (-f).id)
+        self.assertEqual(((-v1) * f).id, (-f).id)
         # multiplication with broadcast
         self.assertEqual((var * broad2).id, (var * 2).id)
         self.assertEqual((broad2 * var).id, (2 * var).id)
         # multiplication with broadcast one
         self.assertEqual((var * broad1).id, var.id)
         self.assertEqual((broad1 * var).id, var.id)
+        # multiplication with broadcast minus one
+        self.assertEqual((var * -broad1).id, (-var).id)
+        self.assertEqual((-broad1 * var).id, (-var).id)
 
         # division by itself
         self.assertEqual((c / c).id, pybamm.Scalar(1).id)
         self.assertEqual((broad2 / broad2).id, broad1.id)
+        # division with a negation
+        self.assertEqual((-c / 4).id, (c / -4).id)
+        self.assertEqual((4 / -c).id, (-4 / c).id)
         # division with broadcasts
         self.assertEqual((c / broad2).id, pybamm.PrimaryBroadcast(c / 2, "domain").id)
         self.assertEqual((broad2 / c).id, pybamm.PrimaryBroadcast(2 / c, "domain").id)
         # division with matrix one
-        self.assertIsInstance((e / v1), pybamm.Array)
-        np.testing.assert_array_equal((e / v1).evaluate(), 2 * np.ones((10, 1)))
+        self.assertEqual((f / v1), f)
+        self.assertEqual((f / -v1).id, (-f).id)
         # division by zero
         with self.assertRaises(ZeroDivisionError):
             b / a
+
+    def test_binary_simplifications_concatenations(self):
+        def conc_broad(x, y, z):
+            return pybamm.concatenation(
+                pybamm.PrimaryBroadcast(x, "negative electrode"),
+                pybamm.PrimaryBroadcast(y, "separator"),
+                pybamm.PrimaryBroadcast(z, "positive electrode"),
+            )
+
+        # Test that concatenations get simplified correctly
+        a = conc_broad(1, 2, 3)
+        b = conc_broad(11, 12, 13)
+        c = conc_broad(
+            pybamm.InputParameter("x"),
+            pybamm.InputParameter("y"),
+            pybamm.InputParameter("z"),
+        )
+        self.assertEqual((a + 4).id, conc_broad(5, 6, 7).id)
+        self.assertEqual((4 + a).id, conc_broad(5, 6, 7).id)
+        self.assertEqual((a + b).id, conc_broad(12, 14, 16).id)
+        self.assertIsInstance((a + c), pybamm.Concatenation)
+
+        # No simplifications if are Variable or StateVector objects
+        v = pybamm.concatenation(
+            pybamm.Variable("x", "negative electrode"),
+            pybamm.Variable("y", "separator"),
+            pybamm.Variable("z", "positive electrode"),
+        )
+        self.assertIsInstance((v * v), pybamm.Multiplication)
+        self.assertIsInstance((a * v), pybamm.Multiplication)
 
     def test_advanced_binary_simplifications(self):
         # MatMul simplifications that often appear when discretising spatial operators

@@ -91,8 +91,7 @@ class Concatenation(pybamm.Symbol):
 
     def _concatenation_new_copy(self, children):
         """ See :meth:`pybamm.Symbol.new_copy()`. """
-        new_symbol = self.__class__(*children)
-        return new_symbol
+        return concatenation(*children)
 
     def _concatenation_jac(self, children_jacs):
         """ Calculate the jacobian of a concatenation """
@@ -152,6 +151,10 @@ class NumpyConcatenation(Concatenation):
             return pybamm.Scalar(0)
         else:
             return SparseStack(*children_jacs)
+
+    def _concatenation_new_copy(self, children):
+        """ See :meth:`pybamm.Symbol.new_copy()`. """
+        return numpy_concatenation(*children)
 
 
 class DomainConcatenation(Concatenation):
@@ -320,6 +323,37 @@ class SparseStack(Concatenation):
             concat_fun=concatenation_function
         )
 
+    def _concatenation_new_copy(self, children):
+        """ See :meth:`pybamm.Symbol.new_copy()`. """
+        return SparseStack(*children)
+
+
+def simplified_concatenation(*children):
+    """ Perform simplifications on a concatenation """
+    # Create Concatenation to easily read domains
+    concat = Concatenation(*children)
+    # Simplify concatenation of broadcasts all with the same child to a single
+    # broadcast across all domains
+    if len(children) >= 1 and all(
+        isinstance(child, pybamm.Broadcast) and child.child.id == children[0].child.id
+        for child in children
+    ):
+        unique_child = children[0].orphans[0]
+        if isinstance(children[0], pybamm.PrimaryBroadcast):
+            return pybamm.PrimaryBroadcast(unique_child, concat.domain)
+        else:
+            return pybamm.FullBroadcast(
+                unique_child, concat.domain, concat.auxiliary_domains
+            )
+    else:
+        return concat
+
+
+def concatenation(*children):
+    """ Helper function to create concatenations """
+    # TODO: add option to turn off simplifications
+    return simplified_concatenation(*children)
+
 
 def simplified_numpy_concatenation(*children):
     """ Perform simplifications on a numpy concatenation """
@@ -346,7 +380,7 @@ def simplified_domain_concatenation(children, mesh, copy_this=None):
     concat = DomainConcatenation(children, mesh, copy_this=copy_this)
     # Simplify Concatenation of StateVectors to a single StateVector
     # The sum of the evalation arrays of the StateVectors must be exactly 1
-    if all([isinstance(child, pybamm.StateVector) for child in children]):
+    if all(isinstance(child, pybamm.StateVector) for child in children):
         longest_eval_array = len(children[-1]._evaluation_array)
         eval_arrays = {}
         for child in children:

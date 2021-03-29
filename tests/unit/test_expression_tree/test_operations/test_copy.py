@@ -15,6 +15,7 @@ class TestCopy(unittest.TestCase):
         x_n = pybamm.standard_spatial_vars.x_n
         v_s = pybamm.Variable("v", "separator")
         vec = pybamm.Vector([1, 2, 3, 4, 5])
+        mat = pybamm.Matrix([[1, 2], [3, 4]])
         mesh = get_mesh_for_testing()
 
         for symbol in [
@@ -37,7 +38,7 @@ class TestCopy(unittest.TestCase):
             pybamm.PrimaryBroadcast(a, "domain"),
             pybamm.SecondaryBroadcast(v_n, "current collector"),
             pybamm.FullBroadcast(a, "domain", {"secondary": "other domain"}),
-            pybamm.Concatenation(v_n, v_s),
+            pybamm.concatenation(v_n, v_s),
             pybamm.NumpyConcatenation(a, b, v_s),
             pybamm.DomainConcatenation([v_n, v_s], mesh),
             pybamm.Parameter("param"),
@@ -56,6 +57,7 @@ class TestCopy(unittest.TestCase):
             ),
             pybamm.minimum(a, b),
             pybamm.maximum(a, b),
+            pybamm.SparseStack(mat, mat),
         ]:
             self.assertEqual(symbol.id, symbol.new_copy().id)
 

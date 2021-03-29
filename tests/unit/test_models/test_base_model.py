@@ -634,7 +634,7 @@ class TestBaseModel(unittest.TestCase):
         )
         var_concat_neg = pybamm.Variable("var_concat_neg", domain="negative electrode")
         var_concat_sep = pybamm.Variable("var_concat_sep", domain="separator")
-        var_concat = pybamm.Concatenation(var_concat_neg, var_concat_sep)
+        var_concat = pybamm.concatenation(var_concat_neg, var_concat_sep)
         model.rhs = {var_scalar: -var_scalar, var_1D: -var_1D}
         model.algebraic = {var_2D: -var_2D, var_concat: -var_concat}
         model.initial_conditions = {var_scalar: 1, var_1D: 1, var_2D: 1, var_concat: 1}
@@ -770,7 +770,7 @@ class TestBaseModel(unittest.TestCase):
             "var_concat_neg", domain="negative electrode"
         )
         new_var_concat_sep = pybamm.Variable("var_concat_sep", domain="separator")
-        new_var_concat = pybamm.Concatenation(new_var_concat_neg, new_var_concat_sep)
+        new_var_concat = pybamm.concatenation(new_var_concat_neg, new_var_concat_sep)
         new_model.rhs = {
             new_var_scalar: -2 * new_var_scalar,
             new_var_1D: -2 * new_var_1D,
@@ -919,7 +919,7 @@ class TestBaseModel(unittest.TestCase):
 
         var_concat_neg = pybamm.Variable("var_concat_neg", domain="negative electrode")
         var_concat_sep = pybamm.Variable("var_concat_sep", domain="separator")
-        var_concat = pybamm.Concatenation(var_concat_neg, var_concat_sep)
+        var_concat = pybamm.concatenation(var_concat_neg, var_concat_sep)
         model.algebraic = {var_concat: -var_concat}
         model.initial_conditions = {var_concat: 1}
         with self.assertRaisesRegex(
@@ -934,7 +934,7 @@ class TestBaseModel(unittest.TestCase):
         model.initial_conditions = {var: pybamm.Scalar(1)}
         with self.assertRaisesRegex(pybamm.ModelError, "must appear in the solution"):
             model.set_initial_conditions_from({"wrong var": 2})
-        var = pybamm.Concatenation(
+        var = pybamm.concatenation(
             pybamm.Variable("var", "test"), pybamm.Variable("var2", "test2")
         )
         model.rhs = {var: -var}
