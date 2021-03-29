@@ -30,9 +30,6 @@ def NMC_ocp_PeymanMPM(sto):
     return u_eq
 
 
-# if __name__ == "__main__": # pragma: no cover
-#     import matplotlib.pyplot as plt
-
-#     x = np.linspace(0, 1)
-#     plt.plot(x, NMC_ocp_PeymanMPM(x))
-#     plt.show()
+# if __name__ == "__main__":  # pragma: no cover
+#     x = pybamm.linspace(0, 1)
+#     pybamm.plot(x, NMC_ocp_PeymanMPM(x))

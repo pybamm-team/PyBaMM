@@ -1,0 +1,9 @@
+Name [units],Value,Reference,Notes
+,,,
+,,,
+# Lithium plating parameters,,,
+Lithium metal partial molar volume [m3.mol-1],1.30E-05,Yang2017,
+Lithium plating kinetic rate constant [m.s-1],1E-10,,
+Exchange-current density for plating [A.m-2],[function]plating_exchange_current_density_OKane2020,,
+Exchange-current density for stripping [A.m-2],[function]stripping_exchange_current_density_OKane2020,,
+Initial plated lithium concentration [mol.m-3],0.00E+00,,

@@ -72,6 +72,11 @@ class BaseInterface(pybamm.BaseSubModel):
                 c_s_surf = c_s_surf.orphans[0]
                 c_e = c_e.orphans[0]
                 T = T.orphans[0]
+
+            tol = 1e-8
+            c_e = pybamm.maximum(tol, c_e)
+            c_s_surf = pybamm.maximum(tol, pybamm.minimum(c_s_surf, 1 - tol))
+
             if self.domain == "Negative":
                 j0 = self.param.j0_n(c_e, c_s_surf, T) / self.param.C_r_n
             elif self.domain == "Positive":
@@ -480,25 +485,15 @@ class BaseInterface(pybamm.BaseSubModel):
         elif eta_r.domain == ["current collector"]:
             eta_r = pybamm.PrimaryBroadcast(eta_r, self.domain_for_broadcast)
 
+        domain_reaction = (
+            self.domain + " electrode" + self.reaction_name + " reaction overpotential"
+        )
+
         variables = {
-            self.domain
-            + " electrode"
-            + self.reaction_name
-            + " reaction overpotential": eta_r,
-            "X-averaged "
-            + self.domain.lower()
-            + " electrode"
-            + self.reaction_name
-            + " reaction overpotential": eta_r_av,
-            self.domain
-            + " electrode"
-            + self.reaction_name
-            + " reaction overpotential [V]": eta_r * pot_scale,
-            "X-averaged "
-            + self.domain.lower()
-            + " electrode"
-            + self.reaction_name
-            + " reaction overpotential [V]": eta_r_av * pot_scale,
+            domain_reaction: eta_r,
+            "X-averaged " + domain_reaction.lower(): eta_r_av,
+            domain_reaction + " [V]": eta_r * pot_scale,
+            "X-averaged " + domain_reaction.lower() + " [V]": eta_r_av * pot_scale,
         }
 
         return variables
@@ -515,11 +510,13 @@ class BaseInterface(pybamm.BaseSubModel):
         elif eta_sei.domain == ["current collector"]:
             eta_sei = pybamm.PrimaryBroadcast(eta_sei, self.domain_for_broadcast)
 
-        domain = self.domain.lower() + " electrode"
+        Domain = self.domain + " electrode"
+        domain = Domain.lower()
+
         variables = {
-            self.domain + " electrode SEI film overpotential": eta_sei,
+            Domain + " SEI film overpotential": eta_sei,
             "X-averaged " + domain + " SEI film overpotential": eta_sei_av,
-            self.domain + " electrode SEI film overpotential [V]": eta_sei * pot_scale,
+            Domain + " SEI film overpotential [V]": eta_sei * pot_scale,
             "X-averaged "
             + domain
             + " SEI film overpotential [V]": eta_sei_av * pot_scale,

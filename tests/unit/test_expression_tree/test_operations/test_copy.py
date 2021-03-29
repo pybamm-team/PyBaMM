@@ -15,6 +15,7 @@ class TestCopy(unittest.TestCase):
         x_n = pybamm.standard_spatial_vars.x_n
         v_s = pybamm.Variable("v", "separator")
         vec = pybamm.Vector([1, 2, 3, 4, 5])
+        mat = pybamm.Matrix([[1, 2], [3, 4]])
         mesh = get_mesh_for_testing()
 
         for symbol in [
@@ -56,6 +57,7 @@ class TestCopy(unittest.TestCase):
             ),
             pybamm.minimum(a, b),
             pybamm.maximum(a, b),
+            pybamm.SparseStack(mat, mat),
         ]:
             self.assertEqual(symbol.id, symbol.new_copy().id)
 

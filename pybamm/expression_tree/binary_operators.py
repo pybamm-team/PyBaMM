@@ -646,36 +646,27 @@ class Maximum(BinaryOperator):
 def simplify_elementwise_binary_broadcasts(left, right):
     left, right = preprocess_binary(left, right)
 
-    # def unpack_broadcast_recursive(symbol):
-    #     if isinstance(symbol, pybamm.Broadcast):
-    #         if symbol.child.domain == []:
-    #             return symbol.orphans[0]
-    #         elif isinstance(symbol.child, pybamm.Broadcast):
-    #             return unpack_broadcast_recursive(symbol.child)
-    #     return symbol
+    def unpack_broadcast_recursive(symbol):
+        if isinstance(symbol, pybamm.Broadcast):
+            if symbol.child.domain == []:
+                return symbol.orphans[0]
+            elif (
+                isinstance(symbol.child, pybamm.Broadcast)
+                and symbol.child.broadcasts_to_nodes
+            ):
+                out = unpack_broadcast_recursive(symbol.orphans[0])
+                if out.domain == []:
+                    return out
+        return symbol
 
     # No need to broadcast if the other symbol already has the shape that is being
     # broadcasted to
-    # Also check for broadcast of a broadcast
+    # Do this recursively
     if left.domains == right.domains:
         if isinstance(left, pybamm.Broadcast) and left.broadcasts_to_nodes:
-            if left.child.domain == []:
-                left = left.orphans[0]
-            elif (
-                isinstance(left.child, pybamm.Broadcast)
-                and left.child.broadcasts_to_nodes
-                and left.child.child.domain == []
-            ):
-                left = left.child.orphans[0]
+            left = unpack_broadcast_recursive(left)
         elif isinstance(right, pybamm.Broadcast) and right.broadcasts_to_nodes:
-            if right.child.domain == []:
-                right = right.orphans[0]
-            elif (
-                isinstance(right.child, pybamm.Broadcast)
-                and right.child.broadcasts_to_nodes
-                and right.child.child.domain == []
-            ):
-                right = right.child.orphans[0]
+            right = unpack_broadcast_recursive(right)
 
     return left, right
 
@@ -704,8 +695,14 @@ def simplified_binary_broadcast_concatenation(left, right, operator):
             )
         elif (
             isinstance(right, pybamm.Concatenation)
-            and all(child.is_constant() for child in left.children)
-            and all(child.is_constant() for child in right.children)
+            and not any(
+                isinstance(child, (pybamm.Variable, pybamm.StateVector))
+                for child in right.children
+            )
+            and (
+                all(child.is_constant() for child in left.children)
+                or all(child.is_constant() for child in right.children)
+            )
         ):
             return left._concatenation_new_copy(
                 [
@@ -1112,6 +1109,29 @@ def simplified_division(left, right):
     # a symbol divided by itself is 1s of the same shape
     if left.id == right.id:
         return pybamm.ones_like(left)
+
+    # anything multiplied by a matrix one returns itself if
+    # - the shapes are the same
+    # - both left and right evaluate on edges, or both evaluate on nodes, in all
+    # dimensions
+    # (and possibly more generally, but not implemented here)
+    try:
+        if left.shape_for_testing == right.shape_for_testing and all(
+            left.evaluates_on_edges(dim) == right.evaluates_on_edges(dim)
+            for dim in ["primary", "secondary", "tertiary"]
+        ):
+            if pybamm.is_matrix_one(right):
+                return left
+            # also check for negative one
+            if pybamm.is_matrix_minus_one(right):
+                return -left
+
+    except NotImplementedError:
+        pass
+
+    # Return constant if both sides are constant
+    if left.is_constant() and right.is_constant():
+        return pybamm.simplify_if_constant(pybamm.Division(left, right))
 
     # Simplify (B @ c) / a to (B / a) @ c if (B / a) is constant
     # This is a common construction that appears from discretisation of averages

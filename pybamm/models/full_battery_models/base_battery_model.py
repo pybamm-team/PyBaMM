@@ -172,6 +172,7 @@ class Options(pybamm.FuzzyDict):
                 "positive",
                 "both",
             ],
+            "lithium plating porosity change": ["true", "false"],
             "particle": [
                 "Fickian diffusion",
                 "fast diffusion",
@@ -207,6 +208,7 @@ class Options(pybamm.FuzzyDict):
             "SEI": "none",
             "lithium plating": "none",
             "SEI porosity change": "false",
+            "lithium plating porosity change": "false",
             "loss of active material": "none",
             "working electrode": "none",
             "particle cracking": "none",
@@ -911,6 +913,26 @@ class BaseBatteryModel(pybamm.BaseModel):
                 "Maximum voltage",
                 V - self.param.voltage_high_cut,
                 pybamm.EventType.TERMINATION,
+            )
+        )
+
+        # Cut-off open-circuit voltage (for event switch with casadi 'fast with events'
+        # mode)
+        # A tolerance of 1 is sufficiently small since the dimensionless voltage is
+        # scaled with the thermal voltage (0.025V) and hence has a range of around 60
+        tol = 1
+        self.events.append(
+            pybamm.Event(
+                "Minimum voltage switch",
+                V - (self.param.voltage_low_cut - tol),
+                pybamm.EventType.SWITCH,
+            )
+        )
+        self.events.append(
+            pybamm.Event(
+                "Maximum voltage switch",
+                V - (self.param.voltage_high_cut + tol),
+                pybamm.EventType.SWITCH,
             )
         )
 
