@@ -95,6 +95,7 @@ class BaseModel(BaseElectrolyteConductivity):
 
         if self.domain == "Positive":
             variables.update(self._get_whole_cell_variables(variables))
+            variables.update(self._get_electrolyte_overpotentials(variables))
 
         return variables
 
@@ -217,9 +218,9 @@ class FullAlgebraic(BaseModel):
         delta_phi = variables[self.domain + " electrode surface potential difference"]
         i_e = variables[self.domain + " electrolyte current density"]
 
-        # Get surface area per unit volume (could be a distribution in x to
+        # Get surface area to volume ratio (could be a distribution in x to
         # account for graded electrodes)
-        a = variables[self.domain + " electrode surface area per unit volume"]
+        a = variables[self.domain + " electrode surface area to volume ratio"]
 
         # Variable summing all of the interfacial current densities
         sum_j = variables[
@@ -259,9 +260,9 @@ class FullDifferential(BaseModel):
         delta_phi = variables[self.domain + " electrode surface potential difference"]
         i_e = variables[self.domain + " electrolyte current density"]
 
-        # Get surface area per unit volume (could be a distribution in x to
+        # Get surface area to volume ratio (could be a distribution in x to
         # account for graded electrodes)
-        a = variables[self.domain + " electrode surface area per unit volume"]
+        a = variables[self.domain + " electrode surface area to volume ratio"]
 
         # Variable summing all of the interfacial current densities
         sum_j = variables[

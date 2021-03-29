@@ -35,17 +35,17 @@ class Geometry(dict):
 
     @property
     def parameters(self):
-        "Returns all the parameters in the geometry"
+        """Returns all the parameters in the geometry"""
         if self._parameters is None:
             self._parameters = self._find_parameters()
         return self._parameters
 
     def _find_parameters(self):
-        "Find all the parameters in the model"
+        """Find all the parameters in the model"""
         unpacker = pybamm.SymbolUnpacker((pybamm.Parameter, pybamm.InputParameter))
 
         def NestedDictValues(d):
-            "Get all the values from a nested dict"
+            """Get all the values from a nested dict"""
             for v in d.values():
                 if isinstance(v, dict):
                     yield from NestedDictValues(v)

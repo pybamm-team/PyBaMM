@@ -74,12 +74,12 @@ class FirstOrder(BaseElectrolyteDiffusion):
         ]
         rhs_n = (
             d_epsc_n_0_dt
-            - (sum_s_j_n_0 - param.t_plus(c_e_0) * sum_j_n_0) / param.gamma_e
+            - (sum_s_j_n_0 - param.t_plus(c_e_0, T_0) * sum_j_n_0) / param.gamma_e
         )
         rhs_s = d_epsc_s_0_dt
         rhs_p = (
             d_epsc_p_0_dt
-            - (sum_s_j_p_0 - param.t_plus(c_e_0) * sum_j_p_0) / param.gamma_e
+            - (sum_s_j_p_0 - param.t_plus(c_e_0, T_0) * sum_j_p_0) / param.gamma_e
         )
 
         # Diffusivities

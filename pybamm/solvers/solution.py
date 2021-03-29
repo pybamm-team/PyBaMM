@@ -2,29 +2,38 @@
 # Solution class
 #
 import casadi
-import copy
 import numbers
 import numpy as np
 import pickle
 import pybamm
 import pandas as pd
-from collections import defaultdict
 from scipy.io import savemat
 
 
-class _BaseSolution(object):
+class Solution(object):
     """
-    (Semi-private) class containing the solution of, and various attributes associated
-    with, a PyBaMM model. This class is automatically created by the `Solution` class,
-    and should never be called from outside the `Solution` class.
+    Class containing the solution of, and various attributes associated with, a PyBaMM
+    model.
 
     Parameters
     ----------
-    t : :class:`numpy.array`, size (n,)
-        A one-dimensional array containing the times at which the solution is evaluated
-    y : :class:`numpy.array`, size (m, n)
+    all_ts : :class:`numpy.array`, size (n,) (or list of these)
+        A one-dimensional array containing the times at which the solution is evaluated.
+        A list of times can be provided instead to initialize a solution with
+        sub-solutions.
+    all_ys : :class:`numpy.array`, size (m, n) (or list of these)
         A two-dimensional array containing the values of the solution. y[i, :] is the
         vector of solutions at time t[i].
+        A list of ys can be provided instead to initialize a solution with
+        sub-solutions.
+    all_models : :class:`pybamm.BaseModel`
+        The model that was used to calculate the solution.
+        A list of models can be provided instead to initialize a solution with
+        sub-solutions that have been calculated using those models.
+    all_inputs : dict (or list of these)
+        The inputs that were used to calculate the solution
+        A list of inputs can be provided instead to initialize a solution with
+        sub-solutions.
     t_event : :class:`numpy.array`, size (1,)
         A zero-dimensional array containing the time at which the event happens.
     y_event : :class:`numpy.array`, size (m,)
@@ -32,135 +41,188 @@ class _BaseSolution(object):
         the event happens.
     termination : str
         String to indicate why the solution terminated
-    copy_this : :class:`pybamm.Solution`, optional
-        A solution to copy, if provided. Default is None.
 
     """
 
     def __init__(
-        self, t, y, t_event=None, y_event=None, termination="final time", copy_this=None
+        self,
+        all_ts,
+        all_ys,
+        all_models,
+        all_inputs,
+        t_event=None,
+        y_event=None,
+        termination="final time",
     ):
-        self._t = t
-        if isinstance(y, casadi.DM):
-            y = y.full()
-        self._y = y
+        if not isinstance(all_ts, list):
+            all_ts = [all_ts]
+        if not isinstance(all_ys, list):
+            all_ys = [all_ys]
+        if not isinstance(all_models, list):
+            all_models = [all_models]
+        self._all_ts = all_ts
+        self._all_ys = all_ys
+        self._all_models = all_models
+
         self._t_event = t_event
         self._y_event = y_event
         self._termination = termination
-        if copy_this is None:
-            # initialize empty inputs and model, to be populated later
-            self._inputs = pybamm.FuzzyDict()
-            self.model = pybamm.BaseModel()
-            self.set_up_time = None
-            self.solve_time = None
-            self.integration_time = None
-            self.has_symbolic_inputs = False
+
+        # Set up inputs
+        if not isinstance(all_inputs, list):
+            for key, value in all_inputs.items():
+                if isinstance(value, numbers.Number):
+                    all_inputs[key] = np.array([value])
+            all_inputs = [all_inputs]
+        self.all_inputs = all_inputs
+        self.has_symbolic_inputs = any(
+            isinstance(v, casadi.MX) for v in all_inputs[0].values()
+        )
+
+        # Copy the timescale_eval and lengthscale_evals if they exist
+        if hasattr(all_models[0], "timescale_eval"):
+            self.timescale_eval = all_models[0].timescale_eval
         else:
-            self._inputs = copy.copy(copy_this.inputs)
-            self.model = copy_this.model
-            self.set_up_time = copy_this.set_up_time
-            self.solve_time = copy_this.solve_time
-            self.integration_time = copy_this.integration_time
-            self.has_symbolic_inputs = copy_this.has_symbolic_inputs
+            self.timescale_eval = all_models[0].timescale.evaluate()
+
+        if hasattr(all_models[0], "length_scales_eval"):
+            self.length_scales_eval = all_models[0].length_scales_eval
+        else:
+            self.length_scales_eval = {
+                domain: scale.evaluate()
+                for domain, scale in all_models[0].length_scales.items()
+            }
+
+        self.set_up_time = None
+        self.solve_time = None
+        self.integration_time = None
 
         # initiaize empty variables and data
         self._variables = pybamm.FuzzyDict()
         self.data = pybamm.FuzzyDict()
 
-        # initialize empty known evals
-        self._known_evals = defaultdict(dict)
-        for time in t:
-            self._known_evals[time] = {}
+        # Add self as sub-solution for compatibility with ProcessedVariable
+        self._sub_solutions = [self]
+
+        # Solution now uses CasADi
+        pybamm.citations.register("Andersson2019")
 
     @property
     def t(self):
-        "Times at which the solution is evaluated"
-        return self._t
+        """Times at which the solution is evaluated"""
+        try:
+            return self._t
+        except AttributeError:
+            self.set_t()
+            return self._t
+
+    def set_t(self):
+        self._t = np.concatenate(self.all_ts)
+        if any(np.diff(self._t) <= 0):
+            raise ValueError("Solution time vector must be strictly increasing")
 
     @property
     def y(self):
-        "Values of the solution"
-        return self._y
+        """Values of the solution"""
+        try:
+            return self._y
+        except AttributeError:
+            self.set_y()
+            return self._y
+
+    def set_y(self):
+        try:
+            if isinstance(self.all_ys[0], (casadi.DM, casadi.MX)):
+                self._y = casadi.horzcat(*self.all_ys)
+            else:
+                self._y = np.hstack(self.all_ys)
+        except ValueError:
+            raise pybamm.SolverError(
+                "The solution is made up from different models, so `y` cannot be "
+                "computed explicitly."
+            )
 
     @property
-    def model(self):
-        "Model used for solution"
-        return self._model
-
-    @model.setter
-    def model(self, model):
-        "Updates the model"
-        assert isinstance(model, pybamm.BaseModel)
-        self._model = model
-
-        # Copy the timescale_eval and lengthscale_evals if they exist
-        if hasattr(model, "timescale_eval"):
-            self.timescale_eval = model.timescale_eval
-        else:
-            self.timescale_eval = model.timescale.evaluate()
-        # self.timescale_eval = model.timescale_eval
-        if hasattr(model, "length_scales_eval"):
-            self.length_scales_eval = model.length_scales_eval
-        else:
-            self.length_scales_eval = {
-                domain: scale.evaluate()
-                for domain, scale in model.length_scales.items()
-            }
+    def all_ts(self):
+        return self._all_ts
 
     @property
-    def inputs(self):
-        "Values of the inputs"
-        return self._inputs
+    def all_ys(self):
+        return self._all_ys
 
-    @inputs.setter
-    def inputs(self, inputs):
-        "Updates the input values"
-        # If there are symbolic inputs, just store them as given
-        if any(isinstance(v, casadi.MX) for v in inputs.values()):
-            self.has_symbolic_inputs = True
-            self._inputs = inputs
-        # Otherwise, make them the same size as the time vector
-        else:
-            self.has_symbolic_inputs = False
-            self._inputs = {}
-            for name, inp in inputs.items():
-                # Convert number to vector of the right shape
-                if isinstance(inp, numbers.Number):
-                    inp = inp * np.ones((1, len(self.t)))
-                # Tile a vector
-                else:
-                    inp = np.tile(inp, len(self.t))
-                self._inputs[name] = inp
+    @property
+    def all_models(self):
+        """Model(s) used for solution"""
+        return self._all_models
+
+    @property
+    def all_inputs_casadi(self):
+        try:
+            return self._all_inputs_casadi
+        except AttributeError:
+            self._all_inputs_casadi = [
+                casadi.vertcat(*inp.values()) for inp in self.all_inputs
+            ]
+            return self._all_inputs_casadi
 
     @property
     def t_event(self):
-        "Time at which the event happens"
+        """Time at which the event happens"""
         return self._t_event
 
     @t_event.setter
     def t_event(self, value):
-        "Updates the event time"
+        """Updates the event time"""
         self._t_event = value
 
     @property
     def y_event(self):
-        "Value of the solution at the time of the event"
+        """Value of the solution at the time of the event"""
         return self._y_event
 
     @y_event.setter
     def y_event(self, value):
-        "Updates the solution at the time of the event"
+        """Updates the solution at the time of the event"""
         self._y_event = value
 
     @property
     def termination(self):
-        "Reason for termination"
+        """Reason for termination"""
         return self._termination
 
     @termination.setter
     def termination(self, value):
-        "Updates the reason for termination"
+        """Updates the reason for termination"""
         self._termination = value
+
+    @property
+    def last_state(self):
+        """
+        A Solution object that only contains the final state. This is faster to evaluate
+        than the full solution when only the final state is needed (e.g. to initialize
+        a model with the solution)
+        """
+        try:
+            return self._last_state
+        except AttributeError:
+            new_sol = Solution(
+                self.all_ts[-1][-1:],
+                self.all_ys[-1][:, -1:],
+                self.all_models[-1:],
+                self.all_inputs[-1:],
+                self.t_event,
+                self.y_event,
+                self.termination,
+            )
+            new_sol._all_inputs_casadi = self.all_inputs_casadi[-1:]
+            new_sol._sub_solutions = self.sub_solutions
+
+            new_sol.solve_time = 0
+            new_sol.integration_time = 0
+            new_sol.set_up_time = 0
+
+            self._last_state = new_sol
+            return self._last_state
 
     @property
     def total_time(self):
@@ -177,17 +239,46 @@ class _BaseSolution(object):
             # If there are symbolic inputs then we need to make a
             # ProcessedSymbolicVariable
             if self.has_symbolic_inputs is True:
-                var = pybamm.ProcessedSymbolicVariable(self.model.variables[key], self)
+                var = pybamm.ProcessedSymbolicVariable(
+                    self.all_models[0].variables[key], self
+                )
 
             # Otherwise a standard ProcessedVariable is ok
             else:
-                var = pybamm.ProcessedVariable(
-                    self.model.variables[key], self, self._known_evals
-                )
+                vars_pybamm = [model.variables[key] for model in self.all_models]
 
-                # Update known_evals in order to process any other variables faster
-                for t in var.known_evals:
-                    self._known_evals[t].update(var.known_evals[t])
+                # Iterate through all models, some may be in the list several times and
+                # therefore only get set up once
+                vars_casadi = []
+                for model, ys, inputs, var_pybamm in zip(
+                    self.all_models, self.all_ys, self.all_inputs, vars_pybamm
+                ):
+                    if key in model._variables_casadi:
+                        var_casadi = model._variables_casadi[key]
+                    else:
+                        t_MX = casadi.MX.sym("t")
+                        y_MX = casadi.MX.sym("y", ys.shape[0])
+                        symbolic_inputs_dict = {
+                            key: casadi.MX.sym("input", value.shape[0])
+                            for key, value in inputs.items()
+                        }
+                        symbolic_inputs = casadi.vertcat(
+                            *[p for p in symbolic_inputs_dict.values()]
+                        )
+
+                        # Convert variable to casadi
+                        # Make all inputs symbolic first for converting to casadi
+                        var_sym = var_pybamm.to_casadi(
+                            t_MX, y_MX, inputs=symbolic_inputs_dict
+                        )
+
+                        var_casadi = casadi.Function(
+                            "variable", [t_MX, y_MX, symbolic_inputs], [var_sym]
+                        )
+                        model._variables_casadi[key] = var_casadi
+                    vars_casadi.append(var_casadi)
+
+                var = pybamm.ProcessedVariable(vars_pybamm, vars_casadi, self)
 
             # Save variable and data
             self._variables[key] = var
@@ -234,10 +325,21 @@ class _BaseSolution(object):
         """
         return pybamm.dynamic_plot(self, output_variables=output_variables, **kwargs)
 
+    def clear_casadi_attributes(self):
+        """Remove casadi objects for pickling, will be computed again automatically"""
+        # t_MX = None
+        # y_MX = None
+        # symbolic_inputs = None
+        # symbolic_inputs_dict = None
+        pass
+
     def save(self, filename):
         """Save the whole solution using pickle"""
         # No warning here if len(self.data)==0 as solution can be loaded
         # and used to process new variables
+
+        self.clear_casadi_attributes()
+        # Pickle
         with open(filename, "wb") as f:
             pickle.dump(self, f, pickle.HIGHEST_PROTOCOL)
 
@@ -334,92 +436,89 @@ class _BaseSolution(object):
         else:
             raise ValueError("format '{}' not recognised".format(to_format))
 
-
-class Solution(_BaseSolution):
-    """
-    Class extending the base solution, with additional functionality for concatenating
-    different solutions together
-
-    **Extends**: :class:`_BaseSolution`
-
-    """
-
-    def __init__(self, t, y, t_event=None, y_event=None, termination="final time"):
-        super().__init__(t, y, t_event, y_event, termination)
-        self.base_solution_class = _BaseSolution
-
     @property
     def sub_solutions(self):
-        "List of sub solutions that have been concatenated to form the full solution"
-        try:
-            return self._sub_solutions
-        except AttributeError:
-            raise AttributeError(
-                "sub solutions are only created once other solutions have been appended"
-            )
+        """List of sub solutions that have been
+        concatenated to form the full solution"""
+
+        return self._sub_solutions
 
     def __add__(self, other):
-        "See :meth:`Solution.append`"
-        self.append(other, create_sub_solutions=True)
-        return self
-
-    def append(self, solution, start_index=1, create_sub_solutions=False):
-        """
-        Appends solution.t and solution.y onto self.t and self.y.
-
-        Note: by default this process removes the initial time and state of solution to
-        avoid duplicate times and states being stored (self.t[-1] is equal to
-        solution.t[0], and self.y[:, -1] is equal to solution.y[:, 0]). Set the optional
-        argument ``start_index`` to override this behavior
-        """
-        # Create sub-solutions if necessary
-        # sub-solutions are 'BaseSolution' objects, which have slightly reduced
-        # functionality compared to normal solutions (can't append other solutions)
-        if create_sub_solutions and not hasattr(self, "_sub_solutions"):
-            self._sub_solutions = [
-                self.base_solution_class(
-                    self.t,
-                    self.y,
-                    self.t_event,
-                    self.y_event,
-                    self.termination,
-                    copy_this=self,
-                )
-            ]
-
-        # (Create and) update sub-solutions
-        # Create a list of sub-solutions, which are simpler BaseSolution classes
-
-        # Update t, y and inputs
-        self._t = np.concatenate((self._t, solution.t[start_index:]))
-        self._y = np.concatenate((self._y, solution.y[:, start_index:]), axis=1)
-        for name, inp in self.inputs.items():
-            solution_inp = solution.inputs[name]
-            self.inputs[name] = np.c_[inp, solution_inp[:, start_index:]]
-        # Update solution time
-        self.solve_time += solution.solve_time
-        self.integration_time += solution.integration_time
-        # Update termination
-        self._termination = solution.termination
-        self._t_event = solution._t_event
-        self._y_event = solution._y_event
-
-        # Update known_evals
-        for t, evals in solution._known_evals.items():
-            self._known_evals[t].update(evals)
-        # Recompute existing variables
-        for var in self._variables.keys():
-            self.update(var)
-
-        # Append sub_solutions
-        if create_sub_solutions:
-            self._sub_solutions.append(
-                self.base_solution_class(
-                    solution.t,
-                    solution.y,
-                    solution.t_event,
-                    solution.y_event,
-                    solution.termination,
-                    copy_this=solution,
-                )
+        """ Adds two solutions together, e.g. when stepping """
+        if not isinstance(other, Solution):
+            raise pybamm.SolverError(
+                "Only a Solution or None can be added to a Solution"
             )
+        # Special case: new solution only has one timestep and it is already in the
+        # existing solution. In this case, return a copy of the existing solution
+        if (
+            len(other.all_ts) == 1
+            and len(other.all_ts[0]) == 1
+            and other.all_ts[0][0] == self.all_ts[-1][-1]
+        ):
+            return self.copy()
+
+        # Update list of sub-solutions
+        if other.all_ts[0][0] == self.all_ts[-1][-1]:
+            # Skip first time step if it is repeated
+            all_ts = self.all_ts + [other.all_ts[0][1:]] + other.all_ts[1:]
+            all_ys = self.all_ys + [other.all_ys[0][:, 1:]] + other.all_ys[1:]
+        else:
+            all_ts = self.all_ts + other.all_ts
+            all_ys = self.all_ys + other.all_ys
+
+        new_sol = Solution(
+            all_ts,
+            all_ys,
+            self.all_models + other.all_models,
+            self.all_inputs + other.all_inputs,
+            self.t_event,
+            self.y_event,
+            self.termination,
+        )
+
+        new_sol._all_inputs_casadi = self.all_inputs_casadi + other.all_inputs_casadi
+
+        # Set solution time
+        new_sol.solve_time = self.solve_time + other.solve_time
+        new_sol.integration_time = self.integration_time + other.integration_time
+
+        # Update termination using the latter solution
+        new_sol._termination = other.termination
+        new_sol._t_event = other._t_event
+        new_sol._y_event = other._y_event
+
+        # Set sub_solutions
+        new_sol._sub_solutions = self.sub_solutions + other.sub_solutions
+
+        return new_sol
+
+    def __radd__(self, other):
+        """
+        Function to deal with the case `None + Solution` (returns `Solution`)
+        """
+        if other is None:
+            return self.copy()
+        else:
+            raise pybamm.SolverError(
+                "Only a Solution or None can be added to a Solution"
+            )
+
+    def copy(self):
+        new_sol = Solution(
+            self.all_ts,
+            self.all_ys,
+            self.all_models,
+            self.all_inputs,
+            self.t_event,
+            self.y_event,
+            self.termination,
+        )
+        new_sol._all_inputs_casadi = self.all_inputs_casadi
+        new_sol._sub_solutions = self.sub_solutions
+
+        new_sol.solve_time = self.solve_time
+        new_sol.integration_time = self.integration_time
+        new_sol.set_up_time = self.set_up_time
+
+        return new_sol

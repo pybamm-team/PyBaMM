@@ -13,13 +13,13 @@ class TestStandardParametersLeadAcid(unittest.TestCase):
         self.assertAlmostEqual(param.R.evaluate(), 8.314, places=3)
         self.assertAlmostEqual(param.F.evaluate(), 96485, places=0)
 
-    def test_all_defined(self):
+    def test_print_parameters(self):
         parameters = pybamm.LeadAcidParameters()
         parameter_values = pybamm.lead_acid.BaseModel().default_parameter_values
         output_file = "lead_acid_parameters.txt"
         parameter_values.print_parameters(parameters, output_file)
         # test print_parameters with dict and without C-rate
-        del parameter_values["Cell capacity [A.h]"]
+        del parameter_values["Nominal cell capacity [A.h]"]
         parameters = {"C_e": parameters.C_e, "sigma_n": parameters.sigma_n}
         parameter_values.print_parameters(parameters)
 
@@ -96,6 +96,26 @@ class TestStandardParametersLeadAcid(unittest.TestCase):
             dimensional_current_density_eval.evaluate(t=3), 2 / (8 * 0.1 * 0.1)
         )
         self.assertEqual(dimensionless_current_density_eval.evaluate(t=3), 1)
+
+    def test_thermal_parameters(self):
+        values = pybamm.lead_acid.BaseModel().default_parameter_values
+        param = pybamm.LeadAcidParameters()
+        T = 1  # dummy temperature as the values are constant
+
+        # Density
+        self.assertAlmostEqual(values.evaluate(param.rho_cn(T)), 0.8810, places=2)
+        self.assertAlmostEqual(values.evaluate(param.rho_n(T)), 0.8810, places=2)
+        self.assertAlmostEqual(values.evaluate(param.rho_s(T)), 0.7053, places=2)
+        self.assertAlmostEqual(values.evaluate(param.rho_p(T)), 1.4393, places=2)
+        self.assertAlmostEqual(values.evaluate(param.rho_cp(T)), 1.4393, places=2)
+        self.assertAlmostEqual(values.evaluate(param.rho(T)), 1.7102, places=2)
+
+        # Thermal conductivity
+        self.assertAlmostEqual(values.evaluate(param.lambda_cn(T)), 1.6963, places=2)
+        self.assertAlmostEqual(values.evaluate(param.lambda_n(T)), 1.6963, places=2)
+        self.assertAlmostEqual(values.evaluate(param.lambda_s(T)), 0.0019, places=2)
+        self.assertAlmostEqual(values.evaluate(param.lambda_p(T)), 1.6963, places=2)
+        self.assertAlmostEqual(values.evaluate(param.lambda_cp(T)), 1.6963, places=2)
 
     def test_functions_lead_acid(self):
         # Load parameters to be tested

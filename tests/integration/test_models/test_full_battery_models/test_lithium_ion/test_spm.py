@@ -12,7 +12,9 @@ class TestSPM(unittest.TestCase):
     def test_basic_processing(self):
         options = {"thermal": "isothermal"}
         model = pybamm.lithium_ion.SPM(options)
-        modeltest = tests.StandardModelTest(model)
+        # use Ecker parameters for nonlinear diffusion
+        param = pybamm.ParameterValues(chemistry=pybamm.parameter_sets.Ecker2015)
+        modeltest = tests.StandardModelTest(model, parameter_values=param)
         modeltest.test_all()
 
     def test_basic_processing_1plus1D(self):
@@ -54,26 +56,20 @@ class TestSPM(unittest.TestCase):
         optimtest = tests.OptimisationsTest(model)
 
         original = optimtest.evaluate_model()
-        simplified = optimtest.evaluate_model(simplify=True)
         using_known_evals = optimtest.evaluate_model(use_known_evals=True)
-        simp_and_known = optimtest.evaluate_model(simplify=True, use_known_evals=True)
-        simp_and_python = optimtest.evaluate_model(simplify=True, to_python=True)
-        np.testing.assert_array_almost_equal(original, simplified)
+        to_python = optimtest.evaluate_model(to_python=True)
         np.testing.assert_array_almost_equal(original, using_known_evals)
-        np.testing.assert_array_almost_equal(original, simp_and_known)
-        np.testing.assert_array_almost_equal(original, simp_and_python)
+        np.testing.assert_array_almost_equal(original, to_python)
 
         if system() != "Windows":
-            simp_and_jax = optimtest.evaluate_model(simplify=True, to_jax=True)
-            np.testing.assert_array_almost_equal(original, simp_and_jax)
+            to_jax = optimtest.evaluate_model(to_jax=True)
+            np.testing.assert_array_almost_equal(original, to_jax)
 
     def test_set_up(self):
         model = pybamm.lithium_ion.SPM()
         optimtest = tests.OptimisationsTest(model)
-        optimtest.set_up_model(simplify=False, to_python=True)
-        optimtest.set_up_model(simplify=True, to_python=True)
-        optimtest.set_up_model(simplify=False, to_python=False)
-        optimtest.set_up_model(simplify=True, to_python=False)
+        optimtest.set_up_model(to_python=True)
+        optimtest.set_up_model(to_python=False)
 
     def test_charge(self):
         options = {"thermal": "isothermal"}
@@ -120,6 +116,49 @@ class TestSPM(unittest.TestCase):
         modeltest = tests.StandardModelTest(model)
         modeltest.test_all()
 
+    def test_loss_active_material(self):
+        options = {
+            "loss of active material": "none",
+        }
+        model = pybamm.lithium_ion.SPM(options)
+        chemistry = pybamm.parameter_sets.Ai2020
+        parameter_values = pybamm.ParameterValues(chemistry=chemistry)
+        modeltest = tests.StandardModelTest(model, parameter_values=parameter_values)
+        modeltest.test_all()
+
+    def test_loss_active_material_negative(self):
+        options = {
+            "particle cracking": "no cracking",
+            "loss of active material": "negative",
+        }
+        model = pybamm.lithium_ion.SPM(options)
+        chemistry = pybamm.parameter_sets.Ai2020
+        parameter_values = pybamm.ParameterValues(chemistry=chemistry)
+        modeltest = tests.StandardModelTest(model, parameter_values=parameter_values)
+        modeltest.test_all()
+
+    def test_loss_active_material_positive(self):
+        options = {
+            "particle cracking": "no cracking",
+            "loss of active material": "positive",
+        }
+        model = pybamm.lithium_ion.SPM(options)
+        chemistry = pybamm.parameter_sets.Ai2020
+        parameter_values = pybamm.ParameterValues(chemistry=chemistry)
+        modeltest = tests.StandardModelTest(model, parameter_values=parameter_values)
+        modeltest.test_all()
+
+    def test_loss_active_material_both(self):
+        options = {
+            "particle cracking": "no cracking",
+            "loss of active material": "both",
+        }
+        model = pybamm.lithium_ion.SPM(options)
+        chemistry = pybamm.parameter_sets.Ai2020
+        parameter_values = pybamm.ParameterValues(chemistry=chemistry)
+        modeltest = tests.StandardModelTest(model, parameter_values=parameter_values)
+        modeltest.test_all()
+
     def test_surface_form_differential(self):
         options = {"surface form": "differential"}
         model = pybamm.lithium_ion.SPM(options)
@@ -132,34 +171,44 @@ class TestSPM(unittest.TestCase):
         modeltest = tests.StandardModelTest(model)
         modeltest.test_all()
 
+    def test_well_posed_irreversible_plating_with_porosity(self):
+        options = {
+            "lithium plating": "irreversible",
+            "lithium plating porosity change": "true",
+        }
+        model = pybamm.lithium_ion.SPM(options)
+        param = pybamm.ParameterValues(chemistry=pybamm.parameter_sets.Yang2017)
+        modeltest = tests.StandardModelTest(model, parameter_values=param)
+        modeltest.test_all()
+
 
 class TestSPMWithSEI(unittest.TestCase):
     def test_well_posed_reaction_limited(self):
-        options = {"sei": "reaction limited"}
+        options = {"SEI": "reaction limited"}
         model = pybamm.lithium_ion.SPM(options)
         modeltest = tests.StandardModelTest(model)
         modeltest.test_all()
 
     def test_well_posed_solvent_diffusion_limited(self):
-        options = {"sei": "solvent-diffusion limited"}
+        options = {"SEI": "solvent-diffusion limited"}
         model = pybamm.lithium_ion.SPM(options)
         modeltest = tests.StandardModelTest(model)
         modeltest.test_all()
 
     def test_well_posed_electron_migration_limited(self):
-        options = {"sei": "electron-migration limited"}
+        options = {"SEI": "electron-migration limited"}
         model = pybamm.lithium_ion.SPM(options)
         modeltest = tests.StandardModelTest(model)
         modeltest.test_all()
 
     def test_well_posed_interstitial_diffusion_limited(self):
-        options = {"sei": "interstitial-diffusion limited"}
+        options = {"SEI": "interstitial-diffusion limited"}
         model = pybamm.lithium_ion.SPM(options)
         modeltest = tests.StandardModelTest(model)
         modeltest.test_all()
 
     def test_well_posed_ec_reaction_limited(self):
-        options = {"sei": "ec reaction limited", "sei porosity change": True}
+        options = {"SEI": "ec reaction limited", "SEI porosity change": "true"}
         model = pybamm.lithium_ion.SPM(options)
         modeltest = tests.StandardModelTest(model)
         modeltest.test_all()
@@ -167,7 +216,7 @@ class TestSPMWithSEI(unittest.TestCase):
 
 class TestSPMWithCrack(unittest.TestCase):
     def test_well_posed_none_crack(self):
-        options = {"particle": "Fickian diffusion", "particle cracking": None}
+        options = {"particle": "Fickian diffusion", "particle cracking": "none"}
         model = pybamm.lithium_ion.SPM(options)
         chemistry = pybamm.parameter_sets.Ai2020
         parameter_values = pybamm.ParameterValues(chemistry=chemistry)
@@ -182,16 +231,16 @@ class TestSPMWithCrack(unittest.TestCase):
         modeltest = tests.StandardModelTest(model, parameter_values=parameter_values)
         modeltest.test_all()
 
-    def test_well_posed_anode_cracking(self):
-        options = {"particle": "Fickian diffusion", "particle cracking": "anode"}
+    def test_well_posed_negative_cracking(self):
+        options = {"particle": "Fickian diffusion", "particle cracking": "negative"}
         model = pybamm.lithium_ion.SPM(options)
         chemistry = pybamm.parameter_sets.Ai2020
         parameter_values = pybamm.ParameterValues(chemistry=chemistry)
         modeltest = tests.StandardModelTest(model, parameter_values=parameter_values)
         modeltest.test_all()
 
-    def test_well_posed_cathode_cracking(self):
-        options = {"particle": "Fickian diffusion", "particle cracking": "cathode"}
+    def test_well_posed_positive_cracking(self):
+        options = {"particle": "Fickian diffusion", "particle cracking": "positive"}
         model = pybamm.lithium_ion.SPM(options)
         chemistry = pybamm.parameter_sets.Ai2020
         parameter_values = pybamm.ParameterValues(chemistry=chemistry)

@@ -21,20 +21,20 @@ class ForwardTafel(BaseKinetics):
     reaction : str
         The name of the reaction being implemented
     options: dict
-        A dictionary of options to be passed to the model. In this case "sei film
-        resistance" is the important option. See :class:`pybamm.BaseBatteryModel`
+        A dictionary of options to be passed to the model.
+        See :class:`pybamm.BaseBatteryModel`
 
     **Extends:** :class:`pybamm.interface.kinetics.BaseKinetics`
     """
 
-    def __init__(self, param, domain, reaction, options=None):
+    def __init__(self, param, domain, reaction, options):
         super().__init__(param, domain, reaction, options)
 
     def _get_kinetics(self, j0, ne, eta_r, T):
         return j0 * pybamm.exp((ne / (2 * (1 + self.param.Theta * T))) * eta_r)
 
     def _get_dj_dc(self, variables):
-        "See :meth:`pybamm.interface.kinetics.BaseKinetics._get_dj_dc`"
+        """ See :meth:`pybamm.interface.kinetics.BaseKinetics._get_dj_dc` """
         c_e, delta_phi, j0, ne, ocp, T = self._get_interface_variables_for_first_order(
             variables
         )
@@ -46,7 +46,7 @@ class ForwardTafel(BaseKinetics):
         )
 
     def _get_dj_ddeltaphi(self, variables):
-        "See :meth:`pybamm.interface.kinetics.BaseKinetics._get_dj_ddeltaphi`"
+        """ See :meth:`pybamm.interface.kinetics.BaseKinetics._get_dj_ddeltaphi` """
         _, delta_phi, j0, ne, ocp, T = self._get_interface_variables_for_first_order(
             variables
         )
@@ -77,8 +77,8 @@ class BackwardTafel(BaseKinetics):
     **Extends:** :class:`pybamm.interface.kinetics.BaseKinetics`
     """
 
-    def __init__(self, param, domain, reaction):
-        super().__init__(param, domain, reaction)
+    def __init__(self, param, domain, reaction, options):
+        super().__init__(param, domain, reaction, options)
 
     def _get_kinetics(self, j0, ne, eta_r, T):
         return -j0 * pybamm.exp(-(ne / (2 * (1 + self.param.Theta * T))) * eta_r)

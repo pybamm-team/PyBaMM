@@ -14,6 +14,7 @@ from jax.interpreters import partial_eval as pe
 from jax import linear_util as lu
 from jax.config import config
 from absl import logging
+
 logging.set_verbosity(logging.ERROR)
 
 config.update("jax_enable_x64", True)
@@ -929,8 +930,9 @@ def _bdf_odeint_rev(func, mass, rtol, atol, res, g):
         """
         return sum((tuple(b.values()) for b in args if isinstance(b, dict)), ())
 
-    aug_mass = (mass, mass, onp.array(1.0)) + \
-        arg_dicts_to_values(tree_map(arg_to_identity, args))
+    aug_mass = (mass, mass, onp.array(1.0)) + arg_dicts_to_values(
+        tree_map(arg_to_identity, args)
+    )
 
     def scan_fun(carry, i):
         y_bar, t0_bar, args_bar = carry
@@ -945,7 +947,7 @@ def _bdf_odeint_rev(func, mass, rtol, atol, res, g):
             *args,
             mass=aug_mass,
             rtol=rtol,
-            atol=atol
+            atol=atol,
         )
         y_bar, t0_bar, args_bar = tree_map(op.itemgetter(1), (y_bar, t0_bar, args_bar))
         # Add gradient from current output
@@ -982,6 +984,7 @@ def closure_convert(fun, in_tree, in_avals):
     # TODO(mattjj): revise this approach
     def is_float(c):
         return dtypes.issubdtype(dtypes.dtype(c), jnp.inexact)
+
     (closure_consts, hoisted_consts), merge = partition_list(is_float, consts)
     num_consts = len(hoisted_consts)
 

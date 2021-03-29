@@ -55,6 +55,7 @@ class FickianSingleParticle(BaseParticle):
         N_s = pybamm.SecondaryBroadcast(N_s_xav, [self._domain.lower() + " electrode"])
 
         variables.update(self._get_standard_flux_variables(N_s, N_s_xav))
+        variables.update(self._get_total_concentration_variables(variables))
 
         return variables
 
@@ -74,12 +75,10 @@ class FickianSingleParticle(BaseParticle):
         c_s_xav = variables[
             "X-averaged " + self.domain.lower() + " particle concentration"
         ]
-        c_s_surf_xav = variables[
-            "X-averaged " + self.domain.lower() + " particle surface concentration"
-        ]
-        T_xav = variables[
-            "X-averaged " + self.domain.lower() + " electrode temperature"
-        ]
+        T_xav = pybamm.PrimaryBroadcast(
+            variables["X-averaged " + self.domain.lower() + " electrode temperature"],
+            c_s_xav.domain[0],
+        )
         j_xav = variables[
             "X-averaged "
             + self.domain.lower()
@@ -91,7 +90,7 @@ class FickianSingleParticle(BaseParticle):
                 -self.param.C_n
                 * j_xav
                 / self.param.a_R_n
-                / self.param.D_n(c_s_surf_xav, T_xav)
+                / pybamm.surf(self.param.D_n(c_s_xav, T_xav))
             )
 
         elif self.domain == "Positive":
@@ -100,7 +99,7 @@ class FickianSingleParticle(BaseParticle):
                 * j_xav
                 / self.param.a_R_p
                 / self.param.gamma_p
-                / self.param.D_p(c_s_surf_xav, T_xav)
+                / pybamm.surf(self.param.D_p(c_s_xav, T_xav))
             )
 
         self.boundary_conditions = {

@@ -19,11 +19,9 @@ class TestDDT(unittest.TestCase):
 
         a = (pybamm.t ** 2).diff(pybamm.t)
         self.assertEqual(a.id, (2 * pybamm.t ** 1 * 1).id)
-        self.assertEqual(a.simplify().id, (2 * pybamm.t).id)
         self.assertEqual(a.evaluate(t=1), 2)
 
         a = (2 + pybamm.t ** 2).diff(pybamm.t)
-        self.assertEqual(a.simplify().id, (2 * pybamm.t).id)
         self.assertEqual(a.evaluate(t=1), 2)
 
     def test_time_derivative_of_variable(self):
@@ -33,10 +31,11 @@ class TestDDT(unittest.TestCase):
         self.assertEqual(a.name, "a'")
 
         p = pybamm.Parameter("p")
-        a = (1 + p * pybamm.Variable("a")).diff(pybamm.t).simplify()
-        self.assertIsInstance(a, pybamm.Multiplication)
-        self.assertEqual(a.children[0].name, "p")
-        self.assertEqual(a.children[1].name, "a'")
+        a = 1 + p * pybamm.Variable("a")
+        diff_a = a.diff(pybamm.t)
+        self.assertIsInstance(diff_a, pybamm.Multiplication)
+        self.assertEqual(diff_a.children[0].name, "p")
+        self.assertEqual(diff_a.children[1].name, "a'")
 
         with self.assertRaises(pybamm.ModelError):
             a = (pybamm.Variable("a")).diff(pybamm.t).diff(pybamm.t)

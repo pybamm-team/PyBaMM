@@ -37,6 +37,7 @@ class Full(BaseModel):
         self.set_external_circuit_submodel()
         self.set_interfacial_submodel()
         self.set_porosity_submodel()
+        self.set_active_material_submodel()
         self.set_tortuosity_submodels()
         self.set_convection_submodel()
         self.set_electrolyte_submodel()
@@ -45,17 +46,18 @@ class Full(BaseModel):
         self.set_side_reaction_submodels()
         self.set_current_collector_submodel()
         self.set_sei_submodel()
+        self.set_lithium_plating_submodel()
 
         if build:
             self.build_model()
 
-        pybamm.citations.register("sulzer2019physical")
+        pybamm.citations.register("Sulzer2019physical")
 
     def set_porosity_submodel(self):
-        self.submodels["porosity"] = pybamm.porosity.Full(self.param)
+        self.submodels["porosity"] = pybamm.porosity.Full(self.param, self.options)
 
     def set_convection_submodel(self):
-        if self.options["convection"] is False:
+        if self.options["convection"] == "none":
             self.submodels[
                 "transverse convection"
             ] = pybamm.convection.transverse.NoConvection(self.param)
@@ -77,22 +79,22 @@ class Full(BaseModel):
 
     def set_interfacial_submodel(self):
         self.submodels["negative interface"] = pybamm.interface.ButlerVolmer(
-            self.param, "Negative", "lead-acid main"
+            self.param, "Negative", "lead-acid main", self.options
         )
         self.submodels["positive interface"] = pybamm.interface.ButlerVolmer(
-            self.param, "Positive", "lead-acid main"
+            self.param, "Positive", "lead-acid main", self.options
         )
 
     def set_solid_submodel(self):
-        if self.options["surface form"] is False:
+        if self.options["surface form"] == "false":
             submod_n = pybamm.electrode.ohm.Full(self.param, "Negative")
             submod_p = pybamm.electrode.ohm.Full(self.param, "Positive")
         else:
             submod_n = pybamm.electrode.ohm.SurfaceForm(self.param, "Negative")
             submod_p = pybamm.electrode.ohm.SurfaceForm(self.param, "Positive")
 
-        self.submodels["negative electrode"] = submod_n
-        self.submodels["positive electrode"] = submod_p
+        self.submodels["negative electrode potential"] = submod_n
+        self.submodels["positive electrode potential"] = submod_p
 
     def set_electrolyte_submodel(self):
 
@@ -102,7 +104,7 @@ class Full(BaseModel):
             self.param
         )
 
-        if self.options["surface form"] is False:
+        if self.options["surface form"] == "false":
             self.submodels[
                 "electrolyte conductivity"
             ] = pybamm.electrolyte_conductivity.Full(self.param)
@@ -123,7 +125,7 @@ class Full(BaseModel):
                 self.param
             )
             self.submodels["positive oxygen interface"] = pybamm.interface.ForwardTafel(
-                self.param, "Positive", "lead-acid oxygen"
+                self.param, "Positive", "lead-acid oxygen", self.options
             )
             self.submodels[
                 "negative oxygen interface"

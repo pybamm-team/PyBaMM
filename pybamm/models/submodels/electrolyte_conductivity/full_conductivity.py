@@ -45,6 +45,7 @@ class Full(BaseElectrolyteConductivity):
         )
 
         variables.update(self._get_standard_current_variables(i_e))
+        variables.update(self._get_electrolyte_overpotentials(variables))
 
         return variables
 
@@ -52,10 +53,10 @@ class Full(BaseElectrolyteConductivity):
         phi_e = variables["Electrolyte potential"]
         i_e = variables["Electrolyte current density"]
 
-        # Get surface area per unit volume (could be a distribution in x to
+        # Get surface area to volume ratio (could be a distribution in x to
         # account for graded electrodes)
-        a_n = variables["Negative electrode surface area per unit volume"]
-        a_p = variables["Positive electrode surface area per unit volume"]
+        a_n = variables["Negative electrode surface area to volume ratio"]
+        a_p = variables["Positive electrode surface area to volume ratio"]
         a = pybamm.Concatenation(
             a_n, pybamm.FullBroadcast(0, "separator", "current collector"), a_p
         )

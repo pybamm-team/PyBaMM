@@ -13,4 +13,3 @@ variable to be constant.
 
   current_control_external_circuit
   function_control_external_circuit
-  experiment_events

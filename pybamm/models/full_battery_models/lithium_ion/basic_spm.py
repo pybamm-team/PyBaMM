@@ -29,7 +29,7 @@ class BasicSPM(BaseModel):
 
     def __init__(self, name="Single Particle Model"):
         super().__init__({}, name)
-        pybamm.citations.register("marquis2019asymptotic")
+        pybamm.citations.register("Marquis2019")
         # `param` is a class containing all the relevant parameters and functions for
         # this model. These are purely symbolic at this stage, and will be set by the
         # `ParameterValues` class when the model is processed.
@@ -172,5 +172,5 @@ class BasicSPM(BaseModel):
             pybamm.Event("Maximum voltage", V - param.voltage_high_cut),
         ]
 
-    def new_copy(self, build=False):
-        return pybamm.BaseModel.new_copy(self)
+    def new_empty_copy(self):
+        return pybamm.BaseModel.new_empty_copy(self)

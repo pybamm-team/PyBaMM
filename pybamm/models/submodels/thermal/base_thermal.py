@@ -91,8 +91,8 @@ class BaseThermal(pybamm.BaseSubModel):
         T = variables["Cell temperature"]
         T_n, _, T_p = T.orphans
 
-        a_n = variables["Negative electrode surface area per unit volume"]
-        a_p = variables["Positive electrode surface area per unit volume"]
+        a_n = variables["Negative electrode surface area to volume ratio"]
+        a_p = variables["Positive electrode surface area to volume ratio"]
 
         j_n = variables["Negative electrode interfacial current density"]
         j_p = variables["Positive electrode interfacial current density"]
@@ -208,7 +208,7 @@ class BaseThermal(pybamm.BaseSubModel):
         return variables
 
     def _current_collector_heating(self, variables):
-        "Compute Ohmic heating in current collectors"
+        """Compute Ohmic heating in current collectors."""
         # TODO: implement grad in 0D to return a scalar zero
         # TODO: implement grad_squared in other spatial methods so that the if
         # statement can be removed
@@ -255,7 +255,7 @@ class BaseThermal(pybamm.BaseSubModel):
         return out
 
     def _yz_average(self, var):
-        "Computes the y-z average"
+        """Computes the y-z average."""
         # TODO: change the behaviour of z_average and yz_average so the if statement
         # can be removed
         if self.cc_dimension in [0, 1]:

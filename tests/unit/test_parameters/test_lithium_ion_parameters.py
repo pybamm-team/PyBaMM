@@ -14,6 +14,16 @@ class TestDimensionlessParameterValues(unittest.TestCase):
         with self.assertRaisesRegex(pybamm.OptionError, "particle cracking"):
             pybamm.LithiumIonParameters({"particle cracking": "bad crack"})
 
+    def test_print_parameters(self):
+        parameters = pybamm.LithiumIonParameters()
+        parameter_values = pybamm.lithium_ion.BaseModel().default_parameter_values
+        output_file = "lithium_ion_parameters.txt"
+        parameter_values.print_parameters(parameters, output_file)
+        # test print_parameters with dict and without C-rate
+        del parameter_values["Nominal cell capacity [A.h]"]
+        parameters = {"C_e": parameters.C_e, "sigma_n": parameters.sigma_n}
+        parameter_values.print_parameters(parameters)
+
     def test_lithium_ion(self):
         """This test checks that all the dimensionless parameters are being calculated
         correctly for the specific set of parameters for LCO from dualfoil. The values
@@ -28,9 +38,9 @@ class TestDimensionlessParameterValues(unittest.TestCase):
         # Note: in general these can be functions, but are constant for this
         # set, so we just arbitrarily evaluate at 0
 
-        # a_n dimensional
+        # a_n_typ
         np.testing.assert_almost_equal(
-            values.evaluate(param.a_n_dimensional(0)), 0.18 * 10 ** (6), 2
+            values.evaluate(param.a_n_typ), 0.18 * 10 ** (6), 2
         )
         # R_n dimensional
         np.testing.assert_almost_equal(
@@ -40,9 +50,9 @@ class TestDimensionlessParameterValues(unittest.TestCase):
         # a_R_n = a_n_typ * R_n_typ
         np.testing.assert_almost_equal(values.evaluate(param.a_R_n), 1.8, 2)
 
-        # a_p dimensional
+        # a_p_typ
         np.testing.assert_almost_equal(
-            values.evaluate(param.a_p_dimensional(0)), 0.15 * 10 ** (6), 2
+            values.evaluate(param.a_p_typ), 0.15 * 10 ** (6), 2
         )
 
         # R_p dimensional
@@ -167,20 +177,21 @@ class TestDimensionlessParameterValues(unittest.TestCase):
         values = pybamm.lithium_ion.BaseModel().default_parameter_values
         param = pybamm.LithiumIonParameters()
         c_rate = param.i_typ / 24
+        T = 1  # dummy temperature as the values are constant
 
         # Density
-        np.testing.assert_almost_equal(values.evaluate(param.rho_cn), 1.9019, 2)
-        np.testing.assert_almost_equal(values.evaluate(param.rho_n), 0.6403, 2)
-        np.testing.assert_almost_equal(values.evaluate(param.rho_s), 0.1535, 2)
-        np.testing.assert_almost_equal(values.evaluate(param.rho_p), 1.2605, 2)
-        np.testing.assert_almost_equal(values.evaluate(param.rho_cp), 1.3403, 2)
+        np.testing.assert_almost_equal(values.evaluate(param.rho_cn(T)), 1.9019, 2)
+        np.testing.assert_almost_equal(values.evaluate(param.rho_n(T)), 0.6403, 2)
+        np.testing.assert_almost_equal(values.evaluate(param.rho_s(T)), 0.1535, 2)
+        np.testing.assert_almost_equal(values.evaluate(param.rho_p(T)), 1.2605, 2)
+        np.testing.assert_almost_equal(values.evaluate(param.rho_cp(T)), 1.3403, 2)
 
         # Thermal conductivity
-        np.testing.assert_almost_equal(values.evaluate(param.lambda_cn), 6.7513, 2)
-        np.testing.assert_almost_equal(values.evaluate(param.lambda_n), 0.0296, 2)
-        np.testing.assert_almost_equal(values.evaluate(param.lambda_s), 0.0027, 2)
-        np.testing.assert_almost_equal(values.evaluate(param.lambda_p), 0.0354, 2)
-        np.testing.assert_almost_equal(values.evaluate(param.lambda_cp), 3.9901, 2)
+        np.testing.assert_almost_equal(values.evaluate(param.lambda_cn(T)), 6.7513, 2)
+        np.testing.assert_almost_equal(values.evaluate(param.lambda_n(T)), 0.0296, 2)
+        np.testing.assert_almost_equal(values.evaluate(param.lambda_s(T)), 0.0027, 2)
+        np.testing.assert_almost_equal(values.evaluate(param.lambda_p(T)), 0.0354, 2)
+        np.testing.assert_almost_equal(values.evaluate(param.lambda_cp(T)), 3.9901, 2)
 
         # other thermal parameters
 

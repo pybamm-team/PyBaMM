@@ -23,7 +23,11 @@ class NoReaction(BaseKinetics):
     """
 
     def __init__(self, param, domain, reaction):
-        super().__init__(param, domain, reaction)
+        options = {
+            "SEI film resistance": "none",
+            "total interfacial current density as a state": "false",
+        }
+        super().__init__(param, domain, reaction, options)
 
     def _get_kinetics(self, j0, ne, eta_r, T):
         return pybamm.Scalar(0)

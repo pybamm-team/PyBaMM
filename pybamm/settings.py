@@ -5,10 +5,12 @@
 
 class Settings(object):
     _debug_mode = False
+    _simplify = True
     _min_smoothing = "exact"
     _max_smoothing = "exact"
     _heaviside_smoothing = "exact"
     _abs_smoothing = "exact"
+    max_words_in_line = 4
 
     @property
     def debug_mode(self):
@@ -18,6 +20,15 @@ class Settings(object):
     def debug_mode(self, value):
         assert isinstance(value, bool)
         self._debug_mode = value
+
+    @property
+    def simplify(self):
+        return self._simplify
+
+    @simplify.setter
+    def simplify(self, value):
+        assert isinstance(value, bool)
+        self._simplify = value
 
     def set_smoothing_parameters(self, k):
         "Helper function to set all smoothing parameters"

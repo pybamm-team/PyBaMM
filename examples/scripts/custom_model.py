@@ -16,11 +16,17 @@ model.submodels["external circuit"] = pybamm.external_circuit.CurrentControl(
 )
 model.submodels["current collector"] = pybamm.current_collector.Uniform(model.param)
 model.submodels["thermal"] = pybamm.thermal.isothermal.Isothermal(model.param)
-model.submodels["porosity"] = pybamm.porosity.Constant(model.param)
-model.submodels["negative electrode"] = pybamm.electrode.ohm.LeadingOrder(
+model.submodels["porosity"] = pybamm.porosity.Constant(model.param, model.options)
+model.submodels["negative active material"] = pybamm.active_material.Constant(
+    model.param, "Negative", model.options
+)
+model.submodels["positive active material"] = pybamm.active_material.Constant(
+    model.param, "Positive", model.options
+)
+model.submodels["negative electrode potential"] = pybamm.electrode.ohm.LeadingOrder(
     model.param, "Negative"
 )
-model.submodels["positive electrode"] = pybamm.electrode.ohm.LeadingOrder(
+model.submodels["positive electrode potential"] = pybamm.electrode.ohm.LeadingOrder(
     model.param, "Positive"
 )
 model.submodels["negative particle"] = pybamm.particle.PolynomialSingleParticle(
@@ -53,6 +59,12 @@ model.submodels[
 ] = pybamm.electrolyte_conductivity.LeadingOrder(model.param)
 model.submodels["negative sei"] = pybamm.sei.NoSEI(model.param, "Negative")
 model.submodels["positive sei"] = pybamm.sei.NoSEI(model.param, "Positive")
+model.submodels["negative lithium plating"] = pybamm.lithium_plating.NoPlating(
+    model.param, "Negative"
+)
+model.submodels["positive lithium plating"] = pybamm.lithium_plating.NoPlating(
+    model.param, "Positive"
+)
 
 # build model
 model.build_model()
