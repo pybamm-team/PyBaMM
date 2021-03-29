@@ -131,7 +131,7 @@ class BaseSolver(object):
         model : :class:`pybamm.BaseModel`
             The model whose solution to calculate. Must have attributes rhs and
             initial_conditions
-        inputs_dict : dict, optional
+        inputs : dict, optional
             Any input parameters to pass to the model when solving
         t_eval : numeric type, optional
             The times (in seconds) at which to compute the solution
@@ -355,39 +355,67 @@ class BaseSolver(object):
         algebraic, algebraic_eval, jac_algebraic = process(
             model.concatenated_algebraic, "algebraic"
         )
-        terminate_events_eval = [
-            process(event.expression, "event", use_jacobian=False)[1]
-            for event in model.events
-            if event.event_type == pybamm.EventType.TERMINATION
-        ]
 
-        interpolant_extrapolation_events_eval = [
-            process(event.expression, "event", use_jacobian=False)[1]
-            for event in model.events
-            if event.event_type == pybamm.EventType.INTERPOLANT_EXTRAPOLATION
-        ]
+        # Calculate initial conditions
+        model.y0 = init_eval(inputs)
 
-        # discontinuity events are evaluated before the solver is called, so don't need
-        # to process them
-        discontinuity_events_eval = [
-            event
-            for event in model.events
-            if event.event_type == pybamm.EventType.DISCONTINUITY
-        ]
+        casadi_terminate_events = []
+        terminate_events_eval = []
+        interpolant_extrapolation_events_eval = []
+        discontinuity_events_eval = []
+        for n, event in enumerate(model.events):
+            if event.event_type == pybamm.EventType.DISCONTINUITY:
+                # discontinuity events are evaluated before the solver is called,
+                # so don't need to process them
+                discontinuity_events_eval.append(event)
+            elif event.event_type == pybamm.EventType.SWITCH:
+                if (
+                    isinstance(self, pybamm.CasadiSolver)
+                    and self.mode == "fast with events"
+                    and model.algebraic != {}
+                ):
+                    # Save some events to casadi_terminate_events for the 'fast with
+                    # events' mode of the casadi solver
+                    # We only need to do this if the model is a DAE model
+                    # see #1082
+                    k = 20
+                    init_sign = float(
+                        np.sign(event.evaluate(0, model.y0.full(), inputs=inputs))
+                    )
+                    # We create a sigmoid for each event which will multiply the
+                    # rhs. Doing * 2 - 1 ensures that when the event is crossed,
+                    # the sigmoid is zero. Hence the rhs is zero and the solution
+                    # stays constant for the rest of the simulation period
+                    # We can then cut off the part after the event was crossed
+                    event_sigmoid = (
+                        pybamm.sigmoid(0, init_sign * event.expression, k) * 2 - 1
+                    )
+                    event_casadi = process(
+                        event_sigmoid, f"event_{n}", use_jacobian=False
+                    )[0]
+                    # use the actual casadi object as this will go into the rhs
+                    casadi_terminate_events.append(event_casadi)
+            else:
+                # use the function call
+                event_eval = process(
+                    event.expression, f"event_{n}", use_jacobian=False
+                )[1]
+                if event.event_type == pybamm.EventType.TERMINATION:
+                    terminate_events_eval.append(event_eval)
+                elif event.event_type == pybamm.EventType.INTERPOLANT_EXTRAPOLATION:
+                    interpolant_extrapolation_events_eval.append(event_eval)
 
         # Add the solver attributes
         model.init_eval = init_eval
         model.rhs_eval = rhs_eval
         model.algebraic_eval = algebraic_eval
         model.jac_algebraic_eval = jac_algebraic
+        model.casadi_terminate_events = casadi_terminate_events
         model.terminate_events_eval = terminate_events_eval
         model.discontinuity_events_eval = discontinuity_events_eval
         model.interpolant_extrapolation_events_eval = (
             interpolant_extrapolation_events_eval
         )
-
-        # Calculate initial conditions
-        model.y0 = init_eval(inputs)
 
         # Save CasADi functions for the CasADi solver
         # Note: when we pass to casadi the ode part of the problem must be in explicit
@@ -1039,6 +1067,7 @@ class BaseSolver(object):
                 "the solver successfully reached the end of the integration interval",
             )
         elif solution.termination == "event":
+            pybamm.logger.debug("Start post-processing events")
             # Get final event value
             final_event_values = {}
 
@@ -1052,6 +1081,14 @@ class BaseSolver(object):
                         )
                     )
             termination_event = min(final_event_values, key=final_event_values.get)
+
+            # Check that it's actually an event
+            if abs(final_event_values[termination_event]) > 0.1:  # pragma: no cover
+                # Hard to test this
+                raise pybamm.SolverError(
+                    "Could not determine which event was triggered "
+                    "(possibly due to NaNs)"
+                )
             # Add the event to the solution object
             solution.termination = "event: {}".format(termination_event)
             # Update t, y and inputs to include event time and state
@@ -1071,6 +1108,7 @@ class BaseSolver(object):
                 event_sol.integration_time = 0
                 solution = solution + event_sol
 
+            pybamm.logger.debug("Finish post-processing events")
             return solution, solution.termination
         elif solution.termination == "success":
             return solution, solution.termination

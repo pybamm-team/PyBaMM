@@ -228,8 +228,6 @@ class TestScipySolver(unittest.TestCase):
         np.testing.assert_array_almost_equal(
             step_sol2.all_ys[0][0], np.exp(0.1 * step_sol1.t)
         )
-        print(step_sol2.all_ys)
-        print(step_sol2["mul_var"].data)
 
     def test_model_solver_with_inputs(self):
         # Create model
