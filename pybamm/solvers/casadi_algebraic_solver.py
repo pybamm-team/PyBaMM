@@ -123,7 +123,7 @@ class CasadiAlgebraicSolver(pybamm.BaseSolver):
                             extrap_event_names.append(event.name[12:])
 
                     raise pybamm.SolverError(
-                        "CasADI solver failed because the following interpolation "
+                        "CasADi solver failed because the following interpolation "
                         "bounds were exceeded at the initial conditions: {}. "
                         "You may need to provide additional interpolation points "
                         "outside these bounds.".format(extrap_event_names)
