@@ -108,7 +108,7 @@ class BaseInterface(pybamm.BaseSubModel):
 
         return j0
 
-    def _get_open_circuit_potential(self, variables):
+    def _get_open_circuit_potential(self, variables, phase=None):
         """
         A private function to obtain the open circuit potential and entropic change
 
@@ -116,7 +116,9 @@ class BaseInterface(pybamm.BaseSubModel):
         ----------
         variables: dict
             The variables in the full model.
-
+        phase : string
+            phase 1 or phase 2 in the composite particle,
+            the default is None
         Returns
         -------
         ocp : :class:`pybamm.Symbol`
@@ -127,7 +129,16 @@ class BaseInterface(pybamm.BaseSubModel):
         """
 
         if self.reaction == "lithium-ion main":
-            c_s_surf = variables[self.domain + " particle surface concentration"]
+            if phase == "phase 1":
+                p_name = " of phase 1"
+            elif phase == "phase 2":
+                p_name = " of phase 2"
+            else:
+                p_name = ""
+
+            c_s_surf = variables[
+                f"{self.domain} particle surface concentration{p_name}"
+            ]
             T = variables[self.domain + " electrode temperature"]
 
             # If variable was broadcast, take only the orphan
@@ -138,11 +149,11 @@ class BaseInterface(pybamm.BaseSubModel):
                 T = T.orphans[0]
 
             if self.domain == "Negative":
-                ocp = self.param.U_n(c_s_surf, T)
-                dUdT = self.param.dUdT_n(c_s_surf)
+                ocp = self.param.U_n(c_s_surf, T, phase)
+                dUdT = self.param.dUdT_n(c_s_surf, phase)
             elif self.domain == "Positive":
-                ocp = self.param.U_p(c_s_surf, T)
-                dUdT = self.param.dUdT_p(c_s_surf)
+                ocp = self.param.U_p(c_s_surf, T, phase)
+                dUdT = self.param.dUdT_p(c_s_surf, phase)
         elif self.reaction == "lead-acid main":
             c_e = variables[self.domain + " electrolyte concentration"]
             # If c_e was broadcast, take only the orphan

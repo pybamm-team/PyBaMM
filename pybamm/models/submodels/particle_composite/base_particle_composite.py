@@ -43,20 +43,20 @@ class BaseParticleComposite(pybamm.BaseSubModel):
         if self.domain == "Negative":
             if phase == "phase 1":
                 c_scale = self.param.c_n_p1_max
-                p_name = " of " + self.param.n_p1_name
+                p_name = " of phase 1"
             elif phase == "phase 2":
                 c_scale = self.param.c_n_p2_max
-                p_name = " of " + self.param.n_p2_name
+                p_name = " of phase 2"
             else:
                 c_scale = self.param.c_n_max
                 p_name = ""
         elif self.domain == "Positive":
             if phase == "phase 1":
                 c_scale = self.param.c_p_p1_max
-                p_name = " of " + self.param.n_p1_name
+                p_name = " of phase 1"
             elif phase == "phase 2":
                 c_scale = self.param.c_p_p2_max
-                p_name = " of " + self.param.n_p2_name
+                p_name = " of phase 2"
             else:
                 c_scale = self.param.c_p_max
                 p_name = ""
@@ -125,10 +125,10 @@ class BaseParticleComposite(pybamm.BaseSubModel):
         if self.domain == "Negative":
             if phase == "phase 1":
                 c_scale = self.param.c_n_p1_max
-                p_name = " of " + self.param.n_p1_name
+                p_name = " of phase 1"
             elif phase == "phase 2":
                 c_scale = self.param.c_n_p2_max
-                p_name = " of " + self.param.n_p2_name
+                p_name = " of phase 2"
             else:
                 c_scale = self.param.c_n_max
                 p_name = ""
@@ -136,10 +136,10 @@ class BaseParticleComposite(pybamm.BaseSubModel):
         elif self.domain == "Positive":
             if phase == "phase 1":
                 c_scale = self.param.c_p_p1_max
-                p_name = " of " + self.param.p_p1_name
+                p_name = " of phase 1"
             elif phase == "phase 2":
                 c_scale = self.param.c_p_p2_max
-                p_name = " of " + self.param.p_p2_name
+                p_name = " of phase 2"
             else:
                 c_scale = self.param.c_p_max
                 p_name = ""
@@ -170,16 +170,16 @@ class BaseParticleComposite(pybamm.BaseSubModel):
     def _get_standard_flux_variables(self, N_s, N_s_xav, phase=None):
         if self.domain == "Negative":
             if phase == "phase 1":
-                p_name = " of " + self.param.n_p1_name
+                p_name = " of phase 1"
             elif phase == "phase 2":
-                p_name = " of " + self.param.n_p2_name
+                p_name = " of phase 2"
             else:
                 p_name = ""
         elif self.domain == "Positive":
             if phase == "phase 1":
-                p_name = " of " + self.param.p_p1_name
+                p_name = " of phase 1"
             elif phase == "phase 2":
-                p_name = " of " + self.param.p_p2_name
+                p_name = " of phase 2"
             else:
                 p_name = ""
         variables = {
@@ -191,16 +191,16 @@ class BaseParticleComposite(pybamm.BaseSubModel):
     def set_events(self, variables, phase=None):
         if self.domain == "Negative":
             if phase == "phase 1":
-                p_name = " of " + self.param.n_p1_name
+                p_name = " of phase 1"
             elif phase == "phase 2":
-                p_name = " of " + self.param.n_p2_name
+                p_name = " of phase 2"
             else:
                 p_name = ""
         elif self.domain == "Positive":
             if phase == "phase 1":
-                p_name = " of " + self.param.p_p1_name
+                p_name = " of phase 1"
             elif phase == "phase 2":
-                p_name = " of " + self.param.p_p2_name
+                p_name = " of phase 2"
             else:
                 p_name = ""
         c_s_surf = variables[f"{self.domain} particle surface concentration{p_name}"]

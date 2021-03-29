@@ -319,9 +319,6 @@ class ParameterValues:
                     values[name] = (function_name, data)
                 elif value == "[input]":
                     self._dict_items[name] = pybamm.InputParameter(name)
-                elif value.startswith("[string]"):
-                    self._dict_items[name] = value[8:]
-                    values[name] = value[8:]
                 # Anything else should be a converted to a float
                 else:
                     self._dict_items[name] = float(value)

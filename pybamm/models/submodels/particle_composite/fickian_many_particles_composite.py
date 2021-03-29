@@ -36,18 +36,16 @@ class FickianManyParticlesComposite(BaseParticleComposite):
         variables.update(
             self._get_standard_concentration_variables(c_s, phase="phase 2")
         )
-        variables.update(
-            self._get_standard_concentration_variables(c_s)
-        )
+        variables.update(self._get_standard_concentration_variables(c_s))
         return variables
 
     def get_coupled_variables(self, variables):
         if self.domain == "Negative":
-            p1_name = " of " + eval(self.param.n_p1_name)
-            p2_name = " of " + self.param.n_p2_name
+            p1_name = " of phase 1"
+            p2_name = " of phase 2"
         elif self.domain == "Positive":
-            p1_name = " of " + self.param.p_p1_name
-            p2_name = " of " + self.param.p_p2_name
+            p1_name = " of phase 1"
+            p2_name = " of phase 2"
 
         c_s_p1 = variables[f"{self.domain} particle concentration{p1_name}"]
         c_s_p2 = variables[f"{self.domain} particle concentration{p2_name}"]
@@ -71,9 +69,7 @@ class FickianManyParticlesComposite(BaseParticleComposite):
         variables.update(
             self._get_standard_flux_variables(N_s_p2, N_s_p2, phase="phase 2")
         )
-        variables.update(
-            self._get_standard_flux_variables(N_s, N_s)
-        )
+        variables.update(self._get_standard_flux_variables(N_s, N_s))
         variables.update(
             self._get_total_concentration_variables(variables, phase="phase 1")
         )
@@ -84,13 +80,13 @@ class FickianManyParticlesComposite(BaseParticleComposite):
 
     def set_rhs(self, variables):
         if self.domain == "Negative":
-            p1_name = " of " + self.param.n_p1_name
-            p2_name = " of " + self.param.n_p2_name
+            p1_name = " of phase 1"
+            p2_name = " of phase 2"
             C_s_p1 = self.param.C_n_p1
             C_s_p2 = self.param.C_n_p2
         elif self.domain == "Positive":
-            p1_name = " of " + self.param.p_p1_name
-            p2_name = " of " + self.param.p_p2_name
+            p1_name = " of phase 1"
+            p2_name = " of phase 2"
             C_s_p1 = self.param.C_p_p1
             C_s_p2 = self.param.C_p_p2
 
@@ -107,11 +103,11 @@ class FickianManyParticlesComposite(BaseParticleComposite):
 
     def set_boundary_conditions(self, variables):
         if self.domain == "Negative":
-            p1_name = " of " + self.param.n_p1_name
-            p2_name = " of " + self.param.n_p2_name
+            p1_name = " of phase 1"
+            p2_name = " of phase 2"
         elif self.domain == "Positive":
-            p1_name = " of " + self.param.p_p1_name
-            p2_name = " of " + self.param.p_p2_name
+            p1_name = " of phase 1"
+            p2_name = " of phase 2"
         c_s_p1 = variables[f"{self.domain} particle concentration{p1_name}"]
         c_s_surf_p1 = variables[
             f"{self.domain} particle surface concentration{p1_name}"
@@ -177,11 +173,11 @@ class FickianManyParticlesComposite(BaseParticleComposite):
 
     def set_initial_conditions(self, variables):
         if self.domain == "Negative":
-            p1_name = " of " + self.param.n_p1_name
-            p2_name = " of " + self.param.n_p2_name
+            p1_name = " of phase 1"
+            p2_name = " of phase 2"
         elif self.domain == "Positive":
-            p1_name = " of " + self.param.p_p1_name
-            p2_name = " of " + self.param.p_p2_name
+            p1_name = " of phase 1"
+            p2_name = " of phase 2"
         c_s_p1 = variables[f"{self.domain} particle concentration{p1_name}"]
         c_s_p2 = variables[f"{self.domain} particle concentration{p2_name}"]
 

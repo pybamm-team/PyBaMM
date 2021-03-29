@@ -5,8 +5,9 @@ import pybamm
 from .base_lithium_ion_model import BaseModel
 
 
-class BasicDFN(BaseModel):
-    """Doyle-Fuller-Newman (DFN) model of a lithium-ion battery, from [2]_.
+class BasicDFNComposite(BaseModel):
+    """Doyle-Fuller-Newman (DFN) model of a lithium-ion battery with composite particles
+        of graphite and silicon.
 
     This class differs from the :class:`pybamm.lithium_ion.DFN` model class in that it
     shows the whole model in a single class. This comes at the cost of flexibility in
@@ -20,16 +21,13 @@ class BasicDFN(BaseModel):
 
     References
     ----------
-    .. [2] SG Marquis, V Sulzer, R Timms, CP Please and SJ Chapman. “An asymptotic
-           derivation of a single particle model with electrolyte”. Journal of The
-           Electrochemical Society, 166(15):A3693–A3706, 2019
+    .. current project
 
     **Extends:** :class:`pybamm.lithium_ion.BaseModel`
     """
 
     def __init__(self, name="Doyle-Fuller-Newman model"):
         super().__init__({}, name)
-        pybamm.citations.register("Marquis2019")
         # `param` is a class containing all the relevant parameters and functions for
         # this model. These are purely symbolic at this stage, and will be set by the
         # `ParameterValues` class when the model is processed.
@@ -74,8 +72,13 @@ class BasicDFN(BaseModel):
         # Particle concentrations are variables on the particle domain, but also vary in
         # the x-direction (electrode domain) and so must be provided with auxiliary
         # domains
-        c_s_n = pybamm.Variable(
-            "Negative particle concentration",
+        c_s_n_p1 = pybamm.Variable(
+            "Negative particle concentration of phase 1",
+            domain="negative particle",
+            auxiliary_domains={"secondary": "negative electrode"},
+        )
+        c_s_n_p2 = pybamm.Variable(
+            "Negative particle concentration of phase 2",
             domain="negative particle",
             auxiliary_domains={"secondary": "negative electrode"},
         )
@@ -122,15 +125,29 @@ class BasicDFN(BaseModel):
         # Surf takes the surface value of a variable, i.e. its boundary value on the
         # right side. This is also accessible via `boundary_value(x, "right")`, with
         # "left" providing the boundary value of the left side
-        c_s_surf_n = pybamm.surf(c_s_n)
-        j0_n = param.j0_n(c_e_n, c_s_surf_n, T) / param.C_r_n
-        j_n = (
+        c_s_surf_n_p1 = pybamm.surf(c_s_n_p1)
+        j0_n_p1 = param.j0_n(c_e_n, c_s_surf_n_p1, T, "phase 1") / param.C_r_n_p1
+        j_n_p1 = (
             2
-            * j0_n
+            * j0_n_p1
             * pybamm.sinh(
-                param.ne_n / 2 * (phi_s_n - phi_e_n - param.U_n(c_s_surf_n, T))
+                param.ne_n
+                / 2
+                * (phi_s_n - phi_e_n - param.U_n(c_s_surf_n_p1, T, "phase 1"))
             )
         )
+        c_s_surf_n_p2 = pybamm.surf(c_s_n_p2)
+        j0_n_p2 = param.j0_n(c_e_n, c_s_surf_n_p1, T, "phase 1") / param.C_r_n_p2
+        j_n_p2 = (
+            2
+            * j0_n_p2
+            * pybamm.sinh(
+                param.ne_n
+                / 2
+                * (phi_s_n - phi_e_n - param.U_n(c_s_surf_n_p2, T, "phase 2"))
+            )
+        )
+        j_n = j_n_p1 + j_n_p2
         c_s_surf_p = pybamm.surf(c_s_p)
         j0_p = param.gamma_p * param.j0_p(c_e_p, c_s_surf_p, T) / param.C_r_p
         j_s = pybamm.PrimaryBroadcast(0, "separator")
@@ -159,15 +176,30 @@ class BasicDFN(BaseModel):
 
         # The div and grad operators will be converted to the appropriate matrix
         # multiplication at the discretisation stage
-        N_s_n = -param.D_n(c_s_n, T) * pybamm.grad(c_s_n)
+        N_s_n_p1 = -param.D_n(c_s_n_p1, T, "phase 1") * pybamm.grad(c_s_n_p1)
+        N_s_n_p2 = -param.D_n(c_s_n_p2, T, "phase 2") * pybamm.grad(c_s_n_p2)
         N_s_p = -param.D_p(c_s_p, T) * pybamm.grad(c_s_p)
-        self.rhs[c_s_n] = -(1 / param.C_n) * pybamm.div(N_s_n)
+        self.rhs[c_s_n_p1] = -(1 / param.C_n_p1) * pybamm.div(N_s_n_p1)
+        self.rhs[c_s_n_p2] = -(1 / param.C_n_p2) * pybamm.div(N_s_n_p2)
         self.rhs[c_s_p] = -(1 / param.C_p) * pybamm.div(N_s_p)
         # Boundary conditions must be provided for equations with spatial derivatives
-        self.boundary_conditions[c_s_n] = {
+        self.boundary_conditions[c_s_n_p1] = {
             "left": (pybamm.Scalar(0), "Neumann"),
             "right": (
-                -param.C_n * j_n / param.a_R_n / param.D_n(c_s_surf_n, T),
+                -param.C_n_p1
+                * j_n_p1
+                / param.a_R_n_p1
+                / param.D_n(c_s_surf_n_p1, T, "phase 1"),
+                "Neumann",
+            ),
+        }
+        self.boundary_conditions[c_s_n_p2] = {
+            "left": (pybamm.Scalar(0), "Neumann"),
+            "right": (
+                -param.C_n_p2
+                * j_n_p2
+                / param.a_R_n_p2
+                / param.D_n(c_s_surf_n_p2, T, "phase 2"),
                 "Neumann",
             ),
         }
@@ -187,7 +219,8 @@ class BasicDFN(BaseModel):
         x_n = pybamm.PrimaryBroadcast(
             pybamm.standard_spatial_vars.x_n, "negative particle"
         )
-        self.initial_conditions[c_s_n] = param.c_n_init(x_n)
+        self.initial_conditions[c_s_n_p1] = param.c_n_init(x_n, "phase 1")
+        self.initial_conditions[c_s_n_p2] = param.c_n_init(x_n, "phase 2")
         x_p = pybamm.PrimaryBroadcast(
             pybamm.standard_spatial_vars.x_p, "positive particle"
         )
@@ -195,12 +228,20 @@ class BasicDFN(BaseModel):
         # Events specify points at which a solution should terminate
         self.events += [
             pybamm.Event(
-                "Minimum negative particle surface concentration",
-                pybamm.min(c_s_surf_n) - 0.01,
+                "Minimum negative particle surface concentration of phase 1",
+                pybamm.min(c_s_surf_n_p1) - 0.01,
             ),
             pybamm.Event(
-                "Maximum negative particle surface concentration",
-                (1 - 0.01) - pybamm.max(c_s_surf_n),
+                "Maximum negative particle surface concentration of phase 1",
+                (1 - 0.01) - pybamm.max(c_s_surf_n_p1),
+            ),
+            pybamm.Event(
+                "Minimum negative particle surface concentration of phase 2",
+                pybamm.min(c_s_surf_n_p2) - 0.01,
+            ),
+            pybamm.Event(
+                "Maximum negative particle surface concentration of phase 12",
+                (1 - 0.01) - pybamm.max(c_s_surf_n_p2),
             ),
             pybamm.Event(
                 "Minimum positive particle surface concentration",
@@ -282,7 +323,8 @@ class BasicDFN(BaseModel):
         # The `variables` dictionary contains all variables that might be useful for
         # visualising the solution of the model
         self.variables = {
-            "Negative particle surface concentration": c_s_surf_n,
+            "Negative particle surface concentration of phase 1": c_s_surf_n_p1,
+            "Negative particle surface concentration of phase 2": c_s_surf_n_p2,
             "Electrolyte concentration": c_e,
             "Positive particle surface concentration": c_s_surf_p,
             "Current [A]": I,
