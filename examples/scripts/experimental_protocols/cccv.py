@@ -2,6 +2,7 @@
 # Constant-current constant-voltage charge
 #
 import pybamm
+import numpy as np
 import matplotlib.pyplot as plt
 
 pybamm.set_logging_level("NOTICE")
@@ -29,7 +30,7 @@ experiment = pybamm.Experiment(
             "Rest for 5 minutes",
         )
     ]
-    * 200,
+    * 20,
     # + [
     #     (
     #         f"Discharge at 1C until {Vmin}V",
@@ -48,6 +49,8 @@ sim1 = pybamm.Simulation(
     solver=pybamm.CasadiSolver("fast with events", atol=1e-6, rtol=1e-6),
 )  # , parameter_values=parameter_values)
 sol1 = sim1.solve()
+print(sol1.summary_variables["n_Li"])
+print(np.diff(sol1.summary_variables["n_Li"]))
 
 sim2 = pybamm.Simulation(
     dfn,

@@ -61,7 +61,7 @@ sim_acc.build_for_experiment()
 sol_acc = []
 cycle_nums = []
 cycle = 0
-n_cycles_step = 20
+n_cycles_step = 5
 Cn = parameter_values.evaluate(param.C_n_init)
 Cp = parameter_values.evaluate(param.C_p_init)
 
@@ -75,7 +75,8 @@ while cycle < 101:
     delta_nLi_cycle = n_Li_cycle[-1] - n_Li_cycle[0]
 
     n_Li = n_Li_cycle_init + delta_nLi_cycle * n_cycles_step
-
+    print(n_Li_cycle_init)
+    print(n_Li)
     esoh_sol = esoh_sim.solve(
         [0],
         inputs={"V_min": Vmin, "V_max": Vmax, "C_n": Cn, "C_p": Cp, "n_Li": n_Li},

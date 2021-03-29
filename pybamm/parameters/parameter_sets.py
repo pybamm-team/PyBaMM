@@ -117,7 +117,7 @@ Ecker2015 = {
 
 Yang2017 = {
     "chemistry": "lithium-ion",
-    "cell": "kokam_Ecker2015",  # "Yang2017",
+    "cell": "Yang2017",
     "negative electrode": "graphite_Yang2017",
     "separator": "separator_Yang2017",
     "positive electrode": "nmc_Yang2017",
