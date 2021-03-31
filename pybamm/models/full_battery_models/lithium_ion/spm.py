@@ -57,10 +57,20 @@ class SPM(BaseModel):
 
     def set_porosity_submodel(self):
 
-        if self.options["SEI porosity change"] == "false":
-            self.submodels["porosity"] = pybamm.porosity.Constant(self.param)
-        elif self.options["SEI porosity change"] == "true":
-            self.submodels["porosity"] = pybamm.porosity.LeadingOrder(self.param)
+        if (
+            self.options["SEI porosity change"] == "false"
+            and self.options["lithium plating porosity change"] == "false"
+        ):
+            self.submodels["porosity"] = pybamm.porosity.Constant(
+                self.param, self.options
+            )
+        elif (
+            self.options["SEI porosity change"] == "true"
+            or self.options["lithium plating porosity change"] == "true"
+        ):
+            self.submodels["porosity"] = pybamm.porosity.LeadingOrder(
+                self.param, self.options
+            )
 
     def set_active_material_submodel(self):
 

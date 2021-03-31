@@ -18,7 +18,7 @@ class TestFull(unittest.TestCase):
 
         variables = {
             "Electrolyte tortuosity": a,
-            "Electrolyte concentration": pybamm.Concatenation(a_n, a_s, a_p),
+            "Electrolyte concentration": pybamm.concatenation(a_n, a_s, a_p),
             "Negative electrolyte concentration": a_n,
             "Separator electrolyte concentration": a_s,
             "Positive electrolyte concentration": a_p,
@@ -34,7 +34,7 @@ class TestFull(unittest.TestCase):
                 ["negative electrode", "separator", "positive electrode"],
                 "current collector",
             ),
-            "Cell temperature": pybamm.Concatenation(a_n, a_s, a_p),
+            "Cell temperature": pybamm.concatenation(a_n, a_s, a_p),
         }
         submodel = pybamm.electrolyte_conductivity.Full(param)
         std_tests = tests.StandardSubModelTests(submodel, variables)

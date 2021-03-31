@@ -3,7 +3,7 @@
 #
 import pybamm
 
-from .full_oxygen_diffusion import Full, separator_and_positive_only
+from .full_oxygen_diffusion import Full
 
 
 class Composite(Full):
@@ -32,9 +32,10 @@ class Composite(Full):
 
     def get_coupled_variables(self, variables):
 
-        tor_0 = separator_and_positive_only(
-            variables["Leading-order electrolyte tortuosity"]
-        )
+        tor_0_s = variables["Leading-order separator tortuosity"]
+        tor_0_p = variables["Leading-order positive electrode tortuosity"]
+        tor_0 = pybamm.concatenation(tor_0_s, tor_0_p)
+
         c_ox = variables["Separator and positive electrode oxygen concentration"]
 
         param = self.param
@@ -44,7 +45,7 @@ class Composite(Full):
         # Note: no convection because c_ox_0 = 0 (at leading order)
         N_ox = N_ox_diffusion
         # Flux in the negative electrode is zero
-        N_ox = pybamm.Concatenation(
+        N_ox = pybamm.concatenation(
             pybamm.FullBroadcast(0, "negative electrode", "current collector"), N_ox
         )
 
@@ -57,10 +58,14 @@ class Composite(Full):
 
         param = self.param
 
-        eps_0 = separator_and_positive_only(variables["Leading-order porosity"])
-        deps_0_dt = separator_and_positive_only(
-            variables["Leading-order porosity change"]
-        )
+        eps_0_s = variables["Leading-order separator porosity"]
+        eps_0_p = variables["Leading-order positive electrode porosity"]
+        eps_0 = pybamm.concatenation(eps_0_s, eps_0_p)
+
+        deps_0_dt_s = variables["Leading-order separator porosity change"]
+        deps_0_dt_p = variables["Leading-order positive electrode porosity change"]
+        deps_0_dt = pybamm.concatenation(deps_0_dt_s, deps_0_dt_p)
+
         c_ox = variables["Separator and positive electrode oxygen concentration"]
         N_ox = variables["Oxygen flux"].orphans[1]
 
@@ -74,7 +79,7 @@ class Composite(Full):
             pos_reactions = param.s_ox_Ox * j_ox_0
         sep_reactions = pybamm.FullBroadcast(0, "separator", "current collector")
         source_terms_0 = (
-            pybamm.Concatenation(sep_reactions, pos_reactions) / param.gamma_e
+            pybamm.concatenation(sep_reactions, pos_reactions) / param.gamma_e
         )
 
         self.rhs = {

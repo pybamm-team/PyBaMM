@@ -28,7 +28,7 @@ Unary Operators
 .. autoclass:: pybamm.Laplacian
   :members:
 
-.. autoclass:: pybamm.Gradient_Squared
+.. autoclass:: pybamm.GradientSquared
   :members:
 
 .. autoclass:: pybamm.Mass

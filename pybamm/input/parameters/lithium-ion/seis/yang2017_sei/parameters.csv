@@ -1,0 +1,13 @@
+Name [units],Value,Reference,Notes
+# Empty rows and rows starting with ‘#’ will be ignored,,,
+,,,
+# SEI properties,,,
+Inner SEI partial molar volume [m3.mol-1],9.586E-05, Safari paper, 0.162/1690
+Outer SEI partial molar volume [m3.mol-1],9.586E-05, Safari paper, 0.162/1690
+SEI resistivity [Ohm.m],2.00E+06, Safari paper (1/5e-6),
+Initial inner SEI thickness [m],0,,
+Initial outer SEI thickness [m],5E-09,,
+EC initial concentration in electrolyte [mol.m-3],4.541E+03, Safari paper,
+EC diffusivity [m2.s-1],2.00E-18, adjusted parameter in Yang paper,
+SEI kinetic rate constant [m.s-1],1.00E-12, adjusted parameter in Yang paper,
+SEI open-circuit potential [V],0.4, Safari paper,

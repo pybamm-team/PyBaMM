@@ -170,20 +170,10 @@ class Solution(object):
         """Time at which the event happens"""
         return self._t_event
 
-    @t_event.setter
-    def t_event(self, value):
-        """Updates the event time"""
-        self._t_event = value
-
     @property
     def y_event(self):
         """Value of the solution at the time of the event"""
         return self._y_event
-
-    @y_event.setter
-    def y_event(self, value):
-        """Updates the solution at the time of the event"""
-        self._y_event = value
 
     @property
     def termination(self):
@@ -256,26 +246,24 @@ class Solution(object):
                     if key in model._variables_casadi:
                         var_casadi = model._variables_casadi[key]
                     else:
-                        self._t_MX = casadi.MX.sym("t")
-                        self._y_MX = casadi.MX.sym("y", ys.shape[0])
-                        self._symbolic_inputs_dict = {
+                        t_MX = casadi.MX.sym("t")
+                        y_MX = casadi.MX.sym("y", ys.shape[0])
+                        symbolic_inputs_dict = {
                             key: casadi.MX.sym("input", value.shape[0])
                             for key, value in inputs.items()
                         }
-                        self._symbolic_inputs = casadi.vertcat(
-                            *[p for p in self._symbolic_inputs_dict.values()]
+                        symbolic_inputs = casadi.vertcat(
+                            *[p for p in symbolic_inputs_dict.values()]
                         )
 
                         # Convert variable to casadi
                         # Make all inputs symbolic first for converting to casadi
                         var_sym = var_pybamm.to_casadi(
-                            self._t_MX, self._y_MX, inputs=self._symbolic_inputs_dict
+                            t_MX, y_MX, inputs=symbolic_inputs_dict
                         )
 
                         var_casadi = casadi.Function(
-                            "variable",
-                            [self._t_MX, self._y_MX, self._symbolic_inputs],
-                            [var_sym],
+                            "variable", [t_MX, y_MX, symbolic_inputs], [var_sym]
                         )
                         model._variables_casadi[key] = var_casadi
                     vars_casadi.append(var_casadi)
@@ -329,10 +317,11 @@ class Solution(object):
 
     def clear_casadi_attributes(self):
         """Remove casadi objects for pickling, will be computed again automatically"""
-        self._t_MX = None
-        self._y_MX = None
-        self._symbolic_inputs = None
-        self._symbolic_inputs_dict = None
+        # t_MX = None
+        # y_MX = None
+        # symbolic_inputs = None
+        # symbolic_inputs_dict = None
+        pass
 
     def save(self, filename):
         """Save the whole solution using pickle"""
@@ -439,9 +428,9 @@ class Solution(object):
 
     @property
     def sub_solutions(self):
-        """
-        List of sub solutions that have been concatenated to form the full solution
-        """
+        """List of sub solutions that have been
+        concatenated to form the full solution"""
+
         return self._sub_solutions
 
     def __add__(self, other):
@@ -457,7 +446,12 @@ class Solution(object):
             and len(other.all_ts[0]) == 1
             and other.all_ts[0][0] == self.all_ts[-1][-1]
         ):
-            return self.copy()
+            new_sol = self.copy()
+            # Update termination using the latter solution
+            new_sol._termination = other.termination
+            new_sol._t_event = other._t_event
+            new_sol._y_event = other._y_event
+            return new_sol
 
         # Update list of sub-solutions
         if other.all_ts[0][0] == self.all_ts[-1][-1]:
@@ -473,9 +467,9 @@ class Solution(object):
             all_ys,
             self.all_models + other.all_models,
             self.all_inputs + other.all_inputs,
-            self.t_event,
-            self.y_event,
-            self.termination,
+            other.t_event,
+            other.y_event,
+            other.termination,
         )
 
         new_sol._all_inputs_casadi = self.all_inputs_casadi + other.all_inputs_casadi
@@ -483,11 +477,6 @@ class Solution(object):
         # Set solution time
         new_sol.solve_time = self.solve_time + other.solve_time
         new_sol.integration_time = self.integration_time + other.integration_time
-
-        # Update termination using the latter solution
-        new_sol._termination = other.termination
-        new_sol._t_event = other._t_event
-        new_sol._y_event = other._y_event
 
         # Set sub_solutions
         new_sol._sub_solutions = self.sub_solutions + other.sub_solutions

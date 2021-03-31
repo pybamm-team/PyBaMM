@@ -83,7 +83,7 @@ class BasicDFNHalfCell(BaseModel):
         c_e_w = pybamm.Variable(
             "Working electrolyte concentration", domain="working electrode"
         )
-        c_e = pybamm.Concatenation(c_e_s, c_e_w)
+        c_e = pybamm.concatenation(c_e_s, c_e_w)
         c_s_w = pybamm.Variable(
             "Working particle concentration",
             domain="working particle",
@@ -96,7 +96,7 @@ class BasicDFNHalfCell(BaseModel):
         phi_e_w = pybamm.Variable(
             "Working electrolyte potential", domain="working electrode"
         )
-        phi_e = pybamm.Concatenation(phi_e_s, phi_e_w)
+        phi_e = pybamm.concatenation(phi_e_s, phi_e_w)
 
         # Constant temperature
         T = param.T_init
@@ -191,14 +191,14 @@ class BasicDFNHalfCell(BaseModel):
             phi_s_w_ref = param.U_p_ref - param.U_n_ref
             L_w = param.L_p
 
-        eps = pybamm.Concatenation(eps_s, eps_w)
-        tor = pybamm.Concatenation(eps_s ** b_e_s, eps_w ** b_e_w)
+        eps = pybamm.concatenation(eps_s, eps_w)
+        tor = pybamm.concatenation(eps_s ** b_e_s, eps_w ** b_e_w)
 
         j_w = (
             2 * j0_w * pybamm.sinh(ne_w / 2 * (phi_s_w - phi_e_w - U_w(c_s_surf_w, T)))
         )
         j_s = pybamm.PrimaryBroadcast(0, "separator")
-        j = pybamm.Concatenation(j_s, j_w)
+        j = pybamm.concatenation(j_s, j_w)
 
         ######################
         # State of Charge
@@ -222,7 +222,10 @@ class BasicDFNHalfCell(BaseModel):
         # derivatives
         self.boundary_conditions[c_s_w] = {
             "left": (pybamm.Scalar(0), "Neumann"),
-            "right": (-C_w * j_w / a_R_w / gamma_w / D_w(c_s_surf_w, T), "Neumann"),
+            "right": (
+                -C_w * j_w / a_R_w / gamma_w / D_w(c_s_surf_w, T),
+                "Neumann",
+            ),
         }
 
         # c_w_init can in general be a function of x
@@ -249,7 +252,10 @@ class BasicDFNHalfCell(BaseModel):
         i_s_w = -sigma_eff_w * pybamm.grad(phi_s_w)
         self.boundary_conditions[phi_s_w] = {
             "left": (pybamm.Scalar(0), "Neumann"),
-            "right": (i_cell / pybamm.boundary_value(-sigma_eff_w, "right"), "Neumann"),
+            "right": (
+                i_cell / pybamm.boundary_value(-sigma_eff_w, "right"),
+                "Neumann",
+            ),
         }
         self.algebraic[phi_s_w] = pybamm.div(i_s_w) + j_w
         # Initial conditions must also be provided for algebraic equations, as an

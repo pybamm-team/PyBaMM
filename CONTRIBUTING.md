@@ -39,7 +39,7 @@ You now have everything you need to start making changes!
 10. PyBaMM has online documentation at http://pybamm.readthedocs.io/. To make sure any new methods or classes you added show up there, please read the [documentation](#documentation) section.
 11. If you added a major new feature, perhaps it should be showcased in an [example notebook](#example-notebooks).
 12. When you feel your code is finished, or at least warrants serious discussion, run the [pre-commit checks](#pre-commit-checks) and then create a [pull request](https://help.github.com/articles/about-pull-requests/) (PR) on [PyBaMM's GitHub page](https://github.com/pybamm-team/PyBaMM).
-13. Once a PR has been created, it will be reviewed by any member of the community. Changes might be suggested which you can make by simply adding new commits to the branch. When everything's finished, someone with the right GitHub permissions will merge your changes into PyBaMM master repository.
+13. Once a PR has been created, it will be reviewed by any member of the community. Changes might be suggested which you can make by simply adding new commits to the branch. When everything's finished, someone with the right GitHub permissions will merge your changes into PyBaMM main repository.
 
 Finally, if you really, really, _really_ love developing PyBaMM, have a look at the current [project infrastructure](#infrastructure).
 
@@ -272,7 +272,7 @@ Figuring out where to start the debugger is the real challenge. Some good ways t
   warnings.simplefilter("error")
   ```
   Then you can use a try-except block, as in a., but with, for example, `RuntimeWarning` instead of `ValueError`.
-  c. Stepping through the expression tree. Most calls in PyBaMM are operations on [expression trees](https://github.com/pybamm-team/PyBaMM/blob/master/examples/notebooks/expression_tree/expression-tree.ipynb). To view an expression tree in ipython, you can use the `render` command:
+  c. Stepping through the expression tree. Most calls in PyBaMM are operations on [expression trees](https://github.com/pybamm-team/PyBaMM/blob/develop/examples/notebooks/expression_tree/expression-tree.ipynb). To view an expression tree in ipython, you can use the `render` command:
   ```python
   expression_tree.render()
   ```
@@ -484,7 +484,7 @@ Documentation is built using https://readthedocs.org/ and published on http://py
 
 ### Google Colab
 
-Editable notebooks are made available using [Google Colab](https://colab.research.google.com/notebooks/intro.ipynb) [here](https://colab.research.google.com/github/pybamm-team/PyBaMM/blob/master/).
+Editable notebooks are made available using [Google Colab](https://colab.research.google.com/notebooks/intro.ipynb) [here](https://colab.research.google.com/github/pybamm-team/PyBaMM/blob/develop/).
 
 ### GitHub
 

@@ -7,21 +7,18 @@ from .base_plating import BasePlating
 
 class IrreversiblePlating(BasePlating):
     """Base class for irreversible lithium plating.
-
     Parameters
     ----------
     param : parameter class
         The parameters to use for this submodel
     domain : str
         The domain of the model either 'Negative' or 'Positive'
-
     References
     ----------
     .. [1] SEJ O'Kane, ID Campbell, MWJ Marzook, GJ Offer and M Marinescu. "Physical
            Origin of the Differential Voltage Minimum Associated with Li Plating in
            Lithium-Ion Batteries". Journal of The Electrochemical Society,
            167:090540, 2019
-
     **Extends:** :class:`pybamm.lithium_plating.BasePlating`
     """
 
@@ -42,20 +39,19 @@ class IrreversiblePlating(BasePlating):
 
     def get_coupled_variables(self, variables):
         param = self.param
-        phi_s_n = variables[f"{self.domain} electrode potential"]
-        phi_e_n = variables[f"{self.domain} electrolyte potential"]
+        delta_phi = variables[f"{self.domain} electrode surface potential difference"]
         c_e_n = variables[f"{self.domain} electrolyte concentration"]
+        T = variables[f"{self.domain} electrode temperature"]
         eta_sei = variables[f"{self.domain} electrode SEI film overpotential"]
-        C_plating = param.C_plating
+        c_plated_Li = variables[
+            f"{self.domain} electrode lithium plating concentration"
+        ]
+        j0_plating = param.j0_plating(c_e_n, c_plated_Li, T)
         phi_ref = param.U_n_ref / param.potential_scale
-
-        # need to revise for thermal case
+        eta_plating = -(delta_phi + phi_ref + eta_sei)
+        prefactor = 1 / (2 * (1 + self.param.Theta * T))
         # j_stripping is always negative, because there is no stripping, only plating
-        j_stripping = (
-            -(1 / C_plating)
-            * c_e_n
-            * (pybamm.exp(-0.5 * (phi_s_n - phi_e_n + phi_ref + eta_sei)))
-        )
+        j_stripping = -j0_plating * pybamm.exp(prefactor * eta_plating)
 
         variables.update(self._get_standard_reaction_variables(j_stripping))
 

@@ -4,11 +4,11 @@
 
 [![Build](https://github.com/pybamm-team/PyBaMM/workflows/PyBaMM/badge.svg)](https://github.com/pybamm-team/PyBaMM/actions?query=workflow%3APyBaMM+branch%3Adevelop)
 [![readthedocs](https://readthedocs.org/projects/pybamm/badge/?version=latest)](https://pybamm.readthedocs.io/en/latest/?badge=latest)
-[![codecov](https://codecov.io/gh/pybamm-team/PyBaMM/branch/master/graph/badge.svg)](https://codecov.io/gh/pybamm-team/PyBaMM)
-[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/pybamm-team/PyBaMM/blob/master/)
+[![codecov](https://codecov.io/gh/pybamm-team/PyBaMM/branch/main/graph/badge.svg)](https://codecov.io/gh/pybamm-team/PyBaMM)
+[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/pybamm-team/PyBaMM/blob/develop/)
 [![black_code_style](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/ambv/black)
 <!-- ALL-CONTRIBUTORS-BADGE:START - Do not remove or modify this section -->
-[![All Contributors](https://img.shields.io/badge/all_contributors-29-orange.svg?style=flat-square)](#contributors-)
+[![All Contributors](https://img.shields.io/badge/all_contributors-31-orange.svg?style=flat-square)](#contributors-)
 <!-- ALL-CONTRIBUTORS-BADGE:END -->
 
 PyBaMM (Python Battery Mathematical Modelling) solves physics-based electrochemical DAE models by using state-of-the-art automatic differentiation and numerical solvers. The Doyle-Fuller-Newman model can be solved in under 0.1 seconds, while the reduced-order Single Particle Model and Single Particle Model with electrolyte can be solved in just a few milliseconds. Additional physics can easily be included such as thermal effects, fast particle diffusion, 3D effects, and more. All models are implemented in a flexible manner, and a wide range of models and parameter sets (NCA, NMC, LiCoO2, ...) are available. There is also functionality to simulate any set of experimental instructions, such as CCCV or GITT, or specify drive cycles.
@@ -41,13 +41,13 @@ sim = pybamm.Simulation(model, experiment=experiment, solver=pybamm.CasadiSolver
 sim.solve()
 sim.plot()
 ```
-However, much greater customisation is available. It is possible to change the physics, parameter values, geometry, submesh type,  number of submesh points, methods for spatial discretisation and solver for integration (see DFN [script](examples/scripts/DFN.py) or [notebook](examples/notebooks/models/DFN.ipynb)).
+However, much greater customisation is available. It is possible to change the physics, parameter values, geometry, submesh type,  number of submesh points, methods for spatial discretisation and solver for integration (see DFN [script](https://github.com/pybamm-team/PyBaMM/blob/develop/examples/scripts/DFN.py) or [notebook](https://github.com/pybamm-team/PyBaMM/blob/develop/examples/notebooks/models/DFN.ipynb)).
 
-For new users we recommend the [Getting Started](examples/notebooks/Getting%20Started/) guides. These are intended to be very simple step-by-step guides to show the basic functionality of PyBaMM, and can either be downloaded and used locally, or used online through [Google Colab](https://colab.research.google.com/github/pybamm-team/PyBaMM/blob/master/).
+For new users we recommend the [Getting Started](https://github.com/pybamm-team/PyBaMM/tree/develop/examples/notebooks/Getting%20Started) guides. These are intended to be very simple step-by-step guides to show the basic functionality of PyBaMM, and can either be downloaded and used locally, or used online through [Google Colab](https://colab.research.google.com/github/pybamm-team/PyBaMM/blob/develop).
 
-Further details can be found in a number of [detailed examples](examples/notebooks/README.md), hosted here on
+Further details can be found in a number of [detailed examples](https://github.com/pybamm-team/PyBaMM/blob/develop/examples/notebooks/README.md), hosted here on
 github. In addition, there is a [full API documentation](http://pybamm.readthedocs.io/),
-hosted on [Read The Docs](readthedocs.io).
+hosted on [Read The Docs](https://readthedocs.org/).
 Additional supporting material can be found
 [here](https://github.com/pybamm-team/pybamm-supporting-material/).
 
@@ -96,16 +96,16 @@ We would be grateful if you could also cite the relevant papers. These will chan
 pybamm.print_citations()
 ```
 
-to the end of your script. This will print bibtex information to the terminal; passing a filename to `print_citations` will print the bibtex information to the specified file instead. A list of all citations can also be found in the [citations file](pybamm/CITATIONS.txt). In particular, PyBaMM relies heavily on [CasADi](https://web.casadi.org/publications/).
-See [CONTRIBUTING.md](CONTRIBUTING.md#citations) for information on how to add your own citations when you contribute.
+to the end of your script. This will print bibtex information to the terminal; passing a filename to `print_citations` will print the bibtex information to the specified file instead. A list of all citations can also be found in the [citations file](https://github.com/pybamm-team/PyBaMM/blob/develop/pybamm/CITATIONS.txt). In particular, PyBaMM relies heavily on [CasADi](https://web.casadi.org/publications/).
+See [CONTRIBUTING.md](https://github.com/pybamm-team/PyBaMM/blob/develop/CONTRIBUTING.md#citations) for information on how to add your own citations when you contribute.
 
 ## How can I contribute to PyBaMM?
 
-If you'd like to help us develop PyBaMM by adding new methods, writing documentation, or fixing embarrassing bugs, please have a look at these [guidelines](CONTRIBUTING.md) first.
+If you'd like to help us develop PyBaMM by adding new methods, writing documentation, or fixing embarrassing bugs, please have a look at these [guidelines](https://github.com/pybamm-team/PyBaMM/blob/develop/CONTRIBUTING.md) first.
 
 ## Licensing
 
-PyBaMM is fully open source. For more information about its license, see [LICENSE](./LICENSE.txt).
+PyBaMM is fully open source. For more information about its license, see [LICENSE](https://github.com/pybamm-team/PyBaMM/blob/develop/LICENSE.txt).
 
 ## Contributors ✨
 
@@ -153,6 +153,8 @@ Thanks goes to these wonderful people ([emoji key](https://allcontributors.org/d
   </tr>
   <tr>
     <td align="center"><a href="https://github.com/asinghgaba"><img src="https://avatars.githubusercontent.com/u/77078706?v=4?s=100" width="100px;" alt=""/><br /><sub><b>Amarjit Singh Gaba</b></sub></a><br /><a href="https://github.com/pybamm-team/PyBaMM/commits?author=asinghgaba" title="Code">💻</a></td>
+    <td align="center"><a href="https://github.com/KennethNwanoro"><img src="https://avatars.githubusercontent.com/u/78538806?v=4?s=100" width="100px;" alt=""/><br /><sub><b>KennethNwanoro</b></sub></a><br /><a href="https://github.com/pybamm-team/PyBaMM/commits?author=KennethNwanoro" title="Code">💻</a> <a href="https://github.com/pybamm-team/PyBaMM/commits?author=KennethNwanoro" title="Tests">⚠️</a></td>
+    <td align="center"><a href="https://github.com/alibh95"><img src="https://avatars.githubusercontent.com/u/65511923?v=4?s=100" width="100px;" alt=""/><br /><sub><b>Ali Hussain Umar Bhatti</b></sub></a><br /><a href="https://github.com/pybamm-team/PyBaMM/commits?author=alibh95" title="Code">💻</a> <a href="https://github.com/pybamm-team/PyBaMM/commits?author=alibh95" title="Tests">⚠️</a></td>
   </tr>
 </table>
 

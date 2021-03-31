@@ -22,13 +22,13 @@ sys.path.insert(0, os.path.abspath("../"))
 # -- Project information -----------------------------------------------------
 
 project = "PyBaMM"
-copyright = "2020, The PyBaMM Team"
+copyright = "2021, The PyBaMM Team"
 author = "The PyBaMM Team"
 
 # The short X.Y version
-version = "0.3"
+version = "0.4"
 # The full version, including alpha/beta/rc tags
-release = "0.3.0-beta"
+release = "0.4.0"
 
 
 # -- General configuration ---------------------------------------------------
@@ -154,9 +154,7 @@ latex_elements = {
 # Grouping the document tree into LaTeX files. List of tuples
 # (source start file, target name, title,
 #  author, documentclass [howto, manual, or own class]).
-latex_documents = [
-    (master_doc, "PyBaMM.tex", "PyBaMM Documentation", "Valentin Sulzer", "manual")
-]
+latex_documents = [(master_doc, "PyBaMM.tex", "PyBaMM Documentation", author, "manual")]
 
 
 # -- Options for manual page output ------------------------------------------
