@@ -20,14 +20,14 @@ def ax_min(data):
     """Calculate appropriate minimum axis value for plotting"""
     data_min = np.nanmin(data)
     data_max = np.nanmax(data)
-    return data_max - 1.04 * (data_max - data_min)
+    return data_max - 1.1 * (data_max - data_min)
 
 
 def ax_max(data):
     """Calculate appropriate maximum axis value for plotting"""
     data_min = np.nanmin(data)
     data_max = np.nanmax(data)
-    return data_min + 1.04 * (data_max - data_min)
+    return data_min + 1.1 * (data_max - data_min)
 
 
 def split_long_string(title, max_words=None):
