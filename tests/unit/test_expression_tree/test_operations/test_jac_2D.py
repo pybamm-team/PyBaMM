@@ -228,6 +228,7 @@ class TestJacobian(unittest.TestCase):
         c.bounds = (-np.inf, np.inf)
 
         conc = pybamm.concatenation(a, b, c)
+        conc.bounds = (-np.inf, np.inf)
         disc.set_variable_slices([conc])
         conc_disc = disc.process_symbol(conc)
         jac = conc_disc.jac(y).evaluate().toarray()
