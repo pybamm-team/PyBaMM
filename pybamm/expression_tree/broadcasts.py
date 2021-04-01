@@ -66,12 +66,6 @@ class Broadcast(pybamm.SpatialOperator):
         else:
             return False
 
-    def reduce_one_dimension(self):
-        """
-        Reduce the broadcast by one dimension. See specific broadcast classes
-        """
-        raise NotImplementedError
-
 
 class PrimaryBroadcast(Broadcast):
     """A node in the expression tree representing a primary broadcasting operator.
@@ -156,7 +150,7 @@ class PrimaryBroadcast(Broadcast):
         return np.outer(child_eval, vec).reshape(-1, 1)
 
     def reduce_one_dimension(self):
-        """ See :meth:`pybamm.Broadcast.reduce_one_dimension()` """
+        """ Reduce the broadcast by one dimension. """
         return self.orphans[0]
 
 
@@ -261,6 +255,10 @@ class SecondaryBroadcast(Broadcast):
         vec = pybamm.evaluate_for_shape_using_domain(self.domain)
         return np.outer(vec, child_eval).reshape(-1, 1)
 
+    def reduce_one_dimension(self):
+        """ Reduce the broadcast by one dimension. """
+        raise NotImplementedError
+
 
 class SecondaryBroadcastToEdges(SecondaryBroadcast):
     """A secondary broadcast onto the edges of a domain."""
@@ -320,7 +318,7 @@ class FullBroadcast(Broadcast):
         return child_eval * vec
 
     def reduce_one_dimension(self):
-        """ See :meth:`pybamm.Broadcast.reduce_one_dimension()` """
+        """ Reduce the broadcast by one dimension. """
         if self.auxiliary_domains == {}:
             return self.orphans[0]
         elif "tertiary" not in self.auxiliary_domains:
@@ -350,7 +348,7 @@ class FullBroadcastToEdges(FullBroadcast):
         return True
 
     def reduce_one_dimension(self):
-        """ See :meth:`pybamm.Broadcast.reduce_one_dimension()` """
+        """ Reduce the broadcast by one dimension. """
         if self.auxiliary_domains == {}:
             return self.orphans[0]
         elif "tertiary" not in self.auxiliary_domains:
@@ -361,7 +359,7 @@ class FullBroadcastToEdges(FullBroadcast):
             return FullBroadcastToEdges(
                 self.orphans[0],
                 self.auxiliary_domains["secondary"],
-                self.auxiliary_domains["tertiary"],
+                {"secondary": self.auxiliary_domains["tertiary"]},
             )
 
 

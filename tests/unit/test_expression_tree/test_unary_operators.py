@@ -471,6 +471,14 @@ class TestUnaryOperators(unittest.TestCase):
             pybamm.boundary_value(var, "negative tab")
             pybamm.boundary_value(var, "positive tab")
 
+        # boundary value of symbol that evaluates on edges raises error
+        symbol_on_edges = pybamm.PrimaryBroadcastToEdges(1, "domain")
+        with self.assertRaisesRegex(
+            ValueError,
+            "Can't take the boundary value of a symbol that evaluates on edges",
+        ):
+            pybamm.boundary_value(symbol_on_edges, "right")
+
     def test_x_average(self):
         a = pybamm.Scalar(4)
         average_a = pybamm.x_average(a)
