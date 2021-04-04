@@ -80,6 +80,7 @@ API documentation
    source/util
    source/citations
    source/parameters_cli
+   source/batch_study
 
 Examples
 ========
