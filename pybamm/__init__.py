@@ -248,10 +248,16 @@ default_plot_style = os.path.join(root_dir(), "pybamm/plotting/pybamm.mplstyle")
 import matplotlib.pyplot as plt
 
 plt.style.use(default_plot_style)
+
 #
 # Simulation
 #
 from .simulation import Simulation, load_sim, is_notebook
+
+#
+# Batch Study
+#
+from .batch_study import BatchStudy
 
 #
 # Remove any imported modules, so we don't expose them as part of pybamm
