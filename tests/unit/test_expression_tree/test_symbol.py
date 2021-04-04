@@ -453,8 +453,6 @@ class TestSymbol(unittest.TestCase):
         func = pybamm.FunctionParameter("func", {"state": state})
         self.assertEqual(func.shape_for_testing, state.shape_for_testing)
 
-        concat = pybamm.concatenation()
-        self.assertEqual(concat.shape_for_testing, (0,))
         concat = pybamm.concatenation(state, state2)
         self.assertEqual(concat.shape_for_testing, (30, 1))
         self.assertEqual(concat.size_for_testing, 30)
