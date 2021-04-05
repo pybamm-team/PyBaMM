@@ -39,13 +39,14 @@ class BatchStudy:
         if not self.permutations:
             if self.solvers and (len(self.models) != len(self.solvers)):
                 raise ValueError(
-                    f"Either provide no solvers or an equal number of solvers as"
-                    f"the models ({len(self.models)}) if permutations=False"
+                    f"Either provide no solvers or an equal number of solvers as the"
+                    f" models ({len(self.models)} models given) if permutations=False"
                 )
             elif self.experiments and (len(self.models) != len(self.experiments)):
                 raise ValueError(
                     f"Either provide no experiments or an equal number of experiments"
-                    f"as the models ({len(self.models)}) if permutations=False"
+                    f" as the models ({len(self.models)} models given)"
+                    f" if permutations=False"
                 )
 
     def solve(self, t_eval=None):
@@ -75,7 +76,7 @@ class BatchStudy:
             # repeat to get average solve time and integration time
             solve_time = 0
             integration_time = 0
-            for num in range(self.repeats):
+            for _ in range(self.repeats):
                 sol = sim.solve(t_eval)
                 solve_time += sol.solve_time
                 integration_time += sol.integration_time

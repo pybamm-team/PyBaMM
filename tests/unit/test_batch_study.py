@@ -4,7 +4,6 @@ Tests for the batch_study.py
 import pybamm
 import unittest
 
-
 spm = pybamm.lithium_ion.SPM()
 dfn = pybamm.lithium_ion.DFN()
 casadi_safe = pybamm.CasadiSolver(mode="safe")
@@ -25,6 +24,10 @@ gitt = pybamm.Experiment(
     [("Discharge at C/20 for 1 hour", "Rest for 1 hour")] * 20,
 )
 
+batch_study_false_only_models = pybamm.BatchStudy(models={"SPM": spm, "DFN": dfn})
+batch_study_true_only_models = pybamm.BatchStudy(
+    models={"SPM": spm, "DFN": dfn}, permutations=True
+)
 batch_study_false = pybamm.BatchStudy(
     models={"SPM": spm, "DFN": dfn},
     solvers={"casadi safe": casadi_safe, "casadi fast": casadi_fast},
@@ -40,6 +43,29 @@ batch_study_true = pybamm.BatchStudy(
 
 class TestBatchStudy(unittest.TestCase):
     def test_solve(self):
+        # Tests for exceptions
+        with self.assertRaises(ValueError):
+            pybamm.BatchStudy(
+                models={"SPM": spm, "DFN": dfn}, experiments={"gitt": gitt}
+            )
+
+        with self.assertRaises(ValueError):
+            pybamm.BatchStudy(
+                models={"SPM": spm, "DFN": dfn},
+                solvers={"casadi fast": casadi_fast},
+                experiments={"cccv": cccv, "gitt": gitt},
+            )
+
+        # Tests for batch_study_false_only_models (Only models with permutations=False)
+        batch_study_false_only_models.solve(t_eval=[0, 3600])
+        output_len_false_only_models = len(batch_study_false_only_models.sims)
+        self.assertEqual(2, output_len_false_only_models)
+
+        # Tests for batch_study_true_only_models (Only models with permutations=True)
+        batch_study_true_only_models.solve(t_eval=[0, 3600])
+        output_len_true_only_models = len(batch_study_true_only_models.sims)
+        self.assertEqual(2, output_len_true_only_models)
+
         # Tests for batch_study_false (permutations=False)
         batch_study_false.solve()
         output_len_false = len(batch_study_false.sims)
