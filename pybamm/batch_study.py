@@ -71,7 +71,7 @@ class BatchStudy:
         for model, solver, experiment in iter_func(
             self.models.values(), solver_values, experiment_values
         ):
-            sim = pybamm.Simulation(model, solver=solver)
+            sim = pybamm.Simulation(model, solver=solver, experiment=experiment)
             # repeat to get average solve time and integration time
             solve_time = 0
             integration_time = 0
