@@ -11,8 +11,8 @@ pybamm.set_logging_level("INFO")
 model = pybamm.lithium_ion.SPM(
     {
         "SEI": "ec reaction limited",
-        "SEI film resistance": "none",
-        "lithium plating": "irreversible",
+        # "SEI film resistance": "none",
+        # "lithium plating": "irreversible",
     }
 )
 model.convert_to_format = "python"

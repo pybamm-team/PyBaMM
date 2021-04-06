@@ -57,7 +57,7 @@ pb.dynamic_plot(
         ],
         "Sum of x-averaged negative electrode interfacial current densities",
         "X-averaged electrolyte concentration",
-        "Loss of Lithium Inventory [%]",
+        "Loss of lithium inventory [%]",
         "Total lithium [mol]",
         ["Total lithium lost [mol]", "Loss of lithium to negative electrode SEI [mol]"],
         "Total lithium lost from particles [mol]",

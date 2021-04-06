@@ -731,9 +731,9 @@ class DegradationTests(BaseOutputTest):
     def __init__(self, model, param, disc, solution, operating_condition):
         super().__init__(model, param, disc, solution, operating_condition)
 
-        self.LAM_ne = solution["Loss of Active Material in negative electrode [%]"]
-        self.LAM_pe = solution["Loss of Active Material in positive electrode [%]"]
-        self.LLI = solution["Loss of Lithium Inventory [%]"]
+        self.LAM_ne = solution["Loss of active material in negative electrode [%]"]
+        self.LAM_pe = solution["Loss of active material in positive electrode [%]"]
+        self.LLI = solution["Loss of lithium inventory [%]"]
         self.n_Li_lost = solution["Total lithium lost [mol]"]
         self.n_Li_lost_rxn = solution["Total lithium lost to side reactions [mol]"]
 

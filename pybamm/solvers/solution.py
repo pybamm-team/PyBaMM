@@ -644,10 +644,10 @@ def get_cycle_summary_variables(cycle_solution, esoh_sim):
         "Negative electrode capacity [A.h]",
         "Positive electrode capacity [A.h]",
         # LAM, LLI
-        "Loss of Active Material in negative electrode [%]",
-        "Loss of Active Material in positive electrode [%]",
-        "Loss of Lithium Inventory [%]",
-        "Loss of Lithium Inventory, including electrolyte [%]",
+        "Loss of active material in negative electrode [%]",
+        "Loss of active material in positive electrode [%]",
+        "Loss of lithium inventory [%]",
+        "Loss of lithium inventory, including electrolyte [%]",
         # Total lithium
         "Total lithium [mol]",
         "Total lithium in electrolyte [mol]",

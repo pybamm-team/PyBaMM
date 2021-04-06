@@ -71,10 +71,13 @@ class BaseModel(pybamm.BaseBatteryModel):
 
         self.variables.update(
             {
-                "Loss of Active Material in negative electrode [%]": LAM_ne,
-                "Loss of Active Material in positive electrode [%]": LAM_pe,
-                "Loss of Lithium Inventory [%]": LLI,
-                "Loss of Lithium Inventory, including electrolyte [%]": LLI_tot,
+                "LAM_ne [%]": LAM_ne,
+                "LAM_pe [%]": LAM_pe,
+                "LLI [%]": LLI,
+                "Loss of active material in negative electrode [%]": LAM_ne,
+                "Loss of active material in positive electrode [%]": LAM_pe,
+                "Loss of lithium inventory [%]": LLI,
+                "Loss of lithium inventory, including electrolyte [%]": LLI_tot,
                 # Total lithium
                 "Total lithium [mol]": n_Li,
                 "Total lithium in particles [mol]": n_Li_particles,

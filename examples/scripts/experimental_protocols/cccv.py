@@ -25,12 +25,12 @@ experiment = pybamm.Experiment(
         (
             f"Discharge at 2C until {Vmin}V",
             "Rest for 5 minutes",
-            f"Charge at 1C until {Vmax}V",
-            f"Hold at {Vmax}V until C/10",
-            "Rest for 5 minutes",
+            # f"Charge at 1C until {Vmax}V",
+            # f"Hold at {Vmax}V until C/10",
+            # "Rest for 5 minutes",
         )
     ]
-    * 20,
+    * 1,
     # + [
     #     (
     #         f"Discharge at 1C until {Vmin}V",
@@ -47,7 +47,8 @@ sim1 = pybamm.Simulation(
     experiment=experiment,
     var_pts=var_pts,
     solver=pybamm.CasadiSolver("fast with events", atol=1e-6, rtol=1e-6),
-)  # , parameter_values=parameter_values)
+    parameter_values=parameter_values,
+)
 sol1 = sim1.solve()
 print(sol1.summary_variables["n_Li"])
 print(np.diff(sol1.summary_variables["n_Li"]))
@@ -65,19 +66,23 @@ sim2 = pybamm.Simulation(
 pybamm.dynamic_plot(
     [sol1],
     [
-        "Terminal voltage [V]",
-        "Current [A]",
-        "X-averaged negative electrode interfacial current density",
-        "X-averaged negative electrode SEI interfacial current density",
-        "X-averaged negative electrode lithium plating interfacial current density",
-        "X-averaged negative electrode SEI film overpotential [V]",
-        "X-averaged negative electrode reaction overpotential [V]",
-        "X-averaged negative electrode lithium plating reaction overpotential [V]",
-        "X-averaged negative electrode porosity",
-        ["Left porosity", "Right porosity"],
-        "Loss of Lithium Inventory [%]",
-        "Negative electrode SOC",
-        "Positive electrode SOC",
+        # "Terminal voltage [V]",
+        # "Current [A]",
+        # "X-averaged negative electrode interfacial current density",
+        # "X-averaged negative electrode SEI interfacial current density",
+        # "X-averaged negative electrode lithium plating interfacial current density",
+        # "X-averaged negative electrode SEI film overpotential [V]",
+        # "X-averaged negative electrode reaction overpotential [V]",
+        # "X-averaged negative electrode lithium plating reaction overpotential [V]",
+        # "X-averaged negative electrode porosity",
+        # ["Left porosity", "Right porosity"],
+        # "Loss of Lithium Inventory [%]",
+        # "Negative electrode SOC",
+        # "Positive electrode SOC",
+        "Sum of electrolyte reaction source terms",
+        # "Total negative electrode interfacial current density variable",
+        "X-averaged electrolyte concentration",
+        "Total lithium in electrolyte [mol]",
         # "Negative electrode porosity",
     ],
     variable_limits="tight",
