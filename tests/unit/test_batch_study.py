@@ -115,7 +115,7 @@ class TestBatchStudy(unittest.TestCase):
     def test_plot(self):
         # Tests for batch_study_false (permutations=False)
         batch_study_false.solve()
-        batch_study_false.plot()
+        batch_study_false.plot(testing=True)
         output_len_false = len(batch_study_false.sims)
         self.assertEqual(2, output_len_false)
         for num in range(output_len_false):
@@ -125,7 +125,7 @@ class TestBatchStudy(unittest.TestCase):
 
         # Tests for batch_study_true (permutations=True)
         batch_study_true.solve()
-        batch_study_true.plot()
+        batch_study_true.plot(testing=True)
         output_len_true = len(batch_study_true.sims)
         self.assertEqual(4, output_len_true)
         for num in range(output_len_true):
