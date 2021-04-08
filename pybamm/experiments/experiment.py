@@ -174,16 +174,20 @@ class Experiment:
                 end_time = self.convert_time_to_seconds(cond_list[idx + 1 :])
                 ext_drive_cycle = self.extend_drive_cycle(drive_cycles[cond_list[1]],
                                                           end_time)
-                interp = ext_drive_cycle[:, 1] # Electric Part of the Drive Cycle as Numpy Array
-                typ =  cond_list[2][1] # Find the Type of Drive Cycle ("A", "V", or "W")
+                # Electric Part of the Drive Cycle as Numpy Array
+                interp = ext_drive_cycle[:, 1]
+                # Find the Type of Drive Cycle ("A", "V", or "W")
+                typ = cond_list[2][1]
                 electric = (interp, typ)
                 time = ext_drive_cycle[:, 0][-1]
                 period = np.min(np.diff(ext_drive_cycle[:, 0]))
                 events = None
             else:
                 # e.g. Run US06
-                interp = drive_cycles[cond_list[1]][:, 1] # Electric Part of the Drive Cycle as Numpy Array
-                typ = cond_list[2][1] # Find the Type of Drive Cycle ("A", "V", or "W")
+                # Electric Part of the Drive Cycle as Numpy Array
+                interp = drive_cycles[cond_list[1]][:, 1]
+                # Find the Type of Drive Cycle ("A", "V", or "W")
+                typ = cond_list[2][1]
                 electric = (interp, typ)
                 # Set time and period to 1 second for first step and
                 # then calculate the difference in consecutive time steps
