@@ -18,13 +18,10 @@ examples = """
     Charge at 1 C until 4.1V,
     Hold at 4.1 V until 50 mA,
     Hold at 3V until C/50,
-    Run US06,
-    Run US06 for 20 seconds,
-    Run US06 for 45 minutes,
-    Run US06 for 2 hours,
-    Run US06 until 4.1V,
-    Run US06 until 50 mA,
-    Run US06 until C/50,
+    Run US06 (A),
+    Run US06 (A) for 20 seconds,
+    Run US06 (V) for 45 minutes,
+    Run US06 (W) for 2 hours,
     """
 
 
@@ -177,13 +174,17 @@ class Experiment:
                 end_time = self.convert_time_to_seconds(cond_list[idx + 1 :])
                 ext_drive_cycle = self.extend_drive_cycle(drive_cycles[cond_list[1]],
                                                           end_time)
-                electric = (ext_drive_cycle[:, 1], "Drive")
+                interp = ext_drive_cycle[:, 1] # Electric Part of the Drive Cycle as Numpy Array
+                typ =  cond_list[2][1] # Find the Type of Drive Cycle ("A", "V", or "W")
+                electric = (interp, typ)
                 time = ext_drive_cycle[:, 0][-1]
                 period = np.min(np.diff(ext_drive_cycle[:, 0]))
                 events = None
             else:
                 # e.g. Run US06
-                electric = (drive_cycles[cond_list[1]][:, 1], "Drive")
+                interp = drive_cycles[cond_list[1]][:, 1] # Electric Part of the Drive Cycle as Numpy Array
+                typ = cond_list[2][1] # Find the Type of Drive Cycle ("A", "V", or "W")
+                electric = (interp, typ)
                 # Set time and period to 1 second for first step and
                 # then calculate the difference in consecutive time steps
                 time = drive_cycles[cond_list[1]][:, 0][-1]

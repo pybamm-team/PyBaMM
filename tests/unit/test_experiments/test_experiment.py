@@ -34,9 +34,9 @@ class TestExperiment(unittest.TestCase):
                 "Hold at 4.1 V until 50mA",
                 "Hold at 3V until C/50",
                 "Discharge at C/3 for 2 hours or until 2.5 V",
-                "Run US06",
-                "Run US06 for 5 minutes",
-                "Run US06 for 0.5 hours",
+                "Run US06 (A)",
+                "Run US06 (V) for 5 minutes",
+                "Run US06 (W) for 0.5 hours",
             ],
             {"test": "test"}, drive_cycles={"US06": drive_cycle},
             period="20 seconds",
@@ -75,15 +75,15 @@ class TestExperiment(unittest.TestCase):
         # Check drive cycle operating conditions
         self.assertTrue(
             ((experiment.operating_conditions[-3][0] == drive_cycle[:, 1]).all() & (
-                experiment.operating_conditions[-3][1] == "Drive") & (
+                experiment.operating_conditions[-3][1] == "A") & (
                 experiment.operating_conditions[-3][2] == time_0).all() & (
                 experiment.operating_conditions[-3][3] == period_0).all() & (
                 experiment.operating_conditions[-2][0] == drive_cycle_1[:, 1]).all() & (
-                experiment.operating_conditions[-2][1] == "Drive") & (
+                experiment.operating_conditions[-2][1] == "V") & (
                 experiment.operating_conditions[-2][2] == time_1).all() & (
                 experiment.operating_conditions[-2][3] == period_1).all() & (
                 experiment.operating_conditions[-1][0] == drive_cycle_2[:, 1]).all() & (
-                experiment.operating_conditions[-1][1] == "Drive") & (
+                experiment.operating_conditions[-1][1] == "W") & (
                 experiment.operating_conditions[-1][2] == time_2).all() & (
                 experiment.operating_conditions[-1][3] == period_2).all())
         )
