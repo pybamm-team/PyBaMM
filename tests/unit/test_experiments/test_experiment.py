@@ -171,6 +171,10 @@ class TestExperiment(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "Instruction must be"):
             pybamm.Experiment(["Run at 1 A for 2 hours"])
         with self.assertRaisesRegex(
+            ValueError, "Type of drive cycle must be"
+        ):
+            pybamm.Experiment(["Run US06 for 2 hours"])
+        with self.assertRaisesRegex(
             ValueError, "Instruction must be"
         ):
             pybamm.Experiment(["Run at at 1 A for 2 hours"])
