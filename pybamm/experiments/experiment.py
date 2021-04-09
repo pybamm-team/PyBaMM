@@ -18,13 +18,10 @@ examples = """
     Charge at 1 C until 4.1V,
     Hold at 4.1 V until 50 mA,
     Hold at 3V until C/50,
-    Run US06,
-    Run US06 for 20 seconds,
-    Run US06 for 45 minutes,
-    Run US06 for 2 hours,
-    Run US06 until 4.1V,
-    Run US06 until 50 mA,
-    Run US06 until C/50,
+    Run US06 (A),
+    Run US06 (A) for 20 seconds,
+    Run US06 (V) for 45 minutes,
+    Run US06 (W) for 2 hours,
     """
 
 
@@ -170,20 +167,37 @@ class Experiment:
                         examples
                     )
                 )
-                # Check for Events
+            dc_types = ["(A)", "(V)", "(W)"]
+            if all(x not in cond for x in dc_types):
+                raise ValueError(
+                    """Type of drive cycle must be
+                    specified using '(A)', '(V)' or '(W)'.
+                    For example: {}""".format(
+                        examples
+                    )
+                )
+            # Check for Events
             elif "for" in cond:
                 # e.g. for 3 hours
                 idx = cond_list.index("for")
                 end_time = self.convert_time_to_seconds(cond_list[idx + 1 :])
                 ext_drive_cycle = self.extend_drive_cycle(drive_cycles[cond_list[1]],
                                                           end_time)
-                electric = (ext_drive_cycle[:, 1], "Drive")
+                # Drive cycle as numpy array
+                dc_data = ext_drive_cycle
+                # Find the type of drive cycle ("A", "V", or "W")
+                typ = cond_list[2][1]
+                electric = (dc_data, typ)
                 time = ext_drive_cycle[:, 0][-1]
                 period = np.min(np.diff(ext_drive_cycle[:, 0]))
                 events = None
             else:
                 # e.g. Run US06
-                electric = (drive_cycles[cond_list[1]][:, 1], "Drive")
+                # Drive cycle as numpy array
+                dc_data = drive_cycles[cond_list[1]]
+                # Find the type of drive cycle ("A", "V", or "W")
+                typ = cond_list[2][1]
+                electric = (dc_data, typ)
                 # Set time and period to 1 second for first step and
                 # then calculate the difference in consecutive time steps
                 time = drive_cycles[cond_list[1]][:, 0][-1]
@@ -277,7 +291,7 @@ class Experiment:
                     sign = -1
                 else:
                     raise ValueError(
-                        """instruction must be 'discharge', 'charge', 'rest', 'hold' or 'Run'.
+                        """Instruction must be 'discharge', 'charge', 'rest', 'hold' or 'Run'.
                         For example: {}""".format(
                             examples
                         )
