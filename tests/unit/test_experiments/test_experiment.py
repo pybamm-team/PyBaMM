@@ -27,7 +27,7 @@ class TestExperiment(unittest.TestCase):
                 "Discharge at 1 A for 0.5 hours",
                 "Charge at 200 mA for 45 minutes (1 minute period)",
                 "Discharge at 1W for 0.5 hours",
-                "Charge at 200 mW for 45 minutes",
+                "Charge at 200mW for 45 minutes",
                 "Rest for 10 minutes (5 minute period)",
                 "Hold at 1V for 20 seconds",
                 "Charge at 1 C until 4.1V",
@@ -74,15 +74,15 @@ class TestExperiment(unittest.TestCase):
         )
         # Check drive cycle operating conditions
         self.assertTrue(
-            ((experiment.operating_conditions[-3][0] == drive_cycle[:, 1]).all() & (
+            ((experiment.operating_conditions[-3][0] == drive_cycle).all() & (
                 experiment.operating_conditions[-3][1] == "A") & (
                 experiment.operating_conditions[-3][2] == time_0).all() & (
                 experiment.operating_conditions[-3][3] == period_0).all() & (
-                experiment.operating_conditions[-2][0] == drive_cycle_1[:, 1]).all() & (
+                experiment.operating_conditions[-2][0] == drive_cycle_1).all() & (
                 experiment.operating_conditions[-2][1] == "V") & (
                 experiment.operating_conditions[-2][2] == time_1).all() & (
                 experiment.operating_conditions[-2][3] == period_1).all() & (
-                experiment.operating_conditions[-1][0] == drive_cycle_2[:, 1]).all() & (
+                experiment.operating_conditions[-1][0] == drive_cycle_2).all() & (
                 experiment.operating_conditions[-1][1] == "W") & (
                 experiment.operating_conditions[-1][2] == time_2).all() & (
                 experiment.operating_conditions[-1][3] == period_2).all())
@@ -174,6 +174,14 @@ class TestExperiment(unittest.TestCase):
             ValueError, "Instruction must be"
         ):
             pybamm.Experiment(["Run at at 1 A for 2 hours"])
+        with self.assertRaisesRegex(
+            ValueError, "Instruction must be"
+        ):
+            pybamm.Experiment(["Play at 1 A for 2 hours"])
+        with self.assertRaisesRegex(
+            ValueError, "Instruction"
+        ):
+            pybamm.Experiment(["Cell Charge at 1 A for 2 hours"])
         with self.assertRaisesRegex(ValueError, "units must be"):
             pybamm.Experiment(["Discharge at 1 B for 2 hours"])
         with self.assertRaisesRegex(ValueError, "time units must be"):
