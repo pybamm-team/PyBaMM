@@ -170,7 +170,7 @@ class Experiment:
             dc_types = ["(A)", "(V)", "(W)"]
             if all(x not in cond for x in dc_types):
                 raise ValueError(
-                    """Type of diving cycle must be
+                    """Type of drive cycle must be
                     specified using '(A)', '(V)' or '(W)'.
                     For example: {}""".format(
                         examples
