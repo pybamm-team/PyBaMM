@@ -24,16 +24,16 @@ gitt = pybamm.Experiment(
     [("Discharge at C/20 for 1 hour", "Rest for 1 hour")] * 20,
 )
 
-batch_study_false_only_models = pybamm.BatchStudy(models={"SPM": spm, "DFN": dfn})
-batch_study_true_only_models = pybamm.BatchStudy(
+bs_false_only_models = pybamm.BatchStudy(models={"SPM": spm, "DFN": dfn})
+bs_true_only_models = pybamm.BatchStudy(
     models={"SPM": spm, "DFN": dfn}, permutations=True
 )
-batch_study_false = pybamm.BatchStudy(
+bs_false = pybamm.BatchStudy(
     models={"SPM": spm, "DFN": dfn},
     solvers={"casadi safe": casadi_safe, "casadi fast": casadi_fast},
     experiments={"cccv": cccv, "gitt": gitt},
 )
-batch_study_true = pybamm.BatchStudy(
+bs_true = pybamm.BatchStudy(
     models={"SPM": spm, "DFN": dfn},
     solvers={"casadi safe": casadi_safe, "casadi fast": casadi_fast},
     experiments={"gitt": gitt},
@@ -44,93 +44,82 @@ batch_study_true = pybamm.BatchStudy(
 class TestBatchStudy(unittest.TestCase):
     def test_solve(self):
         # Tests for exceptions
-        with self.assertRaises(ValueError):
-            pybamm.BatchStudy(
-                models={"SPM": spm, "DFN": dfn}, experiments={"gitt": gitt}
-            )
+        for name in pybamm.BatchStudy.INPUT_LIST:
+            with self.assertRaises(ValueError):
+                pybamm.BatchStudy(
+                    models={"SPM": spm, "DFN": dfn},
+                    **{name: {None}}
+                )
 
-        with self.assertRaises(ValueError):
-            pybamm.BatchStudy(
-                models={"SPM": spm, "DFN": dfn},
-                solvers={"casadi fast": casadi_fast},
-                experiments={"cccv": cccv, "gitt": gitt},
-            )
+        # Tests for None when only models are given with permutations=False
+        bs_false_only_models.solve(t_eval=[0, 3600])
+        self.assertEqual(2, len(bs_false_only_models.sims))
 
-        # Tests for batch_study_false_only_models (Only models with permutations=False)
-        batch_study_false_only_models.solve(t_eval=[0, 3600])
-        output_len_false_only_models = len(batch_study_false_only_models.sims)
-        self.assertEqual(2, output_len_false_only_models)
+        # Tests for None when only models are given with permutations=True
+        bs_true_only_models.solve(t_eval=[0, 3600])
+        self.assertEqual(2, len(bs_true_only_models.sims))
 
-        # Tests for batch_study_true_only_models (Only models with permutations=True)
-        batch_study_true_only_models.solve(t_eval=[0, 3600])
-        output_len_true_only_models = len(batch_study_true_only_models.sims)
-        self.assertEqual(2, output_len_true_only_models)
-
-        # Tests for batch_study_false (permutations=False)
-        batch_study_false.solve()
-        output_len_false = len(batch_study_false.sims)
-        self.assertEqual(2, output_len_false)
-        for num in range(output_len_false):
-            output_model = batch_study_false.sims[num].model.name
-            models_list = [model.name for model in batch_study_false.models.values()]
+        # Tests for BatchStudy when permutations=False
+        bs_false.solve()
+        self.assertEqual(2, len(bs_false.sims))
+        for num in range(len(bs_false.sims)):
+            output_model = bs_false.sims[num].model.name
+            models_list = [model.name for model in bs_false.models.values()]
             self.assertIn(output_model, models_list)
 
-            output_solver = batch_study_false.sims[num].solver.name
+            output_solver = bs_false.sims[num].solver.name
             solvers_list = [
-                solver.name for solver in batch_study_false.solvers.values()
+                solver.name for solver in bs_false.solvers.values()
             ]
             self.assertIn(output_solver, solvers_list)
 
-            output_experiment = batch_study_false.sims[
+            output_experiment = bs_false.sims[
                 num
             ].experiment.operating_conditions_strings
             experiments_list = [
                 experiment.operating_conditions_strings
-                for experiment in batch_study_false.experiments.values()
+                for experiment in bs_false.experiments.values()
             ]
             self.assertIn(output_experiment, experiments_list)
 
-        # Tests for batch_study_true (permutations=True)
-        batch_study_true.solve()
-        output_len_true = len(batch_study_true.sims)
-        self.assertEqual(4, output_len_true)
-        for num in range(output_len_true):
-            output_model = batch_study_true.sims[num].model.name
-            models_list = [model.name for model in batch_study_true.models.values()]
+        # Tests for BatchStudy when permutations=True
+        bs_true.solve()
+        self.assertEqual(4, len(bs_true.sims))
+        for num in range(len(bs_true.sims)):
+            output_model = bs_true.sims[num].model.name
+            models_list = [model.name for model in bs_true.models.values()]
             self.assertIn(output_model, models_list)
 
-            output_solver = batch_study_true.sims[num].solver.name
-            solvers_list = [solver.name for solver in batch_study_true.solvers.values()]
+            output_solver = bs_true.sims[num].solver.name
+            solvers_list = [solver.name for solver in bs_true.solvers.values()]
             self.assertIn(output_solver, solvers_list)
 
-            output_experiment = batch_study_true.sims[
+            output_experiment = bs_true.sims[
                 num
             ].experiment.operating_conditions_strings
             experiments_list = [
                 experiment.operating_conditions_strings
-                for experiment in batch_study_true.experiments.values()
+                for experiment in bs_true.experiments.values()
             ]
             self.assertIn(output_experiment, experiments_list)
 
     def test_plot(self):
-        # Tests for batch_study_false (permutations=False)
-        batch_study_false.solve()
-        batch_study_false.plot(testing=True)
-        output_len_false = len(batch_study_false.sims)
-        self.assertEqual(2, output_len_false)
-        for num in range(output_len_false):
-            output_model = batch_study_false.sims[num].all_models[0].name
-            models_list = [model.name for model in batch_study_false.models.values()]
+        # Tests for BatchStudy when permutations=False
+        bs_false.solve()
+        bs_false.plot(testing=True)
+        self.assertEqual(2, len(bs_false.sims))
+        for num in range(len(bs_false.sims)):
+            output_model = bs_false.sims[num].all_models[0].name
+            models_list = [model.name for model in bs_false.models.values()]
             self.assertIn(output_model, models_list)
 
-        # Tests for batch_study_true (permutations=True)
-        batch_study_true.solve()
-        batch_study_true.plot(testing=True)
-        output_len_true = len(batch_study_true.sims)
-        self.assertEqual(4, output_len_true)
-        for num in range(output_len_true):
-            output_model = batch_study_true.sims[num].all_models[0].name
-            models_list = [model.name for model in batch_study_true.models.values()]
+        # Tests for BatchStudy when permutations=True
+        bs_true.solve()
+        bs_true.plot(testing=True)
+        self.assertEqual(4, len(bs_true.sims))
+        for num in range(len(bs_true.sims)):
+            output_model = bs_true.sims[num].all_models[0].name
+            models_list = [model.name for model in bs_true.models.values()]
             self.assertIn(output_model, models_list)
 
 
