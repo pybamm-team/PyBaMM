@@ -127,24 +127,26 @@ class BasicDFNComposite(BaseModel):
         # "left" providing the boundary value of the left side
         c_s_surf_n_p1 = pybamm.surf(c_s_n_p1)
         j0_n_p1 = param.j0_n(c_e_n, c_s_surf_n_p1, T, "phase 1") / param.C_r_n_p1
+        ocp_n_p1 = param.U_n(c_s_surf_n_p1, T, "phase 1")
         j_n_p1 = (
             2
             * j0_n_p1
             * pybamm.sinh(
                 param.ne_n
                 / 2
-                * (phi_s_n - phi_e_n - param.U_n(c_s_surf_n_p1, T, "phase 1"))
+                * (phi_s_n - phi_e_n - ocp_n_p1)
             )
         )
         c_s_surf_n_p2 = pybamm.surf(c_s_n_p2)
         j0_n_p2 = param.j0_n(c_e_n, c_s_surf_n_p1, T, "phase 1") / param.C_r_n_p2
+        ocp_n_p2 = param.U_n(c_s_surf_n_p2, T, "phase 2")
         j_n_p2 = (
             2
             * j0_n_p2
             * pybamm.sinh(
                 param.ne_n
                 / 2
-                * (phi_s_n - phi_e_n - param.U_n(c_s_surf_n_p2, T, "phase 2"))
+                * (phi_s_n - phi_e_n - ocp_n_p2)
             )
         )
         j_n = j_n_p1 + j_n_p2
@@ -320,6 +322,18 @@ class BasicDFNComposite(BaseModel):
         pot_scale = param.potential_scale
         U_ref = param.U_p_ref - param.U_n_ref
         voltage_dim = U_ref + voltage * pot_scale
+        ocp_n_p1_dim = self.param.U_n_ref_p1 + self.param.potential_scale * ocp_n_p1
+        ocp_av_n_p1_dim = pybamm.x_average(ocp_n_p1_dim)
+        ocp_n_p2_dim = self.param.U_n_ref_p2 + self.param.potential_scale * ocp_n_p2
+        ocp_av_n_p2_dim = pybamm.x_average(ocp_n_p2_dim)
+        c_s_rav_n_p1 = pybamm.r_average(c_s_n_p1)
+        c_s_rav_n_p1_dim = c_s_rav_n_p1 * self.param.c_n_p1_max
+        c_s_rav_n_p2 = pybamm.r_average(c_s_n_p2)
+        c_s_rav_n_p2_dim = c_s_rav_n_p2 * self.param.c_n_p2_max
+        c_s_xrav_n_p1 = pybamm.x_average(c_s_rav_n_p1)
+        c_s_xrav_n_p1_dim = c_s_xrav_n_p1 * self.param.c_n_p1_max
+        c_s_xrav_n_p2 = pybamm.x_average(c_s_rav_n_p2)
+        c_s_xrav_n_p2_dim = c_s_xrav_n_p2 * self.param.c_n_p2_max        
         # The `variables` dictionary contains all variables that might be useful for
         # visualising the solution of the model
         self.variables = {
@@ -327,12 +341,25 @@ class BasicDFNComposite(BaseModel):
             "Negative particle surface concentration of phase 2": c_s_surf_n_p2,
             "Electrolyte concentration": c_e,
             "Positive particle surface concentration": c_s_surf_p,
-            "Current [A]": I,
             "Negative electrode potential": phi_s_n,
             "Electrolyte potential": phi_e,
             "Positive electrode potential": phi_s_p,
             "Terminal voltage": voltage,
+            "Current [A]": I,
+            "Time [s]": pybamm.t * self.param.timescale,
             "Terminal voltage [V]": voltage_dim,
+            "Negative electrode open circuit potential of phase 1 [V]": ocp_n_p1_dim,
+            "Negative electrode open circuit potential of phase 2 [V]": ocp_n_p2_dim,
+            "X-averaged negative electrode open circuit potential of phase 1 [V]": ocp_av_n_p1_dim,
+            "X-averaged negative electrode open circuit potential of phase 2 [V]": ocp_av_n_p2_dim,
+            "R-averaged negative particle concentration of phase 1": c_s_rav_n_p1,
+            "R-averaged negative particle concentration of phase 2": c_s_rav_n_p2,
+            "R-averaged negative particle concentration of phase 1 [mol.m-3]": c_s_rav_n_p1_dim,
+            "R-averaged negative particle concentration of phase 2 [mol.m-3]": c_s_rav_n_p2_dim,
+            "Averaged negative electrode concentration of phase 1": c_s_xrav_n_p1,
+            "Averaged negative electrode concentration of phase 2": c_s_xrav_n_p2,
+            "Averaged negative electrode concentration of phase 1 [mol.m-3]": c_s_xrav_n_p1_dim,
+            "Averaged negative electrode concentration of phase 2 [mol.m-3]": c_s_xrav_n_p2_dim,
         }
         self.events += [
             pybamm.Event("Minimum voltage", voltage - param.voltage_low_cut),

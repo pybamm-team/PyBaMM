@@ -429,8 +429,14 @@ class LithiumIonParameters:
             "Negative particle surface concentration [mol.m-3]": c_s_surf,
             "Temperature [K]": T,
         }
+        if phase == "phase 1":
+            p_name = " of phase 1"
+        elif phase == "phase 2":
+            p_name = " of phase 2"
+        else:
+            p_name = ""
         return pybamm.FunctionParameter(
-            "Negative electrode exchange-current density [A.m-2]", inputs
+            f"Negative electrode exchange-current density{p_name} [A.m-2]", inputs
         )
 
     def j0_p_dimensional(self, c_e, c_s_surf, T):

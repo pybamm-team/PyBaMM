@@ -13,23 +13,23 @@ chemistry = pybamm.parameter_sets.Chen2020_composite
 param = pybamm.ParameterValues(chemistry=chemistry)
 # model = pybamm.lithium_ion.DFN()
 # param = model.default_parameter_values
-param.update({"Upper voltage cut-off [V]": 4.21})
-param.update({"Lower voltage cut-off [V]": 2.49})
+param.update({"Upper voltage cut-off [V]": 4.5})
+param.update({"Lower voltage cut-off [V]": 2})
 
-C_rates = 0.5
-t_evals = np.linspace(0, 7200*2, 200)
+C_rates = 0.1
+t_evals = np.linspace(0, 7200 / C_rates, 200)
 capacity = param["Nominal cell capacity [A.h]"]
 current = C_rates * capacity
 
 
 def I_fun(A):
     def current(t):
-        # if t < 36:
-        #     I_result = A 
-        # else:
-        #     I_result = - A 
-        # return I_result 
-        return A * 0.2 * pybamm.sin(2 * np.pi * t / 7200 )
+        period = 3600 / 0.1
+        discharge = pybamm.sigmoid( t - period, 0, 1)
+        charge = pybamm.sigmoid(- t + period, 0, 1)
+        return A * discharge - A * charge
+        # return A * (t < period) - A * (t >= period)
+        # return A * 0.2 * pybamm.sin(2 * np.pi * t / 7200 )
     return current
 
 
@@ -45,6 +45,8 @@ solution = sim1.solve(t_eval=t_evals)
 plot = pybamm.QuickPlot( solution, [       
         "Current [A]",
         "Terminal voltage [V]",
+        "X-averaged negative electrode open circuit potential of phase 1 [V]",
+        "X-averaged negative electrode open circuit potential of phase 2 [V]",
     ]
 )
 plot.dynamic_plot()
