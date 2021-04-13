@@ -310,6 +310,9 @@ class Options(pybamm.FuzzyDict):
         super().__init__(options.items())
 
     def print_options(self):
+        """
+        Print the possible options with the ones currently selected
+        """
         for key, value in self.items():
             if key in self.possible_options.keys():
                 print(f"{key!r}: {value!r} (possible: {self.possible_options[key]!r})")
@@ -317,6 +320,9 @@ class Options(pybamm.FuzzyDict):
                 print(f"{key!r}: {value!r}")
 
     def print_detailed_options(self):
+        """
+        Print the docstring for Options
+        """
         print(self.__doc__)
 
 
