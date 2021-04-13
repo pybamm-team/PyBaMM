@@ -30,6 +30,13 @@ class TestConcatenations(unittest.TestCase):
         with self.assertRaises(TypeError):
             pybamm.concatenation(1, 2)
 
+        # concatenation of length 0
+        with self.assertRaisesRegex(ValueError, "Cannot create empty concatenation"):
+            pybamm.concatenation()
+
+        # concatenation of lenght 1
+        self.assertEqual(pybamm.concatenation(a), a)
+
     def test_concatenation_domains(self):
         a = pybamm.Symbol("a", domain=["negative electrode"])
         b = pybamm.Symbol("b", domain=["separator", "positive electrode"])

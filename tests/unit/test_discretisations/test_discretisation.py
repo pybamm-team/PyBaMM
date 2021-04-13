@@ -301,6 +301,7 @@ class TestDiscretise(unittest.TestCase):
                 jn.id: [slice(200, 240)],
                 js.id: [slice(240, 265)],
                 jp.id: [slice(265, 300)],
+                j.id: [slice(200, 300)],
             },
         )
         np.testing.assert_array_equal(
@@ -1108,12 +1109,8 @@ class TestDiscretise(unittest.TestCase):
         self.assertEqual(
             disc.y_slices[c.id], [slice(65, 100), slice(165, 200), slice(265, 300)]
         )
-        np.testing.assert_array_equal(
-            disc.bounds[0], ([-5] * 40 + [6] * 25 + [0] * 35) * 3
-        )
-        np.testing.assert_array_equal(
-            disc.bounds[1], ([-2] * 40 + [10] * 25 + [1] * 35) * 3
-        )
+        np.testing.assert_array_equal(disc.bounds[0], 6)
+        np.testing.assert_array_equal(disc.bounds[1], -2)
         expr = disc.process_symbol(conc)
         self.assertIsInstance(expr, pybamm.StateVector)
 
@@ -1124,12 +1121,8 @@ class TestDiscretise(unittest.TestCase):
 
         # Without simplification
         conc = pybamm.concatenation(2 * a, 3 * b, 4 * c)
-        np.testing.assert_array_equal(
-            disc.bounds[0], ([-5] * 40 + [6] * 25 + [0] * 35) * 3
-        )
-        np.testing.assert_array_equal(
-            disc.bounds[1], ([-2] * 40 + [10] * 25 + [1] * 35) * 3
-        )
+        conc.bounds = (-np.inf, np.inf)
+        disc.set_variable_slices([a, b, c])
         expr = disc.process_symbol(conc)
         self.assertIsInstance(expr, pybamm.DomainConcatenation)
 
