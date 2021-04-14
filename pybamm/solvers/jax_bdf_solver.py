@@ -13,7 +13,6 @@ from jax.tree_util import tree_map, tree_flatten, tree_unflatten, tree_multimap
 from jax.interpreters import partial_eval as pe
 from functools import partial
 from jax import linear_util as lu
-from functools import partial
 from jax.config import config
 from absl import logging
 
@@ -32,19 +31,23 @@ MAX_FACTOR = 10
 def some_hash_function(x):
     return int(onp.sum(x))
 
+
 class HashableArrayWrapper:
     def __init__(self, val):
         self.val = val
+
     def __hash__(self):
         return some_hash_function(self.val)
+
     def __eq__(self, other):
         return (isinstance(other, HashableArrayWrapper) and
-            onp.all(onp.equal(self.val, other.val)))
+                onp.all(onp.equal(self.val, other.val)))
+
 
 def gnool_jit(fun, static_array_argnums=(), static_argnums=()):
     @partial(
         jax.jit,
-        static_argnums=static_array_argnums+static_argnums
+        static_argnums=static_array_argnums + static_argnums
     )
     def callee(*args):
         args = list(args)
