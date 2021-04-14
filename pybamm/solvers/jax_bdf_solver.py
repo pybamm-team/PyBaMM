@@ -33,6 +33,7 @@ def some_hash_function(x):
 
 
 class HashableArrayWrapper:
+    """wrapper for a numpy array to make it hashable"""
     def __init__(self, val):
         self.val = val
 
@@ -45,6 +46,7 @@ class HashableArrayWrapper:
 
 
 def gnool_jit(fun, static_array_argnums=(), static_argnums=()):
+    """redefinition of jax jit to allow static array args"""
     @partial(
         jax.jit,
         static_argnums=static_array_argnums + static_argnums
