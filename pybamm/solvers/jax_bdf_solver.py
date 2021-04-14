@@ -29,7 +29,7 @@ MAX_FACTOR = 10
 
 # https://github.com/google/jax/issues/4572#issuecomment-709809897
 def some_hash_function(x):
-    return int(onp.sum(x))
+    return hash(x.tobytes())
 
 
 class HashableArrayWrapper:
