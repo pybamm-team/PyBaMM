@@ -2,6 +2,10 @@
 
 ## Features
 
+-   Added option to save only specific cycle numbers when simulating an `Experiment` ([#1459](https://github.com/pybamm-team/PyBaMM/pull/1459))
+-   Added capacity-based termination conditions when simulating an `Experiment` ([#1459](https://github.com/pybamm-team/PyBaMM/pull/1459))
+-   Added "summary variables" to track degradation over several cycles ([#1459](https://github.com/pybamm-team/PyBaMM/pull/1459))
+-   Added `ElectrodeSOH` model for calculating capacities and stoichiometric limits ([#1459](https://github.com/pybamm-team/PyBaMM/pull/1459))
 -   Added Batch Study class ([#1455](https://github.com/pybamm-team/PyBaMM/pull/1455))
 -   Added `ConcatenationVariable`, which is automatically created when variables are concatenated ([#1453](https://github.com/pybamm-team/PyBaMM/pull/1453))
 -   Added "fast with events" mode for the CasADi solver, which solves a model and finds events more efficiently than "safe" mode. As of PR #1450 this feature is still being tested and "safe" mode remains the default ([#1450](https://github.com/pybamm-team/PyBaMM/pull/1450))

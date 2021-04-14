@@ -632,8 +632,8 @@ class TestBaseModel(unittest.TestCase):
             domain="negative particle",
             auxiliary_domains={"secondary": "negative electrode"},
         )
-        var_concat_neg = pybamm.Variable("var_concat_neg", domain="negative electrode")
-        var_concat_sep = pybamm.Variable("var_concat_sep", domain="separator")
+        var_concat_neg = pybamm.Variable("var concat neg", domain="negative electrode")
+        var_concat_sep = pybamm.Variable("var concat sep", domain="separator")
         var_concat = pybamm.concatenation(var_concat_neg, var_concat_sep)
         model.rhs = {var_scalar: -var_scalar, var_1D: -var_1D}
         model.algebraic = {var_2D: -var_2D, var_concat: -var_concat}
@@ -642,9 +642,9 @@ class TestBaseModel(unittest.TestCase):
             "var_scalar": var_scalar,
             "var_1D": var_1D,
             "var_2D": var_2D,
-            "var_concat_neg": var_concat_neg,
-            "var_concat_sep": var_concat_sep,
-            "var_concat": var_concat,
+            "var concat neg": var_concat_neg,
+            "var concat sep": var_concat_sep,
+            "Var concat": var_concat,
         }
         model.length_scales = {
             "negative electrode": pybamm.Scalar(1),
@@ -715,7 +715,7 @@ class TestBaseModel(unittest.TestCase):
             self.assertEqual(mdl.initial_conditions[var_2D].shape, (50, 1))
             np.testing.assert_array_equal(mdl.initial_conditions[var_2D].entries, 3)
 
-            var_concat = mdl.variables["var_concat"]
+            var_concat = mdl.variables["Var concat"]
             self.assertIsInstance(mdl.initial_conditions[var_concat], pybamm.Vector)
             self.assertEqual(mdl.initial_conditions[var_concat].shape, (20, 1))
             np.testing.assert_array_equal(mdl.initial_conditions[var_concat].entries, 3)
@@ -767,9 +767,9 @@ class TestBaseModel(unittest.TestCase):
             auxiliary_domains={"secondary": "negative electrode"},
         )
         new_var_concat_neg = pybamm.Variable(
-            "var_concat_neg", domain="negative electrode"
+            "var concat neg", domain="negative electrode"
         )
-        new_var_concat_sep = pybamm.Variable("var_concat_sep", domain="separator")
+        new_var_concat_sep = pybamm.Variable("var concat sep", domain="separator")
         new_var_concat = pybamm.concatenation(new_var_concat_neg, new_var_concat_sep)
         new_model.rhs = {
             new_var_scalar: -2 * new_var_scalar,
@@ -789,8 +789,8 @@ class TestBaseModel(unittest.TestCase):
             "var_scalar": new_var_scalar,
             "var_1D": new_var_1D,
             "var_2D": new_var_2D,
-            "var_concat_neg": new_var_concat_neg,
-            "var_concat_sep": new_var_concat_sep,
+            "var concat neg": new_var_concat_neg,
+            "var concat sep": new_var_concat_sep,
             "var_concat": new_var_concat,
         }
         new_model.length_scales = {
@@ -817,7 +817,7 @@ class TestBaseModel(unittest.TestCase):
         self.assertEqual(new_model.initial_conditions[var_2D].shape, (50, 1))
         np.testing.assert_array_equal(new_model.initial_conditions[var_2D].entries, 3)
 
-        var_concat = new_model.variables["var_concat"]
+        var_concat = new_model.variables["Var concat"]
         self.assertIsInstance(new_model.initial_conditions[var_concat], pybamm.Vector)
         self.assertEqual(new_model.initial_conditions[var_concat].shape, (20, 1))
         np.testing.assert_array_equal(
@@ -828,8 +828,8 @@ class TestBaseModel(unittest.TestCase):
         sol_dict = {
             "var_scalar": 5 * t,
             "var_1D": np.tile(5 * t, (10, 1)),
-            "var_concat_neg": np.tile(5 * t, (10, 1)),
-            "var_concat_sep": np.tile(5 * t, (10, 1)),
+            "var concat neg": np.tile(5 * t, (10, 1)),
+            "var concat sep": np.tile(5 * t, (10, 1)),
             "var_2D": np.tile(5 * t, (10, 5, 1)),
         }
         new_model.set_initial_conditions_from(sol_dict)
@@ -849,7 +849,7 @@ class TestBaseModel(unittest.TestCase):
         self.assertEqual(new_model.initial_conditions[var_2D].shape, (50, 1))
         np.testing.assert_array_equal(new_model.initial_conditions[var_2D].entries, 5)
 
-        var_concat = new_model.variables["var_concat"]
+        var_concat = new_model.variables["Var concat"]
         self.assertIsInstance(new_model.initial_conditions[var_concat], pybamm.Vector)
         self.assertEqual(new_model.initial_conditions[var_concat].shape, (20, 1))
         np.testing.assert_array_equal(
@@ -917,15 +917,15 @@ class TestBaseModel(unittest.TestCase):
         ):
             model.set_initial_conditions_from({"var": np.ones((5, 6, 7, 8))})
 
-        var_concat_neg = pybamm.Variable("var_concat_neg", domain="negative electrode")
-        var_concat_sep = pybamm.Variable("var_concat_sep", domain="separator")
+        var_concat_neg = pybamm.Variable("var concat neg", domain="negative electrode")
+        var_concat_sep = pybamm.Variable("var concat sep", domain="separator")
         var_concat = pybamm.concatenation(var_concat_neg, var_concat_sep)
         model.algebraic = {var_concat: -var_concat}
         model.initial_conditions = {var_concat: 1}
         with self.assertRaisesRegex(
             NotImplementedError, "Variable in concatenation must be 1D"
         ):
-            model.set_initial_conditions_from({"var_concat_neg": np.ones((5, 6, 7))})
+            model.set_initial_conditions_from({"var concat neg": np.ones((5, 6, 7))})
 
         # Inconsistent model and variable names
         model = pybamm.BaseModel()
@@ -941,50 +941,6 @@ class TestBaseModel(unittest.TestCase):
         model.initial_conditions = {var: pybamm.Scalar(1)}
         with self.assertRaisesRegex(pybamm.ModelError, "must appear in the solution"):
             model.set_initial_conditions_from({"wrong var": 2})
-
-
-class TestStandardBatteryBaseModel(unittest.TestCase):
-    def test_default_solver(self):
-        model = pybamm.BaseBatteryModel()
-        self.assertIsInstance(model.default_solver, pybamm.CasadiSolver)
-
-        # check that default_solver gives you a new solver, not an internal object
-        solver = model.default_solver
-        solver = pybamm.BaseModel()
-        self.assertIsInstance(model.default_solver, pybamm.CasadiSolver)
-        self.assertIsInstance(solver, pybamm.BaseModel)
-
-        # check that adding algebraic variables gives DAE solver
-        a = pybamm.Variable("a")
-        model.algebraic = {a: a - 1}
-        self.assertIsInstance(
-            model.default_solver, (pybamm.IDAKLUSolver, pybamm.CasadiSolver)
-        )
-
-        # Check that turning off jacobian gives casadi solver
-        model.use_jacobian = False
-        self.assertIsInstance(model.default_solver, pybamm.CasadiSolver)
-
-    def test_default_parameters(self):
-        # check parameters are read in ok
-        model = pybamm.BaseBatteryModel()
-        self.assertEqual(
-            model.default_parameter_values["Reference temperature [K]"], 298.15
-        )
-
-        # change path and try again
-
-        cwd = os.getcwd()
-        os.chdir("..")
-        model = pybamm.BaseBatteryModel()
-        self.assertEqual(
-            model.default_parameter_values["Reference temperature [K]"], 298.15
-        )
-        os.chdir(cwd)
-
-    def test_timescale(self):
-        model = pybamm.BaseModel()
-        self.assertEqual(model.timescale.evaluate(), 1)
 
 
 if __name__ == "__main__":

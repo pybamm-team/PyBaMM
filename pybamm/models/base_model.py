@@ -937,7 +937,7 @@ class BaseModel(object):
     @property
     def default_solver(self):
         """Return default solver based on whether model is ODE/DAE or algebraic"""
-        if len(self.rhs) == 0:
+        if len(self.rhs) == 0 and len(self.algebraic) != 0:
             return pybamm.CasadiAlgebraicSolver()
         else:
             return pybamm.CasadiSolver(mode="safe")

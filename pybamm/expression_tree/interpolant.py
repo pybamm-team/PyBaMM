@@ -107,7 +107,7 @@ class Interpolant(pybamm.Function):
             raise ValueError("interpolator '{}' not recognised".format(interpolator))
         # Set name
         if name is None:
-            name = "interpolating function"
+            name = "interpolating_function"
         self.x = x
         self.y = y
         self.entries_string = entries_string
