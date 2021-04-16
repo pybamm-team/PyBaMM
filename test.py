@@ -21,7 +21,8 @@ var_pts = {var.x_n: 10, var.x_s: 10, var.x_p: 10, var.r_n: 10, var.r_p: 10}
 
 sim = pybamm.Simulation(model, var_pts=var_pts, parameter_values=parameter_values)
 # sim.set_parameters()
-# mtk_str = pybamm.get_julia_mtk_model(sim.model, geometry=sim.geometry, tspan=(0, 3600))
+# mtk_str = pybamm.get_julia_mtk_model(sim.model, geometry=sim.geometry,
+# tspan=(0, 3600))
 
 
 # print(mtk_str)

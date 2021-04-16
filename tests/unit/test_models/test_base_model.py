@@ -626,7 +626,6 @@ class TestBaseModel(unittest.TestCase):
     def test_generate_julia_diffeq(self):
         # ODE model with no input parameters
         model = pybamm.BaseModel(name="ode test model")
-        t = pybamm.t
         a = pybamm.Variable("a")
         b = pybamm.Variable("b")
         model.rhs = {a: -a, b: a - b}
@@ -642,7 +641,6 @@ class TestBaseModel(unittest.TestCase):
 
         # ODE model with input parameters
         model = pybamm.BaseModel(name="ode test model 2")
-        t = pybamm.t
         a = pybamm.Variable("a")
         b = pybamm.Variable("b")
         p = pybamm.InputParameter("p")

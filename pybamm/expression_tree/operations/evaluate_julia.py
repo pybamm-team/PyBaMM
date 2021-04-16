@@ -605,7 +605,6 @@ def convert_var_and_eqn_to_str(var, eqn, all_constants_str, all_variables_str, t
     # occurences instead of assigning them.
     inlineable_symbols = [" + ", " - ", " * ", " / "]
     var_str = ""
-    input_parameters = {}
     while var_symbols:
         var_symbol_id, symbol_line = var_symbols.popitem(last=False)
         julia_var = id_to_julia_variable(var_symbol_id, False)
@@ -677,7 +676,6 @@ def convert_var_and_eqn_to_str(var, eqn, all_constants_str, all_variables_str, t
             and f"function {x.name}" not in all_variables_str
             and typ == "equation"
         ):
-            range_children = range(len(x.children))
             function_def = (
                 f"\nfunction {x.name}("
                 + ", ".join(x.arg_names)

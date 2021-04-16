@@ -45,7 +45,7 @@ jobs:
       if: matrix.os != 'windows-latest'
       uses: julia-actions/setup-julia@v1
       with:
-        version: 1.5
+        version: 1.6
     
     - name: Install Linux system dependencies
       if: matrix.os == 'ubuntu-latest'
