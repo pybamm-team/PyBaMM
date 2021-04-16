@@ -2,6 +2,7 @@
 
 ## Features
 
+-   Added Batch Study class ([#1455](https://github.com/pybamm-team/PyBaMM/pull/1455))
 -   Added `ConcatenationVariable`, which is automatically created when variables are concatenated ([#1453](https://github.com/pybamm-team/PyBaMM/pull/1453))
 -   Added "fast with events" mode for the CasADi solver, which solves a model and finds events more efficiently than "safe" mode. As of PR #1450 this feature is still being tested and "safe" mode remains the default ([#1450](https://github.com/pybamm-team/PyBaMM/pull/1450))
 
