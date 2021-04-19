@@ -313,10 +313,10 @@ class LithiumIonParameters:
         self.m_n_p2 = pybamm.Parameter(
             "Negative electrode mass fraction of phase 2"
         )
-        self.r_n_p1 = pybamm.Parameter(
+        self.R_n_typ_p1 = pybamm.Parameter(
             "Negative particle radius of phase 1 [m]"
         )
-        self.r_n_p2 = pybamm.Parameter(
+        self.R_n_typ_p2 = pybamm.Parameter(
             "Negative particle radius of phase 2 [m]"
         )
         self.rho_n_p1 = pybamm.Parameter(
@@ -651,11 +651,6 @@ class LithiumIonParameters:
         # Choose discharge timescale
         self.timescale = self.tau_discharge
 
-        # composite particle
-        self.U_n_ref_p1 = self.U_n_dimensional(sto_n_init, self.T_ref, 'phase 1')
-        self.U_n_ref_p2 = self.U_n_dimensional(sto_n_init, self.T_ref, 'phase 2')
-        self.U_p_ref_p1 = self.U_p_dimensional(sto_p_init, self.T_ref, 'phase 1')
-        self.U_p_ref_p2 = self.U_p_dimensional(sto_p_init, self.T_ref, 'phase 2')
 
     def _set_dimensionless_parameters(self):
         """Defines the dimensionless parameters"""
@@ -927,10 +922,8 @@ class LithiumIonParameters:
         self.a_R_n_p2 = self.V_n_p2 * self.a_R_n
         self.a_R_p_p1 = self.V_p_p1 * self.a_R_p
         self.a_R_p_p2 = self.V_p_p2 * self.a_R_p
-        self.a_n_typ_p1 = self.a_n_typ * self.V_n_p1 * self.R_n_typ / self.r_n_p1
-        self.a_n_typ_p2 = self.a_n_typ * self.V_n_p2 * self.R_n_typ / self.r_n_p2
-        self.C_r_n_p1 = self.C_r_n * self.a_n_typ / self.a_n_typ_p1
-        self.C_r_n_p2 = self.C_r_n * self.a_n_typ / self.a_n_typ_p2
+        self.a_p1_a_n = self.V_n_p1 * self.R_n_typ / self.R_n_typ_p1
+        self.a_p2_a_n = self.V_n_p2 * self.R_n_typ / self.R_n_typ_p2
 
     def chi(self, c_e, T):
         """
@@ -989,13 +982,10 @@ class LithiumIonParameters:
     def j0_n(self, c_e, c_s_surf, T, phase=None):
         """Dimensionless negative exchange-current density"""
         if phase == "phase 1":
-            p_name = " of phase 1"
             c_max = self.c_n_p1_max
         elif phase == "phase 2":
-            p_name = " of phase 2"
             c_max = self.c_n_p2_max
         else:
-            p_name = ""
             c_max = self.c_n_max
         c_e_dim = c_e * self.c_e_typ
         c_s_surf_dim = c_s_surf * c_max
@@ -1019,27 +1009,15 @@ class LithiumIonParameters:
 
     def U_n(self, c_s_n, T, phase=None):
         """Dimensionless open-circuit potential in the negative electrode"""
-        if phase == "phase 1":
-            U_ref = self.U_n_ref_p1
-        elif phase == "phase 2":
-            U_ref = self.U_n_ref_p2
-        else:
-            U_ref = self.U_n_ref
         sto = c_s_n
         T_dim = self.Delta_T * T + self.T_ref
-        return (self.U_n_dimensional(sto, T_dim, phase) - U_ref) / self.potential_scale
+        return (self.U_n_dimensional(sto, T_dim, phase) - self.U_n_ref) / self.potential_scale
 
     def U_p(self, c_s_p, T, phase=None):
         """Dimensionless open-circuit potential in the positive electrode"""
-        if phase == "phase 1":
-            U_ref = self.U_p_ref_p1
-        elif phase == "phase 2":
-            U_ref = self.U_p_ref_p2
-        else:
-            U_ref = self.U_p_ref
         sto = c_s_p
         T_dim = self.Delta_T * T + self.T_ref
-        return (self.U_p_dimensional(sto, T_dim, phase) - U_ref) / self.potential_scale
+        return (self.U_p_dimensional(sto, T_dim, phase) - self.U_p_ref) / self.potential_scale
 
     def dUdT_n(self, c_s_n, phase=None):
         """Dimensionless entropic change in negative open-circuit potential"""

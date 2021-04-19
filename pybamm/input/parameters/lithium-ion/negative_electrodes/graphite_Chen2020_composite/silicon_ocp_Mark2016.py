@@ -21,8 +21,8 @@ def silicon_ocp_Mark2016(sto):
         OCP [V]
     """
     current = pybamm.LithiumIonParameters().dimensional_current_with_time
-    m1 = pybamm.sigmoid(current, 0, 100) # for lithation (current < 0)
-    m2 = pybamm.sigmoid(- current, 0, 100) # for delithiation (current > 0)
+    m1 = pybamm.sigmoid(current, 0, 10) # for lithation (current < 0)
+    m2 = pybamm.sigmoid(- current, 0, 10) # for delithiation (current > 0)
 
     p1 = -96.63 * m1 -51.02 * m2
     p2 = 372.6 * m1 + 161.3 * m2
