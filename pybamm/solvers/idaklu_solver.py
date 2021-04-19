@@ -152,6 +152,13 @@ class IDAKLUSolver(pybamm.BaseSolver):
         if model.rhs_eval.form == "casadi":
             # stack inputs
             inputs = casadi.vertcat(*[x for x in inputs_dict.values()])
+            # raise warning about casadi format being slow
+            pybamm.logger.warning(
+                "Using casadi form for the IDA KLU solver is slow. "
+                "Set `model.convert_to_format='python'` for better performance. "
+                "For DAE models, this may also require changing the root method to "
+                "'lm'."
+            )
         else:
             inputs = inputs_dict
 

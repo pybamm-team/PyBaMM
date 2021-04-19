@@ -234,6 +234,22 @@ class Function(pybamm.Symbol):
         )
 
 
+def simplified_function(func_class, child):
+    """
+    Simplifications implemented before applying the function.
+    Currently only implemented for one-child functions.
+    """
+    if isinstance(child, pybamm.Broadcast):
+        # Move the function inside the broadcast
+        # Apply recursively
+        func_child_not_broad = pybamm.simplify_if_constant(
+            simplified_function(func_class, child.orphans[0])
+        )
+        return child._unary_new_copy(func_child_not_broad)
+    else:
+        return pybamm.simplify_if_constant(func_class(child))
+
+
 class SpecificFunction(Function):
     """
     Parent class for the specific functions, which implement their own `diff`
@@ -280,7 +296,7 @@ class Arcsinh(SpecificFunction):
 
 def arcsinh(child):
     """Returns arcsinh function of child."""
-    return pybamm.simplify_if_constant(Arcsinh(child))
+    return simplified_function(Arcsinh, child)
 
 
 class Cos(SpecificFunction):
@@ -296,7 +312,7 @@ class Cos(SpecificFunction):
 
 def cos(child):
     """Returns cosine function of child."""
-    return pybamm.simplify_if_constant(Cos(child))
+    return simplified_function(Cos, child)
 
 
 class Cosh(SpecificFunction):
@@ -312,7 +328,7 @@ class Cosh(SpecificFunction):
 
 def cosh(child):
     """Returns hyperbolic cosine function of child."""
-    return pybamm.simplify_if_constant(Cosh(child))
+    return simplified_function(Cosh, child)
 
 
 class Exponential(SpecificFunction):
@@ -328,7 +344,7 @@ class Exponential(SpecificFunction):
 
 def exp(child):
     """Returns exponential function of child."""
-    return pybamm.simplify_if_constant(Exponential(child))
+    return simplified_function(Exponential, child)
 
 
 class Log(SpecificFunction):
@@ -349,10 +365,11 @@ class Log(SpecificFunction):
 
 def log(child, base="e"):
     """Returns logarithmic function of child (any base, default 'e')."""
+    log_child = simplified_function(Log, child)
     if base == "e":
-        return pybamm.simplify_if_constant(Log(child))
+        return log_child
     else:
-        return Log(child) / np.log(base)
+        return log_child / np.log(base)
 
 
 def log10(child):
@@ -378,7 +395,7 @@ def min(child):
 
 def sech(child):
     """Returns hyperbolic sec function of child."""
-    return pybamm.simplify_if_constant(1 / Cosh(child))
+    return 1 / simplified_function(Cosh, child)
 
 
 class Sin(SpecificFunction):
@@ -394,7 +411,7 @@ class Sin(SpecificFunction):
 
 def sin(child):
     """Returns sine function of child."""
-    return pybamm.simplify_if_constant(Sin(child))
+    return simplified_function(Sin, child)
 
 
 class Sinh(SpecificFunction):
@@ -410,7 +427,7 @@ class Sinh(SpecificFunction):
 
 def sinh(child):
     """Returns hyperbolic sine function of child."""
-    return pybamm.simplify_if_constant(Sinh(child))
+    return simplified_function(Sinh, child)
 
 
 class Sqrt(SpecificFunction):
@@ -431,7 +448,7 @@ class Sqrt(SpecificFunction):
 
 def sqrt(child):
     """Returns square root function of child."""
-    return pybamm.simplify_if_constant(Sqrt(child))
+    return simplified_function(Sqrt, child)
 
 
 class Tanh(SpecificFunction):
@@ -447,7 +464,7 @@ class Tanh(SpecificFunction):
 
 def tanh(child):
     """Returns hyperbolic tan function of child."""
-    return pybamm.simplify_if_constant(Tanh(child))
+    return simplified_function(Tanh, child)
 
 
 class Arctan(SpecificFunction):
@@ -463,7 +480,7 @@ class Arctan(SpecificFunction):
 
 def arctan(child):
     """Returns hyperbolic tan function of child."""
-    return pybamm.simplify_if_constant(Arctan(child))
+    return simplified_function(Arctan, child)
 
 
 class Erf(SpecificFunction):
@@ -479,9 +496,9 @@ class Erf(SpecificFunction):
 
 def erf(child):
     """Returns error function of child."""
-    return pybamm.simplify_if_constant(Erf(child))
+    return simplified_function(Erf, child)
 
 
 def erfc(child):
     """Returns complementary error function of child."""
-    return pybamm.simplify_if_constant(1 - Erf(child))
+    return 1 - simplified_function(Erf, child)

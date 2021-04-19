@@ -11,6 +11,23 @@ class TestSPMe(unittest.TestCase):
         model = pybamm.lithium_ion.SPMe(options)
         model.check_well_posedness()
 
+    def test_external_variables(self):
+        # a concatenation
+        model_options = {"external submodels": ["electrolyte diffusion"]}
+        model = pybamm.lithium_ion.SPMe(model_options)
+        self.assertEqual(
+            model.external_variables[0].id,
+            model.variables["Electrolyte concentration"].id,
+        )
+
+        # a variable
+        model_options = {"thermal": "lumped", "external submodels": ["thermal"]}
+        model = pybamm.lithium_ion.SPMe(model_options)
+        self.assertEqual(
+            model.external_variables[0].id,
+            model.variables["Volume-averaged cell temperature"].id,
+        )
+
     def test_well_posed_2plus1D(self):
         options = {"current collector": "potential pair", "dimensionality": 1}
         model = pybamm.lithium_ion.SPMe(options)

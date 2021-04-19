@@ -310,6 +310,9 @@ class Options(pybamm.FuzzyDict):
         super().__init__(options.items())
 
     def print_options(self):
+        """
+        Print the possible options with the ones currently selected
+        """
         for key, value in self.items():
             if key in self.possible_options.keys():
                 print(f"{key!r}: {value!r} (possible: {self.possible_options[key]!r})")
@@ -317,6 +320,9 @@ class Options(pybamm.FuzzyDict):
                 print(f"{key!r}: {value!r}")
 
     def print_detailed_options(self):
+        """
+        Print the docstring for Options
+        """
         print(self.__doc__)
 
 
@@ -914,6 +920,26 @@ class BaseBatteryModel(pybamm.BaseModel):
                 "Maximum voltage",
                 V - self.param.voltage_high_cut,
                 pybamm.EventType.TERMINATION,
+            )
+        )
+
+        # Cut-off open-circuit voltage (for event switch with casadi 'fast with events'
+        # mode)
+        # A tolerance of 1 is sufficiently small since the dimensionless voltage is
+        # scaled with the thermal voltage (0.025V) and hence has a range of around 60
+        tol = 1
+        self.events.append(
+            pybamm.Event(
+                "Minimum voltage switch",
+                V - (self.param.voltage_low_cut - tol),
+                pybamm.EventType.SWITCH,
+            )
+        )
+        self.events.append(
+            pybamm.Event(
+                "Maximum voltage switch",
+                V - (self.param.voltage_high_cut + tol),
+                pybamm.EventType.SWITCH,
             )
         )
 

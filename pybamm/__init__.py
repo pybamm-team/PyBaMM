@@ -87,8 +87,7 @@ from .expression_tree.input_parameter import InputParameter
 from .expression_tree.parameter import Parameter, FunctionParameter
 from .expression_tree.broadcasts import *
 from .expression_tree.scalar import Scalar
-from .expression_tree.variable import Variable, ExternalVariable, VariableDot
-from .expression_tree.variable import VariableBase
+from .expression_tree.variable import *
 from .expression_tree.independent_variable import *
 from .expression_tree.independent_variable import t
 from .expression_tree.vector import Vector
@@ -122,7 +121,7 @@ from .models.event import Event
 from .models.event import EventType
 
 # Battery models
-from .models.full_battery_models.base_battery_model import BaseBatteryModel
+from .models.full_battery_models.base_battery_model import BaseBatteryModel, Options
 from .models.full_battery_models import lead_acid
 from .models.full_battery_models import lithium_ion
 
@@ -249,10 +248,16 @@ default_plot_style = os.path.join(root_dir(), "pybamm/plotting/pybamm.mplstyle")
 import matplotlib.pyplot as plt
 
 plt.style.use(default_plot_style)
+
 #
 # Simulation
 #
 from .simulation import Simulation, load_sim, is_notebook
+
+#
+# Batch Study
+#
+from .batch_study import BatchStudy
 
 #
 # Remove any imported modules, so we don't expose them as part of pybamm

@@ -72,6 +72,11 @@ class BaseInterface(pybamm.BaseSubModel):
                 c_s_surf = c_s_surf.orphans[0]
                 c_e = c_e.orphans[0]
                 T = T.orphans[0]
+
+            tol = 1e-8
+            c_e = pybamm.maximum(tol, c_e)
+            c_s_surf = pybamm.maximum(tol, pybamm.minimum(c_s_surf, 1 - tol))
+
             if self.domain == "Negative":
                 j0 = self.param.j0_n(c_e, c_s_surf, T) / self.param.C_r_n
             elif self.domain == "Positive":
@@ -331,8 +336,8 @@ class BaseInterface(pybamm.BaseSubModel):
         j_p = variables[
             "Positive electrode" + self.reaction_name + " interfacial current density"
         ]
-        j = pybamm.Concatenation(j_n, j_s, j_p)
-        j_dim = pybamm.Concatenation(j_n_scale * j_n, j_s, j_p_scale * j_p)
+        j = pybamm.concatenation(j_n, j_s, j_p)
+        j_dim = pybamm.concatenation(j_n_scale * j_n, j_s, j_p_scale * j_p)
 
         variables.update(
             {
@@ -344,12 +349,12 @@ class BaseInterface(pybamm.BaseSubModel):
 
         a_n = variables["Negative electrode surface area to volume ratio"]
         a_p = variables["Positive electrode surface area to volume ratio"]
-        a = pybamm.Concatenation(
+        a = pybamm.concatenation(
             a_n, pybamm.FullBroadcast(0, "separator", "current collector"), a_p
         )
 
         s_n, s_p = self._get_electrolyte_reaction_signed_stoichiometry()
-        s = pybamm.Concatenation(
+        s = pybamm.concatenation(
             pybamm.FullBroadcast(s_n, "negative electrode", "current collector"),
             pybamm.FullBroadcast(0, "separator", "current collector"),
             pybamm.FullBroadcast(s_p, "positive electrode", "current collector"),
@@ -448,8 +453,8 @@ class BaseInterface(pybamm.BaseSubModel):
         j0_p = variables[
             "Positive electrode" + self.reaction_name + " exchange current density"
         ]
-        j0 = pybamm.Concatenation(j0_n, j0_s, j0_p)
-        j0_dim = pybamm.Concatenation(j_n_scale * j0_n, j0_s, j_p_scale * j0_p)
+        j0 = pybamm.concatenation(j0_n, j0_s, j0_p)
+        j0_dim = pybamm.concatenation(j_n_scale * j0_n, j0_s, j_p_scale * j0_p)
 
         if self.reaction_name == "":
             variables = {

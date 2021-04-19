@@ -50,8 +50,9 @@ class TestSimulationExperiment(unittest.TestCase):
         self.assertEqual(sim._experiment_inputs[3]["Current cut-off [A]"], -1e10)
         self.assertEqual(sim._experiment_inputs[3]["Voltage cut-off [V]"], -1e10)
 
+        Crate = 1 / model.default_parameter_values["Nominal cell capacity [A.h]"]
         self.assertEqual(
-            sim._experiment_times, [3600, 7 * 24 * 3600, 7 * 24 * 3600, 3600]
+            sim._experiment_times, [3600, 3 / Crate * 3600, 24 * 3600, 3600]
         )
 
         model_I = sim.op_conds_to_model_and_param[(-1.0, "A")][0]

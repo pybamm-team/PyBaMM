@@ -57,7 +57,7 @@ class Full(BaseElectrolyteConductivity):
         # account for graded electrodes)
         a_n = variables["Negative electrode surface area to volume ratio"]
         a_p = variables["Positive electrode surface area to volume ratio"]
-        a = pybamm.Concatenation(
+        a = pybamm.concatenation(
             a_n, pybamm.FullBroadcast(0, "separator", "current collector"), a_p
         )
 

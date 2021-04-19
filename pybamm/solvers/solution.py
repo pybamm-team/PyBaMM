@@ -170,20 +170,10 @@ class Solution(object):
         """Time at which the event happens"""
         return self._t_event
 
-    @t_event.setter
-    def t_event(self, value):
-        """Updates the event time"""
-        self._t_event = value
-
     @property
     def y_event(self):
         """Value of the solution at the time of the event"""
         return self._y_event
-
-    @y_event.setter
-    def y_event(self, value):
-        """Updates the solution at the time of the event"""
-        self._y_event = value
 
     @property
     def termination(self):
@@ -456,7 +446,12 @@ class Solution(object):
             and len(other.all_ts[0]) == 1
             and other.all_ts[0][0] == self.all_ts[-1][-1]
         ):
-            return self.copy()
+            new_sol = self.copy()
+            # Update termination using the latter solution
+            new_sol._termination = other.termination
+            new_sol._t_event = other._t_event
+            new_sol._y_event = other._y_event
+            return new_sol
 
         # Update list of sub-solutions
         if other.all_ts[0][0] == self.all_ts[-1][-1]:
@@ -472,9 +467,9 @@ class Solution(object):
             all_ys,
             self.all_models + other.all_models,
             self.all_inputs + other.all_inputs,
-            self.t_event,
-            self.y_event,
-            self.termination,
+            other.t_event,
+            other.y_event,
+            other.termination,
         )
 
         new_sol._all_inputs_casadi = self.all_inputs_casadi + other.all_inputs_casadi
@@ -482,11 +477,6 @@ class Solution(object):
         # Set solution time
         new_sol.solve_time = self.solve_time + other.solve_time
         new_sol.integration_time = self.integration_time + other.integration_time
-
-        # Update termination using the latter solution
-        new_sol._termination = other.termination
-        new_sol._t_event = other._t_event
-        new_sol._y_event = other._y_event
 
         # Set sub_solutions
         new_sol._sub_solutions = self.sub_solutions + other.sub_solutions

@@ -40,11 +40,11 @@ class SpatialMethod:
             mesh[dom].npts_for_broadcast_to_nodes = mesh[dom].npts
         self._mesh = mesh
 
-    def _get_auxiliary_domain_repeats(self, auxiliary_domains, tertiary_only=False):
+    def _get_auxiliary_domain_repeats(self, auxiliary_domains):
         """
         Helper method to read the 'auxiliary_domain' meshes
         """
-        if tertiary_only is False and "secondary" in auxiliary_domains:
+        if "secondary" in auxiliary_domains:
             sec_mesh_npts = self.mesh.combine_submeshes(
                 *auxiliary_domains["secondary"]
             ).npts
@@ -113,12 +113,15 @@ class SpatialMethod:
         primary_domain_size = sum(
             self.mesh[dom].npts_for_broadcast_to_nodes for dom in domain
         )
-        secondary_domain_size = self._get_auxiliary_domain_repeats(auxiliary_domains)
-        full_domain_size = primary_domain_size * secondary_domain_size
+        secondary_domain_size = self._get_auxiliary_domain_repeats(
+            {k: v for k, v in auxiliary_domains.items() if k == "secondary"}
+        )
+        auxiliary_domains_size = self._get_auxiliary_domain_repeats(auxiliary_domains)
+        full_domain_size = primary_domain_size * auxiliary_domains_size
         if broadcast_type.endswith("to edges"):
             # add one point to each domain for broadcasting to edges
             primary_domain_size += 1
-            full_domain_size = primary_domain_size * secondary_domain_size
+            full_domain_size = primary_domain_size * auxiliary_domains_size
             secondary_domain_size += 1
 
         if broadcast_type.startswith("primary"):

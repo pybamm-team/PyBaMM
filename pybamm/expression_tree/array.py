@@ -36,13 +36,14 @@ class Array(pybamm.Symbol):
         auxiliary_domains=None,
         entries_string=None,
     ):
+        # if
         if isinstance(entries, list):
             entries = np.array(entries)
         if entries.ndim == 1:
             entries = entries[:, np.newaxis]
         if name is None:
             name = "Array of shape {!s}".format(entries.shape)
-        self._entries = entries
+        self._entries = entries.astype(float)
         # Use known entries string to avoid re-hashing, where possible
         self.entries_string = entries_string
         super().__init__(name, domain=domain, auxiliary_domains=auxiliary_domains)
@@ -75,14 +76,19 @@ class Array(pybamm.Symbol):
         else:
             entries = self._entries
             if issparse(entries):
-                self._entries_string = str(entries.__dict__)
+                dct = entries.__dict__
+                self._entries_string = ["shape", str(dct["_shape"])]
+                for key in ["data", "indices", "indptr"]:
+                    self._entries_string += [key, dct[key].tobytes()]
+                self._entries_string = tuple(self._entries_string)
+                # self._entries_string = str(entries.__dict__)
             else:
-                self._entries_string = entries.tobytes()
+                self._entries_string = (entries.tobytes(),)
 
     def set_id(self):
         """ See :meth:`pybamm.Symbol.set_id()`. """
         self._id = hash(
-            (self.__class__, self.name, self.entries_string) + tuple(self.domain)
+            (self.__class__, self.name) + self.entries_string + tuple(self.domain)
         )
 
     def _jac(self, variable):
