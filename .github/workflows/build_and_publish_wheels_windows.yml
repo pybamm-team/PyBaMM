@@ -33,7 +33,7 @@ jobs:
         env:
           cache-name: vckpg_binary_cache
         with:
-          path: vcpkg_binary_cache
+          path: C:\Users\runneradmin\AppData\Local\vcpkg\archives
           key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ hashFiles('vcpkg.json') }}
 
       - name: Clone pybind11 repo
