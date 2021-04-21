@@ -24,8 +24,8 @@ jobs:
       - name: Install cibuildwheel
         run: python -m pip install cibuildwheel==1.9.0
 
-      - name: Clone pybind11 repo
-        run: git clone https://github.com/pybind/pybind11.git
+      - name: Clone pybind11 repo (no history)
+        run: git clone --depth 1 --branch v2.6.2 https://github.com/pybind/pybind11.git
 
       - name: Install sundials on macOS
         if: matrix.os == 'macOS-10.15'
