@@ -130,7 +130,7 @@ def compile_KLU():
         )
         logger.info(msg)
 
-    return CMakeFound and PyBind11Found and (not windows)
+    return CMakeFound and PyBind11Found
 
 
 # Build the list of package data files to be included in the PyBaMM package.
@@ -175,7 +175,7 @@ with open("README.md", encoding="utf-8") as f:
 
 setup(
     name="pybamm",
-    version=load_version(),
+    version=load_version() + ".post1",
     description="Python Battery Mathematical Modelling.",
     long_description=readme,
     long_description_content_type="text/markdown",
