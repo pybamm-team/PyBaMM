@@ -28,7 +28,7 @@ jobs:
         run: git clone --depth 1 --branch v2.6.2 https://github.com/pybind/pybind11.git
 
       - name: Install sundials on macOS
-        if: matrix.os == 'macOS-10.15'
+        if: matrix.os == 'macos-latest'
         run: |
           brew update
           brew install sundials
