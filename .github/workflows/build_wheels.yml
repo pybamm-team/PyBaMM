@@ -34,6 +34,7 @@ jobs:
           brew install sundials
 
       - name: Build wheels on Linux and MacOS
+        if: matrix.os != 'windows-latest'
         run: python -m cibuildwheel --output-dir wheelhouse
         env:
           CIBW_BEFORE_ALL_LINUX: "bash build_manylinux_wheels/install_sundials.sh 5.8.1 5.7.0"
