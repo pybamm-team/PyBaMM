@@ -129,27 +129,15 @@ class BasicDFNComposite(BaseModel):
         j0_n_p1 = param.j0_n(c_e_n, c_s_surf_n_p1, T, "phase 1") / param.C_r_n * param.a_p1_a_n 
         ocp_n_p1 = param.U_n(c_s_surf_n_p1, T, "phase 1")
         j_n_p1 = (
-            2
-            * j0_n_p1
-            * pybamm.sinh(
-                param.ne_n
-                / 2
-                * (phi_s_n - phi_e_n - ocp_n_p1)
-            )
+            2 * j0_n_p1 * pybamm.sinh(param.ne_n / 2 * (phi_s_n - phi_e_n - ocp_n_p1))
         )
         c_s_surf_n_p2 = pybamm.surf(c_s_n_p2)
-        j0_n_p2 = param.j0_n(c_e_n, c_s_surf_n_p2, T, "phase 2") / param.C_r_n * param.a_p2_a_n
+        j0_n_p2 = param.j0_n(c_e_n, c_s_surf_n_p2, T, "phase 2") / param.C_r_n * param.a_p2_a_n 
         ocp_n_p2 = param.U_n(c_s_surf_n_p2, T, "phase 2")
         j_n_p2 = (
-            2
-            * j0_n_p2
-            * pybamm.sinh(
-                param.ne_n
-                / 2
-                * (phi_s_n - phi_e_n - ocp_n_p2)
-            )
+            2 * j0_n_p2 * pybamm.sinh(param.ne_n / 2 * (phi_s_n - phi_e_n - ocp_n_p2))
         )
-        j_n = j_n_p1 / param.a_p1_a_n + j_n_p2 / pybamm.maximum(param.a_p2_a_n, 0.00001)
+        j_n = j_n_p1 + j_n_p2
         c_s_surf_p = pybamm.surf(c_s_p)
         j0_p = param.gamma_p * param.j0_p(c_e_p, c_s_surf_p, T) / param.C_r_p
         j_s = pybamm.PrimaryBroadcast(0, "separator")
@@ -190,7 +178,8 @@ class BasicDFNComposite(BaseModel):
             "right": (
                 -param.C_n_p1
                 * j_n_p1
-                / param.a_R_n_p1
+                / pybamm.maximum(param.a_R_n_p1, 0.00001)
+                / param.gamma_n_p1
                 / param.D_n(c_s_surf_n_p1, T, "phase 1"),
                 "Neumann",
             ),
@@ -201,6 +190,7 @@ class BasicDFNComposite(BaseModel):
                 -param.C_n_p2
                 * j_n_p2
                 / pybamm.maximum(param.a_R_n_p2, 0.00001)
+                / param.gamma_n_p2
                 / param.D_n(c_s_surf_n_p2, T, "phase 2"),
                 "Neumann",
             ),
@@ -228,7 +218,7 @@ class BasicDFNComposite(BaseModel):
         )
         self.initial_conditions[c_s_p] = param.c_p_init(x_p)
         # Events specify points at which a solution should terminate
-        tolerance = 0.001
+        tolerance = 0.0001
         self.events += [
             pybamm.Event(
                 "Minimum negative particle surface concentration of phase 1",
@@ -334,11 +324,11 @@ class BasicDFNComposite(BaseModel):
         c_s_xrav_n_p1 = pybamm.x_average(c_s_rav_n_p1)
         c_s_xrav_n_p1_dim = c_s_xrav_n_p1 * self.param.c_n_p1_max
         c_s_xrav_n_p2 = pybamm.x_average(c_s_rav_n_p2)
-        c_s_xrav_n_p2_dim = c_s_xrav_n_p2 * self.param.c_n_p2_max  
-        j_n_p1_dim = j_n_p1 * param.j_scale_n / param.a_p1_a_n 
-        j_n_p2_dim = j_n_p2 * param.j_scale_n / pybamm.maximum(param.a_p2_a_n,0.000001)  
-        j_n_p1_av_dim = pybamm.x_average(j_n_p1_dim)    
-        j_n_p2_av_dim = pybamm.x_average(j_n_p2_dim) 
+        c_s_xrav_n_p2_dim = c_s_xrav_n_p2 * self.param.c_n_p2_max
+        j_n_p1_dim = j_n_p1 * param.j_scale_n / param.a_p1_a_n
+        j_n_p2_dim = j_n_p2 * param.j_scale_n / pybamm.maximum(param.a_p2_a_n, 0.000001)
+        j_n_p1_av_dim = pybamm.x_average(j_n_p1_dim)
+        j_n_p2_av_dim = pybamm.x_average(j_n_p2_dim)
         # The `variables` dictionary contains all variables that might be useful for
         # visualising the solution of the model
         self.variables = {

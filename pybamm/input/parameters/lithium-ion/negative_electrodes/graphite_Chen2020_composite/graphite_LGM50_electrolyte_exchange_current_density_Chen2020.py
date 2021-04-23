@@ -1,9 +1,7 @@
-from pybamm import exp, constants, Parameter
+from pybamm import exp, constants, Parameter, AbsoluteValue
 
 
-def graphite_LGM50_electrolyte_exchange_current_density_Chen2020(
-    c_e, c_s_surf, T
-):
+def graphite_LGM50_electrolyte_exchange_current_density_Chen2020(c_e, c_s_surf, T):
     """
     Exchange-current density for Butler-Volmer reactions between graphite and LiPF6 in
     EC:DMC.
@@ -38,5 +36,9 @@ def graphite_LGM50_electrolyte_exchange_current_density_Chen2020(
     )
 
     return (
-        m_ref * arrhenius * c_e ** 0.5 * c_s_surf ** 0.5 * (c_n_max - c_s_surf) ** 0.5
+        m_ref
+        * arrhenius
+        * c_e ** 0.5
+        * AbsoluteValue(c_s_surf) ** 0.5
+        * AbsoluteValue(c_n_max - c_s_surf) ** 0.5
     )
