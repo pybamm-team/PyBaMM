@@ -9,7 +9,7 @@ class TestChen(unittest.TestCase):
     def test_load_params(self):
         negative_electrode = pybamm.ParameterValues({}).read_parameters_csv(
             pybamm.get_parameters_filepath(
-                "input/parameters/lithium-ion/negative_electrodes/graphite_Chen2020/"
+                "input/parameters/lithium_ion/negative_electrodes/graphite_Chen2020/"
                 "parameters.csv"
             )
         )
@@ -17,7 +17,7 @@ class TestChen(unittest.TestCase):
 
         positive_electrode = pybamm.ParameterValues({}).read_parameters_csv(
             pybamm.get_parameters_filepath(
-                "input/parameters/lithium-ion/positive_electrodes/nmc_Chen2020/"
+                "input/parameters/lithium_ion/positive_electrodes/nmc_Chen2020/"
                 "parameters.csv"
             )
         )
@@ -25,7 +25,7 @@ class TestChen(unittest.TestCase):
 
         electrolyte = pybamm.ParameterValues({}).read_parameters_csv(
             pybamm.get_parameters_filepath(
-                "input/parameters/lithium-ion/electrolytes/lipf6_Nyman2008/"
+                "input/parameters/lithium_ion/electrolytes/lipf6_Nyman2008/"
                 + "parameters.csv"
             )
         )
@@ -33,7 +33,7 @@ class TestChen(unittest.TestCase):
 
         cell = pybamm.ParameterValues({}).read_parameters_csv(
             pybamm.get_parameters_filepath(
-                "input/parameters/lithium-ion/cells/LGM50_Chen2020/parameters.csv"
+                "input/parameters/lithium_ion/cells/LGM50_Chen2020/parameters.csv"
             )
         )
         self.assertAlmostEqual(cell["Negative current collector thickness [m]"], 12e-6)

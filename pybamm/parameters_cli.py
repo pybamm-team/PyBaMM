@@ -35,7 +35,7 @@ def get_parser(description):
     parser.add_argument(
         "parameter_dir", type=str, help="Name of the parameter directory"
     )
-    parser.add_argument("battery_type", choices=["lithium-ion", "lead-acid"])
+    parser.add_argument("battery_type", choices=["lithium_ion", "lead_acid"])
     parser.add_argument(
         "component",
         choices=[
@@ -64,10 +64,10 @@ def copy_directory(source, destination, overwrite):
 
     Example:
     --------
-    source = "site-packages/pybamm/input/parameters/lead-acid/negative_electrodes/blah"
-    destination = "input/parameters/lead-acid/negative_electrodes/blah"
+    source = "site-packages/pybamm/input/parameters/lead_acid/negative_electrodes/blah"
+    destination = "input/parameters/lead_acid/negative_electrodes/blah"
     Will copy
-      "input/parameters/lead-acid/negative_electrodes/blah"
+      "input/parameters/lead_acid/negative_electrodes/blah"
     in current working directory.
     """
     try:
@@ -97,8 +97,8 @@ def add_parameter(arguments=None):
     This allows the parameters to be used from anywhere in the system.
 
     Example:
-    "add_parameter foo lithium-ion negative_electrodes" will copy directory foo in
-    "pybamm/input/parameters/lithium-ion/negative_electrodes".
+    "add_parameter foo lithium_ion negative_electrodes" will copy directory foo in
+    "pybamm/input/parameters/lithium_ion/negative_electrodes".
     """
     parser = get_parser("Copy parameter to the PyBaMM package directory.")
     args = parser.parse_args(arguments)
@@ -118,8 +118,8 @@ def remove_parameter(arguments=None):
     Remove a parameter directory from package input directory.
 
     Example:
-    "rm_parameter foo lithium-ion negative_electrodes" will remove directory foo in
-    "pybamm/input/parameters/lithium-ion/negative_electrodes".
+    "rm_parameter foo lithium_ion negative_electrodes" will remove directory foo in
+    "pybamm/input/parameters/lithium_ion/negative_electrodes".
     """
     parser = get_parser("Remove parameters from the PyBaMM package directory.")
     args = parser.parse_args(arguments)
@@ -143,11 +143,11 @@ def edit_parameter(arguments=None):
 
     .. code::
 
-      edit_param(["lithium-ion"])
+      edit_param(["lithium_ion"])
 
     will create the directory structure::
 
-      lithium-ion/
+      lithium_ion/
         negative_electrodes/
           graphite_Chen2020
           ...
@@ -158,7 +158,7 @@ def edit_parameter(arguments=None):
     """
     desc = "Pull parameter directory dir to current working directory for editing."
     parser = argparse.ArgumentParser(description=desc)
-    parser.add_argument("chemistry", choices=["lithium-ion", "lead-acid"])
+    parser.add_argument("chemistry", choices=["lithium_ion", "lead_acid"])
     parser.add_argument("-f", "--force", action="store_true")
 
     args = parser.parse_args(arguments)
