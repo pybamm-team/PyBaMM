@@ -28,12 +28,13 @@ jobs:
         run: git clone --depth 1 --branch v2.6.2 https://github.com/pybind/pybind11.git
 
       - name: Install sundials on macOS
-        if: matrix.os == 'macOS-10.15'
+        if: matrix.os == 'macos-latest'
         run: |
           brew update
           brew install sundials
 
       - name: Build wheels on Linux and MacOS
+        if: matrix.os != 'windows-latest'
         run: python -m cibuildwheel --output-dir wheelhouse
         env:
           CIBW_BEFORE_ALL_LINUX: "bash build_manylinux_wheels/install_sundials.sh 5.8.1 5.7.0"
