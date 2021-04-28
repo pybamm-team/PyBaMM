@@ -123,11 +123,13 @@ class TestBaseModel(unittest.TestCase):
         # Read parameters from different parts of the model
         model = pybamm.BaseModel()
         a = pybamm.Parameter("a")
-        b = pybamm.Parameter("b")
+        b = pybamm.InputParameter("b", "test")
         c = pybamm.Parameter("c")
         d = pybamm.Parameter("d")
         e = pybamm.Parameter("e")
-        f = pybamm.Parameter("f")
+        f = pybamm.InputParameter("f")
+        g = pybamm.Parameter("g")
+        h = pybamm.Parameter("h")
 
         u = pybamm.Variable("u")
         v = pybamm.Variable("v")
@@ -136,12 +138,26 @@ class TestBaseModel(unittest.TestCase):
         model.initial_conditions = {u: c, v: d}
         model.events = [pybamm.Event("u=e", u - e)]
         model.variables = {"v+f": v + f}
+        model.boundary_conditions = {
+            u: {"left": (g, "Dirichlet"), "right": (0, "Neumann")},
+            v: {"left": (0, "Dirichlet"), "right": (h, "Neumann")},
+        }
 
         self.assertEqual(
             set([x.name for x in model.parameters]),
-            set([x.name for x in [a, b, c, d, e, f]]),
+            set([x.name for x in [a, b, c, d, e, f, g, h]]),
         )
-        self.assertTrue(all(isinstance(x, pybamm.Parameter) for x in model.parameters))
+        self.assertTrue(
+            all(
+                isinstance(x, (pybamm.Parameter, pybamm.InputParameter))
+                for x in model.parameters
+            )
+        )
+
+        model.variables = {
+            "v+f": v + pybamm.FunctionParameter("f", {"Time [s]": pybamm.t})
+        }
+        model.print_parameter_info()
 
     def test_read_input_parameters(self):
         # Read input parameters from different parts of the model
