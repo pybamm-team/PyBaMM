@@ -170,44 +170,82 @@ class Simulation:
         self._experiment_inputs = []
         self._experiment_times = []
         for op, events in zip(experiment.operating_conditions, experiment.events):
-            if op[1] in ["A", "C"]:
-                # Update inputs for constant current
+            if isinstance(op[0], np.ndarray):
+                # self.operating_mode = "drive cycle" ########!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+                # If ndarray is recived from, create interpolant
+                # create interpolant
+                timescale = self._parameter_values.evaluate(model.timescale)
+                drive_cycle_interpolant = pybamm.Interpolant(
+                    op[0][:, 0], op[0][:, 1], timescale * pybamm.t
+                )
+                # print(type(drive_cycle_interpolant))  #!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
                 if op[1] == "A":
-                    I = op[0]
-                else:
-                    # Scale C-rate with capacity to obtain current
-                    capacity = self._parameter_values["Nominal cell capacity [A.h]"]
-                    I = op[0] * capacity
-                operating_inputs = {
-                    "Current switch": 1,
-                    "Voltage switch": 0,
-                    "Power switch": 0,
-                    "Current input [A]": I,
-                    "Voltage input [V]": 0,  # doesn't matter
-                    "Power input [W]": 0,  # doesn't matter
-                }
-            elif op[1] == "V":
-                # Update inputs for constant voltage
-                V = op[0]
-                operating_inputs = {
-                    "Current switch": 0,
-                    "Voltage switch": 1,
-                    "Power switch": 0,
-                    "Current input [A]": 0,  # doesn't matter
-                    "Voltage input [V]": V,
-                    "Power input [W]": 0,  # doesn't matter
-                }
-            elif op[1] == "W":
-                # Update inputs for constant power
-                P = op[0]
-                operating_inputs = {
-                    "Current switch": 0,
-                    "Voltage switch": 0,
-                    "Power switch": 1,
-                    "Current input [A]": 0,  # doesn't matter
-                    "Voltage input [V]": 0,  # doesn't matter
-                    "Power input [W]": P,
-                }
+                    operating_inputs = {
+                        "Current switch": 1,
+                        "Voltage switch": 0,
+                        "Power switch": 0,
+                        "Current input [A]": drive_cycle_interpolant,
+                        "Voltage input [V]": 0,  # doesn't matter
+                        "Power input [W]": 0,  # doesn't matter
+                    }
+                if op[1] == "V":
+                    operating_inputs = {
+                        "Current switch": 0,
+                        "Voltage switch": 1,
+                        "Power switch": 0,
+                        "Current input [A]": 0,
+                        "Voltage input [V]": drive_cycle_interpolant,  # doesn't matter
+                        "Power input [W]": 0,  # doesn't matter
+                    }
+                if op[1] == "W":
+                    operating_inputs = {
+                        "Current switch": 0,
+                        "Voltage switch": 0,
+                        "Power switch": 1,
+                        "Current input [A]": 0,
+                        "Voltage input [V]": 0,  # doesn't matter
+                        "Power input [W]": drive_cycle_interpolant,  # doesn't matter
+                    }
+            else:
+                # self.operating_mode = "experiment" ########!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!        
+                if op[1] in ["A", "C"]:
+                    # Update inputs for constant current
+                    if op[1] == "A":
+                        I = op[0]
+                    else:
+                        # Scale C-rate with capacity to obtain current
+                        capacity = self._parameter_values["Nominal cell capacity [A.h]"]
+                        I = op[0] * capacity
+                    operating_inputs = {
+                        "Current switch": 1,
+                        "Voltage switch": 0,
+                        "Power switch": 0,
+                        "Current input [A]": I,
+                        "Voltage input [V]": 0,  # doesn't matter
+                        "Power input [W]": 0,  # doesn't matter
+                    }
+                elif op[1] == "V":
+                    # Update inputs for constant voltage
+                    V = op[0]
+                    operating_inputs = {
+                        "Current switch": 0,
+                        "Voltage switch": 1,
+                        "Power switch": 0,
+                        "Current input [A]": 0,  # doesn't matter
+                        "Voltage input [V]": V,
+                        "Power input [W]": 0,  # doesn't matter
+                    }
+                elif op[1] == "W":
+                    # Update inputs for constant power
+                    P = op[0]
+                    operating_inputs = {
+                        "Current switch": 0,
+                        "Voltage switch": 0,
+                        "Power switch": 1,
+                        "Current input [A]": 0,  # doesn't matter
+                        "Voltage input [V]": 0,  # doesn't matter
+                        "Power input [W]": P,
+                    }
             # Update period
             operating_inputs["period"] = op[3]
             # Update events
@@ -319,7 +357,7 @@ class Simulation:
         self.model = new_model
 
         self.op_conds_to_model_and_param = {
-            op_cond[:2]: (new_model, self.parameter_values)
+            op_cond[-1]: (new_model, self.parameter_values)
             for op_cond in set(self.experiment.operating_conditions)
         }
         self.op_conds_to_built_models = None
@@ -339,7 +377,7 @@ class Simulation:
         ):
             # Create model for this operating condition if it has not already been seen
             # before
-            if op_cond[:2] not in self.op_conds_to_model_and_param:
+            if op_cond[-1] not in self.op_conds_to_model_and_param:
                 if op_inputs["Current switch"] == 1:
                     # Current control
                     # Make a new copy of the model (we will update events later))
@@ -439,8 +477,10 @@ class Simulation:
                         {"Power function [W]": op_inputs["Power input [W]"]},
                         check_already_exists=False,
                     )
+                
+                # print(new_parameter_values) #!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!)
 
-                self.op_conds_to_model_and_param[op_cond[:2]] = (
+                self.op_conds_to_model_and_param[op_cond[-1]] = (
                     new_model,
                     new_parameter_values,
                 )
@@ -691,7 +731,9 @@ class Simulation:
                     dt = self._experiment_times[idx]
                     op_conds_str = self.experiment.operating_conditions_strings[idx]
                     op_conds_elec = self.experiment.operating_conditions[idx][:2]
-                    model = self.op_conds_to_built_models[op_conds_elec]
+                    # print('Operating Conditions', op_conds_elec)
+                    # model = self.op_conds_to_built_models[op_conds_elec]
+                    model = self.op_conds_to_built_models[op_conds_str]
                     # Use 1-indexing for printing cycle number as it is more
                     # human-intuitive
                     pybamm.logger.notice(

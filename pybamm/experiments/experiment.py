@@ -233,7 +233,7 @@ class Experiment:
                         examples
                     )
                 )
-        return electric + (time,) + (period,), events
+        return electric + (time,) + (period,) + (cond,), events
 
     def extend_drive_cycle(self, drive_cycle, end_time):
         "Extends the drive cycle to enable for event"

@@ -907,7 +907,15 @@ class BaseSolver(object):
         # Set up external variables and inputs
         external_variables = external_variables or {}
         inputs = inputs or {}
+        if isinstance(inputs['Current input [A]'], pybamm.Interpolant):
+            del inputs['Current input [A]']
+        elif isinstance(inputs['Voltage input [V]'], pybamm.Interpolant):
+            del inputs['Voltage input [V]']
+        elif isinstance(inputs['Power input [W]'], pybamm.Interpolant):
+            del inputs['Power input [W]']
+        print("First Inputs",inputs)
         ext_and_inputs = {**external_variables, **inputs}
+        print("First EXT and Inputs",ext_and_inputs)
 
         # Check that any inputs that may affect the scaling have not changed
         # Set model timescale
@@ -1199,6 +1207,7 @@ class InitialConditions(SolverCallable):
     def __call__(self, inputs):
         if self.form == "casadi":
             if isinstance(inputs, dict):
+                print(inputs) #!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
                 inputs = casadi.vertcat(*[x for x in inputs.values()])
             return self._function(0, self.y_dummy, inputs)
         else:
