@@ -85,3 +85,8 @@ class ElectrodeSOH(pybamm.BaseModel):
             "C_n * (x_100 - x_0)": C_n * (x_100 - x_0),
             "C_p * (y_100 - y_0)": C_p * (y_0 - y_100),
         }
+
+    @property
+    def default_solver(self):
+        return pybamm.CasadiAlgebraicSolver()
+        # return pybamm.AlgebraicSolver()

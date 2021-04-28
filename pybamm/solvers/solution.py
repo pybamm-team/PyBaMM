@@ -710,6 +710,6 @@ def get_cycle_summary_variables(cycle_solution, esoh_sim):
     for var in esoh_sol.all_models[0].variables:
         cycle_summary_variables[var] = esoh_sol[var].data[0]
 
-    cycle_summary_variables["Theoretical capacity [A.h]"] = cycle_summary_variables["C"]
+    cycle_summary_variables["Capacity [A.h]"] = cycle_summary_variables["C"]
 
     return cycle_summary_variables

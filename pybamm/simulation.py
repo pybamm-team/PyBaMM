@@ -791,9 +791,7 @@ class Simulation:
                     if "capacity" in self.experiment.termination:
                         # Note capacity_start could be defined as
                         # self.parameter_values["Nominal cell capacity [A.h]"] instead
-                        capacity_start = all_summary_variables[0][
-                            "Theoretical capacity [A.h]"
-                        ]
+                        capacity_start = all_summary_variables[0]["Capacity [A.h]"]
                         value, typ = self.experiment.termination["capacity"]
                         if typ == "Ah":
                             capacity_stop = value
@@ -803,7 +801,7 @@ class Simulation:
                         capacity_stop = None
 
                 if capacity_stop is not None:
-                    capacity_now = cycle_summary_variables["Theoretical capacity [A.h]"]
+                    capacity_now = cycle_summary_variables["Capacity [A.h]"]
                     if capacity_now > capacity_stop:
                         pybamm.logger.notice(
                             f"Capacity is now {capacity_now:.3f} Ah "
