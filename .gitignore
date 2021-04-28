@@ -94,7 +94,6 @@ CMakeFiles
 Makefile
 cmake_install.cmake
 *.so
-*.json
 
 third-party/pybind11
 pybind11/
@@ -111,3 +110,5 @@ setup.log
 # Julia
 Manifest.toml
 
+# vcpkg
+vcpkg_installed/
