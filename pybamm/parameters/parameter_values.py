@@ -802,7 +802,7 @@ class ParameterValues:
 
         df = pd.DataFrame(parameter_output)
         df = df.transpose()
-        df.to_csv(filename, header=None)
+        df.to_csv(filename, header=['Value'], index_label="Name [units]")
 
     def print_parameters(self, parameters, output_file=None):
         """
