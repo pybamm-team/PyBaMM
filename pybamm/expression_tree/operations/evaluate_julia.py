@@ -865,7 +865,8 @@ def get_julia_mtk_model(model, geometry=None, tspan=None):
     mtk_str += "@variables"
     for var in variables:
         mtk_str += f" {variable_id_to_short_name[var.id]}(..)"
-        dep_vars.append(variable_id_to_short_name[var.id])
+        dep_var = variable_id_to_short_name[var.id] + var_to_ind_vars[var.id]
+        dep_vars.append(dep_var)
     mtk_str += "\n"
 
     # Define derivatives
@@ -1048,7 +1049,10 @@ def get_julia_mtk_model(model, geometry=None, tspan=None):
 
         # Domains
         mtk_str += "\n"
-        mtk_str += f"t_domain = IntervalDomain({tspan[0]}, {tspan[1]})\n"
+        tpsan_str = ",".join(
+            map(lambda x: f"{x / model.timescale.evaluate():.3f}", tspan)
+        )
+        mtk_str += f"t_domain = IntervalDomain({tpsan_str})\n"
         domains = "domains = [\n   t in t_domain,\n"
         for domain, symbol in domain_name_to_symbol.items():
             limits = domain_name_to_limits[tuple(domain)]
