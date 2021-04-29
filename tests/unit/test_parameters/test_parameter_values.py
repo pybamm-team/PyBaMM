@@ -756,13 +756,14 @@ class TestParameterValues(unittest.TestCase):
         c = pybamm.Parameter("c")
         self.assertEqual(parameter_values.evaluate(a), 1)
         self.assertEqual(parameter_values.evaluate(a + (b * c)), 7)
+        d = pybamm.Parameter("a") + pybamm.Parameter("b") * pybamm.Array([4, 5])
+        np.testing.assert_array_equal(
+            parameter_values.evaluate(d), np.array([9, 11])[:, np.newaxis]
+        )
 
         y = pybamm.StateVector(slice(0, 1))
         with self.assertRaises(ValueError):
             parameter_values.evaluate(y)
-        array = pybamm.Array(np.array([1, 2, 3]))
-        with self.assertRaises(ValueError):
-            parameter_values.evaluate(array)
 
     def test_export_csv(self):
         def some_function(self):
