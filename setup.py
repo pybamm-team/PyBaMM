@@ -130,7 +130,7 @@ def compile_KLU():
         )
         logger.info(msg)
 
-    return CMakeFound and PyBind11Found and (not windows)
+    return CMakeFound and PyBind11Found
 
 
 # Build the list of package data files to be included in the PyBaMM package.
@@ -164,8 +164,8 @@ ext_modules = [idaklu_ext] if compile_KLU() else []
 jax_dependencies = []
 if system() != "Windows":
     jax_dependencies = [
-        "jax==0.2.5",
-        "jaxlib==0.1.57",
+        "jax==0.2.12",
+        "jaxlib==0.1.65",
     ]
 
 

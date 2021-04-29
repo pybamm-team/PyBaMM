@@ -9,7 +9,7 @@ class TestYang2017(unittest.TestCase):
     def test_load_params(self):
         negative_electrode = pybamm.ParameterValues({}).read_parameters_csv(
             pybamm.get_parameters_filepath(
-                "input/parameters/lithium-ion/negative_electrodes/graphite_Yang2017/"
+                "input/parameters/lithium_ion/negative_electrodes/graphite_Yang2017/"
                 "parameters.csv"
             )
         )
@@ -17,7 +17,7 @@ class TestYang2017(unittest.TestCase):
 
         positive_electrode = pybamm.ParameterValues({}).read_parameters_csv(
             pybamm.get_parameters_filepath(
-                "input/parameters/lithium-ion/positive_electrodes/nmc_Yang2017/"
+                "input/parameters/lithium_ion/positive_electrodes/nmc_Yang2017/"
                 "parameters.csv"
             )
         )
@@ -25,7 +25,7 @@ class TestYang2017(unittest.TestCase):
 
         electrolyte = pybamm.ParameterValues({}).read_parameters_csv(
             pybamm.get_parameters_filepath(
-                "input/parameters/lithium-ion/electrolytes/lipf6_Ecker2015/"
+                "input/parameters/lithium_ion/electrolytes/lipf6_Ecker2015/"
                 + "parameters.csv"
             )
         )
@@ -33,7 +33,7 @@ class TestYang2017(unittest.TestCase):
 
         cell = pybamm.ParameterValues({}).read_parameters_csv(
             pybamm.get_parameters_filepath(
-                "input/parameters/lithium-ion/cells/Yang2017/parameters.csv"
+                "input/parameters/lithium_ion/cells/Yang2017/parameters.csv"
             )
         )
         self.assertAlmostEqual(cell["Negative current collector thickness [m]"], 25e-6)

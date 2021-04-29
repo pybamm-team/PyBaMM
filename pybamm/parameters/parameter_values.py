@@ -45,7 +45,7 @@ class ParameterValues:
     >>> param = pybamm.ParameterValues(values)
     >>> param["some parameter"]
     1
-    >>> file = "input/parameters/lithium-ion/cells/kokam_Marquis2019/parameters.csv"
+    >>> file = "input/parameters/lithium_ion/cells/kokam_Marquis2019/parameters.csv"
     >>> values_path = pybamm.get_parameters_filepath(file)
     >>> param = pybamm.ParameterValues(values=values_path)
     >>> param["Negative current collector thickness [m]"]
@@ -776,14 +776,14 @@ class ParameterValues:
 
         Returns
         -------
-        number of array
+        number or array
             The evaluated symbol
         """
         processed_symbol = self.process_symbol(symbol)
-        if processed_symbol.evaluates_to_constant_number():
+        if processed_symbol.is_constant():
             return processed_symbol.evaluate()
         else:
-            raise ValueError("symbol must evaluate to a constant scalar")
+            raise ValueError("symbol must evaluate to a constant scalar or array")
 
     def _ipython_key_completions_(self):
         return list(self._dict_items.keys())

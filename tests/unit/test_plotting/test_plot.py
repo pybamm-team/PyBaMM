@@ -1,13 +1,18 @@
 import pybamm
 import unittest
 import numpy as np
+import matplotlib.pyplot as plt
 
 
 class TestPlot(unittest.TestCase):
     def test_plot(self):
         x = pybamm.Array(np.array([0, 3, 10]))
         y = pybamm.Array(np.array([6, 16, 78]))
-        pybamm.plot(x, y, xlabel="x", ylabel="y", title="title", testing=True)
+        pybamm.plot(x, y, testing=True)
+
+        _, ax = plt.subplots()
+        ax_out = pybamm.plot(x, y, ax=ax, testing=True)
+        self.assertEqual(ax_out, ax)
 
     def test_plot_fail(self):
         x = pybamm.Array(np.array([0]))
@@ -22,10 +27,14 @@ class TestPlot(unittest.TestCase):
         X, Y = pybamm.meshgrid(x, y)
 
         # plot with array directly
-        pybamm.plot2D(x, y, Y, xlabel="x", ylabel="y", title="title", testing=True)
+        pybamm.plot2D(x, y, Y, testing=True)
 
         # plot with meshgrid
-        pybamm.plot2D(X, Y, Y, xlabel="x", ylabel="y", title="title", testing=True)
+        pybamm.plot2D(X, Y, Y, testing=True)
+
+        _, ax = plt.subplots()
+        ax_out = pybamm.plot2D(X, Y, Y, ax=ax, testing=True)
+        self.assertEqual(ax_out, ax)
 
     def test_plot2D_fail(self):
         x = pybamm.Array(np.array([0]))

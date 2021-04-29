@@ -35,7 +35,7 @@ class TestLandesfeind(unittest.TestCase):
         for solvent in ["EC_DMC_1_1", "EC_EMC_3_7", "EMC_FEC_19_1"]:
             root = pybamm.root_dir()
             p = (
-                "pybamm/input/parameters/lithium-ion/electrolytes/lipf6_"
+                "pybamm/input/parameters/lithium_ion/electrolytes/lipf6_"
                 + solvent
                 + "_Landesfeind2019/"
             )

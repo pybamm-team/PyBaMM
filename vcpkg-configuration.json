@@ -1,0 +1,9 @@
+{
+  "registries": [
+    {
+      "kind": "git",
+      "repository": "https://github.com/pybamm-team/sundials-vcpkg-registry.git",
+      "packages": [ "sundials" ]
+    }
+  ]
+}
