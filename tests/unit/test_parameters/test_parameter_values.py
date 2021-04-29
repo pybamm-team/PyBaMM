@@ -29,7 +29,7 @@ class TestParameterValues(unittest.TestCase):
                 "pybamm",
                 "input",
                 "parameters",
-                "lithium-ion",
+                "lithium_ion",
                 "positive_electrodes",
                 "lico2_Marquis2019",
                 "parameters.csv",
@@ -47,7 +47,7 @@ class TestParameterValues(unittest.TestCase):
 
         # from file
         param = pybamm.ParameterValues(
-            "lithium-ion/positive_electrodes/lico2_Marquis2019/" + "parameters.csv"
+            "lithium_ion/positive_electrodes/lico2_Marquis2019/" + "parameters.csv"
         )
         self.assertEqual(param["Positive electrode porosity"], 0.3)
 
@@ -69,7 +69,7 @@ class TestParameterValues(unittest.TestCase):
     def test_update_from_chemistry(self):
         # incomplete chemistry
         with self.assertRaisesRegex(KeyError, "must provide 'cell' parameters"):
-            pybamm.ParameterValues(chemistry={"chemistry": "lithium-ion"})
+            pybamm.ParameterValues(chemistry={"chemistry": "lithium_ion"})
 
     def test_update(self):
         param = pybamm.ParameterValues({"a": 1})
@@ -471,7 +471,7 @@ class TestParameterValues(unittest.TestCase):
                 "pybamm",
                 "input",
                 "parameters",
-                "lithium-ion",
+                "lithium_ion",
                 "positive_electrodes",
                 "lico2_Marquis2019",
             ),
