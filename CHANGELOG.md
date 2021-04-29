@@ -2,6 +2,8 @@
 
 ## Features
 
+-   `plot` and `plot2D` now take and return a matplotlib Axis to allow for easier customization ([#1472](https://github.com/pybamm-team/PyBaMM/pull/1472))
+-   `ParameterValues.evaluate` can now return arrays to allow function parameters to be easily evaluated ([#1472](https://github.com/pybamm-team/PyBaMM/pull/1472))
 -   Added option to save only specific cycle numbers when simulating an `Experiment` ([#1459](https://github.com/pybamm-team/PyBaMM/pull/1459))
 -   Added capacity-based termination conditions when simulating an `Experiment` ([#1459](https://github.com/pybamm-team/PyBaMM/pull/1459))
 -   Added "summary variables" to track degradation over several cycles ([#1459](https://github.com/pybamm-team/PyBaMM/pull/1459))
@@ -15,6 +17,11 @@
 -   Improved how the CasADi solver's "safe" mode finds events ([#1450](https://github.com/pybamm-team/PyBaMM/pull/1450))
 -   Perform more automatic simplifications of the expression tree ([#1449](https://github.com/pybamm-team/PyBaMM/pull/1449))
 -   Reduce time taken to hash a sparse `Matrix` object ([#1449](https://github.com/pybamm-team/PyBaMM/pull/1449))
+
+## Bug fixes
+
+## Breaking changes
+-   Renamed `lithium-ion` folder to `lithium_ion` and `lead-acid` folder to `lead_acid` in parameters ([#1464](https://github.com/pybamm-team/PyBaMM/pull/1464))
 
 # [v0.4.0](https://github.com/pybamm-team/PyBaMM/tree/v0.4.0) - 2021-03-28
 
