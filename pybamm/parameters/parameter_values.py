@@ -268,6 +268,9 @@ class ParameterValues:
         path : string, optional
             Path from which to load functions
         """
+        # check if values is not a dictionary
+        if not isinstance(values, dict):
+            values = values._dict_items
         # check parameter values
         self.check_parameter_values(values)
         # update
