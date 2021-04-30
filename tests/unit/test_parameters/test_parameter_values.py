@@ -74,8 +74,10 @@ class TestParameterValues(unittest.TestCase):
     def test_update(self):
         # converts to dict if not
         param = pybamm.ParameterValues(chemistry=pybamm.parameter_sets.Chen2020)
-        param_from_csv = pybamm.ParameterValues("lithium_ion/negative_electrodes/graphite_Chen2020/parameters.csv")
-        param.update(param_from_csv) 
+        param_from_csv = pybamm.ParameterValues(
+            "lithium_ion/negative_electrodes/graphite_Chen2020/parameters.csv"
+        )
+        param.update(param_from_csv)
         # equate values
         param = pybamm.ParameterValues({"a": 1})
         self.assertEqual(param["a"], 1)
