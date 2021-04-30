@@ -397,7 +397,9 @@ class BaseModel(object):
                     )
                 if isinstance(solution, pybamm.Solution):
                     final_state = final_state.data
-                if final_state.ndim == 1:
+                if final_state.ndim == 0:
+                    final_state_eval = np.array([final_state])
+                elif final_state.ndim == 1:
                     final_state_eval = final_state[-1:]
                 elif final_state.ndim == 2:
                     final_state_eval = final_state[:, -1]
