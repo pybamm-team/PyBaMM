@@ -323,7 +323,7 @@ class BaseModel(object):
             + [
                 x[side][0]
                 for x in self.boundary_conditions.values()
-                for side in ["left", "right"]
+                for side in x.keys()
             ]
             + list(self.variables.values())
             + [event.expression for event in self.events]
