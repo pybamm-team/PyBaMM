@@ -67,7 +67,6 @@ class TestUtil(unittest.TestCase):
             "process_symbol_test_function.py",
         )
         func = pybamm.load_function(rel_test_path)
-        import tests.unit.test_parameters.data.process_symbol_test_function
         self.assertEqual(
             func,
             tests.unit.test_parameters.data.process_symbol_test_function.process_symbol_test_function,  # noqa
