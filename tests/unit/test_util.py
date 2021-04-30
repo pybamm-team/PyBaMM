@@ -58,6 +58,21 @@ class TestUtil(unittest.TestCase):
             tests.unit.test_parameters.data.process_symbol_test_function.process_symbol_test_function,  # noqa
         )
 
+        # Test function load with relative path
+        rel_test_path = os.path.join(
+            "tests",
+            "unit",
+            "test_parameters",
+            "data",
+            "process_symbol_test_function.py",
+        )
+        func = pybamm.load_function(rel_test_path)
+        import tests.unit.test_parameters.data.process_symbol_test_function
+        self.assertEqual(
+            func,
+            tests.unit.test_parameters.data.process_symbol_test_function.process_symbol_test_function,  # noqa
+        )
+
     def test_rmse(self):
         self.assertEqual(pybamm.rmse(np.ones(5), np.zeros(5)), 1)
         self.assertEqual(pybamm.rmse(2 * np.ones(5), np.zeros(5)), 2)
