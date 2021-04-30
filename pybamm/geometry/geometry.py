@@ -34,6 +34,7 @@ class Geometry(dict):
         self._parameters = None
 
     def print_parameter_info(self):
+        "Prints all the parameters' information"
         for param in self.parameters:
             print(param.name + " (Parameter)")
 

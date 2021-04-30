@@ -295,6 +295,7 @@ class TestAlgebraicSolver(unittest.TestCase):
         # Solve
         solver = pybamm.AlgebraicSolver()
         solution = solver.solve(model, np.linspace(0, 1, 10), inputs={"value": 7})
+        model.print_parameter_info()
         np.testing.assert_array_equal(solution.y, -7)
 
 
