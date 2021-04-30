@@ -303,7 +303,15 @@ class TestParameterValues(unittest.TestCase):
         parameter_values = pybamm.ParameterValues(
             {
                 "a": 3,
-                "func": pybamm.load_function("process_symbol_test_function.py"),
+                "func": pybamm.load_function(
+                    os.path.join(
+                        "tests",
+                        "unit",
+                        "test_parameters",
+                        "data",
+                        "process_symbol_test_function.py",
+                    )
+                ),
                 "const": 254,
                 "float_func": lambda x: 42,
                 "mult": pybamm.InputParameter("b") * 5,
@@ -485,9 +493,7 @@ class TestParameterValues(unittest.TestCase):
         processed_func = parameter_values.process_symbol(func)
         processed_interp = parameter_values.process_symbol(interp)
         np.testing.assert_array_almost_equal(
-            processed_func.evaluate(),
-            processed_interp.evaluate(),
-            decimal=4,
+            processed_func.evaluate(), processed_interp.evaluate(), decimal=4
         )
 
         # process differentiated function parameter
@@ -496,9 +502,7 @@ class TestParameterValues(unittest.TestCase):
         processed_diff_func = parameter_values.process_symbol(diff_func)
         processed_diff_interp = parameter_values.process_symbol(diff_interp)
         np.testing.assert_array_almost_equal(
-            processed_diff_func.evaluate(),
-            processed_diff_interp.evaluate(),
-            decimal=2,
+            processed_diff_func.evaluate(), processed_diff_interp.evaluate(), decimal=2
         )
 
     def test_process_integral_broadcast(self):

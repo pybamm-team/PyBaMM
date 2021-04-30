@@ -1,4 +1,4 @@
-from electrolyte_base_Landesfeind2019 import (
+from .electrolyte_base_Landesfeind2019 import (
     electrolyte_conductivity_base_Landesfeind2019,
 )
 import numpy as np
