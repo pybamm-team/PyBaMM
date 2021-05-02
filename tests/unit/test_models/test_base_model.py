@@ -420,24 +420,6 @@ class TestBaseModel(unittest.TestCase):
         with self.assertRaisesRegex(pybamm.ModelError, "initial condition"):
             model.check_well_posedness()
 
-        # Model with bad boundary conditions - Dirichlet (expect assertion error)
-        d = pybamm.Variable("d", domain=whole_cell)
-        model.initial_conditions = {c: 3}
-        model.boundary_conditions = {
-            d: {"left": (0, "Dirichlet"), "right": (0, "Dirichlet")}
-        }
-        with self.assertRaisesRegex(pybamm.ModelError, "boundary condition"):
-            model.check_well_posedness()
-
-        # Model with bad boundary conditions - Neumann (expect assertion error)
-        d = pybamm.Variable("d", domain=whole_cell)
-        model.initial_conditions = {c: 3}
-        model.boundary_conditions = {
-            d: {"left": (0, "Neumann"), "right": (0, "Neumann")}
-        }
-        with self.assertRaisesRegex(pybamm.ModelError, "boundary condition"):
-            model.check_well_posedness()
-
         # Algebraic well-posed model
         whole_cell = ["negative electrode", "separator", "positive electrode"]
         model = pybamm.BaseModel()
@@ -450,13 +432,6 @@ class TestBaseModel(unittest.TestCase):
             c: {"left": (0, "Neumann"), "right": (0, "Neumann")}
         }
         model.check_well_posedness()
-
-        # Algebraic model with bad boundary conditions
-        model.boundary_conditions = {
-            d: {"left": (0, "Dirichlet"), "right": (0, "Dirichlet")}
-        }
-        with self.assertRaisesRegex(pybamm.ModelError, "boundary condition"):
-            model.check_well_posedness()
 
     def test_check_well_posedness_output_variables(self):
         model = pybamm.BaseModel()
