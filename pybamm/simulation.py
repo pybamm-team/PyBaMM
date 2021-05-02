@@ -748,8 +748,7 @@ class Simulation:
                     steps.append(step_solution)
                     current_solution = step_solution
 
-                    if save_this_cycle:
-                        self._solution = self._solution + step_solution
+                    cycle_solution = cycle_solution + step_solution
 
                     # Only allow events specified by experiment
                     if not (
@@ -778,6 +777,9 @@ class Simulation:
                         "or reducing the period.\n\n"
                     )
                     break
+
+                if save_this_cycle:
+                    self._solution = self._solution + cycle_solution
 
                 # At the final step of the inner loop we save the cycle
                 cycle_solution, cycle_summary_variables = pybamm.make_cycle_solution(

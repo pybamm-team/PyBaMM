@@ -917,15 +917,15 @@ class TestBaseModel(unittest.TestCase):
         ):
             model.set_initial_conditions_from({"var": np.ones((5, 6, 7, 8))})
 
-        var_concat_neg = pybamm.Variable("var_concat_neg", domain="negative electrode")
-        var_concat_sep = pybamm.Variable("var_concat_sep", domain="separator")
+        var_concat_neg = pybamm.Variable("var concat neg", domain="negative electrode")
+        var_concat_sep = pybamm.Variable("var concat sep", domain="separator")
         var_concat = pybamm.concatenation(var_concat_neg, var_concat_sep)
         model.algebraic = {var_concat: -var_concat}
         model.initial_conditions = {var_concat: 1}
         with self.assertRaisesRegex(
             NotImplementedError, "Variable in concatenation must be 1D"
         ):
-            model.set_initial_conditions_from({"var_concat_neg": np.ones((5, 6, 7))})
+            model.set_initial_conditions_from({"var concat neg": np.ones((5, 6, 7))})
 
         # Inconsistent model and variable names
         model = pybamm.BaseModel()
@@ -941,50 +941,6 @@ class TestBaseModel(unittest.TestCase):
         model.initial_conditions = {var: pybamm.Scalar(1)}
         with self.assertRaisesRegex(pybamm.ModelError, "must appear in the solution"):
             model.set_initial_conditions_from({"wrong var": 2})
-
-
-class TestStandardBatteryBaseModel(unittest.TestCase):
-    def test_default_solver(self):
-        model = pybamm.BaseBatteryModel()
-        self.assertIsInstance(model.default_solver, pybamm.CasadiSolver)
-
-        # check that default_solver gives you a new solver, not an internal object
-        solver = model.default_solver
-        solver = pybamm.BaseModel()
-        self.assertIsInstance(model.default_solver, pybamm.CasadiSolver)
-        self.assertIsInstance(solver, pybamm.BaseModel)
-
-        # check that adding algebraic variables gives DAE solver
-        a = pybamm.Variable("a")
-        model.algebraic = {a: a - 1}
-        self.assertIsInstance(
-            model.default_solver, (pybamm.IDAKLUSolver, pybamm.CasadiSolver)
-        )
-
-        # Check that turning off jacobian gives casadi solver
-        model.use_jacobian = False
-        self.assertIsInstance(model.default_solver, pybamm.CasadiSolver)
-
-    def test_default_parameters(self):
-        # check parameters are read in ok
-        model = pybamm.BaseBatteryModel()
-        self.assertEqual(
-            model.default_parameter_values["Reference temperature [K]"], 298.15
-        )
-
-        # change path and try again
-
-        cwd = os.getcwd()
-        os.chdir("..")
-        model = pybamm.BaseBatteryModel()
-        self.assertEqual(
-            model.default_parameter_values["Reference temperature [K]"], 298.15
-        )
-        os.chdir(cwd)
-
-    def test_timescale(self):
-        model = pybamm.BaseModel()
-        self.assertEqual(model.timescale.evaluate(), 1)
 
 
 if __name__ == "__main__":

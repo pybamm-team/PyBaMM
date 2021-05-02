@@ -363,8 +363,8 @@ def intersect(s1, s2):
     if len(all_intersects) == 0:
         return ""
     intersect = max(all_intersects, key=len)
-    # lstrip removes leading white space
-    return intersect.lstrip()
+    # remove leading and trailing white space
+    return intersect.lstrip().rstrip()
 
 
 def simplified_concatenation(*children):

@@ -11,7 +11,7 @@ class TestBaseModel(unittest.TestCase):
     def test_public_functions(self):
         param = pybamm.LithiumIonParameters()
 
-        a = pybamm.Scalar(0)
+        a = pybamm.Scalar(0.5)
         variables = {
             "Negative electrode open circuit potential": a,
             "Negative particle surface concentration": a,

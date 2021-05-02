@@ -36,10 +36,10 @@ Lithium-ion parameter sets
 """
 
 AUTHOR_YEAR_DICT = {
-    "lithium-ion": [
+    "lithium_ion": [
         ("Prada2013", ["Chen2020", "Lain2019", "Prada2013"]),
     ],
-    "lead-acid": [("Sulzer2019", ["Sulzer2019physical"])],
+    "lead_acid": [("Sulzer2019", ["Sulzer2019physical"])],
 }
 
 

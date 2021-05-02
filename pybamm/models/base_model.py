@@ -385,7 +385,7 @@ class BaseModel(object):
         if isinstance(solution, pybamm.Solution):
             solution = solution.last_state
         for var, equation in model.initial_conditions.items():
-            if isinstance(var, (pybamm.Variable, pybamm.ConcatenationVariable)):
+            if isinstance(var, pybamm.Variable):
                 try:
                     final_state = solution[var.name]
                 except KeyError as e:
@@ -397,7 +397,7 @@ class BaseModel(object):
                     )
                 if isinstance(solution, pybamm.Solution):
                     final_state = final_state.data
-                if isinstance(final_state, numbers.Number):
+                if final_state.ndim == 0:
                     final_state_eval = np.array([final_state])
                 elif final_state.ndim == 1:
                     final_state_eval = final_state[-1:]
@@ -457,7 +457,7 @@ class BaseModel(object):
             equations = list(model.initial_conditions.values())
             # sort equations according to slices
             sorted_equations = [eq for _, eq in sorted(zip(slices, equations))]
-            model.concatenated_initial_conditions = pybamm.numpy_concatenation(
+            model.concatenated_initial_conditions = pybamm.NumpyConcatenation(
                 *sorted_equations
             )
 
@@ -937,7 +937,7 @@ class BaseModel(object):
     @property
     def default_solver(self):
         """Return default solver based on whether model is ODE/DAE or algebraic"""
-        if len(self.rhs) == 0:
+        if len(self.rhs) == 0 and len(self.algebraic) != 0:
             return pybamm.CasadiAlgebraicSolver()
         else:
             return pybamm.CasadiSolver(mode="safe")

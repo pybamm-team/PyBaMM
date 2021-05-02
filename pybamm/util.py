@@ -13,6 +13,7 @@ import pathlib
 import pickle
 import pybamm
 import numbers
+import warnings
 from collections import defaultdict
 
 
@@ -243,6 +244,19 @@ def load_function(filename):
 
     if not filename.endswith(".py"):
         raise ValueError("Expected filename.py, but got {}".format(filename))
+
+    if "lead-acid" in filename:
+        warnings.simplefilter("always", DeprecationWarning)
+        warnings.warn(
+            "lead-acid is deprecated, use lead_acid instead", DeprecationWarning
+        )
+        filename = filename.replace("lead-acid", "lead_acid")
+    if "lithium-ion" in filename:
+        warnings.simplefilter("always", DeprecationWarning)
+        warnings.warn(
+            "lithium-ion is deprecated, use lithium_ion instead", DeprecationWarning
+        )
+        filename = filename.replace("lithium-ion", "lithium_ion")
 
     # If it's an absolute path, find that exact file
     if os.path.isabs(filename):

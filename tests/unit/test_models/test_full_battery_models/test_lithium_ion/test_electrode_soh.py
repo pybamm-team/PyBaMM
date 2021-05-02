@@ -32,10 +32,10 @@ class TestElectrodeSOH(unittest.TestCase):
                 "n_Li": n_Li,
             },
         )
-        self.assertAlmostEqual(sol["Up(y_100) - Un(x_100)"].data[0], V_max)
-        self.assertAlmostEqual(sol["Up(y_0) - Un(x_0)"].data[0], V_min)
-        self.assertAlmostEqual(sol["n_Li_100"].data[0], n_Li)
-        self.assertAlmostEqual(sol["n_Li_0"].data[0], n_Li)
+        self.assertAlmostEqual(sol["Up(y_100) - Un(x_100)"].data[0], V_max, places=5)
+        self.assertAlmostEqual(sol["Up(y_0) - Un(x_0)"].data[0], V_min, places=5)
+        self.assertAlmostEqual(sol["n_Li_100"].data[0], n_Li, places=5)
+        self.assertAlmostEqual(sol["n_Li_0"].data[0], n_Li, places=5)
 
 
 if __name__ == "__main__":
