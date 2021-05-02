@@ -63,7 +63,7 @@ class ThermalParameters:
 
     def T_amb_dim(self, t):
         """Dimensional ambient temperature"""
-        return pybamm.FunctionParameter("Ambient temperature [K]", {"Times [s]": t})
+        return pybamm.FunctionParameter("Ambient temperature [K]", {"Time [s]": t})
 
     def rho_cn_dim(self, T):
         """Negative current collector density [kg.m-3]"""

@@ -33,6 +33,10 @@ class Geometry(dict):
         super().__init__(**geometry)
         self._parameters = None
 
+    def print_parameter_info(self):
+        for param in self.parameters:
+            print(param.name + " (Parameter)")
+
     @property
     def parameters(self):
         """Returns all the parameters in the geometry"""
