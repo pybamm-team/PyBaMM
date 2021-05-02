@@ -17,7 +17,7 @@ class TestSPMe(unittest.TestCase):
         model = pybamm.lithium_ion.SPMe(model_options)
         self.assertEqual(
             model.external_variables[0].id,
-            model.variables["Electrolyte concentration"].id,
+            model.variables["Porosity times concentration"].id,
         )
 
         # a variable
