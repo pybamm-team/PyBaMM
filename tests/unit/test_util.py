@@ -45,31 +45,34 @@ class TestUtil(unittest.TestCase):
         # Test function load with absolute path
         abs_test_path = os.path.join(
             pybamm.root_dir(),
-            "tests",
-            "unit",
-            "test_parameters",
-            "data",
-            "process_symbol_test_function.py",
+            "pybamm",
+            "input",
+            "parameters",
+            "lithium_ion",
+            "negative_electrodes",
+            "graphite_Chen2020",
+            "graphite_LGM50_electrolyte_exchange_current_density_Chen2020.py",
         )
         func = pybamm.load_function(abs_test_path)
-        import tests.unit.test_parameters.data.process_symbol_test_function
         self.assertEqual(
             func,
-            tests.unit.test_parameters.data.process_symbol_test_function.process_symbol_test_function,  # noqa
+            pybamm.input.parameters.lithium_ion.negative_electrodes.graphite_Chen2020.graphite_LGM50_electrolyte_exchange_current_density_Chen2020.graphite_LGM50_electrolyte_exchange_current_density_Chen2020,  # noqa
         )
 
         # Test function load with relative path
         rel_test_path = os.path.join(
-            "tests",
-            "unit",
-            "test_parameters",
-            "data",
-            "process_symbol_test_function.py",
+            "pybamm",
+            "input",
+            "parameters",
+            "lithium_ion",
+            "negative_electrodes",
+            "graphite_Chen2020",
+            "graphite_LGM50_electrolyte_exchange_current_density_Chen2020.py",
         )
         func = pybamm.load_function(rel_test_path)
         self.assertEqual(
             func,
-            tests.unit.test_parameters.data.process_symbol_test_function.process_symbol_test_function,  # noqa
+            pybamm.input.parameters.lithium_ion.negative_electrodes.graphite_Chen2020.graphite_LGM50_electrolyte_exchange_current_density_Chen2020.graphite_LGM50_electrolyte_exchange_current_density_Chen2020,  # noqa
         )
 
     def test_rmse(self):

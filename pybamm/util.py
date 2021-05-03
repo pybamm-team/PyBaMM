@@ -239,9 +239,11 @@ def load_function(filename):
     function
         The python function loaded from the file.
     """
+    # Remove `.py` from the file name
     if filename.endswith(".py"):
         filename = filename.replace(".py", "")
 
+    # Replace `lead-acid` with `lead_acid`
     if "lead-acid" in filename:
         warnings.simplefilter("always", DeprecationWarning)
         warnings.warn(
@@ -249,6 +251,7 @@ def load_function(filename):
         )
         filename = filename.replace("lead-acid", "lead_acid")
 
+    # Replace `lithium-ion` with `lithium_ion`
     if "lithium-ion" in filename:
         warnings.simplefilter("always", DeprecationWarning)
         warnings.warn(
@@ -256,10 +259,12 @@ def load_function(filename):
         )
         filename = filename.replace("lithium-ion", "lithium_ion")
 
+    # Assign path to _ and filename to tail
     _, tail = os.path.split(filename)
 
-    if "PyBaMM" in filename:
-        root_path = filename[filename.rfind("PyBaMM") :][7:]
+    # Strip absolute path to pybamm/input/exapmle.py
+    if "pybamm" in filename:
+        root_path = filename[filename.rfind("pybamm") :]
     else:
         root_path = filename
 
