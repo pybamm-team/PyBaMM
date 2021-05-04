@@ -653,25 +653,6 @@ class BaseModel(object):
                     """no initial condition given for variable '{}'""".format(var)
                 )
 
-        # Boundary conditions
-        for var, eqn in {**self.rhs, **self.algebraic}.items():
-            if eqn.has_symbol_of_classes(
-                (pybamm.Gradient, pybamm.Divergence)
-            ) and not eqn.has_symbol_of_classes(pybamm.Integral):
-                # I have relaxed this check for now so that the lumped temperature
-                # equation doesn't raise errors (this has and average in it)
-
-                # Variable must be in the boundary conditions
-                if not any(
-                    var.id == x.id
-                    for symbol in self.boundary_conditions.keys()
-                    for x in symbol.pre_order()
-                ):
-                    raise pybamm.ModelError(
-                        "no boundary condition given for "
-                        "variable '{}' with equation '{}'.".format(var, eqn)
-                    )
-
     def check_default_variables_dictionaries(self):
         """Check that the right variables are provided."""
         missing_vars = []

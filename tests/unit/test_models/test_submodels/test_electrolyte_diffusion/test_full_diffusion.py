@@ -18,6 +18,9 @@ class TestFull(unittest.TestCase):
         )
         variables = {
             "Porosity": a,
+            "Negative electrode porosity": a,
+            "Separator porosity": a,
+            "Positive electrode porosity": a,
             "Electrolyte tortuosity": a,
             "Porosity change": a,
             "Volume-averaged velocity": a,
