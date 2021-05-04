@@ -23,9 +23,7 @@ class Interpolant(pybamm.Function):
         Name of the interpolant. Default is None, in which case the name "interpolating
         function" is given.
     interpolator : str, optional
-        Which interpolator to use ("pchip" or "cubic spline"). Note that whichever
-        interpolator is used must be differentiable (for ``Interpolator._diff``).
-        Default is "cubic spline". Note that "pchip" may give slow results.
+        Which interpolator to use ("linear", "pchip", or "cubic spline").
     extrapolate : bool, optional
         Whether to extrapolate for points that are outside of the parametrisation
         range, or return NaN (following default behaviour from scipy). Default is True.
@@ -43,8 +41,8 @@ class Interpolant(pybamm.Function):
         extrapolate=True,
         entries_string=None,
     ):
+        interpolator = interpolator or "linear"
         if isinstance(x, (tuple, list)) and len(x) == 2:
-            interpolator = interpolator or "linear"
             if interpolator != "linear":
                 raise ValueError(
                     "interpolator should be 'linear' if x is two-dimensional"
@@ -53,7 +51,6 @@ class Interpolant(pybamm.Function):
             if y.ndim != 2:
                 raise ValueError("y should be two-dimensional if len(x)=2")
         else:
-            interpolator = interpolator or "cubic spline"
             if isinstance(x, (tuple, list)):
                 x1 = x[0]
             else:
