@@ -21,6 +21,8 @@
 ## Bug fixes
 
 ## Breaking changes
+
+-   Changed the variable in the full diffusion model from "Electrolyte concentration" to "Porosity times concentration" ([#1476](https://github.com/pybamm-team/PyBaMM/pull/1476))
 -   Renamed `lithium-ion` folder to `lithium_ion` and `lead-acid` folder to `lead_acid` in parameters ([#1464](https://github.com/pybamm-team/PyBaMM/pull/1464))
 
 # [v0.4.0](https://github.com/pybamm-team/PyBaMM/tree/v0.4.0) - 2021-03-28
