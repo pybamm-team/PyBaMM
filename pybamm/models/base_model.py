@@ -276,7 +276,7 @@ class BaseModel(object):
         """Returns all the parameters in the model"""
         if self._parameters is None:
             self._parameters = self._find_symbols(
-                (pybamm.Parameter, pybamm.InputParameter)
+                (pybamm.Parameter, pybamm.InputParameter, pybamm.FunctionParameter)
             )
         return self._parameters
 
