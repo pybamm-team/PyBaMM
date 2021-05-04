@@ -700,7 +700,7 @@ def get_cycle_summary_variables(cycle_solution, esoh_sim):
         n_Li = last_state["Total lithium in particles [mol]"].data[0]
         x_100_init = np.max(cycle_solution["Negative electrode SOC"].data)
         # make sure x_0 > 0
-        C_init = np.minimum(C_n * x_100_init - 0.1, max_Q - min_Q)
+        C_init = np.minimum(0.95 * (C_n * x_100_init), max_Q - min_Q)
 
         # Solve the esoh model and add outputs to the summary variables
         # temporarily turn off logger
@@ -714,7 +714,7 @@ def get_cycle_summary_variables(cycle_solution, esoh_sim):
                 esoh_sim.parameter_values["Positive electrode OCP [V]"][1][:, 0]
             )
             x_100_max = (n_Li * pybamm.constants.F.value / 3600 - y_100_min * C_p) / C_n
-            x_100_init = np.minimum(x_100_init, x_100_max - 0.01)
+            x_100_init = np.minimum(x_100_init, 0.99 * x_100_max)
         else:
             solver = None
         # Update initial conditions using the cycle solution
