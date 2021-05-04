@@ -122,7 +122,7 @@ Yang2017 = {
     "separator": "separator_Yang2017",
     "positive electrode": "nmc_Yang2017",
     "electrolyte": "lipf6_Ecker2015",
-    "experiment": "1C_discharge_from_full_Ecker2015",
+    "experiment": "1C_discharge_from_full_Yang2017",
     "sei": "yang2017_sei",
     "lithium plating": "yang2017_Li_plating",
     "citation": ["Yang2017", "Ecker2015i"],

@@ -283,8 +283,10 @@ class LithiumIonParameters:
 
         eps_s_n_av = pybamm.x_average(self.epsilon_s_n(x_n))
         eps_s_p_av = pybamm.x_average(self.epsilon_s_p(x_p))
-        self.C_n_init = eps_s_n_av * self.L_n * self.A_cc * self.c_n_max * self.F / 3600
-        self.C_p_init = eps_s_p_av * self.L_p * self.A_cc * self.c_p_max * self.F / 3600
+        self.neg_elec_loading = eps_s_n_av * self.L_n * self.c_n_max * self.F / 3600
+        self.pos_elec_loading = eps_s_p_av * self.L_p * self.c_p_max * self.F / 3600
+        self.C_n_init = self.neg_elec_loading * self.A_cc
+        self.C_p_init = self.pos_elec_loading * self.A_cc
 
         # Total lithium
         eps = pybamm.Concatenation(self.epsilon_n, self.epsilon_s, self.epsilon_p)
@@ -415,7 +417,7 @@ class LithiumIonParameters:
         # add a term to ensure that the OCP goes to infinity at 0 and -infinity at 1
         # this will not affect the OCP for most values of sto
         # see #1435
-        u_ref = u_ref - 1e-6 * (1 / sto + 1 / (sto - 1))
+        u_ref = u_ref + 1e-6 * (1 / sto + 1 / (sto - 1))
         return u_ref + (T - self.T_ref) * self.dUdT_n_dimensional(sto)
 
     def U_p_dimensional(self, sto, T):
@@ -425,7 +427,7 @@ class LithiumIonParameters:
         # add a term to ensure that the OCP goes to infinity at 0 and -infinity at 1
         # this will not affect the OCP for most values of sto
         # see #1435
-        u_ref = u_ref - 1e-6 * (1 / sto + 1 / (sto - 1))
+        u_ref = u_ref + 1e-6 * (1 / sto + 1 / (sto - 1))
         return u_ref + (T - self.T_ref) * self.dUdT_p_dimensional(sto)
 
     def dUdT_n_dimensional(self, sto):
