@@ -298,9 +298,7 @@ class ParameterValues:
             # Functions are flagged with the string "[function]"
             if isinstance(value, str):
                 if value.startswith("[function]"):
-                    loaded_value = pybamm.load_function(
-                        os.path.join(path, value[10:] + ".py")
-                    )
+                    loaded_value = pybamm.load_function(os.path.join(path, value[10:]))
                     self._dict_items[name] = loaded_value
                     values[name] = loaded_value
                 # Data is flagged with the string "[data]" or "[current data]"
