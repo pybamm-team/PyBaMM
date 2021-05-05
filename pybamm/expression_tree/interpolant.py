@@ -41,8 +41,8 @@ class Interpolant(pybamm.Function):
         extrapolate=True,
         entries_string=None,
     ):
-        interpolator = interpolator or "linear"
         if isinstance(x, (tuple, list)) and len(x) == 2:
+            interpolator = interpolator or "linear"
             if interpolator != "linear":
                 raise ValueError(
                     "interpolator should be 'linear' if x is two-dimensional"
@@ -51,6 +51,7 @@ class Interpolant(pybamm.Function):
             if y.ndim != 2:
                 raise ValueError("y should be two-dimensional if len(x)=2")
         else:
+            interpolator = interpolator or "cubic spline"
             if isinstance(x, (tuple, list)):
                 x1 = x[0]
             else:
