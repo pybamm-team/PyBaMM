@@ -373,6 +373,9 @@ class TestSymbol(unittest.TestCase):
 
         variables = {
             "Porosity": param.epsilon,
+            "Negative electrode porosity": param.epsilon_n,
+            "Separator porosity": param.epsilon_s,
+            "Positive electrode porosity": param.epsilon_p,
             "Electrolyte tortuosity": param.epsilon ** 1.5,
             "Porosity change": zero_nsp,
             "Electrolyte current density": zero_nsp,

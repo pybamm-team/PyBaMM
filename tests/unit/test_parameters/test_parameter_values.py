@@ -29,7 +29,7 @@ class TestParameterValues(unittest.TestCase):
                 "pybamm",
                 "input",
                 "parameters",
-                "lithium-ion",
+                "lithium_ion",
                 "positive_electrodes",
                 "lico2_Marquis2019",
                 "parameters.csv",
@@ -47,7 +47,7 @@ class TestParameterValues(unittest.TestCase):
 
         # from file
         param = pybamm.ParameterValues(
-            "lithium-ion/positive_electrodes/lico2_Marquis2019/" + "parameters.csv"
+            "lithium_ion/positive_electrodes/lico2_Marquis2019/" + "parameters.csv"
         )
         self.assertEqual(param["Positive electrode porosity"], 0.3)
 
@@ -69,7 +69,7 @@ class TestParameterValues(unittest.TestCase):
     def test_update_from_chemistry(self):
         # incomplete chemistry
         with self.assertRaisesRegex(KeyError, "must provide 'cell' parameters"):
-            pybamm.ParameterValues(chemistry={"chemistry": "lithium-ion"})
+            pybamm.ParameterValues(chemistry={"chemistry": "lithium_ion"})
 
     def test_update(self):
         param = pybamm.ParameterValues({"a": 1})
@@ -303,7 +303,15 @@ class TestParameterValues(unittest.TestCase):
         parameter_values = pybamm.ParameterValues(
             {
                 "a": 3,
-                "func": pybamm.load_function("process_symbol_test_function.py"),
+                "func": pybamm.load_function(
+                    os.path.join(
+                        "tests",
+                        "unit",
+                        "test_parameters",
+                        "data",
+                        "process_symbol_test_function.py",
+                    )
+                ),
                 "const": 254,
                 "float_func": lambda x: 42,
                 "mult": pybamm.InputParameter("b") * 5,
@@ -471,7 +479,7 @@ class TestParameterValues(unittest.TestCase):
                 "pybamm",
                 "input",
                 "parameters",
-                "lithium-ion",
+                "lithium_ion",
                 "positive_electrodes",
                 "lico2_Marquis2019",
             ),
@@ -485,9 +493,7 @@ class TestParameterValues(unittest.TestCase):
         processed_func = parameter_values.process_symbol(func)
         processed_interp = parameter_values.process_symbol(interp)
         np.testing.assert_array_almost_equal(
-            processed_func.evaluate(),
-            processed_interp.evaluate(),
-            decimal=4,
+            processed_func.evaluate(), processed_interp.evaluate(), decimal=4
         )
 
         # process differentiated function parameter
@@ -496,9 +502,7 @@ class TestParameterValues(unittest.TestCase):
         processed_diff_func = parameter_values.process_symbol(diff_func)
         processed_diff_interp = parameter_values.process_symbol(diff_interp)
         np.testing.assert_array_almost_equal(
-            processed_diff_func.evaluate(),
-            processed_diff_interp.evaluate(),
-            decimal=2,
+            processed_diff_func.evaluate(), processed_diff_interp.evaluate(), decimal=2
         )
 
     def test_process_integral_broadcast(self):
@@ -756,13 +760,14 @@ class TestParameterValues(unittest.TestCase):
         c = pybamm.Parameter("c")
         self.assertEqual(parameter_values.evaluate(a), 1)
         self.assertEqual(parameter_values.evaluate(a + (b * c)), 7)
+        d = pybamm.Parameter("a") + pybamm.Parameter("b") * pybamm.Array([4, 5])
+        np.testing.assert_array_equal(
+            parameter_values.evaluate(d), np.array([9, 11])[:, np.newaxis]
+        )
 
         y = pybamm.StateVector(slice(0, 1))
         with self.assertRaises(ValueError):
             parameter_values.evaluate(y)
-        array = pybamm.Array(np.array([1, 2, 3]))
-        with self.assertRaises(ValueError):
-            parameter_values.evaluate(array)
 
     def test_export_csv(self):
         def some_function(self):

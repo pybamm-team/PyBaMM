@@ -104,6 +104,9 @@ KLU_module_deps
 # setup
 setup.log
 
+# test
+test.c
+
 # tox
 .tox/
 

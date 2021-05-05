@@ -9,7 +9,7 @@ class TestMohtat(unittest.TestCase):
     def test_load_params(self):
         negative_electrode = pybamm.ParameterValues({}).read_parameters_csv(
             pybamm.get_parameters_filepath(
-                "input/parameters/lithium-ion/"
+                "input/parameters/lithium_ion/"
                 + "negative_electrodes/graphite_UMBL_Mohtat2020/parameters.csv"
             )
         )
@@ -17,7 +17,7 @@ class TestMohtat(unittest.TestCase):
 
         positive_electrode = pybamm.ParameterValues({}).read_parameters_csv(
             pybamm.get_parameters_filepath(
-                "input/parameters/lithium-ion/"
+                "input/parameters/lithium_ion/"
                 + "positive_electrodes/NMC_UMBL_Mohtat2020/parameters.csv"
             )
         )
@@ -25,7 +25,7 @@ class TestMohtat(unittest.TestCase):
 
         electrolyte = pybamm.ParameterValues({}).read_parameters_csv(
             pybamm.get_parameters_filepath(
-                "input/parameters/lithium-ion/electrolytes/LiPF6_Mohtat2020/"
+                "input/parameters/lithium_ion/electrolytes/LiPF6_Mohtat2020/"
                 + "parameters.csv"
             )
         )
@@ -33,7 +33,7 @@ class TestMohtat(unittest.TestCase):
 
         cell = pybamm.ParameterValues({}).read_parameters_csv(
             pybamm.get_parameters_filepath(
-                "input/parameters/lithium-ion/cells/UMBL_Mohtat2020/parameters.csv"
+                "input/parameters/lithium_ion/cells/UMBL_Mohtat2020/parameters.csv"
             )
         )
         self.assertAlmostEqual(

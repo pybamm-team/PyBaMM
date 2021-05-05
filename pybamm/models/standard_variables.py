@@ -29,10 +29,35 @@ class StandardVariables:
             auxiliary_domains={"secondary": "current collector"},
             bounds=(0, np.inf),
         )
-        # self.c_e = pybamm.concatenation(c_e_n, c_e_s, c_e_p)
 
         self.c_e_av = pybamm.Variable(
             "X-averaged electrolyte concentration",
+            domain="current collector",
+            bounds=(0, np.inf),
+        )
+
+        # Electrolyte porosity times concentration
+        self.eps_c_e_n = pybamm.Variable(
+            "Negative electrode porosity times concentration",
+            domain="negative electrode",
+            auxiliary_domains={"secondary": "current collector"},
+            bounds=(0, np.inf),
+        )
+        self.eps_c_e_s = pybamm.Variable(
+            "Separator porosity times concentration",
+            domain="separator",
+            auxiliary_domains={"secondary": "current collector"},
+            bounds=(0, np.inf),
+        )
+        self.eps_c_e_p = pybamm.Variable(
+            "Positive electrode porosity times concentration",
+            domain="positive electrode",
+            auxiliary_domains={"secondary": "current collector"},
+            bounds=(0, np.inf),
+        )
+
+        self.eps_c_e_av = pybamm.Variable(
+            "X-averaged porosity times concentration",
             domain="current collector",
             bounds=(0, np.inf),
         )
