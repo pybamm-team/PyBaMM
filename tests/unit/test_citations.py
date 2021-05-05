@@ -168,6 +168,14 @@ class TestCitations(unittest.TestCase):
         pybamm.active_material.VaryingFull(None, None, None)
         self.assertIn("Reniers2019", citations._papers_to_cite)
 
+    def test_mohtat_2019(self):
+        citations = pybamm.citations
+
+        citations._reset()
+        self.assertNotIn("Mohtat2019", citations._papers_to_cite)
+        pybamm.lithium_ion.ElectrodeSOH()
+        self.assertIn("Mohtat2019", citations._papers_to_cite)
+
     def test_parameter_citations(self):
         citations = pybamm.citations
 

@@ -29,6 +29,7 @@ class ElectrodeSOH(pybamm.BaseModel):
     """
 
     def __init__(self, name="Electrode-specific SOH model"):
+        pybamm.citations.register("Mohtat2019")
         super().__init__(name)
         param = pybamm.LithiumIonParameters()
 
