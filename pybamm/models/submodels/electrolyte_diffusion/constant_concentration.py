@@ -39,6 +39,19 @@ class ConstantConcentration(BaseElectrolyteDiffusion):
         return variables
 
     def get_coupled_variables(self, variables):
+        eps_n = variables["Negative electrode porosity"]
+        eps_s = variables["Separator porosity"]
+        eps_p = variables["Positive electrode porosity"]
+        c_e_n = variables["Negative electrolyte concentration"]
+        c_e_s = variables["Separator electrolyte concentration"]
+        c_e_p = variables["Positive electrolyte concentration"]
+
+        variables.update(
+            self._get_standard_porosity_times_concentration_variables(
+                eps_n * c_e_n, eps_s * c_e_s, eps_p * c_e_p
+            )
+        )
+
         c_e = variables["Electrolyte concentration"]
         eps = variables["Porosity"]
 

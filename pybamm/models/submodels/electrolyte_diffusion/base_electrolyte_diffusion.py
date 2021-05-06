@@ -78,6 +78,19 @@ class BaseElectrolyteDiffusion(pybamm.BaseSubModel):
 
         return variables
 
+    def _get_standard_porosity_times_concentration_variables(
+        self, eps_c_e_n, eps_c_e_s, eps_c_e_p
+    ):
+        eps_c_e = pybamm.concatenation(eps_c_e_n, eps_c_e_s, eps_c_e_p)
+
+        variables = {
+            "Porosity times concentration": eps_c_e,
+            "Negative electrode porosity times concentration": eps_c_e_n,
+            "Separator porosity times concentration": eps_c_e_s,
+            "Positive electrode porosity times concentration": eps_c_e_p,
+        }
+        return variables
+
     def _get_standard_flux_variables(self, N_e):
         """
         A private function to obtain the standard variables which

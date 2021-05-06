@@ -25,17 +25,36 @@ class Full(BaseElectrolyteDiffusion):
         super().__init__(param)
 
     def get_fundamental_variables(self):
-        c_e_n = pybamm.standard_variables.c_e_n
-        c_e_s = pybamm.standard_variables.c_e_s
-        c_e_p = pybamm.standard_variables.c_e_p
+        eps_c_e_n = pybamm.standard_variables.eps_c_e_n
+        eps_c_e_s = pybamm.standard_variables.eps_c_e_s
+        eps_c_e_p = pybamm.standard_variables.eps_c_e_p
 
-        return self._get_standard_concentration_variables(c_e_n, c_e_s, c_e_p)
+        variables = self._get_standard_porosity_times_concentration_variables(
+            eps_c_e_n, eps_c_e_s, eps_c_e_p
+        )
+
+        return variables
 
     def get_coupled_variables(self, variables):
 
-        tor = variables["Electrolyte tortuosity"]
+        eps_n = variables["Negative electrode porosity"]
+        eps_s = variables["Separator porosity"]
+        eps_p = variables["Positive electrode porosity"]
+        eps_c_e_n = variables["Negative electrode porosity times concentration"]
+        eps_c_e_s = variables["Separator porosity times concentration"]
+        eps_c_e_p = variables["Positive electrode porosity times concentration"]
+
+        c_e_n = eps_c_e_n / eps_n
+        c_e_s = eps_c_e_s / eps_s
+        c_e_p = eps_c_e_p / eps_p
+
+        variables.update(
+            self._get_standard_concentration_variables(c_e_n, c_e_s, c_e_p)
+        )
+
         eps = variables["Porosity"]
         c_e = variables["Electrolyte concentration"]
+        tor = variables["Electrolyte tortuosity"]
         i_e = variables["Electrolyte current density"]
         v_box = variables["Volume-averaged velocity"]
         T = variables["Cell temperature"]
@@ -57,8 +76,7 @@ class Full(BaseElectrolyteDiffusion):
 
         param = self.param
 
-        eps = variables["Porosity"]
-        deps_dt = variables["Porosity change"]
+        eps_c_e = variables["Porosity times concentration"]
         c_e = variables["Electrolyte concentration"]
         N_e = variables["Electrolyte flux"]
         div_Vbox = variables["Transverse volume-averaged acceleration"]
@@ -67,20 +85,16 @@ class Full(BaseElectrolyteDiffusion):
         source_terms = sum_s_j / self.param.gamma_e
 
         self.rhs = {
-            c_e: (1 / eps)
-            * (
-                -pybamm.div(N_e) / param.C_e
-                + source_terms
-                - c_e * deps_dt
-                - c_e * div_Vbox
-            )
+            eps_c_e: -pybamm.div(N_e) / param.C_e + source_terms - c_e * div_Vbox
         }
 
     def set_initial_conditions(self, variables):
 
-        c_e = variables["Electrolyte concentration"]
+        eps_c_e = variables["Porosity times concentration"]
 
-        self.initial_conditions = {c_e: self.param.c_e_init}
+        self.initial_conditions = {
+            eps_c_e: self.param.epsilon_init * self.param.c_e_init
+        }
 
     def set_boundary_conditions(self, variables):
 
@@ -90,5 +104,5 @@ class Full(BaseElectrolyteDiffusion):
             c_e: {
                 "left": (pybamm.Scalar(0), "Neumann"),
                 "right": (pybamm.Scalar(0), "Neumann"),
-            }
+            },
         }

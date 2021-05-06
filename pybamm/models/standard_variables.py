@@ -31,6 +31,33 @@ c_e_av = pybamm.Variable(
     bounds=(0, np.inf),
 )
 
+# Electrolyte porosity times concentration
+eps_c_e_n = pybamm.Variable(
+    "Negative electrode porosity times concentration",
+    domain="negative electrode",
+    auxiliary_domains={"secondary": "current collector"},
+    bounds=(0, np.inf),
+)
+eps_c_e_s = pybamm.Variable(
+    "Separator porosity times concentration",
+    domain="separator",
+    auxiliary_domains={"secondary": "current collector"},
+    bounds=(0, np.inf),
+)
+eps_c_e_p = pybamm.Variable(
+    "Positive electrode porosity times concentration",
+    domain="positive electrode",
+    auxiliary_domains={"secondary": "current collector"},
+    bounds=(0, np.inf),
+)
+eps_c_e = pybamm.concatenation(eps_c_e_n, eps_c_e_s, eps_c_e_p)
+
+eps_c_e_av = pybamm.Variable(
+    "X-averaged porosity times concentration",
+    domain="current collector",
+    bounds=(0, np.inf),
+)
+
 # Electrolyte potential
 phi_e_n = pybamm.Variable(
     "Negative electrolyte potential",
