@@ -611,9 +611,9 @@ class CasadiSolver(pybamm.BaseSolver):
         len_rhs = model.concatenated_rhs.size
         y0_diff = y0[:len_rhs]
         y0_alg = y0[len_rhs:]
-        in_shape = inputs.shape
-        if len(in_shape) > 1:
-            N = in_shape[1]
+        in_size = inputs.shape[1]
+        if in_size > 1:
+            N = in_size
             x0 = casadi.horzcat(*[y0_diff for x in range(N)])
             z0 = casadi.horzcat(*[y0_alg for x in range(N)])
             t_min = casadi.horzcat(*[t_eval[0] for x in range(N)])
@@ -632,7 +632,7 @@ class CasadiSolver(pybamm.BaseSolver):
                     x0=x0, z0=z0, p=inputs_with_tmin, **self.extra_options_call
                 )
                 integration_time = timer.time()
-                if len(in_shape) == 1:
+                if in_size <= 1:
                     y_sol = casadi.vertcat(casadi_sol["xf"], casadi_sol["zf"])
                     sol = pybamm.Solution(t_eval, y_sol, model, inputs_dict)
                     sol.integration_time = integration_time
