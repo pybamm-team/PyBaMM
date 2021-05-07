@@ -764,20 +764,14 @@ class BaseSolver(object):
                 )
                 new_solutions = [new_solution]
             else:
-                # with mp.Pool(processes=nproc) as p:
-                #     new_solutions = p.starmap(
-                #         self._integrate,
+                new_solutions = self._process_pool(model,
+                                                   t_eval_dimensionless,
+                                                   start_index,
+                                                   end_index,
+                                                   ext_and_inputs_list,
+                                                   ninputs,
+                                                   nproc)
 
-                 new_solutions = self._process_pool(model,
-                                                    t_eval_dimensionless,
-                                                    start_index,
-                                                    end_index,
-                                                    ext_and_inputs_list,
-                                                    ninputs,
-                                                    nproc)
-                #     )
-                #     p.close()
-                #     p.join()
             # Setting the solve time for each segment.
             # pybamm.Solution.__add__ assumes attribute solve_time.
             solve_time = timer.time()
@@ -873,15 +867,12 @@ class BaseSolver(object):
     def _process_pool(self, model, t_eval_dimensionless, start_index, end_index,
                       ext_and_inputs_list, ninputs, nproc):
         bundle = zip(
-           [model] * ninputs,
-           [t_eval_dimensionless[start_index:end_index]] * ninputs,
-           ext_and_inputs_list,
-           )
+            [model] * ninputs,
+            [t_eval_dimensionless[start_index:end_index]] * ninputs,
+            ext_and_inputs_list
+        )
         with mp.Pool(processes=nproc) as p:
-            new_solutions = p.starmap(
-                self._integrate,
-                bundle,
-            )
+            new_solutions = p.starmap(self._integrate, bundle)
             p.close()
             p.join()
         return new_solutions

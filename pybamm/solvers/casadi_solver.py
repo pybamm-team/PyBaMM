@@ -413,8 +413,7 @@ class CasadiSolver(pybamm.BaseSolver):
         if self.mode == "safe without grid":
             use_grid = False
         else:
-            self.create_integrator(model, inputs, t_window_event_dense,
-                                   ninputs=ninputs, nproc=nproc)
+            self.create_integrator(model, inputs, t_window_event_dense)
             use_grid = True
 
         y0 = coarse_solution.y[:, event_idx_lower]
@@ -640,13 +639,14 @@ class CasadiSolver(pybamm.BaseSolver):
                 else:
                     nt = len(t_eval)
                     xf = casadi_sol["xf"]
-                    zf = casadi_sol["zf"]
+                    # zf = casadi_sol["zf"]
                     sol = []
                     for i in range(N):
-                        start = i*nt
-                        y_sol = xf[:, start:start+nt]
+                        start = i * nt
+                        y_sol = xf[:, start:start + nt]
                         # Not sure how to index into zf - need an example
-                        sol.append(pybamm.Solution(t_eval, y_sol, model, inputs_dict[i]))
+                        sol.append(pybamm.Solution(t_eval, y_sol, model,
+                                                   inputs_dict[i]))
                         sol[-1].integration_time = integration_time
                 return sol
             else:
@@ -688,7 +688,7 @@ class CasadiSolver(pybamm.BaseSolver):
         functionality
         '''
         t_eval = t_eval_dimensionless[start_index:end_index]
-        new_solutions = self._integrate(model, t_eval, 
+        new_solutions = self._integrate(model, t_eval,
                                         inputs_dict=ext_and_inputs_list,
                                         ninputs=ninputs, nproc=nproc)
 
