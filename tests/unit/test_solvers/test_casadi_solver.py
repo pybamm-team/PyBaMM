@@ -537,6 +537,36 @@ class TestCasadiSolver(unittest.TestCase):
         with self.assertRaisesRegex(pybamm.SolverError, "interpolation bounds"):
             solver.solve(model, t_eval=[0, 1])
 
+    def test_model_solver_multiple_inputs_happy_path(self):
+        for convert_to_format in ["python", "casadi"]:
+            # Create model
+            model = pybamm.BaseModel()
+            model.convert_to_format = convert_to_format
+            domain = ["negative electrode", "separator", "positive electrode"]
+            var = pybamm.Variable("var", domain=domain)
+            model.rhs = {var: -pybamm.InputParameter("rate") * var}
+            model.initial_conditions = {var: 1}
+            # create discretisation
+            mesh = get_mesh_for_testing()
+            spatial_methods = {"macroscale": pybamm.FiniteVolume()}
+            disc = pybamm.Discretisation(mesh, spatial_methods)
+            disc.process_model(model)
+
+            solver = pybamm.CasadiSolver(rtol=1e-9, atol=1e-9, mode="fast")
+            t_eval = np.linspace(0, 10, 100)
+            ninputs = 8
+            inputs_list = [{"rate": 0.01 * (i + 1)} for i in range(ninputs)]
+
+            solutions = solver.solve(model, t_eval, inputs=inputs_list, nproc=2)
+            for i in range(ninputs):
+                with self.subTest(i=i):
+                    solution = solutions[i]
+                    np.testing.assert_array_equal(solution.t, t_eval)
+                    np.testing.assert_allclose(
+                        solution.y[0, :],
+                        np.exp(-0.01 * (i + 1) * solution.t[np.newaxis, :])
+                    )
+
 
 class TestCasadiSolverSensitivity(unittest.TestCase):
     def test_solve_with_symbolic_input(self):
