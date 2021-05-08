@@ -34,6 +34,15 @@ class BaseSolver(object):
         The tolerance for the initial-condition solver (default is 1e-6).
     extrap_tol : float, optional
         The tolerance to assert whether extrapolation occurs or not. Default is 0.
+    sensitivity : str, optional
+        Whether (and how) to calculate sensitivities when solving. Options are:
+        - "explicit forward": explicitly formulate the sensitivity equations. \
+        The formulation is as per "Park, S., Kato, D., Gima, Z., \
+        Klein, R., & Moura, S. (2018). Optimal experimental design for parameterization\
+        of an electrochemical lithium-ion battery model. Journal of The Electrochemical\
+        Society, 165(7), A1309.". See #1100 for details \
+        - see individual solvers for other options
+
     """
 
     def __init__(
@@ -45,6 +54,7 @@ class BaseSolver(object):
         root_tol=1e-6,
         extrap_tol=0,
         max_steps="deprecated",
+        sensitivity=None
     ):
         self._method = method
         self._rtol = rtol
@@ -63,6 +73,7 @@ class BaseSolver(object):
         self.name = "Base solver"
         self.ode_solver = False
         self.algebraic_solver = False
+        self.sensitivity = sensitivity
 
     @property
     def method(self):
@@ -203,6 +214,10 @@ class BaseSolver(object):
             y = pybamm.StateVector(slice(0, model.concatenated_initial_conditions.size))
             # set up Jacobian object, for re-use of dict
             jacobian = pybamm.Jacobian()
+            jacobian_parameters = {
+                p: pybamm.Jacobian() for p in inputs.keys()
+            }
+
         else:
             # Convert model attributes to casadi
             t_casadi = casadi.MX.sym("t")
@@ -225,12 +240,42 @@ class BaseSolver(object):
 
             if use_jacobian is None:
                 use_jacobian = model.use_jacobian
-            if model.convert_to_format != "casadi":
-                # Process with pybamm functions
 
-                if model.convert_to_format == "jax":
-                    report(f"Converting {name} to jax")
-                    jax_func = pybamm.EvaluatorJax(func)
+            if model.convert_to_format == "jax":
+                report(f"Converting {name} to jax")
+                func = pybamm.EvaluatorJax(func)
+                if self.sensitivity:
+                    report(f"Calculating sensitivities for {name} using jax")
+                    jacp_dict = func.get_sensitivities()
+                else:
+                    jacp_dict = None
+                if use_jacobian:
+                    report(f"Calculating jacobian for {name} using jax")
+                    jac = func.get_jacobian()
+                    jac = jac.evaluate
+                else:
+                    jac = None
+
+                func = func.evaluate
+
+            elif model.convert_to_format != "casadi":
+                # Process with pybamm functions, optionally converting
+                # to python evaluator
+                if self.sensitivity:
+                    report(f"Calculating sensitivities for {name}")
+                    jacp_dict = {
+                        p: jwrtp.jac(func, pybamm.InputParameter(p))
+                        for jwrtp, p in
+                        zip(jacobian_parameters, inputs.keys())
+                    }
+                    if model.convert_to_format == "python":
+                        report(f"Converting sensitivities for {name} to python")
+                        jacp_dict = {
+                            p: pybamm.EvaluatorPython(jacp)
+                            for p, jacp in jacp_dict.items()
+                        }
+                else:
+                    jacp_dict = None
 
                 if use_jacobian:
                     report(f"Calculating jacobian for {name}")
@@ -238,9 +283,6 @@ class BaseSolver(object):
                     if model.convert_to_format == "python":
                         report(f"Converting jacobian for {name} to python")
                         jac = pybamm.EvaluatorPython(jac)
-                    elif model.convert_to_format == "jax":
-                        report(f"Converting jacobian for {name} to jax")
-                        jac = jax_func.get_jacobian()
                     jac = jac.evaluate
                 else:
                     jac = None
@@ -248,9 +290,6 @@ class BaseSolver(object):
                 if model.convert_to_format == "python":
                     report(f"Converting {name} to python")
                     func = pybamm.EvaluatorPython(func)
-                if model.convert_to_format == "jax":
-                    report(f"Converting {name} to jax")
-                    func = jax_func
 
                 func = func.evaluate
 
@@ -266,6 +305,16 @@ class BaseSolver(object):
                     )
                 else:
                     jac = None
+
+                if self.sensitivity:
+                    report(f"Calculating sensitivities for {name} using CasADi")
+                    jacp_dict = {
+                        name: casadi.jacobian(func, p)
+                        for name, p in p_casadi.items()
+                    }
+                else:
+                    jacp_dict = None
+
                 func = casadi.Function(
                     name, [t_casadi, y_casadi, p_casadi_stacked], [func]
                 )

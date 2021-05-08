@@ -38,6 +38,15 @@ class IDAKLUSolver(pybamm.BaseSolver):
         The tolerance for the initial-condition solver (default is 1e-6).
     extrap_tol : float, optional
         The tolerance to assert whether extrapolation occurs or not (default is 0).
+    sensitivity : str, optional
+        Whether (and how) to calculate sensitivities when solving. Options are:
+        - "explicit forward": explicitly formulate the sensitivity equations. \
+        The formulation is as per "Park, S., Kato, D., Gima, Z., \
+        Klein, R., & Moura, S. (2018). Optimal experimental design for parameterization\
+        of an electrochemical lithium-ion battery model. Journal of The Electrochemical\
+        Society, 165(7), A1309.". See #1100 for details \
+        - "idas": use Sundials IDAS to compute forward sensitivities
+
     """
 
     def __init__(
@@ -48,13 +57,21 @@ class IDAKLUSolver(pybamm.BaseSolver):
         root_tol=1e-6,
         extrap_tol=0,
         max_steps="deprecated",
+        sensitivity="idas"
     ):
 
         if idaklu_spec is None:
             raise ImportError("KLU is not installed")
 
         super().__init__(
-            "ida", rtol, atol, root_method, root_tol, extrap_tol, max_steps
+            "ida",
+            rtol,
+            atol,
+            root_method,
+            root_tol,
+            extrap_tol,
+            max_steps,
+            sensitivity=sensitivity,
         )
         self.name = "IDA KLU solver"
 

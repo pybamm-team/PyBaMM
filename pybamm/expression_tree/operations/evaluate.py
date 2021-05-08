@@ -557,7 +557,7 @@ class EvaluatorJax:
                 constants[symbol_id] = jax.device_put(constants[symbol_id])
 
         # get a list of constant arguments to input to the function
-        arg_list = [
+        self._arg_list = [
             id_to_python_variable(symbol_id, True) for symbol_id in constants.keys()
         ]
 
@@ -578,8 +578,8 @@ class EvaluatorJax:
 
         # add function def to first line
         args = "t=None, y=None, y_dot=None, inputs=None, known_evals=None"
-        if arg_list:
-            args = ",".join(arg_list) + ", " + args
+        if self._arg_list:
+            args = ",".join(self._arg_list) + ", " + args
         python_str = "def evaluate_jax({}):\n".format(args) + python_str
 
         # calculate the final variable that will output the result of calling `evaluate`
@@ -604,16 +604,32 @@ class EvaluatorJax:
         compiled_function = compile(python_str, result_var, "exec")
         exec(compiled_function)
 
-        n = len(arg_list)
-        static_argnums = tuple(static_argnums)
-        self._jit_evaluate = jax.jit(self._evaluate_jax, static_argnums=static_argnums)
-
-        # store a jit version of evaluate_jax's jacobian
-        jacobian_evaluate = jax.jacfwd(self._evaluate_jax, argnums=1 + n)
-        self._jac_evaluate = jax.jit(jacobian_evaluate, static_argnums=static_argnums)
+        self._static_argnums = tuple(static_argnums)
+        self._jit_evaluate = jax.jit(self._evaluate_jax,
+                                     static_argnums=self._static_argnums)
 
     def get_jacobian(self):
+        n = len(self._arg_list)
+
+        # forward mode autodiff  wrt y, which is argument 1 after arg_list
+        jacobian_evaluate = jax.jacfwd(self._evaluate_jax, argnums=1 + n)
+
+        self._jac_evaluate = jax.jit(jacobian_evaluate,
+                                     static_argnums=self._static_argnums)
+
         return EvaluatorJaxJacobian(self._jac_evaluate, self._constants)
+
+    def get_sensitivities(self):
+        n = len(self._arg_list)
+
+        # forward mode autodiff wrt inputs, which is argument 3 after arg_list
+        jacobian_evaluate = jax.jacfwd(self._evaluate_jax, argnums=3 + n)
+
+        self._sens_evaluate = jax.jit(jacobian_evaluate,
+                                     static_argnums=self._static_argnums)
+
+        return EvaluatorJaxJacobian(self._jac_evaluate, self._constants)
+
 
     def debug(self, t=None, y=None, y_dot=None, inputs=None, known_evals=None):
         # generated code assumes y is a column vector

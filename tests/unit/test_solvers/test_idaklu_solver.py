@@ -46,6 +46,59 @@ class TestIDAKLUSolver(unittest.TestCase):
             true_solution = 0.1 * solution.t
             np.testing.assert_array_almost_equal(solution.y[0, :], true_solution)
 
+    def test_ida_roberts_klu_sensitivities(self):
+        # this test implements a python version of the ida Roberts
+        # example provided in sundials
+        # see sundials ida examples pdf
+        for form in ["python", "casadi"]:
+            model = pybamm.BaseModel()
+            model.convert_to_format = form
+            u = pybamm.Variable("u")
+            v = pybamm.Variable("v")
+            a = pybamm.InputParameter("a")
+            model.rhs = {u: a * v}
+            model.algebraic = {v: 1 - v}
+            model.initial_conditions = {u: 0, v: 1}
+            model.events = [pybamm.Event("1", u - 0.2), pybamm.Event("2", v)]
+
+            disc = pybamm.Discretisation()
+            disc.process_model(model)
+
+            solver = pybamm.IDAKLUSolver(root_method="lm")
+
+            t_eval = np.linspace(0, 3, 100)
+            a_value = 0.1
+            sol = solver.solve(model, t_eval, inputs={"a": a_value})
+
+            # test that final time is time of event
+            # y = 0.1 t + y0 so y=0.2 when t=2
+            np.testing.assert_array_almost_equal(sol.t[-1], 2.0)
+
+            # test that final value is the event value
+            np.testing.assert_array_almost_equal(sol.y[0, -1], 0.2)
+
+            # test that y[1] remains constant
+            np.testing.assert_array_almost_equal(
+                sol.y[1, :], np.ones(sol.t.shape)
+            )
+
+            # test that y[0] = to true solution
+            true_solution = 0.1 * sol.t
+            np.testing.assert_array_almost_equal(sol.y[0, :], true_solution)
+
+            # evaluate the sensitivities using idas
+            dyda_ida = sol.sensitivities["a"]
+
+            # evaluate the sensitivities using finite difference
+            h = 1e-6
+            sol_plus = solver.solve(model, t_eval, inputs={"a": a_value + 0.5 * h})
+            sol_neg = solver.solve(model, t_eval, inputs={"a": a_value - 0.5 * h})
+            dyda_fd = (sol_plus.y - sol_neg.y) / h
+
+            np.testing.assert_array_almost_equal(
+                dyda_ida, dyda_fd
+            )
+
     def test_set_atol(self):
         model = pybamm.lithium_ion.DFN()
         geometry = model.default_geometry
