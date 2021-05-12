@@ -25,7 +25,8 @@ def graphite_electrolyte_exchange_current_density_Mohtat2020(c_e, c_s_surf, T):
     :class:`pybamm.Symbol`
         Exchange-current density [A.m-2]
     """
-    m_ref = 1.061 * 10 ** (-6)  # unit has been converted
+    # m_ref = 1.061 * 10 ** (-6)  # unit has been converted
+    m_ref = 1.061 * 10 ** (-4)  # unit has been converted
     # units are (A/m2)(mol/m3)**1.5 - includes ref concentrations
     E_r = 37480
     arrhenius = exp(E_r / constants.R * (1 / 298.15 - 1 / T))
