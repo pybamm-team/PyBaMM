@@ -274,10 +274,9 @@ class BaseModel(object):
     @property
     def parameters(self):
         """Returns all the parameters in the model"""
-        if self._parameters is None:
-            self._parameters = self._find_symbols(
-                (pybamm.Parameter, pybamm.InputParameter, pybamm.FunctionParameter)
-            )
+        self._parameters = self._find_symbols(
+            (pybamm.Parameter, pybamm.InputParameter, pybamm.FunctionParameter)
+        )
         return self._parameters
 
     @property
@@ -288,28 +287,27 @@ class BaseModel(object):
         return self._input_parameters
 
     def print_parameter_info(self):
-        if self._parameter_info is None:
-            self._parameter_info = ""
-            parameters = self._find_symbols(pybamm.Parameter)
-            for param in parameters:
-                self._parameter_info += f"{param.name} (Parameter)\n"
-            input_parameters = self._find_symbols(pybamm.InputParameter)
-            for input_param in input_parameters:
-                if input_param.domain == []:
-                    self._parameter_info += f"{input_param.name} (InputParameter)\n"
-                else:
-                    self._parameter_info += (
-                        f"{input_param.name} (InputParameter in {input_param.domain})\n"
-                    )
-            function_parameters = self._find_symbols(pybamm.FunctionParameter)
-            for func_param in function_parameters:
-                # don't double count function parameters
-                if func_param.name not in self._parameter_info:
-                    input_names = "'" + "', '".join(func_param.input_names) + "'"
-                    self._parameter_info += (
-                        f"{func_param.name} (FunctionParameter "
-                        f"with input(s) {input_names})\n"
-                    )
+        self._parameter_info = ""
+        parameters = self._find_symbols(pybamm.Parameter)
+        for param in parameters:
+            self._parameter_info += f"{param.name} (Parameter)\n"
+        input_parameters = self._find_symbols(pybamm.InputParameter)
+        for input_param in input_parameters:
+            if input_param.domain == []:
+                self._parameter_info += f"{input_param.name} (InputParameter)\n"
+            else:
+                self._parameter_info += (
+                    f"{input_param.name} (InputParameter in {input_param.domain})\n"
+                )
+        function_parameters = self._find_symbols(pybamm.FunctionParameter)
+        for func_param in function_parameters:
+            # don't double count function parameters
+            if func_param.name not in self._parameter_info:
+                input_names = "'" + "', '".join(func_param.input_names) + "'"
+                self._parameter_info += (
+                    f"{func_param.name} (FunctionParameter "
+                    f"with input(s) {input_names})\n"
+                )
 
         print(self._parameter_info)
 

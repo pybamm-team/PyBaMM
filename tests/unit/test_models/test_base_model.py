@@ -130,6 +130,7 @@ class TestBaseModel(unittest.TestCase):
         f = pybamm.InputParameter("f")
         g = pybamm.Parameter("g")
         h = pybamm.Parameter("h")
+        i = pybamm.InputParameter("i")
 
         u = pybamm.Variable("u")
         v = pybamm.Variable("v")
@@ -137,7 +138,7 @@ class TestBaseModel(unittest.TestCase):
         model.algebraic = {v: v - b}
         model.initial_conditions = {u: c, v: d}
         model.events = [pybamm.Event("u=e", u - e)]
-        model.variables = {"v+f": v + f}
+        model.variables = {"v+f+i": v + f + i}
         model.boundary_conditions = {
             u: {"left": (g, "Dirichlet"), "right": (0, "Neumann")},
             v: {"left": (0, "Dirichlet"), "right": (h, "Neumann")},
@@ -145,7 +146,7 @@ class TestBaseModel(unittest.TestCase):
 
         self.assertEqual(
             set([x.name for x in model.parameters]),
-            set([x.name for x in [a, b, c, d, e, f, g, h]]),
+            set([x.name for x in [a, b, c, d, e, f, g, h, i]]),
         )
         self.assertTrue(
             all(
@@ -155,7 +156,7 @@ class TestBaseModel(unittest.TestCase):
         )
 
         model.variables = {
-            "v+f": v + pybamm.FunctionParameter("f", {"Time [s]": pybamm.t})
+            "v+f+i": v + pybamm.FunctionParameter("f", {"Time [s]": pybamm.t}) + i
         }
         model.print_parameter_info()
 
