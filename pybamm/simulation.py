@@ -577,7 +577,7 @@ class Simulation:
         save_at_cycles : int or list of ints, optional
             Which cycles to save the full sub-solutions for. If None, all cycles are
             saved. If int, every multiple of save_at_cycles is saved. If list, every
-            cycle in the list is saved.
+            cycle in the list is saved. The first cycle (cycle 1) is always saved.
         calc_esoh : bool, optional
             Whether to include eSOH variables in the summary variables. If `False`
             then only summary variables that do not require the eSOH calculation
@@ -716,8 +716,10 @@ class Simulation:
 
                 # Decide whether we should save this cycle
                 save_this_cycle = (
+                    # always save cycle 1
+                    cycle_num == 1
                     # None: save all cycles
-                    save_at_cycles is None
+                    or save_at_cycles is None
                     # list: save all cycles in the list
                     or (
                         isinstance(save_at_cycles, list)

@@ -1089,13 +1089,10 @@ class Discretisation(object):
             )
             if ids != y_slices_with_external_removed:
                 given_variable_names = [v.name for v in var_eqn_dict.keys()]
-                if given_variable_names == []:
-                    raise pybamm.ModelError("Model is missing initial conditions")
-                else:
-                    raise pybamm.ModelError(
-                        "Initial conditions are insufficient. Only "
-                        "provided for {} ".format(given_variable_names)
-                    )
+                raise pybamm.ModelError(
+                    "Initial conditions are insufficient. Only "
+                    "provided for {} ".format(given_variable_names)
+                )
 
         equations = list(var_eqn_dict.values())
 

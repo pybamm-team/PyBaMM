@@ -386,13 +386,13 @@ class Experiment:
                 end_discharge = "".join(term_list[:-1])
                 if end_discharge.endswith("%"):
                     end_discharge_percent = end_discharge.split("%")[0]
-                    termination_dict["capacity"] = (int(end_discharge_percent), "%")
+                    termination_dict["capacity"] = (float(end_discharge_percent), "%")
                 elif end_discharge.endswith("Ah"):
                     end_discharge_Ah = end_discharge.split("Ah")[0]
-                    termination_dict["capacity"] = (int(end_discharge_Ah), "Ah")
+                    termination_dict["capacity"] = (float(end_discharge_Ah), "Ah")
                 elif end_discharge.endswith("A.h"):
                     end_discharge_Ah = end_discharge.split("A.h")[0]
-                    termination_dict["capacity"] = (int(end_discharge_Ah), "Ah")
+                    termination_dict["capacity"] = (float(end_discharge_Ah), "Ah")
                 else:
                     raise ValueError(
                         "Capacity termination must be given in the form "

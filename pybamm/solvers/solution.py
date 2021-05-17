@@ -703,7 +703,6 @@ def get_cycle_summary_variables(cycle_solution, esoh_sim):
         C_init = np.minimum(0.95 * (C_n * x_100_init), max_Q - min_Q)
 
         # Solve the esoh model and add outputs to the summary variables
-        # temporarily turn off logger
         # use CasadiAlgebraicSolver if there are interpolants
         if isinstance(
             esoh_sim.parameter_values["Negative electrode OCP [V]"], tuple

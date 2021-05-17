@@ -38,19 +38,18 @@ class TestExperiment(unittest.TestCase):
                 "Run US06 (V) for 5 minutes",
                 "Run US06 (W) for 0.5 hours",
             ],
-            {"test": "test"}, drive_cycles={"US06": drive_cycle},
+            {"test": "test"},
+            drive_cycles={"US06": drive_cycle},
             period="20 seconds",
         )
 
         # Calculation for operating conditions of drive cycle
         time_0 = drive_cycle[:, 0][-1]
         period_0 = numpy.min(numpy.diff(drive_cycle[:, 0]))
-        drive_cycle_1 = experiment.extend_drive_cycle(
-            drive_cycle, end_time=300)
+        drive_cycle_1 = experiment.extend_drive_cycle(drive_cycle, end_time=300)
         time_1 = drive_cycle_1[:, 0][-1]
         period_1 = numpy.min(numpy.diff(drive_cycle_1[:, 0]))
-        drive_cycle_2 = experiment.extend_drive_cycle(
-            drive_cycle, end_time=1800)
+        drive_cycle_2 = experiment.extend_drive_cycle(drive_cycle, end_time=1800)
         time_2 = drive_cycle_2[:, 0][-1]
         period_2 = numpy.min(numpy.diff(drive_cycle_2[:, 0]))
 
@@ -74,18 +73,20 @@ class TestExperiment(unittest.TestCase):
         )
         # Check drive cycle operating conditions
         self.assertTrue(
-            ((experiment.operating_conditions[-3][0] == drive_cycle).all() & (
-                experiment.operating_conditions[-3][1] == "A") & (
-                experiment.operating_conditions[-3][2] == time_0).all() & (
-                experiment.operating_conditions[-3][3] == period_0).all() & (
-                experiment.operating_conditions[-2][0] == drive_cycle_1).all() & (
-                experiment.operating_conditions[-2][1] == "V") & (
-                experiment.operating_conditions[-2][2] == time_1).all() & (
-                experiment.operating_conditions[-2][3] == period_1).all() & (
-                experiment.operating_conditions[-1][0] == drive_cycle_2).all() & (
-                experiment.operating_conditions[-1][1] == "W") & (
-                experiment.operating_conditions[-1][2] == time_2).all() & (
-                experiment.operating_conditions[-1][3] == period_2).all())
+            (
+                (experiment.operating_conditions[-3][0] == drive_cycle).all()
+                & (experiment.operating_conditions[-3][1] == "A")
+                & (experiment.operating_conditions[-3][2] == time_0).all()
+                & (experiment.operating_conditions[-3][3] == period_0).all()
+                & (experiment.operating_conditions[-2][0] == drive_cycle_1).all()
+                & (experiment.operating_conditions[-2][1] == "V")
+                & (experiment.operating_conditions[-2][2] == time_1).all()
+                & (experiment.operating_conditions[-2][3] == period_1).all()
+                & (experiment.operating_conditions[-1][0] == drive_cycle_2).all()
+                & (experiment.operating_conditions[-1][1] == "W")
+                & (experiment.operating_conditions[-1][2] == time_2).all()
+                & (experiment.operating_conditions[-1][3] == period_2).all()
+            )
         )
         self.assertEqual(
             experiment.events,
@@ -170,21 +171,13 @@ class TestExperiment(unittest.TestCase):
             pybamm.Experiment(["Discharge at 1 A at 2 hours"])
         with self.assertRaisesRegex(ValueError, "Instruction must be"):
             pybamm.Experiment(["Run at 1 A for 2 hours"])
-        with self.assertRaisesRegex(
-            ValueError, "Type of drive cycle must be"
-        ):
+        with self.assertRaisesRegex(ValueError, "Type of drive cycle must be"):
             pybamm.Experiment(["Run US06 for 2 hours"])
-        with self.assertRaisesRegex(
-            ValueError, "Instruction must be"
-        ):
+        with self.assertRaisesRegex(ValueError, "Instruction must be"):
             pybamm.Experiment(["Run at at 1 A for 2 hours"])
-        with self.assertRaisesRegex(
-            ValueError, "Instruction must be"
-        ):
+        with self.assertRaisesRegex(ValueError, "Instruction must be"):
             pybamm.Experiment(["Play at 1 A for 2 hours"])
-        with self.assertRaisesRegex(
-            ValueError, "Instruction"
-        ):
+        with self.assertRaisesRegex(ValueError, "Instruction"):
             pybamm.Experiment(["Cell Charge at 1 A for 2 hours"])
         with self.assertRaisesRegex(ValueError, "units must be"):
             pybamm.Experiment(["Discharge at 1 B for 2 hours"])
@@ -200,22 +193,22 @@ class TestExperiment(unittest.TestCase):
         self.assertEqual(experiment.termination, {})
 
         experiment = pybamm.Experiment(
-            ["Discharge at 1 C for 20 seconds"], termination="80% capacity"
+            ["Discharge at 1 C for 20 seconds"], termination="80.7% capacity"
         )
-        self.assertEqual(experiment.termination, {"capacity": (80, "%")})
+        self.assertEqual(experiment.termination, {"capacity": (80.7, "%")})
         experiment = pybamm.Experiment(
-            ["Discharge at 1 C for 20 seconds"], termination="80 % capacity"
+            ["Discharge at 1 C for 20 seconds"], termination="80.7 % capacity"
         )
-        self.assertEqual(experiment.termination, {"capacity": (80, "%")})
+        self.assertEqual(experiment.termination, {"capacity": (80.7, "%")})
 
         experiment = pybamm.Experiment(
-            ["Discharge at 1 C for 20 seconds"], termination="4Ah capacity"
+            ["Discharge at 1 C for 20 seconds"], termination="4.1Ah capacity"
         )
-        self.assertEqual(experiment.termination, {"capacity": (4, "Ah")})
+        self.assertEqual(experiment.termination, {"capacity": (4.1, "Ah")})
         experiment = pybamm.Experiment(
-            ["Discharge at 1 C for 20 seconds"], termination="4 A.h capacity"
+            ["Discharge at 1 C for 20 seconds"], termination="4.1 A.h capacity"
         )
-        self.assertEqual(experiment.termination, {"capacity": (4, "Ah")})
+        self.assertEqual(experiment.termination, {"capacity": (4.1, "Ah")})
 
         with self.assertRaisesRegex(ValueError, "Only capacity"):
             experiment = pybamm.Experiment(
