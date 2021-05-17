@@ -5,47 +5,51 @@
 import pybamm
 import numpy as np
 
-pybamm.set_logging_level("INFO")
-
-# load model
-model = pybamm.lithium_ion.DFN()
-# create geometry
-geometry = model.default_geometry
-
-# load parameter values and process model and geometry
-param = model.default_parameter_values
-param.process_geometry(geometry)
-param.process_model(model)
-
-# set mesh
-var = pybamm.standard_spatial_vars
-var_pts = {var.x_n: 30, var.x_s: 30, var.x_p: 30, var.r_n: 10, var.r_p: 10}
-mesh = pybamm.Mesh(geometry, model.default_submesh_types, var_pts)
-
-# discretise model
-disc = pybamm.Discretisation(mesh, model.default_spatial_methods)
-disc.process_model(model)
-
-# solve model
-t_eval = np.linspace(0, 3600, 100)
-solver = pybamm.CasadiSolver(mode="fast with events", atol=1e-6, rtol=1e-3)
-solution = solver.solve(model, t_eval)
-solution = solver.solve(model, t_eval)
-
-# plot
-plot = pybamm.QuickPlot(
-    solution,
-    [
-        "Negative particle concentration [mol.m-3]",
-        "Electrolyte concentration [mol.m-3]",
-        "Positive particle concentration [mol.m-3]",
-        "Current [A]",
-        "Negative electrode potential [V]",
-        "Electrolyte potential [V]",
-        "Positive electrode potential [V]",
-        "Terminal voltage [V]",
-    ],
-    time_unit="seconds",
-    spatial_unit="um",
+parameter_values = pybamm.ParameterValues(chemistry=pybamm.parameter_sets.Mohtat2020)
+parameter_values.update(
+    {
+        "SEI kinetic rate constant [m.s-1]": 1e-15,
+        #         "SEI resistivity [Ohm.m]": 0,
+    },
 )
-plot.dynamic_plot()
+spm = pybamm.lithium_ion.SPM({"SEI": "ec reaction limited"})
+esoh_model = pybamm.lithium_ion.ElectrodeSOH()
+esoh_sim = pybamm.Simulation(esoh_model, parameter_values=parameter_values)
+param = spm.param
+
+Vmin = 3.0
+Vmax = 4.2
+Cn = parameter_values.evaluate(param.C_n_init)
+Cp = parameter_values.evaluate(param.C_p_init)
+n_Li_init = parameter_values.evaluate(param.n_Li_particles_init)
+c_n_max = parameter_values.evaluate(param.c_n_max)
+c_p_max = parameter_values.evaluate(param.c_p_max)
+
+esoh_sol = esoh_sim.solve(
+    [0],
+    inputs={"V_min": Vmin, "V_max": Vmax, "C_n": Cn, "C_p": Cp, "n_Li": n_Li_init},
+)
+print(esoh_sol["x_100"].data[0])
+print(esoh_sol["y_100"].data[0])
+pybamm.set_logging_level("NOTICE")
+experiment = pybamm.Experiment(
+    [
+        (
+            f"Discharge at 1C until {Vmin}V",
+            "Rest for 1 hour",
+            f"Charge at 1C until {Vmax}V",
+            f"Hold at {Vmax}V until C/50",
+        )
+    ]
+    * 500,
+    termination="80% capacity",
+)
+sim_100 = pybamm.Simulation(
+    spm,
+    experiment=experiment,
+    parameter_values=parameter_values,
+    solver=pybamm.CasadiSolver("safe"),
+)
+spm_sol_100 = sim_100.solve(
+    starting_solution=pybamm.load("examples/notebooks/bad_sol.pkl")
+)

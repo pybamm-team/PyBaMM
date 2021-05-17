@@ -698,44 +698,56 @@ def get_cycle_summary_variables(cycle_solution, esoh_sim):
         C_n = last_state["Negative electrode capacity [A.h]"].data[0]
         C_p = last_state["Positive electrode capacity [A.h]"].data[0]
         n_Li = last_state["Total lithium in particles [mol]"].data[0]
-        x_100_init = np.max(cycle_solution["Negative electrode SOC"].data)
-        # make sure x_0 > 0
-        C_init = np.minimum(0.95 * (C_n * x_100_init), max_Q - min_Q)
-
-        # Solve the esoh model and add outputs to the summary variables
-        # temporarily turn off logger
-        # use CasadiAlgebraicSolver if there are interpolants
-        if isinstance(
-            esoh_sim.parameter_values["Negative electrode OCP [V]"], tuple
-        ) or isinstance(esoh_sim.parameter_values["Positive electrode OCP [V]"], tuple):
-            solver = pybamm.CasadiAlgebraicSolver()
-            # Choose x_100_init so as not to violate the interpolation limits
-            y_100_min = np.min(
-                esoh_sim.parameter_values["Positive electrode OCP [V]"][1][:, 0]
-            )
-            x_100_max = (n_Li * pybamm.constants.F.value / 3600 - y_100_min * C_p) / C_n
-            x_100_init = np.minimum(x_100_init, 0.99 * x_100_max)
-        else:
+        if esoh_sim.solution is not None:
+            # initialize with previous solution if it is available
+            esoh_sim.built_model.set_initial_conditions_from(esoh_sim.solution)
             solver = None
-        # Update initial conditions using the cycle solution
-        esoh_sim.build()
-        esoh_sim.built_model.set_initial_conditions_from(
-            {"x_100": x_100_init, "C": C_init}
-        )
-        esoh_sol = esoh_sim.solve(
-            [0],
-            inputs={
-                "V_min": V_min,
-                "V_max": V_max,
-                "C_n": C_n,
-                "C_p": C_p,
-                "n_Li": n_Li,
-            },
-            solver=solver,
-        )
+        else:
+            x_100_init = np.max(cycle_solution["Negative electrode SOC"].data)
+            # make sure x_0 > 0
+            C_init = np.minimum(0.95 * (C_n * x_100_init), max_Q - min_Q)
 
-        for var in esoh_sol.all_models[0].variables:
-            cycle_summary_variables[var] = esoh_sol[var].data[0]
+            # Solve the esoh model and add outputs to the summary variables
+            # use CasadiAlgebraicSolver if there are interpolants
+            if isinstance(
+                esoh_sim.parameter_values["Negative electrode OCP [V]"], tuple
+            ) or isinstance(
+                esoh_sim.parameter_values["Positive electrode OCP [V]"], tuple
+            ):
+                solver = pybamm.CasadiAlgebraicSolver()
+                # Choose x_100_init so as not to violate the interpolation limits
+                y_100_min = np.min(
+                    esoh_sim.parameter_values["Positive electrode OCP [V]"][1][:, 0]
+                )
+                x_100_max = (
+                    n_Li * pybamm.constants.F.value / 3600 - y_100_min * C_p
+                ) / C_n
+                x_100_init = np.minimum(x_100_init, 0.99 * x_100_max)
+            else:
+                solver = None
+            # Update initial conditions using the cycle solution
+            esoh_sim.build()
+            esoh_sim.built_model.set_initial_conditions_from(
+                {"x_100": x_100_init, "C": C_init}
+            )
+        try:
+            esoh_sol = esoh_sim.solve(
+                [0],
+                inputs={
+                    "V_min": V_min,
+                    "V_max": V_max,
+                    "C_n": C_n,
+                    "C_p": C_p,
+                    "n_Li": n_Li,
+                },
+                solver=solver,
+            )
+            for var in esoh_sim.built_model.variables:
+                cycle_summary_variables[var] = esoh_sol[var].data[0]
+        except pybamm.SolverError:
+            # eSOH algorithm failed, record NaN
+            for var in esoh_sim.built_model.variables:
+                cycle_summary_variables[var] = np.nan
 
         cycle_summary_variables["Capacity [A.h]"] = cycle_summary_variables["C"]
 
