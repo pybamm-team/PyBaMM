@@ -13,25 +13,39 @@ class IrreversiblePlating(BasePlating):
         The parameters to use for this submodel
     domain : str
         The domain of the model either 'Negative' or 'Positive'
+    x_average : bool
+        Whether to use x-averaged variables (SPM, SPMe, etc) or full variables (DFN)
+
     References
     ----------
     .. [1] SEJ O'Kane, ID Campbell, MWJ Marzook, GJ Offer and M Marinescu. "Physical
            Origin of the Differential Voltage Minimum Associated with Li Plating in
            Lithium-Ion Batteries". Journal of The Electrochemical Society,
            167:090540, 2019
+
     **Extends:** :class:`pybamm.lithium_plating.BasePlating`
     """
 
-    def __init__(self, param, domain):
+    def __init__(self, param, domain, x_average):
         super().__init__(param, domain)
+        self.x_average = x_average
         pybamm.citations.register("OKane2020")
 
     def get_fundamental_variables(self):
-        c_plated_Li = pybamm.Variable(
-            f"{self.domain.capitalize()} electrode lithium plating concentration",
-            domain=self.domain.lower() + " electrode",
-            auxiliary_domains={"secondary": "current collector"},
-        )
+        if self.x_average is True:
+            c_plated_Li_av = pybamm.Variable(
+                f"{self.domain.capitalize()} electrode lithium plating concentration",
+                domain="current collector",
+            )
+            c_plated_Li = pybamm.PrimaryBroadcast(
+                c_plated_Li_av, self.domain.lower() + " electrode"
+            )
+        else:
+            c_plated_Li = pybamm.Variable(
+                f"{self.domain.capitalize()} electrode lithium plating concentration",
+                domain=self.domain.lower() + " electrode",
+                auxiliary_domains={"secondary": "current collector"},
+            )
 
         variables = self._get_standard_concentration_variables(c_plated_Li)
 
@@ -70,20 +84,39 @@ class IrreversiblePlating(BasePlating):
         return variables
 
     def set_rhs(self, variables):
-        c_plated_Li = variables[
-            f"{self.domain} electrode lithium plating concentration"
-        ]
-        j_stripping = variables[
-            f"{self.domain} electrode lithium plating interfacial current density"
-        ]
-        Gamma_plating = self.param.Gamma_plating
+        if self.x_average is True:
+            c_plated_Li = variables[
+                "X-averaged "
+                + self.domain.lower()
+                + " electrode lithium plating concentration"
+            ]
+            j_stripping = variables[
+                "X-averaged "
+                + self.domain.lower()
+                + " electrode lithium plating interfacial current density"
+            ]
+        else:
+            c_plated_Li = variables[
+                f"{self.domain} electrode lithium plating concentration"
+            ]
+            j_stripping = variables[
+                f"{self.domain} electrode lithium plating interfacial current density"
+            ]
 
+        Gamma_plating = self.param.Gamma_plating
         self.rhs = {c_plated_Li: -Gamma_plating * j_stripping}
 
     def set_initial_conditions(self, variables):
-        c_plated_Li = variables[
-            f"{self.domain} electrode lithium plating concentration"
-        ]
+        if self.x_average is True:
+            c_plated_Li = variables[
+                "X-averaged "
+                + self.domain.lower()
+                + " electrode lithium plating concentration"
+            ]
+        else:
+            c_plated_Li = variables[
+                f"{self.domain} electrode lithium plating concentration"
+            ]
         c_plated_Li_0 = self.param.c_plated_Li_0
 
         self.initial_conditions = {c_plated_Li: c_plated_Li_0}
