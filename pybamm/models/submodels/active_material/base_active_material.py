@@ -106,7 +106,13 @@ class BaseModel(pybamm.BaseSubModel):
 
     def _get_standard_active_material_change_variables(self, deps_solid_dt):
 
-        deps_solid_dt_av = pybamm.x_average(deps_solid_dt)
+        if deps_solid_dt.domain == ["current collector"]:
+            deps_solid_dt_av = deps_solid_dt
+            deps_solid_dt = pybamm.PrimaryBroadcast(
+                deps_solid_dt_av, self.domain.lower() + " electrode"
+            )
+        else:
+            deps_solid_dt_av = pybamm.x_average(deps_solid_dt)
 
         variables = {
             self.domain

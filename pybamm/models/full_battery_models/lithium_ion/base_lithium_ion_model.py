@@ -117,21 +117,65 @@ class BaseModel(pybamm.BaseBatteryModel):
         )
 
     def set_crack_submodel(self):
-        if self.options["particle cracking"] == "none":
-            return
-
-        if self.options["particle cracking"] == "no cracking":
-            n = pybamm.particle_cracking.NoCracking(self.param, "Negative")
-            p = pybamm.particle_cracking.NoCracking(self.param, "Positive")
-        elif self.options["particle cracking"] == "positive":
-            n = pybamm.particle_cracking.NoCracking(self.param, "Negative")
-            p = pybamm.particle_cracking.CrackPropagation(self.param, "Positive")
-        elif self.options["particle cracking"] == "negative":
-            n = pybamm.particle_cracking.CrackPropagation(self.param, "Negative")
-            p = pybamm.particle_cracking.NoCracking(self.param, "Positive")
+        # this option can either be a string (both sides the same) or a 2-tuple
+        # to indicate different options in negative and positive electrodes
+        if isinstance(self.options["particle mechanics"], str):
+            crack_left = self.options["particle mechanics"]
+            crack_right = self.options["particle mechanics"]
         else:
-            n = pybamm.particle_cracking.CrackPropagation(self.param, "Negative")
-            p = pybamm.particle_cracking.CrackPropagation(self.param, "Positive")
+            crack_left, crack_right = self.options["particle mechanics"]
+        for crack_side, domain in [[crack_left, "Negative"], [crack_right, "Positive"]]:
+            if crack_side == "none":
+                pass
+            elif crack_side == "swelling only":
+                self.submodels[
+                    domain.lower() + " particle mechanics"
+                ] = pybamm.particle_cracking.SwellingOnly(self.param, domain)
+            elif crack_side == "swelling and cracking":
+                self.submodels[
+                    domain.lower() + " particle mechanics"
+                ] = pybamm.particle_cracking.CrackPropagation(
+                    self.param, domain, self.x_average
+                )
 
-        self.submodels["negative particle cracking"] = n
-        self.submodels["positive particle cracking"] = p
+    def set_active_material_submodel(self):
+        # this option can either be a string (both sides the same) or a 2-tuple
+        # to indicate different options in negative and positive electrodes
+        if isinstance(self.options["loss of active material"], str):
+            lam_left = self.options["loss of active material"]
+            lam_right = self.options["loss of active material"]
+        else:
+            lam_left, lam_right = self.options["loss of active material"]
+        for lam_side, domain in [[lam_left, "Negative"], [lam_right, "Positive"]]:
+            if lam_side == "none":
+                self.submodels[
+                    domain.lower() + " active material"
+                ] = pybamm.active_material.Constant(self.param, domain, self.options)
+            elif lam_side == "stress-driven":
+                self.submodels[
+                    domain.lower() + " active material"
+                ] = pybamm.active_material.StressDriven(
+                    self.param, domain, self.options, self.x_average
+                )
+            elif lam_side == "reaction-driven":
+                self.submodels[
+                    domain.lower() + " active material"
+                ] = pybamm.active_material.ReactionDriven(
+                    self.param, domain, self.options, self.x_average
+                )
+
+    def set_porosity_submodel(self):
+        if (
+            self.options["SEI porosity change"] == "false"
+            and self.options["lithium plating porosity change"] == "false"
+        ):
+            self.submodels["porosity"] = pybamm.porosity.Constant(
+                self.param, self.options
+            )
+        elif (
+            self.options["SEI porosity change"] == "true"
+            or self.options["lithium plating porosity change"] == "true"
+        ):
+            self.submodels["porosity"] = pybamm.porosity.ReactionDriven(
+                self.param, self.options, self.x_average
+            )

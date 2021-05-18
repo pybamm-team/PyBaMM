@@ -6,7 +6,7 @@ import pybamm
 import warnings
 
 
-class Options(pybamm.FuzzyDict):
+class BatteryModelOptions(pybamm.FuzzyDict):
     """
     Attributes
     ----------
@@ -16,6 +16,9 @@ class Options(pybamm.FuzzyDict):
         be set are listed below. Note that not all of the options are compatible with
         each other and with all of the models implemented in PyBaMM. Each option is
         optional and takes a default value if not provided.
+        In general, the option provided must be a string, but there are some cases
+        where a 2-tuple of strings can be provided instead to indicate a different
+        option for the negative and positive electrodes.
 
             * "cell geometry" : str
                 Sets the geometry of the cell. Can be "pouch" (default) or
@@ -49,8 +52,9 @@ class Options(pybamm.FuzzyDict):
                 "reversible" or "irreversible".
             * "loss of active material" : str
                 Sets the model for loss of active material. Can be "none" (default),
-                "positive", "negative" or "both" to enable it for the specific
-                electrode.
+                "stress-driven", or "reaction-driven".
+                A 2-tuple can be provided for different behaviour in negative and
+                positive electrodes.
             * "operating mode" : str
                 Sets the operating mode for the model. Can be "current" (default),
                 "voltage" or "power". Alternatively, the operating mode can be
@@ -68,15 +72,12 @@ class Options(pybamm.FuzzyDict):
                 (default), "user" or "no particles". For the "user" option the surface
                 area per unit volume can be passed as a parameter, and is therefore not
                 necessarily consistent with the particle shape.
-            * "particle cracking" : str
-                Sets the model to account for mechanical effects and particle
-                cracking. Can be "none", "no cracking", "negative", "positive" or
-                "both".
-                All options other than "none" account for the effects of swelling
-                of electrode particles, cell thickness change, and stress-assisted
-                diffusion. The options "negative", "positive" or "both" additionally
-                account for crack propagation in the negative, positive or both
-                electrodes, respectively.
+            * "particle mechanics" : str
+                Sets the model to account for mechanical effects such as particle
+                swelling and cracking. Can be "none" (default), "swelling only",
+                or "swelling and cracking".
+                A 2-tuple can be provided for different behaviour in negative and
+                positive electrodes.
             * "SEI" : str
                 Set the SEI submodel to be used. Options are:
 
@@ -163,14 +164,12 @@ class Options(pybamm.FuzzyDict):
             "SEI film resistance": ["none", "distributed", "average"],
             "SEI porosity change": ["true", "false"],
             "lithium plating": ["none", "reversible", "irreversible"],
-            "loss of active material": ["none", "negative", "positive", "both"],
+            "loss of active material": ["none", "stress-driven", "reaction-driven"],
             "operating mode": ["current", "voltage", "power"],
-            "particle cracking": [
+            "particle mechanics": [
                 "none",
-                "no cracking",
-                "negative",
-                "positive",
-                "both",
+                "swelling only",
+                "swelling and cracking",
             ],
             "lithium plating porosity change": ["true", "false"],
             "particle": [
@@ -211,14 +210,14 @@ class Options(pybamm.FuzzyDict):
             "lithium plating porosity change": "false",
             "loss of active material": "none",
             "working electrode": "none",
-            "particle cracking": "none",
+            "particle mechanics": "none",
             "total interfacial current density as a state": "false",
         }
 
         # Change the default for cell geometry based on which thermal option is provided
         extra_options = extra_options or {}
-        thermal_option = extra_options.get("thermal", "none")
         # return "none" if option not given
+        thermal_option = extra_options.get("thermal", "none")
         if thermal_option in ["none", "isothermal", "lumped"]:
             default_options["cell geometry"] = "arbitrary"
         else:
@@ -228,13 +227,23 @@ class Options(pybamm.FuzzyDict):
 
         # Change the default for SEI film resistance based on which SEI option is
         # provided
-        # extra_options = extra_options or {}
-        sei_option = extra_options.get("SEI", "none")
         # return "none" if option not given
+        sei_option = extra_options.get("SEI", "none")
         if sei_option == "none":
             default_options["SEI film resistance"] = "none"
         else:
             default_options["SEI film resistance"] = "distributed"
+        # The "SEI film resistance" option will still be overridden by extra_options if
+        # provided
+
+        # Change the default for swelling based on which LAM option is
+        # provided
+        # return "none" if option not given
+        lam_option = extra_options.get("loss of active material", "none")
+        if lam_option == "none":
+            default_options["particle mechanics"] = "none"
+        else:
+            default_options["particle mechanics"] = "swelling only"
         # The "SEI film resistance" option will still be overridden by extra_options if
         # provided
 
@@ -244,11 +253,17 @@ class Options(pybamm.FuzzyDict):
             if name in default_options:
                 options[name] = opt
             else:
-                raise pybamm.OptionError(
-                    "Option '{}' not recognised. Best matches are {}".format(
-                        name, options.get_best_matches(name)
+                if name == "particle cracking":
+                    raise pybamm.OptionError(
+                        "The 'particle cracking' option has been renamed. "
+                        "Use 'particle mechanics' instead."
                     )
-                )
+                else:
+                    raise pybamm.OptionError(
+                        "Option '{}' not recognised. Best matches are {}".format(
+                            name, options.get_best_matches(name)
+                        )
+                    )
 
         # If "SEI film resistance" is "distributed" then "total interfacial current
         # density as a state" must be "true"
@@ -300,12 +315,38 @@ class Options(pybamm.FuzzyDict):
                 or option == "working electrode"
             ):
                 pass
-            elif value not in self.possible_options[option]:
-                if not (option == "operating mode" and callable(value)):
-                    raise pybamm.OptionError(
-                        f"\n'{value}' is not recognized in option '{option}'. "
-                        f"Possible values are {self.possible_options[option]}"
-                    )
+            else:
+                if isinstance(value, str) or option in [
+                    "dimensionality",
+                    "operating mode",
+                ]:  # some options don't take strings
+                    value = (value,)
+                else:
+                    if not (
+                        (
+                            option
+                            in [
+                                "loss of active material",
+                                "particle mechanics",
+                            ]
+                            and isinstance(value, tuple)
+                            and len(value) == 2
+                        )
+                    ):
+                        # more possible options that can take 2-tuples to be added
+                        # as they come
+                        raise pybamm.OptionError(
+                            f"\n'{value}' is not recognized in option '{option}'. "
+                            "Values must be strings or (in some cases) "
+                            "2-tuples of strings"
+                        )
+                for val in value:
+                    if val not in self.possible_options[option]:
+                        if not (option == "operating mode" and callable(val)):
+                            raise pybamm.OptionError(
+                                f"\n'{val}' is not recognized in option '{option}'. "
+                                f"Possible values are {self.possible_options[option]}"
+                            )
 
         super().__init__(options.items())
 
@@ -413,7 +454,7 @@ class BaseBatteryModel(pybamm.BaseModel):
 
     @options.setter
     def options(self, extra_options):
-        options = Options(extra_options)
+        options = BatteryModelOptions(extra_options)
 
         # Options that are incompatible with models
         if isinstance(self, pybamm.lithium_ion.BaseModel):

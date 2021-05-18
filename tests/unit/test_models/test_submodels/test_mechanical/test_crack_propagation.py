@@ -33,7 +33,10 @@ class TestCrackPropagation(unittest.TestCase):
             "Positive electrode active material volume fraction": a_p,
             "Positive electrode surface area to volume ratio": a_p,
         }
-        options = {"particle": "Fickian diffusion", "particle cracking": "both"}
+        options = {
+            "particle": "Fickian diffusion",
+            "particle mechanics": "swelling and cracking",
+        }
         param = pybamm.LithiumIonParameters(options)
         submodel = pybamm.particle_cracking.CrackPropagation(param, "Negative")
         std_tests = tests.StandardSubModelTests(submodel, variables)
@@ -41,7 +44,7 @@ class TestCrackPropagation(unittest.TestCase):
         submodel = pybamm.particle_cracking.CrackPropagation(param, "Positive")
         std_tests = tests.StandardSubModelTests(submodel, variables)
         std_tests.test_all()
-        submodel = pybamm.particle_cracking.NoCracking(param, "Positive")
+        submodel = pybamm.particle_cracking.SwellingOnly(param, "Positive")
         std_tests = tests.StandardSubModelTests(submodel, variables)
         std_tests.test_all()
 

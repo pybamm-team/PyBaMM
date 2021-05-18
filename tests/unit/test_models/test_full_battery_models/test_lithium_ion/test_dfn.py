@@ -108,34 +108,18 @@ class TestDFN(unittest.TestCase):
         model = pybamm.lithium_ion.DFN(options)
         model.check_well_posedness()
 
-    def test_loss_active_material(self):
-        options = {
-            "loss of active material": "none",
-        }
-        model = pybamm.lithium_ion.DFN(options)
-        model.check_well_posedness()
-
     def test_loss_active_material_negative(self):
-        options = {
-            "particle cracking": "no cracking",
-            "loss of active material": "negative",
-        }
+        options = {"loss of active material": ("stress-driven", "none")}
         model = pybamm.lithium_ion.DFN(options)
         model.check_well_posedness()
 
     def test_loss_active_material_positive(self):
-        options = {
-            "particle cracking": "no cracking",
-            "loss of active material": "positive",
-        }
+        options = {"loss of active material": ("none", "stress-driven")}
         model = pybamm.lithium_ion.DFN(options)
         model.check_well_posedness()
 
     def test_loss_active_material_both(self):
-        options = {
-            "particle cracking": "no cracking",
-            "loss of active material": "both",
-        }
+        options = {"loss of active material": "stress-driven"}
         model = pybamm.lithium_ion.DFN(options)
         model.check_well_posedness()
 
@@ -209,28 +193,23 @@ class TestDFNWithSEI(unittest.TestCase):
 
 
 class TestDFNWithCrack(unittest.TestCase):
-    def test_well_posed_none_crack(self):
-        options = {"particle": "Fickian diffusion", "particle cracking": "none"}
-        model = pybamm.lithium_ion.DFN(options)
-        model.check_well_posedness()
-
-    def test_well_posed_no_cracking(self):
-        options = {"particle": "Fickian diffusion", "particle cracking": "no cracking"}
-        model = pybamm.lithium_ion.DFN(options)
-        model.check_well_posedness()
-
     def test_well_posed_negative_cracking(self):
-        options = {"particle": "Fickian diffusion", "particle cracking": "negative"}
+        options = {"particle mechanics": ("swelling and cracking", "none")}
         model = pybamm.lithium_ion.DFN(options)
         model.check_well_posedness()
 
     def test_well_posed_positive_cracking(self):
-        options = {"particle": "Fickian diffusion", "particle cracking": "positive"}
+        options = {"particle mechanics": ("none", "swelling and cracking")}
         model = pybamm.lithium_ion.DFN(options)
         model.check_well_posedness()
 
     def test_well_posed_both_cracking(self):
-        options = {"particle": "Fickian diffusion", "particle cracking": "both"}
+        options = {"particle mechanics": "swelling and cracking"}
+        model = pybamm.lithium_ion.DFN(options)
+        model.check_well_posedness()
+
+    def test_well_posed_both_swelling_only(self):
+        options = {"particle mechanics": "swelling only"}
         model = pybamm.lithium_ion.DFN(options)
         model.check_well_posedness()
 

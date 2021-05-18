@@ -307,7 +307,8 @@ class LithiumIonParameters:
         """Dimensional diffusivity in negative particle. Note this is defined as a
         function of stochiometry"""
         inputs = {"Negative particle stoichiometry": sto, "Temperature [K]": T}
-        if self.options["particle cracking"] != "none":
+        crack = self.options["particle mechanics"]
+        if crack == "true" or (isinstance(crack, tuple) and crack[0] == "true"):
             mech_effects = (
                 1 + self.theta_n_dim * (sto * self.c_n_max - self.c_n_0_dim) / T
             )
@@ -322,7 +323,8 @@ class LithiumIonParameters:
         """Dimensional diffusivity in positive particle. Note this is defined as a
         function of stochiometry"""
         inputs = {"Positive particle stoichiometry": sto, "Temperature [K]": T}
-        if self.options["particle cracking"] != "none":
+        crack = self.options["particle mechanics"]
+        if crack == "true" or (isinstance(crack, tuple) and crack[1] == "true"):
             mech_effects = (
                 1 + self.theta_p_dim * (sto * self.c_p_max - self.c_p_0_dim) / T
             )
@@ -1012,35 +1014,4 @@ class LithiumIonParameters:
 
     @options.setter
     def options(self, extra_options):
-        extra_options = extra_options or {}
-
-        # Default options
-        options = {"particle shape": "spherical", "particle cracking": "none"}
-
-        # All model options get passed to the parameter class, so we just need
-        # to update the options in the default options and ignore the rest
-        for name, opt in extra_options.items():
-            if name in options:
-                options[name] = opt
-
-        # Check the options are valid (this check also happens in 'BaseBatteryModel',
-        # but we check here incase the parameter class is instantiated separetly
-        # from the model)
-        if options["particle shape"] not in ["spherical", "user"]:
-            raise pybamm.OptionError(
-                "particle shape '{}' not recognised".format(options["particle shape"])
-            )
-
-        if options["particle cracking"] not in [
-            "none",
-            "no cracking",
-            "positive",
-            "negative",
-            "both",
-        ]:
-            raise pybamm.OptionError(
-                "particle cracking '{}' not recognised".format(
-                    options["particle cracking"]
-                )
-            )
-        self._options = options
+        self._options = pybamm.BatteryModelOptions(extra_options)

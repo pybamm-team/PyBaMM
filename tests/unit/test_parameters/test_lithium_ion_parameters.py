@@ -8,12 +8,6 @@ import numpy as np
 
 
 class TestDimensionlessParameterValues(unittest.TestCase):
-    def test_options(self):
-        with self.assertRaisesRegex(pybamm.OptionError, "particle shape"):
-            pybamm.LithiumIonParameters({"particle shape": "bad shape"})
-        with self.assertRaisesRegex(pybamm.OptionError, "particle cracking"):
-            pybamm.LithiumIonParameters({"particle cracking": "bad crack"})
-
     def test_print_parameters(self):
         parameters = pybamm.LithiumIonParameters()
         parameter_values = pybamm.lithium_ion.BaseModel().default_parameter_values
