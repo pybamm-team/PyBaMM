@@ -7,7 +7,8 @@ from .base_active_material import BaseModel
 
 
 class ReactionDriven(BaseModel):
-    """Submodel for varying active material volume fraction, driven by reactions
+    """Submodel for varying active material volume fraction, driven by reactions, from
+    [1]_
 
     Parameters
     ----------

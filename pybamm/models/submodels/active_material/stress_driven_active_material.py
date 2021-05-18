@@ -7,7 +7,8 @@ from .base_active_material import BaseModel
 
 
 class StressDriven(BaseModel):
-    """Submodel for varying active material volume fraction, driven by stress
+    """Submodel for varying active material volume fraction, driven by stress, from
+    [1]_ and [2]_.
 
     Parameters
     ----------
