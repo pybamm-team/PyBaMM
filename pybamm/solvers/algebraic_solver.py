@@ -133,8 +133,8 @@ class AlgebraicSolver(pybamm.BaseSolver):
                 maxiter = 2
                 success = False
                 while not success:
-                    # Methods which use least-squares are specified as either "lsq", which
-                    # uses the default method, or with "lsq__methodname"
+                    # Methods which use least-squares are specified as either "lsq",
+                    # which uses the default method, or with "lsq__methodname"
                     if self.method.startswith("lsq"):
 
                         if self.method == "lsq":
@@ -154,8 +154,8 @@ class AlgebraicSolver(pybamm.BaseSolver):
                             **self.extra_options,
                         )
                         integration_time += timer.time()
-                    # Methods which use minimize are specified as either "minimize", which
-                    # uses the default method, or with "minimize__methodname"
+                    # Methods which use minimize are specified as either "minimize",
+                    # which uses the default method, or with "minimize__methodname"
                     elif self.method.startswith("minimize"):
                         # Adapt the root function for minimize
                         def root_norm(y):

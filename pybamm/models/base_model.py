@@ -402,11 +402,11 @@ class BaseModel(object):
         if inplace is True:
             model = self
         else:
-            model = self.new_copy()
+            model = self.new_empty_copy()
 
         if isinstance(solution, pybamm.Solution):
             solution = solution.last_state
-        for var, equation in model.initial_conditions.items():
+        for var, equation in self.initial_conditions.items():
             if isinstance(var, pybamm.Variable):
                 try:
                     final_state = solution[var.name]
@@ -460,11 +460,11 @@ class BaseModel(object):
 
         # Also update the concatenated initial conditions if the model is already
         # discretised
-        if model.is_discretised:
+        if self.is_discretised:
             # Unpack slices for sorting
-            y_slices = {var.id: slce for var, slce in model.y_slices.items()}
+            y_slices = {var.id: slce for var, slce in self.y_slices.items()}
             slices = []
-            for symbol in model.initial_conditions.keys():
+            for symbol in self.initial_conditions.keys():
                 if isinstance(symbol, pybamm.Concatenation):
                     # must append the slice for the whole concatenation, so that
                     # equations get sorted correctly

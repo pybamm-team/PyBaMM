@@ -273,9 +273,9 @@ class Solution(object):
 
         summary_variables["Cycle number"] = range(1, len(all_summary_variables) + 1)
         self.all_summary_variables = all_summary_variables
-        self._summary_variables = {
-            name: np.array(value) for name, value in summary_variables.items()
-        }
+        self._summary_variables = pybamm.FuzzyDict(
+            {name: np.array(value) for name, value in summary_variables.items()}
+        )
 
     def update(self, variables):
         """Add ProcessedVariables to the dictionary of variables in the solution"""
