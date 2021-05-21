@@ -46,7 +46,7 @@ class ReactionDriven(BaseModel):
         else:
             eps_solid = pybamm.Variable(
                 self.domain + " electrode active material volume fraction",
-                domain=domain + " electrode",
+                domain=domain,
                 auxiliary_domains={"secondary": "current collector"},
             )
         variables = self._get_standard_active_material_variables(eps_solid)
@@ -59,17 +59,24 @@ class ReactionDriven(BaseModel):
                 + self.domain.lower()
                 + " electrode SEI interfacial current density"
             ]
+            a = variables[
+                "X-averaged "
+                + self.domain.lower()
+                + " electrode surface area to volume ratio"
+            ]
+
         else:
             j_sei = variables[
                 self.domain + " electrode SEI interfacial current density"
             ]
+            a = variables[self.domain + " electrode surface area to volume ratio"]
 
         if self.domain == "Negative":
             beta_LAM_sei = self.param.beta_LAM_sei_n
         else:
             beta_LAM_sei = self.param.beta_LAM_sei_p
 
-        deps_solid_dt = beta_LAM_sei * j_sei
+        deps_solid_dt = beta_LAM_sei * a * j_sei
         variables.update(
             self._get_standard_active_material_change_variables(deps_solid_dt)
         )

@@ -63,10 +63,12 @@ class BaseModel(pybamm.BaseSubModel):
                 R = self.param.R_p(x)
                 R_dim = self.param.R_p_dimensional(x * self.param.L_x)
                 a_typ = self.param.a_p_typ
+            R_dim_av = pybamm.x_average(R_dim)
 
             # Compute dimensional particle shape
             if self.options["particle shape"] == "spherical":
                 a_dim = 3 * eps_solid / R_dim
+                a_dim_av = 3 * eps_solid_av / R_dim_av
             elif self.options["particle shape"] == "user":
                 if self.domain == "Negative":
                     # give dimensional x as an input
@@ -80,11 +82,11 @@ class BaseModel(pybamm.BaseSubModel):
                     a_dim = pybamm.FunctionParameter(
                         "Positive electrode surface area to volume ratio [m-1]", inputs
                     )
+                a_dim_av = pybamm.x_average(a_dim)
 
             # Surface area to volume ratio is scaled with a_typ, so that it is equal to
             # 1 when eps_solid and R are uniform in space and time
             a = a_dim / a_typ
-            a_dim_av = pybamm.x_average(a_dim)
             a_av = a_dim_av / a_typ
             variables.update(
                 {

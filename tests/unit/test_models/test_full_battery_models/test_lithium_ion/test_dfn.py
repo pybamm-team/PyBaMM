@@ -108,18 +108,23 @@ class TestDFN(unittest.TestCase):
         model = pybamm.lithium_ion.DFN(options)
         model.check_well_posedness()
 
-    def test_loss_active_material_negative(self):
+    def test_loss_active_material_stress_negative(self):
         options = {"loss of active material": ("stress-driven", "none")}
         model = pybamm.lithium_ion.DFN(options)
         model.check_well_posedness()
 
-    def test_loss_active_material_positive(self):
+    def test_loss_active_material_stress_positive(self):
         options = {"loss of active material": ("none", "stress-driven")}
         model = pybamm.lithium_ion.DFN(options)
         model.check_well_posedness()
 
-    def test_loss_active_material_both(self):
+    def test_loss_active_material_stress_both(self):
         options = {"loss of active material": "stress-driven"}
+        model = pybamm.lithium_ion.DFN(options)
+        model.check_well_posedness()
+
+    def test_loss_active_material_stress_reaction_both(self):
+        options = {"loss of active material": "reaction-driven"}
         model = pybamm.lithium_ion.DFN(options)
         model.check_well_posedness()
 

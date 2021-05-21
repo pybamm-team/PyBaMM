@@ -240,10 +240,10 @@ class BatteryModelOptions(pybamm.FuzzyDict):
         # provided
         # return "none" if option not given
         lam_option = extra_options.get("loss of active material", "none")
-        if lam_option == "none":
-            default_options["particle mechanics"] = "none"
-        else:
+        if "stress-driven" in lam_option:
             default_options["particle mechanics"] = "swelling only"
+        else:
+            default_options["particle mechanics"] = "none"
         # The "SEI film resistance" option will still be overridden by extra_options if
         # provided
 

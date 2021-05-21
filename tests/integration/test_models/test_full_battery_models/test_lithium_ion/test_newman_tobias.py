@@ -100,7 +100,7 @@ class TestNewmanTobias(unittest.TestCase):
         modeltest = tests.StandardModelTest(model, var_pts=var_pts)
         modeltest.test_all()
 
-    def test_loss_active_material_negative(self):
+    def test_loss_active_material_stress_negative(self):
         options = {"loss of active material": ("stress-driven", "none")}
         model = pybamm.lithium_ion.NewmanTobias(options)
         chemistry = pybamm.parameter_sets.Ai2020
@@ -108,7 +108,7 @@ class TestNewmanTobias(unittest.TestCase):
         modeltest = tests.StandardModelTest(model, parameter_values=parameter_values)
         modeltest.test_all()
 
-    def test_loss_active_material_positive(self):
+    def test_loss_active_material_stress_positive(self):
         options = {"loss of active material": ("none", "stress-driven")}
         model = pybamm.lithium_ion.NewmanTobias(options)
         chemistry = pybamm.parameter_sets.Ai2020
@@ -116,12 +116,18 @@ class TestNewmanTobias(unittest.TestCase):
         modeltest = tests.StandardModelTest(model, parameter_values=parameter_values)
         modeltest.test_all()
 
-    def test_loss_active_material_both(self):
+    def test_loss_active_material_stress_both(self):
         options = {"loss of active material": "stress-driven"}
         model = pybamm.lithium_ion.NewmanTobias(options)
         chemistry = pybamm.parameter_sets.Ai2020
         parameter_values = pybamm.ParameterValues(chemistry=chemistry)
         modeltest = tests.StandardModelTest(model, parameter_values=parameter_values)
+        modeltest.test_all()
+
+    def test_loss_active_material_reaction_both(self):
+        options = {"loss of active material": "reaction-driven"}
+        model = pybamm.lithium_ion.NewmanTobias(options)
+        modeltest = tests.StandardModelTest(model)
         modeltest.test_all()
 
     def test_surface_form_differential(self):
