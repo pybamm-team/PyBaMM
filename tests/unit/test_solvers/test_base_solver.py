@@ -322,6 +322,45 @@ class TestBaseSolver(unittest.TestCase):
         with self.assertWarns(pybamm.SolverWarning):
             solver.solve(model, t_eval=[0, 1])
 
+    def test_sensitivities(self):
+        pybamm.set_logging_level('DEBUG')
+
+        def exact_diff_a(v, a, b):
+            return v**2 + 2 * a
+
+        def exact_diff_b(v, a, b):
+            return v
+
+        for f in ['', 'python', 'casadi']:
+            model = pybamm.BaseModel()
+            v = pybamm.Variable("v")
+            a = pybamm.InputParameter("a")
+            b = pybamm.InputParameter("b")
+            model.rhs = {v: a * v**2 + b * v + a**2}
+            model.initial_conditions = {v: 1}
+            model.convert_to_format = f
+            solver = pybamm.ScipySolver()
+            solver.set_up(model, calculate_sensitivites=True,
+                          inputs={'a': 0, 'b': 0})
+            for v_value in [0.1, -0.2, 1.5, 8.4]:
+                for a_value in [0.12, 1.5]:
+                    for b_value in [0.82, 1.9]:
+                        y = np.array([v_value])
+                        t = 0
+                        inputs = {'a': a_value, 'b': b_value}
+
+                        self.assertAlmostEqual(
+                            model.sensitivities_eval['a'](
+                                t=0, y=y, inputs=inputs
+                            ),
+                            exact_diff_a(v_value, a_value, b_value)
+                        )
+                        self.assertAlmostEqual(
+                            model.sensitivities_eval['b'](
+                                t=0, y=y, inputs=inputs
+                            ),
+                            exact_diff_b(v_value, a_value, b_value)
+                        )
 
 if __name__ == "__main__":
     print("Add -v for more debug output")
