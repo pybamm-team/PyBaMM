@@ -131,6 +131,7 @@ class BasicDFN(BaseModel):
                 param.ne_n / 2 * (phi_s_n - phi_e_n - param.U_n(c_s_surf_n, T))
             )
         )
+        ocp_n = param.U_n(c_s_surf_n, T)
         c_s_surf_p = pybamm.surf(c_s_p)
         j0_p = param.gamma_p * param.j0_p(c_e_p, c_s_surf_p, T) / param.C_r_p
         j_s = pybamm.PrimaryBroadcast(0, "separator")
@@ -279,6 +280,17 @@ class BasicDFN(BaseModel):
         pot_scale = param.potential_scale
         U_ref = param.U_p_ref - param.U_n_ref
         voltage_dim = U_ref + voltage * pot_scale
+        ocp_n_dim = param.U_n_ref + param.potential_scale * ocp_n
+        ocp_av_n_dim = pybamm.x_average(ocp_n_dim)
+        c_s_rav_n = pybamm.r_average(c_s_n)
+        c_s_rav_n_dim = c_s_rav_n * param.c_n_max
+        c_s_xrav_n = pybamm.x_average(c_s_rav_n)
+        c_s_xrav_n_dim = c_s_xrav_n * param.c_n_max
+        c_s_rav_p = pybamm.r_average(c_s_p)
+        c_s_xrav_p = pybamm.x_average(c_s_rav_p)
+        c_s_xrav_p_dim = c_s_xrav_p * param.c_p_max
+        j_n_dim = j_n * param.j_scale_n
+        j_n_av_dim = pybamm.x_average(j_n_dim)
         # The `variables` dictionary contains all variables that might be useful for
         # visualising the solution of the model
         self.variables = {
@@ -291,6 +303,17 @@ class BasicDFN(BaseModel):
             "Positive electrode potential": phi_s_p,
             "Terminal voltage": voltage,
             "Terminal voltage [V]": voltage_dim,
+            "Time [s]": pybamm.t * self.param.timescale,
+            "Negative electrode open circuit potential of [V]": ocp_n_dim,
+            "X-averaged negative electrode open circuit potential [V]": ocp_av_n_dim,
+            "R-averaged negative particle concentration": c_s_rav_n,
+            "R-averaged negative particle concentration [mol.m-3]": c_s_rav_n_dim,
+            "Averaged negative electrode concentration": c_s_xrav_n,
+            "Averaged negative electrode concentration [mol.m-3]": c_s_xrav_n_dim,
+            "Averaged positive electrode concentration": c_s_xrav_p,
+            "Averaged positive electrode concentration [mol.m-3]": c_s_xrav_p_dim,
+            "Negative electrode interfacial current density [A.m-2]": j_n_dim,
+            "X-averaged negative electrode interfacial current density [A.m-2]": j_n_av_dim,
         }
         self.events += [
             pybamm.Event("Minimum voltage", voltage - param.voltage_low_cut),
