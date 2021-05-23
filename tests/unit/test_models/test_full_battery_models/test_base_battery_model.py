@@ -218,10 +218,23 @@ class TestBaseBatteryModel(unittest.TestCase):
             model = pybamm.BaseBatteryModel(
                 {"loss of active material": "bad LAM model"}
             )
+        with self.assertRaisesRegex(pybamm.OptionError, "loss of active material"):
+            # can't have a 3-tuple
+            model = pybamm.BaseBatteryModel(
+                {
+                    "loss of active material": (
+                        "bad LAM model",
+                        "bad LAM model",
+                        "bad LAM model",
+                    )
+                }
+            )
 
         # crack model
         with self.assertRaisesRegex(pybamm.OptionError, "particle mechanics"):
             pybamm.BaseBatteryModel({"particle mechanics": "bad particle cracking"})
+        with self.assertRaisesRegex(pybamm.OptionError, "particle cracking"):
+            pybamm.BaseBatteryModel({"particle cracking": "bad particle cracking"})
 
         # plating model
         with self.assertRaisesRegex(pybamm.OptionError, "lithium plating"):

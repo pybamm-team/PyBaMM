@@ -314,7 +314,7 @@ class LithiumIonParameters:
         function of stochiometry"""
         inputs = {"Negative particle stoichiometry": sto, "Temperature [K]": T}
         crack = self.options["particle mechanics"]
-        if crack == "true" or (isinstance(crack, tuple) and crack[0] == "true"):
+        if crack != "none" or (isinstance(crack, tuple) and crack[0] != "none"):
             mech_effects = (
                 1 + self.theta_n_dim * (sto * self.c_n_max - self.c_n_0_dim) / T
             )
@@ -330,7 +330,7 @@ class LithiumIonParameters:
         function of stochiometry"""
         inputs = {"Positive particle stoichiometry": sto, "Temperature [K]": T}
         crack = self.options["particle mechanics"]
-        if crack == "true" or (isinstance(crack, tuple) and crack[1] == "true"):
+        if crack != "none" or (isinstance(crack, tuple) and crack[1] != "none"):
             mech_effects = (
                 1 + self.theta_p_dim * (sto * self.c_p_max - self.c_p_0_dim) / T
             )
