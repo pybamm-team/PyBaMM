@@ -403,6 +403,12 @@ class BaseModel(object):
             model = self
         else:
             model = self.new_empty_copy()
+            model.rhs = self.rhs.copy()
+            model.algebraic = self.algebraic.copy()
+            model.initial_conditions = self.initial_conditions.copy()
+            model.boundary_conditions = self.boundary_conditions.copy()
+            model.variables = self.variables.copy()
+            model.events = self.events.copy()
 
         if isinstance(solution, pybamm.Solution):
             solution = solution.last_state
