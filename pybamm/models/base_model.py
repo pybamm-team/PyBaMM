@@ -274,10 +274,9 @@ class BaseModel(object):
     @property
     def parameters(self):
         """Returns all the parameters in the model"""
-        if self._parameters is None:
-            self._parameters = self._find_symbols(
-                (pybamm.Parameter, pybamm.InputParameter)
-            )
+        self._parameters = self._find_symbols(
+            (pybamm.Parameter, pybamm.InputParameter, pybamm.FunctionParameter)
+        )
         return self._parameters
 
     @property
@@ -288,28 +287,27 @@ class BaseModel(object):
         return self._input_parameters
 
     def print_parameter_info(self):
-        if self._parameter_info is None:
-            self._parameter_info = ""
-            parameters = self._find_symbols(pybamm.Parameter)
-            for param in parameters:
-                self._parameter_info += f"{param.name} (Parameter)\n"
-            input_parameters = self._find_symbols(pybamm.InputParameter)
-            for input_param in input_parameters:
-                if input_param.domain == []:
-                    self._parameter_info += f"{input_param.name} (InputParameter)\n"
-                else:
-                    self._parameter_info += (
-                        f"{input_param.name} (InputParameter in {input_param.domain})\n"
-                    )
-            function_parameters = self._find_symbols(pybamm.FunctionParameter)
-            for func_param in function_parameters:
-                # don't double count function parameters
-                if func_param.name not in self._parameter_info:
-                    input_names = "'" + "', '".join(func_param.input_names) + "'"
-                    self._parameter_info += (
-                        f"{func_param.name} (FunctionParameter "
-                        f"with input(s) {input_names})\n"
-                    )
+        self._parameter_info = ""
+        parameters = self._find_symbols(pybamm.Parameter)
+        for param in parameters:
+            self._parameter_info += f"{param.name} (Parameter)\n"
+        input_parameters = self._find_symbols(pybamm.InputParameter)
+        for input_param in input_parameters:
+            if input_param.domain == []:
+                self._parameter_info += f"{input_param.name} (InputParameter)\n"
+            else:
+                self._parameter_info += (
+                    f"{input_param.name} (InputParameter in {input_param.domain})\n"
+                )
+        function_parameters = self._find_symbols(pybamm.FunctionParameter)
+        for func_param in function_parameters:
+            # don't double count function parameters
+            if func_param.name not in self._parameter_info:
+                input_names = "'" + "', '".join(func_param.input_names) + "'"
+                self._parameter_info += (
+                    f"{func_param.name} (FunctionParameter "
+                    f"with input(s) {input_names})\n"
+                )
 
         print(self._parameter_info)
 
@@ -323,7 +321,7 @@ class BaseModel(object):
             + [
                 x[side][0]
                 for x in self.boundary_conditions.values()
-                for side in ["left", "right"]
+                for side in x.keys()
             ]
             + list(self.variables.values())
             + [event.expression for event in self.events]
@@ -404,11 +402,17 @@ class BaseModel(object):
         if inplace is True:
             model = self
         else:
-            model = self.new_copy()
+            model = self.new_empty_copy()
+            model.rhs = self.rhs.copy()
+            model.algebraic = self.algebraic.copy()
+            model.initial_conditions = self.initial_conditions.copy()
+            model.boundary_conditions = self.boundary_conditions.copy()
+            model.variables = self.variables.copy()
+            model.events = self.events.copy()
 
         if isinstance(solution, pybamm.Solution):
             solution = solution.last_state
-        for var, equation in model.initial_conditions.items():
+        for var, equation in self.initial_conditions.items():
             if isinstance(var, pybamm.Variable):
                 try:
                     final_state = solution[var.name]
@@ -462,11 +466,11 @@ class BaseModel(object):
 
         # Also update the concatenated initial conditions if the model is already
         # discretised
-        if model.is_discretised:
+        if self.is_discretised:
             # Unpack slices for sorting
-            y_slices = {var.id: slce for var, slce in model.y_slices.items()}
+            y_slices = {var.id: slce for var, slce in self.y_slices.items()}
             slices = []
-            for symbol in model.initial_conditions.keys():
+            for symbol in self.initial_conditions.keys():
                 if isinstance(symbol, pybamm.Concatenation):
                     # must append the slice for the whole concatenation, so that
                     # equations get sorted correctly

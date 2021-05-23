@@ -29,14 +29,9 @@ class Full(BaseElectrolyteDiffusion):
         eps_c_e_s = pybamm.standard_variables.eps_c_e_s
         eps_c_e_p = pybamm.standard_variables.eps_c_e_p
 
-        eps_c_e = pybamm.concatenation(eps_c_e_n, eps_c_e_s, eps_c_e_p)
-
-        variables = {
-            "Porosity times concentration": eps_c_e,
-            "Negative electrode porosity times concentration": eps_c_e_n,
-            "Separator porosity times concentration": eps_c_e_s,
-            "Positive electrode porosity times concentration": eps_c_e_p,
-        }
+        variables = self._get_standard_porosity_times_concentration_variables(
+            eps_c_e_n, eps_c_e_s, eps_c_e_p
+        )
 
         return variables
 

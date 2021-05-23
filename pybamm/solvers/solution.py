@@ -273,9 +273,9 @@ class Solution(object):
 
         summary_variables["Cycle number"] = range(1, len(all_summary_variables) + 1)
         self.all_summary_variables = all_summary_variables
-        self._summary_variables = {
-            name: np.array(value) for name, value in summary_variables.items()
-        }
+        self._summary_variables = pybamm.FuzzyDict(
+            {name: np.array(value) for name, value in summary_variables.items()}
+        )
 
     def update(self, variables):
         """Add ProcessedVariables to the dictionary of variables in the solution"""
@@ -574,7 +574,7 @@ class Solution(object):
         return new_sol
 
 
-def make_cycle_solution(step_solutions, esoh_sim, save_this_cycle):
+def make_cycle_solution(step_solutions, esoh_sim=None, save_this_cycle=True):
     """
     Function to create a Solution for an entire cycle, and associated summary variables
 
@@ -582,11 +582,14 @@ def make_cycle_solution(step_solutions, esoh_sim, save_this_cycle):
     ----------
     step_solutions : list of :class:`Solution`
         Step solutions that form the entire cycle
-    esoh_sim : :class:`pybamm.Simulation`
+    esoh_sim : :class:`pybamm.Simulation`, optional
         A simulation, whose model should be a :class:`pybamm.lithium_ion.ElectrodeSOH`
-        model, which is used to calculate some of the summary variables
-    save_this_cycle : bool
-        Whether to save the entire cycle variables or just the summary variables
+        model, which is used to calculate some of the summary variables. If `None`
+        (default) then only summary variables that do not require the eSOH calculation
+        are calculated. See [1] for more details on eSOH variables.
+    save_this_cycle : bool, optional
+        Whether to save the entire cycle variables or just the summary variables.
+        Default True
 
     Returns
     -------
@@ -594,6 +597,13 @@ def make_cycle_solution(step_solutions, esoh_sim, save_this_cycle):
         The Solution object for this cycle, or None (if save_this_cycle is False)
     cycle_summary_variables : dict
         Dictionary of summary variables for this cycle
+
+    References
+    ----------
+    .. [1] Mohtat, P., Lee, S., Siegel, J. B., & Stefanopoulou, A. G. (2019). Towards
+    better estimability of electrode-specific state of health: Decoding the cell
+    expansion. Journal of Power Sources, 427, 101-111.
+
     """
     sum_sols = step_solutions[0].copy()
     for step_solution in step_solutions[1:]:
@@ -668,6 +678,8 @@ def get_cycle_summary_variables(cycle_solution, esoh_sim):
         "Loss of capacity to positive electrode lithium plating [A.h]",
         "Total lithium lost to side reactions [mol]",
         "Total capacity lost to side reactions [A.h]",
+        # Resistance
+        "Local ECM resistance [Ohm]",
     ]
     first_state = cycle_solution.first_state
     last_state = cycle_solution.last_state
@@ -680,36 +692,63 @@ def get_cycle_summary_variables(cycle_solution, esoh_sim):
             data_last[0] - data_first[0]
         )
 
-    V_min = esoh_sim.parameter_values["Lower voltage cut-off [V]"]
-    V_max = esoh_sim.parameter_values["Upper voltage cut-off [V]"]
-    C_n = last_state["Negative electrode capacity [A.h]"].data[0]
-    C_p = last_state["Positive electrode capacity [A.h]"].data[0]
-    n_Li = last_state["Total lithium in particles [mol]"].data[0]
+    if esoh_sim is not None:
+        V_min = esoh_sim.parameter_values["Lower voltage cut-off [V]"]
+        V_max = esoh_sim.parameter_values["Upper voltage cut-off [V]"]
+        C_n = last_state["Negative electrode capacity [A.h]"].data[0]
+        C_p = last_state["Positive electrode capacity [A.h]"].data[0]
+        n_Li = last_state["Total lithium in particles [mol]"].data[0]
+        if esoh_sim.solution is not None:
+            # initialize with previous solution if it is available
+            esoh_sim.built_model.set_initial_conditions_from(esoh_sim.solution)
+            solver = None
+        else:
+            x_100_init = np.max(cycle_solution["Negative electrode SOC"].data)
+            # make sure x_0 > 0
+            C_init = np.minimum(0.95 * (C_n * x_100_init), max_Q - min_Q)
 
-    # Solve the esoh model and add outputs to the summary variables
-    # temporarily turn off logger
-    # Update initial conditions using the cycle solution
-    esoh_sim.build()
-    esoh_sim.built_model.set_initial_conditions_from(
-        {
-            "x_100": np.max(cycle_solution["Negative electrode SOC"].data),
-            "C": max_Q - min_Q,
-        }
-    )
-    esoh_sol = esoh_sim.solve(
-        [0],
-        inputs={
-            "V_min": V_min,
-            "V_max": V_max,
-            "C_n": C_n,
-            "C_p": C_p,
-            "n_Li": n_Li,
-        },
-    )
+            # Solve the esoh model and add outputs to the summary variables
+            # use CasadiAlgebraicSolver if there are interpolants
+            if isinstance(
+                esoh_sim.parameter_values["Negative electrode OCP [V]"], tuple
+            ) or isinstance(
+                esoh_sim.parameter_values["Positive electrode OCP [V]"], tuple
+            ):
+                solver = pybamm.CasadiAlgebraicSolver()
+                # Choose x_100_init so as not to violate the interpolation limits
+                y_100_min = np.min(
+                    esoh_sim.parameter_values["Positive electrode OCP [V]"][1][:, 0]
+                )
+                x_100_max = (
+                    n_Li * pybamm.constants.F.value / 3600 - y_100_min * C_p
+                ) / C_n
+                x_100_init = np.minimum(x_100_init, 0.99 * x_100_max)
+            else:
+                solver = None
+            # Update initial conditions using the cycle solution
+            esoh_sim.build()
+            esoh_sim.built_model.set_initial_conditions_from(
+                {"x_100": x_100_init, "C": C_init}
+            )
+        try:
+            esoh_sol = esoh_sim.solve(
+                [0],
+                inputs={
+                    "V_min": V_min,
+                    "V_max": V_max,
+                    "C_n": C_n,
+                    "C_p": C_p,
+                    "n_Li": n_Li,
+                },
+                solver=solver,
+            )
+            for var in esoh_sim.built_model.variables:
+                cycle_summary_variables[var] = esoh_sol[var].data[0]
+        except pybamm.SolverError:
+            # eSOH algorithm failed, record NaN
+            for var in esoh_sim.built_model.variables:
+                cycle_summary_variables[var] = np.nan
 
-    for var in esoh_sol.all_models[0].variables:
-        cycle_summary_variables[var] = esoh_sol[var].data[0]
-
-    cycle_summary_variables["Capacity [A.h]"] = cycle_summary_variables["C"]
+        cycle_summary_variables["Capacity [A.h]"] = cycle_summary_variables["C"]
 
     return cycle_summary_variables

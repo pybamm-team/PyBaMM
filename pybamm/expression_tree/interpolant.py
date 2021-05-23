@@ -23,9 +23,7 @@ class Interpolant(pybamm.Function):
         Name of the interpolant. Default is None, in which case the name "interpolating
         function" is given.
     interpolator : str, optional
-        Which interpolator to use ("pchip" or "cubic spline"). Note that whichever
-        interpolator is used must be differentiable (for ``Interpolator._diff``).
-        Default is "cubic spline". Note that "pchip" may give slow results.
+        Which interpolator to use ("linear", "pchip", or "cubic spline").
     extrapolate : bool, optional
         Whether to extrapolate for points that are outside of the parametrisation
         range, or return NaN (following default behaviour from scipy). Default is True.

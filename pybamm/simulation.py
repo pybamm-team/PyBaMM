@@ -543,6 +543,7 @@ class Simulation:
         solver=None,
         check_model=True,
         save_at_cycles=None,
+        calc_esoh=True,
         starting_solution=None,
         **kwargs,
     ):
@@ -576,7 +577,11 @@ class Simulation:
         save_at_cycles : int or list of ints, optional
             Which cycles to save the full sub-solutions for. If None, all cycles are
             saved. If int, every multiple of save_at_cycles is saved. If list, every
-            cycle in the list is saved.
+            cycle in the list is saved. The first cycle (cycle 1) is always saved.
+        calc_esoh : bool, optional
+            Whether to include eSOH variables in the summary variables. If `False`
+            then only summary variables that do not require the eSOH calculation
+            are calculated. Default is True.
         starting_solution : :class:`pybamm.Solution`
             The solution to start stepping from. If None (default), then self._solution
             is used. Must be None if not using an experiment.
@@ -688,10 +693,13 @@ class Simulation:
             current_solution = starting_solution
 
             # Set up eSOH model (for summary variables)
-            esoh_model = pybamm.lithium_ion.ElectrodeSOH()
-            esoh_sim = pybamm.Simulation(
-                esoh_model, parameter_values=self.parameter_values
-            )
+            if calc_esoh is True:
+                esoh_model = pybamm.lithium_ion.ElectrodeSOH()
+                esoh_sim = pybamm.Simulation(
+                    esoh_model, parameter_values=self.parameter_values
+                )
+            else:
+                esoh_sim = None
 
             idx = 0
             num_cycles = len(self.experiment.cycle_lengths)
@@ -708,8 +716,10 @@ class Simulation:
 
                 # Decide whether we should save this cycle
                 save_this_cycle = (
+                    # always save cycle 1
+                    cycle_num == 1
                     # None: save all cycles
-                    save_at_cycles is None
+                    or save_at_cycles is None
                     # list: save all cycles in the list
                     or (
                         isinstance(save_at_cycles, list)
@@ -783,7 +793,9 @@ class Simulation:
 
                 # At the final step of the inner loop we save the cycle
                 cycle_solution, cycle_summary_variables = pybamm.make_cycle_solution(
-                    steps, esoh_sim, save_this_cycle
+                    steps,
+                    esoh_sim,
+                    save_this_cycle=save_this_cycle,
                 )
                 all_cycle_solutions.append(cycle_solution)
                 all_summary_variables.append(cycle_summary_variables)
@@ -804,7 +816,7 @@ class Simulation:
 
                 if capacity_stop is not None:
                     capacity_now = cycle_summary_variables["Capacity [A.h]"]
-                    if capacity_now > capacity_stop:
+                    if np.isnan(capacity_now) or capacity_now > capacity_stop:
                         pybamm.logger.notice(
                             f"Capacity is now {capacity_now:.3f} Ah "
                             f"(originally {capacity_start:.3f} Ah, "
