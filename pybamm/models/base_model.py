@@ -86,7 +86,7 @@ class BaseModel(object):
 
     def __init__(self, name="Unnamed model"):
         self.name = name
-        self.options = {}
+        self._options = {}
 
         # Initialise empty model
         self._rhs = {}

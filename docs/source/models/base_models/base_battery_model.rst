@@ -4,5 +4,5 @@ Base Battery Model
 .. autoclass:: pybamm.BaseBatteryModel
     :members:
 
-.. autoclass:: pybamm.Options
+.. autoclass:: pybamm.BatteryModelOptions
     :members:
