@@ -730,24 +730,19 @@ def get_cycle_summary_variables(cycle_solution, esoh_sim):
             esoh_sim.built_model.set_initial_conditions_from(
                 {"x_100": x_100_init, "C": C_init}
             )
-        try:
-            esoh_sol = esoh_sim.solve(
-                [0],
-                inputs={
-                    "V_min": V_min,
-                    "V_max": V_max,
-                    "C_n": C_n,
-                    "C_p": C_p,
-                    "n_Li": n_Li,
-                },
-                solver=solver,
-            )
-            for var in esoh_sim.built_model.variables:
-                cycle_summary_variables[var] = esoh_sol[var].data[0]
-        except pybamm.SolverError:
-            # eSOH algorithm failed, record NaN
-            for var in esoh_sim.built_model.variables:
-                cycle_summary_variables[var] = np.nan
+        esoh_sol = esoh_sim.solve(
+            [0],
+            inputs={
+                "V_min": V_min,
+                "V_max": V_max,
+                "C_n": C_n,
+                "C_p": C_p,
+                "n_Li": n_Li,
+            },
+            solver=solver,
+        )
+        for var in esoh_sim.built_model.variables:
+            cycle_summary_variables[var] = esoh_sol[var].data[0]
 
         cycle_summary_variables["Capacity [A.h]"] = cycle_summary_variables["C"]
 

@@ -129,7 +129,7 @@ class AlgebraicSolver(pybamm.BaseSolver):
                 y_alg[:, idx] = y0_alg
             # Otherwise calculate new y0
             else:
-                iter = 0
+                itr = 0
                 maxiter = 2
                 success = False
                 while not success:
@@ -215,7 +215,7 @@ class AlgebraicSolver(pybamm.BaseSolver):
                         )
                     else:
                         y0_alg = sol.x
-                        if iter > maxiter:
+                        if itr > maxiter:
                             raise pybamm.SolverError(
                                 "Could not find acceptable solution: solver terminated "
                                 "successfully, but maximum solution error "
@@ -223,7 +223,7 @@ class AlgebraicSolver(pybamm.BaseSolver):
                                     np.max(abs(sol.fun)), self.tol
                                 )
                             )
-                    iter += 1
+                    itr += 1
 
         # Concatenate differential part
         y_diff = np.r_[[y0_diff] * len(t_eval)].T
