@@ -32,6 +32,7 @@ class DFN(BaseModel):
 
     def __init__(self, options=None, name="Doyle-Fuller-Newman model", build=True):
         super().__init__(options, name)
+        # For degradation models we use the full form since this is a full-order model
         self.x_average = False
 
         self.set_external_circuit_submodel()
