@@ -108,44 +108,34 @@ class TestSPMe(unittest.TestCase):
         modeltest = tests.StandardModelTest(model)
         modeltest.test_all()
 
-    def test_loss_active_material(self):
-        options = {"loss of active material": "none"}
+    def test_loss_active_material_stress_negative(self):
+        options = {"loss of active material": ("stress-driven", "none")}
         model = pybamm.lithium_ion.SPMe(options)
         chemistry = pybamm.parameter_sets.Ai2020
         parameter_values = pybamm.ParameterValues(chemistry=chemistry)
         modeltest = tests.StandardModelTest(model, parameter_values=parameter_values)
         modeltest.test_all()
 
-    def test_loss_active_material_negative(self):
-        options = {
-            "loss of active material": "none",
-        }
+    def test_loss_active_material_stress_positive(self):
+        options = {"loss of active material": ("none", "stress-driven")}
         model = pybamm.lithium_ion.SPMe(options)
         chemistry = pybamm.parameter_sets.Ai2020
         parameter_values = pybamm.ParameterValues(chemistry=chemistry)
         modeltest = tests.StandardModelTest(model, parameter_values=parameter_values)
         modeltest.test_all()
 
-    def test_loss_active_material_positive(self):
-        options = {
-            "particle cracking": "no cracking",
-            "loss of active material": "positive",
-        }
+    def test_loss_active_material_stress_both(self):
+        options = {"loss of active material": "stress-driven"}
         model = pybamm.lithium_ion.SPMe(options)
         chemistry = pybamm.parameter_sets.Ai2020
         parameter_values = pybamm.ParameterValues(chemistry=chemistry)
         modeltest = tests.StandardModelTest(model, parameter_values=parameter_values)
         modeltest.test_all()
 
-    def test_loss_active_material_both(self):
-        options = {
-            "particle cracking": "no cracking",
-            "loss of active material": "both",
-        }
+    def test_loss_active_material_reaction_both(self):
+        options = {"loss of active material": "reaction-driven"}
         model = pybamm.lithium_ion.SPMe(options)
-        chemistry = pybamm.parameter_sets.Ai2020
-        parameter_values = pybamm.ParameterValues(chemistry=chemistry)
-        modeltest = tests.StandardModelTest(model, parameter_values=parameter_values)
+        modeltest = tests.StandardModelTest(model)
         modeltest.test_all()
 
     def test_surface_form_differential(self):
@@ -210,24 +200,8 @@ class TestSPMeWithSEI(unittest.TestCase):
 
 
 class TestSPMeWithCrack(unittest.TestCase):
-    def test_well_posed_none_crack(self):
-        options = {"particle": "Fickian diffusion", "particle cracking": "none"}
-        model = pybamm.lithium_ion.SPMe(options)
-        chemistry = pybamm.parameter_sets.Ai2020
-        parameter_values = pybamm.ParameterValues(chemistry=chemistry)
-        modeltest = tests.StandardModelTest(model, parameter_values=parameter_values)
-        modeltest.test_all()
-
-    def test_well_posed_no_cracking(self):
-        options = {"particle": "Fickian diffusion", "particle cracking": "no cracking"}
-        model = pybamm.lithium_ion.SPMe(options)
-        chemistry = pybamm.parameter_sets.Ai2020
-        parameter_values = pybamm.ParameterValues(chemistry=chemistry)
-        modeltest = tests.StandardModelTest(model, parameter_values=parameter_values)
-        modeltest.test_all()
-
     def test_well_posed_negative_cracking(self):
-        options = {"particle": "Fickian diffusion", "particle cracking": "negative"}
+        options = {"particle mechanics": ("swelling and cracking", "none")}
         model = pybamm.lithium_ion.SPMe(options)
         chemistry = pybamm.parameter_sets.Ai2020
         parameter_values = pybamm.ParameterValues(chemistry=chemistry)
@@ -235,7 +209,7 @@ class TestSPMeWithCrack(unittest.TestCase):
         modeltest.test_all()
 
     def test_well_posed_positive_cracking(self):
-        options = {"particle": "Fickian diffusion", "particle cracking": "positive"}
+        options = {"particle mechanics": ("none", "swelling and cracking")}
         model = pybamm.lithium_ion.SPMe(options)
         chemistry = pybamm.parameter_sets.Ai2020
         parameter_values = pybamm.ParameterValues(chemistry=chemistry)
@@ -243,7 +217,15 @@ class TestSPMeWithCrack(unittest.TestCase):
         modeltest.test_all()
 
     def test_well_posed_both_cracking(self):
-        options = {"particle": "Fickian diffusion", "particle cracking": "both"}
+        options = {"particle mechanics": "swelling and cracking"}
+        model = pybamm.lithium_ion.SPMe(options)
+        chemistry = pybamm.parameter_sets.Ai2020
+        parameter_values = pybamm.ParameterValues(chemistry=chemistry)
+        modeltest = tests.StandardModelTest(model, parameter_values=parameter_values)
+        modeltest.test_all()
+
+    def test_well_posed_both_swelling_only(self):
+        options = {"particle mechanics": "swelling only"}
         model = pybamm.lithium_ion.SPMe(options)
         chemistry = pybamm.parameter_sets.Ai2020
         parameter_values = pybamm.ParameterValues(chemistry=chemistry)

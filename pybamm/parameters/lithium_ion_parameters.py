@@ -323,6 +323,12 @@ class LithiumIonParameters:
         self.stress_critical_p_dim = pybamm.Parameter(
             "Positive electrode critical stress [Pa]"
         )
+        self.beta_LAM_sei_n_dimensional = pybamm.Parameter(
+            "Negative electrode reaction-driven LAM factor [m3.mol-1]"
+        )
+        self.beta_LAM_sei_p_dimensional = pybamm.Parameter(
+            "Positive electrode reaction-driven LAM factor [m3.mol-1]"
+        )
 
     def D_e_dimensional(self, c_e, T):
         """Dimensional diffusivity in electrolyte"""
@@ -338,7 +344,8 @@ class LithiumIonParameters:
         """Dimensional diffusivity in negative particle. Note this is defined as a
         function of stochiometry"""
         inputs = {"Negative particle stoichiometry": sto, "Temperature [K]": T}
-        if self.options["particle cracking"] != "none":
+        crack = self.options["particle mechanics"]
+        if crack != "none" or (isinstance(crack, tuple) and crack[0] != "none"):
             mech_effects = (
                 1 + self.theta_n_dim * (sto * self.c_n_max - self.c_n_0_dim) / T
             )
@@ -353,7 +360,8 @@ class LithiumIonParameters:
         """Dimensional diffusivity in positive particle. Note this is defined as a
         function of stochiometry"""
         inputs = {"Positive particle stoichiometry": sto, "Temperature [K]": T}
-        if self.options["particle cracking"] != "none":
+        crack = self.options["particle mechanics"]
+        if crack != "none" or (isinstance(crack, tuple) and crack[1] != "none"):
             mech_effects = (
                 1 + self.theta_p_dim * (sto * self.c_p_max - self.c_p_0_dim) / T
             )
@@ -824,6 +832,19 @@ class LithiumIonParameters:
         # normalised typical time for one cycle
         self.stress_critical_n = self.stress_critical_n_dim / self.E_n
         self.stress_critical_p = self.stress_critical_p_dim / self.E_p
+        # Reaction-driven LAM parameters
+        self.beta_LAM_sei_n = (
+            self.beta_LAM_sei_n_dimensional
+            * self.a_n_typ
+            * self.j_scale_n
+            * self.tau_discharge
+        ) / self.F
+        self.beta_LAM_sei_p = (
+            self.beta_LAM_sei_p_dimensional
+            * self.a_n_typ
+            * self.j_scale_p
+            * self.tau_discharge
+        ) / self.F
 
     def chi(self, c_e, T):
         """
@@ -1043,35 +1064,4 @@ class LithiumIonParameters:
 
     @options.setter
     def options(self, extra_options):
-        extra_options = extra_options or {}
-
-        # Default options
-        options = {"particle shape": "spherical", "particle cracking": "none"}
-
-        # All model options get passed to the parameter class, so we just need
-        # to update the options in the default options and ignore the rest
-        for name, opt in extra_options.items():
-            if name in options:
-                options[name] = opt
-
-        # Check the options are valid (this check also happens in 'BaseBatteryModel',
-        # but we check here incase the parameter class is instantiated separetly
-        # from the model)
-        if options["particle shape"] not in ["spherical", "user"]:
-            raise pybamm.OptionError(
-                "particle shape '{}' not recognised".format(options["particle shape"])
-            )
-
-        if options["particle cracking"] not in [
-            "none",
-            "no cracking",
-            "positive",
-            "negative",
-            "both",
-        ]:
-            raise pybamm.OptionError(
-                "particle cracking '{}' not recognised".format(
-                    options["particle cracking"]
-                )
-            )
-        self._options = options
+        self._options = pybamm.BatteryModelOptions(extra_options)
