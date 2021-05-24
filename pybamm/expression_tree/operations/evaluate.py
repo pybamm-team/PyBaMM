@@ -628,7 +628,7 @@ class EvaluatorJax:
         self._sens_evaluate = jax.jit(jacobian_evaluate,
                                      static_argnums=self._static_argnums)
 
-        return EvaluatorJaxJacobian(self._jac_evaluate, self._constants)
+        return EvaluatorJaxSensitivities(self._sens_evaluate, self._constants)
 
 
     def debug(self, t=None, y=None, y_dot=None, inputs=None, known_evals=None):
@@ -681,6 +681,28 @@ class EvaluatorJaxJacobian:
         # execute code
         result = self._jac_evaluate(*self._constants, t, y, y_dot, inputs, known_evals)
         result = result.reshape(result.shape[0], -1)
+
+        # don't need known_evals, but need to reproduce Symbol.evaluate signature
+        if known_evals is not None:
+            return result, known_evals
+        else:
+            return result
+
+class EvaluatorJaxSensitivities:
+    def __init__(self, jac_evaluate, constants):
+        self._jac_evaluate = jac_evaluate
+        self._constants = constants
+
+    def evaluate(self, t=None, y=None, y_dot=None, inputs=None, known_evals=None):
+        """
+        Acts as a drop-in replacement for :func:`pybamm.Symbol.evaluate`
+        """
+        # generated code assumes y is a column vector
+        if y is not None and y.ndim == 1:
+            y = y.reshape(-1, 1)
+
+        # execute code
+        result = self._jac_evaluate(*self._constants, t, y, y_dot, inputs, known_evals)
 
         # don't need known_evals, but need to reproduce Symbol.evaluate signature
         if known_evals is not None:

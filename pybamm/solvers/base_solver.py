@@ -269,6 +269,7 @@ class BaseSolver(object):
                         f"to parameters {calculate_sensitivites} using jax"
                     ))
                     jacp_dict = func.get_sensitivities()
+                    jacp_dict = jacp_dict.evaluate
                 else:
                     jacp_dict = None
                 if use_jacobian:
@@ -283,13 +284,11 @@ class BaseSolver(object):
             elif model.convert_to_format != "casadi":
                 # Process with pybamm functions, optionally converting
                 # to python evaluator
-                print('calculate_sensitivites = ', calculate_sensitivites)
                 if calculate_sensitivites:
                     report((
                         f"Calculating sensitivities for {name} with respect "
                         f"to parameters {calculate_sensitivites}"
                     ))
-                    print(type(func))
                     jacp_dict = {
                         p: func.diff(pybamm.InputParameter(p))
                         for p in calculate_sensitivites
@@ -360,10 +359,17 @@ class BaseSolver(object):
             else:
                 jac_call = None
             if jacp_dict is not None:
-                jacp_call = {
-                    k: SolverCallable(v, name + "_sensitivity_wrt_" + k, model)
-                    for k, v in jacp_dict.items()
-                }
+                if model.convert_to_format == "jax":
+                    jacp_call = SolverCallable(
+                        jacp_dict, name + "_sensitivity_wrt_inputs", model
+                    )
+                else:
+                    jacp_call = {
+                        k: SolverCallable(v, name + "_sensitivity_wrt_" + k, model)
+                        for k, v in jacp_dict.items()
+                    }
+            else:
+                jacp_call = None
             return func, func_call, jac_call, jacp_call
 
         # Check for heaviside and modulo functions in rhs and algebraic and add
@@ -520,6 +526,8 @@ class BaseSolver(object):
                     "rhs", [t_casadi, y_casadi, p_casadi_stacked], [explicit_rhs]
                 )
             model.casadi_algebraic = algebraic
+            model.casadi_sensitivities_rhs = jacp_rhs
+            model.casadi_sensitivities_algebraic = jacp_algebraic
         if len(model.rhs) == 0:
             # No rhs equations: residuals is algebraic only
             model.residuals_eval = Residuals(algebraic, "residuals", model)

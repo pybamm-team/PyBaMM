@@ -323,15 +323,14 @@ class TestBaseSolver(unittest.TestCase):
             solver.solve(model, t_eval=[0, 1])
 
     def test_sensitivities(self):
-        pybamm.set_logging_level('DEBUG')
 
         def exact_diff_a(v, a, b):
-            return v**2 + 2 * a
+            return np.array([v**2 + 2 * a])
 
         def exact_diff_b(v, a, b):
-            return v
+            return np.array([v])
 
-        for f in ['', 'python', 'casadi']:
+        for f in ['', 'python', 'casadi', 'jax']:
             model = pybamm.BaseModel()
             v = pybamm.Variable("v")
             a = pybamm.InputParameter("a")
@@ -342,25 +341,45 @@ class TestBaseSolver(unittest.TestCase):
             solver = pybamm.ScipySolver()
             solver.set_up(model, calculate_sensitivites=True,
                           inputs={'a': 0, 'b': 0})
+            all_inputs = []
             for v_value in [0.1, -0.2, 1.5, 8.4]:
                 for a_value in [0.12, 1.5]:
                     for b_value in [0.82, 1.9]:
                         y = np.array([v_value])
                         t = 0
                         inputs = {'a': a_value, 'b': b_value}
+                        all_inputs.append((t, y, inputs))
+            for t, y, inputs in all_inputs:
+                if f == 'casadi':
+                    use_inputs = casadi.vertcat(*[x for x in inputs.values()])
+                else:
+                    use_inputs = inputs
+                if f == 'jax':
+                    sens = model.sensitivities_eval(
+                            t, y, use_inputs
+                    )
+                    np.testing.assert_array_equal(
+                        sens['a'],
+                        exact_diff_a(y, inputs['a'], inputs['b'])
+                    )
+                    np.testing.assert_array_equal(
+                        sens['b'],
+                        exact_diff_b(y, inputs['a'], inputs['b'])
+                    )
+                else:
+                    np.testing.assert_array_equal(
+                        model.sensitivities_eval['a'](
+                            t, y, use_inputs
+                        ),
+                        exact_diff_a(y, inputs['a'], inputs['b'])
+                    )
+                    np.testing.assert_array_equal(
+                        model.sensitivities_eval['b'](
+                            t, y, use_inputs
+                        ),
+                        exact_diff_b(y, inputs['a'], inputs['b'])
+                    )
 
-                        self.assertAlmostEqual(
-                            model.sensitivities_eval['a'](
-                                t=0, y=y, inputs=inputs
-                            ),
-                            exact_diff_a(v_value, a_value, b_value)
-                        )
-                        self.assertAlmostEqual(
-                            model.sensitivities_eval['b'](
-                                t=0, y=y, inputs=inputs
-                            ),
-                            exact_diff_b(v_value, a_value, b_value)
-                        )
 
 if __name__ == "__main__":
     print("Add -v for more debug output")
