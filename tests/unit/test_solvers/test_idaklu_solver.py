@@ -68,7 +68,10 @@ class TestIDAKLUSolver(unittest.TestCase):
 
             t_eval = np.linspace(0, 3, 100)
             a_value = 0.1
-            sol = solver.solve(model, t_eval, inputs={"a": a_value})
+            sol = solver.solve(
+                model, t_eval, inputs={"a": a_value},
+                calculate_sensitivities=True
+            )
 
             # test that final time is time of event
             # y = 0.1 t + y0 so y=0.2 when t=2
