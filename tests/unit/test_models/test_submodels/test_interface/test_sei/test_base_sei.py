@@ -11,7 +11,7 @@ class TestBaseSEI(unittest.TestCase):
             NotImplementedError,
             "SEI models are not implemented for the positive electrode",
         ):
-            pybamm.sei.ReactionLimited(None, "Positive")
+            pybamm.sei.ReactionLimited(None, "Positive", True)
 
 
 if __name__ == "__main__":

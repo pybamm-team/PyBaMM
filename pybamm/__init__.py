@@ -120,7 +120,10 @@ from .models.event import Event
 from .models.event import EventType
 
 # Battery models
-from .models.full_battery_models.base_battery_model import BaseBatteryModel, Options
+from .models.full_battery_models.base_battery_model import (
+    BaseBatteryModel,
+    BatteryModelOptions,
+)
 from .models.full_battery_models import lead_acid
 from .models.full_battery_models import lithium_ion
 

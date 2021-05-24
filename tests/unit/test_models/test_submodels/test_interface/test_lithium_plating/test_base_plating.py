@@ -12,7 +12,7 @@ class TestBasePlating(unittest.TestCase):
             NotImplementedError,
             "Lithium plating models are not implemented for the positive electrode",
         ):
-            pybamm.lithium_plating.ReversiblePlating(None, "Positive")
+            pybamm.lithium_plating.ReversiblePlating(None, "Positive", True)
 
 
 if __name__ == "__main__":
