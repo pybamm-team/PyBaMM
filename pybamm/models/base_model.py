@@ -86,7 +86,7 @@ class BaseModel(object):
 
     def __init__(self, name="Unnamed model"):
         self.name = name
-        self.options = {}
+        self._options = {}
 
         # Initialise empty model
         self._rhs = {}
@@ -105,6 +105,7 @@ class BaseModel(object):
         self.external_variables = []
         self._parameters = None
         self._input_parameters = None
+        self._parameter_info = None
         self._variables_casadi = {}
 
         # Default behaviour is to use the jacobian
@@ -273,38 +274,59 @@ class BaseModel(object):
     @property
     def parameters(self):
         """Returns all the parameters in the model"""
-        if self._parameters is None:
-            self._parameters = self._find_parameters()
-        return self._parameters
-
-    def _find_parameters(self):
-        """Find all the parameters in the model"""
-        unpacker = pybamm.SymbolUnpacker((pybamm.Parameter, pybamm.InputParameter))
-        all_parameters = unpacker.unpack_list_of_symbols(
-            list(self.rhs.values())
-            + list(self.algebraic.values())
-            + list(self.initial_conditions.values())
-            + list(self.variables.values())
-            + [event.expression for event in self.events]
+        self._parameters = self._find_symbols(
+            (pybamm.Parameter, pybamm.InputParameter, pybamm.FunctionParameter)
         )
-        return list(all_parameters.values())
+        return self._parameters
 
     @property
     def input_parameters(self):
         """Returns all the input parameters in the model"""
         if self._input_parameters is None:
-            self._input_parameters = self._find_input_parameters()
+            self._input_parameters = self._find_symbols(pybamm.InputParameter)
         return self._input_parameters
 
-    def _find_input_parameters(self):
-        """Find all the input parameters in the model"""
-        unpacker = pybamm.SymbolUnpacker(pybamm.InputParameter)
+    def print_parameter_info(self):
+        self._parameter_info = ""
+        parameters = self._find_symbols(pybamm.Parameter)
+        for param in parameters:
+            self._parameter_info += f"{param.name} (Parameter)\n"
+        input_parameters = self._find_symbols(pybamm.InputParameter)
+        for input_param in input_parameters:
+            if input_param.domain == []:
+                self._parameter_info += f"{input_param.name} (InputParameter)\n"
+            else:
+                self._parameter_info += (
+                    f"{input_param.name} (InputParameter in {input_param.domain})\n"
+                )
+        function_parameters = self._find_symbols(pybamm.FunctionParameter)
+        for func_param in function_parameters:
+            # don't double count function parameters
+            if func_param.name not in self._parameter_info:
+                input_names = "'" + "', '".join(func_param.input_names) + "'"
+                self._parameter_info += (
+                    f"{func_param.name} (FunctionParameter "
+                    f"with input(s) {input_names})\n"
+                )
+
+        print(self._parameter_info)
+
+    def _find_symbols(self, typ):
+        """Find all the instances of `typ` in the model"""
+        unpacker = pybamm.SymbolUnpacker(typ)
         all_input_parameters = unpacker.unpack_list_of_symbols(
             list(self.rhs.values())
             + list(self.algebraic.values())
             + list(self.initial_conditions.values())
+            + [
+                x[side][0]
+                for x in self.boundary_conditions.values()
+                for side in x.keys()
+            ]
             + list(self.variables.values())
             + [event.expression for event in self.events]
+            + [self.timescale]
+            + list(self.length_scales.values())
         )
         return list(all_input_parameters.values())
 

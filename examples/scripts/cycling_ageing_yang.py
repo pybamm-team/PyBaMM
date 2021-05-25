@@ -42,7 +42,7 @@ experiment = pb.Experiment(
     ]
 )
 sim = pb.Simulation(model, experiment=experiment)
-sim.solve(solver=pb.CasadiSolver(mode="safe"))
+sim.solve(solver=pb.CasadiSolver(mode="fast with events"))
 sim.plot(
     [
         "Current [A]",

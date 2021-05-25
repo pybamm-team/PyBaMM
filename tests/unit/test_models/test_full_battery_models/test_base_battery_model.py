@@ -1,7 +1,7 @@
 #
 # Tests for the base battery model class
 #
-from pybamm.models.full_battery_models.base_battery_model import Options
+from pybamm.models.full_battery_models.base_battery_model import BatteryModelOptions
 import pybamm
 import unittest
 import io
@@ -9,7 +9,7 @@ from contextlib import redirect_stdout
 
 OPTIONS_DICT = {
     "surface form": "differential",
-    "loss of active material": "negative",
+    "loss of active material": "stress-driven",
     "thermal": "x-full",
 }
 
@@ -31,9 +31,9 @@ PRINT_OPTIONS_OUTPUT = """\
 'lithium plating': 'none' (possible: ['none', 'reversible', 'irreversible'])
 'SEI porosity change': 'false' (possible: ['true', 'false'])
 'lithium plating porosity change': 'false' (possible: ['true', 'false'])
-'loss of active material': 'negative' (possible: ['none', 'negative', 'positive', 'both'])
+'loss of active material': 'stress-driven' (possible: ['none', 'stress-driven', 'reaction-driven'])
 'working electrode': 'none'
-'particle cracking': 'none' (possible: ['none', 'no cracking', 'negative', 'positive', 'both'])
+'particle mechanics': 'swelling only' (possible: ['none', 'swelling only', 'swelling and cracking'])
 'total interfacial current density as a state': 'false' (possible: ['true', 'false'])
 'SEI film resistance': 'none' (possible: ['none', 'distributed', 'average'])
 """  # noqa: E501
@@ -218,8 +218,21 @@ class TestBaseBatteryModel(unittest.TestCase):
             model = pybamm.BaseBatteryModel(
                 {"loss of active material": "bad LAM model"}
             )
+        with self.assertRaisesRegex(pybamm.OptionError, "loss of active material"):
+            # can't have a 3-tuple
+            model = pybamm.BaseBatteryModel(
+                {
+                    "loss of active material": (
+                        "bad LAM model",
+                        "bad LAM model",
+                        "bad LAM model",
+                    )
+                }
+            )
 
         # crack model
+        with self.assertRaisesRegex(pybamm.OptionError, "particle mechanics"):
+            pybamm.BaseBatteryModel({"particle mechanics": "bad particle cracking"})
         with self.assertRaisesRegex(pybamm.OptionError, "particle cracking"):
             pybamm.BaseBatteryModel({"particle cracking": "bad particle cracking"})
 
@@ -254,7 +267,7 @@ class TestBaseBatteryModel(unittest.TestCase):
 class TestOptions(unittest.TestCase):
     def test_print_options(self):
         with io.StringIO() as buffer, redirect_stdout(buffer):
-            Options(OPTIONS_DICT).print_options()
+            BatteryModelOptions(OPTIONS_DICT).print_options()
             output = buffer.getvalue()
         self.assertEqual(output, PRINT_OPTIONS_OUTPUT)
 

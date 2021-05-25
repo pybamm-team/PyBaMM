@@ -2,6 +2,8 @@
 
 ## Features
 
+-   Added a new "reaction-driven" model for LAM from Reniers et al (2019) ([#1490](https://github.com/pybamm-team/PyBaMM/pull/1490))
+-   Some features ("loss of active material" and "particle mechanics") can now be specified separately for the negative electrode and positive electrode by passing a 2-tuple ([#1490](https://github.com/pybamm-team/PyBaMM/pull/1490))
 -   `plot` and `plot2D` now take and return a matplotlib Axis to allow for easier customization ([#1472](https://github.com/pybamm-team/PyBaMM/pull/1472))
 -   `ParameterValues.evaluate` can now return arrays to allow function parameters to be easily evaluated ([#1472](https://github.com/pybamm-team/PyBaMM/pull/1472))
 -   Added Batch Study class ([#1455](https://github.com/pybamm-team/PyBaMM/pull/1455))
@@ -10,6 +12,7 @@
 
 ## Optimizations
 
+-   Models that mostly use x-averaged quantities (SPM and SPMe) now use x-averaged degradation models ([#1490](https://github.com/pybamm-team/PyBaMM/pull/1490))
 -   Improved how the CasADi solver's "safe" mode finds events ([#1450](https://github.com/pybamm-team/PyBaMM/pull/1450))
 -   Perform more automatic simplifications of the expression tree ([#1449](https://github.com/pybamm-team/PyBaMM/pull/1449))
 -   Reduce time taken to hash a sparse `Matrix` object ([#1449](https://github.com/pybamm-team/PyBaMM/pull/1449))
@@ -20,6 +23,7 @@
 
 ## Breaking changes
 
+-   Changed how options are specified for the "loss of active material" and "particle cracking" submodels. "loss of active material" can now be one of "none", "stress-driven", or "reaction-driven", or a 2-tuple for different options in negative and positive electrode. Similarly "particle cracking" (now called "particle mechanics") can now be "none", "swelling only", "swelling and cracking", or a 2-tuple ([#1490](https://github.com/pybamm-team/PyBaMM/pull/1490))
 -   Changed the variable in the full diffusion model from "Electrolyte concentration" to "Porosity times concentration" ([#1476](https://github.com/pybamm-team/PyBaMM/pull/1476))
 -   Renamed `lithium-ion` folder to `lithium_ion` and `lead-acid` folder to `lead_acid` in parameters ([#1464](https://github.com/pybamm-team/PyBaMM/pull/1464))
 
@@ -94,11 +98,11 @@ This release introduces:
 
 # [v0.3.0](https://github.com/pybamm-team/PyBaMM/tree/v0.3.0) - 2020-12-01
 
-This release introduces a new aging model for particle swelling and cracking, a new reduced-order model (TSPMe), and a parameter set for A123 LFP cells. Additionally, there have been several backend optimizations to speed up model creation and solving, and other minor features and bug fixes.
+This release introduces a new aging model for particle mechanics, a new reduced-order model (TSPMe), and a parameter set for A123 LFP cells. Additionally, there have been several backend optimizations to speed up model creation and solving, and other minor features and bug fixes.
 
 ## Features
 
--   Added a submodel for particle swelling and cracking ([#1232](https://github.com/pybamm-team/PyBaMM/pull/1232))
+-   Added a submodel for particle mechanics ([#1232](https://github.com/pybamm-team/PyBaMM/pull/1232))
 -   Added a notebook on how to speed up the solver and handle instabilities ([#1223](https://github.com/pybamm-team/PyBaMM/pull/1223))
 -   Improve string printing of `BinaryOperator`, `Function`, and `Concatenation` objects ([#1223](https://github.com/pybamm-team/PyBaMM/pull/1223))
 -   Added `Solution.integration_time`, which is the time taken just by the integration subroutine, without extra setups ([#1223](https://github.com/pybamm-team/PyBaMM/pull/1223))

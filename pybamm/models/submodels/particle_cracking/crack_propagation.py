@@ -16,7 +16,8 @@ class CrackPropagation(BaseCracking):
         The parameters to use for this submodel
     domain : str
         The domain of the model either 'Negative' or 'Positive'
-    requiring the radius, average concantration, surface concantration
+    x_average : bool
+        Whether to use x-averaged variables (SPM, SPMe, etc) or full variables (DFN)
 
     References
     ----------
@@ -27,15 +28,22 @@ class CrackPropagation(BaseCracking):
     **Extends:** :class:`pybamm.particle_cracking.BaseCracking`
     """
 
-    def __init__(self, param, domain):
+    def __init__(self, param, domain, x_average):
         super().__init__(param, domain)
+        self.x_average = x_average
 
     def get_fundamental_variables(self):
-        l_cr = pybamm.Variable(
-            self.domain + " particle crack length",
-            domain=self.domain.lower() + " electrode",
-            auxiliary_domains={"secondary": "current collector"},
-        )
+        if self.x_average is True:
+            l_cr_av = pybamm.Variable(
+                self.domain + " particle crack length", domain="current collector"
+            )
+            l_cr = pybamm.PrimaryBroadcast(l_cr_av, self.domain.lower() + " electrode")
+        else:
+            l_cr = pybamm.Variable(
+                self.domain + " particle crack length",
+                domain=self.domain.lower() + " electrode",
+                auxiliary_domains={"secondary": "current collector"},
+            )
         return self._get_standard_variables(l_cr)
 
     def get_coupled_variables(self, variables):
@@ -54,7 +62,7 @@ class CrackPropagation(BaseCracking):
         l_cr = variables[self.domain + " particle crack length"]
         # # compressive stress will not lead to crack propagation
         dK_SIF = stress_t_surf * b_cr * pybamm.Sqrt(np.pi * l_cr) * (stress_t_surf >= 0)
-        dl_cr = k_cr * pybamm.Power(dK_SIF, m_cr) / self.param.t0_cr
+        dl_cr = k_cr * (dK_SIF ** m_cr) / self.param.t0_cr
         variables.update(
             {
                 self.domain + " particle cracking rate": dl_cr,
@@ -66,13 +74,25 @@ class CrackPropagation(BaseCracking):
         return variables
 
     def set_rhs(self, variables):
-        l_cr = variables[self.domain + " particle crack length"]
-        dl_cr = variables[self.domain + " particle cracking rate"]
+        if self.x_average is True:
+            l_cr = variables[
+                "X-averaged " + self.domain.lower() + " particle crack length"
+            ]
+            dl_cr = variables[
+                "X-averaged " + self.domain.lower() + " particle cracking rate"
+            ]
+        else:
+            l_cr = variables[self.domain + " particle crack length"]
+            dl_cr = variables[self.domain + " particle cracking rate"]
         self.rhs = {l_cr: dl_cr}
 
     def set_initial_conditions(self, variables):
-        l_cr = variables[self.domain + " particle crack length"]
-        l0 = pybamm.PrimaryBroadcast(
-            pybamm.Scalar(1), [self.domain.lower() + " electrode"]
-        )
+        if self.x_average is True:
+            l_cr = variables[
+                "X-averaged " + self.domain.lower() + " particle crack length"
+            ]
+            l0 = 1
+        else:
+            l_cr = variables[self.domain + " particle crack length"]
+            l0 = pybamm.PrimaryBroadcast(1, self.domain.lower() + " electrode")
         self.initial_conditions = {l_cr: l0}

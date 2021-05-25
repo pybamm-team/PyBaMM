@@ -277,6 +277,9 @@ class ParameterValues:
         path : string, optional
             Path from which to load functions
         """
+        # check if values is not a dictionary
+        if not isinstance(values, dict):
+            values = values._dict_items
         # check parameter values
         self.check_parameter_values(values)
         # update
@@ -839,7 +842,7 @@ class ParameterValues:
 
         df = pd.DataFrame(parameter_output)
         df = df.transpose()
-        df.to_csv(filename, header=None)
+        df.to_csv(filename, header=['Value'], index_label="Name [units]")
 
     def print_parameters(self, parameters, output_file=None):
         """

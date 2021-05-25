@@ -27,7 +27,7 @@ class TestFull(unittest.TestCase):
             "lithium plating": "irreversible",
             "lithium plating porosity change": "true",
         }
-        submodel = pybamm.porosity.Full(param, options)
+        submodel = pybamm.porosity.ReactionDriven(param, options, False)
         std_tests = tests.StandardSubModelTests(submodel, variables)
         std_tests.test_all()
 
