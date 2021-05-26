@@ -23,6 +23,7 @@ class BaseModel(pybamm.BaseSubModel):
         super().__init__(param, domain, options=options)
 
     def _get_standard_active_material_variables(self, eps_solid):
+        param = self.param
         eps_solid_av = pybamm.x_average(eps_solid)
 
         variables = {
@@ -53,6 +54,17 @@ class BaseModel(pybamm.BaseSubModel):
             return variables
 
         else:
+            # Update electrode capacity variables
+            if self.domain == "Negative":
+                L = param.L_n
+                c_s_max = param.c_n_max
+            elif self.domain == "Positive":
+                L = param.L_p
+                c_s_max = param.c_p_max
+
+            C = eps_solid_av * L * param.A_cc * c_s_max * param.F / 3600
+            variables.update({self.domain + " electrode capacity [A.h]": C})
+
             if self.domain == "Negative":
                 x = pybamm.standard_spatial_vars.x_n
                 R = self.param.R_n(x)
