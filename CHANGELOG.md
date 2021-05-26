@@ -2,6 +2,7 @@
 
 ## Features
 
+-   Added Base Parameters class and SymPy in dependencies ([#1495](https://github.com/pybamm-team/PyBaMM/pull/1495))
 -   `plot` and `plot2D` now take and return a matplotlib Axis to allow for easier customization ([#1472](https://github.com/pybamm-team/PyBaMM/pull/1472))
 -   `ParameterValues.evaluate` can now return arrays to allow function parameters to be easily evaluated ([#1472](https://github.com/pybamm-team/PyBaMM/pull/1472))
 -   Added Batch Study class ([#1455](https://github.com/pybamm-team/PyBaMM/pull/1455))
