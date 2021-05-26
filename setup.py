@@ -199,7 +199,7 @@ setup(
         *jax_dependencies,
         "jupyter",  # For example notebooks
         "pybtex",
-        "sympy==1.8"
+        "sympy==1.8",
         # Note: Matplotlib is loaded for debug plots, but to ensure pybamm runs
         # on systems without an attached display, it should never be imported
         # outside of plot() methods.
