@@ -163,10 +163,7 @@ ext_modules = [idaklu_ext] if compile_KLU() else []
 
 jax_dependencies = []
 if system() != "Windows":
-    jax_dependencies = [
-        "jax==0.2.12",
-        "jaxlib==0.1.65",
-    ]
+    jax_dependencies = ["jax==0.2.12", "jaxlib==0.1.65"]
 
 
 # Load text for description and license
@@ -207,6 +204,7 @@ setup(
         # outside of plot() methods.
         # Should not be imported
         "matplotlib>=2.0",
+        "sympy==1.8",
     ],
     extras_require={
         "docs": ["sphinx>=1.5", "guzzle-sphinx-theme"],  # For doc generation

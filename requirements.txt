@@ -15,3 +15,4 @@ pybtex
 # Should not be imported
 matplotlib >= 2.0
 #
+sympy==1.8
