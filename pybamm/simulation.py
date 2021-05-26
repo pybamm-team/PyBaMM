@@ -418,7 +418,8 @@ class Simulation:
                         pybamm.Event(
                             "Voltage cut-off [V] [experiment]",
                             new_model.variables["Terminal voltage [V]"]
-                            - op_inputs["Voltage cut-off [V]"] / model.param.n_cells,
+                            - pybamm.InputParameter("Voltage cut-off [V]")
+                            / model.param.n_cells,
                         )
                     )
 
@@ -542,6 +543,7 @@ class Simulation:
         solver=None,
         check_model=True,
         save_at_cycles=None,
+        calc_esoh=True,
         starting_solution=None,
         **kwargs,
     ):
@@ -575,7 +577,11 @@ class Simulation:
         save_at_cycles : int or list of ints, optional
             Which cycles to save the full sub-solutions for. If None, all cycles are
             saved. If int, every multiple of save_at_cycles is saved. If list, every
-            cycle in the list is saved.
+            cycle in the list is saved. The first cycle (cycle 1) is always saved.
+        calc_esoh : bool, optional
+            Whether to include eSOH variables in the summary variables. If `False`
+            then only summary variables that do not require the eSOH calculation
+            are calculated. Default is True.
         starting_solution : :class:`pybamm.Solution`
             The solution to start stepping from. If None (default), then self._solution
             is used. Must be None if not using an experiment.
@@ -674,12 +680,26 @@ class Simulation:
 
             if starting_solution is None:
                 starting_solution_cycles = []
+                starting_solution_summary_variables = []
             else:
                 starting_solution_cycles = starting_solution.cycles.copy()
+                starting_solution_summary_variables = (
+                    starting_solution.all_summary_variables.copy()
+                )
 
             cycle_offset = len(starting_solution_cycles)
             all_cycle_solutions = starting_solution_cycles
+            all_summary_variables = starting_solution_summary_variables
             current_solution = starting_solution
+
+            # Set up eSOH model (for summary variables)
+            if calc_esoh is True:
+                esoh_model = pybamm.lithium_ion.ElectrodeSOH()
+                esoh_sim = pybamm.Simulation(
+                    esoh_model, parameter_values=self.parameter_values
+                )
+            else:
+                esoh_sim = None
 
             idx = 0
             num_cycles = len(self.experiment.cycle_lengths)
@@ -694,6 +714,23 @@ class Simulation:
                 steps = []
                 cycle_solution = None
 
+                # Decide whether we should save this cycle
+                save_this_cycle = (
+                    # always save cycle 1
+                    cycle_num == 1
+                    # None: save all cycles
+                    or save_at_cycles is None
+                    # list: save all cycles in the list
+                    or (
+                        isinstance(save_at_cycles, list)
+                        and cycle_num + cycle_offset in save_at_cycles
+                    )
+                    # int: save all multiples
+                    or (
+                        isinstance(save_at_cycles, int)
+                        and (cycle_num + cycle_offset) % save_at_cycles == 0
+                    )
+                )
                 for step_num in range(1, cycle_length + 1):
                     exp_inputs = self._experiment_inputs[idx]
                     dt = self._experiment_times[idx]
@@ -725,9 +762,9 @@ class Simulation:
 
                     # Only allow events specified by experiment
                     if not (
-                        cycle_solution is None
-                        or cycle_solution.termination == "final time"
-                        or "[experiment]" in cycle_solution.termination
+                        step_solution is None
+                        or step_solution.termination == "final time"
+                        or "[experiment]" in step_solution.termination
                     ):
                         feasible = False
                         break
@@ -739,7 +776,7 @@ class Simulation:
                 if feasible is False:
                     pybamm.logger.warning(
                         "\n\n\tExperiment is infeasible: '{}' ".format(
-                            cycle_solution.termination
+                            step_solution.termination
                         )
                         + "was triggered during '{}'. ".format(
                             self.experiment.operating_conditions_strings[idx]
@@ -751,13 +788,51 @@ class Simulation:
                     )
                     break
 
-                # At the final step of the inner loop we save the cycle
-                self._solution = self.solution + cycle_solution
-                cycle_solution.steps = steps
-                all_cycle_solutions.append(cycle_solution)
+                if save_this_cycle:
+                    self._solution = self._solution + cycle_solution
 
-            if self.solution is not None:
+                # At the final step of the inner loop we save the cycle
+                cycle_solution, cycle_summary_variables = pybamm.make_cycle_solution(
+                    steps,
+                    esoh_sim,
+                    save_this_cycle=save_this_cycle,
+                )
+                all_cycle_solutions.append(cycle_solution)
+                all_summary_variables.append(cycle_summary_variables)
+
+                # Calculate capacity_start using the first cycle
+                if cycle_num == 1:
+                    if "capacity" in self.experiment.termination:
+                        # Note capacity_start could be defined as
+                        # self.parameter_values["Nominal cell capacity [A.h]"] instead
+                        capacity_start = all_summary_variables[0]["Capacity [A.h]"]
+                        value, typ = self.experiment.termination["capacity"]
+                        if typ == "Ah":
+                            capacity_stop = value
+                        elif typ == "%":
+                            capacity_stop = value / 100 * capacity_start
+                    else:
+                        capacity_stop = None
+
+                if capacity_stop is not None:
+                    capacity_now = cycle_summary_variables["Capacity [A.h]"]
+                    if np.isnan(capacity_now) or capacity_now > capacity_stop:
+                        pybamm.logger.notice(
+                            f"Capacity is now {capacity_now:.3f} Ah "
+                            f"(originally {capacity_start:.3f} Ah, "
+                            f"will stop at {capacity_stop:.3f} Ah)"
+                        )
+                    else:
+                        pybamm.logger.notice(
+                            "Stopping experiment since capacity "
+                            f"({capacity_now:.3f} Ah) "
+                            f"is below stopping capacity ({capacity_stop:.3f} Ah)."
+                        )
+                        break
+
+            if self.solution is not None and len(all_cycle_solutions) > 0:
                 self.solution.cycles = all_cycle_solutions
+                self.solution.set_summary_variables(all_summary_variables)
 
             pybamm.logger.notice(
                 "Finish experiment simulation, took {}".format(timer.time())

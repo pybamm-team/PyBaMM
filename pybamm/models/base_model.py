@@ -86,7 +86,7 @@ class BaseModel(object):
 
     def __init__(self, name="Unnamed model"):
         self.name = name
-        self.options = {}
+        self._options = {}
 
         # Initialise empty model
         self._rhs = {}
@@ -402,11 +402,17 @@ class BaseModel(object):
         if inplace is True:
             model = self
         else:
-            model = self.new_copy()
+            model = self.new_empty_copy()
+            model.rhs = self.rhs.copy()
+            model.algebraic = self.algebraic.copy()
+            model.initial_conditions = self.initial_conditions.copy()
+            model.boundary_conditions = self.boundary_conditions.copy()
+            model.variables = self.variables.copy()
+            model.events = self.events.copy()
 
         if isinstance(solution, pybamm.Solution):
             solution = solution.last_state
-        for var, equation in model.initial_conditions.items():
+        for var in self.initial_conditions:
             if isinstance(var, pybamm.Variable):
                 try:
                     final_state = solution[var.name]
@@ -419,7 +425,9 @@ class BaseModel(object):
                     )
                 if isinstance(solution, pybamm.Solution):
                     final_state = final_state.data
-                if final_state.ndim == 1:
+                if final_state.ndim == 0:
+                    final_state_eval = np.array([final_state])
+                elif final_state.ndim == 1:
                     final_state_eval = final_state[-1:]
                 elif final_state.ndim == 2:
                     final_state_eval = final_state[:, -1]
@@ -458,11 +466,11 @@ class BaseModel(object):
 
         # Also update the concatenated initial conditions if the model is already
         # discretised
-        if model.is_discretised:
+        if self.is_discretised:
             # Unpack slices for sorting
-            y_slices = {var.id: slce for var, slce in model.y_slices.items()}
+            y_slices = {var.id: slce for var, slce in self.y_slices.items()}
             slices = []
-            for symbol in model.initial_conditions.keys():
+            for symbol in self.initial_conditions.keys():
                 if isinstance(symbol, pybamm.Concatenation):
                     # must append the slice for the whole concatenation, so that
                     # equations get sorted correctly
@@ -937,8 +945,11 @@ class BaseModel(object):
 
     @property
     def default_solver(self):
-        """Return default solver based on whether model is ODE model or DAE model."""
-        return pybamm.CasadiSolver(mode="safe")
+        """Return default solver based on whether model is ODE/DAE or algebraic"""
+        if len(self.rhs) == 0 and len(self.algebraic) != 0:
+            return pybamm.CasadiAlgebraicSolver()
+        else:
+            return pybamm.CasadiSolver(mode="safe")
 
 
 # helper functions for finding symbols

@@ -116,7 +116,9 @@ class CasadiAlgebraicSolver(pybamm.BaseSolver):
                             event.event_type
                             == pybamm.EventType.INTERPOLANT_EXTRAPOLATION
                             and (
-                                event.expression.evaluate(0, y0.full(), inputs=inputs)
+                                event.expression.evaluate(
+                                    0, y0.full(), inputs=inputs_dict
+                                )
                                 < self.extrap_tol
                             )
                         ):
