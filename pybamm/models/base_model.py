@@ -412,7 +412,7 @@ class BaseModel(object):
 
         if isinstance(solution, pybamm.Solution):
             solution = solution.last_state
-        for var, equation in self.initial_conditions.items():
+        for var in self.initial_conditions:
             if isinstance(var, pybamm.Variable):
                 try:
                     final_state = solution[var.name]

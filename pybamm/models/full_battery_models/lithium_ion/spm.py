@@ -31,6 +31,8 @@ class SPM(BaseModel):
 
     def __init__(self, options=None, name="Single Particle Model", build=True):
         super().__init__(options, name)
+        # For degradation models we use the "x-average" form since this is a
+        # reduced-order model with uniform current density in the electrodes
         self.x_average = True
 
         self.set_external_circuit_submodel()

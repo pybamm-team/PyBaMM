@@ -83,20 +83,20 @@ class ReactionDriven(BaseModel):
         return variables
 
     def set_rhs(self, variables):
-        Domain = self.domain + " electrode"
+        domain = self.domain.lower() + " electrode"
         if self.x_average is True:
             eps_solid = variables[
-                "X-averaged " + Domain.lower() + " active material volume fraction"
+                "X-averaged " + domain + " active material volume fraction"
             ]
             deps_solid_dt = variables[
-                "X-averaged "
-                + Domain.lower()
-                + " active material volume fraction change"
+                "X-averaged " + domain + " active material volume fraction change"
             ]
         else:
-            eps_solid = variables[Domain + " active material volume fraction"]
+            eps_solid = variables[
+                self.domain + " electrode active material volume fraction"
+            ]
             deps_solid_dt = variables[
-                Domain + " active material volume fraction change"
+                self.domain + " electrode active material volume fraction change"
             ]
 
         self.rhs = {eps_solid: deps_solid_dt}
