@@ -587,7 +587,6 @@ class ParameterValues:
             Symbol with Parameter instances replaced by Value
 
         """
-
         try:
             return self._processed_symbols[symbol.id]
         except KeyError:

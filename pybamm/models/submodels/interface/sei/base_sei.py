@@ -163,6 +163,9 @@ class BaseModel(BaseInterface):
                 + domain
                 + " SEI concentration [mol.m-3]": n_SEI_av * n_scale,
                 "Loss of lithium to " + domain + " SEI [mol]": Q_sei * n_scale,
+                "Loss of capacity to "
+                + domain
+                + " SEI [A.h]": Q_sei * n_scale * self.param.F / 3600,
             }
         )
 

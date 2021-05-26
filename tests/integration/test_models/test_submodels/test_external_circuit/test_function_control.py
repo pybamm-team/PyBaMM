@@ -55,7 +55,7 @@ class TestFunctionControl(unittest.TestCase):
     def test_constant_voltage(self):
         def constant_voltage(variables):
             V = variables["Terminal voltage [V]"]
-            return V - 4.1
+            return V - 4.08
 
         # load models
         models = [
@@ -66,8 +66,8 @@ class TestFunctionControl(unittest.TestCase):
         # load parameter values and process models and geometry
         params = [model.default_parameter_values for model in models]
 
-        # First model: 4.1V charge
-        params[0].update({"Voltage function [V]": 4.1}, check_already_exists=False)
+        # First model: 4.08V charge
+        params[0].update({"Voltage function [V]": 4.08}, check_already_exists=False)
 
         # set parameters and discretise models
         var = pybamm.standard_spatial_vars
