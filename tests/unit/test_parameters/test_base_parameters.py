@@ -7,10 +7,8 @@ import unittest
 
 class TestBaseParameters(unittest.TestCase):
     def test__setattr__(self):
-        model = pybamm.lithium_ion.SPM()
-        var, eqn = list(model.rhs.items())[0]
-        p_name = eqn.children[0].children[0].print_name
-        self.assertEqual(p_name, "dimensional_current_with_time")
+        param = pybamm.ElectricalParameters()
+        self.assertEqual(param.I_typ.print_name, "I_typ")
 
 
 if __name__ == "__main__":
