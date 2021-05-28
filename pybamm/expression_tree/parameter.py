@@ -93,16 +93,16 @@ class FunctionParameter(pybamm.Symbol):
 
         # Use the inspect module to find the function's "short name" from the
         # Parameters module that called it
-        short_name = inspect.stack()[1][3]
-        if short_name.startswith("_"):
-            self.short_name = None
+        print_name = inspect.stack()[1][3]
+        if print_name.startswith("_"):
+            self.print_name = None
         else:
-            if short_name.endswith("_dimensional"):
-                self.short_name = short_name[: -len("_dimensional")]
-            elif short_name.endswith("_dim"):
-                self.short_name = short_name[: -len("_dim")]
+            if print_name.endswith("_dimensional"):
+                self.print_name = print_name[: -len("_dimensional")]
+            elif print_name.endswith("_dim"):
+                self.print_name = print_name[: -len("_dim")]
             else:
-                self.short_name = short_name
+                self.print_name = print_name
 
     @property
     def input_names(self):
@@ -174,7 +174,7 @@ class FunctionParameter(pybamm.Symbol):
     def new_copy(self):
         """ See :meth:`pybamm.Symbol.new_copy()`. """
         out = self._function_parameter_new_copy(self._input_names, self.orphans)
-        out.short_name = self.short_name
+        out.print_name = self.print_name
         return out
 
     def _function_parameter_new_copy(self, input_names, children):

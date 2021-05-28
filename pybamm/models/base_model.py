@@ -928,67 +928,6 @@ class BaseModel(object):
         C.add(variables_fn)
         C.generate()
 
-    def generate_julia_diffeq(
-        self, input_parameter_order=None, get_consistent_ics_solver=None
-    ):
-        """
-        Generate a Julia representation of the model, ready to be solved by Julia's
-        DifferentialEquations library.
-
-        Parameters
-        ----------
-        input_parameter_order : list, optional
-            Order in which input parameters will be provided when solving the model
-
-        Returns
-        -------
-        eqn_str : str
-            The Julia-compatible equations for the model in string format,
-            to be evaluated by eval(Meta.parse(...))
-        ics_str : str
-            The Julia-compatible initial conditions for the model in string format,
-            to be evaluated by eval(Meta.parse(...))
-        """
-        self.check_discretised_or_discretise_inplace_if_0D()
-
-        name = self.name.replace(" ", "_")
-
-        if self.algebraic == {}:
-            # ODE model: form dy[] = ...
-            eqn_str = pybamm.get_julia_function(
-                self.concatenated_rhs,
-                funcname=name,
-                input_parameter_order=input_parameter_order,
-            )
-        else:
-            # DAE model: form out[] = ... - dy[]
-            eqn_str = pybamm.get_julia_function(
-                pybamm.numpy_concatenation(
-                    self.concatenated_rhs, self.concatenated_algebraic
-                ),
-                funcname=name,
-                input_parameter_order=input_parameter_order,
-                len_rhs=self.concatenated_rhs.size,
-            )
-
-        if get_consistent_ics_solver is None or self.algebraic == {}:
-            ics = self.concatenated_initial_conditions
-        else:
-            get_consistent_ics_solver.set_up(self)
-            get_consistent_ics_solver._set_initial_conditions(self, {}, False)
-            ics = pybamm.Vector(self.y0.full())
-
-        ics_str = pybamm.get_julia_function(
-            ics,
-            funcname=name + "_u0",
-            input_parameter_order=input_parameter_order,
-        )
-        # Change the string to a form for u0
-        ics_str = ics_str.replace("(dy, y, p, t)", "(u0, p)")
-        ics_str = ics_str.replace("dy", "u0")
-
-        return eqn_str, ics_str
-
     @property
     def default_parameter_values(self):
         return pybamm.ParameterValues({})

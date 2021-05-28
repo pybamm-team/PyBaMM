@@ -684,12 +684,12 @@ class ParameterValues:
                     and not isinstance(
                         self.process_symbol(function), (pybamm.Scalar, pybamm.Broadcast)
                     )
-                    and symbol.short_name is not None
+                    and symbol.print_name is not None
                     and symbol.diff_variable is None
                 ):
                     # Special trick for printing in Julia ModelingToolkit format
                     out = pybamm.FunctionParameter(
-                        symbol.short_name, dict(zip(symbol.input_names, new_children))
+                        symbol.print_name, dict(zip(symbol.input_names, new_children))
                     )
 
                     out.arg_names = inspect.getfullargspec(function_name)[0]

@@ -225,13 +225,6 @@ class Function(pybamm.Symbol):
             ),
         )
 
-    @property
-    def julia_name(self):
-        "Return the name of the equivalent Julia function, for generating Julia code"
-        raise NotImplementedError(
-            "No julia name defined for function {}".format(self.function)
-        )
-
 
 def simplified_function(func_class, child):
     """
@@ -270,13 +263,6 @@ class SpecificFunction(Function):
         """ See :meth:`pybamm.Function._function_new_copy()` """
         return pybamm.simplify_if_constant(self.__class__(*children))
 
-    @property
-    def julia_name(self):
-        """ See :meth:`pybamm.Function.julia_name` """
-        # By default, the julia name for a specific function is the function's name
-        # Some functions may overwrite this
-        return self.function.__name__
-
 
 class Arcsinh(SpecificFunction):
     """Arcsinh function."""
@@ -287,11 +273,6 @@ class Arcsinh(SpecificFunction):
     def _function_diff(self, children, idx):
         """ See :meth:`pybamm.Symbol._function_diff()`. """
         return 1 / Sqrt(children[0] ** 2 + 1)
-
-    @property
-    def julia_name(self):
-        """ See :meth:`pybamm.Function.julia_name` """
-        return "asinh"
 
 
 def arcsinh(child):
@@ -383,11 +364,6 @@ class Max(SpecificFunction):
     def __init__(self, child):
         super().__init__(np.max, child)
 
-    @property
-    def julia_name(self):
-        """ See :meth:`pybamm.Function.julia_name` """
-        return "maximum"
-
 
 def max(child):
     """
@@ -402,11 +378,6 @@ class Min(SpecificFunction):
 
     def __init__(self, child):
         super().__init__(np.min, child)
-
-    @property
-    def julia_name(self):
-        """ See :meth:`pybamm.Function.julia_name` """
-        return "minimum"
 
 
 def min(child):
@@ -500,11 +471,6 @@ class Arctan(SpecificFunction):
     def _function_diff(self, children, idx):
         """ See :meth:`pybamm.Function._function_diff()`. """
         return 1 / (children[0] ** 2 + 1)
-
-    @property
-    def julia_name(self):
-        """ See :meth:`pybamm.Function.julia_name` """
-        return "atan"
 
 
 def arctan(child):
