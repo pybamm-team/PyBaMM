@@ -2,9 +2,10 @@
 # Geometric Parameters
 #
 import pybamm
+from .base_parameters import BaseParameters
 
 
-class GeometricParameters:
+class GeometricParameters(BaseParameters):
     """
     Standard geometric parameters
 

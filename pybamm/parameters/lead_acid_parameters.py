@@ -4,9 +4,10 @@
 
 import pybamm
 import numpy as np
+from .base_parameters import BaseParameters
 
 
-class LeadAcidParameters:
+class LeadAcidParameters(BaseParameters):
     """
     Standard Parameters for lead-acid battery models
 

@@ -2,6 +2,7 @@
 
 ## Features
 
+-   Added Base Parameters class and SymPy in dependencies ([#1495](https://github.com/pybamm-team/PyBaMM/pull/1495))
 -   Added a new "reaction-driven" model for LAM from Reniers et al (2019) ([#1490](https://github.com/pybamm-team/PyBaMM/pull/1490))
 -   Some features ("loss of active material" and "particle mechanics") can now be specified separately for the negative electrode and positive electrode by passing a 2-tuple ([#1490](https://github.com/pybamm-team/PyBaMM/pull/1490))
 -   `plot` and `plot2D` now take and return a matplotlib Axis to allow for easier customization ([#1472](https://github.com/pybamm-team/PyBaMM/pull/1472))
