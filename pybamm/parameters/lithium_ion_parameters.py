@@ -3,9 +3,10 @@
 #
 import pybamm
 import numpy as np
+from .base_parameters import BaseParameters
 
 
-class LithiumIonParameters:
+class LithiumIonParameters(BaseParameters):
     """
     Standard parameters for lithium-ion battery models
 
