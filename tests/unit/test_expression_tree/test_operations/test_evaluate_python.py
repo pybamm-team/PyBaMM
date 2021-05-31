@@ -427,6 +427,10 @@ class TestEvaluate(unittest.TestCase):
         for t, y in zip(t_tests, y_tests):
             result = evaluator.evaluate(t=t, y=y).toarray()
             np.testing.assert_allclose(result, expr.evaluate(t=t, y=y).toarray())
+        expr = pybamm.SparseStack(A)
+        evaluator = pybamm.EvaluatorPython(expr)
+        result = evaluator.evaluate().toarray()
+        np.testing.assert_allclose(result, expr.evaluate().toarray())
 
         # test Inner
         expr = pybamm.Inner(a, b)
