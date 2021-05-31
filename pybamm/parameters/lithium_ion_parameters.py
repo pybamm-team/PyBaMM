@@ -262,7 +262,7 @@ class LithiumIonParameters(BaseParameters):
             "Positive electrode activation energy for cracking rate [kJ.mol-1]"
         )  # noqa
         self.alpha_T_cell_dim = pybamm.Parameter(
-            "Cell thermal expansion coefficien [m.K-1]"
+            "Cell thermal expansion coefficient [m.K-1]"
         )
         self.R_const = pybamm.constants.R
         self.theta_p_dim = (
