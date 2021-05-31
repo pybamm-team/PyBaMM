@@ -4,9 +4,9 @@
 import pybamm
 
 
-class BaseCracking(pybamm.BaseSubModel):
+class BaseMechanics(pybamm.BaseSubModel):
     """
-    Base class for particle cracking models. See [1]_ for mechanical model (thickness
+    Base class for particle mechanics models. See [1]_ for mechanical model (thickness
     change) and [2]_ for cracking model.
 
     Parameters

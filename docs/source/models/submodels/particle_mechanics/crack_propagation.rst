@@ -1,5 +1,5 @@
 Crack Propagation Model
 =======================
 
-.. autoclass:: pybamm.particle_cracking.CrackPropagation
+.. autoclass:: pybamm.particle_mechanics.CrackPropagation
     :members:

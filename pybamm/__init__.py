@@ -146,7 +146,7 @@ from .models.submodels import (
     porosity,
     thermal,
     tortuosity,
-    particle_cracking,
+    particle_mechanics,
 )
 from .models.submodels.interface import sei
 from .models.submodels.interface import lithium_plating

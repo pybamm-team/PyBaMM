@@ -7,7 +7,7 @@ import tests
 import unittest
 
 
-class TestBaseCracking(unittest.TestCase):
+class TestBaseMechanics(unittest.TestCase):
     def test_public_functions(self):
         variables = {
             "Negative particle crack length": pybamm.Scalar(0),
@@ -15,7 +15,7 @@ class TestBaseCracking(unittest.TestCase):
             "Positive particle crack length": pybamm.Scalar(0),
             "Positive particle concentration": pybamm.Scalar(0),
         }
-        submodel = pybamm.particle_cracking.BaseCracking(None, "Negative")
+        submodel = pybamm.particle_mechanics.BaseMechanics(None, "Negative")
         std_tests = tests.StandardSubModelTests(submodel, variables)
         std_tests.test_all()
 

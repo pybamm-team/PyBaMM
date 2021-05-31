@@ -198,11 +198,11 @@ class BaseModel(pybamm.BaseBatteryModel):
             elif crack_side == "swelling only":
                 self.submodels[
                     domain.lower() + " particle mechanics"
-                ] = pybamm.particle_cracking.SwellingOnly(self.param, domain)
+                ] = pybamm.particle_mechanics.SwellingOnly(self.param, domain)
             elif crack_side == "swelling and cracking":
                 self.submodels[
                     domain.lower() + " particle mechanics"
-                ] = pybamm.particle_cracking.CrackPropagation(
+                ] = pybamm.particle_mechanics.CrackPropagation(
                     self.param, domain, self.x_average
                 )
 

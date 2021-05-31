@@ -38,13 +38,13 @@ class TestCrackPropagation(unittest.TestCase):
             "particle mechanics": "swelling and cracking",
         }
         param = pybamm.LithiumIonParameters(options)
-        submodel = pybamm.particle_cracking.CrackPropagation(param, "Negative", True)
+        submodel = pybamm.particle_mechanics.CrackPropagation(param, "Negative", True)
         std_tests = tests.StandardSubModelTests(submodel, variables)
         std_tests.test_all()
-        submodel = pybamm.particle_cracking.CrackPropagation(param, "Positive", False)
+        submodel = pybamm.particle_mechanics.CrackPropagation(param, "Positive", False)
         std_tests = tests.StandardSubModelTests(submodel, variables)
         std_tests.test_all()
-        submodel = pybamm.particle_cracking.SwellingOnly(param, "Positive")
+        submodel = pybamm.particle_mechanics.SwellingOnly(param, "Positive")
         std_tests = tests.StandardSubModelTests(submodel, variables)
         std_tests.test_all()
 
