@@ -43,7 +43,7 @@ class BaseElectrolyteDiffusion(pybamm.BaseSubModel):
 
         c_e_typ = self.param.c_e_typ
 
-        c_e = pybamm.Concatenation(c_e_n, c_e_s, c_e_p)
+        c_e = pybamm.concatenation(c_e_n, c_e_s, c_e_p)
         c_e_av = pybamm.x_average(c_e)
         c_e_n_av = pybamm.x_average(c_e_n)
         c_e_s_av = pybamm.x_average(c_e_s)
@@ -78,6 +78,19 @@ class BaseElectrolyteDiffusion(pybamm.BaseSubModel):
 
         return variables
 
+    def _get_standard_porosity_times_concentration_variables(
+        self, eps_c_e_n, eps_c_e_s, eps_c_e_p
+    ):
+        eps_c_e = pybamm.concatenation(eps_c_e_n, eps_c_e_s, eps_c_e_p)
+
+        variables = {
+            "Porosity times concentration": eps_c_e,
+            "Negative electrode porosity times concentration": eps_c_e_n,
+            "Separator porosity times concentration": eps_c_e_s,
+            "Positive electrode porosity times concentration": eps_c_e_p,
+        }
+        return variables
+
     def _get_standard_flux_variables(self, N_e):
         """
         A private function to obtain the standard variables which
@@ -101,6 +114,35 @@ class BaseElectrolyteDiffusion(pybamm.BaseSubModel):
         variables = {
             "Electrolyte flux": N_e,
             "Electrolyte flux [mol.m-2.s-1]": N_e * flux_scale,
+        }
+
+        return variables
+
+    def _get_total_concentration_electrolyte(self, c_e, epsilon):
+        """
+        A private function to obtain the total ion concentration in the electrolyte.
+
+        Parameters
+        ----------
+        c_e : :class:`pybamm.Symbol`
+            The electrolyte concentration
+        epsilon : :class:`pybamm.Symbol`
+            The porosity
+
+        Returns
+        -------
+        variables : dict
+            The "Total concentration in electrolyte [mol]" variable.
+        """
+
+        c_e_typ = self.param.c_e_typ
+        L_x = self.param.L_x
+        A = self.param.A_cc
+
+        c_e_total = pybamm.x_average(epsilon * c_e)
+
+        variables = {
+            "Total concentration in electrolyte [mol]": c_e_typ * L_x * A * c_e_total
         }
 
         return variables

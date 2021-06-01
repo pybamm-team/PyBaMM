@@ -40,11 +40,12 @@ class Full(BaseElectrolyteConductivity):
         phi_e = variables["Electrolyte potential"]
 
         i_e = (param.kappa_e(c_e, T) * tor * param.gamma_e / param.C_e) * (
-            param.chi(c_e) * (1 + param.Theta * T) * pybamm.grad(c_e) / c_e
+            param.chi(c_e, T) * (1 + param.Theta * T) * pybamm.grad(c_e) / c_e
             - pybamm.grad(phi_e)
         )
 
         variables.update(self._get_standard_current_variables(i_e))
+        variables.update(self._get_electrolyte_overpotentials(variables))
 
         return variables
 
@@ -52,10 +53,18 @@ class Full(BaseElectrolyteConductivity):
         phi_e = variables["Electrolyte potential"]
         i_e = variables["Electrolyte current density"]
 
+        # Get surface area to volume ratio (could be a distribution in x to
+        # account for graded electrodes)
+        a_n = variables["Negative electrode surface area to volume ratio"]
+        a_p = variables["Positive electrode surface area to volume ratio"]
+        a = pybamm.concatenation(
+            a_n, pybamm.FullBroadcast(0, "separator", "current collector"), a_p
+        )
+
         # Variable summing all of the interfacial current densities
         sum_j = variables["Sum of interfacial current densities"]
 
-        self.algebraic = {phi_e: pybamm.div(i_e) - sum_j}
+        self.algebraic = {phi_e: pybamm.div(i_e) - a * sum_j}
 
     def set_initial_conditions(self, variables):
         phi_e = variables["Electrolyte potential"]

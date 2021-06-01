@@ -19,20 +19,24 @@ class ScipySolver(pybamm.BaseSolver):
         The relative tolerance for the solver (default is 1e-6).
     atol : float, optional
         The absolute tolerance for the solver (default is 1e-6).
+    extrap_tol : float, optional
+        The tolerance to assert whether extrapolation occurs or not (default is 0).
     extra_options : dict, optional
         Any options to pass to the solver.
         Please consult `SciPy documentation <https://tinyurl.com/yafgqg9y>`_ for
         details.
     """
 
-    def __init__(self, method="BDF", rtol=1e-6, atol=1e-6, extra_options=None):
-        super().__init__(method, rtol, atol)
+    def __init__(
+        self, method="BDF", rtol=1e-6, atol=1e-6, extrap_tol=0, extra_options=None
+    ):
+        super().__init__(method, rtol, atol, extrap_tol=extrap_tol)
         self.ode_solver = True
         self.extra_options = extra_options or {}
         self.name = "Scipy solver ({})".format(method)
-        pybamm.citations.register("virtanen2020scipy")
+        pybamm.citations.register("Virtanen2020")
 
-    def _integrate(self, model, t_eval, inputs=None):
+    def _integrate(self, model, t_eval, inputs_dict=None):
         """
         Solve a model defined by dydt with initial conditions y0.
 
@@ -42,7 +46,7 @@ class ScipySolver(pybamm.BaseSolver):
             The model whose solution to calculate.
         t_eval : :class:`numpy.array`, size (k,)
             The times at which to compute the solution
-        inputs : dict, optional
+        inputs_dict : dict, optional
             Any input parameters to pass to the model when solving
 
         Returns
@@ -53,7 +57,9 @@ class ScipySolver(pybamm.BaseSolver):
 
         """
         if model.convert_to_format == "casadi":
-            inputs = casadi.vertcat(*[x for x in inputs.values()])
+            inputs = casadi.vertcat(*[x for x in inputs_dict.values()])
+        else:
+            inputs = inputs_dict
 
         extra_options = {**self.extra_options, "rtol": self.rtol, "atol": self.atol}
 
@@ -83,6 +89,7 @@ class ScipySolver(pybamm.BaseSolver):
             events = [event_wrapper(event) for event in model.terminate_events_eval]
             extra_options.update({"events": events})
 
+        timer = pybamm.Timer()
         sol = it.solve_ivp(
             lambda t, y: model.rhs_eval(t, y, inputs),
             (t_eval[0], t_eval[-1]),
@@ -92,6 +99,7 @@ class ScipySolver(pybamm.BaseSolver):
             dense_output=True,
             **extra_options
         )
+        integration_time = timer.time()
 
         if sol.success:
             # Set the reason for termination
@@ -107,6 +115,10 @@ class ScipySolver(pybamm.BaseSolver):
                 termination = "final time"
                 t_event = None
                 y_event = np.array(None)
-            return pybamm.Solution(sol.t, sol.y, t_event, y_event, termination)
+            sol = pybamm.Solution(
+                sol.t, sol.y, model, inputs_dict, t_event, y_event, termination
+            )
+            sol.integration_time = integration_time
+            return sol
         else:
             raise pybamm.SolverError(sol.message)

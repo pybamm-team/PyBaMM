@@ -1,5 +1,5 @@
 
-.. _CONTRIBUTING.md: https://github.com/pybamm-team/PyBaMM/blob/master/CONTRIBUTING.md
+.. _CONTRIBUTING.md: https://github.com/pybamm-team/PyBaMM/blob/develop/CONTRIBUTING.md
 
 
 Adding a Model
@@ -8,12 +8,12 @@ Adding a Model
 As with any contribution to PyBaMM, please follow the workflow in CONTRIBUTING.md_.
 In particular, start by creating an issue to discuss what you want to do - this is a good way to avoid wasted coding hours!
 
-We aim here to provide an overview of how a new model is entered into PyBaMM in a form which can be eventually merged into the master branch of the PyBaMM project. However, we recommend that you first read through the notebook: `create a model <https://github.com/pybamm-team/PyBaMM/blob/master/examples/notebooks/create-model.ipynb>`_, which goes step-by-step through the procedure for creating a model. Once you understand that procedure, you can then formalise your model following the outline provided here.
+We aim here to provide an overview of how a new model is entered into PyBaMM in a form which can be eventually merged into the main branch of the PyBaMM project. However, we recommend that you first read through the notebook: `create a model <https://github.com/pybamm-team/PyBaMM/tree/develop/examples/notebooks/Creating%20Models>`_, which goes step-by-step through the procedure for creating a model. Once you understand that procedure, you can then formalise your model following the outline provided here.
 
 The role of models
 ------------------
 
-One of the main motivations for PyBaMM is to allow for new models of batteries to be easily be added, solved, tested, and compared without requiring a detailed knowledge of sophisticated numerical methods. It has therefore been our focus to make the process of adding a new model as simple as possible. To achieve this, all models in PyBaMM are implemented as `expression trees <https://github.com/pybamm-team/PyBaMM/blob/master/examples/notebooks/expression-tree.ipynb>`_, which abstract away the details of computation.
+One of the main motivations for PyBaMM is to allow for new models of batteries to be easily be added, solved, tested, and compared without requiring a detailed knowledge of sophisticated numerical methods. It has therefore been our focus to make the process of adding a new model as simple as possible. To achieve this, all models in PyBaMM are implemented as `expression trees <https://github.com/pybamm-team/PyBaMM/blob/develop/examples/notebooks/expression_tree/expression-tree.ipynb>`_, which abstract away the details of computation.
 
 The fundamental building blocks of a PyBaMM expression tree are :class:`pybamm.Symbol`. There are different types of :class:`pybamm.Symbol`: :class:`pybamm.Variable`, :class:`pybamm.Parameter`, :class:`pybamm.Addition`, :class:`pybamm.Multiplication`, :class:`pybamm.Gradient` etc which have been created so that each component of a model written out in PyBaMM mirrors exactly the written mathematics. For example, the expression:
 
@@ -142,10 +142,11 @@ The inbuilt models in PyBaMM do not add all the model attributes within their ow
 In addition to calling submodels, common sets of variables and parameters found in
 lithium-ion and lead acid batteries are provided in
 `standard_variables.py`,
-`standard_parameters_lithium_ion.py`,
-`standard_parameters_lead_acid.py`,
+`lithium_ion_parameters.py`,
+`lead_acid_parameters.py`,
 `electrical_parameters.py`,
 `geometric_parameters.py`,
+`thermal_parameters.py`,
 and `standard_spatial_vars.py`
 which we encourage use of to save redefining the same parameters and variables in
 every model and submodel.

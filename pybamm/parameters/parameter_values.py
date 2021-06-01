@@ -5,6 +5,7 @@ import pybamm
 import pandas as pd
 import os
 import numbers
+import warnings
 from pprint import pformat
 from collections import defaultdict
 
@@ -25,13 +26,14 @@ class ParameterValues:
         Dict of strings for default chemistries. Must be of the form:
         {"base chemistry": base_chemistry,
         "cell": cell_properties_authorYear,
-        "anode": anode_chemistry_authorYear,
+        "negative electrode": negative_electrode_chemistry_authorYear,
         "separator": separator_chemistry_authorYear,
-        "cathode": cathode_chemistry_authorYear,
+        "positive electrode": positive_electrode_chemistry_authorYear,
         "electrolyte": electrolyte_chemistry_authorYear,
         "experiment": experimental_conditions_authorYear}.
-        Then the anode chemistry is loaded from the file
-        inputs/parameters/base_chemistry/anodes/anode_chemistry_authorYear, etc.
+        Then the negative electrode chemistry is loaded from the file
+        inputs/parameters/base_chemistry/negative electrodes/
+        negative_electrode_chemistry_authorYear, etc.
         Parameters in "cell" should include geometry and current collector properties.
         Parameters in "experiment" should include parameters relating to experimental
         conditions, such as initial conditions and currents.
@@ -43,7 +45,7 @@ class ParameterValues:
     >>> param = pybamm.ParameterValues(values)
     >>> param["some parameter"]
     1
-    >>> file = "input/parameters/lithium-ion/cells/kokam_Marquis2019/parameters.csv"
+    >>> file = "input/parameters/lithium_ion/cells/kokam_Marquis2019/parameters.csv"
     >>> values_path = pybamm.get_parameters_filepath(file)
     >>> param = pybamm.ParameterValues(values=values_path)
     >>> param["Negative current collector thickness [m]"]
@@ -77,25 +79,26 @@ class ParameterValues:
                 path = os.path.split(file_path)[0]
                 values = self.read_parameters_csv(file_path)
             else:
-                path = None
+                path = ""
             # Don't check parameter already exists when first creating it
             self.update(values, check_already_exists=False, path=path)
 
         # Initialise empty _processed_symbols dict (for caching)
         self._processed_symbols = {}
+        self.parameter_events = []
 
     def __getitem__(self, key):
         return self._dict_items[key]
 
     def get(self, key, default=None):
-        "Return item correspoonding to key if it exists, otherwise return default"
+        """Return item correspoonding to key if it exists, otherwise return default"""
         try:
             return self._dict_items[key]
         except KeyError:
             return default
 
     def __setitem__(self, key, value):
-        "Call the update functionality when doing a setitem"
+        """Call the update functionality when doing a setitem"""
         self.update({key: value})
 
     def __delitem__(self, key):
@@ -105,15 +108,15 @@ class ParameterValues:
         return pformat(self._dict_items, width=1)
 
     def keys(self):
-        "Get the keys of the dictionary"
+        """Get the keys of the dictionary"""
         return self._dict_items.keys()
 
     def values(self):
-        "Get the values of the dictionary"
+        """Get the values of the dictionary"""
         return self._dict_items.values()
 
     def items(self):
-        "Get the items of the dictionary"
+        """Get the items of the dictionary"""
         return self._dict_items.items()
 
     def copy(self):
@@ -139,16 +142,56 @@ class ParameterValues:
 
         component_groups = [
             "cell",
-            "anode",
-            "cathode",
+            "negative electrode",
+            "positive electrode",
             "separator",
             "electrolyte",
             "experiment",
         ]
 
-        # add sei parameters if provided
+        # add SEI parameters if provided
         if "sei" in chemistry:
             component_groups += ["sei"]
+
+        # add lithium plating parameters if provided
+        if "lithium plating" in chemistry:
+            component_groups += ["lithium plating"]
+
+        if "anode" in chemistry.keys():
+            if "negative electrode" in chemistry.keys():
+                raise KeyError(
+                    "both 'anode' and 'negative electrode' keys provided in the "
+                    "chemistry. The 'anode' notation will be deprecated in the next "
+                    "release so 'negative electrode' should be used instead."
+                )
+            else:
+                chemistry["negative electrode"] = chemistry["anode"]
+                warnings.warn(
+                    "the 'anode' component notation will be deprecated in the next "
+                    "release, as it has now been renamed to 'negative electrode'. "
+                    "Simulation will continue passing the 'anode' component as "
+                    "'negative electrode' (it might overwrite any existing definition "
+                    "of the component).",
+                    DeprecationWarning,
+                )
+
+        if "cathode" in chemistry.keys():
+            if "positive electrode" in chemistry.keys():
+                raise KeyError(
+                    "both 'cathode' and 'positive electrode' keys provided in the "
+                    "chemistry. The 'cathode' notation will be deprecated in the next "
+                    "release so 'positive electrode' should be used instead."
+                )
+            else:
+                chemistry["positive electrode"] = chemistry["cathode"]
+                warnings.warn(
+                    "the 'cathode' component notation will be deprecated in the next "
+                    "release, as it has now been renamed to 'positive electrode'. "
+                    "Simulation will continue passing the 'cathode' component as "
+                    "'positive electrode' (it might overwrite any existing definition "
+                    "of the component).",
+                    DeprecationWarning,
+                )
 
         for component_group in component_groups:
             # Make sure component is provided
@@ -162,7 +205,7 @@ class ParameterValues:
                 )
             # Create path to component and load values
             component_path = os.path.join(
-                base_chemistry, component_group + "s", component
+                base_chemistry, component_group.replace(" ", "_") + "s", component
             )
             file_path = self.find_parameter(
                 os.path.join(component_path, "parameters.csv")
@@ -255,9 +298,7 @@ class ParameterValues:
             # Functions are flagged with the string "[function]"
             if isinstance(value, str):
                 if value.startswith("[function]"):
-                    loaded_value = pybamm.load_function(
-                        os.path.join(path, value[10:] + ".py")
-                    )
+                    loaded_value = pybamm.load_function(os.path.join(path, value[10:]))
                     self._dict_items[name] = loaded_value
                     values[name] = loaded_value
                 # Data is flagged with the string "[data]" or "[current data]"
@@ -299,9 +340,29 @@ class ParameterValues:
         if "C-rate" in values:
             raise ValueError(
                 "The 'C-rate' parameter has been deprecated, "
-                "use 'Current function [A]' instead. The cell capacity can be accessed "
-                "as 'Cell capacity [A.h]', and used to calculate current from C-rate."
+                "use 'Current function [A]' instead. The Nominal "
+                "cell capacity can be accessed as 'Nominal cell "
+                "capacity [A.h]', and used to calculate current from C-rate."
             )
+        if "Cell capacity [A.h]" in values:
+            if "Nominal cell capacity [A.h]" in values:
+                raise ValueError(
+                    "both 'Cell capacity [A.h]' and 'Nominal cell capacity [A.h]' "
+                    "provided in values. The 'Cell capacity [A.h]' notation will be "
+                    "deprecated in the next release so 'Nominal cell capacity [A.h]' "
+                    "should be used instead."
+                )
+            else:
+                values["Nominal cell capacity [A.h]"] = values["Cell capacity [A.h]"]
+                warnings.warn(
+                    "the 'Cell capacity [A.h]' notation will be "
+                    "deprecated in the next release, as it has now been renamed "
+                    "to 'Nominal cell capacity [A.h]'. Simulation will continue "
+                    "passing the 'Cell capacity [A.h]' as 'Nominal cell "
+                    "capacity [A.h]' (it might overwrite any existing definition "
+                    "of the component)",
+                    DeprecationWarning,
+                )
         for param in values:
             if "surface area density" in param:
                 raise ValueError(
@@ -312,6 +373,21 @@ class ParameterValues:
                 raise ValueError(
                     "Parameters involving 'reaction rate' have been replaced with "
                     "'exchange-current density' ('{}' found)".format(param)
+                )
+        for param in values:
+            if "particle distribution in x" in param:
+                raise ValueError(
+                    "The parameter '{}' has been deprecated".format(param)
+                    + "The particle radius is now set as a function of x directly "
+                    "instead of providing a reference value and a distribution."
+                )
+        for param in values:
+            if "surface area to volume ratio distribution in x" in param:
+                raise ValueError(
+                    "The parameter '{}' has been deprecated".format(param)
+                    + "The surface area to volume ratio is now set as a function "
+                    "of x directly instead of providing a reference value and a "
+                    "distribution."
                 )
 
     def process_model(self, unprocessed_model, inplace=True):
@@ -339,12 +415,12 @@ class ParameterValues:
 
         # set up inplace vs not inplace
         if inplace:
-            # any changes to model_disc attributes will change model attributes
+            # any changes to unprocessed_model attributes will change model attributes
             # since they point to the same object
             model = unprocessed_model
         else:
             # create a blank model of the same class
-            model = unprocessed_model.new_copy()
+            model = unprocessed_model.new_empty_copy()
 
         if (
             len(unprocessed_model.rhs) == 0
@@ -353,42 +429,76 @@ class ParameterValues:
         ):
             raise pybamm.ModelError("Cannot process parameters for empty model")
 
-        for variable, equation in model.rhs.items():
-            pybamm.logger.debug("Processing parameters for {!r} (rhs)".format(variable))
-            model.rhs[variable] = self.process_symbol(equation)
+        new_rhs = {}
+        for variable, equation in unprocessed_model.rhs.items():
+            pybamm.logger.verbose(
+                "Processing parameters for {!r} (rhs)".format(variable)
+            )
+            new_rhs[variable] = self.process_symbol(equation)
+        model.rhs = new_rhs
 
-        for variable, equation in model.algebraic.items():
-            pybamm.logger.debug(
+        new_algebraic = {}
+        for variable, equation in unprocessed_model.algebraic.items():
+            pybamm.logger.verbose(
                 "Processing parameters for {!r} (algebraic)".format(variable)
             )
-            model.algebraic[variable] = self.process_symbol(equation)
+            new_algebraic[variable] = self.process_symbol(equation)
+        model.algebraic = new_algebraic
 
-        for variable, equation in model.initial_conditions.items():
-            pybamm.logger.debug(
+        new_initial_conditions = {}
+        for variable, equation in unprocessed_model.initial_conditions.items():
+            pybamm.logger.verbose(
                 "Processing parameters for {!r} (initial conditions)".format(variable)
             )
-            model.initial_conditions[variable] = self.process_symbol(equation)
+            new_initial_conditions[variable] = self.process_symbol(equation)
+        model.initial_conditions = new_initial_conditions
 
-        model.boundary_conditions = self.process_boundary_conditions(model)
+        model.boundary_conditions = self.process_boundary_conditions(unprocessed_model)
 
-        for variable, equation in model.variables.items():
-            pybamm.logger.debug(
+        new_variables = {}
+        for variable, equation in unprocessed_model.variables.items():
+            pybamm.logger.verbose(
                 "Processing parameters for {!r} (variables)".format(variable)
             )
-            model.variables[variable] = self.process_symbol(equation)
+            new_variables[variable] = self.process_symbol(equation)
+        model.variables = new_variables
 
-        for event in model.events:
-            pybamm.logger.debug(
-                "Processing parameters for event'{}''".format(event.name)
+        new_events = []
+        for event in unprocessed_model.events:
+            pybamm.logger.verbose(
+                "Processing parameters for event '{}''".format(event.name)
             )
-            event.expression = self.process_symbol(event.expression)
+            new_events.append(
+                pybamm.Event(
+                    event.name, self.process_symbol(event.expression), event.event_type
+                )
+            )
+
+        for event in self.parameter_events:
+            pybamm.logger.verbose(
+                "Processing parameters for event '{}''".format(event.name)
+            )
+            new_events.append(
+                pybamm.Event(
+                    event.name, self.process_symbol(event.expression), event.event_type
+                )
+            )
+
+        model.events = new_events
+
+        # Set external variables
+        model.external_variables = [
+            self.process_symbol(var) for var in unprocessed_model.external_variables
+        ]
 
         # Process timescale
-        model.timescale = self.process_symbol(model.timescale)
+        model.timescale = self.process_symbol(unprocessed_model.timescale)
 
         # Process length scales
-        for domain, scale in model.length_scales.items():
-            model.length_scales[domain] = self.process_symbol(scale)
+        new_length_scales = {}
+        for domain, scale in unprocessed_model.length_scales.items():
+            new_length_scales[domain] = self.process_symbol(scale)
+        model.length_scales = new_length_scales
 
         pybamm.logger.info("Finish setting parameters for {}".format(model.name))
 
@@ -410,7 +520,7 @@ class ParameterValues:
             for side in sides:
                 try:
                     bc, typ = bcs[side]
-                    pybamm.logger.debug(
+                    pybamm.logger.verbose(
                         "Processing parameters for {!r} ({} bc)".format(variable, side)
                     )
                     processed_bc = (self.process_symbol(bc), typ)
@@ -479,8 +589,8 @@ class ParameterValues:
             return self._processed_symbols[symbol.id]
         except KeyError:
             processed_symbol = self._process_symbol(symbol)
-
             self._processed_symbols[symbol.id] = processed_symbol
+
             return processed_symbol
 
     def _process_symbol(self, symbol):
@@ -500,7 +610,17 @@ class ParameterValues:
                 raise TypeError("Cannot process parameter '{}'".format(value))
 
         elif isinstance(symbol, pybamm.FunctionParameter):
-            new_children = [self.process_symbol(child) for child in symbol.children]
+            new_children = []
+            for child in symbol.children:
+                if symbol.diff_variable is not None and any(
+                    x.id == symbol.diff_variable.id for x in child.pre_order()
+                ):
+                    # Wrap with NotConstant to avoid simplification,
+                    # which would stop symbolic diff from working properly
+                    new_child = pybamm.NotConstant(child.new_copy())
+                    new_children.append(self.process_symbol(new_child))
+                else:
+                    new_children.append(self.process_symbol(child))
             function_name = self[symbol.name]
 
             # Create Function or Interpolant or Scalar object
@@ -508,7 +628,26 @@ class ParameterValues:
                 # If function_name is a tuple then it should be (name, data) and we need
                 # to create an Interpolant
                 name, data = function_name
-                function = pybamm.Interpolant(data, *new_children, name=name)
+                function = pybamm.Interpolant(
+                    data[:, 0], data[:, 1], *new_children, name=name
+                )
+                # Define event to catch extrapolation. In these events the sign is
+                # important: it should be positive inside of the range and negative
+                # outside of it
+                self.parameter_events.append(
+                    pybamm.Event(
+                        "Interpolant {} lower bound".format(name),
+                        pybamm.min(new_children[0] - min(data[:, 0])),
+                        pybamm.EventType.INTERPOLANT_EXTRAPOLATION,
+                    )
+                )
+                self.parameter_events.append(
+                    pybamm.Event(
+                        "Interpolant {} upper bound".format(name),
+                        pybamm.min(max(data[:, 0]) - new_children[0]),
+                        pybamm.EventType.INTERPOLANT_EXTRAPOLATION,
+                    )
+                )
             elif isinstance(function_name, numbers.Number):
                 # If the "function" is provided is actually a scalar, return a Scalar
                 # object instead of throwing an error.
@@ -516,19 +655,19 @@ class ParameterValues:
                 function = pybamm.Scalar(
                     function_name, name=symbol.name
                 ) * pybamm.ones_like(*new_children)
-            elif isinstance(function_name, pybamm.InputParameter):
-                # Replace the function with an input parameter
-                function = function_name
             elif (
                 isinstance(function_name, pybamm.Symbol)
                 and function_name.evaluates_to_number()
             ):
                 # If the "function" provided is a pybamm scalar-like, use ones_like to
                 # get the right shape
+                # This also catches input parameters
                 function = function_name * pybamm.ones_like(*new_children)
             elif callable(function_name):
                 # otherwise evaluate the function to create a new PyBaMM object
                 function = function_name(*new_children)
+            elif isinstance(function_name, pybamm.Interpolant):
+                function = function_name
             else:
                 raise TypeError(
                     "Parameter provided for '{}' ".format(symbol.name)
@@ -551,6 +690,45 @@ class ParameterValues:
             # process children
             new_left = self.process_symbol(symbol.left)
             new_right = self.process_symbol(symbol.right)
+            # Special case for averages, which can appear as "integral of a broadcast"
+            # divided by "integral of a broadcast"
+            # this construction seems very specific but can appear often when averaging
+            if (
+                isinstance(symbol, pybamm.Division)
+                # right is integral(Broadcast(1))
+                and (
+                    isinstance(new_right, pybamm.Integral)
+                    and isinstance(new_right.child, pybamm.Broadcast)
+                    and new_right.child.child.id == pybamm.Scalar(1).id
+                )
+                # left is integral
+                and isinstance(new_left, pybamm.Integral)
+            ):
+                # left is integral(Broadcast)
+                if (
+                    isinstance(new_left.child, pybamm.Broadcast)
+                    and new_left.child.child.domain == []
+                ):
+                    integrand = new_left.child
+                    if integrand.auxiliary_domains == {}:
+                        return integrand.orphans[0]
+                    else:
+                        domain = integrand.auxiliary_domains["secondary"]
+                        if "tertiary" not in integrand.auxiliary_domains:
+                            return pybamm.PrimaryBroadcast(integrand.orphans[0], domain)
+                        else:
+                            auxiliary_domains = {
+                                "secondary": integrand.auxiliary_domains["tertiary"]
+                            }
+                            return pybamm.FullBroadcast(
+                                integrand.orphans[0], domain, auxiliary_domains
+                            )
+                # left is "integral of concatenation of broadcasts"
+                elif isinstance(new_left.child, pybamm.Concatenation) and all(
+                    isinstance(child, pybamm.Broadcast)
+                    for child in new_left.child.children
+                ):
+                    return self.process_symbol(pybamm.x_average(new_left.child))
             # make new symbol, ensure domain remains the same
             new_symbol = symbol._binary_new_copy(new_left, new_right)
             new_symbol.domain = symbol.domain
@@ -596,14 +774,14 @@ class ParameterValues:
 
         Returns
         -------
-        number of array
+        number or array
             The evaluated symbol
         """
         processed_symbol = self.process_symbol(symbol)
-        if processed_symbol.is_constant() and processed_symbol.evaluates_to_number():
+        if processed_symbol.is_constant():
             return processed_symbol.evaluate()
         else:
-            raise ValueError("symbol must evaluate to a constant scalar")
+            raise ValueError("symbol must evaluate to a constant scalar or array")
 
     def _ipython_key_completions_(self):
         return list(self._dict_items.keys())
@@ -667,8 +845,12 @@ class ParameterValues:
             "print_function",
             "unicode_literals",
             "pybamm",
+            "_options",
             "constants",
             "np",
+            "geo",
+            "elec",
+            "therm",
         ]
 
         # If 'parameters' is a class, extract the dict
@@ -681,22 +863,34 @@ class ParameterValues:
         # Calculate parameters for each C-rate
         for Crate in [1, 10]:
             # Update Crate
-            capacity = self.get("Cell capacity [A.h]")
+            capacity = self.get("Nominal cell capacity [A.h]")
             if capacity is not None:
                 self.update(
                     {"Current function [A]": Crate * capacity},
                     check_already_exists=False,
                 )
+
+            # Turn to regular dictionary for faster KeyErrors
+            self._dict_items = dict(self._dict_items)
+
             for name, symbol in parameters.items():
                 if not callable(symbol):
-                    proc_symbol = self.process_symbol(symbol)
+                    try:
+                        proc_symbol = self.process_symbol(symbol)
+                    except KeyError:
+                        # skip parameters that don't have a value in that parameter set
+                        proc_symbol = None
                     if not (
                         callable(proc_symbol)
+                        or proc_symbol is None
                         or proc_symbol.has_symbol_of_classes(
                             (pybamm.Concatenation, pybamm.Broadcast)
                         )
                     ):
                         evaluated_parameters[name].append(proc_symbol.evaluate(t=0))
+
+            # Turn back to FuzzyDict
+            self._dict_items = pybamm.FuzzyDict(self._dict_items)
 
         # Calculate C-dependence of the parameters based on the difference between the
         # value at 1C and the value at C / 10

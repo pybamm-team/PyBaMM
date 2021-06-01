@@ -9,8 +9,8 @@ import unittest
 
 class TestFull(unittest.TestCase):
     def test_public_functions(self):
-        param = pybamm.standard_parameters_lithium_ion
-        a = pybamm.Scalar(0)
+        param = pybamm.LithiumIonParameters()
+        a = pybamm.Scalar(1)
         full = pybamm.FullBroadcast(
             a,
             ["negative electrode", "separator", "positive electrode"],
@@ -18,6 +18,9 @@ class TestFull(unittest.TestCase):
         )
         variables = {
             "Porosity": a,
+            "Negative electrode porosity": a,
+            "Separator porosity": a,
+            "Positive electrode porosity": a,
             "Electrolyte tortuosity": a,
             "Porosity change": a,
             "Volume-averaged velocity": a,

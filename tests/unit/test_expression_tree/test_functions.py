@@ -6,6 +6,7 @@ import pybamm
 import unittest
 import numpy as np
 from scipy.interpolate import interp1d
+from scipy import special
 
 
 def test_function(arg):
@@ -36,6 +37,7 @@ class TestFunction(unittest.TestCase):
         a = pybamm.Symbol("a")
         funca = pybamm.Function(test_function, a)
         self.assertEqual(funca.name, "function (test_function)")
+        self.assertEqual(str(funca), "test_function(a)")
         self.assertEqual(funca.children[0].name, a.name)
 
         b = pybamm.Scalar(1)
@@ -95,6 +97,7 @@ class TestFunction(unittest.TestCase):
         b = pybamm.Parameter("b")
         func = pybamm.Function(test_multi_var_function, a, b)
         self.assertEqual(func.name, "function (test_multi_var_function)")
+        self.assertEqual(str(func), "test_multi_var_function(a, b)")
         self.assertEqual(func.children[0].name, a.name)
         self.assertEqual(func.children[1].name, b.name)
 
@@ -142,6 +145,23 @@ class TestSpecificFunctions(unittest.TestCase):
             places=5,
         )
 
+        # Test broadcast gets switched
+        broad_a = pybamm.PrimaryBroadcast(a, "test")
+        fun_broad = pybamm.arcsinh(broad_a)
+        self.assertEqual(fun_broad.id, pybamm.PrimaryBroadcast(fun, "test").id)
+
+        broad_a = pybamm.FullBroadcast(a, "test", "test2")
+        fun_broad = pybamm.arcsinh(broad_a)
+        self.assertEqual(fun_broad.id, pybamm.FullBroadcast(fun, "test", "test2").id)
+
+        # Test recursion
+        broad_a = pybamm.PrimaryBroadcast(pybamm.PrimaryBroadcast(a, "test"), "test2")
+        fun_broad = pybamm.arcsinh(broad_a)
+        self.assertEqual(
+            fun_broad.id,
+            pybamm.PrimaryBroadcast(pybamm.PrimaryBroadcast(fun, "test"), "test2").id,
+        )
+
     def test_arctan(self):
         a = pybamm.InputParameter("a")
         fun = pybamm.arctan(a)
@@ -174,11 +194,6 @@ class TestSpecificFunctions(unittest.TestCase):
             / h,
             places=5,
         )
-
-        # test simplify
-        y = pybamm.StateVector(slice(0, 1))
-        fun = pybamm.cos(y)
-        self.assertEqual(fun.id, fun.simplify().id)
 
     def test_cosh(self):
         a = pybamm.InputParameter("a")
@@ -316,6 +331,38 @@ class TestSpecificFunctions(unittest.TestCase):
             fun.diff(a).evaluate(inputs={"a": 3}),
             (
                 pybamm.tanh(pybamm.Scalar(3 + h)).evaluate()
+                - fun.evaluate(inputs={"a": 3})
+            )
+            / h,
+            places=5,
+        )
+
+    def test_erf(self):
+        a = pybamm.InputParameter("a")
+        fun = pybamm.erf(a)
+        self.assertEqual(fun.evaluate(inputs={"a": 3}), special.erf(3))
+        h = 0.0000001
+        self.assertAlmostEqual(
+            fun.diff(a).evaluate(inputs={"a": 3}),
+            (
+                pybamm.erf(pybamm.Scalar(3 + h)).evaluate()
+                - fun.evaluate(inputs={"a": 3})
+            )
+            / h,
+            places=5,
+        )
+
+    def test_erfc(self):
+        a = pybamm.InputParameter("a")
+        fun = pybamm.erfc(a)
+        self.assertAlmostEqual(
+            fun.evaluate(inputs={"a": 3}), special.erfc(3), places=15
+        )
+        h = 0.0000001
+        self.assertAlmostEqual(
+            fun.diff(a).evaluate(inputs={"a": 3}),
+            (
+                pybamm.erfc(pybamm.Scalar(3 + h)).evaluate()
                 - fun.evaluate(inputs={"a": 3})
             )
             / h,

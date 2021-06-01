@@ -29,7 +29,7 @@ class BasicDFN(BaseModel):
 
     def __init__(self, name="Doyle-Fuller-Newman model"):
         super().__init__({}, name)
-        pybamm.citations.register("marquis2019asymptotic")
+        pybamm.citations.register("Marquis2019")
         # `param` is a class containing all the relevant parameters and functions for
         # this model. These are purely symbolic at this stage, and will be set by the
         # `ParameterValues` class when the model is processed.
@@ -52,7 +52,7 @@ class BasicDFN(BaseModel):
         )
         # Concatenations combine several variables into a single variable, to simplify
         # implementing equations that hold over several domains
-        c_e = pybamm.Concatenation(c_e_n, c_e_s, c_e_p)
+        c_e = pybamm.concatenation(c_e_n, c_e_s, c_e_p)
 
         # Electrolyte potential
         phi_e_n = pybamm.Variable(
@@ -62,7 +62,7 @@ class BasicDFN(BaseModel):
         phi_e_p = pybamm.Variable(
             "Positive electrolyte potential", domain="positive electrode"
         )
-        phi_e = pybamm.Concatenation(phi_e_n, phi_e_s, phi_e_p)
+        phi_e = pybamm.concatenation(phi_e_n, phi_e_s, phi_e_p)
 
         # Electrode potential
         phi_s_n = pybamm.Variable(
@@ -107,10 +107,14 @@ class BasicDFN(BaseModel):
         eps_p = pybamm.PrimaryBroadcast(
             pybamm.Parameter("Positive electrode porosity"), "positive electrode"
         )
-        eps = pybamm.Concatenation(eps_n, eps_s, eps_p)
+        eps = pybamm.concatenation(eps_n, eps_s, eps_p)
+
+        # Active material volume fraction (eps + eps_s + eps_inactive = 1)
+        eps_s_n = pybamm.Parameter("Negative electrode active material volume fraction")
+        eps_s_p = pybamm.Parameter("Positive electrode active material volume fraction")
 
         # Tortuosity
-        tor = pybamm.Concatenation(
+        tor = pybamm.concatenation(
             eps_n ** param.b_e_n, eps_s ** param.b_e_s, eps_p ** param.b_e_p
         )
 
@@ -137,7 +141,7 @@ class BasicDFN(BaseModel):
                 param.ne_p / 2 * (phi_s_p - phi_e_p - param.U_p(c_s_surf_p, T))
             )
         )
-        j = pybamm.Concatenation(j_n, j_s, j_p)
+        j = pybamm.concatenation(j_n, j_s, j_p)
 
         ######################
         # State of Charge
@@ -163,14 +167,18 @@ class BasicDFN(BaseModel):
         self.boundary_conditions[c_s_n] = {
             "left": (pybamm.Scalar(0), "Neumann"),
             "right": (
-                -param.C_n * j_n / param.a_n / param.D_n(c_s_surf_n, T),
+                -param.C_n * j_n / param.a_R_n / param.D_n(c_s_surf_n, T),
                 "Neumann",
             ),
         }
         self.boundary_conditions[c_s_p] = {
             "left": (pybamm.Scalar(0), "Neumann"),
             "right": (
-                -param.C_p * j_p / param.a_p / param.gamma_p / param.D_p(c_s_surf_p, T),
+                -param.C_p
+                * j_p
+                / param.a_R_p
+                / param.gamma_p
+                / param.D_p(c_s_surf_p, T),
                 "Neumann",
             ),
         }
@@ -206,8 +214,9 @@ class BasicDFN(BaseModel):
         ######################
         # Current in the solid
         ######################
-        i_s_n = -param.sigma_n * (1 - eps_n) ** param.b_s_n * pybamm.grad(phi_s_n)
-        sigma_eff_p = param.sigma_p * (1 - eps_p) ** param.b_s_p
+        sigma_eff_n = param.sigma_n * eps_s_n ** param.b_s_n
+        i_s_n = -sigma_eff_n * pybamm.grad(phi_s_n)
+        sigma_eff_p = param.sigma_p * eps_s_p ** param.b_s_p
         i_s_p = -sigma_eff_p * pybamm.grad(phi_s_p)
         # The `algebraic` dictionary contains differential equations, with the key being
         # the main scalar variable of interest in the equation
@@ -235,7 +244,7 @@ class BasicDFN(BaseModel):
         # Current in the electrolyte
         ######################
         i_e = (param.kappa_e(c_e, T) * tor * param.gamma_e / param.C_e) * (
-            param.chi(c_e) * pybamm.grad(c_e) / c_e - pybamm.grad(phi_e)
+            param.chi(c_e, T) * pybamm.grad(c_e) / c_e - pybamm.grad(phi_e)
         )
         self.algebraic[phi_e] = pybamm.div(i_e) - j
         self.boundary_conditions[phi_e] = {
@@ -249,7 +258,8 @@ class BasicDFN(BaseModel):
         ######################
         N_e = -tor * param.D_e(c_e, T) * pybamm.grad(c_e)
         self.rhs[c_e] = (1 / eps) * (
-            -pybamm.div(N_e) / param.C_e + (1 - param.t_plus(c_e)) * j / param.gamma_e
+            -pybamm.div(N_e) / param.C_e
+            + (1 - param.t_plus(c_e, T)) * j / param.gamma_e
         )
         self.boundary_conditions[c_e] = {
             "left": (pybamm.Scalar(0), "Neumann"),
@@ -283,5 +293,5 @@ class BasicDFN(BaseModel):
             pybamm.Event("Maximum voltage", voltage - param.voltage_high_cut),
         ]
 
-    def new_copy(self, build=False):
-        return pybamm.BaseModel.new_copy(self)
+    def new_empty_copy(self):
+        return pybamm.BaseModel.new_empty_copy(self)

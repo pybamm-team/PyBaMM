@@ -1,0 +1,52 @@
+name: Run benchmarks on push
+on:
+  push:
+
+jobs:
+  benchmarks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Set up Python 3.8
+        uses: actions/setup-python@v2
+        with:
+          python-version: 3.8
+      - name: Install asv
+        run: pip install -U pip virtualenv asv
+      - name: Fetch base branch
+        run: |
+          # This workflow also runs for merge commits
+          # on develop. In this case, we don't want to be
+          # fetching the develop branch.
+          current_branch=$(git rev-parse --abbrev-ref HEAD)
+          if [ $current_branch != "develop" ]; then
+              git fetch origin develop:develop
+          fi
+      - name: Run benchmarks
+        run: |
+          asv machine --machine "GitHubRunner"
+          # Get IDs of branch and PR commits
+          BASE_COMMIT=$(git rev-parse develop)
+          HEAD_COMMIT=$(git rev-parse HEAD)
+          echo $BASE_COMMIT | tee commits_to_compare.txt
+          echo $HEAD_COMMIT | tee -a commits_to_compare.txt
+          asv run HASHFILE:commits_to_compare.txt --m "GitHubRunner" --show-stderr
+      - name: Compare commits' benchmark results
+        run: |
+          BASE_COMMIT=$(head -1 commits_to_compare.txt)
+          HEAD_COMMIT=$(tail -1 commits_to_compare.txt)
+          echo "SUMMARY OF CHANGES"
+          echo "=================="
+          asv compare $BASE_COMMIT $HEAD_COMMIT | tee compare_result.txt
+          # Make sure grep returns error code 0 even if code 1 is
+          # returned because no match is found
+          REGRESSIONS=$({ grep "+" compare_result.txt || test $? = 1; })
+          if [ ! -z "$REGRESSIONS" ]; \
+          then \
+          echo "REGRESSIONS FOUND"; \
+          echo "================="; \
+          echo "$REGRESSIONS"; \
+          echo "================="; \
+          printf "Found %d regression(s)\n" $(echo "$REGRESSIONS" | wc -l); \
+          exit 1; \
+          fi

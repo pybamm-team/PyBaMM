@@ -16,8 +16,8 @@ class BaseModel(pybamm.BaseSubModel):
     **Extends:** :class:`pybamm.BaseSubModel`
     """
 
-    def __init__(self, param):
-        super().__init__(param)
+    def __init__(self, param, options):
+        super().__init__(param, options=options)
 
     def _get_standard_porosity_variables(
         self, eps_n, eps_s, eps_p, set_leading_order=False
@@ -26,7 +26,7 @@ class BaseModel(pybamm.BaseSubModel):
         eps_n_av = pybamm.x_average(eps_n)
         eps_s_av = pybamm.x_average(eps_s)
         eps_p_av = pybamm.x_average(eps_p)
-        eps = pybamm.Concatenation(eps_n, eps_s, eps_p)
+        eps = pybamm.concatenation(eps_n, eps_s, eps_p)
 
         variables = {
             "Porosity": eps,
@@ -37,25 +37,6 @@ class BaseModel(pybamm.BaseSubModel):
             "X-averaged separator porosity": eps_s_av,
             "X-averaged positive electrode porosity": eps_p_av,
         }
-
-        # activate material volume fractions
-        eps_solid_n = 1 - eps_n - self.param.epsilon_inactive_n
-        eps_solid_s = 1 - eps_s - self.param.epsilon_inactive_s
-        eps_solid_p = 1 - eps_p - self.param.epsilon_inactive_p
-        eps_solid = pybamm.Concatenation(eps_solid_n, eps_solid_s, eps_solid_p)
-
-        am = "active material volume fraction"
-        variables.update(
-            {
-                am.capitalize(): eps_solid,
-                "Negative electrode " + am: eps_solid_n,
-                "Separator " + am: eps_solid,
-                "Positive electrode " + am: eps_solid_p,
-                "X-averaged negative electrode " + am: pybamm.x_average(eps_solid_n),
-                "X-averaged separator " + am: pybamm.x_average(eps_solid),
-                "X-averaged positive electrode " + am: pybamm.x_average(eps_solid_p),
-            }
-        )
 
         if set_leading_order is True:
             leading_order_variables = {
@@ -72,7 +53,7 @@ class BaseModel(pybamm.BaseSubModel):
         deps_n_dt_av = pybamm.x_average(deps_n_dt)
         deps_s_dt_av = pybamm.x_average(deps_s_dt)
         deps_p_dt_av = pybamm.x_average(deps_p_dt)
-        deps_dt = pybamm.Concatenation(deps_n_dt, deps_s_dt, deps_p_dt)
+        deps_dt = pybamm.concatenation(deps_n_dt, deps_s_dt, deps_p_dt)
 
         variables = {
             "Porosity change": deps_dt,

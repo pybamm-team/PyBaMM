@@ -15,9 +15,12 @@ class BaseModel(pybamm.BaseBatteryModel):
 
     """
 
-    def __init__(self, options=None, name="Unnamed lead-acid model"):
+    def __init__(self, options=None, name="Unnamed lead-acid model", build=False):
+        options = options or {}
+        # Specify that there are no particles in lead-acid
+        options["particle shape"] = "no particles"
         super().__init__(options, name)
-        self.param = pybamm.standard_parameters_lead_acid
+        self.param = pybamm.LeadAcidParameters()
 
         # Default timescale is discharge timescale
         self.timescale = self.param.tau_discharge
@@ -27,7 +30,7 @@ class BaseModel(pybamm.BaseBatteryModel):
             "negative electrode": self.param.L_x,
             "separator": self.param.L_x,
             "positive electrode": self.param.L_x,
-            "current collector y": self.param.L_y,
+            "current collector y": self.param.L_z,
             "current collector z": self.param.L_z,
         }
 
@@ -51,7 +54,7 @@ class BaseModel(pybamm.BaseBatteryModel):
         return {var.x_n: 25, var.x_s: 41, var.x_p: 34, var.y: 10, var.z: 10}
 
     def set_soc_variables(self):
-        "Set variables relating to the state of charge."
+        """Set variables relating to the state of charge."""
         # State of Charge defined as function of dimensionless electrolyte concentration
         z = pybamm.standard_spatial_vars.z
         soc = (
@@ -67,7 +70,24 @@ class BaseModel(pybamm.BaseBatteryModel):
             self.rhs[fci] = -self.variables["Total current density"] * 100
             self.initial_conditions[fci] = self.param.q_init * 100
 
+    def set_active_material_submodel(self):
+        self.submodels["negative active material"] = pybamm.active_material.Constant(
+            self.param, "Negative", self.options
+        )
+        self.submodels["positive active material"] = pybamm.active_material.Constant(
+            self.param, "Positive", self.options
+        )
+
     def set_sei_submodel(self):
 
         self.submodels["negative sei"] = pybamm.sei.NoSEI(self.param, "Negative")
         self.submodels["positive sei"] = pybamm.sei.NoSEI(self.param, "Positive")
+
+    def set_lithium_plating_submodel(self):
+
+        self.submodels["negative lithium plating"] = pybamm.lithium_plating.NoPlating(
+            self.param, "Negative"
+        )
+        self.submodels["positive lithium plating"] = pybamm.lithium_plating.NoPlating(
+            self.param, "Positive"
+        )

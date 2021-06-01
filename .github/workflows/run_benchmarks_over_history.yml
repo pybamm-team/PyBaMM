@@ -1,0 +1,87 @@
+# GitHub actions workflow that runs the benchmark suite in benchmarks/
+# from "commit_start" to "commit_end".  It pushes the results to the
+# pybamm-bench repo and updates the display website.
+
+# This workflow is meant to be triggered manually, see
+# https://docs.github.com/en/enterprise-server@3.0/actions/managing-workflow-runs/manually-running-a-workflow
+
+name: Manual benchmarks
+on:
+  workflow_dispatch:
+    inputs:
+      commit_start:
+        description: 'Identifier of commit from which to start'
+        default: 'v0.1.0'
+      commit_end:
+        description: 'Identifier of commit at which to end'
+        default: 'develop'
+      ncommits:
+        description: 'Number of commits to benchmark between commit_start and commit_end'
+        default: '100'
+jobs:
+  benchmarks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Set up Python 3.8
+        uses: actions/setup-python@v2
+        with:
+          python-version: 3.8
+      - name: Install tox and asv
+        run: pip install -U pip tox asv
+      - name: Fetch develop branch
+        # Not required when worklow trigerred
+        # on develop, but useful when
+        # experimenting/developing on another branch.
+        run: |
+          git fetch origin develop:develop
+      - name: Run benchmarks
+        run: |
+          asv machine --machine "GitHubRunner"
+          asv run -m "GitHubRunner" -s ${{ github.event.inputs.ncommits }} \
+          ${{ github.event.inputs.commit_start }}..${{ github.event.inputs.commit_end }}
+      - name: Upload results as artifact
+        uses: actions/upload-artifact@v2
+        with:
+          name: asv_new_results
+          path: results
+
+  publish-results:
+    name: Push and publish results
+    needs: benchmarks
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set up Python 3.8
+        uses: actions/setup-python@v2
+        with:
+          python-version: 3.8
+      - name: Install asv
+        run: pip install asv
+      - name: Checkout pybamm-bench repo
+        uses: actions/checkout@v2
+        with:
+          repository: pybamm-team/pybamm-bench
+          token: ${{ secrets.BENCH_PAT }}
+      - name: Download results artifact
+        uses: actions/download-artifact@v2
+        with:
+          name: asv_new_results
+          path: new_results
+      - name: Copy new results and push to pybamm-bench repo
+        env:
+          PUSH_BENCH_EMAIL: ${{ secrets.PUSH_BENCH_EMAIL }}
+          PUSH_BENCH_NAME: ${{ secrets.PUSH_BENCH_NAME }}
+        run: |
+          cp -vr new_results/* results
+          git config --global user.email "$PUSH_BENCH_EMAIL"
+          git config --global user.name "$PUSH_BENCH_NAME"
+          git add results
+          git commit -am "Add new results"
+          git push
+      - name: Publish results
+        run:
+          |
+            asv publish
+            git fetch origin gh-pages:gh-pages
+            asv gh-pages
+      

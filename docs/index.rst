@@ -57,7 +57,7 @@ Installation
    install/GNU-linux
    install/windows
    install/windows-wsl
-   For developers: compiling the KLU solver <install/install-klu>
+   install/install-from-source
 
 API documentation
 ====================
@@ -80,14 +80,15 @@ API documentation
    source/util
    source/citations
    source/parameters_cli
+   source/batch_study
 
 Examples
 ========
 
 Detailed examples can be viewed on the
-`GitHub examples page <https://github.com/pybamm-team/PyBaMM/tree/master/examples/notebooks>`_,
+`GitHub examples page <https://github.com/pybamm-team/PyBaMM/tree/develop/examples/notebooks>`_,
 and run locally using ``jupyter notebook``, or online through
-`Binder <https://mybinder.org/v2/gh/pybamm-team/PyBaMM/master?filepath=examples%2Fnotebooks>`_.
+`Google Colab <https://colab.research.google.com/github/pybamm-team/PyBaMM/blob/develop/>`_.
 
 Contributing
 ============
@@ -102,4 +103,4 @@ There are many ways to contribute to PyBaMM:
     tutorials/add-spatial-method
     tutorials/add-solver
 
-Before contributing, please read the `Contribution Guidelines <https://github.com/pybamm-team/PyBaMM/blob/master/CONTRIBUTING.md>`_.
+Before contributing, please read the `Contribution Guidelines <https://github.com/pybamm-team/PyBaMM/blob/develop/CONTRIBUTING.md>`_.

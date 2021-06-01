@@ -217,7 +217,7 @@ class TestFiniteVolume(unittest.TestCase):
             domain=["positive electrode"],
             auxiliary_domains={"secondary": "current collector"},
         )
-        var = pybamm.Concatenation(a, b, c)
+        var = pybamm.concatenation(a, b, c)
         boundary_conditions = {
             var.id: {
                 "left": (pybamm.Vector(np.linspace(0, 1, 15)), "Neumann"),
@@ -483,7 +483,7 @@ class TestFiniteVolume(unittest.TestCase):
             grad_eqn_disc.evaluate(None, constant_y),
             np.zeros_like(combined_submesh.edges[:, np.newaxis]),
         )
-        np.testing.assert_array_equal(
+        np.testing.assert_array_almost_equal(
             div_eqn_disc.evaluate(None, constant_y),
             np.zeros_like(combined_submesh.nodes[:, np.newaxis]),
         )
@@ -725,15 +725,15 @@ class TestFiniteVolume(unittest.TestCase):
 
         constant_y = np.ones_like(mesh["negative particle"].nodes[:, np.newaxis])
         np.testing.assert_array_almost_equal(
-            integral_eqn_disc.evaluate(None, constant_y), 2 * np.pi ** 2
+            integral_eqn_disc.evaluate(None, constant_y), 4 * np.pi / 3, decimal=4
         )
         linear_y = mesh["negative particle"].nodes
         np.testing.assert_array_almost_equal(
-            integral_eqn_disc.evaluate(None, linear_y), 4 * np.pi ** 2 / 3, decimal=3
+            integral_eqn_disc.evaluate(None, linear_y), np.pi, decimal=3
         )
-        one_over_y = 1 / mesh["negative particle"].nodes
+        one_over_y_squared = 1 / mesh["negative particle"].nodes ** 2
         np.testing.assert_array_almost_equal(
-            integral_eqn_disc.evaluate(None, one_over_y), 4 * np.pi ** 2
+            integral_eqn_disc.evaluate(None, one_over_y_squared), 4 * np.pi
         )
 
         # test failure for secondary dimension column form
@@ -1151,7 +1151,7 @@ class TestFiniteVolume(unittest.TestCase):
         # constant case
         phi_exact = np.ones_like(combined_submesh.nodes)
         phi_approx = int_int_phi_disc.evaluate(None, phi_exact)
-        np.testing.assert_array_equal(x_end ** 2 / 2, phi_approx)
+        np.testing.assert_array_almost_equal(x_end ** 2 / 2, phi_approx)
 
         # linear case
         phi_exact = combined_submesh.nodes[:, np.newaxis]
@@ -1303,7 +1303,7 @@ class TestFiniteVolume(unittest.TestCase):
         r_disc = disc.process_symbol(r)
         self.assertIsInstance(r_disc, pybamm.Vector)
         np.testing.assert_array_equal(
-            r_disc.evaluate(), 3 * disc.mesh["negative particle"].nodes[:, np.newaxis],
+            r_disc.evaluate(), 3 * disc.mesh["negative particle"].nodes[:, np.newaxis]
         )
 
     def test_mass_matrix_shape(self):
@@ -1348,7 +1348,7 @@ class TestFiniteVolume(unittest.TestCase):
         model.rhs = {c: pybamm.div(N)}
         model.initial_conditions = {c: pybamm.Scalar(0)}
         model.boundary_conditions = {
-            c: {"left": (0, "Dirichlet"), "right": (0, "Dirichlet")}
+            c: {"left": (0, "Neumann"), "right": (0, "Dirichlet")}
         }
         model.variables = {"c": c, "N": N}
         mesh = get_p2d_mesh_for_testing()
@@ -1521,6 +1521,58 @@ class TestFiniteVolume(unittest.TestCase):
         self.assertEqual(disc_heav.size, nodes.size)
         np.testing.assert_array_equal(disc_heav.evaluate(y=2 * np.ones_like(nodes)), 2)
         np.testing.assert_array_equal(disc_heav.evaluate(y=-2 * np.ones_like(nodes)), 0)
+
+    def test_upwind_downwind(self):
+        mesh = get_mesh_for_testing()
+        spatial_methods = {"macroscale": pybamm.FiniteVolume()}
+        disc = pybamm.Discretisation(mesh, spatial_methods)
+
+        n = mesh["negative electrode"].npts
+        var = pybamm.StateVector(slice(0, n), domain="negative electrode")
+        upwind = pybamm.upwind(var)
+        downwind = pybamm.downwind(var)
+
+        disc.bcs = {
+            var.id: {
+                "left": (pybamm.Scalar(5), "Dirichlet"),
+                "right": (pybamm.Scalar(3), "Dirichlet"),
+            }
+        }
+
+        disc_upwind = disc.process_symbol(upwind)
+        disc_downwind = disc.process_symbol(downwind)
+
+        nodes = mesh["negative electrode"].nodes
+        n = mesh["negative electrode"].npts
+        self.assertEqual(disc_upwind.size, nodes.size + 1)
+        self.assertEqual(disc_downwind.size, nodes.size + 1)
+
+        y_test = 2 * np.ones_like(nodes)
+        np.testing.assert_array_equal(
+            disc_upwind.evaluate(y=y_test),
+            np.concatenate([np.array([5, 0.5]), 2 * np.ones(n - 1)])[:, np.newaxis],
+        )
+        np.testing.assert_array_equal(
+            disc_downwind.evaluate(y=y_test),
+            np.concatenate([2 * np.ones(n - 1), np.array([1.5, 3])])[:, np.newaxis],
+        )
+
+        # Remove boundary conditions and check error is raised
+        disc.bcs = {}
+        with self.assertRaisesRegex(pybamm.ModelError, "Boundary conditions"):
+            disc.process_symbol(upwind)
+
+        # Set wrong boundary conditions and check error is raised
+        disc.bcs = {
+            var.id: {
+                "left": (pybamm.Scalar(5), "Neumann"),
+                "right": (pybamm.Scalar(3), "Neumann"),
+            }
+        }
+        with self.assertRaisesRegex(pybamm.ModelError, "Dirichlet boundary conditions"):
+            disc.process_symbol(upwind)
+        with self.assertRaisesRegex(pybamm.ModelError, "Dirichlet boundary conditions"):
+            disc.process_symbol(downwind)
 
     def test_grad_div_with_bcs_on_tab(self):
         # 2d macroscale

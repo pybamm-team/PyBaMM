@@ -19,22 +19,16 @@ class TestLOQS(unittest.TestCase):
         optimtest = tests.OptimisationsTest(model)
 
         original = optimtest.evaluate_model()
-        simplified = optimtest.evaluate_model(simplify=True)
         using_known_evals = optimtest.evaluate_model(use_known_evals=True)
-        simp_and_known = optimtest.evaluate_model(simplify=True, use_known_evals=True)
-        simp_and_python = optimtest.evaluate_model(simplify=True, to_python=True)
-        np.testing.assert_array_almost_equal(original, simplified)
+        to_python = optimtest.evaluate_model(to_python=True)
         np.testing.assert_array_almost_equal(original, using_known_evals)
-        np.testing.assert_array_almost_equal(original, simp_and_known)
-        np.testing.assert_array_almost_equal(original, simp_and_python)
+        np.testing.assert_array_almost_equal(original, to_python)
 
     def test_set_up(self):
         model = pybamm.lead_acid.LOQS()
         optimtest = tests.OptimisationsTest(model)
-        optimtest.set_up_model(simplify=False, to_python=True)
-        optimtest.set_up_model(simplify=True, to_python=True)
-        optimtest.set_up_model(simplify=False, to_python=False)
-        optimtest.set_up_model(simplify=True, to_python=False)
+        optimtest.set_up_model(to_python=True)
+        optimtest.set_up_model(to_python=False)
 
     def test_charge(self):
         model = pybamm.lead_acid.LOQS()
@@ -70,13 +64,7 @@ class TestLOQS(unittest.TestCase):
         options = {"current collector": "potential pair", "dimensionality": 1}
         model = pybamm.lead_acid.LOQS(options)
         var = pybamm.standard_spatial_vars
-        var_pts = {
-            var.x_n: 5,
-            var.x_s: 5,
-            var.x_p: 5,
-            var.y: 5,
-            var.z: 5,
-        }
+        var_pts = {var.x_n: 5, var.x_s: 5, var.x_p: 5, var.y: 5, var.z: 5}
         modeltest = tests.StandardModelTest(model, var_pts=var_pts)
         modeltest.test_all(skip_output_tests=True)
 

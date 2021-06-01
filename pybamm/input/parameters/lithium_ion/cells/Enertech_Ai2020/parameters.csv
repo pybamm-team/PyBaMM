@@ -1,0 +1,36 @@
+Name [units],Value,Reference,Notes
+# Empty rows and rows starting with ‘#’ will be ignored,,,
+,,,
+# Macroscale geometry,,,
+Negative current collector thickness [m],10E-6,Ai 2020,
+Negative electrode thickness [m],76.5E-6,Ai 2020,
+Separator thickness [m],25E-6,Ai 2020,
+Positive electrode thickness [m],68E-6,Ai 2020,
+Positive current collector thickness [m],15E-6,Ai 2020,
+Electrode height [m],51E-3,Ai 2020,Not needed for 1D
+Electrode width [m],47E-3,Ai 2020,Not needed for 1D
+Cell cooling surface area [m2],60.484E-4,Ai 2020, pouch
+Cell volume [m3],1.5341E-5,Ai 2020, pouch
+Cell emissivity,0.95,Ai 2020,estimation
+Cell thermal expansion coefficien [m.K-1], 1.1E-6,Ai 2020,
+,,,
+# Current collector properties ,,,
+Negative current collector conductivity [S.m-1],58411000,CRC Handbook,copper
+Positive current collector conductivity [S.m-1],36914000,CRC Handbook,aluminium
+,,,
+# Density,,,
+Negative current collector density [kg.m-3],8960,CRC Handbook,copper
+Positive current collector density [kg.m-3],2700,CRC Handbook,aluminium
+,,,
+# Specific heat capacity,,,
+Negative current collector specific heat capacity [J.kg-1.K-1],385,CRC Handbook,copper
+Positive current collector specific heat capacity [J.kg-1.K-1],897,CRC Handbook,aluminium
+,,,
+# Thermal conductivity,,,
+Negative current collector thermal conductivity [W.m-1.K-1],401,CRC Handbook,copper
+Positive current collector thermal conductivity [W.m-1.K-1],237,CRC Handbook,aluminium
+,,,
+# Electrical,,,
+Nominal cell capacity [A.h], 2.28,Ai 2020,2.28/34
+Typical current [A], 2.28,Ai 2020,
+Current function [A], 2.28,default current function,

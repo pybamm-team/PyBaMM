@@ -13,6 +13,8 @@ class TestBroadcasts(unittest.TestCase):
         self.assertEqual(broad_a.name, "broadcast")
         self.assertEqual(broad_a.children[0].name, a.name)
         self.assertEqual(broad_a.domain, ["negative electrode"])
+        self.assertTrue(broad_a.broadcasts_to_nodes)
+        self.assertEqual(broad_a.reduce_one_dimension(), a)
 
         a = pybamm.Symbol(
             "a",
@@ -54,7 +56,14 @@ class TestBroadcasts(unittest.TestCase):
             broad_a.auxiliary_domains,
             {"secondary": ["negative electrode"], "tertiary": ["current collector"]},
         )
+        self.assertTrue(broad_a.broadcasts_to_nodes)
 
+        with self.assertRaises(NotImplementedError):
+            broad_a.reduce_one_dimension()
+
+        a = pybamm.Symbol("a")
+        with self.assertRaisesRegex(TypeError, "empty domain"):
+            pybamm.SecondaryBroadcast(a, "current collector")
         a = pybamm.Symbol("a", domain="negative particle")
         with self.assertRaisesRegex(
             pybamm.DomainError, "Secondary broadcast from particle"
@@ -77,6 +86,24 @@ class TestBroadcasts(unittest.TestCase):
         broad_a = pybamm.FullBroadcast(a, ["negative electrode"], "current collector")
         self.assertEqual(broad_a.domain, ["negative electrode"])
         self.assertEqual(broad_a.auxiliary_domains["secondary"], ["current collector"])
+        self.assertTrue(broad_a.broadcasts_to_nodes)
+        self.assertEqual(
+            broad_a.reduce_one_dimension().id,
+            pybamm.PrimaryBroadcast(a, "current collector").id,
+        )
+
+        broad_a = pybamm.FullBroadcast(a, ["negative electrode"], {})
+        self.assertEqual(broad_a.reduce_one_dimension(), a)
+
+        broad_a = pybamm.FullBroadcast(
+            a,
+            "negative particle",
+            {"secondary": "negative electrode", "tertiary": "current collector"},
+        )
+        self.assertEqual(
+            broad_a.reduce_one_dimension().id,
+            pybamm.FullBroadcast(a, "negative electrode", "current collector").id,
+        )
 
     def test_full_broadcast_number(self):
         broad_a = pybamm.FullBroadcast(1, ["negative electrode"], None)
@@ -90,7 +117,7 @@ class TestBroadcasts(unittest.TestCase):
             pybamm.FullBroadcast(a, "electrode", None)
 
     def test_ones_like(self):
-        a = pybamm.Variable("a")
+        a = pybamm.Parameter("a")
         ones_like_a = pybamm.ones_like(a)
         self.assertEqual(ones_like_a.id, pybamm.Scalar(1).id)
 
@@ -114,12 +141,17 @@ class TestBroadcasts(unittest.TestCase):
 
     def test_broadcast_to_edges(self):
         a = pybamm.Symbol("a")
+
+        # primary
         broad_a = pybamm.PrimaryBroadcastToEdges(a, ["negative electrode"])
         self.assertEqual(broad_a.name, "broadcast to edges")
         self.assertEqual(broad_a.children[0].name, a.name)
         self.assertEqual(broad_a.domain, ["negative electrode"])
         self.assertTrue(broad_a.evaluates_on_edges("primary"))
+        self.assertFalse(broad_a.broadcasts_to_nodes)
+        self.assertEqual(broad_a.reduce_one_dimension(), a)
 
+        # secondary
         a = pybamm.Symbol(
             "a",
             domain=["negative particle"],
@@ -132,7 +164,9 @@ class TestBroadcasts(unittest.TestCase):
             {"secondary": ["negative electrode"], "tertiary": ["current collector"]},
         )
         self.assertTrue(broad_a.evaluates_on_edges("primary"))
+        self.assertFalse(broad_a.broadcasts_to_nodes)
 
+        # full
         a = pybamm.Symbol("a")
         broad_a = pybamm.FullBroadcastToEdges(
             a, ["negative electrode"], "current collector"
@@ -140,6 +174,25 @@ class TestBroadcasts(unittest.TestCase):
         self.assertEqual(broad_a.domain, ["negative electrode"])
         self.assertEqual(broad_a.auxiliary_domains["secondary"], ["current collector"])
         self.assertTrue(broad_a.evaluates_on_edges("primary"))
+        self.assertFalse(broad_a.broadcasts_to_nodes)
+        self.assertEqual(
+            broad_a.reduce_one_dimension().id,
+            pybamm.PrimaryBroadcastToEdges(a, "current collector").id,
+        )
+        broad_a = pybamm.FullBroadcastToEdges(a, ["negative electrode"], {})
+        self.assertEqual(broad_a.reduce_one_dimension(), a)
+
+        broad_a = pybamm.FullBroadcastToEdges(
+            a,
+            "negative particle",
+            {"secondary": "negative electrode", "tertiary": "current collector"},
+        )
+        self.assertEqual(
+            broad_a.reduce_one_dimension().id,
+            pybamm.FullBroadcastToEdges(
+                a, "negative electrode", "current collector"
+            ).id,
+        )
 
 
 if __name__ == "__main__":

@@ -1,4 +1,4 @@
-.. _CONTRIBUTING.md: https://github.com/pybamm-team/PyBaMM/blob/master/CONTRIBUTING.md
+.. _CONTRIBUTING.md: https://github.com/pybamm-team/PyBaMM/blob/develop/CONTRIBUTING.md
 
 
 Adding a Spatial Method
@@ -10,7 +10,7 @@ In particular, start by creating an issue to discuss what you want to do - this 
 The role of spatial methods
 ---------------------------
 
-All models in PyBaMM are implemented as `expression trees <https://github.com/pybamm-team/PyBaMM/blob/master/examples/notebooks/expression-tree.ipynb>`_.
+All models in PyBaMM are implemented as `expression trees <https://github.com/pybamm-team/PyBaMM/blob/develop/examples/notebooks/expression_tree/expression-tree.ipynb>`_.
 After it has been created and parameters have been set, the model is passed to the :class:`pybamm.Discretisation` class,
 which converts it into a linear algebra form.
 For example, the object:
@@ -68,13 +68,13 @@ Optionally, a new spatial method can also overwrite the default behaviour for th
 For an example of an existing spatial method implementation, see the Finite Volume
 `API docs <https://pybamm.readthedocs.io/en/latest/source/spatial_methods/finite_volume.html>`_
 and
-`notebook <https://github.com/pybamm-team/PyBaMM/blob/master/examples/notebooks/spatial_methods/finite-volumes.ipynb>`_.
+`notebook <https://github.com/pybamm-team/PyBaMM/blob/develop/examples/notebooks/spatial_methods/finite-volumes.ipynb>`_.
 
 Unit tests for the new class
 ----------------------------
 
 For the new spatial method to be added to PyBaMM, you must add unit tests to demonstrate that it behaves as expected
-(see, for example, the `Finite Volume unit tests <https://github.com/pybamm-team/PyBaMM/blob/master/tests/unit/test_spatial_methods/test_finite_volume.py>`_).
+(see, for example, the `Finite Volume unit tests <https://github.com/pybamm-team/PyBaMM/blob/develop/tests/unit/test_spatial_methods/test_finite_volume/test_finite_volume.py>`_).
 The best way to get started would be to create a file ``test_my_fast_method.py`` in ``tests/unit/test_spatial_methods/`` that performs at least the
 following checks:
 
@@ -87,7 +87,7 @@ Test on the models
 
 In theory, any existing model can now be discretised using ``MyFastMethod`` instead of their default spatial methods, with no extra work from here.
 To test this, add something like the following test to one of the model test files
-(e.g. `DFN <https://github.com/pybamm-team/PyBaMM/blob/master/tests/integration/test_models/test_full_battery_models/test_lithium_ion/test_dfn.py>`_):
+(e.g. `DFN <https://github.com/pybamm-team/PyBaMM/blob/develop/tests/integration/test_models/test_full_battery_models/test_lithium_ion/test_dfn.py>`_):
 
 .. code-block:: python
 
@@ -104,5 +104,5 @@ To test this, add something like the following test to one of the model test fil
 This will check that the model can run with the new spatial method (but not that it gives a sensible answer!).
 
 Once you have performed the above checks, you are almost ready to merge your code into the core PyBaMM - see
-`CONTRIBUTING.md workflow <https://github.com/pybamm-team/PyBaMM/blob/master/CONTRIBUTING.md#c-merging-your-changes-with-pybamm>`_
+`CONTRIBUTING.md workflow <https://github.com/pybamm-team/PyBaMM/blob/develop/CONTRIBUTING.md#c-merging-your-changes-with-pybamm>`_
 for how to do this.

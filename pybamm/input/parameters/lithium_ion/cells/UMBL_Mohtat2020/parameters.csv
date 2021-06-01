@@ -1,0 +1,34 @@
+Name [units],Value,Reference,Notes
+# Empty rows and rows starting with ‘#’ will be ignored,,,
+,,,
+# Macroscale geometry,,,
+Negative current collector thickness [m],2.5E-05,Scott Moura FastDFN,no info from Peyman MPM
+Negative electrode thickness [m],62E-06,Peyman MPM,
+Separator thickness [m],12E-06,Peyman MPM,
+Positive electrode thickness [m],67E-06,Peyman MPM,
+Positive current collector thickness [m],2.5E-05,Scott Moura FastDFN,no info from Peyman MPM
+Electrode height [m],1,KOKAM SLPB78205130H,Not needed for 1D
+Electrode width [m],0.2050,KOKAM SLPB78205130H,Not needed for 1D
+Cell cooling surface area [m2],0.41,,pouch
+Cell volume [m3],3.92E-5,,pouch
+,,,
+# Current collector properties ,,,
+Negative current collector conductivity [S.m-1],59600000,LIONSIMBA,carbon
+Positive current collector conductivity [S.m-1],35500000,LIONSIMBA,aluminium
+,,,
+# Density,,,
+Negative current collector density [kg.m-3],8954,,
+Positive current collector density [kg.m-3],2707,,
+,,,
+# Specific heat capacity,,,
+Negative current collector specific heat capacity [J.kg-1.K-1],385,,
+Positive current collector specific heat capacity [J.kg-1.K-1],897,,
+,,,
+# Thermal conductivity,,,
+Negative current collector thermal conductivity [W.m-1.K-1],401,,
+Positive current collector thermal conductivity [W.m-1.K-1],237,,
+,,,
+# Electrical,,,
+Nominal cell capacity [A.h],5,Peyman MPM,
+Typical current [A],5,,1C current
+Current function [A],5,default current function,

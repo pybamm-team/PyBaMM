@@ -1,0 +1,97 @@
+name: "Build and publish Python wheels"
+
+on:
+  push:
+    branches: main
+  workflow_dispatch:
+    inputs:
+      target:
+        description: 'Deployment target. Can be "pypi" or "testpypi"'
+        default: 'pypi'
+
+jobs:
+  build_wheels:
+    name: Build wheels on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@v2
+
+      - uses: actions/setup-python@v2
+
+      - name: Install cibuildwheel
+        run: python -m pip install cibuildwheel==1.9.0
+
+      - name: Clone pybind11 repo (no history)
+        run: git clone --depth 1 --branch v2.6.2 https://github.com/pybind/pybind11.git
+
+      - name: Install sundials on macOS
+        if: matrix.os == 'macos-latest'
+        run: |
+          brew update
+          brew install sundials
+
+      - name: Build wheels on Linux and MacOS
+        if: matrix.os != 'windows-latest'
+        run: python -m cibuildwheel --output-dir wheelhouse
+        env:
+          CIBW_BEFORE_ALL_LINUX: "bash build_manylinux_wheels/install_sundials.sh 5.8.1 5.7.0"
+          CIBW_BEFORE_BUILD_LINUX: "python -m pip install cmake"
+
+      - name: Cache packages installed through vcpkg on windows
+        if: matrix.os == 'windows-latest'
+        uses: actions/cache@v2
+        env:
+          cache-name: vckpg_binary_cache
+        with:
+          path: C:\Users\runneradmin\AppData\Local\vcpkg\archives
+          key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ hashFiles('vcpkg.json') }}
+
+      - name: Build 32 bits wheels on Windows
+        if: matrix.os == 'windows-latest'
+        run: python -m cibuildwheel --output-dir wheelhouse
+        env:
+          CIBW_ENVIRONMENT: "PYBAMM_USE_VCPKG=ON VCPKG_ROOT_DIR=$VCPKG_INSTALLATION_ROOT VCPKG_DEFAULT_TRIPLET=x86-windows-static VCPKG_FEATURE_FLAGS=manifests,registries CMAKE_GENERATOR=\"Visual Studio 16 2019\" CMAKE_GENERATOR_PLATFORM=Win32"
+          CIBW_ARCHS: "x86"
+
+      - name: Build 64 bits wheels on Windows
+        if: matrix.os == 'windows-latest'
+        run: python -m cibuildwheel --output-dir wheelhouse
+        env:
+          CIBW_ENVIRONMENT: "PYBAMM_USE_VCPKG=ON VCPKG_ROOT_DIR=$cd/vcpkg VCPKG_DEFAULT_TRIPLET=x64-windows-static VCPKG_FEATURE_FLAGS=manifests,registries CMAKE_GENERATOR=\"Visual Studio 16 2019\" CMAKE_GENERATOR_PLATFORM=x64"
+          CIBW_ARCHS: "AMD64"
+
+      - uses: actions/upload-artifact@v2
+        with:
+          name: wheels
+          path: ./wheelhouse/*.whl
+
+
+  publish-pypi:
+    name: Upload wheels to PyPI
+    needs: build_wheels
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download wheels
+        uses: actions/download-artifact@v1
+        with:
+          name: wheels
+
+      - name: Publish wheels on PyPI
+        if: github.event.inputs.target == 'pypi'
+        uses: pypa/gh-action-pypi-publish@master
+        with:
+          user: __token__
+          password: ${{ secrets.PYPI_TOKEN }}
+          packages_dir: wheels/
+
+      - name: Publish wheels on TestPyPI
+        if: github.event.inputs.target == 'testpypi'
+        uses: pypa/gh-action-pypi-publish@master
+        with:
+          user: __token__
+          password: ${{ secrets.TESTPYPI_TOKEN }}
+          packages_dir: wheels/
+          repository_url: https://test.pypi.org/legacy/

@@ -5,15 +5,12 @@
 #  1C rate when electrode dimensions are euqal.
 #  Coulomb counting is performed to calculate the capacity of the
 #  battery within the operating voltage limits and maximum particle concs.
-#  The anode thickenss is varied to highlight the importance of electrode
+#  The negative electrode thickness is varied to highlight the importance of electrode
 #  sizing to enable full lithium utilization
 #
 import pybamm
 import numpy as np
 import matplotlib.pyplot as plt
-
-plt.close("all")
-pybamm.set_logging_level(30)
 
 factor = 6.38
 capacities = []
@@ -56,8 +53,6 @@ for l_n in thicknesses:
                 "Maximum concentration in positive electrode [mol.m-3]": 50000,
                 "Initial concentration in negative electrode [mol.m-3]": 12500,
                 "Initial concentration in positive electrode [mol.m-3]": 25000,
-                "Negative electrode surface area to volume ratio [m-1]": 180000.0,
-                "Positive electrode surface area to volume ratio [m-1]": 150000.0,
                 "Current function [A]": I_app,
             }
         )
@@ -79,8 +74,8 @@ for l_n in thicknesses:
         # solve model
         t_eval = np.linspace(0, 3600, 100)
         sol = model.default_solver.solve(model, t_eval)
-        xpext = sol["Positive electrode average extent of lithiation"]
-        xnext = sol["Negative electrode average extent of lithiation"]
+        xpext = sol["X-averaged positive electrode extent of lithiation"]
+        xnext = sol["X-averaged negative electrode extent of lithiation"]
         xpsurf = sol["X-averaged positive particle surface concentration"]
         xnsurf = sol["X-averaged negative particle surface concentration"]
         time = sol["Time [h]"]
@@ -119,7 +114,7 @@ for l_n in thicknesses:
         tot_cap += cap
         tot_time += dc_time
 
-    print("Anode : Cathode thickness", e_ratio)
+    print("Negative : Positive electrode thickness", e_ratio)
     print("Total Charge/Discharge Time", tot_time, "hrs")
     print("Total Capacity", np.around(tot_cap, 3), "mAh")
     specific_cap = np.around(tot_cap, 3) / vol_cm3
@@ -132,4 +127,5 @@ ax1.plot(thicknesses / l_p, capacities)
 ax2.plot(thicknesses / l_p, specific_capacities)
 ax1.set_ylabel("Capacity [mAh]")
 ax2.set_ylabel("Specific Capacity [mAh.cm-3]")
-ax2.set_xlabel("Anode : Cathode thickness")
+ax2.set_xlabel("Negative : Positive electrode thickness")
+plt.show()

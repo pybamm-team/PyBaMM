@@ -132,7 +132,7 @@ class FastManyPSDs(BaseParticle):
             self.rhs = {
                 c_s_surf_distribution: -3
                 * j_distribution
-                / self.param.a_n
+                / self.param.a_R_n
                 / R_variable
             }
 
@@ -140,7 +140,7 @@ class FastManyPSDs(BaseParticle):
             self.rhs = {
                 c_s_surf_distribution: -3
                 * j_distribution
-                / self.param.a_p
+                / self.param.a_R_p
                 / self.param.gamma_p
                 / R_variable
             }

@@ -36,6 +36,7 @@ class Composite(BaseElectrolyteDiffusion):
     def get_coupled_variables(self, variables):
 
         tor_0 = variables["Leading-order electrolyte tortuosity"]
+        eps = variables["Leading-order porosity"]
         c_e_0_av = variables["Leading-order x-averaged electrolyte concentration"]
         c_e = variables["Electrolyte concentration"]
         i_e = variables["Electrolyte current density"]
@@ -45,17 +46,18 @@ class Composite(BaseElectrolyteDiffusion):
         param = self.param
 
         N_e_diffusion = -tor_0 * param.D_e(c_e_0_av, T_0) * pybamm.grad(c_e)
-        N_e_migration = param.C_e * param.t_plus(c_e) * i_e / param.gamma_e
+        N_e_migration = param.C_e * param.t_plus(c_e, T_0) * i_e / param.gamma_e
         N_e_convection = param.C_e * c_e_0_av * v_box_0
 
         N_e = N_e_diffusion + N_e_migration + N_e_convection
 
         variables.update(self._get_standard_flux_variables(N_e))
+        variables.update(self._get_total_concentration_electrolyte(c_e, eps))
 
         return variables
 
     def set_rhs(self, variables):
-        "Composite reaction-diffusion with source terms from leading order"
+        """Composite reaction-diffusion with source terms from leading order."""
 
         param = self.param
 
@@ -76,7 +78,7 @@ class Composite(BaseElectrolyteDiffusion):
             sum_s_j_p_av = variables[
                 "Sum of x-averaged positive electrode electrolyte reaction source terms"
             ]
-            sum_s_j = pybamm.Concatenation(
+            sum_s_j = pybamm.concatenation(
                 pybamm.PrimaryBroadcast(sum_s_j_n_av, "negative electrode"),
                 pybamm.FullBroadcast(0, "separator", "current collector"),
                 pybamm.PrimaryBroadcast(sum_s_j_p_av, "positive electrode"),

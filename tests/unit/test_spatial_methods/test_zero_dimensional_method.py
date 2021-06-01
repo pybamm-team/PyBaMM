@@ -4,7 +4,7 @@
 import numpy as np
 import pybamm
 import unittest
-from tests import get_mesh_for_testing
+from tests import get_mesh_for_testing, get_discretisation_for_testing
 
 
 class TestZeroDimensionalSpatialMethod(unittest.TestCase):
@@ -53,6 +53,23 @@ class TestZeroDimensionalSpatialMethod(unittest.TestCase):
             self.assertIsInstance(var_disc, pybamm.Vector)
             np.testing.assert_array_equal(
                 var_disc.evaluate()[:, 0], mesh.combine_submeshes(*var.domain).edges
+            )
+
+    def test_averages(self):
+        # create discretisation
+        disc = get_discretisation_for_testing(
+            cc_method=pybamm.ZeroDimensionalSpatialMethod
+        )
+        # create and discretise variable
+        var = pybamm.Variable("var", domain="current collector")
+        disc.set_variable_slices([var])
+        var_disc = disc.process_symbol(var)
+        # check average returns the same value
+        y = np.array([1])
+        for expression in [pybamm.z_average(var), pybamm.yz_average(var)]:
+            expr_disc = disc.process_symbol(expression)
+            np.testing.assert_array_equal(
+                var_disc.evaluate(y=y), expr_disc.evaluate(y=y)
             )
 
 

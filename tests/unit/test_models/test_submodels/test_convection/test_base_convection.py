@@ -9,7 +9,7 @@ import unittest
 
 class TestBaseModel(unittest.TestCase):
     def test_public_functions(self):
-        param = pybamm.standard_parameters_lead_acid
+        param = pybamm.LeadAcidParameters()
         submodel = pybamm.convection.through_cell.BaseThroughCellModel(param)
         a = pybamm.PrimaryBroadcast(0, "current collector")
         a_n = pybamm.PrimaryBroadcast(0, "negative electrode")

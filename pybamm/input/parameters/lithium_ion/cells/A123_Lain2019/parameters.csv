@@ -1,0 +1,38 @@
+Name [units],Value,Reference,Notes
+# Empty rows and rows starting with ‘#’ will be ignored,,,
+,,,
+# Macroscale geometry,,,
+Negative current collector thickness [m],1.00E-05,Lain 2019,
+Negative electrode thickness [m],3.60E-05,Lain 2019,
+Separator thickness [m],1.80E-05,Lain 2019,
+Positive electrode thickness [m],8.10E-05,Lain 2019,
+Positive current collector thickness [m],1.90E-05,Lain 2019,
+Electrode height [m],6.49E-02,A123 18650 datasheet,Not needed for 1D
+Electrode width [m],1.78,fit to Severson 2019,Not needed for 1D
+Negative tab width [m],0.04,default,Not needed for 1D
+Negative tab centre y-coordinate [m],0.06,default,Not needed for 1D
+Negative tab centre z-coordinate [m],0.137,default,Not needed for 1D
+Positive tab width [m],0.04,default,Not needed for 1D
+Positive tab centre y-coordinate [m],0.147,default,Not needed for 1D
+Positive tab centre z-coordinate [m],0.137,default,Not needed for 1D
+,,,
+# Current collector properties ,,,
+Negative current collector conductivity [S.m-1],58411000,CRC Handbook,copper
+Positive current collector conductivity [S.m-1],36914000,CRC Handbook,aluminium
+,,,
+# Density,,,
+Negative current collector density [kg.m-3],8960,CRC Handbook,copper
+Positive current collector density [kg.m-3],2700,CRC Handbook,aluminium
+,,,
+# Specific heat capacity,,,
+Negative current collector specific heat capacity [J.kg-1.K-1],385,CRC Handbook,copper
+Positive current collector specific heat capacity [J.kg-1.K-1],897,CRC Handbook,aluminium
+,,,
+# Thermal conductivity,,,
+Negative current collector thermal conductivity [W.m-1.K-1],401,CRC Handbook,copper
+Positive current collector thermal conductivity [W.m-1.K-1],237,CRC Handbook,aluminium
+,,,
+# Electrical,,,
+Nominal cell capacity [A.h],1.1,Lain 2019,
+Current function [A],4.4,,
+Typical current [A],4.4,Lain 2019,

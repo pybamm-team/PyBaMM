@@ -42,6 +42,7 @@ class TestAlgebraicSolver(unittest.TestCase):
             y0 = np.array([2])
             rhs = {}
             timescale_eval = 1
+            length_scales = {}
             jac_algebraic_eval = None
             convert_to_format = "python"
 
@@ -64,6 +65,7 @@ class TestAlgebraicSolver(unittest.TestCase):
             y0 = np.array([2])
             rhs = {}
             timescale_eval = 1
+            length_scales = {}
             jac_algebraic_eval = None
             convert_to_format = "casadi"
 
@@ -94,6 +96,7 @@ class TestAlgebraicSolver(unittest.TestCase):
             y0 = np.zeros(2)
             rhs = {}
             timescale_eval = 1
+            length_scales = {}
             convert_to_format = "python"
 
             def algebraic_eval(self, t, y, inputs):

@@ -53,7 +53,7 @@ class BaseElectrode(pybamm.BaseSubModel):
             phi_s_av_dim = param.U_p_ref - param.U_n_ref + pot * phi_s_av
 
             v = pybamm.boundary_value(phi_s, "right")
-            delta_phi_s = phi_s - v
+            delta_phi_s = v - phi_s
         delta_phi_s_av = pybamm.x_average(delta_phi_s)
         delta_phi_s_dim = delta_phi_s * pot
         delta_phi_s_av_dim = delta_phi_s_av * pot
@@ -173,7 +173,7 @@ class BaseElectrode(pybamm.BaseSubModel):
         i_s_s = pybamm.FullBroadcast(0, ["separator"], "current collector")
         i_s_p = variables["Positive electrode current density"]
 
-        i_s = pybamm.Concatenation(i_s_n, i_s_s, i_s_p)
+        i_s = pybamm.concatenation(i_s_n, i_s_s, i_s_p)
 
         variables.update({"Electrode current density": i_s})
 

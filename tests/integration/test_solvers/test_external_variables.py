@@ -3,6 +3,7 @@
 #
 import pybamm
 import numpy as np
+import os
 import unittest
 
 
@@ -32,7 +33,7 @@ class TestExternalVariables(unittest.TestCase):
         )
         sim.solve(t_eval=np.linspace(0, 3600, 100), inputs=inputs)
 
-    def test_external_variables_SPMe(self):
+    def test_external_variables_SPMe_thermal(self):
         model_options = {"thermal": "lumped", "external submodels": ["thermal"]}
         model = pybamm.lithium_ion.SPMe(model_options)
         sim = pybamm.Simulation(model)
@@ -43,12 +44,11 @@ class TestExternalVariables(unittest.TestCase):
             external_variables = {"Volume-averaged cell temperature": T_av}
             T_av += 1
             sim.step(dt, external_variables=external_variables)
-        var = "Terminal voltage [V]"
-        t = sim.solution.t[-1]
-        y = sim.solution.y[:, -1]
-        inputs = external_variables
-        sim.built_model.variables[var].evaluate(t, y, inputs=inputs)
-        sim.solution[var](t)
+        V = sim.solution["Terminal voltage [V]"].data
+        np.testing.assert_array_less(np.diff(V), 0)
+        # test generate with external variable
+        sim.built_model.generate("test.c", ["Volume-averaged cell temperature"])
+        os.remove("test.c")
 
 
 if __name__ == "__main__":

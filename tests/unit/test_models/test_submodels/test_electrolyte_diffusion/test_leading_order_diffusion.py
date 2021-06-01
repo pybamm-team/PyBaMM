@@ -9,9 +9,10 @@ import unittest
 
 class TestLeadingOrder(unittest.TestCase):
     def test_public_functions(self):
-        param = pybamm.standard_parameters_lead_acid
-        a = pybamm.Scalar(0)
+        param = pybamm.LeadAcidParameters()
+        a = pybamm.Scalar(1)
         variables = {
+            "Porosity": a,
             "X-averaged negative electrode porosity": a,
             "X-averaged separator porosity": a,
             "X-averaged positive electrode porosity": a,
@@ -23,6 +24,7 @@ class TestLeadingOrder(unittest.TestCase):
             "Sum of x-averaged negative electrode electrolyte reaction source terms": a,
             "Sum of x-averaged positive electrode electrolyte reaction source terms": a,
             "X-averaged separator transverse volume-averaged acceleration": a,
+            "X-averaged cell temperature": a,
         }
         submodel = pybamm.electrolyte_diffusion.LeadingOrder(param)
         std_tests = tests.StandardSubModelTests(submodel, variables)

@@ -13,9 +13,7 @@ class TestThermal(unittest.TestCase):
         # much larger realistic temperature rises
         # so that errors can be more easily observed
         C_rate = 5
-        options = {
-            "thermal": "x-lumped",
-        }
+        options = {"thermal": "x-lumped"}
         spme_1D = pybamm.lithium_ion.SPMe(options=options)
 
         options = {
@@ -102,4 +100,5 @@ if __name__ == "__main__":
 
     if "-v" in sys.argv:
         debug = True
+    pybamm.settings.debug_mode = True
     unittest.main()

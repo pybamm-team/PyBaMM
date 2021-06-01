@@ -6,6 +6,7 @@ import pybamm
 import unittest
 import numpy as np
 import os
+from scipy.sparse import coo_matrix
 
 
 class TestSymbol(unittest.TestCase):
@@ -93,6 +94,11 @@ class TestSymbol(unittest.TestCase):
         # unary
         self.assertIsInstance(-a, pybamm.Negate)
         self.assertIsInstance(abs(a), pybamm.AbsoluteValue)
+        # special cases
+        neg_a = -a
+        self.assertEqual(-neg_a, a)
+        abs_a = abs(a)
+        self.assertEqual(abs(abs_a), abs_a)
 
         # binary - two symbols
         self.assertIsInstance(a + b, pybamm.Addition)
@@ -105,6 +111,7 @@ class TestSymbol(unittest.TestCase):
         self.assertIsInstance(a <= b, pybamm.Heaviside)
         self.assertIsInstance(a > b, pybamm.Heaviside)
         self.assertIsInstance(a >= b, pybamm.Heaviside)
+        self.assertIsInstance(a % b, pybamm.Modulo)
 
         # binary - symbol and number
         self.assertIsInstance(a + 2, pybamm.Addition)
@@ -130,9 +137,45 @@ class TestSymbol(unittest.TestCase):
 
         # error raising
         with self.assertRaisesRegex(
-            NotImplementedError, "'Addition' not implemented for symbols of type"
+            NotImplementedError, "BinaryOperator not implemented for symbols of type"
         ):
             a + "two"
+
+    def test_sigmoid(self):
+        # Test that smooth heaviside is used when the setting is changed
+        a = pybamm.Symbol("a")
+        b = pybamm.Symbol("b")
+
+        pybamm.settings.heaviside_smoothing = 10
+
+        self.assertEqual(str(a < b), str(pybamm.sigmoid(a, b, 10)))
+        self.assertEqual(str(a <= b), str(pybamm.sigmoid(a, b, 10)))
+        self.assertEqual(str(a > b), str(pybamm.sigmoid(b, a, 10)))
+        self.assertEqual(str(a >= b), str(pybamm.sigmoid(b, a, 10)))
+
+        # But exact heavisides should still be used if both variables are constant
+        a = pybamm.Scalar(1)
+        b = pybamm.Scalar(2)
+        self.assertEqual(str(a < b), str(pybamm.Scalar(1)))
+        self.assertEqual(str(a <= b), str(pybamm.Scalar(1)))
+        self.assertEqual(str(a > b), str(pybamm.Scalar(0)))
+        self.assertEqual(str(a >= b), str(pybamm.Scalar(0)))
+
+        # Change setting back for other tests
+        pybamm.settings.heaviside_smoothing = "exact"
+
+    def test_smooth_absolute_value(self):
+        # Test that smooth absolute value is used when the setting is changed
+        a = pybamm.Symbol("a")
+        pybamm.settings.abs_smoothing = 10
+        self.assertEqual(str(abs(a)), str(pybamm.smooth_absolute_value(a, 10)))
+
+        # But exact absolute value should still be used for constants
+        a = pybamm.Scalar(-5)
+        self.assertEqual(str(abs(a)), str(pybamm.Scalar(5)))
+
+        # Change setting back for other tests
+        pybamm.settings.abs_smoothing = "exact"
 
     def test_multiple_symbols(self):
         a = pybamm.Symbol("a")
@@ -177,20 +220,19 @@ class TestSymbol(unittest.TestCase):
         self.assertEqual(pybamm.t.evaluate_ignoring_errors(t=0), 0)
         self.assertIsNone(pybamm.Parameter("a").evaluate_ignoring_errors())
         self.assertIsNone(pybamm.StateVector(slice(0, 1)).evaluate_ignoring_errors())
-        self.assertEqual(pybamm.InputParameter("a").evaluate_ignoring_errors(), 1)
+        np.testing.assert_array_equal(
+            pybamm.InputParameter("a").evaluate_ignoring_errors(), np.nan
+        )
 
     def test_symbol_is_constant(self):
         a = pybamm.Variable("a")
         self.assertFalse(a.is_constant())
 
         a = pybamm.Parameter("a")
-        self.assertTrue(a.is_constant())
+        self.assertFalse(a.is_constant())
 
         a = pybamm.Scalar(1) * pybamm.Variable("a")
         self.assertFalse(a.is_constant())
-
-        a = pybamm.Scalar(1) * pybamm.Parameter("a")
-        self.assertTrue(a.is_constant())
 
         a = pybamm.Scalar(1) * pybamm.StateVector(slice(10))
         self.assertFalse(a.is_constant())
@@ -203,7 +245,7 @@ class TestSymbol(unittest.TestCase):
         self.assertTrue(a.evaluates_to_number())
 
         a = pybamm.Parameter("a")
-        self.assertFalse(a.evaluates_to_number())
+        self.assertTrue(a.evaluates_to_number())
 
         a = pybamm.Scalar(3) * pybamm.Time()
         self.assertTrue(a.evaluates_to_number())
@@ -225,9 +267,43 @@ class TestSymbol(unittest.TestCase):
         a = pybamm.StateVector(slice(0, 10))
         self.assertFalse(a.evaluates_to_number())
 
-        # Time variable returns true
+        # Time variable returns false
         a = 3 * pybamm.t + 2
         self.assertTrue(a.evaluates_to_number())
+
+    def test_symbol_evaluates_to_constant_number(self):
+        a = pybamm.Scalar(3)
+        self.assertTrue(a.evaluates_to_constant_number())
+
+        a = pybamm.Parameter("a")
+        self.assertFalse(a.evaluates_to_constant_number())
+
+        a = pybamm.Variable("a")
+        self.assertFalse(a.evaluates_to_constant_number())
+
+        a = pybamm.Scalar(3) - 2
+        self.assertTrue(a.evaluates_to_constant_number())
+
+        a = pybamm.Vector(np.ones(5))
+        self.assertFalse(a.evaluates_to_constant_number())
+
+        a = pybamm.Matrix(np.ones((4, 6)))
+        self.assertFalse(a.evaluates_to_constant_number())
+
+        a = pybamm.StateVector(slice(0, 10))
+        self.assertFalse(a.evaluates_to_constant_number())
+
+        # Time variable returns true
+        a = 3 * pybamm.t + 2
+        self.assertFalse(a.evaluates_to_constant_number())
+
+    def test_simplify(self):
+        a = pybamm.Parameter("A")
+        # test error
+        with self.assertRaisesRegex(
+            pybamm.ModelError, "simplify is deprecated as it now has no effect"
+        ):
+            (a + a).simplify()
 
     def test_symbol_repr(self):
         """
@@ -285,26 +361,29 @@ class TestSymbol(unittest.TestCase):
 
     def test_symbol_visualise(self):
 
-        param = pybamm.standard_parameters_lithium_ion
+        param = pybamm.LithiumIonParameters()
 
         zero_n = pybamm.FullBroadcast(0, ["negative electrode"], "current collector")
         zero_s = pybamm.FullBroadcast(0, ["separator"], "current collector")
         zero_p = pybamm.FullBroadcast(0, ["positive electrode"], "current collector")
 
-        zero_nsp = pybamm.Concatenation(zero_n, zero_s, zero_p)
+        zero_nsp = pybamm.concatenation(zero_n, zero_s, zero_p)
 
         v_box = pybamm.Scalar(0)
 
         variables = {
             "Porosity": param.epsilon,
+            "Negative electrode porosity": param.epsilon_n,
+            "Separator porosity": param.epsilon_s,
+            "Positive electrode porosity": param.epsilon_p,
             "Electrolyte tortuosity": param.epsilon ** 1.5,
             "Porosity change": zero_nsp,
             "Electrolyte current density": zero_nsp,
             "Volume-averaged velocity": v_box,
             "Interfacial current density": zero_nsp,
             "Oxygen interfacial current density": zero_nsp,
-            "Cell temperature": pybamm.Concatenation(zero_n, zero_s, zero_p),
-            "Transverse volume-averaged acceleration": pybamm.Concatenation(
+            "Cell temperature": pybamm.concatenation(zero_n, zero_s, zero_p),
+            "Transverse volume-averaged acceleration": pybamm.concatenation(
                 zero_n, zero_s, zero_p
             ),
             "Sum of electrolyte reaction source terms": zero_nsp,
@@ -367,7 +446,8 @@ class TestSymbol(unittest.TestCase):
         self.assertEqual(scal.shape_for_testing, scal.shape)
         self.assertEqual(scal.size_for_testing, scal.size)
 
-        state = pybamm.StateVector(slice(10, 25))
+        state = pybamm.StateVector(slice(10, 25), domain="test")
+        state2 = pybamm.StateVector(slice(10, 25), domain="test 2")
         self.assertEqual(state.shape_for_testing, state.shape)
 
         param = pybamm.Parameter("a")
@@ -376,9 +456,7 @@ class TestSymbol(unittest.TestCase):
         func = pybamm.FunctionParameter("func", {"state": state})
         self.assertEqual(func.shape_for_testing, state.shape_for_testing)
 
-        concat = pybamm.Concatenation()
-        self.assertEqual(concat.shape_for_testing, (0,))
-        concat = pybamm.Concatenation(state, state)
+        concat = pybamm.concatenation(state, state2)
         self.assertEqual(concat.shape_for_testing, (30, 1))
         self.assertEqual(concat.size_for_testing, 30)
 
@@ -408,6 +486,29 @@ class TestSymbol(unittest.TestCase):
         y2 = pybamm.StateVector(slice(0, 5))
         with self.assertRaises(pybamm.ShapeError):
             (y1 + y2).test_shape()
+
+
+class TestIsZero(unittest.TestCase):
+    def test_is_scalar_zero(self):
+        a = pybamm.Scalar(0)
+        b = pybamm.Scalar(2)
+        self.assertTrue(pybamm.is_scalar_zero(a))
+        self.assertFalse(pybamm.is_scalar_zero(b))
+
+    def test_is_matrix_zero(self):
+        a = pybamm.Matrix(coo_matrix(np.zeros((10, 10))))
+        b = pybamm.Matrix(coo_matrix(np.ones((10, 10))))
+        c = pybamm.Matrix(coo_matrix(([1], ([0], [0])), shape=(5, 5)))
+        self.assertTrue(pybamm.is_matrix_zero(a))
+        self.assertFalse(pybamm.is_matrix_zero(b))
+        self.assertFalse(pybamm.is_matrix_zero(c))
+
+        a = pybamm.Matrix(np.zeros((10, 10)))
+        b = pybamm.Matrix(np.ones((10, 10)))
+        c = pybamm.Matrix([1, 0, 0])
+        self.assertTrue(pybamm.is_matrix_zero(a))
+        self.assertFalse(pybamm.is_matrix_zero(b))
+        self.assertFalse(pybamm.is_matrix_zero(c))
 
 
 if __name__ == "__main__":

@@ -12,20 +12,22 @@ import unittest
 import platform
 
 
-@unittest.skipUnless(platform.system() != "Windows", "Skipped for Windows")
+@unittest.skipIf(platform.system() == "Windows", "Skipped for Windows")
 class TestParametersCLI(unittest.TestCase):
     def test_add_rm_param(self):
         # Read a parameter file thta is shipped with PyBaMM
         param_pkg_dir = os.path.join(pybamm.__path__[0], "input", "parameters")
         param_filename = os.path.join(
             param_pkg_dir,
-            "lithium-ion",
-            "anodes",
+            "lithium_ion",
+            "negative_electrodes",
             "graphite_mcmb2528_Marquis2019",
             "parameters.csv",
         )
 
-        anode = pybamm.ParameterValues({}).read_parameters_csv(param_filename)
+        negative_electrode = pybamm.ParameterValues({}).read_parameters_csv(
+            param_filename
+        )
 
         # Write these parameters in current working dir. to mimic
         # user-defined parameters
@@ -35,32 +37,44 @@ class TestParametersCLI(unittest.TestCase):
             fieldnames = ["Name [units]", "Value"]
             writer = csv.writer(csvfile)
             writer.writerow(fieldnames)
-            for row in anode.items():
+            for row in negative_electrode.items():
                 writer.writerow(row)
 
         # Use pybamm command line to add new parameters under
         # test_parameters_dir directory
-        cmd = ["pybamm_add_parameter", "-f", tempdir.name, "lithium-ion", "anodes"]
+        cmd = [
+            "pybamm_add_parameter",
+            "-f",
+            tempdir.name,
+            "lithium_ion",
+            "negative_electrodes",
+        ]
         subprocess.run(cmd, check=True)
 
         # Check that the new parameters can be accessed from the package
         # and that content is correct
         new_parameter_filename = os.path.join(
             param_pkg_dir,
-            "lithium-ion",
-            "anodes",
+            "lithium_ion",
+            "negative_electrodes",
             os.path.basename(tempdir.name),
             "parameters.csv",
         )
         self.assertTrue(os.path.isfile(new_parameter_filename))
 
-        new_anode = pybamm.ParameterValues({}).read_parameters_csv(
+        new_negative_electrode = pybamm.ParameterValues({}).read_parameters_csv(
             new_parameter_filename
         )
-        self.assertEqual(new_anode["Negative electrode porosity"], "0.3")
+        self.assertEqual(new_negative_electrode["Negative electrode porosity"], "0.3")
 
         # Now delete added parameter
-        cmd = ["pybamm_rm_parameter", "-f", tempdir.name, "lithium-ion", "anodes"]
+        cmd = [
+            "pybamm_rm_parameter",
+            "-f",
+            tempdir.name,
+            "lithium_ion",
+            "negative_electrodes",
+        ]
         subprocess.run(cmd, check=True)
         self.assertFalse(os.path.isfile(new_parameter_filename))
 
@@ -68,12 +82,14 @@ class TestParametersCLI(unittest.TestCase):
         tempdir.cleanup()  # Remove temporary local directory
 
     def test_edit_param(self):
-        anodes_dir = os.path.join("input", "parameters", "lithium-ion", "anodes")
-        chemistry = "lithium-ion"
+        negative_electrodes_dir = os.path.join(
+            "input", "parameters", "lithium_ion", "negative_electrodes"
+        )
+        chemistry = "lithium_ion"
         # Write dummy parameters.csv file in temporary directory
         # in package input dir
         tempdir = tempfile.TemporaryDirectory(
-            dir=os.path.join(pybamm.__path__[0], anodes_dir)
+            dir=os.path.join(pybamm.__path__[0], negative_electrodes_dir)
         )
         with open(os.path.join(tempdir.name, "parameters.csv"), "w") as f:
             f.write("hello")
@@ -82,18 +98,14 @@ class TestParametersCLI(unittest.TestCase):
         sandbox_dir = tempfile.TemporaryDirectory()
 
         # Copy temporary dir in package to current working directory
-        cmd = [
-            "pybamm_edit_parameter",
-            "-f",
-            chemistry,
-        ]
+        cmd = ["pybamm_edit_parameter", "-f", chemistry]
         subprocess.run(cmd, cwd=sandbox_dir.name)
 
         # Read and compare copied parameters.csv file
         copied_path_parameters_file = os.path.join(
             sandbox_dir.name,
             chemistry,
-            "anodes",
+            "negative_electrodes",
             os.path.basename(tempdir.name),
             "parameters.csv",
         )

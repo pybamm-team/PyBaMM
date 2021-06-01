@@ -3,7 +3,7 @@ from .fickian_many_particles import FickianManyParticles
 from .fickian_many_particle_size_distributions import FickianManyPSDs
 from .fickian_single_particle import FickianSingleParticle
 from .fickian_single_particle_size_distribution import FickianSinglePSD
-from .fast_many_particles import FastManyParticles
 from .fast_many_particle_size_distributions import FastManyPSDs
-from .fast_single_particle import FastSingleParticle
 from .fast_single_particle_size_distribution import FastSinglePSD
+from .polynomial_single_particle import PolynomialSingleParticle
+from .polynomial_many_particles import PolynomialManyParticles

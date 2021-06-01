@@ -31,6 +31,8 @@ class ScikitsOdeSolver(pybamm.BaseSolver):
         The relative tolerance for the solver (default is 1e-6).
     atol : float, optional
         The absolute tolerance for the solver (default is 1e-6).
+    extrap_tol : float, optional
+        The tolerance to assert whether extrapolation occurs or not (default is 0).
     extra_options : dict, optional
         Any options to pass to the solver.
         Please consult `scikits.odes documentation
@@ -46,13 +48,14 @@ class ScikitsOdeSolver(pybamm.BaseSolver):
         method="cvode",
         rtol=1e-6,
         atol=1e-6,
+        extrap_tol=0,
         linsolver="deprecated",
         extra_options=None,
     ):
         if scikits_odes_spec is None:
             raise ImportError("scikits.odes is not installed")
 
-        super().__init__(method, rtol, atol)
+        super().__init__(method, rtol, atol, extrap_tol=extrap_tol)
         self.extra_options = extra_options or {}
         if linsolver != "deprecated":
             raise ValueError(
@@ -62,11 +65,11 @@ class ScikitsOdeSolver(pybamm.BaseSolver):
         self.ode_solver = True
         self.name = "Scikits ODE solver ({})".format(method)
 
-        pybamm.citations.register("scikits-odes")
-        pybamm.citations.register("hindmarsh2000pvode")
-        pybamm.citations.register("hindmarsh2005sundials")
+        pybamm.citations.register("Malengier2018")
+        pybamm.citations.register("Hindmarsh2000")
+        pybamm.citations.register("Hindmarsh2005")
 
-    def _integrate(self, model, t_eval, inputs=None):
+    def _integrate(self, model, t_eval, inputs_dict=None):
         """
         Solve a model defined by dydt with initial conditions y0.
 
@@ -76,12 +79,14 @@ class ScikitsOdeSolver(pybamm.BaseSolver):
             The model whose solution to calculate.
         t_eval : numeric type
             The times at which to compute the solution
-        inputs : dict, optional
+        inputs_dict : dict, optional
             Any input parameters to pass to the model when solving
 
         """
         if model.rhs_eval.form == "casadi":
-            inputs = casadi.vertcat(*[x for x in inputs.values()])
+            inputs = casadi.vertcat(*[x for x in inputs_dict.values()])
+        else:
+            inputs = inputs_dict
 
         y0 = model.y0
         if isinstance(y0, casadi.DM):
@@ -147,7 +152,9 @@ class ScikitsOdeSolver(pybamm.BaseSolver):
             extra_options.update({"rootfn": rootfn, "nr_rootfns": len(events)})
 
         ode_solver = scikits_odes.ode(self.method, eqsydot, **extra_options)
+        timer = pybamm.Timer()
         sol = ode_solver.solve(t_eval, y0)
+        integration_time = timer.time()
 
         # return solution, we need to tranpose y to match scipy's ivp interface
         if sol.flag in [0, 2]:
@@ -161,12 +168,16 @@ class ScikitsOdeSolver(pybamm.BaseSolver):
                 t_root = None
             else:
                 t_root = sol.roots.t
-            return pybamm.Solution(
+            sol = pybamm.Solution(
                 sol.values.t,
                 np.transpose(sol.values.y),
+                model,
+                inputs_dict,
                 t_root,
                 np.transpose(sol.roots.y),
                 termination,
             )
+            sol.integration_time = integration_time
+            return sol
         else:
             raise pybamm.SolverError(sol.message)

@@ -74,12 +74,12 @@ class FirstOrder(BaseElectrolyteDiffusion):
         ]
         rhs_n = (
             d_epsc_n_0_dt
-            - (sum_s_j_n_0 - param.t_plus(c_e_0) * sum_j_n_0) / param.gamma_e
+            - (sum_s_j_n_0 - param.t_plus(c_e_0, T_0) * sum_j_n_0) / param.gamma_e
         )
         rhs_s = d_epsc_s_0_dt
         rhs_p = (
             d_epsc_p_0_dt
-            - (sum_s_j_p_0 - param.t_plus(c_e_0) * sum_j_p_0) / param.gamma_e
+            - (sum_s_j_p_0 - param.t_plus(c_e_0, T_0) * sum_j_p_0) / param.gamma_e
         )
 
         # Diffusivities
@@ -133,9 +133,18 @@ class FirstOrder(BaseElectrolyteDiffusion):
             }
         )
 
-        N_e = pybamm.Concatenation(
+        N_e = pybamm.concatenation(
             param.C_e * N_e_n_1, param.C_e * N_e_s_1, param.C_e * N_e_p_1
         )
         variables.update(self._get_standard_flux_variables(N_e))
+
+        c_e = pybamm.concatenation(c_e_n, c_e_s, c_e_p)
+        eps = pybamm.concatenation(
+            pybamm.PrimaryBroadcast(eps_n_0, "negative electrode"),
+            pybamm.PrimaryBroadcast(eps_s_0, "separator"),
+            pybamm.PrimaryBroadcast(eps_p_0, "positive electrode"),
+        )
+
+        variables.update(self._get_total_concentration_electrolyte(c_e, eps))
 
         return variables

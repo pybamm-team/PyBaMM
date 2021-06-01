@@ -181,7 +181,7 @@ class FickianSinglePSD(BaseParticle):
                 -self.param.C_n
                 * R_variable
                 * j_xav_distribution
-                / self.param.a_n
+                / self.param.a_R_n
                 / self.param.D_n(c_s_surf_xav_distribution, T_k_xav)
             )
 
@@ -190,7 +190,7 @@ class FickianSinglePSD(BaseParticle):
                 -self.param.C_p
                 * R_variable
                 * j_xav_distribution
-                / self.param.a_p
+                / self.param.a_R_p
                 / self.param.gamma_p
                 / self.param.D_p(c_s_surf_xav_distribution, T_k_xav)
             )

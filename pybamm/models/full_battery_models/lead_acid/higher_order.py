@@ -49,22 +49,22 @@ class BaseHigherOrderModel(BaseModel):
         self.set_full_interface_submodel()
         self.set_full_convection_submodel()
         self.set_full_porosity_submodel()
+        self.set_active_material_submodel()
         self.set_tortuosity_submodels()
         self.set_thermal_submodel()
         self.set_current_collector_submodel()
         self.set_sei_submodel()
+        self.set_lithium_plating_submodel()
 
         if build:
             self.build_model()
 
-        pybamm.citations.register("sulzer2019asymptotic")
+        pybamm.citations.register("Sulzer2019asymptotic")
 
     def set_current_collector_submodel(self):
         cc = pybamm.current_collector
 
-        if self.options["current collector"] in [
-            "uniform",
-        ]:
+        if self.options["current collector"] in ["uniform"]:
             submodel = cc.Uniform(self.param)
         elif self.options["current collector"] == "potential pair quite conductive":
             if self.options["dimensionality"] == 1:
@@ -136,12 +136,12 @@ class BaseHigherOrderModel(BaseModel):
         )
 
     def set_negative_electrode_submodel(self):
-        self.submodels["negative electrode"] = pybamm.electrode.ohm.Composite(
+        self.submodels["negative electrode potential"] = pybamm.electrode.ohm.Composite(
             self.param, "Negative"
         )
 
     def set_positive_electrode_submodel(self):
-        self.submodels["positive electrode"] = pybamm.electrode.ohm.Composite(
+        self.submodels["positive electrode potential"] = pybamm.electrode.ohm.Composite(
             self.param, "Positive"
         )
 
@@ -154,12 +154,16 @@ class BaseHigherOrderModel(BaseModel):
         self.submodels["negative interface"] = pybamm.interface.FirstOrderKinetics(
             self.param,
             "Negative",
-            pybamm.interface.ButlerVolmer(self.param, "Negative", "lead-acid main"),
+            pybamm.interface.ButlerVolmer(
+                self.param, "Negative", "lead-acid main", self.options
+            ),
         )
         self.submodels["positive interface"] = pybamm.interface.FirstOrderKinetics(
             self.param,
             "Positive",
-            pybamm.interface.ButlerVolmer(self.param, "Positive", "lead-acid main"),
+            pybamm.interface.ButlerVolmer(
+                self.param, "Positive", "lead-acid main", self.options
+            ),
         )
 
         # Oxygen
@@ -170,7 +174,7 @@ class BaseHigherOrderModel(BaseModel):
                 self.param,
                 "Positive",
                 pybamm.interface.ForwardTafel(
-                    self.param, "Positive", "lead-acid oxygen"
+                    self.param, "Positive", "lead-acid oxygen", self.options
                 ),
             )
             self.submodels[
@@ -184,7 +188,7 @@ class BaseHigherOrderModel(BaseModel):
         Update convection submodel, now that we have the spatially heterogeneous
         interfacial current densities
         """
-        if self.options["convection"] is not False:
+        if self.options["convection"] != "none":
             self.submodels[
                 "through-cell convection"
             ] = pybamm.convection.through_cell.Explicit(self.param)
@@ -194,7 +198,7 @@ class BaseHigherOrderModel(BaseModel):
         Update porosity submodel, now that we have the spatially heterogeneous
         interfacial current densities
         """
-        self.submodels["full porosity"] = pybamm.porosity.Full(self.param)
+        self.submodels["full porosity"] = pybamm.porosity.Full(self.param, self.options)
 
 
 class FOQS(BaseHigherOrderModel):
@@ -265,7 +269,7 @@ class Composite(BaseHigherOrderModel):
         Update porosity submodel, now that we have the spatially heterogeneous
         interfacial current densities
         """
-        self.submodels["full porosity"] = pybamm.porosity.Full(self.param)
+        self.submodels["full porosity"] = pybamm.porosity.Full(self.param, self.options)
 
 
 class CompositeExtended(Composite):

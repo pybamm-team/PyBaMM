@@ -36,7 +36,7 @@ class AlgebraicSolver(pybamm.BaseSolver):
         self.extra_options = extra_options or {}
         self.name = "Algebraic solver ({})".format(method)
         self.algebraic_solver = True
-        pybamm.citations.register("virtanen2020scipy")
+        pybamm.citations.register("Virtanen2020")
 
     @property
     def tol(self):
@@ -46,7 +46,7 @@ class AlgebraicSolver(pybamm.BaseSolver):
     def tol(self, value):
         self._tol = value
 
-    def _integrate(self, model, t_eval, inputs=None):
+    def _integrate(self, model, t_eval, inputs_dict=None):
         """
         Calculate the solution of the algebraic equations through root-finding
 
@@ -56,12 +56,14 @@ class AlgebraicSolver(pybamm.BaseSolver):
             The model whose solution to calculate.
         t_eval : :class:`numpy.array`, size (k,)
             The times at which to compute the solution
-        inputs : dict, optional
+        inputs_dict : dict, optional
             Any input parameters to pass to the model when solving
         """
-        inputs = inputs or {}
+        inputs_dict = inputs_dict or {}
         if model.convert_to_format == "casadi":
-            inputs = casadi.vertcat(*[x for x in inputs.values()])
+            inputs = casadi.vertcat(*[x for x in inputs_dict.values()])
+        else:
+            inputs = inputs_dict
 
         y0 = model.y0
         if isinstance(y0, casadi.DM):
@@ -82,6 +84,8 @@ class AlgebraicSolver(pybamm.BaseSolver):
 
         y_alg = np.empty((len(y0_alg), len(t_eval)))
 
+        timer = pybamm.Timer()
+        integration_time = 0
         for idx, t in enumerate(t_eval):
 
             def root_fun(y_alg):
@@ -135,6 +139,7 @@ class AlgebraicSolver(pybamm.BaseSolver):
                         method = self.method[5:]
                     if jac_fn is None:
                         jac_fn = "2-point"
+                    timer.reset()
                     sol = optimize.least_squares(
                         root_fun,
                         y0_alg,
@@ -144,6 +149,7 @@ class AlgebraicSolver(pybamm.BaseSolver):
                         bounds=model.bounds,
                         **self.extra_options,
                     )
+                    integration_time += timer.time()
                 # Methods which use minimize are specified as either "minimize", which
                 # uses the default method, or with "minimize__methodname"
                 elif self.method.startswith("minimize"):
@@ -170,6 +176,7 @@ class AlgebraicSolver(pybamm.BaseSolver):
                             (lb, ub) for lb, ub in zip(model.bounds[0], model.bounds[1])
                         ]
                         extra_options["bounds"] = bounds
+                    timer.reset()
                     sol = optimize.minimize(
                         root_norm,
                         y0_alg,
@@ -178,7 +185,9 @@ class AlgebraicSolver(pybamm.BaseSolver):
                         jac=jac_norm,
                         **extra_options,
                     )
+                    integration_time += timer.time()
                 else:
+                    timer.reset()
                     sol = optimize.root(
                         root_fun,
                         y0_alg,
@@ -187,6 +196,7 @@ class AlgebraicSolver(pybamm.BaseSolver):
                         jac=jac_fn,
                         options=self.extra_options,
                     )
+                    integration_time += timer.time()
 
                 if sol.success and np.all(abs(sol.fun) < self.tol):
                     # update initial guess for the next iteration
@@ -210,4 +220,6 @@ class AlgebraicSolver(pybamm.BaseSolver):
         y_diff = np.r_[[y0_diff] * len(t_eval)].T
         y_sol = np.r_[y_diff, y_alg]
         # Return solution object (no events, so pass None to t_event, y_event)
-        return pybamm.Solution(t_eval, y_sol, termination="success")
+        sol = pybamm.Solution(t_eval, y_sol, model, inputs_dict, termination="success")
+        sol.integration_time = integration_time
+        return sol

@@ -35,7 +35,7 @@ class MPM(BaseModel):
         self, options=None, name="Many-Particle Model", build=True
     ):
         super().__init__(options, name)
-        self.options["particle-size distribution"] = True
+        self.options["particle-size distribution"] = "true"
 
         # Set submodels
         self.set_external_circuit_submodel()
@@ -59,7 +59,59 @@ class MPM(BaseModel):
 
     def set_porosity_submodel(self):
 
-        self.submodels["porosity"] = pybamm.porosity.Constant(self.param)
+        if (
+            self.options["SEI porosity change"] == "false"
+            and self.options["lithium plating porosity change"] == "false"
+        ):
+            self.submodels["porosity"] = pybamm.porosity.Constant(
+                self.param, self.options
+            )
+        elif (
+            self.options["SEI porosity change"] == "true"
+            or self.options["lithium plating porosity change"] == "true"
+        ):
+            self.submodels["porosity"] = pybamm.porosity.LeadingOrder(
+                self.param, self.options
+            )
+
+    def set_active_material_submodel(self):
+
+        if self.options["loss of active material"] == "none":
+            self.submodels[
+                "negative active material"
+            ] = pybamm.active_material.Constant(self.param, "Negative", self.options)
+            self.submodels[
+                "positive active material"
+            ] = pybamm.active_material.Constant(self.param, "Positive", self.options)
+        elif self.options["loss of active material"] == "both":
+            self.submodels[
+                "negative active material"
+            ] = pybamm.active_material.VaryingUniform(
+                self.param, "Negative", self.options
+            )
+            self.submodels[
+                "positive active material"
+            ] = pybamm.active_material.VaryingUniform(
+                self.param, "Positive", self.options
+            )
+        elif self.options["loss of active material"] == "negative":
+            self.submodels[
+                "negative active material"
+            ] = pybamm.active_material.VaryingUniform(
+                self.param, "Negative", self.options
+            )
+            self.submodels[
+                "positive active material"
+            ] = pybamm.active_material.Constant(self.param, "Positive", self.options)
+        elif self.options["loss of active material"] == "positive":
+            self.submodels[
+                "negative active material"
+            ] = pybamm.active_material.Constant(self.param, "Negative", self.options)
+            self.submodels[
+                "positive active material"
+            ] = pybamm.active_material.VaryingUniform(
+                self.param, "Positive", self.options
+            )
 
     def set_convection_submodel(self):
 
@@ -100,13 +152,13 @@ class MPM(BaseModel):
     def set_negative_electrode_submodel(self):
 
         self.submodels[
-            "negative electrode"
+            "negative electrode potential"
         ] = pybamm.electrode.ohm.LeadingOrderSizeDistribution(self.param, "Negative")
 
     def set_positive_electrode_submodel(self):
 
         self.submodels[
-            "positive electrode"
+            "positive electrode potential"
         ] = pybamm.electrode.ohm.LeadingOrderSizeDistribution(self.param, "Positive")
 
     def set_electrolyte_submodel(self):

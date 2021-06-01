@@ -183,7 +183,7 @@ class FickianManyPSDs(BaseParticle):
                 -self.param.C_n
                 * R_variable
                 * j_distribution
-                / self.param.a_n
+                / self.param.a_R_n
                 / self.param.D_n(c_s_surf_distribution, T_k)
             )
 
@@ -192,7 +192,7 @@ class FickianManyPSDs(BaseParticle):
                 -self.param.C_p
                 * R_variable
                 * j_distribution
-                / self.param.a_p
+                / self.param.a_R_p
                 / self.param.gamma_p
                 / self.param.D_p(c_s_surf_distribution, T_k)
             )

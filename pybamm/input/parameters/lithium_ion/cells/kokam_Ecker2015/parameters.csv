@@ -1,0 +1,18 @@
+Name [units],Value,Reference,Notes
+# Empty rows and rows starting with ‘#’ will be ignored,,,
+,,,
+# Macroscale geometry,,,
+Negative current collector thickness [m],1.40E-05,,
+Negative electrode thickness [m],7.4E-05,,
+Separator thickness [m],2E-05,,
+Positive electrode thickness [m],5.4E-05,,
+Positive current collector thickness [m],2.5E-05,,
+Electrode height [m],1.01E-01,,
+Electrode width [m],8.50E-02,,
+Cell cooling surface area [m2],1.72E-2,,pouch (single layer)
+Cell volume [m3],1.61E-6,,pouch (single layer)
+,,,
+# Electrical,,,
+Nominal cell capacity [A.h], 0.15625, 7.5/48 (parameter set for a single layer cell),
+Typical current [A], 0.15652,,
+Current function [A],0.15652,default current function,

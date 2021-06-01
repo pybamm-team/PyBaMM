@@ -6,7 +6,8 @@ from .base_sei import BaseModel
 
 
 class ConstantSEI(BaseModel):
-    """Base class for SEI with constant thickness.
+    """
+    Class for SEI with constant thickness.
 
     Note that there is no SEI current, so we don't need to update the "sum of
     interfacial current densities" variables from
@@ -31,6 +32,9 @@ class ConstantSEI(BaseModel):
         L_outer = self.param.L_outer_0
         variables = self._get_standard_thickness_variables(L_inner, L_outer)
 
+        # Concentrations (derived from thicknesses)
+        variables.update(self._get_standard_concentration_variables(variables))
+
         # Reactions
         zero = pybamm.FullBroadcast(
             pybamm.Scalar(0), self.domain.lower() + " electrode", "current collector"
@@ -42,9 +46,9 @@ class ConstantSEI(BaseModel):
     def get_coupled_variables(self, variables):
         # Update whole cell variables, which also updates the "sum of" variables
         if (
-            "Negative electrode sei interfacial current density" in variables
-            and "Positive electrode sei interfacial current density" in variables
-            and "Sei interfacial current density" not in variables
+            "Negative electrode SEI interfacial current density" in variables
+            and "Positive electrode SEI interfacial current density" in variables
+            and "SEI interfacial current density" not in variables
         ):
             variables.update(
                 self._get_standard_whole_cell_interfacial_current_variables(variables)

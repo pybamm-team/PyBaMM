@@ -7,6 +7,6 @@ Parameters
   geometric_parameters
   electrical_parameters
   thermal_parameters
-  standard_parameters_lithium_ion
-  standard_parameters_lead_acid
+  lithium_ion_parameters
+  lead_acid_parameters
   parameter_sets

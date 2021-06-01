@@ -4,6 +4,7 @@
 import numbers
 import numpy as np
 import pybamm
+from scipy.sparse import csr_matrix
 
 
 class Broadcast(pybamm.SpatialOperator):
@@ -13,7 +14,7 @@ class Broadcast(pybamm.SpatialOperator):
 
     For an example of broadcasts in action, see
     `this example notebook
-    <https://github.com/pybamm-team/PyBaMM/blob/master/examples/notebooks/expression_tree/broadcasts.ipynb>`_
+    <https://github.com/pybamm-team/PyBaMM/blob/develop/examples/notebooks/expression_tree/broadcasts.ipynb>`_
 
     Parameters
     ----------
@@ -58,9 +59,12 @@ class Broadcast(pybamm.SpatialOperator):
         self.broadcast_domain = broadcast_domain
         super().__init__(name, child, domain, auxiliary_domains)
 
-    def _unary_simplify(self, simplified_child):
-        """ See :meth:`pybamm.UnaryOperator.simplify()`. """
-        return self._unary_new_copy(simplified_child)
+    @property
+    def broadcasts_to_nodes(self):
+        if self.broadcast_type.endswith("nodes"):
+            return True
+        else:
+            return False
 
 
 class PrimaryBroadcast(Broadcast):
@@ -110,16 +114,20 @@ class PrimaryBroadcast(Broadcast):
                 """Primary broadcast from current collector domain must be to electrode
                 or separator or particle or particle-size domains"""
             )
-        elif child.domain[0] in [
-            "negative electrode",
-            "separator",
-            "positive electrode",
-        ] and broadcast_domain[0] not in [
-            "negative particle",
-            "positive particle",
-            "negative particle-size domain",
-            "positive particle-size domain",
-        ]:
+        elif (
+            child.domain[0]
+            in [
+                "negative electrode",
+                "separator",
+                "positive electrode",
+            ]
+            and broadcast_domain[0] not in [
+                "negative particle",
+                "positive particle",
+                "negative particle-size domain",
+                "positive particle-size domain",
+            ]
+        ):
             raise pybamm.DomainError(
                 """Primary broadcast from electrode or separator must be to particle
                 or particle-size domains"""
@@ -157,16 +165,20 @@ class PrimaryBroadcast(Broadcast):
         vec = pybamm.evaluate_for_shape_using_domain(self.domain)
         return np.outer(child_eval, vec).reshape(-1, 1)
 
+    def reduce_one_dimension(self):
+        """ Reduce the broadcast by one dimension. """
+        return self.orphans[0]
+
 
 class PrimaryBroadcastToEdges(PrimaryBroadcast):
-    "A primary broadcast onto the edges of the domain"
+    """A primary broadcast onto the edges of the domain."""
 
     def __init__(self, child, broadcast_domain, name=None):
         name = name or "broadcast to edges"
         super().__init__(child, broadcast_domain, name)
         self.broadcast_type = "primary to edges"
 
-    def evaluates_on_edges(self, dimension):
+    def _evaluates_on_edges(self, dimension):
         return True
 
 
@@ -199,8 +211,12 @@ class SecondaryBroadcast(Broadcast):
     def check_and_set_domains(
         self, child, broadcast_type, broadcast_domain, broadcast_auxiliary_domains
     ):
-        "See :meth:`Broadcast.check_and_set_domains`"
-
+        """ See :meth:`Broadcast.check_and_set_domains` """
+        if child.domain == []:
+            raise TypeError(
+                "Cannot take SecondaryBroadcast of an object with empty domain. "
+                "Use PrimaryBroadcast instead."
+            )
         # Can only do secondary broadcast from particle to electrode or from
         # electrode to current collector
         if child.domain[0] in [
@@ -230,11 +246,15 @@ class SecondaryBroadcast(Broadcast):
                 """Secondary broadcast from particle-size domain must be to
                 electrode or separator or current collector domains"""
             )
-        elif child.domain[0] in [
-            "negative electrode",
-            "separator",
-            "positive electrode",
-        ] and broadcast_domain != ["current collector"]:
+        elif (
+            child.domain[0]
+            in [
+                "negative electrode",
+                "separator",
+                "positive electrode",
+            ]
+            and broadcast_domain != ["current collector"]
+        ):
             raise pybamm.DomainError(
                 """Secondary broadcast from electrode or separator must be to
                 current collector domains"""
@@ -266,21 +286,25 @@ class SecondaryBroadcast(Broadcast):
         vec = pybamm.evaluate_for_shape_using_domain(self.domain)
         return np.outer(vec, child_eval).reshape(-1, 1)
 
+    def reduce_one_dimension(self):
+        """ Reduce the broadcast by one dimension. """
+        raise NotImplementedError
+
 
 class SecondaryBroadcastToEdges(SecondaryBroadcast):
-    "A secondary broadcast onto the edges of a domain"
+    """A secondary broadcast onto the edges of a domain."""
 
     def __init__(self, child, broadcast_domain, name=None):
         name = name or "broadcast to edges"
         super().__init__(child, broadcast_domain, name)
         self.broadcast_type = "secondary to edges"
 
-    def evaluates_on_edges(self, dimension):
+    def _evaluates_on_edges(self, dimension):
         return True
 
 
 class FullBroadcast(Broadcast):
-    "A class for full broadcasts"
+    """A class for full broadcasts."""
 
     def __init__(self, child, broadcast_domain, auxiliary_domains, name=None):
         if isinstance(auxiliary_domains, str):
@@ -296,7 +320,7 @@ class FullBroadcast(Broadcast):
     def check_and_set_domains(
         self, child, broadcast_type, broadcast_domain, broadcast_auxiliary_domains
     ):
-        "See :meth:`Broadcast.check_and_set_domains`"
+        """ See :meth:`Broadcast.check_and_set_domains` """
 
         # Variables on the current collector can only be broadcast to 'primary'
         if child.domain == ["current collector"]:
@@ -310,7 +334,7 @@ class FullBroadcast(Broadcast):
 
     def _unary_new_copy(self, child):
         """ See :meth:`pybamm.UnaryOperator._unary_new_copy()`. """
-        return FullBroadcast(child, self.broadcast_domain, self.auxiliary_domains)
+        return self.__class__(child, self.broadcast_domain, self.auxiliary_domains)
 
     def _evaluate_for_shape(self):
         """
@@ -324,6 +348,21 @@ class FullBroadcast(Broadcast):
 
         return child_eval * vec
 
+    def reduce_one_dimension(self):
+        """ Reduce the broadcast by one dimension. """
+        if self.auxiliary_domains == {}:
+            return self.orphans[0]
+        elif "tertiary" not in self.auxiliary_domains:
+            return PrimaryBroadcast(
+                self.orphans[0], self.auxiliary_domains["secondary"]
+            )
+        elif "tertiary" in self.auxiliary_domains:
+            return FullBroadcast(
+                self.orphans[0],
+                self.auxiliary_domains["secondary"],
+                {"secondary": self.auxiliary_domains["tertiary"]},
+            )
+
 
 class FullBroadcastToEdges(FullBroadcast):
     """
@@ -336,28 +375,97 @@ class FullBroadcastToEdges(FullBroadcast):
         super().__init__(child, broadcast_domain, auxiliary_domains, name)
         self.broadcast_type = "full to edges"
 
-    def evaluates_on_edges(self, dimension):
+    def _evaluates_on_edges(self, dimension):
         return True
 
+    def reduce_one_dimension(self):
+        """ Reduce the broadcast by one dimension. """
+        if self.auxiliary_domains == {}:
+            return self.orphans[0]
+        elif "tertiary" not in self.auxiliary_domains:
+            return PrimaryBroadcastToEdges(
+                self.orphans[0], self.auxiliary_domains["secondary"]
+            )
+        elif "tertiary" in self.auxiliary_domains:
+            return FullBroadcastToEdges(
+                self.orphans[0],
+                self.auxiliary_domains["secondary"],
+                {"secondary": self.auxiliary_domains["tertiary"]},
+            )
 
-def ones_like(*symbols):
+
+def full_like(symbols, fill_value):
     """
-    Create a symbol with the same shape as the input symbol and with constant value '1',
-    using `FullBroadcast`.
+    Returns an array with the same shape, domain and auxiliary domains as the sum of the
+    input symbols, with a constant value given by `fill_value`.
+
+    Parameters
+    ----------
+    symbols : :class:`Symbol`
+        Symbols whose shape to copy
+    fill_value : number
+        Value to assign
+    """
+    # Make a symbol that combines all the children, to get the right domain
+    # that takes all the child symbols into account
+    sum_symbol = symbols[0]
+    for sym in symbols[1:]:
+        sum_symbol += sym
+
+    # Just return scalar if symbol shape is scalar
+    if sum_symbol.evaluates_to_number():
+        return pybamm.Scalar(fill_value)
+    try:
+        shape = sum_symbol.shape
+        # use vector or matrix
+        if shape[1] == 1:
+            array_type = pybamm.Vector
+        else:
+            array_type = pybamm.Matrix
+        # return dense array, except for a matrix of zeros
+        if shape[1] != 1 and fill_value == 0:
+            entries = csr_matrix(shape)
+        else:
+            entries = fill_value * np.ones(shape)
+
+        return array_type(
+            entries,
+            domain=sum_symbol.domain,
+            auxiliary_domains=sum_symbol.auxiliary_domains,
+        )
+
+    except NotImplementedError:
+        if sum_symbol.evaluates_on_edges("primary"):
+            return FullBroadcastToEdges(
+                fill_value, sum_symbol.domain, sum_symbol.auxiliary_domains
+            )
+        else:
+            return FullBroadcast(
+                fill_value, sum_symbol.domain, sum_symbol.auxiliary_domains
+            )
+
+
+def zeros_like(*symbols):
+    """
+    Returns an array with the same shape, domain and auxiliary domains as the sum of the
+    input symbols, with each entry equal to zero.
 
     Parameters
     ----------
     symbols : :class:`Symbol`
         Symbols whose shape to copy
     """
-    # Make a symbol that combines all the children, to get the right domain
-    # that takes all the child symbols into account
-    sum_symbol = symbols[0]
-    for sym in symbols:
-        sum_symbol += sym
+    return full_like(symbols, 0)
 
-    # Just return scalar 1 if symbol has no domain (no broadcasting necessary)
-    if sum_symbol.domain == []:
-        return pybamm.Scalar(1)
-    else:
-        return FullBroadcast(1, sum_symbol.domain, sum_symbol.auxiliary_domains)
+
+def ones_like(*symbols):
+    """
+    Returns an array with the same shape, domain and auxiliary domains as the sum of the
+    input symbols, with each entry equal to one.
+
+    Parameters
+    ----------
+    symbols : :class:`Symbol`
+        Symbols whose shape to copy
+    """
+    return full_like(symbols, 1)

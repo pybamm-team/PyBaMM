@@ -123,7 +123,7 @@ class FastSinglePSD(BaseParticle):
             self.rhs = {
                 c_s_surf_xav_distribution: -3
                 * j_xav_distribution
-                / self.param.a_n
+                / self.param.a_R_n
                 / R_variable
             }
 
@@ -131,7 +131,7 @@ class FastSinglePSD(BaseParticle):
             self.rhs = {
                 c_s_surf_xav_distribution: -3
                 * j_xav_distribution
-                / self.param.a_p
+                / self.param.a_R_p
                 / self.param.gamma_p
                 / R_variable
             }

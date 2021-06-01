@@ -9,7 +9,7 @@ import pybamm
 class Parameter(pybamm.Symbol):
     """A node in the expression tree representing a parameter
 
-    This node will be replaced by a :class:`.Scalar` node by :class`.Parameter`
+    This node will be replaced by a :class:`.Scalar` node
 
     Parameters
     ----------
@@ -34,6 +34,11 @@ class Parameter(pybamm.Symbol):
         See :meth:`pybamm.Symbol.evaluate_for_shape()`
         """
         return np.nan
+
+    def is_constant(self):
+        """ See :meth:`pybamm.Symbol.is_constant()`. """
+        # Parameter is not constant since it can become an InputParameter
+        return False
 
 
 class FunctionParameter(pybamm.Symbol):
@@ -60,7 +65,10 @@ class FunctionParameter(pybamm.Symbol):
     """
 
     def __init__(
-        self, name, inputs, diff_variable=None,
+        self,
+        name,
+        inputs,
+        diff_variable=None,
     ):
         # assign diff variable
         self.diff_variable = diff_variable

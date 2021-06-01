@@ -9,7 +9,7 @@ import unittest
 
 class TestLithiumIon(unittest.TestCase):
     def test_public_functions(self):
-        param = pybamm.standard_parameters_lithium_ion
+        param = pybamm.LithiumIonParameters()
 
         a_n = pybamm.FullBroadcast(
             pybamm.Scalar(0), ["negative electrode"], "current collector"
@@ -26,8 +26,17 @@ class TestLithiumIon(unittest.TestCase):
             "Negative electrolyte concentration": a_n,
             "Negative particle surface concentration": a_n,
             "Negative electrode temperature": a_n,
+            "Negative electrode surface area to volume ratio": a_n,
         }
-        submodel = pybamm.interface.ButlerVolmer(param, "Negative", "lithium-ion main")
+        submodel = pybamm.interface.ButlerVolmer(
+            param,
+            "Negative",
+            "lithium-ion main",
+            {
+                "SEI film resistance": "none",
+                "total interfacial current density as a state": "false",
+            },
+        )
         std_tests = tests.StandardSubModelTests(submodel, variables)
 
         std_tests.test_all()
@@ -42,6 +51,8 @@ class TestLithiumIon(unittest.TestCase):
             "Negative electrode interfacial current density": a_n,
             "Negative electrode exchange current density": a_n,
             "Positive electrode temperature": a_p,
+            "Negative electrode surface area to volume ratio": a_n,
+            "Positive electrode surface area to volume ratio": a_p,
             "X-averaged negative electrode interfacial current density": a,
             "X-averaged positive electrode interfacial current density": a,
             "Sum of electrolyte reaction source terms": 0,
@@ -57,7 +68,15 @@ class TestLithiumIon(unittest.TestCase):
             "Sum of x-averaged negative electrode interfacial current densities": 0,
             "Sum of x-averaged positive electrode interfacial current densities": 0,
         }
-        submodel = pybamm.interface.ButlerVolmer(param, "Positive", "lithium-ion main")
+        submodel = pybamm.interface.ButlerVolmer(
+            param,
+            "Positive",
+            "lithium-ion main",
+            {
+                "SEI film resistance": "none",
+                "total interfacial current density as a state": "false",
+            },
+        )
         std_tests = tests.StandardSubModelTests(submodel, variables)
         std_tests.test_all()
 

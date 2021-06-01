@@ -47,7 +47,7 @@ class TestIDAKLUSolver(unittest.TestCase):
             np.testing.assert_array_almost_equal(solution.y[0, :], true_solution)
 
     def test_set_atol(self):
-        model = pybamm.lithium_ion.SPMe()
+        model = pybamm.lithium_ion.DFN()
         geometry = model.default_geometry
         param = model.default_parameter_values
         param.process_model(model)
@@ -57,7 +57,7 @@ class TestIDAKLUSolver(unittest.TestCase):
         disc.process_model(model)
         solver = pybamm.IDAKLUSolver(root_method="lm")
 
-        variable_tols = {"Electrolyte concentration": 1e-3}
+        variable_tols = {"Porosity times concentration": 1e-3}
         solver.set_atol_by_variable(variable_tols, model)
 
     def test_failures(self):
