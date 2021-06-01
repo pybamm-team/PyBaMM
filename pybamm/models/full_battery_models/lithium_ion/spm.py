@@ -69,10 +69,7 @@ class SPM(BaseModel):
 
     def set_interfacial_submodel(self):
 
-        if (
-            self.options["surface form"] is False
-            and self.options["particle-size distribution"] is False
-        ):
+        if self.options["surface form"] == "false":
             self.submodels["negative interface"] = pybamm.interface.InverseButlerVolmer(
                 self.param, "Negative", "lithium-ion main", self.options
             )
