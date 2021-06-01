@@ -86,6 +86,8 @@ class TestBaseBatteryModel(unittest.TestCase):
             var.r_p: 30,
             var.y: 10,
             var.z: 10,
+            var.R_variable_n: 30,
+            var.R_variable_p: 30,
         }
         model = pybamm.BaseBatteryModel({"dimensionality": 0})
         self.assertDictEqual(var_pts, model.default_var_pts)

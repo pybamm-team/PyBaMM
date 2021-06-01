@@ -20,7 +20,8 @@ class BaseKinetics(BaseInterface):
         The name of the reaction being implemented
     options: dict
         A dictionary of options to be passed to the model. In this case "sei film
-        resistance" is the important option. See :class:`pybamm.BaseBatteryModel`
+        resistance" and "particle-size distribution" are the important options.
+        See :class:`pybamm.BaseBatteryModel`
 
     **Extends:** :class:`pybamm.interface.BaseInterface`
     """
@@ -28,7 +29,10 @@ class BaseKinetics(BaseInterface):
     def __init__(self, param, domain, reaction, options=None):
         super().__init__(param, domain, reaction)
         if options is None:
-            options = {"sei film resistance": None}
+            options = {
+                "sei film resistance": None,
+                "particle-size distribution": False
+            }
         self.options = options
 
     def get_fundamental_variables(self):
