@@ -4,6 +4,7 @@
 import numbers
 import numpy as np
 import pybamm
+import sys
 
 
 class Parameter(pybamm.Symbol):
@@ -89,7 +90,20 @@ class FunctionParameter(pybamm.Symbol):
         )
 
         self.input_names = list(inputs.keys())
-        self.print_name = None
+
+        # Use the inspect module to find the function's "short name" from the
+        # Parameters module that called it
+        frame = sys._getframe().f_back
+        print_name = frame.f_code.co_name
+        if print_name.startswith("_"):
+            self.print_name = None
+        else:
+            if print_name.endswith("_dimensional"):
+                self.print_name = print_name[: -len("_dimensional")]
+            elif print_name.endswith("_dim"):
+                self.print_name = print_name[: -len("_dim")]
+            else:
+                self.print_name = print_name
 
     @property
     def input_names(self):
