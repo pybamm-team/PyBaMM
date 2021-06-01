@@ -8,7 +8,6 @@ import numbers
 import warnings
 from pprint import pformat
 from collections import defaultdict
-import inspect
 
 
 class ParameterValues:
