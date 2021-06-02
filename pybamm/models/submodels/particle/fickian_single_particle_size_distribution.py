@@ -38,8 +38,16 @@ class FickianSinglePSD(BaseParticle):
                 },
                 bounds=(0, 1),
             )
-            R_variable = pybamm.standard_spatial_vars.R_variable_n
-            R_dim = self.param.R_n
+            # Since concentration does not depend on "x", need a particle-size
+            # spatial variable R with only "current collector" as secondary
+            # domain
+            R_variable = pybamm.SpatialVariable(
+                "R_n",
+                domain=["negative particle-size domain"],
+                auxiliary_domains={"secondary": "current collector"},
+                coord_sys="cartesian",
+            )
+            R_dim = self.param.R_n_typ
 
             # Particle-size distribution (area-weighted)
             f_a_dist = self.param.f_a_dist_n(R_variable)
@@ -55,8 +63,16 @@ class FickianSinglePSD(BaseParticle):
                 },
                 bounds=(0, 1),
             )
-            R_variable = pybamm.standard_spatial_vars.R_variable_p
-            R_dim = self.param.R_p
+            # Since concentration does not depend on "x", need a particle-size
+            # spatial variable R with only "current collector" as secondary
+            # domain
+            R_variable = pybamm.SpatialVariable(
+                "R_p",
+                domain=["positive particle-size domain"],
+                auxiliary_domains={"secondary": "current collector"},
+                coord_sys="cartesian",
+            )
+            R_dim = self.param.R_p_typ
 
             # Particle-size distribution (area-weighted)
             f_a_dist = self.param.f_a_dist_p(R_variable)
@@ -70,7 +86,7 @@ class FickianSinglePSD(BaseParticle):
         c_s = pybamm.SecondaryBroadcast(c_s_xav, [self.domain.lower() + " electrode"])
         variables = self._get_standard_concentration_variables(c_s, c_s_xav)
 
-        # Standard distribution variables (R-dependent)
+        # Standard concentration distribution variables (R-dependent)
         variables.update(
             self._get_standard_concentration_distribution_variables(
                 c_s_xav_distribution
@@ -92,7 +108,7 @@ class FickianSinglePSD(BaseParticle):
         c_s_xav_distribution = variables[
             "X-averaged " + self.domain.lower() + " particle concentration distribution"
         ]
-        R_variable = variables[self.domain + " particle size"]
+        R_spatial_variable = variables[self.domain + " particle size"]
         f_a_dist = variables[self.domain + " area-weighted particle-size distribution"]
 
         # broadcast to particle-size domain then again into particle
@@ -101,19 +117,25 @@ class FickianSinglePSD(BaseParticle):
             [self.domain.lower() + " particle-size domain"],
         )
         T_k_xav = pybamm.PrimaryBroadcast(T_k_xav, [self.domain.lower() + " particle"],)
+        R = pybamm.PrimaryBroadcast(
+            R_spatial_variable, [self.domain.lower() + " particle"],
+        )
+        f_a_dist = pybamm.PrimaryBroadcast(
+            f_a_dist, [self.domain.lower() + " particle"],
+        )
 
         if self.domain == "Negative":
             N_s_xav_distribution = -self.param.D_n(
                 c_s_xav_distribution, T_k_xav
-            ) * pybamm.grad(c_s_xav_distribution) / R_variable
+            ) * pybamm.grad(c_s_xav_distribution) / R
         elif self.domain == "Positive":
             N_s_xav_distribution = -self.param.D_p(
                 c_s_xav_distribution, T_k_xav
-            ) * pybamm.grad(c_s_xav_distribution) / R_variable
+            ) * pybamm.grad(c_s_xav_distribution) / R
 
         # Standard R-averaged flux variables
-        N_s_xav = pybamm.Integral(f_a_dist * N_s_xav_distribution, R_variable)
-        N_s = pybamm.SecondaryBroadcast(N_s_xav, [self._domain.lower() + " electrode"])
+        N_s_xav = pybamm.Integral(f_a_dist * N_s_xav_distribution, R_spatial_variable)
+        N_s = pybamm.SecondaryBroadcast(N_s_xav, [self.domain.lower() + " electrode"])
         variables.update(self._get_standard_flux_variables(N_s, N_s_xav))
 
         # Standard distribution flux variables (R-dependent)
@@ -128,6 +150,7 @@ class FickianSinglePSD(BaseParticle):
         return variables
 
     def set_rhs(self, variables):
+        # Extract x-av variables
         c_s_xav_distribution = variables[
             "X-averaged " + self.domain.lower() + " particle concentration distribution"
         ]
@@ -136,22 +159,26 @@ class FickianSinglePSD(BaseParticle):
             "X-averaged " + self.domain.lower() + " particle flux distribution"
         ]
 
-        R_variable = variables[self.domain + " particle size"]
+        # Spatial variable R, broadcast into particle
+        R_spatial_variable = variables[self.domain + " particle size"]
+        R = pybamm.PrimaryBroadcast(
+            R_spatial_variable, [self.domain.lower() + " particle"],
+        )
         if self.domain == "Negative":
             self.rhs = {
                 c_s_xav_distribution: -(1 / self.param.C_n)
                 * pybamm.div(N_s_xav_distribution)
-                / R_variable
+                / R
             }
         elif self.domain == "Positive":
             self.rhs = {
                 c_s_xav_distribution: -(1 / self.param.C_p)
                 * pybamm.div(N_s_xav_distribution)
-                / R_variable
+                / R
             }
 
     def set_boundary_conditions(self, variables):
-        # Extract variables
+        # Extract x-av variables
         c_s_xav_distribution = variables[
             "X-averaged " + self.domain.lower() + " particle concentration distribution"
         ]
@@ -165,7 +192,7 @@ class FickianSinglePSD(BaseParticle):
             + self.domain.lower()
             + " electrode interfacial current density distribution"
         ]
-        R_variable = variables[self.domain + " particle size"]
+        R = variables[self.domain + " particle size"]
 
         # Extract x-av T and broadcast to particle-size domain
         T_k_xav = variables[
@@ -179,7 +206,7 @@ class FickianSinglePSD(BaseParticle):
         if self.domain == "Negative":
             rbc = (
                 -self.param.C_n
-                * R_variable
+                * R
                 * j_xav_distribution
                 / self.param.a_R_n
                 / self.param.D_n(c_s_surf_xav_distribution, T_k_xav)
@@ -188,7 +215,7 @@ class FickianSinglePSD(BaseParticle):
         elif self.domain == "Positive":
             rbc = (
                 -self.param.C_p
-                * R_variable
+                * R
                 * j_xav_distribution
                 / self.param.a_R_p
                 / self.param.gamma_p

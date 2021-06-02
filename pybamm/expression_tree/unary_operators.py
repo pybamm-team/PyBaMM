@@ -1344,7 +1344,7 @@ def r_average(symbol):
         return Integral(symbol, r) / Integral(v, r)
 
 
-def R_average(symbol, domain):
+def R_average(symbol, domain, param):
     """convenience function for averaging over particle size R.
 
     Parameters
@@ -1353,6 +1353,9 @@ def R_average(symbol, domain):
         The function to be averaged
     domain : str
         The electrode for averaging, either "negative" or "positive"
+    param : :class:`pybamm.LithiumIonParameters`
+        The parameter object containing the particle-size distributions.
+        Only implemented for the lithium-ion chemistry.
     Returns
     -------
     :class:`Symbol`
@@ -1388,9 +1391,9 @@ def R_average(symbol, domain):
         coord_sys="cartesian",
     )
     if domain.lower() == "negative":
-        f_a_dist = pybamm.standard_parameters_lithium_ion.f_a_dist_n(R)
+        f_a_dist = param.f_a_dist_n(R)
     elif domain.lower() == "positive":
-        f_a_dist = pybamm.standard_parameters_lithium_ion.f_a_dist_p(R)
+        f_a_dist = param.f_a_dist_p(R)
 
     # enforce true average, normalising f_a_dist if it is not already
     return Integral(f_a_dist * symbol, R) / Integral(f_a_dist, R)

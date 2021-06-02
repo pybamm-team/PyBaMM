@@ -40,6 +40,8 @@ class MPM(BaseModel):
         # Set submodels
         self.set_external_circuit_submodel()
         self.set_porosity_submodel()
+        self.set_crack_submodel()
+        self.set_active_material_submodel()
         self.set_tortuosity_submodels()
         self.set_convection_submodel()
         self.set_interfacial_submodel()
@@ -50,7 +52,9 @@ class MPM(BaseModel):
         self.set_positive_electrode_submodel()
         self.set_thermal_submodel()
         self.set_current_collector_submodel()
+
         self.set_sei_submodel()
+        self.set_lithium_plating_submodel()
 
         if build:
             self.build_model()
@@ -165,7 +169,14 @@ class MPM(BaseModel):
 
         surf_form = pybamm.electrolyte_conductivity.surface_potential_form
 
-        if self.options["surface form"] is False:
+        if self.options["electrolyte conductivity"] not in ["default", "leading order"]:
+            raise pybamm.OptionError(
+                "electrolyte conductivity '{}' not suitable for SPM".format(
+                    self.options["electrolyte conductivity"]
+                )
+            )
+
+        if self.options["surface form"] == "false":
             self.submodels[
                 "leading-order electrolyte conductivity"
             ] = pybamm.electrolyte_conductivity.LeadingOrder(self.param)
@@ -181,6 +192,7 @@ class MPM(BaseModel):
                 self.submodels[
                     "leading-order " + domain.lower() + " electrolyte conductivity"
                 ] = surf_form.LeadingOrderAlgebraic(self.param, domain)
+
         self.submodels[
             "electrolyte diffusion"
         ] = pybamm.electrolyte_diffusion.ConstantConcentration(self.param)
@@ -272,73 +284,3 @@ class MPM(BaseModel):
         return default_params
 
 
-'''
-    @property
-    def default_geometry(self):
-        default_geom = super().default_geometry
-
-        # New Spatial Variables
-        R_variable_n = pybamm.standard_spatial_vars.R_variable_n
-        R_variable_p = pybamm.standard_spatial_vars.R_variable_p
-
-        # append new domains
-        default_geom.update(
-            {
-                "negative particle-size domain": {
-                    R_variable_n: {
-                        "min": pybamm.Scalar(0),
-                        "max": pybamm.Parameter("Negative maximum particle radius"),
-                    }
-                },
-                "positive particle-size domain": {
-                    R_variable_p: {
-                        "min": pybamm.Scalar(0),
-                        "max": pybamm.Parameter("Positive maximum particle radius"),
-                    }
-                },
-            }
-        )
-        return default_geom
-'''
-'''
-    @property
-    def default_var_pts(self):
-        defaults = super().default_var_pts
-
-        # New Spatial Variables
-        R_variable_n = pybamm.standard_spatial_vars.R_variable_n
-        R_variable_p = pybamm.standard_spatial_vars.R_variable_p
-        # add to dictionary
-        defaults.update({R_variable_n: 50, R_variable_p: 50})
-        return defaults
-'''
-'''
-    @property
-    def default_submesh_types(self):
-        default_submeshes = super().default_submesh_types
-
-        default_submeshes.update(
-            {
-                "negative particle-size domain": pybamm.MeshGenerator(
-                    pybamm.Uniform1DSubMesh
-                ),
-                "positive particle-size domain": pybamm.MeshGenerator(
-                    pybamm.Uniform1DSubMesh
-                ),
-            }
-        )
-        return default_submeshes
-'''
-'''
-    @property
-    def default_spatial_methods(self):
-        default_spatials = super().default_spatial_methods
-
-        default_spatials.update(
-            {
-                "negative particle-size domain": pybamm.FiniteVolume(),
-                "positive particle-size domain": pybamm.FiniteVolume(),
-            }
-        )
-        return default_spatials
-'''

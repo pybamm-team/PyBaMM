@@ -69,8 +69,8 @@ class Options(pybamm.FuzzyDict):
                 area per unit volume can be passed as a parameter, and is therefore not
                 necessarily consistent with the particle shape.
             * "particle-size distribution" : str
-                Sets the model to include a single active particle size or a 
-                distribution of sizes for each electrode. Can be "true" or 
+                Sets the model to include a single active particle size or a
+                distribution of sizes for each electrode. Can be "true" or
                 "false" (default).
             * "particle cracking" : str
                 Sets the model to account for mechanical effects and particle
@@ -354,7 +354,7 @@ class BaseBatteryModel(pybamm.BaseModel):
     @property
     def default_geometry(self):
         return pybamm.battery_geometry(
-            particle_size_distribution=self.options["particle-size distribution"],
+            options=self.options,
             current_collector_dimension=self.options["dimensionality"]
         )
 
