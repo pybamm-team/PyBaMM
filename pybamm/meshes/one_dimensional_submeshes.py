@@ -57,6 +57,19 @@ class SubMesh1D(SubMesh):
                         )
                     )
 
+    def read_lims(self, lims):
+        # Separate limits and tabs
+        # Read and remove tabs. If "tabs" is not a key in "lims", then tabs is set to
+        # "None" and nothing is removed from lims
+        tabs = lims.pop("tabs", None)
+
+        # check that only one variable passed in
+        if len(lims) != 1:
+            raise pybamm.GeometryError("lims should only contain a single variable")
+
+        ((spatial_var, spatial_lims),) = lims.items()
+        return spatial_var, spatial_lims, tabs
+
 
 class Uniform1DSubMesh(SubMesh1D):
     """
@@ -70,21 +83,13 @@ class Uniform1DSubMesh(SubMesh1D):
         A dictionary that contains the number of points to be used on each
         spatial variable. Note: the number of nodes (located at the cell centres)
         is npts, and the number of edges is npts+1.
-    tabs : dict, optional
-        A dictionary that contains information about the size and location of
-        the tabs
 
     **Extends:"": :class:`pybamm.SubMesh1D`
     """
 
-    def __init__(self, lims, npts, tabs=None):
+    def __init__(self, lims, npts):
 
-        # check that only one variable passed in
-        if len(lims) != 1:
-            raise pybamm.GeometryError("lims should only contain a single variable")
-
-        spatial_var = list(lims.keys())[0]
-        spatial_lims = lims[spatial_var]
+        spatial_var, spatial_lims, tabs = self.read_lims(lims)
         npts = npts[spatial_var.id]
 
         edges = np.linspace(spatial_lims["min"], spatial_lims["max"], npts + 1)
@@ -134,9 +139,6 @@ class Exponential1DSubMesh(SubMesh1D):
         A dictionary that contains the number of points to be used on each
         spatial variable. Note: the number of nodes (located at the cell centres)
         is npts, and the number of edges is npts+1.
-    tabs : dict
-        A dictionary that contains information about the size and location of
-        the tabs
     side : str, optional
         Whether the points are clustered near to the left or right boundary,
         or both boundaries. Can be "left", "right" or "symmetric". Default is
@@ -149,14 +151,9 @@ class Exponential1DSubMesh(SubMesh1D):
     **Extends:"": :class:`pybamm.SubMesh1D`
     """
 
-    def __init__(self, lims, npts, tabs, side="symmetric", stretch=None):
+    def __init__(self, lims, npts, side="symmetric", stretch=None):
 
-        # check that only one variable passed in
-        if len(lims) != 1:
-            raise pybamm.GeometryError("lims should only contain a single variable")
-
-        spatial_var = list(lims.keys())[0]
-        spatial_lims = lims[spatial_var]
+        spatial_var, spatial_lims, tabs = self.read_lims(lims)
         a = spatial_lims["min"]
         b = spatial_lims["max"]
         npts = npts[spatial_var.id]
@@ -236,12 +233,7 @@ class Chebyshev1DSubMesh(SubMesh1D):
 
     def __init__(self, lims, npts, tabs=None):
 
-        # check that only one variable passed in
-        if len(lims) != 1:
-            raise pybamm.GeometryError("lims should only contain a single variable")
-
-        spatial_var = list(lims.keys())[0]
-        spatial_lims = lims[spatial_var]
+        spatial_var, spatial_lims, tabs = self.read_lims(lims)
         npts = npts[spatial_var.id]
 
         # Create N Chebyshev nodes in the interval (a,b)
@@ -272,27 +264,19 @@ class UserSupplied1DSubMesh(SubMesh1D):
         A dictionary that contains the number of points to be used on each
         spatial variable. Note: the number of nodes (located at the cell centres)
         is npts, and the number of edges is npts+1.
-    tabs : dict
-        A dictionary that contains information about the size and location of
-        the tabs
     edges : array_like
         The array of points which correspond to the edges of the mesh.
 
     **Extends:"": :class:`pybamm.SubMesh1D`
     """
 
-    def __init__(self, lims, npts, tabs, edges=None):
+    def __init__(self, lims, npts, edges=None):
 
         # raise error if no edges passed
         if edges is None:
             raise pybamm.GeometryError("User mesh requires parameter 'edges'")
 
-        # check that only one variable passed in
-        if len(lims) != 1:
-            raise pybamm.GeometryError("lims should only contain a single variable")
-
-        spatial_var = list(lims.keys())[0]
-        spatial_lims = lims[spatial_var]
+        spatial_var, spatial_lims, tabs = self.read_lims(lims)
         npts = npts[spatial_var.id]
 
         # check that npts + 1 equals number of user-supplied edges
@@ -323,3 +307,98 @@ class UserSupplied1DSubMesh(SubMesh1D):
         coord_sys = spatial_var.coord_sys
 
         super().__init__(edges, coord_sys=coord_sys, tabs=tabs)
+
+
+class SpectralVolume1DSubMesh(SubMesh1D):
+    """
+    A class to subdivide any mesh to incorporate Chebyshev collocation
+    Control Volumes. Note that the Spectral Volume method is optimized
+    to only work with this submesh. The underlying theory could use any
+    mesh with the right number of nodes, but in 1D the only sensible
+    choice are the Chebyshev collocation points.
+
+    Parameters
+    ----------
+    lims : dict
+        A dictionary that contains the limits of the spatial variables
+    npts : dict
+        A dictionary that contains the number of points to be used on
+        each spatial variable. Note: the number of nodes (located at the
+        cell centres) is npts, and the number of edges is npts+1.
+    order : int, optional
+        The order of the Spectral Volume method that is to be used with
+        this submesh. The default is 2, the same as the default for the
+        SpectralVolume class. If the orders of the submesh and the
+        Spectral Volume method don't match, the method will fail.
+    **Extends:"": :class:`pybamm.SubMesh1D`
+    """
+
+    def __init__(self, lims, npts, edges=None, order=2):
+
+        spatial_var, spatial_lims, tabs = self.read_lims(lims)
+        npts = npts[spatial_var.id]
+
+        # default: Spectral Volumes of equal size
+        if edges is None:
+            edges = np.linspace(spatial_lims["min"], spatial_lims["max"], npts + 1)
+        # check that npts + 1 equals number of user-supplied edges
+        elif (npts + 1) != len(edges):
+            raise pybamm.GeometryError(
+                "User-suppled edges should have length (npts + 1) but has len"
+                "gth {}. Number of points (npts) for domain {} is {}.".format(
+                    len(edges), spatial_var.domain, npts
+                )
+            )
+
+        # check end points of edges agree with spatial_lims
+        if edges[0] != spatial_lims["min"]:
+            raise pybamm.GeometryError(
+                """First entry of edges is {}, but should be equal to {}
+                 for domain {}.""".format(
+                    edges[0], spatial_lims["min"], spatial_var.domain
+                )
+            )
+        if edges[-1] != spatial_lims["max"]:
+            raise pybamm.GeometryError(
+                """Last entry of edges is {}, but should be equal to {}
+                for domain {}.""".format(
+                    edges[-1], spatial_lims["max"], spatial_var.domain
+                )
+            )
+
+        coord_sys = spatial_var.coord_sys
+
+        cv_edges = np.array(
+            [edges[0]]
+            + [
+                x
+                for (a, b) in zip(edges[:-1], edges[1:])
+                for x in np.flip(
+                    a
+                    + 0.5
+                    * (b - a)
+                    * (
+                        1
+                        + np.sin(
+                            np.pi
+                            * np.array(
+                                [
+                                    ((order + 1) - 1 - 2 * i) / (2 * (order + 1) - 2)
+                                    for i in range(order + 1)
+                                ]
+                            )
+                        )
+                    )
+                )[1:]
+            ]
+        )
+
+        self.sv_edges = edges
+        self.sv_nodes = (edges[:-1] + edges[1:]) / 2
+        self.d_sv_edges = np.diff(self.sv_edges)
+        self.d_sv_nodes = np.diff(self.sv_nodes)
+        self.order = 2
+        # The Control Volume edges and nodes are assigned to the
+        # "edges" and "nodes" properties. This makes some of the
+        # code of FiniteVolume directly applicable.
+        super().__init__(cv_edges, coord_sys=coord_sys, tabs=tabs)

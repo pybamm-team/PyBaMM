@@ -36,7 +36,6 @@ class BaseHigherOrderModel(BaseModel):
 
         self.set_external_circuit_submodel()
         self.set_leading_order_model()
-        self.set_reactions()
         # Electrolyte submodel to get first-order concentrations
         self.set_electrolyte_diffusion_submodel()
         self.set_other_species_diffusion_submodels()
@@ -50,21 +49,22 @@ class BaseHigherOrderModel(BaseModel):
         self.set_full_interface_submodel()
         self.set_full_convection_submodel()
         self.set_full_porosity_submodel()
+        self.set_active_material_submodel()
         self.set_tortuosity_submodels()
         self.set_thermal_submodel()
         self.set_current_collector_submodel()
+        self.set_sei_submodel()
+        self.set_lithium_plating_submodel()
 
         if build:
             self.build_model()
 
-        pybamm.citations.register("sulzer2019asymptotic")
+        pybamm.citations.register("Sulzer2019asymptotic")
 
     def set_current_collector_submodel(self):
         cc = pybamm.current_collector
 
-        if self.options["current collector"] in [
-            "uniform",
-        ]:
+        if self.options["current collector"] in ["uniform"]:
             submodel = cc.Uniform(self.param)
         elif self.options["current collector"] == "potential pair quite conductive":
             if self.options["dimensionality"] == 1:
@@ -98,6 +98,24 @@ class BaseHigherOrderModel(BaseModel):
             leading_order_model.variables["X-averaged electrolyte concentration"]
         ]
 
+        # Reset sums
+        self.variables.update(
+            {
+                "Sum of electrolyte reaction source terms": 0,
+                "Sum of negative electrode electrolyte reaction source terms": 0,
+                "Sum of positive electrode electrolyte reaction source terms": 0,
+                "Sum of x-averaged negative electrode "
+                "electrolyte reaction source terms": 0,
+                "Sum of x-averaged positive electrode "
+                "electrolyte reaction source terms": 0,
+                "Sum of interfacial current densities": 0,
+                "Sum of negative electrode interfacial current densities": 0,
+                "Sum of positive electrode interfacial current densities": 0,
+                "Sum of x-averaged negative electrode interfacial current densities": 0,
+                "Sum of x-averaged positive electrode interfacial current densities": 0,
+            }
+        )
+
     def set_average_interfacial_submodel(self):
         self.submodels[
             "x-averaged negative interface"
@@ -118,12 +136,12 @@ class BaseHigherOrderModel(BaseModel):
         )
 
     def set_negative_electrode_submodel(self):
-        self.submodels["negative electrode"] = pybamm.electrode.ohm.Composite(
+        self.submodels["negative electrode potential"] = pybamm.electrode.ohm.Composite(
             self.param, "Negative"
         )
 
     def set_positive_electrode_submodel(self):
-        self.submodels["positive electrode"] = pybamm.electrode.ohm.Composite(
+        self.submodels["positive electrode potential"] = pybamm.electrode.ohm.Composite(
             self.param, "Positive"
         )
 
@@ -136,12 +154,16 @@ class BaseHigherOrderModel(BaseModel):
         self.submodels["negative interface"] = pybamm.interface.FirstOrderKinetics(
             self.param,
             "Negative",
-            pybamm.interface.ButlerVolmer(self.param, "Negative", "lead-acid main"),
+            pybamm.interface.ButlerVolmer(
+                self.param, "Negative", "lead-acid main", self.options
+            ),
         )
         self.submodels["positive interface"] = pybamm.interface.FirstOrderKinetics(
             self.param,
             "Positive",
-            pybamm.interface.ButlerVolmer(self.param, "Positive", "lead-acid main"),
+            pybamm.interface.ButlerVolmer(
+                self.param, "Positive", "lead-acid main", self.options
+            ),
         )
 
         # Oxygen
@@ -152,7 +174,7 @@ class BaseHigherOrderModel(BaseModel):
                 self.param,
                 "Positive",
                 pybamm.interface.ForwardTafel(
-                    self.param, "Positive", "lead-acid oxygen"
+                    self.param, "Positive", "lead-acid oxygen", self.options
                 ),
             )
             self.submodels[
@@ -166,7 +188,7 @@ class BaseHigherOrderModel(BaseModel):
         Update convection submodel, now that we have the spatially heterogeneous
         interfacial current densities
         """
-        if self.options["convection"] is not False:
+        if self.options["convection"] != "none":
             self.submodels[
                 "through-cell convection"
             ] = pybamm.convection.through_cell.Explicit(self.param)
@@ -176,7 +198,9 @@ class BaseHigherOrderModel(BaseModel):
         Update porosity submodel, now that we have the spatially heterogeneous
         interfacial current densities
         """
-        self.submodels["full porosity"] = pybamm.porosity.Full(self.param)
+        self.submodels["full porosity"] = pybamm.porosity.ReactionDriven(
+            self.param, self.options, False
+        )
 
 
 class FOQS(BaseHigherOrderModel):
@@ -204,12 +228,12 @@ class FOQS(BaseHigherOrderModel):
     def set_electrolyte_diffusion_submodel(self):
         self.submodels[
             "electrolyte diffusion"
-        ] = pybamm.electrolyte_diffusion.FirstOrder(self.param, self.reactions)
+        ] = pybamm.electrolyte_diffusion.FirstOrder(self.param)
 
     def set_other_species_diffusion_submodels(self):
         if "oxygen" in self.options["side reactions"]:
             self.submodels["oxygen diffusion"] = pybamm.oxygen_diffusion.FirstOrder(
-                self.param, self.reactions
+                self.param
             )
 
     def set_full_porosity_submodel(self):
@@ -234,12 +258,12 @@ class Composite(BaseHigherOrderModel):
     def set_electrolyte_diffusion_submodel(self):
         self.submodels[
             "electrolyte diffusion"
-        ] = pybamm.electrolyte_diffusion.Composite(self.param, self.reactions)
+        ] = pybamm.electrolyte_diffusion.Composite(self.param)
 
     def set_other_species_diffusion_submodels(self):
         if "oxygen" in self.options["side reactions"]:
             self.submodels["oxygen diffusion"] = pybamm.oxygen_diffusion.Composite(
-                self.param, self.reactions
+                self.param
             )
 
     def set_full_porosity_submodel(self):
@@ -247,7 +271,9 @@ class Composite(BaseHigherOrderModel):
         Update porosity submodel, now that we have the spatially heterogeneous
         interfacial current densities
         """
-        self.submodels["full porosity"] = pybamm.porosity.Full(self.param)
+        self.submodels["full porosity"] = pybamm.porosity.ReactionDriven(
+            self.param, self.options, False
+        )
 
 
 class CompositeExtended(Composite):
@@ -278,14 +304,12 @@ class CompositeExtended(Composite):
     def set_electrolyte_diffusion_submodel(self):
         self.submodels[
             "electrolyte diffusion"
-        ] = pybamm.electrolyte_diffusion.Composite(
-            self.param, self.reactions, extended="distributed"
-        )
+        ] = pybamm.electrolyte_diffusion.Composite(self.param, extended="distributed")
 
     def set_other_species_diffusion_submodels(self):
         if "oxygen" in self.options["side reactions"]:
             self.submodels["oxygen diffusion"] = pybamm.oxygen_diffusion.Composite(
-                self.param, self.reactions, extended="distributed"
+                self.param, extended="distributed"
             )
 
 
@@ -302,12 +326,10 @@ class CompositeAverageCorrection(Composite):
     def set_electrolyte_diffusion_submodel(self):
         self.submodels[
             "electrolyte diffusion"
-        ] = pybamm.electrolyte_diffusion.Composite(
-            self.param, self.reactions, extended="average"
-        )
+        ] = pybamm.electrolyte_diffusion.Composite(self.param, extended="average")
 
     def set_other_species_diffusion_submodels(self):
         if "oxygen" in self.options["side reactions"]:
             self.submodels["oxygen diffusion"] = pybamm.oxygen_diffusion.Composite(
-                self.param, self.reactions, extended="average"
+                self.param, extended="average"
             )

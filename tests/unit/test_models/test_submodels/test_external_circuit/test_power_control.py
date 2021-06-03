@@ -9,7 +9,7 @@ import unittest
 
 class TestPowerControl(unittest.TestCase):
     def test_public_functions(self):
-        param = pybamm.standard_parameters_lithium_ion
+        param = pybamm.LithiumIonParameters()
         submodel = pybamm.external_circuit.PowerFunctionControl(param)
         variables = {"Terminal voltage [V]": pybamm.Scalar(0)}
         std_tests = tests.StandardSubModelTests(submodel, variables)

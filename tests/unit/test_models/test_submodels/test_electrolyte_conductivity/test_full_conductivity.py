@@ -9,27 +9,34 @@ import unittest
 
 class TestFull(unittest.TestCase):
     def test_public_functions(self):
-        param = pybamm.standard_parameters_lithium_ion
-        a = pybamm.Scalar(0)
+        param = pybamm.LithiumIonParameters()
+        a = pybamm.Scalar(1)
+        surf = "electrode surface area to volume ratio"
+        a_n = pybamm.FullBroadcast(a, "negative electrode", "current collector")
+        a_s = pybamm.FullBroadcast(a, "separator", "current collector")
+        a_p = pybamm.FullBroadcast(a, "positive electrode", "current collector")
+
         variables = {
             "Electrolyte tortuosity": a,
-            "Electrolyte concentration": a,
-            "Negative electrode interfacial current density": pybamm.FullBroadcast(
-                a, "negative electrode", "current collector"
+            "Electrolyte concentration": pybamm.concatenation(a_n, a_s, a_p),
+            "Negative electrolyte concentration": a_n,
+            "Separator electrolyte concentration": a_s,
+            "Positive electrolyte concentration": a_p,
+            "Negative electrode temperature": a_n,
+            "Separator temperature": a_s,
+            "Positive electrode temperature": a_p,
+            "Negative "
+            + surf: pybamm.FullBroadcast(a, "negative electrode", "current collector"),
+            "Positive "
+            + surf: pybamm.FullBroadcast(a, "positive electrode", "current collector"),
+            "Sum of interfacial current densities": pybamm.FullBroadcast(
+                a,
+                ["negative electrode", "separator", "positive electrode"],
+                "current collector",
             ),
-            "Positive electrode interfacial current density": pybamm.FullBroadcast(
-                a, "positive electrode", "current collector"
-            ),
-            "Cell temperature": a,
+            "Cell temperature": pybamm.concatenation(a_n, a_s, a_p),
         }
-        icd = " interfacial current density"
-        reactions = {
-            "main": {
-                "Negative": {"s": 1, "aj": "Negative electrode" + icd},
-                "Positive": {"s": 1, "aj": "Positive electrode" + icd},
-            }
-        }
-        submodel = pybamm.electrolyte_conductivity.Full(param, reactions)
+        submodel = pybamm.electrolyte_conductivity.Full(param)
         std_tests = tests.StandardSubModelTests(submodel, variables)
         std_tests.test_all()
 

@@ -28,7 +28,7 @@ Unary Operators
 .. autoclass:: pybamm.Laplacian
   :members:
 
-.. autoclass:: pybamm.Gradient_Squared
+.. autoclass:: pybamm.GradientSquared
   :members:
 
 .. autoclass:: pybamm.Mass
@@ -58,6 +58,15 @@ Unary Operators
 .. autoclass:: pybamm.BoundaryGradient
   :members:
 
+.. autoclass:: pybamm.UpwindDownwind
+  :members:
+
+.. autoclass:: pybamm.Upwind
+  :members:
+
+.. autoclass:: pybamm.Downwind
+  :members:
+
 .. autofunction:: pybamm.grad
 
 .. autofunction:: pybamm.div
@@ -78,4 +87,10 @@ Unary Operators
 
 .. autofunction:: pybamm.boundary_value
 
+.. autofunction:: pybamm.smooth_absolute_value
+
 .. autofunction:: pybamm.sign
+
+.. autofunction:: pybamm.upwind
+
+.. autofunction:: pybamm.downwind

@@ -14,7 +14,7 @@ import unittest
 import subprocess
 
 
-def run_code_tests(executable=False, folder: str = "unit"):
+def run_code_tests(executable=False, folder: str = "unit", interpreter="python"):
     """
     Runs tests, exits if they don't finish.
     Parameters
@@ -31,12 +31,16 @@ def run_code_tests(executable=False, folder: str = "unit"):
         tests = "tests/" + folder
         if folder == "unit":
             pybamm.settings.debug_mode = True
+    if interpreter == "python":
+        # Make sure to refer to the interpreter for the
+        # currently activated virtual environment
+        interpreter = sys.executable
     if executable is False:
         suite = unittest.defaultTestLoader.discover(tests, pattern="test*.py")
         unittest.TextTestRunner(verbosity=2).run(suite)
     else:
-        print("Running {} tests with executable 'python'".format(folder))
-        cmd = ["python", "-m", "unittest", "discover", "-v", tests]
+        print("Running {} tests with executable '{}'".format(folder, interpreter))
+        cmd = [interpreter, "-m", "unittest", "discover", "-v", tests]
         p = subprocess.Popen(cmd)
         try:
             ret = p.wait()
@@ -177,6 +181,32 @@ def test_notebook(path, executable="python"):
     print("Test " + path + " ... ", end="")
     sys.stdout.flush()
 
+    # Make sure the notebook has a "%pip install pybamm -q" command, for using Google
+    # Colab
+    with open(path, "r") as f:
+        if "%pip install pybamm -q" not in f.read():
+            # print error and exit
+            print("\n" + "-" * 70)
+            print("ERROR")
+            print("-" * 70)
+            print("Installation command '%pip install pybamm -q' not found in notebook")
+            print("-" * 70)
+            return False
+
+    # Make sure the notebook has "pybamm.print_citations()" to print the relevant papers
+    with open(path, "r") as f:
+        if "pybamm.print_citations()" not in f.read():
+            # print error and exit
+            print("\n" + "-" * 70)
+            print("ERROR")
+            print("-" * 70)
+            print(
+                "Print citations command 'pybamm.print_citations()' not found in "
+                "notebook"
+            )
+            print("-" * 70)
+            return False
+
     # Load notebook, convert to python
     e = nbconvert.exporters.PythonExporter()
     code, __ = e.from_filename(path)
@@ -187,6 +217,15 @@ def test_notebook(path, executable="python"):
     # Tell matplotlib not to produce any figures
     env = dict(os.environ)
     env["MPLBACKEND"] = "Template"
+
+    # If notebook makes use of magic commands then
+    # the script must be ran using ipython
+    # https://github.com/jupyter/nbconvert/issues/503#issuecomment-269527834
+    executable = (
+        "ipython"
+        if (("run_cell_magic(" in code) or ("run_line_magic(" in code))
+        else executable
+    )
 
     # Run in subprocess
     cmd = [executable] + ["-c", code]
@@ -215,7 +254,7 @@ def test_notebook(path, executable="python"):
         sys.exit(1)
 
     # Sucessfully run
-    print("ok (" + b.format() + ")")
+    print("ok ({})".format(b.time()))
     return True
 
 
@@ -256,7 +295,7 @@ def test_script(path, executable="python"):
         sys.exit(1)
 
     # Sucessfully run
-    print("ok (" + b.format() + ")")
+    print("ok ({})".format(b.time()))
     return True
 
 
@@ -344,6 +383,14 @@ if __name__ == "__main__":
         action="store_true",
         help="Run quick checks (unit tests, flake8, docs)",
     )
+    # Non-standard Python interpreter name for subprocesses
+    parser.add_argument(
+        "--interpreter",
+        nargs="?",
+        default="python",
+        metavar="python",
+        help="Give the name of the Python interpreter if it is not 'python'",
+    )
 
     # Parse!
     args = parser.parse_args()
@@ -352,13 +399,14 @@ if __name__ == "__main__":
     has_run = False
     # Unit vs integration
     folder = args.folder[0]
+    interpreter = args.interpreter
     # Unit tests
     if args.unit:
         has_run = True
-        run_code_tests(True, folder)
+        run_code_tests(True, folder, interpreter)
     if args.nosub:
         has_run = True
-        run_code_tests(folder=folder)
+        run_code_tests(folder=folder, interpreter=interpreter)
     # Flake8
     if args.flake8:
         has_run = True
@@ -370,10 +418,10 @@ if __name__ == "__main__":
     # Notebook tests
     if args.allexamples:
         has_run = True
-        run_notebook_and_scripts()
+        run_notebook_and_scripts(executable=interpreter)
     elif args.examples:
         has_run = True
-        run_notebook_and_scripts(True)
+        run_notebook_and_scripts(True, interpreter)
     if args.debook:
         has_run = True
         export_notebook(*args.debook)
@@ -381,7 +429,7 @@ if __name__ == "__main__":
     if args.quick:
         has_run = True
         run_flake8()
-        run_code_tests(folder)
+        run_code_tests(folder, interpreter=interpreter)
         run_doc_tests()
     # Help
     if not has_run:

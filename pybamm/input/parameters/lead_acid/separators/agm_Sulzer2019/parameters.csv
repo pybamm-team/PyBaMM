@@ -1,0 +1,8 @@
+Name [units],Value,Reference,Notes
+# Empty rows and rows starting with ‘#’ will be ignored,,,
+,,,
+Maximum porosity of separator,0.92,,
+Separator Bruggeman coefficient (electrolyte),1.5,,
+Separator density [kg.m-3],1680, Bulk density from Gigova 2006,
+Separator specific heat capacity [J.kg-1.K-1],700, Electronics Cooling (fiberglass),
+Separator thermal conductivity [W.m-1.K-1],0.04, University Physics Sears et al. 1999 (fiberglass),

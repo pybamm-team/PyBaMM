@@ -4,7 +4,7 @@ For new users we recommend the [Getting Started](./Getting%20Started/) notebooks
 
 # Examples
 
-[![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/pybamm-team/PyBaMM/master)
+[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/pybamm-team/PyBaMM/blob/develop/)
 
 This page contains a number of examples showing how to use PyBaMM.
 
@@ -13,7 +13,7 @@ These notebooks can be downloaded and used locally by running
 ```
 $ jupyter notebook
 ```
-from your local PyBaMM repository, or used online through [Binder](https://mybinder.org/v2/gh/pybamm-team/PyBaMM/master), or you can simply copy/paste the relevant code.
+from your local PyBaMM repository or used online through [Google Colab](https://colab.research.google.com/github/pybamm-team/PyBaMM/blob/develop/). Alternatively, you can simply copy/paste the relevant code.
 
 ## Using PyBaMM
 
@@ -41,8 +41,8 @@ For more advanced usage, new sets of parameters, spatial methods and solvers can
 
 PyBaMM is built around an expression tree structure.
 
-- [The expression tree notebook](expression_tree/expression-tree.ipynb) explains how this works, from model creation to solution. 
-- [The broadcast notebook](expression_tree/broadcasts.ipynb) explains the different types of broadcast. 
+- [The expression tree notebook](expression_tree/expression-tree.ipynb) explains how this works, from model creation to solution.
+- [The broadcast notebook](expression_tree/broadcasts.ipynb) explains the different types of broadcast.
 
 The following notebooks are specific to different stages of the PyBaMM pipeline, such as choosing a model, spatial method, or solver.
 
@@ -50,7 +50,7 @@ The following notebooks are specific to different stages of the PyBaMM pipeline,
 
 Several battery models are implemented and can easily be used or [compared](./models/lead-acid.ipynb). The notebooks below show the solution of each individual model. We always welcome [new models](https://pybamm.readthedocs.io/en/latest/tutorials/add-model.html)!
 
-Once you are comfortable with the expression tree structure, a good starting point to understand the models in PyBaMM is to take a look at the [basic SPM](https://github.com/pybamm-team/PyBaMM/blob/master/pybamm/models/full_battery_models/lithium_ion/basic_spm.py) and [basic DFN](https://github.com/pybamm-team/PyBaMM/blob/master/pybamm/models/full_battery_models/lithium_ion/basic_dfn.py), since these define the entire model (variables, equations, initial and boundary conditions, events) in a single class and so are easier to understand. However, we recommend that you subsequently use the full models as they offer much greater flexibility for coupling different physical effects and visualising a greater range of variables.
+Once you are comfortable with the expression tree structure, a good starting point to understand the models in PyBaMM is to take a look at the [basic SPM](https://github.com/pybamm-team/PyBaMM/blob/develop/pybamm/models/full_battery_models/lithium_ion/basic_spm.py) and [basic DFN](https://github.com/pybamm-team/PyBaMM/blob/develop/pybamm/models/full_battery_models/lithium_ion/basic_dfn.py), since these define the entire model (variables, equations, initial and boundary conditions, events) in a single class and so are easier to understand. However, we recommend that you subsequently use the full models as they offer much greater flexibility for coupling different physical effects and visualising a greater range of variables.
 
 #### Lithium-ion models
 
@@ -62,12 +62,13 @@ Once you are comfortable with the expression tree structure, a good starting poi
 
 - [Full porous-electrode](https://pybamm.readthedocs.io/en/latest/source/models/lead_acid/full.html)
 - [Leading-Order Quasi-Static](https://pybamm.readthedocs.io/en/latest/source/models/lead_acid/loqs.html)
-- [Composite](https://pybamm.readthedocs.io/en/latest/source/models/lead_acid/composite.html)
+- [Higher-Order](https://pybamm.readthedocs.io/en/latest/source/models/lead_acid/higher_order.html)
 
 ### Spatial Methods
 
 The following spatial methods are implemented
-- [Finite Volumes](./spatial_methods/finite-volumes.ipynb)
+- [Finite Volumes](./spatial_methods/finite-volumes.ipynb) (1D only)
+- Spectral Volumes (1D only)
 - Finite Elements (only for 2D current collector domains)
 
 See [here](https://pybamm.readthedocs.io/en/latest/tutorials/add-spatial-method.html) for instructions on adding new spatial methods.

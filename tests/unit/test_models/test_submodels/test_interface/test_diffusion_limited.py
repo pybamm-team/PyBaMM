@@ -9,7 +9,7 @@ import unittest
 
 class TestBaseModel(unittest.TestCase):
     def test_public_function(self):
-        param = pybamm.standard_parameters_lead_acid
+        param = pybamm.LeadAcidParameters()
 
         a_n = pybamm.PrimaryBroadcast(pybamm.Scalar(0), ["negative electrode"])
         a_s = pybamm.PrimaryBroadcast(pybamm.Scalar(0), ["separator"])
@@ -19,6 +19,7 @@ class TestBaseModel(unittest.TestCase):
             "Negative electrode potential": a_n,
             "Negative electrolyte potential": a_n,
             "Negative electrolyte concentration": a_n,
+            "Negative electrode temperature": a_n,
             "X-averaged positive electrode oxygen interfacial current density": a,
             "Separator tortuosity": a_s,
             "Separator oxygen concentration": a_s,

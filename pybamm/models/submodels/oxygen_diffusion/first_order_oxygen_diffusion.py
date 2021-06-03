@@ -24,8 +24,8 @@ class FirstOrder(BaseModel):
     **Extends:** :class:`pybamm.oxygen_diffusion.BaseModel`
     """
 
-    def __init__(self, param, reactions):
-        super().__init__(param, reactions)
+    def __init__(self, param):
+        super().__init__(param)
 
     def get_coupled_variables(self, variables):
 
@@ -47,13 +47,11 @@ class FirstOrder(BaseModel):
         D_ox_p = tor_p_0_av * param.curlyD_ox
 
         # Reactions
-        sj_ox_p = sum(
-            reaction["Positive"]["s_ox"]
-            * variables[
-                "Leading-order x-averaged " + reaction["Positive"]["aj"].lower()
-            ]
-            for reaction in self.reactions.values()
-        )
+        j_ox_0 = variables[
+            "Leading-order x-averaged positive electrode "
+            "oxygen interfacial current density"
+        ]
+        sj_ox_p = param.s_ox_Ox * j_ox_0
 
         # Fluxes
         N_ox_n_1 = pybamm.FullBroadcast(0, "negative electrode", "current collector")
@@ -69,12 +67,13 @@ class FirstOrder(BaseModel):
         )
 
         # Update variables
-        c_ox = pybamm.Concatenation(
-            param.C_e * c_ox_n_1, param.C_e * c_ox_s_1, param.C_e * c_ox_p_1
+        variables.update(
+            self._get_standard_concentration_variables(
+                param.C_e * c_ox_n_1, param.C_e * c_ox_s_1, param.C_e * c_ox_p_1
+            )
         )
-        variables.update(self._get_standard_concentration_variables(c_ox))
 
-        N_ox = pybamm.Concatenation(
+        N_ox = pybamm.concatenation(
             param.C_e * N_ox_n_1, param.C_e * N_ox_s_1, param.C_e * N_ox_p_1
         )
         variables.update(self._get_standard_flux_variables(N_ox))

@@ -24,15 +24,15 @@ class Scalar(pybamm.Symbol):
     """
 
     def __init__(self, value, name=None, domain=[]):
-        """
-
-        """
         # set default name if not provided
         self.value = value
         if name is None:
             name = str(self.value)
 
         super().__init__(name, domain=domain)
+
+    def __str__(self):
+        return str(self.value)
 
     @property
     def value(self):
@@ -62,3 +62,7 @@ class Scalar(pybamm.Symbol):
     def new_copy(self):
         """ See :meth:`pybamm.Symbol.new_copy()`. """
         return Scalar(self.value, self.name, self.domain)
+
+    def is_constant(self):
+        """ See :meth:`pybamm.Symbol.is_constant()`. """
+        return True

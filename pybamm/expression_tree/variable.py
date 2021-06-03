@@ -26,20 +26,37 @@ class VariableBase(pybamm.Symbol):
         collector'. For the DFN, the particle concentration would be a Variable with
         domain 'negative particle', secondary domain 'negative electrode' and tertiary
         domain 'current collector'
+    bounds : tuple, optional
+        Physical bounds on the variable
 
     *Extends:* :class:`Symbol`
     """
 
-    def __init__(self, name, domain=None, auxiliary_domains=None):
+    def __init__(self, name, domain=None, auxiliary_domains=None, bounds=None):
         if domain is None:
             domain = []
         if auxiliary_domains is None:
             auxiliary_domains = {}
         super().__init__(name, domain=domain, auxiliary_domains=auxiliary_domains)
+        if bounds is None:
+            bounds = (-np.inf, np.inf)
+        else:
+            if bounds[0] >= bounds[1]:
+                raise ValueError(
+                    "Invalid bounds {}. ".format(bounds)
+                    + "Lower bound should be strictly less than upper bound."
+                )
+        self.bounds = bounds
+        self.print_name = None
 
     def new_copy(self):
         """ See :meth:`pybamm.Symbol.new_copy()`. """
-        return self.__class__(self.name, self.domain, self.auxiliary_domains)
+
+        out = self.__class__(
+            self.name, self.domain, self.auxiliary_domains, self.bounds
+        )
+        out.print_name = self.print_name
+        return out
 
     def _evaluate_for_shape(self):
         """ See :meth:`pybamm.Symbol.evaluate_for_shape_using_domain()` """
@@ -59,21 +76,24 @@ class Variable(VariableBase):
 
     name : str
         name of the node
-    domain : iterable of str
+        domain : iterable of str, optional
         list of domains that this variable is valid over
-    auxiliary_domains : dict
+    auxiliary_domains : dict, optional
         dictionary of auxiliary domains ({'secondary': ..., 'tertiary': ...}). For
         example, for the single particle model, the particle concentration would be a
         Variable with domain 'negative particle' and secondary auxiliary domain 'current
         collector'. For the DFN, the particle concentration would be a Variable with
         domain 'negative particle', secondary domain 'negative electrode' and tertiary
         domain 'current collector'
-
+    bounds : tuple, optional
+        Physical bounds on the variable
     *Extends:* :class:`Symbol`
     """
 
-    def __init__(self, name, domain=None, auxiliary_domains=None):
-        super().__init__(name, domain=domain, auxiliary_domains=auxiliary_domains)
+    def __init__(self, name, domain=None, auxiliary_domains=None, bounds=None):
+        super().__init__(
+            name, domain=domain, auxiliary_domains=auxiliary_domains, bounds=bounds
+        )
 
     def diff(self, variable):
         if variable.id == self.id:
@@ -110,11 +130,13 @@ class VariableDot(VariableBase):
         collector'. For the DFN, the particle concentration would be a Variable with
         domain 'negative particle', secondary domain 'negative electrode' and tertiary
         domain 'current collector'
-
+    bounds : tuple, optional
+        Physical bounds on the variable. Included for compatibility with `VariableBase`,
+        but ignored.
     *Extends:* :class:`Symbol`
     """
 
-    def __init__(self, name, domain=None, auxiliary_domains=None):
+    def __init__(self, name, domain=None, auxiliary_domains=None, bounds=None):
         super().__init__(name, domain=domain, auxiliary_domains=auxiliary_domains)
 
     def get_variable(self):
@@ -126,9 +148,7 @@ class VariableDot(VariableBase):
 
         """
         return Variable(
-            self.name[:-1],
-            domain=self._domain,
-            auxiliary_domains=self._auxiliary_domains,
+            self.name[:-1], domain=self.domain, auxiliary_domains=self.auxiliary_domains
         )
 
     def diff(self, variable):
@@ -172,6 +192,12 @@ class ExternalVariable(Variable):
     def size(self):
         return self._size
 
+    def new_copy(self):
+        """ See :meth:`pybamm.Symbol.new_copy()`. """
+        return ExternalVariable(
+            self.name, self.size, self.domain, self.auxiliary_domains
+        )
+
     def _evaluate_for_shape(self):
         """ See :meth:`pybamm.Symbol.evaluate_for_shape_using_domain()` """
         return np.nan * np.ones((self.size, 1))
@@ -197,6 +223,8 @@ class ExternalVariable(Variable):
                     )
                 )
             else:
+                if isinstance(out, np.ndarray) and out.ndim == 1:
+                    out = out[:, np.newaxis]
                 return out
         # raise more informative error if can't find name in dict
         except KeyError:

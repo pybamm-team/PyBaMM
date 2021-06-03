@@ -9,23 +9,26 @@ import unittest
 
 class TestFull(unittest.TestCase):
     def test_public_functions(self):
-        param = pybamm.standard_parameters_lead_acid
-        a = pybamm.Scalar(0)
+        param = pybamm.LeadAcidParameters()
+        a = pybamm.Scalar(1)
         variables = {
-            "Porosity": pybamm.Concatenation(
-                pybamm.FullBroadcast(a, "negative electrode", "current collector"),
-                pybamm.FullBroadcast(a, "separator", "current collector"),
-                pybamm.FullBroadcast(a, "positive electrode", "current collector"),
+            "Separator tortuosity": pybamm.FullBroadcast(
+                a, "separator", "current collector"
             ),
-            "Electrolyte tortuosity": pybamm.Concatenation(
-                pybamm.FullBroadcast(a, "negative electrode", "current collector"),
-                pybamm.FullBroadcast(a, "separator", "current collector"),
-                pybamm.FullBroadcast(a, "positive electrode", "current collector"),
+            "Positive electrode tortuosity": pybamm.FullBroadcast(
+                a, "positive electrode", "current collector"
             ),
-            "Porosity change": pybamm.Concatenation(
-                pybamm.FullBroadcast(a, "negative electrode", "current collector"),
-                pybamm.FullBroadcast(a, "separator", "current collector"),
-                pybamm.FullBroadcast(a, "positive electrode", "current collector"),
+            "Separator porosity": pybamm.FullBroadcast(
+                a, "separator", "current collector"
+            ),
+            "Positive electrode porosity": pybamm.FullBroadcast(
+                a, "positive electrode", "current collector"
+            ),
+            "Separator porosity change": pybamm.FullBroadcast(
+                a, "separator", "current collector"
+            ),
+            "Positive electrode porosity change": pybamm.FullBroadcast(
+                a, "positive electrode", "current collector"
             ),
             "Volume-averaged velocity": a,
             "Negative electrode interfacial current density": pybamm.FullBroadcast(
@@ -34,20 +37,12 @@ class TestFull(unittest.TestCase):
             "Positive electrode interfacial current density": pybamm.FullBroadcast(
                 a, "positive electrode", "current collector"
             ),
+            "Positive electrode oxygen interfacial current "
+            "density": pybamm.FullBroadcast(
+                a, "positive electrode", "current collector"
+            ),
         }
-        reactions = {
-            "main": {
-                "Negative": {
-                    "s_ox": param.s_ox_Ox,
-                    "aj": "Negative electrode interfacial current density",
-                },
-                "Positive": {
-                    "s_ox": param.s_ox_Ox,
-                    "aj": "Positive electrode interfacial current density",
-                },
-            }
-        }
-        submodel = pybamm.oxygen_diffusion.Full(param, reactions)
+        submodel = pybamm.oxygen_diffusion.Full(param)
         std_tests = tests.StandardSubModelTests(submodel, variables)
         std_tests.test_all()
 

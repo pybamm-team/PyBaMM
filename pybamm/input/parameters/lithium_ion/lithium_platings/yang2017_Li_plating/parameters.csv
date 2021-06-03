@@ -1,0 +1,7 @@
+Name [units],Value,Reference,Notes
+,,,
+,,,
+# Lithium plating parameters,,,
+Lithium metal partial molar volume [m3.mol-1],1.30E-05,Yang2017,6.94e-3/534
+Exchange-current density for plating [A.m-2],0.001,,
+Initial plated lithium concentration [mol.m-3],0.00E+00,,

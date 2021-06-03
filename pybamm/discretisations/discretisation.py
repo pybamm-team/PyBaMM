@@ -47,8 +47,18 @@ class Discretisation(object):
                 spatial_methods["positive electrode"] = method
 
             self._spatial_methods = spatial_methods
-            for method in self._spatial_methods.values():
+            for domain, method in self._spatial_methods.items():
                 method.build(mesh)
+                # Check zero-dimensional methods are only applied to zero-dimensional
+                # meshes
+                if isinstance(method, pybamm.ZeroDimensionalSpatialMethod):
+                    if not isinstance(mesh[domain], pybamm.SubMesh0D):
+                        raise pybamm.DiscretisationError(
+                            "Zero-dimensional spatial method for the "
+                            "{} domain requires a zero-dimensional submesh".format(
+                                domain
+                            )
+                        )
 
         self.bcs = {}
         self.y_slices = {}
@@ -117,6 +127,12 @@ class Discretisation(object):
             `model.variables = {}`)
 
         """
+        if model.is_discretised is True:
+            raise pybamm.ModelError(
+                "Cannot re-discretise a model. "
+                "Set 'inplace=False' when first discretising a model to then be able "
+                "to discretise it more times (e.g. for convergence studies)."
+            )
 
         pybamm.logger.info("Start discretising {}".format(model.name))
 
@@ -142,10 +158,8 @@ class Discretisation(object):
                     )
 
         # Set the y split for variables
-        pybamm.logger.info("Set variable slices for {}".format(model.name))
+        pybamm.logger.verbose("Set variable slices for {}".format(model.name))
         self.set_variable_slices(variables)
-        # Keep a record of y_slices in the model
-        model.y_slices = self.y_slices_explicit
 
         # now add extrapolated external variables to the boundary conditions
         # if required by the spatial method
@@ -153,9 +167,13 @@ class Discretisation(object):
         self.set_external_variables(model)
 
         # set boundary conditions (only need key ids for boundary_conditions)
-        pybamm.logger.info("Discretise boundary conditions for {}".format(model.name))
+        pybamm.logger.verbose(
+            "Discretise boundary conditions for {}".format(model.name)
+        )
         self.bcs = self.process_boundary_conditions(model)
-        pybamm.logger.info("Set internal boundary conditions for {}".format(model.name))
+        pybamm.logger.verbose(
+            "Set internal boundary conditions for {}".format(model.name)
+        )
         self.set_internal_boundary_conditions(model)
 
         # set up inplace vs not inplace
@@ -165,11 +183,16 @@ class Discretisation(object):
             model_disc = model
         else:
             # create an empty copy of the original model
-            model_disc = model.new_copy()
+            model_disc = model.new_empty_copy()
+
+        # Keep a record of y_slices in the model
+        model_disc.y_slices = self.y_slices_explicit
+        # Keep a record of the bounds in the model
+        model_disc.bounds = self.bounds
 
         model_disc.bcs = self.bcs
 
-        pybamm.logger.info("Discretise initial conditions for {}".format(model.name))
+        pybamm.logger.verbose("Discretise initial conditions for {}".format(model.name))
         ics, concat_ics = self.process_initial_conditions(model)
         model_disc.initial_conditions = ics
         model_disc.concatenated_initial_conditions = concat_ics
@@ -177,18 +200,18 @@ class Discretisation(object):
         # Discretise variables (applying boundary conditions)
         # Note that we **do not** discretise the keys of model.rhs,
         # model.initial_conditions and model.boundary_conditions
-        pybamm.logger.info("Discretise variables for {}".format(model.name))
+        pybamm.logger.verbose("Discretise variables for {}".format(model.name))
         model_disc.variables = self.process_dict(model.variables)
 
         # Process parabolic and elliptic equations
-        pybamm.logger.info("Discretise model equations for {}".format(model.name))
+        pybamm.logger.verbose("Discretise model equations for {}".format(model.name))
         rhs, concat_rhs, alg, concat_alg = self.process_rhs_and_algebraic(model)
         model_disc.rhs, model_disc.concatenated_rhs = rhs, concat_rhs
         model_disc.algebraic, model_disc.concatenated_algebraic = alg, concat_alg
 
         # Process events
         processed_events = []
-        pybamm.logger.info("Discretise events for {}".format(model.name))
+        pybamm.logger.verbose("Discretise events for {}".format(model.name))
         for event in model.events:
             pybamm.logger.debug("Discretise event '{}'".format(event.name))
             processed_event = pybamm.Event(
@@ -197,15 +220,20 @@ class Discretisation(object):
             processed_events.append(processed_event)
         model_disc.events = processed_events
 
+        # Set external variables
+        model_disc.external_variables = [
+            self.process_symbol(var) for var in model.external_variables
+        ]
+
         # Create mass matrix
-        pybamm.logger.info("Create mass matrix for {}".format(model.name))
+        pybamm.logger.verbose("Create mass matrix for {}".format(model.name))
         model_disc.mass_matrix, model_disc.mass_matrix_inv = self.create_mass_matrix(
             model_disc
         )
 
         # Check that resulting model makes sense
         if check_model:
-            pybamm.logger.info("Performing model checks for {}".format(model.name))
+            pybamm.logger.verbose("Performing model checks for {}".format(model.name))
             self.check_model(model_disc)
 
         pybamm.logger.info("Finish discretising {}".format(model.name))
@@ -224,54 +252,71 @@ class Discretisation(object):
         variables : iterable of :class:`pybamm.Variables`
             The variables for which to set slices
         """
-        # Set up y_slices
+        # Set up y_slices and bounds
         y_slices = defaultdict(list)
         y_slices_explicit = defaultdict(list)
         start = 0
         end = 0
+        lower_bounds = []
+        upper_bounds = []
         # Iterate through unpacked variables, adding appropriate slices to y_slices
         for variable in variables:
             # Add up the size of all the domains in variable.domain
-            if isinstance(variable, pybamm.Concatenation):
+            if isinstance(variable, pybamm.ConcatenationVariable):
+                start_ = start
+                spatial_method = self.spatial_methods[variable.domain[0]]
                 children = variable.children
                 meshes = OrderedDict()
                 for child in children:
-                    meshes[child] = [
-                        self.spatial_methods[dom].mesh[dom] for dom in child.domain
-                    ]
-                sec_points = len(list(meshes.values())[0][0])
+                    meshes[child] = [spatial_method.mesh[dom] for dom in child.domain]
+                sec_points = spatial_method._get_auxiliary_domain_repeats(
+                    variable.domains
+                )
                 for i in range(sec_points):
                     for child, mesh in meshes.items():
                         for domain_mesh in mesh:
-                            submesh = domain_mesh[i]
-                            end += submesh.npts_for_broadcast_to_nodes
-                        y_slices[child.id].append(slice(start, end))
-                        y_slices_explicit[child].append(slice(start, end))
-                        start = end
+                            end += domain_mesh.npts_for_broadcast_to_nodes
+                        # Add to slices
+                        y_slices[child.id].append(slice(start_, end))
+                        y_slices_explicit[child].append(slice(start_, end))
+                        # Increment start_
+                        start_ = end
             else:
                 end += self._get_variable_size(variable)
-                y_slices[variable.id].append(slice(start, end))
-                y_slices_explicit[variable].append(slice(start, end))
-                start = end
+
+            # Add to slices
+            y_slices[variable.id].append(slice(start, end))
+            y_slices_explicit[variable].append(slice(start, end))
+            # Add to bounds
+            lower_bounds.extend([variable.bounds[0]] * (end - start))
+            upper_bounds.extend([variable.bounds[1]] * (end - start))
+            # Increment start
+            start = end
 
         # Convert y_slices back to normal dictionary
         self.y_slices = dict(y_slices)
         # Also keep a record of what the y_slices are, to be stored in the model
         self.y_slices_explicit = dict(y_slices_explicit)
 
+        # Also keep a record of bounds
+        self.bounds = (np.array(lower_bounds), np.array(upper_bounds))
+
         # reset discretised_symbols
         self._discretised_symbols = {}
 
     def _get_variable_size(self, variable):
-        "Helper function to determine what size a variable should be"
+        """Helper function to determine what size a variable should be"""
         # If domain is empty then variable has size 1
         if variable.domain == []:
             return 1
         else:
             size = 0
+            spatial_method = self.spatial_methods[variable.domain[0]]
+            repeats = spatial_method._get_auxiliary_domain_repeats(
+                variable.auxiliary_domains
+            )
             for dom in variable.domain:
-                for submesh in self.spatial_methods[dom].mesh[dom]:
-                    size += submesh.npts_for_broadcast_to_nodes
+                size += spatial_method.mesh[dom].npts_for_broadcast_to_nodes * repeats
             return size
 
     def _preprocess_external_variables(self, model):
@@ -319,12 +364,17 @@ class Discretisation(object):
             if isinstance(var, pybamm.Variable):
                 # No need to keep track of the parent
                 self.external_variables[(name, None)] = var
-            elif isinstance(var, pybamm.Concatenation):
+            elif isinstance(var, pybamm.ConcatenationVariable):
                 start = 0
                 end = 0
                 for child in var.children:
                     dom = child.domain[0]
-                    if len(self.spatial_methods[dom].mesh[dom]) > 1:
+                    if (
+                        self.spatial_methods[dom]._get_auxiliary_domain_repeats(
+                            child.domains
+                        )
+                        > 1
+                    ):
                         raise NotImplementedError(
                             "Cannot create 2D external variable with concatenations"
                         )
@@ -366,27 +416,20 @@ class Discretisation(object):
         internal_bcs = {}
         for var in model.boundary_conditions.keys():
             if isinstance(var, pybamm.Concatenation):
-                children = var.children
+                children = var.orphans
 
                 first_child = children[0]
-                first_orphan = first_child.new_copy()
                 next_child = children[1]
-                next_orphan = next_child.new_copy()
 
                 lbc = self.bcs[var.id]["left"]
-                rbc = (boundary_gradient(first_orphan, next_orphan), "Neumann")
+                rbc = (boundary_gradient(first_child, next_child), "Neumann")
 
                 if first_child.id not in bc_key_ids:
                     internal_bcs.update({first_child.id: {"left": lbc, "right": rbc}})
 
-                for i, _ in enumerate(children[1:-1]):
-                    current_child = next_child
-                    current_orphan = next_orphan
-                    next_child = children[i + 2]
-                    next_orphan = next_child.new_copy()
-
+                for current_child, next_child in zip(children[1:-1], children[2:]):
                     lbc = rbc
-                    rbc = (boundary_gradient(current_orphan, next_orphan), "Neumann")
+                    rbc = (boundary_gradient(current_child, next_child), "Neumann")
                     if current_child.id not in bc_key_ids:
                         internal_bcs.update(
                             {current_child.id: {"left": lbc, "right": rbc}}
@@ -450,6 +493,19 @@ class Discretisation(object):
         for key, bcs in model.boundary_conditions.items():
             processed_bcs[key.id] = {}
 
+            # check if the boundary condition at the origin for sphere domains is other
+            # than no flux
+            if key not in model.external_variables:
+                for subdomain in key.domain:
+                    if self.mesh[subdomain].coord_sys == "spherical polar":
+                        if bcs["left"][0].value != 0 or bcs["left"][1] != "Neumann":
+                            raise pybamm.ModelError(
+                                "Boundary condition at r = 0 must be a homogeneous "
+                                "Neumann condition for {} coordinates".format(
+                                    self.mesh[subdomain].coord_sys
+                                )
+                            )
+
             # Handle any boundary conditions applied on the tabs
             if any("tab" in side for side in list(bcs.keys())):
                 bcs = self.check_tab_conditions(key, bcs)
@@ -488,7 +544,7 @@ class Discretisation(object):
         """
         # Check symbol domain
         domain = symbol.domain[0]
-        mesh = self.mesh[domain][0]
+        mesh = self.mesh[domain]
 
         if domain != "current collector":
             raise pybamm.ModelError(
@@ -592,15 +648,7 @@ class Discretisation(object):
         model_variables = model.rhs.keys()
         model_slices = []
         for v in model_variables:
-            if isinstance(v, pybamm.Concatenation):
-                model_slices.append(
-                    slice(
-                        self.y_slices[v.children[0].id][0].start,
-                        self.y_slices[v.children[-1].id][0].stop,
-                    )
-                )
-            else:
-                model_slices.append(self.y_slices[v.id][0])
+            model_slices.append(self.y_slices[v.id][0])
         sorted_model_variables = [
             v for _, v in sorted(zip(model_slices, model_variables))
         ]
@@ -727,8 +775,8 @@ class Discretisation(object):
         """
         new_var_eqn_dict = {}
         for eqn_key, eqn in var_eqn_dict.items():
-            # Broadcast if the equation evaluates to a number(e.g. Scalar)
-            if eqn.evaluates_to_number() and not isinstance(eqn_key, str):
+            # Broadcast if the equation evaluates to a number (e.g. Scalar)
+            if np.prod(eqn.shape_for_testing) == 1 and not isinstance(eqn_key, str):
                 eqn = pybamm.FullBroadcast(
                     eqn, eqn_key.domain, eqn_key.auxiliary_domains
                 )
@@ -764,6 +812,7 @@ class Discretisation(object):
             discretised_symbol = self._process_symbol(symbol)
             self._discretised_symbols[symbol.id] = discretised_symbol
             discretised_symbol.test_shape()
+
             # Assign mesh as an attribute to the processed variable
             if symbol.domain != []:
                 discretised_symbol.mesh = self.mesh.combine_submeshes(*symbol.domain)
@@ -797,12 +846,13 @@ class Discretisation(object):
             disc_left = self.process_symbol(left)
             disc_right = self.process_symbol(right)
             if symbol.domain == []:
-                return symbol._binary_new_copy(disc_left, disc_right)
+                return pybamm.simplify_if_constant(
+                    symbol._binary_new_copy(disc_left, disc_right)
+                )
             else:
                 return spatial_method.process_binary_operators(
                     symbol, left, right, disc_left, disc_right
                 )
-
         elif isinstance(symbol, pybamm.UnaryOperator):
             child = symbol.child
             disc_child = self.process_symbol(child)
@@ -818,7 +868,7 @@ class Discretisation(object):
             elif isinstance(symbol, pybamm.Laplacian):
                 return child_spatial_method.laplacian(child, disc_child, self.bcs)
 
-            elif isinstance(symbol, pybamm.Gradient_Squared):
+            elif isinstance(symbol, pybamm.GradientSquared):
                 return child_spatial_method.gradient_squared(
                     child, disc_child, self.bcs
                 )
@@ -830,16 +880,27 @@ class Discretisation(object):
                 return child_spatial_method.boundary_mass_matrix(child, self.bcs)
 
             elif isinstance(symbol, pybamm.IndefiniteIntegral):
-                return child_spatial_method.indefinite_integral(child, disc_child)
+                return child_spatial_method.indefinite_integral(
+                    child, disc_child, "forward"
+                )
+            elif isinstance(symbol, pybamm.BackwardIndefiniteIntegral):
+                return child_spatial_method.indefinite_integral(
+                    child, disc_child, "backward"
+                )
 
             elif isinstance(symbol, pybamm.Integral):
-                out = child_spatial_method.integral(child, disc_child)
+                integral_spatial_method = self.spatial_methods[
+                    symbol.integration_variable[0].domain[0]
+                ]
+                out = integral_spatial_method.integral(
+                    child, disc_child, symbol._integration_dimension
+                )
                 out.copy_domains(symbol)
                 return out
 
             elif isinstance(symbol, pybamm.DefiniteIntegralVector):
                 return child_spatial_method.definite_integral_matrix(
-                    child.domain, vector_type=symbol.vector_type
+                    child, vector_type=symbol.vector_type
                 )
 
             elif isinstance(symbol, pybamm.BoundaryIntegral):
@@ -851,15 +912,15 @@ class Discretisation(object):
                 # Broadcast new_child to the domain specified by symbol.domain
                 # Different discretisations may broadcast differently
                 if symbol.domain == []:
-                    symbol = disc_child * pybamm.Vector(np.array([1]))
+                    out = disc_child * pybamm.Vector([1])
                 else:
-                    symbol = spatial_method.broadcast(
+                    out = spatial_method.broadcast(
                         disc_child,
                         symbol.domain,
                         symbol.auxiliary_domains,
                         symbol.broadcast_type,
                     )
-                return symbol
+                return out
 
             elif isinstance(symbol, pybamm.DeltaFunction):
                 return spatial_method.delta_function(symbol, disc_child)
@@ -869,13 +930,20 @@ class Discretisation(object):
                 # "positive tab" *and* the mesh is 1D then change side to
                 # "left" or "right" as appropriate
                 if symbol.side in ["negative tab", "positive tab"]:
-                    mesh = self.mesh[symbol.children[0].domain[0]][0]
+                    mesh = self.mesh[symbol.children[0].domain[0]]
                     if isinstance(mesh, pybamm.SubMesh1D):
                         symbol.side = mesh.tabs[symbol.side]
                 return child_spatial_method.boundary_value_or_flux(
                     symbol, disc_child, self.bcs
                 )
-
+            elif isinstance(symbol, pybamm.UpwindDownwind):
+                direction = symbol.name  # upwind or downwind
+                return spatial_method.upwind_or_downwind(
+                    child, disc_child, self.bcs, direction
+                )
+            elif isinstance(symbol, pybamm.NotConstant):
+                # After discretisation, we can make the symbol constant
+                return disc_child
             else:
                 return symbol._unary_new_copy(disc_child)
 
@@ -887,7 +955,7 @@ class Discretisation(object):
             return pybamm.StateVectorDot(
                 *self.y_slices[symbol.get_variable().id],
                 domain=symbol.domain,
-                auxiliary_domains=symbol.auxiliary_domains
+                auxiliary_domains=symbol.auxiliary_domains,
             )
 
         elif isinstance(symbol, pybamm.Variable):
@@ -915,7 +983,7 @@ class Discretisation(object):
                         domain=parent.domain,
                         auxiliary_domains=parent.auxiliary_domains,
                     )
-                    out = ext[slice(start, end)]
+                    out = pybamm.Index(ext, slice(start, end))
                     out.domain = symbol.domain
                     return out
 
@@ -938,7 +1006,7 @@ class Discretisation(object):
                 return pybamm.StateVector(
                     *y_slices,
                     domain=symbol.domain,
-                    auxiliary_domains=symbol.auxiliary_domains
+                    auxiliary_domains=symbol.auxiliary_domains,
                 )
 
         elif isinstance(symbol, pybamm.SpatialVariable):
@@ -947,7 +1015,6 @@ class Discretisation(object):
         elif isinstance(symbol, pybamm.Concatenation):
             new_children = [self.process_symbol(child) for child in symbol.children]
             new_symbol = spatial_method.concatenation(new_children)
-
             return new_symbol
 
         elif isinstance(symbol, pybamm.InputParameter):
@@ -971,7 +1038,7 @@ class Discretisation(object):
         if sparse:
             return pybamm.SparseStack(*symbols)
         else:
-            return pybamm.NumpyConcatenation(*symbols)
+            return pybamm.numpy_concatenation(*symbols)
 
     def _concatenate_in_order(self, var_eqn_dict, check_complete=False, sparse=False):
         """
@@ -1004,19 +1071,11 @@ class Discretisation(object):
         unpacked_variables = []
         slices = []
         for symbol in var_eqn_dict.keys():
-            if isinstance(symbol, pybamm.Concatenation):
-                unpacked_variables.extend([var for var in symbol.children])
-                # must append the slice for the whole concatenation, so that equations
-                # get sorted correctly
-                slices.append(
-                    slice(
-                        self.y_slices[symbol.children[0].id][0].start,
-                        self.y_slices[symbol.children[-1].id][0].stop,
-                    )
-                )
+            if isinstance(symbol, pybamm.ConcatenationVariable):
+                unpacked_variables.extend([symbol] + [var for var in symbol.children])
             else:
                 unpacked_variables.append(symbol)
-                slices.append(self.y_slices[symbol.id][0])
+            slices.append(self.y_slices[symbol.id][0])
 
         if check_complete:
             # Check keys from the given var_eqn_dict against self.y_slices
@@ -1045,68 +1104,53 @@ class Discretisation(object):
     def check_model(self, model):
         """ Perform some basic checks to make sure the discretised model makes sense."""
         self.check_initial_conditions(model)
-        self.check_initial_conditions_rhs(model)
         self.check_variables(model)
 
     def check_initial_conditions(self, model):
-        """Check initial conditions are a numpy array"""
+
+        # Check initial conditions are a numpy array
         # Individual
         for var, eqn in model.initial_conditions.items():
-            assert isinstance(
-                eqn.evaluate(t=0, inputs="shape test"), np.ndarray
-            ), pybamm.ModelError(
-                """
-                initial_conditions must be numpy array after discretisation but they are
-                {} for variable '{}'.
-                """.format(
-                    type(eqn.evaluate(t=0, inputs="shape test")), var
+            ic_eval = eqn.evaluate(t=0, inputs="shape test")
+            if not isinstance(ic_eval, np.ndarray):
+                raise pybamm.ModelError(
+                    "initial conditions must be numpy array after discretisation but "
+                    "they are {} for variable '{}'.".format(type(ic_eval), var)
                 )
-            )
-        # Concatenated
-        assert (
-            type(
-                model.concatenated_initial_conditions.evaluate(t=0, inputs="shape test")
-            )
-            is np.ndarray
-        ), pybamm.ModelError(
-            """
-            Concatenated initial_conditions must be numpy array after discretisation but
-            they are {}.
-            """.format(
-                type(model.concatenated_initial_conditions)
-            )
-        )
 
-    def check_initial_conditions_rhs(self, model):
-        """Check initial conditions and rhs have the same shape"""
-        y0 = model.concatenated_initial_conditions
+            # Check that the initial condition is within the bounds
+            # Skip this check if there are input parameters in the initial conditions
+            bounds = var.bounds
+            if not eqn.has_symbol_of_classes(pybamm.InputParameter) and not (
+                all(bounds[0] <= ic_eval) and all(ic_eval <= bounds[1])
+            ):
+                raise pybamm.ModelError(
+                    "initial condition is outside of variable bounds "
+                    "{} for variable '{}'.".format(bounds, var)
+                )
+
+        # Check initial conditions and model equations have the same shape
         # Individual
         for var in model.rhs.keys():
-            assert (
-                model.rhs[var].shape == model.initial_conditions[var].shape
-            ), pybamm.ModelError(
-                """
-                rhs and initial_conditions must have the same shape after discretisation
-                but rhs.shape = {} and initial_conditions.shape = {} for variable '{}'.
-                """.format(
-                    model.rhs[var].shape, model.initial_conditions[var].shape, var
+            if model.rhs[var].shape != model.initial_conditions[var].shape:
+                raise pybamm.ModelError(
+                    "rhs and initial conditions must have the same shape after "
+                    "discretisation but rhs.shape = "
+                    "{} and initial_conditions.shape = {} for variable '{}'.".format(
+                        model.rhs[var].shape, model.initial_conditions[var].shape, var
+                    )
                 )
-            )
-        # Concatenated
-        assert (
-            model.concatenated_rhs.shape[0] + model.concatenated_algebraic.shape[0]
-            == y0.shape[0]
-        ), pybamm.ModelError(
-            """
-            Concatenation of (rhs, algebraic) and initial_conditions must have the
-            same shape after discretisation but rhs.shape = {}, algebraic.shape = {},
-            and initial_conditions.shape = {}.
-            """.format(
-                model.concatenated_rhs.shape,
-                model.concatenated_algebraic.shape,
-                y0.shape,
-            )
-        )
+        for var in model.algebraic.keys():
+            if model.algebraic[var].shape != model.initial_conditions[var].shape:
+                raise pybamm.ModelError(
+                    "algebraic and initial conditions must have the same shape after "
+                    "discretisation but algebraic.shape = "
+                    "{} and initial_conditions.shape = {} for variable '{}'.".format(
+                        model.algebraic[var].shape,
+                        model.initial_conditions[var].shape,
+                        var,
+                    )
+                )
 
     def check_variables(self, model):
         """
@@ -1126,17 +1170,20 @@ class Discretisation(object):
                 not_concatenation = not isinstance(var, pybamm.Concatenation)
 
                 not_mult_by_one_vec = not (
-                    isinstance(var, pybamm.Multiplication)
-                    and isinstance(var.right, pybamm.Vector)
-                    and np.all(var.right.entries == 1)
+                    isinstance(
+                        var, (pybamm.Multiplication, pybamm.MatrixMultiplication)
+                    )
+                    and (
+                        pybamm.is_matrix_one(var.left)
+                        or pybamm.is_matrix_one(var.right)
+                    )
                 )
 
                 if different_shapes and not_concatenation and not_mult_by_one_vec:
                     raise pybamm.ModelError(
-                        """
-                    variable and its eqn must have the same shape after discretisation
-                    but variable.shape = {} and rhs.shape = {} for variable '{}'.
-                    """.format(
+                        "variable and its eqn must have the same shape after "
+                        "discretisation but variable.shape = "
+                        "{} and rhs.shape = {} for variable '{}'. ".format(
                             var.shape, model.rhs[rhs_var].shape, var
                         )
                     )

@@ -72,7 +72,7 @@ class StandardModelTest(object):
 
         Crate = abs(
             self.parameter_values["Current function [A]"]
-            * self.parameter_values["Cell capacity [A.h]"]
+            / self.parameter_values["Nominal cell capacity [A.h]"]
         )
         # don't allow zero C-rate
         if Crate == 0:
@@ -128,17 +128,18 @@ class OptimisationsTest(object):
 
         self.model = model
 
-    def evaluate_model(self, simplify=False, use_known_evals=False, to_python=False):
+    def evaluate_model(self, use_known_evals=False, to_python=False, to_jax=False):
         result = np.empty((0, 1))
         for eqn in [self.model.concatenated_rhs, self.model.concatenated_algebraic]:
-            if simplify:
-                eqn = eqn.simplify()
 
             y = self.model.concatenated_initial_conditions.evaluate(t=0)
             if use_known_evals:
                 eqn_eval, known_evals = eqn.evaluate(0, y, known_evals={})
             elif to_python:
                 evaluator = pybamm.EvaluatorPython(eqn)
+                eqn_eval = evaluator.evaluate(0, y)
+            elif to_jax:
+                evaluator = pybamm.EvaluatorJax(eqn)
                 eqn_eval = evaluator.evaluate(0, y)
             else:
                 eqn_eval = eqn.evaluate(0, y)
@@ -150,8 +151,7 @@ class OptimisationsTest(object):
 
         return result
 
-    def set_up_model(self, simplify=False, to_python=False):
-        self.model.use_simplify = simplify
+    def set_up_model(self, to_python=False):
         if to_python is True:
             self.model.convert_to_format = "python"
         self.model.default_solver.set_up(self.model)

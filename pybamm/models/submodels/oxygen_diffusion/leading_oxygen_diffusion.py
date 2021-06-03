@@ -20,21 +20,18 @@ class LeadingOrder(BaseModel):
     **Extends:** :class:`pybamm.oxgen_diffusion.BaseModel`
     """
 
-    def __init__(self, param, reactions):
-        super().__init__(param, reactions)
+    def __init__(self, param):
+        super().__init__(param)
 
     def get_fundamental_variables(self):
-        c_ox_av = pybamm.Variable("X-averaged oxygen concentration")
-        c_ox_n = pybamm.FullBroadcast(
-            c_ox_av, ["negative electrode"], "current collector"
+        c_ox_av = pybamm.Variable(
+            "X-averaged oxygen concentration", domain="current collector"
         )
-        c_ox_s = pybamm.FullBroadcast(c_ox_av, ["separator"], "current collector")
-        c_ox_p = pybamm.FullBroadcast(
-            c_ox_av, ["positive electrode"], "current collector"
-        )
-        c_ox = pybamm.Concatenation(c_ox_n, c_ox_s, c_ox_p)
+        c_ox_n = pybamm.PrimaryBroadcast(c_ox_av, "negative electrode")
+        c_ox_s = pybamm.PrimaryBroadcast(c_ox_av, "separator")
+        c_ox_p = pybamm.PrimaryBroadcast(c_ox_av, "positive electrode")
 
-        return self._get_standard_concentration_variables(c_ox)
+        return self._get_standard_concentration_variables(c_ox_n, c_ox_s, c_ox_p)
 
     def get_coupled_variables(self, variables):
 
@@ -61,14 +58,16 @@ class LeadingOrder(BaseModel):
         deps_n_dt_av = variables["X-averaged negative electrode porosity change"]
         deps_p_dt_av = variables["X-averaged positive electrode porosity change"]
 
-        source_terms = sum(
-            param.l_n
-            * rxn["Negative"]["s_ox"]
-            * variables["X-averaged " + rxn["Negative"]["aj"].lower()]
-            + param.l_p
-            * rxn["Positive"]["s_ox"]
-            * variables["X-averaged " + rxn["Positive"]["aj"].lower()]
-            for rxn in self.reactions.values()
+        j_ox_n_av = variables[
+            "X-averaged negative electrode oxygen interfacial current density"
+        ]
+        j_ox_p_av = variables[
+            "X-averaged positive electrode oxygen interfacial current density"
+        ]
+
+        source_terms = (
+            param.l_n * param.s_ox_Ox * j_ox_n_av
+            + param.l_p * param.s_ox_Ox * j_ox_p_av
         )
 
         self.rhs = {

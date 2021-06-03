@@ -19,10 +19,8 @@ class TestLeadAcidLOQS(unittest.TestCase):
     def test_default_geometry(self):
         options = {"thermal": "isothermal"}
         model = pybamm.lead_acid.LOQS(options)
-        self.assertIsInstance(model.default_geometry, pybamm.Geometry)
         self.assertNotIn("negative particle", model.default_geometry)
         self.assertIsInstance(model.default_spatial_methods, dict)
-        self.assertNotIn("negative particle", model.default_geometry)
         self.assertTrue(
             isinstance(
                 model.default_spatial_methods["current collector"],

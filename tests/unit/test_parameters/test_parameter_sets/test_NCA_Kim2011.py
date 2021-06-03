@@ -7,30 +7,32 @@ import unittest
 
 class TestKim(unittest.TestCase):
     def test_load_params(self):
-        anode = pybamm.ParameterValues({}).read_parameters_csv(
+        negative_electrode = pybamm.ParameterValues({}).read_parameters_csv(
             pybamm.get_parameters_filepath(
-                "input/parameters/lithium-ion/anodes/graphite_Kim2011/parameters.csv"
+                "input/parameters/lithium_ion/negative_electrodes/graphite_Kim2011/"
+                "parameters.csv"
             )
         )
-        self.assertEqual(anode["Negative electrode porosity"], "0.4")
+        self.assertEqual(negative_electrode["Negative electrode porosity"], "0.4")
 
-        cathode = pybamm.ParameterValues({}).read_parameters_csv(
+        positive_electrode = pybamm.ParameterValues({}).read_parameters_csv(
             pybamm.get_parameters_filepath(
-                "input/parameters/lithium-ion/cathodes/nca_Kim2011/parameters.csv"
+                "input/parameters/lithium_ion/positive_electrodes/nca_Kim2011/"
+                "parameters.csv"
             )
         )
-        self.assertEqual(cathode["Positive electrode porosity"], "0.4")
+        self.assertEqual(positive_electrode["Positive electrode porosity"], "0.4")
 
         electrolyte = pybamm.ParameterValues({}).read_parameters_csv(
             pybamm.get_parameters_filepath(
-                "input/parameters/lithium-ion/electrolytes/lipf6_Kim2011/parameters.csv"
+                "input/parameters/lithium_ion/electrolytes/lipf6_Kim2011/parameters.csv"
             )
         )
         self.assertEqual(electrolyte["Cation transference number"], "0.4")
 
         cell = pybamm.ParameterValues({}).read_parameters_csv(
             pybamm.get_parameters_filepath(
-                "input/parameters/lithium-ion/cells/Kim2011/parameters.csv"
+                "input/parameters/lithium_ion/cells/Kim2011/parameters.csv"
             )
         )
         self.assertAlmostEqual(

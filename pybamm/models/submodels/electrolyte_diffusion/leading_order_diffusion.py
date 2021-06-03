@@ -21,8 +21,8 @@ class LeadingOrder(BaseElectrolyteDiffusion):
     **Extends:** :class:`pybamm.electrolyte_diffusion.BaseElectrolyteDiffusion`
     """
 
-    def __init__(self, param, reactions):
-        super().__init__(param, reactions)
+    def __init__(self, param):
+        super().__init__(param)
 
     def get_fundamental_variables(self):
         c_e_av = pybamm.standard_variables.c_e_av
@@ -42,6 +42,16 @@ class LeadingOrder(BaseElectrolyteDiffusion):
 
         variables.update(self._get_standard_flux_variables(N_e))
 
+        c_e_av = pybamm.standard_variables.c_e_av
+        c_e = pybamm.concatenation(
+            pybamm.PrimaryBroadcast(c_e_av, ["negative electrode"]),
+            pybamm.PrimaryBroadcast(c_e_av, ["separator"]),
+            pybamm.PrimaryBroadcast(c_e_av, ["positive electrode"]),
+        )
+        eps = variables["Porosity"]
+
+        variables.update(self._get_total_concentration_electrolyte(c_e, eps))
+
         return variables
 
     def set_rhs(self, variables):
@@ -49,6 +59,8 @@ class LeadingOrder(BaseElectrolyteDiffusion):
         param = self.param
 
         c_e_av = variables["X-averaged electrolyte concentration"]
+
+        T_av = variables["X-averaged cell temperature"]
 
         eps_n_av = variables["X-averaged negative electrode porosity"]
         eps_s_av = variables["X-averaged separator porosity"]
@@ -61,15 +73,22 @@ class LeadingOrder(BaseElectrolyteDiffusion):
             "X-averaged separator transverse volume-averaged acceleration"
         ]
 
-        source_terms = sum(
-            param.l_n
-            * (rxn["Negative"]["s"] - param.t_plus(c_e_av))
-            * variables["X-averaged " + rxn["Negative"]["aj"].lower()]
-            + param.l_p
-            * (rxn["Positive"]["s"] - param.t_plus(c_e_av))
-            * variables["X-averaged " + rxn["Positive"]["aj"].lower()]
-            for rxn in self.reactions.values()
-        )
+        sum_j_n_0 = variables[
+            "Sum of x-averaged negative electrode interfacial current densities"
+        ]
+        sum_j_p_0 = variables[
+            "Sum of x-averaged positive electrode interfacial current densities"
+        ]
+        sum_s_j_n_0 = variables[
+            "Sum of x-averaged negative electrode electrolyte reaction source terms"
+        ]
+        sum_s_j_p_0 = variables[
+            "Sum of x-averaged positive electrode electrolyte reaction source terms"
+        ]
+        source_terms = (
+            param.l_n * (sum_s_j_n_0 - param.t_plus(c_e_av, T_av) * sum_j_n_0)
+            + param.l_p * (sum_s_j_p_0 - param.t_plus(c_e_av, T_av) * sum_j_p_0)
+        ) / param.gamma_e
 
         self.rhs = {
             c_e_av: 1

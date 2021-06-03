@@ -38,3 +38,39 @@ class ConstantConcentration(BaseElectrolyteDiffusion):
 
         return variables
 
+    def get_coupled_variables(self, variables):
+        eps_n = variables["Negative electrode porosity"]
+        eps_s = variables["Separator porosity"]
+        eps_p = variables["Positive electrode porosity"]
+        c_e_n = variables["Negative electrolyte concentration"]
+        c_e_s = variables["Separator electrolyte concentration"]
+        c_e_p = variables["Positive electrolyte concentration"]
+
+        variables.update(
+            self._get_standard_porosity_times_concentration_variables(
+                eps_n * c_e_n, eps_s * c_e_s, eps_p * c_e_p
+            )
+        )
+
+        c_e = variables["Electrolyte concentration"]
+        eps = variables["Porosity"]
+
+        variables.update(self._get_total_concentration_electrolyte(c_e, eps))
+
+        return variables
+
+    def set_boundary_conditions(self, variables):
+        """
+        We provide boundary conditions even though the concentration is constant
+        so that the gradient of the concentration has the correct shape after
+        discretisation.
+        """
+
+        c_e = variables["Electrolyte concentration"]
+
+        self.boundary_conditions = {
+            c_e: {
+                "left": (pybamm.Scalar(0), "Neumann"),
+                "right": (pybamm.Scalar(0), "Neumann"),
+            }
+        }

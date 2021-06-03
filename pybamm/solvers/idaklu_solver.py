@@ -8,10 +8,13 @@ import scipy.sparse as sparse
 
 import importlib
 
-idaklu_spec = importlib.util.find_spec("idaklu")
+idaklu_spec = importlib.util.find_spec("pybamm.solvers.idaklu")
 if idaklu_spec is not None:
-    idaklu = importlib.util.module_from_spec(idaklu_spec)
-    idaklu_spec.loader.exec_module(idaklu)
+    try:
+        idaklu = importlib.util.module_from_spec(idaklu_spec)
+        idaklu_spec.loader.exec_module(idaklu)
+    except ImportError:  # pragma: no cover
+        idaklu_spec = None
 
 
 def have_idaklu():
@@ -27,27 +30,39 @@ class IDAKLUSolver(pybamm.BaseSolver):
         The relative tolerance for the solver (default is 1e-6).
     atol : float, optional
         The absolute tolerance for the solver (default is 1e-6).
-    root_method : str, optional
-        The method to use to find initial conditions (default is "lm")
+    root_method : str or pybamm algebraic solver class, optional
+        The method to use to find initial conditions (for DAE solvers).
+        If a solver class, must be an algebraic solver class.
+        If "casadi",
+        the solver uses casadi's Newton rootfinding algorithm to find initial
+        conditions. Otherwise, the solver uses 'scipy.optimize.root' with method
+        specified by 'root_method' (e.g. "lm", "hybr", ...)
     root_tol : float, optional
-        The tolerance for the initial-condition solver (default is 1e-8).
-    max_steps: int, optional
-        The maximum number of steps the solver will take before terminating
-        (default is 1000).
+        The tolerance for the initial-condition solver (default is 1e-6).
+    extrap_tol : float, optional
+        The tolerance to assert whether extrapolation occurs or not (default is 0).
     """
 
     def __init__(
-        self, rtol=1e-6, atol=1e-6, root_method="casadi", root_tol=1e-6, max_steps=1000
+        self,
+        rtol=1e-6,
+        atol=1e-6,
+        root_method="casadi",
+        root_tol=1e-6,
+        extrap_tol=0,
+        max_steps="deprecated",
     ):
 
         if idaklu_spec is None:
             raise ImportError("KLU is not installed")
 
-        super().__init__("ida", rtol, atol, root_method, root_tol, max_steps)
+        super().__init__(
+            "ida", rtol, atol, root_method, root_tol, extrap_tol, max_steps
+        )
         self.name = "IDA KLU solver"
 
-        pybamm.citations.register("hindmarsh2000pvode")
-        pybamm.citations.register("hindmarsh2005sundials")
+        pybamm.citations.register("Hindmarsh2000")
+        pybamm.citations.register("Hindmarsh2005")
 
     def set_atol_by_variable(self, variables_with_tols, model):
         """
@@ -70,20 +85,8 @@ class IDAKLUSolver(pybamm.BaseSolver):
             variable = model.variables[var]
             if isinstance(variable, pybamm.StateVector):
                 atol = self.set_state_vec_tol(atol, variable, tol)
-            elif isinstance(variable, pybamm.Concatenation):
-                for child in variable.children:
-                    if isinstance(child, pybamm.StateVector):
-                        atol = self.set_state_vec_tol(atol, child, tol)
-                    else:
-                        raise pybamm.SolverError(
-                            """Can only set tolerances for state variables
-                            or concatenations of state variables"""
-                        )
             else:
-                raise pybamm.SolverError(
-                    """Can only set tolerances for state variables or
-                    concatenations of state variables"""
-                )
+                raise pybamm.SolverError("Can only set tolerances for state variables")
 
         model.atol = atol
 
@@ -136,7 +139,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
 
         return atol
 
-    def _integrate(self, model, t_eval, inputs=None):
+    def _integrate(self, model, t_eval, inputs_dict=None):
         """
         Solve a DAE model defined by residuals with initial conditions y0.
 
@@ -146,9 +149,21 @@ class IDAKLUSolver(pybamm.BaseSolver):
             The model whose solution to calculate.
         t_eval : numeric type
             The times at which to compute the solution
+        inputs_dict : dict, optional
+            Any external variables or input parameters to pass to the model when solving
         """
         if model.rhs_eval.form == "casadi":
-            inputs = casadi.vertcat(*[x for x in inputs.values()])
+            # stack inputs
+            inputs = casadi.vertcat(*[x for x in inputs_dict.values()])
+            # raise warning about casadi format being slow
+            pybamm.logger.warning(
+                "Using casadi form for the IDA KLU solver is slow. "
+                "Set `model.convert_to_format='python'` for better performance. "
+                "For DAE models, this may also require changing the root method to "
+                "'lm'."
+            )
+        else:
+            inputs = inputs_dict
 
         if model.jacobian_eval is None:
             raise pybamm.SolverError("KLU requires the Jacobian to be provided")
@@ -158,9 +173,13 @@ class IDAKLUSolver(pybamm.BaseSolver):
         except AttributeError:
             atol = self._atol
 
-        rtol = self._rtol
-        atol = self._check_atol_type(atol, model.y0.size)
         y0 = model.y0
+        if isinstance(y0, casadi.DM):
+            y0 = y0.full().flatten()
+
+        rtol = self._rtol
+        atol = self._check_atol_type(atol, y0.size)
+
         mass_matrix = model.mass_matrix.entries
 
         if model.jacobian_eval:
@@ -222,6 +241,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
         ids = np.concatenate((rhs_ids, alg_ids))
 
         # solve
+        timer = pybamm.Timer()
         sol = idaklu.solve(
             t_eval,
             y0,
@@ -239,10 +259,11 @@ class IDAKLUSolver(pybamm.BaseSolver):
             atol,
             rtol,
         )
+        integration_time = timer.time()
 
         t = sol.t
         number_of_timesteps = t.size
-        number_of_states = model.y0.size
+        number_of_states = y0.size
         y_out = sol.y.reshape((number_of_timesteps, number_of_states))
 
         # return solution, we need to tranpose y to match scipy's interface
@@ -254,12 +275,16 @@ class IDAKLUSolver(pybamm.BaseSolver):
             elif sol.flag == 2:
                 termination = "event"
 
-            return pybamm.Solution(
+            sol = pybamm.Solution(
                 sol.t,
                 np.transpose(y_out),
+                model,
+                inputs_dict,
                 t[-1],
                 np.transpose(y_out[-1])[:, np.newaxis],
                 termination,
             )
+            sol.integration_time = integration_time
+            return sol
         else:
             raise pybamm.SolverError(sol.message)

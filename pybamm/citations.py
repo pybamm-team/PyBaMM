@@ -5,6 +5,7 @@
 #
 import pybamm
 import os
+import pybtex
 
 
 class Citations:
@@ -17,7 +18,7 @@ class Citations:
     Examples
     --------
     >>> import pybamm
-    >>> pybamm.citations.register("sulzer2020python")
+    >>> pybamm.citations.register("Sulzer2020")
     >>> pybamm.print_citations("citations.txt")
     """
 
@@ -26,14 +27,15 @@ class Citations:
         self._reset()
 
     def _reset(self):
-        "Reset citations to default only (only for testing purposes)"
+        """Reset citations to default only (only for testing purposes)"""
         # Initialize empty papers to cite
         self._papers_to_cite = set()
-        # Register the PyBaMM paper
-        self.register("sulzer2020python")
+        # Register the PyBaMM paper and the numpy paper
+        self.register("Sulzer2020")
+        self.register("Harris2020")
 
     def read_citations(self):
-        "Read the citations text file"
+        """Read the citations text file"""
         self._all_citations = {}
 
         citations_file = os.path.join(pybamm.root_dir(), "pybamm", "CITATIONS.txt")
@@ -73,7 +75,7 @@ class Citations:
             raise KeyError("'{}' is not a known citation".format(key))
         self._papers_to_cite.add(key)
 
-    def print(self, filename=None):
+    def print(self, filename=None, output_format="text"):
         """Print all citations that were used for running simulations.
 
         Parameters
@@ -83,8 +85,23 @@ class Citations:
             terminal.
         """
         citations = ""
-        for key in self._papers_to_cite:
-            citations += self._all_citations[key] + "\n"
+        citations_file = os.path.join(pybamm.root_dir(), "pybamm", "CITATIONS.txt")
+        if output_format == "text":
+            citations = pybtex.format_from_file(
+                citations_file,
+                "plain",
+                citations=self._papers_to_cite,
+                output_backend="plaintext",
+            )
+        elif output_format == "bibtex":
+            for key in self._papers_to_cite:
+                citations += self._all_citations[key] + "\n"
+        else:
+            raise pybamm.OptionError(
+                "Output format {} not recognised."
+                "It should be 'text' or 'bibtex'.".format(output_format)
+            )
+
         if filename is None:
             print(citations)
         else:
@@ -92,9 +109,9 @@ class Citations:
                 f.write(citations)
 
 
-def print_citations(filename=None):
-    "See :meth:`Citations.print`"
-    pybamm.citations.print(filename)
+def print_citations(filename=None, output_format="text"):
+    """ See :meth:`Citations.print` """
+    pybamm.citations.print(filename, output_format)
 
 
 citations = Citations()

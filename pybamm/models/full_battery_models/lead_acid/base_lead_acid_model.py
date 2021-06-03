@@ -15,12 +15,25 @@ class BaseModel(pybamm.BaseBatteryModel):
 
     """
 
-    def __init__(self, options=None, name="Unnamed lead-acid model"):
+    def __init__(self, options=None, name="Unnamed lead-acid model", build=False):
+        options = options or {}
+        # Specify that there are no particles in lead-acid
+        options["particle shape"] = "no particles"
         super().__init__(options, name)
-        self.param = pybamm.standard_parameters_lead_acid
+        self.param = pybamm.LeadAcidParameters()
 
         # Default timescale is discharge timescale
         self.timescale = self.param.tau_discharge
+
+        # Set default length scales
+        self.length_scales = {
+            "negative electrode": self.param.L_x,
+            "separator": self.param.L_x,
+            "positive electrode": self.param.L_x,
+            "current collector y": self.param.L_z,
+            "current collector z": self.param.L_z,
+        }
+
         self.set_standard_output_variables()
 
     @property
@@ -29,12 +42,10 @@ class BaseModel(pybamm.BaseBatteryModel):
 
     @property
     def default_geometry(self):
-        if self.options["dimensionality"] == 0:
-            return pybamm.Geometry("1D macro")
-        elif self.options["dimensionality"] == 1:
-            return pybamm.Geometry("1+1D macro")
-        elif self.options["dimensionality"] == 2:
-            return pybamm.Geometry("2+1D macro")
+        return pybamm.battery_geometry(
+            include_particles=False,
+            current_collector_dimension=self.options["dimensionality"],
+        )
 
     @property
     def default_var_pts(self):
@@ -42,47 +53,8 @@ class BaseModel(pybamm.BaseBatteryModel):
         var = pybamm.standard_spatial_vars
         return {var.x_n: 25, var.x_s: 41, var.x_p: 34, var.y: 10, var.z: 10}
 
-    @property
-    def default_solver(self):
-        """
-        Return default solver based on whether model is ODE model or DAE model.
-        There are bugs with KLU on the lead-acid models.
-        """
-        if len(self.algebraic) == 0:
-            return pybamm.ScipySolver()
-        else:
-            return pybamm.CasadiSolver(mode="safe")
-
-    def set_reactions(self):
-
-        # Should probably refactor as this is a bit clunky at the moment
-        # Maybe each reaction as a Reaction class so we can just list names of classes
-        param = self.param
-        icd = " interfacial current density"
-        self.reactions = {
-            "main": {
-                "Negative": {"s": -param.s_plus_n_S, "aj": "Negative electrode" + icd},
-                "Positive": {"s": -param.s_plus_p_S, "aj": "Positive electrode" + icd},
-            }
-        }
-        if "oxygen" in self.options["side reactions"]:
-            self.reactions["oxygen"] = {
-                "Negative": {
-                    "s": -param.s_plus_Ox,
-                    "s_ox": -param.s_ox_Ox,
-                    "aj": "Negative electrode oxygen" + icd,
-                },
-                "Positive": {
-                    "s": -param.s_plus_Ox,
-                    "s_ox": -param.s_ox_Ox,
-                    "aj": "Positive electrode oxygen" + icd,
-                },
-            }
-            self.reactions["main"]["Negative"]["s_ox"] = 0
-            self.reactions["main"]["Positive"]["s_ox"] = 0
-
     def set_soc_variables(self):
-        "Set variables relating to the state of charge."
+        """Set variables relating to the state of charge."""
         # State of Charge defined as function of dimensionless electrolyte concentration
         z = pybamm.standard_spatial_vars.z
         soc = (
@@ -97,3 +69,25 @@ class BaseModel(pybamm.BaseBatteryModel):
             self.variables["Fractional Charge Input"] = fci
             self.rhs[fci] = -self.variables["Total current density"] * 100
             self.initial_conditions[fci] = self.param.q_init * 100
+
+    def set_active_material_submodel(self):
+        self.submodels["negative active material"] = pybamm.active_material.Constant(
+            self.param, "Negative", self.options
+        )
+        self.submodels["positive active material"] = pybamm.active_material.Constant(
+            self.param, "Positive", self.options
+        )
+
+    def set_sei_submodel(self):
+
+        self.submodels["negative sei"] = pybamm.sei.NoSEI(self.param, "Negative")
+        self.submodels["positive sei"] = pybamm.sei.NoSEI(self.param, "Positive")
+
+    def set_lithium_plating_submodel(self):
+
+        self.submodels["negative lithium plating"] = pybamm.lithium_plating.NoPlating(
+            self.param, "Negative"
+        )
+        self.submodels["positive lithium plating"] = pybamm.lithium_plating.NoPlating(
+            self.param, "Positive"
+        )

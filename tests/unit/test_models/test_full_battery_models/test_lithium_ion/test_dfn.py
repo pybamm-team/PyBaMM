@@ -11,20 +11,6 @@ class TestDFN(unittest.TestCase):
         model = pybamm.lithium_ion.DFN(options)
         model.check_well_posedness()
 
-    def test_default_geometry(self):
-        options = {"thermal": "isothermal"}
-        model = pybamm.lithium_ion.DFN(options)
-        self.assertIsInstance(model.default_geometry, pybamm.Geometry)
-        self.assertTrue("secondary" in model.default_geometry["negative particle"])
-
-        options = {"current collector": "potential pair", "dimensionality": 1}
-        model = pybamm.lithium_ion.DFN(options)
-        self.assertIn("current collector", model.default_geometry)
-
-        options = {"current collector": "potential pair", "dimensionality": 2}
-        model = pybamm.lithium_ion.DFN(options)
-        self.assertIn("current collector", model.default_geometry)
-
     def test_well_posed_2plus1D(self):
         options = {"current collector": "potential pair", "dimensionality": 1}
         model = pybamm.lithium_ion.DFN(options)
@@ -102,8 +88,43 @@ class TestDFN(unittest.TestCase):
         model = pybamm.lithium_ion.DFN(options)
         model.check_well_posedness()
 
-    def test_particle_fast_diffusion(self):
-        options = {"particle": "fast diffusion"}
+    def test_particle_uniform(self):
+        options = {"particle": "uniform profile"}
+        model = pybamm.lithium_ion.DFN(options)
+        model.check_well_posedness()
+
+    def test_particle_quadratic(self):
+        options = {"particle": "quadratic profile"}
+        model = pybamm.lithium_ion.DFN(options)
+        model.check_well_posedness()
+
+    def test_particle_quartic(self):
+        options = {"particle": "quartic profile"}
+        model = pybamm.lithium_ion.DFN(options)
+        model.check_well_posedness()
+
+    def test_particle_shape_user(self):
+        options = {"particle shape": "user"}
+        model = pybamm.lithium_ion.DFN(options)
+        model.check_well_posedness()
+
+    def test_loss_active_material_stress_negative(self):
+        options = {"loss of active material": ("stress-driven", "none")}
+        model = pybamm.lithium_ion.DFN(options)
+        model.check_well_posedness()
+
+    def test_loss_active_material_stress_positive(self):
+        options = {"loss of active material": ("none", "stress-driven")}
+        model = pybamm.lithium_ion.DFN(options)
+        model.check_well_posedness()
+
+    def test_loss_active_material_stress_both(self):
+        options = {"loss of active material": "stress-driven"}
+        model = pybamm.lithium_ion.DFN(options)
+        model.check_well_posedness()
+
+    def test_loss_active_material_stress_reaction_both(self):
+        options = {"loss of active material": "reaction-driven"}
         model = pybamm.lithium_ion.DFN(options)
         model.check_well_posedness()
 
@@ -114,6 +135,103 @@ class TestDFN(unittest.TestCase):
 
     def test_surface_form_algebraic(self):
         options = {"surface form": "algebraic"}
+        model = pybamm.lithium_ion.DFN(options)
+        model.check_well_posedness()
+
+    def test_electrolyte_options(self):
+        options = {"electrolyte conductivity": "integrated"}
+        with self.assertRaisesRegex(pybamm.OptionError, "electrolyte conductivity"):
+            pybamm.lithium_ion.DFN(options)
+
+    def test_well_posed_reversible_plating_with_porosity(self):
+        options = {
+            "lithium plating": "reversible",
+            "lithium plating porosity change": "true",
+        }
+        model = pybamm.lithium_ion.DFN(options)
+        model.check_well_posedness()
+
+    def test_well_posed_irreversible_plating_with_porosity(self):
+        options = {
+            "lithium plating": "irreversible",
+            "lithium plating porosity change": "true",
+        }
+        model = pybamm.lithium_ion.DFN(options)
+        model.check_well_posedness()
+
+
+class TestDFNWithSEI(unittest.TestCase):
+    def test_well_posed_constant(self):
+        options = {"SEI": "constant"}
+        model = pybamm.lithium_ion.DFN(options)
+        model.check_well_posedness()
+
+    def test_well_posed_reaction_limited(self):
+        options = {"SEI": "reaction limited"}
+        model = pybamm.lithium_ion.DFN(options)
+        model.check_well_posedness()
+
+    def test_well_posed_reaction_limited_average_film_resistance(self):
+        options = {"SEI": "reaction limited", "SEI film resistance": "average"}
+        model = pybamm.lithium_ion.DFN(options)
+        model.check_well_posedness()
+
+    def test_well_posed_solvent_diffusion_limited(self):
+        options = {"SEI": "solvent-diffusion limited"}
+        model = pybamm.lithium_ion.DFN(options)
+        model.check_well_posedness()
+
+    def test_well_posed_electron_migration_limited(self):
+        options = {"SEI": "electron-migration limited"}
+        model = pybamm.lithium_ion.DFN(options)
+        model.check_well_posedness()
+
+    def test_well_posed_interstitial_diffusion_limited(self):
+        options = {"SEI": "interstitial-diffusion limited"}
+        model = pybamm.lithium_ion.DFN(options)
+        model.check_well_posedness()
+
+    def test_well_posed_ec_reaction_limited(self):
+        options = {"SEI": "ec reaction limited", "SEI porosity change": "true"}
+        model = pybamm.lithium_ion.DFN(options)
+        model.check_well_posedness()
+
+
+class TestDFNWithCrack(unittest.TestCase):
+    def test_well_posed_negative_cracking(self):
+        options = {"particle mechanics": ("swelling and cracking", "none")}
+        model = pybamm.lithium_ion.DFN(options)
+        model.check_well_posedness()
+
+    def test_well_posed_positive_cracking(self):
+        options = {"particle mechanics": ("none", "swelling and cracking")}
+        model = pybamm.lithium_ion.DFN(options)
+        model.check_well_posedness()
+
+    def test_well_posed_both_cracking(self):
+        options = {"particle mechanics": "swelling and cracking"}
+        model = pybamm.lithium_ion.DFN(options)
+        model.check_well_posedness()
+
+    def test_well_posed_both_swelling_only(self):
+        options = {"particle mechanics": "swelling only"}
+        model = pybamm.lithium_ion.DFN(options)
+        model.check_well_posedness()
+
+
+class TestDFNWithPlating(unittest.TestCase):
+    def test_well_posed_none_plating(self):
+        options = {"lithium plating": "none"}
+        model = pybamm.lithium_ion.DFN(options)
+        model.check_well_posedness()
+
+    def test_well_posed_reversible_plating(self):
+        options = {"lithium plating": "reversible"}
+        model = pybamm.lithium_ion.DFN(options)
+        model.check_well_posedness()
+
+    def test_well_posed_irreversible_plating(self):
+        options = {"lithium plating": "irreversible"}
         model = pybamm.lithium_ion.DFN(options)
         model.check_well_posedness()
 

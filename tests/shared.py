@@ -17,14 +17,14 @@ class SpatialMethodForTesting(pybamm.SpatialMethod):
     def gradient(self, symbol, discretised_symbol, boundary_conditions):
         n = 0
         for domain in symbol.domain:
-            n += self.mesh[domain][0].npts
+            n += self.mesh[domain].npts
         gradient_matrix = pybamm.Matrix(eye(n))
         return gradient_matrix @ discretised_symbol
 
     def divergence(self, symbol, discretised_symbol, boundary_conditions):
         n = 0
         for domain in symbol.domain:
-            n += self.mesh[domain][0].npts
+            n += self.mesh[domain].npts
         divergence_matrix = pybamm.Matrix(eye(n))
         return divergence_matrix @ discretised_symbol
 
@@ -36,7 +36,7 @@ class SpatialMethodForTesting(pybamm.SpatialMethod):
     def mass_matrix(self, symbol, boundary_conditions):
         n = 0
         for domain in symbol.domain:
-            n += self.mesh[domain][0].npts
+            n += self.mesh[domain].npts
         mass_matrix = pybamm.Matrix(eye(n))
         return mass_matrix
 
@@ -61,7 +61,7 @@ def get_mesh_for_testing(
     )
 
     if geometry is None:
-        geometry = pybamm.Geometry("1D macro", "1D micro")
+        geometry = pybamm.battery_geometry()
     param.process_geometry(geometry)
 
     submesh_types = {
@@ -94,32 +94,44 @@ def get_mesh_for_testing(
 
 
 def get_p2d_mesh_for_testing(xpts=None, rpts=10):
-    geometry = pybamm.Geometry("1D macro", "1+1D micro")
+    geometry = pybamm.battery_geometry()
     return get_mesh_for_testing(xpts=xpts, rpts=rpts, geometry=geometry)
 
 
 def get_1p1d_mesh_for_testing(
-    xpts=None, zpts=15, cc_submesh=pybamm.MeshGenerator(pybamm.Uniform1DSubMesh)
+    xpts=None,
+    rpts=10,
+    zpts=15,
+    cc_submesh=pybamm.MeshGenerator(pybamm.Uniform1DSubMesh),
 ):
-    geometry = pybamm.Geometry("1+1D macro")
+    geometry = pybamm.battery_geometry(current_collector_dimension=1)
     return get_mesh_for_testing(
-        xpts=xpts, zpts=zpts, geometry=geometry, cc_submesh=cc_submesh
+        xpts=xpts, rpts=rpts, zpts=zpts, geometry=geometry, cc_submesh=cc_submesh
     )
 
 
 def get_2p1d_mesh_for_testing(
     xpts=None,
+    rpts=10,
     ypts=15,
     zpts=15,
+    include_particles=True,
     cc_submesh=pybamm.MeshGenerator(pybamm.ScikitUniform2DSubMesh),
 ):
-    geometry = pybamm.Geometry("2+1D macro")
+    geometry = pybamm.battery_geometry(
+        include_particles=include_particles, current_collector_dimension=2
+    )
     return get_mesh_for_testing(
-        xpts=xpts, zpts=zpts, geometry=geometry, cc_submesh=cc_submesh
+        xpts=xpts,
+        rpts=rpts,
+        ypts=ypts,
+        zpts=zpts,
+        geometry=geometry,
+        cc_submesh=cc_submesh,
     )
 
 
-def get_unit_2p1D_mesh_for_testing(ypts=15, zpts=15):
+def get_unit_2p1D_mesh_for_testing(ypts=15, zpts=15, include_particles=True):
     param = pybamm.ParameterValues(
         values={
             "Electrode width [m]": 1,
@@ -136,7 +148,9 @@ def get_unit_2p1D_mesh_for_testing(ypts=15, zpts=15):
         }
     )
 
-    geometry = pybamm.Geometryxp1DMacro(cc_dimension=2)
+    geometry = pybamm.battery_geometry(
+        include_particles=include_particles, current_collector_dimension=2
+    )
     param.process_geometry(geometry)
 
     var = pybamm.standard_spatial_vars
@@ -170,12 +184,16 @@ def get_p2d_discretisation_for_testing(xpts=None, rpts=10):
     return get_discretisation_for_testing(mesh=get_p2d_mesh_for_testing(xpts, rpts))
 
 
-def get_1p1d_discretisation_for_testing(xpts=None, zpts=15):
-    return get_discretisation_for_testing(mesh=get_1p1d_mesh_for_testing(xpts, zpts))
-
-
-def get_2p1d_discretisation_for_testing(xpts=None, ypts=15, zpts=15):
+def get_1p1d_discretisation_for_testing(xpts=None, rpts=10, zpts=15):
     return get_discretisation_for_testing(
-        mesh=get_2p1d_mesh_for_testing(xpts, ypts, zpts),
+        mesh=get_1p1d_mesh_for_testing(xpts, rpts, zpts)
+    )
+
+
+def get_2p1d_discretisation_for_testing(
+    xpts=None, rpts=10, ypts=15, zpts=15, include_particles=True
+):
+    return get_discretisation_for_testing(
+        mesh=get_2p1d_mesh_for_testing(xpts, rpts, ypts, zpts, include_particles),
         cc_method=pybamm.ScikitFiniteElement,
     )

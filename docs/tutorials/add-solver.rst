@@ -1,4 +1,4 @@
-.. _CONTRIBUTING.md: https://github.com/pybamm-team/PyBaMM/blob/master/CONTRIBUTING.md
+.. _CONTRIBUTING.md: https://github.com/pybamm-team/PyBaMM/blob/develop/CONTRIBUTING.md
 
 
 Adding a Solver
@@ -10,7 +10,7 @@ In particular, start by creating an issue to discuss what you want to do - this 
 The role of solvers
 -------------------
 
-All models in PyBaMM are implemented as `expression trees <https://github.com/pybamm-team/PyBaMM/blob/master/examples/notebooks/expression-tree.ipynb>`_.
+All models in PyBaMM are implemented as `expression trees <https://github.com/pybamm-team/PyBaMM/blob/develop/examples/notebooks/expression_tree/expression-tree.ipynb>`_.
 After the model has been created, parameters have been set, and the model has been discretised, the model is now a linear algebra object with the following attributes:
 
 model.concatenated_rhs
@@ -54,13 +54,13 @@ You can then start implementing the solver by adding the ``integrate`` function 
 For an example of an existing solver implementation, see the Scikits DAE solver
 `API docs <https://pybamm.readthedocs.io/en/latest/source/solvers/scikits_solvers.html>`_
 and
-`notebook <https://github.com/pybamm-team/PyBaMM/blob/master/examples/notebooks/solvers/scikits-dae-solver.ipynb>`_.
+`notebook <https://github.com/pybamm-team/PyBaMM/blob/develop/examples/notebooks/solvers/dae-solver.ipynb>`_.
 
 Unit tests for the new class
 ----------------------------
 
 For the new solver to be added to PyBaMM, you must add unit tests to demonstrate that it behaves as expected
-(see, for example, the `Scikits solver tests <https://github.com/pybamm-team/PyBaMM/blob/master/tests/unit/test_solvers/test_scikits_solvers.py>`_).
+(see, for example, the `Scikits solver tests <https://github.com/pybamm-team/PyBaMM/blob/develop/tests/unit/test_solvers/test_scikits_solvers.py>`_).
 The best way to get started would be to create a file ``test_my_fast_solver.py`` in ``tests/unit/test_solvers/`` that performs at least the
 following checks:
 
@@ -74,7 +74,7 @@ Test on the models
 
 In theory, any existing model can now be solved using `MyFastDaeSolver` instead of their default solvers, with no extra work from here.
 To test this, add something like the following test to one of the model test files
-(e.g. `DFN <https://github.com/pybamm-team/PyBaMM/blob/master/tests/integration/test_models/test_full_battery_models/test_lithium_ion/test_dfn.py>`_):
+(e.g. `DFN <https://github.com/pybamm-team/PyBaMM/blob/develop/tests/integration/test_models/test_full_battery_models/test_lithium_ion/test_dfn.py>`_):
 
 .. code-block:: python
 
@@ -87,5 +87,5 @@ To test this, add something like the following test to one of the model test fil
 This will check that the model can run with the new solver (but not that it gives a sensible answer!).
 
 Once you have performed the above checks, you are almost ready to merge your code into the core PyBaMM - see
-`CONTRIBUTING.md workflow <https://github.com/pybamm-team/PyBaMM/blob/master/CONTRIBUTING.md#c-merging-your-changes-with-pybamm>`_
+`CONTRIBUTING.md workflow <https://github.com/pybamm-team/PyBaMM/blob/develop/CONTRIBUTING.md#c-merging-your-changes-with-pybamm>`_
 for how to do this.

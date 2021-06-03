@@ -20,6 +20,27 @@ class TestBaseSolver(unittest.TestCase):
         solver.rtol = 1e-7
         self.assertEqual(solver.rtol, 1e-7)
 
+        # max_steps deprecated
+        with self.assertRaisesRegex(ValueError, "max_steps has been deprecated"):
+            pybamm.BaseSolver(max_steps=10)
+
+    def test_root_method_init(self):
+        solver = pybamm.BaseSolver(root_method="casadi")
+        self.assertIsInstance(solver.root_method, pybamm.CasadiAlgebraicSolver)
+
+        solver = pybamm.BaseSolver(root_method="lm")
+        self.assertIsInstance(solver.root_method, pybamm.AlgebraicSolver)
+        self.assertEqual(solver.root_method.method, "lm")
+
+        root_solver = pybamm.AlgebraicSolver()
+        solver = pybamm.BaseSolver(root_method=root_solver)
+        self.assertEqual(solver.root_method, root_solver)
+
+        with self.assertRaisesRegex(
+            pybamm.SolverError, "Root method must be an algebraic solver"
+        ):
+            pybamm.BaseSolver(root_method=pybamm.ScipySolver())
+
     def test_step_or_solve_empty_model(self):
         model = pybamm.BaseModel()
         solver = pybamm.BaseSolver()
@@ -50,14 +71,31 @@ class TestBaseSolver(unittest.TestCase):
         ):
             solver.solve(model, np.array([1, 2, 3, 2]))
 
+        # Check stepping with negative step size
+        dt = -1
+        with self.assertRaisesRegex(pybamm.SolverError, "Step time must be positive"):
+            solver.step(None, model, dt)
+
+    def test_solution_time_length_fail(self):
+        model = pybamm.BaseModel()
+        v = pybamm.Scalar(1)
+        model.variables = {"v": v}
+        solver = pybamm.DummySolver()
+        t_eval = np.array([0])
+        with self.assertRaisesRegex(
+            pybamm.SolverError, "Solution time vector has length 1"
+        ):
+            solver.solve(model, t_eval)
+
     def test_block_symbolic_inputs(self):
         solver = pybamm.BaseSolver(rtol=1e-2, atol=1e-4)
         model = pybamm.BaseModel()
-        a = pybamm.Scalar(0)
+        a = pybamm.Variable("a")
         p = pybamm.InputParameter("p")
         model.rhs = {a: a * p}
         with self.assertRaisesRegex(
-            pybamm.SolverError, "Only CasadiAlgebraicSolver can have symbolic inputs"
+            pybamm.SolverError,
+            "Only CasadiSolver and CasadiAlgebraicSolver can have symbolic inputs",
         ):
             solver.solve(model, np.array([1, 2, 3]))
 
@@ -74,9 +112,11 @@ class TestBaseSolver(unittest.TestCase):
         # Simple system: a single algebraic equation
         class ScalarModel:
             def __init__(self):
-                self.concatenated_initial_conditions = np.array([[2]])
+                self.y0 = np.array([2])
+                self.rhs = {}
                 self.jac_algebraic_eval = None
-                self.timescale = 1
+                self.timescale_eval = 1
+                self.length_scales = {}
                 t = casadi.MX.sym("t")
                 y = casadi.MX.sym("y")
                 p = casadi.MX.sym("p")
@@ -84,6 +124,8 @@ class TestBaseSolver(unittest.TestCase):
                     "alg", [t, y, p], [self.algebraic_eval(t, y, p)]
                 )
                 self.convert_to_format = "casadi"
+                self.bounds = (np.array([-np.inf]), np.array([np.inf]))
+                self.interpolant_extrapolation_events_eval = []
 
             def rhs_eval(self, t, y, inputs):
                 return np.array([])
@@ -106,9 +148,12 @@ class TestBaseSolver(unittest.TestCase):
 
         class VectorModel:
             def __init__(self):
-                self.concatenated_initial_conditions = np.zeros_like(vec)
+                self.y0 = np.zeros_like(vec)
+                self.rhs = {"test": "test"}
+                self.concatenated_rhs = np.array([1])
                 self.jac_algebraic_eval = None
-                self.timescale = 1
+                self.timescale_eval = 1
+                self.length_scales = {}
                 t = casadi.MX.sym("t")
                 y = casadi.MX.sym("y", vec.size)
                 p = casadi.MX.sym("p")
@@ -116,6 +161,8 @@ class TestBaseSolver(unittest.TestCase):
                     "alg", [t, y, p], [self.algebraic_eval(t, y, p)]
                 )
                 self.convert_to_format = "casadi"
+                self.bounds = (-np.inf * np.ones(4), np.inf * np.ones(4))
+                self.interpolant_extrapolation_events_eval = []
 
             def rhs_eval(self, t, y, inputs):
                 return y[0:1]
@@ -128,7 +175,7 @@ class TestBaseSolver(unittest.TestCase):
         np.testing.assert_array_almost_equal(init_cond, vec)
         # with casadi
         init_cond = solver_with_casadi.calculate_consistent_state(model)
-        np.testing.assert_array_almost_equal(init_cond, vec)
+        np.testing.assert_array_almost_equal(init_cond.full().flatten(), vec)
 
         # With jacobian
         def jac_dense(t, y, inputs):
@@ -151,9 +198,11 @@ class TestBaseSolver(unittest.TestCase):
     def test_fail_consistent_initial_conditions(self):
         class Model:
             def __init__(self):
-                self.concatenated_initial_conditions = np.array([2])
+                self.y0 = np.array([2])
+                self.rhs = {}
                 self.jac_algebraic_eval = None
-                self.timescale = 1
+                self.timescale_eval = 1
+                self.length_scales = {}
                 t = casadi.MX.sym("t")
                 y = casadi.MX.sym("y")
                 p = casadi.MX.sym("p")
@@ -161,6 +210,8 @@ class TestBaseSolver(unittest.TestCase):
                     "alg", [t, y, p], [self.algebraic_eval(t, y, p)]
                 )
                 self.convert_to_format = "casadi"
+                self.bounds = (np.array([-np.inf]), np.array([np.inf]))
+                self.interpolant_extrapolation_events_eval = []
 
             def rhs_eval(self, t, y, inputs):
                 return np.array([])
@@ -173,20 +224,18 @@ class TestBaseSolver(unittest.TestCase):
 
         with self.assertRaisesRegex(
             pybamm.SolverError,
-            "Could not find consistent initial conditions: The iteration is not making",
+            "Could not find acceptable solution: The iteration is not making",
         ):
             solver.calculate_consistent_state(Model())
         solver = pybamm.BaseSolver(root_method="lm")
         with self.assertRaisesRegex(
-            pybamm.SolverError,
-            "Could not find consistent initial conditions: solver terminated",
+            pybamm.SolverError, "Could not find acceptable solution: solver terminated"
         ):
             solver.calculate_consistent_state(Model())
         # with casadi
         solver = pybamm.BaseSolver(root_method="casadi")
         with self.assertRaisesRegex(
-            pybamm.SolverError,
-            "Could not find consistent initial conditions: .../casadi",
+            pybamm.SolverError, "Could not find acceptable solution: .../casadi"
         ):
             solver.calculate_consistent_state(Model())
 
@@ -224,11 +273,54 @@ class TestBaseSolver(unittest.TestCase):
         disc = pybamm.Discretisation()
         disc.process_model(model)
 
-        solver = pybamm.BaseSolver()
+        solver = pybamm.BaseSolver(root_method="casadi")
         pybamm.set_logging_level("ERROR")
         solver.set_up(model, {})
         self.assertEqual(model.convert_to_format, "casadi")
         pybamm.set_logging_level("WARNING")
+
+    def test_timescale_input_fail(self):
+        # Make sure timescale can't depend on inputs
+        model = pybamm.BaseModel()
+        v = pybamm.Variable("v")
+        model.rhs = {v: -1}
+        model.initial_conditions = {v: 1}
+        a = pybamm.InputParameter("a")
+        model.timescale = a
+        solver = pybamm.CasadiSolver()
+        solver.set_up(model, inputs={"a": 10})
+        sol = solver.step(old_solution=None, model=model, dt=1.0, inputs={"a": 10})
+        with self.assertRaisesRegex(pybamm.SolverError, "The model timescale"):
+            sol = solver.step(old_solution=sol, model=model, dt=1.0, inputs={"a": 20})
+
+    def test_extrapolation_warnings(self):
+        # Make sure the extrapolation warnings work
+        model = pybamm.BaseModel()
+        v = pybamm.Variable("v")
+        model.rhs = {v: -1}
+        model.initial_conditions = {v: 1}
+        model.events.append(
+            pybamm.Event(
+                "Triggered event",
+                v - 0.5,
+                pybamm.EventType.INTERPOLANT_EXTRAPOLATION,
+            )
+        )
+        model.events.append(
+            pybamm.Event(
+                "Ignored event",
+                v + 10,
+                pybamm.EventType.INTERPOLANT_EXTRAPOLATION,
+            )
+        )
+        solver = pybamm.ScipySolver()
+        solver.set_up(model)
+
+        with self.assertWarns(pybamm.SolverWarning):
+            solver.step(old_solution=None, model=model, dt=1.0)
+
+        with self.assertWarns(pybamm.SolverWarning):
+            solver.solve(model, t_eval=[0, 1])
 
 
 if __name__ == "__main__":

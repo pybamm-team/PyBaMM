@@ -16,6 +16,8 @@ class EventType(Enum):
 
     TERMINATION = 0
     DISCONTINUITY = 1
+    INTERPOLANT_EXTRAPOLATION = 2
+    SWITCH = 3
 
 
 class Event:
@@ -57,10 +59,6 @@ class Event:
     @property
     def expression(self):
         return self._expression
-
-    @expression.setter
-    def expression(self, value):
-        self._expression = value
 
     @property
     def event_type(self):

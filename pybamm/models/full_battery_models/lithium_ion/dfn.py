@@ -32,27 +32,29 @@ class DFN(BaseModel):
 
     def __init__(self, options=None, name="Doyle-Fuller-Newman model", build=True):
         super().__init__(options, name)
+        # For degradation models we use the full form since this is a full-order model
+        self.x_average = False
 
         self.set_external_circuit_submodel()
-        self.set_reactions()
         self.set_porosity_submodel()
+        self.set_crack_submodel()
+        self.set_active_material_submodel()
         self.set_tortuosity_submodels()
         self.set_convection_submodel()
         self.set_interfacial_submodel()
+        self.set_other_reaction_submodels_to_zero()
         self.set_particle_submodel()
         self.set_solid_submodel()
         self.set_electrolyte_submodel()
         self.set_thermal_submodel()
         self.set_current_collector_submodel()
+        self.set_sei_submodel()
+        self.set_lithium_plating_submodel()
 
         if build:
             self.build_model()
 
-        pybamm.citations.register("doyle1993modeling")
-
-    def set_porosity_submodel(self):
-
-        self.submodels["porosity"] = pybamm.porosity.Constant(self.param)
+        pybamm.citations.register("Doyle1993")
 
     def set_convection_submodel(self):
 
@@ -66,10 +68,10 @@ class DFN(BaseModel):
     def set_interfacial_submodel(self):
 
         self.submodels["negative interface"] = pybamm.interface.ButlerVolmer(
-            self.param, "Negative", "lithium-ion main"
+            self.param, "Negative", "lithium-ion main", self.options
         )
         self.submodels["positive interface"] = pybamm.interface.ButlerVolmer(
-            self.param, "Positive", "lithium-ion main"
+            self.param, "Positive", "lithium-ion main", self.options
         )
 
     def set_particle_submodel(self):
@@ -81,55 +83,60 @@ class DFN(BaseModel):
             self.submodels["positive particle"] = pybamm.particle.FickianManyParticles(
                 self.param, "Positive"
             )
-        elif self.options["particle"] == "fast diffusion":
-            self.submodels["negative particle"] = pybamm.particle.FastManyParticles(
-                self.param, "Negative"
+        elif self.options["particle"] in [
+            "uniform profile",
+            "quadratic profile",
+            "quartic profile",
+        ]:
+            self.submodels[
+                "negative particle"
+            ] = pybamm.particle.PolynomialManyParticles(
+                self.param, "Negative", self.options["particle"]
             )
-            self.submodels["positive particle"] = pybamm.particle.FastManyParticles(
-                self.param, "Positive"
+            self.submodels[
+                "positive particle"
+            ] = pybamm.particle.PolynomialManyParticles(
+                self.param, "Positive", self.options["particle"]
             )
 
     def set_solid_submodel(self):
 
-        if self.options["surface form"] is False:
-            submod_n = pybamm.electrode.ohm.Full(self.param, "Negative", self.reactions)
-            submod_p = pybamm.electrode.ohm.Full(self.param, "Positive", self.reactions)
+        if self.options["surface form"] == "false":
+            submod_n = pybamm.electrode.ohm.Full(self.param, "Negative")
+            submod_p = pybamm.electrode.ohm.Full(self.param, "Positive")
         else:
             submod_n = pybamm.electrode.ohm.SurfaceForm(self.param, "Negative")
             submod_p = pybamm.electrode.ohm.SurfaceForm(self.param, "Positive")
 
-        self.submodels["negative electrode"] = submod_n
-        self.submodels["positive electrode"] = submod_p
+        self.submodels["negative electrode potential"] = submod_n
+        self.submodels["positive electrode potential"] = submod_p
 
     def set_electrolyte_submodel(self):
 
         surf_form = pybamm.electrolyte_conductivity.surface_potential_form
 
         self.submodels["electrolyte diffusion"] = pybamm.electrolyte_diffusion.Full(
-            self.param, self.reactions
+            self.param
         )
 
-        if self.options["surface form"] is False:
+        if self.options["electrolyte conductivity"] not in ["default", "full"]:
+            raise pybamm.OptionError(
+                "electrolyte conductivity '{}' not suitable for DFN".format(
+                    self.options["electrolyte conductivity"]
+                )
+            )
+
+        if self.options["surface form"] == "false":
             self.submodels[
                 "electrolyte conductivity"
-            ] = pybamm.electrolyte_conductivity.Full(self.param, self.reactions)
+            ] = pybamm.electrolyte_conductivity.Full(self.param)
         elif self.options["surface form"] == "differential":
             for domain in ["Negative", "Separator", "Positive"]:
                 self.submodels[
                     domain.lower() + " electrolyte conductivity"
-                ] = surf_form.FullDifferential(self.param, domain, self.reactions)
+                ] = surf_form.FullDifferential(self.param, domain)
         elif self.options["surface form"] == "algebraic":
             for domain in ["Negative", "Separator", "Positive"]:
                 self.submodels[
                     domain.lower() + " electrolyte conductivity"
-                ] = surf_form.FullAlgebraic(self.param, domain, self.reactions)
-
-    @property
-    def default_geometry(self):
-        dimensionality = self.options["dimensionality"]
-        if dimensionality == 0:
-            return pybamm.Geometry("1D macro", "1+1D micro")
-        elif dimensionality == 1:
-            return pybamm.Geometry("1+1D macro", "(1+1)+1D micro")
-        elif dimensionality == 2:
-            return pybamm.Geometry("2+1D macro", "(2+1)+1D micro")
+                ] = surf_form.FullAlgebraic(self.param, domain)

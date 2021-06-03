@@ -33,12 +33,25 @@ def constant_current_constant_voltage_constant_power(variables):
     s_I = pybamm.InputParameter("Current switch")
     s_V = pybamm.InputParameter("Voltage switch")
     s_P = pybamm.InputParameter("Power switch")
-    n_cells = pybamm.electrical_parameters.n_cells
+    n_cells = pybamm.Parameter("Number of cells connected in series to make a battery")
     return (
         s_I * (I - pybamm.InputParameter("Current input [A]"))
         + s_V * (V - pybamm.InputParameter("Voltage input [V]") / n_cells)
         + s_P * (V * I - pybamm.InputParameter("Power input [W]") / n_cells)
     )
+
+
+def constant_voltage(variables, V_applied):
+    V = variables["Terminal voltage [V]"]
+    n_cells = pybamm.Parameter("Number of cells connected in series to make a battery")
+    return V - V_applied / n_cells
+
+
+def constant_power(variables, P_applied):
+    I = variables["Current [A]"]
+    V = variables["Terminal voltage [V]"]
+    n_cells = pybamm.Parameter("Number of cells connected in series to make a battery")
+    return V * I - P_applied / n_cells
 
 
 class Simulation:
@@ -57,18 +70,16 @@ class Simulation:
     submesh_types: dict (optional)
         A dictionary of the types of submesh to use on each subdomain
     var_pts: dict (optional)
-        A dictionary of the number of points used by each spatial
-        variable
+        A dictionary of the number of points used by each spatial variable
     spatial_methods: dict (optional)
         A dictionary of the types of spatial method to use on each
         domain (e.g. pybamm.FiniteVolume)
     solver: :class:`pybamm.BaseSolver` (optional)
         The solver to use to solve the model.
-    quick_plot_vars: list (optional)
+    output_variables: list (optional)
         A list of variables to plot automatically
     C_rate: float (optional)
-        The C_rate at which you would like to run a constant current
-        experiment at.
+        The C-rate at which you would like to run a constant current (dis)charge.
     """
 
     def __init__(
@@ -81,21 +92,38 @@ class Simulation:
         var_pts=None,
         spatial_methods=None,
         solver=None,
-        quick_plot_vars=None,
+        output_variables=None,
         C_rate=None,
     ):
         self.parameter_values = parameter_values or model.default_parameter_values
 
+        if isinstance(model, pybamm.lithium_ion.BasicDFNHalfCell):
+            raise NotImplementedError(
+                "BasicDFNHalfCell is not compatible with Simulations yet."
+            )
+
         if experiment is None:
-            self.operating_mode = "without experiment"
-            if C_rate:
-                self.C_rate = C_rate
-                self._parameter_values.update(
-                    {
-                        "Current function [A]": self.C_rate
-                        * self._parameter_values["Cell capacity [A.h]"]
-                    }
+            # Check to see if the current is provided as data (i.e. drive cycle)
+            current = self._parameter_values.get("Current function [A]")
+            if isinstance(current, pybamm.Interpolant):
+                self.operating_mode = "drive cycle"
+            elif isinstance(current, tuple):
+                raise NotImplementedError(
+                    "Drive cycle from data has been deprecated. "
+                    + "Define an Interpolant instead."
                 )
+            else:
+                self.operating_mode = "without experiment"
+                if C_rate:
+                    self.C_rate = C_rate
+                    self._parameter_values.update(
+                        {
+                            "Current function [A]": self.C_rate
+                            * self._parameter_values["Nominal cell capacity [A.h]"]
+                        }
+                    )
+
+            self._unprocessed_model = model
             self.model = model
         else:
             self.set_up_experiment(model, experiment)
@@ -105,9 +133,14 @@ class Simulation:
         self.var_pts = var_pts or self.model.default_var_pts
         self.spatial_methods = spatial_methods or self.model.default_spatial_methods
         self.solver = solver or self.model.default_solver
-        self.quick_plot_vars = quick_plot_vars
+        self.output_variables = output_variables
 
-        self.reset(update_model=False)
+        # Initialize empty built states
+        self._model_with_set_params = None
+        self._built_model = None
+        self._mesh = None
+        self._disc = None
+        self._solution = None
 
         # ignore runtime warnings in notebooks
         if is_notebook():  # pragma: no cover
@@ -124,14 +157,10 @@ class Simulation:
         time.
         """
         self.operating_mode = "with experiment"
-        self.model = model.new_copy(
-            options={
-                **model.options,
-                "operating mode": constant_current_constant_voltage_constant_power,
-            }
-        )
+
         if not isinstance(experiment, pybamm.Experiment):
             raise TypeError("experiment must be a pybamm `Experiment` instance")
+
         # Save the experiment
         self.experiment = experiment
         # Update parameter values with experiment parameters
@@ -143,12 +172,14 @@ class Simulation:
         for op, events in zip(experiment.operating_conditions, experiment.events):
             if op[1] in ["A", "C"]:
                 # Update inputs for constant current
+                capacity = self._parameter_values["Nominal cell capacity [A.h]"]
                 if op[1] == "A":
                     I = op[0]
+                    Crate = I / capacity
                 else:
                     # Scale C-rate with capacity to obtain current
-                    capacity = self._parameter_values["Cell capacity [A.h]"]
-                    I = op[0] * capacity
+                    Crate = op[0]
+                    I = Crate * capacity
                 operating_inputs = {
                     "Current switch": 1,
                     "Voltage switch": 0,
@@ -193,7 +224,7 @@ class Simulation:
                     I = events[0]
                 else:
                     # Scale C-rate with capacity to obtain current
-                    capacity = self._parameter_values["Cell capacity [A.h]"]
+                    capacity = self._parameter_values["Nominal cell capacity [A.h]"]
                     I = events[0] * capacity
                 operating_inputs.update(
                     {"Current cut-off [A]": I, "Voltage cut-off [V]": -1e10}
@@ -209,64 +240,224 @@ class Simulation:
             # Add time to the experiment times
             dt = op[2]
             if dt is None:
-                # max simulation time: 1 week
-                dt = 7 * 24 * 3600
+                if op[1] in ["A", "C"]:
+                    # Current control: max simulation time: 3 * max simulation time
+                    # based on C-rate
+                    dt = 3 / abs(Crate) * 3600  # seconds
+                else:
+                    # max simulation time: 1 day
+                    dt = 24 * 3600  # seconds
             self._experiment_times.append(dt)
 
+        # Set up model for experiment
+        if experiment.use_simulation_setup_type == "old":
+            self.set_up_model_for_experiment_old(model)
+        elif experiment.use_simulation_setup_type == "new":
+            self.set_up_model_for_experiment_new(model)
+
+    def set_up_model_for_experiment_old(self, model):
+        """
+        Set up self.model to be able to run the experiment (old version).
+        In this version, a single model is created which can then be called with
+        different inputs for current-control, voltage-control, or power-control.
+
+        This reduces set-up time since only one model needs to be processed, but
+        increases simulation time since the model formulation is inefficient
+        """
+        # Create a new model where the current density is now a variable
+        # To do so, we replace all instances of the current density in the
+        # model with a current density variable, which is obtained from the
+        # FunctionControl submodel
+        # create the FunctionControl submodel and extract variables
+        external_circuit_variables = pybamm.external_circuit.FunctionControl(
+            model.param, None
+        ).get_fundamental_variables()
+
+        # Perform the replacement
+        symbol_replacement_map = {
+            model.variables[name]: variable
+            for name, variable in external_circuit_variables.items()
+        }
+        replacer = pybamm.SymbolReplacer(symbol_replacement_map)
+        new_model = replacer.process_model(model, inplace=False)
+
+        # Update the algebraic equation and initial conditions for FunctionControl
+        # This creates an algebraic equation for the current to allow current, voltage,
+        # or power control, together with the appropriate guess for the
+        # initial condition.
+        # External circuit submodels are always equations on the current
+        # The external circuit function should fix either the current, or the voltage,
+        # or a combination (e.g. I*V for power control)
+        i_cell = new_model.variables["Total current density"]
+        new_model.initial_conditions[i_cell] = new_model.param.current_with_time
+        new_model.algebraic[i_cell] = constant_current_constant_voltage_constant_power(
+            new_model.variables
+        )
+
+        # Remove upper and lower voltage cut-offs that are *not* part of the experiment
+        new_model.events = [
+            event
+            for event in model.events
+            if event.name not in ["Minimum voltage", "Maximum voltage"]
+        ]
         # add current and voltage events to the model
         # current events both negative and positive to catch specification
-        n_cells = pybamm.electrical_parameters.n_cells
-        self.model.events.extend(
+        new_model.events.extend(
             [
                 pybamm.Event(
                     "Current cut-off (positive) [A] [experiment]",
-                    self.model.variables["Current [A]"]
+                    new_model.variables["Current [A]"]
                     - abs(pybamm.InputParameter("Current cut-off [A]")),
                 ),
                 pybamm.Event(
                     "Current cut-off (negative) [A] [experiment]",
-                    self.model.variables["Current [A]"]
+                    new_model.variables["Current [A]"]
                     + abs(pybamm.InputParameter("Current cut-off [A]")),
                 ),
                 pybamm.Event(
                     "Voltage cut-off [V] [experiment]",
-                    self.model.variables["Terminal voltage [V]"]
-                    - pybamm.InputParameter("Voltage cut-off [V]") / n_cells,
+                    new_model.variables["Terminal voltage [V]"]
+                    - pybamm.InputParameter("Voltage cut-off [V]")
+                    / model.param.n_cells,
                 ),
             ]
         )
 
-    def set_defaults(self):
-        """
-        A method to set all the simulation specs to default values for the
-        supplied model.
-        """
-        self.geometry = self._model.default_geometry
-        self.parameter_values = self._model.default_parameter_values
-        self.submesh_types = self._model.default_submesh_types
-        self.var_pts = self._model.default_var_pts
-        self.spatial_methods = self._model.default_spatial_methods
-        self.solver = self._model.default_solver
-        self.quick_plot_vars = None
+        self.model = new_model
 
-    def reset(self, update_model=True):
+        self.op_conds_to_model_and_param = {
+            op_cond[:2]: (new_model, self.parameter_values)
+            for op_cond in set(self.experiment.operating_conditions)
+        }
+        self.op_conds_to_built_models = None
+
+    def set_up_model_for_experiment_new(self, model):
         """
-        A method to reset a simulation back to its unprocessed state.
+        Set up self.model to be able to run the experiment (new version).
+        In this version, a new model is created for each step.
+
+        This increases set-up time since several models to be processed, but
+        reduces simulation time since the model formulation is efficient.
         """
-        if update_model:
-            self.model = self.model.new_copy(self._model_options)
-        self.geometry = copy.deepcopy(self._unprocessed_geometry)
-        self._model_with_set_params = None
-        self._built_model = None
-        self._mesh = None
-        self._disc = None
-        self._solution = None
+        self.op_conds_to_model_and_param = {}
+        self.op_conds_to_built_models = None
+        for op_cond, op_inputs in zip(
+            self.experiment.operating_conditions, self._experiment_inputs
+        ):
+            # Create model for this operating condition if it has not already been seen
+            # before
+            if op_cond[:2] not in self.op_conds_to_model_and_param:
+                if op_inputs["Current switch"] == 1:
+                    # Current control
+                    # Make a new copy of the model (we will update events later))
+                    new_model = model.new_copy()
+                else:
+                    # Voltage or power control
+                    # Create a new model where the current density is now a variable
+                    # To do so, we replace all instances of the current density in the
+                    # model with a current density variable, which is obtained from the
+                    # FunctionControl submodel
+                    # create the FunctionControl submodel and extract variables
+                    external_circuit_variables = (
+                        pybamm.external_circuit.FunctionControl(
+                            model.param, None
+                        ).get_fundamental_variables()
+                    )
+
+                    # Perform the replacement
+                    symbol_replacement_map = {
+                        model.variables[name]: variable
+                        for name, variable in external_circuit_variables.items()
+                    }
+                    replacer = pybamm.SymbolReplacer(symbol_replacement_map)
+                    new_model = replacer.process_model(model, inplace=False)
+
+                    # Update the algebraic equation and initial conditions for
+                    # FunctionControl
+                    # This creates an algebraic equation for the current to allow
+                    # current, voltage, or power control, together with the appropriate
+                    # guess for the initial condition.
+                    # External circuit submodels are always equations on the current
+                    # The external circuit function should fix either the current, or
+                    # the voltage, or a combination (e.g. I*V for power control)
+                    i_cell = new_model.variables["Total current density"]
+                    new_model.initial_conditions[
+                        i_cell
+                    ] = new_model.param.current_with_time
+
+                    # add current events to the model
+                    # current events both negative and positive to catch specification
+                    new_model.events.extend(
+                        [
+                            pybamm.Event(
+                                "Current cut-off (positive) [A] [experiment]",
+                                new_model.variables["Current [A]"]
+                                - abs(pybamm.InputParameter("Current cut-off [A]")),
+                            ),
+                            pybamm.Event(
+                                "Current cut-off (negative) [A] [experiment]",
+                                new_model.variables["Current [A]"]
+                                + abs(pybamm.InputParameter("Current cut-off [A]")),
+                            ),
+                        ]
+                    )
+                    if op_inputs["Voltage switch"] == 1:
+                        new_model.algebraic[i_cell] = constant_voltage(
+                            new_model.variables,
+                            pybamm.Parameter("Voltage function [V]"),
+                        )
+                    elif op_inputs["Power switch"] == 1:
+                        new_model.algebraic[i_cell] = constant_power(
+                            new_model.variables,
+                            pybamm.Parameter("Power function [W]"),
+                        )
+
+                # add voltage events to the model
+                if op_inputs["Power switch"] == 1 or op_inputs["Current switch"] == 1:
+                    new_model.events.append(
+                        pybamm.Event(
+                            "Voltage cut-off [V] [experiment]",
+                            new_model.variables["Terminal voltage [V]"]
+                            - pybamm.InputParameter("Voltage cut-off [V]")
+                            / model.param.n_cells,
+                        )
+                    )
+
+                # Keep the min and max voltages as safeguards but add some tolerances
+                # so that they are not triggered before the voltage limits in the
+                # experiment
+                for event in new_model.events:
+                    if event.name == "Minimum voltage":
+                        event._expression += 1
+                    elif event.name == "Maximum voltage":
+                        event._expression -= 1
+
+                # Update parameter values
+                new_parameter_values = self.parameter_values.copy()
+                if op_inputs["Current switch"] == 1:
+                    new_parameter_values.update(
+                        {"Current function [A]": op_inputs["Current input [A]"]}
+                    )
+                elif op_inputs["Voltage switch"] == 1:
+                    new_parameter_values.update(
+                        {"Voltage function [V]": op_inputs["Voltage input [V]"]},
+                        check_already_exists=False,
+                    )
+                elif op_inputs["Power switch"] == 1:
+                    new_parameter_values.update(
+                        {"Power function [W]": op_inputs["Power input [W]"]},
+                        check_already_exists=False,
+                    )
+
+                self.op_conds_to_model_and_param[op_cond[:2]] = (
+                    new_model,
+                    new_parameter_values,
+                )
+        self.model = model
 
     def set_parameters(self):
         """
-        A method to set the parameters in the model and the associated geometry. If
-        the model has already been built or solved then this will first reset to the
-        unprocessed state and then set the parameter values.
+        A method to set the parameters in the model and the associated geometry.
         """
 
         if self.model_with_set_params:
@@ -274,19 +465,20 @@ class Simulation:
 
         if self._parameter_values._dict_items == {}:
             # Don't process if parameter values is empty
-            self._model_with_set_params = self._model
+            self._model_with_set_params = self._unprocessed_model
         else:
             self._model_with_set_params = self._parameter_values.process_model(
-                self._model, inplace=True
+                self._unprocessed_model, inplace=False
             )
             self._parameter_values.process_geometry(self._geometry)
+        self.model = self._model_with_set_params
 
     def build(self, check_model=True):
         """
         A method to build the model into a system of matrices and vectors suitable for
         performing numerical computations. If the model has already been built or
-        solved then this function will have no effect. If you want to rebuild,
-        first use "reset()". This method will automatically set the parameters
+        solved then this function will have no effect.
+        This method will automatically set the parameters
         if they have not already been set.
 
         Parameters
@@ -298,21 +490,62 @@ class Simulation:
 
         if self.built_model:
             return None
+        elif self.model.is_discretised:
+            self._model_with_set_params = self.model
+            self._built_model = self.model
+        else:
+            self.set_parameters()
+            self._mesh = pybamm.Mesh(self._geometry, self._submesh_types, self._var_pts)
+            self._disc = pybamm.Discretisation(self._mesh, self._spatial_methods)
+            self._built_model = self._disc.process_model(
+                self._model_with_set_params, inplace=False, check_model=check_model
+            )
 
-        self.set_parameters()
-        self._mesh = pybamm.Mesh(self._geometry, self._submesh_types, self._var_pts)
-        self._disc = pybamm.Discretisation(self._mesh, self._spatial_methods)
-        self._built_model = self._disc.process_model(
-            self._model_with_set_params, inplace=False, check_model=check_model
-        )
+    def build_for_experiment(self, check_model=True):
+        """
+        Similar to :meth:`Simulation.build`, but for the case of simulating an
+        experiment, where there may be several models to build
+        """
+        if self.op_conds_to_built_models:
+            return None
+        else:
+            # Can process geometry with default parameter values (only electrical
+            # parameters change between parameter values)
+            self._parameter_values.process_geometry(self._geometry)
+            # Only needs to set up mesh and discretisation once
+            self._mesh = pybamm.Mesh(self._geometry, self._submesh_types, self._var_pts)
+            self._disc = pybamm.Discretisation(self._mesh, self._spatial_methods)
+            # Process all the different models
+            self.op_conds_to_built_models = {}
+            processed_models = {}
+            for op_cond, (
+                unbuilt_model,
+                parameter_values,
+            ) in self.op_conds_to_model_and_param.items():
+                if unbuilt_model in processed_models:
+                    built_model = processed_models[unbuilt_model]
+                else:
+                    # It's ok to modify the models in-place as they are not accessible
+                    # from outside the simulation
+                    model_with_set_params = parameter_values.process_model(
+                        unbuilt_model, inplace=True
+                    )
+                    built_model = self._disc.process_model(
+                        model_with_set_params, inplace=True, check_model=check_model
+                    )
+                    processed_models[unbuilt_model] = built_model
+
+                self.op_conds_to_built_models[op_cond] = built_model
 
     def solve(
         self,
         t_eval=None,
         solver=None,
-        external_variables=None,
-        inputs=None,
         check_model=True,
+        save_at_cycles=None,
+        calc_esoh=True,
+        starting_solution=None,
+        **kwargs,
     ):
         """
         A method to solve the model. This method will automatically build
@@ -321,49 +554,84 @@ class Simulation:
         Parameters
         ----------
         t_eval : numeric type, optional
-            The times at which to compute the solution. If None and the parameter
-            "Current function [A]" is not read from data the model will
-            be solved for a full discharge (1 hour / C_rate). If None and the
-            parameter "Current function [A]" is read from data the model will be
-            solved at the times provided in the data.
-        solver : :class:`pybamm.BaseSolver`
-            The solver to use to solve the model.
-        external_variables : dict
-            A dictionary of external variables and their corresponding
-            values at the current time. The variables must correspond to
-            the variables that would normally be found by solving the
-            submodels that have been made external.
-        inputs : dict, optional
-            Any input parameters to pass to the model when solving
+            The times (in seconds) at which to compute the solution. Can be
+            provided as an array of times at which to return the solution, or as a
+            list `[t0, tf]` where `t0` is the initial time and `tf` is the final time.
+            If provided as a list the solution is returned at 100 points within the
+            interval `[t0, tf]`.
+
+            If not using an experiment or running a drive cycle simulation (current
+            provided as data) `t_eval` *must* be provided.
+
+            If running an experiment the values in `t_eval` are ignored, and the
+            solution times are specified by the experiment.
+
+            If None and the parameter "Current function [A]" is read from data
+            (i.e. drive cycle simulation) the model will be solved at the times
+            provided in the data.
+        solver : :class:`pybamm.BaseSolver`, optional
+            The solver to use to solve the model. If None, Simulation.solver is used
         check_model : bool, optional
             If True, model checks are performed after discretisation (see
             :meth:`pybamm.Discretisation.process_model`). Default is True.
+        save_at_cycles : int or list of ints, optional
+            Which cycles to save the full sub-solutions for. If None, all cycles are
+            saved. If int, every multiple of save_at_cycles is saved. If list, every
+            cycle in the list is saved. The first cycle (cycle 1) is always saved.
+        calc_esoh : bool, optional
+            Whether to include eSOH variables in the summary variables. If `False`
+            then only summary variables that do not require the eSOH calculation
+            are calculated. Default is True.
+        starting_solution : :class:`pybamm.Solution`
+            The solution to start stepping from. If None (default), then self._solution
+            is used. Must be None if not using an experiment.
+        **kwargs
+            Additional key-word arguments passed to `solver.solve`.
+            See :meth:`pybamm.BaseSolver.solve`.
         """
         # Setup
-        self.build(check_model=check_model)
         if solver is None:
             solver = self.solver
 
-        if self.operating_mode == "without experiment":
-            # For drive cycles (current provided as data) we perform additional tests
-            # on t_eval (if provided) to ensure the returned solution captures the
-            # input. If the current is provided as data then the "Current function [A]"
-            # is the tuple (filename, data).
-            # First, read the current function (if provided, otherwise return None)
-            current = self._parameter_values.get("Current function [A]")
-            if isinstance(current, tuple):
-                filename = self._parameter_values["Current function [A]"][0]
-                time_data = self._parameter_values["Current function [A]"][1][:, 0]
+        if self.operating_mode in ["without experiment", "drive cycle"]:
+            self.build(check_model=check_model)
+            if save_at_cycles is not None:
+                raise ValueError(
+                    "'save_at_cycles' option can only be used if simulating an "
+                    "Experiment "
+                )
+            if starting_solution is not None:
+                raise ValueError(
+                    "starting_solution can only be provided if simulating an Experiment"
+                )
+            if self.operating_mode == "without experiment":
+                if t_eval is None:
+                    raise pybamm.SolverError(
+                        "'t_eval' must be provided if not using an experiment or "
+                        "simulating a drive cycle. 't_eval' can be provided as an "
+                        "array of times at which to return the solution, or as a "
+                        "list [t0, tf] where t0 is the initial time and tf is the "
+                        "final time. "
+                        "For a constant current (dis)charge the suggested 't_eval'  "
+                        "is [0, 3700/C] where C is the C-rate. "
+                        "For example, run\n\n"
+                        "\tsim.solve([0, 3700])\n\n"
+                        "for a 1C discharge."
+                    )
+
+            elif self.operating_mode == "drive cycle":
+                # For drive cycles (current provided as data) we perform additional
+                # tests on t_eval (if provided) to ensure the returned solution
+                # captures the input.
+                time_data = self._parameter_values["Current function [A]"].x[0]
                 # If no t_eval is provided, we use the times provided in the data.
                 if t_eval is None:
-                    pybamm.logger.info(
-                        "Setting t_eval as specified by the data '{}'".format(filename)
-                    )
+                    pybamm.logger.info("Setting t_eval as specified by the data")
                     t_eval = time_data
-                # If t_eval is provided we first check if it contains all of the times
-                # in the data to within 10-12. If it doesn't, we then check
-                # that the largest gap in t_eval is smaller than the smallest gap in the
-                # time data (to ensure the resolution of t_eval is fine enough).
+                # If t_eval is provided we first check if it contains all of the
+                # times in the data to within 10-12. If it doesn't, we then check
+                # that the largest gap in t_eval is smaller than the smallest gap in
+                # the time data (to ensure the resolution of t_eval is fine enough).
                 # We only raise a warning here as users may genuinely only want
                 # the solution returned at some specified points.
                 elif (
@@ -372,11 +640,9 @@ class Simulation:
                     warnings.warn(
                         """
                         t_eval does not contain all of the time points in the data
-                        '{}'. Note: passing t_eval = None automatically sets t_eval
+                        set. Note: passing t_eval = None automatically sets t_eval
                         to be the points in the data.
-                        """.format(
-                            filename
-                        ),
+                        """,
                         pybamm.SolverWarning,
                     )
                     dt_data_min = np.min(np.diff(time_data))
@@ -395,76 +661,187 @@ class Simulation:
                             ),
                             pybamm.SolverWarning,
                         )
-            # If not using a drive cycle and t_eval is not provided, set t_eval
-            # to correspond to a single discharge
-            elif t_eval is None:
-                if current is None:
-                    t_end = 1
-                else:
-                    # Get C-rate, return None if it doesn't exist
-                    capacity = self.parameter_values["Cell capacity [A.h]"]
-                    if isinstance(current, pybamm.InputParameter):
-                        C_rate = inputs["Current function [A]"] / capacity
-                        t_end = 3600 / C_rate
-                    else:
-                        try:
-                            C_rate = current / capacity
-                            t_end = 3600 / C_rate
-                        except TypeError:
-                            t_end = 3600
-                t_eval = np.linspace(0, t_end, 100)
 
-            self.t_eval = t_eval
-            self._solution = solver.solve(self.built_model, t_eval, inputs=inputs)
+            self._solution = solver.solve(self.built_model, t_eval, **kwargs)
 
         elif self.operating_mode == "with experiment":
+            self.build_for_experiment(check_model=check_model)
             if t_eval is not None:
                 pybamm.logger.warning(
                     "Ignoring t_eval as solution times are specified by the experiment"
                 )
+            # Re-initialize solution, e.g. for solving multiple times with different
+            # inputs without having to build the simulation again
+            self._solution = starting_solution
             # Step through all experimental conditions
-            inputs = inputs or {}
+            inputs = kwargs.get("inputs", {})
             pybamm.logger.info("Start running experiment")
             timer = pybamm.Timer()
-            for idx, (exp_inputs, dt) in enumerate(
-                zip(self._experiment_inputs, self._experiment_times)
-            ):
-                pybamm.logger.info(self.experiment.operating_conditions_strings[idx])
-                inputs.update(exp_inputs)
-                # Make sure we take at least 2 timesteps
-                npts = max(int(round(dt / exp_inputs["period"])) + 1, 2)
-                self.step(
-                    dt,
-                    solver=solver,
-                    npts=npts,
-                    external_variables=external_variables,
-                    inputs=inputs,
+
+            if starting_solution is None:
+                starting_solution_cycles = []
+                starting_solution_summary_variables = []
+            else:
+                starting_solution_cycles = starting_solution.cycles.copy()
+                starting_solution_summary_variables = (
+                    starting_solution.all_summary_variables.copy()
                 )
-                # Only allow events specified by experiment
-                if not (
-                    self._solution.termination == "final time"
-                    or "[experiment]" in self._solution.termination
-                ):
+
+            cycle_offset = len(starting_solution_cycles)
+            all_cycle_solutions = starting_solution_cycles
+            all_summary_variables = starting_solution_summary_variables
+            current_solution = starting_solution
+
+            # Set up eSOH model (for summary variables)
+            if calc_esoh is True:
+                esoh_model = pybamm.lithium_ion.ElectrodeSOH()
+                esoh_sim = pybamm.Simulation(
+                    esoh_model, parameter_values=self.parameter_values
+                )
+            else:
+                esoh_sim = None
+
+            idx = 0
+            num_cycles = len(self.experiment.cycle_lengths)
+            feasible = True  # simulation will stop if experiment is infeasible
+            for cycle_num, cycle_length in enumerate(
+                self.experiment.cycle_lengths, start=1
+            ):
+                pybamm.logger.notice(
+                    f"Cycle {cycle_num+cycle_offset}/{num_cycles+cycle_offset} "
+                    f"({timer.time()} elapsed) " + "-" * 20
+                )
+                steps = []
+                cycle_solution = None
+
+                # Decide whether we should save this cycle
+                save_this_cycle = (
+                    # always save cycle 1
+                    cycle_num == 1
+                    # None: save all cycles
+                    or save_at_cycles is None
+                    # list: save all cycles in the list
+                    or (
+                        isinstance(save_at_cycles, list)
+                        and cycle_num + cycle_offset in save_at_cycles
+                    )
+                    # int: save all multiples
+                    or (
+                        isinstance(save_at_cycles, int)
+                        and (cycle_num + cycle_offset) % save_at_cycles == 0
+                    )
+                )
+                for step_num in range(1, cycle_length + 1):
+                    exp_inputs = self._experiment_inputs[idx]
+                    dt = self._experiment_times[idx]
+                    op_conds_str = self.experiment.operating_conditions_strings[idx]
+                    op_conds_elec = self.experiment.operating_conditions[idx][:2]
+                    model = self.op_conds_to_built_models[op_conds_elec]
+                    # Use 1-indexing for printing cycle number as it is more
+                    # human-intuitive
+                    pybamm.logger.notice(
+                        f"Cycle {cycle_num+cycle_offset}/{num_cycles+cycle_offset}, "
+                        f"step {step_num}/{cycle_length}: {op_conds_str}"
+                    )
+                    inputs.update(exp_inputs)
+                    kwargs["inputs"] = inputs
+                    # Make sure we take at least 2 timesteps
+                    npts = max(int(round(dt / exp_inputs["period"])) + 1, 2)
+                    step_solution = solver.step(
+                        current_solution,
+                        model,
+                        dt,
+                        npts=npts,
+                        save=False,
+                        **kwargs,
+                    )
+                    steps.append(step_solution)
+                    current_solution = step_solution
+
+                    cycle_solution = cycle_solution + step_solution
+
+                    # Only allow events specified by experiment
+                    if not (
+                        step_solution is None
+                        or step_solution.termination == "final time"
+                        or "[experiment]" in step_solution.termination
+                    ):
+                        feasible = False
+                        break
+
+                    # Increment index for next iteration
+                    idx += 1
+
+                # Break if the experiment is infeasible
+                if feasible is False:
                     pybamm.logger.warning(
-                        """
-                        Experiment is infeasible: '{}' was triggered during '{}'. Try
-                        reducing current, shortening the time interval, or reducing
-                        the period.
-                        """.format(
-                            self._solution.termination,
-                            self.experiment.operating_conditions_strings[idx],
+                        "\n\n\tExperiment is infeasible: '{}' ".format(
+                            step_solution.termination
                         )
+                        + "was triggered during '{}'. ".format(
+                            self.experiment.operating_conditions_strings[idx]
+                        )
+                        + "The returned solution only contains the first "
+                        "{} cycles. ".format(cycle_num - 1 + cycle_offset)
+                        + "Try reducing the current, shortening the time interval, "
+                        "or reducing the period.\n\n"
                     )
                     break
-            pybamm.logger.info(
-                "Finish experiment simulation, took {}".format(
-                    timer.format(timer.time())
+
+                if save_this_cycle:
+                    self._solution = self._solution + cycle_solution
+
+                # At the final step of the inner loop we save the cycle
+                cycle_solution, cycle_summary_variables = pybamm.make_cycle_solution(
+                    steps,
+                    esoh_sim,
+                    save_this_cycle=save_this_cycle,
                 )
+                all_cycle_solutions.append(cycle_solution)
+                all_summary_variables.append(cycle_summary_variables)
+
+                # Calculate capacity_start using the first cycle
+                if cycle_num == 1:
+                    if "capacity" in self.experiment.termination:
+                        # Note capacity_start could be defined as
+                        # self.parameter_values["Nominal cell capacity [A.h]"] instead
+                        capacity_start = all_summary_variables[0]["Capacity [A.h]"]
+                        value, typ = self.experiment.termination["capacity"]
+                        if typ == "Ah":
+                            capacity_stop = value
+                        elif typ == "%":
+                            capacity_stop = value / 100 * capacity_start
+                    else:
+                        capacity_stop = None
+
+                if capacity_stop is not None:
+                    capacity_now = cycle_summary_variables["Capacity [A.h]"]
+                    if np.isnan(capacity_now) or capacity_now > capacity_stop:
+                        pybamm.logger.notice(
+                            f"Capacity is now {capacity_now:.3f} Ah "
+                            f"(originally {capacity_start:.3f} Ah, "
+                            f"will stop at {capacity_stop:.3f} Ah)"
+                        )
+                    else:
+                        pybamm.logger.notice(
+                            "Stopping experiment since capacity "
+                            f"({capacity_now:.3f} Ah) "
+                            f"is below stopping capacity ({capacity_stop:.3f} Ah)."
+                        )
+                        break
+
+            if self.solution is not None and len(all_cycle_solutions) > 0:
+                self.solution.cycles = all_cycle_solutions
+                self.solution.set_summary_variables(all_summary_variables)
+
+            pybamm.logger.notice(
+                "Finish experiment simulation, took {}".format(timer.time())
             )
+
         return self.solution
 
     def step(
-        self, dt, solver=None, npts=2, external_variables=None, inputs=None, save=True
+        self, dt, solver=None, npts=2, save=True, starting_solution=None, **kwargs
     ):
         """
         A method to step the model forward one timestep. This method will
@@ -478,84 +855,67 @@ class Simulation:
             The solver to use to solve the model.
         npts : int, optional
             The number of points at which the solution will be returned during
-            the step dt. default is 2 (returns the solution at t0 and t0 + dt).
-        external_variables : dict
-            A dictionary of external variables and their corresponding
-            values at the current time. The variables must correspond to
-            the variables that would normally be found by solving the
-            submodels that have been made external.
-        inputs : dict, optional
-            Any input parameters to pass to the model when solving
+            the step dt. Default is 2 (returns the solution at t0 and t0 + dt).
         save : bool
             Turn on to store the solution of all previous timesteps
+        starting_solution : :class:`pybamm.Solution`
+            The solution to start stepping from. If None (default), then self._solution
+            is used
+        **kwargs
+            Additional key-word arguments passed to `solver.solve`.
+            See :meth:`pybamm.BaseSolver.step`.
         """
-        self.build()
+        if self.operating_mode in ["without experiment", "drive cycle"]:
+            self.build()
 
         if solver is None:
             solver = self.solver
 
+        if starting_solution is None:
+            starting_solution = self._solution
+
         self._solution = solver.step(
-            self._solution,
-            self.built_model,
-            dt,
-            npts=npts,
-            external_variables=external_variables,
-            inputs=inputs,
-            save=save,
+            starting_solution, self.built_model, dt, npts=npts, save=save, **kwargs
         )
 
-    def get_variable_array(self, *variables):
+        return self.solution
+
+    def plot(self, output_variables=None, quick_plot_vars=None, **kwargs):
         """
-        A helper function to easily obtain a dictionary of arrays of values
-        for a list of variables at the latest timestep.
+        A method to quickly plot the outputs of the simulation. Creates a
+        :class:`pybamm.QuickPlot` object (with keyword arguments 'kwargs') and
+        then calls :meth:`pybamm.QuickPlot.dynamic_plot`.
 
         Parameters
         ----------
-        variable: str
-            The name of the variable/variables you wish to obtain the arrays for.
-
-        Returns
-        -------
-        variable_arrays: dict
-            A dictionary of the variable names and their corresponding
-            arrays.
-        """
-
-        variable_arrays = [
-            self.built_model.variables[var].evaluate(
-                self.solution.t[-1], self.solution.y[:, -1]
-            )
-            for var in variables
-        ]
-
-        if len(variable_arrays) == 1:
-            return variable_arrays[0]
-        else:
-            return tuple(variable_arrays)
-
-    def plot(self, quick_plot_vars=None, testing=False):
-        """
-        A method to quickly plot the outputs of the simulation.
-
-        Parameters
-        ----------
-        quick_plot_vars: list, optional
+        output_variables: list, optional
             A list of the variables to plot.
-        testing, bool, optional
-            If False the plot will not be displayed
+        quick_plot_vars: list, optional
+            A list of the variables to plot. Deprecated, use output_variables instead.
+        **kwargs
+            Additional keyword arguments passed to
+            :meth:`pybamm.QuickPlot.dynamic_plot`.
+            For a list of all possible keyword arguments see :class:`pybamm.QuickPlot`.
         """
+
+        if quick_plot_vars is not None:
+            raise NotImplementedError(
+                "'quick_plot_vars' has been deprecated. Use 'output_variables' instead."
+            )
 
         if self._solution is None:
             raise ValueError(
                 "Model has not been solved, please solve the model before plotting."
             )
 
-        if quick_plot_vars is None:
-            quick_plot_vars = self.quick_plot_vars
+        if output_variables is None:
+            output_variables = self.output_variables
 
         self.quick_plot = pybamm.dynamic_plot(
-            self._solution, output_variables=quick_plot_vars, testing=testing
+            self._solution, output_variables=output_variables, **kwargs
         )
+
+        return self.quick_plot
 
     @property
     def model(self):
@@ -565,7 +925,6 @@ class Simulation:
     def model(self, model):
         self._model = copy.copy(model)
         self._model_class = model.__class__
-        self._model_options = model.options.copy()
 
     @property
     def model_with_set_params(self):
@@ -576,21 +935,12 @@ class Simulation:
         return self._built_model
 
     @property
-    def model_options(self):
-        return self._model_options
-
-    @property
     def geometry(self):
         return self._geometry
 
     @geometry.setter
     def geometry(self, geometry):
         self._geometry = geometry.copy()
-        self._unprocessed_geometry = copy.deepcopy(geometry)
-
-    @property
-    def unprocessed_geometry(self):
-        return self._unprocessed_geometry
 
     @property
     def parameter_values(self):
@@ -637,12 +987,12 @@ class Simulation:
         self._solver = solver.copy()
 
     @property
-    def quick_plot_vars(self):
-        return self._quick_plot_vars
+    def output_variables(self):
+        return self._output_variables
 
-    @quick_plot_vars.setter
-    def quick_plot_vars(self, quick_plot_vars):
-        self._quick_plot_vars = copy.copy(quick_plot_vars)
+    @output_variables.setter
+    def output_variables(self, output_variables):
+        self._output_variables = copy.copy(output_variables)
 
     @property
     def solution(self):
@@ -650,83 +1000,20 @@ class Simulation:
 
     def specs(
         self,
-        model_options=None,
         geometry=None,
         parameter_values=None,
         submesh_types=None,
         var_pts=None,
         spatial_methods=None,
         solver=None,
-        quick_plot_vars=None,
+        output_variables=None,
         C_rate=None,
     ):
-        """
-        A method to set the various specs of the simulation. This method
-        automatically resets the model after the new specs have been set.
-
-        Parameters
-        ----------
-        model_options: dict, optional
-            A dictionary of options to tweak the model you are using
-        geometry: :class:`pybamm.Geometry`, optional
-            The geometry upon which to solve the model
-        parameter_values: dict, optional
-            A dictionary of parameters and their corresponding numerical
-            values
-        submesh_types: dict, optional
-            A dictionary of the types of submesh to use on each subdomain
-        var_pts: dict, optional
-            A dictionary of the number of points used by each spatial
-            variable
-        spatial_methods: dict, optional
-            A dictionary of the types of spatial method to use on each
-            domain (e.g. pybamm.FiniteVolume)
-        solver: :class:`pybamm.BaseSolver` (optional)
-            The solver to use to solve the model.
-        quick_plot_vars: list (optional)
-            A list of variables to plot automatically
-        C_rate: float (optional)
-            The C_rate at which you would like to run a constant current
-            experiment at.
-        """
-
-        if model_options:
-            self._model_options = model_options.copy()
-
-        if geometry:
-            self.geometry = geometry
-
-        if parameter_values:
-            self.parameter_values = parameter_values
-        if submesh_types:
-            self.submesh_types = submesh_types
-        if var_pts:
-            self.var_pts = var_pts
-        if spatial_methods:
-            self.spatial_methods = spatial_methods
-        if solver:
-            self.solver = solver
-        if quick_plot_vars:
-            self.quick_plot_vars = quick_plot_vars
-
-        if C_rate:
-            self.C_rate = C_rate
-            self._parameter_values.update(
-                {
-                    "Current function [A]": self.C_rate
-                    * self._parameter_values["Cell capacity [A.h]"]
-                }
-            )
-
-        if (
-            model_options
-            or geometry
-            or parameter_values
-            or submesh_types
-            or var_pts
-            or spatial_methods
-        ):
-            self.reset()
+        "Deprecated method for setting specs"
+        raise NotImplementedError(
+            "The 'specs' method has been deprecated. "
+            "Create a new simulation for each different case instead."
+        )
 
     def save(self, filename):
         """Save simulation using pickle"""
@@ -741,9 +1028,11 @@ class Simulation:
         # Clear solver problem (not pickle-able, will automatically be recomputed)
         if (
             isinstance(self._solver, pybamm.CasadiSolver)
-            and self._solver.problems != {}
+            and self._solver.integrator_specs != {}
         ):
-            self._solver.problems = {}
+            self._solver.integrator_specs = {}
+        if self.solution is not None:
+            self.solution.clear_casadi_attributes()
         with open(filename, "wb") as f:
             pickle.dump(self, f, pickle.HIGHEST_PROTOCOL)
 

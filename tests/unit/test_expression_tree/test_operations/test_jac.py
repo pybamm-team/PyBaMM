@@ -14,6 +14,13 @@ def test_multi_var_function(arg1, arg2):
 
 
 class TestJacobian(unittest.TestCase):
+    def test_variable_is_statevector(self):
+        a = pybamm.Symbol("a")
+        with self.assertRaisesRegex(
+            TypeError, "Jacobian can only be taken with respect to a 'StateVector'"
+        ):
+            a.jac(a)
+
     def test_linear(self):
         y = pybamm.StateVector(slice(0, 4))
         u = pybamm.StateVector(slice(0, 2))
@@ -44,7 +51,7 @@ class TestJacobian(unittest.TestCase):
         A = pybamm.Matrix(2 * eye(2))
         func = A @ u
         jacobian = np.array([[2, 0, 0, 0], [0, 2, 0, 0]])
-        dfunc_dy = func.jac(y).simplify().evaluate(y=y0)
+        dfunc_dy = func.jac(y).evaluate(y=y0)
         np.testing.assert_array_equal(jacobian, dfunc_dy.toarray())
 
         func = u @ pybamm.StateVector(slice(0, 1))
@@ -206,7 +213,7 @@ class TestJacobian(unittest.TestCase):
         np.testing.assert_array_equal(jacobian, dfunc_dy.toarray())
 
         # when child evaluates to number
-        func = pybamm.sin(const)
+        func = pybamm.Sin(const)
         dfunc_dy = func.jac(y).evaluate(y=y0)
         np.testing.assert_array_equal(0, dfunc_dy)
 
@@ -229,11 +236,11 @@ class TestJacobian(unittest.TestCase):
         np.testing.assert_array_equal(jac, np.array([[0, 0, 0, 0, 0]]))
 
     def test_jac_of_number(self):
-        "Jacobian of a number should be zero"
+        """Jacobian of a number should be zero"""
         a = pybamm.Scalar(1)
         b = pybamm.Scalar(2)
 
-        y = pybamm.Variable("y")
+        y = pybamm.StateVector(slice(0, 1))
 
         self.assertEqual(a.jac(y).evaluate(), 0)
 
@@ -261,14 +268,16 @@ class TestJacobian(unittest.TestCase):
     def test_spatial_operator(self):
         a = pybamm.Variable("a")
         b = pybamm.SpatialOperator("Operator", a)
+        y = pybamm.StateVector(slice(0, 1))
         with self.assertRaises(NotImplementedError):
-            b.jac(None)
+            b.jac(y)
 
     def test_jac_of_unary_operator(self):
         a = pybamm.Scalar(1)
         b = pybamm.UnaryOperator("Operator", a)
+        y = pybamm.StateVector(slice(0, 1))
         with self.assertRaises(NotImplementedError):
-            b.jac(None)
+            b.jac(y)
 
     def test_jac_of_independent_variable(self):
         a = pybamm.IndependentVariable("Variable")
@@ -290,21 +299,41 @@ class TestJacobian(unittest.TestCase):
         a = pybamm.Scalar(1)
         y = pybamm.StateVector(slice(0, 5))
         np.testing.assert_array_equal(
-            ((a < y) * y ** 2).jac(y).evaluate(y=5 * np.ones(5)), 10 * np.eye(5)
+            ((a < y) * y ** 2).jac(y).evaluate(y=5 * np.ones(5)).toarray(),
+            10 * np.eye(5),
         )
         np.testing.assert_array_equal(
-            ((a < y) * y ** 2).jac(y).evaluate(y=-5 * np.ones(5)), 0
+            ((a < y) * y ** 2).jac(y).evaluate(y=-5 * np.ones(5)).toarray(), 0
+        )
+
+    def test_jac_of_modulo(self):
+        a = pybamm.Scalar(3)
+        y = pybamm.StateVector(slice(0, 5))
+        np.testing.assert_array_equal(
+            (a % (3 * a)).jac(y).evaluate(y=5 * np.ones(5)), 0
+        )
+        np.testing.assert_array_equal(
+            ((y % a) * y ** 2).jac(y).evaluate(y=5 * np.ones(5)).toarray(),
+            45 * np.eye(5),
+        )
+        np.testing.assert_array_equal(
+            ((a % y) * y ** 2).jac(y).evaluate(y=5 * np.ones(5)).toarray(),
+            30 * np.eye(5),
+        )
+        np.testing.assert_array_equal(
+            (((y + 1) ** 2 % y) * y ** 2).jac(y).evaluate(y=5 * np.ones(5)).toarray(),
+            135 * np.eye(5),
         )
 
     def test_jac_of_minimum_maximum(self):
         y = pybamm.StateVector(slice(0, 10))
         y_test = np.linspace(0, 2, 10)
         np.testing.assert_array_equal(
-            np.diag(pybamm.minimum(1, y ** 2).jac(y).evaluate(y=y_test)),
+            np.diag(pybamm.minimum(1, y ** 2).jac(y).evaluate(y=y_test).toarray()),
             2 * y_test * (y_test < 1),
         )
         np.testing.assert_array_equal(
-            np.diag(pybamm.maximum(1, y ** 2).jac(y).evaluate(y=y_test)),
+            np.diag(pybamm.maximum(1, y ** 2).jac(y).evaluate(y=y_test).toarray()),
             2 * y_test * (y_test > 1),
         )
 
@@ -322,7 +351,41 @@ class TestJacobian(unittest.TestCase):
         func = pybamm.sign(y) * y
         jac = func.jac(y)
         y_test = np.linspace(-2, 2, 10)
-        np.testing.assert_array_equal(np.diag(jac.evaluate(y=y_test)), np.sign(y_test))
+        np.testing.assert_array_equal(
+            np.diag(jac.evaluate(y=y_test).toarray()), np.sign(y_test)
+        )
+
+    def test_jac_of_floor(self):
+        y = pybamm.StateVector(slice(0, 10))
+        func = pybamm.Floor(y) * y
+        jac = func.jac(y)
+        y_test = np.linspace(-2, 2, 10)
+        np.testing.assert_array_equal(
+            np.diag(jac.evaluate(y=y_test).toarray()), np.floor(y_test)
+        )
+
+    def test_jac_of_ceiling(self):
+        y = pybamm.StateVector(slice(0, 10))
+        func = pybamm.Ceiling(y) * y
+        jac = func.jac(y)
+        y_test = np.linspace(-2, 2, 10)
+        np.testing.assert_array_equal(
+            np.diag(jac.evaluate(y=y_test).toarray()), np.ceil(y_test)
+        )
+
+    def test_jac_of_numpy_concatenation(self):
+        u = pybamm.StateVector(slice(0, 2))
+
+        y0 = np.ones(2)
+
+        # Multiple children
+        func = pybamm.NumpyConcatenation(u, u)
+        jacobian = np.array([[1, 0], [0, 1], [1, 0], [0, 1]])
+        dfunc_dy = func.jac(u).evaluate(y=y0)
+        np.testing.assert_array_equal(jacobian, dfunc_dy.toarray())
+
+        # One child
+        self.assertEqual(u.jac(u).id, pybamm.NumpyConcatenation(u).jac(u).id)
 
     def test_jac_of_domain_concatenation(self):
         # create mesh
@@ -334,9 +397,9 @@ class TestJacobian(unittest.TestCase):
         a_dom = ["negative electrode"]
         b_dom = ["separator"]
         c_dom = ["positive electrode"]
-        a_npts = mesh[a_dom[0]][0].npts
-        b_npts = mesh[b_dom[0]][0].npts
-        c_npts = mesh[c_dom[0]][0].npts
+        a_npts = mesh[a_dom[0]].npts
+        b_npts = mesh[b_dom[0]].npts
+        c_npts = mesh[c_dom[0]].npts
         a = 2 * pybamm.Vector(np.ones(a_npts), domain=a_dom)
         b = pybamm.Vector(np.ones(b_npts), domain=b_dom)
         c = 3 * pybamm.Vector(np.ones(c_npts), domain=c_dom)

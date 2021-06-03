@@ -21,8 +21,10 @@ class BaseModel(pybamm.BaseSubModel):
         super().__init__(param)
         self.phase = phase
 
-    def _get_standard_tortuosity_variables(self, tor, set_leading_order=False):
-        tor_n, tor_s, tor_p = tor.orphans
+    def _get_standard_tortuosity_variables(
+        self, tor_n, tor_s, tor_p, set_leading_order=False
+    ):
+        tor = pybamm.concatenation(tor_n, tor_s, tor_p)
 
         variables = {
             self.phase + " tortuosity": tor,

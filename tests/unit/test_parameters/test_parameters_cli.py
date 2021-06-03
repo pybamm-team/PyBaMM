@@ -11,18 +11,23 @@ import tempfile
 import unittest
 import platform
 
-from sys import version_info as python_version
 
-
-@unittest.skipUnless(platform.system() != "Windows", "Skipped for Windows")
+@unittest.skipIf(platform.system() == "Windows", "Skipped for Windows")
 class TestParametersCLI(unittest.TestCase):
-    def test_add_param(self):
+    def test_add_rm_param(self):
         # Read a parameter file thta is shipped with PyBaMM
-        param_filename = pybamm.get_parameters_filepath(
-            "input/parameters/lithium-ion/anodes/"
-            "graphite_mcmb2528_Marquis2019/parameters.csv"
+        param_pkg_dir = os.path.join(pybamm.__path__[0], "input", "parameters")
+        param_filename = os.path.join(
+            param_pkg_dir,
+            "lithium_ion",
+            "negative_electrodes",
+            "graphite_mcmb2528_Marquis2019",
+            "parameters.csv",
         )
-        anode = pybamm.ParameterValues({}).read_parameters_csv(param_filename)
+
+        negative_electrode = pybamm.ParameterValues({}).read_parameters_csv(
+            param_filename
+        )
 
         # Write these parameters in current working dir. to mimic
         # user-defined parameters
@@ -32,43 +37,59 @@ class TestParametersCLI(unittest.TestCase):
             fieldnames = ["Name [units]", "Value"]
             writer = csv.writer(csvfile)
             writer.writerow(fieldnames)
-            for row in anode.items():
+            for row in negative_electrode.items():
                 writer.writerow(row)
 
         # Use pybamm command line to add new parameters under
         # test_parameters_dir directory
-        cmd = ["pybamm_add_parameter", "-f", tempdir.name, "lithium-ion", "anodes"]
+        cmd = [
+            "pybamm_add_parameter",
+            "-f",
+            tempdir.name,
+            "lithium_ion",
+            "negative_electrodes",
+        ]
         subprocess.run(cmd, check=True)
 
         # Check that the new parameters can be accessed from the package
         # and that content is correct
-        new_parameter_filename = pybamm.get_parameters_filepath(
-            os.path.join(
-                "input",
-                "parameters",
-                "lithium-ion",
-                "anodes",
-                os.path.basename(tempdir.name),
-                "parameters.csv",
-            )
+        new_parameter_filename = os.path.join(
+            param_pkg_dir,
+            "lithium_ion",
+            "negative_electrodes",
+            os.path.basename(tempdir.name),
+            "parameters.csv",
         )
+        self.assertTrue(os.path.isfile(new_parameter_filename))
 
-        new_anode = pybamm.ParameterValues({}).read_parameters_csv(
+        new_negative_electrode = pybamm.ParameterValues({}).read_parameters_csv(
             new_parameter_filename
         )
-        self.assertEqual(new_anode["Negative electrode porosity"], "0.3")
+        self.assertEqual(new_negative_electrode["Negative electrode porosity"], "0.3")
+
+        # Now delete added parameter
+        cmd = [
+            "pybamm_rm_parameter",
+            "-f",
+            tempdir.name,
+            "lithium_ion",
+            "negative_electrodes",
+        ]
+        subprocess.run(cmd, check=True)
+        self.assertFalse(os.path.isfile(new_parameter_filename))
 
         # Clean up directories
         tempdir.cleanup()  # Remove temporary local directory
-        os.remove(new_parameter_filename)  # Remove parameters.csv file
-        os.rmdir(os.path.dirname(new_parameter_filename))  # Remove (now empty) dir
 
     def test_edit_param(self):
-        anodes_dir = os.path.join("input", "parameters", "lithium-ion", "anodes")
+        negative_electrodes_dir = os.path.join(
+            "input", "parameters", "lithium_ion", "negative_electrodes"
+        )
+        chemistry = "lithium_ion"
         # Write dummy parameters.csv file in temporary directory
         # in package input dir
         tempdir = tempfile.TemporaryDirectory(
-            dir=os.path.join(pybamm.__path__[0], anodes_dir)
+            dir=os.path.join(pybamm.__path__[0], negative_electrodes_dir)
         )
         with open(os.path.join(tempdir.name, "parameters.csv"), "w") as f:
             f.write("hello")
@@ -77,19 +98,14 @@ class TestParametersCLI(unittest.TestCase):
         sandbox_dir = tempfile.TemporaryDirectory()
 
         # Copy temporary dir in package to current working directory
-        cmd = [
-            "pybamm_edit_parameter",
-            "-f",
-            os.path.basename(tempdir.name),
-            "lithium-ion",
-            "anodes",
-        ]
+        cmd = ["pybamm_edit_parameter", "-f", chemistry]
         subprocess.run(cmd, cwd=sandbox_dir.name)
 
         # Read and compare copied parameters.csv file
         copied_path_parameters_file = os.path.join(
             sandbox_dir.name,
-            anodes_dir,
+            chemistry,
+            "negative_electrodes",
             os.path.basename(tempdir.name),
             "parameters.csv",
         )
@@ -97,28 +113,9 @@ class TestParametersCLI(unittest.TestCase):
             content = f.read()
             self.assertTrue(content == "hello")
 
-        # Clean up temporaty dicts
+        # Clean up temporary dicts
         sandbox_dir.cleanup()
         tempdir.cleanup()
-
-    def test_list_params(self):
-        cmd = ["pybamm_list_parameters", "lithium-ion", "cathodes"]
-        if python_version >= (3, 7):
-            output = subprocess.run(cmd, check=True, capture_output=True)
-        else:
-            output = subprocess.run(cmd, check=True, stdout=subprocess.PIPE)
-        # First check that available package parameters are listed
-        # correctly
-        self.assertTrue("lico2_Marquis2019" in str(output.stdout))
-        self.assertTrue("nca_Kim2011" in str(output.stdout))
-        self.assertTrue("nmc_Chen2020" in str(output.stdout))
-
-        # Then create temporary directory in current working dir
-        # and verify it is listed
-        # Must create a temporary directory structure like
-        # ./input/parameters/lithium-ion/cathodes/tmp_dir
-        # but must not intefere with existing input dir if it exists
-        # in the current dir...
 
 
 if __name__ == "__main__":

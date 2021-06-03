@@ -1,0 +1,38 @@
+Name [units],Value,Reference,Notes
+# Empty rows and rows starting with ‘#’ will be ignored,,,
+,,,
+# Macroscale geometry,,,
+Negative current collector thickness [m],1.7E-05,Ramadass 2002,
+Negative electrode thickness [m],8.8e-05,Ramadass,
+Separator thickness [m],2.5E-05,Scott Moura FastDFN,
+Positive electrode thickness [m],8e-05,Ramadass,
+Positive current collector thickness [m],2.3E-05,Ramadass 2002,
+Electrode height [m],0.057,Ramadass 2002 negative electrode,Not needed for 1D
+Electrode width [m],1.060692,Ramadass 2002 negative electrode twice ,Not needed for 1D
+Negative tab width [m],0.04,,Need to find actual value for KOKAM cell
+Negative tab centre y-coordinate [m],0.06,,Need to find actual value for KOKAM cell
+Negative tab centre z-coordinate [m],0.137,,Need to find actual value for KOKAM cell
+Positive tab width [m],0.04,,Need to find actual value for KOKAM cell
+Positive tab centre y-coordinate [m],0.147,,Need to find actual value for KOKAM cell
+Positive tab centre z-coordinate [m],0.137,,Need to find actual value for KOKAM cell
+,,,
+# Current collector properties ,,,
+Negative current collector conductivity [S.m-1],59600000,LIONSIMBA,carbon
+Positive current collector conductivity [S.m-1],35500000,LIONSIMBA,aluminium
+,,,
+# Density,,,
+Negative current collector density [kg.m-3],8954,,
+Positive current collector density [kg.m-3],2707,,
+,,,
+# Specific heat capacity,,,
+Negative current collector specific heat capacity [J.kg-1.K-1],385,,
+Positive current collector specific heat capacity [J.kg-1.K-1],897,,
+,,,
+# Thermal conductivity,,,
+Negative current collector thermal conductivity [W.m-1.K-1],401,,
+Positive current collector thermal conductivity [W.m-1.K-1],237,,
+,,,
+# Electrical,,,
+Nominal cell capacity [A.h],1,,16.54 Ah/m2 * 0.057m * 1.06m
+Typical current [A],1,,1C current
+Current function [A],1,default current function,
