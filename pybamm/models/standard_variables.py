@@ -78,7 +78,6 @@ class StandardVariables:
             domain="positive electrode",
             auxiliary_domains={"secondary": "current collector"},
         )
-        # self.phi_e = pybamm.concatenation(phi_e_n, phi_e_s, phi_e_p)
 
         # Electrode potential
         self.phi_s_n = pybamm.Variable(
@@ -249,7 +248,6 @@ class StandardVariables:
             auxiliary_domains={"secondary": "current collector"},
             bounds=(0, 1),
         )
-        # self.eps = pybamm.concatenation(eps_n, eps_s, eps_p)
 
         # Piecewise constant (for asymptotic models)
         self.eps_n_pc = pybamm.Variable(
@@ -265,12 +263,6 @@ class StandardVariables:
             domain="current collector",
             bounds=(0, 1),
         )
-
-        # self.eps_piecewise_constant = pybamm.concatenation(
-        #     pybamm.PrimaryBroadcast(eps_n_pc, "negative electrode"),
-        #     pybamm.PrimaryBroadcast(eps_s_pc, "separator"),
-        #     pybamm.PrimaryBroadcast(eps_p_pc, "positive electrode"),
-        # )
 
         # Temperature
         self.T_cn = pybamm.Variable(
@@ -294,7 +286,6 @@ class StandardVariables:
         self.T_cp = pybamm.Variable(
             "Positive currents collector temperature", domain="current collector"
         )
-        # self.T = pybamm.concatenation(T_n, T_s, T_p)
         self.T_av = pybamm.Variable(
             "X-averaged cell temperature", domain="current collector"
         )
