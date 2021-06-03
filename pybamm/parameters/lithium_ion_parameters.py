@@ -288,7 +288,7 @@ class LithiumIonParameters(BaseParameters):
         self.C_p_init = eps_s_p_av * self.L_p * self.A_cc * self.c_p_max * self.F / 3600
 
         # Total lithium
-        eps = pybamm.Concatenation(self.epsilon_n, self.epsilon_s, self.epsilon_p)
+        eps = pybamm.concatenation(self.epsilon_n, self.epsilon_s, self.epsilon_p)
 
         c_e_av = pybamm.x_average(eps) * self.c_e_typ
         self.n_Li_e_init = c_e_av * self.L_x * self.A_cc

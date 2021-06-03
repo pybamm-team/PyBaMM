@@ -28,11 +28,15 @@ class VariableBase(pybamm.Symbol):
         domain 'current collector'
     bounds : tuple, optional
         Physical bounds on the variable
+    print_name : str, optional
+        The name to use for printing. Default is None, in which case self.name is used.
 
     *Extends:* :class:`Symbol`
     """
 
-    def __init__(self, name, domain=None, auxiliary_domains=None, bounds=None):
+    def __init__(
+        self, name, domain=None, auxiliary_domains=None, bounds=None, print_name=None
+    ):
         if domain is None:
             domain = []
         if auxiliary_domains is None:
@@ -47,16 +51,18 @@ class VariableBase(pybamm.Symbol):
                     + "Lower bound should be strictly less than upper bound."
                 )
         self.bounds = bounds
-        self.short_name = None
+        self.print_name = print_name
 
     def new_copy(self):
         """ See :meth:`pybamm.Symbol.new_copy()`. """
 
-        out = self.__class__(
-            self.name, self.domain, self.auxiliary_domains, self.bounds
+        return self.__class__(
+            self.name,
+            self.domain,
+            self.auxiliary_domains,
+            self.bounds,
+            print_name=self.print_name,
         )
-        out.short_name = self.short_name
-        return out
 
     def _evaluate_for_shape(self):
         """ See :meth:`pybamm.Symbol.evaluate_for_shape_using_domain()` """
@@ -87,10 +93,15 @@ class Variable(VariableBase):
         domain 'current collector'
     bounds : tuple, optional
         Physical bounds on the variable
-    *Extends:* :class:`Symbol`
+    print_name : str, optional
+        The name to use for printing. Default is None, in which case self.name is used.
+
+    *Extends:* :class:`VariableBase`
     """
 
-    def __init__(self, name, domain=None, auxiliary_domains=None, bounds=None):
+    def __init__(
+        self, name, domain=None, auxiliary_domains=None, bounds=None, print_name=None
+    ):
         super().__init__(
             name, domain=domain, auxiliary_domains=auxiliary_domains, bounds=bounds
         )
@@ -133,10 +144,15 @@ class VariableDot(VariableBase):
     bounds : tuple, optional
         Physical bounds on the variable. Included for compatibility with `VariableBase`,
         but ignored.
-    *Extends:* :class:`Symbol`
+    print_name : str, optional
+        The name to use for printing. Default is None, in which case self.name is used.
+
+    *Extends:* :class:`VariableBase`
     """
 
-    def __init__(self, name, domain=None, auxiliary_domains=None, bounds=None):
+    def __init__(
+        self, name, domain=None, auxiliary_domains=None, bounds=None, print_name=None
+    ):
         super().__init__(name, domain=domain, auxiliary_domains=auxiliary_domains)
 
     def get_variable(self):

@@ -276,7 +276,7 @@ class TestEvaluate(unittest.TestCase):
         c_n = pybamm.Variable("c_n", domain="negative electrode")
         c_s = pybamm.Variable("c_s", domain="separator")
         c_p = pybamm.Variable("c_p", domain="positive electrode")
-        c = pybamm.Concatenation(c_n, c_s, c_p)
+        c = pybamm.concatenation(c_n, c_s, c_p)
         # create discretisation
         mesh = get_mesh_for_testing()
         spatial_methods = {
@@ -318,7 +318,7 @@ class TestEvaluate(unittest.TestCase):
             domain="positive electrode",
             auxiliary_domains={"secondary": "current collector"},
         )
-        c = pybamm.Concatenation(c_n, c_s, c_p)
+        c = pybamm.concatenation(c_n, c_s, c_p)
         # create discretisation
         mesh = get_1p1d_mesh_for_testing()
         spatial_methods = {"macroscale": pybamm.FiniteVolume()}
