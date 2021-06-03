@@ -312,7 +312,7 @@ class StandardVariables:
         )
 
     def __setattr__(self, name, value):
-        value.print_name = name
+        value.short_name = name
         super().__setattr__(name, value)
 
 

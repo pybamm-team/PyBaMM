@@ -197,6 +197,8 @@ setup(
         "scikit-fem>=0.2.0",
         "casadi>=3.5.0",
         *jax_dependencies,
+        "julia>=0.5.6",
+        # Can be installed even if julia is not installed
         "jupyter",  # For example notebooks
         "pybtex",
         "sympy==1.8",

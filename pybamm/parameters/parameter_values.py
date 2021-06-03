@@ -8,6 +8,7 @@ import numbers
 import warnings
 from pprint import pformat
 from collections import defaultdict
+import inspect
 
 
 class ParameterValues:
@@ -670,6 +671,34 @@ class ParameterValues:
             elif callable(function_name):
                 # otherwise evaluate the function to create a new PyBaMM object
                 function = function_name(*new_children)
+                if (
+                    self._replace_callable_function_parameters is False
+                    and not isinstance(
+                        self.process_symbol(function), (pybamm.Scalar, pybamm.Broadcast)
+                    )
+                    and symbol.short_name is not None
+                    and symbol.diff_variable is None
+                ):
+                    # Special trick for printing in Julia ModelingToolkit format
+                    out = pybamm.FunctionParameter(
+                        symbol.short_name, dict(zip(symbol.input_names, new_children))
+                    )
+
+                    out.arg_names = inspect.getfullargspec(function_name)[0]
+                    out.callable = self.process_symbol(
+                        function_name(
+                            *[
+                                pybamm.Variable(
+                                    arg_name,
+                                    domain=child.domain,
+                                    auxiliary_domains=child.auxiliary_domains,
+                                )
+                                for arg_name, child in zip(out.arg_names, new_children)
+                            ]
+                        )
+                    )
+
+                    return out
             elif isinstance(function_name, pybamm.Interpolant):
                 function = function_name
             else:
