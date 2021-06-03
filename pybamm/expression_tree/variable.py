@@ -47,13 +47,16 @@ class VariableBase(pybamm.Symbol):
                     + "Lower bound should be strictly less than upper bound."
                 )
         self.bounds = bounds
+        self.print_name = None
 
     def new_copy(self):
         """ See :meth:`pybamm.Symbol.new_copy()`. """
 
-        return self.__class__(
+        out = self.__class__(
             self.name, self.domain, self.auxiliary_domains, self.bounds
         )
+        out.print_name = self.print_name
+        return out
 
     def _evaluate_for_shape(self):
         """ See :meth:`pybamm.Symbol.evaluate_for_shape_using_domain()` """
