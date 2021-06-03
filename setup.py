@@ -165,7 +165,6 @@ jax_dependencies = []
 if system() != "Windows":
     jax_dependencies = ["jax==0.2.12", "jaxlib==0.1.65"]
 
-
 # Load text for description and license
 with open("README.md", encoding="utf-8") as f:
     readme = f.read()
