@@ -88,6 +88,10 @@ class ParameterValues:
         self._processed_symbols = {}
         self.parameter_events = []
 
+        # Don't touch this parameter unless you know what you are doing
+        # This is for the conversion to Julia (ModelingToolkit)
+        self._replace_callable_function_parameters = True
+
     def __getitem__(self, key):
         return self._dict_items[key]
 
@@ -123,7 +127,11 @@ class ParameterValues:
     def copy(self):
         """Returns a copy of the parameter values. Makes sure to copy the internal
         dictionary."""
-        return ParameterValues(values=self._dict_items.copy())
+        new_copy = ParameterValues(values=self._dict_items.copy())
+        new_copy._replace_callable_function_parameters = (
+            self._replace_callable_function_parameters
+        )
+        return new_copy
 
     def search(self, key, print_values=True):
         """
