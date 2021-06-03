@@ -52,15 +52,28 @@ class BasicDFNHalfCell(BaseModel):
         self.options.update(options)
         working_electrode = options["working electrode"]
 
+        # Define variables and timescale depending on the working electrode
         if working_electrode == "negative":
             R_w_typ = param.R_n_typ
+            L_x = param.L_n + param.L_s
+            self.timescale = param.F * param.c_n_max * L_x / param.i_typ
         else:
             R_w_typ = param.R_p_typ
+            L_x = param.L_s + param.L_p
+            self.timescale = param.F * param.c_p_max * L_x / param.i_typ
+
+        # update timescale (and hence current and dimensionless parameters)
+        # this is too hacky and needs to be done better
+        param.L_x = L_x
+        param._set_scales()
+        param.timescale = self.timescale
+        param._set_input_current()
+        param._set_dimensionless_parameters()
 
         # Set default length scales
         self.length_scales = {
-            "working electrode": param.L_x,
-            "separator": param.L_x,
+            "working electrode": L_x,
+            "separator": L_x,
             "working particle": R_w_typ,
             "current collector y": param.L_z,
             "current collector z": param.L_z,
@@ -139,7 +152,7 @@ class BasicDFNHalfCell(BaseModel):
             D_w = param.D_n
             C_w = param.C_n
             a_R_w = param.a_R_n
-            gamma_w = pybamm.Scalar(1)
+            gamma_e = param.c_e_typ / param.c_n_max
             c_w_init = param.c_n_init
 
             # Electrode equation parameters
@@ -152,6 +165,7 @@ class BasicDFNHalfCell(BaseModel):
             # Other parameters (for outputs)
             c_w_max = param.c_n_max
             U_ref = param.U_n_ref
+            U_n_ref = param.U_n_ref
             phi_s_w_ref = pybamm.Scalar(0)
             L_w = param.L_n
 
@@ -167,7 +181,7 @@ class BasicDFNHalfCell(BaseModel):
             b_e_w = param.b_e_p
 
             # Interfacial reactions
-            j0_w = param.gamma_p * param.j0_p(c_e_w, c_s_surf_w, T) / param.C_r_p
+            j0_w = param.j0_p(c_e_w, c_s_surf_w, T) / param.C_r_p
             U_w = param.U_p
             ne_w = param.ne_p
 
@@ -175,7 +189,7 @@ class BasicDFNHalfCell(BaseModel):
             D_w = param.D_p
             C_w = param.C_p
             a_R_w = param.a_R_p
-            gamma_w = param.gamma_p
+            gamma_e = param.c_e_typ / param.c_p_max
             c_w_init = param.c_p_init
 
             # Electrode equation parameters
@@ -188,8 +202,13 @@ class BasicDFNHalfCell(BaseModel):
             # Other parameters (for outputs)
             c_w_max = param.c_p_max
             U_ref = param.U_p_ref
-            phi_s_w_ref = param.U_p_ref - param.U_n_ref
+            U_n_ref = pybamm.Scalar(0)
+            phi_s_w_ref = param.U_p_ref - U_n_ref
             L_w = param.L_p
+
+        # gamma_w is always 1 because we choose the timescale based on the working
+        # electrode
+        gamma_w = pybamm.Scalar(1)
 
         eps = pybamm.concatenation(eps_s, eps_w)
         tor = pybamm.concatenation(eps_s ** b_e_s, eps_w ** b_e_w)
@@ -206,7 +225,7 @@ class BasicDFNHalfCell(BaseModel):
         I = param.dimensional_current_with_time
         # The `rhs` dictionary contains differential equations, with the key being the
         # variable in the d/dt
-        self.rhs[Q] = I * param.timescale / 3600
+        self.rhs[Q] = I * self.timescale / 3600
         # Initial conditions must be provided for the ODEs
         self.initial_conditions[Q] = pybamm.Scalar(0)
 
@@ -268,14 +287,13 @@ class BasicDFNHalfCell(BaseModel):
         ######################
         N_e = -tor * param.D_e(c_e, T) * pybamm.grad(c_e)
         self.rhs[c_e] = (1 / eps) * (
-            -pybamm.div(N_e) / param.C_e
-            + (1 - param.t_plus(c_e, T)) * j / param.gamma_e
+            -pybamm.div(N_e) / param.C_e + (1 - param.t_plus(c_e, T)) * j / gamma_e
         )
         dce_dx = (
             -(1 - param.t_plus(c_e, T))
             * i_cell
             * param.C_e
-            / (tor * param.gamma_e * param.D_e(c_e, T))
+            / (tor * gamma_e * param.D_e(c_e, T))
         )
 
         self.boundary_conditions[c_e] = {
@@ -293,12 +311,12 @@ class BasicDFNHalfCell(BaseModel):
         ######################
         # Current in the electrolyte
         ######################
-        i_e = (param.kappa_e(c_e, T) * tor * param.gamma_e / param.C_e) * (
+        i_e = (param.kappa_e(c_e, T) * tor * gamma_e / param.C_e) * (
             param.chi(c_e, T) * pybamm.grad(c_e) / c_e - pybamm.grad(phi_e)
         )
         self.algebraic[phi_e] = pybamm.div(i_e) - j
 
-        ref_potential = param.U_n_ref / pot
+        ref_potential = U_n_ref / pot
 
         self.boundary_conditions[phi_e] = {
             "left": (ref_potential, "Dirichlet"),
@@ -332,7 +350,7 @@ class BasicDFNHalfCell(BaseModel):
         # The `variables` dictionary contains all variables that might be useful for
         # visualising the solution of the model
         self.variables = {
-            "Time [s]": param.timescale * pybamm.t,
+            "Time [s]": self.timescale * pybamm.t,
             "Working particle surface concentration": c_s_surf_w,
             "X-averaged working particle surface concentration": c_s_surf_w_av,
             "Working particle concentration": c_s_w,
@@ -360,13 +378,11 @@ class BasicDFNHalfCell(BaseModel):
             "Working electrode open circuit potential [V]": U_ref
             + pot * U_w(c_s_surf_w, T),
             "Electrolyte potential": phi_e,
-            "Electrolyte potential [V]": -param.U_n_ref + pot * phi_e,
+            "Electrolyte potential [V]": -U_n_ref + pot * phi_e,
             "Voltage drop in the cell": vdrop_cell,
-            "Voltage drop in the cell [V]": phi_s_w_ref
-            + param.U_n_ref
-            + pot * vdrop_cell,
+            "Voltage drop in the cell [V]": phi_s_w_ref + U_n_ref + pot * vdrop_cell,
             "Terminal voltage": voltage,
-            "Terminal voltage [V]": phi_s_w_ref + param.U_n_ref + pot * voltage,
+            "Terminal voltage [V]": phi_s_w_ref + U_n_ref + pot * voltage,
         }
 
     @property

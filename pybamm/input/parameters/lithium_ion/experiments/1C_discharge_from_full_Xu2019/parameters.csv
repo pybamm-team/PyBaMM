@@ -8,12 +8,10 @@ Heat transfer coefficient [W.m-2.K-1],10,,
 # Electrical			
 Number of electrodes connected in parallel to make a cell,1,,
 Number of cells connected in series to make a battery,1,,
-Lower voltage cut-off [V],3.45,,just below 3.5
-Upper voltage cut-off [V],4.25,,just above 4.25
-C-rate,1,,
+Lower voltage cut-off [V],3.5,,
+Upper voltage cut-off [V],4.2,,
 ,,,
 # Initial conditions
-Initial concentration in negative electrode [mol.m-3],,,
-Initial concentration in positive electrode [mol.m-3],,,
+Initial concentration in positive electrode [mol.m-3],40827,48230*0.8465,
 Initial concentration in electrolyte [mol.m-3],1000,,
 Initial temperature [K],298.15,,

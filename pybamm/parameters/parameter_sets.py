@@ -215,7 +215,7 @@ Ai2020 = {
 }
 
 Xu2019 = {
-    "chemistry": "lithium-ion",
+    "chemistry": "lithium_ion",
     "cell": "li_metal_Xu2019",
     "anode": "li_metal_Xu2019",
     "separator": "separator_Xu2019",

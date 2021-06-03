@@ -1,6 +1,6 @@
 def electrolyte_diffusivity_Valoen2005(c_e, T):
     """
-    Diffusivity of LiPF6 in EC:DMC as a function of ion concentration, from [1]
+    Diffusivity of LiPF6 in EC:DMC as a function of ion concentration, from [1] (eqn 14)
 
     References
     ----------
@@ -28,5 +28,5 @@ def electrolyte_diffusivity_Valoen2005(c_e, T):
     D_1 = -0.22
 
     # cm2/s to m2/s
-    # note, in the Valoen paper, ln means log10 ...
+    # note, in the Valoen paper, ln means log10, so its inverse is 10^x
     return (10 ** (D_0 + D_1 * c_e)) * 1e-4
