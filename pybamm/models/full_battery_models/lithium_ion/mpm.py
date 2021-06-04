@@ -139,19 +139,21 @@ class MPM(BaseModel):
     def set_particle_submodel(self):
 
         if self.options["particle"] == "Fickian diffusion":
-            self.submodels["negative particle"] = pybamm.particle.FickianSinglePSD(
+            submod_n = pybamm.particle.FickianSingleSizeDistribution(
                 self.param, "Negative"
             )
-            self.submodels["positive particle"] = pybamm.particle.FickianSinglePSD(
+            submod_p = pybamm.particle.FickianSingleSizeDistribution(
                 self.param, "Positive"
             )
-        elif self.options["particle"] == "fast diffusion":
-            self.submodels["negative particle"] = pybamm.particle.FastSinglePSD(
+        elif self.options["particle"] == "uniform profile":
+            submod_n = pybamm.particle.FastSingleSizeDistribution(
                 self.param, "Negative"
             )
-            self.submodels["positive particle"] = pybamm.particle.FastSinglePSD(
+            submod_p = pybamm.particle.FastSingleSizeDistribution(
                 self.param, "Positive"
             )
+        self.submodels["negative particle"] = submod_n
+        self.submodels["positive particle"] = submod_p
 
     def set_negative_electrode_submodel(self):
 

@@ -122,19 +122,21 @@ class DFN(BaseModel):
 
         if self.options["particle size"] == "distribution":
             if self.options["particle"] == "Fickian diffusion":
-                self.submodels["negative particle"] = pybamm.particle.FickianManyPSDs(
+                submod_n = pybamm.particle.FickianManySizeDistributions(
                     self.param, "Negative"
                 )
-                self.submodels["positive particle"] = pybamm.particle.FickianManyPSDs(
+                submod_p = pybamm.particle.FickianManySizeDistributions(
                     self.param, "Positive"
                 )
             elif self.options["particle"] == "uniform profile":
-                self.submodels["negative particle"] = pybamm.particle.FastManyPSDs(
+                submod_n = pybamm.particle.FastManySizeDistributions(
                     self.param, "Negative"
                 )
-                self.submodels["positive particle"] = pybamm.particle.FastManyPSDs(
+                submod_p = pybamm.particle.FastManySizeDistributions(
                     self.param, "Positive"
                 )
+            self.submodels["negative particle"] = submod_n
+            self.submodels["positive particle"] = submod_p
         else:
             if self.options["particle"] == "Fickian diffusion":
                 self.submodels["negative particle"] = pybamm.particle.FickianManyParticles(

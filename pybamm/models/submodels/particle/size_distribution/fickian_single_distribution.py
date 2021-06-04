@@ -4,12 +4,12 @@
 #
 import pybamm
 
-from .base_particle import BaseParticle
+from .base_distribution import BaseSizeDistribution
 
 
-class FickianSinglePSD(BaseParticle):
+class FickianSingleSizeDistribution(BaseSizeDistribution):
     """Class for molar conservation in a single (i.e., x-averaged) particle-size
-    distribution (PSD) with Fickian diffusion within each particle.
+    distribution with Fickian diffusion within each particle.
 
     Parameters
     ----------
@@ -19,7 +19,7 @@ class FickianSinglePSD(BaseParticle):
         The domain of the model either 'Negative' or 'Positive'
 
 
-    **Extends:** :class:`pybamm.particle.BaseParticle`
+    **Extends:** :class:`pybamm.particle.size_distribution.BaseSizeDistribution`
     """
 
     def __init__(self, param, domain):
