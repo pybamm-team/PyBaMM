@@ -394,3 +394,14 @@ doi={10.1149/2.0661810jes}
   year={2020},
   publisher={Elsevier}
 }
+
+@misc{Kirk2020,
+  author = {Kirk, Toby L. and Evans, Jack and Please, Colin P. and Chapman, S. Jonathan},
+  title         = {Modelling electrode heterogeneity in lithium-ion batteries: unimodal and bimodal particle-size distributions},
+  year          = {2020},
+  howpublished  = {arXiv:2006.12208},
+  eprint        = {2006.12208},
+  url           = {https://arxiv.org/abs/2006.12208},
+  archiveprefix = {arXiv},
+  primaryclass  = {physics.app-ph},
+}

@@ -59,7 +59,7 @@ class MPM(BaseModel):
         if build:
             self.build_model()
 
-        # pybamm.citations.register("marquis2019asymptotic")
+        pybamm.citations.register("Kirk2020")
 
     def set_porosity_submodel(self):
 
