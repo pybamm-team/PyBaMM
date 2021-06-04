@@ -23,6 +23,7 @@ PRINT_OPTIONS_OUTPUT = """\
 'current collector': 'uniform' (possible: ['uniform', 'potential pair', 'potential pair quite conductive'])
 'particle': 'Fickian diffusion' (possible: ['Fickian diffusion', 'fast diffusion', 'uniform profile', 'quadratic profile', 'quartic profile'])
 'particle shape': 'spherical' (possible: ['spherical', 'user', 'no particles'])
+'particle size': 'single' (possible: ['single', 'distribution'])
 'electrolyte conductivity': 'default' (possible: ['default', 'full', 'leading order', 'composite', 'integrated'])
 'thermal': 'x-full' (possible: ['isothermal', 'lumped', 'x-lumped', 'x-full'])
 'cell geometry': 'pouch' (possible: ['arbitrary', 'pouch'])

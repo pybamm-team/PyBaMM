@@ -35,6 +35,7 @@ class TestTafel(unittest.TestCase):
             {
                 "SEI film resistance": "none",
                 "total interfacial current density as a state": "false",
+                "particle size": "single"
             },
         )
         std_tests = tests.StandardSubModelTests(submodel, variables)
@@ -76,6 +77,7 @@ class TestTafel(unittest.TestCase):
             {
                 "SEI film resistance": "none",
                 "total interfacial current density as a state": "false",
+                "particle size": "single"
             },
         )
         std_tests = tests.StandardSubModelTests(submodel, variables)
