@@ -1,8 +1,10 @@
 #
 # Scalar class
 #
-import pybamm
 import numpy as np
+import sympy
+
+import pybamm
 
 
 class Scalar(pybamm.Symbol):
@@ -20,7 +22,6 @@ class Scalar(pybamm.Symbol):
         if not provided
     domain : iterable of str, optional
         list of domains the parameter is valid over, defaults to empty list
-
     """
 
     def __init__(self, value, name=None, domain=[]):
@@ -66,3 +67,7 @@ class Scalar(pybamm.Symbol):
     def is_constant(self):
         """ See :meth:`pybamm.Symbol.is_constant()`. """
         return True
+
+    def to_equation(self):
+        """Returns the value returned by the node when evaluated"""
+        return self.value

@@ -1,11 +1,13 @@
 #
 # Binary operator classes
 #
-import pybamm
+import numbers
 
 import numpy as np
-import numbers
-from scipy.sparse import issparse, csr_matrix
+import sympy
+from scipy.sparse import csr_matrix, issparse
+
+import pybamm
 
 
 def preprocess_binary(left, right):
@@ -175,6 +177,20 @@ class BinaryOperator(pybamm.Symbol):
     def is_constant(self):
         """ See :meth:`pybamm.Symbol.is_constant()`. """
         return self.left.is_constant() and self.right.is_constant()
+
+    def _sympy_operator(self, left, right):
+        """Apply appropriate SymPy operators"""
+        return self._binary_evaluate(left, right)
+
+    def to_equation(self):
+        """Convert the node and its subtree into a SymPy equation"""
+        if getattr(self, "print_name", None):
+            return sympy.symbols(self.print_name)
+        else:
+            child1, child2 = self.children
+            eq1 = child1.to_equation()
+            eq2 = child2.to_equation()
+            return self._sympy_operator(eq1, eq2)
 
 
 class Power(BinaryOperator):
@@ -350,6 +366,10 @@ class MatrixMultiplication(BinaryOperator):
         """ See :meth:`pybamm.BinaryOperator._binary_evaluate()`. """
         return left @ right
 
+    def _sympy_operator(self, left, right):
+        """Override :meth:`pybamm.BinaryOperator._sympy_operator`"""
+        return left * right
+
 
 class Division(BinaryOperator):
     """A node in the expression tree representing a division operator
@@ -505,6 +525,10 @@ class Heaviside(BinaryOperator):
         # need to worry about shape
         return pybamm.Scalar(0)
 
+    def _sympy_operator(self, left, right):
+        """Override :meth:`pybamm.BinaryOperator._sympy_operator`"""
+        return sympy.Heaviside(left,right)
+
 
 class EqualHeaviside(Heaviside):
     """A heaviside function with equality (return 1 when left = right)"""
@@ -612,7 +636,7 @@ class Minimum(BinaryOperator):
 
 
 class Maximum(BinaryOperator):
-    """Returns the smaller of two objects."""
+    """Returns the greater of two objects."""
 
     def __init__(self, left, right):
         super().__init__("maximum", left, right)
