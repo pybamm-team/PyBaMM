@@ -57,7 +57,7 @@ class TestLeadAcidCompositeMultiDimensional(unittest.TestCase):
 
 class TestLeadAcidCompositeWithSideReactions(unittest.TestCase):
     def test_well_posed_algebraic(self):
-        options = {"surface form": "algebraic", "side reactions": ["oxygen"]}
+        options = {"surface form": "algebraic", "hydrolysis": "true"}
         model = pybamm.lead_acid.Composite(options)
         model.check_well_posedness()
         self.assertIsInstance(
@@ -67,7 +67,7 @@ class TestLeadAcidCompositeWithSideReactions(unittest.TestCase):
 
 class TestLeadAcidCompositeExtended(unittest.TestCase):
     def test_well_posed_differential_side_reactions(self):
-        options = {"surface form": "differential", "side reactions": ["oxygen"]}
+        options = {"surface form": "differential", "hydrolysis": "true"}
         model = pybamm.lead_acid.CompositeExtended(options)
         model.check_well_posedness()
 
