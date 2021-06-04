@@ -88,7 +88,7 @@ class DFN(BaseModel):
             if particle_side == "Fickian diffusion":
                 self.submodels[
                     domain.lower() + " particle"
-                ] = pybamm.particle.FickianManyParticle(self.param, domain)
+                ] = pybamm.particle.FickianManyParticles(self.param, domain)
             elif particle_side in [
                 "uniform profile",
                 "quadratic profile",
@@ -96,7 +96,7 @@ class DFN(BaseModel):
             ]:
                 self.submodels[
                     domain.lower() + " particle"
-                ] = pybamm.particle.PolynomialManyParticle(
+                ] = pybamm.particle.PolynomialManyParticles(
                     self.param, domain, particle_side
                 )
 
