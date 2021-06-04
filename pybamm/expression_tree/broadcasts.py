@@ -105,14 +105,14 @@ class PrimaryBroadcast(Broadcast):
             "negative electrode",
             "separator",
             "positive electrode",
-            "negative particle-size domain",
-            "positive particle-size domain",
+            "negative particle size",
+            "positive particle size",
             "negative particle",
             "positive particle",
         ]:
             raise pybamm.DomainError(
                 """Primary broadcast from current collector domain must be to electrode
-                or separator or particle or particle-size domains"""
+                or separator or particle or particle size domains"""
             )
         elif (
             child.domain[0]
@@ -124,20 +124,20 @@ class PrimaryBroadcast(Broadcast):
             and broadcast_domain[0] not in [
                 "negative particle",
                 "positive particle",
-                "negative particle-size domain",
-                "positive particle-size domain",
+                "negative particle size",
+                "positive particle size",
             ]
         ):
             raise pybamm.DomainError(
                 """Primary broadcast from electrode or separator must be to particle
-                or particle-size domains"""
+                or particle size domains"""
             )
         elif child.domain[0] in [
-            "negative particle-size domain",
-            "positive particle-size domain",
+            "negative particle size",
+            "positive particle size",
         ] and broadcast_domain[0] not in ["negative particle", "positive particle"]:
             raise pybamm.DomainError(
-                """Primary broadcast from particle-size domain must be to particle
+                """Primary broadcast from particle size domain must be to particle
                 domain"""
             )
         elif child.domain[0] in ["negative particle", "positive particle"]:
@@ -223,8 +223,8 @@ class SecondaryBroadcast(Broadcast):
             "negative particle",
             "positive particle",
         ] and broadcast_domain[0] not in [
-            "negative particle-size domain",
-            "positive particle-size domain",
+            "negative particle size",
+            "positive particle size",
             "negative electrode",
             "separator",
             "positive electrode",
@@ -234,8 +234,8 @@ class SecondaryBroadcast(Broadcast):
                 electrode or separator domains"""
             )
         if child.domain[0] in [
-            "negative particle-size domain",
-            "positive particle-size domain",
+            "negative particle size",
+            "positive particle size",
         ] and broadcast_domain[0] not in [
             "negative electrode",
             "separator",
@@ -243,7 +243,7 @@ class SecondaryBroadcast(Broadcast):
             "current collector"
         ]:
             raise pybamm.DomainError(
-                """Secondary broadcast from particle-size domain must be to
+                """Secondary broadcast from particle size domain must be to
                 electrode or separator or current collector domains"""
             )
         elif (

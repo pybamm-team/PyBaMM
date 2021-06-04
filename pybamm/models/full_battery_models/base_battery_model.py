@@ -68,10 +68,10 @@ class Options(pybamm.FuzzyDict):
                 (default), "user" or "no particles". For the "user" option the surface
                 area per unit volume can be passed as a parameter, and is therefore not
                 necessarily consistent with the particle shape.
-            * "particle-size distribution" : str
+            * "particle size" : str
                 Sets the model to include a single active particle size or a
-                distribution of sizes for each electrode. Can be "true" or
-                "false" (default).
+                distribution of sizes at any macroscale location. Can be "single"
+                (default) or "distribution". Option applies to both electrodes.
             * "particle cracking" : str
                 Sets the model to account for mechanical effects and particle
                 cracking. Can be "none", "no cracking", "negative", "positive" or
@@ -185,7 +185,7 @@ class Options(pybamm.FuzzyDict):
                 "quartic profile",
             ],
             "particle shape": ["spherical", "user", "no particles"],
-            "particle-size distribution": ["true", "false"],
+            "particle size": ["single", "distribution"],
             "electrolyte conductivity": [
                 "default",
                 "full",
@@ -206,7 +206,7 @@ class Options(pybamm.FuzzyDict):
             "current collector": "uniform",
             "particle": "Fickian diffusion",
             "particle shape": "spherical",
-            "particle-size distribution": "false",
+            "particle size": "single",
             "electrolyte conductivity": "default",
             "thermal": "isothermal",
             "cell geometry": "none",
@@ -369,8 +369,8 @@ class BaseBatteryModel(pybamm.BaseModel):
             var.r_p: 30,
             var.y: 10,
             var.z: 10,
-            var.R_variable_n: 30,
-            var.R_variable_p: 30,
+            var.R_n: 30,
+            var.R_p: 30,
         }
         # Reduce the default points for 2D current collectors
         if self.options["dimensionality"] == 2:
@@ -385,10 +385,10 @@ class BaseBatteryModel(pybamm.BaseModel):
             "positive electrode": pybamm.MeshGenerator(pybamm.Uniform1DSubMesh),
             "negative particle": pybamm.MeshGenerator(pybamm.Uniform1DSubMesh),
             "positive particle": pybamm.MeshGenerator(pybamm.Uniform1DSubMesh),
-            "negative particle-size domain": pybamm.MeshGenerator(
+            "negative particle size": pybamm.MeshGenerator(
                 pybamm.Uniform1DSubMesh
             ),
-            "positive particle-size domain": pybamm.MeshGenerator(
+            "positive particle size": pybamm.MeshGenerator(
                 pybamm.Uniform1DSubMesh
             ),
         }
@@ -410,8 +410,8 @@ class BaseBatteryModel(pybamm.BaseModel):
             "macroscale": pybamm.FiniteVolume(),
             "negative particle": pybamm.FiniteVolume(),
             "positive particle": pybamm.FiniteVolume(),
-            "negative particle-size domain": pybamm.FiniteVolume(),
-            "positive particle-size domain": pybamm.FiniteVolume(),
+            "negative particle size": pybamm.FiniteVolume(),
+            "positive particle size": pybamm.FiniteVolume(),
         }
         if self.options["dimensionality"] == 0:
             # 0D submesh - use base spatial method

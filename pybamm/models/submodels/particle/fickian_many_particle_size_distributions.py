@@ -34,14 +34,24 @@ class FickianManyPSDs(BaseParticle):
                 "Negative particle concentration distribution",
                 domain="negative particle",
                 auxiliary_domains={
-                    "secondary": "negative particle-size domain",
+                    "secondary": "negative particle size",
                     "tertiary": "negative electrode",
                 },
                 bounds=(0, 1),
             )
-            R = pybamm.standard_spatial_vars.R_variable_n  # used for averaging
-            R_variable = pybamm.SecondaryBroadcast(R, ["negative electrode"])
-            R_dim = self.param.R_n
+            # Since concentration does not depend on "y,z", need a particle-size
+            # spatial variable R with only "electrode" as secondary
+            # domain
+            R_variable = pybamm.SpatialVariable(
+                "R_n",
+                domain=["negative particle size"],
+                auxiliary_domains={
+                    "secondary": "negative electrode",
+                },
+                coord_sys="cartesian",
+            )
+            #R_variable = pybamm.standard_spatial_vars.R_n
+            R_dim = self.param.R_n_typ
 
             # Particle-size distribution (area-weighted)
             f_a_dist = self.param.f_a_dist_n(R_variable)
@@ -52,24 +62,35 @@ class FickianManyPSDs(BaseParticle):
                 "Positive particle concentration distribution",
                 domain="positive particle",
                 auxiliary_domains={
-                    "secondary": "positive particle-size domain",
+                    "secondary": "positive particle size",
                     "tertiary": "positive electrode",
                 },
                 bounds=(0, 1),
             )
-            R = pybamm.standard_spatial_vars.R_variable_p  # used for averaging
-            R_variable = pybamm.SecondaryBroadcast(R, ["positive electrode"])
-            R_dim = self.param.R_p
+            # Since concentration does not depend on "y,z", need a
+            # spatial variable R with only "electrode" as secondary
+            # domain
+            R_variable = pybamm.SpatialVariable(
+                "R_p",
+                domain=["positive particle size"],
+                auxiliary_domains={
+                    "secondary": "positive electrode",
+                },
+                coord_sys="cartesian",
+            )
+            #R = pybamm.standard_spatial_vars.R_p  # used for averaging
+            #R_variable = pybamm.SecondaryBroadcast(R, ["positive electrode"])
+            R_dim = self.param.R_p_typ
 
             # Particle-size distribution (area-weighted)
             f_a_dist = self.param.f_a_dist_p(R_variable)
 
         # Ensure the distribution is normalised, irrespective of discretisation
         # or user input
-        f_a_dist = f_a_dist / pybamm.Integral(f_a_dist, R)
+        f_a_dist = f_a_dist / pybamm.Integral(f_a_dist, R_variable)
 
         # Standard R-averaged variables (avg secondary domain)
-        c_s = pybamm.Integral(f_a_dist * c_s_distribution, R)
+        c_s = pybamm.Integral(f_a_dist * c_s_distribution, R_variable)
         c_s_xav = pybamm.x_average(c_s)
         variables = self._get_standard_concentration_variables(c_s, c_s_xav)
 
@@ -96,39 +117,57 @@ class FickianManyPSDs(BaseParticle):
             self.domain + " particle concentration distribution"
         ]
         R_variable = variables[self.domain + " particle size"]
+        R = pybamm.PrimaryBroadcast(R_variable, [self.domain.lower() + " particle"],)
+        T_k = variables[self.domain + " electrode temperature"]
 
-        # broadcast to particle-size domain then again into particle
-        T_k = pybamm.PrimaryBroadcast(
-            variables[self.domain + " electrode temperature"],
-            [self.domain.lower() + " particle-size domain"],
-        )
-        T_k = pybamm.PrimaryBroadcast(T_k, [self.domain.lower() + " particle"],)
+        # Variables can currently only have 3 domains, so remove "current collector"
+        # from T_k. If T_k was broadcast to "electrode", take orphan, average
+        # over "current collector", then broadcast to "particle", "particle-size"
+        # and "electrode"
+        if isinstance(T_k, pybamm.Broadcast):
+            T_k = pybamm.yz_average(T_k.orphans[0])
+            T_k = pybamm.FullBroadcast(
+                T_k, self.domain.lower() + " particle",
+                {
+                    "secondary": self.domain.lower() + " particle size",
+                    "tertiary": self.domain.lower() + " electrode"
+                }
+            )
+        else:
+            # broadcast to "particle size" domain then again into "particle"
+            T_k = pybamm.PrimaryBroadcast(
+                T_k,
+                [self.domain.lower() + " particle size"],
+            )
+            T_k = pybamm.PrimaryBroadcast(
+                T_k, [self.domain.lower() + " particle"],
+            )
 
         if self.domain == "Negative":
             N_s_distribution = (
                 -self.param.D_n(c_s_distribution, T_k)
                 * pybamm.grad(c_s_distribution)
-                / R_variable
+                / R
             )
             f_a_dist = self.param.f_a_dist_n(R_variable)
 
             # spatial var to use in R integral below (cannot use R_variable as
             # it is a broadcast)
-            R = pybamm.standard_spatial_vars.R_variable_n
+            #R = pybamm.standard_spatial_vars.R_n
         elif self.domain == "Positive":
             N_s_distribution = (
                 -self.param.D_p(c_s_distribution, T_k)
                 * pybamm.grad(c_s_distribution)
-                / R_variable
+                / R
             )
             f_a_dist = self.param.f_a_dist_p(R_variable)
 
             # spatial var to use in R integral below (cannot use R_variable as
             # it is a broadcast)
-            R = pybamm.standard_spatial_vars.R_variable_p
+            #R = pybamm.standard_spatial_vars.R_p
 
         # Standard R-averaged flux variables
-        N_s = pybamm.Integral(f_a_dist * N_s_distribution, R)
+        N_s = pybamm.Integral(f_a_dist * N_s_distribution, R_variable)
         variables.update(self._get_standard_flux_variables(N_s, N_s))
 
         # Standard distribution flux variables (R-dependent)
@@ -145,17 +184,19 @@ class FickianManyPSDs(BaseParticle):
         N_s_distribution = variables[self.domain + " particle flux distribution"]
 
         R_variable = variables[self.domain + " particle size"]
+        R = pybamm.PrimaryBroadcast(R_variable, [self.domain.lower() + " particle"],)
+
         if self.domain == "Negative":
             self.rhs = {
                 c_s_distribution: -(1 / self.param.C_n)
                 * pybamm.div(N_s_distribution)
-                / R_variable
+                / R
             }
         elif self.domain == "Positive":
             self.rhs = {
                 c_s_distribution: -(1 / self.param.C_p)
                 * pybamm.div(N_s_distribution)
-                / R_variable
+                / R
             }
 
     def set_boundary_conditions(self, variables):
@@ -171,10 +212,10 @@ class FickianManyPSDs(BaseParticle):
         ]
         R_variable = variables[self.domain + " particle size"]
 
-        # Extract T and broadcast to particle-size domain
+        # Extract T and broadcast to particle size domain
         T_k = variables[self.domain + " electrode temperature"]
         T_k = pybamm.PrimaryBroadcast(
-            T_k, [self.domain.lower() + " particle-size domain"]
+            T_k, [self.domain.lower() + " particle size"]
         )
 
         # Set surface Neumann boundary values
@@ -212,7 +253,7 @@ class FickianManyPSDs(BaseParticle):
         if self.domain == "Negative":
             # Broadcast x_n to particle-size then into the particles
             x_n = pybamm.PrimaryBroadcast(
-                pybamm.standard_spatial_vars.x_n, "negative particle-size domain"
+                pybamm.standard_spatial_vars.x_n, "negative particle size"
             )
             x_n = pybamm.PrimaryBroadcast(x_n, "negative particle")
             c_init = self.param.c_n_init(x_n)
@@ -220,7 +261,7 @@ class FickianManyPSDs(BaseParticle):
         elif self.domain == "Positive":
             # Broadcast x_n to particle-size then into the particles
             x_p = pybamm.PrimaryBroadcast(
-                pybamm.standard_spatial_vars.x_p, "positive particle-size domain"
+                pybamm.standard_spatial_vars.x_p, "positive particle size"
             )
             x_p = pybamm.PrimaryBroadcast(x_p, "positive particle")
             c_init = self.param.c_p_init(x_p)

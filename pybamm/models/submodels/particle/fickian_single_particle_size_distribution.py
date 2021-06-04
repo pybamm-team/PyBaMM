@@ -33,7 +33,7 @@ class FickianSinglePSD(BaseParticle):
                 "X-averaged negative particle concentration distribution",
                 domain="negative particle",
                 auxiliary_domains={
-                    "secondary": "negative particle-size domain",
+                    "secondary": "negative particle size",
                     "tertiary": "current collector",
                 },
                 bounds=(0, 1),
@@ -43,7 +43,7 @@ class FickianSinglePSD(BaseParticle):
             # domain
             R_variable = pybamm.SpatialVariable(
                 "R_n",
-                domain=["negative particle-size domain"],
+                domain=["negative particle size"],
                 auxiliary_domains={"secondary": "current collector"},
                 coord_sys="cartesian",
             )
@@ -58,7 +58,7 @@ class FickianSinglePSD(BaseParticle):
                 "X-averaged positive particle concentration distribution",
                 domain="positive particle",
                 auxiliary_domains={
-                    "secondary": "positive particle-size domain",
+                    "secondary": "positive particle size",
                     "tertiary": "current collector",
                 },
                 bounds=(0, 1),
@@ -68,7 +68,7 @@ class FickianSinglePSD(BaseParticle):
             # domain
             R_variable = pybamm.SpatialVariable(
                 "R_p",
-                domain=["positive particle-size domain"],
+                domain=["positive particle size"],
                 auxiliary_domains={"secondary": "current collector"},
                 coord_sys="cartesian",
             )
@@ -111,10 +111,10 @@ class FickianSinglePSD(BaseParticle):
         R_spatial_variable = variables[self.domain + " particle size"]
         f_a_dist = variables[self.domain + " area-weighted particle-size distribution"]
 
-        # broadcast to particle-size domain then again into particle
+        # broadcast to "particle size" domain then again into "particle"
         T_k_xav = pybamm.PrimaryBroadcast(
             variables["X-averaged " + self.domain.lower() + " electrode temperature"],
-            [self.domain.lower() + " particle-size domain"],
+            [self.domain.lower() + " particle size"],
         )
         T_k_xav = pybamm.PrimaryBroadcast(T_k_xav, [self.domain.lower() + " particle"],)
         R = pybamm.PrimaryBroadcast(
@@ -194,12 +194,12 @@ class FickianSinglePSD(BaseParticle):
         ]
         R = variables[self.domain + " particle size"]
 
-        # Extract x-av T and broadcast to particle-size domain
+        # Extract x-av T and broadcast to particle size domain
         T_k_xav = variables[
             "X-averaged " + self.domain.lower() + " electrode temperature"
         ]
         T_k_xav = pybamm.PrimaryBroadcast(
-            T_k_xav, [self.domain.lower() + " particle-size domain"]
+            T_k_xav, [self.domain.lower() + " particle size"]
         )
 
         # Set surface Neumann boundary values

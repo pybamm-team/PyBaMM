@@ -32,7 +32,7 @@ class InverseButlerVolmer(BaseInterface):
         if options is None:
             options = {
                 "SEI film resistance": "none",
-                "particle-size distribution": False
+                "particle size": "distribution"
             }
         self.options = options
 

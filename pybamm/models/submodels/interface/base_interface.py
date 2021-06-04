@@ -63,7 +63,7 @@ class BaseInterface(pybamm.BaseSubModel):
         if self.reaction == "lithium-ion main":
             # For "particle-size distribution" submodels, take distribution version
             # of c_s_surf that depends on particle size.
-            if self.options["particle-size distribution"] == "true":
+            if self.options["particle size"] == "distribution":
                 c_s_surf = variables[
                     self.domain + " particle surface concentration distribution"
                 ]
@@ -83,12 +83,12 @@ class BaseInterface(pybamm.BaseSubModel):
                     c_e = pybamm.PrimaryBroadcast(
                         c_e, ["current collector"],
                     )
-                # broadcast c_e, T onto "particle-size domain"
+                # broadcast c_e, T onto "particle size"
                 c_e = pybamm.PrimaryBroadcast(
-                    c_e, [self.domain.lower() + " particle-size domain"]
+                    c_e, [self.domain.lower() + " particle size"]
                 )
                 T = pybamm.PrimaryBroadcast(
-                    T, [self.domain.lower() + " particle-size domain"]
+                    T, [self.domain.lower() + " particle size"]
                 )
 
             else:
@@ -163,26 +163,31 @@ class BaseInterface(pybamm.BaseSubModel):
             T = variables[self.domain + " electrode temperature"]
             # For "particle-size distribution" models, take distribution version
             # of c_s_surf that depends on particle size.
-            if self.options["particle-size distribution"] == "true":
+            if self.options["particle size"] == "distribution":
                 c_s_surf = variables[
                     self.domain + " particle surface concentration distribution"
                 ]
+                # If variable was broadcast, take only the orphan
+                if (
+                    isinstance(c_s_surf, pybamm.Broadcast)
+                    and isinstance(T, pybamm.Broadcast)
+                ):
+                    c_s_surf = c_s_surf.orphans[0]
+                    T = T.orphans[0]
+                T = pybamm.PrimaryBroadcast(
+                    T, [self.domain.lower() + " particle size"]
+                )
             else:
                 c_s_surf = variables[self.domain + " particle surface concentration"]
 
-            # If variable was broadcast, take only the orphan
-            if (
-                isinstance(c_s_surf, pybamm.Broadcast)
-                and isinstance(T, pybamm.Broadcast)
-            ):
-                c_s_surf = c_s_surf.orphans[0]
-                T = T.orphans[0]
-            # For "particle-size distribution" models, then broadcast T
-            # onto particle-size domain
-            if self.options["particle-size distribution"] == "true":
-                T = pybamm.PrimaryBroadcast(
-                    T, [self.domain.lower() + " particle-size domain"]
-                )
+                # If variable was broadcast, take only the orphan
+                if (
+                    isinstance(c_s_surf, pybamm.Broadcast)
+                    and isinstance(T, pybamm.Broadcast)
+                ):
+                    c_s_surf = c_s_surf.orphans[0]
+                    T = T.orphans[0]
+
             if self.domain == "Negative":
                 ocp = self.param.U_n(c_s_surf, T)
                 dUdT = self.param.dUdT_n(c_s_surf)
@@ -441,7 +446,7 @@ class BaseInterface(pybamm.BaseSubModel):
 
         # If j0 depends on particle size R then must R-average to get standard
         # output exchange current density
-        if j0.domain == [self.domain.lower() + " particle-size domain"]:
+        if j0.domain == [self.domain.lower() + " particle size"]:
             # R-average
             j0 = pybamm.R_average(j0, self.domain, self.param)
 
@@ -528,7 +533,7 @@ class BaseInterface(pybamm.BaseSubModel):
         pot_scale = self.param.potential_scale
         # If eta_r depends on particle size R then must R-average to get standard
         # output reaction overpotential
-        if eta_r.domain == [self.domain.lower() + " particle-size domain"]:
+        if eta_r.domain == [self.domain.lower() + " particle size"]:
             # R-average
             eta_r = pybamm.R_average(eta_r, self.domain, self.param)
 
@@ -643,7 +648,7 @@ class BaseInterface(pybamm.BaseSubModel):
         """
         # If ocp depends on particle size R then must R-average to get standard
         # output open circuit potential
-        if ocp.domain == [self.domain.lower() + " particle-size domain"]:
+        if ocp.domain == [self.domain.lower() + " particle size"]:
             # R-average
             ocp = pybamm.R_average(ocp, self.domain, self.param)
 
@@ -661,7 +666,7 @@ class BaseInterface(pybamm.BaseSubModel):
 
         # If dUdT depends on particle size R then must R-average to get standard
         # output entropic change
-        if dUdT.domain == [self.domain.lower() + " particle-size domain"]:
+        if dUdT.domain == [self.domain.lower() + " particle size"]:
             # R-average
             dUdT = pybamm.R_average(dUdT, self.domain, self.param)
 
@@ -717,9 +722,9 @@ class BaseInterface(pybamm.BaseSubModel):
         if eta_r.domains["secondary"] != [self.domain.lower() + " electrode"]:
             T = pybamm.x_average(T)
 
-        # Broadcast T onto "particle-size domain"
+        # Broadcast T onto "particle size" domain
         T = pybamm.PrimaryBroadcast(
-            T, [self.domain.lower() + " particle-size domain"]
+            T, [self.domain.lower() + " particle size"]
         )
 
         # current density that depends on particle size R
@@ -732,7 +737,7 @@ class BaseInterface(pybamm.BaseSubModel):
     def _get_standard_PSD_interfacial_current_variables(self, j_distribution):
         """
         Interfacial current density variables that depend on particle size R,
-        relevant if "particle-size distribution" option is "true".
+        relevant if "particle size" option is "distribution".
         """
         # X-average and broadcast if necessary
         if j_distribution.domains["secondary"] == [self.domain.lower() + " electrode"]:

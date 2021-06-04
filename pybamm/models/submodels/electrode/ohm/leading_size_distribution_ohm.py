@@ -135,10 +135,6 @@ class LeadingOrderSizeDistribution(BaseModel):
         else:
             delta_phi_av = pybamm.x_average(delta_phi)
 
-        #        # For particle-size distributions (true here), must broadcast further
-        #        delta_phi = pybamm.PrimaryBroadcast(delta_phi, [self.domain.lower() + " particle-size domain"])
-        #        delta_phi_av = pybamm.PrimaryBroadcast(delta_phi_av, [self.domain.lower() + " particle-size domain"])
-
         variables = {
             self.domain + " electrode surface potential difference": delta_phi,
             "X-averaged "

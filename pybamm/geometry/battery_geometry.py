@@ -46,10 +46,10 @@ def battery_geometry(
                 "positive particle": {var.r_p: {"min": 0, "max": 1}},
             }
         )
-    # Add particle-size domains
+    # Add particle size domains
     if (
         options is not None and
-        options["particle-size distribution"] == "true"
+        options["particle size"] == "distribution"
     ):
         param = pybamm.LithiumIonParameters(options)
         R_min_n = param.R_min_n
@@ -58,11 +58,11 @@ def battery_geometry(
         R_max_p = param.R_max_p
         geometry.update(
             {
-                "negative particle-size domain": {
-                    var.R_variable_n: {"min": R_min_n, "max": R_max_n}
+                "negative particle size": {
+                    var.R_n: {"min": R_min_n, "max": R_max_n}
                 },
-                "positive particle-size domain": {
-                    var.R_variable_p: {"min": R_min_p, "max": R_max_p}
+                "positive particle size": {
+                    var.R_p: {"min": R_min_p, "max": R_max_p}
                 },
             }
         )

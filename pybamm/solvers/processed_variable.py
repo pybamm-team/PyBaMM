@@ -177,8 +177,8 @@ class ProcessedVariable(object):
             self.first_dimension = "z"
             self.z_sol = space
         elif self.domain[0] in [
-            "negative particle-size domain",
-            "positive particle-size domain",
+            "negative particle size",
+            "positive particle size",
         ]:
             self.first_dimension = "R"
             self.R_sol = space
@@ -325,16 +325,16 @@ class ProcessedVariable(object):
             "negative particle",
             "positive particle",
         ] and self.auxiliary_domains["secondary"][0] in [
-            "negative particle-size domain",
-            "positive particle-size domain",
+            "negative particle size",
+            "positive particle size",
         ]:
             self.first_dimension = "r"
             self.second_dimension = "R"
             self.r_sol = first_dim_pts
             self.R_sol = second_dim_pts
         elif self.domain[0] in [
-            "negative particle-size domain",
-            "positive particle-size domain",
+            "negative particle size",
+            "positive particle size",
         ] and self.auxiliary_domains["secondary"][0] in [
             "negative electrode",
             "positive electrode",

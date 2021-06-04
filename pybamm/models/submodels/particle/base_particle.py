@@ -159,7 +159,7 @@ class BaseParticle(pybamm.BaseSubModel):
 
         # Broadcast and x-average when necessary
         if c_s.domain == [
-            self.domain.lower() + " particle-size domain"
+            self.domain.lower() + " particle size"
         ] and c_s.auxiliary_domains["secondary"] != [
             self.domain.lower() + " electrode"
         ]:
@@ -171,7 +171,7 @@ class BaseParticle(pybamm.BaseSubModel):
                 0,
                 [self.domain.lower() + " particle"],
                 {
-                    "secondary": self.domain.lower() + " particle-size domain",
+                    "secondary": self.domain.lower() + " particle size",
                     "tertiary": self.domain.lower() + " electrode",
                 },
             )
@@ -190,7 +190,7 @@ class BaseParticle(pybamm.BaseSubModel):
                 0,
                 [self.domain.lower() + " particle"],
                 {
-                    "secondary": self.domain.lower() + " particle-size domain",
+                    "secondary": self.domain.lower() + " particle size",
                     "tertiary": self.domain.lower() + " electrode",
                 },
             )
@@ -201,7 +201,7 @@ class BaseParticle(pybamm.BaseSubModel):
                 c_s_surf_xav_distribution, [self.domain.lower() + " electrode"]
             )
         elif c_s.domain == [
-            self.domain.lower() + " particle-size domain"
+            self.domain.lower() + " particle size"
         ] and c_s.auxiliary_domains["secondary"] == [
             self.domain.lower() + " electrode"
         ]:
@@ -216,7 +216,7 @@ class BaseParticle(pybamm.BaseSubModel):
                 0,
                 [self.domain.lower() + " particle"],
                 {
-                    "secondary": self.domain.lower() + " particle-size domain",
+                    "secondary": self.domain.lower() + " particle size",
                     "tertiary": self.domain.lower() + " electrode",
                 },
             )

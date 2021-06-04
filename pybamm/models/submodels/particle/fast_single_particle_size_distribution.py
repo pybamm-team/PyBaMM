@@ -36,12 +36,12 @@ class FastSinglePSD(BaseParticle):
             # distribution variables
             c_s_surf_xav_distribution = pybamm.Variable(
                 "X-averaged negative particle surface concentration distribution",
-                domain="negative particle-size domain",
+                domain="negative particle size",
                 auxiliary_domains={"secondary": "current collector"},
                 bounds=(0, 1),
             )
-            R_variable = pybamm.standard_spatial_vars.R_variable_n
-            R_dim = self.param.R_n
+            R_variable = pybamm.standard_spatial_vars.R_n
+            R_dim = self.param.R_n_typ
 
             # Particle-size distribution (area-weighted)
             f_a_dist = self.param.f_a_dist_n(R_variable)
@@ -50,12 +50,12 @@ class FastSinglePSD(BaseParticle):
             # distribution variables
             c_s_surf_xav_distribution = pybamm.Variable(
                 "X-averaged positive particle surface concentration distribution",
-                domain="positive particle-size domain",
+                domain="positive particle size",
                 auxiliary_domains={"secondary": "current collector"},
                 bounds=(0, 1),
             )
-            R_variable = pybamm.standard_spatial_vars.R_variable_p
-            R_dim = self.param.R_p
+            R_variable = pybamm.standard_spatial_vars.R_p
+            R_dim = self.param.R_p_typ
 
             # Particle-size distribution (area-weighted)
             f_a_dist = self.param.f_a_dist_p(R_variable)

@@ -60,13 +60,13 @@ class BaseKinetics(BaseInterface):
         if isinstance(delta_phi, pybamm.Broadcast):
             delta_phi = delta_phi.orphans[0]
         # For "particle-size distribution" models, delta_phi must then be
-        # broadcast to "particle-size domain"
+        # broadcast to "particle size" domain
         if (
             self.reaction == "lithium-ion main"
-            and self.options["particle-size distribution"] == "true"
+            and self.options["particle size"] == "distribution"
         ):
             delta_phi = pybamm.PrimaryBroadcast(
-                delta_phi, [self.domain.lower() + " particle-size domain"]
+                delta_phi, [self.domain.lower() + " particle size"]
             )
 
         # Get exchange-current density
@@ -120,7 +120,7 @@ class BaseKinetics(BaseInterface):
         # (In the "distributed SEI resistance" model, we have already defined j)
         if (
             self.reaction == "lithium-ion main"
-            and self.options["particle-size distribution"] == "true"
+            and self.options["particle size"] == "distribution"
         ):
             # For "particle-size distribution" models, additional steps (R-averaging)
             # are necessary to calculate j

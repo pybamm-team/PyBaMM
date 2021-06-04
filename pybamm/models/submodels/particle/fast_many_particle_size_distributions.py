@@ -37,17 +37,17 @@ class FastManyPSDs(BaseParticle):
             # distribution variables
             c_s_surf_distribution = pybamm.Variable(
                 "Negative particle surface concentration distribution",
-                domain="negative particle-size domain",
+                domain="negative particle size",
                 auxiliary_domains={
                     "secondary": "negative electrode",
                     "tertiary": "current collector",
                 },
                 bounds=(0, 1),
             )
-            R = pybamm.standard_spatial_vars.R_variable_n  # used for averaging
+            R = pybamm.standard_spatial_vars.R_n  # used for averaging
             R_variable = pybamm.SecondaryBroadcast(R, ["current collector"])
             R_variable = pybamm.SecondaryBroadcast(R_variable, ["negative electrode"])
-            R_dim = self.param.R_n
+            R_dim = self.param.R_n_typ
 
             # Particle-size distribution (area-weighted)
             f_a_dist = self.param.f_a_dist_n(R_variable)
@@ -56,17 +56,17 @@ class FastManyPSDs(BaseParticle):
             # distribution variables
             c_s_surf_distribution = pybamm.Variable(
                 "Positive particle surface concentration distribution",
-                domain="positive particle-size domain",
+                domain="positive particle size",
                 auxiliary_domains={
                     "secondary": "positive electrode",
                     "tertiary": "current collector",
                 },
                 bounds=(0, 1),
             )
-            R = pybamm.standard_spatial_vars.R_variable_p  # used for averaging
+            R = pybamm.standard_spatial_vars.R_p  # used for averaging
             R_variable = pybamm.SecondaryBroadcast(R, ["current collector"])
             R_variable = pybamm.SecondaryBroadcast(R_variable, ["positive electrode"])
-            R_dim = self.param.R_p
+            R_dim = self.param.R_p_typ
 
             # Particle-size distribution (area-weighted)
             f_a_dist = self.param.f_a_dist_p(R_variable)
@@ -152,16 +152,16 @@ class FastManyPSDs(BaseParticle):
         ]
 
         if self.domain == "Negative":
-            # Broadcast x_n to particle-size domain
+            # Broadcast x_n to particle size domain
             x_n = pybamm.PrimaryBroadcast(
-                pybamm.standard_spatial_vars.x_n, "negative particle-size domain"
+                pybamm.standard_spatial_vars.x_n, "negative particle size"
             )
             c_init = self.param.c_n_init(x_n)
 
         elif self.domain == "Positive":
-            # Broadcast x_p to particle-size domain
+            # Broadcast x_p to particle size domain
             x_p = pybamm.PrimaryBroadcast(
-                pybamm.standard_spatial_vars.x_p, "positive particle-size domain"
+                pybamm.standard_spatial_vars.x_p, "positive particle size"
             )
             c_init = self.param.c_p_init(x_p)
 

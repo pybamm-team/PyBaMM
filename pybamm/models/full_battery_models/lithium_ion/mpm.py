@@ -35,7 +35,7 @@ class MPM(BaseModel):
         self, options=None, name="Many-Particle Model", build=True
     ):
         super().__init__(options, name)
-        self.options["particle-size distribution"] = "true"
+        self.options["particle size"] = "distribution"
 
         # Set submodels
         self.set_external_circuit_submodel()
@@ -196,23 +196,6 @@ class MPM(BaseModel):
         self.submodels[
             "electrolyte diffusion"
         ] = pybamm.electrolyte_diffusion.ConstantConcentration(self.param)
-        """
-        def set_standard_output_variables(self):
-        super().set_standard_output_variables()
-
-        # add particle-size variables
-        var = pybamm.standard_spatial_vars
-        R_n = pybamm.geometric_parameters.R_n
-        R_p = pybamm.geometric_parameters.R_p
-        self.variables.update(
-            {
-                "Negative particle size": var.R_variable_n,
-                "Negative particle size [m]": var.R_variable_n * R_n,
-                "Positive particle size": var.R_variable_p,
-                "Positive particle size [m]": var.R_variable_p * R_p,
-            }
-        )
-        """
 
     @property
     def default_parameter_values(self):

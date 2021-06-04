@@ -1194,13 +1194,13 @@ def x_average(symbol):
         # as this will be easier to identify for simplifications later on
         if (
             symbol.domain == ["negative particle"] or
-            symbol.domain == ["negative particle-size domain"]
+            symbol.domain == ["negative particle size"]
         ):
             x = pybamm.standard_spatial_vars.x_n
             l = geo.l_n
         elif (
             symbol.domain == ["positive particle"] or
-            symbol.domain == ["positive particle-size domain"]
+            symbol.domain == ["positive particle size"]
         ):
             x = pybamm.standard_spatial_vars.x_p
             l = geo.l_p
@@ -1373,8 +1373,8 @@ def R_average(symbol, domain, param):
         )
 
     if symbol.domain not in [
-        ["negative particle-size domain"],
-        ["positive particle-size domain"],
+        ["negative particle size"],
+        ["positive particle size"],
     ]:
         raise pybamm.DomainError(
             """R-average only implemented for primary 'particle size' domains,

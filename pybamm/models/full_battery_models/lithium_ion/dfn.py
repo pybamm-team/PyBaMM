@@ -120,7 +120,7 @@ class DFN(BaseModel):
 
     def set_particle_submodel(self):
 
-        if self.options["particle-size distribution"] == "true":
+        if self.options["particle size"] == "distribution":
             if self.options["particle"] == "Fickian diffusion":
                 self.submodels["negative particle"] = pybamm.particle.FickianManyPSDs(
                     self.param, "Negative"
