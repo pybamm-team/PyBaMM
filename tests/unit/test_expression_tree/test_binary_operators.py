@@ -1,11 +1,12 @@
 #
 # Tests for the Binary Operator classes
 #
-import pybamm
+import unittest
 
 import numpy as np
-import unittest
 from scipy.sparse.coo import coo_matrix
+
+import pybamm
 
 
 class TestBinaryOperators(unittest.TestCase):
@@ -370,16 +371,14 @@ class TestBinaryOperators(unittest.TestCase):
         self.assertAlmostEqual(minimum.evaluate(y=np.array([2]))[0, 0], 1)
         self.assertAlmostEqual(minimum.evaluate(y=np.array([0]))[0, 0], 0)
         self.assertEqual(
-            str(minimum),
-            "log(1.9287498479639178e-22 + exp(-50.0 * y[0:1])) / -50.0",
+            str(minimum), "log(1.9287498479639178e-22 + exp(-50.0 * y[0:1])) / -50.0"
         )
 
         maximum = pybamm.softplus(a, b, 50)
         self.assertAlmostEqual(maximum.evaluate(y=np.array([2]))[0, 0], 2)
         self.assertAlmostEqual(maximum.evaluate(y=np.array([0]))[0, 0], 1)
         self.assertEqual(
-            str(maximum),
-            "log(5.184705528587072e+21 + exp(50.0 * y[0:1])) / 50.0",
+            str(maximum), "log(5.184705528587072e+21 + exp(50.0 * y[0:1])) / 50.0"
         )
 
         # Test that smooth min/max are used when the setting is changed
