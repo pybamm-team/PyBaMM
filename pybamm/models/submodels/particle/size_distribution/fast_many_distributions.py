@@ -10,7 +10,7 @@ from .base_distribution import BaseSizeDistribution
 
 class FastManySizeDistributions(BaseSizeDistribution):
     """Class for molar conservation in many particle-size
-    distributions (PSD), one distribution at every x location of the electrode,
+    distributions, one distribution at every x location of the electrode,
     with fast diffusion (uniform concentration in r) within the particles
 
     Parameters
@@ -30,8 +30,7 @@ class FastManySizeDistributions(BaseSizeDistribution):
 
     def get_fundamental_variables(self):
         # The concentration is uniform throughout each particle, so we
-        # can just use the surface value. This avoids dealing with
-        # x, R *and* r averaged quantities, which may be confusing.
+        # can just use the surface value.
 
         if self.domain == "Negative":
             # distribution variables
@@ -44,13 +43,11 @@ class FastManySizeDistributions(BaseSizeDistribution):
                 },
                 bounds=(0, 1),
             )
-            R = pybamm.standard_spatial_vars.R_n  # used for averaging
-            R_variable = pybamm.SecondaryBroadcast(R, ["current collector"])
-            R_variable = pybamm.SecondaryBroadcast(R_variable, ["negative electrode"])
+            R = pybamm.standard_spatial_vars.R_n
             R_dim = self.param.R_n_typ
 
             # Particle-size distribution (area-weighted)
-            f_a_dist = self.param.f_a_dist_n(R_variable)
+            f_a_dist = self.param.f_a_dist_n(R)
 
         elif self.domain == "Positive":
             # distribution variables
@@ -63,13 +60,11 @@ class FastManySizeDistributions(BaseSizeDistribution):
                 },
                 bounds=(0, 1),
             )
-            R = pybamm.standard_spatial_vars.R_p  # used for averaging
-            R_variable = pybamm.SecondaryBroadcast(R, ["current collector"])
-            R_variable = pybamm.SecondaryBroadcast(R_variable, ["positive electrode"])
+            R = pybamm.standard_spatial_vars.R_p
             R_dim = self.param.R_p_typ
 
             # Particle-size distribution (area-weighted)
-            f_a_dist = self.param.f_a_dist_p(R_variable)
+            f_a_dist = self.param.f_a_dist_p(R)
 
         # Ensure the distribution is normalised, irrespective of discretisation
         # or user input
@@ -105,8 +100,8 @@ class FastManySizeDistributions(BaseSizeDistribution):
         )
         variables.update(
             {
-                self.domain + " particle size": R_variable,
-                self.domain + " particle size [m]": R_variable * R_dim,
+                self.domain + " particle size": R,
+                self.domain + " particle size [m]": R * R_dim,
                 self.domain
                 + " area-weighted particle-size"
                 + " distribution": pybamm.x_average(f_a_dist),
@@ -126,23 +121,22 @@ class FastManySizeDistributions(BaseSizeDistribution):
             self.domain
             + " electrode interfacial current density distribution"
         ]
-        R_variable = variables[self.domain + " particle size"]
+        R = variables[self.domain + " particle size"]
 
         if self.domain == "Negative":
             self.rhs = {
                 c_s_surf_distribution: -3
                 * j_distribution
                 / self.param.a_R_n
-                / R_variable
+                / R
             }
-
         elif self.domain == "Positive":
             self.rhs = {
                 c_s_surf_distribution: -3
                 * j_distribution
                 / self.param.a_R_p
                 / self.param.gamma_p
-                / R_variable
+                / R
             }
 
     def set_initial_conditions(self, variables):

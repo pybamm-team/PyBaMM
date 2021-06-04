@@ -29,8 +29,7 @@ class FastSingleSizeDistribution(BaseSizeDistribution):
 
     def get_fundamental_variables(self):
         # The concentration is uniform throughout each particle, so we
-        # can just use the surface value. This avoids dealing with
-        # x, R *and* r averaged quantities, which may be confusing.
+        # can just use the surface value.
 
         if self.domain == "Negative":
             # distribution variables
@@ -40,11 +39,19 @@ class FastSingleSizeDistribution(BaseSizeDistribution):
                 auxiliary_domains={"secondary": "current collector"},
                 bounds=(0, 1),
             )
-            R_variable = pybamm.standard_spatial_vars.R_n
+            # Since concentration does not depend on "x", need a particle-size
+            # spatial variable R with only "current collector" as secondary
+            # domain
+            R_spatial_variable = pybamm.SpatialVariable(
+                "R_n",
+                domain=["negative particle size"],
+                auxiliary_domains={"secondary": "current collector"},
+                coord_sys="cartesian",
+            )
             R_dim = self.param.R_n_typ
 
             # Particle-size distribution (area-weighted)
-            f_a_dist = self.param.f_a_dist_n(R_variable)
+            f_a_dist = self.param.f_a_dist_n(R_spatial_variable)
 
         elif self.domain == "Positive":
             # distribution variables
@@ -54,15 +61,23 @@ class FastSingleSizeDistribution(BaseSizeDistribution):
                 auxiliary_domains={"secondary": "current collector"},
                 bounds=(0, 1),
             )
-            R_variable = pybamm.standard_spatial_vars.R_p
+            # Since concentration does not depend on "x", need a particle-size
+            # spatial variable R with only "current collector" as secondary
+            # domain
+            R_spatial_variable = pybamm.SpatialVariable(
+                "R_p",
+                domain=["positive particle size"],
+                auxiliary_domains={"secondary": "current collector"},
+                coord_sys="cartesian",
+            )
             R_dim = self.param.R_p_typ
 
             # Particle-size distribution (area-weighted)
-            f_a_dist = self.param.f_a_dist_p(R_variable)
+            f_a_dist = self.param.f_a_dist_p(R_spatial_variable)
 
         # Ensure the distribution is normalised, irrespective of discretisation
         # or user input
-        f_a_dist = f_a_dist / pybamm.Integral(f_a_dist, R_variable)
+        f_a_dist = f_a_dist / pybamm.Integral(f_a_dist, R_spatial_variable)
 
         # Flux variables (zero)
         N_s = pybamm.FullBroadcastToEdges(
@@ -78,7 +93,9 @@ class FastSingleSizeDistribution(BaseSizeDistribution):
         )
 
         # Standard R-averaged variables
-        c_s_surf_xav = pybamm.Integral(f_a_dist * c_s_surf_xav_distribution, R_variable)
+        c_s_surf_xav = pybamm.Integral(
+            f_a_dist * c_s_surf_xav_distribution, R_spatial_variable
+        )
         c_s_xav = pybamm.PrimaryBroadcast(
             c_s_surf_xav, [self.domain.lower() + " particle"]
         )
@@ -94,8 +111,8 @@ class FastSingleSizeDistribution(BaseSizeDistribution):
         )
         variables.update(
             {
-                self.domain + " particle size": R_variable,
-                self.domain + " particle size [m]": R_variable * R_dim,
+                self.domain + " particle size": R_spatial_variable,
+                self.domain + " particle size [m]": R_spatial_variable * R_dim,
                 self.domain
                 + " area-weighted particle-size"
                 + " distribution": f_a_dist,
@@ -117,14 +134,14 @@ class FastSingleSizeDistribution(BaseSizeDistribution):
             + self.domain.lower()
             + " electrode interfacial current density distribution"
         ]
-        R_variable = variables[self.domain + " particle size"]
+        R = variables[self.domain + " particle size"]
 
         if self.domain == "Negative":
             self.rhs = {
                 c_s_surf_xav_distribution: -3
                 * j_xav_distribution
                 / self.param.a_R_n
-                / R_variable
+                / R
             }
 
         elif self.domain == "Positive":
@@ -133,7 +150,7 @@ class FastSingleSizeDistribution(BaseSizeDistribution):
                 * j_xav_distribution
                 / self.param.a_R_p
                 / self.param.gamma_p
-                / R_variable
+                / R
             }
 
     def set_initial_conditions(self, variables):
