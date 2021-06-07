@@ -4,6 +4,7 @@
 import unittest
 
 import numpy as np
+import sympy
 from scipy.sparse.coo import coo_matrix
 
 import pybamm
@@ -679,7 +680,7 @@ class TestBinaryOperators(unittest.TestCase):
         arr2 = pybamm.Array([[4, 1], [2, 2]])
         self.assertEqual(
             pybamm.MatrixMultiplication(arr1, arr2).to_equation(),
-            "Matrix([[4.0, 1.0], [2.0, 2.0]])",
+            sympy.Matrix([[4.0, 1.0], [2.0, 2.0]]),
         )
 
         # Test Heaviside

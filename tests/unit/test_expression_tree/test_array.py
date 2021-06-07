@@ -4,6 +4,7 @@
 import unittest
 
 import numpy as np
+import sympy
 
 import pybamm
 
@@ -36,8 +37,7 @@ class TestArray(unittest.TestCase):
 
     def test_to_equation(self):
         self.assertEqual(
-            str(pybamm.Array([1, 2]).to_equation()),
-            "[[1.00000000000000], [2.00000000000000]]",
+            pybamm.Array([1, 2]).to_equation(), sympy.Array([[1.0], [2.0]])
         )
 
 
