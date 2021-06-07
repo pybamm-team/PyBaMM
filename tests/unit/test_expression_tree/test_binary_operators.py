@@ -667,6 +667,24 @@ class TestBinaryOperators(unittest.TestCase):
         self.assertEqual(pybamm.inner(a3, a2).evaluate(), 3)
         self.assertEqual(pybamm.inner(a3, a3).evaluate(), 9)
 
+    def test_to_equation(self):
+        # Test Power
+        self.assertEqual(pybamm.Power(7, 2).to_equation(), 49)
+
+        # Test Division
+        self.assertEqual(pybamm.Division(10, 2).to_equation(), 5)
+
+        # Test Matrix Multiplication
+        arr1 = pybamm.Array([[1, 0], [0, 1]])
+        arr2 = pybamm.Array([[4, 1], [2, 2]])
+        self.assertEqual(
+            pybamm.MatrixMultiplication(arr1, arr2).to_equation(),
+            "Matrix([[4.0, 1.0], [2.0, 2.0]])",
+        )
+
+        # Test Heaviside
+        self.assertEqual(pybamm.Heaviside("test", 4, 2).to_equation(), 1)
+
 
 if __name__ == "__main__":
     print("Add -v for more debug output")

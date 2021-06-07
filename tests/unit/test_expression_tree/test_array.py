@@ -1,10 +1,11 @@
 #
 # Tests for the Array class
 #
-import pybamm
+import unittest
+
 import numpy as np
 
-import unittest
+import pybamm
 
 
 class TestArray(unittest.TestCase):
@@ -32,6 +33,12 @@ class TestArray(unittest.TestCase):
         C, D = pybamm.meshgrid(c, d)
         np.testing.assert_array_equal(A, C.entries)
         np.testing.assert_array_equal(B, D.entries)
+
+    def test_to_equation(self):
+        self.assertEqual(
+            str(pybamm.Array([1, 2]).to_equation()),
+            "[[1.00000000000000], [2.00000000000000]]",
+        )
 
 
 if __name__ == "__main__":
