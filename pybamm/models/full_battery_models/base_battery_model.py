@@ -162,7 +162,7 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                 "ec reaction limited",
             ],
             "SEI film resistance": ["none", "distributed", "average"],
-            "SEI porosity change": ["true", "false"],
+            "SEI porosity change": ["true", "false", "true2"],
             "lithium plating": ["none", "reversible", "irreversible"],
             "loss of active material": ["none", "stress-driven", "reaction-driven"],
             "operating mode": ["current", "voltage", "power"],
