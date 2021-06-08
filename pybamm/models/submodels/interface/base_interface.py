@@ -448,7 +448,7 @@ class BaseInterface(pybamm.BaseSubModel):
         # output exchange current density
         if j0.domain == [self.domain.lower() + " particle size"]:
             # R-average
-            j0 = pybamm.R_average(j0, self.domain, self.param)
+            j0 = pybamm.R_average(j0, self.param)
 
         # X-average, and broadcast if necessary
         if j0.domain == []:
@@ -535,7 +535,7 @@ class BaseInterface(pybamm.BaseSubModel):
         # output reaction overpotential
         if eta_r.domain == [self.domain.lower() + " particle size"]:
             # R-average
-            eta_r = pybamm.R_average(eta_r, self.domain, self.param)
+            eta_r = pybamm.R_average(eta_r, self.param)
 
         # X-average, and broadcast if necessary
         eta_r_av = pybamm.x_average(eta_r)
@@ -650,7 +650,7 @@ class BaseInterface(pybamm.BaseSubModel):
         # output open circuit potential
         if ocp.domain == [self.domain.lower() + " particle size"]:
             # R-average
-            ocp = pybamm.R_average(ocp, self.domain, self.param)
+            ocp = pybamm.R_average(ocp, self.param)
 
         # X-average, and broadcast if necessary
         if ocp.domain == []:
@@ -668,7 +668,7 @@ class BaseInterface(pybamm.BaseSubModel):
         # output entropic change
         if dUdT.domain == [self.domain.lower() + " particle size"]:
             # R-average
-            dUdT = pybamm.R_average(dUdT, self.domain, self.param)
+            dUdT = pybamm.R_average(dUdT, self.param)
 
         dUdT_av = pybamm.x_average(dUdT)
 
@@ -731,7 +731,7 @@ class BaseInterface(pybamm.BaseSubModel):
         j_distribution = self._get_kinetics(j0, ne, eta_r, T)
 
         # R-average
-        j = pybamm.R_average(j_distribution, self.domain, self.param)
+        j = pybamm.R_average(j_distribution, self.param)
         return j, j_distribution
 
     def _get_standard_PSD_interfacial_current_variables(self, j_distribution):

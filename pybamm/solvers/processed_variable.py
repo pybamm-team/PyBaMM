@@ -294,7 +294,7 @@ class ProcessedVariable(object):
             axis=1,
         )
 
-        # Process r-x, x-z, r-R, or R-x
+        # Process r-x, x-z, r-R, R-x, or R-z
         if self.domain[0] in [
             "negative particle",
             "positive particle",
@@ -343,6 +343,14 @@ class ProcessedVariable(object):
             self.second_dimension = "x"
             self.R_sol = first_dim_pts
             self.x_sol = second_dim_pts
+        elif self.domain[0] in [
+            "negative particle size",
+            "positive particle size",
+        ] and self.auxiliary_domains["secondary"] == ["current collector"]:
+            self.first_dimension = "R"
+            self.second_dimension = "z"
+            self.R_sol = first_dim_pts
+            self.z_sol = second_dim_pts
         else:
             raise pybamm.DomainError(
                 "Cannot process 3D object with domain '{}' "

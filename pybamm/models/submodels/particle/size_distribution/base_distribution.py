@@ -33,9 +33,6 @@ class BaseSizeDistribution(BaseParticle):
         elif self.domain == "Positive":
             c_scale = self.param.c_p_max
 
-        # Note: Currently not possible to broadcast from (r, R) to (r, R, x) since
-        # domain x for broadcast is in "tertiary" position.
-
         # Broadcast and x-average when necessary
         if c_s.domain == [
             self.domain.lower() + " particle size"

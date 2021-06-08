@@ -61,6 +61,30 @@ class MPM(BaseModel):
 
         pybamm.citations.register("Kirk2020")
 
+    def set_external_circuit_submodel(self):
+        """
+        Define how the external circuit defines the boundary conditions for the model,
+        e.g. (not necessarily constant-) current, voltage, etc
+        """
+        if self.options["operating mode"] == "current":
+            self.submodels["external circuit"] = pybamm.external_circuit.CurrentControl(
+                self.param
+            )
+        elif self.options["operating mode"] == "voltage":
+            raise NotImplementedError(
+                """Many-Particle Model does not support voltage control."""
+            )
+        elif self.options["operating mode"] == "power":
+            self.submodels[
+                "external circuit"
+            ] = pybamm.external_circuit.PowerFunctionControl(self.param)
+        elif callable(self.options["operating mode"]):
+            self.submodels[
+                "external circuit"
+            ] = pybamm.external_circuit.FunctionControl(
+                self.param, self.options["operating mode"]
+            )
+
     def set_porosity_submodel(self):
 
         if (
@@ -199,17 +223,65 @@ class MPM(BaseModel):
             "electrolyte diffusion"
         ] = pybamm.electrolyte_diffusion.ConstantConcentration(self.param)
 
+    def set_thermal_submodel(self):
+
+        if self.options["thermal"] == "isothermal":
+            thermal_submodel = pybamm.thermal.isothermal.Isothermal(self.param)
+
+        elif self.options["thermal"] == "lumped":
+            thermal_submodel = pybamm.thermal.Lumped(
+                self.param,
+                cc_dimension=self.options["dimensionality"],
+                geometry=self.options["cell geometry"],
+            )
+
+        elif self.options["thermal"] == "x-lumped":
+            if self.options["dimensionality"] == 0:
+                # With 0D current collectors x-lumped is equivalent to lumped pouch
+                thermal_submodel = pybamm.thermal.Lumped(self.param, geometry="pouch")
+            elif self.options["dimensionality"] == 1:
+                thermal_submodel = pybamm.thermal.pouch_cell.CurrentCollector1D(
+                    self.param
+                )
+            elif self.options["dimensionality"] == 2:
+                thermal_submodel = pybamm.thermal.pouch_cell.CurrentCollector2D(
+                    self.param
+                )
+
+        elif self.options["thermal"] == "x-full":
+            raise NotImplementedError(
+                """X-full thermal submodels do
+                not yet support particle-size distributions."""
+            )
+
+        self.submodels["thermal"] = thermal_submodel
+
+    def set_sei_submodel(self):
+
+        # negative electrode SEI
+        if self.options["SEI"] == "none":
+            self.submodels["negative sei"] = pybamm.sei.NoSEI(self.param, "Negative")
+        else:
+            raise NotImplementedError(
+                """SEI submodels do not yet support particle-size distributions."""
+            )
+
+        # positive electrode
+        self.submodels["positive sei"] = pybamm.sei.NoSEI(self.param, "Positive")
+
     @property
     def default_parameter_values(self):
         # Default parameter values
         default_params = super().default_parameter_values
-        # Extract the particle radius, taken to be the average radius
+        # The mean particle radii for each electrode, taken to be the
+        # "Negative particle radius [m]" and "Positive particle radius [m]"
+        # provided in the parameter set. These will be the means of the
+        # (area-weighted) particle-size distributions f_a_dist_n_dim,
+        # f_a_dist_p_dim, provided below.
         R_n_dim = default_params["Negative particle radius [m]"]
         R_p_dim = default_params["Positive particle radius [m]"]
 
-        # Additional particle distribution parameter values
-
-        # Area-weighted standard deviations
+        # Standard deviations (dimensionless)
         sd_a_n = 0.3
         sd_a_p = 0.3
 
@@ -218,9 +290,9 @@ class MPM(BaseModel):
         R_min_p = 0
 
         # Max radius in the particle-size distributions (dimensionless).
-        # Either 5 s.d.'s above the mean or 2 times the mean, whichever is larger
-        R_max_n = max(2, 1 + sd_a_n * 5)
-        R_max_p = max(2, 1 + sd_a_p * 5)
+        # 5 standard deviations above the mean
+        R_max_n = 1 + sd_a_n * 5
+        R_max_p = 1 + sd_a_p * 5
 
         # Define lognormal distribution
         def lognormal_distribution(R, R_av, sd):
@@ -241,14 +313,14 @@ class MPM(BaseModel):
                 / (R)
             )
 
-        # Set the (area-weighted) particle-size distributions (dimensional)
+        # Set the dimensional (area-weighted) particle-size distributions
         def f_a_dist_n_dim(R):
             return lognormal_distribution(R, R_n_dim, sd_a_n * R_n_dim)
 
         def f_a_dist_p_dim(R):
             return lognormal_distribution(R, R_p_dim, sd_a_p * R_p_dim)
 
-        # Append to default parameters (dimensional)
+        # Append to default parameters
         default_params.update(
             {
                 "Negative area-weighted particle-size "

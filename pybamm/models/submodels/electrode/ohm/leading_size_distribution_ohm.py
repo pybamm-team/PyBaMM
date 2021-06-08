@@ -7,9 +7,10 @@ from .base_ohm import BaseModel
 
 
 class LeadingOrderSizeDistribution(BaseModel):
-    """An electrode submodel that employs Ohm's law the leading-order approximation to
-    governing equations when there is a distribution of particle sizes. An algebraic
-    equation is imposed for the x-averaged surface potential difference.
+    """An electrode submodel that employs Ohm's law the leading-order approximation
+    (no variation in x) to governing equations when there is a distribution of particle
+    sizes. An algebraic equation is imposed for the x-averaged surface potential
+    difference.
 
     Parameters
     ----------
@@ -95,6 +96,10 @@ class LeadingOrderSizeDistribution(BaseModel):
             + self.domain.lower()
             + " electrode surface potential difference"
         ]
+        # Algebraic equation for the (X-avg) surface potential difference phi_s - phi_e.
+        # The electrode total interfacial current density (already integrated across
+        # particle size) must equal the sum from all sources, sum_j_av. May not account
+        # for interfacial current densities from reactions other than "main"
         self.algebraic[delta_phi_av] = sum_j_av - j_tot_av
 
     def set_initial_conditions(self, variables):
@@ -114,6 +119,15 @@ class LeadingOrderSizeDistribution(BaseModel):
             )
 
         self.initial_conditions[delta_phi_av] = delta_phi_av_init
+
+    def set_boundary_conditions(self, variables):
+
+        phi_s = variables[self.domain + " electrode potential"]
+
+        lbc = (pybamm.Scalar(0), "Neumann")
+        rbc = (pybamm.Scalar(0), "Neumann")
+
+        self.boundary_conditions[phi_s] = {"left": lbc, "right": rbc}
 
     def _get_standard_surface_potential_difference_variables(self, delta_phi):
 
