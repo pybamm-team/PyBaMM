@@ -34,8 +34,11 @@ class MPM(BaseModel):
     def __init__(
         self, options=None, name="Many-Particle Model", build=True
     ):
+        if options is None:
+            options = {"particle size": "distribution"}
+        else:
+            options["particle size"] = "distribution"
         super().__init__(options, name)
-        self.options["particle size"] = "distribution"
 
         # Set submodels
         self.set_external_circuit_submodel()

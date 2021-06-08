@@ -335,6 +335,8 @@ class ParticleConcentrationTests(BaseOutputTest):
         diff = (self.c_s_tot[1:] - self.c_s_tot[:-1]) / self.c_s_tot[:-1]
         if "profile" in self.model.options["particle"]:
             np.testing.assert_array_almost_equal(diff, 0, decimal=10)
+        elif self.model.options["particle size"] == "distribution":
+            np.testing.assert_array_almost_equal(diff, 0, decimal=10)
         elif self.model.options["surface form"] == "differential":
             np.testing.assert_array_almost_equal(diff, 0, decimal=10)
         elif self.model.options["SEI"] == "ec reaction limited":

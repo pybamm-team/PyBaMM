@@ -76,14 +76,6 @@ class TestMPM(unittest.TestCase):
         optimtest.set_up_model(to_python=True)
         optimtest.set_up_model(to_python=False)
 
-    def test_charge(self):
-        options = {"thermal": "isothermal"}
-        model = pybamm.lithium_ion.MPM(options)
-        parameter_values = model.default_parameter_values
-        parameter_values.update({"Current function [A]": -1})
-        modeltest = tests.StandardModelTest(model, parameter_values=parameter_values)
-        modeltest.test_all()
-
     def test_zero_current(self):
         options = {"thermal": "isothermal"}
         model = pybamm.lithium_ion.MPM(options)
@@ -92,18 +84,8 @@ class TestMPM(unittest.TestCase):
         modeltest = tests.StandardModelTest(model, parameter_values=parameter_values)
         modeltest.test_all()
 
-    def test_thermal(self):
+    def test_thermal_lumped(self):
         options = {"thermal": "lumped"}
-        model = pybamm.lithium_ion.MPM(options)
-        modeltest = tests.StandardModelTest(model)
-        modeltest.test_all()
-
-    def test_thermal_1plus1D(self):
-        options = {
-            "current collector": "potential pair",
-            "dimensionality": 1,
-            "thermal": "x-lumped"
-        }
         model = pybamm.lithium_ion.MPM(options)
         modeltest = tests.StandardModelTest(model)
         modeltest.test_all()
@@ -158,17 +140,6 @@ class TestMPM(unittest.TestCase):
         chemistry = pybamm.parameter_sets.Ai2020
         parameter_values = pybamm.ParameterValues(chemistry=chemistry)
         param = self.add_distribution_params_for_test(parameter_values)
-        modeltest = tests.StandardModelTest(model, parameter_values=param)
-        modeltest.test_all()
-
-    def test_well_posed_irreversible_plating_with_porosity(self):
-        options = {
-            "lithium plating": "irreversible",
-            "lithium plating porosity change": "true",
-        }
-        model = pybamm.lithium_ion.MPM(options)
-        param = pybamm.ParameterValues(chemistry=pybamm.parameter_sets.Yang2017)
-        param = self.add_distribution_params_for_test(param)
         modeltest = tests.StandardModelTest(model, parameter_values=param)
         modeltest.test_all()
 

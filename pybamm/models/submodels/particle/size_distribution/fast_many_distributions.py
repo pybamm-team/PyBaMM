@@ -70,6 +70,12 @@ class FastManySizeDistributions(BaseSizeDistribution):
         # or user input
         f_a_dist = f_a_dist / pybamm.Integral(f_a_dist, R)
 
+        # Volume-weighted particle-size distribution
+        f_v_dist = (
+            R * f_a_dist /
+            pybamm.Integral(R * f_a_dist, R)
+        )
+
         # Flux variables (zero)
         N_s = pybamm.FullBroadcastToEdges(
             0,
@@ -83,8 +89,11 @@ class FastManySizeDistributions(BaseSizeDistribution):
             0, self.domain.lower() + " electrode", "current collector"
         )
 
-        # Standard R-averaged variables
-        c_s_surf = pybamm.Integral(f_a_dist * c_s_surf_distribution, R)
+        # Standard R-averaged variables. Average concentrations using
+        # the volume-weighted distribution since they are volume-based
+        # quantities. Necessary for output variables "Total lithium in
+        # negative electrode [mol]", etc, to be calculated correctly
+        c_s_surf = pybamm.Integral(f_v_dist * c_s_surf_distribution, R)
         c_s = pybamm.PrimaryBroadcast(
             c_s_surf, [self.domain.lower() + " particle"]
         )
@@ -108,8 +117,16 @@ class FastManySizeDistributions(BaseSizeDistribution):
                 self.domain
                 + " area-weighted particle-size"
                 + " distribution [m-1]": pybamm.x_average(f_a_dist) / R_dim,
+                self.domain + " volume-weighted particle-size"
+                + " distribution": pybamm.x_average(f_v_dist),
+                self.domain + " volume-weighted particle-size"
+                + " distribution [m-1]": pybamm.x_average(f_v_dist) / R_dim,
             }
         )
+        return variables
+
+    def get_coupled_variables(self, variables):
+        variables.update(self._get_total_concentration_variables(variables))
         return variables
 
     def set_rhs(self, variables):

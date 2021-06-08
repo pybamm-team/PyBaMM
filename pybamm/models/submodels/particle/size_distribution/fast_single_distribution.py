@@ -75,9 +75,15 @@ class FastSingleSizeDistribution(BaseSizeDistribution):
             # Particle-size distribution (area-weighted)
             f_a_dist = self.param.f_a_dist_p(R_spatial_variable)
 
-        # Ensure the distribution is normalised, irrespective of discretisation
-        # or user input
+        # Ensure the area-weighted distribution is normalised, irrespective
+        # of discretisation or user input
         f_a_dist = f_a_dist / pybamm.Integral(f_a_dist, R_spatial_variable)
+
+        # Volume-weighted particle-size distribution
+        f_v_dist = (
+            R_spatial_variable * f_a_dist /
+            pybamm.Integral(R_spatial_variable * f_a_dist, R_spatial_variable)
+        )
 
         # Flux variables (zero)
         N_s = pybamm.FullBroadcastToEdges(
@@ -92,9 +98,12 @@ class FastSingleSizeDistribution(BaseSizeDistribution):
             0, self.domain.lower() + " electrode", "current collector"
         )
 
-        # Standard R-averaged variables
+        # Standard R-averaged variables. Average concentrations using
+        # the volume-weighted distribution since they are volume-based
+        # quantities. Necessary for output variables "Total lithium in
+        # negative electrode [mol]", etc, to be calculated correctly
         c_s_surf_xav = pybamm.Integral(
-            f_a_dist * c_s_surf_xav_distribution, R_spatial_variable
+            f_v_dist * c_s_surf_xav_distribution, R_spatial_variable
         )
         c_s_xav = pybamm.PrimaryBroadcast(
             c_s_surf_xav, [self.domain.lower() + " particle"]
@@ -119,8 +128,16 @@ class FastSingleSizeDistribution(BaseSizeDistribution):
                 self.domain
                 + " area-weighted particle-size"
                 + " distribution [m-1]": f_a_dist / R_dim,
+                self.domain + " volume-weighted particle-size"
+                + " distribution": f_v_dist,
+                self.domain + " volume-weighted particle-size"
+                + " distribution [m-1]": f_v_dist / R_dim,
             }
         )
+        return variables
+
+    def get_coupled_variables(self, variables):
+        variables.update(self._get_total_concentration_variables(variables))
         return variables
 
     def set_rhs(self, variables):

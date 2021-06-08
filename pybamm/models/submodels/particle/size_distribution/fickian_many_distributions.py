@@ -89,8 +89,17 @@ class FickianManySizeDistributions(BaseSizeDistribution):
         # or user input
         f_a_dist = f_a_dist / pybamm.Integral(f_a_dist, R_variable)
 
-        # Standard R-averaged variables (avg secondary domain)
-        c_s = pybamm.Integral(f_a_dist * c_s_distribution, R_variable)
+        # Volume-weighted particle-size distribution
+        f_v_dist = (
+            R_variable * f_a_dist /
+            pybamm.Integral(R_variable * f_a_dist, R_variable)
+        )
+
+        # Standard R-averaged variables. Average concentrations using
+        # the volume-weighted distribution since they are volume-based
+        # quantities. Necessary for output variables "Total lithium in
+        # negative electrode [mol]", etc, to be calculated correctly
+        c_s = pybamm.Integral(f_v_dist * c_s_distribution, R_variable)
         c_s_xav = pybamm.x_average(c_s)
         variables = self._get_standard_concentration_variables(c_s, c_s_xav)
 
@@ -108,6 +117,10 @@ class FickianManySizeDistributions(BaseSizeDistribution):
                 self.domain
                 + " area-weighted particle-size"
                 + " distribution [m-1]": pybamm.x_average(f_a_dist) / R_dim,
+                self.domain + " volume-weighted particle-size"
+                + " distribution": pybamm.x_average(f_v_dist),
+                self.domain + " volume-weighted particle-size"
+                + " distribution [m-1]": pybamm.x_average(f_v_dist) / R_dim,
             }
         )
         return variables
@@ -174,6 +187,8 @@ class FickianManySizeDistributions(BaseSizeDistribution):
         variables.update(
             {self.domain + " particle flux distribution": N_s_distribution}
         )
+
+        variables.update(self._get_total_concentration_variables(variables))
         return variables
 
     def set_rhs(self, variables):
