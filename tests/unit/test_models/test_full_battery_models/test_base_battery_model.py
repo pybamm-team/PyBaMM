@@ -249,6 +249,8 @@ class TestBaseBatteryModel(unittest.TestCase):
                     "plating porosity change"
                 }
             )
+        with self.assertRaisesRegex(pybamm.OptionError, "surface formulation"):
+            pybamm.lead_acid.LOQS({"hydrolysis": "true", "surface form": "false"})
 
     def test_build_twice(self):
         model = pybamm.lithium_ion.SPM()  # need to pick a model to set vars and build
