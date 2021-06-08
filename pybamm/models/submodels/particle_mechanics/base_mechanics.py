@@ -95,7 +95,9 @@ class BaseMechanics(pybamm.BaseSubModel):
         cell_thickness_change += self.param.n_electrodes_parallel * v_change * L0
         disp_surf_dim = Omega * R0 / 3 * (c_s_rav - c_0) * c_scale
         # c0 reference concentration for no deformation
+        # stress evaluated at the surface of the particles
         stress_r_surf_dim = 0 * E0
+        # c_s_rav is already multiplied by 3/R^3
         stress_t_surf_dim = (
             Omega * E0 / 3.0 / (1.0 - nu) * (c_s_rav - c_s_surf) * c_scale
         )
