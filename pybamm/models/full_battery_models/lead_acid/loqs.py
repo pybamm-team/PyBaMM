@@ -214,7 +214,7 @@ class LOQS(BaseModel):
         ] = pybamm.electrolyte_diffusion.LeadingOrder(self.param)
 
     def set_side_reaction_submodels(self):
-        if "oxygen" in self.options["side reactions"]:
+        if self.options["hydrolysis"] == "true":
             self.submodels[
                 "leading-order oxygen diffusion"
             ] = pybamm.oxygen_diffusion.LeadingOrder(self.param)

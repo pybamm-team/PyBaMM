@@ -96,29 +96,29 @@ class SPM(BaseModel):
             )
 
     def set_particle_submodel(self):
-
-        if self.options["particle"] == "Fickian diffusion":
-            self.submodels["negative particle"] = pybamm.particle.FickianSingleParticle(
-                self.param, "Negative"
-            )
-            self.submodels["positive particle"] = pybamm.particle.FickianSingleParticle(
-                self.param, "Positive"
-            )
-        elif self.options["particle"] in [
-            "uniform profile",
-            "quadratic profile",
-            "quartic profile",
+        if isinstance(self.options["particle"], str):
+            particle_left = self.options["particle"]
+            particle_right = self.options["particle"]
+        else:
+            particle_left, particle_right = self.options["particle"]
+        for particle_side, domain in [
+            [particle_left, "Negative"],
+            [particle_right, "Positive"],
         ]:
-            self.submodels[
-                "negative particle"
-            ] = pybamm.particle.PolynomialSingleParticle(
-                self.param, "Negative", self.options["particle"]
-            )
-            self.submodels[
-                "positive particle"
-            ] = pybamm.particle.PolynomialSingleParticle(
-                self.param, "Positive", self.options["particle"]
-            )
+            if particle_side == "Fickian diffusion":
+                self.submodels[
+                    domain.lower() + " particle"
+                ] = pybamm.particle.FickianSingleParticle(self.param, domain)
+            elif particle_side in [
+                "uniform profile",
+                "quadratic profile",
+                "quartic profile",
+            ]:
+                self.submodels[
+                    domain.lower() + " particle"
+                ] = pybamm.particle.PolynomialSingleParticle(
+                    self.param, domain, particle_side
+                )
 
     def set_negative_electrode_submodel(self):
 

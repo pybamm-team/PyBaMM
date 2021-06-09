@@ -15,27 +15,26 @@ OPTIONS_DICT = {
 }
 
 PRINT_OPTIONS_OUTPUT = """\
-'operating mode': 'current' (possible: ['current', 'voltage', 'power'])
-'dimensionality': 0 (possible: [0, 1, 2])
-'surface form': 'differential' (possible: ['false', 'differential', 'algebraic'])
-'convection': 'none' (possible: ['none', 'uniform transverse', 'full transverse'])
-'side reactions': []
-'interfacial surface area': 'constant' (possible: ['constant', 'varying'])
-'current collector': 'uniform' (possible: ['uniform', 'potential pair', 'potential pair quite conductive'])
-'particle': 'Fickian diffusion' (possible: ['Fickian diffusion', 'fast diffusion', 'uniform profile', 'quadratic profile', 'quartic profile'])
-'particle shape': 'spherical' (possible: ['spherical', 'user', 'no particles'])
-'electrolyte conductivity': 'default' (possible: ['default', 'full', 'leading order', 'composite', 'integrated'])
-'thermal': 'x-full' (possible: ['isothermal', 'lumped', 'x-lumped', 'x-full'])
 'cell geometry': 'pouch' (possible: ['arbitrary', 'pouch'])
+'convection': 'none' (possible: ['none', 'uniform transverse', 'full transverse'])
+'current collector': 'uniform' (possible: ['uniform', 'potential pair', 'potential pair quite conductive'])
+'dimensionality': 0 (possible: [0, 1, 2])
+'electrolyte conductivity': 'default' (possible: ['default', 'full', 'leading order', 'composite', 'integrated'])
 'external submodels': []
-'SEI': 'none' (possible: ['none', 'constant', 'reaction limited', 'solvent-diffusion limited', 'electron-migration limited', 'interstitial-diffusion limited', 'ec reaction limited'])
+'hydrolysis': 'false' (possible: ['true', 'false'])
 'lithium plating': 'none' (possible: ['none', 'reversible', 'irreversible'])
-'SEI porosity change': 'false' (possible: ['true', 'false'])
 'lithium plating porosity change': 'false' (possible: ['true', 'false'])
 'loss of active material': 'stress-driven' (possible: ['none', 'stress-driven', 'reaction-driven'])
-'working electrode': 'none'
+'operating mode': 'current' (possible: ['current', 'voltage', 'power'])
+'particle': 'Fickian diffusion' (possible: ['Fickian diffusion', 'fast diffusion', 'uniform profile', 'quadratic profile', 'quartic profile'])
 'particle mechanics': 'swelling only' (possible: ['none', 'swelling only', 'swelling and cracking'])
+'particle shape': 'spherical' (possible: ['spherical', 'user', 'no particles'])
+'SEI': 'none' (possible: ['none', 'constant', 'reaction limited', 'solvent-diffusion limited', 'electron-migration limited', 'interstitial-diffusion limited', 'ec reaction limited'])
+'SEI porosity change': 'false' (possible: ['true', 'false'])
+'surface form': 'differential' (possible: ['false', 'differential', 'algebraic'])
+'thermal': 'x-full' (possible: ['isothermal', 'lumped', 'x-lumped', 'x-full'])
 'total interfacial current density as a state': 'false' (possible: ['true', 'false'])
+'working electrode': 'none'
 'SEI film resistance': 'none' (possible: ['none', 'distributed', 'average'])
 """  # noqa: E501
 
@@ -250,6 +249,8 @@ class TestBaseBatteryModel(unittest.TestCase):
                     "plating porosity change"
                 }
             )
+        with self.assertRaisesRegex(pybamm.OptionError, "surface formulation"):
+            pybamm.lead_acid.LOQS({"hydrolysis": "true", "surface form": "false"})
 
     def test_build_twice(self):
         model = pybamm.lithium_ion.SPM()  # need to pick a model to set vars and build

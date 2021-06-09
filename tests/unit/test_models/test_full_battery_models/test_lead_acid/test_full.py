@@ -39,18 +39,18 @@ class TestLeadAcidFullSurfaceForm(unittest.TestCase):
 
 class TestLeadAcidFullSideReactions(unittest.TestCase):
     def test_well_posed(self):
-        options = {"side reactions": ["oxygen"]}
+        options = {"hydrolysis": "true"}
         model = pybamm.lead_acid.Full(options)
         model.check_well_posedness()
 
     def test_well_posed_surface_form_differential(self):
-        options = {"side reactions": ["oxygen"], "surface form": "differential"}
+        options = {"hydrolysis": "true", "surface form": "differential"}
         model = pybamm.lead_acid.Full(options)
         model.check_well_posedness()
         self.assertIsInstance(model.default_solver, pybamm.CasadiSolver)
 
     def test_well_posed_surface_form_algebraic(self):
-        options = {"side reactions": ["oxygen"], "surface form": "algebraic"}
+        options = {"hydrolysis": "true", "surface form": "algebraic"}
         model = pybamm.lead_acid.Full(options)
         model.check_well_posedness()
         self.assertIsInstance(model.default_solver, pybamm.CasadiSolver)
