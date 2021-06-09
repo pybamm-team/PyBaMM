@@ -107,10 +107,10 @@ class TestSymbol(unittest.TestCase):
         self.assertIsInstance(a @ b, pybamm.MatrixMultiplication)
         self.assertIsInstance(a / b, pybamm.Division)
         self.assertIsInstance(a ** b, pybamm.Power)
-        self.assertIsInstance(a < b, pybamm.Heaviside)
-        self.assertIsInstance(a <= b, pybamm.Heaviside)
-        self.assertIsInstance(a > b, pybamm.Heaviside)
-        self.assertIsInstance(a >= b, pybamm.Heaviside)
+        self.assertIsInstance(a < b, pybamm._Heaviside)
+        self.assertIsInstance(a <= b, pybamm._Heaviside)
+        self.assertIsInstance(a > b, pybamm._Heaviside)
+        self.assertIsInstance(a >= b, pybamm._Heaviside)
         self.assertIsInstance(a % b, pybamm.Modulo)
 
         # binary - symbol and number

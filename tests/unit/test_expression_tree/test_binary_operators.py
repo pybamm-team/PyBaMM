@@ -683,9 +683,6 @@ class TestBinaryOperators(unittest.TestCase):
             sympy.Matrix([[4.0, 1.0], [2.0, 2.0]]),
         )
 
-        # Test Heaviside
-        self.assertEqual(pybamm.Heaviside("test", 4, 2).to_equation(), 1)
-
 
 if __name__ == "__main__":
     print("Add -v for more debug output")

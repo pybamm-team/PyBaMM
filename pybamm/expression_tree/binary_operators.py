@@ -500,7 +500,7 @@ def inner(left, right):
     return pybamm.simplify_if_constant(pybamm.Inner(left, right))
 
 
-class Heaviside(BinaryOperator):
+class _Heaviside(BinaryOperator):
     """
     A node in the expression tree representing a heaviside step function.
 
@@ -533,12 +533,8 @@ class Heaviside(BinaryOperator):
         # need to worry about shape
         return pybamm.Scalar(0)
 
-    def _sympy_operator(self, left, right):
-        """Override :meth:`pybamm.BinaryOperator._sympy_operator`"""
-        return sympy.Heaviside(left, right)
 
-
-class EqualHeaviside(Heaviside):
+class EqualHeaviside(_Heaviside):
     """A heaviside function with equality (return 1 when left = right)"""
 
     def __init__(self, left, right):
@@ -556,7 +552,7 @@ class EqualHeaviside(Heaviside):
             return left <= right
 
 
-class NotEqualHeaviside(Heaviside):
+class NotEqualHeaviside(_Heaviside):
     """A heaviside function without equality (return 0 when left = right)"""
 
     def __init__(self, left, right):

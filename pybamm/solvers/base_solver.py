@@ -301,7 +301,7 @@ class BaseSolver(object):
                     model.concatenated_rhs.pre_order(),
                     model.concatenated_algebraic.pre_order(),
                 ):
-                    if isinstance(symbol, pybamm.Heaviside):
+                    if isinstance(symbol, pybamm._Heaviside):
                         found_t = False
                         # Dimensionless
                         if symbol.right.id == pybamm.t.id:
