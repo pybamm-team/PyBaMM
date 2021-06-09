@@ -1,12 +1,14 @@
 #
 # Test for the Symbol class
 #
-import pybamm
-
-import unittest
-import numpy as np
 import os
+import unittest
+
+import numpy as np
 from scipy.sparse import coo_matrix
+
+import pybamm
+from pybamm.expression_tree.binary_operators import _Heaviside
 
 
 class TestSymbol(unittest.TestCase):
@@ -107,10 +109,10 @@ class TestSymbol(unittest.TestCase):
         self.assertIsInstance(a @ b, pybamm.MatrixMultiplication)
         self.assertIsInstance(a / b, pybamm.Division)
         self.assertIsInstance(a ** b, pybamm.Power)
-        self.assertIsInstance(a < b, pybamm._Heaviside)
-        self.assertIsInstance(a <= b, pybamm._Heaviside)
-        self.assertIsInstance(a > b, pybamm._Heaviside)
-        self.assertIsInstance(a >= b, pybamm._Heaviside)
+        self.assertIsInstance(a < b, _Heaviside)
+        self.assertIsInstance(a <= b, _Heaviside)
+        self.assertIsInstance(a > b, _Heaviside)
+        self.assertIsInstance(a >= b, _Heaviside)
         self.assertIsInstance(a % b, pybamm.Modulo)
 
         # binary - symbol and number
