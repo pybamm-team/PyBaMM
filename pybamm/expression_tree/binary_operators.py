@@ -1216,7 +1216,10 @@ def simplified_matrix_multiplication(left, right):
         if right.right.evaluates_to_constant_number():
             r_left, r_right = right.orphans
             new_left = left / r_right
-            return new_left @ r_left
+            new_mul = new_left @ r_left
+            # Keep the domain of the old left
+            new_mul.copy_domains(left)
+            return new_mul
 
     # Simplify A @ (B @ c) to (A @ B) @ c if (A @ B) is constant
     # This is a common construction that appears from discretisation of spatial

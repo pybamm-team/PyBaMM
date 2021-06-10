@@ -404,13 +404,13 @@ def full_like(symbols, fill_value):
         )
 
     except NotImplementedError:
-        if sum_symbol.evaluates_on_edges("primary"):
+        if product_symbol.evaluates_on_edges("primary"):
             return FullBroadcastToEdges(
-                fill_value, sum_symbol.domain, sum_symbol.auxiliary_domains
+                fill_value, product_symbol.domain, product_symbol.auxiliary_domains
             )
         else:
             return FullBroadcast(
-                fill_value, sum_symbol.domain, sum_symbol.auxiliary_domains
+                fill_value, product_symbol.domain, product_symbol.auxiliary_domains
             )
 
 

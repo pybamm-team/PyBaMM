@@ -96,7 +96,7 @@ from .expression_tree.state_vector import StateVectorBase, StateVector, StateVec
 from .expression_tree.exceptions import *
 
 # Operations
-from .expression_tree.operations.evaluate import (
+from .expression_tree.operations.evaluate_python import (
     find_symbols,
     id_to_python_variable,
     to_python,
@@ -104,8 +104,8 @@ from .expression_tree.operations.evaluate import (
 )
 
 if system() != "Windows":
-    from .expression_tree.operations.evaluate import EvaluatorJax
-    from .expression_tree.operations.evaluate import JaxCooMatrix
+    from .expression_tree.operations.evaluate_python import EvaluatorJax
+    from .expression_tree.operations.evaluate_python import JaxCooMatrix
 
 from .expression_tree.operations.jacobian import Jacobian
 from .expression_tree.operations.convert_to_casadi import CasadiConverter
@@ -116,12 +116,15 @@ from .expression_tree.operations.replace_symbols import SymbolReplacer
 # Model classes
 #
 from .models.base_model import BaseModel
-from .models import standard_variables
+from .models.standard_variables import standard_variables
 from .models.event import Event
 from .models.event import EventType
 
 # Battery models
-from .models.full_battery_models.base_battery_model import BaseBatteryModel, Options
+from .models.full_battery_models.base_battery_model import (
+    BaseBatteryModel,
+    BatteryModelOptions,
+)
 from .models.full_battery_models import lead_acid
 from .models.full_battery_models import lithium_ion
 
@@ -208,7 +211,7 @@ from .spatial_methods.scikit_finite_element import ScikitFiniteElement
 #
 # Solver classes
 #
-from .solvers.solution import Solution
+from .solvers.solution import Solution, make_cycle_solution
 from .solvers.processed_variable import ProcessedVariable
 from .solvers.processed_symbolic_variable import ProcessedSymbolicVariable
 from .solvers.base_solver import BaseSolver

@@ -377,12 +377,26 @@ def log10(child):
     return log(child, base=10)
 
 
+class Max(SpecificFunction):
+    """ Max function """
+
+    def __init__(self, child):
+        super().__init__(np.max, child)
+
+
 def max(child):
     """
     Returns max function of child. Not to be confused with :meth:`pybamm.maximum`, which
     returns the larger of two objects.
     """
-    return pybamm.simplify_if_constant(Function(np.max, child))
+    return pybamm.simplify_if_constant(Max(child))
+
+
+class Min(SpecificFunction):
+    """ Min function """
+
+    def __init__(self, child):
+        super().__init__(np.min, child)
 
 
 def min(child):
@@ -390,7 +404,7 @@ def min(child):
     Returns min function of child. Not to be confused with :meth:`pybamm.minimum`, which
     returns the smaller of two objects.
     """
-    return pybamm.simplify_if_constant(Function(np.min, child))
+    return pybamm.simplify_if_constant(Min(child))
 
 
 def sech(child):

@@ -22,7 +22,7 @@ Adding a set of parameters values
 ---------------------------------
 
 Parameter sets are split by material into ``negative_electrodes``, ``separators``, ``positive_electrodes``, ``electrolytes``, ``cells`` (for cell geometries and thermal properties) and ``experiments`` (for initial conditions and charge/discharge rates).
-To add a new parameter set in one of these subcategories, first create a new folder in the appropriate chemistry folder: for example, to add a new negative electrode chemistry for lithium-ion, add a subfolder ``input/parameters/lithium-ion/negative_electrodes/new_negative_electrode_chemistry_AuthorYear``. 
+To add a new parameter set in one of these subcategories, first create a new folder in the appropriate chemistry folder: for example, to add a new negative electrode chemistry for lithium-ion, add a subfolder ``input/parameters/lithium_ion/negative_electrodes/new_negative_electrode_chemistry_AuthorYear``. 
 This subfolder should then contain:
 
 - a csv file ``parameters.csv`` with all the relevant scalar parameters. The expected structure of the csv file is:
@@ -39,7 +39,7 @@ Empty lines, and lines starting with ``#``, will be ignored.
 - python files for any functions, which should be referenced from the ``parameters.csv`` file (see ``Adding a Function`` below)
 - csv files for any data to be interpolated, which should be referenced from the ``parameters.csv`` file (see ``Adding data for interpolation`` below)
 
-The easiest way to start is to copy an existing file (e.g. ````input/parameters/lithium-ion/negative_electrodes/graphite_mcmb2528_Marquis2019``) and replace all entries in all files as appropriate
+The easiest way to start is to copy an existing file (e.g. ````input/parameters/lithium_ion/negative_electrodes/graphite_mcmb2528_Marquis2019``) and replace all entries in all files as appropriate
 
 Adding a function
 -----------------
@@ -110,7 +110,7 @@ If you have added a whole new set of parameters, then you can create a new param
 .. code-block:: python
 
     AuthorYear = {
-        "chemistry": "lithium-ion",
+        "chemistry": "lithium_ion",
         "cell": "new_cell_AuthorYear",
         "negative electrode": "new_negative_electrode_AuthorYear",
         "separator": "new_separator_AuthorYear",
@@ -133,7 +133,7 @@ It's also possible to add parameters for a single material (e.g. negative electr
 
     param = pybamm.ParameterValues(
         chemistry={
-            "chemistry": "lithium-ion",
+            "chemistry": "lithium_ion",
             "cell": "kokam_Marquis2019",
             "negative electrode": "new_negative_electrode_chemistry_AuthorYear",
             "separator": "separator_Marquis2019",

@@ -45,7 +45,7 @@ class ParameterValues:
     >>> param = pybamm.ParameterValues(values)
     >>> param["some parameter"]
     1
-    >>> file = "input/parameters/lithium-ion/cells/kokam_Marquis2019/parameters.csv"
+    >>> file = "input/parameters/lithium_ion/cells/kokam_Marquis2019/parameters.csv"
     >>> values_path = pybamm.get_parameters_filepath(file)
     >>> param = pybamm.ParameterValues(values=values_path)
     >>> param["Negative current collector thickness [m]"]
@@ -268,6 +268,9 @@ class ParameterValues:
         path : string, optional
             Path from which to load functions
         """
+        # check if values is not a dictionary
+        if not isinstance(values, dict):
+            values = values._dict_items
         # check parameter values
         self.check_parameter_values(values)
         # update
@@ -298,9 +301,7 @@ class ParameterValues:
             # Functions are flagged with the string "[function]"
             if isinstance(value, str):
                 if value.startswith("[function]"):
-                    loaded_value = pybamm.load_function(
-                        os.path.join(path, value[10:] + ".py")
-                    )
+                    loaded_value = pybamm.load_function(os.path.join(path, value[10:]))
                     self._dict_items[name] = loaded_value
                     values[name] = loaded_value
                 # Data is flagged with the string "[data]" or "[current data]"
@@ -575,6 +576,8 @@ class ParameterValues:
                             geometry[domain][spatial_variable][
                                 lim
                             ] = self.process_symbol(sym)
+                        elif isinstance(sym, numbers.Number):
+                            geometry[domain][spatial_variable][lim] = pybamm.Scalar(sym)
 
     def process_symbol(self, symbol):
         """Walk through the symbol and replace any Parameter with a Value.
@@ -591,7 +594,6 @@ class ParameterValues:
             Symbol with Parameter instances replaced by Value
 
         """
-
         try:
             return self._processed_symbols[symbol.id]
         except KeyError:
@@ -792,14 +794,14 @@ class ParameterValues:
 
         Returns
         -------
-        number of array
+        number or array
             The evaluated symbol
         """
         processed_symbol = self.process_symbol(symbol)
-        if processed_symbol.evaluates_to_constant_number():
+        if processed_symbol.is_constant():
             return processed_symbol.evaluate()
         else:
-            raise ValueError("symbol must evaluate to a constant scalar")
+            raise ValueError("symbol must evaluate to a constant scalar or array")
 
     def _ipython_key_completions_(self):
         return list(self._dict_items.keys())
@@ -818,7 +820,7 @@ class ParameterValues:
 
         df = pd.DataFrame(parameter_output)
         df = df.transpose()
-        df.to_csv(filename, header=None)
+        df.to_csv(filename, header=["Value"], index_label="Name [units]")
 
     def print_parameters(self, parameters, output_file=None):
         """

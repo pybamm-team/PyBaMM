@@ -92,7 +92,7 @@ Lithium-ion parameter sets
 #
 
 NCA_Kim2011 = {
-    "chemistry": "lithium-ion",
+    "chemistry": "lithium_ion",
     "cell": "Kim2011",
     "negative electrode": "graphite_Kim2011",
     "separator": "separator_Kim2011",
@@ -104,7 +104,7 @@ NCA_Kim2011 = {
 }
 
 Ecker2015 = {
-    "chemistry": "lithium-ion",
+    "chemistry": "lithium_ion",
     "cell": "kokam_Ecker2015",
     "negative electrode": "graphite_Ecker2015",
     "separator": "separator_Ecker2015",
@@ -116,7 +116,7 @@ Ecker2015 = {
 }
 
 Yang2017 = {
-    "chemistry": "lithium-ion",
+    "chemistry": "lithium_ion",
     "cell": "Yang2017",
     "negative electrode": "graphite_Yang2017",
     "separator": "separator_Yang2017",
@@ -130,7 +130,7 @@ Yang2017 = {
 
 
 Marquis2019 = {
-    "chemistry": "lithium-ion",
+    "chemistry": "lithium_ion",
     "cell": "kokam_Marquis2019",
     "negative electrode": "graphite_mcmb2528_Marquis2019",
     "separator": "separator_Marquis2019",
@@ -142,7 +142,7 @@ Marquis2019 = {
 }
 
 Chen2020 = {
-    "chemistry": "lithium-ion",
+    "chemistry": "lithium_ion",
     "cell": "LGM50_Chen2020",
     "negative electrode": "graphite_Chen2020",
     "separator": "separator_Chen2020",
@@ -154,7 +154,7 @@ Chen2020 = {
 }
 
 Chen2020_plating = {
-    "chemistry": "lithium-ion",
+    "chemistry": "lithium_ion",
     "cell": "LGM50_Chen2020",
     "negative electrode": "graphite_Chen2020_plating",
     "separator": "separator_Chen2020",
@@ -167,7 +167,7 @@ Chen2020_plating = {
 }
 
 Mohtat2020 = {
-    "chemistry": "lithium-ion",
+    "chemistry": "lithium_ion",
     "cell": "UMBL_Mohtat2020",
     "negative electrode": "graphite_UMBL_Mohtat2020",
     "separator": "separator_Mohtat2020",
@@ -175,11 +175,12 @@ Mohtat2020 = {
     "electrolyte": "LiPF6_Mohtat2020",
     "experiment": "1C_charge_from_empty_Mohtat2020",
     "sei": "example",
+    "lithium plating": "yang2017_Li_plating",
     "citation": "Mohtat2020",
 }
 
 Ramadass2004 = {
-    "chemistry": "lithium-ion",
+    "chemistry": "lithium_ion",
     "cell": "sony_Ramadass2004",
     "negative electrode": "graphite_Ramadass2004",
     "separator": "separator_Ecker2015",  # no values found, relevance?
@@ -191,7 +192,7 @@ Ramadass2004 = {
 }
 
 Prada2013 = {
-    "chemistry": "lithium-ion",
+    "chemistry": "lithium_ion",
     "cell": "A123_Lain2019",
     "negative electrode": "graphite_Chen2020",
     "separator": "separator_Chen2020",
@@ -202,7 +203,7 @@ Prada2013 = {
 }
 
 Ai2020 = {
-    "chemistry": "lithium-ion",
+    "chemistry": "lithium_ion",
     "cell": "Enertech_Ai2020",
     "negative electrode": "graphite_Ai2020",
     "separator": "separator_Ai2020",
@@ -218,7 +219,7 @@ Ai2020 = {
 #
 
 Sulzer2019 = {
-    "chemistry": "lead-acid",
+    "chemistry": "lead_acid",
     "cell": "BBOXX_Sulzer2019",
     "negative electrode": "lead_Sulzer2019",
     "separator": "agm_Sulzer2019",

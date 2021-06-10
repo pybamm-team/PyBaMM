@@ -10,19 +10,19 @@ import numpy as np
 
 class TestLeadAcidCompositeSideReactions(unittest.TestCase):
     def test_basic_processing_differential(self):
-        options = {"side reactions": ["oxygen"], "surface form": "differential"}
+        options = {"hydrolysis": "true", "surface form": "differential"}
         model = pybamm.lead_acid.Composite(options)
         modeltest = tests.StandardModelTest(model)
         modeltest.test_all(skip_output_tests=True)
 
     def test_basic_processing_algebraic(self):
-        options = {"side reactions": ["oxygen"], "surface form": "algebraic"}
+        options = {"hydrolysis": "true", "surface form": "algebraic"}
         model = pybamm.lead_acid.Composite(options)
         modeltest = tests.StandardModelTest(model)
         modeltest.test_all(skip_output_tests=True)
 
     def test_basic_processing_charge(self):
-        options = {"side reactions": ["oxygen"], "surface form": "differential"}
+        options = {"hydrolysis": "true", "surface form": "differential"}
         model = pybamm.lead_acid.Composite(options)
         parameter_values = model.default_parameter_values
         parameter_values.update(
@@ -32,7 +32,7 @@ class TestLeadAcidCompositeSideReactions(unittest.TestCase):
         modeltest.test_all(skip_output_tests=True)
 
     def test_basic_processing_zero_current(self):
-        options = {"side reactions": ["oxygen"], "surface form": "differential"}
+        options = {"hydrolysis": "true", "surface form": "differential"}
         model = pybamm.lead_acid.Composite(options)
         parameter_values = model.default_parameter_values
         parameter_values.update({"Current function [A]": 0})
@@ -40,13 +40,13 @@ class TestLeadAcidCompositeSideReactions(unittest.TestCase):
         modeltest.test_all(skip_output_tests=True)
 
     def test_basic_processing_extended_differential(self):
-        options = {"side reactions": ["oxygen"], "surface form": "differential"}
+        options = {"hydrolysis": "true", "surface form": "differential"}
         model = pybamm.lead_acid.CompositeExtended(options)
         modeltest = tests.StandardModelTest(model)
         modeltest.test_all(skip_output_tests=True)
 
     def test_optimisations(self):
-        options = {"side reactions": ["oxygen"], "surface form": "differential"}
+        options = {"hydrolysis": "true", "surface form": "differential"}
         model = pybamm.lead_acid.Composite(options)
         optimtest = tests.OptimisationsTest(model)
 

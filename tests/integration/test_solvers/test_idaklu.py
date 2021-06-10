@@ -31,7 +31,7 @@ class TestIDAKLUSolver(unittest.TestCase):
         t_eval = np.linspace(0, 3600, 100)
         solver = pybamm.IDAKLUSolver()
 
-        variable_tols = {"Electrolyte concentration": 1e-3}
+        variable_tols = {"Porosity times concentration": 1e-3}
         solver.set_atol_by_variable(variable_tols, model)
 
         solver.solve(model, t_eval)
