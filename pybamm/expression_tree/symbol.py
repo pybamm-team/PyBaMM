@@ -152,7 +152,7 @@ def simplify_if_constant(symbol):
                 or (isinstance(result, np.ndarray) and result.ndim == 0)
                 or isinstance(result, np.bool_)
             ):
-                return pybamm.Scalar(result)
+                return pybamm.Scalar(result, symbol.units)
             elif isinstance(result, np.ndarray) or issparse(result):
                 if result.ndim == 1 or result.shape[1] == 1:
                     return pybamm.Vector(

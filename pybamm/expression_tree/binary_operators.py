@@ -961,9 +961,9 @@ def simplified_multiplication(left, right):
         return left
 
     # anything multiplied by a scalar negative one returns negative itself
-    if pybamm.is_scalar_minus_one(left):
+    if pybamm.is_scalar_minus_one(left) and left.units.units_str == "[-]":
         return -right
-    if pybamm.is_scalar_minus_one(right):
+    if pybamm.is_scalar_minus_one(right) and right.units.units_str == "[-]":
         return -left
 
     # anything multiplied by a matrix one returns itself if
