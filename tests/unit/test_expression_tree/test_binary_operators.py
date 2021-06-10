@@ -633,6 +633,10 @@ class TestBinaryOperators(unittest.TestCase):
         self.assertEqual(expr.id, (var * (e / f)).id)
         expr = (e * var) / f
         self.assertEqual(expr.id, ((e / f) * var).id)
+        expr = (e / var) / f
+        self.assertEqual(expr.id, ((e / f) / var).id)
+        expr = (var / e) / f
+        self.assertEqual(expr.id, (var / (e * f)).id)
 
         # use power rules on multiplications and divisions
         expr = (var * e) ** 2

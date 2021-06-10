@@ -853,8 +853,10 @@ def get_julia_mtk_model(model, geometry=None, tspan=None):
         if domain_name_to_limits[domain_name] is not None:
             mtk_str += f"# {domain_name} -> {domain_symbol}\n"
     mtk_str += "@parameters " + " ".join(ind_vars)
-    for param in model.input_parameters:
-        mtk_str += f" {param.name}"
+    if len(model.input_parameters) > 0:
+        mtk_str += "\n# Input parameters\n@parameters"
+        for param in model.input_parameters:
+            mtk_str += f" {param.name}"
     mtk_str += "\n"
 
     # Add a comment with the variable names
@@ -938,18 +940,6 @@ def get_julia_mtk_model(model, geometry=None, tspan=None):
         x_s = geometry["separator"][var.x_s]["max"].evaluate()
         all_julia_str = all_julia_str.replace("neg_width", str(x_n))
         all_julia_str = all_julia_str.replace("neg_plus_sep_width", str(x_s))
-
-    # Replace parameters in the julia strings in the form "inputs[name]"
-    # with just "name"
-    for param in model.input_parameters:
-        # Replace 'var_id' with 'param.name'
-        all_julia_str = all_julia_str.replace(
-            id_to_julia_variable(param.id, False), param.name
-        )
-        # Remove the line where the variable is re-defined
-        all_julia_str = all_julia_str.replace(
-            f"{param.name} = inputs['{param.name}']\n", ""
-        )
 
     # Update the MTK string
     mtk_str += all_constants_str + all_julia_str + "\n" + f"eqs = [\n{all_eqns_str}]\n"
@@ -1053,12 +1043,12 @@ def get_julia_mtk_model(model, geometry=None, tspan=None):
         tpsan_str = ",".join(
             map(lambda x: f"{x / model.timescale.evaluate():.3f}", tspan)
         )
-        mtk_str += f"t_domain = IntervalDomain({tpsan_str})\n"
+        mtk_str += f"t_domain = Interval({tpsan_str})\n"
         domains = "domains = [\n   t in t_domain,\n"
         for domain, symbol in domain_name_to_symbol.items():
             limits = domain_name_to_limits[tuple(domain)]
             if limits is not None:
-                mtk_str += f"{symbol}_domain = IntervalDomain{limits}\n"
+                mtk_str += f"{symbol}_domain = Interval{limits}\n"
                 domains += f"   {symbol} in {symbol}_domain,\n"
         domains += "]\n"
 
@@ -1074,6 +1064,11 @@ def get_julia_mtk_model(model, geometry=None, tspan=None):
             name
             + "_pde_system = PDESystem(eqs, ics_bcs, domains, ind_vars, dep_vars)\n\n"
         )
+
+    # Replace parameters in the julia strings in the form "inputs[name]"
+    # with just "name"
+    for param in model.input_parameters:
+        mtk_str = mtk_str.replace(f"inputs['{param.name}']", param.name)
 
     # Need to add 'nothing' to the end of the mtk string to avoid errors in MTK v4
     # See https://github.com/SciML/diffeqpy/issues/82

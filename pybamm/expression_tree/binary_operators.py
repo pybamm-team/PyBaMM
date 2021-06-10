@@ -1146,7 +1146,7 @@ def simplified_division(left, right):
             new_division.copy_domains(left)
             return new_division
 
-    if isinstance(left, Multiplication):
+    elif isinstance(left, Multiplication):
         # Simplify (a * b) / c to (a / c) * b if (a / c) is constant
         if left.left.is_constant():
             l_left, l_right = left.orphans
@@ -1160,11 +1160,26 @@ def simplified_division(left, right):
             if new_right.is_constant():
                 return l_left * new_right
 
+    elif isinstance(left, Division):
+        # Simplify (a / b) / c to a / (b * c) if (b * c) is constant
+        if left.right.is_constant():
+            l_left, l_right = left.orphans
+            new_right = l_right * right
+            if new_right.is_constant():
+                return l_left / new_right
+        # Simplify (a / b) / c to (a / c) / b if (a / c) is constant
+        elif left.left.is_constant():
+            l_left, l_right = left.orphans
+            new_left = l_left / right
+            if new_left.is_constant():
+                return new_left / l_right
+
     # Negation simplifications
     elif isinstance(left, pybamm.Negate) and right.is_constant():
         # Simplify (-a) / b to a / (-b) if (-b) is constant
         return left.orphans[0] / (-right)
-    elif isinstance(right, pybamm.Negate) and left.is_constant():
+
+    if isinstance(right, pybamm.Negate) and left.is_constant():
         # Simplify a / (-b) to (-a) / b if (-a) is constant
         return (-left) / right.orphans[0]
 
