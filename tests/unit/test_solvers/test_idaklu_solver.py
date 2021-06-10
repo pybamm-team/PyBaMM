@@ -68,6 +68,7 @@ class TestIDAKLUSolver(unittest.TestCase):
 
             t_eval = np.linspace(0, 3, 100)
             a_value = 0.1
+            print('starting solve.....')
             sol = solver.solve(
                 model, t_eval, inputs={"a": a_value},
                 calculate_sensitivities=True

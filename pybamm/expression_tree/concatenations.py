@@ -50,7 +50,7 @@ class Concatenation(pybamm.Symbol):
         if len(children_diffs) == 1:
             diff = children_diffs[0]
         else:
-            diff = self.__class__(children_diffs)
+            diff = self.__class__(*children_diffs)
 
         return diff
 

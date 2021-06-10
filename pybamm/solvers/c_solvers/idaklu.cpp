@@ -1,7 +1,7 @@
 #include <math.h>
 #include <stdio.h>
 
-#include <ida/ida.h>                 /* prototypes for IDA fcts., consts.    */
+#include <idas/idas.h>                 /* prototypes for IDAS fcts., consts.    */
 #include <nvector/nvector_serial.h>  /* access to serial N_Vector            */
 #include <sundials/sundials_math.h>  /* defs. of SUNRabs, SUNRexp, etc.      */
 #include <sundials/sundials_types.h> /* defs. of realtype, sunindextype      */
@@ -11,12 +11,21 @@
 #include <pybind11/functional.h>
 #include <pybind11/numpy.h>
 #include <pybind11/pybind11.h>
+
+#include <iostream>
 namespace py = pybind11;
 
 using residual_type = std::function<py::array_t<double>(
     double, py::array_t<double>, py::array_t<double>)>;
+using sensitivities_type = std::function<void(
+    py::array_t<realtype>, realtype, 
+    py::array_t<realtype>, py::array_t<realtype>, 
+    py::array_t<realtype>, py::array_t<realtype>
+  )>;
 using jacobian_type =
     std::function<py::array_t<double>(double, py::array_t<double>, double)>;
+
+
 using event_type =
     std::function<py::array_t<double>(double, py::array_t<double>)>;
 using np_array = py::array_t<double>;
@@ -27,14 +36,20 @@ class PybammFunctions
 {
 public:
   int number_of_states;
+  int number_of_parameters;
   int number_of_events;
 
   PybammFunctions(const residual_type &res, const jacobian_type &jac,
+                  const sensitivities_type &sens,
                   const jac_get_type &get_jac_data_in,
                   const jac_get_type &get_jac_row_vals_in,
                   const jac_get_type &get_jac_col_ptrs_in,
-                  const event_type &event, const int n_s, int n_e)
-      : number_of_states(n_s), number_of_events(n_e), py_res(res), py_jac(jac),
+                  const event_type &event, 
+                  const int n_s, int n_e, const int n_p)
+      : number_of_states(n_s), number_of_events(n_e), 
+        number_of_parameters(n_p),
+        py_res(res), py_jac(jac),
+        py_sens(sens),
         py_event(event), py_get_jac_data(get_jac_data_in),
         py_get_jac_row_vals(get_jac_row_vals_in),
         py_get_jac_col_ptrs(get_jac_col_ptrs_in)
@@ -44,12 +59,14 @@ public:
   py::array_t<double> operator()(double t, py::array_t<double> y,
                                  py::array_t<double> yp)
   {
+    std::cout << "calling res()" << std::endl;
     return py_res(t, y, yp);
   }
 
   py::array_t<double> res(double t, py::array_t<double> y,
                           py::array_t<double> yp)
   {
+    std::cout << "calling res" << std::endl;
     return py_res(t, y, yp);
   }
 
@@ -59,6 +76,24 @@ public:
     // of a python class which can then be called by get_jac_data,
     // get_jac_col_ptr, etc
     py_jac(t, y, cj);
+  }
+
+  void sensitivities(
+      py::array_t<realtype> resvalS,
+      double t, 
+      py::array_t<realtype> y, py::array_t<realtype> yp, 
+      py::array_t<realtype> yS, py::array_t<realtype> ypS) 
+  {
+    // this function evaluates the sensitivity equations required by IDAS,
+    // returning them in resvalS, which is preallocated as a numpy array 
+    // of size (np, n), where n is the number of states and np is the number
+    // of parameters
+    //
+    // yS and ypS are also shape (np, n), y and yp are shape (n)
+    //
+    // dF/dy * s_i + dF/dyd * sd + dFdp_i for i in range(np)
+    std::cout << "calling sensitivity" << std::endl;
+    py_sens(resvalS, t, y, yp, yS, ypS);
   }
 
   np_array get_jac_data() { return py_get_jac_data(); }
@@ -71,6 +106,7 @@ public:
 
 private:
   residual_type py_res;
+  sensitivities_type py_sens;
   jacobian_type py_jac;
   event_type py_event;
   jac_get_type py_get_jac_data;
@@ -81,6 +117,7 @@ private:
 int residual(realtype tres, N_Vector yy, N_Vector yp, N_Vector rr,
              void *user_data)
 {
+  std::cout << "calling orignal res" <<std::endl;
   PybammFunctions *python_functions_ptr =
       static_cast<PybammFunctions *>(user_data);
   PybammFunctions python_functions = *python_functions_ptr;
@@ -106,6 +143,7 @@ int residual(realtype tres, N_Vector yy, N_Vector yp, N_Vector rr,
   {
     rval[i] = r_np_ptr[i];
   }
+  std::cout << "back in original res" <<std::endl;
   return 0;
 }
 
@@ -113,6 +151,7 @@ int jacobian(realtype tt, realtype cj, N_Vector yy, N_Vector yp,
              N_Vector resvec, SUNMatrix JJ, void *user_data, N_Vector tempv1,
              N_Vector tempv2, N_Vector tempv3)
 {
+  std::cout << "calling orignal jacobian" <<std::endl;
   realtype *yval;
   yval = N_VGetArrayPointer(yy);
 
@@ -196,6 +235,63 @@ int events(realtype t, N_Vector yy, N_Vector yp, realtype *events_ptr,
   return (0);
 }
 
+int sensitivities(int Ns, realtype t, N_Vector yy, N_Vector yp, 
+    N_Vector resval, N_Vector *yS, N_Vector *ypS, N_Vector *resvalS, 
+    void *user_data, N_Vector tmp1, N_Vector tmp2, N_Vector tmp3) {
+// This function computes the sensitivity residual for all sensitivity 
+// equations. It must compute the vectors 
+// (∂F/∂y)s i (t)+(∂F/∂ ẏ) ṡ i (t)+(∂F/∂p i ) and store them in resvalS[i].
+// Ns is the number of sensitivities.
+// t is the current value of the independent variable.
+// yy is the current value of the state vector, y(t).
+// yp is the current value of ẏ(t).
+// resval contains the current value F of the original DAE residual.
+// yS contains the current values of the sensitivities s i .
+// ypS contains the current values of the sensitivity derivatives ṡ i .
+// resvalS contains the output sensitivity residual vectors. 
+// Memory allocation for resvalS is handled within idas.
+// user data is a pointer to user data.
+// tmp1, tmp2, tmp3 are N Vectors of length N which can be used as 
+// temporary storage.
+//
+// Return value An IDASensResFn should return 0 if successful, 
+// a positive value if a recoverable error
+// occurred (in which case idas will attempt to correct), 
+// or a negative value if it failed unrecoverably (in which case the integration is halted and IDA SRES FAIL is returned)
+//
+  std::cout << "calling orignal sensitivity" <<std::endl;
+  PybammFunctions *python_functions_ptr =
+      static_cast<PybammFunctions *>(user_data);
+  PybammFunctions python_functions = *python_functions_ptr;
+
+  realtype *yval = N_VGetArrayPointer(yy);
+  realtype *ypval = N_VGetArrayPointer(yp);
+  realtype *ySval = N_VGetArrayPointer(yS[0]);
+  realtype *ypSval = N_VGetArrayPointer(ypS[0]);
+  realtype *resvalSval = N_VGetArrayPointer(resvalS[0]);
+
+  int n = python_functions.number_of_states;
+  int np = python_functions.number_of_parameters;
+
+  py::array_t<realtype> y_np = py::array_t<realtype>(n, yval);
+  py::array_t<realtype> yp_np = py::array_t<realtype>(n, ypval);
+  py::array_t<realtype> yS_np = py::array_t<realtype>(
+      std::vector<ptrdiff_t>{np, n}, ySval
+      );
+  py::array_t<realtype> ypS_np = py::array_t<realtype>(
+      std::vector<ptrdiff_t>{np, n}, ypSval
+      );
+  py::array_t<realtype> resvalS_np = py::array_t<realtype>(
+      std::vector<ptrdiff_t>{np, n}, resvalSval 
+      );
+  
+  python_functions.sensitivities(
+      resvalS_np, t, y_np, yp_np, yS_np, ypS_np
+      );
+
+  return 0;
+}
+
 class Solution
 {
 public:
@@ -211,23 +307,23 @@ public:
 
 /* main program */
 Solution solve(np_array t_np, np_array y0_np, np_array yp0_np,
-               residual_type res, jacobian_type jac, jac_get_type gjd,
-               jac_get_type gjrv, jac_get_type gjcp, int nnz, event_type event,
+               residual_type res, jacobian_type jac, 
+               sensitivities_type sens,
+               jac_get_type gjd, jac_get_type gjrv, jac_get_type gjcp, 
+               int nnz, event_type event,
                int number_of_events, int use_jacobian, np_array rhs_alg_id,
-               np_array atol_np, double rel_tol)
+               np_array atol_np, double rel_tol, int number_of_parameters)
 {
   auto t = t_np.unchecked<1>();
   auto y0 = y0_np.unchecked<1>();
   auto yp0 = yp0_np.unchecked<1>();
   auto atol = atol_np.unchecked<1>();
 
-  int number_of_states;
-  number_of_states = y0_np.request().size;
-  int number_of_timesteps;
-  number_of_timesteps = t_np.request().size;
-
+  int number_of_states = y0_np.request().size;
+  int number_of_timesteps = t_np.request().size;
   void *ida_mem;          // pointer to memory
   N_Vector yy, yp, avtol; // y, y', and absolute tolerance
+  N_Vector *yyS, *ypS;      // y, y' for sensitivities
   realtype rtol, *yval, *ypval, *atval;
   int retval;
   SUNMatrix J;
@@ -237,6 +333,11 @@ Solution solve(np_array t_np, np_array y0_np, np_array yp0_np,
   yy = N_VNew_Serial(number_of_states);
   yp = N_VNew_Serial(number_of_states);
   avtol = N_VNew_Serial(number_of_states);
+
+  if (number_of_parameters > 0) {
+    yyS = N_VCloneVectorArray(number_of_parameters, yy);
+    ypS = N_VCloneVectorArray(number_of_parameters, yp);
+  }
 
   // set initial value
   yval = N_VGetArrayPointer(yy);
@@ -248,6 +349,13 @@ Solution solve(np_array t_np, np_array y0_np, np_array yp0_np,
     yval[i] = y0[i];
     ypval[i] = yp0[i];
     atval[i] = atol[i];
+  }
+
+  if (number_of_parameters > 0) {
+    for (int is = 0 ; is < number_of_parameters; is++) {
+      N_VConst(NZERO, yyS[is]);
+      N_VConst(NZERO, ypS[is]);
+    }
   }
 
   // allocate memory for solver
@@ -266,8 +374,9 @@ Solution solve(np_array t_np, np_array y0_np, np_array yp0_np,
   IDARootInit(ida_mem, number_of_events, events);
 
   // set pybamm functions by passing pointer to it
-  PybammFunctions pybamm_functions(res, jac, gjd, gjrv, gjcp, event,
-                                   number_of_states, number_of_events);
+  PybammFunctions pybamm_functions(res, jac, sens, gjd, gjrv, gjcp, event,
+                                   number_of_states, number_of_events,
+                                   number_of_parameters);
   void *user_data = &pybamm_functions;
   IDASetUserData(ida_mem, user_data);
 
@@ -280,6 +389,16 @@ Solution solve(np_array t_np, np_array y0_np, np_array yp0_np,
   if (use_jacobian == 1)
   {
     IDASetJacFn(ida_mem, jacobian);
+  }
+
+  if (number_of_parameters > 0)
+  {
+    std::cout << "running sensitivities with np = " << number_of_parameters << std::endl;
+    retval = IDASensInit(ida_mem, number_of_parameters, 
+        IDA_SIMULTANEOUS, sensitivities, yyS, ypS);
+    std::cout << "retval from IDASensInit is " << retval << std::endl;
+    retval = IDASensEEtolerances(ida_mem);
+    std::cout << "retval from IDASensEEtolerances is " << retval << std::endl;
   }
 
   int t_i = 1;
@@ -299,6 +418,7 @@ Solution solve(np_array t_np, np_array y0_np, np_array yp0_np,
   }
 
   // calculate consistent initial conditions
+  std::cout << "calculating ICs" << std::endl;
   N_Vector id;
   auto id_np_val = rhs_alg_id.unchecked<1>();
   id = N_VNew_Serial(number_of_states);
@@ -313,10 +433,12 @@ Solution solve(np_array t_np, np_array y0_np, np_array yp0_np,
 
   IDASetId(ida_mem, id);
   IDACalcIC(ida_mem, IDA_YA_YDP_INIT, t(1));
+  std::cout << "finished calculating ICs" << std::endl;
 
   while (true)
   {
     t_next = t(t_i);
+    std::cout << "next time step "<<t_next<<std::endl;
     IDASetStopTime(ida_mem, t_next);
     retval = IDASolve(ida_mem, t_final, &tret, yy, yp, IDA_NORMAL);
 
@@ -342,6 +464,9 @@ Solution solve(np_array t_np, np_array y0_np, np_array yp0_np,
   }
 
   /* Free memory */
+  if (number_of_parameters > 0) {
+    IDASensFree(ida_mem);
+  }
   IDAFree(&ida_mem);
   SUNLinSolFree(LS);
   SUNMatDestroy(J);
@@ -362,10 +487,12 @@ PYBIND11_MODULE(idaklu, m)
   m.doc() = "sundials solvers"; // optional module docstring
 
   m.def("solve", &solve, "The solve function", py::arg("t"), py::arg("y0"),
-        py::arg("yp0"), py::arg("res"), py::arg("jac"), py::arg("get_jac_data"),
+        py::arg("yp0"), py::arg("res"), py::arg("jac"), py::arg("sens"), 
+        py::arg("get_jac_data"),
         py::arg("get_jac_row_vals"), py::arg("get_jac_col_ptr"), py::arg("nnz"),
         py::arg("events"), py::arg("number_of_events"), py::arg("use_jacobian"),
         py::arg("rhs_alg_id"), py::arg("atol"), py::arg("rtol"),
+        py::arg("number_of_sensitivity_parameters"),
         py::return_value_policy::take_ownership);
 
   py::class_<Solution>(m, "solution")

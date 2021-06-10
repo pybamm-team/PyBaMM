@@ -343,7 +343,7 @@ class TestBaseSolver(unittest.TestCase):
             model.algebraic = {u: a * v - u}
             model.initial_conditions = {v: 1, u: a * 1}
             model.convert_to_format = convert_to_format
-            solver = pybamm.CasadiSolver()
+            solver = pybamm.IDAKLUSolver(root_method='lm')
             solver.set_up(model, calculate_sensitivites=True,
                           inputs={'a': 0, 'b': 0})
             all_inputs = []
@@ -360,31 +360,18 @@ class TestBaseSolver(unittest.TestCase):
                     use_inputs = casadi.vertcat(*[x for x in inputs.values()])
                 else:
                     use_inputs = inputs
-                if model.convert_to_format == 'jax':
-                    sens = model.sensitivities_eval(
-                            t, y, use_inputs
-                    )
-                    np.testing.assert_array_equal(
-                        sens['a'],
-                        exact_diff_a(y, inputs['a'], inputs['b'])
-                    )
-                    np.testing.assert_array_equal(
-                        sens['b'],
-                        exact_diff_b(y, inputs['a'], inputs['b'])
-                    )
-                else:
-                    np.testing.assert_array_equal(
-                        model.sensitivities_eval['a'](
-                            t, y, use_inputs
-                        ),
-                        exact_diff_a(y, inputs['a'], inputs['b'])
-                    )
-                    np.testing.assert_array_equal(
-                        model.sensitivities_eval['b'](
-                            t, y, use_inputs
-                        ),
-                        exact_diff_b(y, inputs['a'], inputs['b'])
-                    )
+
+                sens = model.sensitivities_eval(
+                        t, y, use_inputs
+                )
+                np.testing.assert_allclose(
+                    sens['a'],
+                    exact_diff_a(y, inputs['a'], inputs['b'])
+                )
+                np.testing.assert_allclose(
+                    sens['b'],
+                    exact_diff_b(y, inputs['a'], inputs['b'])
+                )
 
 
 if __name__ == "__main__":

@@ -268,10 +268,10 @@ class BaseSolver(object):
                         f"Calculating sensitivities for {name} with respect "
                         f"to parameters {calculate_sensitivites} using jax"
                     ))
-                    jacp_dict = func.get_sensitivities()
-                    jacp_dict = jacp_dict.evaluate
+                    jacp = func.get_sensitivities()
+                    jacp = jacp.evaluate
                 else:
-                    jacp_dict = None
+                    jacp = None
                 if use_jacobian:
                     report(f"Calculating jacobian for {name} using jax")
                     jac = func.get_jacobian()
@@ -299,9 +299,13 @@ class BaseSolver(object):
                             p: pybamm.EvaluatorPython(jacp)
                             for p, jacp in jacp_dict.items()
                         }
-                    jacp_dict = {k: v.evaluate for k, v in jacp_dict.items()}
+
+                    # jacp should be a function that returns a dict of sensitivities
+                    def jacp(*args, **kwargs):
+                        return {k: v.evaluate(*args, **kwargs)
+                                for k, v in jacp_dict.items()}
                 else:
-                    jacp_dict = None
+                    jacp = None
 
                 if use_jacobian:
                     report(f"Calculating jacobian for {name}")
@@ -344,8 +348,13 @@ class BaseSolver(object):
                             name, [t_casadi, y_casadi, p_casadi_stacked],
                             [p_diff]
                         )
+                    # jacp should be a function that returns a dict of sensitivities
+                    def jacp(*args, **kwargs):
+                        return {k: v(*args, **kwargs)
+                                for k, v in jacp_dict.items()}
+
                 else:
-                    jacp_dict = None
+                    jacp = None
 
                 func = casadi.Function(
                     name, [t_casadi, y_casadi, p_casadi_stacked], [func]
@@ -358,16 +367,11 @@ class BaseSolver(object):
                 jac_call = SolverCallable(jac, name + "_jac", model)
             else:
                 jac_call = None
-            if jacp_dict is not None:
-                if model.convert_to_format == "jax":
-                    jacp_call = SolverCallable(
-                        jacp_dict, name + "_sensitivity_wrt_inputs", model
-                    )
-                else:
-                    jacp_call = {
-                        k: SolverCallable(v, name + "_sensitivity_wrt_" + k, model)
-                        for k, v in jacp_dict.items()
-                    }
+            if jacp is not None:
+                jacp_call = SensitivityCallable(
+                    jacp, name + "_sensitivity_wrt_inputs", model,
+                    model.convert_to_format
+                )
             else:
                 jacp_call = None
             return func, func_call, jac_call, jacp_call
@@ -1323,6 +1327,33 @@ class SolverCallable:
         else:
             return self._function(t, y, inputs=inputs, known_evals={})[0]
 
+class SensitivityCallable:
+    """A class that will be called by the solver when integrating"""
+
+    def __init__(self, function, name, model, form):
+        self._function = function
+        self.form = form
+        self.name = name
+        self.model = model
+        self.timescale = self.model.timescale_eval
+
+    def __call__(self, t, y, inputs):
+        pybamm.logger.debug(
+            "Evaluating sensitivities of {} for {} at t={}".format(
+                self.name, self.model.name, t * self.timescale
+            )
+        )
+        return self.function(t, y, inputs)
+
+    def function(self, t, y, inputs):
+        if self.form == "casadi":
+            return self._function(t, y, inputs)
+        elif self.form == "jax":
+            return self._function(t, y, inputs=inputs)
+        else:
+            ret_with_known_evals = \
+                self._function(t, y, inputs=inputs, known_evals={})
+            return {k: v[0] for k, v in ret_with_known_evals.items()}
 
 class Residuals(SolverCallable):
     """Returns information about residuals at time t and state y"""

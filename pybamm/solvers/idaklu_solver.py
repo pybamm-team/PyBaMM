@@ -196,6 +196,11 @@ class IDAKLUSolver(pybamm.BaseSolver):
 
         mass_matrix = model.mass_matrix.entries
 
+        # construct residuals function by binding inputs
+        def resfn(t, y, ydot):
+            print("calling python res")
+            return model.residuals_eval(t, y, ydot, inputs)
+
         if model.jacobian_eval:
             jac_y0_t0 = model.jacobian_eval(t_eval[0], y0, inputs)
             if sparse.issparse(jac_y0_t0):
@@ -254,14 +259,62 @@ class IDAKLUSolver(pybamm.BaseSolver):
         alg_ids = np.zeros(len(y0) - len(rhs_ids))
         ids = np.concatenate((rhs_ids, alg_ids))
 
+        number_of_sensitivity_parameters = 0
+        if model.sensitivities_eval is not None:
+            sens0 = model.sensitivities_eval(t=0, y=y0, inputs=inputs)
+            print('sensitivities found are = ', sens0.keys())
+            number_of_sensitivity_parameters = len(sens0.keys())
+
+        def sensfn(resvalS, t, y, yp, yS, ypS):
+            """
+            this function evaluates the sensitivity equations required by IDAS,
+            returning them in resvalS, which is preallocated as a numpy array of size
+            (np, n), where n is the number of states and np is the number of parameters
+
+            The equations returned are:
+
+             dF/dy * s_i + dF/dyd * sd_i + dFdp_i for i in range(np)
+
+            Parameters
+            ----------
+            resvalS: ndarray of shape (np, n)
+                returns the sensitivity equations in this preallocated array
+            t: number
+                time value
+            y: ndarray of shape (n)
+                current state vector
+            yp: ndarray of shape (n)
+                current time derivative of state vector
+            yS: ndarray of shape (n)
+                current state vector of sensitivity equations
+            ypS: ndarray of shape (n)
+                current time derivative of state vector of sensitivity equations
+
+            """
+
+            print('calling python sensfn')
+            np, n = resvalS.shape
+            dFdy = model.jacobian_eval(t, y, inputs)
+            dFdyd = mass_matrix
+            dFdp = model.sensitivities_eval(t, y, inputs)
+            print('dFdy', dFdy.shape)
+            print('dFdyd', dFdyd.shape)
+            print('dFdp_i', list(dFdp.values())[0].shape)
+            print('yS_i', yS[0].shape)
+            print('ypS_i', ypS[0].shape)
+
+            for i, dFdp_i in enumerate(dFdp.values()):
+                resvalS[i] = dFdy @ yS[i] + dFdyd @ ypS[i] + dFdp_i.reshape(-1)
+
         # solve
         timer = pybamm.Timer()
         sol = idaklu.solve(
             t_eval,
             y0,
             ydot0,
-            lambda t, y, ydot: model.residuals_eval(t, y, ydot, inputs),
+            resfn,
             jac_class.jac_res,
+            sensfn,
             jac_class.get_jac_data,
             jac_class.get_jac_row_vals,
             jac_class.get_jac_col_ptrs,
@@ -272,6 +325,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
             ids,
             atol,
             rtol,
+            number_of_sensitivity_parameters,
         )
         integration_time = timer.time()
 

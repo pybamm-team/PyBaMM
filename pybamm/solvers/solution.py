@@ -130,6 +130,7 @@ class Solution(object):
             self.set_y()
             return self._y
 
+
     def set_y(self):
         try:
             if isinstance(self.all_ys[0], (casadi.DM, casadi.MX)):
