@@ -122,7 +122,7 @@ class Full(BaseModel):
                 ] = surf_form.FullAlgebraic(self.param, domain)
 
     def set_side_reaction_submodels(self):
-        if "oxygen" in self.options["side reactions"]:
+        if self.options["hydrolysis"] == "true":
             self.submodels["oxygen diffusion"] = pybamm.oxygen_diffusion.Full(
                 self.param
             )

@@ -10,25 +10,25 @@ import numpy as np
 
 class TestLeadAcidFullSideReactions(unittest.TestCase):
     def test_basic_processing(self):
-        options = {"side reactions": ["oxygen"]}
+        options = {"hydrolysis": "true"}
         model = pybamm.lead_acid.Full(options)
         modeltest = tests.StandardModelTest(model)
         modeltest.test_all(skip_output_tests=True, t_eval=np.linspace(0, 3600 * 17))
 
     def test_basic_processing_differential(self):
-        options = {"side reactions": ["oxygen"], "surface form": "differential"}
+        options = {"hydrolysis": "true", "surface form": "differential"}
         model = pybamm.lead_acid.Full(options)
         modeltest = tests.StandardModelTest(model)
         modeltest.test_all(skip_output_tests=True)
 
     def test_basic_processing_algebraic(self):
-        options = {"side reactions": ["oxygen"], "surface form": "algebraic"}
+        options = {"hydrolysis": "true", "surface form": "algebraic"}
         model = pybamm.lead_acid.Full(options)
         modeltest = tests.StandardModelTest(model)
         modeltest.test_all(skip_output_tests=True)
 
     def test_basic_processing_charge(self):
-        options = {"side reactions": ["oxygen"], "surface form": "differential"}
+        options = {"hydrolysis": "true", "surface form": "differential"}
         model = pybamm.lead_acid.Full(options)
         parameter_values = model.default_parameter_values
         parameter_values.update(
@@ -38,7 +38,7 @@ class TestLeadAcidFullSideReactions(unittest.TestCase):
         modeltest.test_all(skip_output_tests=True)
 
     def test_basic_processing_zero_current(self):
-        options = {"side reactions": ["oxygen"], "surface form": "differential"}
+        options = {"hydrolysis": "true", "surface form": "differential"}
         model = pybamm.lead_acid.Full(options)
         parameter_values = model.default_parameter_values
         parameter_values.update({"Current function [A]": 0})
@@ -46,7 +46,7 @@ class TestLeadAcidFullSideReactions(unittest.TestCase):
         modeltest.test_all(skip_output_tests=True)
 
     def test_optimisations(self):
-        options = {"side reactions": ["oxygen"], "surface form": "differential"}
+        options = {"hydrolysis": "true", "surface form": "differential"}
         model = pybamm.lead_acid.Full(options)
         optimtest = tests.OptimisationsTest(model)
 
