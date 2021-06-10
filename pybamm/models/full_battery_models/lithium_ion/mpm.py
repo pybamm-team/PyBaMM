@@ -34,10 +34,15 @@ class MPM(BaseModel):
     def __init__(
         self, options=None, name="Many-Particle Model", build=True
     ):
+        # Necessary options
         if options is None:
-            options = {"particle size": "distribution"}
+            options = {
+                "particle size": "distribution",
+                "surface form": "algebraic"
+            }
         else:
             options["particle size"] = "distribution"
+            options["surface form"] = "algebraic"
         super().__init__(options, name)
 
         # Set submodels
@@ -186,13 +191,13 @@ class MPM(BaseModel):
 
         self.submodels[
             "negative electrode potential"
-        ] = pybamm.electrode.ohm.LeadingOrderSizeDistribution(self.param, "Negative")
+        ] = pybamm.electrode.ohm.LeadingOrder(self.param, "Negative")
 
     def set_positive_electrode_submodel(self):
 
         self.submodels[
             "positive electrode potential"
-        ] = pybamm.electrode.ohm.LeadingOrderSizeDistribution(self.param, "Positive")
+        ] = pybamm.electrode.ohm.LeadingOrder(self.param, "Positive")
 
     def set_electrolyte_submodel(self):
 
@@ -200,23 +205,17 @@ class MPM(BaseModel):
 
         if self.options["electrolyte conductivity"] not in ["default", "leading order"]:
             raise pybamm.OptionError(
-                "electrolyte conductivity '{}' not suitable for SPM".format(
+                "electrolyte conductivity '{}' not suitable for MPM".format(
                     self.options["electrolyte conductivity"]
                 )
             )
-
-        if self.options["surface form"] == "false":
-            self.submodels[
-                "leading-order electrolyte conductivity"
-            ] = pybamm.electrolyte_conductivity.LeadingOrder(self.param)
-
-        elif self.options["surface form"] == "differential":
-            for domain in ["Negative", "Separator", "Positive"]:
-                self.submodels[
-                    "leading-order " + domain.lower() + " electrolyte conductivity"
-                ] = surf_form.LeadingOrderDifferential(self.param, domain)
-
-        elif self.options["surface form"] == "algebraic":
+        if self.options["surface form"] != "algebraic":
+            raise pybamm.OptionError(
+                "surface form must be 'algebraic' not '{}' for MPM".format(
+                    self.options["electrolyte conductivity"]
+                )
+            )
+        else:
             for domain in ["Negative", "Separator", "Positive"]:
                 self.submodels[
                     "leading-order " + domain.lower() + " electrolyte conductivity"
@@ -274,8 +273,8 @@ class MPM(BaseModel):
 
     @property
     def default_parameter_values(self):
-        # Default parameter values
         default_params = super().default_parameter_values
+
         # The mean particle radii for each electrode, taken to be the
         # "Negative particle radius [m]" and "Positive particle radius [m]"
         # provided in the parameter set. These will be the means of the
