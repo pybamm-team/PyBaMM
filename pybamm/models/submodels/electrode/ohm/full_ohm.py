@@ -37,11 +37,12 @@ class Full(BaseModel):
 
         phi_s = variables[self.domain + " electrode potential"]
         tor = variables[self.domain + " electrode tortuosity"]
+        T = variables[self.domain + " electrode temperature"]
 
         if self.domain == "Negative":
-            sigma = self.param.sigma_n
+            sigma = self.param.sigma_n(T)
         elif self.domain == "Positive":
-            sigma = self.param.sigma_p
+            sigma = self.param.sigma_p(T)
 
         sigma_eff = sigma * tor
         i_s = -sigma_eff * pybamm.grad(phi_s)
@@ -76,6 +77,7 @@ class Full(BaseModel):
         phi_s = variables[self.domain + " electrode potential"]
         phi_s_cn = variables["Negative current collector potential"]
         tor = variables[self.domain + " electrode tortuosity"]
+        T = variables[self.domain + " electrode temperature"]
 
         if self.domain == "Negative":
             lbc = (phi_s_cn, "Dirichlet")
@@ -83,7 +85,7 @@ class Full(BaseModel):
 
         elif self.domain == "Positive":
             lbc = (pybamm.Scalar(0), "Neumann")
-            sigma_eff = self.param.sigma_p * tor
+            sigma_eff = self.param.sigma_p(T) * tor
             i_boundary_cc = variables["Current collector current density"]
             rbc = (
                 i_boundary_cc / pybamm.boundary_value(-sigma_eff, "right"),

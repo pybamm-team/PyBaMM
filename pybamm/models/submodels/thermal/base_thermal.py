@@ -217,6 +217,9 @@ class BaseThermal(pybamm.BaseSubModel):
         # In the limit of infinitely large current collector conductivity (i.e.
         # 0D current collectors), the Ohmic heating in the current collectors is
         # zero
+        T_cn = variables["Negative current collector temperature"]
+        T_cp = variables["Positive current collector temperature"]
+
         if self.cc_dimension == 0:
             Q_s_cn = pybamm.Scalar(0)
             Q_s_cp = pybamm.Scalar(0)
@@ -225,16 +228,16 @@ class BaseThermal(pybamm.BaseSubModel):
             phi_s_cn = variables["Negative current collector potential"]
             phi_s_cp = variables["Positive current collector potential"]
             if self.cc_dimension == 1:
-                Q_s_cn = self.param.sigma_cn_prime * pybamm.inner(
+                Q_s_cn = self.param.sigma_cn_prime(T_cn) * pybamm.inner(
                     pybamm.grad(phi_s_cn), pybamm.grad(phi_s_cn)
                 )
-                Q_s_cp = self.param.sigma_cp_prime * pybamm.inner(
+                Q_s_cp = self.param.sigma_cp_prime(T_cp) * pybamm.inner(
                     pybamm.grad(phi_s_cp), pybamm.grad(phi_s_cp)
                 )
             elif self.cc_dimension == 2:
                 # Inner not implemented in 2D -- have to call grad_squared directly
-                Q_s_cn = self.param.sigma_cn_prime * pybamm.grad_squared(phi_s_cn)
-                Q_s_cp = self.param.sigma_cp_prime * pybamm.grad_squared(phi_s_cp)
+                Q_s_cn = self.param.sigma_cn_prime(T_cn) * pybamm.grad_squared(phi_s_cn)
+                Q_s_cp = self.param.sigma_cp_prime(T_cp) * pybamm.grad_squared(phi_s_cp)
         return Q_s_cn, Q_s_cp
 
     def _x_average(self, var, var_cn, var_cp):

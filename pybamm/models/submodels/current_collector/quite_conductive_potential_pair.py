@@ -57,13 +57,16 @@ class BaseQuiteConductivePotentialPair(BasePotentialPair):
         i_boundary_cc_0 = variables["Leading-order current collector current density"]
         c = variables["Lagrange multiplier"]
 
+        T_cn = variables["Negative current collector temperature"]
+        T_cp = variables["Positive current collector temperature"]
+
         # Note that the second argument of 'source' must be the same as the argument
         # in the laplacian (the variable to which the boundary conditions are applied)
         self.algebraic = {
-            phi_s_cn: (param.sigma_cn * param.delta ** 2 * param.l_cn)
+            phi_s_cn: (param.sigma_cn(T_cn) * param.delta ** 2 * param.l_cn)
             * pybamm.laplacian(phi_s_cn)
             - pybamm.source(i_boundary_cc_0, phi_s_cn),
-            i_boundary_cc: (param.sigma_cp * param.delta ** 2 * param.l_cp)
+            i_boundary_cc: (param.sigma_cp(T_cp) * param.delta ** 2 * param.l_cp)
             * pybamm.laplacian(phi_s_cp)
             + pybamm.source(i_boundary_cc_0, phi_s_cp)
             + c * pybamm.PrimaryBroadcast(cc_area, "current collector"),
