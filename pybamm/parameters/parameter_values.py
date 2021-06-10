@@ -454,8 +454,6 @@ class ParameterValues:
             pybamm.logger.verbose(
                 "Processing parameters for {!r} (initial conditions)".format(variable)
             )
-            if "concentration" in variable.name:
-                n = 1
             new_initial_conditions[variable] = self.process_symbol(equation)
         model.initial_conditions = new_initial_conditions
 
