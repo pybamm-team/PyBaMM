@@ -13,7 +13,7 @@ def graphite_ocp_PeymanMPM(sto):
 
     u_eq = (
         0.063
-        + 0.8 * pybamm.exp(-75 * (sto + 0.007))
+        + 0.8 * pybamm.exp(-75 * (sto + 0.001))
         - 0.0120 * pybamm.tanh((sto - 0.127) / 0.016)
         - 0.0118 * pybamm.tanh((sto - 0.155) / 0.016)
         - 0.0035 * pybamm.tanh((sto - 0.220) / 0.020)

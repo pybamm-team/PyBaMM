@@ -268,6 +268,9 @@ class ParameterValues:
         path : string, optional
             Path from which to load functions
         """
+        # check if values is not a dictionary
+        if not isinstance(values, dict):
+            values = values._dict_items
         # check parameter values
         self.check_parameter_values(values)
         # update
@@ -568,6 +571,8 @@ class ParameterValues:
                             geometry[domain][spatial_variable][
                                 lim
                             ] = self.process_symbol(sym)
+                        elif isinstance(sym, numbers.Number):
+                            geometry[domain][spatial_variable][lim] = pybamm.Scalar(sym)
 
     def process_symbol(self, symbol):
         """Walk through the symbol and replace any Parameter with a Value.
@@ -584,7 +589,6 @@ class ParameterValues:
             Symbol with Parameter instances replaced by Value
 
         """
-
         try:
             return self._processed_symbols[symbol.id]
         except KeyError:
@@ -800,7 +804,7 @@ class ParameterValues:
 
         df = pd.DataFrame(parameter_output)
         df = df.transpose()
-        df.to_csv(filename, header=None)
+        df.to_csv(filename, header=["Value"], index_label="Name [units]")
 
     def print_parameters(self, parameters, output_file=None):
         """

@@ -313,23 +313,23 @@ def find_symbols(symbol, constant_symbols, variable_symbols, output_jax=False):
 
     elif isinstance(symbol, pybamm.Concatenation):
 
-        # don't bother to concatenate if there is only a single child
+        # no need to concatenate if there is only a single child
         if isinstance(symbol, pybamm.NumpyConcatenation):
-            if len(children_vars) > 1:
-                symbol_str = "np.concatenate(({}))".format(",".join(children_vars))
+            if len(children_vars) == 1:
+                symbol_str = children_vars[0]
             else:
-                symbol_str = "{}".format(",".join(children_vars))
+                symbol_str = "np.concatenate(({}))".format(",".join(children_vars))
 
         elif isinstance(symbol, pybamm.SparseStack):
-            if len(children_vars) > 1:
+            if len(children_vars) == 1:
+                symbol_str = children_vars[0]
+            else:
                 if output_jax:
                     raise NotImplementedError
                 else:
                     symbol_str = "scipy.sparse.vstack(({}))".format(
                         ",".join(children_vars)
                     )
-            else:
-                symbol_str = "{}".format(",".join(children_vars))
 
         # DomainConcatenation specifies a particular ordering for the concatenation,
         # which we must follow
@@ -376,7 +376,9 @@ def find_symbols(symbol, constant_symbols, variable_symbols, output_jax=False):
 
     else:
         raise NotImplementedError(
-            "Not implemented for a symbol of type '{}'".format(type(symbol))
+            "Conversion to python not implemented for a symbol of type '{}'".format(
+                type(symbol)
+            )
         )
 
     variable_symbols[symbol.id] = symbol_str

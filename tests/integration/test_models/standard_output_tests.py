@@ -52,6 +52,7 @@ class StandardOutputTests(object):
 
         if self.chemistry == "Lithium-ion":
             self.run_test_class(ParticleConcentrationTests)
+            self.run_test_class(DegradationTests)
 
         if self.model.options["convection"] != "none":
             self.run_test_class(VelocityTests)
@@ -420,7 +421,7 @@ class ElectrolyteConcentrationTests(BaseOutputTest):
         self.c_e_n_av = solution["X-averaged negative electrolyte concentration"]
         self.c_e_s_av = solution["X-averaged separator electrolyte concentration"]
         self.c_e_p_av = solution["X-averaged positive electrolyte concentration"]
-        self.c_e_tot = solution["Total concentration in electrolyte [mol]"]
+        self.c_e_tot = solution["Total lithium in electrolyte [mol]"]
 
         self.N_e_hat = solution["Electrolyte flux"]
         # self.N_e_hat = solution["Reduced cation flux"]
@@ -726,3 +727,33 @@ class VelocityTests(BaseOutputTest):
         self.test_velocity_boundaries()
         self.test_vertical_velocity()
         self.test_velocity_vs_current()
+
+
+class DegradationTests(BaseOutputTest):
+    def __init__(self, model, param, disc, solution, operating_condition):
+        super().__init__(model, param, disc, solution, operating_condition)
+
+        self.LAM_ne = solution["Loss of active material in negative electrode [%]"]
+        self.LAM_pe = solution["Loss of active material in positive electrode [%]"]
+        self.LLI = solution["Loss of lithium inventory [%]"]
+        self.n_Li_lost = solution["Total lithium lost [mol]"]
+        self.n_Li_lost_rxn = solution["Total lithium lost to side reactions [mol]"]
+
+    def test_degradation_modes(self):
+        """Test degradation modes are between 0 and 100%"""
+        np.testing.assert_array_less(-1e-3, self.LLI(self.t))
+        np.testing.assert_array_less(-1e-3, self.LAM_ne(self.t))
+        np.testing.assert_array_less(-1e-3, self.LAM_pe(self.t))
+        np.testing.assert_array_less(self.LLI(self.t), 100)
+        np.testing.assert_array_less(self.LAM_ne(self.t), 100)
+        np.testing.assert_array_less(self.LAM_pe(self.t), 100)
+
+    def test_lithium_lost(self):
+        """Test the two ways of measuring lithium lost give the same value"""
+        np.testing.assert_array_almost_equal(
+            self.n_Li_lost(self.t), self.n_Li_lost_rxn(self.t), decimal=3
+        )
+
+    def test_all(self):
+        self.test_degradation_modes()
+        self.test_lithium_lost()

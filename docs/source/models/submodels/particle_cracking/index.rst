@@ -6,4 +6,4 @@ Particle Cracking
 
   base_cracking
   crack_propagation
-  no_cracking
+  swelling_only

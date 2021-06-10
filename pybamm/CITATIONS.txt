@@ -113,6 +113,16 @@
   doi = {10.1149/1945-7111/aba5d1},
 }
 
+@article{Mohtat2019,
+  title={Towards better estimability of electrode-specific state of health: Decoding the cell expansion},
+  author={Mohtat, Peyman and Lee, Suhak and Siegel, Jason B and Stefanopoulou, Anna G},
+  journal={Journal of Power Sources},
+  volume={427},
+  pages={101--111},
+  year={2019},
+  publisher={Elsevier}
+}
+
 @article{Malengier2018,
   year  = {2018},
   month = {feb},

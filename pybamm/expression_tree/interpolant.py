@@ -23,9 +23,7 @@ class Interpolant(pybamm.Function):
         Name of the interpolant. Default is None, in which case the name "interpolating
         function" is given.
     interpolator : str, optional
-        Which interpolator to use ("pchip" or "cubic spline"). Note that whichever
-        interpolator is used must be differentiable (for ``Interpolator._diff``).
-        Default is "cubic spline". Note that "pchip" may give slow results.
+        Which interpolator to use ("linear", "pchip", or "cubic spline").
     extrapolate : bool, optional
         Whether to extrapolate for points that are outside of the parametrisation
         range, or return NaN (following default behaviour from scipy). Default is True.
@@ -106,10 +104,8 @@ class Interpolant(pybamm.Function):
         else:
             raise ValueError("interpolator '{}' not recognised".format(interpolator))
         # Set name
-        if name is not None and not name.startswith("interpolating function"):
-            name = "interpolating function ({})".format(name)
-        else:
-            name = "interpolating function"
+        if name is None:
+            name = "interpolating_function"
         self.x = x
         self.y = y
         self.entries_string = entries_string
@@ -140,7 +136,9 @@ class Interpolant(pybamm.Function):
     def set_id(self):
         """ See :meth:`pybamm.Symbol.set_id()`. """
         self._id = hash(
-            (self.__class__, self.name, self.entries_string) + tuple(self.domain)
+            (self.__class__, self.name, self.entries_string)
+            + tuple([child.id for child in self.children])
+            + tuple(self.domain)
         )
 
     def _function_new_copy(self, children):

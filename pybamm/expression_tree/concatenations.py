@@ -349,6 +349,16 @@ class ConcatenationVariable(Concatenation):
             np.min([child.bounds[1] for child in children]),
         )
 
+        if not any(c.print_name is None for c in children):
+            print_name = intersect(children[0].print_name, children[1].print_name)
+            for child in children[2:]:
+                print_name = intersect(print_name, child.print_name)
+            if print_name.endswith("_"):
+                print_name = print_name[:-1]
+        else:
+            print_name = None
+        self.print_name = print_name
+
 
 def substrings(s):
     for i in range(len(s)):
@@ -363,8 +373,8 @@ def intersect(s1, s2):
     if len(all_intersects) == 0:
         return ""
     intersect = max(all_intersects, key=len)
-    # lstrip removes leading white space
-    return intersect.lstrip()
+    # remove leading and trailing white space
+    return intersect.lstrip().rstrip()
 
 
 def simplified_concatenation(*children):
