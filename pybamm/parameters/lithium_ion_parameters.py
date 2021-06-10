@@ -550,7 +550,10 @@ class LithiumIonParameters(BaseParameters):
         self.velocity_scale = pybamm.Scalar(1)
 
         # Discharge timescale
-        self.tau_discharge = self.F * self.c_n_max * self.L_x / self.i_typ
+        if self.options["working electrode"] == "positive":
+            self.tau_discharge = self.F * self.c_p_max * self.L_x / self.i_typ
+        else:
+            self.tau_discharge = self.F * self.c_n_max * self.L_x / self.i_typ
 
         # Reaction timescales
         self.tau_r_n = (

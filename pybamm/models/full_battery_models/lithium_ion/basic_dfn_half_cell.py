@@ -35,45 +35,30 @@ class BasicDFNHalfCell(BaseModel):
     """
 
     def __init__(self, name="Doyle-Fuller-Newman half cell model", options=None):
-        super().__init__({}, name)
+        super().__init__(options, name)
+        if self.options["working electrode"] not in ["negative", "positive"]:
+            raise ValueError(
+                "The option 'working electrode' should be either 'positive'"
+                " or 'negative'"
+            )
+        working_electrode = self.options["working electrode"]
+
         pybamm.citations.register("Marquis2019")
         # `param` is a class containing all the relevant parameters and functions for
         # this model. These are purely symbolic at this stage, and will be set by the
         # `ParameterValues` class when the model is processed.
         param = self.param
-        options = options or {"working electrode": None}
-
-        if options["working electrode"] not in ["negative", "positive"]:
-            raise ValueError(
-                "The option 'working electrode' should be either 'positive'"
-                " or 'negative'"
-            )
-
-        self.options.update(options)
-        working_electrode = options["working electrode"]
 
         # Define variables and timescale depending on the working electrode
         if working_electrode == "negative":
             R_w_typ = param.R_n_typ
-            L_x = param.L_n + param.L_s
-            self.timescale = param.F * param.c_n_max * L_x / param.i_typ
         else:
             R_w_typ = param.R_p_typ
-            L_x = param.L_s + param.L_p
-            self.timescale = param.F * param.c_p_max * L_x / param.i_typ
-
-        # update timescale (and hence current and dimensionless parameters)
-        # this is too hacky and needs to be done better
-        param.L_x = L_x
-        param._set_scales()
-        param.timescale = self.timescale
-        param._set_input_current()
-        param._set_dimensionless_parameters()
 
         # Set default length scales
         self.length_scales = {
-            "working electrode": L_x,
-            "separator": L_x,
+            "working electrode": param.L_x,
+            "separator": param.L_x,
             "working particle": R_w_typ,
             "current collector y": param.L_z,
             "current collector z": param.L_z,
@@ -340,12 +325,46 @@ class BasicDFNHalfCell(BaseModel):
             + L_Li * i_typ * i_cell / (sigma_Li * pot)
         )
         voltage = vdrop_cell + vdrop_Li
-
+        voltage_dim = phi_s_w_ref + U_n_ref + pot * voltage
         c_e_total = pybamm.x_average(eps * c_e)
         c_s_surf_w_av = pybamm.x_average(c_s_surf_w)
 
         c_s_rav = pybamm.r_average(c_s_w)
         c_s_vol_av = pybamm.x_average(eps_s_w * c_s_rav)
+
+        # Cut-off voltage
+        self.events.append(
+            pybamm.Event(
+                "Minimum voltage",
+                voltage_dim - self.param.voltage_low_cut_dimensional,
+                pybamm.EventType.TERMINATION,
+            )
+        )
+        self.events.append(
+            pybamm.Event(
+                "Maximum voltage",
+                voltage_dim - self.param.voltage_high_cut_dimensional,
+                pybamm.EventType.TERMINATION,
+            )
+        )
+
+        # Cut-off open-circuit voltage (for event switch with casadi 'fast with events'
+        # mode)
+        tol = 0.1
+        self.events.append(
+            pybamm.Event(
+                "Minimum voltage switch",
+                voltage_dim - (self.param.voltage_low_cut_dimensional - tol),
+                pybamm.EventType.SWITCH,
+            )
+        )
+        self.events.append(
+            pybamm.Event(
+                "Maximum voltage switch",
+                voltage_dim - (self.param.voltage_high_cut_dimensional + tol),
+                pybamm.EventType.SWITCH,
+            )
+        )
 
         # The `variables` dictionary contains all variables that might be useful for
         # visualising the solution of the model
@@ -382,7 +401,7 @@ class BasicDFNHalfCell(BaseModel):
             "Voltage drop in the cell": vdrop_cell,
             "Voltage drop in the cell [V]": phi_s_w_ref + U_n_ref + pot * vdrop_cell,
             "Terminal voltage": voltage,
-            "Terminal voltage [V]": phi_s_w_ref + U_n_ref + pot * voltage,
+            "Terminal voltage [V]": voltage_dim,
         }
 
     @property

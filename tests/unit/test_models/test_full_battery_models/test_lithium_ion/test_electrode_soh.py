@@ -38,6 +38,26 @@ class TestElectrodeSOH(unittest.TestCase):
         self.assertAlmostEqual(sol["n_Li_0"].data[0], n_Li, places=5)
 
 
+class TestElectrodeSOHHalfCell(unittest.TestCase):
+    def test_known_solution(self):
+        model = pybamm.lithium_ion.ElectrodeSOHHalfCell("positive")
+
+        param = pybamm.LithiumIonParameters({"working electrode": "positive"})
+        parameter_values = pybamm.ParameterValues(
+            chemistry=pybamm.parameter_sets.Xu2019
+        )
+        sim = pybamm.Simulation(model, parameter_values=parameter_values)
+
+        V_min = 3
+        V_max = 4.2
+        C_w = parameter_values.evaluate(param.C_p_init)
+
+        # Solve the model and check outputs
+        sol = sim.solve([0], inputs={"V_min": V_min, "V_max": V_max, "C_w": C_w})
+        self.assertAlmostEqual(sol["Uw(x_100)"].data[0], V_max, places=5)
+        self.assertAlmostEqual(sol["Uw(x_0)"].data[0], V_min, places=5)
+
+
 if __name__ == "__main__":
     print("Add -v for more debug output")
     import sys

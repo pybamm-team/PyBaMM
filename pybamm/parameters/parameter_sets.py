@@ -217,9 +217,9 @@ Ai2020 = {
 Xu2019 = {
     "chemistry": "lithium_ion",
     "cell": "li_metal_Xu2019",
-    "anode": "li_metal_Xu2019",
+    "negative electrode": "li_metal_Xu2019",
     "separator": "separator_Xu2019",
-    "cathode": "NMC532_Xu2019",
+    "positive electrode": "NMC532_Xu2019",
     "electrolyte": "lipf6_Valoen2005",
     "experiment": "1C_discharge_from_full_Xu2019",
     "citation": "Xu2019",

@@ -63,10 +63,7 @@ class ElectrodeSOH(pybamm.BaseModel):
         C_init = pybamm.minimum(C_n * x_100_init - 0.1, C_init)
         # Make sure y_100 > 0
         # x_100_init = pybamm.minimum(n_Li * param.F / 3600 / C_n - 0.01, x_100_init)
-        self.initial_conditions = {
-            x_100: x_100_init,
-            C: C_init,
-        }
+        self.initial_conditions = {x_100: x_100_init, C: C_init}
 
         self.variables = {
             "x_100": x_100,

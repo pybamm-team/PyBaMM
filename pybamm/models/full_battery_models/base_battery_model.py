@@ -132,6 +132,10 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                 solve an algebraic equation for it. Default is "false", unless "SEI film
                 resistance" is distributed in which case it is automatically set to
                 "true".
+            * "working electrode": str
+                Which electrode(s) intercalates and which is counter. If "both"
+                (default), the model is a standard battery. Otherwise can be "negative"
+                or "positive" to indicate a half-cell model.
 
     **Extends:** :class:`dict`
     """
@@ -181,6 +185,7 @@ class BatteryModelOptions(pybamm.FuzzyDict):
             "surface form": ["false", "differential", "algebraic"],
             "thermal": ["isothermal", "lumped", "x-lumped", "x-full"],
             "total interfacial current density as a state": ["true", "false"],
+            "working electrode": ["both", "negative", "positive"],
         }
 
         default_options = {
@@ -203,7 +208,7 @@ class BatteryModelOptions(pybamm.FuzzyDict):
             "surface form": "false",
             "thermal": "isothermal",
             "total interfacial current density as a state": "false",
-            "working electrode": "none",
+            "working electrode": "both",
         }
 
         # Change the default for cell geometry based on which thermal option is provided
@@ -957,7 +962,7 @@ class BaseBatteryModel(pybamm.BaseModel):
 
         # Cut-off open-circuit voltage (for event switch with casadi 'fast with events'
         # mode)
-        # A tolerance of 1 is sufficiently small since the dimensionless voltage is
+        # A tolerance of ~1 is sufficiently small since the dimensionless voltage is
         # scaled with the thermal voltage (0.025V) and hence has a range of around 60
         tol = 5
         self.events.append(
