@@ -94,17 +94,17 @@ class BaseSizeDistribution(BaseParticle):
             + " distribution": f_num_dist,
             self.domain + " number-based particle-size"
             + " distribution [m-1]": f_num_dist / R_typ,
-            "True " + self.domain.lower() + " area-weighted"
+            self.domain + " area-weighted"
             + " mean radius": true_R_a_mean,
-            "True " + self.domain.lower() + " area-weighted"
+            self.domain + " area-weighted"
             + " mean radius [m]": true_R_a_mean * R_typ,
-            "True " + self.domain.lower() + " volume-weighted"
+            self.domain + " volume-weighted"
             + " mean radius": true_R_v_mean,
-            "True " + self.domain.lower() + " volume-weighted"
+            self.domain + " volume-weighted"
             + " mean radius [m]": true_R_v_mean * R_typ,
-            "True " + self.domain.lower() + " number-based"
+            self.domain + " number-based"
             + " mean radius": true_R_num_mean,
-            "True " + self.domain.lower() + " number-based"
+            self.domain + " number-based"
             + " mean radius [m]": true_R_num_mean * R_typ,
             # X-averaged distributions
             "X-averaged " + self.domain.lower() +
@@ -249,13 +249,13 @@ class BaseSizeDistribution(BaseParticle):
         elif self.domain == "Positive":
             a_typ = self.param.a_p_typ
 
-        true_R_a_mean = variables[
-            "True " + self.domain.lower() + " area-weighted mean radius"
-        ]
+        R_a_mean = variables[self.domain + " area-weighted mean radius"]
 
         # True surface area to volume ratio, using the true area-weighted mean
-        # radius calculated from the distribution
-        true_a = 1 / true_R_a_mean
+        # radius calculated from the distribution. It should agree with the
+        # "X-averaged negative electrode surface area to volume ratio", etc.,
+        # calculated in `active_material.BaseModel`, and can be used as a check
+        true_a = 1 / R_a_mean
 
         variables.update(
             {
