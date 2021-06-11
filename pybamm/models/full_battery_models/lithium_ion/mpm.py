@@ -117,6 +117,13 @@ class MPM(BaseModel):
 
     def set_particle_submodel(self):
 
+        if self.options["particle size"] != "distribution":
+            raise pybamm.OptionError(
+                "particle size must be 'distribution' for MPM not '{}'".format(
+                    self.options["particle size"]
+                )
+            )
+
         if self.options["particle"] == "Fickian diffusion":
             submod_n = pybamm.particle.FickianSingleSizeDistribution(
                 self.param, "Negative"
@@ -208,12 +215,7 @@ class MPM(BaseModel):
     def set_sei_submodel(self):
 
         # negative electrode SEI
-        if self.options["SEI"] == "none":
-            self.submodels["negative sei"] = pybamm.sei.NoSEI(self.param, "Negative")
-        else:
-            raise NotImplementedError(
-                """SEI submodels do not yet support particle-size distributions."""
-            )
+        self.submodels["negative sei"] = pybamm.sei.NoSEI(self.param, "Negative")
 
         # positive electrode
         self.submodels["positive sei"] = pybamm.sei.NoSEI(self.param, "Positive")

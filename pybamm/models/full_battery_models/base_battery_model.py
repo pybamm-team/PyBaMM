@@ -277,6 +277,33 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                     "current density as a state' must be 'true'"
                 )
 
+        # Options not yet compatible with particle-size distributions
+        if options["particle size"] == "distribution":
+            if options["SEI"] != "none":
+                raise NotImplementedError(
+                    "SEI submodels do not yet support particle-size distributions."
+                )
+            if options["lithium plating"] != "none":
+                raise NotImplementedError(
+                    "Lithium plating submodels do not yet support particle-size "
+                    "distributions."
+                )
+            if options["particle mechanics"] != "none":
+                raise NotImplementedError(
+                    "Particle mechanics submodels do not yet support particle-size"
+                    " distributions."
+                )
+            if options["particle shape"] != "spherical":
+                raise NotImplementedError(
+                    "Particle shape must be 'spherical' for particle-size distributions"
+                    " submodels."
+                )
+            if options["thermal"] == "x-full":
+                raise NotImplementedError(
+                    "X-full thermal submodels do not yet support particle-size"
+                    " distributions."
+                )
+
         # Some standard checks to make sure options are compatible
         if options["SEI porosity change"] in [True, False]:
             raise pybamm.OptionError(

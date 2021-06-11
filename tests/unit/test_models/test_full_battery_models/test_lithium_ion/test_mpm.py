@@ -96,28 +96,23 @@ class TestMPM(unittest.TestCase):
 
     def test_particle_shape_user(self):
         options = {"particle shape": "user"}
-        model = pybamm.lithium_ion.MPM(options)
-        model.check_well_posedness()
+        with self.assertRaises(NotImplementedError):
+            pybamm.lithium_ion.MPM(options)
 
     def test_loss_active_material_stress_negative(self):
         options = {"loss of active material": ("stress-driven", "none")}
-        model = pybamm.lithium_ion.MPM(options)
-        model.check_well_posedness()
+        with self.assertRaises(NotImplementedError):
+            pybamm.lithium_ion.MPM(options)
 
     def test_loss_active_material_stress_positive(self):
         options = {"loss of active material": ("none", "stress-driven")}
-        model = pybamm.lithium_ion.MPM(options)
-        model.check_well_posedness()
+        with self.assertRaises(NotImplementedError):
+            pybamm.lithium_ion.MPM(options)
 
     def test_loss_active_material_stress_both(self):
         options = {"loss of active material": "stress-driven"}
-        model = pybamm.lithium_ion.MPM(options)
-        model.check_well_posedness()
-
-    def test_loss_active_material_stress_reaction_both(self):
-        options = {"loss of active material": "reaction-driven"}
-        model = pybamm.lithium_ion.MPM(options)
-        model.check_well_posedness()
+        with self.assertRaises(NotImplementedError):
+            pybamm.lithium_ion.MPM(options)
 
     def test_electrolyte_options(self):
         options = {"electrolyte conductivity": "full"}
@@ -155,8 +150,8 @@ class TestMPM(unittest.TestCase):
             "lithium plating": "reversible",
             "lithium plating porosity change": "true",
         }
-        model = pybamm.lithium_ion.MPM(options)
-        model.check_well_posedness()
+        with self.assertRaises(NotImplementedError):
+            pybamm.lithium_ion.MPM(options)
 
 
 class TestMPMExternalCircuits(unittest.TestCase):
@@ -211,40 +206,35 @@ class TestMPMWithSEI(unittest.TestCase):
 class TestMPMWithCrack(unittest.TestCase):
     def test_well_posed_negative_cracking(self):
         options = {"particle mechanics": ("swelling and cracking", "none")}
-        model = pybamm.lithium_ion.MPM(options)
-        model.check_well_posedness()
+        with self.assertRaises(NotImplementedError):
+            pybamm.lithium_ion.MPM(options)
 
     def test_well_posed_positive_cracking(self):
         options = {"particle mechanics": ("none", "swelling and cracking")}
-        model = pybamm.lithium_ion.MPM(options)
-        model.check_well_posedness()
+        with self.assertRaises(NotImplementedError):
+            pybamm.lithium_ion.MPM(options)
 
     def test_well_posed_both_cracking(self):
         options = {"particle mechanics": "swelling and cracking"}
-        model = pybamm.lithium_ion.MPM(options)
-        model.check_well_posedness()
+        with self.assertRaises(NotImplementedError):
+            pybamm.lithium_ion.MPM(options)
 
     def test_well_posed_both_swelling_only(self):
         options = {"particle mechanics": "swelling only"}
-        model = pybamm.lithium_ion.MPM(options)
-        model.check_well_posedness()
+        with self.assertRaises(NotImplementedError):
+            pybamm.lithium_ion.MPM(options)
 
 
 class TestMPMWithPlating(unittest.TestCase):
-    def test_well_posed_none_plating(self):
-        options = {"lithium plating": "none"}
-        model = pybamm.lithium_ion.MPM(options)
-        model.check_well_posedness()
-
     def test_well_posed_reversible_plating(self):
         options = {"lithium plating": "reversible"}
-        model = pybamm.lithium_ion.MPM(options)
-        model.check_well_posedness()
+        with self.assertRaises(NotImplementedError):
+            pybamm.lithium_ion.MPM(options)
 
     def test_well_posed_irreversible_plating(self):
         options = {"lithium plating": "irreversible"}
-        model = pybamm.lithium_ion.MPM(options)
-        model.check_well_posedness()
+        with self.assertRaises(NotImplementedError):
+            pybamm.lithium_ion.MPM(options)
 
 
 if __name__ == "__main__":
