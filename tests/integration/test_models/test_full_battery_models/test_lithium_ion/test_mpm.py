@@ -13,8 +13,8 @@ class TestMPM(unittest.TestCase):
         options = {"thermal": "isothermal"}
         model = pybamm.lithium_ion.MPM(options)
         # use Ecker parameters for nonlinear diffusion
-        #param = pybamm.ParameterValues(chemistry=pybamm.parameter_sets.Ecker2015)
-        #param = self.add_distribution_params_for_test(param)
+        param = pybamm.ParameterValues(chemistry=pybamm.parameter_sets.Ecker2015)
+        param = self.set_distribution_params_for_test(param)
         modeltest = tests.StandardModelTest(model)
         modeltest.test_all()
 
@@ -96,34 +96,38 @@ class TestMPM(unittest.TestCase):
         modeltest = tests.StandardModelTest(model)
         modeltest.test_all()
 
-    def test_loss_active_material_stress_negative(self):
-        options = {"loss of active material": ("none", "stress-driven")}
-        model = pybamm.lithium_ion.MPM(options)
-        chemistry = pybamm.parameter_sets.Ai2020
-        parameter_values = pybamm.ParameterValues(chemistry=chemistry)
-        param = self.add_distribution_params_for_test(parameter_values)
-        modeltest = tests.StandardModelTest(model, parameter_values=param)
-        modeltest.test_all()
+    def test_conservation_each_electrode(self):
+        # Test that surface areas are being calculated from the distribution correctly
+        # for any discretization in the size domain.
+        # We test that the amount of lithium removed or added to each electrode
+        # is the same as for the SPM with the same parameters
+        models = [pybamm.lithium_ion.SPM(), pybamm.lithium_ion.MPM()]
+        var = pybamm.standard_spatial_vars
 
-    def test_loss_active_material_stress_positive(self):
-        options = {"loss of active material": ("stress-driven", "none")}
-        model = pybamm.lithium_ion.MPM(options)
-        chemistry = pybamm.parameter_sets.Ai2020
-        parameter_values = pybamm.ParameterValues(chemistry=chemistry)
-        param = self.add_distribution_params_for_test(parameter_values)
-        modeltest = tests.StandardModelTest(model, parameter_values=param)
-        modeltest.test_all()
+        # reduce number of particle sizes, for a crude discretization
+        var_pts = {
+            var.R_n: 3,
+            var.R_p: 3,
+        }
+        solver = pybamm.CasadiSolver(mode="fast")
 
-    def test_loss_active_material_stress_both(self):
-        options = {"loss of active material": "stress-driven"}
-        model = pybamm.lithium_ion.MPM(options)
-        chemistry = pybamm.parameter_sets.Ai2020
-        parameter_values = pybamm.ParameterValues(chemistry=chemistry)
-        param = self.add_distribution_params_for_test(parameter_values)
-        modeltest = tests.StandardModelTest(model, parameter_values=param)
-        modeltest.test_all()
+        # solve
+        neg_Li = []
+        pos_Li = []
+        for model in models:
+            sim = pybamm.Simulation(model, solver=solver)
+            sim.var_pts.update(var_pts)
+            solution = sim.solve([0, 3500])
+            neg = solution["Total lithium in negative electrode [mol]"].entries[-1]
+            pos = solution["Total lithium in positive electrode [mol]"].entries[-1]
+            neg_Li.append(neg)
+            pos_Li.append(pos)
 
-    def add_distribution_params_for_test(self, param):
+        # compare
+        np.testing.assert_array_almost_equal(neg_Li[0], neg_Li[1], decimal=14)
+        np.testing.assert_array_almost_equal(pos_Li[0], pos_Li[1], decimal=14)
+
+    def set_distribution_params_for_test(self, param):
         R_n_dim = param["Negative particle radius [m]"]
         R_p_dim = param["Positive particle radius [m]"]
         sd_a_n = 0.3
@@ -135,7 +139,7 @@ class TestMPM(unittest.TestCase):
         R_max_n = 1 + sd_a_n * 5
         R_max_p = 1 + sd_a_p * 5
 
-        def lognormal_distribution(R, R_av, sd):
+        def lognormal(R, R_av, sd):
             import numpy as np
 
             mu_ln = pybamm.log(R_av ** 2 / pybamm.sqrt(R_av ** 2 + sd ** 2))
@@ -148,94 +152,10 @@ class TestMPM(unittest.TestCase):
 
         # Set the dimensional (area-weighted) particle-size distributions
         def f_a_dist_n_dim(R):
-            return lognormal_distribution(R, R_n_dim, sd_a_n * R_n_dim)
+            return lognormal(R, R_n_dim, sd_a_n * R_n_dim)
 
         def f_a_dist_p_dim(R):
-            return lognormal_distribution(R, R_p_dim, sd_a_p * R_p_dim)
-
-        # Append to parameter set
-        param.update(
-            {
-                "Negative minimum particle radius [m]": R_min_n * R_n_dim,
-                "Positive minimum particle radius [m]": R_min_p * R_p_dim,
-                "Negative maximum particle radius [m]": R_max_n * R_n_dim,
-                "Positive maximum particle radius [m]": R_max_p * R_p_dim,
-                "Negative area-weighted "
-                + "particle-size distribution [m-1]": f_a_dist_n_dim,
-                "Positive area-weighted "
-                + "particle-size distribution [m-1]": f_a_dist_p_dim,
-            },
-            check_already_exists=False,
-        )
-        return param
-
-
-class TestMPMWithCrack(unittest.TestCase):
-    def test_well_posed_negative_cracking(self):
-        options = {"particle mechanics": ("swelling and cracking", "none")}
-        model = pybamm.lithium_ion.MPM(options)
-        chemistry = pybamm.parameter_sets.Ai2020
-        parameter_values = pybamm.ParameterValues(chemistry=chemistry)
-        param = self.add_distribution_params_for_test(parameter_values)
-        modeltest = tests.StandardModelTest(model, parameter_values=param)
-        modeltest.test_all()
-
-    def test_well_posed_positive_cracking(self):
-        options = {"particle mechanics": ("none", "swelling and cracking")}
-        model = pybamm.lithium_ion.MPM(options)
-        chemistry = pybamm.parameter_sets.Ai2020
-        parameter_values = pybamm.ParameterValues(chemistry=chemistry)
-        param = self.add_distribution_params_for_test(parameter_values)
-        modeltest = tests.StandardModelTest(model, parameter_values=param)
-        modeltest.test_all()
-
-    def test_well_posed_both_cracking(self):
-        options = {"particle mechanics": "swelling and cracking"}
-        model = pybamm.lithium_ion.MPM(options)
-        chemistry = pybamm.parameter_sets.Ai2020
-        parameter_values = pybamm.ParameterValues(chemistry=chemistry)
-        param = self.add_distribution_params_for_test(parameter_values)
-        modeltest = tests.StandardModelTest(model, parameter_values=param)
-        modeltest.test_all()
-
-    def test_well_posed_both_swelling_only(self):
-        options = {"particle mechanics": "swelling only"}
-        model = pybamm.lithium_ion.MPM(options)
-        chemistry = pybamm.parameter_sets.Ai2020
-        parameter_values = pybamm.ParameterValues(chemistry=chemistry)
-        param = self.add_distribution_params_for_test(parameter_values)
-        modeltest = tests.StandardModelTest(model, parameter_values=param)
-        modeltest.test_all()
-
-    def add_distribution_params_for_test(self, param):
-        R_n_dim = param["Negative particle radius [m]"]
-        R_p_dim = param["Positive particle radius [m]"]
-        sd_a_n = 0.3
-        sd_a_p = 0.3
-
-        # Min and max radii
-        R_min_n = 0
-        R_min_p = 0
-        R_max_n = 1 + sd_a_n * 5
-        R_max_p = 1 + sd_a_p * 5
-
-        def lognormal_distribution(R, R_av, sd):
-            import numpy as np
-
-            mu_ln = pybamm.log(R_av ** 2 / pybamm.sqrt(R_av ** 2 + sd ** 2))
-            sigma_ln = pybamm.sqrt(pybamm.log(1 + sd ** 2 / R_av ** 2))
-            return (
-                pybamm.exp(-((pybamm.log(R) - mu_ln) ** 2) / (2 * sigma_ln ** 2))
-                / pybamm.sqrt(2 * np.pi * sigma_ln ** 2)
-                / (R)
-            )
-
-        # Set the dimensional (area-weighted) particle-size distributions
-        def f_a_dist_n_dim(R):
-            return lognormal_distribution(R, R_n_dim, sd_a_n * R_n_dim)
-
-        def f_a_dist_p_dim(R):
-            return lognormal_distribution(R, R_p_dim, sd_a_p * R_p_dim)
+            return lognormal(R, R_p_dim, sd_a_p * R_p_dim)
 
         # Append to parameter set
         param.update(

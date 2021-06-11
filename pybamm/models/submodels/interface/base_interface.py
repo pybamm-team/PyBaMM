@@ -715,7 +715,7 @@ class BaseInterface(pybamm.BaseSubModel):
         """
         Calculates current density (j_distribution) that depends on
         particle size for "particle-size distribution" models, and
-        the standard R-averaged current density (j)
+        the R-averaged (using area-weighted distribution) current density (j)
         """
         # T must have same domains as j0, eta_r, so remove electrode domain from T
         # if necessary (only check eta_r, as j0 should already match)

@@ -23,6 +23,106 @@ class BaseSizeDistribution(BaseParticle):
     def __init__(self, param, domain):
         super().__init__(param, domain)
 
+    def _get_distribution_variables(self, R):
+        """
+        Forms the particle-size distributions and mean radii given a spatial variable
+        R. The domains of R will be different depending on the submodel, e.g. for the
+        `SingleSizeDistribution` classes R does not have an "electrode" domain.
+        """
+        if self.domain == "Negative":
+            R_typ = self.param.R_n_typ
+            # Particle-size distribution (area-weighted)
+            f_a_dist = self.param.f_a_dist_n(R)
+        elif self.domain == "Positive":
+            R_typ = self.param.R_p_typ
+            # Particle-size distribution (area-weighted)
+            f_a_dist = self.param.f_a_dist_p(R)
+
+        # Ensure the distribution is normalised, irrespective of discretisation
+        # or user input
+        f_a_dist = f_a_dist / pybamm.Integral(f_a_dist, R)
+
+        # Volume-weighted particle-size distribution
+        f_v_dist = R * f_a_dist / pybamm.Integral(R * f_a_dist, R)
+
+        # Number-based particle-size distribution
+        f_num_dist = (f_a_dist / R ** 2) / pybamm.Integral(f_a_dist / R ** 2, R)
+
+        # True mean radii, given the f_a_dist that was given
+        true_R_num_mean = pybamm.Integral(R * f_num_dist, R)
+        true_R_a_mean = pybamm.Integral(R * f_a_dist, R)
+        true_R_v_mean = pybamm.Integral(R * f_v_dist, R)
+
+        # X-average the mean radii (to remove the "electrode" domain, if present)
+        true_R_num_mean = pybamm.x_average(true_R_num_mean)
+        true_R_a_mean = pybamm.x_average(true_R_a_mean)
+        true_R_v_mean = pybamm.x_average(true_R_v_mean)
+
+        # X-averaged distributions
+        if R.auxiliary_domains["secondary"] == [self.domain.lower() + " electrode"]:
+            f_a_dist_xav = pybamm.x_average(f_a_dist)
+            f_v_dist_xav = pybamm.x_average(f_v_dist)
+            f_num_dist_xav = pybamm.x_average(f_num_dist)
+        else:
+            f_a_dist_xav = f_a_dist
+            f_v_dist_xav = f_v_dist
+            f_num_dist_xav = f_num_dist
+
+            # broadcast
+            f_a_dist = pybamm.SecondaryBroadcast(
+                f_a_dist_xav, [self.domain.lower() + " electrode"]
+            )
+            f_v_dist = pybamm.SecondaryBroadcast(
+                f_v_dist_xav, [self.domain.lower() + " electrode"]
+            )
+            f_num_dist = pybamm.SecondaryBroadcast(
+                f_num_dist_xav, [self.domain.lower() + " electrode"]
+            )
+
+        variables = {
+            self.domain + " particle sizes": R,
+            self.domain + " particle sizes [m]": R * R_typ,
+            self.domain + " area-weighted particle-size"
+            + " distribution": f_a_dist,
+            self.domain + " area-weighted particle-size"
+            + " distribution [m-1]": f_a_dist / R_typ,
+            self.domain + " volume-weighted particle-size"
+            + " distribution": f_v_dist,
+            self.domain + " volume-weighted particle-size"
+            + " distribution [m-1]": f_v_dist / R_typ,
+            self.domain + " number-based particle-size"
+            + " distribution": f_num_dist,
+            self.domain + " number-based particle-size"
+            + " distribution [m-1]": f_num_dist / R_typ,
+            "True " + self.domain.lower() + " area-weighted"
+            + " mean radius": true_R_a_mean,
+            "True " + self.domain.lower() + " area-weighted"
+            + " mean radius [m]": true_R_a_mean * R_typ,
+            "True " + self.domain.lower() + " volume-weighted"
+            + " mean radius": true_R_v_mean,
+            "True " + self.domain.lower() + " volume-weighted"
+            + " mean radius [m]": true_R_v_mean * R_typ,
+            "True " + self.domain.lower() + " number-based"
+            + " mean radius": true_R_num_mean,
+            "True " + self.domain.lower() + " number-based"
+            + " mean radius [m]": true_R_num_mean * R_typ,
+            # X-averaged distributions
+            "X-averaged " + self.domain.lower() +
+            " area-weighted particle-size distribution": f_a_dist_xav,
+            "X-averaged " + self.domain.lower() +
+            " area-weighted particle-size distribution [m-1]": f_a_dist_xav / R_typ,
+            "X-averaged " + self.domain.lower() +
+            " volume-weighted particle-size distribution": f_v_dist_xav,
+            "X-averaged " + self.domain.lower() +
+            " volume-weighted particle-size distribution [m-1]": f_v_dist_xav / R_typ,
+            "X-averaged " + self.domain.lower() +
+            " number-based particle-size distribution": f_num_dist_xav,
+            "X-averaged " + self.domain.lower() +
+            " number-based particle-size distribution [m-1]": f_num_dist_xav / R_typ,
+        }
+
+        return variables
+
     def _get_standard_concentration_distribution_variables(self, c_s):
         """
         Forms standard concentration variables that depend on particle size R given
@@ -103,8 +203,6 @@ class BaseSizeDistribution(BaseParticle):
             c_s_distribution = c_s
 
             # x-average the *tertiary* domain. Do manually using Integral
-            #x = pybamm.standard_spatial_vars.x_p
-            #l = pybamm.geometric_parameters.l_p
             x = pybamm.SpatialVariable("x", domain=[self.domain.lower() + " electrode"])
             v = pybamm.ones_like(c_s)
             l = pybamm.Integral(v, x)
@@ -142,4 +240,29 @@ class BaseSizeDistribution(BaseParticle):
             + " particle surface concentration"
             + " distribution [mol.m-3]": c_scale * c_s_surf_distribution,
         }
+        return variables
+
+    def _get_surface_area_output_variables(self, variables):
+
+        if self.domain == "Negative":
+            a_typ = self.param.a_n_typ
+        elif self.domain == "Positive":
+            a_typ = self.param.a_p_typ
+
+        true_R_a_mean = variables[
+            "True " + self.domain.lower() + " area-weighted mean radius"
+        ]
+
+        # True surface area to volume ratio, using the true area-weighted mean
+        # radius calculated from the distribution
+        true_a = 1 / true_R_a_mean
+
+        variables.update(
+            {
+                "True " + self.domain.lower() + " electrode surface area to volume"
+                + " ratio" : true_a,
+                "True " + self.domain.lower() + " electrode surface area to volume"
+                + " ratio [m-1]" : true_a * a_typ,
+            }
+        )
         return variables

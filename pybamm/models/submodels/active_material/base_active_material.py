@@ -65,16 +65,31 @@ class BaseModel(pybamm.BaseSubModel):
             C = eps_solid_av * L * param.A_cc * c_s_max * param.F / 3600
             variables.update({self.domain + " electrode capacity [A.h]": C})
 
+            # If a single particle size at every x, use the parameters
+            # R_n, R_p. For a size distribution, calculate the area-weighted
+            # mean using the distribution instead. Then the surface area is
+            # calculated the same way
             if self.domain == "Negative":
-                x = pybamm.standard_spatial_vars.x_n
-                R = self.param.R_n(x)
-                R_dim = self.param.R_n_dimensional(x * self.param.L_x)
+                if self.options["particle size"] == "single":
+                    x = pybamm.standard_spatial_vars.x_n
+                    R = self.param.R_n(x)
+                    R_dim = self.param.R_n_dimensional(x * self.param.L_x)
+                elif self.options["particle size"] == "distribution":
+                    R_n = pybamm.standard_spatial_vars.R_n
+                    R = pybamm.R_average(R_n, self.param)
+                    R_dim = R * self.param.R_n_typ
                 a_typ = self.param.a_n_typ
             elif self.domain == "Positive":
-                x = pybamm.standard_spatial_vars.x_p
-                R = self.param.R_p(x)
-                R_dim = self.param.R_p_dimensional(x * self.param.L_x)
+                if self.options["particle size"] == "single":
+                    x = pybamm.standard_spatial_vars.x_p
+                    R = self.param.R_p(x)
+                    R_dim = self.param.R_p_dimensional(x * self.param.L_x)
+                elif self.options["particle size"] == "distribution":
+                    R_p = pybamm.standard_spatial_vars.R_p
+                    R = pybamm.R_average(R_p, self.param)
+                    R_dim = R * self.param.R_p_typ
                 a_typ = self.param.a_p_typ
+
             R_dim_av = pybamm.x_average(R_dim)
 
             # Compute dimensional particle shape

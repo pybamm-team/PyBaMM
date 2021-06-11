@@ -82,12 +82,15 @@ class BaseOutputTest(object):
         self.x_edge = disc.mesh.combine_submeshes(*whole_cell).edges * L_x
 
         if isinstance(self.model, pybamm.lithium_ion.BaseModel):
-            R_n = param.evaluate(model.param.R_n_typ)
-            R_p = param.evaluate(model.param.R_p_typ)
-            self.r_n = disc.mesh["negative particle"].nodes * R_n
-            self.r_p = disc.mesh["positive particle"].nodes * R_p
-            self.r_n_edge = disc.mesh["negative particle"].edges * R_n
-            self.r_p_edge = disc.mesh["positive particle"].edges * R_p
+            R_n_typ = param.evaluate(model.param.R_n_typ)
+            R_p_typ = param.evaluate(model.param.R_p_typ)
+            self.r_n = disc.mesh["negative particle"].nodes * R_n_typ
+            self.r_p = disc.mesh["positive particle"].nodes * R_p_typ
+            self.r_n_edge = disc.mesh["negative particle"].edges * R_n_typ
+            self.r_p_edge = disc.mesh["positive particle"].edges * R_p_typ
+            if self.model.options["particle size"] == "distribution":
+                self.R_n = disc.mesh["negative particle size"].nodes * R_n_typ
+                self.R_p = disc.mesh["positive particle size"].nodes * R_p_typ
 
         # Useful parameters
         self.l_n = param.evaluate(geo.l_n)
@@ -276,6 +279,25 @@ class ParticleConcentrationTests(BaseOutputTest):
             "Loss of lithium to positive electrode lithium plating [mol]"
         ]
 
+        if model.options["particle size"] == "distribution":
+            # These concentration variables are only present for distribution models.
+
+            # Take only the x-averaged of these for now, since variables cannot have
+            # 4 domains yet
+            self.c_s_n_dist = solution[
+                "X-averaged negative particle concentration distribution"
+            ]
+            self.c_s_p_dist = solution[
+                "X-averaged positive particle concentration distribution"
+            ]
+
+            self.c_s_n_surf_dist = solution[
+                "Negative particle surface concentration distribution"
+            ]
+            self.c_s_p_surf_dist = solution[
+                "Positive particle surface concentration distribution"
+            ]
+
     def test_concentration_increase_decrease(self):
         """Test all concentrations in negative particles decrease and all
         concentrations in positive particles increase over a discharge."""
@@ -290,6 +312,25 @@ class ParticleConcentrationTests(BaseOutputTest):
             pos_diff = self.c_s_p_rav(t[1:], x_p) - self.c_s_p_rav(t[:-1], x_p)
             neg_end_vs_start = self.c_s_n_rav(t[-1], x_n) - self.c_s_n_rav(t[0], x_n)
             pos_end_vs_start = self.c_s_p_rav(t[-1], x_p) - self.c_s_p_rav(t[0], x_p)
+        elif self.model.options["particle size"] == "distribution":
+            R_n, R_p = self.R_n, self.R_p
+            # Test the concentration variables that depend on particle size
+            neg_diff = (
+                self.c_s_n_dist(t[1:], r=r_n, R=R_n) -
+                self.c_s_n_dist(t[:-1], r=r_n, R=R_n)
+            )
+            pos_diff = (
+                self.c_s_p_dist(t[1:], r=r_p, R=R_p) -
+                self.c_s_p_dist(t[:-1], r=r_p, R=R_p)
+            )
+            neg_end_vs_start = (
+                self.c_s_n_dist(t[-1], r=r_n, R=R_n) -
+                self.c_s_n_dist(t[0], r=r_n, R=R_n)
+            )
+            pos_end_vs_start = (
+                self.c_s_p_dist(t[-1], r=r_p, R=R_p) -
+                self.c_s_p_dist(t[0], r=r_p, R=R_p)
+            )
         else:
             neg_diff = self.c_s_n(t[1:], x_n, r_n) - self.c_s_n(t[:-1], x_n, r_n)
             pos_diff = self.c_s_p(t[1:], x_p, r_p) - self.c_s_p(t[:-1], x_p, r_p)
@@ -321,6 +362,13 @@ class ParticleConcentrationTests(BaseOutputTest):
 
         np.testing.assert_array_less(self.c_s_n(t, x_n, r_n), 1)
         np.testing.assert_array_less(self.c_s_p(t, x_p, r_p), 1)
+        if self.model.options["particle size"] == "distribution":
+            R_n, R_p = self.R_n, self.R_p
+            np.testing.assert_array_less(-self.c_s_n_dist(t, r=r_n, R=R_n), 0)
+            np.testing.assert_array_less(-self.c_s_p_dist(t, r=r_p, R=R_p), 0)
+
+            np.testing.assert_array_less(self.c_s_n_dist(t, r=r_n, R=R_n), 1)
+            np.testing.assert_array_less(self.c_s_p_dist(t, r=r_p, R=R_p), 1)
 
     def test_conservation(self):
         """Test amount of lithium stored across all particles and in SEI layers is

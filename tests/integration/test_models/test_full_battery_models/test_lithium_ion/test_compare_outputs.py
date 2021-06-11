@@ -159,6 +159,88 @@ class TestCompareOutputs(unittest.TestCase):
         comparison = StandardOutputComparison(solutions)
         comparison.test_all(skip_first_timestep=True)
 
+    def test_compare_narrow_size_distribution(self):
+        # The MPM should agree with the SPM when the size distributions are narrow
+        # enough.
+        models = [
+            pybamm.lithium_ion.SPM(), pybamm.lithium_ion.MPM()
+        ]
+
+        param = models[0].default_parameter_values
+
+        # Set size distribution parameters
+        R_n_dim = param["Negative particle radius [m]"]
+        R_p_dim = param["Positive particle radius [m]"]
+
+        # Very small standard deviations
+        sd_a_n = 0.05
+        sd_a_p = 0.05
+
+        # Min and max radii
+        R_min_n = 0.8
+        R_min_p = 0.8
+        R_max_n = 1.2
+        R_max_p = 1.2
+
+        def lognormal(R, R_av, sd):
+            import numpy as np
+
+            mu_ln = pybamm.log(R_av ** 2 / pybamm.sqrt(R_av ** 2 + sd ** 2))
+            sigma_ln = pybamm.sqrt(pybamm.log(1 + sd ** 2 / R_av ** 2))
+            return (
+                pybamm.exp(-((pybamm.log(R) - mu_ln) ** 2) / (2 * sigma_ln ** 2))
+                / pybamm.sqrt(2 * np.pi * sigma_ln ** 2)
+                / R
+            )
+
+        def f_a_dist_n_dim(R):
+            return lognormal(R, R_n_dim, sd_a_n * R_n_dim)
+
+        def f_a_dist_p_dim(R):
+            return lognormal(R, R_p_dim, sd_a_p * R_p_dim)
+
+        param.update(
+            {
+                "Negative minimum particle radius [m]": R_min_n * R_n_dim,
+                "Positive minimum particle radius [m]": R_min_p * R_p_dim,
+                "Negative maximum particle radius [m]": R_max_n * R_n_dim,
+                "Positive maximum particle radius [m]": R_max_p * R_p_dim,
+                "Negative area-weighted "
+                + "particle-size distribution [m-1]": f_a_dist_n_dim,
+                "Positive area-weighted "
+                + "particle-size distribution [m-1]": f_a_dist_p_dim,
+            },
+            check_already_exists=False,
+        )
+
+        # set same mesh for both models
+        var = pybamm.standard_spatial_vars
+        var_pts = {
+            var.x_n: 5,
+            var.x_s: 5,
+            var.x_p: 5,
+            var.r_n: 5,
+            var.r_p: 5,
+            var.R_n: 5,
+            var.R_p: 5,
+        }
+
+        # solve models
+        solutions = []
+        for model in models:
+            sim = pybamm.Simulation(
+                model,
+                var_pts=var_pts,
+                parameter_values=param,
+                solver=pybamm.CasadiSolver(mode="fast")
+            )
+            solution = sim.solve([0, 3600])
+            solutions.append(solution)
+
+        # compare outputs
+        comparison = StandardOutputComparison(solutions)
+        comparison.test_all(skip_first_timestep=True)
+
 
 if __name__ == "__main__":
     print("Add -v for more debug output")
