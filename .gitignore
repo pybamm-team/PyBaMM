@@ -110,8 +110,5 @@ test.c
 # tox
 .tox/
 
-# julia
-Manifest.toml
-
 # vcpkg
 vcpkg_installed/

@@ -571,6 +571,8 @@ class ParameterValues:
                             geometry[domain][spatial_variable][
                                 lim
                             ] = self.process_symbol(sym)
+                        elif isinstance(sym, numbers.Number):
+                            geometry[domain][spatial_variable][lim] = pybamm.Scalar(sym)
 
     def process_symbol(self, symbol):
         """Walk through the symbol and replace any Parameter with a Value.

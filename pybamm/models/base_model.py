@@ -774,6 +774,22 @@ class BaseModel(object):
 
         print(div)
 
+    def check_discretised_or_discretise_inplace_if_0D(self):
+        """
+        Discretise model if it isn't already discretised
+        This only works with purely 0D models, as otherwise the mesh and spatial
+        method should be specified by the user
+        """
+        if self.is_discretised is False:
+            try:
+                disc = pybamm.Discretisation()
+                disc.process_model(self)
+            except pybamm.DiscretisationError as e:
+                raise pybamm.DiscretisationError(
+                    "Cannot automatically discretise model, model should be "
+                    "discretised before exporting casadi functions ({})".format(e)
+                )
+
     def export_casadi_objects(self, variable_names, input_parameter_order=None):
         """
         Export the constituent parts of the model (rhs, algebraic, initial conditions,
@@ -793,18 +809,7 @@ class BaseModel(object):
             Dictionary of {str: casadi object} pairs representing the model in casadi
             format
         """
-        # Discretise model if it isn't already discretised
-        # This only works with purely 0D models, as otherwise the mesh and spatial
-        # method should be specified by the user
-        if self.is_discretised is False:
-            try:
-                disc = pybamm.Discretisation()
-                disc.process_model(self)
-            except pybamm.DiscretisationError as e:
-                raise pybamm.DiscretisationError(
-                    "Cannot automatically discretise model, model should be "
-                    "discretised before exporting casadi functions ({})".format(e)
-                )
+        self.check_discretised_or_discretise_inplace_if_0D()
 
         # Create casadi functions for the model
         t_casadi = casadi.MX.sym("t")

@@ -31,6 +31,9 @@ class Scalar(pybamm.Symbol):
 
         super().__init__(name, domain=domain)
 
+    def __str__(self):
+        return str(self.value)
+
     @property
     def value(self):
         """the value returned by the node when evaluated"""

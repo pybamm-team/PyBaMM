@@ -44,9 +44,10 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                 variable for instead of solving in PyBaMM. The entries of the lists
                 are strings that correspond to the submodel names in the keys
                 of `self.submodels`.
-            * "interfacial surface area" : str
-                Sets the model for the interfacial surface area. Can be "constant"
-                (default) or "varying". Not currently implemented in any of the models.
+            * "hydrolysis" : str
+                Whether to include hydrolysis in the model. Only implemented for
+                lead-acid models. Can be "false" (default) or "true". If "true", then
+                "surface form" cannot be 'false'.
             * "lithium plating" : str, optional
                 Sets the model for lithium plating. Can be "none" (default),
                 "reversible" or "irreversible".
@@ -120,10 +121,6 @@ class BatteryModelOptions(pybamm.FuzzyDict):
             * "SEI porosity change" : str
                 Whether to include porosity change due to SEI formation, can be "false"
                 (default) or "true".
-            * "side reactions" : list
-                Contains a list of any side reactions to include. Default is []. If this
-                list is not empty (i.e. side reactions are included in the model), then
-                "surface form" cannot be 'false'.
             * "surface form" : str
                 Whether to use the surface formulation of the problem. Can be "false"
                 (default), "differential" or "algebraic".
@@ -141,7 +138,7 @@ class BatteryModelOptions(pybamm.FuzzyDict):
 
     def __init__(self, extra_options):
         self.possible_options = {
-            "surface form": ["false", "differential", "algebraic"],
+            "cell geometry": ["arbitrary", "pouch"],
             "convection": ["none", "uniform transverse", "full transverse"],
             "current collector": [
                 "uniform",
@@ -149,9 +146,27 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                 "potential pair quite conductive",
             ],
             "dimensionality": [0, 1, 2],
-            "interfacial surface area": ["constant", "varying"],
-            "thermal": ["isothermal", "lumped", "x-lumped", "x-full"],
-            "cell geometry": ["arbitrary", "pouch"],
+            "electrolyte conductivity": [
+                "default",
+                "full",
+                "leading order",
+                "composite",
+                "integrated",
+            ],
+            "hydrolysis": ["true", "false"],
+            "lithium plating": ["none", "reversible", "irreversible"],
+            "lithium plating porosity change": ["true", "false"],
+            "loss of active material": ["none", "stress-driven", "reaction-driven"],
+            "operating mode": ["current", "voltage", "power"],
+            "particle": [
+                "Fickian diffusion",
+                "fast diffusion",
+                "uniform profile",
+                "quadratic profile",
+                "quartic profile",
+            ],
+            "particle mechanics": ["none", "swelling only", "swelling and cracking"],
+            "particle shape": ["spherical", "user", "no particles"],
             "SEI": [
                 "none",
                 "constant",
@@ -163,55 +178,32 @@ class BatteryModelOptions(pybamm.FuzzyDict):
             ],
             "SEI film resistance": ["none", "distributed", "average"],
             "SEI porosity change": ["true", "false"],
-            "lithium plating": ["none", "reversible", "irreversible"],
-            "loss of active material": ["none", "stress-driven", "reaction-driven"],
-            "operating mode": ["current", "voltage", "power"],
-            "particle mechanics": [
-                "none",
-                "swelling only",
-                "swelling and cracking",
-            ],
-            "lithium plating porosity change": ["true", "false"],
-            "particle": [
-                "Fickian diffusion",
-                "fast diffusion",
-                "uniform profile",
-                "quadratic profile",
-                "quartic profile",
-            ],
-            "particle shape": ["spherical", "user", "no particles"],
-            "electrolyte conductivity": [
-                "default",
-                "full",
-                "leading order",
-                "composite",
-                "integrated",
-            ],
+            "surface form": ["false", "differential", "algebraic"],
+            "thermal": ["isothermal", "lumped", "x-lumped", "x-full"],
             "total interfacial current density as a state": ["true", "false"],
         }
 
         default_options = {
-            "operating mode": "current",
-            "dimensionality": 0,
-            "surface form": "false",
-            "convection": "none",
-            "side reactions": [],
-            "interfacial surface area": "constant",
-            "current collector": "uniform",
-            "particle": "Fickian diffusion",
-            "particle shape": "spherical",
-            "electrolyte conductivity": "default",
-            "thermal": "isothermal",
             "cell geometry": "none",
+            "convection": "none",
+            "current collector": "uniform",
+            "dimensionality": 0,
+            "electrolyte conductivity": "default",
             "external submodels": [],
-            "SEI": "none",
+            "hydrolysis": "false",
             "lithium plating": "none",
-            "SEI porosity change": "false",
             "lithium plating porosity change": "false",
             "loss of active material": "none",
-            "working electrode": "none",
+            "operating mode": "current",
+            "particle": "Fickian diffusion",
             "particle mechanics": "none",
+            "particle shape": "spherical",
+            "SEI": "none",
+            "SEI porosity change": "false",
+            "surface form": "false",
+            "thermal": "isothermal",
             "total interfacial current density as a state": "false",
+            "working electrode": "none",
         }
 
         # Change the default for cell geometry based on which thermal option is provided
@@ -309,11 +301,7 @@ class BatteryModelOptions(pybamm.FuzzyDict):
             )
 
         for option, value in options.items():
-            if (
-                option == "side reactions"
-                or option == "external submodels"
-                or option == "working electrode"
-            ):
+            if option == "external submodels" or option == "working electrode":
                 pass
             else:
                 if isinstance(value, str) or option in [
@@ -328,6 +316,7 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                             in [
                                 "loss of active material",
                                 "particle mechanics",
+                                "particle",
                             ]
                             and isinstance(value, tuple)
                             and len(value) == 2
@@ -483,14 +472,14 @@ class BaseBatteryModel(pybamm.BaseModel):
         if (
             isinstance(self, (pybamm.lead_acid.LOQS, pybamm.lead_acid.Composite))
             and options["surface form"] == "false"
+            and options["hydrolysis"] == "true"
         ):
-            if len(options["side reactions"]) > 0:
-                raise pybamm.OptionError(
-                    """must use surface formulation to solve {!s} with side reactions
+            raise pybamm.OptionError(
+                """must use surface formulation to solve {!s} with hydrolysis
                     """.format(
-                        self
-                    )
+                    self
                 )
+            )
 
         self._options = options
 
