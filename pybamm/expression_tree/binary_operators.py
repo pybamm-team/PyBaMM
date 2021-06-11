@@ -503,6 +503,8 @@ def inner(left, right):
 class _Heaviside(BinaryOperator):
     """
     A node in the expression tree representing a heaviside step function.
+    This class is semi-private and should not be called directly, use `EqualHeaviside`
+    or `NotEqualHeaviside` instead, or `<` or `<=`.
 
     Adding this operation to the rhs or algebraic equations in a model can often cause a
     discontinuity in the solution. For the specific cases listed below, this will be
