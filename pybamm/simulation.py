@@ -138,6 +138,7 @@ class Simulation:
         # Initialize empty built states
         self._model_with_set_params = None
         self._built_model = None
+        self._built_initial_soc = None
         self.op_conds_to_built_models = None
         self._mesh = None
         self._disc = None
@@ -598,10 +599,7 @@ class Simulation:
             solver = self.solver
 
         if initial_soc is not None:
-            if (
-                hasattr(self, "_built_initial_soc")
-                and self._built_initial_soc != initial_soc
-            ):
+            if self._built_initial_soc != initial_soc:
                 # reset
                 self._model_with_set_params = None
                 self._built_model = None

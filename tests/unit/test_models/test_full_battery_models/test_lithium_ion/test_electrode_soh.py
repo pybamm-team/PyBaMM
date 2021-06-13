@@ -73,6 +73,12 @@ class TestSetInitialSOC(unittest.TestCase):
         self.assertAlmostEqual(x, esoh_sol["x_0"].data[0])
         self.assertAlmostEqual(y, esoh_sol["y_0"].data[0])
 
+    def test_error(self):
+        with self.assertRaisesRegex(
+            ValueError, "Initial SOC should be between 0 and 1"
+        ):
+            pybamm.lithium_ion.get_initial_stoichiometries(2, None)
+
 
 if __name__ == "__main__":
     print("Add -v for more debug output")
