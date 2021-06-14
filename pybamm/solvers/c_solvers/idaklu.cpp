@@ -445,7 +445,9 @@ Solution solve(np_array t_np, np_array y0_np, np_array yp0_np,
 
     if (retval == IDA_TSTOP_RETURN || retval == IDA_SUCCESS || retval == IDA_ROOT_RETURN)
     {
-      IDAGetSens(ida_mem, &tret, yyS);
+      if (number_of_parameters > 0) {
+        IDAGetSens(ida_mem, &tret, yyS);
+      }
 
       t_return[t_i] = tret;
       for (int j = 0; j < number_of_states; j++)
