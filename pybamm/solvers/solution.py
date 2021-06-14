@@ -53,6 +53,7 @@ class Solution(object):
         t_event=None,
         y_event=None,
         termination="final time",
+        sensitivities=None
     ):
         if not isinstance(all_ts, list):
             all_ts = [all_ts]
@@ -63,6 +64,7 @@ class Solution(object):
         self._all_ts = all_ts
         self._all_ys = all_ys
         self._all_models = all_models
+        self._sensitivities = sensitivities
 
         self._t_event = t_event
         self._y_event = y_event
@@ -70,13 +72,16 @@ class Solution(object):
 
         # Set up inputs
         if not isinstance(all_inputs, list):
-            for key, value in all_inputs.items():
+            all_inputs_copy = dict(all_inputs)
+            for key, value in all_inputs_copy.items():
                 if isinstance(value, numbers.Number):
-                    all_inputs[key] = np.array([value])
-            all_inputs = [all_inputs]
-        self.all_inputs = all_inputs
+                    all_inputs_copy[key] = np.array([value])
+            self.all_inputs = [all_inputs_copy]
+        else:
+            self.all_inputs = all_inputs
+
         self.has_symbolic_inputs = any(
-            isinstance(v, casadi.MX) for v in all_inputs[0].values()
+            isinstance(v, casadi.MX) for v in self.all_inputs[0].values()
         )
 
         # Copy the timescale_eval and lengthscale_evals if they exist
@@ -130,6 +135,10 @@ class Solution(object):
             self.set_y()
             return self._y
 
+    @property
+    def sensitivities(self):
+        """Values of the sensitivities. Returns a dict of param_name: np_array"""
+        return self._sensitivities
 
     def set_y(self):
         try:

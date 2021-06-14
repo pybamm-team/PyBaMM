@@ -194,11 +194,13 @@ class IDAKLUSolver(pybamm.BaseSolver):
         rtol = self._rtol
         atol = self._check_atol_type(atol, y0.size)
 
-        mass_matrix = model.mass_matrix.entries
+        if model.convert_to_format == "jax":
+            mass_matrix = model.mass_matrix.entries.toarray()
+        else:
+            mass_matrix = model.mass_matrix.entries
 
         # construct residuals function by binding inputs
         def resfn(t, y, ydot):
-            print("calling python res")
             return model.residuals_eval(t, y, ydot, inputs)
 
         if model.jacobian_eval:
@@ -262,7 +264,6 @@ class IDAKLUSolver(pybamm.BaseSolver):
         number_of_sensitivity_parameters = 0
         if model.sensitivities_eval is not None:
             sens0 = model.sensitivities_eval(t=0, y=y0, inputs=inputs)
-            print('sensitivities found are = ', sens0.keys())
             number_of_sensitivity_parameters = len(sens0.keys())
 
         def sensfn(resvalS, t, y, yp, yS, ypS):
@@ -283,28 +284,23 @@ class IDAKLUSolver(pybamm.BaseSolver):
                 time value
             y: ndarray of shape (n)
                 current state vector
-            yp: ndarray of shape (n)
+            yp: list (np) of ndarray of shape (n)
                 current time derivative of state vector
-            yS: ndarray of shape (n)
+            yS: list (np) of ndarray of shape (n)
                 current state vector of sensitivity equations
-            ypS: ndarray of shape (n)
+            ypS: list (np) of ndarray of shape (n)
                 current time derivative of state vector of sensitivity equations
 
             """
 
-            print('calling python sensfn')
-            np, n = resvalS.shape
+            np = len(resvalS)
+            n = resvalS[0].shape[0]
             dFdy = model.jacobian_eval(t, y, inputs)
             dFdyd = mass_matrix
             dFdp = model.sensitivities_eval(t, y, inputs)
-            print('dFdy', dFdy.shape)
-            print('dFdyd', dFdyd.shape)
-            print('dFdp_i', list(dFdp.values())[0].shape)
-            print('yS_i', yS[0].shape)
-            print('ypS_i', ypS[0].shape)
 
             for i, dFdp_i in enumerate(dFdp.values()):
-                resvalS[i] = dFdy @ yS[i] + dFdyd @ ypS[i] + dFdp_i.reshape(-1)
+                resvalS[i][:] = dFdy @ yS[i] - dFdyd @ ypS[i] + dFdp_i
 
         # solve
         timer = pybamm.Timer()
@@ -335,6 +331,12 @@ class IDAKLUSolver(pybamm.BaseSolver):
         y_out = sol.y.reshape((number_of_timesteps, number_of_states))
 
         # return solution, we need to tranpose y to match scipy's interface
+        if number_of_sensitivity_parameters != 0:
+            yS_out = {
+                name: sol.yS[i].transpose() for i, name in enumerate(sens0.keys())
+            }
+        else:
+            yS_out = None
         if sol.flag in [0, 2]:
             # 0 = solved for all t_eval
             if sol.flag == 0:
@@ -351,6 +353,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
                 t[-1],
                 np.transpose(y_out[-1])[:, np.newaxis],
                 termination,
+                sensitivities=yS_out,
             )
             sol.integration_time = integration_time
             return sol

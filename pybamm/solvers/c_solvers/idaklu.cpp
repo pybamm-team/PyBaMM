@@ -11,24 +11,24 @@
 #include <pybind11/functional.h>
 #include <pybind11/numpy.h>
 #include <pybind11/pybind11.h>
+#include <pybind11/stl_bind.h>
 
-#include <iostream>
+//#include <iostream>
 namespace py = pybind11;
 
-using residual_type = std::function<py::array_t<double>(
-    double, py::array_t<double>, py::array_t<double>)>;
-using sensitivities_type = std::function<void(
-    py::array_t<realtype>, realtype, 
-    py::array_t<realtype>, py::array_t<realtype>, 
-    py::array_t<realtype>, py::array_t<realtype>
-  )>;
-using jacobian_type =
-    std::function<py::array_t<double>(double, py::array_t<double>, double)>;
 
+using np_array = py::array_t<realtype>;
+PYBIND11_MAKE_OPAQUE(std::vector<np_array>);
+using residual_type = std::function<np_array(realtype, np_array, np_array)>;
+using sensitivities_type = std::function<void(
+    std::vector<np_array>&, realtype, const np_array&, 
+    const np_array&, const std::vector<np_array>&, 
+    const std::vector<np_array>&
+  )>;
+using jacobian_type = std::function<np_array(realtype, np_array, realtype)>;
 
 using event_type =
-    std::function<py::array_t<double>(double, py::array_t<double>)>;
-using np_array = py::array_t<double>;
+    std::function<np_array(realtype, np_array)>;
 
 using jac_get_type = std::function<np_array()>;
 
@@ -59,14 +59,12 @@ public:
   py::array_t<double> operator()(double t, py::array_t<double> y,
                                  py::array_t<double> yp)
   {
-    std::cout << "calling res()" << std::endl;
     return py_res(t, y, yp);
   }
 
   py::array_t<double> res(double t, py::array_t<double> y,
                           py::array_t<double> yp)
   {
-    std::cout << "calling res" << std::endl;
     return py_res(t, y, yp);
   }
 
@@ -79,10 +77,9 @@ public:
   }
 
   void sensitivities(
-      py::array_t<realtype> resvalS,
-      double t, 
-      py::array_t<realtype> y, py::array_t<realtype> yp, 
-      py::array_t<realtype> yS, py::array_t<realtype> ypS) 
+      std::vector<np_array>& resvalS,
+      const double t, const np_array& y, const np_array& yp, 
+      const std::vector<np_array>& yS, const std::vector<np_array>& ypS) 
   {
     // this function evaluates the sensitivity equations required by IDAS,
     // returning them in resvalS, which is preallocated as a numpy array 
@@ -92,7 +89,6 @@ public:
     // yS and ypS are also shape (np, n), y and yp are shape (n)
     //
     // dF/dy * s_i + dF/dyd * sd + dFdp_i for i in range(np)
-    std::cout << "calling sensitivity" << std::endl;
     py_sens(resvalS, t, y, yp, yS, ypS);
   }
 
@@ -117,7 +113,6 @@ private:
 int residual(realtype tres, N_Vector yy, N_Vector yp, N_Vector rr,
              void *user_data)
 {
-  std::cout << "calling orignal res" <<std::endl;
   PybammFunctions *python_functions_ptr =
       static_cast<PybammFunctions *>(user_data);
   PybammFunctions python_functions = *python_functions_ptr;
@@ -143,7 +138,6 @@ int residual(realtype tres, N_Vector yy, N_Vector yp, N_Vector rr,
   {
     rval[i] = r_np_ptr[i];
   }
-  std::cout << "back in original res" <<std::endl;
   return 0;
 }
 
@@ -151,7 +145,6 @@ int jacobian(realtype tt, realtype cj, N_Vector yy, N_Vector yp,
              N_Vector resvec, SUNMatrix JJ, void *user_data, N_Vector tempv1,
              N_Vector tempv2, N_Vector tempv3)
 {
-  std::cout << "calling orignal jacobian" <<std::endl;
   realtype *yval;
   yval = N_VGetArrayPointer(yy);
 
@@ -259,35 +252,43 @@ int sensitivities(int Ns, realtype t, N_Vector yy, N_Vector yp,
 // occurred (in which case idas will attempt to correct), 
 // or a negative value if it failed unrecoverably (in which case the integration is halted and IDA SRES FAIL is returned)
 //
-  std::cout << "calling orignal sensitivity" <<std::endl;
   PybammFunctions *python_functions_ptr =
       static_cast<PybammFunctions *>(user_data);
   PybammFunctions python_functions = *python_functions_ptr;
 
-  realtype *yval = N_VGetArrayPointer(yy);
-  realtype *ypval = N_VGetArrayPointer(yp);
-  realtype *ySval = N_VGetArrayPointer(yS[0]);
-  realtype *ypSval = N_VGetArrayPointer(ypS[0]);
-  realtype *resvalSval = N_VGetArrayPointer(resvalS[0]);
-
   int n = python_functions.number_of_states;
   int np = python_functions.number_of_parameters;
 
-  py::array_t<realtype> y_np = py::array_t<realtype>(n, yval);
-  py::array_t<realtype> yp_np = py::array_t<realtype>(n, ypval);
-  py::array_t<realtype> yS_np = py::array_t<realtype>(
-      std::vector<ptrdiff_t>{np, n}, ySval
-      );
-  py::array_t<realtype> ypS_np = py::array_t<realtype>(
-      std::vector<ptrdiff_t>{np, n}, ypSval
-      );
-  py::array_t<realtype> resvalS_np = py::array_t<realtype>(
-      std::vector<ptrdiff_t>{np, n}, resvalSval 
-      );
-  
-  python_functions.sensitivities(
-      resvalS_np, t, y_np, yp_np, yS_np, ypS_np
-      );
+  // memory managed by sundials, so pass a destructor that does nothing
+  auto state_vector_shape = std::vector<ptrdiff_t>{n, 1};
+  np_array y_np = np_array(state_vector_shape, N_VGetArrayPointer(yy), 
+                           py::capsule(&yy, [](void* p) {}));
+  np_array yp_np = np_array(state_vector_shape, N_VGetArrayPointer(yp),
+                           py::capsule(&yp, [](void* p) {}));
+
+  std::vector<np_array> yS_np(np);
+  for (int i = 0; i < np; i++) {
+    auto capsule = py::capsule(yS + i, [](void* p) {});
+    yS_np[i] = np_array(state_vector_shape, N_VGetArrayPointer(yS[i]), capsule);
+  }
+
+  std::vector<np_array> ypS_np(np);
+  for (int i = 0; i < np; i++) {
+    auto capsule = py::capsule(ypS + i, [](void* p) {});
+    ypS_np[i] = np_array(state_vector_shape, N_VGetArrayPointer(ypS[i]), capsule);
+  }
+
+  std::vector<np_array> resvalS_np(np);
+  for (int i = 0; i < np; i++) {
+    auto capsule = py::capsule(resvalS + i, [](void* p) {});
+    resvalS_np[i] = np_array(state_vector_shape, 
+                             N_VGetArrayPointer(resvalS[i]), capsule);
+  }
+
+  realtype *ptr1 = static_cast<realtype *>(resvalS_np[0].request().ptr);
+  const realtype* resvalSval = N_VGetArrayPointer(resvalS[0]);
+
+  python_functions.sensitivities(resvalS_np, t, y_np, yp_np, yS_np, ypS_np);
 
   return 0;
 }
@@ -295,14 +296,15 @@ int sensitivities(int Ns, realtype t, N_Vector yy, N_Vector yp,
 class Solution
 {
 public:
-  Solution(int retval, np_array t_np, np_array y_np)
-      : flag(retval), t(t_np), y(y_np)
+  Solution(int retval, np_array t_np, np_array y_np, np_array yS_np)
+      : flag(retval), t(t_np), y(y_np), yS(yS_np)
   {
   }
 
   int flag;
   np_array t;
   np_array y;
+  np_array yS;
 };
 
 /* main program */
@@ -324,7 +326,7 @@ Solution solve(np_array t_np, np_array y0_np, np_array yp0_np,
   void *ida_mem;          // pointer to memory
   N_Vector yy, yp, avtol; // y, y', and absolute tolerance
   N_Vector *yyS, *ypS;      // y, y' for sensitivities
-  realtype rtol, *yval, *ypval, *atval;
+  realtype rtol, *yval, *ypval, *atval, *ySval;
   int retval;
   SUNMatrix J;
   SUNLinearSolver LS;
@@ -341,6 +343,7 @@ Solution solve(np_array t_np, np_array y0_np, np_array yp0_np,
 
   // set initial value
   yval = N_VGetArrayPointer(yy);
+  ySval = N_VGetArrayPointer(yyS[0]);
   ypval = N_VGetArrayPointer(yp);
   atval = N_VGetArrayPointer(avtol);
   int i;
@@ -351,11 +354,9 @@ Solution solve(np_array t_np, np_array y0_np, np_array yp0_np,
     atval[i] = atol[i];
   }
 
-  if (number_of_parameters > 0) {
-    for (int is = 0 ; is < number_of_parameters; is++) {
-      N_VConst(NZERO, yyS[is]);
-      N_VConst(NZERO, ypS[is]);
-    }
+  for (int is = 0 ; is < number_of_parameters; is++) {
+    N_VConst(RCONST(0.0), yyS[is]);
+    N_VConst(RCONST(0.0), ypS[is]);
   }
 
   // allocate memory for solver
@@ -393,12 +394,9 @@ Solution solve(np_array t_np, np_array y0_np, np_array yp0_np,
 
   if (number_of_parameters > 0)
   {
-    std::cout << "running sensitivities with np = " << number_of_parameters << std::endl;
     retval = IDASensInit(ida_mem, number_of_parameters, 
         IDA_SIMULTANEOUS, sensitivities, yyS, ypS);
-    std::cout << "retval from IDASensInit is " << retval << std::endl;
     retval = IDASensEEtolerances(ida_mem);
-    std::cout << "retval from IDASensEEtolerances is " << retval << std::endl;
   }
 
   int t_i = 1;
@@ -409,16 +407,21 @@ Solution solve(np_array t_np, np_array y0_np, np_array yp0_np,
   // set return vectors
   std::vector<double> t_return(number_of_timesteps);
   std::vector<double> y_return(number_of_timesteps * number_of_states);
+  std::vector<double> yS_return(number_of_parameters * number_of_timesteps * number_of_states);
 
   t_return[0] = t(0);
-  int j;
-  for (j = 0; j < number_of_states; j++)
+  for (int j = 0; j < number_of_states; j++)
   {
     y_return[j] = yval[j];
   }
+  for (int j = 0; j < number_of_parameters; j++) {
+    const int base_index = j * number_of_timesteps * number_of_states;
+    for (int k = 0; k < number_of_states; k++) {
+      yS_return[base_index + k] = ySval[j * number_of_states + k];
+    }
+  }
 
   // calculate consistent initial conditions
-  std::cout << "calculating ICs" << std::endl;
   N_Vector id;
   auto id_np_val = rhs_alg_id.unchecked<1>();
   id = N_VNew_Serial(number_of_states);
@@ -433,33 +436,34 @@ Solution solve(np_array t_np, np_array y0_np, np_array yp0_np,
 
   IDASetId(ida_mem, id);
   IDACalcIC(ida_mem, IDA_YA_YDP_INIT, t(1));
-  std::cout << "finished calculating ICs" << std::endl;
 
   while (true)
   {
     t_next = t(t_i);
-    std::cout << "next time step "<<t_next<<std::endl;
     IDASetStopTime(ida_mem, t_next);
     retval = IDASolve(ida_mem, t_final, &tret, yy, yp, IDA_NORMAL);
 
-    if (retval == IDA_TSTOP_RETURN)
+    if (retval == IDA_TSTOP_RETURN || retval == IDA_SUCCESS || retval == IDA_ROOT_RETURN)
     {
+      IDAGetSens(ida_mem, &tret, yyS);
+
       t_return[t_i] = tret;
-      for (j = 0; j < number_of_states; j++)
+      for (int j = 0; j < number_of_states; j++)
       {
         y_return[t_i * number_of_states + j] = yval[j];
+      }
+      for (int j = 0; j < number_of_parameters; j++) {
+        const int base_index = j * number_of_timesteps * number_of_states 
+                               + t_i * number_of_states;
+        for (int k = 0; k < number_of_states; k++) {
+          yS_return[base_index + k] = ySval[j * number_of_states + k];
+        }
       }
       t_i += 1;
-    }
-
-    if (retval == IDA_SUCCESS || retval == IDA_ROOT_RETURN)
-    {
-      t_return[t_i] = tret;
-      for (j = 0; j < number_of_states; j++)
-      {
-        y_return[t_i * number_of_states + j] = yval[j];
+      if (retval == IDA_SUCCESS || retval == IDA_ROOT_RETURN) {
+        break;
       }
-      break;
+
     }
   }
 
@@ -472,12 +476,19 @@ Solution solve(np_array t_np, np_array y0_np, np_array yp0_np,
   SUNMatDestroy(J);
   N_VDestroy(avtol);
   N_VDestroy(yp);
+  if (number_of_parameters > 0) {
+    N_VDestroyVectorArray(yyS, number_of_parameters);
+    N_VDestroyVectorArray(ypS, number_of_parameters);
+  }
 
-  py::array_t<double> t_ret = py::array_t<double>((t_i + 1), &t_return[0]);
-  py::array_t<double> y_ret =
-      py::array_t<double>((t_i + 1) * number_of_states, &y_return[0]);
+  np_array t_ret = np_array(t_i, &t_return[0]);
+  np_array y_ret = np_array(t_i * number_of_states, &y_return[0]);
+  np_array yS_ret = np_array(
+      std::vector<ptrdiff_t>{number_of_parameters, t_i, number_of_states},
+      &yS_return[0] 
+      );
 
-  Solution sol(retval, t_ret, y_ret);
+  Solution sol(retval, t_ret, y_ret, yS_ret);
 
   return sol;
 }
@@ -485,6 +496,8 @@ Solution solve(np_array t_np, np_array y0_np, np_array yp0_np,
 PYBIND11_MODULE(idaklu, m)
 {
   m.doc() = "sundials solvers"; // optional module docstring
+
+  py::bind_vector<std::vector<np_array>>(m, "VectorNdArray");
 
   m.def("solve", &solve, "The solve function", py::arg("t"), py::arg("y0"),
         py::arg("yp0"), py::arg("res"), py::arg("jac"), py::arg("sens"), 
@@ -498,5 +511,6 @@ PYBIND11_MODULE(idaklu, m)
   py::class_<Solution>(m, "solution")
       .def_readwrite("t", &Solution::t)
       .def_readwrite("y", &Solution::y)
+      .def_readwrite("yS", &Solution::yS)
       .def_readwrite("flag", &Solution::flag);
 }
