@@ -293,8 +293,6 @@ class IDAKLUSolver(pybamm.BaseSolver):
 
             """
 
-            np = len(resvalS)
-            n = resvalS[0].shape[0]
             dFdy = model.jacobian_eval(t, y, inputs)
             dFdyd = mass_matrix
             dFdp = model.sensitivities_eval(t, y, inputs)

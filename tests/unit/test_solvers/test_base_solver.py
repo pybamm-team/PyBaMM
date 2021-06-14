@@ -362,7 +362,7 @@ class TestBaseSolver(unittest.TestCase):
                     use_inputs = inputs
 
                 sens = model.sensitivities_eval(
-                        t, y, use_inputs
+                    t, y, use_inputs
                 )
                 np.testing.assert_allclose(
                     sens['a'],

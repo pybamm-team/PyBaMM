@@ -349,6 +349,7 @@ class BaseSolver(object):
                             [p_diff]
                         )
                     # jacp should be a function that returns a dict of sensitivities
+
                     def jacp(*args, **kwargs):
                         return {k: v(*args, **kwargs)
                                 for k, v in jacp_dict.items()}
@@ -1327,6 +1328,7 @@ class SolverCallable:
         else:
             return self._function(t, y, inputs=inputs, known_evals={})[0]
 
+
 class SensitivityCallable:
     """A class that will be called by the solver when integrating"""
 
@@ -1354,6 +1356,7 @@ class SensitivityCallable:
             ret_with_known_evals = \
                 self._function(t, y, inputs=inputs, known_evals={})
             return {k: v[0] for k, v in ret_with_known_evals.items()}
+
 
 class Residuals(SolverCallable):
     """Returns information about residuals at time t and state y"""

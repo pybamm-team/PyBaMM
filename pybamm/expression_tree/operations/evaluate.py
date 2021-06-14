@@ -626,10 +626,9 @@ class EvaluatorJax:
         jacobian_evaluate = jax.jacfwd(self._evaluate_jax, argnums=3 + n)
 
         self._sens_evaluate = jax.jit(jacobian_evaluate,
-                                     static_argnums=self._static_argnums)
+                                      static_argnums=self._static_argnums)
 
         return EvaluatorJaxSensitivities(self._sens_evaluate, self._constants)
-
 
     def debug(self, t=None, y=None, y_dot=None, inputs=None, known_evals=None):
         # generated code assumes y is a column vector
@@ -687,6 +686,7 @@ class EvaluatorJaxJacobian:
             return result, known_evals
         else:
             return result
+
 
 class EvaluatorJaxSensitivities:
     def __init__(self, jac_evaluate, constants):
