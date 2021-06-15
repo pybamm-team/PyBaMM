@@ -72,30 +72,6 @@ class MPM(BaseModel):
 
         pybamm.citations.register("Kirk2020")
 
-    def set_external_circuit_submodel(self):
-        """
-        Define how the external circuit defines the boundary conditions for the model,
-        e.g. (not necessarily constant-) current, voltage, etc
-        """
-        if self.options["operating mode"] == "current":
-            self.submodels["external circuit"] = pybamm.external_circuit.CurrentControl(
-                self.param
-            )
-        elif self.options["operating mode"] == "voltage":
-            raise NotImplementedError(
-                """Many-Particle Model does not support voltage control."""
-            )
-        elif self.options["operating mode"] == "power":
-            self.submodels[
-                "external circuit"
-            ] = pybamm.external_circuit.PowerFunctionControl(self.param)
-        elif callable(self.options["operating mode"]):
-            self.submodels[
-                "external circuit"
-            ] = pybamm.external_circuit.FunctionControl(
-                self.param, self.options["operating mode"]
-            )
-
     def set_convection_submodel(self):
 
         self.submodels[

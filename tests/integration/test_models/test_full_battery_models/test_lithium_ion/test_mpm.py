@@ -96,6 +96,14 @@ class TestMPM(unittest.TestCase):
         modeltest = tests.StandardModelTest(model)
         modeltest.test_all()
 
+    def test_voltage_control(self):
+        options = {"operating mode": "voltage"}
+        model = pybamm.lithium_ion.MPM(options)
+        param = model.default_parameter_values
+        param.update({"Voltage function [V]": 3.8}, check_already_exists=False)
+        modeltest = tests.StandardModelTest(model, parameter_values=param)
+        modeltest.test_all(skip_output_tests=True)
+
     def test_conservation_each_electrode(self):
         # Test that surface areas are being calculated from the distribution correctly
         # for any discretization in the size domain.
@@ -128,6 +136,8 @@ class TestMPM(unittest.TestCase):
         np.testing.assert_array_almost_equal(pos_Li[0], pos_Li[1], decimal=14)
 
     def set_distribution_params_for_test(self, param):
+        import numpy as np
+
         R_n_dim = param["Negative particle radius [m]"]
         R_p_dim = param["Positive particle radius [m]"]
         sd_a_n = 0.3
@@ -140,8 +150,6 @@ class TestMPM(unittest.TestCase):
         R_max_p = 1 + sd_a_p * 5
 
         def lognormal(R, R_av, sd):
-            import numpy as np
-
             mu_ln = pybamm.log(R_av ** 2 / pybamm.sqrt(R_av ** 2 + sd ** 2))
             sigma_ln = pybamm.sqrt(pybamm.log(1 + sd ** 2 / R_av ** 2))
             return (

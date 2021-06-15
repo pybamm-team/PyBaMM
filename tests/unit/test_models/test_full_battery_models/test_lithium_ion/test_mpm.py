@@ -155,10 +155,10 @@ class TestMPM(unittest.TestCase):
 
 
 class TestMPMExternalCircuits(unittest.TestCase):
-    def test_voltage_not_implemented(self):
+    def test_well_posed_voltage(self):
         options = {"operating mode": "voltage"}
-        with self.assertRaises(NotImplementedError):
-            pybamm.lithium_ion.MPM(options)
+        model = pybamm.lithium_ion.MPM(options)
+        model.check_well_posedness()
 
     def test_well_posed_power(self):
         options = {"operating mode": "power"}
