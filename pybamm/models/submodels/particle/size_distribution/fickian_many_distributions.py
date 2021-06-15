@@ -135,7 +135,6 @@ class FickianManySizeDistributions(BaseSizeDistribution):
         )
 
         variables.update(self._get_total_concentration_variables(variables))
-        variables.update(self._get_surface_area_output_variables(variables))
         return variables
 
     def set_rhs(self, variables):

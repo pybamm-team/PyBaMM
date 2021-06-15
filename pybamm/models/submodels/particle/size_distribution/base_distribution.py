@@ -103,28 +103,28 @@ class BaseSizeDistribution(BaseParticle):
             self.domain + " number-based particle-size"
             + " distribution [m-1]": f_num_dist / R_typ,
             self.domain + " area-weighted"
-            + " mean radius": R_a_mean,
+            + " mean particle radius": R_a_mean,
             self.domain + " area-weighted"
-            + " mean radius [m]": R_a_mean * R_typ,
+            + " mean particle radius [m]": R_a_mean * R_typ,
             self.domain + " volume-weighted"
-            + " mean radius": R_v_mean,
+            + " mean particle radius": R_v_mean,
             self.domain + " volume-weighted"
-            + " mean radius [m]": R_v_mean * R_typ,
+            + " mean particle radius [m]": R_v_mean * R_typ,
             self.domain + " number-based"
-            + " mean radius": R_num_mean,
+            + " mean particle radius": R_num_mean,
             self.domain + " number-based"
-            + " mean radius [m]": R_num_mean * R_typ,
-            self.domain + " area-weighted"
+            + " mean particle radius [m]": R_num_mean * R_typ,
+            self.domain + " area-weighted particle-size"
             + " standard deviation": sd_a,
-            self.domain + " area-weighted"
+            self.domain + " area-weighted particle-size"
             + " standard deviation [m]": sd_a * R_typ,
-            self.domain + " volume-weighted"
+            self.domain + " volume-weighted particle-size"
             + " standard deviation": sd_v,
-            self.domain + " volume-weighted"
+            self.domain + " volume-weighted particle-size"
             + " standard deviation [m]": sd_v * R_typ,
-            self.domain + " number-based"
+            self.domain + " number-based particle-size"
             + " standard deviation": sd_num,
-            self.domain + " number-based"
+            self.domain + " number-based particle-size"
             + " standard deviation [m]": sd_num * R_typ,
             # X-averaged distributions
             "X-averaged " + self.domain.lower() +
@@ -262,27 +262,3 @@ class BaseSizeDistribution(BaseParticle):
         }
         return variables
 
-    def _get_surface_area_output_variables(self, variables):
-
-        if self.domain == "Negative":
-            a_typ = self.param.a_n_typ
-        elif self.domain == "Positive":
-            a_typ = self.param.a_p_typ
-
-        R_a_mean = variables[self.domain + " area-weighted mean radius"]
-
-        # True surface area to volume ratio, using the true area-weighted mean
-        # radius calculated from the distribution. It should agree with the
-        # "X-averaged negative electrode surface area to volume ratio", etc.,
-        # calculated in `active_material.BaseModel`, and can be used as a check
-        true_a = 1 / R_a_mean
-
-        variables.update(
-            {
-                "True " + self.domain.lower() + " electrode surface area to volume"
-                + " ratio" : true_a,
-                "True " + self.domain.lower() + " electrode surface area to volume"
-                + " ratio [m-1]" : true_a * a_typ,
-            }
-        )
-        return variables
