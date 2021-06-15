@@ -1,11 +1,13 @@
 #
 # Binary operator classes
 #
-import pybamm
+import numbers
 
 import numpy as np
-import numbers
-from scipy.sparse import issparse, csr_matrix
+import sympy
+from scipy.sparse import csr_matrix, issparse
+
+import pybamm
 
 
 def preprocess_binary(left, right):
@@ -60,7 +62,8 @@ def get_binary_children_domains(ldomain, rdomain):
 
 
 class BinaryOperator(pybamm.Symbol):
-    """A node in the expression tree representing a binary operator (e.g. `+`, `*`)
+    """
+    A node in the expression tree representing a binary operator (e.g. `+`, `*`)
 
     Derived classes will specify the particular operator
 
@@ -75,7 +78,6 @@ class BinaryOperator(pybamm.Symbol):
         lhs child node (converted to :class:`Scalar` if Number)
     right : :class:`Symbol` or :class:`Number`
         rhs child node (converted to :class:`Scalar` if Number)
-
     """
 
     def __init__(self, name, left, right):
@@ -93,7 +95,7 @@ class BinaryOperator(pybamm.Symbol):
         self.right = self.children[1]
 
     def __str__(self):
-        """ See :meth:`pybamm.Symbol.__str__()`. """
+        """See :meth:`pybamm.Symbol.__str__()`."""
         # Possibly add brackets for clarity
         if isinstance(self.left, pybamm.BinaryOperator) and not (
             (self.left.name == self.name)
@@ -113,7 +115,7 @@ class BinaryOperator(pybamm.Symbol):
         return "{} {} {}".format(left_str, self.name, right_str)
 
     def new_copy(self):
-        """ See :meth:`pybamm.Symbol.new_copy()`. """
+        """See :meth:`pybamm.Symbol.new_copy()`."""
 
         # process children
         new_left = self.left.new_copy()
@@ -134,7 +136,7 @@ class BinaryOperator(pybamm.Symbol):
         return self._binary_evaluate(left, right)
 
     def evaluate(self, t=None, y=None, y_dot=None, inputs=None, known_evals=None):
-        """ See :meth:`pybamm.Symbol.evaluate()`. """
+        """See :meth:`pybamm.Symbol.evaluate()`."""
         if known_evals is not None:
             id = self.id
             try:
@@ -153,42 +155,57 @@ class BinaryOperator(pybamm.Symbol):
             return self._binary_evaluate(left, right)
 
     def _evaluate_for_shape(self):
-        """ See :meth:`pybamm.Symbol.evaluate_for_shape()`. """
+        """See :meth:`pybamm.Symbol.evaluate_for_shape()`."""
         left = self.children[0].evaluate_for_shape()
         right = self.children[1].evaluate_for_shape()
         return self._binary_evaluate(left, right)
 
     def _binary_jac(self, left_jac, right_jac):
-        """ Calculate the jacobian of a binary operator. """
+        """Calculate the jacobian of a binary operator."""
         raise NotImplementedError
 
     def _binary_evaluate(self, left, right):
-        """ Perform binary operation on nodes 'left' and 'right'. """
+        """Perform binary operation on nodes 'left' and 'right'."""
         raise NotImplementedError
 
     def _evaluates_on_edges(self, dimension):
-        """ See :meth:`pybamm.Symbol._evaluates_on_edges()`. """
+        """See :meth:`pybamm.Symbol._evaluates_on_edges()`."""
         return self.left.evaluates_on_edges(dimension) or self.right.evaluates_on_edges(
             dimension
         )
 
     def is_constant(self):
-        """ See :meth:`pybamm.Symbol.is_constant()`. """
+        """See :meth:`pybamm.Symbol.is_constant()`."""
         return self.left.is_constant() and self.right.is_constant()
+
+    def _sympy_operator(self, left, right):
+        """Apply appropriate SymPy operators."""
+        return self._binary_evaluate(left, right)
+
+    def to_equation(self):
+        """Convert the node and its subtree into a SymPy equation."""
+        if getattr(self, "print_name", None):
+            return sympy.symbols(self.print_name)
+        else:
+            child1, child2 = self.children
+            eq1 = child1.to_equation()
+            eq2 = child2.to_equation()
+            return self._sympy_operator(eq1, eq2)
 
 
 class Power(BinaryOperator):
-    """A node in the expression tree representing a `**` power operator
+    """
+    A node in the expression tree representing a `**` power operator.
 
     **Extends:** :class:`BinaryOperator`
     """
 
     def __init__(self, left, right):
-        """ See :meth:`pybamm.BinaryOperator.__init__()`. """
+        """See :meth:`pybamm.BinaryOperator.__init__()`."""
         super().__init__("**", left, right)
 
     def _diff(self, variable):
-        """ See :meth:`pybamm.Symbol._diff()`. """
+        """See :meth:`pybamm.Symbol._diff()`."""
         # apply chain rule and power rule
         base, exponent = self.orphans
         # derivative if variable is in the base
@@ -200,7 +217,7 @@ class Power(BinaryOperator):
         return diff
 
     def _binary_jac(self, left_jac, right_jac):
-        """ See :meth:`pybamm.BinaryOperator._binary_jac()`. """
+        """See :meth:`pybamm.BinaryOperator._binary_jac()`."""
         # apply chain rule and power rule
         left, right = self.orphans
         if right.evaluates_to_constant_number():
@@ -213,56 +230,58 @@ class Power(BinaryOperator):
             )
 
     def _binary_evaluate(self, left, right):
-        """ See :meth:`pybamm.BinaryOperator._binary_evaluate()`. """
+        """See :meth:`pybamm.BinaryOperator._binary_evaluate()`."""
         # don't raise RuntimeWarning for NaNs
         with np.errstate(invalid="ignore"):
             return left ** right
 
 
 class Addition(BinaryOperator):
-    """A node in the expression tree representing an addition operator
+    """
+    A node in the expression tree representing an addition operator.
 
     **Extends:** :class:`BinaryOperator`
     """
 
     def __init__(self, left, right):
-        """ See :meth:`pybamm.BinaryOperator.__init__()`. """
+        """See :meth:`pybamm.BinaryOperator.__init__()`."""
         super().__init__("+", left, right)
 
     def _diff(self, variable):
-        """ See :meth:`pybamm.Symbol._diff()`. """
+        """See :meth:`pybamm.Symbol._diff()`."""
         return self.left.diff(variable) + self.right.diff(variable)
 
     def _binary_jac(self, left_jac, right_jac):
-        """ See :meth:`pybamm.BinaryOperator._binary_jac()`. """
+        """See :meth:`pybamm.BinaryOperator._binary_jac()`."""
         return left_jac + right_jac
 
     def _binary_evaluate(self, left, right):
-        """ See :meth:`pybamm.BinaryOperator._binary_evaluate()`. """
+        """See :meth:`pybamm.BinaryOperator._binary_evaluate()`."""
         return left + right
 
 
 class Subtraction(BinaryOperator):
-    """A node in the expression tree representing a subtraction operator
+    """
+    A node in the expression tree representing a subtraction operator.
 
     **Extends:** :class:`BinaryOperator`
     """
 
     def __init__(self, left, right):
-        """ See :meth:`pybamm.BinaryOperator.__init__()`. """
+        """See :meth:`pybamm.BinaryOperator.__init__()`."""
 
         super().__init__("-", left, right)
 
     def _diff(self, variable):
-        """ See :meth:`pybamm.Symbol._diff()`. """
+        """See :meth:`pybamm.Symbol._diff()`."""
         return self.left.diff(variable) - self.right.diff(variable)
 
     def _binary_jac(self, left_jac, right_jac):
-        """ See :meth:`pybamm.BinaryOperator._binary_jac()`. """
+        """See :meth:`pybamm.BinaryOperator._binary_jac()`."""
         return left_jac - right_jac
 
     def _binary_evaluate(self, left, right):
-        """ See :meth:`pybamm.BinaryOperator._binary_evaluate()`. """
+        """See :meth:`pybamm.BinaryOperator._binary_evaluate()`."""
         return left - right
 
 
@@ -276,18 +295,18 @@ class Multiplication(BinaryOperator):
     """
 
     def __init__(self, left, right):
-        """ See :meth:`pybamm.BinaryOperator.__init__()`. """
+        """See :meth:`pybamm.BinaryOperator.__init__()`."""
 
         super().__init__("*", left, right)
 
     def _diff(self, variable):
-        """ See :meth:`pybamm.Symbol._diff()`. """
+        """See :meth:`pybamm.Symbol._diff()`."""
         # apply product rule
         left, right = self.orphans
         return left.diff(variable) * right + left * right.diff(variable)
 
     def _binary_jac(self, left_jac, right_jac):
-        """ See :meth:`pybamm.BinaryOperator._binary_jac()`. """
+        """See :meth:`pybamm.BinaryOperator._binary_jac()`."""
         # apply product rule
         left, right = self.orphans
         if left.evaluates_to_constant_number():
@@ -298,7 +317,7 @@ class Multiplication(BinaryOperator):
             return right * left_jac + left * right_jac
 
     def _binary_evaluate(self, left, right):
-        """ See :meth:`pybamm.BinaryOperator._binary_evaluate()`. """
+        """See :meth:`pybamm.BinaryOperator._binary_evaluate()`."""
 
         if issparse(left):
             return csr_matrix(left.multiply(right))
@@ -310,24 +329,25 @@ class Multiplication(BinaryOperator):
 
 
 class MatrixMultiplication(BinaryOperator):
-    """A node in the expression tree representing a matrix multiplication operator
+    """
+    A node in the expression tree representing a matrix multiplication operator.
 
     **Extends:** :class:`BinaryOperator`
     """
 
     def __init__(self, left, right):
-        """ See :meth:`pybamm.BinaryOperator.__init__()`. """
+        """See :meth:`pybamm.BinaryOperator.__init__()`."""
         super().__init__("@", left, right)
 
     def diff(self, variable):
-        """ See :meth:`pybamm.Symbol.diff()`. """
+        """See :meth:`pybamm.Symbol.diff()`."""
         # We shouldn't need this
         raise NotImplementedError(
             "diff not implemented for symbol of type 'MatrixMultiplication'"
         )
 
     def _binary_jac(self, left_jac, right_jac):
-        """ See :meth:`pybamm.BinaryOperator._binary_jac()`. """
+        """See :meth:`pybamm.BinaryOperator._binary_jac()`."""
         # We only need the case where left is an array and right
         # is a (slice of a) state vector, e.g. for discretised spatial
         # operators of the form D @ u (also catch cases of (-D) @ u)
@@ -347,28 +367,35 @@ class MatrixMultiplication(BinaryOperator):
             )
 
     def _binary_evaluate(self, left, right):
-        """ See :meth:`pybamm.BinaryOperator._binary_evaluate()`. """
+        """See :meth:`pybamm.BinaryOperator._binary_evaluate()`."""
         return left @ right
+
+    def _sympy_operator(self, left, right):
+        """Override :meth:`pybamm.BinaryOperator._sympy_operator`"""
+        left = sympy.Matrix(left)
+        right = sympy.Matrix(right)
+        return left * right
 
 
 class Division(BinaryOperator):
-    """A node in the expression tree representing a division operator
+    """
+    A node in the expression tree representing a division operator.
 
     **Extends:** :class:`BinaryOperator`
     """
 
     def __init__(self, left, right):
-        """ See :meth:`pybamm.BinaryOperator.__init__()`. """
+        """See :meth:`pybamm.BinaryOperator.__init__()`."""
         super().__init__("/", left, right)
 
     def _diff(self, variable):
-        """ See :meth:`pybamm.Symbol._diff()`. """
+        """See :meth:`pybamm.Symbol._diff()`."""
         # apply quotient rule
         top, bottom = self.orphans
         return (top.diff(variable) * bottom - top * bottom.diff(variable)) / bottom ** 2
 
     def _binary_jac(self, left_jac, right_jac):
-        """ See :meth:`pybamm.BinaryOperator._binary_jac()`. """
+        """See :meth:`pybamm.BinaryOperator._binary_jac()`."""
         # apply quotient rule
         left, right = self.orphans
         if left.evaluates_to_constant_number():
@@ -379,7 +406,7 @@ class Division(BinaryOperator):
             return (right * left_jac - left * right_jac) / right ** 2
 
     def _binary_evaluate(self, left, right):
-        """ See :meth:`pybamm.BinaryOperator._binary_evaluate()`. """
+        """See :meth:`pybamm.BinaryOperator._binary_evaluate()`."""
 
         if issparse(left):
             return csr_matrix(left.multiply(1 / right))
@@ -411,17 +438,17 @@ class Inner(BinaryOperator):
     """
 
     def __init__(self, left, right):
-        """ See :meth:`pybamm.BinaryOperator.__init__()`. """
+        """See :meth:`pybamm.BinaryOperator.__init__()`."""
         super().__init__("inner product", left, right)
 
     def _diff(self, variable):
-        """ See :meth:`pybamm.Symbol._diff()`. """
+        """See :meth:`pybamm.Symbol._diff()`."""
         # apply product rule
         left, right = self.orphans
         return left.diff(variable) * right + left * right.diff(variable)
 
     def _binary_jac(self, left_jac, right_jac):
-        """ See :meth:`pybamm.BinaryOperator._binary_jac()`. """
+        """See :meth:`pybamm.BinaryOperator._binary_jac()`."""
         # apply product rule
         left, right = self.orphans
         if left.evaluates_to_constant_number():
@@ -432,7 +459,7 @@ class Inner(BinaryOperator):
             return right * left_jac + left * right_jac
 
     def _binary_evaluate(self, left, right):
-        """ See :meth:`pybamm.BinaryOperator._binary_evaluate()`. """
+        """See :meth:`pybamm.BinaryOperator._binary_evaluate()`."""
 
         if issparse(left):
             return left.multiply(right)
@@ -443,11 +470,11 @@ class Inner(BinaryOperator):
             return left * right
 
     def _binary_new_copy(self, left, right):
-        """ See :meth:`pybamm.BinaryOperator._binary_new_copy()`. """
+        """See :meth:`pybamm.BinaryOperator._binary_new_copy()`."""
         return pybamm.inner(left, right)
 
     def _evaluates_on_edges(self, dimension):
-        """ See :meth:`pybamm.Symbol._evaluates_on_edges()`. """
+        """See :meth:`pybamm.Symbol._evaluates_on_edges()`."""
         return False
 
 
@@ -473,8 +500,11 @@ def inner(left, right):
     return pybamm.simplify_if_constant(pybamm.Inner(left, right))
 
 
-class Heaviside(BinaryOperator):
-    """A node in the expression tree representing a heaviside step function.
+class _Heaviside(BinaryOperator):
+    """
+    A node in the expression tree representing a heaviside step function.
+    This class is semi-private and should not be called directly, use `EqualHeaviside`
+    or `NotEqualHeaviside` instead, or `<` or `<=`.
 
     Adding this operation to the rhs or algebraic equations in a model can often cause a
     discontinuity in the solution. For the specific cases listed below, this will be
@@ -490,52 +520,52 @@ class Heaviside(BinaryOperator):
     """
 
     def __init__(self, name, left, right):
-        """ See :meth:`pybamm.BinaryOperator.__init__()`. """
+        """See :meth:`pybamm.BinaryOperator.__init__()`."""
         super().__init__(name, left, right)
 
     def diff(self, variable):
-        """ See :meth:`pybamm.Symbol.diff()`. """
+        """See :meth:`pybamm.Symbol.diff()`."""
         # Heaviside should always be multiplied by something else so hopefully don't
         # need to worry about shape
         return pybamm.Scalar(0)
 
     def _binary_jac(self, left_jac, right_jac):
-        """ See :meth:`pybamm.BinaryOperator._binary_jac()`. """
+        """See :meth:`pybamm.BinaryOperator._binary_jac()`."""
         # Heaviside should always be multiplied by something else so hopefully don't
         # need to worry about shape
         return pybamm.Scalar(0)
 
 
-class EqualHeaviside(Heaviside):
+class EqualHeaviside(_Heaviside):
     """A heaviside function with equality (return 1 when left = right)"""
 
     def __init__(self, left, right):
-        """ See :meth:`pybamm.BinaryOperator.__init__()`. """
+        """See :meth:`pybamm.BinaryOperator.__init__()`."""
         super().__init__("<=", left, right)
 
     def __str__(self):
-        """ See :meth:`pybamm.Symbol.__str__()`. """
+        """See :meth:`pybamm.Symbol.__str__()`."""
         return "{!s} <= {!s}".format(self.left, self.right)
 
     def _binary_evaluate(self, left, right):
-        """ See :meth:`pybamm.BinaryOperator._binary_evaluate()`. """
+        """See :meth:`pybamm.BinaryOperator._binary_evaluate()`."""
         # don't raise RuntimeWarning for NaNs
         with np.errstate(invalid="ignore"):
             return left <= right
 
 
-class NotEqualHeaviside(Heaviside):
+class NotEqualHeaviside(_Heaviside):
     """A heaviside function without equality (return 0 when left = right)"""
 
     def __init__(self, left, right):
         super().__init__("<", left, right)
 
     def __str__(self):
-        """ See :meth:`pybamm.Symbol.__str__()`. """
+        """See :meth:`pybamm.Symbol.__str__()`."""
         return "{!s} < {!s}".format(self.left, self.right)
 
     def _binary_evaluate(self, left, right):
-        """ See :meth:`pybamm.BinaryOperator._binary_evaluate()`. """
+        """See :meth:`pybamm.BinaryOperator._binary_evaluate()`."""
         # don't raise RuntimeWarning for NaNs
         with np.errstate(invalid="ignore"):
             return left < right
@@ -548,7 +578,7 @@ class Modulo(BinaryOperator):
         super().__init__("%", left, right)
 
     def _diff(self, variable):
-        """ See :meth:`pybamm.Symbol._diff()`. """
+        """See :meth:`pybamm.Symbol._diff()`."""
         # apply chain rule and power rule
         left, right = self.orphans
         # derivative if variable is in the base
@@ -560,7 +590,7 @@ class Modulo(BinaryOperator):
         return diff
 
     def _binary_jac(self, left_jac, right_jac):
-        """ See :meth:`pybamm.BinaryOperator._binary_jac()`. """
+        """See :meth:`pybamm.BinaryOperator._binary_jac()`."""
         # apply chain rule and power rule
         left, right = self.orphans
         if right.evaluates_to_constant_number():
@@ -571,11 +601,11 @@ class Modulo(BinaryOperator):
             return left_jac - right_jac * pybamm.Floor(left / right)
 
     def __str__(self):
-        """ See :meth:`pybamm.Symbol.__str__()`. """
+        """See :meth:`pybamm.Symbol.__str__()`."""
         return "{!s} mod {!s}".format(self.left, self.right)
 
     def _binary_evaluate(self, left, right):
-        """ See :meth:`pybamm.BinaryOperator._binary_evaluate()`. """
+        """See :meth:`pybamm.BinaryOperator._binary_evaluate()`."""
         return left % right
 
 
@@ -586,60 +616,60 @@ class Minimum(BinaryOperator):
         super().__init__("minimum", left, right)
 
     def __str__(self):
-        """ See :meth:`pybamm.Symbol.__str__()`. """
+        """See :meth:`pybamm.Symbol.__str__()`."""
         return "minimum({!s}, {!s})".format(self.left, self.right)
 
     def _diff(self, variable):
-        """ See :meth:`pybamm.Symbol._diff()`. """
+        """See :meth:`pybamm.Symbol._diff()`."""
         left, right = self.orphans
         return (left <= right) * left.diff(variable) + (left > right) * right.diff(
             variable
         )
 
     def _binary_jac(self, left_jac, right_jac):
-        """ See :meth:`pybamm.BinaryOperator._binary_jac()`. """
+        """See :meth:`pybamm.BinaryOperator._binary_jac()`."""
         left, right = self.orphans
         return (left <= right) * left_jac + (left > right) * right_jac
 
     def _binary_evaluate(self, left, right):
-        """ See :meth:`pybamm.BinaryOperator._binary_evaluate()`. """
+        """See :meth:`pybamm.BinaryOperator._binary_evaluate()`."""
         # don't raise RuntimeWarning for NaNs
         return np.minimum(left, right)
 
     def _binary_new_copy(self, left, right):
-        "See :meth:`pybamm.BinaryOperator._binary_new_copy()`. "
+        """See :meth:`pybamm.BinaryOperator._binary_new_copy()`."""
         return pybamm.minimum(left, right)
 
 
 class Maximum(BinaryOperator):
-    """Returns the smaller of two objects."""
+    """Returns the greater of two objects."""
 
     def __init__(self, left, right):
         super().__init__("maximum", left, right)
 
     def __str__(self):
-        """ See :meth:`pybamm.Symbol.__str__()`. """
+        """See :meth:`pybamm.Symbol.__str__()`."""
         return "maximum({!s}, {!s})".format(self.left, self.right)
 
     def _diff(self, variable):
-        """ See :meth:`pybamm.Symbol._diff()`. """
+        """See :meth:`pybamm.Symbol._diff()`."""
         left, right = self.orphans
         return (left >= right) * left.diff(variable) + (left < right) * right.diff(
             variable
         )
 
     def _binary_jac(self, left_jac, right_jac):
-        """ See :meth:`pybamm.BinaryOperator._binary_jac()`. """
+        """See :meth:`pybamm.BinaryOperator._binary_jac()`."""
         left, right = self.orphans
         return (left >= right) * left_jac + (left < right) * right_jac
 
     def _binary_evaluate(self, left, right):
-        """ See :meth:`pybamm.BinaryOperator._binary_evaluate()`. """
+        """See :meth:`pybamm.BinaryOperator._binary_evaluate()`."""
         # don't raise RuntimeWarning for NaNs
         return np.maximum(left, right)
 
     def _binary_new_copy(self, left, right):
-        "See :meth:`pybamm.BinaryOperator._binary_new_copy()`. "
+        """See :meth:`pybamm.BinaryOperator._binary_new_copy()`."""
         return pybamm.maximum(left, right)
 
 
@@ -1309,7 +1339,6 @@ def source(left, right, boundary=False):
         corresponding to a source term which only acts on the boundary of the
         domain. If False (default), the matrix is assembled over the entire domain,
         corresponding to a source term in the bulk.
-
     """
     # Broadcast if left is number
     if isinstance(left, numbers.Number):
