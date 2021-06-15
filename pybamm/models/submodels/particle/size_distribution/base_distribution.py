@@ -48,17 +48,25 @@ class BaseSizeDistribution(BaseParticle):
         # Number-based particle-size distribution
         f_num_dist = (f_a_dist / R ** 2) / pybamm.Integral(f_a_dist / R ** 2, R)
 
-        # True mean radii, given the f_a_dist that was given
-        true_R_num_mean = pybamm.Integral(R * f_num_dist, R)
-        true_R_a_mean = pybamm.Integral(R * f_a_dist, R)
-        true_R_v_mean = pybamm.Integral(R * f_v_dist, R)
+        # True mean radii and standard deviations, calculated from the f_a_dist that
+        # was given
+        R_num_mean = pybamm.Integral(R * f_num_dist, R)
+        R_a_mean = pybamm.Integral(R * f_a_dist, R)
+        R_v_mean = pybamm.Integral(R * f_v_dist, R)
+        sd_num = pybamm.sqrt(pybamm.Integral((R - R_num_mean) ** 2 * f_num_dist, R))
+        sd_a = pybamm.sqrt(pybamm.Integral((R - R_a_mean) ** 2 * f_a_dist, R))
+        sd_v = pybamm.sqrt(pybamm.Integral((R - R_v_mean) ** 2 * f_v_dist, R))
 
-        # X-average the mean radii (to remove the "electrode" domain, if present)
-        true_R_num_mean = pybamm.x_average(true_R_num_mean)
-        true_R_a_mean = pybamm.x_average(true_R_a_mean)
-        true_R_v_mean = pybamm.x_average(true_R_v_mean)
+        # X-average the means and standard deviations to give scalars
+        # (to remove the "electrode" domain, if present)
+        R_num_mean = pybamm.x_average(R_num_mean)
+        R_a_mean = pybamm.x_average(R_a_mean)
+        R_v_mean = pybamm.x_average(R_v_mean)
+        sd_num = pybamm.x_average(sd_num)
+        sd_a = pybamm.x_average(sd_a)
+        sd_v = pybamm.x_average(sd_v)
 
-        # X-averaged distributions
+        # X-averaged distributions, or broadcast
         if R.auxiliary_domains["secondary"] == [self.domain.lower() + " electrode"]:
             f_a_dist_xav = pybamm.x_average(f_a_dist)
             f_v_dist_xav = pybamm.x_average(f_v_dist)
@@ -95,17 +103,29 @@ class BaseSizeDistribution(BaseParticle):
             self.domain + " number-based particle-size"
             + " distribution [m-1]": f_num_dist / R_typ,
             self.domain + " area-weighted"
-            + " mean radius": true_R_a_mean,
+            + " mean radius": R_a_mean,
             self.domain + " area-weighted"
-            + " mean radius [m]": true_R_a_mean * R_typ,
+            + " mean radius [m]": R_a_mean * R_typ,
             self.domain + " volume-weighted"
-            + " mean radius": true_R_v_mean,
+            + " mean radius": R_v_mean,
             self.domain + " volume-weighted"
-            + " mean radius [m]": true_R_v_mean * R_typ,
+            + " mean radius [m]": R_v_mean * R_typ,
             self.domain + " number-based"
-            + " mean radius": true_R_num_mean,
+            + " mean radius": R_num_mean,
             self.domain + " number-based"
-            + " mean radius [m]": true_R_num_mean * R_typ,
+            + " mean radius [m]": R_num_mean * R_typ,
+            self.domain + " area-weighted"
+            + " standard deviation": sd_a,
+            self.domain + " area-weighted"
+            + " standard deviation [m]": sd_a * R_typ,
+            self.domain + " volume-weighted"
+            + " standard deviation": sd_v,
+            self.domain + " volume-weighted"
+            + " standard deviation [m]": sd_v * R_typ,
+            self.domain + " number-based"
+            + " standard deviation": sd_num,
+            self.domain + " number-based"
+            + " standard deviation [m]": sd_num * R_typ,
             # X-averaged distributions
             "X-averaged " + self.domain.lower() +
             " area-weighted particle-size distribution": f_a_dist_xav,
