@@ -17,7 +17,7 @@ class BaseSizeDistribution(BaseParticle):
     domain : str
         The domain of the model either 'Negative' or 'Positive'
 
-    **Extends:** :class:`pybamm.BaseParticle`
+    **Extends:** :class:`pybamm.particle.BaseParticle`
     """
 
     def __init__(self, param, domain):

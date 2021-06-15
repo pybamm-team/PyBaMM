@@ -1345,14 +1345,15 @@ def r_average(symbol):
 
 
 def R_average(symbol, param):
-    """convenience function for averaging over particle size R.
+    """convenience function for averaging over particle size R using the area-weighted
+    particle-size distribution.
 
     Parameters
     ----------
     symbol : :class:`pybamm.Symbol`
         The function to be averaged
     param : :class:`pybamm.LithiumIonParameters`
-        The parameter object containing the particle-size distributions
+        The parameter object containing the area-weighted particle-size distributions
         f_a_dist_n and f_a_dist_p.
     Returns
     -------

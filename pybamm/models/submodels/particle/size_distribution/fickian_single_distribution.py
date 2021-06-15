@@ -19,7 +19,7 @@ class FickianSingleSizeDistribution(BaseSizeDistribution):
         The domain of the model either 'Negative' or 'Positive'
 
 
-    **Extends:** :class:`pybamm.particle.size_distribution.BaseSizeDistribution`
+    **Extends:** :class:`pybamm.particle.BaseSizeDistribution`
     """
 
     def __init__(self, param, domain):
