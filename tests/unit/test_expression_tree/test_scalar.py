@@ -1,9 +1,9 @@
 #
 # Tests for the Scalar class
 #
-import pybamm
-
 import unittest
+
+import pybamm
 
 
 class TestScalar(unittest.TestCase):
@@ -31,6 +31,10 @@ class TestScalar(unittest.TestCase):
         self.assertEqual(a1.id, a2.id)
         a3 = pybamm.Scalar(5)
         self.assertNotEqual(a1.id, a3.id)
+
+    def test_to_equation(self):
+        a = pybamm.Scalar(3)
+        self.assertEqual(str(a.to_equation()), "3.0")
 
 
 if __name__ == "__main__":
