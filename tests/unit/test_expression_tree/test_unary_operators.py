@@ -1,11 +1,13 @@
 #
 # Tests for the Unary Operator classes
 #
-import pybamm
-
 import unittest
+
 import numpy as np
+import sympy
 from scipy.sparse import diags
+
+import pybamm
 
 
 class TestUnaryOperators(unittest.TestCase):
@@ -560,11 +562,7 @@ class TestUnaryOperators(unittest.TestCase):
         self.assertEqual(average_conc_broad.auxiliary_domains, {"secondary": ["test"]})
 
         # x-average of broadcast
-        for domain in [
-            ["negative electrode"],
-            ["separator"],
-            ["positive electrode"],
-        ]:
+        for domain in [["negative electrode"], ["separator"], ["positive electrode"]]:
             a = pybamm.Variable("a", domain=domain)
             x = pybamm.SpatialVariable("x", domain)
             av_a = pybamm.x_average(a)
@@ -740,6 +738,17 @@ class TestUnaryOperators(unittest.TestCase):
         self.assertEqual(a.jac(pybamm.StateVector(slice(0, 1))).evaluate(), 0)
         self.assertFalse(a.is_constant())
         self.assertFalse((2 * a).is_constant())
+
+    def test_to_equation(self):
+        # Test print_name
+        pybamm.Floor.print_name = "test"
+        self.assertEqual(pybamm.Floor(-2.5).to_equation(), sympy.symbols("test"))
+
+        # Test Negate
+        self.assertEqual(pybamm.Negate(4).to_equation(), -4.0)
+
+        # Test AbsoluteValue
+        self.assertEqual(pybamm.AbsoluteValue(-4).to_equation(), 4.0)
 
 
 if __name__ == "__main__":
