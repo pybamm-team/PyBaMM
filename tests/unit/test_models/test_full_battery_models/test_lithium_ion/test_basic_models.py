@@ -46,8 +46,22 @@ class TestBasicModels(unittest.TestCase):
 
     def basic_dfn_half_cell_simulation(self):
         model = pybamm.lithium_ion.BasicDFNHalfCell(options={"working electrode": "positive"})
-        sim = pybamm.Simulation(model=model)
-        sim.solve([0, 3600])
+        chemistry = pybamm.parameter_sets.Chen2020
+        param = pybamm.ParameterValues(chemistry=chemistry)
+        param.update({
+        "Lithium counter electrode exchange-current density [A.m-2]": 12.6,
+        "Lithium counter electrode conductivity [S.m-1]": 1.0776e7,
+        "Lithium counter electrode thickness [m]": 250e-6,
+        },
+        check_already_exists=False,
+        )
+        param["Initial concentration in negative electrode [mol.m-3]"] = 1000
+        param["Current function [A]"] = 2.5
+        sim = pybamm.Simulation(model=model, parameter_values=param)
+        sim.solve([0, 100])
+        self.assertTrue(
+            isinstance(sim.solution, pybamm.solvers.solution.Solution)
+        )
 
     def test_dfn_half_cell_defaults(self):
         # test default geometry
