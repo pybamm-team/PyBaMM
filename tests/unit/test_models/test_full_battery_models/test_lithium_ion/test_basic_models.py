@@ -36,6 +36,19 @@ class TestBasicModels(unittest.TestCase):
         copy = model.new_copy()
         copy.check_well_posedness()
 
+    def test_dfn_half_cell_simulation_with_experiment_error(self):
+        options = {"working electrode": "negative"}
+        model = pybamm.lithium_ion.BasicDFNHalfCell(options=options)
+        experiment = pybamm.Experiment([("Discharge at C/10 for 10 hours or until 3.5 V")])
+        with self.assertRaisesRegex(
+            NotImplementedError, "BasicDFNHalfCell is not compatible with experiment simulations yet."):
+            pybamm.Simulation(model, experiment=experiment)
+
+    def basic_dfn_half_cell_simulation(self):
+        model = pybamm.lithium_ion.BasicDFNHalfCell(options={"working electrode": "positive"})
+        sim = pybamm.Simulation(model=model)
+        sim.solve([0, 3600])
+
     def test_dfn_half_cell_defaults(self):
         # test default geometry
         var = half_cell_spatial_vars
