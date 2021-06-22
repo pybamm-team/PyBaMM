@@ -166,7 +166,9 @@ class BinaryOperator(pybamm.Symbol):
 
     def _binary_evaluate(self, left, right):
         """Perform binary operation on nodes 'left' and 'right'."""
-        raise NotImplementedError
+        raise NotImplementedError(
+            f"{self.__class__} does not implement _binary_evaluate."
+        )
 
     def _evaluates_on_edges(self, dimension):
         """See :meth:`pybamm.Symbol._evaluates_on_edges()`."""

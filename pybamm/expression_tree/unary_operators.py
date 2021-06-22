@@ -2,9 +2,14 @@
 # Unary operator classes and methods
 #
 import numbers
+
 import numpy as np
+import sympy
+from scipy.sparse import csr_matrix, issparse
+from sympy.vector.operators import Divergence as sympy_Divergence
+from sympy.vector.operators import Gradient as sympy_Gradient
+
 import pybamm
-from scipy.sparse import issparse, csr_matrix
 
 
 class UnaryOperator(pybamm.Symbol):
@@ -56,7 +61,9 @@ class UnaryOperator(pybamm.Symbol):
 
     def _unary_evaluate(self, child):
         """Perform unary operation on a child. """
-        raise NotImplementedError
+        raise NotImplementedError(
+            f"{self.__class__} does not implement _unary_evaluate."
+        )
 
     def evaluate(self, t=None, y=None, y_dot=None, inputs=None, known_evals=None):
         """ See :meth:`pybamm.Symbol.evaluate()`. """
@@ -85,6 +92,18 @@ class UnaryOperator(pybamm.Symbol):
     def is_constant(self):
         """ See :meth:`pybamm.Symbol.is_constant()`. """
         return self.child.is_constant()
+
+    def _sympy_operator(self, child):
+        """Apply appropriate SymPy operators."""
+        return self._unary_evaluate(child)
+
+    def to_equation(self):
+        """Convert the node and its subtree into a SymPy equation."""
+        if getattr(self, "print_name", None):
+            return sympy.symbols(self.print_name)
+        else:
+            eq1 = self.child.to_equation()
+            return self._sympy_operator(eq1)
 
 
 class Negate(UnaryOperator):
@@ -368,6 +387,10 @@ class Gradient(SpatialOperator):
         """ See :meth:`UnaryOperator._unary_new_copy()`. """
         return grad(child)
 
+    def _sympy_operator(self, child):
+        """Override :meth:`pybamm.UnaryOperator._sympy_operator`"""
+        return sympy_Gradient(child)
+
 
 class Divergence(SpatialOperator):
     """A node in the expression tree representing a div operator
@@ -399,6 +422,10 @@ class Divergence(SpatialOperator):
     def _unary_new_copy(self, child):
         """ See :meth:`UnaryOperator._unary_new_copy()`. """
         return div(child)
+
+    def _sympy_operator(self, child):
+        """Override :meth:`pybamm.UnaryOperator._sympy_operator`"""
+        return sympy_Divergence(child)
 
 
 class Laplacian(SpatialOperator):
