@@ -15,8 +15,7 @@ model = pybamm.lithium_ion.BasicDFNHalfCell(options=options)
 geometry = model.default_geometry
 
 # load parameter values
-# chemistry = pybamm.parameter_sets.Chen2020
-chemistry = pybamm.parameter_sets.Xu2019
+chemistry = pybamm.parameter_sets.Chen2020
 param = pybamm.ParameterValues(chemistry=chemistry)
 
 # add lithium counter electrode parameter values
@@ -29,8 +28,8 @@ param.update(
     check_already_exists=False,
 )
 
-# param["Initial concentration in negative electrode [mol.m-3]"] = 1000
-param["Current function [A]"] = 2.5e-3
+param["Initial concentration in negative electrode [mol.m-3]"] = 1000
+param["Current function [A]"] = 2.5
 
 # process model and geometry
 param.process_model(model)
@@ -54,13 +53,11 @@ plot = pybamm.QuickPlot(
     solution,
     [
         "Working particle concentration [mol.m-3]",
-        "Working particle surface concentration",
         "Electrolyte concentration [mol.m-3]",
         "Current [A]",
         "Working electrode potential [V]",
         "Electrolyte potential [V]",
         "Total electrolyte concentration",
-        "Total lithium in working electrode",
         "Total lithium in working electrode [mol]",
         "Working electrode open circuit potential [V]",
         ["Terminal voltage [V]", "Voltage drop in the cell [V]"],

@@ -19,11 +19,11 @@ class BasicDFNHalfCell(BaseModel):
 
     Parameters
     ----------
-    name : str, optional
-        The name of the model.
     options : dict
         A dictionary of options to be passed to the model. For the half cell it should
         include which is the working electrode.
+    name : str, optional
+        The name of the model.
 
     References
     ----------
@@ -34,7 +34,7 @@ class BasicDFNHalfCell(BaseModel):
     **Extends:** :class:`pybamm.lithium_ion.BaseModel`
     """
 
-    def __init__(self, name="Doyle-Fuller-Newman half cell model", options=None):
+    def __init__(self, options=None, name="Doyle-Fuller-Newman half cell model"):
         super().__init__(options, name)
         if self.options["working electrode"] not in ["negative", "positive"]:
             raise ValueError(
