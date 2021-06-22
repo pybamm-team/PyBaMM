@@ -374,8 +374,8 @@ class MatrixMultiplication(BinaryOperator):
 
     def _sympy_operator(self, left, right):
         """Override :meth:`pybamm.BinaryOperator._sympy_operator`"""
-        right = sympy.Matrix(right)
         left = sympy.Matrix(left)
+        right = sympy.Matrix(right)
         return left * right
 
 

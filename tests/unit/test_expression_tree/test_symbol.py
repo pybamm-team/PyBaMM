@@ -489,6 +489,9 @@ class TestSymbol(unittest.TestCase):
         with self.assertRaises(pybamm.ShapeError):
             (y1 + y2).test_shape()
 
+    def test_to_equation(self):
+        self.assertEqual(pybamm.Symbol("test").to_equation(), "test")
+
 
 class TestIsZero(unittest.TestCase):
     def test_is_scalar_zero(self):

@@ -2,8 +2,11 @@
 # Tests for the Parameter class
 #
 import numbers
-import pybamm
 import unittest
+
+import sympy
+
+import pybamm
 
 
 class TestParameter(unittest.TestCase):
@@ -92,6 +95,11 @@ class TestFunctionParameter(unittest.TestCase):
         self.assertEqual(myfun_dim(x).print_name, "myfun")
         self.assertEqual(myfun_dimensional(x).print_name, "myfun")
         self.assertEqual(_myfun(x).print_name, None)
+
+    def test_to_equation(self):
+        func = pybamm.FunctionParameter("test", {"x": pybamm.Scalar(1)})
+        func.print_name = "test"
+        self.assertEqual(func.to_equation(), sympy.symbols("test"))
 
 
 if __name__ == "__main__":

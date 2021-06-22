@@ -6,6 +6,8 @@ import unittest
 import numpy as np
 import sympy
 from scipy.sparse import diags
+from sympy.vector.operators import Divergence as sympy_Divergence
+from sympy.vector.operators import Gradient as sympy_Gradient
 
 import pybamm
 
@@ -749,6 +751,16 @@ class TestUnaryOperators(unittest.TestCase):
 
         # Test AbsoluteValue
         self.assertEqual(pybamm.AbsoluteValue(-4).to_equation(), 4.0)
+
+        # Test Gradient
+        a = pybamm.Symbol("a", domain="test")
+        self.assertEqual(pybamm.Gradient(a).to_equation(), sympy_Gradient("a"))
+
+        # Test Divergence
+        self.assertEqual(
+            pybamm.Divergence(pybamm.Gradient(a)).to_equation(),
+            sympy_Divergence(sympy_Gradient(a)),
+        )
 
 
 if __name__ == "__main__":
