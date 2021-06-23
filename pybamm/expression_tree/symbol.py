@@ -1,14 +1,15 @@
 #
 # Base Symbol Class for the expression tree
 #
-import pybamm
+import copy
+import numbers
 
 import anytree
-import numbers
-import copy
 import numpy as np
 from anytree.exporter import DotExporter
-from scipy.sparse import issparse, csr_matrix
+from scipy.sparse import csr_matrix, issparse
+
+import pybamm
 
 
 def domain_size(domain):
@@ -170,7 +171,8 @@ def simplify_if_constant(symbol):
 
 
 class Symbol(anytree.NodeMixin):
-    """Base node class for the expression tree
+    """
+    Base node class for the expression tree.
 
     Parameters
     ----------
@@ -190,7 +192,6 @@ class Symbol(anytree.NodeMixin):
         "separator" and tertiary domain "current collector" (`domain="negative
         particle", auxiliary_domains={"secondary": "separator", "tertiary": "current
         collector"}`).
-
     """
 
     def __init__(self, name, children=None, domain=None, auxiliary_domains=None):
@@ -238,13 +239,12 @@ class Symbol(anytree.NodeMixin):
 
         Note: it is assumed that children of a node are not modified after initial
         creation
-
         """
         return self.cached_children
 
     @property
     def name(self):
-        """name of the node"""
+        """name of the node."""
         return self._name
 
     @name.setter
@@ -258,7 +258,8 @@ class Symbol(anytree.NodeMixin):
 
     @property
     def domain(self):
-        """list of applicable domains
+        """
+        list of applicable domains.
 
         Returns
         -------
@@ -289,7 +290,7 @@ class Symbol(anytree.NodeMixin):
 
     @property
     def auxiliary_domains(self):
-        """Returns auxiliary domains"""
+        """Returns auxiliary domains."""
         return self._auxiliary_domains
 
     @auxiliary_domains.setter
@@ -313,11 +314,11 @@ class Symbol(anytree.NodeMixin):
 
     @property
     def secondary_domain(self):
-        """Helper function to get the secondary domain of a symbol"""
+        """Helper function to get the secondary domain of a symbol."""
         return self.auxiliary_domains["secondary"]
 
     def copy_domains(self, symbol):
-        """Copy the domains from a given symbol, bypassing checks"""
+        """Copy the domains from a given symbol, bypassing checks."""
         self._domains = symbol.domains.copy()
         self._auxiliary_domains = {
             k: v for k, v in self._domains.items() if k != "primary"
@@ -325,13 +326,13 @@ class Symbol(anytree.NodeMixin):
         self.set_id()
 
     def clear_domains(self):
-        """Clear domains, bypassing checks"""
+        """Clear domains, bypassing checks."""
         self._domains = {"primary": []}
         self._auxiliary_domains = {}
         self.set_id()
 
     def get_children_auxiliary_domains(self, children):
-        """Combine auxiliary domains from children, at all levels"""
+        """Combine auxiliary domains from children, at all levels."""
         aux_domains = {}
         for child in children:
             for level in child.auxiliary_domains.keys():
@@ -382,8 +383,8 @@ class Symbol(anytree.NodeMixin):
         return self._orphans
 
     def render(self):  # pragma: no cover
-        """print out a visual representation of the tree (this node and its
-        children)
+        """
+        Print out a visual representation of the tree (this node and its children)
         """
         for pre, _, node in anytree.RenderTree(self):
             if isinstance(node, pybamm.Scalar) and node.name != str(node.value):
@@ -401,7 +402,6 @@ class Symbol(anytree.NodeMixin):
 
         filename : str
             filename to output, must end in ".png"
-
         """
 
         # check that filename ends in .png.
@@ -419,7 +419,8 @@ class Symbol(anytree.NodeMixin):
             pybamm.logger.error("Please install graphviz>=2.42.2 to use dot exporter")
 
     def relabel_tree(self, symbol, counter):
-        """Finds all children of a symbol and assigns them a new id so that they can be
+        """
+        Finds all children of a symbol and assigns them a new id so that they can be
         visualised properly using the graphviz output
         """
         name = symbol.name
@@ -452,8 +453,8 @@ class Symbol(anytree.NodeMixin):
         return new_node, counter
 
     def pre_order(self):
-        """returns an iterable that steps through the tree in pre-order
-        fashion
+        """
+        returns an iterable that steps through the tree in pre-order fashion.
 
         Examples
         --------
@@ -466,12 +467,11 @@ class Symbol(anytree.NodeMixin):
         *
         a
         b
-
         """
         return anytree.PreOrderIter(self)
 
     def __str__(self):
-        """return a string representation of the node and its children"""
+        """return a string representation of the node and its children."""
         return self._name
 
     def __repr__(self):
@@ -488,55 +488,55 @@ class Symbol(anytree.NodeMixin):
         )
 
     def __add__(self, other):
-        """return an :class:`Addition` object"""
+        """return an :class:`Addition` object."""
         return pybamm.simplified_addition(self, other)
 
     def __radd__(self, other):
-        """return an :class:`Addition` object"""
+        """return an :class:`Addition` object."""
         return pybamm.simplified_addition(other, self)
 
     def __sub__(self, other):
-        """return a :class:`Subtraction` object"""
+        """return a :class:`Subtraction` object."""
         return pybamm.simplified_subtraction(self, other)
 
     def __rsub__(self, other):
-        """return a :class:`Subtraction` object"""
+        """return a :class:`Subtraction` object."""
         return pybamm.simplified_subtraction(other, self)
 
     def __mul__(self, other):
-        """return a :class:`Multiplication` object"""
+        """return a :class:`Multiplication` object."""
         return pybamm.simplified_multiplication(self, other)
 
     def __rmul__(self, other):
-        """return a :class:`Multiplication` object"""
+        """return a :class:`Multiplication` object."""
         return pybamm.simplified_multiplication(other, self)
 
     def __matmul__(self, other):
-        """return a :class:`MatrixMultiplication` object"""
+        """return a :class:`MatrixMultiplication` object."""
         return pybamm.simplified_matrix_multiplication(self, other)
 
     def __rmatmul__(self, other):
-        """return a :class:`MatrixMultiplication` object"""
+        """return a :class:`MatrixMultiplication` object."""
         return pybamm.simplified_matrix_multiplication(other, self)
 
     def __truediv__(self, other):
-        """return a :class:`Division` object"""
+        """return a :class:`Division` object."""
         return pybamm.simplified_division(self, other)
 
     def __rtruediv__(self, other):
-        """return a :class:`Division` object"""
+        """return a :class:`Division` object."""
         return pybamm.simplified_division(other, self)
 
     def __pow__(self, other):
-        """return a :class:`Power` object"""
+        """return a :class:`Power` object."""
         return pybamm.simplified_power(self, other)
 
     def __rpow__(self, other):
-        """return a :class:`Power` object"""
+        """return a :class:`Power` object."""
         return pybamm.simplified_power(other, self)
 
     def __lt__(self, other):
-        """return a :class:`NotEqualHeaviside` object, or a smooth approximation"""
+        """return a :class:`NotEqualHeaviside` object, or a smooth approximation."""
         k = pybamm.settings.heaviside_smoothing
         # Return exact approximation if that is the setting or the outcome is a constant
         # (i.e. no need for smoothing)
@@ -547,7 +547,7 @@ class Symbol(anytree.NodeMixin):
         return pybamm.simplify_if_constant(out)
 
     def __le__(self, other):
-        """return a :class:`EqualHeaviside` object, or a smooth approximation"""
+        """return a :class:`EqualHeaviside` object, or a smooth approximation."""
         k = pybamm.settings.heaviside_smoothing
         # Return exact approximation if that is the setting or the outcome is a constant
         # (i.e. no need for smoothing)
@@ -558,7 +558,7 @@ class Symbol(anytree.NodeMixin):
         return pybamm.simplify_if_constant(out)
 
     def __gt__(self, other):
-        """return a :class:`NotEqualHeaviside` object, or a smooth approximation"""
+        """return a :class:`NotEqualHeaviside` object, or a smooth approximation."""
         k = pybamm.settings.heaviside_smoothing
         # Return exact approximation if that is the setting or the outcome is a constant
         # (i.e. no need for smoothing)
@@ -569,7 +569,7 @@ class Symbol(anytree.NodeMixin):
         return pybamm.simplify_if_constant(out)
 
     def __ge__(self, other):
-        """return a :class:`EqualHeaviside` object, or a smooth approximation"""
+        """return a :class:`EqualHeaviside` object, or a smooth approximation."""
         k = pybamm.settings.heaviside_smoothing
         # Return exact approximation if that is the setting or the outcome is a constant
         # (i.e. no need for smoothing)
@@ -580,7 +580,7 @@ class Symbol(anytree.NodeMixin):
         return pybamm.simplify_if_constant(out)
 
     def __neg__(self):
-        """return a :class:`Negate` object"""
+        """return a :class:`Negate` object."""
         if isinstance(self, pybamm.Negate):
             # Double negative is a positive
             return self.orphans[0]
@@ -596,7 +596,7 @@ class Symbol(anytree.NodeMixin):
             return pybamm.simplify_if_constant(pybamm.Negate(self))
 
     def __abs__(self):
-        """return an :class:`AbsoluteValue` object, or a smooth approximation"""
+        """return an :class:`AbsoluteValue` object, or a smooth approximation."""
         if isinstance(self, pybamm.AbsoluteValue):
             # No need to apply abs a second time
             return self
@@ -616,7 +616,7 @@ class Symbol(anytree.NodeMixin):
             return pybamm.simplify_if_constant(out)
 
     def __mod__(self, other):
-        """return an :class:`Modulo` object"""
+        """return an :class:`Modulo` object."""
         return pybamm.simplify_if_constant(pybamm.Modulo(self, other))
 
     def diff(self, variable):
@@ -630,7 +630,6 @@ class Symbol(anytree.NodeMixin):
         ----------
         variable : :class:`pybamm.Symbol`
             The variable with respect to which to differentiate
-
         """
         if variable.id == self.id:
             return pybamm.Scalar(1)
@@ -671,7 +670,8 @@ class Symbol(anytree.NodeMixin):
         raise NotImplementedError
 
     def _base_evaluate(self, t=None, y=None, y_dot=None, inputs=None):
-        """evaluate expression tree
+        """
+        evaluate expression tree.
 
         will raise a ``NotImplementedError`` if this member function has not
         been defined for the node. For example, :class:`Scalar` returns its
@@ -689,7 +689,6 @@ class Symbol(anytree.NodeMixin):
         y_dot : numpy.array, optional
             array with time derivatives of state values to evaluate when solving
             (default None)
-
         """
         raise NotImplementedError(
             """method self.evaluate() not implemented
@@ -733,10 +732,12 @@ class Symbol(anytree.NodeMixin):
             return self._base_evaluate(t, y, y_dot, inputs)
 
     def evaluate_for_shape(self):
-        """Evaluate expression tree to find its shape. For symbols that cannot be
-        evaluated directly (e.g. `Variable` or `Parameter`), a vector of the appropriate
-        shape is returned instead, using the symbol's domain.
-        See :meth:`pybamm.Symbol.evaluate()`
+        """
+        Evaluate expression tree to find its shape.
+
+        For symbols that cannot be evaluated directly (e.g. `Variable` or `Parameter`),
+        a vector of the appropriate shape is returned instead, using the symbol's
+        domain. See :meth:`pybamm.Symbol.evaluate()`
         """
         try:
             return self._saved_evaluate_for_shape
@@ -745,17 +746,17 @@ class Symbol(anytree.NodeMixin):
             return self._saved_evaluate_for_shape
 
     def _evaluate_for_shape(self):
-        "See :meth:`Symbol.evaluate_for_shape`"
+        """See :meth:`Symbol.evaluate_for_shape`"""
         return self.evaluate()
 
     def is_constant(self):
-        """returns true if evaluating the expression is not dependent on `t` or `y`
+        """
+        returns true if evaluating the expression is not dependent on `t` or `y`
         or `inputs`
 
         See Also
         --------
         evaluate : evaluate the expression
-
         """
         # Default behaviour is False
         return False
@@ -767,11 +768,9 @@ class Symbol(anytree.NodeMixin):
         is returned. If there is an InputParameter in the tree then a 1 is returned.
         Otherwise the result of the evaluation is given.
 
-
         See Also
         --------
         evaluate : evaluate the expression
-
         """
         try:
             result = self.evaluate(t=t, inputs="shape test")
@@ -806,7 +805,6 @@ class Symbol(anytree.NodeMixin):
         See Also
         --------
         evaluate : evaluate the expression
-
         """
         return self.shape_for_testing == ()
 
@@ -817,7 +815,7 @@ class Symbol(anytree.NodeMixin):
         """
         Returns True if a symbol evaluates on an edge, i.e. symbol contains a gradient
         operator, but not a divergence operator, and is not an IndefiniteIntegral.
-        Caches the solution for faster results
+        Caches the solution for faster results.
 
         Parameters
         ----------
@@ -843,7 +841,8 @@ class Symbol(anytree.NodeMixin):
         return False
 
     def has_symbol_of_classes(self, symbol_classes):
-        """Returns True if equation has a term of the class(es) `symbol_class`.
+        """
+        Returns True if equation has a term of the class(es) `symbol_class`.
 
         Parameters
         ----------
@@ -853,7 +852,7 @@ class Symbol(anytree.NodeMixin):
         return any(isinstance(symbol, symbol_classes) for symbol in self.pre_order())
 
     def simplify(self, simplified_symbols=None, clear_domains=True):
-        """ `simplify()` has now been removed. """
+        """`simplify()` has now been removed."""
         raise pybamm.ModelError("simplify is deprecated as it now has no effect")
 
     def to_casadi(self, t=None, y=None, y_dot=None, inputs=None, casadi_symbols=None):
@@ -920,9 +919,7 @@ class Symbol(anytree.NodeMixin):
 
     @property
     def size_for_testing(self):
-        """
-        Size of an object, based on shape for testing
-        """
+        """Size of an object, based on shape for testing."""
         return np.prod(self.shape_for_testing)
 
     @property
@@ -948,7 +945,7 @@ class Symbol(anytree.NodeMixin):
 
     def test_shape(self):
         """
-        Check that the discretised self has a pybamm `shape`, i.e. can be evaluated
+        Check that the discretised self has a pybamm `shape`, i.e. can be evaluated.
 
         Raises
         ------
