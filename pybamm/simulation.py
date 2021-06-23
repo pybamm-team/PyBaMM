@@ -99,7 +99,9 @@ class Simulation:
 
         if isinstance(model, pybamm.lithium_ion.BasicDFNHalfCell):
             if experiment is not None:
-                raise NotImplementedError("BasicDFNHalfCell is not compatible with experiment simulations yet.")
+                raise NotImplementedError(
+                    "BasicDFNHalfCell is not compatible "
+                    "with experiment simulations yet.")
 
         if experiment is None:
             # Check to see if the current is provided as data (i.e. drive cycle)
