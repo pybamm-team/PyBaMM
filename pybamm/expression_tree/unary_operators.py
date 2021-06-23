@@ -13,7 +13,8 @@ import pybamm
 
 
 class UnaryOperator(pybamm.Symbol):
-    """A node in the expression tree representing a unary operator
+    """
+    A node in the expression tree representing a unary operator
     (e.g. '-', grad, div)
 
     Derived classes will specify the particular operator
@@ -26,7 +27,6 @@ class UnaryOperator(pybamm.Symbol):
         name of the node
     child : :class:`Symbol`
         child node
-
     """
 
     def __init__(self, name, child, domain=None, auxiliary_domains=None):
@@ -42,11 +42,11 @@ class UnaryOperator(pybamm.Symbol):
         self.child = self.children[0]
 
     def __str__(self):
-        """ See :meth:`pybamm.Symbol.__str__()`. """
+        """See :meth:`pybamm.Symbol.__str__()`."""
         return "{}({!s})".format(self.name, self.child)
 
     def new_copy(self):
-        """ See :meth:`pybamm.Symbol.new_copy()`. """
+        """See :meth:`pybamm.Symbol.new_copy()`."""
         new_child = self.child.new_copy()
         return self._unary_new_copy(new_child)
 
@@ -60,13 +60,13 @@ class UnaryOperator(pybamm.Symbol):
         raise NotImplementedError
 
     def _unary_evaluate(self, child):
-        """Perform unary operation on a child. """
+        """Perform unary operation on a child."""
         raise NotImplementedError(
             f"{self.__class__} does not implement _unary_evaluate."
         )
 
     def evaluate(self, t=None, y=None, y_dot=None, inputs=None, known_evals=None):
-        """ See :meth:`pybamm.Symbol.evaluate()`. """
+        """See :meth:`pybamm.Symbol.evaluate()`."""
         if known_evals is not None:
             if self.id not in known_evals:
                 child, known_evals = self.child.evaluate(
@@ -86,11 +86,11 @@ class UnaryOperator(pybamm.Symbol):
         return self.children[0].evaluate_for_shape()
 
     def _evaluates_on_edges(self, dimension):
-        """ See :meth:`pybamm.Symbol._evaluates_on_edges()`. """
+        """See :meth:`pybamm.Symbol._evaluates_on_edges()`."""
         return self.child.evaluates_on_edges(dimension)
 
     def is_constant(self):
-        """ See :meth:`pybamm.Symbol.is_constant()`. """
+        """See :meth:`pybamm.Symbol.is_constant()`."""
         return self.child.is_constant()
 
     def _sympy_operator(self, child):
@@ -107,81 +107,84 @@ class UnaryOperator(pybamm.Symbol):
 
 
 class Negate(UnaryOperator):
-    """A node in the expression tree representing a `-` negation operator
+    """
+    A node in the expression tree representing a `-` negation operator.
 
     **Extends:** :class:`UnaryOperator`
     """
 
     def __init__(self, child):
-        """ See :meth:`pybamm.UnaryOperator.__init__()`. """
+        """See :meth:`pybamm.UnaryOperator.__init__()`."""
         super().__init__("-", child)
 
     def __str__(self):
-        """ See :meth:`pybamm.Symbol.__str__()`. """
+        """See :meth:`pybamm.Symbol.__str__()`."""
         return "{}{!s}".format(self.name, self.child)
 
     def _diff(self, variable):
-        """ See :meth:`pybamm.Symbol._diff()`. """
+        """See :meth:`pybamm.Symbol._diff()`."""
         return -self.child.diff(variable)
 
     def _unary_jac(self, child_jac):
-        """ See :meth:`pybamm.UnaryOperator._unary_jac()`. """
+        """See :meth:`pybamm.UnaryOperator._unary_jac()`."""
         return -child_jac
 
     def _unary_evaluate(self, child):
-        """ See :meth:`UnaryOperator._unary_evaluate()`. """
+        """See :meth:`UnaryOperator._unary_evaluate()`."""
         return -child
 
     def _unary_new_copy(self, child):
-        """ See :meth:`UnaryOperator._unary_new_copy()`. """
+        """See :meth:`UnaryOperator._unary_new_copy()`."""
         return -child
 
 
 class AbsoluteValue(UnaryOperator):
-    """A node in the expression tree representing an `abs` operator
+    """
+    A node in the expression tree representing an `abs` operator.
 
     **Extends:** :class:`UnaryOperator`
     """
 
     def __init__(self, child):
-        """ See :meth:`pybamm.UnaryOperator.__init__()`. """
+        """See :meth:`pybamm.UnaryOperator.__init__()`."""
         super().__init__("abs", child)
 
     def diff(self, variable):
-        """ See :meth:`pybamm.Symbol.diff()`. """
+        """See :meth:`pybamm.Symbol.diff()`."""
         child = self.child.new_copy()
         return Sign(child) * child.diff(variable)
 
     def _unary_jac(self, child_jac):
-        """ See :meth:`pybamm.UnaryOperator._unary_jac()`. """
+        """See :meth:`pybamm.UnaryOperator._unary_jac()`."""
         child = self.child.new_copy()
         return Sign(child) * child_jac
 
     def _unary_evaluate(self, child):
-        """ See :meth:`UnaryOperator._unary_evaluate()`. """
+        """See :meth:`UnaryOperator._unary_evaluate()`."""
         return np.abs(child)
 
 
 class Sign(UnaryOperator):
-    """A node in the expression tree representing a `sign` operator
+    """
+    A node in the expression tree representing a `sign` operator.
 
     **Extends:** :class:`UnaryOperator`
     """
 
     def __init__(self, child):
-        """ See :meth:`pybamm.UnaryOperator.__init__()`. """
+        """See :meth:`pybamm.UnaryOperator.__init__()`."""
         super().__init__("sign", child)
 
     def diff(self, variable):
-        """ See :meth:`pybamm.Symbol.diff()`. """
+        """See :meth:`pybamm.Symbol.diff()`."""
         return pybamm.Scalar(0)
 
     def _unary_jac(self, child_jac):
-        """ See :meth:`pybamm.UnaryOperator._unary_jac()`. """
+        """See :meth:`pybamm.UnaryOperator._unary_jac()`."""
         return pybamm.Scalar(0)
 
     def _unary_evaluate(self, child):
-        """ See :meth:`UnaryOperator._unary_evaluate()`. """
+        """See :meth:`UnaryOperator._unary_evaluate()`."""
         if issparse(child):
             return csr_matrix.sign(child)
         else:
@@ -189,53 +192,56 @@ class Sign(UnaryOperator):
 
 
 class Floor(UnaryOperator):
-    """A node in the expression tree representing an `floor` operator
+    """
+    A node in the expression tree representing an `floor` operator.
 
     **Extends:** :class:`UnaryOperator`
     """
 
     def __init__(self, child):
-        """ See :meth:`pybamm.UnaryOperator.__init__()`. """
+        """See :meth:`pybamm.UnaryOperator.__init__()`."""
         super().__init__("floor", child)
 
     def diff(self, variable):
-        """ See :meth:`pybamm.Symbol.diff()`. """
+        """See :meth:`pybamm.Symbol.diff()`."""
         return pybamm.Scalar(0)
 
     def _unary_jac(self, child_jac):
-        """ See :meth:`pybamm.UnaryOperator._unary_jac()`. """
+        """See :meth:`pybamm.UnaryOperator._unary_jac()`."""
         return pybamm.Scalar(0)
 
     def _unary_evaluate(self, child):
-        """ See :meth:`UnaryOperator._unary_evaluate()`. """
+        """See :meth:`UnaryOperator._unary_evaluate()`."""
         return np.floor(child)
 
 
 class Ceiling(UnaryOperator):
-    """A node in the expression tree representing a `ceil` operator
+    """
+    A node in the expression tree representing a `ceil` operator.
 
     **Extends:** :class:`UnaryOperator`
     """
 
     def __init__(self, child):
-        """ See :meth:`pybamm.UnaryOperator.__init__()`. """
+        """See :meth:`pybamm.UnaryOperator.__init__()`."""
         super().__init__("ceil", child)
 
     def diff(self, variable):
-        """ See :meth:`pybamm.Symbol.diff()`. """
+        """See :meth:`pybamm.Symbol.diff()`."""
         return pybamm.Scalar(0)
 
     def _unary_jac(self, child_jac):
-        """ See :meth:`pybamm.UnaryOperator._unary_jac()`. """
+        """See :meth:`pybamm.UnaryOperator._unary_jac()`."""
         return pybamm.Scalar(0)
 
     def _unary_evaluate(self, child):
-        """ See :meth:`UnaryOperator._unary_evaluate()`. """
+        """See :meth:`UnaryOperator._unary_evaluate()`."""
         return np.ceil(child)
 
 
 class Index(UnaryOperator):
-    """A node in the expression tree, which stores the index that should be
+    """
+    A node in the expression tree, which stores the index that should be
     extracted from its child after the child has been evaluated.
 
     Parameters
@@ -286,7 +292,7 @@ class Index(UnaryOperator):
             self.clear_domains()
 
     def _unary_jac(self, child_jac):
-        """ See :meth:`pybamm.UnaryOperator._unary_jac()`. """
+        """See :meth:`pybamm.UnaryOperator._unary_jac()`."""
 
         # if child.jac returns a matrix of zeros, this subsequently gives a bug
         # when trying to simplify the node Index(child_jac). Instead, search the
@@ -299,7 +305,7 @@ class Index(UnaryOperator):
             return Index(child_jac, self.index)
 
     def set_id(self):
-        """ See :meth:`pybamm.Symbol.set_id()` """
+        """See :meth:`pybamm.Symbol.set_id()`"""
         self._id = hash(
             (
                 self.__class__,
@@ -312,11 +318,11 @@ class Index(UnaryOperator):
         )
 
     def _unary_evaluate(self, child):
-        """ See :meth:`UnaryOperator._unary_evaluate()`. """
+        """See :meth:`UnaryOperator._unary_evaluate()`."""
         return child[self.slice]
 
     def _unary_new_copy(self, child):
-        """ See :meth:`UnaryOperator._unary_new_copy()`. """
+        """See :meth:`UnaryOperator._unary_new_copy()`."""
         new_index = self.__class__(child, self.index, check_size=False)
         # Keep same domains
         new_index.copy_domains(self)
@@ -326,12 +332,13 @@ class Index(UnaryOperator):
         return self._unary_evaluate(self.children[0].evaluate_for_shape())
 
     def _evaluates_on_edges(self, dimension):
-        """ See :meth:`pybamm.Symbol._evaluates_on_edges()`. """
+        """See :meth:`pybamm.Symbol._evaluates_on_edges()`."""
         return False
 
 
 class SpatialOperator(UnaryOperator):
-    """A node in the expression tree representing a unary spatial operator
+    """
+    A node in the expression tree representing a unary spatial operator
     (e.g. grad, div)
 
     Derived classes will specify the particular operator
@@ -348,20 +355,20 @@ class SpatialOperator(UnaryOperator):
         name of the node
     child : :class:`Symbol`
         child node
-
     """
 
     def __init__(self, name, child, domain=None, auxiliary_domains=None):
         super().__init__(name, child, domain, auxiliary_domains)
 
     def diff(self, variable):
-        """ See :meth:`pybamm.Symbol.diff()`. """
+        """See :meth:`pybamm.Symbol.diff()`."""
         # We shouldn't need this
         raise NotImplementedError
 
 
 class Gradient(SpatialOperator):
-    """A node in the expression tree representing a grad operator
+    """
+    A node in the expression tree representing a grad operator.
 
     **Extends:** :class:`SpatialOperator`
     """
@@ -380,11 +387,11 @@ class Gradient(SpatialOperator):
         super().__init__("grad", child)
 
     def _evaluates_on_edges(self, dimension):
-        """ See :meth:`pybamm.Symbol._evaluates_on_edges()`. """
+        """See :meth:`pybamm.Symbol._evaluates_on_edges()`."""
         return True
 
     def _unary_new_copy(self, child):
-        """ See :meth:`UnaryOperator._unary_new_copy()`. """
+        """See :meth:`UnaryOperator._unary_new_copy()`."""
         return grad(child)
 
     def _sympy_operator(self, child):
@@ -393,7 +400,8 @@ class Gradient(SpatialOperator):
 
 
 class Divergence(SpatialOperator):
-    """A node in the expression tree representing a div operator
+    """
+    A node in the expression tree representing a div operator.
 
     **Extends:** :class:`SpatialOperator`
     """
@@ -416,11 +424,11 @@ class Divergence(SpatialOperator):
         super().__init__("div", child)
 
     def _evaluates_on_edges(self, dimension):
-        """ See :meth:`pybamm.Symbol._evaluates_on_edges()`. """
+        """See :meth:`pybamm.Symbol._evaluates_on_edges()`."""
         return False
 
     def _unary_new_copy(self, child):
-        """ See :meth:`UnaryOperator._unary_new_copy()`. """
+        """See :meth:`UnaryOperator._unary_new_copy()`."""
         return div(child)
 
     def _sympy_operator(self, child):
@@ -429,7 +437,8 @@ class Divergence(SpatialOperator):
 
 
 class Laplacian(SpatialOperator):
-    """A node in the expression tree representing a laplacian operator. This is
+    """
+    A node in the expression tree representing a laplacian operator. This is
     currently only implemeted in the weak form for finite element formulations.
 
     **Extends:** :class:`SpatialOperator`
@@ -439,12 +448,13 @@ class Laplacian(SpatialOperator):
         super().__init__("laplacian", child)
 
     def _evaluates_on_edges(self, dimension):
-        """ See :meth:`pybamm.Symbol._evaluates_on_edges()`. """
+        """See :meth:`pybamm.Symbol._evaluates_on_edges()`."""
         return False
 
 
 class GradientSquared(SpatialOperator):
-    """A node in the expression tree representing a the inner product of the grad
+    """
+    A node in the expression tree representing a the inner product of the grad
     operator with itself. In particular, this is useful in the finite element
     formualtion where we only require the (sclar valued) square of the gradient,
     and  not the gradient itself.
@@ -455,12 +465,13 @@ class GradientSquared(SpatialOperator):
         super().__init__("grad squared", child)
 
     def _evaluates_on_edges(self, dimension):
-        """ See :meth:`pybamm.Symbol._evaluates_on_edges()`. """
+        """See :meth:`pybamm.Symbol._evaluates_on_edges()`."""
         return False
 
 
 class Mass(SpatialOperator):
-    """Returns the mass matrix for a given symbol, accounting for Dirchlet boundary
+    """
+    Returns the mass matrix for a given symbol, accounting for Dirchlet boundary
     conditions where necessary (e.g. in the finite element formualtion)
     **Extends:** :class:`SpatialOperator`
     """
@@ -473,7 +484,8 @@ class Mass(SpatialOperator):
 
 
 class BoundaryMass(SpatialOperator):
-    """Returns the mass matrix for a given symbol assembled over the boundary of
+    """
+    Returns the mass matrix for a given symbol assembled over the boundary of
     the domain, accounting for Dirchlet boundary conditions where necessary
     (e.g. in the finite element formualtion)
     **Extends:** :class:`SpatialOperator`
@@ -487,7 +499,8 @@ class BoundaryMass(SpatialOperator):
 
 
 class Integral(SpatialOperator):
-    """A node in the expression tree representing an integral operator
+    """
+    A node in the expression tree representing an integral operator.
 
     .. math::
         I = \\int_{a}^{b}\\!f(u)\\,du,
@@ -577,7 +590,7 @@ class Integral(SpatialOperator):
         return self._integration_variable
 
     def set_id(self):
-        """ See :meth:`pybamm.Symbol.set_id()` """
+        """See :meth:`pybamm.Symbol.set_id()`"""
         self._id = hash(
             (self.__class__, self.name)
             + tuple(
@@ -591,23 +604,24 @@ class Integral(SpatialOperator):
         )
 
     def _unary_new_copy(self, child):
-        """ See :meth:`UnaryOperator._unary_new_copy()`. """
+        """See :meth:`UnaryOperator._unary_new_copy()`."""
 
         return self.__class__(child, self.integration_variable)
 
     def _evaluate_for_shape(self):
-        """ See :meth:`pybamm.Symbol.evaluate_for_shape_using_domain()` """
+        """See :meth:`pybamm.Symbol.evaluate_for_shape_using_domain()`"""
         return pybamm.evaluate_for_shape_using_domain(
             self.domain, self.auxiliary_domains
         )
 
     def _evaluates_on_edges(self, dimension):
-        """ See :meth:`pybamm.Symbol._evaluates_on_edges()`. """
+        """See :meth:`pybamm.Symbol._evaluates_on_edges()`."""
         return False
 
 
 class BaseIndefiniteIntegral(Integral):
-    """Base class for indefinite integrals (forward or backward).
+    """
+    Base class for indefinite integrals (forward or backward).
 
     Parameters
     ----------
@@ -641,7 +655,8 @@ class BaseIndefiniteIntegral(Integral):
 
 
 class IndefiniteIntegral(BaseIndefiniteIntegral):
-    """A node in the expression tree representing an indefinite integral operator
+    """
+    A node in the expression tree representing an indefinite integral operator.
 
     .. math::
         I = \\int_{x_\text{min}}^{x}\\!f(u)\\,du
@@ -670,8 +685,8 @@ class IndefiniteIntegral(BaseIndefiniteIntegral):
 
 
 class BackwardIndefiniteIntegral(BaseIndefiniteIntegral):
-    """A node in the expression tree representing a backward indefinite integral
-    operator
+    """
+    A node in the expression tree representing a backward indefinite integral operator.
 
     .. math::
         I = \\int_{x}^{x_\text{max}}\\!f(u)\\,du
@@ -700,7 +715,8 @@ class BackwardIndefiniteIntegral(BaseIndefiniteIntegral):
 
 
 class DefiniteIntegralVector(SpatialOperator):
-    """A node in the expression tree representing an integral of the basis used
+    """
+    A node in the expression tree representing an integral of the basis used
     for discretisation
 
     .. math::
@@ -727,7 +743,7 @@ class DefiniteIntegralVector(SpatialOperator):
         self.clear_domains()
 
     def set_id(self):
-        """ See :meth:`pybamm.Symbol.set_id()` """
+        """See :meth:`pybamm.Symbol.set_id()`"""
         self._id = hash(
             (self.__class__, self.name, self.vector_type)
             + (self.children[0].id,)
@@ -735,17 +751,18 @@ class DefiniteIntegralVector(SpatialOperator):
         )
 
     def _unary_new_copy(self, child):
-        """ See :meth:`UnaryOperator._unary_new_copy()`. """
+        """See :meth:`UnaryOperator._unary_new_copy()`."""
 
         return self.__class__(child, vector_type=self.vector_type)
 
     def _evaluate_for_shape(self):
-        """ See :meth:`pybamm.Symbol.evaluate_for_shape_using_domain()` """
+        """See :meth:`pybamm.Symbol.evaluate_for_shape_using_domain()`"""
         return pybamm.evaluate_for_shape_using_domain(self.domain)
 
 
 class BoundaryIntegral(SpatialOperator):
-    """A node in the expression tree representing an integral operator over the
+    """
+    A node in the expression tree representing an integral operator over the
     boundary of a domain
 
     .. math::
@@ -785,27 +802,28 @@ class BoundaryIntegral(SpatialOperator):
         )
 
     def set_id(self):
-        """ See :meth:`pybamm.Symbol.set_id()` """
+        """See :meth:`pybamm.Symbol.set_id()`"""
         self._id = hash(
             (self.__class__, self.name) + (self.children[0].id,) + tuple(self.domain)
         )
 
     def _unary_new_copy(self, child):
-        """ See :meth:`UnaryOperator._unary_new_copy()`. """
+        """See :meth:`UnaryOperator._unary_new_copy()`."""
 
         return self.__class__(child, region=self.region)
 
     def _evaluate_for_shape(self):
-        """ See :meth:`pybamm.Symbol.evaluate_for_shape_using_domain()` """
+        """See :meth:`pybamm.Symbol.evaluate_for_shape_using_domain()`"""
         return pybamm.evaluate_for_shape_using_domain(self.domain)
 
     def _evaluates_on_edges(self, dimension):
-        """ See :meth:`pybamm.Symbol._evaluates_on_edges()`. """
+        """See :meth:`pybamm.Symbol._evaluates_on_edges()`."""
         return False
 
 
 class DeltaFunction(SpatialOperator):
-    """Delta function. Currently can only be implemented at the edge of a domain
+    """
+    Delta function. Currently can only be implemented at the edge of a domain.
 
     Parameters
     ----------
@@ -828,7 +846,7 @@ class DeltaFunction(SpatialOperator):
         super().__init__("delta_function", child, domain, auxiliary_domains)
 
     def set_id(self):
-        """ See :meth:`pybamm.Symbol.set_id()` """
+        """See :meth:`pybamm.Symbol.set_id()`"""
         self._id = hash(
             (self.__class__, self.name, self.side, self.children[0].id)
             + tuple(self.domain)
@@ -836,17 +854,15 @@ class DeltaFunction(SpatialOperator):
         )
 
     def _evaluates_on_edges(self, dimension):
-        """ See :meth:`pybamm.Symbol._evaluates_on_edges()`. """
+        """See :meth:`pybamm.Symbol._evaluates_on_edges()`."""
         return False
 
     def _unary_new_copy(self, child):
-        """ See :meth:`UnaryOperator._unary_new_copy()`. """
+        """See :meth:`UnaryOperator._unary_new_copy()`."""
         return self.__class__(child, self.side, self.domain)
 
     def evaluate_for_shape(self):
-        """
-        See :meth:`pybamm.Symbol.evaluate_for_shape_using_domain()`
-        """
+        """See :meth:`pybamm.Symbol.evaluate_for_shape_using_domain()`"""
         child_eval = self.children[0].evaluate_for_shape()
         vec = pybamm.evaluate_for_shape_using_domain(self.domain)
 
@@ -854,7 +870,8 @@ class DeltaFunction(SpatialOperator):
 
 
 class BoundaryOperator(SpatialOperator):
-    """A node in the expression tree which gets the boundary value of a variable.
+    """
+    A node in the expression tree which gets the boundary value of a variable.
 
     Parameters
     ----------
@@ -896,7 +913,7 @@ class BoundaryOperator(SpatialOperator):
         )
 
     def set_id(self):
-        """ See :meth:`pybamm.Symbol.set_id()` """
+        """See :meth:`pybamm.Symbol.set_id()`"""
         self._id = hash(
             (self.__class__, self.name, self.side, self.children[0].id)
             + tuple(self.domain)
@@ -904,18 +921,19 @@ class BoundaryOperator(SpatialOperator):
         )
 
     def _unary_new_copy(self, child):
-        """ See :meth:`UnaryOperator._unary_new_copy()`. """
+        """See :meth:`UnaryOperator._unary_new_copy()`."""
         return self.__class__(child, self.side)
 
     def _evaluate_for_shape(self):
-        """ See :meth:`pybamm.Symbol.evaluate_for_shape_using_domain()` """
+        """See :meth:`pybamm.Symbol.evaluate_for_shape_using_domain()`"""
         return pybamm.evaluate_for_shape_using_domain(
             self.domain, self.auxiliary_domains
         )
 
 
 class BoundaryValue(BoundaryOperator):
-    """A node in the expression tree which gets the boundary value of a variable.
+    """
+    A node in the expression tree which gets the boundary value of a variable.
 
     Parameters
     ----------
@@ -931,12 +949,13 @@ class BoundaryValue(BoundaryOperator):
         super().__init__("boundary value", child, side)
 
     def _unary_new_copy(self, child):
-        """ See :meth:`UnaryOperator._unary_new_copy()`. """
+        """See :meth:`UnaryOperator._unary_new_copy()`."""
         return boundary_value(child, self.side)
 
 
 class BoundaryGradient(BoundaryOperator):
-    """A node in the expression tree which gets the boundary flux of a variable.
+    """
+    A node in the expression tree which gets the boundary flux of a variable.
 
     Parameters
     ----------
@@ -953,7 +972,8 @@ class BoundaryGradient(BoundaryOperator):
 
 
 class UpwindDownwind(SpatialOperator):
-    """A node in the expression tree representing an upwinding or downwinding operator.
+    """
+    A node in the expression tree representing an upwinding or downwinding operator.
     Usually to be used for better stability in convection-dominated equations.
 
     **Extends:** :class:`SpatialOperator`
@@ -974,7 +994,7 @@ class UpwindDownwind(SpatialOperator):
         super().__init__(name, child)
 
     def _evaluates_on_edges(self, dimension):
-        """ See :meth:`pybamm.Symbol._evaluates_on_edges()`. """
+        """See :meth:`pybamm.Symbol._evaluates_on_edges()`."""
         return True
 
 
@@ -1001,29 +1021,29 @@ class Downwind(UpwindDownwind):
 
 
 class NotConstant(UnaryOperator):
-    """Special class to wrap a symbol that should not be treated as a constant"""
+    """Special class to wrap a symbol that should not be treated as a constant."""
 
     def __init__(self, child):
         super().__init__("not_constant", child)
 
     def _unary_new_copy(self, child):
-        """ See :meth:`pybamm.Symbol.new_copy()`. """
+        """See :meth:`pybamm.Symbol.new_copy()`."""
         return NotConstant(child)
 
     def _diff(self, variable):
-        """ See :meth:`pybamm.Symbol._diff()`. """
+        """See :meth:`pybamm.Symbol._diff()`."""
         return self.child.diff(variable)
 
     def _unary_jac(self, child_jac):
-        """ See :meth:`pybamm.UnaryOperator._unary_jac()`. """
+        """See :meth:`pybamm.UnaryOperator._unary_jac()`."""
         return child_jac
 
     def _unary_evaluate(self, child):
-        """ See :meth:`UnaryOperator._unary_evaluate()`. """
+        """See :meth:`UnaryOperator._unary_evaluate()`."""
         return child
 
     def is_constant(self):
-        """ See :meth:`pybamm.Symbol.is_constant()`. """
+        """See :meth:`pybamm.Symbol.is_constant()`."""
         # This symbol is not constant
         return False
 
@@ -1034,7 +1054,8 @@ class NotConstant(UnaryOperator):
 
 
 def grad(symbol):
-    """convenience function for creating a :class:`Gradient`
+    """
+    convenience function for creating a :class:`Gradient`
 
     Parameters
     ----------
@@ -1059,7 +1080,8 @@ def grad(symbol):
 
 
 def div(symbol):
-    """convenience function for creating a :class:`Divergence`
+    """
+    convenience function for creating a :class:`Divergence`
 
     Parameters
     ----------
@@ -1085,7 +1107,8 @@ def div(symbol):
 
 
 def laplacian(symbol):
-    """convenience function for creating a :class:`Laplacian`
+    """
+    convenience function for creating a :class:`Laplacian`
 
     Parameters
     ----------
@@ -1104,7 +1127,8 @@ def laplacian(symbol):
 
 
 def grad_squared(symbol):
-    """convenience function for creating a :class:`GradientSquared`
+    """
+    convenience function for creating a :class:`GradientSquared`
 
     Parameters
     ----------
@@ -1139,8 +1163,9 @@ def downwind(symbol):
 
 
 def surf(symbol):
-    """convenience function for creating a right :class:`BoundaryValue`, usually in the
-    spherical geometry
+    """
+    convenience function for creating a right :class:`BoundaryValue`, usually in the
+    spherical geometry.
 
     Parameters
     ----------
@@ -1163,7 +1188,7 @@ def surf(symbol):
 
 def x_average(symbol):
     """
-    convenience function for creating an average in the x-direction
+    convenience function for creating an average in the x-direction.
 
     Parameters
     ----------
@@ -1233,7 +1258,8 @@ def x_average(symbol):
 
 
 def z_average(symbol):
-    """convenience function for creating an average in the z-direction
+    """
+    convenience function for creating an average in the z-direction.
 
     Parameters
     ----------
@@ -1276,7 +1302,8 @@ def z_average(symbol):
 
 
 def yz_average(symbol):
-    """convenience function for creating an average in the y-z-direction
+    """
+    convenience function for creating an average in the y-z-direction.
 
     Parameters
     ----------
@@ -1317,7 +1344,8 @@ def yz_average(symbol):
 
 
 def r_average(symbol):
-    """convenience function for creating an average in the r-direction
+    """
+    convenience function for creating an average in the r-direction.
 
     Parameters
     ----------
@@ -1366,7 +1394,8 @@ def r_average(symbol):
 
 
 def boundary_value(symbol, side):
-    """convenience function for creating a :class:`pybamm.BoundaryValue`
+    """
+    convenience function for creating a :class:`pybamm.BoundaryValue`
 
     Parameters
     ----------
@@ -1409,7 +1438,7 @@ def boundary_value(symbol, side):
 
 
 def sign(symbol):
-    """ Returns a :class:`Sign` object. """
+    """Returns a :class:`Sign` object."""
     return pybamm.simplify_if_constant(Sign(symbol))
 
 

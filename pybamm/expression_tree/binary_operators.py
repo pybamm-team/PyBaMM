@@ -1317,7 +1317,8 @@ def sigmoid(left, right, k):
 
 
 def source(left, right, boundary=False):
-    """A convenience function for creating (part of) an expression tree representing
+    """
+    A convenience function for creating (part of) an expression tree representing
     a source term. This is necessary for spatial methods where the mass matrix
     is not the identity (e.g. finite element formulation with piecwise linear
     basis functions). The left child is the symbol representing the source term
