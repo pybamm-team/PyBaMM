@@ -171,14 +171,12 @@ class Simulation:
         self._experiment_times = []
         for op, events in zip(experiment.operating_conditions, experiment.events):
             if isinstance(op[0], np.ndarray):
-                # self.operating_mode = "drive cycle" ########!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
                 # If ndarray is recived from, create interpolant
                 # create interpolant
                 timescale = self._parameter_values.evaluate(model.timescale)
                 drive_cycle_interpolant = pybamm.Interpolant(
                     op[0][:, 0], op[0][:, 1], timescale * pybamm.t
                 )
-                # print(type(drive_cycle_interpolant))  #!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
                 if op[1] == "A":
                     operating_inputs = {
                         "Current switch": 1,
@@ -193,8 +191,8 @@ class Simulation:
                         "Current switch": 0,
                         "Voltage switch": 1,
                         "Power switch": 0,
-                        "Current input [A]": 0,
-                        "Voltage input [V]": drive_cycle_interpolant,  # doesn't matter
+                        "Current input [A]": 0,  # doesn't matter
+                        "Voltage input [V]": drive_cycle_interpolant,
                         "Power input [W]": 0,  # doesn't matter
                     }
                 if op[1] == "W":
@@ -202,12 +200,11 @@ class Simulation:
                         "Current switch": 0,
                         "Voltage switch": 0,
                         "Power switch": 1,
-                        "Current input [A]": 0,
+                        "Current input [A]": 0,  # doesn't matter
                         "Voltage input [V]": 0,  # doesn't matter
-                        "Power input [W]": drive_cycle_interpolant,  # doesn't matter
+                        "Power input [W]": drive_cycle_interpolant,
                     }
             else:
-                # self.operating_mode = "experiment" ########!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!        
                 if op[1] in ["A", "C"]:
                     # Update inputs for constant current
                     if op[1] == "A":
@@ -460,7 +457,8 @@ class Simulation:
                     for event in new_model.events
                     if event.name not in ["Minimum voltage", "Maximum voltage"]
                 ]
-
+# Make Interpolant Here
+                print("OK GEE")
                 # Update parameter values
                 new_parameter_values = self.parameter_values.copy()
                 if op_inputs["Current switch"] == 1:
@@ -731,8 +729,6 @@ class Simulation:
                     dt = self._experiment_times[idx]
                     op_conds_str = self.experiment.operating_conditions_strings[idx]
                     op_conds_elec = self.experiment.operating_conditions[idx][:2]
-                    # print('Operating Conditions', op_conds_elec)
-                    # model = self.op_conds_to_built_models[op_conds_elec]
                     model = self.op_conds_to_built_models[op_conds_str]
                     # Use 1-indexing for printing cycle number as it is more
                     # human-intuitive
@@ -754,9 +750,7 @@ class Simulation:
                     )
                     steps.append(step_solution)
                     current_solution = step_solution
-
                     cycle_solution = cycle_solution + step_solution
-
                     # Only allow events specified by experiment
                     if not (
                         cycle_solution is None
