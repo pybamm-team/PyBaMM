@@ -1,15 +1,18 @@
 #
 # Function classes and methods
 #
-import autograd
 import numbers
+
+import autograd
 import numpy as np
 from scipy import special
+
 import pybamm
 
 
 class Function(pybamm.Symbol):
-    """A node in the expression tree representing an arbitrary function
+    """
+    A node in the expression tree representing an arbitrary function.
 
     Parameters
     ----------
@@ -60,7 +63,7 @@ class Function(pybamm.Symbol):
         )
 
     def __str__(self):
-        """ See :meth:`pybamm.Symbol.__str__()`. """
+        """See :meth:`pybamm.Symbol.__str__()`."""
         out = "{}(".format(self.name[10:-1])
         for child in self.children:
             out += "{!s}, ".format(child)
@@ -68,8 +71,10 @@ class Function(pybamm.Symbol):
         return out
 
     def get_children_domains(self, children_list):
-        """Obtains the unique domain of the children. If the
-        children have different domains then raise an error"""
+        """
+        Obtains the unique domain of the children.
+        If the children have different domains then raise an error
+        """
 
         domains = [child.domain for child in children_list if child.domain != []]
 
@@ -88,7 +93,7 @@ class Function(pybamm.Symbol):
         return domain
 
     def diff(self, variable):
-        """ See :meth:`pybamm.Symbol.diff()`. """
+        """See :meth:`pybamm.Symbol.diff()`."""
         if variable.id == self.id:
             return pybamm.Scalar(1)
         else:
@@ -141,7 +146,7 @@ class Function(pybamm.Symbol):
                 )
 
     def _function_jac(self, children_jacs):
-        """ Calculate the jacobian of a function. """
+        """Calculate the jacobian of a function."""
 
         if all(child.evaluates_to_constant_number() for child in self.children):
             jacobian = pybamm.Scalar(0)
@@ -162,7 +167,7 @@ class Function(pybamm.Symbol):
         return jacobian
 
     def evaluate(self, t=None, y=None, y_dot=None, inputs=None, known_evals=None):
-        """ See :meth:`pybamm.Symbol.evaluate()`. """
+        """See :meth:`pybamm.Symbol.evaluate()`."""
         if known_evals is not None:
             if self.id not in known_evals:
                 evaluated_children = [None] * len(self.children)
@@ -179,11 +184,11 @@ class Function(pybamm.Symbol):
             return self._function_evaluate(evaluated_children)
 
     def _evaluates_on_edges(self, dimension):
-        """ See :meth:`pybamm.Symbol._evaluates_on_edges()`. """
+        """See :meth:`pybamm.Symbol._evaluates_on_edges()`."""
         return any(child.evaluates_on_edges(dimension) for child in self.children)
 
     def is_constant(self):
-        """ See :meth:`pybamm.Symbol.is_constant()`. """
+        """See :meth:`pybamm.Symbol.is_constant()`."""
         return all(child.is_constant() for child in self.children)
 
     def _evaluate_for_shape(self):
@@ -198,12 +203,13 @@ class Function(pybamm.Symbol):
         return self.function(*evaluated_children)
 
     def new_copy(self):
-        """ See :meth:`pybamm.Symbol.new_copy()`. """
+        """See :meth:`pybamm.Symbol.new_copy()`."""
         children_copy = [child.new_copy() for child in self.children]
         return self._function_new_copy(children_copy)
 
     def _function_new_copy(self, children):
-        """Returns a new copy of the function.
+        """
+        Returns a new copy of the function.
 
         Inputs
         ------
@@ -222,7 +228,7 @@ class Function(pybamm.Symbol):
                 name=self.name,
                 derivative=self.derivative,
                 differentiated_function=self.differentiated_function
-            ),
+            )
         )
 
 
@@ -253,14 +259,13 @@ class SpecificFunction(Function):
         Function to be applied to child
     child : :class:`pybamm.Symbol`
         The child to apply the function to
-
     """
 
     def __init__(self, function, child):
         super().__init__(function, child)
 
     def _function_new_copy(self, children):
-        """ See :meth:`pybamm.Function._function_new_copy()` """
+        """See :meth:`pybamm.Function._function_new_copy()`"""
         return pybamm.simplify_if_constant(self.__class__(*children))
 
 
@@ -271,7 +276,7 @@ class Arcsinh(SpecificFunction):
         super().__init__(np.arcsinh, child)
 
     def _function_diff(self, children, idx):
-        """ See :meth:`pybamm.Symbol._function_diff()`. """
+        """See :meth:`pybamm.Symbol._function_diff()`."""
         return 1 / Sqrt(children[0] ** 2 + 1)
 
 
@@ -287,7 +292,7 @@ class Cos(SpecificFunction):
         super().__init__(np.cos, child)
 
     def _function_diff(self, children, idx):
-        """ See :meth:`pybamm.Symbol._function_diff()`. """
+        """See :meth:`pybamm.Symbol._function_diff()`."""
         return -Sin(children[0])
 
 
@@ -303,7 +308,7 @@ class Cosh(SpecificFunction):
         super().__init__(np.cosh, child)
 
     def _function_diff(self, children, idx):
-        """ See :meth:`pybamm.Function._function_diff()`. """
+        """See :meth:`pybamm.Function._function_diff()`."""
         return Sinh(children[0])
 
 
@@ -319,7 +324,7 @@ class Exponential(SpecificFunction):
         super().__init__(np.exp, child)
 
     def _function_diff(self, children, idx):
-        """ See :meth:`pybamm.Function._function_diff()`. """
+        """See :meth:`pybamm.Function._function_diff()`."""
         return Exponential(children[0])
 
 
@@ -340,7 +345,7 @@ class Log(SpecificFunction):
             return np.log(*evaluated_children)
 
     def _function_diff(self, children, idx):
-        """ See :meth:`pybamm.Function._function_diff()`. """
+        """See :meth:`pybamm.Function._function_diff()`."""
         return 1 / children[0]
 
 
@@ -359,7 +364,7 @@ def log10(child):
 
 
 class Max(SpecificFunction):
-    """ Max function """
+    """Max function."""
 
     def __init__(self, child):
         super().__init__(np.max, child)
@@ -374,7 +379,7 @@ def max(child):
 
 
 class Min(SpecificFunction):
-    """ Min function """
+    """Min function."""
 
     def __init__(self, child):
         super().__init__(np.min, child)
@@ -400,7 +405,7 @@ class Sin(SpecificFunction):
         super().__init__(np.sin, child)
 
     def _function_diff(self, children, idx):
-        """ See :meth:`pybamm.Function._function_diff()`. """
+        """See :meth:`pybamm.Function._function_diff()`."""
         return Cos(children[0])
 
 
@@ -416,7 +421,7 @@ class Sinh(SpecificFunction):
         super().__init__(np.sinh, child)
 
     def _function_diff(self, children, idx):
-        """ See :meth:`pybamm.Function._function_diff()`. """
+        """See :meth:`pybamm.Function._function_diff()`."""
         return Cosh(children[0])
 
 
@@ -437,7 +442,7 @@ class Sqrt(SpecificFunction):
             return np.sqrt(*evaluated_children)
 
     def _function_diff(self, children, idx):
-        """ See :meth:`pybamm.Function._function_diff()`. """
+        """See :meth:`pybamm.Function._function_diff()`."""
         return 1 / (2 * Sqrt(children[0]))
 
 
@@ -453,7 +458,7 @@ class Tanh(SpecificFunction):
         super().__init__(np.tanh, child)
 
     def _function_diff(self, children, idx):
-        """ See :meth:`pybamm.Function._function_diff()`. """
+        """See :meth:`pybamm.Function._function_diff()`."""
         return sech(children[0]) ** 2
 
 
@@ -469,7 +474,7 @@ class Arctan(SpecificFunction):
         super().__init__(np.arctan, child)
 
     def _function_diff(self, children, idx):
-        """ See :meth:`pybamm.Function._function_diff()`. """
+        """See :meth:`pybamm.Function._function_diff()`."""
         return 1 / (children[0] ** 2 + 1)
 
 
@@ -485,7 +490,7 @@ class Erf(SpecificFunction):
         super().__init__(special.erf, child)
 
     def _function_diff(self, children, idx):
-        """ See :meth:`pybamm.Function._function_diff()`. """
+        """See :meth:`pybamm.Function._function_diff()`."""
         return 2 / np.sqrt(np.pi) * Exponential(-children[0] ** 2)
 
 
