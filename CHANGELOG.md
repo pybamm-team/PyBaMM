@@ -2,6 +2,7 @@
 
 ## Features
 
+-   Added fitted expressions for OCPs for the Chen2020 parameter set ([#1526](https://github.com/pybamm-team/PyBaMM/pull/1497))
 -   Added `print_name` to some symbols ([#1495](https://github.com/pybamm-team/PyBaMM/pull/1497), [#1495](https://github.com/pybamm-team/PyBaMM/pull/1497))
 -   Added Base Parameters class and SymPy in dependencies ([#1495](https://github.com/pybamm-team/PyBaMM/pull/1495))
 -   Added a new "reaction-driven" model for LAM from Reniers et al (2019) ([#1490](https://github.com/pybamm-team/PyBaMM/pull/1490))
