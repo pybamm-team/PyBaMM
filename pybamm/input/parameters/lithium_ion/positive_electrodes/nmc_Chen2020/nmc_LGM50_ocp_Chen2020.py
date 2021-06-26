@@ -1,4 +1,4 @@
-from pybamm import exp, tanh
+from pybamm import tanh
 
 
 def nmc_LGM50_ocp_Chen2020(sto):
