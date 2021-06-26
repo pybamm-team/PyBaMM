@@ -2,12 +2,15 @@
 # Parameter classes
 #
 import numbers
+
 import numpy as np
+
 import pybamm
 
 
 class InputParameter(pybamm.Symbol):
-    """A node in the expression tree representing an input parameter
+    """
+    A node in the expression tree representing an input parameter.
 
     This node's value can be set at the point of solving, allowing parameter estimation
     and control
@@ -27,7 +30,7 @@ class InputParameter(pybamm.Symbol):
         super().__init__(name, domain=domain)
 
     def new_copy(self):
-        """ See :meth:`pybamm.Symbol.new_copy()`. """
+        """See :meth:`pybamm.Symbol.new_copy()`."""
         new_input_parameter = InputParameter(self.name, self.domain)
         new_input_parameter._expected_size = self._expected_size
         return new_input_parameter
@@ -52,7 +55,7 @@ class InputParameter(pybamm.Symbol):
             return np.nan * np.ones((self._expected_size, 1))
 
     def _jac(self, variable):
-        """ See :meth:`pybamm.Symbol._jac()`. """
+        """See :meth:`pybamm.Symbol._jac()`."""
         return pybamm.Scalar(0)
 
     def _base_evaluate(self, t=None, y=None, y_dot=None, inputs=None):
