@@ -166,7 +166,9 @@ class BinaryOperator(pybamm.Symbol):
 
     def _binary_evaluate(self, left, right):
         """Perform binary operation on nodes 'left' and 'right'."""
-        raise NotImplementedError
+        raise NotImplementedError(
+            f"{self.__class__} does not implement _binary_evaluate."
+        )
 
     def _evaluates_on_edges(self, dimension):
         """See :meth:`pybamm.Symbol._evaluates_on_edges()`."""
@@ -1315,7 +1317,8 @@ def sigmoid(left, right, k):
 
 
 def source(left, right, boundary=False):
-    """A convenience function for creating (part of) an expression tree representing
+    """
+    A convenience function for creating (part of) an expression tree representing
     a source term. This is necessary for spatial methods where the mass matrix
     is not the identity (e.g. finite element formulation with piecwise linear
     basis functions). The left child is the symbol representing the source term

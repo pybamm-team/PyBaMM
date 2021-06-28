@@ -13,7 +13,7 @@ class BasicDFNHalfCell(BaseModel):
 
     This class differs from the :class:`pybamm.lithium_ion.BasicDFN` model class in
     that it is for a cell with a lithium counter electrode (half cell). This is a
-    feature under development (for example, it cannot be used with the Simulation class
+    feature under development (for example, it cannot be used with the Experiment class
     for the moment) and in the future it will be incorporated as a standard model with
     the full functionality.
 

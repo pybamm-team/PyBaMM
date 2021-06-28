@@ -1,16 +1,17 @@
 #
 # Matrix class
 #
-import pybamm
 import numpy as np
-from scipy.sparse import issparse, csr_matrix
+from scipy.sparse import csr_matrix, issparse
+
+import pybamm
 
 
 class Matrix(pybamm.Array):
-    """node in the expression tree that holds a matrix type (e.g. :class:`numpy.array`)
+    """
+    Node in the expression tree that holds a matrix type (e.g. :class:`numpy.array`)
 
     **Extends:** :class:`Array`
-
     """
 
     def __init__(
