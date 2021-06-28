@@ -36,13 +36,35 @@ class TestBasicModels(unittest.TestCase):
         copy = model.new_copy()
         copy.check_well_posedness()
 
-    def test_dfn_half_cell_simulation_error(self):
+    def test_dfn_half_cell_simulation_with_experiment_error(self):
         options = {"working electrode": "negative"}
         model = pybamm.lithium_ion.BasicDFNHalfCell(options=options)
+        experiment = pybamm.Experiment([
+            ("Discharge at C/10 for 10 hours or until 3.5 V")])
         with self.assertRaisesRegex(
-            NotImplementedError, "not compatible with Simulations yet."
-        ):
-            pybamm.Simulation(model)
+                NotImplementedError,
+                "BasicDFNHalfCell is not compatible with experiment simulations yet."):
+            pybamm.Simulation(model, experiment=experiment)
+
+    def basic_dfn_half_cell_simulation(self):
+        model = pybamm.lithium_ion.BasicDFNHalfCell(
+            options={"working electrode": "positive"})
+        chemistry = pybamm.parameter_sets.Chen2020
+        param = pybamm.ParameterValues(chemistry=chemistry)
+        param.update(
+            {
+                "Lithium counter electrode exchange-current density [A.m-2]": 12.6,
+                "Lithium counter electrode conductivity [S.m-1]": 1.0776e7,
+                "Lithium counter electrode thickness [m]": 250e-6,
+            },
+            check_already_exists=False, )
+        param["Initial concentration in negative electrode [mol.m-3]"] = 1000
+        param["Current function [A]"] = 2.5
+        sim = pybamm.Simulation(model=model, parameter_values=param)
+        sim.solve([0, 100])
+        self.assertTrue(
+            isinstance(sim.solution, pybamm.solvers.solution.Solution)
+        )
 
     def test_dfn_half_cell_defaults(self):
         # test default geometry
