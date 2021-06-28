@@ -222,6 +222,35 @@ class TestSimulationExperiment(unittest.TestCase):
         # Summary variables are not None
         self.assertIsNotNone(sol.summary_variables["Capacity [A.h]"])
 
+    def test_cycle_summary_variables(self):
+        # Test cycle_summary_variables works for different combinations of data and
+        # function OCPs
+        experiment = pybamm.Experiment(
+            [
+                (
+                    "Discharge at 1C until 3.3V",
+                    "Charge at C/3 until 4.0V",
+                    "Hold at 4.0V until C/10",
+                ),
+            ]
+            * 5,
+        )
+        model = pybamm.lithium_ion.SPM()
+
+        # Chen 2020: pos = function, neg = function
+        param = pybamm.ParameterValues(chemistry=pybamm.parameter_sets.Chen2020)
+        sim = pybamm.Simulation(model, experiment=experiment, parameter_values=param)
+        sim.solve(
+            solver=pybamm.CasadiSolver("fast with events"), save_at_cycles=2
+        )
+
+        # Chen 2020 plating: pos = function, neg = data
+        param = pybamm.ParameterValues(chemistry=pybamm.parameter_sets.Chen2020_plating)
+        sim = pybamm.Simulation(model, experiment=experiment, parameter_values=param)
+        sim.solve(
+            solver=pybamm.CasadiSolver("fast with events"), save_at_cycles=2
+        )
+
     def test_inputs(self):
         experiment = pybamm.Experiment(
             ["Discharge at C/2 for 1 hour", "Rest for 1 hour"]
