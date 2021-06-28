@@ -188,8 +188,11 @@ class IDAKLUSolver(pybamm.BaseSolver):
             atol = self._atol
 
         y0 = model.y0
+        print('idaklu, y0', y0)
         if isinstance(y0, casadi.DM):
             y0 = y0.full().flatten()
+
+        print('idaklu, y0', y0)
 
         rtol = self._rtol
         atol = self._check_atol_type(atol, y0.size)

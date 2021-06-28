@@ -37,15 +37,15 @@ class BaseSolver(object):
         The tolerance to assert whether extrapolation occurs or not. Default is 0.
     sensitivity : str, optional
         Whether (and how) to calculate sensitivities when solving. Options are:
-        - None (default): user must give the names of input parameters to calculate
-        sensitivity via the "solve" method, the individual solver is responsible for
+        - None (default): the individual solver is responsible for
         calculating the sensitivity wrt these parameters, and providing the result in
         the solution instance returned. At the moment this is only implemented for the
         IDAKLU solver.\
-        - "explicit forward": explicitly formulate the sensitivity equations for *all*
-        the input parameters. The formulation is as per "Park, S., Kato, D., Gima, Z., \
-        Klein, R., & Moura, S. (2018). Optimal experimental design for parameterization\
-        of an electrochemical lithium-ion battery model. Journal of The Electrochemical\
+        - "explicit forward": explicitly formulate the sensitivity equations for
+        the chosen input parameters. The formulation is as per
+        "Park, S., Kato, D., Gima, Z., Klein, R., & Moura, S. (2018).\
+        Optimal experimental design for parameterization of an electrochemical
+        lithium-ion battery model. Journal of The Electrochemical\
         Society, 165(7), A1309.". See #1100 for details. At the moment this is only
         implemented using convert_to_format = 'casadi'. \
         - see individual solvers for other options
@@ -139,6 +139,8 @@ class BaseSolver(object):
         # clear models_set_up
         new_solver.models_set_up = {}
         return new_solver
+
+
 
     def set_up(self, model, inputs=None, t_eval=None,
                calculate_sensitivites=False):
@@ -236,6 +238,9 @@ class BaseSolver(object):
                 calculate_sensitivites = [p for p in inputs.keys()]
             else:
                 calculate_sensitivites = []
+        # save sensitivity parameters so we can identify them later on
+        # (FYI: this is used in the Solution class)
+        model.calculate_sensitivities = calculate_sensitivites
 
         # Only allow solving explicit sensitivity equations with the casadi format for now
         if (
@@ -269,8 +274,13 @@ class BaseSolver(object):
             p_casadi_stacked = casadi.vertcat(*[p for p in p_casadi.values()])
             # sensitivity vectors
             if self.sensitivity == "explicit forward":
-                S_x = casadi.MX.sym("S_x", model.len_rhs * p_casadi_stacked.shape[0])
-                S_z = casadi.MX.sym("S_z", model.len_alg * p_casadi_stacked.shape[0])
+                pS_casadi_stacked = casadi.vertcat(
+                    *[p_casadi[name] for name in calculate_sensitivites]
+                )
+                model.len_rhs_sens = model.len_rhs * pS_casadi_stacked.shape[0]
+                model.len_alg_sens = model.len_alg * pS_casadi_stacked.shape[0]
+                S_x = casadi.MX.sym("S_x", model.len_rhs_sens)
+                S_z = casadi.MX.sym("S_z", model.len_alg_sens)
                 y_and_S = casadi.vertcat(y_diff, S_x, y_alg, S_z)
             else:
                 y_and_S = y_casadi
@@ -356,16 +366,16 @@ class BaseSolver(object):
                     if name == "rhs" and model.len_rhs > 0:
                         report("Creating sensitivity equations for rhs using CasADi")
                         df_dx = casadi.jacobian(func, y_diff)
-                        df_dp = casadi.jacobian(func, p_casadi_stacked)
+                        df_dp = casadi.jacobian(func, pS_casadi_stacked)
                         S_x_mat = S_x.reshape(
-                            (model.len_rhs, p_casadi_stacked.shape[0])
+                            (model.len_rhs, pS_casadi_stacked.shape[0])
                         )
                         if model.len_alg == 0:
                             S_rhs = (df_dx @ S_x_mat + df_dp).reshape((-1, 1))
                         else:
                             df_dz = casadi.jacobian(func, y_alg)
                             S_z_mat = S_z.reshape(
-                                (model.len_alg, p_casadi_stacked.shape[0])
+                                (model.len_alg, pS_casadi_stacked.shape[0])
                             )
                             S_rhs = (df_dx @ S_x_mat + df_dz @ S_z_mat + df_dp).reshape(
                                 (-1, 1)
@@ -376,16 +386,16 @@ class BaseSolver(object):
                             "Creating sensitivity equations for algebraic using CasADi"
                         )
                         dg_dz = casadi.jacobian(func, y_alg)
-                        dg_dp = casadi.jacobian(func, p_casadi_stacked)
+                        dg_dp = casadi.jacobian(func, pS_casadi_stacked)
                         S_z_mat = S_z.reshape(
-                            (model.len_alg, p_casadi_stacked.shape[0])
+                            (model.len_alg, pS_casadi_stacked.shape[0])
                         )
                         if model.len_rhs == 0:
                             S_alg = (dg_dz @ S_z_mat + dg_dp).reshape((-1, 1))
                         else:
                             dg_dx = casadi.jacobian(func, y_diff)
                             S_x_mat = S_x.reshape(
-                                (model.len_rhs, p_casadi_stacked.shape[0])
+                                (model.len_rhs, pS_casadi_stacked.shape[0])
                             )
                             S_alg = (dg_dx @ S_x_mat + dg_dz @ S_z_mat + dg_dp).reshape(
                                 (-1, 1)
@@ -393,17 +403,17 @@ class BaseSolver(object):
                         func = casadi.vertcat(func, S_alg)
                     elif name == "initial_conditions":
                         if model.len_rhs == 0 or model.len_alg == 0:
-                            S_0 = casadi.jacobian(func, p_casadi_stacked).reshape(
+                            S_0 = casadi.jacobian(func, pS_casadi_stacked).reshape(
                                 (-1, 1)
                             )
                             func = casadi.vertcat(func, S_0)
                         else:
                             x0 = func[: model.len_rhs]
                             z0 = func[model.len_rhs :]
-                            Sx_0 = casadi.jacobian(x0, p_casadi_stacked).reshape(
+                            Sx_0 = casadi.jacobian(x0, pS_casadi_stacked).reshape(
                                 (-1, 1)
                             )
-                            Sz_0 = casadi.jacobian(z0, p_casadi_stacked).reshape(
+                            Sz_0 = casadi.jacobian(z0, pS_casadi_stacked).reshape(
                                 (-1, 1)
                             )
                             func = casadi.vertcat(x0, Sx_0, z0, Sz_0)
@@ -416,7 +426,7 @@ class BaseSolver(object):
                 else:
                     jac = None
 
-                if calculate_sensitivites:
+                if calculate_sensitivites and self.sensitivity != "explicit forward":
                     report((
                         f"Calculating sensitivities for {name} with respect "
                         f"to parameters {calculate_sensitivites} using CasADi"
@@ -529,12 +539,11 @@ class BaseSolver(object):
         init_eval = InitialConditions(initial_conditions, model)
 
         if self.sensitivity == "explicit forward":
-            init_eval.y_dummy = np.zeros(
-                (
-                    model.len_rhs_and_alg * (np.vstack(list(inputs.values())).size + 1),
-                    1,
-                )
+            y0_total_size = (
+                model.len_rhs + model.len_rhs_sens
+                + model.len_alg + model.len_alg_sens
             )
+            init_eval.y_dummy = np.zeros((y0_total_size, 1))
         else:
             init_eval.y_dummy = np.zeros((model.len_rhs_and_alg, 1))
 
@@ -546,6 +555,7 @@ class BaseSolver(object):
 
         # Calculate initial conditions
         model.y0 = init_eval(inputs)
+        print('YYYYY', model.y0)
 
         casadi_terminate_events = []
         terminate_events_eval = []
@@ -710,6 +720,7 @@ class BaseSolver(object):
             model.y0 = casadi.Function("y0", [symbolic_inputs], [y0])
         else:
             model.y0 = y0
+        print('ASDF', model.y0)
 
     def calculate_consistent_state(self, model, time=0, inputs=None):
         """
@@ -736,13 +747,15 @@ class BaseSolver(object):
         if self.root_method is None:
             return model.y0
         try:
-            root_sol = self.root_method._integrate(model, [time], inputs)
+            root_sol = self.root_method._integrate(model, np.array([time]), inputs)
         except pybamm.SolverError as e:
             raise pybamm.SolverError(
                 "Could not find consistent states: {}".format(e.args[0])
             )
         pybamm.logger.debug("Found consistent states")
-        y0 = root_sol.all_ys[0]
+
+        # use all_ys_and_sens in case we are solving the full sensitivity equations
+        y0 = root_sol.all_ys_and_sens[0]
         if isinstance(y0, np.ndarray):
             y0 = y0.flatten()
         return y0
@@ -1428,7 +1441,7 @@ class SolverCallable:
                 self.name, self.model.name, t * self.timescale
             )
         )
-        if self.name in ["RHS", "algebraic", "residuals"]:
+        if self.name in ["RHS", "algebraic", "residuals", "event"]:
 
             return self.function(t, y, inputs).flatten()
         else:
@@ -1437,7 +1450,7 @@ class SolverCallable:
     def function(self, t, y, inputs):
         if self.form == "casadi":
             states_eval = self._function(t, y, inputs)
-            if self.name in ["rhs", "algebraic", "residuals", "event"]:
+            if self.name in ["RHS", "algebraic", "residuals", "event"]:
                 return states_eval.full()
             else:
                 # keep jacobians sparse

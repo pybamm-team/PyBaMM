@@ -76,12 +76,14 @@ class CasadiAlgebraicSolver(pybamm.BaseSolver):
         inputs = casadi.vertcat(*[v for v in inputs_dict.values()])
 
         y0 = model.y0
+        print('algebraic', y0)
 
         # If y0 already satisfies the tolerance for all t then keep it
         if self.sensitivity != "casadi" and all(
             np.all(abs(model.casadi_algebraic(t, y0, inputs).full()) < self.tol)
             for t in t_eval
         ):
+            print('keeping soln', y0.full())
             pybamm.logger.debug("Keeping same solution at all times")
             return pybamm.Solution(
                 t_eval, y0, model, inputs_dict, termination="success"
@@ -92,14 +94,17 @@ class CasadiAlgebraicSolver(pybamm.BaseSolver):
         # equations will be equal to the initial condition provided. This allows this
         # solver to be used for initialising the DAE solvers
         if model.rhs == {}:
+            print('no rhs')
             len_rhs = 0
             y0_diff = casadi.DM()
             y0_alg = y0
         else:
             # Check y0 to see if it includes sensitivities
             if model.len_rhs_and_alg == y0.shape[0]:
+                print('doesnt include sens')
                 len_rhs = model.len_rhs
             else:
+                print('includes sens', inputs.shape[0])
                 len_rhs = model.len_rhs * (inputs.shape[0] + 1)
             y0_diff = y0[:len_rhs]
             y0_alg = y0[len_rhs:]
