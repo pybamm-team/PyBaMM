@@ -188,16 +188,24 @@ class TestCasadiAlgebraicSolverSensitivity(unittest.TestCase):
         disc.process_model(model)
 
         # Solve
-        solver = pybamm.CasadiAlgebraicSolver()
-        solution = solver.solve(model, [0])
-        np.testing.assert_array_equal(solution["var"].value({"param": 7}), -7)
-        np.testing.assert_array_equal(solution["var"].value({"param": 3}), -3)
-        np.testing.assert_array_equal(solution["var"].sensitivity({"param": 3}), -1)
+        solver = pybamm.CasadiAlgebraicSolver(sensitivity="casadi")
+        solution = solver.solve(model, [0], inputs={"param": 7})
+        np.testing.assert_array_equal(solution["var"].data, -7)
+        np.testing.assert_array_equal(solution["var"].sensitivity["param"], -1)
+        np.testing.assert_array_equal(solution["var"].sensitivity["all"], -1)
+
+        solution = solver.solve(model, [0], inputs={"param": 3})
+        np.testing.assert_array_equal(solution["var"].data, -3)
+        np.testing.assert_array_equal(solution["var"].sensitivity["param"], -1)
+        np.testing.assert_array_equal(solution["var"].sensitivity["all"], -1)
 
     def test_least_squares_fit(self):
         # Simple system: a single algebraic equation
         var = pybamm.Variable("var", domain="negative electrode")
         model = pybamm.BaseModel()
+        # Set length scale to avoid warning
+        model.length_scales = {"negative electrode": 1}
+
         p = pybamm.InputParameter("p")
         q = pybamm.InputParameter("q")
         model.algebraic = {var: (var - p)}
@@ -209,27 +217,29 @@ class TestCasadiAlgebraicSolverSensitivity(unittest.TestCase):
         disc.process_model(model)
 
         # Solve
-        solver = pybamm.CasadiAlgebraicSolver()
-        solution = solver.solve(model, [0])
-        sol_var = solution["objective"]
+        solver = pybamm.CasadiAlgebraicSolver(sensitivity="casadi")
 
         def objective(x):
-            return sol_var.value({"p": x[0], "q": x[1]}).full().flatten()
+            solution = solver.solve(model, [0], inputs={"p": x[0], "q": x[1]})
+            return solution["objective"].data.flatten()
 
         # without jacobian
         lsq_sol = least_squares(objective, [2, 2], method="lm")
         np.testing.assert_array_almost_equal(lsq_sol.x, [3, 3], decimal=3)
 
         def jac(x):
-            return sol_var.sensitivity({"p": x[0], "q": x[1]})
+            solution = solver.solve(model, [0], inputs={"p": x[0], "q": x[1]})
+            return solution["objective"].sensitivity["all"]
 
         # with jacobian
         lsq_sol = least_squares(objective, [2, 2], jac=jac, method="lm")
         np.testing.assert_array_almost_equal(lsq_sol.x, [3, 3], decimal=3)
 
-    def test_solve_with_symbolic_input_1D_scalar_input(self):
+    def test_solve_with_symbolic_input_vector_variable_scalar_input(self):
         var = pybamm.Variable("var", "negative electrode")
         model = pybamm.BaseModel()
+        # Set length scale to avoid warning
+        model.length_scales = {"negative electrode": 1}
         param = pybamm.InputParameter("param")
         model.algebraic = {var: var + param}
         model.initial_conditions = {var: 2}
@@ -240,15 +250,18 @@ class TestCasadiAlgebraicSolverSensitivity(unittest.TestCase):
         disc.process_model(model)
 
         # Solve - scalar input
-        solver = pybamm.CasadiAlgebraicSolver()
-        solution = solver.solve(model, [0])
-        np.testing.assert_array_equal(solution["var"].value({"param": 7}), -7)
-        np.testing.assert_array_equal(solution["var"].value({"param": 3}), -3)
-        np.testing.assert_array_equal(solution["var"].sensitivity({"param": 3}), -1)
+        solver = pybamm.CasadiAlgebraicSolver(sensitivity="casadi")
+        solution = solver.solve(model, [0], inputs={"param": 7})
+        np.testing.assert_array_equal(solution["var"].data, -7)
+        solution = solver.solve(model, [0], inputs={"param": 3})
+        np.testing.assert_array_equal(solution["var"].data, -3)
+        np.testing.assert_array_equal(solution["var"].sensitivity["param"], -1)
 
-    def test_solve_with_symbolic_input_1D_vector_input(self):
+    def test_solve_with_symbolic_input_vector_variable_vector_input(self):
         var = pybamm.Variable("var", "negative electrode")
         model = pybamm.BaseModel()
+        # Set length scale to avoid warning
+        model.length_scales = {"negative electrode": 1}
         param = pybamm.InputParameter("param", "negative electrode")
         model.algebraic = {var: var + param}
         model.initial_conditions = {var: 2}
@@ -257,26 +270,22 @@ class TestCasadiAlgebraicSolverSensitivity(unittest.TestCase):
         # create discretisation
         disc = tests.get_discretisation_for_testing()
         disc.process_model(model)
-
-        # Solve - scalar input
-        solver = pybamm.CasadiAlgebraicSolver()
-        solution = solver.solve(model, [0])
         n = disc.mesh["negative electrode"].npts
 
-        solver = pybamm.CasadiAlgebraicSolver()
-        solution = solver.solve(model, [0])
+        # Solve - vector input
+        solver = pybamm.CasadiAlgebraicSolver(sensitivity="casadi")
+        solution = solver.solve(model, [0], inputs={"param": 3 * np.ones(n)})
+
+        np.testing.assert_array_almost_equal(solution["var"].data, -3)
+        np.testing.assert_array_almost_equal(
+            solution["var"].sensitivity["param"], -np.eye(40)
+        )
+
         p = np.linspace(0, 1, n)[:, np.newaxis]
+        solution = solver.solve(model, [0], inputs={"param": 2 * p})
+        np.testing.assert_array_almost_equal(solution["var"].data, -2 * p)
         np.testing.assert_array_almost_equal(
-            solution["var"].value({"param": 3 * np.ones(n)}), -3
-        )
-        np.testing.assert_array_almost_equal(
-            solution["var"].value({"param": 2 * p}), -2 * p
-        )
-        np.testing.assert_array_almost_equal(
-            solution["var"].sensitivity({"param": 3 * np.ones(n)}), -np.eye(40)
-        )
-        np.testing.assert_array_almost_equal(
-            solution["var"].sensitivity({"param": p}), -np.eye(40)
+            solution["var"].sensitivity["param"], -np.eye(40)
         )
 
     def test_solve_with_symbolic_input_in_initial_conditions(self):
@@ -292,37 +301,10 @@ class TestCasadiAlgebraicSolverSensitivity(unittest.TestCase):
         disc.process_model(model)
 
         # Solve
-        solver = pybamm.CasadiAlgebraicSolver()
-        solution = solver.solve(model, [0])
-        np.testing.assert_array_equal(solution["var"].value({"param": 7}), -2)
-        np.testing.assert_array_equal(solution["var"].value({"param": 3}), -2)
-        np.testing.assert_array_equal(solution["var"].sensitivity({"param": 3}), 0)
-
-    def test_least_squares_fit_input_in_initial_conditions(self):
-        # Simple system: a single algebraic equation
-        var = pybamm.Variable("var", domain="negative electrode")
-        model = pybamm.BaseModel()
-        p = pybamm.InputParameter("p")
-        q = pybamm.InputParameter("q")
-        model.algebraic = {var: (var - p)}
-        model.initial_conditions = {var: p}
-        model.variables = {"objective": (var - q) ** 2 + (p - 3) ** 2}
-
-        # create discretisation
-        disc = tests.get_discretisation_for_testing()
-        disc.process_model(model)
-
-        # Solve
-        solver = pybamm.CasadiAlgebraicSolver()
-        solution = solver.solve(model, [0])
-        sol_var = solution["objective"]
-
-        def objective(x):
-            return sol_var.value({"p": x[0], "q": x[1]}).full().flatten()
-
-        # without jacobian
-        lsq_sol = least_squares(objective, [2, 2], method="lm")
-        np.testing.assert_array_almost_equal(lsq_sol.x, [3, 3], decimal=3)
+        solver = pybamm.CasadiAlgebraicSolver(sensitivity="casadi")
+        solution = solver.solve(model, [0], inputs={"param": 7})
+        np.testing.assert_array_equal(solution["var"].data, -2)
+        np.testing.assert_array_equal(solution["var"].sensitivity["param"], 0)
 
 
 if __name__ == "__main__":

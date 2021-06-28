@@ -45,11 +45,10 @@ class TestSolution(unittest.TestCase):
         y2 = np.tile(t2, (20, 1))
         sol2 = pybamm.Solution(t2, y2, pybamm.BaseModel(), {"a": 2})
         sol2.solve_time = 1
-        sol2.integration_time = 0.5
+
         sol_sum = sol1 + sol2
 
         # Test
-        self.assertEqual(sol_sum.solve_time, 2.5)
         self.assertEqual(sol_sum.integration_time, 0.8)
         np.testing.assert_array_equal(sol_sum.t, np.concatenate([t1, t2[1:]]))
         np.testing.assert_array_equal(

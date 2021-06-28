@@ -83,6 +83,7 @@ class ScikitsOdeSolver(pybamm.BaseSolver):
             Any input parameters to pass to the model when solving
 
         """
+        inputs_dict = inputs_dict or {}
         if model.rhs_eval.form == "casadi":
             inputs = casadi.vertcat(*[x for x in inputs_dict.values()])
         else:
@@ -176,6 +177,8 @@ class ScikitsOdeSolver(pybamm.BaseSolver):
                 t_root,
                 np.transpose(sol.roots.y),
                 termination,
+                model=model,
+                inputs=inputs_dict,
             )
             sol.integration_time = integration_time
             return sol

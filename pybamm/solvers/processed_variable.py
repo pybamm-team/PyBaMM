@@ -1,6 +1,7 @@
 #
 # Processed Variable class
 #
+import casadi
 import numbers
 import numpy as np
 import pybamm
@@ -44,6 +45,15 @@ class ProcessedVariable(object):
         self.domain = base_variables[0].domain
         self.auxiliary_domains = base_variables[0].auxiliary_domains
         self.warn = warn
+
+        self.symbolic_inputs = solution._symbolic_inputs
+
+        self.u_sol = solution.y
+        self.y_sym = solution._y_sym
+
+        # Sensitivity starts off uninitialized, only set when called
+        self._sensitivity = None
+        self.all_sensitivities = solution.all_sensitivities
 
         # Set timescale
         self.timescale = solution.timescale_eval
@@ -486,6 +496,154 @@ class Interpolant0D:
 
     def __call__(self, t):
         return self.entries
+
+    @property
+    def sensitivity(self):
+        """
+        Returns a dictionary of sensitivity for each input parameter.
+        The keys are the input parameters, and the value is a matrix of size
+        (n_x * n_t, n_p), where n_x is the number of states, n_t is the number of time
+        points, and n_p is the size of the input parameter
+        """
+        # No sensitivity if there are no inputs
+        if len(self.inputs) == 0:
+            return {}
+        # Otherwise initialise and return sensitivity
+        if self._sensitivity is None:
+            if self.solution_sensitivity != {}:
+                self.initialise_sensitivity_explicit_forward()
+            elif self.y_sym is not None:
+                self.initialise_sensitivity_casadi()
+            else:
+                raise ValueError(
+                    "Cannot compute sensitivities. The 'sensitivity' argument of the "
+                    "solver should be changed from 'None' to allow sensitivity "
+                    "calculations. Check solver documentation for details."
+                )
+        return self._sensitivity
+
+    def initialise_sensitivity_explicit_forward(self):
+        "Set up the sensitivity dictionary"
+        inputs_stacked = casadi.vertcat(*[p for p in self.inputs.values()])
+
+        # Set up symbolic variables
+        t_casadi = casadi.MX.sym("t")
+        y_casadi = casadi.MX.sym("y", self.u_sol.shape[0])
+        p_casadi = {
+            name: casadi.MX.sym(name, value.shape[0])
+            for name, value in self.inputs.items()
+        }
+        p_casadi_stacked = casadi.vertcat(*[p for p in p_casadi.values()])
+
+        # Convert variable to casadi format for differentiating
+        var_casadi = self.base_variable.to_casadi(t_casadi, y_casadi, inputs=p_casadi)
+        dvar_dy = casadi.jacobian(var_casadi, y_casadi)
+        dvar_dp = casadi.jacobian(var_casadi, p_casadi_stacked)
+
+        # Convert to functions and evaluate index-by-index
+        dvar_dy_func = casadi.Function(
+            "dvar_dy", [t_casadi, y_casadi, p_casadi_stacked], [dvar_dy]
+        )
+        dvar_dp_func = casadi.Function(
+            "dvar_dp", [t_casadi, y_casadi, p_casadi_stacked], [dvar_dp]
+        )
+        for idx in range(len(self.t_sol)):
+            t = self.t_sol[idx]
+            u = self.u_sol[:, idx]
+            inp = inputs_stacked[:, idx]
+            next_dvar_dy_eval = dvar_dy_func(t, u, inp)
+            next_dvar_dp_eval = dvar_dp_func(t, u, inp)
+            if idx == 0:
+                dvar_dy_eval = next_dvar_dy_eval
+                dvar_dp_eval = next_dvar_dp_eval
+            else:
+                dvar_dy_eval = casadi.diagcat(dvar_dy_eval, next_dvar_dy_eval)
+                dvar_dp_eval = casadi.vertcat(dvar_dp_eval, next_dvar_dp_eval)
+
+        # Compute sensitivity
+        dy_dp = self.solution_sensitivity["all"]
+        S_var = dvar_dy_eval @ dy_dp + dvar_dp_eval
+
+        sensitivity = {"all": S_var}
+
+        # Add the individual sensitivity
+        start = 0
+        for name, inp in self.inputs.items():
+            end = start + inp.shape[0]
+            sensitivity[name] = S_var[:, start:end]
+            start = end
+
+        # Save attribute
+        self._sensitivity = sensitivity
+
+    def initialise_sensitivity_casadi(self):
+        def initialise_0D_symbolic():
+            "Create a 0D symbolic variable"
+            # Evaluate the base_variable index-by-index
+            for idx in range(len(self.t_sol)):
+                t = self.t_sol[idx]
+                u = self.y_sym[:, idx]
+                next_entries = self.base_variable_casadi(t, u, self.symbolic_inputs)
+                if idx == 0:
+                    entries = next_entries
+                else:
+                    entries = casadi.horzcat(entries, next_entries)
+
+            return entries
+
+        def initialise_1D_symbolic():
+            "Create a 1D symbolic variable"
+            # Evaluate the base_variable index-by-index
+            for idx in range(len(self.t_sol)):
+                t = self.t_sol[idx]
+                u = self.y_sym[:, idx]
+                next_entries = self.base_variable_casadi(t, u, self.symbolic_inputs)
+                if idx == 0:
+                    entries = next_entries
+                else:
+                    entries = casadi.vertcat(entries, next_entries)
+
+            return entries
+
+        inputs_stacked = casadi.vertcat(*self.inputs.values())
+        self.base_eval = self.base_variable_casadi(
+            self.t_sol[0], self.u_sol[:, 0], inputs_stacked
+        )
+        if (
+            isinstance(self.base_eval, numbers.Number)
+            or len(self.base_eval.shape) == 0
+            or self.base_eval.shape[0] == 1
+        ):
+            entries_MX = initialise_0D_symbolic()
+        else:
+            n = self.mesh.npts
+            base_shape = self.base_eval.shape[0]
+            # Try shape that could make the variable a 1D variable
+            if base_shape == n:
+                entries_MX = initialise_1D_symbolic()
+            else:
+                # Raise error for 2D variable
+                raise NotImplementedError(
+                    "Shape not recognized for {} ".format(self.base_variable)
+                    + "(note processing of 2D and 3D variables is not yet "
+                    + "implemented)"
+                )
+
+        # Compute jacobian
+        sens_MX = casadi.jacobian(entries_MX, self.symbolic_inputs)
+        casadi_sens_fn = casadi.Function("variable", [self.symbolic_inputs], [sens_MX])
+
+        sens_eval = casadi_sens_fn(inputs_stacked)
+        sensitivity = {"all": sens_eval}
+
+        # Add the individual sensitivity
+        start = 0
+        for name, inp in self.inputs.items():
+            end = start + inp.shape[0]
+            sensitivity[name] = sens_eval[:, start:end]
+            start = end
+
+        self._sensitivity = sensitivity
 
 
 class Interpolant1D:

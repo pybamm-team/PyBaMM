@@ -98,6 +98,88 @@ class Solution(object):
                 for domain, scale in all_models[0].length_scales.items()
             }
 
+        # If the model has been provided, split up y into solution and sensitivity
+        # Don't do this if the sensitivity equations have not been computed (i.e. if
+        # y only has the shape or the rhs and alg solution)
+        # Don't do this if y is symbolic (sensitivities will be calculated a different
+        # way)
+        if (
+            model is None
+            or isinstance(all_ys[0], casadi.Function)
+            or model.len_rhs_and_alg == all_ys[0].shape[0]
+            or model.len_rhs_and_alg == 0  # for the dummy solver
+        ):
+            self.all_ys = all_ys
+            self.sensitivity = {}
+        else:
+            n_states = model.len_rhs_and_alg
+            n_rhs = model.len_rhs
+            n_alg = model.len_alg
+            n_p = self.all_inputs_casadi[0].size
+            # Get the point where the algebraic equations start
+            len_rhs_and_sens = (n_p + 1) * model.len_rhs
+            for idx, y in enumerate(all_ys):
+                n_t = len(self.all_ts[idx])
+                # y gets the part of the solution vector that correspond to the
+                # actual ODE/DAE solution
+                all_ys[idx] = np.vstack(
+                    [
+                        y[: model.len_rhs, :],
+                        y[len_rhs_and_sens : len_rhs_and_sens + model.len_alg, :],
+                    ]
+                )
+                # save sensitivities as a dictionary
+                # first save the whole sensitivity matrix
+                # reshape using Fortran order to get the right array:
+                #   t0_x0_p0, t0_x0_p1, ..., t0_x0_pn
+                #   t0_x1_p0, t0_x1_p1, ..., t0_x1_pn
+                #   ...
+                #   t0_xn_p0, t0_xn_p1, ..., t0_xn_pn
+                #   t1_x0_p0, t1_x0_p1, ..., t1_x0_pn
+                #   t1_x1_p0, t1_x1_p1, ..., t1_x1_pn
+                #   ...
+                #   t1_xn_p0, t1_xn_p1, ..., t1_xn_pn
+                #   ...
+                #   tn_x0_p0, tn_x0_p1, ..., tn_x0_pn
+                #   tn_x1_p0, tn_x1_p1, ..., tn_x1_pn
+                #   ...
+                #   tn_xn_p0, tn_xn_p1, ..., tn_xn_pn
+                # 1, Extract rhs and alg sensitivities and reshape into 3D matrices
+                # with shape (n_p, n_states, n_t)
+                if isinstance(y, casadi.DM):
+                    y_full = y.full()
+                else:
+                    y_full = y
+                ode_sens = y_full[n_rhs:len_rhs_and_sens, :].reshape(n_p, n_rhs, n_t)
+                alg_sens = y_full[len_rhs_and_sens + n_alg :, :].reshape(
+                    n_p, n_alg, n_t
+                )
+                # 2. Concatenate into a single 3D matrix with shape (n_p, n_states, n_t)
+                # i.e. along first axis
+                full_sens_matrix = np.concatenate([ode_sens, alg_sens], axis=1)
+                # Transpose and reshape into a (n_states * n_t, n_p) matrix
+                full_sens_matrix = full_sens_matrix.transpose(2, 1, 0).reshape(
+                    n_t * n_states, n_p
+                )
+
+                # Save the full sensitivity matrix
+                sensitivity = {"all": full_sens_matrix}
+                # also save the sensitivity wrt each parameter (read the columns of the
+                # sensitivity matrix)
+                start = 0
+                for i, (name, inp) in enumerate(self.all_inputs[0].items()):
+                    input_size = inp.shape[0]
+                    end = start + input_size
+                    sensitivity[name] = full_sens_matrix[:, start:end]
+                    start = end
+                self.all_sensitivities[idx] = sensitivity
+
+        # Events
+        self._t_event = t_event
+        self._y_event = y_event
+        self._termination = termination
+
+        # Initialize times
         self.set_up_time = None
         self.solve_time = None
         self.integration_time = None

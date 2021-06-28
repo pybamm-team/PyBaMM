@@ -62,7 +62,13 @@ class CasadiSolver(pybamm.BaseSolver):
         Any options to pass to the CasADi integrator when calling the integrator.
         Please consult `CasADi documentation <https://tinyurl.com/y5rk76os>`_ for
         details.
+    sensitivity : str, optional
+        Whether (and how) to calculate sensitivities when solving. Options are:
 
+        - None: no sensitivities
+        - "explicit forward": explicitly formulate the sensitivity equations. \
+        See :class:`pybamm.BaseSolver`
+        - "casadi": use casadi to differentiate through the integrator
     """
 
     def __init__(
@@ -77,9 +83,16 @@ class CasadiSolver(pybamm.BaseSolver):
         extrap_tol=0,
         extra_options_setup=None,
         extra_options_call=None,
+        sensitivity=None,
     ):
         super().__init__(
-            "problem dependent", rtol, atol, root_method, root_tol, extrap_tol
+            "problem dependent",
+            rtol,
+            atol,
+            root_method,
+            root_tol,
+            extrap_tol,
+            sensitivity=sensitivity,
         )
         if mode in ["safe", "fast", "fast with events", "safe without grid"]:
             self.mode = mode
@@ -101,6 +114,7 @@ class CasadiSolver(pybamm.BaseSolver):
         # Initialize
         self.integrators = {}
         self.integrator_specs = {}
+        self.y_sols = {}
 
         pybamm.citations.register("Andersson2019")
 
@@ -119,9 +133,6 @@ class CasadiSolver(pybamm.BaseSolver):
         """
         # Record whether there are any symbolic inputs
         inputs_dict = inputs_dict or {}
-        has_symbolic_inputs = any(
-            isinstance(v, casadi.MX) for v in inputs_dict.values()
-        )
 
         # convert inputs to casadi format
         inputs = casadi.vertcat(*[x for x in inputs_dict.values()])
@@ -149,6 +160,20 @@ class CasadiSolver(pybamm.BaseSolver):
             solution = self._run_integrator(
                 model, model.y0, inputs_dict, inputs, t_eval, use_grid=False
             )
+        if self.sensitivity == "casadi" and inputs_dict != {}:
+            # If the solution has already been created, we can reuse it
+            if model in self.y_sols:
+                y_sol = self.y_sols[model]
+                solution = pybamm.Solution(
+                    t_eval, y_sol, model=model, inputs=inputs_dict
+                )
+            else:
+                # Create integrator without grid, which will be called repeatedly
+                # This is necessary for casadi to compute sensitivities
+                self.create_integrator(model, inputs_dict)
+                solution = self._run_integrator(
+                    model, model.y0, inputs_dict, inputs, t_eval
+                )
             solution.termination = "final time"
             return solution
         elif self.mode in ["fast", "fast with events"] or not model.events:
@@ -185,7 +210,7 @@ class CasadiSolver(pybamm.BaseSolver):
                 # in "safe without grid" mode,
                 # create integrator once, without grid,
                 # to avoid having to create several times
-                self.create_integrator(model, inputs)
+                self.create_integrator(model, inputs_dict)
                 # Initialize solution
                 solution = pybamm.Solution(np.array([t]), y0, model, inputs_dict)
                 solution.solve_time = 0
@@ -224,7 +249,7 @@ class CasadiSolver(pybamm.BaseSolver):
 
                     if self.mode == "safe":
                         # update integrator with the grid
-                        self.create_integrator(model, inputs, t_window)
+                        self.create_integrator(model, inputs_dict, t_window)
                     # Try to solve with the current global step, if it fails then
                     # halve the step size and try again.
                     try:
@@ -479,6 +504,7 @@ class CasadiSolver(pybamm.BaseSolver):
         Otherwise, the integrator has grid [0,1].
         """
         pybamm.logger.debug("Creating CasADi integrator")
+
         # Use grid if t_eval is given
         use_grid = not (t_eval is None)
         if use_grid is True:
@@ -502,7 +528,6 @@ class CasadiSolver(pybamm.BaseSolver):
                     self.integrators[model][t_eval_shifted_rounded] = integrator
                     return integrator
         else:
-            y0 = model.y0
             rhs = model.casadi_rhs
             algebraic = model.casadi_algebraic
 
@@ -525,6 +550,12 @@ class CasadiSolver(pybamm.BaseSolver):
             # set up and solve
             t = casadi.MX.sym("t")
             p = casadi.MX.sym("p", inputs.shape[0])
+            # If the initial conditions depend on inputs, evaluate the function
+            if isinstance(model.y0, casadi.Function):
+                y0 = model.y0(p)
+            else:
+                y0 = model.y0
+
             y_diff = casadi.MX.sym("y_diff", rhs(0, y0, p).shape[0])
             y_alg = casadi.MX.sym("y_alg", algebraic(0, y0, p).shape[0])
             y_full = casadi.vertcat(y_diff, y_alg)
@@ -588,9 +619,24 @@ class CasadiSolver(pybamm.BaseSolver):
             integrator = self.integrators[model][t_eval_shifted_rounded]
         else:
             integrator = self.integrators[model]["no grid"]
+
+        symbolic_inputs = casadi.MX.sym("inputs", inputs.shape[0])
+        # If doing sensitivity with casadi, evaluate with symbolic inputs
+        # Otherwise, evaluate with actual inputs
+        if self.sensitivity == "casadi":
+            inputs_eval = symbolic_inputs
+        else:
+            inputs_eval = inputs
+
         len_rhs = model.concatenated_rhs.size
+
+        # Check y0 to see if it includes sensitivities
+        if model.len_rhs_and_alg != y0.shape[0]:
+            len_rhs = len_rhs * (inputs.shape[0] + 1)
+
         y0_diff = y0[:len_rhs]
         y0_alg = y0[len_rhs:]
+        # Solve
         try:
             # Try solving
             if use_grid is True:
@@ -615,7 +661,7 @@ class CasadiSolver(pybamm.BaseSolver):
                 for i in range(len(t_eval) - 1):
                     t_min = t_eval[i]
                     t_max = t_eval[i + 1]
-                    inputs_with_tlims = casadi.vertcat(inputs, t_min, t_max)
+                    inputs_with_tlims = casadi.vertcat(inputs_eval, t_min, t_max)
                     timer = pybamm.Timer()
                     casadi_sol = integrator(
                         x0=x, z0=z, p=inputs_with_tlims, **self.extra_options_call
@@ -627,13 +673,18 @@ class CasadiSolver(pybamm.BaseSolver):
                     if not z.is_empty():
                         y_alg = casadi.horzcat(y_alg, z)
                 if z.is_empty():
-                    sol = pybamm.Solution(t_eval, y_diff, model, inputs_dict)
+                    y_sol = y_diff
                 else:
                     y_sol = casadi.vertcat(y_diff, y_alg)
-                    sol = pybamm.Solution(t_eval, y_sol, model, inputs_dict)
+            # If doing sensitivity, return the solution as a function of the inputs
+            if self.sensitivity == "casadi":
+                y_sol = casadi.Function("y_sol", [symbolic_inputs], [y_sol])
+                # Save the solution, can just reuse and change the inputs
+                self.y_sols[model] = y_sol
 
-                sol.integration_time = integration_time
-                return sol
+            sol = pybamm.Solution(t_eval, y_sol, model, inputs_dict)
+            sol.integration_time = integration_time
+            return sol
         except RuntimeError as e:
             # If it doesn't work raise error
             raise pybamm.SolverError(e.args[0])

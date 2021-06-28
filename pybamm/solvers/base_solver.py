@@ -8,6 +8,7 @@ import numbers
 import numpy as np
 import sys
 import itertools
+from scipy.linalg import block_diag
 import multiprocessing as mp
 import warnings
 
@@ -36,13 +37,18 @@ class BaseSolver(object):
         The tolerance to assert whether extrapolation occurs or not. Default is 0.
     sensitivity : str, optional
         Whether (and how) to calculate sensitivities when solving. Options are:
-        - "explicit forward": explicitly formulate the sensitivity equations. \
-        The formulation is as per "Park, S., Kato, D., Gima, Z., \
+        - None (default): user must give the names of input parameters to calculate
+        sensitivity via the "solve" method, the individual solver is responsible for
+        calculating the sensitivity wrt these parameters, and providing the result in
+        the solution instance returned. At the moment this is only implemented for the
+        IDAKLU solver.\
+        - "explicit forward": explicitly formulate the sensitivity equations for *all*
+        the input parameters. The formulation is as per "Park, S., Kato, D., Gima, Z., \
         Klein, R., & Moura, S. (2018). Optimal experimental design for parameterization\
         of an electrochemical lithium-ion battery model. Journal of The Electrochemical\
-        Society, 165(7), A1309.". See #1100 for details \
+        Society, 165(7), A1309.". See #1100 for details. At the moment this is only
+        implemented using convert_to_format = 'casadi'. \
         - see individual solvers for other options
-
     """
 
     def __init__(
@@ -54,7 +60,7 @@ class BaseSolver(object):
         root_tol=1e-6,
         extrap_tol=0,
         max_steps="deprecated",
-        sensitivity=None
+        sensitivity=None,
     ):
         self._method = method
         self._rtol = rtol
@@ -231,17 +237,28 @@ class BaseSolver(object):
             else:
                 calculate_sensitivites = []
 
+        # Only allow solving explicit sensitivity equations with the casadi format for now
+        if (
+            self.sensitivity == "explicit forward"
+            and model.convert_to_format != "casadi"
+        ):
+            raise NotImplementedError(
+                "model should be converted to casadi format in order to solve "
+                "explicit sensitivity equations"
+            )
+
         if model.convert_to_format != "casadi":
             # Create Jacobian from concatenated rhs and algebraic
-            y = pybamm.StateVector(slice(0, model.concatenated_initial_conditions.size))
+            y = pybamm.StateVector(slice(0, model.len_rhs_and_alg))
             # set up Jacobian object, for re-use of dict
             jacobian = pybamm.Jacobian()
 
         else:
             # Convert model attributes to casadi
             t_casadi = casadi.MX.sym("t")
-            y_diff = casadi.MX.sym("y_diff", model.concatenated_rhs.size)
-            y_alg = casadi.MX.sym("y_alg", model.concatenated_algebraic.size)
+            # Create the symbolic state vectors
+            y_diff = casadi.MX.sym("y_diff", model.len_rhs)
+            y_alg = casadi.MX.sym("y_alg", model.len_alg)
             y_casadi = casadi.vertcat(y_diff, y_alg)
             p_casadi = {}
             for name, value in inputs.items():
@@ -250,6 +267,13 @@ class BaseSolver(object):
                 else:
                     p_casadi[name] = casadi.MX.sym(name, value.shape[0])
             p_casadi_stacked = casadi.vertcat(*[p for p in p_casadi.values()])
+            # sensitivity vectors
+            if self.sensitivity == "explicit forward":
+                S_x = casadi.MX.sym("S_x", model.len_rhs * p_casadi_stacked.shape[0])
+                S_z = casadi.MX.sym("S_z", model.len_alg * p_casadi_stacked.shape[0])
+                y_and_S = casadi.vertcat(y_diff, S_x, y_alg, S_z)
+            else:
+                y_and_S = y_casadi
 
         def process(func, name, use_jacobian=None):
             def report(string):
@@ -327,11 +351,67 @@ class BaseSolver(object):
                 # Process with CasADi
                 report(f"Converting {name} to CasADi")
                 func = func.to_casadi(t_casadi, y_casadi, inputs=p_casadi)
+                # Add sensitivity vectors to the rhs and algebraic equations
+                if self.sensitivity == "explicit forward":
+                    if name == "rhs" and model.len_rhs > 0:
+                        report("Creating sensitivity equations for rhs using CasADi")
+                        df_dx = casadi.jacobian(func, y_diff)
+                        df_dp = casadi.jacobian(func, p_casadi_stacked)
+                        S_x_mat = S_x.reshape(
+                            (model.len_rhs, p_casadi_stacked.shape[0])
+                        )
+                        if model.len_alg == 0:
+                            S_rhs = (df_dx @ S_x_mat + df_dp).reshape((-1, 1))
+                        else:
+                            df_dz = casadi.jacobian(func, y_alg)
+                            S_z_mat = S_z.reshape(
+                                (model.len_alg, p_casadi_stacked.shape[0])
+                            )
+                            S_rhs = (df_dx @ S_x_mat + df_dz @ S_z_mat + df_dp).reshape(
+                                (-1, 1)
+                            )
+                        func = casadi.vertcat(func, S_rhs)
+                    if name == "algebraic" and model.len_alg > 0:
+                        report(
+                            "Creating sensitivity equations for algebraic using CasADi"
+                        )
+                        dg_dz = casadi.jacobian(func, y_alg)
+                        dg_dp = casadi.jacobian(func, p_casadi_stacked)
+                        S_z_mat = S_z.reshape(
+                            (model.len_alg, p_casadi_stacked.shape[0])
+                        )
+                        if model.len_rhs == 0:
+                            S_alg = (dg_dz @ S_z_mat + dg_dp).reshape((-1, 1))
+                        else:
+                            dg_dx = casadi.jacobian(func, y_diff)
+                            S_x_mat = S_x.reshape(
+                                (model.len_rhs, p_casadi_stacked.shape[0])
+                            )
+                            S_alg = (dg_dx @ S_x_mat + dg_dz @ S_z_mat + dg_dp).reshape(
+                                (-1, 1)
+                            )
+                        func = casadi.vertcat(func, S_alg)
+                    elif name == "initial_conditions":
+                        if model.len_rhs == 0 or model.len_alg == 0:
+                            S_0 = casadi.jacobian(func, p_casadi_stacked).reshape(
+                                (-1, 1)
+                            )
+                            func = casadi.vertcat(func, S_0)
+                        else:
+                            x0 = func[: model.len_rhs]
+                            z0 = func[model.len_rhs :]
+                            Sx_0 = casadi.jacobian(x0, p_casadi_stacked).reshape(
+                                (-1, 1)
+                            )
+                            Sz_0 = casadi.jacobian(z0, p_casadi_stacked).reshape(
+                                (-1, 1)
+                            )
+                            func = casadi.vertcat(x0, Sx_0, z0, Sz_0)
                 if use_jacobian:
                     report(f"Calculating jacobian for {name} using CasADi")
-                    jac_casadi = casadi.jacobian(func, y_casadi)
+                    jac_casadi = casadi.jacobian(func, y_and_S)
                     jac = casadi.Function(
-                        name, [t_casadi, y_casadi, p_casadi_stacked], [jac_casadi]
+                        name, [t_casadi, y_and_S, p_casadi_stacked], [jac_casadi]
                     )
                 else:
                     jac = None
@@ -358,7 +438,7 @@ class BaseSolver(object):
                     jacp = None
 
                 func = casadi.Function(
-                    name, [t_casadi, y_casadi, p_casadi_stacked], [func]
+                    name, [t_casadi, y_and_S, p_casadi_stacked], [func]
                 )
             if name == "residuals":
                 func_call = Residuals(func, name, model)
@@ -448,6 +528,16 @@ class BaseSolver(object):
         )[0]
         init_eval = InitialConditions(initial_conditions, model)
 
+        if self.sensitivity == "explicit forward":
+            init_eval.y_dummy = np.zeros(
+                (
+                    model.len_rhs_and_alg * (np.vstack(list(inputs.values())).size + 1),
+                    1,
+                )
+            )
+        else:
+            init_eval.y_dummy = np.zeros((model.len_rhs_and_alg, 1))
+
         # Process rhs, algebraic and event expressions
         rhs, rhs_eval, jac_rhs, jacp_rhs = process(model.concatenated_rhs, "RHS")
         algebraic, algebraic_eval, jac_algebraic, jacp_algebraic = process(
@@ -523,12 +613,21 @@ class BaseSolver(object):
         ):
             # can use DAE solver to solve model with algebraic equations only
             if len(model.rhs) > 0:
-                mass_matrix_inv = casadi.MX(model.mass_matrix_inv.entries)
+                if self.sensitivity == "explicit forward":
+                    # Copy mass matrix blocks diagonally
+                    single_mass_matrix_inv = model.mass_matrix_inv.entries.toarray()
+                    n_inputs = p_casadi_stacked.shape[0]
+                    block_mass_matrix = block_diag(
+                        *[single_mass_matrix_inv] * (n_inputs + 1)
+                    )
+                    mass_matrix_inv = casadi.MX(block_mass_matrix)
+                else:
+                    mass_matrix_inv = casadi.MX(model.mass_matrix_inv.entries)
                 explicit_rhs = mass_matrix_inv @ rhs(
-                    t_casadi, y_casadi, p_casadi_stacked
+                    t_casadi, y_and_S, p_casadi_stacked
                 )
                 model.casadi_rhs = casadi.Function(
-                    "rhs", [t_casadi, y_casadi, p_casadi_stacked], [explicit_rhs]
+                    "rhs", [t_casadi, y_and_S, p_casadi_stacked], [explicit_rhs]
                 )
             model.casadi_algebraic = algebraic
             model.casadi_sensitivities_rhs = jacp_rhs
@@ -574,23 +673,30 @@ class BaseSolver(object):
             Whether to update the rhs. True for 'solve', False for 'step'.
 
         """
+        # Make inputs symbolic if calculating sensitivities with casadi
+        if self.sensitivity == "casadi":
+            symbolic_inputs = casadi.MX.sym(
+                "inputs", casadi.vertcat(*inputs.values()).shape[0]
+            )
+        else:
+            symbolic_inputs = inputs
         if self.algebraic_solver is True:
             # Don't update model.y0
             return None
         elif len(model.algebraic) == 0:
             if update_rhs is True:
                 # Recalculate initial conditions for the rhs equations
-                model.y0 = model.init_eval(inputs)
+                y0 = model.init_eval(symbolic_inputs)
             else:
                 # Don't update model.y0
                 return None
         else:
             if update_rhs is True:
                 # Recalculate initial conditions for the rhs equations
-                y0_from_inputs = model.init_eval(inputs)
+                y0_from_inputs = model.init_eval(symbolic_inputs)
                 # Reuse old solution for algebraic equations
                 y0_from_model = model.y0
-                len_rhs = model.concatenated_rhs.size
+                len_rhs = model.len_rhs
                 # update model.y0, which is used for initialising the algebraic solver
                 if len_rhs == 0:
                     model.y0 = y0_from_model
@@ -598,7 +704,12 @@ class BaseSolver(object):
                     model.y0 = casadi.vertcat(
                         y0_from_inputs[:len_rhs], y0_from_model[len_rhs:]
                     )
-            model.y0 = self.calculate_consistent_state(model, 0, inputs)
+            y0 = self.calculate_consistent_state(model, 0, inputs)
+        # Make y0 a function of inputs if doing symbolic with casadi
+        if self.sensitivity == "casadi":
+            model.y0 = casadi.Function("y0", [symbolic_inputs], [y0])
+        else:
+            model.y0 = y0
 
     def calculate_consistent_state(self, model, time=0, inputs=None):
         """
@@ -1277,6 +1388,12 @@ class BaseSolver(object):
         for input_param in model.input_parameters:
             name = input_param.name
             if name not in inputs:
+                # Don't allow symbolic inputs if using `sensitivity`
+                if self.sensitivity == "explicit forward":
+                    raise pybamm.SolverError(
+                        "Cannot have symbolic inputs if explicitly solving forward"
+                        "sensitivity equations"
+                    )
                 # Only allow symbolic inputs for CasadiSolver and CasadiAlgebraicSolver
                 if not isinstance(
                     self, (pybamm.CasadiSolver, pybamm.CasadiAlgebraicSolver)
@@ -1320,7 +1437,7 @@ class SolverCallable:
     def function(self, t, y, inputs):
         if self.form == "casadi":
             states_eval = self._function(t, y, inputs)
-            if self.name in ["RHS", "algebraic", "residuals", "event"]:
+            if self.name in ["rhs", "algebraic", "residuals", "event"]:
                 return states_eval.full()
             else:
                 # keep jacobians sparse
@@ -1376,7 +1493,6 @@ class InitialConditions(SolverCallable):
 
     def __init__(self, function, model):
         super().__init__(function, "initial conditions", model)
-        self.y_dummy = np.zeros(model.concatenated_initial_conditions.shape)
 
     def __call__(self, inputs):
         if self.form == "casadi":

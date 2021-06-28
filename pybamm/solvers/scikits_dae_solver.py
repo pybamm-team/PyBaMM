@@ -162,6 +162,8 @@ class ScikitsDaeSolver(pybamm.BaseSolver):
                 t_root,
                 np.transpose(sol.roots.y),
                 termination,
+                model=model,
+                inputs=inputs_dict,
             )
             sol.integration_time = integration_time
             return sol

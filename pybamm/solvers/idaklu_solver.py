@@ -45,7 +45,6 @@ class IDAKLUSolver(pybamm.BaseSolver):
         Klein, R., & Moura, S. (2018). Optimal experimental design for parameterization\
         of an electrochemical lithium-ion battery model. Journal of The Electrochemical\
         Society, 165(7), A1309.". See #1100 for details \
-        - "idas": use Sundials IDAS to compute forward sensitivities
 
     """
 
@@ -166,6 +165,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
         inputs_dict : dict, optional
             Any external variables or input parameters to pass to the model when solving
         """
+        inputs_dict = inputs_dict or {}
         if model.rhs_eval.form == "casadi":
             # stack inputs
             inputs = casadi.vertcat(*[x for x in inputs_dict.values()])
