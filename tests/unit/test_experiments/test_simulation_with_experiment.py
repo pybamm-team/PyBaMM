@@ -5,6 +5,7 @@ import casadi
 import pybamm
 import numpy as np
 import os
+import pandas as pd
 import unittest
 
 
@@ -237,19 +238,55 @@ class TestSimulationExperiment(unittest.TestCase):
         )
         model = pybamm.lithium_ion.SPM()
 
-        # Chen 2020: pos = function, neg = function
-        param = pybamm.ParameterValues(chemistry=pybamm.parameter_sets.Chen2020)
-        sim = pybamm.Simulation(model, experiment=experiment, parameter_values=param)
-        sim.solve(
-            solver=pybamm.CasadiSolver("fast with events"), save_at_cycles=2
-        )
-
         # Chen 2020 plating: pos = function, neg = data
         param = pybamm.ParameterValues(chemistry=pybamm.parameter_sets.Chen2020_plating)
         sim = pybamm.Simulation(model, experiment=experiment, parameter_values=param)
-        sim.solve(
-            solver=pybamm.CasadiSolver("fast with events"), save_at_cycles=2
+        sim.solve(solver=pybamm.CasadiSolver("fast with events"), save_at_cycles=2)
+
+        # Chen 2020: pos = function, neg = function
+        param = pybamm.ParameterValues(chemistry=pybamm.parameter_sets.Chen2020)
+        sim = pybamm.Simulation(model, experiment=experiment, parameter_values=param)
+        sim.solve(solver=pybamm.CasadiSolver("fast with events"), save_at_cycles=2)
+
+        # Chen 2020 with data: pos = data, neg = data
+        # Load negative electrode OCP data
+        filename = os.path.join(
+            pybamm.root_dir(),
+            "pybamm",
+            "input",
+            "parameters",
+            "lithium_ion",
+            "negative_electrodes",
+            "graphite_Chen2020",
+            "graphite_LGM50_ocp_Chen2020.csv",
         )
+        function_name = "graphite_Chen2020"
+        filename = pybamm.get_parameters_filepath(filename)
+        data = pd.read_csv(
+            filename, comment="#", skip_blank_lines=True, header=None
+        ).to_numpy()
+        param["Negative electrode OCP [V]"] = (function_name, data)
+
+        # Load positive electrode OCP data
+        filename = os.path.join(
+            pybamm.root_dir(),
+            "pybamm",
+            "input",
+            "parameters",
+            "lithium_ion",
+            "positive_electrodes",
+            "nmc_Chen2020",
+            "nmc_LGM50_ocp_Chen2020.csv",
+        )
+        function_name = "nmc_LGM50_ocp_Chen2020.csv"
+        filename = pybamm.get_parameters_filepath(filename)
+        data = pd.read_csv(
+            filename, comment="#", skip_blank_lines=True, header=None
+        ).to_numpy()
+        param["Positive electrode OCP [V]"] = (function_name, data)
+
+        sim = pybamm.Simulation(model, experiment=experiment, parameter_values=param)
+        sim.solve(solver=pybamm.CasadiSolver("safe"), save_at_cycles=2)
 
     def test_inputs(self):
         experiment = pybamm.Experiment(
