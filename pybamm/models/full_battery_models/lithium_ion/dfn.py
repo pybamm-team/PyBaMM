@@ -85,38 +85,20 @@ class DFN(BaseModel):
             [particle_left, "Negative"],
             [particle_right, "Positive"],
         ]:
-            if self.options["particle size"] == "single":
-                if particle_side == "Fickian diffusion":
-                    self.submodels[
-                        domain.lower() + " particle"
-                    ] = pybamm.particle.FickianManyParticles(self.param, domain)
-                elif particle_side in [
-                    "uniform profile",
-                    "quadratic profile",
-                    "quartic profile",
-                ]:
-                    self.submodels[
-                        domain.lower() + " particle"
-                    ] = pybamm.particle.PolynomialManyParticles(
-                        self.param, domain, particle_side
-                    )
-            # remove when merging
-            elif self.options["particle size"] == "distribution":
-                if particle_side == "Fickian diffusion":
-                    raise pybamm.OptionError(
-                        "Fickian diffusion not yet compatible with"
-                        + " particle size distributions."
-                    )
-                elif particle_side in [
-                    "uniform profile",
-                    "quadratic profile",
-                    "quartic profile",
-                ]:
-                    self.submodels[
-                        domain.lower() + " particle"
-                    ] = pybamm.particle.FastManySizeDistributions(
-                        self.param, domain
-                    )
+            if particle_side == "Fickian diffusion":
+                self.submodels[
+                    domain.lower() + " particle"
+                ] = pybamm.particle.FickianManyParticles(self.param, domain)
+            elif particle_side in [
+                "uniform profile",
+                "quadratic profile",
+                "quartic profile",
+            ]:
+                self.submodels[
+                    domain.lower() + " particle"
+                ] = pybamm.particle.PolynomialManyParticles(
+                    self.param, domain, particle_side
+                )
 
     def set_solid_submodel(self):
 
