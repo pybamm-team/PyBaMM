@@ -6,6 +6,7 @@ import numbers
 
 import anytree
 import numpy as np
+import sympy
 from anytree.exporter import DotExporter
 from scipy.sparse import csr_matrix, issparse
 
@@ -958,4 +959,4 @@ class Symbol(anytree.NodeMixin):
             raise pybamm.ShapeError("Cannot find shape (original error: {})".format(e))
 
     def to_equation(self):
-        return self.name
+        return sympy.symbols(str(self.name))

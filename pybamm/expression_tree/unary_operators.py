@@ -952,6 +952,9 @@ class BoundaryValue(BoundaryOperator):
         """See :meth:`UnaryOperator._unary_new_copy()`."""
         return boundary_value(child, self.side)
 
+    def _sympy_operator(self, child):
+        return child
+
 
 class BoundaryGradient(BoundaryOperator):
     """

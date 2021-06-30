@@ -44,6 +44,10 @@ class Parameter(pybamm.Symbol):
         # Parameter is not constant since it can become an InputParameter
         return False
 
+    def to_equation(self):
+        """Convert the node and its subtree into a SymPy equation."""
+        return sympy.symbols(self.print_name)
+
 
 class FunctionParameter(pybamm.Symbol):
     """
