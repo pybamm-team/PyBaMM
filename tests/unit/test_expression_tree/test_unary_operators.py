@@ -762,6 +762,11 @@ class TestUnaryOperators(unittest.TestCase):
             sympy_Divergence(sympy_Gradient(a)),
         )
 
+        # Test BoundaryValue
+        self.assertEqual(
+            pybamm.BoundaryValue(a, "right").to_equation(), sympy.symbols(str(a))
+        )
+
 
 if __name__ == "__main__":
     print("Add -v for more debug output")
