@@ -16,8 +16,7 @@ class LeadingOrder(BaseElectrolyteConductivity):
         The parameters to use for this submodel
     domain : str, optional
         The domain in which the model holds
-    reactions : dict, optional
-        Dictionary of reaction terms
+
 
     **Extends:** :class:`pybamm.electrolyte_conductivity.BaseElectrolyteConductivity`
     """

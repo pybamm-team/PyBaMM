@@ -11,8 +11,7 @@ class BasePlating(BaseInterface):
     ----------
     param : parameter class
         The parameters to use for this submodel
-    reactions : dict, optional
-        Dictionary of reaction terms
+
     References
     ----------
     .. [1] SEJ O'Kane, ID Campbell, MWJ Marzook, GJ Offer and M Marinescu. "Physical

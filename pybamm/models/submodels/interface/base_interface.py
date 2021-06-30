@@ -23,7 +23,7 @@ class BaseInterface(pybamm.BaseSubModel):
 
     def __init__(self, param, domain, reaction):
         super().__init__(param, domain)
-        if reaction == "lithium-ion main":
+        if reaction in ["lithium-ion main", "lithium metal plating"]:
             self.reaction_name = ""  # empty reaction name for the main reaction
             self.Reaction_icd = "Interfacial current density"
         elif reaction == "lead-acid main":
@@ -57,6 +57,8 @@ class BaseInterface(pybamm.BaseSubModel):
         j0 : :class: `pybamm.Symbol`
             The exchange current density.
         """
+        param = self.param
+
         c_e = variables[self.domain + " electrolyte concentration"]
         T = variables[self.domain + " electrode temperature"]
 
@@ -78,13 +80,12 @@ class BaseInterface(pybamm.BaseSubModel):
             c_s_surf = pybamm.maximum(tol, pybamm.minimum(c_s_surf, 1 - tol))
 
             if self.domain == "Negative":
-                j0 = self.param.j0_n(c_e, c_s_surf, T) / self.param.C_r_n
+                j0 = param.j0_n(c_e, c_s_surf, T) / param.C_r_n
             elif self.domain == "Positive":
-                j0 = (
-                    self.param.gamma_p
-                    * self.param.j0_p(c_e, c_s_surf, T)
-                    / self.param.C_r_p
-                )
+                j0 = param.gamma_p * param.j0_p(c_e, c_s_surf, T) / param.C_r_p
+
+        elif self.reaction == "lithium metal plating":
+            j0 = param.j0_plating(c_e, 1, T)
 
         elif self.reaction == "lead-acid main":
             # If variable was broadcast, take only the orphan
@@ -92,9 +93,9 @@ class BaseInterface(pybamm.BaseSubModel):
                 c_e = c_e.orphans[0]
                 T = T.orphans[0]
             if self.domain == "Negative":
-                j0 = self.param.j0_n(c_e, T)
+                j0 = param.j0_n(c_e, T)
             elif self.domain == "Positive":
-                j0 = self.param.j0_p(c_e, T)
+                j0 = param.j0_p(c_e, T)
 
         elif self.reaction == "lead-acid oxygen":
             # If variable was broadcast, take only the orphan
@@ -104,7 +105,7 @@ class BaseInterface(pybamm.BaseSubModel):
             if self.domain == "Negative":
                 j0 = pybamm.Scalar(0)
             elif self.domain == "Positive":
-                j0 = self.param.j0_p_Ox(c_e, T)
+                j0 = param.j0_p_Ox(c_e, T)
         else:
             j0 = pybamm.Scalar(0)
 
@@ -145,6 +146,10 @@ class BaseInterface(pybamm.BaseSubModel):
             elif self.domain == "Positive":
                 ocp = self.param.U_p(c_s_surf, T)
                 dUdT = self.param.dUdT_p(c_s_surf)
+        elif self.reaction == "lithium metal plating":
+            T = variables[self.domain + " electrode temperature"]
+            ocp = self.param.U_n_ref
+            dUdT = 0 * T
         elif self.reaction == "lead-acid main":
             c_e = variables[self.domain + " electrolyte concentration"]
             # If c_e was broadcast, take only the orphan
@@ -171,7 +176,11 @@ class BaseInterface(pybamm.BaseSubModel):
 
     def _get_number_of_electrons_in_reaction(self):
         """Returns the number of electrons in the reaction."""
-        if self.reaction in ["lead-acid main", "lithium-ion main"]:
+        if self.reaction in [
+            "lead-acid main",
+            "lithium-ion main",
+            "lithium metal plating",
+        ]:
             if self.domain == "Negative":
                 return self.param.ne_n
             elif self.domain == "Positive":
@@ -183,7 +192,12 @@ class BaseInterface(pybamm.BaseSubModel):
 
     def _get_electrolyte_reaction_signed_stoichiometry(self):
         """Returns the number of electrons in the reaction."""
-        if self.reaction in ["lithium-ion main", "SEI", "lithium plating"]:
+        if self.reaction in [
+            "lithium-ion main",
+            "SEI",
+            "lithium plating",
+            "lithium metal plating",
+        ]:
             # Both the main reaction current contribute to the electrolyte reaction
             # current
             return pybamm.Scalar(1), pybamm.Scalar(1)

@@ -71,7 +71,7 @@ class BasicDFNHalfCell(BaseModel):
         Q = pybamm.Variable("Discharge capacity [A.h]")
 
         # Define some useful scalings
-        pot = param.potential_scale
+        pot_scale = param.potential_scale
         i_typ = param.current_scale
 
         # Variables that vary spatially are created with a domain.
@@ -149,9 +149,8 @@ class BasicDFNHalfCell(BaseModel):
 
             # Other parameters (for outputs)
             c_w_max = param.c_n_max
-            U_ref = param.U_n_ref
-            U_n_ref = param.U_n_ref
-            phi_s_w_ref = pybamm.Scalar(0)
+            U_w_ref = param.U_n_ref
+            U_Li_ref = param.U_p_ref
             L_w = param.L_n
 
         else:
@@ -186,9 +185,8 @@ class BasicDFNHalfCell(BaseModel):
 
             # Other parameters (for outputs)
             c_w_max = param.c_p_max
-            U_ref = param.U_p_ref
-            U_n_ref = pybamm.Scalar(0)
-            phi_s_w_ref = param.U_p_ref - U_n_ref
+            U_w_ref = param.U_p_ref
+            U_Li_ref = param.U_n_ref
             L_w = param.L_p
 
         # gamma_w is always 1 because we choose the timescale based on the working
@@ -301,7 +299,9 @@ class BasicDFNHalfCell(BaseModel):
         )
         self.algebraic[phi_e] = pybamm.div(i_e) - j
 
-        ref_potential = U_n_ref / pot
+        # dimensionless reference potential so that dimensional reference potential
+        # is zero (phi_dim = U_n_ref + pot_scale * phi)
+        ref_potential = U_Li_ref / pot_scale
 
         self.boundary_conditions[phi_e] = {
             "left": (ref_potential, "Dirichlet"),
@@ -322,10 +322,10 @@ class BasicDFNHalfCell(BaseModel):
         vdrop_cell = pybamm.boundary_value(phi_s_w, "right") - ref_potential
         vdrop_Li = -(
             2 * pybamm.arcsinh(i_cell * i_typ / j_Li)
-            + L_Li * i_typ * i_cell / (sigma_Li * pot)
+            + L_Li * i_typ * i_cell / (sigma_Li * pot_scale)
         )
         voltage = vdrop_cell + vdrop_Li
-        voltage_dim = phi_s_w_ref + U_n_ref + pot * voltage
+        voltage_dim = U_w_ref - U_Li_ref + pot_scale * voltage
         c_e_total = pybamm.x_average(eps * c_e)
         c_s_surf_w_av = pybamm.x_average(c_s_surf_w)
 
@@ -392,14 +392,14 @@ class BasicDFNHalfCell(BaseModel):
             * param.A_cc,
             "Current [A]": I,
             "Working electrode potential": phi_s_w,
-            "Working electrode potential [V]": phi_s_w_ref + pot * phi_s_w,
+            "Working electrode potential [V]": U_w_ref - U_Li_ref + pot_scale * phi_s_w,
             "Working electrode open circuit potential": U_w(c_s_surf_w, T),
-            "Working electrode open circuit potential [V]": U_ref
-            + pot * U_w(c_s_surf_w, T),
+            "Working electrode open circuit potential [V]": U_w_ref
+            + pot_scale * U_w(c_s_surf_w, T),
             "Electrolyte potential": phi_e,
-            "Electrolyte potential [V]": -U_n_ref + pot * phi_e,
+            "Electrolyte potential [V]": -U_Li_ref + pot_scale * phi_e,
             "Voltage drop in the cell": vdrop_cell,
-            "Voltage drop in the cell [V]": phi_s_w_ref + U_n_ref + pot * vdrop_cell,
+            "Voltage drop in the cell [V]": U_w_ref - U_Li_ref + pot_scale * vdrop_cell,
             "Terminal voltage": voltage,
             "Terminal voltage [V]": voltage_dim,
         }

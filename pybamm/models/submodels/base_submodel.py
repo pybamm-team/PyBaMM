@@ -59,6 +59,10 @@ class BaseSubModel(pybamm.BaseModel):
         self.external = external
         self.options = options or {}
 
+        # Save whether the submodel is a half-cell submodel
+        we = self.options.get("working electrode", "both")
+        self.half_cell = we != "both"
+
     @property
     def domain(self):
         return self._domain

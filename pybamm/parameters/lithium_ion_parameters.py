@@ -35,6 +35,8 @@ class LithiumIonParameters(BaseParameters):
 
     def __init__(self, options=None):
         self.options = options
+        # Save whether the submodel is a half-cell submodel
+        self.half_cell = self.options["working electrode"] != "both"
 
         # Get geometric, electrical and thermal parameters
         self.geo = pybamm.geometric_parameters
@@ -805,7 +807,9 @@ class LithiumIonParameters(BaseParameters):
         self.c_sei_init = self.c_ec_0_dim / self.c_sei_outer_scale
 
         # lithium plating parameters
-        self.c_Li_typ = self.c_e_typ
+        self.c_Li_typ = pybamm.Parameter(
+            "Typical plated lithium concentration [mol.m-3]"
+        )
         self.c_plated_Li_0 = self.c_plated_Li_0_dim / self.c_Li_typ
 
         # ratio of lithium plating reaction scaled to intercalation reaction
@@ -819,9 +823,12 @@ class LithiumIonParameters(BaseParameters):
         self.epsilon_n_init = pybamm.Parameter("Negative electrode porosity")
         self.epsilon_s_init = pybamm.Parameter("Separator porosity")
         self.epsilon_p_init = pybamm.Parameter("Positive electrode porosity")
-        self.epsilon_init = pybamm.concatenation(
-            self.epsilon_n, self.epsilon_s, self.epsilon_p
-        )
+        if self.half_cell:
+            self.epsilon_init = pybamm.concatenation(self.epsilon_s, self.epsilon_p)
+        else:
+            self.epsilon_init = pybamm.concatenation(
+                self.epsilon_n, self.epsilon_s, self.epsilon_p
+            )
         self.T_init = self.therm.T_init
         self.c_e_init = self.c_e_init_dimensional / self.c_e_typ
 

@@ -13,14 +13,17 @@ class BaseElectrode(pybamm.BaseSubModel):
         The parameters to use for this submodel
     domain : str
         Either 'Negative' or 'Positive'
+    options : dict, optional
+        A dictionary of options to be passed to the model.
     set_positive_potential :  bool, optional
         If True the battery model sets the positve potential based on the current.
         If False, the potential is specified by the user. Default is True.
+
     **Extends:** :class:`pybamm.BaseSubModel`
     """
 
-    def __init__(self, param, domain, set_positive_potential=True):
-        super().__init__(param, domain)
+    def __init__(self, param, domain, options=None, set_positive_potential=True):
+        super().__init__(param, domain, options=options)
         self.set_positive_potential = set_positive_potential
 
     def _get_standard_potential_variables(self, phi_s):
@@ -169,7 +172,10 @@ class BaseElectrode(pybamm.BaseSubModel):
             current variables added.
         """
 
-        i_s_n = variables["Negative electrode current density"]
+        if self.half_cell:
+            i_s_n = None
+        else:
+            i_s_n = variables["Negative electrode current density"]
         i_s_s = pybamm.FullBroadcast(0, ["separator"], "current collector")
         i_s_p = variables["Positive electrode current density"]
 

@@ -51,7 +51,13 @@ class BaseModel(pybamm.BaseBatteryModel):
         param = self.param
 
         # LAM
-        C_n = self.variables["Negative electrode capacity [A.h]"]
+        if self.half_cell:
+            C_n = param.C_n_init
+            n_Li_n = pybamm.Scalar(0)
+        else:
+            C_n = self.variables["Negative electrode capacity [A.h]"]
+            n_Li_n = self.variables["Total lithium in negative electrode [mol]"]
+
         C_p = self.variables["Positive electrode capacity [A.h]"]
 
         LAM_ne = (1 - C_n / param.C_n_init) * 100
@@ -60,7 +66,6 @@ class BaseModel(pybamm.BaseBatteryModel):
         # LLI
         n_Li_e = self.variables["Total lithium in electrolyte [mol]"]
         n_Li_p = self.variables["Total lithium in positive electrode [mol]"]
-        n_Li_n = self.variables["Total lithium in negative electrode [mol]"]
         n_Li_particles = n_Li_n + n_Li_p
         n_Li = n_Li_particles + n_Li_e
 
@@ -148,6 +153,11 @@ class BaseModel(pybamm.BaseBatteryModel):
 
         # positive electrode
         self.submodels["positive sei"] = pybamm.sei.NoSEI(self.param, "Positive")
+        # counter electrode
+        if self.half_cell:
+            self.submodels["counter electrode sei"] = pybamm.sei.NoSEI(
+                self.param, "Negative"
+            )
 
     def set_lithium_plating_submodel(self):
 
@@ -175,6 +185,12 @@ class BaseModel(pybamm.BaseBatteryModel):
         self.submodels["positive lithium plating"] = pybamm.lithium_plating.NoPlating(
             self.param, "Positive"
         )
+        # counter electrode
+        # there is plating but it is implemented differently
+        if self.half_cell:
+            self.submodels[
+                "counter electrode side reaction plating"
+            ] = pybamm.lithium_plating.NoPlating(self.param, "Negative")
 
     def set_other_reaction_submodels_to_zero(self):
         self.submodels["negative oxygen interface"] = pybamm.interface.NoReaction(

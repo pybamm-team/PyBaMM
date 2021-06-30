@@ -728,16 +728,18 @@ class BaseBatteryModel(pybamm.BaseModel):
 
     def set_tortuosity_submodels(self):
         self.submodels["electrolyte tortuosity"] = pybamm.tortuosity.Bruggeman(
-            self.param, "Electrolyte"
+            self.param, "Electrolyte", self.options
         )
         self.submodels["electrode tortuosity"] = pybamm.tortuosity.Bruggeman(
-            self.param, "Electrode"
+            self.param, "Electrode", self.options
         )
 
     def set_thermal_submodel(self):
 
         if self.options["thermal"] == "isothermal":
-            thermal_submodel = pybamm.thermal.isothermal.Isothermal(self.param)
+            thermal_submodel = pybamm.thermal.isothermal.Isothermal(
+                self.param, self.options
+            )
 
         elif self.options["thermal"] == "lumped":
             thermal_submodel = pybamm.thermal.Lumped(

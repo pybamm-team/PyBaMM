@@ -8,7 +8,7 @@ import numpy as np
 pybamm.set_logging_level("INFO")
 
 # load model
-model = pybamm.lithium_ion.DFN()
+model = pybamm.lithium_ion.DFN({"working electrode": "positive"})
 # create geometry
 geometry = model.default_geometry
 

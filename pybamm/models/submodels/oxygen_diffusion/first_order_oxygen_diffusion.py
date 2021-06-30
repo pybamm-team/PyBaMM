@@ -18,8 +18,7 @@ class FirstOrder(BaseModel):
     ----------
     param : parameter class
         The parameters to use for this submodel
-    reactions : dict
-        Dictionary of reaction terms
+
 
     **Extends:** :class:`pybamm.oxygen_diffusion.BaseModel`
     """

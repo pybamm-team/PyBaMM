@@ -14,14 +14,14 @@ class BaseElectrolyteConductivity(pybamm.BaseSubModel):
         The parameters to use for this submodel
     domain : str, optional
         The domain in which the model holds
-    reactions : dict, optional
-        Dictionary of reaction terms
+    options : dict, optional
+        A dictionary of options to be passed to the model.
 
     **Extends:** :class:`pybamm.BaseSubModel`
     """
 
-    def __init__(self, param, domain=None):
-        super().__init__(param, domain)
+    def __init__(self, param, domain=None, options=None):
+        super().__init__(param, domain, options=options)
 
     def _get_standard_potential_variables(self, phi_e_n, phi_e_s, phi_e_p):
         """
@@ -48,6 +48,11 @@ class BaseElectrolyteConductivity(pybamm.BaseSubModel):
         pot_scale = param.potential_scale
 
         phi_e = pybamm.concatenation(phi_e_n, phi_e_s, phi_e_p)
+
+        if self.half_cell:
+            # overwrite phi_e_n to be the boundary value of phi_e_s
+            phi_e_n = pybamm.boundary_value(phi_e_s, "left")
+
         phi_e_n_av = pybamm.x_average(phi_e_n)
         phi_e_s_av = pybamm.x_average(phi_e_s)
         phi_e_p_av = pybamm.x_average(phi_e_p)
@@ -109,9 +114,13 @@ class BaseElectrolyteConductivity(pybamm.BaseSubModel):
         }
 
         if isinstance(i_e, pybamm.Concatenation):
-            i_e_n, _, i_e_p = i_e.orphans
-            variables.update(self._get_domain_current_variables(i_e_n, "Negative"))
-            variables.update(self._get_domain_current_variables(i_e_p, "Positive"))
+            if self.half_cell:
+                _, i_e_p = i_e.orphans
+                variables.update(self._get_domain_current_variables(i_e_p, "Positive"))
+            else:
+                i_e_n, _, i_e_p = i_e.orphans
+                variables.update(self._get_domain_current_variables(i_e_n, "Negative"))
+                variables.update(self._get_domain_current_variables(i_e_p, "Positive"))
 
         return variables
 
@@ -311,25 +320,32 @@ class BaseElectrolyteConductivity(pybamm.BaseSubModel):
         """
         param = self.param
 
-        phi_e_n = variables["Negative electrolyte potential"]
+        if self.half_cell:
+            # No concentration overpotential in the counter electrode
+            phi_e_n = pybamm.Scalar(0)
+            indef_integral_n = pybamm.Scalar(0)
+        else:
+            phi_e_n = variables["Negative electrolyte potential"]
+            # concentration overpotential
+            c_e_n = variables["Negative electrolyte concentration"]
+            T_n = variables["Negative electrode temperature"]
+            indef_integral_n = pybamm.IndefiniteIntegral(
+                param.chi(c_e_n, T_n)
+                * (1 + param.Theta * T_n)
+                * pybamm.grad(c_e_n)
+                / c_e_n,
+                pybamm.standard_spatial_vars.x_n,
+            )
+
         phi_e_p = variables["Positive electrolyte potential"]
 
-        c_e_n = variables["Negative electrolyte concentration"]
         c_e_s = variables["Separator electrolyte concentration"]
         c_e_p = variables["Positive electrolyte concentration"]
 
-        T_n = variables["Negative electrode temperature"]
         T_s = variables["Separator temperature"]
         T_p = variables["Positive electrode temperature"]
 
         # concentration overpotential
-        indef_integral_n = pybamm.IndefiniteIntegral(
-            param.chi(c_e_n, T_n)
-            * (1 + param.Theta * T_n)
-            * pybamm.grad(c_e_n)
-            / c_e_n,
-            pybamm.standard_spatial_vars.x_n,
-        )
         indef_integral_s = pybamm.IndefiniteIntegral(
             param.chi(c_e_s, T_s)
             * (1 + param.Theta * T_s)

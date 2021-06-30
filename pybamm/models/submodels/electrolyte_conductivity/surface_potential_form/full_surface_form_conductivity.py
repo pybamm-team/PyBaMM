@@ -16,8 +16,7 @@ class BaseModel(BaseElectrolyteConductivity):
         The parameters to use for this submodel
     domain : str
         The domain in which the model holds
-    reactions : dict
-        Dictionary of reaction terms
+
 
     **Extends:** :class:`pybamm.electrolyte_conductivity.BaseElectrolyteConductivity`
     """

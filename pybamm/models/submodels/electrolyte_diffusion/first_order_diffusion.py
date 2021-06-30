@@ -14,8 +14,7 @@ class FirstOrder(BaseElectrolyteDiffusion):
     ----------
     param : parameter class
         The parameters to use for this submodel
-    reactions : dict
-        Dictionary of reaction terms
+
 
     **Extends:** :class:`pybamm.electrolyte_diffusion.BaseElectrolyteDiffusion`
     """
