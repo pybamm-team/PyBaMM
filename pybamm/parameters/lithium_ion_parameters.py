@@ -690,7 +690,7 @@ class LithiumIonParameters(BaseParameters):
         self.lambda_cp = self.therm.lambda_cp
 
         self.Theta = self.therm.Theta
-        
+
         self.h_edge = self.therm.h_edge
         self.h_tab_n = self.therm.h_tab_n
         self.h_tab_p = self.therm.h_tab_p
