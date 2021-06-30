@@ -26,7 +26,7 @@ class FastManySizeDistributions(BaseSizeDistribution):
 
     def __init__(self, param, domain):
         super().__init__(param, domain)
-        pybamm.citations.register("Kirk2020")
+        pybamm.citations.register("Kirk2021")
 
     def get_fundamental_variables(self):
         # The concentration is uniform throughout each particle, so we

@@ -415,3 +415,17 @@ doi={10.1149/2.0661810jes}
   archiveprefix = {arXiv},
   primaryclass  = {physics.app-ph},
 }
+
+@article{Kirk2021,
+	author = {Toby L. Kirk and Colin P. Please and S. Jon Chapman},
+	title = {Physical Modelling of the Slow Voltage Relaxation Phenomenon in Lithium-Ion Batteries},
+	journal = {Journal of The Electrochemical Society},
+	year = 2021,
+	month = {jun},
+	publisher = {The Electrochemical Society},
+	volume = {168},
+	number = {6},
+	pages = {060554},
+	doi = {10.1149/1945-7111/ac0bf7},
+	url = {https://doi.org/10.1149/1945-7111/ac0bf7},
+}

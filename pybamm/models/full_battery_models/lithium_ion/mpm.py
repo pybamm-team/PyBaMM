@@ -71,6 +71,7 @@ class MPM(BaseModel):
             self.build_model()
 
         pybamm.citations.register("Kirk2020")
+        pybamm.citations.register("Kirk2021")
 
     def set_convection_submodel(self):
 
