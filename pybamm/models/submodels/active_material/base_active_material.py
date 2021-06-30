@@ -49,6 +49,10 @@ class BaseModel(pybamm.BaseSubModel):
                     self.domain + " electrode surface area to volume ratio": a,
                     self.domain
                     + " electrode surface area to volume ratio [m-1]": a * a_typ,
+                    "X-averaged " + self.domain.lower() +
+                    " electrode surface area to volume ratio": pybamm.x_average(a),
+                    "X-averaged " + self.domain.lower() + " electrode surface area"
+                    + " to volume ratio [m-1]": pybamm.x_average(a) * a_typ,
                 }
             )
             return variables
