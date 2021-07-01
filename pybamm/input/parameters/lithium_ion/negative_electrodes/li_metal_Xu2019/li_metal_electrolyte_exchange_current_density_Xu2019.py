@@ -1,7 +1,7 @@
 from pybamm import constants, Parameter
 
 
-def li_metal_electrolyte_exchange_current_density_Xu2019(c_e, c_s_surf, T):
+def li_metal_electrolyte_exchange_current_density_Xu2019(c_e, c_Li, T):
     """
     Exchange-current density for Butler-Volmer reactions between li metal and LiPF6 in
     EC:DMC.
@@ -17,8 +17,8 @@ def li_metal_electrolyte_exchange_current_density_Xu2019(c_e, c_s_surf, T):
     ----------
     c_e : :class:`pybamm.Symbol`
         Electrolyte concentration [mol.m-3]
-    c_s_surf : :class:`pybamm.Symbol`
-        Particle concentration [mol.m-3]
+    c_Li : :class:`pybamm.Symbol`
+        Pure metal lithium concentration [mol.m-3]
     T : :class:`pybamm.Symbol`
         Temperature [K]
 
@@ -28,6 +28,5 @@ def li_metal_electrolyte_exchange_current_density_Xu2019(c_e, c_s_surf, T):
         Exchange-current density [A.m-2]
     """
     m_ref = 3.5e-8 * constants.F  # (A/m2)(mol/m3) - includes ref concentrations
-    c_Li = Parameter("Lithium metal concentration [mol.m-3]")
 
-    return m_ref * c_Li ** 0.5 * c_e ** 0.5
+    return m_ref * c_Li ** 0.7 * c_e ** 0.3

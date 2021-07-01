@@ -104,12 +104,24 @@ class Full(BaseElectrolyteDiffusion):
         }
 
     def set_boundary_conditions(self, variables):
-
+        param = self.param
         c_e = variables["Electrolyte concentration"]
 
+        if self.half_cell:
+            # assuming v_box = 0 for now
+            T = variables["Cell temperature"]
+            tor = variables["Electrolyte tortuosity"]
+            i_boundary_cc = variables["Current collector current density"]
+            dce_dx = (
+                -(1 - param.t_plus(c_e, T))
+                * i_boundary_cc
+                * param.C_e
+                / (tor * param.gamma_e * param.D_e(c_e, T))
+            )
+            lbc = pybamm.boundary_value(dce_dx, "left")
+        else:
+            lbc = pybamm.Scalar(0)
+
         self.boundary_conditions = {
-            c_e: {
-                "left": (pybamm.Scalar(0), "Neumann"),
-                "right": (pybamm.Scalar(0), "Neumann"),
-            },
+            c_e: {"left": (lbc, "Neumann"), "right": (pybamm.Scalar(0), "Neumann")},
         }

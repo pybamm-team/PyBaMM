@@ -26,8 +26,7 @@ class BaseKinetics(BaseInterface):
     """
 
     def __init__(self, param, domain, reaction, options):
-        super().__init__(param, domain, reaction)
-        self.options = options
+        super().__init__(param, domain, reaction, options=options)
 
     def get_fundamental_variables(self):
         if (

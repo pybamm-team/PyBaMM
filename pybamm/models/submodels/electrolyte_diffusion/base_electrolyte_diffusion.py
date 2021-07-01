@@ -89,10 +89,14 @@ class BaseElectrolyteDiffusion(pybamm.BaseSubModel):
 
         variables = {
             "Porosity times concentration": eps_c_e,
-            "Negative electrode porosity times concentration": eps_c_e_n,
             "Separator porosity times concentration": eps_c_e_s,
             "Positive electrode porosity times concentration": eps_c_e_p,
         }
+
+        if not self.half_cell:
+            variables.update(
+                {"Negative electrode porosity times concentration": eps_c_e_n}
+            )
         return variables
 
     def _get_standard_flux_variables(self, N_e):
@@ -144,7 +148,8 @@ class BaseElectrolyteDiffusion(pybamm.BaseSubModel):
         eps_c_e_av = pybamm.x_average(eps_c_e)
 
         variables = {
-            "Total lithium in electrolyte [mol]": c_e_typ * L_x * A * eps_c_e_av
+            "Total lithium in electrolyte": eps_c_e_av,
+            "Total lithium in electrolyte [mol]": c_e_typ * L_x * A * eps_c_e_av,
         }
 
         return variables

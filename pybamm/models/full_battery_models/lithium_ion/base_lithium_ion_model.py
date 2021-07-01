@@ -17,6 +17,9 @@ class BaseModel(pybamm.BaseBatteryModel):
         super().__init__(options, name)
         self.param = pybamm.LithiumIonParameters(options)
 
+        # Assess whether the submodel is a half-cell model
+        self.half_cell = self.options["working electrode"] != "both"
+
         # Default timescale is discharge timescale
         self.timescale = self.param.tau_discharge
 
@@ -25,11 +28,13 @@ class BaseModel(pybamm.BaseBatteryModel):
             "negative electrode": self.param.L_x,
             "separator": self.param.L_x,
             "positive electrode": self.param.L_x,
-            "negative particle": self.param.R_n_typ,
             "positive particle": self.param.R_p_typ,
             "current collector y": self.param.L_z,
             "current collector z": self.param.L_z,
         }
+
+        if not self.half_cell:
+            self.length_scales.update({"negative particle": self.param.R_n_typ})
         self.set_standard_output_variables()
 
     def set_standard_output_variables(self):
@@ -37,14 +42,11 @@ class BaseModel(pybamm.BaseBatteryModel):
 
         # Particle concentration position
         var = pybamm.standard_spatial_vars
-        self.variables.update(
-            {
-                "r_n": var.r_n,
-                "r_n [m]": var.r_n * self.param.R_n_typ,
-                "r_p": var.r_p,
-                "r_p [m]": var.r_p * self.param.R_p_typ,
-            }
-        )
+        self.variables.update({"r_p": var.r_p, "r_p [m]": var.r_p * self.param.R_p_typ})
+        if not self.half_cell:
+            self.variables.update(
+                {"r_n": var.r_n, "r_n [m]": var.r_n * self.param.R_n_typ}
+            )
 
     def set_degradation_variables(self):
         """ Sets variables that quantify degradation (LAM, LLI, etc) """
@@ -52,15 +54,15 @@ class BaseModel(pybamm.BaseBatteryModel):
 
         # LAM
         if self.half_cell:
-            C_n = param.C_n_init
             n_Li_n = pybamm.Scalar(0)
+            LAM_ne = pybamm.Scalar(0)
         else:
             C_n = self.variables["Negative electrode capacity [A.h]"]
             n_Li_n = self.variables["Total lithium in negative electrode [mol]"]
+            LAM_ne = (1 - C_n / param.C_n_init) * 100
 
         C_p = self.variables["Positive electrode capacity [A.h]"]
 
-        LAM_ne = (1 - C_n / param.C_n_init) * 100
         LAM_pe = (1 - C_p / param.C_p_init) * 100
 
         # LLI
@@ -152,11 +154,13 @@ class BaseModel(pybamm.BaseBatteryModel):
             )
 
         # positive electrode
-        self.submodels["positive sei"] = pybamm.sei.NoSEI(self.param, "Positive")
+        self.submodels["positive sei"] = pybamm.sei.NoSEI(
+            self.param, "Positive", self.options
+        )
         # counter electrode
         if self.half_cell:
             self.submodels["counter electrode sei"] = pybamm.sei.NoSEI(
-                self.param, "Negative"
+                self.param, "Negative", self.options
             )
 
     def set_lithium_plating_submodel(self):
@@ -183,14 +187,14 @@ class BaseModel(pybamm.BaseBatteryModel):
 
         # positive electrode
         self.submodels["positive lithium plating"] = pybamm.lithium_plating.NoPlating(
-            self.param, "Positive"
+            self.param, "Positive", self.options
         )
         # counter electrode
         # there is plating but it is implemented differently
         if self.half_cell:
             self.submodels[
                 "counter electrode side reaction plating"
-            ] = pybamm.lithium_plating.NoPlating(self.param, "Negative")
+            ] = pybamm.lithium_plating.NoPlating(self.param, "Negative", self.options)
 
     def set_other_reaction_submodels_to_zero(self):
         self.submodels["negative oxygen interface"] = pybamm.interface.NoReaction(

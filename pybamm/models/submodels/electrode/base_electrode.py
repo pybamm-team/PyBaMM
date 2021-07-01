@@ -76,10 +76,16 @@ class BaseElectrode(pybamm.BaseSubModel):
             "X-averaged "
             + self.domain.lower()
             + " electrode ohmic losses [V]": delta_phi_s_av_dim,
-            "Gradient of "
-            + self.domain.lower()
-            + " electrode potential": pybamm.grad(phi_s),
         }
+
+        if not self.half_cell:
+            variables.update(
+                {
+                    "Gradient of "
+                    + self.domain.lower()
+                    + " electrode potential": pybamm.grad(phi_s),
+                }
+            )
 
         return variables
 

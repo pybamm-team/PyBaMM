@@ -34,8 +34,6 @@ class DFN(BaseModel):
         super().__init__(options, name)
         # For degradation models we use the full form since this is a full-order model
         self.x_average = False
-        # Assess whether the submodel is a half-cell model
-        self.half_cell = self.options["working electrode"] != "both"
 
         self.set_external_circuit_submodel()
         self.set_porosity_submodel()
@@ -97,6 +95,11 @@ class DFN(BaseModel):
             ] = pybamm.interface.InverseButlerVolmer(
                 self.param, "Negative", "lithium metal plating", self.options
             )  # assuming symmetric reaction for now so we can take the inverse
+            self.submodels[
+                "counter electrode interface current"
+            ] = pybamm.interface.CurrentForInverseButlerVolmerLiMetal(
+                self.param, "Negative", "lithium metal plating", self.options
+            )
 
     def set_particle_submodel(self):
 

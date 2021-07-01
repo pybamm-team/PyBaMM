@@ -3,8 +3,6 @@
 #
 import pybamm
 from .base_lithium_ion_model import BaseModel
-from pybamm.geometry import half_cell_spatial_vars
-from pybamm.geometry.half_cell_geometry import half_cell_geometry
 
 
 class BasicDFNHalfCell(BaseModel):
@@ -16,6 +14,12 @@ class BasicDFNHalfCell(BaseModel):
     feature under development (for example, it cannot be used with the Simulation class
     for the moment) and in the future it will be incorporated as a standard model with
     the full functionality.
+
+    The electrode labeled "positive electrode" is the working electrode, and the
+    electrode labeled "negative electrode" is the counter electrode. If the "negative
+    electrode" is the working electrode, then the parameters for the "negative
+    electrode" are used to define the "positive electrode".
+    This facilitates compatibility with the full-cell models.
 
     Parameters
     ----------
@@ -57,9 +61,9 @@ class BasicDFNHalfCell(BaseModel):
 
         # Set default length scales
         self.length_scales = {
-            "working electrode": param.L_x,
             "separator": param.L_x,
-            "working particle": R_w_typ,
+            "positive electrode": param.L_x,
+            "positive particle": R_w_typ,
             "current collector y": param.L_z,
             "current collector z": param.L_z,
         }
@@ -79,20 +83,20 @@ class BasicDFNHalfCell(BaseModel):
             "Separator electrolyte concentration", domain="separator"
         )
         c_e_w = pybamm.Variable(
-            "Working electrolyte concentration", domain="working electrode"
+            "Positive electrolyte concentration", domain="positive electrode"
         )
         c_e = pybamm.concatenation(c_e_s, c_e_w)
         c_s_w = pybamm.Variable(
-            "Working particle concentration",
-            domain="working particle",
-            auxiliary_domains={"secondary": "working electrode"},
+            "Positive particle concentration",
+            domain="positive particle",
+            auxiliary_domains={"secondary": "positive electrode"},
         )
         phi_s_w = pybamm.Variable(
-            "Working electrode potential", domain="working electrode"
+            "Positive electrode potential", domain="positive electrode"
         )
         phi_e_s = pybamm.Variable("Separator electrolyte potential", domain="separator")
         phi_e_w = pybamm.Variable(
-            "Working electrolyte potential", domain="working electrode"
+            "Positive electrolyte potential", domain="positive electrode"
         )
         phi_e = pybamm.concatenation(phi_e_s, phi_e_w)
 
@@ -123,7 +127,7 @@ class BasicDFNHalfCell(BaseModel):
                 pybamm.Parameter("Separator porosity"), "separator"
             )
             eps_w = pybamm.PrimaryBroadcast(
-                pybamm.Parameter("Negative electrode porosity"), "working electrode"
+                pybamm.Parameter("Negative electrode porosity"), "positive electrode"
             )
             b_e_s = param.b_e_s
             b_e_w = param.b_e_n
@@ -159,7 +163,7 @@ class BasicDFNHalfCell(BaseModel):
                 pybamm.Parameter("Separator porosity"), "separator"
             )
             eps_w = pybamm.PrimaryBroadcast(
-                pybamm.Parameter("Positive electrode porosity"), "working electrode"
+                pybamm.Parameter("Positive electrode porosity"), "positive electrode"
             )
             b_e_s = param.b_e_s
             b_e_w = param.b_e_p
@@ -232,17 +236,18 @@ class BasicDFNHalfCell(BaseModel):
 
         # c_w_init can in general be a function of x
         # Note the broadcasting, for domains
-        x_w = pybamm.PrimaryBroadcast(half_cell_spatial_vars.x_w, "working particle")
+        var = pybamm.standard_spatial_vars
+        x_w = pybamm.PrimaryBroadcast(var.x_p, "positive particle")
         self.initial_conditions[c_s_w] = c_w_init(x_w)
 
         # Events specify points at which a solution should terminate
         self.events += [
             pybamm.Event(
-                "Minimum working particle surface concentration",
+                "Minimum positive particle surface concentration",
                 pybamm.min(c_s_surf_w) - 0.01,
             ),
             pybamm.Event(
-                "Maximum working particle surface concentration",
+                "Maximum positive particle surface concentration",
                 (1 - 0.01) - pybamm.max(c_s_surf_w),
             ),
         ]
@@ -313,12 +318,18 @@ class BasicDFNHalfCell(BaseModel):
         ######################
         # (Some) variables
         ######################
-        L_Li = pybamm.Parameter("Lithium counter electrode thickness [m]")
-        sigma_Li = pybamm.Parameter("Lithium counter electrode conductivity [S.m-1]")
-        j_Li = pybamm.Parameter(
-            "Lithium counter electrode exchange-current density [A.m-2]"
-        )
-
+        if working_electrode == "negative":
+            L_Li = pybamm.Parameter("Positive electrode thickness [m]")
+            sigma_Li = pybamm.Parameter("Positive electrode conductivity [S.m-1]")
+            j_Li = pybamm.Parameter(
+                "Positive electrode exchange-current density [A.m-2]"
+            )
+        else:
+            L_Li = pybamm.Parameter("Negative electrode thickness [m]")
+            sigma_Li = pybamm.Parameter("Negative electrode conductivity [S.m-1]")
+            j_Li = pybamm.Parameter(
+                "Negative electrode exchange-current density [A.m-2]"
+            )
         vdrop_cell = pybamm.boundary_value(phi_s_w, "right") - ref_potential
         vdrop_Li = -(
             2 * pybamm.arcsinh(i_cell * i_typ / j_Li)
@@ -370,31 +381,32 @@ class BasicDFNHalfCell(BaseModel):
         # visualising the solution of the model
         self.variables = {
             "Time [s]": self.timescale * pybamm.t,
-            "Working particle surface concentration": c_s_surf_w,
-            "X-averaged working particle surface concentration": c_s_surf_w_av,
-            "Working particle concentration": c_s_w,
-            "Working particle surface concentration [mol.m-3]": c_w_max * c_s_surf_w,
-            "X-averaged working particle surface concentration "
+            "Positive particle surface concentration": c_s_surf_w,
+            "X-averaged positive particle surface concentration": c_s_surf_w_av,
+            "Positive particle concentration": c_s_w,
+            "Positive particle surface concentration [mol.m-3]": c_w_max * c_s_surf_w,
+            "X-averaged positive particle surface concentration "
             "[mol.m-3]": c_w_max * c_s_surf_w_av,
-            "Working particle concentration [mol.m-3]": c_w_max * c_s_w,
-            "Total lithium in working electrode": c_s_vol_av,
-            "Total lithium in working electrode [mol]": c_s_vol_av
+            "Positive particle concentration [mol.m-3]": c_w_max * c_s_w,
+            "Total lithium in positive electrode": c_s_vol_av,
+            "Total lithium in positive electrode [mol]": c_s_vol_av
             * c_w_max
             * L_w
             * param.A_cc,
             "Electrolyte concentration": c_e,
             "Electrolyte concentration [mol.m-3]": param.c_e_typ * c_e,
-            "Total electrolyte concentration": c_e_total,
-            "Total electrolyte concentration [mol]": c_e_total
+            "Total lithium in electrolyte": c_e_total,
+            "Total lithium in electrolyte [mol]": c_e_total
             * param.c_e_typ
-            * L_w
-            * param.L_s
+            * param.L_x
             * param.A_cc,
             "Current [A]": I,
-            "Working electrode potential": phi_s_w,
-            "Working electrode potential [V]": U_w_ref - U_Li_ref + pot_scale * phi_s_w,
-            "Working electrode open circuit potential": U_w(c_s_surf_w, T),
-            "Working electrode open circuit potential [V]": U_w_ref
+            "Positive electrode potential": phi_s_w,
+            "Positive electrode potential [V]": U_w_ref
+            - U_Li_ref
+            + pot_scale * phi_s_w,
+            "Positive electrode open circuit potential": U_w(c_s_surf_w, T),
+            "Positive electrode open circuit potential [V]": U_w_ref
             + pot_scale * U_w(c_s_surf_w, T),
             "Electrolyte potential": phi_e,
             "Electrolyte potential [V]": -U_Li_ref + pot_scale * phi_e,
@@ -403,68 +415,6 @@ class BasicDFNHalfCell(BaseModel):
             "Terminal voltage": voltage,
             "Terminal voltage [V]": voltage_dim,
         }
-
-    @property
-    def default_geometry(self):
-        return half_cell_geometry(
-            current_collector_dimension=self.options["dimensionality"],
-            working_electrode=self.options["working electrode"],
-        )
-
-    @property
-    def default_var_pts(self):
-        var = pybamm.geometry.half_cell_spatial_vars
-        base_var_pts = {
-            var.x_Li: 20,
-            var.x_s: 20,
-            var.x_w: 20,
-            var.r_w: 30,
-            var.y: 10,
-            var.z: 10,
-        }
-        # Reduce the default points for 2D current collectors
-        if self.options["dimensionality"] == 2:
-            base_var_pts.update({var.x_Li: 10, var.x_s: 10, var.x_w: 10})
-        return base_var_pts
-
-    @property
-    def default_submesh_types(self):
-        base_submeshes = {
-            "lithium counter electrode": pybamm.MeshGenerator(pybamm.Uniform1DSubMesh),
-            "separator": pybamm.MeshGenerator(pybamm.Uniform1DSubMesh),
-            "working electrode": pybamm.MeshGenerator(pybamm.Uniform1DSubMesh),
-            "working particle": pybamm.MeshGenerator(pybamm.Uniform1DSubMesh),
-        }
-        if self.options["dimensionality"] == 0:
-            base_submeshes["current collector"] = pybamm.MeshGenerator(pybamm.SubMesh0D)
-        elif self.options["dimensionality"] == 1:
-            base_submeshes["current collector"] = pybamm.MeshGenerator(
-                pybamm.Uniform1DSubMesh
-            )
-        elif self.options["dimensionality"] == 2:
-            base_submeshes["current collector"] = pybamm.MeshGenerator(
-                pybamm.ScikitUniform2DSubMesh
-            )
-        return base_submeshes
-
-    @property
-    def default_spatial_methods(self):
-        base_spatial_methods = {
-            "lithium counter electrode": pybamm.FiniteVolume(),
-            "separator": pybamm.FiniteVolume(),
-            "working electrode": pybamm.FiniteVolume(),
-            "working particle": pybamm.FiniteVolume(),
-        }
-        if self.options["dimensionality"] == 0:
-            # 0D submesh - use base spatial method
-            base_spatial_methods[
-                "current collector"
-            ] = pybamm.ZeroDimensionalSpatialMethod()
-        elif self.options["dimensionality"] == 1:
-            base_spatial_methods["current collector"] = pybamm.FiniteVolume()
-        elif self.options["dimensionality"] == 2:
-            base_spatial_methods["current collector"] = pybamm.ScikitFiniteElement()
-        return base_spatial_methods
 
     def new_copy(self, build=False):
         new_model = self.__class__(name=self.name, options=self.options)

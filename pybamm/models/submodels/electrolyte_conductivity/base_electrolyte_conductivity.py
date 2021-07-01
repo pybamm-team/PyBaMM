@@ -82,11 +82,15 @@ class BaseElectrolyteConductivity(pybamm.BaseSubModel):
             + pot_scale * phi_e_p_av,
             "X-averaged electrolyte overpotential": eta_e_av,
             "X-averaged electrolyte overpotential [V]": pot_scale * eta_e_av,
-            "Gradient of negative electrolyte potential": pybamm.grad(phi_e_n),
             "Gradient of separator electrolyte potential": pybamm.grad(phi_e_s),
             "Gradient of positive electrolyte potential": pybamm.grad(phi_e_p),
             "Gradient of electrolyte potential": pybamm.grad(phi_e),
         }
+
+        if not self.half_cell:
+            variables.update(
+                {"Gradient of negative electrolyte potential": pybamm.grad(phi_e_n)}
+            )
 
         return variables
 
@@ -376,10 +380,15 @@ class BaseElectrolyteConductivity(pybamm.BaseSubModel):
         return variables
 
     def set_boundary_conditions(self, variables):
+        param = self.param
         phi_e = variables["Electrolyte potential"]
+
+        if self.half_cell:
+            # dimensionless reference potential so that dimensional reference potential
+            # is zero (phi_dim = U_n_ref + pot_scale * phi)
+            lbc = (param.U_n_ref / param.potential_scale, "Dirichlet")
+        else:
+            lbc = (pybamm.Scalar(0), "Neumann")
         self.boundary_conditions = {
-            phi_e: {
-                "left": (pybamm.Scalar(0), "Neumann"),
-                "right": (pybamm.Scalar(0), "Neumann"),
-            }
+            phi_e: {"left": lbc, "right": (pybamm.Scalar(0), "Neumann")}
         }

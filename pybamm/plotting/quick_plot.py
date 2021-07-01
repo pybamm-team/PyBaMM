@@ -426,6 +426,11 @@ class QuickPlot(object):
                         for var in variable_list
                     ]
                 )
+                if np.isnan(var_min) or np.isnan(var_max):
+                    raise ValueError(
+                        "The variable limits are set to 'fixed' but the min and max values "
+                        "are NaN"
+                    )
                 if var_min == var_max:
                     var_min -= 1
                     var_max += 1
