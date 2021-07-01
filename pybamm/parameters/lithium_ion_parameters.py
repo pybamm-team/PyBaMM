@@ -584,13 +584,6 @@ class LithiumIonParameters(BaseParameters):
         # Choose discharge timescale
         self.timescale = self.tau_discharge
 
-        # Override print_name
-        self.j0_n_ref_dimensional.print_name = r"\hat{j0}_{n_{ref}}"
-        self.j0_p_ref_dimensional.print_name = r"\hat{j0}_{p_{ref}}"
-        self.potential_scale.print_name = r"\frac{RT_{ref}}{F}"
-        self.U_p_ref.print_name = r"U_{p_{ref}}"
-        self.U_n_ref.print_name = r"U_{n_{ref}}"
-
     def _set_dimensionless_parameters(self):
         """Defines the dimensionless parameters"""
 
@@ -860,9 +853,6 @@ class LithiumIonParameters(BaseParameters):
             * self.tau_discharge
         ) / self.F
 
-        # Override print_name
-        self.Theta.print_name = r"\frac{1}{T_{ref_{dim}}}"
-
     def chi(self, c_e, T):
         """
         Thermodynamic factor:
@@ -1030,11 +1020,6 @@ class LithiumIonParameters(BaseParameters):
             / self.I_typ
             * pybamm.Function(np.sign, self.I_typ)
         )
-
-        # Override print_name
-        self.current_with_time.print_name = "I"
-        self.timescale.print_name = r"\tau"
-        self.dimensional_current_with_time.print_name = r"\hat{I}"
 
     def t_n_change(self, sto):
         """

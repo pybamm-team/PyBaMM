@@ -953,7 +953,18 @@ class BoundaryValue(BoundaryOperator):
         return boundary_value(child, self.side)
 
     def _sympy_operator(self, child):
-        return child
+        """Override :meth:`pybamm.UnaryOperator._sympy_operator`"""
+        if (
+            self.child.domain[0] in ["negative particle", "positive particle"]
+            and self.side == "right"
+        ):
+            return sympy.Symbol(
+                str(child) + r"^{surf}"
+            )  # value on the surface of the particle
+        elif self.side == "positive tab":
+            return child
+        else:
+            return sympy.Symbol(str(child) + r"^{" + f"{self.side}" + r"}")
 
 
 class BoundaryGradient(BoundaryOperator):

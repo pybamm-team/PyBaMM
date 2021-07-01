@@ -298,6 +298,7 @@ class Arcsinh(SpecificFunction):
         return 1 / Sqrt(children[0] ** 2 + 1)
 
     def _sympy_operator(self, child):
+        """Override :meth:`pybamm.Function._sympy_operator`"""
         return sympy.asinh(child)
 
 
