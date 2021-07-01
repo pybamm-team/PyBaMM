@@ -315,8 +315,13 @@ class BasicDFNHalfCell(BaseModel):
         ######################
         L_Li = pybamm.Parameter("Lithium counter electrode thickness [m]")
         sigma_Li = pybamm.Parameter("Lithium counter electrode conductivity [S.m-1]")
-        j_Li = pybamm.Parameter(
-            "Lithium counter electrode exchange-current density [A.m-2]"
+        inputs = {
+            "Electrolyte concentration [mol.m-3]": pybamm.boundary_value(c_e, "left"),
+            "Plated lithium concentration [mol.m-3]": param.c_Li_typ,
+            "Temperature [K]": T,
+        }
+        j_Li = pybamm.FunctionParameter(
+            "Lithium counter electrode exchange-current density [A.m-2]", inputs
         )
 
         vdrop_cell = pybamm.boundary_value(phi_s_w, "right") - ref_potential

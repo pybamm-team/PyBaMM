@@ -35,9 +35,8 @@ class ElectrodeSOHHalfCell(pybamm.BaseModel):
         C = pybamm.Variable("C", bounds=(0, np.inf))
         Cw = pybamm.InputParameter("C_w")
         T_ref = param.T_ref
-        if working_electrode == "negative":
-            Uw = param.U_n_dimensional
-            x_0 = x_100 - C / Cw
+        if working_electrode == "negative":  # pragma: no cover
+            raise NotImplementedError
         elif working_electrode == "positive":
             Uw = param.U_p_dimensional
             x_0 = x_100 + C / Cw

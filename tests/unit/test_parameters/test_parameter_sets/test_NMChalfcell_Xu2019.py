@@ -46,7 +46,10 @@ class TestXu(unittest.TestCase):
         parameter_values = pybamm.ParameterValues(chemistry=chemistry)
         parameter_values.update(
             {
-                "Lithium counter electrode exchange-current density [A.m-2]": 12.6,
+                "Lithium counter electrode exchange-current density "
+                "[A.m-2]": parameter_values[
+                    "Negative electrode exchange-current density [A.m-2]"
+                ],
                 "Lithium counter electrode conductivity [S.m-1]": 1.0776e7,
                 "Lithium counter electrode thickness [m]": 250e-6,
             },
