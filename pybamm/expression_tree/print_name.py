@@ -64,7 +64,6 @@ def prettify_print_name(name):
     # Dim and Dimensional with comma separated
     # e.g. j0_n_ref_dimensional --> \hat{j0}^{n\,ref}
     if name.endswith("dim") or name.endswith("dimensional"):
-
         dim_re1, dim_re2 = re.findall(
             r"([\da-zA-Z]+)_?(.*?)_?(?:dim|dimensional)", name
         )[0]

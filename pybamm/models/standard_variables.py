@@ -1,9 +1,8 @@
 #
 # Standard variables for the models
 #
-import numpy as np
-
 import pybamm
+import numpy as np
 from pybamm.expression_tree.print_name import prettify_print_name
 
 
