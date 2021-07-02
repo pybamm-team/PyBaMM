@@ -4,7 +4,7 @@
 import numpy as np
 
 import pybamm
-from pybamm.expression_tree.print_name_overrides import PRINT_NAME_OVERRIDES
+from pybamm.expression_tree.print_name import prettify_print_name
 
 
 class StandardVariables:
@@ -314,7 +314,7 @@ class StandardVariables:
         )
 
     def __setattr__(self, name, value):
-        value.print_name = PRINT_NAME_OVERRIDES.get(name, name)
+        value.print_name = prettify_print_name(name)
         super().__setattr__(name, value)
 
 

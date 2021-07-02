@@ -964,7 +964,7 @@ class BoundaryValue(BoundaryOperator):
         elif self.side == "positive tab":
             return child
         else:
-            return sympy.Symbol(str(child) + r"^{" + f"{self.side}" + r"}")
+            return sympy.Symbol(str(child) + r"^{" + self.side + r"}")
 
 
 class BoundaryGradient(BoundaryOperator):
