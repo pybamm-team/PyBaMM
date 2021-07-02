@@ -716,13 +716,16 @@ def get_cycle_summary_variables(cycle_solution, esoh_sim):
             ):
                 solver = pybamm.CasadiAlgebraicSolver()
                 # Choose x_100_init so as not to violate the interpolation limits
-                y_100_min = np.min(
-                    esoh_sim.parameter_values["Positive electrode OCP [V]"][1][:, 0]
-                )
-                x_100_max = (
-                    n_Li * pybamm.constants.F.value / 3600 - y_100_min * C_p
-                ) / C_n
-                x_100_init = np.minimum(x_100_init, 0.99 * x_100_max)
+                if isinstance(
+                    esoh_sim.parameter_values["Positive electrode OCP [V]"], tuple
+                ):
+                    y_100_min = np.min(
+                        esoh_sim.parameter_values["Positive electrode OCP [V]"][1][:, 0]
+                    )
+                    x_100_max = (
+                        n_Li * pybamm.constants.F.value / 3600 - y_100_min * C_p
+                    ) / C_n
+                    x_100_init = np.minimum(x_100_init, 0.99 * x_100_max)
             else:
                 solver = None
             # Update initial conditions using the cycle solution

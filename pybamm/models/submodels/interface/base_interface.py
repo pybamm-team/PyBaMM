@@ -257,17 +257,14 @@ class BaseInterface(pybamm.BaseSubModel):
             j_scale = param.j_scale_p
 
         # Average, and broadcast if necessary
+        j_av = pybamm.x_average(j)
         if self.half_cell and self.domain == "Negative":
             # Half-cell domain, j should not be broadcast
-            j_av = j
+            pass
         elif j.domain == []:
-            j_av = j
             j = pybamm.FullBroadcast(j, self.domain_for_broadcast, "current collector")
         elif j.domain == ["current collector"]:
-            j_av = j
             j = pybamm.PrimaryBroadcast(j, self.domain_for_broadcast)
-        else:
-            j_av = pybamm.x_average(j)
 
         variables = {
             self.domain
@@ -430,16 +427,16 @@ class BaseInterface(pybamm.BaseSubModel):
             j_scale = param.j_scale_p
 
         # Average, and broadcast if necessary
-        if j0.domain == []:
-            j0_av = j0
+        j0_av = pybamm.x_average(j0)
+        if self.half_cell and self.domain == "Negative":
+            # Half-cell domain, j0 should not be broadcast
+            pass
+        elif j0.domain == []:
             j0 = pybamm.FullBroadcast(
                 j0, self.domain_for_broadcast, "current collector"
             )
         elif j0.domain == ["current collector"]:
-            j0_av = j0
             j0 = pybamm.PrimaryBroadcast(j0, self.domain_for_broadcast)
-        else:
-            j0_av = pybamm.x_average(j0)
 
         variables = {
             self.domain
@@ -487,8 +484,12 @@ class BaseInterface(pybamm.BaseSubModel):
         j0_p = variables[
             "Positive electrode" + self.reaction_name + " exchange current density"
         ]
-        j0 = pybamm.concatenation(j0_n, j0_s, j0_p)
-        j0_dim = pybamm.concatenation(j_n_scale * j0_n, j0_s, j_p_scale * j0_p)
+        if self.half_cell:
+            j0 = pybamm.concatenation(j0_s, j0_p)
+            j0_dim = pybamm.concatenation(j0_s, j_p_scale * j0_p)
+        else:
+            j0 = pybamm.concatenation(j0_n, j0_s, j0_p)
+            j0_dim = pybamm.concatenation(j_n_scale * j0_n, j0_s, j_p_scale * j0_p)
 
         if self.reaction_name == "":
             variables = {
@@ -512,7 +513,10 @@ class BaseInterface(pybamm.BaseSubModel):
         pot_scale = self.param.potential_scale
         # Average, and broadcast if necessary
         eta_r_av = pybamm.x_average(eta_r)
-        if eta_r.domain == []:
+        if self.half_cell and self.domain == "Negative":
+            # Half-cell domain, eta should not be broadcast
+            pass
+        elif eta_r.domain == []:
             eta_r = pybamm.FullBroadcast(
                 eta_r, self.domain_for_broadcast, "current collector"
             )
@@ -567,9 +571,12 @@ class BaseInterface(pybamm.BaseSubModel):
         pot_scale = self.param.potential_scale
 
         # Average, and broadcast if necessary
+        delta_phi_av = pybamm.x_average(delta_phi)
+        delta_phi_av_dim = ocp_ref + delta_phi_av * pot_scale
+        if self.half_cell and self.domain == "Negative":
+            # Half-cell domain, delta_phi should not be broadcast
+            delta_phi_dim = ocp_ref + delta_phi * pot_scale
         if delta_phi.domain == []:
-            delta_phi_av = delta_phi
-            delta_phi_av_dim = ocp_ref + delta_phi_av * pot_scale
             delta_phi = pybamm.FullBroadcast(
                 delta_phi_av, self.domain_for_broadcast, "current collector"
             )
@@ -577,15 +584,11 @@ class BaseInterface(pybamm.BaseSubModel):
                 delta_phi_av_dim, self.domain_for_broadcast, "current collector"
             )
         elif delta_phi.domain == ["current collector"]:
-            delta_phi_av = delta_phi
-            delta_phi_av_dim = ocp_ref + delta_phi * pot_scale
             delta_phi = pybamm.PrimaryBroadcast(delta_phi_av, self.domain_for_broadcast)
             delta_phi_dim = pybamm.PrimaryBroadcast(
                 delta_phi_av_dim, self.domain_for_broadcast
             )
         else:
-            delta_phi_av = pybamm.x_average(delta_phi)
-            delta_phi_av_dim = ocp_ref + delta_phi_av * pot_scale
             delta_phi_dim = ocp_ref + delta_phi * pot_scale
 
         variables = {
@@ -621,17 +624,17 @@ class BaseInterface(pybamm.BaseSubModel):
         """
 
         # Average, and broadcast if necessary
-        if ocp.domain == []:
-            ocp_av = ocp
+        dUdT_av = pybamm.x_average(dUdT)
+        ocp_av = pybamm.x_average(ocp)
+        if self.half_cell and self.domain == "Negative":
+            # Half-cell domain, ocp should not be broadcast
+            pass
+        elif ocp.domain == []:
             ocp = pybamm.FullBroadcast(
                 ocp, self.domain_for_broadcast, "current collector"
             )
         elif ocp.domain == ["current collector"]:
-            ocp_av = ocp
             ocp = pybamm.PrimaryBroadcast(ocp, self.domain_for_broadcast)
-        else:
-            ocp_av = pybamm.x_average(ocp)
-        dUdT_av = pybamm.x_average(dUdT)
 
         if self.domain == "Negative":
             ocp_dim = self.param.U_n_ref + self.param.potential_scale * ocp

@@ -11,7 +11,7 @@ class BasicDFNHalfCell(BaseModel):
 
     This class differs from the :class:`pybamm.lithium_ion.BasicDFN` model class in
     that it is for a cell with a lithium counter electrode (half cell). This is a
-    feature under development (for example, it cannot be used with the Simulation class
+    feature under development (for example, it cannot be used with the Experiment class
     for the moment) and in the future it will be incorporated as a standard model with
     the full functionality.
 
@@ -321,20 +321,15 @@ class BasicDFNHalfCell(BaseModel):
         if working_electrode == "negative":
             L_Li = pybamm.Parameter("Positive electrode thickness [m]")
             sigma_Li = pybamm.Parameter("Positive electrode conductivity [S.m-1]")
-            j_Li = pybamm.Parameter(
-                "Positive electrode exchange-current density [A.m-2]"
-            )
         else:
             L_Li = pybamm.Parameter("Negative electrode thickness [m]")
             sigma_Li = pybamm.Parameter("Negative electrode conductivity [S.m-1]")
-            j_Li = pybamm.Parameter(
-                "Negative electrode exchange-current density [A.m-2]"
-            )
+        j_Li = param.j0_plating(pybamm.boundary_value(c_e, "left"), 1, T)
         vdrop_cell = pybamm.boundary_value(phi_s_w, "right") - ref_potential
-        vdrop_Li = -(
-            2 * pybamm.arcsinh(i_cell * i_typ / j_Li)
-            + L_Li * i_typ * i_cell / (sigma_Li * pot_scale)
-        )
+        eta_Li = 2 * (1 + param.Theta * T) * pybamm.arcsinh(i_cell / (2 * j_Li))
+        delta_phis_an = L_Li * i_typ * i_cell / (sigma_Li * pot_scale)
+        vdrop_Li = -eta_Li - delta_phis_an
+
         voltage = vdrop_cell + vdrop_Li
         voltage_dim = U_w_ref - U_Li_ref + pot_scale * voltage
         c_e_total = pybamm.x_average(eps * c_e)
@@ -412,6 +407,9 @@ class BasicDFNHalfCell(BaseModel):
             "Electrolyte potential [V]": -U_Li_ref + pot_scale * phi_e,
             "Voltage drop in the cell": vdrop_cell,
             "Voltage drop in the cell [V]": U_w_ref - U_Li_ref + pot_scale * vdrop_cell,
+            "Negative electrode exchange current density": j_Li,
+            "Negative electrode reaction overpotential": eta_Li,
+            "Negative electrode reaction overpotential [V]": pot_scale * eta_Li,
             "Terminal voltage": voltage,
             "Terminal voltage [V]": voltage_dim,
         }

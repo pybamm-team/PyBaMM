@@ -28,10 +28,7 @@ class InverseButlerVolmer(BaseInterface):
     """
 
     def __init__(self, param, domain, reaction, options=None):
-        super().__init__(param, domain, reaction)
-        if options is None:
-            options = {"SEI film resistance": "none"}
-        self.options = options
+        super().__init__(param, domain, reaction, options=options)
 
     def get_coupled_variables(self, variables):
         ocp, dUdT = self._get_open_circuit_potential(variables)
@@ -39,7 +36,12 @@ class InverseButlerVolmer(BaseInterface):
         j0 = self._get_exchange_current_density(variables)
         j_tot_av = self._get_average_total_interfacial_current_density(variables)
         # Broadcast to match j0's domain
-        if j0.domain in [[], ["current collector"]]:
+        if self.half_cell and self.domain == "Negative":
+            # In a half-cell the total interfacial current density is the current
+            # collector current density, not divided by electrode thickness
+            i_boundary_cc = variables["Current collector current density"]
+            j_tot = i_boundary_cc
+        elif j0.domain in [[], ["current collector"]]:
             j_tot = j_tot_av
         else:
             j_tot = pybamm.PrimaryBroadcast(

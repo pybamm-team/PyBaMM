@@ -22,19 +22,6 @@ for model in [model1, model2]:
     chemistry = pybamm.parameter_sets.Xu2019
     param = pybamm.ParameterValues(chemistry=chemistry)
 
-    # add lithium counter electrode parameter values
-    param.update(
-        {
-            "Negative electrode exchange-current density [A.m-2]": 12.6,
-            "Negative electrode conductivity [S.m-1]": 1.0776e7,
-            "Negative electrode thickness [m]": 250e-6,
-        },
-        check_already_exists=False,
-    )
-    param.update({"Negative electrode OCP [V]": 0})
-
-    param["Current function [A]"] = 2.5e-3
-
     # process model and geometry
     param.process_model(model)
     param.process_geometry(geometry)
@@ -66,6 +53,7 @@ plot = pybamm.QuickPlot(
         # "Total lithium in positive electrode [mol]",
         "Positive electrode open circuit potential [V]",
         ["Terminal voltage [V]"],  # , "Voltage drop in the cell [V]"],
+        "Negative electrode reaction overpotential [V]",
     ],
     time_unit="seconds",
     spatial_unit="um",

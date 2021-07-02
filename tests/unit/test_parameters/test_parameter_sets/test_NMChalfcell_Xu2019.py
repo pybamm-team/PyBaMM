@@ -40,15 +40,15 @@ class TestXu(unittest.TestCase):
         )
         self.assertAlmostEqual(cell["Negative electrode thickness [m]"], 700e-6)
 
-    # def test_standard_lithium_parameters(self):
+    def test_standard_lithium_parameters(self):
 
-    #     chemistry = pybamm.parameter_sets.Xu2019
-    #     parameter_values = pybamm.ParameterValues(chemistry=chemistry)
+        chemistry = pybamm.parameter_sets.Xu2019
+        parameter_values = pybamm.ParameterValues(chemistry=chemistry)
 
-    #     model = pybamm.lithium_ion.BasicDFNHalfCell({"working electrode": "positive"})
-    #     sim = pybamm.Simulation(model, parameter_values=parameter_values)
-    #     sim.set_parameters()
-    #     sim.build()
+        model = pybamm.lithium_ion.BasicDFNHalfCell({"working electrode": "positive"})
+        sim = pybamm.Simulation(model, parameter_values=parameter_values)
+        sim.set_parameters()
+        sim.build()
 
 
 if __name__ == "__main__":
