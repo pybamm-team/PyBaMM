@@ -306,30 +306,32 @@ class BasicDFNHalfCell(BaseModel):
 
         # dimensionless reference potential so that dimensional reference potential
         # is zero (phi_dim = U_n_ref + pot_scale * phi)
-        ref_potential = U_Li_ref / pot_scale
+        if working_electrode == "negative":
+            l_Li = param.l_p
+            sigma_Li = param.sigma_p
+        else:
+            l_Li = param.l_n
+            sigma_Li = param.sigma_n
+        j_Li = param.j0_plating(pybamm.boundary_value(c_e, "left"), 1, T)
+        eta_Li = 2 * (1 + param.Theta * T) * pybamm.arcsinh(i_cell / (2 * j_Li))
+
+        phi_s_cn = 0
+        delta_phi = eta_Li + U_Li_ref
+        delta_phis_Li = l_Li * i_cell / sigma_Li
+        ref_potential = phi_s_cn - delta_phis_Li - delta_phi
 
         self.boundary_conditions[phi_e] = {
             "left": (ref_potential, "Dirichlet"),
             "right": (pybamm.Scalar(0), "Neumann"),
         }
 
-        self.initial_conditions[phi_e] = ref_potential
+        self.initial_conditions[phi_e] = param.U_n_ref / pot_scale
 
         ######################
         # (Some) variables
         ######################
-        if working_electrode == "negative":
-            L_Li = pybamm.Parameter("Positive electrode thickness [m]")
-            sigma_Li = pybamm.Parameter("Positive electrode conductivity [S.m-1]")
-        else:
-            L_Li = pybamm.Parameter("Negative electrode thickness [m]")
-            sigma_Li = pybamm.Parameter("Negative electrode conductivity [S.m-1]")
-        j_Li = param.j0_plating(pybamm.boundary_value(c_e, "left"), 1, T)
         vdrop_cell = pybamm.boundary_value(phi_s_w, "right") - ref_potential
-        eta_Li = 2 * (1 + param.Theta * T) * pybamm.arcsinh(i_cell / (2 * j_Li))
-        delta_phis_an = L_Li * i_typ * i_cell / (sigma_Li * pot_scale)
-        vdrop_Li = -eta_Li - delta_phis_an
-
+        vdrop_Li = -eta_Li - delta_phis_Li
         voltage = vdrop_cell + vdrop_Li
         voltage_dim = U_w_ref - U_Li_ref + pot_scale * voltage
         c_e_total = pybamm.x_average(eps * c_e)
@@ -410,6 +412,8 @@ class BasicDFNHalfCell(BaseModel):
             "Negative electrode exchange current density": j_Li,
             "Negative electrode reaction overpotential": eta_Li,
             "Negative electrode reaction overpotential [V]": pot_scale * eta_Li,
+            "Negative electrode potential drop": delta_phis_Li,
+            "Negative electrode potential drop [V]": pot_scale * delta_phis_Li,
             "Terminal voltage": voltage,
             "Terminal voltage [V]": voltage_dim,
         }

@@ -30,18 +30,20 @@ class LiMetalExplicit(BaseModel):
     def get_coupled_variables(self, variables):
         param = self.param
 
-        # Reference value at the negative electrode / separator interface
-        delta_phi_s_right = variables[
-            "X-averaged negative electrode surface potential difference"
-        ]
-        phi_e_right = param.U_n_ref / param.potential_scale
-        phi_s_right = delta_phi_s_right + phi_e_right
-
         i_boundary_cc = variables["Current collector current density"]
-        sigma = self.param.sigma_n
-        x_n = pybamm.standard_spatial_vars.x_n
+        delta_phi_s = i_boundary_cc * param.l_n / param.sigma_n
+        delta_phi_s_dim = param.potential_scale * delta_phi_s
 
-        phi_s = phi_s_right - i_boundary_cc * (x_n - param.l_n) / sigma
-        variables.update(self._get_standard_potential_variables(phi_s))
+        variables.update(
+            {
+                "Negative electrode potential drop": delta_phi_s,
+                "Negative electrode potential drop [V]": delta_phi_s_dim,
+                "X-averaged negative electrode ohmic losses": delta_phi_s / 2,
+                "X-averaged negative electrode ohmic losses [V]": delta_phi_s_dim / 2,
+            }
+        )
 
         return variables
+
+    def set_boundary_conditions(self, variables):
+        pass

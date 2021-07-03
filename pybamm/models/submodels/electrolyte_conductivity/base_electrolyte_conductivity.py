@@ -2,6 +2,7 @@
 # Base class for electrolyte conductivity
 #
 
+from numpy.core.fromnumeric import var
 import pybamm
 
 
@@ -384,9 +385,13 @@ class BaseElectrolyteConductivity(pybamm.BaseSubModel):
         phi_e = variables["Electrolyte potential"]
 
         if self.half_cell:
-            # dimensionless reference potential so that dimensional reference potential
-            # is zero (phi_dim = U_n_ref + pot_scale * phi)
-            lbc = (param.U_n_ref / param.potential_scale, "Dirichlet")
+            phi_s_cn = variables["Negative current collector potential"]
+            delta_phi_s = variables["Negative electrode potential drop"]
+            delta_phi = variables["Negative electrode surface potential difference"]
+
+            phi_s = phi_s_cn - delta_phi_s
+            phi_e_ref = phi_s - delta_phi
+            lbc = (phi_e_ref, "Dirichlet")
         else:
             lbc = (pybamm.Scalar(0), "Neumann")
         self.boundary_conditions = {

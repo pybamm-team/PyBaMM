@@ -576,7 +576,7 @@ class BaseInterface(pybamm.BaseSubModel):
         if self.half_cell and self.domain == "Negative":
             # Half-cell domain, delta_phi should not be broadcast
             delta_phi_dim = ocp_ref + delta_phi * pot_scale
-        if delta_phi.domain == []:
+        elif delta_phi.domain == []:
             delta_phi = pybamm.FullBroadcast(
                 delta_phi_av, self.domain_for_broadcast, "current collector"
             )

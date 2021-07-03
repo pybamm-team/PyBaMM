@@ -53,7 +53,7 @@ plot = pybamm.QuickPlot(
         # "Total lithium in positive electrode [mol]",
         "Positive electrode open circuit potential [V]",
         ["Terminal voltage [V]"],  # , "Voltage drop in the cell [V]"],
-        "Negative electrode reaction overpotential [V]",
+        "Negative electrode potential drop [V]",
     ],
     time_unit="seconds",
     spatial_unit="um",

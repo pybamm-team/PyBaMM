@@ -15,8 +15,7 @@ class InverseButlerVolmer(BaseInterface):
     param
         Model parameters
     domain : iter of str, optional
-        The domain(s) in which to compute the interfacial current. Default is None,
-        in which case j.domain is used.
+        The domain(s) in which to compute the interfacial current.
     reaction : str
         The name of the reaction being implemented
     options: dict
@@ -119,8 +118,7 @@ class CurrentForInverseButlerVolmer(BaseInterface):
     param
         Model parameters
     domain : iter of str, optional
-        The domain(s) in which to compute the interfacial current. Default is None,
-        in which case j.domain is used.
+        The domain(s) in which to compute the interfacial current.
     reaction : str
         The name of the reaction being implemented
 
@@ -167,15 +165,14 @@ class CurrentForInverseButlerVolmer(BaseInterface):
 class CurrentForInverseButlerVolmerLiMetal(BaseInterface):
     """
     Submodel for the current associated with the inverse Butler-Volmer formulation in
-    a lithium metal cell. This is simply equal to I_app.
+    a lithium metal cell. This is simply equal to the current collector current density.
 
     Parameters
     ----------
     param
         Model parameters
     domain : iter of str, optional
-        The domain(s) in which to compute the interfacial current. Default is None,
-        in which case j.domain is used.
+        The domain(s) in which to compute the interfacial current.
     reaction : str
         The name of the reaction being implemented
     options : dict, optional
