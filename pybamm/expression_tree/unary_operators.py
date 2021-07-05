@@ -1399,7 +1399,7 @@ def r_average(symbol):
         return Integral(symbol, r) / Integral(v, r)
 
 
-def R_average(symbol, param):
+def size_average(symbol, param):
     """convenience function for averaging over particle size R using the area-weighted
     particle-size distribution.
 
@@ -1417,7 +1417,9 @@ def R_average(symbol, param):
     """
     # Can't take average if the symbol evaluates on edges
     if symbol.evaluates_on_edges("primary"):
-        raise ValueError("Can't take the R-average of a symbol that evaluates on edges")
+        raise ValueError(
+            """Can't take the size-average of a symbol that evaluates on edges"""
+        )
 
     # If symbol doesn't have a domain, or doesn't have "negative particle size"
     #  or "positive particle size" as a domain, it's average value is itself

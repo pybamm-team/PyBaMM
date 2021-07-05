@@ -81,7 +81,7 @@ Unary Operators
 
 .. autofunction:: pybamm.r_average
 
-.. autofunction:: pybamm.R_average
+.. autofunction:: pybamm.size_average
 
 .. autofunction:: pybamm.z_average
 

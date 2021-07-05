@@ -627,12 +627,12 @@ class TestUnaryOperators(unittest.TestCase):
         self.assertIsInstance(av_a.children[0], pybamm.Integral)
         self.assertEqual(av_a.children[1].id, l_p.id)
 
-    def test_R_average(self):
+    def test_size_average(self):
         param = pybamm.LithiumIonParameters()
 
         # no domain
         a = pybamm.Scalar(1)
-        average_a = pybamm.R_average(a, param)
+        average_a = pybamm.size_average(a, param)
         self.assertEqual(average_a.id, a.id)
 
         b = pybamm.FullBroadcast(
@@ -644,18 +644,18 @@ class TestUnaryOperators(unittest.TestCase):
             }
         )
         # no "particle size" domain
-        average_b = pybamm.R_average(b, param)
+        average_b = pybamm.size_average(b, param)
         self.assertEqual(average_b.id, b.id)
 
         # primary or secondary broadcast to "particle size" domain
-        average_a = pybamm.R_average(
+        average_a = pybamm.size_average(
             pybamm.PrimaryBroadcast(a, "negative particle size"),
             param
         )
         self.assertEqual(average_a.evaluate(), np.array([1]))
 
         a = pybamm.Symbol("a", domain="negative particle")
-        average_a = pybamm.R_average(
+        average_a = pybamm.size_average(
             pybamm.SecondaryBroadcast(a, "negative particle size"),
             param
         )
@@ -664,7 +664,7 @@ class TestUnaryOperators(unittest.TestCase):
         for domain in [["negative particle size"], ["positive particle size"]]:
             a = pybamm.Symbol("a", domain=domain)
             R = pybamm.SpatialVariable("R", domain)
-            av_a = pybamm.R_average(a, param)
+            av_a = pybamm.size_average(a, param)
             self.assertIsInstance(av_a, pybamm.Division)
             self.assertIsInstance(av_a.children[0], pybamm.Integral)
             self.assertIsInstance(av_a.children[1], pybamm.Integral)
@@ -675,9 +675,10 @@ class TestUnaryOperators(unittest.TestCase):
         # R-average of symbol that evaluates on edges raises error
         symbol_on_edges = pybamm.PrimaryBroadcastToEdges(1, "domain")
         with self.assertRaisesRegex(
-            ValueError, "Can't take the R-average of a symbol that evaluates on edges"
+            ValueError,
+            """Can't take the size-average of a symbol that evaluates on edges"""
         ):
-            pybamm.R_average(symbol_on_edges, param)
+            pybamm.size_average(symbol_on_edges, param)
 
     def test_r_average(self):
         a = pybamm.Scalar(1)
