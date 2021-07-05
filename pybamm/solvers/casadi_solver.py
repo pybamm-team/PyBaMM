@@ -131,6 +131,11 @@ class CasadiSolver(pybamm.BaseSolver):
         inputs_dict : dict, optional
             Any external variables or input parameters to pass to the model when solving
         """
+
+
+        # are we solving explicit forward equations?
+        explicit_sensitivities = self.sensitivity == 'explicit forward'
+
         # Record whether there are any symbolic inputs
         inputs_dict = inputs_dict or {}
 
@@ -158,14 +163,15 @@ class CasadiSolver(pybamm.BaseSolver):
             # Create integrator without grid to avoid having to create several times
             self.create_integrator(model, inputs)
             solution = self._run_integrator(
-                model, model.y0, inputs_dict, inputs, t_eval, use_grid=False
+                model, model.y0, inputs_dict, inputs, t_eval, use_grid=False,
             )
         if self.sensitivity == "casadi" and inputs_dict != {}:
             # If the solution has already been created, we can reuse it
             if model in self.y_sols:
                 y_sol = self.y_sols[model]
                 solution = pybamm.Solution(
-                    t_eval, y_sol, model=model, inputs=inputs_dict
+                    t_eval, y_sol, model=model, inputs=inputs_dict,
+                    sensitivities=explicit_sensitivities
                 )
             else:
                 # Create integrator without grid, which will be called repeatedly
@@ -212,7 +218,10 @@ class CasadiSolver(pybamm.BaseSolver):
                 # to avoid having to create several times
                 self.create_integrator(model, inputs_dict)
                 # Initialize solution
-                solution = pybamm.Solution(np.array([t]), y0, model, inputs_dict)
+                solution = pybamm.Solution(
+                    np.array([t]), y0, model, inputs_dict,
+                    sensitivities=explicit_sensitivities
+                )
                 solution.solve_time = 0
                 solution.integration_time = 0
                 use_grid = False
@@ -455,6 +464,7 @@ class CasadiSolver(pybamm.BaseSolver):
             np.array([t_event]),
             y_event[:, np.newaxis],
             "event",
+            sensitivities=explicit_sensitivities
         )
         solution.integration_time = (
             coarse_solution.integration_time + dense_step_sol.integration_time
@@ -613,6 +623,10 @@ class CasadiSolver(pybamm.BaseSolver):
 
     def _run_integrator(self, model, y0, inputs_dict, inputs, t_eval, use_grid=True):
         pybamm.logger.debug("Running CasADi integrator")
+
+        # are we solving explicit forward equations?
+        explicit_sensitivities = self.sensitivity == 'explicit forward'
+
         if use_grid is True:
             t_eval_shifted = t_eval - t_eval[0]
             t_eval_shifted_rounded = np.round(t_eval_shifted, decimals=12).tobytes()
@@ -649,7 +663,10 @@ class CasadiSolver(pybamm.BaseSolver):
                 )
                 integration_time = timer.time()
                 y_sol = casadi.vertcat(casadi_sol["xf"], casadi_sol["zf"])
-                sol = pybamm.Solution(t_eval, y_sol, model, inputs_dict)
+                sol = pybamm.Solution(
+                    t_eval, y_sol, model, inputs_dict,
+                    sensitivities=explicit_sensitivities
+                )
                 sol.integration_time = integration_time
                 return sol
             else:
@@ -682,7 +699,10 @@ class CasadiSolver(pybamm.BaseSolver):
                 # Save the solution, can just reuse and change the inputs
                 self.y_sols[model] = y_sol
 
-            sol = pybamm.Solution(t_eval, y_sol, model, inputs_dict)
+            sol = pybamm.Solution(
+                t_eval, y_sol, model, inputs_dict,
+                sensitivities=explicit_sensitivities
+            )
             sol.integration_time = integration_time
             return sol
         except RuntimeError as e:

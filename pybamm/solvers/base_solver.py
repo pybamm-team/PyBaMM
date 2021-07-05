@@ -8,7 +8,7 @@ import numbers
 import numpy as np
 import sys
 import itertools
-from scipy.linalg import block_diag
+from scipy.sparse import block_diag
 import multiprocessing as mp
 import warnings
 
@@ -241,6 +241,8 @@ class BaseSolver(object):
         # save sensitivity parameters so we can identify them later on
         # (FYI: this is used in the Solution class)
         model.calculate_sensitivities = calculate_sensitivites
+        model.len_rhs_sens = model.len_rhs * len(calculate_sensitivites)
+        model.len_alg_sens = model.len_alg * len(calculate_sensitivites)
 
         # Only allow solving explicit sensitivity equations with the casadi format for now
         if (
@@ -277,8 +279,6 @@ class BaseSolver(object):
                 pS_casadi_stacked = casadi.vertcat(
                     *[p_casadi[name] for name in calculate_sensitivites]
                 )
-                model.len_rhs_sens = model.len_rhs * pS_casadi_stacked.shape[0]
-                model.len_alg_sens = model.len_alg * pS_casadi_stacked.shape[0]
                 S_x = casadi.MX.sym("S_x", model.len_rhs_sens)
                 S_z = casadi.MX.sym("S_z", model.len_alg_sens)
                 y_and_S = casadi.vertcat(y_diff, S_x, y_alg, S_z)
@@ -615,6 +615,21 @@ class BaseSolver(object):
             interpolant_extrapolation_events_eval
         )
 
+        # if we have changed the equations to include the explicit sensitivity
+        # equations, then we also need to update the mass matrix
+        if self.sensitivity == "explicit forward":
+            n_inputs = len(calculate_sensitivites)
+            model.mass_matrix_inv = pybamm.Matrix(
+                block_diag(
+                    [model.mass_matrix_inv.entries] * (n_inputs + 1), format="csr"
+                )
+            )
+            model.mass_matrix = pybamm.Matrix(
+                block_diag(
+                    [model.mass_matrix.entries] * (n_inputs + 1), format="csr"
+                )
+            )
+
         # Save CasADi functions for the CasADi solver
         # Note: when we pass to casadi the ode part of the problem must be in explicit
         # form so we pre-multiply by the inverse of the mass matrix
@@ -623,16 +638,7 @@ class BaseSolver(object):
         ):
             # can use DAE solver to solve model with algebraic equations only
             if len(model.rhs) > 0:
-                if self.sensitivity == "explicit forward":
-                    # Copy mass matrix blocks diagonally
-                    single_mass_matrix_inv = model.mass_matrix_inv.entries.toarray()
-                    n_inputs = p_casadi_stacked.shape[0]
-                    block_mass_matrix = block_diag(
-                        *[single_mass_matrix_inv] * (n_inputs + 1)
-                    )
-                    mass_matrix_inv = casadi.MX(block_mass_matrix)
-                else:
-                    mass_matrix_inv = casadi.MX(model.mass_matrix_inv.entries)
+                mass_matrix_inv = casadi.MX(model.mass_matrix_inv.entries)
                 explicit_rhs = mass_matrix_inv @ rhs(
                     t_casadi, y_and_S, p_casadi_stacked
                 )
@@ -754,8 +760,7 @@ class BaseSolver(object):
             )
         pybamm.logger.debug("Found consistent states")
 
-        # use all_ys_and_sens in case we are solving the full sensitivity equations
-        y0 = root_sol.all_ys_and_sens[0]
+        y0 = root_sol.all_ys[0]
         if isinstance(y0, np.ndarray):
             y0 = y0.flatten()
         return y0

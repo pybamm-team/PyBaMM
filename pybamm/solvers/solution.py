@@ -41,9 +41,11 @@ class Solution(object):
         the event happens.
     termination : str
         String to indicate why the solution terminated
-    sensitivities: None or dict
-        Will be None if there are no sensitivities in this soluion. Otherwise, this is a
-        dict of parameter names to their calcululated sensitivities
+
+    sensitivities: bool or dict
+        True if sensitivities included as the solution of the explicit forwards
+        equations.  False if no sensitivities included/wanted. Dict if sensitivities are
+        provided as a dict of {parameter: sensitivities} pairs.
 
     """
 
@@ -56,7 +58,7 @@ class Solution(object):
         t_event=None,
         y_event=None,
         termination="final time",
-        sensitivities=None
+        sensitivities=False
     ):
         if not isinstance(all_ts, list):
             all_ts = [all_ts]
@@ -80,11 +82,12 @@ class Solution(object):
             self.all_inputs = all_inputs
 
         # sensitivities
-        if sensitivities is None:
+        if isinstance(sensitivities, bool):
             self._sensitivities = {}
             # if solution consists of explicit sensitivity equations, extract them
             if (
-                all_models[0] is not None
+                sensitivities == True
+                and all_models[0] is not None
                 and not isinstance(all_ys[0], casadi.Function)
                 and all_models[0].len_rhs_and_alg != all_ys[0].shape[0]
                 and all_models[0].len_rhs_and_alg != 0  # for the dummy solver
@@ -95,8 +98,10 @@ class Solution(object):
                     self._extract_explicit_sensitivities(
                         all_models[0], all_ys[0], all_ts[0], self.all_inputs[0]
                     )
-        else:
+        elif isinstance(sensitivities, dict):
             self._sensitivities = sensitivities
+        else:
+            raise RuntimeError('sensitivities arg needs to be a bool or dict')
 
         self._t_event = t_event
         self._y_event = y_event
