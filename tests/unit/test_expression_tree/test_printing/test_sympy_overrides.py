@@ -6,7 +6,7 @@ import unittest
 import sympy
 
 import pybamm
-from pybamm.expression_tree.sympy_overrides import custom_print_func
+from pybamm.expression_tree.printing.sympy_overrides import custom_print_func
 
 
 class TestCustomPrint(unittest.TestCase):
