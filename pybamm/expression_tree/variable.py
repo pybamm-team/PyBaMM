@@ -70,7 +70,7 @@ class VariableBase(pybamm.Symbol):
 
     def to_equation(self):
         """Convert the node and its subtree into a SymPy equation."""
-        if getattr(self, "print_name", None):
+        if self.print_name is not None:
             return sympy.symbols(self.print_name)
         else:
             return self.name

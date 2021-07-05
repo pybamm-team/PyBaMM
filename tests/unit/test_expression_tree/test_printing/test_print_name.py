@@ -24,7 +24,7 @@ class TestPrintName(unittest.TestCase):
         self.assertEqual(param.C_dl_n_dimensional.print_name, r"\hat{C}_{dl\,n}")
 
         # Test bar
-        self.assertEqual(param1.c_s_n_xav.print_name, r"\bar{c}_{s\,n\,xav}")
+        self.assertEqual(param1.c_s_n_xav.print_name, r"\bar{c}_{s\,n}")
 
         # Test greek letters
         self.assertEqual(param1.delta_phi_n.print_name, r"\delta_\phi_n")

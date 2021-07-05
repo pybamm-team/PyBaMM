@@ -74,9 +74,9 @@ def prettify_print_name(name):
             name = r"\hat{" + dim_re1 + r"}_{" + dim_re2.replace("_", "\,") + r"}"
 
     # Bar with comma separated
-    # e.g. c_s_n_xav --> \bar{c}_{s\,n\,xav}
+    # e.g. c_s_n_xav --> \bar{c}_{s\,n}
     if any(elem in name for elem in ["_av", "_xav"]):
-        bar_re1, bar_re2 = re.findall(r"^([a-zA-Z]+)_*(\w*(?:av|xav))", name)[0]
+        bar_re1, bar_re2 = re.findall(r"^([a-zA-Z]+)_*(\w*?)_(?:av|xav)", name)[0]
         name = r"\bar{" + bar_re1 + r"}_{" + bar_re2.replace("_", "\,") + r"}"
 
     # Greek letters

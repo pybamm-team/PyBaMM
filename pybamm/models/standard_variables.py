@@ -3,7 +3,6 @@
 #
 import pybamm
 import numpy as np
-from pybamm.expression_tree.print_name import prettify_print_name
 
 
 class StandardVariables:
@@ -313,7 +312,7 @@ class StandardVariables:
         )
 
     def __setattr__(self, name, value):
-        value.print_name = prettify_print_name(name)
+        value.print_name = name
         super().__setattr__(name, value)
 
 

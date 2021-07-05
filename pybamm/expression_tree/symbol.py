@@ -11,6 +11,7 @@ from anytree.exporter import DotExporter
 from scipy.sparse import csr_matrix, issparse
 
 import pybamm
+from pybamm.expression_tree.printing.print_name import prettify_print_name
 
 
 def domain_size(domain):
@@ -194,6 +195,8 @@ class Symbol(anytree.NodeMixin):
         particle", auxiliary_domains={"secondary": "separator", "tertiary": "current
         collector"}`).
     """
+
+    _print_name = None
 
     def __init__(self, name, children=None, domain=None, auxiliary_domains=None):
         super(Symbol, self).__init__()
@@ -957,6 +960,17 @@ class Symbol(anytree.NodeMixin):
             self.shape_for_testing
         except ValueError as e:
             raise pybamm.ShapeError("Cannot find shape (original error: {})".format(e))
+
+    @property
+    def print_name(self):
+        return self._print_name
+
+    @print_name.setter
+    def print_name(self, name):
+        if name is None:
+            self._print_name = name
+        else:
+            self._print_name = prettify_print_name(name)
 
     def to_equation(self):
         return sympy.symbols(str(self.name))
