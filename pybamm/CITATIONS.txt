@@ -404,3 +404,14 @@ doi={10.1149/2.0661810jes}
   year={2020},
   publisher={Elsevier}
 }
+
+@article{Xu2019,
+  title={Evolution of Dead Lithium Growth in Lithium Metal Batteries: Experimentally Validated Model of the Apparent Capacity Loss},
+  author={Xu, Shanshan and Chen, Kuan-Hung and Dasgupta, Neil P and Siegel, Jason B and Stefanopoulou, Anna G},
+  journal={Journal of The Electrochemical Society},
+  volume={166},
+  number={14},
+  pages={A3456},
+  year={2019},
+  publisher={IOP Publishing}
+}

@@ -1,5 +1,5 @@
 #
-# Tests for the base model class
+# Tests for the half-cell geometry class
 #
 import pybamm
 import unittest
