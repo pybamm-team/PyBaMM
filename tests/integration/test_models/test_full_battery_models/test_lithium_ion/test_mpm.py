@@ -135,52 +135,6 @@ class TestMPM(unittest.TestCase):
         np.testing.assert_array_almost_equal(neg_Li[0], neg_Li[1], decimal=14)
         np.testing.assert_array_almost_equal(pos_Li[0], pos_Li[1], decimal=14)
 
-    def set_distribution_params_for_test(self, param):
-        import numpy as np
-
-        R_n_dim = param["Negative particle radius [m]"]
-        R_p_dim = param["Positive particle radius [m]"]
-        sd_a_n = 0.3
-        sd_a_p = 0.3
-
-        # Min and max radii
-        R_min_n = 0
-        R_min_p = 0
-        R_max_n = 1 + sd_a_n * 5
-        R_max_p = 1 + sd_a_p * 5
-
-        def lognormal(R, R_av, sd):
-            mu_ln = pybamm.log(R_av ** 2 / pybamm.sqrt(R_av ** 2 + sd ** 2))
-            sigma_ln = pybamm.sqrt(pybamm.log(1 + sd ** 2 / R_av ** 2))
-            return (
-                pybamm.exp(-((pybamm.log(R) - mu_ln) ** 2) / (2 * sigma_ln ** 2))
-                / pybamm.sqrt(2 * np.pi * sigma_ln ** 2)
-                / (R)
-            )
-
-        # Set the dimensional (area-weighted) particle-size distributions
-        def f_a_dist_n_dim(R):
-            return lognormal(R, R_n_dim, sd_a_n * R_n_dim)
-
-        def f_a_dist_p_dim(R):
-            return lognormal(R, R_p_dim, sd_a_p * R_p_dim)
-
-        # Append to parameter set
-        param.update(
-            {
-                "Negative minimum particle radius [m]": R_min_n * R_n_dim,
-                "Positive minimum particle radius [m]": R_min_p * R_p_dim,
-                "Negative maximum particle radius [m]": R_max_n * R_n_dim,
-                "Positive maximum particle radius [m]": R_max_p * R_p_dim,
-                "Negative area-weighted "
-                + "particle-size distribution [m-1]": f_a_dist_n_dim,
-                "Positive area-weighted "
-                + "particle-size distribution [m-1]": f_a_dist_p_dim,
-            },
-            check_already_exists=False,
-        )
-        return param
-
 
 if __name__ == "__main__":
     print("Add -v for more debug output")
