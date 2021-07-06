@@ -5,6 +5,7 @@ import os
 import unittest
 
 import numpy as np
+import sympy
 from scipy.sparse import coo_matrix
 
 import pybamm
@@ -491,6 +492,9 @@ class TestSymbol(unittest.TestCase):
         y2 = pybamm.StateVector(slice(0, 5))
         with self.assertRaises(pybamm.ShapeError):
             (y1 + y2).test_shape()
+
+    def test_to_equation(self):
+        self.assertEqual(pybamm.Symbol("test").to_equation(), sympy.symbols("test"))
 
 
 class TestIsZero(unittest.TestCase):

@@ -103,7 +103,9 @@ class BatchStudy:
         solver=None,
         check_model=True,
         save_at_cycles=None,
+        calc_esoh=True,
         starting_solution=None,
+        initial_soc=None,
         **kwargs,
     ):
         """
@@ -157,7 +159,9 @@ class BatchStudy:
                     solver,
                     check_model,
                     save_at_cycles,
+                    calc_esoh,
                     starting_solution,
+                    initial_soc,
                     **kwargs,
                 )
                 solve_time += sol.solve_time

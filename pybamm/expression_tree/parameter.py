@@ -2,13 +2,17 @@
 # Parameter classes
 #
 import numbers
-import numpy as np
-import pybamm
 import sys
+
+import numpy as np
+import sympy
+
+import pybamm
 
 
 class Parameter(pybamm.Symbol):
-    """A node in the expression tree representing a parameter
+    """
+    A node in the expression tree representing a parameter.
 
     This node will be replaced by a :class:`.Scalar` node
 
@@ -20,7 +24,6 @@ class Parameter(pybamm.Symbol):
         node's units
     domain : iterable of str, optional
         list of domains the parameter is valid over, defaults to empty list
-
     """
 
     def __init__(self, name, domain=[]):
@@ -33,7 +36,7 @@ class Parameter(pybamm.Symbol):
         super().__init__(name, domain=domain, units=units)
 
     def new_copy(self):
-        """ See :meth:`pybamm.Symbol.new_copy()`. """
+        """See :meth:`pybamm.Symbol.new_copy()`."""
         return Parameter(self.name, self.domain)
 
     def _evaluate_for_shape(self):
@@ -44,13 +47,18 @@ class Parameter(pybamm.Symbol):
         return np.nan
 
     def is_constant(self):
-        """ See :meth:`pybamm.Symbol.is_constant()`. """
+        """See :meth:`pybamm.Symbol.is_constant()`."""
         # Parameter is not constant since it can become an InputParameter
         return False
 
+    def to_equation(self):
+        """Convert the node and its subtree into a SymPy equation."""
+        return sympy.symbols(self.print_name)
+
 
 class FunctionParameter(pybamm.Symbol):
-    """A node in the expression tree representing a function parameter
+    """
+    A node in the expression tree representing a function parameter.
 
     This node will be replaced by a :class:`pybamm.Function` node if a callable function
     is passed to the parameter values, and otherwise (in some rarer cases, such as
@@ -157,7 +165,7 @@ class FunctionParameter(pybamm.Symbol):
         self._input_names = inp
 
     def set_id(self):
-        """See :meth:`pybamm.Symbol.set_id` """
+        """See :meth:`pybamm.Symbol.set_id`"""
         self._id = hash(
             (self.__class__, self.name, self.diff_variable)
             + tuple([child.id for child in self.children])
@@ -165,8 +173,10 @@ class FunctionParameter(pybamm.Symbol):
         )
 
     def get_children_domains(self, children_list):
-        """Obtains the unique domain of the children. If the
-        children have different domains then raise an error"""
+        """
+        Obtains the unique domain of the children.
+        If the children have different domains then raise an error
+        """
         domains = [child.domain for child in children_list if child.domain != []]
 
         # check that there is one common domain amongst children
@@ -184,7 +194,7 @@ class FunctionParameter(pybamm.Symbol):
         return domain
 
     def diff(self, variable):
-        """ See :meth:`pybamm.Symbol.diff()`. """
+        """See :meth:`pybamm.Symbol.diff()`."""
         # return a new FunctionParameter, that knows it will need to be differentiated
         # when the parameters are set
         children_list = self.orphans
@@ -195,7 +205,7 @@ class FunctionParameter(pybamm.Symbol):
         return FunctionParameter(self.name, input_dict, diff_variable=variable)
 
     def new_copy(self):
-        """ See :meth:`pybamm.Symbol.new_copy()`. """
+        """See :meth:`pybamm.Symbol.new_copy()`."""
         out = self._function_parameter_new_copy(
             self._input_names, self.orphans, print_name=self.print_name
         )
@@ -204,7 +214,8 @@ class FunctionParameter(pybamm.Symbol):
     def _function_parameter_new_copy(
         self, input_names, children, print_name="calculate"
     ):
-        """Returns a new copy of the function parameter.
+        """
+        Returns a new copy of the function parameter.
 
         Inputs
         ------
@@ -234,3 +245,7 @@ class FunctionParameter(pybamm.Symbol):
         See :meth:`pybamm.Symbol.evaluate_for_shape()`
         """
         return sum(child.evaluate_for_shape() for child in self.children)
+
+    def to_equation(self):
+        """Convert the node and its subtree into a SymPy equation."""
+        return sympy.symbols(self.print_name)

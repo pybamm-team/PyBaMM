@@ -33,9 +33,7 @@ def NMC_entropic_change_PeymanMPM(sto):
     )
 
     du_dT = (
-        (-800 + 779 * u_eq - 284 * u_eq ** 2 + 46 * u_eq ** 3 - 2.8 * u_eq ** 4)
-        * 10 ** (-3)
-        * pybamm.Scalar(1, "[V.K-1]")
-    )
+        -800 + 779 * u_eq - 284 * u_eq ** 2 + 46 * u_eq ** 3 - 2.8 * u_eq ** 4
+    ) * pybamm.Scalar(10 ** (-3), "[V.K-1]")
 
     return du_dT
