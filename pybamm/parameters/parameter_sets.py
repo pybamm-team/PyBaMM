@@ -76,6 +76,11 @@ Lithium-ion parameter sets
          Popov. Development of first principles capacity fade model for li-ion cells.
          Journal of the Electrochemical Society, 151(2):A196, 2004.
          doi:10.1149/1.1634273.
+    * Xu2019 :
+       - Shanshan Xu, Kuan-Hung Chen, Neil P Dasgupta, Jason B Siegel, and Anna G
+         Stefanopoulou. Evolution of dead lithium growth in lithium metal batteries:
+         experimentally validated model of the apparent capacity loss. Journal of The
+         Electrochemical Society, 166(14):A3456, 2019.
     * Yang2017 :
        - Madeleine Ecker, Thi Kim Dung Tran, Philipp Dechent, Stefan Käbitz, Alexander
          Warnecke, and Dirk Uwe Sauer. Parameterization of a Physico-Chemical Model of a
