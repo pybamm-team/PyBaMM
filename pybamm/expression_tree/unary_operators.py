@@ -1116,8 +1116,14 @@ def div(symbol):
     # Divergence commutes with Negate operator
     if isinstance(symbol, pybamm.Negate):
         return -div(symbol.orphans[0])
-    else:
-        return Divergence(symbol)
+    elif isinstance(symbol, pybamm.Multiplication):
+        if isinstance(symbol.left, pybamm.Negate):
+            return -div(symbol.left.orphans[0] * symbol.orphans[1])
+        elif isinstance(symbol.right, pybamm.Negate):
+            return -div(symbol.orphans[0] * symbol.right.orphans[0])
+
+    # Last resort
+    return Divergence(symbol)
 
 
 def laplacian(symbol):
