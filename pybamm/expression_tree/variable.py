@@ -1,13 +1,17 @@
 #
 # Variable class
 #
-import pybamm
 import numbers
+
 import numpy as np
+import sympy
+
+import pybamm
 
 
 class VariableBase(pybamm.Symbol):
-    """A node in the expression tree represending a dependent variable
+    """
+    A node in the expression tree represending a dependent variable.
 
     This node will be discretised by :class:`.Discretisation` and converted
     to a :class:`pybamm.StateVector` node.
@@ -54,7 +58,7 @@ class VariableBase(pybamm.Symbol):
         self.print_name = print_name
 
     def new_copy(self):
-        """ See :meth:`pybamm.Symbol.new_copy()`. """
+        """See :meth:`pybamm.Symbol.new_copy()`."""
 
         return self.__class__(
             self.name,
@@ -65,14 +69,22 @@ class VariableBase(pybamm.Symbol):
         )
 
     def _evaluate_for_shape(self):
-        """ See :meth:`pybamm.Symbol.evaluate_for_shape_using_domain()` """
+        """See :meth:`pybamm.Symbol.evaluate_for_shape_using_domain()`"""
         return pybamm.evaluate_for_shape_using_domain(
             self.domain, self.auxiliary_domains
         )
 
+    def to_equation(self):
+        """Convert the node and its subtree into a SymPy equation."""
+        if self.print_name is not None:
+            return sympy.symbols(self.print_name)
+        else:
+            return self.name
+
 
 class Variable(VariableBase):
-    """A node in the expression tree represending a dependent variable
+    """
+    A node in the expression tree represending a dependent variable.
 
     This node will be discretised by :class:`.Discretisation` and converted
     to a :class:`pybamm.StateVector` node.
@@ -161,7 +173,6 @@ class VariableDot(VariableBase):
 
         Note: Variable._jac adds a dash to the name of the corresponding VariableDot, so
         we remove this here
-
         """
         return Variable(
             self.name[:-1], domain=self.domain, auxiliary_domains=self.auxiliary_domains
@@ -177,7 +188,8 @@ class VariableDot(VariableBase):
 
 
 class ExternalVariable(Variable):
-    """A node in the expression tree representing an external variable variable
+    """
+    A node in the expression tree representing an external variable variable.
 
     This node will be discretised by :class:`.Discretisation` and converted
     to a :class:`.Vector` node.
@@ -209,13 +221,13 @@ class ExternalVariable(Variable):
         return self._size
 
     def new_copy(self):
-        """ See :meth:`pybamm.Symbol.new_copy()`. """
+        """See :meth:`pybamm.Symbol.new_copy()`."""
         return ExternalVariable(
             self.name, self.size, self.domain, self.auxiliary_domains
         )
 
     def _evaluate_for_shape(self):
-        """ See :meth:`pybamm.Symbol.evaluate_for_shape_using_domain()` """
+        """See :meth:`pybamm.Symbol.evaluate_for_shape_using_domain()`"""
         return np.nan * np.ones((self.size, 1))
 
     def _base_evaluate(self, t=None, y=None, y_dot=None, inputs=None):
