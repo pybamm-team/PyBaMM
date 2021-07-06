@@ -21,6 +21,11 @@ class TestParameter(unittest.TestCase):
         a = pybamm.Parameter("a")
         self.assertIsInstance(a.evaluate_for_shape(), numbers.Number)
 
+    def test_to_equation(self):
+        func = pybamm.Parameter("test_string")
+        func.print_name = "test"
+        self.assertEqual(func.to_equation(), sympy.symbols("test"))
+
 
 class TestFunctionParameter(unittest.TestCase):
     def test_function_parameter_init(self):
@@ -96,7 +101,7 @@ class TestFunctionParameter(unittest.TestCase):
         self.assertEqual(myfun_dimensional(x).print_name, "myfun")
         self.assertEqual(_myfun(x).print_name, None)
 
-    def test_to_equation(self):
+    def test_function_parameter_to_equation(self):
         func = pybamm.FunctionParameter("test", {"x": pybamm.Scalar(1)})
         func.print_name = "test"
         self.assertEqual(func.to_equation(), sympy.symbols("test"))

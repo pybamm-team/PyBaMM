@@ -5,6 +5,7 @@ import numbers
 
 import autograd
 import numpy as np
+import sympy
 from scipy import special
 
 import pybamm
@@ -231,6 +232,23 @@ class Function(pybamm.Symbol):
             )
         )
 
+    def _sympy_operator(self, *children):
+        """Apply appropriate SymPy operators."""
+        raise NotImplementedError(
+            f"{self.__class__} does not implement _sympy_operator."
+        )
+
+    def to_equation(self):
+        """Convert the node and its subtree into a SymPy equation."""
+        if self.print_name is not None:
+            return sympy.symbols(self.print_name)
+        else:
+            eq_list = []
+            for child in self.children:
+                eq = child.to_equation()
+                eq_list.append(eq)
+            return self._sympy_operator(*eq_list)
+
 
 def simplified_function(func_class, child):
     """
@@ -278,6 +296,10 @@ class Arcsinh(SpecificFunction):
     def _function_diff(self, children, idx):
         """See :meth:`pybamm.Symbol._function_diff()`."""
         return 1 / Sqrt(children[0] ** 2 + 1)
+
+    def _sympy_operator(self, child):
+        """Override :meth:`pybamm.Function._sympy_operator`"""
+        return sympy.asinh(child)
 
 
 def arcsinh(child):

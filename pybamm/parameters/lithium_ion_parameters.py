@@ -425,7 +425,9 @@ class LithiumIonParameters(BaseParameters):
         # this will not affect the OCP for most values of sto
         # see #1435
         u_ref = u_ref + 1e-6 * (1 / sto + 1 / (sto - 1))
-        return u_ref + (T - self.T_ref) * self.dUdT_n_dimensional(sto)
+        dudt_n_dim_func = self.dUdT_n_dimensional(sto)
+        dudt_n_dim_func.print_name = r"\frac{dU}{dT_n}"
+        return u_ref + (T - self.T_ref) * dudt_n_dim_func
 
     def U_p_dimensional(self, sto, T):
         """Dimensional open-circuit potential in the positive electrode [V]"""
@@ -435,7 +437,9 @@ class LithiumIonParameters(BaseParameters):
         # this will not affect the OCP for most values of sto
         # see #1435
         u_ref = u_ref + 1e-6 * (1 / sto + 1 / (sto - 1))
-        return u_ref + (T - self.T_ref) * self.dUdT_p_dimensional(sto)
+        dudt_p_dim_func = self.dUdT_p_dimensional(sto)
+        dudt_p_dim_func.print_name = r"\frac{dU}{dT_p}"
+        return u_ref + (T - self.T_ref) * dudt_p_dim_func
 
     def dUdT_n_dimensional(self, sto):
         """
