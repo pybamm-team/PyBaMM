@@ -196,8 +196,6 @@ class Symbol(anytree.NodeMixin):
         collector"}`).
     """
 
-    _print_name = None
-
     def __init__(self, name, children=None, domain=None, auxiliary_domains=None):
         super(Symbol, self).__init__()
         self.name = name
@@ -225,6 +223,7 @@ class Symbol(anytree.NodeMixin):
         self.domain = domain
 
         self._saved_evaluates_on_edges = {}
+        self._print_name = None
 
         # Test shape on everything but nodes that contain the base Symbol class or
         # the base BinaryOperator class
