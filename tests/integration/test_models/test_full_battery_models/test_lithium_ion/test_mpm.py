@@ -14,7 +14,7 @@ class TestMPM(unittest.TestCase):
         model = pybamm.lithium_ion.MPM(options)
         # use Ecker parameters for nonlinear diffusion
         param = pybamm.ParameterValues(chemistry=pybamm.parameter_sets.Ecker2015)
-        param = self.set_distribution_params_for_test(param)
+        param = pybamm.get_size_distribution_parameters(param)
         modeltest = tests.StandardModelTest(model)
         modeltest.test_all()
 
