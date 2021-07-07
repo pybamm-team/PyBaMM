@@ -1,4 +1,4 @@
-Fickian Many Size Distributions
+#Fickian Many Size Distributions
 ===============================
 
 .. autoclass:: pybamm.particle.FickianManySizeDistributions

@@ -6,6 +6,6 @@ Particle Size Distribution
 
   base_distribution
   fickian_single_distribution
-  fickian_many_distributions
+  #fickian_many_distributions
   fast_single_distribution
-  fast_many_distributions
+  #fast_many_distributions

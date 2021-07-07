@@ -1,4 +1,4 @@
-Fast Many Size Distributions
+#Fast Many Size Distributions
 ============================
 
 .. autoclass:: pybamm.particle.FastManySizeDistributions

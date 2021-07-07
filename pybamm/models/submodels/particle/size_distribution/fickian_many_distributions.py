@@ -2,6 +2,7 @@
 # Class for many particle-size distributions, one distribution at every
 # x location of the electrode, and Fickian diffusion within each particle
 #
+#
 import pybamm
 
 from .base_distribution import BaseSizeDistribution
