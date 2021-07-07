@@ -51,11 +51,10 @@ def battery_geometry(
         options is not None and
         options["particle size"] == "distribution"
     ):
-        param = pybamm.LithiumIonParameters(options)
-        R_min_n = param.R_min_n
-        R_min_p = param.R_min_p
-        R_max_n = param.R_max_n
-        R_max_p = param.R_max_p
+        R_min_n = geo.R_min_n
+        R_min_p = geo.R_min_p
+        R_max_n = geo.R_max_n
+        R_max_p = geo.R_max_p
         geometry.update(
             {
                 "negative particle size": {

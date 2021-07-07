@@ -628,11 +628,10 @@ class TestUnaryOperators(unittest.TestCase):
         self.assertEqual(av_a.children[1].id, l_p.id)
 
     def test_size_average(self):
-        param = pybamm.LithiumIonParameters()
 
         # no domain
         a = pybamm.Scalar(1)
-        average_a = pybamm.size_average(a, param)
+        average_a = pybamm.size_average(a)
         self.assertEqual(average_a.id, a.id)
 
         b = pybamm.FullBroadcast(
@@ -644,27 +643,25 @@ class TestUnaryOperators(unittest.TestCase):
             }
         )
         # no "particle size" domain
-        average_b = pybamm.size_average(b, param)
+        average_b = pybamm.size_average(b)
         self.assertEqual(average_b.id, b.id)
 
         # primary or secondary broadcast to "particle size" domain
         average_a = pybamm.size_average(
-            pybamm.PrimaryBroadcast(a, "negative particle size"),
-            param
+            pybamm.PrimaryBroadcast(a, "negative particle size")
         )
         self.assertEqual(average_a.evaluate(), np.array([1]))
 
         a = pybamm.Symbol("a", domain="negative particle")
         average_a = pybamm.size_average(
-            pybamm.SecondaryBroadcast(a, "negative particle size"),
-            param
+            pybamm.SecondaryBroadcast(a, "negative particle size")
         )
         self.assertEqual(average_a.id, a.id)
 
         for domain in [["negative particle size"], ["positive particle size"]]:
             a = pybamm.Symbol("a", domain=domain)
             R = pybamm.SpatialVariable("R", domain)
-            av_a = pybamm.size_average(a, param)
+            av_a = pybamm.size_average(a)
             self.assertIsInstance(av_a, pybamm.Division)
             self.assertIsInstance(av_a.children[0], pybamm.Integral)
             self.assertIsInstance(av_a.children[1], pybamm.Integral)
@@ -678,7 +675,7 @@ class TestUnaryOperators(unittest.TestCase):
             ValueError,
             """Can't take the size-average of a symbol that evaluates on edges"""
         ):
-            pybamm.size_average(symbol_on_edges, param)
+            pybamm.size_average(symbol_on_edges)
 
     def test_r_average(self):
         a = pybamm.Scalar(1)

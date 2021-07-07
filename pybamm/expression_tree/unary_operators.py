@@ -1399,7 +1399,7 @@ def r_average(symbol):
         return Integral(symbol, r) / Integral(v, r)
 
 
-def size_average(symbol, param):
+def size_average(symbol):
     """convenience function for averaging over particle size R using the area-weighted
     particle-size distribution.
 
@@ -1407,9 +1407,6 @@ def size_average(symbol, param):
     ----------
     symbol : :class:`pybamm.Symbol`
         The function to be averaged
-    param : :class:`pybamm.LithiumIonParameters`
-        The parameter object containing the area-weighted particle-size distributions
-        f_a_dist_n and f_a_dist_p.
     Returns
     -------
     :class:`Symbol`
@@ -1453,10 +1450,11 @@ def size_average(symbol, param):
             auxiliary_domains=symbol.auxiliary_domains,
             coord_sys="cartesian",
         )
+        geo = pybamm.geometric_parameters
         if ["negative particle size"] in list(symbol.domains.values()):
-            f_a_dist = param.f_a_dist_n(R)
+            f_a_dist = geo.f_a_dist_n(R)
         elif ["positive particle size"] in list(symbol.domains.values()):
-            f_a_dist = param.f_a_dist_p(R)
+            f_a_dist = geo.f_a_dist_p(R)
 
         # take average using Integral and distribution f_a_dist
         return Integral(f_a_dist * symbol, R) / Integral(f_a_dist, R)

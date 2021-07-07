@@ -291,7 +291,7 @@ class BaseInterface(pybamm.BaseSubModel):
 
         # Size average. For j variables that depend on particle size, see
         # "_get_standard_size_distribution_interfacial_current_variables"
-        j = pybamm.size_average(j, self.param)
+        j = pybamm.size_average(j)
 
         # Average, and broadcast if necessary
         if j.domain == []:
@@ -450,7 +450,7 @@ class BaseInterface(pybamm.BaseSubModel):
 
         # Size average. For j0 variables that depend on particle size, see
         # "_get_standard_size_distribution_exchange_current_variables"
-        j0 = pybamm.size_average(j0, self.param)
+        j0 = pybamm.size_average(j0)
 
         # X-average, and broadcast if necessary
         if j0.domain == []:
@@ -536,7 +536,7 @@ class BaseInterface(pybamm.BaseSubModel):
 
         # Size average. For eta_r variables that depend on particle size, see
         # "_get_standard_size_distribution_overpotential_variables"
-        eta_r = pybamm.size_average(eta_r, self.param)
+        eta_r = pybamm.size_average(eta_r)
 
         # X-average, and broadcast if necessary
         eta_r_av = pybamm.x_average(eta_r)
@@ -649,7 +649,7 @@ class BaseInterface(pybamm.BaseSubModel):
         """
         # Size average. For ocp variables that depend on particle size, see
         # "_get_standard_size_distribution_ocp_variables"
-        ocp = pybamm.size_average(ocp, self.param)
+        ocp = pybamm.size_average(ocp)
 
         # X-average, and broadcast if necessary
         if ocp.domain == []:
@@ -664,7 +664,7 @@ class BaseInterface(pybamm.BaseSubModel):
             ocp_av = pybamm.x_average(ocp)
 
         # Size average
-        dUdT = pybamm.size_average(dUdT, self.param)
+        dUdT = pybamm.size_average(dUdT)
 
         dUdT_av = pybamm.x_average(dUdT)
 
