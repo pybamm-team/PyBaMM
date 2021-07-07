@@ -627,12 +627,11 @@ class TestUnaryOperators(unittest.TestCase):
         self.assertIsInstance(av_a.children[0], pybamm.Integral)
         self.assertEqual(av_a.children[1].id, l_p.id)
 
-    def test_R_average(self):
-        param = pybamm.LithiumIonParameters()
+    def test_size_average(self):
 
         # no domain
         a = pybamm.Scalar(1)
-        average_a = pybamm.R_average(a, param)
+        average_a = pybamm.size_average(a)
         self.assertEqual(average_a.id, a.id)
 
         b = pybamm.FullBroadcast(
@@ -644,27 +643,25 @@ class TestUnaryOperators(unittest.TestCase):
             }
         )
         # no "particle size" domain
-        average_b = pybamm.R_average(b, param)
+        average_b = pybamm.size_average(b)
         self.assertEqual(average_b.id, b.id)
 
         # primary or secondary broadcast to "particle size" domain
-        average_a = pybamm.R_average(
-            pybamm.PrimaryBroadcast(a, "negative particle size"),
-            param
+        average_a = pybamm.size_average(
+            pybamm.PrimaryBroadcast(a, "negative particle size")
         )
         self.assertEqual(average_a.evaluate(), np.array([1]))
 
         a = pybamm.Symbol("a", domain="negative particle")
-        average_a = pybamm.R_average(
-            pybamm.SecondaryBroadcast(a, "negative particle size"),
-            param
+        average_a = pybamm.size_average(
+            pybamm.SecondaryBroadcast(a, "negative particle size")
         )
         self.assertEqual(average_a.id, a.id)
 
         for domain in [["negative particle size"], ["positive particle size"]]:
             a = pybamm.Symbol("a", domain=domain)
             R = pybamm.SpatialVariable("R", domain)
-            av_a = pybamm.R_average(a, param)
+            av_a = pybamm.size_average(a)
             self.assertIsInstance(av_a, pybamm.Division)
             self.assertIsInstance(av_a.children[0], pybamm.Integral)
             self.assertIsInstance(av_a.children[1], pybamm.Integral)
@@ -675,9 +672,10 @@ class TestUnaryOperators(unittest.TestCase):
         # R-average of symbol that evaluates on edges raises error
         symbol_on_edges = pybamm.PrimaryBroadcastToEdges(1, "domain")
         with self.assertRaisesRegex(
-            ValueError, "Can't take the R-average of a symbol that evaluates on edges"
+            ValueError,
+            """Can't take the size-average of a symbol that evaluates on edges"""
         ):
-            pybamm.R_average(symbol_on_edges, param)
+            pybamm.size_average(symbol_on_edges)
 
     def test_r_average(self):
         a = pybamm.Scalar(1)
@@ -794,6 +792,10 @@ class TestUnaryOperators(unittest.TestCase):
         self.assertFalse((2 * a).is_constant())
 
     def test_to_equation(self):
+        a = pybamm.Symbol("a", domain="negative particle")
+        b = pybamm.Symbol("b", domain="current collector")
+        c = pybamm.Symbol("c", domain="test")
+
         # Test print_name
         pybamm.Floor.print_name = "test"
         self.assertEqual(pybamm.Floor(-2.5).to_equation(), sympy.symbols("test"))
@@ -805,13 +807,23 @@ class TestUnaryOperators(unittest.TestCase):
         self.assertEqual(pybamm.AbsoluteValue(-4).to_equation(), 4.0)
 
         # Test Gradient
-        a = pybamm.Symbol("a", domain="test")
         self.assertEqual(pybamm.Gradient(a).to_equation(), sympy_Gradient("a"))
 
         # Test Divergence
         self.assertEqual(
             pybamm.Divergence(pybamm.Gradient(a)).to_equation(),
             sympy_Divergence(sympy_Gradient(a)),
+        )
+
+        # Test BoundaryValue
+        self.assertEqual(
+            pybamm.BoundaryValue(a, "right").to_equation(), sympy.symbols("a^{surf}")
+        )
+        self.assertEqual(
+            pybamm.BoundaryValue(b, "positive tab").to_equation(), sympy.symbols(str(b))
+        )
+        self.assertEqual(
+            pybamm.BoundaryValue(c, "left").to_equation(), sympy.symbols("c^{left}")
         )
 
 

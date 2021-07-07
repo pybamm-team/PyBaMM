@@ -99,7 +99,7 @@ class UnaryOperator(pybamm.Symbol):
 
     def to_equation(self):
         """Convert the node and its subtree into a SymPy equation."""
-        if getattr(self, "print_name", None):
+        if self.print_name is not None:
             return sympy.symbols(self.print_name)
         else:
             eq1 = self.child.to_equation()
@@ -952,6 +952,20 @@ class BoundaryValue(BoundaryOperator):
         """See :meth:`UnaryOperator._unary_new_copy()`."""
         return boundary_value(child, self.side)
 
+    def _sympy_operator(self, child):
+        """Override :meth:`pybamm.UnaryOperator._sympy_operator`"""
+        if (
+            self.child.domain[0] in ["negative particle", "positive particle"]
+            and self.side == "right"
+        ):
+            return sympy.Symbol(
+                str(child) + r"^{surf}"
+            )  # value on the surface of the particle
+        elif self.side == "positive tab":
+            return child
+        else:
+            return sympy.Symbol(str(child) + r"^{" + self.side + r"}")
+
 
 class BoundaryGradient(BoundaryOperator):
     """
@@ -1399,7 +1413,7 @@ def r_average(symbol):
         return Integral(symbol, r) / Integral(v, r)
 
 
-def R_average(symbol, param):
+def size_average(symbol):
     """convenience function for averaging over particle size R using the area-weighted
     particle-size distribution.
 
@@ -1407,9 +1421,6 @@ def R_average(symbol, param):
     ----------
     symbol : :class:`pybamm.Symbol`
         The function to be averaged
-    param : :class:`pybamm.LithiumIonParameters`
-        The parameter object containing the area-weighted particle-size distributions
-        f_a_dist_n and f_a_dist_p.
     Returns
     -------
     :class:`Symbol`
@@ -1417,7 +1428,9 @@ def R_average(symbol, param):
     """
     # Can't take average if the symbol evaluates on edges
     if symbol.evaluates_on_edges("primary"):
-        raise ValueError("Can't take the R-average of a symbol that evaluates on edges")
+        raise ValueError(
+            """Can't take the size-average of a symbol that evaluates on edges"""
+        )
 
     # If symbol doesn't have a domain, or doesn't have "negative particle size"
     #  or "positive particle size" as a domain, it's average value is itself
@@ -1451,10 +1464,11 @@ def R_average(symbol, param):
             auxiliary_domains=symbol.auxiliary_domains,
             coord_sys="cartesian",
         )
+        geo = pybamm.geometric_parameters
         if ["negative particle size"] in list(symbol.domains.values()):
-            f_a_dist = param.f_a_dist_n(R)
+            f_a_dist = geo.f_a_dist_n(R)
         elif ["positive particle size"] in list(symbol.domains.values()):
-            f_a_dist = param.f_a_dist_p(R)
+            f_a_dist = geo.f_a_dist_p(R)
 
         # take average using Integral and distribution f_a_dist
         return Integral(f_a_dist * symbol, R) / Integral(f_a_dist, R)

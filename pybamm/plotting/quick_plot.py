@@ -257,10 +257,8 @@ class QuickPlot(object):
         self.spatial_variable_dict = {}
         self.first_dimensional_spatial_variable = {}
         self.second_dimensional_spatial_variable = {}
-        self.is_x_r = {}
+        self.x_first_and_y_second = {}
         self.is_y_z = {}
-        self.is_x_R = {}
-        self.is_R_r = {}
 
         # Calculate subplot positions based on number of variables supplied
         self.subplot_positions = {}
@@ -341,37 +339,23 @@ class QuickPlot(object):
                     self.second_dimensional_spatial_variable[variable_tuple] = (
                         second_spatial_var_value * self.spatial_factor
                     )
-                    if first_spatial_var_name == "r" and second_spatial_var_name == "x":
-                        self.is_x_r[variable_tuple] = True
-                        self.is_y_z[variable_tuple] = False
-                        self.is_x_R[variable_tuple] = False
-                        self.is_R_r[variable_tuple] = False
-                    elif (
-                        first_spatial_var_name == "y" and second_spatial_var_name == "z"
+                    # different order based on whether the domains
+                    # are x-r, x-z or y-z, etc
+                    if (
+                        first_spatial_var_name in ("r", "R") and
+                        second_spatial_var_name == "x"
                     ):
-                        self.is_x_r[variable_tuple] = False
+                        self.x_first_and_y_second[variable_tuple] = False
+                        self.is_y_z[variable_tuple] = False
+                    elif (
+                        first_spatial_var_name == "y" and
+                        second_spatial_var_name == "z"
+                    ):
+                        self.x_first_and_y_second[variable_tuple] = True
                         self.is_y_z[variable_tuple] = True
-                        self.is_x_R[variable_tuple] = False
-                        self.is_R_r[variable_tuple] = False
-                    elif (
-                        first_spatial_var_name == "R" and second_spatial_var_name == "x"
-                    ):
-                        self.is_x_r[variable_tuple] = False
-                        self.is_y_z[variable_tuple] = False
-                        self.is_x_R[variable_tuple] = True
-                        self.is_R_r[variable_tuple] = False
-                    elif (
-                        first_spatial_var_name == "r" and second_spatial_var_name == "R"
-                    ):
-                        self.is_x_r[variable_tuple] = False
-                        self.is_y_z[variable_tuple] = False
-                        self.is_x_R[variable_tuple] = False
-                        self.is_R_r[variable_tuple] = True
                     else:
-                        self.is_x_r[variable_tuple] = False
+                        self.x_first_and_y_second[variable_tuple] = True
                         self.is_y_z[variable_tuple] = False
-                        self.is_x_R[variable_tuple] = False
-                        self.is_R_r[variable_tuple] = False
 
             # Store variables and subplot position
             self.variables[variable_tuple] = variables
@@ -416,7 +400,7 @@ class QuickPlot(object):
                 x_max = self.first_dimensional_spatial_variable[key][-1]
             elif variable_lists[0][0].dimensions == 2:
                 # different order based on whether the domains are x-r, x-z or y-z, etc
-                if (self.is_x_r[key] or self.is_x_R[key] or self.is_R_r[key]) is True:
+                if self.x_first_and_y_second[key] is False:
                     x_min = self.second_dimensional_spatial_variable[key][0]
                     x_max = self.second_dimensional_spatial_variable[key][-1]
                     y_min = self.first_dimensional_spatial_variable[key][0]
@@ -573,7 +557,7 @@ class QuickPlot(object):
                 # there can only be one entry in the variable list
                 variable = variable_lists[0][0]
                 # different order based on whether the domains are x-r, x-z or y-z, etc
-                if (self.is_x_r[key] or self.is_x_R[key] or self.is_R_r[key]) is True:
+                if self.x_first_and_y_second[key] is False:
                     x_name = list(spatial_vars.keys())[1][0]
                     y_name = list(spatial_vars.keys())[0][0]
                     x = self.second_dimensional_spatial_variable[key]
@@ -736,7 +720,7 @@ class QuickPlot(object):
                 # there can only be one entry in the variable list
                 variable = self.variables[key][0][0]
                 vmin, vmax = self.variable_limits[key]
-                if (self.is_x_r[key] or self.is_x_R[key] or self.is_R_r[key]) is True:
+                if self.x_first_and_y_second[key] is False:
                     x = self.second_dimensional_spatial_variable[key]
                     y = self.first_dimensional_spatial_variable[key]
                     var = variable(time_in_seconds, **spatial_vars, warn=False)

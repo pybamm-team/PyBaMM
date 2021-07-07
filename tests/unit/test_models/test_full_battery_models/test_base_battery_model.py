@@ -35,7 +35,7 @@ PRINT_OPTIONS_OUTPUT = """\
 'surface form': 'differential' (possible: ['false', 'differential', 'algebraic'])
 'thermal': 'x-full' (possible: ['isothermal', 'lumped', 'x-lumped', 'x-full'])
 'total interfacial current density as a state': 'false' (possible: ['true', 'false'])
-'working electrode': 'none'
+'working electrode': 'both' (possible: ['both', 'negative', 'positive'])
 'SEI film resistance': 'none' (possible: ['none', 'distributed', 'average'])
 """  # noqa: E501
 

@@ -267,6 +267,14 @@ class TestParameterValues(unittest.TestCase):
             x = pybamm.Parameter("x")
             parameter_values.process_symbol(x)
 
+        parameter_values = pybamm.ParameterValues({"x": np.nan})
+        with self.assertRaisesRegex(ValueError, "Parameter 'x' not found"):
+            x = pybamm.Parameter("x")
+            parameter_values.process_symbol(x)
+        with self.assertRaisesRegex(ValueError, "possibly a function"):
+            x = pybamm.FunctionParameter("x", {})
+            parameter_values.process_symbol(x)
+
     def test_process_parameter_in_parameter(self):
         parameter_values = pybamm.ParameterValues(
             {"a": 2, "2a": pybamm.Parameter("a") * 2, "b": np.array([1, 2, 3])}

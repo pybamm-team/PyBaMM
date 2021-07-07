@@ -175,7 +175,7 @@ class FastSingleSizeDistribution(BaseSizeDistribution):
 
         self.events.append(
             pybamm.Event(
-                "Minumum " + self.domain.lower() + " particle surface concentration",
+                "Minimum " + self.domain.lower() + " particle surface concentration",
                 pybamm.min(c_s_surf_xav_distribution) - tol,
                 pybamm.EventType.TERMINATION,
             )

@@ -76,47 +76,46 @@ class DFN(BaseModel):
 
     def set_particle_submodel(self):
 
-        # if isinstance(self.options["particle"], str):
-        #     particle_left = self.options["particle"]
-        #     particle_right = self.options["particle"]
-        # else:
-        #     particle_left, particle_right = self.options["particle"]
-        # for particle_side, domain in [
-        #     [particle_left, "Negative"],
-        #     [particle_right, "Positive"],
-        # ]:
-            # if self.options["particle size"] == "single":
-            #     if particle_side == "Fickian diffusion":
-            #         self.submodels[
-            #             domain.lower() + " particle"
-            #         ] = pybamm.particle.FickianManyParticles(self.param, domain)
-            #     elif particle_side in [
-            #         "uniform profile",
-            #         "quadratic profile",
-            #         "quartic profile",
-            #     ]:
-            #         self.submodels[
-            #             domain.lower() + " particle"
-            #         ] = pybamm.particle.PolynomialManyParticles(
-            #             self.param, domain, particle_side
-            #         )
-            # # remove when merging
-            # elif self.options["particle size"] == "distribution":
-            #     if particle_side == "Fickian diffusion":
-            #         raise pybamm.OptionError(
-            #             "Fickian diffusion not yet compatible with"
-            #             + " particle size distributions."
-            #         )
-            #     elif particle_side in [
-            #         "uniform profile",
-            #         "quadratic profile",
-            #         "quartic profile",
-            #     ]:
-            #         self.submodels[
-            #             domain.lower() + " particle"
-            #         ] = pybamm.particle.FastManySizeDistributions(
-            #             self.param, domain
-            #         )
+        if isinstance(self.options["particle"], str):
+            particle_left = self.options["particle"]
+            particle_right = self.options["particle"]
+        else:
+            particle_left, particle_right = self.options["particle"]
+        for particle_side, domain in [
+            [particle_left, "Negative"],
+            [particle_right, "Positive"],
+        ]:
+            if self.options["particle size"] == "single":
+                if particle_side == "Fickian diffusion":
+                    self.submodels[
+                        domain.lower() + " particle"
+                    ] = pybamm.particle.FickianManyParticles(self.param, domain)
+                elif particle_side in [
+                    "uniform profile",
+                    "quadratic profile",
+                    "quartic profile",
+                ]:
+                    self.submodels[
+                        domain.lower() + " particle"
+                    ] = pybamm.particle.PolynomialManyParticles(
+                        self.param, domain, particle_side
+                    )
+            elif self.options["particle size"] == "distribution":
+                if particle_side == "Fickian diffusion":
+                    raise pybamm.OptionError(
+                        "Fickian diffusion not yet compatible with"
+                        + " particle size distributions."
+                    )
+                elif particle_side in [
+                    "uniform profile",
+                    "quadratic profile",
+                    "quartic profile",
+                ]:
+                    self.submodels[
+                        domain.lower() + " particle"
+                    ] = pybamm.particle.FastManySizeDistributions(
+                        self.param, domain
+                    )
 
     def set_solid_submodel(self):
 

@@ -80,7 +80,7 @@ class BaseModel(pybamm.BaseSubModel):
                     R_dim = self.param.R_n_dimensional(x * self.param.L_x)
                 elif self.options["particle size"] == "distribution":
                     R_n = pybamm.standard_spatial_vars.R_n
-                    R = pybamm.R_average(R_n, self.param)
+                    R = pybamm.size_average(R_n)
                     R_dim = R * self.param.R_n_typ
                 a_typ = self.param.a_n_typ
             elif self.domain == "Positive":
@@ -90,7 +90,7 @@ class BaseModel(pybamm.BaseSubModel):
                     R_dim = self.param.R_p_dimensional(x * self.param.L_x)
                 elif self.options["particle size"] == "distribution":
                     R_p = pybamm.standard_spatial_vars.R_p
-                    R = pybamm.R_average(R_p, self.param)
+                    R = pybamm.size_average(R_p)
                     R_dim = R * self.param.R_p_typ
                 a_typ = self.param.a_p_typ
 

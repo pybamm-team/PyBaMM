@@ -19,8 +19,12 @@ class TestBaseModel(unittest.TestCase):
             "Negative electrolyte concentration": a,
             "Current collector current density": a,
         }
+        options = {
+            "SEI film resistance": "none",
+            "particle size": "single"
+        }
         submodel = pybamm.interface.inverse_kinetics.InverseButlerVolmer(
-            param, "Negative", "lithium-ion main"
+            param, "Negative", "lithium-ion main", options
         )
         std_tests = tests.StandardSubModelTests(submodel, variables)
         std_tests.test_all()
@@ -33,7 +37,7 @@ class TestBaseModel(unittest.TestCase):
             "Current collector current density": a,
         }
         submodel = pybamm.interface.inverse_kinetics.InverseButlerVolmer(
-            param, "Positive", "lithium-ion main"
+            param, "Positive", "lithium-ion main", options
         )
         std_tests = tests.StandardSubModelTests(submodel, variables)
         std_tests.test_all()
