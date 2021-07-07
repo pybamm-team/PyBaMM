@@ -39,7 +39,7 @@ class FickianManySizeDistributions(BaseSizeDistribution):
                 },
                 bounds=(0, 1),
             )
-            R_variable = pybamm.standard_spatial_vars.R_n
+            R = pybamm.standard_spatial_vars.R_n
 
         elif self.domain == "Positive":
             # distribution variables
@@ -69,7 +69,7 @@ class FickianManySizeDistributions(BaseSizeDistribution):
         f_v_dist = variables[
             self.domain + " volume-weighted particle-size distribution"
         ]
-        c_s = pybamm.Integral(f_v_dist * c_s_distribution, R_variable)
+        c_s = pybamm.Integral(f_v_dist * c_s_distribution, R)
         c_s_xav = pybamm.x_average(c_s)
         variables.update(self._get_standard_concentration_variables(c_s, c_s_xav))
 

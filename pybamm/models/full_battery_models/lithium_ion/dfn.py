@@ -102,9 +102,10 @@ class DFN(BaseModel):
                     )
             elif self.options["particle size"] == "distribution":
                 if particle_side == "Fickian diffusion":
-                    raise pybamm.OptionError(
-                        "Fickian diffusion not yet compatible with"
-                        + " particle size distributions."
+                    self.submodels[
+                        domain.lower() + " particle"
+                    ] = pybamm.particle.FickianManySizeDistributions(
+                        self.param, domain
                     )
                 elif particle_side in [
                     "uniform profile",
