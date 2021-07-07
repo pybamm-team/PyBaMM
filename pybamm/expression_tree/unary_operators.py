@@ -99,7 +99,7 @@ class UnaryOperator(pybamm.Symbol):
 
     def to_equation(self):
         """Convert the node and its subtree into a SymPy equation."""
-        if getattr(self, "print_name", None):
+        if self.print_name is not None:
             return sympy.symbols(self.print_name)
         else:
             eq1 = self.child.to_equation()
@@ -951,6 +951,20 @@ class BoundaryValue(BoundaryOperator):
     def _unary_new_copy(self, child):
         """See :meth:`UnaryOperator._unary_new_copy()`."""
         return boundary_value(child, self.side)
+
+    def _sympy_operator(self, child):
+        """Override :meth:`pybamm.UnaryOperator._sympy_operator`"""
+        if (
+            self.child.domain[0] in ["negative particle", "positive particle"]
+            and self.side == "right"
+        ):
+            return sympy.Symbol(
+                str(child) + r"^{surf}"
+            )  # value on the surface of the particle
+        elif self.side == "positive tab":
+            return child
+        else:
+            return sympy.Symbol(str(child) + r"^{" + self.side + r"}")
 
 
 class BoundaryGradient(BoundaryOperator):

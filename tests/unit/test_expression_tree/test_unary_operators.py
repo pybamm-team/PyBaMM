@@ -792,6 +792,10 @@ class TestUnaryOperators(unittest.TestCase):
         self.assertFalse((2 * a).is_constant())
 
     def test_to_equation(self):
+        a = pybamm.Symbol("a", domain="negative particle")
+        b = pybamm.Symbol("b", domain="current collector")
+        c = pybamm.Symbol("c", domain="test")
+
         # Test print_name
         pybamm.Floor.print_name = "test"
         self.assertEqual(pybamm.Floor(-2.5).to_equation(), sympy.symbols("test"))
@@ -803,13 +807,23 @@ class TestUnaryOperators(unittest.TestCase):
         self.assertEqual(pybamm.AbsoluteValue(-4).to_equation(), 4.0)
 
         # Test Gradient
-        a = pybamm.Symbol("a", domain="test")
         self.assertEqual(pybamm.Gradient(a).to_equation(), sympy_Gradient("a"))
 
         # Test Divergence
         self.assertEqual(
             pybamm.Divergence(pybamm.Gradient(a)).to_equation(),
             sympy_Divergence(sympy_Gradient(a)),
+        )
+
+        # Test BoundaryValue
+        self.assertEqual(
+            pybamm.BoundaryValue(a, "right").to_equation(), sympy.symbols("a^{surf}")
+        )
+        self.assertEqual(
+            pybamm.BoundaryValue(b, "positive tab").to_equation(), sympy.symbols(str(b))
+        )
+        self.assertEqual(
+            pybamm.BoundaryValue(c, "left").to_equation(), sympy.symbols("c^{left}")
         )
 
 
