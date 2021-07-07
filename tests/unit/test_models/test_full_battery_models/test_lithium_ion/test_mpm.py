@@ -26,15 +26,6 @@ class TestMPM(unittest.TestCase):
         with self.assertRaises(NotImplementedError):
             pybamm.lithium_ion.MPM(options)
 
-    def test_lumped_thermal_1plus1D(self):
-        options = {
-            "current collector": "potential pair",
-            "dimensionality": 1,
-            "thermal": "lumped",
-        }
-        model = pybamm.lithium_ion.MPM(options)
-        model.check_well_posedness()
-
     def test_thermal_1plus1D(self):
         options = {
             "current collector": "potential pair",
@@ -49,22 +40,22 @@ class TestMPM(unittest.TestCase):
         model = pybamm.lithium_ion.MPM(options)
         model.check_well_posedness()
 
-    def test_loss_active_material_stress_negative(self):
+    def test_loss_active_material_stress_negative_not_implemented(self):
         options = {"loss of active material": ("stress-driven", "none")}
         with self.assertRaises(NotImplementedError):
             pybamm.lithium_ion.MPM(options)
 
-    def test_loss_active_material_stress_positive(self):
+    def test_loss_active_material_stress_positive_not_implemented(self):
         options = {"loss of active material": ("none", "stress-driven")}
         with self.assertRaises(NotImplementedError):
             pybamm.lithium_ion.MPM(options)
 
-    def test_loss_active_material_stress_both(self):
+    def test_loss_active_material_stress_both_not_implemented(self):
         options = {"loss of active material": "stress-driven"}
         with self.assertRaises(NotImplementedError):
             pybamm.lithium_ion.MPM(options)
 
-    def test_well_posed_reversible_plating_with_porosity(self):
+    def test_well_posed_reversible_plating_with_porosity_not_implemented(self):
         options = {
             "lithium plating": "reversible",
             "lithium plating porosity change": "true",
@@ -123,34 +114,34 @@ class TestMPMWithSEI(unittest.TestCase):
 
 
 class TestMPMWithCrack(unittest.TestCase):
-    def test_well_posed_negative_cracking(self):
+    def test_well_posed_negative_cracking_not_implemented(self):
         options = {"particle mechanics": ("swelling and cracking", "none")}
         with self.assertRaises(NotImplementedError):
             pybamm.lithium_ion.MPM(options)
 
-    def test_well_posed_positive_cracking(self):
+    def test_well_posed_positive_cracking_not_implemented(self):
         options = {"particle mechanics": ("none", "swelling and cracking")}
         with self.assertRaises(NotImplementedError):
             pybamm.lithium_ion.MPM(options)
 
-    def test_well_posed_both_cracking(self):
+    def test_well_posed_both_cracking_not_implemented(self):
         options = {"particle mechanics": "swelling and cracking"}
         with self.assertRaises(NotImplementedError):
             pybamm.lithium_ion.MPM(options)
 
-    def test_well_posed_both_swelling_only(self):
+    def test_well_posed_both_swelling_only_not_implemented(self):
         options = {"particle mechanics": "swelling only"}
         with self.assertRaises(NotImplementedError):
             pybamm.lithium_ion.MPM(options)
 
 
 class TestMPMWithPlating(unittest.TestCase):
-    def test_well_posed_reversible_plating(self):
+    def test_well_posed_reversible_plating_not_implemented(self):
         options = {"lithium plating": "reversible"}
         with self.assertRaises(NotImplementedError):
             pybamm.lithium_ion.MPM(options)
 
-    def test_well_posed_irreversible_plating(self):
+    def test_well_posed_irreversible_plating_not_implemented(self):
         options = {"lithium plating": "irreversible"}
         with self.assertRaises(NotImplementedError):
             pybamm.lithium_ion.MPM(options)

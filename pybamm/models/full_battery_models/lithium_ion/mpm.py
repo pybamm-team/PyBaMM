@@ -43,32 +43,7 @@ class MPM(SPM):
         else:
             options["particle size"] = "distribution"
             options["surface form"] = "algebraic"
-        super(SPM, self).__init__(options, name)
-
-        # For degradation models we use the "x-average" form since this is a
-        # reduced-order model with uniform current density in the electrodes
-        self.x_average = True
-
-        self.set_external_circuit_submodel()
-        self.set_porosity_submodel()
-        self.set_crack_submodel()
-        self.set_active_material_submodel()
-        self.set_tortuosity_submodels()
-        self.set_convection_submodel()
-        self.set_interfacial_submodel()
-        self.set_other_reaction_submodels_to_zero()
-        self.set_particle_submodel()
-        self.set_negative_electrode_submodel()
-        self.set_electrolyte_submodel()
-        self.set_positive_electrode_submodel()
-        self.set_thermal_submodel()
-        self.set_current_collector_submodel()
-
-        self.set_sei_submodel()
-        self.set_lithium_plating_submodel()
-
-        if build:
-            self.build_model()
+        super().__init__(options, name, build)
 
         pybamm.citations.register("Kirk2020")
         pybamm.citations.register("Kirk2021")

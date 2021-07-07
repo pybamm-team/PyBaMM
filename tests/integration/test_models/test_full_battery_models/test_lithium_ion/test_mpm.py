@@ -18,24 +18,6 @@ class TestMPM(unittest.TestCase):
         modeltest = tests.StandardModelTest(model)
         modeltest.test_all()
 
-    def test_basic_processing_2plus1D(self):
-        options = {"current collector": "potential pair", "dimensionality": 2}
-        model = pybamm.lithium_ion.MPM(options)
-        var = pybamm.standard_spatial_vars
-        var_pts = {
-            var.x_n: 5,
-            var.x_s: 5,
-            var.x_p: 5,
-            var.r_n: 5,
-            var.r_p: 5,
-            var.R_n: 5,
-            var.R_p: 5,
-            var.y: 5,
-            var.z: 5,
-        }
-        modeltest = tests.StandardModelTest(model, var_pts=var_pts)
-        modeltest.test_all(skip_output_tests=True)
-
     def test_optimisations(self):
         options = {"thermal": "isothermal"}
         model = pybamm.lithium_ion.MPM(options)
@@ -56,20 +38,6 @@ class TestMPM(unittest.TestCase):
         optimtest = tests.OptimisationsTest(model)
         optimtest.set_up_model(to_python=True)
         optimtest.set_up_model(to_python=False)
-
-    def test_zero_current(self):
-        options = {"thermal": "isothermal"}
-        model = pybamm.lithium_ion.MPM(options)
-        parameter_values = model.default_parameter_values
-        parameter_values.update({"Current function [A]": 0})
-        modeltest = tests.StandardModelTest(model, parameter_values=parameter_values)
-        modeltest.test_all()
-
-    def test_thermal_lumped(self):
-        options = {"thermal": "lumped"}
-        model = pybamm.lithium_ion.MPM(options)
-        modeltest = tests.StandardModelTest(model)
-        modeltest.test_all()
 
     def test_particle_uniform(self):
         options = {"particle": "uniform profile"}
