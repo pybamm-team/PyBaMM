@@ -2,7 +2,6 @@
 # Class for many particle-size distributions, one distribution at every
 # x location of the electrode, and Fickian diffusion within each particle
 #
-#
 import pybamm
 
 from .base_distribution import BaseSizeDistribution
@@ -240,7 +239,7 @@ class FickianManySizeDistributions(BaseSizeDistribution):
 
         self.events.append(
             pybamm.Event(
-                "Minumum " + self.domain.lower() + " particle surface concentration",
+                "Minimum " + self.domain.lower() + " particle surface concentration",
                 pybamm.min(c_s_surf_distribution) - tol,
                 pybamm.EventType.TERMINATION,
             )

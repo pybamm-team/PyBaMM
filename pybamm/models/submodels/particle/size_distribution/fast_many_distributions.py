@@ -3,7 +3,6 @@
 # x location of the electrode, with fast diffusion (uniform concentration in r)
 # within particles
 #
-#
 import pybamm
 
 from .base_distribution import BaseSizeDistribution
@@ -160,7 +159,7 @@ class FastManySizeDistributions(BaseSizeDistribution):
 
         self.events.append(
             pybamm.Event(
-                "Minumum " + self.domain.lower() + " particle surface concentration",
+                "Minimum " + self.domain.lower() + " particle surface concentration",
                 pybamm.min(c_s_surf_distribution) - tol,
                 pybamm.EventType.TERMINATION,
             )
