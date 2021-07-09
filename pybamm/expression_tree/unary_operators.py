@@ -1116,11 +1116,12 @@ def div(symbol):
     # Divergence commutes with Negate operator
     if isinstance(symbol, pybamm.Negate):
         return -div(symbol.orphans[0])
-    elif isinstance(symbol, pybamm.Multiplication):
-        if isinstance(symbol.left, pybamm.Negate):
-            return -div(symbol.left.orphans[0] * symbol.orphans[1])
-        elif isinstance(symbol.right, pybamm.Negate):
-            return -div(symbol.orphans[0] * symbol.right.orphans[0])
+    elif isinstance(symbol, (pybamm.Multiplication, pybamm.Division)):
+        left, right = symbol.orphans
+        if isinstance(left, pybamm.Negate):
+            return -div(symbol._binary_new_copy(left.orphans[0], right))
+        # elif isinstance(right, pybamm.Negate):
+        #     return -div(symbol._binary_new_copy(left, right.orphans[0]))
 
     # Last resort
     return Divergence(symbol)
