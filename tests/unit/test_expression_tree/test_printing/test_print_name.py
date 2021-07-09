@@ -33,7 +33,7 @@ class TestPrintName(unittest.TestCase):
         param2 = pybamm.LeadAcidParameters()
         x_n = pybamm.standard_spatial_vars.x_n
         a_n = param2.a_n(x_n)
-        a_n_new = a_n.new_copy()
+        a_n.new_copy()
 
 
 if __name__ == "__main__":
