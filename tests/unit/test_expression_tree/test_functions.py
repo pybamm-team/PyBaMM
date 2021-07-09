@@ -5,8 +5,9 @@ import pybamm
 
 import unittest
 import numpy as np
-from scipy.interpolate import interp1d
+import sympy
 from scipy import special
+from scipy.interpolate import interp1d
 
 
 def test_function(arg):
@@ -126,6 +127,21 @@ class TestFunction(unittest.TestCase):
         self.assertEqual(
             fun.name, "function (<class 'scipy.interpolate.interpolate.interp1d'>)"
         )
+
+    def test_to_equation(self):
+        a = pybamm.Symbol("a", domain="test")
+
+        # Test _sympy_operator
+        with self.assertRaises(NotImplementedError):
+            pybamm.Arctan(a).to_equation()
+
+        # Test print_name
+        func = pybamm.Arcsinh(a)
+        func.print_name = "test"
+        self.assertEqual(func.to_equation(), sympy.symbols("test"))
+
+        # Test Arcsinh
+        self.assertEqual(pybamm.Arcsinh(a).to_equation(), sympy.asinh(a))
 
 
 class TestSpecificFunctions(unittest.TestCase):
