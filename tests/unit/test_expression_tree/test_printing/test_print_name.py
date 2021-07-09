@@ -29,6 +29,12 @@ class TestPrintName(unittest.TestCase):
         # Test greek letters
         self.assertEqual(param1.delta_phi_n.print_name, r"\delta_\phi_n")
 
+        # Test new_copy()
+        param2 = pybamm.LeadAcidParameters()
+        x_n = pybamm.standard_spatial_vars.x_n
+        a_n = param2.a_n(x_n)
+        a_n_new = a_n.new_copy()
+
 
 if __name__ == "__main__":
     print("Add -v for more debug output")
