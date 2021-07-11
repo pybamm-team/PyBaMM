@@ -339,6 +339,9 @@ class BaseInterface(pybamm.BaseSubModel):
         j = pybamm.concatenation(j_n, j_s, j_p)
         j_dim = pybamm.concatenation(j_n_scale * j_n, j_s, j_p_scale * j_p)
 
+        # Override print_name
+        j.print_name = "J"
+
         variables.update(
             {
                 self.Reaction_icd: j,

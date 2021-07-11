@@ -571,6 +571,8 @@ class LithiumIonParameters(BaseParameters):
         self.D_e_typ = self.D_e_dimensional(self.c_e_typ, self.T_ref)
         self.tau_diffusion_e = self.L_x ** 2 / self.D_e_typ
 
+        self.D_n_typ_dim = self.D_n_dimensional(pybamm.Scalar(1), self.T_ref)
+
         # Particle diffusion timescales
         self.tau_diffusion_n = self.R_n_typ ** 2 / self.D_n_dimensional(
             pybamm.Scalar(1), self.T_ref
@@ -896,9 +898,7 @@ class LithiumIonParameters(BaseParameters):
         """Dimensionless negative particle diffusivity"""
         sto = c_s_n
         T_dim = self.Delta_T * T + self.T_ref
-        return self.D_n_dimensional(sto, T_dim) / self.D_n_dimensional(
-            pybamm.Scalar(1), self.T_ref
-        )
+        return self.D_n_dimensional(sto, T_dim) / self.D_n_typ_dim
 
     def D_p(self, c_s_p, T):
         """Dimensionless positive particle diffusivity"""
