@@ -370,6 +370,10 @@ class Log(SpecificFunction):
         """See :meth:`pybamm.Function._function_diff()`."""
         return 1 / children[0]
 
+    def _sympy_operator(self, child):
+        """Override :meth:`pybamm.Function._sympy_operator`"""
+        return sympy.log(child)
+
 
 def log(child, base="e"):
     """Returns logarithmic function of child (any base, default 'e')."""
@@ -445,6 +449,10 @@ class Sinh(SpecificFunction):
     def _function_diff(self, children, idx):
         """See :meth:`pybamm.Function._function_diff()`."""
         return Cosh(children[0])
+
+    def _sympy_operator(self, child):
+        """Override :meth:`pybamm.Function._sympy_operator`"""
+        return sympy.sinh(child)
 
 
 def sinh(child):

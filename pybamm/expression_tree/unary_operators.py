@@ -618,6 +618,10 @@ class Integral(SpatialOperator):
         """See :meth:`pybamm.Symbol._evaluates_on_edges()`."""
         return False
 
+    def _sympy_operator(self, child):
+        """Override :meth:`pybamm.UnaryOperator._sympy_operator`"""
+        return sympy.Integral(child, self.integration_variable)
+
 
 class BaseIndefiniteIntegral(Integral):
     """
