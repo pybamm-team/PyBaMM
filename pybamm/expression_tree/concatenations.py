@@ -117,7 +117,7 @@ class Concatenation(pybamm.Symbol):
 
     def _sympy_operator(self, *children):
         """Apply appropriate SymPy operators."""
-        concat_str = r"\\".join(map(lambda child: sympy.latex(child), children))
+        concat_str = r"\\".join(map(sympy.latex, children))
         concat_sym = sympy.Symbol(r"\begin{cases}" + concat_str + r"\end{cases}")
 
         if self.print_name is not None:
