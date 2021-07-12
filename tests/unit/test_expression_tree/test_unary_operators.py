@@ -774,7 +774,8 @@ class TestUnaryOperators(unittest.TestCase):
             pybamm.BoundaryValue(b, "positive tab").to_equation(), sympy.symbols(str(b))
         )
         self.assertEqual(
-            pybamm.BoundaryValue(c, "left").to_equation(), sympy.symbols("c^{left}")
+            pybamm.BoundaryValue(c, "left").to_equation(),
+            sympy.Symbol(r"c^{\mathtt{\text{left}}}"),
         )
 
         # Test Integral
