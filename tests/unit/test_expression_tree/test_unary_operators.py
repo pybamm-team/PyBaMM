@@ -745,6 +745,7 @@ class TestUnaryOperators(unittest.TestCase):
         a = pybamm.Symbol("a", domain="negative particle")
         b = pybamm.Symbol("b", domain="current collector")
         c = pybamm.Symbol("c", domain="test")
+        d = pybamm.Symbol("d", domain=["negative electrode"])
 
         # Test print_name
         pybamm.Floor.print_name = "test"
@@ -774,6 +775,12 @@ class TestUnaryOperators(unittest.TestCase):
         )
         self.assertEqual(
             pybamm.BoundaryValue(c, "left").to_equation(), sympy.symbols("c^{left}")
+        )
+
+        # Test Integral
+        x = pybamm.SpatialVariable("x", ["negative electrode"])
+        self.assertEqual(
+            pybamm.Integral(d, x).to_equation(), sympy.Integral("d", sympy.symbols("x"))
         )
 
 
