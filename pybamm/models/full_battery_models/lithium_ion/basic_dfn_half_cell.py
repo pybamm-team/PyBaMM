@@ -354,6 +354,7 @@ class BasicDFNHalfCell(BaseModel):
             * param.L_s
             * param.A_cc,
             "Current [A]": I,
+            "Current density [A.m-2]": i_cell,
             "Working electrode potential": phi_s_w,
             "Working electrode potential [V]": phi_s_w_ref + pot * phi_s_w,
             "Working electrode open circuit potential": U_w(c_s_surf_w, T),
@@ -367,6 +368,11 @@ class BasicDFNHalfCell(BaseModel):
             + pot * vdrop_cell,
             "Terminal voltage": voltage,
             "Terminal voltage [V]": phi_s_w_ref + param.U_n_ref + pot * voltage,
+            "Specific power [W.m-2]": i_cell * i_typ * (phi_s_w_ref + param.U_n_ref + pot * voltage),
+            "Pore-wall flux [mol.m-2.s-1]": j_w,
+            "Flux [mol.m-2.s-1]": N_e,
+            "Ratio of electrolyte diffusion to discharge time": param.C_e,
+            "Ratio of solid diffusion to discharge time": param.C_p,
         }
 
     @property
