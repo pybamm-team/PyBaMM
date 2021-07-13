@@ -339,9 +339,6 @@ class BaseInterface(pybamm.BaseSubModel):
         j = pybamm.concatenation(j_n, j_s, j_p)
         j_dim = pybamm.concatenation(j_n_scale * j_n, j_s, j_p_scale * j_p)
 
-        # Override print_name
-        j.print_name = "J"
-
         variables.update(
             {
                 self.Reaction_icd: j,
@@ -355,6 +352,10 @@ class BaseInterface(pybamm.BaseSubModel):
         a = pybamm.concatenation(
             a_n, pybamm.FullBroadcast(0, "separator", "current collector"), a_p
         )
+
+        # Override print_name
+        j.print_name = "J"
+        a.print_name = "A"
 
         s_n, s_p = self._get_electrolyte_reaction_signed_stoichiometry()
         s = pybamm.concatenation(
