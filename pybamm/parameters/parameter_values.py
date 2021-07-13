@@ -1,6 +1,7 @@
 #
 # Dimensional and dimensionless parameter values, and scales
 #
+import numpy as np
 import pybamm
 import pandas as pd
 import os
@@ -268,6 +269,9 @@ class ParameterValues:
         path : string, optional
             Path from which to load functions
         """
+        # check if values is not a dictionary
+        if not isinstance(values, dict):
+            values = values._dict_items
         # check parameter values
         self.check_parameter_values(values)
         # update
@@ -568,6 +572,8 @@ class ParameterValues:
                             geometry[domain][spatial_variable][
                                 lim
                             ] = self.process_symbol(sym)
+                        elif isinstance(sym, numbers.Number):
+                            geometry[domain][spatial_variable][lim] = pybamm.Scalar(sym)
 
     def process_symbol(self, symbol):
         """Walk through the symbol and replace any Parameter with a Value.
@@ -584,7 +590,6 @@ class ParameterValues:
             Symbol with Parameter instances replaced by Value
 
         """
-
         try:
             return self._processed_symbols[symbol.id]
         except KeyError:
@@ -599,6 +604,9 @@ class ParameterValues:
         if isinstance(symbol, pybamm.Parameter):
             value = self[symbol.name]
             if isinstance(value, numbers.Number):
+                # Check not NaN (parameter in csv file but no value given)
+                if np.isnan(value):
+                    raise ValueError(f"Parameter '{symbol.name}' not found")
                 # Scalar inherits name (for updating parameters) and domain (for
                 # Broadcast)
                 return pybamm.Scalar(value, name=symbol.name, domain=symbol.domain)
@@ -649,6 +657,11 @@ class ParameterValues:
                     )
                 )
             elif isinstance(function_name, numbers.Number):
+                # Check not NaN (parameter in csv file but no value given)
+                if np.isnan(function_name):
+                    raise ValueError(
+                        f"Parameter '{symbol.name}' (possibly a function) not found"
+                    )
                 # If the "function" is provided is actually a scalar, return a Scalar
                 # object instead of throwing an error.
                 # Also use ones_like so that we get the right shapes
@@ -800,7 +813,7 @@ class ParameterValues:
 
         df = pd.DataFrame(parameter_output)
         df = df.transpose()
-        df.to_csv(filename, header=None)
+        df.to_csv(filename, header=["Value"], index_label="Name [units]")
 
     def print_parameters(self, parameters, output_file=None):
         """

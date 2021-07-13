@@ -350,7 +350,7 @@ class AlternativeEffectiveResistance2D(pybamm.BaseModel):
             f_p: pybamm.laplacian(f_p)
             - pybamm.source(1, f_p)
             + c * pybamm.DefiniteIntegralVector(f_p, vector_type="column"),
-            c: pybamm.yz_average(f_p) + pybamm.NotConstant(0) * c,
+            c: pybamm.yz_average(f_p),
         }
 
         # Boundary conditons

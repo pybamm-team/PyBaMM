@@ -1,13 +1,13 @@
 #
-# Class for no cracking
+# Class for swelling only (no cracking)
 #
 import pybamm
 from .base_cracking import BaseCracking
 
 
-class NoCracking(BaseCracking):
+class SwellingOnly(BaseCracking):
     """
-    Class for no cracking.
+    Class for swelling only (no cracking)
 
     Parameters
     ----------

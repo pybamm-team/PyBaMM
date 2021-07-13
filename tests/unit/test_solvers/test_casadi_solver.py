@@ -479,7 +479,7 @@ class TestCasadiSolver(unittest.TestCase):
 
     def test_interpolant_extrapolate(self):
         model = pybamm.lithium_ion.DFN()
-        param = pybamm.ParameterValues(chemistry=pybamm.parameter_sets.Chen2020)
+        param = pybamm.ParameterValues(chemistry=pybamm.parameter_sets.NCA_Kim2011)
         experiment = pybamm.Experiment(
             ["Charge at 1C until 4.6 V"], period="10 seconds"
         )

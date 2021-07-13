@@ -163,10 +163,7 @@ ext_modules = [idaklu_ext] if compile_KLU() else []
 
 jax_dependencies = []
 if system() != "Windows":
-    jax_dependencies = [
-        "jax==0.2.12",
-        "jaxlib==0.1.65",
-    ]
+    jax_dependencies = ["jax==0.2.12", "jaxlib==0.1.65"]
 
 
 # Load text for description and license
@@ -202,6 +199,7 @@ setup(
         *jax_dependencies,
         "jupyter",  # For example notebooks
         "pybtex",
+        "sympy==1.8",
         # Note: Matplotlib is loaded for debug plots, but to ensure pybamm runs
         # on systems without an attached display, it should never be imported
         # outside of plot() methods.

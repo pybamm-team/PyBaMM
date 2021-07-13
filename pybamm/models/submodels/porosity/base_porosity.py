@@ -50,9 +50,17 @@ class BaseModel(pybamm.BaseSubModel):
         self, deps_n_dt, deps_s_dt, deps_p_dt, set_leading_order=False
     ):
 
-        deps_n_dt_av = pybamm.x_average(deps_n_dt)
-        deps_s_dt_av = pybamm.x_average(deps_s_dt)
-        deps_p_dt_av = pybamm.x_average(deps_p_dt)
+        if deps_n_dt.domain == ["current collector"]:
+            deps_n_dt_av = deps_n_dt
+            deps_s_dt_av = deps_s_dt
+            deps_p_dt_av = deps_p_dt
+            deps_n_dt = pybamm.PrimaryBroadcast(deps_n_dt_av, "negative electrode")
+            deps_s_dt = pybamm.PrimaryBroadcast(deps_s_dt_av, "separator")
+            deps_p_dt = pybamm.PrimaryBroadcast(deps_p_dt_av, "positive electrode")
+        else:
+            deps_n_dt_av = pybamm.x_average(deps_n_dt)
+            deps_s_dt_av = pybamm.x_average(deps_s_dt)
+            deps_p_dt_av = pybamm.x_average(deps_p_dt)
         deps_dt = pybamm.concatenation(deps_n_dt, deps_s_dt, deps_p_dt)
 
         variables = {

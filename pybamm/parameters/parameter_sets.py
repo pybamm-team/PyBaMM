@@ -76,6 +76,11 @@ Lithium-ion parameter sets
          Popov. Development of first principles capacity fade model for li-ion cells.
          Journal of the Electrochemical Society, 151(2):A196, 2004.
          doi:10.1149/1.1634273.
+    * Xu2019 :
+       - Shanshan Xu, Kuan-Hung Chen, Neil P Dasgupta, Jason B Siegel, and Anna G
+         Stefanopoulou. Evolution of dead lithium growth in lithium metal batteries:
+         experimentally validated model of the apparent capacity loss. Journal of The
+         Electrochemical Society, 166(14):A3456, 2019.
     * Yang2017 :
        - Madeleine Ecker, Thi Kim Dung Tran, Philipp Dechent, Stefan Käbitz, Alexander
          Warnecke, and Dirk Uwe Sauer. Parameterization of a Physico-Chemical Model of a
@@ -175,6 +180,7 @@ Mohtat2020 = {
     "electrolyte": "LiPF6_Mohtat2020",
     "experiment": "1C_charge_from_empty_Mohtat2020",
     "sei": "example",
+    "lithium plating": "yang2017_Li_plating",
     "citation": "Mohtat2020",
 }
 
@@ -211,6 +217,17 @@ Ai2020 = {
     "experiment": "1C_discharge_from_full_Ai2020",
     "sei": "example",
     "citation": "Ai2019",
+}
+
+Xu2019 = {
+    "chemistry": "lithium_ion",
+    "cell": "li_metal_Xu2019",
+    "negative electrode": "li_metal_Xu2019",
+    "separator": "separator_Xu2019",
+    "positive electrode": "NMC532_Xu2019",
+    "electrolyte": "lipf6_Valoen2005",
+    "experiment": "1C_discharge_from_full_Xu2019",
+    "citation": "Xu2019",
 }
 
 #

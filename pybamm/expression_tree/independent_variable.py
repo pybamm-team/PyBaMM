@@ -7,7 +7,8 @@ KNOWN_COORD_SYS = ["cartesian", "spherical polar"]
 
 
 class IndependentVariable(pybamm.Symbol):
-    """A node in the expression tree representing an independent variable
+    """
+    A node in the expression tree representing an independent variable.
 
     Used for expressing functions depending on a spatial variable or time
 
@@ -25,18 +26,19 @@ class IndependentVariable(pybamm.Symbol):
         super().__init__(name, domain=domain, auxiliary_domains=auxiliary_domains)
 
     def _evaluate_for_shape(self):
-        """ See :meth:`pybamm.Symbol.evaluate_for_shape_using_domain()` """
+        """See :meth:`pybamm.Symbol.evaluate_for_shape_using_domain()`"""
         return pybamm.evaluate_for_shape_using_domain(
             self.domain, self.auxiliary_domains
         )
 
     def _jac(self, variable):
-        """ See :meth:`pybamm.Symbol._jac()`. """
+        """See :meth:`pybamm.Symbol._jac()`."""
         return pybamm.Scalar(0)
 
 
 class Time(IndependentVariable):
-    """A node in the expression tree representing time
+    """
+    A node in the expression tree representing time.
 
     *Extends:* :class:`Symbol`
     """
@@ -45,11 +47,11 @@ class Time(IndependentVariable):
         super().__init__("time")
 
     def new_copy(self):
-        """ See :meth:`pybamm.Symbol.new_copy()`. """
+        """See :meth:`pybamm.Symbol.new_copy()`."""
         return Time()
 
     def _base_evaluate(self, t=None, y=None, y_dot=None, inputs=None):
-        """ See :meth:`pybamm.Symbol._base_evaluate()`. """
+        """See :meth:`pybamm.Symbol._base_evaluate()`."""
         if t is None:
             raise ValueError("t must be provided")
         return t
@@ -63,7 +65,8 @@ class Time(IndependentVariable):
 
 
 class SpatialVariable(IndependentVariable):
-    """A node in the expression tree representing a spatial variable
+    """
+    A node in the expression tree representing a spatial variable.
 
     Parameters
     ----------
@@ -103,14 +106,15 @@ class SpatialVariable(IndependentVariable):
             )
 
     def new_copy(self):
-        """ See :meth:`pybamm.Symbol.new_copy()`. """
+        """See :meth:`pybamm.Symbol.new_copy()`."""
         return self.__class__(
             self.name, self.domain, self.auxiliary_domains, self.coord_sys
         )
 
 
 class SpatialVariableEdge(SpatialVariable):
-    """A node in the expression tree representing a spatial variable, which evaluates
+    """
+    A node in the expression tree representing a spatial variable, which evaluates
     on the edges
 
     Parameters

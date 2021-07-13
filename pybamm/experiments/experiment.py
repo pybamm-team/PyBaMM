@@ -48,6 +48,8 @@ class Experiment:
     period : string, optional
         Period (1/frequency) at which to record outputs. Default is 1 minute. Can be
         overwritten by individual operating conditions.
+    termination : list, optional
+        List of conditions under which to terminate the experiment. Default is None.
     use_simulation_setup_type : str
         Whether to use the "new" (default) or "old" simulation set-up type. "new" is
         faster at simulating individual steps but has higher set-up overhead
@@ -61,6 +63,7 @@ class Experiment:
         operating_conditions,
         parameters=None,
         period="1 minute",
+        termination=None,
         use_simulation_setup_type="new",
         drive_cycles={},
     ):
@@ -105,6 +108,7 @@ class Experiment:
         else:
             raise TypeError("experimental parameters should be a dictionary")
 
+        self.termination = self.read_termination(termination)
         self.use_simulation_setup_type = use_simulation_setup_type
 
     def __str__(self):
@@ -181,8 +185,9 @@ class Experiment:
                 # e.g. for 3 hours
                 idx = cond_list.index("for")
                 end_time = self.convert_time_to_seconds(cond_list[idx + 1 :])
-                ext_drive_cycle = self.extend_drive_cycle(drive_cycles[cond_list[1]],
-                                                          end_time)
+                ext_drive_cycle = self.extend_drive_cycle(
+                    drive_cycles[cond_list[1]], end_time
+                )
                 # Drive cycle as numpy array
                 dc_data = ext_drive_cycle
                 # Find the type of drive cycle ("A", "V", or "W")
@@ -244,8 +249,9 @@ class Experiment:
         while loop_end_time <= end_time:
             # Extend the drive cycle until the drive cycle time
             # becomes greater than specified end time
-            temp_time.append(np.append(temp_time[i - 1],
-                                       temp_time[0] + temp_time[i - 1][-1] + 1))
+            temp_time.append(
+                np.append(temp_time[i - 1], temp_time[0] + temp_time[i - 1][-1] + 1)
+            )
             loop_end_time = temp_time[i][-1]
             i += 1
         time = temp_time[-1]
@@ -363,3 +369,38 @@ class Experiment:
                 )
             )
         return time_in_seconds
+
+    def read_termination(self, termination):
+        """
+        Read the termination reason. If this condition is hit, the experiment will stop.
+        """
+        if termination is None:
+            return {}
+        elif isinstance(termination, str):
+            termination = [termination]
+
+        termination_dict = {}
+        for term in termination:
+            term_list = term.split()
+            if term_list[-1] == "capacity":
+                end_discharge = "".join(term_list[:-1])
+                if end_discharge.endswith("%"):
+                    end_discharge_percent = end_discharge.split("%")[0]
+                    termination_dict["capacity"] = (float(end_discharge_percent), "%")
+                elif end_discharge.endswith("Ah"):
+                    end_discharge_Ah = end_discharge.split("Ah")[0]
+                    termination_dict["capacity"] = (float(end_discharge_Ah), "Ah")
+                elif end_discharge.endswith("A.h"):
+                    end_discharge_Ah = end_discharge.split("A.h")[0]
+                    termination_dict["capacity"] = (float(end_discharge_Ah), "Ah")
+                else:
+                    raise ValueError(
+                        "Capacity termination must be given in the form "
+                        "'80%', '4Ah', or '4A.h'"
+                    )
+            else:
+                raise ValueError(
+                    "Only capacity can be provided as a termination reason, "
+                    "e.g. '80% capacity' or '4 Ah capacity'"
+                )
+        return termination_dict
