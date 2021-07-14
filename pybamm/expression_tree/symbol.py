@@ -6,10 +6,12 @@ import numbers
 
 import anytree
 import numpy as np
+import sympy
 from anytree.exporter import DotExporter
 from scipy.sparse import csr_matrix, issparse
 
 import pybamm
+from pybamm.expression_tree.printing.print_name import prettify_print_name
 
 
 def domain_size(domain):
@@ -221,6 +223,7 @@ class Symbol(anytree.NodeMixin):
         self.domain = domain
 
         self._saved_evaluates_on_edges = {}
+        self._print_name = None
 
         # Test shape on everything but nodes that contain the base Symbol class or
         # the base BinaryOperator class
@@ -957,5 +960,16 @@ class Symbol(anytree.NodeMixin):
         except ValueError as e:
             raise pybamm.ShapeError("Cannot find shape (original error: {})".format(e))
 
+    @property
+    def print_name(self):
+        return self._print_name
+
+    @print_name.setter
+    def print_name(self, name):
+        if name is None:
+            self._print_name = name
+        else:
+            self._print_name = prettify_print_name(name)
+
     def to_equation(self):
-        return self.name
+        return sympy.symbols(str(self.name))

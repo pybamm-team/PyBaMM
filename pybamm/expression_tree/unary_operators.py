@@ -99,7 +99,7 @@ class UnaryOperator(pybamm.Symbol):
 
     def to_equation(self):
         """Convert the node and its subtree into a SymPy equation."""
-        if getattr(self, "print_name", None):
+        if self.print_name is not None:
             return sympy.symbols(self.print_name)
         else:
             eq1 = self.child.to_equation()
@@ -952,6 +952,20 @@ class BoundaryValue(BoundaryOperator):
         """See :meth:`UnaryOperator._unary_new_copy()`."""
         return boundary_value(child, self.side)
 
+    def _sympy_operator(self, child):
+        """Override :meth:`pybamm.UnaryOperator._sympy_operator`"""
+        if (
+            self.child.domain[0] in ["negative particle", "positive particle"]
+            and self.side == "right"
+        ):
+            return sympy.Symbol(
+                str(child) + r"^{surf}"
+            )  # value on the surface of the particle
+        elif self.side == "positive tab":
+            return child
+        else:
+            return sympy.Symbol(str(child) + r"^{" + self.side + r"}")
+
 
 class BoundaryGradient(BoundaryOperator):
     """
@@ -1102,8 +1116,15 @@ def div(symbol):
     # Divergence commutes with Negate operator
     if isinstance(symbol, pybamm.Negate):
         return -div(symbol.orphans[0])
-    else:
-        return Divergence(symbol)
+    elif isinstance(symbol, (pybamm.Multiplication, pybamm.Division)):
+        left, right = symbol.orphans
+        if isinstance(left, pybamm.Negate):
+            return -div(symbol._binary_new_copy(left.orphans[0], right))
+        # elif isinstance(right, pybamm.Negate):
+        #     return -div(symbol._binary_new_copy(left, right.orphans[0]))
+
+    # Last resort
+    return Divergence(symbol)
 
 
 def laplacian(symbol):
