@@ -501,6 +501,7 @@ class TestBinaryOperators(unittest.TestCase):
         self.assertEqual((c * -1).id, (-c).id)
         self.assertEqual((-1 * c).id, (-c).id)
         # multiplication with a negation
+        self.assertEqual((-c * -f).id, (c * f).id)
         self.assertEqual((-c * 4).id, (c * -4).id)
         self.assertEqual((4 * -c).id, (-4 * c).id)
         # multiplication with broadcasts
@@ -532,6 +533,7 @@ class TestBinaryOperators(unittest.TestCase):
         self.assertEqual((c / c).id, pybamm.Scalar(1).id)
         self.assertEqual((broad2 / broad2).id, broad1.id)
         # division with a negation
+        self.assertEqual((-c / -f).id, (c / f).id)
         self.assertEqual((-c / 4).id, (c / -4).id)
         self.assertEqual((4 / -c).id, (-4 / c).id)
         # division with broadcasts

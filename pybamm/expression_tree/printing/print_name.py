@@ -41,6 +41,10 @@ GREEK_LETTERS = [
 def prettify_print_name(name):
     """Prettify print_name using regex"""
 
+    # Skip prettify_print_name() for cases like `new_copy()`
+    if "{" in name:
+        return name
+
     # Return print_name if name exists in the dictionary
     if name in PRINT_NAME_OVERRIDES:
         return PRINT_NAME_OVERRIDES[name]
