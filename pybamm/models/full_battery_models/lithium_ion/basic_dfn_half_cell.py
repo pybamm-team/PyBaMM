@@ -354,7 +354,7 @@ class BasicDFNHalfCell(BaseModel):
             * param.L_s
             * param.A_cc,
             "Current [A]": I,
-            "Current density [A.m-2]": i_cell,
+            "Current density [A.m-2]": i_cell * i_typ,
             "Working electrode potential": phi_s_w,
             "Working electrode potential [V]": phi_s_w_ref + pot * phi_s_w,
             "Working electrode open circuit potential": U_w(c_s_surf_w, T),
