@@ -132,10 +132,6 @@ class TestFunction(unittest.TestCase):
     def test_to_equation(self):
         a = pybamm.Symbol("a", domain="test")
 
-        # Test _sympy_operator
-        with self.assertRaises(NotImplementedError):
-            pybamm.Arctan(a).to_equation()
-
         # Test print_name
         func = pybamm.Arcsinh(a)
         func.print_name = "test"

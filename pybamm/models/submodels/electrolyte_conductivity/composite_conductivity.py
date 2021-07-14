@@ -154,6 +154,6 @@ class Composite(BaseElectrolyteConductivity):
         variables.update(self._get_split_overpotential(eta_c_av, delta_phi_e_av))
 
         # Override print_name
-        i_e.print_name = "I_e"
+        i_e.print_name = "i_e"
 
         return variables

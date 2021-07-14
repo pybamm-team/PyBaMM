@@ -355,7 +355,7 @@ class BaseInterface(pybamm.BaseSubModel):
 
         # Override print_name
         j.print_name = "J"
-        a.print_name = "A"
+        a.print_name = "a"
 
         s_n, s_p = self._get_electrolyte_reaction_signed_stoichiometry()
         s = pybamm.concatenation(
