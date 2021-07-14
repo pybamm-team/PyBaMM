@@ -368,7 +368,9 @@ class BasicDFNHalfCell(BaseModel):
             + pot * vdrop_cell,
             "Terminal voltage": voltage,
             "Terminal voltage [V]": phi_s_w_ref + param.U_n_ref + pot * voltage,
-            "Instantaneous power [W.m-2]": i_cell * i_typ * (phi_s_w_ref + param.U_n_ref + pot * voltage),
+            "Instantaneous power [W.m-2]": i_cell * i_typ * (phi_s_w_ref +
+                                                             param.U_n_ref +
+                                                             pot * voltage),
             "Pore-wall flux [mol.m-2.s-1]": j_w,
         }
 
