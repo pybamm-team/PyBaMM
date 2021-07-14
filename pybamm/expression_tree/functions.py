@@ -281,7 +281,7 @@ class SpecificFunction(Function):
         return pybamm.simplify_if_constant(self.__class__(*children))
 
     def _sympy_operator(self, child):
-        """Override :meth:`pybamm.Function._sympy_operator`"""
+        """Apply appropriate SymPy operators."""
         class_name = self.__class__.__name__.lower()
         sympy_function = getattr(sympy, class_name)
         return sympy_function(child)

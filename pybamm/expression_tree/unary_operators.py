@@ -620,7 +620,7 @@ class Integral(SpatialOperator):
 
     def _sympy_operator(self, child):
         """Override :meth:`pybamm.UnaryOperator._sympy_operator`"""
-        return sympy.Integral(child, self.integration_variable)
+        return sympy.Integral(child, sympy.symbols("xn"))
 
 
 class BaseIndefiniteIntegral(Integral):
