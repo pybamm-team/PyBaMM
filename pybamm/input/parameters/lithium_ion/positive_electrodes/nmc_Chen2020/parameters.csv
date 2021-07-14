@@ -5,7 +5,7 @@ Name [units],Value,Reference,Notes
 Positive electrode conductivity [S.m-1],0.18,Chen 2020,
 Maximum concentration in positive electrode [mol.m-3],63104,Chen 2020,tuned for 1C
 Positive electrode diffusivity [m2.s-1],4E-15,Chen 2020,tuned for 1C
-Positive electrode OCP [V],[data]nmc_LGM50_ocp_Chen2020,Chen 2020,
+Positive electrode OCP [V],[function]nmc_LGM50_ocp_Chen2020,Chen 2020,
 ,,,
 # Microstructure,,,
 Positive electrode porosity,0.335,Chen 2020,
@@ -17,7 +17,6 @@ Positive electrode Bruggeman coefficient (electrode),1.5,default,
 # Interfacial reactions,,,
 Positive electrode cation signed stoichiometry,-1,,
 Positive electrode electrons in reaction,1,,
-Reference OCP vs SHE in the positive electrode [V],,,
 Positive electrode charge transfer coefficient,0.5,Chen 2020,
 Positive electrode double-layer capacity [F.m-2],0.2,,
 Positive electrode exchange-current density [A.m-2],[function]nmc_LGM50_electrolyte_exchange_current_density_Chen2020,,

@@ -19,7 +19,6 @@ Positive electrode tortuosity,0.16,
 Positive electrode cation signed stoichiometry,-1,,no info from Peyman MPM
 Positive electrode electrons in reaction,1,,no info from Peyman MPM
 Positive electrode reference exchange-current density [A.m-2(m3.mol)1.5],4.824E-06,Peyman MPM,converted unit
-Reference OCP vs SHE in the positive electrode [V],,,
 Positive electrode charge transfer coefficient,0.5,Peyman MPM,
 Positive electrode double-layer capacity [F.m-2],0.2,,no info from Peyman MPM
 Positive electrode exchange-current density [A.m-2],[function]NMC_electrolyte_exchange_current_density_PeymanMPM,,
