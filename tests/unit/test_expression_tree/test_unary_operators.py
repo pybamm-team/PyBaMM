@@ -779,9 +779,10 @@ class TestUnaryOperators(unittest.TestCase):
         )
 
         # Test Integral
-        x = pybamm.SpatialVariable("x", ["negative electrode"])
+        xn = pybamm.SpatialVariable("xn", ["negative electrode"])
         self.assertEqual(
-            pybamm.Integral(d, x).to_equation(), sympy.Integral("d", sympy.symbols("x"))
+            pybamm.Integral(d, xn).to_equation(),
+            sympy.Integral("d", sympy.symbols("xn")),
         )
 
 
