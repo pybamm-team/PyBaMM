@@ -746,7 +746,7 @@ def get_cycle_summary_variables(cycle_solution, esoh_sim):
                 },
                 solver=solver,
             )
-        except pybamm.SolverError:
+        except pybamm.SolverError:  # pragma: no cover
             raise pybamm.SolverError(
                 "Could not solve for summary variables, run "
                 "`sim.solve(calc_esoh=False)` to skip this step"
