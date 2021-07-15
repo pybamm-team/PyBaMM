@@ -117,13 +117,13 @@ class Concatenation(pybamm.Symbol):
 
     def _sympy_operator(self, *children):
         """Apply appropriate SymPy operators."""
-        concat_str = r"\\".join(map(sympy.latex, children))
-        concat_sym = sympy.Symbol(r"\begin{cases}" + concat_str + r"\end{cases}")
+        self.concat_latex = tuple(map(sympy.latex, children))
 
         if self.print_name is not None:
-            self.concat_eqn = sympy.Eq(sympy.symbols(self.print_name), concat_sym)
             return sympy.symbols(self.print_name)
         else:
+            concat_str = r"\\".join(self.concat_latex)
+            concat_sym = sympy.Symbol(r"\begin{cases}" + concat_str + r"\end{cases}")
             return concat_sym
 
     def to_equation(self):

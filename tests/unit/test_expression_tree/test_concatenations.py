@@ -373,9 +373,6 @@ class TestConcatenations(unittest.TestCase):
         # Test concat_sym
         self.assertEqual(pybamm.Concatenation(a, b).to_equation(), func_symbol)
 
-        # Test concat_eqn
-        self.assertEqual(func.concat_eqn, sympy.Eq(sympy.symbols("test"), func_symbol))
-
 
 if __name__ == "__main__":
     print("Add -v for more debug output")
