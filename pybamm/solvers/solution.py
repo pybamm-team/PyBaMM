@@ -733,17 +733,24 @@ def get_cycle_summary_variables(cycle_solution, esoh_sim):
             esoh_sim.built_model.set_initial_conditions_from(
                 {"x_100": x_100_init, "C": C_init}
             )
-        esoh_sol = esoh_sim.solve(
-            [0],
-            inputs={
-                "V_min": V_min,
-                "V_max": V_max,
-                "C_n": C_n,
-                "C_p": C_p,
-                "n_Li": n_Li,
-            },
-            solver=solver,
-        )
+
+        try:
+            esoh_sol = esoh_sim.solve(
+                [0],
+                inputs={
+                    "V_min": V_min,
+                    "V_max": V_max,
+                    "C_n": C_n,
+                    "C_p": C_p,
+                    "n_Li": n_Li,
+                },
+                solver=solver,
+            )
+        except pybamm.SolverError:  # pragma: no cover
+            raise pybamm.SolverError(
+                "Could not solve for summary variables, run "
+                "`sim.solve(calc_esoh=False)` to skip this step"
+            )
         for var in esoh_sim.built_model.variables:
             cycle_summary_variables[var] = esoh_sol[var].data[0]
 

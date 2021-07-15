@@ -398,6 +398,7 @@ class BasicDFNHalfCell(BaseModel):
             * param.L_x
             * param.A_cc,
             "Current [A]": I,
+            "Current density [A.m-2]": i_cell * i_typ,
             "Positive electrode potential": phi_s_w,
             "Positive electrode potential [V]": U_w_ref
             - U_Li_ref
@@ -416,6 +417,8 @@ class BasicDFNHalfCell(BaseModel):
             "Negative electrode potential drop [V]": pot_scale * delta_phis_Li,
             "Terminal voltage": voltage,
             "Terminal voltage [V]": voltage_dim,
+            "Instantaneous power [W.m-2]": i_cell * i_typ * voltage_dim,
+            "Pore-wall flux [mol.m-2.s-1]": j_w,
         }
 
     def new_copy(self, build=False):

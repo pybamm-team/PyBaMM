@@ -145,7 +145,7 @@ class BaseElectrolyteDiffusion(pybamm.BaseSubModel):
         L_x = self.param.L_x
         A = self.param.A_cc
 
-        eps_c_e_av = pybamm.x_average(eps_c_e)
+        eps_c_e_av = pybamm.yz_average(pybamm.x_average(eps_c_e))
 
         variables = {
             "Total lithium in electrolyte": eps_c_e_av,
