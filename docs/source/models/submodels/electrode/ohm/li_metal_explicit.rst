@@ -1,5 +1,5 @@
 Explicit potential drop for lithium metal
 =========================================
 
-.. autoclass:: pybamm.electrode.ohm.LiMetalExplicit
+.. autoclass:: pybamm.electrode.ohm.LithiumMetalExplicit
     :members:

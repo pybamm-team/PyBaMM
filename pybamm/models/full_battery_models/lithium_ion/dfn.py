@@ -97,7 +97,7 @@ class DFN(BaseModel):
             )  # assuming symmetric reaction for now so we can take the inverse
             self.submodels[
                 "counter electrode interface current"
-            ] = pybamm.interface.CurrentForInverseButlerVolmerLiMetal(
+            ] = pybamm.interface.CurrentForInverseButlerVolmerLithiumMetal(
                 self.param, "Negative", "lithium metal plating", self.options
             )
 
@@ -144,7 +144,7 @@ class DFN(BaseModel):
         if self.half_cell:
             self.submodels[
                 "counter electrode potential"
-            ] = pybamm.electrode.ohm.LiMetalExplicit(
+            ] = pybamm.electrode.ohm.LithiumMetalExplicit(
                 self.param, "Negative", self.options
             )
 

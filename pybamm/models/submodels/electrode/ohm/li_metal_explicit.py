@@ -5,7 +5,7 @@ import pybamm
 from .base_ohm import BaseModel
 
 
-class LiMetalExplicit(BaseModel):
+class LithiumMetalExplicit(BaseModel):
     """Explicit model for potential drop across a lithium metal electrode.
 
     Parameters
@@ -24,14 +24,15 @@ class LiMetalExplicit(BaseModel):
         super().__init__(param, domain, options=options)
         if self.domain == "Positive":
             raise NotImplementedError(
-                "LiMetalExplicit model only implemented in negative electrode"
+                "LithiumMetalExplicit model only implemented in negative electrode"
             )
 
     def get_coupled_variables(self, variables):
         param = self.param
 
         i_boundary_cc = variables["Current collector current density"]
-        delta_phi_s = i_boundary_cc * param.l_n / param.sigma_n
+        l_n = variables["Lithium metal electrode thickness"]
+        delta_phi_s = i_boundary_cc * l_n / param.sigma_n
         delta_phi_s_dim = param.potential_scale * delta_phi_s
 
         variables.update(

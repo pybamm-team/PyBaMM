@@ -162,7 +162,7 @@ class CurrentForInverseButlerVolmer(BaseInterface):
         return variables
 
 
-class CurrentForInverseButlerVolmerLiMetal(BaseInterface):
+class CurrentForInverseButlerVolmerLithiumMetal(BaseInterface):
     """
     Submodel for the current associated with the inverse Butler-Volmer formulation in
     a lithium metal cell. This is simply equal to the current collector current density.
