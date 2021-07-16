@@ -286,7 +286,7 @@ class CasadiSolver(pybamm.BaseSolver):
                         solution.all_ys[0],
                         solution.all_ts[0],
                         solution.all_inputs[0],
-                    )
+                )
 
             return solution
 
