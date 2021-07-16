@@ -19,6 +19,47 @@ class TestIDAKLUSolver(unittest.TestCase):
         solution = pybamm.IDAKLUSolver().solve(model, t_eval)
         np.testing.assert_array_less(1, solution.t.size)
 
+    def test_on_spme_sensitivities(self):
+        param_name = "Negative electrode conductivity [S.m-1]"
+        neg_electrode_cond = 100.0
+        model = pybamm.lithium_ion.SPMe()
+        geometry = model.default_geometry
+        param = model.default_parameter_values
+        param.update({param_name: "[input]"})
+        inputs = {param_name: neg_electrode_cond}
+        param.process_model(model)
+        param.process_geometry(geometry)
+        mesh = pybamm.Mesh(geometry, model.default_submesh_types, model.default_var_pts)
+        disc = pybamm.Discretisation(mesh, model.default_spatial_methods)
+        disc.process_model(model)
+        t_eval = np.linspace(0, 3600, 100)
+        solver = pybamm.IDAKLUSolver()
+        solution = solver.solve(
+            model, t_eval,
+            inputs=inputs,
+            calculate_sensitivities=True,
+        )
+        np.testing.assert_array_less(1, solution.t.size)
+
+        # evaluate the sensitivities using idas
+        dyda_ida = solution.sensitivities[param_name]
+
+        # evaluate the sensitivities using finite difference
+        h = 1e-6
+        sol_plus = solver.solve(
+            model, t_eval,
+            inputs={param_name: neg_electrode_cond + 0.5 * h}
+        )
+        sol_neg = solver.solve(
+            model, t_eval,
+            inputs={param_name: neg_electrode_cond - 0.5 * h}
+        )
+        dyda_fd = (sol_plus.y - sol_neg.y) / h
+
+        np.testing.assert_array_almost_equal(
+            dyda_ida, dyda_fd
+        )
+
     def test_set_tol_by_variable(self):
         model = pybamm.lithium_ion.SPMe()
         geometry = model.default_geometry
@@ -68,6 +109,7 @@ class TestIDAKLUSolver(unittest.TestCase):
 if __name__ == "__main__":
     print("Add -v for more debug output")
 
+    pybamm.set_logging_level('INFO')
     if "-v" in sys.argv:
         debug = True
     pybamm.settings.debug_mode = True

@@ -51,7 +51,6 @@ class TestIDAKLUSolver(unittest.TestCase):
         # example provided in sundials
         # see sundials ida examples pdf
         for form in ["python", "casadi", "jax"]:
-            print('FORM', form)
             model = pybamm.BaseModel()
             model.convert_to_format = form
             u = pybamm.Variable("u")
@@ -68,11 +67,20 @@ class TestIDAKLUSolver(unittest.TestCase):
 
             t_eval = np.linspace(0, 3, 100)
             a_value = 0.1
-            print('starting solve.....')
-            sol = solver.solve(
-                model, t_eval, inputs={"a": a_value},
-                calculate_sensitivities=True
-            )
+
+            if form == 'python':
+                with self.assertRaisesRegex(
+                        NotImplementedError, "sensitivities"):
+                    sol = solver.solve(
+                        model, t_eval, inputs={"a": a_value},
+                        calculate_sensitivities=True
+                    )
+                continue
+            else:
+                sol = solver.solve(
+                    model, t_eval, inputs={"a": a_value},
+                    calculate_sensitivities=True
+                )
 
             # test that y[1] remains constant
             np.testing.assert_array_almost_equal(
@@ -95,59 +103,6 @@ class TestIDAKLUSolver(unittest.TestCase):
             np.testing.assert_array_almost_equal(
                 dyda_ida, dyda_fd
             )
-
-    def test_ida_roberts_klu_sensitivities_explicit(self):
-        # this test implements a python version of the ida Roberts
-        # example provided in sundials
-        # see sundials ida examples pdf
-        model = pybamm.BaseModel()
-        model.convert_to_format = "casadi"
-        u = pybamm.Variable("u")
-        v = pybamm.Variable("v")
-        a = pybamm.InputParameter("a")
-        b = pybamm.InputParameter("b")
-        model.rhs = {u: a * b * v}
-        model.algebraic = {v: 1 - v}
-        model.initial_conditions = {u: 0, v: 1}
-
-        disc = pybamm.Discretisation()
-        disc.process_model(model)
-
-        solver = pybamm.IDAKLUSolver(
-            sensitivity='explicit forward'
-        )
-
-        t_eval = np.linspace(0, 3, 100)
-        a_value = 0.1
-        print('starting solve.....')
-        sol = solver.solve(
-            model, t_eval, inputs={"a": a_value, "b": 1},
-            calculate_sensitivities=True
-        )
-
-        # test that y[1] remains constant
-        np.testing.assert_array_almost_equal(
-            sol.y[1, :], np.ones(sol.t.shape)
-        )
-
-        # test that y[0] = to true solution
-        true_solution = a_value * sol.t
-        np.testing.assert_array_almost_equal(sol.y[0, :], true_solution)
-
-        # evaluate the sensitivities
-        dyda_ida = sol.sensitivities["a"]
-
-        # evaluate the sensitivities using finite difference
-        h = 1e-6
-        sol_plus = solver.solve(model, t_eval, inputs={"a": a_value + 0.5 * h})
-        sol_neg = solver.solve(model, t_eval, inputs={"a": a_value - 0.5 * h})
-        dyda_fd = (sol_plus.y - sol_neg.y) / h
-
-        np.testing.assert_array_almost_equal(
-            dyda_ida, dyda_fd
-        )
-
-
 
     def test_set_atol(self):
         model = pybamm.lithium_ion.DFN()

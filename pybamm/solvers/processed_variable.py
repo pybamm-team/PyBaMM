@@ -46,7 +46,7 @@ class ProcessedVariable(object):
         self.auxiliary_domains = base_variables[0].auxiliary_domains
         self.warn = warn
 
-        self.symbolic_inputs = solution._symbolic_inputs
+        self.symbolic_inputs = solution.has_symbolic_inputs
 
         self.u_sol = solution.y
         self.y_sym = solution._y_sym

@@ -62,13 +62,6 @@ class CasadiSolver(pybamm.BaseSolver):
         Any options to pass to the CasADi integrator when calling the integrator.
         Please consult `CasADi documentation <https://tinyurl.com/y5rk76os>`_ for
         details.
-    sensitivity : str, optional
-        Whether (and how) to calculate sensitivities when solving. Options are:
-
-        - None: no sensitivities
-        - "explicit forward": explicitly formulate the sensitivity equations. \
-        See :class:`pybamm.BaseSolver`
-        - "casadi": use casadi to differentiate through the integrator
     """
 
     def __init__(
@@ -83,7 +76,6 @@ class CasadiSolver(pybamm.BaseSolver):
         extrap_tol=0,
         extra_options_setup=None,
         extra_options_call=None,
-        sensitivity=None,
     ):
         super().__init__(
             "problem dependent",
@@ -92,7 +84,6 @@ class CasadiSolver(pybamm.BaseSolver):
             root_method,
             root_tol,
             extrap_tol,
-            sensitivity=sensitivity,
         )
         if mode in ["safe", "fast", "fast with events", "safe without grid"]:
             self.mode = mode
@@ -138,6 +129,9 @@ class CasadiSolver(pybamm.BaseSolver):
 
         # Record whether there are any symbolic inputs
         inputs_dict = inputs_dict or {}
+        has_symbolic_inputs = any(
+            isinstance(v, casadi.MX) for v in inputs_dict.values()
+        )
 
         # convert inputs to casadi format
         inputs = casadi.vertcat(*[x for x in inputs_dict.values()])
@@ -176,7 +170,7 @@ class CasadiSolver(pybamm.BaseSolver):
             else:
                 # Create integrator without grid, which will be called repeatedly
                 # This is necessary for casadi to compute sensitivities
-                self.create_integrator(model, inputs_dict)
+                self.create_integrator(model, inputs)
                 solution = self._run_integrator(
                     model, model.y0, inputs_dict, inputs, t_eval
                 )
@@ -216,7 +210,7 @@ class CasadiSolver(pybamm.BaseSolver):
                 # in "safe without grid" mode,
                 # create integrator once, without grid,
                 # to avoid having to create several times
-                self.create_integrator(model, inputs_dict)
+                self.create_integrator(model, inputs)
                 # Initialize solution
                 solution = pybamm.Solution(
                     np.array([t]), y0, model, inputs_dict,
@@ -258,7 +252,7 @@ class CasadiSolver(pybamm.BaseSolver):
 
                     if self.mode == "safe":
                         # update integrator with the grid
-                        self.create_integrator(model, inputs_dict, t_window)
+                        self.create_integrator(model, inputs, t_window)
                     # Try to solve with the current global step, if it fails then
                     # halve the step size and try again.
                     try:

@@ -62,6 +62,11 @@ class IDAKLUSolver(pybamm.BaseSolver):
         if idaklu_spec is None:
             raise ImportError("KLU is not installed")
 
+        if sensitivity == "explicit forward":
+            raise NotImplementedError(
+                "Cannot use explicit forward equations with IDAKLUSolver"
+            )
+
         super().__init__(
             "ida",
             rtol,
@@ -188,11 +193,8 @@ class IDAKLUSolver(pybamm.BaseSolver):
             atol = self._atol
 
         y0 = model.y0
-        print('idaklu, y0', y0)
         if isinstance(y0, casadi.DM):
             y0 = y0.full().flatten()
-
-        print('idaklu, y0', y0)
 
         rtol = self._rtol
         atol = self._check_atol_type(atol, y0.size)
