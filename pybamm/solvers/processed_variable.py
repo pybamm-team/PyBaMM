@@ -524,7 +524,9 @@ class ProcessedVariable(object):
         p_casadi_stacked = casadi.vertcat(*[p for p in p_casadi.values()])
 
         # Convert variable to casadi format for differentiating
-        var_casadi = self.base_variables[0].to_casadi(t_casadi, y_casadi, inputs=p_casadi)
+        var_casadi = self.base_variables[0].to_casadi(
+            t_casadi, y_casadi, inputs=p_casadi
+        )
         dvar_dy = casadi.jacobian(var_casadi, y_casadi)
         dvar_dp = casadi.jacobian(var_casadi, p_casadi_stacked)
 

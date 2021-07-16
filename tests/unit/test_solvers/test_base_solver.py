@@ -163,12 +163,12 @@ class TestBaseSolver(unittest.TestCase):
                 )
                 self.convert_to_format = "casadi"
                 self.bounds = (-np.inf * np.ones(4), np.inf * np.ones(4))
-<<<<<<< HEAD
                 self.len_rhs = 1
                 self.len_rhs_and_alg = 4
                 self.interpolant_extrapolation_events_eval = []
->>>>>>> develop
+
             def rhs_eval(self, t, y, inputs):
+                return y[0:1]
 
             def algebraic_eval(self, t, y, inputs):
                 return (y[1:] - vec[1:]) ** 2

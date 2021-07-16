@@ -123,7 +123,6 @@ class CasadiSolver(pybamm.BaseSolver):
             Any external variables or input parameters to pass to the model when solving
         """
 
-
         # are we solving explicit forward equations?
         explicit_sensitivities = bool(self.calculate_sensitivites)
 
@@ -611,8 +610,6 @@ class CasadiSolver(pybamm.BaseSolver):
             integrator = self.integrators[model][t_eval_shifted_rounded]
         else:
             integrator = self.integrators[model]["no grid"]
-
-        symbolic_inputs = casadi.MX.sym("inputs", inputs.shape[0])
 
         len_rhs = model.concatenated_rhs.size
 

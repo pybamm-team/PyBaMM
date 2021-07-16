@@ -150,7 +150,6 @@ class TestProcessedVariable(unittest.TestCase):
             np.linspace(0, 1, 1),
             np.zeros((var_pts[x])),
             "test",
-            model=pybamm.BaseModel(),
         )
 
         c = pybamm.StateVector(slice(0, var_pts[x]), domain=["SEI layer"])

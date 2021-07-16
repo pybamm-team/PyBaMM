@@ -209,6 +209,7 @@ from .spatial_methods.scikit_finite_element import ScikitFiniteElement
 #
 from .solvers.solution import Solution
 from .solvers.processed_variable import ProcessedVariable
+from .solvers.processed_symbolic_variable import ProcessedSymbolicVariable
 from .solvers.base_solver import BaseSolver
 from .solvers.dummy_solver import DummySolver
 from .solvers.algebraic_solver import AlgebraicSolver

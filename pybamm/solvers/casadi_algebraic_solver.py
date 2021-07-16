@@ -32,9 +32,6 @@ class CasadiAlgebraicSolver(pybamm.BaseSolver):
         self.extra_options = extra_options or {}
         pybamm.citations.register("Andersson2019")
 
-        self.rootfinders = {}
-        self.y_sols = {}
-
     @property
     def tol(self):
         return self._tol
@@ -102,6 +99,14 @@ class CasadiAlgebraicSolver(pybamm.BaseSolver):
 
         y_alg = None
 
+        # Set up
+        t_sym = casadi.MX.sym("t")
+        y_alg_sym = casadi.MX.sym("y_alg", y0_alg.shape[0])
+        y_sym = casadi.vertcat(y0_diff, y_alg_sym)
+
+        t_and_inputs_sym = casadi.vertcat(t_sym, symbolic_inputs)
+        alg = model.casadi_algebraic(t_sym, y_sym, inputs)
+
         # Check interpolant extrapolation
         if model.interpolant_extrapolation_events_eval:
             extrap_event = [
@@ -116,7 +121,9 @@ class CasadiAlgebraicSolver(pybamm.BaseSolver):
                             event.event_type
                             == pybamm.EventType.INTERPOLANT_EXTRAPOLATION
                             and (
-                                event.expression.evaluate(0, y0.full(), inputs=inputs)
+                                event.expression.evaluate(
+                                    0, y0.full(), inputs=inputs_dict
+                                )
                                 < self.extrap_tol
                             )
                         ):
@@ -129,40 +136,26 @@ class CasadiAlgebraicSolver(pybamm.BaseSolver):
                         "outside these bounds.".format(extrap_event_names)
                     )
 
-        if model in self.rootfinders:
-            roots = self.rootfinders[model]
-        else:
-            # Set up
-            t_sym = casadi.MX.sym("t")
-            y0_diff_sym = casadi.MX.sym("y0_diff", y0_diff.shape[0])
-            y_alg_sym = casadi.MX.sym("y_alg", y0_alg.shape[0])
-            y_sym = casadi.vertcat(y0_diff_sym, y_alg_sym)
+        # Set constraints vector in the casadi format
+        # Constrain the unknowns. 0 (default): no constraint on ui, 1: ui >= 0.0,
+        # -1: ui <= 0.0, 2: ui > 0.0, -2: ui < 0.0.
+        constraints = np.zeros_like(model.bounds[0], dtype=int)
+        # If the lower bound is positive then the variable must always be positive
+        constraints[model.bounds[0] >= 0] = 1
+        # If the upper bound is negative then the variable must always be negative
+        constraints[model.bounds[1] <= 0] = -1
 
-            t_y0diff_inputs_sym = casadi.vertcat(t_sym, y0_diff_sym, symbolic_inputs)
-            alg = model.casadi_algebraic(t_sym, y_sym, symbolic_inputs)
-
-            # Set constraints vector in the casadi format
-            # Constrain the unknowns. 0 (default): no constraint on ui, 1: ui >= 0.0,
-            # -1: ui <= 0.0, 2: ui > 0.0, -2: ui < 0.0.
-            constraints = np.zeros_like(model.bounds[0], dtype=int)
-            # If the lower bound is positive then the variable must always be positive
-            constraints[model.bounds[0] >= 0] = 1
-            # If the upper bound is negative then the variable must always be negative
-            constraints[model.bounds[1] <= 0] = -1
-
-            # Set up rootfinder
-            roots = casadi.rootfinder(
-                "roots",
-                "newton",
-                dict(x=y_alg_sym, p=t_y0diff_inputs_sym, g=alg),
-                {
-                    **self.extra_options,
-                    "abstol": self.tol,
-                    "constraints": list(constraints[len_rhs:]),
-                },
-            )
-
-            self.rootfinders[model] = roots
+        # Set up rootfinder
+        roots = casadi.rootfinder(
+            "roots",
+            "newton",
+            dict(x=y_alg_sym, p=t_and_inputs_sym, g=alg),
+            {
+                **self.extra_options,
+                "abstol": self.tol,
+                "constraints": list(constraints[len_rhs:]),
+            },
+        )
 
         timer = pybamm.Timer()
         integration_time = 0
@@ -182,11 +175,11 @@ class CasadiAlgebraicSolver(pybamm.BaseSolver):
                     y_alg = casadi.horzcat(y_alg, y0_alg)
             # Otherwise calculate new y_sol
             else:
-                t_y0_diff_inputs = casadi.vertcat(t, y0_diff, symbolic_inputs)
+                t_eval_inputs_sym = casadi.vertcat(t, symbolic_inputs)
                 # Solve
                 try:
                     timer.reset()
-                    y_alg_sol = roots(y0_alg, t_y0_diff_inputs)
+                    y_alg_sol = roots(y0_alg, t_eval_inputs_sym)
                     integration_time += timer.time()
                     success = True
                     message = None

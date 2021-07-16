@@ -45,6 +45,7 @@ class TestSolution(unittest.TestCase):
         y2 = np.tile(t2, (20, 1))
         sol2 = pybamm.Solution(t2, y2, pybamm.BaseModel(), {"a": 2})
         sol2.solve_time = 1
+        sol2.integration_time = 0.5
 
         sol_sum = sol1 + sol2
 

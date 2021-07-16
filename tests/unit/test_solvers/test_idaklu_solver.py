@@ -70,7 +70,7 @@ class TestIDAKLUSolver(unittest.TestCase):
 
             if form == 'python':
                 with self.assertRaisesRegex(
-                        NotImplementedError, "sensitivities"):
+                        NotImplementedError, "explicit sensitivity"):
                     sol = solver.solve(
                         model, t_eval, inputs={"a": a_value},
                         calculate_sensitivities=True

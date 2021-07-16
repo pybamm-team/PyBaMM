@@ -25,12 +25,6 @@ class ScipySolver(pybamm.BaseSolver):
         Any options to pass to the solver.
         Please consult `SciPy documentation <https://tinyurl.com/yafgqg9y>`_ for
         details.
-    sensitivity : str, optional
-        Whether (and how) to calculate sensitivities when solving. Options are:
-
-        - None: no sensitivities
-        - "explicit forward": explicitly formulate the sensitivity equations. \
-        See :class:`pybamm.BaseSolver`
     """
 
     def __init__(
@@ -40,14 +34,12 @@ class ScipySolver(pybamm.BaseSolver):
         atol=1e-6,
         extrap_tol=0,
         extra_options=None,
-        sensitivity=None,
     ):
         super().__init__(
             method=method,
             rtol=rtol,
             atol=atol,
             extrap_tol=extrap_tol,
-            sensitivity=sensitivity,
         )
         self.ode_solver = True
         self.extra_options = extra_options or {}
@@ -136,7 +128,8 @@ class ScipySolver(pybamm.BaseSolver):
                 t_event = None
                 y_event = np.array(None)
             sol = pybamm.Solution(
-                sol.t, sol.y, model, inputs_dict, t_event, y_event, termination
+                sol.t, sol.y, model, inputs_dict, t_event, y_event, termination,
+                sensitivities=bool(self.calculate_sensitivites)
             )
             sol.integration_time = integration_time
             return sol

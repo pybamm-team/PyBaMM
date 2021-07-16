@@ -11,7 +11,6 @@ import itertools
 from scipy.sparse import block_diag
 import multiprocessing as mp
 import warnings
-import numbers
 
 
 class BaseSolver(object):
@@ -228,6 +227,13 @@ class BaseSolver(object):
         if calculate_sensitivites and not isinstance(self, pybamm.IDAKLUSolver):
             calculate_sensitivites_explicit = True
 
+        if calculate_sensitivites_explicit and model.convert_to_format != 'casadi':
+            raise NotImplementedError(
+                "Sensitivities only supported for:\n"
+                "  - model.convert_to_format = 'casadi'\n"
+                "  - IDAKLUSolver (any convert_to_format)"
+            )
+
         # save sensitivity parameters so we can identify them later on
         # (FYI: this is used in the Solution class)
         model.calculate_sensitivities = calculate_sensitivites
@@ -288,8 +294,8 @@ class BaseSolver(object):
                 jacp = None
                 if calculate_sensitivites_explicit:
                     raise NotImplementedError(
-                        "sensitivities using convert_to_format = 'jax' "
-                        "only implemented for IDAKLUSolver"
+                        "explicit sensitivity equations not supported for "
+                        "convert_to_format='jax'"
                     )
                 elif calculate_sensitivites:
                     report((
@@ -310,11 +316,12 @@ class BaseSolver(object):
             elif model.convert_to_format != "casadi":
                 # Process with pybamm functions, optionally converting
                 # to python evaluator
-                if calculate_sensitivites:
+                if calculate_sensitivites_explicit:
                     raise NotImplementedError(
-                        "sensitivities only implemented with "
-                        "convert_to_format = 'casadi' or convert_to_format = 'jax'"
+                        "explicit sensitivity equations not supported for "
+                        "convert_to_format='{}'".format(model.convert_to_format)
                     )
+                elif calculate_sensitivites:
                     report((
                         f"Calculating sensitivities for {name} with respect "
                         f"to parameters {calculate_sensitivites}"
@@ -367,7 +374,9 @@ class BaseSolver(object):
                     # for details
                     if name == "RHS" and model.len_rhs > 0:
                         report(
-                            "Creating explicit forward sensitivity equations for rhs using CasADi")
+                            "Creating explicit forward sensitivity equations "
+                            "for rhs using CasADi"
+                        )
                         df_dx = casadi.jacobian(func, y_diff)
                         df_dp = casadi.jacobian(func, pS_casadi_stacked)
                         S_x_mat = S_x.reshape(
@@ -386,7 +395,8 @@ class BaseSolver(object):
                         func = casadi.vertcat(func, S_rhs)
                     if name == "algebraic" and model.len_alg > 0:
                         report(
-                            "Creating explicit forward sensitivity equations for algebraic using CasADi"
+                            "Creating explicit forward sensitivity equations "
+                            "for algebraic using CasADi"
                         )
                         dg_dz = casadi.jacobian(func, y_alg)
                         dg_dp = casadi.jacobian(func, pS_casadi_stacked)
@@ -812,6 +822,7 @@ class BaseSolver(object):
 
         """
         pybamm.logger.info("Start solving {} with {}".format(model.name, self.name))
+        self.calculate_sensitivites = calculate_sensitivities
 
         # Make sure model isn't empty
         if len(model.rhs) == 0 and len(model.algebraic) == 0:
@@ -1401,7 +1412,7 @@ class BaseSolver(object):
             name = input_param.name
             if name not in inputs:
                 # Don't allow symbolic inputs if using `sensitivity`
-                if self.sensitivity == "explicit forward":
+                if self.calculate_sensitivites:
                     raise pybamm.SolverError(
                         "Cannot have symbolic inputs if explicitly solving forward"
                         "sensitivity equations"

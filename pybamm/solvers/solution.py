@@ -86,7 +86,7 @@ class Solution(object):
             self._sensitivities = {}
             # if solution consists of explicit sensitivity equations, extract them
             if (
-                sensitivities == True
+                sensitivities is True
                 and all_models[0] is not None
                 and not isinstance(all_ys[0], casadi.Function)
                 and all_models[0].len_rhs_and_alg != all_ys[0].shape[0]
@@ -97,7 +97,7 @@ class Solution(object):
                 self._all_ys[0], self._sensitivities = \
                     self._extract_explicit_sensitivities(
                         all_models[0], all_ys[0], all_ts[0], self.all_inputs[0]
-                    )
+                )
         elif isinstance(sensitivities, dict):
             self._sensitivities = sensitivities
         else:
