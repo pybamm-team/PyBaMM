@@ -660,7 +660,7 @@ class TestCasadiSolverODEsWithForwardSensitivityEquations(unittest.TestCase):
         solver = pybamm.CasadiSolver()
         t_eval = np.linspace(0, 1)
         solution = solver.solve(model, t_eval, inputs={"param": 7},
-                                sensitivity=["param"])
+                                sensitivities=["param"])
         np.testing.assert_array_almost_equal(
             solution["var"].data, np.tile(2 * np.exp(-7 * t_eval), (n, 1)), decimal=4,
         )
