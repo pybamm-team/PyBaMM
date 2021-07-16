@@ -537,7 +537,6 @@ class TestCasadiSolver(unittest.TestCase):
             solver.solve(model, t_eval=[0, 1])
 
 
-
 class TestCasadiSolverODEsWithForwardSensitivityEquations(unittest.TestCase):
     def test_solve_sensitivity_scalar_var_scalar_input(self):
         # Create model
@@ -817,6 +816,7 @@ class TestCasadiSolverODEsWithForwardSensitivityEquations(unittest.TestCase):
             solution["integral of var"].sensitivities["param"],
             np.vstack([-2 * t * np.exp(-p_eval * t) * l_n / n for t in t_eval]),
         )
+
 
 class TestCasadiSolverDAEsWithForwardSensitivityEquations(unittest.TestCase):
     def test_solve_sensitivity_scalar_var_scalar_input(self):
@@ -1100,7 +1100,6 @@ class TestCasadiSolverDAEsWithForwardSensitivityEquations(unittest.TestCase):
             solution["integral of var"].sensitivities["param"],
             np.vstack([-2 * t * np.exp(-p_eval * t) * l_n / n for t in t_eval]),
         )
-
 
 
 if __name__ == "__main__":

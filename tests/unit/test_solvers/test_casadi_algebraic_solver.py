@@ -5,8 +5,6 @@ import casadi
 import pybamm
 import unittest
 import numpy as np
-from scipy.optimize import least_squares
-import tests
 
 
 class TestCasadiAlgebraicSolver(unittest.TestCase):
