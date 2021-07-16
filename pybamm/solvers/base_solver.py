@@ -11,6 +11,7 @@ import itertools
 from scipy.sparse import block_diag
 import multiprocessing as mp
 import warnings
+import numbers
 
 
 class BaseSolver(object):
@@ -231,8 +232,15 @@ class BaseSolver(object):
         # (FYI: this is used in the Solution class)
         model.calculate_sensitivities = calculate_sensitivites
         if calculate_sensitivites_explicit:
-            model.len_rhs_sens = model.len_rhs * len(calculate_sensitivites)
-            model.len_alg_sens = model.len_alg * len(calculate_sensitivites)
+            num_parameters = 0
+            for name in calculate_sensitivites:
+                # if not a number, assume its a vector
+                if isinstance(inputs[name], numbers.Number):
+                    num_parameters += 1
+                else:
+                    num_parameters += len(inputs[name])
+            model.len_rhs_sens = model.len_rhs * num_parameters
+            model.len_alg_sens = model.len_alg * num_parameters
 
         if model.convert_to_format != "casadi":
             # Create Jacobian from concatenated rhs and algebraic
@@ -615,7 +623,7 @@ class BaseSolver(object):
         # if we have changed the equations to include the explicit sensitivity
         # equations, then we also need to update the mass matrix
         if calculate_sensitivites_explicit:
-            n_inputs = len(calculate_sensitivites)
+            n_inputs = model.len_rhs_sens // model.len_rhs
             model.mass_matrix_inv = pybamm.Matrix(
                 block_diag(
                     [model.mass_matrix_inv.entries] * (n_inputs + 1), format="csr"

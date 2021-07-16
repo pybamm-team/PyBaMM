@@ -49,8 +49,6 @@ class ProcessedVariable(object):
 
         self.symbolic_inputs = solution.has_symbolic_inputs
 
-        self.u_sol = solution.y
-
         # Sensitivity starts off uninitialized, only set when called
         self._sensitivities = None
         self.solution_sensitivities = solution.sensitivities
@@ -518,7 +516,7 @@ class ProcessedVariable(object):
 
         # Set up symbolic variables
         t_casadi = casadi.MX.sym("t")
-        y_casadi = casadi.MX.sym("y", self.u_sol.shape[0])
+        y_casadi = casadi.MX.sym("y", self.all_ys[0].shape[0])
         p_casadi = {
             name: casadi.MX.sym(name, value.shape[0])
             for name, value in self.all_inputs[0].items()
@@ -539,10 +537,9 @@ class ProcessedVariable(object):
         )
         for idx in range(len(self.all_ts[0])):
             t = self.all_ts[0][idx]
-            u = self.u_sol[:, idx]
-            inp = inputs_stacked[:, idx]
-            next_dvar_dy_eval = dvar_dy_func(t, u, inp)
-            next_dvar_dp_eval = dvar_dp_func(t, u, inp)
+            u = self.all_ys[0][:, idx]
+            next_dvar_dy_eval = dvar_dy_func(t, u, inputs_stacked)
+            next_dvar_dp_eval = dvar_dp_func(t, u, inputs_stacked)
             if idx == 0:
                 dvar_dy_eval = next_dvar_dy_eval
                 dvar_dp_eval = next_dvar_dp_eval

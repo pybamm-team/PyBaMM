@@ -823,7 +823,6 @@ if __name__ == "__main__":
     print("Add -v for more debug output")
     import sys
 
-    pybamm.set_logging_level('DEBUG')
     if "-v" in sys.argv:
         debug = True
     pybamm.settings.debug_mode = True
