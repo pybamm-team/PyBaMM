@@ -304,6 +304,8 @@ class ParticleConcentrationTests(BaseOutputTest):
 
         t, x_n, x_p, r_n, r_p = self.t, self.x_n, self.x_p, self.r_n, self.r_p
 
+        tol = 1e-16
+
         if self.model.options["particle"] in ["quadratic profile", "quartic profile"]:
             # For the assumed polynomial concentration profiles the values
             # can increase/decrease within the particle as the polynomial shifts,
@@ -331,6 +333,7 @@ class ParticleConcentrationTests(BaseOutputTest):
                 self.c_s_p_dist(t[-1], r=r_p, R=R_p) -
                 self.c_s_p_dist(t[0], r=r_p, R=R_p)
             )
+            tol = 1e-15
         else:
             neg_diff = self.c_s_n(t[1:], x_n, r_n) - self.c_s_n(t[:-1], x_n, r_n)
             pos_diff = self.c_s_p(t[1:], x_p, r_p) - self.c_s_p(t[:-1], x_p, r_p)
@@ -338,13 +341,13 @@ class ParticleConcentrationTests(BaseOutputTest):
             pos_end_vs_start = self.c_s_p(t[-1], x_p, r_p) - self.c_s_p(t[0], x_p, r_p)
 
         if self.operating_condition == "discharge":
-            np.testing.assert_array_less(neg_diff, 1e-16)
-            np.testing.assert_array_less(-1e-16, pos_diff)
+            np.testing.assert_array_less(neg_diff, tol)
+            np.testing.assert_array_less(-tol, pos_diff)
             np.testing.assert_array_less(neg_end_vs_start, 0)
             np.testing.assert_array_less(0, pos_end_vs_start)
         elif self.operating_condition == "charge":
-            np.testing.assert_array_less(-1e-16, neg_diff)
-            np.testing.assert_array_less(pos_diff, 1e-16)
+            np.testing.assert_array_less(-tol, neg_diff)
+            np.testing.assert_array_less(pos_diff, tol)
             np.testing.assert_array_less(0, neg_end_vs_start)
             np.testing.assert_array_less(pos_end_vs_start, 0)
         elif self.operating_condition == "off":

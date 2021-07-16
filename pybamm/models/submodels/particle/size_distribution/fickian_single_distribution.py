@@ -106,18 +106,15 @@ class FickianSingleSizeDistribution(BaseSizeDistribution):
             [self.domain.lower() + " particle size"],
         )
         T_k_xav = pybamm.PrimaryBroadcast(T_k_xav, [self.domain.lower() + " particle"],)
-        R = pybamm.PrimaryBroadcast(
-            R_spatial_variable, [self.domain.lower() + " particle"],
-        )
 
         if self.domain == "Negative":
             N_s_xav_distribution = -self.param.D_n(
                 c_s_xav_distribution, T_k_xav
-            ) * pybamm.grad(c_s_xav_distribution) / R
+            ) * pybamm.grad(c_s_xav_distribution)
         elif self.domain == "Positive":
             N_s_xav_distribution = -self.param.D_p(
                 c_s_xav_distribution, T_k_xav
-            ) * pybamm.grad(c_s_xav_distribution) / R
+            ) * pybamm.grad(c_s_xav_distribution)
 
         # Standard R-averaged flux variables. Average using the area-weighted
         # distribution
@@ -166,13 +163,13 @@ class FickianSingleSizeDistribution(BaseSizeDistribution):
             self.rhs = {
                 c_s_xav_distribution: -(1 / self.param.C_n)
                 * pybamm.div(N_s_xav_distribution)
-                / R
+                / R ** 2
             }
         elif self.domain == "Positive":
             self.rhs = {
                 c_s_xav_distribution: -(1 / self.param.C_p)
                 * pybamm.div(N_s_xav_distribution)
-                / R
+                / R ** 2
             }
 
     def set_boundary_conditions(self, variables):
