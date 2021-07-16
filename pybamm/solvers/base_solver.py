@@ -35,16 +35,6 @@ class BaseSolver(object):
         The tolerance for the initial-condition solver (default is 1e-6).
     extrap_tol : float, optional
         The tolerance to assert whether extrapolation occurs or not. Default is 0.
-    sensitivity : str, optional
-        Whether (and how) to calculate sensitivities when solving. Options are:
-        - None (default): the individual solver is responsible for
-        calculating the sensitivity wrt these parameters, and providing the result in
-        the solution instance returned. At the moment this is only implemented for the
-        IDAKLU solver.\
-        - "explicit forward": explicitly formulate the sensitivity equations for
-        the chosen input parameters. . At the moment this is only
-        implemented using convert_to_format = 'casadi'. \
-        - see individual solvers for other options
     """
 
     def __init__(
@@ -231,6 +221,8 @@ class BaseSolver(object):
             else:
                 calculate_sensitivites = []
 
+        self.calculate_sensitivites = calculate_sensitivites
+
         calculate_sensitivites_explicit = False
         if calculate_sensitivites and not isinstance(self, pybamm.IDAKLUSolver):
             calculate_sensitivites_explicit = True
@@ -360,12 +352,13 @@ class BaseSolver(object):
                 # Add sensitivity vectors to the rhs and algebraic equations
                 jacp = None
                 if calculate_sensitivites_explicit:
+                    print('CASADI EXPLICIT', name, model.len_rhs)
                     # The formulation is as per Park, S., Kato, D., Gima, Z., Klein, R.,
                     # & Moura, S. (2018).  Optimal experimental design for
                     # parameterization of an electrochemical lithium-ion battery model.
                     # Journal of The Electrochemical Society, 165(7), A1309.". See #1100
                     # for details
-                    if name == "rhs" and model.len_rhs > 0:
+                    if name == "RHS" and model.len_rhs > 0:
                         report(
                             "Creating explicit forward sensitivity equations for rhs using CasADi")
                         df_dx = casadi.jacobian(func, y_diff)
@@ -621,7 +614,7 @@ class BaseSolver(object):
 
         # if we have changed the equations to include the explicit sensitivity
         # equations, then we also need to update the mass matrix
-        if self.sensitivity == "explicit forward":
+        if calculate_sensitivites_explicit:
             n_inputs = len(calculate_sensitivites)
             model.mass_matrix_inv = pybamm.Matrix(
                 block_diag(
@@ -693,27 +686,21 @@ class BaseSolver(object):
             Whether to update the rhs. True for 'solve', False for 'step'.
 
         """
-        # Make inputs symbolic if calculating sensitivities with casadi
-        if self.sensitivity == "casadi":
-            symbolic_inputs = casadi.MX.sym(
-                "inputs", casadi.vertcat(*inputs.values()).shape[0]
-            )
-        else:
-            symbolic_inputs = inputs
+
         if self.algebraic_solver is True:
             # Don't update model.y0
             return None
         elif len(model.algebraic) == 0:
             if update_rhs is True:
                 # Recalculate initial conditions for the rhs equations
-                y0 = model.init_eval(symbolic_inputs)
+                y0 = model.init_eval(inputs)
             else:
                 # Don't update model.y0
                 return None
         else:
             if update_rhs is True:
                 # Recalculate initial conditions for the rhs equations
-                y0_from_inputs = model.init_eval(symbolic_inputs)
+                y0_from_inputs = model.init_eval(inputs)
                 # Reuse old solution for algebraic equations
                 y0_from_model = model.y0
                 len_rhs = model.len_rhs
@@ -726,10 +713,7 @@ class BaseSolver(object):
                     )
             y0 = self.calculate_consistent_state(model, 0, inputs)
         # Make y0 a function of inputs if doing symbolic with casadi
-        if self.sensitivity == "casadi":
-            model.y0 = casadi.Function("y0", [symbolic_inputs], [y0])
-        else:
-            model.y0 = y0
+        model.y0 = y0
 
     def calculate_consistent_state(self, model, time=0, inputs=None):
         """

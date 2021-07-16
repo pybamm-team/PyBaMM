@@ -125,7 +125,7 @@ class CasadiSolver(pybamm.BaseSolver):
 
 
         # are we solving explicit forward equations?
-        explicit_sensitivities = self.sensitivity == 'explicit forward'
+        explicit_sensitivities = bool(self.calculate_sensitivites)
 
         # Record whether there are any symbolic inputs
         inputs_dict = inputs_dict or {}
@@ -603,7 +603,7 @@ class CasadiSolver(pybamm.BaseSolver):
         pybamm.logger.debug("Running CasADi integrator")
 
         # are we solving explicit forward equations?
-        explicit_sensitivities = self.sensitivity == 'explicit forward'
+        explicit_sensitivities = bool(self.calculate_sensitivites)
 
         if use_grid is True:
             t_eval_shifted = t_eval - t_eval[0]
@@ -613,12 +613,6 @@ class CasadiSolver(pybamm.BaseSolver):
             integrator = self.integrators[model]["no grid"]
 
         symbolic_inputs = casadi.MX.sym("inputs", inputs.shape[0])
-        # If doing sensitivity with casadi, evaluate with symbolic inputs
-        # Otherwise, evaluate with actual inputs
-        if self.sensitivity == "casadi":
-            inputs_eval = symbolic_inputs
-        else:
-            inputs_eval = inputs
 
         len_rhs = model.concatenated_rhs.size
 
@@ -656,7 +650,7 @@ class CasadiSolver(pybamm.BaseSolver):
                 for i in range(len(t_eval) - 1):
                     t_min = t_eval[i]
                     t_max = t_eval[i + 1]
-                    inputs_with_tlims = casadi.vertcat(inputs_eval, t_min, t_max)
+                    inputs_with_tlims = casadi.vertcat(inputs, t_min, t_max)
                     timer = pybamm.Timer()
                     casadi_sol = integrator(
                         x0=x, z0=z, p=inputs_with_tlims, **self.extra_options_call

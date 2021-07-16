@@ -554,18 +554,19 @@ class TestCasadiSolverODEsWithForwardSensitivityEquations(unittest.TestCase):
             mode="fast", rtol=1e-10, atol=1e-10
         )
         t_eval = np.linspace(0, 1, 80)
-        solution = solver.solve(model, t_eval, inputs={"p": 0.1}, sensitivity=True)
+        solution = solver.solve(model, t_eval, inputs={"p": 0.1},
+                                calculate_sensitivities=True)
         np.testing.assert_array_equal(solution.t, t_eval)
         np.testing.assert_allclose(solution.y[0], np.exp(0.1 * solution.t))
         np.testing.assert_allclose(
-            solution.sensitivity["p"],
+            solution.sensitivities["p"],
             (solution.t * np.exp(0.1 * solution.t))[:, np.newaxis],
         )
         np.testing.assert_allclose(
             solution["var squared"].data, np.exp(0.1 * solution.t) ** 2
         )
         np.testing.assert_allclose(
-            solution["var squared"].sensitivity["p"],
+            solution["var squared"].sensitivities["p"],
             (2 * np.exp(0.1 * solution.t) * solution.t * np.exp(0.1 * solution.t))[
                 :, np.newaxis
             ],
@@ -595,21 +596,21 @@ class TestCasadiSolverODEsWithForwardSensitivityEquations(unittest.TestCase):
         )
         np.testing.assert_allclose(solution.y[0], -1 + 0.2 * solution.t)
         np.testing.assert_allclose(
-            solution.sensitivity["p"], (2 * solution.t)[:, np.newaxis],
+            solution.sensitivities["p"], (2 * solution.t)[:, np.newaxis],
         )
         np.testing.assert_allclose(
-            solution.sensitivity["q"], (0.1 * solution.t)[:, np.newaxis],
+            solution.sensitivities["q"], (0.1 * solution.t)[:, np.newaxis],
         )
-        np.testing.assert_allclose(solution.sensitivity["r"], 1)
-        np.testing.assert_allclose(solution.sensitivity["s"], 0)
+        np.testing.assert_allclose(solution.sensitivities["r"], 1)
+        np.testing.assert_allclose(solution.sensitivities["s"], 0)
         np.testing.assert_allclose(
-            solution.sensitivity["all"],
+            solution.sensitivities["all"],
             np.hstack(
                 [
-                    solution.sensitivity["p"],
-                    solution.sensitivity["q"],
-                    solution.sensitivity["r"],
-                    solution.sensitivity["s"],
+                    solution.sensitivities["p"],
+                    solution.sensitivities["q"],
+                    solution.sensitivities["r"],
+                    solution.sensitivities["s"],
                 ]
             ),
         )
@@ -617,26 +618,26 @@ class TestCasadiSolverODEsWithForwardSensitivityEquations(unittest.TestCase):
             solution["var times s"].data, 0.5 * (-1 + 0.2 * solution.t)
         )
         np.testing.assert_allclose(
-            solution["var times s"].sensitivity["p"],
+            solution["var times s"].sensitivities["p"],
             0.5 * (2 * solution.t)[:, np.newaxis],
         )
         np.testing.assert_allclose(
-            solution["var times s"].sensitivity["q"],
+            solution["var times s"].sensitivities["q"],
             0.5 * (0.1 * solution.t)[:, np.newaxis],
         )
-        np.testing.assert_allclose(solution["var times s"].sensitivity["r"], 0.5)
+        np.testing.assert_allclose(solution["var times s"].sensitivities["r"], 0.5)
         np.testing.assert_allclose(
-            solution["var times s"].sensitivity["s"],
+            solution["var times s"].sensitivities["s"],
             (-1 + 0.2 * solution.t)[:, np.newaxis],
         )
         np.testing.assert_allclose(
-            solution["var times s"].sensitivity["all"],
+            solution["var times s"].sensitivities["all"],
             np.hstack(
                 [
-                    solution["var times s"].sensitivity["p"],
-                    solution["var times s"].sensitivity["q"],
-                    solution["var times s"].sensitivity["r"],
-                    solution["var times s"].sensitivity["s"],
+                    solution["var times s"].sensitivities["p"],
+                    solution["var times s"].sensitivities["q"],
+                    solution["var times s"].sensitivities["r"],
+                    solution["var times s"].sensitivities["s"],
                 ]
             ),
         )
@@ -660,12 +661,12 @@ class TestCasadiSolverODEsWithForwardSensitivityEquations(unittest.TestCase):
         solver = pybamm.CasadiSolver()
         t_eval = np.linspace(0, 1)
         solution = solver.solve(model, t_eval, inputs={"param": 7},
-                                sensitivities=["param"])
+                                calculate_sensitivities=["param"])
         np.testing.assert_array_almost_equal(
             solution["var"].data, np.tile(2 * np.exp(-7 * t_eval), (n, 1)), decimal=4,
         )
         np.testing.assert_array_almost_equal(
-            solution["var"].sensitivity["param"],
+            solution["var"].sensitivities["param"],
             np.repeat(-2 * t_eval * np.exp(-7 * t_eval), n)[:, np.newaxis],
             decimal=4,
         )
@@ -695,25 +696,25 @@ class TestCasadiSolverODEsWithForwardSensitivityEquations(unittest.TestCase):
         t_eval = np.linspace(0, 1, 80)
         solution = solver.solve(
             model, t_eval, inputs={"p": 0.1, "q": 2, "r": -1, "s": 0.5},
-            sensitivities=True,
+            calculate_sensitivities=True,
         )
         np.testing.assert_allclose(solution.y, np.tile(-1 + 0.2 * solution.t, (n, 1)))
         np.testing.assert_allclose(
-            solution.sensitivity["p"], np.repeat(2 * solution.t, n)[:, np.newaxis],
+            solution.sensitivities["p"], np.repeat(2 * solution.t, n)[:, np.newaxis],
         )
         np.testing.assert_allclose(
-            solution.sensitivity["q"], np.repeat(0.1 * solution.t, n)[:, np.newaxis],
+            solution.sensitivities["q"], np.repeat(0.1 * solution.t, n)[:, np.newaxis],
         )
-        np.testing.assert_allclose(solution.sensitivity["r"], 1)
-        np.testing.assert_allclose(solution.sensitivity["s"], 0)
+        np.testing.assert_allclose(solution.sensitivities["r"], 1)
+        np.testing.assert_allclose(solution.sensitivities["s"], 0)
         np.testing.assert_allclose(
-            solution.sensitivity["all"],
+            solution.sensitivities["all"],
             np.hstack(
                 [
-                    solution.sensitivity["p"],
-                    solution.sensitivity["q"],
-                    solution.sensitivity["r"],
-                    solution.sensitivity["s"],
+                    solution.sensitivities["p"],
+                    solution.sensitivities["q"],
+                    solution.sensitivities["r"],
+                    solution.sensitivities["s"],
                 ]
             ),
         )
@@ -721,26 +722,26 @@ class TestCasadiSolverODEsWithForwardSensitivityEquations(unittest.TestCase):
             solution["var times s"].data, np.tile(0.5 * (-1 + 0.2 * solution.t), (n, 1))
         )
         np.testing.assert_allclose(
-            solution["var times s"].sensitivity["p"],
+            solution["var times s"].sensitivities["p"],
             np.repeat(0.5 * (2 * solution.t), n)[:, np.newaxis],
         )
         np.testing.assert_allclose(
-            solution["var times s"].sensitivity["q"],
+            solution["var times s"].sensitivities["q"],
             np.repeat(0.5 * (0.1 * solution.t), n)[:, np.newaxis],
         )
-        np.testing.assert_allclose(solution["var times s"].sensitivity["r"], 0.5)
+        np.testing.assert_allclose(solution["var times s"].sensitivities["r"], 0.5)
         np.testing.assert_allclose(
-            solution["var times s"].sensitivity["s"],
+            solution["var times s"].sensitivities["s"],
             np.repeat(-1 + 0.2 * solution.t, n)[:, np.newaxis],
         )
         np.testing.assert_allclose(
-            solution["var times s"].sensitivity["all"],
+            solution["var times s"].sensitivities["all"],
             np.hstack(
                 [
-                    solution["var times s"].sensitivity["p"],
-                    solution["var times s"].sensitivity["q"],
-                    solution["var times s"].sensitivity["r"],
-                    solution["var times s"].sensitivity["s"],
+                    solution["var times s"].sensitivities["p"],
+                    solution["var times s"].sensitivities["q"],
+                    solution["var times s"].sensitivities["r"],
+                    solution["var times s"].sensitivities["s"],
                 ]
             ),
         )
@@ -772,34 +773,34 @@ class TestCasadiSolverODEsWithForwardSensitivityEquations(unittest.TestCase):
         )
         t_eval = np.linspace(0, 1)
         solution = solver.solve(model, t_eval, inputs={"param": 7 * np.ones(n)},
-                                sensitivities=True)
+                                calculate_sensitivities=True)
         l_n = mesh["negative electrode"].edges[-1]
         np.testing.assert_array_almost_equal(
             solution["var"].data, np.tile(2 * np.exp(-7 * t_eval), (n, 1)), decimal=4,
         )
 
         np.testing.assert_array_almost_equal(
-            solution["var"].sensitivity["param"],
+            solution["var"].sensitivities["param"],
             np.vstack([np.eye(n) * -2 * t * np.exp(-7 * t) for t in t_eval]),
         )
         np.testing.assert_array_almost_equal(
             solution["integral of var"].data, 2 * np.exp(-7 * t_eval) * l_n, decimal=4,
         )
         np.testing.assert_array_almost_equal(
-            solution["integral of var"].sensitivity["param"],
+            solution["integral of var"].sensitivities["param"],
             np.tile(-2 * t_eval * np.exp(-7 * t_eval) * l_n / n, (n, 1)).T,
         )
 
         # Solve - linspace input
         p_eval = np.linspace(1, 2, n)
         solution = solver.solve(model, t_eval, inputs={"param": p_eval},
-                                sensitivities=True)
+                                calculate_sensitivities=True)
         l_n = mesh["negative electrode"].edges[-1]
         np.testing.assert_array_almost_equal(
             solution["var"].data, 2 * np.exp(-p_eval[:, np.newaxis] * t_eval), decimal=4
         )
         np.testing.assert_array_almost_equal(
-            solution["var"].sensitivity["param"],
+            solution["var"].sensitivities["param"],
             np.vstack([np.diag(-2 * t * np.exp(-p_eval * t)) for t in t_eval]),
         )
 
@@ -813,7 +814,7 @@ class TestCasadiSolverODEsWithForwardSensitivityEquations(unittest.TestCase):
             ),
         )
         np.testing.assert_array_almost_equal(
-            solution["integral of var"].sensitivity["param"],
+            solution["integral of var"].sensitivities["param"],
             np.vstack([-2 * t * np.exp(-p_eval * t) * l_n / n for t in t_eval]),
         )
 
@@ -822,6 +823,7 @@ if __name__ == "__main__":
     print("Add -v for more debug output")
     import sys
 
+    pybamm.set_logging_level('DEBUG')
     if "-v" in sys.argv:
         debug = True
     pybamm.settings.debug_mode = True
