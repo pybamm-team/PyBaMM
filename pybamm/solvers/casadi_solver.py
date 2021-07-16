@@ -159,24 +159,8 @@ class CasadiSolver(pybamm.BaseSolver):
             solution = self._run_integrator(
                 model, model.y0, inputs_dict, inputs, t_eval, use_grid=False,
             )
-        if self.sensitivity == "casadi" and inputs_dict != {}:
-            # If the solution has already been created, we can reuse it
-            if model in self.y_sols:
-                y_sol = self.y_sols[model]
-                solution = pybamm.Solution(
-                    t_eval, y_sol, model=model, inputs=inputs_dict,
-                    sensitivities=explicit_sensitivities
-                )
-            else:
-                # Create integrator without grid, which will be called repeatedly
-                # This is necessary for casadi to compute sensitivities
-                self.create_integrator(model, inputs)
-                solution = self._run_integrator(
-                    model, model.y0, inputs_dict, inputs, t_eval
-                )
-            solution.termination = "final time"
-            return solution
-        elif self.mode in ["fast", "fast with events"] or not model.events:
+
+        if self.mode in ["fast", "fast with events"] or not model.events:
             if not model.events:
                 pybamm.logger.info("No events found, running fast mode")
             if self.mode == "fast with events":
