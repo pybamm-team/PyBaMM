@@ -190,6 +190,12 @@ class TestUnaryOperators(unittest.TestCase):
         div = pybamm.div(-pybamm.Gradient(a))
         self.assertEqual(div.id, (-pybamm.Divergence(pybamm.Gradient(a))).id)
 
+        div = pybamm.div(-a * pybamm.Gradient(a))
+        self.assertEqual(div.id, (-pybamm.Divergence(a * pybamm.Gradient(a))).id)
+
+        # div = pybamm.div(a * -pybamm.Gradient(a))
+        # self.assertEqual(div.id, (-pybamm.Divergence(a * pybamm.Gradient(a))).id)
+
     def test_integral(self):
         # space integral
         a = pybamm.Symbol("a", domain=["negative electrode"])
