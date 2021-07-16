@@ -197,7 +197,7 @@ class CasadiSolver(pybamm.BaseSolver):
                 # Initialize solution
                 solution = pybamm.Solution(
                     np.array([t]), y0, model, inputs_dict,
-                    sensitivities=explicit_sensitivities
+                    sensitivities=False,
                 )
                 solution.solve_time = 0
                 solution.integration_time = 0
@@ -240,7 +240,8 @@ class CasadiSolver(pybamm.BaseSolver):
                     # halve the step size and try again.
                     try:
                         current_step_sol = self._run_integrator(
-                            model, y0, inputs_dict, inputs, t_window, use_grid=use_grid
+                            model, y0, inputs_dict, inputs, t_window, use_grid=use_grid,
+                            extract_sensitivities_in_solution=False,
                         )
                         solved = True
                     except pybamm.SolverError:
@@ -273,6 +274,20 @@ class CasadiSolver(pybamm.BaseSolver):
                     t = t_window[-1]
                     # update y0
                     y0 = solution.all_ys[-1][:, -1]
+
+            # now we extract sensitivities from the solution
+            if (explicit_sensitivities):
+                # save original ys[0] and replace with separated soln
+                # TODO: This is a dodgy hack, perhaps re-init the solution object?
+                solution._all_ys_and_sens = [solution._all_ys[0][:]]
+                solution._all_ys[0], solution._sensitivities = \
+                    solution._extract_explicit_sensitivities(
+                        solution.all_models[0],
+                        solution.all_ys[0],
+                        solution.all_ts[0],
+                        solution.all_inputs[0],
+                    )
+
             return solution
 
     def _solve_for_event(self, coarse_solution, init_event_signs):
@@ -598,11 +613,19 @@ class CasadiSolver(pybamm.BaseSolver):
 
             return integrator
 
-    def _run_integrator(self, model, y0, inputs_dict, inputs, t_eval, use_grid=True):
+    def _run_integrator(self, model, y0, inputs_dict,
+                        inputs, t_eval, use_grid=True,
+                        extract_sensitivities_in_solution=None,
+                        ):
         pybamm.logger.debug("Running CasADi integrator")
 
         # are we solving explicit forward equations?
         explicit_sensitivities = bool(self.calculate_sensitivites)
+
+        # by default we extract sensitivities in the solution if we
+        # are calculating the sensitivities
+        if extract_sensitivities_in_solution is None:
+            extract_sensitivities_in_solution = explicit_sensitivities
 
         if use_grid is True:
             t_eval_shifted = t_eval - t_eval[0]
@@ -614,8 +637,9 @@ class CasadiSolver(pybamm.BaseSolver):
         len_rhs = model.concatenated_rhs.size
 
         # Check y0 to see if it includes sensitivities
-        if model.len_rhs_and_alg != y0.shape[0]:
-            len_rhs = len_rhs * (inputs.shape[0] + 1)
+        if explicit_sensitivities:
+            num_parameters = model.len_rhs_sens // model.len_rhs
+            len_rhs = len_rhs * (num_parameters + 1)
 
         y0_diff = y0[:len_rhs]
         y0_alg = y0[len_rhs:]
@@ -634,7 +658,7 @@ class CasadiSolver(pybamm.BaseSolver):
                 y_sol = casadi.vertcat(casadi_sol["xf"], casadi_sol["zf"])
                 sol = pybamm.Solution(
                     t_eval, y_sol, model, inputs_dict,
-                    sensitivities=explicit_sensitivities
+                    sensitivities=extract_sensitivities_in_solution
                 )
                 sol.integration_time = integration_time
                 return sol
@@ -665,7 +689,7 @@ class CasadiSolver(pybamm.BaseSolver):
 
             sol = pybamm.Solution(
                 t_eval, y_sol, model, inputs_dict,
-                sensitivities=explicit_sensitivities
+                sensitivities=extract_sensitivities_in_solution
             )
             sol.integration_time = integration_time
             return sol

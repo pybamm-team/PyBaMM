@@ -414,11 +414,6 @@ class BaseSolver(object):
                                 (-1, 1)
                             )
                         func = casadi.vertcat(func, S_alg)
-                    if name == "residuals":
-                        raise NotImplementedError(
-                            "explicit forward equations not implimented for residuals"
-                        )
-
                     if name == "initial_conditions":
                         if model.len_rhs == 0 or model.len_alg == 0:
                             S_0 = casadi.jacobian(func, pS_casadi_stacked).reshape(

@@ -145,6 +145,7 @@ class Solution(object):
         # Solution now uses CasADi
         pybamm.citations.register("Andersson2019")
 
+
     def _extract_explicit_sensitivities(self, model, y, t_eval, inputs):
         """
         given a model and a solution y, extracts the sensitivities
