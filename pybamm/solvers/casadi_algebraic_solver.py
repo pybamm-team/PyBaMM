@@ -61,6 +61,9 @@ class CasadiAlgebraicSolver(pybamm.BaseSolver):
         """
         # Record whether there are any symbolic inputs
         inputs_dict = inputs_dict or {}
+        has_symbolic_inputs = any(
+            isinstance(v, casadi.MX) for v in inputs_dict.values()
+        )
         symbolic_inputs = casadi.vertcat(
             *[v for v in inputs_dict.values() if isinstance(v, casadi.MX)]
         )
@@ -70,22 +73,29 @@ class CasadiAlgebraicSolver(pybamm.BaseSolver):
 
         y0 = model.y0
 
+        # If y0 already satisfies the tolerance for all t then keep it
+        if has_symbolic_inputs is False and all(
+            np.all(abs(model.casadi_algebraic(t, y0, inputs).full()) < self.tol)
+            for t in t_eval
+        ):
+            pybamm.logger.debug("Keeping same solution at all times")
+            return pybamm.Solution(
+                t_eval, y0, model, inputs_dict, termination="success"
+            )
+
         # The casadi algebraic solver can read rhs equations, but leaves them unchanged
         # i.e. the part of the solution vector that corresponds to the differential
         # equations will be equal to the initial condition provided. This allows this
         # solver to be used for initialising the DAE solvers
         if model.rhs == {}:
-            print('no rhs')
             len_rhs = 0
             y0_diff = casadi.DM()
             y0_alg = y0
         else:
             # Check y0 to see if it includes sensitivities
             if model.len_rhs_and_alg == y0.shape[0]:
-                print('doesnt include sens')
                 len_rhs = model.len_rhs
             else:
-                print('includes sens', inputs.shape[0])
                 len_rhs = model.len_rhs * (inputs.shape[0] + 1)
             y0_diff = y0[:len_rhs]
             y0_alg = y0[len_rhs:]
@@ -159,7 +169,8 @@ class CasadiAlgebraicSolver(pybamm.BaseSolver):
         for idx, t in enumerate(t_eval):
             # Evaluate algebraic with new t and previous y0, if it's already close
             # enough then keep it
-            if np.all(
+            # We can't do this if there are symbolic inputs
+            if has_symbolic_inputs is False and np.all(
                 abs(model.casadi_algebraic(t, y0, inputs).full()) < self.tol
             ):
                 pybamm.logger.debug(
@@ -171,7 +182,7 @@ class CasadiAlgebraicSolver(pybamm.BaseSolver):
                     y_alg = casadi.horzcat(y_alg, y0_alg)
             # Otherwise calculate new y_sol
             else:
-                t_y0_diff_inputs = casadi.vertcat(t, y0_diff, inputs)
+                t_y0_diff_inputs = casadi.vertcat(t, y0_diff, symbolic_inputs)
                 # Solve
                 try:
                     timer.reset()
@@ -187,9 +198,11 @@ class CasadiAlgebraicSolver(pybamm.BaseSolver):
                     message = err.args[0]
                     fun = None
 
-                # check the function is below the tol
+                # If there are no symbolic inputs, check the function is below the tol
+                # Skip this check if there are symbolic inputs
                 if success and (
-                    not any(np.isnan(fun)) and np.all(casadi.fabs(fun) < self.tol)
+                    has_symbolic_inputs is True
+                    or (not any(np.isnan(fun)) and np.all(casadi.fabs(fun) < self.tol))
                 ):
                     # update initial guess for the next iteration
                     y0_alg = y_alg_sol

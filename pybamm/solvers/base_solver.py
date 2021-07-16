@@ -360,7 +360,6 @@ class BaseSolver(object):
                 # Add sensitivity vectors to the rhs and algebraic equations
                 jacp = None
                 if calculate_sensitivites_explicit:
-                    print('CASADI EXPLICIT', name, model.len_rhs)
                     # The formulation is as per Park, S., Kato, D., Gima, Z., Klein, R.,
                     # & Moura, S. (2018).  Optimal experimental design for
                     # parameterization of an electrochemical lithium-ion battery model.

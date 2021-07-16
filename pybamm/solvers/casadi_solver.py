@@ -442,7 +442,7 @@ class CasadiSolver(pybamm.BaseSolver):
             np.array([t_event]),
             y_event[:, np.newaxis],
             "event",
-            sensitivities=explicit_sensitivities
+            sensitivities=bool(self.calculate_sensitivites)
         )
         solution.integration_time = (
             coarse_solution.integration_time + dense_step_sol.integration_time
@@ -665,11 +665,6 @@ class CasadiSolver(pybamm.BaseSolver):
                     y_sol = y_diff
                 else:
                     y_sol = casadi.vertcat(y_diff, y_alg)
-            # If doing sensitivity, return the solution as a function of the inputs
-            if self.sensitivity == "casadi":
-                y_sol = casadi.Function("y_sol", [symbolic_inputs], [y_sol])
-                # Save the solution, can just reuse and change the inputs
-                self.y_sols[model] = y_sol
 
             sol = pybamm.Solution(
                 t_eval, y_sol, model, inputs_dict,
