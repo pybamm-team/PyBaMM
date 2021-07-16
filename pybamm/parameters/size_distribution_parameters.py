@@ -11,8 +11,8 @@ def get_size_distribution_parameters(
     param,
     R_n_av=None,
     R_p_av=None,
-    sd_n=None,
-    sd_p=None,
+    sd_n=0.3,
+    sd_p=0.3,
     R_min_n=None,
     R_min_p=None,
     R_max_n=None,
@@ -63,10 +63,6 @@ def get_size_distribution_parameters(
     # Set the mean particle radii for each electrode
     R_n_av = R_n_av or R_n_typ
     R_p_av = R_p_av or R_p_typ
-
-    # Standard deviations (scaled by the mean radius)
-    sd_n = sd_n or 0.3
-    sd_p = sd_p or 0.3
 
     # Minimum radii
     R_min_n = R_min_n or np.max([0, 1 - sd_n * 5])
