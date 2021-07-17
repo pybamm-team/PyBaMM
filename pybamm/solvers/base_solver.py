@@ -689,8 +689,9 @@ class BaseSolver(object):
                     model.concatenated_rhs, model.concatenated_algebraic
                 )
                 # Process again, uses caching so should be quick
-                residuals_eval, jacobian_eval, jacobian_wrtp_eval = process(all_states, "residuals")[
-                    1:]
+                residuals_eval, jacobian_eval, jacobian_wrtp_eval = process(
+                    all_states, "residuals"
+                )[1:]
                 model.residuals_eval = residuals_eval
                 model.jacobian_eval = jacobian_eval
                 model.sensitivities_eval = jacobian_wrtp_eval
