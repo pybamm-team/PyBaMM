@@ -24,7 +24,6 @@ def nca_diffusivity_Kim2011(sto, T):
     :class:`pybamm.Symbol`
         Solid diffusivity
     """
-
     D_ref = 3 * 10 ** (-15)
     E_D_s = 2e4
     arrhenius = exp(E_D_s / constants.R * (1 / 298.15 - 1 / T))

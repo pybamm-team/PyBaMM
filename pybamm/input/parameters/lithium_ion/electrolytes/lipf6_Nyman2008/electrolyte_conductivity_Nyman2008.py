@@ -2,11 +2,13 @@ def electrolyte_conductivity_Nyman2008(c_e, T):
     """
     Conductivity of LiPF6 in EC:EMC (3:7) as a function of ion concentration. The data
     comes from [1].
+
     References
     ----------
     .. [1] A. Nyman, M. Behm, and G. Lindbergh, "Electrochemical characterisation and
     modelling of the mass transport phenomena in LiPF6-EC-EMC electrolyte,"
     Electrochim. Acta, vol. 53, no. 22, pp. 6356–6365, 2008.
+
     Parameters
     ----------
     c_e: :class:`pybamm.Symbol`

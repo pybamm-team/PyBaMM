@@ -183,23 +183,46 @@ class TestSimulation(unittest.TestCase):
         dt = 0.001
         model = pybamm.lithium_ion.SPM()
         sim = pybamm.Simulation(model)
+
         sim.step(dt)  # 1 step stores first two points
         tau = sim.model.timescale.evaluate()
         self.assertEqual(sim.solution.t.size, 2)
         self.assertEqual(sim.solution.y.full()[0, :].size, 2)
         self.assertEqual(sim.solution.t[0], 0)
         self.assertEqual(sim.solution.t[1], dt / tau)
+        saved_sol = sim.solution
+
         sim.step(dt)  # automatically append the next step
         self.assertEqual(sim.solution.t.size, 3)
         self.assertEqual(sim.solution.y.full()[0, :].size, 3)
         self.assertEqual(sim.solution.t[0], 0)
         self.assertEqual(sim.solution.t[1], dt / tau)
         self.assertEqual(sim.solution.t[2], 2 * dt / tau)
+
         sim.step(dt, save=False)  # now only store the two end step points
         self.assertEqual(sim.solution.t.size, 2)
         self.assertEqual(sim.solution.y.full()[0, :].size, 2)
         self.assertEqual(sim.solution.t[0], 2 * dt / tau)
         self.assertEqual(sim.solution.t[1], 3 * dt / tau)
+
+        # Start from saved solution
+        sim.step(
+            dt, starting_solution=saved_sol
+        )  # now only store the two end step points
+        self.assertEqual(sim.solution.t.size, 3)
+        self.assertEqual(sim.solution.y.full()[0, :].size, 3)
+        self.assertEqual(sim.solution.t[0], 0)
+        self.assertEqual(sim.solution.t[1], dt / tau)
+        self.assertEqual(sim.solution.t[2], 2 * dt / tau)
+
+    def test_solve_with_initial_soc(self):
+        model = pybamm.lithium_ion.SPM()
+        param = model.default_parameter_values
+        sim = pybamm.Simulation(model, parameter_values=param)
+        sim.solve(t_eval=[0, 600], initial_soc=1)
+        self.assertEqual(sim._built_initial_soc, 1)
+        sim.solve(t_eval=[0, 600], initial_soc=0.5)
+        self.assertEqual(sim._built_initial_soc, 0.5)
 
     def test_solve_with_inputs(self):
         model = pybamm.lithium_ion.SPM()

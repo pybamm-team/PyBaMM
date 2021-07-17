@@ -92,7 +92,9 @@ class TestInterpolant(unittest.TestCase):
         a = pybamm.Symbol("a")
         x = np.linspace(0, 1, 200)
         interp = pybamm.Interpolant(x, x, a, "name")
-        self.assertEqual(interp.name, "interpolating function (name)")
+        self.assertEqual(interp.name, "name")
+        interp = pybamm.Interpolant(x, x, a)
+        self.assertEqual(interp.name, "interpolating_function")
 
     def test_diff(self):
         x = np.linspace(0, 1, 200)

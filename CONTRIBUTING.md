@@ -126,7 +126,7 @@ We use [black](https://black.readthedocs.io/en/stable/) to automatically configu
 black {source_file_or_directory}
 ```
 
-2. Editor: black can be [configured](https://black.readthedocs.io/en/stable/editor_integration.html) to automatically reformat a python script each time the script is saved in an editor.
+2. Editor: black can be [configured](https://test-black.readthedocs.io/en/latest/editor_integration.html) to automatically reformat a python script each time the script is saved in an editor.
 
 If you want to use black in your editor, you may need to change the max line length in your editor settings.
 

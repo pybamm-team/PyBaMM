@@ -15,7 +15,7 @@ class CasadiSolver(pybamm.BaseSolver):
     Parameters
     ----------
     mode : str
-            How to solve the model (default is "safe"):
+        How to solve the model (default is "safe"):
 
             - "fast": perform direct integration, without accounting for events. \
             Recommended when simulating a drive cycle or other simulation where \

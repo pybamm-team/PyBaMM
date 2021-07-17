@@ -26,7 +26,7 @@ class TestLeadingOrder(unittest.TestCase):
             "lithium plating": "irreversible",
             "lithium plating porosity change": "true",
         }
-        submodel = pybamm.porosity.LeadingOrder(param, options)
+        submodel = pybamm.porosity.ReactionDriven(param, options, True)
         std_tests = tests.StandardSubModelTests(submodel, variables)
         std_tests.test_all()
 

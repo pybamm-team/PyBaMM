@@ -30,6 +30,12 @@ class NoPlating(BasePlating):
         return variables
 
     def get_coupled_variables(self, variables):
+        zero = pybamm.FullBroadcast(
+            pybamm.Scalar(0), self.domain.lower() + " electrode", "current collector"
+        )
+        variables.update(self._get_standard_overpotential_variables(zero))
+        variables.update(self._get_standard_reaction_variables(zero))
+
         # Update whole cell variables, which also updates the "sum of" variables
         if (
             "Negative electrode lithium plating interfacial current density"

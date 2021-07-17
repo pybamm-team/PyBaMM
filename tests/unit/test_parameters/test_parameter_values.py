@@ -72,6 +72,13 @@ class TestParameterValues(unittest.TestCase):
             pybamm.ParameterValues(chemistry={"chemistry": "lithium_ion"})
 
     def test_update(self):
+        # converts to dict if not
+        param = pybamm.ParameterValues(chemistry=pybamm.parameter_sets.Chen2020)
+        param_from_csv = pybamm.ParameterValues(
+            "lithium_ion/negative_electrodes/graphite_Chen2020/parameters.csv"
+        )
+        param.update(param_from_csv)
+        # equate values
         param = pybamm.ParameterValues({"a": 1})
         self.assertEqual(param["a"], 1)
         # no conflict
@@ -258,6 +265,14 @@ class TestParameterValues(unittest.TestCase):
         # not found
         with self.assertRaises(KeyError):
             x = pybamm.Parameter("x")
+            parameter_values.process_symbol(x)
+
+        parameter_values = pybamm.ParameterValues({"x": np.nan})
+        with self.assertRaisesRegex(ValueError, "Parameter 'x' not found"):
+            x = pybamm.Parameter("x")
+            parameter_values.process_symbol(x)
+        with self.assertRaisesRegex(ValueError, "possibly a function"):
+            x = pybamm.FunctionParameter("x", {})
             parameter_values.process_symbol(x)
 
     def test_process_parameter_in_parameter(self):
