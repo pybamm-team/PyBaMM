@@ -582,7 +582,9 @@ class EvaluatorJax:
         args = "t=None, y=None, y_dot=None, inputs=None, known_evals=None"
         if self._arg_list:
             args = ",".join(self._arg_list) + ", " + args
-        python_str = "def evaluate_jax({}):\n".format(args) + python_str
+        python_str = (
+            "def evaluate_jax({}):\n".format(args) + python_str
+        )
 
         # calculate the final variable that will output the result of calling `evaluate`
         # on `symbol`

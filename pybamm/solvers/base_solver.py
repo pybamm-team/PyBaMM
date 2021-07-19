@@ -497,12 +497,6 @@ class BaseSolver(object):
         else:
             init_eval.y_dummy = np.zeros((model.len_rhs_and_alg, 1))
 
-        # Process rhs, algebraic and event expressions
-        rhs, rhs_eval, jac_rhs, jacp_rhs = process(model.concatenated_rhs, "RHS")
-        algebraic, algebraic_eval, jac_algebraic, jacp_algebraic = process(
-            model.concatenated_algebraic, "algebraic"
-        )
-
         # Calculate initial conditions
         model.y0 = init_eval(inputs)
         model.init_eval = init_eval
@@ -579,8 +573,8 @@ class BaseSolver(object):
                                 )
 
             # Process rhs, algebraic and event expressions
-            rhs, rhs_eval, jac_rhs = process(model.concatenated_rhs, "RHS")
-            algebraic, algebraic_eval, jac_algebraic = process(
+            rhs, rhs_eval, jac_rhs, jacp_rhs = process(model.concatenated_rhs, "RHS")
+            algebraic, algebraic_eval, jac_algebraic, jacp_algebraic = process(
                 model.concatenated_algebraic, "algebraic"
             )
             casadi_terminate_events = []
@@ -897,7 +891,7 @@ class BaseSolver(object):
             # is passed to `set_up`.
             # See https://github.com/pybamm-team/PyBaMM/pull/1261
             self.set_up(model, ext_and_inputs_list[0], t_eval,
-                        calculate_sensitivities)
+                        calculate_sensitivites=calculate_sensitivities)
             self.models_set_up.update(
                 {model: {"initial conditions": model.concatenated_initial_conditions}}
             )
@@ -907,7 +901,8 @@ class BaseSolver(object):
             if ics_set_up.id != model.concatenated_initial_conditions.id:
                 # If the new initial conditions are different, set up again
                 self.set_up(model, ext_and_inputs_list[0], t_eval,
-                            calculate_sensitivities, ics_only=True)
+                            calculate_sensitivites=calculate_sensitivities,
+                            ics_only=True)
                 self.models_set_up[model][
                     "initial conditions"
                 ] = model.concatenated_initial_conditions

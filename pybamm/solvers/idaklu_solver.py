@@ -250,7 +250,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
             return return_root
 
         # get ids of rhs and algebraic variables
-        rhs_ids = np.ones(model.rhs_eval(0, y0, inputs).shape)
+        rhs_ids = np.ones(model.rhs_eval(0, y0, inputs).shape[0])
         alg_ids = np.zeros(len(y0) - len(rhs_ids))
         ids = np.concatenate((rhs_ids, alg_ids))
 
