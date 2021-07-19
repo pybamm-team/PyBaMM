@@ -547,7 +547,7 @@ class BaseSolver(object):
         external_variables=None,
         inputs=None,
         initial_conditions=None,
-        nproc=None,
+        nproc=1,
     ):
         """
         Execute the solver setup and calculate the solution of the model at

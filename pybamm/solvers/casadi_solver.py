@@ -261,22 +261,26 @@ class CasadiSolver(pybamm.BaseSolver):
                                 t * model.timescale_eval, dt_max * model.timescale_eval
                             )
                         )
-                # Check if the sign of an event changes, if so find an accurate
-                # termination point and exit
-                current_step_sol = self._solve_for_event(
-                    current_step_sol, init_event_signs
-                )
-                # assign temporary solve time
-                current_step_sol.solve_time = np.nan
-                # append solution from the current step to solution
-                solution = solution + current_step_sol
-                if current_step_sol.termination == "event":
-                    break
+                if current_step_sol is not list:
+                    # Check if the sign of an event changes, if so find an accurate
+                    # termination point and exit
+                    current_step_sol = self._solve_for_event(
+                        current_step_sol, init_event_signs
+                    )
+                    # assign temporary solve time
+                    current_step_sol.solve_time = np.nan
+                    # append solution from the current step to solution
+                    solution = solution + current_step_sol
+                    if current_step_sol.termination == "event":
+                        break
+                    else:
+                        # update time
+                        t = t_window[-1]
+                        # update y0
+                        y0 = solution.all_ys[-1][:, -1]
                 else:
-                    # update time
-                    t = t_window[-1]
-                    # update y0
-                    y0 = solution.all_ys[-1][:, -1]
+                    for sol in current_step_sol:
+                        sol.solve_time = np.nan
             return solution
 
     def _solve_for_event(self, coarse_solution, init_event_signs):
