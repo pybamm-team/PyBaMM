@@ -826,7 +826,7 @@ class TestCasadiSolverDAEsWithForwardSensitivityEquations(unittest.TestCase):
         p = pybamm.InputParameter("p")
         var1 = pybamm.Variable("var1")
         var2 = pybamm.Variable("var2")
-        model.rhs = {var1: 0.1 * var1}
+        model.rhs = {var1: p * var1}
         model.algebraic = {var2: 2 * var1 - var2}
         model.initial_conditions = {var1: 1, var2: 2}
         model.variables = {"var2 squared": var2 ** 2}
@@ -843,86 +843,19 @@ class TestCasadiSolverDAEsWithForwardSensitivityEquations(unittest.TestCase):
         np.testing.assert_allclose(solution.y[0], np.exp(0.1 * solution.t))
         np.testing.assert_allclose(
             solution.sensitivities["p"],
-            (solution.t * np.exp(0.1 * solution.t))[:, np.newaxis],
+            np.stack((
+                solution.t * np.exp(0.1 * solution.t),
+                2 * solution.t * np.exp(0.1 * solution.t),
+            )).transpose().reshape(-1, 1),
+            atol=1e-7
         )
         np.testing.assert_allclose(
-            solution["var squared"].data, np.exp(0.1 * solution.t) ** 2
+            solution["var2 squared"].data, 4 * np.exp(2 * 0.1 * solution.t)
         )
         np.testing.assert_allclose(
-            solution["var squared"].sensitivities["p"],
-            (2 * np.exp(0.1 * solution.t) * solution.t * np.exp(0.1 * solution.t))[
-                :, np.newaxis
-            ],
-        )
-
-        # More complicated model
-        # Create model
-        model = pybamm.BaseModel()
-        var = pybamm.Variable("var")
-        p = pybamm.InputParameter("p")
-        q = pybamm.InputParameter("q")
-        r = pybamm.InputParameter("r")
-        s = pybamm.InputParameter("s")
-        model.rhs = {var: p * q}
-        model.initial_conditions = {var: r}
-        model.variables = {"var times s": var * s}
-
-        # Solve
-        # Make sure that passing in extra options works
-        solver = pybamm.CasadiSolver(
-            rtol=1e-10, atol=1e-10
-        )
-        t_eval = np.linspace(0, 1, 80)
-        solution = solver.solve(
-            model, t_eval, inputs={"p": 0.1, "q": 2, "r": -1, "s": 0.5},
-            calculate_sensitivities=True,
-        )
-        np.testing.assert_allclose(solution.y[0], -1 + 0.2 * solution.t)
-        np.testing.assert_allclose(
-            solution.sensitivities["p"], (2 * solution.t)[:, np.newaxis],
-        )
-        np.testing.assert_allclose(
-            solution.sensitivities["q"], (0.1 * solution.t)[:, np.newaxis],
-        )
-        np.testing.assert_allclose(solution.sensitivities["r"], 1)
-        np.testing.assert_allclose(solution.sensitivities["s"], 0)
-        np.testing.assert_allclose(
-            solution.sensitivities["all"],
-            np.hstack(
-                [
-                    solution.sensitivities["p"],
-                    solution.sensitivities["q"],
-                    solution.sensitivities["r"],
-                    solution.sensitivities["s"],
-                ]
-            ),
-        )
-        np.testing.assert_allclose(
-            solution["var times s"].data, 0.5 * (-1 + 0.2 * solution.t)
-        )
-        np.testing.assert_allclose(
-            solution["var times s"].sensitivities["p"],
-            0.5 * (2 * solution.t)[:, np.newaxis],
-        )
-        np.testing.assert_allclose(
-            solution["var times s"].sensitivities["q"],
-            0.5 * (0.1 * solution.t)[:, np.newaxis],
-        )
-        np.testing.assert_allclose(solution["var times s"].sensitivities["r"], 0.5)
-        np.testing.assert_allclose(
-            solution["var times s"].sensitivities["s"],
-            (-1 + 0.2 * solution.t)[:, np.newaxis],
-        )
-        np.testing.assert_allclose(
-            solution["var times s"].sensitivities["all"],
-            np.hstack(
-                [
-                    solution["var times s"].sensitivities["p"],
-                    solution["var times s"].sensitivities["q"],
-                    solution["var times s"].sensitivities["r"],
-                    solution["var times s"].sensitivities["s"],
-                ]
-            ),
+            solution["var2 squared"].sensitivities["p"],
+            (8 * solution.t * np.exp(2 * 0.1 * solution.t))[:, np.newaxis],
+            atol=1e-7
         )
 
     def test_solve_sensitivity_vector_var_scalar_input(self):

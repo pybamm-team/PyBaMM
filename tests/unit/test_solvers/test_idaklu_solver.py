@@ -51,6 +51,7 @@ class TestIDAKLUSolver(unittest.TestCase):
         # example provided in sundials
         # see sundials ida examples pdf
         for form in ["python", "casadi", "jax"]:
+            print(form)
             model = pybamm.BaseModel()
             model.convert_to_format = form
             u = pybamm.Variable("u")
@@ -68,19 +69,29 @@ class TestIDAKLUSolver(unittest.TestCase):
             t_eval = np.linspace(0, 3, 100)
             a_value = 0.1
 
-            if form == 'python':
-                with self.assertRaisesRegex(
-                        NotImplementedError, "explicit sensitivity"):
-                    sol = solver.solve(
-                        model, t_eval, inputs={"a": a_value},
-                        calculate_sensitivities=True
-                    )
-                continue
-            else:
-                sol = solver.solve(
-                    model, t_eval, inputs={"a": a_value},
-                    calculate_sensitivities=True
-                )
+            # solve first without sensitivities
+            sol = solver.solve(
+                model, t_eval, inputs={"a": a_value},
+            )
+
+            # test that y[1] remains constant
+            np.testing.assert_array_almost_equal(
+                sol.y[1, :], np.ones(sol.t.shape)
+            )
+
+            # test that y[0] = to true solution
+            true_solution = a_value * sol.t
+            np.testing.assert_array_almost_equal(sol.y[0, :], true_solution)
+
+            # should be no sensitivities calculated
+            with self.assertRaises(KeyError):
+                sol.sensitivities["a"]
+
+            # now solve with sensitivities (this should cause set_up to be run again)
+            sol = solver.solve(
+                model, t_eval, inputs={"a": a_value},
+                calculate_sensitivities=True
+            )
 
             # test that y[1] remains constant
             np.testing.assert_array_almost_equal(

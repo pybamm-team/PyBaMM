@@ -127,8 +127,7 @@ class BaseSolver(object):
         new_solver.models_set_up = {}
         return new_solver
 
-    def set_up(self, model, inputs=None, t_eval=None, ics_only=False,
-               calculate_sensitivites=False):
+    def set_up(self, model, inputs=None, t_eval=None, ics_only=False):
         """Unpack model, perform checks, and calculate jacobian.
 
         Parameters
@@ -140,11 +139,6 @@ class BaseSolver(object):
             Any input parameters to pass to the model when solving
         t_eval : numeric type, optional
             The times (in seconds) at which to compute the solution
-        calculate_sensitivites : list of str or bool
-            If true, solver calculates sensitivities of all input parameters.
-            If only a subset of sensitivities are required, can also pass a
-            list of input parameter names
-
         """
         pybamm.logger.info("Start solver set-up")
 
@@ -217,32 +211,27 @@ class BaseSolver(object):
                 if isinstance(symbol, pybamm.InputParameter)
             })
 
-        # from here on, calculate_sensitivites is now only a list
-        if isinstance(calculate_sensitivites, bool):
-            if calculate_sensitivites:
-                calculate_sensitivites = [p for p in inputs.keys()]
-            else:
-                calculate_sensitivites = []
+        # set default calculate sensitivities on model
+        if not hasattr(model, 'calculate_sensitivities'):
+            model.calculate_sensitivities = []
 
-        self.calculate_sensitivites = calculate_sensitivites
+        # see if we need to form the explicit sensitivity equations
+        calculate_sensitivities_explicit = False
+        if model.calculate_sensitivities and not isinstance(self, pybamm.IDAKLUSolver):
+            calculate_sensitivities_explicit = True
 
-        calculate_sensitivites_explicit = False
-        if calculate_sensitivites and not isinstance(self, pybamm.IDAKLUSolver):
-            calculate_sensitivites_explicit = True
-
-        if calculate_sensitivites_explicit and model.convert_to_format != 'casadi':
+        if calculate_sensitivities_explicit and model.convert_to_format != 'casadi':
             raise NotImplementedError(
                 "Sensitivities only supported for:\n"
                 "  - model.convert_to_format = 'casadi'\n"
                 "  - IDAKLUSolver (any convert_to_format)"
             )
 
-        # save sensitivity parameters so we can identify them later on
-        # (FYI: this is used in the Solution class)
-        model.calculate_sensitivities = calculate_sensitivites
-        if calculate_sensitivites_explicit:
+        # if we are calculating sensitivities explicitly then the number of
+        # equations will change
+        if calculate_sensitivities_explicit:
             num_parameters = 0
-            for name in calculate_sensitivites:
+            for name in model.calculate_sensitivities:
                 # if not a number, assume its a vector
                 if isinstance(inputs[name], numbers.Number):
                     num_parameters += 1
@@ -272,9 +261,9 @@ class BaseSolver(object):
                     p_casadi[name] = casadi.MX.sym(name, value.shape[0])
             p_casadi_stacked = casadi.vertcat(*[p for p in p_casadi.values()])
             # sensitivity vectors
-            if calculate_sensitivites_explicit:
+            if calculate_sensitivities_explicit:
                 pS_casadi_stacked = casadi.vertcat(
-                    *[p_casadi[name] for name in calculate_sensitivites]
+                    *[p_casadi[name] for name in model.calculate_sensitivities]
                 )
                 S_x = casadi.MX.sym("S_x", model.len_rhs_sens)
                 S_z = casadi.MX.sym("S_z", model.len_alg_sens)
@@ -295,15 +284,15 @@ class BaseSolver(object):
                 report(f"Converting {name} to jax")
                 func = pybamm.EvaluatorJax(func)
                 jacp = None
-                if calculate_sensitivites_explicit:
+                if calculate_sensitivities_explicit:
                     raise NotImplementedError(
                         "explicit sensitivity equations not supported for "
                         "convert_to_format='jax'"
                     )
-                elif calculate_sensitivites:
+                elif model.calculate_sensitivities:
                     report((
                         f"Calculating sensitivities for {name} with respect "
-                        f"to parameters {calculate_sensitivites} using jax"
+                        f"to parameters {model.calculate_sensitivities} using jax"
                     ))
                     jacp = func.get_sensitivities()
                     jacp = jacp.evaluate
@@ -319,19 +308,19 @@ class BaseSolver(object):
             elif model.convert_to_format != "casadi":
                 # Process with pybamm functions, optionally converting
                 # to python evaluator
-                if calculate_sensitivites_explicit:
+                if calculate_sensitivities_explicit:
                     raise NotImplementedError(
                         "explicit sensitivity equations not supported for "
                         "convert_to_format='{}'".format(model.convert_to_format)
                     )
-                elif calculate_sensitivites:
+                elif model.calculate_sensitivities:
                     report((
                         f"Calculating sensitivities for {name} with respect "
-                        f"to parameters {calculate_sensitivites}"
+                        f"to parameters {model.calculate_sensitivities}"
                     ))
                     jacp_dict = {
                         p: func.diff(pybamm.InputParameter(p))
-                        for p in calculate_sensitivites
+                        for p in model.calculate_sensitivities
                     }
                     if model.convert_to_format == "python":
                         report(f"Converting sensitivities for {name} to python")
@@ -369,7 +358,7 @@ class BaseSolver(object):
                 func = func.to_casadi(t_casadi, y_casadi, inputs=p_casadi)
                 # Add sensitivity vectors to the rhs and algebraic equations
                 jacp = None
-                if calculate_sensitivites_explicit:
+                if calculate_sensitivities_explicit:
                     # The formulation is as per Park, S., Kato, D., Gima, Z., Klein, R.,
                     # & Moura, S. (2018).  Optimal experimental design for
                     # parameterization of an electrochemical lithium-ion battery model.
@@ -433,13 +422,13 @@ class BaseSolver(object):
                                 (-1, 1)
                             )
                             func = casadi.vertcat(x0, Sx_0, z0, Sz_0)
-                elif calculate_sensitivites:
+                elif model.calculate_sensitivities:
                     report((
                         f"Calculating sensitivities for {name} with respect "
-                        f"to parameters {calculate_sensitivites} using CasADi"
+                        f"to parameters {model.calculate_sensitivities} using CasADi"
                     ))
                     jacp_dict = {}
-                    for pname in calculate_sensitivites:
+                    for pname in model.calculate_sensitivities:
                         p_diff = casadi.jacobian(func, p_casadi[pname])
                         jacp_dict[pname] = casadi.Function(
                             name, [t_casadi, y_casadi, p_casadi_stacked],
@@ -488,7 +477,7 @@ class BaseSolver(object):
         )[0]
         init_eval = InitialConditions(initial_conditions, model)
 
-        if calculate_sensitivites_explicit:
+        if calculate_sensitivities_explicit:
             y0_total_size = (
                 model.len_rhs + model.len_rhs_sens
                 + model.len_alg + model.len_alg_sens
@@ -636,7 +625,7 @@ class BaseSolver(object):
 
             # if we have changed the equations to include the explicit sensitivity
             # equations, then we also need to update the mass matrix
-            if calculate_sensitivites_explicit:
+            if calculate_sensitivities_explicit:
                 n_inputs = model.len_rhs_sens // model.len_rhs
                 model.mass_matrix_inv = pybamm.Matrix(
                     block_diag(
@@ -659,10 +648,10 @@ class BaseSolver(object):
                 if len(model.rhs) > 0:
                     mass_matrix_inv = casadi.MX(model.mass_matrix_inv.entries)
                     explicit_rhs = mass_matrix_inv @ rhs(
-                        t_casadi, y_casadi, p_casadi_stacked
+                        t_casadi, y_and_S, p_casadi_stacked
                     )
                     model.casadi_rhs = casadi.Function(
-                        "rhs", [t_casadi, y_casadi, p_casadi_stacked], [explicit_rhs]
+                        "rhs", [t_casadi, y_and_S, p_casadi_stacked], [explicit_rhs]
                     )
                 model.casadi_algebraic = algebraic
                 model.casadi_sensitivities_rhs = jacp_rhs
@@ -828,7 +817,15 @@ class BaseSolver(object):
 
         """
         pybamm.logger.info("Start solving {} with {}".format(model.name, self.name))
-        self.calculate_sensitivites = calculate_sensitivities
+
+        # get a list-only version of calculate_sensitivities
+        if isinstance(calculate_sensitivities, bool):
+            if calculate_sensitivities:
+                calculate_sensitivities_list = [p for p in inputs.keys()]
+            else:
+                calculate_sensitivities_list = []
+        else:
+            calculate_sensitivities_list = calculate_sensitivities
 
         # Make sure model isn't empty
         if len(model.rhs) == 0 and len(model.algebraic) == 0:
@@ -871,7 +868,8 @@ class BaseSolver(object):
         # If "inputs" is a single dict, "inputs_list" is a list of only one dict.
         inputs_list = inputs if isinstance(inputs, list) else [inputs]
         ext_and_inputs_list = [
-            self._set_up_ext_and_inputs(model, external_variables, inputs)
+            self._set_up_ext_and_inputs(model, external_variables, inputs,
+                                        calculate_sensitivities_list)
             for inputs in inputs_list
         ]
 
@@ -885,27 +883,36 @@ class BaseSolver(object):
         # Set up (if not done already)
         timer = pybamm.Timer()
         if model not in self.models_set_up:
+            # save sensitivity parameters so we can identify them later on
+            # (FYI: this is used in the Solution class)
+            model.calculate_sensitivities = calculate_sensitivities_list
+
             # It is assumed that when len(inputs_list) > 1, model set
             # up (initial condition, time-scale and length-scale) does
             # not depend on input parameters. Thefore only `ext_and_inputs[0]`
             # is passed to `set_up`.
             # See https://github.com/pybamm-team/PyBaMM/pull/1261
-            self.set_up(model, ext_and_inputs_list[0], t_eval,
-                        calculate_sensitivites=calculate_sensitivities)
+            self.set_up(model, ext_and_inputs_list[0], t_eval)
             self.models_set_up.update(
                 {model: {"initial conditions": model.concatenated_initial_conditions}}
             )
         else:
+            # Check that calculate_sensitivites have not been updated
+            calculate_sensitivities_list.sort()
+            model.calculate_sensitivities.sort()
+            if (calculate_sensitivities_list != model.calculate_sensitivities):
+                model.calculate_sensitivities = calculate_sensitivities_list
+                self.set_up(model, ext_and_inputs_list[0], t_eval)
+
             ics_set_up = self.models_set_up[model]["initial conditions"]
             # Check that initial conditions have not been updated
             if ics_set_up.id != model.concatenated_initial_conditions.id:
                 # If the new initial conditions are different, set up again
-                self.set_up(model, ext_and_inputs_list[0], t_eval,
-                            calculate_sensitivites=calculate_sensitivities,
-                            ics_only=True)
+                self.set_up(model, ext_and_inputs_list[0], t_eval, ics_only=True)
                 self.models_set_up[model][
                     "initial conditions"
                 ] = model.concatenated_initial_conditions
+
         set_up_time = timer.time()
         timer.reset()
 
@@ -1218,6 +1225,7 @@ class BaseSolver(object):
             pybamm.logger.verbose(
                 "Start stepping {} with {}".format(model.name, self.name)
             )
+
             self.set_up(model, ext_and_inputs)
             self.models_set_up.update(
                 {model: {"initial conditions": model.concatenated_initial_conditions}}
@@ -1225,6 +1233,7 @@ class BaseSolver(object):
             t = 0.0
         elif model not in self.models_set_up:
             # Run set up if the model has changed
+
             self.set_up(model, ext_and_inputs)
             self.models_set_up.update(
                 {model: {"initial conditions": model.concatenated_initial_conditions}}
@@ -1406,7 +1415,8 @@ class BaseSolver(object):
 
         return [k for k, v in extrap_events.items() if v]
 
-    def _set_up_ext_and_inputs(self, model, external_variables, inputs):
+    def _set_up_ext_and_inputs(self, model, external_variables, inputs,
+                               calculate_sensitivities):
         """Set up external variables and input parameters"""
         inputs = inputs or {}
 
@@ -1417,7 +1427,7 @@ class BaseSolver(object):
             name = input_param.name
             if name not in inputs:
                 # Don't allow symbolic inputs if using `sensitivity`
-                if self.calculate_sensitivites:
+                if calculate_sensitivities:
                     raise pybamm.SolverError(
                         "Cannot have symbolic inputs if explicitly solving forward"
                         "sensitivity equations"

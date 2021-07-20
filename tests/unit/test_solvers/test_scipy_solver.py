@@ -1,4 +1,3 @@
-#
 # Tests for the Scipy Solver class
 #
 import pybamm

@@ -129,7 +129,7 @@ class ScipySolver(pybamm.BaseSolver):
                 y_event = np.array(None)
             sol = pybamm.Solution(
                 sol.t, sol.y, model, inputs_dict, t_event, y_event, termination,
-                sensitivities=bool(self.calculate_sensitivites)
+                sensitivities=bool(model.calculate_sensitivities)
             )
             sol.integration_time = integration_time
             return sol

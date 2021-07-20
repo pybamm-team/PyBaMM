@@ -124,7 +124,7 @@ class CasadiSolver(pybamm.BaseSolver):
         """
 
         # are we solving explicit forward equations?
-        explicit_sensitivities = bool(self.calculate_sensitivites)
+        explicit_sensitivities = bool(model.calculate_sensitivities)
 
         # Record whether there are any symbolic inputs
         inputs_dict = inputs_dict or {}
@@ -456,7 +456,7 @@ class CasadiSolver(pybamm.BaseSolver):
             np.array([t_event]),
             y_event[:, np.newaxis],
             "event",
-            sensitivities=bool(self.calculate_sensitivites)
+            sensitivities=bool(model.calculate_sensitivities)
         )
         solution.integration_time = (
             coarse_solution.integration_time + dense_step_sol.integration_time
@@ -620,7 +620,7 @@ class CasadiSolver(pybamm.BaseSolver):
         pybamm.logger.debug("Running CasADi integrator")
 
         # are we solving explicit forward equations?
-        explicit_sensitivities = bool(self.calculate_sensitivites)
+        explicit_sensitivities = bool(model.calculate_sensitivities)
 
         # by default we extract sensitivities in the solution if we
         # are calculating the sensitivities

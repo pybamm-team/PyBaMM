@@ -222,6 +222,7 @@ class Solution(object):
 
         # Save the full sensitivity matrix
         sensitivity = {"all": full_sens_matrix}
+
         # also save the sensitivity wrt each parameter (read the columns of the
         # sensitivity matrix)
         start = 0

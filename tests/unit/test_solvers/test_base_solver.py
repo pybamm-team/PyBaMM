@@ -347,8 +347,8 @@ class TestBaseSolver(unittest.TestCase):
             model.initial_conditions = {v: 1, u: a * 1}
             model.convert_to_format = convert_to_format
             solver = pybamm.IDAKLUSolver(root_method='lm')
-            solver.set_up(model, calculate_sensitivites=True,
-                          inputs={'a': 0, 'b': 0})
+            model.calculate_sensitivities = ['a', 'b']
+            solver.set_up(model, inputs={'a': 0, 'b': 0})
             all_inputs = []
             for v_value in [0.1, -0.2, 1.5, 8.4]:
                 for u_value in [0.13, -0.23, 1.3, 13.4]:

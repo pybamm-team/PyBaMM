@@ -82,6 +82,34 @@ class StandardModelTest(object):
 
         self.solution = self.solver.solve(self.model, t_eval)
 
+    def test_solving_with_sensitivities(self, solver=None, t_eval=None):
+        # Overwrite solver if given
+        if solver is not None:
+            self.solver = solver
+        # Use tighter default tolerances for testing
+        self.solver.rtol = 1e-8
+        self.solver.atol = 1e-8
+
+        Crate = abs(
+            self.parameter_values["Current function [A]"]
+            / self.parameter_values["Nominal cell capacity [A.h]"]
+        )
+        # don't allow zero C-rate
+        if Crate == 0:
+            Crate = 1
+        if t_eval is None:
+            t_eval = np.linspace(0, 3600 / Crate, 100)
+
+        # replace a parameter with an input param
+        param_name = "Negative electrode conductivity [S.m-1]"
+        neg_electrode_cond = 100.0
+        self.parameter_values.update({param_name: "[input]"})
+        inputs = {param_name: neg_electrode_cond}
+
+        self.solution_sensitivities = self.solver.solve(
+            self.model, t_eval, inputs=inputs, calculate_sensitivities=True
+        )
+
     def test_outputs(self):
         # run the standard output tests
         std_out_test = tests.StandardOutputTests(
@@ -96,6 +124,7 @@ class StandardModelTest(object):
         self.test_processing_parameters(param)
         self.test_processing_disc(disc)
         self.test_solving(solver, t_eval)
+        self.test_solving_with_sensitivities(solver, t_eval)
 
         if (
             isinstance(
