@@ -192,6 +192,111 @@ class TestProcessedVariable(unittest.TestCase):
             np.reshape(y_sol, [len(r_sol), len(x_sol), len(t_sol)]),
         )
 
+    def test_processed_variable_2D_x_R(self):
+        var = pybamm.Variable(
+            "var",
+            domain=["negative particle size"],
+            auxiliary_domains={"secondary": ["negative electrode"]},
+        )
+        R = pybamm.SpatialVariable(
+            "R",
+            domain=["negative particle size"],
+            auxiliary_domains={"secondary": ["negative electrode"]},
+        )
+        x = pybamm.SpatialVariable("x", domain=["negative electrode"])
+
+        disc = tests.get_size_distribution_disc_for_testing()
+        disc.set_variable_slices([var])
+        x_sol = disc.process_symbol(x).entries[:, 0]
+        R_sol = disc.process_symbol(R).entries[:, 0]
+        # Keep only the first iteration of entries
+        R_sol = R_sol[: len(R_sol) // len(x_sol)]
+        var_sol = disc.process_symbol(var)
+        t_sol = np.linspace(0, 1)
+        y_sol = np.ones(len(x_sol) * len(R_sol))[:, np.newaxis] * np.linspace(0, 5)
+
+        var_casadi = to_casadi(var_sol, y_sol)
+        processed_var = pybamm.ProcessedVariable(
+            [var_sol],
+            [var_casadi],
+            pybamm.Solution(t_sol, y_sol, pybamm.BaseModel(), {}),
+            warn=False,
+        )
+        np.testing.assert_array_equal(
+            processed_var.entries,
+            np.reshape(y_sol, [len(R_sol), len(x_sol), len(t_sol)]),
+        )
+
+    def test_processed_variable_2D_R_z(self):
+        var = pybamm.Variable(
+            "var",
+            domain=["negative particle size"],
+            auxiliary_domains={"secondary": ["current collector"]},
+        )
+        R = pybamm.SpatialVariable(
+            "R",
+            domain=["negative particle size"],
+            auxiliary_domains={"secondary": ["current collector"]},
+        )
+        z = pybamm.SpatialVariable("z", domain=["current collector"])
+
+        disc = tests.get_size_distribution_disc_for_testing()
+        disc.set_variable_slices([var])
+        z_sol = disc.process_symbol(z).entries[:, 0]
+        R_sol = disc.process_symbol(R).entries[:, 0]
+        # Keep only the first iteration of entries
+        R_sol = R_sol[: len(R_sol) // len(z_sol)]
+        var_sol = disc.process_symbol(var)
+        t_sol = np.linspace(0, 1)
+        y_sol = np.ones(len(z_sol) * len(R_sol))[:, np.newaxis] * np.linspace(0, 5)
+
+        var_casadi = to_casadi(var_sol, y_sol)
+        processed_var = pybamm.ProcessedVariable(
+            [var_sol],
+            [var_casadi],
+            pybamm.Solution(t_sol, y_sol, pybamm.BaseModel(), {}),
+            warn=False,
+        )
+        np.testing.assert_array_equal(
+            processed_var.entries,
+            np.reshape(y_sol, [len(R_sol), len(z_sol), len(t_sol)]),
+        )
+
+    def test_processed_variable_2D_r_R(self):
+        var = pybamm.Variable(
+            "var",
+            domain=["negative particle"],
+            auxiliary_domains={"secondary": ["negative particle size"]},
+        )
+        r = pybamm.SpatialVariable(
+            "r",
+            domain=["negative particle"],
+            auxiliary_domains={"secondary": ["negative particle size"]},
+        )
+        R = pybamm.SpatialVariable("R", domain=["negative particle size"])
+
+        disc = tests.get_size_distribution_disc_for_testing()
+        disc.set_variable_slices([var])
+        r_sol = disc.process_symbol(r).entries[:, 0]
+        R_sol = disc.process_symbol(R).entries[:, 0]
+        # Keep only the first iteration of entries
+        r_sol = r_sol[: len(r_sol) // len(R_sol)]
+        var_sol = disc.process_symbol(var)
+        t_sol = np.linspace(0, 1)
+        y_sol = np.ones(len(r_sol) * len(R_sol))[:, np.newaxis] * np.linspace(0, 5)
+
+        var_casadi = to_casadi(var_sol, y_sol)
+        processed_var = pybamm.ProcessedVariable(
+            [var_sol],
+            [var_casadi],
+            pybamm.Solution(t_sol, y_sol, pybamm.BaseModel(), {}),
+            warn=False,
+        )
+        np.testing.assert_array_equal(
+            processed_var.entries,
+            np.reshape(y_sol, [len(r_sol), len(R_sol), len(t_sol)]),
+        )
+
     def test_processed_variable_2D_x_z(self):
         var = pybamm.Variable(
             "var",
