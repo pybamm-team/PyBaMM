@@ -40,6 +40,24 @@ class MPM(SPM):
                 "particle size": "distribution",
                 "surface form": "algebraic"
             }
+        elif (
+            "particle size" in options and
+            options["particle size"] != "distribution"
+        ):
+            raise pybamm.OptionError(
+                "particle size must be 'distribution' for MPM not '{}'".format(
+                    options["particle size"]
+                )
+            )
+        elif (
+            "surface form" in options and
+            options["surface form"] != "algebraic"
+        ):
+            raise pybamm.OptionError(
+                "surface form must be 'algebraic' for MPM not '{}'".format(
+                    options["surface form"]
+                )
+            )
         else:
             options["particle size"] = "distribution"
             options["surface form"] = "algebraic"
@@ -49,13 +67,6 @@ class MPM(SPM):
         pybamm.citations.register("Kirk2021")
 
     def set_particle_submodel(self):
-
-        if self.options["particle size"] != "distribution":
-            raise pybamm.OptionError(
-                "particle size must be 'distribution' for MPM not '{}'".format(
-                    self.options["particle size"]
-                )
-            )
 
         if self.options["particle"] == "Fickian diffusion":
             submod_n = pybamm.particle.FickianSingleSizeDistribution(
