@@ -27,6 +27,7 @@
 
 ## Bug fixes
 
+-   Fix broken module import for spyder when running a script twice ([#1555](https://github.com/pybamm-team/PyBaMM/pull/1555))
 -   Fixed ElectrodeSOH model for multi-dimensional simulations ([#1548](https://github.com/pybamm-team/PyBaMM/pull/1548))
 -   Removed the overly-restrictive check "each variable in the algebraic eqn keys must appear in the eqn" ([#1510](https://github.com/pybamm-team/PyBaMM/pull/1510))
 -   Made parameters importable through pybamm ([#1475](https://github.com/pybamm-team/PyBaMM/pull/1475))
