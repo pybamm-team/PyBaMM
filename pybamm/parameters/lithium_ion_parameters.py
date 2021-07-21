@@ -893,13 +893,13 @@ class LithiumIonParameters:
         )
         self.V_n_p1 = (
             self.m_n_p1
-            / self.rho_n_p1
-            / (self.m_n_p1 / self.rho_n_p1 + self.m_n_p2 / self.rho_n_p2)
+            # / self.rho_n_p1
+            # / (self.m_n_p1 / self.rho_n_p1 + self.m_n_p2 / self.rho_n_p2)
         )
         self.V_n_p2 = (
             self.m_n_p2
-            / self.rho_n_p2
-            / (self.m_n_p1 / self.rho_n_p1 + self.m_n_p2 / self.rho_n_p2)
+            # / self.rho_n_p2
+            # / (self.m_n_p1 / self.rho_n_p1 + self.m_n_p2 / self.rho_n_p2)
         )
         self.a_R_n_p1 = self.V_n_p1 * self.a_R_n
         self.a_R_n_p2 = self.V_n_p2 * self.a_R_n

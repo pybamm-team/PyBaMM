@@ -31,7 +31,7 @@ Positive electrode thermal conductivity [W.m-1.K-1],2.1,default,
 Positive electrode OCP entropic change [V.K-1],0,,
 #
 # below are for reserving the parameters and not used
-# phase 1 for graphite
+# phase 1 
 Maximum concentration in positive electrode of phase 1 [mol.m-3],28700,Chen 2020,tuned for 1C
 Positive electrode diffusivity of phase 1 [m2.s-1],5.5e-14,Chen 2020,tuned for 1C
 Positive electrode OCP of phase 1 [V],0,Chen 2020,
@@ -39,10 +39,10 @@ Positive electrode mass fraction of phase 1,0.9,Chen 2020,
 Positive particle radius of phase 1 [m],5.86E-6,Chen 2020,
 Positive electrode exchange-current density of phase 1 [A.m-2],0,,
 Positive electrode density of phase 1 [kg.m-3],1657,default,
-# Name of positive electrode phase 1,[string]graphite,,
+# Name of positive electrode phase 1,[string]nmc811,,
 Initial concentration in positive electrode of phase 1 [mol.m-3],25870,,
 ,,,
-# phase 2 for silicon
+# phase 2 
 Maximum concentration in positive electrode of phase 2 [mol.m-3],278000,Chen 2020,tuned for 1C
 Positive electrode diffusivity of phase 2 [m2.s-1],1.67e-14,Chen 2020,tuned for 1C
 Positive electrode OCP of phase 2 [V],0,Mark2016,
@@ -50,5 +50,5 @@ Positive electrode mass fraction of phase 2,0.1,Chen 2020,
 Positive particle radius of phase 2 [m],1.2E-6,Chen 2020,
 Positive electrode exchange-current density of phase 2 [A.m-2],0,,
 Positive electrode density of phase 2 [kg.m-3],1657,default,
-# Name of positive electrode phase 2,[string]silicon,,
+# Name of positive electrode phase 2,[string]nmc622,,
 Initial concentration in positive electrode of phase 2 [mol.m-3],250589,,

@@ -33,7 +33,7 @@ Negative electrode OCP entropic change [V.K-1],0,,
 # below are new implementations
 # phase 1 for graphite
 Maximum concentration in negative electrode of phase 1 [mol.m-3],28700,Chen 2020,tuned for 1C
-Negative electrode diffusivity of phase 1 [m2.s-1],3.9e-14,Chen 2020,tuned for 1C
+Negative electrode diffusivity of phase 1 [m2.s-1],3.9e-14,Ai 2020,tuned for 1C
 Negative electrode OCP of phase 1 [V],[data]graphite_ocp_Enertech_Ai2020,Chen 2020,
 Negative electrode mass fraction of phase 1,0.9,Chen 2020,
 Negative particle radius of phase 1 [m],5.86E-6,Chen 2020,

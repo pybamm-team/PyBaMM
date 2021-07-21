@@ -15,66 +15,69 @@ param = pybamm.ParameterValues(chemistry=chemistry)
 # param = model.default_parameter_values
 param.update({"Upper voltage cut-off [V]": 4.5})
 param.update({"Lower voltage cut-off [V]": 2})
-param.update({"Negative electrode mass fraction of phase 1": 0.9})
-param.update({"Negative electrode mass fraction of phase 2": 0.1})
+param.update({
+    "Maximum concentration in negative electrode of phase 1 [mol.m-3]":28700,
+    "Initial concentration in negative electrode of phase 1 [mol.m-3]":23600,
+    "Negative electrode mass fraction of phase 1":0.98,
+    "Negative electrode diffusivity of phase 1 [m2.s-1]":3.3E-14,
+    "Negative electrode mass fraction of phase 2":0.02,
+    "Initial concentration in negative electrode of phase 2 [mol.m-3]":270000,
+    "Maximum concentration in negative electrode of phase 2 [mol.m-3]":278000,
+    })
+
+# initial concentration of graphite 29866 [mol.m-3]
+# -> 0.9134 * 25830 + 0.0866 * 275220
 
 C_rates = 0.01
-period = 3600 / C_rates
+Q_cell = 4.89 # [Ah]
+period = 3600 / C_rates * Q_cell / 5
 rest_period = 3600
-transition = 5
-t1 = np.linspace(0, rest_period - transition, 201)
-t2 = np.linspace(rest_period - transition, rest_period + transition, 51)
-t3 = np.linspace(rest_period + transition, rest_period + period - transition, 401)
-t4 = np.linspace(
-    rest_period + period - transition, rest_period + period + transition, 51
-)
-t5 = np.linspace(rest_period + period + transition, rest_period + period * 2, 401)
-t_evals = np.concatenate((t1, t2, t3, t4, t5), axis=None)
+rest_period2 = 3600
+transition = period / 400
+timestep=[rest_period, period, rest_period2, period]
+points=[101,401,101,401]
+t_evals=[]
+t0 = 0
+for i in range(0,len(timestep)):
+    t1 = np.linspace(t0, t0 + timestep[i] - transition, points[i])
+    t0 += timestep[i]
+    if i<len(timestep)-1:
+        t2 = np.linspace(t0 - transition, t0 + transition, 41) # transition points
+    else:
+        t2 = []
+    t_evals=np.concatenate((t_evals, t1 ,t2))
+
 t_evals = np.unique(t_evals)
 capacity = param["Nominal cell capacity [A.h]"]
-current = C_rates * capacity
-
+I_load = C_rates * capacity  
 
 def I_fun(A):
     def current(t):
-        period = 3600 / 0.1
+        C_rates = 0.01
+        Q_cell = 4.89 # [Ah]
+        period = 3600 / C_rates * Q_cell / 5
         rest_period = 3600
-        k = 10
-        rest = pybamm.sigmoid(t, rest_period, k)
-        discharge = pybamm.sigmoid(t, rest_period + period, k) - rest
-        charge = pybamm.sigmoid(rest_period + period, t, k)
+        rest_period2 = 3600
+        k = 20
+        rest = pybamm.sigmoid( t , rest_period, k)
+        discharge = pybamm.sigmoid( t , rest_period + period, k) - rest
+        # rest3 = pybamm.sigmoid( rest_period + period * 2 + rest_period2, t, k)
+        charge = pybamm.sigmoid( rest_period + period + rest_period2, t, k)
         return A * discharge - A * charge
         # return A * (t < period) - A * (t >= period)
         # return A * 0.2 * pybamm.sin(2 * np.pi * t / 7200 )
-
     return current
 
 
-param["Current function [A]"] = I_fun(current)
+param["Current function [A]"] = I_fun(I_load)
 
 sim1 = pybamm.Simulation(
     model,
     parameter_values=param,
-    solver=pybamm.CasadiSolver(dt_max=10),
+    solver=pybamm.CasadiSolver(dt_max = 10),
 )
-solution = sim1.solve(t_eval=t_evals)
+solution = sim1.solve(t_eval = t_evals)
 stop = timeit.default_timer()
 print("running time: " + str(stop - start) + "s")
-
-
-# plot
-plot = pybamm.QuickPlot(
-    solution,
-    [
-        "Current [A]",
-        "Terminal voltage [V]",
-        "X-averaged negative electrode open circuit potential of phase 1 [V]",
-        "X-averaged negative electrode open circuit potential of phase 2 [V]",
-    ],
-)
-plot.dynamic_plot()
-stop = timeit.default_timer()
-print("running time: " + str(stop - start) + "s")
-
 
 # %%
