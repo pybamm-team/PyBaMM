@@ -896,7 +896,6 @@ class BaseSolver(object):
         model.calculate_sensitivities = calculate_sensitivities_list
 
         # Set up (if not done already)
-
         timer = pybamm.Timer()
         if model not in self.models_set_up:
             # It is assumed that when len(inputs_list) > 1, model set

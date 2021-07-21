@@ -117,6 +117,15 @@ class StandardModelTest(object):
         )
         std_out_test.test_all()
 
+        # also run them on the sensitivity solution to make sure we havn't messed
+        # up the solution
+        std_out_sensitivity_test = tests.StandardOutputTests(
+            self.model, self.parameter_values, self.disc,
+            self.solution_sensitivities
+        )
+        std_out_sensitivity_test.test_all()
+
+
     def test_all(
         self, param=None, disc=None, solver=None, t_eval=None, skip_output_tests=False
     ):
