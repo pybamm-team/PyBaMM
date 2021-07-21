@@ -2,12 +2,8 @@
 
 ## Features
 
--   `pybamm.base_solver.solve` function can take a list of input parameters to calculate 
-    the sensitivities of the solution with respect to. Alternatively, it can be set 
-    to `True` to calculate the sensitivities for all input parameters.
-    ([#1552](https://github.com/pybamm-team/PyBaMM/pull/1552))
--   Added fitted expressions for OCPs for the Chen2020 parameter set 
-    ([#1526](https://github.com/pybamm-team/PyBaMM/pull/1497))
+-   `pybamm.base_solver.solve` function can take a list of input parameters to calculate the sensitivities of the solution with respect to. Alternatively, it can be set  to `True` to calculate the sensitivities for all input parameters ([#1552](https://github.com/pybamm-team/PyBaMM/pull/1552))
+-   Added fitted expressions for OCPs for the Chen2020 parameter set ([#1526](https://github.com/pybamm-team/PyBaMM/pull/1497))
 -   Added `initial_soc` argument to `Simualtion.solve` for specifying the initial SOC when solving a model ([#1512](https://github.com/pybamm-team/PyBaMM/pull/1512))
 -   Added `print_name` to some symbols ([#1495](https://github.com/pybamm-team/PyBaMM/pull/1495), [#1497](https://github.com/pybamm-team/PyBaMM/pull/1497))
 -   Added Base Parameters class and SymPy in dependencies ([#1495](https://github.com/pybamm-team/PyBaMM/pull/1495))
