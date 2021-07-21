@@ -880,13 +880,25 @@ class BaseSolver(object):
                 'when model in format "jax".'
             )
 
+        # Check that calculate_sensitivites have not been updated
+        calculate_sensitivities_list.sort()
+        if not hasattr(model, 'calculate_sensitivities'):
+            model.calculate_sensitivities = []
+        model.calculate_sensitivities.sort()
+        if (calculate_sensitivities_list != model.calculate_sensitivities):
+            self.models_set_up.pop(model, None)
+            # CasadiSolver caches its integrators using model, so delete this too
+            if isinstance(self, pybamm.CasadiSolver):
+                self.integrators.pop(model, None)
+
+        # save sensitivity parameters so we can identify them later on
+        # (FYI: this is used in the Solution class)
+        model.calculate_sensitivities = calculate_sensitivities_list
+
         # Set up (if not done already)
+
         timer = pybamm.Timer()
         if model not in self.models_set_up:
-            # save sensitivity parameters so we can identify them later on
-            # (FYI: this is used in the Solution class)
-            model.calculate_sensitivities = calculate_sensitivities_list
-
             # It is assumed that when len(inputs_list) > 1, model set
             # up (initial condition, time-scale and length-scale) does
             # not depend on input parameters. Thefore only `ext_and_inputs[0]`
@@ -897,13 +909,6 @@ class BaseSolver(object):
                 {model: {"initial conditions": model.concatenated_initial_conditions}}
             )
         else:
-            # Check that calculate_sensitivites have not been updated
-            calculate_sensitivities_list.sort()
-            model.calculate_sensitivities.sort()
-            if (calculate_sensitivities_list != model.calculate_sensitivities):
-                model.calculate_sensitivities = calculate_sensitivities_list
-                self.set_up(model, ext_and_inputs_list[0], t_eval)
-
             ics_set_up = self.models_set_up[model]["initial conditions"]
             # Check that initial conditions have not been updated
             if ics_set_up.id != model.concatenated_initial_conditions.id:
