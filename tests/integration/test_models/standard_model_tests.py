@@ -86,7 +86,6 @@ class StandardModelTest(object):
             calculate_sensitivities=calculate_sensitivities
         )
 
-
     def test_outputs(self):
         # run the standard output tests
         std_out_test = tests.StandardOutputTests(
@@ -110,7 +109,6 @@ class StandardModelTest(object):
             )
         ):
             self.test_outputs()
-
 
     def test_all(
         self, param=None, disc=None, solver=None, t_eval=None, skip_output_tests=False
