@@ -277,16 +277,7 @@ class CasadiSolver(pybamm.BaseSolver):
 
             # now we extract sensitivities from the solution
             if (explicit_sensitivities):
-                # save original ys[0] and replace with separated soln
-                # TODO: This is a dodgy hack, perhaps re-init the solution object?
-                solution._all_ys_and_sens = [solution._all_ys[0][:]]
-                solution._all_ys[0], solution._sensitivities = \
-                    solution._extract_explicit_sensitivities(
-                        solution.all_models[0],
-                        solution.all_ys[0],
-                        solution.all_ts[0],
-                        solution.all_inputs[0],
-                )
+                solution.extract_explicit_sensitivities()
 
             return solution
 
@@ -300,6 +291,7 @@ class CasadiSolver(pybamm.BaseSolver):
         so that only the times up to the event are returned
         """
         pybamm.logger.debug("Solving for events")
+
         model = coarse_solution.all_models[-1]
         inputs_dict = coarse_solution.all_inputs[-1]
         inputs = casadi.vertcat(*[x for x in inputs_dict.values()])

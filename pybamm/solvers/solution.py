@@ -92,12 +92,8 @@ class Solution(object):
                 and all_models[0].len_rhs_and_alg != all_ys[0].shape[0]
                 and all_models[0].len_rhs_and_alg != 0  # for the dummy solver
             ):
-                # save original ys[0] and replace with separated soln
-                self._all_ys_and_sens = [self._all_ys[0][:]]
-                self._all_ys[0], self._sensitivities = \
-                    self._extract_explicit_sensitivities(
-                        all_models[0], all_ys[0], all_ts[0], self.all_inputs[0]
-                )
+                self.extract_explicit_sensitivities()
+
         elif isinstance(sensitivities, dict):
             self._sensitivities = sensitivities
         else:
@@ -150,6 +146,25 @@ class Solution(object):
 
         # Solution now uses CasADi
         pybamm.citations.register("Andersson2019")
+
+    def extract_explicit_sensitivities(self):
+        for index, (model, ys, ts, inputs) in enumerate(
+            zip(self.all_models, self.all_ys, self.all_ts,
+                self.all_inputs)
+        ):
+            # TODO: only support sensitivities for one solution atm
+            # but make sure that sensitivities are removed for all
+            # solutions
+            if index == 0:
+                self._all_ys[index], self._sensitivities = \
+                    self._extract_explicit_sensitivities(
+                        model, ys, ts, inputs
+                )
+            else:
+                self._all_ys[index], _ = \
+                    self._extract_explicit_sensitivities(
+                        model, ys, ts, inputs
+                )
 
     def _extract_explicit_sensitivities(self, model, y, t_eval, inputs):
         """

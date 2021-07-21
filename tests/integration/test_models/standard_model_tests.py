@@ -62,7 +62,8 @@ class StandardModelTest(object):
         # Model should still be well-posed after processing
         self.model.check_well_posedness(post_discretisation=True)
 
-    def test_solving(self, solver=None, t_eval=None):
+    def test_solving(self, solver=None, t_eval=None, inputs=None,
+                     calculate_sensitivities=False):
         # Overwrite solver if given
         if solver is not None:
             self.solver = solver
@@ -80,35 +81,11 @@ class StandardModelTest(object):
         if t_eval is None:
             t_eval = np.linspace(0, 3600 / Crate, 100)
 
-        self.solution = self.solver.solve(self.model, t_eval)
-
-    def test_solving_with_sensitivities(self, solver=None, t_eval=None):
-        # Overwrite solver if given
-        if solver is not None:
-            self.solver = solver
-        # Use tighter default tolerances for testing
-        self.solver.rtol = 1e-8
-        self.solver.atol = 1e-8
-
-        Crate = abs(
-            self.parameter_values["Current function [A]"]
-            / self.parameter_values["Nominal cell capacity [A.h]"]
+        self.solution = self.solver.solve(
+            self.model, t_eval, inputs=inputs,
+            calculate_sensitivities=calculate_sensitivities
         )
-        # don't allow zero C-rate
-        if Crate == 0:
-            Crate = 1
-        if t_eval is None:
-            t_eval = np.linspace(0, 3600 / Crate, 100)
 
-        # replace a parameter with an input param
-        param_name = "Negative electrode conductivity [S.m-1]"
-        neg_electrode_cond = 100.0
-        self.parameter_values.update({param_name: "[input]"})
-        inputs = {param_name: neg_electrode_cond}
-
-        self.solution_sensitivities = self.solver.solve(
-            self.model, t_eval, inputs=inputs, calculate_sensitivities=True
-        )
 
     def test_outputs(self):
         # run the standard output tests
@@ -117,13 +94,22 @@ class StandardModelTest(object):
         )
         std_out_test.test_all()
 
-        # also run them on the sensitivity solution to make sure we havn't messed
-        # up the solution
-        std_out_sensitivity_test = tests.StandardOutputTests(
-            self.model, self.parameter_values, self.disc,
-            self.solution_sensitivities
-        )
-        std_out_sensitivity_test.test_all()
+    def test_sensitivities(self):
+        param_name = "Negative electrode conductivity [S.m-1]"
+        neg_electrode_cond = 100.0
+        self.parameter_values.update({param_name: "[input]"})
+        inputs = {param_name: neg_electrode_cond}
+
+        self.test_processing_parameters()
+        self.test_processing_disc()
+        self.test_solving(inputs=inputs, calculate_sensitivities=True)
+
+        if (
+            isinstance(
+                self.model, (pybamm.lithium_ion.BaseModel, pybamm.lead_acid.BaseModel)
+            )
+        ):
+            self.test_outputs()
 
 
     def test_all(
@@ -133,7 +119,6 @@ class StandardModelTest(object):
         self.test_processing_parameters(param)
         self.test_processing_disc(disc)
         self.test_solving(solver, t_eval)
-        self.test_solving_with_sensitivities(solver, t_eval)
 
         if (
             isinstance(

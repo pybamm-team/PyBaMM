@@ -18,6 +18,14 @@ class TestSPMe(unittest.TestCase):
         modeltest = tests.StandardModelTest(model, parameter_values=param)
         modeltest.test_all()
 
+    def test_sensitivities(self):
+        options = {"thermal": "isothermal"}
+        model = pybamm.lithium_ion.SPMe(options)
+        # use Ecker parameters for nonlinear diffusion
+        param = pybamm.ParameterValues(chemistry=pybamm.parameter_sets.Ecker2015)
+        modeltest = tests.StandardModelTest(model, parameter_values=param)
+        modeltest.test_sensitivities()
+
     def test_basic_processing_python(self):
         options = {"thermal": "isothermal"}
         model = pybamm.lithium_ion.SPMe(options)
