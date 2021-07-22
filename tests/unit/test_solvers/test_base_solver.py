@@ -325,6 +325,7 @@ class TestBaseSolver(unittest.TestCase):
         with self.assertWarns(pybamm.SolverWarning):
             solver.solve(model, t_eval=[0, 1])
 
+    @unittest.skipIf(not pybamm.have_idaklu(), "idaklu solver is not installed")
     def test_sensitivities(self):
 
         def exact_diff_a(y, a, b):
