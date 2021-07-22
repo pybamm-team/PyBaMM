@@ -343,7 +343,9 @@ Solution solve(np_array t_np, np_array y0_np, np_array yp0_np,
 
   // set initial value
   yval = N_VGetArrayPointer(yy);
-  ySval = N_VGetArrayPointer(yyS[0]);
+  if (number_of_parameters > 0) {
+    ySval = N_VGetArrayPointer(yyS[0]);
+  }
   ypval = N_VGetArrayPointer(yp);
   atval = N_VGetArrayPointer(avtol);
   int i;
