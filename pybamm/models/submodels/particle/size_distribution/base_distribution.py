@@ -66,26 +66,21 @@ class BaseSizeDistribution(BaseParticle):
         sd_a = pybamm.x_average(sd_a)
         sd_v = pybamm.x_average(sd_v)
 
-        # X-averaged distributions, or broadcast
-        if R.auxiliary_domains["secondary"] == [self.domain.lower() + " electrode"]:
-            f_a_dist_xav = pybamm.x_average(f_a_dist)
-            f_v_dist_xav = pybamm.x_average(f_v_dist)
-            f_num_dist_xav = pybamm.x_average(f_num_dist)
-        else:
-            f_a_dist_xav = f_a_dist
-            f_v_dist_xav = f_v_dist
-            f_num_dist_xav = f_num_dist
+        # X-averaged distributions
+        f_a_dist_xav = f_a_dist
+        f_v_dist_xav = f_v_dist
+        f_num_dist_xav = f_num_dist
 
-            # broadcast
-            f_a_dist = pybamm.SecondaryBroadcast(
-                f_a_dist_xav, [self.domain.lower() + " electrode"]
-            )
-            f_v_dist = pybamm.SecondaryBroadcast(
-                f_v_dist_xav, [self.domain.lower() + " electrode"]
-            )
-            f_num_dist = pybamm.SecondaryBroadcast(
-                f_num_dist_xav, [self.domain.lower() + " electrode"]
-            )
+        # broadcast
+        f_a_dist = pybamm.SecondaryBroadcast(
+            f_a_dist_xav, [self.domain.lower() + " electrode"]
+        )
+        f_v_dist = pybamm.SecondaryBroadcast(
+            f_v_dist_xav, [self.domain.lower() + " electrode"]
+        )
+        f_num_dist = pybamm.SecondaryBroadcast(
+            f_num_dist_xav, [self.domain.lower() + " electrode"]
+        )
 
         variables = {
             self.domain + " particle sizes": R,
@@ -199,38 +194,6 @@ class BaseSizeDistribution(BaseParticle):
                     "tertiary": self.domain.lower() + " electrode",
                 },
             )
-        elif c_s.domain == [
-            self.domain.lower() + " particle size"
-        ] and c_s.auxiliary_domains["secondary"] == [
-            self.domain.lower() + " electrode"
-        ]:
-            # Surface concentration distribution variables
-            c_s_surf_distribution = c_s
-            c_s_surf_xav_distribution = pybamm.x_average(c_s)
-
-            # X-avg concentration distribution
-            c_s_xav_distribution = pybamm.PrimaryBroadcast(
-                c_s_surf_xav_distribution, [self.domain.lower() + " particle"]
-            )
-
-            # Concentration distribution in all domains.
-            # NOTE: currently variables can only have 3 domains, so current collector
-            # is excluded, i.e. pushed off domain list
-            c_s_distribution = pybamm.PrimaryBroadcast(
-                c_s_surf_distribution, [self.domain.lower() + " particle"]
-            )
-        else:
-            c_s_distribution = c_s
-
-            # x-average the *tertiary* domain. Do manually using Integral
-            x = pybamm.SpatialVariable("x", domain=[self.domain.lower() + " electrode"])
-            v = pybamm.ones_like(c_s)
-            l = pybamm.Integral(v, x)
-            c_s_xav_distribution = pybamm.Integral(c_s, x) / l
-
-            # Surface concentration distribution variables
-            c_s_surf_distribution = pybamm.surf(c_s)
-            c_s_surf_xav_distribution = pybamm.x_average(c_s_surf_distribution)
 
         variables = {
             self.domain
