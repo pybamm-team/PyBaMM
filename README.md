@@ -81,7 +81,7 @@ If you use PyBaMM in your work, please cite our paper
 You can use the bibtex
 
 ```
-@article{sulzer2020python,
+@article{Sulzer2021python,
   title={Python Battery Mathematical Modelling (PyBaMM)},
   author={Sulzer, Valentin and Marquis, Scott G and Timms, Robert and Robinson, Martin and Chapman, S Jon},
   journal={ECSarXiv. February},

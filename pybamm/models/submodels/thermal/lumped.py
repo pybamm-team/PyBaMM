@@ -30,7 +30,7 @@ class Lumped(BaseThermal):
     def __init__(self, param, cc_dimension=0, geometry="arbitrary"):
         self.geometry = geometry
         super().__init__(param, cc_dimension)
-        pybamm.citations.register("Timms2020")
+        pybamm.citations.register("Timms2021")
 
     def get_fundamental_variables(self):
 
