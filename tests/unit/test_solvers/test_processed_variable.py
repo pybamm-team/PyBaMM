@@ -553,7 +553,7 @@ class TestProcessedVariable(unittest.TestCase):
         )
         np.testing.assert_array_almost_equal(processed_x(x=x_sol), x_sol[:, np.newaxis])
 
-        # On microscale
+        # In particles
         r_n = pybamm.Matrix(
             disc.mesh["negative particle"].nodes, domain="negative particle"
         )
@@ -568,6 +568,24 @@ class TestProcessedVariable(unittest.TestCase):
         np.testing.assert_array_equal(r_n.entries[:, 0], processed_r_n.entries[:, 0])
         np.testing.assert_array_almost_equal(
             processed_r_n(0, r=np.linspace(0, 1))[:, 0], np.linspace(0, 1)
+        )
+
+        # On size domain
+        R_n = pybamm.Matrix(
+            disc.mesh["negative particle size"].nodes,
+            domain="negative particle size"
+        )
+        R_n.mesh = disc.mesh["negative particle size"]
+        R_n_casadi = to_casadi(R_n, y_sol)
+        processed_R_n = pybamm.ProcessedVariable(
+            [R_n],
+            [R_n_casadi],
+            pybamm.Solution(t_sol, y_sol, pybamm.BaseModel(), {}),
+            warn=False,
+        )
+        np.testing.assert_array_equal(R_n.entries[:, 0], processed_R_n.entries[:, 0])
+        np.testing.assert_array_almost_equal(
+            processed_R_n(0, R=np.linspace(0, 1))[:, 0], np.linspace(0, 1)
         )
 
     def test_processed_var_1D_fixed_t_interpolation(self):

@@ -67,7 +67,7 @@ def get_mesh_for_testing(
     )
 
     if geometry is None:
-        geometry = pybamm.battery_geometry()
+        geometry = pybamm.battery_geometry(options={"particle size": "distribution"})
     param.process_geometry(geometry)
 
     submesh_types = {
