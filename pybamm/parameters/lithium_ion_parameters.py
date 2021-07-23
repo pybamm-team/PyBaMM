@@ -255,7 +255,7 @@ class LithiumIonParameters(BaseParameters):
         self.m_cr_n = pybamm.Parameter("Negative electrode Paris' law constant m")
         self.Eac_cr_n = pybamm.Parameter(
             "Negative electrode activation energy for cracking rate [kJ.mol-1]"
-        )  # noqaR
+        )  # noqa
         self.b_cr_p = pybamm.Parameter("Positive electrode Paris' law constant b")
         self.m_cr_p = pybamm.Parameter("Positive electrode Paris' law constant m")
         self.Eac_cr_p = pybamm.Parameter(
