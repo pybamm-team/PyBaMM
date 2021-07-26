@@ -232,12 +232,6 @@ class Function(pybamm.Symbol):
             )
         )
 
-    def _sympy_operator(self, *children):
-        """Apply appropriate SymPy operators."""
-        raise NotImplementedError(
-            f"{self.__class__} does not implement _sympy_operator."
-        )
-
     def to_equation(self):
         """Convert the node and its subtree into a SymPy equation."""
         if self.print_name is not None:
@@ -285,6 +279,12 @@ class SpecificFunction(Function):
     def _function_new_copy(self, children):
         """See :meth:`pybamm.Function._function_new_copy()`"""
         return pybamm.simplify_if_constant(self.__class__(*children))
+
+    def _sympy_operator(self, child):
+        """Apply appropriate SymPy operators."""
+        class_name = self.__class__.__name__.lower()
+        sympy_function = getattr(sympy, class_name)
+        return sympy_function(child)
 
 
 class Arcsinh(SpecificFunction):
