@@ -9,6 +9,7 @@ PRINT_NAME_OVERRIDES = {
     "current_with_time": "I",
     "timescale": r"\tau",
     "dimensional_current_with_time": r"\hat{I}",
+    "eps": r"\epsilon{c}",
     "eps_c_e": r"\epsilon{c_e}",
     "one_plus_dlnf_dlnc": r"1+\frac{dlnf}{dlnc}",
     "negative_particle_concentration_scale": r"c_{n}^{max}",
@@ -83,8 +84,11 @@ def prettify_print_name(name):
         name = (r"\bar{" + bar_re.group(1) + r"}_{" +
                 bar_re.group(2).replace("_", "\,") + r"}")
 
-    # Greek letters (delta_phi_n --> \delta_\phi_n)
-    greek_re = f"({'|'.join(GREEK_LETTERS)})"
+    # Replace eps with epsilon (eps_n --> epsilon_n)
+    name = re.sub(r"(eps)(?![0-9a-zA-Z])", "epsilon", name)
+
+    # Greek letters (delta --> \delta)
+    greek_re = r"(?<!\\)(" + "|".join(GREEK_LETTERS) + r")(?![0-9a-zA-Z])"
     name = re.sub(greek_re, r"\\\1", name, flags=re.IGNORECASE)
 
     return name
