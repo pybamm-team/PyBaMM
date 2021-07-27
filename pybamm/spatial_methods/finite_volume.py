@@ -405,7 +405,7 @@ class FiniteVolume(pybamm.SpatialMethod):
         **Backward integral**
 
         .. math::
-            F(x) = \\int_x^end\\!f(u)\\,du
+            F(x) = \\int_x^{end}\\!f(u)\\,du
 
         The indefinite integral must satisfy the following conditions:
 

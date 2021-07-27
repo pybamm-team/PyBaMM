@@ -18,7 +18,6 @@ Positive electrode Bruggeman coefficient (electrode),0,Ai 2020,
 # Interfacial reactions,,,
 Positive electrode cation signed stoichiometry,-1,,
 Positive electrode electrons in reaction,1,,
-Reference OCP vs SHE in the positive electrode [V],,,
 Positive electrode charge transfer coefficient,0.5,Ai 2020,
 Negative electrode double-layer capacity [F.m-2],0,,#??
 Positive electrode exchange-current density [A.m-2],[function]lico2_electrolyte_exchange_current_density_Dualfoil1998,,

@@ -1,15 +1,18 @@
 #
 # Base solver class
 #
-import casadi
 import copy
-import pybamm
-import numbers
-import numpy as np
-import sys
 import itertools
 import multiprocessing as mp
+import numbers
+import sys
 import warnings
+
+import casadi
+import numpy as np
+
+import pybamm
+from pybamm.expression_tree.binary_operators import _Heaviside
 
 
 class BaseSolver(object):
@@ -301,7 +304,7 @@ class BaseSolver(object):
                     model.concatenated_rhs.pre_order(),
                     model.concatenated_algebraic.pre_order(),
                 ):
-                    if isinstance(symbol, pybamm.Heaviside):
+                    if isinstance(symbol, _Heaviside):
                         found_t = False
                         # Dimensionless
                         if symbol.right.id == pybamm.t.id:

@@ -2,13 +2,16 @@
 # Unary operator classes and methods
 #
 import numbers
+
 import numpy as np
-import pybamm
 from scipy.sparse import csr_matrix
+
+import pybamm
 
 
 class Broadcast(pybamm.SpatialOperator):
-    """A node in the expression tree representing a broadcasting operator.
+    """
+    A node in the expression tree representing a broadcasting operator.
     Broadcasts a child to a specified domain. After discretisation, this will evaluate
     to an array of the right shape for the specified domain.
 
@@ -66,9 +69,14 @@ class Broadcast(pybamm.SpatialOperator):
         else:
             return False
 
+    def _sympy_operator(self, child):
+        """Override :meth:`pybamm.UnaryOperator._sympy_operator`"""
+        return child
+
 
 class PrimaryBroadcast(Broadcast):
-    """A node in the expression tree representing a primary broadcasting operator.
+    """
+    A node in the expression tree representing a primary broadcasting operator.
     Broadcasts in a `primary` dimension only. That is, makes explicit copies of the
     symbol in the domain specified by `broadcast_domain`. This should be used for
     broadcasting from a "larger" scale to a "smaller" scale, for example broadcasting
@@ -95,7 +103,7 @@ class PrimaryBroadcast(Broadcast):
     def check_and_set_domains(
         self, child, broadcast_type, broadcast_domain, broadcast_auxiliary_domains
     ):
-        "See :meth:`Broadcast.check_and_set_domains`"
+        """See :meth:`Broadcast.check_and_set_domains`"""
         # Can only do primary broadcast from current collector to electrode or particle
         # or from electrode to particle. Note current collector to particle *is* allowed
         if child.domain == []:
@@ -111,15 +119,11 @@ class PrimaryBroadcast(Broadcast):
                 """Primary broadcast from current collector domain must be to electrode
                 or separator or particle domains"""
             )
-        elif (
-            child.domain[0]
-            in [
-                "negative electrode",
-                "separator",
-                "positive electrode",
-            ]
-            and broadcast_domain[0] not in ["negative particle", "positive particle"]
-        ):
+        elif child.domain[0] in [
+            "negative electrode",
+            "separator",
+            "positive electrode",
+        ] and broadcast_domain[0] not in ["negative particle", "positive particle"]:
             raise pybamm.DomainError(
                 """Primary broadcast from electrode or separator must be to particle
                 domains"""
@@ -137,7 +141,7 @@ class PrimaryBroadcast(Broadcast):
         return domain, auxiliary_domains
 
     def _unary_new_copy(self, child):
-        """ See :meth:`pybamm.UnaryOperator._unary_new_copy()`. """
+        """See :meth:`pybamm.UnaryOperator._unary_new_copy()`."""
         return self.__class__(child, self.broadcast_domain)
 
     def _evaluate_for_shape(self):
@@ -150,7 +154,7 @@ class PrimaryBroadcast(Broadcast):
         return np.outer(child_eval, vec).reshape(-1, 1)
 
     def reduce_one_dimension(self):
-        """ Reduce the broadcast by one dimension. """
+        """Reduce the broadcast by one dimension."""
         return self.orphans[0]
 
 
@@ -167,7 +171,8 @@ class PrimaryBroadcastToEdges(PrimaryBroadcast):
 
 
 class SecondaryBroadcast(Broadcast):
-    """A node in the expression tree representing a primary broadcasting operator.
+    """
+    A node in the expression tree representing a primary broadcasting operator.
     Broadcasts in a `secondary` dimension only. That is, makes explicit copies of the
     symbol in the domain specified by `broadcast_domain`. This should be used for
     broadcasting from a "smaller" scale to a "larger" scale, for example broadcasting
@@ -195,7 +200,7 @@ class SecondaryBroadcast(Broadcast):
     def check_and_set_domains(
         self, child, broadcast_type, broadcast_domain, broadcast_auxiliary_domains
     ):
-        """ See :meth:`Broadcast.check_and_set_domains` """
+        """See :meth:`Broadcast.check_and_set_domains`"""
         if child.domain == []:
             raise TypeError(
                 "Cannot take SecondaryBroadcast of an object with empty domain. "
@@ -215,15 +220,11 @@ class SecondaryBroadcast(Broadcast):
                 """Secondary broadcast from particle domain must be to electrode or
                 separator domains"""
             )
-        elif (
-            child.domain[0]
-            in [
-                "negative electrode",
-                "separator",
-                "positive electrode",
-            ]
-            and broadcast_domain != ["current collector"]
-        ):
+        elif child.domain[0] in [
+            "negative electrode",
+            "separator",
+            "positive electrode",
+        ] and broadcast_domain != ["current collector"]:
             raise pybamm.DomainError(
                 """Secondary broadcast from electrode or separator must be to
                 current collector domains"""
@@ -243,7 +244,7 @@ class SecondaryBroadcast(Broadcast):
         return domain, auxiliary_domains
 
     def _unary_new_copy(self, child):
-        """ See :meth:`pybamm.UnaryOperator._unary_new_copy()`. """
+        """See :meth:`pybamm.UnaryOperator._unary_new_copy()`."""
         return SecondaryBroadcast(child, self.broadcast_domain)
 
     def _evaluate_for_shape(self):
@@ -256,7 +257,7 @@ class SecondaryBroadcast(Broadcast):
         return np.outer(vec, child_eval).reshape(-1, 1)
 
     def reduce_one_dimension(self):
-        """ Reduce the broadcast by one dimension. """
+        """Reduce the broadcast by one dimension."""
         raise NotImplementedError
 
 
@@ -289,7 +290,7 @@ class FullBroadcast(Broadcast):
     def check_and_set_domains(
         self, child, broadcast_type, broadcast_domain, broadcast_auxiliary_domains
     ):
-        """ See :meth:`Broadcast.check_and_set_domains` """
+        """See :meth:`Broadcast.check_and_set_domains`"""
 
         # Variables on the current collector can only be broadcast to 'primary'
         if child.domain == ["current collector"]:
@@ -302,7 +303,7 @@ class FullBroadcast(Broadcast):
         return domain, auxiliary_domains
 
     def _unary_new_copy(self, child):
-        """ See :meth:`pybamm.UnaryOperator._unary_new_copy()`. """
+        """See :meth:`pybamm.UnaryOperator._unary_new_copy()`."""
         return self.__class__(child, self.broadcast_domain, self.auxiliary_domains)
 
     def _evaluate_for_shape(self):
@@ -318,7 +319,7 @@ class FullBroadcast(Broadcast):
         return child_eval * vec
 
     def reduce_one_dimension(self):
-        """ Reduce the broadcast by one dimension. """
+        """Reduce the broadcast by one dimension."""
         if self.auxiliary_domains == {}:
             return self.orphans[0]
         elif "tertiary" not in self.auxiliary_domains:
@@ -348,7 +349,7 @@ class FullBroadcastToEdges(FullBroadcast):
         return True
 
     def reduce_one_dimension(self):
-        """ Reduce the broadcast by one dimension. """
+        """Reduce the broadcast by one dimension."""
         if self.auxiliary_domains == {}:
             return self.orphans[0]
         elif "tertiary" not in self.auxiliary_domains:

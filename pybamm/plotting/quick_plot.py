@@ -562,11 +562,7 @@ class QuickPlot(object):
                     y_name = list(spatial_vars.keys())[1][0]
                     x = self.first_dimensional_spatial_variable[key]
                     y = self.second_dimensional_spatial_variable[key]
-                    # need to transpose if domain is x-z
-                    if self.is_y_z[key] is True:
-                        var = variable(t_in_seconds, **spatial_vars, warn=False)
-                    else:
-                        var = variable(t_in_seconds, **spatial_vars, warn=False).T
+                    var = variable(t_in_seconds, **spatial_vars, warn=False).T
                 ax.set_xlabel("{} [{}]".format(x_name, self.spatial_unit))
                 ax.set_ylabel("{} [{}]".format(y_name, self.spatial_unit))
                 vmin, vmax = self.variable_limits[key]
@@ -721,11 +717,7 @@ class QuickPlot(object):
                 else:
                     x = self.first_dimensional_spatial_variable[key]
                     y = self.second_dimensional_spatial_variable[key]
-                    # need to transpose if domain is x-z
-                    if self.is_y_z[key] is True:
-                        var = variable(time_in_seconds, **spatial_vars, warn=False)
-                    else:
-                        var = variable(time_in_seconds, **spatial_vars, warn=False).T
+                    var = variable(time_in_seconds, **spatial_vars, warn=False).T
                 # store the plot and the var data (for testing) as cant access
                 # z data from QuadMesh or QuadContourSet object
                 if self.is_y_z[key] is True:

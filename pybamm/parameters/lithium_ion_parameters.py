@@ -254,7 +254,7 @@ class LithiumIonParameters(BaseParameters):
             "Positive electrode activation energy for cracking rate [kJ.mol-1]"
         )  # noqa
         self.alpha_T_cell_dim = pybamm.Parameter(
-            "Cell thermal expansion coefficien [m.K-1]"
+            "Cell thermal expansion coefficient [m.K-1]"
         )
         self.R_const = pybamm.constants.R
         self.theta_p_dim = (
@@ -447,7 +447,9 @@ class LithiumIonParameters(BaseParameters):
         # this will not affect the OCP for most values of sto
         # see #1435
         u_ref = u_ref + 1e-6 * (1 / sto + 1 / (sto - 1))
-        return u_ref + (T - self.T_ref) * self.dUdT_n_dimensional(sto)
+        dudt_n_dim_func = self.dUdT_n_dimensional(sto)
+        dudt_n_dim_func.print_name = r"\frac{dU}{dT_n}"
+        return u_ref + (T - self.T_ref) * dudt_n_dim_func
 
     def U_p_dimensional(self, sto, T):
         """Dimensional open-circuit potential in the positive electrode [V]"""
@@ -457,7 +459,9 @@ class LithiumIonParameters(BaseParameters):
         # this will not affect the OCP for most values of sto
         # see #1435
         u_ref = u_ref + 1e-6 * (1 / sto + 1 / (sto - 1))
-        return u_ref + (T - self.T_ref) * self.dUdT_p_dimensional(sto)
+        dudt_p_dim_func = self.dUdT_p_dimensional(sto)
+        dudt_p_dim_func.print_name = r"\frac{dU}{dT_p}"
+        return u_ref + (T - self.T_ref) * dudt_p_dim_func
 
     def dUdT_n_dimensional(self, sto):
         """
@@ -539,7 +543,7 @@ class LithiumIonParameters(BaseParameters):
         # Concentration
         self.electrolyte_concentration_scale = self.c_e_typ
         self.negative_particle_concentration_scale = self.c_n_max
-        self.positive_particle_concentration_scale = self.c_n_max
+        self.positive_particle_concentration_scale = self.c_p_max
 
         # Electrical
         self.potential_scale = self.R * self.T_ref / self.F
@@ -572,7 +576,10 @@ class LithiumIonParameters(BaseParameters):
         self.velocity_scale = pybamm.Scalar(1)
 
         # Discharge timescale
-        self.tau_discharge = self.F * self.c_n_max * self.L_x / self.i_typ
+        if self.options["working electrode"] == "positive":
+            self.tau_discharge = self.F * self.c_p_max * self.L_x / self.i_typ
+        else:
+            self.tau_discharge = self.F * self.c_n_max * self.L_x / self.i_typ
 
         # Reaction timescales
         self.tau_r_n = (
@@ -585,6 +592,8 @@ class LithiumIonParameters(BaseParameters):
         # Electrolyte diffusion timescale
         self.D_e_typ = self.D_e_dimensional(self.c_e_typ, self.T_ref)
         self.tau_diffusion_e = self.L_x ** 2 / self.D_e_typ
+
+        self.D_n_typ_dim = self.D_n_dimensional(pybamm.Scalar(1), self.T_ref)
 
         # Particle diffusion timescales
         self.tau_diffusion_n = self.R_n_typ ** 2 / self.D_n_dimensional(
@@ -604,12 +613,12 @@ class LithiumIonParameters(BaseParameters):
         """Defines the dimensionless parameters"""
 
         # Timescale ratios
-        self.C_n = self.tau_diffusion_n / self.tau_discharge
-        self.C_p = self.tau_diffusion_p / self.tau_discharge
-        self.C_e = self.tau_diffusion_e / self.tau_discharge
-        self.C_r_n = self.tau_r_n / self.tau_discharge
-        self.C_r_p = self.tau_r_p / self.tau_discharge
-        self.C_th = self.tau_th_yz / self.tau_discharge
+        self.C_n = self.tau_diffusion_n / self.timescale
+        self.C_p = self.tau_diffusion_p / self.timescale
+        self.C_e = self.tau_diffusion_e / self.timescale
+        self.C_r_n = self.tau_r_n / self.timescale
+        self.C_r_p = self.tau_r_p / self.timescale
+        self.C_th = self.tau_th_yz / self.timescale
 
         # Concentration ratios
         self.gamma_e = self.c_e_typ / self.c_n_max
@@ -652,13 +661,13 @@ class LithiumIonParameters(BaseParameters):
             self.C_dl_n_dimensional
             * self.potential_scale
             / self.j_scale_n
-            / self.tau_discharge
+            / self.timescale
         )
         self.C_dl_p = (
             self.C_dl_p_dimensional
             * self.potential_scale
             / self.j_scale_p
-            / self.tau_discharge
+            / self.timescale
         )
 
         # Electrical
@@ -777,10 +786,10 @@ class LithiumIonParameters(BaseParameters):
 
         # ratio of SEI reaction scale to intercalation reaction
         self.Gamma_SEI_n = (
-            self.V_bar_inner_dimensional * self.j_scale_n * self.tau_discharge
+            self.V_bar_inner_dimensional * self.j_scale_n * self.timescale
         ) / (self.F * self.L_sei_0_dim)
         self.Gamma_SEI_p = (
-            self.V_bar_inner_dimensional * self.j_scale_p * self.tau_discharge
+            self.V_bar_inner_dimensional * self.j_scale_p * self.timescale
         ) / (self.F * self.L_sei_0_dim)
 
         # EC reaction
@@ -812,7 +821,7 @@ class LithiumIonParameters(BaseParameters):
         self.c_plated_Li_0 = self.c_plated_Li_0_dim / self.c_Li_typ
 
         # ratio of lithium plating reaction scaled to intercalation reaction
-        self.Gamma_plating = (self.a_n_typ * self.j_scale_n * self.tau_discharge) / (
+        self.Gamma_plating = (self.a_n_typ * self.j_scale_n * self.timescale) / (
             self.F * self.c_Li_typ
         )
 
@@ -844,13 +853,13 @@ class LithiumIonParameters(BaseParameters):
             self.beta_LAM_sei_n_dimensional
             * self.a_n_typ
             * self.j_scale_n
-            * self.tau_discharge
+            * self.timescale
         ) / self.F
         self.beta_LAM_sei_p = (
             self.beta_LAM_sei_p_dimensional
             * self.a_n_typ
             * self.j_scale_p
-            * self.tau_discharge
+            * self.timescale
         ) / self.F
 
     def sigma_n(self, T):
@@ -963,9 +972,7 @@ class LithiumIonParameters(BaseParameters):
         """Dimensionless negative particle diffusivity"""
         sto = c_s_n
         T_dim = self.Delta_T * T + self.T_ref
-        return self.D_n_dimensional(sto, T_dim) / self.D_n_dimensional(
-            pybamm.Scalar(1), self.T_ref
-        )
+        return self.D_n_dimensional(sto, T_dim) / self.D_n_typ_dim
 
     def D_p(self, c_s_p, T):
         """Dimensionless positive particle diffusivity"""

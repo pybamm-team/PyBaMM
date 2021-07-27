@@ -1,11 +1,15 @@
 #
 # Tests for the Unary Operator classes
 #
-import pybamm
-
 import unittest
+
 import numpy as np
+import sympy
 from scipy.sparse import diags
+from sympy.vector.operators import Divergence as sympy_Divergence
+from sympy.vector.operators import Gradient as sympy_Gradient
+
+import pybamm
 
 
 class TestUnaryOperators(unittest.TestCase):
@@ -185,6 +189,12 @@ class TestUnaryOperators(unittest.TestCase):
         a = pybamm.Symbol("a", domain="test domain")
         div = pybamm.div(-pybamm.Gradient(a))
         self.assertEqual(div.id, (-pybamm.Divergence(pybamm.Gradient(a))).id)
+
+        div = pybamm.div(-a * pybamm.Gradient(a))
+        self.assertEqual(div.id, (-pybamm.Divergence(a * pybamm.Gradient(a))).id)
+
+        # div = pybamm.div(a * -pybamm.Gradient(a))
+        # self.assertEqual(div.id, (-pybamm.Divergence(a * pybamm.Gradient(a))).id)
 
     def test_integral(self):
         # space integral
@@ -560,11 +570,7 @@ class TestUnaryOperators(unittest.TestCase):
         self.assertEqual(average_conc_broad.auxiliary_domains, {"secondary": ["test"]})
 
         # x-average of broadcast
-        for domain in [
-            ["negative electrode"],
-            ["separator"],
-            ["positive electrode"],
-        ]:
+        for domain in [["negative electrode"], ["separator"], ["positive electrode"]]:
             a = pybamm.Variable("a", domain=domain)
             x = pybamm.SpatialVariable("x", domain)
             av_a = pybamm.x_average(a)
@@ -740,6 +746,50 @@ class TestUnaryOperators(unittest.TestCase):
         self.assertEqual(a.jac(pybamm.StateVector(slice(0, 1))).evaluate(), 0)
         self.assertFalse(a.is_constant())
         self.assertFalse((2 * a).is_constant())
+
+    def test_to_equation(self):
+        a = pybamm.Symbol("a", domain="negative particle")
+        b = pybamm.Symbol("b", domain="current collector")
+        c = pybamm.Symbol("c", domain="test")
+        d = pybamm.Symbol("d", domain=["negative electrode"])
+
+        # Test print_name
+        pybamm.Floor.print_name = "test"
+        self.assertEqual(pybamm.Floor(-2.5).to_equation(), sympy.symbols("test"))
+
+        # Test Negate
+        self.assertEqual(pybamm.Negate(4).to_equation(), -4.0)
+
+        # Test AbsoluteValue
+        self.assertEqual(pybamm.AbsoluteValue(-4).to_equation(), 4.0)
+
+        # Test Gradient
+        self.assertEqual(pybamm.Gradient(a).to_equation(), sympy_Gradient("a"))
+
+        # Test Divergence
+        self.assertEqual(
+            pybamm.Divergence(pybamm.Gradient(a)).to_equation(),
+            sympy_Divergence(sympy_Gradient(a)),
+        )
+
+        # Test BoundaryValue
+        self.assertEqual(
+            pybamm.BoundaryValue(a, "right").to_equation(), sympy.symbols("a^{surf}")
+        )
+        self.assertEqual(
+            pybamm.BoundaryValue(b, "positive tab").to_equation(), sympy.symbols(str(b))
+        )
+        self.assertEqual(
+            pybamm.BoundaryValue(c, "left").to_equation(),
+            sympy.Symbol(r"c^{\mathtt{\text{left}}}"),
+        )
+
+        # Test Integral
+        xn = pybamm.SpatialVariable("xn", ["negative electrode"])
+        self.assertEqual(
+            pybamm.Integral(d, xn).to_equation(),
+            sympy.Integral("d", sympy.symbols("xn")),
+        )
 
 
 if __name__ == "__main__":

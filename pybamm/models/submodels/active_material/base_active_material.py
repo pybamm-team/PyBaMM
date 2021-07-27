@@ -62,7 +62,14 @@ class BaseModel(pybamm.BaseSubModel):
                 L = param.L_p
                 c_s_max = param.c_p_max
 
-            C = eps_solid_av * L * param.A_cc * c_s_max * param.F / 3600
+            C = (
+                pybamm.yz_average(eps_solid_av)
+                * L
+                * param.A_cc
+                * c_s_max
+                * param.F
+                / 3600
+            )
             variables.update({self.domain + " electrode capacity [A.h]": C})
 
             if self.domain == "Negative":
