@@ -61,8 +61,6 @@ class EffectiveResistance(pybamm.BaseModel):
         sigma_cn_dbl_prime = param.sigma_cn_dbl_prime
         sigma_cp_dbl_prime = param.sigma_cp_dbl_prime
         delta = param.delta  # aspect ratio
-        T_cn = self.variables["Negative current collector temperature"]
-        T_cp = self.variables["Positive current collector temperature"]
 
         # Set model variables: Note: we solve using a scaled version that is
         # better conditioned
@@ -72,8 +70,8 @@ class EffectiveResistance(pybamm.BaseModel):
         R_cp_scaled = pybamm.Variable(
             "Scaled positive current collector resistance", domain="current collector"
         )
-        R_cn = delta * R_cn_scaled / (l_cn * sigma_cn_dbl_prime(T_cn))
-        R_cp = delta * R_cp_scaled / (l_cp * sigma_cp_dbl_prime(T_cp))
+        R_cn = delta * R_cn_scaled / (l_cn * sigma_cn_dbl_prime)
+        R_cp = delta * R_cp_scaled / (l_cp * sigma_cp_dbl_prime)
 
         # Define effective current collector resistance
         if self.options["dimensionality"] == 1:
@@ -333,8 +331,6 @@ class AlternativeEffectiveResistance2D(pybamm.BaseModel):
         sigma_cn_dbl_prime = param.sigma_cn_dbl_prime
         sigma_cp_dbl_prime = param.sigma_cp_dbl_prime
         delta = param.delta
-        T_cn = self.variables["Negative current collector temperature"]
-        T_cp = self.variables["Positive current collector temperature"]
 
         # Set model variables -- we solve a auxilliary problem in each current collector
         # then relate this to the potentials and resistances later
@@ -375,11 +371,11 @@ class AlternativeEffectiveResistance2D(pybamm.BaseModel):
         }
 
         # Define effective current collector resistance
-        R_cc_n = delta * pybamm.yz_average(f_n) / (l_cn * sigma_cn_dbl_prime(T_cn))
+        R_cc_n = delta * pybamm.yz_average(f_n) / (l_cn * sigma_cn_dbl_prime)
         R_cc_p = (
             delta
             * pybamm.BoundaryIntegral(f_p, "positive tab")
-            / (l_cp * sigma_cp_dbl_prime(T_cp))
+            / (l_cp * sigma_cp_dbl_prime)
         )
         R_cc = R_cc_n + R_cc_p
         R_scale = param.potential_scale / param.I_typ

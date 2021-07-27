@@ -101,6 +101,12 @@ class LithiumIonParameters(BaseParameters):
         self.c_p_max = pybamm.Parameter(
             "Maximum concentration in positive electrode [mol.m-3]"
         )
+        self.sigma_cn_dimensional = pybamm.Parameter(
+            "Negative current collector conductivity [S.m-1]"
+        )
+        self.sigma_cp_dimensional = pybamm.Parameter(
+            "Positive current collector conductivity [S.m-1]"
+        )
 
         # Microscale geometry
         # Note: the particle radius in the electrodes can be set as a function
@@ -335,22 +341,6 @@ class LithiumIonParameters(BaseParameters):
         inputs = {"Temperature [K]": T}
         return pybamm.FunctionParameter(
             "Positive electrode conductivity [S.m-1]", inputs
-        )
-
-    def sigma_cn_dimensional(self, T):
-        """Dimensional electrical conductivity in negative electrode current
-        collector"""
-        inputs = {"Temperature [K]": T}
-        return pybamm.FunctionParameter(
-            "Negative current collector conductivity [S.m-1]", inputs
-        )
-
-    def sigma_cp_dimensional(self, T):
-        """Dimensional electrical conductivity in positive electrode current
-        collector"""
-        inputs = {"Temperature [K]": T}
-        return pybamm.FunctionParameter(
-            "Positive current collector conductivity [S.m-1]", inputs
         )
 
     def D_e_dimensional(self, c_e, T):
@@ -651,6 +641,18 @@ class LithiumIonParameters(BaseParameters):
         self.a_R_n = self.a_n_typ * self.R_n_typ
         self.a_R_p = self.a_p_typ * self.R_p_typ
 
+        # Electrode Properties
+        self.sigma_cn = (
+            self.sigma_cn_dimensional * self.potential_scale / self.i_typ / self.L_x
+        )
+        self.sigma_cp = (
+            self.sigma_cp_dimensional * self.potential_scale / self.i_typ / self.L_x
+        )
+        self.sigma_cn_prime = self.sigma_cn * self.delta ** 2
+        self.sigma_cp_prime = self.sigma_cp * self.delta ** 2
+        self.sigma_cn_dbl_prime = self.sigma_cn_prime * self.delta
+        self.sigma_cp_dbl_prime = self.sigma_cp_prime * self.delta
+
         # Electrolyte Properties
         self.beta_surf = pybamm.Scalar(0)
         self.beta_surf_n = pybamm.Scalar(0)
@@ -882,26 +884,6 @@ class LithiumIonParameters(BaseParameters):
             / self.L_x
         )
 
-    def sigma_cn(self, T):
-        """Dimensionless negative electrode current collector electrical conductivity"""
-        T_dim = self.Delta_T * T + self.T_ref
-        return (
-            self.sigma_cn_dimensional(T_dim)
-            * self.potential_scale
-            / self.i_typ
-            / self.L_x
-        )
-
-    def sigma_cp(self, T):
-        """Dimensionless positive electrode current collector electrical conductivity"""
-        T_dim = self.Delta_T * T + self.T_ref
-        return (
-            self.sigma_cp_dimensional(T_dim)
-            * self.potential_scale
-            / self.i_typ
-            / self.L_x
-        )
-    
     def sigma_n_prime(self, T):
         """Rescaled dimensionless negative electrode electrical conductivity"""
         return self.sigma_n(T) * self.delta
@@ -909,26 +891,6 @@ class LithiumIonParameters(BaseParameters):
     def sigma_p_prime(self, T):
         """Rescaled dimensionless positive electrode electrical conductivity"""
         return self.sigma_p(T) * self.delta
-
-    def sigma_cn_prime(self, T):
-        """Rescaled dimensionless negative electrode current collector electrical
-        conductivity"""
-        return self.sigma_cn(T) * self.delta ** 2
-
-    def sigma_cp_prime(self, T):
-        """Rescaled dimensionless positive electrode current collector electrical
-        conductivity"""
-        return self.sigma_cp(T) * self.delta ** 2
-
-    def sigma_cn_dbl_prime(self, T):
-        """Rescaled dimensionless negative electrode current collector electrical
-        conductivity"""
-        return self.sigma_cn_prime(T) * self.delta
-
-    def sigma_cp_dbl_prime(self, T):
-        """Rescaled dimensionless positive electrode current collector electrical
-        conductivity"""
-        return self.sigma_cp_prime(T) * self.delta
 
     def chi(self, c_e, T):
         """

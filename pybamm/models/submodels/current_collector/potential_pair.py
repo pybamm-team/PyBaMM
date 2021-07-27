@@ -58,14 +58,12 @@ class BasePotentialPair(BaseModel):
         phi_s_cn = variables["Negative current collector potential"]
         phi_s_cp = variables["Positive current collector potential"]
         i_boundary_cc = variables["Current collector current density"]
-        T_cn = variables["Negative current collector temperature"]
-        T_cp = variables["Positive current collector temperature"]
 
         self.algebraic = {
-            phi_s_cn: (param.sigma_cn(T_cn) * param.delta ** 2 * param.l_cn)
+            phi_s_cn: (param.sigma_cn * param.delta ** 2 * param.l_cn)
             * pybamm.laplacian(phi_s_cn)
             - pybamm.source(i_boundary_cc, phi_s_cn),
-            i_boundary_cc: (param.sigma_cp(T_cp) * param.delta ** 2 * param.l_cp)
+            i_boundary_cc: (param.sigma_cp * param.delta ** 2 * param.l_cp)
             * pybamm.laplacian(phi_s_cp)
             + pybamm.source(i_boundary_cc, phi_s_cp),
         }
@@ -93,9 +91,6 @@ class PotentialPair1plus1D(BasePotentialPair):
         phi_s_cn = variables["Negative current collector potential"]
         phi_s_cp = variables["Positive current collector potential"]
 
-        T_cn = variables["Negative current collector temperature"]
-        T_cp = variables["Positive current collector temperature"]
-
         param = self.param
         applied_current = variables["Total current density"]
         cc_area = self._get_effective_current_collector_area()
@@ -104,7 +99,7 @@ class PotentialPair1plus1D(BasePotentialPair):
         pos_tab_bc = (
             -applied_current
             * cc_area
-            / (param.sigma_cp(T_cp) * param.delta ** 2 * param.l_cp)
+            / (param.sigma_cp * param.delta ** 2 * param.l_cp)
         )
 
         # Boundary condition needs to be on the variables that go into the Laplacian,

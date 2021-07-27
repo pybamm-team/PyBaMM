@@ -34,7 +34,9 @@ class BaseModel(BaseElectrode):
             lbc = (pybamm.Scalar(0), "Neumann")
             i_boundary_cc = variables["Current collector current density"]
             T_p = variables["Positive electrode temperature"]
-            sigma_eff = self.param.sigma_p(T_p) * variables["Positive electrode tortuosity"]
+            sigma_eff = (
+                self.param.sigma_p(T_p) * variables["Positive electrode tortuosity"]
+            )
             rbc = (
                 i_boundary_cc / pybamm.boundary_value(-sigma_eff, "right"),
                 "Neumann",

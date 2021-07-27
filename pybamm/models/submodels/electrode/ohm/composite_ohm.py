@@ -38,7 +38,7 @@ class Composite(BaseModel):
             "Leading-order x-averaged " + self.domain.lower() + " electrode tortuosity"
         ]
         phi_s_cn = variables["Negative current collector potential"]
-        T = variables[self.domain + " electrode temperature"]
+        T = variables["X-averaged " + self.domain.lower() + " electrode temperature"]
 
         if self._domain == "Negative":
             sigma_eff_0 = self.param.sigma_n(T) * tor_0
@@ -81,7 +81,7 @@ class Composite(BaseModel):
             "Leading-order x-averaged " + self.domain.lower() + " electrode tortuosity"
         ]
         i_boundary_cc_0 = variables["Leading-order current collector current density"]
-        T = variables[self.domain + " electrode temperature"]
+        T = variables["X-averaged " + self.domain.lower() + " electrode temperature"]
 
         if self.domain == "Negative":
             lbc = (pybamm.Scalar(0), "Dirichlet")

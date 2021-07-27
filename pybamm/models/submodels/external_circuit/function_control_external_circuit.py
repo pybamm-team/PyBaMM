@@ -6,7 +6,7 @@ from .base_external_circuit import BaseModel, LeadingOrderBaseModel
 
 
 class FunctionControl(BaseModel):
-    """External circuit with an arbitrary function. """
+    """External circuit with an arbitrary function."""
 
     def __init__(self, param, external_circuit_function):
         super().__init__(param)
@@ -63,7 +63,7 @@ class VoltageFunctionControl(FunctionControl):
 
 
 class PowerFunctionControl(FunctionControl):
-    """External circuit with power control. """
+    """External circuit with power control."""
 
     def __init__(self, param):
         super().__init__(param, self.constant_power)
@@ -77,7 +77,7 @@ class PowerFunctionControl(FunctionControl):
 
 
 class LeadingOrderFunctionControl(FunctionControl, LeadingOrderBaseModel):
-    """External circuit with an arbitrary function, at leading order. """
+    """External circuit with an arbitrary function, at leading order."""
 
     def __init__(self, param, external_circuit_class):
         super().__init__(param, external_circuit_class)
@@ -103,7 +103,7 @@ class LeadingOrderVoltageFunctionControl(LeadingOrderFunctionControl):
 
 
 class LeadingOrderPowerFunctionControl(LeadingOrderFunctionControl):
-    """External circuit with power control, at leading order. """
+    """External circuit with power control, at leading order."""
 
     def __init__(self, param):
         super().__init__(param, self.constant_power)
