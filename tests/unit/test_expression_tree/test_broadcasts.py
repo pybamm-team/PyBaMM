@@ -1,9 +1,11 @@
 #
 # Tests for the Broadcast class
 #
-import pybamm
-import numpy as np
 import unittest
+
+import numpy as np
+
+import pybamm
 
 
 class TestBroadcasts(unittest.TestCase):
@@ -218,6 +220,10 @@ class TestBroadcasts(unittest.TestCase):
                 a, "negative electrode", "current collector"
             ).id,
         )
+
+    def test_to_equation(self):
+        a = pybamm.PrimaryBroadcast(0, "test").to_equation()
+        self.assertEqual(a, 0)
 
 
 if __name__ == "__main__":

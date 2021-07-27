@@ -44,6 +44,9 @@ class Full(BaseElectrolyteConductivity):
             - pybamm.grad(phi_e)
         )
 
+        # Override print_name
+        i_e.print_name = "i_e"
+
         variables.update(self._get_standard_current_variables(i_e))
         variables.update(self._get_electrolyte_overpotentials(variables))
 

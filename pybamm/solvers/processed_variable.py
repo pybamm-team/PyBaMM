@@ -414,7 +414,7 @@ class ProcessedVariable(object):
                 entries[:, :, idx] = np.reshape(
                     base_var_casadi(t, y, inputs).full(),
                     [len_y, len_z],
-                    order="F",
+                    order="C",
                 )
                 idx += 1
 

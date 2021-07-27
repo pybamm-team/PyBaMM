@@ -1,8 +1,9 @@
 """
 Tests for the print_name.py
 """
-import pybamm
 import unittest
+
+import pybamm
 
 
 class TestPrintName(unittest.TestCase):
@@ -14,13 +15,13 @@ class TestPrintName(unittest.TestCase):
         self.assertEqual(param.timescale.print_name, r"\tau")
 
         # Test superscripts
-        self.assertEqual(param.U_n_ref.print_name, r"U^{n\,ref}")
+        self.assertEqual(param.U_n_ref.print_name, r"U_{n}^{ref}")
 
         # Test subscripts
         self.assertEqual(param.a_R_p.print_name, r"a_{R\,p}")
 
         # Test dim and dimensional
-        self.assertEqual(param.j0_n_ref_dimensional.print_name, r"\hat{j0}^{n\,ref}")
+        self.assertEqual(param.j0_n_ref_dimensional.print_name, r"\hat{j0}_{n}^{ref}")
         self.assertEqual(param.C_dl_n_dimensional.print_name, r"\hat{C}_{dl\,n}")
 
         # Test bar
