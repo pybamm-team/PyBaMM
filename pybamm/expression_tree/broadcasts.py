@@ -69,6 +69,10 @@ class Broadcast(pybamm.SpatialOperator):
         else:
             return False
 
+    def _sympy_operator(self, child):
+        """Override :meth:`pybamm.UnaryOperator._sympy_operator`"""
+        return child
+
 
 class PrimaryBroadcast(Broadcast):
     """

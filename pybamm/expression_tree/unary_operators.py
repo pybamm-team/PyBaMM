@@ -618,6 +618,10 @@ class Integral(SpatialOperator):
         """See :meth:`pybamm.Symbol._evaluates_on_edges()`."""
         return False
 
+    def _sympy_operator(self, child):
+        """Override :meth:`pybamm.UnaryOperator._sympy_operator`"""
+        return sympy.Integral(child, sympy.symbols("xn"))
+
 
 class BaseIndefiniteIntegral(Integral):
     """
@@ -958,13 +962,16 @@ class BoundaryValue(BoundaryOperator):
             self.child.domain[0] in ["negative particle", "positive particle"]
             and self.side == "right"
         ):
-            return sympy.Symbol(
-                str(child) + r"^{surf}"
-            )  # value on the surface of the particle
+            # value on the surface of the particle
+            latex_child = sympy.latex(child) + r"^{surf}"
+            return sympy.Symbol(latex_child)
+
         elif self.side == "positive tab":
             return child
+
         else:
-            return sympy.Symbol(str(child) + r"^{" + self.side + r"}")
+            latex_child = sympy.latex(child) + r"^{" + sympy.latex(self.side) + r"}"
+            return sympy.Symbol(latex_child)
 
 
 class BoundaryGradient(BoundaryOperator):

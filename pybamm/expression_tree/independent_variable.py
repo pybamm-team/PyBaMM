@@ -1,6 +1,8 @@
 #
 # IndependentVariable class
 #
+import sympy
+
 import pybamm
 
 KNOWN_COORD_SYS = ["cartesian", "spherical polar"]
@@ -34,6 +36,13 @@ class IndependentVariable(pybamm.Symbol):
     def _jac(self, variable):
         """See :meth:`pybamm.Symbol._jac()`."""
         return pybamm.Scalar(0)
+
+    def to_equation(self):
+        """Convert the node and its subtree into a SymPy equation."""
+        if self.print_name is not None:
+            return sympy.symbols(self.print_name)
+        else:
+            return sympy.symbols(self.name)
 
 
 class Time(IndependentVariable):

@@ -76,6 +76,9 @@ class BaseElectrolyteDiffusion(pybamm.BaseSubModel):
             * c_e_p_av,
         }
 
+        # Override print_name
+        c_e.print_name = "c_e"
+
         return variables
 
     def _get_standard_porosity_times_concentration_variables(
