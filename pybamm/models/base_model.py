@@ -955,11 +955,14 @@ class BaseModel:
                 hasattr(node, "concat_latex")
                 and getattr(node, "print_name", None) is not None
             ):
+                # Combine list of concatenations with list of ranges
                 concat_geo = map(
                     operator.add,
                     node.concat_latex,
                     self._get_concat_geometry_displays(node),
                 )
+
+                # Add cases and split by new line
                 concat_sym = r"\begin{cases}" + r"\\".join(concat_geo) + r"\end{cases}"
                 concat_eqn = sympy.Eq(
                     sympy.symbols(node.print_name),
@@ -983,12 +986,19 @@ class BaseModel:
         # Loop through all subdomains for concatenations
         for domain in var.domain:
             for var_name, rng in self.default_geometry[domain].items():
-                if "max" in rng:
-                    rng_min = getattr(rng["min"], "print_name", rng["min"])
-                    name = sympy.latex(var_name)
-                    rng_max = getattr(rng["max"], "print_name", rng["max"])
+                if "min" in rng and "max" in rng:
+                    if getattr(rng["min"], "print_name", None) is None:
+                        rng_min = rng["min"]
+                    else:
+                        rng_min = rng["min"].print_name
 
-                    geo_latex = f"\quad {rng_min} < {name} < {rng_max}"
+                    if getattr(rng["max"], "print_name", None) is None:
+                        rng_max = rng["max"]
+                    else:
+                        rng_max = rng["max"].print_name
+
+                    name = sympy.latex(var_name)
+                    geo_latex = f"& {rng_min} < {name} < {rng_max}"
                     geo.append(geo_latex)
 
         return geo
@@ -1009,14 +1019,19 @@ class BaseModel:
 
         # Take range minimum from the first domain
         for var_name, rng in self.default_geometry[var.domain[0]].items():
-            # r_n --> r
+            # Trim name (r_n --> r)
             name = re.findall(r"(.)_*.*", str(var_name))[0]
-
-            rng_min = getattr(rng["min"], "print_name", rng["min"])
+            if getattr(rng["min"], "print_name", None) is None:
+                rng_min = rng["min"]
+            else:
+                rng_min = rng["min"].print_name
 
         # Take range maximum from the last domain
         for var_name, rng in self.default_geometry[var.domain[-1]].items():
-            rng_max = getattr(rng["max"], "print_name", rng["max"])
+            if getattr(rng["max"], "print_name", None) is None:
+                rng_max = rng["max"]
+            else:
+                rng_max = rng["max"].print_name
 
         geo_latex = f"\quad {rng_min} < {name} < {rng_max}"
         geo.append(geo_latex)
@@ -1026,19 +1041,22 @@ class BaseModel:
     def _get_bcs_displays(self, lhs_dr, var):
         """
         Returns a list of boundary condition equations with ranges in front of
-        all equations.
+        the equations.
         """
         bcs_eqn_list = []
-
         bcs = self.boundary_conditions.get(var, None)
-        if bcs:
 
+        if bcs:
             # Take range minimum from the first domain
             for var_name, rng in self.default_geometry[var.domain[0]].items():
-                # r_n --> r
+                # Trim name (r_n --> r)
                 name = re.findall(r"(.)_*.*", str(var_name))[0]
 
-                rng_min = getattr(rng["min"], "print_name", rng["min"])
+                if getattr(rng["min"], "print_name", None) is None:
+                    rng_min = rng["min"]
+                else:
+                    rng_min = rng["min"].print_name
+
                 bcs_left = sympy.latex(bcs["left"][0].to_equation())
                 bcs_left_latex = bcs_left + f"\quad {name} = {rng_min}"
                 bcs_eqn = sympy.Eq(lhs_dr, sympy.Symbol(bcs_left_latex), evaluate=False)
@@ -1046,10 +1064,14 @@ class BaseModel:
 
             # Take range maximum from the last domain
             for var_name, rng in self.default_geometry[var.domain[-1]].items():
-                # r_n --> r
+                # Trim name (r_n --> r)
                 name = re.findall(r"(.)_*.*", str(var_name))[0]
 
-                rng_max = getattr(rng["max"], "print_name", rng["max"])
+                if getattr(rng["max"], "print_name", None) is None:
+                    rng_max = rng["max"]
+                else:
+                    rng_max = rng["max"].print_name
+
                 bcs_right = sympy.latex(bcs["right"][0].to_equation())
                 bcs_right_latex = bcs_right + f"\quad {name} = {rng_max}"
                 bcs_eqn = sympy.Eq(
@@ -1144,7 +1166,7 @@ class BaseModel:
                 if not eqn_type == "algebraic":
                     eqn_list.extend([init_eqn])
 
-                # Add boundary condition in the list
+                # Add boundary condition equations in the list
                 eqn_list.extend(bcs)
 
         # Add voltage expression in the list
@@ -1156,10 +1178,10 @@ class BaseModel:
             voltage_eqn = sympy.Eq(sympy.symbols("V"), voltage, evaluate=False)
             eqn_list.extend([voltage_eqn])
 
-        # Seperate list with new line
+        # Split list with new lines
         eqn_new_line = sympy.Symbol(r"\\\\".join(map(custom_print_func, eqn_list)))
 
-        # Return latex of equations (pretty print if jupyter notebook)
+        # Return latex of equations
         if filename is None:
             return eqn_new_line
 
@@ -1176,7 +1198,7 @@ class BaseModel:
                     output=pathlib.Path(filename).suffix[1:],
                     viewer="file",
                     filename=filename,
-                    dvioptions=["-D", "1100", "-z", "0"],
+                    dvioptions=["-D", "1100"],
                     euler=False,
                 )
 
@@ -1186,7 +1208,7 @@ class BaseModel:
                     eqn_new_line,
                     viewer="file",
                     filename=filename,
-                    dvioptions=["-D", "1100", "-z", "0"],
+                    dvioptions=["-D", "1100"],
                     euler=False,
                 )
 
