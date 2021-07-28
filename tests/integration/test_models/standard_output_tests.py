@@ -377,11 +377,6 @@ class ParticleConcentrationTests(BaseOutputTest):
                     # sign, so ignore first three times
                     np.testing.assert_array_less(0, self.N_s_n(t[3:], x_n, r_n[1:]))
                     np.testing.assert_array_less(self.N_s_p(t[3:], x_p, r_p[1:]), 0)
-                elif self.model.name == "Yang2017":
-                    np.testing.assert_array_less(
-                        -1e-16, self.N_s_n(t[1:], x_n, r_n[2:])
-                    )
-                    np.testing.assert_array_less(self.N_s_p(t[1:], x_p, r_p[1:]), 1e-16)
                 else:
                     np.testing.assert_array_less(
                         -1e-16, self.N_s_n(t[1:], x_n, r_n[1:])

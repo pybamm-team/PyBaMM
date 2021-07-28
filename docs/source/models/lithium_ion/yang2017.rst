@@ -1,6 +1,0 @@
-Yang et al 2017
-===============
-
-.. autoclass:: pybamm.lithium_ion.Yang2017
-    :members:
-
