@@ -299,12 +299,6 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                 "Use 'uniform profile' instead."
             )
 
-        if options["thermal"] == "x-lumped" and options["dimensionality"] == 1:
-            warnings.warn(
-                "1+1D Thermal models are only valid if both tabs are "
-                "placed at the top of the cell."
-            )
-
         for option, value in options.items():
             if option == "external submodels" or option == "working electrode":
                 pass
