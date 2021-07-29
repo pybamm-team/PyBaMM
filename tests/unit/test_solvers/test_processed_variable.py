@@ -267,6 +267,7 @@ class TestProcessedVariable(unittest.TestCase):
 
         disc = tests.get_1p1d_discretisation_for_testing()
         y_sol, x_sol, z_sol, t_sol = process_and_check_2D_variable(var, x, z, disc=disc)
+        del x_sol
 
         # On edges
         x_s_edge = pybamm.Matrix(
