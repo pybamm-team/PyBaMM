@@ -482,11 +482,7 @@ class BaseInterface(pybamm.BaseSubModel):
         pot_scale = self.param.potential_scale
         # Average, and broadcast if necessary
         eta_r_av = pybamm.x_average(eta_r)
-        if eta_r.domain == []:
-            eta_r = pybamm.FullBroadcast(
-                eta_r, self.domain_for_broadcast, "current collector"
-            )
-        elif eta_r.domain == ["current collector"]:
+        if eta_r.domain == ["current collector"]:
             eta_r = pybamm.PrimaryBroadcast(eta_r, self.domain_for_broadcast)
 
         domain_reaction = (
@@ -537,16 +533,7 @@ class BaseInterface(pybamm.BaseSubModel):
         pot_scale = self.param.potential_scale
 
         # Average, and broadcast if necessary
-        if delta_phi.domain == []:
-            delta_phi_av = delta_phi
-            delta_phi_av_dim = ocp_ref + delta_phi_av * pot_scale
-            delta_phi = pybamm.FullBroadcast(
-                delta_phi_av, self.domain_for_broadcast, "current collector"
-            )
-            delta_phi_dim = pybamm.FullBroadcast(
-                delta_phi_av_dim, self.domain_for_broadcast, "current collector"
-            )
-        elif delta_phi.domain == ["current collector"]:
+        if delta_phi.domain == ["current collector"]:
             delta_phi_av = delta_phi
             delta_phi_av_dim = ocp_ref + delta_phi * pot_scale
             delta_phi = pybamm.PrimaryBroadcast(delta_phi_av, self.domain_for_broadcast)
