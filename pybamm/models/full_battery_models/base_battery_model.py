@@ -3,7 +3,6 @@
 #
 
 import pybamm
-import warnings
 
 
 class BatteryModelOptions(pybamm.FuzzyDict):
