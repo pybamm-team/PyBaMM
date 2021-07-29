@@ -69,16 +69,6 @@ class CasadiAlgebraicSolver(pybamm.BaseSolver):
 
         y0 = model.y0
 
-        # If y0 already satisfies the tolerance for all t then keep it
-        if has_symbolic_inputs is False and all(
-            np.all(abs(model.casadi_algebraic(t, y0, inputs).full()) < self.tol)
-            for t in t_eval
-        ):
-            pybamm.logger.debug("Keeping same solution at all times")
-            return pybamm.Solution(
-                t_eval, y0, model, inputs_dict, termination="success"
-            )
-
         # The casadi algebraic solver can read rhs equations, but leaves them unchanged
         # i.e. the part of the solution vector that corresponds to the differential
         # equations will be equal to the initial condition provided. This allows this
