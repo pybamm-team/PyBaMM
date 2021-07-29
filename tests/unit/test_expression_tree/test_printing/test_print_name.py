@@ -10,6 +10,7 @@ class TestPrintName(unittest.TestCase):
     def test_prettify_print_name(self):
         param = pybamm.LithiumIonParameters()
         param1 = pybamm.standard_variables
+        param2 = pybamm.LeadAcidParameters()
 
         # Test PRINT_NAME_OVERRIDES
         self.assertEqual(param.timescale.print_name, r"\tau")
@@ -28,13 +29,15 @@ class TestPrintName(unittest.TestCase):
         self.assertEqual(param1.c_s_n_xav.print_name, r"\bar{c}_{s\,n}")
 
         # Test greek letters
-        self.assertEqual(param1.delta_phi_n.print_name, r"\delta_\phi_n")
+        self.assertEqual(param2.delta.print_name, r"\delta")
 
         # Test new_copy()
-        param2 = pybamm.LeadAcidParameters()
         x_n = pybamm.standard_spatial_vars.x_n
         a_n = param2.a_n(x_n)
         a_n.new_copy()
+
+        # Test eps
+        self.assertEqual(param1.eps_n.print_name, r"\epsilon_n")
 
 
 if __name__ == "__main__":

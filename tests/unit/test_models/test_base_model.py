@@ -922,6 +922,38 @@ class TestBaseModel(unittest.TestCase):
         with self.assertRaisesRegex(pybamm.ModelError, "must appear in the solution"):
             model.set_initial_conditions_from({"wrong var": 2})
 
+    def test_latexify(self):
+        model_dfn = pybamm.lithium_ion.DFN()
+        func_dfn = str(model_dfn.latexify())
+
+        model_spme = pybamm.lithium_ion.SPMe()
+        func_spme = str(model_spme.latexify())
+
+        # Test equation names
+        self.assertIn("Terminal \\: voltage \\: [V]", func_spme)
+
+        # Test concatenation cases
+        self.assertIn("begin{cases}", func_spme)
+        self.assertIn("end{cases}", func_spme)
+
+        # Test partial derivative in boundary conditions
+        self.assertIn("frac{\\partial}{\\partial r}", func_spme)
+
+        # Test boundary conditions range
+        self.assertIn("\\quad r =", func_spme)
+
+        # Test derivative in equations
+        self.assertIn("frac{d}{d t}", func_spme)
+
+        # Test rhs geometry ranges
+        self.assertIn("\\quad 0 < r < 1", func_spme)
+
+        # Test initial conditions
+        self.assertIn("\\quad at\\; t=0", func_spme)
+
+        # Test DFN algebraic lhs
+        self.assertIn("0 =", func_dfn)
+
 
 if __name__ == "__main__":
     print("Add -v for more debug output")

@@ -25,11 +25,15 @@ def battery_geometry(include_particles=True, current_collector_dimension=0):
     geo = pybamm.geometric_parameters
     l_n = geo.l_n
     l_s = geo.l_s
+    l_n_l_s = l_n + l_s
+
+    # Override print_name
+    l_n_l_s.print_name = "l_n + l_s"
 
     geometry = {
         "negative electrode": {var.x_n: {"min": 0, "max": l_n}},
-        "separator": {var.x_s: {"min": l_n, "max": l_n + l_s}},
-        "positive electrode": {var.x_p: {"min": l_n + l_s, "max": 1}},
+        "separator": {var.x_s: {"min": l_n, "max": l_n_l_s}},
+        "positive electrode": {var.x_p: {"min": l_n_l_s, "max": 1}},
     }
     # Add particle domains
     if include_particles is True:
