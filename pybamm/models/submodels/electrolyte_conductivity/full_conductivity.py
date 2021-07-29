@@ -67,6 +67,10 @@ class Full(BaseElectrolyteConductivity):
         # Variable summing all of the interfacial current densities
         sum_j = variables["Sum of interfacial current densities"]
 
+        # Override print_name
+        sum_j.print_name = "J"
+        a.print_name = "a"
+
         self.algebraic = {phi_e: pybamm.div(i_e) - a * sum_j}
 
     def set_initial_conditions(self, variables):
