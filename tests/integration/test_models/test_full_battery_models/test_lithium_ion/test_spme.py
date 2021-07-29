@@ -164,7 +164,7 @@ class TestSPMe(unittest.TestCase):
             "lithium plating porosity change": "true",
         }
         model = pybamm.lithium_ion.SPMe(options)
-        param = pybamm.ParameterValues(chemistry=pybamm.parameter_sets.Mohtat2020)
+        param = pybamm.ParameterValues(chemistry=pybamm.parameter_sets.Yang2017)
         modeltest = tests.StandardModelTest(model, parameter_values=param)
         modeltest.test_all()
 
