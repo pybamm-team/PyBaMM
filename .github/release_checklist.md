@@ -1,4 +1,5 @@
-- Increment version number in `version`	
-- Increment version number in `docs/conf.py`	
-- Update CHANGELOG.md with a summary of the release	
-- Update (and pin) jax and jaxlib to latest version and fix any bugs that arise	
+- Increment version number in `version`
+- Increment version number in `docs/conf.py`
+- Increment version number in `CITATION.cff`
+- Update CHANGELOG.md with a summary of the release
+- Update (and pin) jax and jaxlib to latest version and fix any bugs that arise
