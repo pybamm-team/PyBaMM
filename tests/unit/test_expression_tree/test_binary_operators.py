@@ -326,7 +326,7 @@ class TestBinaryOperators(unittest.TestCase):
     def test_equality(self):
         a = pybamm.Scalar(1)
         b = pybamm.StateVector(slice(0, 1))
-        equal = pybamm.equality(a, b)
+        equal = pybamm.Equality(a, b)
         self.assertEqual(equal.evaluate(y=np.array([1])), 1)
         self.assertEqual(equal.evaluate(y=np.array([2])), 0)
         self.assertEqual(str(equal), "1.0 == y[0:1]")
