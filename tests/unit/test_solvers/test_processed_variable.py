@@ -26,6 +26,37 @@ def to_casadi(var_pybamm, y, inputs=None):
     return var_casadi
 
 
+def process_and_check_2D_variable(
+    var, first_spatial_var, second_spatial_var, disc=None
+):
+    # first_spatial_var should be on the "smaller" domain, i.e "r" for an "r-x" variable
+    if disc is None:
+        disc = tests.get_discretisation_for_testing()
+    disc.set_variable_slices([var])
+
+    first_sol = disc.process_symbol(first_spatial_var).entries[:, 0]
+    second_sol = disc.process_symbol(second_spatial_var).entries[:, 0]
+
+    # Keep only the first iteration of entries
+    first_sol = first_sol[: len(first_sol) // len(second_sol)]
+    var_sol = disc.process_symbol(var)
+    t_sol = np.linspace(0, 1)
+    y_sol = np.ones(len(second_sol) * len(first_sol))[:, np.newaxis] * np.linspace(0, 5)
+
+    var_casadi = to_casadi(var_sol, y_sol)
+    processed_var = pybamm.ProcessedVariable(
+        [var_sol],
+        [var_casadi],
+        pybamm.Solution(t_sol, y_sol, pybamm.BaseModel(), {}),
+        warn=False,
+    )
+    np.testing.assert_array_equal(
+        processed_var.entries,
+        np.reshape(y_sol, [len(first_sol), len(second_sol), len(t_sol)]),
+    )
+    return y_sol, first_sol, second_sol, t_sol
+
+
 class TestProcessedVariable(unittest.TestCase):
     def test_processed_variable_0D(self):
         # without space
@@ -171,26 +202,55 @@ class TestProcessedVariable(unittest.TestCase):
         )
 
         disc = tests.get_p2d_discretisation_for_testing()
-        disc.set_variable_slices([var])
-        x_sol = disc.process_symbol(x).entries[:, 0]
-        r_sol = disc.process_symbol(r).entries[:, 0]
-        # Keep only the first iteration of entries
-        r_sol = r_sol[: len(r_sol) // len(x_sol)]
-        var_sol = disc.process_symbol(var)
-        t_sol = np.linspace(0, 1)
-        y_sol = np.ones(len(x_sol) * len(r_sol))[:, np.newaxis] * np.linspace(0, 5)
+        process_and_check_2D_variable(var, r, x, disc=disc)
 
-        var_casadi = to_casadi(var_sol, y_sol)
-        processed_var = pybamm.ProcessedVariable(
-            [var_sol],
-            [var_casadi],
-            pybamm.Solution(t_sol, y_sol, pybamm.BaseModel(), {}),
-            warn=False,
+    def test_processed_variable_2D_R_x(self):
+        var = pybamm.Variable(
+            "var",
+            domain=["negative particle size"],
+            auxiliary_domains={"secondary": ["negative electrode"]},
         )
-        np.testing.assert_array_equal(
-            processed_var.entries,
-            np.reshape(y_sol, [len(r_sol), len(x_sol), len(t_sol)]),
+        R = pybamm.SpatialVariable(
+            "R",
+            domain=["negative particle size"],
+            auxiliary_domains={"secondary": ["negative electrode"]},
         )
+        x = pybamm.SpatialVariable("x", domain=["negative electrode"])
+
+        disc = tests.get_size_distribution_disc_for_testing()
+        process_and_check_2D_variable(var, R, x, disc=disc)
+
+    def test_processed_variable_2D_R_z(self):
+        var = pybamm.Variable(
+            "var",
+            domain=["negative particle size"],
+            auxiliary_domains={"secondary": ["current collector"]},
+        )
+        R = pybamm.SpatialVariable(
+            "R",
+            domain=["negative particle size"],
+            auxiliary_domains={"secondary": ["current collector"]},
+        )
+        z = pybamm.SpatialVariable("z", domain=["current collector"])
+
+        disc = tests.get_size_distribution_disc_for_testing()
+        process_and_check_2D_variable(var, R, z, disc=disc)
+
+    def test_processed_variable_2D_r_R(self):
+        var = pybamm.Variable(
+            "var",
+            domain=["negative particle"],
+            auxiliary_domains={"secondary": ["negative particle size"]},
+        )
+        r = pybamm.SpatialVariable(
+            "r",
+            domain=["negative particle"],
+            auxiliary_domains={"secondary": ["negative particle size"]},
+        )
+        R = pybamm.SpatialVariable("R", domain=["negative particle size"])
+
+        disc = tests.get_size_distribution_disc_for_testing()
+        process_and_check_2D_variable(var, r, R, disc=disc)
 
     def test_processed_variable_2D_x_z(self):
         var = pybamm.Variable(
@@ -206,26 +266,8 @@ class TestProcessedVariable(unittest.TestCase):
         z = pybamm.SpatialVariable("z", domain=["current collector"])
 
         disc = tests.get_1p1d_discretisation_for_testing()
-        disc.set_variable_slices([var])
-        z_sol = disc.process_symbol(z).entries[:, 0]
-        x_sol = disc.process_symbol(x).entries[:, 0]
-        # Keep only the first iteration of entries
-        x_sol = x_sol[: len(x_sol) // len(z_sol)]
-        var_sol = disc.process_symbol(var)
-        t_sol = np.linspace(0, 1)
-        y_sol = np.ones(len(x_sol) * len(z_sol))[:, np.newaxis] * np.linspace(0, 5)
-
-        var_casadi = to_casadi(var_sol, y_sol)
-        processed_var = pybamm.ProcessedVariable(
-            [var_sol],
-            [var_casadi],
-            pybamm.Solution(t_sol, y_sol, pybamm.BaseModel(), {}),
-            warn=False,
-        )
-        np.testing.assert_array_equal(
-            processed_var.entries,
-            np.reshape(y_sol, [len(x_sol), len(z_sol), len(t_sol)]),
-        )
+        y_sol, x_sol, z_sol, t_sol = process_and_check_2D_variable(var, x, z, disc=disc)
+        del x_sol
 
         # On edges
         x_s_edge = pybamm.Matrix(
@@ -448,7 +490,7 @@ class TestProcessedVariable(unittest.TestCase):
         )
         np.testing.assert_array_almost_equal(processed_x(x=x_sol), x_sol[:, np.newaxis])
 
-        # On microscale
+        # In particles
         r_n = pybamm.Matrix(
             disc.mesh["negative particle"].nodes, domain="negative particle"
         )
@@ -463,6 +505,24 @@ class TestProcessedVariable(unittest.TestCase):
         np.testing.assert_array_equal(r_n.entries[:, 0], processed_r_n.entries[:, 0])
         np.testing.assert_array_almost_equal(
             processed_r_n(0, r=np.linspace(0, 1))[:, 0], np.linspace(0, 1)
+        )
+
+        # On size domain
+        R_n = pybamm.Matrix(
+            disc.mesh["negative particle size"].nodes,
+            domain="negative particle size"
+        )
+        R_n.mesh = disc.mesh["negative particle size"]
+        R_n_casadi = to_casadi(R_n, y_sol)
+        processed_R_n = pybamm.ProcessedVariable(
+            [R_n],
+            [R_n_casadi],
+            pybamm.Solution(t_sol, y_sol, pybamm.BaseModel(), {}),
+            warn=False,
+        )
+        np.testing.assert_array_equal(R_n.entries[:, 0], processed_R_n.entries[:, 0])
+        np.testing.assert_array_almost_equal(
+            processed_R_n(0, R=np.linspace(0, 1))[:, 0], np.linspace(0, 1)
         )
 
     def test_processed_var_1D_fixed_t_interpolation(self):

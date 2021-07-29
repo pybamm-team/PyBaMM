@@ -24,6 +24,7 @@ class TestLeadingOrderModel(unittest.TestCase):
             "Negative electrolyte concentration": a_n,
             "Sum of x-averaged negative electrode interfacial current densities": a,
             "X-averaged negative electrode total interfacial current density": a,
+            "X-averaged negative electrode surface area to volume ratio": a,
         }
         spf = pybamm.electrolyte_conductivity.surface_potential_form
         submodel = spf.LeadingOrderAlgebraic(param, "Negative")
@@ -43,6 +44,7 @@ class TestLeadingOrderModel(unittest.TestCase):
             "Positive electrolyte concentration": a_p,
             "Sum of x-averaged positive electrode interfacial current densities": a,
             "X-averaged positive electrode total interfacial current density": a,
+            "X-averaged positive electrode surface area to volume ratio": a,
         }
         submodel = spf.LeadingOrderAlgebraic(param, "Positive")
         std_tests = tests.StandardSubModelTests(submodel, variables)
