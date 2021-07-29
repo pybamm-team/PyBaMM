@@ -17,12 +17,15 @@ class BaseInterface(pybamm.BaseSubModel):
         The domain to implement the model, either: 'Negative' or 'Positive'.
     reaction : str
         The name of the reaction being implemented
+    options: dict
+        A dictionary of options to be passed to the model. See
+        :class:`pybamm.BaseBatteryModel`
 
     **Extends:** :class:`pybamm.BaseSubModel`
     """
 
-    def __init__(self, param, domain, reaction):
-        super().__init__(param, domain)
+    def __init__(self, param, domain, reaction, options=None):
+        super().__init__(param, domain, options=options)
         if reaction == "lithium-ion main":
             self.reaction_name = ""  # empty reaction name for the main reaction
             self.Reaction_icd = "Interfacial current density"
