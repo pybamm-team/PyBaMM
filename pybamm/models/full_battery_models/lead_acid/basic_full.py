@@ -188,8 +188,8 @@ class BasicFull(BaseModel):
         ######################
         # Current in the solid
         ######################
-        i_s_n = -param.sigma_n * (1 - eps_n) ** param.b_s_n * pybamm.grad(phi_s_n)
-        sigma_eff_p = param.sigma_p * (1 - eps_p) ** param.b_s_p
+        i_s_n = -param.sigma_n(T) * (1 - eps_n) ** param.b_s_n * pybamm.grad(phi_s_n)
+        sigma_eff_p = param.sigma_p(T) * (1 - eps_p) ** param.b_s_p
         i_s_p = -sigma_eff_p * pybamm.grad(phi_s_p)
         # The `algebraic` dictionary contains differential equations, with the key being
         # the main scalar variable of interest in the equation
