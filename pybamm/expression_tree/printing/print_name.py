@@ -9,7 +9,6 @@ PRINT_NAME_OVERRIDES = {
     "current_with_time": "I",
     "timescale": r"\tau",
     "dimensional_current_with_time": r"\hat{I}",
-    "eps": r"\epsilon{c}",
     "eps_c_e": r"\epsilon{c_e}",
     "one_plus_dlnf_dlnc": r"1+\frac{dlnf}{dlnc}",
     "negative_particle_concentration_scale": r"c_{n}^{max}",
