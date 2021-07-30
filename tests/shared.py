@@ -42,7 +42,7 @@ class SpatialMethodForTesting(pybamm.SpatialMethod):
 
 
 def get_mesh_for_testing(
-    xpts=None, rpts=10, ypts=15, zpts=15, geometry=None, cc_submesh=None
+    xpts=None, rpts=10, Rpts=10, ypts=15, zpts=15, geometry=None, cc_submesh=None
 ):
     param = pybamm.ParameterValues(
         values={
@@ -57,11 +57,17 @@ def get_mesh_for_testing(
             "Negative electrode thickness [m]": 0.3,
             "Separator thickness [m]": 0.3,
             "Positive electrode thickness [m]": 0.3,
+            "Negative particle radius [m]": 0.5,
+            "Positive particle radius [m]": 0.5,
+            "Negative minimum particle radius [m]": 0.0,
+            "Negative maximum particle radius [m]": 1.0,
+            "Positive minimum particle radius [m]": 0.0,
+            "Positive maximum particle radius [m]": 1.0,
         }
     )
 
     if geometry is None:
-        geometry = pybamm.battery_geometry()
+        geometry = pybamm.battery_geometry(options={"particle size": "distribution"})
     param.process_geometry(geometry)
 
     submesh_types = {
@@ -70,6 +76,8 @@ def get_mesh_for_testing(
         "positive electrode": pybamm.MeshGenerator(pybamm.Uniform1DSubMesh),
         "negative particle": pybamm.MeshGenerator(pybamm.Uniform1DSubMesh),
         "positive particle": pybamm.MeshGenerator(pybamm.Uniform1DSubMesh),
+        "negative particle size": pybamm.MeshGenerator(pybamm.Uniform1DSubMesh),
+        "positive particle size": pybamm.MeshGenerator(pybamm.Uniform1DSubMesh),
         "current collector": pybamm.MeshGenerator(pybamm.SubMesh0D),
     }
     if cc_submesh:
@@ -88,6 +96,8 @@ def get_mesh_for_testing(
         var.r_p: rpts,
         var.y: ypts,
         var.z: zpts,
+        var.R_n: Rpts,
+        var.R_p: Rpts,
     }
 
     return pybamm.Mesh(geometry, submesh_types, var_pts)
@@ -96,6 +106,25 @@ def get_mesh_for_testing(
 def get_p2d_mesh_for_testing(xpts=None, rpts=10):
     geometry = pybamm.battery_geometry()
     return get_mesh_for_testing(xpts=xpts, rpts=rpts, geometry=geometry)
+
+
+def get_size_distribution_mesh_for_testing(
+    xpts=None,
+    rpts=10,
+    Rpts=10,
+    zpts=15,
+    cc_submesh=pybamm.MeshGenerator(pybamm.Uniform1DSubMesh),
+):
+    options = {"particle size": "distribution"}
+    geometry = pybamm.battery_geometry(options=options, current_collector_dimension=1)
+    return get_mesh_for_testing(
+        xpts=xpts,
+        rpts=rpts,
+        Rpts=Rpts,
+        zpts=zpts,
+        geometry=geometry,
+        cc_submesh=cc_submesh
+    )
 
 
 def get_1p1d_mesh_for_testing(
@@ -175,6 +204,8 @@ def get_discretisation_for_testing(
         "macroscale": SpatialMethodForTesting(),
         "negative particle": SpatialMethodForTesting(),
         "positive particle": SpatialMethodForTesting(),
+        "negative particle size": SpatialMethodForTesting(),
+        "positive particle size": SpatialMethodForTesting(),
         "current collector": cc_method(),
     }
     return pybamm.Discretisation(mesh, spatial_methods)
@@ -182,6 +213,12 @@ def get_discretisation_for_testing(
 
 def get_p2d_discretisation_for_testing(xpts=None, rpts=10):
     return get_discretisation_for_testing(mesh=get_p2d_mesh_for_testing(xpts, rpts))
+
+
+def get_size_distribution_disc_for_testing(xpts=None, rpts=10, Rpts=10, zpts=15):
+    return get_discretisation_for_testing(
+        mesh=get_size_distribution_mesh_for_testing(xpts, rpts, Rpts, zpts)
+    )
 
 
 def get_1p1d_discretisation_for_testing(xpts=None, rpts=10, zpts=15):
