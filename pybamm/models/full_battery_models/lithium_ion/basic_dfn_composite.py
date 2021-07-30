@@ -338,6 +338,10 @@ class BasicDFNComposite(BaseModel):
         # The `variables` dictionary contains all variables that might be useful for
         # visualising the solution of the model
         self.variables = {
+            "Negative particle concentration of phase 1": c_s_n_p1,
+            "Negative particle concentration of phase 2": c_s_n_p2,
+            "Positive particle concentration": c_s_p,
+            "Negative particle concentration": c_s_p,
             "Negative particle surface concentration of phase 1": c_s_surf_n_p1,
             "Negative particle surface concentration of phase 2": c_s_surf_n_p2,
             "Electrolyte concentration": c_e,
@@ -346,8 +350,17 @@ class BasicDFNComposite(BaseModel):
             "Electrolyte potential [V]":  -param.U_n_ref + param.potential_scale * phi_e,
             "Positive electrode potential [V]": param.U_p_ref
             - param.U_n_ref + param.potential_scale * phi_s_p,
+            "Negative electrolyte potential": phi_e_n,
+            "Separator electrolyte potential": phi_e_s,
+            "Positive electrolyte potential": phi_e_p,
+            "Negative electrolyte concentration": c_e_n,
+            "Separator electrolyte concentration": c_e_s,
+            "Positive electrolyte concentration": c_e_p,
+            "Positive electrode potential": phi_s_p,
+            "Negative electrode potential": phi_s_n,
             "Terminal voltage": voltage,
             "Current [A]": I,
+            "Discharge capacity [A.h]":Q,
             "Time [s]": pybamm.t * param.timescale,
             "Terminal voltage [V]": voltage_dim,
             "Negative electrode open circuit potential of phase 1 [V]": ocp_n_p1_dim,
