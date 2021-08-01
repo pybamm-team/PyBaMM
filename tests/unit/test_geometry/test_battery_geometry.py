@@ -8,7 +8,10 @@ import unittest
 class TestBatteryGeometry(unittest.TestCase):
     def test_geometry_keys(self):
         for cc_dimension in [0, 1, 2]:
-            geometry = pybamm.battery_geometry(current_collector_dimension=cc_dimension)
+            geometry = pybamm.battery_geometry(
+                options={"particle size": "distribution"},
+                current_collector_dimension=cc_dimension
+            )
             for domain_geoms in geometry.values():
                 all(
                     self.assertIsInstance(spatial_var, pybamm.SpatialVariable)
@@ -20,10 +23,14 @@ class TestBatteryGeometry(unittest.TestCase):
         var = pybamm.standard_spatial_vars
         geo = pybamm.geometric_parameters
         for cc_dimension in [0, 1, 2]:
-            geometry = pybamm.battery_geometry(current_collector_dimension=cc_dimension)
+            geometry = pybamm.battery_geometry(
+                options={"particle size": "distribution"},
+                current_collector_dimension=cc_dimension
+            )
             self.assertIsInstance(geometry, pybamm.Geometry)
             self.assertIn("negative electrode", geometry)
             self.assertIn("negative particle", geometry)
+            self.assertIn("negative particle size", geometry)
             self.assertEqual(geometry["negative electrode"][var.x_n]["min"], 0)
             self.assertEqual(
                 geometry["negative electrode"][var.x_n]["max"].id, geo.l_n.id
@@ -33,6 +40,9 @@ class TestBatteryGeometry(unittest.TestCase):
 
         geometry = pybamm.battery_geometry(include_particles=False)
         self.assertNotIn("negative particle", geometry)
+
+        geometry = pybamm.battery_geometry()
+        self.assertNotIn("negative particle size", geometry)
 
     def test_geometry_error(self):
         with self.assertRaisesRegex(pybamm.GeometryError, "Invalid current"):

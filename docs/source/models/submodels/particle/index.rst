@@ -9,3 +9,4 @@ Particle
   fickian_many_particles
   polynomial_single_particle
   polynomial_many_particles
+  size_distribution/index

@@ -29,6 +29,12 @@ class TestBroadcasts(unittest.TestCase):
             broad_a.auxiliary_domains,
             {"secondary": ["negative electrode"], "tertiary": ["current collector"]},
         )
+        broad_a = pybamm.PrimaryBroadcast(a, ["negative particle size"])
+        self.assertEqual(broad_a.domain, ["negative particle size"])
+        self.assertEqual(
+            broad_a.auxiliary_domains,
+            {"secondary": ["negative electrode"], "tertiary": ["current collector"]},
+        )
 
         a = pybamm.Symbol("a", domain="current collector")
         with self.assertRaisesRegex(
@@ -40,6 +46,11 @@ class TestBroadcasts(unittest.TestCase):
             pybamm.DomainError, "Primary broadcast from electrode"
         ):
             pybamm.PrimaryBroadcast(a, "current collector")
+        a = pybamm.Symbol("a", domain="negative particle size")
+        with self.assertRaisesRegex(
+            pybamm.DomainError, "Primary broadcast from particle size"
+        ):
+            pybamm.PrimaryBroadcast(a, "negative electrode")
         a = pybamm.Symbol("a", domain="negative particle")
         with self.assertRaisesRegex(
             pybamm.DomainError, "Cannot do primary broadcast from particle domain"
@@ -59,6 +70,15 @@ class TestBroadcasts(unittest.TestCase):
             {"secondary": ["negative electrode"], "tertiary": ["current collector"]},
         )
         self.assertTrue(broad_a.broadcasts_to_nodes)
+        broad_a = pybamm.SecondaryBroadcast(a, ["negative particle size"])
+        self.assertEqual(broad_a.domain, ["negative particle"])
+        self.assertEqual(
+            broad_a.auxiliary_domains,
+            {
+                "secondary": ["negative particle size"],
+                "tertiary": ["current collector"]
+            },
+        )
 
         with self.assertRaises(NotImplementedError):
             broad_a.reduce_one_dimension()
@@ -71,6 +91,11 @@ class TestBroadcasts(unittest.TestCase):
             pybamm.DomainError, "Secondary broadcast from particle"
         ):
             pybamm.SecondaryBroadcast(a, "current collector")
+        a = pybamm.Symbol("a", domain="negative particle size")
+        with self.assertRaisesRegex(
+            pybamm.DomainError, "Secondary broadcast from particle size"
+        ):
+            pybamm.SecondaryBroadcast(a, "negative particle")
         a = pybamm.Symbol("a", domain="negative electrode")
         with self.assertRaisesRegex(
             pybamm.DomainError, "Secondary broadcast from electrode"

@@ -1272,10 +1272,16 @@ def x_average(symbol):
         # Even if domain is "negative electrode", "separator", or
         # "positive electrode", and we know l, we still compute it as Integral(1, x)
         # as this will be easier to identify for simplifications later on
-        if symbol.domain == ["negative particle"]:
+        if (
+            symbol.domain == ["negative particle"] or
+            symbol.domain == ["negative particle size"]
+        ):
             x = pybamm.standard_spatial_vars.x_n
             l = geo.l_n
-        elif symbol.domain == ["positive particle"]:
+        elif (
+            symbol.domain == ["positive particle"] or
+            symbol.domain == ["positive particle size"]
+        ):
             x = pybamm.standard_spatial_vars.x_p
             l = geo.l_p
         else:
@@ -1419,6 +1425,67 @@ def r_average(symbol):
             pybamm.Scalar(1), symbol.domain, symbol.auxiliary_domains
         )
         return Integral(symbol, r) / Integral(v, r)
+
+
+def size_average(symbol):
+    """convenience function for averaging over particle size R using the area-weighted
+    particle-size distribution.
+
+    Parameters
+    ----------
+    symbol : :class:`pybamm.Symbol`
+        The function to be averaged
+    Returns
+    -------
+    :class:`Symbol`
+        the new averaged symbol
+    """
+    # Can't take average if the symbol evaluates on edges
+    if symbol.evaluates_on_edges("primary"):
+        raise ValueError(
+            """Can't take the size-average of a symbol that evaluates on edges"""
+        )
+
+    # If symbol doesn't have a domain, or doesn't have "negative particle size"
+    #  or "positive particle size" as a domain, it's average value is itself
+    if symbol.domain == [] or not any(
+        domain in [["negative particle size"], ["positive particle size"]]
+        for domain in list(symbol.domains.values())
+    ):
+        new_symbol = symbol.new_copy()
+        new_symbol.parent = None
+        return new_symbol
+
+    # If symbol is a primary broadcast to "particle size", take the orphan
+    elif isinstance(symbol, pybamm.PrimaryBroadcast) and symbol.domain in [
+        ["negative particle size"], ["positive particle size"]
+    ]:
+        return symbol.orphans[0]
+    # If symbol is a secondary broadcast to "particle size" from "particle",
+    # take the orphan
+    elif (
+        isinstance(symbol, pybamm.SecondaryBroadcast) and
+        symbol.domains["secondary"] in [
+            ["negative particle size"], ["positive particle size"]
+        ]
+    ):
+        return symbol.orphans[0]
+    # Otherwise, perform the integration in R
+    else:
+        R = pybamm.SpatialVariable(
+            "R",
+            domain=symbol.domain,
+            auxiliary_domains=symbol.auxiliary_domains,
+            coord_sys="cartesian",
+        )
+        geo = pybamm.geometric_parameters
+        if ["negative particle size"] in list(symbol.domains.values()):
+            f_a_dist = geo.f_a_dist_n(R)
+        elif ["positive particle size"] in list(symbol.domains.values()):
+            f_a_dist = geo.f_a_dist_p(R)
+
+        # take average using Integral and distribution f_a_dist
+        return Integral(f_a_dist * symbol, R) / Integral(f_a_dist, R)
 
 
 def boundary_value(symbol, side):

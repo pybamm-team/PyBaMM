@@ -122,15 +122,16 @@ class LeadAcidParameters(BaseParameters):
         self.Q_p_max_dimensional = pybamm.Parameter(
             "Positive electrode volumetric capacity [C.m-3]"
         )
-        self.sigma_n_dim = pybamm.Parameter("Negative electrode conductivity [S.m-1]")
-        self.sigma_p_dim = pybamm.Parameter("Positive electrode conductivity [S.m-1]")
         # In lead-acid the current collector and electrodes are the same (same
-        # conductivity) but we correct here for Bruggeman
+        # conductivity) but we correct here for Bruggeman. Note that because for
+        # lithium-ion we allow electrode conductivity to be a function of temperature,
+        # but not the current collector conductivity, here the latter is evaluated at
+        # T_ref.
         self.sigma_cn_dimensional = (
-            self.sigma_n_dim * (1 - self.eps_n_max) ** self.b_s_n
+            self.sigma_n_dimensional(self.T_ref) * (1 - self.eps_n_max) ** self.b_s_n
         )
         self.sigma_cp_dimensional = (
-            self.sigma_p_dim * (1 - self.eps_p_max) ** self.b_s_p
+            self.sigma_p_dimensional(self.T_ref) * (1 - self.eps_p_max) ** self.b_s_p
         )
 
         # Electrochemical reactions
@@ -224,6 +225,20 @@ class LeadAcidParameters(BaseParameters):
         # SEI parameters (for compatibility)
         self.R_sei_dimensional = pybamm.Scalar(0)
         self.beta_sei_n = pybamm.Scalar(0)
+
+    def sigma_n_dimensional(self, T):
+        """Dimensional electrical conductivity in negative electrode"""
+        inputs = {"Temperature [K]": T}
+        return pybamm.FunctionParameter(
+            "Negative electrode conductivity [S.m-1]", inputs
+        )
+
+    def sigma_p_dimensional(self, T):
+        """Dimensional electrical conductivity in positive electrode"""
+        inputs = {"Temperature [K]": T}
+        return pybamm.FunctionParameter(
+            "Positive electrode conductivity [S.m-1]", inputs
+        )
 
     def t_plus(self, c_e, T):
         """Dimensionless transference number (i.e. c_e is dimensionless)"""
@@ -481,20 +496,13 @@ class LeadAcidParameters(BaseParameters):
         )
 
         # Electrode Properties
+        # Electrode Properties
         self.sigma_cn = (
             self.sigma_cn_dimensional * self.potential_scale / self.i_typ / self.L_x
-        )
-        self.sigma_n = (
-            self.sigma_n_dim * self.potential_scale / self.current_scale / self.L_x
-        )
-        self.sigma_p = (
-            self.sigma_p_dim * self.potential_scale / self.current_scale / self.L_x
         )
         self.sigma_cp = (
             self.sigma_cp_dimensional * self.potential_scale / self.i_typ / self.L_x
         )
-        self.sigma_n_prime = self.sigma_n * self.delta ** 2
-        self.sigma_p_prime = self.sigma_p * self.delta ** 2
         self.sigma_cn_prime = self.sigma_cn * self.delta ** 2
         self.sigma_cp_prime = self.sigma_cp * self.delta ** 2
         self.delta_pore_n = 1 / (self.a_n_typ * self.L_x)
@@ -675,6 +683,34 @@ class LeadAcidParameters(BaseParameters):
         self.curlyU_p_init = (
             self.Q_e_max * (1.2 - self.q_init) / (self.Q_p_max * self.l_p)
         )
+
+    def sigma_n(self, T):
+        """Dimensionless negative electrode electrical conductivity"""
+        T_dim = self.Delta_T * T + self.T_ref
+        return (
+            self.sigma_n_dimensional(T_dim)
+            * self.potential_scale
+            / self.current_scale
+            / self.L_x
+        )
+
+    def sigma_p(self, T):
+        """Dimensionless positive electrode electrical conductivity"""
+        T_dim = self.Delta_T * T + self.T_ref
+        return (
+            self.sigma_p_dimensional(T_dim)
+            * self.potential_scale
+            / self.current_scale
+            / self.L_x
+        )
+
+    def sigma_n_prime(self, T):
+        """Rescaled dimensionless negative electrode electrical conductivity"""
+        return self.sigma_n(T) * self.delta ** 2
+
+    def sigma_p_prime(self, T):
+        """Rescaled dimensionless positive electrode electrical conductivity"""
+        return self.sigma_p(T) * self.delta ** 2
 
     def D_e(self, c_e, T):
         """Dimensionless electrolyte diffusivity"""
