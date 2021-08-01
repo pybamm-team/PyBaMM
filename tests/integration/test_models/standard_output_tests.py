@@ -317,21 +317,17 @@ class ParticleConcentrationTests(BaseOutputTest):
         elif self.model.options["particle size"] == "distribution":
             R_n, R_p = self.R_n, self.R_p
             # Test the concentration variables that depend on particle size
-            neg_diff = (
-                self.c_s_n_dist(t[1:], r=r_n, R=R_n) -
-                self.c_s_n_dist(t[:-1], r=r_n, R=R_n)
+            neg_diff = self.c_s_n_dist(t[1:], r=r_n, R=R_n) - self.c_s_n_dist(
+                t[:-1], r=r_n, R=R_n
             )
-            pos_diff = (
-                self.c_s_p_dist(t[1:], r=r_p, R=R_p) -
-                self.c_s_p_dist(t[:-1], r=r_p, R=R_p)
+            pos_diff = self.c_s_p_dist(t[1:], r=r_p, R=R_p) - self.c_s_p_dist(
+                t[:-1], r=r_p, R=R_p
             )
-            neg_end_vs_start = (
-                self.c_s_n_dist(t[-1], r=r_n, R=R_n) -
-                self.c_s_n_dist(t[0], r=r_n, R=R_n)
+            neg_end_vs_start = self.c_s_n_dist(t[-1], r=r_n, R=R_n) - self.c_s_n_dist(
+                t[0], r=r_n, R=R_n
             )
-            pos_end_vs_start = (
-                self.c_s_p_dist(t[-1], r=r_p, R=R_p) -
-                self.c_s_p_dist(t[0], r=r_p, R=R_p)
+            pos_end_vs_start = self.c_s_p_dist(t[-1], r=r_p, R=R_p) - self.c_s_p_dist(
+                t[0], r=r_p, R=R_p
             )
             tol = 1e-15
         else:
@@ -394,7 +390,7 @@ class ParticleConcentrationTests(BaseOutputTest):
         elif self.model.options["SEI"] == "ec reaction limited":
             np.testing.assert_array_almost_equal(diff, 0, decimal=11)
         elif self.model.options["lithium plating"] == "irreversible":
-            np.testing.assert_array_almost_equal(diff, 0, decimal=14)
+            np.testing.assert_array_almost_equal(diff, 0, decimal=13)
         else:
             np.testing.assert_array_almost_equal(diff, 0, decimal=15)
 
@@ -430,11 +426,6 @@ class ParticleConcentrationTests(BaseOutputTest):
                     # sign, so ignore first three times
                     np.testing.assert_array_less(0, self.N_s_n(t[3:], x_n, r_n[1:]))
                     np.testing.assert_array_less(self.N_s_p(t[3:], x_p, r_p[1:]), 0)
-                elif self.model.name == "Yang2017":
-                    np.testing.assert_array_less(
-                        -1e-16, self.N_s_n(t[1:], x_n, r_n[2:])
-                    )
-                    np.testing.assert_array_less(self.N_s_p(t[1:], x_p, r_p[1:]), 1e-16)
                 else:
                     np.testing.assert_array_less(
                         -1e-16, self.N_s_n(t[1:], x_n, r_n[1:])
