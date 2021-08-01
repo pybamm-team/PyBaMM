@@ -365,6 +365,18 @@
 }
 
 
+@article{Yang2017,
+  author = {Yang, Xiao Guang and Leng, Yongjun and Zhang, Guangsheng and Ge, Shanhai and Wang, Chao Yang},
+  title = {Modeling of lithium plating induced aging of lithium-ion batteries: Transition from linear to nonlinear aging},
+  journal = {Journal of Power Sources},
+  volume = {360},
+  pages = {28--40},
+  year = {2017},
+  publisher = {Elsevier},
+  doi = {10.1016/j.jpowsour.2017.05.110},
+}
+
+
 @article{Ramadass2004,
   title={Development of first principles capacity fade model for Li-ion cells},
   author={Ramadass, P and Haran, Bala and Gomadam, Parthasarathy M and White, Ralph and Popov, Branko N},

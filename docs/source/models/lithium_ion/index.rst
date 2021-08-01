@@ -9,3 +9,4 @@ Lithium-ion Models
   mpm
   dfn
   newman_tobias
+  yang2017
