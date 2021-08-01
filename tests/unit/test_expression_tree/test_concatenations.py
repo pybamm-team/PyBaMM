@@ -1,10 +1,13 @@
 #
 # Tests for the Concatenation class and subclasses
 #
-import pybamm
-from tests import get_mesh_for_testing, get_discretisation_for_testing
-import numpy as np
 import unittest
+
+import numpy as np
+import sympy
+
+import pybamm
+from tests import get_discretisation_for_testing, get_mesh_for_testing
 
 
 class TestConcatenations(unittest.TestCase):
@@ -356,6 +359,19 @@ class TestConcatenations(unittest.TestCase):
             pybamm.numpy_concatenation(pybamm.numpy_concatenation(a, b), c).id,
             pybamm.NumpyConcatenation(a, b, c).id,
         )
+
+    def test_to_equation(self):
+        a = pybamm.Symbol("a", domain="test a")
+        b = pybamm.Symbol("b", domain="test b")
+        func_symbol = sympy.symbols(r"\begin{cases}a\\b\end{cases}")
+
+        # Test print_name
+        func = pybamm.Concatenation(a, b)
+        func.print_name = "test"
+        self.assertEqual(func.to_equation(), sympy.symbols("test"))
+
+        # Test concat_sym
+        self.assertEqual(pybamm.Concatenation(a, b).to_equation(), func_symbol)
 
 
 if __name__ == "__main__":

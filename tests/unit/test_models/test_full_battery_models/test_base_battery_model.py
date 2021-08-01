@@ -29,6 +29,7 @@ PRINT_OPTIONS_OUTPUT = """\
 'particle': 'Fickian diffusion' (possible: ['Fickian diffusion', 'fast diffusion', 'uniform profile', 'quadratic profile', 'quartic profile'])
 'particle mechanics': 'swelling only' (possible: ['none', 'swelling only', 'swelling and cracking'])
 'particle shape': 'spherical' (possible: ['spherical', 'user', 'no particles'])
+'particle size': 'single' (possible: ['single', 'distribution'])
 'SEI': 'none' (possible: ['none', 'constant', 'reaction limited', 'solvent-diffusion limited', 'electron-migration limited', 'interstitial-diffusion limited', 'ec reaction limited'])
 'SEI porosity change': 'false' (possible: ['true', 'false'])
 'surface form': 'differential' (possible: ['false', 'differential', 'algebraic'])
@@ -120,6 +121,8 @@ class TestBaseBatteryModel(unittest.TestCase):
             var.r_p: 30,
             var.y: 10,
             var.z: 10,
+            var.R_n: 30,
+            var.R_p: 30,
         }
         model = pybamm.BaseBatteryModel({"dimensionality": 0})
         self.assertDictEqual(var_pts, model.default_var_pts)

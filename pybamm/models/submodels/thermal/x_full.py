@@ -29,7 +29,7 @@ class OneDimensionalX(BaseThermal):
 
     def __init__(self, param):
         super().__init__(param)
-        pybamm.citations.register("Timms2020")
+        pybamm.citations.register("Timms2021")
 
     def get_fundamental_variables(self):
         T_n = pybamm.standard_variables.T_n

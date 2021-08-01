@@ -5,6 +5,7 @@ import copy
 from collections import defaultdict
 
 import numpy as np
+import sympy
 from scipy.sparse import issparse, vstack
 
 import pybamm
@@ -113,6 +114,25 @@ class Concatenation(pybamm.Symbol):
     def is_constant(self):
         """See :meth:`pybamm.Symbol.is_constant()`."""
         return all(child.is_constant() for child in self.children)
+
+    def _sympy_operator(self, *children):
+        """Apply appropriate SymPy operators."""
+        self.concat_latex = tuple(map(sympy.latex, children))
+
+        if self.print_name is not None:
+            return sympy.symbols(self.print_name)
+        else:
+            concat_str = r"\\".join(self.concat_latex)
+            concat_sym = sympy.Symbol(r"\begin{cases}" + concat_str + r"\end{cases}")
+            return concat_sym
+
+    def to_equation(self):
+        """Convert the node and its subtree into a SymPy equation."""
+        eq_list = []
+        for child in self.children:
+            eq = child.to_equation()
+            eq_list.append(eq)
+        return self._sympy_operator(*eq_list)
 
 
 class NumpyConcatenation(Concatenation):

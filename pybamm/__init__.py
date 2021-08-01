@@ -7,7 +7,7 @@
 #
 import sys
 import os
-from platform import system
+import platform
 
 #
 # Version info
@@ -102,7 +102,10 @@ from .expression_tree.operations.evaluate_python import (
     EvaluatorPython,
 )
 
-if system() != "Windows":
+if not (
+    platform.system() == "Windows"
+    or (platform.system() == "Darwin" and "ARM64" in platform.version())
+):
     from .expression_tree.operations.evaluate_python import EvaluatorJax
     from .expression_tree.operations.evaluate_python import JaxCooMatrix
 
@@ -173,6 +176,7 @@ from .parameters.electrical_parameters import (
 from .parameters.thermal_parameters import thermal_parameters, ThermalParameters
 from .parameters.lithium_ion_parameters import LithiumIonParameters
 from .parameters.lead_acid_parameters import LeadAcidParameters
+from .parameters.size_distribution_parameters import *
 from .parameters import parameter_sets
 
 #
@@ -223,7 +227,10 @@ from .solvers.scikits_ode_solver import ScikitsOdeSolver, have_scikits_odes
 from .solvers.scipy_solver import ScipySolver
 
 # Jax not supported under windows
-if system() != "Windows":
+if not (
+    platform.system() == "Windows"
+    or (platform.system() == "Darwin" and "ARM64" in platform.version())
+):
     from .solvers.jax_solver import JaxSolver
     from .solvers.jax_bdf_solver import jax_bdf_integrate
 

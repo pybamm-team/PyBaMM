@@ -429,6 +429,7 @@ class TestQuickPlot(unittest.TestCase):
         quick_plot.slider_update(1)
 
         # check 2D (y,z space) variables update properly for different time units
+        # Note: these should be the transpose of the entries in the processed variable
         phi_n = solution["Negative current collector potential [V]"].entries
 
         for unit, scale in zip(["seconds", "minutes", "hours"], [1, 60, 3600]):
@@ -439,12 +440,12 @@ class TestQuickPlot(unittest.TestCase):
             qp_data = quick_plot.plots[("Negative current collector potential [V]",)][
                 0
             ][1]
-            np.testing.assert_array_almost_equal(qp_data, phi_n[:, :, 0])
+            np.testing.assert_array_almost_equal(qp_data.T, phi_n[:, :, 0])
             quick_plot.slider_update(t_eval[-1] / scale)
             qp_data = quick_plot.plots[("Negative current collector potential [V]",)][
                 0
             ][1]
-            np.testing.assert_array_almost_equal(qp_data, phi_n[:, :, -1])
+            np.testing.assert_array_almost_equal(qp_data.T, phi_n[:, :, -1])
 
         with self.assertRaisesRegex(NotImplementedError, "Shape not recognized for"):
             pybamm.QuickPlot(solution, ["Negative particle concentration [mol.m-3]"])

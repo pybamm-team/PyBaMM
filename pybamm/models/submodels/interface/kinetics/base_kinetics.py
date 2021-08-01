@@ -56,9 +56,18 @@ class BaseKinetics(BaseInterface):
         if self.domain + " electrode surface potential difference" not in variables:
             variables = self._get_delta_phi(variables)
         delta_phi = variables[self.domain + " electrode surface potential difference"]
-        # If delta_phi was broadcast, take only the orphan
+        # If delta_phi was broadcast, take only the orphan.
         if isinstance(delta_phi, pybamm.Broadcast):
             delta_phi = delta_phi.orphans[0]
+        # For "particle-size distribution" models, delta_phi must then be
+        # broadcast to "particle size" domain
+        if (
+            self.reaction == "lithium-ion main"
+            and self.options["particle size"] == "distribution"
+        ):
+            delta_phi = pybamm.PrimaryBroadcast(
+                delta_phi, [self.domain.lower() + " particle size"]
+            )
 
         # Get exchange-current density
         j0 = self._get_exchange_current_density(variables)
@@ -103,13 +112,38 @@ class BaseKinetics(BaseInterface):
         # Get kinetics. Note: T must have the same domain as j0 and eta_r
         if j0.domain in ["current collector", ["current collector"]]:
             T = variables["X-averaged cell temperature"]
+        elif j0.domain == [self.domain.lower() + " particle size"]:
+            if j0.domains["secondary"] != [self.domain.lower() + " electrode"]:
+                T = variables["X-averaged cell temperature"]
+            else:
+                T = variables[self.domain + " electrode temperature"]
+
+            # Broadcast T onto "particle size" domain
+            T = pybamm.PrimaryBroadcast(T, [self.domain.lower() + " particle size"])
         else:
             T = variables[self.domain + " electrode temperature"]
 
         # Update j, except in the "distributed SEI resistance" model, where j will be
-        # found by solving an algebraic equation
+        # found by solving an algebraic equation.
         # (In the "distributed SEI resistance" model, we have already defined j)
         j = self._get_kinetics(j0, ne, eta_r, T)
+
+        if j.domain == [self.domain.lower() + " particle size"]:
+            # If j depends on particle size, get size-dependent "distribution"
+            # variables first
+            variables.update(
+                self._get_standard_size_distribution_interfacial_current_variables(j)
+            )
+            variables.update(
+                self._get_standard_size_distribution_exchange_current_variables(j0)
+            )
+            variables.update(
+                self._get_standard_size_distribution_overpotential_variables(eta_r)
+            )
+            variables.update(
+                self._get_standard_size_distribution_ocp_variables(ocp, dUdT)
+            )
+
         variables.update(self._get_standard_interfacial_current_variables(j))
 
         variables.update(
@@ -242,3 +276,5 @@ class BaseKinetics(BaseInterface):
         since the reaction is not diffusion-limited
         """
         return pybamm.Scalar(0)
+
+
