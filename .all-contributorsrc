@@ -375,6 +375,17 @@
         "code",
         "ideas"
       ]
+    },
+    {
+      "login": "tobykirk",
+      "name": "tobykirk",
+      "avatar_url": "https://avatars.githubusercontent.com/u/42966045?v=4",
+      "profile": "https://github.com/tobykirk",
+      "contributions": [
+        "ideas",
+        "code",
+        "test"
+      ]
     }
   ],
   "contributorsPerLine": 7,
