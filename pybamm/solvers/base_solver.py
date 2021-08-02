@@ -608,10 +608,9 @@ class BaseSolver(object):
 
             # if we have changed the equations to include the explicit sensitivity
             # equations, then we also need to update the mass matrix
-            n_state_without_sens = model.len_rhs_and_alg
             if calculate_sensitivities_explicit:
                 n_inputs = model.len_rhs_sens // model.len_rhs
-                if model.mass_matrix.shape[0] == n_state_without_sens:
+                if model.mass_matrix.shape[0] == model.len_rhs_and_alg:
                     model.mass_matrix_inv = pybamm.Matrix(
                         block_diag(
                             [model.mass_matrix_inv.entries] * (n_inputs + 1),
@@ -625,14 +624,14 @@ class BaseSolver(object):
                     )
             else:
                 # take care if calculate_sensitivites used then not used
-                if model.mass_matrix.shape[0] > n_state_without_sens:
+                if model.mass_matrix.shape[0] > model.len_rhs_and_alg:
                     model.mass_matrix_inv = pybamm.Matrix(
-                        model.mass_matrix_inv.entries[:n_state_without_sens,
-                                                      :n_state_without_sens]
+                        model.mass_matrix_inv.entries[:model.len_rhs_and_alg,
+                                                      :model.len_rhs_and_alg]
                     )
                     model.mass_matrix = pybamm.Matrix(
-                        model.mass_matrix.entries[:n_state_without_sens,
-                                                  :n_state_without_sens]
+                        model.mass_matrix.entries[:model.len_rhs_and_alg,
+                                                  :model.len_rhs_and_alg]
                     )
 
             # Save CasADi functions for the CasADi solver
