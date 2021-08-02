@@ -39,6 +39,7 @@
 
 ## Breaking changes
 
+-   The `Yang2017` parameter set has been removed as the complete parameter set is not publicly available in the literature ([#1577](https://github.com/pybamm-team/PyBaMM/pull/1577))
 -   Changed how options are specified for the "loss of active material" and "particle cracking" submodels. "loss of active material" can now be one of "none", "stress-driven", or "reaction-driven", or a 2-tuple for different options in negative and positive electrode. Similarly "particle cracking" (now called "particle mechanics") can now be "none", "swelling only", "swelling and cracking", or a 2-tuple ([#1490](https://github.com/pybamm-team/PyBaMM/pull/1490))
 -   Changed the variable in the full diffusion model from "Electrolyte concentration" to "Porosity times concentration" ([#1476](https://github.com/pybamm-team/PyBaMM/pull/1476))
 -   Renamed `lithium-ion` folder to `lithium_ion` and `lead-acid` folder to `lead_acid` in parameters ([#1464](https://github.com/pybamm-team/PyBaMM/pull/1464))
