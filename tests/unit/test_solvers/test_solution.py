@@ -22,6 +22,12 @@ class TestSolution(unittest.TestCase):
         self.assertEqual(sol.all_inputs, [{}])
         self.assertIsInstance(sol.all_models[0], pybamm.BaseModel)
 
+    def test_sensitivities(self):
+        t = np.linspace(0, 1)
+        y = np.tile(t, (20, 1))
+        with self.assertRaises(TypeError):
+            pybamm.Solution(t, y, pybamm.BaseModel(), {}, sensitivities=1.0)
+
     def test_errors(self):
         bad_ts = [np.array([1, 2, 3]), np.array([3, 4, 5])]
         sol = pybamm.Solution(

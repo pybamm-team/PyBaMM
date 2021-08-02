@@ -97,7 +97,7 @@ class Solution(object):
         elif isinstance(sensitivities, dict):
             self._sensitivities = sensitivities
         else:
-            raise RuntimeError('sensitivities arg needs to be a bool or dict')
+            raise TypeError('sensitivities arg needs to be a bool or dict')
 
         self._t_event = t_event
         self._y_event = y_event
@@ -303,10 +303,6 @@ class Solution(object):
     @property
     def all_ys(self):
         return self._all_ys
-
-    @property
-    def all_ys_and_sens(self):
-        return self._all_ys_and_sens
 
     @property
     def all_models(self):

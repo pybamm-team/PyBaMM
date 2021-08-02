@@ -220,13 +220,6 @@ class BaseSolver(object):
         if model.calculate_sensitivities and not isinstance(self, pybamm.IDAKLUSolver):
             calculate_sensitivities_explicit = True
 
-        if calculate_sensitivities_explicit and model.convert_to_format != 'casadi':
-            raise NotImplementedError(
-                "Sensitivities only supported for:\n"
-                "  - model.convert_to_format = 'casadi'\n"
-                "  - IDAKLUSolver (any convert_to_format)"
-            )
-
         # if we are calculating sensitivities explicitly then the number of
         # equations will change
         if calculate_sensitivities_explicit:
@@ -284,12 +277,7 @@ class BaseSolver(object):
                 report(f"Converting {name} to jax")
                 func = pybamm.EvaluatorJax(func)
                 jacp = None
-                if calculate_sensitivities_explicit:
-                    raise NotImplementedError(
-                        "explicit sensitivity equations not supported for "
-                        "convert_to_format='jax'"
-                    )
-                elif model.calculate_sensitivities:
+                if model.calculate_sensitivities:
                     report((
                         f"Calculating sensitivities for {name} with respect "
                         f"to parameters {model.calculate_sensitivities} using jax"
@@ -308,12 +296,7 @@ class BaseSolver(object):
             elif model.convert_to_format != "casadi":
                 # Process with pybamm functions, optionally converting
                 # to python evaluator
-                if calculate_sensitivities_explicit:
-                    raise NotImplementedError(
-                        "explicit sensitivity equations not supported for "
-                        "convert_to_format='{}'".format(model.convert_to_format)
-                    )
-                elif model.calculate_sensitivities:
+                if model.calculate_sensitivities:
                     report((
                         f"Calculating sensitivities for {name} with respect "
                         f"to parameters {model.calculate_sensitivities}"
