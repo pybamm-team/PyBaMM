@@ -101,7 +101,24 @@ class StandardModelTest(object):
 
         self.test_processing_parameters()
         self.test_processing_disc()
+
         self.test_solving(inputs=inputs, calculate_sensitivities=True)
+
+        # check via finite differencing
+        h = 1e-6
+        inputs_plus = {param_name: neg_electrode_cond + 0.5 * h}
+        inputs_neg = {param_name: neg_electrode_cond - 0.5 * h}
+        sol_plus = self.solver.solve(
+            self.model, self.solution.all_ts[0], inputs=inputs_plus
+        )
+        sol_neg = self.solver.solve(
+            self.model, self.solution.all_ts[0], inputs=inputs_neg
+        )
+        n = self.solution.sensitivities[param_name].shape[0]
+        np.testing.assert_array_almost_equal(
+            self.solution.sensitivities[param_name],
+            ((sol_plus.y - sol_neg.y) / h).reshape((n, 1))
+        )
 
         if (
             isinstance(

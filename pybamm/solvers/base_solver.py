@@ -608,18 +608,33 @@ class BaseSolver(object):
 
             # if we have changed the equations to include the explicit sensitivity
             # equations, then we also need to update the mass matrix
+            n_inputs = model.len_rhs_sens // model.len_rhs
+            n_state_without_sens = model.len_rhs_and_alg
             if calculate_sensitivities_explicit:
-                n_inputs = model.len_rhs_sens // model.len_rhs
-                model.mass_matrix_inv = pybamm.Matrix(
-                    block_diag(
-                        [model.mass_matrix_inv.entries] * (n_inputs + 1), format="csr"
+                if model.mass_matrix.shape[0] == n_state_without_sens:
+                    model.mass_matrix_inv = pybamm.Matrix(
+                        block_diag(
+                            [model.mass_matrix_inv.entries] * (n_inputs + 1),
+                            format="csr"
+                        )
                     )
-                )
-                model.mass_matrix = pybamm.Matrix(
-                    block_diag(
-                        [model.mass_matrix.entries] * (n_inputs + 1), format="csr"
+                    model.mass_matrix = pybamm.Matrix(
+                        block_diag(
+                            [model.mass_matrix.entries] * (n_inputs + 1), format="csr"
+                        )
                     )
-                )
+            else:
+                # take care if calculate_sensitivites used then not used
+                n_state_with_sens = model.len_rhs_and_alg * (n_inputs + 1)
+                if model.mass_matrix.shape[0] == n_state_with_sens:
+                    model.mass_matrix_inv = pybamm.Matrix(
+                        model.mass_matrix_inv.entries[:n_state_without_sens,
+                                                      :n_state_without_sens]
+                    )
+                    model.mass_matrix = pybamm.Matrix(
+                        model.mass_matrix.entries[:n_state_without_sens,
+                                                  :n_state_without_sens]
+                    )
 
             # Save CasADi functions for the CasADi solver
             # Note: when we pass to casadi the ode part of the problem must be in
