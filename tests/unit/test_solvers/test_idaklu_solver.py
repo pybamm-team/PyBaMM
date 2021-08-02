@@ -85,7 +85,7 @@ class TestIDAKLUSolver(unittest.TestCase):
 
             # should be no sensitivities calculated
             with self.assertRaises(KeyError):
-                sol.sensitivities["a"]
+                print(sol.sensitivities["a"])
 
             # now solve with sensitivities (this should cause set_up to be run again)
             sol = solver.solve(

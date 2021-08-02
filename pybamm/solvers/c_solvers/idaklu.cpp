@@ -396,9 +396,9 @@ Solution solve(np_array t_np, np_array y0_np, np_array yp0_np,
 
   if (number_of_parameters > 0)
   {
-    retval = IDASensInit(ida_mem, number_of_parameters, 
-        IDA_SIMULTANEOUS, sensitivities, yyS, ypS);
-    retval = IDASensEEtolerances(ida_mem);
+    IDASensInit(ida_mem, number_of_parameters, 
+                IDA_SIMULTANEOUS, sensitivities, yyS, ypS);
+    IDASensEEtolerances(ida_mem);
   }
 
   int t_i = 1;
