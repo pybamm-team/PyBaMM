@@ -8,7 +8,7 @@
 [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/pybamm-team/PyBaMM/blob/develop/)
 [![black_code_style](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/ambv/black)
 <!-- ALL-CONTRIBUTORS-BADGE:START - Do not remove or modify this section -->
-[![All Contributors](https://img.shields.io/badge/all_contributors-32-orange.svg?style=flat-square)](#contributors-)
+[![All Contributors](https://img.shields.io/badge/all_contributors-33-orange.svg?style=flat-square)](#contributors-)
 <!-- ALL-CONTRIBUTORS-BADGE:END -->
 
 PyBaMM (Python Battery Mathematical Modelling) solves physics-based electrochemical DAE models by using state-of-the-art automatic differentiation and numerical solvers. The Doyle-Fuller-Newman model can be solved in under 0.1 seconds, while the reduced-order Single Particle Model and Single Particle Model with electrolyte can be solved in just a few milliseconds. Additional physics can easily be included such as thermal effects, fast particle diffusion, 3D effects, and more. All models are implemented in a flexible manner, and a wide range of models and parameter sets (NCA, NMC, LiCoO2, ...) are available. There is also functionality to simulate any set of experimental instructions, such as CCCV or GITT, or specify drive cycles.
@@ -160,6 +160,7 @@ Thanks goes to these wonderful people ([emoji key](https://allcontributors.org/d
     <td align="center"><a href="https://github.com/KennethNwanoro"><img src="https://avatars.githubusercontent.com/u/78538806?v=4?s=100" width="100px;" alt=""/><br /><sub><b>KennethNwanoro</b></sub></a><br /><a href="https://github.com/pybamm-team/PyBaMM/commits?author=KennethNwanoro" title="Code">💻</a> <a href="https://github.com/pybamm-team/PyBaMM/commits?author=KennethNwanoro" title="Tests">⚠️</a></td>
     <td align="center"><a href="https://github.com/alibh95"><img src="https://avatars.githubusercontent.com/u/65511923?v=4?s=100" width="100px;" alt=""/><br /><sub><b>Ali Hussain Umar Bhatti</b></sub></a><br /><a href="https://github.com/pybamm-team/PyBaMM/commits?author=alibh95" title="Code">💻</a> <a href="https://github.com/pybamm-team/PyBaMM/commits?author=alibh95" title="Tests">⚠️</a></td>
     <td align="center"><a href="https://sites.google.com/view/leshinka-molel/home"><img src="https://avatars.githubusercontent.com/u/81125862?v=4?s=100" width="100px;" alt=""/><br /><sub><b>Leshinka Molel</b></sub></a><br /><a href="https://github.com/pybamm-team/PyBaMM/commits?author=molel-gt" title="Code">💻</a> <a href="#ideas-molel-gt" title="Ideas, Planning, & Feedback">🤔</a></td>
+    <td align="center"><a href="https://github.com/tobykirk"><img src="https://avatars.githubusercontent.com/u/42966045?v=4?s=100" width="100px;" alt=""/><br /><sub><b>tobykirk</b></sub></a><br /><a href="#ideas-tobykirk" title="Ideas, Planning, & Feedback">🤔</a> <a href="https://github.com/pybamm-team/PyBaMM/commits?author=tobykirk" title="Code">💻</a> <a href="https://github.com/pybamm-team/PyBaMM/commits?author=tobykirk" title="Tests">⚠️</a></td>
   </tr>
 </table>
 
