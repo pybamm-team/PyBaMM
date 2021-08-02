@@ -610,7 +610,8 @@ class BaseSolver(object):
             # equations, then we also need to update the mass matrix
             if calculate_sensitivities_explicit:
                 n_inputs = model.len_rhs_sens // model.len_rhs
-                if model.mass_matrix.shape[0] == model.len_rhs_and_alg:
+                if (model.mass_matrix is not None
+                        and model.mass_matrix.shape[0] == model.len_rhs_and_alg):
                     model.mass_matrix_inv = pybamm.Matrix(
                         block_diag(
                             [model.mass_matrix_inv.entries] * (n_inputs + 1),
@@ -624,10 +625,11 @@ class BaseSolver(object):
                     )
             else:
                 # take care if calculate_sensitivites used then not used
-                if model.mass_matrix.shape[0] > model.len_rhs_and_alg:
+                if (model.mass_matrix is not None and
+                        model.mass_matrix.shape[0] > model.len_rhs_and_alg):
                     model.mass_matrix_inv = pybamm.Matrix(
-                        model.mass_matrix_inv.entries[:model.len_rhs_and_alg,
-                                                      :model.len_rhs_and_alg]
+                        model.mass_matrix_inv.entries[:model.len_rhs,
+                                                      :model.len_rhs]
                     )
                     model.mass_matrix = pybamm.Matrix(
                         model.mass_matrix.entries[:model.len_rhs_and_alg,
