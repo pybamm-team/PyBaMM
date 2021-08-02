@@ -217,6 +217,7 @@ class BaseThermal(pybamm.BaseSubModel):
         # In the limit of infinitely large current collector conductivity (i.e.
         # 0D current collectors), the Ohmic heating in the current collectors is
         # zero
+
         if self.cc_dimension == 0:
             Q_s_cn = pybamm.Scalar(0)
             Q_s_cp = pybamm.Scalar(0)

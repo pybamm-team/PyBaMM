@@ -3,7 +3,7 @@ import glob
 import logging
 import subprocess
 from pathlib import Path
-from platform import system
+from platform import system, version
 import wheel.bdist_wheel as orig
 import site
 import shutil
@@ -162,7 +162,7 @@ idaklu_ext = Extension("pybamm.solvers.idaklu", ["pybamm/solvers/c_solvers/idakl
 ext_modules = [idaklu_ext] if compile_KLU() else []
 
 jax_dependencies = []
-if system() != "Windows":
+if not (system() == "Windows" or (system() == "Darwin" and "ARM64" in version())):
     jax_dependencies = ["jax==0.2.12", "jaxlib==0.1.65"]
 
 

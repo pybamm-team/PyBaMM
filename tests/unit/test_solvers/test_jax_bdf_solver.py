@@ -4,13 +4,16 @@ from tests import get_mesh_for_testing
 import sys
 import time
 import numpy as np
-from platform import system
+from platform import system, version
 
-if system() != "Windows":
+if not (system() == "Windows" or (system() == "Darwin" and "ARM64" in version())):
     import jax
 
 
-@unittest.skipIf(system() == "Windows", "JAX not supported on windows")
+@unittest.skipIf(
+    system() == "Windows" or (system() == "Darwin" and "ARM64" in version()),
+    "JAX not supported on windows or Mac M1",
+)
 class TestJaxBDFSolver(unittest.TestCase):
     def test_solver(self):
         # Create model

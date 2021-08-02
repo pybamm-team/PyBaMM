@@ -159,6 +159,54 @@ class TestCompareOutputs(unittest.TestCase):
         comparison = StandardOutputComparison(solutions)
         comparison.test_all(skip_first_timestep=True)
 
+    def test_compare_narrow_size_distribution(self):
+        # The MPM should agree with the SPM when the size distributions are narrow
+        # enough.
+        models = [
+            pybamm.lithium_ion.SPM(), pybamm.lithium_ion.MPM()
+        ]
+
+        param = models[0].default_parameter_values
+
+        # Set size distribution parameters (lognormals)
+        param = pybamm.get_size_distribution_parameters(
+            param,
+            sd_n=0.05,  # small standard deviations
+            sd_p=0.05,
+            R_min_n=0.8,
+            R_min_p=0.8,
+            R_max_n=1.2,
+            R_max_p=1.2,
+        )
+
+        # set same mesh for both models
+        var = pybamm.standard_spatial_vars
+        var_pts = {
+            var.x_n: 5,
+            var.x_s: 5,
+            var.x_p: 5,
+            var.r_n: 5,
+            var.r_p: 5,
+            var.R_n: 5,
+            var.R_p: 5,
+        }
+
+        # solve models
+        solutions = []
+        for model in models:
+            sim = pybamm.Simulation(
+                model,
+                var_pts=var_pts,
+                parameter_values=param,
+                solver=pybamm.CasadiSolver(mode="fast")
+            )
+            solution = sim.solve([0, 3600])
+            solutions.append(solution)
+
+        # compare outputs
+        comparison = StandardOutputComparison(solutions)
+        comparison.test_all(skip_first_timestep=True)
+
 
 if __name__ == "__main__":
     print("Add -v for more debug output")

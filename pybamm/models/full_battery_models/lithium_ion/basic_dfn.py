@@ -214,9 +214,9 @@ class BasicDFN(BaseModel):
         ######################
         # Current in the solid
         ######################
-        sigma_eff_n = param.sigma_n * eps_s_n ** param.b_s_n
+        sigma_eff_n = param.sigma_n(T) * eps_s_n ** param.b_s_n
         i_s_n = -sigma_eff_n * pybamm.grad(phi_s_n)
-        sigma_eff_p = param.sigma_p * eps_s_p ** param.b_s_p
+        sigma_eff_p = param.sigma_p(T) * eps_s_p ** param.b_s_p
         i_s_p = -sigma_eff_p * pybamm.grad(phi_s_p)
         # The `algebraic` dictionary contains differential equations, with the key being
         # the main scalar variable of interest in the equation

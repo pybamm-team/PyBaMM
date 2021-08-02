@@ -411,6 +411,31 @@
   publisher={Elsevier}
 }
 
+@misc{Kirk2020,
+  author = {Kirk, Toby L. and Evans, Jack and Please, Colin P. and Chapman, S. Jonathan},
+  title         = {Modelling electrode heterogeneity in lithium-ion batteries: unimodal and bimodal particle-size distributions},
+  year          = {2020},
+  howpublished  = {arXiv:2006.12208},
+  eprint        = {2006.12208},
+  url           = {https://arxiv.org/abs/2006.12208},
+  archiveprefix = {arXiv},
+  primaryclass  = {physics.app-ph},
+}
+
+@article{Kirk2021,
+	author = {Toby L. Kirk and Colin P. Please and S. Jon Chapman},
+	title = {Physical Modelling of the Slow Voltage Relaxation Phenomenon in Lithium-Ion Batteries},
+	journal = {Journal of The Electrochemical Society},
+	year = 2021,
+	month = {jun},
+	publisher = {The Electrochemical Society},
+	volume = {168},
+	number = {6},
+	pages = {060554},
+	doi = {10.1149/1945-7111/ac0bf7},
+	url = {https://doi.org/10.1149/1945-7111/ac0bf7},
+}
+
 @article{Xu2019,
   title={Evolution of Dead Lithium Growth in Lithium Metal Batteries: Experimentally Validated Model of the Apparent Capacity Loss},
   author={Xu, Shanshan and Chen, Kuan-Hung and Dasgupta, Neil P and Siegel, Jason B and Stefanopoulou, Anna G},

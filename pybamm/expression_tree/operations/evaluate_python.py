@@ -8,9 +8,9 @@ import scipy.sparse
 from collections import OrderedDict
 
 import numbers
-from platform import system
+from platform import system, version
 
-if system() != "Windows":
+if not (system() == "Windows" or (system() == "Darwin" and "ARM64" in version())):
     import jax
 
     from jax.config import config
