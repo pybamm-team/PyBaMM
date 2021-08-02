@@ -116,9 +116,8 @@ class TestFunctionParameter(unittest.TestCase):
         self.assertEqual(func.to_equation(), sympy.symbols("test"))
 
         # Test name
-        self.assertEqual(
-            func1.to_equation(), sympy.symbols("test_function_parameter_to_equation")
-        )
+        func1.print_name = None
+        self.assertEqual(func1.to_equation(), sympy.symbols("func"))
 
 
 if __name__ == "__main__":
