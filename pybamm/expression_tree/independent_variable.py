@@ -55,7 +55,7 @@ class Time(IndependentVariable):
     def __init__(self):
         super().__init__("time")
 
-    def new_copy(self):
+    def create_copy(self):
         """See :meth:`pybamm.Symbol.new_copy()`."""
         return Time()
 
@@ -114,7 +114,7 @@ class SpatialVariable(IndependentVariable):
                 "domain cannot be particle if name is '{}'".format(name)
             )
 
-    def new_copy(self):
+    def create_copy(self):
         """See :meth:`pybamm.Symbol.new_copy()`."""
         return self.__class__(
             self.name, self.domain, self.auxiliary_domains, self.coord_sys
