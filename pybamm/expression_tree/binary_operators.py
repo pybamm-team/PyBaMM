@@ -114,7 +114,7 @@ class BinaryOperator(pybamm.Symbol):
             right_str = "{!s}".format(self.right)
         return "{} {} {}".format(left_str, self.name, right_str)
 
-    def new_copy(self):
+    def create_copy(self):
         """See :meth:`pybamm.Symbol.new_copy()`."""
 
         # process children
