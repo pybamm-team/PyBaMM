@@ -29,11 +29,23 @@ class TestBroadcasts(unittest.TestCase):
             broad_a.auxiliary_domains,
             {"secondary": ["negative electrode"], "tertiary": ["current collector"]},
         )
-        broad_a = pybamm.PrimaryBroadcast(a, ["negative particle size"])
-        self.assertEqual(broad_a.domain, ["negative particle size"])
+        a = pybamm.Symbol(
+            "a",
+            domain="negative particle size",
+            auxiliary_domains={
+                "secondary": "negative electrode",
+                "tertiary": "current collector"
+            },
+        )
+        broad_a = pybamm.PrimaryBroadcast(a, ["negative particle"])
+        self.assertEqual(broad_a.domain, ["negative particle"])
         self.assertEqual(
             broad_a.auxiliary_domains,
-            {"secondary": ["negative electrode"], "tertiary": ["current collector"]},
+            {
+                "secondary": ["negative particle size"],
+                "tertiary": ["negative electrode"],
+                "quaternary": ["current collector"]
+            },
         )
 
         a = pybamm.Symbol("a", domain="current collector")
@@ -70,13 +82,14 @@ class TestBroadcasts(unittest.TestCase):
             {"secondary": ["negative electrode"], "tertiary": ["current collector"]},
         )
         self.assertTrue(broad_a.broadcasts_to_nodes)
-        broad_a = pybamm.SecondaryBroadcast(a, ["negative particle size"])
-        self.assertEqual(broad_a.domain, ["negative particle"])
+        broadbroad_a = pybamm.SecondaryBroadcast(broad_a, ["negative particle size"])
+        self.assertEqual(broadbroad_a.domain, ["negative particle"])
         self.assertEqual(
-            broad_a.auxiliary_domains,
+            broadbroad_a.auxiliary_domains,
             {
                 "secondary": ["negative particle size"],
-                "tertiary": ["current collector"]
+                "tertiary": ["negative electrode"],
+                "quaternary": ["current collector"]
             },
         )
 
@@ -107,6 +120,56 @@ class TestBroadcasts(unittest.TestCase):
             pybamm.DomainError, "Cannot do secondary broadcast"
         ):
             pybamm.SecondaryBroadcast(a, "electrode")
+
+    def test_tertiary_broadcast(self):
+        a = pybamm.Symbol(
+            "a",
+            domain=["negative particle"],
+            auxiliary_domains={
+                "secondary": "negative particle size",
+                "tertiary": "current collector"
+            },
+        )
+        broad_a = pybamm.TertiaryBroadcast(a, "negative electrode")
+        self.assertEqual(broad_a.domain, ["negative particle"])
+        self.assertEqual(
+            broad_a.auxiliary_domains,
+            {
+                "secondary": ["negative particle size"],
+                "tertiary": ["negative electrode"],
+                "quaternary": ["current collector"]
+            },
+        )
+        self.assertTrue(broad_a.broadcasts_to_nodes)
+
+        with self.assertRaises(NotImplementedError):
+            broad_a.reduce_one_dimension()
+
+        a_no_secondary = pybamm.Symbol("a", domain="negative particle")
+        with self.assertRaisesRegex(TypeError, "without a secondary"):
+            pybamm.TertiaryBroadcast(a_no_secondary, "negative electrode")
+        with self.assertRaisesRegex(
+            pybamm.DomainError, "Tertiary broadcast from a symbol with particle"
+        ):
+            pybamm.TertiaryBroadcast(a, "negative particle")
+        a = pybamm.Symbol(
+            "a",
+            domain=["negative particle"],
+            auxiliary_domains={"secondary": "negative electrode"},
+        )
+        with self.assertRaisesRegex(
+            pybamm.DomainError, "Tertiary broadcast from a symbol with an electrode"
+        ):
+            pybamm.TertiaryBroadcast(a, "negative particle size")
+        a = pybamm.Symbol(
+            "a",
+            domain=["negative particle"],
+            auxiliary_domains={"secondary": "current collector"},
+        )
+        with self.assertRaisesRegex(
+            pybamm.DomainError, "Cannot do tertiary broadcast"
+        ):
+            pybamm.TertiaryBroadcast(a, "negative electrode")
 
     def test_full_broadcast(self):
         a = pybamm.Symbol("a")
@@ -189,6 +252,28 @@ class TestBroadcasts(unittest.TestCase):
         self.assertEqual(
             broad_a.auxiliary_domains,
             {"secondary": ["negative electrode"], "tertiary": ["current collector"]},
+        )
+        self.assertTrue(broad_a.evaluates_on_edges("primary"))
+        self.assertFalse(broad_a.broadcasts_to_nodes)
+
+        # tertiary
+        a = pybamm.Symbol(
+            "a",
+            domain=["negative particle"],
+            auxiliary_domains={
+                "secondary": "negative particle size",
+                "tertiary": "current collector"
+            },
+        )
+        broad_a = pybamm.TertiaryBroadcastToEdges(a, ["negative electrode"])
+        self.assertEqual(broad_a.domain, ["negative particle"])
+        self.assertEqual(
+            broad_a.auxiliary_domains,
+            {
+                "secondary": ["negative particle size"],
+                "tertiary": ["negative electrode"],
+                "quaternary": ["current collector"]
+            },
         )
         self.assertTrue(broad_a.evaluates_on_edges("primary"))
         self.assertFalse(broad_a.broadcasts_to_nodes)
