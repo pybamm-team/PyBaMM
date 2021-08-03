@@ -254,7 +254,13 @@ class DomainConcatenation(Concatenation):
             ).npts
         else:
             tert_mesh_npts = 1
-        return sec_mesh_npts * tert_mesh_npts
+        if "quaternary" in auxiliary_domains:
+            quat_mesh_npts = self.full_mesh.combine_submeshes(
+                *auxiliary_domains["quaternary"]
+            ).npts
+        else:
+            quat_mesh_npts = 1
+        return sec_mesh_npts * tert_mesh_npts * quat_mesh_npts
 
     @property
     def full_mesh(self):

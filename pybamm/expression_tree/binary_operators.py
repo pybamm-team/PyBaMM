@@ -827,7 +827,7 @@ def simplified_addition(left, right):
             )
         ) and all(
             left.evaluates_on_edges(dim) == right.evaluates_on_edges(dim)
-            for dim in ["primary", "secondary", "tertiary"]
+            for dim in ["primary", "secondary", "tertiary", "quaternary"]
         ):
             return right
     elif pybamm.is_matrix_zero(right):
@@ -841,7 +841,7 @@ def simplified_addition(left, right):
             )
         ) and all(
             left.evaluates_on_edges(dim) == right.evaluates_on_edges(dim)
-            for dim in ["primary", "secondary", "tertiary"]
+            for dim in ["primary", "secondary", "tertiary", "quaternary"]
         ):
             return left
 
@@ -919,7 +919,7 @@ def simplified_subtraction(left, right):
             )
         ) and all(
             left.evaluates_on_edges(dim) == right.evaluates_on_edges(dim)
-            for dim in ["primary", "secondary", "tertiary"]
+            for dim in ["primary", "secondary", "tertiary", "quaternary"]
         ):
             return -right
     if pybamm.is_matrix_zero(right):
@@ -933,7 +933,7 @@ def simplified_subtraction(left, right):
             )
         ) and all(
             left.evaluates_on_edges(dim) == right.evaluates_on_edges(dim)
-            for dim in ["primary", "secondary", "tertiary"]
+            for dim in ["primary", "secondary", "tertiary", "quaternary"]
         ):
             return left
 
@@ -984,7 +984,7 @@ def simplified_multiplication(left, right):
     try:
         if left.shape_for_testing == right.shape_for_testing and all(
             left.evaluates_on_edges(dim) == right.evaluates_on_edges(dim)
-            for dim in ["primary", "secondary", "tertiary"]
+            for dim in ["primary", "secondary", "tertiary", "quaternary"]
         ):
             if pybamm.is_matrix_one(left):
                 return right
@@ -1153,7 +1153,7 @@ def simplified_division(left, right):
     try:
         if left.shape_for_testing == right.shape_for_testing and all(
             left.evaluates_on_edges(dim) == right.evaluates_on_edges(dim)
-            for dim in ["primary", "secondary", "tertiary"]
+            for dim in ["primary", "secondary", "tertiary", "quaternary"]
         ):
             if pybamm.is_matrix_one(right):
                 return left
