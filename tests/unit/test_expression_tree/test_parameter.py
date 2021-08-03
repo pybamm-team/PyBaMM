@@ -23,8 +23,14 @@ class TestParameter(unittest.TestCase):
 
     def test_to_equation(self):
         func = pybamm.Parameter("test_string")
+        func1 = pybamm.Parameter("test_name")
+
+        # Test print_name
         func.print_name = "test"
         self.assertEqual(func.to_equation(), sympy.symbols("test"))
+
+        # Test name
+        self.assertEqual(func1.to_equation(), sympy.symbols("test_name"))
 
 
 class TestFunctionParameter(unittest.TestCase):
@@ -103,8 +109,15 @@ class TestFunctionParameter(unittest.TestCase):
 
     def test_function_parameter_to_equation(self):
         func = pybamm.FunctionParameter("test", {"x": pybamm.Scalar(1)})
+        func1 = pybamm.FunctionParameter("func", {"var": pybamm.Variable("var")})
+
+        # Test print_name
         func.print_name = "test"
         self.assertEqual(func.to_equation(), sympy.symbols("test"))
+
+        # Test name
+        func1.print_name = None
+        self.assertEqual(func1.to_equation(), sympy.symbols("func"))
 
 
 if __name__ == "__main__":
