@@ -261,8 +261,11 @@ class Solution(object):
     @property
     def sensitivities(self):
         """Values of the sensitivities. Returns a dict of param_name: np_array"""
-        if isinstance(self._sensitivities, bool) and self._sensitivities:
-            self.extract_explicit_sensitivities()
+        if isinstance(self._sensitivities, bool):
+            if self._sensitivities:
+                self.extract_explicit_sensitivities()
+            else:
+                self._sensitivities = {}
         return self._sensitivities
 
     def set_y(self):

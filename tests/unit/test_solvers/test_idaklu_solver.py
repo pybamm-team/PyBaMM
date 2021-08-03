@@ -110,6 +110,7 @@ class TestIDAKLUSolver(unittest.TestCase):
             sol_plus = solver.solve(model, t_eval, inputs={"a": a_value + 0.5 * h})
             sol_neg = solver.solve(model, t_eval, inputs={"a": a_value - 0.5 * h})
             dyda_fd = (sol_plus.y - sol_neg.y) / h
+            dyda_fd = dyda_fd.transpose().reshape(-1, 1)
 
             np.testing.assert_array_almost_equal(
                 dyda_ida, dyda_fd
