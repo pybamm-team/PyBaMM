@@ -29,8 +29,6 @@ class InverseButlerVolmer(BaseInterface):
 
     def __init__(self, param, domain, reaction, options=None):
         super().__init__(param, domain, reaction)
-        if options is None:
-            options = {"SEI film resistance": "none"}
         self.options = options
 
     def get_coupled_variables(self, variables):

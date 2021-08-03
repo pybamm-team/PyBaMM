@@ -3,7 +3,7 @@
 #
 import pybamm
 import unittest
-from platform import system
+from platform import system, version
 
 
 class TestCitations(unittest.TestCase):
@@ -237,7 +237,10 @@ class TestCitations(unittest.TestCase):
             pybamm.IDAKLUSolver()
             self.assertIn("Hindmarsh2005", citations._papers_to_cite)
 
-    @unittest.skipIf(system() == "Windows", "JAX not supported on windows")
+    @unittest.skipIf(
+        system() == "Windows" or (system() == "Darwin" and "ARM64" in version()),
+        "JAX not supported on windows or Mac M1",
+    )
     def test_jax_citations(self):
         citations = pybamm.citations
         citations._reset()
