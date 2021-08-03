@@ -733,7 +733,7 @@ class ParameterValues:
                             }
                             if "quaternary" in integrand.auxiliary_domains:
                                 quat_domain = integrand.auxiliary_domains["quaternary"]
-                                auxiliary_domains["tertiary"] = integrand.auxiliary_domains["quaternary"]
+                                auxiliary_domains["tertiary"] = quat_domain
                             return pybamm.FullBroadcast(
                                 integrand.orphans[0], domain, auxiliary_domains
                             )

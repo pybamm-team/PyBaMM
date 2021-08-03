@@ -10,6 +10,7 @@ from tests import (
     get_size_distribution_mesh_for_testing
 )
 
+
 class TestSpatialMethod(unittest.TestCase):
     def test_basics(self):
         mesh = get_mesh_for_testing()

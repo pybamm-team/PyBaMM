@@ -574,8 +574,8 @@ class Integral(SpatialOperator):
                 domain = []
                 auxiliary_domains = {}
         elif self._integration_dimension == "secondary":
-            # integral in the secondary dimension keeps the same domain, moves quaternary
-            # to tertiary and tertiary to secondary domain
+            # integral in the secondary dimension keeps the same domain, moves
+            # quaternary to tertiary and tertiary to secondary domain
             domain = child.domain
             if "tertiary" in child.auxiliary_domains:
                 auxiliary_domains = {"secondary": child.auxiliary_domains["tertiary"]}

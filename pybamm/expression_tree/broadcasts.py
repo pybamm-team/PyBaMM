@@ -281,7 +281,7 @@ class SecondaryBroadcast(Broadcast):
             auxiliary_domains["tertiary"] = child.auxiliary_domains["secondary"]
             # Child's tertiary becomes quaternary
             if "tertiary" in child.auxiliary_domains:
-                auxiliary_domains["quaternary"] = child.auxiliary_domains["tertiary"]                
+                auxiliary_domains["quaternary"] = child.auxiliary_domains["tertiary"]
 
         return domain, auxiliary_domains
 
@@ -332,7 +332,7 @@ class TertiaryBroadcast(Broadcast):
     broadcast_domain : iterable of str
         The domain for broadcast. This will become the tertiary domain of the symbol.
         The `tertiary` domain of the child, if present, is shifted by one to the
-        `quaternary` domain of the symbol. 
+        `quaternary` domain of the symbol.
     name : str
         name of the node
 
