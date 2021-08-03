@@ -963,8 +963,11 @@ class BoundaryValue(BoundaryOperator):
             and self.side == "right"
         ):
             # value on the surface of the particle
-            latex_child = sympy.latex(child) + r"^{surf}"
-            return sympy.Symbol(latex_child)
+            if str(child) == "1":
+                return child
+            else:
+                latex_child = sympy.latex(child) + r"^{surf}"
+                return sympy.Symbol(latex_child)
 
         elif self.side == "positive tab":
             return child
