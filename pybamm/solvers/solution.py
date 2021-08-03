@@ -135,9 +135,23 @@ class Solution(object):
         pybamm.citations.register("Andersson2019")
 
     def extract_explicit_sensitivities(self):
+        # if we got here, we havn't set y yet
+        self.set_y()
+
+        # extract sensitivities from full y solution
         self._y, self._sensitivities = \
             self._extract_explicit_sensitivities(
                 self.all_models[0], self.y, self.t, self.all_inputs[0]
+            )
+
+        # make sure we remove all sensitivities from all_ys
+        for index, (model, ys, ts, inputs) in enumerate(
+            zip(self.all_models, self.all_ys, self.all_ts,
+                self.all_inputs)
+        ):
+            self._all_ys[index], _ = \
+                self._extract_explicit_sensitivities(
+                    model, ys, ts, inputs
             )
 
     def _extract_explicit_sensitivities(self, model, y, t_eval, inputs):
@@ -411,6 +425,10 @@ class Solution(object):
 
     def update(self, variables):
         """Add ProcessedVariables to the dictionary of variables in the solution"""
+        # make sure that sensitivities are extracted if required
+        if isinstance(self._sensitivities, bool) and self._sensitivities:
+            self.extract_explicit_sensitivities()
+
         # Convert single entry to list
         if isinstance(variables, str):
             variables = [variables]
