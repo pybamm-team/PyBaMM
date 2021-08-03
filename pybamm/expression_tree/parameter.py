@@ -28,7 +28,7 @@ class Parameter(pybamm.Symbol):
     def __init__(self, name, domain=[]):
         super().__init__(name, domain=domain)
 
-    def new_copy(self):
+    def create_copy(self):
         """See :meth:`pybamm.Symbol.new_copy()`."""
         return Parameter(self.name, self.domain)
 
@@ -46,7 +46,10 @@ class Parameter(pybamm.Symbol):
 
     def to_equation(self):
         """Convert the node and its subtree into a SymPy equation."""
-        return sympy.symbols(self.print_name)
+        if self.print_name is not None:
+            return sympy.symbols(self.print_name)
+        else:
+            return sympy.Symbol(self.name)
 
 
 class FunctionParameter(pybamm.Symbol):
@@ -189,7 +192,7 @@ class FunctionParameter(pybamm.Symbol):
 
         return FunctionParameter(self.name, input_dict, diff_variable=variable)
 
-    def new_copy(self):
+    def create_copy(self):
         """See :meth:`pybamm.Symbol.new_copy()`."""
         out = self._function_parameter_new_copy(
             self._input_names, self.orphans, print_name=self.print_name
@@ -233,4 +236,7 @@ class FunctionParameter(pybamm.Symbol):
 
     def to_equation(self):
         """Convert the node and its subtree into a SymPy equation."""
-        return sympy.symbols(self.print_name)
+        if self.print_name is not None:
+            return sympy.symbols(self.print_name)
+        else:
+            return sympy.Symbol(self.name)
