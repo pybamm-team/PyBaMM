@@ -81,23 +81,10 @@ class Solution(object):
         else:
             self.all_inputs = all_inputs
 
-        # sensitivities
-        if isinstance(sensitivities, bool):
-            self._sensitivities = {}
-            # if solution consists of explicit sensitivity equations, extract them
-            if (
-                sensitivities is True
-                and all_models[0] is not None
-                and not isinstance(all_ys[0], casadi.Function)
-                and all_models[0].len_rhs_and_alg != all_ys[0].shape[0]
-                and all_models[0].len_rhs_and_alg != 0  # for the dummy solver
-            ):
-                self.extract_explicit_sensitivities()
-
-        elif isinstance(sensitivities, dict):
-            self._sensitivities = sensitivities
-        else:
+        # sensitivities must be a dict or bool
+        if not isinstance(sensitivities, (bool, dict)):
             raise TypeError('sensitivities arg needs to be a bool or dict')
+        self._sensitivities = sensitivities
 
         self._t_event = t_event
         self._y_event = y_event
@@ -148,23 +135,10 @@ class Solution(object):
         pybamm.citations.register("Andersson2019")
 
     def extract_explicit_sensitivities(self):
-        for index, (model, ys, ts, inputs) in enumerate(
-            zip(self.all_models, self.all_ys, self.all_ts,
-                self.all_inputs)
-        ):
-            # TODO: only support sensitivities for one solution atm
-            # but make sure that sensitivities are removed for all
-            # solutions
-            if index == 0:
-                self._all_ys[index], self._sensitivities = \
-                    self._extract_explicit_sensitivities(
-                        model, ys, ts, inputs
-                )
-            else:
-                self._all_ys[index], _ = \
-                    self._extract_explicit_sensitivities(
-                        model, ys, ts, inputs
-                )
+        self._y, self._sensitivities = \
+            self._extract_explicit_sensitivities(
+                self.all_models[0], self.y, self.t, self.all_inputs[0]
+            )
 
     def _extract_explicit_sensitivities(self, model, y, t_eval, inputs):
         """
@@ -277,11 +251,18 @@ class Solution(object):
             return self._y
         except AttributeError:
             self.set_y()
+
+            # if y is evaluated before sensitivities then need to extract them
+            if isinstance(self._sensitivities, bool) and self._sensitivities:
+                self.extract_explicit_sensitivities()
+
             return self._y
 
     @property
     def sensitivities(self):
         """Values of the sensitivities. Returns a dict of param_name: np_array"""
+        if isinstance(self._sensitivities, bool) and self._sensitivities:
+            self.extract_explicit_sensitivities()
         return self._sensitivities
 
     def set_y(self):

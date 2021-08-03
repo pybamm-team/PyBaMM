@@ -83,7 +83,6 @@ class StandardModelTest(object):
 
         self.solution = self.solver.solve(
             self.model, t_eval, inputs=inputs,
-            calculate_sensitivities=calculate_sensitivities
         )
 
     def test_outputs(self):
@@ -93,39 +92,44 @@ class StandardModelTest(object):
         )
         std_out_test.test_all()
 
-    def test_sensitivities(self):
-        param_name = "Negative electrode conductivity [S.m-1]"
-        neg_electrode_cond = 100.0
+    def test_sensitivities(self, param_name, param_value):
         self.parameter_values.update({param_name: "[input]"})
-        inputs = {param_name: neg_electrode_cond}
+        inputs = {param_name: param_value}
 
         self.test_processing_parameters()
         self.test_processing_disc()
 
-        self.test_solving(inputs=inputs, calculate_sensitivities=True)
+        # Use tighter default tolerances for testing
+        self.solver.rtol = 1e-8
+        self.solver.atol = 1e-8
+
+        Crate = abs(
+            self.parameter_values["Current function [A]"]
+            / self.parameter_values["Nominal cell capacity [A.h]"]
+        )
+        t_eval = np.linspace(0, 3600 / Crate, 100)
+
+        self.solution = self.solver.solve(
+            self.model, t_eval, inputs=inputs,
+            calculate_sensitivities=True
+        )
 
         # check via finite differencing
-        h = 1e-6
-        inputs_plus = {param_name: neg_electrode_cond + 0.5 * h}
-        inputs_neg = {param_name: neg_electrode_cond - 0.5 * h}
+        h = 1e-6 * param_value
+        inputs_plus = {param_name: (param_value + 0.5 * h)}
+        inputs_neg = {param_name: (param_value - 0.5 * h)}
         sol_plus = self.solver.solve(
-            self.model, self.solution.all_ts[0], inputs=inputs_plus
+            self.model, t_eval, inputs=inputs_plus,
         )
         sol_neg = self.solver.solve(
-            self.model, self.solution.all_ts[0], inputs=inputs_neg
+            self.model, t_eval, inputs=inputs_neg
         )
-        n = self.solution.sensitivities[param_name].shape[0]
-        np.testing.assert_array_almost_equal(
-            self.solution.sensitivities[param_name],
-            ((sol_plus.y - sol_neg.y) / h).reshape((n, 1))
+        fd = ((np.array(sol_plus.y) - np.array(sol_neg.y)) / h)
+        fd = fd.transpose().reshape(-1, 1)
+        np.testing.assert_allclose(
+            self.solution.sensitivities[param_name], fd,
+            rtol=1e-1, atol=1e-5,
         )
-
-        if (
-            isinstance(
-                self.model, (pybamm.lithium_ion.BaseModel, pybamm.lead_acid.BaseModel)
-            )
-        ):
-            self.test_outputs()
 
     def test_all(
         self, param=None, disc=None, solver=None, t_eval=None, skip_output_tests=False

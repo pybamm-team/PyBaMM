@@ -321,10 +321,11 @@ class IDAKLUSolver(pybamm.BaseSolver):
         number_of_states = y0.size
         y_out = sol.y.reshape((number_of_timesteps, number_of_states))
 
-        # return solution, we need to tranpose y to match scipy's interface
+        # return sensitivity solution, we need to flatten yS to
+        # (#timesteps * #states,) to match format used by Solution
         if number_of_sensitivity_parameters != 0:
             yS_out = {
-                name: sol.yS[i].transpose() for i, name in enumerate(sens0.keys())
+                name: sol.yS[i].reshape(-1, 1) for i, name in enumerate(sens0.keys())
             }
         else:
             yS_out = False

@@ -20,10 +20,18 @@ class TestSPM(unittest.TestCase):
     def test_sensitivities(self):
         options = {"thermal": "isothermal"}
         model = pybamm.lithium_ion.SPM(options)
-        # use Ecker parameters for nonlinear diffusion
         param = pybamm.ParameterValues(chemistry=pybamm.parameter_sets.Ecker2015)
         modeltest = tests.StandardModelTest(model, parameter_values=param)
-        modeltest.test_sensitivities()
+        modeltest.test_sensitivities(
+            #"Negative electrode conductivity [S.m-1]", 14.0
+            'Typical current [A]', 0.15652,
+            #"Typical electrolyte concentration [mol.m-3]", 1000.0
+            #''Negative electrode diffusivity [m2.s-1]', 1e-3,
+            #'Negative electrode active material volume fraction', 0.372403,
+            #'Separator thickness [m]', 2e-05,
+            #'Negative electrode electrons in reaction', 1.0,
+            #'Outer SEI open-circuit potential [V]', 0.8,
+        )
 
     def test_basic_processing_1plus1D(self):
         options = {"current collector": "potential pair", "dimensionality": 1}
