@@ -1,6 +1,3 @@
-from pybamm import Parameter
-
-
 def nmc_LGM50_thermal_conductivity_ORegan2021(T):
     """
     Wet positive electrode thermal conductivity as a function of the temperature from

@@ -1,4 +1,4 @@
-from pybamm import exp, constants, maximum
+from pybamm import exp, constants
 
 
 def graphite_LGM50_diffusivity_ORegan2021(sto, T):
@@ -25,41 +25,6 @@ def graphite_LGM50_diffusivity_ORegan2021(sto, T):
     :class:`pybamm.Symbol`
        Solid diffusivity
     """
-
-    #  a0 = 5
-    #  a1 = -1.38
-    #  a2 = -6.278
-    #  a3 = -5.033
-    #  a4 = 3.998
-    #  b1 = 0.2059
-    #  b2 = 0.5882
-    #  b3 = 0.8757
-    #  b4 = 0.5956
-    #  c0 = -14.84
-    #  c1 = 0.0006043
-    #  c2 = 0.0448
-    #  c3 = 0.02463
-    #  c4 = 0.004477
-    #  d = 3221
-
-    #  a0 = 9.947
-    #  a1 = -1.737
-    #  #  a2 = -6.565
-    #  a2 = -3.6
-    #  #  a3 = -9.47
-    #  a3 = -7.54
-    #  #  a4 = 2.955
-    #  a4 = 1.704
-    #  b1 = 0.1981
-    #  b2 = 0.5399
-    #  b3 = 0.8868
-    #  b4 = 0.5858
-    #  c0 = -15.14
-    #  c1 = 0.0005582
-    #  c2 = 0.04973
-    #  c3 = 0.0478
-    #  c4 = 0.002958
-    #  d = 3221
 
     a0 = 11.17
     a1 = -1.553

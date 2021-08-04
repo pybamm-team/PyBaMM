@@ -1,6 +1,3 @@
-from pybamm import Parameter
-
-
 def graphite_LGM50_thermal_conductivity_ORegan2021(T):
     """
     Wet negative electrode thermal conductivity as a function of the temperature from
