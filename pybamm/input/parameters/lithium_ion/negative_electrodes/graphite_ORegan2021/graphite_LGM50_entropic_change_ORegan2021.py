@@ -20,24 +20,9 @@ def graphite_LGM50_entropic_change_ORegan2021(sto):
     :class:`pybamm.Symbol`
        Entropic change [V.K-1]
     """
-    #  a0 = -0.09668
-    #  a1 = -0.2434
-    #  a2 = 0.3656
-    #  b1 = 0.5203
-    #  b2 = 0.08201
-    #  c0 = 0.01831
-    #  c1 = 0.007665
-    #  c2 = 0.005254
-
-    #  dUdT = (
-    #      a0 * sto
-    #      + c0
-    #      + 0.5 * a1 * exp(-((sto - b1) ** 2) / c1)
-    #      + a2 * exp(-((sto - b2) ** 2) / c2)
-    #  ) / 1000  # fit in mV / K
 
     a0 = -0.1112
-    a1 = -0.09002  # * 0
+    a1 = -0.09002 * 0   # fixed fit (see discussion on paper)
     a2 = 0.3561
     b1 = 0.4955
     b2 = 0.08309
