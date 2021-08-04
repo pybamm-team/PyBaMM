@@ -92,7 +92,8 @@ class StandardModelTest(object):
         )
         std_out_test.test_all()
 
-    def test_sensitivities(self, param_name, param_value):
+    def test_sensitivities(self, param_name, param_value,
+                           output_name='Terminal voltage [V]'):
         self.parameter_values.update({param_name: "[input]"})
         inputs = {param_name: param_value}
 
@@ -113,6 +114,7 @@ class StandardModelTest(object):
             self.model, t_eval, inputs=inputs,
             calculate_sensitivities=True
         )
+        output_sens = self.solution[output_name].sensitivities[param_name]
 
         # check via finite differencing
         h = 1e-6 * param_value
@@ -121,14 +123,16 @@ class StandardModelTest(object):
         sol_plus = self.solver.solve(
             self.model, t_eval, inputs=inputs_plus,
         )
+        output_plus = sol_plus[output_name](t=t_eval)
         sol_neg = self.solver.solve(
             self.model, t_eval, inputs=inputs_neg
         )
-        fd = ((np.array(sol_plus.y) - np.array(sol_neg.y)) / h)
+        output_neg = sol_neg[output_name](t=t_eval)
+        fd = ((np.array(output_plus) - np.array(output_neg)) / h)
         fd = fd.transpose().reshape(-1, 1)
         np.testing.assert_allclose(
-            self.solution.sensitivities[param_name], fd,
-            rtol=1e-1, atol=1e-5,
+            output_sens, fd,
+            rtol=1e-2, atol=1e-6,
         )
 
     def test_all(

@@ -537,17 +537,18 @@ class ProcessedVariable(object):
         dvar_dp_func = casadi.Function(
             "dvar_dp", [t_casadi, y_casadi, p_casadi_stacked], [dvar_dp]
         )
-        for idx in range(len(self.all_ts[0])):
-            t = self.all_ts[0][idx]
-            u = self.all_ys[0][:, idx]
-            next_dvar_dy_eval = dvar_dy_func(t, u, inputs_stacked)
-            next_dvar_dp_eval = dvar_dp_func(t, u, inputs_stacked)
-            if idx == 0:
-                dvar_dy_eval = next_dvar_dy_eval
-                dvar_dp_eval = next_dvar_dp_eval
-            else:
-                dvar_dy_eval = casadi.diagcat(dvar_dy_eval, next_dvar_dy_eval)
-                dvar_dp_eval = casadi.vertcat(dvar_dp_eval, next_dvar_dp_eval)
+        for index, (ts, ys) in enumerate(zip(self.all_ts, self.all_ys)):
+            for idx in range(len(ts)):
+                t = ts[idx]
+                u = ys[:, idx]
+                next_dvar_dy_eval = dvar_dy_func(t, u, inputs_stacked)
+                next_dvar_dp_eval = dvar_dp_func(t, u, inputs_stacked)
+                if index == 0 and idx == 0:
+                    dvar_dy_eval = next_dvar_dy_eval
+                    dvar_dp_eval = next_dvar_dp_eval
+                else:
+                    dvar_dy_eval = casadi.diagcat(dvar_dy_eval, next_dvar_dy_eval)
+                    dvar_dp_eval = casadi.vertcat(dvar_dp_eval, next_dvar_dp_eval)
 
         # Compute sensitivity
         dy_dp = self.solution_sensitivities["all"]
