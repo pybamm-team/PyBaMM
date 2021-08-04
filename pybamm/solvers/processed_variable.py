@@ -538,8 +538,7 @@ class ProcessedVariable(object):
             "dvar_dp", [t_casadi, y_casadi, p_casadi_stacked], [dvar_dp]
         )
         for index, (ts, ys) in enumerate(zip(self.all_ts, self.all_ys)):
-            for idx in range(len(ts)):
-                t = ts[idx]
+            for idx, t in enumerate(ts):
                 u = ys[:, idx]
                 next_dvar_dy_eval = dvar_dy_func(t, u, inputs_stacked)
                 next_dvar_dp_eval = dvar_dp_func(t, u, inputs_stacked)
