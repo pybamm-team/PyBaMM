@@ -528,15 +528,9 @@ class Integral(SpatialOperator):
                 # Check that child and integration_variable domains agree
                 if var.domain == child.domain:
                     self._integration_dimension = "primary"
-                elif (
-                    "secondary" in child.auxiliary_domains
-                    and var.domain == child.auxiliary_domains["secondary"]
-                ):
+                elif var.domain == child.domains["secondary"]:
                     self._integration_dimension = "secondary"
-                elif (
-                    "tertiary" in child.auxiliary_domains
-                    and var.domain == child.auxiliary_domains["tertiary"]
-                ):
+                elif var.domain == child.domains["tertiary"]:
                     self._integration_dimension = "tertiary"
                 else:
                     raise pybamm.DomainError(
@@ -902,16 +896,9 @@ class BoundaryOperator(SpatialOperator):
                 )
         self.side = side
         # boundary value of a child takes the domain from auxiliary domain of the child
-        if child.auxiliary_domains != {}:
-            domain = child.auxiliary_domains["secondary"]
-        # if child has no auxiliary domain, boundary operator removes domain
-        else:
-            domain = []
+        domain = child.domains["secondary"]
         # tertiary auxiliary domain shift down to secondary
-        try:
-            auxiliary_domains = {"secondary": child.auxiliary_domains["tertiary"]}
-        except KeyError:
-            auxiliary_domains = {}
+        auxiliary_domains = {"secondary": child.domains["tertiary"]}
         super().__init__(
             name, child, domain=domain, auxiliary_domains=auxiliary_domains
         )
@@ -1272,16 +1259,14 @@ def x_average(symbol):
         # Even if domain is "negative electrode", "separator", or
         # "positive electrode", and we know l, we still compute it as Integral(1, x)
         # as this will be easier to identify for simplifications later on
-        if (
-            symbol.domain == ["negative particle"] or
-            symbol.domain == ["negative particle size"]
-        ):
+        if symbol.domain == ["negative particle"] or symbol.domain == [
+            "negative particle size"
+        ]:
             x = pybamm.standard_spatial_vars.x_n
             l = geo.l_n
-        elif (
-            symbol.domain == ["positive particle"] or
-            symbol.domain == ["positive particle size"]
-        ):
+        elif symbol.domain == ["positive particle"] or symbol.domain == [
+            "positive particle size"
+        ]:
             x = pybamm.standard_spatial_vars.x_p
             l = geo.l_p
         else:
@@ -1458,17 +1443,15 @@ def size_average(symbol):
 
     # If symbol is a primary broadcast to "particle size", take the orphan
     elif isinstance(symbol, pybamm.PrimaryBroadcast) and symbol.domain in [
-        ["negative particle size"], ["positive particle size"]
+        ["negative particle size"],
+        ["positive particle size"],
     ]:
         return symbol.orphans[0]
     # If symbol is a secondary broadcast to "particle size" from "particle",
     # take the orphan
-    elif (
-        isinstance(symbol, pybamm.SecondaryBroadcast) and
-        symbol.domains["secondary"] in [
-            ["negative particle size"], ["positive particle size"]
-        ]
-    ):
+    elif isinstance(symbol, pybamm.SecondaryBroadcast) and symbol.domains[
+        "secondary"
+    ] in [["negative particle size"], ["positive particle size"]]:
         return symbol.orphans[0]
     # Otherwise, perform the integration in R
     else:

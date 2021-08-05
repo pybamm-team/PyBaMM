@@ -1,6 +1,7 @@
 #
 # Dimensional and dimensionless parameter values, and scales
 #
+from pybamm.expression_tree.input_parameter import InputParameter
 import numpy as np
 import pybamm
 import pandas as pd
@@ -599,7 +600,7 @@ class ParameterValues:
             return processed_symbol
 
     def _process_symbol(self, symbol):
-        """ See :meth:`ParameterValues.process_symbol()`. """
+        """See :meth:`ParameterValues.process_symbol()`."""
 
         if isinstance(symbol, pybamm.Parameter):
             value = self[symbol.name]
@@ -668,13 +669,12 @@ class ParameterValues:
                 function = pybamm.Scalar(
                     function_name, name=symbol.name
                 ) * pybamm.ones_like(*new_children)
-            elif (
+            elif isinstance(function_name, pybamm.InputParameter) or (
                 isinstance(function_name, pybamm.Symbol)
-                and function_name.evaluates_to_number()
+                and function_name.size_for_testing == 1
             ):
                 # If the "function" provided is a pybamm scalar-like, use ones_like to
                 # get the right shape
-                # This also catches input parameters
                 function = function_name * pybamm.ones_like(*new_children)
             elif callable(function_name):
                 # otherwise evaluate the function to create a new PyBaMM object

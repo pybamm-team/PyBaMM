@@ -768,17 +768,17 @@ class LeadAcidParameters(BaseParameters):
         T_dim = self.Delta_T * T + self.T_ref
         return self.j0_p_Ox_dimensional(c_e_dim, T_dim) / self.j_scale_p
 
-    def c_n_init(self, x):
+    def c_n_init(self, r, x):
         """
-        Dimensionless initial concentration (as a function of dimensionless position x
-        to be consistent with lithium-ion)
+        Dimensionless initial concentration (as a function of dimensionless positions
+        r and x to be consistent with lithium-ion)
         """
         return self.c_e_init
 
-    def c_p_init(self, x):
+    def c_p_init(self, r, x):
         """
-        Dimensionless initial concentration (as a function of dimensionless position x
-        to be consistent with lithium-ion)
+        Dimensionless initial concentration (as a function of dimensionless positions
+        r and x to be consistent with lithium-ion)
         """
         return self.c_e_init
 

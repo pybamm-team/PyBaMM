@@ -95,12 +95,11 @@ class FastSingleSizeDistribution(BaseSizeDistribution):
         # quantities. Necessary for output variables "Total lithium in
         # negative electrode [mol]", etc, to be calculated correctly
         f_v_dist = variables[
-            "X-averaged " + self.domain.lower()
+            "X-averaged "
+            + self.domain.lower()
             + " volume-weighted particle-size distribution"
         ]
-        c_s_surf_xav = pybamm.Integral(
-            f_v_dist * c_s_surf_xav_distribution, R
-        )
+        c_s_surf_xav = pybamm.Integral(f_v_dist * c_s_surf_xav_distribution, R)
         c_s_xav = pybamm.PrimaryBroadcast(
             c_s_surf_xav, [self.domain.lower() + " particle"]
         )
@@ -158,10 +157,22 @@ class FastSingleSizeDistribution(BaseSizeDistribution):
         ]
 
         if self.domain == "Negative":
-            c_init = self.param.c_n_init(0)
+            r_n = pybamm.SpatialVariable(
+                "r_n",
+                domain=["negative particle"],
+                auxiliary_domains={"secondary": "current collector"},
+                coord_sys="spherical polar",
+            )
+            c_init = pybamm.r_average(self.param.c_n_init(r_n, 0))
 
         elif self.domain == "Positive":
-            c_init = self.param.c_p_init(1)
+            r_p = pybamm.SpatialVariable(
+                "r_p",
+                domain=["positive particle"],
+                auxiliary_domains={"secondary": "current collector"},
+                coord_sys="spherical polar",
+            )
+            c_init = pybamm.r_average(self.param.c_p_init(r_p, 1))
 
         self.initial_conditions = {c_s_surf_xav_distribution: c_init}
 

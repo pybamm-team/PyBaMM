@@ -217,7 +217,7 @@ class Symbol(anytree.NodeMixin):
         self.cached_children = super(Symbol, self).children
 
         # Set auxiliary domains
-        self._domains = {"primary": None}
+        self._domains = pybamm.DomainDict({"primary": None})
         self.auxiliary_domains = auxiliary_domains
         # Set domain (and hence id)
         self.domain = domain
@@ -294,7 +294,7 @@ class Symbol(anytree.NodeMixin):
     @property
     def auxiliary_domains(self):
         """Returns auxiliary domains."""
-        return self._auxiliary_domains
+        return {k: v for k, v in self._domains.items() if k != "primary"}
 
     @auxiliary_domains.setter
     def auxiliary_domains(self, auxiliary_domains):
@@ -312,26 +312,21 @@ class Symbol(anytree.NodeMixin):
         if len(set(values)) != len(values):
             raise pybamm.DomainError("All auxiliary domains must be different")
 
-        self._auxiliary_domains = auxiliary_domains.copy()
         self._domains.update(auxiliary_domains)
 
     @property
     def secondary_domain(self):
         """Helper function to get the secondary domain of a symbol."""
-        return self.auxiliary_domains["secondary"]
+        return self._domains["secondary"]
 
     def copy_domains(self, symbol):
         """Copy the domains from a given symbol, bypassing checks."""
-        self._domains = symbol.domains.copy()
-        self._auxiliary_domains = {
-            k: v for k, v in self._domains.items() if k != "primary"
-        }
+        self._domains = pybamm.DomainDict(symbol.domains.copy())
         self.set_id()
 
     def clear_domains(self):
         """Clear domains, bypassing checks."""
-        self._domains = {"primary": []}
-        self._auxiliary_domains = {}
+        self._domains = pybamm.DomainDict({"primary": []})
         self.set_id()
 
     def get_children_auxiliary_domains(self, children):

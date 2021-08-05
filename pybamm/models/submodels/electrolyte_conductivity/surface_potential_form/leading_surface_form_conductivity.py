@@ -62,9 +62,9 @@ class BaseLeadingOrderSurfaceForm(LeadingOrder):
             + " electrode surface potential difference"
         ]
         if self.domain == "Negative":
-            delta_phi_init = self.param.U_n(self.param.c_n_init(0), self.param.T_init)
+            delta_phi_init = self.param.U_n_init
         elif self.domain == "Positive":
-            delta_phi_init = self.param.U_p(self.param.c_p_init(1), self.param.T_init)
+            delta_phi_init = self.self.param.U_p_init
 
         self.initial_conditions = {delta_phi: delta_phi_init}
 
@@ -155,8 +155,9 @@ class LeadingOrderAlgebraic(BaseLeadingOrderSurfaceForm):
         # equal to 1 since it was scaled by a_typ, which is likely not the surface area
         # of the final (discretized) distribution.
         a = variables[
-            "X-averaged " + self.domain.lower() +
-            " electrode surface area to volume ratio"
+            "X-averaged "
+            + self.domain.lower()
+            + " electrode surface area to volume ratio"
         ]
 
         sum_j = variables[

@@ -122,28 +122,28 @@ class PrimaryBroadcast(Broadcast):
                 """Primary broadcast from current collector domain must be to electrode
                 or separator or particle or particle size domains"""
             )
-        elif (
-            child.domain[0]
-            in [
-                "negative electrode",
-                "separator",
-                "positive electrode",
-            ]
-            and broadcast_domain[0] not in [
-                "negative particle",
-                "positive particle",
-                "negative particle size",
-                "positive particle size",
-            ]
-        ):
+        elif child.domain[0] in [
+            "negative electrode",
+            "separator",
+            "positive electrode",
+        ] and broadcast_domain[0] not in [
+            "negative particle",
+            "positive particle",
+            "negative particle size",
+            "positive particle size",
+        ]:
             raise pybamm.DomainError(
                 """Primary broadcast from electrode or separator must be to particle
                 or particle size domains"""
             )
-        elif child.domain[0] in [
-            "negative particle size",
-            "positive particle size",
-        ] and broadcast_domain[0] not in ["negative particle", "positive particle"]:
+        elif (
+            child.domain[0]
+            in [
+                "negative particle size",
+                "positive particle size",
+            ]
+            and broadcast_domain[0] not in ["negative particle", "positive particle"]
+        ):
             raise pybamm.DomainError(
                 """Primary broadcast from particle size domain must be to particle
                 domain"""
@@ -226,8 +226,8 @@ class SecondaryBroadcast(Broadcast):
                 "Cannot take SecondaryBroadcast of an object with empty domain. "
                 "Use PrimaryBroadcast instead."
             )
-        # Can only do secondary broadcast from particle to electrode or from
-        # electrode to current collector
+        # Can only do secondary broadcast from particle to electrode or current
+        # collector or from electrode to current collector
         if child.domain[0] in [
             "negative particle",
             "positive particle",
@@ -237,10 +237,11 @@ class SecondaryBroadcast(Broadcast):
             "negative electrode",
             "separator",
             "positive electrode",
+            "current collector",
         ]:
             raise pybamm.DomainError(
                 """Secondary broadcast from particle domain must be to particle-size,
-                electrode or separator domains"""
+                electrode, separator, or current collector domains"""
             )
         if child.domain[0] in [
             "negative particle size",
@@ -249,17 +250,21 @@ class SecondaryBroadcast(Broadcast):
             "negative electrode",
             "separator",
             "positive electrode",
-            "current collector"
+            "current collector",
         ]:
             raise pybamm.DomainError(
                 """Secondary broadcast from particle size domain must be to
                 electrode or separator or current collector domains"""
             )
-        elif child.domain[0] in [
-            "negative electrode",
-            "separator",
-            "positive electrode",
-        ] and broadcast_domain != ["current collector"]:
+        elif (
+            child.domain[0]
+            in [
+                "negative electrode",
+                "separator",
+                "positive electrode",
+            ]
+            and broadcast_domain != ["current collector"]
+        ):
             raise pybamm.DomainError(
                 """Secondary broadcast from electrode or separator must be to
                 current collector domains"""
@@ -273,8 +278,7 @@ class SecondaryBroadcast(Broadcast):
         domain = child.domain
         auxiliary_domains = {"secondary": broadcast_domain}
         # Child's secondary domain becomes tertiary domain
-        if "secondary" in child.auxiliary_domains:
-            auxiliary_domains["tertiary"] = child.auxiliary_domains["secondary"]
+        auxiliary_domains["tertiary"] = child.domains["secondary"]
 
         return domain, auxiliary_domains
 
@@ -288,7 +292,9 @@ class SecondaryBroadcast(Broadcast):
         See :meth:`pybamm.Symbol.evaluate_for_shape_using_domain()`
         """
         child_eval = self.children[0].evaluate_for_shape()
-        vec = pybamm.evaluate_for_shape_using_domain(self.domain)
+        vec = pybamm.evaluate_for_shape_using_domain(
+            self.auxiliary_domains["secondary"]
+        )
         return np.outer(vec, child_eval).reshape(-1, 1)
 
     def reduce_one_dimension(self):

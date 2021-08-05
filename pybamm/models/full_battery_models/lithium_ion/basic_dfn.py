@@ -184,14 +184,16 @@ class BasicDFN(BaseModel):
         }
         # c_n_init and c_p_init can in general be functions of x
         # Note the broadcasting, for domains
+        r_n = pybamm.standard_spatial_vars.r_n
         x_n = pybamm.PrimaryBroadcast(
             pybamm.standard_spatial_vars.x_n, "negative particle"
         )
-        self.initial_conditions[c_s_n] = param.c_n_init(x_n)
+        self.initial_conditions[c_s_n] = param.c_n_init(r_n, x_n)
+        r_p = pybamm.standard_spatial_vars.r_p
         x_p = pybamm.PrimaryBroadcast(
             pybamm.standard_spatial_vars.x_p, "positive particle"
         )
-        self.initial_conditions[c_s_p] = param.c_p_init(x_p)
+        self.initial_conditions[c_s_p] = param.c_p_init(r_p, x_p)
         # Events specify points at which a solution should terminate
         self.events += [
             pybamm.Event(
@@ -233,12 +235,10 @@ class BasicDFN(BaseModel):
         # Initial conditions must also be provided for algebraic equations, as an
         # initial guess for a root-finding algorithm which calculates consistent initial
         # conditions
-        # We evaluate c_n_init at x=0 and c_p_init at x=1 (this is just an initial
-        # guess so actual value is not too important)
+        # We evaluate c_n_init at r=0, x=0 and c_p_init at r=0, x=1
+        # (this is just an initial guess so actual value is not too important)
         self.initial_conditions[phi_s_n] = pybamm.Scalar(0)
-        self.initial_conditions[phi_s_p] = param.U_p(
-            param.c_p_init(1), param.T_init
-        ) - param.U_n(param.c_n_init(0), param.T_init)
+        self.initial_conditions[phi_s_p] = param.ocv_init
 
         ######################
         # Current in the electrolyte
@@ -251,7 +251,7 @@ class BasicDFN(BaseModel):
             "left": (pybamm.Scalar(0), "Neumann"),
             "right": (pybamm.Scalar(0), "Neumann"),
         }
-        self.initial_conditions[phi_e] = -param.U_n(param.c_n_init(0), param.T_init)
+        self.initial_conditions[phi_e] = -param.U_n_init
 
         ######################
         # Electrolyte concentration

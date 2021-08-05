@@ -286,6 +286,18 @@ class LithiumIonParameters(BaseParameters):
         # intermediate variable  [K*m^3/mol]
 
         # Electrode capacities
+        r_n = pybamm.SpatialVariable(
+            "r_n",
+            domain=["negative particle"],
+            auxiliary_domains={"secondary": "negative electrode"},
+            coord_sys="spherical polar",
+        )
+        r_p = pybamm.SpatialVariable(
+            "r_p",
+            domain=["positive particle"],
+            auxiliary_domains={"secondary": "positive electrode"},
+            coord_sys="spherical polar",
+        )
         x_n = pybamm.SpatialVariable(
             "x_n", domain=["negative electrode"], coord_sys="cartesian"
         )
@@ -305,14 +317,14 @@ class LithiumIonParameters(BaseParameters):
         self.n_Li_e_init = c_e_av * self.L_x * self.A_cc
 
         eps_s_n = self.epsilon_s_n(x_n)
-        c_n = self.c_n_init(x_n)
-        c_n_av = pybamm.x_average(eps_s_n * c_n)
-        self.n_Li_n_init = c_n_av * self.c_n_max * self.L_n * self.A_cc
+        c_n_init = self.c_n_init(r_n, pybamm.PrimaryBroadcast(x_n, "negative particle"))
+        c_n_init_av = pybamm.x_average(eps_s_n * pybamm.r_average(c_n_init))
+        self.n_Li_n_init = c_n_init_av * self.c_n_max * self.L_n * self.A_cc
 
         eps_s_p = self.epsilon_s_p(x_p)
-        c_p = self.c_p_init(x_p)
-        c_p_av = pybamm.x_average(eps_s_p * c_p)
-        self.n_Li_p_init = c_p_av * self.c_p_max * self.L_p * self.A_cc
+        c_p_init = self.c_p_init(r_p, pybamm.PrimaryBroadcast(x_p, "positive particle"))
+        c_p_init_av = pybamm.x_average(eps_s_p * pybamm.r_average(c_p_init))
+        self.n_Li_p_init = c_p_init_av * self.c_p_max * self.L_p * self.A_cc
 
         self.n_Li_particles_init = self.n_Li_n_init + self.n_Li_p_init
         self.n_Li_init = self.n_Li_particles_init + self.n_Li_e_init
@@ -341,6 +353,20 @@ class LithiumIonParameters(BaseParameters):
         self.beta_LAM_sei_p_dimensional = pybamm.Parameter(
             "Positive electrode reaction-driven LAM factor [m3.mol-1]"
         )
+
+        # Reference OCP based on initial concentration at
+        # current collector/electrode interface
+        self.U_n_ref = self.U_n_dimensional(c_n_init_av, self.T_ref)
+
+        # Reference OCP based on initial concentration at
+        # current collector/electrode interface
+        self.U_p_ref = self.U_p_dimensional(c_p_init_av, self.T_ref)
+
+        self.ocv_ref = self.U_p_ref - self.U_n_ref
+        self.T_init = self.therm.T_init
+        self.U_n_init_dim = self.U_n_dimensional(c_n_init_av, self.T_init)
+        self.U_p_init_dim = self.U_p_dimensional(c_p_init_av, self.T_init)
+        self.ocv_init_dim = self.U_p_init_dim - self.U_n_init_dim
 
     def sigma_n_dimensional(self, T):
         """Dimensional electrical conductivity in negative electrode"""
@@ -500,16 +526,16 @@ class LithiumIonParameters(BaseParameters):
             "Positive electrode active material volume fraction", inputs
         )
 
-    def c_n_init_dimensional(self, x):
+    def c_n_init_dimensional(self, r, x):
         """Initial concentration as a function of dimensionless position x"""
-        inputs = {"Dimensionless through-cell position (x_n)": x}
+        inputs = {"Radial distance (r_n) [m]": r, "Through-cell distance (x_n) [m]": x}
         return pybamm.FunctionParameter(
             "Initial concentration in negative electrode [mol.m-3]", inputs
         )
 
-    def c_p_init_dimensional(self, x):
+    def c_p_init_dimensional(self, r, x):
         """Initial concentration as a function of dimensionless position x"""
-        inputs = {"Dimensionless through-cell position (x_p)": x}
+        inputs = {"Radial distance (r_p) [m]": r, "Through-cell distance (x_p) [m]": x}
         return pybamm.FunctionParameter(
             "Initial concentration in positive electrode [mol.m-3]", inputs
         )
@@ -543,16 +569,6 @@ class LithiumIonParameters(BaseParameters):
         self.current_scale = self.i_typ
         self.j_scale_n = self.i_typ / (self.a_n_typ * self.L_x)
         self.j_scale_p = self.i_typ / (self.a_p_typ * self.L_x)
-
-        # Reference OCP based on initial concentration at
-        # current collector/electrode interface
-        sto_n_init = self.c_n_init_dimensional(0) / self.c_n_max
-        self.U_n_ref = self.U_n_dimensional(sto_n_init, self.T_ref)
-
-        # Reference OCP based on initial concentration at
-        # current collector/electrode interface
-        sto_p_init = self.c_p_init_dimensional(1) / self.c_p_max
-        self.U_p_ref = self.U_p_dimensional(sto_p_init, self.T_ref)
 
         # Reference exchange-current density
         self.j0_n_ref_dimensional = (
@@ -851,8 +867,11 @@ class LithiumIonParameters(BaseParameters):
         self.epsilon_init = pybamm.concatenation(
             self.epsilon_n, self.epsilon_s, self.epsilon_p
         )
-        self.T_init = self.therm.T_init
         self.c_e_init = self.c_e_init_dimensional / self.c_e_typ
+
+        self.U_n_init = (self.U_n_init_dim - self.U_n_ref) / self.potential_scale
+        self.U_p_init = (self.U_p_init_dim - self.U_p_ref) / self.potential_scale
+        self.ocv_init = (self.ocv_init_dim - self.ocv_ref) / self.potential_scale
 
         # Dimensionless mechanical parameters
         self.rho_cr_n = self.rho_cr_n_dim * self.l_cr_n_0 * self.w_cr
@@ -1019,17 +1038,21 @@ class LithiumIonParameters(BaseParameters):
         sto = c_s_p
         return self.dUdT_p_dimensional(sto) * self.Delta_T / self.potential_scale
 
-    def c_n_init(self, x):
+    def c_n_init(self, r, x):
         """
         Dimensionless initial concentration as a function of dimensionless position x.
         """
-        return self.c_n_init_dimensional(x) / self.c_n_max
+        return (
+            self.c_n_init_dimensional(r * self.geo.R_n_typ, x * self.L_x) / self.c_n_max
+        )
 
-    def c_p_init(self, x):
+    def c_p_init(self, r, x):
         """
         Dimensionless initial concentration as a function of dimensionless position x.
         """
-        return self.c_p_init_dimensional(x) / self.c_p_max
+        return (
+            self.c_p_init_dimensional(r * self.geo.R_p_typ, x * self.L_x) / self.c_p_max
+        )
 
     def rho(self, T):
         """Dimensionless effective volumetric heat capacity"""

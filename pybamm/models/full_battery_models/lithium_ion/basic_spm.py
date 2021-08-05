@@ -106,8 +106,10 @@ class BasicSPM(BaseModel):
         }
         # c_n_init and c_p_init are functions, but for the SPM we evaluate them at x=0
         # and x=1 since there is no x-dependence in the particles
-        self.initial_conditions[c_s_n] = param.c_n_init(0)
-        self.initial_conditions[c_s_p] = param.c_p_init(1)
+        r_n = pybamm.standard_spatial_vars.r_n
+        r_p = pybamm.standard_spatial_vars.r_p
+        self.initial_conditions[c_s_n] = param.c_n_init(r_n, 0)
+        self.initial_conditions[c_s_p] = param.c_p_init(r_p, 1)
         # Events specify points at which a solution should terminate
         self.events += [
             pybamm.Event(

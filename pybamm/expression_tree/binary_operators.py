@@ -26,18 +26,18 @@ def preprocess_binary(left, right):
 
     # Do some broadcasting in special cases, to avoid having to do this manually
     if left.domain != [] and right.domain != []:
-        if (
-            left.domain != right.domain
-            and "secondary" in right.auxiliary_domains
-            and left.domain == right.auxiliary_domains["secondary"]
-        ):
+        if left.domain != right.domain and left.domain == right.secondary_domain:
             left = pybamm.PrimaryBroadcast(left, right.domain)
-        if (
-            right.domain != left.domain
-            and "secondary" in left.auxiliary_domains
-            and right.domain == left.auxiliary_domains["secondary"]
-        ):
+        elif right.domain != left.domain and right.domain == left.secondary_domain:
             right = pybamm.PrimaryBroadcast(right, left.domain)
+        elif (
+            left.domain == right.domain
+            and left.auxiliary_domains != right.auxiliary_domains
+        ):
+            if "secondary" not in left.auxiliary_domains:
+                left = pybamm.SecondaryBroadcast(left, right.secondary_domain)
+            elif "secondary" not in right.auxiliary_domains:
+                right = pybamm.SecondaryBroadcast(right, left.secondary_domain)
 
     return left, right
 

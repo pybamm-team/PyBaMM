@@ -17,7 +17,7 @@ from collections import defaultdict
 
 
 def root_dir():
-    """ return the root directory of the PyBaMM install directory """
+    """return the root directory of the PyBaMM install directory"""
     return str(pathlib.Path(pybamm.__path__[0]).parent)
 
 
@@ -122,6 +122,26 @@ class FuzzyDict(dict):
         else:
             # Just print keys
             print("\n".join("{}".format(k) for k in results.keys()))
+
+
+class DomainDict(dict):
+    def update(self, items):
+        if any(key not in ["primary", "secondary", "tertiary"] for key in items):
+            raise KeyError(
+                "DomainDict keys must be 'primary', 'secondary', or 'tertiary'"
+            )
+        return super().update(
+            {k: v for k, v in items.items() if (k == "primary" or v != [])}
+        )
+
+    def __setitem__(self, key, value):
+        self.update({key: value})
+
+    def __getitem__(self, key):
+        try:
+            return super().__getitem__(key)
+        except KeyError:
+            return []
 
 
 class Timer(object):

@@ -52,8 +52,10 @@ class TestSymbol(unittest.TestCase):
             pybamm.DomainError,
             "Domain cannot be empty if auxiliary domains are not empty",
         ):
-            b = pybamm.Symbol("b", auxiliary_domains={"sec": ["test sec"]})
-        b = pybamm.Symbol("b", domain="test", auxiliary_domains={"sec": ["test sec"]})
+            b = pybamm.Symbol("b", auxiliary_domains={"secondary": ["test sec"]})
+        b = pybamm.Symbol(
+            "b", domain="test", auxiliary_domains={"secondary": ["test sec"]}
+        )
         with self.assertRaisesRegex(
             pybamm.DomainError, "Domain cannot be the same as an auxiliary domain"
         ):
@@ -63,14 +65,15 @@ class TestSymbol(unittest.TestCase):
         a = pybamm.Symbol(
             "a",
             domain="test",
-            auxiliary_domains={"secondary": "sec", "tertiary": "tert"},
+            auxiliary_domains={"secondary": "secondary", "tertiary": "tertiary"},
         )
         self.assertEqual(a.domain, ["test"])
         self.assertEqual(
-            a.auxiliary_domains, {"secondary": ["sec"], "tertiary": ["tert"]}
+            a.auxiliary_domains, {"secondary": ["secondary"], "tertiary": ["tertiary"]}
         )
         self.assertEqual(
-            a.domains, {"primary": ["test"], "secondary": ["sec"], "tertiary": ["tert"]}
+            a.domains,
+            {"primary": ["test"], "secondary": ["secondary"], "tertiary": ["tertiary"]},
         )
         a = pybamm.Symbol("a", domain=["t", "e", "s"])
         self.assertEqual(a.domain, ["t", "e", "s"])
@@ -80,14 +83,14 @@ class TestSymbol(unittest.TestCase):
         with self.assertRaisesRegex(
             pybamm.DomainError, "Domain cannot be the same as an auxiliary domain"
         ):
-            b.auxiliary_domains = {"sec": "test sec"}
+            b.auxiliary_domains = {"secondary": "test sec"}
         with self.assertRaisesRegex(
             pybamm.DomainError, "All auxiliary domains must be different"
         ):
             b = pybamm.Symbol(
                 "b",
                 domain="test",
-                auxiliary_domains={"sec": ["test sec"], "tert": ["test sec"]},
+                auxiliary_domains={"secondary": ["test sec"], "tertiary": ["test sec"]},
             )
 
     def test_symbol_methods(self):
@@ -316,7 +319,9 @@ class TestSymbol(unittest.TestCase):
         a = pybamm.Symbol("a")
         b = pybamm.Symbol("b")
         c = pybamm.Symbol("c", domain=["test"])
-        d = pybamm.Symbol("d", domain=["test"], auxiliary_domains={"sec": "other test"})
+        d = pybamm.Symbol(
+            "d", domain=["test"], auxiliary_domains={"secondary": "other test"}
+        )
         hex_regex = r"\-?0x[0-9,a-f]+"
         self.assertRegex(
             a.__repr__(),
@@ -341,7 +346,7 @@ class TestSymbol(unittest.TestCase):
             r"Symbol\("
             + hex_regex
             + r", d, children\=\[\], domain\=\['test'\]"
-            + r", auxiliary_domains\=\{'sec': \"\['other test'\]\"\}\)",
+            + r", auxiliary_domains\=\{'secondary': \"\['other test'\]\"\}\)",
         )
         self.assertRegex(
             (a + b).__repr__(),
@@ -352,7 +357,7 @@ class TestSymbol(unittest.TestCase):
             r"Multiplication\("
             + hex_regex
             + r", \*, children\=\['c', 'd'\], domain=\['test'\]"
-            + r", auxiliary_domains\=\{'sec': \"\['other test'\]\"\}\)",
+            + r", auxiliary_domains\=\{'secondary': \"\['other test'\]\"\}\)",
         )
         self.assertRegex(
             pybamm.grad(c).__repr__(),

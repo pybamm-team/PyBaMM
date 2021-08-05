@@ -353,10 +353,22 @@ class PolynomialSingleParticle(BaseParticle):
         ]
 
         if self.domain == "Negative":
-            c_init = self.param.c_n_init(0)
+            r_n = pybamm.SpatialVariable(
+                "r_n",
+                domain=["negative particle"],
+                auxiliary_domains={"secondary": "current collector"},
+                coord_sys="spherical polar",
+            )
+            c_init = pybamm.r_average(self.param.c_n_init(r_n, 0))
 
         elif self.domain == "Positive":
-            c_init = self.param.c_p_init(1)
+            r_p = pybamm.SpatialVariable(
+                "r_p",
+                domain=["positive particle"],
+                auxiliary_domains={"secondary": "current collector"},
+                coord_sys="spherical polar",
+            )
+            c_init = pybamm.r_average(self.param.c_p_init(r_p, 1))
 
         self.initial_conditions = {c_s_rxav: c_init}
         if self.name == "quartic profile":

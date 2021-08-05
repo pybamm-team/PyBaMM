@@ -234,8 +234,9 @@ class BasicDFNHalfCell(BaseModel):
 
         # c_w_init can in general be a function of x
         # Note the broadcasting, for domains
+        r_w = half_cell_spatial_vars.r_w
         x_w = pybamm.PrimaryBroadcast(half_cell_spatial_vars.x_w, "working particle")
-        self.initial_conditions[c_s_w] = c_w_init(x_w)
+        self.initial_conditions[c_s_w] = c_w_init(r_w, x_w)
 
         # Events specify points at which a solution should terminate
         self.events += [
