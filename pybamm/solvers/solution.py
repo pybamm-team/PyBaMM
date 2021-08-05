@@ -182,7 +182,10 @@ class Solution(object):
         n_rhs = model.len_rhs
         n_alg = model.len_alg
         # Get the point where the algebraic equations start
-        n_p = model.len_rhs_sens // model.len_rhs
+        if model.len_rhs != 0:
+            n_p = model.len_rhs_sens // model.len_rhs
+        else:
+            n_p = model.len_alg_sens // model.len_alg
         len_rhs_and_sens = model.len_rhs + model.len_rhs_sens
 
         n_t = len(t_eval)

@@ -607,17 +607,26 @@ class BaseSolver(object):
             )
 
             # if we have changed the equations to include the explicit sensitivity
-            # equations, then we also need to update the mass matrix
+            # equations, then we also need to update the mass matrix and bounds
             if calculate_sensitivities_explicit:
-                n_inputs = model.len_rhs_sens // model.len_rhs
+                if model.len_rhs != 0:
+                    n_inputs = model.len_rhs_sens // model.len_rhs
+                elif model.len_alg != 0:
+                    n_inputs = model.len_alg_sens // model.len_alg
+                model.bounds = (
+                    np.repeat(model.bounds[0], n_inputs + 1),
+                    np.repeat(model.bounds[1], n_inputs + 1),
+                )
                 if (model.mass_matrix is not None
                         and model.mass_matrix.shape[0] == model.len_rhs_and_alg):
-                    model.mass_matrix_inv = pybamm.Matrix(
-                        block_diag(
-                            [model.mass_matrix_inv.entries] * (n_inputs + 1),
-                            format="csr"
+
+                    if model.mass_matrix_inv is not None:
+                        model.mass_matrix_inv = pybamm.Matrix(
+                            block_diag(
+                                [model.mass_matrix_inv.entries] * (n_inputs + 1),
+                                format="csr"
+                            )
                         )
-                    )
                     model.mass_matrix = pybamm.Matrix(
                         block_diag(
                             [model.mass_matrix.entries] * (n_inputs + 1), format="csr"
@@ -627,10 +636,11 @@ class BaseSolver(object):
                 # take care if calculate_sensitivites used then not used
                 if (model.mass_matrix is not None and
                         model.mass_matrix.shape[0] > model.len_rhs_and_alg):
-                    model.mass_matrix_inv = pybamm.Matrix(
-                        model.mass_matrix_inv.entries[:model.len_rhs,
-                                                      :model.len_rhs]
-                    )
+                    if model.mass_matrix_inv is not None:
+                        model.mass_matrix_inv = pybamm.Matrix(
+                            model.mass_matrix_inv.entries[:model.len_rhs,
+                                                          :model.len_rhs]
+                        )
                     model.mass_matrix = pybamm.Matrix(
                         model.mass_matrix.entries[:model.len_rhs_and_alg,
                                                   :model.len_rhs_and_alg]
@@ -1428,12 +1438,6 @@ class BaseSolver(object):
         for input_param in model.input_parameters:
             name = input_param.name
             if name not in inputs:
-                # Don't allow symbolic inputs if using `sensitivity`
-                if calculate_sensitivities:
-                    raise pybamm.SolverError(
-                        "Cannot have symbolic inputs if explicitly solving forward"
-                        "sensitivity equations"
-                    )
                 # Only allow symbolic inputs for CasadiSolver and CasadiAlgebraicSolver
                 if not isinstance(
                     self, (pybamm.CasadiSolver, pybamm.CasadiAlgebraicSolver)

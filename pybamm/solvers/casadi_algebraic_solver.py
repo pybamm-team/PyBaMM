@@ -229,8 +229,11 @@ class CasadiAlgebraicSolver(pybamm.BaseSolver):
         y_sol = casadi.vertcat(y_diff, y_alg)
 
         # Return solution object (no events, so pass None to t_event, y_event)
+
+        explicit_sensitivities = bool(model.calculate_sensitivities)
         sol = pybamm.Solution(
-            [t_eval], y_sol, model, inputs_dict, termination="success"
+            [t_eval], y_sol, model, inputs_dict, termination="success",
+            sensitivities=explicit_sensitivities
         )
         sol.integration_time = integration_time
         return sol

@@ -123,9 +123,6 @@ class CasadiSolver(pybamm.BaseSolver):
             Any external variables or input parameters to pass to the model when solving
         """
 
-        # are we solving explicit forward equations?
-        explicit_sensitivities = bool(model.calculate_sensitivities)
-
         # Record whether there are any symbolic inputs
         inputs_dict = inputs_dict or {}
         has_symbolic_inputs = any(
@@ -274,10 +271,6 @@ class CasadiSolver(pybamm.BaseSolver):
                     t = t_window[-1]
                     # update y0
                     y0 = solution.all_ys[-1][:, -1]
-
-            # now we extract sensitivities from the solution
-            if (explicit_sensitivities):
-                solution.extract_explicit_sensitivities()
 
             return solution
 
@@ -544,11 +537,7 @@ class CasadiSolver(pybamm.BaseSolver):
             # set up and solve
             t = casadi.MX.sym("t")
             p = casadi.MX.sym("p", inputs.shape[0])
-            # If the initial conditions depend on inputs, evaluate the function
-            if isinstance(model.y0, casadi.Function):
-                y0 = model.y0(p)
-            else:
-                y0 = model.y0
+            y0 = model.y0
 
             y_diff = casadi.MX.sym("y_diff", rhs(0, y0, p).shape[0])
             y_alg = casadi.MX.sym("y_alg", algebraic(0, y0, p).shape[0])
