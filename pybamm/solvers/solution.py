@@ -81,7 +81,6 @@ class Solution(object):
         else:
             self.all_inputs = all_inputs
 
-
         self.sensitivities = sensitivities
 
         self._t_event = t_event
