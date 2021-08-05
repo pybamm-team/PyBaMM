@@ -146,6 +146,9 @@ class TestFunction(unittest.TestCase):
         # Test sinh
         self.assertEqual(pybamm.Sinh(a).to_equation(), sympy.sinh(a))
 
+        # Test Function
+        self.assertEqual(pybamm.Function(np.log, 10).to_equation(), 10.0)
+
 
 class TestSpecificFunctions(unittest.TestCase):
     def test_arcsinh(self):

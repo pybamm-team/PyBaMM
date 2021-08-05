@@ -87,7 +87,7 @@ class Concatenation(pybamm.Symbol):
                 children_eval[idx] = child.evaluate(t, y, y_dot, inputs)
             return self._concatenation_evaluate(children_eval)
 
-    def new_copy(self):
+    def create_copy(self):
         """See :meth:`pybamm.Symbol.new_copy()`."""
         new_children = [child.new_copy() for child in self.children]
         return self._concatenation_new_copy(new_children)
