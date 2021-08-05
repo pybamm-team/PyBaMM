@@ -148,3 +148,4 @@ class BaseParticle(pybamm.BaseSubModel):
         }
 
         return variables
+

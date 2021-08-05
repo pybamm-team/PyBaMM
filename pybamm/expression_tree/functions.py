@@ -203,7 +203,7 @@ class Function(pybamm.Symbol):
     def _function_evaluate(self, evaluated_children):
         return self.function(*evaluated_children)
 
-    def new_copy(self):
+    def create_copy(self):
         """See :meth:`pybamm.Symbol.new_copy()`."""
         children_copy = [child.new_copy() for child in self.children]
         return self._function_new_copy(children_copy)
@@ -231,6 +231,10 @@ class Function(pybamm.Symbol):
                 differentiated_function=self.differentiated_function
             )
         )
+
+    def _sympy_operator(self, child):
+        """Apply appropriate SymPy operators."""
+        return child
 
     def to_equation(self):
         """Convert the node and its subtree into a SymPy equation."""

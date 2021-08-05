@@ -34,8 +34,20 @@ class TestStandardParametersLeadAcid(unittest.TestCase):
         self.assertLess(param_eval["C_e"], param_eval["C_rate"])
 
         # Dimensionless electrode conductivities should be large
-        self.assertGreater(param_eval["sigma_n"], 10)
-        self.assertGreater(param_eval["sigma_p"], 10)
+        self.assertGreater(
+            parameter_values.evaluate(parameters.sigma_n(parameters.T_ref)), 10
+        )
+        self.assertGreater(
+            parameter_values.evaluate(parameters.sigma_p(parameters.T_ref)), 10
+        )
+
+        # Rescaled dimensionless electrode conductivities should still be large
+        self.assertGreater(
+            parameter_values.evaluate(parameters.sigma_n_prime(parameters.T_ref)), 10
+        )
+        self.assertGreater(
+            parameter_values.evaluate(parameters.sigma_p_prime(parameters.T_ref)), 10
+        )
         # Dimensionless double-layer capacity should be small
         self.assertLess(param_eval["C_dl_n"], 1e-3)
         self.assertLess(param_eval["C_dl_p"], 1e-3)

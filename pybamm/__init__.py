@@ -176,6 +176,7 @@ from .parameters.electrical_parameters import (
 from .parameters.thermal_parameters import thermal_parameters, ThermalParameters
 from .parameters.lithium_ion_parameters import LithiumIonParameters
 from .parameters.lead_acid_parameters import LeadAcidParameters
+from .parameters.size_distribution_parameters import *
 from .parameters import parameter_sets
 
 #
