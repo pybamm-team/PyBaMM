@@ -60,7 +60,7 @@ class BaseThroughCellModel(BaseModel):
         return variables
 
     def _get_standard_neg_pos_acceleration_variables(self, div_v_box_n, div_v_box_p):
-        """ Acceleration in the electrodes """
+        """Acceleration in the electrodes"""
 
         acc_scale = self.param.velocity_scale / self.param.L_x
 
@@ -94,7 +94,7 @@ class BaseThroughCellModel(BaseModel):
         return variables
 
     def _get_standard_neg_pos_pressure_variables(self, p_n, p_p):
-        """ Pressure in the electrodes """
+        """Pressure in the electrodes"""
 
         variables = {
             "Positive electrode pressure": p_p,

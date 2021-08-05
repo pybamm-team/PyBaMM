@@ -1,7 +1,6 @@
 #
 # Base class for convection submodels
 #
-from pybamm.expression_tree.unary_operators import div
 import pybamm
 
 

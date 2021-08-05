@@ -36,10 +36,10 @@ model.submodels["positive particle"] = pybamm.particle.PolynomialSingleParticle(
     model.param, "Positive", "uniform profile"
 )
 model.submodels["negative interface"] = pybamm.interface.InverseButlerVolmer(
-    model.param, "Negative", "lithium-ion main"
+    model.param, "Negative", "lithium-ion main", options=model.options
 )
 model.submodels["positive interface"] = pybamm.interface.InverseButlerVolmer(
-    model.param, "Positive", "lithium-ion main"
+    model.param, "Positive", "lithium-ion main", options=model.options
 )
 model.submodels[
     "negative interface current"

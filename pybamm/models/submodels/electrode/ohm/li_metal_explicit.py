@@ -1,7 +1,6 @@
 #
 # Explicit model for potential drop across a lithium metal electrode
 #
-import pybamm
 from .base_ohm import BaseModel
 
 

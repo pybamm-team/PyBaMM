@@ -56,7 +56,8 @@ class SPM(BaseModel):
         if build:
             self.build_model()
 
-        pybamm.citations.register("Marquis2019")
+        if self.__class__ != "MPM":
+            pybamm.citations.register("Marquis2019")
 
     def set_convection_submodel(self):
 

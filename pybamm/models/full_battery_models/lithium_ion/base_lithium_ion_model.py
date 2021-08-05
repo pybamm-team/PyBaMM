@@ -29,6 +29,8 @@ class BaseModel(pybamm.BaseBatteryModel):
             "separator": self.param.L_x,
             "positive electrode": self.param.L_x,
             "positive particle": self.param.R_p_typ,
+            "negative particle size": self.param.R_n_typ,
+            "positive particle size": self.param.R_p_typ,
             "current collector y": self.param.L_z,
             "current collector z": self.param.L_z,
         }

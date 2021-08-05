@@ -59,7 +59,6 @@ class Full(BaseElectrolyteDiffusion):
         )
 
         eps_c_e = variables["Porosity times concentration"]
-        eps = variables["Porosity"]
         c_e = variables["Electrolyte concentration"]
         tor = variables["Electrolyte tortuosity"]
         i_e = variables["Electrolyte current density"]
@@ -89,6 +88,7 @@ class Full(BaseElectrolyteDiffusion):
         div_Vbox = variables["Transverse volume-averaged acceleration"]
 
         sum_s_j = variables["Sum of electrolyte reaction source terms"]
+        sum_s_j.print_name = "a"
         source_terms = sum_s_j / self.param.gamma_e
 
         self.rhs = {

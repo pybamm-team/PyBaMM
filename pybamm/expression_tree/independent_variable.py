@@ -1,6 +1,8 @@
 #
 # IndependentVariable class
 #
+import sympy
+
 import pybamm
 
 KNOWN_COORD_SYS = ["cartesian", "spherical polar"]
@@ -35,6 +37,13 @@ class IndependentVariable(pybamm.Symbol):
         """See :meth:`pybamm.Symbol._jac()`."""
         return pybamm.Scalar(0)
 
+    def to_equation(self):
+        """Convert the node and its subtree into a SymPy equation."""
+        if self.print_name is not None:
+            return sympy.symbols(self.print_name)
+        else:
+            return sympy.symbols(self.name)
+
 
 class Time(IndependentVariable):
     """
@@ -46,7 +55,7 @@ class Time(IndependentVariable):
     def __init__(self):
         super().__init__("time")
 
-    def new_copy(self):
+    def create_copy(self):
         """See :meth:`pybamm.Symbol.new_copy()`."""
         return Time()
 
@@ -105,7 +114,7 @@ class SpatialVariable(IndependentVariable):
                 "domain cannot be particle if name is '{}'".format(name)
             )
 
-    def new_copy(self):
+    def create_copy(self):
         """See :meth:`pybamm.Symbol.new_copy()`."""
         return self.__class__(
             self.name, self.domain, self.auxiliary_domains, self.coord_sys

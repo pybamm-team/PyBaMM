@@ -2,7 +2,6 @@
 # Base class for electrolyte conductivity
 #
 
-from numpy.core.fromnumeric import var
 import pybamm
 
 
@@ -381,7 +380,6 @@ class BaseElectrolyteConductivity(pybamm.BaseSubModel):
         return variables
 
     def set_boundary_conditions(self, variables):
-        param = self.param
         phi_e = variables["Electrolyte potential"]
 
         if self.half_cell:
