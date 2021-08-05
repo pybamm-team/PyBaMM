@@ -31,7 +31,7 @@ class InputParameter(pybamm.Symbol):
         self._expected_size = 1
         super().__init__(name, domain=domain, units=units)
 
-    def new_copy(self):
+    def create_copy(self):
         """See :meth:`pybamm.Symbol.new_copy()`."""
         new_input_parameter = InputParameter(
             self.name, units=self.units, domain=self.domain

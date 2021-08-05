@@ -69,6 +69,10 @@ class Broadcast(pybamm.SpatialOperator):
         else:
             return False
 
+    def _sympy_operator(self, child):
+        """Override :meth:`pybamm.UnaryOperator._sympy_operator`"""
+        return child
+
 
 class PrimaryBroadcast(Broadcast):
     """
@@ -100,29 +104,49 @@ class PrimaryBroadcast(Broadcast):
         self, child, broadcast_type, broadcast_domain, broadcast_auxiliary_domains
     ):
         """See :meth:`Broadcast.check_and_set_domains`"""
-        # Can only do primary broadcast from current collector to electrode or particle
-        # or from electrode to particle. Note current collector to particle *is* allowed
+        # Can only do primary broadcast from current collector to electrode,
+        # particle-size or particle or from electrode to particle-size or particle.
+        # Note e.g. current collector to particle *is* allowed
         if child.domain == []:
             pass
         elif child.domain == ["current collector"] and broadcast_domain[0] not in [
             "negative electrode",
             "separator",
             "positive electrode",
+            "negative particle size",
+            "positive particle size",
             "negative particle",
             "positive particle",
         ]:
             raise pybamm.DomainError(
                 """Primary broadcast from current collector domain must be to electrode
-                or separator or particle domains"""
+                or separator or particle or particle size domains"""
             )
-        elif child.domain[0] in [
-            "negative electrode",
-            "separator",
-            "positive electrode",
-        ] and broadcast_domain[0] not in ["negative particle", "positive particle"]:
+        elif (
+            child.domain[0]
+            in [
+                "negative electrode",
+                "separator",
+                "positive electrode",
+            ]
+            and broadcast_domain[0] not in [
+                "negative particle",
+                "positive particle",
+                "negative particle size",
+                "positive particle size",
+            ]
+        ):
             raise pybamm.DomainError(
                 """Primary broadcast from electrode or separator must be to particle
-                domains"""
+                or particle size domains"""
+            )
+        elif child.domain[0] in [
+            "negative particle size",
+            "positive particle size",
+        ] and broadcast_domain[0] not in ["negative particle", "positive particle"]:
+            raise pybamm.DomainError(
+                """Primary broadcast from particle size domain must be to particle
+                domain"""
             )
         elif child.domain[0] in ["negative particle", "positive particle"]:
             raise pybamm.DomainError("Cannot do primary broadcast from particle domain")
@@ -208,13 +232,28 @@ class SecondaryBroadcast(Broadcast):
             "negative particle",
             "positive particle",
         ] and broadcast_domain[0] not in [
+            "negative particle size",
+            "positive particle size",
             "negative electrode",
             "separator",
             "positive electrode",
         ]:
             raise pybamm.DomainError(
-                """Secondary broadcast from particle domain must be to electrode or
-                separator domains"""
+                """Secondary broadcast from particle domain must be to particle-size,
+                electrode or separator domains"""
+            )
+        if child.domain[0] in [
+            "negative particle size",
+            "positive particle size",
+        ] and broadcast_domain[0] not in [
+            "negative electrode",
+            "separator",
+            "positive electrode",
+            "current collector"
+        ]:
+            raise pybamm.DomainError(
+                """Secondary broadcast from particle size domain must be to
+                electrode or separator or current collector domains"""
             )
         elif child.domain[0] in [
             "negative electrode",

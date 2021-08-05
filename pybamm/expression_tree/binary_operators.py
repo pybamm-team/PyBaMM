@@ -114,7 +114,7 @@ class BinaryOperator(pybamm.Symbol):
             right_str = "{!s}".format(self.right)
         return "{} {} {}".format(left_str, self.name, right_str)
 
-    def new_copy(self):
+    def create_copy(self):
         """See :meth:`pybamm.Symbol.new_copy()`."""
 
         # process children
@@ -1125,7 +1125,10 @@ def simplified_multiplication(left, right):
                 return (left * r_left) + (left * r_right)
 
     # Negation simplifications
-    if isinstance(left, pybamm.Negate) and right.is_constant():
+    if isinstance(left, pybamm.Negate) and isinstance(right, pybamm.Negate):
+        # Double negation cancels out
+        return left.orphans[0] * right.orphans[0]
+    elif isinstance(left, pybamm.Negate) and right.is_constant():
         # Simplify (-a) * b to a * (-b) if (-b) is constant
         return left.orphans[0] * (-right)
     elif isinstance(right, pybamm.Negate) and left.is_constant():
@@ -1216,6 +1219,9 @@ def simplified_division(left, right):
                 return l_left * new_right
 
     # Negation simplifications
+    if isinstance(left, pybamm.Negate) and isinstance(right, pybamm.Negate):
+        # Double negation cancels out
+        return left.orphans[0] / right.orphans[0]
     elif isinstance(left, pybamm.Negate) and right.is_constant():
         # Simplify (-a) / b to a / (-b) if (-b) is constant
         return left.orphans[0] / (-right)

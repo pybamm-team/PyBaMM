@@ -174,7 +174,7 @@ class TestDFN(unittest.TestCase):
             "lithium plating porosity change": "true",
         }
         model = pybamm.lithium_ion.DFN(options)
-        param = pybamm.ParameterValues(chemistry=pybamm.parameter_sets.Yang2017)
+        param = pybamm.ParameterValues(chemistry=pybamm.parameter_sets.Chen2020_plating)
         modeltest = tests.StandardModelTest(model, parameter_values=param)
         modeltest.test_all()
 

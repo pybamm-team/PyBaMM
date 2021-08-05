@@ -626,6 +626,17 @@ class Simulation:
                     * c_p_max,
                 }
             )
+            # For experiments also update the following
+            if hasattr(self, 'op_conds_to_model_and_param'):
+                for key, (model, param) in self.op_conds_to_model_and_param.items():
+                    param.update(
+                        {
+                            "Initial concentration in negative electrode [mol.m-3]": x
+                            * c_n_max,
+                            "Initial concentration in positive electrode [mol.m-3]": y
+                            * c_p_max,
+                        }
+                    )
             # Save solved initial SOC in case we need to re-build the model
             self._built_initial_soc = initial_soc
 

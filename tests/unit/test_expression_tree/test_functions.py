@@ -1,13 +1,14 @@
 #
 # Tests for the Function classes
 #
-import pybamm
-
 import unittest
+
 import numpy as np
 import sympy
 from scipy import special
 from scipy.interpolate import interp1d
+
+import pybamm
 
 
 def test_function(arg):
@@ -131,10 +132,6 @@ class TestFunction(unittest.TestCase):
     def test_to_equation(self):
         a = pybamm.Symbol("a", domain="test")
 
-        # Test _sympy_operator
-        with self.assertRaises(NotImplementedError):
-            pybamm.Arctan(a).to_equation()
-
         # Test print_name
         func = pybamm.Arcsinh(a)
         func.print_name = "test"
@@ -142,6 +139,15 @@ class TestFunction(unittest.TestCase):
 
         # Test Arcsinh
         self.assertEqual(pybamm.Arcsinh(a).to_equation(), sympy.asinh(a))
+
+        # Test log
+        self.assertEqual(pybamm.Log(54.0).to_equation(), sympy.log(54.0))
+
+        # Test sinh
+        self.assertEqual(pybamm.Sinh(a).to_equation(), sympy.sinh(a))
+
+        # Test Function
+        self.assertEqual(pybamm.Function(np.log, 10).to_equation(), 10.0)
 
 
 class TestSpecificFunctions(unittest.TestCase):

@@ -172,13 +172,16 @@
   doi = {10.1149/2.0441908jes},
 }
 
-@article{Sulzer2020,
+@article{Sulzer2021,
   title = {{Python Battery Mathematical Modelling (PyBaMM)}},
   author = {Sulzer, Valentin and Marquis, Scott G. and Timms, Robert and Robinson, Martin and Chapman, S. Jon},
-  journal = {ECSarXiv. February},
-  volume = {7},
-  year = {2020},
-  doi = {10.1149/osf.io/67ckj},
+  doi = {10.5334/jors.309},
+  journal = {Journal of Open Research Software},
+  publisher = {Software Sustainability Institute},
+  volume = {9},
+  number = {1},
+  pages = {14},
+  year = {2021}
 }
 
 @article{Gustafsson2020,
@@ -228,14 +231,16 @@
   doi = {10.1016/j.electacta.2020.135862},
 }
 
-@article{Timms2020,
-title = {{Asymptotic Reduction of a Lithium-ion Pouch Cell Model}},
-journal = {Submitted for publication},
-author = {Timms, Robert and Marquis, Scott G. and Sulzer, Valentin and Please, Colin P. and Chapman, S. Jon},
-year = {2020},
-eprint = {2005.05127},
-archivePrefix = {arXiv},
-primaryClass = {physics.app-ph},
+@article{Timms2021,
+  title = {{Asymptotic Reduction of a Lithium-ion Pouch Cell Model}},
+  author = {Timms, Robert and Marquis, Scott G and Sulzer, Valentin and Please, Colin P. and Chapman, S Jonathan},
+  year = {2021},
+  journal = {SIAM Journal on Applied Mathematics},
+  publisher = {Society for Industrial and Applied Mathematics},
+  number = {3},
+  pages = {765--788},
+  volume = {81},
+  doi = {10.1137/20M1336898},
 }
 
 @article{Subramanian2005,
@@ -250,14 +255,15 @@ primaryClass = {physics.app-ph},
   doi = {10.1149/1.2032427},
 }
 
-@article{BrosaPlanella2020,
+@article{BrosaPlanella2021,
   title = {Systematic derivation and validation of a reduced thermal-electrochemical model for lithium-ion batteries using asymptotic methods},
-  journal = {Submitted for publication},
   author = {Brosa Planella, Ferran and Sheikh, Muhammad and Widanage, W. Dhammika},
-  year = {2020},
-  eprint = {2011.01611},
-  archivePrefix = {arXiv},
-  primaryClass = {physics.chem-ph},
+  year = {2021},
+  journal = {Electrochimica Acta},
+  publisher = {Elsevier},
+  pages = {138524},
+  volume = {388},
+  doi = {10.1016/j.electacta.2021.138524},
 }
 
 @article{Lain2019,
@@ -335,14 +341,14 @@ primaryClass = {physics.app-ph},
 }
 
 @article{Ren2018,
-author={Ren, Dongsheng and Smith, Kandler and Guo, Dongxu and Han, Xuebing and Feng, Xuning and Lu, Languang and Ouyang, Minggao},
-title={Investigation of Lithium Plating-Stripping Process in Li-Ion Batteries at Low Temperature Using an Electrochemical Model},
-journal={Journal of the Electrochemistry Society},
-year={2018},
-volume={165},
-pages={A2167-A2178},
-publisher={The Electrochemical Society},
-doi={10.1149/2.0661810jes}
+  author={Ren, Dongsheng and Smith, Kandler and Guo, Dongxu and Han, Xuebing and Feng, Xuning and Lu, Languang and Ouyang, Minggao},
+  title={Investigation of Lithium Plating-Stripping Process in Li-Ion Batteries at Low Temperature Using an Electrochemical Model},
+  journal={Journal of the Electrochemistry Society},
+  year={2018},
+  volume={165},
+  pages={A2167-A2178},
+  publisher={The Electrochemical Society},
+  doi={10.1149/2.0661810jes}
 }
 
 
@@ -403,6 +409,31 @@ doi={10.1149/2.0661810jes}
   pages={227787},
   year={2020},
   publisher={Elsevier}
+}
+
+@misc{Kirk2020,
+  author = {Kirk, Toby L. and Evans, Jack and Please, Colin P. and Chapman, S. Jonathan},
+  title         = {Modelling electrode heterogeneity in lithium-ion batteries: unimodal and bimodal particle-size distributions},
+  year          = {2020},
+  howpublished  = {arXiv:2006.12208},
+  eprint        = {2006.12208},
+  url           = {https://arxiv.org/abs/2006.12208},
+  archiveprefix = {arXiv},
+  primaryclass  = {physics.app-ph},
+}
+
+@article{Kirk2021,
+	author = {Toby L. Kirk and Colin P. Please and S. Jon Chapman},
+	title = {Physical Modelling of the Slow Voltage Relaxation Phenomenon in Lithium-Ion Batteries},
+	journal = {Journal of The Electrochemical Society},
+	year = 2021,
+	month = {jun},
+	publisher = {The Electrochemical Society},
+	volume = {168},
+	number = {6},
+	pages = {060554},
+	doi = {10.1149/1945-7111/ac0bf7},
+	url = {https://doi.org/10.1149/1945-7111/ac0bf7},
 }
 
 @article{Xu2019,
