@@ -62,7 +62,7 @@ class BaseModel(pybamm.BaseModel):
     def default_parameter_values(self):
         # TODO: separate parameters out by component and create a parameter set
         # that can be called (see pybamm/parameters/parameter_sets.py)
-        return pybamm.ParameterValues(values="lithium-sulfur/parameters.csv")
+        return pybamm.ParameterValues(values="lithium_sulfur/parameters.csv")
 
     @property
     def options(self):

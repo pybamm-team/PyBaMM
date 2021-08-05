@@ -101,7 +101,8 @@ class Simulation:
             if experiment is not None:
                 raise NotImplementedError(
                     "BasicDFNHalfCell is not compatible "
-                    "with experiment simulations yet.")
+                    "with experiment simulations yet."
+                )
 
         if experiment is None:
             # Check to see if the current is provided as data (i.e. drive cycle)
@@ -682,7 +683,7 @@ class Simulation:
                 }
             )
             # For experiments also update the following
-            if hasattr(self, 'op_conds_to_model_and_param'):
+            if hasattr(self, "op_conds_to_model_and_param"):
                 for key, (model, param) in self.op_conds_to_model_and_param.items():
                     param.update(
                         {
@@ -894,9 +895,15 @@ class Simulation:
                     self._solution = self._solution + cycle_solution
 
                 # At the final step of the inner loop we save the cycle
+                if isinstance(model, pybamm.lithium_sulfur.BaseModel):
+                    # don't calculate summary variables for li-s
+                    calculate_summary_variables = False
+                else:
+                    calculate_summary_variables = True
                 cycle_solution, cycle_summary_variables = pybamm.make_cycle_solution(
                     steps,
                     esoh_sim,
+                    calculate_summary_variables=calculate_summary_variables,
                     save_this_cycle=save_this_cycle,
                 )
                 all_cycle_solutions.append(cycle_solution)
@@ -934,7 +941,8 @@ class Simulation:
 
             if self.solution is not None and len(all_cycle_solutions) > 0:
                 self.solution.cycles = all_cycle_solutions
-                self.solution.set_summary_variables(all_summary_variables)
+                if calculate_summary_variables:
+                    self.solution.set_summary_variables(all_summary_variables)
 
             pybamm.logger.notice(
                 "Finish experiment simulation, took {}".format(timer.time())

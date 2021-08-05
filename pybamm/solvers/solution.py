@@ -574,7 +574,12 @@ class Solution(object):
         return new_sol
 
 
-def make_cycle_solution(step_solutions, esoh_sim=None, save_this_cycle=True):
+def make_cycle_solution(
+    step_solutions,
+    esoh_sim=None,
+    calculate_summary_variables=True,
+    save_this_cycle=True,
+):
     """
     Function to create a Solution for an entire cycle, and associated summary variables
 
@@ -586,7 +591,10 @@ def make_cycle_solution(step_solutions, esoh_sim=None, save_this_cycle=True):
         A simulation, whose model should be a :class:`pybamm.lithium_ion.ElectrodeSOH`
         model, which is used to calculate some of the summary variables. If `None`
         (default) then only summary variables that do not require the eSOH calculation
-        are calculated. See [1] for more details on eSOH variables.
+        are calculated (unless `calculate_summary_variables` is False).
+        See [1] for more details on eSOH variables.
+    calculate_summary_variables : bool, optional
+        Whether to calculate summary variables. Default True.
     save_this_cycle : bool, optional
         Whether to save the entire cycle variables or just the summary variables.
         Default True
@@ -627,7 +635,10 @@ def make_cycle_solution(step_solutions, esoh_sim=None, save_this_cycle=True):
 
     cycle_solution.steps = step_solutions
 
-    cycle_summary_variables = get_cycle_summary_variables(cycle_solution, esoh_sim)
+    if calculate_summary_variables:
+        cycle_summary_variables = get_cycle_summary_variables(cycle_solution, esoh_sim)
+    else:
+        cycle_summary_variables = []
 
     if save_this_cycle:
         cycle_solution.cycle_summary_variables = cycle_summary_variables
