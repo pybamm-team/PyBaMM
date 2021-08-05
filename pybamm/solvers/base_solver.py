@@ -613,10 +613,11 @@ class BaseSolver(object):
                     n_inputs = model.len_rhs_sens // model.len_rhs
                 elif model.len_alg != 0:
                     n_inputs = model.len_alg_sens // model.len_alg
-                model.bounds = (
-                    np.repeat(model.bounds[0], n_inputs + 1),
-                    np.repeat(model.bounds[1], n_inputs + 1),
-                )
+                if model.bounds[0].shape[0] < model.len_alg + model.len_alg_sens:
+                    model.bounds = (
+                        np.repeat(model.bounds[0], n_inputs + 1),
+                        np.repeat(model.bounds[1], n_inputs + 1),
+                    )
                 if (model.mass_matrix is not None
                         and model.mass_matrix.shape[0] == model.len_rhs_and_alg):
 
@@ -634,6 +635,11 @@ class BaseSolver(object):
                     )
             else:
                 # take care if calculate_sensitivites used then not used
+                if model.bounds[0].shape[0] > model.len_alg:
+                    model.bounds = (
+                        model.bounds[0][:model.len_alg],
+                        model.bounds[1][:model.len_alg],
+                    )
                 if (model.mass_matrix is not None and
                         model.mass_matrix.shape[0] > model.len_rhs_and_alg):
                     if model.mass_matrix_inv is not None:

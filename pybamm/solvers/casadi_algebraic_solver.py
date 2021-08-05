@@ -230,7 +230,11 @@ class CasadiAlgebraicSolver(pybamm.BaseSolver):
 
         # Return solution object (no events, so pass None to t_event, y_event)
 
-        explicit_sensitivities = bool(model.calculate_sensitivities)
+        try:
+            explicit_sensitivities = bool(model.calculate_sensitivities)
+        except AttributeError:
+            explicit_sensitivities = False
+
         sol = pybamm.Solution(
             [t_eval], y_sol, model, inputs_dict, termination="success",
             sensitivities=explicit_sensitivities

@@ -81,10 +81,8 @@ class Solution(object):
         else:
             self.all_inputs = all_inputs
 
-        # sensitivities must be a dict or bool
-        if not isinstance(sensitivities, (bool, dict)):
-            raise TypeError('sensitivities arg needs to be a bool or dict')
-        self._sensitivities = sensitivities
+
+        self.sensitivities = sensitivities
 
         self._t_event = t_event
         self._y_event = y_event
@@ -284,6 +282,14 @@ class Solution(object):
             else:
                 self._sensitivities = {}
         return self._sensitivities
+
+    @sensitivities.setter
+    def sensitivities(self, value):
+        """Updates the sensitivity"""
+        # sensitivities must be a dict or bool
+        if not isinstance(value, (bool, dict)):
+            raise TypeError('sensitivities arg needs to be a bool or dict')
+        self._sensitivities = value
 
     def set_y(self):
         try:

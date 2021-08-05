@@ -272,6 +272,10 @@ class CasadiSolver(pybamm.BaseSolver):
                     # update y0
                     y0 = solution.all_ys[-1][:, -1]
 
+            # now we extract sensitivities from the solution
+            if (bool(model.calculate_sensitivities)):
+                solution.sensitivities = True
+
             return solution
 
     def _solve_for_event(self, coarse_solution, init_event_signs):
