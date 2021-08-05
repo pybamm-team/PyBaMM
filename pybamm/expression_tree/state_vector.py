@@ -1,15 +1,15 @@
 #
 # State Vector class
 #
-import pybamm
-
 import numpy as np
 from scipy.sparse import csr_matrix, vstack
+
+import pybamm
 
 
 class StateVectorBase(pybamm.Symbol):
     """
-    node in the expression tree that holds a slice to read from an external vector type
+    Node in the expression tree that holds a slice to read from an external vector type.
 
     Parameters
     ----------
@@ -82,7 +82,7 @@ class StateVectorBase(pybamm.Symbol):
 
     @property
     def evaluation_array(self):
-        """Array to use for evaluating"""
+        """Array to use for evaluating."""
         return self._evaluation_array
 
     @property
@@ -90,7 +90,7 @@ class StateVectorBase(pybamm.Symbol):
         return self.evaluation_array.count(True)
 
     def set_evaluation_array(self, y_slices, evaluation_array):
-        "Set evaluation array using slices"
+        """Set evaluation array using slices."""
         if evaluation_array is not None and pybamm.settings.debug_mode is False:
             self._evaluation_array = evaluation_array
         else:
@@ -100,7 +100,7 @@ class StateVectorBase(pybamm.Symbol):
             self._evaluation_array = [bool(x) for x in array]
 
     def set_id(self):
-        """ See :meth:`pybamm.Symbol.set_id()` """
+        """See :meth:`pybamm.Symbol.set_id()`"""
         self._id = hash(
             (self.__class__, self.name, tuple(self.evaluation_array))
             + tuple(self.domain)
@@ -116,7 +116,6 @@ class StateVectorBase(pybamm.Symbol):
         ----------
         variable : :class:`pybamm.Symbol`
             The variable with respect to which to differentiate
-
         """
         if len(variable.y_slices) > 1:
             raise NotImplementedError(
@@ -138,7 +137,6 @@ class StateVectorBase(pybamm.Symbol):
         ----------
         variable : :class:`pybamm.Symbol`
             The variable with respect to which to differentiate
-
         """
         if len(variable.y_slices) > 1:
             raise NotImplementedError(
@@ -174,8 +172,8 @@ class StateVectorBase(pybamm.Symbol):
                 )
         return pybamm.Matrix(jac)
 
-    def new_copy(self):
-        """ See :meth:`pybamm.Symbol.new_copy()`. """
+    def create_copy(self):
+        """See :meth:`pybamm.Symbol.new_copy()`."""
         return StateVector(
             *self.y_slices,
             name=self.name,
@@ -195,7 +193,7 @@ class StateVectorBase(pybamm.Symbol):
 
 class StateVector(StateVectorBase):
     """
-    node in the expression tree that holds a slice to read from an external vector type
+    Node in the expression tree that holds a slice to read from an external vector type.
 
     Parameters
     ----------
@@ -233,7 +231,7 @@ class StateVector(StateVectorBase):
         )
 
     def _base_evaluate(self, t=None, y=None, y_dot=None, inputs=None):
-        """ See :meth:`pybamm.Symbol._base_evaluate()`. """
+        """See :meth:`pybamm.Symbol._base_evaluate()`."""
         if y is None:
             raise TypeError("StateVector cannot evaluate input 'y=None'")
         if y.shape[0] < len(self.evaluation_array):
@@ -269,7 +267,7 @@ class StateVector(StateVectorBase):
 
 class StateVectorDot(StateVectorBase):
     """
-    node in the expression tree that holds a slice to read from the ydot
+    Node in the expression tree that holds a slice to read from the ydot.
 
     Parameters
     ----------
@@ -307,7 +305,7 @@ class StateVectorDot(StateVectorBase):
         )
 
     def _base_evaluate(self, t=None, y=None, y_dot=None, inputs=None):
-        """ See :meth:`pybamm.Symbol._base_evaluate()`. """
+        """See :meth:`pybamm.Symbol._base_evaluate()`."""
         if y_dot is None:
             raise TypeError("StateVectorDot cannot evaluate input 'y_dot=None'")
         if y_dot.shape[0] < len(self.evaluation_array):

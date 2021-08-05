@@ -7,26 +7,6 @@ import pybamm
 import scipy.interpolate as interp
 
 
-def make_interp2D_fun(input, interpolant):
-    """
-    Calls and returns a 2D interpolant of the correct shape depending on the
-    shape of the input
-    """
-    first_dim, second_dim, _ = input
-    if isinstance(first_dim, np.ndarray) and isinstance(second_dim, np.ndarray):
-        first_dim = first_dim[:, 0, 0]
-        second_dim = second_dim[:, 0]
-        return interpolant(second_dim, first_dim)
-    elif isinstance(first_dim, np.ndarray):
-        first_dim = first_dim[:, 0]
-        return interpolant(second_dim, first_dim)[:, 0]
-    elif isinstance(second_dim, np.ndarray):
-        second_dim = second_dim[:, 0]
-        return interpolant(second_dim, first_dim)
-    else:
-        return interpolant(second_dim, first_dim)[0]
-
-
 class ProcessedVariable(object):
     """
     An object that can be evaluated at arbitrary (scalars or vectors) t and x, and
@@ -133,11 +113,8 @@ class ProcessedVariable(object):
         # set up interpolation
         if len(self.t_pts) == 1:
             # Variable is just a scalar value, but we need to create a callable
-            # function to be consitent with other processed variables
-            def fun(t):
-                return entries
-
-            self._interpolation_function = fun
+            # function to be consistent with other processed variables
+            self._interpolation_function = Interpolant0D(entries)
         else:
             self._interpolation_function = interp.interp1d(
                 self.t_pts,
@@ -199,6 +176,12 @@ class ProcessedVariable(object):
         elif self.domain == ["current collector"]:
             self.first_dimension = "z"
             self.z_sol = space
+        elif self.domain[0] in [
+            "negative particle size",
+            "positive particle size",
+        ]:
+            self.first_dimension = "R"
+            self.R_sol = space
         else:
             self.first_dimension = "x"
             self.x_sol = space
@@ -216,21 +199,9 @@ class ProcessedVariable(object):
         # set up interpolation
         if len(self.t_pts) == 1:
             # function of space only
-            interpolant = interp.interp1d(
-                pts_for_interp,
-                entries_for_interp[:, 0],
-                kind="linear",
-                fill_value=np.nan,
-                bounds_error=False,
+            self._interpolation_function = Interpolant1D(
+                pts_for_interp, entries_for_interp
             )
-
-            def interp_fun(t, z):
-                if isinstance(z, np.ndarray):
-                    return interpolant(z)[:, np.newaxis]
-                else:
-                    return interpolant(z)
-
-            self._interpolation_function = interp_fun
         else:
             # function of space and time. Note that the order of 't' and 'space'
             # is the reverse of what you'd expect
@@ -245,7 +216,7 @@ class ProcessedVariable(object):
 
     def initialise_2D(self):
         """
-        Initialise a 2D object that depends on x and r, or x and z.
+        Initialise a 2D object that depends on x and r, x and z, x and R, or R and r.
         """
         first_dim_nodes = self.mesh.nodes
         first_dim_edges = self.mesh.edges
@@ -323,7 +294,7 @@ class ProcessedVariable(object):
             axis=1,
         )
 
-        # Process r-x or x-z
+        # Process r-x, x-z, r-R, R-x, or R-z
         if self.domain[0] in [
             "negative particle",
             "positive particle",
@@ -350,6 +321,36 @@ class ProcessedVariable(object):
             self.second_dimension = "z"
             self.x_sol = first_dim_pts
             self.z_sol = second_dim_pts
+        elif self.domain[0] in [
+            "negative particle",
+            "positive particle",
+        ] and self.auxiliary_domains["secondary"][0] in [
+            "negative particle size",
+            "positive particle size",
+        ]:
+            self.first_dimension = "r"
+            self.second_dimension = "R"
+            self.r_sol = first_dim_pts
+            self.R_sol = second_dim_pts
+        elif self.domain[0] in [
+            "negative particle size",
+            "positive particle size",
+        ] and self.auxiliary_domains["secondary"][0] in [
+            "negative electrode",
+            "positive electrode",
+        ]:
+            self.first_dimension = "R"
+            self.second_dimension = "x"
+            self.R_sol = first_dim_pts
+            self.x_sol = second_dim_pts
+        elif self.domain[0] in [
+            "negative particle size",
+            "positive particle size",
+        ] and self.auxiliary_domains["secondary"] == ["current collector"]:
+            self.first_dimension = "R"
+            self.second_dimension = "z"
+            self.R_sol = first_dim_pts
+            self.z_sol = second_dim_pts
         else:
             raise pybamm.DomainError(
                 "Cannot process 3D object with domain '{}' "
@@ -359,9 +360,14 @@ class ProcessedVariable(object):
         # assign attributes for reference
         self.entries = entries
         self.dimensions = 2
-        first_length_scale = self.get_spatial_scale(
-            self.first_dimension, self.domain[0]
-        )
+        if self.first_dimension == "r" and self.second_dimension == "R":
+            # for an r-R variable, must leave r nondimensional as it was scaled using
+            # R
+            first_length_scale = 1
+        else:
+            first_length_scale = self.get_spatial_scale(
+                self.first_dimension, self.domain[0]
+            )
         first_dim_pts_for_interp = first_dim_pts * first_length_scale
 
         second_length_scale = self.get_spatial_scale(
@@ -377,19 +383,9 @@ class ProcessedVariable(object):
         if len(self.t_pts) == 1:
             # function of space only. Note the order of the points is the reverse
             # of what you'd expect
-            interpolant = interp.interp2d(
-                second_dim_pts_for_interp,
-                first_dim_pts_for_interp,
-                entries_for_interp[:, :, 0],
-                kind="linear",
-                fill_value=np.nan,
-                bounds_error=False,
+            self._interpolation_function = Interpolant2D(
+                first_dim_pts_for_interp, second_dim_pts_for_interp, entries_for_interp
             )
-
-            def interp_fun(input):
-                return make_interp2D_fun(input, interpolant)
-
-            self._interpolation_function = interp_fun
         else:
             # function of space and time.
             self._interpolation_function = interp.RegularGridInterpolator(
@@ -418,7 +414,7 @@ class ProcessedVariable(object):
                 entries[:, :, idx] = np.reshape(
                     base_var_casadi(t, y, inputs).full(),
                     [len_y, len_z],
-                    order="F",
+                    order="C",
                 )
                 idx += 1
 
@@ -436,19 +432,9 @@ class ProcessedVariable(object):
         if len(self.t_pts) == 1:
             # function of space only. Note the order of the points is the reverse
             # of what you'd expect
-            interpolant = interp.interp2d(
-                self.second_dim_pts,
-                self.first_dim_pts,
-                entries,
-                kind="linear",
-                fill_value=np.nan,
-                bounds_error=False,
+            self._interpolation_function = Interpolant2D(
+                self.first_dim_pts, self.second_dim_pts, entries
             )
-
-            def interp_fun(input):
-                return make_interp2D_fun(input, interpolant)
-
-            self._interpolation_function = interp_fun
         else:
             # function of space and time.
             self._interpolation_function = interp.RegularGridInterpolator(
@@ -459,9 +445,9 @@ class ProcessedVariable(object):
                 bounds_error=False,
             )
 
-    def __call__(self, t=None, x=None, r=None, y=None, z=None, warn=True):
+    def __call__(self, t=None, x=None, r=None, y=None, z=None, R=None, warn=True):
         """
-        Evaluate the variable at arbitrary *dimensional* t (and x, r, y and/or z),
+        Evaluate the variable at arbitrary *dimensional* t (and x, r, y, z and/or R),
         using interpolation
         """
         # If t is None and there is only one value of time in the soluton (i.e.
@@ -483,24 +469,24 @@ class ProcessedVariable(object):
         if self.dimensions == 0:
             out = self._interpolation_function(t)
         elif self.dimensions == 1:
-            out = self.call_1D(t, x, r, z)
+            out = self.call_1D(t, x, r, z, R)
         elif self.dimensions == 2:
-            out = self.call_2D(t, x, r, y, z)
+            out = self.call_2D(t, x, r, y, z, R)
         if warn is True and np.isnan(out).any():
             pybamm.logger.warning(
                 "Calling variable outside interpolation range (returns 'nan')"
             )
         return out
 
-    def call_1D(self, t, x, r, z):
+    def call_1D(self, t, x, r, z, R):
         """Evaluate a 1D variable"""
-        spatial_var = eval_dimension_name(self.first_dimension, x, r, None, z)
+        spatial_var = eval_dimension_name(self.first_dimension, x, r, None, z, R)
         return self._interpolation_function(t, spatial_var)
 
-    def call_2D(self, t, x, r, y, z):
+    def call_2D(self, t, x, r, y, z, R):
         """Evaluate a 2D variable"""
-        first_dim = eval_dimension_name(self.first_dimension, x, r, y, z)
-        second_dim = eval_dimension_name(self.second_dimension, x, r, y, z)
+        first_dim = eval_dimension_name(self.first_dimension, x, r, y, z, R)
+        second_dim = eval_dimension_name(self.second_dimension, x, r, y, z, R)
         if isinstance(first_dim, np.ndarray):
             if isinstance(second_dim, np.ndarray) and isinstance(t, np.ndarray):
                 first_dim = first_dim[:, np.newaxis, np.newaxis]
@@ -535,7 +521,65 @@ class ProcessedVariable(object):
         return self.entries
 
 
-def eval_dimension_name(name, x, r, y, z):
+class Interpolant0D:
+    def __init__(self, entries):
+        self.entries = entries
+
+    def __call__(self, t):
+        return self.entries
+
+
+class Interpolant1D:
+    def __init__(self, pts_for_interp, entries_for_interp):
+        self.interpolant = interp.interp1d(
+            pts_for_interp,
+            entries_for_interp[:, 0],
+            kind="linear",
+            fill_value=np.nan,
+            bounds_error=False,
+        )
+
+    def __call__(self, t, z):
+        if isinstance(z, np.ndarray):
+            return self.interpolant(z)[:, np.newaxis]
+        else:
+            return self.interpolant(z)
+
+
+class Interpolant2D:
+    def __init__(
+        self, first_dim_pts_for_interp, second_dim_pts_for_interp, entries_for_interp
+    ):
+        self.interpolant = interp.interp2d(
+            second_dim_pts_for_interp,
+            first_dim_pts_for_interp,
+            entries_for_interp[:, :, 0],
+            kind="linear",
+            fill_value=np.nan,
+            bounds_error=False,
+        )
+
+    def __call__(self, input):
+        """
+        Calls and returns a 2D interpolant of the correct shape depending on the
+        shape of the input
+        """
+        first_dim, second_dim, _ = input
+        if isinstance(first_dim, np.ndarray) and isinstance(second_dim, np.ndarray):
+            first_dim = first_dim[:, 0, 0]
+            second_dim = second_dim[:, 0]
+            return self.interpolant(second_dim, first_dim)
+        elif isinstance(first_dim, np.ndarray):
+            first_dim = first_dim[:, 0]
+            return self.interpolant(second_dim, first_dim)[:, 0]
+        elif isinstance(second_dim, np.ndarray):
+            second_dim = second_dim[:, 0]
+            return self.interpolant(second_dim, first_dim)
+        else:
+            return self.interpolant(second_dim, first_dim)[0]
+
+
+def eval_dimension_name(name, x, r, y, z, R):
     if name == "x":
         out = x
     elif name == "r":
@@ -544,6 +588,8 @@ def eval_dimension_name(name, x, r, y, z):
         out = y
     elif name == "z":
         out = z
+    elif name == "R":
+        out = R
 
     if out is None:
         raise ValueError("inputs {} cannot be None".format(name))

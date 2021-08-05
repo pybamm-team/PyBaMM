@@ -11,6 +11,23 @@ class TestSPMe(unittest.TestCase):
         model = pybamm.lithium_ion.SPMe(options)
         model.check_well_posedness()
 
+    def test_external_variables(self):
+        # a concatenation
+        model_options = {"external submodels": ["electrolyte diffusion"]}
+        model = pybamm.lithium_ion.SPMe(model_options)
+        self.assertEqual(
+            model.external_variables[0].id,
+            model.variables["Porosity times concentration"].id,
+        )
+
+        # a variable
+        model_options = {"thermal": "lumped", "external submodels": ["thermal"]}
+        model = pybamm.lithium_ion.SPMe(model_options)
+        self.assertEqual(
+            model.external_variables[0].id,
+            model.variables["Volume-averaged cell temperature"].id,
+        )
+
     def test_well_posed_2plus1D(self):
         options = {"current collector": "potential pair", "dimensionality": 1}
         model = pybamm.lithium_ion.SPMe(options)
@@ -103,39 +120,33 @@ class TestSPMe(unittest.TestCase):
         model = pybamm.lithium_ion.SPMe(options)
         model.check_well_posedness()
 
+    def test_particle_mixed(self):
+        options = {"particle": ("Fickian diffusion", "quartic profile")}
+        model = pybamm.lithium_ion.SPMe(options)
+        model.check_well_posedness()
+
     def test_particle_shape_user(self):
         options = {"particle shape": "user"}
         model = pybamm.lithium_ion.SPMe(options)
         model.check_well_posedness()
 
-    def test_loss_active_material(self):
-        options = {
-            "loss of active material": "none",
-        }
+    def test_loss_active_material_stress_negative(self):
+        options = {"loss of active material": ("stress-driven", "none")}
         model = pybamm.lithium_ion.SPMe(options)
         model.check_well_posedness()
 
-    def test_loss_active_material_negative(self):
-        options = {
-            "particle cracking": "no cracking",
-            "loss of active material": "negative",
-        }
+    def test_loss_active_material_stress_positive(self):
+        options = {"loss of active material": ("none", "stress-driven")}
         model = pybamm.lithium_ion.SPMe(options)
         model.check_well_posedness()
 
-    def test_loss_active_material_positive(self):
-        options = {
-            "particle cracking": "no cracking",
-            "loss of active material": "positive",
-        }
+    def test_loss_active_material_stress_both(self):
+        options = {"loss of active material": "stress-driven"}
         model = pybamm.lithium_ion.SPMe(options)
         model.check_well_posedness()
 
-    def test_loss_active_material_both(self):
-        options = {
-            "particle cracking": "no cracking",
-            "loss of active material": "both",
-        }
+    def test_loss_active_material_stress_reaction_both(self):
+        options = {"loss of active material": "reaction-driven"}
         model = pybamm.lithium_ion.SPMe(options)
         model.check_well_posedness()
 
@@ -158,6 +169,14 @@ class TestSPMe(unittest.TestCase):
         options = {"electrolyte conductivity": "full"}
         with self.assertRaisesRegex(pybamm.OptionError, "electrolyte conductivity"):
             pybamm.lithium_ion.SPMe(options)
+
+    def test_well_posed_reversible_plating_with_porosity(self):
+        options = {
+            "lithium plating": "reversible",
+            "lithium plating porosity change": "true",
+        }
+        model = pybamm.lithium_ion.SPMe(options)
+        model.check_well_posedness()
 
 
 class TestSPMeWithSEI(unittest.TestCase):
@@ -188,28 +207,23 @@ class TestSPMeWithSEI(unittest.TestCase):
 
 
 class TestSPMeWithCrack(unittest.TestCase):
-    def test_well_posed_none_crack(self):
-        options = {"particle": "Fickian diffusion", "particle cracking": "none"}
-        model = pybamm.lithium_ion.SPMe(options)
-        model.check_well_posedness()
-
-    def test_well_posed_no_cracking(self):
-        options = {"particle": "Fickian diffusion", "particle cracking": "no cracking"}
-        model = pybamm.lithium_ion.SPMe(options)
-        model.check_well_posedness()
-
     def test_well_posed_negative_cracking(self):
-        options = {"particle": "Fickian diffusion", "particle cracking": "negative"}
+        options = {"particle mechanics": ("swelling and cracking", "none")}
         model = pybamm.lithium_ion.SPMe(options)
         model.check_well_posedness()
 
     def test_well_posed_positive_cracking(self):
-        options = {"particle": "Fickian diffusion", "particle cracking": "positive"}
+        options = {"particle mechanics": ("none", "swelling and cracking")}
         model = pybamm.lithium_ion.SPMe(options)
         model.check_well_posedness()
 
     def test_well_posed_both_cracking(self):
-        options = {"particle": "Fickian diffusion", "particle cracking": "both"}
+        options = {"particle mechanics": "swelling and cracking"}
+        model = pybamm.lithium_ion.SPMe(options)
+        model.check_well_posedness()
+
+    def test_well_posed_both_swelling_only(self):
+        options = {"particle mechanics": "swelling only"}
         model = pybamm.lithium_ion.SPMe(options)
         model.check_well_posedness()
 

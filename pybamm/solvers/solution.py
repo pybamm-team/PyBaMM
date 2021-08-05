@@ -104,6 +104,12 @@ class Solution(object):
         # Add self as sub-solution for compatibility with ProcessedVariable
         self._sub_solutions = [self]
 
+        # initialize empty cycles
+        self._cycles = []
+
+        # Initialize empty summary variables
+        self._summary_variables = None
+
         # Solution now uses CasADi
         pybamm.citations.register("Andersson2019")
 
@@ -170,20 +176,10 @@ class Solution(object):
         """Time at which the event happens"""
         return self._t_event
 
-    @t_event.setter
-    def t_event(self, value):
-        """Updates the event time"""
-        self._t_event = value
-
     @property
     def y_event(self):
         """Value of the solution at the time of the event"""
         return self._y_event
-
-    @y_event.setter
-    def y_event(self, value):
-        """Updates the solution at the time of the event"""
-        self._y_event = value
 
     @property
     def termination(self):
@@ -194,6 +190,35 @@ class Solution(object):
     def termination(self, value):
         """Updates the reason for termination"""
         self._termination = value
+
+    @property
+    def first_state(self):
+        """
+        A Solution object that only contains the first state. This is faster to evaluate
+        than the full solution when only the first state is needed (e.g. to initialize
+        a model with the solution)
+        """
+        try:
+            return self._first_state
+        except AttributeError:
+            new_sol = Solution(
+                self.all_ts[0][:1],
+                self.all_ys[0][:, :1],
+                self.all_models[:1],
+                self.all_inputs[:1],
+                None,
+                None,
+                "success",
+            )
+            new_sol._all_inputs_casadi = self.all_inputs_casadi[:1]
+            new_sol._sub_solutions = self.sub_solutions[:1]
+
+            new_sol.solve_time = 0
+            new_sol.integration_time = 0
+            new_sol.set_up_time = 0
+
+            self._first_state = new_sol
+            return self._first_state
 
     @property
     def last_state(self):
@@ -215,7 +240,7 @@ class Solution(object):
                 self.termination,
             )
             new_sol._all_inputs_casadi = self.all_inputs_casadi[-1:]
-            new_sol._sub_solutions = self.sub_solutions
+            new_sol._sub_solutions = self.sub_solutions[-1:]
 
             new_sol.solve_time = 0
             new_sol.integration_time = 0
@@ -227,6 +252,30 @@ class Solution(object):
     @property
     def total_time(self):
         return self.set_up_time + self.solve_time
+
+    @property
+    def cycles(self):
+        return self._cycles
+
+    @cycles.setter
+    def cycles(self, cycles):
+        self._cycles = cycles
+
+    @property
+    def summary_variables(self):
+        return self._summary_variables
+
+    def set_summary_variables(self, all_summary_variables):
+        summary_variables = {var: [] for var in all_summary_variables[0]}
+        for sum_vars in all_summary_variables:
+            for name, value in sum_vars.items():
+                summary_variables[name].append(value)
+
+        summary_variables["Cycle number"] = range(1, len(all_summary_variables) + 1)
+        self.all_summary_variables = all_summary_variables
+        self._summary_variables = pybamm.FuzzyDict(
+            {name: np.array(value) for name, value in summary_variables.items()}
+        )
 
     def update(self, variables):
         """Add ProcessedVariables to the dictionary of variables in the solution"""
@@ -256,26 +305,24 @@ class Solution(object):
                     if key in model._variables_casadi:
                         var_casadi = model._variables_casadi[key]
                     else:
-                        self._t_MX = casadi.MX.sym("t")
-                        self._y_MX = casadi.MX.sym("y", ys.shape[0])
-                        self._symbolic_inputs_dict = {
+                        t_MX = casadi.MX.sym("t")
+                        y_MX = casadi.MX.sym("y", ys.shape[0])
+                        symbolic_inputs_dict = {
                             key: casadi.MX.sym("input", value.shape[0])
                             for key, value in inputs.items()
                         }
-                        self._symbolic_inputs = casadi.vertcat(
-                            *[p for p in self._symbolic_inputs_dict.values()]
+                        symbolic_inputs = casadi.vertcat(
+                            *[p for p in symbolic_inputs_dict.values()]
                         )
 
                         # Convert variable to casadi
                         # Make all inputs symbolic first for converting to casadi
                         var_sym = var_pybamm.to_casadi(
-                            self._t_MX, self._y_MX, inputs=self._symbolic_inputs_dict
+                            t_MX, y_MX, inputs=symbolic_inputs_dict
                         )
 
                         var_casadi = casadi.Function(
-                            "variable",
-                            [self._t_MX, self._y_MX, self._symbolic_inputs],
-                            [var_sym],
+                            "variable", [t_MX, y_MX, symbolic_inputs], [var_sym]
                         )
                         model._variables_casadi[key] = var_casadi
                     vars_casadi.append(var_casadi)
@@ -329,10 +376,11 @@ class Solution(object):
 
     def clear_casadi_attributes(self):
         """Remove casadi objects for pickling, will be computed again automatically"""
-        self._t_MX = None
-        self._y_MX = None
-        self._symbolic_inputs = None
-        self._symbolic_inputs_dict = None
+        # t_MX = None
+        # y_MX = None
+        # symbolic_inputs = None
+        # symbolic_inputs_dict = None
+        pass
 
     def save(self, filename):
         """Save the whole solution using pickle"""
@@ -439,9 +487,9 @@ class Solution(object):
 
     @property
     def sub_solutions(self):
-        """
-        List of sub solutions that have been concatenated to form the full solution
-        """
+        """List of sub solutions that have been
+        concatenated to form the full solution"""
+
         return self._sub_solutions
 
     def __add__(self, other):
@@ -457,7 +505,12 @@ class Solution(object):
             and len(other.all_ts[0]) == 1
             and other.all_ts[0][0] == self.all_ts[-1][-1]
         ):
-            return self.copy()
+            new_sol = self.copy()
+            # Update termination using the latter solution
+            new_sol._termination = other.termination
+            new_sol._t_event = other._t_event
+            new_sol._y_event = other._y_event
+            return new_sol
 
         # Update list of sub-solutions
         if other.all_ts[0][0] == self.all_ts[-1][-1]:
@@ -473,9 +526,9 @@ class Solution(object):
             all_ys,
             self.all_models + other.all_models,
             self.all_inputs + other.all_inputs,
-            self.t_event,
-            self.y_event,
-            self.termination,
+            other.t_event,
+            other.y_event,
+            other.termination,
         )
 
         new_sol._all_inputs_casadi = self.all_inputs_casadi + other.all_inputs_casadi
@@ -484,11 +537,6 @@ class Solution(object):
         new_sol.solve_time = self.solve_time + other.solve_time
         new_sol.integration_time = self.integration_time + other.integration_time
 
-        # Update termination using the latter solution
-        new_sol._termination = other.termination
-        new_sol._t_event = other._t_event
-        new_sol._y_event = other._y_event
-
         # Set sub_solutions
         new_sol._sub_solutions = self.sub_solutions + other.sub_solutions
 
@@ -496,7 +544,8 @@ class Solution(object):
 
     def __radd__(self, other):
         """
-        Function to deal with the case `None + Solution` (returns `Solution`)
+        Right-side adding with special handling for the case None + Solution (returns
+        Solution)
         """
         if other is None:
             return self.copy()
@@ -506,7 +555,7 @@ class Solution(object):
             )
 
     def copy(self):
-        new_sol = Solution(
+        new_sol = self.__class__(
             self.all_ts,
             self.all_ys,
             self.all_models,
@@ -523,3 +572,188 @@ class Solution(object):
         new_sol.set_up_time = self.set_up_time
 
         return new_sol
+
+
+def make_cycle_solution(step_solutions, esoh_sim=None, save_this_cycle=True):
+    """
+    Function to create a Solution for an entire cycle, and associated summary variables
+
+    Parameters
+    ----------
+    step_solutions : list of :class:`Solution`
+        Step solutions that form the entire cycle
+    esoh_sim : :class:`pybamm.Simulation`, optional
+        A simulation, whose model should be a :class:`pybamm.lithium_ion.ElectrodeSOH`
+        model, which is used to calculate some of the summary variables. If `None`
+        (default) then only summary variables that do not require the eSOH calculation
+        are calculated. See [1] for more details on eSOH variables.
+    save_this_cycle : bool, optional
+        Whether to save the entire cycle variables or just the summary variables.
+        Default True
+
+    Returns
+    -------
+    cycle_solution : :class:`pybamm.Solution` or None
+        The Solution object for this cycle, or None (if save_this_cycle is False)
+    cycle_summary_variables : dict
+        Dictionary of summary variables for this cycle
+
+    References
+    ----------
+    .. [1] Mohtat, P., Lee, S., Siegel, J. B., & Stefanopoulou, A. G. (2019). Towards
+    better estimability of electrode-specific state of health: Decoding the cell
+    expansion. Journal of Power Sources, 427, 101-111.
+
+    """
+    sum_sols = step_solutions[0].copy()
+    for step_solution in step_solutions[1:]:
+        sum_sols = sum_sols + step_solution
+
+    cycle_solution = Solution(
+        sum_sols.all_ts,
+        sum_sols.all_ys,
+        sum_sols.all_models,
+        sum_sols.all_inputs,
+        sum_sols.t_event,
+        sum_sols.y_event,
+        sum_sols.termination,
+    )
+    cycle_solution._all_inputs_casadi = sum_sols.all_inputs_casadi
+    cycle_solution._sub_solutions = sum_sols.sub_solutions
+
+    cycle_solution.solve_time = sum_sols.solve_time
+    cycle_solution.integration_time = sum_sols.integration_time
+    cycle_solution.set_up_time = sum_sols.set_up_time
+
+    cycle_solution.steps = step_solutions
+
+    cycle_summary_variables = get_cycle_summary_variables(cycle_solution, esoh_sim)
+
+    if save_this_cycle:
+        cycle_solution.cycle_summary_variables = cycle_summary_variables
+    else:
+        cycle_solution = None
+
+    return cycle_solution, cycle_summary_variables
+
+
+def get_cycle_summary_variables(cycle_solution, esoh_sim):
+    Q = cycle_solution["Discharge capacity [A.h]"].data
+    min_Q = np.min(Q)
+    max_Q = np.max(Q)
+
+    cycle_summary_variables = pybamm.FuzzyDict(
+        {
+            "Minimum measured discharge capacity [A.h]": min_Q,
+            "Maximum measured discharge capacity [A.h]": max_Q,
+            "Measured capacity [A.h]": max_Q - min_Q,
+        }
+    )
+
+    degradation_variables = [
+        "Negative electrode capacity [A.h]",
+        "Positive electrode capacity [A.h]",
+        # LAM, LLI
+        "Loss of active material in negative electrode [%]",
+        "Loss of active material in positive electrode [%]",
+        "Loss of lithium inventory [%]",
+        "Loss of lithium inventory, including electrolyte [%]",
+        # Total lithium
+        "Total lithium [mol]",
+        "Total lithium in electrolyte [mol]",
+        "Total lithium in positive electrode [mol]",
+        "Total lithium in negative electrode [mol]",
+        "Total lithium in particles [mol]",
+        # Lithium lost
+        "Total lithium lost [mol]",
+        "Total lithium lost from particles [mol]",
+        "Total lithium lost from electrolyte [mol]",
+        "Loss of lithium to negative electrode SEI [mol]",
+        "Loss of lithium to positive electrode SEI [mol]",
+        "Loss of lithium to negative electrode lithium plating [mol]",
+        "Loss of lithium to positive electrode lithium plating [mol]",
+        "Loss of capacity to negative electrode SEI [A.h]",
+        "Loss of capacity to positive electrode SEI [A.h]",
+        "Loss of capacity to negative electrode lithium plating [A.h]",
+        "Loss of capacity to positive electrode lithium plating [A.h]",
+        "Total lithium lost to side reactions [mol]",
+        "Total capacity lost to side reactions [A.h]",
+        # Resistance
+        "Local ECM resistance [Ohm]",
+    ]
+    first_state = cycle_solution.first_state
+    last_state = cycle_solution.last_state
+    for var in degradation_variables:
+        data_first = first_state[var].data
+        data_last = last_state[var].data
+        cycle_summary_variables[var] = data_last[0]
+        var_lowercase = var[0].lower() + var[1:]
+        cycle_summary_variables["Change in " + var_lowercase] = (
+            data_last[0] - data_first[0]
+        )
+
+    if esoh_sim is not None:
+        V_min = esoh_sim.parameter_values["Lower voltage cut-off [V]"]
+        V_max = esoh_sim.parameter_values["Upper voltage cut-off [V]"]
+        C_n = last_state["Negative electrode capacity [A.h]"].data[0]
+        C_p = last_state["Positive electrode capacity [A.h]"].data[0]
+        n_Li = last_state["Total lithium in particles [mol]"].data[0]
+        if esoh_sim.solution is not None:
+            # initialize with previous solution if it is available
+            esoh_sim.built_model.set_initial_conditions_from(esoh_sim.solution)
+            solver = None
+        else:
+            x_100_init = np.max(cycle_solution["Negative electrode SOC"].data)
+            # make sure x_0 > 0
+            C_init = np.minimum(0.95 * (C_n * x_100_init), max_Q - min_Q)
+
+            # Solve the esoh model and add outputs to the summary variables
+            # use CasadiAlgebraicSolver if there are interpolants
+            if isinstance(
+                esoh_sim.parameter_values["Negative electrode OCP [V]"], tuple
+            ) or isinstance(
+                esoh_sim.parameter_values["Positive electrode OCP [V]"], tuple
+            ):
+                solver = pybamm.CasadiAlgebraicSolver()
+                # Choose x_100_init so as not to violate the interpolation limits
+                if isinstance(
+                    esoh_sim.parameter_values["Positive electrode OCP [V]"], tuple
+                ):
+                    y_100_min = np.min(
+                        esoh_sim.parameter_values["Positive electrode OCP [V]"][1][:, 0]
+                    )
+                    x_100_max = (
+                        n_Li * pybamm.constants.F.value / 3600 - y_100_min * C_p
+                    ) / C_n
+                    x_100_init = np.minimum(x_100_init, 0.99 * x_100_max)
+            else:
+                solver = None
+            # Update initial conditions using the cycle solution
+            esoh_sim.build()
+            esoh_sim.built_model.set_initial_conditions_from(
+                {"x_100": x_100_init, "C": C_init}
+            )
+
+        try:
+            esoh_sol = esoh_sim.solve(
+                [0],
+                inputs={
+                    "V_min": V_min,
+                    "V_max": V_max,
+                    "C_n": C_n,
+                    "C_p": C_p,
+                    "n_Li": n_Li,
+                },
+                solver=solver,
+            )
+        except pybamm.SolverError:  # pragma: no cover
+            raise pybamm.SolverError(
+                "Could not solve for summary variables, run "
+                "`sim.solve(calc_esoh=False)` to skip this step"
+            )
+        for var in esoh_sim.built_model.variables:
+            cycle_summary_variables[var] = esoh_sol[var].data[0]
+
+        cycle_summary_variables["Capacity [A.h]"] = cycle_summary_variables["C"]
+
+    return cycle_summary_variables

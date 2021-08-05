@@ -16,7 +16,7 @@ model.submodels["external circuit"] = pybamm.external_circuit.CurrentControl(
 )
 model.submodels["current collector"] = pybamm.current_collector.Uniform(model.param)
 model.submodels["thermal"] = pybamm.thermal.isothermal.Isothermal(model.param)
-model.submodels["porosity"] = pybamm.porosity.Constant(model.param)
+model.submodels["porosity"] = pybamm.porosity.Constant(model.param, model.options)
 model.submodels["negative active material"] = pybamm.active_material.Constant(
     model.param, "Negative", model.options
 )
@@ -36,10 +36,10 @@ model.submodels["positive particle"] = pybamm.particle.PolynomialSingleParticle(
     model.param, "Positive", "uniform profile"
 )
 model.submodels["negative interface"] = pybamm.interface.InverseButlerVolmer(
-    model.param, "Negative", "lithium-ion main"
+    model.param, "Negative", "lithium-ion main", options=model.options
 )
 model.submodels["positive interface"] = pybamm.interface.InverseButlerVolmer(
-    model.param, "Positive", "lithium-ion main"
+    model.param, "Positive", "lithium-ion main", options=model.options
 )
 model.submodels[
     "negative interface current"

@@ -5,7 +5,6 @@ import casadi
 import pybamm
 import numpy as np
 from scipy.interpolate import interp1d
-from scipy.optimize import brentq
 
 
 class CasadiSolver(pybamm.BaseSolver):
@@ -16,11 +15,13 @@ class CasadiSolver(pybamm.BaseSolver):
     Parameters
     ----------
     mode : str
-            How to solve the model (default is "safe"):
+        How to solve the model (default is "safe"):
 
             - "fast": perform direct integration, without accounting for events. \
             Recommended when simulating a drive cycle or other simulation where \
             no events should be triggered.
+            - "fast with events": perform direct integration of the whole timespan, \
+            then go back and check where events were crossed. Experimental only.
             - "safe": perform step-and-check integration in global steps of size \
             dt_max, checking whether events have been triggered. Recommended for \
             simulations of a full charge or discharge.
@@ -80,13 +81,13 @@ class CasadiSolver(pybamm.BaseSolver):
         super().__init__(
             "problem dependent", rtol, atol, root_method, root_tol, extrap_tol
         )
-        if mode in ["safe", "fast", "safe without grid"]:
+        if mode in ["safe", "fast", "fast with events", "safe without grid"]:
             self.mode = mode
         else:
             raise ValueError(
                 "invalid mode '{}'. Must be 'safe', for solving with events, "
-                "'fast', for solving quickly without events, or 'safe without grid' "
-                "(experimental)".format(mode)
+                "'fast', for solving quickly without events, or 'safe without grid' or "
+                "'fast with events' (both experimental)".format(mode)
             )
         self.max_step_decrease_count = max_step_decrease_count
         self.dt_max = dt_max
@@ -125,37 +126,56 @@ class CasadiSolver(pybamm.BaseSolver):
         # convert inputs to casadi format
         inputs = casadi.vertcat(*[x for x in inputs_dict.values()])
 
+        # Calculate initial event signs needed for some of the modes
+        if (
+            has_symbolic_inputs is False
+            and self.mode != "fast"
+            and model.terminate_events_eval
+        ):
+            init_event_signs = np.sign(
+                np.concatenate(
+                    [
+                        event(t_eval[0], model.y0, inputs)
+                        for event in model.terminate_events_eval
+                    ]
+                )
+            )
+        else:
+            init_event_signs = np.sign([])
+
         if has_symbolic_inputs:
             # Create integrator without grid to avoid having to create several times
             self.create_integrator(model, inputs)
             solution = self._run_integrator(
-                model, model.y0, inputs_dict, inputs, t_eval
+                model, model.y0, inputs_dict, inputs, t_eval, use_grid=False
             )
             solution.termination = "final time"
             return solution
-        elif self.mode == "fast" or not model.events:
+        elif self.mode in ["fast", "fast with events"] or not model.events:
             if not model.events:
                 pybamm.logger.info("No events found, running fast mode")
+            if self.mode == "fast with events":
+                # Create the integrator with an event switch that will set the rhs to
+                # zero when voltage limits are crossed
+                use_event_switch = True
+            else:
+                use_event_switch = False
             # Create an integrator with the grid (we just need to do this once)
-            self.create_integrator(model, inputs, t_eval)
+            self.create_integrator(
+                model, inputs, t_eval, use_event_switch=use_event_switch
+            )
             solution = self._run_integrator(
                 model, model.y0, inputs_dict, inputs, t_eval
             )
-            solution.termination = "final time"
+            # Check if the sign of an event changes, if so find an accurate
+            # termination point and exit
+            solution = self._solve_for_event(solution, init_event_signs)
             return solution
         elif self.mode in ["safe", "safe without grid"]:
             y0 = model.y0
             # Step-and-check
             t = t_eval[0]
             t_f = t_eval[-1]
-            if model.terminate_events_eval:
-                init_event_signs = np.sign(
-                    np.concatenate(
-                        [event(t, y0, inputs) for event in model.terminate_events_eval]
-                    )
-                )
-            else:
-                init_event_signs = np.sign([])
 
             pybamm.logger.debug(
                 "Start solving {} with {}".format(model.name, self.name)
@@ -170,8 +190,10 @@ class CasadiSolver(pybamm.BaseSolver):
                 solution = pybamm.Solution(np.array([t]), y0, model, inputs_dict)
                 solution.solve_time = 0
                 solution.integration_time = 0
+                use_grid = False
             else:
                 solution = None
+                use_grid = True
 
             # Try to integrate in global steps of size dt_max. Note: dt_max must
             # be at least as big as the the biggest step in t_eval (multiplied
@@ -207,7 +229,7 @@ class CasadiSolver(pybamm.BaseSolver):
                     # halve the step size and try again.
                     try:
                         current_step_sol = self._run_integrator(
-                            model, y0, inputs_dict, inputs, t_window
+                            model, y0, inputs_dict, inputs, t_window, use_grid=use_grid
                         )
                         solved = True
                     except pybamm.SolverError:
@@ -224,160 +246,260 @@ class CasadiSolver(pybamm.BaseSolver):
                                 t * model.timescale_eval, dt_max * model.timescale_eval
                             )
                         )
-                # Check most recent y to see if any events have been crossed
-                if model.terminate_events_eval:
-                    new_event_signs = np.sign(
-                        np.concatenate(
-                            [
-                                event(t, current_step_sol.all_ys[-1][:, -1], inputs)
-                                for event in model.terminate_events_eval
-                            ]
-                        )
-                    )
-                else:
-                    new_event_signs = np.sign([])
-
-                if model.interpolant_extrapolation_events_eval:
-                    extrap_event = [
-                        event(t, current_step_sol.y[:, -1], inputs=inputs)
-                        for event in model.interpolant_extrapolation_events_eval
-                    ]
-
-                    if extrap_event:
-                        if (np.concatenate(extrap_event) < self.extrap_tol).any():
-                            extrap_event_names = []
-                            for event in model.events:
-                                if (
-                                    event.event_type
-                                    == pybamm.EventType.INTERPOLANT_EXTRAPOLATION
-                                    and (
-                                        event.expression.evaluate(
-                                            t,
-                                            current_step_sol.y[:, -1].full(),
-                                            inputs=inputs,
-                                        )
-                                        < self.extrap_tol
-                                    ).any()
-                                ):
-                                    extrap_event_names.append(event.name[12:])
-
-                            raise pybamm.SolverError(
-                                "CasADI solver failed because the following "
-                                "interpolation bounds were exceeded: {}. You may need "
-                                "to provide additional interpolation points outside "
-                                "these bounds.".format(extrap_event_names)
-                            )
-
-                # Exit loop if the sign of an event changes
-                # Locate the event time using a root finding algorithm and
-                # event state using interpolation. The solution is then truncated
-                # so that only the times up to the event are returned
-                if (new_event_signs != init_event_signs).any():
-                    # get the index of the events that have been crossed
-                    event_ind = np.where(new_event_signs != init_event_signs)[0]
-                    active_events = [model.terminate_events_eval[i] for i in event_ind]
-
-                    # solve again with a more dense t_window
-                    if len(t_window) < 10:
-                        t_window_dense = np.linspace(t_window[0], t_window[-1], 10)
-                        if self.mode == "safe":
-                            self.create_integrator(model, inputs, t_window_dense)
-                        current_step_sol = self._run_integrator(
-                            model, y0, inputs_dict, inputs, t_window_dense
-                        )
-                    integration_time = current_step_sol.integration_time
-
-                    # create interpolant to evaluate y in the current integration
-                    # window
-                    y_sol = interp1d(
-                        current_step_sol.t, current_step_sol.y, kind="cubic"
-                    )
-
-                    # loop over events to compute the time at which they were triggered
-                    t_events = [None] * len(active_events)
-                    for i, event in enumerate(active_events):
-
-                        def event_fun(t):
-                            return event(t, y_sol(t), inputs)
-
-                        if np.isnan(event_fun(current_step_sol.t[-1])[0]):
-                            # bracketed search fails if f(a) or f(b) is NaN, so we
-                            # need to find the times for which we can evaluate the event
-                            times = [
-                                t
-                                for t in current_step_sol.t
-                                if event_fun(t)[0] == event_fun(t)[0]
-                            ]
-                        else:
-                            times = current_step_sol.t
-                        # skip if sign hasn't changed
-                        if np.sign(event_fun(times[0])) != np.sign(
-                            event_fun(times[-1])
-                        ):
-                            t_events[i] = brentq(
-                                lambda t: event_fun(t), times[0], times[-1]
-                            )
-                        else:
-                            t_events[i] = np.nan
-
-                    # t_event is the earliest event triggered
-                    t_event = np.nanmin(t_events)
-                    y_event = y_sol(t_event)
-
-                    # call interpolant at times in t_eval and create solution
-                    t_window = np.concatenate(
-                        ([t], t_eval[(t_eval > t) & (t_eval < t_event)])
-                    )
-                    y_sol_casadi = casadi.DM(y_sol(t_window))
-                    current_step_sol = pybamm.Solution(
-                        t_window, y_sol_casadi, model, inputs_dict
-                    )
-                    current_step_sol.integration_time = integration_time
-                    # assign temporary solve time
-                    current_step_sol.solve_time = np.nan
-
-                    # append solution from the current step to solution
-                    solution = solution + current_step_sol
-                    solution.termination = "event"
-                    solution.t_event = np.array([t_event])
-                    solution.y_event = y_event[:, np.newaxis]
-
+                # Check if the sign of an event changes, if so find an accurate
+                # termination point and exit
+                current_step_sol = self._solve_for_event(
+                    current_step_sol, init_event_signs
+                )
+                # assign temporary solve time
+                current_step_sol.solve_time = np.nan
+                # append solution from the current step to solution
+                solution = solution + current_step_sol
+                if current_step_sol.termination == "event":
                     break
                 else:
-                    # assign temporary solve time
-                    current_step_sol.solve_time = np.nan
-                    # append solution from the current step to solution
-                    solution = solution + current_step_sol
                     # update time
                     t = t_window[-1]
                     # update y0
                     y0 = solution.all_ys[-1][:, -1]
             return solution
 
-    def create_integrator(self, model, inputs, t_eval=None):
+    def _solve_for_event(self, coarse_solution, init_event_signs):
+        """
+        Check if the sign of an event changes, if so find an accurate
+        termination point and exit
+
+        Locate the event time using a root finding algorithm and
+        event state using interpolation. The solution is then truncated
+        so that only the times up to the event are returned
+        """
+        pybamm.logger.debug("Solving for events")
+        model = coarse_solution.all_models[-1]
+        inputs_dict = coarse_solution.all_inputs[-1]
+        inputs = casadi.vertcat(*[x for x in inputs_dict.values()])
+
+        def find_t_event(sol, typ):
+
+            # Check most recent y to see if any events have been crossed
+            if model.terminate_events_eval:
+                y_last = sol.all_ys[-1][:, -1]
+                crossed_events = np.sign(
+                    init_event_signs
+                    * np.concatenate(
+                        [
+                            event(sol.t[-1], y_last, inputs)
+                            for event in model.terminate_events_eval
+                        ]
+                    )
+                    - 1e-5
+                )
+            else:
+                crossed_events = np.sign([])
+
+            # Return None if no events have been triggered
+            if (crossed_events == 1).all():
+                return None, None
+
+            # get the index of the events that have been crossed
+            event_ind = np.where(crossed_events != 1)[0]
+            active_events = [model.terminate_events_eval[i] for i in event_ind]
+
+            # loop over events to compute the time at which they were triggered
+            t_events = [None] * len(active_events)
+            event_idcs_lower = [None] * len(active_events)
+            for i, event in enumerate(active_events):
+                # Implement our own bisection algorithm for speed
+                # This is used to find the time range in which the event is triggered
+                # Evaluations of the "event" function are (relatively) expensive
+                init_event_sign = init_event_signs[event_ind[i]][0]
+
+                f_eval = {}
+
+                def f(idx):
+                    try:
+                        return f_eval[idx]
+                    except KeyError:
+                        # We take away 1e-5 to deal with the case where the event sits
+                        # exactly on zero, as can happen when the event switch is used
+                        # (fast with events mode)
+                        f_eval[idx] = (
+                            init_event_sign * event(sol.t[idx], sol.y[:, idx], inputs)
+                            - 1e-5
+                        )
+                        return f_eval[idx]
+
+                def integer_bisect():
+                    a_n = 0
+                    b_n = len(sol.t) - 1
+                    for _ in range(len(sol.t)):
+                        if a_n + 1 == b_n:
+                            return a_n
+                        m_n = (a_n + b_n) // 2
+                        f_m_n = f(m_n)
+                        if np.isnan(f_m_n):
+                            a_n = a_n
+                            b_n = m_n
+                        elif f_m_n < 0:
+                            a_n = a_n
+                            b_n = m_n
+                        elif f_m_n > 0:
+                            a_n = m_n
+                            b_n = b_n
+
+                event_idx_lower = integer_bisect()
+                if typ == "window":
+                    event_idcs_lower[i] = event_idx_lower
+                elif typ == "exact":
+                    # Linear interpolation between the two indices to find the root time
+                    # We could do cubic interpolation here instead but it would be
+                    # slower
+                    t_lower = sol.t[event_idx_lower]
+                    t_upper = sol.t[event_idx_lower + 1]
+                    event_lower = abs(f(event_idx_lower))
+                    event_upper = abs(f(event_idx_lower + 1))
+
+                    t_events[i] = (event_lower * t_upper + event_upper * t_lower) / (
+                        event_lower + event_upper
+                    )
+
+            if typ == "window":
+                event_idx_lower = np.nanmin(event_idcs_lower)
+                return event_idx_lower, None
+            elif typ == "exact":
+                # t_event is the earliest event triggered
+                t_event = np.nanmin(t_events)
+                # create interpolant to evaluate y in the current integration
+                # window
+                y_sol = interp1d(sol.t, sol.y, kind="linear")
+                y_event = y_sol(t_event)
+
+                return t_event, y_event
+
+        # Find the interval in which the event was triggered
+        event_idx_lower, _ = find_t_event(coarse_solution, "window")
+
+        # Return the existing solution if no events have been triggered
+        if event_idx_lower is None:
+            # Flag "final time" for termination
+            self.check_interpolant_extrapolation(model, coarse_solution)
+            coarse_solution.termination = "final time"
+            return coarse_solution
+
+        # If events have been triggered, we solve for a dense window in the interval
+        # where the event was triggered, then find the precise location of the event
+        # Solve again with a more dense idx_window, starting from the start of the
+        # window where the event was triggered
+        t_window_event_dense = np.linspace(
+            coarse_solution.t[event_idx_lower],
+            coarse_solution.t[event_idx_lower + 1],
+            100,
+        )
+
+        if self.mode == "safe without grid":
+            use_grid = False
+        else:
+            self.create_integrator(model, inputs, t_window_event_dense)
+            use_grid = True
+
+        y0 = coarse_solution.y[:, event_idx_lower]
+        dense_step_sol = self._run_integrator(
+            model, y0, inputs_dict, inputs, t_window_event_dense, use_grid=use_grid
+        )
+
+        # Find the exact time at which the event was triggered
+        t_event, y_event = find_t_event(dense_step_sol, "exact")
+        # If this returns None, no event was crossed in dense_step_sol. This can happen
+        # if the event crossing was right at the end of the interval in the coarse
+        # solution. In this case, return the t and y from the end of the interval
+        # (i.e. next point in the coarse solution)
+        if y_event is None:  # pragma: no cover
+            # This is extremely rare, it's difficult to find a test that triggers this
+            # hence no coverage check
+            t_event = coarse_solution.t[event_idx_lower + 1]
+            y_event = coarse_solution.y[:, event_idx_lower + 1].full().flatten()
+
+        # Return solution truncated at the first coarse event time
+        # Also assign t_event
+        t_sol = coarse_solution.t[: event_idx_lower + 1]
+        y_sol = coarse_solution.y[:, : event_idx_lower + 1]
+        solution = pybamm.Solution(
+            t_sol,
+            y_sol,
+            model,
+            inputs_dict,
+            np.array([t_event]),
+            y_event[:, np.newaxis],
+            "event",
+        )
+        solution.integration_time = (
+            coarse_solution.integration_time + dense_step_sol.integration_time
+        )
+        self.check_interpolant_extrapolation(model, solution)
+
+        return solution
+
+    def check_interpolant_extrapolation(self, model, solution):
+        # Check for interpolant extrapolations
+        if model.interpolant_extrapolation_events_eval:
+            inputs = casadi.vertcat(*[x for x in solution.all_inputs[-1].values()])
+            extrap_event = [
+                event(solution.t[-1], solution.y[:, -1], inputs=inputs)
+                for event in model.interpolant_extrapolation_events_eval
+            ]
+
+            if extrap_event:
+                if (np.concatenate(extrap_event) < self.extrap_tol).any():
+                    extrap_event_names = []
+                    for event in model.events:
+                        if (
+                            event.event_type
+                            == pybamm.EventType.INTERPOLANT_EXTRAPOLATION
+                            and (
+                                event.expression.evaluate(
+                                    solution.t[-1],
+                                    solution.y[:, -1].full(),
+                                    inputs=inputs,
+                                )
+                                < self.extrap_tol
+                            ).any()
+                        ):
+                            extrap_event_names.append(event.name[12:])
+
+                    raise pybamm.SolverError(
+                        "CasADi solver failed because the following "
+                        "interpolation bounds were exceeded: {}. You may need "
+                        "to provide additional interpolation points outside "
+                        "these bounds.".format(extrap_event_names)
+                    )
+
+    def create_integrator(self, model, inputs, t_eval=None, use_event_switch=False):
         """
         Method to create a casadi integrator object.
         If t_eval is provided, the integrator uses t_eval to make the grid.
         Otherwise, the integrator has grid [0,1].
         """
+        pybamm.logger.debug("Creating CasADi integrator")
         # Use grid if t_eval is given
         use_grid = not (t_eval is None)
+        if use_grid is True:
+            t_eval_shifted = t_eval - t_eval[0]
+            t_eval_shifted_rounded = np.round(t_eval_shifted, decimals=12).tobytes()
         # Only set up problem once
         if model in self.integrators:
             # If we're not using the grid, we don't need to change the integrator
             if use_grid is False:
-                return self.integrators[model][0]
+                return self.integrators[model]["no grid"]
             # Otherwise, create new integrator with an updated grid
             # We don't need to update the grid if reusing the same t_eval
+            # (up to a shift by a constant)
             else:
-                method, problem, options = self.integrator_specs[model]
-                t_eval_old = options["grid"]
-                if np.array_equal(t_eval_old, t_eval):
-                    return self.integrators[model][0]
+                if t_eval_shifted_rounded in self.integrators[model]:
+                    return self.integrators[model][t_eval_shifted_rounded]
                 else:
-                    options["grid"] = t_eval
+                    method, problem, options = self.integrator_specs[model]
+                    options["grid"] = t_eval_shifted
                     integrator = casadi.integrator("F", method, problem, options)
-                    self.integrators[model] = (integrator, use_grid)
+                    self.integrators[model][t_eval_shifted_rounded] = integrator
                     return integrator
         else:
             y0 = model.y0
@@ -404,56 +526,80 @@ class CasadiSolver(pybamm.BaseSolver):
             t = casadi.MX.sym("t")
             p = casadi.MX.sym("p", inputs.shape[0])
             y_diff = casadi.MX.sym("y_diff", rhs(0, y0, p).shape[0])
+            y_alg = casadi.MX.sym("y_alg", algebraic(0, y0, p).shape[0])
+            y_full = casadi.vertcat(y_diff, y_alg)
 
             if use_grid is False:
                 # rescale time
                 t_min = casadi.MX.sym("t_min")
                 t_max = casadi.MX.sym("t_max")
+                t_max_minus_t_min = t_max - t_min
                 t_scaled = t_min + (t_max - t_min) * t
                 # add time limits as inputs
                 p_with_tlims = casadi.vertcat(p, t_min, t_max)
             else:
-                options.update({"grid": t_eval, "output_t0": True})
+                options.update({"grid": t_eval_shifted, "output_t0": True})
+                # rescale time
+                t_min = casadi.MX.sym("t_min")
                 # Set dummy parameters for consistency with rescaled time
-                t_max = 1
-                t_min = 0
-                t_scaled = t
-                p_with_tlims = p
+                t_max_minus_t_min = 1
+                t_scaled = t_min + t
+                p_with_tlims = casadi.vertcat(p, t_min)
 
-            problem = {"t": t, "x": y_diff, "p": p_with_tlims}
+            # define the event switch as the point when an event is crossed
+            # we don't do this for ODE models
+            # see #1082
+            event_switch = 1
+            if use_event_switch is True and not algebraic(0, y0, p).is_empty():
+                for event in model.casadi_terminate_events:
+                    event_switch *= event(t_scaled, y_full, p)
+
+            problem = {
+                "t": t,
+                "x": y_diff,
+                # rescale rhs by (t_max - t_min)
+                "ode": (t_max_minus_t_min) * rhs(t_scaled, y_full, p) * event_switch,
+                "p": p_with_tlims,
+            }
             if algebraic(0, y0, p).is_empty():
                 method = "cvodes"
-                # rescale rhs by (t_max - t_min)
-                problem.update({"ode": (t_max - t_min) * rhs(t_scaled, y_diff, p)})
             else:
                 method = "idas"
-                y_alg = casadi.MX.sym("y_alg", algebraic(0, y0, p).shape[0])
-                y_full = casadi.vertcat(y_diff, y_alg)
-                # rescale rhs by (t_max - t_min)
                 problem.update(
                     {
-                        "ode": (t_max - t_min) * rhs(t_scaled, y_full, p),
                         "z": y_alg,
                         "alg": algebraic(t_scaled, y_full, p),
                     }
                 )
             integrator = casadi.integrator("F", method, problem, options)
             self.integrator_specs[model] = method, problem, options
-            self.integrators[model] = (integrator, use_grid)
+            if use_grid is False:
+                self.integrators[model] = {"no grid": integrator}
+            else:
+                self.integrators[model] = {t_eval_shifted_rounded: integrator}
+
             return integrator
 
-    def _run_integrator(self, model, y0, inputs_dict, inputs, t_eval):
-        integrator, use_grid = self.integrators[model]
+    def _run_integrator(self, model, y0, inputs_dict, inputs, t_eval, use_grid=True):
+        pybamm.logger.debug("Running CasADi integrator")
+        if use_grid is True:
+            t_eval_shifted = t_eval - t_eval[0]
+            t_eval_shifted_rounded = np.round(t_eval_shifted, decimals=12).tobytes()
+            integrator = self.integrators[model][t_eval_shifted_rounded]
+        else:
+            integrator = self.integrators[model]["no grid"]
         len_rhs = model.concatenated_rhs.size
         y0_diff = y0[:len_rhs]
         y0_alg = y0[len_rhs:]
         try:
             # Try solving
             if use_grid is True:
+                t_min = t_eval[0]
+                inputs_with_tmin = casadi.vertcat(inputs, t_min)
                 # Call the integrator once, with the grid
                 timer = pybamm.Timer()
                 casadi_sol = integrator(
-                    x0=y0_diff, z0=y0_alg, p=inputs, **self.extra_options_call
+                    x0=y0_diff, z0=y0_alg, p=inputs_with_tmin, **self.extra_options_call
                 )
                 integration_time = timer.time()
                 y_sol = casadi.vertcat(casadi_sol["xf"], casadi_sol["zf"])

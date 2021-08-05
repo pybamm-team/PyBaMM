@@ -80,12 +80,13 @@ API documentation
    source/util
    source/citations
    source/parameters_cli
+   source/batch_study
 
 Examples
 ========
 
 Detailed examples can be viewed on the
-`GitHub examples page <https://github.com/pybamm-team/PyBaMM/tree/master/examples/notebooks>`_,
+`GitHub examples page <https://github.com/pybamm-team/PyBaMM/tree/develop/examples/notebooks>`_,
 and run locally using ``jupyter notebook``, or online through
 `Google Colab <https://colab.research.google.com/github/pybamm-team/PyBaMM/blob/develop/>`_.
 

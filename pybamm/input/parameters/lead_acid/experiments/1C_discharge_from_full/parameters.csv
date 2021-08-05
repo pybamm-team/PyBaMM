@@ -1,0 +1,25 @@
+Name [units],Value,Reference,Notes
+# Empty rows and rows starting with ‘#’ will be ignored,,,
+,,,
+# Temperature,,,
+Reference temperature [K],294.85,Room temperature,
+Maximum temperature [K],333.15,,
+Ambient temperature [K], 294.85,,
+Negative current collector surface heat transfer coefficient [W.m-2.K-1],0,,
+Positive current collector surface heat transfer coefficient [W.m-2.K-1],0,,
+Negative tab heat transfer coefficient [W.m-2.K-1],10,,
+Positive tab heat transfer coefficient [W.m-2.K-1],10,,
+Total heat transfer coefficient [W.m-2.K-1],10,,
+Edge heat transfer coefficient [W.m-2.K-1],0.3,,
+
+,,,
+# Electrical
+Number of electrodes connected in parallel to make a cell,8,Manufacturer,
+Number of cells connected in series to make a battery,6,Manufacturer,
+Lower voltage cut-off [V],1.75,10.5V across 6-cell battery,
+Upper voltage cut-off [V],2.42,14.5V across 6-cell battery,
+,,,
+# Initial conditions
+Initial State of Charge,1,-,
+Initial oxygen concentration [mol.m-3],0,,
+Initial temperature [K],294.85,Room temperature,

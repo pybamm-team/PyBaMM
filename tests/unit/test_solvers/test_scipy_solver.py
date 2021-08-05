@@ -7,13 +7,15 @@ import numpy as np
 from tests import get_mesh_for_testing
 import warnings
 import sys
-from platform import system
+from platform import system, version
 
 
 class TestScipySolver(unittest.TestCase):
     def test_model_solver_python_and_jax(self):
 
-        if system() != "Windows":
+        if not (
+            system() == "Windows" or (system() == "Darwin" and "ARM64" in version())
+        ):
             formats = ["python", "jax"]
         else:
             formats = ["python"]
@@ -228,8 +230,6 @@ class TestScipySolver(unittest.TestCase):
         np.testing.assert_array_almost_equal(
             step_sol2.all_ys[0][0], np.exp(0.1 * step_sol1.t)
         )
-        print(step_sol2.all_ys)
-        print(step_sol2["mul_var"].data)
 
     def test_model_solver_with_inputs(self):
         # Create model

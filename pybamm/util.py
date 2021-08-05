@@ -7,12 +7,12 @@
 import importlib
 import numpy as np
 import os
-import sys
 import timeit
 import pathlib
 import pickle
 import pybamm
 import numbers
+import warnings
 from collections import defaultdict
 
 
@@ -226,86 +226,58 @@ class TimerTime:
 
 def load_function(filename):
     """
-    Load a python function from a file "function_name.py" called "function_name".
-    The filename might either be an absolute path, in which case that specific file will
-    be used, or the file will be searched for relative to PyBaMM root.
+    Load a python function from an absolute or relative path using `importlib`.
+    Example - pybamm.load_function("pybamm/input/example.py")
 
     Arguments
     ---------
     filename : str
-        The name of the file containing the function of the same name.
+        The path of the file containing the function.
 
     Returns
     -------
     function
         The python function loaded from the file.
     """
+    # Remove `.py` from the file name
+    if filename.endswith(".py"):
+        filename = filename.replace(".py", "")
 
-    if not filename.endswith(".py"):
-        raise ValueError("Expected filename.py, but got {}".format(filename))
-
-    # If it's an absolute path, find that exact file
-    if os.path.isabs(filename):
-        if not os.path.isfile(filename):
-            raise ValueError(
-                "{} is an absolute path, but the file is not found".format(filename)
-            )
-
-        valid_filename = filename
-
-    # Else, search in the whole PyBaMM directory for matches
-    else:
-        search_path = pybamm.root_dir()
-
-        head, tail = os.path.split(filename)
-
-        matching_files = []
-
-        for root, _, files in os.walk(search_path):
-            for file in files:
-                if file == tail:
-                    full_path = os.path.join(root, file)
-                    if full_path.endswith(filename):
-                        matching_files.append(full_path)
-
-        if len(matching_files) == 0:
-            raise ValueError(
-                "{} cannot be found in the PyBaMM directory".format(filename)
-            )
-        elif len(matching_files) > 1:
-            raise ValueError(
-                "{} found multiple times in the PyBaMM directory."
-                "Consider using absolute file path.".format(filename)
-            )
-
-        valid_filename = matching_files[0]
-
-    # Now: we have some /path/to/valid/filename.py
-    # Add "/path/to/vaid" to the python path, and load the module "filename".
-    # Then, check "filename" module contains "filename" function.  If it does, return
-    # that function object, or raise an exception
-
-    valid_path, valid_leaf = os.path.split(valid_filename)
-    sys.path.append(valid_path)
-
-    # Load the module, which must be the leaf of filename, minus the .py extension
-    valid_module = valid_leaf.replace(".py", "")
-    module_object = importlib.import_module(valid_module)
-
-    # Check that a function of the same name exists in the loaded module
-    if valid_module not in dir(module_object):
-        raise ValueError(
-            "No function {} found in module {}".format(valid_module, valid_module)
+    # Replace `lead-acid` with `lead_acid`
+    if "lead-acid" in filename:
+        warnings.simplefilter("always", DeprecationWarning)
+        warnings.warn(
+            "lead-acid is deprecated, use lead_acid instead", DeprecationWarning
         )
+        filename = filename.replace("lead-acid", "lead_acid")
 
-    # Remove valid_path from sys_path to avoid clashes down the line
-    sys.path.remove(valid_path)
+    # Replace `lithium-ion` with `lithium_ion`
+    if "lithium-ion" in filename:
+        warnings.simplefilter("always", DeprecationWarning)
+        warnings.warn(
+            "lithium-ion is deprecated, use lithium_ion instead", DeprecationWarning
+        )
+        filename = filename.replace("lithium-ion", "lithium_ion")
 
-    return getattr(module_object, valid_module)
+    # Assign path to _ and filename to tail
+    _, tail = os.path.split(filename)
+
+    # Strip absolute path to pybamm/input/exapmle.py
+    if "pybamm" in filename:
+        root_path = filename[filename.rfind("pybamm") :]
+    else:
+        root_path = filename
+
+    path = root_path.replace("/", ".")
+    path = path.replace("\\", ".")
+    module_object = importlib.import_module(path)
+
+    return getattr(module_object, tail)
 
 
 def rmse(x, y):
-    """Calculate the root-mean-square-error between two vectors x and y, ignoring NaNs
+    """
+    Calculate the root-mean-square-error between two vectors x and y, ignoring NaNs
     """
     # Check lengths
     if len(x) != len(y):

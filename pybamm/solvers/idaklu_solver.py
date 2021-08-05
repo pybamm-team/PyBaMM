@@ -8,10 +8,13 @@ import scipy.sparse as sparse
 
 import importlib
 
-idaklu_spec = importlib.util.find_spec("idaklu")
+idaklu_spec = importlib.util.find_spec("pybamm.solvers.idaklu")
 if idaklu_spec is not None:
-    idaklu = importlib.util.module_from_spec(idaklu_spec)
-    idaklu_spec.loader.exec_module(idaklu)
+    try:
+        idaklu = importlib.util.module_from_spec(idaklu_spec)
+        idaklu_spec.loader.exec_module(idaklu)
+    except ImportError:  # pragma: no cover
+        idaklu_spec = None
 
 
 def have_idaklu():
@@ -152,6 +155,13 @@ class IDAKLUSolver(pybamm.BaseSolver):
         if model.rhs_eval.form == "casadi":
             # stack inputs
             inputs = casadi.vertcat(*[x for x in inputs_dict.values()])
+            # raise warning about casadi format being slow
+            pybamm.logger.warning(
+                "Using casadi form for the IDA KLU solver is slow. "
+                "Set `model.convert_to_format='python'` for better performance. "
+                "For DAE models, this may also require changing the root method to "
+                "'lm'."
+            )
         else:
             inputs = inputs_dict
 

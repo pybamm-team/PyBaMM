@@ -52,6 +52,15 @@ class TestCasadiSolver(unittest.TestCase):
             solution.y.full()[0], np.exp(0.1 * solution.t), decimal=5
         )
 
+        # Fast with events
+        # with an ODE model this behaves exactly the same as "fast"
+        solver = pybamm.CasadiSolver(mode="fast with events", rtol=1e-8, atol=1e-8)
+        solution = solver.solve(model, t_eval)
+        np.testing.assert_array_equal(solution.t, t_eval)
+        np.testing.assert_array_almost_equal(
+            solution.y.full()[0], np.exp(0.1 * solution.t), decimal=5
+        )
+
     def test_model_solver_python(self):
         # Create model
         pybamm.set_logging_level("ERROR")
@@ -155,6 +164,36 @@ class TestCasadiSolver(unittest.TestCase):
         solution = solver.solve(model, t_eval)
         np.testing.assert_array_less(solution.y.full()[0], 1.5)
         np.testing.assert_array_less(solution.y.full()[-1], 2.5 + 1e-10)
+        np.testing.assert_array_almost_equal(
+            solution.y.full()[0], np.exp(0.1 * solution.t), decimal=5
+        )
+        np.testing.assert_array_almost_equal(
+            solution.y.full()[-1], 2 * np.exp(0.1 * solution.t), decimal=5
+        )
+
+        # Solve using "fast with events" mode
+        model = pybamm.BaseModel()
+        var1 = pybamm.Variable("var1")
+        var2 = pybamm.Variable("var2")
+        model.rhs = {var1: 0.1 * var1}
+        model.algebraic = {var2: 2 * var1 - var2}
+        model.initial_conditions = {var1: 1, var2: 2}
+        model.events = [
+            pybamm.Event("var1 = 1.5", var1 - 1.5),
+            pybamm.Event("var2 = 2.5", var2 - 2.5),
+            pybamm.Event("var1 = 1.5 switch", var1 - 2, pybamm.EventType.SWITCH),
+            pybamm.Event("var2 = 2.5 switch", var2 - 3, pybamm.EventType.SWITCH),
+        ]
+
+        solver = pybamm.CasadiSolver(mode="fast with events", rtol=1e-8, atol=1e-8)
+        t_eval = np.linspace(0, 5, 100)
+        solution = solver.solve(model, t_eval)
+        np.testing.assert_array_less(solution.y.full()[0, :-1], 1.5)
+        np.testing.assert_array_less(solution.y.full()[-1, :-1], 2.5)
+        np.testing.assert_equal(solution.t_event[0], solution.t[-1])
+        np.testing.assert_array_almost_equal(
+            solution.y_event[:, 0].flatten(), [1.25, 2.5], decimal=5
+        )
         np.testing.assert_array_almost_equal(
             solution.y.full()[0], np.exp(0.1 * solution.t), decimal=5
         )
@@ -440,7 +479,7 @@ class TestCasadiSolver(unittest.TestCase):
 
     def test_interpolant_extrapolate(self):
         model = pybamm.lithium_ion.DFN()
-        param = pybamm.ParameterValues(chemistry=pybamm.parameter_sets.Chen2020)
+        param = pybamm.ParameterValues(chemistry=pybamm.parameter_sets.NCA_Kim2011)
         experiment = pybamm.Experiment(
             ["Charge at 1C until 4.6 V"], period="10 seconds"
         )

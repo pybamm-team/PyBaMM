@@ -15,14 +15,16 @@ class TestIrreversiblePlating(unittest.TestCase):
             pybamm.Scalar(0), ["negative electrode"], "current collector"
         )
         variables = {
-            "Negative electrode potential": a_n,
-            "Negative electrolyte potential": a_n,
+            "Negative electrode surface potential difference": a_n,
             "Negative electrolyte concentration": a_n,
+            "Negative electrode temperature": a_n,
             "Negative electrode SEI film overpotential": a_n,
         }
-        submodel = pybamm.lithium_plating.IrreversiblePlating(param, "Negative")
+        submodel = pybamm.lithium_plating.IrreversiblePlating(param, "Negative", True)
         std_tests = tests.StandardSubModelTests(submodel, variables)
-
+        std_tests.test_all()
+        submodel = pybamm.lithium_plating.IrreversiblePlating(param, "Negative", False)
+        std_tests = tests.StandardSubModelTests(submodel, variables)
         std_tests.test_all()
 
 

@@ -16,7 +16,7 @@ class TestLeadAcidFOQS(unittest.TestCase):
 
 class TestLeadAcidFOQSWithSideReactions(unittest.TestCase):
     def test_well_posed_differential(self):
-        options = {"surface form": "differential", "side reactions": ["oxygen"]}
+        options = {"surface form": "differential", "hydrolysis": "true"}
         # debug mode slows down the FOQS model a fair bit, so turn off
         pybamm.settings.debug_mode = False
         model = pybamm.lead_acid.FOQS(options)

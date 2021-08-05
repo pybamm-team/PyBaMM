@@ -3,7 +3,7 @@ import glob
 import logging
 import subprocess
 from pathlib import Path
-from platform import system
+from platform import system, version
 import wheel.bdist_wheel as orig
 import site
 import shutil
@@ -130,7 +130,7 @@ def compile_KLU():
         )
         logger.info(msg)
 
-    return CMakeFound and PyBind11Found and (not windows)
+    return CMakeFound and PyBind11Found
 
 
 # Build the list of package data files to be included in the PyBaMM package.
@@ -158,15 +158,12 @@ pybamm_data.append("./version")
 pybamm_data.append("./CITATIONS.txt")
 pybamm_data.append("./plotting/pybamm.mplstyle")
 
-idaklu_ext = Extension("idaklu", ["pybamm/solvers/c_solvers/idaklu.cpp"])
+idaklu_ext = Extension("pybamm.solvers.idaklu", ["pybamm/solvers/c_solvers/idaklu.cpp"])
 ext_modules = [idaklu_ext] if compile_KLU() else []
 
 jax_dependencies = []
-if system() != "Windows":
-    jax_dependencies = [
-        "jax==0.2.5",
-        "jaxlib==0.1.57",
-    ]
+if not (system() == "Windows" or (system() == "Darwin" and "ARM64" in version())):
+    jax_dependencies = ["jax==0.2.12", "jaxlib==0.1.65"]
 
 
 # Load text for description and license
@@ -175,7 +172,7 @@ with open("README.md", encoding="utf-8") as f:
 
 setup(
     name="pybamm",
-    version=load_version() + "-beta",
+    version=load_version(),
     description="Python Battery Mathematical Modelling.",
     long_description=readme,
     long_description_content_type="text/markdown",
@@ -202,6 +199,7 @@ setup(
         *jax_dependencies,
         "jupyter",  # For example notebooks
         "pybtex",
+        "sympy==1.8",
         # Note: Matplotlib is loaded for debug plots, but to ensure pybamm runs
         # on systems without an attached display, it should never be imported
         # outside of plot() methods.

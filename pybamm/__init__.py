@@ -7,7 +7,7 @@
 #
 import sys
 import os
-from platform import system
+import platform
 
 #
 # Version info
@@ -86,8 +86,7 @@ from .expression_tree.input_parameter import InputParameter
 from .expression_tree.parameter import Parameter, FunctionParameter
 from .expression_tree.broadcasts import *
 from .expression_tree.scalar import Scalar
-from .expression_tree.variable import Variable, ExternalVariable, VariableDot
-from .expression_tree.variable import VariableBase
+from .expression_tree.variable import *
 from .expression_tree.independent_variable import *
 from .expression_tree.independent_variable import t
 from .expression_tree.vector import Vector
@@ -96,16 +95,19 @@ from .expression_tree.state_vector import StateVectorBase, StateVector, StateVec
 from .expression_tree.exceptions import *
 
 # Operations
-from .expression_tree.operations.evaluate import (
+from .expression_tree.operations.evaluate_python import (
     find_symbols,
     id_to_python_variable,
     to_python,
     EvaluatorPython,
 )
 
-if system() != "Windows":
-    from .expression_tree.operations.evaluate import EvaluatorJax
-    from .expression_tree.operations.evaluate import JaxCooMatrix
+if not (
+    platform.system() == "Windows"
+    or (platform.system() == "Darwin" and "ARM64" in platform.version())
+):
+    from .expression_tree.operations.evaluate_python import EvaluatorJax
+    from .expression_tree.operations.evaluate_python import JaxCooMatrix
 
 from .expression_tree.operations.jacobian import Jacobian
 from .expression_tree.operations.convert_to_casadi import CasadiConverter
@@ -116,12 +118,15 @@ from .expression_tree.operations.replace_symbols import SymbolReplacer
 # Model classes
 #
 from .models.base_model import BaseModel
-from .models import standard_variables
+from .models.standard_variables import standard_variables
 from .models.event import Event
 from .models.event import EventType
 
 # Battery models
-from .models.full_battery_models.base_battery_model import BaseBatteryModel
+from .models.full_battery_models.base_battery_model import (
+    BaseBatteryModel,
+    BatteryModelOptions,
+)
 from .models.full_battery_models import lead_acid
 from .models.full_battery_models import lithium_ion
 from .models.full_battery_models import lithium_sulfur
@@ -173,6 +178,7 @@ from .parameters.thermal_parameters import thermal_parameters, ThermalParameters
 from .parameters.lithium_ion_parameters import LithiumIonParameters
 from .parameters.lead_acid_parameters import LeadAcidParameters
 from .parameters.lithium_sulfur_parameters import LithiumSulfurParameters
+from .parameters.size_distribution_parameters import *
 from .parameters import parameter_sets
 
 #
@@ -210,7 +216,7 @@ from .spatial_methods.scikit_finite_element import ScikitFiniteElement
 #
 # Solver classes
 #
-from .solvers.solution import Solution
+from .solvers.solution import Solution, make_cycle_solution
 from .solvers.processed_variable import ProcessedVariable
 from .solvers.processed_symbolic_variable import ProcessedSymbolicVariable
 from .solvers.base_solver import BaseSolver
@@ -223,7 +229,10 @@ from .solvers.scikits_ode_solver import ScikitsOdeSolver, have_scikits_odes
 from .solvers.scipy_solver import ScipySolver
 
 # Jax not supported under windows
-if system() != "Windows":
+if not (
+    platform.system() == "Windows"
+    or (platform.system() == "Darwin" and "ARM64" in platform.version())
+):
     from .solvers.jax_solver import JaxSolver
     from .solvers.jax_bdf_solver import jax_bdf_integrate
 
@@ -250,10 +259,16 @@ default_plot_style = os.path.join(root_dir(), "pybamm/plotting/pybamm.mplstyle")
 import matplotlib.pyplot as plt
 
 plt.style.use(default_plot_style)
+
 #
 # Simulation
 #
 from .simulation import Simulation, load_sim, is_notebook
+
+#
+# Batch Study
+#
+from .batch_study import BatchStudy
 
 #
 # Remove any imported modules, so we don't expose them as part of pybamm

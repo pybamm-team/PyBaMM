@@ -16,8 +16,8 @@ class BaseModel(pybamm.BaseSubModel):
     **Extends:** :class:`pybamm.BaseSubModel`
     """
 
-    def __init__(self, param):
-        super().__init__(param)
+    def __init__(self, param, options):
+        super().__init__(param, options=options)
 
     def _get_standard_porosity_variables(
         self, eps_n, eps_s, eps_p, set_leading_order=False
@@ -26,7 +26,7 @@ class BaseModel(pybamm.BaseSubModel):
         eps_n_av = pybamm.x_average(eps_n)
         eps_s_av = pybamm.x_average(eps_s)
         eps_p_av = pybamm.x_average(eps_p)
-        eps = pybamm.Concatenation(eps_n, eps_s, eps_p)
+        eps = pybamm.concatenation(eps_n, eps_s, eps_p)
 
         variables = {
             "Porosity": eps,
@@ -50,10 +50,18 @@ class BaseModel(pybamm.BaseSubModel):
         self, deps_n_dt, deps_s_dt, deps_p_dt, set_leading_order=False
     ):
 
-        deps_n_dt_av = pybamm.x_average(deps_n_dt)
-        deps_s_dt_av = pybamm.x_average(deps_s_dt)
-        deps_p_dt_av = pybamm.x_average(deps_p_dt)
-        deps_dt = pybamm.Concatenation(deps_n_dt, deps_s_dt, deps_p_dt)
+        if deps_n_dt.domain == ["current collector"]:
+            deps_n_dt_av = deps_n_dt
+            deps_s_dt_av = deps_s_dt
+            deps_p_dt_av = deps_p_dt
+            deps_n_dt = pybamm.PrimaryBroadcast(deps_n_dt_av, "negative electrode")
+            deps_s_dt = pybamm.PrimaryBroadcast(deps_s_dt_av, "separator")
+            deps_p_dt = pybamm.PrimaryBroadcast(deps_p_dt_av, "positive electrode")
+        else:
+            deps_n_dt_av = pybamm.x_average(deps_n_dt)
+            deps_s_dt_av = pybamm.x_average(deps_s_dt)
+            deps_p_dt_av = pybamm.x_average(deps_p_dt)
+        deps_dt = pybamm.concatenation(deps_n_dt, deps_s_dt, deps_p_dt)
 
         variables = {
             "Porosity change": deps_dt,

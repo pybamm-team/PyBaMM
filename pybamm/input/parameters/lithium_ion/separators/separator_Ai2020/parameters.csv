@@ -1,0 +1,8 @@
+Name [units],Value,Reference,Notes
+# Empty rows and rows starting with ‘#’ will be ignored,,,
+,,,
+Separator porosity,0.5,Ai 2020,
+Separator Bruggeman coefficient (electrolyte),1.5,Ai 2020,theoretical
+Separator density [kg.m-3],2470,default,cell parameter
+Separator specific heat capacity [J.kg-1.K-1],1080.2,default,cell parameter
+Separator thermal conductivity [W.m-1.K-1],0.334,default,cell parameter 

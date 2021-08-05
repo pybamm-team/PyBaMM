@@ -42,7 +42,7 @@ class BaseModel(pybamm.BaseSubModel):
         v_box_s = variables["Separator volume-averaged velocity"]
         v_box_p = variables["Positive electrode volume-averaged velocity"]
 
-        v_box = pybamm.Concatenation(v_box_n, v_box_s, v_box_p)
+        v_box = pybamm.concatenation(v_box_n, v_box_s, v_box_p)
 
         variables = {
             "Volume-averaged velocity": v_box,
@@ -74,7 +74,7 @@ class BaseModel(pybamm.BaseSubModel):
         div_v_box_s = variables["Separator volume-averaged acceleration"]
         div_v_box_p = variables["Positive electrode volume-averaged acceleration"]
 
-        div_v_box = pybamm.Concatenation(div_v_box_n, div_v_box_s, div_v_box_p)
+        div_v_box = pybamm.concatenation(div_v_box_n, div_v_box_s, div_v_box_p)
         div_v_box_av = pybamm.x_average(div_v_box)
 
         variables = {
@@ -105,7 +105,7 @@ class BaseModel(pybamm.BaseSubModel):
         p_s = variables["Separator pressure"]
         p_p = variables["Positive electrode pressure"]
 
-        p = pybamm.Concatenation(p_n, p_s, p_p)
+        p = pybamm.concatenation(p_n, p_s, p_p)
 
         variables = {"Pressure": p}
 

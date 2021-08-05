@@ -13,7 +13,7 @@ class TestReversiblePlating(unittest.TestCase):
             NotImplementedError,
             "Lithium plating models are not implemented for the positive electrode",
         ):
-            pybamm.lithium_plating.ReversiblePlating(None, "Positive")
+            pybamm.lithium_plating.ReversiblePlating(None, "Positive", True)
 
     def test_public_functions(self):
         param = pybamm.LithiumIonParameters()
@@ -22,15 +22,18 @@ class TestReversiblePlating(unittest.TestCase):
             pybamm.Scalar(0), ["negative electrode"], "current collector"
         )
         variables = {
-            "Negative electrode potential": a_n,
-            "Negative electrolyte potential": a_n,
+            "Negative electrode surface potential difference": a_n,
+            "Negative electrode temperature": a_n,
             "Negative electrolyte concentration": a_n,
-            "Negative electrode lithium plating concentration": a_n,
             "Negative electrode SEI film overpotential": a_n,
         }
-        submodel = pybamm.lithium_plating.ReversiblePlating(param, "Negative")
-        std_tests = tests.StandardSubModelTests(submodel, variables)
 
+        submodel = pybamm.lithium_plating.ReversiblePlating(param, "Negative", True)
+        std_tests = tests.StandardSubModelTests(submodel, variables)
+        std_tests.test_all()
+
+        submodel = pybamm.lithium_plating.ReversiblePlating(param, "Negative", False)
+        std_tests = tests.StandardSubModelTests(submodel, variables)
         std_tests.test_all()
 
 

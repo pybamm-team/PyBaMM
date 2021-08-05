@@ -52,7 +52,7 @@ class BasicFull(BaseModel):
         )
         # Concatenations combine several variables into a single variable, to simplify
         # implementing equations that hold over several domains
-        c_e = pybamm.Concatenation(c_e_n, c_e_s, c_e_p)
+        c_e = pybamm.concatenation(c_e_n, c_e_s, c_e_p)
 
         # Electrolyte potential
         phi_e_n = pybamm.Variable(
@@ -62,7 +62,7 @@ class BasicFull(BaseModel):
         phi_e_p = pybamm.Variable(
             "Positive electrolyte potential", domain="positive electrode"
         )
-        phi_e = pybamm.Concatenation(phi_e_n, phi_e_s, phi_e_p)
+        phi_e = pybamm.concatenation(phi_e_n, phi_e_s, phi_e_p)
 
         # Electrode potential
         phi_s_n = pybamm.Variable(
@@ -80,7 +80,7 @@ class BasicFull(BaseModel):
         eps_p = pybamm.Variable(
             "Positive electrode porosity", domain="positive electrode"
         )
-        eps = pybamm.Concatenation(eps_n, eps_s, eps_p)
+        eps = pybamm.concatenation(eps_n, eps_s, eps_p)
 
         # Pressure (for convection)
         pressure_n = pybamm.Variable(
@@ -101,7 +101,7 @@ class BasicFull(BaseModel):
         i_cell = param.current_with_time
 
         # Tortuosity
-        tor = pybamm.Concatenation(
+        tor = pybamm.concatenation(
             eps_n ** param.b_e_n, eps_s ** param.b_e_s, eps_p ** param.b_e_p
         )
 
@@ -119,7 +119,7 @@ class BasicFull(BaseModel):
             * j0_p
             * pybamm.sinh(param.ne_p / 2 * (phi_s_p - phi_e_p - param.U_p(c_e_p, T)))
         )
-        j = pybamm.Concatenation(j_n, j_s, j_p)
+        j = pybamm.concatenation(j_n, j_s, j_p)
 
         ######################
         # State of Charge
@@ -152,8 +152,8 @@ class BasicFull(BaseModel):
 
         # v is the velocity in the x-direction
         # div_V is the divergence of the velocity in the yz-directions
-        v = pybamm.Concatenation(v_n, v_s, v_p)
-        div_V = pybamm.Concatenation(
+        v = pybamm.concatenation(v_n, v_s, v_p)
+        div_V = pybamm.concatenation(
             pybamm.PrimaryBroadcast(0, "negative electrode"),
             pybamm.PrimaryBroadcast(div_V_s, "separator"),
             pybamm.PrimaryBroadcast(0, "positive electrode"),
@@ -188,8 +188,8 @@ class BasicFull(BaseModel):
         ######################
         # Current in the solid
         ######################
-        i_s_n = -param.sigma_n * (1 - eps_n) ** param.b_s_n * pybamm.grad(phi_s_n)
-        sigma_eff_p = param.sigma_p * (1 - eps_p) ** param.b_s_p
+        i_s_n = -param.sigma_n(T) * (1 - eps_n) ** param.b_s_n * pybamm.grad(phi_s_n)
+        sigma_eff_p = param.sigma_p(T) * (1 - eps_p) ** param.b_s_p
         i_s_p = -sigma_eff_p * pybamm.grad(phi_s_p)
         # The `algebraic` dictionary contains differential equations, with the key being
         # the main scalar variable of interest in the equation
@@ -214,7 +214,7 @@ class BasicFull(BaseModel):
         ######################
         # Porosity
         ######################
-        beta_surf = pybamm.Concatenation(
+        beta_surf = pybamm.concatenation(
             pybamm.PrimaryBroadcast(param.beta_surf_n, "negative electrode"),
             pybamm.PrimaryBroadcast(0, "separator"),
             pybamm.PrimaryBroadcast(param.beta_surf_p, "positive electrode"),
@@ -247,7 +247,7 @@ class BasicFull(BaseModel):
             + param.C_e * param.t_plus(c_e, T) * i_e / param.gamma_e
             + param.C_e * c_e * v
         )
-        s = pybamm.Concatenation(
+        s = pybamm.concatenation(
             pybamm.PrimaryBroadcast(param.s_plus_n_S, "negative electrode"),
             pybamm.PrimaryBroadcast(0, "separator"),
             pybamm.PrimaryBroadcast(param.s_plus_p_S, "positive electrode"),

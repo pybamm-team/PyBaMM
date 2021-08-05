@@ -9,8 +9,9 @@ from jax import dtypes
 from jax.util import safe_map, cache, split_list
 from jax.api_util import flatten_fun_nokwargs
 from jax.flatten_util import ravel_pytree
-from jax.tree_util import tree_map, tree_flatten, tree_unflatten, tree_multimap, partial
+from jax.tree_util import tree_map, tree_flatten, tree_unflatten, tree_multimap
 from jax.interpreters import partial_eval as pe
+from functools import partial
 from jax import linear_util as lu
 from jax.config import config
 from absl import logging
@@ -24,6 +25,45 @@ NEWTON_MAXITER = 4
 ROOT_SOLVE_MAXITER = 15
 MIN_FACTOR = 0.2
 MAX_FACTOR = 10
+
+
+# https://github.com/google/jax/issues/4572#issuecomment-709809897
+def some_hash_function(x):
+    return hash(x.tobytes())
+
+
+class HashableArrayWrapper:
+    """wrapper for a numpy array to make it hashable"""
+    def __init__(self, val):
+        self.val = val
+
+    def __hash__(self):
+        return some_hash_function(self.val)
+
+    def __eq__(self, other):
+        return (isinstance(other, HashableArrayWrapper) and
+                onp.all(onp.equal(self.val, other.val)))
+
+
+def gnool_jit(fun, static_array_argnums=(), static_argnums=()):
+    """redefinition of jax jit to allow static array args"""
+    @partial(
+        jax.jit,
+        static_argnums=static_array_argnums + static_argnums
+    )
+    def callee(*args):
+        args = list(args)
+        for i in static_array_argnums:
+            args[i] = args[i].val
+        return fun(*args)
+
+    def caller(*args):
+        args = list(args)
+        for i in static_array_argnums:
+            args[i] = HashableArrayWrapper(args[i])
+        return callee(*args)
+
+    return caller
 
 
 @jax.partial(jax.custom_vjp, nondiff_argnums=(0, 1, 2, 3))
@@ -809,6 +849,10 @@ def jax_bdf_integrate(func, y0, t_eval, *args, rtol=1e-6, atol=1e-6, mass=None):
     flat_args, in_tree = tree_flatten((y0, t_eval[0], *args))
     in_avals = tuple(safe_map(abstractify, flat_args))
     converted, consts = closure_convert(func, in_tree, in_avals)
+    if mass is None:
+        mass = onp.identity(y0.shape[0], dtype=y0.dtype)
+    else:
+        mass = block_diag(tree_flatten(mass)[0])
     return _bdf_odeint_wrapper(converted, mass, rtol, atol, y0, t_eval, *consts, *args)
 
 
@@ -846,13 +890,10 @@ def flax_scan(f, init, xs, length=None):  # pragma: no cover
     return carry, onp.stack(ys)
 
 
-@jax.partial(jax.jit, static_argnums=(0, 1, 2, 3))
+@jax.partial(gnool_jit,
+             static_array_argnums=(1,), static_argnums=(0, 2, 3))
 def _bdf_odeint_wrapper(func, mass, rtol, atol, y0, ts, *args):
     y0, unravel = ravel_pytree(y0)
-    if mass is None:
-        mass = onp.identity(y0.shape[0], dtype=y0.dtype)
-    else:
-        mass = block_diag(tree_flatten(mass)[0])
     func = ravel_first_arg(func, unravel)
     out = _bdf_odeint(func, mass, rtol, atol, y0, ts, *args)
     return jax.vmap(unravel)(out)
@@ -947,7 +988,7 @@ def _bdf_odeint_rev(func, mass, rtol, atol, res, g):
             *args,
             mass=aug_mass,
             rtol=rtol,
-            atol=atol
+            atol=atol,
         )
         y_bar, t0_bar, args_bar = tree_map(op.itemgetter(1), (y_bar, t0_bar, args_bar))
         # Add gradient from current output

@@ -1,0 +1,8 @@
+Name [units],Value,Reference,Notes
+# Empty rows and rows starting with ‘#’ will be ignored,,,
+,,,
+Separator porosity,0.4,,
+Separator Bruggeman coefficient (electrolyte),2,,
+Separator density [kg.m-3],511.86798,397 * 1.28934,
+Separator specific heat capacity [J.kg-1.K-1],700,,
+Separator thermal conductivity [W.m-1.K-1],0.10672, 0.16 * 0.667,

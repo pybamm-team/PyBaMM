@@ -67,7 +67,7 @@ class TestGhostNodes(unittest.TestCase):
         var_n = pybamm.Variable("var", domain=["negative electrode"])
         var_s = pybamm.Variable("var", domain=["separator"])
         var_p = pybamm.Variable("var", domain=["positive electrode"])
-        var = pybamm.Concatenation(var_n, var_s, var_p)
+        var = pybamm.concatenation(var_n, var_s, var_p)
         disc.set_variable_slices([var])
         discretised_symbol = disc.process_symbol(var)
         bcs = {

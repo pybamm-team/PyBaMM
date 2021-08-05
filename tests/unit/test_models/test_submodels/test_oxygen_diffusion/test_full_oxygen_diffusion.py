@@ -10,22 +10,25 @@ import unittest
 class TestFull(unittest.TestCase):
     def test_public_functions(self):
         param = pybamm.LeadAcidParameters()
-        a = pybamm.Scalar(0)
+        a = pybamm.Scalar(1)
         variables = {
-            "Porosity": pybamm.Concatenation(
-                pybamm.FullBroadcast(a, "negative electrode", "current collector"),
-                pybamm.FullBroadcast(a, "separator", "current collector"),
-                pybamm.FullBroadcast(a, "positive electrode", "current collector"),
+            "Separator tortuosity": pybamm.FullBroadcast(
+                a, "separator", "current collector"
             ),
-            "Electrolyte tortuosity": pybamm.Concatenation(
-                pybamm.FullBroadcast(a, "negative electrode", "current collector"),
-                pybamm.FullBroadcast(a, "separator", "current collector"),
-                pybamm.FullBroadcast(a, "positive electrode", "current collector"),
+            "Positive electrode tortuosity": pybamm.FullBroadcast(
+                a, "positive electrode", "current collector"
             ),
-            "Porosity change": pybamm.Concatenation(
-                pybamm.FullBroadcast(a, "negative electrode", "current collector"),
-                pybamm.FullBroadcast(a, "separator", "current collector"),
-                pybamm.FullBroadcast(a, "positive electrode", "current collector"),
+            "Separator porosity": pybamm.FullBroadcast(
+                a, "separator", "current collector"
+            ),
+            "Positive electrode porosity": pybamm.FullBroadcast(
+                a, "positive electrode", "current collector"
+            ),
+            "Separator porosity change": pybamm.FullBroadcast(
+                a, "separator", "current collector"
+            ),
+            "Positive electrode porosity change": pybamm.FullBroadcast(
+                a, "positive electrode", "current collector"
             ),
             "Volume-averaged velocity": a,
             "Negative electrode interfacial current density": pybamm.FullBroadcast(

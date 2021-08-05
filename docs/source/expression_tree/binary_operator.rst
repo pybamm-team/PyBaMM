@@ -25,7 +25,7 @@ Binary Operators
 .. autoclass:: pybamm.Inner
   :members:
 
-.. autoclass:: pybamm.Heaviside
+.. autoclass:: pybamm.expression_tree.binary_operators._Heaviside
   :members:
 
 .. autoclass:: pybamm.EqualHeaviside

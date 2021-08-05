@@ -116,14 +116,16 @@ class CasadiAlgebraicSolver(pybamm.BaseSolver):
                             event.event_type
                             == pybamm.EventType.INTERPOLANT_EXTRAPOLATION
                             and (
-                                event.expression.evaluate(0, y0.full(), inputs=inputs)
+                                event.expression.evaluate(
+                                    0, y0.full(), inputs=inputs_dict
+                                )
                                 < self.extrap_tol
                             )
                         ):
                             extrap_event_names.append(event.name[12:])
 
                     raise pybamm.SolverError(
-                        "CasADI solver failed because the following interpolation "
+                        "CasADi solver failed because the following interpolation "
                         "bounds were exceeded at the initial conditions: {}. "
                         "You may need to provide additional interpolation points "
                         "outside these bounds.".format(extrap_event_names)

@@ -8,11 +8,15 @@ import numpy as np
 
 
 class TestDimensionlessParameterValues(unittest.TestCase):
-    def test_options(self):
-        with self.assertRaisesRegex(pybamm.OptionError, "particle shape"):
-            pybamm.LithiumIonParameters({"particle shape": "bad shape"})
-        with self.assertRaisesRegex(pybamm.OptionError, "particle cracking"):
-            pybamm.LithiumIonParameters({"particle cracking": "bad crack"})
+    def test_print_parameters(self):
+        parameters = pybamm.LithiumIonParameters()
+        parameter_values = pybamm.lithium_ion.BaseModel().default_parameter_values
+        output_file = "lithium_ion_parameters.txt"
+        parameter_values.print_parameters(parameters, output_file)
+        # test print_parameters with dict and without C-rate
+        del parameter_values["Nominal cell capacity [A.h]"]
+        parameters = {"C_e": parameters.C_e, "sigma_n": parameters.sigma_n}
+        parameter_values.print_parameters(parameters)
 
     def test_lithium_ion(self):
         """This test checks that all the dimensionless parameters are being calculated
@@ -146,21 +150,35 @@ class TestDimensionlessParameterValues(unittest.TestCase):
 
         "electrode conductivities"
         # neg dimensional
-        np.testing.assert_almost_equal(values.evaluate(param.sigma_n_dim), 100, 3)
+        np.testing.assert_almost_equal(
+            values.evaluate(param.sigma_n_dimensional(param.T_ref)), 100, 3
+        )
 
         # neg dimensionless (old sigma_n / old_Lambda ) (this is different to values
         # in paper so check again, it is close enough though for now)
         np.testing.assert_almost_equal(
-            values.evaluate(param.sigma_n * c_rate), 475.7, 1
+            values.evaluate(param.sigma_n(param.T_ref) * c_rate), 475.7, 1
         )
 
-        # neg dimensional
-        np.testing.assert_almost_equal(values.evaluate(param.sigma_p_dim), 10, 3)
+        # neg dimensionless rescaled
+        np.testing.assert_almost_equal(
+            values.evaluate(param.sigma_n_prime(param.T_ref) * c_rate), 0.7814, 1
+        )
 
-        # neg dimensionless (old sigma_n / old_Lambda ) (this is different to values in
+        # pos dimensional
+        np.testing.assert_almost_equal(
+            values.evaluate(param.sigma_p_dimensional(param.T_ref)), 10, 3
+        )
+
+        # pos dimensionless (old sigma_n / old_Lambda ) (this is different to values in
         # paper so check again, it is close enough for now though)
         np.testing.assert_almost_equal(
-            values.evaluate(param.sigma_p * c_rate), 47.57, 1
+            values.evaluate(param.sigma_p(param.T_ref) * c_rate), 47.57, 1
+        )
+
+        # pos dimensionless rescaled
+        np.testing.assert_almost_equal(
+            values.evaluate(param.sigma_p_prime(param.T_ref) * c_rate), 0.07814, 1
         )
 
     def test_thermal_parameters(self):

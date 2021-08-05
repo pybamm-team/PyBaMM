@@ -1,12 +1,15 @@
 #
 # Test for the Symbol class
 #
-import pybamm
-
-import unittest
-import numpy as np
 import os
+import unittest
+
+import numpy as np
+import sympy
 from scipy.sparse import coo_matrix
+
+import pybamm
+from pybamm.expression_tree.binary_operators import _Heaviside
 
 
 class TestSymbol(unittest.TestCase):
@@ -94,6 +97,11 @@ class TestSymbol(unittest.TestCase):
         # unary
         self.assertIsInstance(-a, pybamm.Negate)
         self.assertIsInstance(abs(a), pybamm.AbsoluteValue)
+        # special cases
+        neg_a = -a
+        self.assertEqual(-neg_a, a)
+        abs_a = abs(a)
+        self.assertEqual(abs(abs_a), abs_a)
 
         # binary - two symbols
         self.assertIsInstance(a + b, pybamm.Addition)
@@ -102,10 +110,10 @@ class TestSymbol(unittest.TestCase):
         self.assertIsInstance(a @ b, pybamm.MatrixMultiplication)
         self.assertIsInstance(a / b, pybamm.Division)
         self.assertIsInstance(a ** b, pybamm.Power)
-        self.assertIsInstance(a < b, pybamm.Heaviside)
-        self.assertIsInstance(a <= b, pybamm.Heaviside)
-        self.assertIsInstance(a > b, pybamm.Heaviside)
-        self.assertIsInstance(a >= b, pybamm.Heaviside)
+        self.assertIsInstance(a < b, _Heaviside)
+        self.assertIsInstance(a <= b, _Heaviside)
+        self.assertIsInstance(a > b, _Heaviside)
+        self.assertIsInstance(a >= b, _Heaviside)
         self.assertIsInstance(a % b, pybamm.Modulo)
 
         # binary - symbol and number
@@ -362,20 +370,23 @@ class TestSymbol(unittest.TestCase):
         zero_s = pybamm.FullBroadcast(0, ["separator"], "current collector")
         zero_p = pybamm.FullBroadcast(0, ["positive electrode"], "current collector")
 
-        zero_nsp = pybamm.Concatenation(zero_n, zero_s, zero_p)
+        zero_nsp = pybamm.concatenation(zero_n, zero_s, zero_p)
 
         v_box = pybamm.Scalar(0)
 
         variables = {
             "Porosity": param.epsilon,
+            "Negative electrode porosity": param.epsilon_n,
+            "Separator porosity": param.epsilon_s,
+            "Positive electrode porosity": param.epsilon_p,
             "Electrolyte tortuosity": param.epsilon ** 1.5,
             "Porosity change": zero_nsp,
             "Electrolyte current density": zero_nsp,
             "Volume-averaged velocity": v_box,
             "Interfacial current density": zero_nsp,
             "Oxygen interfacial current density": zero_nsp,
-            "Cell temperature": pybamm.Concatenation(zero_n, zero_s, zero_p),
-            "Transverse volume-averaged acceleration": pybamm.Concatenation(
+            "Cell temperature": pybamm.concatenation(zero_n, zero_s, zero_p),
+            "Transverse volume-averaged acceleration": pybamm.concatenation(
                 zero_n, zero_s, zero_p
             ),
             "Sum of electrolyte reaction source terms": zero_nsp,
@@ -448,9 +459,7 @@ class TestSymbol(unittest.TestCase):
         func = pybamm.FunctionParameter("func", {"state": state})
         self.assertEqual(func.shape_for_testing, state.shape_for_testing)
 
-        concat = pybamm.Concatenation()
-        self.assertEqual(concat.shape_for_testing, (0,))
-        concat = pybamm.Concatenation(state, state2)
+        concat = pybamm.concatenation(state, state2)
         self.assertEqual(concat.shape_for_testing, (30, 1))
         self.assertEqual(concat.size_for_testing, 30)
 
@@ -480,6 +489,9 @@ class TestSymbol(unittest.TestCase):
         y2 = pybamm.StateVector(slice(0, 5))
         with self.assertRaises(pybamm.ShapeError):
             (y1 + y2).test_shape()
+
+    def test_to_equation(self):
+        self.assertEqual(pybamm.Symbol("test").to_equation(), sympy.symbols("test"))
 
 
 class TestIsZero(unittest.TestCase):
