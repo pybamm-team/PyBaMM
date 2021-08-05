@@ -130,6 +130,31 @@ class TestIDAKLUSolver(unittest.TestCase):
         variable_tols = {"Porosity times concentration": 1e-3}
         solver.set_atol_by_variable(variable_tols, model)
 
+        model = pybamm.BaseModel()
+        u = pybamm.Variable("u")
+        model.rhs = {u: -0.1 * u}
+        model.initial_conditions = {u: 1}
+        t_eval = np.linspace(0, 3, 100)
+
+        disc = pybamm.Discretisation()
+        disc.process_model(model)
+
+        # numpy array atol
+        atol = np.zeros(1)
+        solver = pybamm.IDAKLUSolver(root_method="lm", atol=atol)
+        solver.solve(model, t_eval)
+
+        # list atol
+        atol = [1]
+        solver = pybamm.IDAKLUSolver(root_method="lm", atol=atol)
+        solver.solve(model, t_eval)
+
+        # wrong size (should fail)
+        atol = [1, 2]
+        solver = pybamm.IDAKLUSolver(root_method="lm", atol=atol)
+        with self.assertRaisesRegex(pybamm.SolverError, 'Absolute tolerances'):
+            solver.solve(model, t_eval)
+
     def test_failures(self):
         # this test implements a python version of the ida Roberts
         # example provided in sundials
@@ -147,6 +172,23 @@ class TestIDAKLUSolver(unittest.TestCase):
 
         t_eval = np.linspace(0, 3, 100)
         with self.assertRaisesRegex(pybamm.SolverError, "KLU requires the Jacobian"):
+            solver.solve(model, t_eval)
+
+        model = pybamm.BaseModel()
+        u = pybamm.Variable("u")
+        model.rhs = {u: -0.1 * u}
+        model.initial_conditions = {u: 1}
+
+        disc = pybamm.Discretisation()
+        disc.process_model(model)
+
+        solver = pybamm.IDAKLUSolver(root_method="lm")
+
+        # will give solver error
+        t_eval = np.linspace(0, -3, 100)
+        with self.assertRaisesRegex(
+            pybamm.SolverError, 't_eval must increase monotonically'
+        ):
             solver.solve(model, t_eval)
 
     def test_dae_solver_algebraic_model(self):

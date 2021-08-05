@@ -53,7 +53,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
         max_steps="deprecated",
     ):
 
-        if idaklu_spec is None:
+        if idaklu_spec is None:  # pragma: no cover
             raise ImportError("KLU is not installed")
 
         super().__init__(
@@ -140,7 +140,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
         if atol.size != size:
             raise pybamm.SolverError(
                 """Absolute tolerances must be either a scalar or a numpy arrray
-                of the same shape at y0"""
+                of the same shape as y0 ({})""".format(size)
             )
 
         return atol
