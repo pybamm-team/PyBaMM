@@ -17,12 +17,15 @@ class BaseInterface(pybamm.BaseSubModel):
         The domain to implement the model, either: 'Negative' or 'Positive'.
     reaction : str
         The name of the reaction being implemented
+    options: dict
+        A dictionary of options to be passed to the model. See
+        :class:`pybamm.BaseBatteryModel`
 
     **Extends:** :class:`pybamm.BaseSubModel`
     """
 
-    def __init__(self, param, domain, reaction):
-        super().__init__(param, domain)
+    def __init__(self, param, domain, reaction, options=None):
+        super().__init__(param, domain, options=options)
         if reaction == "lithium-ion main":
             self.reaction_name = ""  # empty reaction name for the main reaction
             self.Reaction_icd = "Interfacial current density"
@@ -549,11 +552,7 @@ class BaseInterface(pybamm.BaseSubModel):
 
         # X-average, and broadcast if necessary
         eta_r_av = pybamm.x_average(eta_r)
-        if eta_r.domain == []:
-            eta_r = pybamm.FullBroadcast(
-                eta_r, self.domain_for_broadcast, "current collector"
-            )
-        elif eta_r.domain == ["current collector"]:
+        if eta_r.domain == ["current collector"]:
             eta_r = pybamm.PrimaryBroadcast(eta_r, self.domain_for_broadcast)
 
         domain_reaction = (
@@ -604,16 +603,7 @@ class BaseInterface(pybamm.BaseSubModel):
         pot_scale = self.param.potential_scale
 
         # Average, and broadcast if necessary
-        if delta_phi.domain == []:
-            delta_phi_av = delta_phi
-            delta_phi_av_dim = ocp_ref + delta_phi_av * pot_scale
-            delta_phi = pybamm.FullBroadcast(
-                delta_phi_av, self.domain_for_broadcast, "current collector"
-            )
-            delta_phi_dim = pybamm.FullBroadcast(
-                delta_phi_av_dim, self.domain_for_broadcast, "current collector"
-            )
-        elif delta_phi.domain == ["current collector"]:
+        if delta_phi.domain == ["current collector"]:
             delta_phi_av = delta_phi
             delta_phi_av_dim = ocp_ref + delta_phi * pot_scale
             delta_phi = pybamm.PrimaryBroadcast(delta_phi_av, self.domain_for_broadcast)

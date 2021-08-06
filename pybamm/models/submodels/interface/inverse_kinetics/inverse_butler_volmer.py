@@ -28,8 +28,7 @@ class InverseButlerVolmer(BaseInterface):
     """
 
     def __init__(self, param, domain, reaction, options=None):
-        super().__init__(param, domain, reaction)
-        self.options = options
+        super().__init__(param, domain, reaction, options=options)
 
     def get_coupled_variables(self, variables):
         ocp, dUdT = self._get_open_circuit_potential(variables)
