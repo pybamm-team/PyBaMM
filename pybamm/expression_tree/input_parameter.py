@@ -2,9 +2,7 @@
 # Parameter classes
 #
 import numbers
-
 import numpy as np
-
 import pybamm
 
 
@@ -25,8 +23,11 @@ class InputParameter(pybamm.Symbol):
     """
 
     def __init__(self, name, domain=None):
-        # Expected shape defaults to None
-        self._expected_size = None
+        # Expected size defaults to 1 if no domain else None (gets set later)
+        if domain is None:
+            self._expected_size = 1
+        else:
+            self._expected_size = None
         super().__init__(name, domain=domain)
 
     def create_copy(self):

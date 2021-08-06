@@ -124,7 +124,7 @@ class BaseModel(BaseElectrolyteConductivity):
         if self.domain == "Negative":
             delta_phi_e_init = self.param.U_n_init
         elif self.domain == "Positive":
-            delta_phi_e_init = self.self.param.U_p_init
+            delta_phi_e_init = self.param.U_p_init
 
         self.initial_conditions = {delta_phi_e: delta_phi_e_init}
 

@@ -66,6 +66,7 @@ class BaseCracking(pybamm.BaseSubModel):
 
         if self.domain == "Negative":
             x = pybamm.standard_spatial_vars.x_n
+            r = pybamm.standard_spatial_vars.r_n
             Omega = self.param.Omega_n
             R0 = self.param.R_n(x)
             c_scale = self.param.c_n_max
@@ -73,13 +74,14 @@ class BaseCracking(pybamm.BaseSubModel):
             E0 = self.param.E_n
             nu = self.param.nu_n
             L0 = self.param.L_n
-            c_init = self.param.c_n_init(1)
+            c_init = pybamm.r_average(self.param.c_n_init(r, x))
             v_change = pybamm.x_average(
                 eps_s * self.param.t_n_change(c_s_rav)
             ) - pybamm.x_average(eps_s * self.param.t_n_change(c_init))
 
         elif self.domain == "Positive":
             x = pybamm.standard_spatial_vars.x_p
+            r = pybamm.standard_spatial_vars.r_p
             Omega = self.param.Omega_p
             R0 = self.param.R_p(x)
             c_scale = self.param.c_p_max
@@ -87,7 +89,7 @@ class BaseCracking(pybamm.BaseSubModel):
             E0 = self.param.E_p
             nu = self.param.nu_p
             L0 = self.param.L_p
-            c_init = self.param.c_p_init(0)
+            c_init = pybamm.r_average(self.param.c_p_init(r, x))
             v_change = pybamm.x_average(
                 eps_s * self.param.t_p_change(c_s_rav)
             ) - pybamm.x_average(eps_s * self.param.t_p_change(c_init))

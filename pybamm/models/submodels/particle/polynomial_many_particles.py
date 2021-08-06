@@ -275,11 +275,13 @@ class PolynomialManyParticles(BaseParticle):
 
         if self.domain == "Negative":
             x_n = pybamm.standard_spatial_vars.x_n
-            c_init = self.param.c_n_init(x_n)
+            r_n = pybamm.standard_spatial_vars.r_n
+            c_init = self.param.c_n_init(r_n, x_n)
 
         elif self.domain == "Positive":
             x_p = pybamm.standard_spatial_vars.x_p
-            c_init = self.param.c_p_init(x_p)
+            r_p = pybamm.standard_spatial_vars.r_p
+            c_init = self.param.c_p_init(r_p, x_p)
 
         self.initial_conditions = {c_s_rav: c_init}
 

@@ -684,6 +684,10 @@ class LeadAcidParameters(BaseParameters):
             self.Q_e_max * (1.2 - self.q_init) / (self.Q_p_max * self.l_p)
         )
 
+        self.U_n_init = self.U_n(self.c_e_init, self.T_init)
+        self.U_p_init = self.U_p(self.c_e_init, self.T_init)
+        self.ocv_init = self.U_p_init - self.U_n_init
+
     def sigma_n(self, T):
         """Dimensionless negative electrode electrical conductivity"""
         T_dim = self.Delta_T * T + self.T_ref

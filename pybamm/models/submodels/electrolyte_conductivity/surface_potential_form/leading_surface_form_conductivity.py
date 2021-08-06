@@ -64,7 +64,7 @@ class BaseLeadingOrderSurfaceForm(LeadingOrder):
         if self.domain == "Negative":
             delta_phi_init = self.param.U_n_init
         elif self.domain == "Positive":
-            delta_phi_init = self.self.param.U_p_init
+            delta_phi_init = self.param.U_p_init
 
         self.initial_conditions = {delta_phi: delta_phi_init}
 
