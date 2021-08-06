@@ -95,12 +95,11 @@ class FastSingleSizeDistribution(BaseSizeDistribution):
         # quantities. Necessary for output variables "Total lithium in
         # negative electrode [mol]", etc, to be calculated correctly
         f_v_dist = variables[
-            "X-averaged " + self.domain.lower()
+            "X-averaged "
+            + self.domain.lower()
             + " volume-weighted particle-size distribution"
         ]
-        c_s_surf_xav = pybamm.Integral(
-            f_v_dist * c_s_surf_xav_distribution, R
-        )
+        c_s_surf_xav = pybamm.Integral(f_v_dist * c_s_surf_xav_distribution, R)
         c_s_xav = pybamm.PrimaryBroadcast(
             c_s_surf_xav, [self.domain.lower() + " particle"]
         )
@@ -164,27 +163,3 @@ class FastSingleSizeDistribution(BaseSizeDistribution):
             c_init = self.param.c_p_init(1)
 
         self.initial_conditions = {c_s_surf_xav_distribution: c_init}
-
-    def set_events(self, variables):
-        c_s_surf_xav_distribution = variables[
-            "X-averaged "
-            + self.domain.lower()
-            + " particle surface concentration distribution"
-        ]
-        tol = 1e-4
-
-        self.events.append(
-            pybamm.Event(
-                "Minimum " + self.domain.lower() + " particle surface concentration",
-                pybamm.min(c_s_surf_xav_distribution) - tol,
-                pybamm.EventType.TERMINATION,
-            )
-        )
-
-        self.events.append(
-            pybamm.Event(
-                "Maximum " + self.domain.lower() + " particle surface concentration",
-                (1 - tol) - pybamm.max(c_s_surf_xav_distribution),
-                pybamm.EventType.TERMINATION,
-            )
-        )
