@@ -175,27 +175,3 @@ class FastSingleSizeDistribution(BaseSizeDistribution):
             c_init = pybamm.r_average(self.param.c_p_init(r_p, 1))
 
         self.initial_conditions = {c_s_surf_xav_distribution: c_init}
-
-    def set_events(self, variables):
-        c_s_surf_xav_distribution = variables[
-            "X-averaged "
-            + self.domain.lower()
-            + " particle surface concentration distribution"
-        ]
-        tol = 1e-4
-
-        self.events.append(
-            pybamm.Event(
-                "Minimum " + self.domain.lower() + " particle surface concentration",
-                pybamm.min(c_s_surf_xav_distribution) - tol,
-                pybamm.EventType.TERMINATION,
-            )
-        )
-
-        self.events.append(
-            pybamm.Event(
-                "Maximum " + self.domain.lower() + " particle surface concentration",
-                (1 - tol) - pybamm.max(c_s_surf_xav_distribution),
-                pybamm.EventType.TERMINATION,
-            )
-        )

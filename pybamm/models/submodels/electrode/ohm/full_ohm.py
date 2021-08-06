@@ -97,7 +97,6 @@ class Full(BaseModel):
     def set_initial_conditions(self, variables):
 
         phi_s = variables[self.domain + " electrode potential"]
-        T_init = self.param.T_init
 
         if self.domain == "Negative":
             phi_s_init = pybamm.Scalar(0)

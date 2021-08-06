@@ -1,7 +1,6 @@
 #
 # Dimensional and dimensionless parameter values, and scales
 #
-from pybamm.expression_tree.input_parameter import InputParameter
 import numpy as np
 import pybamm
 import pandas as pd

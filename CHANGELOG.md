@@ -2,6 +2,7 @@
 
 ## Features
 
+-   Tabs can now be placed at the bottom of the cell in 1+1D thermal models ([#1581](https://github.com/pybamm-team/PyBaMM/pull/1581)) 
 -   Added temperature dependence on electrode electronic conductivity ([#1570](https://github.com/pybamm-team/PyBaMM/pull/1570))
 -   Added a new lithium-ion model `MPM` or Many-Particle Model, with a distribution of particle sizes in each electrode. ([#1529](https://github.com/pybamm-team/PyBaMM/pull/1529))
 -   Added 2 new submodels for lithium transport in a size distribution of electrode particles: Fickian diffusion (`FickianSingleSizeDistribution`) and uniform concentration profile (`FastSingleSizeDistribution`). ([#1529](https://github.com/pybamm-team/PyBaMM/pull/1529))
