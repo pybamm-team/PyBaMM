@@ -69,16 +69,6 @@ class CasadiAlgebraicSolver(pybamm.BaseSolver):
 
         y0 = model.y0
 
-        # If y0 already satisfies the tolerance for all t then keep it
-        if has_symbolic_inputs is False and all(
-            np.all(abs(model.casadi_algebraic(t, y0, inputs).full()) < self.tol)
-            for t in t_eval
-        ):
-            pybamm.logger.debug("Keeping same solution at all times")
-            return pybamm.Solution(
-                t_eval, y0, model, inputs_dict, termination="success"
-            )
-
         # The casadi algebraic solver can read rhs equations, but leaves them unchanged
         # i.e. the part of the solution vector that corresponds to the differential
         # equations will be equal to the initial condition provided. This allows this
@@ -154,69 +144,54 @@ class CasadiAlgebraicSolver(pybamm.BaseSolver):
         timer = pybamm.Timer()
         integration_time = 0
         for idx, t in enumerate(t_eval):
-            # Evaluate algebraic with new t and previous y0, if it's already close
-            # enough then keep it
-            # We can't do this if there are symbolic inputs
-            if has_symbolic_inputs is False and np.all(
-                abs(model.casadi_algebraic(t, y0, inputs).full()) < self.tol
-            ):
-                pybamm.logger.debug(
-                    "Keeping same solution at t={}".format(t * model.timescale_eval)
-                )
-                if y_alg is None:
-                    y_alg = y0_alg
-                else:
-                    y_alg = casadi.horzcat(y_alg, y0_alg)
-            # Otherwise calculate new y_sol
-            else:
-                t_eval_inputs_sym = casadi.vertcat(t, symbolic_inputs)
-                # Solve
-                try:
-                    timer.reset()
-                    y_alg_sol = roots(y0_alg, t_eval_inputs_sym)
-                    integration_time += timer.time()
-                    success = True
-                    message = None
-                    # Check final output
-                    y_sol = casadi.vertcat(y0_diff, y_alg_sol)
-                    fun = model.casadi_algebraic(t, y_sol, inputs)
-                except RuntimeError as err:
-                    success = False
-                    message = err.args[0]
-                    fun = None
+            t_eval_inputs_sym = casadi.vertcat(t, symbolic_inputs)
+            # Solve
+            try:
+                timer.reset()
+                y_alg_sol = roots(y0_alg, t_eval_inputs_sym)
+                integration_time += timer.time()
+                success = True
+                message = None
+                # Check final output
+                y_sol = casadi.vertcat(y0_diff, y_alg_sol)
+                fun = model.casadi_algebraic(t, y_sol, inputs)
+            except RuntimeError as err:
+                success = False
+                message = err.args[0]
+                fun = None
 
-                # If there are no symbolic inputs, check the function is below the tol
-                # Skip this check if there are symbolic inputs
-                if success and (
-                    has_symbolic_inputs is True
-                    or (not any(np.isnan(fun)) and np.all(casadi.fabs(fun) < self.tol))
-                ):
-                    # update initial guess for the next iteration
-                    y0_alg = y_alg_sol
-                    y0 = casadi.vertcat(y0_diff, y0_alg)
-                    # update solution array
-                    if y_alg is None:
-                        y_alg = y_alg_sol
-                    else:
-                        y_alg = casadi.horzcat(y_alg, y_alg_sol)
-                elif not success:
-                    raise pybamm.SolverError(
-                        "Could not find acceptable solution: {}".format(message)
-                    )
-                elif any(np.isnan(fun)):
-                    raise pybamm.SolverError(
-                        "Could not find acceptable solution: solver returned NaNs"
-                    )
+            # If there are no symbolic inputs, check the function is below the tol
+            # Skip this check if there are symbolic inputs
+            if success and (
+                has_symbolic_inputs is True
+                or (not any(np.isnan(fun)) and np.all(casadi.fabs(fun) < self.tol))
+            ):
+                # update initial guess for the next iteration
+                y0_alg = y_alg_sol
+                y0 = casadi.vertcat(y0_diff, y0_alg)
+                # update solution array
+                if y_alg is None:
+                    y_alg = y_alg_sol
                 else:
-                    raise pybamm.SolverError(
-                        """
-                        Could not find acceptable solution: solver terminated
-                        successfully, but maximum solution error ({})
-                        above tolerance ({})
-                        """.format(
-                            casadi.mmax(casadi.fabs(fun)), self.tol
-                        )
+                    y_alg = casadi.horzcat(y_alg, y_alg_sol)
+            elif not success:
+                raise pybamm.SolverError(
+                    "Could not find acceptable solution: {}".format(message)
+                )
+            elif any(np.isnan(fun)):
+                raise pybamm.SolverError(
+                    "Could not find acceptable solution: solver returned NaNs"
+                )
+            else:
+                raise pybamm.SolverError(
+                    """
+                    Could not find acceptable solution: solver terminated
+                    successfully, but maximum solution error ({})
+                    above tolerance ({})
+                    """.format(
+                        casadi.mmax(casadi.fabs(fun)), self.tol
                     )
+                )
 
         # Concatenate differential part
         y_diff = casadi.horzcat(*[y0_diff] * len(t_eval))
