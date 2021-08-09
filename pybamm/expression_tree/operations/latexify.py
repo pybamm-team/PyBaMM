@@ -87,9 +87,6 @@ class Latexify:
         """Returns a list of min/max ranges of all concatenation nodes in latex."""
         geo = []
 
-        if not var.domain:
-            return geo
-
         # Loop through all subdomains for concatenations
         for domain in var.domain:
             for var_name, rng in self.model.default_geometry[domain].items():
@@ -343,7 +340,7 @@ class Latexify:
                 return eqn_list
 
         # # Formats - tex
-        elif self.filename.endswith(".tex"):
+        elif self.filename.endswith(".tex"):  # pragma: no cover
             return sympy.preview(eqn_new_line, outputTexFile=self.filename)
 
         elif self.filename is not None:
