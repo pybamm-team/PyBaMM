@@ -58,30 +58,20 @@ class FastManySizeDistributions(BaseSizeDistribution):
             )
             R = pybamm.standard_spatial_vars.R_p
 
-        # Distribution variables
         variables = self._get_distribution_variables(R)
 
-        # Flux variables (zero)
-        N_s = pybamm.FullBroadcastToEdges(
-            0,
-            [self.domain.lower() + " particle"],
-            auxiliary_domains={
-                "secondary": self.domain.lower() + " electrode",
-                "tertiary": "current collector",
-            },
-        )
-        N_s_xav = pybamm.FullBroadcast(
-            0, self.domain.lower() + " electrode", "current collector"
-        )
-
-        # Standard concentration distribution variables (R-dependent)
+        # Standard concentration distribution variables (size-dependent)
         variables.update(
             self._get_standard_concentration_distribution_variables(
                 c_s_surf_distribution
             )
         )
+        # Flux variables (size-dependent)
+        variables.update(
+            self._get_standard_flux_distribution_variables(pybamm.Scalar(0))
+        )
 
-        # Standard R-averaged variables. Average concentrations using
+        # Standard size-averaged variables. Average concentrations using
         # the volume-weighted distribution since they are volume-based
         # quantities. Necessary for output variables "Total lithium in
         # negative electrode [mol]", etc, to be calculated correctly
@@ -94,6 +84,19 @@ class FastManySizeDistributions(BaseSizeDistribution):
         )
         c_s_xav = pybamm.x_average(c_s)
         variables.update(self._get_standard_concentration_variables(c_s, c_s_xav))
+
+        # Size-averaged flux variables
+        N_s = pybamm.FullBroadcastToEdges(
+            0,
+            [self.domain.lower() + " particle"],
+            auxiliary_domains={
+                "secondary": self.domain.lower() + " electrode",
+                "tertiary": "current collector",
+            },
+        )
+        N_s_xav = pybamm.FullBroadcastToEdges(
+            0, self.domain.lower() + " particle", "current collector"
+        )
         variables.update(self._get_standard_flux_variables(N_s, N_s_xav))
         return variables
 

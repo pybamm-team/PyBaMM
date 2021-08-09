@@ -32,7 +32,6 @@ class FastSingleSizeDistribution(BaseSizeDistribution):
         # can just use the surface value.
 
         if self.domain == "Negative":
-            # distribution variables
             c_s_surf_xav_distribution = pybamm.Variable(
                 "X-averaged negative particle surface concentration distribution",
                 domain="negative particle size",
@@ -50,7 +49,6 @@ class FastSingleSizeDistribution(BaseSizeDistribution):
             )
 
         elif self.domain == "Positive":
-            # distribution variables
             c_s_surf_xav_distribution = pybamm.Variable(
                 "X-averaged positive particle surface concentration distribution",
                 domain="positive particle size",
@@ -67,30 +65,20 @@ class FastSingleSizeDistribution(BaseSizeDistribution):
                 coord_sys="cartesian",
             )
 
-        # Distribution variables
         variables = self._get_distribution_variables(R)
 
-        # Flux variables (zero)
-        N_s = pybamm.FullBroadcastToEdges(
-            0,
-            [self.domain.lower() + " particle"],
-            auxiliary_domains={
-                "secondary": self.domain.lower() + " electrode",
-                "tertiary": "current collector",
-            },
-        )
-        N_s_xav = pybamm.FullBroadcast(
-            0, self.domain.lower() + " electrode", "current collector"
-        )
-
-        # Standard distribution variables (R-dependent)
+        # Standard distribution variables (size-dependent)
         variables.update(
             self._get_standard_concentration_distribution_variables(
                 c_s_surf_xav_distribution
             )
         )
+        # Flux variables (size-dependent)
+        variables.update(
+            self._get_standard_flux_distribution_variables(pybamm.Scalar(0))
+        )
 
-        # Standard R-averaged variables. Average concentrations using
+        # Standard size-averaged variables. Average concentrations using
         # the volume-weighted distribution since they are volume-based
         # quantities. Necessary for output variables "Total lithium in
         # negative electrode [mol]", etc, to be calculated correctly
@@ -105,7 +93,12 @@ class FastSingleSizeDistribution(BaseSizeDistribution):
         )
         c_s = pybamm.SecondaryBroadcast(c_s_xav, [self.domain.lower() + " electrode"])
         variables.update(self._get_standard_concentration_variables(c_s, c_s_xav))
-        variables.update(self._get_standard_flux_variables(N_s, N_s_xav))
+
+        # Size-averaged flux variables
+        N_s_xav = pybamm.FullBroadcastToEdges(
+            0, self.domain.lower() + " particle", "current collector"
+        )
+        variables.update(self._get_standard_flux_variables(N_s_xav, N_s_xav))
         return variables
 
     def get_coupled_variables(self, variables):

@@ -118,30 +118,24 @@ class FickianSingleSizeDistribution(BaseSizeDistribution):
                 c_s_xav_distribution, T_k_xav
             ) * pybamm.grad(c_s_xav_distribution)
 
-        # Standard R-averaged flux variables. Average using the area-weighted
-        # distribution
-        f_a_dist = variables[
-            "X-averaged "
-            + self.domain.lower()
-            + " area-weighted particle-size distribution"
-        ]
+        # Size-dependent flux variables
+        variables.update(
+            self._get_standard_flux_distribution_variables(N_s_xav_distribution)
+        )
+
+        # Size-averaged flux variables (perform area-weighted avg manually as flux
+        # evals on edges)
         f_a_dist = pybamm.PrimaryBroadcast(
-            f_a_dist,
+            variables[
+                "X-averaged "
+                + self.domain.lower()
+                + " area-weighted particle-size distribution"
+            ],
             [self.domain.lower() + " particle"],
         )
         N_s_xav = pybamm.Integral(f_a_dist * N_s_xav_distribution, R)
         N_s = pybamm.SecondaryBroadcast(N_s_xav, [self.domain.lower() + " electrode"])
         variables.update(self._get_standard_flux_variables(N_s, N_s_xav))
-
-        # Standard distribution flux variables (R-dependent)
-        # (Cannot currently broadcast to "x" as cannot have 4 domains)
-        variables.update(
-            {
-                "X-averaged "
-                + self.domain.lower()
-                + " particle flux distribution": N_s_xav_distribution,
-            }
-        )
 
         variables.update(self._get_total_concentration_variables(variables))
         return variables

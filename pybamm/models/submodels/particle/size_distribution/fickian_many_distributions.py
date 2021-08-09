@@ -29,7 +29,6 @@ class FickianManySizeDistributions(BaseSizeDistribution):
 
     def get_fundamental_variables(self):
         if self.domain == "Negative":
-            # distribution variables
             c_s_distribution = pybamm.Variable(
                 "Negative particle concentration distribution",
                 domain="negative particle",
@@ -43,7 +42,6 @@ class FickianManySizeDistributions(BaseSizeDistribution):
             R = pybamm.standard_spatial_vars.R_n
 
         elif self.domain == "Positive":
-            # distribution variables
             c_s_distribution = pybamm.Variable(
                 "Positive particle concentration distribution",
                 domain="positive particle",
@@ -56,15 +54,14 @@ class FickianManySizeDistributions(BaseSizeDistribution):
             )
             R = pybamm.standard_spatial_vars.R_p
 
-        # Distribution variables
         variables = self._get_distribution_variables(R)
 
-        # Standard distribution variables (R-dependent)
+        # Standard concentration distribution variables (size-dependent)
         variables.update(
             self._get_standard_concentration_distribution_variables(c_s_distribution)
         )
 
-        # Standard R-averaged variables. Average concentrations using
+        # Standard size-averaged variables. Average concentrations using
         # the volume-weighted distribution since they are volume-based
         # quantities. Necessary for output variables "Total lithium in
         # negative electrode [mol]", etc, to be calculated correctly
@@ -82,11 +79,10 @@ class FickianManySizeDistributions(BaseSizeDistribution):
             self.domain + " particle concentration distribution"
         ]
         R = variables[self.domain + " particle sizes"]
-        T_k = variables[self.domain + " electrode temperature"]
 
-        # broadcast to "particle size" domain then again into "particle"
+        # broadcast T to "particle size" domain then again into "particle"
         T_k = pybamm.PrimaryBroadcast(
-            T_k,
+            variables[self.domain + " electrode temperature"],
             [self.domain.lower() + " particle size"],
         )
         T_k = pybamm.PrimaryBroadcast(
@@ -99,7 +95,6 @@ class FickianManySizeDistributions(BaseSizeDistribution):
                 * pybamm.grad(c_s_distribution)
             )
             f_a_dist = self.param.f_a_dist_n(R)
-
         elif self.domain == "Positive":
             N_s_distribution = (
                 -self.param.D_p(c_s_distribution, T_k)
@@ -107,13 +102,15 @@ class FickianManySizeDistributions(BaseSizeDistribution):
             )
             f_a_dist = self.param.f_a_dist_p(R)
 
+        # Size-dependent flux variables
+        variables.update(
+            self._get_standard_flux_distribution_variables(N_s_distribution)
+        )
+
+        # Size-averaged flux variables (perform area-weighted avg manually as flux
+        # evals on edges)
         N_s = pybamm.Integral(f_a_dist * N_s_distribution, R)
         variables.update(self._get_standard_flux_variables(N_s, N_s))
-
-        # Standard distribution flux variables (R-dependent)
-        variables.update(
-            {self.domain + " particle flux distribution": N_s_distribution}
-        )
 
         variables.update(self._get_total_concentration_variables(variables))
         return variables
@@ -122,12 +119,10 @@ class FickianManySizeDistributions(BaseSizeDistribution):
         c_s_distribution = variables[
             self.domain + " particle concentration distribution"
         ]
-
         N_s_distribution = variables[self.domain + " particle flux distribution"]
-
-        R_spatial_variable = variables[self.domain + " particle sizes"]
         R = pybamm.PrimaryBroadcast(
-            R_spatial_variable, [self.domain.lower() + " particle"]
+            variables[self.domain + " particle sizes"],
+            [self.domain.lower() + " particle"]
         )
 
         if self.domain == "Negative":
@@ -155,11 +150,9 @@ class FickianManySizeDistributions(BaseSizeDistribution):
             self.domain + " electrode interfacial current density distribution"
         ]
         R = variables[self.domain + " particle sizes"]
-
-        # Extract T and broadcast to particle size domain
-        T_k = variables[self.domain + " electrode temperature"]
         T_k = pybamm.PrimaryBroadcast(
-            T_k, [self.domain.lower() + " particle size"]
+            variables[self.domain + " electrode temperature"],
+            [self.domain.lower() + " particle size"]
         )
 
         # Set surface Neumann boundary values
@@ -171,7 +164,6 @@ class FickianManySizeDistributions(BaseSizeDistribution):
                 / self.param.a_R_n
                 / self.param.D_n(c_s_surf_distribution, T_k)
             )
-
         elif self.domain == "Positive":
             rbc = (
                 -self.param.C_p
@@ -181,7 +173,6 @@ class FickianManySizeDistributions(BaseSizeDistribution):
                 / self.param.gamma_p
                 / self.param.D_p(c_s_surf_distribution, T_k)
             )
-
         self.boundary_conditions = {
             c_s_distribution: {
                 "left": (pybamm.Scalar(0), "Neumann"),

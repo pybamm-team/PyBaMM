@@ -212,13 +212,7 @@ class BaseSizeDistribution(BaseParticle):
             c_s_distribution = c_s
 
             # x-average the *tertiary* domain.
-            # NOTE: not yet implemented
-            # x = pybamm.SpatialVariable(
-            #   "x", domain=[self.domain.lower() + " electrode"]
-            # )
-            # v = pybamm.ones_like(c_s)
-            # l = pybamm.Integral(v, x)
-            # c_s_xav_distribution = pybamm.Integral(c_s, x) / l
+            # NOTE: not yet implemented. Fill with zeros
             c_s_xav_distribution = pybamm.FullBroadcast(
                 0,
                 [self.domain.lower() + " particle"],
@@ -261,5 +255,62 @@ class BaseSizeDistribution(BaseParticle):
             + " particle surface concentration"
             + " distribution [mol.m-3]": c_scale * c_s_surf_distribution,
         }
+        return variables
+
+    def _get_standard_flux_distribution_variables(self, N_s):
+        """
+        Forms standard flux variables that depend on particle size R given
+        the flux variable N_s from the distribution submodel.
+        """
+
+        if [self.domain.lower() + " electrode"] in N_s.auxiliary_domains.values():
+            # N_s depends on x
+
+            N_s_distribution = N_s
+            # x-av the *tertiary* domain
+            # NOTE: not yet implemented. Fill with zeros instead
+            N_s_xav_distribution = pybamm.FullBroadcast(
+                0,
+                [self.domain.lower() + " particle"],
+                {
+                    "secondary": self.domain.lower() + " particle size",
+                    "tertiary": self.domain.lower() + " electrode",
+                    "quaternary": "current collector"
+                },
+            )
+        elif isinstance(N_s, pybamm.Scalar):
+            # N_s is a constant (zero), as in "fast" submodels
+
+            N_s_distribution = pybamm.FullBroadcastToEdges(
+                0,
+                [self.domain.lower() + " particle"],
+                auxiliary_domains={
+                    "secondary": self.domain.lower() + " particle size",
+                    "tertiary": self.domain.lower() + " electrode",
+                    "quaternary": "current collector",
+                },
+            )
+            N_s_xav_distribution = pybamm.FullBroadcastToEdges(
+                0,
+                [self.domain.lower() + " particle"],
+                auxiliary_domains={
+                    "secondary": self.domain.lower() + " particle size",
+                    "tertiary": "current collector",
+                },
+            )
+        else:
+            N_s_xav_distribution = N_s
+            N_s_distribution = pybamm.TertiaryBroadcast(
+                N_s, [self.domain.lower() + " electrode"]
+            )
+
+        variables = {
+            "X-averaged "
+            + self.domain.lower()
+            + " particle flux distribution": N_s_xav_distribution,
+            self.domain
+            + " particle flux distribution": N_s_distribution,
+        }
+
         return variables
 
