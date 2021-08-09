@@ -231,6 +231,24 @@ class TestUnaryOperators(unittest.TestCase):
         self.assertEqual(
             inta_tert.auxiliary_domains, {"secondary": ["some extra domain"]}
         )
+        # space integral with quaternary domain
+        a_quat = pybamm.Symbol(
+            "a",
+            domain=["negative electrode"],
+            auxiliary_domains={
+                "secondary": "current collector",
+                "tertiary": "some extra domain",
+                "quaternary": "another extra domain"
+            },
+        )
+        inta_quat = pybamm.Integral(a_quat, x)
+        self.assertEqual(inta_quat.domain, ["current collector"])
+        self.assertEqual(
+            inta_quat.auxiliary_domains, {
+                "secondary": ["some extra domain"],
+                "tertiary": ["another extra domain"]
+            }
+        )
 
         # space integral *in* secondary domain
         y = pybamm.SpatialVariable("y", ["current collector"])
@@ -244,6 +262,15 @@ class TestUnaryOperators(unittest.TestCase):
         self.assertEqual(
             inta_tert_y.auxiliary_domains, {"secondary": ["some extra domain"]}
         )
+        # with a quaternary domain
+        inta_quat_y = pybamm.Integral(a_quat, y)
+        self.assertEqual(inta_quat_y.domain, ["negative electrode"])
+        self.assertEqual(
+            inta_quat_y.auxiliary_domains, {
+                "secondary": ["some extra domain"],
+                "tertiary": ["another extra domain"]
+            }
+        )
 
         # space integral *in* tertiary domain
         z = pybamm.SpatialVariable("z", ["some extra domain"])
@@ -251,6 +278,26 @@ class TestUnaryOperators(unittest.TestCase):
         self.assertEqual(inta_tert_z.domain, ["negative electrode"])
         self.assertEqual(
             inta_tert_z.auxiliary_domains, {"secondary": ["current collector"]}
+        )
+        # with a quaternary domain
+        inta_quat_z = pybamm.Integral(a_quat, z)
+        self.assertEqual(inta_quat_z.domain, ["negative electrode"])
+        self.assertEqual(
+            inta_quat_z.auxiliary_domains, {
+                "secondary": ["current collector"],
+                "tertiary": ["another extra domain"]
+            }
+        )
+
+        # space integral *in* quaternary domain
+        Z = pybamm.SpatialVariable("Z", ["another extra domain"])
+        inta_quat_Z = pybamm.Integral(a_quat, Z)
+        self.assertEqual(inta_quat_Z.domain, ["negative electrode"])
+        self.assertEqual(
+            inta_quat_Z.auxiliary_domains, {
+                "secondary": ["current collector"],
+                "tertiary": ["some extra domain"]
+            }
         )
 
         # space integral over two variables
@@ -474,6 +521,25 @@ class TestUnaryOperators(unittest.TestCase):
         boundary_a_tert = pybamm.boundary_value(a_tert, "right")
         self.assertEqual(boundary_a_tert.domain, ["current collector"])
         self.assertEqual(boundary_a_tert.auxiliary_domains, {"secondary": ["bla"]})
+        # test with secondary, tertiary and quaternary domains
+        a_quat = pybamm.Symbol(
+            "a",
+            domain=["separator"],
+            auxiliary_domains={
+                "secondary": "current collector",
+                "tertiary": "bla",
+                "quaternary": "another domain"
+            },
+        )
+        boundary_a_quat = pybamm.boundary_value(a_quat, "right")
+        self.assertEqual(boundary_a_quat.domain, ["current collector"])
+        self.assertEqual(
+            boundary_a_quat.auxiliary_domains,
+            {
+                "secondary": ["bla"],
+                "tertiary": ["another domain"]
+            }
+        )
 
         # error if boundary value on tabs and domain is not "current collector"
         var = pybamm.Variable("var", domain=["negative electrode"])

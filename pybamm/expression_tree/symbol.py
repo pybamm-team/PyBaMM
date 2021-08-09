@@ -190,8 +190,8 @@ class Symbol(anytree.NodeMixin):
         is valid over all domains)
     auxiliary_domains : dict of str
         dictionary of auxiliary domains over which the node is valid (empty dictionary
-        indicates no auxiliary domains). Keys can be "secondary" or "tertiary". The
-        symbol is broadcast over its auxiliary domains.
+        indicates no auxiliary domains). Keys can be "secondary", "tertiary" or
+        "quaternary". The symbol is broadcast over its auxiliary domains.
         For example, a symbol might have domain "negative particle", secondary domain
         "separator" and tertiary domain "current collector" (`domain="negative
         particle", auxiliary_domains={"secondary": "separator", "tertiary": "current
