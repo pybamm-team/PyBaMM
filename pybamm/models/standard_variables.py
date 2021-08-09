@@ -311,11 +311,6 @@ class StandardVariables:
             auxiliary_domains={"secondary": "current collector"},
         )
 
-        # Lithium metal thickness
-        self.l_Li = pybamm.Variable(
-            "Lithium metal electrode thickness", domain="current collector"
-        )
-
     def __setattr__(self, name, value):
         value.print_name = name
         super().__setattr__(name, value)

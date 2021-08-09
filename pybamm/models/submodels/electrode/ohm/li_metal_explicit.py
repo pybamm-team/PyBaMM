@@ -30,8 +30,9 @@ class LithiumMetalExplicit(BaseModel):
         param = self.param
 
         i_boundary_cc = variables["Current collector current density"]
-        l_n = variables["Lithium metal electrode thickness"]
-        delta_phi_s = i_boundary_cc * l_n / param.sigma_n
+        T_n = variables["Negative current collector temperature"]
+        l_n = param.l_n
+        delta_phi_s = i_boundary_cc * l_n / param.sigma_n(T_n)
         delta_phi_s_dim = param.potential_scale * delta_phi_s
 
         variables.update(

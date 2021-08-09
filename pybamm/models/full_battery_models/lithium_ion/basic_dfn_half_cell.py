@@ -317,7 +317,7 @@ class BasicDFNHalfCell(BaseModel):
 
         phi_s_cn = 0
         delta_phi = eta_Li + U_Li_ref
-        delta_phis_Li = l_Li * i_cell / sigma_Li
+        delta_phis_Li = l_Li * i_cell / sigma_Li(T)
         ref_potential = phi_s_cn - delta_phis_Li - delta_phi
 
         self.boundary_conditions[phi_e] = {

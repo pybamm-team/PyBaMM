@@ -29,14 +29,19 @@ class BaseModel(pybamm.BaseBatteryModel):
             "separator": self.param.L_x,
             "positive electrode": self.param.L_x,
             "positive particle": self.param.R_p_typ,
-            "negative particle size": self.param.R_n_typ,
             "positive particle size": self.param.R_p_typ,
             "current collector y": self.param.L_z,
             "current collector z": self.param.L_z,
         }
 
+        # Add negative particle domains only if not a half cell model
         if not self.half_cell:
-            self.length_scales.update({"negative particle": self.param.R_n_typ})
+            self.length_scales.update(
+                {
+                    "negative particle": self.param.R_n_typ,
+                    "negative particle size": self.param.R_n_typ,
+                }
+            )
         self.set_standard_output_variables()
 
     def set_standard_output_variables(self):
@@ -51,7 +56,7 @@ class BaseModel(pybamm.BaseBatteryModel):
             )
 
     def set_degradation_variables(self):
-        """ Sets variables that quantify degradation (LAM, LLI, etc) """
+        """Sets variables that quantify degradation (LAM, LLI, etc)"""
         param = self.param
 
         # LAM
