@@ -543,6 +543,7 @@ class LithiumIonParameters(BaseParameters):
         # Electrical
         self.potential_scale = self.R * self.T_ref / self.F
         self.current_scale = self.i_typ
+        self.current_scale.print_name = "I_typ"
         self.j_scale_n = self.i_typ / (self.a_n_typ * self.L_x)
         self.j_scale_p = self.i_typ / (self.a_p_typ * self.L_x)
 
