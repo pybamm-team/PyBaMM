@@ -212,14 +212,13 @@ class BaseSizeDistribution(BaseParticle):
             c_s_distribution = c_s
 
             # x-average the *tertiary* domain.
-            # NOTE: not yet implemented. Fill with zeros
+            # NOTE: not yet implemented. Make 0.5 everywhere
             c_s_xav_distribution = pybamm.FullBroadcast(
-                0,
+                0.5,
                 [self.domain.lower() + " particle"],
                 {
                     "secondary": self.domain.lower() + " particle size",
-                    "tertiary": self.domain.lower() + " electrode",
-                    "quaternary": "current collector"
+                    "tertiary": "current collector"
                 },
             )
 

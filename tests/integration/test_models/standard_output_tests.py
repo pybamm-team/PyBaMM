@@ -316,18 +316,23 @@ class ParticleConcentrationTests(BaseOutputTest):
             pos_end_vs_start = self.c_s_p_rav(t[-1], x_p) - self.c_s_p_rav(t[0], x_p)
         elif self.model.options["particle size"] == "distribution":
             R_n, R_p = self.R_n, self.R_p
-            # Test the concentration variables that depend on particle size
-            neg_diff = self.c_s_n_dist(t[1:], r=r_n, R=R_n) - self.c_s_n_dist(
-                t[:-1], r=r_n, R=R_n
+            # Test the concentration variables that depend on x-R (surface values only,
+            # as 3D vars not implemented)
+            neg_diff = (
+                self.c_s_n_surf_dist(t[1:], x=x_n, R=R_n)
+                - self.c_s_n_surf_dist(t[:-1], x=x_n, R=R_n)
             )
-            pos_diff = self.c_s_p_dist(t[1:], r=r_p, R=R_p) - self.c_s_p_dist(
-                t[:-1], r=r_p, R=R_p
+            pos_diff = (
+                self.c_s_p_surf_dist(t[1:], x=x_p, R=R_p)
+                - self.c_s_p_surf_dist(t[:-1], x=x_p, R=R_p)
             )
-            neg_end_vs_start = self.c_s_n_dist(t[-1], r=r_n, R=R_n) - self.c_s_n_dist(
-                t[0], r=r_n, R=R_n
+            neg_end_vs_start = (
+                self.c_s_n_surf_dist(t[-1], x=x_n, R=R_n)
+                - self.c_s_n_surf_dist(t[0], x=x_n, R=R_n)
             )
-            pos_end_vs_start = self.c_s_p_dist(t[-1], r=r_p, R=R_p) - self.c_s_p_dist(
-                t[0], r=r_p, R=R_p
+            pos_end_vs_start = (
+                self.c_s_p_surf_dist(t[-1], x=x_p, R=R_p)
+                - self.c_s_p_surf_dist(t[0], x=x_p, R=R_p)
             )
             tol = 1e-15
         else:
@@ -363,11 +368,22 @@ class ParticleConcentrationTests(BaseOutputTest):
         np.testing.assert_array_less(self.c_s_p(t, x_p, r_p), 1)
         if self.model.options["particle size"] == "distribution":
             R_n, R_p = self.R_n, self.R_p
+            # Cannot have 3D processed variables, so test concs that depend on
+            # r-R and x-R
+
+            # r-R (x-averaged)
             np.testing.assert_array_less(-self.c_s_n_dist(t, r=r_n, R=R_n), 0)
             np.testing.assert_array_less(-self.c_s_p_dist(t, r=r_p, R=R_p), 0)
 
             np.testing.assert_array_less(self.c_s_n_dist(t, r=r_n, R=R_n), 1)
             np.testing.assert_array_less(self.c_s_p_dist(t, r=r_p, R=R_p), 1)
+
+            # x-R (surface concentrations)
+            np.testing.assert_array_less(-self.c_s_n_surf_dist(t, x=x_n, R=R_n), 0)
+            np.testing.assert_array_less(-self.c_s_p_surf_dist(t, x=x_p, R=R_p), 0)
+
+            np.testing.assert_array_less(self.c_s_n_surf_dist(t, x=x_n, R=R_n), 1)
+            np.testing.assert_array_less(self.c_s_p_surf_dist(t, x=x_p, R=R_p), 1)
 
     def test_conservation(self):
         """Test amount of lithium stored across all particles and in SEI layers is

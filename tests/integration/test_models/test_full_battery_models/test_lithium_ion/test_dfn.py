@@ -257,6 +257,53 @@ class TestDFNWithCrack(unittest.TestCase):
         modeltest.test_all()
 
 
+class TestDFNWithSizeDistribution(unittest.TestCase):
+    def setUp(self):
+        params = pybamm.ParameterValues(chemistry=pybamm.parameter_sets.Marquis2019)
+        self.params = pybamm.get_size_distribution_parameters(params)
+
+        var = pybamm.standard_spatial_vars
+        self.var_pts = {
+            var.x_n: 5,
+            var.x_s: 5,
+            var.x_p: 5,
+            var.r_n: 5,
+            var.r_p: 5,
+            var.R_n: 5,
+            var.R_p: 5,
+            var.y: 5,
+            var.z: 5,
+        }
+
+    def test_basic_processing(self):
+        options = {"particle size": "distribution"}
+        model = pybamm.lithium_ion.DFN(options)
+        modeltest = tests.StandardModelTest(
+            model, parameter_values=self.params, var_pts=self.var_pts
+        )
+        modeltest.test_all()
+
+    def test_uniform_profile(self):
+        options = {"particle size": "distribution", "particle": "uniform profile"}
+        model = pybamm.lithium_ion.DFN(options)
+        modeltest = tests.StandardModelTest(
+            model, parameter_values=self.params, var_pts=self.var_pts
+        )
+        modeltest.test_all()
+
+    def test_4D_basic_processing(self):
+        options = {
+            "particle size": "distribution",
+            "current collector": "potential pair",
+            "dimensionality": "1"
+        }
+        model = pybamm.lithium_ion.DFN(options)
+        modeltest = tests.StandardModelTest(
+            model, parameter_values=self.params, var_pts=self.var_pts
+        )
+        modeltest.test_all(skip_output_tests=True)
+
+
 if __name__ == "__main__":
     print("Add -v for more debug output")
     import sys
