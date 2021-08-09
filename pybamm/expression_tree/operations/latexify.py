@@ -235,7 +235,7 @@ class Latexify:
         # Add model name to the list
         eqn_list.append(
             sympy.Symbol(
-                r"\underline{\textbf{\large{" + self.model.name + " Equations}}}"
+                r"\large{\underline{\textbf{" + self.model.name + " Equations}}}"
             )
         )
 
