@@ -532,6 +532,8 @@ class TestParameterValues(unittest.TestCase):
         self.assertEqual(func_proc.id, pybamm.Scalar(2, name="func").id)
 
         # test with auxiliary domains
+
+        # secondary
         var = pybamm.Variable(
             "var", domain="test", auxiliary_domains={"secondary": "test sec"}
         )
@@ -545,6 +547,7 @@ class TestParameterValues(unittest.TestCase):
             pybamm.PrimaryBroadcast(pybamm.Scalar(2, name="func"), "test sec").id,
         )
 
+        # secondary and tertiary
         var = pybamm.Variable(
             "var",
             domain="test",
@@ -559,6 +562,30 @@ class TestParameterValues(unittest.TestCase):
             func_proc.id,
             pybamm.FullBroadcast(
                 pybamm.Scalar(2, name="func"), "test sec", "test tert"
+            ).id,
+        )
+
+        # secondary, tertiary and quaternary
+        var = pybamm.Variable(
+            "var",
+            domain="test",
+            auxiliary_domains={
+                "secondary": "test sec",
+                "tertiary": "test tert",
+                "quaternary": "test quat"
+            },
+        )
+        func = pybamm.x_average(pybamm.FunctionParameter("func", {"var": var}))
+
+        param = pybamm.ParameterValues({"func": 2})
+        func_proc = param.process_symbol(func)
+
+        self.assertEqual(
+            func_proc.id,
+            pybamm.FullBroadcast(
+                pybamm.Scalar(2, name="func"),
+                "test sec",
+                {"secondary": "test tert", "tertiary": "test quat"}
             ).id,
         )
 
