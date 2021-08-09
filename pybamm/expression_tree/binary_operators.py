@@ -825,9 +825,11 @@ def simplified_addition(left, right):
             for left_dim_size, right_dim_size in zip(
                 left.shape_for_testing, right.shape_for_testing
             )
+        # And in each dimension, both evaluate on edges or on nodes (need only check for
+        # domains of left or right object since they already match)
         ) and all(
             left.evaluates_on_edges(dim) == right.evaluates_on_edges(dim)
-            for dim in ["primary", "secondary", "tertiary", "quaternary"]
+            for dim in left.domains.keys()
         ):
             return right
     elif pybamm.is_matrix_zero(right):
@@ -841,7 +843,7 @@ def simplified_addition(left, right):
             )
         ) and all(
             left.evaluates_on_edges(dim) == right.evaluates_on_edges(dim)
-            for dim in ["primary", "secondary", "tertiary", "quaternary"]
+            for dim in left.domains.keys()
         ):
             return left
 
@@ -919,7 +921,7 @@ def simplified_subtraction(left, right):
             )
         ) and all(
             left.evaluates_on_edges(dim) == right.evaluates_on_edges(dim)
-            for dim in ["primary", "secondary", "tertiary", "quaternary"]
+            for dim in left.domains.keys()
         ):
             return -right
     if pybamm.is_matrix_zero(right):
@@ -933,7 +935,7 @@ def simplified_subtraction(left, right):
             )
         ) and all(
             left.evaluates_on_edges(dim) == right.evaluates_on_edges(dim)
-            for dim in ["primary", "secondary", "tertiary", "quaternary"]
+            for dim in left.domains.keys()
         ):
             return left
 
@@ -984,7 +986,7 @@ def simplified_multiplication(left, right):
     try:
         if left.shape_for_testing == right.shape_for_testing and all(
             left.evaluates_on_edges(dim) == right.evaluates_on_edges(dim)
-            for dim in ["primary", "secondary", "tertiary", "quaternary"]
+            for dim in left.domains.keys()
         ):
             if pybamm.is_matrix_one(left):
                 return right
@@ -1152,8 +1154,10 @@ def simplified_division(left, right):
     # (and possibly more generally, but not implemented here)
     try:
         if left.shape_for_testing == right.shape_for_testing and all(
-            left.evaluates_on_edges(dim) == right.evaluates_on_edges(dim)
-            for dim in ["primary", "secondary", "tertiary", "quaternary"]
+            left.evaluates_on_edges(left_dim) == right.evaluates_on_edges(right_dim)
+            for left_dim, right_dim in zip(
+                left.domains.keys(), right.domains.keys()
+            )
         ):
             if pybamm.is_matrix_one(right):
                 return left

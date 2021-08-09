@@ -395,7 +395,7 @@ class TertiaryBroadcast(Broadcast):
 
     def _unary_new_copy(self, child):
         """See :meth:`pybamm.UnaryOperator._unary_new_copy()`."""
-        return TertiaryBroadcast(child, self.broadcast_domain)
+        return self.__class__(child, self.broadcast_domain)
 
     def _evaluate_for_shape(self):
         """
