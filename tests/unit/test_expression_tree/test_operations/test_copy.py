@@ -1,7 +1,6 @@
 #
 # Test for making copies
 #
-from pybamm.expression_tree.broadcasts import TertiaryBroadcast
 import numpy as np
 import pybamm
 import unittest
@@ -13,7 +12,8 @@ class TestCopy(unittest.TestCase):
         a = pybamm.Parameter("a")
         b = pybamm.Parameter("b")
         v_n = pybamm.Variable("v", "negative electrode")
-        v_n_2D = pybamm.Variable("v",
+        v_n_2D = pybamm.Variable(
+            "v",
             domain="negative particle",
             auxiliary_domains={"secondary": "negative electrode"}
         )

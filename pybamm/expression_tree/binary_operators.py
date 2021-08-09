@@ -851,14 +851,13 @@ def simplified_addition(left, right):
             return right * pybamm.ones_like(left)
         # If left object is zero and has size smaller than or equal to right object in
         # all dimensions, we can safely return the right object. For example, adding a
-        # zero vector a matrix, we can just return the matrix
+        # zero vector a matrix, we can just return the matrix.
+        # When checking evaluation on edges, check dimensions of left object only
         elif all(
             left_dim_size <= right_dim_size
             for left_dim_size, right_dim_size in zip(
                 left.shape_for_testing, right.shape_for_testing
             )
-        # And in each dimension, both evaluate on edges or on nodes (need only check for
-        # domains of left or right object since they already match)
         ) and all(
             left.evaluates_on_edges(dim) == right.evaluates_on_edges(dim)
             for dim in left.domains.keys()
