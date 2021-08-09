@@ -144,6 +144,6 @@ class FirstOrder(BaseElectrolyteDiffusion):
             pybamm.PrimaryBroadcast(eps_p_0, "positive electrode"),
         )
 
-        variables.update(self._get_total_concentration_electrolyte(c_e, eps))
+        variables.update(self._get_total_concentration_electrolyte(eps * c_e))
 
         return variables
