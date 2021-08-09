@@ -56,7 +56,13 @@ class SpatialMethod:
             ).npts
         else:
             tert_mesh_npts = 1
-        return sec_mesh_npts * tert_mesh_npts
+        if "quaternary" in auxiliary_domains:
+            quat_mesh_npts = self.mesh.combine_submeshes(
+                *auxiliary_domains["quaternary"]
+            ).npts
+        else:
+            quat_mesh_npts = 1
+        return sec_mesh_npts * tert_mesh_npts * quat_mesh_npts
 
     @property
     def mesh(self):
@@ -102,7 +108,8 @@ class SpatialMethod:
             The auxiliary domains for broadcasting
         broadcast_type : str
             The type of broadcast: 'primary to node', 'primary to edges', 'secondary to
-            nodes', 'secondary to edges', 'full to nodes' or 'full to edges'
+            nodes', 'secondary to edges', 'tertiary to nodes', 'tertiary to edges',
+            'full to nodes' or 'full to edges'
 
         Returns
         -------
@@ -116,6 +123,9 @@ class SpatialMethod:
         secondary_domain_size = self._get_auxiliary_domain_repeats(
             {k: v for k, v in auxiliary_domains.items() if k == "secondary"}
         )
+        tertiary_domain_size = self._get_auxiliary_domain_repeats(
+            {k: v for k, v in auxiliary_domains.items() if k == "tertiary"}
+        )
         auxiliary_domains_size = self._get_auxiliary_domain_repeats(auxiliary_domains)
         full_domain_size = primary_domain_size * auxiliary_domains_size
         if broadcast_type.endswith("to edges"):
@@ -123,6 +133,7 @@ class SpatialMethod:
             primary_domain_size += 1
             full_domain_size = primary_domain_size * auxiliary_domains_size
             secondary_domain_size += 1
+            tertiary_domain_size += 1
 
         if broadcast_type.startswith("primary"):
             # Make copies of the child stacked on top of each other
@@ -138,6 +149,11 @@ class SpatialMethod:
             # Make copies of the child stacked on top of each other
             identity = eye(symbol.shape[0])
             matrix = vstack([identity for _ in range(secondary_domain_size)])
+            out = pybamm.Matrix(matrix) @ symbol
+        elif broadcast_type.startswith("tertiary"):
+            # Make copies of the child stacked on top of each other
+            identity = eye(symbol.shape[0])
+            matrix = vstack([identity for _ in range(tertiary_domain_size)])
             out = pybamm.Matrix(matrix) @ symbol
         elif broadcast_type.startswith("full"):
             out = symbol * pybamm.Vector(np.ones(full_domain_size), domain=domain)
