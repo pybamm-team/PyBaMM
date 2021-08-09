@@ -1185,10 +1185,8 @@ def simplified_division(left, right):
     # (and possibly more generally, but not implemented here)
     try:
         if left.shape_for_testing == right.shape_for_testing and all(
-            left.evaluates_on_edges(left_dim) == right.evaluates_on_edges(right_dim)
-            for left_dim, right_dim in zip(
-                left.domains.keys(), right.domains.keys()
-            )
+            left.evaluates_on_edges(dim) == right.evaluates_on_edges(dim)
+            for dim in left.domains.keys()
         ):
             if pybamm.is_matrix_one(right):
                 return left
