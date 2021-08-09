@@ -727,15 +727,18 @@ class ParameterValues:
                         return integrand.orphans[0]
                     else:
                         domain = integrand.auxiliary_domains["secondary"]
-                        if "tertiary" not in integrand.auxiliary_domains:
-                            return pybamm.PrimaryBroadcast(integrand.orphans[0], domain)
-                        else:
+                        if "tertiary" in integrand.auxiliary_domains:
                             auxiliary_domains = {
                                 "secondary": integrand.auxiliary_domains["tertiary"]
                             }
+                            if "quaternary" in integrand.auxiliary_domains:
+                                quat_domain = integrand.auxiliary_domains["quaternary"]
+                                auxiliary_domains["tertiary"] = quat_domain
                             return pybamm.FullBroadcast(
                                 integrand.orphans[0], domain, auxiliary_domains
                             )
+                        else:
+                            return pybamm.PrimaryBroadcast(integrand.orphans[0], domain)
                 # left is "integral of concatenation of broadcasts"
                 elif isinstance(new_left.child, pybamm.Concatenation) and all(
                     isinstance(child, pybamm.Broadcast)
