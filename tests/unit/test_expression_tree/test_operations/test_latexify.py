@@ -17,6 +17,9 @@ func_spme = str(model_spme.latexify())
 
 class TestLatexify(unittest.TestCase):
     def test_latexify(self):
+        # Test model name
+        self.assertIn("Single Particle Model with electrolyte Equations", func_spme)
+
         # Test newline=False
         self.assertIn(r"\\", str(model_spme.latexify(newline=False)))
 

@@ -27,6 +27,7 @@ class Latexify:
         Default is True, If True, returns every equation in a new line.
         If False, returns the list of all the equations.
 
+    Load model
     >>> model = pybamm.lithium_ion.SPM()
 
     This will returns all model equations in png
@@ -83,9 +84,7 @@ class Latexify:
         return list(dict.fromkeys(concat_displays))
 
     def _get_concat_geometry_displays(self, var):
-        """
-        Returns a list of min/max ranges of all concatenation nodes in latex.
-        """
+        """Returns a list of min/max ranges of all concatenation nodes in latex."""
         geo = []
 
         if not var.domain:
@@ -189,10 +188,12 @@ class Latexify:
 
         return bcs_eqn_list
 
-    def _get_names(self, node):
-        nodes_list1 = []
-        nodes_list2 = []
+    def _get_param_var(self, node):
+        """Returns a list of parameters and a list of variables."""
+        param_list = []
+        var_list = []
         dfs_nodes = [node]
+
         while dfs_nodes:
             node = dfs_nodes.pop()
             if getattr(node, "print_name", None) is not None:
@@ -211,6 +212,7 @@ class Latexify:
                 node_latex = sympy.Eq(
                     sympy.Symbol(node.print_name), sympy.Symbol(node_copy_latex)
                 )
+                # If it contains name, append it to var_list
                 if isinstance(
                     node_copy,
                     (
@@ -220,27 +222,32 @@ class Latexify:
                         pybamm.Scalar,
                     ),
                 ):
-                    nodes_list2.append(node_latex)
+                    var_list.append(node_latex)
+                # Else append parameters to param_list
                 else:
-                    nodes_list1.append(node_latex)
+                    param_list.append(node_latex)
             dfs_nodes.extend(node.children)
 
-        return nodes_list1, nodes_list2
+        return param_list, var_list
 
     def latexify(self):
-        """
-        Main latexify function
-        """
         eqn_list = []
-        all_names1 = []
-        all_names2 = []
+        param_list = []
+        var_list = []
+
+        # Add model name to the list
+        eqn_list.append(
+            sympy.Symbol(
+                r"\underline{\textbf{\large{" + self.model.name + " Equations}}}"
+            )
+        )
 
         for eqn_type in ["rhs", "algebraic"]:
             for var, eqn in getattr(self.model, eqn_type).items():
                 var_symbol = sympy.symbols(var.print_name)
 
-                # Add equation name in the list
-                eqn_list.append(sympy.Symbol(r"\\\\ \textbf{" + str(var) + "}"))
+                # Add equation name to the list
+                eqn_list.append(sympy.Symbol(r"\\ \textbf{" + str(var) + "}"))
 
                 # Set lhs derivative
                 lhs = sympy.Derivative(var_symbol, "t")
@@ -288,40 +295,42 @@ class Latexify:
                     use_unicode="True",
                 )
 
-                # Add model equations in the list
+                # Add model equations to the list
                 eqn_list.append(lhs_rhs)
 
-                # Add concatenation in the list
+                # Add concatenation to the list
                 if concat_displays:
                     eqn_list.append(concat_displays)
 
-                # Add initial conditions in the list
+                # Add initial conditions to the list
                 if not eqn_type == "algebraic":
                     eqn_list.extend([init_eqn])
 
-                # Add boundary condition equations in the list
+                # Add boundary condition equations to the list
                 eqn_list.extend(bcs)
 
-                # Add names in the all_names list
-                list1, list2 = self._get_names(eqn)
-                all_names1.extend(list1)
-                all_names2.extend(list2)
+                # Add parameters and variables to the list
+                list1, list2 = self._get_param_var(eqn)
+                param_list.extend(list1)
+                var_list.extend(list2)
 
-        # Add voltage expression in the list
+        # Add voltage expression to the list
         if "Terminal voltage [V]" in self.model.variables:
             voltage = self.model.variables["Terminal voltage [V]"].to_equation()
             voltage_eqn = sympy.Eq(sympy.symbols("V"), voltage, evaluate=False)
-            # Add terminal voltage in the list
-            eqn_list.append(sympy.Symbol(r"\\\\ \textbf{Terminal voltage [V]}"))
+            # Add terminal voltage to the list
+            eqn_list.append(sympy.Symbol(r"\\ \textbf{Terminal voltage [V]}"))
             eqn_list.extend([voltage_eqn])
 
         # Remove duplicates from the list whilst preserving order
-        all_names1 = list(dict.fromkeys(all_names1))
-        all_names2 = list(dict.fromkeys(all_names2))
-        # Add names in the list
-        eqn_list.append(sympy.Symbol(r"\\\\ \textbf{Parameters and Variables}"))
-        eqn_list.extend(all_names1)
-        eqn_list.extend(all_names2)
+        param_list = list(dict.fromkeys(param_list))
+        var_list = list(dict.fromkeys(var_list))
+        # Add Parameters and Variables to the list
+        eqn_list.append(sympy.Symbol(r"\\ \textbf{Parameters and Variables}"))
+        # Add parameters to the list
+        eqn_list.extend(param_list)
+        # Add names to the list
+        eqn_list.extend(var_list)
 
         # Split list with new lines
         eqn_new_line = sympy.Symbol(r"\\\\".join(map(custom_print_func, eqn_list)))

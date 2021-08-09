@@ -939,7 +939,11 @@ class BaseModel:
             return pybamm.CasadiSolver(mode="safe")
 
     def latexify(self, filename=None, newline=True):
+        # For docstring, see pybamm.expression_tree.operations.latexify.Latexify
         return Latexify(self, filename, newline).latexify()
+
+    # Set :meth:`latexify` docstring from :class:`Latexify`
+    latexify.__doc__ = Latexify.__doc__
 
 
 # helper functions for finding symbols
