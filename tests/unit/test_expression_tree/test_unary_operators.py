@@ -868,6 +868,7 @@ class TestUnaryOperators(unittest.TestCase):
         b = pybamm.Symbol("b", domain="current collector")
         c = pybamm.Symbol("c", domain="test")
         d = pybamm.Symbol("d", domain=["negative electrode"])
+        one = pybamm.Symbol("1", domain="negative particle")
 
         # Test print_name
         pybamm.Floor.print_name = "test"
@@ -889,6 +890,9 @@ class TestUnaryOperators(unittest.TestCase):
         )
 
         # Test BoundaryValue
+        self.assertEqual(
+            pybamm.BoundaryValue(one, "right").to_equation(), sympy.symbols("1")
+        )
         self.assertEqual(
             pybamm.BoundaryValue(a, "right").to_equation(), sympy.symbols("a^{surf}")
         )

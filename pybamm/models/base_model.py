@@ -1,20 +1,23 @@
 #
 # Base model class
 #
-import casadi
-import numpy as np
 import numbers
-import pybamm
 import warnings
 from collections import OrderedDict
 
+import casadi
+import numpy as np
 
-class BaseModel(object):
-    """Base model class for other models to extend.
+import pybamm
+from pybamm.expression_tree.operations.latexify import Latexify
+
+
+class BaseModel:
+    """
+    Base model class for other models to extend.
 
     Attributes
     ----------
-
     name: str
         A string giving the name of the model
     options: dict
@@ -81,7 +84,6 @@ class BaseModel(object):
         algorithm to calculate the Jacobian.
 
         Default is "casadi".
-
     """
 
     def __init__(self, name="Unnamed model"):
@@ -935,6 +937,13 @@ class BaseModel(object):
             return pybamm.CasadiAlgebraicSolver()
         else:
             return pybamm.CasadiSolver(mode="safe")
+
+    def latexify(self, filename=None, newline=True):
+        # For docstring, see pybamm.expression_tree.operations.latexify.Latexify
+        return Latexify(self, filename, newline).latexify()
+
+    # Set :meth:`latexify` docstring from :class:`Latexify`
+    latexify.__doc__ = Latexify.__doc__
 
 
 # helper functions for finding symbols
