@@ -532,6 +532,11 @@ class Integral(SpatialOperator):
                     self._integration_dimension = "secondary"
                 elif var.domain == child.domains["tertiary"]:
                     self._integration_dimension = "tertiary"
+                elif (
+                    "quaternary" in child.auxiliary_domains
+                    and var.domain == child.auxiliary_domains["quaternary"]
+                ):
+                    self._integration_dimension = "quaternary"
                 else:
                     raise pybamm.DomainError(
                         "integration_variable must be the same as child domain or "
@@ -552,6 +557,10 @@ class Integral(SpatialOperator):
                     auxiliary_domains = {
                         "secondary": child.auxiliary_domains["tertiary"]
                     }
+                    if "quaternary" in child.auxiliary_domains:
+                        auxiliary_domains["tertiary"] = child.auxiliary_domains[
+                            "quaternary"
+                        ]
                 else:
                     auxiliary_domains = {}
             # if child has no auxiliary domain, integral removes domain
@@ -559,18 +568,32 @@ class Integral(SpatialOperator):
                 domain = []
                 auxiliary_domains = {}
         elif self._integration_dimension == "secondary":
-            # integral in the secondary dimension keeps the same domain, moves tertiary
-            # domain to secondary domain
+            # integral in the secondary dimension keeps the same domain, moves
+            # quaternary to tertiary and tertiary to secondary domain
             domain = child.domain
             if "tertiary" in child.auxiliary_domains:
                 auxiliary_domains = {"secondary": child.auxiliary_domains["tertiary"]}
+                if "quaternary" in child.auxiliary_domains:
+                    auxiliary_domains["tertiary"] = child.auxiliary_domains[
+                        "quaternary"
+                    ]
             else:
                 auxiliary_domains = {}
         elif self._integration_dimension == "tertiary":
-            # integral in the tertiary dimension keeps the domain and secondary domain
+            # integral in the tertiary dimension keeps the domain and secondary domain,
+            # moves quaternary to tertiary
             domain = child.domain
             auxiliary_domains = {"secondary": child.auxiliary_domains["secondary"]}
-
+            if "quaternary" in child.auxiliary_domains:
+                auxiliary_domains["tertiary"] = child.auxiliary_domains["quaternary"]
+        elif self._integration_dimension == "quaternary":
+            # integral in the quaternary dimension keeps the domain, secondary and
+            # tertiary domains
+            domain = child.domain
+            auxiliary_domains = {
+                "secondary": child.auxiliary_domains["secondary"],
+                "tertiary": child.auxiliary_domains["tertiary"],
+            }
         if any(isinstance(var, pybamm.SpatialVariable) for var in integration_variable):
             name += " {}".format(child.domain)
 
@@ -897,8 +920,11 @@ class BoundaryOperator(SpatialOperator):
         self.side = side
         # boundary value of a child takes the domain from auxiliary domain of the child
         domain = child.domains["secondary"]
-        # tertiary auxiliary domain shift down to secondary
-        auxiliary_domains = {"secondary": child.domains["tertiary"]}
+        # tertiary auxiliary domain shift down to secondary, quarternary to tertiary
+        auxiliary_domains = {
+            "secondary": child.domains["tertiary"],
+            "tertiary": child.domains["quaternary"],
+        }
         super().__init__(
             name, child, domain=domain, auxiliary_domains=auxiliary_domains
         )

@@ -126,9 +126,13 @@ class FuzzyDict(dict):
 
 class DomainDict(dict):
     def update(self, items):
-        if any(key not in ["primary", "secondary", "tertiary"] for key in items):
+        if any(
+            key not in ["primary", "secondary", "tertiary", "quaternary"]
+            for key in items
+        ):
             raise KeyError(
-                "DomainDict keys must be 'primary', 'secondary', or 'tertiary'"
+                "DomainDict keys must be 'primary', 'secondary', 'tertiary', "
+                "or 'quaternary'"
             )
         return super().update(
             {k: v for k, v in items.items() if (k == "primary" or v != [])}
