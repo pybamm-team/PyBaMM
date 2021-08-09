@@ -64,6 +64,7 @@ class TestCopy(unittest.TestCase):
             pybamm.minimum(a, b),
             pybamm.maximum(a, b),
             pybamm.SparseStack(mat, mat),
+            pybamm.Equality(a, b),
         ]:
             self.assertEqual(symbol.id, symbol.new_copy().id)
 
