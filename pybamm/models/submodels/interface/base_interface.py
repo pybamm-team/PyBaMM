@@ -406,6 +406,10 @@ class BaseInterface(pybamm.BaseSubModel):
             a_n, pybamm.FullBroadcast(0, "separator", "current collector"), a_p
         )
 
+        # Override print_name
+        j.print_name = "J"
+        a.print_name = "a"
+
         s_n, s_p = self._get_electrolyte_reaction_signed_stoichiometry()
         s = pybamm.concatenation(
             pybamm.FullBroadcast(s_n, "negative electrode", "current collector"),

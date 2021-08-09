@@ -8,7 +8,7 @@ import unittest
 class TestBaseParameters(unittest.TestCase):
     def test__setattr__(self):
         param = pybamm.ElectricalParameters()
-        self.assertEqual(param.I_typ.print_name, r"I^{typ}")
+        self.assertEqual(param.I_typ.print_name, r"I{}^{typ}")
 
 
 if __name__ == "__main__":

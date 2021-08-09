@@ -104,8 +104,6 @@ class LithiumIonParameters(BaseParameters):
         self.sigma_cn_dimensional = pybamm.Parameter(
             "Negative current collector conductivity [S.m-1]"
         )
-        self.sigma_n_dim = pybamm.Parameter("Negative electrode conductivity [S.m-1]")
-        self.sigma_p_dim = pybamm.Parameter("Positive electrode conductivity [S.m-1]")
         self.sigma_cp_dimensional = pybamm.Parameter(
             "Positive current collector conductivity [S.m-1]"
         )
@@ -275,7 +273,7 @@ class LithiumIonParameters(BaseParameters):
             "Positive electrode activation energy for cracking rate [kJ.mol-1]"
         )  # noqa
         self.alpha_T_cell_dim = pybamm.Parameter(
-            "Cell thermal expansion coefficien [m.K-1]"
+            "Cell thermal expansion coefficient [m.K-1]"
         )
         self.R_const = pybamm.constants.R
         self.theta_p_dim = (
@@ -342,6 +340,20 @@ class LithiumIonParameters(BaseParameters):
         )
         self.beta_LAM_sei_p_dimensional = pybamm.Parameter(
             "Positive electrode reaction-driven LAM factor [m3.mol-1]"
+        )
+
+    def sigma_n_dimensional(self, T):
+        """Dimensional electrical conductivity in negative electrode"""
+        inputs = {"Temperature [K]": T}
+        return pybamm.FunctionParameter(
+            "Negative electrode conductivity [S.m-1]", inputs
+        )
+
+    def sigma_p_dimensional(self, T):
+        """Dimensional electrical conductivity in positive electrode"""
+        inputs = {"Temperature [K]": T}
+        return pybamm.FunctionParameter(
+            "Positive electrode conductivity [S.m-1]", inputs
         )
 
     def D_e_dimensional(self, c_e, T):
@@ -574,6 +586,8 @@ class LithiumIonParameters(BaseParameters):
         self.D_e_typ = self.D_e_dimensional(self.c_e_typ, self.T_ref)
         self.tau_diffusion_e = self.L_x ** 2 / self.D_e_typ
 
+        self.D_n_typ_dim = self.D_n_dimensional(pybamm.Scalar(1), self.T_ref)
+
         # Particle diffusion timescales
         self.tau_diffusion_n = self.R_n_typ ** 2 / self.D_n_dimensional(
             pybamm.Scalar(1), self.T_ref
@@ -646,14 +660,10 @@ class LithiumIonParameters(BaseParameters):
         self.sigma_cn = (
             self.sigma_cn_dimensional * self.potential_scale / self.i_typ / self.L_x
         )
-        self.sigma_n = self.sigma_n_dim * self.potential_scale / self.i_typ / self.L_x
-        self.sigma_p = self.sigma_p_dim * self.potential_scale / self.i_typ / self.L_x
         self.sigma_cp = (
             self.sigma_cp_dimensional * self.potential_scale / self.i_typ / self.L_x
         )
         self.sigma_cn_prime = self.sigma_cn * self.delta ** 2
-        self.sigma_n_prime = self.sigma_n * self.delta
-        self.sigma_p_prime = self.sigma_p * self.delta
         self.sigma_cp_prime = self.sigma_cp * self.delta ** 2
         self.sigma_cn_dbl_prime = self.sigma_cn_prime * self.delta
         self.sigma_cp_dbl_prime = self.sigma_cp_prime * self.delta
@@ -869,6 +879,34 @@ class LithiumIonParameters(BaseParameters):
             * self.timescale
         ) / self.F
 
+    def sigma_n(self, T):
+        """Dimensionless negative electrode electrical conductivity"""
+        T_dim = self.Delta_T * T + self.T_ref
+        return (
+            self.sigma_n_dimensional(T_dim)
+            * self.potential_scale
+            / self.i_typ
+            / self.L_x
+        )
+
+    def sigma_p(self, T):
+        """Dimensionless positive electrode electrical conductivity"""
+        T_dim = self.Delta_T * T + self.T_ref
+        return (
+            self.sigma_p_dimensional(T_dim)
+            * self.potential_scale
+            / self.i_typ
+            / self.L_x
+        )
+
+    def sigma_n_prime(self, T):
+        """Rescaled dimensionless negative electrode electrical conductivity"""
+        return self.sigma_n(T) * self.delta
+
+    def sigma_p_prime(self, T):
+        """Rescaled dimensionless positive electrode electrical conductivity"""
+        return self.sigma_p(T) * self.delta
+
     def chi(self, c_e, T):
         """
         Thermodynamic factor:
@@ -911,9 +949,7 @@ class LithiumIonParameters(BaseParameters):
         """Dimensionless negative particle diffusivity"""
         sto = c_s_n
         T_dim = self.Delta_T * T + self.T_ref
-        return self.D_n_dimensional(sto, T_dim) / self.D_n_dimensional(
-            pybamm.Scalar(1), self.T_ref
-        )
+        return self.D_n_dimensional(sto, T_dim) / self.D_n_typ_dim
 
     def D_p(self, c_s_p, T):
         """Dimensionless positive particle diffusivity"""

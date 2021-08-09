@@ -172,7 +172,7 @@ class StateVectorBase(pybamm.Symbol):
                 )
         return pybamm.Matrix(jac)
 
-    def new_copy(self):
+    def create_copy(self):
         """See :meth:`pybamm.Symbol.new_copy()`."""
         return StateVector(
             *self.y_slices,

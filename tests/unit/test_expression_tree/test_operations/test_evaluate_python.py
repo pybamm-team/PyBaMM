@@ -8,7 +8,7 @@ import unittest
 import numpy as np
 import scipy.sparse
 from collections import OrderedDict
-from platform import system
+from platform import system, version
 
 
 def test_function(arg):
@@ -457,7 +457,10 @@ class TestEvaluate(unittest.TestCase):
             result = evaluator.evaluate(t=t, y=y)
             np.testing.assert_allclose(result, expr.evaluate(t=t, y=y))
 
-    @unittest.skipIf(system() == "Windows", "JAX not supported on windows")
+    @unittest.skipIf(
+        system() == "Windows" or (system() == "Darwin" and "ARM64" in version()),
+        "JAX not supported on windows or Mac M1",
+    )
     def test_find_symbols_jax(self):
         # test sparse conversion
         constant_symbols = OrderedDict()
@@ -470,7 +473,10 @@ class TestEvaluate(unittest.TestCase):
             list(constant_symbols.values())[0].toarray(), A.entries.toarray()
         )
 
-    @unittest.skipIf(system() == "Windows", "JAX not supported on windows")
+    @unittest.skipIf(
+        system() == "Windows" or (system() == "Darwin" and "ARM64" in version()),
+        "JAX not supported on windows or Mac M1",
+    )
     def test_evaluator_jax(self):
         a = pybamm.StateVector(slice(0, 1))
         b = pybamm.StateVector(slice(1, 2))
@@ -632,7 +638,10 @@ class TestEvaluate(unittest.TestCase):
                 result = evaluator.evaluate(t=t, y=y)
                 np.testing.assert_allclose(result, expr.evaluate(t=t, y=y))
 
-    @unittest.skipIf(system() == "Windows", "JAX not supported on windows")
+    @unittest.skipIf(
+        system() == "Windows" or (system() == "Darwin" and "ARM64" in version()),
+        "JAX not supported on windows or Mac M1",
+    )
     def test_evaluator_jax_jacobian(self):
         a = pybamm.StateVector(slice(0, 1))
         y_tests = [np.array([[2.0]]), np.array([[1.0]]), np.array([1.0])]
@@ -647,7 +656,10 @@ class TestEvaluate(unittest.TestCase):
             result_true = evaluator_jac.evaluate(t=None, y=y)
             np.testing.assert_allclose(result_test, result_true)
 
-    @unittest.skipIf(system() == "Windows", "JAX not supported on windows")
+    @unittest.skipIf(
+        system() == "Windows" or (system() == "Darwin" and "ARM64" in version()),
+        "JAX not supported on windows or Mac M1",
+    )
     def test_evaluator_jax_debug(self):
         a = pybamm.StateVector(slice(0, 1))
         expr = a ** 2
@@ -655,7 +667,10 @@ class TestEvaluate(unittest.TestCase):
         evaluator = pybamm.EvaluatorJax(expr)
         evaluator.debug(y=y_test)
 
-    @unittest.skipIf(system() == "Windows", "JAX not supported on windows")
+    @unittest.skipIf(
+        system() == "Windows" or (system() == "Darwin" and "ARM64" in version()),
+        "JAX not supported on windows or Mac M1",
+    )
     def test_evaluator_jax_inputs(self):
         a = pybamm.InputParameter("a")
         expr = a ** 2
@@ -663,7 +678,10 @@ class TestEvaluate(unittest.TestCase):
         result = evaluator.evaluate(inputs={"a": 2})
         self.assertEqual(result, 4)
 
-    @unittest.skipIf(system() == "Windows", "JAX not supported on windows")
+    @unittest.skipIf(
+        system() == "Windows" or (system() == "Darwin" and "ARM64" in version()),
+        "JAX not supported on windows or Mac M1",
+    )
     def test_jax_coo_matrix(self):
         import jax
 

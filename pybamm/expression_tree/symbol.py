@@ -867,7 +867,7 @@ class Symbol(anytree.NodeMixin):
         """
         return pybamm.CasadiConverter(casadi_symbols).convert(self, t, y, y_dot, inputs)
 
-    def new_copy(self):
+    def create_copy(self):
         """
         Make a new copy of a symbol, to avoid Tree corruption errors while bypassing
         copy.deepcopy(), which is slow.
@@ -878,6 +878,14 @@ class Symbol(anytree.NodeMixin):
                 self, type(self)
             )
         )
+
+    def new_copy(self):
+        """
+        Returns `create_copy` with added attributes
+        """
+        obj = self.create_copy()
+        obj._print_name = self.print_name
+        return obj
 
     @property
     def size(self):

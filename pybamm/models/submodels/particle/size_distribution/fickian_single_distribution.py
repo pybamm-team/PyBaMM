@@ -84,14 +84,13 @@ class FickianSingleSizeDistribution(BaseSizeDistribution):
         # quantities. Necessary for output variables "Total lithium in
         # negative electrode [mol]", etc, to be calculated correctly
         f_v_dist = variables[
-            "X-averaged " + self.domain.lower()
+            "X-averaged "
+            + self.domain.lower()
             + " volume-weighted particle-size distribution"
         ]
         c_s_xav = pybamm.Integral(f_v_dist * c_s_xav_distribution, R)
         c_s = pybamm.SecondaryBroadcast(c_s_xav, [self.domain.lower() + " electrode"])
-        variables.update(
-            self._get_standard_concentration_variables(c_s, c_s_xav)
-        )
+        variables.update(self._get_standard_concentration_variables(c_s, c_s_xav))
         return variables
 
     def get_coupled_variables(self, variables):
@@ -105,28 +104,30 @@ class FickianSingleSizeDistribution(BaseSizeDistribution):
             variables["X-averaged " + self.domain.lower() + " electrode temperature"],
             [self.domain.lower() + " particle size"],
         )
-        T_k_xav = pybamm.PrimaryBroadcast(T_k_xav, [self.domain.lower() + " particle"],)
-        R = pybamm.PrimaryBroadcast(
-            R_spatial_variable, [self.domain.lower() + " particle"],
+        T_k_xav = pybamm.PrimaryBroadcast(
+            T_k_xav,
+            [self.domain.lower() + " particle"],
         )
 
         if self.domain == "Negative":
             N_s_xav_distribution = -self.param.D_n(
                 c_s_xav_distribution, T_k_xav
-            ) * pybamm.grad(c_s_xav_distribution) / R
+            ) * pybamm.grad(c_s_xav_distribution)
         elif self.domain == "Positive":
             N_s_xav_distribution = -self.param.D_p(
                 c_s_xav_distribution, T_k_xav
-            ) * pybamm.grad(c_s_xav_distribution) / R
+            ) * pybamm.grad(c_s_xav_distribution)
 
         # Standard R-averaged flux variables. Average using the area-weighted
         # distribution
         f_a_dist = variables[
-            "X-averaged " + self.domain.lower()
+            "X-averaged "
+            + self.domain.lower()
             + " area-weighted particle-size distribution"
         ]
         f_a_dist = pybamm.PrimaryBroadcast(
-            f_a_dist, [self.domain.lower() + " particle"],
+            f_a_dist,
+            [self.domain.lower() + " particle"],
         )
         # must use "R_spatial_variable" as integration variable, since "R" is a
         # broadcast
@@ -160,19 +161,20 @@ class FickianSingleSizeDistribution(BaseSizeDistribution):
         # Spatial variable R, broadcast into particle
         R_spatial_variable = variables[self.domain + " particle sizes"]
         R = pybamm.PrimaryBroadcast(
-            R_spatial_variable, [self.domain.lower() + " particle"],
+            R_spatial_variable,
+            [self.domain.lower() + " particle"],
         )
         if self.domain == "Negative":
             self.rhs = {
                 c_s_xav_distribution: -(1 / self.param.C_n)
                 * pybamm.div(N_s_xav_distribution)
-                / R
+                / R ** 2
             }
         elif self.domain == "Positive":
             self.rhs = {
                 c_s_xav_distribution: -(1 / self.param.C_p)
                 * pybamm.div(N_s_xav_distribution)
-                / R
+                / R ** 2
             }
 
     def set_boundary_conditions(self, variables):
@@ -246,28 +248,3 @@ class FickianSingleSizeDistribution(BaseSizeDistribution):
             c_init = self.param.c_p_init(1)
 
         self.initial_conditions = {c_s_xav_distribution: c_init}
-
-    def set_events(self, variables):
-        c_s_surf_xav_distribution = variables[
-            "X-averaged "
-            + self.domain.lower()
-            + " particle surface concentration distribution"
-        ]
-        tol = 1e-4
-
-        self.events.append(
-            pybamm.Event(
-                "Minimum " + self.domain.lower() + " particle surface concentration",
-                pybamm.min(c_s_surf_xav_distribution) - tol,
-                pybamm.EventType.TERMINATION,
-            )
-        )
-
-        self.events.append(
-            pybamm.Event(
-                "Maximum " + self.domain.lower() + " particle surface concentration",
-                (1 - tol) - pybamm.max(c_s_surf_xav_distribution),
-                pybamm.EventType.TERMINATION,
-            )
-        )
-

@@ -114,7 +114,7 @@ class BinaryOperator(pybamm.Symbol):
             right_str = "{!s}".format(self.right)
         return "{} {} {}".format(left_str, self.name, right_str)
 
-    def new_copy(self):
+    def create_copy(self):
         """See :meth:`pybamm.Symbol.new_copy()`."""
 
         # process children
@@ -500,6 +500,38 @@ def inner(left, right):
         return left
 
     return pybamm.simplify_if_constant(pybamm.Inner(left, right))
+
+
+class Equality(BinaryOperator):
+    """
+    A node in the expression tree representing an equality comparison between two
+    nodes. Returns 1 if the two nodes evaluate to the same thing and 0 otherwise.
+    **Extends:** :class:`BinaryOperator`
+    """
+
+    def __init__(self, left, right):
+        """See :meth:`pybamm.BinaryOperator.__init__()`."""
+        super().__init__("==", left, right)
+
+    def diff(self, variable):
+        """See :meth:`pybamm.Symbol.diff()`."""
+        # Equality should always be multiplied by something else so hopefully don't
+        # need to worry about shape
+        return pybamm.Scalar(0)
+
+    def _binary_jac(self, left_jac, right_jac):
+        """See :meth:`pybamm.BinaryOperator._binary_jac()`."""
+        # Equality should always be multiplied by something else so hopefully don't
+        # need to worry about shape
+        return pybamm.Scalar(0)
+
+    def _binary_evaluate(self, left, right):
+        """See :meth:`pybamm.BinaryOperator._binary_evaluate()`."""
+        return int(left == right)
+
+    def _binary_new_copy(self, left, right):
+        """See :meth:`pybamm.BinaryOperator._binary_new_copy()`."""
+        return pybamm.Equality(left, right)
 
 
 class _Heaviside(BinaryOperator):
@@ -1104,7 +1136,10 @@ def simplified_multiplication(left, right):
                 return (left * r_left) + (left * r_right)
 
     # Negation simplifications
-    if isinstance(left, pybamm.Negate) and right.is_constant():
+    if isinstance(left, pybamm.Negate) and isinstance(right, pybamm.Negate):
+        # Double negation cancels out
+        return left.orphans[0] * right.orphans[0]
+    elif isinstance(left, pybamm.Negate) and right.is_constant():
         # Simplify (-a) * b to a * (-b) if (-b) is constant
         return left.orphans[0] * (-right)
     elif isinstance(right, pybamm.Negate) and left.is_constant():
@@ -1193,6 +1228,9 @@ def simplified_division(left, right):
                 return l_left * new_right
 
     # Negation simplifications
+    if isinstance(left, pybamm.Negate) and isinstance(right, pybamm.Negate):
+        # Double negation cancels out
+        return left.orphans[0] / right.orphans[0]
     elif isinstance(left, pybamm.Negate) and right.is_constant():
         # Simplify (-a) / b to a / (-b) if (-b) is constant
         return left.orphans[0] / (-right)

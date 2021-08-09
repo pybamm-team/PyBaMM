@@ -12,7 +12,7 @@ Electrode width [m],47E-3,Ai 2020,Not needed for 1D
 Cell cooling surface area [m2],60.484E-4,Ai 2020, pouch
 Cell volume [m3],1.5341E-5,Ai 2020, pouch
 Cell emissivity,0.95,Ai 2020,estimation
-Cell thermal expansion coefficien [m.K-1], 1.1E-6,Ai 2020,
+Cell thermal expansion coefficient [m.K-1], 1.1E-6,Ai 2020,
 ,,,
 # Current collector properties ,,,
 Negative current collector conductivity [S.m-1],58411000,CRC Handbook,copper

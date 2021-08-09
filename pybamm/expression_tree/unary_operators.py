@@ -45,7 +45,7 @@ class UnaryOperator(pybamm.Symbol):
         """See :meth:`pybamm.Symbol.__str__()`."""
         return "{}({!s})".format(self.name, self.child)
 
-    def new_copy(self):
+    def create_copy(self):
         """See :meth:`pybamm.Symbol.new_copy()`."""
         new_child = self.child.new_copy()
         return self._unary_new_copy(new_child)
@@ -618,6 +618,10 @@ class Integral(SpatialOperator):
         """See :meth:`pybamm.Symbol._evaluates_on_edges()`."""
         return False
 
+    def _sympy_operator(self, child):
+        """Override :meth:`pybamm.UnaryOperator._sympy_operator`"""
+        return sympy.Integral(child, sympy.symbols("xn"))
+
 
 class BaseIndefiniteIntegral(Integral):
     """
@@ -958,13 +962,16 @@ class BoundaryValue(BoundaryOperator):
             self.child.domain[0] in ["negative particle", "positive particle"]
             and self.side == "right"
         ):
-            return sympy.Symbol(
-                str(child) + r"^{surf}"
-            )  # value on the surface of the particle
+            # value on the surface of the particle
+            latex_child = sympy.latex(child) + r"^{surf}"
+            return sympy.Symbol(latex_child)
+
         elif self.side == "positive tab":
             return child
+
         else:
-            return sympy.Symbol(str(child) + r"^{" + self.side + r"}")
+            latex_child = sympy.latex(child) + r"^{" + sympy.latex(self.side) + r"}"
+            return sympy.Symbol(latex_child)
 
 
 class BoundaryGradient(BoundaryOperator):
@@ -1116,8 +1123,15 @@ def div(symbol):
     # Divergence commutes with Negate operator
     if isinstance(symbol, pybamm.Negate):
         return -div(symbol.orphans[0])
-    else:
-        return Divergence(symbol)
+    elif isinstance(symbol, (pybamm.Multiplication, pybamm.Division)):
+        left, right = symbol.orphans
+        if isinstance(left, pybamm.Negate):
+            return -div(symbol._binary_new_copy(left.orphans[0], right))
+        # elif isinstance(right, pybamm.Negate):
+        #     return -div(symbol._binary_new_copy(left, right.orphans[0]))
+
+    # Last resort
+    return Divergence(symbol)
 
 
 def laplacian(symbol):

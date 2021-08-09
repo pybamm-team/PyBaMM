@@ -190,6 +190,12 @@ class TestUnaryOperators(unittest.TestCase):
         div = pybamm.div(-pybamm.Gradient(a))
         self.assertEqual(div.id, (-pybamm.Divergence(pybamm.Gradient(a))).id)
 
+        div = pybamm.div(-a * pybamm.Gradient(a))
+        self.assertEqual(div.id, (-pybamm.Divergence(a * pybamm.Gradient(a))).id)
+
+        # div = pybamm.div(a * -pybamm.Gradient(a))
+        # self.assertEqual(div.id, (-pybamm.Divergence(a * pybamm.Gradient(a))).id)
+
     def test_integral(self):
         # space integral
         a = pybamm.Symbol("a", domain=["negative electrode"])
@@ -795,6 +801,7 @@ class TestUnaryOperators(unittest.TestCase):
         a = pybamm.Symbol("a", domain="negative particle")
         b = pybamm.Symbol("b", domain="current collector")
         c = pybamm.Symbol("c", domain="test")
+        d = pybamm.Symbol("d", domain=["negative electrode"])
 
         # Test print_name
         pybamm.Floor.print_name = "test"
@@ -823,7 +830,15 @@ class TestUnaryOperators(unittest.TestCase):
             pybamm.BoundaryValue(b, "positive tab").to_equation(), sympy.symbols(str(b))
         )
         self.assertEqual(
-            pybamm.BoundaryValue(c, "left").to_equation(), sympy.symbols("c^{left}")
+            pybamm.BoundaryValue(c, "left").to_equation(),
+            sympy.Symbol(r"c^{\mathtt{\text{left}}}"),
+        )
+
+        # Test Integral
+        xn = pybamm.SpatialVariable("xn", ["negative electrode"])
+        self.assertEqual(
+            pybamm.Integral(d, xn).to_equation(),
+            sympy.Integral("d", sympy.symbols("xn")),
         )
 
 

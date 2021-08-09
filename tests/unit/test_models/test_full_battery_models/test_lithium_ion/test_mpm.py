@@ -16,6 +16,16 @@ class TestMPM(unittest.TestCase):
         model.build_model()
         model.check_well_posedness()
 
+    def test_default_parameter_values(self):
+        # check default parameters are added correctly
+        model = pybamm.lithium_ion.MPM()
+        self.assertEqual(
+            model.default_parameter_values[
+                "Negative area-weighted mean particle radius [m]"
+            ],
+            1E-05
+        )
+
     def test_lumped_thermal_model_1D(self):
         options = {"thermal": "lumped"}
         model = pybamm.lithium_ion.MPM(options)
@@ -39,6 +49,19 @@ class TestMPM(unittest.TestCase):
         options = {"particle": "uniform profile"}
         model = pybamm.lithium_ion.MPM(options)
         model.check_well_posedness()
+
+    def test_necessary_options(self):
+        options = {"particle size": "single"}
+        with self.assertRaises(pybamm.OptionError):
+            pybamm.lithium_ion.MPM(options)
+        options = {"surface form": "none"}
+        with self.assertRaises(pybamm.OptionError):
+            pybamm.lithium_ion.MPM(options)
+
+    def test_nonspherical_particle_not_implemented(self):
+        options = {"particle shape": "user"}
+        with self.assertRaises(NotImplementedError):
+            pybamm.lithium_ion.MPM(options)
 
     def test_loss_active_material_stress_negative_not_implemented(self):
         options = {"loss of active material": ("stress-driven", "none")}

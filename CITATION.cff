@@ -1,0 +1,29 @@
+cff-version: 1.1.0
+message: "If you use PyBaMM, please cite it as below."
+authors: 
+- family-names: Sulzer
+  given-names: Valentin
+  orcid: "https://orcid.org/0000-0002-8687-327X"
+- family-names: Marquis
+  given-names: Scott G.
+  orcid: "https://orcid.org/0000-0002-6895-990X"
+- family-names: Timms
+  given-names: Robert
+  orcid: "https://orcid.org/0000-0002-8858-4818"
+- family-names: Robinson
+  given-names: Martin
+  orcid: "https://orcid.org/0000-0002-1572-6782"
+- family-names: Chapman
+  given-names: S. Jon
+  orcid: "https://orcid.org/0000-0003-3347-6024"
+journal: "Journal of Open Research Software"
+date-released: 2021-06-08
+doi: 10.5334/jors.309
+keywords: 
+  - "battery modelling"
+  - "expression tree"
+  - "python"
+  - "symbolic differentiation"
+version: 0.4.0
+repository-code: "https://github.com/pybamm-team/PyBaMM"
+title: "Python Battery Mathematical Modelling (PyBaMM)"
