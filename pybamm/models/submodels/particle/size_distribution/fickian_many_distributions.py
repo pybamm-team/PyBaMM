@@ -36,6 +36,7 @@ class FickianManySizeDistributions(BaseSizeDistribution):
                 auxiliary_domains={
                     "secondary": "negative particle size",
                     "tertiary": "negative electrode",
+                    "quaternary": "current collector"
                 },
                 bounds=(0, 1),
             )
@@ -49,6 +50,7 @@ class FickianManySizeDistributions(BaseSizeDistribution):
                 auxiliary_domains={
                     "secondary": "positive particle size",
                     "tertiary": "positive electrode",
+                    "quaternary": "current collector"
                 },
                 bounds=(0, 1),
             )
@@ -79,54 +81,33 @@ class FickianManySizeDistributions(BaseSizeDistribution):
         c_s_distribution = variables[
             self.domain + " particle concentration distribution"
         ]
-        R_spatial_variable = variables[self.domain + " particle sizes"]
-        R = pybamm.PrimaryBroadcast(
-            R_spatial_variable, [self.domain.lower() + " particle"]
-        )
+        R = variables[self.domain + " particle sizes"]
         T_k = variables[self.domain + " electrode temperature"]
 
-        # Variables can currently only have 3 domains, so remove "current collector"
-        # from T_k. If T_k was broadcast to "electrode", take orphan, average
-        # over "current collector", then broadcast to "particle", "particle-size"
-        # and "electrode"
-        if isinstance(T_k, pybamm.Broadcast):
-            T_k = pybamm.yz_average(T_k.orphans[0])
-            T_k = pybamm.FullBroadcast(
-                T_k, self.domain.lower() + " particle",
-                {
-                    "secondary": self.domain.lower() + " particle size",
-                    "tertiary": self.domain.lower() + " electrode"
-                }
-            )
-        else:
-            # broadcast to "particle size" domain then again into "particle"
-            T_k = pybamm.PrimaryBroadcast(
-                T_k,
-                [self.domain.lower() + " particle size"],
-            )
-            T_k = pybamm.PrimaryBroadcast(
-                T_k, [self.domain.lower() + " particle"],
-            )
+        # broadcast to "particle size" domain then again into "particle"
+        T_k = pybamm.PrimaryBroadcast(
+            T_k,
+            [self.domain.lower() + " particle size"],
+        )
+        T_k = pybamm.PrimaryBroadcast(
+            T_k, [self.domain.lower() + " particle"],
+        )
 
         if self.domain == "Negative":
             N_s_distribution = (
                 -self.param.D_n(c_s_distribution, T_k)
                 * pybamm.grad(c_s_distribution)
-                / R
             )
-            f_a_dist = self.param.f_a_dist_n(R_spatial_variable)
+            f_a_dist = self.param.f_a_dist_n(R)
 
         elif self.domain == "Positive":
             N_s_distribution = (
                 -self.param.D_p(c_s_distribution, T_k)
                 * pybamm.grad(c_s_distribution)
-                / R
             )
-            f_a_dist = self.param.f_a_dist_p(R_spatial_variable)
+            f_a_dist = self.param.f_a_dist_p(R)
 
-        # Standard R-averaged flux variables
-        # Use R_spatial_variable, since "R" is a broadcast
-        N_s = pybamm.Integral(f_a_dist * N_s_distribution, R_spatial_variable)
+        N_s = pybamm.Integral(f_a_dist * N_s_distribution, R)
         variables.update(self._get_standard_flux_variables(N_s, N_s))
 
         # Standard distribution flux variables (R-dependent)
@@ -153,13 +134,13 @@ class FickianManySizeDistributions(BaseSizeDistribution):
             self.rhs = {
                 c_s_distribution: -(1 / self.param.C_n)
                 * pybamm.div(N_s_distribution)
-                / R
+                / R ** 2
             }
         elif self.domain == "Positive":
             self.rhs = {
                 c_s_distribution: -(1 / self.param.C_p)
                 * pybamm.div(N_s_distribution)
-                / R
+                / R ** 2
             }
 
     def set_boundary_conditions(self, variables):
@@ -173,7 +154,7 @@ class FickianManySizeDistributions(BaseSizeDistribution):
         j_distribution = variables[
             self.domain + " electrode interfacial current density distribution"
         ]
-        R_variable = variables[self.domain + " particle size"]
+        R = variables[self.domain + " particle sizes"]
 
         # Extract T and broadcast to particle size domain
         T_k = variables[self.domain + " electrode temperature"]
@@ -185,7 +166,7 @@ class FickianManySizeDistributions(BaseSizeDistribution):
         if self.domain == "Negative":
             rbc = (
                 -self.param.C_n
-                * R_variable
+                * R
                 * j_distribution
                 / self.param.a_R_n
                 / self.param.D_n(c_s_surf_distribution, T_k)
@@ -194,7 +175,7 @@ class FickianManySizeDistributions(BaseSizeDistribution):
         elif self.domain == "Positive":
             rbc = (
                 -self.param.C_p
-                * R_variable
+                * R
                 * j_distribution
                 / self.param.a_R_p
                 / self.param.gamma_p
@@ -230,25 +211,3 @@ class FickianManySizeDistributions(BaseSizeDistribution):
             c_init = self.param.c_p_init(x_p)
 
         self.initial_conditions = {c_s_distribution: c_init}
-
-    def set_events(self, variables):
-        c_s_surf_distribution = variables[
-            self.domain + " particle surface concentration distribution"
-        ]
-        tol = 1e-5
-
-        self.events.append(
-            pybamm.Event(
-                "Minimum " + self.domain.lower() + " particle surface concentration",
-                pybamm.min(c_s_surf_distribution) - tol,
-                pybamm.EventType.TERMINATION,
-            )
-        )
-
-        self.events.append(
-            pybamm.Event(
-                "Maximum " + self.domain.lower() + " particle surface concentration",
-                (1 - tol) - pybamm.max(c_s_surf_distribution),
-                pybamm.EventType.TERMINATION,
-            )
-        )

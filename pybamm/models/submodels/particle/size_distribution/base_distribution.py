@@ -171,8 +171,6 @@ class BaseSizeDistribution(BaseParticle):
             )
 
             # Concentration distribution in all domains.
-            # NOTE: currently variables can only have 3 domains, so current collector
-            # is excluded, i.e. pushed off domain list
             c_s_distribution = pybamm.PrimaryBroadcast(
                 c_s_surf_distribution, [self.domain.lower() + " particle"]
             )
@@ -189,15 +187,8 @@ class BaseSizeDistribution(BaseParticle):
             )
 
             # Concentration distribution in all domains.
-            # NOTE: requires broadcast to "tertiary" domain, which is
-            # not implemented. Fill with zeros instead as placeholder
-            c_s_distribution = pybamm.FullBroadcast(
-                0,
-                [self.domain.lower() + " particle"],
-                {
-                    "secondary": self.domain.lower() + " particle size",
-                    "tertiary": self.domain.lower() + " electrode",
-                },
+            c_s_distribution = pybamm.TertiaryBroadcast(
+                c_s_xav_distribution, [self.domain.lower() + " electrode"]
             )
         elif c_s.domain == [
             self.domain.lower() + " particle size"
@@ -214,19 +205,29 @@ class BaseSizeDistribution(BaseParticle):
             )
 
             # Concentration distribution in all domains.
-            # NOTE: currently variables can only have 3 domains, so current collector
-            # is excluded, i.e. pushed off domain list
             c_s_distribution = pybamm.PrimaryBroadcast(
                 c_s_surf_distribution, [self.domain.lower() + " particle"]
             )
         else:
             c_s_distribution = c_s
 
-            # x-average the *tertiary* domain. Do manually using Integral
-            x = pybamm.SpatialVariable("x", domain=[self.domain.lower() + " electrode"])
-            v = pybamm.ones_like(c_s)
-            l = pybamm.Integral(v, x)
-            c_s_xav_distribution = pybamm.Integral(c_s, x) / l
+            # x-average the *tertiary* domain.
+            # NOTE: not yet implemented
+            # x = pybamm.SpatialVariable(
+            #   "x", domain=[self.domain.lower() + " electrode"]
+            # )
+            # v = pybamm.ones_like(c_s)
+            # l = pybamm.Integral(v, x)
+            # c_s_xav_distribution = pybamm.Integral(c_s, x) / l
+            c_s_xav_distribution = pybamm.FullBroadcast(
+                0,
+                [self.domain.lower() + " particle"],
+                {
+                    "secondary": self.domain.lower() + " particle size",
+                    "tertiary": self.domain.lower() + " electrode",
+                    "quaternary": "current collector"
+                },
+            )
 
             # Surface concentration distribution variables
             c_s_surf_distribution = pybamm.surf(c_s)

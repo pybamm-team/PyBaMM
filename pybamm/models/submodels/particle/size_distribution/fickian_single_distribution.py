@@ -97,7 +97,7 @@ class FickianSingleSizeDistribution(BaseSizeDistribution):
         c_s_xav_distribution = variables[
             "X-averaged " + self.domain.lower() + " particle concentration distribution"
         ]
-        R_spatial_variable = variables[self.domain + " particle sizes"]
+        R = variables[self.domain + " particle sizes"]
 
         # broadcast to "particle size" domain then again into "particle"
         T_k_xav = pybamm.PrimaryBroadcast(
@@ -129,9 +129,7 @@ class FickianSingleSizeDistribution(BaseSizeDistribution):
             f_a_dist,
             [self.domain.lower() + " particle"],
         )
-        # must use "R_spatial_variable" as integration variable, since "R" is a
-        # broadcast
-        N_s_xav = pybamm.Integral(f_a_dist * N_s_xav_distribution, R_spatial_variable)
+        N_s_xav = pybamm.Integral(f_a_dist * N_s_xav_distribution, R)
         N_s = pybamm.SecondaryBroadcast(N_s_xav, [self.domain.lower() + " electrode"])
         variables.update(self._get_standard_flux_variables(N_s, N_s_xav))
 

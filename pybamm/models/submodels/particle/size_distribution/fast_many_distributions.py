@@ -149,26 +149,3 @@ class FastManySizeDistributions(BaseSizeDistribution):
             c_init = self.param.c_p_init(x_p)
 
         self.initial_conditions = {c_s_surf_distribution: c_init}
-
-    def set_events(self, variables):
-        c_s_surf_distribution = variables[
-            self.domain
-            + " particle surface concentration distribution"
-        ]
-        tol = 1e-4
-
-        self.events.append(
-            pybamm.Event(
-                "Minimum " + self.domain.lower() + " particle surface concentration",
-                pybamm.min(c_s_surf_distribution) - tol,
-                pybamm.EventType.TERMINATION,
-            )
-        )
-
-        self.events.append(
-            pybamm.Event(
-                "Maximum " + self.domain.lower() + " particle surface concentration",
-                (1 - tol) - pybamm.max(c_s_surf_distribution),
-                pybamm.EventType.TERMINATION,
-            )
-        )
