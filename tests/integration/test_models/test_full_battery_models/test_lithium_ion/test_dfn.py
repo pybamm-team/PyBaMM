@@ -269,8 +269,8 @@ class TestDFNWithSizeDistribution(unittest.TestCase):
             var.x_p: 5,
             var.r_n: 5,
             var.r_p: 5,
-            var.R_n: 5,
-            var.R_p: 5,
+            var.R_n: 3,
+            var.R_p: 3,
             var.y: 5,
             var.z: 5,
         }
@@ -291,11 +291,12 @@ class TestDFNWithSizeDistribution(unittest.TestCase):
         )
         modeltest.test_all()
 
-    def test_4D_basic_processing(self):
+    def test_basic_processing_4D(self):
+        # 4 dimensions: particle, particle size, electrode, current collector
         options = {
             "particle size": "distribution",
             "current collector": "potential pair",
-            "dimensionality": "1"
+            "dimensionality": 1
         }
         model = pybamm.lithium_ion.DFN(options)
         modeltest = tests.StandardModelTest(
