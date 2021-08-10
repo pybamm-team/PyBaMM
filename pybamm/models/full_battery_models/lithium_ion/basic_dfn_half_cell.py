@@ -127,7 +127,7 @@ class BasicDFNHalfCell(BaseModel):
                 pybamm.Parameter("Separator porosity"), "separator"
             )
             eps_w = pybamm.PrimaryBroadcast(
-                pybamm.Parameter("Negative electrode porosity"), "positive electrode"
+                pybamm.Parameter("Positive electrode porosity"), "positive electrode"
             )
             b_e_s = param.b_e_s
             b_e_w = param.b_e_n

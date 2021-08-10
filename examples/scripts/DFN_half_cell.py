@@ -14,7 +14,6 @@ model2 = pybamm.lithium_ion.BasicDFNHalfCell(options=options)
 
 sols = []
 for model in [model1, model2]:
-    # for model in [model2]:
     # create geometry
     geometry = model.default_geometry
 
@@ -44,15 +43,13 @@ for model in [model1, model2]:
 plot = pybamm.QuickPlot(
     sols,
     [
-        # "Positive particle concentration [mol.m-3]",
         "Electrolyte concentration [mol.m-3]",
         "Current [A]",
         "Positive electrode potential [V]",
         "Electrolyte potential [V]",
         "Total lithium in electrolyte [mol]",
-        # "Total lithium in positive electrode [mol]",
         "Positive electrode open circuit potential [V]",
-        ["Terminal voltage [V]"],  # , "Voltage drop in the cell [V]"],
+        ["Terminal voltage [V]"],
         "Negative electrode potential drop [V]",
     ],
     time_unit="seconds",

@@ -540,16 +540,16 @@ class BaseInterface(pybamm.BaseSubModel):
         j0_n = variables[
             "Negative electrode" + self.reaction_name + " exchange current density"
         ]
-        j0_s = pybamm.FullBroadcast(0, "separator", "current collector")
+        zero_s = pybamm.FullBroadcast(0, "separator", "current collector")
         j0_p = variables[
             "Positive electrode" + self.reaction_name + " exchange current density"
         ]
         if self.half_cell:
-            j0 = pybamm.concatenation(j0_s, j0_p)
-            j0_dim = pybamm.concatenation(j0_s, j_p_scale * j0_p)
+            j0 = pybamm.concatenation(zero_s, j0_p)
+            j0_dim = pybamm.concatenation(zero_s, j_p_scale * j0_p)
         else:
-            j0 = pybamm.concatenation(j0_n, j0_s, j0_p)
-            j0_dim = pybamm.concatenation(j_n_scale * j0_n, j0_s, j_p_scale * j0_p)
+            j0 = pybamm.concatenation(j0_n, zero_s, j0_p)
+            j0_dim = pybamm.concatenation(j_n_scale * j0_n, zero_s, j_p_scale * j0_p)
 
         if self.reaction_name == "":
             variables = {
