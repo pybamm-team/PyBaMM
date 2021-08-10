@@ -17,8 +17,9 @@ class BaseInterface(pybamm.BaseSubModel):
         The domain to implement the model, either: 'Negative' or 'Positive'.
     reaction : str
         The name of the reaction being implemented
-    options : dict, optional
-        A dictionary of options to be passed to the model.
+    options: dict
+        A dictionary of options to be passed to the model. See
+        :class:`pybamm.BaseBatteryModel`
 
     **Extends:** :class:`pybamm.BaseSubModel`
     """
