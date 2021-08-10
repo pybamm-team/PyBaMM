@@ -481,11 +481,11 @@ class BaseInterface(pybamm.BaseSubModel):
         elif self.domain == "Positive":
             j_scale = param.j_scale_p
 
-        # Average, and broadcast if necessary
-        j0_av = pybamm.x_average(j0)
         # Size average. For j0 variables that depend on particle size, see
         # "_get_standard_size_distribution_exchange_current_variables"
         j0 = pybamm.size_average(j0)
+        # Average, and broadcast if necessary
+        j0_av = pybamm.x_average(j0)
 
         # X-average, and broadcast if necessary
         if self.half_cell and self.domain == "Negative":
@@ -691,6 +691,8 @@ class BaseInterface(pybamm.BaseSubModel):
         # "_get_standard_size_distribution_ocp_variables"
         ocp = pybamm.size_average(ocp)
 
+        # Size average
+        dUdT = pybamm.size_average(dUdT)
         # Average, and broadcast if necessary
         dUdT_av = pybamm.x_average(dUdT)
         ocp_av = pybamm.x_average(ocp)
@@ -703,11 +705,6 @@ class BaseInterface(pybamm.BaseSubModel):
             )
         elif ocp.domain == ["current collector"]:
             ocp = pybamm.PrimaryBroadcast(ocp, self.domain_for_broadcast)
-
-        # Size average
-        dUdT = pybamm.size_average(dUdT)
-
-        dUdT_av = pybamm.x_average(dUdT)
 
         if self.domain == "Negative":
             ocp_dim = self.param.U_n_ref + self.param.potential_scale * ocp

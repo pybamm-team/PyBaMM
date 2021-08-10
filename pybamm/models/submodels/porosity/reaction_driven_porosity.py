@@ -101,9 +101,9 @@ class ReactionDriven(BaseModel):
             eps_p_av = variables["X-averaged positive electrode porosity"]
 
             self.initial_conditions = {
-                eps_n_av: self.param.epsilon_n_init,
-                eps_s_av: self.param.epsilon_s_init,
-                eps_p_av: self.param.epsilon_p_init,
+                eps_n_av: pybamm.x_average(self.param.epsilon_n_init),
+                eps_s_av: pybamm.x_average(self.param.epsilon_s_init),
+                eps_p_av: pybamm.x_average(self.param.epsilon_p_init),
             }
         else:
             eps = variables["Porosity"]
