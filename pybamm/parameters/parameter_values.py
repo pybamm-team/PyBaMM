@@ -1,6 +1,7 @@
 #
 # Dimensional and dimensionless parameter values, and scales
 #
+import numpy as np
 import pybamm
 import pandas as pd
 import os
@@ -603,6 +604,9 @@ class ParameterValues:
         if isinstance(symbol, pybamm.Parameter):
             value = self[symbol.name]
             if isinstance(value, numbers.Number):
+                # Check not NaN (parameter in csv file but no value given)
+                if np.isnan(value):
+                    raise ValueError(f"Parameter '{symbol.name}' not found")
                 # Scalar inherits name (for updating parameters) and domain (for
                 # Broadcast)
                 return pybamm.Scalar(value, name=symbol.name, domain=symbol.domain)
@@ -653,6 +657,11 @@ class ParameterValues:
                     )
                 )
             elif isinstance(function_name, numbers.Number):
+                # Check not NaN (parameter in csv file but no value given)
+                if np.isnan(function_name):
+                    raise ValueError(
+                        f"Parameter '{symbol.name}' (possibly a function) not found"
+                    )
                 # If the "function" is provided is actually a scalar, return a Scalar
                 # object instead of throwing an error.
                 # Also use ones_like so that we get the right shapes
@@ -718,15 +727,18 @@ class ParameterValues:
                         return integrand.orphans[0]
                     else:
                         domain = integrand.auxiliary_domains["secondary"]
-                        if "tertiary" not in integrand.auxiliary_domains:
-                            return pybamm.PrimaryBroadcast(integrand.orphans[0], domain)
-                        else:
+                        if "tertiary" in integrand.auxiliary_domains:
                             auxiliary_domains = {
                                 "secondary": integrand.auxiliary_domains["tertiary"]
                             }
+                            if "quaternary" in integrand.auxiliary_domains:
+                                quat_domain = integrand.auxiliary_domains["quaternary"]
+                                auxiliary_domains["tertiary"] = quat_domain
                             return pybamm.FullBroadcast(
                                 integrand.orphans[0], domain, auxiliary_domains
                             )
+                        else:
+                            return pybamm.PrimaryBroadcast(integrand.orphans[0], domain)
                 # left is "integral of concatenation of broadcasts"
                 elif isinstance(new_left.child, pybamm.Concatenation) and all(
                     isinstance(child, pybamm.Broadcast)

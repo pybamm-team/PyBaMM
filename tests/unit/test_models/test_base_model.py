@@ -1,13 +1,15 @@
 #
 # Tests for the base model class
 #
-import casadi
-import pybamm
-import numpy as np
-import unittest
 import os
-import subprocess  # nosec
 import platform
+import subprocess  # nosec
+import unittest
+
+import casadi
+import numpy as np
+
+import pybamm
 
 
 class TestBaseModel(unittest.TestCase):
@@ -341,18 +343,6 @@ class TestBaseModel(unittest.TestCase):
         # fails with post_discretisation=False (default)
         with self.assertRaisesRegex(pybamm.ModelError, "extra algebraic keys"):
             model.check_well_posedness()
-
-        # before discretisation, fail if the algebraic eqn keys don't appear in the eqns
-        model = pybamm.BaseModel()
-        model.algebraic = {c: d - 2, d: d - c}
-        with self.assertRaisesRegex(
-            pybamm.ModelError,
-            "each variable in the algebraic eqn keys must appear in the eqn",
-        ):
-            model.check_well_posedness()
-        # passes when we switch the equations around
-        model.algebraic = {c: d - c, d: d - 2}
-        model.check_well_posedness()
 
         # after discretisation, algebraic equation without a StateVector fails
         model = pybamm.BaseModel()

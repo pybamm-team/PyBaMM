@@ -76,15 +76,11 @@ Lithium-ion parameter sets
          Popov. Development of first principles capacity fade model for li-ion cells.
          Journal of the Electrochemical Society, 151(2):A196, 2004.
          doi:10.1149/1.1634273.
-    * Yang2017 :
-       - Madeleine Ecker, Thi Kim Dung Tran, Philipp Dechent, Stefan Käbitz, Alexander
-         Warnecke, and Dirk Uwe Sauer. Parameterization of a Physico-Chemical Model of a
-         Lithium-Ion Battery: I. Determination of Parameters. Journal of the
-         Electrochemical Society, 162(9):A1836–A1848, 2015. doi:10.1149/2.0551509jes.
-       - Xiao Guang Yang, Yongjun Leng, Guangsheng Zhang, Shanhai Ge, and Chao Yang
-         Wang. Modeling of lithium plating induced aging of lithium-ion batteries:
-         transition from linear to nonlinear aging. Journal of Power Sources, 360:28–40,
-         2017. doi:10.1016/j.jpowsour.2017.05.110.
+    * Xu2019 :
+       - Shanshan Xu, Kuan-Hung Chen, Neil P Dasgupta, Jason B Siegel, and Anna G
+         Stefanopoulou. Evolution of dead lithium growth in lithium metal batteries:
+         experimentally validated model of the apparent capacity loss. Journal of The
+         Electrochemical Society, 166(14):A3456, 2019.
 """
 
 #
@@ -114,20 +110,6 @@ Ecker2015 = {
     "sei": "example",
     "citation": ["Ecker2015i", "Ecker2015ii", "Richardson2020"],
 }
-
-Yang2017 = {
-    "chemistry": "lithium_ion",
-    "cell": "Yang2017",
-    "negative electrode": "graphite_Yang2017",
-    "separator": "separator_Yang2017",
-    "positive electrode": "nmc_Yang2017",
-    "electrolyte": "lipf6_Ecker2015",
-    "experiment": "1C_discharge_from_full_Ecker2015",
-    "sei": "yang2017_sei",
-    "lithium plating": "yang2017_Li_plating",
-    "citation": ["Yang2017", "Ecker2015i"],
-}
-
 
 Marquis2019 = {
     "chemistry": "lithium_ion",
@@ -212,6 +194,17 @@ Ai2020 = {
     "experiment": "1C_discharge_from_full_Ai2020",
     "sei": "example",
     "citation": "Ai2019",
+}
+
+Xu2019 = {
+    "chemistry": "lithium_ion",
+    "cell": "li_metal_Xu2019",
+    "negative electrode": "li_metal_Xu2019",
+    "separator": "separator_Xu2019",
+    "positive electrode": "NMC532_Xu2019",
+    "electrolyte": "lipf6_Valoen2005",
+    "experiment": "1C_discharge_from_full_Xu2019",
+    "citation": "Xu2019",
 }
 
 #

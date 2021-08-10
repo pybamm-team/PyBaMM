@@ -716,13 +716,16 @@ def get_cycle_summary_variables(cycle_solution, esoh_sim):
             ):
                 solver = pybamm.CasadiAlgebraicSolver()
                 # Choose x_100_init so as not to violate the interpolation limits
-                y_100_min = np.min(
-                    esoh_sim.parameter_values["Positive electrode OCP [V]"][1][:, 0]
-                )
-                x_100_max = (
-                    n_Li * pybamm.constants.F.value / 3600 - y_100_min * C_p
-                ) / C_n
-                x_100_init = np.minimum(x_100_init, 0.99 * x_100_max)
+                if isinstance(
+                    esoh_sim.parameter_values["Positive electrode OCP [V]"], tuple
+                ):
+                    y_100_min = np.min(
+                        esoh_sim.parameter_values["Positive electrode OCP [V]"][1][:, 0]
+                    )
+                    x_100_max = (
+                        n_Li * pybamm.constants.F.value / 3600 - y_100_min * C_p
+                    ) / C_n
+                    x_100_init = np.minimum(x_100_init, 0.99 * x_100_max)
             else:
                 solver = None
             # Update initial conditions using the cycle solution
@@ -730,17 +733,24 @@ def get_cycle_summary_variables(cycle_solution, esoh_sim):
             esoh_sim.built_model.set_initial_conditions_from(
                 {"x_100": x_100_init, "C": C_init}
             )
-        esoh_sol = esoh_sim.solve(
-            [0],
-            inputs={
-                "V_min": V_min,
-                "V_max": V_max,
-                "C_n": C_n,
-                "C_p": C_p,
-                "n_Li": n_Li,
-            },
-            solver=solver,
-        )
+
+        try:
+            esoh_sol = esoh_sim.solve(
+                [0],
+                inputs={
+                    "V_min": V_min,
+                    "V_max": V_max,
+                    "C_n": C_n,
+                    "C_p": C_p,
+                    "n_Li": n_Li,
+                },
+                solver=solver,
+            )
+        except pybamm.SolverError:  # pragma: no cover
+            raise pybamm.SolverError(
+                "Could not solve for summary variables, run "
+                "`sim.solve(calc_esoh=False)` to skip this step"
+            )
         for var in esoh_sim.built_model.variables:
             cycle_summary_variables[var] = esoh_sol[var].data[0]
 

@@ -76,6 +76,9 @@ class BaseElectrolyteDiffusion(pybamm.BaseSubModel):
             * c_e_p_av,
         }
 
+        # Override print_name
+        c_e.print_name = "c_e"
+
         return variables
 
     def _get_standard_porosity_times_concentration_variables(
@@ -139,7 +142,7 @@ class BaseElectrolyteDiffusion(pybamm.BaseSubModel):
         L_x = self.param.L_x
         A = self.param.A_cc
 
-        c_e_av = pybamm.x_average(epsilon * c_e)
+        c_e_av = pybamm.yz_average(pybamm.x_average(epsilon * c_e))
 
         variables = {"Total lithium in electrolyte [mol]": c_e_typ * L_x * A * c_e_av}
 

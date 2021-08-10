@@ -133,7 +133,10 @@ class BaseParticle(pybamm.BaseSubModel):
                 + "volume-averaged concentration [mol.m-3]": c_s_vol_av * c_scale,
                 "Total lithium in "
                 + self.domain.lower()
-                + " electrode [mol]": c_s_vol_av * eps_s_av * c_scale * L * A,
+                + " electrode [mol]": pybamm.yz_average(c_s_vol_av * eps_s_av)
+                * c_scale
+                * L
+                * A,
             }
         )
         return variables
@@ -145,3 +148,4 @@ class BaseParticle(pybamm.BaseSubModel):
         }
 
         return variables
+

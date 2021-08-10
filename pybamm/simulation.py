@@ -98,9 +98,10 @@ class Simulation:
         self.parameter_values = parameter_values or model.default_parameter_values
 
         if isinstance(model, pybamm.lithium_ion.BasicDFNHalfCell):
-            raise NotImplementedError(
-                "BasicDFNHalfCell is not compatible with Simulations yet."
-            )
+            if experiment is not None:
+                raise NotImplementedError(
+                    "BasicDFNHalfCell is not compatible "
+                    "with experiment simulations yet.")
 
         if experiment is None:
             # Check to see if the current is provided as data (i.e. drive cycle)
@@ -138,6 +139,8 @@ class Simulation:
         # Initialize empty built states
         self._model_with_set_params = None
         self._built_model = None
+        self._built_initial_soc = None
+        self.op_conds_to_built_models = None
         self._mesh = None
         self._disc = None
         self._solution = None
@@ -329,7 +332,6 @@ class Simulation:
             op_cond[:2]: (new_model, self.parameter_values)
             for op_cond in set(self.experiment.operating_conditions)
         }
-        self.op_conds_to_built_models = None
 
     def set_up_model_for_experiment_new(self, model):
         """
@@ -340,7 +342,6 @@ class Simulation:
         reduces simulation time since the model formulation is efficient.
         """
         self.op_conds_to_model_and_param = {}
-        self.op_conds_to_built_models = None
         for op_cond, op_inputs in zip(
             self.experiment.operating_conditions, self._experiment_inputs
         ):
@@ -545,6 +546,7 @@ class Simulation:
         save_at_cycles=None,
         calc_esoh=True,
         starting_solution=None,
+        initial_soc=None,
         **kwargs,
     ):
         """
@@ -585,6 +587,10 @@ class Simulation:
         starting_solution : :class:`pybamm.Solution`
             The solution to start stepping from. If None (default), then self._solution
             is used. Must be None if not using an experiment.
+        initial_soc : float, optional
+            Initial State of Charge (SOC) for the simulation. Must be between 0 and 1.
+            If given, overwrites the initial concentrations provided in the parameter
+            set.
         **kwargs
             Additional key-word arguments passed to `solver.solve`.
             See :meth:`pybamm.BaseSolver.solve`.
@@ -592,6 +598,47 @@ class Simulation:
         # Setup
         if solver is None:
             solver = self.solver
+
+        if initial_soc is not None:
+            if self._built_initial_soc != initial_soc:
+                # reset
+                self._model_with_set_params = None
+                self._built_model = None
+                self.op_conds_to_built_models = None
+
+            c_n_init = self.parameter_values[
+                "Initial concentration in negative electrode [mol.m-3]"
+            ]
+            c_p_init = self.parameter_values[
+                "Initial concentration in positive electrode [mol.m-3]"
+            ]
+            param = pybamm.LithiumIonParameters()
+            c_n_max = self.parameter_values.evaluate(param.c_n_max)
+            c_p_max = self.parameter_values.evaluate(param.c_p_max)
+            x, y = pybamm.lithium_ion.get_initial_stoichiometries(
+                initial_soc, self.parameter_values
+            )
+            self.parameter_values.update(
+                {
+                    "Initial concentration in negative electrode [mol.m-3]": x
+                    * c_n_max,
+                    "Initial concentration in positive electrode [mol.m-3]": y
+                    * c_p_max,
+                }
+            )
+            # For experiments also update the following
+            if hasattr(self, 'op_conds_to_model_and_param'):
+                for key, (model, param) in self.op_conds_to_model_and_param.items():
+                    param.update(
+                        {
+                            "Initial concentration in negative electrode [mol.m-3]": x
+                            * c_n_max,
+                            "Initial concentration in positive electrode [mol.m-3]": y
+                            * c_p_max,
+                        }
+                    )
+            # Save solved initial SOC in case we need to re-build the model
+            self._built_initial_soc = initial_soc
 
         if self.operating_mode in ["without experiment", "drive cycle"]:
             self.build(check_model=check_model)
@@ -836,6 +883,15 @@ class Simulation:
 
             pybamm.logger.notice(
                 "Finish experiment simulation, took {}".format(timer.time())
+            )
+
+        # reset parameter values
+        if initial_soc is not None:
+            self.parameter_values.update(
+                {
+                    "Initial concentration in negative electrode [mol.m-3]": c_n_init,
+                    "Initial concentration in positive electrode [mol.m-3]": c_p_init,
+                }
             )
 
         return self.solution

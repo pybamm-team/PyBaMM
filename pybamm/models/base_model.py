@@ -1,20 +1,23 @@
 #
 # Base model class
 #
-import casadi
-import numpy as np
 import numbers
-import pybamm
 import warnings
 from collections import OrderedDict
 
+import casadi
+import numpy as np
 
-class BaseModel(object):
-    """Base model class for other models to extend.
+import pybamm
+from pybamm.expression_tree.operations.latexify import Latexify
+
+
+class BaseModel:
+    """
+    Base model class for other models to extend.
 
     Attributes
     ----------
-
     name: str
         A string giving the name of the model
     options: dict
@@ -81,7 +84,6 @@ class BaseModel(object):
         algorithm to calculate the Jacobian.
 
         Default is "casadi".
-
     """
 
     def __init__(self, name="Unnamed model"):
@@ -639,40 +641,20 @@ class BaseModel(object):
 
     def check_algebraic_equations(self, post_discretisation):
         """
-        Check that the algebraic equations are well-posed.
-        Before discretisation, each algebraic equation key must appear in the equation
-        After discretisation, there must be at least one StateVector in each algebraic
-        equation
+        Check that the algebraic equations are well-posed. After discretisation,
+        there must be at least one StateVector in each algebraic equation.
         """
-        vars_in_bcs = set()
-        unpacker = pybamm.SymbolUnpacker(pybamm.Variable)
-        for side_eqn in self.boundary_conditions.values():
-            all_vars = unpacker.unpack_list_of_symbols(
-                [eqn for eqn, _ in side_eqn.values()]
-            )
-            vars_in_bcs.update(all_vars.keys())
-        if not post_discretisation:
-            # After the model has been defined, each algebraic equation key should
-            # appear in that algebraic equation, or in the boundary conditions
-            # this has been relaxed for concatenations for now
-            for var, eqn in self.algebraic.items():
-                if not (
-                    any(x.id == var.id for x in eqn.pre_order())
-                    or var.id in vars_in_bcs
-                    or isinstance(var, pybamm.Concatenation)
-                ):
-                    raise pybamm.ModelError(
-                        "each variable in the algebraic eqn keys must appear in the eqn"
-                    )
-        else:
-            # variables in keys don't get discretised so they will no longer match
-            # with the state vectors in the algebraic equations. Instead, we check
-            # that each algebraic equation contains some StateVector
+        if post_discretisation:
+            # Check that each algebraic equation contains some StateVector
             for eqn in self.algebraic.values():
                 if not eqn.has_symbol_of_classes(pybamm.StateVector):
                     raise pybamm.ModelError(
                         "each algebraic equation must contain at least one StateVector"
                     )
+        else:
+            # We do not perfom any checks before discretisation (most problematic
+            # cases should be caught by `check_well_determined`)
+            pass
 
     def check_ics_bcs(self):
         """Check that the initial and boundary conditions are well-posed."""
@@ -955,6 +937,13 @@ class BaseModel(object):
             return pybamm.CasadiAlgebraicSolver()
         else:
             return pybamm.CasadiSolver(mode="safe")
+
+    def latexify(self, filename=None, newline=True):
+        # For docstring, see pybamm.expression_tree.operations.latexify.Latexify
+        return Latexify(self, filename, newline).latexify()
+
+    # Set :meth:`latexify` docstring from :class:`Latexify`
+    latexify.__doc__ = Latexify.__doc__
 
 
 # helper functions for finding symbols

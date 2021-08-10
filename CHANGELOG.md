@@ -2,7 +2,16 @@
 
 ## Features
 
--   Added `print_name` to some symbols ([#1495](https://github.com/pybamm-team/PyBaMM/pull/1497), [#1495](https://github.com/pybamm-team/PyBaMM/pull/1497))
+-   Addes UDDS and WLTC drive cycles  ([#1601](https://github.com/pybamm-team/PyBaMM/pull/1601))
+-   Added capability for `quaternary` domains (in addition to `primary`, `secondary` and `tertiary`), increasing the maximum number of domains that a `Symbol` can have to 4. ([#1580](https://github.com/pybamm-team/PyBaMM/pull/1580))
+-   Tabs can now be placed at the bottom of the cell in 1+1D thermal models ([#1581](https://github.com/pybamm-team/PyBaMM/pull/1581)) 
+-   Added temperature dependence on electrode electronic conductivity ([#1570](https://github.com/pybamm-team/PyBaMM/pull/1570))
+-   Added a new lithium-ion model `MPM` or Many-Particle Model, with a distribution of particle sizes in each electrode. ([#1529](https://github.com/pybamm-team/PyBaMM/pull/1529))
+-   Added 2 new submodels for lithium transport in a size distribution of electrode particles: Fickian diffusion (`FickianSingleSizeDistribution`) and uniform concentration profile (`FastSingleSizeDistribution`). ([#1529](https://github.com/pybamm-team/PyBaMM/pull/1529))
+-   Added a "particle size" domain to the default lithium-ion geometry, including plotting capabilities (`QuickPlot`) and processing of variables (`ProcessedVariable`). ([#1529](https://github.com/pybamm-team/PyBaMM/pull/1529))
+-   Added fitted expressions for OCPs for the Chen2020 parameter set ([#1526](https://github.com/pybamm-team/PyBaMM/pull/1497))
+-   Added `initial_soc` argument to `Simualtion.solve` for specifying the initial SOC when solving a model ([#1512](https://github.com/pybamm-team/PyBaMM/pull/1512))
+-   Added `print_name` to some symbols ([#1495](https://github.com/pybamm-team/PyBaMM/pull/1495), [#1497](https://github.com/pybamm-team/PyBaMM/pull/1497))
 -   Added Base Parameters class and SymPy in dependencies ([#1495](https://github.com/pybamm-team/PyBaMM/pull/1495))
 -   Added a new "reaction-driven" model for LAM from Reniers et al (2019) ([#1490](https://github.com/pybamm-team/PyBaMM/pull/1490))
 -   Some features ("loss of active material" and "particle mechanics") can now be specified separately for the negative electrode and positive electrode by passing a 2-tuple ([#1490](https://github.com/pybamm-team/PyBaMM/pull/1490))
@@ -25,10 +34,15 @@
 
 ## Bug fixes
 
+-   Fixed a bug where the order of the indexing for the entries of variables discretised using FEM was incorrect ([#1556](https://github.com/pybamm-team/PyBaMM/pull/1556))
+-   Fix broken module import for spyder when running a script twice ([#1555](https://github.com/pybamm-team/PyBaMM/pull/1555))
+-   Fixed ElectrodeSOH model for multi-dimensional simulations ([#1548](https://github.com/pybamm-team/PyBaMM/pull/1548))
+-   Removed the overly-restrictive check "each variable in the algebraic eqn keys must appear in the eqn" ([#1510](https://github.com/pybamm-team/PyBaMM/pull/1510))
 -   Made parameters importable through pybamm ([#1475](https://github.com/pybamm-team/PyBaMM/pull/1475))
 
 ## Breaking changes
 
+-   The `Yang2017` parameter set has been removed as the complete parameter set is not publicly available in the literature ([#1577](https://github.com/pybamm-team/PyBaMM/pull/1577))
 -   Changed how options are specified for the "loss of active material" and "particle cracking" submodels. "loss of active material" can now be one of "none", "stress-driven", or "reaction-driven", or a 2-tuple for different options in negative and positive electrode. Similarly "particle cracking" (now called "particle mechanics") can now be "none", "swelling only", "swelling and cracking", or a 2-tuple ([#1490](https://github.com/pybamm-team/PyBaMM/pull/1490))
 -   Changed the variable in the full diffusion model from "Electrolyte concentration" to "Porosity times concentration" ([#1476](https://github.com/pybamm-team/PyBaMM/pull/1476))
 -   Renamed `lithium-ion` folder to `lithium_ion` and `lead-acid` folder to `lead_acid` in parameters ([#1464](https://github.com/pybamm-team/PyBaMM/pull/1464))

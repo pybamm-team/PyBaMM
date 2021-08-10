@@ -4,7 +4,11 @@
 import pybamm
 
 
-def battery_geometry(include_particles=True, current_collector_dimension=0):
+def battery_geometry(
+    include_particles=True,
+    options=None,
+    current_collector_dimension=0,
+):
     """
     A convenience function to create battery geometries.
 
@@ -12,6 +16,9 @@ def battery_geometry(include_particles=True, current_collector_dimension=0):
     ----------
     include_particles : bool
         Whether to include particle domains
+    options : dict
+        Dictionary of model options. Necessary for "particle-size geometry",
+        relevant for lithium-ion chemistries.
     current_collector_dimensions : int, default
         The dimensions of the current collector. Should be 0 (default), 1 or 2
 
@@ -25,11 +32,15 @@ def battery_geometry(include_particles=True, current_collector_dimension=0):
     geo = pybamm.geometric_parameters
     l_n = geo.l_n
     l_s = geo.l_s
+    l_n_l_s = l_n + l_s
+
+    # Override print_name
+    l_n_l_s.print_name = "l_n + l_s"
 
     geometry = {
         "negative electrode": {var.x_n: {"min": 0, "max": l_n}},
-        "separator": {var.x_s: {"min": l_n, "max": l_n + l_s}},
-        "positive electrode": {var.x_p: {"min": l_n + l_s, "max": 1}},
+        "separator": {var.x_s: {"min": l_n, "max": l_n_l_s}},
+        "positive electrode": {var.x_p: {"min": l_n_l_s, "max": 1}},
     }
     # Add particle domains
     if include_particles is True:
@@ -37,6 +48,25 @@ def battery_geometry(include_particles=True, current_collector_dimension=0):
             {
                 "negative particle": {var.r_n: {"min": 0, "max": 1}},
                 "positive particle": {var.r_p: {"min": 0, "max": 1}},
+            }
+        )
+    # Add particle size domains
+    if (
+        options is not None and
+        options["particle size"] == "distribution"
+    ):
+        R_min_n = geo.R_min_n
+        R_min_p = geo.R_min_p
+        R_max_n = geo.R_max_n
+        R_max_p = geo.R_max_p
+        geometry.update(
+            {
+                "negative particle size": {
+                    var.R_n: {"min": R_min_n, "max": R_max_n}
+                },
+                "positive particle size": {
+                    var.R_p: {"min": R_min_p, "max": R_max_p}
+                },
             }
         )
 

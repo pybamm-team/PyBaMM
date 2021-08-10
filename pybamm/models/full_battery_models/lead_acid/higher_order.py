@@ -167,7 +167,7 @@ class BaseHigherOrderModel(BaseModel):
         )
 
         # Oxygen
-        if "oxygen" in self.options["side reactions"]:
+        if self.options["hydrolysis"] == "true":
             self.submodels[
                 "positive oxygen interface"
             ] = pybamm.interface.FirstOrderKinetics(
@@ -231,7 +231,7 @@ class FOQS(BaseHigherOrderModel):
         ] = pybamm.electrolyte_diffusion.FirstOrder(self.param)
 
     def set_other_species_diffusion_submodels(self):
-        if "oxygen" in self.options["side reactions"]:
+        if self.options["hydrolysis"] == "true":
             self.submodels["oxygen diffusion"] = pybamm.oxygen_diffusion.FirstOrder(
                 self.param
             )
@@ -261,7 +261,7 @@ class Composite(BaseHigherOrderModel):
         ] = pybamm.electrolyte_diffusion.Composite(self.param)
 
     def set_other_species_diffusion_submodels(self):
-        if "oxygen" in self.options["side reactions"]:
+        if self.options["hydrolysis"] == "true":
             self.submodels["oxygen diffusion"] = pybamm.oxygen_diffusion.Composite(
                 self.param
             )
@@ -307,7 +307,7 @@ class CompositeExtended(Composite):
         ] = pybamm.electrolyte_diffusion.Composite(self.param, extended="distributed")
 
     def set_other_species_diffusion_submodels(self):
-        if "oxygen" in self.options["side reactions"]:
+        if self.options["hydrolysis"] == "true":
             self.submodels["oxygen diffusion"] = pybamm.oxygen_diffusion.Composite(
                 self.param, extended="distributed"
             )
@@ -329,7 +329,7 @@ class CompositeAverageCorrection(Composite):
         ] = pybamm.electrolyte_diffusion.Composite(self.param, extended="average")
 
     def set_other_species_diffusion_submodels(self):
-        if "oxygen" in self.options["side reactions"]:
+        if self.options["hydrolysis"] == "true":
             self.submodels["oxygen diffusion"] = pybamm.oxygen_diffusion.Composite(
                 self.param, extended="average"
             )
