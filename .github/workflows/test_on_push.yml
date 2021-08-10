@@ -45,6 +45,7 @@ jobs:
       if: matrix.os == 'ubuntu-latest'
       run: |
         sudo apt install gfortran gcc libopenblas-dev graphviz
+        sudo apt install texlive-full
     
     - name: Install MacOS system dependencies
       if: matrix.os == 'macos-latest'

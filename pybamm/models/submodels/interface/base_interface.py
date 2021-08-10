@@ -442,6 +442,8 @@ class BaseInterface(pybamm.BaseSubModel):
         # Override print_name
         j.print_name = "J"
         a.print_name = "a"
+        j_n.print_name = "j_n"
+        j_p.print_name = "j_p"
 
         new_variables["Sum of electrolyte reaction source terms"] += a * s * j
         new_variables[

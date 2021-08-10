@@ -553,6 +553,7 @@ class LithiumIonParameters(BaseParameters):
         # Electrical
         self.potential_scale = self.R * self.T_ref / self.F
         self.current_scale = self.i_typ
+        self.current_scale.print_name = "I_typ"
         # Scale for interfacial current density in A/m2
         if self.options["working electrode"] == "both":
             # porous electrode
