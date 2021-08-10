@@ -200,8 +200,9 @@ class Latexify:
 
                 # Add spaces between words
                 node_copy_eqn = node_copy.to_equation()
+                # Typical current [A] --> \text{Typical current [A]}
                 if re.search(r"(^[0-9a-zA-Z-\s.-\[\]()]*$)", str(node_copy_eqn)):
-                    node_copy_latex = r"\textit{" + str(node_copy_eqn) + "}"
+                    node_copy_latex = r"\text{" + str(node_copy_eqn) + "}"
                 else:
                     node_copy_latex = sympy.latex(node_copy_eqn)
 
@@ -368,7 +369,7 @@ class Latexify:
                 # When equations are too huge, set output resolution to default
                 except RuntimeError:  # pragma: no cover
                     warnings.warn(
-                        "RuntimeError: Setting the output resolution to default"
+                        "RuntimeError - Setting the output resolution to default"
                     )
                     return sympy.preview(
                         eqn_new_line,
