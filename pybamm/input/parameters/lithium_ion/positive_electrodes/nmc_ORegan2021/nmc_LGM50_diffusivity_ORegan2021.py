@@ -46,7 +46,7 @@ def nmc_LGM50_diffusivity_ORegan2021(sto, T):
             + a2 * exp(-((sto - b2) ** 2) / c2)
             + a3 * exp(-((sto - b3) ** 2) / c3)
         )
-        #* 2
+        * 2  # correcting factor (see O'Regan et al 2021)
     )
 
     E_D_s = d * constants.R
