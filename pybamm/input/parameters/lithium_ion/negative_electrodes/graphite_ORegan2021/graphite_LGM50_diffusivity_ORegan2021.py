@@ -8,10 +8,10 @@ def graphite_LGM50_diffusivity_ORegan2021(sto, T):
 
     References
     ----------
-    .. [1] Chang-Hui Chen, Ferran Brosa Planella, Kieran O’Regan, Dominika Gastol, W.
-    Dhammika Widanage, and Emma Kendrick. "Development of Experimental Techniques for
-    Parameterization of Multi-scale Lithium-ion Battery Models." Journal of the
-    Electrochemical Society 167 (2020): 080534.
+    .. [1] Kieran O’Regan, Ferran Brosa Planella, W. Dhammika Widanage, and Emma
+    Kendrick. "Thermal-electrochemical parametrisation of a lithium-ion battery:
+    mapping Li concentration and temperature dependencies." Journal of the
+    Electrochemical Society, submitted (2021).
 
     Parameters
     ----------

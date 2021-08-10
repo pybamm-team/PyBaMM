@@ -2,6 +2,6 @@
 
 Parameters for an LG M50 NMC positive electrode, from the paper
 
-> Chang-Hui Chen, Ferran Brosa Planella, Kieran O’Regan, Dominika Gastol, W. Dhammika Widanage, and Emma Kendrick. ["Development of Experimental Techniques for Parameterization of Multi-scale Lithium-ion Battery Models."](https://iopscience.iop.org/article/10.1149/1945-7111/ab9050) Journal of the Electrochemical Society 167 (2020): 080534
+> Kieran O’Regan, Ferran Brosa Planella, W. Dhammika Widanage, and Emma Kendrick. ["Thermal-electrochemical parametrisation of a lithium-ion battery: mapping Li concentration and temperature dependencies."]() Journal of the Electrochemical Society, submitted (2021)
 
 and references therein.

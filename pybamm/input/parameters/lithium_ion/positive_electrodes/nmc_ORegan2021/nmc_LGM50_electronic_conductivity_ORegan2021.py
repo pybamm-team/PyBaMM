@@ -8,7 +8,10 @@ def nmc_LGM50_electronic_conductivity_ORegan2021(T):
 
     References
     ----------
-    .. [1] K. O'Regan ... (2021)
+    .. [1] Kieran O’Regan, Ferran Brosa Planella, W. Dhammika Widanage, and Emma
+    Kendrick. "Thermal-electrochemical parametrisation of a lithium-ion battery:
+    mapping Li concentration and temperature dependencies." Journal of the
+    Electrochemical Society, submitted (2021).
 
     Parameters
     ----------
