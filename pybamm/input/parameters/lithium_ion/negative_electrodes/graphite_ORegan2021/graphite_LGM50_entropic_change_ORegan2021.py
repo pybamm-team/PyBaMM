@@ -22,7 +22,7 @@ def graphite_LGM50_entropic_change_ORegan2021(sto):
     """
 
     a0 = -0.1112
-    a1 = -0.09002 * 0   # fixed fit (see discussion on paper)
+    a1 = -0.09002 * 0   # fixed fit (see discussion O'Regan et al 2021)
     a2 = 0.3561
     b1 = 0.4955
     b2 = 0.08309

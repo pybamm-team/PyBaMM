@@ -52,7 +52,7 @@ def graphite_LGM50_diffusivity_ORegan2021(sto, T):
             + a3 * exp(-((sto - b3) ** 2) / c3)
             + a4 * exp(-((sto - b4) ** 2) / c4)
         )
-        * 3
+        * 3.0321  # correcting factor (see O'Regan et al 2021)
     )
 
     E_D_s = d * constants.R
