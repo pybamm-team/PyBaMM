@@ -2,6 +2,7 @@
 
 ## Features
 
+-   Addes UDDS and WLTC drive cycles  ([#1601](https://github.com/pybamm-team/PyBaMM/pull/1601))
 -   Added capability for `quaternary` domains (in addition to `primary`, `secondary` and `tertiary`), increasing the maximum number of domains that a `Symbol` can have to 4. ([#1580](https://github.com/pybamm-team/PyBaMM/pull/1580))
 -   Tabs can now be placed at the bottom of the cell in 1+1D thermal models ([#1581](https://github.com/pybamm-team/PyBaMM/pull/1581)) 
 -   Added temperature dependence on electrode electronic conductivity ([#1570](https://github.com/pybamm-team/PyBaMM/pull/1570))
