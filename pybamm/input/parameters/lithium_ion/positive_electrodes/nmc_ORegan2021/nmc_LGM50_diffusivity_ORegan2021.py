@@ -26,17 +26,17 @@ def nmc_LGM50_diffusivity_ORegan2021(sto, T):
        Solid diffusivity
     """
 
-    a1 = -0.9337
-    a2 = -0.4581
-    a3 = -0.9386
-    b1 = 0.3222
-    b2 = 0.4531
-    b3 = 0.75
-    c0 = -14
-    c1 = 0.002572
-    c2 = 0.004133
-    c3 = 0.05436
-    d = 1367
+    a1 = -0.9231
+    a2 = -0.4066
+    a3 = -0.993
+    b1 = 0.3216
+    b2 = 0.4532
+    b3 = 0.8098
+    c0 = -13.96
+    c1 = 0.002534
+    c2 = 0.003926
+    c3 = 0.09924
+    d = 1449
 
     D_ref = (
         10
@@ -46,7 +46,7 @@ def nmc_LGM50_diffusivity_ORegan2021(sto, T):
             + a2 * exp(-((sto - b2) ** 2) / c2)
             + a3 * exp(-((sto - b3) ** 2) / c3)
         )
-        * 2  # correcting factor (see O'Regan et al 2021)
+        * 2.7  # correcting factor (see O'Regan et al 2021)
     )
 
     E_D_s = d * constants.R
