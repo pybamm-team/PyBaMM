@@ -26,4 +26,4 @@ def graphite_LGM50_thermal_conductivity_ORegan2021(T):
 
     lambda_wet = -2.61e-4 * T ** 2 + 0.1726 * T - 24.49
 
-    return Scalar(lambda_wet)
+    return lambda_wet

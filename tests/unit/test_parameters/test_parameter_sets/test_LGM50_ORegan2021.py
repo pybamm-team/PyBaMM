@@ -53,6 +53,7 @@ class TestORegan2021(unittest.TestCase):
     def test_functions(self):
         root = pybamm.root_dir()
         param = pybamm.ParameterValues(chemistry=pybamm.parameter_sets.ORegan2021)
+        T = pybamm.Scalar(298.15)
 
         # Positive electrode
         p = "pybamm/input/parameters/lithium_ion/positive_electrodes/nmc_ORegan2021/"
@@ -68,7 +69,7 @@ class TestORegan2021(unittest.TestCase):
             ),
             "nmc_LGM50_ocp_Chen2020.py": ([0.5], 3.9720),
             "nmc_LGM50_electronic_conductivity_ORegan2021.py": ([298.15], 0.8473),
-            "nmc_LGM50_thermal_conductivity_ORegan2021.py": ([298.15], 0.8047),
+            "nmc_LGM50_thermal_conductivity_ORegan2021.py": ([T], 0.8047),
         }
 
         for name, value in fun_test.items():
@@ -91,7 +92,7 @@ class TestORegan2021(unittest.TestCase):
                 1.0372,
             ),
             "graphite_LGM50_ocp_Chen2020.py": ([0.5], 0.1331),
-            "graphite_LGM50_thermal_conductivity_ORegan2021.py": ([298.15], 3.7695),
+            "graphite_LGM50_thermal_conductivity_ORegan2021.py": ([T], 3.7695),
         }
 
         for name, value in fun_test.items():
@@ -103,9 +104,9 @@ class TestORegan2021(unittest.TestCase):
         k_path = os.path.join(root, p)
 
         fun_test = {
-            "aluminium_heat_capacity_CRC.py": ([298.15], 897.1585),
-            "copper_heat_capacity_CRC.py": ([298.15], 388.5190),
-            "copper_thermal_conductivity_CRC.py": ([298.15], 400.8491),
+            "aluminium_heat_capacity_CRC.py": ([T], 897.1585),
+            "copper_heat_capacity_CRC.py": ([T], 388.5190),
+            "copper_thermal_conductivity_CRC.py": ([T], 400.8491),
         }
 
         for name, value in fun_test.items():
