@@ -4,6 +4,8 @@
 import pybamm
 from .base_lithium_sulfur_model import BaseModel
 
+import numpy as np
+
 
 class MarinescuEtAl2016(BaseModel):
     """
@@ -43,11 +45,11 @@ class MarinescuEtAl2016(BaseModel):
         I = self.variables["Current [A]"]
 
         # set species variables
-        S8 = pybamm.Variable("S8 [g]")
-        S4 = pybamm.Variable("S4 [g]")
-        S2 = pybamm.Variable("S2 [g]")
-        S = pybamm.Variable("S [g]")
-        Sp = pybamm.Variable("Precipitated Sulfur [g]")
+        S8 = pybamm.Variable("S8 [g]", bounds=(0, np.inf))
+        S4 = pybamm.Variable("S4 [g]", bounds=(0, np.inf))
+        S2 = pybamm.Variable("S2 [g]", bounds=(0, np.inf))
+        S = pybamm.Variable("S [g]", bounds=(0, np.inf))
+        Sp = pybamm.Variable("Precipitated Sulfur [g]", bounds=(0, np.inf))
 
         #######################################
         # Model parameters as defined in table (1) in [1]. Parameters with 'H' or
@@ -186,7 +188,6 @@ class MarinescuEtAl2016(BaseModel):
         ######################################
         # Model events
         ######################################
-        tol = 1e-4
         self.events.append(
             pybamm.Event(
                 "Minimum voltage",
@@ -202,7 +203,5 @@ class MarinescuEtAl2016(BaseModel):
             )
         )
         self.events.append(
-            pybamm.Event(
-                "Zero theoretical capacity", cth - tol, pybamm.EventType.TERMINATION
-            )
+            pybamm.Event("Zero theoretical capacity", cth, pybamm.EventType.TERMINATION)
         )
