@@ -1,3 +1,6 @@
+from pybamm import Scalar
+
+
 def graphite_LGM50_thermal_conductivity_ORegan2021(T):
     """
     Wet negative electrode thermal conductivity as a function of the temperature from
@@ -23,4 +26,4 @@ def graphite_LGM50_thermal_conductivity_ORegan2021(T):
 
     lambda_wet = -2.61e-4 * T ** 2 + 0.1726 * T - 24.49
 
-    return lambda_wet
+    return Scalar(lambda_wet)

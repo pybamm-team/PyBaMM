@@ -1,3 +1,6 @@
+from pybamm import Scalar
+
+
 def nmc_LGM50_thermal_conductivity_ORegan2021(T):
     """
     Wet positive electrode thermal conductivity as a function of the temperature from
@@ -23,4 +26,4 @@ def nmc_LGM50_thermal_conductivity_ORegan2021(T):
 
     lambda_wet = 2.063e-5 * T ** 2 - 0.01127 * T + 2.331
 
-    return lambda_wet
+    return Scalar(lambda_wet)

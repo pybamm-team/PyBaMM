@@ -1,3 +1,6 @@
+from pybamm import Scalar
+
+
 def copper_thermal_conductivity_CRC(T):
     """
     Copper thermal conductivity as a function of the temperature from [1].
@@ -20,4 +23,4 @@ def copper_thermal_conductivity_CRC(T):
 
     lambda_th = -5.409e-7 * T ** 3 + 7.054e-4 * T ** 2 - 0.3727 * T + 463.6
 
-    return lambda_th
+    return Scalar(lambda_th)

@@ -78,7 +78,7 @@ class TestCitations(unittest.TestCase):
         pybamm.lead_acid.Full(build=False)
         self.assertIn("Sulzer2019physical", citations._papers_to_cite)
 
-    def test_timms_2020(self):
+    def test_timms_2021(self):
         # Test that calling relevant bits of code adds the right paper to citations
         citations = pybamm.citations
 
@@ -131,7 +131,7 @@ class TestCitations(unittest.TestCase):
         pybamm.particle.PolynomialManyParticles(None, "Negative", "quadratic profile")
         self.assertIn("Subramanian2005", citations._papers_to_cite)
 
-    def test_brosaplanella_2020(self):
+    def test_brosaplanella_2021(self):
         # Test that calling relevant bits of code adds the right paper to citations
         citations = pybamm.citations
 
@@ -205,6 +205,10 @@ class TestCitations(unittest.TestCase):
         self.assertIn("Ecker2015i", citations._papers_to_cite)
         self.assertIn("Ecker2015ii", citations._papers_to_cite)
         self.assertIn("Richardson2020", citations._papers_to_cite)
+
+        citations._reset()
+        pybamm.ParameterValues(chemistry=pybamm.parameter_sets.ORegan2021)
+        self.assertIn("ORegan2021", citations._papers_to_cite)
 
     def test_solver_citations(self):
         # Test that solving each solver adds the right citations

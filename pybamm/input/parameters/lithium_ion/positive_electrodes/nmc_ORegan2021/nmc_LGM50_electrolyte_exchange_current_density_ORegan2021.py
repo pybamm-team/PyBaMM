@@ -12,7 +12,7 @@ def nmc_LGM50_electrolyte_exchange_current_density_ORegan2021(c_e, c_s_surf, T):
     Kendrick. "Thermal-electrochemical parametrisation of a lithium-ion battery:
     mapping Li concentration and temperature dependencies." Journal of the
     Electrochemical Society, submitted (2021).
-    
+
     Parameters
     ----------
     c_e : :class:`pybamm.Symbol`
