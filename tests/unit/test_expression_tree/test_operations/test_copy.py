@@ -12,6 +12,11 @@ class TestCopy(unittest.TestCase):
         a = pybamm.Parameter("a")
         b = pybamm.Parameter("b")
         v_n = pybamm.Variable("v", "negative electrode")
+        v_n_2D = pybamm.Variable(
+            "v",
+            domain="negative particle",
+            auxiliary_domains={"secondary": "negative electrode"}
+        )
         x_n = pybamm.standard_spatial_vars.x_n
         v_s = pybamm.Variable("v", "separator")
         vec = pybamm.Vector([1, 2, 3, 4, 5])
@@ -37,6 +42,7 @@ class TestCopy(unittest.TestCase):
             pybamm.BoundaryGradient(v_n, "right"),
             pybamm.PrimaryBroadcast(a, "domain"),
             pybamm.SecondaryBroadcast(v_n, "current collector"),
+            pybamm.TertiaryBroadcast(v_n_2D, "current collector"),
             pybamm.FullBroadcast(a, "domain", {"secondary": "other domain"}),
             pybamm.concatenation(v_n, v_s),
             pybamm.NumpyConcatenation(a, b, v_s),
@@ -58,6 +64,7 @@ class TestCopy(unittest.TestCase):
             pybamm.minimum(a, b),
             pybamm.maximum(a, b),
             pybamm.SparseStack(mat, mat),
+            pybamm.Equality(a, b),
         ]:
             self.assertEqual(symbol.id, symbol.new_copy().id)
 

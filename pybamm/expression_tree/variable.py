@@ -24,12 +24,12 @@ class VariableBase(pybamm.Symbol):
     domain : iterable of str
         list of domains that this variable is valid over
     auxiliary_domains : dict
-        dictionary of auxiliary domains ({'secondary': ..., 'tertiary': ...}). For
-        example, for the single particle model, the particle concentration would be a
-        Variable with domain 'negative particle' and secondary auxiliary domain 'current
-        collector'. For the DFN, the particle concentration would be a Variable with
-        domain 'negative particle', secondary domain 'negative electrode' and tertiary
-        domain 'current collector'
+        dictionary of auxiliary domains ({'secondary': ..., 'tertiary': ...,
+        'quaternary': ...}). For example, for the single particle model, the particle
+        concentration would be a Variable with domain 'negative particle' and secondary
+        auxiliary domain 'current collector'. For the DFN, the particle concentration
+        would be a Variable with domain 'negative particle', secondary domain
+        'negative electrode' and tertiary domain 'current collector'
     bounds : tuple, optional
         Physical bounds on the variable
 
@@ -90,12 +90,12 @@ class Variable(VariableBase):
         domain : iterable of str, optional
         list of domains that this variable is valid over
     auxiliary_domains : dict, optional
-        dictionary of auxiliary domains ({'secondary': ..., 'tertiary': ...}). For
-        example, for the single particle model, the particle concentration would be a
-        Variable with domain 'negative particle' and secondary auxiliary domain 'current
-        collector'. For the DFN, the particle concentration would be a Variable with
-        domain 'negative particle', secondary domain 'negative electrode' and tertiary
-        domain 'current collector'
+        dictionary of auxiliary domains ({'secondary': ..., 'tertiary': ...,
+        'quaternary': ...}). For example, for the single particle model, the particle
+        concentration would be a Variable with domain 'negative particle' and secondary
+        auxiliary domain 'current collector'. For the DFN, the particle concentration
+        would be a Variable with domain 'negative particle', secondary domain
+        'negative electrode' and tertiary domain 'current collector'
     bounds : tuple, optional
         Physical bounds on the variable
     *Extends:* :class:`Symbol`
@@ -135,12 +135,12 @@ class VariableDot(VariableBase):
     domain : iterable of str
         list of domains that this variable is valid over
     auxiliary_domains : dict
-        dictionary of auxiliary domains ({'secondary': ..., 'tertiary': ...}). For
-        example, for the single particle model, the particle concentration would be a
-        Variable with domain 'negative particle' and secondary auxiliary domain 'current
-        collector'. For the DFN, the particle concentration would be a Variable with
-        domain 'negative particle', secondary domain 'negative electrode' and tertiary
-        domain 'current collector'
+        dictionary of auxiliary domains ({'secondary': ..., 'tertiary': ...,
+        'quaternary': ...}). For example, for the single particle model, the particle
+        concentration would be a Variable with domain 'negative particle' and secondary
+        auxiliary domain 'current collector'. For the DFN, the particle concentration
+        would be a Variable with domain 'negative particle', secondary domain
+        'negative electrode' and tertiary domain 'current collector'
     bounds : tuple, optional
         Physical bounds on the variable. Included for compatibility with `VariableBase`,
         but ignored.
@@ -185,12 +185,12 @@ class ExternalVariable(Variable):
     domain : iterable of str
         list of domains that this variable is valid over
     auxiliary_domains : dict
-        dictionary of auxiliary domains ({'secondary': ..., 'tertiary': ...}). For
-        example, for the single particle model, the particle concentration would be a
-        Variable with domain 'negative particle' and secondary auxiliary domain 'current
-        collector'. For the DFN, the particle concentration would be a Variable with
-        domain 'negative particle', secondary domain 'negative electrode' and tertiary
-        domain 'current collector'
+        dictionary of auxiliary domains ({'secondary': ..., 'tertiary': ...,
+        'quaternary': ...}). For example, for the single particle model, the particle
+        concentration would be a Variable with domain 'negative particle' and secondary
+        auxiliary domain 'current collector'. For the DFN, the particle concentration
+        would be a Variable with domain 'negative particle', secondary domain
+        'negative electrode' and tertiary domain 'current collector'
 
     *Extends:* :class:`pybamm.Variable`
     """
