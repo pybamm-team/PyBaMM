@@ -2,7 +2,8 @@
 
 ## Features
 
--   Addes UDDS and WLTC drive cycles  ([#1601](https://github.com/pybamm-team/PyBaMM/pull/1601))
+-   Added UDDS and WLTC drive cycles  ([#1601](https://github.com/pybamm-team/PyBaMM/pull/1601))
+-   Added LG M50 (NMC811 and graphite + SiOx) parameter set from O'Regan 2021 ([#1594](https://github.com/pybamm-team/PyBaMM/pull/1594))
 -   Added capability for `quaternary` domains (in addition to `primary`, `secondary` and `tertiary`), increasing the maximum number of domains that a `Symbol` can have to 4. ([#1580](https://github.com/pybamm-team/PyBaMM/pull/1580))
 -   Tabs can now be placed at the bottom of the cell in 1+1D thermal models ([#1581](https://github.com/pybamm-team/PyBaMM/pull/1581)) 
 -   Added temperature dependence on electrode electronic conductivity ([#1570](https://github.com/pybamm-team/PyBaMM/pull/1570))
@@ -338,7 +339,7 @@ This release introduces many new features and optimizations. All models can now 
 
 ## Features
 
--   Added LG M50 parameter set ([#854](https://github.com/pybamm-team/PyBaMM/pull/854))
+-   Added LG M50 parameter set from Chen 2020 ([#854](https://github.com/pybamm-team/PyBaMM/pull/854))
 -   Changed rootfinding algorithm to CasADi, scipy.optimize.root still accessible as an option ([#844](https://github.com/pybamm-team/PyBaMM/pull/844))
 -   Added capacitance effects to lithium-ion models ([#842](https://github.com/pybamm-team/PyBaMM/pull/842))
 -   Added NCA parameter set ([#824](https://github.com/pybamm-team/PyBaMM/pull/824))
