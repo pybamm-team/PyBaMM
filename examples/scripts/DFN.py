@@ -8,12 +8,16 @@ import numpy as np
 pybamm.set_logging_level("INFO")
 
 # load model
-model = pybamm.lithium_ion.DFN()
+model = pybamm.lithium_ion.SPM({"operating mode": "CCCV"})
 # create geometry
 geometry = model.default_geometry
 
 # load parameter values and process model and geometry
-param = model.default_parameter_values
+param = pybamm.ParameterValues(chemistry=pybamm.parameter_sets.Mohtat2020)
+
+param["Current function [A]"] = -5
+param["Upper voltage cut-off [V]"] = 5
+param.update({"CCCV voltage [V]": 4.2}, check_already_exists=False)
 param.process_geometry(geometry)
 param.process_model(model)
 
@@ -27,7 +31,7 @@ disc = pybamm.Discretisation(mesh, model.default_spatial_methods)
 disc.process_model(model)
 
 # solve model
-t_eval = np.linspace(0, 3600, 100)
+t_eval = np.linspace(0, 4500, 100)
 solver = pybamm.CasadiSolver(mode="safe", atol=1e-6, rtol=1e-3)
 solution = solver.solve(model, t_eval)
 
@@ -35,13 +39,17 @@ solution = solver.solve(model, t_eval)
 plot = pybamm.QuickPlot(
     solution,
     [
-        "Negative particle concentration [mol.m-3]",
-        "Electrolyte concentration [mol.m-3]",
-        "Positive particle concentration [mol.m-3]",
+        # "Negative particle concentration [mol.m-3]",
+        # "Electrolyte concentration [mol.m-3]",
+        # "Positive particle concentration [mol.m-3]",
         "Current [A]",
-        "Negative electrode potential [V]",
-        "Electrolyte potential [V]",
-        "Positive electrode potential [V]",
+        ["Current density variable", "Total current density"],
+        "dIdt",
+        "dIdt_I",
+        "dIdt_V",
+        # "Negative electrode potential [V]",
+        # "Electrolyte potential [V]",
+        # "Positive electrode potential [V]",
         "Terminal voltage [V]",
     ],
     time_unit="seconds",
