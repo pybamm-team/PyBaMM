@@ -1,7 +1,6 @@
 #
 # External circuit with an arbitrary function
 #
-from numpy.core.fromnumeric import var
 import pybamm
 from .base_external_circuit import BaseModel, LeadingOrderBaseModel
 
