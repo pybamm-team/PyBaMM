@@ -25,11 +25,26 @@ class ReactionDriven(BaseModel):
         self.x_average = x_average
 
     def get_coupled_variables(self, variables):
-        L_sei_n = variables["Negative electrode SEI thickness"]
-        L_sei_0 = self.param.L_inner_0 + self.param.L_outer_0
-        L_pl_n = variables["Negative electrode lithium plating thickness"]
+        L_sei_n = variables["Negative electrode SEI thickness [m]"]
+        L_sei_0 = self.param.L_inner_0_dim + self.param.L_outer_0_dim
+        L_pl_n = variables["Negative electrode lithium plating thickness [m]"]
 
-        eps_n = self.param.epsilon_n_init - (L_sei_n - L_sei_0) - L_pl_n
+        L_tot = (L_sei_n - L_sei_0) + L_pl_n
+
+        R_n = variables["Negative particle radius [m]"]
+        a_n = variables[
+            "Negative electrode surface area to volume ratio [m-1]"
+        ]
+
+        if self.options["particle shape"] == "spherical":
+            delta_eps_n = - a_n * (
+                L_tot #+ L_tot ** 2 / R_n + L_tot ** 3 / (3 * R_n ** 2)
+            )
+
+        elif self.options["particle shape"] == "user":
+            delta_eps_n = - a_n * L_tot
+
+        eps_n = self.param.epsilon_n_init + delta_eps_n
         eps_s = pybamm.FullBroadcast(
             self.param.epsilon_s_init, "separator", "current collector"
         )
