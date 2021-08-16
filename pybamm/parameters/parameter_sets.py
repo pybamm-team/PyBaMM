@@ -215,7 +215,7 @@ ORegan2021 = {
     "positive electrode": "nmc_ORegan2021",
     "electrolyte": "lipf6_EC_EMC_3_7_Landesfeind2019",
     "experiment": "1C_discharge_from_full_ORegan2021",
-    "citation": "ORegan2021",
+    "citation": ["ORegan2021", "Chen2020"],
 }
 
 #
