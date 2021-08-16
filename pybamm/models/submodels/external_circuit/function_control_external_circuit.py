@@ -53,18 +53,6 @@ class FunctionControl(BaseModel):
 
         return variables
 
-    def get_coupled_variables(self, variables):
-        K_aw = 100  # anti-windup
-        K_V = 10
-        i_var = variables["Current density variable"]
-        i_cell = variables["Total current density"]
-        V = variables["Terminal voltage [V]"]
-        V_CCCV = pybamm.Parameter("CCCV voltage [V]")
-        variables["dIdt"] = -K_aw * (i_var - i_cell) + K_V * (V - V_CCCV)
-        variables["dIdt_I"] = -K_aw * (i_var - i_cell)
-        variables["dIdt_V"] = K_V * (V - V_CCCV)
-        return variables
-
     def set_initial_conditions(self, variables):
         super().set_initial_conditions(variables)
         # Initial condition as a guess for consistent initial conditions
@@ -125,7 +113,15 @@ class CCCVFunctionControl(FunctionControl):
         super().__init__(param, self.cccv, control="differential")
 
     def cccv(self, variables):
-        return variables["dIdt"]
+        # Multiply by the time scale so that the votage overshoot only lasts a few
+        # seconds
+        K_aw = 1 * self.param.timescale  # anti-windup
+        K_V = 1 * self.param.timescale
+        i_var = variables["Current density variable"]
+        i_cell = variables["Total current density"]
+        V = variables["Terminal voltage [V]"]
+        V_CCCV = pybamm.Parameter("Voltage function [V]")
+        return -K_aw * (i_var - i_cell) + K_V * (V - V_CCCV)
 
 
 class LeadingOrderFunctionControl(FunctionControl, LeadingOrderBaseModel):
