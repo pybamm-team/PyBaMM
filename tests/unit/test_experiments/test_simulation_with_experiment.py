@@ -118,7 +118,17 @@ class TestSimulationExperiment(unittest.TestCase):
         os.remove("test_experiment.sav")
 
     def test_run_experiment_cccv_ode(self):
-        experiment = pybamm.Experiment(
+        experiment_2step = pybamm.Experiment(
+            [
+                (
+                    "Discharge at C/20 for 1 hour",
+                    "Charge at 1 A until 4.1 V",
+                    "Hold at 4.1 V until C/2",
+                    "Discharge at 2 W for 1 hour",
+                ),
+            ],
+        )
+        experiment_ode = pybamm.Experiment(
             [
                 (
                     "Discharge at C/20 for 1 hour",
@@ -129,10 +139,24 @@ class TestSimulationExperiment(unittest.TestCase):
             ],
             cccv_handling="ode",
         )
-        model = pybamm.lithium_ion.SPM()
-        sim = pybamm.Simulation(model, experiment=experiment)
-        solution1 = sim.solve(solver=pybamm.CasadiSolver())
-        self.assertEqual(solution1.termination, "final time")
+        solutions = []
+        for experiment in [experiment_2step, experiment_ode]:
+            model = pybamm.lithium_ion.SPM()
+            sim = pybamm.Simulation(model, experiment=experiment)
+            solution = sim.solve(solver=pybamm.CasadiSolver("fast with events"))
+            solutions.append(solution)
+
+        np.testing.assert_array_almost_equal(
+            solutions[0]["Terminal voltage [V]"].data,
+            solutions[1]["Terminal voltage [V]"].data,
+            decimal=2,
+        )
+        np.testing.assert_array_almost_equal(
+            solutions[0]["Current [A]"].data,
+            solutions[1]["Current [A]"].data,
+            decimal=0,
+        )
+        self.assertEqual(solutions[1].termination, "final time")
 
     def test_run_experiment_old_setup_type(self):
         experiment = pybamm.Experiment(

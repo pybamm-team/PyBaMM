@@ -212,6 +212,11 @@ class TestExperiment(unittest.TestCase):
         )
 
     def test_bad_strings(self):
+        with self.assertRaisesRegex(ValueError, "cccv_handling"):
+            pybamm.Experiment(
+                ["Discharge at 1 C for 20 seconds", "Charge at 0.5 W for 10 minutes"],
+                cccv_handling="bad",
+            )
         with self.assertRaisesRegex(
             TypeError, "Operating conditions should be strings or tuples of strings"
         ):
