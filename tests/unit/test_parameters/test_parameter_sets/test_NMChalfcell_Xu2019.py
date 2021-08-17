@@ -14,7 +14,8 @@ class TestXu(unittest.TestCase):
             )
         )
         self.assertEqual(
-            negative_electrode["Lithium metal concentration [mol.m-3]"], "76900"
+            negative_electrode["Typical plated lithium concentration [mol.m-3]"],
+            "76900",
         )
 
         positive_electrode = pybamm.ParameterValues({}).read_parameters_csv(

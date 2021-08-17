@@ -599,7 +599,7 @@ class ParameterValues:
             return processed_symbol
 
     def _process_symbol(self, symbol):
-        """ See :meth:`ParameterValues.process_symbol()`. """
+        """See :meth:`ParameterValues.process_symbol()`."""
 
         if isinstance(symbol, pybamm.Parameter):
             value = self[symbol.name]
@@ -869,6 +869,7 @@ class ParameterValues:
             "geo",
             "elec",
             "therm",
+            "half_cell",
         ]
 
         # If 'parameters' is a class, extract the dict
