@@ -19,7 +19,7 @@ for model in [model1, model2]:
     geometry = model.default_geometry
 
     # load parameter values
-    chemistry = pybamm.parameter_sets.Chen2020
+    chemistry = pybamm.parameter_sets.Xu2019
     param = pybamm.ParameterValues(chemistry=chemistry)
 
     # process model and geometry
