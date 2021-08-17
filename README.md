@@ -58,7 +58,9 @@ hosted on [Read The Docs](https://readthedocs.org/).
 Additional supporting material can be found
 [here](https://github.com/pybamm-team/pybamm-supporting-material/).
 
-For further examples, see the list of repositories that use PyBaMM [here](https://github.com/pybamm-team/pybamm-example-results).
+Note that the examples on the default `develop` branch are tested on the latest `develop` commit. This may sometimes cause errors when running the examples on the pybamm pip package, which is synced to the `main` branch. You can switch to the `main` branch on github to see the version of the examples that is compatible with the latest pip release.
+
+<!-- For further examples, see the list of repositories that use PyBaMM [here](https://github.com/pybamm-team/pybamm-example-results). -->
 
 ## 🚀 Installing PyBaMM
 
