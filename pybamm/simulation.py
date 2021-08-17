@@ -323,9 +323,13 @@ class Simulation:
 
         self.model = new_model
 
+        operating_conditions = set(
+            x["electric"] + (x["time"],) + (x["period"],)
+            for x in self.experiment.operating_conditions
+        )
         self.op_conds_to_model_and_param = {
-            op_cond["electric"]: (new_model, self.parameter_values)
-            for op_cond in set(self.experiment.operating_conditions)
+            op_cond[:2]: (new_model, self.parameter_values)
+            for op_cond in operating_conditions
         }
 
     def set_up_model_for_experiment_new(self, model):

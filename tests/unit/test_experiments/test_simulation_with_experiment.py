@@ -117,6 +117,23 @@ class TestSimulationExperiment(unittest.TestCase):
         self.assertEqual(len(sol3.cycles), 2)
         os.remove("test_experiment.sav")
 
+    def test_run_experiment_cccv_ode(self):
+        experiment = pybamm.Experiment(
+            [
+                (
+                    "Discharge at C/20 for 1 hour",
+                    "Charge at 1 A until 4.1 V",
+                    "Hold at 4.1 V until C/2",
+                    "Discharge at 2 W for 1 hour",
+                ),
+            ],
+            cccv_handling="ode",
+        )
+        model = pybamm.lithium_ion.SPM()
+        sim = pybamm.Simulation(model, experiment=experiment)
+        solution1 = sim.solve(solver=pybamm.CasadiSolver())
+        self.assertEqual(solution1.termination, "final time")
+
     def test_run_experiment_old_setup_type(self):
         experiment = pybamm.Experiment(
             [
