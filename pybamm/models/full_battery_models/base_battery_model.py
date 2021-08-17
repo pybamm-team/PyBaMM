@@ -164,7 +164,7 @@ class BatteryModelOptions(pybamm.FuzzyDict):
             "lithium plating": ["none", "reversible", "irreversible"],
             "lithium plating porosity change": ["true", "false"],
             "loss of active material": ["none", "stress-driven", "reaction-driven"],
-            "operating mode": ["current", "voltage", "power"],
+            "operating mode": ["current", "voltage", "power", "CCCV"],
             "particle": [
                 "Fickian diffusion",
                 "fast diffusion",
@@ -752,6 +752,10 @@ class BaseBatteryModel(pybamm.BaseModel):
             self.submodels[
                 "external circuit"
             ] = pybamm.external_circuit.PowerFunctionControl(self.param)
+        elif self.options["operating mode"] == "CCCV":
+            self.submodels[
+                "external circuit"
+            ] = pybamm.external_circuit.CCCVFunctionControl(self.param)
         elif callable(self.options["operating mode"]):
             self.submodels[
                 "external circuit"

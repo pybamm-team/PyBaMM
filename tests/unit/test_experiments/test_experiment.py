@@ -2,7 +2,7 @@
 # Test the base experiment class
 #
 import pybamm
-import numpy
+import numpy as np
 import unittest
 import pandas as pd
 import os
@@ -43,51 +43,52 @@ class TestExperiment(unittest.TestCase):
             period="20 seconds",
         )
 
-        # Calculation for operating conditions of drive cycle
-        time_0 = drive_cycle[:, 0][-1]
-        period_0 = numpy.min(numpy.diff(drive_cycle[:, 0]))
-        drive_cycle_1 = experiment.extend_drive_cycle(drive_cycle, end_time=300)
-        time_1 = drive_cycle_1[:, 0][-1]
-        period_1 = numpy.min(numpy.diff(drive_cycle_1[:, 0]))
-        drive_cycle_2 = experiment.extend_drive_cycle(drive_cycle, end_time=1800)
-        time_2 = drive_cycle_2[:, 0][-1]
-        period_2 = numpy.min(numpy.diff(drive_cycle_2[:, 0]))
-
         self.assertEqual(
             experiment.operating_conditions[:-3],
             [
-                (1, "C", 1800.0, 20.0),
-                (0.05, "C", 1800.0, 20.0),
-                (-0.5, "C", 2700.0, 20.0),
-                (1, "A", 1800.0, 20.0),
-                (-0.2, "A", 2700.0, 60.0),
-                (1, "W", 1800.0, 20.0),
-                (-0.2, "W", 2700.0, 20.0),
-                (0, "A", 600.0, 300.0),
-                (1, "V", 20.0, 20.0),
-                (-1, "C", None, 20.0),
-                (4.1, "V", None, 20.0),
-                (3, "V", None, 20.0),
-                (1 / 3, "C", 7200.0, 20.0),
+                {"electric": (1, "C"), "time": 1800.0, "period": 20.0},
+                {"electric": (0.05, "C"), "time": 1800.0, "period": 20.0},
+                {"electric": (-0.5, "C"), "time": 2700.0, "period": 20.0},
+                {"electric": (1, "A"), "time": 1800.0, "period": 20.0},
+                {"electric": (-0.2, "A"), "time": 2700.0, "period": 60.0},
+                {"electric": (1, "W"), "time": 1800.0, "period": 20.0},
+                {"electric": (-0.2, "W"), "time": 2700.0, "period": 20.0},
+                {"electric": (0, "A"), "time": 600.0, "period": 300.0},
+                {"electric": (1, "V"), "time": 20.0, "period": 20.0},
+                {"electric": (-1, "C"), "time": None, "period": 20.0},
+                {"electric": (4.1, "V"), "time": None, "period": 20.0},
+                {"electric": (3, "V"), "time": None, "period": 20.0},
+                {"electric": (1 / 3, "C"), "time": 7200.0, "period": 20.0},
             ],
         )
+        # Calculation for operating conditions of drive cycle
+        time_0 = drive_cycle[:, 0][-1]
+        period_0 = np.min(np.diff(drive_cycle[:, 0]))
+        drive_cycle_1 = experiment.extend_drive_cycle(drive_cycle, end_time=300)
+        time_1 = drive_cycle_1[:, 0][-1]
+        period_1 = np.min(np.diff(drive_cycle_1[:, 0]))
+        drive_cycle_2 = experiment.extend_drive_cycle(drive_cycle, end_time=1800)
+        time_2 = drive_cycle_2[:, 0][-1]
+        period_2 = np.min(np.diff(drive_cycle_2[:, 0]))
         # Check drive cycle operating conditions
-        self.assertTrue(
-            (
-                (experiment.operating_conditions[-3][0] == drive_cycle).all()
-                & (experiment.operating_conditions[-3][1] == "A")
-                & (experiment.operating_conditions[-3][2] == time_0).all()
-                & (experiment.operating_conditions[-3][3] == period_0).all()
-                & (experiment.operating_conditions[-2][0] == drive_cycle_1).all()
-                & (experiment.operating_conditions[-2][1] == "V")
-                & (experiment.operating_conditions[-2][2] == time_1).all()
-                & (experiment.operating_conditions[-2][3] == period_1).all()
-                & (experiment.operating_conditions[-1][0] == drive_cycle_2).all()
-                & (experiment.operating_conditions[-1][1] == "W")
-                & (experiment.operating_conditions[-1][2] == time_2).all()
-                & (experiment.operating_conditions[-1][3] == period_2).all()
-            )
+        np.testing.assert_array_equal(
+            experiment.operating_conditions[-3]["electric"][0], drive_cycle
         )
+        self.assertEqual(experiment.operating_conditions[-3]["electric"][1], "A")
+        self.assertEqual(experiment.operating_conditions[-3]["time"], time_0)
+        self.assertEqual(experiment.operating_conditions[-3]["period"], period_0)
+        np.testing.assert_array_equal(
+            experiment.operating_conditions[-2]["electric"][0], drive_cycle_1
+        )
+        self.assertEqual(experiment.operating_conditions[-2]["electric"][1], "V")
+        self.assertEqual(experiment.operating_conditions[-2]["time"], time_1)
+        self.assertEqual(experiment.operating_conditions[-2]["period"], period_1)
+        np.testing.assert_array_equal(
+            experiment.operating_conditions[-1]["electric"][0], drive_cycle_2
+        )
+        self.assertEqual(experiment.operating_conditions[-1]["electric"][1], "W")
+        self.assertEqual(experiment.operating_conditions[-1]["time"], time_2)
+        self.assertEqual(experiment.operating_conditions[-1]["period"], period_2)
         self.assertEqual(
             experiment.events,
             [
@@ -112,6 +113,58 @@ class TestExperiment(unittest.TestCase):
         self.assertEqual(experiment.parameters, {"test": "test"})
         self.assertEqual(experiment.period, 20)
 
+    def test_read_strings_cccv_combined(self):
+        experiment = pybamm.Experiment(
+            [
+                (
+                    "Discharge at C/20 for 0.5 hours",
+                    "Charge at 0.5 C until 1V",
+                    "Hold at 1V until C/50",
+                    "Discharge at C/20 for 0.5 hours",
+                ),
+            ],
+            cccv_handling="ode",
+        )
+        self.assertEqual(
+            experiment.operating_conditions,
+            [
+                {"electric": (0.05, "C"), "time": 1800.0, "period": 60.0},
+                {"electric": (-0.5, "C", 1, "V"), "time": None, "period": 60.0},
+                {"electric": (0.05, "C"), "time": 1800.0, "period": 60.0},
+            ],
+        )
+        self.assertEqual(experiment.events, [None, (0.02, "C"), None])
+
+        # Cases that don't quite match shouldn't do CCCV setup
+        experiment = pybamm.Experiment(
+            [
+                "Charge at 0.5 C until 2V",
+                "Hold at 1V until C/50",
+            ],
+            cccv_handling="ode",
+        )
+        self.assertEqual(
+            experiment.operating_conditions,
+            [
+                {"electric": (-0.5, "C"), "time": None, "period": 60.0},
+                {"electric": (1, "V"), "time": None, "period": 60.0},
+            ],
+        )
+        experiment = pybamm.Experiment(
+            [
+                "Charge at 0.5 C for 2 minutes",
+                "Hold at 1V until C/50",
+            ],
+            cccv_handling="ode",
+        )
+        self.assertEqual(
+            experiment.operating_conditions,
+            [
+                {"electric": (-0.5, "C"), "time": 120.0, "period": 60.0},
+                {"electric": (1, "V"), "time": None, "period": 60.0},
+            ],
+        )
+
     def test_read_strings_repeat(self):
         experiment = pybamm.Experiment(
             ["Discharge at 10 mA for 0.5 hours"]
@@ -120,11 +173,11 @@ class TestExperiment(unittest.TestCase):
         self.assertEqual(
             experiment.operating_conditions,
             [
-                (0.01, "A", 1800.0, 60),
-                (-0.5, "C", 2700.0, 60),
-                (1, "V", 20.0, 60),
-                (-0.5, "C", 2700.0, 60),
-                (1, "V", 20.0, 60),
+                {"electric": (0.01, "A"), "time": 1800.0, "period": 60},
+                {"electric": (-0.5, "C"), "time": 2700.0, "period": 60},
+                {"electric": (1, "V"), "time": 20.0, "period": 60},
+                {"electric": (-0.5, "C"), "time": 2700.0, "period": 60},
+                {"electric": (1, "V"), "time": 20.0, "period": 60},
             ],
         )
         self.assertEqual(experiment.period, 60)
@@ -140,10 +193,10 @@ class TestExperiment(unittest.TestCase):
         self.assertEqual(
             experiment.operating_conditions,
             [
-                (0.05, "C", 1800.0, 60.0),
-                (-0.2, "C", 2700.0, 60.0),
-                (0.05, "C", 1800.0, 60.0),
-                (-0.2, "C", 2700.0, 60.0),
+                {"electric": (0.05, "C"), "time": 1800.0, "period": 60.0},
+                {"electric": (-0.2, "C"), "time": 2700.0, "period": 60.0},
+                {"electric": (0.05, "C"), "time": 1800.0, "period": 60.0},
+                {"electric": (-0.2, "C"), "time": 2700.0, "period": 60.0},
             ],
         )
         self.assertEqual(experiment.cycle_lengths, [2, 1, 1])
@@ -159,6 +212,11 @@ class TestExperiment(unittest.TestCase):
         )
 
     def test_bad_strings(self):
+        with self.assertRaisesRegex(ValueError, "cccv_handling"):
+            pybamm.Experiment(
+                ["Discharge at 1 C for 20 seconds", "Charge at 0.5 W for 10 minutes"],
+                cccv_handling="bad",
+            )
         with self.assertRaisesRegex(
             TypeError, "Operating conditions should be strings or tuples of strings"
         ):
