@@ -132,7 +132,7 @@ class Concatenation(pybamm.Symbol):
         self.concat_latex = tuple(map(sympy.latex, children))
 
         if self.print_name is not None:
-            return sympy.symbols(self.print_name)
+            return sympy.Symbol(self.print_name)
         else:
             concat_str = r"\\".join(self.concat_latex)
             concat_sym = sympy.Symbol(r"\begin{cases}" + concat_str + r"\end{cases}")

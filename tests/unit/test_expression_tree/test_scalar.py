@@ -34,7 +34,14 @@ class TestScalar(unittest.TestCase):
 
     def test_to_equation(self):
         a = pybamm.Scalar(3)
+        b = pybamm.Scalar(4)
+
+        # Test value
         self.assertEqual(str(a.to_equation()), "3.0")
+
+        # Test print_name
+        b.print_name = "test"
+        self.assertEqual(str(b.to_equation()), "test")
 
 
 if __name__ == "__main__":
