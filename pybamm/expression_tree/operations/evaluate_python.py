@@ -685,7 +685,10 @@ class EvaluatorJaxJacobian:
         result = self._jac_evaluate(*self._constants, t, y, y_dot, inputs, known_evals)
         result = result.reshape(result.shape[0], -1)
 
-        return result
+        if known_evals is not None:
+            return result, known_evals
+        else:
+            return result
 
 
 class EvaluatorJaxSensitivities:
@@ -704,4 +707,7 @@ class EvaluatorJaxSensitivities:
         # execute code
         result = self._jac_evaluate(*self._constants, t, y, y_dot, inputs, known_evals)
 
-        return result
+        if known_evals is not None:
+            return result, known_evals
+        else:
+            return result
