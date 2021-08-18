@@ -73,7 +73,7 @@ class Latexify:
                     r"\begin{cases}" + r" \\ ".join(concat_geo) + r"\end{cases}"
                 )
                 concat_eqn = sympy.Eq(
-                    sympy.symbols(node.print_name),
+                    sympy.Symbol(node.print_name),
                     sympy.Symbol(concat_sym),
                     evaluate=False,
                 )
@@ -242,7 +242,7 @@ class Latexify:
 
         for eqn_type in ["rhs", "algebraic"]:
             for var, eqn in getattr(self.model, eqn_type).items():
-                var_symbol = sympy.symbols(var.print_name)
+                var_symbol = sympy.Symbol(var.print_name)
 
                 # Add equation name to the list
                 eqn_list.append(sympy.Symbol(r"\\ \textbf{" + str(var) + "}"))
@@ -315,7 +315,7 @@ class Latexify:
         # Add voltage expression to the list
         if "Terminal voltage [V]" in self.model.variables:
             voltage = self.model.variables["Terminal voltage [V]"].to_equation()
-            voltage_eqn = sympy.Eq(sympy.symbols("V"), voltage, evaluate=False)
+            voltage_eqn = sympy.Eq(sympy.Symbol("V"), voltage, evaluate=False)
             # Add terminal voltage to the list
             eqn_list.append(sympy.Symbol(r"\\ \textbf{Terminal voltage [V]}"))
             eqn_list.extend([voltage_eqn])
