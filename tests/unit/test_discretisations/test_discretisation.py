@@ -1042,6 +1042,48 @@ class TestDiscretise(unittest.TestCase):
             (mesh["negative particle"].npts * (mesh["negative electrode"].npts + 1), 1),
         )
 
+    def test_tertiary_broadcast_3D(self):
+        disc = get_1p1d_discretisation_for_testing()
+        mesh = disc.mesh
+        var = pybamm.Variable(
+            "var",
+            domain=["negative particle"],
+            auxiliary_domains={"secondary": "negative electrode"}
+        )
+        broad = pybamm.TertiaryBroadcast(var, "current collector")
+
+        disc.set_variable_slices([var])
+        broad_disc = disc.process_symbol(broad)
+        self.assertIsInstance(broad_disc, pybamm.MatrixMultiplication)
+        self.assertIsInstance(broad_disc.children[0], pybamm.Matrix)
+        self.assertIsInstance(broad_disc.children[1], pybamm.StateVector)
+        self.assertEqual(
+            broad_disc.shape,
+            (
+                mesh["negative particle"].npts
+                * mesh["negative electrode"].npts
+                * mesh["current collector"].npts,
+                1
+            ),
+        )
+
+        # test broadcast to edges
+        broad_to_edges = pybamm.TertiaryBroadcastToEdges(var, "current collector")
+        disc.set_variable_slices([var])
+        broad_to_edges_disc = disc.process_symbol(broad_to_edges)
+        self.assertIsInstance(broad_to_edges_disc, pybamm.MatrixMultiplication)
+        self.assertIsInstance(broad_to_edges_disc.children[0], pybamm.Matrix)
+        self.assertIsInstance(broad_to_edges_disc.children[1], pybamm.StateVector)
+        self.assertEqual(
+            broad_to_edges_disc.shape,
+            (
+                mesh["negative particle"].npts
+                * mesh["negative electrode"].npts
+                * (mesh["current collector"].npts + 1),
+                1
+            ),
+        )
+
     def test_concatenation(self):
         a = pybamm.Parameter("a")
         b = pybamm.Parameter("b")

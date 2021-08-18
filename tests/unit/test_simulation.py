@@ -223,6 +223,10 @@ class TestSimulation(unittest.TestCase):
         self.assertEqual(sim._built_initial_soc, 1)
         sim.solve(t_eval=[0, 600], initial_soc=0.5)
         self.assertEqual(sim._built_initial_soc, 0.5)
+        exp = pybamm.Experiment(['Discharge at 1C until 3.6V (1 minute period)'])
+        sim = pybamm.Simulation(model, parameter_values=param, experiment=exp)
+        sim.solve(initial_soc=0.8)
+        self.assertEqual(sim._built_initial_soc, 0.8)
 
     def test_solve_with_inputs(self):
         model = pybamm.lithium_ion.SPM()

@@ -231,6 +231,24 @@ class TestUnaryOperators(unittest.TestCase):
         self.assertEqual(
             inta_tert.auxiliary_domains, {"secondary": ["some extra domain"]}
         )
+        # space integral with quaternary domain
+        a_quat = pybamm.Symbol(
+            "a",
+            domain=["negative electrode"],
+            auxiliary_domains={
+                "secondary": "current collector",
+                "tertiary": "some extra domain",
+                "quaternary": "another extra domain"
+            },
+        )
+        inta_quat = pybamm.Integral(a_quat, x)
+        self.assertEqual(inta_quat.domain, ["current collector"])
+        self.assertEqual(
+            inta_quat.auxiliary_domains, {
+                "secondary": ["some extra domain"],
+                "tertiary": ["another extra domain"]
+            }
+        )
 
         # space integral *in* secondary domain
         y = pybamm.SpatialVariable("y", ["current collector"])
@@ -244,6 +262,15 @@ class TestUnaryOperators(unittest.TestCase):
         self.assertEqual(
             inta_tert_y.auxiliary_domains, {"secondary": ["some extra domain"]}
         )
+        # with a quaternary domain
+        inta_quat_y = pybamm.Integral(a_quat, y)
+        self.assertEqual(inta_quat_y.domain, ["negative electrode"])
+        self.assertEqual(
+            inta_quat_y.auxiliary_domains, {
+                "secondary": ["some extra domain"],
+                "tertiary": ["another extra domain"]
+            }
+        )
 
         # space integral *in* tertiary domain
         z = pybamm.SpatialVariable("z", ["some extra domain"])
@@ -251,6 +278,26 @@ class TestUnaryOperators(unittest.TestCase):
         self.assertEqual(inta_tert_z.domain, ["negative electrode"])
         self.assertEqual(
             inta_tert_z.auxiliary_domains, {"secondary": ["current collector"]}
+        )
+        # with a quaternary domain
+        inta_quat_z = pybamm.Integral(a_quat, z)
+        self.assertEqual(inta_quat_z.domain, ["negative electrode"])
+        self.assertEqual(
+            inta_quat_z.auxiliary_domains, {
+                "secondary": ["current collector"],
+                "tertiary": ["another extra domain"]
+            }
+        )
+
+        # space integral *in* quaternary domain
+        Z = pybamm.SpatialVariable("Z", ["another extra domain"])
+        inta_quat_Z = pybamm.Integral(a_quat, Z)
+        self.assertEqual(inta_quat_Z.domain, ["negative electrode"])
+        self.assertEqual(
+            inta_quat_Z.auxiliary_domains, {
+                "secondary": ["current collector"],
+                "tertiary": ["some extra domain"]
+            }
         )
 
         # space integral over two variables
@@ -474,6 +521,25 @@ class TestUnaryOperators(unittest.TestCase):
         boundary_a_tert = pybamm.boundary_value(a_tert, "right")
         self.assertEqual(boundary_a_tert.domain, ["current collector"])
         self.assertEqual(boundary_a_tert.auxiliary_domains, {"secondary": ["bla"]})
+        # test with secondary, tertiary and quaternary domains
+        a_quat = pybamm.Symbol(
+            "a",
+            domain=["separator"],
+            auxiliary_domains={
+                "secondary": "current collector",
+                "tertiary": "bla",
+                "quaternary": "another domain"
+            },
+        )
+        boundary_a_quat = pybamm.boundary_value(a_quat, "right")
+        self.assertEqual(boundary_a_quat.domain, ["current collector"])
+        self.assertEqual(
+            boundary_a_quat.auxiliary_domains,
+            {
+                "secondary": ["bla"],
+                "tertiary": ["another domain"]
+            }
+        )
 
         # error if boundary value on tabs and domain is not "current collector"
         var = pybamm.Variable("var", domain=["negative electrode"])
@@ -633,6 +699,56 @@ class TestUnaryOperators(unittest.TestCase):
         self.assertIsInstance(av_a.children[0], pybamm.Integral)
         self.assertEqual(av_a.children[1].id, l_p.id)
 
+    def test_size_average(self):
+
+        # no domain
+        a = pybamm.Scalar(1)
+        average_a = pybamm.size_average(a)
+        self.assertEqual(average_a.id, a.id)
+
+        b = pybamm.FullBroadcast(
+            1,
+            ["negative particle"],
+            {
+                "secondary": "negative electrode",
+                "tertiary": "current collector"
+            }
+        )
+        # no "particle size" domain
+        average_b = pybamm.size_average(b)
+        self.assertEqual(average_b.id, b.id)
+
+        # primary or secondary broadcast to "particle size" domain
+        average_a = pybamm.size_average(
+            pybamm.PrimaryBroadcast(a, "negative particle size")
+        )
+        self.assertEqual(average_a.evaluate(), np.array([1]))
+
+        a = pybamm.Symbol("a", domain="negative particle")
+        average_a = pybamm.size_average(
+            pybamm.SecondaryBroadcast(a, "negative particle size")
+        )
+        self.assertEqual(average_a.id, a.id)
+
+        for domain in [["negative particle size"], ["positive particle size"]]:
+            a = pybamm.Symbol("a", domain=domain)
+            R = pybamm.SpatialVariable("R", domain)
+            av_a = pybamm.size_average(a)
+            self.assertIsInstance(av_a, pybamm.Division)
+            self.assertIsInstance(av_a.children[0], pybamm.Integral)
+            self.assertIsInstance(av_a.children[1], pybamm.Integral)
+            self.assertEqual(av_a.children[0].integration_variable[0].domain, R.domain)
+            # domain list should now be empty
+            self.assertEqual(av_a.domain, [])
+
+        # R-average of symbol that evaluates on edges raises error
+        symbol_on_edges = pybamm.PrimaryBroadcastToEdges(1, "domain")
+        with self.assertRaisesRegex(
+            ValueError,
+            """Can't take the size-average of a symbol that evaluates on edges"""
+        ):
+            pybamm.size_average(symbol_on_edges)
+
     def test_r_average(self):
         a = pybamm.Scalar(1)
         average_a = pybamm.r_average(a)
@@ -751,6 +867,8 @@ class TestUnaryOperators(unittest.TestCase):
         a = pybamm.Symbol("a", domain="negative particle")
         b = pybamm.Symbol("b", domain="current collector")
         c = pybamm.Symbol("c", domain="test")
+        d = pybamm.Symbol("d", domain=["negative electrode"])
+        one = pybamm.Symbol("1", domain="negative particle")
 
         # Test print_name
         pybamm.Floor.print_name = "test"
@@ -773,13 +891,24 @@ class TestUnaryOperators(unittest.TestCase):
 
         # Test BoundaryValue
         self.assertEqual(
+            pybamm.BoundaryValue(one, "right").to_equation(), sympy.symbols("1")
+        )
+        self.assertEqual(
             pybamm.BoundaryValue(a, "right").to_equation(), sympy.symbols("a^{surf}")
         )
         self.assertEqual(
             pybamm.BoundaryValue(b, "positive tab").to_equation(), sympy.symbols(str(b))
         )
         self.assertEqual(
-            pybamm.BoundaryValue(c, "left").to_equation(), sympy.symbols("c^{left}")
+            pybamm.BoundaryValue(c, "left").to_equation(),
+            sympy.Symbol(r"c^{\mathtt{\text{left}}}"),
+        )
+
+        # Test Integral
+        xn = pybamm.SpatialVariable("xn", ["negative electrode"])
+        self.assertEqual(
+            pybamm.Integral(d, xn).to_equation(),
+            sympy.Integral("d", sympy.symbols("xn")),
         )
 
 

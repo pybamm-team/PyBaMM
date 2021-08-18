@@ -312,9 +312,13 @@ class FiniteVolume(pybamm.SpatialMethod):
                 n_primary_pts = primary_submesh.npts
             int_matrix = hstack([d_edge * eye(n_primary_pts) for d_edge in d_edges])
 
-            # repeat matrix for each node in secondary dimensions
+            # repeat matrix for each node in higher dimensions
             third_dim_repeats = self._get_auxiliary_domain_repeats(
-                {k: v for k, v in domains.items() if k == "tertiary"}
+                {
+                    k: v for k, v in domains.items() if (
+                        k == "tertiary" or k == "quaternary"
+                    )
+                }
             )
             # generate full matrix from the submatrix
             matrix = kron(eye(third_dim_repeats), int_matrix)
@@ -405,7 +409,7 @@ class FiniteVolume(pybamm.SpatialMethod):
         **Backward integral**
 
         .. math::
-            F(x) = \\int_x^end\\!f(u)\\,du
+            F(x) = \\int_x^{end}\\!f(u)\\,du
 
         The indefinite integral must satisfy the following conditions:
 

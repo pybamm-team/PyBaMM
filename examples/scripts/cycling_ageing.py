@@ -1,10 +1,17 @@
 import pybamm as pb
 
-# Note: the Yang model is still in active development and results do not
-# match with those reported in the paper
-
 pb.set_logging_level("NOTICE")
-model = pb.lithium_ion.Yang2017()
+model = pb.lithium_ion.DFN(
+    {
+        "SEI": "ec reaction limited",
+        "SEI film resistance": "distributed",
+        "SEI porosity change": "true",
+        "lithium plating": "irreversible",
+        "lithium plating porosity change": "true",
+    }
+)
+
+param = pb.ParameterValues(chemistry=pb.parameter_sets.Mohtat2020)
 
 experiment = pb.Experiment(
     [
@@ -44,8 +51,9 @@ experiment = pb.Experiment(
         ),
     ]
 )
-sim = pb.Simulation(model, experiment=experiment)
-sim.solve(solver=pb.CasadiSolver(mode="fast with events"))
+
+sim = pb.Simulation(model, experiment=experiment, parameter_values=param)
+sim.solve(solver=pb.CasadiSolver(mode="safe"))
 sim.plot(
     [
         "Current [A]",

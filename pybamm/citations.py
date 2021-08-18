@@ -18,7 +18,7 @@ class Citations:
     Examples
     --------
     >>> import pybamm
-    >>> pybamm.citations.register("Sulzer2020")
+    >>> pybamm.citations.register("Sulzer2021")
     >>> pybamm.print_citations("citations.txt")
     """
 
@@ -31,7 +31,7 @@ class Citations:
         # Initialize empty papers to cite
         self._papers_to_cite = set()
         # Register the PyBaMM paper and the numpy paper
-        self.register("Sulzer2020")
+        self.register("Sulzer2021")
         self.register("Harris2020")
 
     def read_citations(self):

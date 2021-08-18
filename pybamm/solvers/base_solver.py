@@ -1264,7 +1264,7 @@ class BaseSolver(object):
                 model.y0 = old_solution.all_ys[-1][:, -1]
             else:
                 model.y0 = (
-                    model.set_initial_conditions_from(old_solution, inplace=False)
+                    model.set_initial_conditions_from(old_solution)
                     .concatenated_initial_conditions.evaluate(0, inputs=ext_and_inputs)
                     .flatten()
                 )

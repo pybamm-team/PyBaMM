@@ -45,7 +45,7 @@ class UnaryOperator(pybamm.Symbol):
         """See :meth:`pybamm.Symbol.__str__()`."""
         return "{}({!s})".format(self.name, self.child)
 
-    def new_copy(self):
+    def create_copy(self):
         """See :meth:`pybamm.Symbol.new_copy()`."""
         new_child = self.child.new_copy()
         return self._unary_new_copy(new_child)
@@ -538,6 +538,11 @@ class Integral(SpatialOperator):
                     and var.domain == child.auxiliary_domains["tertiary"]
                 ):
                     self._integration_dimension = "tertiary"
+                elif (
+                    "quaternary" in child.auxiliary_domains
+                    and var.domain == child.auxiliary_domains["quaternary"]
+                ):
+                    self._integration_dimension = "quaternary"
                 else:
                     raise pybamm.DomainError(
                         "integration_variable must be the same as child domain or "
@@ -558,6 +563,10 @@ class Integral(SpatialOperator):
                     auxiliary_domains = {
                         "secondary": child.auxiliary_domains["tertiary"]
                     }
+                    if "quaternary" in child.auxiliary_domains:
+                        auxiliary_domains["tertiary"] = child.auxiliary_domains[
+                            "quaternary"
+                        ]
                 else:
                     auxiliary_domains = {}
             # if child has no auxiliary domain, integral removes domain
@@ -565,18 +574,32 @@ class Integral(SpatialOperator):
                 domain = []
                 auxiliary_domains = {}
         elif self._integration_dimension == "secondary":
-            # integral in the secondary dimension keeps the same domain, moves tertiary
-            # domain to secondary domain
+            # integral in the secondary dimension keeps the same domain, moves
+            # quaternary to tertiary and tertiary to secondary domain
             domain = child.domain
             if "tertiary" in child.auxiliary_domains:
                 auxiliary_domains = {"secondary": child.auxiliary_domains["tertiary"]}
+                if "quaternary" in child.auxiliary_domains:
+                    auxiliary_domains["tertiary"] = child.auxiliary_domains[
+                        "quaternary"
+                    ]
             else:
                 auxiliary_domains = {}
         elif self._integration_dimension == "tertiary":
-            # integral in the tertiary dimension keeps the domain and secondary domain
+            # integral in the tertiary dimension keeps the domain and secondary domain,
+            # moves quaternary to tertiary
             domain = child.domain
             auxiliary_domains = {"secondary": child.auxiliary_domains["secondary"]}
-
+            if "quaternary" in child.auxiliary_domains:
+                auxiliary_domains["tertiary"] = child.auxiliary_domains["quaternary"]
+        elif self._integration_dimension == "quaternary":
+            # integral in the quaternary dimension keeps the domain, secondary and
+            # tertiary domains
+            domain = child.domain
+            auxiliary_domains = {
+                "secondary": child.auxiliary_domains["secondary"],
+                "tertiary": child.auxiliary_domains["tertiary"]
+            }
         if any(isinstance(var, pybamm.SpatialVariable) for var in integration_variable):
             name += " {}".format(child.domain)
 
@@ -617,6 +640,10 @@ class Integral(SpatialOperator):
     def _evaluates_on_edges(self, dimension):
         """See :meth:`pybamm.Symbol._evaluates_on_edges()`."""
         return False
+
+    def _sympy_operator(self, child):
+        """Override :meth:`pybamm.UnaryOperator._sympy_operator`"""
+        return sympy.Integral(child, sympy.symbols("xn"))
 
 
 class BaseIndefiniteIntegral(Integral):
@@ -903,10 +930,12 @@ class BoundaryOperator(SpatialOperator):
         # if child has no auxiliary domain, boundary operator removes domain
         else:
             domain = []
-        # tertiary auxiliary domain shift down to secondary
-        try:
+        # shift tertiary and quaternary domains down by one
+        if "tertiary" in child.auxiliary_domains:
             auxiliary_domains = {"secondary": child.auxiliary_domains["tertiary"]}
-        except KeyError:
+            if "quaternary" in child.auxiliary_domains:
+                auxiliary_domains["tertiary"] = child.auxiliary_domains["quaternary"]
+        else:
             auxiliary_domains = {}
         super().__init__(
             name, child, domain=domain, auxiliary_domains=auxiliary_domains
@@ -958,13 +987,19 @@ class BoundaryValue(BoundaryOperator):
             self.child.domain[0] in ["negative particle", "positive particle"]
             and self.side == "right"
         ):
-            return sympy.Symbol(
-                str(child) + r"^{surf}"
-            )  # value on the surface of the particle
+            # value on the surface of the particle
+            if str(child) == "1":
+                return child
+            else:
+                latex_child = sympy.latex(child) + r"^{surf}"
+                return sympy.Symbol(latex_child)
+
         elif self.side == "positive tab":
             return child
+
         else:
-            return sympy.Symbol(str(child) + r"^{" + self.side + r"}")
+            latex_child = sympy.latex(child) + r"^{" + sympy.latex(self.side) + r"}"
+            return sympy.Symbol(latex_child)
 
 
 class BoundaryGradient(BoundaryOperator):
@@ -1265,10 +1300,16 @@ def x_average(symbol):
         # Even if domain is "negative electrode", "separator", or
         # "positive electrode", and we know l, we still compute it as Integral(1, x)
         # as this will be easier to identify for simplifications later on
-        if symbol.domain == ["negative particle"]:
+        if (
+            symbol.domain == ["negative particle"] or
+            symbol.domain == ["negative particle size"]
+        ):
             x = pybamm.standard_spatial_vars.x_n
             l = geo.l_n
-        elif symbol.domain == ["positive particle"]:
+        elif (
+            symbol.domain == ["positive particle"] or
+            symbol.domain == ["positive particle size"]
+        ):
             x = pybamm.standard_spatial_vars.x_p
             l = geo.l_p
         else:
@@ -1412,6 +1453,67 @@ def r_average(symbol):
             pybamm.Scalar(1), symbol.domain, symbol.auxiliary_domains
         )
         return Integral(symbol, r) / Integral(v, r)
+
+
+def size_average(symbol):
+    """convenience function for averaging over particle size R using the area-weighted
+    particle-size distribution.
+
+    Parameters
+    ----------
+    symbol : :class:`pybamm.Symbol`
+        The function to be averaged
+    Returns
+    -------
+    :class:`Symbol`
+        the new averaged symbol
+    """
+    # Can't take average if the symbol evaluates on edges
+    if symbol.evaluates_on_edges("primary"):
+        raise ValueError(
+            """Can't take the size-average of a symbol that evaluates on edges"""
+        )
+
+    # If symbol doesn't have a domain, or doesn't have "negative particle size"
+    #  or "positive particle size" as a domain, it's average value is itself
+    if symbol.domain == [] or not any(
+        domain in [["negative particle size"], ["positive particle size"]]
+        for domain in list(symbol.domains.values())
+    ):
+        new_symbol = symbol.new_copy()
+        new_symbol.parent = None
+        return new_symbol
+
+    # If symbol is a primary broadcast to "particle size", take the orphan
+    elif isinstance(symbol, pybamm.PrimaryBroadcast) and symbol.domain in [
+        ["negative particle size"], ["positive particle size"]
+    ]:
+        return symbol.orphans[0]
+    # If symbol is a secondary broadcast to "particle size" from "particle",
+    # take the orphan
+    elif (
+        isinstance(symbol, pybamm.SecondaryBroadcast) and
+        symbol.domains["secondary"] in [
+            ["negative particle size"], ["positive particle size"]
+        ]
+    ):
+        return symbol.orphans[0]
+    # Otherwise, perform the integration in R
+    else:
+        R = pybamm.SpatialVariable(
+            "R",
+            domain=symbol.domain,
+            auxiliary_domains=symbol.auxiliary_domains,
+            coord_sys="cartesian",
+        )
+        geo = pybamm.geometric_parameters
+        if ["negative particle size"] in list(symbol.domains.values()):
+            f_a_dist = geo.f_a_dist_n(R)
+        elif ["positive particle size"] in list(symbol.domains.values()):
+            f_a_dist = geo.f_a_dist_p(R)
+
+        # take average using Integral and distribution f_a_dist
+        return Integral(f_a_dist * symbol, R) / Integral(f_a_dist, R)
 
 
 def boundary_value(symbol, side):

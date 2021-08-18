@@ -323,6 +323,14 @@ class TestBinaryOperators(unittest.TestCase):
         self.assertEqual(heav.evaluate(y=np.array([0])), 1)
         self.assertEqual(str(heav), "y[0:1] <= 1.0")
 
+    def test_equality(self):
+        a = pybamm.Scalar(1)
+        b = pybamm.StateVector(slice(0, 1))
+        equal = pybamm.Equality(a, b)
+        self.assertEqual(equal.evaluate(y=np.array([1])), 1)
+        self.assertEqual(equal.evaluate(y=np.array([2])), 0)
+        self.assertEqual(str(equal), "1.0 == y[0:1]")
+
     def test_sigmoid(self):
         a = pybamm.Scalar(1)
         b = pybamm.StateVector(slice(0, 1))

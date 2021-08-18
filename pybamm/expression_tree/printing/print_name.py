@@ -9,6 +9,10 @@ PRINT_NAME_OVERRIDES = {
     "current_with_time": "I",
     "timescale": r"\tau",
     "dimensional_current_with_time": r"\hat{I}",
+    "eps_c_e": r"\epsilon{c_e}",
+    "one_plus_dlnf_dlnc": r"1+\frac{dlnf}{dlnc}",
+    "negative_particle_concentration_scale": r"c_{n}^{max}",
+    "positive_particle_concentration_scale": r"c_{p}^{max}",
 }
 
 GREEK_LETTERS = [
@@ -49,43 +53,41 @@ def prettify_print_name(name):
     if name in PRINT_NAME_OVERRIDES:
         return PRINT_NAME_OVERRIDES[name]
 
-    # Superscripts with comma separated
-    # e.g. U_n_ref --> U^{n\,ref}
-    if any(elem in name for elem in ["_init", "_ref", "_typ", "_max", "_0"]):
-        superscript_re = re.findall(
-            r"^[0-9a-zA-Z]+_(\w*_*(?:init|ref|typ|max|0))", name
-        )[0]
-        superscript_str = r"^{" + superscript_re.replace("_", "\,") + r"}"
-        name = name.replace(superscript_re, superscript_str).replace("_", "")
+    # Superscripts with comma separated (U_n_ref --> U_{n}^{ref})
+    sup_re = re.search(r"^[\da-zA-Z]+_?(.*?)_?((?:init|ref|typ|max|0))", name)
+    if sup_re:
+        sup_str = (r"{" + sup_re.group(1).replace("_", "\,") + r"}^{" +
+                   sup_re.group(2) + r"}")
+        sup_var = sup_re.group(1) + "_" + sup_re.group(2)
+        name = name.replace(sup_var, sup_str)
 
-    # Subscripts with comma separated
-    # e.g. a_R_p --> a_{R\,p}
-    if name.startswith("a_"):
-        subscript_re = re.findall(r"^a_+(\w+)", name)[0]
-        subscript_str = r"{" + subscript_re.replace("_", "\,") + r"}"
-        name = name.replace(subscript_re, subscript_str)
+    # Subscripts with comma separated (a_R_p --> a_{R\,p})
+    sub_re = re.search(r"^a_+(\w+)", name)
+    if sub_re:
+        sub_str = r"{" + sub_re.group(1).replace("_", "\,") + r"}"
+        name = name.replace(sub_re.group(1), sub_str)
 
-    # Dim and Dimensional with comma separated
-    # e.g. j0_n_ref_dimensional --> \hat{j0}^{n\,ref}
-    if name.endswith("dim") or name.endswith("dimensional"):
-        dim_re1, dim_re2 = re.findall(
-            r"([\da-zA-Z]+)_?(.*?)_?(?:dim|dimensional)", name
-        )[0]
-
+    # Dimensions with comma separated (j0_n_ref_dimensional --> \hat{j0}_{n}^{ref})
+    dim_re = re.search(r"([\da-zA-Z]+)_?(.*?)_?(?:dim|dimensional)", name)
+    if dim_re:
         if "^" in name:
-            name = r"\hat{" + dim_re1 + r"}" + dim_re2.replace("_", "\,")
+            name = (r"\hat{" + dim_re.group(1) + r"}_" +
+                    dim_re.group(2).replace("_", "\,"))
         else:
-            name = r"\hat{" + dim_re1 + r"}_{" + dim_re2.replace("_", "\,") + r"}"
+            name = (r"\hat{" + dim_re.group(1) + r"}_{" +
+                    dim_re.group(2).replace("_", "\,") + r"}")
 
-    # Bar with comma separated
-    # e.g. c_s_n_xav --> \bar{c}_{s\,n}
-    if any(elem in name for elem in ["_av", "_xav"]):
-        bar_re1, bar_re2 = re.findall(r"^([a-zA-Z]+)_*(\w*?)_(?:av|xav)", name)[0]
-        name = r"\bar{" + bar_re1 + r"}_{" + bar_re2.replace("_", "\,") + r"}"
+    # Bar with comma separated (c_s_n_xav --> \bar{c}_{s\,n})
+    bar_re = re.search(r"^([a-zA-Z]+)_*(\w*?)_(?:av|xav)", name)
+    if bar_re:
+        name = (r"\bar{" + bar_re.group(1) + r"}_{" +
+                bar_re.group(2).replace("_", "\,") + r"}")
 
-    # Greek letters
-    # e.g. delta_phi_n --> \delta_\phi_n
-    greek_re = f"({'|'.join(GREEK_LETTERS)})"
+    # Replace eps with epsilon (eps_n --> epsilon_n)
+    name = re.sub(r"(eps)(?![0-9a-zA-Z])", "epsilon", name)
+
+    # Greek letters (delta --> \delta)
+    greek_re = r"(?<!\\)(" + "|".join(GREEK_LETTERS) + r")(?![0-9a-zA-Z])"
     name = re.sub(greek_re, r"\\\1", name, flags=re.IGNORECASE)
 
     return name

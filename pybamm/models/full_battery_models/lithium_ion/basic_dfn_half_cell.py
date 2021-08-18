@@ -252,7 +252,7 @@ class BasicDFNHalfCell(BaseModel):
         ######################
         # Current in the solid
         ######################
-        sigma_eff_w = sigma_w * eps_s_w ** b_s_w
+        sigma_eff_w = sigma_w(T) * eps_s_w ** b_s_w
         i_s_w = -sigma_eff_w * pybamm.grad(phi_s_w)
         self.boundary_conditions[phi_s_w] = {
             "left": (pybamm.Scalar(0), "Neumann"),
