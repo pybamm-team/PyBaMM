@@ -1,13 +1,15 @@
 #
 # Tests for the base model class
 #
-import casadi
-import pybamm
-import numpy as np
-import unittest
 import os
-import subprocess  # nosec
 import platform
+import subprocess  # nosec
+import unittest
+
+import casadi
+import numpy as np
+
+import pybamm
 
 
 class TestBaseModel(unittest.TestCase):

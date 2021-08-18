@@ -203,7 +203,7 @@ class Function(pybamm.Symbol):
     def _function_evaluate(self, evaluated_children):
         return self.function(*evaluated_children)
 
-    def new_copy(self):
+    def create_copy(self):
         """See :meth:`pybamm.Symbol.new_copy()`."""
         children_copy = [child.new_copy() for child in self.children]
         return self._function_new_copy(children_copy)
@@ -232,11 +232,9 @@ class Function(pybamm.Symbol):
             )
         )
 
-    def _sympy_operator(self, *children):
+    def _sympy_operator(self, child):
         """Apply appropriate SymPy operators."""
-        raise NotImplementedError(
-            f"{self.__class__} does not implement _sympy_operator."
-        )
+        return child
 
     @property
     def julia_name(self):
@@ -295,10 +293,16 @@ class SpecificFunction(Function):
 
     @property
     def julia_name(self):
-        """ See :meth:`pybamm.Function.julia_name` """
+        """See :meth:`pybamm.Function.julia_name`"""
         # By default, the julia name for a specific function is the function's name
         # Some functions may overwrite this
         return self.function.__name__
+
+    def _sympy_operator(self, child):
+        """Apply appropriate SymPy operators."""
+        class_name = self.__class__.__name__.lower()
+        sympy_function = getattr(sympy, class_name)
+        return sympy_function(child)
 
 
 class Arcsinh(SpecificFunction):
@@ -313,7 +317,7 @@ class Arcsinh(SpecificFunction):
 
     @property
     def julia_name(self):
-        """ See :meth:`pybamm.Function.julia_name` """
+        """See :meth:`pybamm.Function.julia_name`"""
         return "asinh"
 
     def _sympy_operator(self, child):
@@ -412,7 +416,7 @@ class Max(SpecificFunction):
 
     @property
     def julia_name(self):
-        """ See :meth:`pybamm.Function.julia_name` """
+        """See :meth:`pybamm.Function.julia_name`"""
         return "maximum"
 
 
@@ -432,7 +436,7 @@ class Min(SpecificFunction):
 
     @property
     def julia_name(self):
-        """ See :meth:`pybamm.Function.julia_name` """
+        """See :meth:`pybamm.Function.julia_name`"""
         return "minimum"
 
 
@@ -530,7 +534,7 @@ class Arctan(SpecificFunction):
 
     @property
     def julia_name(self):
-        """ See :meth:`pybamm.Function.julia_name` """
+        """See :meth:`pybamm.Function.julia_name`"""
         return "atan"
 
 

@@ -82,6 +82,7 @@ class Full(BaseElectrolyteDiffusion):
         div_Vbox = variables["Transverse volume-averaged acceleration"]
 
         sum_s_j = variables["Sum of electrolyte reaction source terms"]
+        sum_s_j.print_name = "a"
         source_terms = sum_s_j / self.param.gamma_e
 
         self.rhs = {

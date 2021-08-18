@@ -4,6 +4,7 @@
   ],
   "imageSize": 100,
   "commit": false,
+  "badgeTemplate": "[![All Contributors](https://img.shields.io/badge/all_contributors-<%= contributors.length %>-orange.svg)](#-contributors)",
   "contributors": [
     {
       "login": "tinosulzer",
@@ -362,6 +363,27 @@
       "avatar_url": "https://avatars.githubusercontent.com/u/65511923?v=4",
       "profile": "https://github.com/alibh95",
       "contributions": [
+        "code",
+        "test"
+      ]
+    },
+    {
+      "login": "molel-gt",
+      "name": "Leshinka Molel",
+      "avatar_url": "https://avatars.githubusercontent.com/u/81125862?v=4",
+      "profile": "https://github.com/molel-gt",
+      "contributions": [
+        "code",
+        "ideas"
+      ]
+    },
+    {
+      "login": "tobykirk",
+      "name": "tobykirk",
+      "avatar_url": "https://avatars.githubusercontent.com/u/42966045?v=4",
+      "profile": "https://github.com/tobykirk",
+      "contributions": [
+        "ideas",
         "code",
         "test"
       ]

@@ -16,4 +16,4 @@ class Yang2017(DFN):
 
     @property
     def default_parameter_values(self):
-        return pybamm.ParameterValues(chemistry=pybamm.parameter_sets.Yang2017)
+        return pybamm.ParameterValues(chemistry=pybamm.parameter_sets.Chen2020_plating)

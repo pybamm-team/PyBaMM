@@ -51,4 +51,7 @@ class BaseModel(pybamm.BaseSubModel):
             }
             variables.update(leading_order_variables)
 
+        # Override print_name
+        tor.print_name = r"\epsilon^{b_e}"
+
         return variables
