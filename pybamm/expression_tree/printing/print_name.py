@@ -10,11 +10,6 @@ PRINT_NAME_OVERRIDES = {
     "timescale": r"\tau",
     "dimensional_current_with_time": r"\hat{I}",
     "eps_c_e": r"\epsilon{c_e}",
-    "\epsilon_c_e": r"\epsilon{c_e}",
-    "eps_c_e_n": r"\epsilon c_{e,n}",
-    "eps_c_e_s": r"\epsilon c_{e,s}",
-    "eps_c_e_p": r"\epsilon c_{e,p}",
-    "eps_c_e_av": r"\epsilon c_{e,av}",
     "one_plus_dlnf_dlnc": r"1+\frac{dlnf}{dlnc}",
     "negative_particle_concentration_scale": r"c_{n}^{max}",
     "positive_particle_concentration_scale": r"c_{p}^{max}",
@@ -51,7 +46,7 @@ def prettify_print_name(name):
     """Prettify print_name using regex"""
 
     # Skip prettify_print_name() for cases like `new_copy()`
-    if "{" in name:
+    if "{" in name or "\\" in name:
         return name
 
     # Return print_name if name exists in the dictionary
