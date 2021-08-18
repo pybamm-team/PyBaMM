@@ -94,6 +94,15 @@ class StandardModelTest(object):
 
     def test_sensitivities(self, param_name, param_value,
                            output_name='Terminal voltage [V]'):
+
+        self.parameter_values.update({param_name: param_value})
+        Crate = abs(
+            self.parameter_values["Current function [A]"]
+            / self.parameter_values["Nominal cell capacity [A.h]"]
+        )
+        t_eval = np.linspace(0, 3600 / Crate, 100)
+
+        # make param_name an input
         self.parameter_values.update({param_name: "[input]"})
         inputs = {param_name: param_value}
 
@@ -103,12 +112,6 @@ class StandardModelTest(object):
         # Use tighter default tolerances for testing
         self.solver.rtol = 1e-8
         self.solver.atol = 1e-8
-
-        Crate = abs(
-            self.parameter_values["Current function [A]"]
-            / self.parameter_values["Nominal cell capacity [A.h]"]
-        )
-        t_eval = np.linspace(0, 3600 / Crate, 100)
 
         self.solution = self.solver.solve(
             self.model, t_eval, inputs=inputs,

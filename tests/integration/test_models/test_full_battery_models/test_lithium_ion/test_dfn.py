@@ -32,8 +32,7 @@ class TestDFN(unittest.TestCase):
             model, parameter_values=param, var_pts=var_pts
         )
         modeltest.test_sensitivities(
-            #'Separator thickness [m]', 2e-05,
-            'Typical current [A]', 0.15652,
+            'Current function [A]', 0.15652,
         )
 
     def test_basic_processing_1plus1D(self):

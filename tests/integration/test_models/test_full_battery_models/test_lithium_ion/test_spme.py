@@ -25,8 +25,7 @@ class TestSPMe(unittest.TestCase):
         param = pybamm.ParameterValues(chemistry=pybamm.parameter_sets.Ecker2015)
         modeltest = tests.StandardModelTest(model, parameter_values=param)
         modeltest.test_sensitivities(
-            #'Separator thickness [m]', 2e-05,
-            'Typical current [A]', 0.15652,
+            'Current function [A]', 0.15652,
         )
 
     def test_basic_processing_python(self):

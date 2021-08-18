@@ -23,7 +23,7 @@ class TestSPM(unittest.TestCase):
         param = pybamm.ParameterValues(chemistry=pybamm.parameter_sets.Ecker2015)
         modeltest = tests.StandardModelTest(model, parameter_values=param)
         modeltest.test_sensitivities(
-            'Typical current [A]', 0.15652,
+            'Current function [A]', 0.15652,
         )
 
     def test_basic_processing_1plus1D(self):
