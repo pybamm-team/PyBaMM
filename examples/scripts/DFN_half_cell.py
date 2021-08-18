@@ -10,7 +10,6 @@ pybamm.set_logging_level("INFO")
 # load model
 options = {"working electrode": "positive"}
 model1 = pybamm.lithium_ion.DFN(options=options)
-model1 = pybamm.lithium_ion.BasicDFNHalfCell(options=options)
 model2 = pybamm.lithium_ion.BasicDFNHalfCell(options=options)
 
 sols = []

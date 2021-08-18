@@ -4,6 +4,7 @@ from .function_control_external_circuit import (
     FunctionControl,
     VoltageFunctionControl,
     PowerFunctionControl,
+    CCCVFunctionControl,
     LeadingOrderFunctionControl,
     LeadingOrderVoltageFunctionControl,
     LeadingOrderPowerFunctionControl,
