@@ -1,6 +1,7 @@
 #
 # Processed Variable class
 #
+import casadi
 import numbers
 import numpy as np
 import pybamm
@@ -38,12 +39,19 @@ class ProcessedVariable(object):
 
         self.all_ts = solution.all_ts
         self.all_ys = solution.all_ys
+        self.all_inputs = solution.all_inputs
         self.all_inputs_casadi = solution.all_inputs_casadi
 
         self.mesh = base_variables[0].mesh
         self.domain = base_variables[0].domain
         self.auxiliary_domains = base_variables[0].auxiliary_domains
         self.warn = warn
+
+        self.symbolic_inputs = solution.has_symbolic_inputs
+
+        # Sensitivity starts off uninitialized, only set when called
+        self._sensitivities = None
+        self.solution_sensitivities = solution.sensitivities
 
         # Set timescale
         self.timescale = solution.timescale_eval
@@ -519,6 +527,84 @@ class ProcessedVariable(object):
     def data(self):
         """Same as entries, but different name"""
         return self.entries
+
+    @property
+    def sensitivities(self):
+        """
+        Returns a dictionary of sensitivities for each input parameter.
+        The keys are the input parameters, and the value is a matrix of size
+        (n_x * n_t, n_p), where n_x is the number of states, n_t is the number of time
+        points, and n_p is the size of the input parameter
+        """
+        # No sensitivities if there are no inputs
+        if len(self.all_inputs[0]) == 0:
+            return {}
+        # Otherwise initialise and return sensitivities
+        if self._sensitivities is None:
+            if self.solution_sensitivities != {}:
+                self.initialise_sensitivity_explicit_forward()
+            else:
+                raise ValueError(
+                    "Cannot compute sensitivities. The 'sensitivities' argument of the "
+                    "solver.solve should be changed from 'None' to allow sensitivities "
+                    "calculations. Check solver documentation for details."
+                )
+        return self._sensitivities
+
+    def initialise_sensitivity_explicit_forward(self):
+        "Set up the sensitivity dictionary"
+        inputs_stacked = self.all_inputs_casadi[0]
+
+        # Set up symbolic variables
+        t_casadi = casadi.MX.sym("t")
+        y_casadi = casadi.MX.sym("y", self.all_ys[0].shape[0])
+        p_casadi = {
+            name: casadi.MX.sym(name, value.shape[0])
+            for name, value in self.all_inputs[0].items()
+        }
+        p_casadi_stacked = casadi.vertcat(*[p for p in p_casadi.values()])
+
+        # Convert variable to casadi format for differentiating
+        var_casadi = self.base_variables[0].to_casadi(
+            t_casadi, y_casadi, inputs=p_casadi
+        )
+        dvar_dy = casadi.jacobian(var_casadi, y_casadi)
+        dvar_dp = casadi.jacobian(var_casadi, p_casadi_stacked)
+
+        # Convert to functions and evaluate index-by-index
+        dvar_dy_func = casadi.Function(
+            "dvar_dy", [t_casadi, y_casadi, p_casadi_stacked], [dvar_dy]
+        )
+        dvar_dp_func = casadi.Function(
+            "dvar_dp", [t_casadi, y_casadi, p_casadi_stacked], [dvar_dp]
+        )
+        for index, (ts, ys) in enumerate(zip(self.all_ts, self.all_ys)):
+            for idx, t in enumerate(ts):
+                u = ys[:, idx]
+                next_dvar_dy_eval = dvar_dy_func(t, u, inputs_stacked)
+                next_dvar_dp_eval = dvar_dp_func(t, u, inputs_stacked)
+                if index == 0 and idx == 0:
+                    dvar_dy_eval = next_dvar_dy_eval
+                    dvar_dp_eval = next_dvar_dp_eval
+                else:
+                    dvar_dy_eval = casadi.diagcat(dvar_dy_eval, next_dvar_dy_eval)
+                    dvar_dp_eval = casadi.vertcat(dvar_dp_eval, next_dvar_dp_eval)
+
+        # Compute sensitivity
+        dy_dp = self.solution_sensitivities["all"]
+        S_var = dvar_dy_eval @ dy_dp + dvar_dp_eval
+
+        sensitivities = {"all": S_var}
+
+        # Add the individual sensitivity
+        start = 0
+        for name, inp in self.all_inputs[0].items():
+            end = start + inp.shape[0]
+            sensitivities[name] = S_var[:, start:end]
+            start = end
+
+        # Save attribute
+        self._sensitivities = sensitivities
 
 
 class Interpolant0D:

@@ -7,6 +7,7 @@ import unittest
 import uuid
 
 import pybamm
+from pybamm.expression_tree.operations.latexify import Latexify
 
 model_dfn = pybamm.lithium_ion.DFN()
 func_dfn = str(model_dfn.latexify())
@@ -17,6 +18,9 @@ func_spme = str(model_spme.latexify())
 
 class TestLatexify(unittest.TestCase):
     def test_latexify(self):
+        # Test docstring
+        self.assertEqual(pybamm.BaseModel.latexify.__doc__, Latexify.__doc__)
+
         # Test model name
         self.assertIn("Single Particle Model with electrolyte Equations", func_spme)
 

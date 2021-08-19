@@ -101,6 +101,12 @@ class TestBaseModel(unittest.TestCase):
         with self.assertRaisesRegex(pybamm.ModelError, "boundary condition"):
             model.boundary_conditions = bad_bcs
 
+    def test_length_scales(self):
+        model = pybamm.BaseModel()
+        model.length_scales = {"a": 1.3}
+        self.assertIsInstance(model.length_scales["a"], pybamm.Scalar)
+        self.assertEqual(model.length_scales["a"].value, 1.3)
+
     def test_variables_set_get(self):
         model = pybamm.BaseModel()
         variables = {"c": "alpha", "d": "beta"}

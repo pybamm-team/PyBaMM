@@ -872,7 +872,7 @@ class TestUnaryOperators(unittest.TestCase):
 
         # Test print_name
         pybamm.Floor.print_name = "test"
-        self.assertEqual(pybamm.Floor(-2.5).to_equation(), sympy.symbols("test"))
+        self.assertEqual(pybamm.Floor(-2.5).to_equation(), sympy.Symbol("test"))
 
         # Test Negate
         self.assertEqual(pybamm.Negate(4).to_equation(), -4.0)
@@ -891,13 +891,13 @@ class TestUnaryOperators(unittest.TestCase):
 
         # Test BoundaryValue
         self.assertEqual(
-            pybamm.BoundaryValue(one, "right").to_equation(), sympy.symbols("1")
+            pybamm.BoundaryValue(one, "right").to_equation(), sympy.Symbol("1")
         )
         self.assertEqual(
-            pybamm.BoundaryValue(a, "right").to_equation(), sympy.symbols("a^{surf}")
+            pybamm.BoundaryValue(a, "right").to_equation(), sympy.Symbol("a^{surf}")
         )
         self.assertEqual(
-            pybamm.BoundaryValue(b, "positive tab").to_equation(), sympy.symbols(str(b))
+            pybamm.BoundaryValue(b, "positive tab").to_equation(), sympy.Symbol(str(b))
         )
         self.assertEqual(
             pybamm.BoundaryValue(c, "left").to_equation(),
@@ -908,7 +908,7 @@ class TestUnaryOperators(unittest.TestCase):
         xn = pybamm.SpatialVariable("xn", ["negative electrode"])
         self.assertEqual(
             pybamm.Integral(d, xn).to_equation(),
-            sympy.Integral("d", sympy.symbols("xn")),
+            sympy.Integral("d", sympy.Symbol("xn")),
         )
 
 

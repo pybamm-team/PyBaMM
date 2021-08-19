@@ -980,4 +980,4 @@ class Symbol(anytree.NodeMixin):
             self._print_name = prettify_print_name(name)
 
     def to_equation(self):
-        return sympy.symbols(str(self.name))
+        return sympy.Symbol(str(self.name))

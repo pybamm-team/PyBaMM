@@ -2,6 +2,7 @@
 # Scalar class
 #
 import numpy as np
+import sympy
 
 import pybamm
 
@@ -70,4 +71,7 @@ class Scalar(pybamm.Symbol):
 
     def to_equation(self):
         """Returns the value returned by the node when evaluated."""
-        return self.value
+        if self.print_name is not None:
+            return sympy.Symbol(self.print_name)
+        else:
+            return self.value
