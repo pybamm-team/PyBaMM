@@ -274,6 +274,19 @@ class BaseModel:
         self._timescale = value
 
     @property
+    def length_scales(self):
+        "Length scales of model"
+        return self._length_scale
+
+    @length_scales.setter
+    def length_scales(self, values):
+        "Set the length scale, converting any numbers to pybamm.Scalar"
+        for domain, scale in values.items():
+            if isinstance(scale, numbers.Number):
+                values[domain] = pybamm.Scalar(scale)
+        self._length_scale = values
+
+    @property
     def parameters(self):
         """Returns all the parameters in the model"""
         self._parameters = self._find_symbols(

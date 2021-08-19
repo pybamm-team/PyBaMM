@@ -99,6 +99,7 @@ class TestScikitsSolvers(unittest.TestCase):
             timescale_eval = 1
             length_scales = {}
             convert_to_format = "python"
+            len_rhs_and_alg = 2
 
             def residuals_eval(self, t, y, ydot, inputs):
                 return np.array(
