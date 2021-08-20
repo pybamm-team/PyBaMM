@@ -191,6 +191,11 @@ class TestSPMExternalCircuits(unittest.TestCase):
         model = pybamm.lithium_ion.SPM(options)
         model.check_well_posedness()
 
+    def test_well_posed_cccv(self):
+        options = {"operating mode": "CCCV"}
+        model = pybamm.lithium_ion.SPM(options)
+        model.check_well_posedness()
+
     def test_well_posed_function(self):
         def external_circuit_function(variables):
             I = variables["Current [A]"]

@@ -21,6 +21,20 @@ class TestDFN(unittest.TestCase):
         )
         modeltest.test_all()
 
+    def test_sensitivities(self):
+        options = {"thermal": "isothermal"}
+        model = pybamm.lithium_ion.DFN(options)
+        # use Ecker parameters for nonlinear diffusion
+        param = pybamm.ParameterValues(chemistry=pybamm.parameter_sets.Ecker2015)
+        var = pybamm.standard_spatial_vars
+        var_pts = {var.x_n: 10, var.x_s: 10, var.x_p: 10, var.r_n: 5, var.r_p: 5}
+        modeltest = tests.StandardModelTest(
+            model, parameter_values=param, var_pts=var_pts
+        )
+        modeltest.test_sensitivities(
+            'Current function [A]', 0.15652,
+        )
+
     def test_basic_processing_1plus1D(self):
         options = {"current collector": "potential pair", "dimensionality": 1}
         model = pybamm.lithium_ion.DFN(options)

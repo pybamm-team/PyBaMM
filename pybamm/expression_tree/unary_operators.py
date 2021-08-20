@@ -100,7 +100,7 @@ class UnaryOperator(pybamm.Symbol):
     def to_equation(self):
         """Convert the node and its subtree into a SymPy equation."""
         if self.print_name is not None:
-            return sympy.symbols(self.print_name)
+            return sympy.Symbol(self.print_name)
         else:
             eq1 = self.child.to_equation()
             return self._sympy_operator(eq1)
@@ -643,7 +643,7 @@ class Integral(SpatialOperator):
 
     def _sympy_operator(self, child):
         """Override :meth:`pybamm.UnaryOperator._sympy_operator`"""
-        return sympy.Integral(child, sympy.symbols("xn"))
+        return sympy.Integral(child, sympy.Symbol("xn"))
 
 
 class BaseIndefiniteIntegral(Integral):

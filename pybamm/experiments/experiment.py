@@ -164,7 +164,7 @@ class Experiment:
         """
         converted_operating_conditions = []
         events = []
-        for idx, cond in enumerate(operating_conditions):
+        for cond in operating_conditions:
             next_op, next_event = self.read_string(cond, drive_cycles)
             converted_operating_conditions.append(next_op)
             events.append(next_event)
