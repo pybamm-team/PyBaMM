@@ -1,15 +1,16 @@
 #
-# Class for a single particle-size distribution representing an
-# electrode, with Fickian diffusion within each particle
+# Class for a particle-size distribution averaged in the x direction,
+# with Fickian diffusion within each particle
 #
 import pybamm
 
 from .base_distribution import BaseSizeDistribution
 
 
-class FickianSingleSizeDistribution(BaseSizeDistribution):
-    """Class for molar conservation in a single (i.e., x-averaged) particle-size
-    distribution with Fickian diffusion within each particle.
+class XAveragedFickianDiffusion(BaseSizeDistribution):
+    """Class for molar conservation in an x-averaged particle-size
+    distribution with Fickian diffusion in each particle. Concentration
+    varies with r (spherical coordinate), R (particle size) but not x.
 
     Parameters
     ----------
@@ -19,7 +20,7 @@ class FickianSingleSizeDistribution(BaseSizeDistribution):
         The domain of the model either 'Negative' or 'Positive'
 
 
-    **Extends:** :class:`pybamm.particle.BaseSizeDistribution`
+    **Extends:** :class:`pybamm.particle.size_distribution.BaseSizeDistribution`
     """
 
     def __init__(self, param, domain):
@@ -223,7 +224,7 @@ class FickianSingleSizeDistribution(BaseSizeDistribution):
 
     def set_initial_conditions(self, variables):
         """
-        For single particle-size distribution models, initial conditions can't
+        For x-averaged particle-size distribution models, initial conditions can't
         depend on x so we arbitrarily set the initial values of the single
         particles to be given by the values at x=0 in the negative electrode
         and x=1 in the positive electrode. Typically, supplied initial

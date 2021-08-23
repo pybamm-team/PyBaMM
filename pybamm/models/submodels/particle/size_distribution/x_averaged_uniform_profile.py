@@ -1,16 +1,15 @@
 #
-# Class for a single particle-size distribution representing an
-# electrode, with fast diffusion (uniform concentration in r) within particles
+# Class for a x-averaged particle-size distribution, with uniform concentration
+# profile in each particle
 #
 import pybamm
 
 from .base_distribution import BaseSizeDistribution
 
 
-class FastSingleSizeDistribution(BaseSizeDistribution):
-    """Class for molar conservation in a single (i.e., x-averaged) particle-size
-    distribution) with fast diffusion within each particle
-    (uniform concentration in r).
+class XAveragedUniformProfile(BaseSizeDistribution):
+    """Class for molar conservation in an x-averaged particle-size
+    distribution with uniform concentration in each particle.
 
     Parameters
     ----------
@@ -20,7 +19,7 @@ class FastSingleSizeDistribution(BaseSizeDistribution):
         The domain of the model either 'Negative' or 'Positive'
 
 
-    **Extends:** :class:`pybamm.particle.BaseSizeDistribution`
+    **Extends:** :class:`pybamm.particle.size_distribution.BaseSizeDistribution`
     """
 
     def __init__(self, param, domain):

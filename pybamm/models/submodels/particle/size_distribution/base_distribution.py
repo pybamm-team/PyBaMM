@@ -1,5 +1,5 @@
 #
-# Base class for particles
+# Base class for particle-size distributions
 #
 import pybamm
 
@@ -273,8 +273,7 @@ class BaseSizeDistribution(BaseParticle):
                 [self.domain.lower() + " particle"],
                 {
                     "secondary": self.domain.lower() + " particle size",
-                    "tertiary": self.domain.lower() + " electrode",
-                    "quaternary": "current collector"
+                    "tertiary": "current collector"
                 },
             )
         elif isinstance(N_s, pybamm.Scalar):

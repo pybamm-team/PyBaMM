@@ -1,5 +1,5 @@
 #
-# Class for many particle-size distributions, one distribution at every
+# Class for particle-size distributions, one distribution at every
 # x location of the electrode, and Fickian diffusion within each particle
 #
 import pybamm
@@ -7,10 +7,11 @@ import pybamm
 from .base_distribution import BaseSizeDistribution
 
 
-class FickianManySizeDistributions(BaseSizeDistribution):
-    """Class for molar conservation in many particle-size
-    distributions, one distribution at every x location of the electrode,
-    with Fickian diffusion within each particle.
+class FickianDiffusion(BaseSizeDistribution):
+    """Class for molar conservation in particle-size distributions, one
+    distribution at every x location of the electrode,
+    with Fickian diffusion within each particle. Concentration varies with
+    r (spherical coordinate), R (particle size), and x (electrode coordinate).
 
     Parameters
     ----------
@@ -20,7 +21,7 @@ class FickianManySizeDistributions(BaseSizeDistribution):
         The domain of the model either 'Negative' or 'Positive'
 
 
-    **Extends:** :class:`pybamm.particle.BaseSizeDistribution`
+    **Extends:** :class:`pybamm.particle.size_distribution.BaseSizeDistribution`
     """
 
     def __init__(self, param, domain):
