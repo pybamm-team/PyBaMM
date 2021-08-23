@@ -681,7 +681,7 @@ class TestBinaryOperators(unittest.TestCase):
     def test_to_equation(self):
         # Test print_name
         pybamm.Addition.print_name = "test"
-        self.assertEqual(pybamm.Addition(1, 2).to_equation(), sympy.symbols("test"))
+        self.assertEqual(pybamm.Addition(1, 2).to_equation(), sympy.Symbol("test"))
 
         # Test Power
         self.assertEqual(pybamm.Power(7, 2).to_equation(), 49)

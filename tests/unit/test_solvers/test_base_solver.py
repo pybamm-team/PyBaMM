@@ -125,6 +125,7 @@ class TestBaseSolver(unittest.TestCase):
                 )
                 self.convert_to_format = "casadi"
                 self.bounds = (np.array([-np.inf]), np.array([np.inf]))
+                self.len_rhs_and_alg = 1
                 self.interpolant_extrapolation_events_eval = []
 
             def rhs_eval(self, t, y, inputs):
@@ -162,6 +163,8 @@ class TestBaseSolver(unittest.TestCase):
                 )
                 self.convert_to_format = "casadi"
                 self.bounds = (-np.inf * np.ones(4), np.inf * np.ones(4))
+                self.len_rhs = 1
+                self.len_rhs_and_alg = 4
                 self.interpolant_extrapolation_events_eval = []
 
             def rhs_eval(self, t, y, inputs):
@@ -321,6 +324,58 @@ class TestBaseSolver(unittest.TestCase):
 
         with self.assertWarns(pybamm.SolverWarning):
             solver.solve(model, t_eval=[0, 1])
+
+    @unittest.skipIf(not pybamm.have_idaklu(), "idaklu solver is not installed")
+    def test_sensitivities(self):
+
+        def exact_diff_a(y, a, b):
+            return np.array([
+                [y[0]**2 + 2 * a],
+                [y[0]]
+            ])
+
+        def exact_diff_b(y, a, b):
+            return np.array([[y[0]], [0]])
+
+        for convert_to_format in ['', 'python', 'casadi', 'jax']:
+            model = pybamm.BaseModel()
+            v = pybamm.Variable("v")
+            u = pybamm.Variable("u")
+            a = pybamm.InputParameter("a")
+            b = pybamm.InputParameter("b")
+            model.rhs = {v: a * v**2 + b * v + a**2}
+            model.algebraic = {u: a * v - u}
+            model.initial_conditions = {v: 1, u: a * 1}
+            model.convert_to_format = convert_to_format
+            solver = pybamm.IDAKLUSolver(root_method='lm')
+            model.calculate_sensitivities = ['a', 'b']
+            solver.set_up(model, inputs={'a': 0, 'b': 0})
+            all_inputs = []
+            for v_value in [0.1, -0.2, 1.5, 8.4]:
+                for u_value in [0.13, -0.23, 1.3, 13.4]:
+                    for a_value in [0.12, 1.5]:
+                        for b_value in [0.82, 1.9]:
+                            y = np.array([v_value, u_value])
+                            t = 0
+                            inputs = {'a': a_value, 'b': b_value}
+                            all_inputs.append((t, y, inputs))
+            for t, y, inputs in all_inputs:
+                if model.convert_to_format == 'casadi':
+                    use_inputs = casadi.vertcat(*[x for x in inputs.values()])
+                else:
+                    use_inputs = inputs
+
+                sens = model.sensitivities_eval(
+                    t, y, use_inputs
+                )
+                np.testing.assert_allclose(
+                    sens['a'],
+                    exact_diff_a(y, inputs['a'], inputs['b'])
+                )
+                np.testing.assert_allclose(
+                    sens['b'],
+                    exact_diff_b(y, inputs['a'], inputs['b'])
+                )
 
 
 if __name__ == "__main__":

@@ -3,6 +3,7 @@
 #
 import copy
 import itertools
+from scipy.sparse import block_diag
 import multiprocessing as mp
 import numbers
 import sys
@@ -138,7 +139,6 @@ class BaseSolver(object):
             Any input parameters to pass to the model when solving
         t_eval : numeric type, optional
             The times (in seconds) at which to compute the solution
-
         """
         pybamm.logger.info("Start solver set-up")
 
@@ -201,16 +201,50 @@ class BaseSolver(object):
             )
             model.convert_to_format = "casadi"
 
+        # find all the input parameters in the model
+        input_parameters = {}
+        for equation in [model.concatenated_rhs,
+                         model.concatenated_algebraic,
+                         model.concatenated_initial_conditions]:
+            input_parameters.update({
+                symbol._id: symbol for symbol in equation.pre_order()
+                if isinstance(symbol, pybamm.InputParameter)
+            })
+
+        # set default calculate sensitivities on model
+        if not hasattr(model, 'calculate_sensitivities'):
+            model.calculate_sensitivities = []
+
+        # see if we need to form the explicit sensitivity equations
+        calculate_sensitivities_explicit = False
+        if model.calculate_sensitivities and not isinstance(self, pybamm.IDAKLUSolver):
+            calculate_sensitivities_explicit = True
+
+        # if we are calculating sensitivities explicitly then the number of
+        # equations will change
+        if calculate_sensitivities_explicit:
+            num_parameters = 0
+            for name in model.calculate_sensitivities:
+                # if not a number, assume its a vector
+                if isinstance(inputs[name], numbers.Number):
+                    num_parameters += 1
+                else:
+                    num_parameters += len(inputs[name])
+            model.len_rhs_sens = model.len_rhs * num_parameters
+            model.len_alg_sens = model.len_alg * num_parameters
+
         if model.convert_to_format != "casadi":
             # Create Jacobian from concatenated rhs and algebraic
-            y = pybamm.StateVector(slice(0, model.concatenated_initial_conditions.size))
+            y = pybamm.StateVector(slice(0, model.len_rhs_and_alg))
             # set up Jacobian object, for re-use of dict
             jacobian = pybamm.Jacobian()
+
         else:
             # Convert model attributes to casadi
             t_casadi = casadi.MX.sym("t")
-            y_diff = casadi.MX.sym("y_diff", model.concatenated_rhs.size)
-            y_alg = casadi.MX.sym("y_alg", model.concatenated_algebraic.size)
+            # Create the symbolic state vectors
+            y_diff = casadi.MX.sym("y_diff", model.len_rhs)
+            y_alg = casadi.MX.sym("y_alg", model.len_alg)
             y_casadi = casadi.vertcat(y_diff, y_alg)
             p_casadi = {}
             for name, value in inputs.items():
@@ -219,6 +253,16 @@ class BaseSolver(object):
                 else:
                     p_casadi[name] = casadi.MX.sym(name, value.shape[0])
             p_casadi_stacked = casadi.vertcat(*[p for p in p_casadi.values()])
+            # sensitivity vectors
+            if calculate_sensitivities_explicit:
+                pS_casadi_stacked = casadi.vertcat(
+                    *[p_casadi[name] for name in model.calculate_sensitivities]
+                )
+                S_x = casadi.MX.sym("S_x", model.len_rhs_sens)
+                S_z = casadi.MX.sym("S_z", model.len_alg_sens)
+                y_and_S = casadi.vertcat(y_diff, S_x, y_alg, S_z)
+            else:
+                y_and_S = y_casadi
 
         def process(func, name, use_jacobian=None):
             def report(string):
@@ -228,12 +272,52 @@ class BaseSolver(object):
 
             if use_jacobian is None:
                 use_jacobian = model.use_jacobian
-            if model.convert_to_format != "casadi":
-                # Process with pybamm functions
 
-                if model.convert_to_format == "jax":
-                    report(f"Converting {name} to jax")
-                    jax_func = pybamm.EvaluatorJax(func)
+            if model.convert_to_format == "jax":
+                report(f"Converting {name} to jax")
+                func = pybamm.EvaluatorJax(func)
+                jacp = None
+                if model.calculate_sensitivities:
+                    report((
+                        f"Calculating sensitivities for {name} with respect "
+                        f"to parameters {model.calculate_sensitivities} using jax"
+                    ))
+                    jacp = func.get_sensitivities()
+                    jacp = jacp.evaluate
+                if use_jacobian:
+                    report(f"Calculating jacobian for {name} using jax")
+                    jac = func.get_jacobian()
+                    jac = jac.evaluate
+                else:
+                    jac = None
+
+                func = func.evaluate
+
+            elif model.convert_to_format != "casadi":
+                # Process with pybamm functions, optionally converting
+                # to python evaluator
+                if model.calculate_sensitivities:
+                    report((
+                        f"Calculating sensitivities for {name} with respect "
+                        f"to parameters {model.calculate_sensitivities}"
+                    ))
+                    jacp_dict = {
+                        p: func.diff(pybamm.InputParameter(p))
+                        for p in model.calculate_sensitivities
+                    }
+                    if model.convert_to_format == "python":
+                        report(f"Converting sensitivities for {name} to python")
+                        jacp_dict = {
+                            p: pybamm.EvaluatorPython(jacp)
+                            for p, jacp in jacp_dict.items()
+                        }
+
+                    # jacp should be a function that returns a dict of sensitivities
+                    def jacp(*args, **kwargs):
+                        return {k: v.evaluate(*args, **kwargs)
+                                for k, v in jacp_dict.items()}
+                else:
+                    jacp = None
 
                 if use_jacobian:
                     report(f"Calculating jacobian for {name}")
@@ -241,9 +325,6 @@ class BaseSolver(object):
                     if model.convert_to_format == "python":
                         report(f"Converting jacobian for {name} to python")
                         jac = pybamm.EvaluatorPython(jac)
-                    elif model.convert_to_format == "jax":
-                        report(f"Converting jacobian for {name} to jax")
-                        jac = jax_func.get_jacobian()
                     jac = jac.evaluate
                 else:
                     jac = None
@@ -251,9 +332,6 @@ class BaseSolver(object):
                 if model.convert_to_format == "python":
                     report(f"Converting {name} to python")
                     func = pybamm.EvaluatorPython(func)
-                if model.convert_to_format == "jax":
-                    report(f"Converting {name} to jax")
-                    func = jax_func
 
                 func = func.evaluate
 
@@ -261,16 +339,101 @@ class BaseSolver(object):
                 # Process with CasADi
                 report(f"Converting {name} to CasADi")
                 func = func.to_casadi(t_casadi, y_casadi, inputs=p_casadi)
+                # Add sensitivity vectors to the rhs and algebraic equations
+                jacp = None
+                if calculate_sensitivities_explicit:
+                    # The formulation is as per Park, S., Kato, D., Gima, Z., Klein, R.,
+                    # & Moura, S. (2018).  Optimal experimental design for
+                    # parameterization of an electrochemical lithium-ion battery model.
+                    # Journal of The Electrochemical Society, 165(7), A1309.". See #1100
+                    # for details
+                    if name == "RHS" and model.len_rhs > 0:
+                        report(
+                            "Creating explicit forward sensitivity equations "
+                            "for rhs using CasADi"
+                        )
+                        df_dx = casadi.jacobian(func, y_diff)
+                        df_dp = casadi.jacobian(func, pS_casadi_stacked)
+                        S_x_mat = S_x.reshape(
+                            (model.len_rhs, pS_casadi_stacked.shape[0])
+                        )
+                        if model.len_alg == 0:
+                            S_rhs = (df_dx @ S_x_mat + df_dp).reshape((-1, 1))
+                        else:
+                            df_dz = casadi.jacobian(func, y_alg)
+                            S_z_mat = S_z.reshape(
+                                (model.len_alg, pS_casadi_stacked.shape[0])
+                            )
+                            S_rhs = (df_dx @ S_x_mat + df_dz @ S_z_mat + df_dp).reshape(
+                                (-1, 1)
+                            )
+                        func = casadi.vertcat(func, S_rhs)
+                    if name == "algebraic" and model.len_alg > 0:
+                        report(
+                            "Creating explicit forward sensitivity equations "
+                            "for algebraic using CasADi"
+                        )
+                        dg_dz = casadi.jacobian(func, y_alg)
+                        dg_dp = casadi.jacobian(func, pS_casadi_stacked)
+                        S_z_mat = S_z.reshape(
+                            (model.len_alg, pS_casadi_stacked.shape[0])
+                        )
+                        if model.len_rhs == 0:
+                            S_alg = (dg_dz @ S_z_mat + dg_dp).reshape((-1, 1))
+                        else:
+                            dg_dx = casadi.jacobian(func, y_diff)
+                            S_x_mat = S_x.reshape(
+                                (model.len_rhs, pS_casadi_stacked.shape[0])
+                            )
+                            S_alg = (dg_dx @ S_x_mat + dg_dz @ S_z_mat + dg_dp).reshape(
+                                (-1, 1)
+                            )
+                        func = casadi.vertcat(func, S_alg)
+                    if name == "initial_conditions":
+                        if model.len_rhs == 0 or model.len_alg == 0:
+                            S_0 = casadi.jacobian(func, pS_casadi_stacked).reshape(
+                                (-1, 1)
+                            )
+                            func = casadi.vertcat(func, S_0)
+                        else:
+                            x0 = func[: model.len_rhs]
+                            z0 = func[model.len_rhs :]
+                            Sx_0 = casadi.jacobian(x0, pS_casadi_stacked).reshape(
+                                (-1, 1)
+                            )
+                            Sz_0 = casadi.jacobian(z0, pS_casadi_stacked).reshape(
+                                (-1, 1)
+                            )
+                            func = casadi.vertcat(x0, Sx_0, z0, Sz_0)
+                elif model.calculate_sensitivities:
+                    report((
+                        f"Calculating sensitivities for {name} with respect "
+                        f"to parameters {model.calculate_sensitivities} using CasADi"
+                    ))
+                    jacp_dict = {}
+                    for pname in model.calculate_sensitivities:
+                        p_diff = casadi.jacobian(func, p_casadi[pname])
+                        jacp_dict[pname] = casadi.Function(
+                            name, [t_casadi, y_casadi, p_casadi_stacked],
+                            [p_diff]
+                        )
+                    # jacp should be a function that returns a dict of sensitivities
+
+                    def jacp(*args, **kwargs):
+                        return {k: v(*args, **kwargs)
+                                for k, v in jacp_dict.items()}
+
                 if use_jacobian:
                     report(f"Calculating jacobian for {name} using CasADi")
-                    jac_casadi = casadi.jacobian(func, y_casadi)
+                    jac_casadi = casadi.jacobian(func, y_and_S)
                     jac = casadi.Function(
-                        name, [t_casadi, y_casadi, p_casadi_stacked], [jac_casadi]
+                        name, [t_casadi, y_and_S, p_casadi_stacked], [jac_casadi]
                     )
                 else:
                     jac = None
+
                 func = casadi.Function(
-                    name, [t_casadi, y_casadi, p_casadi_stacked], [func]
+                    name, [t_casadi, y_and_S, p_casadi_stacked], [func]
                 )
             if name == "residuals":
                 func_call = Residuals(func, name, model)
@@ -280,7 +443,14 @@ class BaseSolver(object):
                 jac_call = SolverCallable(jac, name + "_jac", model)
             else:
                 jac_call = None
-            return func, func_call, jac_call
+            if jacp is not None:
+                jacp_call = SensitivityCallable(
+                    jacp, name + "_sensitivity_wrt_inputs", model,
+                    model.convert_to_format
+                )
+            else:
+                jacp_call = None
+            return func, func_call, jac_call, jacp_call
 
         # Process initial conditions
         initial_conditions = process(
@@ -289,8 +459,19 @@ class BaseSolver(object):
             use_jacobian=False,
         )[0]
         init_eval = InitialConditions(initial_conditions, model)
-        model.init_eval = init_eval
+
+        if calculate_sensitivities_explicit:
+            y0_total_size = (
+                model.len_rhs + model.len_rhs_sens
+                + model.len_alg + model.len_alg_sens
+            )
+            init_eval.y_dummy = np.zeros((y0_total_size, 1))
+        else:
+            init_eval.y_dummy = np.zeros((model.len_rhs_and_alg, 1))
+
+        # Calculate initial conditions
         model.y0 = init_eval(inputs)
+        model.init_eval = init_eval
 
         if not ics_only:
             # Check for heaviside and modulo functions in rhs and algebraic and add
@@ -364,8 +545,8 @@ class BaseSolver(object):
                                 )
 
             # Process rhs, algebraic and event expressions
-            rhs, rhs_eval, jac_rhs = process(model.concatenated_rhs, "RHS")
-            algebraic, algebraic_eval, jac_algebraic = process(
+            rhs, rhs_eval, jac_rhs, jacp_rhs = process(model.concatenated_rhs, "RHS")
+            algebraic, algebraic_eval, jac_algebraic, jacp_algebraic = process(
                 model.concatenated_algebraic, "algebraic"
             )
             casadi_terminate_events = []
@@ -425,6 +606,52 @@ class BaseSolver(object):
                 interpolant_extrapolation_events_eval
             )
 
+            # if we have changed the equations to include the explicit sensitivity
+            # equations, then we also need to update the mass matrix and bounds
+            if calculate_sensitivities_explicit:
+                if model.len_rhs != 0:
+                    n_inputs = model.len_rhs_sens // model.len_rhs
+                elif model.len_alg != 0:
+                    n_inputs = model.len_alg_sens // model.len_alg
+                if model.bounds[0].shape[0] == model.len_rhs_and_alg:
+                    model.bounds = (
+                        np.repeat(model.bounds[0], n_inputs + 1),
+                        np.repeat(model.bounds[1], n_inputs + 1),
+                    )
+                if (model.mass_matrix is not None
+                        and model.mass_matrix.shape[0] == model.len_rhs_and_alg):
+
+                    if model.mass_matrix_inv is not None:
+                        model.mass_matrix_inv = pybamm.Matrix(
+                            block_diag(
+                                [model.mass_matrix_inv.entries] * (n_inputs + 1),
+                                format="csr"
+                            )
+                        )
+                    model.mass_matrix = pybamm.Matrix(
+                        block_diag(
+                            [model.mass_matrix.entries] * (n_inputs + 1), format="csr"
+                        )
+                    )
+            else:
+                # take care if calculate_sensitivites used then not used
+                if model.bounds[0].shape[0] > model.len_rhs_and_alg:
+                    model.bounds = (
+                        model.bounds[0][:model.len_rhs_and_alg],
+                        model.bounds[1][:model.len_rhs_and_alg],
+                    )
+                if (model.mass_matrix is not None and
+                        model.mass_matrix.shape[0] > model.len_rhs_and_alg):
+                    if model.mass_matrix_inv is not None:
+                        model.mass_matrix_inv = pybamm.Matrix(
+                            model.mass_matrix_inv.entries[:model.len_rhs,
+                                                          :model.len_rhs]
+                        )
+                    model.mass_matrix = pybamm.Matrix(
+                        model.mass_matrix.entries[:model.len_rhs_and_alg,
+                                                  :model.len_rhs_and_alg]
+                    )
+
             # Save CasADi functions for the CasADi solver
             # Note: when we pass to casadi the ode part of the problem must be in
             # explicit form so we pre-multiply by the inverse of the mass matrix
@@ -435,29 +662,36 @@ class BaseSolver(object):
                 if len(model.rhs) > 0:
                     mass_matrix_inv = casadi.MX(model.mass_matrix_inv.entries)
                     explicit_rhs = mass_matrix_inv @ rhs(
-                        t_casadi, y_casadi, p_casadi_stacked
+                        t_casadi, y_and_S, p_casadi_stacked
                     )
                     model.casadi_rhs = casadi.Function(
-                        "rhs", [t_casadi, y_casadi, p_casadi_stacked], [explicit_rhs]
+                        "rhs", [t_casadi, y_and_S, p_casadi_stacked], [explicit_rhs]
                     )
                 model.casadi_algebraic = algebraic
+                model.casadi_sensitivities_rhs = jacp_rhs
+                model.casadi_sensitivities_algebraic = jacp_algebraic
             if len(model.rhs) == 0:
                 # No rhs equations: residuals is algebraic only
                 model.residuals_eval = Residuals(algebraic, "residuals", model)
                 model.jacobian_eval = jac_algebraic
+                model.sensitivities_eval = jacp_algebraic
             elif len(model.algebraic) == 0:
                 # No algebraic equations: residuals is rhs only
                 model.residuals_eval = Residuals(rhs, "residuals", model)
                 model.jacobian_eval = jac_rhs
+                model.sensitivities_eval = jacp_rhs
             # Calculate consistent initial conditions for the algebraic equations
             else:
                 all_states = pybamm.NumpyConcatenation(
                     model.concatenated_rhs, model.concatenated_algebraic
                 )
                 # Process again, uses caching so should be quick
-                residuals_eval, jacobian_eval = process(all_states, "residuals")[1:]
+                residuals_eval, jacobian_eval, jacobian_wrtp_eval = process(
+                    all_states, "residuals"
+                )[1:]
                 model.residuals_eval = residuals_eval
                 model.jacobian_eval = jacobian_eval
+                model.sensitivities_eval = jacobian_wrtp_eval
 
         pybamm.logger.info("Finish solver set-up")
 
@@ -478,13 +712,14 @@ class BaseSolver(object):
             Whether to update the rhs. True for 'solve', False for 'step'.
 
         """
+
         if self.algebraic_solver is True:
             # Don't update model.y0
             return None
         elif len(model.algebraic) == 0:
             if update_rhs is True:
                 # Recalculate initial conditions for the rhs equations
-                model.y0 = model.init_eval(inputs)
+                y0 = model.init_eval(inputs)
             else:
                 # Don't update model.y0
                 return None
@@ -494,7 +729,7 @@ class BaseSolver(object):
                 y0_from_inputs = model.init_eval(inputs)
                 # Reuse old solution for algebraic equations
                 y0_from_model = model.y0
-                len_rhs = model.concatenated_rhs.size
+                len_rhs = model.len_rhs
                 # update model.y0, which is used for initialising the algebraic solver
                 if len_rhs == 0:
                     model.y0 = y0_from_model
@@ -502,7 +737,9 @@ class BaseSolver(object):
                     model.y0 = casadi.vertcat(
                         y0_from_inputs[:len_rhs], y0_from_model[len_rhs:]
                     )
-            model.y0 = self.calculate_consistent_state(model, 0, inputs)
+            y0 = self.calculate_consistent_state(model, 0, inputs)
+        # Make y0 a function of inputs if doing symbolic with casadi
+        model.y0 = y0
 
     def calculate_consistent_state(self, model, time=0, inputs=None):
         """
@@ -529,12 +766,13 @@ class BaseSolver(object):
         if self.root_method is None:
             return model.y0
         try:
-            root_sol = self.root_method._integrate(model, [time], inputs)
+            root_sol = self.root_method._integrate(model, np.array([time]), inputs)
         except pybamm.SolverError as e:
             raise pybamm.SolverError(
                 "Could not find consistent states: {}".format(e.args[0])
             )
         pybamm.logger.debug("Found consistent states")
+
         y0 = root_sol.all_ys[0]
         if isinstance(y0, np.ndarray):
             y0 = y0.flatten()
@@ -548,6 +786,7 @@ class BaseSolver(object):
         inputs=None,
         initial_conditions=None,
         nproc=None,
+        calculate_sensitivities=False
     ):
         """
         Execute the solver setup and calculate the solution of the model at
@@ -573,6 +812,10 @@ class BaseSolver(object):
         nproc : int, optional
             Number of processes to use when solving for more than one set of input
             parameters. Defaults to value returned by "os.cpu_count()".
+        calculate_sensitivites : list of str or bool
+            If true, solver calculates sensitivities of all input parameters.
+            If only a subset of sensitivities are required, can also pass a
+            list of input parameter names
 
         Returns
         -------
@@ -588,6 +831,15 @@ class BaseSolver(object):
 
         """
         pybamm.logger.info("Start solving {} with {}".format(model.name, self.name))
+
+        # get a list-only version of calculate_sensitivities
+        if isinstance(calculate_sensitivities, bool):
+            if calculate_sensitivities:
+                calculate_sensitivities_list = [p for p in inputs.keys()]
+            else:
+                calculate_sensitivities_list = []
+        else:
+            calculate_sensitivities_list = calculate_sensitivities
 
         # Make sure model isn't empty
         if len(model.rhs) == 0 and len(model.algebraic) == 0:
@@ -630,7 +882,8 @@ class BaseSolver(object):
         # If "inputs" is a single dict, "inputs_list" is a list of only one dict.
         inputs_list = inputs if isinstance(inputs, list) else [inputs]
         ext_and_inputs_list = [
-            self._set_up_ext_and_inputs(model, external_variables, inputs)
+            self._set_up_ext_and_inputs(model, external_variables, inputs,
+                                        calculate_sensitivities_list)
             for inputs in inputs_list
         ]
 
@@ -640,6 +893,21 @@ class BaseSolver(object):
                 "Cannot solve list of inputs with multiprocessing "
                 'when model in format "jax".'
             )
+
+        # Check that calculate_sensitivites have not been updated
+        calculate_sensitivities_list.sort()
+        if not hasattr(model, 'calculate_sensitivities'):
+            model.calculate_sensitivities = []
+        model.calculate_sensitivities.sort()
+        if (calculate_sensitivities_list != model.calculate_sensitivities):
+            self.models_set_up.pop(model, None)
+            # CasadiSolver caches its integrators using model, so delete this too
+            if isinstance(self, pybamm.CasadiSolver):
+                self.integrators.pop(model, None)
+
+        # save sensitivity parameters so we can identify them later on
+        # (FYI: this is used in the Solution class)
+        model.calculate_sensitivities = calculate_sensitivities_list
 
         # Set up (if not done already)
         timer = pybamm.Timer()
@@ -662,6 +930,7 @@ class BaseSolver(object):
                 self.models_set_up[model][
                     "initial conditions"
                 ] = model.concatenated_initial_conditions
+
         set_up_time = timer.time()
         timer.reset()
 
@@ -908,6 +1177,9 @@ class BaseSolver(object):
         save : bool
             Turn on to store the solution of all previous timesteps
 
+
+
+
         Raises
         ------
         :class:`pybamm.ModelError`
@@ -971,6 +1243,7 @@ class BaseSolver(object):
             pybamm.logger.verbose(
                 "Start stepping {} with {}".format(model.name, self.name)
             )
+
             self.set_up(model, ext_and_inputs)
             self.models_set_up.update(
                 {model: {"initial conditions": model.concatenated_initial_conditions}}
@@ -978,6 +1251,7 @@ class BaseSolver(object):
             t = 0.0
         elif model not in self.models_set_up:
             # Run set up if the model has changed
+
             self.set_up(model, ext_and_inputs)
             self.models_set_up.update(
                 {model: {"initial conditions": model.concatenated_initial_conditions}}
@@ -990,7 +1264,7 @@ class BaseSolver(object):
                 model.y0 = old_solution.all_ys[-1][:, -1]
             else:
                 model.y0 = (
-                    model.set_initial_conditions_from(old_solution, inplace=False)
+                    model.set_initial_conditions_from(old_solution)
                     .concatenated_initial_conditions.evaluate(0, inputs=ext_and_inputs)
                     .flatten()
                 )
@@ -1159,7 +1433,8 @@ class BaseSolver(object):
 
         return [k for k, v in extrap_events.items() if v]
 
-    def _set_up_ext_and_inputs(self, model, external_variables, inputs):
+    def _set_up_ext_and_inputs(self, model, external_variables, inputs,
+                               calculate_sensitivities):
         """Set up external variables and input parameters"""
         inputs = inputs or {}
 
@@ -1198,12 +1473,13 @@ class SolverCallable:
         self.timescale = self.model.timescale_eval
 
     def __call__(self, t, y, inputs):
-        if self.name in ["RHS", "algebraic", "residuals"]:
-            pybamm.logger.debug(
-                "Evaluating {} for {} at t={}".format(
-                    self.name, self.model.name, t * self.timescale
-                )
+        pybamm.logger.debug(
+            "Evaluating {} for {} at t={}".format(
+                self.name, self.model.name, t * self.timescale
             )
+        )
+        if self.name in ["RHS", "algebraic", "residuals", "event"]:
+
             return self.function(t, y, inputs).flatten()
         else:
             return self.function(t, y, inputs)
@@ -1218,6 +1494,35 @@ class SolverCallable:
                 return states_eval
         else:
             return self._function(t, y, inputs=inputs, known_evals={})[0]
+
+
+class SensitivityCallable:
+    """A class that will be called by the solver when integrating"""
+
+    def __init__(self, function, name, model, form):
+        self._function = function
+        self.form = form
+        self.name = name
+        self.model = model
+        self.timescale = self.model.timescale_eval
+
+    def __call__(self, t, y, inputs):
+        pybamm.logger.debug(
+            "Evaluating sensitivities of {} for {} at t={}".format(
+                self.name, self.model.name, t * self.timescale
+            )
+        )
+        return self.function(t, y, inputs)
+
+    def function(self, t, y, inputs):
+        if self.form == "casadi":
+            return self._function(t, y, inputs)
+        elif self.form == "jax":
+            return self._function(t, y, inputs=inputs)
+        else:
+            ret_with_known_evals = \
+                self._function(t, y, inputs=inputs, known_evals={})
+            return {k: v[0] for k, v in ret_with_known_evals.items()}
 
 
 class Residuals(SolverCallable):
@@ -1238,7 +1543,6 @@ class InitialConditions(SolverCallable):
 
     def __init__(self, function, model):
         super().__init__(function, "initial conditions", model)
-        self.y_dummy = np.zeros(model.concatenated_initial_conditions.shape)
 
     def __call__(self, inputs):
         if self.form == "casadi":

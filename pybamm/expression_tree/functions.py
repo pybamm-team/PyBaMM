@@ -239,7 +239,7 @@ class Function(pybamm.Symbol):
     def to_equation(self):
         """Convert the node and its subtree into a SymPy equation."""
         if self.print_name is not None:
-            return sympy.symbols(self.print_name)
+            return sympy.Symbol(self.print_name)
         else:
             eq_list = []
             for child in self.children:

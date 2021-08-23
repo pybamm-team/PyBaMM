@@ -68,11 +68,14 @@ class TestIndependentVariable(unittest.TestCase):
         # Test print_name
         func = pybamm.IndependentVariable("a")
         func.print_name = "test"
-        self.assertEqual(func.to_equation(), sympy.symbols("test"))
+        self.assertEqual(func.to_equation(), sympy.Symbol("test"))
 
         self.assertEqual(
-            pybamm.IndependentVariable("a").to_equation(), sympy.symbols("a")
+            pybamm.IndependentVariable("a").to_equation(), sympy.Symbol("a")
         )
+
+        # Test time
+        self.assertEqual(pybamm.t.to_equation(), sympy.Symbol("t"))
 
 
 if __name__ == "__main__":
