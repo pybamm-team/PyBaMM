@@ -185,7 +185,7 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                 "ec reaction limited",
             ],
             "SEI film resistance": ["none", "distributed", "average"],
-            "SEI porosity change": ["true", "false", "true2"],
+            "SEI porosity change": ["true", "false"],
             "surface form": ["false", "differential", "algebraic"],
             "thermal": ["isothermal", "lumped", "x-lumped", "x-full"],
             "total interfacial current density as a state": ["true", "false"],

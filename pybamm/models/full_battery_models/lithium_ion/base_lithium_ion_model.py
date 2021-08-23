@@ -246,13 +246,6 @@ class BaseModel(pybamm.BaseBatteryModel):
             self.options["SEI porosity change"] == "true"
             or self.options["lithium plating porosity change"] == "true"
         ):
-            self.submodels["porosity"] = pybamm.porosity.ReactionDrivenODE(
-                self.param, self.options, self.x_average
-            )
-        elif (
-            self.options["SEI porosity change"] == "true2"
-            or self.options["lithium plating porosity change"] == "true"
-        ):
             self.submodels["porosity"] = pybamm.porosity.ReactionDriven(
                 self.param, self.options, self.x_average
             )
