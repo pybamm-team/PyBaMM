@@ -41,19 +41,6 @@ def constant_current_constant_voltage_constant_power(variables):
     )
 
 
-def constant_voltage(variables, V_applied):
-    V = variables["Terminal voltage [V]"]
-    n_cells = pybamm.Parameter("Number of cells connected in series to make a battery")
-    return V - V_applied / n_cells
-
-
-def constant_power(variables, P_applied):
-    I = variables["Current [A]"]
-    V = variables["Terminal voltage [V]"]
-    n_cells = pybamm.Parameter("Number of cells connected in series to make a battery")
-    return V * I - P_applied / n_cells
-
-
 class Simulation:
     """A Simulation class for easy building and running of PyBaMM simulations.
 
@@ -101,7 +88,8 @@ class Simulation:
             if experiment is not None:
                 raise NotImplementedError(
                     "BasicDFNHalfCell is not compatible "
-                    "with experiment simulations yet.")
+                    "with experiment simulations yet."
+                )
 
         if experiment is None:
             # Check to see if the current is provided as data (i.e. drive cycle)
@@ -158,6 +146,8 @@ class Simulation:
         operating condition in the experiment. The model will then be solved by
         integrating the model successively with each group of inputs, one group at a
         time.
+        This needs to be done here and not in the Experiment class because the nominal
+        cell capacity (from the parameters) is used to convert C-rate to current.
         """
         self.operating_mode = "with experiment"
 
@@ -173,48 +163,51 @@ class Simulation:
         self._experiment_inputs = []
         self._experiment_times = []
         for op, events in zip(experiment.operating_conditions, experiment.events):
-            if op[1] in ["A", "C"]:
-                # Update inputs for constant current
+            operating_inputs = {
+                "Current switch": 0,
+                "Voltage switch": 0,
+                "Power switch": 0,
+                "CCCV switch": 0,
+                "Current input [A]": 0,
+                "Voltage input [V]": 0,  # doesn't matter
+                "Power input [W]": 0,  # doesn't matter
+            }
+            op_control = op["electric"][1]
+            if op_control in ["A", "C"]:
                 capacity = self._parameter_values["Nominal cell capacity [A.h]"]
-                if op[1] == "A":
-                    I = op[0]
+                if op_control == "A":
+                    I = op["electric"][0]
                     Crate = I / capacity
                 else:
                     # Scale C-rate with capacity to obtain current
-                    Crate = op[0]
+                    Crate = op["electric"][0]
                     I = Crate * capacity
-                operating_inputs = {
-                    "Current switch": 1,
-                    "Voltage switch": 0,
-                    "Power switch": 0,
-                    "Current input [A]": I,
-                    "Voltage input [V]": 0,  # doesn't matter
-                    "Power input [W]": 0,  # doesn't matter
-                }
-            elif op[1] == "V":
+                if len(op["electric"]) == 4:
+                    # Update inputs for CCCV
+                    op_control = "CCCV"  # change to CCCV
+                    V = op["electric"][2]
+                    operating_inputs.update(
+                        {
+                            "CCCV switch": 1,
+                            "Current input [A]": I,
+                            "Voltage input [V]": V,
+                        }
+                    )
+                else:
+                    # Update inputs for constant current
+                    operating_inputs.update(
+                        {"Current switch": 1, "Current input [A]": I}
+                    )
+            elif op_control == "V":
                 # Update inputs for constant voltage
-                V = op[0]
-                operating_inputs = {
-                    "Current switch": 0,
-                    "Voltage switch": 1,
-                    "Power switch": 0,
-                    "Current input [A]": 0,  # doesn't matter
-                    "Voltage input [V]": V,
-                    "Power input [W]": 0,  # doesn't matter
-                }
-            elif op[1] == "W":
+                V = op["electric"][0]
+                operating_inputs.update({"Voltage switch": 1, "Voltage input [V]": V})
+            elif op_control == "W":
                 # Update inputs for constant power
-                P = op[0]
-                operating_inputs = {
-                    "Current switch": 0,
-                    "Voltage switch": 0,
-                    "Power switch": 1,
-                    "Current input [A]": 0,  # doesn't matter
-                    "Voltage input [V]": 0,  # doesn't matter
-                    "Power input [W]": P,
-                }
+                P = op["electric"][0]
+                operating_inputs.update({"Power switch": 1, "Power input [W]": P})
             # Update period
-            operating_inputs["period"] = op[3]
+            operating_inputs["period"] = op["period"]
             # Update events
             if events is None:
                 # make current and voltage values that won't be hit
@@ -241,12 +234,14 @@ class Simulation:
 
             self._experiment_inputs.append(operating_inputs)
             # Add time to the experiment times
-            dt = op[2]
+            dt = op["time"]
             if dt is None:
-                if op[1] in ["A", "C"]:
+                if op_control in ["A", "C", "CCCV"]:
                     # Current control: max simulation time: 3 * max simulation time
                     # based on C-rate
                     dt = 3 / abs(Crate) * 3600  # seconds
+                    if op_control == "CCCV":
+                        dt *= 5  # 5x longer for CCCV
                 else:
                     # max simulation time: 1 day
                     dt = 24 * 3600  # seconds
@@ -328,9 +323,13 @@ class Simulation:
 
         self.model = new_model
 
+        operating_conditions = set(
+            x["electric"] + (x["time"],) + (x["period"],)
+            for x in self.experiment.operating_conditions
+        )
         self.op_conds_to_model_and_param = {
             op_cond[:2]: (new_model, self.parameter_values)
-            for op_cond in set(self.experiment.operating_conditions)
+            for op_cond in operating_conditions
         }
 
     def set_up_model_for_experiment_new(self, model):
@@ -347,7 +346,7 @@ class Simulation:
         ):
             # Create model for this operating condition if it has not already been seen
             # before
-            if op_cond[:2] not in self.op_conds_to_model_and_param:
+            if op_cond["electric"] not in self.op_conds_to_model_and_param:
                 if op_inputs["Current switch"] == 1:
                     # Current control
                     # Make a new copy of the model (we will update events later))
@@ -358,10 +357,16 @@ class Simulation:
                     # To do so, we replace all instances of the current density in the
                     # model with a current density variable, which is obtained from the
                     # FunctionControl submodel
+                    # check which kind of external circuit model we need (differential
+                    # or algebraic)
+                    if op_inputs["CCCV switch"] == 1:
+                        control = "differential"
+                    else:
+                        control = "algebraic"
                     # create the FunctionControl submodel and extract variables
                     external_circuit_variables = (
                         pybamm.external_circuit.FunctionControl(
-                            model.param, None
+                            model.param, None, control=control
                         ).get_fundamental_variables()
                     )
 
@@ -373,15 +378,15 @@ class Simulation:
                     replacer = pybamm.SymbolReplacer(symbol_replacement_map)
                     new_model = replacer.process_model(model, inplace=False)
 
-                    # Update the algebraic equation and initial conditions for
+                    # Update the rhs or algebraic equation and initial conditions for
                     # FunctionControl
-                    # This creates an algebraic equation for the current to allow
-                    # current, voltage, or power control, together with the appropriate
-                    # guess for the initial condition.
+                    # This creates a differential or algebraic equation for the current
+                    # to allow current, voltage, or power control, together with the
+                    # appropriate guess for the initial condition.
                     # External circuit submodels are always equations on the current
                     # The external circuit function should fix either the current, or
                     # the voltage, or a combination (e.g. I*V for power control)
-                    i_cell = new_model.variables["Total current density"]
+                    i_cell = new_model.variables["Current density variable"]
                     new_model.initial_conditions[
                         i_cell
                     ] = new_model.param.current_with_time
@@ -403,14 +408,28 @@ class Simulation:
                         ]
                     )
                     if op_inputs["Voltage switch"] == 1:
-                        new_model.algebraic[i_cell] = constant_voltage(
-                            new_model.variables,
-                            pybamm.Parameter("Voltage function [V]"),
+                        new_model.algebraic[
+                            i_cell
+                        ] = pybamm.external_circuit.VoltageFunctionControl(
+                            new_model.param
+                        ).constant_voltage(
+                            new_model.variables
                         )
                     elif op_inputs["Power switch"] == 1:
-                        new_model.algebraic[i_cell] = constant_power(
-                            new_model.variables,
-                            pybamm.Parameter("Power function [W]"),
+                        new_model.algebraic[
+                            i_cell
+                        ] = pybamm.external_circuit.PowerFunctionControl(
+                            new_model.param
+                        ).constant_power(
+                            new_model.variables
+                        )
+                    elif op_inputs["CCCV switch"] == 1:
+                        new_model.algebraic[
+                            i_cell
+                        ] = pybamm.external_circuit.CCCVFunctionControl(
+                            new_model.param
+                        ).cccv(
+                            new_model.variables
                         )
 
                 # add voltage events to the model
@@ -449,8 +468,16 @@ class Simulation:
                         {"Power function [W]": op_inputs["Power input [W]"]},
                         check_already_exists=False,
                     )
+                elif op_inputs["CCCV switch"] == 1:
+                    new_parameter_values.update(
+                        {
+                            "Current function [A]": op_inputs["Current input [A]"],
+                            "Voltage function [V]": op_inputs["Voltage input [V]"],
+                        },
+                        check_already_exists=False,
+                    )
 
-                self.op_conds_to_model_and_param[op_cond[:2]] = (
+                self.op_conds_to_model_and_param[op_cond["electric"]] = (
                     new_model,
                     new_parameter_values,
                 )
@@ -627,7 +654,7 @@ class Simulation:
                 }
             )
             # For experiments also update the following
-            if hasattr(self, 'op_conds_to_model_and_param'):
+            if hasattr(self, "op_conds_to_model_and_param"):
                 for key, (model, param) in self.op_conds_to_model_and_param.items():
                     param.update(
                         {
@@ -782,7 +809,9 @@ class Simulation:
                     exp_inputs = self._experiment_inputs[idx]
                     dt = self._experiment_times[idx]
                     op_conds_str = self.experiment.operating_conditions_strings[idx]
-                    op_conds_elec = self.experiment.operating_conditions[idx][:2]
+                    op_conds_elec = self.experiment.operating_conditions[idx][
+                        "electric"
+                    ]
                     model = self.op_conds_to_built_models[op_conds_elec]
                     # Use 1-indexing for printing cycle number as it is more
                     # human-intuitive

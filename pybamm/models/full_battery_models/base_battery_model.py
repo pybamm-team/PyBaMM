@@ -164,7 +164,7 @@ class BatteryModelOptions(pybamm.FuzzyDict):
             "lithium plating": ["none", "reversible", "irreversible"],
             "lithium plating porosity change": ["true", "false"],
             "loss of active material": ["none", "stress-driven", "reaction-driven"],
-            "operating mode": ["current", "voltage", "power"],
+            "operating mode": ["current", "voltage", "power", "CCCV"],
             "particle": [
                 "Fickian diffusion",
                 "fast diffusion",
@@ -410,7 +410,7 @@ class BaseBatteryModel(pybamm.BaseModel):
     def default_geometry(self):
         return pybamm.battery_geometry(
             options=self.options,
-            current_collector_dimension=self.options["dimensionality"]
+            current_collector_dimension=self.options["dimensionality"],
         )
 
     @property
@@ -440,12 +440,8 @@ class BaseBatteryModel(pybamm.BaseModel):
             "positive electrode": pybamm.MeshGenerator(pybamm.Uniform1DSubMesh),
             "negative particle": pybamm.MeshGenerator(pybamm.Uniform1DSubMesh),
             "positive particle": pybamm.MeshGenerator(pybamm.Uniform1DSubMesh),
-            "negative particle size": pybamm.MeshGenerator(
-                pybamm.Uniform1DSubMesh
-            ),
-            "positive particle size": pybamm.MeshGenerator(
-                pybamm.Uniform1DSubMesh
-            ),
+            "negative particle size": pybamm.MeshGenerator(pybamm.Uniform1DSubMesh),
+            "positive particle size": pybamm.MeshGenerator(pybamm.Uniform1DSubMesh),
         }
         if self.options["dimensionality"] == 0:
             base_submeshes["current collector"] = pybamm.MeshGenerator(pybamm.SubMesh0D)
@@ -731,7 +727,7 @@ class BaseBatteryModel(pybamm.BaseModel):
         pybamm.logger.info("Finish building {}".format(self.name))
 
     def new_empty_copy(self):
-        """ See :meth:`pybamm.BaseModel.new_empty_copy()` """
+        """See :meth:`pybamm.BaseModel.new_empty_copy()`"""
         new_model = self.__class__(name=self.name, options=self.options)
         new_model.use_jacobian = self.use_jacobian
         new_model.convert_to_format = self.convert_to_format
@@ -756,6 +752,10 @@ class BaseBatteryModel(pybamm.BaseModel):
             self.submodels[
                 "external circuit"
             ] = pybamm.external_circuit.PowerFunctionControl(self.param)
+        elif self.options["operating mode"] == "CCCV":
+            self.submodels[
+                "external circuit"
+            ] = pybamm.external_circuit.CCCVFunctionControl(self.param)
         elif callable(self.options["operating mode"]):
             self.submodels[
                 "external circuit"

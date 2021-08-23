@@ -27,7 +27,7 @@
 # find the SUNDIALS include directories
 find_path(SUNDIALS_INCLUDE_DIR
   NAMES
-    ida/ida.h
+    idas/idas.h
     sundials/sundials_math.h
     sundials/sundials_types.h
     sunlinsol/sunlinsol_klu.h
@@ -39,7 +39,7 @@ find_path(SUNDIALS_INCLUDE_DIR
   )
 
 set(SUNDIALS_WANT_COMPONENTS
-  sundials_ida
+  sundials_idas
   sundials_sunlinsolklu
   sundials_sunmatrixsparse
   sundials_nvecserial
