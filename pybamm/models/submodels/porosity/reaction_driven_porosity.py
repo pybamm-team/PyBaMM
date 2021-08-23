@@ -30,19 +30,15 @@ class ReactionDriven(BaseModel):
         L_pl_n = variables["Negative electrode lithium plating thickness [m]"]
 
         L_tot = (L_sei_n - L_sei_0) + L_pl_n
-
-        R_n = variables["Negative particle radius [m]"]
+        
         a_n = variables[
             "Negative electrode surface area to volume ratio [m-1]"
         ]
 
-        if self.options["particle shape"] == "spherical":
-            delta_eps_n = - a_n * (
-                L_tot #+ L_tot ** 2 / R_n + L_tot ** 3 / (3 * R_n ** 2)
-            )
-
-        elif self.options["particle shape"] == "user":
-            delta_eps_n = - a_n * L_tot
+        # This assumes a thin film so curvature effects are neglected. They could be
+        # included (i.e. for a sphere it is a_n * (L_tot + L_tot ** 2 / R_n + L_tot **
+        # 3 / (3 * R_n ** 2))) but it is not clear if it is relevant or not.
+        delta_eps_n = - a_n * L_tot
 
         eps_n = self.param.epsilon_n_init + delta_eps_n
         eps_s = pybamm.FullBroadcast(
