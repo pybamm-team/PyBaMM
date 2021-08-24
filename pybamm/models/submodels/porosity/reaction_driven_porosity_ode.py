@@ -66,12 +66,13 @@ class ReactionDrivenODE(BaseModel):
             )
 
         deps_n_dt = -self.param.beta_surf_n * j_n
-        if self.options["SEI porosity change"] == "true":
-            beta_sei_n = self.param.beta_sei_n
-            deps_n_dt += beta_sei_n * j_sei_n
-        if self.options["lithium plating porosity change"] == "true":
-            beta_plating = self.param.beta_plating
-            deps_n_dt += beta_plating * j_plating
+        # Reaction driven porosity ODE for lithium-ion is not supported at the moment
+        # if self.options["SEI porosity change"] == "true":
+        #     beta_sei_n = self.param.beta_sei_n
+        #     deps_n_dt += beta_sei_n * j_sei_n
+        # if self.options["lithium plating porosity change"] == "true":
+        #     beta_plating = self.param.beta_plating
+        #     deps_n_dt += beta_plating * j_plating
 
         deps_p_dt = -self.param.beta_surf_p * j_p
 
