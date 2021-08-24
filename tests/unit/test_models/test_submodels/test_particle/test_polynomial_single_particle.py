@@ -21,19 +21,19 @@ class TestSingleParticle(unittest.TestCase):
             "Negative electrode surface area to volume ratio": a,
         }
 
-        submodel = pybamm.particle.PolynomialSingleParticle(
+        submodel = pybamm.particle.no_distribution.XAveragedPolynomialProfile(
             param, "Negative", "uniform profile"
         )
         std_tests = tests.StandardSubModelTests(submodel, variables)
         std_tests.test_all()
 
-        submodel = pybamm.particle.PolynomialSingleParticle(
+        submodel = pybamm.particle.no_distribution.XAveragedPolynomialProfile(
             param, "Negative", "quadratic profile"
         )
         std_tests = tests.StandardSubModelTests(submodel, variables)
         std_tests.test_all()
 
-        submodel = pybamm.particle.PolynomialSingleParticle(
+        submodel = pybamm.particle.no_distribution.XAveragedPolynomialProfile(
             param, "Negative", "quartic profile"
         )
         std_tests = tests.StandardSubModelTests(submodel, variables)
@@ -47,19 +47,19 @@ class TestSingleParticle(unittest.TestCase):
             "Positive electrode surface area to volume ratio": a,
         }
 
-        submodel = pybamm.particle.PolynomialSingleParticle(
+        submodel = pybamm.particle.no_distribution.XAveragedPolynomialProfile(
             param, "Positive", "uniform profile"
         )
         std_tests = tests.StandardSubModelTests(submodel, variables)
         std_tests.test_all()
 
-        submodel = pybamm.particle.PolynomialSingleParticle(
+        submodel = pybamm.particle.no_distribution.XAveragedPolynomialProfile(
             param, "Positive", "quadratic profile"
         )
         std_tests = tests.StandardSubModelTests(submodel, variables)
         std_tests.test_all()
 
-        submodel = pybamm.particle.PolynomialSingleParticle(
+        submodel = pybamm.particle.no_distribution.XAveragedPolynomialProfile(
             param, "Positive", "quartic profile"
         )
         std_tests = tests.StandardSubModelTests(submodel, variables)

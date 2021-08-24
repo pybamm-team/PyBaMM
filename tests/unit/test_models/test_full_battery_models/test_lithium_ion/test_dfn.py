@@ -241,6 +241,18 @@ class TestDFNWithPlating(unittest.TestCase):
         model.check_well_posedness()
 
 
+class TestDFNWithSizeDistribution(unittest.TestCase):
+    def test_well_posed(self):
+        options = {"particle size": "distribution"}
+        model = pybamm.lithium_ion.DFN(options)
+        model.check_well_posedness()
+
+    def test_uniform_profile(self):
+        options = {"particle size": "distribution", "particle": "uniform profile"}
+        model = pybamm.lithium_ion.DFN(options)
+        model.check_well_posedness()
+
+
 if __name__ == "__main__":
     print("Add -v for more debug output")
     import sys

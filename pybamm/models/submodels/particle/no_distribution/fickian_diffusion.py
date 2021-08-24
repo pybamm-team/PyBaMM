@@ -1,13 +1,15 @@
 #
-# Class for many particles with Fickian diffusion
+# Class for particles with Fickian diffusion and x-dependence
 #
 import pybamm
-from .base_particle import BaseParticle
+from ..base_particle import BaseParticle
 
 
-class FickianManyParticles(BaseParticle):
+class FickianDiffusion(BaseParticle):
     """
-    Class for molar conservation in many particles which employs Fick's law.
+    Class for molar conservation in particles, employing Fick's law, and allowing
+    variation in the electrode domain. I.e., the concentration varies with r
+    (internal coordinate) and x (electrode coordinate).
 
     Parameters
     ----------

@@ -32,6 +32,8 @@ def domain_size(domain):
         "positive electrode": 17,
         "working electrode": 19,
         "working particle": 23,
+        "negative particle size": 29,
+        "positive particle size": 31,
     }
     if isinstance(domain, str):
         domain = [domain]
