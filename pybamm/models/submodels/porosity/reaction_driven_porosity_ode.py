@@ -46,34 +46,15 @@ class ReactionDrivenODE(BaseModel):
         if self.x_average is True:
             j_n = variables["X-averaged negative electrode interfacial current density"]
             j_p = variables["X-averaged positive electrode interfacial current density"]
-            # j_sei_n = variables[
-            #     "X-averaged negative electrode SEI interfacial current density"
-            # ]
-            # j_plating = variables[
-            #     "X-averaged negative electrode lithium plating "
-            #     "interfacial current density"
-            # ]
             deps_s_dt = pybamm.PrimaryBroadcast(0, "current collector")
         else:
             j_n = variables["Negative electrode interfacial current density"]
             j_p = variables["Positive electrode interfacial current density"]
-            # j_sei_n = variables["Negative electrode SEI interfacial current density"]
-            # j_plating = variables[
-            #     "Negative electrode lithium plating interfacial current density"
-            # ]
             deps_s_dt = pybamm.FullBroadcast(
                 0, "separator", auxiliary_domains={"secondary": "current collector"}
             )
 
         deps_n_dt = -self.param.beta_surf_n * j_n
-        # Reaction driven porosity ODE for lithium-ion is not supported at the moment
-        # if self.options["SEI porosity change"] == "true":
-        #     beta_sei_n = self.param.beta_sei_n
-        #     deps_n_dt += beta_sei_n * j_sei_n
-        # if self.options["lithium plating porosity change"] == "true":
-        #     beta_plating = self.param.beta_plating
-        #     deps_n_dt += beta_plating * j_plating
-
         deps_p_dt = -self.param.beta_surf_p * j_p
 
         variables.update(
