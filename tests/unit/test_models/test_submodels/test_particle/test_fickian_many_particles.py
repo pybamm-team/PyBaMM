@@ -26,7 +26,7 @@ class TestManyParticles(unittest.TestCase):
             "Negative particle radius": a_n,
         }
 
-        submodel = pybamm.particle.FickianManyParticles(param, "Negative")
+        submodel = pybamm.particle.no_distribution.FickianDiffusion(param, "Negative")
         std_tests = tests.StandardSubModelTests(submodel, variables)
         std_tests.test_all()
 
@@ -37,7 +37,7 @@ class TestManyParticles(unittest.TestCase):
             "Positive electrode surface area to volume ratio": a_p,
             "Positive particle radius": a_p,
         }
-        submodel = pybamm.particle.FickianManyParticles(param, "Positive")
+        submodel = pybamm.particle.no_distribution.FickianDiffusion(param, "Positive")
         std_tests = tests.StandardSubModelTests(submodel, variables)
         std_tests.test_all()
 
