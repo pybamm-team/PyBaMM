@@ -4,7 +4,7 @@
 import pybamm
 import matplotlib.pyplot as plt
 
-pybamm.set_logging_level("NOTICE")
+pybamm.set_logging_level("INFO")
 experiment = pybamm.Experiment(
     [
         (
@@ -15,9 +15,10 @@ experiment = pybamm.Experiment(
             "Rest for 1 hour",
         ),
     ]
-    * 3
+    * 3,
+    # cccv_handling="ode",
 )
-model = pybamm.lithium_ion.DFN()
+model = pybamm.lithium_ion.SPM()
 
 sim = pybamm.Simulation(
     model, experiment=experiment, solver=pybamm.CasadiSolver("fast with events")
