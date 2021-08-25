@@ -40,9 +40,9 @@ class IndependentVariable(pybamm.Symbol):
     def to_equation(self):
         """Convert the node and its subtree into a SymPy equation."""
         if self.print_name is not None:
-            return sympy.symbols(self.print_name)
+            return sympy.Symbol(self.print_name)
         else:
-            return sympy.symbols(self.name)
+            return sympy.Symbol(self.name)
 
 
 class Time(IndependentVariable):
@@ -55,7 +55,7 @@ class Time(IndependentVariable):
     def __init__(self):
         super().__init__("time")
 
-    def new_copy(self):
+    def create_copy(self):
         """See :meth:`pybamm.Symbol.new_copy()`."""
         return Time()
 
@@ -71,6 +71,10 @@ class Time(IndependentVariable):
         See :meth:`pybamm.Symbol.evaluate_for_shape()`
         """
         return 0
+
+    def to_equation(self):
+        """Convert the node and its subtree into a SymPy equation."""
+        return sympy.Symbol("t")
 
 
 class SpatialVariable(IndependentVariable):
@@ -114,7 +118,7 @@ class SpatialVariable(IndependentVariable):
                 "domain cannot be particle if name is '{}'".format(name)
             )
 
-    def new_copy(self):
+    def create_copy(self):
         """See :meth:`pybamm.Symbol.new_copy()`."""
         return self.__class__(
             self.name, self.domain, self.auxiliary_domains, self.coord_sys

@@ -55,7 +55,11 @@ class Experiment:
         faster at simulating individual steps but has higher set-up overhead
     drive_cycles : dict
         Dictionary of drive cycles to use for this experiment.
-
+    cccv_handling : str, optional
+        How to handle CCCV. If "two-step" (default), then the experiment is run in
+        two steps (CC then CV). If "ode", then the experiment is run in a single step
+        using an ODE for current: see
+        :class:`pybamm.external_circuit.CCCVFunctionControl` for details.
     """
 
     def __init__(
@@ -66,7 +70,11 @@ class Experiment:
         termination=None,
         use_simulation_setup_type="new",
         drive_cycles={},
+        cccv_handling="two-step",
     ):
+        if cccv_handling not in ["two-step", "ode"]:
+            raise ValueError("cccv_handling should be either 'two-step' or 'ode'")
+        self.cccv_handling = cccv_handling
 
         self.period = self.convert_time_to_seconds(period.split())
         operating_conditions_cycles = []
@@ -75,9 +83,28 @@ class Experiment:
             if (isinstance(cycle, tuple) or isinstance(cycle, str)) and all(
                 [isinstance(cond, str) for cond in cycle]
             ):
-                operating_conditions_cycles.append(
-                    cycle if isinstance(cycle, tuple) else (cycle,)
-                )
+                if isinstance(cycle, str):
+                    processed_cycle = (cycle,)
+                else:
+                    processed_cycle = []
+                    idx = 0
+                    finished = False
+                    while not finished:
+                        step = cycle[idx]
+                        if idx < len(cycle) - 1:
+                            next_step = cycle[idx + 1]
+                        else:
+                            next_step = None
+                            finished = True
+                        if self.is_cccv(step, next_step):
+                            processed_cycle.append(step + " then " + next_step)
+                            idx += 2
+                        else:
+                            processed_cycle.append(step)
+                            idx += 1
+                        if idx >= len(cycle):
+                            finished = True
+                operating_conditions_cycles.append(tuple(processed_cycle))
             else:
                 try:
                     # Condition is not a string
@@ -153,7 +180,20 @@ class Experiment:
             must be numbers, 'C' denotes the unit of the external circuit (can be A for
             current, C for C-rate, V for voltage or W for power), and 'hours' denotes
             the unit of time (can be second(s), minute(s) or hour(s))
+        drive_cycles: dict
+            A map specifying the drive cycles
         """
+        if " then " in cond:
+            # If the string contains " then ", then this is a two-step CCCV experiment
+            # and we need to split it into two strings
+            cond_CC, cond_CV = cond.split(" then ")
+            op_CC, _ = self.read_string(cond_CC, drive_cycles)
+            op_CV, event_CV = self.read_string(cond_CV, drive_cycles)
+            return {
+                "electric": op_CC["electric"] + op_CV["electric"],
+                "time": op_CV["time"],
+                "period": op_CV["period"],
+            }, event_CV
         # Read period
         if " period)" in cond:
             cond, time_period = cond.split("(")
@@ -165,20 +205,12 @@ class Experiment:
         if "Run" in cond:
             cond_list = cond.split()
             if "at" in cond:
-                raise ValueError(
-                    """Instruction must be
-                    For example: {}""".format(
-                        examples
-                    )
-                )
+                raise ValueError(f"Instruction must be of the form: {examples}")
             dc_types = ["(A)", "(V)", "(W)"]
             if all(x not in cond for x in dc_types):
                 raise ValueError(
-                    """Type of drive cycle must be
-                    specified using '(A)', '(V)' or '(W)'.
-                    For example: {}""".format(
-                        examples
-                    )
+                    "Type of drive cycle must be specified using '(A)', '(V)' or '(W)'."
+                    f" For example: {examples}"
                 )
             # Check for Events
             elif "for" in cond:
@@ -208,7 +240,7 @@ class Experiment:
                 time = drive_cycles[cond_list[1]][:, 0][-1]
                 period = np.min(np.diff(drive_cycles[cond_list[1]][:, 0]))
                 events = None
-        elif "Run" not in cond:
+        else:
             if "for" in cond and "or until" in cond:
                 # e.g. for 3 hours or until 4.2 V
                 cond_list = cond.split()
@@ -238,7 +270,8 @@ class Experiment:
                         examples
                     )
                 )
-        return electric + (time,) + (period,), events
+
+        return {"electric": electric, "time": time, "period": period}, events
 
     def extend_drive_cycle(self, drive_cycle, end_time):
         "Extends the drive cycle to enable for event"
@@ -404,3 +437,25 @@ class Experiment:
                     "e.g. '80% capacity' or '4 Ah capacity'"
                 )
         return termination_dict
+
+    def is_cccv(self, step, next_step):
+        """
+        Check whether a step and the next step indicate a CCCV charge
+        """
+        if self.cccv_handling == "two-step" or next_step is None:
+            return False
+        # e.g. step="Charge at 2.0 A until 4.2V"
+        # next_step="Hold at 4.2V until C/50"
+        if (
+            step.startswith("Charge")
+            and "until" in step
+            and "V" in step
+            and "Hold at " in next_step
+            and "V until" in next_step
+        ):
+            _, events = self.read_string(step, None)
+            next_op, _ = self.read_string(next_step, None)
+            # Check that the event conditions are the same as the hold conditions
+            if events == next_op["electric"]:
+                return True
+        return False

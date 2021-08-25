@@ -32,6 +32,8 @@ def domain_size(domain):
         "positive electrode": 17,
         "working electrode": 19,
         "working particle": 23,
+        "negative particle size": 29,
+        "positive particle size": 31,
     }
     if isinstance(domain, str):
         domain = [domain]
@@ -188,8 +190,8 @@ class Symbol(anytree.NodeMixin):
         is valid over all domains)
     auxiliary_domains : dict of str
         dictionary of auxiliary domains over which the node is valid (empty dictionary
-        indicates no auxiliary domains). Keys can be "secondary" or "tertiary". The
-        symbol is broadcast over its auxiliary domains.
+        indicates no auxiliary domains). Keys can be "secondary", "tertiary" or
+        "quaternary". The symbol is broadcast over its auxiliary domains.
         For example, a symbol might have domain "negative particle", secondary domain
         "separator" and tertiary domain "current collector" (`domain="negative
         particle", auxiliary_domains={"secondary": "separator", "tertiary": "current
@@ -865,7 +867,7 @@ class Symbol(anytree.NodeMixin):
         """
         return pybamm.CasadiConverter(casadi_symbols).convert(self, t, y, y_dot, inputs)
 
-    def new_copy(self):
+    def create_copy(self):
         """
         Make a new copy of a symbol, to avoid Tree corruption errors while bypassing
         copy.deepcopy(), which is slow.
@@ -876,6 +878,14 @@ class Symbol(anytree.NodeMixin):
                 self, type(self)
             )
         )
+
+    def new_copy(self):
+        """
+        Returns `create_copy` with added attributes
+        """
+        obj = self.create_copy()
+        obj._print_name = self.print_name
+        return obj
 
     @property
     def size(self):
@@ -972,4 +982,4 @@ class Symbol(anytree.NodeMixin):
             self._print_name = prettify_print_name(name)
 
     def to_equation(self):
-        return sympy.symbols(str(self.name))
+        return sympy.Symbol(str(self.name))

@@ -31,6 +31,13 @@ class TestFunctionControl(unittest.TestCase):
         std_tests = tests.StandardSubModelTests(submodel, variables)
         std_tests.test_all()
 
+    def test_cccv_control(self):
+        param = pybamm.LithiumIonParameters()
+        submodel = pybamm.external_circuit.CCCVFunctionControl(param)
+        variables = {"Terminal voltage [V]": pybamm.Scalar(0)}
+        std_tests = tests.StandardSubModelTests(submodel, variables)
+        std_tests.test_all()
+
 
 if __name__ == "__main__":
     print("Add -v for more debug output")

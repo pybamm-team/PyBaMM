@@ -114,7 +114,7 @@ class BinaryOperator(pybamm.Symbol):
             right_str = "{!s}".format(self.right)
         return "{} {} {}".format(left_str, self.name, right_str)
 
-    def new_copy(self):
+    def create_copy(self):
         """See :meth:`pybamm.Symbol.new_copy()`."""
 
         # process children
@@ -187,7 +187,7 @@ class BinaryOperator(pybamm.Symbol):
     def to_equation(self):
         """Convert the node and its subtree into a SymPy equation."""
         if self.print_name is not None:
-            return sympy.symbols(self.print_name)
+            return sympy.Symbol(self.print_name)
         else:
             child1, child2 = self.children
             eq1 = child1.to_equation()
@@ -500,6 +500,38 @@ def inner(left, right):
         return left
 
     return pybamm.simplify_if_constant(pybamm.Inner(left, right))
+
+
+class Equality(BinaryOperator):
+    """
+    A node in the expression tree representing an equality comparison between two
+    nodes. Returns 1 if the two nodes evaluate to the same thing and 0 otherwise.
+    **Extends:** :class:`BinaryOperator`
+    """
+
+    def __init__(self, left, right):
+        """See :meth:`pybamm.BinaryOperator.__init__()`."""
+        super().__init__("==", left, right)
+
+    def diff(self, variable):
+        """See :meth:`pybamm.Symbol.diff()`."""
+        # Equality should always be multiplied by something else so hopefully don't
+        # need to worry about shape
+        return pybamm.Scalar(0)
+
+    def _binary_jac(self, left_jac, right_jac):
+        """See :meth:`pybamm.BinaryOperator._binary_jac()`."""
+        # Equality should always be multiplied by something else so hopefully don't
+        # need to worry about shape
+        return pybamm.Scalar(0)
+
+    def _binary_evaluate(self, left, right):
+        """See :meth:`pybamm.BinaryOperator._binary_evaluate()`."""
+        return int(left == right)
+
+    def _binary_new_copy(self, left, right):
+        """See :meth:`pybamm.BinaryOperator._binary_new_copy()`."""
+        return pybamm.Equality(left, right)
 
 
 class _Heaviside(BinaryOperator):
@@ -819,7 +851,8 @@ def simplified_addition(left, right):
             return right * pybamm.ones_like(left)
         # If left object is zero and has size smaller than or equal to right object in
         # all dimensions, we can safely return the right object. For example, adding a
-        # zero vector a matrix, we can just return the matrix
+        # zero vector a matrix, we can just return the matrix.
+        # When checking evaluation on edges, check dimensions of left object only
         elif all(
             left_dim_size <= right_dim_size
             for left_dim_size, right_dim_size in zip(
@@ -827,7 +860,7 @@ def simplified_addition(left, right):
             )
         ) and all(
             left.evaluates_on_edges(dim) == right.evaluates_on_edges(dim)
-            for dim in ["primary", "secondary", "tertiary"]
+            for dim in left.domains.keys()
         ):
             return right
     elif pybamm.is_matrix_zero(right):
@@ -841,7 +874,7 @@ def simplified_addition(left, right):
             )
         ) and all(
             left.evaluates_on_edges(dim) == right.evaluates_on_edges(dim)
-            for dim in ["primary", "secondary", "tertiary"]
+            for dim in left.domains.keys()
         ):
             return left
 
@@ -919,7 +952,7 @@ def simplified_subtraction(left, right):
             )
         ) and all(
             left.evaluates_on_edges(dim) == right.evaluates_on_edges(dim)
-            for dim in ["primary", "secondary", "tertiary"]
+            for dim in left.domains.keys()
         ):
             return -right
     if pybamm.is_matrix_zero(right):
@@ -933,7 +966,7 @@ def simplified_subtraction(left, right):
             )
         ) and all(
             left.evaluates_on_edges(dim) == right.evaluates_on_edges(dim)
-            for dim in ["primary", "secondary", "tertiary"]
+            for dim in left.domains.keys()
         ):
             return left
 
@@ -984,7 +1017,7 @@ def simplified_multiplication(left, right):
     try:
         if left.shape_for_testing == right.shape_for_testing and all(
             left.evaluates_on_edges(dim) == right.evaluates_on_edges(dim)
-            for dim in ["primary", "secondary", "tertiary"]
+            for dim in left.domains.keys()
         ):
             if pybamm.is_matrix_one(left):
                 return right
@@ -1153,7 +1186,7 @@ def simplified_division(left, right):
     try:
         if left.shape_for_testing == right.shape_for_testing and all(
             left.evaluates_on_edges(dim) == right.evaluates_on_edges(dim)
-            for dim in ["primary", "secondary", "tertiary"]
+            for dim in left.domains.keys()
         ):
             if pybamm.is_matrix_one(right):
                 return left

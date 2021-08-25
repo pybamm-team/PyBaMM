@@ -5,5 +5,7 @@ Particle Size Distribution
   :maxdepth: 1
 
   base_distribution
-  fickian_single_distribution
-  fast_single_distribution
+  fickian_diffusion
+  x_averaged_fickian_diffusion
+  uniform_profile
+  x_averaged_uniform_profile

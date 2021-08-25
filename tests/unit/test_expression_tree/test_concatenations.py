@@ -363,12 +363,12 @@ class TestConcatenations(unittest.TestCase):
     def test_to_equation(self):
         a = pybamm.Symbol("a", domain="test a")
         b = pybamm.Symbol("b", domain="test b")
-        func_symbol = sympy.symbols(r"\begin{cases}a\\b\end{cases}")
+        func_symbol = sympy.Symbol(r"\begin{cases}a\\b\end{cases}")
 
         # Test print_name
         func = pybamm.Concatenation(a, b)
         func.print_name = "test"
-        self.assertEqual(func.to_equation(), sympy.symbols("test"))
+        self.assertEqual(func.to_equation(), sympy.Symbol("test"))
 
         # Test concat_sym
         self.assertEqual(pybamm.Concatenation(a, b).to_equation(), func_symbol)

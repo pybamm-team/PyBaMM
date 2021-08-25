@@ -135,7 +135,7 @@ class TestFunction(unittest.TestCase):
         # Test print_name
         func = pybamm.Arcsinh(a)
         func.print_name = "test"
-        self.assertEqual(func.to_equation(), sympy.symbols("test"))
+        self.assertEqual(func.to_equation(), sympy.Symbol("test"))
 
         # Test Arcsinh
         self.assertEqual(pybamm.Arcsinh(a).to_equation(), sympy.asinh(a))
@@ -145,6 +145,9 @@ class TestFunction(unittest.TestCase):
 
         # Test sinh
         self.assertEqual(pybamm.Sinh(a).to_equation(), sympy.sinh(a))
+
+        # Test Function
+        self.assertEqual(pybamm.Function(np.log, 10).to_equation(), 10.0)
 
 
 class TestSpecificFunctions(unittest.TestCase):

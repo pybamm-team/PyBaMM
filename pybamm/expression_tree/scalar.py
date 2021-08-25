@@ -2,6 +2,7 @@
 # Scalar class
 #
 import numpy as np
+import sympy
 
 import pybamm
 
@@ -60,7 +61,7 @@ class Scalar(pybamm.Symbol):
         """See :meth:`pybamm.Symbol._jac()`."""
         return pybamm.Scalar(0)
 
-    def new_copy(self):
+    def create_copy(self):
         """See :meth:`pybamm.Symbol.new_copy()`."""
         return Scalar(self.value, self.name, self.domain)
 
@@ -70,4 +71,7 @@ class Scalar(pybamm.Symbol):
 
     def to_equation(self):
         """Returns the value returned by the node when evaluated."""
-        return self.value
+        if self.print_name is not None:
+            return sympy.Symbol(self.print_name)
+        else:
+            return self.value
