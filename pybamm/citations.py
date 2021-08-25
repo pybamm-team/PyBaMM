@@ -60,8 +60,8 @@ class Citations:
                     citation = ""
                     start = True
 
-        # add the final citation
-        self._all_citations[key] = citation
+            # add the final citation
+            self._all_citations[key] = citation
 
     def register(self, key):
         """Register a paper to be cited. The intended use is that :meth:`register`
