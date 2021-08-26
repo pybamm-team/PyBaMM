@@ -3,7 +3,7 @@
 This release introduces:
 - the shift to calendar versioning: from now on we will use year.month version number
 - sensitivity analysis of solutions with respect to input parameters
-- several new models, including multiparticle and state-of-health models
+- several new models, including many-particle and state-of-health models
 - improvement on how CasADI solver's handle events, including a new "fast with events" mode
 - several other new features, optimizations, and bug fixes, summarized below
 
