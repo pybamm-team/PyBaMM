@@ -12,13 +12,12 @@ class TestFull(unittest.TestCase):
         # param = pybamm.LeadAcidParameters()
         param = pybamm.LithiumIonParameters()
         a_n = pybamm.PrimaryBroadcast(pybamm.Scalar(0), ["negative electrode"])
-        a_p = pybamm.PrimaryBroadcast(pybamm.Scalar(0), ["positive electrode"])
 
         variables = {
-            "Negative electrode interfacial current density": a_n,
-            "Negative electrode SEI interfacial current density": a_n,
-            "Positive electrode interfacial current density": a_p,
-            "Negative electrode lithium plating interfacial current density": a_n,
+            "Total negative electrode SEI thickness [m]": a_n,
+            "Negative electrode lithium plating thickness [m]": a_n,
+            "Negative electrode surface area to volume ratio [m-1]": a_n,
+
         }
         options = {
             "SEI": "ec reaction limited",
