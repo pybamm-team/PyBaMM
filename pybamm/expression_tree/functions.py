@@ -311,6 +311,22 @@ def arcsinh(child):
     return simplified_function(Arcsinh, child)
 
 
+class Arctan(SpecificFunction):
+    """Arctan function."""
+
+    def __init__(self, child):
+        super().__init__(np.arctan, child)
+
+    def _function_diff(self, children, idx):
+        """See :meth:`pybamm.Function._function_diff()`."""
+        return 1 / (children[0] ** 2 + 1)
+
+
+def arctan(child):
+    """Returns hyperbolic tan function of child."""
+    return simplified_function(Arctan, child)
+
+
 class Cos(SpecificFunction):
     """Cosine function."""
 
@@ -341,6 +357,27 @@ class Cosh(SpecificFunction):
 def cosh(child):
     """Returns hyperbolic cosine function of child."""
     return simplified_function(Cosh, child)
+
+
+class Erf(SpecificFunction):
+    """Error function."""
+
+    def __init__(self, child):
+        super().__init__(special.erf, child)
+
+    def _function_diff(self, children, idx):
+        """See :meth:`pybamm.Function._function_diff()`."""
+        return 2 / np.sqrt(np.pi) * Exponential(-children[0] ** 2)
+
+
+def erf(child):
+    """Returns error function of child."""
+    return simplified_function(Erf, child)
+
+
+def erfc(child):
+    """Returns complementary error function of child."""
+    return 1 - simplified_function(Erf, child)
 
 
 class Exponential(SpecificFunction):
@@ -491,40 +528,3 @@ class Tanh(SpecificFunction):
 def tanh(child):
     """Returns hyperbolic tan function of child."""
     return simplified_function(Tanh, child)
-
-
-class Arctan(SpecificFunction):
-    """Arctan function."""
-
-    def __init__(self, child):
-        super().__init__(np.arctan, child)
-
-    def _function_diff(self, children, idx):
-        """See :meth:`pybamm.Function._function_diff()`."""
-        return 1 / (children[0] ** 2 + 1)
-
-
-def arctan(child):
-    """Returns hyperbolic tan function of child."""
-    return simplified_function(Arctan, child)
-
-
-class Erf(SpecificFunction):
-    """Error function."""
-
-    def __init__(self, child):
-        super().__init__(special.erf, child)
-
-    def _function_diff(self, children, idx):
-        """See :meth:`pybamm.Function._function_diff()`."""
-        return 2 / np.sqrt(np.pi) * Exponential(-children[0] ** 2)
-
-
-def erf(child):
-    """Returns error function of child."""
-    return simplified_function(Erf, child)
-
-
-def erfc(child):
-    """Returns complementary error function of child."""
-    return 1 - simplified_function(Erf, child)
