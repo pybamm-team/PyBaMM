@@ -597,7 +597,7 @@ class QuickPlot(object):
             # Set either y label or legend entries
             if len(key) == 1:
                 title = split_long_string(key[0])
-                ax.set_title(title)
+                ax.set_title(title, fontsize='medium')
             else:
                 ax.legend(
                     variable_handles,
