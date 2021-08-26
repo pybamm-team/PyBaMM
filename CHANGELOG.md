@@ -36,6 +36,7 @@ example notebook ([#1602](https://github.com/pybamm-team/PyBaMM/pull/1602))
 
 ## Bug fixes
 
+-   Updated documentation to include some previously missing functions, such as `erf` and `tanh` ([#1628](https://github.com/pybamm-team/PyBaMM/pull/1628))
 -   Fixed reading citation file without closing ([#1620](https://github.com/pybamm-team/PyBaMM/pull/1620))
 -   Porosity variation for SEI and plating models is calculated from the film thickness rather than from a separate ODE ([#1617](https://github.com/pybamm-team/PyBaMM/pull/1617))
 -   Fixed a bug where the order of the indexing for the entries of variables discretised using FEM was incorrect ([#1556](https://github.com/pybamm-team/PyBaMM/pull/1556))
@@ -43,7 +44,6 @@ example notebook ([#1602](https://github.com/pybamm-team/PyBaMM/pull/1602))
 -   Fixed ElectrodeSOH model for multi-dimensional simulations ([#1548](https://github.com/pybamm-team/PyBaMM/pull/1548))
 -   Removed the overly-restrictive check "each variable in the algebraic eqn keys must appear in the eqn" ([#1510](https://github.com/pybamm-team/PyBaMM/pull/1510))
 -   Made parameters importable through pybamm ([#1475](https://github.com/pybamm-team/PyBaMM/pull/1475))
--   Updated documentation to include some previously missing functions, such as erf and tanh ([#1628](https://github.com/pybamm-team/PyBaMM/pull/1628))
 
 ## Breaking changes
 -   Refactored the `particle` submodel module, with the models having no size distribution now found in `particle.no_distribution`, and those with a size distribution in `particle.size_distribution`. Renamed submodels to indicate the transport model (Fickian diffusion, polynomial profile) and if they are "x-averaged". E.g., `FickianManyParticles` and `FickianSingleParticle` are now `no_distribution.FickianDiffusion` and `no_distribution.XAveragedFickianDiffusion` ([#1602](https://github.com/pybamm-team/PyBaMM/pull/1602))
