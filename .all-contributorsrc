@@ -387,6 +387,16 @@
         "code",
         "test"
       ]
+    },
+    {
+      "login": "chuckliu1979",
+      "name": "Chuck Liu",
+      "avatar_url": "https://avatars.githubusercontent.com/u/13491954?v=4",
+      "profile": "https://github.com/chuckliu1979",
+      "contributions": [
+        "bug",
+        "code"
+      ]
     }
   ],
   "contributorsPerLine": 7,
