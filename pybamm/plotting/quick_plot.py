@@ -133,7 +133,7 @@ class QuickPlot(object):
         # Set colors, linestyles, figsize, axis limits
         # call LoopList to make sure list index never runs out
         if colors is None:
-            self.colors = LoopList([None])
+            self.colors = LoopList(colors or ["r", "b", "k", "g", "m", "c"])
         else:
             self.colors = LoopList(colors)
         self.linestyles = LoopList(linestyles or ["-", ":", "--", "-."])
