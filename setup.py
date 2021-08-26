@@ -163,7 +163,7 @@ ext_modules = [idaklu_ext] if compile_KLU() else []
 
 jax_dependencies = []
 if not (system() == "Windows" or (system() == "Darwin" and "ARM64" in version())):
-    jax_dependencies = ["jax==0.2.19", "jaxlib==0.1.70"]
+    jax_dependencies = ["jax==0.2.12", "jaxlib==0.1.70"]
 
 
 # Load text for description and license
