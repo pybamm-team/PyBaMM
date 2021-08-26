@@ -7,8 +7,6 @@ Functions
 .. autoclass:: pybamm.SpecificFunction
   :members:
 
-.. autoclass:: pybamm.SpecificFunction
-  :members:
 
 .. autoclass:: pybamm.Arcsinh
   :members:
