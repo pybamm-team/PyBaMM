@@ -1,7 +1,7 @@
 # [v21.08](https://github.com/pybamm-team/PyBaMM/tree/v21.08) - 2021-08-26
 
 This release introduces:
-- the shift to calendar versioning: from now on we will use year.month version number
+- the switch to calendar versioning: from now on we will use year.month version number
 - sensitivity analysis of solutions with respect to input parameters
 - several new models, including many-particle and state-of-health models
 - improvement on how CasADI solver's handle events, including a new "fast with events" mode
