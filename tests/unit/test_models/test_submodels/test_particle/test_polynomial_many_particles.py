@@ -26,19 +26,19 @@ class TestManyParticles(unittest.TestCase):
             "Negative particle radius": a_n,
         }
 
-        submodel = pybamm.particle.PolynomialManyParticles(
+        submodel = pybamm.particle.no_distribution.PolynomialProfile(
             param, "Negative", "uniform profile"
         )
         std_tests = tests.StandardSubModelTests(submodel, variables)
         std_tests.test_all()
 
-        submodel = pybamm.particle.PolynomialManyParticles(
+        submodel = pybamm.particle.no_distribution.PolynomialProfile(
             param, "Negative", "quadratic profile"
         )
         std_tests = tests.StandardSubModelTests(submodel, variables)
         std_tests.test_all()
 
-        submodel = pybamm.particle.PolynomialManyParticles(
+        submodel = pybamm.particle.no_distribution.PolynomialProfile(
             param, "Negative", "quartic profile"
         )
         std_tests = tests.StandardSubModelTests(submodel, variables)
@@ -52,19 +52,19 @@ class TestManyParticles(unittest.TestCase):
             "Positive particle radius": a_p,
         }
 
-        submodel = pybamm.particle.PolynomialManyParticles(
+        submodel = pybamm.particle.no_distribution.PolynomialProfile(
             param, "Positive", "uniform profile"
         )
         std_tests = tests.StandardSubModelTests(submodel, variables)
         std_tests.test_all()
 
-        submodel = pybamm.particle.PolynomialManyParticles(
+        submodel = pybamm.particle.no_distribution.PolynomialProfile(
             param, "Positive", "quadratic profile"
         )
         std_tests = tests.StandardSubModelTests(submodel, variables)
         std_tests.test_all()
 
-        submodel = pybamm.particle.PolynomialManyParticles(
+        submodel = pybamm.particle.no_distribution.PolynomialProfile(
             param, "Positive", "quartic profile"
         )
         std_tests = tests.StandardSubModelTests(submodel, variables)

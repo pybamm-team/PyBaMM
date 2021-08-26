@@ -35,6 +35,7 @@ for model in models:
 
     sim.solve(t_eval=t_eval, solver=solver)
     sims.append(sim)
+
 pb.dynamic_plot(
     sims,
     [

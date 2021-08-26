@@ -85,20 +85,40 @@ class DFN(BaseModel):
             [particle_left, "Negative"],
             [particle_right, "Positive"],
         ]:
-            if particle_side == "Fickian diffusion":
-                self.submodels[
-                    domain.lower() + " particle"
-                ] = pybamm.particle.FickianManyParticles(self.param, domain)
-            elif particle_side in [
-                "uniform profile",
-                "quadratic profile",
-                "quartic profile",
-            ]:
-                self.submodels[
-                    domain.lower() + " particle"
-                ] = pybamm.particle.PolynomialManyParticles(
-                    self.param, domain, particle_side
-                )
+            if self.options["particle size"] == "single":
+                if particle_side == "Fickian diffusion":
+                    self.submodels[
+                        domain.lower() + " particle"
+                    ] = pybamm.particle.no_distribution.FickianDiffusion(
+                        self.param, domain
+                    )
+                elif particle_side in [
+                    "uniform profile",
+                    "quadratic profile",
+                    "quartic profile",
+                ]:
+                    self.submodels[
+                        domain.lower() + " particle"
+                    ] = pybamm.particle.no_distribution.PolynomialProfile(
+                        self.param, domain, particle_side
+                    )
+            elif self.options["particle size"] == "distribution":
+                if particle_side == "Fickian diffusion":
+                    self.submodels[
+                        domain.lower() + " particle"
+                    ] = pybamm.particle.size_distribution.FickianDiffusion(
+                        self.param, domain
+                    )
+                elif particle_side in [
+                    "uniform profile",
+                    "quadratic profile",
+                    "quartic profile",
+                ]:
+                    self.submodels[
+                        domain.lower() + " particle"
+                    ] = pybamm.particle.size_distribution.UniformProfile(
+                        self.param, domain
+                    )
 
     def set_solid_submodel(self):
 

@@ -3,13 +3,14 @@
 #
 import pybamm
 
-from .base_particle import BaseParticle
+from ..base_particle import BaseParticle
 
 
-class PolynomialManyParticles(BaseParticle):
+class PolynomialProfile(BaseParticle):
     """
-    Class for molar conservation in many particles with an assumed polynomial
-    concentration profile in r. Model equations from [1]_.
+    Class for molar conservation in particles, assuming a polynomial
+    concentration profile in r, and allowing variation in the electrode domain.
+    Model equations from [1]_.
 
     Parameters
     ----------

@@ -1,15 +1,16 @@
 #
-# Class for a single particle-size distribution representing an
-# electrode, with Fickian diffusion within each particle
+# Class for a particle-size distribution averaged in the x direction,
+# with Fickian diffusion within each particle
 #
 import pybamm
 
 from .base_distribution import BaseSizeDistribution
 
 
-class FickianSingleSizeDistribution(BaseSizeDistribution):
-    """Class for molar conservation in a single (i.e., x-averaged) particle-size
-    distribution with Fickian diffusion within each particle.
+class XAveragedFickianDiffusion(BaseSizeDistribution):
+    """Class for molar conservation in an x-averaged particle-size
+    distribution with Fickian diffusion in each particle. Concentration
+    varies with r (spherical coordinate), R (particle size) but not x.
 
     Parameters
     ----------
@@ -19,7 +20,7 @@ class FickianSingleSizeDistribution(BaseSizeDistribution):
         The domain of the model either 'Negative' or 'Positive'
 
 
-    **Extends:** :class:`pybamm.particle.BaseSizeDistribution`
+    **Extends:** :class:`pybamm.particle.size_distribution.BaseSizeDistribution`
     """
 
     def __init__(self, param, domain):
@@ -97,7 +98,7 @@ class FickianSingleSizeDistribution(BaseSizeDistribution):
         c_s_xav_distribution = variables[
             "X-averaged " + self.domain.lower() + " particle concentration distribution"
         ]
-        R_spatial_variable = variables[self.domain + " particle sizes"]
+        R = variables[self.domain + " particle sizes"]
 
         # broadcast to "particle size" domain then again into "particle"
         T_k_xav = pybamm.PrimaryBroadcast(
@@ -118,32 +119,24 @@ class FickianSingleSizeDistribution(BaseSizeDistribution):
                 c_s_xav_distribution, T_k_xav
             ) * pybamm.grad(c_s_xav_distribution)
 
-        # Standard R-averaged flux variables. Average using the area-weighted
-        # distribution
-        f_a_dist = variables[
-            "X-averaged "
-            + self.domain.lower()
-            + " area-weighted particle-size distribution"
-        ]
-        f_a_dist = pybamm.PrimaryBroadcast(
-            f_a_dist,
-            [self.domain.lower() + " particle"],
-        )
-        # must use "R_spatial_variable" as integration variable, since "R" is a
-        # broadcast
-        N_s_xav = pybamm.Integral(f_a_dist * N_s_xav_distribution, R_spatial_variable)
-        N_s = pybamm.SecondaryBroadcast(N_s_xav, [self.domain.lower() + " electrode"])
-        variables.update(self._get_standard_flux_variables(N_s, N_s_xav))
-
-        # Standard distribution flux variables (R-dependent)
-        # (Cannot currently broadcast to "x" as cannot have 4 domains)
+        # Size-dependent flux variables
         variables.update(
-            {
+            self._get_standard_flux_distribution_variables(N_s_xav_distribution)
+        )
+
+        # Size-averaged flux variables (perform area-weighted avg manually as flux
+        # evals on edges)
+        f_a_dist = pybamm.PrimaryBroadcast(
+            variables[
                 "X-averaged "
                 + self.domain.lower()
-                + " particle flux distribution": N_s_xav_distribution,
-            }
+                + " area-weighted particle-size distribution"
+            ],
+            [self.domain.lower() + " particle"],
         )
+        N_s_xav = pybamm.Integral(f_a_dist * N_s_xav_distribution, R)
+        N_s = pybamm.SecondaryBroadcast(N_s_xav, [self.domain.lower() + " electrode"])
+        variables.update(self._get_standard_flux_variables(N_s, N_s_xav))
 
         variables.update(self._get_total_concentration_variables(variables))
         return variables
@@ -231,7 +224,7 @@ class FickianSingleSizeDistribution(BaseSizeDistribution):
 
     def set_initial_conditions(self, variables):
         """
-        For single particle-size distribution models, initial conditions can't
+        For x-averaged particle-size distribution models, initial conditions can't
         depend on x so we arbitrarily set the initial values of the single
         particles to be given by the values at x=0 in the negative electrode
         and x=1 in the positive electrode. Typically, supplied initial
