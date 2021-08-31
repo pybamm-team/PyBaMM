@@ -1,0 +1,9 @@
+Name [units],Value,Reference,Notes
+# Empty rows and rows starting with ‘#’ will be ignored,,,
+,,,
+Separator porosity,0.47,Chen 2020,
+Separator Bruggeman coefficient (electrolyte),1.5,Chen 2020,theoretical
+Separator Bruggeman coefficient (electrode),1.5,default,
+Separator density [kg.m-3],1548,O'Regan 2021,
+Separator specific heat capacity [J.kg-1.K-1],[function]separator_LGM50_heat_capacity_ORegan2021,O'Regan 2021,
+Separator thermal conductivity [W.m-1.K-1],0.3344,O'Regan 2021,

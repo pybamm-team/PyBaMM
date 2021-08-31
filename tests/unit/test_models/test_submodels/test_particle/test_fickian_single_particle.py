@@ -19,7 +19,9 @@ class TestSingleParticle(unittest.TestCase):
             "Negative electrode surface area to volume ratio": a,
         }
 
-        submodel = pybamm.particle.FickianSingleParticle(param, "Negative")
+        submodel = pybamm.particle.no_distribution.XAveragedFickianDiffusion(
+            param, "Negative"
+        )
         std_tests = tests.StandardSubModelTests(submodel, variables)
         std_tests.test_all()
 
@@ -29,7 +31,9 @@ class TestSingleParticle(unittest.TestCase):
             "Positive electrode active material volume fraction": a,
             "Positive electrode surface area to volume ratio": a,
         }
-        submodel = pybamm.particle.FickianSingleParticle(param, "Positive")
+        submodel = pybamm.particle.no_distribution.XAveragedFickianDiffusion(
+            param, "Positive"
+        )
         std_tests = tests.StandardSubModelTests(submodel, variables)
         std_tests.test_all()
 

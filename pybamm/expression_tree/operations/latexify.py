@@ -73,7 +73,7 @@ class Latexify:
                     r"\begin{cases}" + r" \\ ".join(concat_geo) + r"\end{cases}"
                 )
                 concat_eqn = sympy.Eq(
-                    sympy.symbols(node.print_name),
+                    sympy.Symbol(node.print_name),
                     sympy.Symbol(concat_sym),
                     evaluate=False,
                 )
@@ -200,8 +200,9 @@ class Latexify:
 
                 # Add spaces between words
                 node_copy_eqn = node_copy.to_equation()
+                # Typical current [A] --> \text{Typical current [A]}
                 if re.search(r"(^[0-9a-zA-Z-\s.-\[\]()]*$)", str(node_copy_eqn)):
-                    node_copy_latex = r"\textit{" + str(node_copy_eqn) + "}"
+                    node_copy_latex = r"\text{" + str(node_copy_eqn) + "}"
                 else:
                     node_copy_latex = sympy.latex(node_copy_eqn)
 
@@ -235,13 +236,13 @@ class Latexify:
         # Add model name to the list
         eqn_list.append(
             sympy.Symbol(
-                r"\underline{\textbf{\large{" + self.model.name + " Equations}}}"
+                r"\large{\underline{\textbf{" + self.model.name + " Equations}}}"
             )
         )
 
         for eqn_type in ["rhs", "algebraic"]:
             for var, eqn in getattr(self.model, eqn_type).items():
-                var_symbol = sympy.symbols(var.print_name)
+                var_symbol = sympy.Symbol(var.print_name)
 
                 # Add equation name to the list
                 eqn_list.append(sympy.Symbol(r"\\ \textbf{" + str(var) + "}"))
@@ -314,7 +315,7 @@ class Latexify:
         # Add voltage expression to the list
         if "Terminal voltage [V]" in self.model.variables:
             voltage = self.model.variables["Terminal voltage [V]"].to_equation()
-            voltage_eqn = sympy.Eq(sympy.symbols("V"), voltage, evaluate=False)
+            voltage_eqn = sympy.Eq(sympy.Symbol("V"), voltage, evaluate=False)
             # Add terminal voltage to the list
             eqn_list.append(sympy.Symbol(r"\\ \textbf{Terminal voltage [V]}"))
             eqn_list.extend([voltage_eqn])
@@ -368,7 +369,7 @@ class Latexify:
                 # When equations are too huge, set output resolution to default
                 except RuntimeError:  # pragma: no cover
                     warnings.warn(
-                        "RuntimeError: Setting the output resolution to default"
+                        "RuntimeError - Setting the output resolution to default"
                     )
                     return sympy.preview(
                         eqn_new_line,

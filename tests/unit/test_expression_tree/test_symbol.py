@@ -491,7 +491,7 @@ class TestSymbol(unittest.TestCase):
             (y1 + y2).test_shape()
 
     def test_to_equation(self):
-        self.assertEqual(pybamm.Symbol("test").to_equation(), sympy.symbols("test"))
+        self.assertEqual(pybamm.Symbol("test").to_equation(), sympy.Symbol("test"))
 
 
 class TestIsZero(unittest.TestCase):
