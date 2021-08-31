@@ -10,11 +10,11 @@ class ElectrodeSOHHalfCell(pybamm.BaseModel):
     Subscript w indicates working electrode and subscript c indicates counter electrode.
 
     .. math::
-        V_{max} &= U_w(x_{100}),
+        V_{max} = U_w(x_{100}),
         \\
-        V_{min} &= U_w(x_{0}),
+        V_{min} = U_w(x_{0}),
         \\
-        x_0 &= x_{100} - \\frac{C}{C_w},
+        x_0 = x_{100} - \\frac{C}{C_w},
 
     References
     ----------

@@ -108,6 +108,7 @@ class Full(BaseElectrolyteDiffusion):
         c_e = variables["Electrolyte concentration"]
 
         if self.half_cell:
+            # left bc at anode/separator interface
             # assuming v_box = 0 for now
             T = variables["Cell temperature"]
             tor = variables["Electrolyte tortuosity"]
@@ -120,6 +121,7 @@ class Full(BaseElectrolyteDiffusion):
             )
             lbc = pybamm.boundary_value(dce_dx, "left")
         else:
+            # left bc at anode/current collector interface
             lbc = pybamm.Scalar(0)
 
         self.boundary_conditions = {
