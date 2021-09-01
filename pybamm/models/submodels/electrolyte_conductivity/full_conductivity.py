@@ -44,6 +44,9 @@ class Full(BaseElectrolyteConductivity):
             - pybamm.grad(phi_e)
         )
 
+        # Override print_name
+        i_e.print_name = "i_e"
+
         variables.update(self._get_standard_current_variables(i_e))
         variables.update(self._get_electrolyte_overpotentials(variables))
 
@@ -57,12 +60,16 @@ class Full(BaseElectrolyteConductivity):
         # account for graded electrodes)
         a_n = variables["Negative electrode surface area to volume ratio"]
         a_p = variables["Positive electrode surface area to volume ratio"]
-        a = pybamm.Concatenation(
+        a = pybamm.concatenation(
             a_n, pybamm.FullBroadcast(0, "separator", "current collector"), a_p
         )
 
         # Variable summing all of the interfacial current densities
         sum_j = variables["Sum of interfacial current densities"]
+
+        # Override print_name
+        sum_j.print_name = "J"
+        a.print_name = "a"
 
         self.algebraic = {phi_e: pybamm.div(i_e) - a * sum_j}
 

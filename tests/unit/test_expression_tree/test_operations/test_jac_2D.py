@@ -227,7 +227,8 @@ class TestJacobian(unittest.TestCase):
         b.bounds = (-np.inf, np.inf)
         c.bounds = (-np.inf, np.inf)
 
-        conc = pybamm.Concatenation(a, b, c)
+        conc = pybamm.concatenation(a, b, c)
+        conc.bounds = (-np.inf, np.inf)
         disc.set_variable_slices([conc])
         conc_disc = disc.process_symbol(conc)
         jac = conc_disc.jac(y).evaluate().toarray()
@@ -243,7 +244,7 @@ class TestJacobian(unittest.TestCase):
         c = pybamm.Variable(
             "c", domain=c_dom, auxiliary_domains={"secondary": "current collector"}
         )
-        conc = pybamm.Concatenation(a, b, c)
+        conc = pybamm.concatenation(a, b, c)
         disc.set_variable_slices([conc])
         conc_disc = disc.process_symbol(conc)
         y0 = np.ones(1500)

@@ -51,7 +51,7 @@ class EffectiveResistance(pybamm.BaseModel):
         self.set_boundary_conditions(self.variables)
         self.set_initial_conditions(self.variables)
 
-        pybamm.citations.register("Timms2020")
+        pybamm.citations.register("Timms2021")
 
     def get_fundamental_variables(self):
         # Get necessary parameters
@@ -350,7 +350,7 @@ class AlternativeEffectiveResistance2D(pybamm.BaseModel):
             f_p: pybamm.laplacian(f_p)
             - pybamm.source(1, f_p)
             + c * pybamm.DefiniteIntegralVector(f_p, vector_type="column"),
-            c: pybamm.yz_average(f_p) + pybamm.NotConstant(0) * c,
+            c: pybamm.yz_average(f_p),
         }
 
         # Boundary conditons
@@ -399,7 +399,7 @@ class AlternativeEffectiveResistance2D(pybamm.BaseModel):
             {"y": var.y, "y [m]": var.y * L_y, "z": var.z, "z [m]": var.z * L_z}
         )
 
-        pybamm.citations.register("Timms2020")
+        pybamm.citations.register("Timms2021")
 
     def post_process(self, solution, param_values, V_av, I_av):
         """

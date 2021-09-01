@@ -27,8 +27,8 @@ class BaseParticle(pybamm.BaseSubModel):
         """
         All particle submodels must provide the particle concentration as an argument
         to this method. Some submodels solve for quantities other than the concentration
-        itself, for example the 'FickianSingleParticle' models solves for the x-averaged
-        concentration. In such cases the variables being solved for (set in
+        itself, for example the 'XAveragedFickianDiffusion' models solves for the
+        x-averaged concentration. In such cases the variables being solved for (set in
         'get_fundamental_variables') must also be passed as keyword arguments. If not
         passed as keyword arguments, the various average concentrations and surface
         concentration are computed automatically from the particle concentration.
@@ -114,7 +114,8 @@ class BaseParticle(pybamm.BaseSubModel):
             "R-averaged " + self.domain.lower() + " particle concentration"
         ]
         eps_s = variables[self.domain + " electrode active material volume fraction"]
-        c_s_vol_av = pybamm.x_average(eps_s * c_s_rav)
+        eps_s_av = pybamm.x_average(eps_s)
+        c_s_vol_av = pybamm.x_average(eps_s * c_s_rav) / eps_s_av
         if self.domain == "Negative":
             c_scale = self.param.c_n_max
             L = self.param.L_n
@@ -125,13 +126,17 @@ class BaseParticle(pybamm.BaseSubModel):
 
         variables.update(
             {
+                self.domain + " electrode SOC": c_s_vol_av,
                 self.domain + " electrode volume-averaged concentration": c_s_vol_av,
                 self.domain
                 + " electrode "
                 + "volume-averaged concentration [mol.m-3]": c_s_vol_av * c_scale,
                 "Total lithium in "
                 + self.domain.lower()
-                + " electrode [mol]": c_s_vol_av * c_scale * L * A,
+                + " electrode [mol]": pybamm.yz_average(c_s_vol_av * eps_s_av)
+                * c_scale
+                * L
+                * A,
             }
         )
         return variables
@@ -144,22 +149,3 @@ class BaseParticle(pybamm.BaseSubModel):
 
         return variables
 
-    def set_events(self, variables):
-        c_s_surf = variables[self.domain + " particle surface concentration"]
-        tol = 1e-4
-
-        self.events.append(
-            pybamm.Event(
-                "Minumum " + self.domain.lower() + " particle surface concentration",
-                pybamm.min(c_s_surf) - tol,
-                pybamm.EventType.TERMINATION,
-            )
-        )
-
-        self.events.append(
-            pybamm.Event(
-                "Maximum " + self.domain.lower() + " particle surface concentration",
-                (1 - tol) - pybamm.max(c_s_surf),
-                pybamm.EventType.TERMINATION,
-            )
-        )

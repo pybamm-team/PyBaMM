@@ -82,6 +82,7 @@ class TestButlerVolmer(unittest.TestCase):
             {
                 "SEI film resistance": "none",
                 "total interfacial current density as a state": "false",
+                "particle size": "single"
             },
         )
         j_n = model_n.get_coupled_variables(self.variables)[
@@ -94,6 +95,7 @@ class TestButlerVolmer(unittest.TestCase):
             {
                 "SEI film resistance": "none",
                 "total interfacial current density as a state": "false",
+                "particle size": "single"
             },
         )
         j_p = model_p.get_coupled_variables(self.variables)[
@@ -117,6 +119,7 @@ class TestButlerVolmer(unittest.TestCase):
             {
                 "SEI film resistance": "none",
                 "total interfacial current density as a state": "false",
+                "particle size": "single"
             },
         )
         j_n = model_n.get_coupled_variables(self.variables)[
@@ -129,6 +132,7 @@ class TestButlerVolmer(unittest.TestCase):
             {
                 "SEI film resistance": "none",
                 "total interfacial current density as a state": "false",
+                "particle size": "single"
             },
         )
         j_p = model_p.get_coupled_variables(self.variables)[
@@ -155,6 +159,7 @@ class TestButlerVolmer(unittest.TestCase):
             {
                 "SEI film resistance": "none",
                 "total interfacial current density as a state": "false",
+                "particle size": "single"
             },
         )
         j_n = model_n.get_coupled_variables(self.variables)[
@@ -167,12 +172,13 @@ class TestButlerVolmer(unittest.TestCase):
             {
                 "SEI film resistance": "none",
                 "total interfacial current density as a state": "false",
+                "particle size": "single"
             },
         )
         j_p = model_p.get_coupled_variables(self.variables)[
             "Positive electrode interfacial current density"
         ]
-        j = pybamm.Concatenation(j_n, pybamm.PrimaryBroadcast(0, ["separator"]), j_p)
+        j = pybamm.concatenation(j_n, pybamm.PrimaryBroadcast(0, ["separator"]), j_p)
 
         # Process parameters and discretise
         parameter_values = pybamm.lithium_ion.BaseModel().default_parameter_values

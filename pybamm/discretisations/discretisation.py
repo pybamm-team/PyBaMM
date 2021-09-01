@@ -209,6 +209,11 @@ class Discretisation(object):
         model_disc.rhs, model_disc.concatenated_rhs = rhs, concat_rhs
         model_disc.algebraic, model_disc.concatenated_algebraic = alg, concat_alg
 
+        # Save length of rhs and algebraic
+        model_disc.len_rhs = model_disc.concatenated_rhs.size
+        model_disc.len_alg = model_disc.concatenated_algebraic.size
+        model_disc.len_rhs_and_alg = model_disc.len_rhs + model_disc.len_alg
+
         # Process events
         processed_events = []
         pybamm.logger.verbose("Discretise events for {}".format(model.name))
@@ -262,7 +267,8 @@ class Discretisation(object):
         # Iterate through unpacked variables, adding appropriate slices to y_slices
         for variable in variables:
             # Add up the size of all the domains in variable.domain
-            if isinstance(variable, pybamm.Concatenation):
+            if isinstance(variable, pybamm.ConcatenationVariable):
+                start_ = start
                 spatial_method = self.spatial_methods[variable.domain[0]]
                 children = variable.children
                 meshes = OrderedDict()
@@ -276,23 +282,21 @@ class Discretisation(object):
                         for domain_mesh in mesh:
                             end += domain_mesh.npts_for_broadcast_to_nodes
                         # Add to slices
-                        y_slices[child.id].append(slice(start, end))
-                        y_slices_explicit[child].append(slice(start, end))
-                        # Add to bounds
-                        lower_bounds.extend([child.bounds[0]] * (end - start))
-                        upper_bounds.extend([child.bounds[1]] * (end - start))
-                        # Increment start
-                        start = end
+                        y_slices[child.id].append(slice(start_, end))
+                        y_slices_explicit[child].append(slice(start_, end))
+                        # Increment start_
+                        start_ = end
             else:
                 end += self._get_variable_size(variable)
-                # Add to slices
-                y_slices[variable.id].append(slice(start, end))
-                y_slices_explicit[variable].append(slice(start, end))
-                # Add to bounds
-                lower_bounds.extend([variable.bounds[0]] * (end - start))
-                upper_bounds.extend([variable.bounds[1]] * (end - start))
-                # Increment start
-                start = end
+
+            # Add to slices
+            y_slices[variable.id].append(slice(start, end))
+            y_slices_explicit[variable].append(slice(start, end))
+            # Add to bounds
+            lower_bounds.extend([variable.bounds[0]] * (end - start))
+            upper_bounds.extend([variable.bounds[1]] * (end - start))
+            # Increment start
+            start = end
 
         # Convert y_slices back to normal dictionary
         self.y_slices = dict(y_slices)
@@ -365,7 +369,7 @@ class Discretisation(object):
             if isinstance(var, pybamm.Variable):
                 # No need to keep track of the parent
                 self.external_variables[(name, None)] = var
-            elif isinstance(var, pybamm.Concatenation):
+            elif isinstance(var, pybamm.ConcatenationVariable):
                 start = 0
                 end = 0
                 for child in var.children:
@@ -417,27 +421,20 @@ class Discretisation(object):
         internal_bcs = {}
         for var in model.boundary_conditions.keys():
             if isinstance(var, pybamm.Concatenation):
-                children = var.children
+                children = var.orphans
 
                 first_child = children[0]
-                first_orphan = first_child.new_copy()
                 next_child = children[1]
-                next_orphan = next_child.new_copy()
 
                 lbc = self.bcs[var.id]["left"]
-                rbc = (boundary_gradient(first_orphan, next_orphan), "Neumann")
+                rbc = (boundary_gradient(first_child, next_child), "Neumann")
 
                 if first_child.id not in bc_key_ids:
                     internal_bcs.update({first_child.id: {"left": lbc, "right": rbc}})
 
-                for i, _ in enumerate(children[1:-1]):
-                    current_child = next_child
-                    current_orphan = next_orphan
-                    next_child = children[i + 2]
-                    next_orphan = next_child.new_copy()
-
+                for current_child, next_child in zip(children[1:-1], children[2:]):
                     lbc = rbc
-                    rbc = (boundary_gradient(current_orphan, next_orphan), "Neumann")
+                    rbc = (boundary_gradient(current_child, next_child), "Neumann")
                     if current_child.id not in bc_key_ids:
                         internal_bcs.update(
                             {current_child.id: {"left": lbc, "right": rbc}}
@@ -656,15 +653,7 @@ class Discretisation(object):
         model_variables = model.rhs.keys()
         model_slices = []
         for v in model_variables:
-            if isinstance(v, pybamm.Concatenation):
-                model_slices.append(
-                    slice(
-                        self.y_slices[v.children[0].id][0].start,
-                        self.y_slices[v.children[-1].id][0].stop,
-                    )
-                )
-            else:
-                model_slices.append(self.y_slices[v.id][0])
+            model_slices.append(self.y_slices[v.id][0])
         sorted_model_variables = [
             v for _, v in sorted(zip(model_slices, model_variables))
         ]
@@ -828,6 +817,7 @@ class Discretisation(object):
             discretised_symbol = self._process_symbol(symbol)
             self._discretised_symbols[symbol.id] = discretised_symbol
             discretised_symbol.test_shape()
+
             # Assign mesh as an attribute to the processed variable
             if symbol.domain != []:
                 discretised_symbol.mesh = self.mesh.combine_submeshes(*symbol.domain)
@@ -883,7 +873,7 @@ class Discretisation(object):
             elif isinstance(symbol, pybamm.Laplacian):
                 return child_spatial_method.laplacian(child, disc_child, self.bcs)
 
-            elif isinstance(symbol, pybamm.Gradient_Squared):
+            elif isinstance(symbol, pybamm.GradientSquared):
                 return child_spatial_method.gradient_squared(
                     child, disc_child, self.bcs
                 )
@@ -1030,7 +1020,6 @@ class Discretisation(object):
         elif isinstance(symbol, pybamm.Concatenation):
             new_children = [self.process_symbol(child) for child in symbol.children]
             new_symbol = spatial_method.concatenation(new_children)
-
             return new_symbol
 
         elif isinstance(symbol, pybamm.InputParameter):
@@ -1087,19 +1076,11 @@ class Discretisation(object):
         unpacked_variables = []
         slices = []
         for symbol in var_eqn_dict.keys():
-            if isinstance(symbol, pybamm.Concatenation):
-                unpacked_variables.extend([var for var in symbol.children])
-                # must append the slice for the whole concatenation, so that equations
-                # get sorted correctly
-                slices.append(
-                    slice(
-                        self.y_slices[symbol.children[0].id][0].start,
-                        self.y_slices[symbol.children[-1].id][0].stop,
-                    )
-                )
+            if isinstance(symbol, pybamm.ConcatenationVariable):
+                unpacked_variables.extend([symbol] + [var for var in symbol.children])
             else:
                 unpacked_variables.append(symbol)
-                slices.append(self.y_slices[symbol.id][0])
+            slices.append(self.y_slices[symbol.id][0])
 
         if check_complete:
             # Check keys from the given var_eqn_dict against self.y_slices
@@ -1143,17 +1124,8 @@ class Discretisation(object):
                 )
 
             # Check that the initial condition is within the bounds
-            if isinstance(var, pybamm.Concatenation):
-                # Overly tight bounds, can edit later if required
-                bounds = (
-                    np.max([child.bounds[0] for child in var.children]),
-                    np.min([child.bounds[1] for child in var.children]),
-                )
-            else:
-                bounds = var.bounds
-
-            # Check bounds
             # Skip this check if there are input parameters in the initial conditions
+            bounds = var.bounds
             if not eqn.has_symbol_of_classes(pybamm.InputParameter) and not (
                 all(bounds[0] <= ic_eval) and all(ic_eval <= bounds[1])
             ):

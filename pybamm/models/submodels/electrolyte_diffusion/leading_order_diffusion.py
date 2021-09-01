@@ -43,7 +43,7 @@ class LeadingOrder(BaseElectrolyteDiffusion):
         variables.update(self._get_standard_flux_variables(N_e))
 
         c_e_av = pybamm.standard_variables.c_e_av
-        c_e = pybamm.Concatenation(
+        c_e = pybamm.concatenation(
             pybamm.PrimaryBroadcast(c_e_av, ["negative electrode"]),
             pybamm.PrimaryBroadcast(c_e_av, ["separator"]),
             pybamm.PrimaryBroadcast(c_e_av, ["positive electrode"]),

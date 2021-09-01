@@ -2,7 +2,10 @@ import pybamm
 import numpy as np
 import pandas as pd
 import os
+import subprocess
+import sys
 import unittest
+import uuid
 
 
 class TestSimulation(unittest.TestCase):
@@ -180,23 +183,50 @@ class TestSimulation(unittest.TestCase):
         dt = 0.001
         model = pybamm.lithium_ion.SPM()
         sim = pybamm.Simulation(model)
+
         sim.step(dt)  # 1 step stores first two points
         tau = sim.model.timescale.evaluate()
         self.assertEqual(sim.solution.t.size, 2)
         self.assertEqual(sim.solution.y.full()[0, :].size, 2)
         self.assertEqual(sim.solution.t[0], 0)
         self.assertEqual(sim.solution.t[1], dt / tau)
+        saved_sol = sim.solution
+
         sim.step(dt)  # automatically append the next step
         self.assertEqual(sim.solution.t.size, 3)
         self.assertEqual(sim.solution.y.full()[0, :].size, 3)
         self.assertEqual(sim.solution.t[0], 0)
         self.assertEqual(sim.solution.t[1], dt / tau)
         self.assertEqual(sim.solution.t[2], 2 * dt / tau)
+
         sim.step(dt, save=False)  # now only store the two end step points
         self.assertEqual(sim.solution.t.size, 2)
         self.assertEqual(sim.solution.y.full()[0, :].size, 2)
         self.assertEqual(sim.solution.t[0], 2 * dt / tau)
         self.assertEqual(sim.solution.t[1], 3 * dt / tau)
+
+        # Start from saved solution
+        sim.step(
+            dt, starting_solution=saved_sol
+        )  # now only store the two end step points
+        self.assertEqual(sim.solution.t.size, 3)
+        self.assertEqual(sim.solution.y.full()[0, :].size, 3)
+        self.assertEqual(sim.solution.t[0], 0)
+        self.assertEqual(sim.solution.t[1], dt / tau)
+        self.assertEqual(sim.solution.t[2], 2 * dt / tau)
+
+    def test_solve_with_initial_soc(self):
+        model = pybamm.lithium_ion.SPM()
+        param = model.default_parameter_values
+        sim = pybamm.Simulation(model, parameter_values=param)
+        sim.solve(t_eval=[0, 600], initial_soc=1)
+        self.assertEqual(sim._built_initial_soc, 1)
+        sim.solve(t_eval=[0, 600], initial_soc=0.5)
+        self.assertEqual(sim._built_initial_soc, 0.5)
+        exp = pybamm.Experiment(['Discharge at 1C until 3.6V (1 minute period)'])
+        sim = pybamm.Simulation(model, parameter_values=param, experiment=exp)
+        sim.solve(initial_soc=0.8)
+        self.assertEqual(sim._built_initial_soc, 0.8)
 
     def test_solve_with_inputs(self):
         model = pybamm.lithium_ion.SPM()
@@ -264,6 +294,26 @@ class TestSimulation(unittest.TestCase):
             NotImplementedError, "Cannot save simulation if model format is python"
         ):
             sim.save("test.pickle")
+
+    def test_load_param(self):
+        # Test load_sim for parameters imports
+        filename = f"{uuid.uuid4()}.p"
+        save_sim = f"import pybamm; model = pybamm.lithium_ion.SPM(); params = pybamm.ParameterValues(chemistry=pybamm.parameter_sets.Chen2020); sim = pybamm.Simulation(model, parameter_values=params); sim.solve([0, 3600]); sim.save('{filename}')"  # noqa
+        subprocess.run([sys.executable, "-c", save_sim])
+
+        try:
+            pkl_obj = pybamm.load_sim(os.path.join(filename))
+        except Exception as excep:
+            os.remove(filename)
+            raise excep
+
+        self.assertEqual(
+            "graphite_LGM50_electrolyte_exchange_current_density_Chen2020",
+            pkl_obj.parameter_values[
+                "Negative electrode exchange-current density [A.m-2]"
+            ].__name__,
+        )
+        os.remove(filename)
 
     def test_save_load_dae(self):
         model = pybamm.lead_acid.LOQS({"surface form": "algebraic"})
@@ -410,7 +460,6 @@ class TestSimulation(unittest.TestCase):
 
 if __name__ == "__main__":
     print("Add -v for more debug output")
-    import sys
 
     if "-v" in sys.argv:
         debug = True

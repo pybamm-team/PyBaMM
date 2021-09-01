@@ -4,6 +4,7 @@
   ],
   "imageSize": 100,
   "commit": false,
+  "badgeTemplate": "[![All Contributors](https://img.shields.io/badge/all_contributors-<%= contributors.length %>-orange.svg)](#-contributors)",
   "contributors": [
     {
       "login": "tinosulzer",
@@ -354,6 +355,56 @@
       "contributions": [
         "code",
         "test"
+      ]
+    },
+    {
+      "login": "alibh95",
+      "name": "Ali Hussain Umar Bhatti",
+      "avatar_url": "https://avatars.githubusercontent.com/u/65511923?v=4",
+      "profile": "https://github.com/alibh95",
+      "contributions": [
+        "code",
+        "test"
+      ]
+    },
+    {
+      "login": "molel-gt",
+      "name": "Leshinka Molel",
+      "avatar_url": "https://avatars.githubusercontent.com/u/81125862?v=4",
+      "profile": "https://github.com/molel-gt",
+      "contributions": [
+        "code",
+        "ideas"
+      ]
+    },
+    {
+      "login": "tobykirk",
+      "name": "tobykirk",
+      "avatar_url": "https://avatars.githubusercontent.com/u/42966045?v=4",
+      "profile": "https://github.com/tobykirk",
+      "contributions": [
+        "ideas",
+        "code",
+        "test"
+      ]
+    },
+    {
+      "login": "chuckliu1979",
+      "name": "Chuck Liu",
+      "avatar_url": "https://avatars.githubusercontent.com/u/13491954?v=4",
+      "profile": "https://github.com/chuckliu1979",
+      "contributions": [
+        "bug",
+        "code"
+      ]
+    },
+    {
+      "login": "partben",
+      "name": "partben",
+      "avatar_url": "https://avatars.githubusercontent.com/u/88316576?v=4",
+      "profile": "https://github.com/partben",
+      "contributions": [
+        "doc"
       ]
     }
   ],

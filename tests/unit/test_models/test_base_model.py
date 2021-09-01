@@ -1,13 +1,15 @@
 #
 # Tests for the base model class
 #
-import casadi
-import pybamm
-import numpy as np
-import unittest
 import os
-import subprocess  # nosec
 import platform
+import subprocess  # nosec
+import unittest
+
+import casadi
+import numpy as np
+
+import pybamm
 
 
 class TestBaseModel(unittest.TestCase):
@@ -99,6 +101,12 @@ class TestBaseModel(unittest.TestCase):
         with self.assertRaisesRegex(pybamm.ModelError, "boundary condition"):
             model.boundary_conditions = bad_bcs
 
+    def test_length_scales(self):
+        model = pybamm.BaseModel()
+        model.length_scales = {"a": 1.3}
+        self.assertIsInstance(model.length_scales["a"], pybamm.Scalar)
+        self.assertEqual(model.length_scales["a"].value, 1.3)
+
     def test_variables_set_get(self):
         model = pybamm.BaseModel()
         variables = {"c": "alpha", "d": "beta"}
@@ -123,11 +131,14 @@ class TestBaseModel(unittest.TestCase):
         # Read parameters from different parts of the model
         model = pybamm.BaseModel()
         a = pybamm.Parameter("a")
-        b = pybamm.Parameter("b")
+        b = pybamm.InputParameter("b", "test")
         c = pybamm.Parameter("c")
         d = pybamm.Parameter("d")
         e = pybamm.Parameter("e")
-        f = pybamm.Parameter("f")
+        f = pybamm.InputParameter("f")
+        g = pybamm.Parameter("g")
+        h = pybamm.Parameter("h")
+        i = pybamm.InputParameter("i")
 
         u = pybamm.Variable("u")
         v = pybamm.Variable("v")
@@ -135,13 +146,27 @@ class TestBaseModel(unittest.TestCase):
         model.algebraic = {v: v - b}
         model.initial_conditions = {u: c, v: d}
         model.events = [pybamm.Event("u=e", u - e)]
-        model.variables = {"v+f": v + f}
+        model.variables = {"v+f+i": v + f + i}
+        model.boundary_conditions = {
+            u: {"left": (g, "Dirichlet"), "right": (0, "Neumann")},
+            v: {"left": (0, "Dirichlet"), "right": (h, "Neumann")},
+        }
 
         self.assertEqual(
             set([x.name for x in model.parameters]),
-            set([x.name for x in [a, b, c, d, e, f]]),
+            set([x.name for x in [a, b, c, d, e, f, g, h, i]]),
         )
-        self.assertTrue(all(isinstance(x, pybamm.Parameter) for x in model.parameters))
+        self.assertTrue(
+            all(
+                isinstance(x, (pybamm.Parameter, pybamm.InputParameter))
+                for x in model.parameters
+            )
+        )
+
+        model.variables = {
+            "v+f+i": v + pybamm.FunctionParameter("f", {"Time [s]": pybamm.t}) + i
+        }
+        model.print_parameter_info()
 
     def test_read_input_parameters(self):
         # Read input parameters from different parts of the model
@@ -325,18 +350,6 @@ class TestBaseModel(unittest.TestCase):
         with self.assertRaisesRegex(pybamm.ModelError, "extra algebraic keys"):
             model.check_well_posedness()
 
-        # before discretisation, fail if the algebraic eqn keys don't appear in the eqns
-        model = pybamm.BaseModel()
-        model.algebraic = {c: d - 2, d: d - c}
-        with self.assertRaisesRegex(
-            pybamm.ModelError,
-            "each variable in the algebraic eqn keys must appear in the eqn",
-        ):
-            model.check_well_posedness()
-        # passes when we switch the equations around
-        model.algebraic = {c: d - c, d: d - 2}
-        model.check_well_posedness()
-
         # after discretisation, algebraic equation without a StateVector fails
         model = pybamm.BaseModel()
         model.algebraic = {
@@ -420,24 +433,6 @@ class TestBaseModel(unittest.TestCase):
         with self.assertRaisesRegex(pybamm.ModelError, "initial condition"):
             model.check_well_posedness()
 
-        # Model with bad boundary conditions - Dirichlet (expect assertion error)
-        d = pybamm.Variable("d", domain=whole_cell)
-        model.initial_conditions = {c: 3}
-        model.boundary_conditions = {
-            d: {"left": (0, "Dirichlet"), "right": (0, "Dirichlet")}
-        }
-        with self.assertRaisesRegex(pybamm.ModelError, "boundary condition"):
-            model.check_well_posedness()
-
-        # Model with bad boundary conditions - Neumann (expect assertion error)
-        d = pybamm.Variable("d", domain=whole_cell)
-        model.initial_conditions = {c: 3}
-        model.boundary_conditions = {
-            d: {"left": (0, "Neumann"), "right": (0, "Neumann")}
-        }
-        with self.assertRaisesRegex(pybamm.ModelError, "boundary condition"):
-            model.check_well_posedness()
-
         # Algebraic well-posed model
         whole_cell = ["negative electrode", "separator", "positive electrode"]
         model = pybamm.BaseModel()
@@ -450,13 +445,6 @@ class TestBaseModel(unittest.TestCase):
             c: {"left": (0, "Neumann"), "right": (0, "Neumann")}
         }
         model.check_well_posedness()
-
-        # Algebraic model with bad boundary conditions
-        model.boundary_conditions = {
-            d: {"left": (0, "Dirichlet"), "right": (0, "Dirichlet")}
-        }
-        with self.assertRaisesRegex(pybamm.ModelError, "boundary condition"):
-            model.check_well_posedness()
 
     def test_check_well_posedness_output_variables(self):
         model = pybamm.BaseModel()
@@ -634,7 +622,7 @@ class TestBaseModel(unittest.TestCase):
         )
         var_concat_neg = pybamm.Variable("var_concat_neg", domain="negative electrode")
         var_concat_sep = pybamm.Variable("var_concat_sep", domain="separator")
-        var_concat = pybamm.Concatenation(var_concat_neg, var_concat_sep)
+        var_concat = pybamm.concatenation(var_concat_neg, var_concat_sep)
         model.rhs = {var_scalar: -var_scalar, var_1D: -var_1D}
         model.algebraic = {var_2D: -var_2D, var_concat: -var_concat}
         model.initial_conditions = {var_scalar: 1, var_1D: 1, var_2D: 1, var_concat: 1}
@@ -770,7 +758,7 @@ class TestBaseModel(unittest.TestCase):
             "var_concat_neg", domain="negative electrode"
         )
         new_var_concat_sep = pybamm.Variable("var_concat_sep", domain="separator")
-        new_var_concat = pybamm.Concatenation(new_var_concat_neg, new_var_concat_sep)
+        new_var_concat = pybamm.concatenation(new_var_concat_neg, new_var_concat_sep)
         new_model.rhs = {
             new_var_scalar: -2 * new_var_scalar,
             new_var_1D: -2 * new_var_1D,
@@ -917,15 +905,15 @@ class TestBaseModel(unittest.TestCase):
         ):
             model.set_initial_conditions_from({"var": np.ones((5, 6, 7, 8))})
 
-        var_concat_neg = pybamm.Variable("var_concat_neg", domain="negative electrode")
-        var_concat_sep = pybamm.Variable("var_concat_sep", domain="separator")
-        var_concat = pybamm.Concatenation(var_concat_neg, var_concat_sep)
+        var_concat_neg = pybamm.Variable("var concat neg", domain="negative electrode")
+        var_concat_sep = pybamm.Variable("var concat sep", domain="separator")
+        var_concat = pybamm.concatenation(var_concat_neg, var_concat_sep)
         model.algebraic = {var_concat: -var_concat}
         model.initial_conditions = {var_concat: 1}
         with self.assertRaisesRegex(
             NotImplementedError, "Variable in concatenation must be 1D"
         ):
-            model.set_initial_conditions_from({"var_concat_neg": np.ones((5, 6, 7))})
+            model.set_initial_conditions_from({"var concat neg": np.ones((5, 6, 7))})
 
         # Inconsistent model and variable names
         model = pybamm.BaseModel()
@@ -934,57 +922,13 @@ class TestBaseModel(unittest.TestCase):
         model.initial_conditions = {var: pybamm.Scalar(1)}
         with self.assertRaisesRegex(pybamm.ModelError, "must appear in the solution"):
             model.set_initial_conditions_from({"wrong var": 2})
-        var = pybamm.Concatenation(
+        var = pybamm.concatenation(
             pybamm.Variable("var", "test"), pybamm.Variable("var2", "test2")
         )
         model.rhs = {var: -var}
         model.initial_conditions = {var: pybamm.Scalar(1)}
         with self.assertRaisesRegex(pybamm.ModelError, "must appear in the solution"):
             model.set_initial_conditions_from({"wrong var": 2})
-
-
-class TestStandardBatteryBaseModel(unittest.TestCase):
-    def test_default_solver(self):
-        model = pybamm.BaseBatteryModel()
-        self.assertIsInstance(model.default_solver, pybamm.CasadiSolver)
-
-        # check that default_solver gives you a new solver, not an internal object
-        solver = model.default_solver
-        solver = pybamm.BaseModel()
-        self.assertIsInstance(model.default_solver, pybamm.CasadiSolver)
-        self.assertIsInstance(solver, pybamm.BaseModel)
-
-        # check that adding algebraic variables gives DAE solver
-        a = pybamm.Variable("a")
-        model.algebraic = {a: a - 1}
-        self.assertIsInstance(
-            model.default_solver, (pybamm.IDAKLUSolver, pybamm.CasadiSolver)
-        )
-
-        # Check that turning off jacobian gives casadi solver
-        model.use_jacobian = False
-        self.assertIsInstance(model.default_solver, pybamm.CasadiSolver)
-
-    def test_default_parameters(self):
-        # check parameters are read in ok
-        model = pybamm.BaseBatteryModel()
-        self.assertEqual(
-            model.default_parameter_values["Reference temperature [K]"], 298.15
-        )
-
-        # change path and try again
-
-        cwd = os.getcwd()
-        os.chdir("..")
-        model = pybamm.BaseBatteryModel()
-        self.assertEqual(
-            model.default_parameter_values["Reference temperature [K]"], 298.15
-        )
-        os.chdir(cwd)
-
-    def test_timescale(self):
-        model = pybamm.BaseModel()
-        self.assertEqual(model.timescale.evaluate(), 1)
 
 
 if __name__ == "__main__":

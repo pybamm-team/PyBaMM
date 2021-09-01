@@ -32,6 +32,8 @@ class DFN(BaseModel):
 
     def __init__(self, options=None, name="Doyle-Fuller-Newman model", build=True):
         super().__init__(options, name)
+        # For degradation models we use the full form since this is a full-order model
+        self.x_average = False
 
         self.set_external_circuit_submodel()
         self.set_porosity_submodel()
@@ -54,52 +56,6 @@ class DFN(BaseModel):
 
         pybamm.citations.register("Doyle1993")
 
-    def set_porosity_submodel(self):
-
-        if (
-            self.options["SEI porosity change"] == "false"
-            and self.options["lithium plating porosity change"] == "false"
-        ):
-            self.submodels["porosity"] = pybamm.porosity.Constant(
-                self.param, self.options
-            )
-        elif (
-            self.options["SEI porosity change"] == "true"
-            or self.options["lithium plating porosity change"] == "true"
-        ):
-            self.submodels["porosity"] = pybamm.porosity.Full(self.param, self.options)
-
-    def set_active_material_submodel(self):
-
-        if self.options["loss of active material"] == "none":
-            self.submodels[
-                "negative active material"
-            ] = pybamm.active_material.Constant(self.param, "Negative", self.options)
-            self.submodels[
-                "positive active material"
-            ] = pybamm.active_material.Constant(self.param, "Positive", self.options)
-        elif self.options["loss of active material"] == "both":
-            self.submodels[
-                "negative active material"
-            ] = pybamm.active_material.VaryingFull(self.param, "Negative", self.options)
-            self.submodels[
-                "positive active material"
-            ] = pybamm.active_material.VaryingFull(self.param, "Positive", self.options)
-        elif self.options["loss of active material"] == "negative":
-            self.submodels[
-                "negative active material"
-            ] = pybamm.active_material.VaryingFull(self.param, "Negative", self.options)
-            self.submodels[
-                "positive active material"
-            ] = pybamm.active_material.Constant(self.param, "Positive", self.options)
-        elif self.options["loss of active material"] == "positive":
-            self.submodels[
-                "negative active material"
-            ] = pybamm.active_material.Constant(self.param, "Negative", self.options)
-            self.submodels[
-                "positive active material"
-            ] = pybamm.active_material.VaryingFull(self.param, "Positive", self.options)
-
     def set_convection_submodel(self):
 
         self.submodels[
@@ -120,28 +76,49 @@ class DFN(BaseModel):
 
     def set_particle_submodel(self):
 
-        if self.options["particle"] == "Fickian diffusion":
-            self.submodels["negative particle"] = pybamm.particle.FickianManyParticles(
-                self.param, "Negative"
-            )
-            self.submodels["positive particle"] = pybamm.particle.FickianManyParticles(
-                self.param, "Positive"
-            )
-        elif self.options["particle"] in [
-            "uniform profile",
-            "quadratic profile",
-            "quartic profile",
+        if isinstance(self.options["particle"], str):
+            particle_left = self.options["particle"]
+            particle_right = self.options["particle"]
+        else:
+            particle_left, particle_right = self.options["particle"]
+        for particle_side, domain in [
+            [particle_left, "Negative"],
+            [particle_right, "Positive"],
         ]:
-            self.submodels[
-                "negative particle"
-            ] = pybamm.particle.PolynomialManyParticles(
-                self.param, "Negative", self.options["particle"]
-            )
-            self.submodels[
-                "positive particle"
-            ] = pybamm.particle.PolynomialManyParticles(
-                self.param, "Positive", self.options["particle"]
-            )
+            if self.options["particle size"] == "single":
+                if particle_side == "Fickian diffusion":
+                    self.submodels[
+                        domain.lower() + " particle"
+                    ] = pybamm.particle.no_distribution.FickianDiffusion(
+                        self.param, domain
+                    )
+                elif particle_side in [
+                    "uniform profile",
+                    "quadratic profile",
+                    "quartic profile",
+                ]:
+                    self.submodels[
+                        domain.lower() + " particle"
+                    ] = pybamm.particle.no_distribution.PolynomialProfile(
+                        self.param, domain, particle_side
+                    )
+            elif self.options["particle size"] == "distribution":
+                if particle_side == "Fickian diffusion":
+                    self.submodels[
+                        domain.lower() + " particle"
+                    ] = pybamm.particle.size_distribution.FickianDiffusion(
+                        self.param, domain
+                    )
+                elif particle_side in [
+                    "uniform profile",
+                    "quadratic profile",
+                    "quartic profile",
+                ]:
+                    self.submodels[
+                        domain.lower() + " particle"
+                    ] = pybamm.particle.size_distribution.UniformProfile(
+                        self.param, domain
+                    )
 
     def set_solid_submodel(self):
 

@@ -9,7 +9,7 @@ class TestLFPPrada2013(unittest.TestCase):
     def test_load_params(self):
         positive_electrode = pybamm.ParameterValues({}).read_parameters_csv(
             pybamm.get_parameters_filepath(
-                "input/parameters/lithium-ion/positive_electrodes/LFP_Prada2013/"
+                "input/parameters/lithium_ion/positive_electrodes/LFP_Prada2013/"
                 "parameters.csv"
             )
         )
@@ -19,7 +19,7 @@ class TestLFPPrada2013(unittest.TestCase):
 
         cell = pybamm.ParameterValues({}).read_parameters_csv(
             pybamm.get_parameters_filepath(
-                "input/parameters/lithium-ion/cells/A123_Lain2019/parameters.csv"
+                "input/parameters/lithium_ion/cells/A123_Lain2019/parameters.csv"
             )
         )
         self.assertAlmostEqual(cell["Negative current collector thickness [m]"], 1e-5)

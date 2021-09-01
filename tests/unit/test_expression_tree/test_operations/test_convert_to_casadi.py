@@ -197,7 +197,7 @@ class TestCasadiConverter(unittest.TestCase):
         disc = get_1p1d_discretisation_for_testing()
         a = pybamm.Variable("a", domain=a_dom)
         b = pybamm.Variable("b", domain=b_dom)
-        conc = pybamm.Concatenation(a, b)
+        conc = pybamm.concatenation(a, b)
         disc.set_variable_slices([conc])
         expr = disc.process_symbol(conc)
         y = casadi.SX.sym("y", expr.size)

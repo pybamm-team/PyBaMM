@@ -1,12 +1,14 @@
 #
 # Tests for the Function classes
 #
-import pybamm
-
 import unittest
+
 import numpy as np
-from scipy.interpolate import interp1d
+import sympy
 from scipy import special
+from scipy.interpolate import interp1d
+
+import pybamm
 
 
 def test_function(arg):
@@ -127,6 +129,26 @@ class TestFunction(unittest.TestCase):
             fun.name, "function (<class 'scipy.interpolate.interpolate.interp1d'>)"
         )
 
+    def test_to_equation(self):
+        a = pybamm.Symbol("a", domain="test")
+
+        # Test print_name
+        func = pybamm.Arcsinh(a)
+        func.print_name = "test"
+        self.assertEqual(func.to_equation(), sympy.Symbol("test"))
+
+        # Test Arcsinh
+        self.assertEqual(pybamm.Arcsinh(a).to_equation(), sympy.asinh(a))
+
+        # Test log
+        self.assertEqual(pybamm.Log(54.0).to_equation(), sympy.log(54.0))
+
+        # Test sinh
+        self.assertEqual(pybamm.Sinh(a).to_equation(), sympy.sinh(a))
+
+        # Test Function
+        self.assertEqual(pybamm.Function(np.log, 10).to_equation(), 10.0)
+
 
 class TestSpecificFunctions(unittest.TestCase):
     def test_arcsinh(self):
@@ -143,6 +165,23 @@ class TestSpecificFunctions(unittest.TestCase):
             )
             / h,
             places=5,
+        )
+
+        # Test broadcast gets switched
+        broad_a = pybamm.PrimaryBroadcast(a, "test")
+        fun_broad = pybamm.arcsinh(broad_a)
+        self.assertEqual(fun_broad.id, pybamm.PrimaryBroadcast(fun, "test").id)
+
+        broad_a = pybamm.FullBroadcast(a, "test", "test2")
+        fun_broad = pybamm.arcsinh(broad_a)
+        self.assertEqual(fun_broad.id, pybamm.FullBroadcast(fun, "test", "test2").id)
+
+        # Test recursion
+        broad_a = pybamm.PrimaryBroadcast(pybamm.PrimaryBroadcast(a, "test"), "test2")
+        fun_broad = pybamm.arcsinh(broad_a)
+        self.assertEqual(
+            fun_broad.id,
+            pybamm.PrimaryBroadcast(pybamm.PrimaryBroadcast(fun, "test"), "test2").id,
         )
 
     def test_arctan(self):

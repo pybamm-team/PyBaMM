@@ -12,12 +12,12 @@ class TestButlerVolmer(unittest.TestCase):
         param = pybamm.LithiumIonParameters()
 
         a_n = pybamm.FullBroadcast(
-            pybamm.Scalar(0), ["negative electrode"], "current collector"
+            pybamm.Scalar(0.5), ["negative electrode"], "current collector"
         )
         a_p = pybamm.FullBroadcast(
-            pybamm.Scalar(0), ["positive electrode"], "current collector"
+            pybamm.Scalar(0.5), ["positive electrode"], "current collector"
         )
-        a = pybamm.Scalar(0)
+        a = pybamm.Scalar(0.5)
         variables = {
             "Current collector current density": a,
             "Negative electrode potential": a_n,
@@ -35,6 +35,7 @@ class TestButlerVolmer(unittest.TestCase):
             {
                 "SEI film resistance": "none",
                 "total interfacial current density as a state": "false",
+                "particle size": "single"
             },
         )
         std_tests = tests.StandardSubModelTests(submodel, variables)
@@ -75,6 +76,7 @@ class TestButlerVolmer(unittest.TestCase):
             {
                 "SEI film resistance": "none",
                 "total interfacial current density as a state": "false",
+                "particle size": "single"
             },
         )
         std_tests = tests.StandardSubModelTests(submodel, variables)

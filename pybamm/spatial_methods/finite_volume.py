@@ -312,9 +312,13 @@ class FiniteVolume(pybamm.SpatialMethod):
                 n_primary_pts = primary_submesh.npts
             int_matrix = hstack([d_edge * eye(n_primary_pts) for d_edge in d_edges])
 
-            # repeat matrix for each node in secondary dimensions
+            # repeat matrix for each node in higher dimensions
             third_dim_repeats = self._get_auxiliary_domain_repeats(
-                domains, tertiary_only=True
+                {
+                    k: v for k, v in domains.items() if (
+                        k == "tertiary" or k == "quaternary"
+                    )
+                }
             )
             # generate full matrix from the submatrix
             matrix = kron(eye(third_dim_repeats), int_matrix)
@@ -405,7 +409,7 @@ class FiniteVolume(pybamm.SpatialMethod):
         **Backward integral**
 
         .. math::
-            F(x) = \\int_x^end\\!f(u)\\,du
+            F(x) = \\int_x^{end}\\!f(u)\\,du
 
         The indefinite integral must satisfy the following conditions:
 
@@ -815,13 +819,12 @@ class FiniteVolume(pybamm.SpatialMethod):
         # Need to match the domain. E.g. in the case of the boundary condition
         # on the particle, the gradient has domain particle but the bcs_vector
         # has domain electrode, since it is a function of the macroscopic variables
-        bcs_vector.domain = discretised_gradient.domain
-        bcs_vector.auxiliary_domains = discretised_gradient.auxiliary_domains
+        bcs_vector.copy_domains(discretised_gradient)
 
         # Make matrix which makes "gaps" in the the discretised gradient into
         # which the known Neumann values will be added. E.g. in 1D if the left
         # boundary condition is Dirichlet and the right Neumann, this matrix will
-        # act to append a zero to the end of the discretsied gradient
+        # act to append a zero to the end of the discretised gradient
         if lbc_type == "Neumann":
             left_vector = csr_matrix((1, n))
         else:
@@ -1129,7 +1132,9 @@ class FiniteVolume(pybamm.SpatialMethod):
                 method = "arithmetic"
             disc_left = self.node_to_edge(disc_left, method=method)
         # Return new binary operator with appropriate class
-        out = pybamm.simplify_if_constant(bin_op.__class__(disc_left, disc_right))
+        out = pybamm.simplify_if_constant(
+            bin_op._binary_new_copy(disc_left, disc_right)
+        )
 
         return out
 
@@ -1374,7 +1379,7 @@ class FiniteVolume(pybamm.SpatialMethod):
                 raise ValueError("shift key '{}' not recognised".format(shift_key))
 
         # If discretised_symbol evaluates to number there is no need to average
-        if discretised_symbol.evaluates_to_number():
+        if discretised_symbol.size == 1:
             out = discretised_symbol
         elif method == "arithmetic":
             out = arithmetic_mean(discretised_symbol)

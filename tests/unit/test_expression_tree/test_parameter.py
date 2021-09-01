@@ -2,8 +2,11 @@
 # Tests for the Parameter class
 #
 import numbers
-import pybamm
 import unittest
+
+import sympy
+
+import pybamm
 
 
 class TestParameter(unittest.TestCase):
@@ -17,6 +20,17 @@ class TestParameter(unittest.TestCase):
     def test_evaluate_for_shape(self):
         a = pybamm.Parameter("a")
         self.assertIsInstance(a.evaluate_for_shape(), numbers.Number)
+
+    def test_to_equation(self):
+        func = pybamm.Parameter("test_string")
+        func1 = pybamm.Parameter("test_name")
+
+        # Test print_name
+        func.print_name = "test"
+        self.assertEqual(func.to_equation(), sympy.Symbol("test"))
+
+        # Test name
+        self.assertEqual(func1.to_equation(), sympy.Symbol("test_name"))
 
 
 class TestFunctionParameter(unittest.TestCase):
@@ -73,6 +87,37 @@ class TestFunctionParameter(unittest.TestCase):
         with self.assertRaises(TypeError):
             new_input_names = [var]
             func.input_names = new_input_names
+
+    def test_print_name(self):
+        def myfun(x):
+            return pybamm.FunctionParameter("my function", {"x": x})
+
+        def myfun_dim(x):
+            return pybamm.FunctionParameter("my function", {"x": x})
+
+        def myfun_dimensional(x):
+            return pybamm.FunctionParameter("my function", {"x": x})
+
+        def _myfun(x):
+            return pybamm.FunctionParameter("my function", {"x": x})
+
+        x = pybamm.Scalar(1)
+        self.assertEqual(myfun(x).print_name, "myfun")
+        self.assertEqual(myfun_dim(x).print_name, "myfun")
+        self.assertEqual(myfun_dimensional(x).print_name, "myfun")
+        self.assertEqual(_myfun(x).print_name, None)
+
+    def test_function_parameter_to_equation(self):
+        func = pybamm.FunctionParameter("test", {"x": pybamm.Scalar(1)})
+        func1 = pybamm.FunctionParameter("func", {"var": pybamm.Variable("var")})
+
+        # Test print_name
+        func.print_name = "test"
+        self.assertEqual(func.to_equation(), sympy.Symbol("test"))
+
+        # Test name
+        func1.print_name = None
+        self.assertEqual(func1.to_equation(), sympy.Symbol("func"))
 
 
 if __name__ == "__main__":

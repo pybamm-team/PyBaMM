@@ -17,6 +17,7 @@ class EventType(Enum):
     TERMINATION = 0
     DISCONTINUITY = 1
     INTERPOLANT_EXTRAPOLATION = 2
+    SWITCH = 3
 
 
 class Event:
