@@ -162,9 +162,10 @@ class TestSPM(unittest.TestCase):
 
         # with custom submodels
         model = pybamm.lithium_ion.SPM({"thermal": "x-full"}, build=False)
-        model.submodels["negative particle"] = pybamm.particle.PolynomialSingleParticle(
+        particle_n = pybamm.particle.no_distribution.XAveragedPolynomialProfile(
             model.param, "Negative", "quadratic profile"
         )
+        model.submodels["negative particle"] = particle_n
         model.build_model()
         new_model = model.new_copy()
         new_model_cs_eqn = list(new_model.rhs.values())[1]

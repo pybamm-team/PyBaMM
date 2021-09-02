@@ -1,15 +1,16 @@
 #
-# Class for a single particle with Fickian diffusion
+# Class for a single x-averaged particle with Fickian diffusion
 #
 import pybamm
 
-from .base_particle import BaseParticle
+from ..base_particle import BaseParticle
 
 
-class FickianSingleParticle(BaseParticle):
+class XAveragedFickianDiffusion(BaseParticle):
     """
-    Class for molar conservation in a single x-averaged particle which employs
-    Fick's law.
+    Class for molar conservation in a single x-averaged particle, employing Fick's
+    law. I.e., the concentration varies with r (internal spherical coordinate)
+    but not x (electrode coordinate).
 
     Parameters
     ----------
@@ -108,8 +109,8 @@ class FickianSingleParticle(BaseParticle):
 
     def set_initial_conditions(self, variables):
         """
-        For single particle models, initial conditions can't depend on x so we
-        arbitrarily set the initial values of the single particles to be given
+        For single or x-averaged particle models, initial conditions can't depend on x
+        so we arbitrarily set the initial values of the single particles to be given
         by the values at x=0 in the negative electrode and x=1 in the
         positive electrode. Typically, supplied initial conditions are uniform
         x.

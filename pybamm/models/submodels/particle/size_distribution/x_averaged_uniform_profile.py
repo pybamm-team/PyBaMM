@@ -1,16 +1,15 @@
 #
-# Class for a single particle-size distribution representing an
-# electrode, with fast diffusion (uniform concentration in r) within particles
+# Class for a x-averaged particle-size distribution, with uniform concentration
+# profile in each particle
 #
 import pybamm
 
 from .base_distribution import BaseSizeDistribution
 
 
-class FastSingleSizeDistribution(BaseSizeDistribution):
-    """Class for molar conservation in a single (i.e., x-averaged) particle-size
-    distribution) with fast diffusion within each particle
-    (uniform concentration in r).
+class XAveragedUniformProfile(BaseSizeDistribution):
+    """Class for molar conservation in an x-averaged particle-size
+    distribution with uniform concentration in each particle.
 
     Parameters
     ----------
@@ -20,7 +19,7 @@ class FastSingleSizeDistribution(BaseSizeDistribution):
         The domain of the model either 'Negative' or 'Positive'
 
 
-    **Extends:** :class:`pybamm.particle.BaseSizeDistribution`
+    **Extends:** :class:`pybamm.particle.size_distribution.BaseSizeDistribution`
     """
 
     def __init__(self, param, domain):
@@ -32,7 +31,6 @@ class FastSingleSizeDistribution(BaseSizeDistribution):
         # can just use the surface value.
 
         if self.domain == "Negative":
-            # distribution variables
             c_s_surf_xav_distribution = pybamm.Variable(
                 "X-averaged negative particle surface concentration distribution",
                 domain="negative particle size",
@@ -50,7 +48,6 @@ class FastSingleSizeDistribution(BaseSizeDistribution):
             )
 
         elif self.domain == "Positive":
-            # distribution variables
             c_s_surf_xav_distribution = pybamm.Variable(
                 "X-averaged positive particle surface concentration distribution",
                 domain="positive particle size",
@@ -67,30 +64,20 @@ class FastSingleSizeDistribution(BaseSizeDistribution):
                 coord_sys="cartesian",
             )
 
-        # Distribution variables
         variables = self._get_distribution_variables(R)
 
-        # Flux variables (zero)
-        N_s = pybamm.FullBroadcastToEdges(
-            0,
-            [self.domain.lower() + " particle"],
-            auxiliary_domains={
-                "secondary": self.domain.lower() + " electrode",
-                "tertiary": "current collector",
-            },
-        )
-        N_s_xav = pybamm.FullBroadcast(
-            0, self.domain.lower() + " electrode", "current collector"
-        )
-
-        # Standard distribution variables (R-dependent)
+        # Standard distribution variables (size-dependent)
         variables.update(
             self._get_standard_concentration_distribution_variables(
                 c_s_surf_xav_distribution
             )
         )
+        # Flux variables (size-dependent)
+        variables.update(
+            self._get_standard_flux_distribution_variables(pybamm.Scalar(0))
+        )
 
-        # Standard R-averaged variables. Average concentrations using
+        # Standard size-averaged variables. Average concentrations using
         # the volume-weighted distribution since they are volume-based
         # quantities. Necessary for output variables "Total lithium in
         # negative electrode [mol]", etc, to be calculated correctly
@@ -105,7 +92,12 @@ class FastSingleSizeDistribution(BaseSizeDistribution):
         )
         c_s = pybamm.SecondaryBroadcast(c_s_xav, [self.domain.lower() + " electrode"])
         variables.update(self._get_standard_concentration_variables(c_s, c_s_xav))
-        variables.update(self._get_standard_flux_variables(N_s, N_s_xav))
+
+        # Size-averaged flux variables
+        N_s_xav = pybamm.FullBroadcastToEdges(
+            0, self.domain.lower() + " particle", "current collector"
+        )
+        variables.update(self._get_standard_flux_variables(N_s_xav, N_s_xav))
         return variables
 
     def get_coupled_variables(self, variables):

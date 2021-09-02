@@ -69,17 +69,17 @@ class MPM(SPM):
     def set_particle_submodel(self):
 
         if self.options["particle"] == "Fickian diffusion":
-            submod_n = pybamm.particle.FickianSingleSizeDistribution(
+            submod_n = pybamm.particle.size_distribution.XAveragedFickianDiffusion(
                 self.param, "Negative"
             )
-            submod_p = pybamm.particle.FickianSingleSizeDistribution(
+            submod_p = pybamm.particle.size_distribution.XAveragedFickianDiffusion(
                 self.param, "Positive"
             )
         elif self.options["particle"] == "uniform profile":
-            submod_n = pybamm.particle.FastSingleSizeDistribution(
+            submod_n = pybamm.particle.size_distribution.XAveragedUniformProfile(
                 self.param, "Negative"
             )
-            submod_p = pybamm.particle.FastSingleSizeDistribution(
+            submod_p = pybamm.particle.size_distribution.XAveragedUniformProfile(
                 self.param, "Positive"
             )
         self.submodels["negative particle"] = submod_n

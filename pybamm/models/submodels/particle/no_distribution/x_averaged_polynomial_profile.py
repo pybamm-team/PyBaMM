@@ -3,10 +3,10 @@
 #
 import pybamm
 
-from .base_particle import BaseParticle
+from ..base_particle import BaseParticle
 
 
-class PolynomialSingleParticle(BaseParticle):
+class XAveragedPolynomialProfile(BaseParticle):
     """
     Class for molar conservation in a single x-averaged particle with
     an assumed polynomial concentration profile in r. Model equations from [1]_.
@@ -349,8 +349,8 @@ class PolynomialSingleParticle(BaseParticle):
 
     def set_initial_conditions(self, variables):
         """
-        For single particle models, initial conditions can't depend on x so we
-        arbitrarily evaluate them at x=0 in the negative electrode and x=1 in the
+        For single or x-averaged particle models, initial conditions can't depend on x
+        so we arbitrarily evaluate them at x=0 in the negative electrode and x=1 in the
         positive electrode (they will usually be constant)
         """
         c_s_rxav = variables[

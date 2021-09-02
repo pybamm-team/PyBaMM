@@ -11,7 +11,7 @@
 [![release](https://img.shields.io/github/v/release/pybamm-team/PyBaMM?color=yellow)](https://github.com/pybamm-team/PyBaMM/releases)
 [![black code style](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/ambv/black)
 <!-- ALL-CONTRIBUTORS-BADGE:START - Do not remove or modify this section -->
-[![All Contributors](https://img.shields.io/badge/all_contributors-33-orange.svg)](#-contributors)
+[![All Contributors](https://img.shields.io/badge/all_contributors-35-orange.svg)](#-contributors)
 <!-- ALL-CONTRIBUTORS-BADGE:END -->
 
 </div>
@@ -175,6 +175,8 @@ Thanks goes to these wonderful people ([emoji key](https://allcontributors.org/d
     <td align="center"><a href="https://github.com/alibh95"><img src="https://avatars.githubusercontent.com/u/65511923?v=4?s=100" width="100px;" alt=""/><br /><sub><b>Ali Hussain Umar Bhatti</b></sub></a><br /><a href="https://github.com/pybamm-team/PyBaMM/commits?author=alibh95" title="Code">💻</a> <a href="https://github.com/pybamm-team/PyBaMM/commits?author=alibh95" title="Tests">⚠️</a></td>
     <td align="center"><a href="https://github.com/molel-gt"><img src="https://avatars.githubusercontent.com/u/81125862?v=4?s=100" width="100px;" alt=""/><br /><sub><b>Leshinka Molel</b></sub></a><br /><a href="https://github.com/pybamm-team/PyBaMM/commits?author=molel-gt" title="Code">💻</a> <a href="#ideas-molel-gt" title="Ideas, Planning, & Feedback">🤔</a></td>
     <td align="center"><a href="https://github.com/tobykirk"><img src="https://avatars.githubusercontent.com/u/42966045?v=4?s=100" width="100px;" alt=""/><br /><sub><b>tobykirk</b></sub></a><br /><a href="#ideas-tobykirk" title="Ideas, Planning, & Feedback">🤔</a> <a href="https://github.com/pybamm-team/PyBaMM/commits?author=tobykirk" title="Code">💻</a> <a href="https://github.com/pybamm-team/PyBaMM/commits?author=tobykirk" title="Tests">⚠️</a></td>
+    <td align="center"><a href="https://github.com/chuckliu1979"><img src="https://avatars.githubusercontent.com/u/13491954?v=4?s=100" width="100px;" alt=""/><br /><sub><b>Chuck Liu</b></sub></a><br /><a href="https://github.com/pybamm-team/PyBaMM/issues?q=author%3Achuckliu1979" title="Bug reports">🐛</a> <a href="https://github.com/pybamm-team/PyBaMM/commits?author=chuckliu1979" title="Code">💻</a></td>
+    <td align="center"><a href="https://github.com/partben"><img src="https://avatars.githubusercontent.com/u/88316576?v=4?s=100" width="100px;" alt=""/><br /><sub><b>partben</b></sub></a><br /><a href="https://github.com/pybamm-team/PyBaMM/commits?author=partben" title="Documentation">📖</a></td>
   </tr>
 </table>
 
