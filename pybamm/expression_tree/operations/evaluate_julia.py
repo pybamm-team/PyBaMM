@@ -810,7 +810,7 @@ def get_julia_mtk_model(model, geometry=None, tspan=None):
     var_to_ind_vars_left_boundary = {}
     var_to_ind_vars_right_boundary = {}
     for var in variables:
-        if var.domain == []:
+        if var.domain in [[], ["current collector"]]:
             var_to_ind_vars[var.id] = "(t)"
         else:
             # all independent variables e.g. (t, x) or (t, rn, xn)
