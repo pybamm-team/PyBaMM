@@ -1,13 +1,17 @@
 #
 # Variable class
 #
-import pybamm
 import numbers
+
 import numpy as np
+import sympy
+
+import pybamm
 
 
 class VariableBase(pybamm.Symbol):
-    """A node in the expression tree represending a dependent variable
+    """
+    A node in the expression tree represending a dependent variable.
 
     This node will be discretised by :class:`.Discretisation` and converted
     to a :class:`pybamm.StateVector` node.
@@ -20,12 +24,12 @@ class VariableBase(pybamm.Symbol):
     domain : iterable of str
         list of domains that this variable is valid over
     auxiliary_domains : dict
-        dictionary of auxiliary domains ({'secondary': ..., 'tertiary': ...}). For
-        example, for the single particle model, the particle concentration would be a
-        Variable with domain 'negative particle' and secondary auxiliary domain 'current
-        collector'. For the DFN, the particle concentration would be a Variable with
-        domain 'negative particle', secondary domain 'negative electrode' and tertiary
-        domain 'current collector'
+        dictionary of auxiliary domains ({'secondary': ..., 'tertiary': ...,
+        'quaternary': ...}). For example, for the single particle model, the particle
+        concentration would be a Variable with domain 'negative particle' and secondary
+        auxiliary domain 'current collector'. For the DFN, the particle concentration
+        would be a Variable with domain 'negative particle', secondary domain
+        'negative electrode' and tertiary domain 'current collector'
     bounds : tuple, optional
         Physical bounds on the variable
 
@@ -47,23 +51,33 @@ class VariableBase(pybamm.Symbol):
                     + "Lower bound should be strictly less than upper bound."
                 )
         self.bounds = bounds
+        self.print_name = None
 
-    def new_copy(self):
-        """ See :meth:`pybamm.Symbol.new_copy()`. """
+    def create_copy(self):
+        """See :meth:`pybamm.Symbol.new_copy()`."""
 
-        return self.__class__(
+        out = self.__class__(
             self.name, self.domain, self.auxiliary_domains, self.bounds
         )
+        return out
 
     def _evaluate_for_shape(self):
-        """ See :meth:`pybamm.Symbol.evaluate_for_shape_using_domain()` """
+        """See :meth:`pybamm.Symbol.evaluate_for_shape_using_domain()`"""
         return pybamm.evaluate_for_shape_using_domain(
             self.domain, self.auxiliary_domains
         )
 
+    def to_equation(self):
+        """Convert the node and its subtree into a SymPy equation."""
+        if self.print_name is not None:
+            return sympy.Symbol(self.print_name)
+        else:
+            return self.name
+
 
 class Variable(VariableBase):
-    """A node in the expression tree represending a dependent variable
+    """
+    A node in the expression tree represending a dependent variable.
 
     This node will be discretised by :class:`.Discretisation` and converted
     to a :class:`pybamm.StateVector` node.
@@ -76,12 +90,12 @@ class Variable(VariableBase):
         domain : iterable of str, optional
         list of domains that this variable is valid over
     auxiliary_domains : dict, optional
-        dictionary of auxiliary domains ({'secondary': ..., 'tertiary': ...}). For
-        example, for the single particle model, the particle concentration would be a
-        Variable with domain 'negative particle' and secondary auxiliary domain 'current
-        collector'. For the DFN, the particle concentration would be a Variable with
-        domain 'negative particle', secondary domain 'negative electrode' and tertiary
-        domain 'current collector'
+        dictionary of auxiliary domains ({'secondary': ..., 'tertiary': ...,
+        'quaternary': ...}). For example, for the single particle model, the particle
+        concentration would be a Variable with domain 'negative particle' and secondary
+        auxiliary domain 'current collector'. For the DFN, the particle concentration
+        would be a Variable with domain 'negative particle', secondary domain
+        'negative electrode' and tertiary domain 'current collector'
     bounds : tuple, optional
         Physical bounds on the variable
     *Extends:* :class:`Symbol`
@@ -121,12 +135,12 @@ class VariableDot(VariableBase):
     domain : iterable of str
         list of domains that this variable is valid over
     auxiliary_domains : dict
-        dictionary of auxiliary domains ({'secondary': ..., 'tertiary': ...}). For
-        example, for the single particle model, the particle concentration would be a
-        Variable with domain 'negative particle' and secondary auxiliary domain 'current
-        collector'. For the DFN, the particle concentration would be a Variable with
-        domain 'negative particle', secondary domain 'negative electrode' and tertiary
-        domain 'current collector'
+        dictionary of auxiliary domains ({'secondary': ..., 'tertiary': ...,
+        'quaternary': ...}). For example, for the single particle model, the particle
+        concentration would be a Variable with domain 'negative particle' and secondary
+        auxiliary domain 'current collector'. For the DFN, the particle concentration
+        would be a Variable with domain 'negative particle', secondary domain
+        'negative electrode' and tertiary domain 'current collector'
     bounds : tuple, optional
         Physical bounds on the variable. Included for compatibility with `VariableBase`,
         but ignored.
@@ -142,7 +156,6 @@ class VariableDot(VariableBase):
 
         Note: Variable._jac adds a dash to the name of the corresponding VariableDot, so
         we remove this here
-
         """
         return Variable(
             self.name[:-1], domain=self.domain, auxiliary_domains=self.auxiliary_domains
@@ -158,7 +171,8 @@ class VariableDot(VariableBase):
 
 
 class ExternalVariable(Variable):
-    """A node in the expression tree representing an external variable variable
+    """
+    A node in the expression tree representing an external variable variable.
 
     This node will be discretised by :class:`.Discretisation` and converted
     to a :class:`.Vector` node.
@@ -171,12 +185,12 @@ class ExternalVariable(Variable):
     domain : iterable of str
         list of domains that this variable is valid over
     auxiliary_domains : dict
-        dictionary of auxiliary domains ({'secondary': ..., 'tertiary': ...}). For
-        example, for the single particle model, the particle concentration would be a
-        Variable with domain 'negative particle' and secondary auxiliary domain 'current
-        collector'. For the DFN, the particle concentration would be a Variable with
-        domain 'negative particle', secondary domain 'negative electrode' and tertiary
-        domain 'current collector'
+        dictionary of auxiliary domains ({'secondary': ..., 'tertiary': ...,
+        'quaternary': ...}). For example, for the single particle model, the particle
+        concentration would be a Variable with domain 'negative particle' and secondary
+        auxiliary domain 'current collector'. For the DFN, the particle concentration
+        would be a Variable with domain 'negative particle', secondary domain
+        'negative electrode' and tertiary domain 'current collector'
 
     *Extends:* :class:`pybamm.Variable`
     """
@@ -189,14 +203,14 @@ class ExternalVariable(Variable):
     def size(self):
         return self._size
 
-    def new_copy(self):
-        """ See :meth:`pybamm.Symbol.new_copy()`. """
+    def create_copy(self):
+        """See :meth:`pybamm.Symbol.new_copy()`."""
         return ExternalVariable(
             self.name, self.size, self.domain, self.auxiliary_domains
         )
 
     def _evaluate_for_shape(self):
-        """ See :meth:`pybamm.Symbol.evaluate_for_shape_using_domain()` """
+        """See :meth:`pybamm.Symbol.evaluate_for_shape_using_domain()`"""
         return np.nan * np.ones((self.size, 1))
 
     def _base_evaluate(self, t=None, y=None, y_dot=None, inputs=None):

@@ -1,6 +1,7 @@
 #
 # Dimensional and dimensionless parameter values, and scales
 #
+import numpy as np
 import pybamm
 import pandas as pd
 import os
@@ -45,7 +46,7 @@ class ParameterValues:
     >>> param = pybamm.ParameterValues(values)
     >>> param["some parameter"]
     1
-    >>> file = "input/parameters/lithium-ion/cells/kokam_Marquis2019/parameters.csv"
+    >>> file = "input/parameters/lithium_ion/cells/kokam_Marquis2019/parameters.csv"
     >>> values_path = pybamm.get_parameters_filepath(file)
     >>> param = pybamm.ParameterValues(values=values_path)
     >>> param["Negative current collector thickness [m]"]
@@ -268,6 +269,9 @@ class ParameterValues:
         path : string, optional
             Path from which to load functions
         """
+        # check if values is not a dictionary
+        if not isinstance(values, dict):
+            values = values._dict_items
         # check parameter values
         self.check_parameter_values(values)
         # update
@@ -298,9 +302,7 @@ class ParameterValues:
             # Functions are flagged with the string "[function]"
             if isinstance(value, str):
                 if value.startswith("[function]"):
-                    loaded_value = pybamm.load_function(
-                        os.path.join(path, value[10:] + ".py")
-                    )
+                    loaded_value = pybamm.load_function(os.path.join(path, value[10:]))
                     self._dict_items[name] = loaded_value
                     values[name] = loaded_value
                 # Data is flagged with the string "[data]" or "[current data]"
@@ -570,6 +572,8 @@ class ParameterValues:
                             geometry[domain][spatial_variable][
                                 lim
                             ] = self.process_symbol(sym)
+                        elif isinstance(sym, numbers.Number):
+                            geometry[domain][spatial_variable][lim] = pybamm.Scalar(sym)
 
     def process_symbol(self, symbol):
         """Walk through the symbol and replace any Parameter with a Value.
@@ -586,7 +590,6 @@ class ParameterValues:
             Symbol with Parameter instances replaced by Value
 
         """
-
         try:
             return self._processed_symbols[symbol.id]
         except KeyError:
@@ -601,6 +604,9 @@ class ParameterValues:
         if isinstance(symbol, pybamm.Parameter):
             value = self[symbol.name]
             if isinstance(value, numbers.Number):
+                # Check not NaN (parameter in csv file but no value given)
+                if np.isnan(value):
+                    raise ValueError(f"Parameter '{symbol.name}' not found")
                 # Scalar inherits name (for updating parameters) and domain (for
                 # Broadcast)
                 return pybamm.Scalar(value, name=symbol.name, domain=symbol.domain)
@@ -651,6 +657,11 @@ class ParameterValues:
                     )
                 )
             elif isinstance(function_name, numbers.Number):
+                # Check not NaN (parameter in csv file but no value given)
+                if np.isnan(function_name):
+                    raise ValueError(
+                        f"Parameter '{symbol.name}' (possibly a function) not found"
+                    )
                 # If the "function" is provided is actually a scalar, return a Scalar
                 # object instead of throwing an error.
                 # Also use ones_like so that we get the right shapes
@@ -716,15 +727,18 @@ class ParameterValues:
                         return integrand.orphans[0]
                     else:
                         domain = integrand.auxiliary_domains["secondary"]
-                        if "tertiary" not in integrand.auxiliary_domains:
-                            return pybamm.PrimaryBroadcast(integrand.orphans[0], domain)
-                        else:
+                        if "tertiary" in integrand.auxiliary_domains:
                             auxiliary_domains = {
                                 "secondary": integrand.auxiliary_domains["tertiary"]
                             }
+                            if "quaternary" in integrand.auxiliary_domains:
+                                quat_domain = integrand.auxiliary_domains["quaternary"]
+                                auxiliary_domains["tertiary"] = quat_domain
                             return pybamm.FullBroadcast(
                                 integrand.orphans[0], domain, auxiliary_domains
                             )
+                        else:
+                            return pybamm.PrimaryBroadcast(integrand.orphans[0], domain)
                 # left is "integral of concatenation of broadcasts"
                 elif (
                     isinstance(new_left.child, pybamm.Concatenation)
@@ -781,14 +795,14 @@ class ParameterValues:
 
         Returns
         -------
-        number of array
+        number or array
             The evaluated symbol
         """
         processed_symbol = self.process_symbol(symbol)
-        if processed_symbol.evaluates_to_constant_number():
+        if processed_symbol.is_constant():
             return processed_symbol.evaluate()
         else:
-            raise ValueError("symbol must evaluate to a constant scalar")
+            raise ValueError("symbol must evaluate to a constant scalar or array")
 
     def _ipython_key_completions_(self):
         return list(self._dict_items.keys())
@@ -807,7 +821,7 @@ class ParameterValues:
 
         df = pd.DataFrame(parameter_output)
         df = df.transpose()
-        df.to_csv(filename, header=None)
+        df.to_csv(filename, header=["Value"], index_label="Name [units]")
 
     def print_parameters(self, parameters, output_file=None):
         """

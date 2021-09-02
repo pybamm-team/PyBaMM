@@ -59,6 +59,15 @@ Lithium-ion parameter sets
          Pesaran. Multi-domain modeling of lithium-ion batteries encompassing
          multi-physics in varied length scales. Journal of the Electrochemical Society,
          158(8):A955–A969, 2011. doi:10.1149/1.3597614.
+    * ORegan2021 :
+       - Chang-Hui Chen, Ferran Brosa Planella, Kieran O'Regan, Dominika Gastol, W.
+         Dhammika Widanage, and Emma Kendrick. Development of Experimental Techniques
+         for Parameterization of Multi-scale Lithium-ion Battery Models. Journal of The
+         Electrochemical Society, 167(8):080534, 2020. doi:10.1149/1945-7111/ab9050.
+       - Kieran O'Regan, Ferran Brosa Planella, W. Dhammika Widanage, and Emma Kendrick.
+         Thermal-electrochemical parametrisation of a lithium-ion battery: mapping Li
+         concentration and temperature dependencies. Journal of The Electrochemical
+         Society, ():, 2021. doi:.
     * Prada2013 :
        - Chang-Hui Chen, Ferran Brosa Planella, Kieran O'Regan, Dominika Gastol, W.
          Dhammika Widanage, and Emma Kendrick. Development of Experimental Techniques
@@ -76,15 +85,11 @@ Lithium-ion parameter sets
          Popov. Development of first principles capacity fade model for li-ion cells.
          Journal of the Electrochemical Society, 151(2):A196, 2004.
          doi:10.1149/1.1634273.
-    * Yang2017 :
-       - Madeleine Ecker, Thi Kim Dung Tran, Philipp Dechent, Stefan Käbitz, Alexander
-         Warnecke, and Dirk Uwe Sauer. Parameterization of a Physico-Chemical Model of a
-         Lithium-Ion Battery: I. Determination of Parameters. Journal of the
-         Electrochemical Society, 162(9):A1836–A1848, 2015. doi:10.1149/2.0551509jes.
-       - Xiao Guang Yang, Yongjun Leng, Guangsheng Zhang, Shanhai Ge, and Chao Yang
-         Wang. Modeling of lithium plating induced aging of lithium-ion batteries:
-         transition from linear to nonlinear aging. Journal of Power Sources, 360:28–40,
-         2017. doi:10.1016/j.jpowsour.2017.05.110.
+    * Xu2019 :
+       - Shanshan Xu, Kuan-Hung Chen, Neil P Dasgupta, Jason B Siegel, and Anna G
+         Stefanopoulou. Evolution of dead lithium growth in lithium metal batteries:
+         experimentally validated model of the apparent capacity loss. Journal of The
+         Electrochemical Society, 166(14):A3456, 2019.
 """
 
 #
@@ -92,7 +97,7 @@ Lithium-ion parameter sets
 #
 
 NCA_Kim2011 = {
-    "chemistry": "lithium-ion",
+    "chemistry": "lithium_ion",
     "cell": "Kim2011",
     "negative electrode": "graphite_Kim2011",
     "separator": "separator_Kim2011",
@@ -104,7 +109,7 @@ NCA_Kim2011 = {
 }
 
 Ecker2015 = {
-    "chemistry": "lithium-ion",
+    "chemistry": "lithium_ion",
     "cell": "kokam_Ecker2015",
     "negative electrode": "graphite_Ecker2015",
     "separator": "separator_Ecker2015",
@@ -115,22 +120,8 @@ Ecker2015 = {
     "citation": ["Ecker2015i", "Ecker2015ii", "Richardson2020"],
 }
 
-Yang2017 = {
-    "chemistry": "lithium-ion",
-    "cell": "Yang2017",
-    "negative electrode": "graphite_Yang2017",
-    "separator": "separator_Yang2017",
-    "positive electrode": "nmc_Yang2017",
-    "electrolyte": "lipf6_Ecker2015",
-    "experiment": "1C_discharge_from_full_Ecker2015",
-    "sei": "yang2017_sei",
-    "lithium plating": "yang2017_Li_plating",
-    "citation": ["Yang2017", "Ecker2015i"],
-}
-
-
 Marquis2019 = {
-    "chemistry": "lithium-ion",
+    "chemistry": "lithium_ion",
     "cell": "kokam_Marquis2019",
     "negative electrode": "graphite_mcmb2528_Marquis2019",
     "separator": "separator_Marquis2019",
@@ -142,7 +133,7 @@ Marquis2019 = {
 }
 
 Chen2020 = {
-    "chemistry": "lithium-ion",
+    "chemistry": "lithium_ion",
     "cell": "LGM50_Chen2020",
     "negative electrode": "graphite_Chen2020",
     "separator": "separator_Chen2020",
@@ -154,7 +145,7 @@ Chen2020 = {
 }
 
 Chen2020_plating = {
-    "chemistry": "lithium-ion",
+    "chemistry": "lithium_ion",
     "cell": "LGM50_Chen2020",
     "negative electrode": "graphite_Chen2020_plating",
     "separator": "separator_Chen2020",
@@ -167,7 +158,7 @@ Chen2020_plating = {
 }
 
 Mohtat2020 = {
-    "chemistry": "lithium-ion",
+    "chemistry": "lithium_ion",
     "cell": "UMBL_Mohtat2020",
     "negative electrode": "graphite_UMBL_Mohtat2020",
     "separator": "separator_Mohtat2020",
@@ -175,11 +166,12 @@ Mohtat2020 = {
     "electrolyte": "LiPF6_Mohtat2020",
     "experiment": "1C_charge_from_empty_Mohtat2020",
     "sei": "example",
+    "lithium plating": "yang2017_Li_plating",
     "citation": "Mohtat2020",
 }
 
 Ramadass2004 = {
-    "chemistry": "lithium-ion",
+    "chemistry": "lithium_ion",
     "cell": "sony_Ramadass2004",
     "negative electrode": "graphite_Ramadass2004",
     "separator": "separator_Ecker2015",  # no values found, relevance?
@@ -191,7 +183,7 @@ Ramadass2004 = {
 }
 
 Prada2013 = {
-    "chemistry": "lithium-ion",
+    "chemistry": "lithium_ion",
     "cell": "A123_Lain2019",
     "negative electrode": "graphite_Chen2020",
     "separator": "separator_Chen2020",
@@ -202,7 +194,7 @@ Prada2013 = {
 }
 
 Ai2020 = {
-    "chemistry": "lithium-ion",
+    "chemistry": "lithium_ion",
     "cell": "Enertech_Ai2020",
     "negative electrode": "graphite_Ai2020",
     "separator": "separator_Ai2020",
@@ -213,12 +205,34 @@ Ai2020 = {
     "citation": "Ai2019",
 }
 
+Xu2019 = {
+    "chemistry": "lithium_ion",
+    "cell": "li_metal_Xu2019",
+    "negative electrode": "li_metal_Xu2019",
+    "separator": "separator_Xu2019",
+    "positive electrode": "NMC532_Xu2019",
+    "electrolyte": "lipf6_Valoen2005",
+    "experiment": "1C_discharge_from_full_Xu2019",
+    "citation": "Xu2019",
+}
+
+ORegan2021 = {
+    "chemistry": "lithium_ion",
+    "cell": "LGM50_ORegan2021",
+    "negative electrode": "graphite_ORegan2021",
+    "separator": "separator_ORegan2021",
+    "positive electrode": "nmc_ORegan2021",
+    "electrolyte": "lipf6_EC_EMC_3_7_Landesfeind2019",
+    "experiment": "1C_discharge_from_full_ORegan2021",
+    "citation": ["ORegan2021", "Chen2020"],
+}
+
 #
 # Lead-acid
 #
 
 Sulzer2019 = {
-    "chemistry": "lead-acid",
+    "chemistry": "lead_acid",
     "cell": "BBOXX_Sulzer2019",
     "negative electrode": "lead_Sulzer2019",
     "separator": "agm_Sulzer2019",

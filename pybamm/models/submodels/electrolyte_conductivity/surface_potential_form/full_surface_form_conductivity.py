@@ -106,9 +106,9 @@ class BaseModel(BaseElectrolyteConductivity):
         c_e = variables[self.domain + " electrolyte concentration"]
         T = variables[self.domain + " electrode temperature"]
         if self.domain == "Negative":
-            sigma = param.sigma_n
+            sigma = param.sigma_n(T)
         elif self.domain == "Positive":
-            sigma = param.sigma_p
+            sigma = param.sigma_p(T)
 
         kappa_eff = param.kappa_e(c_e, T) * tor_e
         sigma_eff = sigma * tor_s

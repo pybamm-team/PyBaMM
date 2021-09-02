@@ -2,9 +2,10 @@
 # Standard thermal parameters
 #
 import pybamm
+from .base_parameters import BaseParameters
 
 
-class ThermalParameters:
+class ThermalParameters(BaseParameters):
     """
     Standard thermal parameters
 
@@ -63,43 +64,33 @@ class ThermalParameters:
 
     def T_amb_dim(self, t):
         """Dimensional ambient temperature"""
-        return pybamm.FunctionParameter("Ambient temperature [K]", {"Times [s]": t})
+        return pybamm.FunctionParameter("Ambient temperature [K]", {"Time [s]": t})
 
     def rho_cn_dim(self, T):
         """Negative current collector density [kg.m-3]"""
-        inputs = {
-            "Temperature [K]": T,
-        }
+        inputs = {"Temperature [K]": T}
         return pybamm.FunctionParameter(
             "Negative current collector density [kg.m-3]", inputs
         )
 
     def rho_n_dim(self, T):
         """Negative electrode density [kg.m-3]"""
-        inputs = {
-            "Temperature [K]": T,
-        }
+        inputs = {"Temperature [K]": T}
         return pybamm.FunctionParameter("Negative electrode density [kg.m-3]", inputs)
 
     def rho_s_dim(self, T):
         """Separator density [kg.m-3]"""
-        inputs = {
-            "Temperature [K]": T,
-        }
+        inputs = {"Temperature [K]": T}
         return pybamm.FunctionParameter("Separator density [kg.m-3]", inputs)
 
     def rho_p_dim(self, T):
         """Positive electrode density [kg.m-3]"""
-        inputs = {
-            "Temperature [K]": T,
-        }
+        inputs = {"Temperature [K]": T}
         return pybamm.FunctionParameter("Positive electrode density [kg.m-3]", inputs)
 
     def rho_cp_dim(self, T):
         """Positive current collector density [kg.m-3]"""
-        inputs = {
-            "Temperature [K]": T,
-        }
+        inputs = {"Temperature [K]": T}
         return pybamm.FunctionParameter(
             "Positive current collector density [kg.m-3]", inputs
         )
@@ -116,90 +107,70 @@ class ThermalParameters:
 
     def c_p_cn_dim(self, T):
         """Negative current collector specific heat capacity [J.kg-1.K-1]"""
-        inputs = {
-            "Temperature [K]": T,
-        }
+        inputs = {"Temperature [K]": T}
         return pybamm.FunctionParameter(
             "Negative current collector specific heat capacity [J.kg-1.K-1]", inputs
         )
 
     def c_p_n_dim(self, T):
         """Negative electrode specific heat capacity [J.kg-1.K-1]"""
-        inputs = {
-            "Temperature [K]": T,
-        }
+        inputs = {"Temperature [K]": T}
         return pybamm.FunctionParameter(
             "Negative electrode specific heat capacity [J.kg-1.K-1]", inputs
         )
 
     def c_p_s_dim(self, T):
         """Separator specific heat capacity [J.kg-1.K-1]"""
-        inputs = {
-            "Temperature [K]": T,
-        }
+        inputs = {"Temperature [K]": T}
         return pybamm.FunctionParameter(
             "Separator specific heat capacity [J.kg-1.K-1]", inputs
         )
 
     def c_p_p_dim(self, T):
         """Positive electrode specific heat capacity [J.kg-1.K-1]"""
-        inputs = {
-            "Temperature [K]": T,
-        }
+        inputs = {"Temperature [K]": T}
         return pybamm.FunctionParameter(
             "Positive electrode specific heat capacity [J.kg-1.K-1]", inputs
         )
 
     def c_p_cp_dim(self, T):
         """Positive current collector specific heat capacity [J.kg-1.K-1]"""
-        inputs = {
-            "Temperature [K]": T,
-        }
+        inputs = {"Temperature [K]": T}
         return pybamm.FunctionParameter(
             "Positive current collector specific heat capacity [J.kg-1.K-1]", inputs
         )
 
     def lambda_cn_dim(self, T):
         """Negative current collector thermal conductivity [W.m-1.K-1]"""
-        inputs = {
-            "Temperature [K]": T,
-        }
+        inputs = {"Temperature [K]": T}
         return pybamm.FunctionParameter(
             "Negative current collector thermal conductivity [W.m-1.K-1]", inputs
         )
 
     def lambda_n_dim(self, T):
         """Negative electrode thermal conductivity [W.m-1.K-1]"""
-        inputs = {
-            "Temperature [K]": T,
-        }
+        inputs = {"Temperature [K]": T}
         return pybamm.FunctionParameter(
             "Negative electrode thermal conductivity [W.m-1.K-1]", inputs
         )
 
     def lambda_s_dim(self, T):
         """Separator thermal conductivity [W.m-1.K-1]"""
-        inputs = {
-            "Temperature [K]": T,
-        }
+        inputs = {"Temperature [K]": T}
         return pybamm.FunctionParameter(
             "Separator thermal conductivity [W.m-1.K-1]", inputs
         )
 
     def lambda_p_dim(self, T):
         """Positive electrode thermal conductivity [W.m-1.K-1]"""
-        inputs = {
-            "Temperature [K]": T,
-        }
+        inputs = {"Temperature [K]": T}
         return pybamm.FunctionParameter(
             "Positive electrode thermal conductivity [W.m-1.K-1]", inputs
         )
 
     def lambda_cp_dim(self, T):
         """Positive current collector thermal conductivity [W.m-1.K-1]"""
-        inputs = {
-            "Temperature [K]": T,
-        }
+        inputs = {"Temperature [K]": T}
         return pybamm.FunctionParameter(
             "Positive current collector thermal conductivity [W.m-1.K-1]", inputs
         )

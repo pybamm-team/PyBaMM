@@ -1,11 +1,13 @@
 #
 # Tests for the Binary Operator classes
 #
-import pybamm
+import unittest
 
 import numpy as np
-import unittest
+import sympy
 from scipy.sparse.coo import coo_matrix
+
+import pybamm
 
 
 class TestBinaryOperators(unittest.TestCase):
@@ -321,6 +323,14 @@ class TestBinaryOperators(unittest.TestCase):
         self.assertEqual(heav.evaluate(y=np.array([0])), 1)
         self.assertEqual(str(heav), "y[0:1] <= 1.0")
 
+    def test_equality(self):
+        a = pybamm.Scalar(1)
+        b = pybamm.StateVector(slice(0, 1))
+        equal = pybamm.Equality(a, b)
+        self.assertEqual(equal.evaluate(y=np.array([1])), 1)
+        self.assertEqual(equal.evaluate(y=np.array([2])), 0)
+        self.assertEqual(str(equal), "1.0 == y[0:1]")
+
     def test_sigmoid(self):
         a = pybamm.Scalar(1)
         b = pybamm.StateVector(slice(0, 1))
@@ -370,16 +380,14 @@ class TestBinaryOperators(unittest.TestCase):
         self.assertAlmostEqual(minimum.evaluate(y=np.array([2]))[0, 0], 1)
         self.assertAlmostEqual(minimum.evaluate(y=np.array([0]))[0, 0], 0)
         self.assertEqual(
-            str(minimum),
-            "log(1.9287498479639178e-22 + exp(-50.0 * y[0:1])) / -50.0",
+            str(minimum), "log(1.9287498479639178e-22 + exp(-50.0 * y[0:1])) / -50.0"
         )
 
         maximum = pybamm.softplus(a, b, 50)
         self.assertAlmostEqual(maximum.evaluate(y=np.array([2]))[0, 0], 2)
         self.assertAlmostEqual(maximum.evaluate(y=np.array([0]))[0, 0], 1)
         self.assertEqual(
-            str(maximum),
-            "log(5.184705528587072e+21 + exp(50.0 * y[0:1])) / 50.0",
+            str(maximum), "log(5.184705528587072e+21 + exp(50.0 * y[0:1])) / 50.0"
         )
 
         # Test that smooth min/max are used when the setting is changed
@@ -501,6 +509,7 @@ class TestBinaryOperators(unittest.TestCase):
         self.assertEqual((c * -1).id, (-c).id)
         self.assertEqual((-1 * c).id, (-c).id)
         # multiplication with a negation
+        self.assertEqual((-c * -f).id, (c * f).id)
         self.assertEqual((-c * 4).id, (c * -4).id)
         self.assertEqual((4 * -c).id, (-4 * c).id)
         # multiplication with broadcasts
@@ -532,6 +541,7 @@ class TestBinaryOperators(unittest.TestCase):
         self.assertEqual((c / c).id, pybamm.Scalar(1).id)
         self.assertEqual((broad2 / broad2).id, broad1.id)
         # division with a negation
+        self.assertEqual((-c / -f).id, (c / f).id)
         self.assertEqual((-c / 4).id, (c / -4).id)
         self.assertEqual((4 / -c).id, (-4 / c).id)
         # division with broadcasts
@@ -667,6 +677,31 @@ class TestBinaryOperators(unittest.TestCase):
         self.assertEqual(pybamm.inner(a2, a3).evaluate(), 3)
         self.assertEqual(pybamm.inner(a3, a2).evaluate(), 3)
         self.assertEqual(pybamm.inner(a3, a3).evaluate(), 9)
+
+    def test_to_equation(self):
+        # Test print_name
+        pybamm.Addition.print_name = "test"
+        self.assertEqual(pybamm.Addition(1, 2).to_equation(), sympy.Symbol("test"))
+
+        # Test Power
+        self.assertEqual(pybamm.Power(7, 2).to_equation(), 49)
+
+        # Test Division
+        self.assertEqual(pybamm.Division(10, 2).to_equation(), 5)
+
+        # Test Matrix Multiplication
+        arr1 = pybamm.Array([[1, 0], [0, 1]])
+        arr2 = pybamm.Array([[4, 1], [2, 2]])
+        self.assertEqual(
+            pybamm.MatrixMultiplication(arr1, arr2).to_equation(),
+            sympy.Matrix([[4.0, 1.0], [2.0, 2.0]]),
+        )
+
+        # Test EqualHeaviside
+        self.assertEqual(pybamm.EqualHeaviside(1, 0).to_equation(), False)
+
+        # Test NotEqualHeaviside
+        self.assertEqual(pybamm.NotEqualHeaviside(2, 4).to_equation(), True)
 
 
 if __name__ == "__main__":

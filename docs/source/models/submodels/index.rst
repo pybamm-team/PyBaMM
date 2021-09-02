@@ -5,6 +5,7 @@ Submodels
     :maxdepth: 1
 
     base_submodel
+    active_material/index
     current_collector/index
     convection/index
     electrode/index

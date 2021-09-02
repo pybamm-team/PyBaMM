@@ -15,16 +15,29 @@ class ElectronMigrationLimited(BaseModel):
         The parameters to use for this submodel
     domain : str
         The domain of the model either 'Negative' or 'Positive'
+    x_average : bool
+        Whether to use x-averaged variables (SPM, SPMe, etc) or full variables (DFN)
 
     **Extends:** :class:`pybamm.sei.BaseModel`
     """
 
-    def __init__(self, param, domain):
+    def __init__(self, param, domain, x_average):
         super().__init__(param, domain)
+        self.x_average = x_average
 
     def get_fundamental_variables(self):
-        L_inner = pybamm.standard_variables.L_inner
-        L_outer = pybamm.standard_variables.L_outer
+        if self.x_average is True:
+            L_inner_av = pybamm.standard_variables.L_inner_av
+            L_outer_av = pybamm.standard_variables.L_outer_av
+            L_inner = pybamm.PrimaryBroadcast(
+                L_inner_av, self.domain.lower() + " electrode"
+            )
+            L_outer = pybamm.PrimaryBroadcast(
+                L_outer_av, self.domain.lower() + " electrode"
+            )
+        else:
+            L_inner = pybamm.standard_variables.L_inner
+            L_outer = pybamm.standard_variables.L_outer
 
         variables = self._get_standard_thickness_variables(L_inner, L_outer)
         variables.update(self._get_standard_concentration_variables(variables))
@@ -63,10 +76,20 @@ class ElectronMigrationLimited(BaseModel):
 
     def set_rhs(self, variables):
         domain = self.domain.lower() + " electrode"
-        L_inner = variables["Inner " + domain + " SEI thickness"]
-        L_outer = variables["Outer " + domain + " SEI thickness"]
-        j_inner = variables["Inner " + domain + " SEI interfacial current density"]
-        j_outer = variables["Outer " + domain + " SEI interfacial current density"]
+        if self.x_average is True:
+            L_inner = variables["X-averaged inner " + domain + " SEI thickness"]
+            L_outer = variables["X-averaged outer " + domain + " SEI thickness"]
+            j_inner = variables[
+                "X-averaged inner " + domain + " SEI interfacial current density"
+            ]
+            j_outer = variables[
+                "X-averaged outer " + domain + " SEI interfacial current density"
+            ]
+        else:
+            L_inner = variables["Inner " + domain + " SEI thickness"]
+            L_outer = variables["Outer " + domain + " SEI thickness"]
+            j_inner = variables["Inner " + domain + " SEI interfacial current density"]
+            j_outer = variables["Outer " + domain + " SEI interfacial current density"]
 
         v_bar = self.param.v_bar
         if self.domain == "Negative":
@@ -79,8 +102,12 @@ class ElectronMigrationLimited(BaseModel):
 
     def set_initial_conditions(self, variables):
         domain = self.domain.lower() + " electrode"
-        L_inner = variables["Inner " + domain + " SEI thickness"]
-        L_outer = variables["Outer " + domain + " SEI thickness"]
+        if self.x_average is True:
+            L_inner = variables["X-averaged inner " + domain + " SEI thickness"]
+            L_outer = variables["X-averaged outer " + domain + " SEI thickness"]
+        else:
+            L_inner = variables["Inner " + domain + " SEI thickness"]
+            L_outer = variables["Outer " + domain + " SEI thickness"]
 
         L_inner_0 = self.param.L_inner_0
         L_outer_0 = self.param.L_outer_0

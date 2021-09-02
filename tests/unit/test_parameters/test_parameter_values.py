@@ -29,7 +29,7 @@ class TestParameterValues(unittest.TestCase):
                 "pybamm",
                 "input",
                 "parameters",
-                "lithium-ion",
+                "lithium_ion",
                 "positive_electrodes",
                 "lico2_Marquis2019",
                 "parameters.csv",
@@ -47,7 +47,7 @@ class TestParameterValues(unittest.TestCase):
 
         # from file
         param = pybamm.ParameterValues(
-            "lithium-ion/positive_electrodes/lico2_Marquis2019/" + "parameters.csv"
+            "lithium_ion/positive_electrodes/lico2_Marquis2019/" + "parameters.csv"
         )
         self.assertEqual(param["Positive electrode porosity"], 0.3)
 
@@ -69,9 +69,16 @@ class TestParameterValues(unittest.TestCase):
     def test_update_from_chemistry(self):
         # incomplete chemistry
         with self.assertRaisesRegex(KeyError, "must provide 'cell' parameters"):
-            pybamm.ParameterValues(chemistry={"chemistry": "lithium-ion"})
+            pybamm.ParameterValues(chemistry={"chemistry": "lithium_ion"})
 
     def test_update(self):
+        # converts to dict if not
+        param = pybamm.ParameterValues(chemistry=pybamm.parameter_sets.Chen2020)
+        param_from_csv = pybamm.ParameterValues(
+            "lithium_ion/negative_electrodes/graphite_Chen2020/parameters.csv"
+        )
+        param.update(param_from_csv)
+        # equate values
         param = pybamm.ParameterValues({"a": 1})
         self.assertEqual(param["a"], 1)
         # no conflict
@@ -260,6 +267,14 @@ class TestParameterValues(unittest.TestCase):
             x = pybamm.Parameter("x")
             parameter_values.process_symbol(x)
 
+        parameter_values = pybamm.ParameterValues({"x": np.nan})
+        with self.assertRaisesRegex(ValueError, "Parameter 'x' not found"):
+            x = pybamm.Parameter("x")
+            parameter_values.process_symbol(x)
+        with self.assertRaisesRegex(ValueError, "possibly a function"):
+            x = pybamm.FunctionParameter("x", {})
+            parameter_values.process_symbol(x)
+
     def test_process_parameter_in_parameter(self):
         parameter_values = pybamm.ParameterValues(
             {"a": 2, "2a": pybamm.Parameter("a") * 2, "b": np.array([1, 2, 3])}
@@ -303,7 +318,15 @@ class TestParameterValues(unittest.TestCase):
         parameter_values = pybamm.ParameterValues(
             {
                 "a": 3,
-                "func": pybamm.load_function("process_symbol_test_function.py"),
+                "func": pybamm.load_function(
+                    os.path.join(
+                        "tests",
+                        "unit",
+                        "test_parameters",
+                        "data",
+                        "process_symbol_test_function.py",
+                    )
+                ),
                 "const": 254,
                 "float_func": lambda x: 42,
                 "mult": pybamm.InputParameter("b") * 5,
@@ -471,7 +494,7 @@ class TestParameterValues(unittest.TestCase):
                 "pybamm",
                 "input",
                 "parameters",
-                "lithium-ion",
+                "lithium_ion",
                 "positive_electrodes",
                 "lico2_Marquis2019",
             ),
@@ -485,9 +508,7 @@ class TestParameterValues(unittest.TestCase):
         processed_func = parameter_values.process_symbol(func)
         processed_interp = parameter_values.process_symbol(interp)
         np.testing.assert_array_almost_equal(
-            processed_func.evaluate(),
-            processed_interp.evaluate(),
-            decimal=4,
+            processed_func.evaluate(), processed_interp.evaluate(), decimal=4
         )
 
         # process differentiated function parameter
@@ -496,9 +517,7 @@ class TestParameterValues(unittest.TestCase):
         processed_diff_func = parameter_values.process_symbol(diff_func)
         processed_diff_interp = parameter_values.process_symbol(diff_interp)
         np.testing.assert_array_almost_equal(
-            processed_diff_func.evaluate(),
-            processed_diff_interp.evaluate(),
-            decimal=2,
+            processed_diff_func.evaluate(), processed_diff_interp.evaluate(), decimal=2
         )
 
     def test_process_integral_broadcast(self):
@@ -513,6 +532,8 @@ class TestParameterValues(unittest.TestCase):
         self.assertEqual(func_proc.id, pybamm.Scalar(2, name="func").id)
 
         # test with auxiliary domains
+
+        # secondary
         var = pybamm.Variable(
             "var", domain="test", auxiliary_domains={"secondary": "test sec"}
         )
@@ -526,6 +547,7 @@ class TestParameterValues(unittest.TestCase):
             pybamm.PrimaryBroadcast(pybamm.Scalar(2, name="func"), "test sec").id,
         )
 
+        # secondary and tertiary
         var = pybamm.Variable(
             "var",
             domain="test",
@@ -540,6 +562,30 @@ class TestParameterValues(unittest.TestCase):
             func_proc.id,
             pybamm.FullBroadcast(
                 pybamm.Scalar(2, name="func"), "test sec", "test tert"
+            ).id,
+        )
+
+        # secondary, tertiary and quaternary
+        var = pybamm.Variable(
+            "var",
+            domain="test",
+            auxiliary_domains={
+                "secondary": "test sec",
+                "tertiary": "test tert",
+                "quaternary": "test quat"
+            },
+        )
+        func = pybamm.x_average(pybamm.FunctionParameter("func", {"var": var}))
+
+        param = pybamm.ParameterValues({"func": 2})
+        func_proc = param.process_symbol(func)
+
+        self.assertEqual(
+            func_proc.id,
+            pybamm.FullBroadcast(
+                pybamm.Scalar(2, name="func"),
+                "test sec",
+                {"secondary": "test tert", "tertiary": "test quat"}
             ).id,
         )
 
@@ -756,13 +802,14 @@ class TestParameterValues(unittest.TestCase):
         c = pybamm.Parameter("c")
         self.assertEqual(parameter_values.evaluate(a), 1)
         self.assertEqual(parameter_values.evaluate(a + (b * c)), 7)
+        d = pybamm.Parameter("a") + pybamm.Parameter("b") * pybamm.Array([4, 5])
+        np.testing.assert_array_equal(
+            parameter_values.evaluate(d), np.array([9, 11])[:, np.newaxis]
+        )
 
         y = pybamm.StateVector(slice(0, 1))
         with self.assertRaises(ValueError):
             parameter_values.evaluate(y)
-        array = pybamm.Array(np.array([1, 2, 3]))
-        with self.assertRaises(ValueError):
-            parameter_values.evaluate(array)
 
     def test_export_csv(self):
         def some_function(self):

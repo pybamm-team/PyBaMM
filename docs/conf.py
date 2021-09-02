@@ -26,9 +26,9 @@ copyright = "2021, The PyBaMM Team"
 author = "The PyBaMM Team"
 
 # The short X.Y version
-version = "0.4"
+version = "21.08"
 # The full version, including alpha/beta/rc tags
-release = "0.4.0"
+release = "21.08"
 
 
 # -- General configuration ---------------------------------------------------
@@ -206,9 +206,9 @@ epub_exclude_files = ["search.html"]
 
 # Example configuration for intersphinx: refer to the Python standard library.
 intersphinx_mapping = {
-    "python": ("https://docs.python.org/", None),
-    "sphinx": ("http://www.sphinx-doc.org/en/stable/", None),
-    "numpy": ("http://docs.scipy.org/doc/numpy/", None),
-    "scipy": ("http://docs.scipy.org/doc/scipy/reference", None),
-    "matplotlib": ("http://matplotlib.org", None),
+    "python": ("https://docs.python.org/3/", None),
+    "sphinx": ("https://www.sphinx-doc.org/en/master/", None),
+    "numpy": ("https://numpy.org/doc/stable", None),
+    # "scipy": ("http://docs.scipy.org/doc/scipy/reference", None),
+    "matplotlib": ("https://matplotlib.org", None),
 }

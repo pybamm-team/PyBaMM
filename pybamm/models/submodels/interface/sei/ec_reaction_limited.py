@@ -16,19 +16,28 @@ class EcReactionLimited(BaseModel):
         The parameters to use for this submodel
     domain : str
         The domain of the model either 'Negative' or 'Positive'
+    x_average : bool
+        Whether to use x-averaged variables (SPM, SPMe, etc) or full variables (DFN)
 
     **Extends:** :class:`pybamm.sei.BaseModel`
     """
 
-    def __init__(self, param, domain):
+    def __init__(self, param, domain, x_average):
         super().__init__(param, domain)
+        self.x_average = x_average
 
     def get_fundamental_variables(self):
 
         L_inner = pybamm.FullBroadcast(
             0, self.domain.lower() + " electrode", "current collector"
         )
-        L_outer = pybamm.standard_variables.L_outer
+        if self.x_average is True:
+            L_outer_av = pybamm.standard_variables.L_outer_av
+            L_outer = pybamm.PrimaryBroadcast(
+                L_outer_av, self.domain.lower() + " electrode"
+            )
+        else:
+            L_outer = pybamm.standard_variables.L_outer
 
         variables = self._get_standard_thickness_variables(L_inner, L_outer)
         variables.update(self._get_standard_concentration_variables(variables))
@@ -113,8 +122,14 @@ class EcReactionLimited(BaseModel):
 
     def set_rhs(self, variables):
         domain = self.domain.lower() + " electrode"
-        L_sei = variables["Outer " + domain + " SEI thickness"]
-        j_sei = variables["Outer " + domain + " SEI interfacial current density"]
+        if self.x_average is True:
+            L_sei = variables["X-averaged outer " + domain + " SEI thickness"]
+            j_sei = variables[
+                "X-averaged outer " + domain + " SEI interfacial current density"
+            ]
+        else:
+            L_sei = variables["Outer " + domain + " SEI thickness"]
+            j_sei = variables["Outer " + domain + " SEI interfacial current density"]
 
         if self.domain == "Negative":
             Gamma_SEI = self.param.Gamma_SEI_n
@@ -122,7 +137,14 @@ class EcReactionLimited(BaseModel):
         self.rhs = {L_sei: -Gamma_SEI * j_sei / 2}
 
     def set_initial_conditions(self, variables):
-        L_sei = variables["Outer " + self.domain.lower() + " electrode SEI thickness"]
+        if self.x_average is True:
+            L_sei = variables[
+                "X-averaged outer " + self.domain.lower() + " electrode SEI thickness"
+            ]
+        else:
+            L_sei = variables[
+                "Outer " + self.domain.lower() + " electrode SEI thickness"
+            ]
         L_sei_0 = pybamm.Scalar(1)
 
         self.initial_conditions = {L_sei: L_sei_0}

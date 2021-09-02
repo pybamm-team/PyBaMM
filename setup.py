@@ -3,7 +3,7 @@ import glob
 import logging
 import subprocess
 from pathlib import Path
-from platform import system
+from platform import system, version
 import wheel.bdist_wheel as orig
 import site
 import shutil
@@ -92,7 +92,7 @@ def load_version():
         root = os.path.abspath(os.path.dirname(__file__))
         with open(os.path.join(root, "pybamm", "version"), "r") as f:
             version = f.read().strip().split(",")
-        return ".".join([str(int(x)) for x in version])
+        return ".".join(["{:02d}".format(int(x)) for x in version])
     except Exception as e:
         raise RuntimeError("Unable to read version number (" + str(e) + ").")
 
@@ -130,7 +130,7 @@ def compile_KLU():
         )
         logger.info(msg)
 
-    return CMakeFound and PyBind11Found and (not windows)
+    return CMakeFound and PyBind11Found
 
 
 # Build the list of package data files to be included in the PyBaMM package.
@@ -162,11 +162,8 @@ idaklu_ext = Extension("pybamm.solvers.idaklu", ["pybamm/solvers/c_solvers/idakl
 ext_modules = [idaklu_ext] if compile_KLU() else []
 
 jax_dependencies = []
-if system() != "Windows":
-    jax_dependencies = [
-        "jax==0.2.12",
-        "jaxlib==0.1.65",
-    ]
+if not (system() == "Windows" or (system() == "Darwin" and "ARM64" in version())):
+    jax_dependencies = ["jax==0.2.12", "jaxlib==0.1.70"]
 
 
 # Load text for description and license
@@ -202,6 +199,7 @@ setup(
         *jax_dependencies,
         "jupyter",  # For example notebooks
         "pybtex",
+        "sympy==1.8",
         # Note: Matplotlib is loaded for debug plots, but to ensure pybamm runs
         # on systems without an attached display, it should never be imported
         # outside of plot() methods.

@@ -13,11 +13,9 @@ class TestLeadingOrder(unittest.TestCase):
         param = pybamm.LithiumIonParameters()
         a = pybamm.PrimaryBroadcast(pybamm.Scalar(0), "current collector")
         variables = {
-            "X-averaged negative electrode interfacial current density": a,
-            "X-averaged negative electrode SEI interfacial current density": a,
-            "X-averaged positive electrode interfacial current density": a,
-            "X-averaged negative electrode lithium plating "
-            "interfacial current density": a,
+            "Total negative electrode SEI thickness [m]": a,
+            "Negative electrode lithium plating thickness [m]": a,
+            "Negative electrode surface area to volume ratio [m-1]": a,
         }
         options = {
             "SEI": "ec reaction limited",
@@ -26,7 +24,7 @@ class TestLeadingOrder(unittest.TestCase):
             "lithium plating": "irreversible",
             "lithium plating porosity change": "true",
         }
-        submodel = pybamm.porosity.LeadingOrder(param, options)
+        submodel = pybamm.porosity.ReactionDriven(param, options, True)
         std_tests = tests.StandardSubModelTests(submodel, variables)
         std_tests.test_all()
 
