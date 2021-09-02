@@ -57,6 +57,8 @@ class BaseModel(BaseInterface):
 
         L_inner_av = pybamm.x_average(L_inner)
         L_outer_av = pybamm.x_average(L_outer)
+        L_tot = L_inner + L_outer
+        L_tot_av = L_inner_av + L_outer_av
 
         variables = {
             "Inner " + domain + " SEI thickness": L_inner,
@@ -67,6 +69,10 @@ class BaseModel(BaseInterface):
             "Outer " + domain + " SEI thickness [m]": L_outer * L_scale,
             "X-averaged outer " + domain + " SEI thickness": L_outer_av,
             "X-averaged outer " + domain + " SEI thickness [m]": L_outer_av * L_scale,
+            self.domain + " electrode SEI thickness": L_tot,
+            self.domain + " electrode SEI thickness [m]": L_tot * L_scale,
+            "X-averaged " + domain + " SEI thickness": L_tot_av,
+            "X-averaged " + domain + " SEI thickness [m]": L_tot_av * L_scale,
         }
 
         # Get variables related to the total thickness

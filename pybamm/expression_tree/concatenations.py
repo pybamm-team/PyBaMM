@@ -45,6 +45,18 @@ class Concatenation(pybamm.Symbol):
         out = out[:-2] + ")"
         return out
 
+    def _diff(self, variable):
+        """ See :meth:`pybamm.Symbol._diff()`. """
+        children_diffs = [
+            child.diff(variable) for child in self.cached_children
+        ]
+        if len(children_diffs) == 1:
+            diff = children_diffs[0]
+        else:
+            diff = self.__class__(*children_diffs)
+
+        return diff
+
     def get_children_domains(self, children):
         # combine domains from children
         domain = []
@@ -120,7 +132,7 @@ class Concatenation(pybamm.Symbol):
         self.concat_latex = tuple(map(sympy.latex, children))
 
         if self.print_name is not None:
-            return sympy.symbols(self.print_name)
+            return sympy.Symbol(self.print_name)
         else:
             concat_str = r"\\".join(self.concat_latex)
             concat_sym = sympy.Symbol(r"\begin{cases}" + concat_str + r"\end{cases}")

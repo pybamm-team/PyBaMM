@@ -59,6 +59,15 @@ Lithium-ion parameter sets
          Pesaran. Multi-domain modeling of lithium-ion batteries encompassing
          multi-physics in varied length scales. Journal of the Electrochemical Society,
          158(8):A955–A969, 2011. doi:10.1149/1.3597614.
+    * ORegan2021 :
+       - Chang-Hui Chen, Ferran Brosa Planella, Kieran O'Regan, Dominika Gastol, W.
+         Dhammika Widanage, and Emma Kendrick. Development of Experimental Techniques
+         for Parameterization of Multi-scale Lithium-ion Battery Models. Journal of The
+         Electrochemical Society, 167(8):080534, 2020. doi:10.1149/1945-7111/ab9050.
+       - Kieran O'Regan, Ferran Brosa Planella, W. Dhammika Widanage, and Emma Kendrick.
+         Thermal-electrochemical parametrisation of a lithium-ion battery: mapping Li
+         concentration and temperature dependencies. Journal of The Electrochemical
+         Society, ():, 2021. doi:.
     * Prada2013 :
        - Chang-Hui Chen, Ferran Brosa Planella, Kieran O'Regan, Dominika Gastol, W.
          Dhammika Widanage, and Emma Kendrick. Development of Experimental Techniques
@@ -205,6 +214,17 @@ Xu2019 = {
     "electrolyte": "lipf6_Valoen2005",
     "experiment": "1C_discharge_from_full_Xu2019",
     "citation": "Xu2019",
+}
+
+ORegan2021 = {
+    "chemistry": "lithium_ion",
+    "cell": "LGM50_ORegan2021",
+    "negative electrode": "graphite_ORegan2021",
+    "separator": "separator_ORegan2021",
+    "positive electrode": "nmc_ORegan2021",
+    "electrolyte": "lipf6_EC_EMC_3_7_Landesfeind2019",
+    "experiment": "1C_discharge_from_full_ORegan2021",
+    "citation": ["ORegan2021", "Chen2020"],
 }
 
 #
