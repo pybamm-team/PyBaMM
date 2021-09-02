@@ -42,6 +42,11 @@ class Solution(object):
     termination : str
         String to indicate why the solution terminated
 
+    sensitivities: bool or dict
+        True if sensitivities included as the solution of the explicit forwards
+        equations.  False if no sensitivities included/wanted. Dict if sensitivities are
+        provided as a dict of {parameter: sensitivities} pairs.
+
     """
 
     def __init__(
@@ -53,6 +58,7 @@ class Solution(object):
         t_event=None,
         y_event=None,
         termination="final time",
+        sensitivities=False
     ):
         if not isinstance(all_ts, list):
             all_ts = [all_ts]
@@ -62,21 +68,27 @@ class Solution(object):
             all_models = [all_models]
         self._all_ts = all_ts
         self._all_ys = all_ys
+        self._all_ys_and_sens = all_ys
         self._all_models = all_models
+
+        # Set up inputs
+        if not isinstance(all_inputs, list):
+            all_inputs_copy = dict(all_inputs)
+            for key, value in all_inputs_copy.items():
+                if isinstance(value, numbers.Number):
+                    all_inputs_copy[key] = np.array([value])
+            self.all_inputs = [all_inputs_copy]
+        else:
+            self.all_inputs = all_inputs
+
+        self.sensitivities = sensitivities
 
         self._t_event = t_event
         self._y_event = y_event
         self._termination = termination
 
-        # Set up inputs
-        if not isinstance(all_inputs, list):
-            for key, value in all_inputs.items():
-                if isinstance(value, numbers.Number):
-                    all_inputs[key] = np.array([value])
-            all_inputs = [all_inputs]
-        self.all_inputs = all_inputs
         self.has_symbolic_inputs = any(
-            isinstance(v, casadi.MX) for v in all_inputs[0].values()
+            isinstance(v, casadi.MX) for v in self.all_inputs[0].values()
         )
 
         # Copy the timescale_eval and lengthscale_evals if they exist
@@ -93,6 +105,12 @@ class Solution(object):
                 for domain, scale in all_models[0].length_scales.items()
             }
 
+        # Events
+        self._t_event = t_event
+        self._y_event = y_event
+        self._termination = termination
+
+        # Initialize times
         self.set_up_time = None
         self.solve_time = None
         self.integration_time = None
@@ -112,6 +130,119 @@ class Solution(object):
 
         # Solution now uses CasADi
         pybamm.citations.register("Andersson2019")
+
+    def extract_explicit_sensitivities(self):
+        # if we got here, we havn't set y yet
+        self.set_y()
+
+        # extract sensitivities from full y solution
+        self._y, self._sensitivities = \
+            self._extract_explicit_sensitivities(
+                self.all_models[0], self.y, self.t, self.all_inputs[0]
+            )
+
+        # make sure we remove all sensitivities from all_ys
+        for index, (model, ys, ts, inputs) in enumerate(
+            zip(self.all_models, self.all_ys, self.all_ts,
+                self.all_inputs)
+        ):
+            self._all_ys[index], _ = \
+                self._extract_explicit_sensitivities(
+                    model, ys, ts, inputs
+            )
+
+    def _extract_explicit_sensitivities(self, model, y, t_eval, inputs):
+        """
+        given a model and a solution y, extracts the sensitivities
+
+        Parameters
+        --------
+        model : :class:`pybamm.BaseModel`
+            A model that has been already setup by this base solver
+        y: ndarray
+            The solution of the full explicit sensitivity equations
+        t_eval: ndarray
+            The evaluation times
+        inputs: dict
+            parameter inputs
+
+        Returns
+        -------
+        y: ndarray
+            The solution of the ode/dae in model
+        sensitivities: dict of (string: ndarray)
+            A dictionary of parameter names, and the corresponding solution of
+            the sensitivity equations
+        """
+
+        n_states = model.len_rhs_and_alg
+        n_rhs = model.len_rhs
+        n_alg = model.len_alg
+        # Get the point where the algebraic equations start
+        if model.len_rhs != 0:
+            n_p = model.len_rhs_sens // model.len_rhs
+        else:
+            n_p = model.len_alg_sens // model.len_alg
+        len_rhs_and_sens = model.len_rhs + model.len_rhs_sens
+
+        n_t = len(t_eval)
+        # y gets the part of the solution vector that correspond to the
+        # actual ODE/DAE solution
+
+        # save sensitivities as a dictionary
+        # first save the whole sensitivity matrix
+        # reshape using Fortran order to get the right array:
+        #   t0_x0_p0, t0_x0_p1, ..., t0_x0_pn
+        #   t0_x1_p0, t0_x1_p1, ..., t0_x1_pn
+        #   ...
+        #   t0_xn_p0, t0_xn_p1, ..., t0_xn_pn
+        #   t1_x0_p0, t1_x0_p1, ..., t1_x0_pn
+        #   t1_x1_p0, t1_x1_p1, ..., t1_x1_pn
+        #   ...
+        #   t1_xn_p0, t1_xn_p1, ..., t1_xn_pn
+        #   ...
+        #   tn_x0_p0, tn_x0_p1, ..., tn_x0_pn
+        #   tn_x1_p0, tn_x1_p1, ..., tn_x1_pn
+        #   ...
+        #   tn_xn_p0, tn_xn_p1, ..., tn_xn_pn
+        # 1, Extract rhs and alg sensitivities and reshape into 3D matrices
+        # with shape (n_p, n_states, n_t)
+        if isinstance(y, casadi.DM):
+            y_full = y.full()
+        else:
+            y_full = y
+        ode_sens = y_full[n_rhs:len_rhs_and_sens, :].reshape(n_p, n_rhs, n_t)
+        alg_sens = y_full[len_rhs_and_sens + n_alg :, :].reshape(
+            n_p, n_alg, n_t
+        )
+        # 2. Concatenate into a single 3D matrix with shape (n_p, n_states, n_t)
+        # i.e. along first axis
+        full_sens_matrix = np.concatenate([ode_sens, alg_sens], axis=1)
+        # Transpose and reshape into a (n_states * n_t, n_p) matrix
+        full_sens_matrix = full_sens_matrix.transpose(2, 1, 0).reshape(
+            n_t * n_states, n_p
+        )
+
+        # Save the full sensitivity matrix
+        sensitivity = {"all": full_sens_matrix}
+
+        # also save the sensitivity wrt each parameter (read the columns of the
+        # sensitivity matrix)
+        start = 0
+        for name in model.calculate_sensitivities:
+            inp = inputs[name]
+            input_size = inp.shape[0]
+            end = start + input_size
+            sensitivity[name] = full_sens_matrix[:, start:end]
+            start = end
+
+        y_dae = np.vstack(
+            [
+                y[: model.len_rhs, :],
+                y[len_rhs_and_sens : len_rhs_and_sens + model.len_alg, :],
+            ]
+        )
+        return y_dae, sensitivity
 
     @property
     def t(self):
@@ -134,7 +265,30 @@ class Solution(object):
             return self._y
         except AttributeError:
             self.set_y()
+
+            # if y is evaluated before sensitivities then need to extract them
+            if isinstance(self._sensitivities, bool) and self._sensitivities:
+                self.extract_explicit_sensitivities()
+
             return self._y
+
+    @property
+    def sensitivities(self):
+        """Values of the sensitivities. Returns a dict of param_name: np_array"""
+        if isinstance(self._sensitivities, bool):
+            if self._sensitivities:
+                self.extract_explicit_sensitivities()
+            else:
+                self._sensitivities = {}
+        return self._sensitivities
+
+    @sensitivities.setter
+    def sensitivities(self, value):
+        """Updates the sensitivity"""
+        # sensitivities must be a dict or bool
+        if not isinstance(value, (bool, dict)):
+            raise TypeError('sensitivities arg needs to be a bool or dict')
+        self._sensitivities = value
 
     def set_y(self):
         try:
@@ -279,6 +433,10 @@ class Solution(object):
 
     def update(self, variables):
         """Add ProcessedVariables to the dictionary of variables in the solution"""
+        # make sure that sensitivities are extracted if required
+        if isinstance(self._sensitivities, bool) and self._sensitivities:
+            self.extract_explicit_sensitivities()
+
         # Convert single entry to list
         if isinstance(variables, str):
             variables = [variables]

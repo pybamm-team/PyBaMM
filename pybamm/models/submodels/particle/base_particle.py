@@ -27,8 +27,8 @@ class BaseParticle(pybamm.BaseSubModel):
         """
         All particle submodels must provide the particle concentration as an argument
         to this method. Some submodels solve for quantities other than the concentration
-        itself, for example the 'FickianSingleParticle' models solves for the x-averaged
-        concentration. In such cases the variables being solved for (set in
+        itself, for example the 'XAveragedFickianDiffusion' models solves for the
+        x-averaged concentration. In such cases the variables being solved for (set in
         'get_fundamental_variables') must also be passed as keyword arguments. If not
         passed as keyword arguments, the various average concentrations and surface
         concentration are computed automatically from the particle concentration.

@@ -21,6 +21,7 @@ class CasadiAlgebraicSolver(pybamm.BaseSolver):
         Any options to pass to the CasADi rootfinder.
         Please consult `CasADi documentation <https://tinyurl.com/y7hrxm7d>`_ for
         details.
+
     """
 
     def __init__(self, tol=1e-6, extra_options=None):
@@ -78,7 +79,11 @@ class CasadiAlgebraicSolver(pybamm.BaseSolver):
             y0_diff = casadi.DM()
             y0_alg = y0
         else:
-            len_rhs = model.concatenated_rhs.size
+            # Check y0 to see if it includes sensitivities
+            if model.len_rhs_and_alg == y0.shape[0]:
+                len_rhs = model.len_rhs
+            else:
+                len_rhs = model.len_rhs * (inputs.shape[0] + 1)
             y0_diff = y0[:len_rhs]
             y0_alg = y0[len_rhs:]
 
@@ -141,6 +146,7 @@ class CasadiAlgebraicSolver(pybamm.BaseSolver):
                 "constraints": list(constraints[len_rhs:]),
             },
         )
+
         timer = pybamm.Timer()
         integration_time = 0
         for idx, t in enumerate(t_eval):
@@ -196,9 +202,17 @@ class CasadiAlgebraicSolver(pybamm.BaseSolver):
         # Concatenate differential part
         y_diff = casadi.horzcat(*[y0_diff] * len(t_eval))
         y_sol = casadi.vertcat(y_diff, y_alg)
+
         # Return solution object (no events, so pass None to t_event, y_event)
+
+        try:
+            explicit_sensitivities = bool(model.calculate_sensitivities)
+        except AttributeError:
+            explicit_sensitivities = False
+
         sol = pybamm.Solution(
-            [t_eval], y_sol, model, inputs_dict, termination="success"
+            [t_eval], y_sol, model, inputs_dict, termination="success",
+            sensitivities=explicit_sensitivities
         )
         sol.integration_time = integration_time
         return sol

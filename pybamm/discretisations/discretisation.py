@@ -209,6 +209,11 @@ class Discretisation(object):
         model_disc.rhs, model_disc.concatenated_rhs = rhs, concat_rhs
         model_disc.algebraic, model_disc.concatenated_algebraic = alg, concat_alg
 
+        # Save length of rhs and algebraic
+        model_disc.len_rhs = model_disc.concatenated_rhs.size
+        model_disc.len_alg = model_disc.concatenated_algebraic.size
+        model_disc.len_rhs_and_alg = model_disc.len_rhs + model_disc.len_alg
+
         # Process events
         processed_events = []
         pybamm.logger.verbose("Discretise events for {}".format(model.name))

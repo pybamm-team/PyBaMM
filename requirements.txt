@@ -5,8 +5,8 @@ anytree >= 2.4.3
 autograd >= 1.2
 scikit-fem >= 0.2.0
 casadi >= 3.5.0
-jax==0.1.75
-jaxlib==0.1.52
+jax==0.2.12
+jaxlib==0.1.70
 jupyter  # For example notebooks
 pybtex
 sympy==1.8

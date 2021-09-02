@@ -44,6 +44,7 @@ jobs:
     - name: Install Linux system dependencies
       if: matrix.os == 'ubuntu-latest'
       run: |
+        sudo apt-get update
         sudo apt install gfortran gcc libopenblas-dev graphviz
         sudo apt install texlive-full
     

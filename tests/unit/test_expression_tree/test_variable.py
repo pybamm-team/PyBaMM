@@ -51,7 +51,7 @@ class TestVariable(unittest.TestCase):
         # Test print_name
         func = pybamm.Variable("test_string")
         func.print_name = "test"
-        self.assertEqual(func.to_equation(), sympy.symbols("test"))
+        self.assertEqual(func.to_equation(), sympy.Symbol("test"))
 
         # Test name
         self.assertEqual(pybamm.Variable("name").to_equation(), "name")

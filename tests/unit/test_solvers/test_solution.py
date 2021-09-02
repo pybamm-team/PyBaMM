@@ -22,6 +22,12 @@ class TestSolution(unittest.TestCase):
         self.assertEqual(sol.all_inputs, [{}])
         self.assertIsInstance(sol.all_models[0], pybamm.BaseModel)
 
+    def test_sensitivities(self):
+        t = np.linspace(0, 1)
+        y = np.tile(t, (20, 1))
+        with self.assertRaises(TypeError):
+            pybamm.Solution(t, y, pybamm.BaseModel(), {}, sensitivities=1.0)
+
     def test_errors(self):
         bad_ts = [np.array([1, 2, 3]), np.array([3, 4, 5])]
         sol = pybamm.Solution(
@@ -46,10 +52,10 @@ class TestSolution(unittest.TestCase):
         sol2 = pybamm.Solution(t2, y2, pybamm.BaseModel(), {"a": 2})
         sol2.solve_time = 1
         sol2.integration_time = 0.5
+
         sol_sum = sol1 + sol2
 
         # Test
-        self.assertEqual(sol_sum.solve_time, 2.5)
         self.assertEqual(sol_sum.integration_time, 0.8)
         np.testing.assert_array_equal(sol_sum.t, np.concatenate([t1, t2[1:]]))
         np.testing.assert_array_equal(

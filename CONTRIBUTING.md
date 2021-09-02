@@ -21,7 +21,7 @@ We use [GIT](https://en.wikipedia.org/wiki/Git) and [GitHub](https://en.wikipedi
 1. Create an [issue](https://guides.github.com/features/issues/) where new proposals can be discussed before any coding is done.
 2. Create a [branch](https://help.github.com/articles/creating-and-deleting-branches-within-your-repository/) of this repo (ideally on your own [fork](https://help.github.com/articles/fork-a-repo/)), where all changes will be made
 3. Download the source code onto your local system, by [cloning](https://help.github.com/articles/cloning-a-repository/) the repository (or your fork of the repository).
-4. [Install](#installation) PyBaMM with the developer options.
+4. [Install](https://pybamm.readthedocs.io/en/latest/install/install-from-source.html) PyBaMM with the developer options.
 5. [Test](#testing) if your installation worked, using the test script: `$ python run-tests.py --unit`.
 
 You now have everything you need to start making changes!
@@ -43,62 +43,6 @@ You now have everything you need to start making changes!
 
 Finally, if you really, really, _really_ love developing PyBaMM, have a look at the current [project infrastructure](#infrastructure).
 
-
-## Installation
-
-To install PyBaMM with all developer options follow the steps below:
-
-
-1. Install tox using the commands below:
-```bash
-pip install tox # (Using this, you will need to additionally install tox in your virtual environment as decribed below)
-# or
-pip install pipx # (For installing pipx)
-pipx install tox # (Using this, tox can automatically be accessed in your virtual environment)
-```
-You can also explore and install pipx from their [GitHub repository](https://github.com/pipxproject/pipx)
-
-2. Install sundials using the command below:
-```bash
-# (Skip this step for Windows installation)
-brew install sundials # (MacOS)
-#
-tox -e pybamm-requires # (GNU/Linux)
-```
-3. Installing PyBaMM
-
-This can be achieved by forking the repository and cloning it in your machine.
-
-4. Navigate to the cloned repository and create a virtual environment using the commands below:
-```bash
-tox -e dev # (GNU/Linux and MacOS)
-#
-python -m tox -e windows-dev # (Windows)
-```
-
-This will
-
-a. Create a virtual environment located at `.tox/dev`.
-
-b. Install all the dependencies for PyBaMM, including the ones for documentation and development.
-
-c. Tell Python to use your local pybamm files when you use `import pybamm` anywhere on your system.
-
-5. Finally, activate your environment.
-
-
-```bash
-source .tox/dev/bin/activate # (GNU/Linux and MacOS)
-#
-.tox\windows-dev\Scripts\activate.bat # (Windows)
-```
-6. Inside the virtual environment, type:
-```bash
-pip install tox # (Skip this step if you used pipx above)
-```
-
-
-Full documentation with an installation guide can be found [here](https://pybamm.readthedocs.io/en/latest/install/install-from-source.html)
 
 ## Coding style guidelines
 

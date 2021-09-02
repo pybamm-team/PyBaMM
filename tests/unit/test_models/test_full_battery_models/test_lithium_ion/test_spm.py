@@ -162,9 +162,10 @@ class TestSPM(unittest.TestCase):
 
         # with custom submodels
         model = pybamm.lithium_ion.SPM({"thermal": "x-full"}, build=False)
-        model.submodels["negative particle"] = pybamm.particle.PolynomialSingleParticle(
+        particle_n = pybamm.particle.no_distribution.XAveragedPolynomialProfile(
             model.param, "Negative", "quadratic profile"
         )
+        model.submodels["negative particle"] = particle_n
         model.build_model()
         new_model = model.new_copy()
         new_model_cs_eqn = list(new_model.rhs.values())[1]
@@ -188,6 +189,11 @@ class TestSPMExternalCircuits(unittest.TestCase):
 
     def test_well_posed_power(self):
         options = {"operating mode": "power"}
+        model = pybamm.lithium_ion.SPM(options)
+        model.check_well_posedness()
+
+    def test_well_posed_cccv(self):
+        options = {"operating mode": "CCCV"}
         model = pybamm.lithium_ion.SPM(options)
         model.check_well_posedness()
 

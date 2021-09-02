@@ -46,7 +46,7 @@ def prettify_print_name(name):
     """Prettify print_name using regex"""
 
     # Skip prettify_print_name() for cases like `new_copy()`
-    if "{" in name:
+    if "{" in name or "\\" in name:
         return name
 
     # Return print_name if name exists in the dictionary

@@ -58,12 +58,14 @@ class NewmanTobias(DFN):
     def set_particle_submodel(self):
 
         if self.options["particle"] == "Fickian diffusion":
-            self.submodels["negative particle"] = pybamm.particle.FickianSingleParticle(
+            submod_n = pybamm.particle.no_distribution.XAveragedFickianDiffusion(
                 self.param, "Negative"
             )
-            self.submodels["positive particle"] = pybamm.particle.FickianSingleParticle(
+            self.submodels["negative particle"] = submod_n
+            submod_p = pybamm.particle.no_distribution.XAveragedFickianDiffusion(
                 self.param, "Positive"
             )
+            self.submodels["positive particle"] = submod_p
         elif self.options["particle"] in [
             "uniform profile",
             "quadratic profile",
@@ -71,12 +73,12 @@ class NewmanTobias(DFN):
         ]:
             self.submodels[
                 "negative particle"
-            ] = pybamm.particle.PolynomialSingleParticle(
+            ] = pybamm.particle.no_distribution.XAveragedPolynomialProfile(
                 self.param, "Negative", self.options["particle"]
             )
             self.submodels[
                 "positive particle"
-            ] = pybamm.particle.PolynomialSingleParticle(
+            ] = pybamm.particle.no_distribution.XAveragedPolynomialProfile(
                 self.param, "Positive", self.options["particle"]
             )
 

@@ -17,6 +17,15 @@ class TestSPM(unittest.TestCase):
         modeltest = tests.StandardModelTest(model, parameter_values=param)
         modeltest.test_all()
 
+    def test_sensitivities(self):
+        options = {"thermal": "isothermal"}
+        model = pybamm.lithium_ion.SPM(options)
+        param = pybamm.ParameterValues(chemistry=pybamm.parameter_sets.Ecker2015)
+        modeltest = tests.StandardModelTest(model, parameter_values=param)
+        modeltest.test_sensitivities(
+            'Current function [A]', 0.15652,
+        )
+
     def test_basic_processing_1plus1D(self):
         options = {"current collector": "potential pair", "dimensionality": 1}
 
