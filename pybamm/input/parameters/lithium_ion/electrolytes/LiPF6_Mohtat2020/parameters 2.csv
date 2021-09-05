@@ -1,0 +1,10 @@
+Name [units],Value,Reference,Notes
+# Empty rows and rows starting with ‘#’ will be ignored,,,
+,,,
+# Electrolyte properties,,,
+Typical electrolyte concentration [mol.m-3],1000,Peyman MPM,from MPM code
+Cation transference number,0.38,Peyman MPM,
+1 + dlnf/dlnc,1,,
+Typical lithium ion diffusivity [m2.s-1],5.34E-10,Scott Moura FastDFN,
+Electrolyte diffusivity [m2.s-1],[function]electrolyte_diffusivity_PeymanMPM,, 
+Electrolyte conductivity [S.m-1],[function]electrolyte_conductivity_PeymanMPM,, 

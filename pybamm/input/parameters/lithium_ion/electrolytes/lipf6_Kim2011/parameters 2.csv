@@ -1,0 +1,9 @@
+Name [units],Value,Reference,Notes
+# Empty rows and rows starting with ‘#’ will be ignored,,,
+,,,
+# Electrolyte properties,,,
+Typical electrolyte concentration [mol.m-3],1200,,
+Cation transference number,0.4,Reported as a function in Kim2011 (Implement later),
+1 + dlnf/dlnc,1,,
+Electrolyte diffusivity [m2.s-1],[function]electrolyte_diffusivity_Kim2011,,
+Electrolyte conductivity [S.m-1],[function]electrolyte_conductivity_Kim2011,,

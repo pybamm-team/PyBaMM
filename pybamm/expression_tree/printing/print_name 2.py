@@ -1,0 +1,93 @@
+#
+# Prettify print_name
+#
+import re
+
+PRINT_NAME_OVERRIDES = {
+    "potential_scale": r"\frac{RT^{ref}}{F}",
+    "Theta": r"\frac{1}{\hat{T}^{ref}}",
+    "current_with_time": "I",
+    "timescale": r"\tau",
+    "dimensional_current_with_time": r"\hat{I}",
+    "eps_c_e": r"\epsilon{c_e}",
+    "one_plus_dlnf_dlnc": r"1+\frac{dlnf}{dlnc}",
+    "negative_particle_concentration_scale": r"c_{n}^{max}",
+    "positive_particle_concentration_scale": r"c_{p}^{max}",
+}
+
+GREEK_LETTERS = [
+    "alpha",
+    "beta",
+    "gamma",
+    "delta",
+    "epsilon",
+    "zeta",
+    "eta",
+    "theta",
+    "iota",
+    "kappa",
+    "lambda",
+    "mu",
+    "nu",
+    "xi",
+    "pi",
+    "rho",
+    "sigma",
+    "tau",
+    "upsilon",
+    "phi",
+    "chi",
+    "psi",
+    "omega",
+]
+
+
+def prettify_print_name(name):
+    """Prettify print_name using regex"""
+
+    # Skip prettify_print_name() for cases like `new_copy()`
+    if "{" in name or "\\" in name:
+        return name
+
+    # Return print_name if name exists in the dictionary
+    if name in PRINT_NAME_OVERRIDES:
+        return PRINT_NAME_OVERRIDES[name]
+
+    # Superscripts with comma separated (U_n_ref --> U_{n}^{ref})
+    sup_re = re.search(r"^[\da-zA-Z]+_?(.*?)_?((?:init|ref|typ|max|0))", name)
+    if sup_re:
+        sup_str = (r"{" + sup_re.group(1).replace("_", "\,") + r"}^{" +
+                   sup_re.group(2) + r"}")
+        sup_var = sup_re.group(1) + "_" + sup_re.group(2)
+        name = name.replace(sup_var, sup_str)
+
+    # Subscripts with comma separated (a_R_p --> a_{R\,p})
+    sub_re = re.search(r"^a_+(\w+)", name)
+    if sub_re:
+        sub_str = r"{" + sub_re.group(1).replace("_", "\,") + r"}"
+        name = name.replace(sub_re.group(1), sub_str)
+
+    # Dimensions with comma separated (j0_n_ref_dimensional --> \hat{j0}_{n}^{ref})
+    dim_re = re.search(r"([\da-zA-Z]+)_?(.*?)_?(?:dim|dimensional)", name)
+    if dim_re:
+        if "^" in name:
+            name = (r"\hat{" + dim_re.group(1) + r"}_" +
+                    dim_re.group(2).replace("_", "\,"))
+        else:
+            name = (r"\hat{" + dim_re.group(1) + r"}_{" +
+                    dim_re.group(2).replace("_", "\,") + r"}")
+
+    # Bar with comma separated (c_s_n_xav --> \bar{c}_{s\,n})
+    bar_re = re.search(r"^([a-zA-Z]+)_*(\w*?)_(?:av|xav)", name)
+    if bar_re:
+        name = (r"\bar{" + bar_re.group(1) + r"}_{" +
+                bar_re.group(2).replace("_", "\,") + r"}")
+
+    # Replace eps with epsilon (eps_n --> epsilon_n)
+    name = re.sub(r"(eps)(?![0-9a-zA-Z])", "epsilon", name)
+
+    # Greek letters (delta --> \delta)
+    greek_re = r"(?<!\\)(" + "|".join(GREEK_LETTERS) + r")(?![0-9a-zA-Z])"
+    name = re.sub(greek_re, r"\\\1", name, flags=re.IGNORECASE)
+
+    return name

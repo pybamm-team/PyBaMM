@@ -13,6 +13,7 @@ import pickle
 import pybamm
 import numbers
 import warnings
+import sys
 from collections import defaultdict
 
 
@@ -262,15 +263,30 @@ def load_function(filename):
     # Assign path to _ and filename to tail
     _, tail = os.path.split(filename)
 
-    # Strip absolute path to pybamm/input/exapmle.py
     if "pybamm" in filename:
+        # Strip absolute path to pybamm/input/example.py
         root_path = filename[filename.rfind("pybamm") :]
     else:
-        root_path = filename
+        # remove the part of the path that corresponds to the current working directory
+        # so that imporlib.import_module knows where to find the files later on
+        # this leaves the filename unchanged if cwd is not in filename
+        root_path = filename.replace(os.getcwd(), "")
+
+    if root_path.startswith("/"):
+        root_path = root_path[1:]
 
     path = root_path.replace("/", ".")
     path = path.replace("\\", ".")
-    module_object = importlib.import_module(path)
+
+    try:
+        module_object = importlib.import_module(path)
+    except ModuleNotFoundError:
+        # fall back to old approach
+        valid_path, valid_leaf = os.path.split(filename)
+        sys.path.append(valid_path)
+        module_object = importlib.import_module(valid_leaf)
+        # Remove valid_path from sys_path to avoid clashes down the line
+        sys.path.remove(valid_path)
 
     return getattr(module_object, tail)
 

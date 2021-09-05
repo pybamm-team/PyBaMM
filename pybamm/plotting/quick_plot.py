@@ -541,9 +541,10 @@ class QuickPlot(object):
                             # multiple variables -> use linestyle to differentiate
                             # variables (color differentiates models)
                             linestyle = self.linestyles[j]
+                        var = variable(t_in_seconds, **spatial_vars, warn=False)
                         (self.plots[key][i][j],) = ax.plot(
                             self.first_dimensional_spatial_variable[key],
-                            variable(t_in_seconds, **spatial_vars, warn=False),
+                            var,
                             color=self.colors[i],
                             linestyle=linestyle,
                             zorder=10,
