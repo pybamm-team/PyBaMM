@@ -7,3 +7,4 @@ Plotting
   dynamic_plot
   plot
   plot_2D
+  plot_voltage_components
