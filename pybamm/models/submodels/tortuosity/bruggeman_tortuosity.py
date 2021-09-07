@@ -8,8 +8,13 @@ from .base_tortuosity import BaseModel
 
 class Bruggeman(BaseModel):
     """Submodel for Bruggeman tortuosity
+
+    Parameters
+    ----------
+    param : parameter class
+        The parameters to use for this submodel
     phase : str
-        The phase in which the model is implemented ("Electrolyte" or "Electrode")
+        The material for the model ('electrolyte' or 'electrode').
     options : dict, optional
         A dictionary of options to be passed to the model.
 
