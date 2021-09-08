@@ -69,12 +69,19 @@ We strongly recommend to install PyBaMM within a python virtual environment, in 
 For instructions on how to create a virtual environment for PyBaMM, see [the documentation](https://pybamm.readthedocs.io/en/latest/install/GNU-linux.html#user-install).
 
 ### Using pip
+[![pypi](https://img.shields.io/pypi/v/pybamm?color=blue)](https://pypi.org/project/pybamm/)
+[![downloads](https://img.shields.io/pypi/dm/pybamm?color=blue)](https://pypi.org/project/pybamm/)
+
 ```bash
 pip install pybamm
 ```
 
 ### Using conda
 PyBaMM is available as a conda package through the conda-forge channel.
+
+[![conda_forge](https://img.shields.io/conda/vn/conda-forge/pybamm?color=green)](https://anaconda.org/conda-forge/pybamm)
+[![downloads](https://img.shields.io/conda/dn/conda-forge/pybamm?color=green)](https://anaconda.org/conda-forge/pybamm)
+
 ```bash
 conda install -c conda-forge pybamm
 ```
