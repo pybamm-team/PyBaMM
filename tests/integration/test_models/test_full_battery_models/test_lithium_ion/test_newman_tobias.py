@@ -187,7 +187,7 @@ class TestNewmanTobiasWithSEI(unittest.TestCase):
         modeltest.test_all()
 
 
-class TestNewmanTobiasWithCrack(unittest.TestCase):
+class TestNewmanTobiasWithMechanics(unittest.TestCase):
     def test_well_posed_negative_cracking(self):
         options = {"particle mechanics": ("swelling and cracking", "none")}
         model = pybamm.lithium_ion.NewmanTobias(options)
