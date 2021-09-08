@@ -48,13 +48,17 @@ jobs:
         sudo apt install gfortran gcc libopenblas-dev graphviz
         sudo apt install texlive-full
     
+    # Added fixes to homebrew installs:
+    # rm -f /usr/local/bin/2to3 
+    # (see https://github.com/actions/virtual-environments/issues/2322)
     - name: Install MacOS system dependencies
       if: matrix.os == 'macos-latest'
       run: |
+        rm -f /usr/local/bin/2to3
         brew update
         brew install graphviz
         brew install openblas
-        
+
     - name: Install Windows system dependencies
       if: matrix.os == 'windows-latest'
       run: choco install graphviz --version=2.38.0.20190211
