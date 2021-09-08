@@ -420,7 +420,8 @@ class BaseSolver(object):
                     report(
                         (
                             f"Calculating sensitivities for {name} with respect "
-                            f"to parameters {model.calculate_sensitivities} using CasADi"
+                            f"to parameters {model.calculate_sensitivities} using "
+                            "CasADi"
                         )
                     )
                     jacp_dict = {}

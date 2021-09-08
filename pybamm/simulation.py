@@ -416,7 +416,8 @@ class Simulation:
                             )
                         )
                     else:
-                        # current events both negative and positive to catch specification
+                        # current events both negative and positive to catch
+                        # specification
                         new_model.events.extend(
                             [
                                 pybamm.Event(
