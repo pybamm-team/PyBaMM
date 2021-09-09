@@ -19,12 +19,18 @@ class Constant(BaseModel):
     """
 
     def get_fundamental_variables(self):
+        if self.half_cell:
+            eps_n = None
+            deps_n_dt = None
+        else:
+            eps_n = self.param.epsilon_n_init
+            deps_n_dt = pybamm.FullBroadcast(
+                0, "negative electrode", "current collector"
+            )
 
-        eps_n = self.param.epsilon_n
-        eps_s = self.param.epsilon_s
-        eps_p = self.param.epsilon_p
+        eps_s = self.param.epsilon_s_init
+        eps_p = self.param.epsilon_p_init
 
-        deps_n_dt = pybamm.FullBroadcast(0, "negative electrode", "current collector")
         deps_s_dt = pybamm.FullBroadcast(0, "separator", "current collector")
         deps_p_dt = pybamm.FullBroadcast(0, "positive electrode", "current collector")
 

@@ -12,14 +12,16 @@ class BaseModel(BaseInterface):
     ----------
     param : parameter class
         The parameters to use for this submodel
+    options : dict, optional
+        A dictionary of options to be passed to the model.
 
     **Extends:** :class:`pybamm.interface.BaseInterface`
     """
 
-    def __init__(self, param):
+    def __init__(self, param, options=None):
         reaction = "SEI"
         domain = "Negative"
-        super().__init__(param, domain, reaction)
+        super().__init__(param, domain, reaction, options=options)
 
     def get_coupled_variables(self, variables):
         # Update some common variables

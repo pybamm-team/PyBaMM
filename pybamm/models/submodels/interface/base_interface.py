@@ -26,7 +26,7 @@ class BaseInterface(pybamm.BaseSubModel):
 
     def __init__(self, param, domain, reaction, options=None):
         super().__init__(param, domain, options=options)
-        if reaction == "lithium-ion main":
+        if reaction in ["lithium-ion main", "lithium metal plating"]:
             self.reaction_name = ""  # empty reaction name for the main reaction
             self.Reaction_icd = "Interfacial current density"
         elif reaction == "lead-acid main":
@@ -60,6 +60,8 @@ class BaseInterface(pybamm.BaseSubModel):
         j0 : :class: `pybamm.Symbol`
             The exchange current density.
         """
+        param = self.param
+
         c_e = variables[self.domain + " electrolyte concentration"]
         T = variables[self.domain + " electrode temperature"]
 
@@ -108,13 +110,12 @@ class BaseInterface(pybamm.BaseSubModel):
             c_s_surf = pybamm.maximum(tol, pybamm.minimum(c_s_surf, 1 - tol))
 
             if self.domain == "Negative":
-                j0 = self.param.j0_n(c_e, c_s_surf, T) / self.param.C_r_n
+                j0 = param.j0_n(c_e, c_s_surf, T) / param.C_r_n
             elif self.domain == "Positive":
-                j0 = (
-                    self.param.gamma_p
-                    * self.param.j0_p(c_e, c_s_surf, T)
-                    / self.param.C_r_p
-                )
+                j0 = param.gamma_p * param.j0_p(c_e, c_s_surf, T) / param.C_r_p
+
+        elif self.reaction == "lithium metal plating":
+            j0 = param.j0_plating(c_e, 1, T)
 
         elif self.reaction == "lead-acid main":
             # If variable was broadcast, take only the orphan
@@ -122,9 +123,9 @@ class BaseInterface(pybamm.BaseSubModel):
                 c_e = c_e.orphans[0]
                 T = T.orphans[0]
             if self.domain == "Negative":
-                j0 = self.param.j0_n(c_e, T)
+                j0 = param.j0_n(c_e, T)
             elif self.domain == "Positive":
-                j0 = self.param.j0_p(c_e, T)
+                j0 = param.j0_p(c_e, T)
 
         elif self.reaction == "lead-acid oxygen":
             # If variable was broadcast, take only the orphan
@@ -134,7 +135,7 @@ class BaseInterface(pybamm.BaseSubModel):
             if self.domain == "Negative":
                 j0 = pybamm.Scalar(0)
             elif self.domain == "Positive":
-                j0 = self.param.j0_p_Ox(c_e, T)
+                j0 = param.j0_p_Ox(c_e, T)
         else:
             j0 = pybamm.Scalar(0)
 
@@ -189,6 +190,10 @@ class BaseInterface(pybamm.BaseSubModel):
             elif self.domain == "Positive":
                 ocp = self.param.U_p(c_s_surf, T)
                 dUdT = self.param.dUdT_p(c_s_surf)
+        elif self.reaction == "lithium metal plating":
+            T = variables[self.domain + " electrode temperature"]
+            ocp = self.param.U_n_ref
+            dUdT = 0 * T
         elif self.reaction == "lead-acid main":
             c_e = variables[self.domain + " electrolyte concentration"]
             # If c_e was broadcast, take only the orphan
@@ -215,7 +220,11 @@ class BaseInterface(pybamm.BaseSubModel):
 
     def _get_number_of_electrons_in_reaction(self):
         """Returns the number of electrons in the reaction."""
-        if self.reaction in ["lead-acid main", "lithium-ion main"]:
+        if self.reaction in [
+            "lead-acid main",
+            "lithium-ion main",
+            "lithium metal plating",
+        ]:
             if self.domain == "Negative":
                 return self.param.ne_n
             elif self.domain == "Positive":
@@ -227,7 +236,12 @@ class BaseInterface(pybamm.BaseSubModel):
 
     def _get_electrolyte_reaction_signed_stoichiometry(self):
         """Returns the number of electrons in the reaction."""
-        if self.reaction in ["lithium-ion main", "SEI", "lithium plating"]:
+        if self.reaction in [
+            "lithium-ion main",
+            "SEI",
+            "lithium plating",
+            "lithium metal plating",
+        ]:
             # Both the main reaction current contribute to the electrolyte reaction
             # current
             return pybamm.Scalar(1), pybamm.Scalar(1)
@@ -276,27 +290,27 @@ class BaseInterface(pybamm.BaseSubModel):
         return j_total_average
 
     def _get_standard_interfacial_current_variables(self, j):
-
-        i_typ = self.param.i_typ
-        L_x = self.param.L_x
+        param = self.param
+        i_typ = param.i_typ
+        L_x = param.L_x
         if self.domain == "Negative":
-            j_scale = i_typ / (self.param.a_n_typ * L_x)
+            j_scale = param.j_scale_n
         elif self.domain == "Positive":
-            j_scale = i_typ / (self.param.a_p_typ * L_x)
+            j_scale = param.j_scale_p
 
         # Size average. For j variables that depend on particle size, see
         # "_get_standard_size_distribution_interfacial_current_variables"
         j = pybamm.size_average(j)
 
         # Average, and broadcast if necessary
-        if j.domain == []:
-            j_av = j
+        j_av = pybamm.x_average(j)
+        if self.half_cell and self.domain == "Negative":
+            # Half-cell domain, j should not be broadcast
+            pass
+        elif j.domain == []:
             j = pybamm.FullBroadcast(j, self.domain_for_broadcast, "current collector")
         elif j.domain == ["current collector"]:
-            j_av = j
             j = pybamm.PrimaryBroadcast(j, self.domain_for_broadcast)
-        else:
-            j_av = pybamm.x_average(j)
 
         variables = {
             self.domain
@@ -335,9 +349,9 @@ class BaseInterface(pybamm.BaseSubModel):
         i_typ = self.param.i_typ
         L_x = self.param.L_x
         if self.domain == "Negative":
-            j_scale = i_typ / (self.param.a_n_typ * L_x)
+            j_scale = self.param.j_scale_n
         elif self.domain == "Positive":
-            j_scale = i_typ / (self.param.a_p_typ * L_x)
+            j_scale = self.param.j_scale_p
 
         variables = {
             "X-averaged "
@@ -361,10 +375,12 @@ class BaseInterface(pybamm.BaseSubModel):
         Get variables associated with interfacial current over the whole cell domain
         This function also automatically increments the "total source term" variables
         """
-        i_typ = self.param.i_typ
-        L_x = self.param.L_x
-        j_n_scale = i_typ / (self.param.a_n_typ * L_x)
-        j_p_scale = i_typ / (self.param.a_p_typ * L_x)
+        param = self.param
+
+        i_typ = param.i_typ
+        L_x = param.L_x
+        j_n_scale = param.j_scale_n
+        j_p_scale = param.j_scale_p
 
         j_n_av = variables[
             "X-averaged negative electrode"
@@ -380,15 +396,22 @@ class BaseInterface(pybamm.BaseSubModel):
         j_n = variables[
             "Negative electrode" + self.reaction_name + " interfacial current density"
         ]
-        j_s = pybamm.FullBroadcast(0, "separator", "current collector")
+        zero_s = pybamm.FullBroadcast(0, "separator", "current collector")
         j_p = variables[
             "Positive electrode" + self.reaction_name + " interfacial current density"
         ]
-        j = pybamm.concatenation(j_n, j_s, j_p)
-        j_dim = pybamm.concatenation(j_n_scale * j_n, j_s, j_p_scale * j_p)
+        if self.half_cell:
+            j = pybamm.concatenation(zero_s, j_p)
+            j_dim = pybamm.concatenation(zero_s, j_p_scale * j_p)
+        else:
+            j = pybamm.concatenation(j_n, zero_s, j_p)
+            j_dim = pybamm.concatenation(j_n_scale * j_n, zero_s, j_p_scale * j_p)
 
+        # Create separate 'new_variables' so that variables only get updated once
+        # everything is computed
+        new_variables = variables.copy()
         if self.reaction not in ["SEI", "lithium plating"]:
-            variables.update(
+            new_variables.update(
                 {
                     self.Reaction_icd: j,
                     self.Reaction_icd + " [A.m-2]": j_dim,
@@ -396,11 +419,24 @@ class BaseInterface(pybamm.BaseSubModel):
                 }
             )
 
-        a_n = variables["Negative electrode surface area to volume ratio"]
-        a_p = variables["Positive electrode surface area to volume ratio"]
-        a = pybamm.concatenation(
-            a_n, pybamm.FullBroadcast(0, "separator", "current collector"), a_p
-        )
+        a_p = new_variables["Positive electrode surface area to volume ratio"]
+
+        s_n, s_p = self._get_electrolyte_reaction_signed_stoichiometry()
+        if self.half_cell:
+            a_n = pybamm.Scalar(1)
+            a = pybamm.concatenation(zero_s, a_p)
+            s = pybamm.concatenation(
+                zero_s,
+                pybamm.FullBroadcast(s_p, "positive electrode", "current collector"),
+            )
+        else:
+            a_n = new_variables["Negative electrode surface area to volume ratio"]
+            a = pybamm.concatenation(a_n, zero_s, a_p)
+            s = pybamm.concatenation(
+                pybamm.FullBroadcast(s_n, "negative electrode", "current collector"),
+                zero_s,
+                pybamm.FullBroadcast(s_p, "positive electrode", "current collector"),
+            )
 
         # Override print_name
         j.print_name = "J"
@@ -408,63 +444,58 @@ class BaseInterface(pybamm.BaseSubModel):
         j_n.print_name = "j_n"
         j_p.print_name = "j_p"
 
-        s_n, s_p = self._get_electrolyte_reaction_signed_stoichiometry()
-        s = pybamm.concatenation(
-            pybamm.FullBroadcast(s_n, "negative electrode", "current collector"),
-            pybamm.FullBroadcast(0, "separator", "current collector"),
-            pybamm.FullBroadcast(s_p, "positive electrode", "current collector"),
-        )
-
-        variables["Sum of electrolyte reaction source terms"] += a * s * j
-        variables["Sum of negative electrode electrolyte reaction source terms"] += (
-            a_n * s_n * j_n
-        )
-        variables["Sum of positive electrode electrolyte reaction source terms"] += (
-            a_p * s_p * j_p
-        )
-        variables[
+        new_variables["Sum of electrolyte reaction source terms"] += a * s * j
+        new_variables[
+            "Sum of negative electrode electrolyte reaction source terms"
+        ] += (a_n * s_n * j_n)
+        new_variables[
+            "Sum of positive electrode electrolyte reaction source terms"
+        ] += (a_p * s_p * j_p)
+        new_variables[
             "Sum of x-averaged negative electrode electrolyte reaction source terms"
         ] += pybamm.x_average(a_n * s_n * j_n)
-        variables[
+        new_variables[
             "Sum of x-averaged positive electrode electrolyte reaction source terms"
         ] += pybamm.x_average(a_p * s_p * j_p)
 
-        variables["Sum of interfacial current densities"] += j
-        variables["Sum of negative electrode interfacial current densities"] += j_n
-        variables["Sum of positive electrode interfacial current densities"] += j_p
-        variables[
+        new_variables["Sum of interfacial current densities"] += j
+        new_variables["Sum of negative electrode interfacial current densities"] += j_n
+        new_variables["Sum of positive electrode interfacial current densities"] += j_p
+        new_variables[
             "Sum of x-averaged negative electrode interfacial current densities"
         ] += j_n_av
-        variables[
+        new_variables[
             "Sum of x-averaged positive electrode interfacial current densities"
         ] += j_p_av
 
+        variables.update(new_variables)
         return variables
 
     def _get_standard_exchange_current_variables(self, j0):
-
-        i_typ = self.param.i_typ
-        L_x = self.param.L_x
+        param = self.param
+        i_typ = param.i_typ
+        L_x = param.L_x
         if self.domain == "Negative":
-            j_scale = i_typ / (self.param.a_n_typ * L_x)
+            j_scale = param.j_scale_n
         elif self.domain == "Positive":
-            j_scale = i_typ / (self.param.a_p_typ * L_x)
+            j_scale = param.j_scale_p
 
         # Size average. For j0 variables that depend on particle size, see
         # "_get_standard_size_distribution_exchange_current_variables"
         j0 = pybamm.size_average(j0)
+        # Average, and broadcast if necessary
+        j0_av = pybamm.x_average(j0)
 
         # X-average, and broadcast if necessary
-        if j0.domain == []:
-            j0_av = j0
+        if self.half_cell and self.domain == "Negative":
+            # Half-cell domain, j0 should not be broadcast
+            pass
+        elif j0.domain == []:
             j0 = pybamm.FullBroadcast(
                 j0, self.domain_for_broadcast, "current collector"
             )
         elif j0.domain == ["current collector"]:
-            j0_av = j0
             j0 = pybamm.PrimaryBroadcast(j0, self.domain_for_broadcast)
-        else:
-            j0_av = pybamm.x_average(j0)
 
         variables = {
             self.domain
@@ -499,21 +530,25 @@ class BaseInterface(pybamm.BaseSubModel):
         return variables
 
     def _get_standard_whole_cell_exchange_current_variables(self, variables):
-
-        i_typ = self.param.i_typ
-        L_x = self.param.L_x
-        j_n_scale = i_typ / (self.param.a_n_typ * L_x)
-        j_p_scale = i_typ / (self.param.a_p_typ * L_x)
+        param = self.param
+        i_typ = param.i_typ
+        L_x = param.L_x
+        j_n_scale = param.j_scale_n
+        j_p_scale = param.j_scale_p
 
         j0_n = variables[
             "Negative electrode" + self.reaction_name + " exchange current density"
         ]
-        j0_s = pybamm.FullBroadcast(0, "separator", "current collector")
+        zero_s = pybamm.FullBroadcast(0, "separator", "current collector")
         j0_p = variables[
             "Positive electrode" + self.reaction_name + " exchange current density"
         ]
-        j0 = pybamm.concatenation(j0_n, j0_s, j0_p)
-        j0_dim = pybamm.concatenation(j_n_scale * j0_n, j0_s, j_p_scale * j0_p)
+        if self.half_cell:
+            j0 = pybamm.concatenation(zero_s, j0_p)
+            j0_dim = pybamm.concatenation(zero_s, j_p_scale * j0_p)
+        else:
+            j0 = pybamm.concatenation(j0_n, zero_s, j0_p)
+            j0_dim = pybamm.concatenation(j_n_scale * j0_n, zero_s, j_p_scale * j0_p)
 
         if self.reaction_name == "":
             variables = {
@@ -542,7 +577,10 @@ class BaseInterface(pybamm.BaseSubModel):
 
         # X-average, and broadcast if necessary
         eta_r_av = pybamm.x_average(eta_r)
-        if eta_r.domain == ["current collector"]:
+        if self.half_cell and self.domain == "Negative":
+            # Half-cell domain, eta should not be broadcast
+            pass
+        elif eta_r.domain == ["current collector"]:
             eta_r = pybamm.PrimaryBroadcast(eta_r, self.domain_for_broadcast)
 
         domain_reaction = (
@@ -588,16 +626,17 @@ class BaseInterface(pybamm.BaseSubModel):
         pot_scale = self.param.potential_scale
 
         # Average, and broadcast if necessary
-        if delta_phi.domain == ["current collector"]:
-            delta_phi_av = delta_phi
-            delta_phi_av_dim = ocp_ref + delta_phi * pot_scale
+        delta_phi_av = pybamm.x_average(delta_phi)
+        delta_phi_av_dim = ocp_ref + delta_phi_av * pot_scale
+        if self.half_cell and self.domain == "Negative":
+            # Half-cell domain, delta_phi should not be broadcast
+            delta_phi_dim = ocp_ref + delta_phi * pot_scale
+        elif delta_phi.domain == ["current collector"]:
             delta_phi = pybamm.PrimaryBroadcast(delta_phi_av, self.domain_for_broadcast)
             delta_phi_dim = pybamm.PrimaryBroadcast(
                 delta_phi_av_dim, self.domain_for_broadcast
             )
         else:
-            delta_phi_av = pybamm.x_average(delta_phi)
-            delta_phi_av_dim = ocp_ref + delta_phi_av * pot_scale
             delta_phi_dim = ocp_ref + delta_phi * pot_scale
 
         variables = {
@@ -635,22 +674,20 @@ class BaseInterface(pybamm.BaseSubModel):
         # "_get_standard_size_distribution_ocp_variables"
         ocp = pybamm.size_average(ocp)
 
-        # X-average, and broadcast if necessary
-        if ocp.domain == []:
-            ocp_av = ocp
+        # Size average
+        dUdT = pybamm.size_average(dUdT)
+        # Average, and broadcast if necessary
+        dUdT_av = pybamm.x_average(dUdT)
+        ocp_av = pybamm.x_average(ocp)
+        if self.half_cell and self.domain == "Negative":
+            # Half-cell domain, ocp should not be broadcast
+            pass
+        elif ocp.domain == []:
             ocp = pybamm.FullBroadcast(
                 ocp, self.domain_for_broadcast, "current collector"
             )
         elif ocp.domain == ["current collector"]:
-            ocp_av = ocp
             ocp = pybamm.PrimaryBroadcast(ocp, self.domain_for_broadcast)
-        else:
-            ocp_av = pybamm.x_average(ocp)
-
-        # Size average
-        dUdT = pybamm.size_average(dUdT)
-
-        dUdT_av = pybamm.x_average(dUdT)
 
         if self.domain == "Negative":
             ocp_dim = self.param.U_n_ref + self.param.potential_scale * ocp
