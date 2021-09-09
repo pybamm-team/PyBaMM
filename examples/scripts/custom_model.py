@@ -59,13 +59,13 @@ model.submodels[
 model.submodels[
     "electrolyte conductivity"
 ] = pybamm.electrolyte_conductivity.LeadingOrder(model.param)
-model.submodels["negative sei"] = pybamm.sei.NoSEI(model.param, "Negative")
-model.submodels["positive sei"] = pybamm.sei.NoSEI(model.param, "Positive")
+model.submodels["negative sei"] = pybamm.sei.NoSEI(model.param)
+model.submodels["positive sei"] = pybamm.sei.NoSEI(model.param)
 model.submodels["negative lithium plating"] = pybamm.lithium_plating.NoPlating(
-    model.param, "Negative"
+    model.param
 )
 model.submodels["positive lithium plating"] = pybamm.lithium_plating.NoPlating(
-    model.param, "Positive"
+    model.param
 )
 
 # build model

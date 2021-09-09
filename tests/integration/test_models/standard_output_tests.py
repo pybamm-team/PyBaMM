@@ -270,8 +270,7 @@ class ParticleConcentrationTests(BaseOutputTest):
         self.N_s_p = solution["Positive particle flux"]
 
         self.c_SEI_tot = solution["Loss of lithium to SEI [mol]"]
-
-        self.c_Li_n_tot = solution["Loss of lithium to lithium plating [mol]"]
+        self.c_Li_tot = solution["Loss of lithium to lithium plating [mol]"]
 
         if model.options["particle size"] == "distribution":
             # These concentration variables are only present for distribution models.
@@ -381,10 +380,8 @@ class ParticleConcentrationTests(BaseOutputTest):
         self.c_s_tot = (
             self.c_s_n_tot(self.solution.t)
             + self.c_s_p_tot(self.solution.t)
-            + self.c_SEI_n_tot(self.solution.t)
-            + self.c_SEI_p_tot(self.solution.t)
-            + self.c_Li_n_tot(self.solution.t)
-            + self.c_Li_p_tot(self.solution.t)
+            + self.c_SEI_tot(self.solution.t)
+            + self.c_Li_tot(self.solution.t)
         )
         diff = (self.c_s_tot[1:] - self.c_s_tot[:-1]) / self.c_s_tot[:-1]
         if "profile" in self.model.options["particle"]:
@@ -680,8 +677,7 @@ class CurrentTests(BaseOutputTest):
         )
         np.testing.assert_array_almost_equal(
             np.mean(
-                self.a_p(self.t, self.x_p)
-                * (self.j_p(self.t, self.x_p) + self.j_p_sei(self.t, self.x_p)),
+                self.a_p(self.t, self.x_p) * self.j_p(self.t, self.x_p),
                 axis=0,
             ),
             -self.i_cell / self.l_p,
