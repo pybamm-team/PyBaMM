@@ -11,8 +11,11 @@ class BasePlating(BaseInterface):
     ----------
     param : parameter class
         The parameters to use for this submodel
-    reactions : dict, optional
-        Dictionary of reaction terms
+    domain : str
+        The domain of the model either 'Negative' or 'Positive'
+    options : dict, optional
+        A dictionary of options to be passed to the model.
+
     References
     ----------
     .. [1] SEJ O'Kane, ID Campbell, MWJ Marzook, GJ Offer and M Marinescu. "Physical
@@ -22,7 +25,7 @@ class BasePlating(BaseInterface):
     **Extends:** :class:`pybamm.interface.BaseInterface`
     """
 
-    def __init__(self, param, domain):
+    def __init__(self, param, domain, options=None):
         if domain == "Positive" and not isinstance(
             self, pybamm.lithium_plating.NoPlating
         ):
@@ -30,7 +33,7 @@ class BasePlating(BaseInterface):
                 "Lithium plating models are not implemented for the positive electrode"
             )
         reaction = "lithium plating"
-        super().__init__(param, domain, reaction)
+        super().__init__(param, domain, reaction, options=options)
 
     def _get_standard_concentration_variables(self, c_plated_Li):
         """

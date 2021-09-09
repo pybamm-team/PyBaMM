@@ -23,7 +23,7 @@ class TestMPM(unittest.TestCase):
             model.default_parameter_values[
                 "Negative area-weighted mean particle radius [m]"
             ],
-            1E-05
+            1e-05,
         )
 
     def test_lumped_thermal_model_1D(self):
@@ -136,7 +136,7 @@ class TestMPMWithSEI(unittest.TestCase):
             pybamm.lithium_ion.MPM(options)
 
 
-class TestMPMWithCrack(unittest.TestCase):
+class TestMPMWithMechanics(unittest.TestCase):
     def test_well_posed_negative_cracking_not_implemented(self):
         options = {"particle mechanics": ("swelling and cracking", "none")}
         with self.assertRaises(NotImplementedError):

@@ -14,17 +14,19 @@ class BaseModel(BaseInterface):
         The parameters to use for this submodel
     domain : str
         The domain to implement the model, either: 'Negative' or 'Positive'.
+    options : dict, optional
+        A dictionary of options to be passed to the model.
 
     **Extends:** :class:`pybamm.interface.BaseInterface`
     """
 
-    def __init__(self, param, domain):
+    def __init__(self, param, domain, options=None):
         if domain == "Positive" and not isinstance(self, pybamm.sei.NoSEI):
             raise NotImplementedError(
                 "SEI models are not implemented for the positive electrode"
             )
         reaction = "SEI"
-        super().__init__(param, domain, reaction)
+        super().__init__(param, domain, reaction, options=options)
 
     def _get_standard_thickness_variables(self, L_inner, L_outer):
         """

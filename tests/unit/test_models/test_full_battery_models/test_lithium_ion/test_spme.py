@@ -206,7 +206,7 @@ class TestSPMeWithSEI(unittest.TestCase):
         model.check_well_posedness()
 
 
-class TestSPMeWithCrack(unittest.TestCase):
+class TestSPMeWithMechanics(unittest.TestCase):
     def test_well_posed_negative_cracking(self):
         options = {"particle mechanics": ("swelling and cracking", "none")}
         model = pybamm.lithium_ion.SPMe(options)

@@ -15,17 +15,24 @@ class NoSEI(BaseModel):
         The parameters to use for this submodel
     domain : str
         The domain of the model either 'Negative' or 'Positive'
+    options : dict, optional
+        A dictionary of options to be passed to the model.
 
     **Extends:** :class:`pybamm.sei.BaseModel`
     """
 
-    def __init__(self, param, domain):
-        super().__init__(param, domain)
+    def __init__(self, param, domain, options=None):
+        super().__init__(param, domain, options=options)
 
     def get_fundamental_variables(self):
-        zero = pybamm.FullBroadcast(
-            pybamm.Scalar(0), self.domain.lower() + " electrode", "current collector"
-        )
+        if self.half_cell and self.domain == "Negative":
+            zero = pybamm.PrimaryBroadcast(pybamm.Scalar(0), "current collector")
+        else:
+            zero = pybamm.FullBroadcast(
+                pybamm.Scalar(0),
+                self.domain.lower() + " electrode",
+                "current collector",
+            )
         variables = self._get_standard_thickness_variables(zero, zero)
         variables.update(self._get_standard_concentration_variables(variables))
         variables.update(self._get_standard_reaction_variables(zero, zero))

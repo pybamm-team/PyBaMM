@@ -15,8 +15,7 @@ class InverseButlerVolmer(BaseInterface):
     param
         Model parameters
     domain : iter of str, optional
-        The domain(s) in which to compute the interfacial current. Default is None,
-        in which case j.domain is used.
+        The domain(s) in which to compute the interfacial current.
     reaction : str
         The name of the reaction being implemented
     options: dict
@@ -36,7 +35,12 @@ class InverseButlerVolmer(BaseInterface):
         j0 = self._get_exchange_current_density(variables)
         j_tot_av = self._get_average_total_interfacial_current_density(variables)
         # Broadcast to match j0's domain
-        if j0.domain in [[], ["current collector"]]:
+        if self.half_cell and self.domain == "Negative":
+            # In a half-cell the total interfacial current density is the current
+            # collector current density, not divided by electrode thickness
+            i_boundary_cc = variables["Current collector current density"]
+            j_tot = i_boundary_cc
+        elif j0.domain in [[], ["current collector"]]:
             j_tot = j_tot_av
         else:
             j_tot = pybamm.PrimaryBroadcast(
@@ -114,8 +118,7 @@ class CurrentForInverseButlerVolmer(BaseInterface):
     param
         Model parameters
     domain : iter of str, optional
-        The domain(s) in which to compute the interfacial current. Default is None,
-        in which case j.domain is used.
+        The domain(s) in which to compute the interfacial current.
     reaction : str
         The name of the reaction being implemented
 
@@ -137,6 +140,53 @@ class CurrentForInverseButlerVolmer(BaseInterface):
             self.domain + " electrode lithium plating interfacial current density"
         ]
         j = j_tot - j_sei - j_stripping
+
+        variables.update(self._get_standard_interfacial_current_variables(j))
+
+        if (
+            "Negative electrode" + self.reaction_name + " interfacial current density"
+            in variables
+            and "Positive electrode"
+            + self.reaction_name
+            + " interfacial current density"
+            in variables
+            and self.Reaction_icd not in variables
+        ):
+            variables.update(
+                self._get_standard_whole_cell_interfacial_current_variables(variables)
+            )
+            variables.update(
+                self._get_standard_whole_cell_exchange_current_variables(variables)
+            )
+
+        return variables
+
+
+class CurrentForInverseButlerVolmerLithiumMetal(BaseInterface):
+    """
+    Submodel for the current associated with the inverse Butler-Volmer formulation in
+    a lithium metal cell. This is simply equal to the current collector current density.
+
+    Parameters
+    ----------
+    param
+        Model parameters
+    domain : iter of str, optional
+        The domain(s) in which to compute the interfacial current.
+    reaction : str
+        The name of the reaction being implemented
+    options : dict, optional
+        A dictionary of options to be passed to the model.
+
+    **Extends:** :class:`pybamm.interface.BaseInterface`
+    """
+
+    def __init__(self, param, domain, reaction, options=None):
+        super().__init__(param, domain, reaction, options=options)
+
+    def get_coupled_variables(self, variables):
+        i_boundary_cc = variables["Current collector current density"]
+        j = i_boundary_cc
 
         variables.update(self._get_standard_interfacial_current_variables(j))
 

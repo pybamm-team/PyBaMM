@@ -342,14 +342,13 @@ class QuickPlot(object):
                     # different order based on whether the domains
                     # are x-r, x-z or y-z, etc
                     if (
-                        first_spatial_var_name in ("r", "R") and
-                        second_spatial_var_name == "x"
+                        first_spatial_var_name in ("r", "R")
+                        and second_spatial_var_name == "x"
                     ):
                         self.x_first_and_y_second[variable_tuple] = False
                         self.is_y_z[variable_tuple] = False
                     elif (
-                        first_spatial_var_name == "y" and
-                        second_spatial_var_name == "z"
+                        first_spatial_var_name == "y" and second_spatial_var_name == "z"
                     ):
                         self.x_first_and_y_second[variable_tuple] = True
                         self.is_y_z[variable_tuple] = True
@@ -432,6 +431,11 @@ class QuickPlot(object):
                         for var in variable_list
                     ]
                 )
+                if np.isnan(var_min) or np.isnan(var_max):
+                    raise ValueError(
+                        "The variable limits are set to 'fixed' but the min and max "
+                        "values are NaN"
+                    )
                 if var_min == var_max:
                     var_min -= 1
                     var_max += 1

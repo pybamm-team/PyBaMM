@@ -1,1 +1,5 @@
-from .inverse_butler_volmer import InverseButlerVolmer, CurrentForInverseButlerVolmer
+from .inverse_butler_volmer import (
+    InverseButlerVolmer,
+    CurrentForInverseButlerVolmer,
+    CurrentForInverseButlerVolmerLithiumMetal,
+)

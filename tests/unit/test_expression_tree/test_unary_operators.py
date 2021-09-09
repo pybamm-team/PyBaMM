@@ -238,16 +238,14 @@ class TestUnaryOperators(unittest.TestCase):
             auxiliary_domains={
                 "secondary": "current collector",
                 "tertiary": "some extra domain",
-                "quaternary": "another extra domain"
+                "quaternary": "another extra domain",
             },
         )
         inta_quat = pybamm.Integral(a_quat, x)
         self.assertEqual(inta_quat.domain, ["current collector"])
         self.assertEqual(
-            inta_quat.auxiliary_domains, {
-                "secondary": ["some extra domain"],
-                "tertiary": ["another extra domain"]
-            }
+            inta_quat.auxiliary_domains,
+            {"secondary": ["some extra domain"], "tertiary": ["another extra domain"]},
         )
 
         # space integral *in* secondary domain
@@ -266,10 +264,8 @@ class TestUnaryOperators(unittest.TestCase):
         inta_quat_y = pybamm.Integral(a_quat, y)
         self.assertEqual(inta_quat_y.domain, ["negative electrode"])
         self.assertEqual(
-            inta_quat_y.auxiliary_domains, {
-                "secondary": ["some extra domain"],
-                "tertiary": ["another extra domain"]
-            }
+            inta_quat_y.auxiliary_domains,
+            {"secondary": ["some extra domain"], "tertiary": ["another extra domain"]},
         )
 
         # space integral *in* tertiary domain
@@ -283,10 +279,8 @@ class TestUnaryOperators(unittest.TestCase):
         inta_quat_z = pybamm.Integral(a_quat, z)
         self.assertEqual(inta_quat_z.domain, ["negative electrode"])
         self.assertEqual(
-            inta_quat_z.auxiliary_domains, {
-                "secondary": ["current collector"],
-                "tertiary": ["another extra domain"]
-            }
+            inta_quat_z.auxiliary_domains,
+            {"secondary": ["current collector"], "tertiary": ["another extra domain"]},
         )
 
         # space integral *in* quaternary domain
@@ -294,10 +288,8 @@ class TestUnaryOperators(unittest.TestCase):
         inta_quat_Z = pybamm.Integral(a_quat, Z)
         self.assertEqual(inta_quat_Z.domain, ["negative electrode"])
         self.assertEqual(
-            inta_quat_Z.auxiliary_domains, {
-                "secondary": ["current collector"],
-                "tertiary": ["some extra domain"]
-            }
+            inta_quat_Z.auxiliary_domains,
+            {"secondary": ["current collector"], "tertiary": ["some extra domain"]},
         )
 
         # space integral over two variables
@@ -528,17 +520,14 @@ class TestUnaryOperators(unittest.TestCase):
             auxiliary_domains={
                 "secondary": "current collector",
                 "tertiary": "bla",
-                "quaternary": "another domain"
+                "quaternary": "another domain",
             },
         )
         boundary_a_quat = pybamm.boundary_value(a_quat, "right")
         self.assertEqual(boundary_a_quat.domain, ["current collector"])
         self.assertEqual(
             boundary_a_quat.auxiliary_domains,
-            {
-                "secondary": ["bla"],
-                "tertiary": ["another domain"]
-            }
+            {"secondary": ["bla"], "tertiary": ["another domain"]},
         )
 
         # error if boundary value on tabs and domain is not "current collector"
@@ -579,6 +568,14 @@ class TestUnaryOperators(unittest.TestCase):
         # x-average of concatenation of broadcasts
         conc_broad = pybamm.concatenation(
             pybamm.PrimaryBroadcast(1, ["negative electrode"]),
+            pybamm.PrimaryBroadcast(2, ["separator"]),
+            pybamm.PrimaryBroadcast(3, ["positive electrode"]),
+        )
+        average_conc_broad = pybamm.x_average(conc_broad)
+        self.assertIsInstance(average_conc_broad, pybamm.Division)
+        self.assertEqual(average_conc_broad.domain, [])
+        # separator and positive electrode only (half-cell model)
+        conc_broad = pybamm.concatenation(
             pybamm.PrimaryBroadcast(2, ["separator"]),
             pybamm.PrimaryBroadcast(3, ["positive electrode"]),
         )
@@ -709,10 +706,7 @@ class TestUnaryOperators(unittest.TestCase):
         b = pybamm.FullBroadcast(
             1,
             ["negative particle"],
-            {
-                "secondary": "negative electrode",
-                "tertiary": "current collector"
-            }
+            {"secondary": "negative electrode", "tertiary": "current collector"},
         )
         # no "particle size" domain
         average_b = pybamm.size_average(b)
@@ -745,7 +739,7 @@ class TestUnaryOperators(unittest.TestCase):
         symbol_on_edges = pybamm.PrimaryBroadcastToEdges(1, "domain")
         with self.assertRaisesRegex(
             ValueError,
-            """Can't take the size-average of a symbol that evaluates on edges"""
+            """Can't take the size-average of a symbol that evaluates on edges""",
         ):
             pybamm.size_average(symbol_on_edges)
 

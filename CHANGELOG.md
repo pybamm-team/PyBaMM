@@ -1,3 +1,9 @@
+# [Unreleased](https://github.com/pybamm-team/PyBaMM)
+
+## Features
+
+-   The DFN model can now be used directly (instead of `BasicDFNHalfCell`) to simulate a half-cell ([#1600](https://github.com/pybamm-team/PyBaMM/pull/1600))
+
 # [v21.08](https://github.com/pybamm-team/PyBaMM/tree/v21.08) - 2021-08-26
 
 This release introduces:

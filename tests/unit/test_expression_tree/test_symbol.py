@@ -5,6 +5,7 @@ import os
 import unittest
 
 import numpy as np
+from scipy.sparse.csr import csr_matrix
 import sympy
 from scipy.sparse import coo_matrix
 
@@ -308,6 +309,12 @@ class TestSymbol(unittest.TestCase):
         ):
             (a + a).simplify()
 
+    def test_simplify_if_constant(self):
+        m = pybamm.Matrix(np.zeros((10, 10)))
+        m_simp = pybamm.simplify_if_constant(m)
+        self.assertIsInstance(m_simp, pybamm.Matrix)
+        self.assertIsInstance(m_simp.entries, csr_matrix)
+
     def test_symbol_repr(self):
         """
         test that __repr___ returns the string
@@ -363,45 +370,12 @@ class TestSymbol(unittest.TestCase):
         )
 
     def test_symbol_visualise(self):
-
-        param = pybamm.LithiumIonParameters()
-
-        zero_n = pybamm.FullBroadcast(0, ["negative electrode"], "current collector")
-        zero_s = pybamm.FullBroadcast(0, ["separator"], "current collector")
-        zero_p = pybamm.FullBroadcast(0, ["positive electrode"], "current collector")
-
-        zero_nsp = pybamm.concatenation(zero_n, zero_s, zero_p)
-
-        v_box = pybamm.Scalar(0)
-
-        variables = {
-            "Porosity": param.epsilon,
-            "Negative electrode porosity": param.epsilon_n,
-            "Separator porosity": param.epsilon_s,
-            "Positive electrode porosity": param.epsilon_p,
-            "Electrolyte tortuosity": param.epsilon ** 1.5,
-            "Porosity change": zero_nsp,
-            "Electrolyte current density": zero_nsp,
-            "Volume-averaged velocity": v_box,
-            "Interfacial current density": zero_nsp,
-            "Oxygen interfacial current density": zero_nsp,
-            "Cell temperature": pybamm.concatenation(zero_n, zero_s, zero_p),
-            "Transverse volume-averaged acceleration": pybamm.concatenation(
-                zero_n, zero_s, zero_p
-            ),
-            "Sum of electrolyte reaction source terms": zero_nsp,
-        }
-        model = pybamm.electrolyte_diffusion.Full(param)
-        variables.update(model.get_fundamental_variables())
-        variables.update(model.get_coupled_variables(variables))
-
-        model.set_rhs(variables)
-
-        rhs = list(model.rhs.values())[0]
-        rhs.visualise("StefanMaxwell_test.png")
-        self.assertTrue(os.path.exists("StefanMaxwell_test.png"))
+        c = pybamm.Variable("c", "negative electrode")
+        sym = pybamm.div(c * pybamm.grad(c)) + (c / 2 + c - 1) ** 5
+        sym.visualise("test_visualize.png")
+        self.assertTrue(os.path.exists("test_visualize.png"))
         with self.assertRaises(ValueError):
-            rhs.visualise("StefanMaxwell_test")
+            sym.visualise("test_visualize")
 
     def test_has_spatial_derivatives(self):
         var = pybamm.Variable("var", domain="test")

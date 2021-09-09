@@ -202,7 +202,7 @@ class TestDFNWithSEI(unittest.TestCase):
         model.check_well_posedness()
 
 
-class TestDFNWithCrack(unittest.TestCase):
+class TestDFNWithMechanics(unittest.TestCase):
     def test_well_posed_negative_cracking(self):
         options = {"particle mechanics": ("swelling and cracking", "none")}
         model = pybamm.lithium_ion.DFN(options)
