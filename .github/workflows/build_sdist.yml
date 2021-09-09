@@ -1,0 +1,64 @@
+name: "Build and publish Python Source Distribution"
+
+on:
+  push:
+    branches: main
+  workflow_dispatch:
+    inputs:
+      target:
+        description: 'Deployment target. Can be "pypi" or "testpypi"'
+        default: 'pypi'
+
+jobs:
+  build_sdist:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: [3.8]
+
+    steps:
+    - uses: actions/checkout@v2
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v2
+      with:
+        python-version: ${{ matrix.python-version }}
+
+      - name: Build sdist
+        run: python setup.py sdist --formats=gztar,zip
+
+      - name: Upload sdist
+        uses: actions/upload-artifact@v2
+        with:
+          name: files
+          path: |
+            ./dist/*.tar.gz
+            ./dist/*.zip
+          if-no-files-found: error
+
+
+  publish-pypi:
+    name: Upload sdist to PyPI
+    needs: build_sdist
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download sdist
+        uses: actions/download-artifact@v2
+        with:
+          name: files
+
+      - name: Publish sdist on PyPI
+        if: github.event.inputs.target == 'pypi'
+        uses: pypa/gh-action-pypi-publish@master
+        with:
+          user: __token__
+          password: ${{ secrets.PYPI_TOKEN }}
+          packages_dir: sdist/
+
+      - name: Publish sdist on TestPyPI
+        if: github.event.inputs.target == 'testpypi'
+        uses: pypa/gh-action-pypi-publish@master
+        with:
+          user: __token__
+          password: ${{ secrets.TESTPYPI_TOKEN }}
+          packages_dir: sdist/
+          repository_url: https://test.pypi.org/legacy/
