@@ -1,6 +1,8 @@
 name: "Build and publish Python Source Distribution"
 
 on:
+  push:
+    branches: main
   workflow_dispatch:
     inputs:
       target:
