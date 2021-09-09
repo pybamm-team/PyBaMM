@@ -58,7 +58,7 @@ class Solution(object):
         t_event=None,
         y_event=None,
         termination="final time",
-        sensitivities=False
+        sensitivities=False,
     ):
         if not isinstance(all_ts, list):
             all_ts = [all_ts]
@@ -136,19 +136,16 @@ class Solution(object):
         self.set_y()
 
         # extract sensitivities from full y solution
-        self._y, self._sensitivities = \
-            self._extract_explicit_sensitivities(
-                self.all_models[0], self.y, self.t, self.all_inputs[0]
-            )
+        self._y, self._sensitivities = self._extract_explicit_sensitivities(
+            self.all_models[0], self.y, self.t, self.all_inputs[0]
+        )
 
         # make sure we remove all sensitivities from all_ys
         for index, (model, ys, ts, inputs) in enumerate(
-            zip(self.all_models, self.all_ys, self.all_ts,
-                self.all_inputs)
+            zip(self.all_models, self.all_ys, self.all_ts, self.all_inputs)
         ):
-            self._all_ys[index], _ = \
-                self._extract_explicit_sensitivities(
-                    model, ys, ts, inputs
+            self._all_ys[index], _ = self._extract_explicit_sensitivities(
+                model, ys, ts, inputs
             )
 
     def _extract_explicit_sensitivities(self, model, y, t_eval, inputs):
@@ -212,9 +209,7 @@ class Solution(object):
         else:
             y_full = y
         ode_sens = y_full[n_rhs:len_rhs_and_sens, :].reshape(n_p, n_rhs, n_t)
-        alg_sens = y_full[len_rhs_and_sens + n_alg :, :].reshape(
-            n_p, n_alg, n_t
-        )
+        alg_sens = y_full[len_rhs_and_sens + n_alg :, :].reshape(n_p, n_alg, n_t)
         # 2. Concatenate into a single 3D matrix with shape (n_p, n_states, n_t)
         # i.e. along first axis
         full_sens_matrix = np.concatenate([ode_sens, alg_sens], axis=1)
@@ -287,7 +282,7 @@ class Solution(object):
         """Updates the sensitivity"""
         # sensitivities must be a dict or bool
         if not isinstance(value, (bool, dict)):
-            raise TypeError('sensitivities arg needs to be a bool or dict')
+            raise TypeError("sensitivities arg needs to be a bool or dict")
         self._sensitivities = value
 
     def set_y(self):
@@ -651,7 +646,7 @@ class Solution(object):
         return self._sub_solutions
 
     def __add__(self, other):
-        """ Adds two solutions together, e.g. when stepping """
+        """Adds two solutions together, e.g. when stepping"""
         if not isinstance(other, Solution):
             raise pybamm.SolverError(
                 "Only a Solution or None can be added to a Solution"
@@ -826,14 +821,10 @@ def get_cycle_summary_variables(cycle_solution, esoh_sim):
         "Total lithium lost [mol]",
         "Total lithium lost from particles [mol]",
         "Total lithium lost from electrolyte [mol]",
-        "Loss of lithium to negative electrode SEI [mol]",
-        "Loss of lithium to positive electrode SEI [mol]",
-        "Loss of lithium to negative electrode lithium plating [mol]",
-        "Loss of lithium to positive electrode lithium plating [mol]",
-        "Loss of capacity to negative electrode SEI [A.h]",
-        "Loss of capacity to positive electrode SEI [A.h]",
-        "Loss of capacity to negative electrode lithium plating [A.h]",
-        "Loss of capacity to positive electrode lithium plating [A.h]",
+        "Loss of lithium to SEI [mol]",
+        "Loss of lithium to lithium plating [mol]",
+        "Loss of capacity to SEI [A.h]",
+        "Loss of capacity to lithium plating [A.h]",
         "Total lithium lost to side reactions [mol]",
         "Total capacity lost to side reactions [A.h]",
         # Resistance

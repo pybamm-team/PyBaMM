@@ -83,16 +83,12 @@ class BaseInterface(pybamm.BaseSubModel):
 
                     # as c_e must now be a scalar, re-broadcast to
                     # "current collector"
-                    c_e = pybamm.PrimaryBroadcast(
-                        c_e, ["current collector"],
-                    )
+                    c_e = pybamm.PrimaryBroadcast(c_e, ["current collector"])
                 # broadcast c_e, T onto "particle size"
                 c_e = pybamm.PrimaryBroadcast(
                     c_e, [self.domain.lower() + " particle size"]
                 )
-                T = pybamm.PrimaryBroadcast(
-                    T, [self.domain.lower() + " particle size"]
-                )
+                T = pybamm.PrimaryBroadcast(T, [self.domain.lower() + " particle size"])
 
             else:
                 c_s_surf = variables[self.domain + " particle surface concentration"]
@@ -171,22 +167,18 @@ class BaseInterface(pybamm.BaseSubModel):
                     self.domain + " particle surface concentration distribution"
                 ]
                 # If variable was broadcast, take only the orphan
-                if (
-                    isinstance(c_s_surf, pybamm.Broadcast)
-                    and isinstance(T, pybamm.Broadcast)
+                if isinstance(c_s_surf, pybamm.Broadcast) and isinstance(
+                    T, pybamm.Broadcast
                 ):
                     c_s_surf = c_s_surf.orphans[0]
                     T = T.orphans[0]
-                T = pybamm.PrimaryBroadcast(
-                    T, [self.domain.lower() + " particle size"]
-                )
+                T = pybamm.PrimaryBroadcast(T, [self.domain.lower() + " particle size"])
             else:
                 c_s_surf = variables[self.domain + " particle surface concentration"]
 
                 # If variable was broadcast, take only the orphan
-                if (
-                    isinstance(c_s_surf, pybamm.Broadcast)
-                    and isinstance(T, pybamm.Broadcast)
+                if isinstance(c_s_surf, pybamm.Broadcast) and isinstance(
+                    T, pybamm.Broadcast
                 ):
                     c_s_surf = c_s_surf.orphans[0]
                     T = T.orphans[0]
@@ -395,13 +387,14 @@ class BaseInterface(pybamm.BaseSubModel):
         j = pybamm.concatenation(j_n, j_s, j_p)
         j_dim = pybamm.concatenation(j_n_scale * j_n, j_s, j_p_scale * j_p)
 
-        variables.update(
-            {
-                self.Reaction_icd: j,
-                self.Reaction_icd + " [A.m-2]": j_dim,
-                self.Reaction_icd + " per volume [A.m-3]": i_typ / L_x * j,
-            }
-        )
+        if self.reaction not in ["SEI", "lithium plating"]:
+            variables.update(
+                {
+                    self.Reaction_icd: j,
+                    self.Reaction_icd + " [A.m-2]": j_dim,
+                    self.Reaction_icd + " per volume [A.m-3]": i_typ / L_x * j,
+                }
+            )
 
         a_n = variables["Negative electrode surface area to volume ratio"]
         a_p = variables["Positive electrode surface area to volume ratio"]
@@ -577,16 +570,11 @@ class BaseInterface(pybamm.BaseSubModel):
         elif eta_sei.domain == ["current collector"]:
             eta_sei = pybamm.PrimaryBroadcast(eta_sei, self.domain_for_broadcast)
 
-        Domain = self.domain + " electrode"
-        domain = Domain.lower()
-
         variables = {
-            Domain + " SEI film overpotential": eta_sei,
-            "X-averaged " + domain + " SEI film overpotential": eta_sei_av,
-            Domain + " SEI film overpotential [V]": eta_sei * pot_scale,
-            "X-averaged "
-            + domain
-            + " SEI film overpotential [V]": eta_sei_av * pot_scale,
+            "SEI film overpotential": eta_sei,
+            "X-averaged SEI film overpotential": eta_sei_av,
+            "SEI film overpotential [V]": eta_sei * pot_scale,
+            "X-averaged SEI film overpotential [V]": eta_sei_av * pot_scale,
         }
 
         return variables
@@ -714,11 +702,9 @@ class BaseInterface(pybamm.BaseSubModel):
             j_xav = pybamm.x_average(j)
         else:
             j_xav = j
-            j = pybamm.SecondaryBroadcast(
-                j_xav, [self.domain.lower() + " electrode"]
-            )
+            j = pybamm.SecondaryBroadcast(j_xav, [self.domain.lower() + " electrode"])
 
-        #j scale
+        # j scale
         i_typ = self.param.i_typ
         L_x = self.param.L_x
         if self.domain == "Negative":
@@ -824,7 +810,8 @@ class BaseInterface(pybamm.BaseSubModel):
             domain_reaction: eta_r,
             "X-averaged " + domain_reaction.lower() + " distribution": eta_r_av,
             domain_reaction + " [V]": eta_r * pot_scale,
-            "X-averaged " + domain_reaction.lower()
+            "X-averaged "
+            + domain_reaction.lower()
             + " distribution [V]": eta_r_av * pot_scale,
         }
 
@@ -879,7 +866,8 @@ class BaseInterface(pybamm.BaseSubModel):
         if self.reaction_name == "":
             variables.update(
                 {
-                    self.domain + " electrode entropic change"
+                    self.domain
+                    + " electrode entropic change"
                     + " (size-dependent)": dUdT,
                     "X-averaged "
                     + self.domain.lower()

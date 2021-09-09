@@ -269,15 +269,9 @@ class ParticleConcentrationTests(BaseOutputTest):
         self.N_s_n = solution["Negative particle flux"]
         self.N_s_p = solution["Positive particle flux"]
 
-        self.c_SEI_n_tot = solution["Loss of lithium to negative electrode SEI [mol]"]
-        self.c_SEI_p_tot = solution["Loss of lithium to positive electrode SEI [mol]"]
+        self.c_SEI_tot = solution["Loss of lithium to SEI [mol]"]
 
-        self.c_Li_n_tot = solution[
-            "Loss of lithium to negative electrode lithium plating [mol]"
-        ]
-        self.c_Li_p_tot = solution[
-            "Loss of lithium to positive electrode lithium plating [mol]"
-        ]
+        self.c_Li_n_tot = solution["Loss of lithium to lithium plating [mol]"]
 
         if model.options["particle size"] == "distribution":
             # These concentration variables are only present for distribution models.
@@ -318,22 +312,18 @@ class ParticleConcentrationTests(BaseOutputTest):
             R_n, R_p = self.R_n, self.R_p
             # Test the concentration variables that depend on x-R (surface values only,
             # as 3D vars not implemented)
-            neg_diff = (
-                self.c_s_n_surf_dist(t[1:], x=x_n, R=R_n)
-                - self.c_s_n_surf_dist(t[:-1], x=x_n, R=R_n)
+            neg_diff = self.c_s_n_surf_dist(t[1:], x=x_n, R=R_n) - self.c_s_n_surf_dist(
+                t[:-1], x=x_n, R=R_n
             )
-            pos_diff = (
-                self.c_s_p_surf_dist(t[1:], x=x_p, R=R_p)
-                - self.c_s_p_surf_dist(t[:-1], x=x_p, R=R_p)
+            pos_diff = self.c_s_p_surf_dist(t[1:], x=x_p, R=R_p) - self.c_s_p_surf_dist(
+                t[:-1], x=x_p, R=R_p
             )
-            neg_end_vs_start = (
-                self.c_s_n_surf_dist(t[-1], x=x_n, R=R_n)
-                - self.c_s_n_surf_dist(t[0], x=x_n, R=R_n)
-            )
-            pos_end_vs_start = (
-                self.c_s_p_surf_dist(t[-1], x=x_p, R=R_p)
-                - self.c_s_p_surf_dist(t[0], x=x_p, R=R_p)
-            )
+            neg_end_vs_start = self.c_s_n_surf_dist(
+                t[-1], x=x_n, R=R_n
+            ) - self.c_s_n_surf_dist(t[0], x=x_n, R=R_n)
+            pos_end_vs_start = self.c_s_p_surf_dist(
+                t[-1], x=x_p, R=R_p
+            ) - self.c_s_p_surf_dist(t[0], x=x_p, R=R_p)
             tol = 1e-15
         else:
             neg_diff = self.c_s_n(t[1:], x_n, r_n) - self.c_s_n(t[:-1], x_n, r_n)
@@ -660,14 +650,8 @@ class CurrentTests(BaseOutputTest):
         self.j_p_av = solution[
             "X-averaged positive electrode interfacial current density"
         ]
-        self.j_n_sei = solution["Negative electrode SEI interfacial current density"]
-        self.j_p_sei = solution["Positive electrode SEI interfacial current density"]
-        self.j_n_sei_av = solution[
-            "X-averaged negative electrode SEI interfacial current density"
-        ]
-        self.j_p_sei_av = solution[
-            "X-averaged positive electrode SEI interfacial current density"
-        ]
+        self.j_n_sei = solution["SEI interfacial current density"]
+        self.j_n_sei_av = solution["X-averaged SEI interfacial current density"]
 
         self.j0_n = solution["Negative electrode exchange current density"]
         self.j0_p = solution["Positive electrode exchange current density"]

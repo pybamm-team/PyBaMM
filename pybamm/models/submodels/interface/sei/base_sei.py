@@ -12,19 +12,36 @@ class BaseModel(BaseInterface):
     ----------
     param : parameter class
         The parameters to use for this submodel
-    domain : str
-        The domain to implement the model, either: 'Negative' or 'Positive'.
 
     **Extends:** :class:`pybamm.interface.BaseInterface`
     """
 
-    def __init__(self, param, domain):
-        if domain == "Positive" and not isinstance(self, pybamm.sei.NoSEI):
-            raise NotImplementedError(
-                "SEI models are not implemented for the positive electrode"
-            )
+    def __init__(self, param):
         reaction = "SEI"
+        domain = "Negative"
         super().__init__(param, domain, reaction)
+
+    def get_coupled_variables(self, variables):
+        # Update some common variables
+        zero_av = pybamm.PrimaryBroadcast(0, "current collector")
+        zero = pybamm.FullBroadcast(0, "positive electrode", "current collector")
+
+        variables.update(
+            {
+                "X-averaged negative electrode SEI interfacial current "
+                "density": variables["X-averaged SEI interfacial current density"],
+                "X-averaged positive electrode SEI interfacial current "
+                "density": zero_av,
+                "Negative electrode SEI interfacial current "
+                "density": variables["SEI interfacial current density"],
+                "Positive electrode SEI interfacial current density": zero,
+            }
+        )
+        variables.update(
+            self._get_standard_whole_cell_interfacial_current_variables(variables)
+        )
+
+        return variables
 
     def _get_standard_thickness_variables(self, L_inner, L_outer):
         """
@@ -44,7 +61,6 @@ class BaseModel(BaseInterface):
             The variables which can be derived from the SEI thicknesses.
         """
         param = self.param
-        domain = self.domain.lower() + " electrode"
 
         # Set length scale to one for the "no SEI" model so that it is not
         # required by parameter values in general
@@ -59,18 +75,18 @@ class BaseModel(BaseInterface):
         L_tot_av = L_inner_av + L_outer_av
 
         variables = {
-            "Inner " + domain + " SEI thickness": L_inner,
-            "Inner " + domain + " SEI thickness [m]": L_inner * L_scale,
-            "X-averaged inner " + domain + " SEI thickness": L_inner_av,
-            "X-averaged inner " + domain + " SEI thickness [m]": L_inner_av * L_scale,
-            "Outer " + domain + " SEI thickness": L_outer,
-            "Outer " + domain + " SEI thickness [m]": L_outer * L_scale,
-            "X-averaged outer " + domain + " SEI thickness": L_outer_av,
-            "X-averaged outer " + domain + " SEI thickness [m]": L_outer_av * L_scale,
+            "Inner SEI thickness": L_inner,
+            "Inner SEI thickness [m]": L_inner * L_scale,
+            "X-averaged inner SEI thickness": L_inner_av,
+            "X-averaged inner SEI thickness [m]": L_inner_av * L_scale,
+            "Outer SEI thickness": L_outer,
+            "Outer SEI thickness [m]": L_outer * L_scale,
+            "X-averaged outer SEI thickness": L_outer_av,
+            "X-averaged outer SEI thickness [m]": L_outer_av * L_scale,
             self.domain + " electrode SEI thickness": L_tot,
             self.domain + " electrode SEI thickness [m]": L_tot * L_scale,
-            "X-averaged " + domain + " SEI thickness": L_tot_av,
-            "X-averaged " + domain + " SEI thickness [m]": L_tot_av * L_scale,
+            "X-averaged SEI thickness": L_tot_av,
+            "X-averaged SEI thickness [m]": L_tot_av * L_scale,
         }
 
         # Get variables related to the total thickness
@@ -81,7 +97,6 @@ class BaseModel(BaseInterface):
 
     def _get_standard_total_thickness_variables(self, L_sei):
         """Update variables related to total SEI thickness."""
-        domain = self.domain.lower() + " electrode"
         if isinstance(self, pybamm.sei.NoSEI):
             L_scale = 1
             R_sei_dim = 1
@@ -91,10 +106,10 @@ class BaseModel(BaseInterface):
         L_sei_av = pybamm.x_average(L_sei)
 
         variables = {
-            "Total " + domain + " SEI thickness": L_sei,
-            "Total " + domain + " SEI thickness [m]": L_sei * L_scale,
-            "X-averaged total " + domain + " SEI thickness": L_sei_av,
-            "X-averaged total " + domain + " SEI thickness [m]": L_sei_av * L_scale,
+            "Total SEI thickness": L_sei,
+            "Total SEI thickness [m]": L_sei * L_scale,
+            "X-averaged total SEI thickness": L_sei_av,
+            "X-averaged total SEI thickness [m]": L_sei_av * L_scale,
             "X-averaged "
             + self.domain.lower()
             + " electrode resistance [Ohm.m2]": L_sei_av * L_scale * R_sei_dim,
@@ -104,7 +119,6 @@ class BaseModel(BaseInterface):
     def _get_standard_concentration_variables(self, variables):
         """Update variables related to the SEI concentration."""
         param = self.param
-        domain = self.domain.lower() + " electrode"
 
         # Set scales to one for the "no SEI" model so that they are not required
         # by parameter values in general
@@ -131,8 +145,8 @@ class BaseModel(BaseInterface):
                 L_outer_0 = param.L_outer_0
                 li_mols_per_sei_mols = 1
 
-        L_inner = variables["Inner " + domain + " SEI thickness"]
-        L_outer = variables["Outer " + domain + " SEI thickness"]
+        L_inner = variables["Inner SEI thickness"]
+        L_outer = variables["Outer SEI thickness"]
 
         n_inner = L_inner  # inner SEI concentration
         n_outer = L_outer  # outer SEI concentration
@@ -154,24 +168,15 @@ class BaseModel(BaseInterface):
 
         variables.update(
             {
-                "Inner " + domain + " SEI concentration [mol.m-3]": n_inner * n_scale,
-                "X-averaged inner "
-                + domain
-                + " SEI concentration [mol.m-3]": n_inner_av * n_scale,
-                "Outer "
-                + domain
-                + " SEI concentration [mol.m-3]": n_outer * n_outer_scale,
-                "X-averaged outer "
-                + domain
-                + " SEI concentration [mol.m-3]": n_outer_av * n_outer_scale,
-                self.domain + " SEI concentration [mol.m-3]": n_SEI * n_scale,
-                "X-averaged "
-                + domain
-                + " SEI concentration [mol.m-3]": n_SEI_av * n_scale,
-                "Loss of lithium to " + domain + " SEI [mol]": Q_sei * n_scale,
-                "Loss of capacity to "
-                + domain
-                + " SEI [A.h]": Q_sei * n_scale * self.param.F / 3600,
+                "Inner SEI concentration [mol.m-3]": n_inner * n_scale,
+                "X-averaged inner SEI concentration [mol.m-3]": n_inner_av * n_scale,
+                "Outer SEI concentration [mol.m-3]": n_outer * n_outer_scale,
+                "X-averaged outer SEI concentration [mol.m-3]": n_outer_av
+                * n_outer_scale,
+                "SEI concentration [mol.m-3]": n_SEI * n_scale,
+                "X-averaged SEI concentration [mol.m-3]": n_SEI_av * n_scale,
+                "Loss of lithium to SEI [mol]": Q_sei * n_scale,
+                "Loss of capacity to SEI [A.h]": Q_sei * n_scale * self.param.F / 3600,
             }
         )
 
@@ -201,25 +206,17 @@ class BaseModel(BaseInterface):
         j_i_av = pybamm.x_average(j_inner)
         j_o_av = pybamm.x_average(j_outer)
 
-        domain = self.domain.lower() + " electrode"
-
         variables = {
-            "Inner " + domain + " SEI interfacial current density": j_inner,
-            "Inner "
-            + domain
-            + " SEI interfacial current density [A.m-2]": j_inner * j_scale,
-            "X-averaged inner " + domain + " SEI interfacial current density": j_i_av,
-            "X-averaged inner "
-            + domain
-            + " SEI interfacial current density [A.m-2]": j_i_av * j_scale,
-            "Outer " + domain + " SEI interfacial current density": j_outer,
-            "Outer "
-            + domain
-            + " SEI interfacial current density [A.m-2]": j_outer * j_scale,
-            "X-averaged outer " + domain + " SEI interfacial current density": j_o_av,
-            "X-averaged outer "
-            + domain
-            + " SEI interfacial current density [A.m-2]": j_o_av * j_scale,
+            "Inner SEI interfacial current density": j_inner,
+            "Inner SEI interfacial current density [A.m-2]": j_inner * j_scale,
+            "X-averaged inner SEI interfacial current density": j_i_av,
+            "X-averaged inner SEI interfacial current density [A.m-2]": j_i_av
+            * j_scale,
+            "Outer SEI interfacial current density": j_outer,
+            "Outer SEI interfacial current density [A.m-2]": j_outer * j_scale,
+            "X-averaged outer SEI interfacial current density": j_o_av,
+            "X-averaged outer SEI interfacial current density [A.m-2]": j_o_av
+            * j_scale,
         }
 
         j_sei = j_inner + j_outer
@@ -236,16 +233,11 @@ class BaseModel(BaseInterface):
 
         j_sei_av = pybamm.x_average(j_sei)
 
-        domain = self.domain.lower() + " electrode"
-        Domain = domain.capitalize()
-
         variables = {
-            Domain + " SEI interfacial current density": j_sei,
-            Domain + " SEI interfacial current density [A.m-2]": j_sei * j_scale,
-            "X-averaged " + domain + " SEI interfacial current density": j_sei_av,
-            "X-averaged "
-            + domain
-            + " SEI interfacial current density [A.m-2]": j_sei_av * j_scale,
+            "SEI interfacial current density": j_sei,
+            "SEI interfacial current density [A.m-2]": j_sei * j_scale,
+            "X-averaged SEI interfacial current density": j_sei_av,
+            "X-averaged SEI interfacial current density [A.m-2]": j_sei_av * j_scale,
         }
 
         return variables
