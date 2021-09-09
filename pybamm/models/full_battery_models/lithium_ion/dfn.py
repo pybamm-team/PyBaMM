@@ -164,9 +164,7 @@ class DFN(BaseModel):
         if self.half_cell:
             self.submodels[
                 "counter electrode potential"
-            ] = pybamm.electrode.ohm.LithiumMetalExplicit(
-                self.param, "Negative", self.options
-            )
+            ] = pybamm.electrode.ohm.LithiumMetalExplicit(self.param, self.options)
 
     def set_electrolyte_submodel(self):
 

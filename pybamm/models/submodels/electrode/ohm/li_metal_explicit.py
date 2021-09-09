@@ -11,20 +11,14 @@ class LithiumMetalExplicit(BaseModel):
     ----------
     param : parameter class
         The parameters to use for this submodel
-    domain : str
-        Either 'Negative' or 'Positive'
     options : dict, optional
         A dictionary of options to be passed to the model.
 
     **Extends:** :class:`pybamm.electrode.ohm.BaseModel`
     """
 
-    def __init__(self, param, domain, options=None):
-        super().__init__(param, domain, options=options)
-        if self.domain == "Positive":
-            raise NotImplementedError(
-                "LithiumMetalExplicit model only implemented in negative electrode"
-            )
+    def __init__(self, param, options=None):
+        super().__init__(param, "Negative", options=options)
 
     def get_coupled_variables(self, variables):
         param = self.param

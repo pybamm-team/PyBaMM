@@ -5,6 +5,7 @@ import os
 import unittest
 
 import numpy as np
+from scipy.sparse.csr import csr_matrix
 import sympy
 from scipy.sparse import coo_matrix
 
@@ -308,6 +309,12 @@ class TestSymbol(unittest.TestCase):
         ):
             (a + a).simplify()
 
+    def test_simplify_if_constant(self):
+        m = pybamm.Matrix(np.zeros((10, 10)))
+        m_simp = pybamm.simplify_if_constant(m)
+        self.assertIsInstance(m_simp, pybamm.Matrix)
+        self.assertIsInstance(m_simp.entries, csr_matrix)
+
     def test_symbol_repr(self):
         """
         test that __repr___ returns the string
@@ -364,7 +371,7 @@ class TestSymbol(unittest.TestCase):
 
     def test_symbol_visualise(self):
         c = pybamm.Variable("c", "negative electrode")
-        sym = pybamm.div(c * pybamm.grad(c))
+        sym = pybamm.div(c * pybamm.grad(c)) + (c / 2 + c - 1) ** 5
         sym.visualise("test_visualize.png")
         self.assertTrue(os.path.exists("test_visualize.png"))
         with self.assertRaises(ValueError):

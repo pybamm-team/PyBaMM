@@ -598,7 +598,7 @@ class Integral(SpatialOperator):
             domain = child.domain
             auxiliary_domains = {
                 "secondary": child.auxiliary_domains["secondary"],
-                "tertiary": child.auxiliary_domains["tertiary"]
+                "tertiary": child.auxiliary_domains["tertiary"],
             }
         if any(isinstance(var, pybamm.SpatialVariable) for var in integration_variable):
             name += " {}".format(child.domain)
@@ -1302,16 +1302,14 @@ def x_average(symbol):
         # Even if domain is "negative electrode", "separator", or
         # "positive electrode", and we know l, we still compute it as Integral(1, x)
         # as this will be easier to identify for simplifications later on
-        if (
-            symbol.domain == ["negative particle"] or
-            symbol.domain == ["negative particle size"]
-        ):
+        if symbol.domain == ["negative particle"] or symbol.domain == [
+            "negative particle size"
+        ]:
             x = pybamm.standard_spatial_vars.x_n
             l = geo.l_n
-        elif (
-            symbol.domain == ["positive particle"] or
-            symbol.domain == ["positive particle size"]
-        ):
+        elif symbol.domain == ["positive particle"] or symbol.domain == [
+            "positive particle size"
+        ]:
             x = pybamm.standard_spatial_vars.x_p
             l = geo.l_p
         else:
@@ -1488,17 +1486,15 @@ def size_average(symbol):
 
     # If symbol is a primary broadcast to "particle size", take the orphan
     elif isinstance(symbol, pybamm.PrimaryBroadcast) and symbol.domain in [
-        ["negative particle size"], ["positive particle size"]
+        ["negative particle size"],
+        ["positive particle size"],
     ]:
         return symbol.orphans[0]
     # If symbol is a secondary broadcast to "particle size" from "particle",
     # take the orphan
-    elif (
-        isinstance(symbol, pybamm.SecondaryBroadcast) and
-        symbol.domains["secondary"] in [
-            ["negative particle size"], ["positive particle size"]
-        ]
-    ):
+    elif isinstance(symbol, pybamm.SecondaryBroadcast) and symbol.domains[
+        "secondary"
+    ] in [["negative particle size"], ["positive particle size"]]:
         return symbol.orphans[0]
     # Otherwise, perform the integration in R
     else:
