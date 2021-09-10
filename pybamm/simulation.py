@@ -392,21 +392,46 @@ class Simulation:
                     ] = new_model.param.current_with_time
 
                     # add current events to the model
-                    # current events both negative and positive to catch specification
-                    new_model.events.extend(
-                        [
-                            pybamm.Event(
-                                "Current cut-off (positive) [A] [experiment]",
-                                new_model.variables["Current [A]"]
-                                - abs(pybamm.InputParameter("Current cut-off [A]")),
-                            ),
+                    if op_inputs["CCCV switch"] == 1:
+                        # for the CCCV model we need to make sure that the current
+                        # cut-off is only reached at the end of the CV phase
+                        # Current is negative for a charge so this event will be
+                        # negative until it is zero
+                        # So we take away a large number times a heaviside switch
+                        # for the CV phase to make sure that the event can only be
+                        # hit during CV
+                        new_model.events.append(
                             pybamm.Event(
                                 "Current cut-off (negative) [A] [experiment]",
                                 new_model.variables["Current [A]"]
-                                + abs(pybamm.InputParameter("Current cut-off [A]")),
-                            ),
-                        ]
-                    )
+                                + abs(pybamm.InputParameter("Current cut-off [A]"))
+                                - 1e4
+                                * (
+                                    new_model.variables["Terminal voltage [V]"]
+                                    < (
+                                        pybamm.InputParameter("Voltage input [V]")
+                                        - 1e-4
+                                    )
+                                ),
+                            )
+                        )
+                    else:
+                        # current events both negative and positive to catch
+                        # specification
+                        new_model.events.extend(
+                            [
+                                pybamm.Event(
+                                    "Current cut-off (positive) [A] [experiment]",
+                                    new_model.variables["Current [A]"]
+                                    - abs(pybamm.InputParameter("Current cut-off [A]")),
+                                ),
+                                pybamm.Event(
+                                    "Current cut-off (negative) [A] [experiment]",
+                                    new_model.variables["Current [A]"]
+                                    + abs(pybamm.InputParameter("Current cut-off [A]")),
+                                ),
+                            ]
+                        )
                     if op_inputs["Voltage switch"] == 1:
                         new_model.algebraic[
                             i_cell
@@ -424,7 +449,7 @@ class Simulation:
                             new_model.variables
                         )
                     elif op_inputs["CCCV switch"] == 1:
-                        new_model.algebraic[
+                        new_model.rhs[
                             i_cell
                         ] = pybamm.external_circuit.CCCVFunctionControl(
                             new_model.param

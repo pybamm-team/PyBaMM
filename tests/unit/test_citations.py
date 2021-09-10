@@ -185,6 +185,14 @@ class TestCitations(unittest.TestCase):
         pybamm.lithium_ion.ElectrodeSOH()
         self.assertIn("Mohtat2019", citations._papers_to_cite)
 
+    def test_mohtat_2021(self):
+        citations = pybamm.citations
+
+        citations._reset()
+        self.assertNotIn("Mohtat2021", citations._papers_to_cite)
+        pybamm.external_circuit.CCCVFunctionControl(None)
+        self.assertIn("Mohtat2021", citations._papers_to_cite)
+
     def test_parameter_citations(self):
         citations = pybamm.citations
 

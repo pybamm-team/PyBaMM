@@ -109,6 +109,7 @@ class Solution(object):
         self._t_event = t_event
         self._y_event = y_event
         self._termination = termination
+        self.closest_event_idx = None
 
         # Initialize times
         self.set_up_time = None
@@ -684,6 +685,7 @@ class Solution(object):
             other.termination,
         )
 
+        new_sol.closest_event_idx = other.closest_event_idx
         new_sol._all_inputs_casadi = self.all_inputs_casadi + other.all_inputs_casadi
 
         # Set solution time
@@ -719,6 +721,7 @@ class Solution(object):
         )
         new_sol._all_inputs_casadi = self.all_inputs_casadi
         new_sol._sub_solutions = self.sub_solutions
+        new_sol.closest_event_idx = self.closest_event_idx
 
         new_sol.solve_time = self.solve_time
         new_sol.integration_time = self.integration_time
