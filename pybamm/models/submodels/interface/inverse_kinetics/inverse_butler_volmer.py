@@ -101,7 +101,7 @@ class CurrentForInverseButlerVolmer(BaseInterface):
     has to be created as a separate submodel because of how the interfacial currents
     are calculated:
 
-    1. Calculate eta_r from the total average current j_tot_av = I_app / L
+    1. Calculate eta_r from the total average current j_tot_av = I_app / (a*L)
     2. Calculate j_sei from eta_r
     3. Calculate j = j_tot_av - j_sei
 

@@ -2,10 +2,10 @@
 # Class for swelling only (no cracking)
 #
 import pybamm
-from .base_cracking import BaseCracking
+from .base_mechanics import BaseMechanics
 
 
-class SwellingOnly(BaseCracking):
+class SwellingOnly(BaseMechanics):
     """
     Class for swelling only (no cracking)
 
@@ -16,7 +16,7 @@ class SwellingOnly(BaseCracking):
     domain : str
         The domain of the model either 'Negative' or 'Positive'
 
-    **Extends:** :class:`pybamm.particle_cracking.BaseCracking`
+    **Extends:** :class:`pybamm.particle_mechanics.BaseMechanics`
     """
 
     def __init__(self, param, domain):
