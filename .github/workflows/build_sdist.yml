@@ -4,10 +4,6 @@ on:
   push:
     branches: main
   workflow_dispatch:
-    inputs:
-      target:
-        description: 'Deployment target. Can be "pypi" or "testpypi"'
-        default: 'pypi'
 
 jobs:
   build_sdist:
@@ -53,7 +49,6 @@ jobs:
           path: sdist
 
       - name: Publish sdist on PyPI
-        if: github.event.inputs.target == 'pypi'
         uses: pypa/gh-action-pypi-publish@master
         with:
           user: __token__
@@ -61,7 +56,6 @@ jobs:
           packages_dir: sdist/
 
       - name: Publish sdist on TestPyPI
-        if: github.event.inputs.target == 'testpypi'
         uses: pypa/gh-action-pypi-publish@master
         with:
           user: __token__
