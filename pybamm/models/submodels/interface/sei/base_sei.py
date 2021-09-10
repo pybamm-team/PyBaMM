@@ -201,10 +201,7 @@ class BaseModel(BaseInterface):
         variables : dict
             The variables which can be derived from the SEI thicknesses.
         """
-        if self.domain == "Negative":
-            j_scale = self.param.j_scale_n
-        elif self.domain == "Positive":
-            j_scale = self.param.j_scale_p
+        j_scale = self.param.j_scale_n
         j_i_av = pybamm.x_average(j_inner)
         j_o_av = pybamm.x_average(j_outer)
 
@@ -228,10 +225,7 @@ class BaseModel(BaseInterface):
 
     def _get_standard_total_reaction_variables(self, j_sei):
         """Update variables related to total SEI interfacial current density."""
-        if self.domain == "Negative":
-            j_scale = self.param.j_scale_n
-        elif self.domain == "Positive":
-            j_scale = self.param.j_scale_p
+        j_scale = self.param.j_scale_n
 
         j_sei_av = pybamm.x_average(j_sei)
 

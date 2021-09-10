@@ -122,66 +122,53 @@ class BaseModel(pybamm.BaseBatteryModel):
 
         # SEI
         if self.options["SEI"] == "none":
-            self.submodels["negative sei"] = pybamm.sei.NoSEI(self.param)
+            self.submodels["sei"] = pybamm.sei.NoSEI(self.param, self.options)
 
         if self.options["SEI"] == "constant":
-            self.submodels["negative sei"] = pybamm.sei.ConstantSEI(self.param)
+            self.submodels["sei"] = pybamm.sei.ConstantSEI(self.param)
 
         elif self.options["SEI"] == "reaction limited":
-            self.submodels["negative sei"] = pybamm.sei.ReactionLimited(
+            self.submodels["sei"] = pybamm.sei.ReactionLimited(
                 self.param, self.x_average
             )
 
         elif self.options["SEI"] == "solvent-diffusion limited":
-            self.submodels["negative sei"] = pybamm.sei.SolventDiffusionLimited(
+            self.submodels["sei"] = pybamm.sei.SolventDiffusionLimited(
                 self.param, self.x_average
             )
 
         elif self.options["SEI"] == "electron-migration limited":
-            self.submodels["negative sei"] = pybamm.sei.ElectronMigrationLimited(
+            self.submodels["sei"] = pybamm.sei.ElectronMigrationLimited(
                 self.param, self.x_average
             )
 
         elif self.options["SEI"] == "interstitial-diffusion limited":
-            self.submodels["negative sei"] = pybamm.sei.InterstitialDiffusionLimited(
+            self.submodels["sei"] = pybamm.sei.InterstitialDiffusionLimited(
                 self.param, self.x_average
             )
 
         elif self.options["SEI"] == "ec reaction limited":
-            self.submodels["negative sei"] = pybamm.sei.EcReactionLimited(
+            self.submodels["sei"] = pybamm.sei.EcReactionLimited(
                 self.param, self.x_average
-            )
-
-        # counter electrode
-        if self.half_cell:
-            self.submodels["counter electrode sei"] = pybamm.sei.NoSEI(
-                self.param, self.options
             )
 
     def set_lithium_plating_submodel(self):
 
         # negative electrode
         if self.options["lithium plating"] == "none":
-            self.submodels[
-                "negative lithium plating"
-            ] = pybamm.lithium_plating.NoPlating(self.param)
+            self.submodels["lithium plating"] = pybamm.lithium_plating.NoPlating(
+                self.param, self.options
+            )
 
         elif self.options["lithium plating"] == "reversible":
             self.submodels[
-                "negative lithium plating"
+                "lithium plating"
             ] = pybamm.lithium_plating.ReversiblePlating(self.param, self.x_average)
 
         elif self.options["lithium plating"] == "irreversible":
             self.submodels[
-                "negative lithium plating"
+                "lithium plating"
             ] = pybamm.lithium_plating.IrreversiblePlating(self.param, self.x_average)
-
-        # counter electrode
-        # there is plating but it is implemented differently
-        if self.half_cell:
-            self.submodels[
-                "counter electrode side reaction plating"
-            ] = pybamm.lithium_plating.NoPlating(self.param, self.options)
 
     def set_other_reaction_submodels_to_zero(self):
         self.submodels["negative oxygen interface"] = pybamm.interface.NoReaction(
