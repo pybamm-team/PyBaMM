@@ -1,4 +1,4 @@
-name: "Build and publish Python Source Distribution"
+name: "Build and publish python sdist"
 
 on:
   push:
@@ -11,6 +11,7 @@ on:
 
 jobs:
   build_sdist:
+    name: Build sdist
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -23,6 +24,9 @@ jobs:
         uses: actions/setup-python@v2
         with:
           python-version: ${{ matrix.python-version }}
+
+      - name: Install dependencies
+        run: pip install wheel
 
       - name: Build sdist
         run: python setup.py sdist --formats=gztar,zip
@@ -46,6 +50,7 @@ jobs:
         uses: actions/download-artifact@v2
         with:
           name: files
+          path: sdist
 
       - name: Publish sdist on PyPI
         if: github.event.inputs.target == 'pypi'
