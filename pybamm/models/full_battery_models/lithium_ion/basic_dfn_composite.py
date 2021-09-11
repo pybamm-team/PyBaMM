@@ -335,6 +335,10 @@ class BasicDFNComposite(BaseModel):
         j_n_p2_dim = j_n_p2 * param.j_scale_n / pybamm.maximum(param.a_p2_a_n, 0.000001)
         j_n_p1_av_dim = pybamm.x_average(j_n_p1_dim)
         j_n_p2_av_dim = pybamm.x_average(j_n_p2_dim)
+        j_n_p1_v_dim = j_n_p1 * param.i_typ / param.L_x
+        j_n_p2_v_dim = j_n_p2 * param.i_typ / param.L_x
+        j_n_p1_v_av_dim = pybamm.x_average(j_n_p1_v_dim)
+        j_n_p2_v_av_dim = pybamm.x_average(j_n_p2_v_dim)
         # The `variables` dictionary contains all variables that might be useful for
         # visualising the solution of the model
         self.variables = {
@@ -387,6 +391,10 @@ class BasicDFNComposite(BaseModel):
             "Negative electrode interfacial current density of phase 2 [A.m-2]": j_n_p2_dim,
             "X-averaged negative electrode interfacial current density of phase 1 [A.m-2]": j_n_p1_av_dim,
             "X-averaged negative electrode interfacial current density of phase 2 [A.m-2]": j_n_p2_av_dim,
+            "Negative electrode interfacial current density of phase 1 per volume [A.m-3]": j_n_p1_v_dim,
+            "Negative electrode interfacial current density of phase 2 per volume [A.m-3]": j_n_p2_v_dim,
+            "X-averaged negative electrode interfacial current density of phase 1 per volume [A.m-3]": j_n_p1_v_av_dim,
+            "X-averaged negative electrode interfacial current density of phase 2 per volume [A.m-3]": j_n_p2_v_av_dim,
         }
         self.events += [
             pybamm.Event("Minimum voltage", voltage - param.voltage_low_cut),

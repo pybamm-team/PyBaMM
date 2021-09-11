@@ -36,7 +36,7 @@ Maximum concentration in positive electrode of phase 1 [mol.m-3],28700,Chen 2020
 Positive electrode diffusivity of phase 1 [m2.s-1],5.5e-14,Chen 2020,tuned for 1C
 Positive electrode OCP of phase 1 [V],0,Chen 2020,
 Positive electrode mass fraction of phase 1,0.9,Chen 2020,
-Positive particle radius of phase 1 [m],5.86E-6,Chen 2020,
+Positive particle radius of phase 1 [m],5.22E-6,Chen 2020,
 Positive electrode exchange-current density of phase 1 [A.m-2],0,,
 Positive electrode density of phase 1 [kg.m-3],1657,default,
 # Name of positive electrode phase 1,[string]nmc811,,

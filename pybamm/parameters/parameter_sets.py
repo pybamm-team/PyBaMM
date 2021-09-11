@@ -135,7 +135,7 @@ Chen2020_composite = {
     "cell": "LGM50_Chen2020",
     "negative electrode": "graphite_Chen2020_composite",
     "separator": "separator_Chen2020",
-    "positive electrode": "nmc_Chen2020_composite",
+    "positive electrode": "nmc_Chen2020",
     "electrolyte": "lipf6_Nyman2008",
     "experiment": "1C_discharge_from_full_Chen2020",
     "sei": "example",

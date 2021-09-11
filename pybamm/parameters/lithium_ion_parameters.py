@@ -959,7 +959,7 @@ class LithiumIonParameters:
         sto = c_s_p
         T_dim = self.Delta_T * T + self.T_ref
         return self.D_p_dimensional(sto, T_dim, phase) / self.D_p_dimensional(
-            pybamm.Scalar(1), self.T_ref, phase
+            pybamm.Scalar(1), self.T_ref
         )
 
     def j0_n(self, c_e, c_s_surf, T, phase=None):
