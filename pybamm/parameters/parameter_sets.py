@@ -95,6 +95,17 @@ Lithium-ion parameter sets
 #
 # Lithium-ion
 #
+Molel2021 = {
+    "chemistry": "lithium_metal",
+    "cell": "Molel2021",
+    "negative electrode": "lithium_metal",
+    "separator": "Molel2021",
+    "positive electrode": "NMC811",
+    "electrolyte": "Molel2021",
+    "experiment": "Molel2021",
+    "sei": "example",
+    "citation": "Molel2021",
+}
 
 NCA_Kim2011 = {
     "chemistry": "lithium_ion",

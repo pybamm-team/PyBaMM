@@ -1,3 +1,15 @@
+@article{Molel2021,
+  author = {Molel, E. L.},
+  title = {{ Cathode Thickness and Rate Capability}},
+  journal = {},
+  volume = {},
+  number = {},
+  pages = {},
+  year = {2021},
+  publisher = {},
+  doi = {},
+}
+
 @article{Andersson2019,
   author = {Andersson, Joel A. E. and Gillis, Joris and Horn, Greg
             and Rawlings, James B. and Diehl, Moritz},
