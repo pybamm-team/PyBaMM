@@ -35,14 +35,6 @@ class TestBasicModels(unittest.TestCase):
         copy = model.new_copy()
         copy.check_well_posedness()
 
-    def test_dfn_half_cell_simulation_with_experiment(self):
-        options = {"working electrode": "negative"}
-        model = pybamm.lithium_ion.BasicDFNHalfCell(options=options)
-        experiment = pybamm.Experiment(
-            [("Discharge at C/10 for 10 hours or until 3.5 V")]
-        )
-        pybamm.Simulation(model, experiment=experiment)
-
     def test_basic_dfn_half_cell_simulation(self):
         model = pybamm.lithium_ion.BasicDFNHalfCell(
             options={"working electrode": "positive"}
