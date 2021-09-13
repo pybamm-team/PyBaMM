@@ -53,7 +53,9 @@ jobs:
           path: sdist
 
       - name: Publish sdist on PyPI
-        if: github.event.inputs.target == 'pypi'
+        if: |
+          github.event.inputs.target == 'pypi' ||
+          (github.event_name == 'push' && github.ref == 'refs/heads/main')
         uses: pypa/gh-action-pypi-publish@master
         with:
           user: __token__
