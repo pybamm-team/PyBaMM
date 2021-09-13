@@ -42,8 +42,8 @@ class TestBasicModels(unittest.TestCase):
             [("Discharge at C/10 for 10 hours or until 3.5 V")]
         )
         with self.assertRaisesRegex(
-                NotImplementedError,
-                "BasicDFNHalfCell is not compatible with experiment simulations yet.",
+            NotImplementedError,
+            "BasicDFNHalfCell is not compatible with experiment simulations yet.",
         ):
             pybamm.Simulation(model, experiment=experiment)
 
