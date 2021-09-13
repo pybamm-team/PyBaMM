@@ -85,10 +85,7 @@ class BaseInterface(pybamm.BaseSubModel):
 
                     # as c_e must now be a scalar, re-broadcast to
                     # "current collector"
-                    c_e = pybamm.PrimaryBroadcast(
-                        c_e,
-                        ["current collector"],
-                    )
+                    c_e = pybamm.PrimaryBroadcast(c_e, ["current collector"])
                 # broadcast c_e, T onto "particle size"
                 c_e = pybamm.PrimaryBroadcast(
                     c_e, [self.domain.lower() + " particle size"]
@@ -418,15 +415,16 @@ class BaseInterface(pybamm.BaseSubModel):
         # Create separate 'new_variables' so that variables only get updated once
         # everything is computed
         new_variables = variables.copy()
-        new_variables.update(
-            {
-                self.Reaction_icd: j,
-                self.Reaction_icd + " [A.m-2]": j_dim,
-                self.Reaction_icd + " per volume [A.m-3]": i_typ / L_x * j,
-            }
-        )
+        if self.reaction not in ["SEI", "lithium plating"]:
+            new_variables.update(
+                {
+                    self.Reaction_icd: j,
+                    self.Reaction_icd + " [A.m-2]": j_dim,
+                    self.Reaction_icd + " per volume [A.m-3]": i_typ / L_x * j,
+                }
+            )
 
-        a_p = variables["Positive electrode surface area to volume ratio"]
+        a_p = new_variables["Positive electrode surface area to volume ratio"]
 
         s_n, s_p = self._get_electrolyte_reaction_signed_stoichiometry()
         if self.half_cell:
@@ -615,16 +613,11 @@ class BaseInterface(pybamm.BaseSubModel):
         elif eta_sei.domain == ["current collector"]:
             eta_sei = pybamm.PrimaryBroadcast(eta_sei, self.domain_for_broadcast)
 
-        Domain = self.domain + " electrode"
-        domain = Domain.lower()
-
         variables = {
-            Domain + " SEI film overpotential": eta_sei,
-            "X-averaged " + domain + " SEI film overpotential": eta_sei_av,
-            Domain + " SEI film overpotential [V]": eta_sei * pot_scale,
-            "X-averaged "
-            + domain
-            + " SEI film overpotential [V]": eta_sei_av * pot_scale,
+            "SEI film overpotential": eta_sei,
+            "X-averaged SEI film overpotential": eta_sei_av,
+            "SEI film overpotential [V]": eta_sei * pot_scale,
+            "X-averaged SEI film overpotential [V]": eta_sei_av * pot_scale,
         }
 
         return variables

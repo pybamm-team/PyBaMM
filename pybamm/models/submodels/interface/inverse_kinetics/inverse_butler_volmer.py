@@ -67,16 +67,17 @@ class InverseButlerVolmer(BaseInterface):
         eta_r = self._get_overpotential(j_tot, j0, ne, T)
 
         # With SEI resistance (distributed and averaged have the same effect here)
-        if self.options["SEI film resistance"] != "none":
-            if self.domain == "Negative":
-                R_sei = self.param.R_sei_n
-            elif self.domain == "Positive":
-                R_sei = self.param.R_sei_p
-            L_sei = variables[
-                "Total " + self.domain.lower() + " electrode SEI thickness"
-            ]
-            eta_sei = -j_tot * L_sei * R_sei
-        # Without SEI resistance
+        if self.domain == "Negative":
+            if self.options["SEI film resistance"] != "none":
+                R_sei = self.param.R_sei
+                L_sei = variables["Total SEI thickness"]
+                eta_sei = -j_tot * L_sei * R_sei
+            # Without SEI resistance
+            else:
+                eta_sei = pybamm.Scalar(0)
+            variables.update(
+                self._get_standard_sei_film_overpotential_variables(eta_sei)
+            )
         else:
             eta_sei = pybamm.Scalar(0)
 
@@ -87,7 +88,6 @@ class InverseButlerVolmer(BaseInterface):
         variables.update(
             self._get_standard_surface_potential_difference_variables(delta_phi)
         )
-        variables.update(self._get_standard_sei_film_overpotential_variables(eta_sei))
         variables.update(self._get_standard_ocp_variables(ocp, dUdT))
 
         return variables
@@ -136,11 +136,12 @@ class CurrentForInverseButlerVolmer(BaseInterface):
             + self.domain.lower()
             + " electrode total interfacial current density"
         ]
-        j_sei = variables[self.domain + " electrode SEI interfacial current density"]
-        j_stripping = variables[
-            self.domain + " electrode lithium plating interfacial current density"
-        ]
-        j = j_tot - j_sei - j_stripping
+        if self.domain == "Negative":
+            j_sei = variables["SEI interfacial current density"]
+            j_stripping = variables["Lithium plating interfacial current density"]
+            j = j_tot - j_sei - j_stripping
+        else:
+            j = j_tot
 
         variables.update(self._get_standard_interfacial_current_variables(j))
 

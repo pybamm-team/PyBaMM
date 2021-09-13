@@ -885,20 +885,8 @@ class BaseBatteryModel(pybamm.BaseModel):
         eta_r_av_dim = eta_r_p_av_dim - eta_r_n_av_dim
 
         # SEI film overpotential
-        eta_sei_n_av = self.variables[
-            "X-averaged negative electrode SEI film overpotential"
-        ]
-        eta_sei_p_av = self.variables[
-            "X-averaged positive electrode SEI film overpotential"
-        ]
-        eta_sei_n_av_dim = self.variables[
-            "X-averaged negative electrode SEI film overpotential [V]"
-        ]
-        eta_sei_p_av_dim = self.variables[
-            "X-averaged positive electrode SEI film overpotential [V]"
-        ]
-        eta_sei_av = eta_sei_n_av + eta_sei_p_av
-        eta_sei_av_dim = eta_sei_n_av_dim + eta_sei_p_av_dim
+        eta_sei_av = self.variables["X-averaged SEI film overpotential"]
+        eta_sei_av_dim = self.variables["X-averaged SEI film overpotential [V]"]
 
         # TODO: add current collector losses to the voltage in 3D
 
