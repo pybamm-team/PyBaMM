@@ -33,18 +33,22 @@ class InverseButlerVolmer(BaseInterface):
         ocp, dUdT = self._get_open_circuit_potential(variables)
 
         j0 = self._get_exchange_current_density(variables)
-        j_tot_av = self._get_average_total_interfacial_current_density(variables)
         # Broadcast to match j0's domain
         if self.half_cell and self.domain == "Negative":
             # In a half-cell the total interfacial current density is the current
             # collector current density, not divided by electrode thickness
             i_boundary_cc = variables["Current collector current density"]
             j_tot = i_boundary_cc
-        elif j0.domain in [[], ["current collector"]]:
-            j_tot = j_tot_av
         else:
-            j_tot = pybamm.PrimaryBroadcast(
-                j_tot_av, [self.domain.lower() + " electrode"]
+            j_tot_av = self._get_average_total_interfacial_current_density(variables)
+            if j0.domain in [[], ["current collector"]]:
+                j_tot = j_tot_av
+            else:
+                j_tot = pybamm.PrimaryBroadcast(
+                    j_tot_av, [self.domain.lower() + " electrode"]
+                )
+            variables.update(
+                self._get_standard_total_interfacial_current_variables(j_tot_av)
             )
 
         ne = self._get_number_of_electrons_in_reaction()
@@ -79,9 +83,6 @@ class InverseButlerVolmer(BaseInterface):
 
         delta_phi = eta_r + ocp - eta_sei
 
-        variables.update(
-            self._get_standard_total_interfacial_current_variables(j_tot_av)
-        )
         variables.update(self._get_standard_exchange_current_variables(j0))
         variables.update(self._get_standard_overpotential_variables(eta_r))
         variables.update(
