@@ -2,8 +2,8 @@
 Automatically update the baseline of vcpkg-configuration.json
 """
 
+import json
 import os
-import re
 
 import pybamm
 
@@ -21,7 +21,8 @@ def update_baseline():
         os.path.join(pybamm.root_dir(), "vcpkg-configuration.json"), "r+"
     ) as file:
         output = file.read()
-        output = output.replace(re.findall(r'"baseline": "(.+)"', output)[0], commit_id)
+        json_commit_id = json.loads(output)["registries"][0]["baseline"]
+        output = output.replace(json_commit_id, commit_id)
         file.truncate(0)
         file.seek(0)
         file.write(output)
