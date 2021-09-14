@@ -2,11 +2,11 @@
 # Class for cracking
 #
 import pybamm
-from .base_cracking import BaseCracking
+from .base_mechanics import BaseMechanics
 import numpy as np
 
 
-class CrackPropagation(BaseCracking):
+class CrackPropagation(BaseMechanics):
     """
     Cracking behaviour in electrode particles, from [1]_.
 
@@ -25,7 +25,7 @@ class CrackPropagation(BaseCracking):
            Battery cycle life prediction with coupled chemical degradation and
            fatigue mechanics. Journal of the Electrochemical Society, 159(10), A1730.
 
-    **Extends:** :class:`pybamm.particle_cracking.BaseCracking`
+    **Extends:** :class:`pybamm.particle_mechanics.BaseMechanics`
     """
 
     def __init__(self, param, domain, x_average):

@@ -1,5 +1,5 @@
 Swelling Only Model
 ===================
 
-.. autoclass:: pybamm.particle_cracking.SwellingOnly
+.. autoclass:: pybamm.particle_mechanics.SwellingOnly
     :members:

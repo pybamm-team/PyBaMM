@@ -94,10 +94,27 @@ class TestUtil(unittest.TestCase):
         self.assertEqual(d[4][5], "y")
 
     def test_fuzzy_dict(self):
-        d = pybamm.FuzzyDict({"test": 1, "test2": 2})
+        d = pybamm.FuzzyDict(
+            {
+                "test": 1,
+                "test2": 2,
+                "SEI current": 3,
+                "Lithium plating current": 4,
+            }
+        )
         self.assertEqual(d["test"], 1)
         with self.assertRaisesRegex(KeyError, "'test3' not found. Best matches are "):
-            d["test3"]
+            d.__getitem__("test3")
+        with self.assertRaisesRegex(
+            KeyError, "'negative electrode SEI current' not found. All SEI parameters"
+        ):
+            d.__getitem__("negative electrode SEI current")
+        with self.assertRaisesRegex(
+            KeyError,
+            "'negative electrode lithium plating current' not found. "
+            "All lithium plating parameters",
+        ):
+            d.__getitem__("negative electrode lithium plating current")
 
     def test_get_parameters_filepath(self):
         tempfile_obj = tempfile.NamedTemporaryFile("w", dir=".")

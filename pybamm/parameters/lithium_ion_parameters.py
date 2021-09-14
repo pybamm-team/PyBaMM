@@ -306,8 +306,10 @@ class LithiumIonParameters(BaseParameters):
 
         eps_s_n_av = pybamm.x_average(self.epsilon_s_n(x_n))
         eps_s_p_av = pybamm.x_average(self.epsilon_s_p(x_p))
-        self.C_n_init = eps_s_n_av * self.L_n * self.A_cc * self.c_n_max * self.F / 3600
-        self.C_p_init = eps_s_p_av * self.L_p * self.A_cc * self.c_p_max * self.F / 3600
+        self.neg_elec_loading = eps_s_n_av * self.L_n * self.c_n_max * self.F / 3600
+        self.pos_elec_loading = eps_s_p_av * self.L_p * self.c_p_max * self.F / 3600
+        self.C_n_init = self.neg_elec_loading * self.A_cc
+        self.C_p_init = self.pos_elec_loading * self.A_cc
 
         # Total lithium
         c_e_av_init = pybamm.x_average(self.epsilon_init) * self.c_e_typ
@@ -752,61 +754,34 @@ class LithiumIonParameters(BaseParameters):
         self.T_amb = self.therm.T_amb
 
         # SEI parameters
-        self.C_sei_reaction_n = (self.j_scale_n / self.m_sei_dimensional) * pybamm.exp(
-            -(self.F * self.U_n_ref / (2 * self.R * self.T_ref))
-        )
-        self.C_sei_reaction_p = (self.j_scale_p / self.m_sei_dimensional) * pybamm.exp(
+        self.C_sei_reaction = (self.j_scale_n / self.m_sei_dimensional) * pybamm.exp(
             -(self.F * self.U_n_ref / (2 * self.R * self.T_ref))
         )
 
-        self.C_sei_solvent_n = (
+        self.C_sei_solvent = (
             self.j_scale_n
             * self.L_sei_0_dim
             / (self.c_sol_dimensional * self.F * self.D_sol_dimensional)
         )
-        self.C_sei_solvent_p = (
-            self.j_scale_p
-            * self.L_sei_0_dim
-            / (self.c_sol_dimensional * self.F * self.D_sol_dimensional)
-        )
 
-        self.C_sei_electron_n = (
+        self.C_sei_electron = (
             self.j_scale_n
             * self.F
             * self.L_sei_0_dim
             / (self.kappa_inner_dimensional * self.R * self.T_ref)
         )
-        self.C_sei_electron_p = (
-            self.j_scale_p
-            * self.F
-            * self.L_sei_0_dim
-            / (self.kappa_inner_dimensional * self.R * self.T_ref)
-        )
 
-        self.C_sei_inter_n = (
+        self.C_sei_inter = (
             self.j_scale_n
-            * self.L_sei_0_dim
-            / (self.D_li_dimensional * self.c_li_0_dimensional * self.F)
-        )
-        self.C_sei_inter_p = (
-            self.j_scale_p
             * self.L_sei_0_dim
             / (self.D_li_dimensional * self.c_li_0_dimensional * self.F)
         )
 
         self.U_inner_electron = self.F * self.U_inner_dimensional / self.R / self.T_ref
 
-        self.R_sei_n = (
+        self.R_sei = (
             self.F
             * self.j_scale_n
-            * self.R_sei_dimensional
-            * self.L_sei_0_dim
-            / self.R
-            / self.T_ref
-        )
-        self.R_sei_p = (
-            self.F
-            * self.j_scale_p
             * self.R_sei_dimensional
             * self.L_sei_0_dim
             / self.R
@@ -825,20 +800,17 @@ class LithiumIonParameters(BaseParameters):
         self.L_outer_0 = self.L_outer_0_dim / self.L_sei_0_dim
 
         # ratio of SEI reaction scale to intercalation reaction
-        self.Gamma_SEI_n = (
+        self.Gamma_SEI = (
             self.V_bar_inner_dimensional * self.j_scale_n * self.timescale
-        ) / (self.F * self.L_sei_0_dim)
-        self.Gamma_SEI_p = (
-            self.V_bar_inner_dimensional * self.j_scale_p * self.timescale
         ) / (self.F * self.L_sei_0_dim)
 
         # EC reaction
-        self.C_ec_n = (
+        self.C_ec = (
             self.L_sei_0_dim
             * self.j_scale_n
             / (self.F * self.c_ec_0_dim * self.D_ec_dim)
         )
-        self.C_sei_ec_n = (
+        self.C_sei_ec = (
             self.F
             * self.k_sei_dim
             * self.c_ec_0_dim
@@ -853,7 +825,7 @@ class LithiumIonParameters(BaseParameters):
                 )
             )
         )
-        self.beta_sei_n = self.a_n_typ * self.L_sei_0_dim * self.Gamma_SEI_n
+        self.beta_sei = self.a_n_typ * self.L_sei_0_dim * self.Gamma_SEI
         self.c_sei_init = self.c_ec_0_dim / self.c_sei_outer_scale
 
         # lithium plating parameters
