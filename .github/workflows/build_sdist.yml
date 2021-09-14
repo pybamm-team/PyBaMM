@@ -29,15 +29,13 @@ jobs:
         run: pip install wheel
 
       - name: Build sdist
-        run: python setup.py sdist --formats=gztar,zip
+        run: python setup.py sdist --formats=gztar
 
       - name: Upload sdist
         uses: actions/upload-artifact@v2
         with:
           name: files
-          path: |
-            ./dist/*.tar.gz
-            ./dist/*.zip
+          path: ./dist/*.tar.gz
           if-no-files-found: error
 
 
