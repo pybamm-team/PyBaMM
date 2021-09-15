@@ -13,11 +13,11 @@ def plot_summary_variables(
     Parameters
     ----------
     solutions : (iter of) :class:`pybamm.Solution`
-        The solution(s) for the model(s) from which to extract voltage components.
+        The solution(s) for the model(s) from which to extract summary variables.
     output_variables: list (optional)
-        A list of variables to plot automatically.
+        A list of variables to plot automatically. If None, the default ones are used.
     labels: list (optional)
-        A list of labels to be added to the legend.
+        A list of labels to be added to the legend. No labels are added by default.
     testing : bool (optional)
         Whether to actually make the plot (turned off for unit tests).
     kwargs_fig
@@ -33,6 +33,7 @@ def plot_summary_variables(
         output_variables = [
             "Capacity [A.h]",
             "Loss of lithium inventory [%]",
+            "Loss of capacity to SEI [A.h]",
             "Loss of active material in negative electrode [%]",
             "Loss of active material in positive electrode [%]",
             "x_100",
@@ -70,3 +71,5 @@ def plot_summary_variables(
         fig.legend(labels, loc="lower right")
     if not testing:  # pragma: no cover
         plt.show()
+
+    return axes
