@@ -262,9 +262,12 @@ def load_function(filename):
     # Assign path to _ and filename to tail
     _, tail = os.path.split(filename)
 
-    # Strip absolute path to pybamm/input/exapmle.py
+    # Strip absolute path to pybamm/input/example.py
     if "pybamm" in filename:
         root_path = filename[filename.rfind("pybamm") :]
+    elif os.getcwd() in filename:
+        root_path = filename.replace(os.getcwd(), "")
+        root_path = root_path[1:]
     else:
         root_path = filename
 
