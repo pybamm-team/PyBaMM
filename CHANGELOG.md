@@ -56,6 +56,7 @@ example notebook ([#1602](https://github.com/pybamm-team/PyBaMM/pull/1602))
 
 ## Bug fixes
 
+-   Fixed bug with `load_function` ([#1675](https://github.com/pybamm-team/PyBaMM/pull/1675))
 -   Updated documentation to include some previously missing functions, such as `erf` and `tanh` ([#1628](https://github.com/pybamm-team/PyBaMM/pull/1628))
 -   Fixed reading citation file without closing ([#1620](https://github.com/pybamm-team/PyBaMM/pull/1620))
 -   Porosity variation for SEI and plating models is calculated from the film thickness rather than from a separate ODE ([#1617](https://github.com/pybamm-team/PyBaMM/pull/1617))
