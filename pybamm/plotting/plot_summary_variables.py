@@ -2,6 +2,7 @@
 # Method for plotting/comparing summary variables
 #
 import numpy as np
+import pybamm
 
 
 def plot_summary_variables(
@@ -25,6 +26,9 @@ def plot_summary_variables(
 
     """
     import matplotlib.pyplot as plt
+
+    if isinstance(solutions, pybamm.Solution):
+        solutions = [solutions]
 
     # setting a default value for figsize
     kwargs_fig = {"figsize": (15, 8), **kwargs_fig}

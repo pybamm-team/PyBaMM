@@ -37,7 +37,7 @@ class TestPlotSummaryVariables(unittest.TestCase):
         )
         sol = sim.solve(initial_soc=1)
 
-        axes = pybamm.plot_summary_variables([sol], testing=True)
+        axes = pybamm.plot_summary_variables(sol, testing=True)
 
         axes = axes.flatten()
         self.assertEqual(len(axes), 9)
