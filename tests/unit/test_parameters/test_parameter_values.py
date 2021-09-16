@@ -4,6 +4,7 @@
 
 import os
 import tempfile
+import subprocess
 import unittest
 
 import numpy as np
@@ -70,6 +71,18 @@ class TestParameterValues(unittest.TestCase):
         # incomplete chemistry
         with self.assertRaisesRegex(KeyError, "must provide 'cell' parameters"):
             pybamm.ParameterValues(chemistry={"chemistry": "lithium_ion"})
+
+    def test_update_from_chemistry_local(self):
+        # Copy parameters
+        cmd = ["pybamm_edit_parameter", "-f", "lithium_ion"]
+        subprocess.run(cmd)
+
+        # Import parameters from chemistry
+        pybamm.ParameterValues(chemistry=pybamm.parameter_sets.Chen2020)
+
+        # Clean up parameter files
+        cmd = ["rm", "-r", "lithium_ion"]
+        subprocess.run(cmd)
 
     def test_update(self):
         # converts to dict if not
