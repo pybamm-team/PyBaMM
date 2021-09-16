@@ -36,6 +36,7 @@ class TestPlotSummaryVariables(unittest.TestCase):
             model, experiment=experiment, parameter_values=parameter_values
         )
         sol = sim.solve(initial_soc=1)
+
         axes = pybamm.plot_summary_variables([sol], testing=True)
 
         axes = axes.flatten()
@@ -46,6 +47,29 @@ class TestPlotSummaryVariables(unittest.TestCase):
             self.assertEqual(ax.get_ylabel(), output_var)
 
             cycle_number, var = ax.get_lines()[0].get_data()
+            np.testing.assert_array_equal(
+                cycle_number, sol.summary_variables["Cycle number"]
+            )
+            np.testing.assert_array_equal(var, sol.summary_variables[output_var])
+
+        axes = pybamm.plot_summary_variables(
+            [sol, sol], labels=["SPM", "SPM"], testing=True
+        )
+
+        axes = axes.flatten()
+        self.assertEqual(len(axes), 9)
+
+        for output_var, ax in zip(output_variables, axes):
+            self.assertEqual(ax.get_xlabel(), "Cycle number")
+            self.assertEqual(ax.get_ylabel(), output_var)
+
+            cycle_number, var = ax.get_lines()[0].get_data()
+            np.testing.assert_array_equal(
+                cycle_number, sol.summary_variables["Cycle number"]
+            )
+            np.testing.assert_array_equal(var, sol.summary_variables[output_var])
+
+            cycle_number, var = ax.get_lines()[1].get_data()
             np.testing.assert_array_equal(
                 cycle_number, sol.summary_variables["Cycle number"]
             )
