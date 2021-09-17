@@ -17,14 +17,14 @@ def _load_version_int():
         root = os.path.abspath(os.path.dirname(__file__))
         with open(os.path.join(root, "version"), "r") as f:
             version = f.read().strip().split(",")
-        major, minor, revision = [int(x) for x in version]
-        return major, minor, revision
+        year, month = [int(x) for x in version]
+        return year, month
     except Exception as e:
         raise RuntimeError("Unable to read version number (" + str(e) + ").")
 
 
 __version_int__ = _load_version_int()
-__version__ = ".".join([str(x) for x in __version_int__])
+__version__ = ".".join(["{:02d}".format(x) for x in __version_int__])
 if sys.version_info[0] < 3:
     del x  # Before Python3, list comprehension iterators leaked
 
@@ -33,9 +33,9 @@ if sys.version_info[0] < 3:
 #
 def version(formatted=False):
     """
-    Returns the version number, as a 3-part integer (major, minor, revision).
+    Returns the version number, as a 2-part integer (year, month).
     If ``formatted=True``, it returns a string formatted version (for example
-    "PyBaMM 1.0.0").
+    "PyBaMM 21.08").
     """
     if formatted:
         return "PyBaMM " + __version__
@@ -149,7 +149,7 @@ from .models.submodels import (
     porosity,
     thermal,
     tortuosity,
-    particle_cracking,
+    particle_mechanics,
 )
 from .models.submodels.interface import sei
 from .models.submodels.interface import lithium_plating
@@ -249,14 +249,8 @@ from .plotting.quick_plot import QuickPlot, close_plots
 from .plotting.plot import plot
 from .plotting.plot2D import plot2D
 from .plotting.plot_voltage_components import plot_voltage_components
+from .plotting.plot_summary_variables import plot_summary_variables
 from .plotting.dynamic_plot import dynamic_plot
-
-# Define the plot-style string and set the default plotting style (can be overwritten
-# in a specific script)
-default_plot_style = os.path.join(root_dir(), "pybamm/plotting/pybamm.mplstyle")
-import matplotlib.pyplot as plt
-
-plt.style.use(default_plot_style)
 
 #
 # Simulation

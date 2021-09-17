@@ -26,9 +26,9 @@ copyright = "2021, The PyBaMM Team"
 author = "The PyBaMM Team"
 
 # The short X.Y version
-version = "0.4"
+version = "21.08"
 # The full version, including alpha/beta/rc tags
-release = "0.4.0"
+release = "21.08"
 
 
 # -- General configuration ---------------------------------------------------

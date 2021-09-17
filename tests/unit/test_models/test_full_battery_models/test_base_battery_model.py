@@ -25,7 +25,7 @@ PRINT_OPTIONS_OUTPUT = """\
 'lithium plating': 'none' (possible: ['none', 'reversible', 'irreversible'])
 'lithium plating porosity change': 'false' (possible: ['true', 'false'])
 'loss of active material': 'stress-driven' (possible: ['none', 'stress-driven', 'reaction-driven'])
-'operating mode': 'current' (possible: ['current', 'voltage', 'power'])
+'operating mode': 'current' (possible: ['current', 'voltage', 'power', 'CCCV'])
 'particle': 'Fickian diffusion' (possible: ['Fickian diffusion', 'fast diffusion', 'uniform profile', 'quadratic profile', 'quartic profile'])
 'particle mechanics': 'swelling only' (possible: ['none', 'swelling only', 'swelling and cracking'])
 'particle shape': 'spherical' (possible: ['spherical', 'user', 'no particles'])

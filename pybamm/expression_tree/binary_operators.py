@@ -187,7 +187,7 @@ class BinaryOperator(pybamm.Symbol):
     def to_equation(self):
         """Convert the node and its subtree into a SymPy equation."""
         if self.print_name is not None:
-            return sympy.symbols(self.print_name)
+            return sympy.Symbol(self.print_name)
         else:
             child1, child2 = self.children
             eq1 = child1.to_equation()

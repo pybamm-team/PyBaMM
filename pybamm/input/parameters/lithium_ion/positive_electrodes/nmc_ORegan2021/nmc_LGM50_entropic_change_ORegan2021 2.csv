@@ -1,0 +1,19 @@
+# Entropic term data for LG M50 NMC positive electrode
+# sto,dUdT
+# extra point to avoid extrapolation
+0.248797280909757,0.0000551
+# experimentally measured data
+0.2980,0.0000320
+0.3663,0
+0.4319,0
+0.4975,0
+0.5603,0
+0.6231,0
+0.6914,-0.0000565
+0.7570,-0.0000550
+0.8199,-0.0000620
+0.8772,-0.0000525
+0.9018,-0.0000535
+0.9127,-0.0000302
+# extra points to avoid extrapolation
+1,0

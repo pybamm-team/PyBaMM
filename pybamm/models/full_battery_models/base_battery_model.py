@@ -164,7 +164,7 @@ class BatteryModelOptions(pybamm.FuzzyDict):
             "lithium plating": ["none", "reversible", "irreversible"],
             "lithium plating porosity change": ["true", "false"],
             "loss of active material": ["none", "stress-driven", "reaction-driven"],
-            "operating mode": ["current", "voltage", "power"],
+            "operating mode": ["current", "voltage", "power", "CCCV"],
             "particle": [
                 "Fickian diffusion",
                 "fast diffusion",
@@ -653,33 +653,33 @@ class BaseBatteryModel(pybamm.BaseModel):
         # Set model equations
         for submodel_name, submodel in self.submodels.items():
             if submodel.external is False:
-                pybamm.logger.debug(
+                pybamm.logger.verbose(
                     "Setting rhs for {} submodel ({})".format(submodel_name, self.name)
                 )
 
                 submodel.set_rhs(self.variables)
-                pybamm.logger.debug(
+                pybamm.logger.verbose(
                     "Setting algebraic for {} submodel ({})".format(
                         submodel_name, self.name
                     )
                 )
 
                 submodel.set_algebraic(self.variables)
-                pybamm.logger.debug(
+                pybamm.logger.verbose(
                     "Setting boundary conditions for {} submodel ({})".format(
                         submodel_name, self.name
                     )
                 )
 
                 submodel.set_boundary_conditions(self.variables)
-                pybamm.logger.debug(
+                pybamm.logger.verbose(
                     "Setting initial conditions for {} submodel ({})".format(
                         submodel_name, self.name
                     )
                 )
                 submodel.set_initial_conditions(self.variables)
                 submodel.set_events(self.variables)
-                pybamm.logger.debug(
+                pybamm.logger.verbose(
                     "Updating {} submodel ({})".format(submodel_name, self.name)
                 )
                 self.update(submodel)
@@ -752,6 +752,10 @@ class BaseBatteryModel(pybamm.BaseModel):
             self.submodels[
                 "external circuit"
             ] = pybamm.external_circuit.PowerFunctionControl(self.param)
+        elif self.options["operating mode"] == "CCCV":
+            self.submodels[
+                "external circuit"
+            ] = pybamm.external_circuit.CCCVFunctionControl(self.param)
         elif callable(self.options["operating mode"]):
             self.submodels[
                 "external circuit"
@@ -761,16 +765,18 @@ class BaseBatteryModel(pybamm.BaseModel):
 
     def set_tortuosity_submodels(self):
         self.submodels["electrolyte tortuosity"] = pybamm.tortuosity.Bruggeman(
-            self.param, "Electrolyte"
+            self.param, "Electrolyte", self.options
         )
         self.submodels["electrode tortuosity"] = pybamm.tortuosity.Bruggeman(
-            self.param, "Electrode"
+            self.param, "Electrode", self.options
         )
 
     def set_thermal_submodel(self):
 
         if self.options["thermal"] == "isothermal":
-            thermal_submodel = pybamm.thermal.isothermal.Isothermal(self.param)
+            thermal_submodel = pybamm.thermal.isothermal.Isothermal(
+                self.param, self.options
+            )
 
         elif self.options["thermal"] == "lumped":
             thermal_submodel = pybamm.thermal.Lumped(
@@ -879,20 +885,8 @@ class BaseBatteryModel(pybamm.BaseModel):
         eta_r_av_dim = eta_r_p_av_dim - eta_r_n_av_dim
 
         # SEI film overpotential
-        eta_sei_n_av = self.variables[
-            "X-averaged negative electrode SEI film overpotential"
-        ]
-        eta_sei_p_av = self.variables[
-            "X-averaged positive electrode SEI film overpotential"
-        ]
-        eta_sei_n_av_dim = self.variables[
-            "X-averaged negative electrode SEI film overpotential [V]"
-        ]
-        eta_sei_p_av_dim = self.variables[
-            "X-averaged positive electrode SEI film overpotential [V]"
-        ]
-        eta_sei_av = eta_sei_n_av + eta_sei_p_av
-        eta_sei_av_dim = eta_sei_n_av_dim + eta_sei_p_av_dim
+        eta_sei_av = self.variables["X-averaged SEI film overpotential"]
+        eta_sei_av_dim = self.variables["X-averaged SEI film overpotential [V]"]
 
         # TODO: add current collector losses to the voltage in 3D
 

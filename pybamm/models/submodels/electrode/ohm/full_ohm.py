@@ -14,13 +14,14 @@ class Full(BaseModel):
         The parameters to use for this submodel
     domain : str
         Either 'Negative' or 'Positive'
-
+    options : dict, optional
+        A dictionary of options to be passed to the model.
 
     **Extends:** :class:`pybamm.electrode.ohm.BaseModel`
     """
 
-    def __init__(self, param, domain):
-        super().__init__(param, domain)
+    def __init__(self, param, domain, options=None):
+        super().__init__(param, domain, options=options)
 
     def get_fundamental_variables(self):
 

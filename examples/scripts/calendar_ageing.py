@@ -35,6 +35,7 @@ for model in models:
 
     sim.solve(t_eval=t_eval, solver=solver)
     sims.append(sim)
+
 pb.dynamic_plot(
     sims,
     [
@@ -42,13 +43,12 @@ pb.dynamic_plot(
         "Negative particle surface concentration",
         "X-averaged negative particle surface concentration",
         "Electrolyte concentration [mol.m-3]",
-        "Total negative electrode SEI thickness [m]",
-        "X-averaged total negative electrode SEI thickness [m]",
-        "X-averaged total negative electrode SEI thickness",
-        "X-averaged negative electrode SEI concentration [mol.m-3]",
-        "Loss of lithium to negative electrode SEI [mol]",
+        "Total SEI thickness [m]",
+        "X-averaged total SEI thickness [m]",
+        "X-averaged total SEI thickness",
+        "X-averaged SEI concentration [mol.m-3]",
         "Sum of x-averaged negative electrode interfacial current densities",
         "Loss of lithium inventory [%]",
-        ["Total lithium lost [mol]", "Loss of lithium to negative electrode SEI [mol]"],
+        ["Total lithium lost [mol]", "Loss of lithium to SEI [mol]"],
     ],
 )

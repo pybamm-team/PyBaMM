@@ -7,11 +7,11 @@ def lico2_cracking_rate_Ai2020(T_dim):
 
     References
     ----------
-     .. [1] > Ai, W., Kraft, L., Sturm, J., Jossen, A., & Wu, B. (2020).
+     .. [1] Ai, W., Kraft, L., Sturm, J., Jossen, A., & Wu, B. (2020).
      Electrochemical Thermal-Mechanical Modelling of Stress Inhomogeneity in
      Lithium-Ion Pouch Cells. Journal of The Electrochemical Society, 167(1), 013512
       DOI: 10.1149/2.0122001JES.
-     .. [2] > Deshpande, R., Verbrugge, M., Cheng, Y. T., Wang, J., & Liu, P. (2012).
+     .. [2] Deshpande, R., Verbrugge, M., Cheng, Y. T., Wang, J., & Liu, P. (2012).
      Battery cycle life prediction with coupled chemical degradation and fatigue
      mechanics. Journal of the Electrochemical Society, 159(10), A1730.
 

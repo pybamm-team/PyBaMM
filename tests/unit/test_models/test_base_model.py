@@ -1,13 +1,15 @@
 #
 # Tests for the base model class
 #
-import casadi
-import pybamm
-import numpy as np
-import unittest
 import os
-import subprocess  # nosec
 import platform
+import subprocess  # nosec
+import unittest
+
+import casadi
+import numpy as np
+
+import pybamm
 
 
 class TestBaseModel(unittest.TestCase):
@@ -98,6 +100,12 @@ class TestBaseModel(unittest.TestCase):
         bad_bcs = {c0: {"left": (-2, "bad type"), "right": (4, "bad type")}}
         with self.assertRaisesRegex(pybamm.ModelError, "boundary condition"):
             model.boundary_conditions = bad_bcs
+
+    def test_length_scales(self):
+        model = pybamm.BaseModel()
+        model.length_scales = {"a": 1.3}
+        self.assertIsInstance(model.length_scales["a"], pybamm.Scalar)
+        self.assertEqual(model.length_scales["a"].value, 1.3)
 
     def test_variables_set_get(self):
         model = pybamm.BaseModel()

@@ -11,14 +11,14 @@ class BaseElectrolyteDiffusion(pybamm.BaseSubModel):
     ----------
     param : parameter class
         The parameters to use for this submodel
-    reactions : dict, optional
-        Dictionary of reaction terms
+    options : dict, optional
+        A dictionary of options to be passed to the model.
 
     **Extends:** :class:`pybamm.BaseSubModel`
     """
 
-    def __init__(self, param):
-        super().__init__(param)
+    def __init__(self, param, options=None):
+        super().__init__(param, options=options)
 
     def _get_standard_concentration_variables(self, c_e_n, c_e_s, c_e_p):
         """
@@ -42,10 +42,14 @@ class BaseElectrolyteDiffusion(pybamm.BaseSubModel):
         """
 
         c_e_typ = self.param.c_e_typ
-
         c_e = pybamm.concatenation(c_e_n, c_e_s, c_e_p)
-        c_e_av = pybamm.x_average(c_e)
+
+        if self.half_cell:
+            # overwrite c_e_n to be the boundary value of c_e_s
+            c_e_n = pybamm.boundary_value(c_e_s, "left")
+
         c_e_n_av = pybamm.x_average(c_e_n)
+        c_e_av = pybamm.x_average(c_e)
         c_e_s_av = pybamm.x_average(c_e_s)
         c_e_p_av = pybamm.x_average(c_e_p)
 
@@ -88,10 +92,14 @@ class BaseElectrolyteDiffusion(pybamm.BaseSubModel):
 
         variables = {
             "Porosity times concentration": eps_c_e,
-            "Negative electrode porosity times concentration": eps_c_e_n,
             "Separator porosity times concentration": eps_c_e_s,
             "Positive electrode porosity times concentration": eps_c_e_p,
         }
+
+        if not self.half_cell:
+            variables.update(
+                {"Negative electrode porosity times concentration": eps_c_e_n}
+            )
         return variables
 
     def _get_standard_flux_variables(self, N_e):
@@ -121,16 +129,14 @@ class BaseElectrolyteDiffusion(pybamm.BaseSubModel):
 
         return variables
 
-    def _get_total_concentration_electrolyte(self, c_e, epsilon):
+    def _get_total_concentration_electrolyte(self, eps_c_e):
         """
         A private function to obtain the total ion concentration in the electrolyte.
 
         Parameters
         ----------
-        c_e : :class:`pybamm.Symbol`
-            The electrolyte concentration
-        epsilon : :class:`pybamm.Symbol`
-            The porosity
+        eps_c_e : :class:`pybamm.Symbol`
+            Porosity times electrolyte concentration
 
         Returns
         -------
@@ -142,9 +148,12 @@ class BaseElectrolyteDiffusion(pybamm.BaseSubModel):
         L_x = self.param.L_x
         A = self.param.A_cc
 
-        c_e_av = pybamm.yz_average(pybamm.x_average(epsilon * c_e))
+        eps_c_e_av = pybamm.yz_average(pybamm.x_average(eps_c_e))
 
-        variables = {"Total lithium in electrolyte [mol]": c_e_typ * L_x * A * c_e_av}
+        variables = {
+            "Total lithium in electrolyte": eps_c_e_av,
+            "Total lithium in electrolyte [mol]": c_e_typ * L_x * A * eps_c_e_av,
+        }
 
         return variables
 

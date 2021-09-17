@@ -35,6 +35,8 @@ class LithiumIonParameters(BaseParameters):
 
     def __init__(self, options=None):
         self.options = options
+        # Save whether the submodel is a half-cell submodel
+        self.half_cell = self.options["working electrode"] != "both"
 
         # Get geometric, electrical and thermal parameters
         self.geo = pybamm.geometric_parameters
@@ -119,29 +121,38 @@ class LithiumIonParameters(BaseParameters):
             "Through-cell distance (x_n) [m]": pybamm.standard_spatial_vars.x_n
             * self.L_x
         }
-        self.epsilon_n = pybamm.FunctionParameter("Negative electrode porosity", inputs)
-
+        self.epsilon_n_init = pybamm.FunctionParameter(
+            "Negative electrode porosity", inputs
+        )
         inputs = {
             "Through-cell distance (x_s) [m]": pybamm.standard_spatial_vars.x_s
             * self.L_x
         }
-        self.epsilon_s = pybamm.FunctionParameter("Separator porosity", inputs)
+        self.epsilon_s_init = pybamm.FunctionParameter("Separator porosity", inputs)
 
         inputs = {
             "Through-cell distance (x_p) [m]": pybamm.standard_spatial_vars.x_p
             * self.L_x
         }
-        self.epsilon_p = pybamm.FunctionParameter("Positive electrode porosity", inputs)
+        self.epsilon_p_init = pybamm.FunctionParameter(
+            "Positive electrode porosity", inputs
+        )
 
-        self.epsilon = pybamm.concatenation(
-            self.epsilon_n, self.epsilon_s, self.epsilon_p
-        )
+        if self.half_cell:
+            self.epsilon_init = pybamm.concatenation(
+                self.epsilon_s_init, self.epsilon_p_init
+            )
+        else:
+            self.epsilon_init = pybamm.concatenation(
+                self.epsilon_n_init, self.epsilon_s_init, self.epsilon_p_init
+            )
+
         self.epsilon_inactive_n = (
-            1 - self.epsilon_n - self.epsilon_s_n(pybamm.standard_spatial_vars.x_n)
+            1 - self.epsilon_n_init - self.epsilon_s_n(pybamm.standard_spatial_vars.x_n)
         )
-        self.epsilon_inactive_s = 1 - self.epsilon_s
+        self.epsilon_inactive_s = 1 - self.epsilon_s_init
         self.epsilon_inactive_p = (
-            1 - self.epsilon_p - self.epsilon_s_p(pybamm.standard_spatial_vars.x_p)
+            1 - self.epsilon_p_init - self.epsilon_s_p(pybamm.standard_spatial_vars.x_p)
         )
 
         self.b_e_n = self.geo.b_e_n
@@ -307,19 +318,27 @@ class LithiumIonParameters(BaseParameters):
 
         eps_s_n_av = pybamm.x_average(self.epsilon_s_n(x_n))
         eps_s_p_av = pybamm.x_average(self.epsilon_s_p(x_p))
-        self.C_n_init = eps_s_n_av * self.L_n * self.A_cc * self.c_n_max * self.F / 3600
-        self.C_p_init = eps_s_p_av * self.L_p * self.A_cc * self.c_p_max * self.F / 3600
+        self.neg_elec_loading = eps_s_n_av * self.L_n * self.c_n_max * self.F / 3600
+        self.pos_elec_loading = eps_s_p_av * self.L_p * self.c_p_max * self.F / 3600
+        self.C_n_init = self.neg_elec_loading * self.A_cc
+        self.C_p_init = self.pos_elec_loading * self.A_cc
 
         # Total lithium
         eps = pybamm.Concatenation(self.epsilon_n, self.epsilon_s, self.epsilon_p)
+        c_e_av_init = pybamm.x_average(eps) * self.c_e_typ
+        self.n_Li_e_init = c_e_av_init * self.L_x * self.A_cc
 
-        c_e_av = pybamm.x_average(eps) * self.c_e_typ
-        self.n_Li_e_init = c_e_av * self.L_x * self.A_cc
-
-        eps_s_n = self.epsilon_s_n(x_n)
-        c_n_init = self.c_n_init(r_n, pybamm.PrimaryBroadcast(x_n, "negative particle"))
-        c_n_init_av = pybamm.x_average(eps_s_n * pybamm.r_average(c_n_init))
-        self.n_Li_n_init = c_n_init_av * self.c_n_max * self.L_n * self.A_cc
+        if self.options["working electrode"] == "both":
+            eps_s_n = self.epsilon_s_n(x_n)
+            c_n_init = self.c_n_init(
+                r_n, pybamm.PrimaryBroadcast(x_n, "negative particle")
+            )
+            c_n_init_av = pybamm.x_average(eps_s_n * pybamm.r_average(c_n_init))
+            c_n = self.c_n_init(x_n)
+            c_n_av = pybamm.x_average(eps_s_n * c_n)
+            self.n_Li_n_init = c_n_av * self.c_n_max * self.L_n * self.A_cc
+        else:
+            self.n_Li_n_init = pybamm.Scalar(0)
 
         eps_s_p = self.epsilon_s_p(x_p)
         c_p_init = self.c_p_init(r_p, pybamm.PrimaryBroadcast(x_p, "positive particle"))
@@ -354,12 +373,11 @@ class LithiumIonParameters(BaseParameters):
             "Positive electrode reaction-driven LAM factor [m3.mol-1]"
         )
 
-        # Reference OCP based on initial concentration at
-        # current collector/electrode interface
-        self.U_n_ref = self.U_n_dimensional(c_n_init_av, self.T_ref)
-
-        # Reference OCP based on initial concentration at
-        # current collector/electrode interface
+        # Reference OCP based on initial concentration
+        if self.options["working electrode"] == "both":
+            self.U_n_ref = self.U_n_dimensional(c_n_init_av, self.T_ref)
+        else:
+            self.U_n_ref = pybamm.Scalar(0)
         self.U_p_ref = self.U_p_dimensional(c_p_init_av, self.T_ref)
 
         self.ocv_ref = self.U_p_ref - self.U_n_ref
@@ -567,7 +585,14 @@ class LithiumIonParameters(BaseParameters):
         # Electrical
         self.potential_scale = self.R * self.T_ref / self.F
         self.current_scale = self.i_typ
-        self.j_scale_n = self.i_typ / (self.a_n_typ * self.L_x)
+        self.current_scale.print_name = "I_typ"
+        # Scale for interfacial current density in A/m2
+        if self.options["working electrode"] == "both":
+            # porous electrode
+            self.j_scale_n = self.i_typ / (self.a_n_typ * self.L_x)
+        else:
+            # metal electrode (boundary condition between negative and separator)
+            self.j_scale_n = self.i_typ
         self.j_scale_p = self.i_typ / (self.a_p_typ * self.L_x)
 
         # Reference exchange-current density
@@ -586,9 +611,10 @@ class LithiumIonParameters(BaseParameters):
 
         # Discharge timescale
         if self.options["working electrode"] == "positive":
-            self.tau_discharge = self.F * self.c_p_max * self.L_x / self.i_typ
+            self.c_max = self.c_p_max
         else:
-            self.tau_discharge = self.F * self.c_n_max * self.L_x / self.i_typ
+            self.c_max = self.c_n_max
+        self.tau_discharge = self.F * self.c_max * self.L_x / self.i_typ
 
         # Reaction timescales
         self.tau_r_n = (
@@ -630,8 +656,8 @@ class LithiumIonParameters(BaseParameters):
         self.C_th = self.tau_th_yz / self.timescale
 
         # Concentration ratios
-        self.gamma_e = self.c_e_typ / self.c_n_max
-        self.gamma_p = self.c_p_max / self.c_n_max
+        self.gamma_e = self.c_e_typ / self.c_max
+        self.gamma_p = self.c_p_max / self.c_max
 
         # Macroscale Geometry
         self.l_cn = self.geo.l_cn
@@ -745,61 +771,34 @@ class LithiumIonParameters(BaseParameters):
         self.T_amb = self.therm.T_amb
 
         # SEI parameters
-        self.C_sei_reaction_n = (self.j_scale_n / self.m_sei_dimensional) * pybamm.exp(
-            -(self.F * self.U_n_ref / (2 * self.R * self.T_ref))
-        )
-        self.C_sei_reaction_p = (self.j_scale_p / self.m_sei_dimensional) * pybamm.exp(
+        self.C_sei_reaction = (self.j_scale_n / self.m_sei_dimensional) * pybamm.exp(
             -(self.F * self.U_n_ref / (2 * self.R * self.T_ref))
         )
 
-        self.C_sei_solvent_n = (
+        self.C_sei_solvent = (
             self.j_scale_n
             * self.L_sei_0_dim
             / (self.c_sol_dimensional * self.F * self.D_sol_dimensional)
         )
-        self.C_sei_solvent_p = (
-            self.j_scale_p
-            * self.L_sei_0_dim
-            / (self.c_sol_dimensional * self.F * self.D_sol_dimensional)
-        )
 
-        self.C_sei_electron_n = (
+        self.C_sei_electron = (
             self.j_scale_n
             * self.F
             * self.L_sei_0_dim
             / (self.kappa_inner_dimensional * self.R * self.T_ref)
         )
-        self.C_sei_electron_p = (
-            self.j_scale_p
-            * self.F
-            * self.L_sei_0_dim
-            / (self.kappa_inner_dimensional * self.R * self.T_ref)
-        )
 
-        self.C_sei_inter_n = (
+        self.C_sei_inter = (
             self.j_scale_n
-            * self.L_sei_0_dim
-            / (self.D_li_dimensional * self.c_li_0_dimensional * self.F)
-        )
-        self.C_sei_inter_p = (
-            self.j_scale_p
             * self.L_sei_0_dim
             / (self.D_li_dimensional * self.c_li_0_dimensional * self.F)
         )
 
         self.U_inner_electron = self.F * self.U_inner_dimensional / self.R / self.T_ref
 
-        self.R_sei_n = (
+        self.R_sei = (
             self.F
             * self.j_scale_n
-            * self.R_sei_dimensional
-            * self.L_sei_0_dim
-            / self.R
-            / self.T_ref
-        )
-        self.R_sei_p = (
-            self.F
-            * self.j_scale_p
             * self.R_sei_dimensional
             * self.L_sei_0_dim
             / self.R
@@ -818,20 +817,17 @@ class LithiumIonParameters(BaseParameters):
         self.L_outer_0 = self.L_outer_0_dim / self.L_sei_0_dim
 
         # ratio of SEI reaction scale to intercalation reaction
-        self.Gamma_SEI_n = (
+        self.Gamma_SEI = (
             self.V_bar_inner_dimensional * self.j_scale_n * self.timescale
-        ) / (self.F * self.L_sei_0_dim)
-        self.Gamma_SEI_p = (
-            self.V_bar_inner_dimensional * self.j_scale_p * self.timescale
         ) / (self.F * self.L_sei_0_dim)
 
         # EC reaction
-        self.C_ec_n = (
+        self.C_ec = (
             self.L_sei_0_dim
             * self.j_scale_n
             / (self.F * self.c_ec_0_dim * self.D_ec_dim)
         )
-        self.C_sei_ec_n = (
+        self.C_sei_ec = (
             self.F
             * self.k_sei_dim
             * self.c_ec_0_dim
@@ -846,11 +842,13 @@ class LithiumIonParameters(BaseParameters):
                 )
             )
         )
-        self.beta_sei_n = self.a_n_typ * self.L_sei_0_dim * self.Gamma_SEI_n
+        self.beta_sei = self.a_n_typ * self.L_sei_0_dim * self.Gamma_SEI
         self.c_sei_init = self.c_ec_0_dim / self.c_sei_outer_scale
 
         # lithium plating parameters
-        self.c_Li_typ = self.c_e_typ
+        self.c_Li_typ = pybamm.Parameter(
+            "Typical plated lithium concentration [mol.m-3]"
+        )
         self.c_plated_Li_0 = self.c_plated_Li_0_dim / self.c_Li_typ
 
         # ratio of lithium plating reaction scaled to intercalation reaction
@@ -869,7 +867,10 @@ class LithiumIonParameters(BaseParameters):
         )
         self.c_e_init = self.c_e_init_dimensional / self.c_e_typ
 
-        self.U_n_init = (self.U_n_init_dim - self.U_n_ref) / self.potential_scale
+        if self.options["working electrode"] == "both":
+            self.U_n_init = (self.U_n_init_dim - self.U_n_ref) / self.potential_scale
+        else:
+            self.U_n_init = pybamm.Scalar(0)
         self.U_p_init = (self.U_p_init_dim - self.U_p_ref) / self.potential_scale
         self.ocv_init = (self.ocv_init_dim - self.ocv_ref) / self.potential_scale
 
@@ -893,7 +894,7 @@ class LithiumIonParameters(BaseParameters):
         ) / self.F
         self.beta_LAM_sei_p = (
             self.beta_LAM_sei_p_dimensional
-            * self.a_n_typ
+            * self.a_p_typ
             * self.j_scale_p
             * self.timescale
         ) / self.F

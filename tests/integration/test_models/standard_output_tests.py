@@ -269,15 +269,8 @@ class ParticleConcentrationTests(BaseOutputTest):
         self.N_s_n = solution["Negative particle flux"]
         self.N_s_p = solution["Positive particle flux"]
 
-        self.c_SEI_n_tot = solution["Loss of lithium to negative electrode SEI [mol]"]
-        self.c_SEI_p_tot = solution["Loss of lithium to positive electrode SEI [mol]"]
-
-        self.c_Li_n_tot = solution[
-            "Loss of lithium to negative electrode lithium plating [mol]"
-        ]
-        self.c_Li_p_tot = solution[
-            "Loss of lithium to positive electrode lithium plating [mol]"
-        ]
+        self.c_SEI_tot = solution["Loss of lithium to SEI [mol]"]
+        self.c_Li_tot = solution["Loss of lithium to lithium plating [mol]"]
 
         if model.options["particle size"] == "distribution":
             # These concentration variables are only present for distribution models.
@@ -316,19 +309,20 @@ class ParticleConcentrationTests(BaseOutputTest):
             pos_end_vs_start = self.c_s_p_rav(t[-1], x_p) - self.c_s_p_rav(t[0], x_p)
         elif self.model.options["particle size"] == "distribution":
             R_n, R_p = self.R_n, self.R_p
-            # Test the concentration variables that depend on particle size
-            neg_diff = self.c_s_n_dist(t[1:], r=r_n, R=R_n) - self.c_s_n_dist(
-                t[:-1], r=r_n, R=R_n
+            # Test the concentration variables that depend on x-R (surface values only,
+            # as 3D vars not implemented)
+            neg_diff = self.c_s_n_surf_dist(t[1:], x=x_n, R=R_n) - self.c_s_n_surf_dist(
+                t[:-1], x=x_n, R=R_n
             )
-            pos_diff = self.c_s_p_dist(t[1:], r=r_p, R=R_p) - self.c_s_p_dist(
-                t[:-1], r=r_p, R=R_p
+            pos_diff = self.c_s_p_surf_dist(t[1:], x=x_p, R=R_p) - self.c_s_p_surf_dist(
+                t[:-1], x=x_p, R=R_p
             )
-            neg_end_vs_start = self.c_s_n_dist(t[-1], r=r_n, R=R_n) - self.c_s_n_dist(
-                t[0], r=r_n, R=R_n
-            )
-            pos_end_vs_start = self.c_s_p_dist(t[-1], r=r_p, R=R_p) - self.c_s_p_dist(
-                t[0], r=r_p, R=R_p
-            )
+            neg_end_vs_start = self.c_s_n_surf_dist(
+                t[-1], x=x_n, R=R_n
+            ) - self.c_s_n_surf_dist(t[0], x=x_n, R=R_n)
+            pos_end_vs_start = self.c_s_p_surf_dist(
+                t[-1], x=x_p, R=R_p
+            ) - self.c_s_p_surf_dist(t[0], x=x_p, R=R_p)
             tol = 1e-15
         else:
             neg_diff = self.c_s_n(t[1:], x_n, r_n) - self.c_s_n(t[:-1], x_n, r_n)
@@ -363,11 +357,22 @@ class ParticleConcentrationTests(BaseOutputTest):
         np.testing.assert_array_less(self.c_s_p(t, x_p, r_p), 1)
         if self.model.options["particle size"] == "distribution":
             R_n, R_p = self.R_n, self.R_p
+            # Cannot have 3D processed variables, so test concs that depend on
+            # r-R and x-R
+
+            # r-R (x-averaged)
             np.testing.assert_array_less(-self.c_s_n_dist(t, r=r_n, R=R_n), 0)
             np.testing.assert_array_less(-self.c_s_p_dist(t, r=r_p, R=R_p), 0)
 
             np.testing.assert_array_less(self.c_s_n_dist(t, r=r_n, R=R_n), 1)
             np.testing.assert_array_less(self.c_s_p_dist(t, r=r_p, R=R_p), 1)
+
+            # x-R (surface concentrations)
+            np.testing.assert_array_less(-self.c_s_n_surf_dist(t, x=x_n, R=R_n), 0)
+            np.testing.assert_array_less(-self.c_s_p_surf_dist(t, x=x_p, R=R_p), 0)
+
+            np.testing.assert_array_less(self.c_s_n_surf_dist(t, x=x_n, R=R_n), 1)
+            np.testing.assert_array_less(self.c_s_p_surf_dist(t, x=x_p, R=R_p), 1)
 
     def test_conservation(self):
         """Test amount of lithium stored across all particles and in SEI layers is
@@ -375,10 +380,8 @@ class ParticleConcentrationTests(BaseOutputTest):
         self.c_s_tot = (
             self.c_s_n_tot(self.solution.t)
             + self.c_s_p_tot(self.solution.t)
-            + self.c_SEI_n_tot(self.solution.t)
-            + self.c_SEI_p_tot(self.solution.t)
-            + self.c_Li_n_tot(self.solution.t)
-            + self.c_Li_p_tot(self.solution.t)
+            + self.c_SEI_tot(self.solution.t)
+            + self.c_Li_tot(self.solution.t)
         )
         diff = (self.c_s_tot[1:] - self.c_s_tot[:-1]) / self.c_s_tot[:-1]
         if "profile" in self.model.options["particle"]:
@@ -644,14 +647,8 @@ class CurrentTests(BaseOutputTest):
         self.j_p_av = solution[
             "X-averaged positive electrode interfacial current density"
         ]
-        self.j_n_sei = solution["Negative electrode SEI interfacial current density"]
-        self.j_p_sei = solution["Positive electrode SEI interfacial current density"]
-        self.j_n_sei_av = solution[
-            "X-averaged negative electrode SEI interfacial current density"
-        ]
-        self.j_p_sei_av = solution[
-            "X-averaged positive electrode SEI interfacial current density"
-        ]
+        self.j_n_sei = solution["SEI interfacial current density"]
+        self.j_n_sei_av = solution["X-averaged SEI interfacial current density"]
 
         self.j0_n = solution["Negative electrode exchange current density"]
         self.j0_p = solution["Positive electrode exchange current density"]
@@ -680,8 +677,7 @@ class CurrentTests(BaseOutputTest):
         )
         np.testing.assert_array_almost_equal(
             np.mean(
-                self.a_p(self.t, self.x_p)
-                * (self.j_p(self.t, self.x_p) + self.j_p_sei(self.t, self.x_p)),
+                self.a_p(self.t, self.x_p) * self.j_p(self.t, self.x_p),
                 axis=0,
             ),
             -self.i_cell / self.l_p,

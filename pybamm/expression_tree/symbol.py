@@ -32,9 +32,9 @@ def domain_size(domain):
         "positive electrode": 17,
         "working electrode": 19,
         "working particle": 23,
+        "negative particle size": 29,
+        "positive particle size": 31,
     }
-    if isinstance(domain, str):
-        domain = [domain]
     if domain in [[], None]:
         size = 1
     elif all(dom in fixed_domain_sizes for dom in domain):
@@ -436,8 +436,6 @@ class Symbol(anytree.NodeMixin):
             name = "&#43;"
         elif name == "**":
             name = "^"
-        elif name == "epsilon_s":
-            name = "&#603;"
 
         new_node = anytree.Node(str(counter), label=name)
         counter += 1
@@ -975,4 +973,4 @@ class Symbol(anytree.NodeMixin):
             self._print_name = prettify_print_name(name)
 
     def to_equation(self):
-        return sympy.symbols(str(self.name))
+        return sympy.Symbol(str(self.name))

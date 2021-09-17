@@ -29,12 +29,14 @@ model.submodels["negative electrode potential"] = pybamm.electrode.ohm.LeadingOr
 model.submodels["positive electrode potential"] = pybamm.electrode.ohm.LeadingOrder(
     model.param, "Positive"
 )
-model.submodels["negative particle"] = pybamm.particle.PolynomialSingleParticle(
+particle_n = pybamm.particle.no_distribution.XAveragedPolynomialProfile(
     model.param, "Negative", "uniform profile"
 )
-model.submodels["positive particle"] = pybamm.particle.PolynomialSingleParticle(
+model.submodels["negative particle"] = particle_n
+particle_p = pybamm.particle.no_distribution.XAveragedPolynomialProfile(
     model.param, "Positive", "uniform profile"
 )
+model.submodels["positive particle"] = particle_p
 model.submodels["negative interface"] = pybamm.interface.InverseButlerVolmer(
     model.param, "Negative", "lithium-ion main", options=model.options
 )
@@ -57,14 +59,8 @@ model.submodels[
 model.submodels[
     "electrolyte conductivity"
 ] = pybamm.electrolyte_conductivity.LeadingOrder(model.param)
-model.submodels["negative sei"] = pybamm.sei.NoSEI(model.param, "Negative")
-model.submodels["positive sei"] = pybamm.sei.NoSEI(model.param, "Positive")
-model.submodels["negative lithium plating"] = pybamm.lithium_plating.NoPlating(
-    model.param, "Negative"
-)
-model.submodels["positive lithium plating"] = pybamm.lithium_plating.NoPlating(
-    model.param, "Positive"
-)
+model.submodels["sei"] = pybamm.sei.NoSEI(model.param)
+model.submodels["lithium plating"] = pybamm.lithium_plating.NoPlating(model.param)
 
 # build model
 model.build_model()

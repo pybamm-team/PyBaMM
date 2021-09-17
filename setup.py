@@ -92,7 +92,7 @@ def load_version():
         root = os.path.abspath(os.path.dirname(__file__))
         with open(os.path.join(root, "pybamm", "version"), "r") as f:
             version = f.read().strip().split(",")
-        return ".".join([str(int(x)) for x in version])
+        return ".".join(["{:02d}".format(int(x)) for x in version])
     except Exception as e:
         raise RuntimeError("Unable to read version number (" + str(e) + ").")
 
@@ -157,13 +157,14 @@ for file_ext in ["*.csv", "*.py", "*.md", "*.txt"]:
 pybamm_data.append("./version")
 pybamm_data.append("./CITATIONS.txt")
 pybamm_data.append("./plotting/pybamm.mplstyle")
+pybamm_data.append("../CMakeBuild.py")
 
 idaklu_ext = Extension("pybamm.solvers.idaklu", ["pybamm/solvers/c_solvers/idaklu.cpp"])
 ext_modules = [idaklu_ext] if compile_KLU() else []
 
 jax_dependencies = []
 if not (system() == "Windows" or (system() == "Darwin" and "ARM64" in version())):
-    jax_dependencies = ["jax==0.2.12", "jaxlib==0.1.65"]
+    jax_dependencies = ["jax==0.2.12", "jaxlib==0.1.70"]
 
 
 # Load text for description and license

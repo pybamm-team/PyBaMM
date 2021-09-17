@@ -89,6 +89,48 @@ class TestProcessedVariable(unittest.TestCase):
         )
         np.testing.assert_array_equal(processed_var.entries, y_sol[0])
 
+        # check empty sensitivity works
+
+    def test_processed_variable_0D_no_sensitivity(self):
+        # without space
+        t = pybamm.t
+        y = pybamm.StateVector(slice(0, 1))
+        var = t * y
+        var.mesh = None
+        t_sol = np.linspace(0, 1)
+        y_sol = np.array([np.linspace(0, 5)])
+        var_casadi = to_casadi(var, y_sol)
+        processed_var = pybamm.ProcessedVariable(
+            [var],
+            [var_casadi],
+            pybamm.Solution(t_sol, y_sol, pybamm.BaseModel(), {}),
+            warn=False,
+        )
+
+        # test no inputs (i.e. no sensitivity)
+        self.assertDictEqual(processed_var.sensitivities, {})
+
+        # with parameter
+        t = pybamm.t
+        y = pybamm.StateVector(slice(0, 1))
+        a = pybamm.InputParameter('a')
+        var = t * y * a
+        var.mesh = None
+        t_sol = np.linspace(0, 1)
+        y_sol = np.array([np.linspace(0, 5)])
+        inputs = {'a': np.array([1.0])}
+        var_casadi = to_casadi(var, y_sol, inputs=inputs)
+        processed_var = pybamm.ProcessedVariable(
+            [var],
+            [var_casadi],
+            pybamm.Solution(t_sol, y_sol, pybamm.BaseModel(), inputs),
+            warn=False,
+        )
+
+        # test no sensitivity raises error
+        with self.assertRaisesRegex(ValueError, 'Cannot compute sensitivities'):
+            print(processed_var.sensitivities)
+
     def test_processed_variable_1D(self):
         t = pybamm.t
         var = pybamm.Variable("var", domain=["negative electrode", "separator"])

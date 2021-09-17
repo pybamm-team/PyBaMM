@@ -100,7 +100,7 @@ class UnaryOperator(pybamm.Symbol):
     def to_equation(self):
         """Convert the node and its subtree into a SymPy equation."""
         if self.print_name is not None:
-            return sympy.symbols(self.print_name)
+            return sympy.Symbol(self.print_name)
         else:
             eq1 = self.child.to_equation()
             return self._sympy_operator(eq1)
@@ -637,7 +637,7 @@ class Integral(SpatialOperator):
 
     def _sympy_operator(self, child):
         """Override :meth:`pybamm.UnaryOperator._sympy_operator`"""
-        return sympy.Integral(child, sympy.symbols("xn"))
+        return sympy.Integral(child, sympy.Symbol("xn"))
 
 
 class BaseIndefiniteIntegral(Integral):
@@ -976,8 +976,11 @@ class BoundaryValue(BoundaryOperator):
             and self.side == "right"
         ):
             # value on the surface of the particle
-            latex_child = sympy.latex(child) + r"^{surf}"
-            return sympy.Symbol(latex_child)
+            if str(child) == "1":
+                return child
+            else:
+                latex_child = sympy.latex(child) + r"^{surf}"
+                return sympy.Symbol(latex_child)
 
         elif self.side == "positive tab":
             return child
@@ -1253,17 +1256,19 @@ def x_average(symbol):
     if isinstance(symbol, (pybamm.PrimaryBroadcast, pybamm.FullBroadcast)):
         return symbol.reduce_one_dimension()
     # If symbol is a concatenation of Broadcasts, its average value is its child
-    elif (
-        isinstance(symbol, pybamm.Concatenation)
-        and all(isinstance(child, pybamm.Broadcast) for child in symbol.children)
-        and symbol.domain == ["negative electrode", "separator", "positive electrode"]
+    elif isinstance(symbol, pybamm.Concatenation) and all(
+        isinstance(child, pybamm.Broadcast) for child in symbol.children
     ):
-        a, b, c = [orp.orphans[0] for orp in symbol.orphans]
         geo = pybamm.geometric_parameters
         l_n = geo.l_n
         l_s = geo.l_s
         l_p = geo.l_p
-        out = (l_n * a + l_s * b + l_p * c) / (l_n + l_s + l_p)
+        if symbol.domain == ["negative electrode", "separator", "positive electrode"]:
+            a, b, c = [orp.orphans[0] for orp in symbol.orphans]
+            out = (l_n * a + l_s * b + l_p * c) / (l_n + l_s + l_p)
+        elif symbol.domain == ["separator", "positive electrode"]:
+            b, c = [orp.orphans[0] for orp in symbol.orphans]
+            out = (l_s * b + l_p * c) / (l_s + l_p)
         # To respect domains we may need to broadcast the child back out
         child = symbol.children[0]
         # If symbol being returned doesn't have empty domain, return it

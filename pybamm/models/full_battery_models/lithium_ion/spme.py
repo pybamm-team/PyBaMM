@@ -71,10 +71,10 @@ class SPMe(BaseModel):
 
     def set_tortuosity_submodels(self):
         self.submodels["electrolyte tortuosity"] = pybamm.tortuosity.Bruggeman(
-            self.param, "Electrolyte", True
+            self.param, "Electrolyte", self.options, True
         )
         self.submodels["electrode tortuosity"] = pybamm.tortuosity.Bruggeman(
-            self.param, "Electrode", True
+            self.param, "Electrode", self.options, True
         )
 
     def set_interfacial_submodel(self):
@@ -119,7 +119,9 @@ class SPMe(BaseModel):
             if particle_side == "Fickian diffusion":
                 self.submodels[
                     domain.lower() + " particle"
-                ] = pybamm.particle.FickianSingleParticle(self.param, domain)
+                ] = pybamm.particle.no_distribution.XAveragedFickianDiffusion(
+                    self.param, domain
+                )
             elif particle_side in [
                 "uniform profile",
                 "quadratic profile",
@@ -127,7 +129,7 @@ class SPMe(BaseModel):
             ]:
                 self.submodels[
                     domain.lower() + " particle"
-                ] = pybamm.particle.PolynomialSingleParticle(
+                ] = pybamm.particle.no_distribution.XAveragedPolynomialProfile(
                     self.param, domain, particle_side
                 )
 

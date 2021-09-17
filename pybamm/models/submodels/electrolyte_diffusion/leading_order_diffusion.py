@@ -15,8 +15,7 @@ class LeadingOrder(BaseElectrolyteDiffusion):
     ----------
     param : parameter class
         The parameters to use for this submodel
-    reactions : dict
-        Dictionary of reaction terms
+
 
     **Extends:** :class:`pybamm.electrolyte_diffusion.BaseElectrolyteDiffusion`
     """
@@ -50,7 +49,7 @@ class LeadingOrder(BaseElectrolyteDiffusion):
         )
         eps = variables["Porosity"]
 
-        variables.update(self._get_total_concentration_electrolyte(c_e, eps))
+        variables.update(self._get_total_concentration_electrolyte(eps * c_e))
 
         return variables
 
