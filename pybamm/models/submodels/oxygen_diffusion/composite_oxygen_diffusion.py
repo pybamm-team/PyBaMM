@@ -18,7 +18,8 @@ class Composite(Full):
     ----------
     param : parameter class
         The parameters to use for this submodel
-
+    reactions : dict
+        Dictionary of reaction terms
     extended : bool
         Whether to include feedback from the first-order terms
 

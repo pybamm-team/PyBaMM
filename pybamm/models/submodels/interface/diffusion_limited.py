@@ -1,5 +1,5 @@
 #
-# Diffusion-limited kinetics
+# Leading-order diffusion limited kinetics
 #
 
 import pybamm
@@ -29,6 +29,9 @@ class DiffusionLimited(BaseInterface):
         self.order = order
 
     def get_coupled_variables(self, variables):
+        # Calculate delta_phi_s from phi_s and phi_e if it isn't already known
+        if self.domain + " electrode surface potential difference" not in variables:
+            variables = self._get_delta_phi(variables)
         delta_phi_s = variables[self.domain + " electrode surface potential difference"]
         # If delta_phi_s was broadcast, take only the orphan
         if isinstance(delta_phi_s, pybamm.Broadcast):

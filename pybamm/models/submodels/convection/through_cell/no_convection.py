@@ -12,35 +12,28 @@ class NoConvection(BaseThroughCellModel):
     ----------
     param : parameter class
         The parameters to use for this submodel
-    options : dict, optional
-        A dictionary of options to be passed to the model.
+
 
     **Extends:** :class:`pybamm.convection.through_cell.BaseThroughCellModel`
     """
 
-    def __init__(self, param, options=None):
-        super().__init__(param, options=options)
+    def __init__(self, param):
+        super().__init__(param)
 
     def get_fundamental_variables(self):
 
-        if self.half_cell:
-            v_box_n = None
-            div_v_box_n = None
-            p_n = None
-        else:
-            v_box_n = pybamm.FullBroadcast(0, "negative electrode", "current collector")
-            div_v_box_n = pybamm.FullBroadcast(
-                0, "negative electrode", "current collector"
-            )
-            p_n = pybamm.FullBroadcast(0, "negative electrode", "current collector")
+        v_box_n = pybamm.FullBroadcast(0, "negative electrode", "current collector")
         v_box_p = pybamm.FullBroadcast(0, "positive electrode", "current collector")
-        div_v_box_p = pybamm.FullBroadcast(0, "positive electrode", "current collector")
-        p_p = pybamm.FullBroadcast(0, "positive electrode", "current collector")
-
         variables = self._get_standard_neg_pos_velocity_variables(v_box_n, v_box_p)
+
+        div_v_box_n = pybamm.FullBroadcast(0, "negative electrode", "current collector")
+        div_v_box_p = pybamm.FullBroadcast(0, "positive electrode", "current collector")
         variables.update(
             self._get_standard_neg_pos_acceleration_variables(div_v_box_n, div_v_box_p)
         )
+
+        p_n = pybamm.FullBroadcast(0, "negative electrode", "current collector")
+        p_p = pybamm.FullBroadcast(0, "positive electrode", "current collector")
         variables.update(self._get_standard_neg_pos_pressure_variables(p_n, p_p))
 
         return variables

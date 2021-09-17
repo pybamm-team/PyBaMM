@@ -23,8 +23,7 @@ class TestSPM(unittest.TestCase):
         param = pybamm.ParameterValues(chemistry=pybamm.parameter_sets.Ecker2015)
         modeltest = tests.StandardModelTest(model, parameter_values=param)
         modeltest.test_sensitivities(
-            "Current function [A]",
-            0.15652,
+            'Current function [A]', 0.15652,
         )
 
     def test_basic_processing_1plus1D(self):
@@ -213,7 +212,7 @@ class TestSPMWithSEI(unittest.TestCase):
         modeltest.test_all()
 
 
-class TestSPMWithMechanics(unittest.TestCase):
+class TestSPMWithCrack(unittest.TestCase):
     def test_well_posed_negative_cracking(self):
         options = {"particle mechanics": ("swelling and cracking", "none")}
         model = pybamm.lithium_ion.SPM(options)

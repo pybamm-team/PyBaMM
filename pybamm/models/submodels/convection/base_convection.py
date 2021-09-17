@@ -11,14 +11,13 @@ class BaseModel(pybamm.BaseSubModel):
     ----------
     param : parameter class
         The parameters to use for this submodel
-    options : dict, optional
-        A dictionary of options to be passed to the model.
+
 
     **Extends:** :class:`pybamm.BaseSubModel`
     """
 
-    def __init__(self, param, options=None):
-        super().__init__(param, options=options)
+    def __init__(self, param):
+        super().__init__(param)
 
     def _get_standard_whole_cell_velocity_variables(self, variables):
         """
@@ -39,10 +38,7 @@ class BaseModel(pybamm.BaseSubModel):
 
         vel_scale = self.param.velocity_scale
 
-        if self.half_cell:
-            v_box_n = None
-        else:
-            v_box_n = variables["Negative electrode volume-averaged velocity"]
+        v_box_n = variables["Negative electrode volume-averaged velocity"]
         v_box_s = variables["Separator volume-averaged velocity"]
         v_box_p = variables["Positive electrode volume-averaged velocity"]
 
@@ -74,10 +70,7 @@ class BaseModel(pybamm.BaseSubModel):
 
         acc_scale = self.param.velocity_scale / self.param.L_x
 
-        if self.half_cell:
-            div_v_box_n = None
-        else:
-            div_v_box_n = variables["Negative electrode volume-averaged acceleration"]
+        div_v_box_n = variables["Negative electrode volume-averaged acceleration"]
         div_v_box_s = variables["Separator volume-averaged acceleration"]
         div_v_box_p = variables["Positive electrode volume-averaged acceleration"]
 
@@ -108,10 +101,7 @@ class BaseModel(pybamm.BaseSubModel):
         variables : dict
             The variables which can be derived from the pressure.
         """
-        if self.half_cell:
-            p_n = None
-        else:
-            p_n = variables["Negative electrode pressure"]
+        p_n = variables["Negative electrode pressure"]
         p_s = variables["Separator pressure"]
         p_p = variables["Positive electrode pressure"]
 

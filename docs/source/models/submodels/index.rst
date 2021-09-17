@@ -15,7 +15,7 @@ Submodels
     interface/index
     oxygen_diffusion/index
     particle/index
-    particle_mechanics/index
+    particle_cracking/index
     porosity/index
     thermal/index
     tortuosity/index

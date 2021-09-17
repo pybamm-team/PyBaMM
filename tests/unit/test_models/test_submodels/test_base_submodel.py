@@ -3,6 +3,7 @@
 #
 
 import pybamm
+import tests
 import unittest
 
 
@@ -19,6 +20,11 @@ class TestBaseSubModel(unittest.TestCase):
         # bad string
         with self.assertRaises(pybamm.DomainError):
             pybamm.BaseSubModel(None, "bad string")
+
+    def test_public_functions(self):
+        submodel = pybamm.BaseSubModel(None)
+        std_tests = tests.StandardSubModelTests(submodel)
+        std_tests.test_all()
 
 
 if __name__ == "__main__":

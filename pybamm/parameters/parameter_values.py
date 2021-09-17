@@ -599,7 +599,7 @@ class ParameterValues:
             return processed_symbol
 
     def _process_symbol(self, symbol):
-        """See :meth:`ParameterValues.process_symbol()`."""
+        """ See :meth:`ParameterValues.process_symbol()`. """
 
         if isinstance(symbol, pybamm.Parameter):
             value = self[symbol.name]
@@ -744,8 +744,6 @@ class ParameterValues:
                     isinstance(child, pybamm.Broadcast)
                     for child in new_left.child.children
                 ):
-                    # in this case x_average will return a weighted sum of the variables
-                    # that were broadcasted
                     return self.process_symbol(pybamm.x_average(new_left.child))
             # make new symbol, ensure domain remains the same
             new_symbol = symbol._binary_new_copy(new_left, new_right)
@@ -869,7 +867,6 @@ class ParameterValues:
             "geo",
             "elec",
             "therm",
-            "half_cell",
         ]
 
         # If 'parameters' is a class, extract the dict

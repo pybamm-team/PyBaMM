@@ -125,7 +125,6 @@ class Experiment:
         operating_conditions = [
             cond for cycle in operating_conditions_cycles for cond in cycle
         ]
-        self.operating_conditions_cycles = operating_conditions_cycles
         self.operating_conditions_strings = operating_conditions
         self.operating_conditions, self.events = self.read_operating_conditions(
             operating_conditions, drive_cycles
@@ -136,7 +135,6 @@ class Experiment:
         else:
             raise TypeError("experimental parameters should be a dictionary")
 
-        self.termination_string = termination
         self.termination = self.read_termination(termination)
         self.use_simulation_setup_type = use_simulation_setup_type
 

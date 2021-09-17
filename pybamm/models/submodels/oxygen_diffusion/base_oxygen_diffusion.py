@@ -11,7 +11,8 @@ class BaseModel(pybamm.BaseSubModel):
     ----------
     param : parameter class
         The parameters to use for this submodel
-
+    reactions : dict, optional
+        Dictionary of reaction terms
 
     **Extends:** :class:`pybamm.BaseSubModel`
     """

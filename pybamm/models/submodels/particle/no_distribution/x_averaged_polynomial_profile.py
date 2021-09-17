@@ -73,11 +73,6 @@ class XAveragedPolynomialProfile(BaseParticle):
             "Average " + self.domain.lower() + " particle concentration"
         ]
         i_boundary_cc = variables["Current collector current density"]
-        a_av = variables[
-            "X-averaged "
-            + self.domain.lower()
-            + " electrode surface area to volume ratio"
-        ]
         T_xav = pybamm.PrimaryBroadcast(
             variables["X-averaged " + self.domain.lower() + " electrode temperature"],
             [self.domain.lower() + " particle"],
@@ -105,7 +100,7 @@ class XAveragedPolynomialProfile(BaseParticle):
             # ok approximation and means the SPM(e) still gives a system of ODEs rather
             # than DAEs.
             if self.domain == "Negative":
-                j_xav = i_boundary_cc / (a_av * self.param.l_n)
+                j_xav = i_boundary_cc / self.param.l_n
                 c_s_surf_xav = c_s_rxav - self.param.C_n * (
                     j_xav
                     / 5
@@ -114,7 +109,7 @@ class XAveragedPolynomialProfile(BaseParticle):
                 )
 
             if self.domain == "Positive":
-                j_xav = -i_boundary_cc / (a_av * self.param.l_p)
+                j_xav = -i_boundary_cc / self.param.l_p
                 c_s_surf_xav = c_s_rxav - self.param.C_p * (
                     j_xav
                     / 5
@@ -130,7 +125,7 @@ class XAveragedPolynomialProfile(BaseParticle):
                 "Average " + self.domain.lower() + " particle concentration gradient"
             ]
             if self.domain == "Negative":
-                j_xav = i_boundary_cc / (a_av * self.param.l_n)
+                j_xav = i_boundary_cc / self.param.l_n
                 c_s_surf_xav = (
                     c_s_rxav
                     + 8 * q_s_rxav / 35
@@ -144,7 +139,7 @@ class XAveragedPolynomialProfile(BaseParticle):
                 )
 
             if self.domain == "Positive":
-                j_xav = -i_boundary_cc / (a_av * self.param.l_p)
+                j_xav = -i_boundary_cc / self.param.l_p
                 c_s_surf_xav = (
                     c_s_rxav
                     + 8 * q_s_rxav / 35

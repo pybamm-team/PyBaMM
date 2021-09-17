@@ -6,7 +6,7 @@ Interface
 
   base_interface
   kinetics
-  inverse_butler_volmer
+  inverse_kinetics
   first_order_kinetics
   diffusion_limited
   sei

@@ -32,8 +32,7 @@ class TestDFN(unittest.TestCase):
             model, parameter_values=param, var_pts=var_pts
         )
         modeltest.test_sensitivities(
-            "Current function [A]",
-            0.15652,
+            'Current function [A]', 0.15652,
         )
 
     def test_basic_processing_1plus1D(self):
@@ -238,7 +237,7 @@ class TestDFNWithSEI(unittest.TestCase):
         modeltest.test_all()
 
 
-class TestDFNWithMechanics(unittest.TestCase):
+class TestDFNWithCrack(unittest.TestCase):
     def test_well_posed_negative_cracking(self):
         options = {"particle mechanics": ("swelling and cracking", "none")}
         model = pybamm.lithium_ion.DFN(options)
@@ -311,7 +310,7 @@ class TestDFNWithSizeDistribution(unittest.TestCase):
         options = {
             "particle size": "distribution",
             "current collector": "potential pair",
-            "dimensionality": 1,
+            "dimensionality": 1
         }
         model = pybamm.lithium_ion.DFN(options)
         modeltest = tests.StandardModelTest(
@@ -326,7 +325,7 @@ class TestDFNWithSizeDistribution(unittest.TestCase):
         # is the same as for the standard DFN with the same parameters
         models = [
             pybamm.lithium_ion.DFN(),
-            pybamm.lithium_ion.DFN(options={"particle size": "distribution"}),
+            pybamm.lithium_ion.DFN(options={"particle size": "distribution"})
         ]
         var = pybamm.standard_spatial_vars
 
@@ -342,7 +341,10 @@ class TestDFNWithSizeDistribution(unittest.TestCase):
         pos_Li = []
         for model in models:
             sim = pybamm.Simulation(
-                model, parameter_values=self.params, var_pts=self.var_pts, solver=solver
+                model,
+                parameter_values=self.params,
+                var_pts=self.var_pts,
+                solver=solver
             )
             sim.var_pts.update(var_pts)
             solution = sim.solve([0, 3500])

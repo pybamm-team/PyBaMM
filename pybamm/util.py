@@ -17,7 +17,7 @@ from collections import defaultdict
 
 
 def root_dir():
-    """return the root directory of the PyBaMM install directory"""
+    """ return the root directory of the PyBaMM install directory """
     return str(pathlib.Path(pybamm.__path__[0]).parent)
 
 
@@ -89,17 +89,6 @@ class FuzzyDict(dict):
         try:
             return super().__getitem__(key)
         except KeyError:
-            if "negative electrode sei" in key.lower():
-                raise KeyError(
-                    f"'{key}' not found. All SEI parameters have been "
-                    "renamed from '...negative electrode SEI...' to '...SEI...'"
-                )
-            if "negative electrode lithium plating" in key.lower():
-                raise KeyError(
-                    f"'{key}' not found. All lithium plating parameters have been "
-                    "renamed from '...negative electrode lithium plating...' "
-                    "to '...lithium plating...'"
-                )
             best_matches = self.get_best_matches(key)
             raise KeyError(f"'{key}' not found. Best matches are {best_matches}")
 

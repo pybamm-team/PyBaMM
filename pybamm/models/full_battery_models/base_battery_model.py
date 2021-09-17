@@ -653,33 +653,33 @@ class BaseBatteryModel(pybamm.BaseModel):
         # Set model equations
         for submodel_name, submodel in self.submodels.items():
             if submodel.external is False:
-                pybamm.logger.verbose(
+                pybamm.logger.debug(
                     "Setting rhs for {} submodel ({})".format(submodel_name, self.name)
                 )
 
                 submodel.set_rhs(self.variables)
-                pybamm.logger.verbose(
+                pybamm.logger.debug(
                     "Setting algebraic for {} submodel ({})".format(
                         submodel_name, self.name
                     )
                 )
 
                 submodel.set_algebraic(self.variables)
-                pybamm.logger.verbose(
+                pybamm.logger.debug(
                     "Setting boundary conditions for {} submodel ({})".format(
                         submodel_name, self.name
                     )
                 )
 
                 submodel.set_boundary_conditions(self.variables)
-                pybamm.logger.verbose(
+                pybamm.logger.debug(
                     "Setting initial conditions for {} submodel ({})".format(
                         submodel_name, self.name
                     )
                 )
                 submodel.set_initial_conditions(self.variables)
                 submodel.set_events(self.variables)
-                pybamm.logger.verbose(
+                pybamm.logger.debug(
                     "Updating {} submodel ({})".format(submodel_name, self.name)
                 )
                 self.update(submodel)
@@ -765,18 +765,16 @@ class BaseBatteryModel(pybamm.BaseModel):
 
     def set_tortuosity_submodels(self):
         self.submodels["electrolyte tortuosity"] = pybamm.tortuosity.Bruggeman(
-            self.param, "Electrolyte", self.options
+            self.param, "Electrolyte"
         )
         self.submodels["electrode tortuosity"] = pybamm.tortuosity.Bruggeman(
-            self.param, "Electrode", self.options
+            self.param, "Electrode"
         )
 
     def set_thermal_submodel(self):
 
         if self.options["thermal"] == "isothermal":
-            thermal_submodel = pybamm.thermal.isothermal.Isothermal(
-                self.param, self.options
-            )
+            thermal_submodel = pybamm.thermal.isothermal.Isothermal(self.param)
 
         elif self.options["thermal"] == "lumped":
             thermal_submodel = pybamm.thermal.Lumped(
@@ -885,8 +883,20 @@ class BaseBatteryModel(pybamm.BaseModel):
         eta_r_av_dim = eta_r_p_av_dim - eta_r_n_av_dim
 
         # SEI film overpotential
-        eta_sei_av = self.variables["X-averaged SEI film overpotential"]
-        eta_sei_av_dim = self.variables["X-averaged SEI film overpotential [V]"]
+        eta_sei_n_av = self.variables[
+            "X-averaged negative electrode SEI film overpotential"
+        ]
+        eta_sei_p_av = self.variables[
+            "X-averaged positive electrode SEI film overpotential"
+        ]
+        eta_sei_n_av_dim = self.variables[
+            "X-averaged negative electrode SEI film overpotential [V]"
+        ]
+        eta_sei_p_av_dim = self.variables[
+            "X-averaged positive electrode SEI film overpotential [V]"
+        ]
+        eta_sei_av = eta_sei_n_av + eta_sei_p_av
+        eta_sei_av_dim = eta_sei_n_av_dim + eta_sei_p_av_dim
 
         # TODO: add current collector losses to the voltage in 3D
 
@@ -930,7 +940,9 @@ class BaseBatteryModel(pybamm.BaseModel):
         )
         # Variables for calculating the equivalent circuit model (ECM) resistance
         # Need to compare OCV to initial value to capture this as an overpotential
-        ocv_init = self.param.U_p_init - self.param.U_n_init
+        ocv_init = self.param.U_p(
+            self.param.c_p_init(1), self.param.T_init
+        ) - self.param.U_n(self.param.c_n_init(0), self.param.T_init)
         ocv_init_dim = (
             self.param.U_p_ref
             - self.param.U_n_ref
