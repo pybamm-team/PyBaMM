@@ -249,6 +249,7 @@ from .plotting.quick_plot import QuickPlot, close_plots
 from .plotting.plot import plot
 from .plotting.plot2D import plot2D
 from .plotting.plot_voltage_components import plot_voltage_components
+from .plotting.plot_summary_variables import plot_summary_variables
 from .plotting.dynamic_plot import dynamic_plot
 
 #
