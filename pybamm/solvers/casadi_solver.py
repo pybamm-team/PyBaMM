@@ -153,7 +153,12 @@ class CasadiSolver(pybamm.BaseSolver):
             # Create integrator without grid to avoid having to create several times
             self.create_integrator(model, inputs)
             solution = self._run_integrator(
-                model, model.y0, inputs_dict, inputs, t_eval, use_grid=False,
+                model,
+                model.y0,
+                inputs_dict,
+                inputs,
+                t_eval,
+                use_grid=False,
             )
 
         if self.mode in ["fast", "fast with events"] or not model.events:
@@ -193,7 +198,10 @@ class CasadiSolver(pybamm.BaseSolver):
                 self.create_integrator(model, inputs)
                 # Initialize solution
                 solution = pybamm.Solution(
-                    np.array([t]), y0, model, inputs_dict,
+                    np.array([t]),
+                    y0,
+                    model,
+                    inputs_dict,
                     sensitivities=False,
                 )
                 solution.solve_time = 0
@@ -237,7 +245,12 @@ class CasadiSolver(pybamm.BaseSolver):
                     # halve the step size and try again.
                     try:
                         current_step_sol = self._run_integrator(
-                            model, y0, inputs_dict, inputs, t_window, use_grid=use_grid,
+                            model,
+                            y0,
+                            inputs_dict,
+                            inputs,
+                            t_window,
+                            use_grid=use_grid,
                             extract_sensitivities_in_solution=False,
                         )
                         solved = True
@@ -273,7 +286,7 @@ class CasadiSolver(pybamm.BaseSolver):
                     y0 = solution.all_ys[-1][:, -1]
 
             # now we extract sensitivities from the solution
-            if (bool(model.calculate_sensitivities)):
+            if bool(model.calculate_sensitivities):
                 solution.sensitivities = True
 
             return solution
@@ -313,11 +326,11 @@ class CasadiSolver(pybamm.BaseSolver):
 
             # Return None if no events have been triggered
             if (crossed_events == 1).all():
-                return None, None
+                return None, None, None
 
             # get the index of the events that have been crossed
-            event_ind = np.where(crossed_events != 1)[0]
-            active_events = [model.terminate_events_eval[i] for i in event_ind]
+            event_idx = np.where(crossed_events != 1)[0]
+            active_events = [model.terminate_events_eval[i] for i in event_idx]
 
             # loop over events to compute the time at which they were triggered
             t_events = [None] * len(active_events)
@@ -326,7 +339,7 @@ class CasadiSolver(pybamm.BaseSolver):
                 # Implement our own bisection algorithm for speed
                 # This is used to find the time range in which the event is triggered
                 # Evaluations of the "event" function are (relatively) expensive
-                init_event_sign = init_event_signs[event_ind[i]][0]
+                init_event_sign = init_event_signs[event_idx[i]][0]
 
                 f_eval = {}
 
@@ -379,7 +392,7 @@ class CasadiSolver(pybamm.BaseSolver):
 
             if typ == "window":
                 event_idx_lower = np.nanmin(event_idcs_lower)
-                return event_idx_lower, None
+                return event_idx_lower, None, None
             elif typ == "exact":
                 # t_event is the earliest event triggered
                 t_event = np.nanmin(t_events)
@@ -388,10 +401,12 @@ class CasadiSolver(pybamm.BaseSolver):
                 y_sol = interp1d(sol.t, sol.y, kind="linear")
                 y_event = y_sol(t_event)
 
-                return t_event, y_event
+                closest_event_idx = event_idx[np.nanargmin(t_events)]
+
+                return t_event, y_event, closest_event_idx
 
         # Find the interval in which the event was triggered
-        event_idx_lower, _ = find_t_event(coarse_solution, "window")
+        event_idx_lower, _, _ = find_t_event(coarse_solution, "window")
 
         # Return the existing solution if no events have been triggered
         if event_idx_lower is None:
@@ -422,7 +437,7 @@ class CasadiSolver(pybamm.BaseSolver):
         )
 
         # Find the exact time at which the event was triggered
-        t_event, y_event = find_t_event(dense_step_sol, "exact")
+        t_event, y_event, closest_event_idx = find_t_event(dense_step_sol, "exact")
         # If this returns None, no event was crossed in dense_step_sol. This can happen
         # if the event crossing was right at the end of the interval in the coarse
         # solution. In this case, return the t and y from the end of the interval
@@ -445,12 +460,14 @@ class CasadiSolver(pybamm.BaseSolver):
             np.array([t_event]),
             y_event[:, np.newaxis],
             "event",
-            sensitivities=bool(model.calculate_sensitivities)
+            sensitivities=bool(model.calculate_sensitivities),
         )
         solution.integration_time = (
             coarse_solution.integration_time + dense_step_sol.integration_time
         )
         self.check_interpolant_extrapolation(model, solution)
+
+        solution.closest_event_idx = closest_event_idx
 
         return solution
 
@@ -598,10 +615,16 @@ class CasadiSolver(pybamm.BaseSolver):
 
             return integrator
 
-    def _run_integrator(self, model, y0, inputs_dict,
-                        inputs, t_eval, use_grid=True,
-                        extract_sensitivities_in_solution=None,
-                        ):
+    def _run_integrator(
+        self,
+        model,
+        y0,
+        inputs_dict,
+        inputs,
+        t_eval,
+        use_grid=True,
+        extract_sensitivities_in_solution=None,
+    ):
         pybamm.logger.debug("Running CasADi integrator")
 
         # are we solving explicit forward equations?
@@ -642,8 +665,11 @@ class CasadiSolver(pybamm.BaseSolver):
                 integration_time = timer.time()
                 y_sol = casadi.vertcat(casadi_sol["xf"], casadi_sol["zf"])
                 sol = pybamm.Solution(
-                    t_eval, y_sol, model, inputs_dict,
-                    sensitivities=extract_sensitivities_in_solution
+                    t_eval,
+                    y_sol,
+                    model,
+                    inputs_dict,
+                    sensitivities=extract_sensitivities_in_solution,
                 )
                 sol.integration_time = integration_time
                 return sol
@@ -673,8 +699,11 @@ class CasadiSolver(pybamm.BaseSolver):
                     y_sol = casadi.vertcat(y_diff, y_alg)
 
             sol = pybamm.Solution(
-                t_eval, y_sol, model, inputs_dict,
-                sensitivities=extract_sensitivities_in_solution
+                t_eval,
+                y_sol,
+                model,
+                inputs_dict,
+                sensitivities=extract_sensitivities_in_solution,
             )
             sol.integration_time = integration_time
             return sol

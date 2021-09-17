@@ -14,13 +14,14 @@ class Full(BaseModel):
         The parameters to use for this submodel
     domain : str
         Either 'Negative' or 'Positive'
-
+    options : dict, optional
+        A dictionary of options to be passed to the model.
 
     **Extends:** :class:`pybamm.electrode.ohm.BaseModel`
     """
 
-    def __init__(self, param, domain):
-        super().__init__(param, domain)
+    def __init__(self, param, domain, options=None):
+        super().__init__(param, domain, options=options)
 
     def get_fundamental_variables(self):
 
@@ -97,13 +98,10 @@ class Full(BaseModel):
     def set_initial_conditions(self, variables):
 
         phi_s = variables[self.domain + " electrode potential"]
-        T_init = self.param.T_init
 
         if self.domain == "Negative":
             phi_s_init = pybamm.Scalar(0)
         elif self.domain == "Positive":
-            phi_s_init = self.param.U_p(
-                self.param.c_p_init(1), T_init
-            ) - self.param.U_n(self.param.c_n_init(0), T_init)
+            phi_s_init = self.param.U_p_init - self.param.U_n_init
 
         self.initial_conditions[phi_s] = phi_s_init

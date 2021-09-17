@@ -54,27 +54,23 @@ class ReactionDriven(BaseModel):
 
     def get_coupled_variables(self, variables):
         if self.x_average is True:
-            j_sei = variables[
-                "X-averaged "
-                + self.domain.lower()
-                + " electrode SEI interfacial current density"
-            ]
             a = variables[
                 "X-averaged "
                 + self.domain.lower()
                 + " electrode surface area to volume ratio"
             ]
-
         else:
-            j_sei = variables[
-                self.domain + " electrode SEI interfacial current density"
-            ]
             a = variables[self.domain + " electrode surface area to volume ratio"]
 
         if self.domain == "Negative":
             beta_LAM_sei = self.param.beta_LAM_sei_n
+            if self.x_average is True:
+                j_sei = variables["X-averaged SEI interfacial current density"]
+            else:
+                j_sei = variables["SEI interfacial current density"]
         else:
             beta_LAM_sei = self.param.beta_LAM_sei_p
+            j_sei = 0
 
         deps_solid_dt = beta_LAM_sei * a * j_sei
         variables.update(

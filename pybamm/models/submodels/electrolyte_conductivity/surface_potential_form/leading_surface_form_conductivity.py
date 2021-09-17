@@ -17,8 +17,7 @@ class BaseLeadingOrderSurfaceForm(LeadingOrder):
         The parameters to use for this submodel
     domain : str
         The domain in which the model holds
-    reactions : dict
-        Dictionary of reaction terms
+
 
     **Extends:** :class:`pybamm.electrolyte_conductivity.LeadingOrder`
     """
@@ -149,16 +148,6 @@ class LeadingOrderAlgebraic(BaseLeadingOrderSurfaceForm):
         if self.domain == "Separator":
             return
 
-        # Get x-averaged surface area to volume ratio. It should be 1 for
-        # the x-average models with a single particle size (SPM, SPMe). But for
-        # x-averaged models with a particle size distribution (MPM) it is not
-        # equal to 1 since it was scaled by a_typ, which is likely not the surface area
-        # of the final (discretized) distribution.
-        a = variables[
-            "X-averaged " + self.domain.lower() +
-            " electrode surface area to volume ratio"
-        ]
-
         sum_j = variables[
             "Sum of x-averaged "
             + self.domain.lower()
@@ -176,4 +165,4 @@ class LeadingOrderAlgebraic(BaseLeadingOrderSurfaceForm):
             + " electrode surface potential difference"
         ]
 
-        self.algebraic[delta_phi] = sum_j_av - a * sum_j
+        self.algebraic[delta_phi] = sum_j_av - sum_j
