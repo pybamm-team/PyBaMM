@@ -55,7 +55,7 @@ class ConstantConcentration(BaseElectrolyteDiffusion):
         c_e = variables["Electrolyte concentration"]
         eps = variables["Porosity"]
 
-        variables.update(self._get_total_concentration_electrolyte(c_e, eps))
+        variables.update(self._get_total_concentration_electrolyte(eps * c_e))
 
         return variables
 

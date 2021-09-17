@@ -409,6 +409,8 @@ def intersect(s1, s2):
 
 def simplified_concatenation(*children):
     """Perform simplifications on a concatenation."""
+    # remove children that are None
+    children = list(filter(lambda x: x is not None, children))
     # Create Concatenation to easily read domains
     concat = Concatenation(*children)
     # Simplify concatenation of broadcasts all with the same child to a single

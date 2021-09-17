@@ -8,3 +8,4 @@ Ohmic
   composite_ohm
   full_ohm
   surface_form_ohm
+  li_metal_explicit

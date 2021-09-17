@@ -13,14 +13,17 @@ class BaseElectrode(pybamm.BaseSubModel):
         The parameters to use for this submodel
     domain : str
         Either 'Negative' or 'Positive'
+    options : dict, optional
+        A dictionary of options to be passed to the model.
     set_positive_potential :  bool, optional
         If True the battery model sets the positve potential based on the current.
         If False, the potential is specified by the user. Default is True.
+
     **Extends:** :class:`pybamm.BaseSubModel`
     """
 
-    def __init__(self, param, domain, set_positive_potential=True):
-        super().__init__(param, domain)
+    def __init__(self, param, domain, options=None, set_positive_potential=True):
+        super().__init__(param, domain, options=options)
         self.set_positive_potential = set_positive_potential
 
     def _get_standard_potential_variables(self, phi_s):
@@ -73,10 +76,16 @@ class BaseElectrode(pybamm.BaseSubModel):
             "X-averaged "
             + self.domain.lower()
             + " electrode ohmic losses [V]": delta_phi_s_av_dim,
-            "Gradient of "
-            + self.domain.lower()
-            + " electrode potential": pybamm.grad(phi_s),
         }
+
+        if not self.half_cell:
+            variables.update(
+                {
+                    "Gradient of "
+                    + self.domain.lower()
+                    + " electrode potential": pybamm.grad(phi_s),
+                }
+            )
 
         return variables
 
@@ -114,8 +123,10 @@ class BaseElectrode(pybamm.BaseSubModel):
 
         Parameters
         ----------
-        phi_cc : :class:`pybamm.Symbol`
-            The potential in the current collector.
+        phi_s_cn : :class:`pybamm.Symbol`
+            The potential in the negative current collector.
+        phi_s_cp : :class:`pybamm.Symbol`
+            The potential in the positive current collector.
 
         Returns
         -------
@@ -169,7 +180,10 @@ class BaseElectrode(pybamm.BaseSubModel):
             current variables added.
         """
 
-        i_s_n = variables["Negative electrode current density"]
+        if self.half_cell:
+            i_s_n = None
+        else:
+            i_s_n = variables["Negative electrode current density"]
         i_s_s = pybamm.FullBroadcast(0, ["separator"], "current collector")
         i_s_p = variables["Positive electrode current density"]
 
