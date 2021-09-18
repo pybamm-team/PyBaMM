@@ -11,6 +11,9 @@ from platform import system
 
 have_julia = pybamm.have_julia()
 if have_julia and system() != "Windows":
+    from julia.api import Julia
+
+    Julia(compiled_modules=False)
     from julia import Main
 
 

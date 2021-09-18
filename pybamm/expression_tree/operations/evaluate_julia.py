@@ -464,7 +464,10 @@ def get_julia_function(symbol, funcname="f", input_parameter_order=None, len_rhs
                             )
                         found_replacement = True
                 if not found_replacement:
-                    var_str += "@. {} = {}\n".format(julia_var, symbol_line)
+                    if "minimum" in symbol_line or "maximum" in symbol_line:
+                        var_str += "{} .= {}\n".format(julia_var, symbol_line)
+                    else:
+                        var_str += "@. {} = {}\n".format(julia_var, symbol_line)
 
             # otherwise assign
             else:
