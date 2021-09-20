@@ -3,7 +3,6 @@
 #
 
 import os
-from pybamm.parameters.parameter_values import ParameterValues
 import tempfile
 import subprocess
 import unittest
