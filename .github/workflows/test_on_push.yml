@@ -42,7 +42,7 @@ jobs:
         python-version: ${{ matrix.python-version }}
   
     - name: Set up Julia
-      if: matrix.os == 'ubuntu-latest'
+      if: matrix.os == 'ubuntu-latest' && matrix.python-version != 3.9
       uses: julia-actions/setup-julia@v1
       with:
         version: 1.6
