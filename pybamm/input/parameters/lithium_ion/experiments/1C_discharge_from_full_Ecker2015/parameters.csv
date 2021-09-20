@@ -3,12 +3,12 @@ Name [units],Value,Reference,Notes
 ,,,
 # Temperature
 Reference temperature [K],296.15,23C,
-Negative current collector surface heat transfer coefficient [W.m-2.K-1],0,Paper does not consider thermal effects
-Positive current collector surface heat transfer coefficient [W.m-2.K-1],0,Paper does not consider thermal effects
-Negative tab heat transfer coefficient [W.m-2.K-1],10,Paper does not consider thermal effects,
-Positive tab heat transfer coefficient [W.m-2.K-1],10,Paper does not consider thermal effects,
-Edge heat transfer coefficient [W.m-2.K-1],0.3,Paper does not consider thermal effects,
-Total heat transfer coefficient [W.m-2.K-1],10,Paper does not consider thermal effects,
+Negative current collector surface heat transfer coefficient [W.m-2.K-1],10,Assume uniform heat loss,
+Positive current collector surface heat transfer coefficient [W.m-2.K-1],10,Assume uniform heat loss,
+Negative tab heat transfer coefficient [W.m-2.K-1],10,Assume uniform heat loss,
+Positive tab heat transfer coefficient [W.m-2.K-1],10,Assume uniform heat loss,
+Edge heat transfer coefficient [W.m-2.K-1],10,Assume uniform heat loss,
+Total heat transfer coefficient [W.m-2.K-1],10,Assume uniform heat loss,
 Ambient temperature [K],298.15,,
 
 ,,,
