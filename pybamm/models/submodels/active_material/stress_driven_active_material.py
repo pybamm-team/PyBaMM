@@ -88,8 +88,7 @@ class StressDriven(BaseModel):
         # assuming the minimum hydrostatic stress is zero for full cycles
         stress_h_surf_min = stress_h_surf * 0
         j_stress_LAM = (
-            -(beta_LAM / self.param.t0_cr)
-            * ((stress_h_surf - stress_h_surf_min) / stress_critical) ** m_LAM
+            -beta_LAM * ((stress_h_surf - stress_h_surf_min) / stress_critical) ** m_LAM
         )
 
         deps_solid_dt = j_stress_LAM
