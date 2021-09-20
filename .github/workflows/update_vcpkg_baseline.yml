@@ -1,0 +1,42 @@
+name: Update vcpkg-configuration baseline
+
+on:
+  push:
+    branches:
+    - develop
+    paths:
+    - vcpkg-configuration.json
+  schedule:
+    # Run at 3 am UTC on 20th every month
+    - cron: 0 3 20 * *
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: [3.8]
+
+    steps:
+    - uses: actions/checkout@v2
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v2
+      with:
+        python-version: ${{ matrix.python-version }}
+    - name: Install dependencies
+      run: |
+        pip install wheel
+        pip install --editable .
+    - name: Update baseline
+      run: python scripts/update_vcpkg_baseline.py
+    - name: Create Pull Request
+      uses: peter-evans/create-pull-request@v3
+      with:
+        delete-branch: true
+        branch-suffix: short-commit-hash
+        commit-message: update baseline
+        title: Update vcpkg-configuration.json baseline
+        body: |
+            Update baseline of vcpkg-configuration.json with the latest commit id
+
+            Auto-generated pull request

@@ -293,7 +293,9 @@
       "contributions": [
         "test",
         "code",
-        "bug"
+        "bug",
+        "review",
+        "maintenance"
       ]
     },
     {
