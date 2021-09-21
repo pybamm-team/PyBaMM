@@ -64,7 +64,7 @@ find_library(SUITESPARSE_CONFIG_LIB
   PATH_SUFFIXES "lib" "lib32" "lib64" "Lib"
   NO_DEFAULT_PATH
 )
-# now also include the deafult paths
+# now also include the default paths
 find_library(SUITESPARSE_CONFIG_LIB
   NAMES "suitesparseconfig"
   PATH_SUFFIXES "lib" "lib32" "lib64" "Lib"
@@ -93,7 +93,7 @@ foreach(_component ${SUITESPARSE_COMPONENTS})
     PATH_SUFFIXES "lib" "lib32" "lib64" "${_component}" "${_component}/Lib"
     NO_DEFAULT_PATH
   )
-  #now  also include the deafult paths
+  #now  also include the default paths
   find_library(${_component}_LIBRARY
     NAMES "${_componentLower}"
     PATH_SUFFIXES "lib" "lib32" "lib64" "${_component}" "${_component}/Lib"
