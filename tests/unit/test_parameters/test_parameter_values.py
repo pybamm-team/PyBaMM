@@ -137,6 +137,10 @@ class TestParameterValues(unittest.TestCase):
             pybamm.ParameterValues(
                 {"Negative electrode surface area to volume ratio distribution in x": 1}
             )
+        with self.assertRaisesRegex(ValueError, "propotional term"):
+            pybamm.ParameterValues(
+                {"Negative electrode LAM constant propotional term": 1}
+            )
 
     def test_process_symbol(self):
         parameter_values = pybamm.ParameterValues({"a": 4, "b": 2, "c": 3})
@@ -585,7 +589,7 @@ class TestParameterValues(unittest.TestCase):
             auxiliary_domains={
                 "secondary": "test sec",
                 "tertiary": "test tert",
-                "quaternary": "test quat"
+                "quaternary": "test quat",
             },
         )
         func = pybamm.x_average(pybamm.FunctionParameter("func", {"var": var}))
@@ -598,7 +602,7 @@ class TestParameterValues(unittest.TestCase):
             pybamm.FullBroadcast(
                 pybamm.Scalar(2, name="func"),
                 "test sec",
-                {"secondary": "test tert", "tertiary": "test quat"}
+                {"secondary": "test tert", "tertiary": "test quat"},
             ).id,
         )
 
