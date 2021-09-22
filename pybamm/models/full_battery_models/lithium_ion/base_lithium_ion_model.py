@@ -17,6 +17,9 @@ class BaseModel(pybamm.BaseBatteryModel):
         super().__init__(options, name)
         self.param = pybamm.LithiumIonParameters(options)
 
+        # Assess whether the submodel is a half-cell model
+        self.half_cell = self.options["working electrode"] != "both"
+
         # Default timescale is discharge timescale
         self.timescale = self.param.tau_discharge
 
@@ -25,13 +28,20 @@ class BaseModel(pybamm.BaseBatteryModel):
             "negative electrode": self.param.L_x,
             "separator": self.param.L_x,
             "positive electrode": self.param.L_x,
-            "negative particle": self.param.R_n_typ,
             "positive particle": self.param.R_p_typ,
-            "negative particle size": self.param.R_n_typ,
             "positive particle size": self.param.R_p_typ,
             "current collector y": self.param.L_z,
             "current collector z": self.param.L_z,
         }
+
+        # Add negative particle domains only if not a half cell model
+        if not self.half_cell:
+            self.length_scales.update(
+                {
+                    "negative particle": self.param.R_n_typ,
+                    "negative particle size": self.param.R_n_typ,
+                }
+            )
         self.set_standard_output_variables()
 
     def set_standard_output_variables(self):
@@ -39,30 +49,32 @@ class BaseModel(pybamm.BaseBatteryModel):
 
         # Particle concentration position
         var = pybamm.standard_spatial_vars
-        self.variables.update(
-            {
-                "r_n": var.r_n,
-                "r_n [m]": var.r_n * self.param.R_n_typ,
-                "r_p": var.r_p,
-                "r_p [m]": var.r_p * self.param.R_p_typ,
-            }
-        )
+        self.variables.update({"r_p": var.r_p, "r_p [m]": var.r_p * self.param.R_p_typ})
+        if not self.half_cell:
+            self.variables.update(
+                {"r_n": var.r_n, "r_n [m]": var.r_n * self.param.R_n_typ}
+            )
 
     def set_degradation_variables(self):
-        """ Sets variables that quantify degradation (LAM, LLI, etc) """
+        """Sets variables that quantify degradation (LAM, LLI, etc)"""
         param = self.param
 
         # LAM
-        C_n = self.variables["Negative electrode capacity [A.h]"]
+        if self.half_cell:
+            n_Li_n = pybamm.Scalar(0)
+            LAM_ne = pybamm.Scalar(0)
+        else:
+            C_n = self.variables["Negative electrode capacity [A.h]"]
+            n_Li_n = self.variables["Total lithium in negative electrode [mol]"]
+            LAM_ne = (1 - C_n / param.C_n_init) * 100
+
         C_p = self.variables["Positive electrode capacity [A.h]"]
 
-        LAM_ne = (1 - C_n / param.C_n_init) * 100
         LAM_pe = (1 - C_p / param.C_p_init) * 100
 
         # LLI
         n_Li_e = self.variables["Total lithium in electrolyte [mol]"]
         n_Li_p = self.variables["Total lithium in positive electrode [mol]"]
-        n_Li_n = self.variables["Total lithium in negative electrode [mol]"]
         n_Li_particles = n_Li_n + n_Li_p
         n_Li = n_Li_particles + n_Li_e
 
@@ -93,16 +105,10 @@ class BaseModel(pybamm.BaseBatteryModel):
 
         # Lithium lost to side reactions
         # Different way of measuring LLI but should give same value
-        LLI_sei_n = self.variables["Loss of lithium to negative electrode SEI [mol]"]
-        LLI_sei_p = self.variables["Loss of lithium to positive electrode SEI [mol]"]
-        LLI_pl_n = self.variables[
-            "Loss of lithium to negative electrode lithium plating [mol]"
-        ]
-        LLI_pl_p = self.variables[
-            "Loss of lithium to positive electrode lithium plating [mol]"
-        ]
+        LLI_sei = self.variables["Loss of lithium to SEI [mol]"]
+        LLI_pl = self.variables["Loss of lithium to lithium plating [mol]"]
 
-        LLI_reactions = LLI_sei_n + LLI_sei_p + LLI_pl_n + LLI_pl_p
+        LLI_reactions = LLI_sei + LLI_pl
         self.variables.update(
             {
                 "Total lithium lost to side reactions [mol]": LLI_reactions,
@@ -114,69 +120,55 @@ class BaseModel(pybamm.BaseBatteryModel):
 
     def set_sei_submodel(self):
 
-        # negative electrode SEI
+        # SEI
         if self.options["SEI"] == "none":
-            self.submodels["negative sei"] = pybamm.sei.NoSEI(self.param, "Negative")
+            self.submodels["sei"] = pybamm.sei.NoSEI(self.param, self.options)
 
         if self.options["SEI"] == "constant":
-            self.submodels["negative sei"] = pybamm.sei.ConstantSEI(
-                self.param, "Negative"
-            )
+            self.submodels["sei"] = pybamm.sei.ConstantSEI(self.param)
 
         elif self.options["SEI"] == "reaction limited":
-            self.submodels["negative sei"] = pybamm.sei.ReactionLimited(
-                self.param, "Negative", self.x_average
+            self.submodels["sei"] = pybamm.sei.ReactionLimited(
+                self.param, self.x_average
             )
 
         elif self.options["SEI"] == "solvent-diffusion limited":
-            self.submodels["negative sei"] = pybamm.sei.SolventDiffusionLimited(
-                self.param, "Negative", self.x_average
+            self.submodels["sei"] = pybamm.sei.SolventDiffusionLimited(
+                self.param, self.x_average
             )
 
         elif self.options["SEI"] == "electron-migration limited":
-            self.submodels["negative sei"] = pybamm.sei.ElectronMigrationLimited(
-                self.param, "Negative", self.x_average
+            self.submodels["sei"] = pybamm.sei.ElectronMigrationLimited(
+                self.param, self.x_average
             )
 
         elif self.options["SEI"] == "interstitial-diffusion limited":
-            self.submodels["negative sei"] = pybamm.sei.InterstitialDiffusionLimited(
-                self.param, "Negative", self.x_average
+            self.submodels["sei"] = pybamm.sei.InterstitialDiffusionLimited(
+                self.param, self.x_average
             )
 
         elif self.options["SEI"] == "ec reaction limited":
-            self.submodels["negative sei"] = pybamm.sei.EcReactionLimited(
-                self.param, "Negative", self.x_average
+            self.submodels["sei"] = pybamm.sei.EcReactionLimited(
+                self.param, self.x_average
             )
-
-        # positive electrode
-        self.submodels["positive sei"] = pybamm.sei.NoSEI(self.param, "Positive")
 
     def set_lithium_plating_submodel(self):
 
         # negative electrode
         if self.options["lithium plating"] == "none":
-            self.submodels[
-                "negative lithium plating"
-            ] = pybamm.lithium_plating.NoPlating(self.param, "Negative")
+            self.submodels["lithium plating"] = pybamm.lithium_plating.NoPlating(
+                self.param, self.options
+            )
 
         elif self.options["lithium plating"] == "reversible":
             self.submodels[
-                "negative lithium plating"
-            ] = pybamm.lithium_plating.ReversiblePlating(
-                self.param, "Negative", self.x_average
-            )
+                "lithium plating"
+            ] = pybamm.lithium_plating.ReversiblePlating(self.param, self.x_average)
 
         elif self.options["lithium plating"] == "irreversible":
             self.submodels[
-                "negative lithium plating"
-            ] = pybamm.lithium_plating.IrreversiblePlating(
-                self.param, "Negative", self.x_average
-            )
-
-        # positive electrode
-        self.submodels["positive lithium plating"] = pybamm.lithium_plating.NoPlating(
-            self.param, "Positive"
-        )
+                "lithium plating"
+            ] = pybamm.lithium_plating.IrreversiblePlating(self.param, self.x_average)
 
     def set_other_reaction_submodels_to_zero(self):
         self.submodels["negative oxygen interface"] = pybamm.interface.NoReaction(
@@ -200,11 +192,11 @@ class BaseModel(pybamm.BaseBatteryModel):
             elif crack_side == "swelling only":
                 self.submodels[
                     domain.lower() + " particle mechanics"
-                ] = pybamm.particle_cracking.SwellingOnly(self.param, domain)
+                ] = pybamm.particle_mechanics.SwellingOnly(self.param, domain)
             elif crack_side == "swelling and cracking":
                 self.submodels[
                     domain.lower() + " particle mechanics"
-                ] = pybamm.particle_cracking.CrackPropagation(
+                ] = pybamm.particle_mechanics.CrackPropagation(
                     self.param, domain, self.x_average
                 )
 

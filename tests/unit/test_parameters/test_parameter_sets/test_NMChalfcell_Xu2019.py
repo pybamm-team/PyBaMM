@@ -14,7 +14,8 @@ class TestXu(unittest.TestCase):
             )
         )
         self.assertEqual(
-            negative_electrode["Lithium metal concentration [mol.m-3]"], "76900"
+            negative_electrode["Typical plated lithium concentration [mol.m-3]"],
+            "76900",
         )
 
         positive_electrode = pybamm.ParameterValues({}).read_parameters_csv(
@@ -44,17 +45,6 @@ class TestXu(unittest.TestCase):
 
         chemistry = pybamm.parameter_sets.Xu2019
         parameter_values = pybamm.ParameterValues(chemistry=chemistry)
-        parameter_values.update(
-            {
-                "Lithium counter electrode exchange-current density "
-                "[A.m-2]": parameter_values[
-                    "Negative electrode exchange-current density [A.m-2]"
-                ],
-                "Lithium counter electrode conductivity [S.m-1]": 1.0776e7,
-                "Lithium counter electrode thickness [m]": 250e-6,
-            },
-            check_already_exists=False,
-        )
 
         model = pybamm.lithium_ion.BasicDFNHalfCell({"working electrode": "positive"})
         sim = pybamm.Simulation(model, parameter_values=parameter_values)

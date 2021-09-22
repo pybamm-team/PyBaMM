@@ -71,10 +71,10 @@ class SPMe(BaseModel):
 
     def set_tortuosity_submodels(self):
         self.submodels["electrolyte tortuosity"] = pybamm.tortuosity.Bruggeman(
-            self.param, "Electrolyte", True
+            self.param, "Electrolyte", self.options, True
         )
         self.submodels["electrode tortuosity"] = pybamm.tortuosity.Bruggeman(
-            self.param, "Electrode", True
+            self.param, "Electrode", self.options, True
         )
 
     def set_interfacial_submodel(self):

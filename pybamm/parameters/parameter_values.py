@@ -373,25 +373,29 @@ class ParameterValues:
                     "Parameters involving 'surface area density' have been renamed to "
                     "'surface area to volume ratio' ('{}' found)".format(param)
                 )
-            if "reaction rate" in param:
+            elif "reaction rate" in param:
                 raise ValueError(
                     "Parameters involving 'reaction rate' have been replaced with "
                     "'exchange-current density' ('{}' found)".format(param)
                 )
-        for param in values:
-            if "particle distribution in x" in param:
+            elif "particle distribution in x" in param:
                 raise ValueError(
                     "The parameter '{}' has been deprecated".format(param)
                     + "The particle radius is now set as a function of x directly "
                     "instead of providing a reference value and a distribution."
                 )
-        for param in values:
-            if "surface area to volume ratio distribution in x" in param:
+            elif "surface area to volume ratio distribution in x" in param:
                 raise ValueError(
                     "The parameter '{}' has been deprecated".format(param)
                     + "The surface area to volume ratio is now set as a function "
                     "of x directly instead of providing a reference value and a "
                     "distribution."
+                )
+            elif "propotional term" in param:
+                raise ValueError(
+                    f"The parameter '{param}' has been renamed to "
+                    "'... proportional term [s-1]', and its value should now be divided"
+                    "by 3600 to get the same results as before."
                 )
 
     def process_model(self, unprocessed_model, inplace=True):
@@ -599,7 +603,7 @@ class ParameterValues:
             return processed_symbol
 
     def _process_symbol(self, symbol):
-        """ See :meth:`ParameterValues.process_symbol()`. """
+        """See :meth:`ParameterValues.process_symbol()`."""
 
         if isinstance(symbol, pybamm.Parameter):
             value = self[symbol.name]
@@ -744,6 +748,8 @@ class ParameterValues:
                     isinstance(child, pybamm.Broadcast)
                     for child in new_left.child.children
                 ):
+                    # in this case x_average will return a weighted sum of the variables
+                    # that were broadcasted
                     return self.process_symbol(pybamm.x_average(new_left.child))
             # make new symbol, ensure domain remains the same
             new_symbol = symbol._binary_new_copy(new_left, new_right)
@@ -867,6 +873,7 @@ class ParameterValues:
             "geo",
             "elec",
             "therm",
+            "half_cell",
         ]
 
         # If 'parameters' is a class, extract the dict
