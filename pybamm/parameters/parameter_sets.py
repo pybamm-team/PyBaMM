@@ -44,6 +44,14 @@ Lithium-ion parameter sets
          Foster. Generalised single particle models for high-rate operation of graded
          lithium-ion electrodes: systematic derivation and validation. Electrochimica
          Acta, 339:135862, 2020. doi:10.1016/j.electacta.2020.135862.
+       - Alastair Hales, Laura Bravo Diaz, Mohamed Waseem Marzook, Yan Zhao,
+         Yatish Patel, and Gregory Offer. The cell cooling coefficient: a standard
+         to define heat rejection from lithium-ion batteries. Journal of The
+         Electrochemical Society, 166(12):A2383, 2019. doi:10.1149/2.0191912jes.
+       - Yan Zhao, Yatish Patel, Teng Zhang, and Gregory Offer. Modeling the Effects
+         of Thermal Gradients Induced by Tab and Surface Cooling on Lithium Ion
+         Cell Performance. Journal of The Electrochemical Society, 165 A3169, 2018.
+         doi:10.1149/2.0901813jes.
     * Marquis2019 :
        - Scott G. Marquis, Valentin Sulzer, Robert Timms, Colin P. Please, and S. Jon
          Chapman. An asymptotic derivation of a single particle model with electrolyte.
@@ -117,7 +125,13 @@ Ecker2015 = {
     "electrolyte": "lipf6_Ecker2015",
     "experiment": "1C_discharge_from_full_Ecker2015",
     "sei": "example",
-    "citation": ["Ecker2015i", "Ecker2015ii", "Richardson2020"],
+    "citation": [
+        "Ecker2015i",
+        "Ecker2015ii",
+        "Zhao2018",
+        "Hales2019",
+        "Richardson2020",
+    ],
 }
 
 Marquis2019 = {
