@@ -40,18 +40,17 @@ Lithium-ion parameter sets
          Warnecke, and Dirk Uwe Sauer. Parameterization of a Physico-Chemical Model of a
          Lithium-Ion Battery: I. Determination of Parameters. Journal of the
          Electrochemical Society, 162(9):A1836–A1848, 2015. doi:10.1149/2.0551509jes.
+       - Alastair Hales, Laura Bravo Diaz, Mohamed Waseem Marzook, Yan Zhao, Yatish
+         Patel, and Gregory Offer. The cell cooling coefficient: a standard to define
+         heat rejection from lithium-ion batteries. Journal of The Electrochemical
+         Society, 166(12):A2383, 2019.
        - Giles Richardson, Ivan Korotkin, Rahifa Ranom, Michael Castle, and Jamie M.
          Foster. Generalised single particle models for high-rate operation of graded
          lithium-ion electrodes: systematic derivation and validation. Electrochimica
          Acta, 339:135862, 2020. doi:10.1016/j.electacta.2020.135862.
-       - Alastair Hales, Laura Bravo Diaz, Mohamed Waseem Marzook, Yan Zhao,
-         Yatish Patel, and Gregory Offer. The cell cooling coefficient: a standard
-         to define heat rejection from lithium-ion batteries. Journal of The
-         Electrochemical Society, 166(12):A2383, 2019. doi:10.1149/2.0191912jes.
-       - Yan Zhao, Yatish Patel, Teng Zhang, and Gregory Offer. Modeling the Effects
-         of Thermal Gradients Induced by Tab and Surface Cooling on Lithium Ion
-         Cell Performance. Journal of The Electrochemical Society, 165 A3169, 2018.
-         doi:10.1149/2.0901813jes.
+       - Yan Zhao, Yatish Patel, Teng Zhang, and Gregory J Offer. Modeling the effects
+         of thermal gradients induced by tab and surface cooling on lithium ion cell
+         performance. Journal of The Electrochemical Society, 165(13):A3169, 2018.
     * Marquis2019 :
        - Scott G. Marquis, Valentin Sulzer, Robert Timms, Colin P. Please, and S. Jon
          Chapman. An asymptotic derivation of a single particle model with electrolyte.
