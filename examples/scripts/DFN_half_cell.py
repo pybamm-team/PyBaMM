@@ -5,15 +5,15 @@
 import pybamm
 import numpy as np
 
-pybamm.set_logging_level("INFO")
+pybamm.set_logging_level("DEBUG")
 
 # load model
-options = {"working electrode": "positive"}
+options = {"working electrode": "positive", "SEI": "ec reaction limited"}
 model1 = pybamm.lithium_ion.DFN(options=options)
-model2 = pybamm.lithium_ion.BasicDFNHalfCell(options=options)
+# model2 = pybamm.lithium_ion.BasicDFNHalfCell(options=options)
 
 sols = []
-for model in [model1, model2]:
+for model in [model1]:
     # create geometry
     geometry = model.default_geometry
 

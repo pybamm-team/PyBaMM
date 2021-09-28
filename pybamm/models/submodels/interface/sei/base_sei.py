@@ -132,10 +132,18 @@ class BaseModel(BaseInterface):
             L_outer_0 = 0
             li_mols_per_sei_mols = 1
         else:
-            n_scale = param.L_sei_0_dim * param.a_n_typ / param.V_bar_inner_dimensional
-            n_outer_scale = (
-                param.L_sei_0_dim * param.a_n_typ / param.V_bar_outer_dimensional
-            )
+            if self.reaction_loc == "interface":
+                # scales in mol/m2 (n is an interfacial quantity)
+                n_scale = param.L_sei_0_dim / param.V_bar_inner_dimensional
+                n_outer_scale = param.L_sei_0_dim / param.V_bar_outer_dimensional
+            else:
+                # scales in mol/m3 (n is a bulk quantity)
+                n_scale = (
+                    param.L_sei_0_dim * param.a_n_typ / param.V_bar_inner_dimensional
+                )
+                n_outer_scale = (
+                    param.L_sei_0_dim * param.a_n_typ / param.V_bar_outer_dimensional
+                )
             v_bar = param.v_bar
             # Set scales for the "EC Reaction Limited" model
             if isinstance(self, pybamm.sei.EcReactionLimited):
@@ -160,10 +168,17 @@ class BaseModel(BaseInterface):
         n_SEI_av = pybamm.x_average(n_SEI)
         delta_n_SEI = n_SEI_av - (L_inner_0 + L_outer_0 / v_bar)
 
+        # Q_sei in mol
+        if self.reaction_loc == "interface":
+            L_n = 1
+        else:
+            L_n = self.param.L_n
+
         Q_sei = (
             li_mols_per_sei_mols
             * delta_n_SEI
-            * self.param.L_n
+            * n_scale
+            * L_n
             * self.param.L_y
             * self.param.L_z
         )
@@ -177,8 +192,8 @@ class BaseModel(BaseInterface):
                 * n_outer_scale,
                 "SEI concentration [mol.m-3]": n_SEI * n_scale,
                 "X-averaged SEI concentration [mol.m-3]": n_SEI_av * n_scale,
-                "Loss of lithium to SEI [mol]": Q_sei * n_scale,
-                "Loss of capacity to SEI [A.h]": Q_sei * n_scale * self.param.F / 3600,
+                "Loss of lithium to SEI [mol]": Q_sei,
+                "Loss of capacity to SEI [A.h]": Q_sei * self.param.F / 3600,
             }
         )
 

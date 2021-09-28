@@ -90,16 +90,23 @@ class DFN(BaseModel):
         # Set the counter-electrode model for the half-cell model
         # The negative electrode model will be ignored
         if self.half_cell:
-            self.submodels[
-                "counter electrode interface"
-            ] = pybamm.interface.InverseButlerVolmer(
-                self.param, "Negative", "lithium metal plating", self.options
-            )  # assuming symmetric reaction for now so we can take the inverse
-            self.submodels[
-                "counter electrode interface current"
-            ] = pybamm.interface.CurrentForInverseButlerVolmerLithiumMetal(
-                self.param, "Negative", "lithium metal plating", self.options
-            )
+            if self.options["surface form"] == "false":
+                self.submodels[
+                    "counter electrode interface"
+                ] = pybamm.interface.InverseButlerVolmer(
+                    self.param, "Negative", "lithium metal plating", self.options
+                )  # assuming symmetric reaction for now so we can take the inverse
+                self.submodels[
+                    "counter electrode interface current"
+                ] = pybamm.interface.CurrentForInverseButlerVolmerLithiumMetal(
+                    self.param, "Negative", "lithium metal plating", self.options
+                )
+            else:
+                self.submodels[
+                    "counter electrode interface"
+                ] = pybamm.interface.ButlerVolmer(
+                    self.param, "Negative", "lithium metal plating", self.options
+                )
 
     def set_particle_submodel(self):
 
@@ -162,9 +169,16 @@ class DFN(BaseModel):
         # Set the counter-electrode model for the half-cell model
         # The negative electrode model will be ignored
         if self.half_cell:
-            self.submodels[
-                "counter electrode potential"
-            ] = pybamm.electrode.ohm.LithiumMetalExplicit(self.param, self.options)
+            if self.options["SEI"] in ["none", "constant"]:
+                self.submodels[
+                    "counter electrode potential"
+                ] = pybamm.electrode.ohm.LithiumMetalExplicit(self.param, self.options)
+            else:
+                self.submodels[
+                    "counter electrode potential"
+                ] = pybamm.electrode.ohm.LithiumMetalSurfaceForm(
+                    self.param, self.options
+                )
 
     def set_electrolyte_submodel(self):
 

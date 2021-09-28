@@ -280,17 +280,24 @@ class BaseInterface(pybamm.BaseSubModel):
         """
 
         i_boundary_cc = variables["Current collector current density"]
-        a_av = variables[
-            "X-averaged "
-            + self.domain.lower()
-            + " electrode surface area to volume ratio"
-        ]
 
-        if self.domain == "Negative":
-            j_total_average = i_boundary_cc / (a_av * self.param.l_n)
+        if self.half_cell and self.domain == "Negative":
+            # In a half-cell the total interfacial current density is the current
+            # collector current density, not divided by electrode thickness
+            i_boundary_cc = variables["Current collector current density"]
+            j_total_average = i_boundary_cc
+        else:
+            a_av = variables[
+                "X-averaged "
+                + self.domain.lower()
+                + " electrode surface area to volume ratio"
+            ]
 
-        elif self.domain == "Positive":
-            j_total_average = -i_boundary_cc / (a_av * self.param.l_p)
+            if self.domain == "Negative":
+                j_total_average = i_boundary_cc / (a_av * self.param.l_n)
+
+            elif self.domain == "Positive":
+                j_total_average = -i_boundary_cc / (a_av * self.param.l_p)
 
         return j_total_average
 

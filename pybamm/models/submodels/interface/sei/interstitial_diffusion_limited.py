@@ -13,18 +13,21 @@ class InterstitialDiffusionLimited(BaseModel):
     ----------
     param : parameter class
         The parameters to use for this submodel
-    x_average : bool
-        Whether to use x-averaged variables (SPM, SPMe, etc) or full variables (DFN)
+    reaction_loc : str
+        Where the reaction happens: "x-average" (SPM, SPMe, etc),
+        "full electrode" (full DFN), or "interface" (half-cell DFN)
+    options : dict, optional
+        A dictionary of options to be passed to the model.
 
     **Extends:** :class:`pybamm.sei.BaseModel`
     """
 
-    def __init__(self, param, x_average):
-        super().__init__(param)
-        self.x_average = x_average
+    def __init__(self, param, reaction_loc, options=None):
+        super().__init__(param, options=options)
+        self.reaction_loc = reaction_loc
 
     def get_fundamental_variables(self):
-        if self.x_average is True:
+        if self.reaction_loc == "x-average":
             L_inner_av = pybamm.standard_variables.L_inner_av
             L_outer_av = pybamm.standard_variables.L_outer_av
             L_inner = pybamm.PrimaryBroadcast(L_inner_av, "negative electrode")
@@ -59,7 +62,7 @@ class InterstitialDiffusionLimited(BaseModel):
         return variables
 
     def set_rhs(self, variables):
-        if self.x_average is True:
+        if self.reaction_loc == "x-average":
             L_inner = variables["X-averaged inner SEI thickness"]
             L_outer = variables["X-averaged outer SEI thickness"]
             j_inner = variables["X-averaged inner SEI interfacial current density"]
@@ -80,7 +83,7 @@ class InterstitialDiffusionLimited(BaseModel):
         }
 
     def set_initial_conditions(self, variables):
-        if self.x_average is True:
+        if self.reaction_loc == "x-average":
             L_inner = variables["X-averaged inner SEI thickness"]
             L_outer = variables["X-averaged outer SEI thickness"]
         else:

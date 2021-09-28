@@ -14,24 +14,29 @@ class EcReactionLimited(BaseModel):
     ----------
     param : parameter class
         The parameters to use for this submodel
-    x_average : bool
-        Whether to use x-averaged variables (SPM, SPMe, etc) or full variables (DFN)
+    reaction_loc : str
+        Where the reaction happens: "x-average" (SPM, SPMe, etc),
+        "full electrode" (full DFN), or "interface" (half-cell DFN)
+    options : dict, optional
+        A dictionary of options to be passed to the model.
 
     **Extends:** :class:`pybamm.sei.BaseModel`
     """
 
-    def __init__(self, param, x_average):
-        super().__init__(param)
-        self.x_average = x_average
+    def __init__(self, param, reaction_loc, options=None):
+        super().__init__(param, options=options)
+        self.reaction_loc = reaction_loc
 
     def get_fundamental_variables(self):
 
         L_inner = pybamm.FullBroadcast(0, "negative electrode", "current collector")
-        if self.x_average is True:
+        if self.reaction_loc == "x-average":
             L_outer_av = pybamm.standard_variables.L_outer_av
             L_outer = pybamm.PrimaryBroadcast(L_outer_av, "negative electrode")
-        else:
+        elif self.reaction_loc == "full electrode":
             L_outer = pybamm.standard_variables.L_outer
+        elif self.reaction_loc == "interface":
+            L_outer = pybamm.standard_variables.L_outer_interface
 
         variables = self._get_standard_thickness_variables(L_inner, L_outer)
         variables.update(self._get_standard_concentration_variables(variables))
@@ -39,8 +44,14 @@ class EcReactionLimited(BaseModel):
         return variables
 
     def get_coupled_variables(self, variables):
-        phi_s_n = variables["Negative electrode potential"]
-        phi_e_n = variables["Negative electrolyte potential"]
+        # delta_phi = phi_s - phi_e
+        if self.reaction_loc == "interface":
+            delta_phi = variables[
+                "Lithium metal interface surface potential difference"
+            ]
+        else:
+            delta_phi = variables["Negative electrode surface potential difference"]
+
         L_sei = variables["Outer SEI thickness"]
 
         # Look for current that contributes to the -IR drop
@@ -70,9 +81,7 @@ class EcReactionLimited(BaseModel):
         #  j_sei = -C_sei_ec * exp() / (1 + L_sei * C_ec * C_sei_ec * exp())
         #  c_ec = 1 / (1 + L_sei * C_ec * C_sei_ec * exp())
         # need to revise for thermal case
-        C_sei_exp = C_sei_ec * pybamm.exp(
-            -0.5 * (phi_s_n - phi_e_n - j * L_sei * R_sei)
-        )
+        C_sei_exp = C_sei_ec * pybamm.exp(-0.5 * (delta_phi - j * L_sei * R_sei))
         j_sei = -C_sei_exp / (1 + L_sei * C_ec * C_sei_exp)
         c_ec = 1 / (1 + L_sei * C_ec * C_sei_exp)
 
@@ -100,7 +109,7 @@ class EcReactionLimited(BaseModel):
         return variables
 
     def set_rhs(self, variables):
-        if self.x_average is True:
+        if self.reaction_loc == "x-average":
             L_sei = variables["X-averaged outer SEI thickness"]
             j_sei = variables["X-averaged outer SEI interfacial current density"]
         else:
@@ -112,7 +121,7 @@ class EcReactionLimited(BaseModel):
         self.rhs = {L_sei: -Gamma_SEI * j_sei / 2}
 
     def set_initial_conditions(self, variables):
-        if self.x_average is True:
+        if self.reaction_loc == "x-average":
             L_sei = variables["X-averaged outer SEI thickness"]
         else:
             L_sei = variables["Outer SEI thickness"]
