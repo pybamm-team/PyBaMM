@@ -216,6 +216,8 @@ class TestCitations(unittest.TestCase):
         pybamm.ParameterValues(chemistry=pybamm.parameter_sets.Ecker2015)
         self.assertIn("Ecker2015i", citations._papers_to_cite)
         self.assertIn("Ecker2015ii", citations._papers_to_cite)
+        self.assertIn("Zhao2018", citations._papers_to_cite)
+        self.assertIn("Hales2019", citations._papers_to_cite)
         self.assertIn("Richardson2020", citations._papers_to_cite)
 
         citations._reset()
