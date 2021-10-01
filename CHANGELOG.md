@@ -1,4 +1,4 @@
-# [v21.09](https://github.com/pybamm-team/PyBaMM/tree/v21.09) - 2021-09-30
+# [v21.9](https://github.com/pybamm-team/PyBaMM/tree/v21.9) - 2021-09-30
 
 ## Features
 
