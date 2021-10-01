@@ -150,18 +150,16 @@ class SPM(BaseModel):
             self.submodels[
                 "electrolyte conductivity"
             ] = pybamm.electrolyte_conductivity.LeadingOrder(self.param)
-
+            surf_model = surf_form.Explicit
         elif self.options["surface form"] == "differential":
-            for domain in ["Negative", "Separator", "Positive"]:
-                self.submodels[
-                    domain.lower() + " electrolyte conductivity"
-                ] = surf_form.LeadingOrderDifferential(self.param, domain)
-
+            surf_model = surf_form.LeadingOrderDifferential
         elif self.options["surface form"] == "algebraic":
-            for domain in ["Negative", "Separator", "Positive"]:
-                self.submodels[
-                    domain.lower() + " electrolyte conductivity"
-                ] = surf_form.LeadingOrderAlgebraic(self.param, domain)
+            surf_model = surf_form.LeadingOrderAlgebraic
+
+        for domain in ["Negative", "Positive"]:
+            self.submodels[
+                domain.lower() + " surface potential difference"
+            ] = surf_model(self.param, domain)
 
         self.submodels[
             "electrolyte diffusion"

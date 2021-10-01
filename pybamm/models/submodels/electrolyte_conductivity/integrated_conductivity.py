@@ -170,14 +170,4 @@ class Integrated(BaseElectrolyteConductivity):
         variables.update(self._get_standard_current_variables(i_e))
         variables.update(self._get_split_overpotential(eta_c_av, delta_phi_e_av))
 
-        # Update delta_phi_n with the full expression
-        delta_phi_n = phi_s_n - phi_e_n
-        variables.update(
-            {
-                "Negative electrode surface potential difference": delta_phi_n,
-                "Negative electrode surface potential difference [V]": param.U_n_ref
-                + delta_phi_n * param.potential_scale,
-            }
-        )
-
         return variables

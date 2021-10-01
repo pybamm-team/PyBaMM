@@ -57,20 +57,6 @@ class LeadingOrder(BaseModel):
             phi_s = pybamm.PrimaryBroadcast(v, ["positive electrode"])
             i_s = i_boundary_cc * (1 - (1 - x_p) / l_p)
 
-            if "Positive electrode surface potential difference" not in variables:
-                # Update surface potential differences to be uniform
-                delta_phi_p = pybamm.PrimaryBroadcast(
-                    delta_phi_p_av, "positive electrode"
-                )
-
-                variables.update(
-                    {
-                        "Positive electrode surface potential difference": delta_phi_p,
-                        "Positive electrode surface potential difference [V]"
-                        "": param.U_p_ref + delta_phi_p * param.potential_scale,
-                    }
-                )
-
         variables.update(self._get_standard_potential_variables(phi_s))
         variables.update(self._get_standard_current_variables(i_s))
 

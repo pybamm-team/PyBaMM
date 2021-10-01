@@ -157,14 +157,4 @@ class Composite(BaseElectrolyteConductivity):
         # Override print_name
         i_e.print_name = "i_e"
 
-        # Update delta_phi_n with the full expression
-        delta_phi_n = phi_s_n - phi_e_n
-        variables.update(
-            {
-                "Negative electrode surface potential difference": delta_phi_n,
-                "Negative electrode surface potential difference [V]": param.U_n_ref
-                + delta_phi_n * param.potential_scale,
-            }
-        )
-
         return variables

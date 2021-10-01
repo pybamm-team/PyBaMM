@@ -53,24 +53,6 @@ class Full(BaseElectrolyteConductivity):
         variables.update(self._get_standard_current_variables(i_e))
         variables.update(self._get_electrolyte_overpotentials(variables))
 
-        # Update delta_phi with the full expression
-        phi_s_n = variables["Negative electrode potential"]
-        phi_e_n = variables["Negative electrolyte potential"]
-        delta_phi_n = phi_s_n - phi_e_n
-        phi_s_p = variables["Positive electrode potential"]
-        phi_e_p = variables["Positive electrolyte potential"]
-        delta_phi_p = phi_s_p - phi_e_p
-        variables.update(
-            {
-                "Negative electrode surface potential difference": delta_phi_n,
-                "Negative electrode surface potential difference [V]": param.U_n_ref
-                + delta_phi_n * param.potential_scale,
-                "Positive electrode surface potential difference": delta_phi_p,
-                "Positive electrode surface potential difference [V]": param.U_p_ref
-                + delta_phi_p * param.potential_scale,
-            }
-        )
-
         return variables
 
     def set_algebraic(self, variables):

@@ -60,15 +60,4 @@ class LeadingOrder(BaseElectrolyteConductivity):
         delta_phi_e_av = pybamm.PrimaryBroadcast(0, "current collector")
         variables.update(self._get_split_overpotential(eta_c_av, delta_phi_e_av))
 
-        # Update surface potential differences to be uniform
-        delta_phi_n = pybamm.PrimaryBroadcast(delta_phi_n_av, "negative electrode")
-
-        variables.update(
-            {
-                "Negative electrode surface potential difference": delta_phi_n,
-                "Negative electrode surface potential difference [V]": param.U_n_ref
-                + delta_phi_n * param.potential_scale,
-            }
-        )
-
         return variables
