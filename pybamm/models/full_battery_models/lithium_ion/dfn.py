@@ -90,7 +90,7 @@ class DFN(BaseModel):
         # Set the counter-electrode model for the half-cell model
         # The negative electrode model will be ignored
         if self.half_cell:
-            if self.options["surface form"] == "false":
+            if self.options["SEI"] in ["none", "constant"]:
                 self.submodels[
                     "counter electrode interface"
                 ] = pybamm.interface.InverseButlerVolmer(

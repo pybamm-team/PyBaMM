@@ -129,7 +129,7 @@ class BaseModel(pybamm.BaseBatteryModel):
         if self.options["SEI"] == "none":
             self.submodels["sei"] = pybamm.sei.NoSEI(self.param, self.options)
         elif self.options["SEI"] == "constant":
-            self.submodels["sei"] = pybamm.sei.ConstantSEI(self.param)
+            self.submodels["sei"] = pybamm.sei.ConstantSEI(self.param, self.options)
         elif self.options["SEI"] == "reaction limited":
             self.submodels["sei"] = pybamm.sei.ReactionLimited(
                 self.param, reaction_loc, self.options

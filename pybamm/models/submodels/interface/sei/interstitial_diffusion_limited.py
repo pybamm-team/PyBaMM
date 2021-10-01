@@ -32,9 +32,12 @@ class InterstitialDiffusionLimited(BaseModel):
             L_outer_av = pybamm.standard_variables.L_outer_av
             L_inner = pybamm.PrimaryBroadcast(L_inner_av, "negative electrode")
             L_outer = pybamm.PrimaryBroadcast(L_outer_av, "negative electrode")
-        else:
+        elif self.reaction_loc == "full electrode":
             L_inner = pybamm.standard_variables.L_inner
             L_outer = pybamm.standard_variables.L_outer
+        elif self.reaction_loc == "interface":
+            L_inner = pybamm.standard_variables.L_inner_interface
+            L_outer = pybamm.standard_variables.L_outer_interface
 
         variables = self._get_standard_thickness_variables(L_inner, L_outer)
         variables.update(self._get_standard_concentration_variables(variables))
@@ -43,12 +46,17 @@ class InterstitialDiffusionLimited(BaseModel):
 
     def get_coupled_variables(self, variables):
         L_sei_inner = variables["Inner SEI thickness"]
-        phi_s_n = variables["Negative electrode potential"]
-        phi_e_n = variables["Negative electrolyte potential"]
+        # delta_phi = phi_s - phi_e
+        if self.reaction_loc == "interface":
+            delta_phi = variables[
+                "Lithium metal interface surface potential difference"
+            ]
+        else:
+            delta_phi = variables["Negative electrode surface potential difference"]
 
         C_sei = self.param.C_sei_inter
 
-        j_sei = -pybamm.exp(-(phi_s_n - phi_e_n)) / (C_sei * L_sei_inner)
+        j_sei = -pybamm.exp(-delta_phi) / (C_sei * L_sei_inner)
 
         alpha = 0.5
         j_inner = alpha * j_sei

@@ -23,19 +23,34 @@ class BaseModel(BaseInterface):
         domain = "Negative"
         super().__init__(param, domain, reaction, options=options)
 
+    @property
+    def reaction_loc(self):
+        return self._reaction_loc
+
+    @reaction_loc.setter
+    def reaction_loc(self, reaction_loc):
+        if self.half_cell and reaction_loc != "interface":
+            raise ValueError("'reaction_loc' must be 'interface' for a half-cell model")
+        self._reaction_loc = reaction_loc
+
     def get_coupled_variables(self, variables):
         # Update some common variables
         zero_av = pybamm.PrimaryBroadcast(0, "current collector")
         zero = pybamm.FullBroadcast(0, "positive electrode", "current collector")
 
+        if self.reaction_loc != "interface":
+            variables.update(
+                {
+                    "X-averaged negative electrode SEI interfacial current "
+                    "density": variables["X-averaged SEI interfacial current density"],
+                    "Negative electrode SEI interfacial current "
+                    "density": variables["SEI interfacial current density"],
+                }
+            )
         variables.update(
             {
-                "X-averaged negative electrode SEI interfacial current "
-                "density": variables["X-averaged SEI interfacial current density"],
                 "X-averaged positive electrode SEI interfacial current "
                 "density": zero_av,
-                "Negative electrode SEI interfacial current "
-                "density": variables["SEI interfacial current density"],
                 "Positive electrode SEI interfacial current density": zero,
             }
         )
@@ -71,26 +86,24 @@ class BaseModel(BaseInterface):
         else:
             L_scale = param.L_sei_0_dim
 
-        L_inner_av = pybamm.x_average(L_inner)
-        L_outer_av = pybamm.x_average(L_outer)
-        L_tot = L_inner + L_outer
-        L_tot_av = L_inner_av + L_outer_av
-
         variables = {
             "Inner SEI thickness": L_inner,
             "Inner SEI thickness [m]": L_inner * L_scale,
-            "X-averaged inner SEI thickness": L_inner_av,
-            "X-averaged inner SEI thickness [m]": L_inner_av * L_scale,
             "Outer SEI thickness": L_outer,
             "Outer SEI thickness [m]": L_outer * L_scale,
-            "X-averaged outer SEI thickness": L_outer_av,
-            "X-averaged outer SEI thickness [m]": L_outer_av * L_scale,
-            self.domain + " electrode SEI thickness": L_tot,
-            self.domain + " electrode SEI thickness [m]": L_tot * L_scale,
-            "X-averaged SEI thickness": L_tot_av,
-            "X-averaged SEI thickness [m]": L_tot_av * L_scale,
         }
 
+        if self.reaction_loc != "interface":
+            L_inner_av = pybamm.x_average(L_inner)
+            L_outer_av = pybamm.x_average(L_outer)
+            variables.update(
+                {
+                    "X-averaged inner SEI thickness": L_inner_av,
+                    "X-averaged inner SEI thickness [m]": L_inner_av * L_scale,
+                    "X-averaged outer SEI thickness": L_outer_av,
+                    "X-averaged outer SEI thickness [m]": L_outer_av * L_scale,
+                }
+            )
         # Get variables related to the total thickness
         L_sei = L_inner + L_outer
         variables.update(self._get_standard_total_thickness_variables(L_sei))
@@ -105,17 +118,26 @@ class BaseModel(BaseInterface):
         else:
             L_scale = self.param.L_sei_0_dim
             R_sei_dim = self.param.R_sei_dimensional
-        L_sei_av = pybamm.x_average(L_sei)
 
         variables = {
+            "SEI thickness": L_sei,
+            "SEI thickness [m]": L_sei * L_scale,
             "Total SEI thickness": L_sei,
             "Total SEI thickness [m]": L_sei * L_scale,
-            "X-averaged total SEI thickness": L_sei_av,
-            "X-averaged total SEI thickness [m]": L_sei_av * L_scale,
-            "X-averaged "
-            + self.domain.lower()
-            + " electrode resistance [Ohm.m2]": L_sei_av * L_scale * R_sei_dim,
         }
+        if self.reaction_loc != "interface":
+            L_sei_av = pybamm.x_average(L_sei)
+            variables.update(
+                {
+                    "X-averaged SEI thickness": L_sei_av,
+                    "X-averaged SEI thickness [m]": L_sei_av * L_scale,
+                    "X-averaged total SEI thickness": L_sei_av,
+                    "X-averaged total SEI thickness [m]": L_sei_av * L_scale,
+                    "X-averaged "
+                    + self.domain.lower()
+                    + " electrode resistance [Ohm.m2]": L_sei_av * L_scale * R_sei_dim,
+                }
+            )
         return variables
 
     def _get_standard_concentration_variables(self, variables):
@@ -242,13 +264,19 @@ class BaseModel(BaseInterface):
         """Update variables related to total SEI interfacial current density."""
         j_scale = self.param.j_scale_n
 
-        j_sei_av = pybamm.x_average(j_sei)
-
         variables = {
             "SEI interfacial current density": j_sei,
             "SEI interfacial current density [A.m-2]": j_sei * j_scale,
-            "X-averaged SEI interfacial current density": j_sei_av,
-            "X-averaged SEI interfacial current density [A.m-2]": j_sei_av * j_scale,
         }
+
+        if self.reaction_loc != "interface":
+            j_sei_av = pybamm.x_average(j_sei)
+            variables.update(
+                {
+                    "X-averaged SEI interfacial current density": j_sei_av,
+                    "X-averaged SEI interfacial current density [A.m-2]": j_sei_av
+                    * j_scale,
+                }
+            )
 
         return variables

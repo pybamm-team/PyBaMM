@@ -72,20 +72,14 @@ class LithiumMetalSurfaceForm(BaseModel):
         self.initial_conditions = {delta_phi: delta_phi_init}
 
     def set_algebraic(self, variables):
-        sum_j = variables[
-            "Sum of x-averaged "
-            + self.domain.lower()
-            + " electrode interfacial current densities"
-        ]
+        j_pl = variables["Lithium metal plating current density"]
+        j_sei = variables["SEI interfacial current density"]
+        sum_j = j_pl + j_sei
 
-        sum_j_av = variables[
-            "X-averaged "
-            + self.domain.lower()
-            + " electrode total interfacial current density"
-        ]
+        i_cc = variables["Current collector current density"]
         delta_phi = variables["Lithium metal interface surface potential difference"]
 
-        self.algebraic[delta_phi] = sum_j_av - sum_j
+        self.algebraic[delta_phi] = i_cc - sum_j
 
 
 class LithiumMetalExplicit(BaseModel):
@@ -106,6 +100,8 @@ class LithiumMetalExplicit(BaseModel):
 
     def get_coupled_variables(self, variables):
         param = self.param
+        ocp_ref = self.param.U_n_ref
+        pot_scale = self.param.potential_scale
 
         i_boundary_cc = variables["Current collector current density"]
         T_n = variables["Negative current collector temperature"]
@@ -127,10 +123,10 @@ class LithiumMetalExplicit(BaseModel):
                 "X-averaged negative electrode ohmic losses [V]": delta_phi_s_dim / 2,
                 "Lithium metal interface electrode potential": phi_s,
                 "Lithium metal interface electrolyte potential": phi_e,
+                "Lithium metal interface surface potential difference": delta_phi,
+                "Lithium metal interface surface potential difference [V]": ocp_ref
+                + delta_phi * pot_scale,
             }
         )
 
         return variables
-
-    def set_boundary_conditions(self, variables):
-        pass

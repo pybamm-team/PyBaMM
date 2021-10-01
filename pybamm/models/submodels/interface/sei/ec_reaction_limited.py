@@ -29,13 +29,15 @@ class EcReactionLimited(BaseModel):
 
     def get_fundamental_variables(self):
 
-        L_inner = pybamm.FullBroadcast(0, "negative electrode", "current collector")
         if self.reaction_loc == "x-average":
+            L_inner = pybamm.FullBroadcast(0, "negative electrode", "current collector")
             L_outer_av = pybamm.standard_variables.L_outer_av
             L_outer = pybamm.PrimaryBroadcast(L_outer_av, "negative electrode")
         elif self.reaction_loc == "full electrode":
+            L_inner = pybamm.FullBroadcast(0, "negative electrode", "current collector")
             L_outer = pybamm.standard_variables.L_outer
         elif self.reaction_loc == "interface":
+            L_inner = pybamm.PrimaryBroadcast(0, "current collector")
             L_outer = pybamm.standard_variables.L_outer_interface
 
         variables = self._get_standard_thickness_variables(L_inner, L_outer)
@@ -61,6 +63,8 @@ class EcReactionLimited(BaseModel):
         # in which case j = j_tot (uniform) anyway
         if "Negative electrode interfacial current density" in variables:
             j = variables["Negative electrode interfacial current density"]
+        elif self.reaction_loc == "interface":
+            j = variables["Lithium metal total interfacial current density"]
         else:
             j = variables[
                 "X-averaged "
@@ -85,7 +89,10 @@ class EcReactionLimited(BaseModel):
         j_sei = -C_sei_exp / (1 + L_sei * C_ec * C_sei_exp)
         c_ec = 1 / (1 + L_sei * C_ec * C_sei_exp)
 
-        j_inner = pybamm.FullBroadcast(0, "negative electrode", "current collector")
+        if self.reaction_loc == "interface":
+            j_inner = pybamm.PrimaryBroadcast(0, "current collector")
+        else:
+            j_inner = pybamm.FullBroadcast(0, "negative electrode", "current collector")
         j_outer = j_sei
 
         variables.update(self._get_standard_reaction_variables(j_inner, j_outer))

@@ -252,16 +252,6 @@ class BaseInterface(pybamm.BaseSubModel):
         else:
             return pybamm.Scalar(0), pybamm.Scalar(0)
 
-    def _get_delta_phi(self, variables):
-        """Calculate delta_phi, and derived variables, using phi_s and phi_e."""
-        phi_s = variables[self.domain + " electrode potential"]
-        phi_e = variables[self.domain + " electrolyte potential"]
-        delta_phi = phi_s - phi_e
-        variables.update(
-            self._get_standard_surface_potential_difference_variables(delta_phi)
-        )
-        return variables
-
     def _get_average_total_interfacial_current_density(self, variables):
         """
         Method to obtain the average total interfacial current density.
@@ -303,23 +293,28 @@ class BaseInterface(pybamm.BaseSubModel):
 
     def _get_standard_interfacial_current_variables(self, j):
         param = self.param
-        i_typ = param.i_typ
-        L_x = param.L_x
         if self.domain == "Negative":
             j_scale = param.j_scale_n
         elif self.domain == "Positive":
             j_scale = param.j_scale_p
 
+        if self.reaction == "lithium metal plating":
+            # Half-cell domain, j should not be broadcast
+            variables = {
+                "Lithium metal plating current density": j,
+                "Lithium metal plating current density [A.m-2]": j_scale * j,
+            }
+            return variables
+
+        i_typ = param.i_typ
+        L_x = param.L_x
+
         # Size average. For j variables that depend on particle size, see
         # "_get_standard_size_distribution_interfacial_current_variables"
         j = pybamm.size_average(j)
-
         # Average, and broadcast if necessary
         j_av = pybamm.x_average(j)
-        if self.half_cell and self.domain == "Negative":
-            # Half-cell domain, j should not be broadcast
-            pass
-        elif j.domain == []:
+        if j.domain == []:
             j = pybamm.FullBroadcast(j, self.domain_for_broadcast, "current collector")
         elif j.domain == ["current collector"]:
             j = pybamm.PrimaryBroadcast(j, self.domain_for_broadcast)
@@ -365,20 +360,27 @@ class BaseInterface(pybamm.BaseSubModel):
         elif self.domain == "Positive":
             j_scale = self.param.j_scale_p
 
-        variables = {
-            "X-averaged "
-            + self.domain.lower()
-            + " electrode total interfacial current density": j_tot_av,
-            "X-averaged "
-            + self.domain.lower()
-            + " electrode total interfacial current density [A.m-2]": j_scale
-            * j_tot_av,
-            "X-averaged "
-            + self.domain.lower()
-            + " electrode total interfacial current density per volume [A.m-3]": i_typ
-            / L_x
-            * j_tot_av,
-        }
+        if self.half_cell and self.domain == "Negative":
+            variables = {
+                "Lithium metal total interfacial current density": j_tot_av,
+                "Lithium metal total interfacial current density [A.m-2]": j_scale
+                * j_tot_av,
+            }
+        else:
+            variables = {
+                "X-averaged "
+                + self.domain.lower()
+                + " electrode total interfacial current density": j_tot_av,
+                "X-averaged "
+                + self.domain.lower()
+                + " electrode total interfacial current density [A.m-2]": j_scale
+                * j_tot_av,
+                "X-averaged "
+                + self.domain.lower()
+                + " electrode total interfacial current density per volume [A.m-3]": i_typ
+                / L_x
+                * j_tot_av,
+            }
 
         return variables
 
@@ -394,20 +396,12 @@ class BaseInterface(pybamm.BaseSubModel):
         j_n_scale = param.j_scale_n
         j_p_scale = param.j_scale_p
 
-        j_n_av = variables[
-            "X-averaged negative electrode"
-            + self.reaction_name
-            + " interfacial current density"
-        ]
         j_p_av = variables[
             "X-averaged positive electrode"
             + self.reaction_name
             + " interfacial current density"
         ]
 
-        j_n = variables[
-            "Negative electrode" + self.reaction_name + " interfacial current density"
-        ]
         zero_s = pybamm.FullBroadcast(0, "separator", "current collector")
         j_p = variables[
             "Positive electrode" + self.reaction_name + " interfacial current density"
@@ -416,6 +410,16 @@ class BaseInterface(pybamm.BaseSubModel):
             j = pybamm.concatenation(zero_s, j_p)
             j_dim = pybamm.concatenation(zero_s, j_p_scale * j_p)
         else:
+            j_n_av = variables[
+                "X-averaged negative electrode"
+                + self.reaction_name
+                + " interfacial current density"
+            ]
+            j_n = variables[
+                "Negative electrode"
+                + self.reaction_name
+                + " interfacial current density"
+            ]
             j = pybamm.concatenation(j_n, zero_s, j_p)
             j_dim = pybamm.concatenation(j_n_scale * j_n, zero_s, j_p_scale * j_p)
 
@@ -453,45 +457,58 @@ class BaseInterface(pybamm.BaseSubModel):
         # Override print_name
         j.print_name = "J"
         a.print_name = "a"
-        j_n.print_name = "j_n"
         j_p.print_name = "j_p"
 
         new_variables["Sum of electrolyte reaction source terms"] += a * s * j
         new_variables[
-            "Sum of negative electrode electrolyte reaction source terms"
-        ] += (a_n * s_n * j_n)
-        new_variables[
             "Sum of positive electrode electrolyte reaction source terms"
         ] += (a_p * s_p * j_p)
-        new_variables[
-            "Sum of x-averaged negative electrode electrolyte reaction source terms"
-        ] += pybamm.x_average(a_n * s_n * j_n)
         new_variables[
             "Sum of x-averaged positive electrode electrolyte reaction source terms"
         ] += pybamm.x_average(a_p * s_p * j_p)
 
         new_variables["Sum of interfacial current densities"] += j
-        new_variables["Sum of negative electrode interfacial current densities"] += j_n
         new_variables["Sum of positive electrode interfacial current densities"] += j_p
-        new_variables[
-            "Sum of x-averaged negative electrode interfacial current densities"
-        ] += j_n_av
         new_variables[
             "Sum of x-averaged positive electrode interfacial current densities"
         ] += j_p_av
+
+        if not self.half_cell:
+            j_n.print_name = "j_n"
+            new_variables[
+                "Sum of negative electrode electrolyte reaction source terms"
+            ] += (a_n * s_n * j_n)
+            new_variables[
+                "Sum of x-averaged negative electrode electrolyte reaction source terms"
+            ] += pybamm.x_average(a_n * s_n * j_n)
+            new_variables[
+                "Sum of negative electrode interfacial current densities"
+            ] += j_n
+            new_variables[
+                "Sum of x-averaged negative electrode interfacial current densities"
+            ] += j_n_av
 
         variables.update(new_variables)
         return variables
 
     def _get_standard_exchange_current_variables(self, j0):
         param = self.param
-        i_typ = param.i_typ
-        L_x = param.L_x
         if self.domain == "Negative":
             j_scale = param.j_scale_n
         elif self.domain == "Positive":
             j_scale = param.j_scale_p
 
+        if self.reaction == "lithium metal plating":
+            # half-cell domain
+            variables = {
+                "Lithium metal interface exchange current density": j0,
+                "Lithium metal interface exchange current density [A.m-2]": j_scale
+                * j0,
+            }
+            return variables
+
+        i_typ = param.i_typ
+        L_x = param.L_x
         # Size average. For j0 variables that depend on particle size, see
         # "_get_standard_size_distribution_exchange_current_variables"
         j0 = pybamm.size_average(j0)
@@ -548,9 +565,6 @@ class BaseInterface(pybamm.BaseSubModel):
         j_n_scale = param.j_scale_n
         j_p_scale = param.j_scale_p
 
-        j0_n = variables[
-            "Negative electrode" + self.reaction_name + " exchange current density"
-        ]
         zero_s = pybamm.FullBroadcast(0, "separator", "current collector")
         j0_p = variables[
             "Positive electrode" + self.reaction_name + " exchange current density"
@@ -559,6 +573,9 @@ class BaseInterface(pybamm.BaseSubModel):
             j0 = pybamm.concatenation(zero_s, j0_p)
             j0_dim = pybamm.concatenation(zero_s, j_p_scale * j0_p)
         else:
+            j0_n = variables[
+                "Negative electrode" + self.reaction_name + " exchange current density"
+            ]
             j0 = pybamm.concatenation(j0_n, zero_s, j0_p)
             j0_dim = pybamm.concatenation(j_n_scale * j0_n, zero_s, j_p_scale * j0_p)
 
@@ -582,6 +599,14 @@ class BaseInterface(pybamm.BaseSubModel):
     def _get_standard_overpotential_variables(self, eta_r):
 
         pot_scale = self.param.potential_scale
+
+        if self.reaction == "lithium metal plating":
+            # half-cell domain
+            variables = {
+                "Lithium metal interface reaction overpotential": eta_r,
+                "Lithium metal interface reaction overpotential [V]": pot_scale * eta_r,
+            }
+            return variables
 
         # Size average. For eta_r variables that depend on particle size, see
         # "_get_standard_size_distribution_overpotential_variables"
@@ -611,6 +636,15 @@ class BaseInterface(pybamm.BaseSubModel):
     def _get_standard_sei_film_overpotential_variables(self, eta_sei):
 
         pot_scale = self.param.potential_scale
+
+        if self.half_cell:
+            # half-cell domain
+            variables = {
+                "SEI film overpotential": eta_sei,
+                "SEI film overpotential [V]": eta_sei * pot_scale,
+            }
+            return variables
+
         # Average, and broadcast if necessary
         eta_sei_av = pybamm.x_average(eta_sei)
         if eta_sei.domain == []:
@@ -637,13 +671,21 @@ class BaseInterface(pybamm.BaseSubModel):
             ocp_ref = self.param.U_p_ref
         pot_scale = self.param.potential_scale
 
+        # For a half-cell model, the reaction name will be "lithium metal plating"
+        # and the variables are only defined on the interface
+        if self.reaction == "lithium metal plating":
+            delta_phi_dim = ocp_ref + delta_phi * pot_scale
+            variables = {
+                "Lithium metal interface surface potential difference": delta_phi,
+                "Lithium metal interface surface potential difference [V]"
+                "": delta_phi_dim,
+            }
+            return variables
+
         # Average, and broadcast if necessary
         delta_phi_av = pybamm.x_average(delta_phi)
         delta_phi_av_dim = ocp_ref + delta_phi_av * pot_scale
-        if self.half_cell and self.domain == "Negative":
-            # Half-cell domain, delta_phi should not be broadcast
-            delta_phi_dim = ocp_ref + delta_phi * pot_scale
-        elif delta_phi.domain == ["current collector"]:
+        if delta_phi.domain == ["current collector"]:
             delta_phi = pybamm.PrimaryBroadcast(delta_phi_av, self.domain_for_broadcast)
             delta_phi_dim = pybamm.PrimaryBroadcast(
                 delta_phi_av_dim, self.domain_for_broadcast
@@ -728,7 +770,7 @@ class BaseInterface(pybamm.BaseSubModel):
             + self.reaction_name
             + " open circuit potential [V]": ocp_av_dim,
         }
-        if self.reaction_name == "":
+        if self.reaction == "lithium-ion main":
             variables.update(
                 {
                     self.domain + " electrode entropic change": dUdT,

@@ -32,9 +32,12 @@ class SolventDiffusionLimited(BaseModel):
             L_outer_av = pybamm.standard_variables.L_outer_av
             L_inner = pybamm.PrimaryBroadcast(L_inner_av, "negative electrode")
             L_outer = pybamm.PrimaryBroadcast(L_outer_av, "negative electrode")
-        else:
+        elif self.reaction_loc == "full electrode":
             L_inner = pybamm.standard_variables.L_inner
             L_outer = pybamm.standard_variables.L_outer
+        elif self.reaction_loc == "interface":
+            L_inner = pybamm.standard_variables.L_inner_interface
+            L_outer = pybamm.standard_variables.L_outer_interface
 
         variables = self._get_standard_thickness_variables(L_inner, L_outer)
         variables.update(self._get_standard_concentration_variables(variables))
