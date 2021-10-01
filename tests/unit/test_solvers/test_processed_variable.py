@@ -113,12 +113,12 @@ class TestProcessedVariable(unittest.TestCase):
         # with parameter
         t = pybamm.t
         y = pybamm.StateVector(slice(0, 1))
-        a = pybamm.InputParameter('a')
+        a = pybamm.InputParameter("a")
         var = t * y * a
         var.mesh = None
         t_sol = np.linspace(0, 1)
         y_sol = np.array([np.linspace(0, 5)])
-        inputs = {'a': np.array([1.0])}
+        inputs = {"a": np.array([1.0])}
         var_casadi = to_casadi(var, y_sol, inputs=inputs)
         processed_var = pybamm.ProcessedVariable(
             [var],
@@ -128,7 +128,7 @@ class TestProcessedVariable(unittest.TestCase):
         )
 
         # test no sensitivity raises error
-        with self.assertRaisesRegex(ValueError, 'Cannot compute sensitivities'):
+        with self.assertRaisesRegex(ValueError, "Cannot compute sensitivities"):
             print(processed_var.sensitivities)
 
     def test_processed_variable_1D(self):
@@ -551,8 +551,7 @@ class TestProcessedVariable(unittest.TestCase):
 
         # On size domain
         R_n = pybamm.Matrix(
-            disc.mesh["negative particle size"].nodes,
-            domain="negative particle size"
+            disc.mesh["negative particle size"].nodes, domain="negative particle size"
         )
         R_n.mesh = disc.mesh["negative particle size"]
         R_n_casadi = to_casadi(R_n, y_sol)
@@ -854,7 +853,7 @@ class TestProcessedVariable(unittest.TestCase):
     def test_processed_variable_ode_pde_solution(self):
         # without space
         model = pybamm.BaseBatteryModel()
-        c = pybamm.Variable("conc")
+        c = pybamm.Variable("c")
         model.rhs = {c: -c}
         model.initial_conditions = {c: 1}
         model.variables = {"c": c}
@@ -872,9 +871,9 @@ class TestProcessedVariable(unittest.TestCase):
             "separator": pybamm.Scalar(1),
             "positive electrode": pybamm.Scalar(1),
         }
-        c = pybamm.Variable("conc", domain=whole_cell)
+        c = pybamm.Variable("c", domain=whole_cell)
         c_s = pybamm.Variable(
-            "particle conc",
+            "c_s",
             domain="negative particle",
             auxiliary_domains={"secondary": ["negative electrode"]},
         )

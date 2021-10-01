@@ -32,7 +32,7 @@ class IrreversiblePlating(BasePlating):
     def get_fundamental_variables(self):
         if self.x_average is True:
             c_plated_Li_av = pybamm.Variable(
-                "Lithium plating concentration",
+                "X-averaged lithium plating concentration",
                 domain="current collector",
             )
             c_plated_Li = pybamm.PrimaryBroadcast(c_plated_Li_av, "negative electrode")

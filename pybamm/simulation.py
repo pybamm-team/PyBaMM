@@ -375,7 +375,11 @@ class Simulation:
                         model.variables[name]: variable
                         for name, variable in external_circuit_variables.items()
                     }
-                    replacer = pybamm.SymbolReplacer(symbol_replacement_map)
+                    # Don't replace initial conditions, as these should not contain
+                    # Variable objects
+                    replacer = pybamm.SymbolReplacer(
+                        symbol_replacement_map, process_initial_conditions=False
+                    )
                     new_model = replacer.process_model(model, inplace=False)
 
                     # Update the rhs or algebraic equation and initial conditions for

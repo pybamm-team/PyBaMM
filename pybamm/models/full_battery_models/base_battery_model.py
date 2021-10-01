@@ -647,7 +647,7 @@ class BaseBatteryModel(pybamm.BaseModel):
                                 )
                             )
         # Convert variables back into FuzzyDict
-        self._variables = pybamm.FuzzyDict(self._variables)
+        self.variables = pybamm.FuzzyDict(self._variables)
 
     def build_model_equations(self):
         # Set model equations

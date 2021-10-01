@@ -176,12 +176,12 @@ class StandardVariables:
             bounds=(0, 1),
         )
         self.c_s_n_rxav = pybamm.Variable(
-            "R-X-averaged negative particle concentration",
+            "Average negative particle concentration",
             domain="current collector",
             bounds=(0, 1),
         )
         self.c_s_p_rxav = pybamm.Variable(
-            "R-X-averaged positive particle concentration",
+            "Average positive particle concentration",
             domain="current collector",
             bounds=(0, 1),
         )
@@ -221,11 +221,11 @@ class StandardVariables:
             auxiliary_domains={"secondary": "current collector"},
         )
         self.q_s_n_rxav = pybamm.Variable(
-            "R-X-averaged negative particle concentration gradient",
+            "Average negative particle concentration gradient",
             domain="current collector",
         )
         self.q_s_p_rxav = pybamm.Variable(
-            "R-X-averaged positive particle concentration gradient",
+            "Average positive particle concentration gradient",
             domain="current collector",
         )
 
