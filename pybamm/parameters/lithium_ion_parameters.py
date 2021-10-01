@@ -320,8 +320,8 @@ class LithiumIonParameters(BaseParameters):
         self.m_LAM_n = pybamm.Parameter(
             "Negative electrode LAM constant exponential term"
         )
-        self.beta_LAM_n = pybamm.Parameter(
-            "Negative electrode LAM constant propotional term"
+        self.beta_LAM_n_dimensional = pybamm.Parameter(
+            "Negative electrode LAM constant proportional term [s-1]"
         )
         self.stress_critical_n_dim = pybamm.Parameter(
             "Negative electrode critical stress [Pa]"
@@ -329,8 +329,8 @@ class LithiumIonParameters(BaseParameters):
         self.m_LAM_p = pybamm.Parameter(
             "Positive electrode LAM constant exponential term"
         )
-        self.beta_LAM_p = pybamm.Parameter(
-            "Positive electrode LAM constant propotional term"
+        self.beta_LAM_p_dimensional = pybamm.Parameter(
+            "Positive electrode LAM constant proportional term [s-1]"
         )
         self.stress_critical_p_dim = pybamm.Parameter(
             "Positive electrode critical stress [Pa]"
@@ -863,6 +863,8 @@ class LithiumIonParameters(BaseParameters):
         self.c_p_0 = self.c_p_0_dim / self.c_p_max
         self.c_n_0 = self.c_n_0_dim / self.c_n_max
         self.t0_cr = 3600 / self.C_rate / self.timescale
+        self.beta_LAM_n = self.beta_LAM_n_dimensional * self.timescale
+        self.beta_LAM_p = self.beta_LAM_p_dimensional * self.timescale
         # normalised typical time for one cycle
         self.stress_critical_n = self.stress_critical_n_dim / self.E_n
         self.stress_critical_p = self.stress_critical_p_dim / self.E_p
