@@ -170,12 +170,12 @@ class SPMe(BaseModel):
                     "electrolyte conductivity"
                 ] = pybamm.electrolyte_conductivity.Integrated(self.param)
         elif self.options["surface form"] == "differential":
-            for domain in ["Negative", "Separator", "Positive"]:
+            for domain in ["Negative", "Positive"]:
                 self.submodels[
                     domain.lower() + " electrolyte conductivity"
                 ] = surf_form.CompositeDifferential(self.param, domain)
         elif self.options["surface form"] == "algebraic":
-            for domain in ["Negative", "Separator", "Positive"]:
+            for domain in ["Negative", "Positive"]:
                 self.submodels[
                     domain.lower() + " electrolyte conductivity"
                 ] = surf_form.CompositeAlgebraic(self.param, domain)

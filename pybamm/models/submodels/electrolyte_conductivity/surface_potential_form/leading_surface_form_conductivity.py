@@ -28,25 +28,24 @@ class BaseLeadingOrderSurfaceForm(LeadingOrder):
     def get_fundamental_variables(self):
 
         if self.domain == "Negative":
-            delta_phi = pybamm.standard_variables.delta_phi_n_av
+            delta_phi_av = pybamm.standard_variables.delta_phi_n_av
         elif self.domain == "Separator":
             return {}
         elif self.domain == "Positive":
-            delta_phi = pybamm.standard_variables.delta_phi_p_av
+            delta_phi_av = pybamm.standard_variables.delta_phi_p_av
 
-        variables = self._get_standard_surface_potential_difference_variables(delta_phi)
+        variables = self._get_standard_average_surface_potential_difference_variables(
+            delta_phi_av
+        )
+        variables.update(
+            self._get_standard_surface_potential_difference_variables(delta_phi_av)
+        )
         return variables
 
     def get_coupled_variables(self, variables):
-        # Use the potential difference in the negative electrode to calculate the
-        # potential difference and current
+        # Only update coupled variables once
         if self.domain == "Negative":
-            delta_phi_n_av = variables[
-                "X-averaged negative electrode surface potential difference"
-            ]
-            phi_e_av = -delta_phi_n_av
-            return self._get_coupled_variables_from_potential(variables, phi_e_av)
-
+            return super().get_coupled_variables(variables)
         else:
             return variables
 

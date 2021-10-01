@@ -70,7 +70,7 @@ class InverseButlerVolmer(BaseInterface):
         if self.domain == "Negative":
             if self.options["SEI film resistance"] != "none":
                 R_sei = self.param.R_sei
-                L_sei = variables["Total SEI thickness"]
+                L_sei = variables["X-averaged total SEI thickness"]
                 eta_sei = -j_tot * L_sei * R_sei
             # Without SEI resistance
             else:
@@ -86,7 +86,9 @@ class InverseButlerVolmer(BaseInterface):
         variables.update(self._get_standard_exchange_current_variables(j0))
         variables.update(self._get_standard_overpotential_variables(eta_r))
         variables.update(
-            self._get_standard_surface_potential_difference_variables(delta_phi)
+            self._get_standard_average_surface_potential_difference_variables(
+                pybamm.x_average(delta_phi)
+            )
         )
         variables.update(self._get_standard_ocp_variables(ocp, dUdT))
 

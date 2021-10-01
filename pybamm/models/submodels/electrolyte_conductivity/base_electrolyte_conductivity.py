@@ -157,6 +157,41 @@ class BaseElectrolyteConductivity(pybamm.BaseSubModel):
 
         return variables
 
+    def _get_standard_average_surface_potential_difference_variables(
+        self, delta_phi_av
+    ):
+        """
+        A private function to obtain the standard variables which
+        can be derived from the surface potential difference.
+
+        Parameters
+        ----------
+        delta_phi_av : :class:`pybamm.Symbol`
+            The x-averaged surface potential difference.
+
+        Returns
+        -------
+        variables : dict
+            The variables which can be derived from the surface potential difference.
+        """
+
+        if self.domain == "Negative":
+            ocp_ref = self.param.U_n_ref
+        elif self.domain == "Positive":
+            ocp_ref = self.param.U_p_ref
+
+        variables = {
+            "X-averaged "
+            + self.domain.lower()
+            + " electrode surface potential difference": delta_phi_av,
+            "X-averaged "
+            + self.domain.lower()
+            + " electrode surface potential difference [V]": ocp_ref
+            + delta_phi_av * self.param.potential_scale,
+        }
+
+        return variables
+
     def _get_standard_surface_potential_difference_variables(self, delta_phi):
         """
         A private function to obtain the standard variables which
@@ -177,10 +212,8 @@ class BaseElectrolyteConductivity(pybamm.BaseSubModel):
             ocp_ref = self.param.U_n_ref
         elif self.domain == "Positive":
             ocp_ref = self.param.U_p_ref
-        pot_scale = self.param.potential_scale
 
-        # Average, and broadcast if necessary
-        delta_phi_av = pybamm.x_average(delta_phi)
+        # Broadcast if necessary
         if delta_phi.domain == []:
             delta_phi = pybamm.FullBroadcast(
                 delta_phi, self.domain_for_broadcast, "current collector"
@@ -190,16 +223,9 @@ class BaseElectrolyteConductivity(pybamm.BaseSubModel):
 
         variables = {
             self.domain + " electrode surface potential difference": delta_phi,
-            "X-averaged "
-            + self.domain.lower()
-            + " electrode surface potential difference": delta_phi_av,
             self.domain
             + " electrode surface potential difference [V]": ocp_ref
-            + delta_phi * pot_scale,
-            "X-averaged "
-            + self.domain.lower()
-            + " electrode surface potential difference [V]": ocp_ref
-            + delta_phi_av * pot_scale,
+            + delta_phi * self.param.potential_scale,
         }
 
         return variables

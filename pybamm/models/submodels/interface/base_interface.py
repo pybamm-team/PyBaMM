@@ -252,16 +252,6 @@ class BaseInterface(pybamm.BaseSubModel):
         else:
             return pybamm.Scalar(0), pybamm.Scalar(0)
 
-    def _get_delta_phi(self, variables):
-        """Calculate delta_phi, and derived variables, using phi_s and phi_e."""
-        phi_s = variables[self.domain + " electrode potential"]
-        phi_e = variables[self.domain + " electrolyte potential"]
-        delta_phi = phi_s - phi_e
-        variables.update(
-            self._get_standard_surface_potential_difference_variables(delta_phi)
-        )
-        return variables
-
     def _get_average_total_interfacial_current_density(self, variables):
         """
         Method to obtain the average total interfacial current density.
@@ -622,6 +612,27 @@ class BaseInterface(pybamm.BaseSubModel):
 
         return variables
 
+    def _get_standard_average_surface_potential_difference_variables(
+        self, delta_phi_av
+    ):
+        if self.domain == "Negative":
+            ocp_ref = self.param.U_n_ref
+        elif self.domain == "Positive":
+            ocp_ref = self.param.U_p_ref
+
+        delta_phi_av_dim = ocp_ref + delta_phi_av * self.param.potential_scale
+
+        variables = {
+            "X-averaged "
+            + self.domain.lower()
+            + " electrode surface potential difference": delta_phi_av,
+            "X-averaged "
+            + self.domain.lower()
+            + " electrode surface potential difference [V]": delta_phi_av_dim,
+        }
+
+        return variables
+
     def _get_standard_surface_potential_difference_variables(self, delta_phi):
 
         if self.domain == "Negative":
@@ -630,29 +641,20 @@ class BaseInterface(pybamm.BaseSubModel):
             ocp_ref = self.param.U_p_ref
         pot_scale = self.param.potential_scale
 
-        # Average, and broadcast if necessary
-        delta_phi_av = pybamm.x_average(delta_phi)
-        delta_phi_av_dim = ocp_ref + delta_phi_av * pot_scale
+        # Broadcast if necessary
+        delta_phi_dim = ocp_ref + delta_phi * pot_scale
         if self.half_cell and self.domain == "Negative":
             # Half-cell domain, delta_phi should not be broadcast
-            delta_phi_dim = ocp_ref + delta_phi * pot_scale
+            pass
         elif delta_phi.domain == ["current collector"]:
-            delta_phi = pybamm.PrimaryBroadcast(delta_phi_av, self.domain_for_broadcast)
+            delta_phi = pybamm.PrimaryBroadcast(delta_phi, self.domain_for_broadcast)
             delta_phi_dim = pybamm.PrimaryBroadcast(
-                delta_phi_av_dim, self.domain_for_broadcast
+                delta_phi_dim, self.domain_for_broadcast
             )
-        else:
-            delta_phi_dim = ocp_ref + delta_phi * pot_scale
 
         variables = {
             self.domain + " electrode surface potential difference": delta_phi,
-            "X-averaged "
-            + self.domain.lower()
-            + " electrode surface potential difference": delta_phi_av,
             self.domain + " electrode surface potential difference [V]": delta_phi_dim,
-            "X-averaged "
-            + self.domain.lower()
-            + " electrode surface potential difference [V]": delta_phi_av_dim,
         }
 
         return variables

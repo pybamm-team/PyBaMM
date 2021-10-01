@@ -25,12 +25,13 @@ class Composite(BaseModel):
         super().__init__(param, domain)
 
     def get_coupled_variables(self, variables):
+        param = self.param
 
         i_boundary_cc_0 = variables["Leading-order current collector current density"]
 
         # import parameters and spatial variables
-        l_n = self.param.l_n
-        l_p = self.param.l_p
+        l_n = param.l_n
+        l_p = param.l_p
         x_n = pybamm.standard_spatial_vars.x_n
         x_p = pybamm.standard_spatial_vars.x_p
 
@@ -65,6 +66,19 @@ class Composite(BaseModel):
                 x_p + (x_p - 1) ** 2 / (2 * l_p)
             )
             i_s = i_boundary_cc_0 * (1 - (1 - x_p) / l_p)
+
+            if "Positive electrode surface potential difference" not in variables:
+                # Update surface potential difference
+                phi_e = variables["Positive electrolyte potential"]
+                delta_phi_p = phi_s - phi_e
+
+                variables.update(
+                    {
+                        "Positive electrode surface potential difference": delta_phi_p,
+                        "Positive electrode surface potential difference [V]"
+                        "": param.U_p_ref + delta_phi_p * param.potential_scale,
+                    }
+                )
 
         variables.update(self._get_standard_potential_variables(phi_s))
         variables.update(self._get_standard_current_variables(i_s))

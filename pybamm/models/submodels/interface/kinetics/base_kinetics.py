@@ -51,9 +51,6 @@ class BaseKinetics(BaseInterface):
             return {}
 
     def get_coupled_variables(self, variables):
-        # Calculate delta_phi from phi_s and phi_e if it isn't already known
-        if self.domain + " electrode surface potential difference" not in variables:
-            variables = self._get_delta_phi(variables)
         delta_phi = variables[self.domain + " electrode surface potential difference"]
         # If delta_phi was broadcast, take only the orphan.
         if isinstance(delta_phi, pybamm.Broadcast):

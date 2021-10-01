@@ -30,12 +30,14 @@ class LeadingOrder(BaseModel):
         """
         Returns variables which are derived from the fundamental variables in the model.
         """
+        param = self.param
+
         i_boundary_cc = variables["Current collector current density"]
         phi_s_cn = variables["Negative current collector potential"]
 
         # import parameters and spatial variables
-        l_n = self.param.l_n
-        l_p = self.param.l_p
+        l_n = param.l_n
+        l_p = param.l_p
         x_n = pybamm.standard_spatial_vars.x_n
         x_p = pybamm.standard_spatial_vars.x_p
 
@@ -54,6 +56,20 @@ class LeadingOrder(BaseModel):
 
             phi_s = pybamm.PrimaryBroadcast(v, ["positive electrode"])
             i_s = i_boundary_cc * (1 - (1 - x_p) / l_p)
+
+            if "Positive electrode surface potential difference" not in variables:
+                # Update surface potential differences to be uniform
+                delta_phi_p = pybamm.PrimaryBroadcast(
+                    delta_phi_p_av, "positive electrode"
+                )
+
+                variables.update(
+                    {
+                        "Positive electrode surface potential difference": delta_phi_p,
+                        "Positive electrode surface potential difference [V]"
+                        "": param.U_p_ref + delta_phi_p * param.potential_scale,
+                    }
+                )
 
         variables.update(self._get_standard_potential_variables(phi_s))
         variables.update(self._get_standard_current_variables(i_s))
