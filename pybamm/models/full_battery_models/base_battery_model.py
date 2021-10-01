@@ -578,7 +578,8 @@ class BaseBatteryModel(pybamm.BaseModel):
                     "Sum of x-averaged negative electrode "
                     "electrolyte reaction source terms": 0,
                     "Sum of negative electrode interfacial current densities": 0,
-                    "Sum of x-averaged negative electrode interfacial current densities": 0,
+                    "Sum of x-averaged negative electrode interfacial current densities"
+                    "": 0,
                 }
             )
 

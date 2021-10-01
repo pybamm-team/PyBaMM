@@ -375,11 +375,8 @@ class BaseInterface(pybamm.BaseSubModel):
                 + self.domain.lower()
                 + " electrode total interfacial current density [A.m-2]": j_scale
                 * j_tot_av,
-                "X-averaged "
-                + self.domain.lower()
-                + " electrode total interfacial current density per volume [A.m-3]": i_typ
-                / L_x
-                * j_tot_av,
+                "X-averaged " + self.domain.lower() + " electrode total interfacial "
+                "current density per volume [A.m-3]": i_typ / L_x * j_tot_av,
             }
 
         return variables

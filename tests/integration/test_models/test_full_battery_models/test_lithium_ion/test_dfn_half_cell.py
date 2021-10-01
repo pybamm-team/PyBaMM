@@ -4,7 +4,6 @@
 import pybamm
 import tests
 
-import numpy as np
 import unittest
 
 
