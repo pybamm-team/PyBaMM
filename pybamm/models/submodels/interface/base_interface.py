@@ -767,7 +767,7 @@ class BaseInterface(pybamm.BaseSubModel):
             + self.reaction_name
             + " open circuit potential [V]": ocp_av_dim,
         }
-        if self.reaction == "lithium-ion main":
+        if self.reaction in ["lithium-ion main", "lead-acid main"]:
             variables.update(
                 {
                     self.domain + " electrode entropic change": dUdT,
