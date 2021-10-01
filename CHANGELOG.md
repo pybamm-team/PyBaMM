@@ -1,4 +1,4 @@
-# [Unreleased](https://github.com/pybamm-team/PyBaMM)
+# [v21.9](https://github.com/pybamm-team/PyBaMM/tree/v21.9) - 2021-09-30
 
 ## Features
 
@@ -8,6 +8,7 @@
 
 ## Breaking changes
 
+-   Dropped support for Python 3.6 ([#1696](https://github.com/pybamm-team/PyBaMM/pull/1696))
 -   The substring 'negative electrode' has been removed from variables related to SEI and lithium plating (e.g. 'Total negative electrode SEI thickness [m]' replaced by 'Total SEI thickness [m]') ([#1654](https://github.com/pybamm-team/PyBaMM/pull/1654))
 
 # [v21.08](https://github.com/pybamm-team/PyBaMM/tree/v21.08) - 2021-08-26
