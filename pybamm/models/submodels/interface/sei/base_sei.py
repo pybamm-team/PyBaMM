@@ -23,16 +23,6 @@ class BaseModel(BaseInterface):
         domain = "Negative"
         super().__init__(param, domain, reaction, options=options)
 
-    @property
-    def reaction_loc(self):
-        return self._reaction_loc
-
-    @reaction_loc.setter
-    def reaction_loc(self, reaction_loc):
-        if self.half_cell and reaction_loc != "interface":
-            raise ValueError("'reaction_loc' must be 'interface' for a half-cell model")
-        self._reaction_loc = reaction_loc
-
     def get_coupled_variables(self, variables):
         # Update some common variables
         zero_av = pybamm.PrimaryBroadcast(0, "current collector")

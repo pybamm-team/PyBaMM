@@ -513,10 +513,7 @@ class BaseInterface(pybamm.BaseSubModel):
         j0_av = pybamm.x_average(j0)
 
         # X-average, and broadcast if necessary
-        if self.half_cell and self.domain == "Negative":
-            # Half-cell domain, j0 should not be broadcast
-            pass
-        elif j0.domain == []:
+        if j0.domain == []:
             j0 = pybamm.FullBroadcast(
                 j0, self.domain_for_broadcast, "current collector"
             )
