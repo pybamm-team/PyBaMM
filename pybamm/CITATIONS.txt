@@ -117,6 +117,17 @@
   journal = {Journal of Open Source Software},
 }
 
+@article{Hales2019,
+  title={The cell cooling coefficient: a standard to define heat rejection from lithium-ion batteries},
+  author={Hales, Alastair and Diaz, Laura Bravo and Marzook, Mohamed Waseem and Zhao, Yan and Patel, Yatish and Offer, Gregory},
+  journal={Journal of The Electrochemical Society},
+  volume={166},
+  number={12},
+  pages={A2383},
+  year={2019},
+  publisher={IOP Publishing}
+}
+
 @article{Harris2020,
   title = {{Array programming with NumPy}},
   author = {Harris, Charles R. and Millman, K. Jarrod and van der Walt, St{\'{e}}fan J. and Gommers, Ralf and Virtanen, Pauli and Cournapeau, David and Wieser, Eric and Taylor, Julian and Berg, Sebastian and Smith, Nathaniel J. and others},
@@ -459,4 +470,15 @@
   year = {2017},
   publisher = {Elsevier},
   doi = {10.1016/j.jpowsour.2017.05.110},
+}
+
+@article{Zhao2018,
+  title={Modeling the effects of thermal gradients induced by tab and surface cooling on lithium ion cell performance},
+  author={Zhao, Yan and Patel, Yatish and Zhang, Teng and Offer, Gregory J},
+  journal={Journal of The Electrochemical Society},
+  volume={165},
+  number={13},
+  pages={A3169},
+  year={2018},
+  publisher={IOP Publishing}
 }
