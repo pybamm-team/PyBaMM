@@ -47,7 +47,6 @@ class Composite(BaseElectrolyteConductivity):
             "X-averaged negative electrode surface potential difference"
         ]
         phi_s_n_av = variables["X-averaged negative electrode potential"]
-        phi_s_n = variables["Negative electrode potential"]
         tor_n_av = variables["Leading-order x-averaged negative electrolyte tortuosity"]
         tor_s_av = variables["Leading-order x-averaged separator tortuosity"]
         tor_p_av = variables["Leading-order x-averaged positive electrolyte tortuosity"]

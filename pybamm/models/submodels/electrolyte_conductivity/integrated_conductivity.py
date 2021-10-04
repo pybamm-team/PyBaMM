@@ -47,7 +47,6 @@ class Integrated(BaseElectrolyteConductivity):
         delta_phi_n_av = variables[
             "X-averaged negative electrode surface potential difference"
         ]
-        phi_s_n = variables["Negative electrode potential"]
         phi_s_n_av = variables["X-averaged negative electrode potential"]
 
         tor_n = variables["Negative electrolyte tortuosity"]
