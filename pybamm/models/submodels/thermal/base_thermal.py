@@ -11,15 +11,17 @@ class BaseThermal(pybamm.BaseSubModel):
     ----------
     param : parameter class
         The parameters to use for this submodel
+    options : dict, optional
+        A dictionary of options to be passed to the model.
     cc_dimension: int, optional
         The dimension of the current collectors. Can be 0 (default), 1 or 2.
 
     **Extends:** :class:`pybamm.BaseSubModel`
     """
 
-    def __init__(self, param, cc_dimension=0):
+    def __init__(self, param, options=None, cc_dimension=0):
         self.cc_dimension = cc_dimension
-        super().__init__(param)
+        super().__init__(param, options=options)
 
     def _get_standard_fundamental_variables(
         self, T_cn, T_n, T_s, T_p, T_cp, T_x_av, T_vol_av
@@ -41,6 +43,9 @@ class BaseThermal(pybamm.BaseSubModel):
         T = pybamm.concatenation(T_n, T_s, T_p)
 
         # Compute averaged temperatures by domain
+        if self.half_cell:
+            # overwrite T_n to be the boundary value of T_s
+            T_n = pybamm.boundary_value(T_s, "left")
         T_n_av = pybamm.x_average(T_n)
         T_s_av = pybamm.x_average(T_s)
         T_p_av = pybamm.x_average(T_p)

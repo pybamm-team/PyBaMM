@@ -4,6 +4,9 @@ about: Create a report to help us improve
 
 ---
 
+- PyBaMM version - `$ python -m pip show pybamm`:
+- Python version - `$ python --version`:
+
 **Describe the bug**
 A clear and concise description of what the bug is.
 

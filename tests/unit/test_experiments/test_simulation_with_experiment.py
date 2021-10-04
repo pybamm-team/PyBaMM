@@ -149,7 +149,7 @@ class TestSimulationExperiment(unittest.TestCase):
         np.testing.assert_array_almost_equal(
             solutions[0]["Terminal voltage [V]"].data,
             solutions[1]["Terminal voltage [V]"].data,
-            decimal=2,
+            decimal=1,
         )
         np.testing.assert_array_almost_equal(
             solutions[0]["Current [A]"].data,

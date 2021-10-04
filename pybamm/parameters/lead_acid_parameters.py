@@ -684,6 +684,10 @@ class LeadAcidParameters(BaseParameters):
             self.Q_e_max * (1.2 - self.q_init) / (self.Q_p_max * self.l_p)
         )
 
+        self.U_n_init = self.U_n(self.c_e_init, self.T_init)
+        self.U_p_init = self.U_p(self.c_e_init, self.T_init)
+        self.ocv_init = self.U_p_init - self.U_n_init
+
     def sigma_n(self, T):
         """Dimensionless negative electrode electrical conductivity"""
         T_dim = self.Delta_T * T + self.T_ref
@@ -770,15 +774,15 @@ class LeadAcidParameters(BaseParameters):
 
     def c_n_init(self, x):
         """
-        Dimensionless initial concentration (as a function of dimensionless position x
-        to be consistent with lithium-ion)
+        Dimensionless initial concentration (as a function of dimensionless positions
+        r and x to be consistent with lithium-ion)
         """
         return self.c_e_init
 
     def c_p_init(self, x):
         """
-        Dimensionless initial concentration (as a function of dimensionless position x
-        to be consistent with lithium-ion)
+        Dimensionless initial concentration (as a function of dimensionless positions
+        r and x to be consistent with lithium-ion)
         """
         return self.c_e_init
 

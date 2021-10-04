@@ -13,12 +13,14 @@ class NoConvection(BaseTransverseModel):
     ----------
     param : parameter class
         The parameters to use for this submodel
+    options : dict, optional
+        A dictionary of options to be passed to the model.
 
     **Extends:** :class:`pybamm.convection.through_cell.BaseTransverseModel`
     """
 
-    def __init__(self, param):
-        super().__init__(param)
+    def __init__(self, param, options=None):
+        super().__init__(param, options=options)
 
     def get_fundamental_variables(self):
 
