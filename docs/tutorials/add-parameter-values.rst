@@ -16,7 +16,7 @@ At the stage of creating a model, we use :class:`pybamm.Parameter` and :class:`p
 We then create a :class:`ParameterValues` class, using a specific set of parameters, to iterate through the model and replace any :class:`pybamm.Parameter` objects with a :class:`pybamm.Scalar` and any :class:`pybamm.FunctionParameter` objects with a :class:`pybamm.Function`.
 
 For an example of how the parameter values work, see the
-`parameter values notebook <https://github.com/pybamm-team/PyBaMM/blob/develop/examples/notebooks/parameter-values.ipynb>`_.
+`parameter values notebook <https://github.com/pybamm-team/PyBaMM/blob/develop/examples/notebooks/parameterization/parameter-values.ipynb>`_.
 
 Adding a set of parameters values
 ---------------------------------

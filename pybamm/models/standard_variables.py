@@ -293,20 +293,20 @@ class StandardVariables:
 
         # SEI variables
         self.L_inner_av = pybamm.Variable(
-            "X-averaged inner negative electrode SEI thickness",
+            "X-averaged inner SEI thickness",
             domain="current collector",
         )
         self.L_inner = pybamm.Variable(
-            "Inner negative electrode SEI thickness",
+            "Inner SEI thickness",
             domain=["negative electrode"],
             auxiliary_domains={"secondary": "current collector"},
         )
         self.L_outer_av = pybamm.Variable(
-            "X-averaged outer negative electrode SEI thickness",
+            "X-averaged outer SEI thickness",
             domain="current collector",
         )
         self.L_outer = pybamm.Variable(
-            "Outer negative electrode SEI thickness",
+            "Outer SEI thickness",
             domain=["negative electrode"],
             auxiliary_domains={"secondary": "current collector"},
         )
