@@ -11,6 +11,15 @@ on:
     types: [completed]
 
 jobs:
+  # If build_wheels fails, exit this workflow
+  exit-workflow:
+    name: Exit workflow if build_wheels fails
+    runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'failure' }}
+    steps:
+      - run: exit 1
+
+
   build_sdist:
     name: Build sdist
     runs-on: ubuntu-latest
