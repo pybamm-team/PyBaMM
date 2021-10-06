@@ -236,3 +236,42 @@ class BaseModel(pybamm.BaseBatteryModel):
             self.submodels["porosity"] = pybamm.porosity.ReactionDriven(
                 self.param, self.options, self.x_average
             )
+
+    def set_li_metal_counter_electrode_submodels(self):
+        if self.options["SEI"] in ["none", "constant"]:
+            self.submodels[
+                "counter electrode potential"
+            ] = pybamm.electrode.ohm.LithiumMetalExplicit(self.param, self.options)
+            self.submodels[
+                "counter electrode interface"
+            ] = pybamm.interface.InverseButlerVolmer(
+                self.param, "Negative", "lithium metal plating", self.options
+            )  # assuming symmetric reaction for now so we can take the inverse
+            self.submodels[
+                "counter electrode interface current"
+            ] = pybamm.interface.CurrentForInverseButlerVolmerLithiumMetal(
+                self.param, "Negative", "lithium metal plating", self.options
+            )
+        else:
+            self.submodels[
+                "counter electrode potential"
+            ] = pybamm.electrode.ohm.LithiumMetalSurfaceForm(self.param, self.options)
+            self.submodels[
+                "counter electrode interface"
+            ] = pybamm.interface.ButlerVolmer(
+                self.param, "Negative", "lithium metal plating", self.options
+            )
+
+        # For half-cell models, remove negative electrode submodels
+        # that are not needed before building
+        # We do this whether the working electrode is 'positive' or 'negative' since
+        # the half-cell models are always defined assuming the positive electrode is
+        # the working electrode
+
+        # This should be done before `self.build_model`, which is the expensive part
+
+        # Models added specifically for the counter electrode have been labelled with
+        # "counter electrode" so as not to be caught by this check
+        self.submodels = {
+            k: v for k, v in self.submodels.items() if not k.startswith("negative")
+        }

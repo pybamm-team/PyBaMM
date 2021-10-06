@@ -51,18 +51,9 @@ class DFN(BaseModel):
         self.set_sei_submodel()
         self.set_lithium_plating_submodel()
 
-        # For half-cell models, remove negative electrode submodels
-        # that are not needed before building
-        # We do this whether the working electrode is 'positive' or 'negative' since
-        # the half-cell models are always defined assuming the positive electrode is
-        # the working electrode
-        # It's ok to only do this now since `build_model` is the expensive part
-        if self.options["working electrode"] != "both":
-            self.submodels = {
-                k: v for k, v in self.submodels.items() if not k.startswith("negative")
-            }
-        # Models added specifically for the counter electrode should be labelled with
-        # "counter electrode" so as not to be caught by this check
+        if self.half_cell:
+            # This also removes "negative electrode" submodels, so should be done last
+            self.set_li_metal_counter_electrode_submodels()
 
         if build:
             self.build_model()
@@ -86,27 +77,6 @@ class DFN(BaseModel):
         self.submodels["positive interface"] = pybamm.interface.ButlerVolmer(
             self.param, "Positive", "lithium-ion main", self.options
         )
-
-        # Set the counter-electrode model for the half-cell model
-        # The negative electrode model will be ignored
-        if self.half_cell:
-            if self.options["SEI"] in ["none", "constant"]:
-                self.submodels[
-                    "counter electrode interface"
-                ] = pybamm.interface.InverseButlerVolmer(
-                    self.param, "Negative", "lithium metal plating", self.options
-                )  # assuming symmetric reaction for now so we can take the inverse
-                self.submodels[
-                    "counter electrode interface current"
-                ] = pybamm.interface.CurrentForInverseButlerVolmerLithiumMetal(
-                    self.param, "Negative", "lithium metal plating", self.options
-                )
-            else:
-                self.submodels[
-                    "counter electrode interface"
-                ] = pybamm.interface.ButlerVolmer(
-                    self.param, "Negative", "lithium metal plating", self.options
-                )
 
     def set_particle_submodel(self):
 
@@ -165,20 +135,6 @@ class DFN(BaseModel):
 
         self.submodels["negative electrode potential"] = submod_n
         self.submodels["positive electrode potential"] = submod_p
-
-        # Set the counter-electrode model for the half-cell model
-        # The negative electrode model will be ignored
-        if self.half_cell:
-            if self.options["SEI"] in ["none", "constant"]:
-                self.submodels[
-                    "counter electrode potential"
-                ] = pybamm.electrode.ohm.LithiumMetalExplicit(self.param, self.options)
-            else:
-                self.submodels[
-                    "counter electrode potential"
-                ] = pybamm.electrode.ohm.LithiumMetalSurfaceForm(
-                    self.param, self.options
-                )
 
     def set_electrolyte_submodel(self):
 
