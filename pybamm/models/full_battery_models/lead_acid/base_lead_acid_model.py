@@ -17,8 +17,9 @@ class BaseModel(pybamm.BaseBatteryModel):
 
     def __init__(self, options=None, name="Unnamed lead-acid model", build=False):
         options = options or {}
-        # Specify that there are no particles in lead-acid
+        # Specify that there are no particles in lead-acid, and no half-cell models
         options["particle shape"] = "no particles"
+        self.half_cell = False
         super().__init__(options, name)
         self.param = pybamm.LeadAcidParameters()
 

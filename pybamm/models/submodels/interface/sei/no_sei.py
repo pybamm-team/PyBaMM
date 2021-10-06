@@ -21,9 +21,13 @@ class NoSEI(BaseModel):
 
     def __init__(self, param, options=None):
         super().__init__(param, options=options)
+        if self.half_cell:
+            self.reaction_loc = "interface"
+        else:
+            self.reaction_loc = "full electrode"
 
     def get_fundamental_variables(self):
-        if self.half_cell and self.domain == "Negative":
+        if self.reaction_loc == "interface":
             zero = pybamm.PrimaryBroadcast(pybamm.Scalar(0), "current collector")
         else:
             zero = pybamm.FullBroadcast(
