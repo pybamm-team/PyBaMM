@@ -74,7 +74,7 @@
       ]
     },
     {
-      "login": "ferranbrosa",
+      "login": "brosaplanella",
       "name": "Ferran Brosa Planella",
       "avatar_url": "https://avatars3.githubusercontent.com/u/28443643?v=4",
       "profile": "https://www.brosaplanella.com",
@@ -221,6 +221,26 @@
       "name": "Colin Please",
       "avatar_url": "https://avatars3.githubusercontent.com/u/44977104?v=4",
       "profile": "https://github.com/colinplease",
+      "contributions": [
+        "ideas",
+        "fundingFinding"
+      ]
+    },
+    {
+      "login": "cwmonroe",
+      "name": "cwmonroe",
+      "avatar_url": "https://avatars.githubusercontent.com/u/92099819?v=4",
+      "profile": "https://github.com/cwmonroe",
+      "contributions": [
+        "ideas",
+        "fundingFinding"
+      ]
+    },
+    {
+      "login": "gjo97",
+      "name": "Greg",
+      "avatar_url": "https://avatars.githubusercontent.com/u/18349157?v=4",
+      "profile": "https://github.com/gjo97",
       "contributions": [
         "ideas",
         "fundingFinding"
