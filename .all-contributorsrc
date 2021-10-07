@@ -418,6 +418,16 @@
         "bug",
         "code"
       ]
+    },
+    {
+      "login": "gjo97",
+      "name": "Greg",
+      "avatar_url": "https://avatars.githubusercontent.com/u/18349157?v=4",
+      "profile": "http://www.imperial.ac.uk/people/gregory.offer",
+      "contributions": [
+        "ideas",
+        "fundingFinding"
+      ]
     }
   ],
   "contributorsPerLine": 7,
