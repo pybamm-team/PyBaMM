@@ -418,6 +418,16 @@
         "bug",
         "code"
       ]
+    },
+    {
+      "login": "cwmonroe",
+      "name": "cwmonroe",
+      "avatar_url": "https://avatars.githubusercontent.com/u/92099819?v=4",
+      "profile": "https://github.com/cwmonroe",
+      "contributions": [
+        "ideas",
+        "fundingFinding"
+      ]
     }
   ],
   "contributorsPerLine": 7,
