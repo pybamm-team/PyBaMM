@@ -11,7 +11,7 @@
 [![release](https://img.shields.io/github/v/release/pybamm-team/PyBaMM?color=yellow)](https://github.com/pybamm-team/PyBaMM/releases)
 [![black code style](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/ambv/black)
 <!-- ALL-CONTRIBUTORS-BADGE:START - Do not remove or modify this section -->
-[![All Contributors](https://img.shields.io/badge/all_contributors-36-orange.svg)](#-contributors)
+[![All Contributors](https://img.shields.io/badge/all_contributors-37-orange.svg)](#-contributors)
 <!-- ALL-CONTRIBUTORS-BADGE:END -->
 
 </div>
@@ -187,6 +187,7 @@ Thanks goes to these wonderful people ([emoji key](https://allcontributors.org/d
   </tr>
   <tr>
     <td align="center"><a href="https://gavinw.me"><img src="https://avatars.githubusercontent.com/u/6828967?v=4?s=100" width="100px;" alt=""/><br /><sub><b>Gavin Wiggins</b></sub></a><br /><a href="https://github.com/pybamm-team/PyBaMM/issues?q=author%3Awigging" title="Bug reports">🐛</a> <a href="https://github.com/pybamm-team/PyBaMM/commits?author=wigging" title="Code">💻</a></td>
+    <td align="center"><a href="https://github.com/cwmonroe"><img src="https://avatars.githubusercontent.com/u/92099819?v=4?s=100" width="100px;" alt=""/><br /><sub><b>cwmonroe</b></sub></a><br /><a href="#ideas-cwmonroe" title="Ideas, Planning, & Feedback">🤔</a> <a href="#fundingFinding-cwmonroe" title="Funding Finding">🔍</a></td>
   </tr>
 </table>
 
