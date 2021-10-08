@@ -12,6 +12,11 @@ class TestSPMeHalfCell(unittest.TestCase):
         model = pybamm.lithium_ion.SPMe(options)
         model.check_well_posedness()
 
+    def test_well_posed_integrated(self):
+        options = {"working electrode": "positive"}
+        model = pybamm.lithium_ion.SPMe(options)
+        model.check_well_posedness()
+
 
 class TestSPMeHalfCellWithSEI(unittest.TestCase):
     def test_well_posed_constant(self):
