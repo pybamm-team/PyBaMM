@@ -9,11 +9,12 @@ pybamm.set_logging_level("INFO")
 
 # load model
 options = {"working electrode": "positive"}
-model1 = pybamm.lithium_ion.DFN(options=options)
-model2 = pybamm.lithium_ion.SPM(options=options)
+# model1 = pybamm.lithium_ion.DFN(options=options)
+model2 = pybamm.lithium_ion.SPMe(options=options)
+# model3 = pybamm.lithium_ion.SPM(options=options)
 
 sols = []
-for model in [model1, model2]:
+for model in [model1, model2, model3]:
     # create geometry
     geometry = model.default_geometry
 
@@ -34,7 +35,7 @@ for model in [model1, model2]:
     disc.process_model(model)
 
     # solve model
-    t_eval = np.linspace(0, 7200, 1000)
+    t_eval = np.linspace(0, 100, 1000)
     solver = pybamm.CasadiSolver(mode="safe", atol=1e-6, rtol=1e-3)
     solution = solver.solve(model, t_eval)
     sols.append(solution)
@@ -51,6 +52,7 @@ plot = pybamm.QuickPlot(
         "Positive electrode open circuit potential [V]",
         ["Terminal voltage [V]"],
         "Negative electrode potential drop [V]",
+        "Lithium metal interface electrolyte potential",
     ],
     time_unit="seconds",
     spatial_unit="um",

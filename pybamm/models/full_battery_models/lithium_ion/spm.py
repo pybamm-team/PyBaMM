@@ -66,10 +66,10 @@ class SPM(BaseModel):
 
         self.submodels[
             "through-cell convection"
-        ] = pybamm.convection.through_cell.NoConvection(self.param)
+        ] = pybamm.convection.through_cell.NoConvection(self.param, self.options)
         self.submodels[
             "transverse convection"
-        ] = pybamm.convection.transverse.NoConvection(self.param)
+        ] = pybamm.convection.transverse.NoConvection(self.param, self.options)
 
     def set_interfacial_submodel(self):
 
