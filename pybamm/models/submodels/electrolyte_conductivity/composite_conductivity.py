@@ -60,21 +60,18 @@ class Composite(BaseElectrolyteConductivity):
         tor_p_av = variables["Leading-order x-averaged positive electrolyte tortuosity"]
 
         T_av = variables["X-averaged cell temperature"]
-        T_av_n = pybamm.PrimaryBroadcast(T_av, "negative electrode")
         T_av_s = pybamm.PrimaryBroadcast(T_av, "separator")
         T_av_p = pybamm.PrimaryBroadcast(T_av, "positive electrode")
 
         param = self.param
         l_n = param.l_n
         l_p = param.l_p
-        x_n = pybamm.standard_spatial_vars.x_n
         x_s = pybamm.standard_spatial_vars.x_s
         x_p = pybamm.standard_spatial_vars.x_p
 
         # bulk conductivities
-        kappa_av = param.kappa_e(c_e_av, T_av)
-        kappa_s_av = kappa_av * tor_s_av
-        kappa_p_av = kappa_av * tor_p_av
+        kappa_s_av = param.kappa_e(c_e_av, T_av) * tor_s_av
+        kappa_p_av = param.kappa_e(c_e_av, T_av) * tor_p_av
 
         chi_av = param.chi(c_e_av, T_av)
         chi_av_s = pybamm.PrimaryBroadcast(chi_av, "separator")
@@ -84,8 +81,10 @@ class Composite(BaseElectrolyteConductivity):
         if self.half_cell:
             i_e_n = None
         else:
+            x_n = pybamm.standard_spatial_vars.x_n
             chi_av_n = pybamm.PrimaryBroadcast(chi_av, "negative electrode")
-            kappa_n_av = kappa_av * tor_n_av
+            T_av_n = pybamm.PrimaryBroadcast(T_av, "negative electrode")
+            kappa_n_av = param.kappa_e(c_e_av, T_av) * tor_n_av
             i_e_n = i_boundary_cc_0 * x_n / l_n
         i_e_s = pybamm.PrimaryBroadcast(i_boundary_cc_0, "separator")
         i_e_p = i_boundary_cc_0 * (1 - x_p) / l_p
@@ -100,7 +99,7 @@ class Composite(BaseElectrolyteConductivity):
                 - chi_av
                 * (1 + param.Theta * T_av)
                 * self._higher_order_macinnes_function(c_e_n / c_e_av)
-                + (i_boundary_cc_0 * param.C_e / param.gamma_e / kappa_av) * l_n
+                + (i_boundary_cc_0 * param.C_e / param.gamma_e / kappa_s_av) * l_n
             )
             phi_e_n = None
         else:

@@ -141,16 +141,26 @@ class QuickPlot(object):
         # Default output variables for lead-acid and lithium-ion
         if output_variables is None:
             if isinstance(models[0], pybamm.lithium_ion.BaseModel):
-                output_variables = [
-                    "Negative particle surface concentration [mol.m-3]",
-                    "Electrolyte concentration [mol.m-3]",
-                    "Positive particle surface concentration [mol.m-3]",
-                    "Current [A]",
-                    "Negative electrode potential [V]",
-                    "Electrolyte potential [V]",
-                    "Positive electrode potential [V]",
-                    "Terminal voltage [V]",
-                ]
+                if models[0].half_cell:
+                    output_variables = [
+                        "Electrolyte concentration [mol.m-3]",
+                        "Positive particle surface concentration [mol.m-3]",
+                        "Current [A]",
+                        "Electrolyte potential [V]",
+                        "Positive electrode potential [V]",
+                        "Terminal voltage [V]",
+                    ]
+                else:
+                    output_variables = [
+                        "Negative particle surface concentration [mol.m-3]",
+                        "Electrolyte concentration [mol.m-3]",
+                        "Positive particle surface concentration [mol.m-3]",
+                        "Current [A]",
+                        "Negative electrode potential [V]",
+                        "Electrolyte potential [V]",
+                        "Positive electrode potential [V]",
+                        "Terminal voltage [V]",
+                    ]
             elif isinstance(models[0], pybamm.lead_acid.BaseModel):
                 output_variables = [
                     "Interfacial current density [A.m-2]",
@@ -601,7 +611,7 @@ class QuickPlot(object):
             # Set either y label or legend entries
             if len(key) == 1:
                 title = split_long_string(key[0])
-                ax.set_title(title, fontsize='medium')
+                ax.set_title(title, fontsize="medium")
             else:
                 ax.legend(
                     variable_handles,

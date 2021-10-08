@@ -83,12 +83,12 @@ class SPM(BaseModel):
             self.submodels[
                 "negative interface current"
             ] = pybamm.interface.CurrentForInverseButlerVolmer(
-                self.param, "Negative", "lithium-ion main"
+                self.param, "Negative", "lithium-ion main", self.options
             )
             self.submodels[
                 "positive interface current"
             ] = pybamm.interface.CurrentForInverseButlerVolmer(
-                self.param, "Positive", "lithium-ion main"
+                self.param, "Positive", "lithium-ion main", self.options
             )
         else:
             self.submodels["negative interface"] = pybamm.interface.ButlerVolmer(
