@@ -13,6 +13,7 @@ models = [
     pybamm.lithium_ion.NewmanTobias(),
 ]
 
+
 # create and run simulations
 sims = []
 for model in models:
@@ -21,4 +22,10 @@ for model in models:
     sims.append(sim)
 
 # plot
-pybamm.dynamic_plot(sims)
+pybamm.dynamic_plot(
+    sims,
+    [
+        "X-averaged negative particle concentration",
+        "X-averaged positive particle concentration",
+    ],
+)
