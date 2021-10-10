@@ -1285,31 +1285,16 @@ def simplified_matrix_multiplication(left, right):
         new_mul.copy_domains(right)
         return new_mul
 
-    elif isinstance(right, Addition) and left.is_constant():
-        # Simplify A @ (b + c) to (A @ b) + (A @ c) if (A @ b) or (A @ c) is constant
-        # This is a common construction that appears from discretisation of spatial
-        # operators
-        # Don't do this if either b or c is a number as this will lead to matmul errors
+    # Simplify A @ (b + c) to (A @ b) + (A @ c) if (A @ b) or (A @ c) is constant
+    # This is a common construction that appears from discretisation of spatial
+    # operators
+    # Don't do this if either b or c is a number as this will lead to matmul errors
+    elif isinstance(right, Addition):
         if (right.left.is_constant() or right.right.is_constant()) and not (
             right.left.size_for_testing == 1 or right.right.size_for_testing == 1
         ):
             r_left, r_right = right.orphans
             return (left @ r_left) + (left @ r_right)
-        # Simplify A @ (B @ b + C @ c) to (A @ B) @ b + (A @ C) @ c
-        # if (A @ B) and (A @ C) are constant
-        # This is a common construction that appears from discretisation of spatial
-        # operators
-        if (
-            isinstance(right.left, pybamm.MatrixMultiplication)
-            and right.left.left.is_constant()
-            and isinstance(right.left, pybamm.MatrixMultiplication)
-            and right.left.left.is_constant()
-        ):
-            rl_left, rl_right = right.left.orphans
-            rr_left, rr_right = right.right.orphans
-            rl_right.copy_domains(right.left)
-            rr_right.copy_domains(right.right)
-            return (left @ rl_left) @ rl_right + (left @ rr_left) @ rr_right
 
     return pybamm.simplify_if_constant(pybamm.MatrixMultiplication(left, right))
 
