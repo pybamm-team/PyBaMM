@@ -341,7 +341,8 @@
       "contributions": [
         "code",
         "test",
-        "doc"
+        "doc",
+        "tutorial"
       ]
     },
     {
