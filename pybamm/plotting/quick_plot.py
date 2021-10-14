@@ -110,7 +110,6 @@ class QuickPlot(object):
             )
 
         # Extract solution from any simulations
-        solutions = solutions.copy()
         for idx, sol in enumerate(solutions):
             if isinstance(sol, pybamm.Simulation):
                 # 'sol' is actually a 'Simulation' object here so it has a 'Solution'
