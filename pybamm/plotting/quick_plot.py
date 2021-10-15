@@ -108,8 +108,8 @@ class QuickPlot(object):
         elif isinstance(input_solutions, list):
             for sim_or_sol in input_solutions:
                 if isinstance(sim_or_sol, pybamm.Simulation):
-                    # 'sim_or_sol' is actually a 'Simulation' object here so it has a 'Solution'
-                    # attribute
+                    # 'sim_or_sol' is actually a 'Simulation' object here so it has a
+                    #  'Solution' attribute
                     solutions.append(sim_or_sol.solution)
                 elif isinstance(sim_or_sol, pybamm.Solution):
                     solutions.append(sim_or_sol)
