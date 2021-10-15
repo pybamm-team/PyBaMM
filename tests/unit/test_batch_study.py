@@ -108,8 +108,10 @@ class TestBatchStudy(unittest.TestCase):
         bs_false.solve()
         bs_false.plot(testing=True)
         self.assertEqual(2, len(bs_false.sims))
+
+        sols = [sim.solution for sim in bs_false.sims]
         for num in range(len(bs_false.sims)):
-            output_model = bs_false.sims[num].all_models[0].name
+            output_model = sols[num].all_models[0].name
             models_list = [model.name for model in bs_false.models.values()]
             self.assertIn(output_model, models_list)
 
@@ -117,8 +119,10 @@ class TestBatchStudy(unittest.TestCase):
         bs_true.solve()
         bs_true.plot(testing=True)
         self.assertEqual(4, len(bs_true.sims))
+
+        sols = [sim.solution for sim in bs_true.sims]
         for num in range(len(bs_true.sims)):
-            output_model = bs_true.sims[num].all_models[0].name
+            output_model = sols[num].all_models[0].name
             models_list = [model.name for model in bs_true.models.values()]
             self.assertIn(output_model, models_list)
 

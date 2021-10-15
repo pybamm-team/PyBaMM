@@ -483,7 +483,7 @@ class TestQuickPlot(unittest.TestCase):
             "Positive particle surface concentration",
         ]
         quick_plot = pybamm.QuickPlot(
-            solutions=[sol1, sol2], output_variables=output_variables
+            input_solutions=[sol1, sol2], output_variables=output_variables
         )
         quick_plot.dynamic_plot(testing=True)
         quick_plot.slider_update(1)
