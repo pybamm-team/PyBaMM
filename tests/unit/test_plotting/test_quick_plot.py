@@ -270,6 +270,11 @@ class TestQuickPlot(unittest.TestCase):
         t_eval = np.linspace(0, 10, 2)
         sim.solve(t_eval)
 
+        # pass only a simulation object
+        # it should be converted to a list of corresponding solution
+        quick_plot = pybamm.QuickPlot(sim)
+        quick_plot.plot(0)
+
         # mixed simulation and solution input
         # solution should be extracted from the simulation
         quick_plot = pybamm.QuickPlot([sim, sim.solution])
