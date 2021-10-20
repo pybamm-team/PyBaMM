@@ -1,6 +1,7 @@
 #
 # Class for quick plotting of variables from models
 #
+import os
 import numpy as np
 import pybamm
 from collections import defaultdict
@@ -601,7 +602,7 @@ class QuickPlot(object):
             # Set either y label or legend entries
             if len(key) == 1:
                 title = split_long_string(key[0])
-                ax.set_title(title, fontsize='medium')
+                ax.set_title(title, fontsize="medium")
             else:
                 ax.legend(
                     variable_handles,
@@ -752,3 +753,39 @@ class QuickPlot(object):
                     )
 
         self.fig.canvas.draw_idle()
+
+    def create_gif(self, number_of_images=80, duration=0.1):
+        """
+        This function generates 80 plots over a time span of t_eval seconds and then
+        compiles them to create a GIF.
+        Parameters:
+            batch_study: pybamm.BatchStudy
+            labels: list
+                default: None
+                A list of labels for the GIF.
+        """
+
+        import imageio
+
+        # generating time to plot the simulation
+        final_time = max(
+            [solution["Time [s]"].entries[-1] for solution in self.solutions]
+        )
+
+        time_array = np.linspace(0, int(final_time), num=number_of_images)
+
+        images = []
+
+        # creating 80 comparison plots
+        for val in time_array:
+            self.plot(val)
+            images.append("plot" + str(val) + ".png")
+            self.fig.savefig("plot" + str(val) + ".png", dpi=300)
+
+        # compiling the plots to create a GIF
+        with imageio.get_writer("plot.gif", mode="I", duration=duration) as writer:
+            for image in images:
+                writer.append_data(imageio.imread(image))
+
+        for image in images:
+            os.remove(image)
