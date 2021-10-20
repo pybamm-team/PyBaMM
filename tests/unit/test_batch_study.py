@@ -46,10 +46,7 @@ class TestBatchStudy(unittest.TestCase):
         # Tests for exceptions
         for name in pybamm.BatchStudy.INPUT_LIST:
             with self.assertRaises(ValueError):
-                pybamm.BatchStudy(
-                    models={"SPM": spm, "DFN": dfn},
-                    **{name: {None}}
-                )
+                pybamm.BatchStudy(models={"SPM": spm, "DFN": dfn}, **{name: {None}})
 
         # Tests for None when only models are given with permutations=False
         bs_false_only_models.solve(t_eval=[0, 3600])
@@ -68,9 +65,7 @@ class TestBatchStudy(unittest.TestCase):
             self.assertIn(output_model, models_list)
 
             output_solver = bs_false.sims[num].solver.name
-            solvers_list = [
-                solver.name for solver in bs_false.solvers.values()
-            ]
+            solvers_list = [solver.name for solver in bs_false.solvers.values()]
             self.assertIn(output_solver, solvers_list)
 
             output_experiment = bs_false.sims[
