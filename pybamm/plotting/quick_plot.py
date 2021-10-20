@@ -58,7 +58,7 @@ class QuickPlot(object):
 
     Parameters
     ----------
-    solutions: (iter of) :class:`pybamm.Solution` or :class:`pybamm.Simulation`
+    input_solutions: (iter of) :class:`pybamm.Solution` or :class:`pybamm.Simulation`
         The numerical solution(s) for the model(s), or the simulation object(s)
         containing the solution(s).
     output_variables : list of str, optional
@@ -92,7 +92,7 @@ class QuickPlot(object):
 
     def __init__(
         self,
-        solutions,
+        input_solutions,
         output_variables=None,
         labels=None,
         colors=None,
@@ -103,19 +103,23 @@ class QuickPlot(object):
         spatial_unit="um",
         variable_limits="fixed",
     ):
-        if isinstance(solutions, (pybamm.Solution, pybamm.Simulation)):
-            solutions = [solutions]
-        elif not isinstance(solutions, list):
+        solutions = []
+        if isinstance(input_solutions, pybamm.Solution):
+            solutions.append(input_solutions)
+        elif isinstance(input_solutions, pybamm.Simulation):
+            solutions.append(input_solutions.solution)
+        elif isinstance(input_solutions, list):
+            for sim_or_sol in input_solutions:
+                if isinstance(sim_or_sol, pybamm.Simulation):
+                    # 'sim_or_sol' is actually a 'Simulation' object here so it has a
+                    # 'Solution' attribute
+                    solutions.append(sim_or_sol.solution)
+                elif isinstance(sim_or_sol, pybamm.Solution):
+                    solutions.append(sim_or_sol)
+        else:
             raise TypeError(
                 "solutions must be 'pybamm.Solution' or 'pybamm.Simulation' or list"
             )
-
-        # Extract solution from any simulations
-        for idx, sol in enumerate(solutions):
-            if isinstance(sol, pybamm.Simulation):
-                # 'sol' is actually a 'Simulation' object here so it has a 'Solution'
-                # attribute
-                solutions[idx] = sol.solution
 
         models = [solution.all_models[0] for solution in solutions]
 
