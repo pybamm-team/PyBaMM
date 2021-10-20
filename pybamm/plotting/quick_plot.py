@@ -103,18 +103,15 @@ class QuickPlot(object):
         variable_limits="fixed",
     ):
         solutions = []
-        if isinstance(input_solutions, pybamm.Solution):
-            solutions.append(input_solutions)
-        elif isinstance(input_solutions, pybamm.Simulation):
-            solutions.append(input_solutions.solution)
-        elif isinstance(input_solutions, list):
-            for sim_or_sol in input_solutions:
-                if isinstance(sim_or_sol, pybamm.Simulation):
-                    # 'sim_or_sol' is actually a 'Simulation' object here so it has a
-                    # 'Solution' attribute
-                    solutions.append(sim_or_sol.solution)
-                elif isinstance(sim_or_sol, pybamm.Solution):
-                    solutions.append(sim_or_sol)
+        if not isinstance(input_solutions, list):
+            input_solutions = [input_solutions]
+        for sim_or_sol in input_solutions:
+            if isinstance(sim_or_sol, pybamm.Simulation):
+                # 'sim_or_sol' is actually a 'Simulation' object here so it has a
+                # 'Solution' attribute
+                solutions.append(sim_or_sol.solution)
+            elif isinstance(sim_or_sol, pybamm.Solution):
+                solutions.append(sim_or_sol)
         else:
             raise TypeError(
                 "solutions must be 'pybamm.Solution' or 'pybamm.Simulation' or list"
