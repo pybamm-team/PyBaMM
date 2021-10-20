@@ -1,6 +1,7 @@
 """
 Tests for the batch_study.py
 """
+import os
 import pybamm
 import unittest
 
@@ -120,6 +121,19 @@ class TestBatchStudy(unittest.TestCase):
             output_model = sols[num].all_models[0].name
             models_list = [model.name for model in bs_true.models.values()]
             self.assertIn(output_model, models_list)
+
+    def test_create_gif(self):
+        bs = pybamm.BatchStudy({"spm": pybamm.lithium_ion.SPM()})
+        bs.solve([0, 3600])
+
+        # create a GIF before calling the plot method
+        bs.create_gif(number_of_images=5, duration=1)
+
+        # create a GIF after calling the plot method
+        bs.plot(testing=True)
+        bs.create_gif(number_of_images=5, duration=1)
+
+        os.remove("plot.gif")
 
 
 if __name__ == "__main__":

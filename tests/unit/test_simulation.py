@@ -356,6 +356,20 @@ class TestSimulation(unittest.TestCase):
         with self.assertRaisesRegex(NotImplementedError, "'quick_plot_vars'"):
             sim.plot(quick_plot_vars=["var"])
 
+    def test_create_gif(self):
+        sim = pybamm.Simulation(pybamm.lithium_ion.SPM())
+        t_eval = np.linspace(0, 100, 5)
+        sim.solve(t_eval=t_eval)
+
+        # create a GIF without calling the plot method
+        sim.create_gif(number_of_images=5, duration=1)
+
+        # call the plot method before creating the GIF
+        sim.plot(testing=True)
+        sim.create_gif(number_of_images=5, duration=1)
+
+        os.remove("plot.gif")
+
     def test_drive_cycle_data(self):
         model = pybamm.lithium_ion.SPM()
         param = model.default_parameter_values
