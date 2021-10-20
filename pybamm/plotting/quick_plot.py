@@ -103,25 +103,25 @@ class QuickPlot(object):
         spatial_unit="um",
         variable_limits="fixed",
     ):
-        solutions = []
+        self.solutions = []
         if isinstance(input_solutions, pybamm.Solution):
-            solutions.append(input_solutions)
+            self.solutions.append(input_solutions)
         elif isinstance(input_solutions, pybamm.Simulation):
-            solutions.append(input_solutions.solution)
+            self.solutions.append(input_solutions.solution)
         elif isinstance(input_solutions, list):
             for sim_or_sol in input_solutions:
                 if isinstance(sim_or_sol, pybamm.Simulation):
                     # 'sim_or_sol' is actually a 'Simulation' object here so it has a
                     # 'Solution' attribute
-                    solutions.append(sim_or_sol.solution)
+                    self.solutions.append(sim_or_sol.solution)
                 elif isinstance(sim_or_sol, pybamm.Solution):
-                    solutions.append(sim_or_sol)
+                    self.solutions.append(sim_or_sol)
         else:
             raise TypeError(
                 "solutions must be 'pybamm.Solution' or 'pybamm.Simulation' or list"
             )
 
-        models = [solution.all_models[0] for solution in solutions]
+        models = [solution.all_models[0] for solution in self.solutions]
 
         # Set labels
         if labels is None:
@@ -190,7 +190,7 @@ class QuickPlot(object):
 
         # Time parameters
         self.ts_seconds = [
-            solution.t * solution.timescale_eval for solution in solutions
+            solution.t * solution.timescale_eval for solution in self.solutions
         ]
         min_t = np.min([t[0] for t in self.ts_seconds])
         max_t = np.max([t[-1] for t in self.ts_seconds])
@@ -253,7 +253,7 @@ class QuickPlot(object):
                         "variable_limits must be 'fixed', 'tight', or a dict"
                     )
 
-        self.set_output_variables(output_variable_tuples, solutions)
+        self.set_output_variables(output_variable_tuples, self.solutions)
         self.reset_axis()
 
     def set_output_variables(self, output_variables, solutions):
@@ -758,38 +758,40 @@ class QuickPlot(object):
 
         self.fig.canvas.draw_idle()
 
-    def create_gif(self, number_of_images=80, duration=0.1):
+    def create_gif(self, number_of_images=80, duration=0.1, output_filename="plot.gif"):
         """
-        This function generates 80 plots over a time span of t_eval seconds and then
-        compiles them to create a GIF.
-        Parameters:
-            batch_study: pybamm.BatchStudy
-            labels: list
-                default: None
-                A list of labels for the GIF.
-        """
+        Generates x plots over a time span of max_t - min_t and compiles them to create
+        a GIF.
 
+        Parameters
+        ----------
+        number_of_images : int (optional)
+            Number of images/plots to be compiled for a GIF.
+        duration : float (optional)
+            Duration of visibility of a single image/plot in the created GIF.
+        output_filename : str (optional)
+            Name of the generated GIF file.
+
+        """
         import imageio
+        import matplotlib.pyplot as plt
 
-        # generating time to plot the simulation
-        final_time = max(
-            [solution["Time [s]"].entries[-1] for solution in self.solutions]
-        )
-
-        time_array = np.linspace(0, int(final_time), num=number_of_images)
-
+        # time stamps at which the images/plots will be created
+        time_array = np.linspace(self.min_t, self.max_t, num=number_of_images)
         images = []
 
-        # creating 80 comparison plots
+        # create images/plots
         for val in time_array:
             self.plot(val)
             images.append("plot" + str(val) + ".png")
             self.fig.savefig("plot" + str(val) + ".png", dpi=300)
+            plt.close()
 
-        # compiling the plots to create a GIF
-        with imageio.get_writer("plot.gif", mode="I", duration=duration) as writer:
+        # compile the images/plots to create a GIF
+        with imageio.get_writer(output_filename, mode="I", duration=duration) as writer:
             for image in images:
                 writer.append_data(imageio.imread(image))
 
+        # remove the generated images
         for image in images:
             os.remove(image)
