@@ -102,19 +102,21 @@ class QuickPlot(object):
         spatial_unit="um",
         variable_limits="fixed",
     ):
-        if isinstance(solutions, (pybamm.Solution, pybamm.Simulation)):
-            solutions = [solutions]
-        elif not isinstance(solutions, list):
+        input_solutions = solutions
+        solutions = []
+        if not isinstance(input_solutions, (pybamm.Solution, pybamm.Simulation, list)):
             raise TypeError(
                 "solutions must be 'pybamm.Solution' or 'pybamm.Simulation' or list"
             )
-
-        # Extract solution from any simulations
-        for idx, sol in enumerate(solutions):
-            if isinstance(sol, pybamm.Simulation):
-                # 'sol' is actually a 'Simulation' object here so it has a 'Solution'
-                # attribute
-                solutions[idx] = sol.solution
+        elif not isinstance(input_solutions, list):
+            input_solutions = [input_solutions]
+        for sim_or_sol in input_solutions:
+            if isinstance(sim_or_sol, pybamm.Simulation):
+                # 'sim_or_sol' is actually a 'Simulation' object here so it has a
+                # 'Solution' attribute
+                solutions.append(sim_or_sol.solution)
+            elif isinstance(sim_or_sol, pybamm.Solution):
+                solutions.append(sim_or_sol)
 
         models = [solution.all_models[0] for solution in solutions]
 
@@ -601,7 +603,7 @@ class QuickPlot(object):
             # Set either y label or legend entries
             if len(key) == 1:
                 title = split_long_string(key[0])
-                ax.set_title(title, fontsize='medium')
+                ax.set_title(title, fontsize="medium")
             else:
                 ax.legend(
                     variable_handles,
