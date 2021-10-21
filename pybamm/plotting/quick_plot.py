@@ -57,7 +57,7 @@ class QuickPlot(object):
 
     Parameters
     ----------
-    input_solutions: (iter of) :class:`pybamm.Solution` or :class:`pybamm.Simulation`
+    solutions: (iter of) :class:`pybamm.Solution` or :class:`pybamm.Simulation`
         The numerical solution(s) for the model(s), or the simulation object(s)
         containing the solution(s).
     output_variables : list of str, optional
@@ -91,7 +91,7 @@ class QuickPlot(object):
 
     def __init__(
         self,
-        input_solutions,
+        solutions,
         output_variables=None,
         labels=None,
         colors=None,
@@ -102,8 +102,13 @@ class QuickPlot(object):
         spatial_unit="um",
         variable_limits="fixed",
     ):
+        input_solutions = solutions
         solutions = []
-        if not isinstance(input_solutions, list):
+        if not isinstance(input_solutions, (pybamm.Solution, pybamm.Simulation, list)):
+            raise TypeError(
+                "solutions must be 'pybamm.Solution' or 'pybamm.Simulation' or list"
+            )
+        elif not isinstance(input_solutions, list):
             input_solutions = [input_solutions]
         for sim_or_sol in input_solutions:
             if isinstance(sim_or_sol, pybamm.Simulation):
@@ -112,10 +117,6 @@ class QuickPlot(object):
                 solutions.append(sim_or_sol.solution)
             elif isinstance(sim_or_sol, pybamm.Solution):
                 solutions.append(sim_or_sol)
-        else:
-            raise TypeError(
-                "solutions must be 'pybamm.Solution' or 'pybamm.Simulation' or list"
-            )
 
         models = [solution.all_models[0] for solution in solutions]
 
