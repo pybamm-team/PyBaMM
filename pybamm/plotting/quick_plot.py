@@ -104,7 +104,7 @@ class QuickPlot(object):
         variable_limits="fixed",
     ):
         input_solutions = solutions
-        self.solutions = []
+        solutions = []
         if not isinstance(input_solutions, (pybamm.Solution, pybamm.Simulation, list)):
             raise TypeError(
                 "solutions must be 'pybamm.Solution' or 'pybamm.Simulation' or list"
@@ -115,11 +115,11 @@ class QuickPlot(object):
             if isinstance(sim_or_sol, pybamm.Simulation):
                 # 'sim_or_sol' is actually a 'Simulation' object here so it has a
                 # 'Solution' attribute
-                self.solutions.append(sim_or_sol.solution)
+                solutions.append(sim_or_sol.solution)
             elif isinstance(sim_or_sol, pybamm.Solution):
-                self.solutions.append(sim_or_sol)
+                solutions.append(sim_or_sol)
 
-        models = [solution.all_models[0] for solution in self.solutions]
+        models = [solution.all_models[0] for solution in solutions]
 
         # Set labels
         if labels is None:
@@ -188,7 +188,7 @@ class QuickPlot(object):
 
         # Time parameters
         self.ts_seconds = [
-            solution.t * solution.timescale_eval for solution in self.solutions
+            solution.t * solution.timescale_eval for solution in solutions
         ]
         min_t = np.min([t[0] for t in self.ts_seconds])
         max_t = np.max([t[-1] for t in self.ts_seconds])
@@ -251,7 +251,7 @@ class QuickPlot(object):
                         "variable_limits must be 'fixed', 'tight', or a dict"
                     )
 
-        self.set_output_variables(output_variable_tuples, self.solutions)
+        self.set_output_variables(output_variable_tuples, solutions)
         self.reset_axis()
 
     def set_output_variables(self, output_variables, solutions):
