@@ -175,13 +175,13 @@ class TestQuickPlot(unittest.TestCase):
 
         # Test different spatial units
         quick_plot = pybamm.QuickPlot(solution, ["a"])
-        self.assertEqual(quick_plot.spatial_unit, "$\mu m$")
+        self.assertEqual(quick_plot.spatial_unit, "$\mu$m")
         quick_plot = pybamm.QuickPlot(solution, ["a"], spatial_unit="m")
         self.assertEqual(quick_plot.spatial_unit, "m")
         quick_plot = pybamm.QuickPlot(solution, ["a"], spatial_unit="mm")
         self.assertEqual(quick_plot.spatial_unit, "mm")
         quick_plot = pybamm.QuickPlot(solution, ["a"], spatial_unit="um")
-        self.assertEqual(quick_plot.spatial_unit, "$\mu m$")
+        self.assertEqual(quick_plot.spatial_unit, "$\mu$m")
         with self.assertRaisesRegex(ValueError, "spatial unit"):
             pybamm.QuickPlot(solution, ["a"], spatial_unit="bad unit")
 
