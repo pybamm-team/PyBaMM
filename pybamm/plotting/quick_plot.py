@@ -1,6 +1,7 @@
 #
 # Class for quick plotting of variables from models
 #
+import os
 import numpy as np
 import pybamm
 from collections import defaultdict
@@ -754,3 +755,41 @@ class QuickPlot(object):
                     )
 
         self.fig.canvas.draw_idle()
+
+    def create_gif(self, number_of_images=80, duration=0.1, output_filename="plot.gif"):
+        """
+        Generates x plots over a time span of max_t - min_t and compiles them to create
+        a GIF.
+
+        Parameters
+        ----------
+        number_of_images : int (optional)
+            Number of images/plots to be compiled for a GIF.
+        duration : float (optional)
+            Duration of visibility of a single image/plot in the created GIF.
+        output_filename : str (optional)
+            Name of the generated GIF file.
+
+        """
+        import imageio
+        import matplotlib.pyplot as plt
+
+        # time stamps at which the images/plots will be created
+        time_array = np.linspace(self.min_t, self.max_t, num=number_of_images)
+        images = []
+
+        # create images/plots
+        for val in time_array:
+            self.plot(val)
+            images.append("plot" + str(val) + ".png")
+            self.fig.savefig("plot" + str(val) + ".png", dpi=300)
+            plt.close()
+
+        # compile the images/plots to create a GIF
+        with imageio.get_writer(output_filename, mode="I", duration=duration) as writer:
+            for image in images:
+                writer.append_data(imageio.imread(image))
+
+        # remove the generated images
+        for image in images:
+            os.remove(image)

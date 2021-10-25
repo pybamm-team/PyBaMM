@@ -132,6 +132,7 @@ class Simulation:
         self._mesh = None
         self._disc = None
         self._solution = None
+        self.quick_plot = None
 
         # ignore runtime warnings in notebooks
         if is_notebook():  # pragma: no cover
@@ -1026,6 +1027,30 @@ class Simulation:
         )
 
         return self.quick_plot
+
+    def create_gif(self, number_of_images=80, duration=0.1, output_filename="plot.gif"):
+        """
+        Generates x plots over a time span of t_eval and compiles them to create
+        a GIF. For more information see :meth:`pybamm.QuickPlot.create_gif`
+
+        Parameters
+        ----------
+        number_of_images : int (optional)
+            Number of images/plots to be compiled for a GIF.
+        duration : float (optional)
+            Duration of visibility of a single image/plot in the created GIF.
+        output_filename : str (optional)
+            Name of the generated GIF file.
+
+        """
+        if self.quick_plot is None:
+            self.quick_plot = pybamm.QuickPlot(self._solution)
+
+        self.quick_plot.create_gif(
+            number_of_images=number_of_images,
+            duration=duration,
+            output_filename=output_filename,
+        )
 
     @property
     def model(self):

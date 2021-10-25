@@ -1,3 +1,4 @@
+import os
 import pybamm
 import unittest
 import numpy as np
@@ -279,6 +280,12 @@ class TestQuickPlot(unittest.TestCase):
         # solution should be extracted from the simulation
         quick_plot = pybamm.QuickPlot([sim, sim.solution])
         quick_plot.plot(0)
+
+        # test creating a GIF
+        quick_plot.create_gif(number_of_images=5, duration=3)
+        assert not os.path.exists("plot*.png")
+        assert os.path.exists("plot.gif")
+        os.remove("plot.gif")
 
         pybamm.close_plots()
 

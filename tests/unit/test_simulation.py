@@ -223,7 +223,7 @@ class TestSimulation(unittest.TestCase):
         self.assertEqual(sim._built_initial_soc, 1)
         sim.solve(t_eval=[0, 600], initial_soc=0.5)
         self.assertEqual(sim._built_initial_soc, 0.5)
-        exp = pybamm.Experiment(['Discharge at 1C until 3.6V (1 minute period)'])
+        exp = pybamm.Experiment(["Discharge at 1C until 3.6V (1 minute period)"])
         sim = pybamm.Simulation(model, parameter_values=param, experiment=exp)
         sim.solve(initial_soc=0.8)
         self.assertEqual(sim._built_initial_soc, 0.8)
@@ -355,6 +355,20 @@ class TestSimulation(unittest.TestCase):
         # test quick_plot_vars deprecation error
         with self.assertRaisesRegex(NotImplementedError, "'quick_plot_vars'"):
             sim.plot(quick_plot_vars=["var"])
+
+    def test_create_gif(self):
+        sim = pybamm.Simulation(pybamm.lithium_ion.SPM())
+        t_eval = np.linspace(0, 100, 5)
+        sim.solve(t_eval=t_eval)
+
+        # create a GIF without calling the plot method
+        sim.create_gif(number_of_images=5, duration=1)
+
+        # call the plot method before creating the GIF
+        sim.plot(testing=True)
+        sim.create_gif(number_of_images=5, duration=1)
+
+        os.remove("plot.gif")
 
     def test_drive_cycle_data(self):
         model = pybamm.lithium_ion.SPM()
