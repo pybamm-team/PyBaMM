@@ -781,15 +781,20 @@ class Simulation:
             if starting_solution is None:
                 starting_solution_cycles = []
                 starting_solution_summary_variables = []
+                starting_solution_first_states = []
             else:
                 starting_solution_cycles = starting_solution.cycles.copy()
                 starting_solution_summary_variables = (
                     starting_solution.all_summary_variables.copy()
                 )
+                starting_solution_first_states = (
+                    starting_solution.all_first_states.copy()
+                )
 
             cycle_offset = len(starting_solution_cycles)
             all_cycle_solutions = starting_solution_cycles
             all_summary_variables = starting_solution_summary_variables
+            all_first_states = starting_solution_first_states
             current_solution = starting_solution
 
             # Set up eSOH model (for summary variables)
@@ -894,13 +899,18 @@ class Simulation:
                     self._solution = self._solution + cycle_solution
 
                 # At the final step of the inner loop we save the cycle
-                cycle_solution, cycle_summary_variables = pybamm.make_cycle_solution(
+                (
+                    cycle_solution,
+                    cycle_summary_variables,
+                    cycle_first_state,
+                ) = pybamm.make_cycle_solution(
                     steps,
                     esoh_sim,
                     save_this_cycle=save_this_cycle,
                 )
                 all_cycle_solutions.append(cycle_solution)
                 all_summary_variables.append(cycle_summary_variables)
+                all_first_states.append(cycle_first_state)
 
                 # Calculate capacity_start using the first cycle
                 if cycle_num == 1:
@@ -935,6 +945,7 @@ class Simulation:
             if self.solution is not None and len(all_cycle_solutions) > 0:
                 self.solution.cycles = all_cycle_solutions
                 self.solution.set_summary_variables(all_summary_variables)
+                self.solution.all_first_states = all_first_states
 
             pybamm.logger.notice(
                 "Finish experiment simulation, took {}".format(timer.time())
