@@ -2,6 +2,7 @@
 
 ## Features
 
+-   Added a new method (`create_gif`) in `QuickPlot`, `Simulation` and `BatchStudy` to create a GIF of a simulation ([#1754](https://github.com/pybamm-team/PyBaMM/pull/1754))
 -   SEI models can now be included in the half-cell model ([#1705](https://github.com/pybamm-team/PyBaMM/pull/1705))
 
 # [v21.9](https://github.com/pybamm-team/PyBaMM/tree/v21.9) - 2021-09-30
