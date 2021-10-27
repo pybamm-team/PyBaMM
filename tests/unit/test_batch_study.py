@@ -5,8 +5,6 @@ import os
 import pybamm
 import unittest
 
-pybamm.set_logging_level("INFO")
-
 spm = pybamm.lithium_ion.SPM()
 spm_uniform = pybamm.lithium_ion.SPM({"particle": "uniform profile"})
 casadi_safe = pybamm.CasadiSolver(mode="safe")
