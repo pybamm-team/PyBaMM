@@ -119,52 +119,47 @@ class BaseModel(pybamm.BaseBatteryModel):
         )
 
     def set_sei_submodel(self):
+        if self.half_cell:
+            reaction_loc = "interface"
+        elif self.x_average:
+            reaction_loc = "x-average"
+        else:
+            reaction_loc = "full electrode"
 
-        # SEI
         if self.options["SEI"] == "none":
             self.submodels["sei"] = pybamm.sei.NoSEI(self.param, self.options)
-
-        if self.options["SEI"] == "constant":
-            self.submodels["sei"] = pybamm.sei.ConstantSEI(self.param)
-
+        elif self.options["SEI"] == "constant":
+            self.submodels["sei"] = pybamm.sei.ConstantSEI(self.param, self.options)
         elif self.options["SEI"] == "reaction limited":
             self.submodels["sei"] = pybamm.sei.ReactionLimited(
-                self.param, self.x_average
+                self.param, reaction_loc, self.options
             )
-
         elif self.options["SEI"] == "solvent-diffusion limited":
             self.submodels["sei"] = pybamm.sei.SolventDiffusionLimited(
-                self.param, self.x_average
+                self.param, reaction_loc, self.options
             )
-
         elif self.options["SEI"] == "electron-migration limited":
             self.submodels["sei"] = pybamm.sei.ElectronMigrationLimited(
-                self.param, self.x_average
+                self.param, reaction_loc, self.options
             )
-
         elif self.options["SEI"] == "interstitial-diffusion limited":
             self.submodels["sei"] = pybamm.sei.InterstitialDiffusionLimited(
-                self.param, self.x_average
+                self.param, reaction_loc, self.options
             )
-
         elif self.options["SEI"] == "ec reaction limited":
             self.submodels["sei"] = pybamm.sei.EcReactionLimited(
-                self.param, self.x_average
+                self.param, reaction_loc, self.options
             )
 
     def set_lithium_plating_submodel(self):
-
-        # negative electrode
         if self.options["lithium plating"] == "none":
             self.submodels["lithium plating"] = pybamm.lithium_plating.NoPlating(
                 self.param, self.options
             )
-
         elif self.options["lithium plating"] == "reversible":
             self.submodels[
                 "lithium plating"
             ] = pybamm.lithium_plating.ReversiblePlating(self.param, self.x_average)
-
         elif self.options["lithium plating"] == "irreversible":
             self.submodels[
                 "lithium plating"

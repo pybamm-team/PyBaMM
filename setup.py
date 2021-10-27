@@ -196,6 +196,7 @@ setup(
         "autograd>=1.2",
         "scikit-fem>=0.2.0",
         "casadi>=3.5.0",
+        "imageio>=2.9.0",
         *jax_dependencies,
         "julia>=0.5.6",
         # Can be installed even if julia is not installed
