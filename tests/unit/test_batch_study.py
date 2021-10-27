@@ -5,39 +5,30 @@ import os
 import pybamm
 import unittest
 
+pybamm.set_logging_level("INFO")
+
 spm = pybamm.lithium_ion.SPM()
-dfn = pybamm.lithium_ion.DFN()
+spm_uniform = pybamm.lithium_ion.SPM({"particle": "uniform profile"})
 casadi_safe = pybamm.CasadiSolver(mode="safe")
 casadi_fast = pybamm.CasadiSolver(mode="fast")
-cccv = pybamm.Experiment(
-    [
-        (
-            "Discharge at C/5 for 10 hours or until 3.3 V",
-            "Rest for 1 hour",
-            "Charge at 1 A until 4.1 V",
-            "Hold at 4.1 V until 10 mA",
-            "Rest for 1 hour",
-        ),
-    ]
-    * 3
-)
-gitt = pybamm.Experiment(
-    [("Discharge at C/20 for 1 hour", "Rest for 1 hour")] * 20,
-)
+exp1 = pybamm.Experiment([("Discharge at C/5 for 10 minutes", "Rest for 1 hour")])
+exp2 = pybamm.Experiment([("Discharge at C/20 for 10 minutes", "Rest for 1 hour")])
 
-bs_false_only_models = pybamm.BatchStudy(models={"SPM": spm, "DFN": dfn})
+bs_false_only_models = pybamm.BatchStudy(
+    models={"SPM": spm, "SPM uniform": spm_uniform}
+)
 bs_true_only_models = pybamm.BatchStudy(
-    models={"SPM": spm, "DFN": dfn}, permutations=True
+    models={"SPM": spm, "SPM uniform": spm_uniform}, permutations=True
 )
 bs_false = pybamm.BatchStudy(
-    models={"SPM": spm, "DFN": dfn},
+    models={"SPM": spm, "SPM uniform": spm_uniform},
     solvers={"casadi safe": casadi_safe, "casadi fast": casadi_fast},
-    experiments={"cccv": cccv, "gitt": gitt},
+    experiments={"exp1": exp1, "exp2": exp2},
 )
 bs_true = pybamm.BatchStudy(
-    models={"SPM": spm, "DFN": dfn},
+    models={"SPM": spm, "SPM uniform": spm_uniform},
     solvers={"casadi safe": casadi_safe, "casadi fast": casadi_fast},
-    experiments={"gitt": gitt},
+    experiments={"exp2": exp2},
     permutations=True,
 )
 
@@ -47,7 +38,9 @@ class TestBatchStudy(unittest.TestCase):
         # Tests for exceptions
         for name in pybamm.BatchStudy.INPUT_LIST:
             with self.assertRaises(ValueError):
-                pybamm.BatchStudy(models={"SPM": spm, "DFN": dfn}, **{name: {None}})
+                pybamm.BatchStudy(
+                    models={"SPM": spm, "SPM uniform": spm_uniform}, **{name: {None}}
+                )
 
         # Tests for None when only models are given with permutations=False
         bs_false_only_models.solve(t_eval=[0, 3600])
@@ -59,6 +52,7 @@ class TestBatchStudy(unittest.TestCase):
 
         # Tests for BatchStudy when permutations=False
         bs_false.solve()
+        bs_false.plot(testing=True)
         self.assertEqual(2, len(bs_false.sims))
         for num in range(len(bs_false.sims)):
             output_model = bs_false.sims[num].model.name
@@ -80,6 +74,7 @@ class TestBatchStudy(unittest.TestCase):
 
         # Tests for BatchStudy when permutations=True
         bs_true.solve()
+        bs_true.plot(testing=True)
         self.assertEqual(4, len(bs_true.sims))
         for num in range(len(bs_true.sims)):
             output_model = bs_true.sims[num].model.name
@@ -99,39 +94,16 @@ class TestBatchStudy(unittest.TestCase):
             ]
             self.assertIn(output_experiment, experiments_list)
 
-    def test_plot(self):
-        # Tests for BatchStudy when permutations=False
-        bs_false.solve()
-        bs_false.plot(testing=True)
-        self.assertEqual(2, len(bs_false.sims))
-
-        sols = [sim.solution for sim in bs_false.sims]
-        for num in range(len(bs_false.sims)):
-            output_model = sols[num].all_models[0].name
-            models_list = [model.name for model in bs_false.models.values()]
-            self.assertIn(output_model, models_list)
-
-        # Tests for BatchStudy when permutations=True
-        bs_true.solve()
-        bs_true.plot(testing=True)
-        self.assertEqual(4, len(bs_true.sims))
-
-        sols = [sim.solution for sim in bs_true.sims]
-        for num in range(len(bs_true.sims)):
-            output_model = sols[num].all_models[0].name
-            models_list = [model.name for model in bs_true.models.values()]
-            self.assertIn(output_model, models_list)
-
     def test_create_gif(self):
         bs = pybamm.BatchStudy({"spm": pybamm.lithium_ion.SPM()})
-        bs.solve([0, 3600])
+        bs.solve([0, 10])
 
         # create a GIF before calling the plot method
-        bs.create_gif(number_of_images=5, duration=1)
+        bs.create_gif(number_of_images=3, duration=1)
 
         # create a GIF after calling the plot method
         bs.plot(testing=True)
-        bs.create_gif(number_of_images=5, duration=1)
+        bs.create_gif(number_of_images=3, duration=1)
 
         os.remove("plot.gif")
 
