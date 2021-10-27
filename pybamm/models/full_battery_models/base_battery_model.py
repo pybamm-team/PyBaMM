@@ -1068,7 +1068,7 @@ class BaseBatteryModel(pybamm.BaseModel):
             variables = list(self.rhs.keys()) + list(self.algebraic.keys())
             disc.set_variable_slices(variables)
 
-        # Set boundary condtions (also requires setting parameter values)
+        # Set boundary conditions (also requires setting parameter values)
         if disc.bcs == {}:
             self.boundary_conditions = parameter_values.process_boundary_conditions(
                 self
