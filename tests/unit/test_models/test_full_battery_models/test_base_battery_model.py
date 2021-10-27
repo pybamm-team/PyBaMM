@@ -5,7 +5,6 @@ from pybamm.models.full_battery_models.base_battery_model import BatteryModelOpt
 import pybamm
 import unittest
 import io
-import os
 from contextlib import redirect_stdout
 
 OPTIONS_DICT = {
@@ -290,23 +289,6 @@ class TestBaseBatteryModel(unittest.TestCase):
         a = pybamm.Variable("a")
         model.algebraic = {a: a - 1}
         self.assertIsInstance(model.default_solver, pybamm.CasadiAlgebraicSolver)
-
-    def test_default_parameters(self):
-        # check parameters are read in ok
-        model = pybamm.BaseBatteryModel()
-        self.assertEqual(
-            model.default_parameter_values["Reference temperature [K]"], 298.15
-        )
-
-        # change path and try again
-
-        cwd = os.getcwd()
-        os.chdir("..")
-        model = pybamm.BaseBatteryModel()
-        self.assertEqual(
-            model.default_parameter_values["Reference temperature [K]"], 298.15
-        )
-        os.chdir(cwd)
 
     def test_timescale(self):
         model = pybamm.BaseModel()

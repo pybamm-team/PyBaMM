@@ -401,12 +401,6 @@ class BaseBatteryModel(pybamm.BaseModel):
         self._built_fundamental_and_external = False
 
     @property
-    def default_parameter_values(self):
-        # Default parameter values
-        # Lion parameters left as default parameter set for tests
-        return pybamm.ParameterValues(chemistry=pybamm.parameter_sets.Marquis2019)
-
-    @property
     def default_geometry(self):
         return pybamm.battery_geometry(
             options=self.options,
