@@ -796,18 +796,16 @@ def make_cycle_solution(step_solutions, esoh_sim=None, save_this_cycle=True):
 
 
 def get_cycle_summary_variables(cycle_solution, esoh_sim):
-    cycle_summary_variables = {}
+    model = cycle_solution.all_models[0]
+    cycle_summary_variables = pybamm.FuzzyDict({})
 
     # Measured capacity variables
-    try:
+    if "Discharge capacity [A.h]" in model.variables:
         Q = cycle_solution["Discharge capacity [A.h]"].data
-    except KeyError:
-        Q = None
-    if Q is not None:
         min_Q = np.min(Q)
         max_Q = np.max(Q)
 
-        cycle_summary_variables = pybamm.FuzzyDict(
+        cycle_summary_variables.update(
             {
                 "Minimum measured discharge capacity [A.h]": min_Q,
                 "Maximum measured discharge capacity [A.h]": max_Q,
@@ -816,7 +814,6 @@ def get_cycle_summary_variables(cycle_solution, esoh_sim):
         )
 
     # Degradation variables
-    model = cycle_solution.all_models[0]
     degradation_variables = model.summary_variables
     first_state = cycle_solution.first_state
     last_state = cycle_solution.last_state
