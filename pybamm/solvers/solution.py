@@ -785,12 +785,14 @@ def make_cycle_solution(step_solutions, esoh_sim=None, save_this_cycle=True):
 
     cycle_summary_variables = get_cycle_summary_variables(cycle_solution, esoh_sim)
 
+    cycle_first_state = cycle_solution.first_state
+
     if save_this_cycle:
         cycle_solution.cycle_summary_variables = cycle_summary_variables
     else:
         cycle_solution = None
 
-    return cycle_solution, cycle_summary_variables
+    return cycle_solution, cycle_summary_variables, cycle_first_state
 
 
 def get_cycle_summary_variables(cycle_solution, esoh_sim):

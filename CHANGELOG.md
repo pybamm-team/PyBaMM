@@ -2,6 +2,7 @@
 
 ## Features
 
+-   Added `all_first_states` to the `Solution` object for a simulation with experiment ([#1759](https://github.com/pybamm-team/PyBaMM/pull/1759))
 -   Added a new method (`create_gif`) in `QuickPlot`, `Simulation` and `BatchStudy` to create a GIF of a simulation ([#1754](https://github.com/pybamm-team/PyBaMM/pull/1754))
 -   SEI models can now be included in the half-cell model ([#1705](https://github.com/pybamm-team/PyBaMM/pull/1705))
 
