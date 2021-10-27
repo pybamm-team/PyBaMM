@@ -44,6 +44,36 @@ class BaseModel(pybamm.BaseBatteryModel):
             )
         self.set_standard_output_variables()
 
+    @property
+    def default_parameter_values(self):
+        if self.half_cell:
+            return pybamm.ParameterValues(chemistry=pybamm.parameter_sets.Xu2019)
+        else:
+            return pybamm.ParameterValues(chemistry=pybamm.parameter_sets.Marquis2019)
+
+    @property
+    def default_quick_plot_variables(self):
+        if self.half_cell:
+            return [
+                "Electrolyte concentration [mol.m-3]",
+                "Positive particle surface concentration [mol.m-3]",
+                "Current [A]",
+                "Electrolyte potential [V]",
+                "Positive electrode potential [V]",
+                "Terminal voltage [V]",
+            ]
+        else:
+            return [
+                "Negative particle surface concentration [mol.m-3]",
+                "Electrolyte concentration [mol.m-3]",
+                "Positive particle surface concentration [mol.m-3]",
+                "Current [A]",
+                "Negative electrode potential [V]",
+                "Electrolyte potential [V]",
+                "Positive electrode potential [V]",
+                "Terminal voltage [V]",
+            ]
+
     def set_standard_output_variables(self):
         super().set_standard_output_variables()
 

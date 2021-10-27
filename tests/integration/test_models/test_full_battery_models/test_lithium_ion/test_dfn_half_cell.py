@@ -11,8 +11,7 @@ class TestDFN(unittest.TestCase):
     def test_basic_processing(self):
         options = {"working electrode": "positive"}
         model = pybamm.lithium_ion.DFN(options)
-        param = pybamm.ParameterValues(chemistry=pybamm.parameter_sets.Xu2019)
-        modeltest = tests.StandardModelTest(model, parameter_values=param)
+        modeltest = tests.StandardModelTest(model)
         modeltest.test_all(skip_output_tests=True)
 
 
@@ -20,29 +19,25 @@ class TestDFNWithSEI(unittest.TestCase):
     def test_well_posed_constant(self):
         options = {"working electrode": "positive", "SEI": "constant"}
         model = pybamm.lithium_ion.DFN(options)
-        param = pybamm.ParameterValues(chemistry=pybamm.parameter_sets.Xu2019)
-        modeltest = tests.StandardModelTest(model, parameter_values=param)
+        modeltest = tests.StandardModelTest(model)
         modeltest.test_all(skip_output_tests=True)
 
     def test_well_posed_reaction_limited(self):
         options = {"working electrode": "positive", "SEI": "reaction limited"}
         model = pybamm.lithium_ion.DFN(options)
-        param = pybamm.ParameterValues(chemistry=pybamm.parameter_sets.Xu2019)
-        modeltest = tests.StandardModelTest(model, parameter_values=param)
+        modeltest = tests.StandardModelTest(model)
         modeltest.test_all(skip_output_tests=True)
 
     def test_well_posed_solvent_diffusion_limited(self):
         options = {"working electrode": "positive", "SEI": "solvent-diffusion limited"}
         model = pybamm.lithium_ion.DFN(options)
-        param = pybamm.ParameterValues(chemistry=pybamm.parameter_sets.Xu2019)
-        modeltest = tests.StandardModelTest(model, parameter_values=param)
+        modeltest = tests.StandardModelTest(model)
         modeltest.test_all(skip_output_tests=True)
 
     def test_well_posed_electron_migration_limited(self):
         options = {"working electrode": "positive", "SEI": "electron-migration limited"}
         model = pybamm.lithium_ion.DFN(options)
-        param = pybamm.ParameterValues(chemistry=pybamm.parameter_sets.Xu2019)
-        modeltest = tests.StandardModelTest(model, parameter_values=param)
+        modeltest = tests.StandardModelTest(model)
         modeltest.test_all(skip_output_tests=True)
 
     def test_well_posed_interstitial_diffusion_limited(self):
@@ -51,8 +46,7 @@ class TestDFNWithSEI(unittest.TestCase):
             "SEI": "interstitial-diffusion limited",
         }
         model = pybamm.lithium_ion.DFN(options)
-        param = pybamm.ParameterValues(chemistry=pybamm.parameter_sets.Xu2019)
-        modeltest = tests.StandardModelTest(model, parameter_values=param)
+        modeltest = tests.StandardModelTest(model)
         modeltest.test_all(skip_output_tests=True)
 
     def test_well_posed_ec_reaction_limited(self):
@@ -61,8 +55,7 @@ class TestDFNWithSEI(unittest.TestCase):
             "SEI": "ec reaction limited",
         }
         model = pybamm.lithium_ion.DFN(options)
-        param = pybamm.ParameterValues(chemistry=pybamm.parameter_sets.Xu2019)
-        modeltest = tests.StandardModelTest(model, parameter_values=param)
+        modeltest = tests.StandardModelTest(model)
         modeltest.test_all(skip_output_tests=True)
 
 
