@@ -350,6 +350,28 @@ class TestSimulationExperiment(unittest.TestCase):
         sim.solve(inputs={"Dsn": 2})
         np.testing.assert_array_equal(sim.solution.all_inputs[0]["Dsn"], 2)
 
+    def test_run_experiment_half_cell(self):
+        experiment = pybamm.Experiment(
+            [("Discharge at C/20 until 3.5V", "Charge at 1C until 3.8 V")]
+        )
+        model = pybamm.lithium_ion.DFN({"working electrode": "positive"})
+        sim = pybamm.Simulation(
+            model,
+            experiment=experiment,
+            parameter_values=pybamm.ParameterValues(
+                chemistry=pybamm.parameter_sets.Xu2019
+            ),
+        )
+        sim.solve()
+
+    def test_run_experiment_lead_acid(self):
+        experiment = pybamm.Experiment(
+            [("Discharge at C/20 until 1.9V", "Charge at 1C until 2.1 V")]
+        )
+        model = pybamm.lead_acid.Full()
+        sim = pybamm.Simulation(model, experiment=experiment)
+        sim.solve()
+
 
 if __name__ == "__main__":
     print("Add -v for more debug output")

@@ -711,6 +711,7 @@ class BaseBatteryModel(pybamm.BaseModel):
 
         pybamm.logger.debug("Setting degradation variables ({})".format(self.name))
         self.set_degradation_variables()
+        self.set_summary_variables()
 
         # Massive hack for consistent delta_phi = phi_s - phi_e with SPMe
         # This needs to be corrected
@@ -734,6 +735,30 @@ class BaseBatteryModel(pybamm.BaseModel):
         new_model.timescale = self.timescale
         new_model.length_scales = self.length_scales
         return new_model
+
+    @property
+    def summary_variables(self):
+        return self._summary_variables
+
+    @summary_variables.setter
+    def summary_variables(self, value):
+        """
+        Set summary variables
+
+        Parameters
+        ----------
+        value : list of strings
+            Names of the summary variables. Must all be in self.variables.
+        """
+        for var in value:
+            if var not in self.variables:
+                raise KeyError(
+                    f"No cycling variable defined for summary variable '{var}'"
+                )
+        self._summary_variables = value
+
+    def set_summary_variables(self):
+        self._summary_variables = []
 
     def set_external_circuit_submodel(self):
         """
@@ -1062,7 +1087,7 @@ class BaseBatteryModel(pybamm.BaseModel):
             variables = list(self.rhs.keys()) + list(self.algebraic.keys())
             disc.set_variable_slices(variables)
 
-        # Set boundary condtions (also requires setting parameter values)
+        # Set boundary conditions (also requires setting parameter values)
         if disc.bcs == {}:
             self.boundary_conditions = parameter_values.process_boundary_conditions(
                 self
