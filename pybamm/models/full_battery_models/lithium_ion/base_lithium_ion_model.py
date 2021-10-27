@@ -118,6 +118,44 @@ class BaseModel(pybamm.BaseBatteryModel):
             }
         )
 
+    def set_summary_variables(self):
+        """
+        Sets the default summary variables.
+        """
+        summary_variables = [
+            "Positive electrode capacity [A.h]",
+            # LAM, LLI
+            "Loss of active material in positive electrode [%]",
+            "Loss of lithium inventory [%]",
+            "Loss of lithium inventory, including electrolyte [%]",
+            # Total lithium
+            "Total lithium [mol]",
+            "Total lithium in electrolyte [mol]",
+            "Total lithium in positive electrode [mol]",
+            "Total lithium in particles [mol]",
+            # Lithium lost
+            "Total lithium lost [mol]",
+            "Total lithium lost from particles [mol]",
+            "Total lithium lost from electrolyte [mol]",
+            "Loss of lithium to SEI [mol]",
+            "Loss of lithium to lithium plating [mol]",
+            "Loss of capacity to SEI [A.h]",
+            "Loss of capacity to lithium plating [A.h]",
+            "Total lithium lost to side reactions [mol]",
+            "Total capacity lost to side reactions [A.h]",
+            # Resistance
+            "Local ECM resistance [Ohm]",
+        ]
+
+        if not self.half_cell:
+            summary_variables += [
+                "Negative electrode capacity [A.h]",
+                "Loss of active material in negative electrode [%]",
+                "Total lithium in negative electrode [mol]",
+            ]
+
+        self.summary_variables = summary_variables
+
     def set_sei_submodel(self):
         if self.half_cell:
             reaction_loc = "interface"

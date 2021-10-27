@@ -76,6 +76,14 @@ class TestBaseBatteryModel(unittest.TestCase):
         disc_flux_2 = disc.process_symbol(param_flux_2)
         self.assertEqual(flux_1.id, disc_flux_2.id)
 
+    def test_summary_variables(self):
+        model = pybamm.BaseBatteryModel()
+        model.variables["var"] = pybamm.Scalar(1)
+        model.summary_variables = ["var"]
+        self.assertEqual(model.summary_variables, ["var"])
+        with self.assertRaisesRegex(KeyError, "No cycling variable defined"):
+            model.summary_variables = ["bad var"]
+
     def test_default_geometry(self):
         var = pybamm.standard_spatial_vars
 
