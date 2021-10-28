@@ -433,7 +433,8 @@ class CasadiSolver(pybamm.BaseSolver):
 
         y0 = coarse_solution.y[:, event_idx_lower]
         dense_step_sol = self._run_integrator(
-            model, y0, inputs_dict, inputs, t_window_event_dense, use_grid=use_grid
+            model, y0, inputs_dict, inputs, t_window_event_dense, use_grid=use_grid,
+            extract_sensitivities_in_solution=False,
         )
 
         # Find the exact time at which the event was triggered

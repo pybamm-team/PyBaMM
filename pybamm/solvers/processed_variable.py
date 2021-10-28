@@ -545,7 +545,7 @@ class ProcessedVariable(object):
                 self.initialise_sensitivity_explicit_forward()
             else:
                 raise ValueError(
-                    "Cannot compute sensitivities. The 'sensitivities' argument of the "
+                    "Cannot compute sensitivities. The 'calculate_sensitivities' argument of the "
                     "solver.solve should be changed from 'None' to allow sensitivities "
                     "calculations. Check solver documentation for details."
                 )

@@ -683,6 +683,7 @@ class Solution(object):
             other.t_event,
             other.y_event,
             other.termination,
+            bool(self.sensitivities),
         )
 
         new_sol.closest_event_idx = other.closest_event_idx
