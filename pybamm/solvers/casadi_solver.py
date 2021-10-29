@@ -641,7 +641,8 @@ class CasadiSolver(pybamm.BaseSolver):
             Casadi vector of inputs
         t_eval : numeric type
             The times at which to compute the solution
-        use_grid:
+        use_grid: bool, optional
+            Determines whether the casadi solver uses a grid or rescales time to (0,1)
         extract_sensitivities_in_solution: bool or None
             If None, then the sensitivities are extracted within the
             :class:`pybamm.Solution` object returned, only if present in the solution.
