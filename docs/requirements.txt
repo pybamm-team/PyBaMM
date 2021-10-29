@@ -18,5 +18,5 @@ pybtex
 matplotlib >= 2.0
 #
 guzzle-sphinx-theme
-sphinx>=1.5
+sphinx>4.0
 sympy==1.8
