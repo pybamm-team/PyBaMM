@@ -643,11 +643,11 @@ class CasadiSolver(pybamm.BaseSolver):
             The times at which to compute the solution
         use_grid:
         extract_sensitivities_in_solution: bool or None
-            If none, then the sensitivities are extracted if present. Setting to True or
-            False will override this behaviour, forcing the sensitivities to be
-            extracted or not (it is up to the caller to determine if the sensitivities
-            are in fact present
-
+            If None, then the sensitivities are extracted within the
+            :class:`pybamm.Solution` object returned, only if present in the solution.
+            Setting to True or False will override this behaviour, forcing the
+            sensitivities to be extracted or not (it is up to the caller to determine if
+            the sensitivities are in fact present)
        """
 
         pybamm.logger.debug("Running CasADi integrator")
