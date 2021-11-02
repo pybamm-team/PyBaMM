@@ -3,7 +3,7 @@ import glob
 import logging
 import subprocess
 from pathlib import Path
-from platform import system, version
+from platform import system
 import wheel.bdist_wheel as orig
 import site
 import shutil
@@ -162,11 +162,6 @@ pybamm_data.append("../CMakeBuild.py")
 idaklu_ext = Extension("pybamm.solvers.idaklu", ["pybamm/solvers/c_solvers/idaklu.cpp"])
 ext_modules = [idaklu_ext] if compile_KLU() else []
 
-jax_dependencies = []
-if not (system() == "Windows" or (system() == "Darwin" and "ARM64" in version())):
-    jax_dependencies = ["jax==0.2.12", "jaxlib==0.1.70"]
-
-
 # Load text for description and license
 with open("README.md", encoding="utf-8") as f:
     readme = f.read()
@@ -198,7 +193,6 @@ setup(
         "scikit-fem>=0.2.0",
         "casadi>=3.5.0",
         "imageio>=2.9.0",
-        *jax_dependencies,
         "jupyter",  # For example notebooks
         "pybtex",
         "sympy==1.8",
@@ -209,6 +203,7 @@ setup(
         "matplotlib>=2.0",
     ],
     extras_require={
+        "jax": ["jax", "jaxlib"],
         "docs": ["sphinx>=1.5", "guzzle-sphinx-theme"],  # For doc generation
         "dev": [
             "flake8>=3",  # For code style checking

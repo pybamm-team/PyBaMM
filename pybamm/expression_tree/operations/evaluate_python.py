@@ -6,13 +6,12 @@ import pybamm
 import numpy as np
 import scipy.sparse
 from collections import OrderedDict
-
+import importlib.util
 import numbers
 from platform import system, version
 
-if not (system() == "Windows" or (system() == "Darwin" and "ARM64" in version())):
+if importlib.util.find_spec("jax"):
     import jax
-
     from jax.config import config
 
     config.update("jax_enable_x64", True)
@@ -102,12 +101,6 @@ if not (system() == "Windows" or (system() == "Darwin" and "ARM64" in version())
         col = jax.numpy.asarray(scipy_coo.col)
         data = jax.numpy.asarray(scipy_coo.data)
         return JaxCooMatrix(row, col, data, value.shape)
-
-
-else:
-
-    def create_jax_coo_matrix(value):  # pragma: no cover
-        raise NotImplementedError("Jax is not available on Windows")
 
 
 def id_to_python_variable(symbol_id, constant=False):

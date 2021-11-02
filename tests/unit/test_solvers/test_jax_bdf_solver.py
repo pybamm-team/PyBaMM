@@ -5,15 +5,13 @@ import sys
 import time
 import numpy as np
 from platform import system, version
+import importlib.util
 
-if not (system() == "Windows" or (system() == "Darwin" and "ARM64" in version())):
+if importlib.util.find_spec("jax"):
     import jax
 
 
-@unittest.skipIf(
-    system() == "Windows" or (system() == "Darwin" and "ARM64" in version()),
-    "JAX not supported on windows or Mac M1",
-)
+@unittest.skipIf(not(importlib.util.find_spec("jax")), "requires jax")
 class TestJaxBDFSolver(unittest.TestCase):
     def test_solver(self):
         # Create model

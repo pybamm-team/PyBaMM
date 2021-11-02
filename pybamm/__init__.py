@@ -8,6 +8,7 @@
 import sys
 import os
 import platform
+import importlib.util
 
 #
 # Version info
@@ -102,10 +103,7 @@ from .expression_tree.operations.evaluate_python import (
     EvaluatorPython,
 )
 
-if not (
-    platform.system() == "Windows"
-    or (platform.system() == "Darwin" and "ARM64" in platform.version())
-):
+if importlib.util.find_spec("jax"):
     from .expression_tree.operations.evaluate_python import EvaluatorJax
     from .expression_tree.operations.evaluate_python import JaxCooMatrix
 
@@ -226,11 +224,7 @@ from .solvers.scikits_dae_solver import ScikitsDaeSolver
 from .solvers.scikits_ode_solver import ScikitsOdeSolver, have_scikits_odes
 from .solvers.scipy_solver import ScipySolver
 
-# Jax not supported under windows
-if not (
-    platform.system() == "Windows"
-    or (platform.system() == "Darwin" and "ARM64" in platform.version())
-):
+if importlib.util.find_spec("jax"):
     from .solvers.jax_solver import JaxSolver
     from .solvers.jax_bdf_solver import jax_bdf_integrate
 

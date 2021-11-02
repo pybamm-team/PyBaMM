@@ -3,7 +3,7 @@
 #
 import pybamm
 import tests
-
+import importlib.util
 import numpy as np
 import unittest
 from platform import system, version
@@ -79,9 +79,7 @@ class TestSPMe(unittest.TestCase):
         np.testing.assert_array_almost_equal(original, using_known_evals)
         np.testing.assert_array_almost_equal(original, to_python)
 
-        if not (
-            system() == "Windows" or (system() == "Darwin" and "ARM64" in version())
-        ):
+        if importlib.util.find_spec("jax"):
             to_jax = optimtest.evaluate_model(to_jax=True)
             np.testing.assert_array_almost_equal(original, to_jax)
 
