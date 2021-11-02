@@ -8,11 +8,11 @@ import unittest
 import numpy as np
 import scipy.sparse
 from collections import OrderedDict
-from platform import system, version
 import importlib.util
 
 if importlib.util.find_spec("jax"):
     import jax
+
 
 def test_function(arg):
     return arg + arg

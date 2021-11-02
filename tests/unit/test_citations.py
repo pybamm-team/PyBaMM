@@ -3,8 +3,8 @@
 #
 import pybamm
 import unittest
-from platform import system, version
 import importlib.util
+
 
 class TestCitations(unittest.TestCase):
     def test_citations(self):

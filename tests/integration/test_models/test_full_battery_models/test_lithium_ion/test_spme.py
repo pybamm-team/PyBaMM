@@ -6,7 +6,6 @@ import tests
 import importlib.util
 import numpy as np
 import unittest
-from platform import system, version
 
 
 class TestSPMe(unittest.TestCase):

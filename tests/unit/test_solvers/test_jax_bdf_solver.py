@@ -4,7 +4,6 @@ from tests import get_mesh_for_testing
 import sys
 import time
 import numpy as np
-from platform import system, version
 import importlib.util
 
 if importlib.util.find_spec("jax"):

@@ -8,7 +8,6 @@ import scipy.sparse
 from collections import OrderedDict
 import importlib.util
 import numbers
-from platform import system, version
 
 if importlib.util.find_spec("jax"):
     import jax

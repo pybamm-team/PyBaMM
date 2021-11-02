@@ -5,8 +5,8 @@ import pybamm
 import tests
 import numpy as np
 import unittest
-from platform import system, version
 import importlib.util
+
 
 class TestSPM(unittest.TestCase):
     def test_basic_processing(self):
