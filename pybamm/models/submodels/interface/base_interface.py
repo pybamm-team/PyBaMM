@@ -721,9 +721,8 @@ class BaseInterface(pybamm.BaseSubModel):
         # Size average. For ocp variables that depend on particle size, see
         # "_get_standard_size_distribution_ocp_variables"
         ocp = pybamm.size_average(ocp)
-
-        # Size average
         dUdT = pybamm.size_average(dUdT)
+
         # Average, and broadcast if necessary
         dUdT_av = pybamm.x_average(dUdT)
         ocp_av = pybamm.x_average(ocp)
@@ -737,12 +736,13 @@ class BaseInterface(pybamm.BaseSubModel):
         elif ocp.domain == ["current collector"]:
             ocp = pybamm.PrimaryBroadcast(ocp, self.domain_for_broadcast)
 
+        pot_scale = self.param.potential_scale
         if self.domain == "Negative":
-            ocp_dim = self.param.U_n_ref + self.param.potential_scale * ocp
-            ocp_av_dim = self.param.U_n_ref + self.param.potential_scale * ocp_av
+            ocp_dim = self.param.U_n_ref + pot_scale * ocp
+            ocp_av_dim = self.param.U_n_ref + pot_scale * ocp_av
         elif self.domain == "Positive":
-            ocp_dim = self.param.U_p_ref + self.param.potential_scale * ocp
-            ocp_av_dim = self.param.U_p_ref + self.param.potential_scale * ocp_av
+            ocp_dim = self.param.U_p_ref + pot_scale * ocp
+            ocp_av_dim = self.param.U_p_ref + pot_scale * ocp_av
 
         variables = {
             self.domain
@@ -768,9 +768,18 @@ class BaseInterface(pybamm.BaseSubModel):
             variables.update(
                 {
                     self.domain + " electrode entropic change": dUdT,
+                    self.domain
+                    + " electrode entropic change [V.K-1]": pot_scale
+                    * dUdT
+                    / self.param.Delta_T,
                     "X-averaged "
                     + self.domain.lower()
                     + " electrode entropic change": dUdT_av,
+                    "X-averaged "
+                    + self.domain.lower()
+                    + " electrode entropic change [V.K-1]": pot_scale
+                    * dUdT_av
+                    / self.param.Delta_T,
                 }
             )
 
@@ -921,12 +930,13 @@ class BaseInterface(pybamm.BaseSubModel):
         else:
             dUdT_av = pybamm.x_average(dUdT)
 
+        pot_scale = self.param.potential_scale
         if self.domain == "Negative":
-            ocp_dim = self.param.U_n_ref + self.param.potential_scale * ocp
-            ocp_av_dim = self.param.U_n_ref + self.param.potential_scale * ocp_av
+            ocp_dim = self.param.U_n_ref + pot_scale * ocp
+            ocp_av_dim = self.param.U_n_ref + pot_scale * ocp_av
         elif self.domain == "Positive":
-            ocp_dim = self.param.U_p_ref + self.param.potential_scale * ocp
-            ocp_av_dim = self.param.U_p_ref + self.param.potential_scale * ocp_av
+            ocp_dim = self.param.U_p_ref + pot_scale * ocp
+            ocp_av_dim = self.param.U_p_ref + pot_scale * ocp_av
 
         variables = {
             self.domain
@@ -954,10 +964,21 @@ class BaseInterface(pybamm.BaseSubModel):
                     self.domain
                     + " electrode entropic change"
                     + " (size-dependent)": dUdT,
+                    self.domain
+                    + " electrode entropic change"
+                    + " (size-dependent) [V.K-1]": pot_scale
+                    * dUdT
+                    / self.param.Delta_T,
                     "X-averaged "
                     + self.domain.lower()
                     + " electrode entropic change"
                     + " (size-dependent)": dUdT_av,
+                    "X-averaged "
+                    + self.domain.lower()
+                    + " electrode entropic change"
+                    + " (size-dependent) [V.K-1]": pot_scale
+                    * dUdT_av
+                    / self.param.Delta_T,
                 }
             )
 

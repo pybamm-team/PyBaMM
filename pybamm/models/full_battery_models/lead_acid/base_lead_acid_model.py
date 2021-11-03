@@ -54,6 +54,17 @@ class BaseModel(pybamm.BaseBatteryModel):
         var = pybamm.standard_spatial_vars
         return {var.x_n: 25, var.x_s: 41, var.x_p: 34, var.y: 10, var.z: 10}
 
+    @property
+    def default_quick_plot_variables(self):
+        return [
+            "Interfacial current density [A.m-2]",
+            "Electrolyte concentration [mol.m-3]",
+            "Current [A]",
+            "Porosity",
+            "Electrolyte potential [V]",
+            "Terminal voltage [V]",
+        ]
+
     def set_soc_variables(self):
         """Set variables relating to the state of charge."""
         # State of Charge defined as function of dimensionless electrolyte concentration

@@ -683,6 +683,7 @@ class Solution(object):
             other.t_event,
             other.y_event,
             other.termination,
+            bool(self.sensitivities),
         )
 
         new_sol.closest_event_idx = other.closest_event_idx
@@ -785,54 +786,36 @@ def make_cycle_solution(step_solutions, esoh_sim=None, save_this_cycle=True):
 
     cycle_summary_variables = get_cycle_summary_variables(cycle_solution, esoh_sim)
 
+    cycle_first_state = cycle_solution.first_state
+
     if save_this_cycle:
         cycle_solution.cycle_summary_variables = cycle_summary_variables
     else:
         cycle_solution = None
 
-    return cycle_solution, cycle_summary_variables
+    return cycle_solution, cycle_summary_variables, cycle_first_state
 
 
 def get_cycle_summary_variables(cycle_solution, esoh_sim):
-    Q = cycle_solution["Discharge capacity [A.h]"].data
-    min_Q = np.min(Q)
-    max_Q = np.max(Q)
+    model = cycle_solution.all_models[0]
+    cycle_summary_variables = pybamm.FuzzyDict({})
 
-    cycle_summary_variables = pybamm.FuzzyDict(
-        {
-            "Minimum measured discharge capacity [A.h]": min_Q,
-            "Maximum measured discharge capacity [A.h]": max_Q,
-            "Measured capacity [A.h]": max_Q - min_Q,
-        }
-    )
+    # Measured capacity variables
+    if "Discharge capacity [A.h]" in model.variables:
+        Q = cycle_solution["Discharge capacity [A.h]"].data
+        min_Q = np.min(Q)
+        max_Q = np.max(Q)
 
-    degradation_variables = [
-        "Negative electrode capacity [A.h]",
-        "Positive electrode capacity [A.h]",
-        # LAM, LLI
-        "Loss of active material in negative electrode [%]",
-        "Loss of active material in positive electrode [%]",
-        "Loss of lithium inventory [%]",
-        "Loss of lithium inventory, including electrolyte [%]",
-        # Total lithium
-        "Total lithium [mol]",
-        "Total lithium in electrolyte [mol]",
-        "Total lithium in positive electrode [mol]",
-        "Total lithium in negative electrode [mol]",
-        "Total lithium in particles [mol]",
-        # Lithium lost
-        "Total lithium lost [mol]",
-        "Total lithium lost from particles [mol]",
-        "Total lithium lost from electrolyte [mol]",
-        "Loss of lithium to SEI [mol]",
-        "Loss of lithium to lithium plating [mol]",
-        "Loss of capacity to SEI [A.h]",
-        "Loss of capacity to lithium plating [A.h]",
-        "Total lithium lost to side reactions [mol]",
-        "Total capacity lost to side reactions [A.h]",
-        # Resistance
-        "Local ECM resistance [Ohm]",
-    ]
+        cycle_summary_variables.update(
+            {
+                "Minimum measured discharge capacity [A.h]": min_Q,
+                "Maximum measured discharge capacity [A.h]": max_Q,
+                "Measured capacity [A.h]": max_Q - min_Q,
+            }
+        )
+
+    # Degradation variables
+    degradation_variables = model.summary_variables
     first_state = cycle_solution.first_state
     last_state = cycle_solution.last_state
     for var in degradation_variables:
@@ -844,7 +827,12 @@ def get_cycle_summary_variables(cycle_solution, esoh_sim):
             data_last[0] - data_first[0]
         )
 
-    if esoh_sim is not None:
+    # eSOH variables (full-cell lithium-ion model only, for now)
+    if (
+        esoh_sim is not None
+        and isinstance(model, pybamm.lithium_ion.BaseModel)
+        and model.half_cell is False
+    ):
         V_min = esoh_sim.parameter_values["Lower voltage cut-off [V]"]
         V_max = esoh_sim.parameter_values["Upper voltage cut-off [V]"]
         C_n = last_state["Negative electrode capacity [A.h]"].data[0]
@@ -885,19 +873,16 @@ def get_cycle_summary_variables(cycle_solution, esoh_sim):
             esoh_sim.built_model.set_initial_conditions_from(
                 {"x_100": x_100_init, "C": C_init}
             )
+        inputs = {
+            "V_min": V_min,
+            "V_max": V_max,
+            "C_n": C_n,
+            "C_p": C_p,
+            "n_Li": n_Li,
+        }
 
         try:
-            esoh_sol = esoh_sim.solve(
-                [0],
-                inputs={
-                    "V_min": V_min,
-                    "V_max": V_max,
-                    "C_n": C_n,
-                    "C_p": C_p,
-                    "n_Li": n_Li,
-                },
-                solver=solver,
-            )
+            esoh_sol = esoh_sim.solve([0], inputs=inputs, solver=solver)
         except pybamm.SolverError:  # pragma: no cover
             raise pybamm.SolverError(
                 "Could not solve for summary variables, run "

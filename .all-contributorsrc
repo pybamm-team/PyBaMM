@@ -70,7 +70,8 @@
         "example",
         "ideas",
         "review",
-        "test"
+        "test",
+        "tutorial"
       ]
     },
     {
@@ -103,7 +104,8 @@
         "example",
         "ideas",
         "review",
-        "test"
+        "test",
+        "tutorial"
       ]
     },
     {
@@ -242,7 +244,8 @@
       "avatar_url": "https://avatars.githubusercontent.com/u/18349157?v=4",
       "profile": "https://github.com/gjo97",
       "contributions": [
-        "ideas"
+        "ideas",
+        "fundingFinding"
       ]
     },
     {
@@ -314,7 +317,8 @@
         "code",
         "bug",
         "review",
-        "maintenance"
+        "maintenance",
+        "tutorial"
       ]
     },
     {
@@ -326,7 +330,8 @@
         "code",
         "example",
         "doc",
-        "test"
+        "test",
+        "tutorial"
       ]
     },
     {
@@ -337,7 +342,8 @@
       "contributions": [
         "code",
         "test",
-        "doc"
+        "doc",
+        "tutorial"
       ]
     },
     {
@@ -406,7 +412,8 @@
       "contributions": [
         "ideas",
         "code",
-        "test"
+        "test",
+        "tutorial"
       ]
     },
     {
