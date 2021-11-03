@@ -34,13 +34,13 @@ class ConstantConcentration(BaseElectrolyteDiffusion):
 
         if self.half_cell:
             N_e = pybamm.FullBroadcastToEdges(
-                0,
-                ["negative electrode", "separator", "positive electrode"],
-                "current collector",
+                0, ["separator", "positive electrode"], "current collector"
             )
         else:
             N_e = pybamm.FullBroadcastToEdges(
-                0, ["separator", "positive electrode"], "current collector"
+                0,
+                ["negative electrode", "separator", "positive electrode"],
+                "current collector",
             )
 
         variables.update(self._get_standard_flux_variables(N_e))
