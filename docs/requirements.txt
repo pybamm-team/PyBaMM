@@ -6,6 +6,7 @@ anytree >= 2.4.3
 autograd >= 1.2
 scikit-fem >= 0.2.0
 casadi >= 3.5.0
+imageio>=2.9.0
 jax==0.2.12
 jaxlib==0.1.70
 jupyter  # For example notebooks
@@ -17,5 +18,5 @@ pybtex
 matplotlib >= 2.0
 #
 guzzle-sphinx-theme
-sphinx>=1.5
+sphinx>4.0
 sympy==1.8

@@ -401,12 +401,6 @@ class BaseBatteryModel(pybamm.BaseModel):
         self._built_fundamental_and_external = False
 
     @property
-    def default_parameter_values(self):
-        # Default parameter values
-        # Lion parameters left as default parameter set for tests
-        return pybamm.ParameterValues(chemistry=pybamm.parameter_sets.Marquis2019)
-
-    @property
     def default_geometry(self):
         return pybamm.battery_geometry(
             options=self.options,
@@ -563,19 +557,25 @@ class BaseBatteryModel(pybamm.BaseModel):
         self.variables.update(
             {
                 "Sum of electrolyte reaction source terms": 0,
-                "Sum of negative electrode electrolyte reaction source terms": 0,
                 "Sum of positive electrode electrolyte reaction source terms": 0,
-                "Sum of x-averaged negative electrode "
-                "electrolyte reaction source terms": 0,
                 "Sum of x-averaged positive electrode "
                 "electrolyte reaction source terms": 0,
                 "Sum of interfacial current densities": 0,
-                "Sum of negative electrode interfacial current densities": 0,
                 "Sum of positive electrode interfacial current densities": 0,
-                "Sum of x-averaged negative electrode interfacial current densities": 0,
                 "Sum of x-averaged positive electrode interfacial current densities": 0,
             }
         )
+        if not self.half_cell:
+            self.variables.update(
+                {
+                    "Sum of negative electrode electrolyte reaction source terms": 0,
+                    "Sum of x-averaged negative electrode "
+                    "electrolyte reaction source terms": 0,
+                    "Sum of negative electrode interfacial current densities": 0,
+                    "Sum of x-averaged negative electrode interfacial current densities"
+                    "": 0,
+                }
+            )
 
     def build_fundamental_and_external(self):
         # Get the fundamental variables
@@ -711,6 +711,7 @@ class BaseBatteryModel(pybamm.BaseModel):
 
         pybamm.logger.debug("Setting degradation variables ({})".format(self.name))
         self.set_degradation_variables()
+        self.set_summary_variables()
 
         # Massive hack for consistent delta_phi = phi_s - phi_e with SPMe
         # This needs to be corrected
@@ -734,6 +735,30 @@ class BaseBatteryModel(pybamm.BaseModel):
         new_model.timescale = self.timescale
         new_model.length_scales = self.length_scales
         return new_model
+
+    @property
+    def summary_variables(self):
+        return self._summary_variables
+
+    @summary_variables.setter
+    def summary_variables(self, value):
+        """
+        Set summary variables
+
+        Parameters
+        ----------
+        value : list of strings
+            Names of the summary variables. Must all be in self.variables.
+        """
+        for var in value:
+            if var not in self.variables:
+                raise KeyError(
+                    f"No cycling variable defined for summary variable '{var}'"
+                )
+        self._summary_variables = value
+
+    def set_summary_variables(self):
+        self._summary_variables = []
 
     def set_external_circuit_submodel(self):
         """
@@ -856,12 +881,20 @@ class BaseBatteryModel(pybamm.BaseModel):
         ocv_dim = ocp_p_right_dim - ocp_n_left_dim
 
         # overpotentials
-        eta_r_n_av = self.variables[
-            "X-averaged negative electrode reaction overpotential"
-        ]
-        eta_r_n_av_dim = self.variables[
-            "X-averaged negative electrode reaction overpotential [V]"
-        ]
+        if self.half_cell:
+            eta_r_n_av = self.variables[
+                "Lithium metal interface reaction overpotential"
+            ]
+            eta_r_n_av_dim = self.variables[
+                "Lithium metal interface reaction overpotential [V]"
+            ]
+        else:
+            eta_r_n_av = self.variables[
+                "X-averaged negative electrode reaction overpotential"
+            ]
+            eta_r_n_av_dim = self.variables[
+                "X-averaged negative electrode reaction overpotential [V]"
+            ]
         eta_r_p_av = self.variables[
             "X-averaged positive electrode reaction overpotential"
         ]
@@ -885,8 +918,12 @@ class BaseBatteryModel(pybamm.BaseModel):
         eta_r_av_dim = eta_r_p_av_dim - eta_r_n_av_dim
 
         # SEI film overpotential
-        eta_sei_av = self.variables["X-averaged SEI film overpotential"]
-        eta_sei_av_dim = self.variables["X-averaged SEI film overpotential [V]"]
+        if self.half_cell:
+            eta_sei_av = self.variables["SEI film overpotential"]
+            eta_sei_av_dim = self.variables["SEI film overpotential [V]"]
+        else:
+            eta_sei_av = self.variables["X-averaged SEI film overpotential"]
+            eta_sei_av_dim = self.variables["X-averaged SEI film overpotential [V]"]
 
         # TODO: add current collector losses to the voltage in 3D
 
@@ -1050,7 +1087,7 @@ class BaseBatteryModel(pybamm.BaseModel):
             variables = list(self.rhs.keys()) + list(self.algebraic.keys())
             disc.set_variable_slices(variables)
 
-        # Set boundary condtions (also requires setting parameter values)
+        # Set boundary conditions (also requires setting parameter values)
         if disc.bcs == {}:
             self.boundary_conditions = parameter_values.process_boundary_conditions(
                 self

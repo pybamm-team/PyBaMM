@@ -37,7 +37,12 @@ class FirstOrderKinetics(BaseInterface):
         dj_ddeltaphi_0 = self.leading_order_model._get_dj_ddeltaphi(variables)
 
         # Update delta_phi with new phi_e and phi_s
-        variables = self._get_delta_phi(variables)
+        phi_s = variables[self.domain + " electrode potential"]
+        phi_e = variables[self.domain + " electrolyte potential"]
+        delta_phi = phi_s - phi_e
+        variables.update(
+            self._get_standard_surface_potential_difference_variables(delta_phi)
+        )
 
         delta_phi_0 = variables[
             "Leading-order "

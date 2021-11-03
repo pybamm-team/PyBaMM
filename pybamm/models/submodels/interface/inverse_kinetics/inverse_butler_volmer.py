@@ -34,22 +34,15 @@ class InverseButlerVolmer(BaseInterface):
 
         j0 = self._get_exchange_current_density(variables)
         # Broadcast to match j0's domain
-        if self.half_cell and self.domain == "Negative":
-            # In a half-cell the total interfacial current density is the current
-            # collector current density, not divided by electrode thickness
-            i_boundary_cc = variables["Current collector current density"]
-            j_tot = i_boundary_cc
+
+        j_tot_av = self._get_average_total_interfacial_current_density(variables)
+        if j0.domain in [[], ["current collector"]]:
+            j_tot = j_tot_av
         else:
-            j_tot_av = self._get_average_total_interfacial_current_density(variables)
-            if j0.domain in [[], ["current collector"]]:
-                j_tot = j_tot_av
-            else:
-                j_tot = pybamm.PrimaryBroadcast(
-                    j_tot_av, [self.domain.lower() + " electrode"]
-                )
-            variables.update(
-                self._get_standard_total_interfacial_current_variables(j_tot_av)
+            j_tot = pybamm.PrimaryBroadcast(
+                j_tot_av, [self.domain.lower() + " electrode"]
             )
+        variables.update(self._get_standard_total_interfacial_current_variables(j_tot))
 
         ne = self._get_number_of_electrons_in_reaction()
         # Note: T must have the same domain as j0 and eta_r
@@ -81,7 +74,7 @@ class InverseButlerVolmer(BaseInterface):
         else:
             eta_sei = pybamm.Scalar(0)
 
-        delta_phi = eta_r + ocp - eta_sei
+        delta_phi = eta_r + ocp - eta_sei  # = phi_s - phi_e
 
         variables.update(self._get_standard_exchange_current_variables(j0))
         variables.update(self._get_standard_overpotential_variables(eta_r))
@@ -191,21 +184,5 @@ class CurrentForInverseButlerVolmerLithiumMetal(BaseInterface):
         j = i_boundary_cc
 
         variables.update(self._get_standard_interfacial_current_variables(j))
-
-        if (
-            "Negative electrode" + self.reaction_name + " interfacial current density"
-            in variables
-            and "Positive electrode"
-            + self.reaction_name
-            + " interfacial current density"
-            in variables
-            and self.Reaction_icd not in variables
-        ):
-            variables.update(
-                self._get_standard_whole_cell_interfacial_current_variables(variables)
-            )
-            variables.update(
-                self._get_standard_whole_cell_exchange_current_variables(variables)
-            )
 
         return variables

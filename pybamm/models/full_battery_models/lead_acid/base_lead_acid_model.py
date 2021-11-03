@@ -17,8 +17,9 @@ class BaseModel(pybamm.BaseBatteryModel):
 
     def __init__(self, options=None, name="Unnamed lead-acid model", build=False):
         options = options or {}
-        # Specify that there are no particles in lead-acid
+        # Specify that there are no particles in lead-acid, and no half-cell models
         options["particle shape"] = "no particles"
+        self.half_cell = False
         super().__init__(options, name)
         self.param = pybamm.LeadAcidParameters()
 
@@ -52,6 +53,17 @@ class BaseModel(pybamm.BaseBatteryModel):
         # Choose points that give uniform grid for the standard parameter values
         var = pybamm.standard_spatial_vars
         return {var.x_n: 25, var.x_s: 41, var.x_p: 34, var.y: 10, var.z: 10}
+
+    @property
+    def default_quick_plot_variables(self):
+        return [
+            "Interfacial current density [A.m-2]",
+            "Electrolyte concentration [mol.m-3]",
+            "Current [A]",
+            "Porosity",
+            "Electrolyte potential [V]",
+            "Terminal voltage [V]",
+        ]
 
     def set_soc_variables(self):
         """Set variables relating to the state of charge."""
