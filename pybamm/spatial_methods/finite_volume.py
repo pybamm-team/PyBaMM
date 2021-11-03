@@ -268,6 +268,10 @@ class FiniteVolume(pybamm.SpatialMethod):
             The finite volume integral matrix for the domain
         """
         domains = child.domains
+        if vector_type != "row" and integration_dimension == "secondary":
+            raise NotImplementedError(
+                "Integral in secondary vector only implemented in 'row' form"
+            )
 
         domain = child.domains[integration_dimension]
         submesh = self.mesh.combine_submeshes(*domain)
@@ -294,10 +298,6 @@ class FiniteVolume(pybamm.SpatialMethod):
             # generate full matrix from the submatrix
             matrix = kron(eye(second_dim_repeats), d_edges)
         elif integration_dimension == "secondary":
-            if vector_type != "row":
-                raise NotImplementedError(
-                    "Integral in secondary vector only implemented in 'row' form"
-                )
             # Create appropriate submesh by combining submeshes in domain
             primary_submesh = self.mesh.combine_submeshes(*domains["primary"])
 
