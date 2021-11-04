@@ -22,6 +22,10 @@ def graphite_volume_change_Ai2020(sto):
     t_change:class:`pybamm.Symbol`
         volume change, dimensionless, normalised by particle volume
     """
+
+    # print parameter for testing
+    print("sto: {0}".format(sto))
+
     p1 = 145.907
     p2 = -681.229
     p3 = 1334.442
