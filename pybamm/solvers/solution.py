@@ -528,21 +528,11 @@ class Solution(object):
         """
         return pybamm.dynamic_plot(self, output_variables=output_variables, **kwargs)
 
-    def clear_casadi_attributes(self):
-        """Remove casadi objects for pickling, will be computed again automatically"""
-        # t_MX = None
-        # y_MX = None
-        # symbolic_inputs = None
-        # symbolic_inputs_dict = None
-        pass
-
     def save(self, filename):
         """Save the whole solution using pickle"""
         # No warning here if len(self.data)==0 as solution can be loaded
         # and used to process new variables
 
-        self.clear_casadi_attributes()
-        # Pickle
         with open(filename, "wb") as f:
             pickle.dump(self, f, pickle.HIGHEST_PROTOCOL)
 
