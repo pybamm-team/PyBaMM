@@ -5,7 +5,7 @@ import pybamm
 import tests
 import numpy as np
 import unittest
-from platform import system
+import importlib.util
 
 
 class TestMPM(unittest.TestCase):
@@ -29,7 +29,7 @@ class TestMPM(unittest.TestCase):
         np.testing.assert_array_almost_equal(original, using_known_evals)
         np.testing.assert_array_almost_equal(original, to_python)
 
-        if system() != "Windows":
+        if importlib.util.find_spec("jax"):
             to_jax = optimtest.evaluate_model(to_jax=True)
             np.testing.assert_array_almost_equal(original, to_jax)
 
