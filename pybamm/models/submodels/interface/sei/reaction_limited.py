@@ -13,25 +13,31 @@ class ReactionLimited(BaseModel):
     ----------
     param : parameter class
         The parameters to use for this submodel
-    x_average : bool
-        Whether to use x-averaged variables (SPM, SPMe, etc) or full variables (DFN)
+    reaction_loc : str
+        Where the reaction happens: "x-average" (SPM, SPMe, etc),
+        "full electrode" (full DFN), or "interface" (half-cell DFN)
+    options : dict, optional
+        A dictionary of options to be passed to the model.
 
     **Extends:** :class:`pybamm.sei.BaseModel`
     """
 
-    def __init__(self, param, x_average):
-        super().__init__(param)
-        self.x_average = x_average
+    def __init__(self, param, reaction_loc, options=None):
+        super().__init__(param, options=options)
+        self.reaction_loc = reaction_loc
 
     def get_fundamental_variables(self):
-        if self.x_average is True:
+        if self.reaction_loc == "x-average":
             L_inner_av = pybamm.standard_variables.L_inner_av
             L_outer_av = pybamm.standard_variables.L_outer_av
             L_inner = pybamm.PrimaryBroadcast(L_inner_av, "negative electrode")
             L_outer = pybamm.PrimaryBroadcast(L_outer_av, "negative electrode")
-        else:
+        elif self.reaction_loc == "full electrode":
             L_inner = pybamm.standard_variables.L_inner
             L_outer = pybamm.standard_variables.L_outer
+        elif self.reaction_loc == "interface":
+            L_inner = pybamm.standard_variables.L_inner_interface
+            L_outer = pybamm.standard_variables.L_outer_interface
 
         variables = self._get_standard_thickness_variables(L_inner, L_outer)
         variables.update(self._get_standard_concentration_variables(variables))
@@ -40,8 +46,13 @@ class ReactionLimited(BaseModel):
 
     def get_coupled_variables(self, variables):
         param = self.param
-        phi_s_n = variables["Negative electrode potential"]
-        phi_e_n = variables["Negative electrolyte potential"]
+        # delta_phi = phi_s - phi_e
+        if self.reaction_loc == "interface":
+            delta_phi = variables[
+                "Lithium metal interface surface potential difference"
+            ]
+        else:
+            delta_phi = variables["Negative electrode surface potential difference"]
 
         # Look for current that contributes to the -IR drop
         # If we can't find the interfacial current density from the main reaction, j,
@@ -50,9 +61,13 @@ class ReactionLimited(BaseModel):
         # in which case j = j_tot (uniform) anyway
         if "Negative electrode interfacial current density" in variables:
             j = variables["Negative electrode interfacial current density"]
+        elif self.reaction_loc == "interface":
+            j = variables["Lithium metal total interfacial current density"]
         else:
             j = variables[
-                "X-averaged negative electrode total interfacial current density"
+                "X-averaged "
+                + self.domain.lower()
+                + " electrode total interfacial current density"
             ]
         L_sei = variables["Total SEI thickness"]
 
@@ -62,9 +77,7 @@ class ReactionLimited(BaseModel):
         C_sei = param.C_sei_reaction
 
         # need to revise for thermal case
-        j_sei = -(1 / C_sei) * pybamm.exp(
-            -0.5 * (phi_s_n - phi_e_n - j * L_sei * R_sei)
-        )
+        j_sei = -(1 / C_sei) * pybamm.exp(-0.5 * (delta_phi - j * L_sei * R_sei))
 
         j_inner = alpha * j_sei
         j_outer = (1 - alpha) * j_sei
@@ -77,7 +90,7 @@ class ReactionLimited(BaseModel):
         return variables
 
     def set_rhs(self, variables):
-        if self.x_average is True:
+        if self.reaction_loc == "x-average":
             L_inner = variables["X-averaged inner SEI thickness"]
             L_outer = variables["X-averaged outer SEI thickness"]
             j_inner = variables["X-averaged inner SEI interfacial current density"]
@@ -97,7 +110,7 @@ class ReactionLimited(BaseModel):
         }
 
     def set_initial_conditions(self, variables):
-        if self.x_average is True:
+        if self.reaction_loc == "x-average":
             L_inner = variables["X-averaged inner SEI thickness"]
             L_outer = variables["X-averaged outer SEI thickness"]
         else:

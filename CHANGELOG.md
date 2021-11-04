@@ -1,4 +1,20 @@
-# [Unreleased](https://github.com/pybamm-team/PyBaMM)
+# [v21.10](https://github.com/pybamm-team/PyBaMM/tree/v21.9) - 2021-10-31
+
+## Features
+
+-   Summary variables can now be user-determined ([#1759](https://github.com/pybamm-team/PyBaMM/pull/1759))
+-   Added `all_first_states` to the `Solution` object for a simulation with experiment ([#1759](https://github.com/pybamm-team/PyBaMM/pull/1759))
+-   Added a new method (`create_gif`) in `QuickPlot`, `Simulation` and `BatchStudy` to create a GIF of a simulation ([#1754](https://github.com/pybamm-team/PyBaMM/pull/1754))
+-   Added more examples for the `BatchStudy` class ([#1747](https://github.com/pybamm-team/PyBaMM/pull/1747))
+-   SEI models can now be included in the half-cell model ([#1705](https://github.com/pybamm-team/PyBaMM/pull/1705))
+
+## Bug fixes
+ 
+-   Half-cell model and lead-acid models can now be simulated with `Experiment`s ([#1759](https://github.com/pybamm-team/PyBaMM/pull/1759))
+-   Removed in-place modification of the solution objects by `QuickPlot` ([#1747](https://github.com/pybamm-team/PyBaMM/pull/1747))
+-   Fixed vector-vector multiplication bug that was causing errors in the SPM with constant voltage or power ([#1735](https://github.com/pybamm-team/PyBaMM/pull/1735))
+
+# [v21.9](https://github.com/pybamm-team/PyBaMM/tree/v21.9) - 2021-09-30
 
 ## Features
 
@@ -8,6 +24,7 @@
 
 ## Breaking changes
 
+-   Dropped support for Python 3.6 ([#1696](https://github.com/pybamm-team/PyBaMM/pull/1696))
 -   The substring 'negative electrode' has been removed from variables related to SEI and lithium plating (e.g. 'Total negative electrode SEI thickness [m]' replaced by 'Total SEI thickness [m]') ([#1654](https://github.com/pybamm-team/PyBaMM/pull/1654))
 
 # [v21.08](https://github.com/pybamm-team/PyBaMM/tree/v21.08) - 2021-08-26

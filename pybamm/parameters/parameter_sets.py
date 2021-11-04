@@ -226,6 +226,7 @@ Xu2019 = {
     "positive electrode": "NMC532_Xu2019",
     "electrolyte": "lipf6_Valoen2005",
     "experiment": "1C_discharge_from_full_Xu2019",
+    "sei": "example",
     "citation": "Xu2019",
 }
 

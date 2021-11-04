@@ -850,57 +850,6 @@ class TestProcessedVariable(unittest.TestCase):
         # 2 scalars
         np.testing.assert_array_equal(processed_var(t=None, y=0.2, z=0.2).shape, ())
 
-    def test_processed_variable_ode_pde_solution(self):
-        # without space
-        model = pybamm.BaseBatteryModel()
-        c = pybamm.Variable("c")
-        model.rhs = {c: -c}
-        model.initial_conditions = {c: 1}
-        model.variables = {"c": c}
-        modeltest = tests.StandardModelTest(model)
-        modeltest.test_all()
-        sol = modeltest.solution
-        np.testing.assert_array_almost_equal(sol["c"](sol.t), np.exp(-sol.t))
-
-        # with space
-        # set up and solve model
-        whole_cell = ["negative electrode", "separator", "positive electrode"]
-        model = pybamm.BaseBatteryModel()
-        model.length_scales = {
-            "negative electrode": pybamm.Scalar(1),
-            "separator": pybamm.Scalar(1),
-            "positive electrode": pybamm.Scalar(1),
-        }
-        c = pybamm.Variable("c", domain=whole_cell)
-        c_s = pybamm.Variable(
-            "c_s",
-            domain="negative particle",
-            auxiliary_domains={"secondary": ["negative electrode"]},
-        )
-        model.rhs = {c: -c, c_s: 1 - c_s}
-        model.initial_conditions = {c: 1, c_s: 0.5}
-        model.boundary_conditions = {
-            c: {"left": (0, "Neumann"), "right": (0, "Neumann")},
-            c_s: {"left": (0, "Neumann"), "right": (0, "Neumann")},
-        }
-        model.variables = {
-            "c": c,
-            "N": pybamm.grad(c),
-            "c_s": c_s,
-            "N_s": pybamm.grad(c_s),
-        }
-        modeltest = tests.StandardModelTest(model)
-        modeltest.test_all()
-        # set up testing
-        sol = modeltest.solution
-        x = pybamm.SpatialVariable("x", domain=whole_cell)
-        x_sol = modeltest.disc.process_symbol(x).entries[:, 0]
-
-        # test
-        np.testing.assert_array_almost_equal(
-            sol["c"](sol.t, x_sol), np.ones_like(x_sol)[:, np.newaxis] * np.exp(-sol.t)
-        )
-
     def test_call_failure(self):
         # x domain
         var = pybamm.Variable("var x", domain=["negative electrode", "separator"])

@@ -187,7 +187,7 @@ setup(
     },
     package_data={"pybamm": pybamm_data},
     # Python version
-    python_requires=">=3.6,<3.10",
+    python_requires=">=3.7,<3.10",
     # List of dependencies
     install_requires=[
         "numpy>=1.16",
@@ -197,6 +197,7 @@ setup(
         "autograd>=1.2",
         "scikit-fem>=0.2.0",
         "casadi>=3.5.0",
+        "imageio>=2.9.0",
         *jax_dependencies,
         "jupyter",  # For example notebooks
         "pybtex",

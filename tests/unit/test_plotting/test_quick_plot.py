@@ -1,3 +1,4 @@
+import os
 import pybamm
 import unittest
 import numpy as np
@@ -174,13 +175,13 @@ class TestQuickPlot(unittest.TestCase):
 
         # Test different spatial units
         quick_plot = pybamm.QuickPlot(solution, ["a"])
-        self.assertEqual(quick_plot.spatial_unit, "$\mu m$")
+        self.assertEqual(quick_plot.spatial_unit, "$\mu$m")
         quick_plot = pybamm.QuickPlot(solution, ["a"], spatial_unit="m")
         self.assertEqual(quick_plot.spatial_unit, "m")
         quick_plot = pybamm.QuickPlot(solution, ["a"], spatial_unit="mm")
         self.assertEqual(quick_plot.spatial_unit, "mm")
         quick_plot = pybamm.QuickPlot(solution, ["a"], spatial_unit="um")
-        self.assertEqual(quick_plot.spatial_unit, "$\mu m$")
+        self.assertEqual(quick_plot.spatial_unit, "$\mu$m")
         with self.assertRaisesRegex(ValueError, "spatial unit"):
             pybamm.QuickPlot(solution, ["a"], spatial_unit="bad unit")
 
@@ -262,6 +263,15 @@ class TestQuickPlot(unittest.TestCase):
 
         pybamm.close_plots()
 
+    def test_plot_with_different_models(self):
+        model = pybamm.BaseModel()
+        a = pybamm.Variable("a")
+        model.rhs = {a: pybamm.Scalar(0)}
+        model.initial_conditions = {a: pybamm.Scalar(0)}
+        solution = pybamm.CasadiSolver("fast").solve(model, [0, 1])
+        with self.assertRaisesRegex(ValueError, "No default output variables"):
+            pybamm.QuickPlot(solution)
+
     def test_spm_simulation(self):
         # SPM
         model = pybamm.lithium_ion.SPM()
@@ -270,17 +280,32 @@ class TestQuickPlot(unittest.TestCase):
         t_eval = np.linspace(0, 10, 2)
         sim.solve(t_eval)
 
+        # pass only a simulation object
+        # it should be converted to a list of corresponding solution
+        quick_plot = pybamm.QuickPlot(sim)
+        quick_plot.plot(0)
+
         # mixed simulation and solution input
         # solution should be extracted from the simulation
         quick_plot = pybamm.QuickPlot([sim, sim.solution])
         quick_plot.plot(0)
+
+        # test creating a GIF
+        quick_plot.create_gif(number_of_images=5, duration=3)
+        assert not os.path.exists("plot*.png")
+        assert os.path.exists("plot.gif")
+        os.remove("plot.gif")
 
         pybamm.close_plots()
 
     def test_loqs_spme(self):
         t_eval = np.linspace(0, 10, 2)
 
-        for model in [pybamm.lithium_ion.SPMe(), pybamm.lead_acid.LOQS()]:
+        for model in [
+            pybamm.lithium_ion.SPMe(),
+            pybamm.lead_acid.LOQS(),
+            pybamm.lithium_ion.DFN({"working electrode": "positive"}),
+        ]:
             geometry = model.default_geometry
             param = model.default_parameter_values
             param.process_model(model)

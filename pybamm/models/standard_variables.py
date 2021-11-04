@@ -310,6 +310,15 @@ class StandardVariables:
             domain=["negative electrode"],
             auxiliary_domains={"secondary": "current collector"},
         )
+        # For SEI reaction at the li metal/separator interface in a li metal model
+        self.L_inner_interface = pybamm.Variable(
+            "Inner SEI thickness",
+            domain=["current collector"],
+        )
+        self.L_outer_interface = pybamm.Variable(
+            "Outer SEI thickness",
+            domain=["current collector"],
+        )
 
     def __setattr__(self, name, value):
         value.print_name = name

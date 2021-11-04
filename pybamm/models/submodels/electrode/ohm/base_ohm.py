@@ -25,6 +25,8 @@ class BaseModel(BaseElectrode):
         super().__init__(param, domain, options, set_positive_potential)
 
     def set_boundary_conditions(self, variables):
+        if self.half_cell:
+            return
 
         if self.domain == "Negative":
             phi_s_cn = variables["Negative current collector potential"]

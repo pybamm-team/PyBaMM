@@ -405,12 +405,7 @@ class BaseElectrolyteConductivity(pybamm.BaseSubModel):
         phi_e = variables["Electrolyte potential"]
 
         if self.half_cell:
-            phi_s_cn = variables["Negative current collector potential"]
-            delta_phi_s = variables["Negative electrode potential drop"]
-            delta_phi = variables["Negative electrode surface potential difference"]
-
-            phi_s = phi_s_cn - delta_phi_s
-            phi_e_ref = phi_s - delta_phi
+            phi_e_ref = variables["Lithium metal interface electrolyte potential"]
             lbc = (phi_e_ref, "Dirichlet")
         else:
             lbc = (pybamm.Scalar(0), "Neumann")

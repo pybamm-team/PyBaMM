@@ -70,11 +70,12 @@
         "example",
         "ideas",
         "review",
-        "test"
+        "test",
+        "tutorial"
       ]
     },
     {
-      "login": "ferranbrosa",
+      "login": "brosaplanella",
       "name": "Ferran Brosa Planella",
       "avatar_url": "https://avatars3.githubusercontent.com/u/28443643?v=4",
       "profile": "https://www.brosaplanella.com",
@@ -103,7 +104,8 @@
         "example",
         "ideas",
         "review",
-        "test"
+        "test",
+        "tutorial"
       ]
     },
     {
@@ -227,6 +229,26 @@
       ]
     },
     {
+      "login": "cwmonroe",
+      "name": "cwmonroe",
+      "avatar_url": "https://avatars.githubusercontent.com/u/92099819?v=4",
+      "profile": "https://github.com/cwmonroe",
+      "contributions": [
+        "ideas",
+        "fundingFinding"
+      ]
+    },
+    {
+      "login": "gjo97",
+      "name": "Greg",
+      "avatar_url": "https://avatars.githubusercontent.com/u/18349157?v=4",
+      "profile": "https://github.com/gjo97",
+      "contributions": [
+        "ideas",
+        "fundingFinding"
+      ]
+    },
+    {
       "login": "FaradayInstitution",
       "name": "Faraday Institution",
       "avatar_url": "https://avatars2.githubusercontent.com/u/42166506?v=4",
@@ -295,7 +317,8 @@
         "code",
         "bug",
         "review",
-        "maintenance"
+        "maintenance",
+        "tutorial"
       ]
     },
     {
@@ -307,7 +330,8 @@
         "code",
         "example",
         "doc",
-        "test"
+        "test",
+        "tutorial"
       ]
     },
     {
@@ -318,7 +342,8 @@
       "contributions": [
         "code",
         "test",
-        "doc"
+        "doc",
+        "tutorial"
       ]
     },
     {
@@ -387,7 +412,8 @@
       "contributions": [
         "ideas",
         "code",
-        "test"
+        "test",
+        "tutorial"
       ]
     },
     {
