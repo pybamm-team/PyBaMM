@@ -775,7 +775,7 @@ class DegradationTests(BaseOutputTest):
 
     def test_degradation_modes(self):
         """Test degradation modes are between 0 and 100%"""
-        np.testing.assert_array_less(-1.1e-3, self.LLI(self.t))
+        np.testing.assert_array_less(-3e-3, self.LLI(self.t))
         np.testing.assert_array_less(-1e-13, self.LAM_ne(self.t))
         np.testing.assert_array_less(-1e-13, self.LAM_pe(self.t))
         np.testing.assert_array_less(self.LLI(self.t), 100)
