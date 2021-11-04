@@ -171,6 +171,11 @@ class DFN(BaseModel):
         if self.half_cell:
             if self.options["SEI"] in ["none", "constant"]:
                 self.submodels[
+                    "counter electrode surface potential difference"
+                ] = pybamm.electrolyte_conductivity.surface_potential_form.Explicit(
+                    self.param, "Negative", self.options
+                )
+                self.submodels[
                     "counter electrode potential"
                 ] = pybamm.electrode.ohm.LithiumMetalExplicit(self.param, self.options)
             else:
@@ -205,7 +210,7 @@ class DFN(BaseModel):
         elif self.options["surface form"] == "algebraic":
             surf_model = surf_form.FullAlgebraic
 
-        for domain in ["Negative", "Separator", "Positive"]:
+        for domain in ["Negative", "Positive"]:
             self.submodels[
                 domain.lower() + " surface potential difference"
-            ] = surf_model(self.param, domain)
+            ] = surf_model(self.param, domain, self.options)

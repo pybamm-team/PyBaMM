@@ -14,21 +14,27 @@ class Explicit(BaseElectrolyteConductivity):
         The parameters to use for this submodel
     domain : str
         The domain in which the model holds
+    options : dict, optional
+        A dictionary of options to be passed to the model.
 
 
     **Extends:** :class:`pybamm.electrolyte_conductivity.BaseElectrolyteConductivity`
     """
 
-    def __init__(self, param, domain):
-        super().__init__(param, domain)
+    def __init__(self, param, domain, options=None):
+        super().__init__(param, domain, options)
 
     def get_coupled_variables(self, variables):
         # skip for separator
         if self.domain == "Separator":
             return variables
 
-        phi_s = variables[self.domain + " electrode potential"]
-        phi_e = variables[self.domain + " electrolyte potential"]
+        if self.half_cell and self.domain == "Negative":
+            domain = "Lithium metal interface"
+        else:
+            domain = self.domain
+        phi_s = variables[domain + " electrode potential"]
+        phi_e = variables[domain + " electrolyte potential"]
         delta_phi = phi_s - phi_e
         variables.update(
             self._get_standard_surface_potential_difference_variables(delta_phi)

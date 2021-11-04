@@ -63,7 +63,10 @@ class InverseButlerVolmer(BaseInterface):
         if self.domain == "Negative":
             if self.options["SEI film resistance"] != "none":
                 R_sei = self.param.R_sei
-                L_sei = variables["X-averaged total SEI thickness"]
+                if self.half_cell:
+                    L_sei = variables["Total SEI thickness"]
+                else:
+                    L_sei = variables["X-averaged total SEI thickness"]
                 eta_sei = -j_tot * L_sei * R_sei
             # Without SEI resistance
             else:

@@ -16,13 +16,15 @@ class BaseModel(BaseElectrolyteConductivity):
         The parameters to use for this submodel
     domain : str
         The domain in which the model holds
+    options : dict, optional
+        A dictionary of options to be passed to the model.
 
 
     **Extends:** :class:`pybamm.electrolyte_conductivity.BaseElectrolyteConductivity`
     """
 
-    def __init__(self, param, domain):
-        super().__init__(param, domain)
+    def __init__(self, param, domain, options=None):
+        super().__init__(param, domain, options)
 
     def get_fundamental_variables(self):
         if self.domain == "Negative":
