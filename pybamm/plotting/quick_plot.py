@@ -1,6 +1,7 @@
 #
 # Class for quick plotting of variables from models
 #
+import os
 import numpy as np
 import pybamm
 from collections import defaultdict
@@ -102,19 +103,21 @@ class QuickPlot(object):
         spatial_unit="um",
         variable_limits="fixed",
     ):
-        if isinstance(solutions, (pybamm.Solution, pybamm.Simulation)):
-            solutions = [solutions]
-        elif not isinstance(solutions, list):
+        input_solutions = solutions
+        solutions = []
+        if not isinstance(input_solutions, (pybamm.Solution, pybamm.Simulation, list)):
             raise TypeError(
                 "solutions must be 'pybamm.Solution' or 'pybamm.Simulation' or list"
             )
-
-        # Extract solution from any simulations
-        for idx, sol in enumerate(solutions):
-            if isinstance(sol, pybamm.Simulation):
-                # 'sol' is actually a 'Simulation' object here so it has a 'Solution'
-                # attribute
-                solutions[idx] = sol.solution
+        elif not isinstance(input_solutions, list):
+            input_solutions = [input_solutions]
+        for sim_or_sol in input_solutions:
+            if isinstance(sim_or_sol, pybamm.Simulation):
+                # 'sim_or_sol' is actually a 'Simulation' object here so it has a
+                # 'Solution' attribute
+                solutions.append(sim_or_sol.solution)
+            elif isinstance(sim_or_sol, pybamm.Solution):
+                solutions.append(sim_or_sol)
 
         models = [solution.all_models[0] for solution in solutions]
 
@@ -140,26 +143,12 @@ class QuickPlot(object):
 
         # Default output variables for lead-acid and lithium-ion
         if output_variables is None:
-            if isinstance(models[0], pybamm.lithium_ion.BaseModel):
-                output_variables = [
-                    "Negative particle surface concentration [mol.m-3]",
-                    "Electrolyte concentration [mol.m-3]",
-                    "Positive particle surface concentration [mol.m-3]",
-                    "Current [A]",
-                    "Negative electrode potential [V]",
-                    "Electrolyte potential [V]",
-                    "Positive electrode potential [V]",
-                    "Terminal voltage [V]",
-                ]
-            elif isinstance(models[0], pybamm.lead_acid.BaseModel):
-                output_variables = [
-                    "Interfacial current density [A.m-2]",
-                    "Electrolyte concentration [mol.m-3]",
-                    "Current [A]",
-                    "Porosity",
-                    "Electrolyte potential [V]",
-                    "Terminal voltage [V]",
-                ]
+            output_variables = models[0].default_quick_plot_variables
+            # raise error if still None
+            if output_variables is None:
+                raise ValueError(
+                    f"No default output variables provided for {models[0].name}"
+                )
 
         self.n_rows = n_rows or int(
             len(output_variables) // np.sqrt(len(output_variables))
@@ -179,7 +168,7 @@ class QuickPlot(object):
             self.spatial_unit = "mm"
         elif spatial_unit == "um":  # micrometers
             self.spatial_factor = 1e6
-            self.spatial_unit = "$\mu m$"
+            self.spatial_unit = "$\mu$m"
         else:
             raise ValueError("spatial unit '{}' not recognized".format(spatial_unit))
 
@@ -601,7 +590,7 @@ class QuickPlot(object):
             # Set either y label or legend entries
             if len(key) == 1:
                 title = split_long_string(key[0])
-                ax.set_title(title, fontsize='medium')
+                ax.set_title(title, fontsize="medium")
             else:
                 ax.legend(
                     variable_handles,
@@ -752,3 +741,41 @@ class QuickPlot(object):
                     )
 
         self.fig.canvas.draw_idle()
+
+    def create_gif(self, number_of_images=80, duration=0.1, output_filename="plot.gif"):
+        """
+        Generates x plots over a time span of max_t - min_t and compiles them to create
+        a GIF.
+
+        Parameters
+        ----------
+        number_of_images : int (optional)
+            Number of images/plots to be compiled for a GIF.
+        duration : float (optional)
+            Duration of visibility of a single image/plot in the created GIF.
+        output_filename : str (optional)
+            Name of the generated GIF file.
+
+        """
+        import imageio
+        import matplotlib.pyplot as plt
+
+        # time stamps at which the images/plots will be created
+        time_array = np.linspace(self.min_t, self.max_t, num=number_of_images)
+        images = []
+
+        # create images/plots
+        for val in time_array:
+            self.plot(val)
+            images.append("plot" + str(val) + ".png")
+            self.fig.savefig("plot" + str(val) + ".png", dpi=300)
+            plt.close()
+
+        # compile the images/plots to create a GIF
+        with imageio.get_writer(output_filename, mode="I", duration=duration) as writer:
+            for image in images:
+                writer.append_data(imageio.imread(image))
+
+        # remove the generated images
+        for image in images:
+            os.remove(image)

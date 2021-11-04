@@ -132,6 +132,7 @@ class Simulation:
         self._mesh = None
         self._disc = None
         self._solution = None
+        self.quick_plot = None
 
         # ignore runtime warnings in notebooks
         if is_notebook():  # pragma: no cover
@@ -780,15 +781,20 @@ class Simulation:
             if starting_solution is None:
                 starting_solution_cycles = []
                 starting_solution_summary_variables = []
+                starting_solution_first_states = []
             else:
                 starting_solution_cycles = starting_solution.cycles.copy()
                 starting_solution_summary_variables = (
                     starting_solution.all_summary_variables.copy()
                 )
+                starting_solution_first_states = (
+                    starting_solution.all_first_states.copy()
+                )
 
             cycle_offset = len(starting_solution_cycles)
             all_cycle_solutions = starting_solution_cycles
             all_summary_variables = starting_solution_summary_variables
+            all_first_states = starting_solution_first_states
             current_solution = starting_solution
 
             # Set up eSOH model (for summary variables)
@@ -893,13 +899,18 @@ class Simulation:
                     self._solution = self._solution + cycle_solution
 
                 # At the final step of the inner loop we save the cycle
-                cycle_solution, cycle_summary_variables = pybamm.make_cycle_solution(
+                (
+                    cycle_solution,
+                    cycle_summary_variables,
+                    cycle_first_state,
+                ) = pybamm.make_cycle_solution(
                     steps,
                     esoh_sim,
                     save_this_cycle=save_this_cycle,
                 )
                 all_cycle_solutions.append(cycle_solution)
                 all_summary_variables.append(cycle_summary_variables)
+                all_first_states.append(cycle_first_state)
 
                 # Calculate capacity_start using the first cycle
                 if cycle_num == 1:
@@ -934,6 +945,7 @@ class Simulation:
             if self.solution is not None and len(all_cycle_solutions) > 0:
                 self.solution.cycles = all_cycle_solutions
                 self.solution.set_summary_variables(all_summary_variables)
+                self.solution.all_first_states = all_first_states
 
             pybamm.logger.notice(
                 "Finish experiment simulation, took {}".format(timer.time())
@@ -1026,6 +1038,30 @@ class Simulation:
         )
 
         return self.quick_plot
+
+    def create_gif(self, number_of_images=80, duration=0.1, output_filename="plot.gif"):
+        """
+        Generates x plots over a time span of t_eval and compiles them to create
+        a GIF. For more information see :meth:`pybamm.QuickPlot.create_gif`
+
+        Parameters
+        ----------
+        number_of_images : int (optional)
+            Number of images/plots to be compiled for a GIF.
+        duration : float (optional)
+            Duration of visibility of a single image/plot in the created GIF.
+        output_filename : str (optional)
+            Name of the generated GIF file.
+
+        """
+        if self.quick_plot is None:
+            self.quick_plot = pybamm.QuickPlot(self._solution)
+
+        self.quick_plot.create_gif(
+            number_of_images=number_of_images,
+            duration=duration,
+            output_filename=output_filename,
+        )
 
     @property
     def model(self):

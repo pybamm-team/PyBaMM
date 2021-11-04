@@ -1,12 +1,36 @@
-# [Unreleased](https://github.com/pybamm-team/PyBaMM)
+# [Unreleased](https://github.com/pybamm-team/PyBaMM/)
+
+## Bug fixes
+
+-   Fixed finite volume discretization in spherical polar coordinates ([#1782](https://github.com/pybamm-team/PyBaMM/pull/1782))
+
+# [v21.10](https://github.com/pybamm-team/PyBaMM/tree/v21.9) - 2021-10-31
 
 ## Features
 
+-   Summary variables can now be user-determined ([#1759](https://github.com/pybamm-team/PyBaMM/pull/1759))
+-   Added `all_first_states` to the `Solution` object for a simulation with experiment ([#1759](https://github.com/pybamm-team/PyBaMM/pull/1759))
+-   Added a new method (`create_gif`) in `QuickPlot`, `Simulation` and `BatchStudy` to create a GIF of a simulation ([#1754](https://github.com/pybamm-team/PyBaMM/pull/1754))
+-   Added more examples for the `BatchStudy` class ([#1747](https://github.com/pybamm-team/PyBaMM/pull/1747))
+-   SEI models can now be included in the half-cell model ([#1705](https://github.com/pybamm-team/PyBaMM/pull/1705))
+
+## Bug fixes
+ 
+-   Half-cell model and lead-acid models can now be simulated with `Experiment`s ([#1759](https://github.com/pybamm-team/PyBaMM/pull/1759))
+-   Removed in-place modification of the solution objects by `QuickPlot` ([#1747](https://github.com/pybamm-team/PyBaMM/pull/1747))
+-   Fixed vector-vector multiplication bug that was causing errors in the SPM with constant voltage or power ([#1735](https://github.com/pybamm-team/PyBaMM/pull/1735))
+
+# [v21.9](https://github.com/pybamm-team/PyBaMM/tree/v21.9) - 2021-09-30
+
+## Features
+
+-   Added thermal parameters (thermal conductivity, specific heat, etc.) to the `Ecker2015` parameter set from Zhao et al. (2018) and Hales et al. (2019) ([#1683](https://github.com/pybamm-team/PyBaMM/pull/1683))
 -   Added `plot_summary_variables` to plot and compare summary variables ([#1678](https://github.com/pybamm-team/PyBaMM/pull/1678))
 -   The DFN model can now be used directly (instead of `BasicDFNHalfCell`) to simulate a half-cell ([#1600](https://github.com/pybamm-team/PyBaMM/pull/1600))
 
 ## Breaking changes
 
+-   Dropped support for Python 3.6 ([#1696](https://github.com/pybamm-team/PyBaMM/pull/1696))
 -   The substring 'negative electrode' has been removed from variables related to SEI and lithium plating (e.g. 'Total negative electrode SEI thickness [m]' replaced by 'Total SEI thickness [m]') ([#1654](https://github.com/pybamm-team/PyBaMM/pull/1654))
 
 # [v21.08](https://github.com/pybamm-team/PyBaMM/tree/v21.08) - 2021-08-26
@@ -26,7 +50,7 @@ example notebook ([#1602](https://github.com/pybamm-team/PyBaMM/pull/1602))
 -   Added LG M50 (NMC811 and graphite + SiOx) parameter set from O'Regan 2021 ([#1594](https://github.com/pybamm-team/PyBaMM/pull/1594))
 -   `pybamm.base_solver.solve` function can take a list of input parameters to calculate the sensitivities of the solution with respect to. Alternatively, it can be set  to `True` to calculate the sensitivities for all input parameters ([#1552](https://github.com/pybamm-team/PyBaMM/pull/1552))
 -   Added capability for `quaternary` domains (in addition to `primary`, `secondary` and `tertiary`), increasing the maximum number of domains that a `Symbol` can have to 4. ([#1580](https://github.com/pybamm-team/PyBaMM/pull/1580))
--   Tabs can now be placed at the bottom of the cell in 1+1D thermal models ([#1581](https://github.com/pybamm-team/PyBaMM/pull/1581)) 
+-   Tabs can now be placed at the bottom of the cell in 1+1D thermal models ([#1581](https://github.com/pybamm-team/PyBaMM/pull/1581))
 -   Added temperature dependence on electrode electronic conductivity ([#1570](https://github.com/pybamm-team/PyBaMM/pull/1570))
 -   `pybamm.base_solver.solve` function can take a list of input parameters to calculate the sensitivities of the solution with respect to. Alternatively, it can be set  to `True` to calculate the sensitivities for all input parameters ([#1552](https://github.com/pybamm-team/PyBaMM/pull/1552))
 -   Added a new lithium-ion model `MPM` or Many-Particle Model, with a distribution of particle sizes in each electrode. ([#1529](https://github.com/pybamm-team/PyBaMM/pull/1529))

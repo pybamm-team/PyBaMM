@@ -206,7 +206,12 @@ class ParameterValues:
                 )
             # Create path to component and load values
             component_path = os.path.join(
-                base_chemistry, component_group.replace(" ", "_") + "s", component
+                "pybamm",
+                "input",
+                "parameters",
+                base_chemistry,
+                component_group.replace(" ", "_") + "s",
+                component,
             )
             file_path = self.find_parameter(
                 os.path.join(component_path, "parameters.csv")
@@ -373,25 +378,29 @@ class ParameterValues:
                     "Parameters involving 'surface area density' have been renamed to "
                     "'surface area to volume ratio' ('{}' found)".format(param)
                 )
-            if "reaction rate" in param:
+            elif "reaction rate" in param:
                 raise ValueError(
                     "Parameters involving 'reaction rate' have been replaced with "
                     "'exchange-current density' ('{}' found)".format(param)
                 )
-        for param in values:
-            if "particle distribution in x" in param:
+            elif "particle distribution in x" in param:
                 raise ValueError(
                     "The parameter '{}' has been deprecated".format(param)
                     + "The particle radius is now set as a function of x directly "
                     "instead of providing a reference value and a distribution."
                 )
-        for param in values:
-            if "surface area to volume ratio distribution in x" in param:
+            elif "surface area to volume ratio distribution in x" in param:
                 raise ValueError(
                     "The parameter '{}' has been deprecated".format(param)
                     + "The surface area to volume ratio is now set as a function "
                     "of x directly instead of providing a reference value and a "
                     "distribution."
+                )
+            elif "propotional term" in param:
+                raise ValueError(
+                    f"The parameter '{param}' has been renamed to "
+                    "'... proportional term [s-1]', and its value should now be divided"
+                    "by 3600 to get the same results as before."
                 )
 
     def process_model(self, unprocessed_model, inplace=True):
