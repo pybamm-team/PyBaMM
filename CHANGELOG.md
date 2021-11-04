@@ -1,3 +1,9 @@
+# [Unreleased](https://github.com/pybamm-team/PyBaMM/)
+
+## Bug fixes
+
+-   Fixed finite volume discretization in spherical polar coordinates ([#1782](https://github.com/pybamm-team/PyBaMM/pull/1782))
+
 # [v21.10](https://github.com/pybamm-team/PyBaMM/tree/v21.9) - 2021-10-31
 
 ## Features
