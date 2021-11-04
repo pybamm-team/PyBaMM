@@ -1,5 +1,5 @@
 #
-# Tests for the lithium-ion SPMe model
+# Tests for the half-cell lithium-ion SPMe model
 #
 import pybamm
 import tests
@@ -7,7 +7,7 @@ import tests
 import unittest
 
 
-class TestSPMe(unittest.TestCase):
+class TestSPMeHalfCell(unittest.TestCase):
     def test_basic_processing(self):
         options = {"working electrode": "positive"}
         model = pybamm.lithium_ion.SPMe(options)
@@ -16,7 +16,7 @@ class TestSPMe(unittest.TestCase):
         modeltest.test_all(skip_output_tests=True)
 
 
-class TestSPMeWithSEI(unittest.TestCase):
+class TestSPMeHalfCellWithSEI(unittest.TestCase):
     def test_well_posed_constant(self):
         options = {"working electrode": "positive", "SEI": "constant"}
         model = pybamm.lithium_ion.SPMe(options)
