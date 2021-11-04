@@ -16,7 +16,7 @@ class TestSPMe(unittest.TestCase):
         modeltest.test_all(skip_output_tests=True)
 
 
-class TestDFNWithSEI(unittest.TestCase):
+class TestSPMeWithSEI(unittest.TestCase):
     def test_well_posed_constant(self):
         options = {"working electrode": "positive", "SEI": "constant"}
         model = pybamm.lithium_ion.SPMe(options)
