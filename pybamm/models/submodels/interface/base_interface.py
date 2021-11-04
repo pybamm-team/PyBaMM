@@ -667,14 +667,21 @@ class BaseInterface(pybamm.BaseSubModel):
 
         delta_phi_av_dim = ocp_ref + delta_phi_av * self.param.potential_scale
 
-        variables = {
-            "X-averaged "
-            + self.domain.lower()
-            + " electrode surface potential difference": delta_phi_av,
-            "X-averaged "
-            + self.domain.lower()
-            + " electrode surface potential difference [V]": delta_phi_av_dim,
-        }
+        if self.half_cell and self.domain == "Negative":
+            variables = {
+                "Lithium metal interface surface potential difference": delta_phi_av,
+                "Lithium metal interface surface potential difference [V]"
+                "": delta_phi_av_dim,
+            }
+        else:
+            variables = {
+                "X-averaged "
+                + self.domain.lower()
+                + " electrode surface potential difference": delta_phi_av,
+                "X-averaged "
+                + self.domain.lower()
+                + " electrode surface potential difference [V]": delta_phi_av_dim,
+            }
 
         return variables
 

@@ -112,9 +112,9 @@ class Full(BaseModel):
             ] = pybamm.electrolyte_conductivity.Full(self.param)
             surf_model = surf_form.Explicit
         elif self.options["surface form"] == "differential":
-            surf_model = surf_form.LeadingOrderDifferential
+            surf_model = surf_form.FullDifferential
         elif self.options["surface form"] == "algebraic":
-            surf_model = surf_form.LeadingOrderAlgebraic
+            surf_model = surf_form.FullAlgebraic
 
         for domain in ["Negative", "Separator", "Positive"]:
             self.submodels[
