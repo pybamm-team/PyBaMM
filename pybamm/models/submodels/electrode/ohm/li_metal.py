@@ -5,7 +5,30 @@ import pybamm
 from .base_ohm import BaseModel
 
 
-class LithiumMetalSurfaceForm(BaseModel):
+class LithiumMetalBaseModel(BaseModel):
+    def __init__(self, param, options=None):
+        super().__init__(param, "Negative", options=options)
+
+    def _get_li_metal_interface_variables(self, delta_phi_s, phi_s, phi_e):
+        param = self.param
+        pot_scale = param.potential_scale
+        delta_phi_s_dim = pot_scale * delta_phi_s
+
+        variables = {
+            "Negative electrode potential drop": delta_phi_s,
+            "Negative electrode potential drop [V]": delta_phi_s_dim,
+            "X-averaged negative electrode ohmic losses": delta_phi_s / 2,
+            "X-averaged negative electrode ohmic losses [V]": delta_phi_s_dim / 2,
+            "Lithium metal interface electrode potential": phi_s,
+            "Lithium metal interface electrode potential [V]": pot_scale * phi_s,
+            "Lithium metal interface electrolyte potential": phi_e,
+            "Lithium metal interface electrolyte potential [V]": param.U_n_ref
+            + pot_scale * phi_e,
+        }
+        return variables
+
+
+class LithiumMetalSurfaceForm(LithiumMetalBaseModel):
     """Explicit model for potential drop across a lithium metal electrode.
 
     Parameters
@@ -15,11 +38,8 @@ class LithiumMetalSurfaceForm(BaseModel):
     options : dict, optional
         A dictionary of options to be passed to the model.
 
-    **Extends:** :class:`pybamm.electrode.ohm.BaseModel`
+    **Extends:** :class:`pybamm.electrode.li_metal.LithiumMetalBaseModel`
     """
-
-    def __init__(self, param, options=None):
-        super().__init__(param, "Negative", options=options)
 
     def get_fundamental_variables(self):
         ocp_ref = self.param.U_n_ref
@@ -44,7 +64,6 @@ class LithiumMetalSurfaceForm(BaseModel):
         T_n = variables["Negative current collector temperature"]
         l_n = param.l_n
         delta_phi_s = i_boundary_cc * l_n / param.sigma_n(T_n)
-        delta_phi_s_dim = param.potential_scale * delta_phi_s
 
         phi_s_cn = variables["Negative current collector potential"]
         delta_phi = variables["Lithium metal interface surface potential difference"]
@@ -54,14 +73,7 @@ class LithiumMetalSurfaceForm(BaseModel):
         phi_e = phi_s - delta_phi
 
         variables.update(
-            {
-                "Negative electrode potential drop": delta_phi_s,
-                "Negative electrode potential drop [V]": delta_phi_s_dim,
-                "X-averaged negative electrode ohmic losses": delta_phi_s / 2,
-                "X-averaged negative electrode ohmic losses [V]": delta_phi_s_dim / 2,
-                "Lithium metal interface electrode potential": phi_s,
-                "Lithium metal interface electrolyte potential": phi_e,
-            }
+            self._get_li_metal_interface_variables(delta_phi_s, phi_s, phi_e)
         )
         return variables
 
@@ -82,7 +94,7 @@ class LithiumMetalSurfaceForm(BaseModel):
         self.algebraic[delta_phi] = i_cc - sum_j
 
 
-class LithiumMetalExplicit(BaseModel):
+class LithiumMetalExplicit(LithiumMetalBaseModel):
     """Explicit model for potential drop across a lithium metal electrode.
 
     Parameters
@@ -92,22 +104,16 @@ class LithiumMetalExplicit(BaseModel):
     options : dict, optional
         A dictionary of options to be passed to the model.
 
-    **Extends:** :class:`pybamm.electrode.ohm.BaseModel`
+    **Extends:** :class:`pybamm.electrode.li_metal.LithiumMetalBaseModel`
     """
-
-    def __init__(self, param, options=None):
-        super().__init__(param, "Negative", options=options)
 
     def get_coupled_variables(self, variables):
         param = self.param
-        ocp_ref = self.param.U_n_ref
-        pot_scale = self.param.potential_scale
 
         i_boundary_cc = variables["Current collector current density"]
         T_n = variables["Negative current collector temperature"]
         l_n = param.l_n
         delta_phi_s = i_boundary_cc * l_n / param.sigma_n(T_n)
-        delta_phi_s_dim = param.potential_scale * delta_phi_s
 
         phi_s_cn = variables["Negative current collector potential"]
         delta_phi = variables["Lithium metal interface surface potential difference"]
@@ -116,17 +122,6 @@ class LithiumMetalExplicit(BaseModel):
         phi_e = phi_s - delta_phi
 
         variables.update(
-            {
-                "Negative electrode potential drop": delta_phi_s,
-                "Negative electrode potential drop [V]": delta_phi_s_dim,
-                "X-averaged negative electrode ohmic losses": delta_phi_s / 2,
-                "X-averaged negative electrode ohmic losses [V]": delta_phi_s_dim / 2,
-                "Lithium metal interface electrode potential": phi_s,
-                "Lithium metal interface electrolyte potential": phi_e,
-                "Lithium metal interface surface potential difference": delta_phi,
-                "Lithium metal interface surface potential difference [V]": ocp_ref
-                + delta_phi * pot_scale,
-            }
+            self._get_li_metal_interface_variables(delta_phi_s, phi_s, phi_e)
         )
-
         return variables
