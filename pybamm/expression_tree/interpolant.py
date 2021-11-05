@@ -59,6 +59,11 @@ class Interpolant(pybamm.Function):
                 x1 = x
                 x = [x]
             x2 = None
+
+        print("x1: {0}".format(x1))
+        print("")
+        print("y: {0}".format(y))
+
         if x1.shape[0] != y.shape[0]:
             raise ValueError(
                 "len(x1) should equal y=shape[0], "
