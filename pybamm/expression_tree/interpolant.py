@@ -178,4 +178,6 @@ class Interpolant(pybamm.Function):
             else:
                 children_eval_flat.append(child)
 
+        print("EVALUATION RESULT SHAPE: {0}".format(self.function(*children_eval_flat).flatten()[:, np.newaxis].shape))
+
         return self.function(*children_eval_flat).flatten()[:, np.newaxis]
