@@ -1,3 +1,9 @@
+# [Unreleased](https://github.com/pybamm-team/PyBaMM/)
+
+## Bug fixes
+
+-   Fixed `sympy` operators for `Arctan` and `Exponential` ([#1786](https://github.com/pybamm-team/PyBaMM/pull/1786))
+
 # [v21.10](https://github.com/pybamm-team/PyBaMM/tree/v21.9) - 2021-10-31
 
 ## Features
