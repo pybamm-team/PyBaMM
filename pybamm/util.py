@@ -277,9 +277,9 @@ def load_function(filename):
     if "pybamm" in filename:
         root_path = filename[filename.rfind("pybamm") :]
     # Commenting not removing these lines in case we get problems later
-    # elif os.getcwd() in filename:
-    #     root_path = filename.replace(os.getcwd(), "")
-    #     root_path = root_path[1:]
+    elif os.getcwd() in filename:
+        root_path = filename.replace(os.getcwd(), "")
+        root_path = root_path[1:]
     else:
         root_path = filename
 
