@@ -331,11 +331,11 @@ class ParameterValues:
                         data_path = os.path.join(
                             pybamm.root_dir(), "pybamm", "input", "drive_cycles"
                         )
-                        filename = os.path.join(data_path, value[14:] + ".pkl")
-                        function_name = value[14:]
+                        filename = os.path.join(data_path, value[17:] + ".pkl")
+                        function_name = value[17:]
                     else:
-                        filename = os.path.join(path, value[6:] + ".pkl")
-                        function_name = value[6:]
+                        filename = os.path.join(path, value[9:] + ".pkl")
+                        function_name = value[9:]
                     filename = pybamm.get_parameters_filepath(filename)
                     my_pspc = PybammStandardParameterClass(pkl_filename=filename)
                     data = my_pspc.get_interpolation_parameters()
