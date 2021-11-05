@@ -99,6 +99,7 @@ class Interpolant(pybamm.Function):
 
         if interpolator == "linear":
             if len(x) == 1:
+                self.dimension = 1
                 if extrapolate is False:
                     interpolating_function = interpolate.interp1d(
                         x1, y.T, bounds_error=False, fill_value=np.nan
@@ -108,6 +109,7 @@ class Interpolant(pybamm.Function):
                         x1, y.T, bounds_error=False, fill_value="extrapolate"
                     )
             elif len(x) == 2:
+                self.dimension = 2
                 interpolating_function = interpolate.interp2d(x1, x2, y)
                 # interpolating_function = lambda *params: grid_interpolating_function(*params).flatten()
         elif interpolator == "pchip":
@@ -178,6 +180,21 @@ class Interpolant(pybamm.Function):
             else:
                 children_eval_flat.append(child)
 
-        print("EVALUATION RESULT SHAPE: {0}".format(self.function(*children_eval_flat).flatten()[:, np.newaxis].shape))
+        if self.dimension == 1:
 
-        return self.function(*children_eval_flat).flatten()[:, np.newaxis]
+            print("EVALUATION RESULT SHAPE: {0}".format(self.function(*children_eval_flat).flatten()[:, np.newaxis].shape))
+
+            return self.function(*children_eval_flat).flatten()[:, np.newaxis]
+
+        elif self.dimension == 2:
+
+            print("EVALUATION RESULT SHAPE: {0}".format(
+                self.function(*children_eval_flat).shape))
+
+            return self.function(*children_eval_flat)
+
+        else:
+
+            raise ValueError("Invalid dimension: {0}".format(self.dimension))
+
+
