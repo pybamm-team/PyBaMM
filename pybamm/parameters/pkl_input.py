@@ -34,12 +34,16 @@ class PybammStandardParameterClass:
 
         X = list(np.meshgrid(*x_))
 
+        X_f = [el.flatten() for el in X]
+
         x = np.column_stack([el.reshape(-1, 1) for el in X])
 
         y = self.model.predict(x)
 
         Y = y.reshape(1000, 1000)
 
-        return x_, Y
+        # return x_, Y
+
+        return X_f, Y
 
 
