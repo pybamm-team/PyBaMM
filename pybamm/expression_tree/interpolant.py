@@ -188,10 +188,18 @@ class Interpolant(pybamm.Function):
 
         elif self.dimension == 2:
 
-            print("EVALUATION RESULT SHAPE: {0}".format(
-                self.function(*children_eval_flat).shape))
+            res = self.function(*children_eval_flat)
 
-            return np.diagonal(self.function(*children_eval_flat))
+            print("EVALUATION RESULT SHAPE: {0}".format(
+                res.shape))
+
+            if res.ndim > 1:
+
+                return np.diagonal(res)
+
+            else:
+
+                return res
 
         else:
 
