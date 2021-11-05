@@ -700,18 +700,18 @@ class ParameterValues:
                     # Define event to catch extrapolation. In these events the sign is
                     # important: it should be positive inside of the range and negative
                     # outside of it
-                    for data_index in range(len(data) - 1):
+                    for data_index in range(len(data[0]) - 1):
                         self.parameter_events.append(
                             pybamm.Event(
                                 "Interpolant {} lower bound".format(name),
-                                pybamm.min(new_children[data_index] - min(data[data_index])),
+                                pybamm.min(new_children[data_index] - min(data[0][data_index])),
                                 pybamm.EventType.INTERPOLANT_EXTRAPOLATION,
                             )
                         )
                         self.parameter_events.append(
                             pybamm.Event(
                                 "Interpolant {} upper bound".format(name),
-                                pybamm.min(max(data[data_index]) - new_children[data_index]),
+                                pybamm.min(max(data[0][data_index]) - new_children[data_index]),
                                 pybamm.EventType.INTERPOLANT_EXTRAPOLATION,
                             )
                         )
