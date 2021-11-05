@@ -686,7 +686,7 @@ class ParameterValues:
 
                 elif len(function_name) == 3:  # ML data
                     # to create an Interpolant
-                    name, data = function_name
+                    name, data, _ = function_name
                     function = pybamm.Interpolant(
                         data[0: -1], data[-1], *new_children, name=name
                     )
