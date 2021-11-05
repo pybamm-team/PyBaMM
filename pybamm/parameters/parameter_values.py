@@ -9,6 +9,7 @@ import numbers
 import warnings
 from pprint import pformat
 from collections import defaultdict
+from pkl_input import PybammStandardParameterClass
 
 
 class ParameterValues:
@@ -323,6 +324,26 @@ class ParameterValues:
                     # Save name and data
                     self._dict_items[name] = (function_name, data)
                     values[name] = (function_name, data)
+
+                # Machine learning data from Random Forest Regressor
+                elif value.startswith("[current ml data]") or value.startswith("[ml data]"):
+                    if value.startswith("[current ml data]"):
+                        data_path = os.path.join(
+                            pybamm.root_dir(), "pybamm", "input", "drive_cycles"
+                        )
+                        filename = os.path.join(data_path, value[14:] + ".pkl")
+                        function_name = value[14:]
+                    else:
+                        filename = os.path.join(path, value[6:] + ".pkl")
+                        function_name = value[6:]
+                    filename = pybamm.get_parameters_filepath(filename)
+                    my_pspc = PybammStandardParameterClass(pkl_filename=filename)
+                    data = my_pspc.get_interpolation_parameters()
+                    # Save name and data
+                    # Add padding to see a difference from CSV imported data
+                    self._dict_items[name] = (function_name, data, "padding")
+                    values[name] = (function_name, data, "padding")
+
                 elif value == "[input]":
                     self._dict_items[name] = pybamm.InputParameter(name)
                 # Anything else should be a converted to a float
