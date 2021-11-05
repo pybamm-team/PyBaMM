@@ -275,14 +275,9 @@ class PolynomialProfile(BaseParticle):
         ]
 
         if self.domain == "Negative":
-            x_n = pybamm.standard_spatial_vars.x_n
-            r_n = pybamm.standard_spatial_vars.r_n
-            c_init = self.param.c_n_init(r_n, x_n)
-
+            c_init = pybamm.r_average(self.param.c_n_init)
         elif self.domain == "Positive":
-            x_p = pybamm.standard_spatial_vars.x_p
-            r_p = pybamm.standard_spatial_vars.r_p
-            c_init = self.param.c_p_init(r_p, x_p)
+            c_init = pybamm.r_average(self.param.c_p_init)
 
         self.initial_conditions = {c_s_rav: c_init}
 

@@ -1393,6 +1393,10 @@ def yz_average(symbol):
         return Integral(symbol, [y, z]) / A
 
 
+def xyz_average(symbol):
+    return yz_average(x_average(symbol))
+
+
 def r_average(symbol):
     """
     convenience function for creating an average in the r-direction.

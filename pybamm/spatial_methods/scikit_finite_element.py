@@ -327,9 +327,7 @@ class ScikitFiniteElement(pybamm.SpatialMethod):
         """
         # get primary domain mesh
         domain = child.domains["primary"]
-        if isinstance(domain, list):
-            domain = domain[0]
-        mesh = self.mesh[domain]
+        mesh = self.mesh[domain[0]]
 
         # make form for the integral
         @skfem.LinearForm
@@ -391,9 +389,7 @@ class ScikitFiniteElement(pybamm.SpatialMethod):
             The finite element integral vector for the domain
         """
         # get primary domain mesh
-        if isinstance(domain, list):
-            domain = domain[0]
-        mesh = self.mesh[domain]
+        mesh = self.mesh[domain[0]]
 
         # make form for the boundary integral
         @skfem.LinearForm

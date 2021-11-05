@@ -308,9 +308,7 @@ class Symbol(anytree.NodeMixin):
         # Turn dictionary into appropriate form
         if auxiliary_domains is None:
             auxiliary_domains = {}
-        for level, dom in auxiliary_domains.items():
-            if isinstance(dom, str):
-                auxiliary_domains[level] = [dom]
+        auxiliary_domains = pybamm.DomainDict(auxiliary_domains)
 
         # Check domains don't clash
         if self.domain in auxiliary_domains.values():

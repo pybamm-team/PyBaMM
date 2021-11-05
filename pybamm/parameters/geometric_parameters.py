@@ -90,15 +90,16 @@ class GeometricParameters(BaseParameters):
             "Positive area-weighted particle-size standard deviation [m]"
         )
 
-    def R_n_dimensional(self, x):
-        """Negative particle radius as a function of through-cell distance"""
-        inputs = {"Through-cell distance (x_n) [m]": x}
-        return pybamm.FunctionParameter("Negative particle radius [m]", inputs)
-
-    def R_p_dimensional(self, x):
-        """Positive particle radius as a function of through-cell distance"""
-        inputs = {"Through-cell distance (x_p) [m]": x}
-        return pybamm.FunctionParameter("Positive particle radius [m]", inputs)
+        x_n = pybamm.standard_spatial_vars.x_n
+        x_p = pybamm.standard_spatial_vars.x_p
+        self.R_n_dimensional = pybamm.FunctionParameter(
+            "Negative particle radius [m]",
+            {"Through-cell distance (x_n) [m]": x_n * self.L_x},
+        )
+        self.R_p_dimensional = pybamm.FunctionParameter(
+            "Positive particle radius [m]",
+            {"Through-cell distance (x_p) [m]": x_p * self.L_x},
+        )
 
     def f_a_dist_n_dimensional(self, R):
         """
@@ -108,7 +109,8 @@ class GeometricParameters(BaseParameters):
             "Negative particle-size variable [m]": R,
         }
         return pybamm.FunctionParameter(
-            "Negative area-weighted particle-size distribution [m-1]", inputs,
+            "Negative area-weighted particle-size distribution [m-1]",
+            inputs,
         )
 
     def f_a_dist_p_dimensional(self, R):
@@ -119,7 +121,8 @@ class GeometricParameters(BaseParameters):
             "Positive particle-size variable [m]": R,
         }
         return pybamm.FunctionParameter(
-            "Positive area-weighted particle-size distribution [m-1]", inputs,
+            "Positive area-weighted particle-size distribution [m-1]",
+            inputs,
         )
 
     def _set_scales(self):
@@ -128,9 +131,17 @@ class GeometricParameters(BaseParameters):
         # Microscale geometry
         # Note: these scales are necessary here to non-dimensionalise the
         # particle size distributions.
-        # Use typical values at electrode/current collector interface.
-        self.R_n_typ = self.R_n_dimensional(0)
-        self.R_p_typ = self.R_p_dimensional(self.L_x)
+        # Can't use x_average here due to circular import
+        x_n = pybamm.SpatialVariable("x", domain="negative electrode")
+        x_p = pybamm.SpatialVariable("x", domain="positive electrode")
+        self.R_n_typ = pybamm.yz_average(
+            pybamm.Integral(self.R_n_dimensional, x_n)
+            / pybamm.Integral(pybamm.ones_like(self.R_n_dimensional), x_n)
+        )
+        self.R_p_typ = pybamm.yz_average(
+            pybamm.Integral(self.R_p_dimensional, x_p)
+            / pybamm.Integral(pybamm.ones_like(self.R_p_dimensional), x_p)
+        )
 
     def _set_dimensionless_parameters(self):
         """Defines the dimensionless parameters."""
@@ -168,21 +179,9 @@ class GeometricParameters(BaseParameters):
         self.sd_a_n = self.sd_a_n_dim / self.R_n_typ
         self.sd_a_p = self.sd_a_p_dim / self.R_p_typ
 
-    def R_n(self, x):
-        """
-        Dimensionless negative particle radius as a function of dimensionless
-        position x
-        """
-        x_dim = x * self.L_x
-        return self.R_n_dimensional(x_dim) / self.R_n_typ
-
-    def R_p(self, x):
-        """
-        Dimensionless positive particle radius as a function of dimensionless
-        position x
-        """
-        x_dim = x * self.L_x
-        return self.R_p_dimensional(x_dim) / self.R_p_typ
+        # Particle radius
+        self.R_n = self.R_n_dimensional / self.R_n_typ
+        self.R_p = self.R_p_dimensional / self.R_p_typ
 
     def f_a_dist_n(self, R):
         """

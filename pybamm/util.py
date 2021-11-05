@@ -136,17 +136,23 @@ class FuzzyDict(dict):
 
 
 class DomainDict(dict):
-    def update(self, items):
+    def __init__(self, d):
+        super().__init__({k: v for k, v in d.items() if (k == "primary" or v != [])})
+
+    def update(self, dict_):
         if any(
             key not in ["primary", "secondary", "tertiary", "quaternary"]
-            for key in items
+            for key in dict_
         ):
             raise KeyError(
                 "DomainDict keys must be 'primary', 'secondary', 'tertiary', "
                 "or 'quaternary'"
             )
+        for level, dom in dict_.items():
+            if isinstance(dom, str):
+                dict_[level] = [dom]
         return super().update(
-            {k: v for k, v in items.items() if (k == "primary" or v != [])}
+            {k: v for k, v in dict_.items() if (k == "primary" or v != [])}
         )
 
     def __setitem__(self, key, value):

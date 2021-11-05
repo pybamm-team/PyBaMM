@@ -233,13 +233,7 @@ class BasicDFNHalfCell(BaseModel):
                 "Neumann",
             ),
         }
-
-        # c_w_init can in general be a function of x
-        # Note the broadcasting, for domains
-        var = pybamm.standard_spatial_vars
-        r_w = var.r_p
-        x_w = pybamm.PrimaryBroadcast(var.x_p, "positive particle")
-        self.initial_conditions[c_s_w] = c_w_init(r_w, x_w)
+        self.initial_conditions[c_s_w] = c_w_init
 
         # Events specify points at which a solution should terminate
         self.events += [

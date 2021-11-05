@@ -603,6 +603,12 @@ class ParameterValues:
             return self._processed_symbols[symbol.id]
         except KeyError:
             processed_symbol = self._process_symbol(symbol)
+            if (
+                isinstance(processed_symbol, pybamm.Scalar)
+                and processed_symbol.evaluate() == 1
+            ):
+                n = 1
+
             self._processed_symbols[symbol.id] = processed_symbol
 
             return processed_symbol

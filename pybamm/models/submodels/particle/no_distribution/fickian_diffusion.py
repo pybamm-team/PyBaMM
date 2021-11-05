@@ -99,19 +99,8 @@ class FickianDiffusion(BaseParticle):
 
     def set_initial_conditions(self, variables):
         c_s = variables[self.domain + " particle concentration"]
-
         if self.domain == "Negative":
-            r_n = pybamm.standard_spatial_vars.r_n
-            x_n = pybamm.PrimaryBroadcast(
-                pybamm.standard_spatial_vars.x_n, "negative particle"
-            )
-            c_init = self.param.c_n_init(r_n, x_n)
-
+            c_init = self.param.c_n_init
         elif self.domain == "Positive":
-            r_p = pybamm.standard_spatial_vars.r_p
-            x_p = pybamm.PrimaryBroadcast(
-                pybamm.standard_spatial_vars.x_p, "positive particle"
-            )
-            c_init = self.param.c_p_init(r_p, x_p)
-
+            c_init = self.param.c_p_init
         self.initial_conditions = {c_s: c_init}
