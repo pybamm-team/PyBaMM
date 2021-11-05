@@ -659,28 +659,59 @@ class ParameterValues:
             # Create Function or Interpolant or Scalar object
             if isinstance(function_name, tuple):
                 # If function_name is a tuple then it should be (name, data) and we need
-                # to create an Interpolant
-                name, data = function_name
-                function = pybamm.Interpolant(
-                    data[:, 0], data[:, 1], *new_children, name=name
-                )
-                # Define event to catch extrapolation. In these events the sign is
-                # important: it should be positive inside of the range and negative
-                # outside of it
-                self.parameter_events.append(
-                    pybamm.Event(
-                        "Interpolant {} lower bound".format(name),
-                        pybamm.min(new_children[0] - min(data[:, 0])),
-                        pybamm.EventType.INTERPOLANT_EXTRAPOLATION,
+                # It might be ML or CSV data, so we check the length (padding added for ML)
+                if len(function_name) == 2:  # CSV data
+                    # to create an Interpolant
+                    name, data = function_name
+                    function = pybamm.Interpolant(
+                        data[:, 0], data[:, 1], *new_children, name=name
                     )
-                )
-                self.parameter_events.append(
-                    pybamm.Event(
-                        "Interpolant {} upper bound".format(name),
-                        pybamm.min(max(data[:, 0]) - new_children[0]),
-                        pybamm.EventType.INTERPOLANT_EXTRAPOLATION,
+                    # Define event to catch extrapolation. In these events the sign is
+                    # important: it should be positive inside of the range and negative
+                    # outside of it
+                    self.parameter_events.append(
+                        pybamm.Event(
+                            "Interpolant {} lower bound".format(name),
+                            pybamm.min(new_children[0] - min(data[:, 0])),
+                            pybamm.EventType.INTERPOLANT_EXTRAPOLATION,
+                        )
                     )
-                )
+                    self.parameter_events.append(
+                        pybamm.Event(
+                            "Interpolant {} upper bound".format(name),
+                            pybamm.min(max(data[:, 0]) - new_children[0]),
+                            pybamm.EventType.INTERPOLANT_EXTRAPOLATION,
+                        )
+                    )
+
+                elif len(function_name) == 3:  # ML data
+                    # to create an Interpolant
+                    name, data = function_name
+                    function = pybamm.Interpolant(
+                        data[0: -1], data[-1], *new_children, name=name
+                    )
+                    # Define event to catch extrapolation. In these events the sign is
+                    # important: it should be positive inside of the range and negative
+                    # outside of it
+                    for data_index in range(len(data) - 1):
+                        self.parameter_events.append(
+                            pybamm.Event(
+                                "Interpolant {} lower bound".format(name),
+                                pybamm.min(new_children[data_index] - min(data[data_index])),
+                                pybamm.EventType.INTERPOLANT_EXTRAPOLATION,
+                            )
+                        )
+                        self.parameter_events.append(
+                            pybamm.Event(
+                                "Interpolant {} upper bound".format(name),
+                                pybamm.min(max(data[data_index]) - new_children[data_index]),
+                                pybamm.EventType.INTERPOLANT_EXTRAPOLATION,
+                            )
+                        )
+
+                else:
+                    raise Exception("Invalid function name length: {0}".format(len(function_name)))
+
             elif isinstance(function_name, numbers.Number):
                 # Check not NaN (parameter in csv file but no value given)
                 if np.isnan(function_name):
