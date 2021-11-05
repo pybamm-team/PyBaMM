@@ -42,6 +42,12 @@ class Interpolant(pybamm.Function):
         extrapolate=True,
         entries_string=None,
     ):
+
+        print("x: {0}".format(x))
+        print("y: {0}".format(y))
+        print("type(x): {0}".format(type(x)))
+        print("type(y): {0}".format(type(y)))
+
         if isinstance(x, (tuple, list)) and len(x) == 2:
             interpolator = interpolator or "linear"
             if interpolator != "linear":
@@ -60,9 +66,9 @@ class Interpolant(pybamm.Function):
                 x = [x]
             x2 = None
 
-        print("x1: {0}".format(x1))
-        print("")
-        print("y: {0}".format(y))
+        # print("x1: {0}".format(x1))
+        # print("")
+        # print("y: {0}".format(y))
 
         if x1.shape[0] != y.shape[0]:
             raise ValueError(
