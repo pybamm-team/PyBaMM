@@ -115,13 +115,15 @@ class CurrentForInverseButlerVolmer(BaseInterface):
         The domain(s) in which to compute the interfacial current.
     reaction : str
         The name of the reaction being implemented
+    options: dict, optional
+        A dictionary of options to be passed to the model.
 
     **Extends:** :class:`pybamm.interface.BaseInterface`
 
     """
 
-    def __init__(self, param, domain, reaction):
-        super().__init__(param, domain, reaction)
+    def __init__(self, param, domain, reaction, options=None):
+        super().__init__(param, domain, reaction, options=options)
 
     def get_coupled_variables(self, variables):
         j_tot = variables[
@@ -139,8 +141,13 @@ class CurrentForInverseButlerVolmer(BaseInterface):
         variables.update(self._get_standard_interfacial_current_variables(j))
 
         if (
-            "Negative electrode" + self.reaction_name + " interfacial current density"
-            in variables
+            self.half_cell
+            or (
+                "Negative electrode"
+                + self.reaction_name
+                + " interfacial current density"
+                in variables
+            )
             and "Positive electrode"
             + self.reaction_name
             + " interfacial current density"
