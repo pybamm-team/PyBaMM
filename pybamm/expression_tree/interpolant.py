@@ -191,7 +191,7 @@ class Interpolant(pybamm.Function):
             print("EVALUATION RESULT SHAPE: {0}".format(
                 self.function(*children_eval_flat).shape))
 
-            return self.function(*children_eval_flat)
+            return np.diagonal(self.function(*children_eval_flat))
 
         else:
 
