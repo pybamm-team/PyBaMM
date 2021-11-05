@@ -664,7 +664,7 @@ class ParameterValues:
                     # to create an Interpolant
                     name, data = function_name
                     function = pybamm.Interpolant(
-                        data[:, 0], data[:, 1], *new_children, name=name
+                        data[:, 0], data[:, 1], new_children, name=name
                     )
                     # Define event to catch extrapolation. In these events the sign is
                     # important: it should be positive inside of the range and negative
