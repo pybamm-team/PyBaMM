@@ -194,15 +194,15 @@ class Interpolant(pybamm.Function):
 
             if res.ndim > 1:
 
-                print("RETURNED EVALUATION RESULT SHAPE: {0}".format(np.diagonal(res).shape))
+                print("RETURNED EVALUATION RESULT SHAPE: {0}".format(np.diagonal(res)[:, np.newaxis].shape))
 
-                return np.diagonal(res)
+                return np.diagonal(res)[:, np.newaxis]
 
             else:
 
-                print("RETURNED EVALUATION RESULT SHAPE: {0}".format(res.shape))
+                print("RETURNED EVALUATION RESULT SHAPE: {0}".format(res[:, np.newaxis].shape))
 
-                return res
+                return res[:, np.newaxis]
 
         else:
 
