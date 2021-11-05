@@ -7,8 +7,7 @@
 #
 import sys
 import os
-import platform
-import importlib.util
+
 
 #
 # Version info
@@ -67,7 +66,7 @@ PARAMETER_PATH = [
 #
 from .util import Timer, TimerTime, FuzzyDict
 from .util import root_dir, load_function, rmse, get_infinite_nested_dict, load
-from .util import get_parameters_filepath
+from .util import get_parameters_filepath, have_jax
 from .logger import logger, set_logging_level
 from .settings import settings
 from .citations import Citations, citations, print_citations
@@ -103,7 +102,7 @@ from .expression_tree.operations.evaluate_python import (
     EvaluatorPython,
 )
 
-if importlib.util.find_spec("jax"):
+if have_jax():
     from .expression_tree.operations.evaluate_python import EvaluatorJax
     from .expression_tree.operations.evaluate_python import JaxCooMatrix
 
@@ -224,7 +223,7 @@ from .solvers.scikits_dae_solver import ScikitsDaeSolver
 from .solvers.scikits_ode_solver import ScikitsOdeSolver, have_scikits_odes
 from .solvers.scipy_solver import ScipySolver
 
-if importlib.util.find_spec("jax"):
+if have_jax():
     from .solvers.jax_solver import JaxSolver
     from .solvers.jax_bdf_solver import jax_bdf_integrate
 

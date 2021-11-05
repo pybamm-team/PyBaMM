@@ -4,13 +4,12 @@ from tests import get_mesh_for_testing
 import sys
 import time
 import numpy as np
-import importlib.util
 
-if importlib.util.find_spec("jax"):
+if pybamm.have_jax():
     import jax
 
 
-@unittest.skipIf(not(importlib.util.find_spec("jax")), "requires jax")
+@unittest.skipIf(not pybamm.have_jax(), "jax is not installed")
 class TestJaxBDFSolver(unittest.TestCase):
     def test_solver(self):
         # Create model

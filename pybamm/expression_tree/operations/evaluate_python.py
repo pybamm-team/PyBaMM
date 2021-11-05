@@ -6,10 +6,9 @@ import pybamm
 import numpy as np
 import scipy.sparse
 from collections import OrderedDict
-import importlib.util
 import numbers
 
-if importlib.util.find_spec("jax"):
+if pybamm.have_jax():
     import jax
     from jax.config import config
 
@@ -574,9 +573,7 @@ class EvaluatorJax:
         args = "t=None, y=None, y_dot=None, inputs=None, known_evals=None"
         if self._arg_list:
             args = ",".join(self._arg_list) + ", " + args
-        python_str = (
-            "def evaluate_jax({}):\n".format(args) + python_str
-        )
+        python_str = "def evaluate_jax({}):\n".format(args) + python_str
 
         # calculate the final variable that will output the result of calling `evaluate`
         # on `symbol`
@@ -601,8 +598,9 @@ class EvaluatorJax:
         exec(compiled_function)
 
         self._static_argnums = tuple(static_argnums)
-        self._jit_evaluate = jax.jit(self._evaluate_jax,
-                                     static_argnums=self._static_argnums)
+        self._jit_evaluate = jax.jit(
+            self._evaluate_jax, static_argnums=self._static_argnums
+        )
 
     def get_jacobian(self):
         n = len(self._arg_list)
@@ -610,8 +608,9 @@ class EvaluatorJax:
         # forward mode autodiff  wrt y, which is argument 1 after arg_list
         jacobian_evaluate = jax.jacfwd(self._evaluate_jax, argnums=1 + n)
 
-        self._jac_evaluate = jax.jit(jacobian_evaluate,
-                                     static_argnums=self._static_argnums)
+        self._jac_evaluate = jax.jit(
+            jacobian_evaluate, static_argnums=self._static_argnums
+        )
 
         return EvaluatorJaxJacobian(self._jac_evaluate, self._constants)
 
@@ -621,8 +620,9 @@ class EvaluatorJax:
         # forward mode autodiff wrt inputs, which is argument 3 after arg_list
         jacobian_evaluate = jax.jacfwd(self._evaluate_jax, argnums=3 + n)
 
-        self._sens_evaluate = jax.jit(jacobian_evaluate,
-                                      static_argnums=self._static_argnums)
+        self._sens_evaluate = jax.jit(
+            jacobian_evaluate, static_argnums=self._static_argnums
+        )
 
         return EvaluatorJaxSensitivities(self._sens_evaluate, self._constants)
 

@@ -3,7 +3,6 @@
 #
 import pybamm
 import unittest
-import importlib.util
 
 
 class TestCitations(unittest.TestCase):
@@ -255,7 +254,7 @@ class TestCitations(unittest.TestCase):
             pybamm.IDAKLUSolver()
             self.assertIn("Hindmarsh2005", citations._papers_to_cite)
 
-    @unittest.skipIf(not(importlib.util.find_spec("jax")), "requires jax")
+    @unittest.skipIf(not pybamm.have_jax(), "jax is not installed")
     def test_jax_citations(self):
         citations = pybamm.citations
         citations._reset()

@@ -335,3 +335,8 @@ def get_parameters_filepath(path):
         return path
     else:
         return os.path.join(pybamm.__path__[0], path)
+
+
+def have_jax():
+    """Check if jax is installed"""
+    return importlib.util.find_spec("jax") is not None

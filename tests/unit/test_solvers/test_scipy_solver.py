@@ -6,13 +6,12 @@ import numpy as np
 from tests import get_mesh_for_testing, get_discretisation_for_testing
 import warnings
 import sys
-import importlib.util
 
 
 class TestScipySolver(unittest.TestCase):
     def test_model_solver_python_and_jax(self):
 
-        if importlib.util.find_spec("jax"):
+        if pybamm.have_jax():
             formats = ["python", "jax"]
         else:
             formats = ["python"]
