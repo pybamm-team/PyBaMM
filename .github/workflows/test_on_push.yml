@@ -80,6 +80,10 @@ jobs:
       if: matrix.os != 'ubuntu-latest'
       run: python -m tox -e mac-windows-tests
 
+    - name: Install dev dependencies and run tests with jax
+      if: matrix.os == 'ubuntu-latest'
+      run: tox -e jaxtests
+
     - name: Install docs dependencies and run doctests
       if: matrix.os == 'ubuntu-latest'
       run: tox -e doctests
