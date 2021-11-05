@@ -12,8 +12,11 @@ import pathlib
 import pickle
 import pybamm
 import numbers
+import subprocess
+import sys
 import warnings
 from collections import defaultdict
+from platform import system
 
 
 def root_dir():
@@ -340,3 +343,11 @@ def get_parameters_filepath(path):
 def have_jax():
     """Check if jax is installed"""
     return importlib.util.find_spec("jax") is not None
+
+
+def install_jax():
+    """Install jax, jaxlib"""
+    if system() != "Windows":
+        subprocess.check_call(
+            [sys.executable, "-m", "pip", "install", "jax==0.2.12", "jaxlib==0.1.70"]
+        )
