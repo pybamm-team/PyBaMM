@@ -1,5 +1,8 @@
 # [Unreleased](https://github.com/pybamm-team/PyBaMM/)
 
+## Features
+
+-   Half-cell SPM and SPMe have been implemented (  [#1731](https://github.com/pybamm-team/PyBaMM/pull/1731))
 ## Bug fixes
 
 -   Fixed finite volume discretization in spherical polar coordinates ([#1782](https://github.com/pybamm-team/PyBaMM/pull/1782))
