@@ -45,8 +45,8 @@ User install
 ------------
 
 We recommend to install PyBaMM within a virtual environment, in order
-not to alter any distribution python files. 
-First, make sure you are using python 3.7, 3.8, or 3.9. 
+not to alter any distribution python files.
+First, make sure you are using python 3.7, 3.8, or 3.9.
 To create a virtual environment ``env`` within your current directory type:
 
 .. code:: bash
@@ -116,8 +116,23 @@ macOS
 .. code:: bash
 
 	  pip install scikits.odes
-   
+
 Assuming that the SUNDIALS were installed as described :ref:`above<user-install-label>`.
+
+Optional - JaxSolver
+--------------------
+
+Users can install ``jax`` and ``jaxlib`` to use the Jax solver.
+Currently, only GNU/Linux and macOS are supported.
+
+GNU/Linux and macOS
+~~~~~~~~~~~~~~~~~~~
+
+.. code:: bash
+
+	  pybamm_install_jax
+
+The ``pybamm_install_jax`` command is installed with PyBaMM. It automatically downloads and installs jax and jaxlib on your system.
 
 Developer install
 -----------------
