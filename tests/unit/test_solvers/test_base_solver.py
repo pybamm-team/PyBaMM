@@ -334,6 +334,7 @@ class TestBaseSolver(unittest.TestCase):
                 [y[0]]
             ])
 
+        @unittest.skipIf(not pybamm.have_jax(), "jax is not installed")
         def exact_diff_b(y, a, b):
             return np.array([[y[0]], [0]])
 
