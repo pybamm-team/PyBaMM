@@ -216,6 +216,7 @@ setup(
             "pybamm_add_parameter = pybamm.parameters_cli:add_parameter",
             "pybamm_rm_parameter = pybamm.parameters_cli:remove_parameter",
             "pybamm_install_odes = pybamm.install_odes:main",
+            "pybamm_install_jax = pybamm.util:install_jax",
         ]
     },
 )
