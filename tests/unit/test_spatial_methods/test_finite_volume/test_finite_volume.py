@@ -725,15 +725,15 @@ class TestFiniteVolume(unittest.TestCase):
 
         constant_y = np.ones_like(mesh["negative particle"].nodes[:, np.newaxis])
         np.testing.assert_array_almost_equal(
-            integral_eqn_disc.evaluate(None, constant_y), 4 * np.pi / 3, decimal=4
+            integral_eqn_disc.evaluate(None, constant_y), 4 * np.pi / 3
         )
         linear_y = mesh["negative particle"].nodes
         np.testing.assert_array_almost_equal(
-            integral_eqn_disc.evaluate(None, linear_y), np.pi, decimal=3
+            integral_eqn_disc.evaluate(None, linear_y), np.pi, decimal=4
         )
-        one_over_y_squared = 1 / mesh["negative particle"].nodes ** 2
+        one_over_y = 1 / mesh["negative particle"].nodes
         np.testing.assert_array_almost_equal(
-            integral_eqn_disc.evaluate(None, one_over_y_squared), 4 * np.pi
+            integral_eqn_disc.evaluate(None, one_over_y), 2 * np.pi, decimal=3
         )
 
         # test failure for secondary dimension column form

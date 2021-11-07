@@ -81,8 +81,8 @@ class TestMPM(unittest.TestCase):
             pos_Li.append(pos)
 
         # compare
-        np.testing.assert_array_almost_equal(neg_Li[0], neg_Li[1], decimal=14)
-        np.testing.assert_array_almost_equal(pos_Li[0], pos_Li[1], decimal=14)
+        np.testing.assert_array_almost_equal(neg_Li[0], neg_Li[1], decimal=13)
+        np.testing.assert_array_almost_equal(pos_Li[0], pos_Li[1], decimal=13)
 
 
 if __name__ == "__main__":
