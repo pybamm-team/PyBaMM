@@ -144,7 +144,7 @@ class CasadiConverter(object):
                     print("CONVERTED CHILDREN: {0}".format(converted_children))
 
                     LUT = casadi.interpolant(
-                        "LUT", "bspline", symbol.x, symbol.y.flatten()
+                        "LUT", "bspline", symbol.x, symbol.y.ravel(order='F')
                     )
 
                     # ([converted_children[0], converted_children[1]], True, True)
