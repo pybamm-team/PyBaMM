@@ -114,8 +114,8 @@ class StandardModelTest(object):
         self.test_processing_disc()
 
         # Use tighter default tolerances for testing
-        self.solver.rtol = 1e-12
-        self.solver.atol = 1e-12
+        self.solver.rtol = 1e-8
+        self.solver.atol = 1e-8
 
         self.solution = self.solver.solve(
             self.model, t_eval, inputs=inputs, calculate_sensitivities=True
