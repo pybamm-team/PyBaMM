@@ -144,7 +144,7 @@ class CasadiConverter(object):
 
                     return casadi.interpolant(
                         "LUT", "bspline", symbol.x, symbol.y.flatten()
-                    )([*converted_children])
+                    )([converted_children[0], converted_children[1]])
 
                 else:
                     raise Exception("Invalid converted_children count for Interpolant: {0}".format(len(converted_children)))
