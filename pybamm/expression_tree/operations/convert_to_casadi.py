@@ -5,7 +5,7 @@ import pybamm
 import casadi
 import numpy as np
 from scipy import special
-import _casadi
+from casadi import _casadi
 
 
 class CasadiConverter(object):
