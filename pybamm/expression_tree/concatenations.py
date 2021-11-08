@@ -24,16 +24,11 @@ class Concatenation(pybamm.Symbol):
     """
 
     def __init__(self, *children, name=None, check_domain=True, concat_fun=None):
-        if all(
-            isinstance(child, pybamm.Variable) for child in children
-        ) and not isinstance(
-            self,
-            (
-                ConcatenationVariable,
-                NumpyConcatenation,
-                DomainConcatenation,
-                SparseStack,
-            ),
+        # The second condition checks whether this is the base Concatenation class
+        # or a subclass of Concatenation
+        # (ConcatenationVariable, NumpyConcatenation, ...)
+        if all(isinstance(child, pybamm.Variable) for child in children) and issubclass(
+            Concatenation, type(self)
         ):
             raise TypeError(
                 "'ConcatenationVariable' should be used for concatenating 'Variable' "
