@@ -5,6 +5,7 @@ import pybamm
 import casadi
 import numpy as np
 from scipy import special
+import _casadi
 
 
 class CasadiConverter(object):
@@ -148,7 +149,9 @@ class CasadiConverter(object):
 
                     # ([converted_children[0], converted_children[1]], True, True)
 
-                    res = LUT(converted_children[0], converted_children[1])
+                    # res = LUT(converted_children[0], converted_children[1])
+
+                    res = _casadi.Function_call(LUT, [converted_children[0], converted_children[1]])
 
                     return res
 
