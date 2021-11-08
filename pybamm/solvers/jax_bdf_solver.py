@@ -1,24 +1,27 @@
-import operator as op
-import numpy as onp
 import collections
-
-import jax
-import jax.numpy as jnp
-from jax import core
-from jax import dtypes
-from jax.util import safe_map, cache, split_list
-from jax.api_util import flatten_fun_nokwargs
-from jax.flatten_util import ravel_pytree
-from jax.tree_util import tree_map, tree_flatten, tree_unflatten, tree_multimap
-from jax.interpreters import partial_eval as pe
+import operator as op
 from functools import partial
-from jax import linear_util as lu
-from jax.config import config
+
+import numpy as onp
 from absl import logging
 
-logging.set_verbosity(logging.ERROR)
+import pybamm
 
-config.update("jax_enable_x64", True)
+if pybamm.have_jax():
+    import jax
+    import jax.numpy as jnp
+    from jax import core, dtypes
+    from jax import linear_util as lu
+    from jax.api_util import flatten_fun_nokwargs
+    from jax.config import config
+    from jax.flatten_util import ravel_pytree
+    from jax.interpreters import partial_eval as pe
+    from jax.tree_util import tree_flatten, tree_map, tree_multimap, tree_unflatten
+    from jax.util import cache, safe_map, split_list
+
+    config.update("jax_enable_x64", True)
+
+logging.set_verbosity(logging.ERROR)
 
 MAX_ORDER = 5
 NEWTON_MAXITER = 4
@@ -34,6 +37,7 @@ def some_hash_function(x):
 
 class HashableArrayWrapper:
     """wrapper for a numpy array to make it hashable"""
+
     def __init__(self, val):
         self.val = val
 
@@ -41,16 +45,15 @@ class HashableArrayWrapper:
         return some_hash_function(self.val)
 
     def __eq__(self, other):
-        return (isinstance(other, HashableArrayWrapper) and
-                onp.all(onp.equal(self.val, other.val)))
+        return isinstance(other, HashableArrayWrapper) and onp.all(
+            onp.equal(self.val, other.val)
+        )
 
 
 def gnool_jit(fun, static_array_argnums=(), static_argnums=()):
     """redefinition of jax jit to allow static array args"""
-    @partial(
-        jax.jit,
-        static_argnums=static_array_argnums + static_argnums
-    )
+
+    @partial(jax.jit, static_argnums=static_array_argnums + static_argnums)
     def callee(*args):
         args = list(args)
         for i in static_array_argnums:
@@ -890,8 +893,7 @@ def flax_scan(f, init, xs, length=None):  # pragma: no cover
     return carry, onp.stack(ys)
 
 
-@jax.partial(gnool_jit,
-             static_array_argnums=(1,), static_argnums=(0, 2, 3))
+@jax.partial(gnool_jit, static_array_argnums=(1,), static_argnums=(0, 2, 3))
 def _bdf_odeint_wrapper(func, mass, rtol, atol, y0, ts, *args):
     y0, unravel = ravel_pytree(y0)
     func = ravel_first_arg(func, unravel)

@@ -4,19 +4,21 @@
 # The code in this file is adapted from Pints
 # (see https://github.com/pints-team/pints)
 #
-import importlib
-import numpy as np
+import importlib.util
+import numbers
 import os
-import timeit
 import pathlib
 import pickle
-import pybamm
-import numbers
 import subprocess
 import sys
+import timeit
 import warnings
 from collections import defaultdict
 from platform import system
+
+import numpy as np
+
+import pybamm
 
 
 def root_dir():
@@ -347,7 +349,9 @@ def have_jax():
 
 def install_jax():
     """Install jax, jaxlib"""
-    if system() != "Windows":
+    if system() == "Windows":
+        raise NotImplementedError("Jax is not available on Windows")
+    else:
         subprocess.check_call(
             [sys.executable, "-m", "pip", "install", "jax==0.2.12", "jaxlib==0.1.70"]
         )
