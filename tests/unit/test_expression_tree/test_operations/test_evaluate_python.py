@@ -275,7 +275,7 @@ class TestEvaluate(unittest.TestCase):
         np.testing.assert_allclose(result, expr.evaluate(y=y))
 
         # check that concatenating a single domain is consistent
-        expr = disc.process_symbol(pybamm.Concatenation(a))
+        expr = disc.process_symbol(pybamm.concatenation(a))
         evaluator = pybamm.EvaluatorPython(expr)
         result = evaluator.evaluate(y=y)
         np.testing.assert_allclose(result, expr.evaluate(y=y))
