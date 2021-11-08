@@ -180,7 +180,7 @@ class DFN(BaseModel):
         elif self.options["surface form"] == "algebraic":
             surf_model = surf_form.FullAlgebraic
 
-        for domain in ["Negative", "Positive"]:
+        for domain in ["Negative", "Separator", "Positive"]:
             self.submodels[
                 domain.lower() + " surface potential difference"
             ] = surf_model(self.param, domain, self.options)

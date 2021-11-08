@@ -217,13 +217,14 @@ class FullAlgebraic(BaseModel):
     ----------
     param : parameter class
         The parameters to use for this submodel
+    options : dict, optional
+        A dictionary of options to be passed to the model.
 
-
-     **Extends:** :class:`pybamm.electrolyte_conductivity.surface_potential_form.BaseFull`
+    **Extends:** :class:`pybamm.electrolyte_conductivity.surface_potential_form.BaseFull`
     """  # noqa: E501
 
-    def __init__(self, param, domain):
-        super().__init__(param, domain)
+    def __init__(self, param, domain, options=None):
+        super().__init__(param, domain, options)
 
     def set_algebraic(self, variables):
         if self.domain == "Separator":
@@ -253,14 +254,14 @@ class FullDifferential(BaseModel):
     ----------
     param : parameter class
         The parameters to use for this submodel
-
+    options : dict, optional
+        A dictionary of options to be passed to the model.
 
     **Extends:** :class:`pybamm.electrolyte_conductivity.surface_potential_form.BaseFull`
-
     """  # noqa: E501
 
-    def __init__(self, param, domain):
-        super().__init__(param, domain)
+    def __init__(self, param, domain, options=None):
+        super().__init__(param, domain, options)
 
     def set_rhs(self, variables):
         if self.domain == "Separator":

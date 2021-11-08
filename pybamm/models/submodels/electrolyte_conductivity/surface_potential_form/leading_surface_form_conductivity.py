@@ -88,14 +88,15 @@ class LeadingOrderDifferential(BaseLeadingOrderSurfaceForm):
     ----------
     param : parameter class
         The parameters to use for this submodel
-
+    options : dict, optional
+        A dictionary of options to be passed to the model.
 
     **Extends:** :class:`BaseLeadingOrderSurfaceForm`
 
     """
 
-    def __init__(self, param, domain):
-        super().__init__(param, domain)
+    def __init__(self, param, domain, options=None):
+        super().__init__(param, domain, options)
 
     def set_rhs(self, variables):
         if self.domain == "Separator":
@@ -137,13 +138,15 @@ class LeadingOrderAlgebraic(BaseLeadingOrderSurfaceForm):
     ----------
     param : parameter class
         The parameters to use for this submodel
+    options : dict, optional
+        A dictionary of options to be passed to the model.
 
 
     **Extends:** :class:`BaseLeadingOrderSurfaceForm`
     """
 
-    def __init__(self, param, domain):
-        super().__init__(param, domain)
+    def __init__(self, param, domain, options=None):
+        super().__init__(param, domain, options)
 
     def set_algebraic(self, variables):
         if self.domain == "Separator":
