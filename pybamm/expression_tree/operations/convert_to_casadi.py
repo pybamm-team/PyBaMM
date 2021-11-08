@@ -148,7 +148,7 @@ class CasadiConverter(object):
 
                     # ([converted_children[0], converted_children[1]], True, True)
 
-                    res = LUT.Function_call([converted_children[0], converted_children[1]])
+                    res = LUT.call([converted_children[0], converted_children[1]])
 
                     return res
 
