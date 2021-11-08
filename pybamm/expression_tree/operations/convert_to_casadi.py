@@ -153,7 +153,7 @@ class CasadiConverter(object):
 
                     # res = _casadi.Function_call(LUT, [converted_children[0], converted_children[1]])
 
-                    res = _casadi.Function_call(LUT, [[converted_children[0], converted_children[1]]])
+                    res = _casadi.Function_call(LUT, *[[converted_children[0], converted_children[1]]])
 
                     # res = LUT([0.5, 300.0])  # working with hardcoded values
 
