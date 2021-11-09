@@ -2,7 +2,9 @@
 
 ## Features
 
--   Half-cell SPM and SPMe have been implemented (  [#1731](https://github.com/pybamm-team/PyBaMM/pull/1731))
+-   `Experiment`s with drive cycles can be solved ([#1793](https://github.com/pybamm-team/PyBaMM/pull/1793))
+-   Half-cell SPM and SPMe have been implemented ([#1731](https://github.com/pybamm-team/PyBaMM/pull/1731))
+
 ## Bug fixes
 
 -   Fixed `sympy` operators for `Arctan` and `Exponential` ([#1786](https://github.com/pybamm-team/PyBaMM/pull/1786))
