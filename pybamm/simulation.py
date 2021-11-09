@@ -175,7 +175,7 @@ class Simulation:
             }
             op_control = op["electric"][1]
             if op["dc_data"] is not None:
-                # If ndarray is recived from, create interpolant
+                # If operating condition includes a drive cycle, define the interpolant
                 timescale = self._parameter_values.evaluate(model.timescale)
                 drive_cycle_interpolant = pybamm.Interpolant(
                     op["dc_data"][:, 0],

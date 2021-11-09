@@ -281,7 +281,6 @@ class Experiment:
             "electric": electric,
             "time": time,
             "period": period,
-            # "cond": cond,
             "dc_data": dc_data,
         }, events
 
