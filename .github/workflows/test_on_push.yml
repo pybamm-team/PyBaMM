@@ -74,7 +74,11 @@ jobs:
 
     - name: Run unit tests for GNU/Linux with Python 3.7 and 3.8
       if: matrix.os == 'ubuntu-latest' && matrix.python-version != 3.9
-      run: python -m tox -e tests
+      run: python -m tox -e quick
+
+    - name: Run integration tests for GNU/Linux
+      if: matrix.os == 'ubuntu-latest'
+      run: python -m tox -e tests --folder integration
 
     - name: Run unit tests for Windows and MacOS
       if: matrix.os != 'ubuntu-latest'
