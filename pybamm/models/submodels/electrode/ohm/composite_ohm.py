@@ -17,12 +17,14 @@ class Composite(BaseModel):
         The parameters to use for this submodel
     domain : str
         Either 'Negative electrode' or 'Positive electrode'
+    options : dict, optional
+        A dictionary of options to be passed to the model.
 
     **Extends:** :class:`pybamm.BaseOhm`
     """
 
-    def __init__(self, param, domain):
-        super().__init__(param, domain)
+    def __init__(self, param, domain, options=None):
+        super().__init__(param, domain, options=options)
 
     def get_coupled_variables(self, variables):
 

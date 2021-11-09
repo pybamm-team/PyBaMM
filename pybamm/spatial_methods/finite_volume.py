@@ -171,18 +171,12 @@ class FiniteVolume(pybamm.SpatialMethod):
         # check for particle domain
         if submesh.coord_sys == "spherical polar":
             second_dim_repeats = self._get_auxiliary_domain_repeats(symbol.domains)
-            edges = submesh.edges
 
-            # create np.array of repeated submesh.nodes
-            r_numpy = np.kron(np.ones(second_dim_repeats), submesh.nodes)
-            r_edges_numpy = np.kron(np.ones(second_dim_repeats), edges)
-
-            r = pybamm.Vector(r_numpy)
+            # create np.array of repeated submesh.edges
+            r_edges_numpy = np.kron(np.ones(second_dim_repeats), submesh.edges)
             r_edges = pybamm.Vector(r_edges_numpy)
 
-            out = (1 / (r ** 2)) * (
-                divergence_matrix @ ((r_edges ** 2) * discretised_symbol)
-            )
+            out = divergence_matrix @ ((r_edges ** 2) * discretised_symbol)
         else:
             out = divergence_matrix @ discretised_symbol
 
@@ -205,7 +199,14 @@ class FiniteVolume(pybamm.SpatialMethod):
         """
         # Create appropriate submesh by combining submeshes in domain
         submesh = self.mesh.combine_submeshes(*domains["primary"])
-        e = 1 / submesh.d_edges
+        if submesh.coord_sys == "spherical polar":
+            r_edges_left = submesh.edges[:-1]
+            r_edges_right = submesh.edges[1:]
+            d_edges = (r_edges_right ** 3 - r_edges_left ** 3) / 3
+        else:
+            d_edges = submesh.d_edges
+
+        e = 1 / d_edges
 
         # Create matrix using submesh
         n = submesh.npts + 1
@@ -234,17 +235,7 @@ class FiniteVolume(pybamm.SpatialMethod):
         integration_vector = self.definite_integral_matrix(
             child, integration_dimension=integration_dimension
         )
-
-        # Check for spherical domains
-        domain = child.domains[integration_dimension]
-        submesh = self.mesh.combine_submeshes(*domain)
-        if submesh.coord_sys == "spherical polar":
-            second_dim_repeats = self._get_auxiliary_domain_repeats(child.domains)
-            r_numpy = np.kron(np.ones(second_dim_repeats), submesh.nodes)
-            r = pybamm.Vector(r_numpy)
-            out = 4 * np.pi * integration_vector @ (discretised_child * r ** 2)
-        else:
-            out = integration_vector @ discretised_child
+        out = integration_vector @ discretised_child
 
         return out
 
@@ -277,33 +268,40 @@ class FiniteVolume(pybamm.SpatialMethod):
             The finite volume integral matrix for the domain
         """
         domains = child.domains
+        if vector_type != "row" and integration_dimension == "secondary":
+            raise NotImplementedError(
+                "Integral in secondary vector only implemented in 'row' form"
+            )
+
+        domain = child.domains[integration_dimension]
+        submesh = self.mesh.combine_submeshes(*domain)
+        if submesh.coord_sys == "spherical polar":
+            r_edges_left = submesh.edges[:-1]
+            r_edges_right = submesh.edges[1:]
+            d_edges = 4 * np.pi * (r_edges_right ** 3 - r_edges_left ** 3) / 3
+        else:
+            d_edges = submesh.d_edges
+
         if integration_dimension == "primary":
             # Create appropriate submesh by combining submeshes in domain
             submesh = self.mesh.combine_submeshes(*domains["primary"])
 
             # Create vector of ones for primary domain submesh
-            vector = submesh.d_edges
 
             if vector_type == "row":
-                vector = vector[np.newaxis, :]
+                d_edges = d_edges[np.newaxis, :]
             elif vector_type == "column":
-                vector = vector[:, np.newaxis]
+                d_edges = d_edges[:, np.newaxis]
 
             # repeat matrix for each node in secondary dimensions
             second_dim_repeats = self._get_auxiliary_domain_repeats(domains)
             # generate full matrix from the submatrix
-            matrix = kron(eye(second_dim_repeats), vector)
+            matrix = kron(eye(second_dim_repeats), d_edges)
         elif integration_dimension == "secondary":
-            if vector_type != "row":
-                raise NotImplementedError(
-                    "Integral in secondary vector only implemented in 'row' form"
-                )
             # Create appropriate submesh by combining submeshes in domain
             primary_submesh = self.mesh.combine_submeshes(*domains["primary"])
-            secondary_submesh = self.mesh.combine_submeshes(*domains["secondary"])
 
             # Create matrix which integrates in the secondary dimension
-            d_edges = secondary_submesh.d_edges
             # Different number of edges depending on whether child evaluates on edges
             # in the primary dimensions
             if child.evaluates_on_edges("primary"):

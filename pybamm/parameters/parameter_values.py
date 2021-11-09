@@ -206,12 +206,7 @@ class ParameterValues:
                 )
             # Create path to component and load values
             component_path = os.path.join(
-                "pybamm",
-                "input",
-                "parameters",
-                base_chemistry,
-                component_group.replace(" ", "_") + "s",
-                component,
+                base_chemistry, component_group.replace(" ", "_") + "s", component
             )
             file_path = self.find_parameter(
                 os.path.join(component_path, "parameters.csv")
