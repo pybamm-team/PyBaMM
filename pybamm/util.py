@@ -285,10 +285,7 @@ def load_function(filename):
 
     path = root_path.replace("/", ".")
     path = path.replace("\\", ".")
-    try:
-        module_object = importlib.import_module(path)
-    except ModuleNotFoundError:
-        module_object = importlib.import_module("pybamm.input.parameters." + path)
+    module_object = importlib.import_module(path)
 
     return getattr(module_object, tail)
 

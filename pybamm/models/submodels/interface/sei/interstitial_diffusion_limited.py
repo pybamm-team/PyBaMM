@@ -75,20 +75,18 @@ class InterstitialDiffusionLimited(BaseModel):
             L_outer = variables["X-averaged outer SEI thickness"]
             j_inner = variables["X-averaged inner SEI interfacial current density"]
             j_outer = variables["X-averaged outer SEI interfacial current density"]
-            if self.reaction_loc == "interface":
-                a = 1
-            else:
-                # Note a is dimensionless (has a constant value of 1 if the surface
-                # area does not change)
-                a = variables[
-                    "X-averaged negative electrode surface area to volume ratio"
-                ]
+            # Note a is dimensionless (has a constant value of 1 if the surface
+            # area does not change)
+            a = variables["X-averaged negative electrode surface area to volume ratio"]
         else:
             L_inner = variables["Inner SEI thickness"]
             L_outer = variables["Outer SEI thickness"]
             j_inner = variables["Inner SEI interfacial current density"]
             j_outer = variables["Outer SEI interfacial current density"]
-            a = variables["Negative electrode surface area to volume ratio"]
+            if self.reaction_loc == "interface":
+                a = 1
+            else:
+                a = variables["Negative electrode surface area to volume ratio"]
 
         v_bar = self.param.v_bar
         Gamma_SEI = self.param.Gamma_SEI

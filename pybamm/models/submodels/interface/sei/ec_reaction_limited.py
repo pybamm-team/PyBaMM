@@ -119,18 +119,16 @@ class EcReactionLimited(BaseModel):
         if self.reaction_loc == "x-average":
             L_sei = variables["X-averaged outer SEI thickness"]
             j_sei = variables["X-averaged outer SEI interfacial current density"]
-            if self.reaction_loc == "interface":
-                a = 1
-            else:
-                # Note a is dimensionless (has a constant value of 1 if the surface
-                # area does not change)
-                a = variables[
-                    "X-averaged negative electrode surface area to volume ratio"
-                ]
+            # Note a is dimensionless (has a constant value of 1 if the surface
+            # area does not change)
+            a = variables["X-averaged negative electrode surface area to volume ratio"]
         else:
             L_sei = variables["Outer SEI thickness"]
             j_sei = variables["Outer SEI interfacial current density"]
-            a = variables["Negative electrode surface area to volume ratio"]
+            if self.reaction_loc == "interface":
+                a = 1
+            else:
+                a = variables["Negative electrode surface area to volume ratio"]
 
         Gamma_SEI = self.param.Gamma_SEI
 
