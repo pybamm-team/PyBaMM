@@ -2,7 +2,6 @@
 # Tests for the Base Solver class
 #
 import casadi
-from casadi.casadi import interpolant
 import pybamm
 import numpy as np
 from scipy.sparse import csr_matrix
@@ -304,11 +303,11 @@ class TestBaseSolver(unittest.TestCase):
         model.rhs = {v: -1}
         model.initial_conditions = {v: 1}
         x = np.array([0, 1])
-        interpolant = pybamm.Interpolant(x, x, pybamm.t)
+        interp = pybamm.Interpolant(x, x, pybamm.t)
         solver = pybamm.CasadiSolver()
         for input_key in ["Current input [A]", "Voltage input [V]", "Power input [W]"]:
             sol = solver.step(
-                old_solution=None, model=model, dt=1.0, inputs={input_key: interpolant}
+                old_solution=None, model=model, dt=1.0, inputs={input_key: interp}
             )
             self.assertFalse(input_key in sol.all_inputs[0])
 
