@@ -377,23 +377,19 @@ class ParticleConcentrationTests(BaseOutputTest):
     def test_conservation(self):
         """Test amount of lithium stored across all particles and in SEI layers is
         constant."""
-        self.c_s_tot = (
+        c_s_tot = (
             self.c_s_n_tot(self.solution.t)
             + self.c_s_p_tot(self.solution.t)
             + self.c_SEI_tot(self.solution.t)
             + self.c_Li_tot(self.solution.t)
         )
-        diff = (self.c_s_tot[1:] - self.c_s_tot[:-1]) / self.c_s_tot[:-1]
-        if "profile" in self.model.options["particle"]:
+        diff = (c_s_tot[1:] - c_s_tot[:-1]) / c_s_tot[:-1]
+        if self.model.options["particle"] == "quartic profile":
             np.testing.assert_array_almost_equal(diff, 0, decimal=10)
-        elif self.model.options["particle size"] == "distribution":
-            np.testing.assert_array_almost_equal(diff, 0, decimal=10)
+        # elif self.model.options["particle size"] == "distribution":
+        #     np.testing.assert_array_almost_equal(diff, 0, decimal=10)
         elif self.model.options["surface form"] == "differential":
             np.testing.assert_array_almost_equal(diff, 0, decimal=10)
-        elif self.model.options["SEI"] == "ec reaction limited":
-            np.testing.assert_array_almost_equal(diff, 0, decimal=11)
-        elif self.model.options["lithium plating"] == "irreversible":
-            np.testing.assert_array_almost_equal(diff, 0, decimal=13)
         else:
             np.testing.assert_array_almost_equal(diff, 0, decimal=15)
 
@@ -779,9 +775,9 @@ class DegradationTests(BaseOutputTest):
 
     def test_degradation_modes(self):
         """Test degradation modes are between 0 and 100%"""
-        np.testing.assert_array_less(-1e-3, self.LLI(self.t))
-        np.testing.assert_array_less(-1e-3, self.LAM_ne(self.t))
-        np.testing.assert_array_less(-1e-3, self.LAM_pe(self.t))
+        np.testing.assert_array_less(-3e-3, self.LLI(self.t))
+        np.testing.assert_array_less(-1e-13, self.LAM_ne(self.t))
+        np.testing.assert_array_less(-1e-13, self.LAM_pe(self.t))
         np.testing.assert_array_less(self.LLI(self.t), 100)
         np.testing.assert_array_less(self.LAM_ne(self.t), 100)
         np.testing.assert_array_less(self.LAM_pe(self.t), 100)

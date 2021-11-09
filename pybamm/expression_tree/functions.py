@@ -321,6 +321,10 @@ class Arctan(SpecificFunction):
         """See :meth:`pybamm.Function._function_diff()`."""
         return 1 / (children[0] ** 2 + 1)
 
+    def _sympy_operator(self, child):
+        """Override :meth:`pybamm.Function._sympy_operator`"""
+        return sympy.atan(child)
+
 
 def arctan(child):
     """Returns hyperbolic tan function of child."""
@@ -389,6 +393,10 @@ class Exponential(SpecificFunction):
     def _function_diff(self, children, idx):
         """See :meth:`pybamm.Function._function_diff()`."""
         return Exponential(children[0])
+
+    def _sympy_operator(self, child):
+        """Override :meth:`pybamm.Function._sympy_operator`"""
+        return sympy.exp(child)
 
 
 def exp(child):

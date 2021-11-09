@@ -414,8 +414,8 @@ class BaseBatteryModel(pybamm.BaseModel):
             var.x_n: 20,
             var.x_s: 20,
             var.x_p: 20,
-            var.r_n: 30,
-            var.r_p: 30,
+            var.r_n: 20,
+            var.r_p: 20,
             var.y: 10,
             var.z: 10,
             var.R_n: 30,
@@ -715,7 +715,7 @@ class BaseBatteryModel(pybamm.BaseModel):
 
         # Massive hack for consistent delta_phi = phi_s - phi_e with SPMe
         # This needs to be corrected
-        if isinstance(self, pybamm.lithium_ion.SPMe):
+        if isinstance(self, pybamm.lithium_ion.SPMe) and not self.half_cell:
             for domain in ["Negative", "Positive"]:
                 phi_s = self.variables[domain + " electrode potential"]
                 phi_e = self.variables[domain + " electrolyte potential"]
