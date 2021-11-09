@@ -195,6 +195,7 @@ class Experiment:
                 "electric": op_CC["electric"] + op_CV["electric"],
                 "time": op_CV["time"],
                 "period": op_CV["period"],
+                "dc_data": None,
             }, event_CV
         # Read period
         if " period)" in cond:
@@ -280,7 +281,7 @@ class Experiment:
             "electric": electric,
             "time": time,
             "period": period,
-            "cond": cond,
+            # "cond": cond,
             "dc_data": dc_data,
         }, events
 
