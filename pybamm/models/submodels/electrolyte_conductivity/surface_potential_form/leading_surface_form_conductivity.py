@@ -31,8 +31,6 @@ class BaseLeadingOrderSurfaceForm(LeadingOrder):
 
         if self.domain == "Negative":
             delta_phi_av = pybamm.standard_variables.delta_phi_n_av
-        elif self.domain == "Separator":
-            return {}
         elif self.domain == "Positive":
             delta_phi_av = pybamm.standard_variables.delta_phi_p_av
 
@@ -52,9 +50,6 @@ class BaseLeadingOrderSurfaceForm(LeadingOrder):
             return variables
 
     def set_initial_conditions(self, variables):
-
-        if self.domain == "Separator":
-            return
 
         delta_phi = variables[
             "X-averaged "
@@ -99,9 +94,6 @@ class LeadingOrderDifferential(BaseLeadingOrderSurfaceForm):
         super().__init__(param, domain, options)
 
     def set_rhs(self, variables):
-        if self.domain == "Separator":
-            return
-
         param = self.param
 
         sum_j = variables[
@@ -149,9 +141,6 @@ class LeadingOrderAlgebraic(BaseLeadingOrderSurfaceForm):
         super().__init__(param, domain, options)
 
     def set_algebraic(self, variables):
-        if self.domain == "Separator":
-            return
-
         sum_j = variables[
             "Sum of x-averaged "
             + self.domain.lower()

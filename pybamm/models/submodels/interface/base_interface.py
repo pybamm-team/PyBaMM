@@ -696,23 +696,9 @@ class BaseInterface(pybamm.BaseSubModel):
             ocp_ref = self.param.U_p_ref
         pot_scale = self.param.potential_scale
 
-        # For a half-cell model, the reaction name will be "lithium metal plating"
-        # and the variables are only defined on the interface
-        if self.reaction == "lithium metal plating":
-            delta_phi_dim = ocp_ref + delta_phi * pot_scale
-            variables = {
-                "Lithium metal interface surface potential difference": delta_phi,
-                "Lithium metal interface surface potential difference [V]"
-                "": delta_phi_dim,
-            }
-            return variables
-
         # Broadcast if necessary
         delta_phi_dim = ocp_ref + delta_phi * pot_scale
-        if self.half_cell and self.domain == "Negative":
-            # Half-cell domain, delta_phi should not be broadcast
-            pass
-        elif delta_phi.domain == ["current collector"]:
+        if delta_phi.domain == ["current collector"]:
             delta_phi = pybamm.PrimaryBroadcast(delta_phi, self.domain_for_broadcast)
             delta_phi_dim = pybamm.PrimaryBroadcast(
                 delta_phi_dim, self.domain_for_broadcast

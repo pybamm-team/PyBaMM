@@ -4,6 +4,7 @@
 
 import os
 import tempfile
+import shutil
 import subprocess
 import unittest
 
@@ -81,8 +82,7 @@ class TestParameterValues(unittest.TestCase):
         pybamm.ParameterValues(chemistry=pybamm.parameter_sets.Chen2020)
 
         # Clean up parameter files
-        cmd = ["rm", "-r", "lithium_ion"]
-        subprocess.run(cmd)
+        shutil.rmtree("lithium_ion")
 
     def test_update(self):
         # converts to dict if not
