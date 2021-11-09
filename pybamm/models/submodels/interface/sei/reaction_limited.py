@@ -101,12 +101,17 @@ class ReactionLimited(BaseModel):
             j_inner = variables["Inner SEI interfacial current density"]
             j_outer = variables["Outer SEI interfacial current density"]
 
+        if self.reaction_loc == "interface":
+            a = 1
+        else:
+            a = variables["Negative electrode surface area to volume ratio"]
+
         v_bar = self.param.v_bar
         Gamma_SEI = self.param.Gamma_SEI
 
         self.rhs = {
-            L_inner: -Gamma_SEI * j_inner,
-            L_outer: -v_bar * Gamma_SEI * j_outer,
+            L_inner: -Gamma_SEI * a * j_inner,
+            L_outer: -v_bar * Gamma_SEI * a * j_outer,
         }
 
     def set_initial_conditions(self, variables):
