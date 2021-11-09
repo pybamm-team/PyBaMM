@@ -78,7 +78,7 @@ jobs:
 
     - name: Run integration tests for GNU/Linux
       if: matrix.os == 'ubuntu-latest'
-      run: python -m tox -e tests --folder integration
+      run: python -m tox -e integration-tests
 
     - name: Run unit tests for Windows and MacOS
       if: matrix.os != 'ubuntu-latest'
