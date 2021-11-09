@@ -2,7 +2,6 @@
 # Constant-current constant-voltage charge with US06 Drive Cycle using Experiment Class.
 #
 import pybamm
-import numpy as np
 import pandas as pd
 import os
 
@@ -20,7 +19,9 @@ drive_cycle_current = pd.read_csv(
 def map_drive_cycle(x, min_op_value, max_op_value):
     min_ip_value = x[:, 1].min()
     max_ip_value = x[:, 1].max()
-    x[:, 1] = (x[:, 1] - min_ip_value) / (max_ip_value - min_ip_value) * (max_op_value - min_op_value) + min_op_value
+    x[:, 1] = (x[:, 1] - min_ip_value) / (max_ip_value - min_ip_value) * (
+        max_op_value - min_op_value
+    ) + min_op_value
     return x
 
 
