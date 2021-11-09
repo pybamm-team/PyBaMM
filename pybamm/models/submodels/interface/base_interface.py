@@ -311,7 +311,8 @@ class BaseInterface(pybamm.BaseSubModel):
 
         # Size average. For j variables that depend on particle size, see
         # "_get_standard_size_distribution_interfacial_current_variables"
-        j = pybamm.size_average(j)
+        if j.domain in [["negative particle size"], ["positive particle size"]]:
+            j = pybamm.size_average(j)
         # Average, and broadcast if necessary
         j_av = pybamm.x_average(j)
         if j.domain == []:
@@ -508,7 +509,8 @@ class BaseInterface(pybamm.BaseSubModel):
         L_x = param.L_x
         # Size average. For j0 variables that depend on particle size, see
         # "_get_standard_size_distribution_exchange_current_variables"
-        j0 = pybamm.size_average(j0)
+        if j0.domain in [["negative particle size"], ["positive particle size"]]:
+            j0 = pybamm.size_average(j0)
         # Average, and broadcast if necessary
         j0_av = pybamm.x_average(j0)
 
@@ -604,7 +606,8 @@ class BaseInterface(pybamm.BaseSubModel):
 
         # Size average. For eta_r variables that depend on particle size, see
         # "_get_standard_size_distribution_overpotential_variables"
-        eta_r = pybamm.size_average(eta_r)
+        if eta_r.domain in [["negative particle size"], ["positive particle size"]]:
+            eta_r = pybamm.size_average(eta_r)
 
         # X-average, and broadcast if necessary
         eta_r_av = pybamm.x_average(eta_r)
@@ -742,8 +745,10 @@ class BaseInterface(pybamm.BaseSubModel):
         """
         # Size average. For ocp variables that depend on particle size, see
         # "_get_standard_size_distribution_ocp_variables"
-        ocp = pybamm.size_average(ocp)
-        dUdT = pybamm.size_average(dUdT)
+        if ocp.domain in [["negative particle size"], ["positive particle size"]]:
+            ocp = pybamm.size_average(ocp)
+        if dUdT.domain in [["negative particle size"], ["positive particle size"]]:
+            dUdT = pybamm.size_average(dUdT)
 
         # Average, and broadcast if necessary
         dUdT_av = pybamm.x_average(dUdT)
