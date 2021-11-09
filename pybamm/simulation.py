@@ -170,25 +170,33 @@ class Simulation:
                 "Power switch": 0,
                 "CCCV switch": 0,
                 "Current input [A]": 0,
-                "Voltage input [V]": 0,  # doesn't matter
-                "Power input [W]": 0,  # doesn't matter
+                "Voltage input [V]": 0,
+                "Power input [W]": 0,
             }
             op_control = op["electric"][1]
-            if isinstance(op[0], np.ndarray):
+            if op["dc_data"] is not None:
                 # If ndarray is recived from, create interpolant
                 timescale = self._parameter_values.evaluate(model.timescale)
                 drive_cycle_interpolant = pybamm.Interpolant(
-                    op[0][:, 0], op[0][:, 1], timescale * pybamm.t
+                    op["dc_data"][:, 0],
+                    op["dc_data"][:, 1],
+                    timescale * (pybamm.t - pybamm.InputParameter("start time")),
                 )
                 if op_control == "A":
                     operating_inputs.update(
-                        {"Current switch": 1, "Current input [A]": drive_cycle_interpolant}
+                        {
+                            "Current switch": 1,
+                            "Current input [A]": drive_cycle_interpolant,
+                        }
                     )
-                if op[1] == "V":
+                if op_control == "V":
                     operating_inputs.update(
-                        {"Voltage switch": 1, "Voltage input [V]": drive_cycle_interpolant}
+                        {
+                            "Voltage switch": 1,
+                            "Voltage input [V]": drive_cycle_interpolant,
+                        }
                     )
-                if op[1] == "W":
+                if op_control == "W":
                     operating_inputs.update(
                         {"Power switch": 1, "Power input [W]": drive_cycle_interpolant}
                     )
@@ -221,7 +229,9 @@ class Simulation:
                 elif op_control == "V":
                     # Update inputs for constant voltage
                     V = op["electric"][0]
-                    operating_inputs.update({"Voltage switch": 1, "Voltage input [V]": V})
+                    operating_inputs.update(
+                        {"Voltage switch": 1, "Voltage input [V]": V}
+                    )
                 elif op_control == "W":
                     # Update inputs for constant power
                     P = op["electric"][0]
@@ -872,6 +882,11 @@ class Simulation:
                         f"step {step_num}/{cycle_length}: {op_conds_str}"
                     )
                     inputs.update(exp_inputs)
+                    if current_solution is None:
+                        start_time = 0
+                    else:
+                        start_time = current_solution.t[-1]
+                    inputs.update({"start time": start_time})
                     kwargs["inputs"] = inputs
                     # Make sure we take at least 2 timesteps
                     npts = max(int(round(dt / exp_inputs["period"])) + 1, 2)
