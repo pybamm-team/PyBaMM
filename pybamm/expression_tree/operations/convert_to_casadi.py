@@ -195,7 +195,9 @@ class CasadiConverter(object):
                     #     call(self,[MX],bool,bool)
                     #   You have: '(Function,([[MX]]))'
 
-                    res = LUT[converted_children[0], converted_children[1]]
+                    # res = LUT[converted_children[0], converted_children[1]]
+
+                    res = LUT(np.array(converted_children))
 
                     return res
 
