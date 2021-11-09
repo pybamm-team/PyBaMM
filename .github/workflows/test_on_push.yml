@@ -73,7 +73,7 @@ jobs:
       run: tox -e pybamm-requires
 
     - name: Run unit tests for GNU/Linux
-      if: matrix.os == 'ubuntu-latest'
+      if: matrix.os == 'ubuntu-latest' && matrix.python-version != 3.9
       run: python -m tox -e tests
 
     - name: Run unit tests for Windows and MacOS
