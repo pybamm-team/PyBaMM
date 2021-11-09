@@ -72,7 +72,7 @@ jobs:
       if: matrix.os == 'ubuntu-latest'
       run: tox -e pybamm-requires
 
-    - name: Run unit tests for GNU/Linux
+    - name: Run unit tests for GNU/Linux with Python 3.7 and 3.8
       if: matrix.os == 'ubuntu-latest' && matrix.python-version != 3.9
       run: python -m tox -e tests
 
@@ -88,7 +88,7 @@ jobs:
       if: matrix.os == 'ubuntu-latest'
       run: tox -e examples
         
-    - name: Install and run coverage
+    - name: Run unit tests for GNU/Linux with Python 3.9 and generate coverage report
       if: success() && (matrix.os == 'ubuntu-latest' && matrix.python-version == 3.9)
       run: tox -e coverage
 
