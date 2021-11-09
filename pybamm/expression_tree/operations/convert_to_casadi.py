@@ -184,7 +184,18 @@ class CasadiConverter(object):
                     #     call(self,[MX],bool,bool)
                     #   You have: '(Function,([MX],[MX]))'
 
-                    res = LUT([[converted_children[0]], [converted_children[1]]])
+                    # res = LUT([[converted_children[0]], [converted_children[1]]])
+                    # NotImplementedError: Wrong number or type of arguments for overloaded function 'Function_call'.
+                    #   Possible prototypes are:
+                    #     call(self,dict:DM,bool,bool)
+                    #     call(self,[DM],bool,bool)
+                    #     call(self,[SX],bool,bool)
+                    #     call(self,dict:SX,bool,bool)
+                    #     call(self,dict:MX,bool,bool)
+                    #     call(self,[MX],bool,bool)
+                    #   You have: '(Function,([[MX]]))'
+
+                    res = LUT[converted_children[0], converted_children[1]]
 
                     return res
 
