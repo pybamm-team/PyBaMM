@@ -3,13 +3,13 @@ import operator as op
 from functools import partial
 
 import numpy as onp
-from absl import logging
 
 import pybamm
 
 if pybamm.have_jax():
     import jax
     import jax.numpy as jnp
+    from absl import logging
     from jax import core, dtypes
     from jax import linear_util as lu
     from jax.api_util import flatten_fun_nokwargs
