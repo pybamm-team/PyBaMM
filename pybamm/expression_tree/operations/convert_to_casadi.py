@@ -156,8 +156,13 @@ class CasadiConverter(object):
                     # res = _casadi.Function_call(LUT, *[[converted_children[0], converted_children[1]]])
 
                     # res = LUT([0.5, 300.0])  # working with hardcoded values
+                    # works
 
-                    res = LUT(*converted_children)
+                    # res = LUT(*converted_children)
+                    # RuntimeError: .../casadi/core/function_internal.hpp:1241: Assertion "arg.size()==n_in_" failed:
+                    # Incorrect number of inputs: Expected 1, got 2
+
+                    res = LUT(converted_children)
 
                     return res
 
