@@ -77,6 +77,8 @@ class ReversiblePlating(BasePlating):
             j_stripping = variables[
                 "X-averaged lithium plating interfacial current density"
             ]
+            # Note a is dimensionless (has a constant value of 1 if the surface
+            # area does not change)
             a = variables["X-averaged negative electrode surface area to volume ratio"]
         else:
             c_plated_Li = variables["Lithium plating concentration"]

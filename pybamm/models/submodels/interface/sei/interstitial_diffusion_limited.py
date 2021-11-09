@@ -78,6 +78,8 @@ class InterstitialDiffusionLimited(BaseModel):
             if self.reaction_loc == "interface":
                 a = 1
             else:
+                # Note a is dimensionless (has a constant value of 1 if the surface
+                # area does not change)
                 a = variables[
                     "X-averaged negative electrode surface area to volume ratio"
                 ]
