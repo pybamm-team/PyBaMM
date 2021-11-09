@@ -17,69 +17,28 @@ drive_cycle_current = pd.read_csv(
 
 
 # Map Drive Cycle
-def Map_Drive_Cycle(x, min_ip_value, max_ip_value, min_op_value, max_op_value):
-    return (x - min_ip_value) * (max_op_value - min_op_value) / (
-        max_ip_value - min_ip_value
-    ) + min_op_value
+def map_drive_cycle(x, min_op_value, max_op_value):
+    min_ip_value = x[:, 1].min()
+    max_ip_value = x[:, 1].max()
+    x[:, 1] = (x[:, 1] - min_ip_value) / (max_ip_value - min_ip_value) * (max_op_value - min_op_value) + min_op_value
+    return x
 
 
-# Map Current to Voltage
-temp_volts = np.array([])
-min_ip_value = drive_cycle_current[:, 1].min()
-max_ip_value = drive_cycle_current[:, 1].max()
-min_Voltage = 3.5
-max_Voltage = 4.1
-for I in drive_cycle_current[:, 1]:
-    temp_volts = np.append(
-        temp_volts,
-        Map_Drive_Cycle(I, min_ip_value, max_ip_value, min_Voltage, max_Voltage),
-    )
+# Map current drive cycle to voltage and power
+drive_cycle_power = map_drive_cycle(drive_cycle_current, 1.5, 3.5)
 
-drive_cycle_voltage = drive_cycle_current
-drive_cycle_voltage = np.column_stack(
-    (np.delete(drive_cycle_voltage, 1, 1), np.array(temp_volts))
-)
-
-# Map Current to Power
-temp_volts = np.array([])
-min_ip_value = drive_cycle_current[:, 1].min()
-max_ip_value = drive_cycle_current[:, 1].max()
-min_Power = 2.5
-max_Power = 5.5
-for I in drive_cycle_current[:, 1]:
-    temp_volts = np.append(
-        temp_volts, Map_Drive_Cycle(I, min_ip_value, max_ip_value, min_Power, max_Power)
-    )
-
-drive_cycle_power = drive_cycle_current
-drive_cycle_power = np.column_stack(
-    (np.delete(drive_cycle_power, 1, 1), np.array(temp_volts))
-)
 experiment = pybamm.Experiment(
     [
-        "Charge at 1 A until 4.1 V",
-        "Hold at 4.1 V until 50 mA",
-        "Rest for 1 hour",
+        "Charge at 1 A until 4.0 V",
+        "Hold at 4.0 V until 50 mA",
+        "Rest for 30 minutes",
         "Run US06_A (A)",
-        "Rest for 1 hour",
-    ]
-    # + [
-    #     "Charge at 1 A until 4.1 V",
-    #     "Hold at 4.1 V until 50 mA",
-    #     "Rest for 1 hour",
-    #     "Run US06_V (V)",
-    #     "Rest for 1 hour",
-    # ]
-    + [
-        # "Charge at 1 A until 4.1 V",
-        # "Hold at 4.1 V until 50 mA",
-        # "Rest for 1 hour",
+        "Rest for 30 minutes",
         "Run US06_W (W)",
-        "Rest for 1 hour",
+        "Rest for 30 minutes",
     ],
     drive_cycles={
         "US06_A": drive_cycle_current,
-        "US06_V": drive_cycle_voltage,
         "US06_W": drive_cycle_power,
     },
 )
