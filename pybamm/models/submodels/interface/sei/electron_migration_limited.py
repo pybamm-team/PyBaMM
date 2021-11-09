@@ -73,15 +73,17 @@ class ElectronMigrationLimited(BaseModel):
             L_outer = variables["X-averaged outer SEI thickness"]
             j_inner = variables["X-averaged inner SEI interfacial current density"]
             j_outer = variables["X-averaged outer SEI interfacial current density"]
+            if self.reaction_loc == "interface":
+                a = 1
+            else:
+                a = variables[
+                    "X-averaged negative electrode surface area to volume ratio"
+                ]
         else:
             L_inner = variables["Inner SEI thickness"]
             L_outer = variables["Outer SEI thickness"]
             j_inner = variables["Inner SEI interfacial current density"]
             j_outer = variables["Outer SEI interfacial current density"]
-
-        if self.reaction_loc == "interface":
-            a = 1
-        else:
             a = variables["Negative electrode surface area to volume ratio"]
 
         v_bar = self.param.v_bar
