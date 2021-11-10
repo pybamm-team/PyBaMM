@@ -2,7 +2,7 @@
 # Base class for particles with Fickian diffusion
 #
 import pybamm
-from base_particle import BaseParticle
+from .base_particle import BaseParticle
 
 
 class BaseFickian(BaseParticle):

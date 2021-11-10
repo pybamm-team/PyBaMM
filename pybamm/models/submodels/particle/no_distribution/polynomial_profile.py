@@ -3,7 +3,7 @@
 #
 import pybamm
 
-from ..base_fickian import BaseFickian
+from .base_fickian import BaseFickian
 
 
 class PolynomialProfile(BaseFickian):
