@@ -350,9 +350,12 @@ def have_jax():
 
 def install_jax():
     """Install jax, jaxlib"""
+    jax_version = "jax==0.2.12"
+    jaxlib_version = "jaxlib==0.1.70"
+
     if system() == "Windows":
         raise NotImplementedError("Jax is not available on Windows")
     else:
         subprocess.check_call(
-            [sys.executable, "-m", "pip", "install", "jax==0.2.12", "jaxlib==0.1.70"]
+            [sys.executable, "-m", "pip", "install", jax_version, jaxlib_version]
         )
