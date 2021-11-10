@@ -124,6 +124,11 @@ class BatteryModelOptions(pybamm.FuzzyDict):
             * "SEI porosity change" : str
                 Whether to include porosity change due to SEI formation, can be "false"
                 (default) or "true".
+            * "stress induced diffusion" : str
+                Whether to includes stress induced diffusion, can be "false" or "true".
+                The default is "false" if "particle mechanics" is "none" and "true"
+                otherwise. A 2-tuple can be provided for different behaviour in negative
+                and positive electrodes.
             * "surface form" : str
                 Whether to use the surface formulation of the problem. Can be "false"
                 (default), "differential" or "algebraic".
@@ -186,6 +191,7 @@ class BatteryModelOptions(pybamm.FuzzyDict):
             ],
             "SEI film resistance": ["none", "distributed", "average"],
             "SEI porosity change": ["true", "false"],
+            "stress induced diffusion": ["true", "false"],
             "surface form": ["false", "differential", "algebraic"],
             "thermal": ["isothermal", "lumped", "x-lumped", "x-full"],
             "total interfacial current density as a state": ["true", "false"],
@@ -238,7 +244,7 @@ class BatteryModelOptions(pybamm.FuzzyDict):
         # The "SEI film resistance" option will still be overridden by extra_options if
         # provided
 
-        # Change the default for swelling based on which LAM option is
+        # Change the default for particle mechanics based on which LAM option is
         # provided
         # return "none" if option not given
         lam_option = extra_options.get("loss of active material", "none")
@@ -246,8 +252,31 @@ class BatteryModelOptions(pybamm.FuzzyDict):
             default_options["particle mechanics"] = "swelling only"
         else:
             default_options["particle mechanics"] = "none"
-        # The "SEI film resistance" option will still be overridden by extra_options if
+        # The "particle mechanics" option will still be overridden by extra_options if
         # provided
+
+        # Change the default for stress induced diffusion based on which particle
+        # mechanics option is provided
+        mechanics_options = extra_options.get("particle mechanics", "none")
+        if mechanics_options == "none":
+            default_options["stress induced diffusion"] = "false"
+        else:
+            if isinstance(self.options["particle mechanics"], str):
+                mech_left = self.options["particle mechanics"]
+                mech_right = self.options["particle mechanics"]
+            else:
+                mech_left, mech_right = self.options["particle mechanics"]
+            if mech_left == "none":
+                default_left = "false"
+            else:
+                default_left = "true"
+            if mech_right == "none":
+                default_right = "false"
+            else:
+                default_right = "true"
+            default_options["stress induced diffusion"] = (default_left, default_right)
+        # The "stress induced diffusion" option will still be overridden by
+        # extra_options if provided
 
         options = pybamm.FuzzyDict(default_options)
         # any extra options overwrite the default options
@@ -283,10 +312,6 @@ class BatteryModelOptions(pybamm.FuzzyDict):
 
         # Options not yet compatible with particle-size distributions
         if options["particle size"] == "distribution":
-            if options["SEI"] != "none":
-                raise NotImplementedError(
-                    "SEI submodels do not yet support particle-size distributions."
-                )
             if options["lithium plating"] != "none":
                 raise NotImplementedError(
                     "Lithium plating submodels do not yet support particle-size "
@@ -299,8 +324,17 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                 )
             if options["particle shape"] != "spherical":
                 raise NotImplementedError(
-                    "Particle shape must be 'spherical' for particle-size distributions"
+                    "Particle shape must be 'spherical' for particle-size distribution"
                     " submodels."
+                )
+            if options["SEI"] != "none":
+                raise NotImplementedError(
+                    "SEI submodels do not yet support particle-size distributions."
+                )
+            if options["stress induced diffusion"] == "true":
+                raise NotImplementedError(
+                    "Stress induced diffusion cannot yet be included in "
+                    "particle-size distributions."
                 )
             if options["thermal"] == "x-full":
                 raise NotImplementedError(
