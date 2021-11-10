@@ -2,7 +2,8 @@
 
 ## Features
 
--   Half-cell SPM and SPMe have been implemented (  [#1731](https://github.com/pybamm-team/PyBaMM/pull/1731))
+-   Added surface area to volume ratio as a factor to the SEI equations ([#1790](https://github.com/pybamm-team/PyBaMM/pull/1790))
+-   Half-cell SPM and SPMe have been implemented ([#1731](https://github.com/pybamm-team/PyBaMM/pull/1731))
 
 ## Bug fixes
 
