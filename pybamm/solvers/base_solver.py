@@ -1160,7 +1160,7 @@ class BaseSolver(object):
         external_variables : dict
             A dictionary of external variables and their corresponding
             values at the current time
-        inputs_dict : dict, optional
+        inputs : dict, optional
             Any input parameters to pass to the model when solving
         save : bool
             Turn on to store the solution of all previous timesteps
@@ -1201,6 +1201,14 @@ class BaseSolver(object):
         # Set up external variables and inputs
         external_variables = external_variables or {}
         inputs = inputs or {}
+
+        # Remove interpolant inputs as Casadi can't handle them
+        if isinstance(inputs.get("Current input [A]"), pybamm.Interpolant):
+            del inputs["Current input [A]"]
+        elif isinstance(inputs.get("Voltage input [V]"), pybamm.Interpolant):
+            del inputs["Voltage input [V]"]
+        elif isinstance(inputs.get("Power input [W]"), pybamm.Interpolant):
+            del inputs["Power input [W]"]
         ext_and_inputs = {**external_variables, **inputs}
 
         # Check that any inputs that may affect the scaling have not changed
