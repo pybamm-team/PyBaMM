@@ -36,6 +36,7 @@ PRINT_OPTIONS_OUTPUT = """\
 'total interfacial current density as a state': 'false' (possible: ['true', 'false'])
 'working electrode': 'both' (possible: ['both', 'negative', 'positive'])
 'SEI film resistance': 'none' (possible: ['none', 'distributed', 'average'])
+'stress induced diffusion': 'false' (possible: ['true', 'false'])
 """  # noqa: E501
 
 
@@ -185,7 +186,7 @@ class TestBaseBatteryModel(unittest.TestCase):
             pybamm.BaseBatteryModel({"convection": "full transverse"})
         with self.assertRaisesRegex(pybamm.OptionError, "particle"):
             pybamm.BaseBatteryModel({"particle": "bad particle"})
-        with self.assertRaisesRegex(NotImplementedError, "The 'fast diffusion'"):
+        with self.assertRaisesRegex(pybamm.OptionError, "The 'fast diffusion'"):
             pybamm.BaseBatteryModel({"particle": "fast diffusion"})
         with self.assertRaisesRegex(pybamm.OptionError, "particle shape"):
             pybamm.BaseBatteryModel({"particle shape": "bad particle shape"})

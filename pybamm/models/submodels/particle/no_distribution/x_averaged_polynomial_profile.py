@@ -73,9 +73,8 @@ class XAveragedPolynomialProfile(BaseFickian):
 
     def get_coupled_variables(self, variables):
         c_s_av = variables["Average " + self.domain.lower() + " particle concentration"]
-        T_av = (
-            variables["X-averaged " + self.domain.lower() + " electrode temperature"],
-        )
+        T_av = variables["X-averaged " + self.domain.lower() + " electrode temperature"]
+
         D_eff_av = self._get_effective_diffusivity(c_s_av, T_av)
         i_boundary_cc = variables["Current collector current density"]
         a_av = variables[

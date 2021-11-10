@@ -2,7 +2,7 @@
 # Base class for particles with Fickian diffusion
 #
 import pybamm
-from .base_particle import BaseParticle
+from ..base_particle import BaseParticle
 
 
 class BaseFickian(BaseParticle):
@@ -25,30 +25,37 @@ class BaseFickian(BaseParticle):
     def __init__(self, param, domain, options):
         super().__init__(param, domain, options)
 
-        if self.options["stress induced diffusion"] == "true":
-            pybamm.citations.register("Ai2019")
-            pybamm.citations.register("Deshpande2012")
-
     def _get_effective_diffusivity(self, c, T):
+        param = self.param
+
+        # Get diffusivity
         if self.domain == "Negative":
-            D = self.param.D_n(c, T)
+            D = param.D_n(c, T)
         elif self.domain == "Positive":
-            D = self.param.D_p(c, T)
+            D = param.D_p(c, T)
 
-        # Account for stress induced diffusion
-        if self.options["stress induced diffusion"] == "true":
-            if self.domain == "Negative":
-                theta = self.param.theta_n
-                c_0 = self.param.c_0_n
-            elif self.domain == "Positive":
-                theta = self.param.theta_p
-                c_0 = self.param.c_0_p
-
-            D_eff = D * (1 + theta * (c - c_0) / (1 + self.param.Theta * T))
+        # Account for stress induced diffusion by defining a multiplicative
+        # "stress factor"
+        # This option can either be a string (both sides the same) or a 2-tuple
+        # to indicate different options in negative and positive electrodes
+        if isinstance(self.options["stress induced diffusion"], str):
+            stress_left = self.options["stress induced diffusion"]
+            stress_right = self.options["stress induced diffusion"]
         else:
-            D_eff = D
+            stress_left, stress_right = self.options["stress induced diffusion"]
 
-        return D_eff
+        if self.domain == "Negative" and stress_left == "true":
+            stress_factor = 1 + param.theta_n * (c - param.c_n_0) / (
+                1 + param.Theta * T
+            )
+        elif self.domain == "Positive" and stress_right == "true":
+            stress_factor = 1 + param.theta_p * (c - param.c_p_0) / (
+                1 + param.Theta * T
+            )
+        else:
+            stress_factor = 1
+
+        return D * stress_factor
 
     def _get_standard_flux_variables(self, N_s, N_s_xav, D_eff):
         variables = {

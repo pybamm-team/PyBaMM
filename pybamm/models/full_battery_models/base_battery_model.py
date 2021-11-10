@@ -257,24 +257,11 @@ class BatteryModelOptions(pybamm.FuzzyDict):
 
         # Change the default for stress induced diffusion based on which particle
         # mechanics option is provided
-        mechanics_options = extra_options.get("particle mechanics", "none")
-        if mechanics_options == "none":
+        mechanics_option = extra_options.get("particle mechanics", "none")
+        if mechanics_option == "none":
             default_options["stress induced diffusion"] = "false"
         else:
-            if isinstance(self.options["particle mechanics"], str):
-                mech_left = self.options["particle mechanics"]
-                mech_right = self.options["particle mechanics"]
-            else:
-                mech_left, mech_right = self.options["particle mechanics"]
-            if mech_left == "none":
-                default_left = "false"
-            else:
-                default_left = "true"
-            if mech_right == "none":
-                default_right = "false"
-            else:
-                default_right = "true"
-            default_options["stress induced diffusion"] = (default_left, default_right)
+            default_options["stress induced diffusion"] = "true"
         # The "stress induced diffusion" option will still be overridden by
         # extra_options if provided
 
@@ -317,6 +304,11 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                     "Lithium plating submodels do not yet support particle-size "
                     "distributions."
                 )
+            if options["particle"] in ["quadratic profile", "quartic profile"]:
+                raise NotImplementedError(
+                    "'quadratic' and 'quartic' concentration profiles have not yet "
+                    "been implemented for particle-size ditributions"
+                )
             if options["particle mechanics"] != "none":
                 raise NotImplementedError(
                     "Particle mechanics submodels do not yet support particle-size"
@@ -342,13 +334,19 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                     " distributions."
                 )
 
-        # Some standard checks to make sure options are compatible
+        # Renamed options
+        if options["particle"] == "fast diffusion":
+            raise pybamm.OptionError(
+                "The 'fast diffusion' option has been renamed. "
+                "Use 'uniform profile' instead."
+            )
         if options["SEI porosity change"] in [True, False]:
             raise pybamm.OptionError(
                 "SEI porosity change must now be given in string format "
                 "('true' or 'false')"
             )
 
+        # Some standard checks to make sure options are compatible
         if options["dimensionality"] == 0:
             if options["current collector"] not in ["uniform"]:
                 raise pybamm.OptionError(
@@ -358,12 +356,15 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                 raise pybamm.OptionError(
                     "cannot have transverse convection in 0D model"
                 )
-
-        if options["particle"] == "fast diffusion":
-            raise NotImplementedError(
-                "The 'fast diffusion' option has been renamed. "
-                "Use 'uniform profile' instead."
-            )
+        if isinstance(options["stress induced diffusion"], str):
+            if (
+                options["stress induced diffusion"] == "true"
+                and options["particle mechanics"] == "none"
+            ):
+                raise pybamm.OptionError(
+                    "cannot have stress induced diffusion without a particle "
+                    "mechanics model"
+                )
 
         for option, value in options.items():
             if option == "external submodels" or option == "working electrode":
@@ -382,6 +383,7 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                                 "loss of active material",
                                 "particle mechanics",
                                 "particle",
+                                "stress induced diffusion",
                             ]
                             and isinstance(value, tuple)
                             and len(value) == 2
