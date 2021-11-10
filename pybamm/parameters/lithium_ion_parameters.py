@@ -594,15 +594,12 @@ class LithiumIonParameters(BaseParameters):
         self.D_e_typ = self.D_e_dimensional(self.c_e_typ, self.T_ref)
         self.tau_diffusion_e = self.L_x ** 2 / self.D_e_typ
 
-        self.D_n_typ_dim = self.D_n_dimensional(pybamm.Scalar(1), self.T_ref)
-
         # Particle diffusion timescales
-        self.tau_diffusion_n = self.R_n_typ ** 2 / self.D_n_dimensional(
-            pybamm.Scalar(1), self.T_ref
-        )
-        self.tau_diffusion_p = self.R_p_typ ** 2 / self.D_p_dimensional(
-            pybamm.Scalar(1), self.T_ref
-        )
+        self.D_n_typ_dim = self.D_n_dimensional(pybamm.Scalar(1), self.T_ref)
+        self.D_p_typ_dim = self.D_p_dimensional(pybamm.Scalar(1), self.T_ref)
+
+        self.tau_diffusion_n = self.R_n_typ ** 2 / self.D_n_typ_dim
+        self.tau_diffusion_p = self.R_p_typ ** 2 / self.D_p_typ_dim
 
         # Thermal diffusion timescale
         self.tau_th_yz = self.therm.tau_th_yz
@@ -937,9 +934,7 @@ class LithiumIonParameters(BaseParameters):
         """Dimensionless positive particle diffusivity"""
         sto = c_s_p
         T_dim = self.Delta_T * T + self.T_ref
-        return self.D_p_dimensional(sto, T_dim) / self.D_p_dimensional(
-            pybamm.Scalar(1), self.T_ref
-        )
+        return self.D_p_dimensional(sto, T_dim) / self.D_p_typ_dim
 
     def j0_n(self, c_e, c_s_surf, T):
         """Dimensionless negative exchange-current density"""

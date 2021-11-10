@@ -48,7 +48,8 @@ class FickianDiffusion(BaseFickian):
         D_eff = self._get_effective_diffusivity(c_s, T)
         N_s = -D_eff * pybamm.grad(c_s)
 
-        variables.update(self._get_standard_flux_variables(N_s, N_s, D_eff))
+        variables.update(self._get_standard_flux_variables(N_s, N_s))
+        variables.update(self._get_standard_diffusivity_variables(D_eff))
         variables.update(self._get_total_concentration_variables(variables))
 
         return variables

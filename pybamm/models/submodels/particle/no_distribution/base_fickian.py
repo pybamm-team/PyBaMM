@@ -57,14 +57,21 @@ class BaseFickian(BaseParticle):
 
         return D * stress_factor
 
-    def _get_standard_flux_variables(self, N_s, N_s_xav, D_eff):
+    def _get_standard_diffusivity_variables(self, D_eff):
+        if self.domain == "Negative":
+            D_scale = self.param.D_n_typ_dim
+        elif self.domain == "Positive":
+            D_scale = self.param.D_p_typ_dim
+
         variables = {
-            self.domain + " particle flux": N_s,
-            "X-averaged " + self.domain.lower() + " particle flux": N_s_xav,
             self.domain + " effective diffusivity": D_eff,
+            self.domain + " effective diffusivity [m2.s-1]": D_eff * D_scale,
             "X-averaged "
             + self.domain.lower()
             + " effective diffusivity": pybamm.x_average(D_eff),
+            "X-averaged "
+            + self.domain.lower()
+            + " effective diffusivity [m2.s-1]": pybamm.x_average(D_eff * D_scale),
         }
 
         return variables

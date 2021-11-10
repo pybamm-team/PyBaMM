@@ -263,7 +263,8 @@ class XAveragedPolynomialProfile(BaseFickian):
                 c_s, c_s_av=c_s_av, c_s_surf=c_s_surf
             )
         )
-        variables.update(self._get_standard_flux_variables(N_s, N_s_xav, D_eff))
+        variables.update(self._get_standard_flux_variables(N_s, N_s_xav))
+        variables.update(self._get_standard_diffusivity_variables(D_eff))
         variables.update(self._get_total_concentration_variables(variables))
 
         return variables
