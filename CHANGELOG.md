@@ -2,7 +2,9 @@
 
 ## Features
 
--   Half-cell SPM and SPMe have been implemented (  [#1731](https://github.com/pybamm-team/PyBaMM/pull/1731))
+-   Added surface area to volume ratio as a factor to the SEI equations ([#1790](https://github.com/pybamm-team/PyBaMM/pull/1790))
+-   Half-cell SPM and SPMe have been implemented ([#1731](https://github.com/pybamm-team/PyBaMM/pull/1731))
+
 ## Bug fixes
 
 -   Fixed `sympy` operators for `Arctan` and `Exponential` ([#1786](https://github.com/pybamm-team/PyBaMM/pull/1786))
@@ -11,6 +13,7 @@
 ## Breaking changes
 
 -   Raise error if `Concatenation` is used directly with `Variable` objects (`concatenation` should be used instead) ([#1789](https://github.com/pybamm-team/PyBaMM/pull/1789))
+
 # [v21.10](https://github.com/pybamm-team/PyBaMM/tree/v21.9) - 2021-10-31
 
 ## Features
