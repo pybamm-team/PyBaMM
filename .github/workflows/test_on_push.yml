@@ -77,7 +77,7 @@ jobs:
       run: python -m tox -e quick
 
     - name: Run unit tests for GNU/Linux with Python 3.9 and generate coverage report
-      if: success() && (matrix.os == 'ubuntu-latest' && matrix.python-version == 3.9)
+      if: matrix.os == 'ubuntu-latest' && matrix.python-version == 3.9
       run: tox -e coverage
 
     - name: Run integration tests for GNU/Linux
