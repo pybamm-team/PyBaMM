@@ -158,6 +158,24 @@ class TestSimulationExperiment(unittest.TestCase):
         )
         self.assertEqual(solutions[1].termination, "final time")
 
+    def test_run_experiment_drive_cycle(self):
+        drive_cycle = np.array([np.arange(10), np.arange(10)]).T
+        experiment = pybamm.Experiment(
+            [
+                (
+                    "Run drive_cycle (A)",
+                    "Run drive_cycle (V)",
+                    "Run drive_cycle (W)",
+                )
+            ],
+            drive_cycles={"drive_cycle": drive_cycle}
+        )
+        model = pybamm.lithium_ion.DFN()
+        sim = pybamm.Simulation(model, experiment=experiment)
+        self.assertIn(('drive_cycle', 'A'), sim.op_conds_to_model_and_param)
+        self.assertIn(('drive_cycle', 'V'), sim.op_conds_to_model_and_param)
+        self.assertIn(('drive_cycle', 'W'), sim.op_conds_to_model_and_param)
+
     def test_run_experiment_old_setup_type(self):
         experiment = pybamm.Experiment(
             [

@@ -6,15 +6,12 @@ import numpy as np
 from tests import get_mesh_for_testing, get_discretisation_for_testing
 import warnings
 import sys
-from platform import system, version
 
 
 class TestScipySolver(unittest.TestCase):
     def test_model_solver_python_and_jax(self):
 
-        if not (
-            system() == "Windows" or (system() == "Darwin" and "ARM64" in version())
-        ):
+        if pybamm.have_jax():
             formats = ["python", "jax"]
         else:
             formats = ["python"]
