@@ -14,6 +14,7 @@
 ## Breaking changes
 
 -   Raise error if `Concatenation` is used directly with `Variable` objects (`concatenation` should be used instead) ([#1789](https://github.com/pybamm-team/PyBaMM/pull/1789))
+-   Made jax and the PyBaMM JaxSolver optional ([#1767](https://github.com/pybamm-team/PyBaMM/pull/1767))
 
 # [v21.10](https://github.com/pybamm-team/PyBaMM/tree/v21.9) - 2021-10-31
 
@@ -26,7 +27,7 @@
 -   SEI models can now be included in the half-cell model ([#1705](https://github.com/pybamm-team/PyBaMM/pull/1705))
 
 ## Bug fixes
- 
+
 -   Half-cell model and lead-acid models can now be simulated with `Experiment`s ([#1759](https://github.com/pybamm-team/PyBaMM/pull/1759))
 -   Removed in-place modification of the solution objects by `QuickPlot` ([#1747](https://github.com/pybamm-team/PyBaMM/pull/1747))
 -   Fixed vector-vector multiplication bug that was causing errors in the SPM with constant voltage or power ([#1735](https://github.com/pybamm-team/PyBaMM/pull/1735))
