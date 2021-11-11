@@ -294,9 +294,10 @@ class SpecificFunction(Function):
     @property
     def julia_name(self):
         """See :meth:`pybamm.Function.julia_name`"""
-        # By default, the julia name for a specific function is the function's name
+        # By default, the julia name for a specific function is the class name
+        # in lowercase
         # Some functions may overwrite this
-        return self.function.__name__
+        return self.__class__.__name__.lower()
 
     def _sympy_operator(self, child):
         """Apply appropriate SymPy operators."""
@@ -344,6 +345,10 @@ class Arctan(SpecificFunction):
     def julia_name(self):
         """See :meth:`pybamm.Function.julia_name`"""
         return "atan"
+
+    def _sympy_operator(self, child):
+        """Override :meth:`pybamm.Function._sympy_operator`"""
+        return sympy.atan(child)
 
 
 def arctan(child):
@@ -413,6 +418,10 @@ class Exponential(SpecificFunction):
     def _function_diff(self, children, idx):
         """See :meth:`pybamm.Function._function_diff()`."""
         return Exponential(children[0])
+
+    def _sympy_operator(self, child):
+        """Override :meth:`pybamm.Function._sympy_operator`"""
+        return sympy.exp(child)
 
 
 def exp(child):

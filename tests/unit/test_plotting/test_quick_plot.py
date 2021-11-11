@@ -263,6 +263,15 @@ class TestQuickPlot(unittest.TestCase):
 
         pybamm.close_plots()
 
+    def test_plot_with_different_models(self):
+        model = pybamm.BaseModel()
+        a = pybamm.Variable("a")
+        model.rhs = {a: pybamm.Scalar(0)}
+        model.initial_conditions = {a: pybamm.Scalar(0)}
+        solution = pybamm.CasadiSolver("fast").solve(model, [0, 1])
+        with self.assertRaisesRegex(ValueError, "No default output variables"):
+            pybamm.QuickPlot(solution)
+
     def test_spm_simulation(self):
         # SPM
         model = pybamm.lithium_ion.SPM()
@@ -292,7 +301,11 @@ class TestQuickPlot(unittest.TestCase):
     def test_loqs_spme(self):
         t_eval = np.linspace(0, 10, 2)
 
-        for model in [pybamm.lithium_ion.SPMe(), pybamm.lead_acid.LOQS()]:
+        for model in [
+            pybamm.lithium_ion.SPMe(),
+            pybamm.lead_acid.LOQS(),
+            pybamm.lithium_ion.DFN({"working electrode": "positive"}),
+        ]:
             geometry = model.default_geometry
             param = model.default_parameter_values
             param.process_model(model)

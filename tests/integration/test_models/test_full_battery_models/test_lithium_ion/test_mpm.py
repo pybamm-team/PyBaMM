@@ -5,7 +5,6 @@ import pybamm
 import tests
 import numpy as np
 import unittest
-from platform import system
 
 
 class TestMPM(unittest.TestCase):
@@ -29,7 +28,7 @@ class TestMPM(unittest.TestCase):
         np.testing.assert_array_almost_equal(original, using_known_evals)
         np.testing.assert_array_almost_equal(original, to_python)
 
-        if system() != "Windows":
+        if pybamm.have_jax():
             to_jax = optimtest.evaluate_model(to_jax=True)
             np.testing.assert_array_almost_equal(original, to_jax)
 
@@ -81,8 +80,8 @@ class TestMPM(unittest.TestCase):
             pos_Li.append(pos)
 
         # compare
-        np.testing.assert_array_almost_equal(neg_Li[0], neg_Li[1], decimal=14)
-        np.testing.assert_array_almost_equal(pos_Li[0], pos_Li[1], decimal=14)
+        np.testing.assert_array_almost_equal(neg_Li[0], neg_Li[1], decimal=13)
+        np.testing.assert_array_almost_equal(pos_Li[0], pos_Li[1], decimal=13)
 
 
 if __name__ == "__main__":

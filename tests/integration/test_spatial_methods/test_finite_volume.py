@@ -126,11 +126,10 @@ class TestFiniteVolumeConvergence(unittest.TestCase):
             r_edge = pybamm.SpatialVariableEdge("r_n", domain=["negative particle"])
 
             # Define flux and bcs
-            N = r_edge ** 2 * pybamm.sin(r_edge)
+            N = pybamm.sin(r_edge)
             div_eqn = pybamm.div(N)
             # Define exact solutions
-            # N = r**3 --> div(N) = 5 * r**2
-            div_exact = 4 * r * np.sin(r) + r ** 2 * np.cos(r)
+            div_exact = 2 / r * np.sin(r) + np.cos(r)
 
             # Discretise and evaluate
             div_eqn_disc = disc.process_symbol(div_eqn)
@@ -140,7 +139,7 @@ class TestFiniteVolumeConvergence(unittest.TestCase):
             return div_approx[:, 0] - div_exact
 
         # Get errors
-        ns = 10 * 2 ** np.arange(6)
+        ns = 10 * 2 ** np.arange(1, 7)
         errs = {n: get_error(int(n)) for n in ns}
         # expect quadratic convergence everywhere
         err_norm = np.array([np.linalg.norm(errs[n], np.inf) for n in ns])
@@ -195,11 +194,12 @@ class TestFiniteVolumeConvergence(unittest.TestCase):
             r = submesh.nodes
             r_edge = pybamm.standard_spatial_vars.r_n_edge
 
-            N = r_edge ** 2 * pybamm.sin(r_edge)
+            # N = r_edge ** 2 * pybamm.sin(r_edge)
+            N = pybamm.sin(r_edge)
             div_eqn = pybamm.div(N)
             # Define exact solutions
-            # N = r**2*sin(r) --> div(N) = 4*r*sin(r) - r**2*cos(r)
-            div_exact = 4 * r * np.sin(r) + r ** 2 * np.cos(r)
+            # N = sin(r) --> div(N) = 1/r2 * d/dr(r2*N) = 2/r*sin(r) + cos(r)
+            div_exact = 2 / r * np.sin(r) + np.cos(r)
             div_exact = np.kron(np.ones(mesh["negative electrode"].npts), div_exact)
 
             # Discretise and evaluate
@@ -209,7 +209,7 @@ class TestFiniteVolumeConvergence(unittest.TestCase):
             return div_approx[:, 0] - div_exact
 
         # Get errors
-        ns = 10 * 2 ** np.arange(6)
+        ns = 10 * 2 ** np.arange(1, 7)
         errs = {n: get_error(int(n)) for n in ns}
         # expect quadratic convergence everywhere
         err_norm = np.array([np.linalg.norm(errs[n], np.inf) for n in ns])
@@ -233,13 +233,11 @@ class TestFiniteVolumeConvergence(unittest.TestCase):
             r_edge = pybamm.standard_spatial_vars.r_n_edge
             x = pybamm.standard_spatial_vars.x_n
 
-            N = pybamm.PrimaryBroadcast(x, "negative particle") * (
-                r_edge ** 2 * pybamm.sin(r_edge)
-            )
+            N = pybamm.PrimaryBroadcast(x, "negative particle") * pybamm.sin(r_edge)
             div_eqn = pybamm.div(N)
             # Define exact solutions
             # N = r**2*sin(r) --> div(N) = 4*r*sin(r) - r**2*cos(r)
-            div_exact = 4 * r * np.sin(r) + r ** 2 * np.cos(r)
+            div_exact = 2 / r * np.sin(r) + np.cos(r)
             div_exact = np.kron(mesh["negative electrode"].nodes, div_exact)
 
             # Discretise and evaluate
@@ -249,7 +247,7 @@ class TestFiniteVolumeConvergence(unittest.TestCase):
             return div_approx[:, 0] - div_exact
 
         # Get errors
-        ns = 10 * 2 ** np.arange(6)
+        ns = 10 * 2 ** np.arange(1, 7)
         errs = {n: get_error(int(n)) for n in ns}
         # expect quadratic convergence everywhere
         err_norm = np.array([np.linalg.norm(errs[n], np.inf) for n in ns])

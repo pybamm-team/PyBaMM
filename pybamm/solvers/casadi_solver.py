@@ -433,7 +433,8 @@ class CasadiSolver(pybamm.BaseSolver):
 
         y0 = coarse_solution.y[:, event_idx_lower]
         dense_step_sol = self._run_integrator(
-            model, y0, inputs_dict, inputs, t_window_event_dense, use_grid=use_grid
+            model, y0, inputs_dict, inputs, t_window_event_dense, use_grid=use_grid,
+            extract_sensitivities_in_solution=False,
         )
 
         # Find the exact time at which the event was triggered
@@ -625,6 +626,31 @@ class CasadiSolver(pybamm.BaseSolver):
         use_grid=True,
         extract_sensitivities_in_solution=None,
     ):
+        """
+        Run the integrator.
+
+        Parameters
+        ----------
+        model : :class:`pybamm.BaseModel`
+            The model whose solution to calculate.
+        y0:
+            casadi vector of initial conditions
+        inputs_dict : dict, optional
+            Any external variables or input parameters to pass to the model when solving
+        inputs:
+            Casadi vector of inputs
+        t_eval : numeric type
+            The times at which to compute the solution
+        use_grid: bool, optional
+            Determines whether the casadi solver uses a grid or rescales time to (0,1)
+        extract_sensitivities_in_solution: bool or None
+            If None, then the sensitivities are extracted within the
+            :class:`pybamm.Solution` object returned, only if present in the solution.
+            Setting to True or False will override this behaviour, forcing the
+            sensitivities to be extracted or not (it is up to the caller to determine if
+            the sensitivities are in fact present)
+       """
+
         pybamm.logger.debug("Running CasADi integrator")
 
         # are we solving explicit forward equations?

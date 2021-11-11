@@ -44,6 +44,36 @@ class BaseModel(pybamm.BaseBatteryModel):
             )
         self.set_standard_output_variables()
 
+    @property
+    def default_parameter_values(self):
+        if self.half_cell:
+            return pybamm.ParameterValues(chemistry=pybamm.parameter_sets.Xu2019)
+        else:
+            return pybamm.ParameterValues(chemistry=pybamm.parameter_sets.Marquis2019)
+
+    @property
+    def default_quick_plot_variables(self):
+        if self.half_cell:
+            return [
+                "Electrolyte concentration [mol.m-3]",
+                "Positive particle surface concentration [mol.m-3]",
+                "Current [A]",
+                "Electrolyte potential [V]",
+                "Positive electrode potential [V]",
+                "Terminal voltage [V]",
+            ]
+        else:
+            return [
+                "Negative particle surface concentration [mol.m-3]",
+                "Electrolyte concentration [mol.m-3]",
+                "Positive particle surface concentration [mol.m-3]",
+                "Current [A]",
+                "Negative electrode potential [V]",
+                "Electrolyte potential [V]",
+                "Positive electrode potential [V]",
+                "Terminal voltage [V]",
+            ]
+
     def set_standard_output_variables(self):
         super().set_standard_output_variables()
 
@@ -117,6 +147,44 @@ class BaseModel(pybamm.BaseBatteryModel):
                 / 3600,
             }
         )
+
+    def set_summary_variables(self):
+        """
+        Sets the default summary variables.
+        """
+        summary_variables = [
+            "Positive electrode capacity [A.h]",
+            # LAM, LLI
+            "Loss of active material in positive electrode [%]",
+            "Loss of lithium inventory [%]",
+            "Loss of lithium inventory, including electrolyte [%]",
+            # Total lithium
+            "Total lithium [mol]",
+            "Total lithium in electrolyte [mol]",
+            "Total lithium in positive electrode [mol]",
+            "Total lithium in particles [mol]",
+            # Lithium lost
+            "Total lithium lost [mol]",
+            "Total lithium lost from particles [mol]",
+            "Total lithium lost from electrolyte [mol]",
+            "Loss of lithium to SEI [mol]",
+            "Loss of lithium to lithium plating [mol]",
+            "Loss of capacity to SEI [A.h]",
+            "Loss of capacity to lithium plating [A.h]",
+            "Total lithium lost to side reactions [mol]",
+            "Total capacity lost to side reactions [A.h]",
+            # Resistance
+            "Local ECM resistance [Ohm]",
+        ]
+
+        if not self.half_cell:
+            summary_variables += [
+                "Negative electrode capacity [A.h]",
+                "Loss of active material in negative electrode [%]",
+                "Total lithium in negative electrode [mol]",
+            ]
+
+        self.summary_variables = summary_variables
 
     def set_sei_submodel(self):
         if self.half_cell:
@@ -236,3 +304,42 @@ class BaseModel(pybamm.BaseBatteryModel):
             self.submodels["porosity"] = pybamm.porosity.ReactionDriven(
                 self.param, self.options, self.x_average
             )
+
+    def set_li_metal_counter_electrode_submodels(self):
+        if self.options["SEI"] in ["none", "constant"]:
+            self.submodels[
+                "counter electrode potential"
+            ] = pybamm.electrode.ohm.LithiumMetalExplicit(self.param, self.options)
+            self.submodels[
+                "counter electrode interface"
+            ] = pybamm.interface.InverseButlerVolmer(
+                self.param, "Negative", "lithium metal plating", self.options
+            )  # assuming symmetric reaction for now so we can take the inverse
+            self.submodels[
+                "counter electrode interface current"
+            ] = pybamm.interface.CurrentForInverseButlerVolmerLithiumMetal(
+                self.param, "Negative", "lithium metal plating", self.options
+            )
+        else:
+            self.submodels[
+                "counter electrode potential"
+            ] = pybamm.electrode.ohm.LithiumMetalSurfaceForm(self.param, self.options)
+            self.submodels[
+                "counter electrode interface"
+            ] = pybamm.interface.ButlerVolmer(
+                self.param, "Negative", "lithium metal plating", self.options
+            )
+
+        # For half-cell models, remove negative electrode submodels
+        # that are not needed before building
+        # We do this whether the working electrode is 'positive' or 'negative' since
+        # the half-cell models are always defined assuming the positive electrode is
+        # the working electrode
+
+        # This should be done before `self.build_model`, which is the expensive part
+
+        # Models added specifically for the counter electrode have been labelled with
+        # "counter electrode" so as not to be caught by this check
+        self.submodels = {
+            k: v for k, v in self.submodels.items() if not k.startswith("negative")
+        }

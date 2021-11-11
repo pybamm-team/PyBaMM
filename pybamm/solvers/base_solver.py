@@ -50,9 +50,9 @@ class BaseSolver(object):
         extrap_tol=0,
         max_steps="deprecated",
     ):
-        self._method = method
-        self._rtol = rtol
-        self._atol = atol
+        self.method = method
+        self.rtol = rtol
+        self.atol = atol
         self.root_tol = root_tol
         self.root_method = root_method
         self.extrap_tol = extrap_tol
@@ -67,30 +67,6 @@ class BaseSolver(object):
         self.name = "Base solver"
         self.ode_solver = False
         self.algebraic_solver = False
-
-    @property
-    def method(self):
-        return self._method
-
-    @method.setter
-    def method(self, value):
-        self._method = value
-
-    @property
-    def rtol(self):
-        return self._rtol
-
-    @rtol.setter
-    def rtol(self, value):
-        self._rtol = value
-
-    @property
-    def atol(self):
-        return self._atol
-
-    @atol.setter
-    def atol(self, value):
-        self._atol = value
 
     @property
     def root_method(self):
@@ -111,14 +87,6 @@ class BaseSolver(object):
         ):
             raise pybamm.SolverError("Root method must be an algebraic solver")
         self._root_method = method
-
-    @property
-    def root_tol(self):
-        return self._root_tol
-
-    @root_tol.setter
-    def root_tol(self, tol):
-        self._root_tol = tol
 
     def copy(self):
         """Returns a copy of the solver"""
@@ -1192,7 +1160,7 @@ class BaseSolver(object):
         external_variables : dict
             A dictionary of external variables and their corresponding
             values at the current time
-        inputs_dict : dict, optional
+        inputs : dict, optional
             Any input parameters to pass to the model when solving
         save : bool
             Turn on to store the solution of all previous timesteps
@@ -1233,6 +1201,14 @@ class BaseSolver(object):
         # Set up external variables and inputs
         external_variables = external_variables or {}
         inputs = inputs or {}
+
+        # Remove interpolant inputs as Casadi can't handle them
+        if isinstance(inputs.get("Current input [A]"), pybamm.Interpolant):
+            del inputs["Current input [A]"]
+        elif isinstance(inputs.get("Voltage input [V]"), pybamm.Interpolant):
+            del inputs["Voltage input [V]"]
+        elif isinstance(inputs.get("Power input [W]"), pybamm.Interpolant):
+            del inputs["Power input [W]"]
         ext_and_inputs = {**external_variables, **inputs}
 
         # Check that any inputs that may affect the scaling have not changed

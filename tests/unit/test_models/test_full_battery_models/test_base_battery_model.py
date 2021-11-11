@@ -5,7 +5,6 @@ from pybamm.models.full_battery_models.base_battery_model import BatteryModelOpt
 import pybamm
 import unittest
 import io
-import os
 from contextlib import redirect_stdout
 
 OPTIONS_DICT = {
@@ -76,6 +75,14 @@ class TestBaseBatteryModel(unittest.TestCase):
         disc_flux_2 = disc.process_symbol(param_flux_2)
         self.assertEqual(flux_1.id, disc_flux_2.id)
 
+    def test_summary_variables(self):
+        model = pybamm.BaseBatteryModel()
+        model.variables["var"] = pybamm.Scalar(1)
+        model.summary_variables = ["var"]
+        self.assertEqual(model.summary_variables, ["var"])
+        with self.assertRaisesRegex(KeyError, "No cycling variable defined"):
+            model.summary_variables = ["bad var"]
+
     def test_default_geometry(self):
         var = pybamm.standard_spatial_vars
 
@@ -117,8 +124,8 @@ class TestBaseBatteryModel(unittest.TestCase):
             var.x_n: 20,
             var.x_s: 20,
             var.x_p: 20,
-            var.r_n: 30,
-            var.r_p: 30,
+            var.r_n: 20,
+            var.r_p: 20,
             var.y: 10,
             var.z: 10,
             var.R_n: 30,
@@ -282,23 +289,6 @@ class TestBaseBatteryModel(unittest.TestCase):
         a = pybamm.Variable("a")
         model.algebraic = {a: a - 1}
         self.assertIsInstance(model.default_solver, pybamm.CasadiAlgebraicSolver)
-
-    def test_default_parameters(self):
-        # check parameters are read in ok
-        model = pybamm.BaseBatteryModel()
-        self.assertEqual(
-            model.default_parameter_values["Reference temperature [K]"], 298.15
-        )
-
-        # change path and try again
-
-        cwd = os.getcwd()
-        os.chdir("..")
-        model = pybamm.BaseBatteryModel()
-        self.assertEqual(
-            model.default_parameter_values["Reference temperature [K]"], 298.15
-        )
-        os.chdir(cwd)
 
     def test_timescale(self):
         model = pybamm.BaseModel()

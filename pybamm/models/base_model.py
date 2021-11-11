@@ -348,6 +348,10 @@ class BaseModel:
     def __getitem__(self, key):
         return self.rhs[key]
 
+    @property
+    def default_quick_plot_variables(self):
+        return None
+
     def new_empty_copy(self):
         """
         Create an empty copy of the model with the same name and "parameters"
