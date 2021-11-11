@@ -195,6 +195,7 @@ class Experiment:
                 "electric": op_CC["electric"] + op_CV["electric"],
                 "time": op_CV["time"],
                 "period": op_CV["period"],
+                "dc_data": None,
             }, event_CV
         # Read period
         if " period)" in cond:
@@ -223,26 +224,29 @@ class Experiment:
                     drive_cycles[cond_list[1]], end_time
                 )
                 # Drive cycle as numpy array
+                dc_name = cond_list[1] + "_ext_{}".format(end_time)
                 dc_data = ext_drive_cycle
                 # Find the type of drive cycle ("A", "V", or "W")
                 typ = cond_list[2][1]
-                electric = (dc_data, typ)
+                electric = (dc_name, typ)
                 time = ext_drive_cycle[:, 0][-1]
                 period = np.min(np.diff(ext_drive_cycle[:, 0]))
                 events = None
             else:
                 # e.g. Run US06
                 # Drive cycle as numpy array
+                dc_name = cond_list[1]
                 dc_data = drive_cycles[cond_list[1]]
                 # Find the type of drive cycle ("A", "V", or "W")
                 typ = cond_list[2][1]
-                electric = (dc_data, typ)
+                electric = (dc_name, typ)
                 # Set time and period to 1 second for first step and
                 # then calculate the difference in consecutive time steps
                 time = drive_cycles[cond_list[1]][:, 0][-1]
                 period = np.min(np.diff(drive_cycles[cond_list[1]][:, 0]))
                 events = None
         else:
+            dc_data = None
             if "for" in cond and "or until" in cond:
                 # e.g. for 3 hours or until 4.2 V
                 cond_list = cond.split()
@@ -273,7 +277,12 @@ class Experiment:
                     )
                 )
 
-        return {"electric": electric, "time": time, "period": period}, events
+        return {
+            "electric": electric,
+            "time": time,
+            "period": period,
+            "dc_data": dc_data,
+        }, events
 
     def extend_drive_cycle(self, drive_cycle, end_time):
         "Extends the drive cycle to enable for event"
