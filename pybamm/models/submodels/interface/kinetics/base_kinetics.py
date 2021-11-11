@@ -122,11 +122,13 @@ class BaseKinetics(BaseInterface):
             T = pybamm.PrimaryBroadcast(T, [self.domain.lower() + " particle size"])
         else:
             T = variables[self.domain + " electrode temperature"]
+        # Get interface utilisation
+        u = variables[self.domain + " electrode interface utilisation"]
 
         # Update j, except in the "distributed SEI resistance" model, where j will be
         # found by solving an algebraic equation.
         # (In the "distributed SEI resistance" model, we have already defined j)
-        j = self._get_kinetics(j0, ne, eta_r, T)
+        j = self._get_kinetics(j0, ne, eta_r, T, u)
 
         if j.domain == [self.domain.lower() + " particle size"]:
             # If j depends on particle size, get size-dependent "distribution"
@@ -236,10 +238,16 @@ class BaseKinetics(BaseInterface):
         Default to calculate derivative of interfacial current density with respect to
         concentration. Can be overwritten by specific kinetic functions.
         """
-        c_e, delta_phi, j0, ne, ocp, T = self._get_interface_variables_for_first_order(
-            variables
-        )
-        j = self._get_kinetics(j0, ne, delta_phi - ocp, T)
+        (
+            c_e,
+            delta_phi,
+            j0,
+            ne,
+            ocp,
+            T,
+            u,
+        ) = self._get_interface_variables_for_first_order(variables)
+        j = self._get_kinetics(j0, ne, delta_phi - ocp, T, u)
         return j.diff(c_e)
 
     def _get_dj_ddeltaphi(self, variables):
@@ -247,10 +255,10 @@ class BaseKinetics(BaseInterface):
         Default to calculate derivative of interfacial current density with respect to
         surface potential difference. Can be overwritten by specific kinetic functions.
         """
-        _, delta_phi, j0, ne, ocp, T = self._get_interface_variables_for_first_order(
+        _, delta_phi, j0, ne, ocp, T, u = self._get_interface_variables_for_first_order(
             variables
         )
-        j = self._get_kinetics(j0, ne, delta_phi - ocp, T)
+        j = self._get_kinetics(j0, ne, delta_phi - ocp, T, u)
         return j.diff(delta_phi)
 
     def _get_interface_variables_for_first_order(self, variables):
@@ -278,9 +286,13 @@ class BaseKinetics(BaseInterface):
         ocp = self._get_open_circuit_potential(hacked_variables)[0]
         if j0.domain in ["current collector", ["current collector"]]:
             T = variables["X-averaged cell temperature"]
+            u = variables[
+                "X-averaged " + self.domain.lower() + " electrode interface utilisation"
+            ]
         else:
             T = variables[self.domain + " electrode temperature"]
-        return c_e_0, delta_phi, j0, ne, ocp, T
+            u = variables[self.domain + " electrode interface utilisation"]
+        return c_e_0, delta_phi, j0, ne, ocp, T, u
 
     def _get_j_diffusion_limited_first_order(self, variables):
         """

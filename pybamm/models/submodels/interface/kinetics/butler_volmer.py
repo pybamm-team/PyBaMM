@@ -31,9 +31,9 @@ class ButlerVolmer(BaseKinetics):
     def __init__(self, param, domain, reaction, options):
         super().__init__(param, domain, reaction, options)
 
-    def _get_kinetics(self, j0, ne, eta_r, T):
+    def _get_kinetics(self, j0, ne, eta_r, T, u):
         prefactor = ne / (2 * (1 + self.param.Theta * T))
-        return 2 * j0 * pybamm.sinh(prefactor * eta_r)
+        return 2 * u * j0 * pybamm.sinh(prefactor * eta_r)
 
     def _get_dj_dc(self, variables):
         """See :meth:`pybamm.interface.kinetics.BaseKinetics._get_dj_dc`"""

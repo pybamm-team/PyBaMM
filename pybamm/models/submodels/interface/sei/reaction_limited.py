@@ -15,7 +15,7 @@ class ReactionLimited(BaseModel):
         The parameters to use for this submodel
     reaction_loc : str
         Where the reaction happens: "x-average" (SPM, SPMe, etc),
-        "full electrode" (full DFN), or "interface" (half-cell DFN)
+        "full electrode" (full DFN), or "interface" (half-cell model)
     options : dict, optional
         A dictionary of options to be passed to the model.
 

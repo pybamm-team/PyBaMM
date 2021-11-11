@@ -320,6 +320,26 @@ class StandardVariables:
             domain=["current collector"],
         )
 
+        # Interface utilisation
+        self.u_n = pybamm.Variable(
+            "Negative electrode interface utilisation",
+            domain="negative electrode",
+            auxiliary_domains={"secondary": "current collector"},
+        )
+        self.u_p = pybamm.Variable(
+            "Positive electrode interface utilisation",
+            domain="positive electrode",
+            auxiliary_domains={"secondary": "current collector"},
+        )
+        self.u_n_xav = pybamm.Variable(
+            "X-averaged negative electrode interface utilisation",
+            domain="current collector",
+        )
+        self.u_p_xav = pybamm.Variable(
+            "X-averaged positive electrode interface utilisation",
+            domain="current collector",
+        )
+
     def __setattr__(self, name, value):
         value.print_name = name
         super().__setattr__(name, value)
