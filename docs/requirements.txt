@@ -7,8 +7,6 @@ autograd >= 1.2
 scikit-fem >= 0.2.0
 casadi >= 3.5.0
 imageio>=2.9.0
-jax==0.2.12
-jaxlib==0.1.70
 jupyter  # For example notebooks
 pybtex
 # Note: Matplotlib is loaded for debug plots but to ensure pybamm runs
@@ -19,4 +17,4 @@ matplotlib >= 2.0
 #
 guzzle-sphinx-theme
 sphinx>4.0
-sympy==1.8
+sympy==1.9

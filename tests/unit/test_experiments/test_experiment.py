@@ -46,19 +46,44 @@ class TestExperiment(unittest.TestCase):
         self.assertEqual(
             experiment.operating_conditions[:-3],
             [
-                {"electric": (1, "C"), "time": 1800.0, "period": 20.0},
-                {"electric": (0.05, "C"), "time": 1800.0, "period": 20.0},
-                {"electric": (-0.5, "C"), "time": 2700.0, "period": 20.0},
-                {"electric": (1, "A"), "time": 1800.0, "period": 20.0},
-                {"electric": (-0.2, "A"), "time": 2700.0, "period": 60.0},
-                {"electric": (1, "W"), "time": 1800.0, "period": 20.0},
-                {"electric": (-0.2, "W"), "time": 2700.0, "period": 20.0},
-                {"electric": (0, "A"), "time": 600.0, "period": 300.0},
-                {"electric": (1, "V"), "time": 20.0, "period": 20.0},
-                {"electric": (-1, "C"), "time": None, "period": 20.0},
-                {"electric": (4.1, "V"), "time": None, "period": 20.0},
-                {"electric": (3, "V"), "time": None, "period": 20.0},
-                {"electric": (1 / 3, "C"), "time": 7200.0, "period": 20.0},
+                {"electric": (1, "C"), "time": 1800.0, "period": 20.0, "dc_data": None},
+                {
+                    "electric": (0.05, "C"),
+                    "time": 1800.0,
+                    "period": 20.0,
+                    "dc_data": None,
+                },
+                {
+                    "electric": (-0.5, "C"),
+                    "time": 2700.0,
+                    "period": 20.0,
+                    "dc_data": None,
+                },
+                {"electric": (1, "A"), "time": 1800.0, "period": 20.0, "dc_data": None},
+                {
+                    "electric": (-0.2, "A"),
+                    "time": 2700.0,
+                    "period": 60.0,
+                    "dc_data": None,
+                },
+                {"electric": (1, "W"), "time": 1800.0, "period": 20.0, "dc_data": None},
+                {
+                    "electric": (-0.2, "W"),
+                    "time": 2700.0,
+                    "period": 20.0,
+                    "dc_data": None,
+                },
+                {"electric": (0, "A"), "time": 600.0, "period": 300.0, "dc_data": None},
+                {"electric": (1, "V"), "time": 20.0, "period": 20.0, "dc_data": None},
+                {"electric": (-1, "C"), "time": None, "period": 20.0, "dc_data": None},
+                {"electric": (4.1, "V"), "time": None, "period": 20.0, "dc_data": None},
+                {"electric": (3, "V"), "time": None, "period": 20.0, "dc_data": None},
+                {
+                    "electric": (1 / 3, "C"),
+                    "time": 7200.0,
+                    "period": 20.0,
+                    "dc_data": None,
+                },
             ],
         )
         # Calculation for operating conditions of drive cycle
@@ -72,19 +97,19 @@ class TestExperiment(unittest.TestCase):
         period_2 = np.min(np.diff(drive_cycle_2[:, 0]))
         # Check drive cycle operating conditions
         np.testing.assert_array_equal(
-            experiment.operating_conditions[-3]["electric"][0], drive_cycle
+            experiment.operating_conditions[-3]["dc_data"], drive_cycle
         )
         self.assertEqual(experiment.operating_conditions[-3]["electric"][1], "A")
         self.assertEqual(experiment.operating_conditions[-3]["time"], time_0)
         self.assertEqual(experiment.operating_conditions[-3]["period"], period_0)
         np.testing.assert_array_equal(
-            experiment.operating_conditions[-2]["electric"][0], drive_cycle_1
+            experiment.operating_conditions[-2]["dc_data"], drive_cycle_1
         )
         self.assertEqual(experiment.operating_conditions[-2]["electric"][1], "V")
         self.assertEqual(experiment.operating_conditions[-2]["time"], time_1)
         self.assertEqual(experiment.operating_conditions[-2]["period"], period_1)
         np.testing.assert_array_equal(
-            experiment.operating_conditions[-1]["electric"][0], drive_cycle_2
+            experiment.operating_conditions[-1]["dc_data"], drive_cycle_2
         )
         self.assertEqual(experiment.operating_conditions[-1]["electric"][1], "W")
         self.assertEqual(experiment.operating_conditions[-1]["time"], time_2)
@@ -128,9 +153,24 @@ class TestExperiment(unittest.TestCase):
         self.assertEqual(
             experiment.operating_conditions,
             [
-                {"electric": (0.05, "C"), "time": 1800.0, "period": 60.0},
-                {"electric": (-0.5, "C", 1, "V"), "time": None, "period": 60.0},
-                {"electric": (0.05, "C"), "time": 1800.0, "period": 60.0},
+                {
+                    "electric": (0.05, "C"),
+                    "time": 1800.0,
+                    "period": 60.0,
+                    "dc_data": None,
+                },
+                {
+                    "electric": (-0.5, "C", 1, "V"),
+                    "time": None,
+                    "period": 60.0,
+                    "dc_data": None,
+                },
+                {
+                    "electric": (0.05, "C"),
+                    "time": 1800.0,
+                    "period": 60.0,
+                    "dc_data": None,
+                },
             ],
         )
         self.assertEqual(experiment.events, [None, (0.02, "C"), None])
@@ -146,8 +186,13 @@ class TestExperiment(unittest.TestCase):
         self.assertEqual(
             experiment.operating_conditions,
             [
-                {"electric": (-0.5, "C"), "time": None, "period": 60.0},
-                {"electric": (1, "V"), "time": None, "period": 60.0},
+                {
+                    "electric": (-0.5, "C"),
+                    "time": None,
+                    "period": 60.0,
+                    "dc_data": None,
+                },
+                {"electric": (1, "V"), "time": None, "period": 60.0, "dc_data": None},
             ],
         )
         experiment = pybamm.Experiment(
@@ -160,8 +205,13 @@ class TestExperiment(unittest.TestCase):
         self.assertEqual(
             experiment.operating_conditions,
             [
-                {"electric": (-0.5, "C"), "time": 120.0, "period": 60.0},
-                {"electric": (1, "V"), "time": None, "period": 60.0},
+                {
+                    "electric": (-0.5, "C"),
+                    "time": 120.0,
+                    "period": 60.0,
+                    "dc_data": None,
+                },
+                {"electric": (1, "V"), "time": None, "period": 60.0, "dc_data": None},
             ],
         )
 
@@ -173,11 +223,26 @@ class TestExperiment(unittest.TestCase):
         self.assertEqual(
             experiment.operating_conditions,
             [
-                {"electric": (0.01, "A"), "time": 1800.0, "period": 60},
-                {"electric": (-0.5, "C"), "time": 2700.0, "period": 60},
-                {"electric": (1, "V"), "time": 20.0, "period": 60},
-                {"electric": (-0.5, "C"), "time": 2700.0, "period": 60},
-                {"electric": (1, "V"), "time": 20.0, "period": 60},
+                {
+                    "electric": (0.01, "A"),
+                    "time": 1800.0,
+                    "period": 60,
+                    "dc_data": None,
+                },
+                {
+                    "electric": (-0.5, "C"),
+                    "time": 2700.0,
+                    "period": 60,
+                    "dc_data": None,
+                },
+                {"electric": (1, "V"), "time": 20.0, "period": 60, "dc_data": None},
+                {
+                    "electric": (-0.5, "C"),
+                    "time": 2700.0,
+                    "period": 60,
+                    "dc_data": None,
+                },
+                {"electric": (1, "V"), "time": 20.0, "period": 60, "dc_data": None},
             ],
         )
         self.assertEqual(experiment.period, 60)
@@ -193,10 +258,30 @@ class TestExperiment(unittest.TestCase):
         self.assertEqual(
             experiment.operating_conditions,
             [
-                {"electric": (0.05, "C"), "time": 1800.0, "period": 60.0},
-                {"electric": (-0.2, "C"), "time": 2700.0, "period": 60.0},
-                {"electric": (0.05, "C"), "time": 1800.0, "period": 60.0},
-                {"electric": (-0.2, "C"), "time": 2700.0, "period": 60.0},
+                {
+                    "electric": (0.05, "C"),
+                    "time": 1800.0,
+                    "period": 60.0,
+                    "dc_data": None,
+                },
+                {
+                    "electric": (-0.2, "C"),
+                    "time": 2700.0,
+                    "period": 60.0,
+                    "dc_data": None,
+                },
+                {
+                    "electric": (0.05, "C"),
+                    "time": 1800.0,
+                    "period": 60.0,
+                    "dc_data": None,
+                },
+                {
+                    "electric": (-0.2, "C"),
+                    "time": 2700.0,
+                    "period": 60.0,
+                    "dc_data": None,
+                },
             ],
         )
         self.assertEqual(experiment.cycle_lengths, [2, 1, 1])
