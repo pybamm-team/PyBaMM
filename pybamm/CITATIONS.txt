@@ -192,17 +192,17 @@
 }
 
 @article{Kirk2021,
-	author = {Toby L. Kirk and Colin P. Please and S. Jon Chapman},
-	title = {Physical Modelling of the Slow Voltage Relaxation Phenomenon in Lithium-Ion Batteries},
-	journal = {Journal of The Electrochemical Society},
-	year = 2021,
-	month = {jun},
-	publisher = {The Electrochemical Society},
-	volume = {168},
-	number = {6},
-	pages = {060554},
-	doi = {10.1149/1945-7111/ac0bf7},
-	url = {https://doi.org/10.1149/1945-7111/ac0bf7},
+  author = {Toby L. Kirk and Colin P. Please and S. Jon Chapman},
+  title = {Physical Modelling of the Slow Voltage Relaxation Phenomenon in Lithium-Ion Batteries},
+  journal = {Journal of The Electrochemical Society},
+  year = 2021,
+  month = {jun},
+  publisher = {The Electrochemical Society},
+  volume = {168},
+  number = {6},
+  pages = {060554},
+  doi = {10.1149/1945-7111/ac0bf7},
+  url = {https://doi.org/10.1149/1945-7111/ac0bf7},
 }
 
 @article{Lain2019,
@@ -283,17 +283,17 @@
 }
 
 @article{OKane2020,
-	doi = {10.1149/1945-7111/ab90ac},
-	url = {https://doi.org/10.1149/1945-7111/ab90ac},
-	year = {2020},
-	month = {may},
-	publisher = {The Electrochemical Society},
-	volume = {167},
-	number = {9},
-	pages = {090540},
-	author = {Simon E. J. O'Kane and Ian D. Campbell and Mohamed W. J. Marzook and Gregory J. Offer and Monica Marinescu},
-	title = {Physical Origin of the Differential Voltage Minimum Associated with Lithium Plating in Li-Ion Batteries},
-	journal = {Journal of The Electrochemical Society}
+  doi = {10.1149/1945-7111/ab90ac},
+  url = {https://doi.org/10.1149/1945-7111/ab90ac},
+  year = {2020},
+  month = {may},
+  publisher = {The Electrochemical Society},
+  volume = {167},
+  number = {9},
+  pages = {090540},
+  author = {Simon E. J. O'Kane and Ian D. Campbell and Mohamed W. J. Marzook and Gregory J. Offer and Monica Marinescu},
+  title = {Physical Origin of the Differential Voltage Minimum Associated with Lithium Plating in Li-Ion Batteries},
+  journal = {Journal of The Electrochemical Society}
 }
 
 @article{ORegan2021,
