@@ -61,8 +61,12 @@ class BaseMechanics(pybamm.BaseSubModel):
             cell_thickness_change = (
                 T_xav * self.param.Delta_T * self.param.alpha_T_cell_dim
             )  # thermal expansion
+            cell_thickness_change_n = 0
+            cell_thickness_change_p = 0
         else:
             cell_thickness_change = variables["Cell thickness change [m]"]
+            cell_thickness_change_n = variables["Negative Electrode thickness change [m]"]
+            cell_thickness_change_p = variables["Positive Electrode thickness change [m]"]
 
         if self.domain == "Negative":
             x = pybamm.standard_spatial_vars.x_n
@@ -77,6 +81,7 @@ class BaseMechanics(pybamm.BaseSubModel):
             v_change = pybamm.x_average(
                 eps_s * self.param.t_n_change(c_s_rav)
             ) - pybamm.x_average(eps_s * self.param.t_n_change(c_init))
+            cell_thickness_change_n += self.param.n_electrodes_parallel * v_change * L0
 
         elif self.domain == "Positive":
             x = pybamm.standard_spatial_vars.x_p
@@ -91,8 +96,10 @@ class BaseMechanics(pybamm.BaseSubModel):
             v_change = pybamm.x_average(
                 eps_s * self.param.t_p_change(c_s_rav)
             ) - pybamm.x_average(eps_s * self.param.t_p_change(c_init))
+            cell_thickness_change_p += self.param.n_electrodes_parallel * v_change * L0
 
         cell_thickness_change += self.param.n_electrodes_parallel * v_change * L0
+        
         disp_surf_dim = Omega * R0 / 3 * (c_s_rav - c_0) * c_scale
         # c0 reference concentration for no deformation
         # stress evaluated at the surface of the particles
@@ -127,6 +134,8 @@ class BaseMechanics(pybamm.BaseSubModel):
             + self.domain.lower()
             + " particle surface tangential stress [Pa]": stress_t_surf_av * E0,
             "Cell thickness change [m]": cell_thickness_change,
+            "Negative Electrode thickness change [m]": cell_thickness_change_n,
+            "Positive Electrode thickness change [m]": cell_thickness_change_p,
         }
 
     def _get_standard_surface_variables(self, variables):
