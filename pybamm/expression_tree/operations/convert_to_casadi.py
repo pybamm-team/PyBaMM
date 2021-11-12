@@ -199,7 +199,7 @@ class CasadiConverter(object):
 
                     # res = LUT[converted_children[0], converted_children[1]]
 
-                    res = LUT(casadi.hcat(converted_children))
+                    res = LUT(casadi.hcat(converted_children).T)
 
                     return res
 
