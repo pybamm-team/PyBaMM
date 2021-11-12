@@ -5,7 +5,6 @@ import pybamm
 import casadi
 import numpy as np
 from scipy import special
-from casadi import _casadi
 
 
 class CasadiConverter(object):
@@ -141,63 +140,9 @@ class CasadiConverter(object):
 
                 elif len(converted_children) == 2:
 
-                    print("CONVERTED CHILDREN: {0}".format(converted_children))
-
-                    print("SHAPES OF CONVERTED CHILDREN: {0}".format([elem.shape for elem in converted_children]))
-
                     LUT = casadi.interpolant(
                         "LUT", "bspline", symbol.x, symbol.y.ravel(order='F')
                     )
-
-                    # ([converted_children[0], converted_children[1]], True, True)
-
-                    # res = LUT(converted_children[0], converted_children[1])
-
-                    # res = _casadi.Function_call(LUT, [converted_children[0], converted_children[1]])
-
-                    # res = _casadi.Function_call(LUT, *[[converted_children[0], converted_children[1]]])
-
-                    # res = LUT([0.5, 300.0])  # working with hardcoded values
-                    # works
-
-                    # res = LUT(*converted_children)
-                    # RuntimeError: .../casadi/core/function_internal.hpp:1241: Assertion "arg.size()==n_in_" failed:
-                    # Incorrect number of inputs: Expected 1, got 2
-
-                    # res = LUT(converted_children)
-                    # NotImplementedError: Wrong number or type of arguments for overloaded function 'Function_call'.
-                    #   Possible prototypes are:
-                    #     call(self,dict:DM,bool,bool)
-                    #     call(self,[DM],bool,bool)
-                    #     call(self,[SX],bool,bool)
-                    #     call(self,dict:SX,bool,bool)
-                    #     call(self,dict:MX,bool,bool)
-                    #     call(self,[MX],bool,bool)
-                    #   You have: '(Function,([MX]))'
-
-                    # res = LUT([converted_children[0]], [converted_children[1]])
-                    # NotImplementedError: Wrong number or type of arguments for overloaded function 'Function_call'.
-                    #   Possible prototypes are:
-                    #     call(self,dict:DM,bool,bool)
-                    #     call(self,[DM],bool,bool)
-                    #     call(self,[SX],bool,bool)
-                    #     call(self,dict:SX,bool,bool)
-                    #     call(self,dict:MX,bool,bool)
-                    #     call(self,[MX],bool,bool)
-                    #   You have: '(Function,([MX],[MX]))'
-
-                    # res = LUT([[converted_children[0]], [converted_children[1]]])
-                    # NotImplementedError: Wrong number or type of arguments for overloaded function 'Function_call'.
-                    #   Possible prototypes are:
-                    #     call(self,dict:DM,bool,bool)
-                    #     call(self,[DM],bool,bool)
-                    #     call(self,[SX],bool,bool)
-                    #     call(self,dict:SX,bool,bool)
-                    #     call(self,dict:MX,bool,bool)
-                    #     call(self,[MX],bool,bool)
-                    #   You have: '(Function,([[MX]]))'
-
-                    # res = LUT[converted_children[0], converted_children[1]]
 
                     res = LUT(casadi.hcat(converted_children).T).T
 

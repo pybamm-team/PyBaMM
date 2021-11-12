@@ -688,12 +688,6 @@ class ParameterValues:
                     # to create an Interpolant
                     name, data, _ = function_name
 
-                    # print("x_: {0}".format(data[0: -1]))
-                    #
-                    # print("")
-                    #
-                    # print("y_: {0}".format(data[-1]))
-
                     function = pybamm.Interpolant(
                         data[0], data[-1], new_children, name=name
                     )
