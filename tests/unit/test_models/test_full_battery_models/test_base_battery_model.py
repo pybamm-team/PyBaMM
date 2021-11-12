@@ -36,7 +36,7 @@ PRINT_OPTIONS_OUTPUT = """\
 'total interfacial current density as a state': 'false' (possible: ['true', 'false'])
 'working electrode': 'both' (possible: ['both', 'negative', 'positive'])
 'SEI film resistance': 'none' (possible: ['none', 'distributed', 'average'])
-'stress induced diffusion': 'false' (possible: ['true', 'false'])
+'stress-induced diffusion': 'false' (possible: ['true', 'false'])
 """  # noqa: E501
 
 
@@ -260,6 +260,11 @@ class TestBaseBatteryModel(unittest.TestCase):
                     "plating porosity change"
                 }
             )
+        # stress-induced diffusion
+        with self.assertRaisesRegex(pybamm.OptionError, "cannot have stress"):
+            pybamm.BaseBatteryModel({"stress-induced diffusion": "true"})
+
+        # hydrolysis
         with self.assertRaisesRegex(pybamm.OptionError, "surface formulation"):
             pybamm.lead_acid.LOQS({"hydrolysis": "true", "surface form": "false"})
 

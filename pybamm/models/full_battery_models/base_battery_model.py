@@ -124,8 +124,8 @@ class BatteryModelOptions(pybamm.FuzzyDict):
             * "SEI porosity change" : str
                 Whether to include porosity change due to SEI formation, can be "false"
                 (default) or "true".
-            * "stress induced diffusion" : str
-                Whether to includes stress induced diffusion, can be "false" or "true".
+            * "stress-induced diffusion" : str
+                Whether to include stress-induced diffusion, can be "false" or "true".
                 The default is "false" if "particle mechanics" is "none" and "true"
                 otherwise. A 2-tuple can be provided for different behaviour in negative
                 and positive electrodes.
@@ -191,7 +191,7 @@ class BatteryModelOptions(pybamm.FuzzyDict):
             ],
             "SEI film resistance": ["none", "distributed", "average"],
             "SEI porosity change": ["true", "false"],
-            "stress induced diffusion": ["true", "false"],
+            "stress-induced diffusion": ["true", "false"],
             "surface form": ["false", "differential", "algebraic"],
             "thermal": ["isothermal", "lumped", "x-lumped", "x-full"],
             "total interfacial current density as a state": ["true", "false"],
@@ -255,14 +255,14 @@ class BatteryModelOptions(pybamm.FuzzyDict):
         # The "particle mechanics" option will still be overridden by extra_options if
         # provided
 
-        # Change the default for stress induced diffusion based on which particle
+        # Change the default for stress-induced diffusion based on which particle
         # mechanics option is provided
         mechanics_option = extra_options.get("particle mechanics", "none")
         if mechanics_option == "none":
-            default_options["stress induced diffusion"] = "false"
+            default_options["stress-induced diffusion"] = "false"
         else:
-            default_options["stress induced diffusion"] = "true"
-        # The "stress induced diffusion" option will still be overridden by
+            default_options["stress-induced diffusion"] = "true"
+        # The "stress-induced diffusion" option will still be overridden by
         # extra_options if provided
 
         options = pybamm.FuzzyDict(default_options)
@@ -323,9 +323,9 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                 raise NotImplementedError(
                     "SEI submodels do not yet support particle-size distributions."
                 )
-            if options["stress induced diffusion"] == "true":
+            if options["stress-induced diffusion"] == "true":
                 raise NotImplementedError(
-                    "Stress induced diffusion cannot yet be included in "
+                    "stress-induced diffusion cannot yet be included in "
                     "particle-size distributions."
                 )
             if options["thermal"] == "x-full":
@@ -356,13 +356,13 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                 raise pybamm.OptionError(
                     "cannot have transverse convection in 0D model"
                 )
-        if isinstance(options["stress induced diffusion"], str):
+        if isinstance(options["stress-induced diffusion"], str):
             if (
-                options["stress induced diffusion"] == "true"
+                options["stress-induced diffusion"] == "true"
                 and options["particle mechanics"] == "none"
             ):
                 raise pybamm.OptionError(
-                    "cannot have stress induced diffusion without a particle "
+                    "cannot have stress-induced diffusion without a particle "
                     "mechanics model"
                 )
 
@@ -383,7 +383,7 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                                 "loss of active material",
                                 "particle mechanics",
                                 "particle",
-                                "stress induced diffusion",
+                                "stress-induced diffusion",
                             ]
                             and isinstance(value, tuple)
                             and len(value) == 2

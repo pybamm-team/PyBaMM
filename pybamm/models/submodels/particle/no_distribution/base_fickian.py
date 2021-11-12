@@ -34,15 +34,15 @@ class BaseFickian(BaseParticle):
         elif self.domain == "Positive":
             D = param.D_p(c, T)
 
-        # Account for stress induced diffusion by defining a multiplicative
+        # Account for stress-induced diffusion by defining a multiplicative
         # "stress factor"
         # This option can either be a string (both sides the same) or a 2-tuple
         # to indicate different options in negative and positive electrodes
-        if isinstance(self.options["stress induced diffusion"], str):
-            stress_left = self.options["stress induced diffusion"]
-            stress_right = self.options["stress induced diffusion"]
+        if isinstance(self.options["stress-induced diffusion"], str):
+            stress_left = self.options["stress-induced diffusion"]
+            stress_right = self.options["stress-induced diffusion"]
         else:
-            stress_left, stress_right = self.options["stress induced diffusion"]
+            stress_left, stress_right = self.options["stress-induced diffusion"]
 
         if self.domain == "Negative" and stress_left == "true":
             stress_factor = 1 + param.theta_n * (c - param.c_n_0) / (

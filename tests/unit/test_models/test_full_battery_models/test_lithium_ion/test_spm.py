@@ -161,7 +161,7 @@ class TestSPM(unittest.TestCase):
         self.assertEqual(new_model.timescale.id, model.timescale.id)
 
         # with custom submodels
-        options = {"stress induced diffusion": "false", "thermal": "x-full"}
+        options = {"stress-induced diffusion": "false", "thermal": "x-full"}
         model = pybamm.lithium_ion.SPM(options, build=False)
         particle_n = pybamm.particle.no_distribution.XAveragedPolynomialProfile(
             model.param, "Negative", "quadratic profile", options
@@ -254,6 +254,14 @@ class TestSPMWithMechanics(unittest.TestCase):
 
     def test_well_posed_both_swelling_only(self):
         options = {"particle mechanics": "swelling only"}
+        model = pybamm.lithium_ion.SPM(options)
+        model.check_well_posedness()
+
+    def test_stress_induced_diffusion_mixed(self):
+        options = {
+            "particle mechanics": "swelling only",
+            "stress-induced diffusion": ("true", "false"),
+        }
         model = pybamm.lithium_ion.SPM(options)
         model.check_well_posedness()
 
