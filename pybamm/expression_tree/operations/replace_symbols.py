@@ -15,15 +15,23 @@ class SymbolReplacer(object):
         Map of which symbols should be replaced by which.
     processed_symbols: dict {variable ids -> :class:`pybamm.Symbol`}, optional
         cached replaced symbols
+    process_initial_conditions: bool, optional
+        Whether to process initial conditions, default is True
     """
 
-    def __init__(self, symbol_replacement_map, processed_symbols=None):
+    def __init__(
+        self,
+        symbol_replacement_map,
+        processed_symbols=None,
+        process_initial_conditions=True,
+    ):
         self._symbol_replacement_map = symbol_replacement_map
         self._symbol_replacement_map_ids = {
             symbol_in.id: symbol_out
             for symbol_in, symbol_out in symbol_replacement_map.items()
         }
         self._processed_symbols = processed_symbols or {}
+        self.process_initial_conditions = process_initial_conditions
 
     def process_model(self, unprocessed_model, inplace=True):
         """Replace all instances of a symbol in a model.
@@ -68,9 +76,12 @@ class SymbolReplacer(object):
             pybamm.logger.verbose(
                 "Replacing symbols in {!r} (initial conditions)".format(variable)
             )
-            new_initial_conditions[self.process_symbol(variable)] = self.process_symbol(
-                equation
-            )
+            if self.process_initial_conditions:
+                new_initial_conditions[
+                    self.process_symbol(variable)
+                ] = self.process_symbol(equation)
+            else:
+                new_initial_conditions[self.process_symbol(variable)] = equation
         model.initial_conditions = new_initial_conditions
 
         model.boundary_conditions = self.process_boundary_conditions(unprocessed_model)

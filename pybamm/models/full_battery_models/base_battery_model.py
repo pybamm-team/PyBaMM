@@ -683,7 +683,7 @@ class BaseBatteryModel(pybamm.BaseModel):
                                 )
                             )
         # Convert variables back into FuzzyDict
-        self._variables = pybamm.FuzzyDict(self._variables)
+        self.variables = pybamm.FuzzyDict(self._variables)
 
     def build_model_equations(self):
         # Set model equations
@@ -748,17 +748,6 @@ class BaseBatteryModel(pybamm.BaseModel):
         pybamm.logger.debug("Setting degradation variables ({})".format(self.name))
         self.set_degradation_variables()
         self.set_summary_variables()
-
-        # Massive hack for consistent delta_phi = phi_s - phi_e with SPMe
-        # This needs to be corrected
-        if isinstance(self, pybamm.lithium_ion.SPMe) and not self.half_cell:
-            for domain in ["Negative", "Positive"]:
-                phi_s = self.variables[domain + " electrode potential"]
-                phi_e = self.variables[domain + " electrolyte potential"]
-                delta_phi = phi_s - phi_e
-                s = self.submodels[domain.lower() + " interface"]
-                var = s._get_standard_surface_potential_difference_variables(delta_phi)
-                self.variables.update(var)
 
         self._built = True
         pybamm.logger.info("Finish building {}".format(self.name))
