@@ -94,7 +94,9 @@ class DFN(BaseModel):
                     self.submodels[
                         domain.lower() + " particle"
                     ] = pybamm.particle.no_distribution.FickianDiffusion(
-                        self.param, domain
+                        self.param,
+                        domain,
+                        self.options,
                     )
                 elif particle_side in [
                     "uniform profile",
@@ -104,7 +106,10 @@ class DFN(BaseModel):
                     self.submodels[
                         domain.lower() + " particle"
                     ] = pybamm.particle.no_distribution.PolynomialProfile(
-                        self.param, domain, particle_side
+                        self.param,
+                        domain,
+                        particle_side,
+                        self.options,
                     )
             elif self.options["particle size"] == "distribution":
                 if particle_side == "Fickian diffusion":
@@ -113,15 +118,12 @@ class DFN(BaseModel):
                     ] = pybamm.particle.size_distribution.FickianDiffusion(
                         self.param, domain
                     )
-                elif particle_side in [
-                    "uniform profile",
-                    "quadratic profile",
-                    "quartic profile",
-                ]:
+                elif particle_side == "uniform profile":
                     self.submodels[
                         domain.lower() + " particle"
                     ] = pybamm.particle.size_distribution.UniformProfile(
-                        self.param, domain
+                        self.param,
+                        domain,
                     )
 
     def set_solid_submodel(self):

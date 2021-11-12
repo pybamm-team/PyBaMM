@@ -59,11 +59,11 @@ class NewmanTobias(DFN):
 
         if self.options["particle"] == "Fickian diffusion":
             submod_n = pybamm.particle.no_distribution.XAveragedFickianDiffusion(
-                self.param, "Negative"
+                self.param, "Negative", self.options
             )
             self.submodels["negative particle"] = submod_n
             submod_p = pybamm.particle.no_distribution.XAveragedFickianDiffusion(
-                self.param, "Positive"
+                self.param, "Positive", self.options
             )
             self.submodels["positive particle"] = submod_p
         elif self.options["particle"] in [
@@ -74,12 +74,12 @@ class NewmanTobias(DFN):
             self.submodels[
                 "negative particle"
             ] = pybamm.particle.no_distribution.XAveragedPolynomialProfile(
-                self.param, "Negative", self.options["particle"]
+                self.param, "Negative", self.options["particle"], self.options
             )
             self.submodels[
                 "positive particle"
             ] = pybamm.particle.no_distribution.XAveragedPolynomialProfile(
-                self.param, "Positive", self.options["particle"]
+                self.param, "Positive", self.options["particle"], self.options
             )
 
     def set_electrolyte_submodel(self):

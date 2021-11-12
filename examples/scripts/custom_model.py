@@ -30,11 +30,11 @@ model.submodels["positive electrode potential"] = pybamm.electrode.ohm.LeadingOr
     model.param, "Positive"
 )
 particle_n = pybamm.particle.no_distribution.XAveragedPolynomialProfile(
-    model.param, "Negative", "uniform profile"
+    model.param, "Negative", "uniform profile", options=model.options
 )
 model.submodels["negative particle"] = particle_n
 particle_p = pybamm.particle.no_distribution.XAveragedPolynomialProfile(
-    model.param, "Positive", "uniform profile"
+    model.param, "Positive", "uniform profile", options=model.options
 )
 model.submodels["positive particle"] = particle_p
 model.submodels["negative interface"] = pybamm.interface.InverseButlerVolmer(

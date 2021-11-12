@@ -113,7 +113,7 @@ class SPM(BaseModel):
                 self.submodels[
                     domain.lower() + " particle"
                 ] = pybamm.particle.no_distribution.XAveragedFickianDiffusion(
-                    self.param, domain
+                    self.param, domain, self.options
                 )
             elif particle_side in [
                 "uniform profile",
@@ -123,7 +123,7 @@ class SPM(BaseModel):
                 self.submodels[
                     domain.lower() + " particle"
                 ] = pybamm.particle.no_distribution.XAveragedPolynomialProfile(
-                    self.param, domain, particle_side
+                    self.param, domain, particle_side, self.options
                 )
 
     def set_solid_submodel(self):
