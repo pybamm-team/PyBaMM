@@ -2,6 +2,7 @@
 
 ## Features
 
+-   Stress-induced diffusion is now a separate model option instead of being automatically included when using the particle mechanics submodels ([#1797](https://github.com/pybamm-team/PyBaMM/pull/1797))
 -   `Experiment`s with drive cycles can be solved ([#1793](https://github.com/pybamm-team/PyBaMM/pull/1793))
 -   Added surface area to volume ratio as a factor to the SEI equations ([#1790](https://github.com/pybamm-team/PyBaMM/pull/1790))
 -   Half-cell SPM and SPMe have been implemented ([#1731](https://github.com/pybamm-team/PyBaMM/pull/1731))
