@@ -343,8 +343,10 @@ def get_parameters_filepath(path):
 
 
 def have_jax():
-    """Check if jax is installed"""
-    return importlib.util.find_spec("jax") is not None
+    """Check if jax and jaxlib are installed"""
+    return (importlib.util.find_spec("jax") is not None) and (
+        importlib.util.find_spec("jaxlib") is not None
+    )
 
 
 def install_jax():
