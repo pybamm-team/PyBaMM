@@ -173,25 +173,17 @@ class Interpolant(pybamm.Function):
 
         if self.dimension == 1:
 
-            print("EVALUATION RESULT SHAPE: {0}".format(self.function(*children_eval_flat).flatten()[:, np.newaxis].shape))
-
             return self.function(*children_eval_flat).flatten()[:, np.newaxis]
 
         elif self.dimension == 2:
 
             res = self.function(*children_eval_flat)
 
-            print("EVALUATION RESULT SHAPE: {0}".format(res.shape))
-
             if res.ndim > 1:
-
-                print("RETURNED EVALUATION RESULT SHAPE: {0}".format(np.diagonal(res)[:, np.newaxis].shape))
 
                 return np.diagonal(res)[:, np.newaxis]
 
             else:
-
-                print("RETURNED EVALUATION RESULT SHAPE: {0}".format(res[:, np.newaxis].shape))
 
                 return res[:, np.newaxis]
 
