@@ -22,10 +22,15 @@ class Constant(BaseModel):
     """
 
     def get_fundamental_variables(self):
-        if self.domain == "Negative":
-            u = self.param.u_n_init
+        if self.options["interface utilisation"] == "full":
+            u = pybamm.FullBroadcast(
+                1, self.domain.lower() + " electrode", "current collector"
+            )
         else:
-            u = self.param.u_p_init
+            if self.domain == "Negative":
+                u = self.param.u_n_init
+            else:
+                u = self.param.u_p_init
 
         variables = self._get_standard_interface_utilisation_variables(u)
         return variables

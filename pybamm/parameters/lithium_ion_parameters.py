@@ -28,9 +28,12 @@ class LithiumIonParameters(BaseParameters):
             * "particle shape" : str, optional
                 Sets the model shape of the electrode particles. This is used to
                 calculate the surface area to volume ratio. Can be "spherical"
-                (default) or "user". For the "user" option the surface area per
-                unit volume can be passed as a parameter, and is therefore not
-                necessarily consistent with the particle shape.
+                (default). TODO: implement "cycylindrical" and "platelet".
+            * "working electrode": str
+                Which electrode(s) intercalates and which is counter. If "both"
+                (default), the model is a standard battery. Otherwise can be "negative"
+                or "positive" to indicate a half-cell model.
+
     """
 
     def __init__(self, options=None):
@@ -537,18 +540,6 @@ class LithiumIonParameters(BaseParameters):
             else:
                 self.a_n_typ = 3 * self.epsilon_s_n(0) / self.R_n_typ
             self.a_p_typ = 3 * self.epsilon_s_p(1) / self.R_p_typ
-        elif self.options["particle shape"] == "user":
-            if self.half_cell:
-                self.a_n_typ = pybamm.Scalar(1)
-            else:
-                inputs = {"Through-cell distance (x_n) [m]": 0}
-                self.a_n_typ = pybamm.FunctionParameter(
-                    "Negative electrode surface area to volume ratio [m-1]", inputs
-                )
-            inputs = {"Through-cell distance (x_p) [m]": self.L_x}
-            self.a_p_typ = pybamm.FunctionParameter(
-                "Positive electrode surface area to volume ratio [m-1]", inputs
-            )
 
         # Concentration
         self.electrolyte_concentration_scale = self.c_e_typ

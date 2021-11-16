@@ -71,9 +71,7 @@ class BatteryModelOptions(pybamm.FuzzyDict):
             * "particle shape" : str
                 Sets the model shape of the electrode particles. This is used to
                 calculate the surface area to volume ratio. Can be "spherical"
-                (default), "user" or "no particles". For the "user" option the surface
-                area per unit volume can be passed as a parameter, and is therefore not
-                necessarily consistent with the particle shape.
+                (default), or "no particles".
             * "particle size" : str
                 Sets the model to include a single active particle size or a
                 distribution of sizes at any macroscale location. Can be "single"
@@ -181,7 +179,7 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                 "quartic profile",
             ],
             "particle mechanics": ["none", "swelling only", "swelling and cracking"],
-            "particle shape": ["spherical", "user", "no particles"],
+            "particle shape": ["spherical", "no particles"],
             "particle size": ["single", "distribution"],
             "SEI": [
                 "none",
@@ -349,6 +347,12 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                     "cannot have stress-induced diffusion without a particle "
                     "mechanics model"
                 )
+
+        if options["thermal"] == "x-full" and options["dimensionality"] != 0:
+            n = options["dimensionality"]
+            raise pybamm.OptionError(
+                f"X-full thermal submodels do not yet support {n}D current collectors"
+            )
 
         for option, value in options.items():
             if option == "external submodels" or option == "working electrode":
@@ -833,19 +837,10 @@ class BaseBatteryModel(pybamm.BaseModel):
                     self.param
                 )
 
-        elif self.options["thermal"] == "x-full":
-            if self.options["dimensionality"] == 0:
-                thermal_submodel = pybamm.thermal.OneDimensionalX(self.param)
-            elif self.options["dimensionality"] == 1:
-                raise NotImplementedError(
-                    """X-full thermal submodels do not
-                yet support 1D current collectors"""
-                )
-            elif self.options["dimensionality"] == 2:
-                raise NotImplementedError(
-                    """X-full thermal submodels do
-                    not yet support 2D current collectors"""
-                )
+        elif (
+            self.options["thermal"] == "x-full" and self.options["dimensionality"] == 0
+        ):
+            thermal_submodel = pybamm.thermal.OneDimensionalX(self.param)
 
         self.submodels["thermal"] = thermal_submodel
 
@@ -877,11 +872,7 @@ class BaseBatteryModel(pybamm.BaseModel):
             name = domain.lower() + " interface utilisation"
             if domain == "Counter":
                 domain = "Negative"
-            if util == "full":
-                self.submodels[name] = pybamm.interface_utilisation.Full(
-                    self.param, domain, self.options
-                )
-            elif util == "constant":
+            if util in ["full", "constant"]:
                 self.submodels[name] = pybamm.interface_utilisation.Constant(
                     self.param, domain, self.options
                 )
