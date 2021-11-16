@@ -61,10 +61,6 @@ class Interpolant(pybamm.Function):
                 x = [x]
             x2 = None
 
-        # print("x1: {0}".format(x1))
-        # print("")
-        # print("y: {0}".format(y))
-
         if x1.shape[0] != y.shape[0]:
             raise ValueError(
                 "len(x1) should equal y=shape[0], "
@@ -170,25 +166,15 @@ class Interpolant(pybamm.Function):
                 children_eval_flat.append(child.flatten())
             else:
                 children_eval_flat.append(child)
-
         if self.dimension == 1:
-
             return self.function(*children_eval_flat).flatten()[:, np.newaxis]
-
         elif self.dimension == 2:
-
             res = self.function(*children_eval_flat)
-
             if res.ndim > 1:
-
                 return np.diagonal(res)[:, np.newaxis]
-
             else:
-
                 return res[:, np.newaxis]
-
         else:
-
             raise ValueError("Invalid dimension: {0}".format(self.dimension))
 
 
