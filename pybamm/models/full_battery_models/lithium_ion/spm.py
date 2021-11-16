@@ -114,7 +114,7 @@ class SPM(BaseModel):
                 self.submodels[
                     domain.lower() + " particle"
                 ] = pybamm.particle.no_distribution.XAveragedFickianDiffusion(
-                    self.param, domain
+                    self.param, domain, self.options
                 )
             elif particle_side in [
                 "uniform profile",
@@ -124,7 +124,7 @@ class SPM(BaseModel):
                 self.submodels[
                     domain.lower() + " particle"
                 ] = pybamm.particle.no_distribution.XAveragedPolynomialProfile(
-                    self.param, domain, particle_side
+                    self.param, domain, particle_side, self.options
                 )
 
     def set_solid_submodel(self):
@@ -157,18 +157,16 @@ class SPM(BaseModel):
             ] = pybamm.electrolyte_conductivity.LeadingOrder(
                 self.param, options=self.options
             )
-
+            surf_model = surf_form.Explicit
         elif self.options["surface form"] == "differential":
-            for domain in ["Negative", "Separator", "Positive"]:
-                self.submodels[
-                    "leading-order " + domain.lower() + " electrolyte conductivity"
-                ] = surf_form.LeadingOrderDifferential(self.param, domain)
-
+            surf_model = surf_form.LeadingOrderDifferential
         elif self.options["surface form"] == "algebraic":
-            for domain in ["Negative", "Separator", "Positive"]:
-                self.submodels[
-                    "leading-order " + domain.lower() + " electrolyte conductivity"
-                ] = surf_form.LeadingOrderAlgebraic(self.param, domain)
+            surf_model = surf_form.LeadingOrderAlgebraic
+
+        for domain in ["Negative", "Positive"]:
+            self.submodels[
+                domain.lower() + " surface potential difference"
+            ] = surf_model(self.param, domain)
 
         self.submodels[
             "electrolyte diffusion"
