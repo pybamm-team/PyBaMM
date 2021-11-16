@@ -1,7 +1,5 @@
 import numpy as np
 import pickle
-import pybamm as pb
-import pybamm
 import os
 import json
 
