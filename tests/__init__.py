@@ -8,6 +8,10 @@ from .integration.test_models.standard_model_tests import (
 )
 from .integration.test_models.standard_output_tests import StandardOutputTests
 from .integration.test_models.standard_output_comparison import StandardOutputComparison
+
+from .unit.test_models.test_full_battery_models.test_lithium_ion.test_lithium_ion_model import (
+    TestLithiumIonModel,
+)
 from .shared import (
     get_mesh_for_testing,
     get_p2d_mesh_for_testing,
