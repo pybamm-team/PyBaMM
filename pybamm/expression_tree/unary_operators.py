@@ -8,7 +8,6 @@ import sympy
 from scipy.sparse import csr_matrix, issparse
 from sympy.vector.operators import Divergence as sympy_Divergence
 from sympy.vector.operators import Gradient as sympy_Gradient
-
 import pybamm
 
 
@@ -198,6 +197,10 @@ class Sign(UnaryOperator):
     def _unary_new_copy(self, child):
         """See :meth:`UnaryOperator._unary_new_copy()`."""
         return sign(child)
+
+    def _sympy_operator(self, child):
+        """Override :meth:`pybamm.UnaryOperator._sympy_operator`"""
+        return sympy.functions.elementary.complexes.sign(child)
 
 
 class Floor(UnaryOperator):
