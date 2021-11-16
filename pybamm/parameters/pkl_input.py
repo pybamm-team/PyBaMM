@@ -40,7 +40,7 @@ class PybammStandardParameterClass:
 
         y = self.model.predict(x)
 
-        Y = y.reshape(1000, 1000)
+        Y = y.reshape(*[len(el) for el in x_])
 
         return x_, Y
 
