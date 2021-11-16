@@ -47,7 +47,7 @@ class CasadiConverter(object):
             return casadi_symbol
 
     def _convert(self, symbol, t, y, y_dot, inputs):
-        """ See :meth:`CasadiConverter.convert()`. """
+        """See :meth:`CasadiConverter.convert()`."""
         if isinstance(
             symbol,
             (
@@ -132,7 +132,6 @@ class CasadiConverter(object):
             elif symbol.function == special.erf:
                 return casadi.erf(*converted_children)
             elif isinstance(symbol, pybamm.Interpolant):
-
                 if symbol.interpolator == "linear":
                     solver = "linear"
                 elif symbol.interpolator == "cubic spline":
@@ -144,26 +143,19 @@ class CasadiConverter(object):
                         "Alternatively, set 'model.convert_to_format = 'python'' "
                         "and use a non-CasADi solver. "
                     )
-
                 else:
                     raise NotImplementedError("Unknown interpolator: {0}".format(symbol.interpolator))
 
                 if len(converted_children) == 1:
-
                     return casadi.interpolant(
                         "LUT", solver, symbol.x, symbol.y.flatten()
                     )(*converted_children)
-
                 elif len(converted_children) == 2:
-
                     LUT = casadi.interpolant(
                         "LUT", solver, symbol.x, symbol.y.ravel(order='F')
                     )
-
                     res = LUT(casadi.hcat(converted_children).T).T
-
                     return res
-
                 else:
                     raise Exception("Invalid converted_children count for Interpolant: {0}".format(len(converted_children)))
 

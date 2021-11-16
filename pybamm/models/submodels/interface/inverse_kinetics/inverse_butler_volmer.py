@@ -63,7 +63,10 @@ class InverseButlerVolmer(BaseInterface):
         if self.domain == "Negative":
             if self.options["SEI film resistance"] != "none":
                 R_sei = self.param.R_sei
-                L_sei = variables["Total SEI thickness"]
+                if self.half_cell:
+                    L_sei = variables["Total SEI thickness"]
+                else:
+                    L_sei = variables["X-averaged total SEI thickness"]
                 eta_sei = -j_tot * L_sei * R_sei
             # Without SEI resistance
             else:
@@ -79,7 +82,9 @@ class InverseButlerVolmer(BaseInterface):
         variables.update(self._get_standard_exchange_current_variables(j0))
         variables.update(self._get_standard_overpotential_variables(eta_r))
         variables.update(
-            self._get_standard_surface_potential_difference_variables(delta_phi)
+            self._get_standard_average_surface_potential_difference_variables(
+                pybamm.x_average(delta_phi)
+            )
         )
         variables.update(self._get_standard_ocp_variables(ocp, dUdT))
 
@@ -115,13 +120,15 @@ class CurrentForInverseButlerVolmer(BaseInterface):
         The domain(s) in which to compute the interfacial current.
     reaction : str
         The name of the reaction being implemented
+    options: dict, optional
+        A dictionary of options to be passed to the model.
 
     **Extends:** :class:`pybamm.interface.BaseInterface`
 
     """
 
-    def __init__(self, param, domain, reaction):
-        super().__init__(param, domain, reaction)
+    def __init__(self, param, domain, reaction, options=None):
+        super().__init__(param, domain, reaction, options=options)
 
     def get_coupled_variables(self, variables):
         j_tot = variables[
@@ -139,8 +146,13 @@ class CurrentForInverseButlerVolmer(BaseInterface):
         variables.update(self._get_standard_interfacial_current_variables(j))
 
         if (
-            "Negative electrode" + self.reaction_name + " interfacial current density"
-            in variables
+            self.half_cell
+            or (
+                "Negative electrode"
+                + self.reaction_name
+                + " interfacial current density"
+                in variables
+            )
             and "Positive electrode"
             + self.reaction_name
             + " interfacial current density"

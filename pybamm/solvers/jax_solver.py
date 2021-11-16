@@ -1,12 +1,14 @@
 #
 # Solver class using Scipy's adaptive time stepper
 #
+import numpy as onp
+
 import pybamm
 
-import jax
-from jax.experimental.ode import odeint
-import jax.numpy as jnp
-import numpy as onp
+if pybamm.have_jax():
+    import jax
+    import jax.numpy as jnp
+    from jax.experimental.ode import odeint
 
 
 class JaxSolver(pybamm.BaseSolver):
@@ -56,6 +58,11 @@ class JaxSolver(pybamm.BaseSolver):
         extrap_tol=0,
         extra_options=None,
     ):
+        if not pybamm.have_jax():
+            raise ModuleNotFoundError(
+                "Jax or jaxlib is not installed, please see https://pybamm.readthedocs.io/en/latest/install/GNU-linux.html#optional-jaxsolver"  # noqa: E501
+            )
+
         # note: bdf solver itself calculates consistent initial conditions so can set
         # root_method to none, allow user to override this behavior
         super().__init__(

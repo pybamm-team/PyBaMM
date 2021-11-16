@@ -16,6 +16,8 @@ class LeadingOrder(BaseModel):
         The parameters to use for this submodel
     domain : str
         Either 'Negative' or 'Positive'
+    options : dict, optional
+        A dictionary of options to be passed to the model.
     set_positive_potential :  bool, optional
         If True the battery model sets the positve potential based on the current.
         If False, the potential is specified by the user. Default is True.
@@ -23,19 +25,26 @@ class LeadingOrder(BaseModel):
     **Extends:** :class:`pybamm.electrode.ohm.BaseModel`
     """
 
-    def __init__(self, param, domain, set_positive_potential=True):
-        super().__init__(param, domain, set_positive_potential=set_positive_potential)
+    def __init__(self, param, domain, options=None, set_positive_potential=True):
+        super().__init__(
+            param,
+            domain,
+            options=options,
+            set_positive_potential=set_positive_potential,
+        )
 
     def get_coupled_variables(self, variables):
         """
         Returns variables which are derived from the fundamental variables in the model.
         """
+        param = self.param
+
         i_boundary_cc = variables["Current collector current density"]
         phi_s_cn = variables["Negative current collector potential"]
 
         # import parameters and spatial variables
-        l_n = self.param.l_n
-        l_p = self.param.l_p
+        l_n = param.l_n
+        l_p = param.l_p
         x_n = pybamm.standard_spatial_vars.x_n
         x_p = pybamm.standard_spatial_vars.x_p
 

@@ -56,14 +56,6 @@ class BaseKinetics(BaseInterface):
                 "Lithium metal interface surface potential difference"
             ]
         else:
-            # Calculate delta_phi from phi_s and phi_e if it isn't already known
-            if self.domain + " electrode surface potential difference" not in variables:
-                phi_s = variables[self.domain + " electrode potential"]
-                phi_e = variables[self.domain + " electrolyte potential"]
-                delta_phi = phi_s - phi_e
-                variables.update(
-                    self._get_standard_surface_potential_difference_variables(delta_phi)
-                )
             delta_phi = variables[
                 self.domain + " electrode surface potential difference"
             ]

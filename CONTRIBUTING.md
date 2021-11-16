@@ -280,7 +280,7 @@ Major PyBaMM features are showcased in [Jupyter notebooks](https://jupyter.org/)
 
 All example notebooks should be listed in [examples/README.md](https://github.com/pybamm-team/PyBaMM/blob/develop/examples/notebooks/README.md). Please follow the (naming and writing) style of existing notebooks where possible.
 
-Where possible, notebooks are tested daily. A list of slow notebooks (which time-out and fail tests) is maintained in `.slow-books`, these notebooks will be excluded from daily testing.
+All the notebooks are tested daily.
 
 ## Citations
 

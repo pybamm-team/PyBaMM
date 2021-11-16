@@ -3,7 +3,6 @@
 #
 import pybamm
 import unittest
-from platform import system, version
 
 
 class TestCitations(unittest.TestCase):
@@ -124,14 +123,14 @@ class TestCitations(unittest.TestCase):
         citations._reset()
         self.assertNotIn("Subramanian2005", citations._papers_to_cite)
         pybamm.particle.no_distribution.XAveragedPolynomialProfile(
-            None, "Negative", "quadratic profile"
+            None, "Negative", "quadratic profile", None
         )
         self.assertIn("Subramanian2005", citations._papers_to_cite)
 
         citations._reset()
         self.assertNotIn("Subramanian2005", citations._papers_to_cite)
         pybamm.particle.no_distribution.PolynomialProfile(
-            None, "Negative", "quadratic profile"
+            None, "Negative", "quadratic profile", None
         )
         self.assertIn("Subramanian2005", citations._papers_to_cite)
 
@@ -255,10 +254,7 @@ class TestCitations(unittest.TestCase):
             pybamm.IDAKLUSolver()
             self.assertIn("Hindmarsh2005", citations._papers_to_cite)
 
-    @unittest.skipIf(
-        system() == "Windows" or (system() == "Darwin" and "ARM64" in version()),
-        "JAX not supported on windows or Mac M1",
-    )
+    @unittest.skipIf(not pybamm.have_jax(), "jax or jaxlib is not installed")
     def test_jax_citations(self):
         citations = pybamm.citations
         citations._reset()

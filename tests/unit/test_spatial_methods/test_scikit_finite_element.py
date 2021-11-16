@@ -503,7 +503,7 @@ class TestScikitFiniteElement(unittest.TestCase):
         a = 3
         b = 4
         c = 5
-        u = pybamm.Variable("variable", domain="current collector")
+        u = pybamm.Variable("u", domain="current collector")
         model.algebraic = {u: -pybamm.laplacian(u) + pybamm.source(2 * a, u)}
         # set boundary conditions ("negative tab" = bottom of unit square,
         # "positive tab" = top of unit square, elsewhere normal derivative is zero)

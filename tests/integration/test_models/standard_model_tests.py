@@ -8,7 +8,7 @@ import numpy as np
 
 
 class StandardModelTest(object):
-    """ Basic processing test for the models. """
+    """Basic processing test for the models."""
 
     def __init__(
         self,
@@ -62,8 +62,9 @@ class StandardModelTest(object):
         # Model should still be well-posed after processing
         self.model.check_well_posedness(post_discretisation=True)
 
-    def test_solving(self, solver=None, t_eval=None, inputs=None,
-                     calculate_sensitivities=False):
+    def test_solving(
+        self, solver=None, t_eval=None, inputs=None, calculate_sensitivities=False
+    ):
         # Overwrite solver if given
         if solver is not None:
             self.solver = solver
@@ -82,7 +83,9 @@ class StandardModelTest(object):
             t_eval = np.linspace(0, 3600 / Crate, 100)
 
         self.solution = self.solver.solve(
-            self.model, t_eval, inputs=inputs,
+            self.model,
+            t_eval,
+            inputs=inputs,
         )
 
     def test_outputs(self):
@@ -92,8 +95,9 @@ class StandardModelTest(object):
         )
         std_out_test.test_all()
 
-    def test_sensitivities(self, param_name, param_value,
-                           output_name='Terminal voltage [V]'):
+    def test_sensitivities(
+        self, param_name, param_value, output_name="Terminal voltage [V]"
+    ):
 
         self.parameter_values.update({param_name: param_value})
         Crate = abs(
@@ -114,8 +118,7 @@ class StandardModelTest(object):
         self.solver.atol = 1e-8
 
         self.solution = self.solver.solve(
-            self.model, t_eval, inputs=inputs,
-            calculate_sensitivities=True
+            self.model, t_eval, inputs=inputs, calculate_sensitivities=True
         )
         output_sens = self.solution[output_name].sensitivities[param_name]
 
@@ -124,18 +127,20 @@ class StandardModelTest(object):
         inputs_plus = {param_name: (param_value + 0.5 * h)}
         inputs_neg = {param_name: (param_value - 0.5 * h)}
         sol_plus = self.solver.solve(
-            self.model, t_eval, inputs=inputs_plus,
+            self.model,
+            t_eval,
+            inputs=inputs_plus,
         )
         output_plus = sol_plus[output_name](t=t_eval)
-        sol_neg = self.solver.solve(
-            self.model, t_eval, inputs=inputs_neg
-        )
+        sol_neg = self.solver.solve(self.model, t_eval, inputs=inputs_neg)
         output_neg = sol_neg[output_name](t=t_eval)
-        fd = ((np.array(output_plus) - np.array(output_neg)) / h)
+        fd = (np.array(output_plus) - np.array(output_neg)) / h
         fd = fd.transpose().reshape(-1, 1)
         np.testing.assert_allclose(
-            output_sens, fd,
-            rtol=1e-2, atol=1e-6,
+            output_sens,
+            fd,
+            rtol=1e-2,
+            atol=1e-6,
         )
 
     def test_all(
@@ -156,7 +161,7 @@ class StandardModelTest(object):
 
 
 class OptimisationsTest(object):
-    """ Test that the optimised models give the same result as the original model. """
+    """Test that the optimised models give the same result as the original model."""
 
     def __init__(self, model, parameter_values=None, disc=None):
         # Set parameter values

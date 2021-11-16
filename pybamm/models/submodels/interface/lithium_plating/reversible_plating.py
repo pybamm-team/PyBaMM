@@ -32,7 +32,7 @@ class ReversiblePlating(BasePlating):
     def get_fundamental_variables(self):
         if self.x_average is True:
             c_plated_Li_av = pybamm.Variable(
-                "Lithium plating concentration", domain="current collector"
+                "X-averaged lithium plating concentration", domain="current collector"
             )
             c_plated_Li = pybamm.PrimaryBroadcast(c_plated_Li_av, "negative electrode")
         else:
@@ -77,12 +77,17 @@ class ReversiblePlating(BasePlating):
             j_stripping = variables[
                 "X-averaged lithium plating interfacial current density"
             ]
+            # Note a is dimensionless (has a constant value of 1 if the surface
+            # area does not change)
+            a = variables["X-averaged negative electrode surface area to volume ratio"]
         else:
             c_plated_Li = variables["Lithium plating concentration"]
             j_stripping = variables["Lithium plating interfacial current density"]
+            a = variables["Negative electrode surface area to volume ratio"]
 
         Gamma_plating = self.param.Gamma_plating
-        self.rhs = {c_plated_Li: -Gamma_plating * j_stripping}
+
+        self.rhs = {c_plated_Li: -Gamma_plating * a * j_stripping}
 
     def set_initial_conditions(self, variables):
         if self.x_average is True:
