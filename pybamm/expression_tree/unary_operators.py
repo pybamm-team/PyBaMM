@@ -188,7 +188,8 @@ class Sign(UnaryOperator):
         if issparse(child):
             return csr_matrix.sign(child)
         else:
-            return np.sign(child)
+            with np.errstate(invalid="ignore"):
+                return np.sign(child)
 
 
 class Floor(UnaryOperator):
