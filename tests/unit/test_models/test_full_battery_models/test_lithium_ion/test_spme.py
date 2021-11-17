@@ -27,6 +27,11 @@ class TestSPMe(BaseUnitTestLithiumIon, unittest.TestCase):
             model.variables["Volume-averaged cell temperature"].id,
         )
 
+    def test_electrolyte_options(self):
+        options = {"electrolyte conductivity": "full"}
+        with self.assertRaisesRegex(pybamm.OptionError, "electrolyte conductivity"):
+            pybamm.lithium_ion.SPMe(options)
+
     def test_integrated_conductivity(self):
         options = {"electrolyte conductivity": "integrated"}
         self.check_well_posedness(options)
