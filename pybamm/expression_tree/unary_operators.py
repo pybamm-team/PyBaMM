@@ -8,7 +8,6 @@ import sympy
 from scipy.sparse import csr_matrix, issparse
 from sympy.vector.operators import Divergence as sympy_Divergence
 from sympy.vector.operators import Gradient as sympy_Gradient
-
 import pybamm
 
 
@@ -152,16 +151,20 @@ class AbsoluteValue(UnaryOperator):
     def diff(self, variable):
         """See :meth:`pybamm.Symbol.diff()`."""
         child = self.child.new_copy()
-        return Sign(child) * child.diff(variable)
+        return sign(child) * child.diff(variable)
 
     def _unary_jac(self, child_jac):
         """See :meth:`pybamm.UnaryOperator._unary_jac()`."""
         child = self.child.new_copy()
-        return Sign(child) * child_jac
+        return sign(child) * child_jac
 
     def _unary_evaluate(self, child):
         """See :meth:`UnaryOperator._unary_evaluate()`."""
         return np.abs(child)
+
+    def _unary_new_copy(self, child):
+        """See :meth:`UnaryOperator._unary_new_copy()`."""
+        return abs(child)
 
 
 class Sign(UnaryOperator):
@@ -188,7 +191,16 @@ class Sign(UnaryOperator):
         if issparse(child):
             return csr_matrix.sign(child)
         else:
-            return np.sign(child)
+            with np.errstate(invalid="ignore"):
+                return np.sign(child)
+
+    def _unary_new_copy(self, child):
+        """See :meth:`UnaryOperator._unary_new_copy()`."""
+        return sign(child)
+
+    def _sympy_operator(self, child):
+        """Override :meth:`pybamm.UnaryOperator._sympy_operator`"""
+        return sympy.functions.elementary.complexes.sign(child)
 
 
 class Floor(UnaryOperator):

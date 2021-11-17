@@ -19,11 +19,6 @@ class TestBaseLeadAcidModel(unittest.TestCase):
         self.assertEqual(model.default_geometry["current collector"][var.y]["min"], 0)
 
     def test_incompatible_options(self):
-        with self.assertRaisesRegex(
-            pybamm.OptionError,
-            "Lead-acid models can only have thermal effects if dimensionality is 0.",
-        ):
-            pybamm.lead_acid.BaseModel({"dimensionality": 1, "thermal": "x-full"})
         with self.assertRaisesRegex(pybamm.OptionError, "SEI"):
             pybamm.lead_acid.BaseModel({"SEI": "constant"})
         with self.assertRaisesRegex(pybamm.OptionError, "lithium plating"):

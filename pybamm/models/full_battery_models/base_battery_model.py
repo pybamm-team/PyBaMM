@@ -87,15 +87,9 @@ class BatteryModelOptions(pybamm.FuzzyDict):
 
                 - "none": :class:`pybamm.sei.NoSEI` (no SEI growth)
                 - "constant": :class:`pybamm.sei.Constant` (constant SEI thickness)
-                - "reaction limited": :class:`pybamm.sei.ReactionLimited`
-                - "solvent-diffusion limited":\
-                    :class:`pybamm.sei.SolventDiffusionLimited`
-                - "electron-migration limited": \
-                    :class:`pybamm.sei.ElectronMigrationLimited`
-                - "interstitial-diffusion limited": \
-                    :class:`pybamm.sei.InterstitialDiffusionLimited`
-                - "ec reaction limited": \
-                    :class:`pybamm.sei.EcReactionLimited`
+                - "reaction limited", "solvent-diffusion limited",\
+                    "electron-migration limited", "interstitial-diffusion limited", \
+                    or "ec reaction limited": :class:`pybamm.sei.SEIGrowth`
             * "SEI film resistance" : str
                 Set the submodel for additional term in the overpotential due to SEI.
                 The default value is "none" if the "SEI" option is "none", and
@@ -338,6 +332,13 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                 raise pybamm.OptionError(
                     "cannot have transverse convection in 0D model"
                 )
+
+        if options["thermal"] == "x-full" and options["dimensionality"] != 0:
+            n = options["dimensionality"]
+            raise pybamm.OptionError(
+                f"X-full thermal submodels do not yet support {n}D current collectors"
+            )
+
         if isinstance(options["stress-induced diffusion"], str):
             if (
                 options["stress-induced diffusion"] == "true"
@@ -836,11 +837,9 @@ class BaseBatteryModel(pybamm.BaseModel):
                 thermal_submodel = pybamm.thermal.pouch_cell.CurrentCollector2D(
                     self.param
                 )
-
-        elif (
-            self.options["thermal"] == "x-full" and self.options["dimensionality"] == 0
-        ):
-            thermal_submodel = pybamm.thermal.OneDimensionalX(self.param)
+        elif self.options["thermal"] == "x-full":
+            if self.options["dimensionality"] == 0:
+                thermal_submodel = pybamm.thermal.OneDimensionalX(self.param)
 
         self.submodels["thermal"] = thermal_submodel
 
