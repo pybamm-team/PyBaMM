@@ -10,6 +10,10 @@ class TestNewmanTobias(BaseIntegrationTestLithiumIon, unittest.TestCase):
     def setUp(self):
         self.model = pybamm.lithium_ion.NewmanTobias
 
+    def test_basic_processing(self):
+        options = {}
+        self.run_basic_processing_test(options)
+
     def test_sensitivities(self):
         pass  # skip this test
 
