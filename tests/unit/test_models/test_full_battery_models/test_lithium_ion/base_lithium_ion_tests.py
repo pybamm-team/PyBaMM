@@ -76,8 +76,12 @@ class BaseUnitTestLithiumIon:
         options = {"particle": ("Fickian diffusion", "quartic profile")}
         self.check_well_posedness(options)
 
-    def test_well_posed_particle_shape_user(self):
-        options = {"particle shape": "user"}
+    def test_well_posed_constant_utilisation(self):
+        options = {"interface utilisation": "constant"}
+        self.check_well_posedness(options)
+
+    def test_well_posed_current_driven_utilisation(self):
+        options = {"interface utilisation": "current-driven"}
         self.check_well_posedness(options)
 
     def test_well_posed_loss_active_material_stress_negative(self):

@@ -27,7 +27,7 @@ class LithiumIonParameters(BaseParameters):
             * "particle shape" : str, optional
                 Sets the model shape of the electrode particles. This is used to
                 calculate the surface area to volume ratio. Can be "spherical"
-                (default). TODO: implement "cycylindrical" and "platelet".
+                (default). TODO: implement "cylindrical" and "platelet".
             * "working electrode": str
                 Which electrode(s) intercalates and which is counter. If "both"
                 (default), the model is a standard battery. Otherwise can be "negative"
