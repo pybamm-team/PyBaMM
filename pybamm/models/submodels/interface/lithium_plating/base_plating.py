@@ -20,6 +20,7 @@ class BasePlating(BaseInterface):
            Origin of the Differential Voltage Minimum Associated with Li Plating in
            Lithium-Ion Batteries". Journal of The Electrochemical Society,
            167:090540, 2019
+
     **Extends:** :class:`pybamm.interface.BaseInterface`
     """
 
