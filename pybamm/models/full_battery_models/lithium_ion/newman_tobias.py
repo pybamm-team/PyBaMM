@@ -56,31 +56,31 @@ class NewmanTobias(DFN):
         pybamm.citations.register("Chu2020")
 
     def set_particle_submodel(self):
-
-        if self.options["particle"] == "Fickian diffusion":
-            submod_n = pybamm.particle.no_distribution.XAveragedFickianDiffusion(
-                self.param, "Negative", self.options
-            )
-            self.submodels["negative particle"] = submod_n
-            submod_p = pybamm.particle.no_distribution.XAveragedFickianDiffusion(
-                self.param, "Positive", self.options
-            )
-            self.submodels["positive particle"] = submod_p
-        elif self.options["particle"] in [
-            "uniform profile",
-            "quadratic profile",
-            "quartic profile",
+        if isinstance(self.options["particle"], str):
+            particle_left = self.options["particle"]
+            particle_right = self.options["particle"]
+        else:
+            particle_left, particle_right = self.options["particle"]
+        for particle_side, domain in [
+            [particle_left, "Negative"],
+            [particle_right, "Positive"],
         ]:
-            self.submodels[
-                "negative particle"
-            ] = pybamm.particle.no_distribution.XAveragedPolynomialProfile(
-                self.param, "Negative", self.options["particle"], self.options
-            )
-            self.submodels[
-                "positive particle"
-            ] = pybamm.particle.no_distribution.XAveragedPolynomialProfile(
-                self.param, "Positive", self.options["particle"], self.options
-            )
+            if particle_side == "Fickian diffusion":
+                self.submodels[
+                    domain.lower() + " particle"
+                ] = pybamm.particle.no_distribution.XAveragedFickianDiffusion(
+                    self.param, domain, self.options
+                )
+            elif particle_side in [
+                "uniform profile",
+                "quadratic profile",
+                "quartic profile",
+            ]:
+                self.submodels[
+                    domain.lower() + " particle"
+                ] = pybamm.particle.no_distribution.XAveragedPolynomialProfile(
+                    self.param, domain, particle_side, self.options
+                )
 
     def set_electrolyte_submodel(self):
 
