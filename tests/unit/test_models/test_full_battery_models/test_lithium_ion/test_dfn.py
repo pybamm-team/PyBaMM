@@ -3,10 +3,10 @@
 #
 import pybamm
 import unittest
-from tests import TestLithiumIonModel
+from tests import BaseUnitTestLithiumIon
 
 
-class TestDFN(TestLithiumIonModel):
+class TestDFN(BaseUnitTestLithiumIon, unittest.TestCase):
     def setUp(self):
         self.model = pybamm.lithium_ion.DFN
 
@@ -14,6 +14,14 @@ class TestDFN(TestLithiumIonModel):
         options = {"electrolyte conductivity": "integrated"}
         with self.assertRaisesRegex(pybamm.OptionError, "electrolyte conductivity"):
             pybamm.lithium_ion.DFN(options)
+
+    def test_well_posed_size_distribution(self):
+        options = {"particle size": "distribution"}
+        self.check_well_posedness(options)
+
+    def test_well_posed_size_distribution_uniform_profile(self):
+        options = {"particle size": "distribution", "particle": "uniform profile"}
+        self.check_well_posedness(options)
 
 
 if __name__ == "__main__":

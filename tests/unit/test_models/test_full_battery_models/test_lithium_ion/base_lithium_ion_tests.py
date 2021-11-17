@@ -1,19 +1,13 @@
 #
-# Tests for the lithium-ion LithiumIonModel model
+# Base unit tests for the lithium-ion models
 #
 import pybamm
-import unittest
 
 
-class TestLithiumIonModel(unittest.TestCase):
-    def setUp(self):
-        # Will be overwritten by subclasses
-        self.model = None
-
+class BaseUnitTestLithiumIon:
     def check_well_posedness(self, options):
-        if self.model is not None:
-            model = self.model(options)
-            model.check_well_posedness()
+        model = self.model(options)
+        model.check_well_posedness()
 
     def test_well_posed(self):
         options = {"thermal": "isothermal"}
@@ -26,15 +20,15 @@ class TestLithiumIonModel(unittest.TestCase):
         options = {"current collector": "potential pair", "dimensionality": 2}
         self.check_well_posedness(options)
 
-    def test_lumped_thermal_model_1D(self):
+    def test_well_posed_lumped_thermal_model_1D(self):
         options = {"thermal": "x-lumped"}
         self.check_well_posedness(options)
 
-    def test_x_full_thermal_model(self):
+    def test_well_posed_x_full_thermal_model(self):
         options = {"thermal": "x-full"}
         self.check_well_posedness(options)
 
-    def test_lumped_thermal_1plus1D(self):
+    def test_well_posed_lumped_thermal_1plus1D(self):
         options = {
             "current collector": "potential pair",
             "dimensionality": 1,
@@ -42,7 +36,7 @@ class TestLithiumIonModel(unittest.TestCase):
         }
         self.check_well_posedness(options)
 
-    def test_lumped_thermal_2plus1D(self):
+    def test_well_posed_lumped_thermal_2plus1D(self):
         options = {
             "current collector": "potential pair",
             "dimensionality": 2,
@@ -50,7 +44,7 @@ class TestLithiumIonModel(unittest.TestCase):
         }
         self.check_well_posedness(options)
 
-    def test_thermal_1plus1D(self):
+    def test_well_posed_thermal_1plus1D(self):
         options = {
             "current collector": "potential pair",
             "dimensionality": 1,
@@ -58,7 +52,7 @@ class TestLithiumIonModel(unittest.TestCase):
         }
         self.check_well_posedness(options)
 
-    def test_thermal_2plus1D(self):
+    def test_well_posed_thermal_2plus1D(self):
         options = {
             "current collector": "potential pair",
             "dimensionality": 2,
@@ -66,62 +60,48 @@ class TestLithiumIonModel(unittest.TestCase):
         }
         self.check_well_posedness(options)
 
-    def test_particle_uniform(self):
+    def test_well_posed_particle_uniform(self):
         options = {"particle": "uniform profile"}
         self.check_well_posedness(options)
 
-    def test_particle_quadratic(self):
+    def test_well_posed_particle_quadratic(self):
         options = {"particle": "quadratic profile"}
         self.check_well_posedness(options)
 
-    def test_particle_quartic(self):
+    def test_well_posed_particle_quartic(self):
         options = {"particle": "quartic profile"}
         self.check_well_posedness(options)
 
-    def test_particle_mixed(self):
+    def test_well_posed_particle_mixed(self):
         options = {"particle": ("Fickian diffusion", "quartic profile")}
         self.check_well_posedness(options)
 
-    def test_particle_shape_user(self):
+    def test_well_posed_particle_shape_user(self):
         options = {"particle shape": "user"}
         self.check_well_posedness(options)
 
-    def test_loss_active_material_stress_negative(self):
+    def test_well_posed_loss_active_material_stress_negative(self):
         options = {"loss of active material": ("stress-driven", "none")}
         self.check_well_posedness(options)
 
-    def test_loss_active_material_stress_positive(self):
+    def test_well_posed_loss_active_material_stress_positive(self):
         options = {"loss of active material": ("none", "stress-driven")}
         self.check_well_posedness(options)
 
-    def test_loss_active_material_stress_both(self):
+    def test_well_posed_loss_active_material_stress_both(self):
         options = {"loss of active material": "stress-driven"}
         self.check_well_posedness(options)
 
-    def test_loss_active_material_stress_reaction_both(self):
+    def test_well_posed_loss_active_material_stress_reaction_both(self):
         options = {"loss of active material": "reaction-driven"}
         self.check_well_posedness(options)
 
-    def test_surface_form_differential(self):
+    def test_well_posed_surface_form_differential(self):
         options = {"surface form": "differential"}
         self.check_well_posedness(options)
 
-    def test_surface_form_algebraic(self):
+    def test_well_posed_surface_form_algebraic(self):
         options = {"surface form": "algebraic"}
-        self.check_well_posedness(options)
-
-    def test_well_posed_reversible_plating_with_porosity(self):
-        options = {
-            "lithium plating": "reversible",
-            "lithium plating porosity change": "true",
-        }
-        self.check_well_posedness(options)
-
-    def test_well_posed_irreversible_plating_with_porosity(self):
-        options = {
-            "lithium plating": "irreversible",
-            "lithium plating porosity change": "true",
-        }
         self.check_well_posedness(options)
 
     def test_well_posed_sei_constant(self):
@@ -168,6 +148,20 @@ class TestLithiumIonModel(unittest.TestCase):
         options = {"particle mechanics": "swelling only"}
         self.check_well_posedness(options)
 
+    def test_well_posed_mechanics_stress_induced_diffusion(self):
+        options = {
+            "particle mechanics": "swelling only",
+            "stress-induced diffusion": "true",
+        }
+        self.check_well_posedness(options)
+
+    def test_well_posed_mechanics_stress_induced_diffusion_mixed(self):
+        options = {
+            "particle mechanics": "swelling only",
+            "stress-induced diffusion": ("true", "false"),
+        }
+        self.check_well_posedness(options)
+
     def test_well_posed_reversible_plating(self):
         options = {"lithium plating": "reversible"}
         self.check_well_posedness(options)
@@ -176,20 +170,37 @@ class TestLithiumIonModel(unittest.TestCase):
         options = {"lithium plating": "irreversible"}
         self.check_well_posedness(options)
 
-    def test_well_posed_size_distribution(self):
-        options = {"particle size": "distribution"}
+    def test_well_posed_reversible_plating_with_porosity(self):
+        options = {
+            "lithium plating": "reversible",
+            "lithium plating porosity change": "true",
+        }
         self.check_well_posedness(options)
 
-    def test_well_posed_size_distribution_uniform_profile(self):
-        options = {"particle size": "distribution", "particle": "uniform profile"}
+    def test_well_posed_irreversible_plating_with_porosity(self):
+        options = {
+            "lithium plating": "irreversible",
+            "lithium plating porosity change": "true",
+        }
         self.check_well_posedness(options)
 
+    def test_well_posed_external_circuit_voltage(self):
+        options = {"operating mode": "voltage"}
+        self.check_well_posedness(options)
 
-if __name__ == "__main__":
-    print("Add -v for more debug output")
-    import sys
+    def test_well_posed_external_circuit_power(self):
+        options = {"operating mode": "power"}
+        self.check_well_posedness(options)
 
-    if "-v" in sys.argv:
-        debug = True
-    pybamm.settings.debug_mode = True
-    unittest.main()
+    def test_well_posed_external_circuit_cccv(self):
+        options = {"operating mode": "CCCV"}
+        self.check_well_posedness(options)
+
+    def test_well_posed_external_circuit_function(self):
+        def external_circuit_function(variables):
+            I = variables["Current [A]"]
+            V = variables["Terminal voltage [V]"]
+            return V + I - pybamm.FunctionParameter("Function", {"Time [s]": pybamm.t})
+
+        options = {"operating mode": external_circuit_function}
+        self.check_well_posedness(options)

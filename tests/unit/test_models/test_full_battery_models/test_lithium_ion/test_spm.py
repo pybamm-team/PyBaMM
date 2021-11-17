@@ -3,9 +3,10 @@
 #
 import pybamm
 import unittest
+from tests import BaseUnitTestLithiumIon
 
 
-class TestSPM(unittest.TestCase):
+class TestSPM(BaseUnitTestLithiumIon, unittest.TestCase):
     def setUp(self):
         self.model = pybamm.lithium_ion.SPM
 
@@ -37,41 +38,6 @@ class TestSPM(unittest.TestCase):
         new_model_cs_eqn = list(new_model.rhs.values())[1]
         model_cs_eqn = list(model.rhs.values())[1]
         self.assertEqual(new_model_cs_eqn.id, model_cs_eqn.id)
-
-
-class TestSPMExternalCircuits(unittest.TestCase):
-    def test_well_posed_voltage(self):
-        options = {"operating mode": "voltage"}
-        model = pybamm.lithium_ion.SPM(options)
-        model.check_well_posedness()
-
-    def test_well_posed_power(self):
-        options = {"operating mode": "power"}
-        model = pybamm.lithium_ion.SPM(options)
-        model.check_well_posedness()
-
-    def test_well_posed_cccv(self):
-        options = {"operating mode": "CCCV"}
-        model = pybamm.lithium_ion.SPM(options)
-        model.check_well_posedness()
-
-    def test_well_posed_function(self):
-        def external_circuit_function(variables):
-            I = variables["Current [A]"]
-            V = variables["Terminal voltage [V]"]
-            return V + I - pybamm.FunctionParameter("Function", {"Time [s]": pybamm.t})
-
-        options = {"operating mode": external_circuit_function}
-        model = pybamm.lithium_ion.SPM(options)
-        model.check_well_posedness()
-
-    def test_stress_induced_diffusion_mixed(self):
-        options = {
-            "particle mechanics": "swelling only",
-            "stress-induced diffusion": ("true", "false"),
-        }
-        model = pybamm.lithium_ion.SPM(options)
-        model.check_well_posedness()
 
 
 if __name__ == "__main__":
