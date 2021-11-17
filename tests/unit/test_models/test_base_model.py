@@ -930,6 +930,12 @@ class TestBaseModel(unittest.TestCase):
         with self.assertRaisesRegex(pybamm.ModelError, "must appear in the solution"):
             model.set_initial_conditions_from({"wrong var": 2})
 
+    def test_set_variables_error(self):
+        var = pybamm.Variable("var")
+        model = pybamm.BaseModel()
+        with self.assertRaisesRegex(ValueError, "not var"):
+            model.variables = {"not var": var}
+
 
 if __name__ == "__main__":
     print("Add -v for more debug output")

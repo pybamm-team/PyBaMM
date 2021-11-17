@@ -16,6 +16,16 @@ class BaseSubModel(pybamm.BaseModel):
     ----------
     param: parameter class
         The model parameter symbols
+    domain : str
+        The domain of the model either 'Negative' or 'Positive'
+    name: str
+        A string giving the name of the submodel
+    external: bool, optional
+        Whether the variables defined by the submodel will be provided externally
+        by the users. Default is 'False'.
+    options: dict
+        A dictionary of options to be passed to the model.
+        See :class:`pybamm.BaseBatteryModel`
 
     Attributes
     ----------

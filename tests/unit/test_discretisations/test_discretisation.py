@@ -150,8 +150,8 @@ class TestDiscretise(unittest.TestCase):
         model = pybamm.BaseModel()
 
         a = pybamm.Variable("a", domain=["test", "test1"])
-        b1 = pybamm.Variable("b", domain=["test"])
-        b2 = pybamm.Variable("c", domain=["test1"])
+        b1 = pybamm.Variable("b1", domain=["test"])
+        b2 = pybamm.Variable("b2", domain=["test1"])
         b = pybamm.concatenation(b1, b2)
 
         model.rhs = {a: a * b}
@@ -1048,7 +1048,7 @@ class TestDiscretise(unittest.TestCase):
         var = pybamm.Variable(
             "var",
             domain=["negative particle"],
-            auxiliary_domains={"secondary": "negative electrode"}
+            auxiliary_domains={"secondary": "negative electrode"},
         )
         broad = pybamm.TertiaryBroadcast(var, "current collector")
 
@@ -1063,7 +1063,7 @@ class TestDiscretise(unittest.TestCase):
                 mesh["negative particle"].npts
                 * mesh["negative electrode"].npts
                 * mesh["current collector"].npts,
-                1
+                1,
             ),
         )
 
@@ -1080,7 +1080,7 @@ class TestDiscretise(unittest.TestCase):
                 mesh["negative particle"].npts
                 * mesh["negative electrode"].npts
                 * (mesh["current collector"].npts + 1),
-                1
+                1,
             ),
         )
 

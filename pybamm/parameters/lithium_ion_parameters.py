@@ -2,7 +2,6 @@
 # Standard parameters for lithium-ion battery models
 #
 import pybamm
-import numpy as np
 from .base_parameters import BaseParameters
 
 
@@ -245,27 +244,27 @@ class LithiumIonParameters(BaseParameters):
             "Initial concentration in electrolyte [mol.m-3]"
         )
 
-        # mechanical parameters
-        self.nu_p = pybamm.Parameter("Positive electrode Poisson's ratio")
-        self.E_p = pybamm.Parameter("Positive electrode Young's modulus [Pa]")
-        self.c_p_0_dim = pybamm.Parameter(
-            "Positive electrode reference concentration for free of deformation "
-            "[mol.m-3]"
-        )
-        self.Omega_p = pybamm.Parameter(
-            "Positive electrode partial molar volume [m3.mol-1]"
-        )
+        # Mechanical parameters
         self.nu_n = pybamm.Parameter("Negative electrode Poisson's ratio")
+        self.nu_p = pybamm.Parameter("Positive electrode Poisson's ratio")
         self.E_n = pybamm.Parameter("Negative electrode Young's modulus [Pa]")
+        self.E_p = pybamm.Parameter("Positive electrode Young's modulus [Pa]")
         self.c_n_0_dim = pybamm.Parameter(
             "Negative electrode reference concentration for free of deformation "
+            "[mol.m-3]"
+        )
+        self.c_p_0_dim = pybamm.Parameter(
+            "Positive electrode reference concentration for free of deformation "
             "[mol.m-3]"
         )
         self.Omega_n = pybamm.Parameter(
             "Negative electrode partial molar volume [m3.mol-1]"
         )
-        self.l_cr_p_0 = pybamm.Parameter("Positive electrode initial crack length [m]")
+        self.Omega_p = pybamm.Parameter(
+            "Positive electrode partial molar volume [m3.mol-1]"
+        )
         self.l_cr_n_0 = pybamm.Parameter("Negative electrode initial crack length [m]")
+        self.l_cr_p_0 = pybamm.Parameter("Positive electrode initial crack length [m]")
         self.w_cr = pybamm.Parameter("Negative electrode initial crack width [m]")
         self.rho_cr_n_dim = pybamm.Parameter(
             "Negative electrode number of cracks per unit area [m-2]"
@@ -274,27 +273,25 @@ class LithiumIonParameters(BaseParameters):
             "Positive electrode number of cracks per unit area [m-2]"
         )
         self.b_cr_n = pybamm.Parameter("Negative electrode Paris' law constant b")
+        self.b_cr_p = pybamm.Parameter("Positive electrode Paris' law constant b")
         self.m_cr_n = pybamm.Parameter("Negative electrode Paris' law constant m")
+        self.m_cr_p = pybamm.Parameter("Positive electrode Paris' law constant m")
         self.Eac_cr_n = pybamm.Parameter(
             "Negative electrode activation energy for cracking rate [kJ.mol-1]"
         )  # noqa
-        self.b_cr_p = pybamm.Parameter("Positive electrode Paris' law constant b")
-        self.m_cr_p = pybamm.Parameter("Positive electrode Paris' law constant m")
         self.Eac_cr_p = pybamm.Parameter(
             "Positive electrode activation energy for cracking rate [kJ.mol-1]"
         )  # noqa
+        # intermediate variables  [K*m^3/mol]
+        self.theta_n_dim = (
+            (self.Omega_n / self.R) * 2 * self.Omega_n * self.E_n / 9 / (1 - self.nu_n)
+        )
+        self.theta_p_dim = (
+            (self.Omega_p / self.R) * 2 * self.Omega_p * self.E_p / 9 / (1 - self.nu_p)
+        )
         self.alpha_T_cell_dim = pybamm.Parameter(
             "Cell thermal expansion coefficient [m.K-1]"
         )
-        self.R_const = pybamm.constants.R
-        self.theta_p_dim = (
-            self.Omega_p ** 2 / self.R_const * 2 / 9 * self.E_p / (1 - self.nu_p)
-        )
-        # intermediate variable  [K*m^3/mol]
-        self.theta_n_dim = (
-            self.Omega_n ** 2 / self.R_const * 2 / 9 * self.E_n / (1 - self.nu_n)
-        )
-        # intermediate variable  [K*m^3/mol]
 
         # Electrode capacities
         x_n = pybamm.SpatialVariable(
@@ -330,7 +327,8 @@ class LithiumIonParameters(BaseParameters):
 
         self.n_Li_particles_init = self.n_Li_n_init + self.n_Li_p_init
         self.n_Li_init = self.n_Li_particles_init + self.n_Li_e_init
-        # loss of active material parameters
+
+        # Loss of active material parameters
         self.m_LAM_n = pybamm.Parameter(
             "Negative electrode LAM constant exponential term"
         )
@@ -384,32 +382,16 @@ class LithiumIonParameters(BaseParameters):
         """Dimensional diffusivity in negative particle. Note this is defined as a
         function of stochiometry"""
         inputs = {"Negative particle stoichiometry": sto, "Temperature [K]": T}
-        crack = self.options["particle mechanics"]
-        if crack != "none" or (isinstance(crack, tuple) and crack[0] != "none"):
-            mech_effects = (
-                1 + self.theta_n_dim * (sto * self.c_n_max - self.c_n_0_dim) / T
-            )
-        else:
-            mech_effects = 1
-        return (
-            pybamm.FunctionParameter("Negative electrode diffusivity [m2.s-1]", inputs)
-            * mech_effects
+        return pybamm.FunctionParameter(
+            "Negative electrode diffusivity [m2.s-1]", inputs
         )
 
     def D_p_dimensional(self, sto, T):
         """Dimensional diffusivity in positive particle. Note this is defined as a
         function of stochiometry"""
         inputs = {"Positive particle stoichiometry": sto, "Temperature [K]": T}
-        crack = self.options["particle mechanics"]
-        if crack != "none" or (isinstance(crack, tuple) and crack[1] != "none"):
-            mech_effects = (
-                1 + self.theta_p_dim * (sto * self.c_p_max - self.c_p_0_dim) / T
-            )
-        else:
-            mech_effects = 1
-        return (
-            pybamm.FunctionParameter("Positive electrode diffusivity [m2.s-1]", inputs)
-            * mech_effects
+        return pybamm.FunctionParameter(
+            "Positive electrode diffusivity [m2.s-1]", inputs
         )
 
     def j0_n_dimensional(self, c_e, c_s_surf, T):
@@ -611,15 +593,12 @@ class LithiumIonParameters(BaseParameters):
         self.D_e_typ = self.D_e_dimensional(self.c_e_typ, self.T_ref)
         self.tau_diffusion_e = self.L_x ** 2 / self.D_e_typ
 
-        self.D_n_typ_dim = self.D_n_dimensional(pybamm.Scalar(1), self.T_ref)
-
         # Particle diffusion timescales
-        self.tau_diffusion_n = self.R_n_typ ** 2 / self.D_n_dimensional(
-            pybamm.Scalar(1), self.T_ref
-        )
-        self.tau_diffusion_p = self.R_p_typ ** 2 / self.D_p_dimensional(
-            pybamm.Scalar(1), self.T_ref
-        )
+        self.D_n_typ_dim = self.D_n_dimensional(pybamm.Scalar(1), self.T_ref)
+        self.D_p_typ_dim = self.D_p_dimensional(pybamm.Scalar(1), self.T_ref)
+
+        self.tau_diffusion_n = self.R_n_typ ** 2 / self.D_n_typ_dim
+        self.tau_diffusion_p = self.R_p_typ ** 2 / self.D_p_typ_dim
 
         # Thermal diffusion timescale
         self.tau_th_yz = self.therm.tau_th_yz
@@ -854,8 +833,8 @@ class LithiumIonParameters(BaseParameters):
         # Dimensionless mechanical parameters
         self.rho_cr_n = self.rho_cr_n_dim * self.l_cr_n_0 * self.w_cr
         self.rho_cr_p = self.rho_cr_p_dim * self.l_cr_p_0 * self.w_cr
-        self.theta_p = self.theta_p_dim * self.c_p_max / self.Delta_T
-        self.theta_n = self.theta_n_dim * self.c_n_max / self.Delta_T
+        self.theta_p = self.theta_p_dim * self.c_p_max / self.T_ref
+        self.theta_n = self.theta_n_dim * self.c_n_max / self.T_ref
         self.c_p_0 = self.c_p_0_dim / self.c_p_max
         self.c_n_0 = self.c_n_0_dim / self.c_n_max
         self.t0_cr = 3600 / self.C_rate / self.timescale
@@ -954,9 +933,7 @@ class LithiumIonParameters(BaseParameters):
         """Dimensionless positive particle diffusivity"""
         sto = c_s_p
         T_dim = self.Delta_T * T + self.T_ref
-        return self.D_p_dimensional(sto, T_dim) / self.D_p_dimensional(
-            pybamm.Scalar(1), self.T_ref
-        )
+        return self.D_p_dimensional(sto, T_dim) / self.D_p_typ_dim
 
     def j0_n(self, c_e, c_s_surf, T):
         """Dimensionless negative exchange-current density"""
@@ -1040,25 +1017,9 @@ class LithiumIonParameters(BaseParameters):
             + self.rho_cp(T) * self.l_cp
         ) / self.l
 
-    def _set_input_current(self):
-        """Set the input current"""
-
-        self.dimensional_current_with_time = pybamm.FunctionParameter(
-            "Current function [A]", {"Time [s]": pybamm.t * self.timescale}
-        )
-        self.dimensional_current_density_with_time = (
-            self.dimensional_current_with_time
-            / (self.n_electrodes_parallel * self.geo.A_cc)
-        )
-        self.current_with_time = (
-            self.dimensional_current_with_time
-            / self.I_typ
-            * pybamm.Function(np.sign, self.I_typ)
-        )
-
     def t_n_change(self, sto):
         """
-        Dimentionless volume change for the negative electrode;
+        Dimensionless volume change for the negative electrode;
         sto should be R-averaged
         """
         return pybamm.FunctionParameter(
@@ -1067,7 +1028,7 @@ class LithiumIonParameters(BaseParameters):
 
     def t_p_change(self, sto):
         """
-        Dimentionless volume change for the positive electrode;
+        Dimensionless volume change for the positive electrode;
         sto should be R-averaged
         """
         return pybamm.FunctionParameter(
@@ -1076,7 +1037,7 @@ class LithiumIonParameters(BaseParameters):
 
     def k_cr_p(self, T):
         """
-        Dimentionless cracking rate for the positive electrode;
+        Dimensionless cracking rate for the positive electrode;
         """
         T_dim = self.Delta_T * T + self.T_ref
         delta_k_cr = self.E_p ** self.m_cr_p * self.l_cr_p_0 ** (self.m_cr_p / 2 - 1)
@@ -1089,7 +1050,7 @@ class LithiumIonParameters(BaseParameters):
 
     def k_cr_n(self, T):
         """
-        Dimentionless cracking rate for the negative electrode;
+        Dimensionless cracking rate for the negative electrode;
         """
         T_dim = self.Delta_T * T + self.T_ref
         delta_k_cr = self.E_n ** self.m_cr_n * self.l_cr_n_0 ** (self.m_cr_n / 2 - 1)
@@ -1098,6 +1059,20 @@ class LithiumIonParameters(BaseParameters):
                 "Negative electrode cracking rate", {"Temperature [K]": T_dim}
             )
             * delta_k_cr
+        )
+
+    def _set_input_current(self):
+        """Set the input current"""
+
+        self.dimensional_current_with_time = pybamm.FunctionParameter(
+            "Current function [A]", {"Time [s]": pybamm.t * self.timescale}
+        )
+        self.dimensional_current_density_with_time = (
+            self.dimensional_current_with_time
+            / (self.n_electrodes_parallel * self.geo.A_cc)
+        )
+        self.current_with_time = (
+            self.dimensional_current_with_time / self.I_typ * pybamm.sign(self.I_typ)
         )
 
     @property
