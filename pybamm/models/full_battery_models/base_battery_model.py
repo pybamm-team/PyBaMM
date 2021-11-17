@@ -871,7 +871,11 @@ class BaseBatteryModel(pybamm.BaseModel):
             name = domain.lower() + " interface utilisation"
             if domain == "Counter":
                 domain = "Negative"
-            if util in ["full", "constant"]:
+            if util == "full":
+                self.submodels[name] = pybamm.interface_utilisation.Full(
+                    self.param, domain, self.options
+                )
+            elif util == "constant":
                 self.submodels[name] = pybamm.interface_utilisation.Constant(
                     self.param, domain, self.options
                 )
