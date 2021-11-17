@@ -7,13 +7,10 @@ pybamm.set_logging_level("INFO")
 
 # load models
 models = [
-    # pybamm.lithium_ion.SPM(),
-    # pybamm.lithium_ion.SPMe(),
-    # pybamm.lithium_ion.DFN(),
-    pybamm.lithium_ion.NewmanTobias(
-        {"particle": ("Fickian diffusion", "quartic profile")}
-        # {"particle": "quartic profile"}
-    ),
+    pybamm.lithium_ion.SPM(),
+    pybamm.lithium_ion.SPMe(),
+    pybamm.lithium_ion.DFN(),
+    pybamm.lithium_ion.NewmanTobias(),
 ]
 
 # create and run simulations
