@@ -37,7 +37,7 @@ class TestDFN(BaseIntegrationTestLithiumIon, unittest.TestCase):
 
 class TestDFNWithSizeDistribution(unittest.TestCase):
     def setUp(self):
-        params = pybamm.ParameterValues(chemistry=pybamm.parameter_sets.Marquis2019)
+        params = pybamm.ParameterValues("Marquis2019")
         self.params = pybamm.get_size_distribution_parameters(params)
 
         var = pybamm.standard_spatial_vars

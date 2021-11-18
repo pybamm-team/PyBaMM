@@ -9,8 +9,7 @@ def prepare_model(model):
     geometry = model.default_geometry
 
     # load parameter values and process model and geometry
-    chemistry = pybamm.parameter_sets.Marquis2019
-    param = pybamm.ParameterValues(chemistry=chemistry)
+    param = pybamm.ParameterValues("Marquis2019")
     param.process_model(model)
     param.process_geometry(geometry)
 

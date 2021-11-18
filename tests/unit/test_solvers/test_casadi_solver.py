@@ -478,7 +478,7 @@ class TestCasadiSolver(unittest.TestCase):
 
     def test_interpolant_extrapolate(self):
         model = pybamm.lithium_ion.DFN()
-        param = pybamm.ParameterValues(chemistry=pybamm.parameter_sets.NCA_Kim2011)
+        param = pybamm.ParameterValues("NCA_Kim2011")
         experiment = pybamm.Experiment(
             ["Charge at 1C until 4.6 V"], period="10 seconds"
         )
@@ -549,12 +549,11 @@ class TestCasadiSolverODEsWithForwardSensitivityEquations(unittest.TestCase):
 
         # Solve
         # Make sure that passing in extra options works
-        solver = pybamm.CasadiSolver(
-            mode="fast", rtol=1e-10, atol=1e-10
-        )
+        solver = pybamm.CasadiSolver(mode="fast", rtol=1e-10, atol=1e-10)
         t_eval = np.linspace(0, 1, 80)
-        solution = solver.solve(model, t_eval, inputs={"p": 0.1},
-                                calculate_sensitivities=True)
+        solution = solver.solve(
+            model, t_eval, inputs={"p": 0.1}, calculate_sensitivities=True
+        )
         np.testing.assert_array_equal(solution.t, t_eval)
         np.testing.assert_allclose(solution.y[0], np.exp(0.1 * solution.t))
         np.testing.assert_allclose(
@@ -585,20 +584,22 @@ class TestCasadiSolverODEsWithForwardSensitivityEquations(unittest.TestCase):
 
         # Solve
         # Make sure that passing in extra options works
-        solver = pybamm.CasadiSolver(
-            rtol=1e-10, atol=1e-10
-        )
+        solver = pybamm.CasadiSolver(rtol=1e-10, atol=1e-10)
         t_eval = np.linspace(0, 1, 80)
         solution = solver.solve(
-            model, t_eval, inputs={"p": 0.1, "q": 2, "r": -1, "s": 0.5},
+            model,
+            t_eval,
+            inputs={"p": 0.1, "q": 2, "r": -1, "s": 0.5},
             calculate_sensitivities=True,
         )
         np.testing.assert_allclose(solution.y[0], -1 + 0.2 * solution.t)
         np.testing.assert_allclose(
-            solution.sensitivities["p"], (2 * solution.t)[:, np.newaxis],
+            solution.sensitivities["p"],
+            (2 * solution.t)[:, np.newaxis],
         )
         np.testing.assert_allclose(
-            solution.sensitivities["q"], (0.1 * solution.t)[:, np.newaxis],
+            solution.sensitivities["q"],
+            (0.1 * solution.t)[:, np.newaxis],
         )
         np.testing.assert_allclose(solution.sensitivities["r"], 1)
         np.testing.assert_allclose(solution.sensitivities["s"], 0)
@@ -659,10 +660,13 @@ class TestCasadiSolverODEsWithForwardSensitivityEquations(unittest.TestCase):
         # Solve - scalar input
         solver = pybamm.CasadiSolver()
         t_eval = np.linspace(0, 1)
-        solution = solver.solve(model, t_eval, inputs={"param": 7},
-                                calculate_sensitivities=["param"])
+        solution = solver.solve(
+            model, t_eval, inputs={"param": 7}, calculate_sensitivities=["param"]
+        )
         np.testing.assert_array_almost_equal(
-            solution["var"].data, np.tile(2 * np.exp(-7 * t_eval), (n, 1)), decimal=4,
+            solution["var"].data,
+            np.tile(2 * np.exp(-7 * t_eval), (n, 1)),
+            decimal=4,
         )
         np.testing.assert_array_almost_equal(
             solution["var"].sensitivities["param"],
@@ -690,19 +694,24 @@ class TestCasadiSolverODEsWithForwardSensitivityEquations(unittest.TestCase):
         # Solve
         # Make sure that passing in extra options works
         solver = pybamm.CasadiSolver(
-            rtol=1e-10, atol=1e-10,
+            rtol=1e-10,
+            atol=1e-10,
         )
         t_eval = np.linspace(0, 1, 80)
         solution = solver.solve(
-            model, t_eval, inputs={"p": 0.1, "q": 2, "r": -1, "s": 0.5},
+            model,
+            t_eval,
+            inputs={"p": 0.1, "q": 2, "r": -1, "s": 0.5},
             calculate_sensitivities=True,
         )
         np.testing.assert_allclose(solution.y, np.tile(-1 + 0.2 * solution.t, (n, 1)))
         np.testing.assert_allclose(
-            solution.sensitivities["p"], np.repeat(2 * solution.t, n)[:, np.newaxis],
+            solution.sensitivities["p"],
+            np.repeat(2 * solution.t, n)[:, np.newaxis],
         )
         np.testing.assert_allclose(
-            solution.sensitivities["q"], np.repeat(0.1 * solution.t, n)[:, np.newaxis],
+            solution.sensitivities["q"],
+            np.repeat(0.1 * solution.t, n)[:, np.newaxis],
         )
         np.testing.assert_allclose(solution.sensitivities["r"], 1)
         np.testing.assert_allclose(solution.sensitivities["s"], 0)
@@ -767,15 +776,19 @@ class TestCasadiSolverODEsWithForwardSensitivityEquations(unittest.TestCase):
         n = disc.mesh["negative electrode"].npts
 
         # Solve - constant input
-        solver = pybamm.CasadiSolver(
-            mode="fast", rtol=1e-10, atol=1e-10
-        )
+        solver = pybamm.CasadiSolver(mode="fast", rtol=1e-10, atol=1e-10)
         t_eval = np.linspace(0, 1)
-        solution = solver.solve(model, t_eval, inputs={"param": 7 * np.ones(n)},
-                                calculate_sensitivities=True)
+        solution = solver.solve(
+            model,
+            t_eval,
+            inputs={"param": 7 * np.ones(n)},
+            calculate_sensitivities=True,
+        )
         l_n = mesh["negative electrode"].edges[-1]
         np.testing.assert_array_almost_equal(
-            solution["var"].data, np.tile(2 * np.exp(-7 * t_eval), (n, 1)), decimal=4,
+            solution["var"].data,
+            np.tile(2 * np.exp(-7 * t_eval), (n, 1)),
+            decimal=4,
         )
 
         np.testing.assert_array_almost_equal(
@@ -783,7 +796,9 @@ class TestCasadiSolverODEsWithForwardSensitivityEquations(unittest.TestCase):
             np.vstack([np.eye(n) * -2 * t * np.exp(-7 * t) for t in t_eval]),
         )
         np.testing.assert_array_almost_equal(
-            solution["integral of var"].data, 2 * np.exp(-7 * t_eval) * l_n, decimal=4,
+            solution["integral of var"].data,
+            2 * np.exp(-7 * t_eval) * l_n,
+            decimal=4,
         )
         np.testing.assert_array_almost_equal(
             solution["integral of var"].sensitivities["param"],
@@ -792,8 +807,9 @@ class TestCasadiSolverODEsWithForwardSensitivityEquations(unittest.TestCase):
 
         # Solve - linspace input
         p_eval = np.linspace(1, 2, n)
-        solution = solver.solve(model, t_eval, inputs={"param": p_eval},
-                                calculate_sensitivities=True)
+        solution = solver.solve(
+            model, t_eval, inputs={"param": p_eval}, calculate_sensitivities=True
+        )
         l_n = mesh["negative electrode"].edges[-1]
         np.testing.assert_array_almost_equal(
             solution["var"].data, 2 * np.exp(-p_eval[:, np.newaxis] * t_eval), decimal=4
@@ -828,12 +844,11 @@ class TestCasadiSolverODEsWithForwardSensitivityEquations(unittest.TestCase):
 
         # Solve
         # Make sure that passing in extra options works
-        solver = pybamm.CasadiSolver(
-            mode="fast", rtol=1e-10, atol=1e-10
-        )
+        solver = pybamm.CasadiSolver(mode="fast", rtol=1e-10, atol=1e-10)
         t_eval = np.linspace(0, 1, 80)
-        solution = solver.solve(model, t_eval, inputs={"p": 0.1},
-                                calculate_sensitivities=True)
+        solution = solver.solve(
+            model, t_eval, inputs={"p": 0.1}, calculate_sensitivities=True
+        )
 
         # check sensitivities
         np.testing.assert_allclose(
@@ -865,21 +880,24 @@ class TestCasadiSolverDAEsWithForwardSensitivityEquations(unittest.TestCase):
 
         # Solve
         # Make sure that passing in extra options works
-        solver = pybamm.CasadiSolver(
-            mode="fast", rtol=1e-10, atol=1e-10
-        )
+        solver = pybamm.CasadiSolver(mode="fast", rtol=1e-10, atol=1e-10)
         t_eval = np.linspace(0, 1, 80)
-        solution = solver.solve(model, t_eval, inputs={"p": 0.1},
-                                calculate_sensitivities=True)
+        solution = solver.solve(
+            model, t_eval, inputs={"p": 0.1}, calculate_sensitivities=True
+        )
         np.testing.assert_array_equal(solution.t, t_eval)
         np.testing.assert_allclose(solution.y[0], np.exp(0.1 * solution.t))
         np.testing.assert_allclose(
             solution.sensitivities["p"],
-            np.stack((
-                solution.t * np.exp(0.1 * solution.t),
-                2 * solution.t * np.exp(0.1 * solution.t),
-            )).transpose().reshape(-1, 1),
-            atol=1e-7
+            np.stack(
+                (
+                    solution.t * np.exp(0.1 * solution.t),
+                    2 * solution.t * np.exp(0.1 * solution.t),
+                )
+            )
+            .transpose()
+            .reshape(-1, 1),
+            atol=1e-7,
         )
         np.testing.assert_allclose(
             solution["var2 squared"].data, 4 * np.exp(2 * 0.1 * solution.t)
@@ -887,7 +905,7 @@ class TestCasadiSolverDAEsWithForwardSensitivityEquations(unittest.TestCase):
         np.testing.assert_allclose(
             solution["var2 squared"].sensitivities["p"],
             (8 * solution.t * np.exp(2 * 0.1 * solution.t))[:, np.newaxis],
-            atol=1e-7
+            atol=1e-7,
         )
 
     def test_solve_sensitivity_algebraic(self):
@@ -903,8 +921,9 @@ class TestCasadiSolverDAEsWithForwardSensitivityEquations(unittest.TestCase):
         # Make sure that passing in extra options works
         solver = pybamm.CasadiAlgebraicSolver(tol=1e-10)
         t_eval = np.linspace(0, 1, 80)
-        solution = solver.solve(model, t_eval, inputs={"p": 0.1},
-                                calculate_sensitivities=True)
+        solution = solver.solve(
+            model, t_eval, inputs={"p": 0.1}, calculate_sensitivities=True
+        )
         np.testing.assert_array_equal(solution.t, t_eval)
         np.testing.assert_allclose(solution.y[0], 0.1 * solution.t)
         np.testing.assert_allclose(
@@ -916,7 +935,7 @@ class TestCasadiSolverDAEsWithForwardSensitivityEquations(unittest.TestCase):
         np.testing.assert_allclose(
             solution["var squared"].sensitivities["p"],
             (2 * 0.1 * solution.t ** 2).reshape(-1, 1),
-            atol=1e-7
+            atol=1e-7,
         )
 
 

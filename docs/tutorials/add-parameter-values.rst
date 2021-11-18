@@ -123,7 +123,7 @@ Then, to use these new parameters, use:
 
 .. code-block:: python
 
-    param = pybamm.ParameterValues(chemistry=pybamm.parameter_sets.AuthorYear)
+    param = pybamm.ParameterValues("AuthorYear")
 
 Note that you can re-use existing parameter subsets instead of creating new ones (for example, you could just replace "experiment": "new_experiment_AuthorYear" with "experiment": "1C_discharge_from_full_Marquis2019" in the above dictionary).
 
@@ -173,7 +173,7 @@ To test this, add something like the following test to one of the model test fil
 
     def test_my_new_parameters(self):
         model = pybamm.lithium_ion.DFN()
-        parameter_values = pybamm.ParameterValues(chemistry=pybamm.parameter_sets.AuthorYear)
+        parameter_values = pybamm.ParameterValues("AuthorYear")
         modeltest = tests.StandardModelTest(model, parameter_values=parameter_values)
         modeltest.test_all()
 

@@ -45,7 +45,7 @@ class TestThermal(unittest.TestCase):
                 var.z: 5,
             }
             chemistry = pybamm.parameter_sets.NCA_Kim2011
-            parameter_values = pybamm.ParameterValues(chemistry=chemistry)
+            parameter_values = pybamm.ParameterValues(chemistry)
 
             # high thermal and electrical conductivity in current collectors
             parameter_values.update(

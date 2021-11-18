@@ -19,7 +19,7 @@ models = [
 ]
 
 chemistry = pybamm.parameter_sets.Xu2019
-param = pybamm.ParameterValues(chemistry=chemistry)
+param = pybamm.ParameterValues(chemistry)
 
 # create and run simulations
 sims = []

@@ -212,7 +212,7 @@ class EffectiveResistance(pybamm.BaseModel):
 
     @property
     def default_parameter_values(self):
-        return pybamm.ParameterValues(chemistry=pybamm.parameter_sets.Marquis2019)
+        return pybamm.ParameterValues("Marquis2019")
 
     @property
     def default_geometry(self):
@@ -468,7 +468,7 @@ class AlternativeEffectiveResistance2D(pybamm.BaseModel):
 
     @property
     def default_parameter_values(self):
-        return pybamm.ParameterValues(chemistry=pybamm.parameter_sets.Marquis2019)
+        return pybamm.ParameterValues("Marquis2019")
 
     @property
     def default_geometry(self):

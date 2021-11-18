@@ -482,8 +482,7 @@ class TestQuickPlot(unittest.TestCase):
             pybamm.QuickPlot(1)
 
     def test_model_with_inputs(self):
-        chemistry = pybamm.parameter_sets.Chen2020
-        parameter_values = pybamm.ParameterValues(chemistry=chemistry)
+        parameter_values = pybamm.ParameterValues("Chen2020")
         model = pybamm.lithium_ion.SPMe()
         parameter_values.update({"Electrode height [m]": "[input]"})
         solver = pybamm.CasadiSolver(mode="safe")

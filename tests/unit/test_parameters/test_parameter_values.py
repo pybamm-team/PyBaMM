@@ -10,7 +10,6 @@ import unittest
 
 import numpy as np
 import pandas as pd
-import copy
 
 import pybamm
 import tests.shared as shared
@@ -79,7 +78,7 @@ class TestParameterValues(unittest.TestCase):
     def test_update_from_chemistry(self):
         # incomplete chemistry
         with self.assertRaisesRegex(KeyError, "must provide 'cell' parameters"):
-            pybamm.ParameterValues(chemistry={"chemistry": "lithium_ion"})
+            pybamm.ParameterValues({"chemistry": "lithium_ion"})
 
     def test_update_from_chemistry_local(self):
         # Copy parameters
@@ -87,14 +86,14 @@ class TestParameterValues(unittest.TestCase):
         subprocess.run(cmd)
 
         # Import parameters from chemistry
-        pybamm.ParameterValues(chemistry=pybamm.parameter_sets.Chen2020)
+        pybamm.ParameterValues("Chen2020")
 
         # Clean up parameter files
         shutil.rmtree("lithium_ion")
 
     def test_update(self):
         # converts to dict if not
-        param = pybamm.ParameterValues(chemistry=pybamm.parameter_sets.Chen2020)
+        param = pybamm.ParameterValues("Chen2020")
         param_from_csv = pybamm.ParameterValues(
             "lithium_ion/negative_electrodes/graphite_Chen2020/parameters.csv"
         )
@@ -700,7 +699,7 @@ class TestParameterValues(unittest.TestCase):
         scal2 = pybamm.Scalar(4)
         expression = (scal1 * (par1 ** var2)) / ((var1 - par2) + scal2)
 
-        param = pybamm.ParameterValues(values={"par1": 1, "par2": 2})
+        param = pybamm.ParameterValues({"par1": 1, "par2": 2})
         exp_param = param.process_symbol(expression)
         self.assertIsInstance(exp_param, pybamm.Division)
         # left side
@@ -857,25 +856,25 @@ class TestParameterValues(unittest.TestCase):
         self.assertEqual(df[1]["c"], "[data]some_data")
 
     def test_deprecate_anode_cathode(self):
-        chemistry = copy.deepcopy(pybamm.parameter_sets.Ecker2015)
+        chemistry = pybamm.parameter_sets.Ecker2015.copy()
         chemistry["anode"] = chemistry.pop("negative electrode")
         with self.assertWarnsRegex(DeprecationWarning, "anode"):
-            pybamm.ParameterValues(chemistry=chemistry)
+            pybamm.ParameterValues(chemistry)
 
-        chemistry = copy.deepcopy(pybamm.parameter_sets.Ecker2015)
+        chemistry = pybamm.parameter_sets.Ecker2015.copy()
         chemistry["cathode"] = chemistry.pop("positive electrode")
         with self.assertWarnsRegex(DeprecationWarning, "cathode"):
-            pybamm.ParameterValues(chemistry=chemistry)
+            pybamm.ParameterValues(chemistry)
 
-        chemistry = copy.deepcopy(pybamm.parameter_sets.Ecker2015)
+        chemistry = pybamm.parameter_sets.Ecker2015.copy()
         chemistry["anode"] = None
         with self.assertRaisesRegex(KeyError, "both 'anode' and 'negative"):
-            pybamm.ParameterValues(chemistry=chemistry)
+            pybamm.ParameterValues(chemistry)
 
-        chemistry = copy.deepcopy(pybamm.parameter_sets.Ecker2015)
+        chemistry = pybamm.parameter_sets.Ecker2015.copy()
         chemistry["cathode"] = None
         with self.assertRaisesRegex(KeyError, "both 'cathode' and 'positive"):
-            pybamm.ParameterValues(chemistry=chemistry)
+            pybamm.ParameterValues(chemistry)
 
 
 if __name__ == "__main__":

@@ -298,7 +298,7 @@ class TestSimulation(unittest.TestCase):
     def test_load_param(self):
         # Test load_sim for parameters imports
         filename = f"{uuid.uuid4()}.p"
-        save_sim = f"import pybamm; model = pybamm.lithium_ion.SPM(); params = pybamm.ParameterValues(chemistry=pybamm.parameter_sets.Chen2020); sim = pybamm.Simulation(model, parameter_values=params); sim.solve([0, 3600]); sim.save('{filename}')"  # noqa
+        save_sim = f"import pybamm; model = pybamm.lithium_ion.SPM(); params = pybamm.ParameterValues("Chen2020"); sim = pybamm.Simulation(model, parameter_values=params); sim.solve([0, 3600]); sim.save('{filename}')"  # noqa
         subprocess.run([sys.executable, "-c", save_sim])
 
         try:

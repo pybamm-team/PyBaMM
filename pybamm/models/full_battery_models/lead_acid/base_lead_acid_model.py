@@ -39,7 +39,7 @@ class BaseModel(pybamm.BaseBatteryModel):
 
     @property
     def default_parameter_values(self):
-        return pybamm.ParameterValues(chemistry=pybamm.parameter_sets.Sulzer2019)
+        return pybamm.ParameterValues("Sulzer2019")
 
     @property
     def default_geometry(self):

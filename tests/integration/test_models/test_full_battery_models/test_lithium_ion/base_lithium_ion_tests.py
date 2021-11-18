@@ -15,12 +15,12 @@ class BaseIntegrationTestLithiumIon:
     def test_basic_processing(self):
         options = {}
         # use Ecker parameters for nonlinear diffusion
-        param = pybamm.ParameterValues(chemistry=pybamm.parameter_sets.Ecker2015)
+        param = pybamm.ParameterValues("Ecker2015")
         self.run_basic_processing_test(options, parameter_values=param)
 
     def test_sensitivities(self):
         model = self.model()
-        param = pybamm.ParameterValues(chemistry=pybamm.parameter_sets.Ecker2015)
+        param = pybamm.ParameterValues("Ecker2015")
         modeltest = tests.StandardModelTest(model, parameter_values=param)
         modeltest.test_sensitivities(
             "Current function [A]",
@@ -132,7 +132,7 @@ class BaseIntegrationTestLithiumIon:
             "lithium plating": "irreversible",
             "lithium plating porosity change": "true",
         }
-        param = pybamm.ParameterValues(chemistry=pybamm.parameter_sets.Chen2020_plating)
+        param = pybamm.ParameterValues("Chen2020_plating")
         self.run_basic_processing_test(options, parameter_values=param)
 
     def test_reaction_limited(self):
@@ -157,42 +157,35 @@ class BaseIntegrationTestLithiumIon:
 
     def test_loss_active_material_stress_negative(self):
         options = {"loss of active material": ("none", "stress-driven")}
-        chemistry = pybamm.parameter_sets.Ai2020
-        parameter_values = pybamm.ParameterValues(chemistry=chemistry)
+        parameter_values = pybamm.ParameterValues("Ai2020")
         self.run_basic_processing_test(options, parameter_values=parameter_values)
 
     def test_loss_active_material_stress_positive(self):
         options = {"loss of active material": ("stress-driven", "none")}
-        chemistry = pybamm.parameter_sets.Ai2020
-        parameter_values = pybamm.ParameterValues(chemistry=chemistry)
+        parameter_values = pybamm.ParameterValues("Ai2020")
         self.run_basic_processing_test(options, parameter_values=parameter_values)
 
     def test_loss_active_material_stress_both(self):
         options = {"loss of active material": "stress-driven"}
-        chemistry = pybamm.parameter_sets.Ai2020
-        parameter_values = pybamm.ParameterValues(chemistry=chemistry)
+        parameter_values = pybamm.ParameterValues("Ai2020")
         self.run_basic_processing_test(options, parameter_values=parameter_values)
 
     def test_negative_cracking(self):
         options = {"particle mechanics": ("swelling and cracking", "none")}
-        chemistry = pybamm.parameter_sets.Ai2020
-        parameter_values = pybamm.ParameterValues(chemistry=chemistry)
+        parameter_values = pybamm.ParameterValues("Ai2020")
         self.run_basic_processing_test(options, parameter_values=parameter_values)
 
     def test_positive_cracking(self):
         options = {"particle mechanics": ("none", "swelling and cracking")}
-        chemistry = pybamm.parameter_sets.Ai2020
-        parameter_values = pybamm.ParameterValues(chemistry=chemistry)
+        parameter_values = pybamm.ParameterValues("Ai2020")
         self.run_basic_processing_test(options, parameter_values=parameter_values)
 
     def test_both_cracking(self):
         options = {"particle mechanics": "swelling and cracking"}
-        chemistry = pybamm.parameter_sets.Ai2020
-        parameter_values = pybamm.ParameterValues(chemistry=chemistry)
+        parameter_values = pybamm.ParameterValues("Ai2020")
         self.run_basic_processing_test(options, parameter_values=parameter_values)
 
     def test_both_swelling_only(self):
         options = {"particle mechanics": "swelling only"}
-        chemistry = pybamm.parameter_sets.Ai2020
-        parameter_values = pybamm.ParameterValues(chemistry=chemistry)
+        parameter_values = pybamm.ParameterValues("Ai2020")
         self.run_basic_processing_test(options, parameter_values=parameter_values)
