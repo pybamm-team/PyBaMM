@@ -3,19 +3,15 @@
 #
 import pybamm
 
-pybamm.set_logging_level("INFO")
+pybamm.set_logging_level("DEBUG")
 
 # load models
 models = [
-    # pybamm.lithium_ion.SPM({"working electrode": "positive"}),
-    # pybamm.lithium_ion.SPMe({"working electrode": "positive"}),
-    pybamm.lithium_ion.DFN(
-        {
-            "working electrode": "positive",
-            "interface utilisation": ("current-driven", "full"),
-        }
+    pybamm.lithium_ion.SPM(
+        {"working electrode": "positive", "SEI": "ec reaction limited"}
     ),
-    pybamm.lithium_ion.DFN({"working electrode": "positive"}),
+    # pybamm.lithium_ion.SPMe({"working electrode": "positive"}),
+    # pybamm.lithium_ion.DFN({"working electrode": "positive"}),
 ]
 
 chemistry = pybamm.parameter_sets.Xu2019

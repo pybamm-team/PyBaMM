@@ -101,21 +101,32 @@ class BaseKinetics(BaseInterface):
 
         # Get number of electrons in reaction
         ne = self._get_number_of_electrons_in_reaction()
-        # Get kinetics. Note: T must have the same domain as j0 and eta_r
-        if j0.domain in ["current collector", ["current collector"]]:
+        # Get kinetics. Note: T and u must have the same domain as j0 and eta_r
+        if self.half_cell and self.domain == "Negative":
             T = variables["X-averaged cell temperature"]
+            u = variables["Lithium metal interface utilisation"]
+        elif j0.domain in ["current collector", ["current collector"]]:
+            T = variables["X-averaged cell temperature"]
+            u = variables[
+                "X-averaged " + self.domain.lower() + " electrode interface utilisation"
+            ]
         elif j0.domain == [self.domain.lower() + " particle size"]:
             if j0.domains["secondary"] != [self.domain.lower() + " electrode"]:
                 T = variables["X-averaged cell temperature"]
+                u = variables[
+                    "X-averaged "
+                    + self.domain.lower()
+                    + " electrode interface utilisation"
+                ]
             else:
                 T = variables[self.domain + " electrode temperature"]
+                u = variables[self.domain + " electrode interface utilisation"]
 
             # Broadcast T onto "particle size" domain
             T = pybamm.PrimaryBroadcast(T, [self.domain.lower() + " particle size"])
         else:
             T = variables[self.domain + " electrode temperature"]
-        # Get interface utilisation
-        u = variables[self.domain + " electrode interface utilisation"]
+            u = variables[self.domain + " electrode interface utilisation"]
 
         # Update j, except in the "distributed SEI resistance" model, where j will be
         # found by solving an algebraic equation.
