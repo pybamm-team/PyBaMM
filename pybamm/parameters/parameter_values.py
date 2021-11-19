@@ -340,6 +340,8 @@ class ParameterValues:
                     with open(filename, 'r') as jsonfile:
                         json_data = json.load(jsonfile)
                     data = json_data['data']
+                    data[0] = [np.array(el) for el in data]
+                    data[1] = np.array(data[1])
                     # Save name and data
                     # Add padding to see a difference from CSV imported data
                     self._dict_items[name] = (function_name, data, "padding")
