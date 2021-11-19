@@ -343,7 +343,8 @@
         "code",
         "test",
         "doc",
-        "tutorial"
+        "tutorial",
+        "review"
       ]
     },
     {
