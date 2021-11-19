@@ -122,10 +122,6 @@ class TestParameterValues(unittest.TestCase):
     def test_check_parameter_values(self):
         # Cell capacity [A.h] deprecated
         with self.assertRaisesRegex(ValueError, "Cell capacity"):
-            pybamm.ParameterValues(
-                {"Cell capacity [A.h]": 1, "Nominal cell capacity [A.h]": 1}
-            )
-        with self.assertWarnsRegex(DeprecationWarning, "Cell capacity"):
             pybamm.ParameterValues({"Cell capacity [A.h]": 1})
         # Can't provide a current density of 0, as this will cause a ZeroDivision error
         with self.assertRaisesRegex(ValueError, "Typical current"):
@@ -858,22 +854,12 @@ class TestParameterValues(unittest.TestCase):
     def test_deprecate_anode_cathode(self):
         chemistry = pybamm.parameter_sets.Ecker2015.copy()
         chemistry["anode"] = chemistry.pop("negative electrode")
-        with self.assertWarnsRegex(DeprecationWarning, "anode"):
+        with self.assertRaisesRegex(KeyError, "anode"):
             pybamm.ParameterValues(chemistry)
 
         chemistry = pybamm.parameter_sets.Ecker2015.copy()
         chemistry["cathode"] = chemistry.pop("positive electrode")
-        with self.assertWarnsRegex(DeprecationWarning, "cathode"):
-            pybamm.ParameterValues(chemistry)
-
-        chemistry = pybamm.parameter_sets.Ecker2015.copy()
-        chemistry["anode"] = None
-        with self.assertRaisesRegex(KeyError, "both 'anode' and 'negative"):
-            pybamm.ParameterValues(chemistry)
-
-        chemistry = pybamm.parameter_sets.Ecker2015.copy()
-        chemistry["cathode"] = None
-        with self.assertRaisesRegex(KeyError, "both 'cathode' and 'positive"):
+        with self.assertRaisesRegex(KeyError, "cathode"):
             pybamm.ParameterValues(chemistry)
 
 

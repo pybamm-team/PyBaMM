@@ -88,32 +88,32 @@ class TestBaseBatteryModel(unittest.TestCase):
 
         model = pybamm.BaseBatteryModel({"dimensionality": 0})
         self.assertEqual(
-            model.default_geometry["current collector"][var.z]["position"], 1
+            model.default_geometry["current collector"]["z"]["position"], 1
         )
         model = pybamm.BaseBatteryModel({"dimensionality": 1})
-        self.assertEqual(model.default_geometry["current collector"][var.z]["min"], 0)
+        self.assertEqual(model.default_geometry["current collector"]["z"]["min"], 0)
         model = pybamm.BaseBatteryModel({"dimensionality": 2})
-        self.assertEqual(model.default_geometry["current collector"][var.y]["min"], 0)
+        self.assertEqual(model.default_geometry["current collector"]["y"]["min"], 0)
 
     def test_default_submesh_types(self):
         model = pybamm.BaseBatteryModel({"dimensionality": 0})
         self.assertTrue(
             issubclass(
-                model.default_submesh_types["current collector"].submesh_type,
+                model.default_submesh_types["current collector"],
                 pybamm.SubMesh0D,
             )
         )
         model = pybamm.BaseBatteryModel({"dimensionality": 1})
         self.assertTrue(
             issubclass(
-                model.default_submesh_types["current collector"].submesh_type,
+                model.default_submesh_types["current collector"],
                 pybamm.Uniform1DSubMesh,
             )
         )
         model = pybamm.BaseBatteryModel({"dimensionality": 2})
         self.assertTrue(
             issubclass(
-                model.default_submesh_types["current collector"].submesh_type,
+                model.default_submesh_types["current collector"],
                 pybamm.ScikitUniform2DSubMesh,
             )
         )

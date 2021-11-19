@@ -32,9 +32,9 @@ class TestScikitFiniteElement2DSubMesh(unittest.TestCase):
         var_pts = {"x_n": 10, "x_s": 7, "x_p": 12, "y": 16, "z": 24}
 
         submesh_types = {
-            "negative electrode": pybamm.MeshGenerator(pybamm.Uniform1DSubMesh),
-            "separator": pybamm.MeshGenerator(pybamm.Uniform1DSubMesh),
-            "positive electrode": pybamm.MeshGenerator(pybamm.Uniform1DSubMesh),
+            "negative electrode": pybamm.Uniform1DSubMesh,
+            "separator": pybamm.Uniform1DSubMesh,
+            "positive electrode": pybamm.Uniform1DSubMesh,
             "current collector": pybamm.MeshGenerator(pybamm.ScikitUniform2DSubMesh),
         }
 
@@ -55,16 +55,16 @@ class TestScikitFiniteElement2DSubMesh(unittest.TestCase):
         for domain in mesh:
             if domain == "current collector":
                 # NOTE: only for degree 1
-                npts = var_pts[var.y] * var_pts[var.z]
+                npts = var_pts["y"] * var_pts["z"]
                 self.assertEqual(mesh[domain].npts, npts)
             else:
                 self.assertEqual(len(mesh[domain].edges), len(mesh[domain].nodes) + 1)
 
     def test_init_failure(self):
         submesh_types = {
-            "negative electrode": pybamm.MeshGenerator(pybamm.Uniform1DSubMesh),
-            "separator": pybamm.MeshGenerator(pybamm.Uniform1DSubMesh),
-            "positive electrode": pybamm.MeshGenerator(pybamm.Uniform1DSubMesh),
+            "negative electrode": pybamm.Uniform1DSubMesh,
+            "separator": pybamm.Uniform1DSubMesh,
+            "positive electrode": pybamm.Uniform1DSubMesh,
             "current collector": pybamm.MeshGenerator(pybamm.ScikitUniform2DSubMesh),
         }
         geometry = pybamm.battery_geometry(
@@ -96,20 +96,23 @@ class TestScikitFiniteElement2DSubMesh(unittest.TestCase):
             "y": {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)},
             "z": {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)},
         }
-        npts = {var.y.id: 10, var.z.id: 10}
-        var.z.coord_sys = "not cartesian"
+        npts = {"y": 10, "z": 10}
+        z = pybamm.SpatialVariable("z", domain="not cartesian")
+        lims = {
+            "y": {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)},
+            z: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)},
+        }
         with self.assertRaises(pybamm.DomainError):
             pybamm.ScikitUniform2DSubMesh(lims, npts)
-        var.z.coord_sys = "cartesian"
 
     def test_tab_error(self):
         # set variables and submesh types
         var_pts = {"x_n": 2, "x_s": 2, "x_p": 2, "y": 64, "z": 64}
 
         submesh_types = {
-            "negative electrode": pybamm.MeshGenerator(pybamm.Uniform1DSubMesh),
-            "separator": pybamm.MeshGenerator(pybamm.Uniform1DSubMesh),
-            "positive electrode": pybamm.MeshGenerator(pybamm.Uniform1DSubMesh),
+            "negative electrode": pybamm.Uniform1DSubMesh,
+            "separator": pybamm.Uniform1DSubMesh,
+            "positive electrode": pybamm.Uniform1DSubMesh,
             "current collector": pybamm.MeshGenerator(pybamm.ScikitUniform2DSubMesh),
         }
 
@@ -143,9 +146,9 @@ class TestScikitFiniteElement2DSubMesh(unittest.TestCase):
         var_pts = {"x_n": 2, "x_s": 2, "x_p": 2, "y": 64, "z": 64}
 
         submesh_types = {
-            "negative electrode": pybamm.MeshGenerator(pybamm.Uniform1DSubMesh),
-            "separator": pybamm.MeshGenerator(pybamm.Uniform1DSubMesh),
-            "positive electrode": pybamm.MeshGenerator(pybamm.Uniform1DSubMesh),
+            "negative electrode": pybamm.Uniform1DSubMesh,
+            "separator": pybamm.Uniform1DSubMesh,
+            "positive electrode": pybamm.Uniform1DSubMesh,
             "current collector": pybamm.MeshGenerator(pybamm.ScikitUniform2DSubMesh),
         }
 
@@ -200,9 +203,9 @@ class TestScikitFiniteElementChebyshev2DSubMesh(unittest.TestCase):
         var_pts = {"x_n": 10, "x_s": 7, "x_p": 12, "y": 16, "z": 24}
 
         submesh_types = {
-            "negative electrode": pybamm.MeshGenerator(pybamm.Uniform1DSubMesh),
-            "separator": pybamm.MeshGenerator(pybamm.Uniform1DSubMesh),
-            "positive electrode": pybamm.MeshGenerator(pybamm.Uniform1DSubMesh),
+            "negative electrode": pybamm.Uniform1DSubMesh,
+            "separator": pybamm.Uniform1DSubMesh,
+            "positive electrode": pybamm.Uniform1DSubMesh,
             "current collector": pybamm.MeshGenerator(pybamm.ScikitChebyshev2DSubMesh),
         }
 
@@ -223,7 +226,7 @@ class TestScikitFiniteElementChebyshev2DSubMesh(unittest.TestCase):
         for domain in mesh:
             if domain == "current collector":
                 # NOTE: only for degree 1
-                npts = var_pts[var.y] * var_pts[var.z]
+                npts = var_pts["y"] * var_pts["z"]
                 self.assertEqual(mesh[domain].npts, npts)
             else:
                 self.assertEqual(len(mesh[domain].edges), len(mesh[domain].nodes) + 1)
@@ -278,9 +281,9 @@ class TestScikitExponential2DSubMesh(unittest.TestCase):
         var_pts = {"x_n": 10, "x_s": 7, "x_p": 12, "y": 16, "z": 24}
 
         submesh_types = {
-            "negative electrode": pybamm.MeshGenerator(pybamm.Uniform1DSubMesh),
-            "separator": pybamm.MeshGenerator(pybamm.Uniform1DSubMesh),
-            "positive electrode": pybamm.MeshGenerator(pybamm.Uniform1DSubMesh),
+            "negative electrode": pybamm.Uniform1DSubMesh,
+            "separator": pybamm.Uniform1DSubMesh,
+            "positive electrode": pybamm.Uniform1DSubMesh,
             "current collector": pybamm.MeshGenerator(
                 pybamm.ScikitExponential2DSubMesh
             ),
@@ -303,7 +306,7 @@ class TestScikitExponential2DSubMesh(unittest.TestCase):
         for domain in mesh:
             if domain == "current collector":
                 # NOTE: only for degree 1
-                npts = var_pts[var.y] * var_pts[var.z]
+                npts = var_pts["y"] * var_pts["z"]
                 self.assertEqual(mesh[domain].npts, npts)
             else:
                 self.assertEqual(len(mesh[domain].edges), len(mesh[domain].nodes) + 1)
@@ -366,9 +369,9 @@ class TestScikitUser2DSubMesh(unittest.TestCase):
 
         submesh_params = {"y_edges": y_edges, "z_edges": z_edges}
         submesh_types = {
-            "negative electrode": pybamm.MeshGenerator(pybamm.Uniform1DSubMesh),
-            "separator": pybamm.MeshGenerator(pybamm.Uniform1DSubMesh),
-            "positive electrode": pybamm.MeshGenerator(pybamm.Uniform1DSubMesh),
+            "negative electrode": pybamm.Uniform1DSubMesh,
+            "separator": pybamm.Uniform1DSubMesh,
+            "positive electrode": pybamm.Uniform1DSubMesh,
             "current collector": pybamm.MeshGenerator(
                 pybamm.UserSupplied2DSubMesh, submesh_params
             ),
@@ -391,7 +394,7 @@ class TestScikitUser2DSubMesh(unittest.TestCase):
         for domain in mesh:
             if domain == "current collector":
                 # NOTE: only for degree 1
-                npts = var_pts[var.y] * var_pts[var.z]
+                npts = var_pts["y"] * var_pts["z"]
                 self.assertEqual(mesh[domain].npts, npts)
             else:
                 self.assertEqual(len(mesh[domain].edges), len(mesh[domain].nodes) + 1)
@@ -408,25 +411,25 @@ class TestScikitUser2DSubMesh(unittest.TestCase):
         lims = {"y": {"min": 0, "max": 1}, "z": {"min": 0, "max": 1}}
 
         # error if len(edges) != npts
-        npts = {var.y.id: 10, var.z.id: 3}
+        npts = {"y": 10, "z": 3}
         with self.assertRaises(pybamm.GeometryError):
             mesh(lims, npts)
 
         # error if lims[0] not equal to edges[0]
         lims = {"y": {"min": 0.1, "max": 1}, "z": {"min": 0, "max": 1}}
-        npts = {var.y.id: 3, var.z.id: 3}
+        npts = {"y": 3, "z": 3}
         with self.assertRaises(pybamm.GeometryError):
             mesh(lims, npts)
 
         # error if lims[-1] not equal to edges[-1]
         lims = {"y": {"min": 0, "max": 1}, "z": {"min": 0, "max": 1.3}}
-        npts = {var.y.id: 3, var.z.id: 3}
+        npts = {"y": 3, "z": 3}
         with self.assertRaises(pybamm.GeometryError):
             mesh(lims, npts)
 
         # error if different coordinate system
         lims = {"y": {"min": 0, "max": 1}, "r_n": {"min": 0, "max": 1}}
-        npts = {var.y.id: 3, var.r_n.id: 3}
+        npts = {"y": 3, "r_n": 3}
         with self.assertRaises(pybamm.DomainError):
             mesh(lims, npts)
 

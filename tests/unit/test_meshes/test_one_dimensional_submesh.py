@@ -33,9 +33,7 @@ class TestUniform1DSubMesh(unittest.TestCase):
             "negative particle": {r: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)}}
         }
 
-        submesh_types = {
-            "negative particle": pybamm.MeshGenerator(pybamm.Uniform1DSubMesh)
-        }
+        submesh_types = {"negative particle": pybamm.Uniform1DSubMesh}
         var_pts = {r: 20}
 
         # create mesh
@@ -189,9 +187,7 @@ class TestChebyshev1DSubMesh(unittest.TestCase):
             "negative particle": {r: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)}}
         }
 
-        submesh_types = {
-            "negative particle": pybamm.MeshGenerator(pybamm.Chebyshev1DSubMesh)
-        }
+        submesh_types = {"negative particle": pybamm.Chebyshev1DSubMesh}
         var_pts = {r: 20}
 
         # create mesh
@@ -215,23 +211,21 @@ class TestUser1DSubMesh(unittest.TestCase):
         submesh_params = {"edges": edges}
         mesh = pybamm.MeshGenerator(pybamm.UserSupplied1DSubMesh, submesh_params)
 
-        x_n = pybamm.standard_spatial_vars.x_n
-
         # error if npts+1 != len(edges)
-        lims = {x_n: {"min": 0, "max": 1}}
-        npts = {x_n.id: 10}
+        lims = {"x_n": {"min": 0, "max": 1}}
+        npts = {"x_n": 10}
         with self.assertRaises(pybamm.GeometryError):
             mesh(lims, npts)
 
         # error if lims[0] not equal to edges[0]
-        lims = {x_n: {"min": 0.1, "max": 1}}
-        npts = {x_n.id: len(edges) - 1}
+        lims = {"x_n": {"min": 0.1, "max": 1}}
+        npts = {"x_n": len(edges) - 1}
         with self.assertRaises(pybamm.GeometryError):
             mesh(lims, npts)
 
         # error if lims[-1] not equal to edges[-1]
-        lims = {x_n: {"min": 0, "max": 10}}
-        npts = {x_n.id: len(edges) - 1}
+        lims = {"x_n": {"min": 0, "max": 10}}
+        npts = {"x_n": len(edges) - 1}
         with self.assertRaises(pybamm.GeometryError):
             mesh(lims, npts)
 
@@ -279,23 +273,21 @@ class TestSpectralVolume1DSubMesh(unittest.TestCase):
         submesh_params = {"edges": edges}
         mesh = pybamm.MeshGenerator(pybamm.SpectralVolume1DSubMesh, submesh_params)
 
-        x_n = pybamm.standard_spatial_vars.x_n
-
         # error if npts+1 != len(edges)
-        lims = {x_n: {"min": 0, "max": 1}}
-        npts = {x_n.id: 10}
+        lims = {"x_n": {"min": 0, "max": 1}}
+        npts = {"x_n": 10}
         with self.assertRaises(pybamm.GeometryError):
             mesh(lims, npts)
 
         # error if lims[0] not equal to edges[0]
-        lims = {x_n: {"min": 0.1, "max": 1}}
-        npts = {x_n.id: len(edges) - 1}
+        lims = {"x_n": {"min": 0.1, "max": 1}}
+        npts = {"x_n": len(edges) - 1}
         with self.assertRaises(pybamm.GeometryError):
             mesh(lims, npts)
 
         # error if lims[-1] not equal to edges[-1]
-        lims = {x_n: {"min": 0, "max": 10}}
-        npts = {x_n.id: len(edges) - 1}
+        lims = {"x_n": {"min": 0, "max": 10}}
+        npts = {"x_n": len(edges) - 1}
         with self.assertRaises(pybamm.GeometryError):
             mesh(lims, npts)
 

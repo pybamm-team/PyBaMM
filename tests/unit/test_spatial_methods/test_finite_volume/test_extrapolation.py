@@ -16,7 +16,7 @@ def errors(pts, function, method_options, bcs=None):
     domain = "test"
     x = pybamm.SpatialVariable("x", domain=domain)
     geometry = {domain: {x: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)}}}
-    submesh_types = {domain: pybamm.MeshGenerator(pybamm.Uniform1DSubMesh)}
+    submesh_types = {domain: pybamm.Uniform1DSubMesh}
     var_pts = {x: pts}
     mesh = pybamm.Mesh(geometry, submesh_types, var_pts)
 

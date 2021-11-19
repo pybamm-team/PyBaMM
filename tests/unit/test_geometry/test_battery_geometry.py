@@ -14,7 +14,7 @@ class TestBatteryGeometry(unittest.TestCase):
             )
             for domain_geoms in geometry.values():
                 all(
-                    self.assertIsInstance(spatial_var, pybamm.SpatialVariable)
+                    self.assertIsInstance(spatial_var, str)
                     for spatial_var in domain_geoms.keys()
                 )
         geometry.print_parameter_info()

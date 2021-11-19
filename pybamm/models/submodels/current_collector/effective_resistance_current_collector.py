@@ -218,7 +218,6 @@ class EffectiveResistance(pybamm.BaseModel):
     def default_geometry(self):
         geometry = {}
         param = self.param
-        var = pybamm.standard_spatial_vars
         if self.options["dimensionality"] == 1:
             geometry["current collector"] = {
                 "z": {"min": 0, "max": 1},
@@ -253,7 +252,7 @@ class EffectiveResistance(pybamm.BaseModel):
     @property
     def default_submesh_types(self):
         if self.options["dimensionality"] == 1:
-            return {"current collector": pybamm.MeshGenerator(pybamm.Uniform1DSubMesh)}
+            return {"current collector": pybamm.Uniform1DSubMesh}
         elif self.options["dimensionality"] == 2:
             return {
                 "current collector": pybamm.MeshGenerator(pybamm.ScikitUniform2DSubMesh)
@@ -472,7 +471,6 @@ class AlternativeEffectiveResistance2D(pybamm.BaseModel):
     @property
     def default_geometry(self):
         param = self.param
-        var = pybamm.standard_spatial_vars
         geometry = {
             "current collector": {
                 "y": {"min": 0, "max": param.l_y},

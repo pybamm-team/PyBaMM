@@ -46,7 +46,7 @@ def get_mesh_for_testing(
         "positive particle": pybamm.MeshGenerator(
             pybamm.SpectralVolume1DSubMesh, {"order": order}
         ),
-        "current collector": pybamm.MeshGenerator(pybamm.SubMesh0D),
+        "current collector": pybamm.SubMesh0D,
     }
     if cc_submesh:
         submesh_types["current collector"] = cc_submesh

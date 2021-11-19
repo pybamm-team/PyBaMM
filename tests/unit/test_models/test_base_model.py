@@ -653,9 +653,9 @@ class TestBaseModel(unittest.TestCase):
             "negative particle": {"r_n": {"min": 0, "max": 1}},
         }
         submeshes = {
-            "negative electrode": pybamm.MeshGenerator(pybamm.Uniform1DSubMesh),
-            "separator": pybamm.MeshGenerator(pybamm.Uniform1DSubMesh),
-            "negative particle": pybamm.MeshGenerator(pybamm.Uniform1DSubMesh),
+            "negative electrode": pybamm.Uniform1DSubMesh,
+            "separator": pybamm.Uniform1DSubMesh,
+            "negative particle": pybamm.Uniform1DSubMesh,
         }
         var_pts = {"x_n": 10, "x_s": 10, "r_n": 5}
         mesh = pybamm.Mesh(geometry, submeshes, var_pts)
