@@ -8,17 +8,12 @@ import numpy as np
 pybamm.set_logging_level("INFO")
 
 models = [
+    pybamm.lithium_ion.DFN({"interface utilisation": "full"}, name="full utilisation"),
     pybamm.lithium_ion.DFN(
-        {"working electrode": "positive", "interface utilisation": "full"},
-        name="full utilisation",
+        {"interface utilisation": "constant"}, name="constant utilisation"
     ),
     pybamm.lithium_ion.DFN(
-        {"working electrode": "positive", "interface utilisation": "constant"},
-        name="constant utilisation",
-    ),
-    pybamm.lithium_ion.DFN(
-        {"working electrode": "positive", "interface utilisation": "current-driven"},
-        name="current-driven utilisation",
+        {"interface utilisation": "current-driven"}, name="current-driven utilisation"
     ),
 ]
 
@@ -29,7 +24,7 @@ param.update(
         "Initial negative electrode interface utilisation": 0.9,
         "Initial positive electrode interface utilisation": 0.8,
         "Negative electrode current-driven interface utilisation factor "
-        "[m3.mol-1]": -1,
+        "[m3.mol-1]": -4e-5,
         "Positive electrode current-driven interface utilisation factor "
         "[m3.mol-1]": 4e-5,
     },
@@ -50,11 +45,11 @@ for model in models:
 pybamm.dynamic_plot(
     solutions,
     [
-        # "Negative particle surface concentration [mol.m-3]",
+        "Negative particle surface concentration [mol.m-3]",
         "Positive particle surface concentration [mol.m-3]",
-        # "Negative electrode interfacial current density [A.m-2]",
+        "Negative electrode interfacial current density [A.m-2]",
         "Positive electrode interfacial current density [A.m-2]",
-        "Lithium metal interface utilisation",
+        "Negative electrode interface utilisation",
         "Positive electrode interface utilisation",
         "Electrolyte potential [V]",
         "Terminal voltage [V]",

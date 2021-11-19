@@ -43,7 +43,7 @@ class BaseIntegrationTestLithiumIonHalfCell:
     def test_constant_utilisation(self):
         options = {"interface utilisation": "constant"}
         parameter_values = pybamm.ParameterValues(
-            chemistry=pybamm.parameter_sets.Marquis2019
+            chemistry=pybamm.parameter_sets.Xu2019
         )
         parameter_values.update(
             {
@@ -57,7 +57,7 @@ class BaseIntegrationTestLithiumIonHalfCell:
     def test_current_driven_utilisation(self):
         options = {"interface utilisation": "current-driven"}
         parameter_values = pybamm.ParameterValues(
-            chemistry=pybamm.parameter_sets.Marquis2019
+            chemistry=pybamm.parameter_sets.Xu2019
         )
         parameter_values.update(
             {
