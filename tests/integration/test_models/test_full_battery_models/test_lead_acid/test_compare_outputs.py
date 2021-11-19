@@ -26,8 +26,7 @@ class TestCompareOutputs(unittest.TestCase):
             param.process_model(model)
 
         # set mesh
-        var = pybamm.standard_spatial_vars
-        var_pts = {var.x_n: 10, var.x_s: 10, var.x_p: 10}
+        var_pts = {"x_n": 10, "x_s": 10, "x_p": 10}
 
         # discretise models
         for model in models:
@@ -70,8 +69,7 @@ class TestCompareOutputs(unittest.TestCase):
                 param.process_model(model)
 
             # set mesh
-            var = pybamm.standard_spatial_vars
-            var_pts = {var.x_n: 5, var.x_s: 5, var.x_p: 5}
+            var_pts = {"x_n": 5, "x_s": 5, "x_p": 5}
 
             # discretise models
             discs = {}

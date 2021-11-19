@@ -90,7 +90,9 @@ class Uniform1DSubMesh(SubMesh1D):
     def __init__(self, lims, npts):
 
         spatial_var, spatial_lims, tabs = self.read_lims(lims)
-        npts = npts[spatial_var.id]
+        if isinstance(spatial_var, str):
+            spatial_var = getattr(pybamm.standard_spatial_vars, spatial_var)
+        npts = npts[spatial_var.name]
 
         edges = np.linspace(spatial_lims["min"], spatial_lims["max"], npts + 1)
 

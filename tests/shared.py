@@ -87,17 +87,16 @@ def get_mesh_for_testing(
         xn_pts, xs_pts, xp_pts = 40, 25, 35
     else:
         xn_pts, xs_pts, xp_pts = xpts, xpts, xpts
-    var = pybamm.standard_spatial_vars
     var_pts = {
-        var.x_n: xn_pts,
-        var.x_s: xs_pts,
-        var.x_p: xp_pts,
-        var.r_n: rpts,
-        var.r_p: rpts,
-        var.y: ypts,
-        var.z: zpts,
-        var.R_n: Rpts,
-        var.R_p: Rpts,
+        "x_n": xn_pts,
+        "x_s": xs_pts,
+        "x_p": xp_pts,
+        "r_n": rpts,
+        "r_p": rpts,
+        "y": ypts,
+        "z": zpts,
+        "R_n": Rpts,
+        "R_p": Rpts,
     }
 
     return pybamm.Mesh(geometry, submesh_types, var_pts)
@@ -123,7 +122,7 @@ def get_size_distribution_mesh_for_testing(
         Rpts=Rpts,
         zpts=zpts,
         geometry=geometry,
-        cc_submesh=cc_submesh
+        cc_submesh=cc_submesh,
     )
 
 
@@ -182,8 +181,7 @@ def get_unit_2p1D_mesh_for_testing(ypts=15, zpts=15, include_particles=True):
     )
     param.process_geometry(geometry)
 
-    var = pybamm.standard_spatial_vars
-    var_pts = {var.x_n: 3, var.x_s: 3, var.x_p: 3, var.y: ypts, var.z: zpts}
+    var_pts = {"x_n": 3, "x_s": 3, "x_p": 3, "y": ypts, "z": zpts}
 
     submesh_types = {
         "negative electrode": pybamm.MeshGenerator(pybamm.Uniform1DSubMesh),

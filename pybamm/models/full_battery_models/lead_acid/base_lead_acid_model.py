@@ -51,8 +51,7 @@ class BaseModel(pybamm.BaseBatteryModel):
     @property
     def default_var_pts(self):
         # Choose points that give uniform grid for the standard parameter values
-        var = pybamm.standard_spatial_vars
-        return {var.x_n: 25, var.x_s: 41, var.x_p: 34, var.y: 10, var.z: 10}
+        return {"x_n": 25, "x_s": 41, "x_p": 34, "y": 10, "z": 10}
 
     @property
     def default_quick_plot_variables(self):

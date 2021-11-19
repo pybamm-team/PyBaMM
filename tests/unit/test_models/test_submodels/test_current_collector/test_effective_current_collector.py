@@ -44,16 +44,7 @@ class TestEffectiveResistancePostProcess(unittest.TestCase):
             pybamm.current_collector.EffectiveResistance({"dimensionality": 2}),
             pybamm.current_collector.AlternativeEffectiveResistance2D(),
         ]
-        var = pybamm.standard_spatial_vars
-        var_pts = {
-            var.x_n: 5,
-            var.x_s: 5,
-            var.x_p: 5,
-            var.r_n: 5,
-            var.r_p: 5,
-            var.y: 5,
-            var.z: 5,
-        }
+        var_pts = {"x_n": 5, "x_s": 5, "x_p": 5, "r_n": 5, "r_p": 5, "y": 5, "z": 5}
         param = models[0].default_parameter_values
         meshes = [None] * len(models)
         for i, model in enumerate(models):

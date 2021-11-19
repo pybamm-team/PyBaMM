@@ -40,17 +40,16 @@ class TestDFNWithSizeDistribution(unittest.TestCase):
         params = pybamm.ParameterValues("Marquis2019")
         self.params = pybamm.get_size_distribution_parameters(params)
 
-        var = pybamm.standard_spatial_vars
         self.var_pts = {
-            var.x_n: 5,
-            var.x_s: 5,
-            var.x_p: 5,
-            var.r_n: 5,
-            var.r_p: 5,
-            var.R_n: 3,
-            var.R_p: 3,
-            var.y: 5,
-            var.z: 5,
+            "x_n": 5,
+            "x_s": 5,
+            "x_p": 5,
+            "r_n": 5,
+            "r_p": 5,
+            "R_n": 3,
+            "R_p": 3,
+            "y": 5,
+            "z": 5,
         }
 
     def test_basic_processing(self):
@@ -91,13 +90,9 @@ class TestDFNWithSizeDistribution(unittest.TestCase):
             pybamm.lithium_ion.DFN(),
             pybamm.lithium_ion.DFN(options={"particle size": "distribution"}),
         ]
-        var = pybamm.standard_spatial_vars
 
         # reduce number of particle sizes, for a crude discretization
-        var_pts = {
-            var.R_n: 3,
-            var.R_p: 3,
-        }
+        var_pts = {"R_n": 3, "R_p": 3}
         solver = pybamm.CasadiSolver(mode="fast")
 
         # solve

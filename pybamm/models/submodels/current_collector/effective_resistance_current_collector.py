@@ -221,7 +221,7 @@ class EffectiveResistance(pybamm.BaseModel):
         var = pybamm.standard_spatial_vars
         if self.options["dimensionality"] == 1:
             geometry["current collector"] = {
-                var.z: {"min": 0, "max": 1},
+                "z": {"min": 0, "max": 1},
                 "tabs": {
                     "negative": {"z_centre": param.centre_z_tab_n},
                     "positive": {"z_centre": param.centre_z_tab_p},
@@ -229,8 +229,8 @@ class EffectiveResistance(pybamm.BaseModel):
             }
         elif self.options["dimensionality"] == 2:
             geometry["current collector"] = {
-                var.y: {"min": 0, "max": param.l_y},
-                var.z: {"min": 0, "max": param.l_z},
+                "y": {"min": 0, "max": param.l_y},
+                "z": {"min": 0, "max": param.l_z},
                 "tabs": {
                     "negative": {
                         "y_centre": param.centre_y_tab_n,
@@ -248,8 +248,7 @@ class EffectiveResistance(pybamm.BaseModel):
 
     @property
     def default_var_pts(self):
-        var = pybamm.standard_spatial_vars
-        return {var.y: 32, var.z: 32}
+        return {"y": 32, "z": 32}
 
     @property
     def default_submesh_types(self):
@@ -476,8 +475,8 @@ class AlternativeEffectiveResistance2D(pybamm.BaseModel):
         var = pybamm.standard_spatial_vars
         geometry = {
             "current collector": {
-                var.y: {"min": 0, "max": param.l_y},
-                var.z: {"min": 0, "max": param.l_z},
+                "y": {"min": 0, "max": param.l_y},
+                "z": {"min": 0, "max": param.l_z},
                 "tabs": {
                     "negative": {
                         "y_centre": param.centre_y_tab_n,
@@ -496,8 +495,7 @@ class AlternativeEffectiveResistance2D(pybamm.BaseModel):
 
     @property
     def default_var_pts(self):
-        var = pybamm.standard_spatial_vars
-        return {var.y: 32, var.z: 32}
+        return {"y": 32, "z": 32}
 
     @property
     def default_submesh_types(self):
