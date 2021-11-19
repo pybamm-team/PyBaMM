@@ -516,6 +516,17 @@ class BaseBatteryModel(pybamm.BaseModel):
                 raise pybamm.OptionError(
                     options["thermal"] + " model must have pouch geometry."
                 )
+        if isinstance(self, pybamm.lithium_ion.SPMe):
+            if options["electrolyte conductivity"] not in [
+                "default",
+                "composite",
+                "integrated",
+            ]:
+                raise pybamm.OptionError(
+                    "electrolyte conductivity '{}' not suitable for SPMe".format(
+                        options["electrolyte conductivity"]
+                    )
+                )
         if isinstance(self, pybamm.lead_acid.BaseModel):
             if options["thermal"] != "isothermal" and options["dimensionality"] != 0:
                 raise pybamm.OptionError(
