@@ -98,7 +98,6 @@ class Interpolant(pybamm.Function):
             elif len(x) == 2:
                 self.dimension = 2
                 interpolating_function = interpolate.interp2d(x1, x2, y)
-                # interpolating_function = lambda *params: grid_interpolating_function(*params).flatten()
         elif interpolator == "pchip":
             interpolating_function = interpolate.PchipInterpolator(
                 x1, y, extrapolate=extrapolate
