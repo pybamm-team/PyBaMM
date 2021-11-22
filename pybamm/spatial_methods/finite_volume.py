@@ -67,32 +67,6 @@ class FiniteVolume(pybamm.SpatialMethod):
             entries, domain=symbol.domain, auxiliary_domains=symbol.auxiliary_domains
         )
 
-    def preprocess_external_variables(self, var):
-        """
-        For finite volumes, we need the boundary fluxes for discretising
-        properly. Here, we extrapolate and then add them to the boundary
-        conditions.
-
-        Parameters
-        ----------
-        var : :class:`pybamm.Variable` or :class:`pybamm.Concatenation`
-            The external variable that is to be processed
-
-        Returns
-        -------
-        new_bcs: dict
-            A dictionary containing the new boundary conditions
-        """
-
-        new_bcs = {
-            var: {
-                "left": (pybamm.BoundaryGradient(var, "left"), "Neumann"),
-                "right": (pybamm.BoundaryGradient(var, "right"), "Neumann"),
-            }
-        }
-
-        return new_bcs
-
     def gradient(self, symbol, discretised_symbol, boundary_conditions):
         """Matrix-vector multiplication to implement the gradient operator.
         See :meth:`pybamm.SpatialMethod.gradient`
@@ -122,6 +96,32 @@ class FiniteVolume(pybamm.SpatialMethod):
                 out = self.add_neumann_values(symbol, out, bcs, domain)
 
         return out
+
+    def preprocess_external_variables(self, var):
+        """
+        For finite volumes, we need the boundary fluxes for discretising
+        properly. Here, we extrapolate and then add them to the boundary
+        conditions.
+
+        Parameters
+        ----------
+        var : :class:`pybamm.Variable` or :class:`pybamm.Concatenation`
+            The external variable that is to be processed
+
+        Returns
+        -------
+        new_bcs: dict
+            A dictionary containing the new boundary conditions
+        """
+
+        new_bcs = {
+            var: {
+                "left": (pybamm.BoundaryGradient(var, "left"), "Neumann"),
+                "right": (pybamm.BoundaryGradient(var, "right"), "Neumann"),
+            }
+        }
+
+        return new_bcs
 
     def gradient_matrix(self, domain, auxiliary_domains):
         """
@@ -291,7 +291,7 @@ class FiniteVolume(pybamm.SpatialMethod):
             r_edges_left = submesh.edges[:-1]
             r_edges_right = submesh.edges[1:]
             d_edges = 4 * np.pi * (r_edges_right ** 3 - r_edges_left ** 3) / 3
-        if submesh.coord_sys == "cylindrical polar":
+        elif submesh.coord_sys == "cylindrical polar":
             r_edges_left = submesh.edges[:-1]
             r_edges_right = submesh.edges[1:]
             d_edges = 2 * np.pi * (r_edges_right ** 2 - r_edges_left ** 2) / 3

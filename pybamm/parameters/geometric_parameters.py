@@ -37,9 +37,11 @@ class GeometricParameters(BaseParameters):
             self.L_n + self.L_s + self.L_p
         )  # Total distance between current collectors
         self.L = self.L_cn + self.L_x + self.L_cp  # Total cell thickness
+        self.L_Li = pybamm.Parameter("Lithium counter electrode thickness [m]")
         self.L_y = pybamm.Parameter("Electrode width [m]")
         self.L_z = pybamm.Parameter("Electrode height [m]")
-        self.L_Li = pybamm.Parameter("Lithium counter electrode thickness [m]")
+        self.r_inner_dimensional = pybamm.Parameter("Inner cell radius [m]")
+        self.r_outer_dimensional = pybamm.Parameter("Outer cell radius [m]")
         self.A_cc = self.L_y * self.L_z  # Area of current collector
         self.A_cooling = pybamm.Parameter("Cell cooling surface area [m2]")
         self.V_cell = pybamm.Parameter("Cell volume [m3]")
@@ -108,7 +110,8 @@ class GeometricParameters(BaseParameters):
             "Negative particle-size variable [m]": R,
         }
         return pybamm.FunctionParameter(
-            "Negative area-weighted particle-size distribution [m-1]", inputs,
+            "Negative area-weighted particle-size distribution [m-1]",
+            inputs,
         )
 
     def f_a_dist_p_dimensional(self, R):
@@ -119,7 +122,8 @@ class GeometricParameters(BaseParameters):
             "Positive particle-size variable [m]": R,
         }
         return pybamm.FunctionParameter(
-            "Positive area-weighted particle-size distribution [m-1]", inputs,
+            "Positive area-weighted particle-size distribution [m-1]",
+            inputs,
         )
 
     def _set_scales(self):
@@ -142,9 +146,11 @@ class GeometricParameters(BaseParameters):
         self.l_p = self.L_p / self.L_x
         self.l_cp = self.L_cp / self.L_x
         self.l_x = self.L_x / self.L_x
+        self.l_Li = self.L_Li / self.L_x
         self.l_y = self.L_y / self.L_z
         self.l_z = self.L_z / self.L_z
-        self.l_Li = self.L_Li / self.L_x
+        self.r_inner = self.r_inner_dimensional / self.r_outer_dimensional
+        self.r_outer = self.r_outer_dimensional / self.r_outer_dimensional
         self.a_cc = self.l_y * self.l_z
         self.a_cooling = self.A_cooling / (self.L_z ** 2)
         self.v_cell = self.V_cell / (self.L_x * self.L_z ** 2)
