@@ -326,16 +326,9 @@ class ParameterValues:
                     values[name] = (function_name, data)
 
                 # Machine learning data from Random Forest Regressor
-                elif value.startswith("[current 2D data]") or value.startswith("[2D data]"):
-                    if value.startswith("[current 2D data]"):
-                        data_path = os.path.join(
-                            pybamm.root_dir(), "pybamm", "input", "drive_cycles"
-                        )
-                        filename = os.path.join(data_path, value[17:] + ".json")
-                        function_name = value[17:]
-                    else:
-                        filename = os.path.join(path, value[9:] + ".json")
-                        function_name = value[9:]
+                elif value.startswith("[2D data]"):
+                    filename = os.path.join(path, value[9:] + ".json")
+                    function_name = value[9:]
                     filename = pybamm.get_parameters_filepath(filename)
                     with open(filename, 'r') as jsonfile:
                         json_data = json.load(jsonfile)
