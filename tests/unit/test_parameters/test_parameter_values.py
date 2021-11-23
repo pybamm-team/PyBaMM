@@ -552,10 +552,12 @@ class TestParameterValues(unittest.TestCase):
         processed_func = parameter_values.process_symbol(func)
         self.assertIsInstance(processed_func, pybamm.Interpolant)
         self.assertEqual(processed_func.evaluate().flatten()[0], 22.23)
+        np.testing.assert_almost_equal(processed_func.evaluate().flatten()[0], 22.23, decimal=4)
 
         interp3 = pybamm.Interpolant(data3[0], data3[1], children=(a, b))
         processed_interp3 = parameter_values.process_symbol(interp3)
-        self.assertEqual(processed_interp3.evaluate().flatten()[0], 22.23)  # 9.03
+        # self.assertEqual(processed_interp3.evaluate().flatten()[0], 22.23)  # 9.03
+        np.testing.assert_almost_equal(processed_interp3.evaluate().flatten()[0], 22.23, decimal=4)
 
     def test_interpolant_against_function(self):
         parameter_values = pybamm.ParameterValues({})
