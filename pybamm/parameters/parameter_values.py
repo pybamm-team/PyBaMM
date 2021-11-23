@@ -662,6 +662,8 @@ class ParameterValues:
 
                     print("DATA: {0}".format(data))
 
+                    print("is numpy array: {0}".format(isinstance(data, np.ndarray)))
+
                     if len(data[0]) == 1:
                         input_data = data[0][0], data[1]
 
