@@ -1,6 +1,8 @@
 #
 # Dimensional and dimensionless parameter values, and scales
 #
+import copy
+
 import numpy as np
 import pybamm
 import pandas as pd
@@ -659,10 +661,13 @@ class ParameterValues:
                     name, data = function_name
 
                     if len(data[0]) == 1:
-                        data = data[0][0], data[1]
+                        input_data = data[0][0], data[1]
+
+                    else:
+                        input_data = copy.deepcopy(data)
 
                     function = pybamm.Interpolant(
-                        data[0], data[-1], new_children, name=name
+                        input_data[0], input_data[-1], new_children, name=name
                     )
                     # Define event to catch extrapolation. In these events the sign is
                     # important: it should be positive inside of the range and negative
