@@ -660,10 +660,6 @@ class ParameterValues:
                     # to create an Interpolant
                     name, data = function_name
 
-                    print("DATA: {0}".format(data))
-
-                    print("is numpy array: {0}".format(isinstance(data, np.ndarray)))
-
                     if isinstance(data, np.ndarray):
                         data = [data[:, 0]], data[:, 1]
 
