@@ -551,7 +551,7 @@ class TestParameterValues(unittest.TestCase):
 
         processed_func = parameter_values.process_symbol(func)
         self.assertIsInstance(processed_func, pybamm.Interpolant)
-        self.assertEqual(processed_func.evaluate(), 22.23)
+        self.assertEqual(processed_func.evaluate().flatten(), 22.23)
 
         interp3 = pybamm.Interpolant(data3[0], data3[1], children=(a, b))
         processed_interp3 = parameter_values.process_symbol(interp3)
