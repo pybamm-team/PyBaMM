@@ -294,7 +294,7 @@ class FiniteVolume(pybamm.SpatialMethod):
         elif submesh.coord_sys == "cylindrical polar":
             r_edges_left = submesh.edges[:-1]
             r_edges_right = submesh.edges[1:]
-            d_edges = 2 * np.pi * (r_edges_right ** 2 - r_edges_left ** 2) / 3
+            d_edges = 2 * np.pi * (r_edges_right ** 2 - r_edges_left ** 2) / 2
         else:
             d_edges = submesh.d_edges
 

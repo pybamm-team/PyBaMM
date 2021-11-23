@@ -66,14 +66,16 @@ class LithiumIonParameters(BaseParameters):
         self.L_p = self.geo.L_p
         self.L_cp = self.geo.L_cp
         self.L_x = self.geo.L_x
+        self.L = self.geo.L
         self.L_y = self.geo.L_y
         self.L_z = self.geo.L_z
-        self.L = self.geo.L
+        self.r_inner_dimensional = self.geo.r_inner_dimensional
+        self.r_outer_dimensional = self.geo.r_outer_dimensional
         self.A_cc = self.geo.A_cc
         self.A_cooling = self.geo.A_cooling
         self.V_cell = self.geo.V_cell
 
-        # Tab geometry
+        # Tab geometry (for pouch cells)
         self.L_tab_n = self.geo.L_tab_n
         self.Centre_y_tab_n = self.geo.Centre_y_tab_n
         self.Centre_z_tab_n = self.geo.Centre_z_tab_n
@@ -631,13 +633,15 @@ class LithiumIonParameters(BaseParameters):
         self.l_x = self.geo.l_x
         self.l_y = self.geo.l_y
         self.l_z = self.geo.l_z
+        self.r_inner = self.geo.r_inner
+        self.r_outer = self.geo.r_outer
         self.a_cc = self.geo.a_cc
         self.a_cooling = self.geo.a_cooling
         self.v_cell = self.geo.v_cell
         self.l = self.geo.l
         self.delta = self.geo.delta
 
-        # Tab geometry
+        # Tab geometry (for pouch cells)
         self.l_tab_n = self.geo.l_tab_n
         self.centre_y_tab_n = self.geo.centre_y_tab_n
         self.centre_z_tab_n = self.geo.centre_z_tab_n
