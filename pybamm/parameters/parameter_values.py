@@ -659,7 +659,7 @@ class ParameterValues:
                     name, data = function_name
 
                     if len(data[0]) == 1:
-                        data[0] = data[0][0]
+                        data = data[0][0], data[1]
 
                     function = pybamm.Interpolant(
                         data[0], data[-1], new_children, name=name
