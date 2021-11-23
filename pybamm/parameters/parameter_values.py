@@ -681,7 +681,7 @@ class ParameterValues:
                         )
 
                 else:
-                    raise Exception("Invalid function name length: {0}".format(len(function_name)))
+                    raise ValueError("Invalid function name length: {0}".format(len(function_name)))
 
             elif isinstance(function_name, numbers.Number):
                 # Check not NaN (parameter in csv file but no value given)
