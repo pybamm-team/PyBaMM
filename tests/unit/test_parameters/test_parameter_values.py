@@ -499,6 +499,46 @@ class TestParameterValues(unittest.TestCase):
         processed_interp3 = parameter_values.process_symbol(interp3)
         self.assertEqual(processed_interp3.evaluate(), 9.03)
 
+    def test_process_interpolant_2d(self):
+
+        x_ = [np.linspace(0, 10), np.linspace(0, 20)]
+
+        X = list(np.meshgrid(*x_))
+
+        x = np.column_stack([el.reshape(-1, 1) for el in X])
+
+        y = 2 * x
+
+        Y = y.reshape(*[len(el) for el in x_])
+
+        data = x_, Y
+
+        parameter_values = pybamm.ParameterValues(
+            {"a": 3.01, "Times two": ("times two", data)}
+        )
+
+        a = pybamm.Parameter("a")
+        func = pybamm.FunctionParameter("Times two", {"a": a})
+
+        processed_func = parameter_values.process_symbol(func)
+        self.assertIsInstance(processed_func, pybamm.Interpolant)
+        self.assertEqual(processed_func.evaluate(), 6.02)
+
+        # process differentiated function parameter
+        diff_func = func.diff(a)
+        processed_diff_func = parameter_values.process_symbol(diff_func)
+        self.assertEqual(processed_diff_func.evaluate(), 2)
+
+        # interpolant defined up front
+        interp2 = pybamm.Interpolant(data[:, 0], data[:, 1], a)
+        processed_interp2 = parameter_values.process_symbol(interp2)
+        self.assertEqual(processed_interp2.evaluate(), 6.02)
+
+        data3 = np.hstack([x, 3 * x])
+        interp3 = pybamm.Interpolant(data3[:, 0], data3[:, 1], a)
+        processed_interp3 = parameter_values.process_symbol(interp3)
+        self.assertEqual(processed_interp3.evaluate(), 9.03)
+
     def test_interpolant_against_function(self):
         parameter_values = pybamm.ParameterValues({})
         parameter_values.update(
