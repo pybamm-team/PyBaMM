@@ -322,8 +322,8 @@ class ParameterValues:
                         filename, comment="#", skip_blank_lines=True, header=None
                     ).to_numpy()
                     # Save name and data
-                    self._dict_items[name] = (function_name, data)
-                    values[name] = (function_name, data)
+                    self._dict_items[name] = (function_name, ([data[:, 0].tolist()], data[:, 1].tolist()))
+                    values[name] = (function_name, ([data[:, 0].tolist()], data[:, 1].tolist()))
 
                 # Machine learning data from Random Forest Regressor
                 elif value.startswith("[2D data]"):
@@ -337,8 +337,8 @@ class ParameterValues:
                     data[1] = np.array(data[1])
                     # Save name and data
                     # Add padding to see a difference from CSV imported data
-                    self._dict_items[name] = (function_name, data, "padding")
-                    values[name] = (function_name, data, "padding")
+                    self._dict_items[name] = (function_name, data)
+                    values[name] = (function_name, data)
 
                 elif value == "[input]":
                     self._dict_items[name] = pybamm.InputParameter(name)
@@ -656,33 +656,33 @@ class ParameterValues:
             if isinstance(function_name, tuple):
                 # If function_name is a tuple then it should be (name, data) and we need
                 # It might be ML or CSV data, so we check the length (padding added for ML)
-                if len(function_name) == 2:  # CSV data
+                # if len(function_name) == 2:  # CSV data
+                #     # to create an Interpolant
+                #     name, data = function_name
+                #     function = pybamm.Interpolant(
+                #         data[:, 0], data[:, 1], *new_children, name=name
+                #     )
+                #     # Define event to catch extrapolation. In these events the sign is
+                #     # important: it should be positive inside of the range and negative
+                #     # outside of it
+                #     self.parameter_events.append(
+                #         pybamm.Event(
+                #             "Interpolant {} lower bound".format(name),
+                #             pybamm.min(new_children[0] - min(data[:, 0])),
+                #             pybamm.EventType.INTERPOLANT_EXTRAPOLATION,
+                #         )
+                #     )
+                #     self.parameter_events.append(
+                #         pybamm.Event(
+                #             "Interpolant {} upper bound".format(name),
+                #             pybamm.min(max(data[:, 0]) - new_children[0]),
+                #             pybamm.EventType.INTERPOLANT_EXTRAPOLATION,
+                #         )
+                #     )
+
+                if len(function_name) == 2:  # ML data
                     # to create an Interpolant
                     name, data = function_name
-                    function = pybamm.Interpolant(
-                        data[:, 0], data[:, 1], *new_children, name=name
-                    )
-                    # Define event to catch extrapolation. In these events the sign is
-                    # important: it should be positive inside of the range and negative
-                    # outside of it
-                    self.parameter_events.append(
-                        pybamm.Event(
-                            "Interpolant {} lower bound".format(name),
-                            pybamm.min(new_children[0] - min(data[:, 0])),
-                            pybamm.EventType.INTERPOLANT_EXTRAPOLATION,
-                        )
-                    )
-                    self.parameter_events.append(
-                        pybamm.Event(
-                            "Interpolant {} upper bound".format(name),
-                            pybamm.min(max(data[:, 0]) - new_children[0]),
-                            pybamm.EventType.INTERPOLANT_EXTRAPOLATION,
-                        )
-                    )
-
-                elif len(function_name) == 3:  # ML data
-                    # to create an Interpolant
-                    name, data, _ = function_name
 
                     function = pybamm.Interpolant(
                         data[0], data[-1], new_children, name=name
@@ -690,7 +690,7 @@ class ParameterValues:
                     # Define event to catch extrapolation. In these events the sign is
                     # important: it should be positive inside of the range and negative
                     # outside of it
-                    for data_index in range(len(data[0]) - 1):
+                    for data_index in range(len(data[0])):
                         self.parameter_events.append(
                             pybamm.Event(
                                 "Interpolant {} lower bound".format(name),
