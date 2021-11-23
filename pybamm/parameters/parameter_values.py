@@ -668,20 +668,23 @@ class ParameterValues:
                         self.parameter_events.append(
                             pybamm.Event(
                                 "Interpolant {} lower bound".format(name),
-                                pybamm.min(new_children[data_index] - min(data[0][data_index])),
+                                pybamm.min(new_children[data_index] -
+                                           min(data[0][data_index])),
                                 pybamm.EventType.INTERPOLANT_EXTRAPOLATION,
                             )
                         )
                         self.parameter_events.append(
                             pybamm.Event(
                                 "Interpolant {} upper bound".format(name),
-                                pybamm.min(max(data[0][data_index]) - new_children[data_index]),
+                                pybamm.min(max(data[0][data_index]) -
+                                           new_children[data_index]),
                                 pybamm.EventType.INTERPOLANT_EXTRAPOLATION,
                             )
                         )
 
                 else:
-                    raise ValueError("Invalid function name length: {0}".format(len(function_name)))
+                    raise ValueError("Invalid function name length: {0}"
+                                     .format(len(function_name)))
 
             elif isinstance(function_name, numbers.Number):
                 # Check not NaN (parameter in csv file but no value given)
