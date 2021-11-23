@@ -535,6 +535,14 @@ class TestParameterValues(unittest.TestCase):
         processed_interp2 = parameter_values.process_symbol(interp2)
         self.assertEqual(processed_interp2.evaluate(), 14.82)  # 6.02
 
+        parameter_values = pybamm.ParameterValues(
+            {"a": 3.01, "b": 4.4, "Times two": ("times two", data)}
+        )
+
+        a = pybamm.Parameter("a")
+        b = pybamm.Parameter("b")
+        func = pybamm.FunctionParameter("Times two", {"a": a, "b": b})
+
         y3 = (3 * x).sum(axis=1)
 
         Y3 = y3.reshape(*[len(el) for el in x_])
