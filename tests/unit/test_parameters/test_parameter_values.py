@@ -531,7 +531,7 @@ class TestParameterValues(unittest.TestCase):
         # self.assertEqual(processed_diff_func.evaluate(), 2)
 
         # interpolant defined up front
-        interp2 = pybamm.Interpolant(data[0], data[1], a, b)
+        interp2 = pybamm.Interpolant(data[0], data[1], children=(a, b))
         processed_interp2 = parameter_values.process_symbol(interp2)
         self.assertEqual(processed_interp2.evaluate(), 14.82)  # 6.02
 
