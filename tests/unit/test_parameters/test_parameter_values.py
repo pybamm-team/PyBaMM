@@ -535,10 +535,15 @@ class TestParameterValues(unittest.TestCase):
         processed_interp2 = parameter_values.process_symbol(interp2)
         self.assertEqual(processed_interp2.evaluate(), 14.82)  # 6.02
 
-        # data3 = np.hstack([x, 3 * x])
-        # interp3 = pybamm.Interpolant(data3[:, 0], data3[:, 1], a)
-        # processed_interp3 = parameter_values.process_symbol(interp3)
-        # self.assertEqual(processed_interp3.evaluate(), 9.03)
+        y3 = (3 * x).sum(axis=1)
+
+        Y3 = y3.reshape(*[len(el) for el in x_])
+
+        data3 = x_, Y3
+
+        interp3 = pybamm.Interpolant(data3[0], data3[1], children=(a, b))
+        processed_interp3 = parameter_values.process_symbol(interp3)
+        self.assertEqual(processed_interp3.evaluate(), 22.23)  # 9.03
 
     def test_interpolant_against_function(self):
         parameter_values = pybamm.ParameterValues({})
