@@ -660,6 +660,8 @@ class ParameterValues:
                     # to create an Interpolant
                     name, data = function_name
 
+                    print("DATA: {0}".format(data))
+
                     if len(data[0]) == 1:
                         input_data = data[0][0], data[1]
 
