@@ -535,27 +535,27 @@ class TestParameterValues(unittest.TestCase):
         processed_interp2 = parameter_values.process_symbol(interp2)
         self.assertEqual(processed_interp2.evaluate(), 14.82)  # 6.02
 
-        parameter_values = pybamm.ParameterValues(
-            {"a": 3.01, "b": 4.4, "Times two": ("times two", data)}
-        )
-
-        a = pybamm.Parameter("a")
-        b = pybamm.Parameter("b")
-        func = pybamm.FunctionParameter("Times two", {"a": a, "b": b})
-
         y3 = (3 * x).sum(axis=1)
 
         Y3 = y3.reshape(*[len(el) for el in x_])
 
         data3 = x_, Y3
 
+        parameter_values = pybamm.ParameterValues(
+            {"a": 3.01, "b": 4.4, "Times two": ("times two", data3)}
+        )
+
+        a = pybamm.Parameter("a")
+        b = pybamm.Parameter("b")
+        func = pybamm.FunctionParameter("Times two", {"a": a, "b": b})
+
         processed_func = parameter_values.process_symbol(func)
         self.assertIsInstance(processed_func, pybamm.Interpolant)
-        self.assertEqual(processed_func.evaluate().flatten()[0], 22.23)
+        self.assertEqual(processed_func.evaluate(), 22.23)
 
         interp3 = pybamm.Interpolant(data3[0], data3[1], children=(a, b))
         processed_interp3 = parameter_values.process_symbol(interp3)
-        self.assertEqual(processed_interp3.evaluate().flatten()[0], 22.23)  # 9.03
+        self.assertEqual(processed_interp3.evaluate(), 22.23)  # 9.03
 
     def test_interpolant_against_function(self):
         parameter_values = pybamm.ParameterValues({})
