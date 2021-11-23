@@ -322,8 +322,8 @@ class ParameterValues:
                         filename, comment="#", skip_blank_lines=True, header=None
                     ).to_numpy()
                     # Save name and data
-                    self._dict_items[name] = (function_name, ([data[:, 0].tolist()], data[:, 1].tolist()))
-                    values[name] = (function_name, ([data[:, 0].tolist()], data[:, 1].tolist()))
+                    self._dict_items[name] = (function_name, ([data[:, 0]], data[:, 1]))
+                    values[name] = (function_name, ([data[:, 0]], data[:, 1]))
 
                 # Machine learning data from Random Forest Regressor
                 elif value.startswith("[2D data]"):
