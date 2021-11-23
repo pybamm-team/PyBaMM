@@ -514,11 +514,12 @@ class TestParameterValues(unittest.TestCase):
         data = x_, Y
 
         parameter_values = pybamm.ParameterValues(
-            {"a": np.array([3.01, 4.4]), "Times two": ("times two", data)}
+            {"a": 3.01, "b": 4.4, "Times two": ("times two", data)}
         )
 
         a = pybamm.Parameter("a")
-        func = pybamm.FunctionParameter("Times two", {"a": a})
+        b = pybamm.Parameter("b")
+        func = pybamm.FunctionParameter("Times two", {"a": a, "b": b})
 
         processed_func = parameter_values.process_symbol(func)
         self.assertIsInstance(processed_func, pybamm.Interpolant)
