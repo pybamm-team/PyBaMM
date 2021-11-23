@@ -507,7 +507,7 @@ class TestParameterValues(unittest.TestCase):
 
         x = np.column_stack([el.reshape(-1, 1) for el in X])
 
-        y = 2 * x
+        y = (2 * x).sum(axis=1)
 
         Y = y.reshape(*[len(el) for el in x_])
 
