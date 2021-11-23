@@ -43,6 +43,9 @@ class Interpolant(pybamm.Function):
         entries_string=None,
     ):
 
+        # set default dimension value
+        self.dimension = 1
+
         if isinstance(x, (tuple, list)) and len(x) == 2:
             interpolator = interpolator or "linear"
             if interpolator != "linear":
