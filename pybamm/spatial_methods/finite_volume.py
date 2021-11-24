@@ -169,9 +169,7 @@ class FiniteVolume(pybamm.SpatialMethod):
         divergence_matrix = self.divergence_matrix(symbol.domains)
 
         # check for particle domain
-        if submesh.coord_sys == "cartesian":
-            out = divergence_matrix @ discretised_symbol
-        elif submesh.coord_sys == "spherical polar":
+        if submesh.coord_sys == "spherical polar":
             second_dim_repeats = self._get_auxiliary_domain_repeats(symbol.domains)
 
             # create np.array of repeated submesh.edges
@@ -188,11 +186,7 @@ class FiniteVolume(pybamm.SpatialMethod):
 
             out = divergence_matrix @ (r_edges * discretised_symbol)
         else:
-            raise pybamm.GeometryError(
-                "coordinate system must be one of {} but is {}".format(
-                    pybamm.KNOWN_COORD_SYS, submesh.coord_sys
-                )
-            )
+            out = divergence_matrix @ discretised_symbol
 
         return out
 
@@ -213,10 +207,7 @@ class FiniteVolume(pybamm.SpatialMethod):
         """
         # Create appropriate submesh by combining submeshes in domain
         submesh = self.mesh.combine_submeshes(*domains["primary"])
-
-        if submesh.coord_sys == "cartesian":
-            d_edges = submesh.d_edges
-        elif submesh.coord_sys == "spherical polar":
+        if submesh.coord_sys == "spherical polar":
             r_edges_left = submesh.edges[:-1]
             r_edges_right = submesh.edges[1:]
             d_edges = (r_edges_right ** 3 - r_edges_left ** 3) / 3
@@ -225,11 +216,7 @@ class FiniteVolume(pybamm.SpatialMethod):
             r_edges_right = submesh.edges[1:]
             d_edges = (r_edges_right ** 2 - r_edges_left ** 2) / 2
         else:
-            raise pybamm.GeometryError(
-                "coordinate system must be one of {} but is {}".format(
-                    pybamm.KNOWN_COORD_SYS, submesh.coord_sys
-                )
-            )
+            d_edges = submesh.d_edges
 
         e = 1 / d_edges
 
@@ -300,10 +287,7 @@ class FiniteVolume(pybamm.SpatialMethod):
 
         domain = child.domains[integration_dimension]
         submesh = self.mesh.combine_submeshes(*domain)
-
-        if submesh.coord_sys == "cartesian":
-            d_edges = submesh.d_edges
-        elif submesh.coord_sys == "spherical polar":
+        if submesh.coord_sys == "spherical polar":
             r_edges_left = submesh.edges[:-1]
             r_edges_right = submesh.edges[1:]
             d_edges = 4 * np.pi * (r_edges_right ** 3 - r_edges_left ** 3) / 3
@@ -312,11 +296,8 @@ class FiniteVolume(pybamm.SpatialMethod):
             r_edges_right = submesh.edges[1:]
             d_edges = 2 * np.pi * (r_edges_right ** 2 - r_edges_left ** 2) / 2
         else:
-            raise pybamm.GeometryError(
-                "coordinate system must be one of {} but is {}".format(
-                    pybamm.KNOWN_COORD_SYS, submesh.coord_sys
-                )
-            )
+            d_edges = submesh.d_edges
+
         if integration_dimension == "primary":
             # Create appropriate submesh by combining submeshes in domain
             submesh = self.mesh.combine_submeshes(*domains["primary"])

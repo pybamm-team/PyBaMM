@@ -67,57 +67,57 @@ def battery_geometry(
             }
         )
     # Add current collector domains
-    if form_factor == "pouch":
-        if current_collector_dimension == 0:
-            geometry["current collector"] = {var.z: {"position": 1}}
-        elif current_collector_dimension == 1:
-            geometry["current collector"] = {
-                var.z: {"min": 0, "max": 1},
-                "tabs": {
-                    "negative": {"z_centre": geo.centre_z_tab_n},
-                    "positive": {"z_centre": geo.centre_z_tab_p},
+    #    if form_factor == "pouch":
+    if current_collector_dimension == 0:
+        geometry["current collector"] = {var.z: {"position": 1}}
+    elif current_collector_dimension == 1:
+        geometry["current collector"] = {
+            var.z: {"min": 0, "max": 1},
+            "tabs": {
+                "negative": {"z_centre": geo.centre_z_tab_n},
+                "positive": {"z_centre": geo.centre_z_tab_p},
+            },
+        }
+    elif current_collector_dimension == 2:
+        geometry["current collector"] = {
+            var.y: {"min": 0, "max": geo.l_y},
+            var.z: {"min": 0, "max": geo.l_z},
+            "tabs": {
+                "negative": {
+                    "y_centre": geo.centre_y_tab_n,
+                    "z_centre": geo.centre_z_tab_n,
+                    "width": geo.l_tab_n,
                 },
-            }
-        elif current_collector_dimension == 2:
-            geometry["current collector"] = {
-                var.y: {"min": 0, "max": geo.l_y},
-                var.z: {"min": 0, "max": geo.l_z},
-                "tabs": {
-                    "negative": {
-                        "y_centre": geo.centre_y_tab_n,
-                        "z_centre": geo.centre_z_tab_n,
-                        "width": geo.l_tab_n,
-                    },
-                    "positive": {
-                        "y_centre": geo.centre_y_tab_p,
-                        "z_centre": geo.centre_z_tab_p,
-                        "width": geo.l_tab_p,
-                    },
+                "positive": {
+                    "y_centre": geo.centre_y_tab_p,
+                    "z_centre": geo.centre_z_tab_p,
+                    "width": geo.l_tab_p,
                 },
-            }
-        else:
-            raise pybamm.GeometryError(
-                "Invalid current collector dimension '{}' (should be 0, 1 or 2)".format(
-                    current_collector_dimension
-                )
-            )
-    elif form_factor == "cylindrical":
-        if current_collector_dimension == 0:
-            geometry["current collector"] = {var.r: {"position": 1}}
-        elif current_collector_dimension == 1:
-            geometry["current collector"] = {
-                var.r: {"min": geo.r_inner, "max": 1},
-            }
-        else:
-            raise pybamm.GeometryError(
-                "Invalid current collector dimension '{}' (should be 0 or 1 for "
-                "a 'cylindrical' battery geometry)".format(current_collector_dimension)
-            )
+            },
+        }
     else:
         raise pybamm.GeometryError(
-            "Invalid form factor '{}' (should be 'pouch' or 'cylindrical'".format(
-                form_factor
+            "Invalid current collector dimension '{}' (should be 0, 1 or 2)".format(
+                current_collector_dimension
             )
         )
+    # elif form_factor == "cylindrical":
+    #    if current_collector_dimension == 0:
+    #        geometry["current collector"] = {var.r: {"position": 1}}
+    #    elif current_collector_dimension == 1:
+    #        geometry["current collector"] = {
+    #            var.r: {"min": geo.r_inner, "max": 1},
+    #        }
+    #    else:
+    #        raise pybamm.GeometryError(
+    #            "Invalid current collector dimension '{}' (should be 0 or 1 for "
+    #            "a 'cylindrical' battery geometry)".format(current_collector_dimension)
+    #        )
+    # else:
+    #    raise pybamm.GeometryError(
+    #        "Invalid form factor '{}' (should be 'pouch' or 'cylindrical'".format(
+    #            form_factor
+    #        )
+    #    )
 
     return pybamm.Geometry(geometry)
