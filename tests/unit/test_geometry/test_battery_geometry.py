@@ -44,6 +44,9 @@ class TestBatteryGeometry(unittest.TestCase):
         geometry = pybamm.battery_geometry()
         self.assertNotIn("negative particle size", geometry)
 
+        geometry = pybamm.battery_geometry(form_factor="cylindrical")
+        self.assertEqual(geometry["current collector"][var.r]["position"], 1)
+
         geometry = pybamm.battery_geometry(
             form_factor="cylindrical", current_collector_dimension=1
         )
