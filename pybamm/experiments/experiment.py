@@ -3,6 +3,7 @@
 #
 
 import numpy as np
+import warnings
 
 examples = """
 
@@ -75,6 +76,22 @@ class Experiment:
         if cccv_handling not in ["two-step", "ode"]:
             raise ValueError("cccv_handling should be either 'two-step' or 'ode'")
         self.cccv_handling = cccv_handling
+        # Deprecations
+        if parameters is None:
+            warnings.simplefilter("always", DeprecationWarning)
+            warnings.warn(
+                "'parameters' as an input to the Experiment class will soon be "
+                "deprecated. Please open an issue if you are using this feature.",
+                DeprecationWarning,
+            )
+        if use_simulation_setup_type == "old":
+            warnings.simplefilter("always", DeprecationWarning)
+            warnings.warn(
+                "'old' simulation setup type for the Experiment class will soon be "
+                "deprecated. Use 'new' instead. Please open an issue if this gives an "
+                "error or unexpected results.",
+                DeprecationWarning,
+            )
 
         self.period = self.convert_time_to_seconds(period.split())
         operating_conditions_cycles = []
