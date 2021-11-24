@@ -59,6 +59,16 @@ model.submodels[
 model.submodels[
     "electrolyte conductivity"
 ] = pybamm.electrolyte_conductivity.LeadingOrder(model.param)
+model.submodels[
+    "negative surface potential difference"
+] = pybamm.electrolyte_conductivity.surface_potential_form.Explicit(
+    model.param, "Negative"
+)
+model.submodels[
+    "positive surface potential difference"
+] = pybamm.electrolyte_conductivity.surface_potential_form.Explicit(
+    model.param, "Positive"
+)
 model.submodels["sei"] = pybamm.sei.NoSEI(model.param)
 model.submodels["lithium plating"] = pybamm.lithium_plating.NoPlating(model.param)
 

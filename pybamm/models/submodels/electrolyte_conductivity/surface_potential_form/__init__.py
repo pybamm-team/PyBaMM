@@ -12,3 +12,6 @@ from .leading_surface_form_conductivity import (
     LeadingOrderDifferential,
     LeadingOrderAlgebraic,
 )
+
+# Explicit model
+from .explicit_surface_form_conductivity import Explicit

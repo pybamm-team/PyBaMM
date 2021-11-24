@@ -2,7 +2,6 @@
 # Standard parameters for lithium-ion battery models
 #
 import pybamm
-import numpy as np
 from .base_parameters import BaseParameters
 
 
@@ -1077,9 +1076,7 @@ class LithiumIonParameters(BaseParameters):
             / (self.n_electrodes_parallel * self.geo.A_cc)
         )
         self.current_with_time = (
-            self.dimensional_current_with_time
-            / self.I_typ
-            * pybamm.Function(np.sign, self.I_typ)
+            self.dimensional_current_with_time / self.I_typ * pybamm.sign(self.I_typ)
         )
 
     @property

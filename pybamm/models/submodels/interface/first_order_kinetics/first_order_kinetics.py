@@ -41,6 +41,11 @@ class FirstOrderKinetics(BaseInterface):
         phi_e = variables[self.domain + " electrolyte potential"]
         delta_phi = phi_s - phi_e
         variables.update(
+            self._get_standard_average_surface_potential_difference_variables(
+                pybamm.x_average(delta_phi)
+            )
+        )
+        variables.update(
             self._get_standard_surface_potential_difference_variables(delta_phi)
         )
 
@@ -49,7 +54,6 @@ class FirstOrderKinetics(BaseInterface):
             + self.domain.lower()
             + " electrode surface potential difference"
         ]
-        delta_phi = variables[self.domain + " electrode surface potential difference"]
         delta_phi_1 = (delta_phi - delta_phi_0) / self.param.C_e
 
         j_0 = variables[

@@ -87,15 +87,9 @@ class BatteryModelOptions(pybamm.FuzzyDict):
 
                 - "none": :class:`pybamm.sei.NoSEI` (no SEI growth)
                 - "constant": :class:`pybamm.sei.Constant` (constant SEI thickness)
-                - "reaction limited": :class:`pybamm.sei.ReactionLimited`
-                - "solvent-diffusion limited":\
-                    :class:`pybamm.sei.SolventDiffusionLimited`
-                - "electron-migration limited": \
-                    :class:`pybamm.sei.ElectronMigrationLimited`
-                - "interstitial-diffusion limited": \
-                    :class:`pybamm.sei.InterstitialDiffusionLimited`
-                - "ec reaction limited": \
-                    :class:`pybamm.sei.EcReactionLimited`
+                - "reaction limited", "solvent-diffusion limited",\
+                    "electron-migration limited", "interstitial-diffusion limited", \
+                    or "ec reaction limited": :class:`pybamm.sei.SEIGrowth`
             * "SEI film resistance" : str
                 Set the submodel for additional term in the overpotential due to SEI.
                 The default value is "none" if the "SEI" option is "none", and
@@ -356,6 +350,13 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                 raise pybamm.OptionError(
                     "cannot have transverse convection in 0D model"
                 )
+
+        if options["thermal"] == "x-full" and options["dimensionality"] != 0:
+            n = options["dimensionality"]
+            raise pybamm.OptionError(
+                f"X-full thermal submodels do not yet support {n}D current collectors"
+            )
+
         if isinstance(options["stress-induced diffusion"], str):
             if (
                 options["stress-induced diffusion"] == "true"
@@ -526,6 +527,17 @@ class BaseBatteryModel(pybamm.BaseModel):
                 raise pybamm.OptionError(
                     options["thermal"] + " model must have pouch geometry."
                 )
+        if isinstance(self, pybamm.lithium_ion.SPMe):
+            if options["electrolyte conductivity"] not in [
+                "default",
+                "composite",
+                "integrated",
+            ]:
+                raise pybamm.OptionError(
+                    "electrolyte conductivity '{}' not suitable for SPMe".format(
+                        options["electrolyte conductivity"]
+                    )
+                )
         if isinstance(self, pybamm.lead_acid.BaseModel):
             if options["thermal"] != "isothermal" and options["dimensionality"] != 0:
                 raise pybamm.OptionError(
@@ -683,7 +695,7 @@ class BaseBatteryModel(pybamm.BaseModel):
                                 )
                             )
         # Convert variables back into FuzzyDict
-        self._variables = pybamm.FuzzyDict(self._variables)
+        self.variables = pybamm.FuzzyDict(self._variables)
 
     def build_model_equations(self):
         # Set model equations
@@ -748,17 +760,6 @@ class BaseBatteryModel(pybamm.BaseModel):
         pybamm.logger.debug("Setting degradation variables ({})".format(self.name))
         self.set_degradation_variables()
         self.set_summary_variables()
-
-        # Massive hack for consistent delta_phi = phi_s - phi_e with SPMe
-        # This needs to be corrected
-        if isinstance(self, pybamm.lithium_ion.SPMe) and not self.half_cell:
-            for domain in ["Negative", "Positive"]:
-                phi_s = self.variables[domain + " electrode potential"]
-                phi_e = self.variables[domain + " electrolyte potential"]
-                delta_phi = phi_s - phi_e
-                s = self.submodels[domain.lower() + " interface"]
-                var = s._get_standard_surface_potential_difference_variables(delta_phi)
-                self.variables.update(var)
 
         self._built = True
         pybamm.logger.info("Finish building {}".format(self.name))
@@ -858,20 +859,9 @@ class BaseBatteryModel(pybamm.BaseModel):
                 thermal_submodel = pybamm.thermal.pouch_cell.CurrentCollector2D(
                     self.param
                 )
-
         elif self.options["thermal"] == "x-full":
             if self.options["dimensionality"] == 0:
                 thermal_submodel = pybamm.thermal.OneDimensionalX(self.param)
-            elif self.options["dimensionality"] == 1:
-                raise NotImplementedError(
-                    """X-full thermal submodels do not
-                yet support 1D current collectors"""
-                )
-            elif self.options["dimensionality"] == 2:
-                raise NotImplementedError(
-                    """X-full thermal submodels do
-                    not yet support 2D current collectors"""
-                )
 
         self.submodels["thermal"] = thermal_submodel
 

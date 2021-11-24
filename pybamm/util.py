@@ -281,7 +281,6 @@ def load_function(filename):
     # Strip absolute path to pybamm/input/example.py
     if "pybamm" in filename:
         root_path = filename[filename.rfind("pybamm") :]
-    # Commenting not removing these lines in case we get problems later
     elif os.getcwd() in filename:
         root_path = filename.replace(os.getcwd(), "")
         root_path = root_path[1:]
@@ -344,8 +343,10 @@ def get_parameters_filepath(path):
 
 
 def have_jax():
-    """Check if jax is installed"""
-    return importlib.util.find_spec("jax") is not None
+    """Check if jax and jaxlib are installed"""
+    return (importlib.util.find_spec("jax") is not None) and (
+        importlib.util.find_spec("jaxlib") is not None
+    )
 
 
 def install_jax():

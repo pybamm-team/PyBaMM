@@ -93,17 +93,6 @@ class SPMe(SPM):
 
         surf_form = pybamm.electrolyte_conductivity.surface_potential_form
 
-        if self.options["electrolyte conductivity"] not in [
-            "default",
-            "composite",
-            "integrated",
-        ]:
-            raise pybamm.OptionError(
-                "electrolyte conductivity '{}' not suitable for SPMe".format(
-                    self.options["electrolyte conductivity"]
-                )
-            )
-
         if self.options["surface form"] == "false":
             if self.options["electrolyte conductivity"] in ["default", "composite"]:
                 self.submodels[
@@ -117,16 +106,16 @@ class SPMe(SPM):
                 ] = pybamm.electrolyte_conductivity.Integrated(
                     self.param, options=self.options
                 )
+            surf_model = surf_form.Explicit
         elif self.options["surface form"] == "differential":
-            for domain in ["Negative", "Separator", "Positive"]:
-                self.submodels[
-                    domain.lower() + " electrolyte conductivity"
-                ] = surf_form.CompositeDifferential(self.param, domain)
+            surf_model = surf_form.CompositeDifferential
         elif self.options["surface form"] == "algebraic":
-            for domain in ["Negative", "Separator", "Positive"]:
-                self.submodels[
-                    domain.lower() + " electrolyte conductivity"
-                ] = surf_form.CompositeAlgebraic(self.param, domain)
+            surf_model = surf_form.CompositeAlgebraic
+
+        for domain in ["Negative", "Positive"]:
+            self.submodels[
+                domain.lower() + " surface potential difference"
+            ] = surf_model(self.param, domain)
 
         self.submodels["electrolyte diffusion"] = pybamm.electrolyte_diffusion.Full(
             self.param, self.options

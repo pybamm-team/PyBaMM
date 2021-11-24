@@ -29,15 +29,14 @@ def is_notebook():
 
 def constant_current_constant_voltage_constant_power(variables):
     I = variables["Current [A]"]
-    V = variables["Terminal voltage [V]"]
+    V = variables["Battery voltage [V]"]
     s_I = pybamm.InputParameter("Current switch")
     s_V = pybamm.InputParameter("Voltage switch")
     s_P = pybamm.InputParameter("Power switch")
-    n_cells = pybamm.Parameter("Number of cells connected in series to make a battery")
     return (
         s_I * (I - pybamm.InputParameter("Current input [A]"))
-        + s_V * (V - pybamm.InputParameter("Voltage input [V]") / n_cells)
-        + s_P * (V * I - pybamm.InputParameter("Power input [W]") / n_cells)
+        + s_V * (V - pybamm.InputParameter("Voltage input [V]"))
+        + s_P * (V * I - pybamm.InputParameter("Power input [W]"))
     )
 
 
@@ -346,9 +345,8 @@ class Simulation:
                 ),
                 pybamm.Event(
                     "Voltage cut-off [V] [experiment]",
-                    new_model.variables["Terminal voltage [V]"]
-                    - pybamm.InputParameter("Voltage cut-off [V]")
-                    / model.param.n_cells,
+                    new_model.variables["Battery voltage [V]"]
+                    - pybamm.InputParameter("Voltage cut-off [V]"),
                 ),
             ]
         )
@@ -407,7 +405,11 @@ class Simulation:
                         model.variables[name]: variable
                         for name, variable in external_circuit_variables.items()
                     }
-                    replacer = pybamm.SymbolReplacer(symbol_replacement_map)
+                    # Don't replace initial conditions, as these should not contain
+                    # Variable objects
+                    replacer = pybamm.SymbolReplacer(
+                        symbol_replacement_map, process_initial_conditions=False
+                    )
                     new_model = replacer.process_model(model, inplace=False)
 
                     # Update the rhs or algebraic equation and initial conditions for
@@ -439,7 +441,7 @@ class Simulation:
                                 + abs(pybamm.InputParameter("Current cut-off [A]"))
                                 - 1e4
                                 * (
-                                    new_model.variables["Terminal voltage [V]"]
+                                    new_model.variables["Battery voltage [V]"]
                                     < (
                                         pybamm.InputParameter("Voltage input [V]")
                                         - 1e-4
@@ -494,9 +496,8 @@ class Simulation:
                     new_model.events.append(
                         pybamm.Event(
                             "Voltage cut-off [V] [experiment]",
-                            new_model.variables["Terminal voltage [V]"]
-                            - pybamm.InputParameter("Voltage cut-off [V]")
-                            / model.param.n_cells,
+                            new_model.variables["Battery voltage [V]"]
+                            - pybamm.InputParameter("Voltage cut-off [V]"),
                         )
                     )
 
@@ -517,7 +518,10 @@ class Simulation:
                     )
                 elif op_inputs["Voltage switch"] == 1:
                     new_parameter_values.update(
-                        {"Voltage function [V]": op_inputs["Voltage input [V]"]},
+                        {
+                            "Voltage function [V]": op_inputs["Voltage input [V]"]
+                            / model.param.n_cells
+                        },
                         check_already_exists=False,
                     )
                 elif op_inputs["Power switch"] == 1:
@@ -529,7 +533,8 @@ class Simulation:
                     new_parameter_values.update(
                         {
                             "Current function [A]": op_inputs["Current input [A]"],
-                            "Voltage function [V]": op_inputs["Voltage input [V]"],
+                            "Voltage function [V]": op_inputs["Voltage input [V]"]
+                            / model.param.n_cells,
                         },
                         check_already_exists=False,
                     )
