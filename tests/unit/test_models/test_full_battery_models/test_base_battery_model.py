@@ -176,6 +176,22 @@ class TestBaseBatteryModel(unittest.TestCase):
             pybamm.BaseBatteryModel(
                 {"dimensionality": 1, "current collector": "bad option"}
             )
+        with self.assertRaisesRegex(pybamm.OptionError, "1D current collectors"):
+            pybamm.BaseBatteryModel(
+                {
+                    "current collector": "potential pair",
+                    "dimensionality": 1,
+                    "thermal": "x-full",
+                }
+            )
+        with self.assertRaisesRegex(pybamm.OptionError, "2D current collectors"):
+            pybamm.BaseBatteryModel(
+                {
+                    "current collector": "potential pair",
+                    "dimensionality": 2,
+                    "thermal": "x-full",
+                }
+            )
         with self.assertRaisesRegex(pybamm.OptionError, "surface form"):
             pybamm.BaseBatteryModel({"surface form": "bad surface form"})
         with self.assertRaisesRegex(pybamm.OptionError, "convection"):

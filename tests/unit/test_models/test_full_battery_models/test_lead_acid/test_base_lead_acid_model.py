@@ -23,7 +23,7 @@ class TestBaseLeadAcidModel(unittest.TestCase):
             pybamm.OptionError,
             "Lead-acid models can only have thermal effects if dimensionality is 0.",
         ):
-            pybamm.lead_acid.BaseModel({"dimensionality": 1, "thermal": "x-full"})
+            pybamm.lead_acid.BaseModel({"dimensionality": 1, "thermal": "lumped"})
         with self.assertRaisesRegex(pybamm.OptionError, "SEI"):
             pybamm.lead_acid.BaseModel({"SEI": "constant"})
         with self.assertRaisesRegex(pybamm.OptionError, "lithium plating"):
