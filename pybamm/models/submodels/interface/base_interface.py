@@ -611,7 +611,7 @@ class BaseInterface(pybamm.BaseSubModel):
 
         # X-average, and broadcast if necessary
         eta_r_av = pybamm.x_average(eta_r)
-        elif eta_r.domain == ["current collector"]:
+        if eta_r.domain == ["current collector"]:
             eta_r = pybamm.PrimaryBroadcast(eta_r, self.domain_for_broadcast)
 
         domain_reaction = (
