@@ -551,7 +551,7 @@ class TestParameterValues(unittest.TestCase):
 
         processed_func = parameter_values.process_symbol(func)
         self.assertIsInstance(processed_func, pybamm.Interpolant)
-        self.assertEqual(processed_func.evaluate().flatten()[0], 22.23)
+        # self.assertEqual(processed_func.evaluate().flatten()[0], 22.23)
         np.testing.assert_almost_equal(processed_func.evaluate().flatten()[0],
                                        22.23, decimal=4)
 
