@@ -67,6 +67,32 @@ class FiniteVolume(pybamm.SpatialMethod):
             entries, domain=symbol.domain, auxiliary_domains=symbol.auxiliary_domains
         )
 
+    def preprocess_external_variables(self, var):
+        """
+        For finite volumes, we need the boundary fluxes for discretising
+        properly. Here, we extrapolate and then add them to the boundary
+        conditions.
+
+        Parameters
+        ----------
+        var : :class:`pybamm.Variable` or :class:`pybamm.Concatenation`
+            The external variable that is to be processed
+
+        Returns
+        -------
+        new_bcs: dict
+            A dictionary containing the new boundary conditions
+        """
+
+        new_bcs = {
+            var: {
+                "left": (pybamm.BoundaryGradient(var, "left"), "Neumann"),
+                "right": (pybamm.BoundaryGradient(var, "right"), "Neumann"),
+            }
+        }
+
+        return new_bcs
+
     def gradient(self, symbol, discretised_symbol, boundary_conditions):
         """Matrix-vector multiplication to implement the gradient operator.
         See :meth:`pybamm.SpatialMethod.gradient`
@@ -96,32 +122,6 @@ class FiniteVolume(pybamm.SpatialMethod):
                 out = self.add_neumann_values(symbol, out, bcs, domain)
 
         return out
-
-    def preprocess_external_variables(self, var):
-        """
-        For finite volumes, we need the boundary fluxes for discretising
-        properly. Here, we extrapolate and then add them to the boundary
-        conditions.
-
-        Parameters
-        ----------
-        var : :class:`pybamm.Variable` or :class:`pybamm.Concatenation`
-            The external variable that is to be processed
-
-        Returns
-        -------
-        new_bcs: dict
-            A dictionary containing the new boundary conditions
-        """
-
-        new_bcs = {
-            var: {
-                "left": (pybamm.BoundaryGradient(var, "left"), "Neumann"),
-                "right": (pybamm.BoundaryGradient(var, "right"), "Neumann"),
-            }
-        }
-
-        return new_bcs
 
     def gradient_matrix(self, domain, auxiliary_domains):
         """
@@ -169,7 +169,9 @@ class FiniteVolume(pybamm.SpatialMethod):
         divergence_matrix = self.divergence_matrix(symbol.domains)
 
         # check for particle domain
-        if submesh.coord_sys == "spherical polar":
+        if submesh.coord_sys == "cartesian":
+            out = divergence_matrix @ discretised_symbol
+        elif submesh.coord_sys == "spherical polar":
             second_dim_repeats = self._get_auxiliary_domain_repeats(symbol.domains)
 
             # create np.array of repeated submesh.edges
@@ -186,7 +188,11 @@ class FiniteVolume(pybamm.SpatialMethod):
 
             out = divergence_matrix @ (r_edges * discretised_symbol)
         else:
-            out = divergence_matrix @ discretised_symbol
+            raise pybamm.GeometryError(
+                "coordinate system must be one of {} but is {}".format(
+                    pybamm.KNOWN_COORD_SYS, submesh.coord_sys
+                )
+            )
 
         return out
 
@@ -207,7 +213,10 @@ class FiniteVolume(pybamm.SpatialMethod):
         """
         # Create appropriate submesh by combining submeshes in domain
         submesh = self.mesh.combine_submeshes(*domains["primary"])
-        if submesh.coord_sys == "spherical polar":
+
+        if submesh.coord_sys == "cartesian":
+            d_edges = submesh.d_edges
+        elif submesh.coord_sys == "spherical polar":
             r_edges_left = submesh.edges[:-1]
             r_edges_right = submesh.edges[1:]
             d_edges = (r_edges_right ** 3 - r_edges_left ** 3) / 3
@@ -216,7 +225,11 @@ class FiniteVolume(pybamm.SpatialMethod):
             r_edges_right = submesh.edges[1:]
             d_edges = (r_edges_right ** 2 - r_edges_left ** 2) / 2
         else:
-            d_edges = submesh.d_edges
+            raise pybamm.GeometryError(
+                "coordinate system must be one of {} but is {}".format(
+                    pybamm.KNOWN_COORD_SYS, submesh.coord_sys
+                )
+            )
 
         e = 1 / d_edges
 
@@ -287,7 +300,10 @@ class FiniteVolume(pybamm.SpatialMethod):
 
         domain = child.domains[integration_dimension]
         submesh = self.mesh.combine_submeshes(*domain)
-        if submesh.coord_sys == "spherical polar":
+
+        if submesh.coord_sys == "cartesian":
+            d_edges = submesh.d_edges
+        elif submesh.coord_sys == "spherical polar":
             r_edges_left = submesh.edges[:-1]
             r_edges_right = submesh.edges[1:]
             d_edges = 4 * np.pi * (r_edges_right ** 3 - r_edges_left ** 3) / 3
@@ -296,8 +312,11 @@ class FiniteVolume(pybamm.SpatialMethod):
             r_edges_right = submesh.edges[1:]
             d_edges = 2 * np.pi * (r_edges_right ** 2 - r_edges_left ** 2) / 2
         else:
-            d_edges = submesh.d_edges
-
+            raise pybamm.GeometryError(
+                "coordinate system must be one of {} but is {}".format(
+                    pybamm.KNOWN_COORD_SYS, submesh.coord_sys
+                )
+            )
         if integration_dimension == "primary":
             # Create appropriate submesh by combining submeshes in domain
             submesh = self.mesh.combine_submeshes(*domains["primary"])
