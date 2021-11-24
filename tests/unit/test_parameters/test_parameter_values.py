@@ -75,6 +75,11 @@ class TestParameterValues(unittest.TestCase):
         self.assertEqual(repr(param), "{'a': 1}")
         self.assertEqual(param._ipython_key_completions_(), ["a"])
 
+    def test_eq(self):
+        self.assertEqual(
+            pybamm.ParameterValues({"a": 1}), pybamm.ParameterValues({"a": 1})
+        )
+
     def test_update_from_chemistry(self):
         # incomplete chemistry
         with self.assertRaisesRegex(KeyError, "must provide 'cell' parameters"):

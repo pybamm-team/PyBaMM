@@ -120,6 +120,9 @@ class ParameterValues:
     def __repr__(self):
         return pformat(self._dict_items, width=1)
 
+    def __eq__(self, other):
+        return self._dict_items == other._dict_items
+
     def keys(self):
         """Get the keys of the dictionary"""
         return self._dict_items.keys()
