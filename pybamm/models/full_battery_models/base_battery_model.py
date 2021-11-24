@@ -349,12 +349,6 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                     "mechanics model"
                 )
 
-        if options["thermal"] == "x-full" and options["dimensionality"] != 0:
-            n = options["dimensionality"]
-            raise pybamm.OptionError(
-                f"X-full thermal submodels do not yet support {n}D current collectors"
-            )
-
         for option, value in options.items():
             if option == "external submodels" or option == "working electrode":
                 pass

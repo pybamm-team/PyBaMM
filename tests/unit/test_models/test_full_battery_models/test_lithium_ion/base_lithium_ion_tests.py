@@ -84,6 +84,10 @@ class BaseUnitTestLithiumIon:
         options = {"interface utilisation": "current-driven"}
         self.check_well_posedness(options)
 
+    def test_well_posed_mixed_utilisation(self):
+        options = {"interface utilisation": ("current-driven", "constant")}
+        self.check_well_posedness(options)
+
     def test_well_posed_loss_active_material_stress_negative(self):
         options = {"loss of active material": ("stress-driven", "none")}
         self.check_well_posedness(options)
