@@ -523,7 +523,7 @@ class TestParameterValues(unittest.TestCase):
 
         processed_func = parameter_values.process_symbol(func)
         self.assertIsInstance(processed_func, pybamm.Interpolant)
-        self.assertEqual(processed_func.evaluate(), 14.82)  # 14.82
+        self.assertEqual(processed_func.evaluate(), 14.82)
 
         # process differentiated function parameter
         # diff_func = func.diff(a)
@@ -533,7 +533,7 @@ class TestParameterValues(unittest.TestCase):
         # interpolant defined up front
         interp2 = pybamm.Interpolant(data[0], data[1], children=(a, b))
         processed_interp2 = parameter_values.process_symbol(interp2)
-        self.assertEqual(processed_interp2.evaluate(), 14.82)  # 6.02
+        self.assertEqual(processed_interp2.evaluate(), 14.82)
 
         y3 = (3 * x).sum(axis=1)
 
@@ -542,12 +542,12 @@ class TestParameterValues(unittest.TestCase):
         data3 = x_, Y3
 
         parameter_values = pybamm.ParameterValues(
-            {"a": 3.01, "b": 4.4, "Times two": ("times two", data3)}
+            {"a": 3.01, "b": 4.4, "Times two": ("times three", data3)}
         )
 
         a = pybamm.Parameter("a")
         b = pybamm.Parameter("b")
-        func = pybamm.FunctionParameter("Times two", {"a": a, "b": b})
+        func = pybamm.FunctionParameter("Times three", {"a": a, "b": b})
 
         processed_func = parameter_values.process_symbol(func)
         self.assertIsInstance(processed_func, pybamm.Interpolant)
