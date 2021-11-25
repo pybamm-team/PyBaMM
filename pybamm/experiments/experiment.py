@@ -77,7 +77,7 @@ class Experiment:
             raise ValueError("cccv_handling should be either 'two-step' or 'ode'")
         self.cccv_handling = cccv_handling
         # Deprecations
-        if parameters is None:
+        if parameters is not None:
             warnings.simplefilter("always", DeprecationWarning)
             warnings.warn(
                 "'parameters' as an input to the Experiment class will soon be "
