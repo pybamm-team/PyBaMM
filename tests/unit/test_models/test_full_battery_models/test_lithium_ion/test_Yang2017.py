@@ -13,8 +13,7 @@ class TestYang2017(unittest.TestCase):
 
     def test_default_parameter_values(self):
         model = pybamm.lithium_ion.Yang2017()
-        chemistry = pybamm.parameter_sets.Chen2020_plating
-        parameter_values = pybamm.ParameterValues(chemistry=chemistry)
+        parameter_values = pybamm.ParameterValues("Chen2020_plating")
         for key, value in parameter_values.items():
             if not isinstance(value, tuple):
                 np.testing.assert_array_equal(

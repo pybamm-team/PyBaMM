@@ -27,8 +27,7 @@ class TestCompareOutputs(unittest.TestCase):
                 param.process_model(model)
 
             # set mesh
-            var = pybamm.standard_spatial_vars
-            var_pts = {var.x_n: 5, var.x_s: 5, var.x_p: 5, var.r_n: 5, var.r_p: 5}
+            var_pts = {"x_n": 5, "x_s": 5, "x_p": 5, "r_n": 5, "r_p": 5}
 
             # discretise models
             discs = {}
@@ -84,8 +83,7 @@ class TestCompareOutputs(unittest.TestCase):
                 param.process_model(model)
 
             # set mesh
-            var = pybamm.standard_spatial_vars
-            var_pts = {var.x_n: 5, var.x_s: 5, var.x_p: 5, var.r_n: 5, var.r_p: 5}
+            var_pts = {"x_n": 5, "x_s": 5, "x_p": 5, "r_n": 5, "r_p": 5}
 
             # discretise models
             discs = {}
@@ -127,16 +125,7 @@ class TestCompareOutputs(unittest.TestCase):
         )
 
         # set same mesh for both models
-        var = pybamm.standard_spatial_vars
-        var_pts = {
-            var.x_n: 5,
-            var.x_s: 5,
-            var.x_p: 5,
-            var.r_n: 5,
-            var.r_p: 5,
-            var.R_n: 5,
-            var.R_p: 5,
-        }
+        var_pts = {"x_n": 5, "x_s": 5, "x_p": 5, "r_n": 5, "r_p": 5, "R_n": 5, "R_p": 5}
 
         # solve models
         solutions = []
