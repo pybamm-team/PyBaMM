@@ -376,9 +376,7 @@ class TestSimulationExperiment(unittest.TestCase):
         sim = pybamm.Simulation(
             model,
             experiment=experiment,
-            parameter_values=pybamm.ParameterValues(
-                chemistry=pybamm.parameter_sets.Xu2019
-            ),
+            parameter_values=pybamm.ParameterValues("Xu2019"),
         )
         sim.solve()
 

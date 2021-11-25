@@ -63,17 +63,13 @@ class BaseIntegrationTestLithiumIon:
 
     def test_charge(self):
         options = {"thermal": "isothermal"}
-        parameter_values = pybamm.ParameterValues(
-            chemistry=pybamm.parameter_sets.Marquis2019
-        )
+        parameter_values = pybamm.ParameterValues("Marquis2019")
         parameter_values.update({"Current function [A]": -1})
         self.run_basic_processing_test(options, parameter_values=parameter_values)
 
     def test_zero_current(self):
         options = {"thermal": "isothermal"}
-        parameter_values = pybamm.ParameterValues(
-            chemistry=pybamm.parameter_sets.Marquis2019
-        )
+        parameter_values = pybamm.ParameterValues("Marquis2019")
         parameter_values.update({"Current function [A]": 0})
         self.run_basic_processing_test(options, parameter_values=parameter_values)
 

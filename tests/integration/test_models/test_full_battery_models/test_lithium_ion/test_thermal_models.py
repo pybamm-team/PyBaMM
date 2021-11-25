@@ -35,8 +35,7 @@ class TestThermal(unittest.TestCase):
 
         for model_name, model in models.items():
             var_pts = {"x_n": 3, "x_s": 3, "x_p": 3, "r_n": 3, "r_p": 3, "y": 5, "z": 5}
-            chemistry = pybamm.parameter_sets.NCA_Kim2011
-            parameter_values = pybamm.ParameterValues(chemistry)
+            parameter_values = pybamm.ParameterValues("NCA_Kim2011")
 
             # high thermal and electrical conductivity in current collectors
             parameter_values.update(
