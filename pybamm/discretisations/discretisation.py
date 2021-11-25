@@ -7,6 +7,8 @@ from collections import defaultdict, OrderedDict
 from scipy.sparse import block_diag, csc_matrix, csr_matrix
 from scipy.sparse.linalg import inv
 
+from pybamm.expression_tree.state_vector import StateVector
+
 
 def has_bc_of_form(symbol, side, bcs, form):
 
@@ -790,6 +792,8 @@ class Discretisation(object):
             # keep calling .id
             pybamm.logger.debug("Discretise {!r}".format(eqn_key))
 
+            if eqn_key == "Electrolyte flux":
+                n = 1
             processed_eqn = self.process_symbol(eqn)
 
             new_var_eqn_dict[eqn_key] = processed_eqn
@@ -833,7 +837,7 @@ class Discretisation(object):
             return discretised_symbol
 
     def _process_symbol(self, symbol):
-        """ See :meth:`Discretisation.process_symbol()`. """
+        """See :meth:`Discretisation.process_symbol()`."""
 
         if symbol.domain != []:
             spatial_method = self.spatial_methods[symbol.domain[0]]
@@ -1019,7 +1023,11 @@ class Discretisation(object):
 
         elif isinstance(symbol, pybamm.Concatenation):
             new_children = [self.process_symbol(child) for child in symbol.children]
-            new_symbol = spatial_method.concatenation(new_children)
+            try:
+                new_symbol = spatial_method.concatenation(new_children)
+            except:
+                # self._discretised_symbols = {}
+                self._process_symbol(symbol.children[0])
             return new_symbol
 
         elif isinstance(symbol, pybamm.InputParameter):
@@ -1107,7 +1115,7 @@ class Discretisation(object):
         return self.concatenate(*sorted_equations, sparse=sparse)
 
     def check_model(self, model):
-        """ Perform some basic checks to make sure the discretised model makes sense."""
+        """Perform some basic checks to make sure the discretised model makes sense."""
         self.check_initial_conditions(model)
         self.check_variables(model)
 

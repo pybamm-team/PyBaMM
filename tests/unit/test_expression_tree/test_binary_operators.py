@@ -626,6 +626,40 @@ class TestBinaryOperators(unittest.TestCase):
         expr = (A @ var) / d
         self.assertEqual(expr.id, ((A / d) @ var).id)
 
+        # simplify additions and subtractions
+        expr = f + (var + e)
+        self.assertEqual(expr.id, ((f + e) + var).id)
+        expr = f + (e + var)
+        self.assertEqual(expr.id, ((f + e) + var).id)
+        expr = (var + e) + f
+        self.assertEqual(expr.id, (var + (e + f)).id)
+        expr = (e + var) + f
+        self.assertEqual(expr.id, ((e + f) + var).id)
+        expr = f + (var - e)
+        self.assertEqual(expr.id, ((f - e) + var).id)
+        expr = f + (e - var)
+        self.assertEqual(expr.id, ((f + e) - var).id)
+        expr = (var - e) + f
+        self.assertEqual(expr.id, (var + (f - e)).id)
+        expr = (e - var) + f
+        self.assertEqual(expr.id, ((e + f) - var).id)
+        expr = f - (var + e)
+        self.assertEqual(expr.id, ((f - e) - var).id)
+        expr = f - (e + var)
+        self.assertEqual(expr.id, ((f - e) - var).id)
+        expr = (var + e) - f
+        self.assertEqual(expr.id, (var + (e - f)).id)
+        expr = (e + var) - f
+        self.assertEqual(expr.id, ((e - f) + var).id)
+        expr = f - (var - e)
+        self.assertEqual(expr.id, ((f + e) - var).id)
+        expr = f - (e - var)
+        self.assertEqual(expr.id, ((f - e) + var).id)
+        expr = (var - e) - f
+        self.assertEqual(expr.id, (var - (e + f)).id)
+        expr = (e - var) - f
+        self.assertEqual(expr.id, ((e - f) - var).id)
+
         # simplify multiplications and divisions
         expr = f * (var * e)
         self.assertEqual(expr.id, ((f * e) * var).id)
@@ -643,6 +677,18 @@ class TestBinaryOperators(unittest.TestCase):
         self.assertEqual(expr.id, (var * (e / f)).id)
         expr = (e * var) / f
         self.assertEqual(expr.id, ((e / f) * var).id)
+        expr = e / (f * var)
+        self.assertEqual(expr.id, ((e / f) / var).id)
+        expr = e / (var * f)
+        self.assertEqual(expr.id, ((e / f) / var).id)
+        expr = (var / e) / f
+        self.assertEqual(expr.id, (var / (e * f)).id)
+        expr = (e / var) / f
+        self.assertEqual(expr.id, ((e / f) / var).id)
+        expr = e / (f / var)
+        self.assertEqual(expr.id, ((e / f) * var).id)
+        expr = e / (var / f)
+        self.assertEqual(expr.id, ((e * f) / var).id)
 
         # use power rules on multiplications and divisions
         expr = (var * e) ** 2
