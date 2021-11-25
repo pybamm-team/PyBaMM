@@ -10,30 +10,29 @@ class TestBatteryGeometry(unittest.TestCase):
         for cc_dimension in [0, 1, 2]:
             geometry = pybamm.battery_geometry(
                 options={"particle size": "distribution"},
-                current_collector_dimension=cc_dimension
+                current_collector_dimension=cc_dimension,
             )
             for domain_geoms in geometry.values():
                 all(
-                    self.assertIsInstance(spatial_var, pybamm.SpatialVariable)
+                    self.assertIsInstance(spatial_var, str)
                     for spatial_var in domain_geoms.keys()
                 )
         geometry.print_parameter_info()
 
     def test_geometry(self):
-        var = pybamm.standard_spatial_vars
         geo = pybamm.geometric_parameters
         for cc_dimension in [0, 1, 2]:
             geometry = pybamm.battery_geometry(
                 options={"particle size": "distribution"},
-                current_collector_dimension=cc_dimension
+                current_collector_dimension=cc_dimension,
             )
             self.assertIsInstance(geometry, pybamm.Geometry)
             self.assertIn("negative electrode", geometry)
             self.assertIn("negative particle", geometry)
             self.assertIn("negative particle size", geometry)
-            self.assertEqual(geometry["negative electrode"][var.x_n]["min"], 0)
+            self.assertEqual(geometry["negative electrode"]["x_n"]["min"], 0)
             self.assertEqual(
-                geometry["negative electrode"][var.x_n]["max"].id, geo.l_n.id
+                geometry["negative electrode"]["x_n"]["max"].id, geo.l_n.id
             )
             if cc_dimension == 1:
                 self.assertIn("tabs", geometry["current collector"])

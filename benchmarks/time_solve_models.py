@@ -9,22 +9,12 @@ def prepare_model(model):
     geometry = model.default_geometry
 
     # load parameter values and process model and geometry
-    chemistry = pybamm.parameter_sets.Marquis2019
-    param = pybamm.ParameterValues(chemistry=chemistry)
+    param = pybamm.ParameterValues("Marquis2019")
     param.process_model(model)
     param.process_geometry(geometry)
 
     # set mesh
-    var = pybamm.standard_spatial_vars
-    var_pts = {
-        var.x_n: 20,
-        var.x_s: 20,
-        var.x_p: 20,
-        var.r_n: 30,
-        var.r_p: 30,
-        var.y: 10,
-        var.z: 10,
-    }
+    var_pts = {"x_n": 20, "x_s": 20, "x_p": 20, "r_n": 30, "r_p": 30, "y": 10, "z": 10}
     mesh = pybamm.Mesh(geometry, model.default_submesh_types, var_pts)
 
     # discretise model

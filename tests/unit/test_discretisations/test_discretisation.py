@@ -119,7 +119,7 @@ class TestDiscretise(unittest.TestCase):
         x = pybamm.SpatialVariable("x", domain="test", coord_sys="cartesian")
         geometry = {"test": {x: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)}}}
 
-        submesh_types = {"test": pybamm.MeshGenerator(pybamm.Uniform1DSubMesh)}
+        submesh_types = {"test": pybamm.Uniform1DSubMesh}
         var_pts = {x: 10}
         mesh = pybamm.Mesh(geometry, submesh_types, var_pts)
 
@@ -178,8 +178,8 @@ class TestDiscretise(unittest.TestCase):
         }
 
         submesh_types = {
-            "test": pybamm.MeshGenerator(pybamm.Uniform1DSubMesh),
-            "test1": pybamm.MeshGenerator(pybamm.Uniform1DSubMesh),
+            "test": pybamm.Uniform1DSubMesh,
+            "test1": pybamm.Uniform1DSubMesh,
         }
         var_pts = {x: 10, y: 5}
         mesh = pybamm.Mesh(geometry, submesh_types, var_pts)
@@ -1324,9 +1324,7 @@ class TestDiscretise(unittest.TestCase):
         }
 
         # mesh
-        submesh_types = {
-            "negative particle": pybamm.MeshGenerator(pybamm.Uniform1DSubMesh)
-        }
+        submesh_types = {"negative particle": pybamm.Uniform1DSubMesh}
         var_pts = {r: 20}
         mesh = pybamm.Mesh(geometry, submesh_types, var_pts)
 

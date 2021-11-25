@@ -58,14 +58,7 @@ for l_n in thicknesses:
         )
         param.process_model(model)
         param.process_geometry(geometry)
-        s_var = pybamm.standard_spatial_vars
-        var_pts = {
-            s_var.x_n: 5,
-            s_var.x_s: 5,
-            s_var.x_p: 5,
-            s_var.r_n: 5,
-            s_var.r_p: 10,
-        }
+        var_pts = {"x_n": 5, "x_s": 5, "x_p": 5, "r_n": 5, "r_p": 10}
         # set mesh
         mesh = pybamm.Mesh(geometry, model.default_submesh_types, var_pts)
         # discretise model

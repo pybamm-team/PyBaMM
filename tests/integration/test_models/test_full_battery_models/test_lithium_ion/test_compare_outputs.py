@@ -27,8 +27,7 @@ class TestCompareOutputs(unittest.TestCase):
                 param.process_model(model)
 
             # set mesh
-            var = pybamm.standard_spatial_vars
-            var_pts = {var.x_n: 5, var.x_s: 5, var.x_p: 5, var.r_n: 5, var.r_p: 5}
+            var_pts = {"x_n": 5, "x_s": 5, "x_p": 5, "r_n": 5, "r_p": 5}
 
             # discretise models
             discs = {}
@@ -84,8 +83,7 @@ class TestCompareOutputs(unittest.TestCase):
                 param.process_model(model)
 
             # set mesh
-            var = pybamm.standard_spatial_vars
-            var_pts = {var.x_n: 5, var.x_s: 5, var.x_p: 5, var.r_n: 5, var.r_p: 5}
+            var_pts = {"x_n": 5, "x_s": 5, "x_p": 5, "r_n": 5, "r_p": 5}
 
             # discretise models
             discs = {}
@@ -119,8 +117,7 @@ class TestCompareOutputs(unittest.TestCase):
         ]
 
         # set same mesh for all models
-        var = pybamm.standard_spatial_vars
-        var_pts = {var.x_n: 5, var.x_s: 5, var.x_p: 5, var.r_n: 5, var.r_p: 5}
+        var_pts = {"x_n": 5, "x_s": 5, "x_p": 5, "r_n": 5, "r_p": 5}
 
         for model, param in zip(models, params):
             if model.name == "user":
@@ -162,9 +159,7 @@ class TestCompareOutputs(unittest.TestCase):
     def test_compare_narrow_size_distribution(self):
         # The MPM should agree with the SPM when the size distributions are narrow
         # enough.
-        models = [
-            pybamm.lithium_ion.SPM(), pybamm.lithium_ion.MPM()
-        ]
+        models = [pybamm.lithium_ion.SPM(), pybamm.lithium_ion.MPM()]
 
         param = models[0].default_parameter_values
 
@@ -180,16 +175,7 @@ class TestCompareOutputs(unittest.TestCase):
         )
 
         # set same mesh for both models
-        var = pybamm.standard_spatial_vars
-        var_pts = {
-            var.x_n: 5,
-            var.x_s: 5,
-            var.x_p: 5,
-            var.r_n: 5,
-            var.r_p: 5,
-            var.R_n: 5,
-            var.R_p: 5,
-        }
+        var_pts = {"x_n": 5, "x_s": 5, "x_p": 5, "r_n": 5, "r_p": 5, "R_n": 5, "R_p": 5}
 
         # solve models
         solutions = []
@@ -198,7 +184,7 @@ class TestCompareOutputs(unittest.TestCase):
                 model,
                 var_pts=var_pts,
                 parameter_values=param,
-                solver=pybamm.CasadiSolver(mode="fast")
+                solver=pybamm.CasadiSolver(mode="fast"),
             )
             solution = sim.solve([0, 3600])
             solutions.append(solution)

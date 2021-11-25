@@ -52,7 +52,7 @@ class TestORegan2021(unittest.TestCase):
 
     def test_functions(self):
         root = pybamm.root_dir()
-        param = pybamm.ParameterValues(chemistry=pybamm.parameter_sets.ORegan2021)
+        param = pybamm.ParameterValues("ORegan2021")
         T = pybamm.Scalar(298.15)
 
         # Positive electrode
@@ -127,8 +127,7 @@ class TestORegan2021(unittest.TestCase):
 
     def test_standard_lithium_parameters(self):
 
-        chemistry = pybamm.parameter_sets.ORegan2021
-        parameter_values = pybamm.ParameterValues(chemistry=chemistry)
+        parameter_values = pybamm.ParameterValues("ORegan2021")
 
         model = pybamm.lithium_ion.DFN()
         sim = pybamm.Simulation(model, parameter_values=parameter_values)
