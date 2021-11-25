@@ -550,7 +550,7 @@ class TestParameterValues(unittest.TestCase):
         data3 = x_, Y3
 
         parameter_values = pybamm.ParameterValues(
-            {"a": 3.01, "b": 4.4, "Times two": ("times three", data3)}
+            {"a": 3.01, "b": 4.4, "Times three": ("times three", data3)}
         )
 
         a = pybamm.Parameter("a")
