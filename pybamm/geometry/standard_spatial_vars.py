@@ -30,8 +30,8 @@ x = pybamm.SpatialVariable(
 
 y = pybamm.SpatialVariable("y", domain="current collector", coord_sys="cartesian")
 z = pybamm.SpatialVariable("z", domain="current collector", coord_sys="cartesian")
-r = pybamm.SpatialVariable(
-    "r", domain="current collector", coord_sys="cylindrical polar"
+r_macro = pybamm.SpatialVariable(
+    "r_macro", domain="current collector", coord_sys="cylindrical polar"
 )
 
 r_n = pybamm.SpatialVariable(
@@ -104,8 +104,8 @@ y_edge = pybamm.SpatialVariableEdge(
 z_edge = pybamm.SpatialVariableEdge(
     "z", domain="current collector", coord_sys="cartesian"
 )
-r_edge = pybamm.SpatialVariableEdge(
-    "r", domain="current collector", coord_sys="cylindrical polar"
+r_macro_edge = pybamm.SpatialVariableEdge(
+    "r_macro", domain="current collector", coord_sys="cylindrical polar"
 )
 
 
