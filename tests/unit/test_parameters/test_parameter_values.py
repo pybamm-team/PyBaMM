@@ -565,7 +565,7 @@ class TestParameterValues(unittest.TestCase):
 
         interp3 = pybamm.Interpolant(data3[0], data3[1], children=(a, b))
         processed_interp3 = parameter_values.process_symbol(interp3)
-        # self.assertEqual(processed_interp3.evaluate().flatten()[0], 22.23)  # 9.03
+        # self.assertEqual(processed_interp3.evaluate().flatten()[0], 22.23)
         np.testing.assert_almost_equal(processed_interp3.evaluate().flatten()[0],
                                        22.23, decimal=4)
 
