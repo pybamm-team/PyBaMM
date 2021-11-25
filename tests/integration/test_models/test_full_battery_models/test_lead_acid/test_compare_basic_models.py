@@ -12,9 +12,7 @@ class TestCompareBasicModels(unittest.TestCase):
         basic_full = pybamm.lead_acid.BasicFull()
         full = pybamm.lead_acid.Full({"convection": "uniform transverse"})
 
-        parameter_values = pybamm.ParameterValues(
-            chemistry=pybamm.parameter_sets.Sulzer2019
-        )
+        parameter_values = pybamm.ParameterValues("Sulzer2019")
         parameter_values["Current function [A]"] = 10
 
         # Solve basic Full mode
