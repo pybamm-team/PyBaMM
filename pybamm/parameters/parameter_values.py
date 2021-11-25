@@ -327,7 +327,7 @@ class ParameterValues:
                     self._dict_items[name] = (function_name, ([data[:, 0]], data[:, 1]))
                     values[name] = (function_name, ([data[:, 0]], data[:, 1]))
 
-                # Machine learning data from Random Forest Regressor
+                # parse 2D parameter data
                 elif value.startswith("[2D data]"):
                     filename = os.path.join(path, value[9:] + ".json")
                     function_name = value[9:]
@@ -337,8 +337,6 @@ class ParameterValues:
                     data = json_data['data']
                     data[0] = [np.array(el) for el in data[0]]
                     data[1] = np.array(data[1])
-                    # Save name and data
-                    # Add padding to see a difference from CSV imported data
                     self._dict_items[name] = (function_name, data)
                     values[name] = (function_name, data)
 
@@ -656,7 +654,7 @@ class ParameterValues:
 
             # Create Function or Interpolant or Scalar object
             if isinstance(function_name, tuple):
-                if len(function_name) == 2:  # ML data
+                if len(function_name) == 2:  # CSV or JSON parsed data
                     # to create an Interpolant
                     name, data = function_name
 
