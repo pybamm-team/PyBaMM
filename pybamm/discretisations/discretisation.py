@@ -903,6 +903,21 @@ class Discretisation(object):
                 out.copy_domains(symbol)
                 return out
 
+            elif isinstance(symbol, pybamm.XAverage):
+                geo = pybamm.geometric_parameters
+                if child.domain in [["negative particle"], ["negative particle size"]]:
+                    x = pybamm.standard_spatial_vars.x_n
+                elif child.domain in [
+                    ["positive particle"],
+                    ["positive particle size"],
+                ]:
+                    x = pybamm.standard_spatial_vars.x_p
+                else:
+                    x = pybamm.SpatialVariable("x", domain=symbol.domain)
+                v = pybamm.ones_like(symbol)
+                x_average = pybamm.Integral(disc_child, x) / pybamm.Integral(v, x)
+                return self.process_symbol(x_average)
+
             elif isinstance(symbol, pybamm.DefiniteIntegralVector):
                 return child_spatial_method.definite_integral_matrix(
                     child, vector_type=symbol.vector_type

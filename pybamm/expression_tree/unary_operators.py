@@ -658,6 +658,52 @@ class Integral(SpatialOperator):
         return sympy.Integral(child, sympy.Symbol("xn"))
 
 
+class XAverage(SpatialOperator):
+    """
+    X-average
+
+    Parameters
+    -----------
+    child : :class:`pybamm.Symbol`
+        The child node
+    """
+
+    def __init__(self, child):
+        name = "X-average"
+        # average of a child takes the domain from auxiliary domain of the child
+        if child.auxiliary_domains != {}:
+            domain = child.auxiliary_domains["secondary"]
+            if "tertiary" in child.auxiliary_domains:
+                auxiliary_domains = {"secondary": child.auxiliary_domains["tertiary"]}
+                if "quaternary" in child.auxiliary_domains:
+                    auxiliary_domains["tertiary"] = child.auxiliary_domains[
+                        "quaternary"
+                    ]
+            else:
+                auxiliary_domains = {}
+        # if child has no auxiliary domain, integral removes domain
+        else:
+            domain = []
+            auxiliary_domains = {}
+        super().__init__(
+            name, child, domain=domain, auxiliary_domains=auxiliary_domains
+        )
+
+    def _unary_new_copy(self, child):
+        """See :meth:`UnaryOperator._unary_new_copy()`."""
+        return x_average(child)
+
+    def _evaluate_for_shape(self):
+        """See :meth:`pybamm.Symbol.evaluate_for_shape_using_domain()`"""
+        return pybamm.evaluate_for_shape_using_domain(
+            self.domain, self.auxiliary_domains
+        )
+
+    def _evaluates_on_edges(self, dimension):
+        """See :meth:`pybamm.Symbol._evaluates_on_edges()`."""
+        return False
+
+
 class BaseIndefiniteIntegral(Integral):
     """
     Base class for indefinite integrals (forward or backward).
@@ -1310,25 +1356,7 @@ def x_average(symbol):
                 return pybamm.FullBroadcast(out, domain, auxiliary_domains)
     # Otherwise, use Integral to calculate average value
     else:
-        geo = pybamm.geometric_parameters
-        # Even if domain is "negative electrode", "separator", or
-        # "positive electrode", and we know l, we still compute it as Integral(1, x)
-        # as this will be easier to identify for simplifications later on
-        if symbol.domain == ["negative particle"] or symbol.domain == [
-            "negative particle size"
-        ]:
-            x = pybamm.standard_spatial_vars.x_n
-            l = geo.l_n
-        elif symbol.domain == ["positive particle"] or symbol.domain == [
-            "positive particle size"
-        ]:
-            x = pybamm.standard_spatial_vars.x_p
-            l = geo.l_p
-        else:
-            x = pybamm.SpatialVariable("x", domain=symbol.domain)
-            v = pybamm.ones_like(symbol)
-            l = pybamm.Integral(v, x)
-        return Integral(symbol, x) / l
+        return XAverage(symbol)
 
 
 def z_average(symbol):
