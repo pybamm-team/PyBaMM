@@ -39,6 +39,13 @@ class BaseCompositePotentialPair(BasePotentialPair):
 
         variables.update(self._get_standard_current_variables(i_cc, i_boundary_cc))
 
+        variables.update(
+            {
+                "Composite negative current collector potential": phi_s_cn,
+                "Composite current collector current density": i_boundary_cc,
+            }
+        )
+
         return variables
 
 

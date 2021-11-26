@@ -574,6 +574,7 @@ class QuickPlot(object):
                         var,
                         vmin=vmin,
                         vmax=vmax,
+                        shading='auto',
                     )
                 else:
                     self.plots[key][0][0] = ax.contourf(
@@ -726,6 +727,7 @@ class QuickPlot(object):
                         var,
                         vmin=vmin,
                         vmax=vmax,
+                        shading='auto',
                     )
                 else:
                     self.plots[key][0][0] = ax.contourf(

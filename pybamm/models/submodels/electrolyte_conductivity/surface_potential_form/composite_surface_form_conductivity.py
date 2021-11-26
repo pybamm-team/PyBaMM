@@ -29,19 +29,31 @@ class BaseModel(Composite):
     def get_fundamental_variables(self):
 
         if self.domain == "Negative":
-            delta_phi = pybamm.standard_variables.delta_phi_n_av
+            delta_phi_av = pybamm.standard_variables.delta_phi_n_av
         elif self.domain == "Separator":
             return {}
         elif self.domain == "Positive":
-            delta_phi = pybamm.standard_variables.delta_phi_p_av
+            delta_phi_av = pybamm.standard_variables.delta_phi_p_av
 
-        variables = self._get_standard_surface_potential_difference_variables(delta_phi)
+        variables = self._get_standard_average_surface_potential_difference_variables(
+            delta_phi_av
+        )
+        return variables
+
+    def get_coupled_variables(self, variables):
+        # Only update coupled variables once
+        if self.domain == "Negative":
+            variables.update(super().get_coupled_variables(variables))
+
+        phi_s = variables[self.domain + " electrode potential"]
+        phi_e = variables[self.domain + " electrolyte potential"]
+        delta_phi = phi_s - phi_e
+        variables.update(
+            self._get_standard_surface_potential_difference_variables(delta_phi)
+        )
         return variables
 
     def set_initial_conditions(self, variables):
-
-        if self.domain == "Separator":
-            return
 
         delta_phi = variables[
             "X-averaged "
@@ -85,9 +97,6 @@ class CompositeDifferential(BaseModel):
         super().__init__(param, domain)
 
     def set_rhs(self, variables):
-        if self.domain == "Separator":
-            return
-
         param = self.param
 
         sum_j = variables[
@@ -134,9 +143,6 @@ class CompositeAlgebraic(BaseModel):
         super().__init__(param, domain)
 
     def set_algebraic(self, variables):
-        if self.domain == "Separator":
-            return
-
         sum_j = variables[
             "Sum of x-averaged "
             + self.domain.lower()

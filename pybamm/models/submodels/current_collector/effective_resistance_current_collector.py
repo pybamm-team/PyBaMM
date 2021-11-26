@@ -4,7 +4,93 @@
 import pybamm
 
 
-class EffectiveResistance(pybamm.BaseModel):
+class BaseEffectiveResistance(pybamm.BaseModel):
+    @property
+    def default_parameter_values(self):
+        return pybamm.ParameterValues("Marquis2019")
+
+    @property
+    def default_geometry(self):
+        geometry = {}
+        param = self.param
+        if self.options["dimensionality"] == 1:
+            geometry["current collector"] = {
+                "z": {"min": 0, "max": 1},
+                "tabs": {
+                    "negative": {"z_centre": param.centre_z_tab_n},
+                    "positive": {"z_centre": param.centre_z_tab_p},
+                },
+            }
+        elif self.options["dimensionality"] == 2:
+            geometry["current collector"] = {
+                "y": {"min": 0, "max": param.l_y},
+                "z": {"min": 0, "max": param.l_z},
+                "tabs": {
+                    "negative": {
+                        "y_centre": param.centre_y_tab_n,
+                        "z_centre": param.centre_z_tab_n,
+                        "width": param.l_tab_n,
+                    },
+                    "positive": {
+                        "y_centre": param.centre_y_tab_p,
+                        "z_centre": param.centre_z_tab_p,
+                        "width": param.l_tab_p,
+                    },
+                },
+            }
+        return pybamm.Geometry(geometry)
+
+    @property
+    def default_var_pts(self):
+        return {"y": 32, "z": 32}
+
+    @property
+    def default_submesh_types(self):
+        if self.options["dimensionality"] == 1:
+            return {"current collector": pybamm.Uniform1DSubMesh}
+        elif self.options["dimensionality"] == 2:
+            return {
+                "current collector": pybamm.MeshGenerator(pybamm.ScikitUniform2DSubMesh)
+            }
+
+    @property
+    def default_spatial_methods(self):
+        if self.options["dimensionality"] == 1:
+            return {"current collector": pybamm.FiniteVolume()}
+        elif self.options["dimensionality"] == 2:
+            return {"current collector": pybamm.ScikitFiniteElement()}
+
+    @property
+    def options(self):
+        return self._options
+
+    @options.setter
+    def options(self, extra_options):
+        default_options = {"dimensionality": 1}
+        extra_options = extra_options or {}
+
+        options = pybamm.FuzzyDict(default_options)
+        # any extra options overwrite the default options
+        for name, opt in extra_options.items():
+            if name in default_options:
+                options[name] = opt
+            else:
+                raise pybamm.OptionError(
+                    "Option '{}' not recognised. Best matches are {}".format(
+                        name, options.get_best_matches(name)
+                    )
+                )
+
+        if options["dimensionality"] not in [1, 2]:
+            raise pybamm.OptionError(
+                "Dimension of current collectors must be 1 or 2, not {}".format(
+                    options["dimensionality"]
+                )
+            )
+        self._options = options
+
+
+class EffectiveResistance(BaseEffectiveResistance):
     """
     A model which calculates the effective Ohmic resistance of the current
     collectors in the limit of large electrical conductivity. For details see [1]_.
@@ -30,7 +116,7 @@ class EffectiveResistance(pybamm.BaseModel):
     .. [1] R Timms, SG Marquis, V Sulzer, CP Please and SJ Chapman. “Asymptotic
            Reduction of a Lithium-ion Pouch Cell Model”. Submitted, 2020.
 
-    **Extends:** :class:`pybamm.BaseModel`
+    **Extends:** :class:`BaseEffectiveResistance`
     """
 
     def __init__(
@@ -210,109 +296,20 @@ class EffectiveResistance(pybamm.BaseModel):
         }
         return processed_vars
 
-    @property
-    def default_parameter_values(self):
-        return pybamm.ParameterValues(chemistry=pybamm.parameter_sets.Marquis2019)
 
-    @property
-    def default_geometry(self):
-        geometry = {}
-        param = self.param
-        var = pybamm.standard_spatial_vars
-        if self.options["dimensionality"] == 1:
-            geometry["current collector"] = {
-                var.z: {"min": 0, "max": 1},
-                "tabs": {
-                    "negative": {"z_centre": param.centre_z_tab_n},
-                    "positive": {"z_centre": param.centre_z_tab_p},
-                },
-            }
-        elif self.options["dimensionality"] == 2:
-            geometry["current collector"] = {
-                var.y: {"min": 0, "max": param.l_y},
-                var.z: {"min": 0, "max": param.l_z},
-                "tabs": {
-                    "negative": {
-                        "y_centre": param.centre_y_tab_n,
-                        "z_centre": param.centre_z_tab_n,
-                        "width": param.l_tab_n,
-                    },
-                    "positive": {
-                        "y_centre": param.centre_y_tab_p,
-                        "z_centre": param.centre_z_tab_p,
-                        "width": param.l_tab_p,
-                    },
-                },
-            }
-        return pybamm.Geometry(geometry)
-
-    @property
-    def default_var_pts(self):
-        var = pybamm.standard_spatial_vars
-        return {var.y: 32, var.z: 32}
-
-    @property
-    def default_submesh_types(self):
-        if self.options["dimensionality"] == 1:
-            return {"current collector": pybamm.MeshGenerator(pybamm.Uniform1DSubMesh)}
-        elif self.options["dimensionality"] == 2:
-            return {
-                "current collector": pybamm.MeshGenerator(pybamm.ScikitUniform2DSubMesh)
-            }
-
-    @property
-    def default_spatial_methods(self):
-        if self.options["dimensionality"] == 1:
-            return {"current collector": pybamm.FiniteVolume()}
-        elif self.options["dimensionality"] == 2:
-            return {"current collector": pybamm.ScikitFiniteElement()}
-
-    @property
-    def default_solver(self):
-        return pybamm.CasadiAlgebraicSolver()
-
-    @property
-    def options(self):
-        return self._options
-
-    @options.setter
-    def options(self, extra_options):
-        default_options = {"dimensionality": 1}
-        extra_options = extra_options or {}
-
-        options = pybamm.FuzzyDict(default_options)
-        # any extra options overwrite the default options
-        for name, opt in extra_options.items():
-            if name in default_options:
-                options[name] = opt
-            else:
-                raise pybamm.OptionError(
-                    "Option '{}' not recognised. Best matches are {}".format(
-                        name, options.get_best_matches(name)
-                    )
-                )
-
-        if options["dimensionality"] not in [1, 2]:
-            raise pybamm.OptionError(
-                "Dimension of current collectors must be 1 or 2, not {}".format(
-                    options["dimensionality"]
-                )
-            )
-        self._options = options
-
-
-class AlternativeEffectiveResistance2D(pybamm.BaseModel):
+class AlternativeEffectiveResistance2D(BaseEffectiveResistance):
     """
     A model which calculates the effective Ohmic resistance of the 2D current
     collectors in the limit of large electrical conductivity. This model assumes
     a uniform *current density* at the tabs and the solution is computed by first
     solving and auxilliary problem which is the related to the resistances.
 
-    **Extends:** :class:`pybamm.BaseModel`
+    **Extends:** :class:`BaseEffectiveResistance`
     """
 
     def __init__(self):
         super().__init__()
+        self.options = {"dimensionality": 2}
         self.name = "Effective resistance in current collector model (2D)"
         self.param = pybamm.LithiumIonParameters()
 
@@ -465,50 +462,3 @@ class AlternativeEffectiveResistance2D(pybamm.BaseModel):
             "Terminal voltage [V]": V_dim,
         }
         return processed_vars
-
-    @property
-    def default_parameter_values(self):
-        return pybamm.ParameterValues(chemistry=pybamm.parameter_sets.Marquis2019)
-
-    @property
-    def default_geometry(self):
-        param = self.param
-        var = pybamm.standard_spatial_vars
-        geometry = {
-            "current collector": {
-                var.y: {"min": 0, "max": param.l_y},
-                var.z: {"min": 0, "max": param.l_z},
-                "tabs": {
-                    "negative": {
-                        "y_centre": param.centre_y_tab_n,
-                        "z_centre": param.centre_z_tab_n,
-                        "width": param.l_tab_n,
-                    },
-                    "positive": {
-                        "y_centre": param.centre_y_tab_p,
-                        "z_centre": param.centre_z_tab_p,
-                        "width": param.l_tab_p,
-                    },
-                },
-            }
-        }
-        return pybamm.Geometry(geometry)
-
-    @property
-    def default_var_pts(self):
-        var = pybamm.standard_spatial_vars
-        return {var.y: 32, var.z: 32}
-
-    @property
-    def default_submesh_types(self):
-        return {
-            "current collector": pybamm.MeshGenerator(pybamm.ScikitUniform2DSubMesh)
-        }
-
-    @property
-    def default_spatial_methods(self):
-        return {"current collector": pybamm.ScikitFiniteElement()}
-
-    @property
-    def default_solver(self):
-        return pybamm.CasadiAlgebraicSolver()

@@ -21,7 +21,7 @@ def is_notebook():
             return False  # Terminal running IPython
         elif shell == "Shell":  # pragma: no cover
             return True  # Google Colab notebook
-        else:
+        else:  # pragma: no cover
             return False  # Other type (?)
     except NameError:
         return False  # Probably standard Python interpreter
@@ -29,15 +29,14 @@ def is_notebook():
 
 def constant_current_constant_voltage_constant_power(variables):
     I = variables["Current [A]"]
-    V = variables["Terminal voltage [V]"]
+    V = variables["Battery voltage [V]"]
     s_I = pybamm.InputParameter("Current switch")
     s_V = pybamm.InputParameter("Voltage switch")
     s_P = pybamm.InputParameter("Power switch")
-    n_cells = pybamm.Parameter("Number of cells connected in series to make a battery")
     return (
         s_I * (I - pybamm.InputParameter("Current input [A]"))
-        + s_V * (V - pybamm.InputParameter("Voltage input [V]") / n_cells)
-        + s_P * (V * I - pybamm.InputParameter("Power input [W]") / n_cells)
+        + s_V * (V - pybamm.InputParameter("Voltage input [V]"))
+        + s_P * (V * I - pybamm.InputParameter("Power input [W]"))
     )
 
 
@@ -170,45 +169,76 @@ class Simulation:
                 "Power switch": 0,
                 "CCCV switch": 0,
                 "Current input [A]": 0,
-                "Voltage input [V]": 0,  # doesn't matter
-                "Power input [W]": 0,  # doesn't matter
+                "Voltage input [V]": 0,
+                "Power input [W]": 0,
             }
             op_control = op["electric"][1]
-            if op_control in ["A", "C"]:
-                capacity = self._parameter_values["Nominal cell capacity [A.h]"]
+            if op["dc_data"] is not None:
+                # If operating condition includes a drive cycle, define the interpolant
+                timescale = self._parameter_values.evaluate(model.timescale)
+                drive_cycle_interpolant = pybamm.Interpolant(
+                    op["dc_data"][:, 0],
+                    op["dc_data"][:, 1],
+                    timescale * (pybamm.t - pybamm.InputParameter("start time")),
+                )
                 if op_control == "A":
-                    I = op["electric"][0]
-                    Crate = I / capacity
-                else:
-                    # Scale C-rate with capacity to obtain current
-                    Crate = op["electric"][0]
-                    I = Crate * capacity
-                if len(op["electric"]) == 4:
-                    # Update inputs for CCCV
-                    op_control = "CCCV"  # change to CCCV
-                    V = op["electric"][2]
                     operating_inputs.update(
                         {
-                            "CCCV switch": 1,
-                            "Current input [A]": I,
-                            "Voltage input [V]": V,
+                            "Current switch": 1,
+                            "Current input [A]": drive_cycle_interpolant,
                         }
                     )
-                else:
-                    # Update inputs for constant current
+                if op_control == "V":
                     operating_inputs.update(
-                        {"Current switch": 1, "Current input [A]": I}
+                        {
+                            "Voltage switch": 1,
+                            "Voltage input [V]": drive_cycle_interpolant,
+                        }
                     )
-            elif op_control == "V":
-                # Update inputs for constant voltage
-                V = op["electric"][0]
-                operating_inputs.update({"Voltage switch": 1, "Voltage input [V]": V})
-            elif op_control == "W":
-                # Update inputs for constant power
-                P = op["electric"][0]
-                operating_inputs.update({"Power switch": 1, "Power input [W]": P})
+                if op_control == "W":
+                    operating_inputs.update(
+                        {"Power switch": 1, "Power input [W]": drive_cycle_interpolant}
+                    )
+            else:
+                if op_control in ["A", "C"]:
+                    capacity = self._parameter_values["Nominal cell capacity [A.h]"]
+                    if op_control == "A":
+                        I = op["electric"][0]
+                        Crate = I / capacity
+                    else:
+                        # Scale C-rate with capacity to obtain current
+                        Crate = op["electric"][0]
+                        I = Crate * capacity
+                    if len(op["electric"]) == 4:
+                        # Update inputs for CCCV
+                        op_control = "CCCV"  # change to CCCV
+                        V = op["electric"][2]
+                        operating_inputs.update(
+                            {
+                                "CCCV switch": 1,
+                                "Current input [A]": I,
+                                "Voltage input [V]": V,
+                            }
+                        )
+                    else:
+                        # Update inputs for constant current
+                        operating_inputs.update(
+                            {"Current switch": 1, "Current input [A]": I}
+                        )
+                elif op_control == "V":
+                    # Update inputs for constant voltage
+                    V = op["electric"][0]
+                    operating_inputs.update(
+                        {"Voltage switch": 1, "Voltage input [V]": V}
+                    )
+                elif op_control == "W":
+                    # Update inputs for constant power
+                    P = op["electric"][0]
+                    operating_inputs.update({"Power switch": 1, "Power input [W]": P})
+
             # Update period
             operating_inputs["period"] = op["period"]
+
             # Update events
             if events is None:
                 # make current and voltage values that won't be hit
@@ -315,9 +345,8 @@ class Simulation:
                 ),
                 pybamm.Event(
                     "Voltage cut-off [V] [experiment]",
-                    new_model.variables["Terminal voltage [V]"]
-                    - pybamm.InputParameter("Voltage cut-off [V]")
-                    / model.param.n_cells,
+                    new_model.variables["Battery voltage [V]"]
+                    - pybamm.InputParameter("Voltage cut-off [V]"),
                 ),
             ]
         )
@@ -376,7 +405,11 @@ class Simulation:
                         model.variables[name]: variable
                         for name, variable in external_circuit_variables.items()
                     }
-                    replacer = pybamm.SymbolReplacer(symbol_replacement_map)
+                    # Don't replace initial conditions, as these should not contain
+                    # Variable objects
+                    replacer = pybamm.SymbolReplacer(
+                        symbol_replacement_map, process_initial_conditions=False
+                    )
                     new_model = replacer.process_model(model, inplace=False)
 
                     # Update the rhs or algebraic equation and initial conditions for
@@ -408,7 +441,7 @@ class Simulation:
                                 + abs(pybamm.InputParameter("Current cut-off [A]"))
                                 - 1e4
                                 * (
-                                    new_model.variables["Terminal voltage [V]"]
+                                    new_model.variables["Battery voltage [V]"]
                                     < (
                                         pybamm.InputParameter("Voltage input [V]")
                                         - 1e-4
@@ -463,9 +496,8 @@ class Simulation:
                     new_model.events.append(
                         pybamm.Event(
                             "Voltage cut-off [V] [experiment]",
-                            new_model.variables["Terminal voltage [V]"]
-                            - pybamm.InputParameter("Voltage cut-off [V]")
-                            / model.param.n_cells,
+                            new_model.variables["Battery voltage [V]"]
+                            - pybamm.InputParameter("Voltage cut-off [V]"),
                         )
                     )
 
@@ -486,7 +518,10 @@ class Simulation:
                     )
                 elif op_inputs["Voltage switch"] == 1:
                     new_parameter_values.update(
-                        {"Voltage function [V]": op_inputs["Voltage input [V]"]},
+                        {
+                            "Voltage function [V]": op_inputs["Voltage input [V]"]
+                            / model.param.n_cells
+                        },
                         check_already_exists=False,
                     )
                 elif op_inputs["Power switch"] == 1:
@@ -498,7 +533,8 @@ class Simulation:
                     new_parameter_values.update(
                         {
                             "Current function [A]": op_inputs["Current input [A]"],
-                            "Voltage function [V]": op_inputs["Voltage input [V]"],
+                            "Voltage function [V]": op_inputs["Voltage input [V]"]
+                            / model.param.n_cells,
                         },
                         check_already_exists=False,
                     )
@@ -851,6 +887,11 @@ class Simulation:
                         f"step {step_num}/{cycle_length}: {op_conds_str}"
                     )
                     inputs.update(exp_inputs)
+                    if current_solution is None:
+                        start_time = 0
+                    else:
+                        start_time = current_solution.t[-1]
+                    inputs.update({"start time": start_time})
                     kwargs["inputs"] = inputs
                     # Make sure we take at least 2 timesteps
                     npts = max(int(round(dt / exp_inputs["period"])) + 1, 2)

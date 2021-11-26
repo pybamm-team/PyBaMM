@@ -2,10 +2,10 @@
 # Class for particles with Fickian diffusion and x-dependence
 #
 import pybamm
-from ..base_particle import BaseParticle
+from .base_fickian import BaseFickian
 
 
-class FickianDiffusion(BaseParticle):
+class FickianDiffusion(BaseFickian):
     """
     Class for molar conservation in particles, employing Fick's law, and allowing
     variation in the electrode domain. I.e., the concentration varies with r
@@ -17,12 +17,15 @@ class FickianDiffusion(BaseParticle):
         The parameters to use for this submodel
     domain : str
         The domain of the model either 'Negative' or 'Positive'
+    options: dict
+        A dictionary of options to be passed to the model.
+        See :class:`pybamm.BaseBatteryModel`
 
     **Extends:** :class:`pybamm.particle.BaseParticle`
     """
 
-    def __init__(self, param, domain):
-        super().__init__(param, domain)
+    def __init__(self, param, domain, options):
+        super().__init__(param, domain, options)
 
     def get_fundamental_variables(self):
         if self.domain == "Negative":
@@ -42,13 +45,11 @@ class FickianDiffusion(BaseParticle):
             [self.domain.lower() + " particle"],
         )
 
-        if self.domain == "Negative":
-            N_s = -self.param.D_n(c_s, T) * pybamm.grad(c_s)
-
-        elif self.domain == "Positive":
-            N_s = -self.param.D_p(c_s, T) * pybamm.grad(c_s)
+        D_eff = self._get_effective_diffusivity(c_s, T)
+        N_s = -D_eff * pybamm.grad(c_s)
 
         variables.update(self._get_standard_flux_variables(N_s, N_s))
+        variables.update(self._get_standard_diffusivity_variables(D_eff))
         variables.update(self._get_total_concentration_variables(variables))
 
         return variables
@@ -67,21 +68,12 @@ class FickianDiffusion(BaseParticle):
     def set_boundary_conditions(self, variables):
 
         c_s = variables[self.domain + " particle concentration"]
-        T = pybamm.PrimaryBroadcast(
-            variables[self.domain + " electrode temperature"],
-            c_s.domain,
-        )
+        D_eff = variables[self.domain + " effective diffusivity"]
         j = variables[self.domain + " electrode interfacial current density"]
         R = variables[self.domain + " particle radius"]
 
         if self.domain == "Negative":
-            rbc = (
-                -self.param.C_n
-                * j
-                * R
-                / self.param.a_R_n
-                / pybamm.surf(self.param.D_n(c_s, T))
-            )
+            rbc = -self.param.C_n * j * R / self.param.a_R_n / pybamm.surf(D_eff)
 
         elif self.domain == "Positive":
             rbc = (
@@ -90,7 +82,7 @@ class FickianDiffusion(BaseParticle):
                 * R
                 / self.param.a_R_p
                 / self.param.gamma_p
-                / pybamm.surf(self.param.D_p(c_s, T))
+                / pybamm.surf(D_eff)
             )
 
         self.boundary_conditions = {

@@ -26,8 +26,17 @@ class Mesh(dict):
 
     def __init__(self, geometry, submesh_types, var_pts):
         super().__init__()
+
+        # Preprocess var_pts
+        var_pts_input = var_pts
+        var_pts = {}
+        for key, value in var_pts_input.items():
+            if isinstance(key, str):
+                key = getattr(pybamm.standard_spatial_vars, key)
+            var_pts[key] = value
+
         # convert var_pts to an id dict
-        var_id_pts = {var.id: pts for var, pts in var_pts.items()}
+        var_name_pts = {var.name: pts for var, pts in var_pts.items()}
 
         # create submesh_pts from var_pts
         submesh_pts = {}
@@ -54,11 +63,13 @@ class Mesh(dict):
                         )
                     # skip over tabs key
                     if var != "tabs":
+                        if isinstance(var, str):
+                            var = getattr(pybamm.standard_spatial_vars, var)
                         # Raise error if the number of points for a particular
                         # variable haven't been provided, unless that variable
                         # doesn't appear in the geometry
                         if (
-                            var.id not in var_id_pts.keys()
+                            var.name not in var_name_pts.keys()
                             and var.domain[0] in geometry.keys()
                         ):
                             raise KeyError(
@@ -67,7 +78,7 @@ class Mesh(dict):
                                 )
                             )
                         # Otherwise add to the dictionary of submesh points
-                        submesh_pts[domain][var.id] = var_id_pts[var.id]
+                        submesh_pts[domain][var.name] = var_name_pts[var.name]
         self.submesh_pts = submesh_pts
 
         # Input domain order manually

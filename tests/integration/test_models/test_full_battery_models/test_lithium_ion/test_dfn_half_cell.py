@@ -1,62 +1,14 @@
 #
-# Tests for the lithium-ion DFN model
+# Tests for the lithium-ion DFN half-cell model
 #
 import pybamm
-import tests
-
 import unittest
+from tests import BaseIntegrationTestLithiumIonHalfCell
 
 
-class TestDFN(unittest.TestCase):
-    def test_basic_processing(self):
-        options = {"working electrode": "positive"}
-        model = pybamm.lithium_ion.DFN(options)
-        modeltest = tests.StandardModelTest(model)
-        modeltest.test_all(skip_output_tests=True)
-
-
-class TestDFNWithSEI(unittest.TestCase):
-    def test_well_posed_constant(self):
-        options = {"working electrode": "positive", "SEI": "constant"}
-        model = pybamm.lithium_ion.DFN(options)
-        modeltest = tests.StandardModelTest(model)
-        modeltest.test_all(skip_output_tests=True)
-
-    def test_well_posed_reaction_limited(self):
-        options = {"working electrode": "positive", "SEI": "reaction limited"}
-        model = pybamm.lithium_ion.DFN(options)
-        modeltest = tests.StandardModelTest(model)
-        modeltest.test_all(skip_output_tests=True)
-
-    def test_well_posed_solvent_diffusion_limited(self):
-        options = {"working electrode": "positive", "SEI": "solvent-diffusion limited"}
-        model = pybamm.lithium_ion.DFN(options)
-        modeltest = tests.StandardModelTest(model)
-        modeltest.test_all(skip_output_tests=True)
-
-    def test_well_posed_electron_migration_limited(self):
-        options = {"working electrode": "positive", "SEI": "electron-migration limited"}
-        model = pybamm.lithium_ion.DFN(options)
-        modeltest = tests.StandardModelTest(model)
-        modeltest.test_all(skip_output_tests=True)
-
-    def test_well_posed_interstitial_diffusion_limited(self):
-        options = {
-            "working electrode": "positive",
-            "SEI": "interstitial-diffusion limited",
-        }
-        model = pybamm.lithium_ion.DFN(options)
-        modeltest = tests.StandardModelTest(model)
-        modeltest.test_all(skip_output_tests=True)
-
-    def test_well_posed_ec_reaction_limited(self):
-        options = {
-            "working electrode": "positive",
-            "SEI": "ec reaction limited",
-        }
-        model = pybamm.lithium_ion.DFN(options)
-        modeltest = tests.StandardModelTest(model)
-        modeltest.test_all(skip_output_tests=True)
+class TestDFNHalfCell(BaseIntegrationTestLithiumIonHalfCell, unittest.TestCase):
+    def setUp(self):
+        self.model = pybamm.lithium_ion.DFN
 
 
 if __name__ == "__main__":

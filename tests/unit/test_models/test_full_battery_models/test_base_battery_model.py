@@ -36,6 +36,7 @@ PRINT_OPTIONS_OUTPUT = """\
 'total interfacial current density as a state': 'false' (possible: ['true', 'false'])
 'working electrode': 'both' (possible: ['both', 'negative', 'positive'])
 'SEI film resistance': 'none' (possible: ['none', 'distributed', 'average'])
+'stress-induced diffusion': 'false' (possible: ['true', 'false'])
 """  # noqa: E501
 
 
@@ -84,57 +85,55 @@ class TestBaseBatteryModel(unittest.TestCase):
             model.summary_variables = ["bad var"]
 
     def test_default_geometry(self):
-        var = pybamm.standard_spatial_vars
 
         model = pybamm.BaseBatteryModel({"dimensionality": 0})
         self.assertEqual(
-            model.default_geometry["current collector"][var.z]["position"], 1
+            model.default_geometry["current collector"]["z"]["position"], 1
         )
         model = pybamm.BaseBatteryModel({"dimensionality": 1})
-        self.assertEqual(model.default_geometry["current collector"][var.z]["min"], 0)
+        self.assertEqual(model.default_geometry["current collector"]["z"]["min"], 0)
         model = pybamm.BaseBatteryModel({"dimensionality": 2})
-        self.assertEqual(model.default_geometry["current collector"][var.y]["min"], 0)
+        self.assertEqual(model.default_geometry["current collector"]["y"]["min"], 0)
 
     def test_default_submesh_types(self):
         model = pybamm.BaseBatteryModel({"dimensionality": 0})
         self.assertTrue(
             issubclass(
-                model.default_submesh_types["current collector"].submesh_type,
+                model.default_submesh_types["current collector"],
                 pybamm.SubMesh0D,
             )
         )
         model = pybamm.BaseBatteryModel({"dimensionality": 1})
         self.assertTrue(
             issubclass(
-                model.default_submesh_types["current collector"].submesh_type,
+                model.default_submesh_types["current collector"],
                 pybamm.Uniform1DSubMesh,
             )
         )
         model = pybamm.BaseBatteryModel({"dimensionality": 2})
         self.assertTrue(
             issubclass(
-                model.default_submesh_types["current collector"].submesh_type,
+                model.default_submesh_types["current collector"],
                 pybamm.ScikitUniform2DSubMesh,
             )
         )
 
     def test_default_var_pts(self):
-        var = pybamm.standard_spatial_vars
         var_pts = {
-            var.x_n: 20,
-            var.x_s: 20,
-            var.x_p: 20,
-            var.r_n: 20,
-            var.r_p: 20,
-            var.y: 10,
-            var.z: 10,
-            var.R_n: 30,
-            var.R_p: 30,
+            "x_n": 20,
+            "x_s": 20,
+            "x_p": 20,
+            "r_n": 20,
+            "r_p": 20,
+            "y": 10,
+            "z": 10,
+            "R_n": 30,
+            "R_p": 30,
         }
         model = pybamm.BaseBatteryModel({"dimensionality": 0})
         self.assertDictEqual(var_pts, model.default_var_pts)
 
-        var_pts.update({var.x_n: 10, var.x_s: 10, var.x_p: 10})
+        var_pts.update({"x_n": 10, "x_s": 10, "x_p": 10})
         model = pybamm.BaseBatteryModel({"dimensionality": 2})
         self.assertDictEqual(var_pts, model.default_var_pts)
 
@@ -175,6 +174,22 @@ class TestBaseBatteryModel(unittest.TestCase):
             pybamm.BaseBatteryModel(
                 {"dimensionality": 1, "current collector": "bad option"}
             )
+        with self.assertRaisesRegex(pybamm.OptionError, "1D current collectors"):
+            pybamm.BaseBatteryModel(
+                {
+                    "current collector": "potential pair",
+                    "dimensionality": 1,
+                    "thermal": "x-full",
+                }
+            )
+        with self.assertRaisesRegex(pybamm.OptionError, "2D current collectors"):
+            pybamm.BaseBatteryModel(
+                {
+                    "current collector": "potential pair",
+                    "dimensionality": 2,
+                    "thermal": "x-full",
+                }
+            )
         with self.assertRaisesRegex(pybamm.OptionError, "surface form"):
             pybamm.BaseBatteryModel({"surface form": "bad surface form"})
         with self.assertRaisesRegex(pybamm.OptionError, "convection"):
@@ -185,7 +200,7 @@ class TestBaseBatteryModel(unittest.TestCase):
             pybamm.BaseBatteryModel({"convection": "full transverse"})
         with self.assertRaisesRegex(pybamm.OptionError, "particle"):
             pybamm.BaseBatteryModel({"particle": "bad particle"})
-        with self.assertRaisesRegex(NotImplementedError, "The 'fast diffusion'"):
+        with self.assertRaisesRegex(pybamm.OptionError, "The 'fast diffusion'"):
             pybamm.BaseBatteryModel({"particle": "fast diffusion"})
         with self.assertRaisesRegex(pybamm.OptionError, "particle shape"):
             pybamm.BaseBatteryModel({"particle shape": "bad particle shape"})
@@ -259,6 +274,11 @@ class TestBaseBatteryModel(unittest.TestCase):
                     "plating porosity change"
                 }
             )
+        # stress-induced diffusion
+        with self.assertRaisesRegex(pybamm.OptionError, "cannot have stress"):
+            pybamm.BaseBatteryModel({"stress-induced diffusion": "true"})
+
+        # hydrolysis
         with self.assertRaisesRegex(pybamm.OptionError, "surface formulation"):
             pybamm.lead_acid.LOQS({"hydrolysis": "true", "surface form": "false"})
 

@@ -3,14 +3,14 @@
 #
 import pybamm
 
-from ..base_particle import BaseParticle
+from .base_fickian import BaseFickian
 
 
-class PolynomialProfile(BaseParticle):
+class PolynomialProfile(BaseFickian):
     """
-    Class for molar conservation in particles, assuming a polynomial
-    concentration profile in r, and allowing variation in the electrode domain.
-    Model equations from [1]_.
+    Class for molar conservation in particles employing Fick's
+    law, assuming a polynomial concentration profile in r, and allowing variation
+    in the electrode domain. Model equations from [1]_.
 
     Parameters
     ----------
@@ -21,6 +21,9 @@ class PolynomialProfile(BaseParticle):
     name : str
         The name of the polynomial approximation to be used. Can be "uniform
         profile", "quadratic profile" or "quartic profile".
+    options: dict
+        A dictionary of options to be passed to the model.
+        See :class:`pybamm.BaseBatteryModel`
 
     References
     ----------
@@ -31,8 +34,8 @@ class PolynomialProfile(BaseParticle):
     **Extends:** :class:`pybamm.particle.BaseParticle`
     """
 
-    def __init__(self, param, domain, name):
-        super().__init__(param, domain)
+    def __init__(self, param, domain, name, options):
+        super().__init__(param, domain, options)
         self.name = name
 
         pybamm.citations.register("Subramanian2005")
@@ -133,6 +136,7 @@ class PolynomialProfile(BaseParticle):
             variables[self.domain + " electrode temperature"],
             [self.domain.lower() + " particle"],
         )
+        D_eff = self._get_effective_diffusivity(c_s, T)
 
         # Set flux depending on polynomial order
         if self.name == "uniform profile":
@@ -152,10 +156,10 @@ class PolynomialProfile(BaseParticle):
             # The flux may be computed directly from the polynomial for c
             if self.domain == "Negative":
                 r = pybamm.standard_spatial_vars.r_n
-                N_s = -self.param.D_n(c_s, T) * 5 * (c_s_surf - c_s_rav) * r
+                N_s = -D_eff * 5 * (c_s_surf - c_s_rav) * r
             elif self.domain == "Positive":
                 r = pybamm.standard_spatial_vars.r_p
-                N_s = -self.param.D_p(c_s, T) * 5 * (c_s_surf - c_s_rav) * r
+                N_s = -D_eff * 5 * (c_s_surf - c_s_rav) * r
             N_s_xav = pybamm.x_average(N_s)
         elif self.name == "quartic profile":
             q_s_rav = variables[
@@ -164,19 +168,20 @@ class PolynomialProfile(BaseParticle):
             # The flux may be computed directly from the polynomial for c
             if self.domain == "Negative":
                 r = pybamm.standard_spatial_vars.r_n
-                N_s = -self.param.D_n(c_s, T) * (
+                N_s = -D_eff * (
                     (-70 * c_s_surf + 20 * q_s_rav + 70 * c_s_rav) * r
                     + (105 * c_s_surf - 28 * q_s_rav - 105 * c_s_rav) * r ** 3
                 )
             elif self.domain == "Positive":
                 r = pybamm.standard_spatial_vars.r_p
-                N_s = -self.param.D_p(c_s, T) * (
+                N_s = -D_eff * (
                     (-70 * c_s_surf + 20 * q_s_rav + 70 * c_s_rav) * r
                     + (105 * c_s_surf - 28 * q_s_rav - 105 * c_s_rav) * r ** 3
                 )
             N_s_xav = pybamm.x_average(N_s)
 
         variables.update(self._get_standard_flux_variables(N_s, N_s_xav))
+        variables.update(self._get_standard_diffusivity_variables(D_eff))
         variables.update(self._get_total_concentration_variables(variables))
 
         return variables
@@ -202,12 +207,13 @@ class PolynomialProfile(BaseParticle):
             c_s_rav = variables[
                 "R-averaged " + self.domain.lower() + " particle concentration"
             ]
-            T = variables[self.domain + " electrode temperature"]
+            D_eff = variables[self.domain + " effective diffusivity"]
+
             if self.domain == "Negative":
                 self.rhs.update(
                     {
                         q_s_rav: -30
-                        * self.param.D_n(c_s_rav, T)
+                        * pybamm.r_average(D_eff)
                         * q_s_rav
                         / self.param.C_n
                         - 45 * j / self.param.a_R_n / 2
@@ -217,7 +223,7 @@ class PolynomialProfile(BaseParticle):
                 self.rhs.update(
                     {
                         q_s_rav: -30
-                        * self.param.D_p(c_s_rav, T)
+                        * pybamm.r_average(D_eff)
                         * q_s_rav
                         / self.param.C_p
                         - 45 * j / self.param.a_R_p / self.param.gamma_p / 2
@@ -229,9 +235,10 @@ class PolynomialProfile(BaseParticle):
         c_s_rav = variables[
             "R-averaged " + self.domain.lower() + " particle concentration"
         ]
+        D_eff = variables[self.domain + " effective diffusivity"]
         j = variables[self.domain + " electrode interfacial current density"]
-        T = variables[self.domain + " electrode temperature"]
         R = variables[self.domain + " particle radius"]
+
         if self.name == "uniform profile":
             # No algebraic equations since we only solve for the average concentration
             pass
@@ -239,13 +246,13 @@ class PolynomialProfile(BaseParticle):
             # We solve an algebraic equation for the surface concentration
             if self.domain == "Negative":
                 self.algebraic = {
-                    c_s_surf: self.param.D_n(c_s_surf, T) * (c_s_surf - c_s_rav)
+                    c_s_surf: pybamm.surf(D_eff) * (c_s_surf - c_s_rav)
                     + self.param.C_n * (j * R / self.param.a_R_n / 5)
                 }
 
             elif self.domain == "Positive":
                 self.algebraic = {
-                    c_s_surf: self.param.D_p(c_s_surf, T) * (c_s_surf - c_s_rav)
+                    c_s_surf: pybamm.surf(D_eff) * (c_s_surf - c_s_rav)
                     + self.param.C_p
                     * (j * R / self.param.a_R_p / self.param.gamma_p / 5)
                 }
@@ -257,14 +264,14 @@ class PolynomialProfile(BaseParticle):
             ]
             if self.domain == "Negative":
                 self.algebraic = {
-                    c_s_surf: self.param.D_n(c_s_surf, T)
+                    c_s_surf: pybamm.surf(D_eff)
                     * (35 * (c_s_surf - c_s_rav) - 8 * q_s_rav)
                     + self.param.C_n * (j * R / self.param.a_R_n)
                 }
 
             elif self.domain == "Positive":
                 self.algebraic = {
-                    c_s_surf: self.param.D_p(c_s_surf, T)
+                    c_s_surf: pybamm.surf(D_eff)
                     * (35 * (c_s_surf - c_s_rav) - 8 * q_s_rav)
                     + self.param.C_p * (j * R / self.param.a_R_p / self.param.gamma_p)
                 }

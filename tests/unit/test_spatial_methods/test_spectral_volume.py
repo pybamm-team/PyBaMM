@@ -46,7 +46,7 @@ def get_mesh_for_testing(
         "positive particle": pybamm.MeshGenerator(
             pybamm.SpectralVolume1DSubMesh, {"order": order}
         ),
-        "current collector": pybamm.MeshGenerator(pybamm.SubMesh0D),
+        "current collector": pybamm.SubMesh0D,
     }
     if cc_submesh:
         submesh_types["current collector"] = cc_submesh
@@ -55,15 +55,14 @@ def get_mesh_for_testing(
         xn_pts, xs_pts, xp_pts = 40, 25, 35
     else:
         xn_pts, xs_pts, xp_pts = xpts, xpts, xpts
-    var = pybamm.standard_spatial_vars
     var_pts = {
-        var.x_n: xn_pts,
-        var.x_s: xs_pts,
-        var.x_p: xp_pts,
-        var.r_n: rpts,
-        var.r_p: rpts,
-        var.y: ypts,
-        var.z: zpts,
+        "x_n": xn_pts,
+        "x_s": xs_pts,
+        "x_p": xp_pts,
+        "r_n": rpts,
+        "r_p": rpts,
+        "y": ypts,
+        "z": zpts,
     }
 
     return pybamm.Mesh(geometry, submesh_types, var_pts)
@@ -78,7 +77,7 @@ def get_1p1d_mesh_for_testing(
     xpts=None,
     rpts=10,
     zpts=15,
-    cc_submesh=pybamm.MeshGenerator(pybamm.Uniform1DSubMesh),
+    cc_submesh=pybamm.Uniform1DSubMesh,
 ):
     geometry = pybamm.battery_geometry(current_collector_dimension=1)
     return get_mesh_for_testing(

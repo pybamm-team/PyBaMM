@@ -73,6 +73,11 @@ class InverseFirstOrderKinetics(BaseInterface):
 
         # Update variables dictionary
         variables.update(
+            self._get_standard_average_surface_potential_difference_variables(
+                pybamm.x_average(delta_phi)
+            )
+        )
+        variables.update(
             self._get_standard_surface_potential_difference_variables(delta_phi)
         )
 

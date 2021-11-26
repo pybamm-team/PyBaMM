@@ -17,43 +17,39 @@ class BaseLeadingOrderSurfaceForm(LeadingOrder):
         The parameters to use for this submodel
     domain : str
         The domain in which the model holds
+    options : dict, optional
+        A dictionary of options to be passed to the model.
 
 
-    **Extends:** :class:`pybamm.electrolyte_conductivity.LeadingOrder`
+    **Extends:** :class:`pybamm.electrolyte_conductivity.BaseElectrolyteConductivity`
     """
 
-    def __init__(self, param, domain):
-        super().__init__(param, domain)
+    def __init__(self, param, domain, options=None):
+        super().__init__(param, domain, options)
 
     def get_fundamental_variables(self):
 
         if self.domain == "Negative":
-            delta_phi = pybamm.standard_variables.delta_phi_n_av
-        elif self.domain == "Separator":
-            return {}
+            delta_phi_av = pybamm.standard_variables.delta_phi_n_av
         elif self.domain == "Positive":
-            delta_phi = pybamm.standard_variables.delta_phi_p_av
+            delta_phi_av = pybamm.standard_variables.delta_phi_p_av
 
-        variables = self._get_standard_surface_potential_difference_variables(delta_phi)
+        variables = self._get_standard_average_surface_potential_difference_variables(
+            delta_phi_av
+        )
+        variables.update(
+            self._get_standard_surface_potential_difference_variables(delta_phi_av)
+        )
         return variables
 
     def get_coupled_variables(self, variables):
-        # Use the potential difference in the negative electrode to calculate the
-        # potential difference and current
+        # Only update coupled variables once
         if self.domain == "Negative":
-            delta_phi_n_av = variables[
-                "X-averaged negative electrode surface potential difference"
-            ]
-            phi_e_av = -delta_phi_n_av
-            return self._get_coupled_variables_from_potential(variables, phi_e_av)
-
+            return super().get_coupled_variables(variables)
         else:
             return variables
 
     def set_initial_conditions(self, variables):
-
-        if self.domain == "Separator":
-            return
 
         delta_phi = variables[
             "X-averaged "
@@ -87,19 +83,17 @@ class LeadingOrderDifferential(BaseLeadingOrderSurfaceForm):
     ----------
     param : parameter class
         The parameters to use for this submodel
-
+    options : dict, optional
+        A dictionary of options to be passed to the model.
 
     **Extends:** :class:`BaseLeadingOrderSurfaceForm`
 
     """
 
-    def __init__(self, param, domain):
-        super().__init__(param, domain)
+    def __init__(self, param, domain, options=None):
+        super().__init__(param, domain, options)
 
     def set_rhs(self, variables):
-        if self.domain == "Separator":
-            return
-
         param = self.param
 
         sum_j = variables[
@@ -136,18 +130,17 @@ class LeadingOrderAlgebraic(BaseLeadingOrderSurfaceForm):
     ----------
     param : parameter class
         The parameters to use for this submodel
+    options : dict, optional
+        A dictionary of options to be passed to the model.
 
 
     **Extends:** :class:`BaseLeadingOrderSurfaceForm`
     """
 
-    def __init__(self, param, domain):
-        super().__init__(param, domain)
+    def __init__(self, param, domain, options=None):
+        super().__init__(param, domain, options)
 
     def set_algebraic(self, variables):
-        if self.domain == "Separator":
-            return
-
         sum_j = variables[
             "Sum of x-averaged "
             + self.domain.lower()

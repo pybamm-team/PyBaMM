@@ -16,8 +16,7 @@ class TestBasicHalfCellModels(unittest.TestCase):
         geometry = model.default_geometry
 
         # load parameter values
-        chemistry = pybamm.parameter_sets.Xu2019
-        param = pybamm.ParameterValues(chemistry=chemistry)
+        param = pybamm.ParameterValues("Xu2019")
 
         param["Current function [A]"] = 2.5e-3
 
@@ -47,8 +46,7 @@ class TestBasicHalfCellModels(unittest.TestCase):
         geometry = model.default_geometry
 
         # load parameter values
-        chemistry = pybamm.parameter_sets.Chen2020_plating
-        param = pybamm.ParameterValues(chemistry=chemistry)
+        param = pybamm.ParameterValues("Chen2020_plating")
 
         param["Current function [A]"] = 2.5
 

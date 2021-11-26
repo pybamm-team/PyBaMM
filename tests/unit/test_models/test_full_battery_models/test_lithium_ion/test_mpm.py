@@ -50,6 +50,11 @@ class TestMPM(unittest.TestCase):
         model = pybamm.lithium_ion.MPM(options)
         model.check_well_posedness()
 
+    def test_particle_quadratic(self):
+        options = {"particle": "quadratic profile"}
+        with self.assertRaises(NotImplementedError):
+            pybamm.lithium_ion.MPM(options)
+
     def test_necessary_options(self):
         options = {"particle size": "single"}
         with self.assertRaises(pybamm.OptionError):
@@ -78,11 +83,16 @@ class TestMPM(unittest.TestCase):
         with self.assertRaises(NotImplementedError):
             pybamm.lithium_ion.MPM(options)
 
-    def test_well_posed_reversible_plating_with_porosity_not_implemented(self):
+    def test_reversible_plating_with_porosity_not_implemented(self):
         options = {
             "lithium plating": "reversible",
             "lithium plating porosity change": "true",
         }
+        with self.assertRaises(NotImplementedError):
+            pybamm.lithium_ion.MPM(options)
+
+    def test_stress_induced_diffusion_not_implemented(self):
+        options = {"stress-induced diffusion": "true"}
         with self.assertRaises(NotImplementedError):
             pybamm.lithium_ion.MPM(options)
 
