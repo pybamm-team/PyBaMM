@@ -68,6 +68,10 @@ class SubMesh1D(SubMesh):
             raise pybamm.GeometryError("lims should only contain a single variable")
 
         ((spatial_var, spatial_lims),) = lims.items()
+
+        if isinstance(spatial_var, str):
+            spatial_var = getattr(pybamm.standard_spatial_vars, spatial_var)
+
         return spatial_var, spatial_lims, tabs
 
 
@@ -90,7 +94,7 @@ class Uniform1DSubMesh(SubMesh1D):
     def __init__(self, lims, npts):
 
         spatial_var, spatial_lims, tabs = self.read_lims(lims)
-        npts = npts[spatial_var.id]
+        npts = npts[spatial_var.name]
 
         edges = np.linspace(spatial_lims["min"], spatial_lims["max"], npts + 1)
 
@@ -156,7 +160,7 @@ class Exponential1DSubMesh(SubMesh1D):
         spatial_var, spatial_lims, tabs = self.read_lims(lims)
         a = spatial_lims["min"]
         b = spatial_lims["max"]
-        npts = npts[spatial_var.id]
+        npts = npts[spatial_var.name]
         coord_sys = spatial_var.coord_sys
 
         # Set stretch if not provided
@@ -234,7 +238,7 @@ class Chebyshev1DSubMesh(SubMesh1D):
     def __init__(self, lims, npts, tabs=None):
 
         spatial_var, spatial_lims, tabs = self.read_lims(lims)
-        npts = npts[spatial_var.id]
+        npts = npts[spatial_var.name]
 
         # Create N Chebyshev nodes in the interval (a,b)
         N = npts - 1
@@ -277,7 +281,7 @@ class UserSupplied1DSubMesh(SubMesh1D):
             raise pybamm.GeometryError("User mesh requires parameter 'edges'")
 
         spatial_var, spatial_lims, tabs = self.read_lims(lims)
-        npts = npts[spatial_var.id]
+        npts = npts[spatial_var.name]
 
         # check that npts + 1 equals number of user-supplied edges
         if (npts + 1) != len(edges):
@@ -336,7 +340,7 @@ class SpectralVolume1DSubMesh(SubMesh1D):
     def __init__(self, lims, npts, edges=None, order=2):
 
         spatial_var, spatial_lims, tabs = self.read_lims(lims)
-        npts = npts[spatial_var.id]
+        npts = npts[spatial_var.name]
 
         # default: Spectral Volumes of equal size
         if edges is None:

@@ -28,8 +28,7 @@ class TestAsymptoticConvergence(unittest.TestCase):
         parameter_values.process_geometry(geometry)
 
         # Discretise (same mesh, create different discretisations)
-        var = pybamm.standard_spatial_vars
-        var_pts = {var.x_n: 3, var.x_s: 3, var.x_p: 3}
+        var_pts = {"x_n": 3, "x_s": 3, "x_p": 3}
         mesh = pybamm.Mesh(geometry, full_model.default_submesh_types, var_pts)
 
         method_options = {"extrapolation": {"order": "linear", "use bcs": False}}

@@ -10,9 +10,7 @@ class TestElectrodeSOH(unittest.TestCase):
         model = pybamm.lithium_ion.ElectrodeSOH()
 
         param = pybamm.LithiumIonParameters()
-        parameter_values = pybamm.ParameterValues(
-            chemistry=pybamm.parameter_sets.Mohtat2020
-        )
+        parameter_values = pybamm.ParameterValues("Mohtat2020")
         sim = pybamm.Simulation(model, parameter_values=parameter_values)
 
         V_min = 3
@@ -43,9 +41,7 @@ class TestElectrodeSOHHalfCell(unittest.TestCase):
         model = pybamm.lithium_ion.ElectrodeSOHHalfCell("positive")
 
         param = pybamm.LithiumIonParameters({"working electrode": "positive"})
-        parameter_values = pybamm.ParameterValues(
-            chemistry=pybamm.parameter_sets.Xu2019
-        )
+        parameter_values = pybamm.ParameterValues("Xu2019")
         sim = pybamm.Simulation(model, parameter_values=parameter_values)
 
         V_min = 3
@@ -63,9 +59,7 @@ class TestSetInitialSOC(unittest.TestCase):
         model = pybamm.lithium_ion.ElectrodeSOH()
 
         param = pybamm.LithiumIonParameters()
-        parameter_values = pybamm.ParameterValues(
-            chemistry=pybamm.parameter_sets.Mohtat2020
-        )
+        parameter_values = pybamm.ParameterValues("Mohtat2020")
         sim = pybamm.Simulation(model, parameter_values=parameter_values)
 
         V_min = parameter_values.evaluate(param.voltage_low_cut_dimensional)
