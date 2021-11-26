@@ -609,7 +609,7 @@ class TestParameterValues(unittest.TestCase):
 
     def test_interpolant_2d_from_json(self):
 
-        pv = pybamm.ParameterValues({})
+        pv = pybamm.ParameterValues({'Positive electrode diffusivity [m2.s-1]': 0.0})
 
         pv['Positive electrode diffusivity [m2.s-1]'] = \
             '[2D data]lico2_diffusivity_Dualfoil1998_2Dx'
