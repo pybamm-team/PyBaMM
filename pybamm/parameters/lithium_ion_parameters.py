@@ -306,6 +306,10 @@ class LithiumIonParameters(BaseParameters):
                 self.epsilon_s_n * pybamm.r_average(self.c_n_init)
             )
             self.n_Li_n_init = c_n_init_av * self.c_n_max * self.L_n * self.A_cc
+
+            eps_s_n_av = pybamm.xyz_average(self.epsilon_s_n)
+            self.neg_elec_loading = eps_s_n_av * self.L_n * self.c_n_max * self.F / 3600
+            self.C_n_init = self.neg_elec_loading * self.A_cc
         else:
             self.n_Li_n_init = pybamm.Scalar(0)
 
@@ -336,12 +340,8 @@ class LithiumIonParameters(BaseParameters):
         self.epsilon_inactive_s = 1 - self.epsilon_s_init
         self.epsilon_inactive_p = 1 - self.epsilon_p_init - self.epsilon_s_p
 
-        # Electrode capacities
-        eps_s_n_av = pybamm.xyz_average(self.epsilon_s_n)
         eps_s_p_av = pybamm.xyz_average(self.epsilon_s_p)
-        self.neg_elec_loading = eps_s_n_av * self.L_n * self.c_n_max * self.F / 3600
         self.pos_elec_loading = eps_s_p_av * self.L_p * self.c_p_max * self.F / 3600
-        self.C_n_init = self.neg_elec_loading * self.A_cc
         self.C_p_init = self.pos_elec_loading * self.A_cc
 
         # Loss of active material parameters
@@ -373,13 +373,14 @@ class LithiumIonParameters(BaseParameters):
         # Reference OCP based on initial concentration
         if self.options["working electrode"] == "both":
             self.U_n_ref = self.U_n_dimensional(c_n_init_av, self.T_ref)
+            self.U_n_init_dim = self.U_n_dimensional(c_n_init_av, self.T_init)
         else:
             self.U_n_ref = pybamm.Scalar(0)
+            self.U_n_init_dim = pybamm.Scalar(0)
         self.U_p_ref = self.U_p_dimensional(c_p_init_av, self.T_ref)
 
         self.ocv_ref = self.U_p_ref - self.U_n_ref
         self.T_init = self.therm.T_init
-        self.U_n_init_dim = self.U_n_dimensional(c_n_init_av, self.T_init)
         self.U_p_init_dim = self.U_p_dimensional(c_p_init_av, self.T_init)
         self.ocv_init_dim = self.U_p_init_dim - self.U_n_init_dim
 

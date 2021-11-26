@@ -578,12 +578,6 @@ class ParameterValues:
             return self._processed_symbols[symbol.id]
         except KeyError:
             processed_symbol = self._process_symbol(symbol)
-            if (
-                isinstance(processed_symbol, pybamm.Scalar)
-                and processed_symbol.evaluate() == 1
-            ):
-                n = 1
-
             self._processed_symbols[symbol.id] = processed_symbol
 
             return processed_symbol
@@ -597,9 +591,8 @@ class ParameterValues:
                 # Check not NaN (parameter in csv file but no value given)
                 if np.isnan(value):
                     raise ValueError(f"Parameter '{symbol.name}' not found")
-                # Scalar inherits name (for updating parameters) and domain (for
-                # Broadcast)
-                return pybamm.Scalar(value, name=symbol.name, domain=symbol.domain)
+                # Scalar inherits name (for updating parameters)
+                return pybamm.Scalar(value, name=symbol.name)
             elif isinstance(value, pybamm.Symbol):
                 new_value = self.process_symbol(value)
                 new_value.domain = symbol.domain
@@ -654,17 +647,16 @@ class ParameterValues:
                     )
                 # If the "function" is provided is actually a scalar, return a Scalar
                 # object instead of throwing an error.
-                # Also use ones_like so that we get the right shapes
                 function = pybamm.Scalar(
                     function_name, name=symbol.name
-                ) * pybamm.ones_like(*new_children)
-            elif isinstance(function_name, pybamm.InputParameter) or (
-                isinstance(function_name, pybamm.Symbol)
-                and function_name.size_for_testing == 1
-            ):
-                # If the "function" provided is a pybamm scalar-like, use ones_like to
-                # get the right shape
-                function = function_name * pybamm.ones_like(*new_children)
+                )  # * pybamm.ones_like(*new_children)
+            # elif isinstance(function_name, pybamm.InputParameter) or (
+            #     isinstance(function_name, pybamm.Symbol)
+            #     and function_name.size_for_testing == 1
+            # ):
+            #     # If the "function" provided is a pybamm scalar-like, use ones_like to
+            #     # get the right shape
+            #     function = function_name * pybamm.ones_like(*new_children)
             elif callable(function_name):
                 # otherwise evaluate the function to create a new PyBaMM object
                 function = function_name(*new_children)
@@ -677,14 +669,12 @@ class ParameterValues:
                 )
             # Differentiate if necessary
             if symbol.diff_variable is None:
-                function_out = function
+                # Use ones_like so that we get the right shapes
+                function_out = function * pybamm.ones_like(*new_children)
             else:
                 # return differentiated function
                 new_diff_variable = self.process_symbol(symbol.diff_variable)
                 function_out = function.diff(new_diff_variable)
-            # Convert possible float output to a pybamm scalar
-            if isinstance(function_out, numbers.Number):
-                return pybamm.Scalar(function_out)
             # Process again just to be sure
             return self.process_symbol(function_out)
 
@@ -738,7 +728,10 @@ class ParameterValues:
                     return self.process_symbol(pybamm.x_average(new_left.child))
             # make new symbol, ensure domain remains the same
             new_symbol = symbol._binary_new_copy(new_left, new_right)
-            new_symbol.domain = symbol.domain
+            try:
+                new_symbol.domain = symbol.domain
+            except pybamm.DomainError:
+                self._process_symbol(symbol.left)
             return new_symbol
 
         # Unary operators

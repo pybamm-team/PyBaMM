@@ -21,16 +21,14 @@ class Parameter(pybamm.Symbol):
 
     name : str
         name of the node
-    domain : iterable of str, optional
-        list of domains the parameter is valid over, defaults to empty list
     """
 
-    def __init__(self, name, domain=[]):
-        super().__init__(name, domain=domain)
+    def __init__(self, name):
+        super().__init__(name)
 
     def create_copy(self):
         """See :meth:`pybamm.Symbol.new_copy()`."""
-        return Parameter(self.name, self.domain)
+        return Parameter(self.name)
 
     def _evaluate_for_shape(self):
         """

@@ -988,6 +988,10 @@ def simplified_subtraction(left, right):
         ):
             return left
 
+    # Return constant if both sides are constant
+    if left.is_constant() and right.is_constant():
+        return pybamm.simplify_if_constant(Subtraction(left, right))
+
     # a symbol minus itself is 0s of the same shape
     if left.id == right.id:
         return pybamm.zeros_like(left)

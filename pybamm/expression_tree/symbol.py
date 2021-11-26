@@ -281,6 +281,11 @@ class Symbol(anytree.NodeMixin):
     def domain(self, domain):
         if domain is None:
             domain = []
+        if domain != [] and isinstance(self, (pybamm.Scalar, pybamm.Parameter)):
+            raise pybamm.DomainError(
+                f"Symbol of type {type(self)} cannot have a domain."
+            )
+
         elif isinstance(domain, str):
             domain = [domain]
         if domain == [] and self.auxiliary_domains != {}:
