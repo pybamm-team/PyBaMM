@@ -103,10 +103,10 @@ def battery_geometry(
             )
     elif form_factor == "cylindrical":
         if current_collector_dimension == 0:
-            geometry["current collector"] = {var.r: {"position": 1}}
+            geometry["current collector"] = {var.r_macro: {"position": 1}}
         elif current_collector_dimension == 1:
             geometry["current collector"] = {
-                var.r: {"min": geo.r_inner, "max": 1},
+                var.r_macro: {"min": geo.r_inner, "max": 1},
             }
         else:
             raise pybamm.GeometryError(
