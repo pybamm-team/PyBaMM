@@ -609,10 +609,53 @@ class TestParameterValues(unittest.TestCase):
 
     def test_interpolant_2d_from_json(self):
 
-        pv = pybamm.ParameterValues({'Positive electrode diffusivity [m2.s-1]': 0.0})
+        # pv = pybamm.ParameterValues({'interpolation': 0.0, 'function': 0.0})
+        #
+        # pv['interpolation'] = \
+        #     '[2D data]../tests/unit/test_parameters/lico2_diffusivity_Dualfoil1998_2D'
+        #
+        # pv['function'] = '[function]'
 
-        pv['Positive electrode diffusivity [m2.s-1]'] = \
-            '[2D data]../tests/unit/test_parameters/lico2_diffusivity_Dualfoil1998_2D'
+        parameter_values = pybamm.ParameterValues({})
+        parameter_values.update(
+            {
+                "function": "[function]lico2_diffusivity_Dualfoil1998",
+            },
+            path=os.path.join(
+                pybamm.root_dir(),
+                "pybamm",
+                "input",
+                "parameters",
+                "lithium_ion",
+                "positive_electrodes",
+                "lico2_Ai2020",
+            ),
+            check_already_exists=False,
+        )
+        parameter_values.update(
+            {
+                "interpolation": "[2D data]lico2_diffusivity_Dualfoil1998_2D",
+            },
+            path=os.path.join(
+                pybamm.root_dir(),
+                "tests",
+                "unit",
+                "test_parameters",
+            ),
+            check_already_exists=False,
+        )
+
+        a = pybamm.Scalar(0.6)
+        b = pybamm.Scalar(300.0)
+
+        func = pybamm.FunctionParameter("function", {"a": a, "b": b})
+        interp = pybamm.FunctionParameter("interpolation", {"a": a, "b": b})
+
+        processed_func = parameter_values.process_symbol(func)
+        processed_interp = parameter_values.process_symbol(interp)
+        np.testing.assert_array_almost_equal(
+            processed_func.evaluate(), processed_interp.evaluate(), decimal=4
+        )
 
     def test_process_integral_broadcast(self):
         # Test that the x-average of a broadcast, created outside of x-average, gets
