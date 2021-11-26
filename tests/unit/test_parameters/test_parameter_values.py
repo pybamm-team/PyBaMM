@@ -607,6 +607,12 @@ class TestParameterValues(unittest.TestCase):
             processed_diff_func.evaluate(), processed_diff_interp.evaluate(), decimal=2
         )
 
+    def test_interpolant_2d_from_json(self):
+
+        pv = pybamm.ParameterValues({})
+
+        pv['Positive electrode diffusivity [m2.s-1]'] = '[2D data]lico2_diffusivity_Dualfoil1998_2Dx'
+
     def test_process_integral_broadcast(self):
         # Test that the x-average of a broadcast, created outside of x-average, gets
         # processed correctly
