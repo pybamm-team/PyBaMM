@@ -696,37 +696,25 @@ class TestParameterValues(unittest.TestCase):
         var2 = pybamm.Variable("var2")
         par1 = pybamm.Parameter("par1")
         par2 = pybamm.Parameter("par2")
-        scal1 = pybamm.Scalar(3)
-        scal2 = pybamm.Scalar(4)
-        expression = (scal1 * (par1 ** var2)) / ((var1 - par2) + scal2)
+        expression = (3 * (par1 ** var2)) / ((var1 - par2) + var2)
 
         param = pybamm.ParameterValues({"par1": 1, "par2": 2})
         exp_param = param.process_symbol(expression)
         self.assertIsInstance(exp_param, pybamm.Division)
         # left side
-        self.assertIsInstance(exp_param.children[0], pybamm.Multiplication)
-        self.assertIsInstance(exp_param.children[0].children[0], pybamm.Scalar)
-        self.assertIsInstance(exp_param.children[0].children[1], pybamm.Power)
-        self.assertTrue(
-            isinstance(exp_param.children[0].children[1].children[0], pybamm.Scalar)
-        )
-        self.assertEqual(exp_param.children[0].children[1].children[0].value, 1)
-        self.assertTrue(
-            isinstance(exp_param.children[0].children[1].children[1], pybamm.Variable)
-        )
+        self.assertIsInstance(exp_param.left, pybamm.Multiplication)
+        self.assertIsInstance(exp_param.left.left, pybamm.Scalar)
+        self.assertIsInstance(exp_param.left.right, pybamm.Power)
+        self.assertIsInstance(exp_param.left.right.left, pybamm.Scalar)
+        self.assertEqual(exp_param.left.right.left.value, 1)
+        self.assertIsInstance(exp_param.left.right.right, pybamm.Variable)
         # right side
-        self.assertIsInstance(exp_param.children[1], pybamm.Addition)
-        self.assertTrue(
-            isinstance(exp_param.children[1].children[0], pybamm.Subtraction)
-        )
-        self.assertTrue(
-            isinstance(exp_param.children[1].children[0].children[0], pybamm.Variable)
-        )
-        self.assertTrue(
-            isinstance(exp_param.children[1].children[0].children[1], pybamm.Scalar)
-        )
-        self.assertEqual(exp_param.children[1].children[0].children[1].value, 2)
-        self.assertIsInstance(exp_param.children[1].children[1], pybamm.Scalar)
+        self.assertIsInstance(exp_param.right, pybamm.Addition)
+        self.assertIsInstance(exp_param.right.left, pybamm.Subtraction)
+        self.assertIsInstance(exp_param.right.left.left, pybamm.Variable)
+        self.assertIsInstance(exp_param.right.left.right, pybamm.Scalar)
+        self.assertEqual(exp_param.right.left.right.value, 2)
+        self.assertIsInstance(exp_param.right.right, pybamm.Variable)
 
     def test_process_model(self):
         model = pybamm.BaseModel()
@@ -774,16 +762,12 @@ class TestParameterValues(unittest.TestCase):
         # variables
         self.assertEqual(model.variables["var1"].id, var1.id)
         self.assertIsInstance(model.variables["grad_var1"], pybamm.Gradient)
-        self.assertTrue(
-            isinstance(model.variables["grad_var1"].children[0], pybamm.Variable)
-        )
+        self.assertIsInstance(model.variables["grad_var1"].children[0], pybamm.Variable)
         self.assertEqual(
             model.variables["d_var1"].id, (pybamm.Scalar(42, name="d") * var1).id
         )
         self.assertIsInstance(model.variables["d_var1"].children[0], pybamm.Scalar)
-        self.assertTrue(
-            isinstance(model.variables["d_var1"].children[1], pybamm.Variable)
-        )
+        self.assertIsInstance(model.variables["d_var1"].children[1], pybamm.Variable)
         # timescale and length scales
         self.assertEqual(model.timescale.evaluate(), 2)
         self.assertEqual(model.length_scales["test"].evaluate(), 3)

@@ -584,25 +584,15 @@ class FiniteVolume(pybamm.SpatialMethod):
             csr_matrix(kron(eye(second_dim_repeats), right_sub_matrix))
         )
 
-        # Remove domains to avoid clash
-        left_domain = left_symbol_disc.domain
-        right_domain = right_symbol_disc.domain
-        left_auxiliary_domains = left_symbol_disc.auxiliary_domains
-        right_auxiliary_domains = right_symbol_disc.auxiliary_domains
-        left_symbol_disc.clear_domains()
-        right_symbol_disc.clear_domains()
-
         # Finite volume derivative
-        dy = right_matrix @ right_symbol_disc - left_matrix @ left_symbol_disc
+        # Remove domains to avoid clash
         dx = right_mesh.nodes[0] - left_mesh.nodes[-1]
+        dy_r = (right_matrix / dx) @ right_symbol_disc
+        dy_r.clear_domains()
+        dy_l = (left_matrix / dx) @ left_symbol_disc
+        dy_l.clear_domains()
 
-        # Change domains back
-        left_symbol_disc.domain = left_domain
-        right_symbol_disc.domain = right_domain
-        left_symbol_disc.auxiliary_domains = left_auxiliary_domains
-        right_symbol_disc.auxiliary_domains = right_auxiliary_domains
-
-        return dy / dx
+        return dy_r - dy_l
 
     def add_ghost_nodes(self, symbol, discretised_symbol, bcs):
         """
@@ -1154,10 +1144,8 @@ class FiniteVolume(pybamm.SpatialMethod):
                     disc_children[idx] = self.edge_to_node(child)
                 else:
                     raise pybamm.ShapeError(
-                        """
-                        child must have size n_nodes (number of nodes in the mesh)
-                        or n_edges (number of edges in the mesh)
-                        """
+                        "child must have size n_nodes (number of nodes in the mesh) "
+                        "or n_edges (number of edges in the mesh)"
                     )
         return pybamm.domain_concatenation(disc_children, self.mesh)
 
