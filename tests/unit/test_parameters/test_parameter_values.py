@@ -616,7 +616,8 @@ class TestParameterValues(unittest.TestCase):
         #
         # pv['function'] = '[function]'
 
-        parameter_values = pybamm.ParameterValues(chemistry=pybamm.parameter_sets.Ai2020)
+        parameter_values = \
+            pybamm.ParameterValues(chemistry=pybamm.parameter_sets.Ai2020)
         parameter_values.update(
             {
                 "function": "[function]lico2_diffusivity_Dualfoil1998",
