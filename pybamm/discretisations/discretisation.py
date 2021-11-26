@@ -7,8 +7,6 @@ from collections import defaultdict, OrderedDict
 from scipy.sparse import block_diag, csc_matrix, csr_matrix
 from scipy.sparse.linalg import inv
 
-from pybamm.expression_tree.state_vector import StateVector
-
 
 def has_bc_of_form(symbol, side, bcs, form):
 
@@ -792,8 +790,6 @@ class Discretisation(object):
             # keep calling .id
             pybamm.logger.debug("Discretise {!r}".format(eqn_key))
 
-            if eqn_key == "Electrolyte flux":
-                n = 1
             processed_eqn = self.process_symbol(eqn)
 
             new_var_eqn_dict[eqn_key] = processed_eqn
@@ -1023,11 +1019,7 @@ class Discretisation(object):
 
         elif isinstance(symbol, pybamm.Concatenation):
             new_children = [self.process_symbol(child) for child in symbol.children]
-            try:
-                new_symbol = spatial_method.concatenation(new_children)
-            except:
-                # self._discretised_symbols = {}
-                self._process_symbol(symbol.children[0])
+            new_symbol = spatial_method.concatenation(new_children)
             return new_symbol
 
         elif isinstance(symbol, pybamm.InputParameter):

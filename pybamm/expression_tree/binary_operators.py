@@ -1167,7 +1167,7 @@ def simplified_multiplication(left, right):
     # This is a common construction that appears from discretisation of spatial
     # operators
     # Also do this for cases like a * (b @ c + d) where (a * b) is constant
-    elif isinstance(right, Addition):
+    elif isinstance(right, (Addition, Subtraction)):
         mul_classes = (
             pybamm.Multiplication,
             pybamm.MatrixMultiplication,
@@ -1183,7 +1183,10 @@ def simplified_multiplication(left, right):
             if (r_left.domain == right.domain or r_left.domain == []) and (
                 r_right.domain == right.domain or r_right.domain == []
             ):
-                return (left * r_left) + (left * r_right)
+                if isinstance(right, Addition):
+                    return (left * r_left) + (left * r_right)
+                elif isinstance(right, Subtraction):
+                    return (left * r_left) - (left * r_right)
 
     # Negation simplifications
     if isinstance(left, pybamm.Negate) and isinstance(right, pybamm.Negate):
@@ -1333,11 +1336,7 @@ def simplified_matrix_multiplication(left, right):
         # Simplify A @ (b / c) to (A / c) @ b if (A / c) is constant
         if right.right.evaluates_to_constant_number():
             r_left, r_right = right.orphans
-            new_left = left / r_right
-            new_mul = new_left @ r_left
-            # Keep the domain of the old left
-            new_mul.copy_domains(left)
-            return new_mul
+            return (left / r_right) @ r_left
 
     # Simplify A @ (B @ c) to (A @ B) @ c if (A @ B) is constant
     # This is a common construction that appears from discretisation of spatial
