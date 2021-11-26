@@ -289,6 +289,9 @@ def load_function(filename):
 
     path = root_path.replace("/", ".")
     path = path.replace("\\", ".")
+    pybamm.logger.debug(
+        f"Importing function '{tail}' from file '{filename}' via path '{path}'"
+    )
     module_object = importlib.import_module(path)
 
     return getattr(module_object, tail)
