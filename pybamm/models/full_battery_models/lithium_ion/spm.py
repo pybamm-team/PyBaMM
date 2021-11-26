@@ -37,6 +37,7 @@ class SPM(BaseModel):
 
         self.set_external_circuit_submodel()
         self.set_porosity_submodel()
+        self.set_interface_utilisation_submodel()
         self.set_crack_submodel()
         self.set_active_material_submodel()
         self.set_tortuosity_submodels()

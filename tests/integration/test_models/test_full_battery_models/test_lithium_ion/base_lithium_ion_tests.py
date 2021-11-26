@@ -93,6 +93,38 @@ class BaseIntegrationTestLithiumIon:
         options = {"particle": "quartic profile"}
         self.run_basic_processing_test(options)
 
+    def test_constant_utilisation(self):
+        options = {"interface utilisation": "constant"}
+        parameter_values = pybamm.ParameterValues(
+            chemistry=pybamm.parameter_sets.Marquis2019
+        )
+        parameter_values.update(
+            {
+                "Initial negative electrode interface utilisation": 0.9,
+                "Initial positive electrode interface utilisation": 0.8,
+            },
+            check_already_exists=False,
+        )
+        self.run_basic_processing_test(options, parameter_values=parameter_values)
+
+    def test_current_driven_utilisation(self):
+        options = {"interface utilisation": "current-driven"}
+        parameter_values = pybamm.ParameterValues(
+            chemistry=pybamm.parameter_sets.Marquis2019
+        )
+        parameter_values.update(
+            {
+                "Initial negative electrode interface utilisation": 0.9,
+                "Initial positive electrode interface utilisation": 0.8,
+                "Negative electrode current-driven interface utilisation factor "
+                "[m3.mol-1]": -1e-5,
+                "Positive electrode current-driven interface utilisation factor "
+                "[m3.mol-1]": 1e-5,
+            },
+            check_already_exists=False,
+        )
+        self.run_basic_processing_test(options, parameter_values=parameter_values)
+
     def test_loss_active_material_reaction_both(self):
         options = {"loss of active material": "reaction-driven"}
         self.run_basic_processing_test(options)

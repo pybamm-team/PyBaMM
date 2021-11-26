@@ -43,6 +43,12 @@ model.submodels["negative interface"] = pybamm.interface.InverseButlerVolmer(
 model.submodels["positive interface"] = pybamm.interface.InverseButlerVolmer(
     model.param, "Positive", "lithium-ion main", options=model.options
 )
+model.submodels["negative interface utilisation"] = pybamm.interface_utilisation.Full(
+    model.param, "Negative", model.options
+)
+model.submodels["positive interface utilisation"] = pybamm.interface_utilisation.Full(
+    model.param, "Positive", model.options
+)
 model.submodels[
     "negative interface current"
 ] = pybamm.interface.CurrentForInverseButlerVolmer(
