@@ -611,7 +611,8 @@ class TestParameterValues(unittest.TestCase):
 
         pv = pybamm.ParameterValues({})
 
-        pv['Positive electrode diffusivity [m2.s-1]'] = '[2D data]lico2_diffusivity_Dualfoil1998_2Dx'
+        pv['Positive electrode diffusivity [m2.s-1]'] = \
+            '[2D data]lico2_diffusivity_Dualfoil1998_2Dx'
 
     def test_process_integral_broadcast(self):
         # Test that the x-average of a broadcast, created outside of x-average, gets
