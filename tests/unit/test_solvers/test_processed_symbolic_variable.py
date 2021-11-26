@@ -280,7 +280,7 @@ class TestProcessedSymbolicVariable(unittest.TestCase):
         geometry = pybamm.Geometry(
             {"line": {x: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)}}}
         )
-        submesh_types = {"line": pybamm.MeshGenerator(pybamm.Uniform1DSubMesh)}
+        submesh_types = {"line": pybamm.Uniform1DSubMesh}
         var_pts = {x: 10}
         mesh = pybamm.Mesh(geometry, submesh_types, var_pts)
         disc = pybamm.Discretisation(mesh, {"line": pybamm.FiniteVolume()})

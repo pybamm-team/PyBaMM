@@ -11,7 +11,7 @@ model = pb.lithium_ion.DFN(
     }
 )
 
-param = pb.ParameterValues(chemistry=pb.parameter_sets.Mohtat2020)
+param = pb.ParameterValues("Mohtat2020")
 
 experiment = pb.Experiment(
     [

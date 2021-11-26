@@ -310,8 +310,7 @@ class TestQuickPlot(unittest.TestCase):
             param = model.default_parameter_values
             param.process_model(model)
             param.process_geometry(geometry)
-            var = pybamm.standard_spatial_vars
-            var_pts = {var.x_n: 5, var.x_s: 5, var.x_p: 5, var.r_n: 5, var.r_p: 5}
+            var_pts = {"x_n": 5, "x_s": 5, "x_p": 5, "r_n": 5, "r_p": 5}
             mesh = pybamm.Mesh(geometry, model.default_submesh_types, var_pts)
             disc = pybamm.Discretisation(mesh, model.default_spatial_methods)
             disc.process_model(model)
@@ -391,8 +390,7 @@ class TestQuickPlot(unittest.TestCase):
         param = spm.default_parameter_values
         param.process_model(spm)
         param.process_geometry(geometry)
-        var = pybamm.standard_spatial_vars
-        var_pts = {var.x_n: 5, var.x_s: 5, var.x_p: 5, var.r_n: 5, var.r_p: 5, var.z: 5}
+        var_pts = {"x_n": 5, "x_s": 5, "x_p": 5, "r_n": 5, "r_p": 5, "z": 5}
         mesh = pybamm.Mesh(geometry, spm.default_submesh_types, var_pts)
         disc_spm = pybamm.Discretisation(mesh, spm.default_spatial_methods)
         disc_spm.process_model(spm)
@@ -426,16 +424,7 @@ class TestQuickPlot(unittest.TestCase):
         param = spm.default_parameter_values
         param.process_model(spm)
         param.process_geometry(geometry)
-        var = pybamm.standard_spatial_vars
-        var_pts = {
-            var.x_n: 5,
-            var.x_s: 5,
-            var.x_p: 5,
-            var.r_n: 5,
-            var.r_p: 5,
-            var.y: 5,
-            var.z: 5,
-        }
+        var_pts = {"x_n": 5, "x_s": 5, "x_p": 5, "r_n": 5, "r_p": 5, "y": 5, "z": 5}
         mesh = pybamm.Mesh(geometry, spm.default_submesh_types, var_pts)
         disc_spm = pybamm.Discretisation(mesh, spm.default_spatial_methods)
         disc_spm.process_model(spm)
@@ -482,8 +471,7 @@ class TestQuickPlot(unittest.TestCase):
             pybamm.QuickPlot(1)
 
     def test_model_with_inputs(self):
-        chemistry = pybamm.parameter_sets.Chen2020
-        parameter_values = pybamm.ParameterValues(chemistry=chemistry)
+        parameter_values = pybamm.ParameterValues("Chen2020")
         model = pybamm.lithium_ion.SPMe()
         parameter_values.update({"Electrode height [m]": "[input]"})
         solver = pybamm.CasadiSolver(mode="safe")
