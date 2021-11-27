@@ -360,10 +360,10 @@ class TestSymbol(unittest.TestCase):
             r"Addition\(" + hex_regex + r", \+, children\=\['a', 'b'\], domain=\[\]",
         )
         self.assertRegex(
-            (c * d).__repr__(),
+            (a * d).__repr__(),
             r"Multiplication\("
             + hex_regex
-            + r", \*, children\=\['c', 'd'\], domain=\['test'\]"
+            + r", \*, children\=\['a', 'd'\], domain=\['test'\]"
             + r", auxiliary_domains\=\{'secondary': \"\['other test'\]\"\}\)",
         )
         self.assertRegex(

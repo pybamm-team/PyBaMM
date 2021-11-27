@@ -8,12 +8,13 @@ import numpy as np
 pybamm.set_logging_level("INFO")
 
 # load model
-model = pybamm.lithium_ion.DFN()
+model = pybamm.lithium_ion.DFN({"particle size": "distribution"})
 # create geometry
 geometry = model.default_geometry
 
 # load parameter values and process model and geometry
 param = model.default_parameter_values
+param = pybamm.get_size_distribution_parameters(param)
 param.process_geometry(geometry)
 param.process_model(model)
 

@@ -326,8 +326,8 @@ class ScikitFiniteElement(pybamm.SpatialMethod):
             The finite element integral vector for the domain
         """
         # get primary domain mesh
-        domain = child.domains["primary"]
-        mesh = self.mesh[domain[0]]
+        domain = child.domain[0]
+        mesh = self.mesh[domain]
 
         # make form for the integral
         @skfem.LinearForm
@@ -354,9 +354,7 @@ class ScikitFiniteElement(pybamm.SpatialMethod):
         See :meth:`pybamm.SpatialMethod.boundary_integral`
         """
         # Calculate integration vector
-        integration_vector = self.boundary_integral_vector(
-            child.domain[0], region=region
-        )
+        integration_vector = self.boundary_integral_vector(child.domain, region=region)
 
         out = integration_vector @ discretised_child
         out.clear_domains()
@@ -424,7 +422,7 @@ class ScikitFiniteElement(pybamm.SpatialMethod):
                 region = "negative tab"
             elif symbol.side == "positive tab":
                 region = "positive tab"
-            domain = symbol.children[0].domain[0]
+            domain = symbol.children[0].domain
             integration_vector = self.boundary_integral_vector(domain, region=region)
 
             # divide integration weights by (numerical) tab width to give average value

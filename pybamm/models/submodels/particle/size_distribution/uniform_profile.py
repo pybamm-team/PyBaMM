@@ -81,9 +81,7 @@ class UniformProfile(BaseSizeDistribution):
             self.domain + " volume-weighted particle-size distribution"
         ]
         c_s_surf = pybamm.Integral(f_v_dist * c_s_surf_distribution, R)
-        c_s = pybamm.PrimaryBroadcast(
-            c_s_surf, [self.domain.lower() + " particle"]
-        )
+        c_s = pybamm.PrimaryBroadcast(c_s_surf, [self.domain.lower() + " particle"])
         c_s_xav = pybamm.x_average(c_s)
         variables.update(self._get_standard_concentration_variables(c_s, c_s_xav))
 
@@ -108,21 +106,16 @@ class UniformProfile(BaseSizeDistribution):
 
     def set_rhs(self, variables):
         c_s_surf_distribution = variables[
-            self.domain
-            + " particle surface concentration distribution"
+            self.domain + " particle surface concentration distribution"
         ]
         j_distribution = variables[
-            self.domain
-            + " electrode interfacial current density distribution"
+            self.domain + " electrode interfacial current density distribution"
         ]
         R = variables[self.domain + " particle sizes"]
 
         if self.domain == "Negative":
             self.rhs = {
-                c_s_surf_distribution: -3
-                * j_distribution
-                / self.param.a_R_n
-                / R
+                c_s_surf_distribution: -3 * j_distribution / self.param.a_R_n / R
             }
         elif self.domain == "Positive":
             self.rhs = {
@@ -135,22 +128,16 @@ class UniformProfile(BaseSizeDistribution):
 
     def set_initial_conditions(self, variables):
         c_s_surf_distribution = variables[
-            self.domain
-            + " particle surface concentration distribution"
+            self.domain + " particle surface concentration distribution"
         ]
 
         if self.domain == "Negative":
-            # Broadcast x_n to particle size domain
-            x_n = pybamm.PrimaryBroadcast(
-                pybamm.standard_spatial_vars.x_n, "negative particle size"
+            c_init = pybamm.PrimaryBroadcast(
+                pybamm.r_average(self.param.c_n_init), "negative particle size"
             )
-            c_init = self.param.c_n_init(x_n)
-
         elif self.domain == "Positive":
-            # Broadcast x_p to particle size domain
-            x_p = pybamm.PrimaryBroadcast(
-                pybamm.standard_spatial_vars.x_p, "positive particle size"
+            c_init = pybamm.PrimaryBroadcast(
+                pybamm.r_average(self.param.c_p_init), "positive particle size"
             )
-            c_init = self.param.c_p_init(x_p)
 
         self.initial_conditions = {c_s_surf_distribution: c_init}

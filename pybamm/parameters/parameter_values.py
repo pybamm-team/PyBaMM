@@ -660,7 +660,12 @@ class ParameterValues:
             elif callable(function_name):
                 # otherwise evaluate the function to create a new PyBaMM object
                 function = function_name(*new_children)
-            elif isinstance(function_name, pybamm.Interpolant):
+            elif isinstance(
+                function_name, (pybamm.Interpolant, pybamm.InputParameter)
+            ) or (
+                isinstance(function_name, pybamm.Symbol)
+                and function_name.size_for_testing == 1
+            ):
                 function = function_name
             else:
                 raise TypeError(

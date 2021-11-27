@@ -180,13 +180,13 @@ class TestParameterValues(unittest.TestCase):
         self.assertEqual(processed_mul.value, 136)
 
         # process integral
-        aa = pybamm.Parameter("a", domain=["negative electrode"])
+        aa = pybamm.PrimaryBroadcast(pybamm.Parameter("a"), "negative electrode")
         x = pybamm.SpatialVariable("x", domain=["negative electrode"])
         integ = pybamm.Integral(aa, x)
         processed_integ = parameter_values.process_symbol(integ)
         self.assertIsInstance(processed_integ, pybamm.Integral)
-        self.assertIsInstance(processed_integ.children[0], pybamm.Scalar)
-        self.assertEqual(processed_integ.children[0].value, 4)
+        self.assertIsInstance(processed_integ.children[0], pybamm.PrimaryBroadcast)
+        self.assertEqual(processed_integ.children[0].child.value, 4)
         self.assertEqual(processed_integ.integration_variable[0].id, x.id)
 
         # process unary operation
@@ -207,7 +207,7 @@ class TestParameterValues(unittest.TestCase):
         self.assertEqual(processed_a.value, 4)
 
         # process boundary operator (test for BoundaryValue)
-        aa = pybamm.Parameter("a", domain=["negative electrode"])
+        aa = pybamm.Parameter("a")
         x = pybamm.SpatialVariable("x", domain=["negative electrode"])
         boundary_op = pybamm.BoundaryValue(aa * x, "left")
         processed_boundary_op = parameter_values.process_symbol(boundary_op)
@@ -368,7 +368,7 @@ class TestParameterValues(unittest.TestCase):
         # process constant function
         const = pybamm.FunctionParameter("const", {"a": a})
         processed_const = parameter_values.process_symbol(const)
-        self.assertIsInstance(processed_const, pybamm.Scalar)
+        self.assertIsInstance(processed_const, pybamm.Vector)
         self.assertEqual(processed_const.evaluate(), 254)
 
         # process case where parameter provided is a pybamm symbol

@@ -149,21 +149,14 @@ class XAveragedUniformProfile(BaseSizeDistribution):
         ]
 
         if self.domain == "Negative":
-            r_n = pybamm.SpatialVariable(
-                "r_n",
-                domain=["negative particle"],
-                auxiliary_domains={"secondary": "current collector"},
-                coord_sys="spherical polar",
+            c_init = pybamm.PrimaryBroadcast(
+                pybamm.x_average(pybamm.r_average(self.param.c_n_init)),
+                "negative particle size",
             )
-            c_init = pybamm.r_average(self.param.c_n_init(r_n, 0))
-
         elif self.domain == "Positive":
-            r_p = pybamm.SpatialVariable(
-                "r_p",
-                domain=["positive particle"],
-                auxiliary_domains={"secondary": "current collector"},
-                coord_sys="spherical polar",
+            c_init = pybamm.PrimaryBroadcast(
+                pybamm.x_average(pybamm.r_average(self.param.c_p_init)),
+                "positive particle size",
             )
-            c_init = pybamm.r_average(self.param.c_p_init(r_p, 1))
 
         self.initial_conditions = {c_s_surf_xav_distribution: c_init}

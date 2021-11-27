@@ -765,7 +765,7 @@ class TestUnaryOperators(unittest.TestCase):
 
         # r-average of a symbol that is broadcast to x
         # takes the average of the child then broadcasts it
-        a = pybamm.Scalar(1, domain="positive particle")
+        a = pybamm.Variable("a", domain="positive particle")
         broad_a = pybamm.SecondaryBroadcast(a, "positive electrode")
         average_broad_a = pybamm.r_average(broad_a)
         self.assertIsInstance(average_broad_a, pybamm.PrimaryBroadcast)
@@ -832,7 +832,7 @@ class TestUnaryOperators(unittest.TestCase):
             pybamm.z_average(symbol_on_edges)
 
     def test_unary_simplifications(self):
-        a = pybamm.Scalar(0, domain="domain")
+        a = pybamm.Scalar(0)
         b = pybamm.Scalar(1)
         d = pybamm.Scalar(-1)
 

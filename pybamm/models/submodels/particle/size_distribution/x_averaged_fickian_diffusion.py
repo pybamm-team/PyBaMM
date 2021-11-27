@@ -235,21 +235,9 @@ class XAveragedFickianDiffusion(BaseSizeDistribution):
         ]
 
         if self.domain == "Negative":
-            r_n = pybamm.SpatialVariable(
-                "r_n",
-                domain=["negative particle"],
-                auxiliary_domains={"secondary": "current collector"},
-                coord_sys="spherical polar",
-            )
-            c_init = self.param.c_n_init(r_n, 0)
+            c_init = pybamm.x_average(self.param.c_n_init)
 
         elif self.domain == "Positive":
-            r_p = pybamm.SpatialVariable(
-                "r_p",
-                domain=["positive particle"],
-                auxiliary_domains={"secondary": "current collector"},
-                coord_sys="spherical polar",
-            )
-            c_init = self.param.c_p_init(r_p, 1)
+            c_init = pybamm.x_average(self.param.c_p_init)
 
         self.initial_conditions = {c_s_xav_distribution: c_init}

@@ -374,6 +374,7 @@ class LithiumIonParameters(BaseParameters):
         )
 
         # Reference OCP based on initial concentration
+        self.T_init = self.therm.T_init
         if self.options["working electrode"] == "both":
             self.U_n_ref = self.U_n_dimensional(c_n_init_av, self.T_ref)
             self.U_n_init_dim = self.U_n_dimensional(c_n_init_av, self.T_init)
@@ -383,7 +384,6 @@ class LithiumIonParameters(BaseParameters):
         self.U_p_ref = self.U_p_dimensional(c_p_init_av, self.T_ref)
 
         self.ocv_ref = self.U_p_ref - self.U_n_ref
-        self.T_init = self.therm.T_init
         self.U_p_init_dim = self.U_p_dimensional(c_p_init_av, self.T_init)
         self.ocv_init_dim = self.U_p_init_dim - self.U_n_init_dim
 
