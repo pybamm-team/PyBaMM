@@ -311,7 +311,8 @@ class BaseInterface(pybamm.BaseSubModel):
 
         # Size average. For j variables that depend on particle size, see
         # "_get_standard_size_distribution_interfacial_current_variables"
-        j = pybamm.size_average(j)
+        if j.domain in [["negative particle size"], ["positive particle size"]]:
+            j = pybamm.size_average(j)
         # Average, and broadcast if necessary
         j_av = pybamm.x_average(j)
         if j.domain == []:
@@ -508,7 +509,8 @@ class BaseInterface(pybamm.BaseSubModel):
         L_x = param.L_x
         # Size average. For j0 variables that depend on particle size, see
         # "_get_standard_size_distribution_exchange_current_variables"
-        j0 = pybamm.size_average(j0)
+        if j0.domain in [["negative particle size"], ["positive particle size"]]:
+            j0 = pybamm.size_average(j0)
         # Average, and broadcast if necessary
         j0_av = pybamm.x_average(j0)
 
@@ -604,7 +606,8 @@ class BaseInterface(pybamm.BaseSubModel):
 
         # Size average. For eta_r variables that depend on particle size, see
         # "_get_standard_size_distribution_overpotential_variables"
-        eta_r = pybamm.size_average(eta_r)
+        if eta_r.domain in [["negative particle size"], ["positive particle size"]]:
+            eta_r = pybamm.size_average(eta_r)
 
         # X-average, and broadcast if necessary
         eta_r_av = pybamm.x_average(eta_r)
@@ -657,6 +660,34 @@ class BaseInterface(pybamm.BaseSubModel):
 
         return variables
 
+    def _get_standard_average_surface_potential_difference_variables(
+        self, delta_phi_av
+    ):
+        if self.domain == "Negative":
+            ocp_ref = self.param.U_n_ref
+        elif self.domain == "Positive":
+            ocp_ref = self.param.U_p_ref
+
+        delta_phi_av_dim = ocp_ref + delta_phi_av * self.param.potential_scale
+
+        if self.half_cell and self.domain == "Negative":
+            variables = {
+                "Lithium metal interface surface potential difference": delta_phi_av,
+                "Lithium metal interface surface potential difference [V]"
+                "": delta_phi_av_dim,
+            }
+        else:
+            variables = {
+                "X-averaged "
+                + self.domain.lower()
+                + " electrode surface potential difference": delta_phi_av,
+                "X-averaged "
+                + self.domain.lower()
+                + " electrode surface potential difference [V]": delta_phi_av_dim,
+            }
+
+        return variables
+
     def _get_standard_surface_potential_difference_variables(self, delta_phi):
 
         if self.domain == "Negative":
@@ -665,37 +696,17 @@ class BaseInterface(pybamm.BaseSubModel):
             ocp_ref = self.param.U_p_ref
         pot_scale = self.param.potential_scale
 
-        # For a half-cell model, the reaction name will be "lithium metal plating"
-        # and the variables are only defined on the interface
-        if self.reaction == "lithium metal plating":
-            delta_phi_dim = ocp_ref + delta_phi * pot_scale
-            variables = {
-                "Lithium metal interface surface potential difference": delta_phi,
-                "Lithium metal interface surface potential difference [V]"
-                "": delta_phi_dim,
-            }
-            return variables
-
-        # Average, and broadcast if necessary
-        delta_phi_av = pybamm.x_average(delta_phi)
-        delta_phi_av_dim = ocp_ref + delta_phi_av * pot_scale
+        # Broadcast if necessary
+        delta_phi_dim = ocp_ref + delta_phi * pot_scale
         if delta_phi.domain == ["current collector"]:
-            delta_phi = pybamm.PrimaryBroadcast(delta_phi_av, self.domain_for_broadcast)
+            delta_phi = pybamm.PrimaryBroadcast(delta_phi, self.domain_for_broadcast)
             delta_phi_dim = pybamm.PrimaryBroadcast(
-                delta_phi_av_dim, self.domain_for_broadcast
+                delta_phi_dim, self.domain_for_broadcast
             )
-        else:
-            delta_phi_dim = ocp_ref + delta_phi * pot_scale
 
         variables = {
             self.domain + " electrode surface potential difference": delta_phi,
-            "X-averaged "
-            + self.domain.lower()
-            + " electrode surface potential difference": delta_phi_av,
             self.domain + " electrode surface potential difference [V]": delta_phi_dim,
-            "X-averaged "
-            + self.domain.lower()
-            + " electrode surface potential difference [V]": delta_phi_av_dim,
         }
 
         return variables
@@ -720,8 +731,10 @@ class BaseInterface(pybamm.BaseSubModel):
         """
         # Size average. For ocp variables that depend on particle size, see
         # "_get_standard_size_distribution_ocp_variables"
-        ocp = pybamm.size_average(ocp)
-        dUdT = pybamm.size_average(dUdT)
+        if ocp.domain in [["negative particle size"], ["positive particle size"]]:
+            ocp = pybamm.size_average(ocp)
+        if dUdT.domain in [["negative particle size"], ["positive particle size"]]:
+            dUdT = pybamm.size_average(dUdT)
 
         # Average, and broadcast if necessary
         dUdT_av = pybamm.x_average(dUdT)

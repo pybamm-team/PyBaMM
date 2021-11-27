@@ -158,7 +158,7 @@ class BaseModel(BaseInterface):
                 )
             v_bar = param.v_bar
             # Set scales for the "EC Reaction Limited" model
-            if isinstance(self, pybamm.sei.EcReactionLimited):
+            if self.options["SEI"] == "ec reaction limited":
                 L_inner_0 = 0
                 L_outer_0 = 1
                 li_mols_per_sei_mols = 2

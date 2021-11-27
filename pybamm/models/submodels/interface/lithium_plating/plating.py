@@ -1,18 +1,21 @@
 #
-# Class for irreversible lithium plating
+# Class for lithium plating
 #
 import pybamm
 from .base_plating import BasePlating
 
 
-class IrreversiblePlating(BasePlating):
-    """Base class for irreversible lithium plating.
+class Plating(BasePlating):
+    """Class for lithium plating.
+
     Parameters
     ----------
     param : parameter class
         The parameters to use for this submodel
     x_average : bool
         Whether to use x-averaged variables (SPM, SPMe, etc) or full variables (DFN)
+    options : dict, optional
+        A dictionary of options to be passed to the model.
 
     References
     ----------
@@ -24,15 +27,15 @@ class IrreversiblePlating(BasePlating):
     **Extends:** :class:`pybamm.lithium_plating.BasePlating`
     """
 
-    def __init__(self, param, x_average):
-        super().__init__(param)
+    def __init__(self, param, x_average, options):
+        super().__init__(param, options)
         self.x_average = x_average
         pybamm.citations.register("OKane2020")
 
     def get_fundamental_variables(self):
         if self.x_average is True:
             c_plated_Li_av = pybamm.Variable(
-                "Lithium plating concentration",
+                "X-averaged lithium plating concentration",
                 domain="current collector",
             )
             c_plated_Li = pybamm.PrimaryBroadcast(c_plated_Li_av, "negative electrode")
@@ -54,14 +57,22 @@ class IrreversiblePlating(BasePlating):
         T = variables["Negative electrode temperature"]
         eta_sei = variables["SEI film overpotential"]
         c_plated_Li = variables["Lithium plating concentration"]
+        j0_stripping = param.j0_stripping(c_e_n, c_plated_Li, T)
         j0_plating = param.j0_plating(c_e_n, c_plated_Li, T)
         phi_ref = param.U_n_ref / param.potential_scale
 
         eta_stripping = delta_phi + phi_ref + eta_sei
         eta_plating = -eta_stripping
         prefactor = 1 / (2 * (1 + self.param.Theta * T))
-        # j_stripping is always negative, because there is no stripping, only plating
-        j_stripping = -j0_plating * pybamm.exp(prefactor * eta_plating)
+
+        if self.options["lithium plating"] == "reversible":
+            j_stripping = j0_stripping * pybamm.exp(
+                prefactor * eta_stripping
+            ) - j0_plating * pybamm.exp(prefactor * eta_plating)
+        elif self.options["lithium plating"] == "irreversible":
+            # j_stripping is always negative, because there is no stripping, only
+            # plating
+            j_stripping = -j0_plating * pybamm.exp(prefactor * eta_plating)
 
         variables.update(self._get_standard_overpotential_variables(eta_stripping))
         variables.update(self._get_standard_reaction_variables(j_stripping))

@@ -12,7 +12,7 @@ class TestMPM(unittest.TestCase):
         options = {"thermal": "isothermal"}
         model = pybamm.lithium_ion.MPM(options)
         # use Ecker parameters for nonlinear diffusion
-        param = pybamm.ParameterValues(chemistry=pybamm.parameter_sets.Ecker2015)
+        param = pybamm.ParameterValues("Ecker2015")
         param = pybamm.get_size_distribution_parameters(param)
         modeltest = tests.StandardModelTest(model)
         modeltest.test_all()
@@ -58,13 +58,9 @@ class TestMPM(unittest.TestCase):
         # We test that the amount of lithium removed or added to each electrode
         # is the same as for the SPM with the same parameters
         models = [pybamm.lithium_ion.SPM(), pybamm.lithium_ion.MPM()]
-        var = pybamm.standard_spatial_vars
 
         # reduce number of particle sizes, for a crude discretization
-        var_pts = {
-            var.R_n: 3,
-            var.R_p: 3,
-        }
+        var_pts = {"R_n": 3, "R_p": 3}
         solver = pybamm.CasadiSolver(mode="fast")
 
         # solve

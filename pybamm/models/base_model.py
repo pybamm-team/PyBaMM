@@ -170,6 +170,20 @@ class BaseModel:
 
     @variables.setter
     def variables(self, variables):
+        for name, var in variables.items():
+            if (
+                isinstance(var, pybamm.Variable)
+                and var.name != name
+                # Exception if the variable is also there under its own name
+                and not (var.name in variables and variables[var.name].id == var.id)
+                # Exception for the key "Leading-order"
+                and "leading-order" not in var.name.lower()
+                and "leading-order" not in name.lower()
+            ):
+                raise ValueError(
+                    f"Variable with name '{var.name}' is in variables dictionary with "
+                    f"name '{name}'. Names must match."
+                )
         self._variables = pybamm.FuzzyDict(variables)
 
     def variable_names(self):

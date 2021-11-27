@@ -9,7 +9,7 @@ if pybamm.have_jax():
     import jax
 
 
-@unittest.skipIf(not pybamm.have_jax(), "jax is not installed")
+@unittest.skipIf(not pybamm.have_jax(), "jax or jaxlib is not installed")
 class TestJaxSolver(unittest.TestCase):
     def test_model_solver(self):
         # Create model

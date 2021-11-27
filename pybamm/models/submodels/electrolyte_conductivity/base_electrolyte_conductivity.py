@@ -122,8 +122,18 @@ class BaseElectrolyteConductivity(pybamm.BaseSubModel):
                 _, i_e_p = i_e.orphans
             else:
                 i_e_n, _, i_e_p = i_e.orphans
-                variables.update(self._get_domain_current_variables(i_e_n, "Negative"))
-            variables.update(self._get_domain_current_variables(i_e_p, "Positive"))
+                variables.update(
+                    {
+                        "Negative electrolyte current density": i_e_n,
+                        "Negative electrolyte current density [A.m-2]": i_e_n * i_typ,
+                    }
+                )
+            variables.update(
+                {
+                    "Positive electrolyte current density": i_e_p,
+                    "Positive electrolyte current density [A.m-2]": i_e_p * i_typ,
+                }
+            )
 
         return variables
 
@@ -160,6 +170,41 @@ class BaseElectrolyteConductivity(pybamm.BaseSubModel):
 
         return variables
 
+    def _get_standard_average_surface_potential_difference_variables(
+        self, delta_phi_av
+    ):
+        """
+        A private function to obtain the standard variables which
+        can be derived from the surface potential difference.
+
+        Parameters
+        ----------
+        delta_phi_av : :class:`pybamm.Symbol`
+            The x-averaged surface potential difference.
+
+        Returns
+        -------
+        variables : dict
+            The variables which can be derived from the surface potential difference.
+        """
+
+        if self.domain == "Negative":
+            ocp_ref = self.param.U_n_ref
+        elif self.domain == "Positive":
+            ocp_ref = self.param.U_p_ref
+
+        variables = {
+            "X-averaged "
+            + self.domain.lower()
+            + " electrode surface potential difference": delta_phi_av,
+            "X-averaged "
+            + self.domain.lower()
+            + " electrode surface potential difference [V]": ocp_ref
+            + delta_phi_av * self.param.potential_scale,
+        }
+
+        return variables
+
     def _get_standard_surface_potential_difference_variables(self, delta_phi):
         """
         A private function to obtain the standard variables which
@@ -180,10 +225,8 @@ class BaseElectrolyteConductivity(pybamm.BaseSubModel):
             ocp_ref = self.param.U_n_ref
         elif self.domain == "Positive":
             ocp_ref = self.param.U_p_ref
-        pot_scale = self.param.potential_scale
 
-        # Average, and broadcast if necessary
-        delta_phi_av = pybamm.x_average(delta_phi)
+        # Broadcast if necessary
         if delta_phi.domain == []:
             delta_phi = pybamm.FullBroadcast(
                 delta_phi, self.domain_for_broadcast, "current collector"
@@ -193,113 +236,10 @@ class BaseElectrolyteConductivity(pybamm.BaseSubModel):
 
         variables = {
             self.domain + " electrode surface potential difference": delta_phi,
-            "X-averaged "
-            + self.domain.lower()
-            + " electrode surface potential difference": delta_phi_av,
             self.domain
             + " electrode surface potential difference [V]": ocp_ref
-            + delta_phi * pot_scale,
-            "X-averaged "
-            + self.domain.lower()
-            + " electrode surface potential difference [V]": ocp_ref
-            + delta_phi_av * pot_scale,
+            + delta_phi * self.param.potential_scale,
         }
-
-        return variables
-
-    def _get_domain_potential_variables(self, phi_e, domain=None):
-        """
-        A private function to obtain the standard variables which
-        can be derived from the potential in the electrolyte split
-        by domain: 'negative electrode', 'separator' and 'positive electrode'.
-
-        Parameters
-        ----------
-        phi_e : :class:`pybamm.Symbol`
-            The potential in the electrolyte within the domain 'domain'.
-
-        Returns
-        -------
-        variables : dict
-            The variables which can be derived from the potential in the
-            electrolyte in domain 'domain'.
-        """
-        domain = domain or self.domain
-
-        pot_scale = self.param.potential_scale
-        phi_e_av = pybamm.x_average(phi_e)
-
-        variables = {
-            domain + " electrolyte potential": phi_e,
-            domain + " electrolyte potential [V]": phi_e * pot_scale,
-            "X-averaged " + domain.lower() + " electrolyte potential": phi_e_av,
-            "X-averaged "
-            + domain.lower()
-            + " electrolyte potential [V]": phi_e_av * pot_scale,
-        }
-
-        return variables
-
-    def _get_domain_current_variables(self, i_e, domain=None):
-        """
-        A private function to obtain the standard variables which
-        can be derived from the current in the electrolyte split
-        by domain: 'negative electrode', 'separator' and 'positive electrode'.
-
-        Parameters
-        ----------
-        i_e : :class:`pybamm.Symbol`
-            The current in the electrolyte within the domain 'domain'.
-
-        Returns
-        -------
-        variables : dict
-            The variables which can be derived from the current in the
-            electrolyte in domain 'domain'.
-        """
-        domain = domain or self.domain
-
-        i_typ = self.param.i_typ
-
-        variables = {
-            domain + " electrolyte current density": i_e,
-            domain + " electrolyte current density [A.m-2]": i_e * i_typ,
-        }
-
-        return variables
-
-    def _get_whole_cell_variables(self, variables):
-        """
-        A private function to obtain the potential and current concatenated
-        across the whole cell. Note: requires 'variables' to contain the potential
-        and current in the subdomains: 'negative electrode', 'separator', and
-        'positive electrode'.
-
-        Parameters
-        ----------
-        variables : dict
-            The variables that have been set in the rest of the model.
-
-        Returns
-        -------
-        variables : dict
-            The variables including the whole-cell electrolyte potentials
-            and currents.
-        """
-
-        phi_e_n = variables["Negative electrolyte potential"]
-        phi_e_s = variables["Separator electrolyte potential"]
-        phi_e_p = variables["Positive electrolyte potential"]
-
-        i_e_n = variables["Negative electrolyte current density"]
-        i_e_s = variables["Separator electrolyte current density"]
-        i_e_p = variables["Positive electrolyte current density"]
-        i_e = pybamm.concatenation(i_e_n, i_e_s, i_e_p)
-
-        variables.update(
-            self._get_standard_potential_variables(phi_e_n, phi_e_s, phi_e_p)
-        )
-        variables.update(self._get_standard_current_variables(i_e))
 
         return variables
 

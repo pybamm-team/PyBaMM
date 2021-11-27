@@ -35,9 +35,7 @@ class LeadingOrder(BaseElectrolyteConductivity):
             ]
             phi_s_n_av = variables["X-averaged negative electrode potential"]
             phi_e_av = phi_s_n_av - delta_phi_n_av
-        return self._get_coupled_variables_from_potential(variables, phi_e_av)
 
-    def _get_coupled_variables_from_potential(self, variables, phi_e_av):
         i_boundary_cc = variables["Current collector current density"]
 
         param = self.param

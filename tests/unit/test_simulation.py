@@ -2,7 +2,6 @@ import pybamm
 import numpy as np
 import pandas as pd
 import os
-import subprocess
 import sys
 import unittest
 import uuid
@@ -157,8 +156,7 @@ class TestSimulation(unittest.TestCase):
         model = pybamm.lithium_ion.SPMe(model_options)
         sim = pybamm.Simulation(model)
 
-        var = pybamm.standard_spatial_vars
-        Nr = model.default_var_pts[var.r_n]
+        Nr = model.default_var_pts["r_n"]
 
         T_av = 0
         c_s_n_av = np.ones((Nr, 1)) * 0.5
@@ -298,8 +296,11 @@ class TestSimulation(unittest.TestCase):
     def test_load_param(self):
         # Test load_sim for parameters imports
         filename = f"{uuid.uuid4()}.p"
-        save_sim = f"import pybamm; model = pybamm.lithium_ion.SPM(); params = pybamm.ParameterValues(chemistry=pybamm.parameter_sets.Chen2020); sim = pybamm.Simulation(model, parameter_values=params); sim.solve([0, 3600]); sim.save('{filename}')"  # noqa
-        subprocess.run([sys.executable, "-c", save_sim])
+        model = pybamm.lithium_ion.SPM()
+        params = pybamm.ParameterValues("Chen2020")
+        sim = pybamm.Simulation(model, parameter_values=params)
+        sim.solve([0, 3600])
+        sim.save(filename)
 
         try:
             pkl_obj = pybamm.load_sim(os.path.join(filename))

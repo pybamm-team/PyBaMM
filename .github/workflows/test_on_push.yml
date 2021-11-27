@@ -85,7 +85,7 @@ jobs:
 
     - name: Run unit tests for GNU/Linux with Python 3.7 and 3.8
       if: matrix.os == 'ubuntu-latest' && matrix.python-version != 3.9
-      run: python -m tox -e quick
+      run: python -m tox -e unit
 
     - name: Run unit tests for GNU/Linux with Python 3.9 and generate coverage report
       if: matrix.os == 'ubuntu-latest' && matrix.python-version == 3.9
@@ -97,7 +97,11 @@ jobs:
 
     - name: Run unit tests for Windows and MacOS
       if: matrix.os != 'ubuntu-latest'
-      run: python -m tox -e mac-windows-tests
+      run: python -m tox -e mac-windows-unit
+
+    - name: Run integration tests for Windows and MacOS
+      if: matrix.os != 'ubuntu-latest'
+      run: python -m tox -e mac-windows-integration
 
     - name: Install docs dependencies and run doctests
       if: matrix.os == 'ubuntu-latest'
