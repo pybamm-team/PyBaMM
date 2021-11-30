@@ -4,4 +4,4 @@
   - `CITATION.cff`
   - `vcpkg.json`
 - Update CHANGELOG.md with a summary of the release
-- Update (and pin) jax and jaxlib to latest version and fix any bugs that arise
+- Update jax and jaxlib to latest version in `pybamm.util.install_jax` and fix any bugs that arise

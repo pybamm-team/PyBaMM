@@ -43,8 +43,7 @@ class TestXu(unittest.TestCase):
 
     def test_standard_lithium_parameters(self):
 
-        chemistry = pybamm.parameter_sets.Xu2019
-        parameter_values = pybamm.ParameterValues(chemistry=chemistry)
+        parameter_values = pybamm.ParameterValues("Xu2019")
 
         model = pybamm.lithium_ion.BasicDFNHalfCell({"working electrode": "positive"})
         sim = pybamm.Simulation(model, parameter_values=parameter_values)

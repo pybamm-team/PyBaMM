@@ -24,6 +24,17 @@ class Concatenation(pybamm.Symbol):
     """
 
     def __init__(self, *children, name=None, check_domain=True, concat_fun=None):
+        # The second condition checks whether this is the base Concatenation class
+        # or a subclass of Concatenation
+        # (ConcatenationVariable, NumpyConcatenation, ...)
+        if all(isinstance(child, pybamm.Variable) for child in children) and issubclass(
+            Concatenation, type(self)
+        ):
+            raise TypeError(
+                "'ConcatenationVariable' should be used for concatenating 'Variable' "
+                "objects. We recommend using the 'concatenation' function, which will "
+                "automatically choose the best form."
+            )
         if name is None:
             name = "concatenation"
         if check_domain:
@@ -46,10 +57,8 @@ class Concatenation(pybamm.Symbol):
         return out
 
     def _diff(self, variable):
-        """ See :meth:`pybamm.Symbol._diff()`. """
-        children_diffs = [
-            child.diff(variable) for child in self.cached_children
-        ]
+        """See :meth:`pybamm.Symbol._diff()`."""
+        children_diffs = [child.diff(variable) for child in self.cached_children]
         if len(children_diffs) == 1:
             diff = children_diffs[0]
         else:
@@ -411,15 +420,17 @@ def simplified_concatenation(*children):
     """Perform simplifications on a concatenation."""
     # remove children that are None
     children = list(filter(lambda x: x is not None, children))
-    # Create Concatenation to easily read domains
-    concat = Concatenation(*children)
     # Simplify concatenation of broadcasts all with the same child to a single
     # broadcast across all domains
     if len(children) == 0:
         raise ValueError("Cannot create empty concatenation")
     elif len(children) == 1:
         return children[0]
+    elif all(isinstance(child, pybamm.Variable) for child in children):
+        return pybamm.ConcatenationVariable(*children)
     else:
+        # Create Concatenation to easily read domains
+        concat = Concatenation(*children)
         if all(
             isinstance(child, pybamm.Broadcast)
             and child.child.id == children[0].child.id
@@ -432,9 +443,8 @@ def simplified_concatenation(*children):
                 return pybamm.FullBroadcast(
                     unique_child, concat.domain, concat.auxiliary_domains
                 )
-        elif all(isinstance(child, pybamm.Variable) for child in children):
-            return pybamm.ConcatenationVariable(*children)
-    return concat
+        else:
+            return concat
 
 
 def concatenation(*children):

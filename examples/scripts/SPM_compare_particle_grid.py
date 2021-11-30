@@ -31,8 +31,8 @@ for model in models:
 # set mesh
 submesh_types = models[0].default_submesh_types
 particle_meshes = [
-    pybamm.MeshGenerator(pybamm.Uniform1DSubMesh),
-    pybamm.MeshGenerator(pybamm.Chebyshev1DSubMesh),
+    pybamm.Uniform1DSubMesh,
+    pybamm.Chebyshev1DSubMesh,
     pybamm.MeshGenerator(pybamm.Exponential1DSubMesh, submesh_params={"side": "right"}),
 ]
 meshes = [None] * len(models)

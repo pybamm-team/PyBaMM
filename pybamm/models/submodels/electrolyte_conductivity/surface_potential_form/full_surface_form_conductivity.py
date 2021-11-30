@@ -16,13 +16,15 @@ class BaseModel(BaseElectrolyteConductivity):
         The parameters to use for this submodel
     domain : str
         The domain in which the model holds
+    options : dict, optional
+        A dictionary of options to be passed to the model.
 
 
     **Extends:** :class:`pybamm.electrolyte_conductivity.BaseElectrolyteConductivity`
     """
 
-    def __init__(self, param, domain):
-        super().__init__(param, domain)
+    def __init__(self, param, domain, options=None):
+        super().__init__(param, domain, options)
 
     def get_fundamental_variables(self):
         if self.domain == "Negative":
@@ -32,7 +34,12 @@ class BaseModel(BaseElectrolyteConductivity):
         elif self.domain == "Positive":
             delta_phi = pybamm.standard_variables.delta_phi_p
 
-        variables = self._get_standard_surface_potential_difference_variables(delta_phi)
+        variables = self._get_standard_average_surface_potential_difference_variables(
+            pybamm.x_average(delta_phi)
+        )
+        variables.update(
+            self._get_standard_surface_potential_difference_variables(delta_phi)
+        )
 
         return variables
 
@@ -54,12 +61,10 @@ class BaseModel(BaseElectrolyteConductivity):
                 + pybamm.grad(delta_phi)
                 + i_boundary_cc / sigma_eff
             )
-            variables.update(self._get_domain_current_variables(i_e))
+            variables[self.domain + " electrolyte current density"] = i_e
 
             phi_s = variables[self.domain + " electrode potential"]
             phi_e = phi_s - delta_phi
-
-            variables.update(self._get_domain_potential_variables(phi_e))
 
         elif self.domain == "Separator":
             x_s = pybamm.standard_spatial_vars.x_s
@@ -73,18 +78,14 @@ class BaseModel(BaseElectrolyteConductivity):
             chi_e_s = param.chi(c_e_s, T)
             kappa_s_eff = param.kappa_e(c_e_s, T) * tor_s
 
-            phi_e_s = pybamm.boundary_value(
-                phi_e_n, "right"
-            ) + pybamm.IndefiniteIntegral(
+            phi_e = pybamm.boundary_value(phi_e_n, "right") + pybamm.IndefiniteIntegral(
                 (1 + param.Theta * T) * chi_e_s / c_e_s * pybamm.grad(c_e_s)
                 - param.C_e * i_boundary_cc / kappa_s_eff,
                 x_s,
             )
 
-            i_e_s = pybamm.PrimaryBroadcast(i_boundary_cc, "separator")
-
-            variables.update(self._get_domain_potential_variables(phi_e_s))
-            variables.update(self._get_domain_current_variables(i_e_s))
+            i_e = pybamm.PrimaryBroadcast(i_boundary_cc, "separator")
+            variables[self.domain + " electrolyte current density"] = i_e
 
             # Update boundary conditions (for indefinite integral)
             self.boundary_conditions[c_e_s] = {
@@ -92,8 +93,22 @@ class BaseModel(BaseElectrolyteConductivity):
                 "right": (pybamm.BoundaryGradient(c_e_s, "right"), "Neumann"),
             }
 
+        variables[self.domain + " electrolyte potential"] = phi_e
+
         if self.domain == "Positive":
-            variables.update(self._get_whole_cell_variables(variables))
+            phi_e_n = variables["Negative electrolyte potential"]
+            phi_e_s = variables["Separator electrolyte potential"]
+            phi_e_p = variables["Positive electrolyte potential"]
+
+            i_e_n = variables["Negative electrolyte current density"]
+            i_e_s = variables["Separator electrolyte current density"]
+            i_e_p = variables["Positive electrolyte current density"]
+            i_e = pybamm.concatenation(i_e_n, i_e_s, i_e_p)
+
+            variables.update(
+                self._get_standard_potential_variables(phi_e_n, phi_e_s, phi_e_p)
+            )
+            variables.update(self._get_standard_current_variables(i_e))
             variables.update(self._get_electrolyte_overpotentials(variables))
 
         return variables
@@ -202,13 +217,14 @@ class FullAlgebraic(BaseModel):
     ----------
     param : parameter class
         The parameters to use for this submodel
+    options : dict, optional
+        A dictionary of options to be passed to the model.
 
-
-     **Extends:** :class:`pybamm.electrolyte_conductivity.surface_potential_form.BaseFull`
+    **Extends:** :class:`pybamm.electrolyte_conductivity.surface_potential_form.BaseFull`
     """  # noqa: E501
 
-    def __init__(self, param, domain):
-        super().__init__(param, domain)
+    def __init__(self, param, domain, options=None):
+        super().__init__(param, domain, options)
 
     def set_algebraic(self, variables):
         if self.domain == "Separator":
@@ -238,14 +254,14 @@ class FullDifferential(BaseModel):
     ----------
     param : parameter class
         The parameters to use for this submodel
-
+    options : dict, optional
+        A dictionary of options to be passed to the model.
 
     **Extends:** :class:`pybamm.electrolyte_conductivity.surface_potential_form.BaseFull`
-
     """  # noqa: E501
 
-    def __init__(self, param, domain):
-        super().__init__(param, domain)
+    def __init__(self, param, domain, options=None):
+        super().__init__(param, domain, options)
 
     def set_rhs(self, variables):
         if self.domain == "Separator":

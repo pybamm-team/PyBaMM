@@ -40,6 +40,11 @@ class TestConcatenations(unittest.TestCase):
         # concatenation of lenght 1
         self.assertEqual(pybamm.concatenation(a), a)
 
+        a = pybamm.Variable("a", domain="test a")
+        b = pybamm.Variable("b", domain="test b")
+        with self.assertRaisesRegex(TypeError, "ConcatenationVariable"):
+            pybamm.Concatenation(a, b)
+
     def test_concatenation_domains(self):
         a = pybamm.Symbol("a", domain=["negative electrode"])
         b = pybamm.Symbol("b", domain=["separator", "positive electrode"])

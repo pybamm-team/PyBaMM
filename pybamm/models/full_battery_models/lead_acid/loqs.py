@@ -35,6 +35,7 @@ class LOQS(BaseModel):
 
         self.set_external_circuit_submodel()
         self.set_interfacial_submodel()
+        self.set_interface_utilisation_submodel()
         self.set_convection_submodel()
         self.set_porosity_submodel()
         self.set_active_material_submodel()
@@ -196,18 +197,16 @@ class LOQS(BaseModel):
             self.submodels[
                 "leading-order electrolyte conductivity"
             ] = pybamm.electrolyte_conductivity.LeadingOrder(self.param)
-
+            surf_model = surf_form.Explicit
         elif self.options["surface form"] == "differential":
-            for domain in ["Negative", "Separator", "Positive"]:
-                self.submodels[
-                    "leading-order " + domain.lower() + " electrolyte conductivity"
-                ] = surf_form.LeadingOrderDifferential(self.param, domain)
-
+            surf_model = surf_form.LeadingOrderDifferential
         elif self.options["surface form"] == "algebraic":
-            for domain in ["Negative", "Separator", "Positive"]:
-                self.submodels[
-                    "leading-order " + domain.lower() + " electrolyte conductivity"
-                ] = surf_form.LeadingOrderAlgebraic(self.param, domain)
+            surf_model = surf_form.LeadingOrderAlgebraic
+
+        for domain in ["Negative", "Positive"]:
+            self.submodels[
+                domain.lower() + " surface potential difference"
+            ] = surf_model(self.param, domain)
 
         self.submodels[
             "electrolyte diffusion"

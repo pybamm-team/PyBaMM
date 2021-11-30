@@ -6,9 +6,7 @@ import numpy as np
 class TestPlotSummaryVariables(unittest.TestCase):
     def test_plot(self):
         model = pybamm.lithium_ion.SPM({"SEI": "ec reaction limited"})
-        parameter_values = pybamm.ParameterValues(
-            chemistry=pybamm.parameter_sets.Mohtat2020
-        )
+        parameter_values = pybamm.ParameterValues("Mohtat2020")
         experiment = pybamm.Experiment(
             [
                 (

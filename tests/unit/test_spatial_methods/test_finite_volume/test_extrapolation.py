@@ -16,7 +16,7 @@ def errors(pts, function, method_options, bcs=None):
     domain = "test"
     x = pybamm.SpatialVariable("x", domain=domain)
     geometry = {domain: {x: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)}}}
-    submesh_types = {domain: pybamm.MeshGenerator(pybamm.Uniform1DSubMesh)}
+    submesh_types = {domain: pybamm.Uniform1DSubMesh}
     var_pts = {x: pts}
     mesh = pybamm.Mesh(geometry, submesh_types, var_pts)
 
@@ -387,10 +387,9 @@ class TestExtrapolation(unittest.TestCase):
         )
 
     def test_extrapolate_on_nonuniform_grid(self):
-        var = pybamm.standard_spatial_vars
         geometry = {
-            "negative particle": {var.r_n: {"min": 0, "max": 1}},
-            "positive particle": {var.r_p: {"min": 0, "max": 1}},
+            "negative particle": {"r_n": {"min": 0, "max": 1}},
+            "positive particle": {"r_p": {"min": 0, "max": 1}},
         }
 
         submesh_types = {
@@ -399,7 +398,7 @@ class TestExtrapolation(unittest.TestCase):
         }
 
         rpts = 10
-        var_pts = {var.r_n: rpts, var.r_p: rpts}
+        var_pts = {"r_n": rpts, "r_p": rpts}
         mesh = pybamm.Mesh(geometry, submesh_types, var_pts)
         method_options = {"extrapolation": {"order": "linear", "use bcs": False}}
         spatial_methods = {"negative particle": pybamm.FiniteVolume(method_options)}

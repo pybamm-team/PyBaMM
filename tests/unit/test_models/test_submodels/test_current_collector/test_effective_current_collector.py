@@ -14,6 +14,12 @@ class TestEffectiveResistance(unittest.TestCase):
         model = pybamm.current_collector.EffectiveResistance({"dimensionality": 2})
         model.check_well_posedness()
 
+    def test_default_parameters(self):
+        model = pybamm.current_collector.EffectiveResistance({"dimensionality": 1})
+        self.assertEqual(
+            model.default_parameter_values, pybamm.ParameterValues("Marquis2019")
+        )
+
     def test_default_geometry(self):
         model = pybamm.current_collector.EffectiveResistance({"dimensionality": 1})
         self.assertTrue("current collector" in model.default_geometry)
@@ -22,6 +28,10 @@ class TestEffectiveResistance(unittest.TestCase):
         model = pybamm.current_collector.EffectiveResistance({"dimensionality": 2})
         self.assertTrue("current collector" in model.default_geometry)
         self.assertNotIn("negative electrode", model.default_geometry)
+
+    def test_default_var_pts(self):
+        model = pybamm.current_collector.EffectiveResistance({"dimensionality": 1})
+        self.assertEqual(model.default_var_pts, {"y": 32, "z": 32})
 
     def test_default_solver(self):
         model = pybamm.current_collector.EffectiveResistance({"dimensionality": 1})
@@ -44,16 +54,7 @@ class TestEffectiveResistancePostProcess(unittest.TestCase):
             pybamm.current_collector.EffectiveResistance({"dimensionality": 2}),
             pybamm.current_collector.AlternativeEffectiveResistance2D(),
         ]
-        var = pybamm.standard_spatial_vars
-        var_pts = {
-            var.x_n: 5,
-            var.x_s: 5,
-            var.x_p: 5,
-            var.r_n: 5,
-            var.r_p: 5,
-            var.y: 5,
-            var.z: 5,
-        }
+        var_pts = {"x_n": 5, "x_s": 5, "x_p": 5, "r_n": 5, "r_p": 5, "y": 5, "z": 5}
         param = models[0].default_parameter_values
         meshes = [None] * len(models)
         for i, model in enumerate(models):
