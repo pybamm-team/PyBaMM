@@ -19,24 +19,25 @@ PRINT_OPTIONS_OUTPUT = """\
 'current collector': 'uniform' (possible: ['uniform', 'potential pair', 'potential pair quite conductive'])
 'dimensionality': 0 (possible: [0, 1, 2])
 'electrolyte conductivity': 'default' (possible: ['default', 'full', 'leading order', 'composite', 'integrated'])
-'external submodels': []
-'hydrolysis': 'false' (possible: ['true', 'false'])
+'hydrolysis': 'false' (possible: ['false', 'true'])
+'interface utilisation': 'full' (possible: ['full', 'constant', 'current-driven'])
 'lithium plating': 'none' (possible: ['none', 'reversible', 'irreversible'])
-'lithium plating porosity change': 'false' (possible: ['true', 'false'])
+'lithium plating porosity change': 'false' (possible: ['false', 'true'])
 'loss of active material': 'stress-driven' (possible: ['none', 'stress-driven', 'reaction-driven'])
 'operating mode': 'current' (possible: ['current', 'voltage', 'power', 'CCCV'])
 'particle': 'Fickian diffusion' (possible: ['Fickian diffusion', 'fast diffusion', 'uniform profile', 'quadratic profile', 'quartic profile'])
 'particle mechanics': 'swelling only' (possible: ['none', 'swelling only', 'swelling and cracking'])
-'particle shape': 'spherical' (possible: ['spherical', 'user', 'no particles'])
+'particle shape': 'spherical' (possible: ['spherical', 'no particles'])
 'particle size': 'single' (possible: ['single', 'distribution'])
 'SEI': 'none' (possible: ['none', 'constant', 'reaction limited', 'solvent-diffusion limited', 'electron-migration limited', 'interstitial-diffusion limited', 'ec reaction limited'])
-'SEI porosity change': 'false' (possible: ['true', 'false'])
+'SEI film resistance': 'none' (possible: ['none', 'distributed', 'average'])
+'SEI porosity change': 'false' (possible: ['false', 'true'])
+'stress-induced diffusion': 'false' (possible: ['false', 'true'])
 'surface form': 'differential' (possible: ['false', 'differential', 'algebraic'])
 'thermal': 'x-full' (possible: ['isothermal', 'lumped', 'x-lumped', 'x-full'])
-'total interfacial current density as a state': 'false' (possible: ['true', 'false'])
+'total interfacial current density as a state': 'false' (possible: ['false', 'true'])
 'working electrode': 'both' (possible: ['both', 'negative', 'positive'])
-'SEI film resistance': 'none' (possible: ['none', 'distributed', 'average'])
-'stress-induced diffusion': 'false' (possible: ['true', 'false'])
+'external submodels': []
 """  # noqa: E501
 
 
