@@ -3,7 +3,7 @@
 #
 import pybamm
 
-pybamm.set_logging_level("DEBUG")
+pybamm.set_logging_level("INFO")
 
 # load models
 models = [
@@ -20,6 +20,4 @@ for model in models:
     sims.append(sim)
 
 # plot
-pybamm.dynamic_plot(
-    sims, ["Lithium metal interface utilisation", "Terminal voltage [V]"]
-)
+pybamm.dynamic_plot(sims)

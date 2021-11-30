@@ -95,9 +95,7 @@ class BaseIntegrationTestLithiumIon:
 
     def test_constant_utilisation(self):
         options = {"interface utilisation": "constant"}
-        parameter_values = pybamm.ParameterValues(
-            chemistry=pybamm.parameter_sets.Marquis2019
-        )
+        parameter_values = pybamm.ParameterValues("Marquis2019")
         parameter_values.update(
             {
                 "Initial negative electrode interface utilisation": 0.9,
@@ -109,9 +107,7 @@ class BaseIntegrationTestLithiumIon:
 
     def test_current_driven_utilisation(self):
         options = {"interface utilisation": "current-driven"}
-        parameter_values = pybamm.ParameterValues(
-            chemistry=pybamm.parameter_sets.Marquis2019
-        )
+        parameter_values = pybamm.ParameterValues("Marquis2019")
         parameter_values.update(
             {
                 "Initial negative electrode interface utilisation": 0.9,
