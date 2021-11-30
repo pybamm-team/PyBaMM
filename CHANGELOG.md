@@ -1,4 +1,4 @@
-# [Unreleased](https://github.com/pybamm-team/PyBaMM/)
+# [v21.11](https://github.com/pybamm-team/PyBaMM/tree/v21.11) - 2021-11-30
 
 ## Features
 
@@ -25,7 +25,7 @@
 -   Raise error if `Concatenation` is used directly with `Variable` objects (`concatenation` should be used instead) ([#1789](https://github.com/pybamm-team/PyBaMM/pull/1789))
 -   Made jax, jaxlib and the PyBaMM JaxSolver optional ([#1767](https://github.com/pybamm-team/PyBaMM/pull/1767))
 
-# [v21.10](https://github.com/pybamm-team/PyBaMM/tree/v21.9) - 2021-10-31
+# [v21.10](https://github.com/pybamm-team/PyBaMM/tree/v21.10) - 2021-10-31
 
 ## Features
 
