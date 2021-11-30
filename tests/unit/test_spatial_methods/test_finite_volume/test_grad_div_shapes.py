@@ -1,125 +1,26 @@
 #
-# Test for the operator class
+# Test for the gradient and divergence in Finite Volumes
 #
 import pybamm
+from tests import (
+    get_mesh_for_testing,
+    get_p2d_mesh_for_testing,
+    get_1p1d_mesh_for_testing,
+    get_cylindrical_mesh_for_testing,
+)
 import numpy as np
 import unittest
 
 
-def get_mesh_for_testing(
-    xpts=None, rpts=10, ypts=15, zpts=15, geometry=None, cc_submesh=None, order=2
-):
-    param = pybamm.ParameterValues(
-        values={
-            "Electrode width [m]": 0.4,
-            "Electrode height [m]": 0.5,
-            "Negative tab width [m]": 0.1,
-            "Negative tab centre y-coordinate [m]": 0.1,
-            "Negative tab centre z-coordinate [m]": 0.0,
-            "Positive tab width [m]": 0.1,
-            "Positive tab centre y-coordinate [m]": 0.3,
-            "Positive tab centre z-coordinate [m]": 0.5,
-            "Negative electrode thickness [m]": 0.3,
-            "Separator thickness [m]": 0.3,
-            "Positive electrode thickness [m]": 0.3,
-        }
-    )
-
-    if geometry is None:
-        geometry = pybamm.battery_geometry()
-    param.process_geometry(geometry)
-
-    submesh_types = {
-        "negative electrode": pybamm.MeshGenerator(
-            pybamm.SpectralVolume1DSubMesh, {"order": order}
-        ),
-        "separator": pybamm.MeshGenerator(
-            pybamm.SpectralVolume1DSubMesh, {"order": order}
-        ),
-        "positive electrode": pybamm.MeshGenerator(
-            pybamm.SpectralVolume1DSubMesh, {"order": order}
-        ),
-        "negative particle": pybamm.MeshGenerator(
-            pybamm.SpectralVolume1DSubMesh, {"order": order}
-        ),
-        "positive particle": pybamm.MeshGenerator(
-            pybamm.SpectralVolume1DSubMesh, {"order": order}
-        ),
-        "current collector": pybamm.SubMesh0D,
-    }
-    if cc_submesh:
-        submesh_types["current collector"] = cc_submesh
-
-    if xpts is None:
-        xn_pts, xs_pts, xp_pts = 40, 25, 35
-    else:
-        xn_pts, xs_pts, xp_pts = xpts, xpts, xpts
-    var_pts = {
-        "x_n": xn_pts,
-        "x_s": xs_pts,
-        "x_p": xp_pts,
-        "r_n": rpts,
-        "r_p": rpts,
-        "y": ypts,
-        "z": zpts,
-    }
-
-    return pybamm.Mesh(geometry, submesh_types, var_pts)
-
-
-def get_p2d_mesh_for_testing(xpts=None, rpts=10):
-    geometry = pybamm.battery_geometry()
-    return get_mesh_for_testing(xpts=xpts, rpts=rpts, geometry=geometry)
-
-
-def get_1p1d_mesh_for_testing(
-    xpts=None,
-    rpts=10,
-    zpts=15,
-    cc_submesh=pybamm.Uniform1DSubMesh,
-):
-    geometry = pybamm.battery_geometry(current_collector_dimension=1)
-    return get_mesh_for_testing(
-        xpts=xpts, rpts=rpts, zpts=zpts, geometry=geometry, cc_submesh=cc_submesh
-    )
-
-
-class TestSpectralVolume(unittest.TestCase):
-    def test_exceptions(self):
-        sp_meth = pybamm.SpectralVolume()
-        with self.assertRaises(ValueError):
-            sp_meth.chebyshev_differentiation_matrices(3, 3)
-
-        mesh = get_mesh_for_testing()
-        spatial_methods = {"macroscale": pybamm.SpectralVolume()}
-        disc = pybamm.Discretisation(mesh, spatial_methods)
-
-        whole_cell = ["negative electrode", "separator", "positive electrode"]
-        var = pybamm.Variable("var", domain=whole_cell)
-        disc.set_variable_slices([var])
-        discretised_symbol = pybamm.StateVector(*disc.y_slices[var.id])
-        sp_meth.build(mesh)
-
-        bcs = {"left": (pybamm.Scalar(0), "x"), "right": (pybamm.Scalar(3), "Neumann")}
-        with self.assertRaisesRegex(ValueError, "boundary condition must be"):
-            sp_meth.replace_dirichlet_values(var, discretised_symbol, bcs)
-        with self.assertRaisesRegex(ValueError, "boundary condition must be"):
-            sp_meth.replace_neumann_values(var, discretised_symbol, bcs)
-        bcs = {"left": (pybamm.Scalar(0), "Neumann"), "right": (pybamm.Scalar(3), "x")}
-        with self.assertRaisesRegex(ValueError, "boundary condition must be"):
-            sp_meth.replace_dirichlet_values(var, discretised_symbol, bcs)
-        with self.assertRaisesRegex(ValueError, "boundary condition must be"):
-            sp_meth.replace_neumann_values(var, discretised_symbol, bcs)
-
+class TestFiniteVolumeGradDiv(unittest.TestCase):
     def test_grad_div_shapes_Dirichlet_bcs(self):
         """
-        Test grad and div with Dirichlet boundary conditions and also test the
-        case where only one Spectral Volume is discretised
+        Test grad and div with Dirichlet boundary conditions in Cartesian coordinates
         """
         # Create discretisation
         whole_cell = ["negative electrode", "separator", "positive electrode"]
-        mesh = get_mesh_for_testing(1)
-        spatial_methods = {"macroscale": pybamm.SpectralVolume()}
+        mesh = get_mesh_for_testing()
+        spatial_methods = {"macroscale": pybamm.FiniteVolume()}
         disc = pybamm.Discretisation(mesh, spatial_methods)
         combined_submesh = mesh.combine_submeshes(*whole_cell)
 
@@ -137,7 +38,7 @@ class TestSpectralVolume(unittest.TestCase):
         disc.bcs = boundary_conditions
         disc.set_variable_slices([var])
         grad_eqn_disc = disc.process_symbol(grad_eqn)
-        np.testing.assert_array_almost_equal(
+        np.testing.assert_array_equal(
             grad_eqn_disc.evaluate(None, constant_y),
             np.zeros_like(combined_submesh.edges[:, np.newaxis]),
         )
@@ -166,6 +67,65 @@ class TestSpectralVolume(unittest.TestCase):
             np.zeros_like(combined_submesh.nodes[:, np.newaxis]),
         )
 
+    def test_cylindrical_grad_div_shapes_Dirichlet_bcs(self):
+        """
+        Test grad and div with Dirichlet boundary conditions in cylindrical polar
+        coordinates
+        """
+        # Create discretisation
+        mesh = get_cylindrical_mesh_for_testing()
+        spatial_methods = {"current collector": pybamm.FiniteVolume()}
+        disc = pybamm.Discretisation(mesh, spatial_methods)
+        submesh = mesh["current collector"]
+        npts = submesh.npts
+        npts_edges = submesh.npts + 1
+
+        # Test gradient of a constant is zero
+        # grad(1) = 0
+        constant_y = np.ones((npts, 1))
+        var = pybamm.Variable(
+            "var",
+            domain=["current collector"],
+        )
+        grad_eqn = pybamm.grad(var)
+        boundary_conditions = {
+            var.id: {
+                "left": (pybamm.Scalar(1), "Dirichlet"),
+                "right": (pybamm.Scalar(1), "Dirichlet"),
+            }
+        }
+        disc.bcs = boundary_conditions
+        disc.set_variable_slices([var])
+        grad_eqn_disc = disc.process_symbol(grad_eqn)
+        np.testing.assert_array_equal(
+            grad_eqn_disc.evaluate(None, constant_y), np.zeros((npts_edges, 1))
+        )
+
+        # Test operations on linear and quadratic in r
+        N = pybamm.grad(var)
+        div_eqn = pybamm.div(N)
+        boundary_conditions = {
+            var.id: {
+                "left": (pybamm.Scalar(submesh.edges[0]), "Dirichlet"),
+                "right": (pybamm.Scalar(1), "Dirichlet"),
+            }
+        }
+        disc.bcs = boundary_conditions
+        # grad(r) == 1
+        y_linear = submesh.nodes
+        grad_eqn_disc = disc.process_symbol(grad_eqn)
+        np.testing.assert_array_almost_equal(
+            grad_eqn_disc.evaluate(None, y_linear), np.ones((npts_edges, 1))
+        )
+        # div(grad r^2) = 4
+        y_squared = submesh.nodes ** 2
+        div_eqn_disc = disc.process_symbol(div_eqn)
+        div_eval = div_eqn_disc.evaluate(None, y_squared)
+        np.testing.assert_array_almost_equal(
+            div_eval[1:-1],
+            4 * np.ones((npts - 2, 1)),
+        )
+
     def test_spherical_grad_div_shapes_Dirichlet_bcs(self):
         """
         Test grad and div with Dirichlet boundary conditions in spherical polar
@@ -173,7 +133,7 @@ class TestSpectralVolume(unittest.TestCase):
         """
         # Create discretisation
         mesh = get_1p1d_mesh_for_testing()
-        spatial_methods = {"negative particle": pybamm.SpectralVolume()}
+        spatial_methods = {"negative particle": pybamm.FiniteVolume()}
         disc = pybamm.Discretisation(mesh, spatial_methods)
         submesh = mesh["negative particle"]
         npts = submesh.npts
@@ -202,14 +162,11 @@ class TestSpectralVolume(unittest.TestCase):
         disc.bcs = boundary_conditions
         disc.set_variable_slices([var])
         grad_eqn_disc = disc.process_symbol(grad_eqn)
-        np.testing.assert_array_almost_equal(
+        np.testing.assert_array_equal(
             grad_eqn_disc.evaluate(None, constant_y), np.zeros((total_npts_edges, 1))
         )
         # grad(r) == 1
-        y_linear = np.tile(
-            submesh.nodes,
-            mesh["negative electrode"].npts * mesh["current collector"].npts,
-        )
+        y_linear = np.tile(submesh.nodes, sec_npts)
         boundary_conditions = {
             var.id: {
                 "left": (pybamm.Scalar(0), "Dirichlet"),
@@ -223,11 +180,8 @@ class TestSpectralVolume(unittest.TestCase):
         )
 
         # Test divergence of gradient
-        # div (grad r^2) = 6
-        y_squared = np.tile(
-            submesh.nodes ** 2,
-            mesh["negative electrode"].npts * mesh["current collector"].npts,
-        )
+        # div(grad r^2) = 6
+        y_squared = np.tile(submesh.nodes ** 2, sec_npts)
         N = pybamm.grad(var)
         div_eqn = pybamm.div(N)
         boundary_conditions = {
@@ -241,7 +195,8 @@ class TestSpectralVolume(unittest.TestCase):
         div_eval = div_eqn_disc.evaluate(None, y_squared)
         div_eval = np.reshape(div_eval, [sec_npts, npts])
         np.testing.assert_array_almost_equal(
-            div_eval[:, 2:-2], 6 * np.ones([sec_npts, npts - 4])
+            div_eval[:, :-1],
+            6 * np.ones([sec_npts, npts - 1]),
         )
 
     def test_p2d_spherical_grad_div_shapes_Dirichlet_bcs(self):
@@ -251,11 +206,7 @@ class TestSpectralVolume(unittest.TestCase):
         """
         # Create discretisation
         mesh = get_p2d_mesh_for_testing()
-        spatial_methods = {
-            "macroscale": pybamm.SpectralVolume(),
-            "negative particle": pybamm.SpectralVolume(),
-            "positive particle": pybamm.SpectralVolume(),
-        }
+        spatial_methods = {"negative particle": pybamm.FiniteVolume()}
         disc = pybamm.Discretisation(mesh, spatial_methods)
         prim_pts = mesh["negative particle"].npts
         sec_pts = mesh["negative electrode"].npts
@@ -280,9 +231,7 @@ class TestSpectralVolume(unittest.TestCase):
         grad_eqn_disc = disc.process_symbol(grad_eqn)
         grad_eval = grad_eqn_disc.evaluate(None, constant_y)
         grad_eval = np.reshape(grad_eval, [sec_pts, prim_pts + 1])
-        np.testing.assert_array_almost_equal(
-            grad_eval, np.zeros([sec_pts, prim_pts + 1])
-        )
+        np.testing.assert_array_equal(grad_eval, np.zeros([sec_pts, prim_pts + 1]))
 
         # Test divergence of gradient
         # div(grad r^2) = 6
@@ -300,7 +249,7 @@ class TestSpectralVolume(unittest.TestCase):
         div_eval = div_eqn_disc.evaluate(None, y_squared)
         div_eval = np.reshape(div_eval, [sec_pts, prim_pts])
         np.testing.assert_array_almost_equal(
-            div_eval[:, 2:-2], 6 * np.ones([sec_pts, prim_pts - 4])
+            div_eval[:, :-1], 6 * np.ones([sec_pts, prim_pts - 1])
         )
 
     def test_grad_div_shapes_Neumann_bcs(self):
@@ -310,7 +259,7 @@ class TestSpectralVolume(unittest.TestCase):
         # Create discretisation
         whole_cell = ["negative electrode", "separator", "positive electrode"]
         mesh = get_mesh_for_testing()
-        spatial_methods = {"macroscale": pybamm.SpectralVolume()}
+        spatial_methods = {"macroscale": pybamm.FiniteVolume()}
         disc = pybamm.Discretisation(mesh, spatial_methods)
         combined_submesh = mesh.combine_submeshes(*whole_cell)
 
@@ -328,7 +277,7 @@ class TestSpectralVolume(unittest.TestCase):
         disc.bcs = boundary_conditions
         disc.set_variable_slices([var])
         grad_eqn_disc = disc.process_symbol(grad_eqn)
-        np.testing.assert_array_almost_equal(
+        np.testing.assert_array_equal(
             grad_eqn_disc.evaluate(None, constant_y),
             np.zeros_like(combined_submesh.edges[:, np.newaxis]),
         )
@@ -365,7 +314,7 @@ class TestSpectralVolume(unittest.TestCase):
         # Create discretisation
         whole_cell = ["negative electrode", "separator", "positive electrode"]
         mesh = get_mesh_for_testing()
-        spatial_methods = {"macroscale": pybamm.SpectralVolume()}
+        spatial_methods = {"macroscale": pybamm.FiniteVolume()}
         disc = pybamm.Discretisation(mesh, spatial_methods)
         combined_submesh = mesh.combine_submeshes(*whole_cell)
 
@@ -385,7 +334,7 @@ class TestSpectralVolume(unittest.TestCase):
         disc.set_variable_slices([var])
         # grad(1) = 0
         grad_eqn_disc = disc.process_symbol(grad_eqn)
-        np.testing.assert_array_almost_equal(
+        np.testing.assert_array_equal(
             grad_eqn_disc.evaluate(None, constant_y),
             np.zeros_like(combined_submesh.edges[:, np.newaxis]),
         )
@@ -418,6 +367,69 @@ class TestSpectralVolume(unittest.TestCase):
             np.zeros_like(combined_submesh.nodes[:, np.newaxis]),
         )
 
+    def test_cylindrical_grad_div_shapes_Neumann_bcs(self):
+        """
+        Test grad and div with Neumann boundary conditions in cylindrical polar
+        coordinates
+        """
+        # Create discretisation
+        mesh = get_cylindrical_mesh_for_testing()
+        spatial_methods = {"current collector": pybamm.FiniteVolume()}
+        disc = pybamm.Discretisation(mesh, spatial_methods)
+        submesh = mesh["current collector"]
+        npts = submesh.npts
+        npts_edges = submesh.npts + 1
+
+        # Test gradient
+        var = pybamm.Variable("var", domain="current collector")
+        grad_eqn = pybamm.grad(var)
+        # grad(1) = 0
+        constant_y = np.ones((npts, 1))
+        boundary_conditions = {
+            var.id: {
+                "left": (pybamm.Scalar(0), "Neumann"),
+                "right": (pybamm.Scalar(0), "Neumann"),
+            }
+        }
+        disc.bcs = boundary_conditions
+        disc.set_variable_slices([var])
+        grad_eqn_disc = disc.process_symbol(grad_eqn)
+        np.testing.assert_array_equal(
+            grad_eqn_disc.evaluate(None, constant_y), np.zeros((npts_edges, 1))
+        )
+        # grad(r) = 1
+        y_linear = submesh.nodes
+        boundary_conditions = {
+            var.id: {
+                "left": (pybamm.Scalar(1), "Neumann"),
+                "right": (pybamm.Scalar(1), "Neumann"),
+            }
+        }
+        disc.bcs = boundary_conditions
+        disc.set_variable_slices([var])
+        grad_eqn_disc = disc.process_symbol(grad_eqn)
+        np.testing.assert_array_almost_equal(
+            grad_eqn_disc.evaluate(None, y_linear), np.ones((npts_edges, 1))
+        )
+
+        # Test divergence
+        # div(grad(r^2)) = 4 , N_left = 2*r_inner, N_right = 2
+        y_squared = submesh.nodes ** 2
+        N = pybamm.grad(var)
+        div_eqn = pybamm.div(N)
+        boundary_conditions = {
+            var.id: {
+                "left": (pybamm.Scalar(2 * submesh.edges[0]), "Neumann"),
+                "right": (pybamm.Scalar(2), "Neumann"),
+            }
+        }
+        disc.bcs = boundary_conditions
+        div_eqn_disc = disc.process_symbol(div_eqn)
+        np.testing.assert_array_almost_equal(
+            div_eqn_disc.evaluate(None, y_squared),
+            4 * np.ones((npts, 1)),
+        )
+
     def test_spherical_grad_div_shapes_Neumann_bcs(self):
         """
         Test grad and div with Neumann boundary conditions spherical polar
@@ -425,7 +437,7 @@ class TestSpectralVolume(unittest.TestCase):
         """
         # Create discretisation
         mesh = get_mesh_for_testing()
-        spatial_methods = {"negative particle": pybamm.SpectralVolume()}
+        spatial_methods = {"negative particle": pybamm.FiniteVolume()}
         disc = pybamm.Discretisation(mesh, spatial_methods)
         combined_submesh = mesh.combine_submeshes("negative particle")
 
@@ -443,7 +455,7 @@ class TestSpectralVolume(unittest.TestCase):
         disc.bcs = boundary_conditions
         disc.set_variable_slices([var])
         grad_eqn_disc = disc.process_symbol(grad_eqn)
-        np.testing.assert_array_almost_equal(
+        np.testing.assert_array_equal(
             grad_eqn_disc.evaluate(None, constant_y),
             np.zeros_like(combined_submesh.edges[:, np.newaxis]),
         )
@@ -487,7 +499,7 @@ class TestSpectralVolume(unittest.TestCase):
         """
         # Create discretisation
         mesh = get_p2d_mesh_for_testing()
-        spatial_methods = {"negative particle": pybamm.SpectralVolume()}
+        spatial_methods = {"negative particle": pybamm.FiniteVolume()}
         disc = pybamm.Discretisation(mesh, spatial_methods)
         prim_pts = mesh["negative particle"].npts
         sec_pts = mesh["negative electrode"].npts
@@ -532,10 +544,9 @@ class TestSpectralVolume(unittest.TestCase):
         np.testing.assert_array_almost_equal(div_eval, 6 * np.ones([sec_pts, prim_pts]))
 
     def test_grad_div_shapes_mixed_domain(self):
-
         # Create discretisation
         mesh = get_mesh_for_testing()
-        spatial_methods = {"macroscale": pybamm.SpectralVolume()}
+        spatial_methods = {"macroscale": pybamm.FiniteVolume()}
         disc = pybamm.Discretisation(mesh, spatial_methods)
         combined_submesh = mesh.combine_submeshes("negative electrode", "separator")
 
@@ -553,7 +564,7 @@ class TestSpectralVolume(unittest.TestCase):
         disc.bcs = boundary_conditions
         disc.set_variable_slices([var])
         grad_eqn_disc = disc.process_symbol(grad_eqn)
-        np.testing.assert_array_almost_equal(
+        np.testing.assert_array_equal(
             grad_eqn_disc.evaluate(None, constant_y),
             np.zeros_like(combined_submesh.edges[:, np.newaxis]),
         )
@@ -584,7 +595,7 @@ class TestSpectralVolume(unittest.TestCase):
 
     def test_grad_1plus1d(self):
         mesh = get_1p1d_mesh_for_testing()
-        spatial_methods = {"macroscale": pybamm.SpectralVolume()}
+        spatial_methods = {"macroscale": pybamm.FiniteVolume()}
         disc = pybamm.Discretisation(mesh, spatial_methods)
 
         a = pybamm.Variable(
