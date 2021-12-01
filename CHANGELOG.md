@@ -1,3 +1,8 @@
+# [Unreleased](https://github.com/pybamm-team/PyBaMM/) - 2021-12-01
+
+## Bug fixes
+- Solid tortuosity is now correctly calculated with Bruggeman coefficient of the respective electrode ([#1773](https://github.com/pybamm-team/PyBaMM/pull/1773))
+
 # [v21.10](https://github.com/pybamm-team/PyBaMM/tree/v21.9) - 2021-10-31
 
 ## Features
