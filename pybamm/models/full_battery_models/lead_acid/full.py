@@ -36,6 +36,7 @@ class Full(BaseModel):
 
         self.set_external_circuit_submodel()
         self.set_interfacial_submodel()
+        self.set_interface_utilisation_submodel()
         self.set_porosity_submodel()
         self.set_active_material_submodel()
         self.set_tortuosity_submodels()
@@ -110,16 +111,16 @@ class Full(BaseModel):
             self.submodels[
                 "electrolyte conductivity"
             ] = pybamm.electrolyte_conductivity.Full(self.param)
+            surf_model = surf_form.Explicit
         elif self.options["surface form"] == "differential":
-            for domain in ["Negative", "Separator", "Positive"]:
-                self.submodels[
-                    domain.lower() + " electrolyte conductivity"
-                ] = surf_form.FullDifferential(self.param, domain)
+            surf_model = surf_form.FullDifferential
         elif self.options["surface form"] == "algebraic":
-            for domain in ["Negative", "Separator", "Positive"]:
-                self.submodels[
-                    domain.lower() + " electrolyte conductivity"
-                ] = surf_form.FullAlgebraic(self.param, domain)
+            surf_model = surf_form.FullAlgebraic
+
+        for domain in ["Negative", "Separator", "Positive"]:
+            self.submodels[
+                domain.lower() + " surface potential difference"
+            ] = surf_model(self.param, domain)
 
     def set_side_reaction_submodels(self):
         if self.options["hydrolysis"] == "true":

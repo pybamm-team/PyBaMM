@@ -14,12 +14,15 @@ class BaseParticle(pybamm.BaseSubModel):
         The parameters to use for this submodel
     domain : str
         The domain of the model either 'Negative' or 'Positive'
+    options: dict
+        A dictionary of options to be passed to the model.
+        See :class:`pybamm.BaseBatteryModel`
 
     **Extends:** :class:`pybamm.BaseSubModel`
     """
 
-    def __init__(self, param, domain):
-        super().__init__(param, domain)
+    def __init__(self, param, domain, options=None):
+        super().__init__(param, domain, options=options)
 
     def _get_standard_concentration_variables(
         self, c_s, c_s_xav=None, c_s_rav=None, c_s_av=None, c_s_surf=None
@@ -148,4 +151,3 @@ class BaseParticle(pybamm.BaseSubModel):
         }
 
         return variables
-

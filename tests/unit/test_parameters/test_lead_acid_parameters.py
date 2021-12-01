@@ -66,9 +66,7 @@ class TestStandardParametersLeadAcid(unittest.TestCase):
         )
 
         # process parameters and discretise
-        parameter_values = pybamm.ParameterValues(
-            chemistry=pybamm.parameter_sets.Sulzer2019
-        )
+        parameter_values = pybamm.ParameterValues("Sulzer2019")
         disc = get_discretisation_for_testing()
         processed_s = disc.process_symbol(parameter_values.process_symbol(s_param))
 
@@ -143,9 +141,7 @@ class TestStandardParametersLeadAcid(unittest.TestCase):
             "U_p_0.5": param.U_p(pybamm.Scalar(0.5), pybamm.Scalar(0)),
         }
         # Process
-        parameter_values = pybamm.ParameterValues(
-            chemistry=pybamm.parameter_sets.Sulzer2019
-        )
+        parameter_values = pybamm.ParameterValues("Sulzer2019")
         param_eval = parameter_values.print_parameters(parameters)
         param_eval = {k: v[0] for k, v in param_eval.items()}
 

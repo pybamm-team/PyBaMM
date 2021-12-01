@@ -82,7 +82,7 @@ class TestLandesfeind(unittest.TestCase):
         for solvent in ["EC_DMC_1_1", "EC_EMC_3_7", "EMC_FEC_19_1"]:
             chemistry = pybamm.parameter_sets.Chen2020
             chemistry["electrolyte"] = "lipf6_" + solvent + "_Landesfeind2019"
-            parameter_values = pybamm.ParameterValues(chemistry=chemistry)
+            parameter_values = pybamm.ParameterValues(chemistry)
             model = pybamm.lithium_ion.DFN()
             sim = pybamm.Simulation(model, parameter_values=parameter_values)
             sim.set_parameters()

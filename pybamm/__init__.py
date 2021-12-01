@@ -7,7 +7,7 @@
 #
 import sys
 import os
-import platform
+
 
 #
 # Version info
@@ -66,7 +66,7 @@ PARAMETER_PATH = [
 #
 from .util import Timer, TimerTime, FuzzyDict
 from .util import root_dir, load_function, rmse, get_infinite_nested_dict, load
-from .util import get_parameters_filepath
+from .util import get_parameters_filepath, have_jax, install_jax
 from .logger import logger, set_logging_level
 from .settings import settings
 from .citations import Citations, citations, print_citations
@@ -102,12 +102,8 @@ from .expression_tree.operations.evaluate_python import (
     EvaluatorPython,
 )
 
-if not (
-    platform.system() == "Windows"
-    or (platform.system() == "Darwin" and "ARM64" in platform.version())
-):
-    from .expression_tree.operations.evaluate_python import EvaluatorJax
-    from .expression_tree.operations.evaluate_python import JaxCooMatrix
+from .expression_tree.operations.evaluate_python import EvaluatorJax
+from .expression_tree.operations.evaluate_python import JaxCooMatrix
 
 from .expression_tree.operations.jacobian import Jacobian
 from .expression_tree.operations.convert_to_casadi import CasadiConverter
@@ -153,6 +149,7 @@ from .models.submodels import (
 )
 from .models.submodels.interface import sei
 from .models.submodels.interface import lithium_plating
+from .models.submodels.interface import interface_utilisation
 
 #
 # Geometry
@@ -226,13 +223,8 @@ from .solvers.scikits_dae_solver import ScikitsDaeSolver
 from .solvers.scikits_ode_solver import ScikitsOdeSolver, have_scikits_odes
 from .solvers.scipy_solver import ScipySolver
 
-# Jax not supported under windows
-if not (
-    platform.system() == "Windows"
-    or (platform.system() == "Darwin" and "ARM64" in platform.version())
-):
-    from .solvers.jax_solver import JaxSolver
-    from .solvers.jax_bdf_solver import jax_bdf_integrate
+from .solvers.jax_solver import JaxSolver
+from .solvers.jax_bdf_solver import jax_bdf_integrate
 
 from .solvers.idaklu_solver import IDAKLUSolver, have_idaklu
 

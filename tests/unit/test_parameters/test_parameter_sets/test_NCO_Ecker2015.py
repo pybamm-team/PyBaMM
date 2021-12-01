@@ -43,8 +43,7 @@ class TestEcker(unittest.TestCase):
 
     def test_standard_lithium_parameters(self):
 
-        chemistry = pybamm.parameter_sets.Ecker2015
-        parameter_values = pybamm.ParameterValues(chemistry=chemistry)
+        parameter_values = pybamm.ParameterValues("Ecker2015")
 
         model = pybamm.lithium_ion.DFN()
         sim = pybamm.Simulation(model, parameter_values=parameter_values)

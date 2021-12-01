@@ -47,9 +47,9 @@ class BaseModel(pybamm.BaseBatteryModel):
     @property
     def default_parameter_values(self):
         if self.half_cell:
-            return pybamm.ParameterValues(chemistry=pybamm.parameter_sets.Xu2019)
+            return pybamm.ParameterValues("Xu2019")
         else:
-            return pybamm.ParameterValues(chemistry=pybamm.parameter_sets.Marquis2019)
+            return pybamm.ParameterValues("Marquis2019")
 
     @property
     def default_quick_plot_variables(self):
@@ -136,7 +136,10 @@ class BaseModel(pybamm.BaseBatteryModel):
         # Lithium lost to side reactions
         # Different way of measuring LLI but should give same value
         LLI_sei = self.variables["Loss of lithium to SEI [mol]"]
-        LLI_pl = self.variables["Loss of lithium to lithium plating [mol]"]
+        if self.half_cell:
+            LLI_pl = pybamm.Scalar(0)
+        else:
+            LLI_pl = self.variables["Loss of lithium to lithium plating [mol]"]
 
         LLI_reactions = LLI_sei + LLI_pl
         self.variables.update(
@@ -168,9 +171,7 @@ class BaseModel(pybamm.BaseBatteryModel):
             "Total lithium lost from particles [mol]",
             "Total lithium lost from electrolyte [mol]",
             "Loss of lithium to SEI [mol]",
-            "Loss of lithium to lithium plating [mol]",
             "Loss of capacity to SEI [A.h]",
-            "Loss of capacity to lithium plating [A.h]",
             "Total lithium lost to side reactions [mol]",
             "Total capacity lost to side reactions [A.h]",
             # Resistance
@@ -182,6 +183,8 @@ class BaseModel(pybamm.BaseBatteryModel):
                 "Negative electrode capacity [A.h]",
                 "Loss of active material in negative electrode [%]",
                 "Total lithium in negative electrode [mol]",
+                "Loss of lithium to lithium plating [mol]",
+                "Loss of capacity to lithium plating [A.h]",
             ]
 
         self.summary_variables = summary_variables
@@ -198,24 +201,8 @@ class BaseModel(pybamm.BaseBatteryModel):
             self.submodels["sei"] = pybamm.sei.NoSEI(self.param, self.options)
         elif self.options["SEI"] == "constant":
             self.submodels["sei"] = pybamm.sei.ConstantSEI(self.param, self.options)
-        elif self.options["SEI"] == "reaction limited":
-            self.submodels["sei"] = pybamm.sei.ReactionLimited(
-                self.param, reaction_loc, self.options
-            )
-        elif self.options["SEI"] == "solvent-diffusion limited":
-            self.submodels["sei"] = pybamm.sei.SolventDiffusionLimited(
-                self.param, reaction_loc, self.options
-            )
-        elif self.options["SEI"] == "electron-migration limited":
-            self.submodels["sei"] = pybamm.sei.ElectronMigrationLimited(
-                self.param, reaction_loc, self.options
-            )
-        elif self.options["SEI"] == "interstitial-diffusion limited":
-            self.submodels["sei"] = pybamm.sei.InterstitialDiffusionLimited(
-                self.param, reaction_loc, self.options
-            )
-        elif self.options["SEI"] == "ec reaction limited":
-            self.submodels["sei"] = pybamm.sei.EcReactionLimited(
+        else:
+            self.submodels["sei"] = pybamm.sei.SEIGrowth(
                 self.param, reaction_loc, self.options
             )
 
@@ -224,14 +211,10 @@ class BaseModel(pybamm.BaseBatteryModel):
             self.submodels["lithium plating"] = pybamm.lithium_plating.NoPlating(
                 self.param, self.options
             )
-        elif self.options["lithium plating"] == "reversible":
-            self.submodels[
-                "lithium plating"
-            ] = pybamm.lithium_plating.ReversiblePlating(self.param, self.x_average)
-        elif self.options["lithium plating"] == "irreversible":
-            self.submodels[
-                "lithium plating"
-            ] = pybamm.lithium_plating.IrreversiblePlating(self.param, self.x_average)
+        else:
+            self.submodels["lithium plating"] = pybamm.lithium_plating.Plating(
+                self.param, self.x_average, self.options
+            )
 
     def set_other_reaction_submodels_to_zero(self):
         self.submodels["negative oxygen interface"] = pybamm.interface.NoReaction(
@@ -304,3 +287,44 @@ class BaseModel(pybamm.BaseBatteryModel):
             self.submodels["porosity"] = pybamm.porosity.ReactionDriven(
                 self.param, self.options, self.x_average
             )
+
+    def set_li_metal_counter_electrode_submodels(self):
+        if self.options["SEI"] in ["none", "constant"]:
+            self.submodels[
+                "counter electrode potential"
+            ] = pybamm.electrode.ohm.LithiumMetalExplicit(self.param, self.options)
+            self.submodels[
+                "counter electrode interface"
+            ] = pybamm.interface.InverseButlerVolmer(
+                self.param, "Negative", "lithium metal plating", self.options
+            )  # assuming symmetric reaction for now so we can take the inverse
+            self.submodels[
+                "counter electrode interface current"
+            ] = pybamm.interface.CurrentForInverseButlerVolmerLithiumMetal(
+                self.param, "Negative", "lithium metal plating", self.options
+            )
+        else:
+            self.submodels[
+                "counter electrode potential"
+            ] = pybamm.electrode.ohm.LithiumMetalSurfaceForm(self.param, self.options)
+            self.submodels[
+                "counter electrode interface"
+            ] = pybamm.interface.ButlerVolmer(
+                self.param, "Negative", "lithium metal plating", self.options
+            )
+
+        # For half-cell models, remove negative electrode submodels
+        # that are not needed before building
+        # We do this whether the working electrode is 'positive' or 'negative' since
+        # the half-cell models are always defined assuming the positive electrode is
+        # the working electrode
+
+        # This should be done before `self.build_model`, which is the expensive part
+
+        # Models added specifically for the counter electrode have been labelled with
+        # "counter electrode" so as not to be caught by this check
+        self.submodels = {
+            k: v
+            for k, v in self.submodels.items()
+            if not (k.startswith("negative") or k == "lithium plating")
+        }

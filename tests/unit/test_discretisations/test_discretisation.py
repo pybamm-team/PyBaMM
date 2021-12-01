@@ -119,7 +119,7 @@ class TestDiscretise(unittest.TestCase):
         x = pybamm.SpatialVariable("x", domain="test", coord_sys="cartesian")
         geometry = {"test": {x: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)}}}
 
-        submesh_types = {"test": pybamm.MeshGenerator(pybamm.Uniform1DSubMesh)}
+        submesh_types = {"test": pybamm.Uniform1DSubMesh}
         var_pts = {x: 10}
         mesh = pybamm.Mesh(geometry, submesh_types, var_pts)
 
@@ -150,8 +150,8 @@ class TestDiscretise(unittest.TestCase):
         model = pybamm.BaseModel()
 
         a = pybamm.Variable("a", domain=["test", "test1"])
-        b1 = pybamm.Variable("b", domain=["test"])
-        b2 = pybamm.Variable("c", domain=["test1"])
+        b1 = pybamm.Variable("b1", domain=["test"])
+        b2 = pybamm.Variable("b2", domain=["test1"])
         b = pybamm.concatenation(b1, b2)
 
         model.rhs = {a: a * b}
@@ -178,8 +178,8 @@ class TestDiscretise(unittest.TestCase):
         }
 
         submesh_types = {
-            "test": pybamm.MeshGenerator(pybamm.Uniform1DSubMesh),
-            "test1": pybamm.MeshGenerator(pybamm.Uniform1DSubMesh),
+            "test": pybamm.Uniform1DSubMesh,
+            "test1": pybamm.Uniform1DSubMesh,
         }
         var_pts = {x: 10, y: 5}
         mesh = pybamm.Mesh(geometry, submesh_types, var_pts)
@@ -1048,7 +1048,7 @@ class TestDiscretise(unittest.TestCase):
         var = pybamm.Variable(
             "var",
             domain=["negative particle"],
-            auxiliary_domains={"secondary": "negative electrode"}
+            auxiliary_domains={"secondary": "negative electrode"},
         )
         broad = pybamm.TertiaryBroadcast(var, "current collector")
 
@@ -1063,7 +1063,7 @@ class TestDiscretise(unittest.TestCase):
                 mesh["negative particle"].npts
                 * mesh["negative electrode"].npts
                 * mesh["current collector"].npts,
-                1
+                1,
             ),
         )
 
@@ -1080,7 +1080,7 @@ class TestDiscretise(unittest.TestCase):
                 mesh["negative particle"].npts
                 * mesh["negative electrode"].npts
                 * (mesh["current collector"].npts + 1),
-                1
+                1,
             ),
         )
 
@@ -1324,9 +1324,7 @@ class TestDiscretise(unittest.TestCase):
         }
 
         # mesh
-        submesh_types = {
-            "negative particle": pybamm.MeshGenerator(pybamm.Uniform1DSubMesh)
-        }
+        submesh_types = {"negative particle": pybamm.Uniform1DSubMesh}
         var_pts = {r: 20}
         mesh = pybamm.Mesh(geometry, submesh_types, var_pts)
 

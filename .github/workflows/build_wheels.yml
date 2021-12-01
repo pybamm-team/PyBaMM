@@ -76,9 +76,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Download wheels
-        uses: actions/download-artifact@v1
+        uses: actions/download-artifact@v2
         with:
           name: wheels
+          path: wheels
 
       - name: Publish wheels on PyPI
         if: |
