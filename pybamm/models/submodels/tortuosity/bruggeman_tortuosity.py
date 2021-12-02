@@ -44,11 +44,11 @@ class Bruggeman(BaseModel):
                 tor_n = None
             else:
                 eps_n = variables["Negative electrode active material volume fraction"]
-                tor_n = eps_n ** param.b_e_n
+                tor_n = eps_n ** param.b_s_n
 
             eps_p = variables["Positive electrode active material volume fraction"]
             tor_s = pybamm.FullBroadcast(0, "separator", "current collector")
-            tor_p = eps_p ** param.b_e_p
+            tor_p = eps_p ** param.b_s_p
 
         variables.update(
             self._get_standard_tortuosity_variables(
