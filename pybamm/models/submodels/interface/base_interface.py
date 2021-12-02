@@ -611,10 +611,7 @@ class BaseInterface(pybamm.BaseSubModel):
 
         # X-average, and broadcast if necessary
         eta_r_av = pybamm.x_average(eta_r)
-        if self.half_cell and self.domain == "Negative":
-            # Half-cell domain, eta should not be broadcast
-            pass
-        elif eta_r.domain == ["current collector"]:
+        if eta_r.domain == ["current collector"]:
             eta_r = pybamm.PrimaryBroadcast(eta_r, self.domain_for_broadcast)
 
         domain_reaction = (
