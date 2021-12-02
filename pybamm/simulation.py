@@ -842,6 +842,8 @@ class Simulation:
             else:
                 esoh_sim = None
 
+            voltage_stop = self.experiment.termination.get("voltage")
+
             idx = 0
             num_cycles = len(self.experiment.cycle_lengths)
             feasible = True  # simulation will stop if experiment is infeasible
@@ -980,6 +982,22 @@ class Simulation:
                             "Stopping experiment since capacity "
                             f"({capacity_now:.3f} Ah) "
                             f"is below stopping capacity ({capacity_stop:.3f} Ah)."
+                        )
+                        break
+
+                # Check voltage stop
+                if voltage_stop is not None:
+                    min_voltage = np.min(cycle_solution["Battery voltage [V]"].data)
+                    if min_voltage > voltage_stop[0]:
+                        pybamm.logger.notice(
+                            f"Minimum voltage is now {min_voltage:.3f} V "
+                            f"(will stop at {voltage_stop[0]:.3f} V)"
+                        )
+                    else:
+                        pybamm.logger.notice(
+                            "Stopping experiment since minimum voltage "
+                            f"({min_voltage:.3f} V) "
+                            f"is below stopping voltage ({voltage_stop[0]:.3f} V)."
                         )
                         break
 
