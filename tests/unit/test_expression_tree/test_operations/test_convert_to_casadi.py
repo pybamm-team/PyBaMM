@@ -187,14 +187,14 @@ class TestCasadiConverter(unittest.TestCase):
         # linear
         y_test = np.array([0.4, 0.6])
         for interpolator in ["linear", "cubic spline"]:
-            interp = pybamm.Interpolant(x, (2 * x).sum(axis=1), y,
+            interp = pybamm.Interpolant(x_, (2 * x).sum(axis=1), y,
                                         interpolator=interpolator)
             interp_casadi = interp.to_casadi(y=casadi_y)
             f = casadi.Function("f", [casadi_y], [interp_casadi])
             np.testing.assert_array_almost_equal(interp.evaluate(y=y_test), f(y_test))
         # square
         y = pybamm.StateVector(slice(0, 1))
-        interp = pybamm.Interpolant(x, (x ** 2).sum(axis=1), y,
+        interp = pybamm.Interpolant(x_, (x ** 2).sum(axis=1), y,
                                     interpolator="cubic spline")
         interp_casadi = interp.to_casadi(y=casadi_y)
         f = casadi.Function("f", [casadi_y], [interp_casadi])
@@ -206,13 +206,13 @@ class TestCasadiConverter(unittest.TestCase):
         data = np.tile((2 * x).sum(axis=1), (10, 1)).T
         y_test = np.array([0.4])
         for interpolator in ["linear", "cubic spline"]:
-            interp = pybamm.Interpolant(x, data, y, interpolator=interpolator)
+            interp = pybamm.Interpolant(x_, data, y, interpolator=interpolator)
             interp_casadi = interp.to_casadi(y=casadi_y)
             f = casadi.Function("f", [casadi_y], [interp_casadi])
             np.testing.assert_array_almost_equal(interp.evaluate(y=y_test), f(y_test))
 
         # error for pchip interpolator
-        interp = pybamm.Interpolant(x, data, y, interpolator="pchip")
+        interp = pybamm.Interpolant(x_, data, y, interpolator="pchip")
         with self.assertRaisesRegex(NotImplementedError, "The interpolator"):
             interp_casadi = interp.to_casadi(y=casadi_y)
 
