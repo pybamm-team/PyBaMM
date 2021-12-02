@@ -289,7 +289,7 @@ def find_symbols(symbol, constant_symbols, variable_symbols, variable_symbol_siz
         symbol_str = "inputs['{}']".format(symbol.name)
 
     elif isinstance(symbol, pybamm.SpatialVariable):
-        symbol_str = symbol.name.replace("_", "")
+        symbol_str = symbol.name
 
     elif isinstance(symbol, pybamm.FunctionParameter):
         symbol_str = "{}({})".format(symbol.name, ", ".join(children_vars))
@@ -773,7 +773,7 @@ def get_julia_mtk_model(model, geometry=None, tspan=None):
     variable_id_to_print_name = {}
     for i, var in enumerate(variables):
         if var.print_name is not None:
-            print_name = var.print_name
+            print_name = var._raw_print_name
         else:
             print_name = f"u{i+1}"
         variable_id_to_print_name[var.id] = print_name
@@ -808,23 +808,18 @@ def get_julia_mtk_model(model, geometry=None, tspan=None):
     long_domain_symbol_to_short = {}
     for dom in all_domains:
         # Read domain name from geometry
-        domain_symbol = list(geometry[dom[0]].keys())[0].name.replace("_", "")
+        domain_symbol = list(geometry[dom[0]].keys())[0]
         if len(dom) > 1:
             domain_symbol = domain_symbol[0]
             # For multi-domain variables keep only the first letter of the domain
             domain_name_to_symbol[tuple(dom)] = domain_symbol
             # Record which domain symbols we shortened
             for d in dom:
-                long = list(geometry[d].keys())[0].name.replace("_", "")
+                long = list(geometry[d].keys())[0]
                 long_domain_symbol_to_short[long] = domain_symbol
         else:
             # Otherwise keep the whole domain
             domain_name_to_symbol[tuple(dom)] = domain_symbol
-
-    # Read coordinate systems
-    domain_name_to_coord_sys = {
-        tuple(dom): list(geometry[dom[0]].keys())[0].coord_sys for dom in all_domains
-    }
 
     # Read domain limits
     domain_name_to_limits = {}
@@ -958,7 +953,7 @@ def get_julia_mtk_model(model, geometry=None, tspan=None):
             f"grad_{domain_name}", f"D{domain_symbol}"
         )
         # Different divergence depending on the coordinate system
-        coord_sys = domain_name_to_coord_sys[domain_name]
+        coord_sys = getattr(pybamm.standard_spatial_vars, domain_symbol).coord_sys
         if coord_sys == "cartesian":
             all_julia_str = all_julia_str.replace(
                 f"div_{domain_name}", f"D{domain_symbol}"
