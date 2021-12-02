@@ -182,7 +182,7 @@ class TestCasadiConverter(unittest.TestCase):
         X = list(np.meshgrid(*x_))
 
         x = np.column_stack([el.reshape(-1, 1) for el in X])
-        y = pybamm.StateVector(slice(0, 2))
+        y = pybamm.StateVector(slice(0, 2), slice(0, 2))
         casadi_y = casadi.MX.sym("y", 2)
         # linear
         y_test = np.array([0.4, 0.6])
@@ -193,7 +193,7 @@ class TestCasadiConverter(unittest.TestCase):
             f = casadi.Function("f", [casadi_y], [interp_casadi])
             np.testing.assert_array_almost_equal(interp.evaluate(y=y_test), f(y_test))
         # square
-        y = pybamm.StateVector(slice(0, 1))
+        y = pybamm.StateVector(slice(0, 1), slice(0, 1))
         interp = pybamm.Interpolant(x_, (x ** 2).sum(axis=1), y,
                                     interpolator="cubic spline")
         interp_casadi = interp.to_casadi(y=casadi_y)
@@ -201,7 +201,7 @@ class TestCasadiConverter(unittest.TestCase):
         np.testing.assert_array_almost_equal(interp.evaluate(y=y_test), f(y_test))
 
         # len(x)=1 but y is 2d
-        y = pybamm.StateVector(slice(0, 1))
+        y = pybamm.StateVector(slice(0, 1), slice(0, 1))
         casadi_y = casadi.MX.sym("y", 1)
         data = np.tile((2 * x).sum(axis=1), (10, 1)).T
         y_test = np.array([0.4])
