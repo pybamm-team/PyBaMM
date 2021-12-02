@@ -691,8 +691,7 @@ class ParameterValues:
                             )
                         )
 
-                else:
-                    # pragma: no cover
+                else:  # pragma: no cover
                     raise ValueError("Invalid function name length: {0}"
                                      .format(len(function_name)))
 
