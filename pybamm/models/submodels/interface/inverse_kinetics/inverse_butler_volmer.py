@@ -46,10 +46,17 @@ class InverseButlerVolmer(BaseInterface):
 
         ne = self._get_number_of_electrons_in_reaction()
         # Note: T must have the same domain as j0 and eta_r
-        if j0.domain in ["current collector", ["current collector"]]:
+        if self.half_cell and self.domain == "Negative":
             T = variables["X-averaged cell temperature"]
+            u = variables["Lithium metal interface utilisation"]
+        elif j0.domain in ["current collector", ["current collector"]]:
+            T = variables["X-averaged cell temperature"]
+            u = variables[
+                "X-averaged " + self.domain.lower() + " electrode interface utilisation"
+            ]
         else:
             T = variables[self.domain + " electrode temperature"]
+            u = variables[self.domain + " electrode interface utilisation"]
 
         # eta_r is the overpotential from inverting Butler-Volmer, regardless of any
         # additional SEI resistance. What changes is how delta_phi is defined in terms
@@ -57,7 +64,7 @@ class InverseButlerVolmer(BaseInterface):
         # We use the total resistance to calculate eta_r, but this only introduces
         # negligible errors. For the exact answer, the surface form submodels should
         # be used instead
-        eta_r = self._get_overpotential(j_tot, j0, ne, T)
+        eta_r = self._get_overpotential(j_tot, j0, ne, T, u)
 
         # With SEI resistance (distributed and averaged have the same effect here)
         if self.domain == "Negative":
@@ -90,8 +97,8 @@ class InverseButlerVolmer(BaseInterface):
 
         return variables
 
-    def _get_overpotential(self, j, j0, ne, T):
-        return (2 * (1 + self.param.Theta * T) / ne) * pybamm.arcsinh(j / (2 * j0))
+    def _get_overpotential(self, j, j0, ne, T, u):
+        return (2 * (1 + self.param.Theta * T) / ne) * pybamm.arcsinh(j / (2 * j0 * u))
 
 
 class CurrentForInverseButlerVolmer(BaseInterface):
