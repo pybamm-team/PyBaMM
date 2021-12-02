@@ -10,17 +10,12 @@ from collections import OrderedDict
 import numbers
 
 
-def id_to_julia_variable(symbol_id, constant=False):
+def id_to_julia_variable(symbol_id, prefix):
     """
     This function defines the format for the julia variable names used in find_symbols
     and to_julia. Variable names are based on a nodes' id to make them unique
     """
-
-    if constant:
-        var_format = "const_{:05d}"
-    else:
-        var_format = "cache_{:05d}"
-
+    var_format = prefix + "_{:05d}"
     # Need to replace "-" character to make them valid julia variable names
     return var_format.format(symbol_id).replace("-", "m")
 
@@ -135,9 +130,9 @@ def find_symbols(symbol, constant_symbols, variable_symbols, variable_symbol_siz
             if isinstance(child_eval, numbers.Number):
                 children_vars.append(str(child_eval))
             else:
-                children_vars.append(id_to_julia_variable(child.id, True))
+                children_vars.append(id_to_julia_variable(child.id, "const"))
         else:
-            children_vars.append(id_to_julia_variable(child.id, False))
+            children_vars.append(id_to_julia_variable(child.id, "cache"))
 
     if isinstance(symbol, pybamm.BinaryOperator):
         # Multiplication and Division need special handling for scipy sparse matrices
@@ -284,7 +279,7 @@ def find_symbols(symbol, constant_symbols, variable_symbols, variable_symbol_siz
                 threshold=max(np.get_printoptions()["threshold"], indices.shape[0] + 10)
             )
             constant_symbols[indices_array.id] = np.array2string(indices, separator=",")
-            index_name = id_to_julia_variable(indices_array.id, True)
+            index_name = id_to_julia_variable(indices_array.id, "const")
             symbol_str = "{}[{}]".format(name, index_name)
 
     elif isinstance(symbol, pybamm.Time):
@@ -348,7 +343,9 @@ def to_julia(symbol):
     return constant_values, variable_symbols, variable_symbol_sizes
 
 
-def get_julia_function(symbol, funcname="f", input_parameter_order=None, len_rhs=None):
+def get_julia_function(
+    symbol, funcname="f", input_parameter_order=None, len_rhs=None, preallocate=True
+):
     """
     Converts a pybamm expression tree into pure julia code that will calculate the
     result of calling `evaluate(t, y)` on the given expression tree.
@@ -367,6 +364,10 @@ def get_julia_function(symbol, funcname="f", input_parameter_order=None, len_rhs
         determines whether the model has any algebraic equations: if None (default),
         the model is assume to have no algebraic parts and ``julia_str`` is compatible
         with an ODE solver. If not None, ``julia_str`` is compatible with a DAE solver
+    preallocate : bool, optional
+        Whether to write the function in a way that preallocates memory for the output.
+        Default is True, which is faster. Must be False for the function to be
+        modelingtoolkitized.
 
     Returns
     -------
@@ -396,9 +397,12 @@ def get_julia_function(symbol, funcname="f", input_parameter_order=None, len_rhs
 
     # extract constants in generated function
     const_and_cache_str = "cs = (\n"
-    for symbol_id, const_value in constants.items():
-        const_name = id_to_julia_variable(symbol_id, True)
-        const_and_cache_str += "   {} = {},\n".format(const_name, const_value)
+    shorter_const_names = {}
+    for i_const, (symbol_id, const_value) in enumerate(constants.items()):
+        const_name = id_to_julia_variable(symbol_id, "const")
+        const_name_short = "const_{}".format(i_const)
+        const_and_cache_str += "   {} = {},\n".format(const_name_short, const_value)
+        shorter_const_names[const_name] = const_name_short
 
     # Pop (get and remove) items from the dictionary of symbols one by one
     # If they are simple operations (@view, +, -, *, /), replace all future
@@ -408,33 +412,48 @@ def get_julia_function(symbol, funcname="f", input_parameter_order=None, len_rhs
     input_parameters = {}
     while var_symbols:
         var_symbol_id, symbol_line = var_symbols.popitem(last=False)
-        julia_var = id_to_julia_variable(var_symbol_id, False)
+        julia_var = id_to_julia_variable(var_symbol_id, "cache")
         # Look for lists in the variable symbols. These correpsond to concatenations, so
         # assign the children to the right parts of the vector
         if symbol_line[0] == "[" and symbol_line[-1] == "]":
             # convert to actual list
             symbol_line = symbol_line[1:-1].split(", ")
             start = 0
-            for child_size_and_name in symbol_line:
-                child_size, child_name = child_size_and_name.split("::")
-                end = start + int(child_size)
-                # add 1 to start to account for julia 1-indexing
-                var_str += "@. {}[{}:{}] = {}\n".format(
-                    julia_var, start + 1, end, child_name
-                )
-                start = end
+            if preallocate is True or var_symbol_id == symbol.id:
+                for child_size_and_name in symbol_line:
+                    child_size, child_name = child_size_and_name.split("::")
+                    end = start + int(child_size)
+                    # add 1 to start to account for julia 1-indexing
+                    var_str += "@. {}[{}:{}] = {}\n".format(
+                        julia_var, start + 1, end, child_name
+                    )
+                    start = end
+            else:
+                concat_str = "{} = vcat(".format(julia_var)
+                for i, child_size_and_name in enumerate(symbol_line):
+                    child_size, child_name = child_size_and_name.split("::")
+                    var_str += "x{} = @. {}\n".format(i + 1, child_name)
+                    concat_str += "x{}, ".format(i + 1)
+                var_str += concat_str[:-2] + ")\n"
         # use mul! for matrix multiplications (requires LinearAlgebra library)
         elif " @ " in symbol_line:
-            symbol_line = symbol_line.replace(" @ ", ", ")
-            var_str += "mul!({}, {})\n".format(julia_var, symbol_line)
+            if preallocate is False:
+                symbol_line = symbol_line.replace(" @ ", " * ")
+                var_str += "{} = {}\n".format(julia_var, symbol_line)
+            else:
+                symbol_line = symbol_line.replace(" @ ", ", ")
+                var_str += "mul!({}, {})\n".format(julia_var, symbol_line)
         # find input parameters
         elif symbol_line.startswith("inputs"):
             input_parameters[julia_var] = symbol_line[8:-2]
         else:
             # don't replace the matrix multiplication cases (which will be
             # turned into a mul!), since it is faster to assign to a cache array
-            # first in that case, unless it is a @view in which case we don't
+            # first in that case
+            # e.g. mul!(cs.cache_1, cs.cache_2, cs.cache_3)
+            # unless it is a @view in which case we don't
             # need to cache
+            # e.g. mul!(cs.cache_1, cs.cache_2, @view y[1:10])
             any_matmuls = any(
                 julia_var in next_symbol_line
                 and (
@@ -475,35 +494,61 @@ def get_julia_function(symbol, funcname="f", input_parameter_order=None, len_rhs
     # Replace all input parameter names
     for input_parameter_id, input_parameter_name in input_parameters.items():
         var_str = var_str.replace(input_parameter_id, input_parameter_name)
-    # add "cs." to constant and cache names
-    var_str = var_str.replace("const", "cs.const")
-    var_str = var_str.replace("cache", "cs.cache")
+
     # indent code
     var_str = "   " + var_str
     var_str = var_str.replace("\n", "\n   ")
 
     # add the cache variables to the cache NamedTuple
+    i_cache = 0
     for var_symbol_id, var_symbol_size in var_symbol_sizes.items():
         # Skip caching the result variable since this is provided as dy
         # Also skip caching the result variable if it doesn't appear in the var_str,
         # since it has been inlined and does not need to be assigned to
-        # make sure that the variable appears at the start of a line in var_str
-        julia_var = id_to_julia_variable(var_symbol_id, False)
-        if (
-            var_symbol_id != symbol.id
-            and "mul!(cs." + julia_var in var_str
-            or "@. cs." + julia_var in var_str
-        ):
-            cache_name = id_to_julia_variable(var_symbol_id, False)
-            const_and_cache_str += "   {} = zeros({}),\n".format(
-                cache_name, var_symbol_size
-            )
+        julia_var = id_to_julia_variable(var_symbol_id, "cache")
+        if var_symbol_id != symbol.id and julia_var in var_str:
+            julia_var_short = "cache_{}".format(i_cache)
+            var_str = var_str.replace(julia_var, julia_var_short)
+            i_cache += 1
+            if preallocate is True:
+                const_and_cache_str += "   {} = zeros({}),\n".format(
+                    julia_var_short, var_symbol_size
+                )
+            else:
+                # Cache variables have not been preallocated
+                var_str = var_str.replace(
+                    "@. {} = ".format(julia_var_short),
+                    "{} = @. ".format(julia_var_short),
+                )
+
+    # Shorten the name of the constants from id to const_0, const_1, etc.
+    for long, short in shorter_const_names.items():
+        var_str = var_str.replace(long, "cs." + short)
 
     # close the constants and cache string
     const_and_cache_str += ")\n"
 
     # remove the constant and cache sring if it is empty
     const_and_cache_str = const_and_cache_str.replace("cs = (\n)\n", "")
+
+    # calculate the final variable that will output the result
+    if symbol.is_constant():
+        result_var = id_to_julia_variable(symbol.id, "const")
+        result_value = symbol.evaluate()
+        if isinstance(result_value, numbers.Number):
+            var_str = var_str + "\n   dy .= " + str(result_value) + "\n"
+        else:
+            var_str = var_str + "\n   dy .= cs." + result_var + "\n"
+    else:
+        result_var = id_to_julia_variable(symbol.id, "cache")
+        if typ == "ode":
+            var_str = var_str.replace(result_var, "dy")
+        elif typ == "dae":
+            var_str = var_str.replace(result_var, "out")
+
+    # add "cs." to cache names
+    if preallocate is True:
+        var_str = var_str.replace("cache", "cs.cache")
 
     # line that extracts the input parameters in the right order
     if input_parameter_order is None:
@@ -515,12 +560,17 @@ def get_julia_function(symbol, funcname="f", input_parameter_order=None, len_rhs
         # extract all parameters
         input_parameter_extraction = "   " + ", ".join(input_parameter_order) + " = p\n"
 
+    if preallocate is False or const_and_cache_str == "":
+        func_def = f"{funcname}!"
+    else:
+        func_def = f"{funcname}_with_consts!"
+
     # add function def and sparse arrays to first line
     imports = "begin\nusing SparseArrays, LinearAlgebra\n\n"
     if typ == "ode":
-        function_def = f"\nfunction {funcname}_with_consts!(dy, y, p, t)\n"
+        function_def = f"\nfunction {func_def}(dy, y, p, t)\n"
     elif typ == "dae":
-        function_def = f"\nfunction {funcname}_with_consts!(out, dy, y, p, t)\n"
+        function_def = f"\nfunction {func_def}(out, dy, y, p, t)\n"
     julia_str = (
         imports
         + const_and_cache_str
@@ -529,30 +579,11 @@ def get_julia_function(symbol, funcname="f", input_parameter_order=None, len_rhs
         + var_str
     )
 
-    # calculate the final variable that will output the result
-    result_var = id_to_julia_variable(symbol.id, symbol.is_constant())
-    if symbol.is_constant():
-        result_value = symbol.evaluate()
-
-    # assign the return variable
-    if symbol.is_constant():
-        if isinstance(result_value, numbers.Number):
-            julia_str = julia_str + "\n   dy .= " + str(result_value) + "\n"
-        else:
-            julia_str = julia_str + "\n   dy .= cs." + result_var + "\n"
-    else:
-        if typ == "ode":
-            julia_str = julia_str.replace("cs." + result_var, "dy")
-        elif typ == "dae":
-            julia_str = julia_str.replace("cs." + result_var, "out")
-
     # close the function, with a 'nothing' to avoid allocations
     julia_str += "nothing\nend\n\n"
     julia_str = julia_str.replace("\n   \n", "\n")
 
-    if const_and_cache_str == "":
-        julia_str += f"{funcname}! = {funcname}_with_consts!\n"
-    else:
+    if not (preallocate is False or const_and_cache_str == ""):
         # Use a let block for the cached variables
         # open the let block
         julia_str = julia_str.replace("cs = (", f"{funcname}! = let cs = (")
@@ -610,7 +641,7 @@ def convert_var_and_eqn_to_str(var, eqn, all_constants_str, all_variables_str, t
     var_str = ""
     while var_symbols:
         var_symbol_id, symbol_line = var_symbols.popitem(last=False)
-        julia_var = id_to_julia_variable(var_symbol_id, False)
+        julia_var = id_to_julia_variable(var_symbol_id, "cache")
         # inline operation if it can be inlined
         if "concatenation" not in symbol_line:
             found_replacement = False
@@ -651,7 +682,7 @@ def convert_var_and_eqn_to_str(var, eqn, all_constants_str, all_variables_str, t
 
     # extract constants in generated function
     for eqn_id, const_value in constants.items():
-        const_name = id_to_julia_variable(eqn_id, True)
+        const_name = id_to_julia_variable(eqn_id, "const")
         all_constants_str += "{} = {}\n".format(const_name, const_value)
         # TODO: avoid repeated constants definitions
 
@@ -700,7 +731,10 @@ def convert_var_and_eqn_to_str(var, eqn, all_constants_str, all_variables_str, t
         all_variables_str += f"# '{var.name}' {typ}\n" + var_str + "\n"
 
     # calculate the final variable that will output the result
-    result_var = id_to_julia_variable(eqn.id, eqn.is_constant())
+    if eqn.is_constant():
+        result_var = id_to_julia_variable(eqn.id, "const")
+    else:
+        result_var = id_to_julia_variable(eqn.id, "cache")
     if is_constant_and_can_evaluate(eqn):
         result_value = eqn.evaluate()
     else:
@@ -906,7 +940,7 @@ def get_julia_mtk_model(model, geometry=None, tspan=None):
     # their julia equivalent
     for var_id, julia_id in variable_id_to_print_name.items():
         # e.g. boundary_value_right(cache_123456789) gets replaced with u1(t, 1)
-        cache_var_id = id_to_julia_variable(var_id, False)
+        cache_var_id = id_to_julia_variable(var_id, "cache")
         if f"boundary_value_right({cache_var_id})" in all_julia_str:
             all_julia_str = all_julia_str.replace(
                 f"boundary_value_right({cache_var_id})",
@@ -1010,7 +1044,7 @@ def get_julia_mtk_model(model, geometry=None, tspan=None):
     # their julia equivalent
     for var_id, julia_id in variable_id_to_print_name.items():
         # e.g. boundary_value_right(cache_123456789) gets replaced with u1(t, 1)
-        cache_var_id = id_to_julia_variable(var_id, False)
+        cache_var_id = id_to_julia_variable(var_id, "cache")
         if f"boundary_value_right({cache_var_id})" in all_ic_bc_julia_str:
             all_ic_bc_julia_str = all_ic_bc_julia_str.replace(
                 f"boundary_value_right({cache_var_id})",

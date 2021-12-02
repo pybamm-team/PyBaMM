@@ -942,7 +942,11 @@ class BaseModel:
         C.generate()
 
     def generate_julia_diffeq(
-        self, input_parameter_order=None, get_consistent_ics_solver=None
+        self,
+        input_parameter_order=None,
+        get_consistent_ics_solver=None,
+        dae_type="implicit",
+        **kwargs,
     ):
         """
         Generate a Julia representation of the model, ready to be solved by Julia's
@@ -952,6 +956,11 @@ class BaseModel:
         ----------
         input_parameter_order : list, optional
             Order in which input parameters will be provided when solving the model
+        get_consistent_ics_solver : pybamm solver, optional
+            Solver to use to get consistent initial conditions. If None, the initial
+            guesses for boundary conditions (non-consistent) are used.
+        dae_type : str, optional
+            How to write the DAEs. Options are "explicit" or "implicit".
 
         Returns
         -------
@@ -972,8 +981,13 @@ class BaseModel:
                 self.concatenated_rhs,
                 funcname=name,
                 input_parameter_order=input_parameter_order,
+                **kwargs,
             )
         else:
+            if dae_type == "explicit":
+                len_rhs = None
+            else:
+                len_rhs = self.concatenated_rhs.size
             # DAE model: form out[] = ... - dy[]
             eqn_str = pybamm.get_julia_function(
                 pybamm.numpy_concatenation(
@@ -981,7 +995,8 @@ class BaseModel:
                 ),
                 funcname=name,
                 input_parameter_order=input_parameter_order,
-                len_rhs=self.concatenated_rhs.size,
+                len_rhs=len_rhs,
+                **kwargs,
             )
 
         if get_consistent_ics_solver is None or self.algebraic == {}:
@@ -995,6 +1010,7 @@ class BaseModel:
             ics,
             funcname=name + "_u0",
             input_parameter_order=input_parameter_order,
+            **kwargs,
         )
         # Change the string to a form for u0
         ics_str = ics_str.replace("(dy, y, p, t)", "(u0, p)")
