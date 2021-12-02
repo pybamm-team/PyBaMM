@@ -903,20 +903,24 @@ class Discretisation(object):
                 out.copy_domains(symbol)
                 return out
 
-            elif isinstance(symbol, pybamm.XAverage):
-                geo = pybamm.geometric_parameters
-                if child.domain in [["negative particle"], ["negative particle size"]]:
-                    x = pybamm.standard_spatial_vars.x_n
-                elif child.domain in [
-                    ["positive particle"],
-                    ["positive particle size"],
-                ]:
-                    x = pybamm.standard_spatial_vars.x_p
+            elif isinstance(symbol, pybamm._BaseAverage):
+                if isinstance(symbol, pybamm.SizeAverage):
+                    R = symbol.integration_variable
+                    geo = pybamm.geometric_parameters
+                    if ["negative particle size"] in list(symbol.domains.values()):
+                        f_a_dist = geo.f_a_dist_n(R)
+                    elif ["positive particle size"] in list(symbol.domains.values()):
+                        f_a_dist = geo.f_a_dist_p(R)
+
+                    # take average using Integral and distribution f_a_dist
+                    average = pybamm.Integral(
+                        f_a_dist * disc_child, R
+                    ) / pybamm.Integral(f_a_dist, R)
                 else:
-                    x = pybamm.SpatialVariable("x", domain=symbol.domain)
-                v = pybamm.ones_like(symbol)
-                x_average = pybamm.Integral(disc_child, x) / pybamm.Integral(v, x)
-                return self.process_symbol(x_average)
+                    x = symbol.integration_variable
+                    v = pybamm.ones_like(disc_child)
+                    average = pybamm.Integral(disc_child, x) / pybamm.Integral(v, x)
+                return self.process_symbol(average)
 
             elif isinstance(symbol, pybamm.DefiniteIntegralVector):
                 return child_spatial_method.definite_integral_matrix(
