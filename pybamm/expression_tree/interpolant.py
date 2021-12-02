@@ -174,8 +174,9 @@ class Interpolant(pybamm.Function):
             res = self.function(*children_eval_flat)
             if res.ndim > 1:
                 return np.diagonal(res)[:, np.newaxis]
-        else:
-            # pragma: no cover
+            else:
+                return res[:, np.newaxis]
+        else:  # pragma: no cover
             raise ValueError("Invalid dimension: {0}".format(self.dimension))
 
 
