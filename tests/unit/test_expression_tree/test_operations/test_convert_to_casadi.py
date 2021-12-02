@@ -176,6 +176,46 @@ class TestCasadiConverter(unittest.TestCase):
         with self.assertRaisesRegex(NotImplementedError, "The interpolator"):
             interp_casadi = interp.to_casadi(y=casadi_y)
 
+    def test_interpolation_2d(self):
+        x_ = [np.linspace(0, 10), np.linspace(0, 20)]
+
+        X = list(np.meshgrid(*x_))
+
+        x = np.column_stack([el.reshape(-1, 1) for el in X])
+        y = pybamm.StateVector(slice(0, 2))
+        casadi_y = casadi.MX.sym("y", 2)
+        # linear
+        y_test = np.array([0.4, 0.6])
+        for interpolator in ["linear", "cubic spline"]:
+            interp = pybamm.Interpolant(x, (2 * x).sum(axis=1), y,
+                                        interpolator=interpolator)
+            interp_casadi = interp.to_casadi(y=casadi_y)
+            f = casadi.Function("f", [casadi_y], [interp_casadi])
+            np.testing.assert_array_almost_equal(interp.evaluate(y=y_test), f(y_test))
+        # square
+        y = pybamm.StateVector(slice(0, 1))
+        interp = pybamm.Interpolant(x, (x ** 2).sum(axis=1), y,
+                                    interpolator="cubic spline")
+        interp_casadi = interp.to_casadi(y=casadi_y)
+        f = casadi.Function("f", [casadi_y], [interp_casadi])
+        np.testing.assert_array_almost_equal(interp.evaluate(y=y_test), f(y_test))
+
+        # len(x)=1 but y is 2d
+        y = pybamm.StateVector(slice(0, 1))
+        casadi_y = casadi.MX.sym("y", 1)
+        data = np.tile((2 * x).sum(axis=1), (10, 1)).T
+        y_test = np.array([0.4])
+        for interpolator in ["linear", "cubic spline"]:
+            interp = pybamm.Interpolant(x, data, y, interpolator=interpolator)
+            interp_casadi = interp.to_casadi(y=casadi_y)
+            f = casadi.Function("f", [casadi_y], [interp_casadi])
+            np.testing.assert_array_almost_equal(interp.evaluate(y=y_test), f(y_test))
+
+        # error for pchip interpolator
+        interp = pybamm.Interpolant(x, data, y, interpolator="pchip")
+        with self.assertRaisesRegex(NotImplementedError, "The interpolator"):
+            interp_casadi = interp.to_casadi(y=casadi_y)
+
     def test_concatenations(self):
         y = np.linspace(0, 1, 10)[:, np.newaxis]
         a = pybamm.Vector(y)
