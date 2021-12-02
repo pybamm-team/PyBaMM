@@ -177,6 +177,7 @@ class Interpolant(pybamm.Function):
             else:
                 return res[:, np.newaxis]
         else:
+            # pragma: no cover
             raise ValueError("Invalid dimension: {0}".format(self.dimension))
 
 
