@@ -176,6 +176,11 @@ class TestCasadiConverter(unittest.TestCase):
         with self.assertRaisesRegex(NotImplementedError, "The interpolator"):
             interp_casadi = interp.to_casadi(y=casadi_y)
 
+        # error for unknown interpolator
+        with self.assertRaisesRegex(NotImplementedError, "Unknown interpolator"):
+            interp = pybamm.Interpolant(x, data, y, interpolator="idonotexist")
+            interp_casadi = interp.to_casadi(y=casadi_y)
+
     def test_interpolation_2d(self):
         x_ = [np.linspace(0, 1), np.linspace(0, 1)]
 
