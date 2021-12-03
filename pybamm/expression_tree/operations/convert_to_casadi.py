@@ -157,7 +157,7 @@ class CasadiConverter(object):
                     )
                     res = LUT(casadi.hcat(converted_children).T).T
                     return res
-                else:
+                else:  # pragma: no cover
                     raise ValueError("Invalid converted_children count: {0}"
                                      .format(len(converted_children)))
 
