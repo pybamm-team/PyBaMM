@@ -185,8 +185,11 @@ class TestCasadiConverter(unittest.TestCase):
         y3 = (pybamm.StateVector(slice(0, 1)),
               pybamm.StateVector(slice(0, 1)),
               pybamm.StateVector(slice(0, 1)))
-        interp = pybamm.Interpolant(x, data, y3, interpolator="linear")
-        with self.assertRaisesRegex(ValueError, "Invalid converted_children count"):
+        x3_ = [np.linspace(0, 1) for _ in range(3)]
+        x3 = np.column_stack(x3_)
+        data3 = 2 * x3  # np.tile(2 * x3, (10, 1)).T
+        with self.assertRaisesRegex(ValueError, "Invalid dimension of x"):
+            interp = pybamm.Interpolant(x3_, data3, y3, interpolator="linear")
             interp_casadi = interp.to_casadi(y=casadi_y)
 
     def test_interpolation_2d(self):
