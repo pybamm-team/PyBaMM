@@ -203,12 +203,6 @@ class TestCasadiConverter(unittest.TestCase):
         # linear
         y_test = np.array([0.4, 0.6])
         Y = (2 * x).sum(axis=1).reshape(*[len(el) for el in x_])
-        print("len(x): {0}".format(len(x)))
-        print("len(y): {0}".format(len(y)))
-        print("len(Y): {0}".format(len(Y)))
-        print("x.shape: {0}".format(x.shape))
-        # print("y.shape: {0}".format(y.shape))
-        print("Y.shape: {0}".format(Y.shape))
         for interpolator in ["linear"]:
             interp = pybamm.Interpolant(x_,
                                         Y,

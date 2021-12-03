@@ -652,8 +652,6 @@ class ParameterValues:
                     new_children.append(self.process_symbol(child))
             function_name = self[symbol.name]
 
-            print("function_name: {0}".format(function_name))
-
             # Create Function or Interpolant or Scalar object
             if isinstance(function_name, tuple):
                 if len(function_name) == 2:  # CSV or JSON parsed data
