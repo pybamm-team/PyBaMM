@@ -12,7 +12,6 @@ on:
 jobs:
 
   pre_job:
-    # continue-on-error: true # Uncomment once integration is finished
     runs-on: ubuntu-latest
     # Map a step output to a job output
     outputs:
@@ -97,6 +96,10 @@ jobs:
       if: matrix.os == 'ubuntu-latest' && matrix.python-version == 3.9
       run: tox -e coverage
 
+    - name: Upload coverage report
+      if: matrix.os == 'ubuntu-latest' && matrix.python-version == 3.9
+      uses: codecov/codecov-action@v2.1.0
+
     - name: Run integration tests for GNU/Linux
       if: matrix.os == 'ubuntu-latest'
       run: python -m tox -e integration
@@ -117,6 +120,3 @@ jobs:
       if: matrix.os == 'ubuntu-latest'
       run: tox -e examples
 
-    - name: Upload coverage report
-      if: matrix.os == 'ubuntu-latest' && matrix.python-version == 3.9
-      uses: codecov/codecov-action@v2.1.0
