@@ -222,7 +222,6 @@ class TestCasadiConverter(unittest.TestCase):
         #     np.testing.assert_array_almost_equal(interp.evaluate(y=y_test), f(y_test))
 
         # error for pchip interpolator
-        # interp = pybamm.Interpolant(x_, Y, y, interpolator="pchip")
         with self.assertRaisesRegex(ValueError, "interpolator should be"):
             interp = pybamm.Interpolant(x_, Y, y, interpolator="pchip")
             interp_casadi = interp.to_casadi(y=casadi_y)
