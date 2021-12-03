@@ -181,6 +181,14 @@ class TestCasadiConverter(unittest.TestCase):
             interp = pybamm.Interpolant(x, data, y, interpolator="idonotexist")
             interp_casadi = interp.to_casadi(y=casadi_y)
 
+        # error for converted children count
+        y3 = (pybamm.StateVector(slice(0, 1)),
+              pybamm.StateVector(slice(0, 1)),
+              pybamm.StateVector(slice(0, 1)))
+        interp = pybamm.Interpolant(x, data, y3, interpolator="linear")
+        with self.assertRaisesRegex(ValueError, "Invalid converted_children count"):
+            interp_casadi = interp.to_casadi(y=casadi_y)
+
     def test_interpolation_2d(self):
         x_ = [np.linspace(0, 1), np.linspace(0, 1)]
 
