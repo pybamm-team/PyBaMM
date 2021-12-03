@@ -1,4 +1,4 @@
-# Unreleased
+# [Unreleased](https://github.com/pybamm-team/PyBaMM/)
 
 ## Features
 
@@ -6,13 +6,16 @@
 
 ## Bug fixes
 
-## Breaking changes
+-   Experiments can be set to terminate when a voltage is reached (across all steps) ([#1832](https://github.com/pybamm-team/PyBaMM/pull/1832))
+-   Fixed bug in expression tree simplification ([#1831](https://github.com/pybamm-team/PyBaMM/pull/1831))
+-   Solid tortuosity is now correctly calculated with Bruggeman coefficient of the respective electrode ([#1773](https://github.com/pybamm-team/PyBaMM/pull/1773))
 
 # [v21.11](https://github.com/pybamm-team/PyBaMM/tree/v21.11) - 2021-11-30
 
 ## Features
 
 -   The name of a parameter set can be passed to `ParameterValues` as a string, e.g. `ParameterValues("Chen2020")` ([#1822](https://github.com/pybamm-team/PyBaMM/pull/1822))
+-   Added submodels for interface utilisation ([#1821](https://github.com/pybamm-team/PyBaMM/pull/1821))
 -   Reformatted SEI growth models into a single submodel with conditionals ([#1808](https://github.com/pybamm-team/PyBaMM/pull/1808))
 -   Stress-induced diffusion is now a separate model option instead of being automatically included when using the particle mechanics submodels ([#1797](https://github.com/pybamm-team/PyBaMM/pull/1797))
 -   `Experiment`s with drive cycles can be solved ([#1793](https://github.com/pybamm-team/PyBaMM/pull/1793))

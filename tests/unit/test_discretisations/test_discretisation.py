@@ -429,11 +429,7 @@ class TestDiscretise(unittest.TestCase):
     def test_process_complex_expression(self):
         var1 = pybamm.Variable("var1")
         var2 = pybamm.Variable("var2")
-        scal1 = pybamm.Scalar(5)
-        scal2 = pybamm.Scalar(2)
-        scal3 = pybamm.Scalar(3)
-        scal4 = pybamm.Scalar(4)
-        expression = (scal1 * (scal3 ** var2)) / ((var1 - scal4) + scal2)
+        expression = (5 * (3 ** var2)) / ((var1 - 4) + var2)
 
         # create discretisation
         disc = get_discretisation_for_testing()
@@ -442,35 +438,25 @@ class TestDiscretise(unittest.TestCase):
         exp_disc = disc.process_symbol(expression)
         self.assertIsInstance(exp_disc, pybamm.Division)
         # left side
-        self.assertIsInstance(exp_disc.children[0], pybamm.Multiplication)
-        self.assertIsInstance(exp_disc.children[0].children[0], pybamm.Scalar)
-        self.assertIsInstance(exp_disc.children[0].children[1], pybamm.Power)
-        self.assertTrue(
-            isinstance(exp_disc.children[0].children[1].children[0], pybamm.Scalar)
-        )
-        self.assertTrue(
-            isinstance(exp_disc.children[0].children[1].children[1], pybamm.StateVector)
-        )
+        self.assertIsInstance(exp_disc.left, pybamm.Multiplication)
+        self.assertIsInstance(exp_disc.left.left, pybamm.Scalar)
+        self.assertIsInstance(exp_disc.left.right, pybamm.Power)
+        self.assertIsInstance(exp_disc.left.right.left, pybamm.Scalar)
+        self.assertIsInstance(exp_disc.left.right.right, pybamm.StateVector)
         self.assertEqual(
-            exp_disc.children[0].children[1].children[1].y_slices[0],
+            exp_disc.left.right.right.y_slices[0],
             disc.y_slices[var2.id][0],
         )
         # right side
-        self.assertIsInstance(exp_disc.children[1], pybamm.Addition)
-        self.assertTrue(
-            isinstance(exp_disc.children[1].children[0], pybamm.Subtraction)
-        )
-        self.assertTrue(
-            isinstance(exp_disc.children[1].children[0].children[0], pybamm.StateVector)
-        )
+        self.assertIsInstance(exp_disc.right, pybamm.Addition)
+        self.assertIsInstance(exp_disc.right.left, pybamm.Subtraction)
+        self.assertIsInstance(exp_disc.right.left.left, pybamm.StateVector)
         self.assertEqual(
-            exp_disc.children[1].children[0].children[0].y_slices[0],
+            exp_disc.right.left.left.y_slices[0],
             disc.y_slices[var1.id][0],
         )
-        self.assertTrue(
-            isinstance(exp_disc.children[1].children[0].children[1], pybamm.Scalar)
-        )
-        self.assertIsInstance(exp_disc.children[1].children[1], pybamm.Scalar)
+        self.assertIsInstance(exp_disc.right.left.right, pybamm.Scalar)
+        self.assertIsInstance(exp_disc.right.right, pybamm.StateVector)
 
     def test_discretise_spatial_operator(self):
         # create discretisation

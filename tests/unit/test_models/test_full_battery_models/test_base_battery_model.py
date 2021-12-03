@@ -140,24 +140,18 @@ class TestBaseBatteryModel(unittest.TestCase):
 
     def test_default_spatial_methods(self):
         model = pybamm.BaseBatteryModel({"dimensionality": 0})
-        self.assertTrue(
-            isinstance(
-                model.default_spatial_methods["current collector"],
-                pybamm.ZeroDimensionalSpatialMethod,
-            )
+        self.assertIsInstance(
+            model.default_spatial_methods["current collector"],
+            pybamm.ZeroDimensionalSpatialMethod,
         )
         model = pybamm.BaseBatteryModel({"dimensionality": 1})
-        self.assertTrue(
-            isinstance(
-                model.default_spatial_methods["current collector"], pybamm.FiniteVolume
-            )
+        self.assertIsInstance(
+            model.default_spatial_methods["current collector"], pybamm.FiniteVolume
         )
         model = pybamm.BaseBatteryModel({"dimensionality": 2})
-        self.assertTrue(
-            isinstance(
-                model.default_spatial_methods["current collector"],
-                pybamm.ScikitFiniteElement,
-            )
+        self.assertIsInstance(
+            model.default_spatial_methods["current collector"],
+            pybamm.ScikitFiniteElement,
         )
 
     def test_options(self):
