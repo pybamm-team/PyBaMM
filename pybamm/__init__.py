@@ -149,6 +149,7 @@ from .models.submodels import (
 )
 from .models.submodels.interface import sei
 from .models.submodels.interface import lithium_plating
+from .models.submodels.interface import interface_utilisation
 
 #
 # Geometry

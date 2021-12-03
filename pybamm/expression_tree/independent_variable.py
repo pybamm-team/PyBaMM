@@ -5,7 +5,7 @@ import sympy
 
 import pybamm
 
-KNOWN_COORD_SYS = ["cartesian", "spherical polar"]
+KNOWN_COORD_SYS = ["cartesian", "cylindrical polar", "spherical polar"]
 
 
 class IndependentVariable(pybamm.Symbol):
@@ -101,9 +101,7 @@ class SpatialVariable(IndependentVariable):
             raise ValueError("domain must be provided")
 
         # Check symbol name vs domain name
-        if name == "r" and not (len(domain) == 1 and "particle" in domain[0]):
-            raise pybamm.DomainError("domain must be particle if name is 'r'")
-        elif name == "r_n" and domain != ["negative particle"]:
+        if name == "r_n" and domain != ["negative particle"]:
             raise pybamm.DomainError(
                 "domain must be negative particle if name is 'r_n'"
             )
