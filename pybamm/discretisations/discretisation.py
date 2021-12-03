@@ -858,8 +858,25 @@ class Discretisation(object):
                 return spatial_method.process_binary_operators(
                     symbol, left, right, disc_left, disc_right
                 )
+        elif isinstance(symbol, pybamm._BaseAverage):
+            # Create a new Integral operator and process it
+            child = symbol.orphans[0]
+            if isinstance(symbol, pybamm.SizeAverage):
+                R = symbol.integration_variable[0]
+                f_a_dist = symbol.f_a_dist
+                # take average using Integral and distribution f_a_dist
+                average = pybamm.Integral(f_a_dist * child, R) / pybamm.Integral(
+                    f_a_dist, R
+                )
+            else:
+                x = symbol.integration_variable
+                v = pybamm.ones_like(child)
+                average = pybamm.Integral(child, x) / pybamm.Integral(v, x)
+            return self.process_symbol(average)
+
         elif isinstance(symbol, pybamm.UnaryOperator):
             child = symbol.child
+
             disc_child = self.process_symbol(child)
             if child.domain != []:
                 child_spatial_method = self.spatial_methods[child.domain[0]]
@@ -902,25 +919,6 @@ class Discretisation(object):
                 )
                 out.copy_domains(symbol)
                 return out
-
-            elif isinstance(symbol, pybamm._BaseAverage):
-                if isinstance(symbol, pybamm.SizeAverage):
-                    R = symbol.integration_variable
-                    geo = pybamm.geometric_parameters
-                    if ["negative particle size"] in list(symbol.domains.values()):
-                        f_a_dist = geo.f_a_dist_n(R)
-                    elif ["positive particle size"] in list(symbol.domains.values()):
-                        f_a_dist = geo.f_a_dist_p(R)
-
-                    # take average using Integral and distribution f_a_dist
-                    average = pybamm.Integral(
-                        f_a_dist * disc_child, R
-                    ) / pybamm.Integral(f_a_dist, R)
-                else:
-                    x = symbol.integration_variable
-                    v = pybamm.ones_like(disc_child)
-                    average = pybamm.Integral(disc_child, x) / pybamm.Integral(v, x)
-                return self.process_symbol(average)
 
             elif isinstance(symbol, pybamm.DefiniteIntegralVector):
                 return child_spatial_method.definite_integral_matrix(

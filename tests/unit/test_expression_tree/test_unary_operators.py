@@ -637,9 +637,8 @@ class TestUnaryOperators(unittest.TestCase):
             a = pybamm.Variable("a", domain=domain)
             x = pybamm.SpatialVariable("x", domain)
             av_a = pybamm.x_average(a)
-            self.assertIsInstance(av_a, pybamm.Division)
-            self.assertIsInstance(av_a.children[0], pybamm.Integral)
-            self.assertEqual(av_a.children[0].integration_variable[0].domain, x.domain)
+            self.assertIsInstance(av_a, pybamm.XAverage)
+            self.assertEqual(av_a.integration_variable[0].domain, x.domain)
             self.assertEqual(av_a.domain, [])
 
         # whole electrode domain is different as the division by 1 gets simplified out
@@ -647,20 +646,15 @@ class TestUnaryOperators(unittest.TestCase):
         a = pybamm.Variable("a", domain=domain)
         x = pybamm.SpatialVariable("x", domain)
         av_a = pybamm.x_average(a)
-        self.assertIsInstance(av_a, pybamm.Division)
-        self.assertIsInstance(av_a.children[0], pybamm.Integral)
-        self.assertEqual(av_a.children[0].integration_variable[0].domain, x.domain)
+        self.assertIsInstance(av_a, pybamm.XAverage)
+        self.assertEqual(av_a.integration_variable[0].domain, x.domain)
         self.assertEqual(av_a.domain, [])
 
         a = pybamm.Variable("a", domain="new domain")
         av_a = pybamm.x_average(a)
         self.assertEqual(av_a.domain, [])
-        self.assertIsInstance(av_a, pybamm.Division)
-        self.assertIsInstance(av_a.children[0], pybamm.Integral)
-        self.assertEqual(av_a.children[0].integration_variable[0].domain, a.domain)
-        self.assertIsInstance(av_a.children[1], pybamm.Integral)
-        self.assertEqual(av_a.children[1].integration_variable[0].domain, a.domain)
-        self.assertEqual(av_a.children[1].children[0].id, pybamm.ones_like(a).id)
+        self.assertIsInstance(av_a, pybamm.XAverage)
+        self.assertEqual(av_a.integration_variable[0].domain, a.domain)
 
         # x-average of symbol that evaluates on edges raises error
         symbol_on_edges = pybamm.PrimaryBroadcastToEdges(1, "domain")
@@ -671,8 +665,6 @@ class TestUnaryOperators(unittest.TestCase):
 
         # Particle domains
         geo = pybamm.geometric_parameters
-        l_n = geo.l_n
-        l_p = geo.l_p
 
         a = pybamm.Symbol(
             "a",
@@ -681,9 +673,7 @@ class TestUnaryOperators(unittest.TestCase):
         )
         av_a = pybamm.x_average(a)
         self.assertEqual(a.domain, ["negative particle"])
-        self.assertIsInstance(av_a, pybamm.Division)
-        self.assertIsInstance(av_a.children[0], pybamm.Integral)
-        self.assertEqual(av_a.children[1].id, l_n.id)
+        self.assertIsInstance(av_a, pybamm.XAverage)
 
         a = pybamm.Symbol(
             "a",
@@ -692,9 +682,7 @@ class TestUnaryOperators(unittest.TestCase):
         )
         av_a = pybamm.x_average(a)
         self.assertEqual(a.domain, ["positive particle"])
-        self.assertIsInstance(av_a, pybamm.Division)
-        self.assertIsInstance(av_a.children[0], pybamm.Integral)
-        self.assertEqual(av_a.children[1].id, l_p.id)
+        self.assertIsInstance(av_a, pybamm.XAverage)
 
     def test_size_average(self):
 
@@ -728,10 +716,8 @@ class TestUnaryOperators(unittest.TestCase):
             a = pybamm.Symbol("a", domain=domain)
             R = pybamm.SpatialVariable("R", domain)
             av_a = pybamm.size_average(a)
-            self.assertIsInstance(av_a, pybamm.Division)
-            self.assertIsInstance(av_a.children[0], pybamm.Integral)
-            self.assertIsInstance(av_a.children[1], pybamm.Integral)
-            self.assertEqual(av_a.children[0].integration_variable[0].domain, R.domain)
+            self.assertIsInstance(av_a, pybamm.SizeAverage)
+            self.assertEqual(av_a.integration_variable[0].domain, R.domain)
             # domain list should now be empty
             self.assertEqual(av_a.domain, [])
 
@@ -757,9 +743,8 @@ class TestUnaryOperators(unittest.TestCase):
             a = pybamm.Symbol("a", domain=domain)
             r = pybamm.SpatialVariable("r", domain)
             av_a = pybamm.r_average(a)
-            self.assertIsInstance(av_a, pybamm.Division)
-            self.assertIsInstance(av_a.children[0], pybamm.Integral)
-            self.assertEqual(av_a.children[0].integration_variable[0].domain, r.domain)
+            self.assertIsInstance(av_a, pybamm.RAverage)
+            self.assertEqual(av_a.integration_variable[0].domain, r.domain)
             # electrode domains go to current collector when averaged
             self.assertEqual(av_a.domain, [])
 
@@ -798,25 +783,17 @@ class TestUnaryOperators(unittest.TestCase):
         a = pybamm.Variable("a", domain=["current collector"])
         y = pybamm.SpatialVariable("y", ["current collector"])
         z = pybamm.SpatialVariable("z", ["current collector"])
-        z_av_a = pybamm.z_average(a)
-        yz_av_a = pybamm.yz_average(a)
 
-        self.assertIsInstance(yz_av_a, pybamm.Division)
-        self.assertIsInstance(z_av_a, pybamm.Division)
-        self.assertIsInstance(z_av_a.children[0], pybamm.Integral)
-        self.assertIsInstance(yz_av_a.children[0], pybamm.Integral)
-        self.assertEqual(z_av_a.children[0].integration_variable[0].domain, z.domain)
-        self.assertEqual(yz_av_a.children[0].integration_variable[0].domain, y.domain)
-        self.assertEqual(yz_av_a.children[0].integration_variable[1].domain, z.domain)
-        self.assertIsInstance(z_av_a.children[1], pybamm.Integral)
-        self.assertIsInstance(yz_av_a.children[1], pybamm.Integral)
-        self.assertEqual(z_av_a.children[1].integration_variable[0].domain, a.domain)
-        self.assertEqual(z_av_a.children[1].children[0].id, pybamm.ones_like(a).id)
-        self.assertEqual(yz_av_a.children[1].integration_variable[0].domain, y.domain)
-        self.assertEqual(yz_av_a.children[1].integration_variable[0].domain, z.domain)
-        self.assertEqual(yz_av_a.children[1].children[0].id, pybamm.ones_like(a).id)
-        self.assertEqual(z_av_a.domain, [])
+        yz_av_a = pybamm.yz_average(a)
+        self.assertIsInstance(yz_av_a, pybamm.YZAverage)
+        self.assertEqual(yz_av_a.integration_variable[0].domain, y.domain)
+        self.assertEqual(yz_av_a.integration_variable[1].domain, z.domain)
         self.assertEqual(yz_av_a.domain, [])
+
+        z_av_a = pybamm.z_average(a)
+        self.assertIsInstance(z_av_a, pybamm.ZAverage)
+        self.assertEqual(z_av_a.integration_variable[0].domain, a.domain)
+        self.assertEqual(z_av_a.domain, [])
 
         a = pybamm.Symbol("a", domain="bad domain")
         with self.assertRaises(pybamm.DomainError):

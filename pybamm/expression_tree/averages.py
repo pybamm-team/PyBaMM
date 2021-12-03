@@ -2,6 +2,7 @@
 # Classes and methods for averaging
 #
 import pybamm
+import sympy
 
 
 class _BaseAverage(pybamm.SpatialOperator):
@@ -44,6 +45,11 @@ class _BaseAverage(pybamm.SpatialOperator):
         """See :meth:`pybamm.Symbol._evaluates_on_edges()`."""
         return False
 
+    def _sympy_operator(self, child):
+        """Override :meth:`pybamm.UnaryOperator._sympy_operator`"""
+        # TODO: come up with a better way to represent an average
+        return sympy.Integral(child, sympy.Symbol("xn"))
+
 
 class XAverage(_BaseAverage):
     def __init__(self, child):
@@ -52,14 +58,15 @@ class XAverage(_BaseAverage):
             ["negative particle"],
             ["negative particle size"],
         ]:
-            self.integration_variable = pybamm.standard_spatial_vars.x_n
+            x = pybamm.standard_spatial_vars.x_n
         elif child.domain in [
             ["positive particle"],
             ["positive particle size"],
         ]:
-            self.integration_variable = pybamm.standard_spatial_vars.x_p
+            x = pybamm.standard_spatial_vars.x_p
         else:
-            self.integration_variable = pybamm.SpatialVariable("x", domain=child.domain)
+            x = pybamm.SpatialVariable("x", domain=child.domain)
+        self.integration_variable = [x]
 
     def _unary_new_copy(self, child):
         """See :meth:`UnaryOperator._unary_new_copy()`."""
@@ -78,10 +85,20 @@ class YZAverage(_BaseAverage):
         return yz_average(child)
 
 
+class ZAverage(_BaseAverage):
+    def __init__(self, child):
+        super().__init__(child, "z-average")
+        self.integration_variable = [pybamm.standard_spatial_vars.z]
+
+    def _unary_new_copy(self, child):
+        """See :meth:`UnaryOperator._unary_new_copy()`."""
+        return z_average(child)
+
+
 class RAverage(_BaseAverage):
     def __init__(self, child):
         super().__init__(child, "r-average")
-        self.integration_variable = pybamm.SpatialVariable("r", child.domain)
+        self.integration_variable = [pybamm.SpatialVariable("r", child.domain)]
 
     def _unary_new_copy(self, child):
         """See :meth:`UnaryOperator._unary_new_copy()`."""
@@ -89,18 +106,20 @@ class RAverage(_BaseAverage):
 
 
 class SizeAverage(_BaseAverage):
-    def __init__(self, child):
+    def __init__(self, child, f_a_dist):
         super().__init__(child, "size-average")
-        self.integration_variable = pybamm.SpatialVariable(
+        R = pybamm.SpatialVariable(
             "R",
-            domain=symbol.domain,
-            auxiliary_domains=symbol.auxiliary_domains,
+            domain=child.domain,
+            auxiliary_domains=child.auxiliary_domains,
             coord_sys="cartesian",
         )
+        self.integration_variable = [R]
+        self.f_a_dist = f_a_dist
 
     def _unary_new_copy(self, child):
         """See :meth:`UnaryOperator._unary_new_copy()`."""
-        return size_average(child)
+        return size_average(child, f_a_dist=self.f_a_dist)
 
 
 def x_average(symbol):
@@ -281,7 +300,7 @@ def r_average(symbol):
         return RAverage(symbol)
 
 
-def size_average(symbol):
+def size_average(symbol, f_a_dist=None):
     """convenience function for averaging over particle size R using the area-weighted
     particle-size distribution.
 
@@ -324,4 +343,16 @@ def size_average(symbol):
         return symbol.orphans[0]
     # Otherwise, define a SizeAverage
     else:
-        return SizeAverage(symbol)
+        if f_a_dist is None:
+            geo = pybamm.geometric_parameters
+            R = pybamm.SpatialVariable(
+                "R",
+                domain=symbol.domain,
+                auxiliary_domains=symbol.auxiliary_domains,
+                coord_sys="cartesian",
+            )
+            if ["negative particle size"] in symbol.domains.values():
+                f_a_dist = geo.f_a_dist_n(R)
+            elif ["positive particle size"] in symbol.domains.values():
+                f_a_dist = geo.f_a_dist_p(R)
+        return SizeAverage(symbol, f_a_dist)

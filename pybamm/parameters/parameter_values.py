@@ -698,6 +698,15 @@ class ParameterValues:
             new_symbol = symbol._unary_new_copy(new_child)
             # ensure domain remains the same
             new_symbol.domain = symbol.domain
+            # x_average can sometimes create a new symbol with electrode thickness
+            # parameters, so we process again to make sure these parameters are set
+            if isinstance(symbol, pybamm.XAverage) and not isinstance(
+                new_symbol, pybamm.XAverage
+            ):
+                new_symbol = self.process_symbol(new_symbol)
+            # f_a_dist in the size average needs to be processed
+            if isinstance(new_symbol, pybamm.SizeAverage):
+                new_symbol.f_a_dist = self.process_symbol(new_symbol.f_a_dist)
             return new_symbol
 
         # Functions
