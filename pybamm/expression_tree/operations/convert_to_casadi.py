@@ -143,7 +143,7 @@ class CasadiConverter(object):
                         "Alternatively, set 'model.convert_to_format = 'python'' "
                         "and use a non-CasADi solver. "
                     )
-                else:
+                else:  # pragma: no cover
                     raise NotImplementedError("Unknown interpolator: {0}"
                                               .format(symbol.interpolator))
 
