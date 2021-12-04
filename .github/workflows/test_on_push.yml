@@ -13,7 +13,7 @@ jobs:
 
   pre_job:
     runs-on: ubuntu-latest
-    # Map a step output to a job output x
+    # Map a step output to a job output
     outputs:
       should_skip: ${{ steps.skip_check.outputs.should_skip }}
     steps:
