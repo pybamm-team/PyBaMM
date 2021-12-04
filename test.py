@@ -1,6 +1,6 @@
 import pybamm
 
-model = pybamm.lithium_ion.SPM(name="SPM")
+model = pybamm.lithium_ion.SPMe(name="SPMe")
 # model = pybamm.BaseModel(name="DFN_no_r")
 # var1 = pybamm.Variable("var1")
 # var2 = pybamm.Variable("var2")

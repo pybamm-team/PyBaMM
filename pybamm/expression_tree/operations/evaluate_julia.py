@@ -968,8 +968,8 @@ def get_julia_mtk_model(model, geometry=None, tspan=None):
     # geometry
     if "neg_width" in all_julia_str or "neg_plus_sep_width" in all_julia_str:
         var = pybamm.standard_spatial_vars
-        x_n = geometry["negative electrode"][var.x_n]["max"].evaluate()
-        x_s = geometry["separator"][var.x_s]["max"].evaluate()
+        x_n = geometry["negative electrode"]["x_n"]["max"].evaluate()
+        x_s = geometry["separator"]["x_s"]["max"].evaluate()
         all_julia_str = all_julia_str.replace("neg_width", str(x_n))
         all_julia_str = all_julia_str.replace("neg_plus_sep_width", str(x_s))
 
