@@ -664,8 +664,6 @@ class TestUnaryOperators(unittest.TestCase):
             pybamm.x_average(symbol_on_edges)
 
         # Particle domains
-        geo = pybamm.geometric_parameters
-
         a = pybamm.Symbol(
             "a",
             domain="negative particle",
