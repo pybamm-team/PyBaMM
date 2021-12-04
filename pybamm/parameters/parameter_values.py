@@ -724,50 +724,6 @@ class ParameterValues:
             # process children
             new_left = self.process_symbol(symbol.left)
             new_right = self.process_symbol(symbol.right)
-            # Special case for averages, which can appear as "integral of a broadcast"
-            # divided by "integral of a broadcast"
-            # this construction seems very specific but can appear often when averaging
-            if (
-                isinstance(symbol, pybamm.Division)
-                # right is integral(Broadcast(1))
-                and (
-                    isinstance(new_right, pybamm.Integral)
-                    and isinstance(new_right.child, pybamm.Broadcast)
-                    and new_right.child.child.id == pybamm.Scalar(1).id
-                )
-                # left is integral
-                and isinstance(new_left, pybamm.Integral)
-            ):
-                # left is integral(Broadcast)
-                if (
-                    isinstance(new_left.child, pybamm.Broadcast)
-                    and new_left.child.child.domain == []
-                ):
-                    integrand = new_left.child
-                    if integrand.auxiliary_domains == {}:
-                        return integrand.orphans[0]
-                    else:
-                        domain = integrand.auxiliary_domains["secondary"]
-                        if "tertiary" in integrand.auxiliary_domains:
-                            auxiliary_domains = {
-                                "secondary": integrand.auxiliary_domains["tertiary"]
-                            }
-                            if "quaternary" in integrand.auxiliary_domains:
-                                quat_domain = integrand.auxiliary_domains["quaternary"]
-                                auxiliary_domains["tertiary"] = quat_domain
-                            return pybamm.FullBroadcast(
-                                integrand.orphans[0], domain, auxiliary_domains
-                            )
-                        else:
-                            return pybamm.PrimaryBroadcast(integrand.orphans[0], domain)
-                # left is "integral of concatenation of broadcasts"
-                elif isinstance(new_left.child, pybamm.Concatenation) and all(
-                    isinstance(child, pybamm.Broadcast)
-                    for child in new_left.child.children
-                ):
-                    # in this case x_average will return a weighted sum of the variables
-                    # that were broadcasted
-                    return self.process_symbol(pybamm.x_average(new_left.child))
             # make new symbol, ensure domain remains the same
             new_symbol = symbol._binary_new_copy(new_left, new_right)
             new_symbol.domain = symbol.domain
@@ -779,6 +735,15 @@ class ParameterValues:
             new_symbol = symbol._unary_new_copy(new_child)
             # ensure domain remains the same
             new_symbol.domain = symbol.domain
+            # x_average can sometimes create a new symbol with electrode thickness
+            # parameters, so we process again to make sure these parameters are set
+            if isinstance(symbol, pybamm.XAverage) and not isinstance(
+                new_symbol, pybamm.XAverage
+            ):
+                new_symbol = self.process_symbol(new_symbol)
+            # f_a_dist in the size average needs to be processed
+            if isinstance(new_symbol, pybamm.SizeAverage):
+                new_symbol.f_a_dist = self.process_symbol(new_symbol.f_a_dist)
             return new_symbol
 
         # Functions

@@ -81,11 +81,13 @@ from .expression_tree.concatenations import *
 from .expression_tree.array import Array, linspace, meshgrid
 from .expression_tree.matrix import Matrix
 from .expression_tree.unary_operators import *
+from .expression_tree.averages import *
+from .expression_tree.averages import _BaseAverage
+from .expression_tree.broadcasts import *
 from .expression_tree.functions import *
 from .expression_tree.interpolant import Interpolant
 from .expression_tree.input_parameter import InputParameter
 from .expression_tree.parameter import Parameter, FunctionParameter
-from .expression_tree.broadcasts import *
 from .expression_tree.scalar import Scalar
 from .expression_tree.variable import *
 from .expression_tree.independent_variable import *
@@ -154,6 +156,7 @@ from .models.submodels import (
 )
 from .models.submodels.interface import sei
 from .models.submodels.interface import lithium_plating
+from .models.submodels.interface import interface_utilisation
 
 #
 # Geometry
