@@ -445,6 +445,16 @@
         "bug",
         "code"
       ]
+    },
+    {
+      "login": "dion-w",
+      "name": "Dion Wilde",
+      "avatar_url": "https://avatars.githubusercontent.com/u/91852142?v=4",
+      "profile": "https://github.com/dion-w",
+      "contributions": [
+        "bug",
+        "code"
+      ]
     }
   ],
   "contributorsPerLine": 7,

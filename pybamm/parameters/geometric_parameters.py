@@ -37,14 +37,18 @@ class GeometricParameters(BaseParameters):
             self.L_n + self.L_s + self.L_p
         )  # Total distance between current collectors
         self.L = self.L_cn + self.L_x + self.L_cp  # Total cell thickness
-        self.L_y = pybamm.Parameter("Electrode width [m]")
-        self.L_z = pybamm.Parameter("Electrode height [m]")
         self.L_Li = pybamm.Parameter("Lithium counter electrode thickness [m]")
-        self.A_cc = self.L_y * self.L_z  # Area of current collector
+        self.L_y = pybamm.Parameter(
+            "Electrode width [m]"
+        )  # For a cylindrical cell L_y is the "unwound" length of the electrode
+        self.L_z = pybamm.Parameter("Electrode height [m]")
+        self.r_inner_dimensional = pybamm.Parameter("Inner cell radius [m]")
+        self.r_outer_dimensional = pybamm.Parameter("Outer cell radius [m]")
+        self.A_cc = self.L_y * self.L_z  # Current collector cross sectional area
         self.A_cooling = pybamm.Parameter("Cell cooling surface area [m2]")
         self.V_cell = pybamm.Parameter("Cell volume [m3]")
 
-        # Tab geometry
+        # Tab geometry (for pouch cells)
         self.L_tab_n = pybamm.Parameter("Negative tab width [m]")
         self.Centre_y_tab_n = pybamm.Parameter("Negative tab centre y-coordinate [m]")
         self.Centre_z_tab_n = pybamm.Parameter("Negative tab centre z-coordinate [m]")
@@ -153,17 +157,19 @@ class GeometricParameters(BaseParameters):
         self.l_p = self.L_p / self.L_x
         self.l_cp = self.L_cp / self.L_x
         self.l_x = self.L_x / self.L_x
+        self.l_Li = self.L_Li / self.L_x
         self.l_y = self.L_y / self.L_z
         self.l_z = self.L_z / self.L_z
-        self.l_Li = self.L_Li / self.L_x
+        self.r_inner = self.r_inner_dimensional / self.r_outer_dimensional
+        self.r_outer = self.r_outer_dimensional / self.r_outer_dimensional
         self.a_cc = self.l_y * self.l_z
         self.a_cooling = self.A_cooling / (self.L_z ** 2)
         self.v_cell = self.V_cell / (self.L_x * self.L_z ** 2)
 
         self.l = self.L / self.L_x
-        self.delta = self.L_x / self.L_z  # Aspect ratio
+        self.delta = self.L_x / self.L_z  # Pouch cell aspect ratio
 
-        # Tab geometry
+        # Tab geometry (for pouch cells)
         self.l_tab_n = self.L_tab_n / self.L_z
         self.centre_y_tab_n = self.Centre_y_tab_n / self.L_z
         self.centre_z_tab_n = self.Centre_z_tab_n / self.L_z

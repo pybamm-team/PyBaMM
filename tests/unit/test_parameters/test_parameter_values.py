@@ -546,8 +546,7 @@ class TestParameterValues(unittest.TestCase):
         )
 
     def test_process_integral_broadcast(self):
-        # Test that the x-average of a broadcast, created outside of x-average, gets
-        # processed correctly
+        # Test that the x-average of a broadcast gets processed correctly
         var = pybamm.Variable("var", domain="test")
         func = pybamm.x_average(pybamm.FunctionParameter("func", {"var": var}))
 

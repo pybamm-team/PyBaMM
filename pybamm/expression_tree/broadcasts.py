@@ -485,10 +485,13 @@ class FullBroadcast(Broadcast):
                 self.orphans[0], self.auxiliary_domains["secondary"]
             )
         elif "tertiary" in self.auxiliary_domains:
+            aux = {"secondary": self.auxiliary_domains["tertiary"]}
+            if "quaternary" in self.auxiliary_domains:
+                aux["tertiary"] = self.auxiliary_domains["quaternary"]
             return FullBroadcast(
                 self.orphans[0],
                 self.auxiliary_domains["secondary"],
-                {"secondary": self.auxiliary_domains["tertiary"]},
+                aux,
             )
 
 
