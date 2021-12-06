@@ -5,7 +5,7 @@ import pybamm
 import sympy
 
 
-class _BaseAverage(pybamm.SpatialOperator):
+class _BaseAverage(pybamm.Integral):
     """
     Base class for a symbol representing an average
 
@@ -15,45 +15,13 @@ class _BaseAverage(pybamm.SpatialOperator):
         The child node
     """
 
-    def __init__(self, child, name):
-        # average of a child takes the domain from auxiliary domain of the child
-        if child.auxiliary_domains != {}:
-            domain = child.auxiliary_domains["secondary"]
-            if "tertiary" in child.auxiliary_domains:
-                auxiliary_domains = {"secondary": child.auxiliary_domains["tertiary"]}
-                if "quaternary" in child.auxiliary_domains:
-                    auxiliary_domains["tertiary"] = child.auxiliary_domains[
-                        "quaternary"
-                    ]
-            else:
-                auxiliary_domains = {}
-        # if child has no auxiliary domain, integral removes domain
-        else:
-            domain = []
-            auxiliary_domains = {}
-        super().__init__(
-            name, child, domain=domain, auxiliary_domains=auxiliary_domains
-        )
-
-    def _evaluate_for_shape(self):
-        """See :meth:`pybamm.Symbol.evaluate_for_shape_using_domain()`"""
-        return pybamm.evaluate_for_shape_using_domain(
-            self.domain, self.auxiliary_domains
-        )
-
-    def _evaluates_on_edges(self, dimension):
-        """See :meth:`pybamm.Symbol._evaluates_on_edges()`."""
-        return False
-
-    def _sympy_operator(self, child):
-        """Override :meth:`pybamm.UnaryOperator._sympy_operator`"""
-        # TODO: come up with a better way to represent an average
-        return sympy.Integral(child, sympy.Symbol("xn"))
+    def __init__(self, child, name, integration_variable):
+        super().__init__(child, integration_variable)
+        self.name = name
 
 
 class XAverage(_BaseAverage):
     def __init__(self, child):
-        super().__init__(child, "x-average")
         if child.domain in [
             ["negative particle"],
             ["negative particle size"],
@@ -66,7 +34,8 @@ class XAverage(_BaseAverage):
             x = pybamm.standard_spatial_vars.x_p
         else:
             x = pybamm.SpatialVariable("x", domain=child.domain)
-        self.integration_variable = [x]
+        integration_variable = x
+        super().__init__(child, "x-average", integration_variable)
 
     def _unary_new_copy(self, child):
         """See :meth:`UnaryOperator._unary_new_copy()`."""
@@ -75,10 +44,10 @@ class XAverage(_BaseAverage):
 
 class YZAverage(_BaseAverage):
     def __init__(self, child):
-        super().__init__(child, "yz-average")
         y = pybamm.standard_spatial_vars.y
         z = pybamm.standard_spatial_vars.z
-        self.integration_variable = [y, z]
+        integration_variable = [y, z]
+        super().__init__(child, "yz-average", integration_variable)
 
     def _unary_new_copy(self, child):
         """See :meth:`UnaryOperator._unary_new_copy()`."""
@@ -87,8 +56,8 @@ class YZAverage(_BaseAverage):
 
 class ZAverage(_BaseAverage):
     def __init__(self, child):
-        super().__init__(child, "z-average")
-        self.integration_variable = [pybamm.standard_spatial_vars.z]
+        integration_variable = [pybamm.standard_spatial_vars.z]
+        super().__init__(child, "z-average", integration_variable)
 
     def _unary_new_copy(self, child):
         """See :meth:`UnaryOperator._unary_new_copy()`."""
@@ -97,8 +66,8 @@ class ZAverage(_BaseAverage):
 
 class RAverage(_BaseAverage):
     def __init__(self, child):
-        super().__init__(child, "r-average")
-        self.integration_variable = [pybamm.SpatialVariable("r", child.domain)]
+        integration_variable = [pybamm.SpatialVariable("r", child.domain)]
+        super().__init__(child, "r-average", integration_variable)
 
     def _unary_new_copy(self, child):
         """See :meth:`UnaryOperator._unary_new_copy()`."""
@@ -107,14 +76,14 @@ class RAverage(_BaseAverage):
 
 class SizeAverage(_BaseAverage):
     def __init__(self, child, f_a_dist):
-        super().__init__(child, "size-average")
         R = pybamm.SpatialVariable(
             "R",
             domain=child.domain,
             auxiliary_domains=child.auxiliary_domains,
             coord_sys="cartesian",
         )
-        self.integration_variable = [R]
+        integration_variable = [R]
+        super().__init__(child, "size-average", integration_variable)
         self.f_a_dist = f_a_dist
 
     def _unary_new_copy(self, child):
