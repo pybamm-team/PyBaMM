@@ -287,7 +287,9 @@ def load_function(filename):
     # If the function is in the current working directory
     elif os.getcwd() in filename:
         root_path = filename.replace(os.getcwd(), "")
-        root_path = root_path[1:]
+        # getcwd() returns "C:\\" when in the root drive and "C:\\a\\b\\c" otherwise
+        if root_path[0] == "\\" or root_path[0] == "/":
+            root_path = root_path[1:]
     # If the function is not in the current working directory and the path provided is
     # absolute
     elif os.path.isabs(filename) and not os.getcwd() in filename:
