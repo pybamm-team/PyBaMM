@@ -2,7 +2,6 @@
 # Classes and methods for averaging
 #
 import pybamm
-import sympy
 
 
 class _BaseAverage(pybamm.Integral):
