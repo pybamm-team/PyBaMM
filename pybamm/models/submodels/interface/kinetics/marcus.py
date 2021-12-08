@@ -50,9 +50,9 @@ class MarcusHushChidsey(BaseKinetics):
     References
     ----------
     .. [1] Sripad, S., Korff, D., DeCaluwe, S. C., & Viswanathan, V. (2020). "Kinetics
-    of lithium electrodeposition and stripping".
-    [The Journal of Chemical Physics](https://doi.org/10.1063/5.0023771), 153(19),
-    194701.
+           of lithium electrodeposition and stripping".
+           [The Journal of Chemical Physics](https://doi.org/10.1063/5.0023771),
+           153(19), 194701.
 
     Parameters
     ----------
