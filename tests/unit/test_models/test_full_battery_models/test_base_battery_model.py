@@ -20,6 +20,7 @@ PRINT_OPTIONS_OUTPUT = """\
 'dimensionality': 0 (possible: [0, 1, 2])
 'electrolyte conductivity': 'default' (possible: ['default', 'full', 'leading order', 'composite', 'integrated'])
 'hydrolysis': 'false' (possible: ['false', 'true'])
+'intercalation kinetics': 'symmetric Butler-Volmer' (possible: ['symmetric Butler-Volmer', 'asymmetric Butler-Volmer', 'linear', 'Marcus', 'Marcus-Hush-Chidsey'])
 'interface utilisation': 'full' (possible: ['full', 'constant', 'current-driven'])
 'lithium plating': 'none' (possible: ['none', 'reversible', 'irreversible'])
 'lithium plating porosity change': 'false' (possible: ['false', 'true'])

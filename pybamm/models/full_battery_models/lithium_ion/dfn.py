@@ -42,7 +42,7 @@ class DFN(BaseModel):
         self.set_active_material_submodel()
         self.set_tortuosity_submodels()
         self.set_convection_submodel()
-        self.set_interfacial_submodel()
+        self.set_intercalation_kinetics_submodel()
         self.set_other_reaction_submodels_to_zero()
         self.set_particle_submodel()
         self.set_solid_submodel()
@@ -70,12 +70,12 @@ class DFN(BaseModel):
             "through-cell convection"
         ] = pybamm.convection.through_cell.NoConvection(self.param, self.options)
 
-    def set_interfacial_submodel(self):
+    def set_intercalation_kinetics_submodel(self):
 
-        self.submodels["negative interface"] = pybamm.interface.ButlerVolmer(
+        self.submodels["negative interface"] = self.intercalation_kinetics(
             self.param, "Negative", "lithium-ion main", self.options
         )
-        self.submodels["positive interface"] = pybamm.interface.ButlerVolmer(
+        self.submodels["positive interface"] = self.intercalation_kinetics(
             self.param, "Positive", "lithium-ion main", self.options
         )
 

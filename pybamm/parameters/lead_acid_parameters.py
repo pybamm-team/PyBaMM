@@ -149,6 +149,12 @@ class LeadAcidParameters(BaseParameters):
         self.C_dl_p_dimensional = pybamm.Parameter(
             "Positive electrode double-layer capacity [F.m-2]"
         )
+        self.alpha_bv_n = pybamm.Parameter(
+            "Negative electrode Butler-Volmer transfer coefficient"
+        )
+        self.alpha_bv_p = pybamm.Parameter(
+            "Positive electrode Butler-Volmer transfer coefficient"
+        )
         # Oxygen
         self.s_plus_Ox_dim = pybamm.Parameter(
             "Signed stoichiometry of cations (oxygen reaction)"

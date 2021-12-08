@@ -35,7 +35,7 @@ class Full(BaseModel):
         super().__init__(options, name)
 
         self.set_external_circuit_submodel()
-        self.set_interfacial_submodel()
+        self.set_intercalation_kinetics_submodel()
         self.set_interface_utilisation_submodel()
         self.set_porosity_submodel()
         self.set_active_material_submodel()
@@ -80,11 +80,11 @@ class Full(BaseModel):
                 "through-cell convection"
             ] = pybamm.convection.through_cell.Full(self.param)
 
-    def set_interfacial_submodel(self):
-        self.submodels["negative interface"] = pybamm.interface.ButlerVolmer(
+    def set_intercalation_kinetics_submodel(self):
+        self.submodels["negative interface"] = self.intercalation_kinetics(
             self.param, "Negative", "lead-acid main", self.options
         )
-        self.submodels["positive interface"] = pybamm.interface.ButlerVolmer(
+        self.submodels["positive interface"] = self.intercalation_kinetics(
             self.param, "Positive", "lead-acid main", self.options
         )
 
@@ -127,21 +127,21 @@ class Full(BaseModel):
             self.submodels["oxygen diffusion"] = pybamm.oxygen_diffusion.Full(
                 self.param
             )
-            self.submodels["positive oxygen interface"] = pybamm.interface.ForwardTafel(
+            self.submodels["positive oxygen interface"] = pybamm.kinetics.ForwardTafel(
                 self.param, "Positive", "lead-acid oxygen", self.options
             )
             self.submodels[
                 "negative oxygen interface"
-            ] = pybamm.interface.DiffusionLimited(
+            ] = pybamm.kinetics.DiffusionLimited(
                 self.param, "Negative", "lead-acid oxygen", order="full"
             )
         else:
             self.submodels["oxygen diffusion"] = pybamm.oxygen_diffusion.NoOxygen(
                 self.param
             )
-            self.submodels["positive oxygen interface"] = pybamm.interface.NoReaction(
+            self.submodels["positive oxygen interface"] = pybamm.kinetics.NoReaction(
                 self.param, "Positive", "lead-acid oxygen"
             )
-            self.submodels["negative oxygen interface"] = pybamm.interface.NoReaction(
+            self.submodels["negative oxygen interface"] = pybamm.kinetics.NoReaction(
                 self.param, "Negative", "lead-acid oxygen"
             )

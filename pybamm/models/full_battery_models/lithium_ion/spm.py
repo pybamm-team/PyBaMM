@@ -42,7 +42,7 @@ class SPM(BaseModel):
         self.set_active_material_submodel()
         self.set_tortuosity_submodels()
         self.set_convection_submodel()
-        self.set_interfacial_submodel()
+        self.set_intercalation_kinetics_submodel()
         self.set_other_reaction_submodels_to_zero()
         self.set_particle_submodel()
         self.set_solid_submodel()
@@ -72,31 +72,31 @@ class SPM(BaseModel):
             "transverse convection"
         ] = pybamm.convection.transverse.NoConvection(self.param, self.options)
 
-    def set_interfacial_submodel(self):
+    def set_intercalation_kinetics_submodel(self):
 
         if self.options["surface form"] == "false":
-            self.submodels["negative interface"] = pybamm.interface.InverseButlerVolmer(
+            self.submodels["negative interface"] = pybamm.kinetics.InverseButlerVolmer(
                 self.param, "Negative", "lithium-ion main", self.options
             )
-            self.submodels["positive interface"] = pybamm.interface.InverseButlerVolmer(
+            self.submodels["positive interface"] = pybamm.kinetics.InverseButlerVolmer(
                 self.param, "Positive", "lithium-ion main", self.options
             )
             self.submodels[
                 "negative interface current"
-            ] = pybamm.interface.CurrentForInverseButlerVolmer(
+            ] = pybamm.kinetics.CurrentForInverseButlerVolmer(
                 self.param, "Negative", "lithium-ion main", self.options
             )
             self.submodels[
                 "positive interface current"
-            ] = pybamm.interface.CurrentForInverseButlerVolmer(
+            ] = pybamm.kinetics.CurrentForInverseButlerVolmer(
                 self.param, "Positive", "lithium-ion main", self.options
             )
         else:
-            self.submodels["negative interface"] = pybamm.interface.ButlerVolmer(
+            self.submodels["negative interface"] = self.intercalation_kinetics(
                 self.param, "Negative", "lithium-ion main", self.options
             )
 
-            self.submodels["positive interface"] = pybamm.interface.ButlerVolmer(
+            self.submodels["positive interface"] = self.intercalation_kinetics(
                 self.param, "Positive", "lithium-ion main", self.options
             )
 
