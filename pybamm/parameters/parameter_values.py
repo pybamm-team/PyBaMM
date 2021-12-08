@@ -1,8 +1,6 @@
 #
 # Dimensional and dimensionless parameter values, and scales
 #
-import copy
-
 import numpy as np
 import pybamm
 import pandas as pd
@@ -665,7 +663,7 @@ class ParameterValues:
                         input_data = data[0][0], data[1]
 
                     else:
-                        input_data = copy.deepcopy(data)
+                        input_data = data
 
                     function = pybamm.Interpolant(
                         input_data[0], input_data[-1], new_children, name=name
