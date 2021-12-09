@@ -1,6 +1,6 @@
 import pybamm
 
-model = pybamm.lithium_ion.SPMe(name="SPMe")
+model = pybamm.lithium_ion.DFN(name="DFN")
 # model = pybamm.BaseModel(name="DFN_no_r")
 # var1 = pybamm.Variable("var1")
 # var2 = pybamm.Variable("var2")
@@ -14,7 +14,7 @@ parameter_values = model.default_parameter_values
 # parameter_values["Positive electrode exchange-current density [A.m-2]"] = 1e-6
 # parameter_values["Negative electrode OCP [V]"] = 0.5
 # parameter_values["Positive electrode OCP [V]"] = 4
-# parameter_values._replace_callable_function_parameters = False
+parameter_values._replace_callable_function_parameters = True
 
 var = pybamm.standard_spatial_vars
 var_pts = {var.x_n: 10, var.x_s: 10, var.x_p: 10, var.r_n: 10, var.r_p: 10}

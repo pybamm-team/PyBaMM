@@ -65,7 +65,7 @@ class VariableBase(pybamm.Symbol):
             self.domain,
             self.auxiliary_domains,
             self.bounds,
-            print_name=self.print_name,
+            print_name=self._raw_print_name,
         )
 
     def _evaluate_for_shape(self):
