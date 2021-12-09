@@ -289,7 +289,11 @@ class BaseModel(pybamm.BaseBatteryModel):
             )
 
     def set_li_metal_counter_electrode_submodels(self):
-        if self.options["SEI"] in ["none", "constant"]:
+        if (
+            self.options["SEI"] in ["none", "constant"]
+            and self.options["intercalation kinetics"] == "symmetric Butler-Volmer"
+        ):
+            # only symmetric Butler-Volmer can be inverted
             self.submodels[
                 "counter electrode potential"
             ] = pybamm.electrode.ohm.LithiumMetalExplicit(self.param, self.options)

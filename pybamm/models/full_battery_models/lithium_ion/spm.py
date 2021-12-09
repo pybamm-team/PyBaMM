@@ -30,6 +30,12 @@ class SPM(BaseModel):
     """
 
     def __init__(self, options=None, name="Single Particle Model", build=True):
+        # Use 'algebraic' surface form if non-default kinetics are used
+        options = options or {}
+        kinetics = options.get("intercalation kinetics")
+        surface_form = options.get("surface form")
+        if kinetics is not None and surface_form is None:
+            options["surface form"] = "algebraic"
         super().__init__(options, name)
         # For degradation models we use the "x-average" form since this is a
         # reduced-order model with uniform current density in the electrodes
@@ -75,10 +81,10 @@ class SPM(BaseModel):
     def set_intercalation_kinetics_submodel(self):
 
         if self.options["surface form"] == "false":
-            self.submodels["negative interface"] = pybamm.kinetics.InverseButlerVolmer(
+            self.submodels["negative interface"] = self.inverse_intercalation_kinetics(
                 self.param, "Negative", "lithium-ion main", self.options
             )
-            self.submodels["positive interface"] = pybamm.kinetics.InverseButlerVolmer(
+            self.submodels["positive interface"] = self.inverse_intercalation_kinetics(
                 self.param, "Positive", "lithium-ion main", self.options
             )
             self.submodels[

@@ -50,8 +50,7 @@ class BatteryModelOptions(pybamm.FuzzyDict):
             * "intercalation kinetics" : str
                 Model for intercalation kinetics. Can be "symmetric Butler-Volmer"
                 (default), "asymmetric Butler-Volmer", "linear", "Marcus", or
-                "Marcus-Hush-Chidsey" (which uses the asymptotic form from
-                Zeng 2014).
+                "Marcus-Hush-Chidsey" (which uses the asymptotic form from Zeng 2014).
             * "interface utilisation": str
                 Can be "full" (default), "constant", or "current-driven".
             * "lithium plating" : str
@@ -803,8 +802,8 @@ class BaseBatteryModel(pybamm.BaseModel):
 
     @property
     def inverse_intercalation_kinetics(self):
-        if self.options["intercalation kinetics"] == "Symmetric Butler-Volmer":
-            return pybamm.inverse_kinetics.InverseButlerVolmer
+        if self.options["intercalation kinetics"] == "symmetric Butler-Volmer":
+            return pybamm.kinetics.InverseButlerVolmer
         else:
             raise pybamm.OptionError(
                 "Inverse kinetics are only implemented for symmetric Butler-Volmer. "
