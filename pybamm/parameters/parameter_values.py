@@ -9,6 +9,7 @@ import numbers
 import warnings
 from pprint import pformat
 from collections import defaultdict
+import json
 
 
 class ParameterValues:
@@ -315,8 +316,22 @@ class ParameterValues:
                         filename, comment="#", skip_blank_lines=True, header=None
                     ).to_numpy()
                     # Save name and data
+                    self._dict_items[name] = (function_name, ([data[:, 0]], data[:, 1]))
+                    values[name] = (function_name, ([data[:, 0]], data[:, 1]))
+
+                # parse 2D parameter data
+                elif value.startswith("[2D data]"):
+                    filename = os.path.join(path, value[9:] + ".json")
+                    function_name = value[9:]
+                    filename = pybamm.get_parameters_filepath(filename)
+                    with open(filename, 'r') as jsonfile:
+                        json_data = json.load(jsonfile)
+                    data = json_data['data']
+                    data[0] = [np.array(el) for el in data[0]]
+                    data[1] = np.array(data[1])
                     self._dict_items[name] = (function_name, data)
                     values[name] = (function_name, data)
+
                 elif value == "[input]":
                     self._dict_items[name] = pybamm.InputParameter(name)
                 # Anything else should be a converted to a float
@@ -617,29 +632,47 @@ class ParameterValues:
 
             # Create Function or Interpolant or Scalar object
             if isinstance(function_name, tuple):
-                # If function_name is a tuple then it should be (name, data) and we need
-                # to create an Interpolant
-                name, data = function_name
-                function = pybamm.Interpolant(
-                    data[:, 0], data[:, 1], *new_children, name=name
-                )
-                # Define event to catch extrapolation. In these events the sign is
-                # important: it should be positive inside of the range and negative
-                # outside of it
-                self.parameter_events.append(
-                    pybamm.Event(
-                        "Interpolant {} lower bound".format(name),
-                        pybamm.min(new_children[0] - min(data[:, 0])),
-                        pybamm.EventType.INTERPOLANT_EXTRAPOLATION,
+                if len(function_name) == 2:  # CSV or JSON parsed data
+                    # to create an Interpolant
+                    name, data = function_name
+
+                    if isinstance(data, np.ndarray):
+                        data = [data[:, 0]], data[:, 1]
+
+                    if len(data[0]) == 1:
+                        input_data = data[0][0], data[1]
+
+                    else:
+                        input_data = data
+
+                    function = pybamm.Interpolant(
+                        input_data[0], input_data[-1], new_children, name=name
                     )
-                )
-                self.parameter_events.append(
-                    pybamm.Event(
-                        "Interpolant {} upper bound".format(name),
-                        pybamm.min(max(data[:, 0]) - new_children[0]),
-                        pybamm.EventType.INTERPOLANT_EXTRAPOLATION,
-                    )
-                )
+                    # Define event to catch extrapolation. In these events the sign is
+                    # important: it should be positive inside of the range and negative
+                    # outside of it
+                    for data_index in range(len(data[0])):
+                        self.parameter_events.append(
+                            pybamm.Event(
+                                "Interpolant {} lower bound".format(name),
+                                pybamm.min(new_children[data_index] -
+                                           min(data[0][data_index])),
+                                pybamm.EventType.INTERPOLANT_EXTRAPOLATION,
+                            )
+                        )
+                        self.parameter_events.append(
+                            pybamm.Event(
+                                "Interpolant {} upper bound".format(name),
+                                pybamm.min(max(data[0][data_index]) -
+                                           new_children[data_index]),
+                                pybamm.EventType.INTERPOLANT_EXTRAPOLATION,
+                            )
+                        )
+
+                else:  # pragma: no cover
+                    raise ValueError("Invalid function name length: {0}"
+                                     .format(len(function_name)))
+
             elif isinstance(function_name, numbers.Number):
                 # Check not NaN (parameter in csv file but no value given)
                 if np.isnan(function_name):
