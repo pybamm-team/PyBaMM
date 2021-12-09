@@ -560,14 +560,16 @@ class TestParameterValues(unittest.TestCase):
         processed_func = parameter_values.process_symbol(func)
         self.assertIsInstance(processed_func, pybamm.Interpolant)
         # self.assertEqual(processed_func.evaluate().flatten()[0], 22.23)
-        np.testing.assert_almost_equal(processed_func.evaluate().flatten()[0],
-                                       22.23, decimal=4)
+        np.testing.assert_almost_equal(
+            processed_func.evaluate().flatten()[0], 22.23, decimal=4
+        )
 
         interp3 = pybamm.Interpolant(data3[0], data3[1], children=(a, b))
         processed_interp3 = parameter_values.process_symbol(interp3)
         # self.assertEqual(processed_interp3.evaluate().flatten()[0], 22.23)
-        np.testing.assert_almost_equal(processed_interp3.evaluate().flatten()[0],
-                                       22.23, decimal=4)
+        np.testing.assert_almost_equal(
+            processed_interp3.evaluate().flatten()[0], 22.23, decimal=4
+        )
 
     def test_interpolant_against_function(self):
         parameter_values = pybamm.ParameterValues({})
@@ -616,8 +618,9 @@ class TestParameterValues(unittest.TestCase):
         #
         # pv['function'] = '[function]'
 
-        parameter_values = \
-            pybamm.ParameterValues(chemistry=pybamm.parameter_sets.Ai2020)
+        parameter_values = pybamm.ParameterValues(
+            chemistry=pybamm.parameter_sets.Ai2020
+        )
         parameter_values.update(
             {
                 "function": "[function]lico2_diffusivity_Dualfoil1998",
@@ -795,6 +798,26 @@ class TestParameterValues(unittest.TestCase):
             func_proc.id,
             pybamm.PrimaryBroadcast(pybamm.Scalar(3), "current collector").id,
         )
+
+    def test_process_size_average(self):
+        # Test that the x-average of a broadcast gets processed correctly
+        var = pybamm.Variable("var", domain="negative particle size")
+        var_av = pybamm.size_average(var)
+
+        def dist(R):
+            return R ** 2
+
+        param = pybamm.ParameterValues(
+            {
+                "Negative particle radius [m]": 2,
+                "Negative area-weighted particle-size distribution [m-1]": dist,
+            }
+        )
+        var_av_proc = param.process_symbol(var_av)
+
+        self.assertIsInstance(var_av_proc, pybamm.SizeAverage)
+        R = pybamm.SpatialVariable("R", "negative particle size")
+        self.assertEqual(var_av_proc.f_a_dist.id, ((R * 2) ** 2 * 2).id)
 
     def test_process_not_constant(self):
         param = pybamm.ParameterValues({"a": 4})
