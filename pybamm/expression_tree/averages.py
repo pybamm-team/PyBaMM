@@ -112,9 +112,40 @@ def x_average(symbol):
         new_symbol = symbol.new_copy()
         new_symbol.parent = None
         return new_symbol
-    # If symbol is a primary or full broadcast, reduce by one dimension
-    if isinstance(symbol, (pybamm.PrimaryBroadcast, pybamm.FullBroadcast)):
-        return symbol.reduce_one_dimension()
+    # If symbol is a broadcast, reduce by one dimension
+    if isinstance(
+        symbol,
+        (pybamm.PrimaryBroadcast, pybamm.SecondaryBroadcast, pybamm.FullBroadcast),
+    ):
+        if all(
+            dom in ["negative electrode", "separator", "positive electrode"]
+            for dom in symbol.broadcast_domain
+        ):
+            return symbol.reduce_one_dimension()
+        elif isinstance(symbol, pybamm.PrimaryBroadcast):
+            return pybamm.PrimaryBroadcast(
+                x_average(symbol.orphans[0]), symbol.broadcast_domain
+            )
+        elif isinstance(symbol, pybamm.FullBroadcast) and all(
+            dom in ["negative electrode", "separator", "positive electrode"]
+            for dom in symbol.secondary_domain
+        ):
+            aux = {}
+            if "tertiary" in symbol.auxiliary_domains:
+                aux["secondary"] = symbol.auxiliary_domains["tertiary"]
+            if "quaternary" in symbol.auxiliary_domains:
+                aux["tertiary"] = symbol.auxiliary_domains["quaternary"]
+            return pybamm.FullBroadcast(symbol.orphans[0], symbol.broadcast_domain, aux)
+        elif isinstance(symbol, pybamm.FullBroadcast) and all(
+            dom in ["negative electrode", "separator", "positive electrode"]
+            for dom in symbol.tertiary_domain
+        ):
+            aux = {"secondary": symbol.auxiliary_domains["secondary"]}
+            if "quaternary" in symbol.auxiliary_domains:
+                aux["tertiary"] = symbol.auxiliary_domains["quaternary"]
+            return pybamm.FullBroadcast(symbol.orphans[0], symbol.broadcast_domain, aux)
+        else:
+            return XAverage(symbol)
     # If symbol is a concatenation of Broadcasts, its average value is its child
     elif isinstance(symbol, pybamm.Concatenation) and all(
         isinstance(child, pybamm.Broadcast) for child in symbol.children

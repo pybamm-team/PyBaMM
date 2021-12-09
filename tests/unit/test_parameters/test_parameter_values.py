@@ -663,7 +663,7 @@ class TestParameterValues(unittest.TestCase):
 
     def test_process_integral_broadcast(self):
         # Test that the x-average of a broadcast gets processed correctly
-        var = pybamm.Variable("var", domain="test")
+        var = pybamm.Variable("var", domain="negative electrode")
         func = pybamm.x_average(pybamm.FunctionParameter("func", {"var": var}))
 
         param = pybamm.ParameterValues({"func": 2})
@@ -675,7 +675,9 @@ class TestParameterValues(unittest.TestCase):
 
         # secondary
         var = pybamm.Variable(
-            "var", domain="test", auxiliary_domains={"secondary": "test sec"}
+            "var",
+            domain="negative electrode",
+            auxiliary_domains={"secondary": "current collector"},
         )
         func = pybamm.x_average(pybamm.FunctionParameter("func", {"var": var}))
 
@@ -684,14 +686,19 @@ class TestParameterValues(unittest.TestCase):
 
         self.assertEqual(
             func_proc.id,
-            pybamm.PrimaryBroadcast(pybamm.Scalar(2, name="func"), "test sec").id,
+            pybamm.PrimaryBroadcast(
+                pybamm.Scalar(2, name="func"), "current collector"
+            ).id,
         )
 
         # secondary and tertiary
         var = pybamm.Variable(
             "var",
-            domain="test",
-            auxiliary_domains={"secondary": "test sec", "tertiary": "test tert"},
+            domain="negative particle",
+            auxiliary_domains={
+                "secondary": "negative electrode",
+                "tertiary": "current collector",
+            },
         )
         func = pybamm.x_average(pybamm.FunctionParameter("func", {"var": var}))
 
@@ -701,18 +708,18 @@ class TestParameterValues(unittest.TestCase):
         self.assertEqual(
             func_proc.id,
             pybamm.FullBroadcast(
-                pybamm.Scalar(2, name="func"), "test sec", "test tert"
+                pybamm.Scalar(2, name="func"), "negative particle", "current collector"
             ).id,
         )
 
         # secondary, tertiary and quaternary
         var = pybamm.Variable(
             "var",
-            domain="test",
+            domain="negative particle",
             auxiliary_domains={
-                "secondary": "test sec",
-                "tertiary": "test tert",
-                "quaternary": "test quat",
+                "secondary": "negative particle size",
+                "tertiary": "negative electrode",
+                "quaternary": "current collector",
             },
         )
         func = pybamm.x_average(pybamm.FunctionParameter("func", {"var": var}))
@@ -724,19 +731,13 @@ class TestParameterValues(unittest.TestCase):
             func_proc.id,
             pybamm.FullBroadcast(
                 pybamm.Scalar(2, name="func"),
-                "test sec",
-                {"secondary": "test tert", "tertiary": "test quat"},
+                "negative particle",
+                {
+                    "secondary": "negative particle size",
+                    "tertiary": "current collector",
+                },
             ).id,
         )
-
-        # this should be the case even if the domain is one of the special domains
-        var = pybamm.Variable("var", domain="negative electrode")
-        func = pybamm.x_average(pybamm.FunctionParameter("func", {"var": var}))
-
-        param = pybamm.ParameterValues({"func": 2})
-        func_proc = param.process_symbol(func)
-
-        self.assertEqual(func_proc.id, pybamm.Scalar(2, name="func").id)
 
         # special case for integral of concatenations of broadcasts
         var_n = pybamm.Variable("var_n", domain="negative electrode")

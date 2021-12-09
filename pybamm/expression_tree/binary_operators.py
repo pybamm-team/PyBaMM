@@ -1064,6 +1064,10 @@ def simplified_multiplication(left, right):
     if pybamm.is_scalar_minus_one(right):
         return -left
 
+    # Return constant if both sides are constant
+    if left.is_constant() and right.is_constant():
+        return pybamm.simplify_if_constant(pybamm.Multiplication(left, right))
+
     # anything multiplied by a matrix one returns itself if
     # - the shapes are the same
     # - both left and right evaluate on edges, or both evaluate on nodes, in all
@@ -1086,10 +1090,6 @@ def simplified_multiplication(left, right):
 
     except NotImplementedError:
         pass
-
-    # Return constant if both sides are constant
-    if left.is_constant() and right.is_constant():
-        return pybamm.simplify_if_constant(pybamm.Multiplication(left, right))
 
     # Simplify (B @ c) * a to (a * B) @ c if (a * B) is constant
     # This is a common construction that appears from discretisation of spatial
