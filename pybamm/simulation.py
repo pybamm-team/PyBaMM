@@ -740,7 +740,9 @@ class Simulation:
                 raise ValueError(
                     "starting_solution can only be provided if simulating an Experiment"
                 )
-            if self.operating_mode == "without experiment":
+            if self.operating_mode == "without experiment" or isinstance(
+                self.model, pybamm.lithium_ion.ElectrodeSOH
+            ):
                 if t_eval is None:
                     raise pybamm.SolverError(
                         "'t_eval' must be provided if not using an experiment or "
