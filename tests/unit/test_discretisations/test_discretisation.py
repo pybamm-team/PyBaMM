@@ -5,7 +5,6 @@ import pybamm
 
 import numpy as np
 import unittest
-from pybamm import geometry
 from tests import (
     get_mesh_for_testing,
     get_discretisation_for_testing,
