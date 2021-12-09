@@ -1102,10 +1102,6 @@ def simplified_multiplication(left, right):
     ):
         l_left, l_right = left.orphans
         new_left = right * l_left
-        # Special hack for the case where l_left is a matrix one
-        # because of weird domain errors otherwise
-        # if new_left == right and isinstance(right, pybamm.Array):
-        #     new_left = right.new_copy()
         # be careful about domains to avoid weird errors
         new_left.clear_domains()
         new_mul = new_left @ l_right
@@ -1137,10 +1133,6 @@ def simplified_multiplication(left, right):
     ):
         r_left, r_right = right.orphans
         new_left = left * r_left
-        # Special hack for the case where r_left is a matrix one
-        # because of weird domain errors otherwise
-        if new_left == left and isinstance(left, pybamm.Array):
-            new_left = left.new_copy()
         # be careful about domains to avoid weird errors
         new_left.clear_domains()
         new_mul = new_left @ r_right
