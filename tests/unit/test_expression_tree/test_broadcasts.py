@@ -34,7 +34,7 @@ class TestBroadcasts(unittest.TestCase):
             domain="negative particle size",
             auxiliary_domains={
                 "secondary": "negative electrode",
-                "tertiary": "current collector"
+                "tertiary": "current collector",
             },
         )
         broad_a = pybamm.PrimaryBroadcast(a, ["negative particle"])
@@ -44,7 +44,7 @@ class TestBroadcasts(unittest.TestCase):
             {
                 "secondary": ["negative particle size"],
                 "tertiary": ["negative electrode"],
-                "quaternary": ["current collector"]
+                "quaternary": ["current collector"],
             },
         )
 
@@ -89,12 +89,11 @@ class TestBroadcasts(unittest.TestCase):
             {
                 "secondary": ["negative particle size"],
                 "tertiary": ["negative electrode"],
-                "quaternary": ["current collector"]
+                "quaternary": ["current collector"],
             },
         )
 
-        with self.assertRaises(NotImplementedError):
-            broad_a.reduce_one_dimension()
+        self.assertEqual(broad_a.reduce_one_dimension(), a)
 
         a = pybamm.Symbol("a")
         with self.assertRaisesRegex(TypeError, "empty domain"):
@@ -127,7 +126,7 @@ class TestBroadcasts(unittest.TestCase):
             domain=["negative particle"],
             auxiliary_domains={
                 "secondary": "negative particle size",
-                "tertiary": "current collector"
+                "tertiary": "current collector",
             },
         )
         broad_a = pybamm.TertiaryBroadcast(a, "negative electrode")
@@ -137,7 +136,7 @@ class TestBroadcasts(unittest.TestCase):
             {
                 "secondary": ["negative particle size"],
                 "tertiary": ["negative electrode"],
-                "quaternary": ["current collector"]
+                "quaternary": ["current collector"],
             },
         )
         self.assertTrue(broad_a.broadcasts_to_nodes)
@@ -166,9 +165,7 @@ class TestBroadcasts(unittest.TestCase):
             domain=["negative particle"],
             auxiliary_domains={"secondary": "current collector"},
         )
-        with self.assertRaisesRegex(
-            pybamm.DomainError, "Cannot do tertiary broadcast"
-        ):
+        with self.assertRaisesRegex(pybamm.DomainError, "Cannot do tertiary broadcast"):
             pybamm.TertiaryBroadcast(a, "negative electrode")
 
     def test_full_broadcast(self):
@@ -188,11 +185,22 @@ class TestBroadcasts(unittest.TestCase):
         broad_a = pybamm.FullBroadcast(
             a,
             "negative particle",
-            {"secondary": "negative electrode", "tertiary": "current collector"},
+            {
+                "secondary": "negative particle size",
+                "tertiary": "negative electrode",
+                "quaternary": "current collector",
+            },
         )
         self.assertEqual(
             broad_a.reduce_one_dimension().id,
-            pybamm.FullBroadcast(a, "negative electrode", "current collector").id,
+            pybamm.FullBroadcast(
+                a,
+                "negative particle size",
+                {
+                    "secondary": "negative electrode",
+                    "tertiary": "current collector",
+                },
+            ).id,
         )
 
     def test_full_broadcast_number(self):
@@ -262,7 +270,7 @@ class TestBroadcasts(unittest.TestCase):
             domain=["negative particle"],
             auxiliary_domains={
                 "secondary": "negative particle size",
-                "tertiary": "current collector"
+                "tertiary": "current collector",
             },
         )
         broad_a = pybamm.TertiaryBroadcastToEdges(a, ["negative electrode"])
@@ -272,7 +280,7 @@ class TestBroadcasts(unittest.TestCase):
             {
                 "secondary": ["negative particle size"],
                 "tertiary": ["negative electrode"],
-                "quaternary": ["current collector"]
+                "quaternary": ["current collector"],
             },
         )
         self.assertTrue(broad_a.evaluates_on_edges("primary"))

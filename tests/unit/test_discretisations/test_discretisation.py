@@ -498,6 +498,26 @@ class TestDiscretise(unittest.TestCase):
                 eqn_disc.evaluate(None, y), var_disc.evaluate(None, y) ** 2
             )
 
+    def test_discretise_average(self):
+        var = pybamm.Variable("var", domain="negative particle size")
+        R = pybamm.SpatialVariable("R", "negative particle size")
+        f_a_dist = (R * 2) ** 2 * 2
+        var_av = pybamm.SizeAverage(var, f_a_dist)
+
+        geometry = {"negative particle size": {"R_n": {"min": 0.5, "max": 1.5}}}
+        var_pts = {"R_n": 10}
+        submesh_types = {"negative particle size": pybamm.Uniform1DSubMesh}
+        spatial_methods = {"negative particle size": pybamm.FiniteVolume()}
+
+        mesh = pybamm.Mesh(geometry, submesh_types, var_pts)
+        disc = pybamm.Discretisation(mesh, spatial_methods)
+
+        disc.set_variable_slices([var])
+        var_av_proc = disc.process_symbol(var_av)
+
+        self.assertIsInstance(var_av_proc, pybamm.MatrixMultiplication)
+        self.assertIsInstance(var_av_proc.right.right, pybamm.StateVector)
+
     def test_process_dict(self):
         # one equation
         whole_cell = ["negative electrode", "separator", "positive electrode"]
