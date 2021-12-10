@@ -92,7 +92,7 @@ class SizeAverage(_BaseAverage):
 
 def x_average(symbol):
     """
-    convenience function for creating an average in the x-direction.
+    Convenience function for creating an average in the x-direction.
 
     Parameters
     ----------
@@ -155,7 +155,8 @@ def x_average(symbol):
         else:  # pragma: no cover
             # It should be impossible to get here
             raise NotImplementedError
-    # If symbol is a concatenation of Broadcasts, its average value is its child
+    # If symbol is a concatenation of Broadcasts, its average value is the
+    # thickness-weighted average of the symbols being broadcasted
     elif isinstance(symbol, pybamm.Concatenation) and all(
         isinstance(child, pybamm.Broadcast) for child in symbol.children
     ):
@@ -191,7 +192,7 @@ def x_average(symbol):
 
 def z_average(symbol):
     """
-    convenience function for creating an average in the z-direction.
+    Convenience function for creating an average in the z-direction.
 
     Parameters
     ----------
@@ -229,7 +230,7 @@ def z_average(symbol):
 
 def yz_average(symbol):
     """
-    convenience function for creating an average in the y-z-direction.
+    Convenience function for creating an average in the y-z-direction.
 
     Parameters
     ----------
@@ -264,7 +265,7 @@ def yz_average(symbol):
 
 def r_average(symbol):
     """
-    convenience function for creating an average in the r-direction.
+    Convenience function for creating an average in the r-direction.
 
     Parameters
     ----------
@@ -309,7 +310,7 @@ def r_average(symbol):
 
 
 def size_average(symbol, f_a_dist=None):
-    """convenience function for averaging over particle size R using the area-weighted
+    """Convenience function for averaging over particle size R using the area-weighted
     particle-size distribution.
 
     Parameters
