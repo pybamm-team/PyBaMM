@@ -4,7 +4,7 @@
 import pybamm
 import numpy as np
 from collections import defaultdict, OrderedDict
-from scipy.sparse import block_diag, csc_matrix, csr_matrix
+from scipy.sparse import block_diag, csc_matrix, csr_matrix, issparse
 from scipy.sparse.linalg import inv
 
 
@@ -32,10 +32,15 @@ class Discretisation(object):
             a dictionary of the spatial methods to be used on each
             domain. The keys correspond to the model domains and the
             values to the spatial method.
+    matrix_free_simplify : bool
+            if true, will attempt to speed up tridiagonal sparse matrices
+            by converting them to matrix free
+            i.e. y[2:]-2*y[1:-1]+y[:-2] instead of A@y where A is the [1,-2,1] matrix
     """
 
-    def __init__(self, mesh=None, spatial_methods=None):
+    def __init__(self, mesh=None, spatial_methods=None, matrix_free_simplify=True):
         self._mesh = mesh
+        self._matrix_free_simplify = matrix_free_simplify
         if mesh is None:
             self._spatial_methods = {}
         else:
@@ -792,9 +797,37 @@ class Discretisation(object):
 
             processed_eqn = self.process_symbol(eqn)
 
+            if self._matrix_free_simplify:
+                processed_eqn = self.simplify_matrix_free(processed_eqn)
+
             new_var_eqn_dict[eqn_key] = processed_eqn
 
         return new_var_eqn_dict
+
+    def simplify_matrix_free(self, symbol):
+        if isinstance(symbol, pybamm.MatrixMultiplication):
+            lhs, rhs = symbol.children
+            if (
+                    isinstance(lhs, pybamm.Matrix) and
+                    issparse(lhs.entries) and
+                    isinstance(rhs, pybamm.StateVector) and
+                    len(rhs.y_slices) == 1
+            ):
+                dia_matrix = lhs.entries.todia()
+                n_diagonals = dia_matrix.offsets.shape[0]
+
+                def create_term(index, offset, data):
+                    return pybamm.Vector(data[:]) * rhs.new_copy()
+
+                if n_diagonals <= 3:
+                    matrix_free_form = create_term(0, dia_matrix.offsets[0],
+                                                   dia_matrix.data[0,:])
+                    for k in range(1, dia_matrix.offsets.shape[0]):
+                        matrix_free_form += create_term(k, dia_matrix.offsets[k],
+                                                   dia_matrix.data[k,:])
+                    return matrix_free_form
+
+        return symbol.new_copy()
 
     def process_symbol(self, symbol):
         """Discretise operators in model equations.
@@ -835,6 +868,7 @@ class Discretisation(object):
     def _process_symbol(self, symbol):
         """See :meth:`Discretisation.process_symbol()`."""
 
+        print('processing stuff', symbol)
         if symbol.domain != []:
             spatial_method = self.spatial_methods[symbol.domain[0]]
             # If boundary conditions are provided, need to check for BCs on tabs
@@ -855,9 +889,11 @@ class Discretisation(object):
                     symbol._binary_new_copy(disc_left, disc_right)
                 )
             else:
-                return spatial_method.process_binary_operators(
+                processed_binary_op = spatial_method.process_binary_operators(
                     symbol, left, right, disc_left, disc_right
                 )
+                return processed_binary_op
+
         elif isinstance(symbol, pybamm.UnaryOperator):
             child = symbol.child
             disc_child = self.process_symbol(child)

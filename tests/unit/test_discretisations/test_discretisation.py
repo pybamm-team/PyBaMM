@@ -10,6 +10,7 @@ from tests import (
     get_discretisation_for_testing,
     get_1p1d_discretisation_for_testing,
     get_2p1d_mesh_for_testing,
+    get_1p1d_mesh_for_testing,
 )
 from tests.shared import SpatialMethodForTesting
 
@@ -1339,6 +1340,60 @@ class TestDiscretise(unittest.TestCase):
         disc = pybamm.Discretisation(mesh, spatial_methods)
         with self.assertRaisesRegex(pybamm.ModelError, "Boundary condition at r = 0"):
             disc.process_model(model)
+
+    def test_matrix_free_simplification(self):
+        whole_cell = ["negative electrode", "separator", "positive electrode"]
+        a = pybamm.Variable("a", domain=whole_cell)
+
+        model = pybamm.BaseModel()
+        model.rhs = {a: pybamm.Laplacian(a)}
+        model.initial_conditions = {a: pybamm.Scalar(3)}
+        model.boundary_conditions = {
+            a: {"left": (0, "Neumann"), "right": (0, "Neumann")},
+        }
+        model.variables = {"a": a}
+
+        # create discretisation
+        mesh = get_mesh_for_testing()
+        spatial_methods = {"macroscale": pybamm.FiniteVolume()}
+
+        disc = pybamm.Discretisation(mesh, spatial_methods, matrix_free_simplify=False)
+        model_no_simplify = disc.process_model(model, inplace=False)
+
+        disc = pybamm.Discretisation(mesh, spatial_methods, matrix_free_simplify=True)
+        model_simplify_laplace = disc.process_model(model, inplace=False)
+        print(model_no_simplify.rhs[a])
+        print(model_simplify_laplace.rhs[a])
+        print(model_no_simplify.rhs[a].children[0].entries.diagonal(-1))
+        print(model_simplify_laplace.rhs[a].children[0].children[0].children[0].entries)
+
+        self.assertIsInstance(model_no_simplify.rhs[a].children[0], pybamm.Matrix)
+        self.assertIsInstance(model_simplify_laplace.rhs[a].children[0], pybamm.Addition)
+        a0 = model_no_simplify.initial_conditions[a].evaluate()
+        np.testing.assert_array_equal(
+            model_no_simplify.rhs[a].evaluate(y=a0),
+            model_simplify_laplace.rhs[a].evaluate(y=a0),
+        )
+
+        model = pybamm.BaseModel()
+        model.rhs = {a: pybamm.Divergence(pybamm.Gradient(a))}
+        model.initial_conditions = {a: pybamm.Scalar(3)}
+        model.boundary_conditions = {
+            a: {"left": (0, "Neumann"), "right": (0, "Neumann")},
+        }
+        model.variables = {"a": a}
+
+        # create discretisation
+        disc = pybamm.Discretisation(mesh, spatial_methods)
+        model_simplify_div_grad = disc.process_model(model, inplace=False)
+        self.assertIsInstance(model_simplify_div_grad.rhs[a].children[0],
+                              pybamm.Addition)
+
+        np.testing.assert_array_equal(
+            model_no_simplify.rhs[a].evaluate(y=a0),
+            model_simplify_div_grad.rhs[a].evaluate(y=a0),
+        )
+
 
     def test_check_model_errors(self):
         disc = pybamm.Discretisation()
