@@ -185,11 +185,22 @@ class TestBroadcasts(unittest.TestCase):
         broad_a = pybamm.FullBroadcast(
             a,
             "negative particle",
-            {"secondary": "negative electrode", "tertiary": "current collector"},
+            {
+                "secondary": "negative particle size",
+                "tertiary": "negative electrode",
+                "quaternary": "current collector",
+            },
         )
         self.assertEqual(
             broad_a.reduce_one_dimension().id,
-            pybamm.FullBroadcast(a, "negative electrode", "current collector").id,
+            pybamm.FullBroadcast(
+                a,
+                "negative particle size",
+                {
+                    "secondary": "negative electrode",
+                    "tertiary": "current collector",
+                },
+            ).id,
         )
 
     def test_full_broadcast_number(self):

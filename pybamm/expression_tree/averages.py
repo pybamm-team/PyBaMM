@@ -107,8 +107,14 @@ def x_average(symbol):
     # Can't take average if the symbol evaluates on edges
     if symbol.evaluates_on_edges("primary"):
         raise ValueError("Can't take the x-average of a symbol that evaluates on edges")
-    # If symbol doesn't have a domain, its average value is itself
-    if symbol.domain in [[], ["current collector"]]:
+    # If symbol doesn't have an electrode domain, its x-averaged value is itself
+    if not any(
+        any(
+            dom in ["negative electrode", "separator", "positive electrode"]
+            for dom in domain
+        )
+        for domain in symbol.domains.values()
+    ):
         new_symbol = symbol.new_copy()
         new_symbol.parent = None
         return new_symbol
@@ -133,19 +139,22 @@ def x_average(symbol):
             aux = {}
             if "tertiary" in symbol.auxiliary_domains:
                 aux["secondary"] = symbol.auxiliary_domains["tertiary"]
-            if "quaternary" in symbol.auxiliary_domains:
-                aux["tertiary"] = symbol.auxiliary_domains["quaternary"]
             return pybamm.FullBroadcast(symbol.orphans[0], symbol.broadcast_domain, aux)
-        elif isinstance(symbol, pybamm.FullBroadcast) and all(
-            dom in ["negative electrode", "separator", "positive electrode"]
-            for dom in symbol.tertiary_domain
+        elif (
+            isinstance(symbol, pybamm.FullBroadcast)
+            and "tertiary" in symbol.auxiliary_domains
+            and all(
+                dom in ["negative electrode", "separator", "positive electrode"]
+                for dom in symbol.tertiary_domain
+            )
         ):
             aux = {"secondary": symbol.auxiliary_domains["secondary"]}
             if "quaternary" in symbol.auxiliary_domains:
                 aux["tertiary"] = symbol.auxiliary_domains["quaternary"]
             return pybamm.FullBroadcast(symbol.orphans[0], symbol.broadcast_domain, aux)
-        else:
-            return XAverage(symbol)
+        else:  # pragma: no cover
+            # It should be impossible to get here
+            raise NotImplementedError
     # If symbol is a concatenation of Broadcasts, its average value is its child
     elif isinstance(symbol, pybamm.Concatenation) and all(
         isinstance(child, pybamm.Broadcast) for child in symbol.children
