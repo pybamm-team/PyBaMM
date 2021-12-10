@@ -9,6 +9,7 @@ import numbers
 import warnings
 from pprint import pformat
 from collections import defaultdict
+import json
 
 
 class ParameterValues:
@@ -48,10 +49,10 @@ class ParameterValues:
     1
     >>> file = "input/parameters/lithium_ion/cells/kokam_Marquis2019/parameters.csv"
     >>> values_path = pybamm.get_parameters_filepath(file)
-    >>> param = pybamm.ParameterValues(values=values_path)
+    >>> param = pybamm.ParameterValues(values_path)
     >>> param["Negative current collector thickness [m]"]
     2.5e-05
-    >>> param = pybamm.ParameterValues(chemistry=pybamm.parameter_sets.Marquis2019)
+    >>> param = pybamm.ParameterValues("Marquis2019")
     >>> param["Reference temperature [K]"]
     298.15
 
@@ -64,25 +65,37 @@ class ParameterValues:
             raise ValueError(
                 "Only one of values and chemistry can be provided. To change parameters"
                 " slightly from a chemistry, first load parameters with the chemistry"
-                " (param = pybamm.ParameterValues(chemistry=...)) and then update with"
+                " (param = pybamm.ParameterValues(...)) and then update with"
                 " param.update({dict of values})."
             )
         if values is None and chemistry is None:
             raise ValueError("values and chemistry cannot both be None")
         # First load chemistry
         if chemistry is not None:
+            warnings.warn(
+                "The 'chemistry' keyword argument has been deprecated and will be "
+                "removed in a future release. Call `ParameterValues` with a "
+                "parameter set dictionary, or the name of a parameter set (string), "
+                "as the single argument, e.g. `ParameterValues('Chen2020')`.",
+                DeprecationWarning,
+            )
             self.update_from_chemistry(chemistry)
         # Then update with values dictionary or file
         if values is not None:
-            # If base_parameters is a filename, load from that filename
-            if isinstance(values, str):
-                file_path = self.find_parameter(values)
-                path = os.path.split(file_path)[0]
-                values = self.read_parameters_csv(file_path)
+            if (isinstance(values, str) and hasattr(pybamm.parameter_sets, values)) or (
+                isinstance(values, dict) and "chemistry" in values
+            ):
+                self.update_from_chemistry(values)
             else:
-                path = ""
-            # Don't check parameter already exists when first creating it
-            self.update(values, check_already_exists=False, path=path)
+                # If base_parameters is a filename, load from that filename
+                if isinstance(values, str):
+                    file_path = self.find_parameter(values)
+                    path = os.path.split(file_path)[0]
+                    values = self.read_parameters_csv(file_path)
+                else:
+                    path = ""
+                # Don't check parameter already exists when first creating it
+                self.update(values, check_already_exists=False, path=path)
 
         # Initialise empty _processed_symbols dict (for caching)
         self._processed_symbols = {}
@@ -108,6 +121,9 @@ class ParameterValues:
     def __repr__(self):
         return pformat(self._dict_items, width=1)
 
+    def __eq__(self, other):
+        return self._dict_items == other._dict_items
+
     def keys(self):
         """Get the keys of the dictionary"""
         return self._dict_items.keys()
@@ -123,7 +139,7 @@ class ParameterValues:
     def copy(self):
         """Returns a copy of the parameter values. Makes sure to copy the internal
         dictionary."""
-        return ParameterValues(values=self._dict_items.copy())
+        return ParameterValues(self._dict_items.copy())
 
     def search(self, key, print_values=True):
         """
@@ -137,6 +153,9 @@ class ParameterValues:
         """
         Load standard set of components from a 'chemistry' dictionary
         """
+        if isinstance(chemistry, str):
+            chemistry = getattr(pybamm.parameter_sets, chemistry)
+
         base_chemistry = chemistry["chemistry"]
 
         # Load each component name
@@ -159,40 +178,16 @@ class ParameterValues:
             component_groups += ["lithium plating"]
 
         if "anode" in chemistry.keys():
-            if "negative electrode" in chemistry.keys():
-                raise KeyError(
-                    "both 'anode' and 'negative electrode' keys provided in the "
-                    "chemistry. The 'anode' notation will be deprecated in the next "
-                    "release so 'negative electrode' should be used instead."
-                )
-            else:
-                chemistry["negative electrode"] = chemistry["anode"]
-                warnings.warn(
-                    "the 'anode' component notation will be deprecated in the next "
-                    "release, as it has now been renamed to 'negative electrode'. "
-                    "Simulation will continue passing the 'anode' component as "
-                    "'negative electrode' (it might overwrite any existing definition "
-                    "of the component).",
-                    DeprecationWarning,
-                )
+            raise KeyError(
+                "The 'anode' notation has been deprecated, "
+                "'negative electrode' should be used instead."
+            )
 
         if "cathode" in chemistry.keys():
-            if "positive electrode" in chemistry.keys():
-                raise KeyError(
-                    "both 'cathode' and 'positive electrode' keys provided in the "
-                    "chemistry. The 'cathode' notation will be deprecated in the next "
-                    "release so 'positive electrode' should be used instead."
-                )
-            else:
-                chemistry["positive electrode"] = chemistry["cathode"]
-                warnings.warn(
-                    "the 'cathode' component notation will be deprecated in the next "
-                    "release, as it has now been renamed to 'positive electrode'. "
-                    "Simulation will continue passing the 'cathode' component as "
-                    "'positive electrode' (it might overwrite any existing definition "
-                    "of the component).",
-                    DeprecationWarning,
-                )
+            raise KeyError(
+                "The 'cathode' notation has been deprecated, "
+                "'positive electrode' should be used instead."
+            )
 
         for component_group in component_groups:
             # Make sure component is provided
@@ -321,8 +316,22 @@ class ParameterValues:
                         filename, comment="#", skip_blank_lines=True, header=None
                     ).to_numpy()
                     # Save name and data
+                    self._dict_items[name] = (function_name, ([data[:, 0]], data[:, 1]))
+                    values[name] = (function_name, ([data[:, 0]], data[:, 1]))
+
+                # parse 2D parameter data
+                elif value.startswith("[2D data]"):
+                    filename = os.path.join(path, value[9:] + ".json")
+                    function_name = value[9:]
+                    filename = pybamm.get_parameters_filepath(filename)
+                    with open(filename, 'r') as jsonfile:
+                        json_data = json.load(jsonfile)
+                    data = json_data['data']
+                    data[0] = [np.array(el) for el in data[0]]
+                    data[1] = np.array(data[1])
                     self._dict_items[name] = (function_name, data)
                     values[name] = (function_name, data)
+
                 elif value == "[input]":
                     self._dict_items[name] = pybamm.InputParameter(name)
                 # Anything else should be a converted to a float
@@ -349,24 +358,10 @@ class ParameterValues:
                 "capacity [A.h]', and used to calculate current from C-rate."
             )
         if "Cell capacity [A.h]" in values:
-            if "Nominal cell capacity [A.h]" in values:
-                raise ValueError(
-                    "both 'Cell capacity [A.h]' and 'Nominal cell capacity [A.h]' "
-                    "provided in values. The 'Cell capacity [A.h]' notation will be "
-                    "deprecated in the next release so 'Nominal cell capacity [A.h]' "
-                    "should be used instead."
-                )
-            else:
-                values["Nominal cell capacity [A.h]"] = values["Cell capacity [A.h]"]
-                warnings.warn(
-                    "the 'Cell capacity [A.h]' notation will be "
-                    "deprecated in the next release, as it has now been renamed "
-                    "to 'Nominal cell capacity [A.h]'. Simulation will continue "
-                    "passing the 'Cell capacity [A.h]' as 'Nominal cell "
-                    "capacity [A.h]' (it might overwrite any existing definition "
-                    "of the component)",
-                    DeprecationWarning,
-                )
+            raise ValueError(
+                "The 'Cell capacity [A.h]' parameter has been deprecated, "
+                "'Nominal cell capacity [A.h]' should be used instead."
+            )
         for param in values:
             if "surface area density" in param:
                 raise ValueError(
@@ -637,29 +632,47 @@ class ParameterValues:
 
             # Create Function or Interpolant or Scalar object
             if isinstance(function_name, tuple):
-                # If function_name is a tuple then it should be (name, data) and we need
-                # to create an Interpolant
-                name, data = function_name
-                function = pybamm.Interpolant(
-                    data[:, 0], data[:, 1], *new_children, name=name
-                )
-                # Define event to catch extrapolation. In these events the sign is
-                # important: it should be positive inside of the range and negative
-                # outside of it
-                self.parameter_events.append(
-                    pybamm.Event(
-                        "Interpolant {} lower bound".format(name),
-                        pybamm.min(new_children[0] - min(data[:, 0])),
-                        pybamm.EventType.INTERPOLANT_EXTRAPOLATION,
+                if len(function_name) == 2:  # CSV or JSON parsed data
+                    # to create an Interpolant
+                    name, data = function_name
+
+                    if isinstance(data, np.ndarray):
+                        data = [data[:, 0]], data[:, 1]
+
+                    if len(data[0]) == 1:
+                        input_data = data[0][0], data[1]
+
+                    else:
+                        input_data = data
+
+                    function = pybamm.Interpolant(
+                        input_data[0], input_data[-1], new_children, name=name
                     )
-                )
-                self.parameter_events.append(
-                    pybamm.Event(
-                        "Interpolant {} upper bound".format(name),
-                        pybamm.min(max(data[:, 0]) - new_children[0]),
-                        pybamm.EventType.INTERPOLANT_EXTRAPOLATION,
-                    )
-                )
+                    # Define event to catch extrapolation. In these events the sign is
+                    # important: it should be positive inside of the range and negative
+                    # outside of it
+                    for data_index in range(len(data[0])):
+                        self.parameter_events.append(
+                            pybamm.Event(
+                                "Interpolant {} lower bound".format(name),
+                                pybamm.min(new_children[data_index] -
+                                           min(data[0][data_index])),
+                                pybamm.EventType.INTERPOLANT_EXTRAPOLATION,
+                            )
+                        )
+                        self.parameter_events.append(
+                            pybamm.Event(
+                                "Interpolant {} upper bound".format(name),
+                                pybamm.min(max(data[0][data_index]) -
+                                           new_children[data_index]),
+                                pybamm.EventType.INTERPOLANT_EXTRAPOLATION,
+                            )
+                        )
+
+                else:  # pragma: no cover
+                    raise ValueError("Invalid function name length: {0}"
+                                     .format(len(function_name)))
+
             elif isinstance(function_name, numbers.Number):
                 # Check not NaN (parameter in csv file but no value given)
                 if np.isnan(function_name):

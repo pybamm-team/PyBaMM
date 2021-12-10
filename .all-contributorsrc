@@ -343,7 +343,8 @@
         "code",
         "test",
         "doc",
-        "tutorial"
+        "tutorial",
+        "review"
       ]
     },
     {
@@ -442,6 +443,25 @@
       "profile": "https://gavinw.me",
       "contributions": [
         "bug",
+        "code"
+      ]
+    },
+    {
+      "login": "dion-w",
+      "name": "Dion Wilde",
+      "avatar_url": "https://avatars.githubusercontent.com/u/91852142?v=4",
+      "profile": "https://github.com/dion-w",
+      "contributions": [
+        "bug",
+        "code"
+      ]
+    },
+    {
+      "login": "ehtec",
+      "name": "Elias Hohl",
+      "avatar_url": "https://avatars.githubusercontent.com/u/48386220?v=4",
+      "profile": "https://www.ehtec.co",
+      "contributions": [
         "code"
       ]
     }

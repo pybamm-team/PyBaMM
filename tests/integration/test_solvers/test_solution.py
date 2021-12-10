@@ -75,8 +75,7 @@ class TestSolution(unittest.TestCase):
         # solve model
         solver = model.default_solver
 
-        var = pybamm.standard_spatial_vars
-        Nr = model.default_var_pts[var.r_n]
+        Nr = model.default_var_pts["r_n"]
 
         T_av = 0
         c_s_n_av = np.ones((Nr, 1)) * 0.6

@@ -47,9 +47,9 @@ class BaseModel(pybamm.BaseBatteryModel):
     @property
     def default_parameter_values(self):
         if self.half_cell:
-            return pybamm.ParameterValues(chemistry=pybamm.parameter_sets.Xu2019)
+            return pybamm.ParameterValues("Xu2019")
         else:
-            return pybamm.ParameterValues(chemistry=pybamm.parameter_sets.Marquis2019)
+            return pybamm.ParameterValues("Marquis2019")
 
     @property
     def default_quick_plot_variables(self):
@@ -136,7 +136,10 @@ class BaseModel(pybamm.BaseBatteryModel):
         # Lithium lost to side reactions
         # Different way of measuring LLI but should give same value
         LLI_sei = self.variables["Loss of lithium to SEI [mol]"]
-        LLI_pl = self.variables["Loss of lithium to lithium plating [mol]"]
+        if self.half_cell:
+            LLI_pl = pybamm.Scalar(0)
+        else:
+            LLI_pl = self.variables["Loss of lithium to lithium plating [mol]"]
 
         LLI_reactions = LLI_sei + LLI_pl
         self.variables.update(
@@ -168,9 +171,7 @@ class BaseModel(pybamm.BaseBatteryModel):
             "Total lithium lost from particles [mol]",
             "Total lithium lost from electrolyte [mol]",
             "Loss of lithium to SEI [mol]",
-            "Loss of lithium to lithium plating [mol]",
             "Loss of capacity to SEI [A.h]",
-            "Loss of capacity to lithium plating [A.h]",
             "Total lithium lost to side reactions [mol]",
             "Total capacity lost to side reactions [A.h]",
             # Resistance
@@ -182,6 +183,8 @@ class BaseModel(pybamm.BaseBatteryModel):
                 "Negative electrode capacity [A.h]",
                 "Loss of active material in negative electrode [%]",
                 "Total lithium in negative electrode [mol]",
+                "Loss of lithium to lithium plating [mol]",
+                "Loss of capacity to lithium plating [A.h]",
             ]
 
         self.summary_variables = summary_variables
@@ -321,5 +324,7 @@ class BaseModel(pybamm.BaseBatteryModel):
         # Models added specifically for the counter electrode have been labelled with
         # "counter electrode" so as not to be caught by this check
         self.submodels = {
-            k: v for k, v in self.submodels.items() if not k.startswith("negative")
+            k: v
+            for k, v in self.submodels.items()
+            if not (k.startswith("negative") or k == "lithium plating")
         }

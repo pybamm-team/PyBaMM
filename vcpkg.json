@@ -1,6 +1,6 @@
 {
   "name": "pybamm",
-  "version-string": "21.10",
+  "version-string": "21.11",
   "dependencies": [
     {
       "name": "sundials",

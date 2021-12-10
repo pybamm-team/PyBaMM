@@ -168,13 +168,13 @@ class TestSimulationExperiment(unittest.TestCase):
                     "Run drive_cycle (W)",
                 )
             ],
-            drive_cycles={"drive_cycle": drive_cycle}
+            drive_cycles={"drive_cycle": drive_cycle},
         )
         model = pybamm.lithium_ion.DFN()
         sim = pybamm.Simulation(model, experiment=experiment)
-        self.assertIn(('drive_cycle', 'A'), sim.op_conds_to_model_and_param)
-        self.assertIn(('drive_cycle', 'V'), sim.op_conds_to_model_and_param)
-        self.assertIn(('drive_cycle', 'W'), sim.op_conds_to_model_and_param)
+        self.assertIn(("drive_cycle", "A"), sim.op_conds_to_model_and_param)
+        self.assertIn(("drive_cycle", "V"), sim.op_conds_to_model_and_param)
+        self.assertIn(("drive_cycle", "W"), sim.op_conds_to_model_and_param)
 
     def test_run_experiment_old_setup_type(self):
         experiment = pybamm.Experiment(
@@ -204,7 +204,7 @@ class TestSimulationExperiment(unittest.TestCase):
         pybamm.set_logging_level("WARNING")
         self.assertEqual(sim._solution, None)
 
-    def test_run_experiment_termination(self):
+    def test_run_experiment_termination_capacity(self):
         # with percent
         experiment = pybamm.Experiment(
             [
@@ -218,7 +218,7 @@ class TestSimulationExperiment(unittest.TestCase):
             termination="99% capacity",
         )
         model = pybamm.lithium_ion.SPM({"SEI": "ec reaction limited"})
-        param = pybamm.ParameterValues(chemistry=pybamm.parameter_sets.Chen2020)
+        param = pybamm.ParameterValues("Chen2020")
         param["SEI kinetic rate constant [m.s-1]"] = 1e-14
         sim = pybamm.Simulation(model, experiment=experiment, parameter_values=param)
         sol = sim.solve(solver=pybamm.CasadiSolver())
@@ -240,12 +240,34 @@ class TestSimulationExperiment(unittest.TestCase):
             termination="5.04Ah capacity",
         )
         model = pybamm.lithium_ion.SPM({"SEI": "ec reaction limited"})
-        param = pybamm.ParameterValues(chemistry=pybamm.parameter_sets.Chen2020)
+        param = pybamm.ParameterValues("Chen2020")
         param["SEI kinetic rate constant [m.s-1]"] = 1e-14
         sim = pybamm.Simulation(model, experiment=experiment, parameter_values=param)
         sol = sim.solve(solver=pybamm.CasadiSolver())
         # all but the last value should be above the termination condition
         np.testing.assert_array_less(5.04, C[:-1])
+
+    def test_run_experiment_termination_voltage(self):
+        # with percent
+        experiment = pybamm.Experiment(
+            [
+                ("Discharge at 0.5C for 10 minutes", "Rest for 10 minutes"),
+            ]
+            * 5,
+            termination="4V",
+        )
+        model = pybamm.lithium_ion.SPM()
+        param = pybamm.ParameterValues("Chen2020")
+        sim = pybamm.Simulation(model, experiment=experiment, parameter_values=param)
+        sol = sim.solve()
+        # Only two cycles should be completed, only 2nd cycle should go below 4V
+        np.testing.assert_array_less(
+            4, np.min(sol.cycles[0]["Terminal voltage [V]"].data)
+        )
+        np.testing.assert_array_less(
+            np.min(sol.cycles[1]["Terminal voltage [V]"].data), 4
+        )
+        self.assertEqual(len(sol.cycles), 2)
 
     def test_save_at_cycles(self):
         experiment = pybamm.Experiment(
@@ -298,12 +320,12 @@ class TestSimulationExperiment(unittest.TestCase):
         model = pybamm.lithium_ion.SPM()
 
         # Chen 2020 plating: pos = function, neg = data
-        param = pybamm.ParameterValues(chemistry=pybamm.parameter_sets.Chen2020_plating)
+        param = pybamm.ParameterValues("Chen2020_plating")
         sim = pybamm.Simulation(model, experiment=experiment, parameter_values=param)
         sim.solve(solver=pybamm.CasadiSolver("fast with events"), save_at_cycles=2)
 
         # Chen 2020: pos = function, neg = function
-        param = pybamm.ParameterValues(chemistry=pybamm.parameter_sets.Chen2020)
+        param = pybamm.ParameterValues("Chen2020")
         sim = pybamm.Simulation(model, experiment=experiment, parameter_values=param)
         sim.solve(solver=pybamm.CasadiSolver("fast with events"), save_at_cycles=2)
 
@@ -354,7 +376,7 @@ class TestSimulationExperiment(unittest.TestCase):
         model = pybamm.lithium_ion.SPM()
 
         # Change a parameter to an input
-        param = pybamm.ParameterValues(chemistry=pybamm.parameter_sets.Marquis2019)
+        param = pybamm.ParameterValues("Marquis2019")
         param["Negative electrode diffusivity [m2.s-1]"] = (
             pybamm.InputParameter("Dsn") * 3.9e-14
         )
@@ -376,9 +398,7 @@ class TestSimulationExperiment(unittest.TestCase):
         sim = pybamm.Simulation(
             model,
             experiment=experiment,
-            parameter_values=pybamm.ParameterValues(
-                chemistry=pybamm.parameter_sets.Xu2019
-            ),
+            parameter_values=pybamm.ParameterValues("Xu2019"),
         )
         sim.solve()
 

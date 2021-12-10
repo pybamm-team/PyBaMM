@@ -29,15 +29,14 @@ def is_notebook():
 
 def constant_current_constant_voltage_constant_power(variables):
     I = variables["Current [A]"]
-    V = variables["Terminal voltage [V]"]
+    V = variables["Battery voltage [V]"]
     s_I = pybamm.InputParameter("Current switch")
     s_V = pybamm.InputParameter("Voltage switch")
     s_P = pybamm.InputParameter("Power switch")
-    n_cells = pybamm.Parameter("Number of cells connected in series to make a battery")
     return (
         s_I * (I - pybamm.InputParameter("Current input [A]"))
-        + s_V * (V - pybamm.InputParameter("Voltage input [V]") / n_cells)
-        + s_P * (V * I - pybamm.InputParameter("Power input [W]") / n_cells)
+        + s_V * (V - pybamm.InputParameter("Voltage input [V]"))
+        + s_P * (V * I - pybamm.InputParameter("Power input [W]"))
     )
 
 
@@ -346,9 +345,8 @@ class Simulation:
                 ),
                 pybamm.Event(
                     "Voltage cut-off [V] [experiment]",
-                    new_model.variables["Terminal voltage [V]"]
-                    - pybamm.InputParameter("Voltage cut-off [V]")
-                    / model.param.n_cells,
+                    new_model.variables["Battery voltage [V]"]
+                    - pybamm.InputParameter("Voltage cut-off [V]"),
                 ),
             ]
         )
@@ -443,7 +441,7 @@ class Simulation:
                                 + abs(pybamm.InputParameter("Current cut-off [A]"))
                                 - 1e4
                                 * (
-                                    new_model.variables["Terminal voltage [V]"]
+                                    new_model.variables["Battery voltage [V]"]
                                     < (
                                         pybamm.InputParameter("Voltage input [V]")
                                         - 1e-4
@@ -498,9 +496,8 @@ class Simulation:
                     new_model.events.append(
                         pybamm.Event(
                             "Voltage cut-off [V] [experiment]",
-                            new_model.variables["Terminal voltage [V]"]
-                            - pybamm.InputParameter("Voltage cut-off [V]")
-                            / model.param.n_cells,
+                            new_model.variables["Battery voltage [V]"]
+                            - pybamm.InputParameter("Voltage cut-off [V]"),
                         )
                     )
 
@@ -521,7 +518,10 @@ class Simulation:
                     )
                 elif op_inputs["Voltage switch"] == 1:
                     new_parameter_values.update(
-                        {"Voltage function [V]": op_inputs["Voltage input [V]"]},
+                        {
+                            "Voltage function [V]": op_inputs["Voltage input [V]"]
+                            / model.param.n_cells
+                        },
                         check_already_exists=False,
                     )
                 elif op_inputs["Power switch"] == 1:
@@ -533,7 +533,8 @@ class Simulation:
                     new_parameter_values.update(
                         {
                             "Current function [A]": op_inputs["Current input [A]"],
-                            "Voltage function [V]": op_inputs["Voltage input [V]"],
+                            "Voltage function [V]": op_inputs["Voltage input [V]"]
+                            / model.param.n_cells,
                         },
                         check_already_exists=False,
                     )
@@ -739,7 +740,9 @@ class Simulation:
                 raise ValueError(
                     "starting_solution can only be provided if simulating an Experiment"
                 )
-            if self.operating_mode == "without experiment":
+            if self.operating_mode == "without experiment" or isinstance(
+                self.model, pybamm.lithium_ion.ElectrodeSOH
+            ):
                 if t_eval is None:
                     raise pybamm.SolverError(
                         "'t_eval' must be provided if not using an experiment or "
@@ -840,6 +843,8 @@ class Simulation:
                 )
             else:
                 esoh_sim = None
+
+            voltage_stop = self.experiment.termination.get("voltage")
 
             idx = 0
             num_cycles = len(self.experiment.cycle_lengths)
@@ -979,6 +984,22 @@ class Simulation:
                             "Stopping experiment since capacity "
                             f"({capacity_now:.3f} Ah) "
                             f"is below stopping capacity ({capacity_stop:.3f} Ah)."
+                        )
+                        break
+
+                # Check voltage stop
+                if voltage_stop is not None:
+                    min_voltage = np.min(cycle_solution["Battery voltage [V]"].data)
+                    if min_voltage > voltage_stop[0]:
+                        pybamm.logger.notice(
+                            f"Minimum voltage is now {min_voltage:.3f} V "
+                            f"(will stop at {voltage_stop[0]:.3f} V)"
+                        )
+                    else:
+                        pybamm.logger.notice(
+                            "Stopping experiment since minimum voltage "
+                            f"({min_voltage:.3f} V) "
+                            f"is below stopping voltage ({voltage_stop[0]:.3f} V)."
                         )
                         break
 

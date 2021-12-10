@@ -21,15 +21,13 @@ class TestLeadAcidLOQS(unittest.TestCase):
         model = pybamm.lead_acid.LOQS(options)
         self.assertNotIn("negative particle", model.default_geometry)
         self.assertIsInstance(model.default_spatial_methods, dict)
-        self.assertTrue(
-            isinstance(
-                model.default_spatial_methods["current collector"],
-                pybamm.ZeroDimensionalSpatialMethod,
-            )
+        self.assertIsInstance(
+            model.default_spatial_methods["current collector"],
+            pybamm.ZeroDimensionalSpatialMethod,
         )
         self.assertTrue(
             issubclass(
-                model.default_submesh_types["current collector"].submesh_type,
+                model.default_submesh_types["current collector"],
                 pybamm.SubMesh0D,
             )
         )
@@ -51,14 +49,12 @@ class TestLeadAcidLOQS(unittest.TestCase):
         }
         model = pybamm.lead_acid.LOQS(options)
         model.check_well_posedness()
-        self.assertTrue(
-            isinstance(
-                model.default_spatial_methods["current collector"], pybamm.FiniteVolume
-            )
+        self.assertIsInstance(
+            model.default_spatial_methods["current collector"], pybamm.FiniteVolume
         )
         self.assertTrue(
             issubclass(
-                model.default_submesh_types["current collector"].submesh_type,
+                model.default_submesh_types["current collector"],
                 pybamm.Uniform1DSubMesh,
             )
         )
@@ -71,15 +67,13 @@ class TestLeadAcidLOQS(unittest.TestCase):
         }
         model = pybamm.lead_acid.LOQS(options)
         model.check_well_posedness()
-        self.assertTrue(
-            isinstance(
-                model.default_spatial_methods["current collector"],
-                pybamm.ScikitFiniteElement,
-            )
+        self.assertIsInstance(
+            model.default_spatial_methods["current collector"],
+            pybamm.ScikitFiniteElement,
         )
         self.assertTrue(
             issubclass(
-                model.default_submesh_types["current collector"].submesh_type,
+                model.default_submesh_types["current collector"],
                 pybamm.ScikitUniform2DSubMesh,
             )
         )

@@ -27,9 +27,12 @@ class LithiumIonParameters(BaseParameters):
             * "particle shape" : str, optional
                 Sets the model shape of the electrode particles. This is used to
                 calculate the surface area to volume ratio. Can be "spherical"
-                (default) or "user". For the "user" option the surface area per
-                unit volume can be passed as a parameter, and is therefore not
-                necessarily consistent with the particle shape.
+                (default). TODO: implement "cylindrical" and "platelet".
+            * "working electrode": str
+                Which electrode(s) intercalates and which is counter. If "both"
+                (default), the model is a standard battery. Otherwise can be "negative"
+                or "positive" to indicate a half-cell model.
+
     """
 
     def __init__(self, options=None):
@@ -65,14 +68,16 @@ class LithiumIonParameters(BaseParameters):
         self.L_p = self.geo.L_p
         self.L_cp = self.geo.L_cp
         self.L_x = self.geo.L_x
+        self.L = self.geo.L
         self.L_y = self.geo.L_y
         self.L_z = self.geo.L_z
-        self.L = self.geo.L
+        self.r_inner_dimensional = self.geo.r_inner_dimensional
+        self.r_outer_dimensional = self.geo.r_outer_dimensional
         self.A_cc = self.geo.A_cc
         self.A_cooling = self.geo.A_cooling
         self.V_cell = self.geo.V_cell
 
-        # Tab geometry
+        # Tab geometry (for pouch cells)
         self.L_tab_n = self.geo.L_tab_n
         self.Centre_y_tab_n = self.geo.Centre_y_tab_n
         self.Centre_z_tab_n = self.geo.Centre_z_tab_n
@@ -354,6 +359,20 @@ class LithiumIonParameters(BaseParameters):
             "Positive electrode reaction-driven LAM factor [m3.mol-1]"
         )
 
+        # utilisation parameters
+        self.u_n_init = pybamm.Parameter(
+            "Initial negative electrode interface utilisation"
+        )
+        self.u_p_init = pybamm.Parameter(
+            "Initial positive electrode interface utilisation"
+        )
+        self.beta_utilisation_n_dimensional = pybamm.Parameter(
+            "Negative electrode current-driven interface utilisation factor [m3.mol-1]"
+        )
+        self.beta_utilisation_p_dimensional = pybamm.Parameter(
+            "Positive electrode current-driven interface utilisation factor [m3.mol-1]"
+        )
+
     def sigma_n_dimensional(self, T):
         """Dimensional electrical conductivity in negative electrode"""
         inputs = {"Temperature [K]": T}
@@ -517,17 +536,11 @@ class LithiumIonParameters(BaseParameters):
         self.R_n_typ = self.geo.R_n_typ
         self.R_p_typ = self.geo.R_p_typ
         if self.options["particle shape"] == "spherical":
-            self.a_n_typ = 3 * self.epsilon_s_n(0) / self.R_n_typ
+            if self.half_cell:
+                self.a_n_typ = pybamm.Scalar(1)
+            else:
+                self.a_n_typ = 3 * self.epsilon_s_n(0) / self.R_n_typ
             self.a_p_typ = 3 * self.epsilon_s_p(1) / self.R_p_typ
-        elif self.options["particle shape"] == "user":
-            inputs = {"Through-cell distance (x_n) [m]": 0}
-            self.a_n_typ = pybamm.FunctionParameter(
-                "Negative electrode surface area to volume ratio [m-1]", inputs
-            )
-            inputs = {"Through-cell distance (x_p) [m]": self.L_x}
-            self.a_p_typ = pybamm.FunctionParameter(
-                "Positive electrode surface area to volume ratio [m-1]", inputs
-            )
 
         # Concentration
         self.electrolyte_concentration_scale = self.c_e_typ
@@ -630,13 +643,15 @@ class LithiumIonParameters(BaseParameters):
         self.l_x = self.geo.l_x
         self.l_y = self.geo.l_y
         self.l_z = self.geo.l_z
+        self.r_inner = self.geo.r_inner
+        self.r_outer = self.geo.r_outer
         self.a_cc = self.geo.a_cc
         self.a_cooling = self.geo.a_cooling
         self.v_cell = self.geo.v_cell
         self.l = self.geo.l
         self.delta = self.geo.delta
 
-        # Tab geometry
+        # Tab geometry (for pouch cells)
         self.l_tab_n = self.geo.l_tab_n
         self.centre_y_tab_n = self.geo.centre_y_tab_n
         self.centre_z_tab_n = self.geo.centre_z_tab_n
@@ -852,6 +867,19 @@ class LithiumIonParameters(BaseParameters):
         ) / self.F
         self.beta_LAM_sei_p = (
             self.beta_LAM_sei_p_dimensional
+            * self.a_p_typ
+            * self.j_scale_p
+            * self.timescale
+        ) / self.F
+        # Utilisation factors
+        self.beta_utilisation_n = (
+            self.beta_utilisation_n_dimensional
+            * self.a_n_typ
+            * self.j_scale_n
+            * self.timescale
+        ) / self.F
+        self.beta_utilisation_p = (
+            self.beta_utilisation_p_dimensional
             * self.a_p_typ
             * self.j_scale_p
             * self.timescale
