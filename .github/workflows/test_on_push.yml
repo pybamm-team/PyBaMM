@@ -1,8 +1,7 @@
 name: PyBaMM
 
 on:
-  push:
-
+  workflow_dispatch:
   pull_request:
 
   # everyday at 3 am UTC
@@ -11,7 +10,23 @@ on:
 
 jobs:
 
+  pre_job:
+    runs-on: ubuntu-latest
+    # Map a step output to a job output
+    outputs:
+      should_skip: ${{ steps.skip_check.outputs.should_skip }}
+    steps:
+      - id: skip_check
+        uses: fkirc/skip-duplicate-actions@master
+        with:
+          # All of these options are optional, so you can remove them if you are happy with the defaults
+          concurrent_skipping: 'never'
+          cancel_others: 'true'
+          paths_ignore: '["**/README.md"]'
+
   style:
+    needs: pre_job
+    if: ${{ needs.pre_job.outputs.should_skip != 'true' }}
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v2
@@ -80,6 +95,10 @@ jobs:
       if: matrix.os == 'ubuntu-latest' && matrix.python-version == 3.9
       run: tox -e coverage
 
+    - name: Upload coverage report
+      if: matrix.os == 'ubuntu-latest' && matrix.python-version == 3.9
+      uses: codecov/codecov-action@v2.1.0
+
     - name: Run integration tests for GNU/Linux
       if: matrix.os == 'ubuntu-latest'
       run: python -m tox -e integration
@@ -100,6 +119,3 @@ jobs:
       if: matrix.os == 'ubuntu-latest'
       run: tox -e examples
 
-    - name: Upload coverage report
-      if: matrix.os == 'ubuntu-latest' && matrix.python-version == 3.9
-      uses: codecov/codecov-action@v2.1.0

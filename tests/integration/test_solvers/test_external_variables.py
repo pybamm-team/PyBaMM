@@ -15,8 +15,6 @@ class TestExternalVariables(unittest.TestCase):
         geometry = model.default_geometry
         param = model.default_parameter_values
         param.update({"Negative electrode conductivity [S.m-1]": "[input]"})
-        param.process_model(model)
-        param.process_geometry(geometry)
         inputs = {"Negative electrode conductivity [S.m-1]": e_height}
         var_pts = {"x_n": 5, "x_s": 5, "x_p": 5, "r_n": 10, "r_p": 10}
         spatial_methods = model.default_spatial_methods

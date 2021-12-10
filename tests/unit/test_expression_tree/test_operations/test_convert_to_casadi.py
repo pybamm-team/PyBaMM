@@ -176,6 +176,66 @@ class TestCasadiConverter(unittest.TestCase):
         with self.assertRaisesRegex(NotImplementedError, "The interpolator"):
             interp_casadi = interp.to_casadi(y=casadi_y)
 
+        # error for not recognized interpolator
+        with self.assertRaisesRegex(ValueError, "interpolator"):
+            interp = pybamm.Interpolant(x, data, y, interpolator="idonotexist")
+            interp_casadi = interp.to_casadi(y=casadi_y)
+
+        # error for converted children count
+        y3 = (pybamm.StateVector(slice(0, 1)),
+              pybamm.StateVector(slice(0, 1)),
+              pybamm.StateVector(slice(0, 1)))
+        x3_ = [np.linspace(0, 1) for _ in range(3)]
+        x3 = np.column_stack(x3_)
+        data3 = 2 * x3  # np.tile(2 * x3, (10, 1)).T
+        with self.assertRaisesRegex(ValueError, "Invalid dimension of x"):
+            interp = pybamm.Interpolant(x3_, data3, y3, interpolator="linear")
+            interp_casadi = interp.to_casadi(y=casadi_y)
+
+    def test_interpolation_2d(self):
+        x_ = [np.linspace(0, 1), np.linspace(0, 1)]
+
+        X = list(np.meshgrid(*x_))
+
+        x = np.column_stack([el.reshape(-1, 1) for el in X])
+        y = (pybamm.StateVector(slice(0, 2)), pybamm.StateVector(slice(0, 2)))
+        casadi_y = casadi.MX.sym("y", 2)
+        # linear
+        y_test = np.array([0.4, 0.6])
+        Y = (2 * x).sum(axis=1).reshape(*[len(el) for el in x_])
+        for interpolator in ["linear"]:
+            interp = pybamm.Interpolant(x_,
+                                        Y,
+                                        y, interpolator=interpolator)
+            interp_casadi = interp.to_casadi(y=casadi_y)
+            f = casadi.Function("f", [casadi_y], [interp_casadi])
+            np.testing.assert_array_almost_equal(interp.evaluate(y=y_test), f(y_test))
+        # square
+        y = (pybamm.StateVector(slice(0, 1)), pybamm.StateVector(slice(0, 1)))
+        Y = (x ** 2).sum(axis=1).reshape(*[len(el) for el in x_])
+        interp = pybamm.Interpolant(x_,
+                                    Y,
+                                    y, interpolator="linear")
+        interp_casadi = interp.to_casadi(y=casadi_y)
+        f = casadi.Function("f", [casadi_y], [interp_casadi])
+        np.testing.assert_array_almost_equal(interp.evaluate(y=y_test), f(y_test))
+
+        # # len(x)=1 but y is 2d
+        # y = pybamm.StateVector(slice(0, 1), slice(0, 1))
+        # casadi_y = casadi.MX.sym("y", 1)
+        # data = np.tile((2 * x).sum(axis=1), (10, 1)).T
+        # y_test = np.array([0.4])
+        # for interpolator in ["linear"]:
+        #     interp = pybamm.Interpolant(x_, data, y, interpolator=interpolator)
+        #     interp_casadi = interp.to_casadi(y=casadi_y)
+        #     f = casadi.Function("f", [casadi_y], [interp_casadi])
+        #     np.testing.assert_array_almost_equal(interp.evaluate(y=y_test), f(y_test))
+
+        # error for pchip interpolator
+        with self.assertRaisesRegex(ValueError, "interpolator should be"):
+            interp = pybamm.Interpolant(x_, Y, y, interpolator="pchip")
+            interp_casadi = interp.to_casadi(y=casadi_y)
+
     def test_concatenations(self):
         y = np.linspace(0, 1, 10)[:, np.newaxis]
         a = pybamm.Vector(y)
