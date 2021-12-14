@@ -7,12 +7,9 @@ pybamm.set_logging_level("DEBUG")
 
 # load models
 models = [
-    pybamm.lithium_ion.SPM(
-        # {"working electrode": "positive", "intercalation kinetics": "linear"}
-        {"working electrode": "positive", "surface form": "algebraic"}
-    ),
-    # pybamm.lithium_ion.SPMe({"working electrode": "positive"}),
-    # pybamm.lithium_ion.DFN({"working electrode": "positive"}),
+    pybamm.lithium_ion.DFN({"working electrode": "positive"}),
+    pybamm.lithium_ion.SPMe({"working electrode": "positive"}),
+    pybamm.lithium_ion.DFN({"working electrode": "positive"}),
 ]
 
 # create and run simulations

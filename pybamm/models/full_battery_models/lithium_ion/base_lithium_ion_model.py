@@ -292,6 +292,7 @@ class BaseModel(pybamm.BaseBatteryModel):
         if (
             self.options["SEI"] in ["none", "constant"]
             and self.options["intercalation kinetics"] == "symmetric Butler-Volmer"
+            and self.options["surface form"] == "false"
         ):
             # only symmetric Butler-Volmer can be inverted
             self.submodels[

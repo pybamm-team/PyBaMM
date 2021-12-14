@@ -157,12 +157,13 @@ class SPM(BaseModel):
                 )
             )
 
-        if self.options["surface form"] == "false":
+        if self.options["surface form"] == "false" or self.half_cell:
             self.submodels[
                 "leading-order electrolyte conductivity"
             ] = pybamm.electrolyte_conductivity.LeadingOrder(
                 self.param, options=self.options
             )
+        if self.options["surface form"] == "false":
             surf_model = surf_form.Explicit
         elif self.options["surface form"] == "differential":
             surf_model = surf_form.LeadingOrderDifferential

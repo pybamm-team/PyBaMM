@@ -18,7 +18,7 @@ class BaseIntegrationTestLithiumIonHalfCell:
 
     def test_kinetics_asymmetric_butler_volmer(self):
         options = {"intercalation kinetics": "asymmetric Butler-Volmer"}
-        parameter_values = pybamm.ParameterValues("Marquis2019")
+        parameter_values = pybamm.ParameterValues("Xu2019")
         parameter_values.update(
             {
                 "Negative electrode Butler-Volmer transfer coefficient": 0.6,
@@ -34,7 +34,7 @@ class BaseIntegrationTestLithiumIonHalfCell:
 
     def test_kinetics_mhc(self):
         options = {"intercalation kinetics": "Marcus-Hush-Chidsey"}
-        parameter_values = pybamm.ParameterValues("Marquis2019")
+        parameter_values = pybamm.ParameterValues("Xu2019")
         parameter_values.update(
             {
                 "Negative electrode reorganization energy [eV]": 0.35,

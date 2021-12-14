@@ -139,25 +139,6 @@ class DFN(BaseModel):
         self.submodels["negative electrode potential"] = submod_n
         self.submodels["positive electrode potential"] = submod_p
 
-        # Set the counter-electrode model for the half-cell model
-        # The negative electrode model will be ignored
-        if self.half_cell:
-            if self.options["SEI"] in ["none", "constant"]:
-                self.submodels[
-                    "counter electrode surface potential difference"
-                ] = pybamm.electrolyte_conductivity.surface_potential_form.Explicit(
-                    self.param, "Negative", self.options
-                )
-                self.submodels[
-                    "counter electrode potential"
-                ] = pybamm.electrode.ohm.LithiumMetalExplicit(self.param, self.options)
-            else:
-                self.submodels[
-                    "counter electrode potential"
-                ] = pybamm.electrode.ohm.LithiumMetalSurfaceForm(
-                    self.param, self.options
-                )
-
     def set_electrolyte_submodel(self):
 
         surf_form = pybamm.electrolyte_conductivity.surface_potential_form
@@ -177,6 +158,7 @@ class DFN(BaseModel):
             self.submodels[
                 "electrolyte conductivity"
             ] = pybamm.electrolyte_conductivity.Full(self.param, self.options)
+        if self.options["surface form"] == "false":
             surf_model = surf_form.Explicit
         elif self.options["surface form"] == "differential":
             surf_model = surf_form.FullDifferential
