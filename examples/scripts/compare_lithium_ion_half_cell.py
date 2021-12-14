@@ -7,7 +7,7 @@ pybamm.set_logging_level("DEBUG")
 
 # load models
 models = [
-    pybamm.lithium_ion.DFN({"working electrode": "positive"}),
+    pybamm.lithium_ion.SPM({"working electrode": "positive"}),
     pybamm.lithium_ion.SPMe({"working electrode": "positive"}),
     pybamm.lithium_ion.DFN({"working electrode": "positive"}),
 ]
