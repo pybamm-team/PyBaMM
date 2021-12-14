@@ -15,6 +15,14 @@ class TestSPM(BaseUnitTestLithiumIon, unittest.TestCase):
         with self.assertRaisesRegex(pybamm.OptionError, "electrolyte conductivity"):
             pybamm.lithium_ion.SPM(options)
 
+    def test_kinetics_options(self):
+        options = {
+            "surface form": "false",
+            "intercalation kinetics": "Marcus-Hush-Chidsey",
+        }
+        with self.assertRaisesRegex(pybamm.OptionError, "Inverse kinetics"):
+            pybamm.lithium_ion.SPM(options)
+
     def test_new_model(self):
         model = pybamm.lithium_ion.SPM({"thermal": "x-full"})
         new_model = model.new_copy()

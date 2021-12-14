@@ -1,7 +1,6 @@
 #
 # Base kinetics class
 #
-
 import pybamm
 from ..base_interface import BaseInterface
 

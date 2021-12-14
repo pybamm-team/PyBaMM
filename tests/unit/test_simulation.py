@@ -226,6 +226,21 @@ class TestSimulation(unittest.TestCase):
         sim.solve(initial_soc=0.8)
         self.assertEqual(sim._built_initial_soc, 0.8)
 
+        # test with drive cycle
+        drive_cycle = pd.read_csv(
+            os.path.join("pybamm", "input", "drive_cycles", "US06.csv"),
+            comment="#",
+            header=None
+        ).to_numpy()
+        timescale = param.evaluate(model.timescale)
+        current_interpolant = pybamm.Interpolant(
+            drive_cycle[:, 0], drive_cycle[:, 1], timescale * pybamm.t
+        )
+        param["Current function [A]"] = current_interpolant
+        sim = pybamm.Simulation(model, parameter_values=param)
+        sim.solve(initial_soc=0.8)
+        self.assertEqual(sim._built_initial_soc, 0.8)
+
     def test_solve_with_inputs(self):
         model = pybamm.lithium_ion.SPM()
         param = model.default_parameter_values

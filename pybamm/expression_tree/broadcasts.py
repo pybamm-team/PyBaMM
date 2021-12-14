@@ -304,7 +304,7 @@ class SecondaryBroadcast(Broadcast):
 
     def reduce_one_dimension(self):
         """Reduce the broadcast by one dimension."""
-        raise NotImplementedError
+        return self.orphans[0]
 
 
 class SecondaryBroadcastToEdges(SecondaryBroadcast):

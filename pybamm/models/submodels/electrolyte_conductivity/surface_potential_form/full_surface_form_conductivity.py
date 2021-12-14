@@ -84,7 +84,7 @@ class BaseModel(BaseElectrolyteConductivity):
                 x_s,
             )
 
-            i_e = pybamm.PrimaryBroadcast(i_boundary_cc, "separator")
+            i_e = pybamm.PrimaryBroadcastToEdges(i_boundary_cc, "separator")
             variables[self.domain + " electrolyte current density"] = i_e
 
             # Update boundary conditions (for indefinite integral)
@@ -96,11 +96,15 @@ class BaseModel(BaseElectrolyteConductivity):
         variables[self.domain + " electrolyte potential"] = phi_e
 
         if self.domain == "Positive":
-            phi_e_n = variables["Negative electrolyte potential"]
             phi_e_s = variables["Separator electrolyte potential"]
             phi_e_p = variables["Positive electrolyte potential"]
 
-            i_e_n = variables["Negative electrolyte current density"]
+            if self.half_cell:
+                phi_e_n = None
+                i_e_n = None
+            else:
+                phi_e_n = variables["Negative electrolyte potential"]
+                i_e_n = variables["Negative electrolyte current density"]
             i_e_s = variables["Separator electrolyte current density"]
             i_e_p = variables["Positive electrolyte current density"]
             i_e = pybamm.concatenation(i_e_n, i_e_s, i_e_p)

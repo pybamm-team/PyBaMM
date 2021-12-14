@@ -329,6 +329,16 @@ class Symbol(anytree.NodeMixin):
         """Helper function to get the secondary domain of a symbol."""
         return self._domains["secondary"]
 
+    @property
+    def tertiary_domain(self):
+        """Helper function to get the tertiary domain of a symbol."""
+        return self.auxiliary_domains["tertiary"]
+
+    @property
+    def quaternary_domain(self):
+        """Helper function to get the quaternary domain of a symbol."""
+        return self.auxiliary_domains["quaternary"]
+
     def copy_domains(self, symbol):
         """Copy the domains from a given symbol, bypassing checks."""
         self._domains = pybamm.DomainDict(symbol.domains.copy())

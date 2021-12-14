@@ -217,10 +217,10 @@ class BaseModel(pybamm.BaseBatteryModel):
             )
 
     def set_other_reaction_submodels_to_zero(self):
-        self.submodels["negative oxygen interface"] = pybamm.interface.NoReaction(
+        self.submodels["negative oxygen interface"] = pybamm.kinetics.NoReaction(
             self.param, "Negative", "lithium-ion oxygen"
         )
-        self.submodels["positive oxygen interface"] = pybamm.interface.NoReaction(
+        self.submodels["positive oxygen interface"] = pybamm.kinetics.NoReaction(
             self.param, "Positive", "lithium-ion oxygen"
         )
 
@@ -289,27 +289,30 @@ class BaseModel(pybamm.BaseBatteryModel):
             )
 
     def set_li_metal_counter_electrode_submodels(self):
-        if self.options["SEI"] in ["none", "constant"]:
+        if (
+            self.options["SEI"] in ["none", "constant"]
+            and self.options["intercalation kinetics"] == "symmetric Butler-Volmer"
+            and self.options["surface form"] == "false"
+        ):
+            # only symmetric Butler-Volmer can be inverted
             self.submodels[
                 "counter electrode potential"
             ] = pybamm.electrode.ohm.LithiumMetalExplicit(self.param, self.options)
             self.submodels[
                 "counter electrode interface"
-            ] = pybamm.interface.InverseButlerVolmer(
+            ] = pybamm.kinetics.InverseButlerVolmer(
                 self.param, "Negative", "lithium metal plating", self.options
             )  # assuming symmetric reaction for now so we can take the inverse
             self.submodels[
                 "counter electrode interface current"
-            ] = pybamm.interface.CurrentForInverseButlerVolmerLithiumMetal(
+            ] = pybamm.kinetics.CurrentForInverseButlerVolmerLithiumMetal(
                 self.param, "Negative", "lithium metal plating", self.options
             )
         else:
             self.submodels[
                 "counter electrode potential"
             ] = pybamm.electrode.ohm.LithiumMetalSurfaceForm(self.param, self.options)
-            self.submodels[
-                "counter electrode interface"
-            ] = pybamm.interface.ButlerVolmer(
+            self.submodels["counter electrode interface"] = self.intercalation_kinetics(
                 self.param, "Negative", "lithium metal plating", self.options
             )
 

@@ -47,6 +47,10 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                 Whether to include hydrolysis in the model. Only implemented for
                 lead-acid models. Can be "false" (default) or "true". If "true", then
                 "surface form" cannot be 'false'.
+            * "intercalation kinetics" : str
+                Model for intercalation kinetics. Can be "symmetric Butler-Volmer"
+                (default), "asymmetric Butler-Volmer", "linear", "Marcus", or
+                "Marcus-Hush-Chidsey" (which uses the asymptotic form from Zeng 2014).
             * "interface utilisation": str
                 Can be "full" (default), "constant", or "current-driven".
             * "lithium plating" : str
@@ -160,6 +164,13 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                 "integrated",
             ],
             "hydrolysis": ["false", "true"],
+            "intercalation kinetics": [
+                "symmetric Butler-Volmer",
+                "asymmetric Butler-Volmer",
+                "linear",
+                "Marcus",
+                "Marcus-Hush-Chidsey",
+            ],
             "interface utilisation": ["full", "constant", "current-driven"],
             "lithium plating": ["none", "reversible", "irreversible"],
             "lithium plating porosity change": ["false", "true"],
@@ -775,6 +786,30 @@ class BaseBatteryModel(pybamm.BaseModel):
 
     def set_summary_variables(self):
         self._summary_variables = []
+
+    @property
+    def intercalation_kinetics(self):
+        if self.options["intercalation kinetics"] == "symmetric Butler-Volmer":
+            return pybamm.kinetics.SymmetricButlerVolmer
+        elif self.options["intercalation kinetics"] == "asymmetric Butler-Volmer":
+            return pybamm.kinetics.AsymmetricButlerVolmer
+        elif self.options["intercalation kinetics"] == "linear":
+            return pybamm.kinetics.Linear
+        elif self.options["intercalation kinetics"] == "Marcus":
+            return pybamm.kinetics.Marcus
+        elif self.options["intercalation kinetics"] == "Marcus-Hush-Chidsey":
+            return pybamm.kinetics.MarcusHushChidsey
+
+    @property
+    def inverse_intercalation_kinetics(self):
+        if self.options["intercalation kinetics"] == "symmetric Butler-Volmer":
+            return pybamm.kinetics.InverseButlerVolmer
+        else:
+            raise pybamm.OptionError(
+                "Inverse kinetics are only implemented for symmetric Butler-Volmer. "
+                "Use option {'surface form': 'algebraic'} to use forward kinetics "
+                "instead."
+            )
 
     def set_external_circuit_submodel(self):
         """

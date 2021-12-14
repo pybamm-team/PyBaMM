@@ -2,10 +2,9 @@
 # Classes and methods for averaging
 #
 import pybamm
-import sympy
 
 
-class _BaseAverage(pybamm.SpatialOperator):
+class _BaseAverage(pybamm.Integral):
     """
     Base class for a symbol representing an average
 
@@ -15,45 +14,13 @@ class _BaseAverage(pybamm.SpatialOperator):
         The child node
     """
 
-    def __init__(self, child, name):
-        # average of a child takes the domain from auxiliary domain of the child
-        if child.auxiliary_domains != {}:
-            domain = child.auxiliary_domains["secondary"]
-            if "tertiary" in child.auxiliary_domains:
-                auxiliary_domains = {"secondary": child.auxiliary_domains["tertiary"]}
-                if "quaternary" in child.auxiliary_domains:
-                    auxiliary_domains["tertiary"] = child.auxiliary_domains[
-                        "quaternary"
-                    ]
-            else:
-                auxiliary_domains = {}
-        # if child has no auxiliary domain, integral removes domain
-        else:
-            domain = []
-            auxiliary_domains = {}
-        super().__init__(
-            name, child, domain=domain, auxiliary_domains=auxiliary_domains
-        )
-
-    def _evaluate_for_shape(self):
-        """See :meth:`pybamm.Symbol.evaluate_for_shape_using_domain()`"""
-        return pybamm.evaluate_for_shape_using_domain(
-            self.domain, self.auxiliary_domains
-        )
-
-    def _evaluates_on_edges(self, dimension):
-        """See :meth:`pybamm.Symbol._evaluates_on_edges()`."""
-        return False
-
-    def _sympy_operator(self, child):
-        """Override :meth:`pybamm.UnaryOperator._sympy_operator`"""
-        # TODO: come up with a better way to represent an average
-        return sympy.Integral(child, sympy.Symbol("xn"))
+    def __init__(self, child, name, integration_variable):
+        super().__init__(child, integration_variable)
+        self.name = name
 
 
 class XAverage(_BaseAverage):
     def __init__(self, child):
-        super().__init__(child, "x-average")
         if child.domain in [
             ["negative particle"],
             ["negative particle size"],
@@ -66,7 +33,8 @@ class XAverage(_BaseAverage):
             x = pybamm.standard_spatial_vars.x_p
         else:
             x = pybamm.SpatialVariable("x", domain=child.domain)
-        self.integration_variable = [x]
+        integration_variable = x
+        super().__init__(child, "x-average", integration_variable)
 
     def _unary_new_copy(self, child):
         """See :meth:`UnaryOperator._unary_new_copy()`."""
@@ -75,10 +43,10 @@ class XAverage(_BaseAverage):
 
 class YZAverage(_BaseAverage):
     def __init__(self, child):
-        super().__init__(child, "yz-average")
         y = pybamm.standard_spatial_vars.y
         z = pybamm.standard_spatial_vars.z
-        self.integration_variable = [y, z]
+        integration_variable = [y, z]
+        super().__init__(child, "yz-average", integration_variable)
 
     def _unary_new_copy(self, child):
         """See :meth:`UnaryOperator._unary_new_copy()`."""
@@ -87,8 +55,8 @@ class YZAverage(_BaseAverage):
 
 class ZAverage(_BaseAverage):
     def __init__(self, child):
-        super().__init__(child, "z-average")
-        self.integration_variable = [pybamm.standard_spatial_vars.z]
+        integration_variable = [pybamm.standard_spatial_vars.z]
+        super().__init__(child, "z-average", integration_variable)
 
     def _unary_new_copy(self, child):
         """See :meth:`UnaryOperator._unary_new_copy()`."""
@@ -97,8 +65,8 @@ class ZAverage(_BaseAverage):
 
 class RAverage(_BaseAverage):
     def __init__(self, child):
-        super().__init__(child, "r-average")
-        self.integration_variable = [pybamm.SpatialVariable("r", child.domain)]
+        integration_variable = [pybamm.SpatialVariable("r", child.domain)]
+        super().__init__(child, "r-average", integration_variable)
 
     def _unary_new_copy(self, child):
         """See :meth:`UnaryOperator._unary_new_copy()`."""
@@ -107,14 +75,14 @@ class RAverage(_BaseAverage):
 
 class SizeAverage(_BaseAverage):
     def __init__(self, child, f_a_dist):
-        super().__init__(child, "size-average")
         R = pybamm.SpatialVariable(
             "R",
             domain=child.domain,
             auxiliary_domains=child.auxiliary_domains,
             coord_sys="cartesian",
         )
-        self.integration_variable = [R]
+        integration_variable = [R]
+        super().__init__(child, "size-average", integration_variable)
         self.f_a_dist = f_a_dist
 
     def _unary_new_copy(self, child):
@@ -124,7 +92,7 @@ class SizeAverage(_BaseAverage):
 
 def x_average(symbol):
     """
-    convenience function for creating an average in the x-direction.
+    Convenience function for creating an average in the x-direction.
 
     Parameters
     ----------
@@ -139,15 +107,56 @@ def x_average(symbol):
     # Can't take average if the symbol evaluates on edges
     if symbol.evaluates_on_edges("primary"):
         raise ValueError("Can't take the x-average of a symbol that evaluates on edges")
-    # If symbol doesn't have a domain, its average value is itself
-    if symbol.domain in [[], ["current collector"]]:
+    # If symbol doesn't have an electrode domain, its x-averaged value is itself
+    if not any(
+        any(
+            dom in ["negative electrode", "separator", "positive electrode"]
+            for dom in domain
+        )
+        for domain in symbol.domains.values()
+    ):
         new_symbol = symbol.new_copy()
         new_symbol.parent = None
         return new_symbol
-    # If symbol is a primary or full broadcast, reduce by one dimension
-    if isinstance(symbol, (pybamm.PrimaryBroadcast, pybamm.FullBroadcast)):
-        return symbol.reduce_one_dimension()
-    # If symbol is a concatenation of Broadcasts, its average value is its child
+    # If symbol is a broadcast, reduce by one dimension
+    if isinstance(
+        symbol,
+        (pybamm.PrimaryBroadcast, pybamm.SecondaryBroadcast, pybamm.FullBroadcast),
+    ):
+        if all(
+            dom in ["negative electrode", "separator", "positive electrode"]
+            for dom in symbol.broadcast_domain
+        ):
+            return symbol.reduce_one_dimension()
+        elif isinstance(symbol, pybamm.PrimaryBroadcast):
+            return pybamm.PrimaryBroadcast(
+                x_average(symbol.orphans[0]), symbol.broadcast_domain
+            )
+        elif isinstance(symbol, pybamm.FullBroadcast) and all(
+            dom in ["negative electrode", "separator", "positive electrode"]
+            for dom in symbol.secondary_domain
+        ):
+            aux = {}
+            if "tertiary" in symbol.auxiliary_domains:
+                aux["secondary"] = symbol.auxiliary_domains["tertiary"]
+            return pybamm.FullBroadcast(symbol.orphans[0], symbol.broadcast_domain, aux)
+        elif (
+            isinstance(symbol, pybamm.FullBroadcast)
+            and "tertiary" in symbol.auxiliary_domains
+            and all(
+                dom in ["negative electrode", "separator", "positive electrode"]
+                for dom in symbol.tertiary_domain
+            )
+        ):
+            aux = {"secondary": symbol.auxiliary_domains["secondary"]}
+            if "quaternary" in symbol.auxiliary_domains:
+                aux["tertiary"] = symbol.auxiliary_domains["quaternary"]
+            return pybamm.FullBroadcast(symbol.orphans[0], symbol.broadcast_domain, aux)
+        else:  # pragma: no cover
+            # It should be impossible to get here
+            raise NotImplementedError
+    # If symbol is a concatenation of Broadcasts, its average value is the
+    # thickness-weighted average of the symbols being broadcasted
     elif isinstance(symbol, pybamm.Concatenation) and all(
         isinstance(child, pybamm.Broadcast) for child in symbol.children
     ):
@@ -183,7 +192,7 @@ def x_average(symbol):
 
 def z_average(symbol):
     """
-    convenience function for creating an average in the z-direction.
+    Convenience function for creating an average in the z-direction.
 
     Parameters
     ----------
@@ -221,7 +230,7 @@ def z_average(symbol):
 
 def yz_average(symbol):
     """
-    convenience function for creating an average in the y-z-direction.
+    Convenience function for creating an average in the y-z-direction.
 
     Parameters
     ----------
@@ -260,7 +269,7 @@ def xyz_average(symbol):
 
 def r_average(symbol):
     """
-    convenience function for creating an average in the r-direction.
+    Convenience function for creating an average in the r-direction.
 
     Parameters
     ----------
@@ -305,7 +314,7 @@ def r_average(symbol):
 
 
 def size_average(symbol, f_a_dist=None):
-    """convenience function for averaging over particle size R using the area-weighted
+    """Convenience function for averaging over particle size R using the area-weighted
     particle-size distribution.
 
     Parameters

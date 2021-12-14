@@ -192,6 +192,19 @@ class TestCitations(unittest.TestCase):
         pybamm.external_circuit.CCCVFunctionControl(None)
         self.assertIn("Mohtat2021", citations._papers_to_cite)
 
+    def test_sripad_2020(self):
+        citations = pybamm.citations
+
+        citations._reset()
+        self.assertNotIn("Sripad2020", citations._papers_to_cite)
+        pybamm.kinetics.Marcus(None, None, None, None)
+        self.assertIn("Sripad2020", citations._papers_to_cite)
+
+        citations._reset()
+        self.assertNotIn("Sripad2020", citations._papers_to_cite)
+        pybamm.kinetics.MarcusHushChidsey(None, None, None, None)
+        self.assertIn("Sripad2020", citations._papers_to_cite)
+
     def test_parameter_citations(self):
         citations = pybamm.citations
 
