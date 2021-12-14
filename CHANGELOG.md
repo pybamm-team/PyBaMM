@@ -2,6 +2,7 @@
 
 ## Features
 
+-   Added new kinetics models for asymmetric Butler-Volmer, linear kinetics, and Marcus-Hush-Chidsey ([#1858](https://github.com/pybamm-team/PyBaMM/pull/1858))
 -   Experiments can be set to terminate when a voltage is reached (across all steps) ([#1832](https://github.com/pybamm-team/PyBaMM/pull/1832))
 -   Added cylindrical geometry and finite volume method ([#1824](https://github.com/pybamm-team/PyBaMM/pull/1824))
 
