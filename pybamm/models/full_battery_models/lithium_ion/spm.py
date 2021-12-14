@@ -30,6 +30,12 @@ class SPM(BaseModel):
     """
 
     def __init__(self, options=None, name="Single Particle Model", build=True):
+        # Use 'algebraic' surface form if non-default kinetics are used
+        options = options or {}
+        kinetics = options.get("intercalation kinetics")
+        surface_form = options.get("surface form")
+        if kinetics is not None and surface_form is None:
+            options["surface form"] = "algebraic"
         super().__init__(options, name)
         # For degradation models we use the "x-average" form since this is a
         # reduced-order model with uniform current density in the electrodes
@@ -42,7 +48,7 @@ class SPM(BaseModel):
         self.set_active_material_submodel()
         self.set_tortuosity_submodels()
         self.set_convection_submodel()
-        self.set_interfacial_submodel()
+        self.set_intercalation_kinetics_submodel()
         self.set_other_reaction_submodels_to_zero()
         self.set_particle_submodel()
         self.set_solid_submodel()
@@ -72,31 +78,31 @@ class SPM(BaseModel):
             "transverse convection"
         ] = pybamm.convection.transverse.NoConvection(self.param, self.options)
 
-    def set_interfacial_submodel(self):
+    def set_intercalation_kinetics_submodel(self):
 
         if self.options["surface form"] == "false":
-            self.submodels["negative interface"] = pybamm.interface.InverseButlerVolmer(
+            self.submodels["negative interface"] = self.inverse_intercalation_kinetics(
                 self.param, "Negative", "lithium-ion main", self.options
             )
-            self.submodels["positive interface"] = pybamm.interface.InverseButlerVolmer(
+            self.submodels["positive interface"] = self.inverse_intercalation_kinetics(
                 self.param, "Positive", "lithium-ion main", self.options
             )
             self.submodels[
                 "negative interface current"
-            ] = pybamm.interface.CurrentForInverseButlerVolmer(
+            ] = pybamm.kinetics.CurrentForInverseButlerVolmer(
                 self.param, "Negative", "lithium-ion main", self.options
             )
             self.submodels[
                 "positive interface current"
-            ] = pybamm.interface.CurrentForInverseButlerVolmer(
+            ] = pybamm.kinetics.CurrentForInverseButlerVolmer(
                 self.param, "Positive", "lithium-ion main", self.options
             )
         else:
-            self.submodels["negative interface"] = pybamm.interface.ButlerVolmer(
+            self.submodels["negative interface"] = self.intercalation_kinetics(
                 self.param, "Negative", "lithium-ion main", self.options
             )
 
-            self.submodels["positive interface"] = pybamm.interface.ButlerVolmer(
+            self.submodels["positive interface"] = self.intercalation_kinetics(
                 self.param, "Positive", "lithium-ion main", self.options
             )
 
@@ -151,12 +157,13 @@ class SPM(BaseModel):
                 )
             )
 
-        if self.options["surface form"] == "false":
+        if self.options["surface form"] == "false" or self.half_cell:
             self.submodels[
                 "leading-order electrolyte conductivity"
             ] = pybamm.electrolyte_conductivity.LeadingOrder(
                 self.param, options=self.options
             )
+        if self.options["surface form"] == "false":
             surf_model = surf_form.Explicit
         elif self.options["surface form"] == "differential":
             surf_model = surf_form.LeadingOrderDifferential

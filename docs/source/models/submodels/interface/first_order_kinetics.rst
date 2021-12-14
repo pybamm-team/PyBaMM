@@ -1,8 +1,8 @@
 First-order Kinetics
 ====================
 
-.. autoclass:: pybamm.interface.FirstOrderKinetics
+.. autoclass:: pybamm.kinetics.FirstOrderKinetics
     :members:
 
-.. autoclass:: pybamm.interface.InverseFirstOrderKinetics
+.. autoclass:: pybamm.kinetics.InverseFirstOrderKinetics
     :members:
