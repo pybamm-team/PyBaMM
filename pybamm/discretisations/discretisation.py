@@ -816,16 +816,34 @@ class Discretisation(object):
                 dia_matrix = lhs.entries.todia()
                 n_diagonals = dia_matrix.offsets.shape[0]
 
-                def create_term(index, offset, data):
-                    return pybamm.Vector(data[:]) * rhs.new_copy()
-
-                if n_diagonals <= 3:
-                    matrix_free_form = create_term(0, dia_matrix.offsets[0],
-                                                   dia_matrix.data[0,:])
-                    for k in range(1, dia_matrix.offsets.shape[0]):
-                        matrix_free_form += create_term(k, dia_matrix.offsets[k],
-                                                   dia_matrix.data[k,:])
-                    return matrix_free_form
+                if (dia_matrix.offsets == [-1, 0, 1]).all():
+                    return pybamm.numpy_concatenation(
+                        dia_matrix.data[1, 0] *
+                        pybamm.StateVector(slice(0, 1))
+                        +
+                        dia_matrix.data[2, 1] *
+                        pybamm.StateVector(slice(1, 2))
+                        ,
+                        pybamm.Vector(dia_matrix.data[0, :-2]) *
+                        pybamm.StateVector(slice(rhs.y_slices[0].start,
+                                                 rhs.y_slices[0].stop - 2))
+                        +
+                        pybamm.Vector(dia_matrix.data[1, 1:-1]) *
+                        pybamm.StateVector(slice(rhs.y_slices[0].start + 1,
+                                                 rhs.y_slices[0].stop - 1))
+                        +
+                        pybamm.Vector(dia_matrix.data[2, 2:]) *
+                        pybamm.StateVector(slice(rhs.y_slices[0].start + 2,
+                                                 rhs.y_slices[0].stop))
+                        ,
+                        dia_matrix.data[0, -2] *
+                        pybamm.StateVector(slice(rhs.y_slices[0].stop - 2,
+                                                 rhs.y_slices[0].stop - 1))
+                        +
+                        dia_matrix.data[1, -1] *
+                        pybamm.StateVector(slice(rhs.y_slices[0].stop - 1,
+                                                 rhs.y_slices[0].stop))
+                    )
 
         return symbol.new_copy()
 
@@ -868,7 +886,6 @@ class Discretisation(object):
     def _process_symbol(self, symbol):
         """See :meth:`Discretisation.process_symbol()`."""
 
-        print('processing stuff', symbol)
         if symbol.domain != []:
             spatial_method = self.spatial_methods[symbol.domain[0]]
             # If boundary conditions are provided, need to check for BCs on tabs

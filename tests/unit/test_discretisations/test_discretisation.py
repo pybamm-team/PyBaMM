@@ -2,6 +2,8 @@
 # Tests for the base model class
 #
 import pybamm
+import timeit
+import casadi
 
 import numpy as np
 import unittest
@@ -1362,15 +1364,13 @@ class TestDiscretise(unittest.TestCase):
 
         disc = pybamm.Discretisation(mesh, spatial_methods, matrix_free_simplify=True)
         model_simplify_laplace = disc.process_model(model, inplace=False)
-        print(model_no_simplify.rhs[a])
-        print(model_simplify_laplace.rhs[a])
-        print(model_no_simplify.rhs[a].children[0].entries.diagonal(-1))
-        print(model_simplify_laplace.rhs[a].children[0].children[0].children[0].entries)
 
         self.assertIsInstance(model_no_simplify.rhs[a].children[0], pybamm.Matrix)
-        self.assertIsInstance(model_simplify_laplace.rhs[a].children[0], pybamm.Addition)
+        self.assertIsInstance(model_simplify_laplace.rhs[a], pybamm.NumpyConcatenation)
         a0 = model_no_simplify.initial_conditions[a].evaluate()
-        np.testing.assert_array_equal(
+        a0 = np.linspace(0, 100, len(a0))**2
+
+        np.testing.assert_allclose(
             model_no_simplify.rhs[a].evaluate(y=a0),
             model_simplify_laplace.rhs[a].evaluate(y=a0),
         )
@@ -1389,10 +1389,33 @@ class TestDiscretise(unittest.TestCase):
         self.assertIsInstance(model_simplify_div_grad.rhs[a].children[0],
                               pybamm.Addition)
 
-        np.testing.assert_array_equal(
+        np.testing.assert_allclose(
             model_no_simplify.rhs[a].evaluate(y=a0),
             model_simplify_div_grad.rhs[a].evaluate(y=a0),
         )
+
+        # check if its faster in casadi
+        casadi_y = casadi.MX.sym("y", len(a0))
+        model_no_simplify_casadi = casadi.Function(
+            "f", [casadi_y], [model_no_simplify.rhs[a].to_casadi(y=casadi_y)]
+        )
+        model_simplify_laplace_casadi = casadi.Function(
+            "f", [casadi_y], [model_simplify_laplace.rhs[a].to_casadi(y=casadi_y)]
+        )
+        model_simplify_div_grad_casadi = casadi.Function(
+            "f", [casadi_y], [model_simplify_div_grad.rhs[a].to_casadi(y=casadi_y)]
+        )
+
+        t_no_simplify = timeit.timeit(
+            lambda: model_no_simplify_casadi(a0), number=10000
+        )
+        t_simplify_div_grad = timeit.timeit(
+            lambda: model_simplify_div_grad_casadi(a0), number=10000
+        )
+        t_simplify_laplace = timeit.timeit(
+            lambda: model_simplify_laplace_casadi(a0), number=10000
+        )
+        print(t_no_simplify, t_simplify_div_grad, t_simplify_laplace)
 
 
     def test_check_model_errors(self):
