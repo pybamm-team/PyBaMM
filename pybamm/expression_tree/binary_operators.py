@@ -1064,6 +1064,10 @@ def simplified_multiplication(left, right):
     if pybamm.is_scalar_minus_one(right):
         return -left
 
+    # Return constant if both sides are constant
+    if left.is_constant() and right.is_constant():
+        return pybamm.simplify_if_constant(pybamm.Multiplication(left, right))
+
     # anything multiplied by a matrix one returns itself if
     # - the shapes are the same
     # - both left and right evaluate on edges, or both evaluate on nodes, in all
@@ -1087,10 +1091,6 @@ def simplified_multiplication(left, right):
     except NotImplementedError:
         pass
 
-    # Return constant if both sides are constant
-    if left.is_constant() and right.is_constant():
-        return pybamm.simplify_if_constant(pybamm.Multiplication(left, right))
-
     # Simplify (B @ c) * a to (a * B) @ c if (a * B) is constant
     # This is a common construction that appears from discretisation of spatial
     # operators
@@ -1102,10 +1102,6 @@ def simplified_multiplication(left, right):
     ):
         l_left, l_right = left.orphans
         new_left = right * l_left
-        # Special hack for the case where l_left is a matrix one
-        # because of weird domain errors otherwise
-        if new_left == right and isinstance(right, pybamm.Array):
-            new_left = right.new_copy()
         # be careful about domains to avoid weird errors
         new_left.clear_domains()
         new_mul = new_left @ l_right
@@ -1137,10 +1133,6 @@ def simplified_multiplication(left, right):
     ):
         r_left, r_right = right.orphans
         new_left = left * r_left
-        # Special hack for the case where r_left is a matrix one
-        # because of weird domain errors otherwise
-        if new_left == left and isinstance(left, pybamm.Array):
-            new_left = left.new_copy()
         # be careful about domains to avoid weird errors
         new_left.clear_domains()
         new_mul = new_left @ r_right

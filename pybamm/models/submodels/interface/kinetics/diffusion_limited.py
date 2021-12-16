@@ -3,7 +3,7 @@
 #
 
 import pybamm
-from .base_interface import BaseInterface
+from ..base_interface import BaseInterface
 
 
 class DiffusionLimited(BaseInterface):

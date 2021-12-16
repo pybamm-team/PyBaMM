@@ -16,27 +16,56 @@ class BaseIntegrationTestLithiumIonHalfCell:
         options = {}
         self.run_basic_processing_test(options)
 
-    def test_constant_sei(self):
+    def test_kinetics_asymmetric_butler_volmer(self):
+        options = {"intercalation kinetics": "asymmetric Butler-Volmer"}
+        parameter_values = pybamm.ParameterValues("Xu2019")
+        parameter_values.update(
+            {
+                "Negative electrode Butler-Volmer transfer coefficient": 0.6,
+                "Positive electrode Butler-Volmer transfer coefficient": 0.6,
+            },
+            check_already_exists=False,
+        )
+        self.run_basic_processing_test(options, parameter_values=parameter_values)
+
+    def test_kinetics_linear(self):
+        options = {"intercalation kinetics": "linear"}
+        self.run_basic_processing_test(options)
+
+    def test_kinetics_mhc(self):
+        options = {"intercalation kinetics": "Marcus-Hush-Chidsey"}
+        parameter_values = pybamm.ParameterValues("Xu2019")
+        parameter_values.update(
+            {
+                "Negative electrode reorganization energy [eV]": 0.35,
+                "Positive electrode reorganization energy [eV]": 0.35,
+                "Positive electrode exchange-current density [A.m-2]": 5,
+            },
+            check_already_exists=False,
+        )
+        self.run_basic_processing_test(options, parameter_values=parameter_values)
+
+    def test_sei_constant(self):
         options = {"SEI": "constant"}
         self.run_basic_processing_test(options)
 
-    def test_reaction_limited_sei(self):
+    def test_sei_reaction_limited(self):
         options = {"SEI": "reaction limited"}
         self.run_basic_processing_test(options)
 
-    def test_solvent_diffusion_limited_sei(self):
+    def test_sei_solvent_diffusion_limited(self):
         options = {"SEI": "solvent-diffusion limited"}
         self.run_basic_processing_test(options)
 
-    def test_electron_migration_limited_sei(self):
+    def test_sei_electron_migration_limited(self):
         options = {"SEI": "electron-migration limited"}
         self.run_basic_processing_test(options)
 
-    def test_interstitial_diffusion_limited_sei(self):
+    def test_sei_interstitial_diffusion_limited(self):
         options = {"SEI": "interstitial-diffusion limited"}
         self.run_basic_processing_test(options)
 
-    def test_ec_reaction_limited_sei(self):
+    def test_sei_ec_reaction_limited(self):
         options = {"SEI": "ec reaction limited"}
         self.run_basic_processing_test(options)
 

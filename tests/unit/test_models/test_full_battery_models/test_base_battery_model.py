@@ -20,6 +20,7 @@ PRINT_OPTIONS_OUTPUT = """\
 'dimensionality': 0 (possible: [0, 1, 2])
 'electrolyte conductivity': 'default' (possible: ['default', 'full', 'leading order', 'composite', 'integrated'])
 'hydrolysis': 'false' (possible: ['false', 'true'])
+'intercalation kinetics': 'symmetric Butler-Volmer' (possible: ['symmetric Butler-Volmer', 'asymmetric Butler-Volmer', 'linear', 'Marcus', 'Marcus-Hush-Chidsey'])
 'interface utilisation': 'full' (possible: ['full', 'constant', 'current-driven'])
 'lithium plating': 'none' (possible: ['none', 'reversible', 'irreversible'])
 'lithium plating porosity change': 'false' (possible: ['false', 'true'])
@@ -32,7 +33,7 @@ PRINT_OPTIONS_OUTPUT = """\
 'SEI': 'none' (possible: ['none', 'constant', 'reaction limited', 'solvent-diffusion limited', 'electron-migration limited', 'interstitial-diffusion limited', 'ec reaction limited'])
 'SEI film resistance': 'none' (possible: ['none', 'distributed', 'average'])
 'SEI porosity change': 'false' (possible: ['false', 'true'])
-'stress-induced diffusion': 'false' (possible: ['false', 'true'])
+'stress-induced diffusion': 'true' (possible: ['false', 'true'])
 'surface form': 'differential' (possible: ['false', 'differential', 'algebraic'])
 'thermal': 'x-full' (possible: ['isothermal', 'lumped', 'x-lumped', 'x-full'])
 'total interfacial current density as a state': 'false' (possible: ['false', 'true'])
@@ -249,6 +250,10 @@ class TestBaseBatteryModel(unittest.TestCase):
                     )
                 }
             )
+        # check default options change
+        model = pybamm.BaseBatteryModel({"loss of active material": "stress-driven"})
+        self.assertEqual(model.options["particle mechanics"], "swelling only")
+        self.assertEqual(model.options["stress-induced diffusion"], "true")
 
         # crack model
         with self.assertRaisesRegex(pybamm.OptionError, "particle mechanics"):
