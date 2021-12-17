@@ -248,9 +248,15 @@ class BatteryModelOptions(pybamm.FuzzyDict):
         # provided
 
         # Change the default for stress-induced diffusion based on which particle
-        # mechanics option is provided
+        # mechanics option is provided. If the user doesn't supply a particle mechanics
+        # option set the default stress-induced diffusion option based on the default
+        # particle mechanics option which may change depending on other options
+        # (e.g. for stress-driven LAM the default mechanics option is "swelling only")
         mechanics_option = extra_options.get("particle mechanics", "none")
-        if mechanics_option == "none":
+        if (
+            mechanics_option == "none"
+            and default_options["particle mechanics"] == "none"
+        ):
             default_options["stress-induced diffusion"] = "false"
         else:
             default_options["stress-induced diffusion"] = "true"
