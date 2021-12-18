@@ -207,7 +207,8 @@ class BaseIntegrationTestLithiumIon:
 
     def test_loss_active_material_stress_and_reaction(self):
         options = {"loss of active material": "stress and reaction-driven"}
-        self.run_basic_processing_test(options)
+        parameter_values = pybamm.ParameterValues("Ai2020")
+        self.run_basic_processing_test(options, parameter_values=parameter_values)
 
     def test_negative_cracking(self):
         options = {"particle mechanics": ("swelling and cracking", "none")}
