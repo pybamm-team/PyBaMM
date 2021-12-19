@@ -303,7 +303,7 @@ class LithiumIonParameters(BaseParameters):
         )
 
         # Total lithium
-        c_e_av_init = pybamm.x_average(self.epsilon_init) * self.c_e_typ
+        c_e_av_init = pybamm.xyz_average(self.epsilon_init) * self.c_e_typ
         self.n_Li_e_init = c_e_av_init * self.L_x * self.A_cc
 
         if self.options["working electrode"] == "both":

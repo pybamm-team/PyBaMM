@@ -222,7 +222,7 @@ def z_average(symbol):
         return new_symbol
     # If symbol is a Broadcast, its average value is its child
     elif isinstance(symbol, pybamm.Broadcast):
-        return symbol.orphans[0]
+        return symbol.reduce_one_dimension()
     # Otherwise, define a ZAverage
     else:
         return ZAverage(symbol)
@@ -257,7 +257,7 @@ def yz_average(symbol):
         return new_symbol
     # If symbol is a Broadcast, its average value is its child
     elif isinstance(symbol, pybamm.Broadcast):
-        return symbol.orphans[0]
+        return symbol.reduce_one_dimension()
     # Otherwise, define a YZAverage
     else:
         return YZAverage(symbol)
@@ -286,11 +286,7 @@ def r_average(symbol):
         raise ValueError("Can't take the r-average of a symbol that evaluates on edges")
     # Otherwise, if symbol doesn't have a particle domain,
     # its r-averaged value is itself
-    elif symbol.domain not in [
-        ["positive particle"],
-        ["negative particle"],
-        ["working particle"],
-    ]:
+    elif symbol.domain not in [["positive particle"], ["negative particle"]]:
         new_symbol = symbol.new_copy()
         new_symbol.parent = None
         return new_symbol
@@ -303,12 +299,10 @@ def r_average(symbol):
         child_av = pybamm.r_average(child)
         return pybamm.PrimaryBroadcast(child_av, symbol.domains["secondary"])
     # If symbol is a Broadcast onto a particle domain, its average value is its child
-    elif isinstance(symbol, pybamm.PrimaryBroadcast) and symbol.domain in [
-        ["positive particle"],
-        ["negative particle"],
-        ["working particle"],
-    ]:
-        return symbol.orphans[0]
+    elif isinstance(
+        symbol, (pybamm.PrimaryBroadcast, pybamm.FullBroadcast)
+    ) and symbol.domain in [["positive particle"], ["negative particle"]]:
+        return symbol.reduce_one_dimension()
     else:
         return RAverage(symbol)
 

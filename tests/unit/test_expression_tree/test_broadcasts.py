@@ -102,7 +102,7 @@ class TestBroadcasts(unittest.TestCase):
         with self.assertRaisesRegex(
             pybamm.DomainError, "Secondary broadcast from particle"
         ):
-            pybamm.SecondaryBroadcast(a, "current collector")
+            pybamm.SecondaryBroadcast(a, "negative particle")
         a = pybamm.Symbol("a", domain="negative particle size")
         with self.assertRaisesRegex(
             pybamm.DomainError, "Secondary broadcast from particle size"

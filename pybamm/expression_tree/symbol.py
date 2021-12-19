@@ -30,10 +30,8 @@ def domain_size(domain):
         "negative electrode": 11,
         "separator": 13,
         "positive electrode": 17,
-        "working electrode": 19,
-        "working particle": 23,
-        "negative particle size": 29,
-        "positive particle size": 31,
+        "negative particle size": 19,
+        "positive particle size": 23,
     }
     if domain in [[], None]:
         size = 1

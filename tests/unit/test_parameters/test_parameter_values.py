@@ -400,17 +400,11 @@ class TestParameterValues(unittest.TestCase):
             parameter_values.process_symbol(func)
 
         # function itself as input (different to the variable being an input)
-        parameter_values = pybamm.ParameterValues(
-            {"func": "[input]", "vector func": pybamm.InputParameter("vec", "test")}
-        )
+        parameter_values = pybamm.ParameterValues({"func": "[input]"})
         a = pybamm.Scalar(3)
         func = pybamm.FunctionParameter("func", {"a": a})
         processed_func = parameter_values.process_symbol(func)
         self.assertEqual(processed_func.evaluate(inputs={"func": 13}), 13)
-
-        func = pybamm.FunctionParameter("vector func", {"a": a})
-        processed_func = parameter_values.process_symbol(func)
-        self.assertEqual(processed_func.evaluate(inputs={"vec": 13}), 13)
 
         # make sure function keeps the domain of the original function
 
@@ -812,6 +806,9 @@ class TestParameterValues(unittest.TestCase):
             {
                 "Negative particle radius [m]": 2,
                 "Negative area-weighted particle-size distribution [m-1]": dist,
+                "Negative electrode thickness [m]": 3,
+                "Separator thickness [m]": 4,
+                "Positive electrode thickness [m]": 5,
             }
         )
         var_av_proc = param.process_symbol(var_av)

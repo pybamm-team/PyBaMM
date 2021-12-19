@@ -38,7 +38,7 @@ class TestDimensionlessParameterValues(unittest.TestCase):
         )
         # R_n dimensional
         np.testing.assert_almost_equal(
-            values.evaluate(param.R_n_dimensional(0)), 1 * 10 ** (-5), 2
+            values.evaluate(param.R_n_typ), 1 * 10 ** (-5), 2
         )
 
         # a_R_n = a_n_typ * R_n_typ
@@ -51,7 +51,7 @@ class TestDimensionlessParameterValues(unittest.TestCase):
 
         # R_p dimensional
         np.testing.assert_almost_equal(
-            values.evaluate(param.R_n_dimensional(0)), 1 * 10 ** (-5), 2
+            values.evaluate(param.R_p_typ), 1 * 10 ** (-5), 2
         )
 
         # a_p = a_p_typ * R_p_typ
@@ -88,8 +88,8 @@ class TestDimensionlessParameterValues(unittest.TestCase):
         # neg diffusion coefficient
         np.testing.assert_almost_equal(
             values.evaluate(
-                param.D_n_dimensional(
-                    pybamm.x_average(pybamm.r_average(param.c_n_init)), param.T_ref
+                pybamm.xyz_average(
+                    pybamm.r_average(param.D_n_dimensional(param.c_n_init, param.T_ref))
                 )
             ),
             3.9 * 10 ** (-14),
@@ -107,8 +107,8 @@ class TestDimensionlessParameterValues(unittest.TestCase):
         # pos diffusion coefficient
         np.testing.assert_almost_equal(
             values.evaluate(
-                param.D_p_dimensional(
-                    pybamm.x_average(pybamm.r_average(param.c_p_init)), param.T_ref
+                pybamm.xyz_average(
+                    pybamm.r_average(param.D_p_dimensional(param.c_p_init, param.T_ref))
                 )
             ),
             1 * 10 ** (-13),

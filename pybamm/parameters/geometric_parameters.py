@@ -135,17 +135,8 @@ class GeometricParameters(BaseParameters):
         # Microscale geometry
         # Note: these scales are necessary here to non-dimensionalise the
         # particle size distributions.
-        # Can't use x_average here due to circular import
-        x_n = pybamm.SpatialVariable("x", domain="negative electrode")
-        x_p = pybamm.SpatialVariable("x", domain="positive electrode")
-        self.R_n_typ = pybamm.yz_average(
-            pybamm.Integral(self.R_n_dimensional, x_n)
-            / pybamm.Integral(pybamm.ones_like(self.R_n_dimensional), x_n)
-        )
-        self.R_p_typ = pybamm.yz_average(
-            pybamm.Integral(self.R_p_dimensional, x_p)
-            / pybamm.Integral(pybamm.ones_like(self.R_p_dimensional), x_p)
-        )
+        self.R_n_typ = pybamm.xyz_average(self.R_n_dimensional)
+        self.R_p_typ = pybamm.xyz_average(self.R_p_dimensional)
 
     def _set_dimensionless_parameters(self):
         """Defines the dimensionless parameters."""
