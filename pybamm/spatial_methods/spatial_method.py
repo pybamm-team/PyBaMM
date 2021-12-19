@@ -44,25 +44,11 @@ class SpatialMethod:
         """
         Helper method to read the 'auxiliary_domain' meshes
         """
-        if "secondary" in auxiliary_domains:
-            sec_mesh_npts = self.mesh.combine_submeshes(
-                *auxiliary_domains["secondary"]
-            ).npts
-        else:
-            sec_mesh_npts = 1
-        if "tertiary" in auxiliary_domains:
-            tert_mesh_npts = self.mesh.combine_submeshes(
-                *auxiliary_domains["tertiary"]
-            ).npts
-        else:
-            tert_mesh_npts = 1
-        if "quaternary" in auxiliary_domains:
-            quat_mesh_npts = self.mesh.combine_submeshes(
-                *auxiliary_domains["quaternary"]
-            ).npts
-        else:
-            quat_mesh_npts = 1
-        return sec_mesh_npts * tert_mesh_npts * quat_mesh_npts
+        mesh_pts = 1
+        for level, dom in auxiliary_domains.items():
+            if level != "primary":
+                mesh_pts *= self.mesh.combine_submeshes(*dom).npts
+        return mesh_pts
 
     @property
     def mesh(self):

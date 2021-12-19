@@ -153,12 +153,9 @@ class PrimaryBroadcast(Broadcast):
 
         domain = broadcast_domain
         auxiliary_domains = {}
-        if child.domain != []:
-            auxiliary_domains["secondary"] = child.domain
-        if "secondary" in child.auxiliary_domains:
-            auxiliary_domains["tertiary"] = child.auxiliary_domains["secondary"]
-            if "tertiary" in child.auxiliary_domains:
-                auxiliary_domains["quaternary"] = child.auxiliary_domains["tertiary"]
+        auxiliary_domains["secondary"] = child.domain
+        auxiliary_domains["tertiary"] = child.auxiliary_domains["secondary"]
+        auxiliary_domains["quaternary"] = child.auxiliary_domains["tertiary"]
 
         return domain, auxiliary_domains
 
@@ -393,11 +390,11 @@ class TertiaryBroadcast(Broadcast):
         # Primary and secondary domains stay the same as child's,
         # and broadcast domain is tertiary
         domain = child.domain
-        auxiliary_domains = {"secondary": child.auxiliary_domains["secondary"]}
-        auxiliary_domains["tertiary"] = broadcast_domain
-        # Child's tertiary domain becomes quaternary
-        if "tertiary" in child.auxiliary_domains:
-            auxiliary_domains["quaternary"] = child.auxiliary_domains["tertiary"]
+        auxiliary_domains = {
+            "secondary": child.auxiliary_domains["secondary"],
+            "tertiary": broadcast_domain,
+            "quaternary": child.auxiliary_domains["tertiary"],
+        }
 
         return domain, auxiliary_domains
 
@@ -484,10 +481,11 @@ class FullBroadcast(Broadcast):
             return PrimaryBroadcast(
                 self.orphans[0], self.auxiliary_domains["secondary"]
             )
-        elif "tertiary" in self.auxiliary_domains:
-            aux = {"secondary": self.auxiliary_domains["tertiary"]}
-            if "quaternary" in self.auxiliary_domains:
-                aux["tertiary"] = self.auxiliary_domains["quaternary"]
+        else:
+            aux = {
+                "secondary": self.auxiliary_domains["tertiary"],
+                "tertiary": self.auxiliary_domains["quaternary"],
+            }
             return FullBroadcast(
                 self.orphans[0],
                 self.auxiliary_domains["secondary"],
@@ -517,7 +515,7 @@ class FullBroadcastToEdges(FullBroadcast):
             return PrimaryBroadcastToEdges(
                 self.orphans[0], self.auxiliary_domains["secondary"]
             )
-        elif "tertiary" in self.auxiliary_domains:
+        else:
             return FullBroadcastToEdges(
                 self.orphans[0],
                 self.auxiliary_domains["secondary"],

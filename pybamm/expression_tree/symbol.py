@@ -304,7 +304,9 @@ class Symbol(anytree.NodeMixin):
     @property
     def auxiliary_domains(self):
         """Returns auxiliary domains."""
-        return {k: v for k, v in self._domains.items() if k != "primary"}
+        return pybamm.DomainDict(
+            {k: v for k, v in self._domains.items() if k != "primary"}
+        )
 
     @auxiliary_domains.setter
     def auxiliary_domains(self, auxiliary_domains):

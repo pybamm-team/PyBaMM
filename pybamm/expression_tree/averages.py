@@ -136,9 +136,10 @@ def x_average(symbol):
             dom in ["negative electrode", "separator", "positive electrode"]
             for dom in symbol.secondary_domain
         ):
-            aux = {}
-            if "tertiary" in symbol.auxiliary_domains:
-                aux["secondary"] = symbol.auxiliary_domains["tertiary"]
+            aux = {
+                "secondary": symbol.auxiliary_domains["tertiary"],
+                "tertiary": symbol.auxiliary_domains["quaternary"],
+            }
             return pybamm.FullBroadcast(symbol.orphans[0], symbol.broadcast_domain, aux)
         elif (
             isinstance(symbol, pybamm.FullBroadcast)
@@ -148,9 +149,10 @@ def x_average(symbol):
                 for dom in symbol.tertiary_domain
             )
         ):
-            aux = {"secondary": symbol.auxiliary_domains["secondary"]}
-            if "quaternary" in symbol.auxiliary_domains:
-                aux["tertiary"] = symbol.auxiliary_domains["quaternary"]
+            aux = {
+                "secondary": symbol.auxiliary_domains["secondary"],
+                "tertiary": symbol.auxiliary_domains["quaternary"],
+            }
             return pybamm.FullBroadcast(symbol.orphans[0], symbol.broadcast_domain, aux)
         else:  # pragma: no cover
             # It should be impossible to get here

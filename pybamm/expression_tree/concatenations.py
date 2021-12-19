@@ -263,19 +263,11 @@ class DomainConcatenation(Concatenation):
 
     def _get_auxiliary_domain_repeats(self, auxiliary_domains):
         """Helper method to read the 'auxiliary_domain' meshes."""
-        if "secondary" in auxiliary_domains:
-            sec_mesh_npts = self.full_mesh.combine_submeshes(
-                *auxiliary_domains["secondary"]
-            ).npts
-        else:
-            sec_mesh_npts = 1
-        if "tertiary" in auxiliary_domains:
-            tert_mesh_npts = self.full_mesh.combine_submeshes(
-                *auxiliary_domains["tertiary"]
-            ).npts
-        else:
-            tert_mesh_npts = 1
-        return sec_mesh_npts * tert_mesh_npts
+        mesh_pts = 1
+        for level, dom in auxiliary_domains.items():
+            if level != "primary":
+                mesh_pts *= self.full_mesh.combine_submeshes(*dom).npts
+        return mesh_pts
 
     @property
     def full_mesh(self):
