@@ -36,6 +36,7 @@ class BaseHigherOrderModel(BaseModel):
 
         self.set_external_circuit_submodel()
         self.set_leading_order_model()
+        self.set_interface_utilisation_submodel()
         # Electrolyte submodel to get first-order concentrations
         self.set_electrolyte_diffusion_submodel()
         self.set_other_species_diffusion_submodels()
@@ -119,12 +120,12 @@ class BaseHigherOrderModel(BaseModel):
     def set_average_interfacial_submodel(self):
         self.submodels[
             "x-averaged negative interface"
-        ] = pybamm.interface.InverseFirstOrderKinetics(
+        ] = pybamm.kinetics.InverseFirstOrderKinetics(
             self.param, "Negative", self.leading_order_reaction_submodels["Negative"]
         )
         self.submodels[
             "x-averaged positive interface"
-        ] = pybamm.interface.InverseFirstOrderKinetics(
+        ] = pybamm.kinetics.InverseFirstOrderKinetics(
             self.param, "Positive", self.leading_order_reaction_submodels["Positive"]
         )
 
@@ -151,17 +152,17 @@ class BaseHigherOrderModel(BaseModel):
         densities
         """
         # Main reaction
-        self.submodels["negative interface"] = pybamm.interface.FirstOrderKinetics(
+        self.submodels["negative interface"] = pybamm.kinetics.FirstOrderKinetics(
             self.param,
             "Negative",
-            pybamm.interface.ButlerVolmer(
+            pybamm.kinetics.SymmetricButlerVolmer(
                 self.param, "Negative", "lead-acid main", self.options
             ),
         )
-        self.submodels["positive interface"] = pybamm.interface.FirstOrderKinetics(
+        self.submodels["positive interface"] = pybamm.kinetics.FirstOrderKinetics(
             self.param,
             "Positive",
-            pybamm.interface.ButlerVolmer(
+            pybamm.kinetics.SymmetricButlerVolmer(
                 self.param, "Positive", "lead-acid main", self.options
             ),
         )
@@ -170,16 +171,16 @@ class BaseHigherOrderModel(BaseModel):
         if self.options["hydrolysis"] == "true":
             self.submodels[
                 "positive oxygen interface"
-            ] = pybamm.interface.FirstOrderKinetics(
+            ] = pybamm.kinetics.FirstOrderKinetics(
                 self.param,
                 "Positive",
-                pybamm.interface.ForwardTafel(
+                pybamm.kinetics.ForwardTafel(
                     self.param, "Positive", "lead-acid oxygen", self.options
                 ),
             )
             self.submodels[
                 "negative oxygen interface"
-            ] = pybamm.interface.DiffusionLimited(
+            ] = pybamm.kinetics.DiffusionLimited(
                 self.param, "Negative", "lead-acid oxygen", order="composite"
             )
 

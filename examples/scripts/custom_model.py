@@ -37,20 +37,26 @@ particle_p = pybamm.particle.no_distribution.XAveragedPolynomialProfile(
     model.param, "Positive", "uniform profile", options=model.options
 )
 model.submodels["positive particle"] = particle_p
-model.submodels["negative interface"] = pybamm.interface.InverseButlerVolmer(
+model.submodels["negative interface"] = pybamm.kinetics.InverseButlerVolmer(
     model.param, "Negative", "lithium-ion main", options=model.options
 )
-model.submodels["positive interface"] = pybamm.interface.InverseButlerVolmer(
+model.submodels["positive interface"] = pybamm.kinetics.InverseButlerVolmer(
     model.param, "Positive", "lithium-ion main", options=model.options
+)
+model.submodels["negative interface utilisation"] = pybamm.interface_utilisation.Full(
+    model.param, "Negative", model.options
+)
+model.submodels["positive interface utilisation"] = pybamm.interface_utilisation.Full(
+    model.param, "Positive", model.options
 )
 model.submodels[
     "negative interface current"
-] = pybamm.interface.CurrentForInverseButlerVolmer(
+] = pybamm.kinetics.CurrentForInverseButlerVolmer(
     model.param, "Negative", "lithium-ion main"
 )
 model.submodels[
     "positive interface current"
-] = pybamm.interface.CurrentForInverseButlerVolmer(
+] = pybamm.kinetics.CurrentForInverseButlerVolmer(
     model.param, "Positive", "lithium-ion main"
 )
 model.submodels[

@@ -42,7 +42,14 @@ class SpatialMethodForTesting(pybamm.SpatialMethod):
 
 
 def get_mesh_for_testing(
-    xpts=None, rpts=10, Rpts=10, ypts=15, zpts=15, geometry=None, cc_submesh=None
+    xpts=None,
+    rpts=10,
+    Rpts=10,
+    ypts=15,
+    zpts=15,
+    rcellpts=15,
+    geometry=None,
+    cc_submesh=None,
 ):
     param = pybamm.ParameterValues(
         values={
@@ -59,6 +66,8 @@ def get_mesh_for_testing(
             "Positive electrode thickness [m]": 0.3,
             "Negative particle radius [m]": 0.5,
             "Positive particle radius [m]": 0.5,
+            "Inner cell radius [m]": 0.2,
+            "Outer cell radius [m]": 1.0,
             "Negative minimum particle radius [m]": 0.0,
             "Negative maximum particle radius [m]": 1.0,
             "Positive minimum particle radius [m]": 0.0,
@@ -95,10 +104,10 @@ def get_mesh_for_testing(
         "r_p": rpts,
         "y": ypts,
         "z": zpts,
+        "r_macro": rcellpts,
         "R_n": Rpts,
         "R_p": Rpts,
     }
-
     return pybamm.Mesh(geometry, submesh_types, var_pts)
 
 
@@ -193,6 +202,23 @@ def get_unit_2p1D_mesh_for_testing(ypts=15, zpts=15, include_particles=True):
     return pybamm.Mesh(geometry, submesh_types, var_pts)
 
 
+def get_cylindrical_mesh_for_testing(
+    xpts=10, rpts=10, rcellpts=15, include_particles=False
+):
+    geometry = pybamm.battery_geometry(
+        include_particles=include_particles,
+        current_collector_dimension=1,
+        form_factor="cylindrical",
+    )
+    return get_mesh_for_testing(
+        xpts=xpts,
+        rpts=rpts,
+        rcellpts=rcellpts,
+        geometry=geometry,
+        cc_submesh=pybamm.MeshGenerator(pybamm.Uniform1DSubMesh),
+    )
+
+
 def get_discretisation_for_testing(
     xpts=None, rpts=10, mesh=None, cc_method=SpatialMethodForTesting
 ):
@@ -221,7 +247,8 @@ def get_size_distribution_disc_for_testing(xpts=None, rpts=10, Rpts=10, zpts=15)
 
 def get_1p1d_discretisation_for_testing(xpts=None, rpts=10, zpts=15):
     return get_discretisation_for_testing(
-        mesh=get_1p1d_mesh_for_testing(xpts, rpts, zpts)
+        mesh=get_1p1d_mesh_for_testing(xpts, rpts, zpts),
+        cc_method=pybamm.FiniteVolume,
     )
 
 
@@ -231,4 +258,13 @@ def get_2p1d_discretisation_for_testing(
     return get_discretisation_for_testing(
         mesh=get_2p1d_mesh_for_testing(xpts, rpts, ypts, zpts, include_particles),
         cc_method=pybamm.ScikitFiniteElement,
+    )
+
+
+def get_cylindrical_discretisation_for_testing(
+    xpts=10, rpts=10, rcellpts=15, include_particles=False
+):
+    return get_discretisation_for_testing(
+        mesh=get_cylindrical_mesh_for_testing(xpts, rpts, rcellpts, include_particles),
+        cc_method=pybamm.FiniteVolume,
     )

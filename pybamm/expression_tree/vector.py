@@ -21,7 +21,7 @@ class Vector(pybamm.Array):
         auxiliary_domains=None,
         entries_string=None,
     ):
-        if isinstance(entries, list):
+        if isinstance(entries, (list, np.matrix)):
             entries = np.array(entries)
         # make sure that entries are a vector (can be a column vector)
         if entries.ndim == 1:

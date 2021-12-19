@@ -366,6 +366,17 @@
   doi = {10.1016/j.electacta.2020.135862},
 }
 
+@article{Sripad2020,
+  title={Kinetics of lithium electrodeposition and stripping},
+  author={Sripad, Shashank and Korff, Daniel and DeCaluwe, Steven C and Viswanathan, Venkatasubramanian},
+  journal={The Journal of Chemical Physics},
+  volume={153},
+  number={19},
+  pages={194701},
+  year={2020},
+  publisher={AIP Publishing LLC}
+}
+
 @article{Subramanian2005,
   title = {Efficient macro-micro scale coupled modeling of batteries},
   author = {Subramanian, Venkat R. and Diwakar, Vinten D. and Tapriyal, Deepak},

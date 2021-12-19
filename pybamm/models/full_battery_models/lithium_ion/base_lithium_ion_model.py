@@ -136,7 +136,10 @@ class BaseModel(pybamm.BaseBatteryModel):
         # Lithium lost to side reactions
         # Different way of measuring LLI but should give same value
         LLI_sei = self.variables["Loss of lithium to SEI [mol]"]
-        LLI_pl = self.variables["Loss of lithium to lithium plating [mol]"]
+        if self.half_cell:
+            LLI_pl = pybamm.Scalar(0)
+        else:
+            LLI_pl = self.variables["Loss of lithium to lithium plating [mol]"]
 
         LLI_reactions = LLI_sei + LLI_pl
         self.variables.update(
@@ -168,9 +171,7 @@ class BaseModel(pybamm.BaseBatteryModel):
             "Total lithium lost from particles [mol]",
             "Total lithium lost from electrolyte [mol]",
             "Loss of lithium to SEI [mol]",
-            "Loss of lithium to lithium plating [mol]",
             "Loss of capacity to SEI [A.h]",
-            "Loss of capacity to lithium plating [A.h]",
             "Total lithium lost to side reactions [mol]",
             "Total capacity lost to side reactions [A.h]",
             # Resistance
@@ -182,6 +183,8 @@ class BaseModel(pybamm.BaseBatteryModel):
                 "Negative electrode capacity [A.h]",
                 "Loss of active material in negative electrode [%]",
                 "Total lithium in negative electrode [mol]",
+                "Loss of lithium to lithium plating [mol]",
+                "Loss of capacity to lithium plating [A.h]",
             ]
 
         self.summary_variables = summary_variables
@@ -214,10 +217,10 @@ class BaseModel(pybamm.BaseBatteryModel):
             )
 
     def set_other_reaction_submodels_to_zero(self):
-        self.submodels["negative oxygen interface"] = pybamm.interface.NoReaction(
+        self.submodels["negative oxygen interface"] = pybamm.kinetics.NoReaction(
             self.param, "Negative", "lithium-ion oxygen"
         )
-        self.submodels["positive oxygen interface"] = pybamm.interface.NoReaction(
+        self.submodels["positive oxygen interface"] = pybamm.kinetics.NoReaction(
             self.param, "Positive", "lithium-ion oxygen"
         )
 
@@ -286,27 +289,30 @@ class BaseModel(pybamm.BaseBatteryModel):
             )
 
     def set_li_metal_counter_electrode_submodels(self):
-        if self.options["SEI"] in ["none", "constant"]:
+        if (
+            self.options["SEI"] in ["none", "constant"]
+            and self.options["intercalation kinetics"] == "symmetric Butler-Volmer"
+            and self.options["surface form"] == "false"
+        ):
+            # only symmetric Butler-Volmer can be inverted
             self.submodels[
                 "counter electrode potential"
             ] = pybamm.electrode.ohm.LithiumMetalExplicit(self.param, self.options)
             self.submodels[
                 "counter electrode interface"
-            ] = pybamm.interface.InverseButlerVolmer(
+            ] = pybamm.kinetics.InverseButlerVolmer(
                 self.param, "Negative", "lithium metal plating", self.options
             )  # assuming symmetric reaction for now so we can take the inverse
             self.submodels[
                 "counter electrode interface current"
-            ] = pybamm.interface.CurrentForInverseButlerVolmerLithiumMetal(
+            ] = pybamm.kinetics.CurrentForInverseButlerVolmerLithiumMetal(
                 self.param, "Negative", "lithium metal plating", self.options
             )
         else:
             self.submodels[
                 "counter electrode potential"
             ] = pybamm.electrode.ohm.LithiumMetalSurfaceForm(self.param, self.options)
-            self.submodels[
-                "counter electrode interface"
-            ] = pybamm.interface.ButlerVolmer(
+            self.submodels["counter electrode interface"] = self.intercalation_kinetics(
                 self.param, "Negative", "lithium metal plating", self.options
             )
 
@@ -321,5 +327,7 @@ class BaseModel(pybamm.BaseBatteryModel):
         # Models added specifically for the counter electrode have been labelled with
         # "counter electrode" so as not to be caught by this check
         self.submodels = {
-            k: v for k, v in self.submodels.items() if not k.startswith("negative")
+            k: v
+            for k, v in self.submodels.items()
+            if not (k.startswith("negative") or k == "lithium plating")
         }

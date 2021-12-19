@@ -54,6 +54,8 @@ class TestButlerVolmer(unittest.TestCase):
             "Positive electrode surface area to volume ratio": 1 + 0 * self.c_e_p,
             "X-averaged negative electrode surface area to volume ratio": 1,
             "X-averaged positive electrode surface area to volume ratio": 1,
+            "Negative electrode interface utilisation": 1,
+            "Positive electrode interface utilisation": 1,
             "Sum of electrolyte reaction source terms": pybamm.Scalar(1),
             "Sum of interfacial current densities": pybamm.Scalar(1),
             "Sum of negative electrode interfacial current densities": pybamm.Scalar(1),
@@ -77,7 +79,7 @@ class TestButlerVolmer(unittest.TestCase):
 
     def test_creation(self):
         param = pybamm.LithiumIonParameters()
-        model_n = pybamm.interface.ButlerVolmer(
+        model_n = pybamm.kinetics.SymmetricButlerVolmer(
             param,
             "Negative",
             "lithium-ion main",
@@ -90,7 +92,7 @@ class TestButlerVolmer(unittest.TestCase):
         j_n = model_n.get_coupled_variables(self.variables)[
             "Negative electrode interfacial current density"
         ]
-        model_p = pybamm.interface.ButlerVolmer(
+        model_p = pybamm.kinetics.SymmetricButlerVolmer(
             param,
             "Positive",
             "lithium-ion main",
@@ -114,7 +116,7 @@ class TestButlerVolmer(unittest.TestCase):
 
     def test_set_parameters(self):
         param = pybamm.LithiumIonParameters()
-        model_n = pybamm.interface.ButlerVolmer(
+        model_n = pybamm.kinetics.SymmetricButlerVolmer(
             param,
             "Negative",
             "lithium-ion main",
@@ -127,7 +129,7 @@ class TestButlerVolmer(unittest.TestCase):
         j_n = model_n.get_coupled_variables(self.variables)[
             "Negative electrode interfacial current density"
         ]
-        model_p = pybamm.interface.ButlerVolmer(
+        model_p = pybamm.kinetics.SymmetricButlerVolmer(
             param,
             "Positive",
             "lithium-ion main",
@@ -154,7 +156,7 @@ class TestButlerVolmer(unittest.TestCase):
 
     def test_discretisation(self):
         param = pybamm.LithiumIonParameters()
-        model_n = pybamm.interface.ButlerVolmer(
+        model_n = pybamm.kinetics.SymmetricButlerVolmer(
             param,
             "Negative",
             "lithium-ion main",
@@ -167,7 +169,7 @@ class TestButlerVolmer(unittest.TestCase):
         j_n = model_n.get_coupled_variables(self.variables)[
             "Negative electrode interfacial current density"
         ]
-        model_p = pybamm.interface.ButlerVolmer(
+        model_p = pybamm.kinetics.SymmetricButlerVolmer(
             param,
             "Positive",
             "lithium-ion main",
@@ -222,7 +224,7 @@ class TestButlerVolmer(unittest.TestCase):
 
         # With intercalation
         param = pybamm.LeadAcidParameters()
-        model_n = pybamm.interface.ButlerVolmer(
+        model_n = pybamm.kinetics.SymmetricButlerVolmer(
             param,
             "Negative",
             "lead-acid main",
@@ -231,7 +233,7 @@ class TestButlerVolmer(unittest.TestCase):
                 "total interfacial current density as a state": "false",
             },
         )
-        model_p = pybamm.interface.ButlerVolmer(
+        model_p = pybamm.kinetics.SymmetricButlerVolmer(
             param,
             "Positive",
             "lead-acid main",
@@ -291,7 +293,7 @@ class TestButlerVolmer(unittest.TestCase):
 
         # With intercalation
         param = pybamm.LeadAcidParameters()
-        model_n = pybamm.interface.ButlerVolmer(
+        model_n = pybamm.kinetics.SymmetricButlerVolmer(
             param,
             "Negative",
             "lead-acid main",
@@ -300,7 +302,7 @@ class TestButlerVolmer(unittest.TestCase):
                 "total interfacial current density as a state": "false",
             },
         )
-        model_p = pybamm.interface.ButlerVolmer(
+        model_p = pybamm.kinetics.SymmetricButlerVolmer(
             param,
             "Positive",
             "lead-acid main",

@@ -47,7 +47,13 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                 Whether to include hydrolysis in the model. Only implemented for
                 lead-acid models. Can be "false" (default) or "true". If "true", then
                 "surface form" cannot be 'false'.
-            * "lithium plating" : str, optional
+            * "intercalation kinetics" : str
+                Model for intercalation kinetics. Can be "symmetric Butler-Volmer"
+                (default), "asymmetric Butler-Volmer", "linear", "Marcus", or
+                "Marcus-Hush-Chidsey" (which uses the asymptotic form from Zeng 2014).
+            * "interface utilisation": str
+                Can be "full" (default), "constant", or "current-driven".
+            * "lithium plating" : str
                 Sets the model for lithium plating. Can be "none" (default),
                 "reversible" or "irreversible".
             * "loss of active material" : str
@@ -69,9 +75,7 @@ class BatteryModelOptions(pybamm.FuzzyDict):
             * "particle shape" : str
                 Sets the model shape of the electrode particles. This is used to
                 calculate the surface area to volume ratio. Can be "spherical"
-                (default), "user" or "no particles". For the "user" option the surface
-                area per unit volume can be passed as a parameter, and is therefore not
-                necessarily consistent with the particle shape.
+                (default), or "no particles".
             * "particle size" : str
                 Sets the model to include a single active particle size or a
                 distribution of sizes at any macroscale location. Can be "single"
@@ -159,9 +163,17 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                 "composite",
                 "integrated",
             ],
-            "hydrolysis": ["true", "false"],
+            "hydrolysis": ["false", "true"],
+            "intercalation kinetics": [
+                "symmetric Butler-Volmer",
+                "asymmetric Butler-Volmer",
+                "linear",
+                "Marcus",
+                "Marcus-Hush-Chidsey",
+            ],
+            "interface utilisation": ["full", "constant", "current-driven"],
             "lithium plating": ["none", "reversible", "irreversible"],
-            "lithium plating porosity change": ["true", "false"],
+            "lithium plating porosity change": ["false", "true"],
             "loss of active material": ["none", "stress-driven", "reaction-driven"],
             "operating mode": ["current", "voltage", "power", "CCCV"],
             "particle": [
@@ -172,7 +184,7 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                 "quartic profile",
             ],
             "particle mechanics": ["none", "swelling only", "swelling and cracking"],
-            "particle shape": ["spherical", "user", "no particles"],
+            "particle shape": ["spherical", "no particles"],
             "particle size": ["single", "distribution"],
             "SEI": [
                 "none",
@@ -184,37 +196,18 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                 "ec reaction limited",
             ],
             "SEI film resistance": ["none", "distributed", "average"],
-            "SEI porosity change": ["true", "false"],
-            "stress-induced diffusion": ["true", "false"],
+            "SEI porosity change": ["false", "true"],
+            "stress-induced diffusion": ["false", "true"],
             "surface form": ["false", "differential", "algebraic"],
             "thermal": ["isothermal", "lumped", "x-lumped", "x-full"],
-            "total interfacial current density as a state": ["true", "false"],
+            "total interfacial current density as a state": ["false", "true"],
             "working electrode": ["both", "negative", "positive"],
         }
 
         default_options = {
-            "cell geometry": "none",
-            "convection": "none",
-            "current collector": "uniform",
-            "dimensionality": 0,
-            "electrolyte conductivity": "default",
-            "external submodels": [],
-            "hydrolysis": "false",
-            "lithium plating": "none",
-            "lithium plating porosity change": "false",
-            "loss of active material": "none",
-            "operating mode": "current",
-            "particle": "Fickian diffusion",
-            "particle mechanics": "none",
-            "particle shape": "spherical",
-            "particle size": "single",
-            "SEI": "none",
-            "SEI porosity change": "false",
-            "surface form": "false",
-            "thermal": "isothermal",
-            "total interfacial current density as a state": "false",
-            "working electrode": "both",
+            name: options[0] for name, options in self.possible_options.items()
         }
+        default_options["external submodels"] = []
 
         # Change the default for cell geometry based on which thermal option is provided
         extra_options = extra_options or {}
@@ -250,9 +243,15 @@ class BatteryModelOptions(pybamm.FuzzyDict):
         # provided
 
         # Change the default for stress-induced diffusion based on which particle
-        # mechanics option is provided
+        # mechanics option is provided. If the user doesn't supply a particle mechanics
+        # option set the default stress-induced diffusion option based on the default
+        # particle mechanics option which may change depending on other options
+        # (e.g. for stress-driven LAM the default mechanics option is "swelling only")
         mechanics_option = extra_options.get("particle mechanics", "none")
-        if mechanics_option == "none":
+        if (
+            mechanics_option == "none"
+            and default_options["particle mechanics"] == "none"
+        ):
             default_options["stress-induced diffusion"] = "false"
         else:
             default_options["stress-induced diffusion"] = "true"
@@ -381,6 +380,7 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                         (
                             option
                             in [
+                                "interface utilisation",
                                 "loss of active material",
                                 "particle mechanics",
                                 "particle",
@@ -793,6 +793,30 @@ class BaseBatteryModel(pybamm.BaseModel):
     def set_summary_variables(self):
         self._summary_variables = []
 
+    @property
+    def intercalation_kinetics(self):
+        if self.options["intercalation kinetics"] == "symmetric Butler-Volmer":
+            return pybamm.kinetics.SymmetricButlerVolmer
+        elif self.options["intercalation kinetics"] == "asymmetric Butler-Volmer":
+            return pybamm.kinetics.AsymmetricButlerVolmer
+        elif self.options["intercalation kinetics"] == "linear":
+            return pybamm.kinetics.Linear
+        elif self.options["intercalation kinetics"] == "Marcus":
+            return pybamm.kinetics.Marcus
+        elif self.options["intercalation kinetics"] == "Marcus-Hush-Chidsey":
+            return pybamm.kinetics.MarcusHushChidsey
+
+    @property
+    def inverse_intercalation_kinetics(self):
+        if self.options["intercalation kinetics"] == "symmetric Butler-Volmer":
+            return pybamm.kinetics.InverseButlerVolmer
+        else:
+            raise pybamm.OptionError(
+                "Inverse kinetics are only implemented for symmetric Butler-Volmer. "
+                "Use option {'surface form': 'algebraic'} to use forward kinetics "
+                "instead."
+            )
+
     def set_external_circuit_submodel(self):
         """
         Define how the external circuit defines the boundary conditions for the model,
@@ -871,6 +895,42 @@ class BaseBatteryModel(pybamm.BaseModel):
             elif self.options["dimensionality"] == 2:
                 submodel = pybamm.current_collector.PotentialPair2plus1D(self.param)
         self.submodels["current collector"] = submodel
+
+    def set_interface_utilisation_submodel(self):
+        # this option can either be a string (both sides the same) or a 2-tuple
+        # to indicate different options in negative and positive electrodes
+        if isinstance(self.options["interface utilisation"], str):
+            util_left = self.options["interface utilisation"]
+            util_right = self.options["interface utilisation"]
+        else:
+            util_left, util_right = self.options["interface utilisation"]
+
+        if self.half_cell:
+            domains = [[util_left, "Counter"], [util_right, "Positive"]]
+        else:
+            domains = [[util_left, "Negative"], [util_right, "Positive"]]
+        for util, domain in domains:
+            name = domain.lower() + " interface utilisation"
+            if domain == "Counter":
+                domain = "Negative"
+            if util == "full":
+                self.submodels[name] = pybamm.interface_utilisation.Full(
+                    self.param, domain, self.options
+                )
+            elif util == "constant":
+                self.submodels[name] = pybamm.interface_utilisation.Constant(
+                    self.param, domain, self.options
+                )
+            elif util == "current-driven":
+                if self.half_cell and domain == "Negative":
+                    reaction_loc = "interface"
+                elif self.x_average:
+                    reaction_loc = "x-average"
+                else:
+                    reaction_loc = "full electrode"
+                self.submodels[name] = pybamm.interface_utilisation.CurrentDriven(
+                    self.param, domain, self.options, reaction_loc
+                )
 
     def set_voltage_variables(self):
 

@@ -204,7 +204,7 @@ class TestSimulationExperiment(unittest.TestCase):
         pybamm.set_logging_level("WARNING")
         self.assertEqual(sim._solution, None)
 
-    def test_run_experiment_termination(self):
+    def test_run_experiment_termination_capacity(self):
         # with percent
         experiment = pybamm.Experiment(
             [
@@ -246,6 +246,28 @@ class TestSimulationExperiment(unittest.TestCase):
         sol = sim.solve(solver=pybamm.CasadiSolver())
         # all but the last value should be above the termination condition
         np.testing.assert_array_less(5.04, C[:-1])
+
+    def test_run_experiment_termination_voltage(self):
+        # with percent
+        experiment = pybamm.Experiment(
+            [
+                ("Discharge at 0.5C for 10 minutes", "Rest for 10 minutes"),
+            ]
+            * 5,
+            termination="4V",
+        )
+        model = pybamm.lithium_ion.SPM()
+        param = pybamm.ParameterValues("Chen2020")
+        sim = pybamm.Simulation(model, experiment=experiment, parameter_values=param)
+        sol = sim.solve()
+        # Only two cycles should be completed, only 2nd cycle should go below 4V
+        np.testing.assert_array_less(
+            4, np.min(sol.cycles[0]["Terminal voltage [V]"].data)
+        )
+        np.testing.assert_array_less(
+            np.min(sol.cycles[1]["Terminal voltage [V]"].data), 4
+        )
+        self.assertEqual(len(sol.cycles), 2)
 
     def test_save_at_cycles(self):
         experiment = pybamm.Experiment(

@@ -143,9 +143,24 @@ class CasadiConverter(object):
                         "Alternatively, set 'model.convert_to_format = 'python'' "
                         "and use a non-CasADi solver. "
                     )
-                return casadi.interpolant("LUT", solver, symbol.x, symbol.y.flatten())(
-                    *converted_children
-                )
+                else:  # pragma: no cover
+                    raise NotImplementedError("Unknown interpolator: {0}"
+                                              .format(symbol.interpolator))
+
+                if len(converted_children) == 1:
+                    return casadi.interpolant(
+                        "LUT", solver, symbol.x, symbol.y.flatten()
+                    )(*converted_children)
+                elif len(converted_children) == 2:
+                    LUT = casadi.interpolant(
+                        "LUT", solver, symbol.x, symbol.y.ravel(order='F')
+                    )
+                    res = LUT(casadi.hcat(converted_children).T).T
+                    return res
+                else:  # pragma: no cover
+                    raise ValueError("Invalid converted_children count: {0}"
+                                     .format(len(converted_children)))
+
             elif symbol.function.__name__.startswith("elementwise_grad_of_"):
                 differentiating_child_idx = int(symbol.function.__name__[-1])
                 # Create dummy symbolic variables in order to differentiate using CasADi
