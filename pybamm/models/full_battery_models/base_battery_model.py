@@ -58,7 +58,7 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                 "reversible" or "irreversible".
             * "loss of active material" : str
                 Sets the model for loss of active material. Can be "none" (default),
-                "stress-driven", or "reaction-driven".
+                "stress-driven", "reaction-driven", or "stress and reaction-driven".
                 A 2-tuple can be provided for different behaviour in negative and
                 positive electrodes.
             * "operating mode" : str
@@ -174,7 +174,12 @@ class BatteryModelOptions(pybamm.FuzzyDict):
             "interface utilisation": ["full", "constant", "current-driven"],
             "lithium plating": ["none", "reversible", "irreversible"],
             "lithium plating porosity change": ["false", "true"],
-            "loss of active material": ["none", "stress-driven", "reaction-driven"],
+            "loss of active material": [
+                "none",
+                "stress-driven",
+                "reaction-driven",
+                "stress and reaction-driven",
+            ],
             "operating mode": ["current", "voltage", "power", "CCCV"],
             "particle": [
                 "Fickian diffusion",
@@ -235,7 +240,7 @@ class BatteryModelOptions(pybamm.FuzzyDict):
         # provided
         # return "none" if option not given
         lam_option = extra_options.get("loss of active material", "none")
-        if "stress-driven" in lam_option:
+        if "stress-driven" in lam_option or "stress and reaction-driven" in lam_option:
             default_options["particle mechanics"] = "swelling only"
         else:
             default_options["particle mechanics"] = "none"
@@ -422,6 +427,32 @@ class BatteryModelOptions(pybamm.FuzzyDict):
         Print the docstring for Options
         """
         print(self.__doc__)
+
+    @property
+    def negative(self):
+        "Returns the options for the negative electrode"
+        # index 0 in a 2-tuple for the negative electrode
+        return BatteryModelDomainOptions(self.items(), 0)
+
+    @property
+    def positive(self):
+        "Returns the options for the positive electrode"
+        # index 1 in a 2-tuple for the positive electrode
+        return BatteryModelDomainOptions(self.items(), 1)
+
+
+class BatteryModelDomainOptions(dict):
+    def __init__(self, dict_items, index):
+        super().__init__(dict_items)
+        self.index = index
+
+    def __getitem__(self, key):
+        options = super().__getitem__(key)
+        if isinstance(options, str):
+            return options
+        else:
+            # 2-tuple, first is negative domain, second is positive domain
+            return options[self.index]
 
 
 class BaseBatteryModel(pybamm.BaseModel):
@@ -897,22 +928,15 @@ class BaseBatteryModel(pybamm.BaseModel):
         self.submodels["current collector"] = submodel
 
     def set_interface_utilisation_submodel(self):
-        # this option can either be a string (both sides the same) or a 2-tuple
-        # to indicate different options in negative and positive electrodes
-        if isinstance(self.options["interface utilisation"], str):
-            util_left = self.options["interface utilisation"]
-            util_right = self.options["interface utilisation"]
-        else:
-            util_left, util_right = self.options["interface utilisation"]
-
         if self.half_cell:
-            domains = [[util_left, "Counter"], [util_right, "Positive"]]
+            domains = ["Counter", "Positive"]
         else:
-            domains = [[util_left, "Negative"], [util_right, "Positive"]]
-        for util, domain in domains:
+            domains = ["Negative", "Positive"]
+        for domain in domains:
             name = domain.lower() + " interface utilisation"
             if domain == "Counter":
                 domain = "Negative"
+            util = getattr(self.options, domain.lower())["interface utilisation"]
             if util == "full":
                 self.submodels[name] = pybamm.interface_utilisation.Full(
                     self.param, domain, self.options
