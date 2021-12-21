@@ -324,9 +324,9 @@ class ParameterValues:
                     filename = os.path.join(path, value[9:] + ".json")
                     function_name = value[9:]
                     filename = pybamm.get_parameters_filepath(filename)
-                    with open(filename, 'r') as jsonfile:
+                    with open(filename, "r") as jsonfile:
                         json_data = json.load(jsonfile)
-                    data = json_data['data']
+                    data = json_data["data"]
                     data[0] = [np.array(el) for el in data[0]]
                     data[1] = np.array(data[1])
                     self._dict_items[name] = (function_name, data)
@@ -654,23 +654,26 @@ class ParameterValues:
                         self.parameter_events.append(
                             pybamm.Event(
                                 "Interpolant {} lower bound".format(name),
-                                pybamm.min(new_children[data_index] -
-                                           min(data[0][data_index])),
+                                pybamm.min(
+                                    new_children[data_index] - min(data[0][data_index])
+                                ),
                                 pybamm.EventType.INTERPOLANT_EXTRAPOLATION,
                             )
                         )
                         self.parameter_events.append(
                             pybamm.Event(
                                 "Interpolant {} upper bound".format(name),
-                                pybamm.min(max(data[0][data_index]) -
-                                           new_children[data_index]),
+                                pybamm.min(
+                                    max(data[0][data_index]) - new_children[data_index]
+                                ),
                                 pybamm.EventType.INTERPOLANT_EXTRAPOLATION,
                             )
                         )
 
                 else:  # pragma: no cover
-                    raise ValueError("Invalid function name length: {0}"
-                                     .format(len(function_name)))
+                    raise ValueError(
+                        "Invalid function name length: {0}".format(len(function_name))
+                    )
 
             elif isinstance(function_name, numbers.Number):
                 # Check not NaN (parameter in csv file but no value given)

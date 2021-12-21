@@ -324,10 +324,11 @@ class LithiumIonParameters(BaseParameters):
                 )
                 / self.c_n_max
             )
-            c_n_init_av = pybamm.xyz_average(
+            c_n_init_av = pybamm.xyz_average(pybamm.r_average(self.c_n_init))
+            eps_c_n_init_av = pybamm.xyz_average(
                 self.epsilon_s_n * pybamm.r_average(self.c_n_init)
             )
-            self.n_Li_n_init = c_n_init_av * self.c_n_max * self.L_n * self.A_cc
+            self.n_Li_n_init = eps_c_n_init_av * self.c_n_max * self.L_n * self.A_cc
 
             eps_s_n_av = pybamm.xyz_average(self.epsilon_s_n)
             self.neg_elec_loading = eps_s_n_av * self.L_n * self.c_n_max * self.F / 3600
@@ -351,10 +352,11 @@ class LithiumIonParameters(BaseParameters):
             )
             / self.c_p_max
         )
-        c_p_init_av = pybamm.xyz_average(
+        c_p_init_av = pybamm.xyz_average(pybamm.r_average(self.c_p_init))
+        eps_c_p_init_av = pybamm.xyz_average(
             self.epsilon_s_p * pybamm.r_average(self.c_p_init)
         )
-        self.n_Li_p_init = c_p_init_av * self.c_p_max * self.L_p * self.A_cc
+        self.n_Li_p_init = eps_c_p_init_av * self.c_p_max * self.L_p * self.A_cc
 
         self.n_Li_particles_init = self.n_Li_n_init + self.n_Li_p_init
         self.n_Li_init = self.n_Li_particles_init + self.n_Li_e_init
