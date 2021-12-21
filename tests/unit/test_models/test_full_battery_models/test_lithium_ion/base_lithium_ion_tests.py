@@ -100,8 +100,12 @@ class BaseUnitTestLithiumIon:
         options = {"loss of active material": "stress-driven"}
         self.check_well_posedness(options)
 
-    def test_well_posed_loss_active_material_stress_reaction_both(self):
+    def test_well_posed_loss_active_material_reaction(self):
         options = {"loss of active material": "reaction-driven"}
+        self.check_well_posedness(options)
+
+    def test_well_posed_loss_active_material_stress_reaction(self):
+        options = {"loss of active material": "stress and reaction-driven"}
         self.check_well_posedness(options)
 
     def test_well_posed_surface_form_differential(self):

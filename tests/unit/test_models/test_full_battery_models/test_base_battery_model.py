@@ -24,7 +24,7 @@ PRINT_OPTIONS_OUTPUT = """\
 'interface utilisation': 'full' (possible: ['full', 'constant', 'current-driven'])
 'lithium plating': 'none' (possible: ['none', 'reversible', 'irreversible'])
 'lithium plating porosity change': 'false' (possible: ['false', 'true'])
-'loss of active material': 'stress-driven' (possible: ['none', 'stress-driven', 'reaction-driven'])
+'loss of active material': 'stress-driven' (possible: ['none', 'stress-driven', 'reaction-driven', 'stress and reaction-driven'])
 'operating mode': 'current' (possible: ['current', 'voltage', 'power', 'CCCV'])
 'particle': 'Fickian diffusion' (possible: ['Fickian diffusion', 'fast diffusion', 'uniform profile', 'quadratic profile', 'quartic profile'])
 'particle mechanics': 'swelling only' (possible: ['none', 'swelling only', 'swelling and cracking'])
@@ -321,6 +321,16 @@ class TestOptions(unittest.TestCase):
             BatteryModelOptions(OPTIONS_DICT).print_options()
             output = buffer.getvalue()
         self.assertEqual(output, PRINT_OPTIONS_OUTPUT)
+
+    def test_domain_options(self):
+        options = BatteryModelOptions(
+            {"particle": ("Fickian diffusion", "quadratic profile")}
+        )
+        self.assertEqual(options.negative["particle"], "Fickian diffusion")
+        self.assertEqual(options.positive["particle"], "quadratic profile")
+        # something that is the same in both domains
+        self.assertEqual(options.negative["thermal"], "isothermal")
+        self.assertEqual(options.positive["thermal"], "isothermal")
 
 
 if __name__ == "__main__":

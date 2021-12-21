@@ -225,21 +225,15 @@ class BaseModel(pybamm.BaseBatteryModel):
         )
 
     def set_crack_submodel(self):
-        # this option can either be a string (both sides the same) or a 2-tuple
-        # to indicate different options in negative and positive electrodes
-        if isinstance(self.options["particle mechanics"], str):
-            crack_left = self.options["particle mechanics"]
-            crack_right = self.options["particle mechanics"]
-        else:
-            crack_left, crack_right = self.options["particle mechanics"]
-        for crack_side, domain in [[crack_left, "Negative"], [crack_right, "Positive"]]:
-            if crack_side == "none":
+        for domain in ["Negative", "Positive"]:
+            crack = getattr(self.options, domain.lower())["particle mechanics"]
+            if crack == "none":
                 pass
-            elif crack_side == "swelling only":
+            elif crack == "swelling only":
                 self.submodels[
                     domain.lower() + " particle mechanics"
                 ] = pybamm.particle_mechanics.SwellingOnly(self.param, domain)
-            elif crack_side == "swelling and cracking":
+            elif crack == "swelling and cracking":
                 self.submodels[
                     domain.lower() + " particle mechanics"
                 ] = pybamm.particle_mechanics.CrackPropagation(
@@ -247,28 +241,16 @@ class BaseModel(pybamm.BaseBatteryModel):
                 )
 
     def set_active_material_submodel(self):
-        # this option can either be a string (both sides the same) or a 2-tuple
-        # to indicate different options in negative and positive electrodes
-        if isinstance(self.options["loss of active material"], str):
-            lam_left = self.options["loss of active material"]
-            lam_right = self.options["loss of active material"]
-        else:
-            lam_left, lam_right = self.options["loss of active material"]
-        for lam_side, domain in [[lam_left, "Negative"], [lam_right, "Positive"]]:
-            if lam_side == "none":
+        for domain in ["Negative", "Positive"]:
+            lam = getattr(self.options, domain.lower())["loss of active material"]
+            if lam == "none":
                 self.submodels[
                     domain.lower() + " active material"
                 ] = pybamm.active_material.Constant(self.param, domain, self.options)
-            elif lam_side == "stress-driven":
+            else:
                 self.submodels[
                     domain.lower() + " active material"
-                ] = pybamm.active_material.StressDriven(
-                    self.param, domain, self.options, self.x_average
-                )
-            elif lam_side == "reaction-driven":
-                self.submodels[
-                    domain.lower() + " active material"
-                ] = pybamm.active_material.ReactionDriven(
+                ] = pybamm.active_material.LossActiveMaterial(
                     self.param, domain, self.options, self.x_average
                 )
 
