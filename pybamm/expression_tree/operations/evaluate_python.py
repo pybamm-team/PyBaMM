@@ -6,6 +6,8 @@ from collections import OrderedDict
 
 import numpy as np
 import scipy.sparse
+from numba import jit, types
+from numba.typed import Dict
 
 import pybamm
 
@@ -464,6 +466,7 @@ class EvaluatorPython:
 
         # add function def to first line
         python_str = (
+            "@jit(nopython=True)\n"
             "def evaluate(constants, t=None, y=None, "
             "y_dot=None, inputs=None, known_evals=None):\n" + python_str
         )
@@ -482,6 +485,8 @@ class EvaluatorPython:
 
         # store a copy of examine_jaxpr
         python_str = python_str + "\nself._evaluate = evaluate"
+        print(python_str)
+
 
         self._python_str = python_str
         self._result_var = result_var
@@ -499,7 +504,25 @@ class EvaluatorPython:
         if y is not None and y.ndim == 1:
             y = y.reshape(-1, 1)
 
-        result = self._evaluate(self._constants, t, y, y_dot, inputs, known_evals)
+        print(inputs)
+        print(known_evals)
+        inputs_numba = Dict.empty(
+            key_type=types.unicode_type,
+            value_type=types.float64,
+        )
+
+        known_evals_numba = Dict.empty(
+            key_type=types.unicode_type,
+            value_type=types.float64,
+        )
+        if inputs:
+            for k, v in inputs.items():
+                inputs_numba_dict[k] = v
+        print(type(self._constants), type(t), type(y), type(y_dot), type(inputs_numba),
+              type(known_evals_numba))
+
+        result = self._evaluate(self._constants, t, y, y_dot, inputs_numba,
+                                known_evals_numba)
 
         # don't need known_evals, but need to reproduce Symbol.evaluate signature
         if known_evals is not None:
