@@ -348,11 +348,11 @@ def have_jax():
     return (
         (importlib.util.find_spec("jax") is not None)
         and (importlib.util.find_spec("jaxlib") is not None)
-        and jax_compatible_with_pybamm()
+        and is_jax_compatible()
     )
 
 
-def jax_compatible_with_pybamm():
+def is_jax_compatible():
     """Check if the available version of jax and jaxlib are compatible with PyBaMM"""
     return (
         pkg_resources.get_distribution("jax").version == "0.2.12"
@@ -368,7 +368,7 @@ def install_jax():
     if system() == "Windows":
         raise NotImplementedError("Jax is not available on Windows")
     elif importlib.util.find_spec("jax") is not None:
-        if not jax_compatible_with_pybamm():
+        if not is_jax_compatible():
             raise ValueError(
                 "Jax is already installed", 
                 "but the installed version of jax or jaxlib is not supported by PyBaMM"
