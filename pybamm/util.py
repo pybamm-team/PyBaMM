@@ -370,8 +370,7 @@ def install_jax():
     elif importlib.util.find_spec("jax") is not None:
         if not is_jax_compatible():
             raise ValueError(
-                "Jax is already installed",
-                "but the installed version of jax or jaxlib is not supported by PyBaMM",
+                "Jax is already installed but the installed version of jax or jaxlib is not supported by PyBaMM",  # noqa: E501
             )
     else:
         subprocess.check_call(

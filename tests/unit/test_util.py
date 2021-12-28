@@ -129,8 +129,9 @@ class TestUtil(unittest.TestCase):
         self.assertTrue(pybamm.get_parameters_filepath(tempfile_obj.name) == path)
 
     def test_is_jax_compatible(self):
-        compatible = pybamm.is_jax_compatible()
-        self.assertTrue(compatible)
+        if pybamm.have_jax():
+            compatible = pybamm.is_jax_compatible()
+            self.assertTrue(compatible)
 
 
 class TestSearch(unittest.TestCase):
