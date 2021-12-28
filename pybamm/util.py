@@ -364,7 +364,7 @@ def is_jax_compatible():
     )
 
 
-def install_jax():
+def install_jax():  # pragma: no cover
     """Install jax, jaxlib"""
     if system() == "Windows":
         raise NotImplementedError("Jax is not available on Windows")
