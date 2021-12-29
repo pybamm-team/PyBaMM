@@ -186,8 +186,12 @@ class FickianDiffusion(BaseSizeDistribution):
         ]
 
         if self.domain == "Negative":
-            c_init = self.param.c_n_init
+            c_init = pybamm.SecondaryBroadcast(
+                self.param.c_n_init, "negative particle size"
+            )
         elif self.domain == "Positive":
-            c_init = self.param.c_p_init
+            c_init = pybamm.SecondaryBroadcast(
+                self.param.c_p_init, "positive particle size"
+            )
 
         self.initial_conditions = {c_s_distribution: c_init}

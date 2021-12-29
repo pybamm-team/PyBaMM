@@ -707,10 +707,8 @@ class Symbol(anytree.NodeMixin):
             (default None)
         """
         raise NotImplementedError(
-            """method self.evaluate() not implemented
-               for symbol {!s} of type {}""".format(
-                self, type(self)
-            )
+            "method self.evaluate() not implemented for symbol "
+            "{!s} of type {}".format(self, type(self))
         )
 
     def evaluate(self, t=None, y=None, y_dot=None, inputs=None, known_evals=None):
