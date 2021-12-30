@@ -694,6 +694,9 @@ class Simulation:
 
         callbacks = pybamm.callbacks.setup_callbacks(callbacks)
 
+        logs = {}
+        callbacks.on_experiment_start(logs)
+
         if initial_soc is not None:
             if self._built_initial_soc != initial_soc:
                 # reset
@@ -858,10 +861,12 @@ class Simulation:
             for cycle_num, cycle_length in enumerate(
                 self.experiment.cycle_lengths, start=1
             ):
-                pybamm.logger.notice(
-                    f"Cycle {cycle_num+cycle_offset}/{num_cycles+cycle_offset} "
-                    f"({timer.time()} elapsed) " + "-" * 20
+                logs["cycle number"] = (
+                    cycle_num + cycle_offset,
+                    num_cycles + cycle_offset,
                 )
+                logs["elapsed time"] = timer.time()
+                callbacks.on_cycle_start(logs)
                 steps = []
                 cycle_solution = None
 
@@ -883,6 +888,8 @@ class Simulation:
                     )
                 )
                 for step_num in range(1, cycle_length + 1):
+                    # Use 1-indexing for printing cycle number as it is more
+                    # human-intuitive
                     exp_inputs = self._experiment_inputs[idx]
                     dt = self._experiment_times[idx]
                     op_conds_str = self.experiment.operating_conditions_strings[idx]
@@ -890,12 +897,9 @@ class Simulation:
                         "electric"
                     ]
                     model = self.op_conds_to_built_models[op_conds_elec]
-                    # Use 1-indexing for printing cycle number as it is more
-                    # human-intuitive
-                    pybamm.logger.notice(
-                        f"Cycle {cycle_num+cycle_offset}/{num_cycles+cycle_offset}, "
-                        f"step {step_num}/{cycle_length}: {op_conds_str}"
-                    )
+                    logs["step number"] = (step_num, cycle_length)
+                    logs["operating conditions"] = op_conds_str
+                    callbacks.on_step_start(logs)
                     inputs.update(exp_inputs)
                     if current_solution is None:
                         start_time = 0
@@ -905,20 +909,30 @@ class Simulation:
                     kwargs["inputs"] = inputs
                     # Make sure we take at least 2 timesteps
                     npts = max(int(round(dt / exp_inputs["period"])) + 1, 2)
-                    step_solution = solver.step(
-                        current_solution,
-                        model,
-                        dt,
-                        npts=npts,
-                        save=False,
-                        **kwargs,
-                    )
+                    try:
+                        step_solution = solver.step(
+                            current_solution,
+                            model,
+                            dt,
+                            npts=npts,
+                            save=False,
+                            **kwargs,
+                        )
+                    except pybamm.SolverError as e:
+                        logs["error"] = e
+                        callbacks.on_experiment_error(logs)
+                        feasible = False
+                        break
+
                     steps.append(step_solution)
                     current_solution = step_solution
 
                     cycle_solution = cycle_solution + step_solution
 
+                    callbacks.on_step_end(logs)
+
                     # Only allow events specified by experiment
+                    logs["termination"] = step_solution.termination
                     if not (
                         step_solution is None
                         or step_solution.termination == "final time"
@@ -930,23 +944,7 @@ class Simulation:
                     # Increment index for next iteration
                     idx += 1
 
-                # Break if the experiment is infeasible
-                if feasible is False:
-                    pybamm.logger.warning(
-                        "\n\n\tExperiment is infeasible: '{}' ".format(
-                            step_solution.termination
-                        )
-                        + "was triggered during '{}'. ".format(
-                            self.experiment.operating_conditions_strings[idx]
-                        )
-                        + "The returned solution only contains the first "
-                        "{} cycles. ".format(cycle_num - 1 + cycle_offset)
-                        + "Try reducing the current, shortening the time interval, "
-                        "or reducing the period.\n\n"
-                    )
-                    break
-
-                if save_this_cycle:
+                if save_this_cycle or feasible is False:
                     self._solution = self._solution + cycle_solution
 
                 # At the final step of the inner loop we save the cycle
@@ -1009,14 +1007,19 @@ class Simulation:
                         )
                         break
 
+                callbacks.on_cycle_end(logs)
+
+                # Break if the experiment is infeasible (or errored)
+                if feasible is False:
+                    callbacks.on_experiment_infeasible(logs)
+                    break
+
             if self.solution is not None and len(all_cycle_solutions) > 0:
                 self.solution.cycles = all_cycle_solutions
                 self.solution.set_summary_variables(all_summary_variables)
                 self.solution.all_first_states = all_first_states
 
-            pybamm.logger.notice(
-                "Finish experiment simulation, took {}".format(timer.time())
-            )
+            callbacks.on_experiment_end(logs)
 
         # reset parameter values
         if initial_soc is not None:
@@ -1026,8 +1029,6 @@ class Simulation:
                     "Initial concentration in positive electrode [mol.m-3]": c_p_init,
                 }
             )
-
-        callbacks.on_simulation_end(self)
 
         return self.solution
 

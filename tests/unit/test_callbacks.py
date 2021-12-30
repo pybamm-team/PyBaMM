@@ -12,46 +12,43 @@ class DummyCallback(callbacks.Callback):
         self.name = name
         self.logs = logs
 
-    def on_simulation_end(self, *args):
+    def on_experiment_end(self, *args):
         with open(self.logs, "w") as f:
             print(self.name, file=f)
 
 
-class DummySimulation:
-    solution = pybamm.Solution(
-        [0], [1, 2, 3], pybamm.BaseModel(), {}, termination="final time"
-    )
-
-
 class TestCallbacks(unittest.TestCase):
-    def setUp(self):
-        self.sim = DummySimulation()
-
     def tearDown(self):
-        del self.sim
+        # Remove any test log files that were created, even if the test fails
+        for logfile in ["test_callback.log", "test_callback_2.log"]:
+            if os.path.exists(logfile):
+                os.remove(logfile)
 
     def test_setup_callbacks(self):
-        callbacks = pybamm.callbacks.setup_callbacks([1, 2, 3])
+        # No callbacks, LoggingCallback should be added
+        callbacks = pybamm.callbacks.setup_callbacks(None)
         self.assertIsInstance(callbacks, pybamm.callbacks.CallbackList)
-        self.assertEqual(callbacks.callbacks, [1, 2, 3])
+        self.assertEqual(len(callbacks), 1)
+        self.assertIsInstance(callbacks[0], pybamm.callbacks.LoggingCallback)
 
+        # Single object, transformed to list
         callbacks = pybamm.callbacks.setup_callbacks(1)
         self.assertIsInstance(callbacks, pybamm.callbacks.CallbackList)
-        self.assertEqual(callbacks.callbacks, [1])
+        self.assertEqual(len(callbacks), 2)
+        self.assertEqual(callbacks.callbacks[0], 1)
+        self.assertIsInstance(callbacks[-1], pybamm.callbacks.LoggingCallback)
 
-    def test_logging_callback(self):
-        callback = pybamm.callbacks.LoggingCallback("test_callback.log")
-        self.assertEqual(callback.logs, "test_callback.log")
-        callback.on_simulation_end(self.sim)
-        with open("test_callback.log", "r") as f:
-            self.assertEqual(f.read(), "final time\n")
-        os.remove("test_callback.log")
+        # List
+        callbacks = pybamm.callbacks.setup_callbacks([1, 2, 3])
+        self.assertIsInstance(callbacks, pybamm.callbacks.CallbackList)
+        self.assertEqual(callbacks.callbacks[:3], [1, 2, 3])
+        self.assertIsInstance(callbacks[-1], pybamm.callbacks.LoggingCallback)
 
     def test_callback_list(self):
         "Tests multiple callbacks in a list"
-        # Should work with empty callback list
+        # Should work with empty callback list (does nothiing)
         callbacks = pybamm.callbacks.CallbackList([])
-        callbacks.on_simulation_end()
+        callbacks.on_experiment_end()
 
         # Should work with multiple callbacks
         callback = pybamm.callbacks.CallbackList(
@@ -60,14 +57,52 @@ class TestCallbacks(unittest.TestCase):
                 DummyCallback("test_callback_2.log", "second"),
             ]
         )
-        callback.on_simulation_end(self.sim)
+        callback.on_experiment_end(None)
         with open("test_callback.log", "r") as f:
             self.assertEqual(f.read(), "first\n")
         with open("test_callback_2.log", "r") as f:
             self.assertEqual(f.read(), "second\n")
 
-        os.remove("test_callback.log")
-        os.remove("test_callback_2.log")
+    def test_logging_callback(self):
+        # No argument, should use pybamm's logger
+        callback = pybamm.callbacks.LoggingCallback()
+        self.assertEqual(callback.logger, pybamm.logger)
+
+        pybamm.set_logging_level("NOTICE")
+        callback = pybamm.callbacks.LoggingCallback("test_callback.log")
+        self.assertEqual(callback.log_output, "test_callback.log")
+
+        logs = {
+            "cycle number": (5, 12),
+            "step number": (1, 4),
+            "elapsed time": 0.45,
+            "operating conditions": "Charge",
+            "termination": "event",
+        }
+        callback.on_experiment_start(logs)
+        with open("test_callback.log") as f:
+            self.assertEqual(f.read(), "")
+
+        callback.on_cycle_start(logs)
+        with open("test_callback.log", "r") as f:
+            self.assertIn("Cycle 5/12", f.read())
+
+        callback.on_step_start(logs)
+        with open("test_callback.log", "r") as f:
+            self.assertIn("Cycle 5/12, step 1/4", f.read())
+
+        callback.on_experiment_infeasible(logs)
+        with open("test_callback.log", "r") as f:
+            self.assertIn("Experiment is infeasible: 'event'", f.read())
+
+        callback.on_experiment_end(logs)
+        with open("test_callback.log", "r") as f:
+            self.assertIn("took 0.45", f.read())
+
+        # Calling start again should clear the log
+        callback.on_experiment_start(logs)
+        with open("test_callback.log") as f:
+            self.assertEqual(f.read(), "")
 
 
 if __name__ == "__main__":
