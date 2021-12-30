@@ -636,6 +636,7 @@ class Simulation:
         calc_esoh=True,
         starting_solution=None,
         initial_soc=None,
+        callbacks=None,
         **kwargs,
     ):
         """
@@ -680,6 +681,9 @@ class Simulation:
             Initial State of Charge (SOC) for the simulation. Must be between 0 and 1.
             If given, overwrites the initial concentrations provided in the parameter
             set.
+        callbacks : list of callbacks, optional
+            A list of callbacks to be called at each time step. Each callback must
+            implement all the methods defined in :class:`pybamm.callbacks.BaseCallback`.
         **kwargs
             Additional key-word arguments passed to `solver.solve`.
             See :meth:`pybamm.BaseSolver.solve`.
@@ -687,6 +691,8 @@ class Simulation:
         # Setup
         if solver is None:
             solver = self.solver
+
+        callbacks = pybamm.callbacks.setup_callbacks(callbacks)
 
         if initial_soc is not None:
             if self._built_initial_soc != initial_soc:
@@ -1020,6 +1026,8 @@ class Simulation:
                     "Initial concentration in positive electrode [mol.m-3]": c_p_init,
                 }
             )
+
+        callbacks.on_simulation_end(self)
 
         return self.solution
 

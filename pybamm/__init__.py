@@ -258,6 +258,11 @@ from .simulation import Simulation, load_sim, is_notebook
 from .batch_study import BatchStudy
 
 #
+# Callbacks
+#
+from . import callbacks
+
+#
 # Remove any imported modules, so we don't expose them as part of pybamm
 #
 del sys
