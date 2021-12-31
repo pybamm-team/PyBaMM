@@ -1,4 +1,4 @@
-# [Unreleased](https://github.com/pybamm-team/PyBaMM/)
+# [v21.12](https://github.com/pybamm-team/PyBaMM/tree/v21.11) - 2021-12-29
 
 ## Features
 
@@ -8,6 +8,7 @@
 
 ## Bug fixes
 
+-   `PyBaMM` is now importable in `Linux` systems where `jax` is already installed ([#1874](https://github.com/pybamm-team/PyBaMM/pull/1874))
 -   Simulations with drive cycles now support `initial_soc` ([#1842](https://github.com/pybamm-team/PyBaMM/pull/1842))
 -   Fixed bug in expression tree simplification ([#1831](https://github.com/pybamm-team/PyBaMM/pull/1831))
 -   Solid tortuosity is now correctly calculated with Bruggeman coefficient of the respective electrode ([#1773](https://github.com/pybamm-team/PyBaMM/pull/1773))
@@ -37,7 +38,7 @@
 -   The `chemistry` keyword argument in `ParameterValues` has been deprecated. Use `ParameterValues(chem)` instead of `ParameterValues(chemistry=chem)` ([#1822](https://github.com/pybamm-team/PyBaMM/pull/1822))
 -   Raise error when trying to convert an `Interpolant` with the "pchip" interpolator to CasADI ([#1791](https://github.com/pybamm-team/PyBaMM/pull/1791))
 -   Raise error if `Concatenation` is used directly with `Variable` objects (`concatenation` should be used instead) ([#1789](https://github.com/pybamm-team/PyBaMM/pull/1789))
--   Made jax, jaxlib and the PyBaMM JaxSolver optional ([#1767](https://github.com/pybamm-team/PyBaMM/pull/1767))
+-   Made jax, jaxlib and the PyBaMM JaxSolver optional ([#1767](https://github.com/pybamm-team/PyBaMM/pull/1767), [#1803](https://github.com/pybamm-team/PyBaMM/pull/1803))
 
 # [v21.10](https://github.com/pybamm-team/PyBaMM/tree/v21.10) - 2021-10-31
 
