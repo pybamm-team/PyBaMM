@@ -2,9 +2,10 @@
 # Tests for the lithium-ion DFN model
 #
 import pybamm
-import tests
 
-import numpy as np
+# import tests
+
+# import numpy as np
 import unittest
 from tests import BaseIntegrationTestLithiumIon
 
@@ -100,7 +101,8 @@ class TestDFN(BaseIntegrationTestLithiumIon, unittest.TestCase):
 #         pos_Li = []
 #         for model in models:
 #             sim = pybamm.Simulation(
-#                 model, parameter_values=self.params, var_pts=self.var_pts, solver=solver
+#                 model, parameter_values=self.params, var_pts=self.var_pts, solver=sol
+# ver
 #             )
 #             sim.var_pts.update(var_pts)
 #             solution = sim.solve([0, 3500])

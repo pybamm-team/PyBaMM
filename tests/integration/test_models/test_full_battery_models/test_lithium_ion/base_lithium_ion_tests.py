@@ -1,9 +1,10 @@
 #
 # Base integration tests for lithium-ion models
 #
-import pybamm
+# import pybamm
 import tests
-import numpy as np
+
+# import numpy as np
 
 
 class BaseIntegrationTestLithiumIon:
