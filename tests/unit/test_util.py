@@ -128,6 +128,11 @@ class TestUtil(unittest.TestCase):
         path = os.path.join(package_dir, tempfile_obj.name)
         self.assertTrue(pybamm.get_parameters_filepath(tempfile_obj.name) == path)
 
+    def test_is_jax_compatible(self):
+        if pybamm.have_jax():
+            compatible = pybamm.is_jax_compatible()
+            self.assertTrue(compatible)
+
 
 class TestSearch(unittest.TestCase):
     def test_url_gets_to_stdout(self):
