@@ -693,9 +693,7 @@ class Simulation:
             solver = self.solver
 
         callbacks = pybamm.callbacks.setup_callbacks(callbacks)
-
         logs = {}
-        callbacks.on_experiment_start(logs)
 
         if initial_soc is not None:
             if self._built_initial_soc != initial_soc:
@@ -812,6 +810,7 @@ class Simulation:
             self._solution = solver.solve(self.built_model, t_eval, **kwargs)
 
         elif self.operating_mode == "with experiment":
+            callbacks.on_experiment_start(logs)
             self.build_for_experiment(check_model=check_model)
             if t_eval is not None:
                 pybamm.logger.warning(
@@ -822,7 +821,6 @@ class Simulation:
             self._solution = starting_solution
             # Step through all experimental conditions
             inputs = kwargs.get("inputs", {})
-            pybamm.logger.info("Start running experiment")
             timer = pybamm.Timer()
 
             if starting_solution is None:
@@ -854,6 +852,7 @@ class Simulation:
                 esoh_sim = None
 
             voltage_stop = self.experiment.termination.get("voltage")
+            logs["stopping conditions"] = {"voltage": voltage_stop}
 
             idx = 0
             num_cycles = len(self.experiment.cycle_lengths)
@@ -867,6 +866,7 @@ class Simulation:
                 )
                 logs["elapsed time"] = timer.time()
                 callbacks.on_cycle_start(logs)
+
                 steps = []
                 cycle_solution = None
 
@@ -897,9 +897,11 @@ class Simulation:
                         "electric"
                     ]
                     model = self.op_conds_to_built_models[op_conds_elec]
+
                     logs["step number"] = (step_num, cycle_length)
-                    logs["operating conditions"] = op_conds_str
+                    logs["step operating conditions"] = op_conds_str
                     callbacks.on_step_start(logs)
+
                     inputs.update(exp_inputs)
                     if current_solution is None:
                         start_time = 0
@@ -931,8 +933,8 @@ class Simulation:
 
                     callbacks.on_step_end(logs)
 
-                    # Only allow events specified by experiment
                     logs["termination"] = step_solution.termination
+                    # Only allow events specified by experiment
                     if not (
                         step_solution is None
                         or step_solution.termination == "final time"
@@ -948,25 +950,25 @@ class Simulation:
                     self._solution = self._solution + cycle_solution
 
                 # At the final step of the inner loop we save the cycle
-                (
-                    cycle_solution,
-                    cycle_summary_variables,
-                    cycle_first_state,
-                ) = pybamm.make_cycle_solution(
+                cycle_sol = pybamm.make_cycle_solution(
                     steps,
                     esoh_sim,
                     save_this_cycle=save_this_cycle,
                 )
+                cycle_solution, cycle_sum_vars, cycle_first_state = cycle_sol
                 all_cycle_solutions.append(cycle_solution)
-                all_summary_variables.append(cycle_summary_variables)
+                all_summary_variables.append(cycle_sum_vars)
                 all_first_states.append(cycle_first_state)
+
+                logs["summary variables"] = cycle_sum_vars
 
                 # Calculate capacity_start using the first cycle
                 if cycle_num == 1:
+                    # Note capacity_start could be defined as
+                    # self.parameter_values["Nominal cell capacity [A.h]"] instead
+                    capacity_start = all_summary_variables[0]["Capacity [A.h]"]
+                    logs["start capacity"] = capacity_start
                     if "capacity" in self.experiment.termination:
-                        # Note capacity_start could be defined as
-                        # self.parameter_values["Nominal cell capacity [A.h]"] instead
-                        capacity_start = all_summary_variables[0]["Capacity [A.h]"]
                         value, typ = self.experiment.termination["capacity"]
                         if typ == "Ah":
                             capacity_stop = value
@@ -974,40 +976,21 @@ class Simulation:
                             capacity_stop = value / 100 * capacity_start
                     else:
                         capacity_stop = None
-
-                if capacity_stop is not None:
-                    capacity_now = cycle_summary_variables["Capacity [A.h]"]
-                    if np.isnan(capacity_now) or capacity_now > capacity_stop:
-                        pybamm.logger.notice(
-                            f"Capacity is now {capacity_now:.3f} Ah "
-                            f"(originally {capacity_start:.3f} Ah, "
-                            f"will stop at {capacity_stop:.3f} Ah)"
-                        )
-                    else:
-                        pybamm.logger.notice(
-                            "Stopping experiment since capacity "
-                            f"({capacity_now:.3f} Ah) "
-                            f"is below stopping capacity ({capacity_stop:.3f} Ah)."
-                        )
-                        break
-
-                # Check voltage stop
-                if voltage_stop is not None:
-                    min_voltage = np.min(cycle_solution["Battery voltage [V]"].data)
-                    if min_voltage > voltage_stop[0]:
-                        pybamm.logger.notice(
-                            f"Minimum voltage is now {min_voltage:.3f} V "
-                            f"(will stop at {voltage_stop[0]:.3f} V)"
-                        )
-                    else:
-                        pybamm.logger.notice(
-                            "Stopping experiment since minimum voltage "
-                            f"({min_voltage:.3f} V) "
-                            f"is below stopping voltage ({voltage_stop[0]:.3f} V)."
-                        )
-                        break
+                    logs["stopping conditions"]["capacity"] = capacity_stop
 
                 callbacks.on_cycle_end(logs)
+
+                # Break if stopping conditions are met
+                # Logging is done in the callbacks
+                if capacity_stop is not None:
+                    capacity_now = cycle_sum_vars["Capacity [A.h]"]
+                    if not np.isnan(capacity_now) and capacity_now <= capacity_stop:
+                        break
+
+                if voltage_stop is not None:
+                    min_voltage = cycle_sum_vars["Minimum voltage [V]"]
+                    if min_voltage <= voltage_stop[0]:
+                        break
 
                 # Break if the experiment is infeasible (or errored)
                 if feasible is False:

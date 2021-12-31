@@ -53,6 +53,8 @@ class TestTimer(unittest.TestCase):
             "2 weeks, 0 days, 3 hours, 1 minute, 4 seconds",
         )
 
+        self.assertEqual(repr(pybamm.TimerTime(1.5)), "pybamm.TimerTime(1.5)")
+
     def test_timer_operations(self):
         self.assertEqual((pybamm.TimerTime(1) + 2).value, 3)
         self.assertEqual((1 + pybamm.TimerTime(1)).value, 2)

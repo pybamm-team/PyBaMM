@@ -793,8 +793,7 @@ def get_cycle_summary_variables(cycle_solution, esoh_sim):
     # Measured capacity variables
     if "Discharge capacity [A.h]" in model.variables:
         Q = cycle_solution["Discharge capacity [A.h]"].data
-        min_Q = np.min(Q)
-        max_Q = np.max(Q)
+        min_Q, max_Q = np.min(Q), np.max(Q)
 
         cycle_summary_variables.update(
             {
@@ -802,6 +801,15 @@ def get_cycle_summary_variables(cycle_solution, esoh_sim):
                 "Maximum measured discharge capacity [A.h]": max_Q,
                 "Measured capacity [A.h]": max_Q - min_Q,
             }
+        )
+
+    # Voltage variables
+    if "Battery voltage [V]" in model.variables:
+        V = cycle_solution["Battery voltage [V]"].data
+        min_V, max_V = np.min(V), np.max(V)
+
+        cycle_summary_variables.update(
+            {"Minimum voltage [V]": min_V, "Maximum voltage [V]": max_V}
         )
 
     # Degradation variables

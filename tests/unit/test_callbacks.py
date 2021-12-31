@@ -70,13 +70,13 @@ class TestCallbacks(unittest.TestCase):
 
         pybamm.set_logging_level("NOTICE")
         callback = pybamm.callbacks.LoggingCallback("test_callback.log")
-        self.assertEqual(callback.log_output, "test_callback.log")
+        self.assertEqual(callback.logfile, "test_callback.log")
 
         logs = {
             "cycle number": (5, 12),
             "step number": (1, 4),
             "elapsed time": 0.45,
-            "operating conditions": "Charge",
+            "step operating conditions": "Charge",
             "termination": "event",
         }
         callback.on_experiment_start(logs)

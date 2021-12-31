@@ -6,6 +6,7 @@
 # https://github.com/keras-team/keras/blob/master/keras/callbacks.py
 #
 import pybamm
+import numpy as np
 import logging
 import inspect
 
@@ -141,27 +142,28 @@ class LoggingCallback(Callback):
 
     Parameters
     ----------
-    log_output : str, optional
+    logfile : str, optional
         Where to send the log output. If None, uses pybamm's logger.
 
     **Extends:** :class:`pybamm.callbacks.Callback`
     """
 
-    def __init__(self, log_output=None):
-        self.log_output = log_output
-        if log_output is None:
+    def __init__(self, logfile=None):
+        self.logfile = logfile
+        if logfile is None:
             # Use pybamm's logger, which prints to command line
             self.logger = pybamm.logger
         else:
             # Use a custom logger, this will have its own level so set it to the same
             # level as the pybamm logger (users can override this)
-            self.logger = pybamm.get_new_logger(__name__, log_output)
+            self.logger = pybamm.get_new_logger(__name__, logfile)
             self.logger.setLevel(pybamm.logger.level)
 
     def on_experiment_start(self, logs):
         # Clear the log file
-        if self.log_output is not None:
-            with open(self.log_output, "w") as f:
+        self.logger.info("Start running experiment")
+        if self.logfile is not None:
+            with open(self.logfile, "w") as f:
                 f.write("")
 
     def on_cycle_start(self, logs):
@@ -174,7 +176,7 @@ class LoggingCallback(Callback):
     def on_step_start(self, logs):
         cycle_num, num_cycles = logs["cycle number"]
         step_num, cycle_length = logs["step number"]
-        operating_conditions = logs["operating conditions"]
+        operating_conditions = logs["step operating conditions"]
         self.logger.notice(
             f"Cycle {cycle_num}/{num_cycles}, step {step_num}/{cycle_length}: "
             f"{operating_conditions}"
@@ -184,7 +186,34 @@ class LoggingCallback(Callback):
         pass
 
     def on_cycle_end(self, logs):
-        pass
+        cap_now = logs["summary variables"]["Capacity [A.h]"]
+        cap_start = logs["start capacity"]
+        cap_stop = logs["stopping conditions"]["capacity"]
+        if cap_stop is not None:
+            if np.isnan(cap_now) or cap_now > cap_stop:
+                self.logger.notice(
+                    f"Capacity is now {cap_now:.3f} Ah (originally {cap_start:.3f} Ah, "
+                    f"will stop at {cap_stop:.3f} Ah)"
+                )
+            else:
+                self.logger.notice(
+                    f"Stopping experiment since capacity ({cap_now:.3f} Ah) "
+                    f"is below stopping capacity ({cap_stop:.3f} Ah)."
+                )
+
+        voltage_stop = logs["stopping conditions"]["voltage"]
+        if voltage_stop is not None:
+            min_voltage = logs["summary variables"]["Minimum voltage [V]"]
+            if min_voltage > voltage_stop[0]:
+                self.logger.notice(
+                    f"Minimum voltage is now {min_voltage:.3f} V "
+                    f"(will stop at {voltage_stop[0]:.3f} V)"
+                )
+            else:
+                self.logger.notice(
+                    f"Stopping experiment since minimum voltage ({min_voltage:.3f} V) "
+                    f"is below stopping voltage ({voltage_stop[0]:.3f} V)."
+                )
 
     def on_experiment_end(self, logs):
         elapsed_time = logs["elapsed time"]
@@ -197,7 +226,7 @@ class LoggingCallback(Callback):
         termination = logs["termination"]
         cycle_num = logs["cycle number"][0]
         step_num = logs["step number"][0]
-        operating_conditions = logs["operating conditions"]
+        operating_conditions = logs["step operating conditions"]
         self.logger.warning(
             f"\n\n\tExperiment is infeasible: '{termination}' was "
             f"triggered during '{operating_conditions}'. The returned solution only "
@@ -205,22 +234,3 @@ class LoggingCallback(Callback):
             "Try reducing the current, shortening the time interval, or reducing the "
             "period.\n\n"
         )
-
-
-class SaveIfErrorCallback(Callback):
-    """
-    Callback to save the simulation configuration to disk if an error occurs.
-
-    Parameters
-    ----------
-    filename : str
-        The filename to save the model to.
-
-    **Extends:** :class:`pybamm.callbacks.Callback`
-    """
-
-    def __init__(self, filename):
-        self.filename = filename
-
-    def on_experiment_error(self, logs):
-        pybamm.save(logs["model"], self.filename)
