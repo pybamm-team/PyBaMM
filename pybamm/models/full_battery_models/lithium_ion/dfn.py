@@ -42,7 +42,7 @@ class DFN(BaseModel):
         self.set_active_material_submodel()
         self.set_tortuosity_submodels()
         self.set_convection_submodel()
-        self.set_interfacial_submodel()
+        self.set_intercalation_kinetics_submodel()
         self.set_other_reaction_submodels_to_zero()
         self.set_particle_submodel()
         self.set_solid_submodel()
@@ -70,28 +70,20 @@ class DFN(BaseModel):
             "through-cell convection"
         ] = pybamm.convection.through_cell.NoConvection(self.param, self.options)
 
-    def set_interfacial_submodel(self):
+    def set_intercalation_kinetics_submodel(self):
 
-        self.submodels["negative interface"] = pybamm.interface.ButlerVolmer(
+        self.submodels["negative interface"] = self.intercalation_kinetics(
             self.param, "Negative", "lithium-ion main", self.options
         )
-        self.submodels["positive interface"] = pybamm.interface.ButlerVolmer(
+        self.submodels["positive interface"] = self.intercalation_kinetics(
             self.param, "Positive", "lithium-ion main", self.options
         )
 
     def set_particle_submodel(self):
-
-        if isinstance(self.options["particle"], str):
-            particle_left = self.options["particle"]
-            particle_right = self.options["particle"]
-        else:
-            particle_left, particle_right = self.options["particle"]
-        for particle_side, domain in [
-            [particle_left, "Negative"],
-            [particle_right, "Positive"],
-        ]:
+        for domain in ["Negative", "Positive"]:
+            particle = getattr(self.options, domain.lower())["particle"]
             if self.options["particle size"] == "single":
-                if particle_side == "Fickian diffusion":
+                if particle == "Fickian diffusion":
                     self.submodels[
                         domain.lower() + " particle"
                     ] = pybamm.particle.no_distribution.FickianDiffusion(
@@ -99,7 +91,7 @@ class DFN(BaseModel):
                         domain,
                         self.options,
                     )
-                elif particle_side in [
+                elif particle in [
                     "uniform profile",
                     "quadratic profile",
                     "quartic profile",
@@ -107,19 +99,16 @@ class DFN(BaseModel):
                     self.submodels[
                         domain.lower() + " particle"
                     ] = pybamm.particle.no_distribution.PolynomialProfile(
-                        self.param,
-                        domain,
-                        particle_side,
-                        self.options,
+                        self.param, domain, particle, self.options
                     )
             elif self.options["particle size"] == "distribution":
-                if particle_side == "Fickian diffusion":
+                if particle == "Fickian diffusion":
                     self.submodels[
                         domain.lower() + " particle"
                     ] = pybamm.particle.size_distribution.FickianDiffusion(
                         self.param, domain
                     )
-                elif particle_side == "uniform profile":
+                elif particle == "uniform profile":
                     self.submodels[
                         domain.lower() + " particle"
                     ] = pybamm.particle.size_distribution.UniformProfile(
@@ -138,25 +127,6 @@ class DFN(BaseModel):
 
         self.submodels["negative electrode potential"] = submod_n
         self.submodels["positive electrode potential"] = submod_p
-
-        # Set the counter-electrode model for the half-cell model
-        # The negative electrode model will be ignored
-        if self.half_cell:
-            if self.options["SEI"] in ["none", "constant"]:
-                self.submodels[
-                    "counter electrode surface potential difference"
-                ] = pybamm.electrolyte_conductivity.surface_potential_form.Explicit(
-                    self.param, "Negative", self.options
-                )
-                self.submodels[
-                    "counter electrode potential"
-                ] = pybamm.electrode.ohm.LithiumMetalExplicit(self.param, self.options)
-            else:
-                self.submodels[
-                    "counter electrode potential"
-                ] = pybamm.electrode.ohm.LithiumMetalSurfaceForm(
-                    self.param, self.options
-                )
 
     def set_electrolyte_submodel(self):
 
@@ -177,6 +147,7 @@ class DFN(BaseModel):
             self.submodels[
                 "electrolyte conductivity"
             ] = pybamm.electrolyte_conductivity.Full(self.param, self.options)
+        if self.options["surface form"] == "false":
             surf_model = surf_form.Explicit
         elif self.options["surface form"] == "differential":
             surf_model = surf_form.FullDifferential

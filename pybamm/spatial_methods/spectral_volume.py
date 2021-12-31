@@ -282,7 +282,7 @@ class SpectralVolume(pybamm.FiniteVolume):
                     symbol, reconstructed_symbol, bcs
                 )
 
-        # note in 1D spherical grad and normal grad are the same
+        # note in 1D cartesian, cylindrical and spherical grad are the same
         gradient_matrix = self.gradient_matrix(domain, symbol.auxiliary_domains)
         penalty_matrix = self.penalty_matrix(domain, symbol.auxiliary_domains)
 

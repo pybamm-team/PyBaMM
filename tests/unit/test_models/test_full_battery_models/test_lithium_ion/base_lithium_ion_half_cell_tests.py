@@ -23,6 +23,22 @@ class BaseUnitTestLithiumIonHalfCell:
         options = {"interface utilisation": "current-driven"}
         self.check_well_posedness(options)
 
+    def test_well_posed_kinetics_asymmetric_butler_volmer(self):
+        options = {"intercalation kinetics": "asymmetric Butler-Volmer"}
+        self.check_well_posedness(options)
+
+    def test_well_posed_kinetics_linear(self):
+        options = {"intercalation kinetics": "linear"}
+        self.check_well_posedness(options)
+
+    def test_well_posed_kinetics_marcus(self):
+        options = {"intercalation kinetics": "Marcus"}
+        self.check_well_posedness(options)
+
+    def test_well_posed_kinetics_mhc(self):
+        options = {"intercalation kinetics": "Marcus-Hush-Chidsey"}
+        self.check_well_posedness(options)
+
     def test_well_posed_constant_sei(self):
         options = {"SEI": "constant"}
         self.check_well_posedness(options)

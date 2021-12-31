@@ -121,10 +121,6 @@ class BaseIntegrationTestLithiumIon:
         )
         self.run_basic_processing_test(options, parameter_values=parameter_values)
 
-    def test_loss_active_material_reaction_both(self):
-        options = {"loss of active material": "reaction-driven"}
-        self.run_basic_processing_test(options)
-
     def test_surface_form_differential(self):
         options = {"surface form": "differential"}
         self.run_basic_processing_test(options)
@@ -132,6 +128,35 @@ class BaseIntegrationTestLithiumIon:
     def test_surface_form_algebraic(self):
         options = {"surface form": "algebraic"}
         self.run_basic_processing_test(options)
+
+    def test_kinetics_asymmetric_butler_volmer(self):
+        options = {"intercalation kinetics": "asymmetric Butler-Volmer"}
+        parameter_values = pybamm.ParameterValues("Marquis2019")
+        parameter_values.update(
+            {
+                "Negative electrode Butler-Volmer transfer coefficient": 0.6,
+                "Positive electrode Butler-Volmer transfer coefficient": 0.6,
+            },
+            check_already_exists=False,
+        )
+        self.run_basic_processing_test(options, parameter_values=parameter_values)
+
+    def test_kinetics_linear(self):
+        options = {"intercalation kinetics": "linear"}
+        self.run_basic_processing_test(options)
+
+    def test_kinetics_mhc(self):
+        options = {"intercalation kinetics": "Marcus-Hush-Chidsey"}
+        parameter_values = pybamm.ParameterValues("Marquis2019")
+        parameter_values.update(
+            {
+                "Negative electrode reorganization energy [eV]": 0.35,
+                "Positive electrode reorganization energy [eV]": 0.35,
+                "Positive electrode exchange-current density [A.m-2]": 5,
+            },
+            check_already_exists=False,
+        )
+        self.run_basic_processing_test(options, parameter_values=parameter_values)
 
     def test_irreversible_plating_with_porosity(self):
         options = {
@@ -141,23 +166,23 @@ class BaseIntegrationTestLithiumIon:
         param = pybamm.ParameterValues("Chen2020_plating")
         self.run_basic_processing_test(options, parameter_values=param)
 
-    def test_reaction_limited(self):
+    def test_sei_reaction_limited(self):
         options = {"SEI": "reaction limited"}
         self.run_basic_processing_test(options)
 
-    def test_solvent_diffusion_limited(self):
+    def test_sei_solvent_diffusion_limited(self):
         options = {"SEI": "solvent-diffusion limited"}
         self.run_basic_processing_test(options)
 
-    def test_electron_migration_limited(self):
+    def test_sei_electron_migration_limited(self):
         options = {"SEI": "electron-migration limited"}
         self.run_basic_processing_test(options)
 
-    def test_interstitial_diffusion_limited(self):
+    def test_sei_interstitial_diffusion_limited(self):
         options = {"SEI": "interstitial-diffusion limited"}
         self.run_basic_processing_test(options)
 
-    def test_ec_reaction_limited(self):
+    def test_sei_ec_reaction_limited(self):
         options = {"SEI": "ec reaction limited", "SEI porosity change": "true"}
         self.run_basic_processing_test(options)
 
@@ -173,6 +198,15 @@ class BaseIntegrationTestLithiumIon:
 
     def test_loss_active_material_stress_both(self):
         options = {"loss of active material": "stress-driven"}
+        parameter_values = pybamm.ParameterValues("Ai2020")
+        self.run_basic_processing_test(options, parameter_values=parameter_values)
+
+    def test_loss_active_material_reaction(self):
+        options = {"loss of active material": "reaction-driven"}
+        self.run_basic_processing_test(options)
+
+    def test_loss_active_material_stress_and_reaction(self):
+        options = {"loss of active material": "stress and reaction-driven"}
         parameter_values = pybamm.ParameterValues("Ai2020")
         self.run_basic_processing_test(options, parameter_values=parameter_values)
 

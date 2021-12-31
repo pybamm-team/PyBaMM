@@ -507,6 +507,70 @@ class TestParameterValues(unittest.TestCase):
         processed_interp3 = parameter_values.process_symbol(interp3)
         self.assertEqual(processed_interp3.evaluate(), 9.03)
 
+    def test_process_interpolant_2d(self):
+
+        x_ = [np.linspace(0, 10), np.linspace(0, 20)]
+
+        X = list(np.meshgrid(*x_))
+
+        x = np.column_stack([el.reshape(-1, 1) for el in X])
+
+        y = (2 * x).sum(axis=1)
+
+        Y = y.reshape(*[len(el) for el in x_])
+
+        data = x_, Y
+
+        parameter_values = pybamm.ParameterValues(
+            {"a": 3.01, "b": 4.4, "Times two": ("times two", data)}
+        )
+
+        a = pybamm.Parameter("a")
+        b = pybamm.Parameter("b")
+        func = pybamm.FunctionParameter("Times two", {"a": a, "b": b})
+
+        processed_func = parameter_values.process_symbol(func)
+        self.assertIsInstance(processed_func, pybamm.Interpolant)
+        self.assertEqual(processed_func.evaluate(), 14.82)
+
+        # process differentiated function parameter
+        # diff_func = func.diff(a)
+        # processed_diff_func = parameter_values.process_symbol(diff_func)
+        # self.assertEqual(processed_diff_func.evaluate(), 2)
+
+        # interpolant defined up front
+        interp2 = pybamm.Interpolant(data[0], data[1], children=(a, b))
+        processed_interp2 = parameter_values.process_symbol(interp2)
+        self.assertEqual(processed_interp2.evaluate(), 14.82)
+
+        y3 = (3 * x).sum(axis=1)
+
+        Y3 = y3.reshape(*[len(el) for el in x_])
+
+        data3 = x_, Y3
+
+        parameter_values = pybamm.ParameterValues(
+            {"a": 3.01, "b": 4.4, "Times three": ("times three", data3)}
+        )
+
+        a = pybamm.Parameter("a")
+        b = pybamm.Parameter("b")
+        func = pybamm.FunctionParameter("Times three", {"a": a, "b": b})
+
+        processed_func = parameter_values.process_symbol(func)
+        self.assertIsInstance(processed_func, pybamm.Interpolant)
+        # self.assertEqual(processed_func.evaluate().flatten()[0], 22.23)
+        np.testing.assert_almost_equal(
+            processed_func.evaluate().flatten()[0], 22.23, decimal=4
+        )
+
+        interp3 = pybamm.Interpolant(data3[0], data3[1], children=(a, b))
+        processed_interp3 = parameter_values.process_symbol(interp3)
+        # self.assertEqual(processed_interp3.evaluate().flatten()[0], 22.23)
+        np.testing.assert_almost_equal(
+            processed_interp3.evaluate().flatten()[0], 22.23, decimal=4
+        )
+
     def test_interpolant_against_function(self):
         parameter_values = pybamm.ParameterValues({})
         parameter_values.update(
@@ -545,10 +609,61 @@ class TestParameterValues(unittest.TestCase):
             processed_diff_func.evaluate(), processed_diff_interp.evaluate(), decimal=2
         )
 
+    def test_interpolant_2d_from_json(self):
+
+        # pv = pybamm.ParameterValues({'interpolation': 0.0, 'function': 0.0})
+        #
+        # pv['interpolation'] = \
+        #     '[2D data]../tests/unit/test_parameters/lico2_diffusivity_Dualfoil1998_2D'
+        #
+        # pv['function'] = '[function]'
+
+        parameter_values = pybamm.ParameterValues(
+            chemistry=pybamm.parameter_sets.Ai2020
+        )
+        parameter_values.update(
+            {
+                "function": "[function]lico2_diffusivity_Dualfoil1998",
+            },
+            path=os.path.join(
+                pybamm.root_dir(),
+                "pybamm",
+                "input",
+                "parameters",
+                "lithium_ion",
+                "positive_electrodes",
+                "lico2_Ai2020",
+            ),
+            check_already_exists=False,
+        )
+        parameter_values.update(
+            {
+                "interpolation": "[2D data]lico2_diffusivity_Dualfoil1998_2D",
+            },
+            path=os.path.join(
+                pybamm.root_dir(),
+                "tests",
+                "unit",
+                "test_parameters",
+            ),
+            check_already_exists=False,
+        )
+
+        a = pybamm.Scalar(0.6)
+        b = pybamm.Scalar(300.0)
+
+        func = pybamm.FunctionParameter("function", {"a": a, "b": b})
+        interp = pybamm.FunctionParameter("interpolation", {"a": a, "b": b})
+
+        processed_func = parameter_values.process_symbol(func)
+        processed_interp = parameter_values.process_symbol(interp)
+        np.testing.assert_array_almost_equal(
+            processed_func.evaluate(), processed_interp.evaluate(), decimal=4
+        )
+
     def test_process_integral_broadcast(self):
-        # Test that the x-average of a broadcast, created outside of x-average, gets
-        # processed correctly
-        var = pybamm.Variable("var", domain="test")
+        # Test that the x-average of a broadcast gets processed correctly
+        var = pybamm.Variable("var", domain="negative electrode")
         func = pybamm.x_average(pybamm.FunctionParameter("func", {"var": var}))
 
         param = pybamm.ParameterValues({"func": 2})
@@ -560,7 +675,9 @@ class TestParameterValues(unittest.TestCase):
 
         # secondary
         var = pybamm.Variable(
-            "var", domain="test", auxiliary_domains={"secondary": "test sec"}
+            "var",
+            domain="negative electrode",
+            auxiliary_domains={"secondary": "current collector"},
         )
         func = pybamm.x_average(pybamm.FunctionParameter("func", {"var": var}))
 
@@ -569,14 +686,19 @@ class TestParameterValues(unittest.TestCase):
 
         self.assertEqual(
             func_proc.id,
-            pybamm.PrimaryBroadcast(pybamm.Scalar(2, name="func"), "test sec").id,
+            pybamm.PrimaryBroadcast(
+                pybamm.Scalar(2, name="func"), "current collector"
+            ).id,
         )
 
         # secondary and tertiary
         var = pybamm.Variable(
             "var",
-            domain="test",
-            auxiliary_domains={"secondary": "test sec", "tertiary": "test tert"},
+            domain="negative particle",
+            auxiliary_domains={
+                "secondary": "negative electrode",
+                "tertiary": "current collector",
+            },
         )
         func = pybamm.x_average(pybamm.FunctionParameter("func", {"var": var}))
 
@@ -586,18 +708,18 @@ class TestParameterValues(unittest.TestCase):
         self.assertEqual(
             func_proc.id,
             pybamm.FullBroadcast(
-                pybamm.Scalar(2, name="func"), "test sec", "test tert"
+                pybamm.Scalar(2, name="func"), "negative particle", "current collector"
             ).id,
         )
 
         # secondary, tertiary and quaternary
         var = pybamm.Variable(
             "var",
-            domain="test",
+            domain="negative particle",
             auxiliary_domains={
-                "secondary": "test sec",
-                "tertiary": "test tert",
-                "quaternary": "test quat",
+                "secondary": "negative particle size",
+                "tertiary": "negative electrode",
+                "quaternary": "current collector",
             },
         )
         func = pybamm.x_average(pybamm.FunctionParameter("func", {"var": var}))
@@ -609,19 +731,13 @@ class TestParameterValues(unittest.TestCase):
             func_proc.id,
             pybamm.FullBroadcast(
                 pybamm.Scalar(2, name="func"),
-                "test sec",
-                {"secondary": "test tert", "tertiary": "test quat"},
+                "negative particle",
+                {
+                    "secondary": "negative particle size",
+                    "tertiary": "current collector",
+                },
             ).id,
         )
-
-        # this should be the case even if the domain is one of the special domains
-        var = pybamm.Variable("var", domain="negative electrode")
-        func = pybamm.x_average(pybamm.FunctionParameter("func", {"var": var}))
-
-        param = pybamm.ParameterValues({"func": 2})
-        func_proc = param.process_symbol(func)
-
-        self.assertEqual(func_proc.id, pybamm.Scalar(2, name="func").id)
 
         # special case for integral of concatenations of broadcasts
         var_n = pybamm.Variable("var_n", domain="negative electrode")
@@ -684,6 +800,26 @@ class TestParameterValues(unittest.TestCase):
             pybamm.PrimaryBroadcast(pybamm.Scalar(3), "current collector").id,
         )
 
+    def test_process_size_average(self):
+        # Test that the x-average of a broadcast gets processed correctly
+        var = pybamm.Variable("var", domain="negative particle size")
+        var_av = pybamm.size_average(var)
+
+        def dist(R):
+            return R ** 2
+
+        param = pybamm.ParameterValues(
+            {
+                "Negative particle radius [m]": 2,
+                "Negative area-weighted particle-size distribution [m-1]": dist,
+            }
+        )
+        var_av_proc = param.process_symbol(var_av)
+
+        self.assertIsInstance(var_av_proc, pybamm.SizeAverage)
+        R = pybamm.SpatialVariable("R", "negative particle size")
+        self.assertEqual(var_av_proc.f_a_dist.id, ((R * 2) ** 2 * 2).id)
+
     def test_process_not_constant(self):
         param = pybamm.ParameterValues({"a": 4})
 
@@ -696,37 +832,25 @@ class TestParameterValues(unittest.TestCase):
         var2 = pybamm.Variable("var2")
         par1 = pybamm.Parameter("par1")
         par2 = pybamm.Parameter("par2")
-        scal1 = pybamm.Scalar(3)
-        scal2 = pybamm.Scalar(4)
-        expression = (scal1 * (par1 ** var2)) / ((var1 - par2) + scal2)
+        expression = (3 * (par1 ** var2)) / ((var1 - par2) + var2)
 
         param = pybamm.ParameterValues({"par1": 1, "par2": 2})
         exp_param = param.process_symbol(expression)
         self.assertIsInstance(exp_param, pybamm.Division)
         # left side
-        self.assertIsInstance(exp_param.children[0], pybamm.Multiplication)
-        self.assertIsInstance(exp_param.children[0].children[0], pybamm.Scalar)
-        self.assertIsInstance(exp_param.children[0].children[1], pybamm.Power)
-        self.assertTrue(
-            isinstance(exp_param.children[0].children[1].children[0], pybamm.Scalar)
-        )
-        self.assertEqual(exp_param.children[0].children[1].children[0].value, 1)
-        self.assertTrue(
-            isinstance(exp_param.children[0].children[1].children[1], pybamm.Variable)
-        )
+        self.assertIsInstance(exp_param.left, pybamm.Multiplication)
+        self.assertIsInstance(exp_param.left.left, pybamm.Scalar)
+        self.assertIsInstance(exp_param.left.right, pybamm.Power)
+        self.assertIsInstance(exp_param.left.right.left, pybamm.Scalar)
+        self.assertEqual(exp_param.left.right.left.value, 1)
+        self.assertIsInstance(exp_param.left.right.right, pybamm.Variable)
         # right side
-        self.assertIsInstance(exp_param.children[1], pybamm.Addition)
-        self.assertTrue(
-            isinstance(exp_param.children[1].children[0], pybamm.Subtraction)
-        )
-        self.assertTrue(
-            isinstance(exp_param.children[1].children[0].children[0], pybamm.Variable)
-        )
-        self.assertTrue(
-            isinstance(exp_param.children[1].children[0].children[1], pybamm.Scalar)
-        )
-        self.assertEqual(exp_param.children[1].children[0].children[1].value, 2)
-        self.assertIsInstance(exp_param.children[1].children[1], pybamm.Scalar)
+        self.assertIsInstance(exp_param.right, pybamm.Addition)
+        self.assertIsInstance(exp_param.right.left, pybamm.Subtraction)
+        self.assertIsInstance(exp_param.right.left.left, pybamm.Variable)
+        self.assertIsInstance(exp_param.right.left.right, pybamm.Scalar)
+        self.assertEqual(exp_param.right.left.right.value, 2)
+        self.assertIsInstance(exp_param.right.right, pybamm.Variable)
 
     def test_process_model(self):
         model = pybamm.BaseModel()
@@ -774,16 +898,12 @@ class TestParameterValues(unittest.TestCase):
         # variables
         self.assertEqual(model.variables["var1"].id, var1.id)
         self.assertIsInstance(model.variables["grad_var1"], pybamm.Gradient)
-        self.assertTrue(
-            isinstance(model.variables["grad_var1"].children[0], pybamm.Variable)
-        )
+        self.assertIsInstance(model.variables["grad_var1"].children[0], pybamm.Variable)
         self.assertEqual(
             model.variables["d_var1"].id, (pybamm.Scalar(42, name="d") * var1).id
         )
         self.assertIsInstance(model.variables["d_var1"].children[0], pybamm.Scalar)
-        self.assertTrue(
-            isinstance(model.variables["d_var1"].children[1], pybamm.Variable)
-        )
+        self.assertIsInstance(model.variables["d_var1"].children[1], pybamm.Variable)
         # timescale and length scales
         self.assertEqual(model.timescale.evaluate(), 2)
         self.assertEqual(model.length_scales["test"].evaluate(), 3)

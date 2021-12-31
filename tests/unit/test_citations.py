@@ -168,12 +168,7 @@ class TestCitations(unittest.TestCase):
 
         citations._reset()
         self.assertNotIn("Reniers2019", citations._papers_to_cite)
-        pybamm.active_material.StressDriven(None, None, None, True)
-        self.assertIn("Reniers2019", citations._papers_to_cite)
-
-        citations._reset()
-        self.assertNotIn("Reniers2019", citations._papers_to_cite)
-        pybamm.active_material.ReactionDriven(None, None, None, True)
+        pybamm.active_material.LossActiveMaterial(None, None, None, True)
         self.assertIn("Reniers2019", citations._papers_to_cite)
 
     def test_mohtat_2019(self):
@@ -191,6 +186,19 @@ class TestCitations(unittest.TestCase):
         self.assertNotIn("Mohtat2021", citations._papers_to_cite)
         pybamm.external_circuit.CCCVFunctionControl(None)
         self.assertIn("Mohtat2021", citations._papers_to_cite)
+
+    def test_sripad_2020(self):
+        citations = pybamm.citations
+
+        citations._reset()
+        self.assertNotIn("Sripad2020", citations._papers_to_cite)
+        pybamm.kinetics.Marcus(None, None, None, None)
+        self.assertIn("Sripad2020", citations._papers_to_cite)
+
+        citations._reset()
+        self.assertNotIn("Sripad2020", citations._papers_to_cite)
+        pybamm.kinetics.MarcusHushChidsey(None, None, None, None)
+        self.assertIn("Sripad2020", citations._papers_to_cite)
 
     def test_parameter_citations(self):
         citations = pybamm.citations

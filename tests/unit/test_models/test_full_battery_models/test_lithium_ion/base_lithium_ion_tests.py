@@ -100,8 +100,12 @@ class BaseUnitTestLithiumIon:
         options = {"loss of active material": "stress-driven"}
         self.check_well_posedness(options)
 
-    def test_well_posed_loss_active_material_stress_reaction_both(self):
+    def test_well_posed_loss_active_material_reaction(self):
         options = {"loss of active material": "reaction-driven"}
+        self.check_well_posedness(options)
+
+    def test_well_posed_loss_active_material_stress_reaction(self):
+        options = {"loss of active material": "stress and reaction-driven"}
         self.check_well_posedness(options)
 
     def test_well_posed_surface_form_differential(self):
@@ -110,6 +114,22 @@ class BaseUnitTestLithiumIon:
 
     def test_well_posed_surface_form_algebraic(self):
         options = {"surface form": "algebraic"}
+        self.check_well_posedness(options)
+
+    def test_well_posed_kinetics_asymmetric_butler_volmer(self):
+        options = {"intercalation kinetics": "asymmetric Butler-Volmer"}
+        self.check_well_posedness(options)
+
+    def test_well_posed_kinetics_linear(self):
+        options = {"intercalation kinetics": "linear"}
+        self.check_well_posedness(options)
+
+    def test_well_posed_kinetics_marcus(self):
+        options = {"intercalation kinetics": "Marcus"}
+        self.check_well_posedness(options)
+
+    def test_well_posed_kinetics_mhc(self):
+        options = {"intercalation kinetics": "Marcus-Hush-Chidsey"}
         self.check_well_posedness(options)
 
     def test_well_posed_sei_constant(self):

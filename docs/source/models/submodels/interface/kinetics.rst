@@ -1,16 +1,28 @@
 Kinetics
 ========
 
-.. autoclass:: pybamm.interface.BaseKinetics
+.. autoclass:: pybamm.kinetics.BaseKinetics
     :members:
 
-.. autoclass:: pybamm.interface.ButlerVolmer
+.. autoclass:: pybamm.kinetics.SymmetricButlerVolmer
     :members:
 
-.. autoclass:: pybamm.interface.NoReaction
+.. autoclass:: pybamm.kinetics.AsymmetricButlerVolmer
     :members:
 
-.. autoclass:: pybamm.interface.ForwardTafel
+.. autoclass:: pybamm.kinetics.Linear
+    :members:
+
+.. autoclass:: pybamm.kinetics.Marcus
+    :members:
+
+.. autoclass:: pybamm.kinetics.MarcusHushChidsey
+    :members:
+
+.. autoclass:: pybamm.kinetics.NoReaction
+    :members:
+
+.. autoclass:: pybamm.kinetics.ForwardTafel
     :members:
 
 .. .. autoclass:: pybamm.interface.BackwardTafel

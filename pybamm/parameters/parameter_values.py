@@ -9,6 +9,7 @@ import numbers
 import warnings
 from pprint import pformat
 from collections import defaultdict
+import json
 
 
 class ParameterValues:
@@ -315,8 +316,22 @@ class ParameterValues:
                         filename, comment="#", skip_blank_lines=True, header=None
                     ).to_numpy()
                     # Save name and data
+                    self._dict_items[name] = (function_name, ([data[:, 0]], data[:, 1]))
+                    values[name] = (function_name, ([data[:, 0]], data[:, 1]))
+
+                # parse 2D parameter data
+                elif value.startswith("[2D data]"):
+                    filename = os.path.join(path, value[9:] + ".json")
+                    function_name = value[9:]
+                    filename = pybamm.get_parameters_filepath(filename)
+                    with open(filename, 'r') as jsonfile:
+                        json_data = json.load(jsonfile)
+                    data = json_data['data']
+                    data[0] = [np.array(el) for el in data[0]]
+                    data[1] = np.array(data[1])
                     self._dict_items[name] = (function_name, data)
                     values[name] = (function_name, data)
+
                 elif value == "[input]":
                     self._dict_items[name] = pybamm.InputParameter(name)
                 # Anything else should be a converted to a float
@@ -617,29 +632,47 @@ class ParameterValues:
 
             # Create Function or Interpolant or Scalar object
             if isinstance(function_name, tuple):
-                # If function_name is a tuple then it should be (name, data) and we need
-                # to create an Interpolant
-                name, data = function_name
-                function = pybamm.Interpolant(
-                    data[:, 0], data[:, 1], *new_children, name=name
-                )
-                # Define event to catch extrapolation. In these events the sign is
-                # important: it should be positive inside of the range and negative
-                # outside of it
-                self.parameter_events.append(
-                    pybamm.Event(
-                        "Interpolant {} lower bound".format(name),
-                        pybamm.min(new_children[0] - min(data[:, 0])),
-                        pybamm.EventType.INTERPOLANT_EXTRAPOLATION,
+                if len(function_name) == 2:  # CSV or JSON parsed data
+                    # to create an Interpolant
+                    name, data = function_name
+
+                    if isinstance(data, np.ndarray):
+                        data = [data[:, 0]], data[:, 1]
+
+                    if len(data[0]) == 1:
+                        input_data = data[0][0], data[1]
+
+                    else:
+                        input_data = data
+
+                    function = pybamm.Interpolant(
+                        input_data[0], input_data[-1], new_children, name=name
                     )
-                )
-                self.parameter_events.append(
-                    pybamm.Event(
-                        "Interpolant {} upper bound".format(name),
-                        pybamm.min(max(data[:, 0]) - new_children[0]),
-                        pybamm.EventType.INTERPOLANT_EXTRAPOLATION,
-                    )
-                )
+                    # Define event to catch extrapolation. In these events the sign is
+                    # important: it should be positive inside of the range and negative
+                    # outside of it
+                    for data_index in range(len(data[0])):
+                        self.parameter_events.append(
+                            pybamm.Event(
+                                "Interpolant {} lower bound".format(name),
+                                pybamm.min(new_children[data_index] -
+                                           min(data[0][data_index])),
+                                pybamm.EventType.INTERPOLANT_EXTRAPOLATION,
+                            )
+                        )
+                        self.parameter_events.append(
+                            pybamm.Event(
+                                "Interpolant {} upper bound".format(name),
+                                pybamm.min(max(data[0][data_index]) -
+                                           new_children[data_index]),
+                                pybamm.EventType.INTERPOLANT_EXTRAPOLATION,
+                            )
+                        )
+
+                else:  # pragma: no cover
+                    raise ValueError("Invalid function name length: {0}"
+                                     .format(len(function_name)))
+
             elif isinstance(function_name, numbers.Number):
                 # Check not NaN (parameter in csv file but no value given)
                 if np.isnan(function_name):
@@ -687,50 +720,6 @@ class ParameterValues:
             # process children
             new_left = self.process_symbol(symbol.left)
             new_right = self.process_symbol(symbol.right)
-            # Special case for averages, which can appear as "integral of a broadcast"
-            # divided by "integral of a broadcast"
-            # this construction seems very specific but can appear often when averaging
-            if (
-                isinstance(symbol, pybamm.Division)
-                # right is integral(Broadcast(1))
-                and (
-                    isinstance(new_right, pybamm.Integral)
-                    and isinstance(new_right.child, pybamm.Broadcast)
-                    and new_right.child.child.id == pybamm.Scalar(1).id
-                )
-                # left is integral
-                and isinstance(new_left, pybamm.Integral)
-            ):
-                # left is integral(Broadcast)
-                if (
-                    isinstance(new_left.child, pybamm.Broadcast)
-                    and new_left.child.child.domain == []
-                ):
-                    integrand = new_left.child
-                    if integrand.auxiliary_domains == {}:
-                        return integrand.orphans[0]
-                    else:
-                        domain = integrand.auxiliary_domains["secondary"]
-                        if "tertiary" in integrand.auxiliary_domains:
-                            auxiliary_domains = {
-                                "secondary": integrand.auxiliary_domains["tertiary"]
-                            }
-                            if "quaternary" in integrand.auxiliary_domains:
-                                quat_domain = integrand.auxiliary_domains["quaternary"]
-                                auxiliary_domains["tertiary"] = quat_domain
-                            return pybamm.FullBroadcast(
-                                integrand.orphans[0], domain, auxiliary_domains
-                            )
-                        else:
-                            return pybamm.PrimaryBroadcast(integrand.orphans[0], domain)
-                # left is "integral of concatenation of broadcasts"
-                elif isinstance(new_left.child, pybamm.Concatenation) and all(
-                    isinstance(child, pybamm.Broadcast)
-                    for child in new_left.child.children
-                ):
-                    # in this case x_average will return a weighted sum of the variables
-                    # that were broadcasted
-                    return self.process_symbol(pybamm.x_average(new_left.child))
             # make new symbol, ensure domain remains the same
             new_symbol = symbol._binary_new_copy(new_left, new_right)
             new_symbol.domain = symbol.domain
@@ -742,6 +731,15 @@ class ParameterValues:
             new_symbol = symbol._unary_new_copy(new_child)
             # ensure domain remains the same
             new_symbol.domain = symbol.domain
+            # x_average can sometimes create a new symbol with electrode thickness
+            # parameters, so we process again to make sure these parameters are set
+            if isinstance(symbol, pybamm.XAverage) and not isinstance(
+                new_symbol, pybamm.XAverage
+            ):
+                new_symbol = self.process_symbol(new_symbol)
+            # f_a_dist in the size average needs to be processed
+            if isinstance(new_symbol, pybamm.SizeAverage):
+                new_symbol.f_a_dist = self.process_symbol(new_symbol.f_a_dist)
             return new_symbol
 
         # Functions

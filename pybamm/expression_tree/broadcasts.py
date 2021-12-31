@@ -122,28 +122,28 @@ class PrimaryBroadcast(Broadcast):
                 """Primary broadcast from current collector domain must be to electrode
                 or separator or particle or particle size domains"""
             )
-        elif (
-            child.domain[0]
-            in [
-                "negative electrode",
-                "separator",
-                "positive electrode",
-            ]
-            and broadcast_domain[0] not in [
-                "negative particle",
-                "positive particle",
-                "negative particle size",
-                "positive particle size",
-            ]
-        ):
+        elif child.domain[0] in [
+            "negative electrode",
+            "separator",
+            "positive electrode",
+        ] and broadcast_domain[0] not in [
+            "negative particle",
+            "positive particle",
+            "negative particle size",
+            "positive particle size",
+        ]:
             raise pybamm.DomainError(
                 """Primary broadcast from electrode or separator must be to particle
                 or particle size domains"""
             )
-        elif child.domain[0] in [
-            "negative particle size",
-            "positive particle size",
-        ] and broadcast_domain[0] not in ["negative particle", "positive particle"]:
+        elif (
+            child.domain[0]
+            in [
+                "negative particle size",
+                "positive particle size",
+            ]
+            and broadcast_domain[0] not in ["negative particle", "positive particle"]
+        ):
             raise pybamm.DomainError(
                 """Primary broadcast from particle size domain must be to particle
                 domain"""
@@ -253,17 +253,21 @@ class SecondaryBroadcast(Broadcast):
             "negative electrode",
             "separator",
             "positive electrode",
-            "current collector"
+            "current collector",
         ]:
             raise pybamm.DomainError(
                 """Secondary broadcast from particle size domain must be to
                 electrode or separator or current collector domains"""
             )
-        elif child.domain[0] in [
-            "negative electrode",
-            "separator",
-            "positive electrode",
-        ] and broadcast_domain != ["current collector"]:
+        elif (
+            child.domain[0]
+            in [
+                "negative electrode",
+                "separator",
+                "positive electrode",
+            ]
+            and broadcast_domain != ["current collector"]
+        ):
             raise pybamm.DomainError(
                 """Secondary broadcast from electrode or separator must be to
                 current collector domains"""
@@ -300,7 +304,7 @@ class SecondaryBroadcast(Broadcast):
 
     def reduce_one_dimension(self):
         """Reduce the broadcast by one dimension."""
-        raise NotImplementedError
+        return self.orphans[0]
 
 
 class SecondaryBroadcastToEdges(SecondaryBroadcast):
@@ -362,17 +366,21 @@ class TertiaryBroadcast(Broadcast):
             "negative electrode",
             "separator",
             "positive electrode",
-            "current collector"
+            "current collector",
         ]:
             raise pybamm.DomainError(
                 """Tertiary broadcast from a symbol with particle size secondary
                 domain must be to electrode, separator or current collector"""
             )
-        if child.auxiliary_domains["secondary"][0] in [
-            "negative electrode",
-            "separator",
-            "positive electrode",
-        ] and broadcast_domain != ["current collector"]:
+        if (
+            child.auxiliary_domains["secondary"][0]
+            in [
+                "negative electrode",
+                "separator",
+                "positive electrode",
+            ]
+            and broadcast_domain != ["current collector"]
+        ):
             raise pybamm.DomainError(
                 """Tertiary broadcast from a symbol with an electrode or
                 separator secondary domain must be to current collector"""
@@ -477,10 +485,13 @@ class FullBroadcast(Broadcast):
                 self.orphans[0], self.auxiliary_domains["secondary"]
             )
         elif "tertiary" in self.auxiliary_domains:
+            aux = {"secondary": self.auxiliary_domains["tertiary"]}
+            if "quaternary" in self.auxiliary_domains:
+                aux["tertiary"] = self.auxiliary_domains["quaternary"]
             return FullBroadcast(
                 self.orphans[0],
                 self.auxiliary_domains["secondary"],
-                {"secondary": self.auxiliary_domains["tertiary"]},
+                aux,
             )
 
 

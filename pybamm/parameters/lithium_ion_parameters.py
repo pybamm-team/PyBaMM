@@ -59,6 +59,9 @@ class LithiumIonParameters(BaseParameters):
         # Physical constants
         self.R = pybamm.constants.R
         self.F = pybamm.constants.F
+        self.k_b = pybamm.constants.k_b
+        self.q_e = pybamm.constants.q_e
+
         self.T_ref = self.therm.T_ref
 
         # Macroscale geometry
@@ -68,14 +71,16 @@ class LithiumIonParameters(BaseParameters):
         self.L_p = self.geo.L_p
         self.L_cp = self.geo.L_cp
         self.L_x = self.geo.L_x
+        self.L = self.geo.L
         self.L_y = self.geo.L_y
         self.L_z = self.geo.L_z
-        self.L = self.geo.L
+        self.r_inner_dimensional = self.geo.r_inner_dimensional
+        self.r_outer_dimensional = self.geo.r_outer_dimensional
         self.A_cc = self.geo.A_cc
         self.A_cooling = self.geo.A_cooling
         self.V_cell = self.geo.V_cell
 
-        # Tab geometry
+        # Tab geometry (for pouch cells)
         self.L_tab_n = self.geo.L_tab_n
         self.Centre_y_tab_n = self.geo.Centre_y_tab_n
         self.Centre_z_tab_n = self.geo.Centre_z_tab_n
@@ -181,6 +186,20 @@ class LithiumIonParameters(BaseParameters):
         )
         self.C_dl_p_dimensional = pybamm.Parameter(
             "Positive electrode double-layer capacity [F.m-2]"
+        )
+
+        # Intercalation kinetics
+        self.mhc_lambda_n_dimensional = pybamm.Parameter(
+            "Negative electrode reorganization energy [eV]"
+        )
+        self.mhc_lambda_p_dimensional = pybamm.Parameter(
+            "Positive electrode reorganization energy [eV]"
+        )
+        self.alpha_bv_n = pybamm.Parameter(
+            "Negative electrode Butler-Volmer transfer coefficient"
+        )
+        self.alpha_bv_p = pybamm.Parameter(
+            "Positive electrode Butler-Volmer transfer coefficient"
         )
 
         # SEI parameters
@@ -546,7 +565,9 @@ class LithiumIonParameters(BaseParameters):
         self.positive_particle_concentration_scale = self.c_p_max
 
         # Electrical
-        self.potential_scale = self.R * self.T_ref / self.F
+        # Both potential scales are the same but they have different units
+        self.potential_scale = self.R * self.T_ref / self.F  # volts
+        self.potential_scale_eV = self.k_b / self.q_e * self.T_ref  # eV
         self.current_scale = self.i_typ
         self.current_scale.print_name = "I_typ"
         # Scale for interfacial current density in A/m2
@@ -641,13 +662,15 @@ class LithiumIonParameters(BaseParameters):
         self.l_x = self.geo.l_x
         self.l_y = self.geo.l_y
         self.l_z = self.geo.l_z
+        self.r_inner = self.geo.r_inner
+        self.r_outer = self.geo.r_outer
         self.a_cc = self.geo.a_cc
         self.a_cooling = self.geo.a_cooling
         self.v_cell = self.geo.v_cell
         self.l = self.geo.l
         self.delta = self.geo.delta
 
-        # Tab geometry
+        # Tab geometry (for pouch cells)
         self.l_tab_n = self.geo.l_tab_n
         self.centre_y_tab_n = self.geo.centre_y_tab_n
         self.centre_z_tab_n = self.geo.centre_z_tab_n
@@ -701,6 +724,10 @@ class LithiumIonParameters(BaseParameters):
             / self.j_scale_p
             / self.timescale
         )
+
+        # Intercalation kinetics
+        self.mhc_lambda_n = self.mhc_lambda_n_dimensional / self.potential_scale_eV
+        self.mhc_lambda_p = self.mhc_lambda_p_dimensional / self.potential_scale_eV
 
         # Electrical
         self.voltage_low_cut = (

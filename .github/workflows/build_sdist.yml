@@ -11,25 +11,21 @@ on:
     types: [completed]
 
 jobs:
-  # If build_wheels fails, exit this workflow
-  exit-workflow:
-    name: Exit workflow if build_wheels fails
-    runs-on: ubuntu-latest
-    if: ${{ github.event.workflow_run.conclusion == 'failure' }}
-    steps:
-      - run: exit 1
 
-
-  build_sdist:
+  build-sdist:
     name: Build sdist
     runs-on: ubuntu-latest
     strategy:
       matrix:
         python-version: [3.8]
-    if: |
-      ${{ github.event.workflow_run.conclusion == 'success' }} ||
-      github.event_name == 'workflow_dispatch'
+
     steps:
+      - name: Fail the job if build_wheels fails
+        if: ${{ github.event.workflow_run.conclusion == 'failure' }}
+        uses: actions/github-script@v5
+        with:
+          script: core.setFailed('workflow build_wheels failed')
+
       - uses: actions/checkout@v2
 
       - name: Set up Python ${{ matrix.python-version }}
@@ -53,7 +49,7 @@ jobs:
 
   publish-pypi:
     name: Upload sdist to PyPI
-    needs: build_sdist
+    needs: build-sdist
     runs-on: ubuntu-latest
     steps:
       - name: Download sdist
