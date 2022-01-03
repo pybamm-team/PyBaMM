@@ -239,10 +239,11 @@ class Discretisation(object):
         # Process length scales
         new_length_scales = {}
         for domain, scale in model.length_scales.items():
-            # Convert possible arrays of length 1 to scalars
-            new_length_scales[domain] = pybamm.Scalar(
-                float(self.process_symbol(scale).evaluate())
-            )
+            new_scale = self.process_symbol(scale)
+            if isinstance(new_scale, pybamm.Array):
+                # Convert possible arrays of length 1 to scalars
+                new_scale = pybamm.Scalar(float(new_scale.evaluate()))
+            new_length_scales[domain] = new_scale
         model_disc.length_scales = new_length_scales
 
         # Check that resulting model makes sense
