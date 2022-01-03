@@ -1,3 +1,9 @@
+# [Unreleased](https://github.com/pybamm-team/PyBaMM/)
+
+## Features
+
+-   Added an option to force install compatible versions of jax and jaxlib if already installed using CLI ([#1881](https://github.com/pybamm-team/PyBaMM/pull/1881))
+
 # [v21.12](https://github.com/pybamm-team/PyBaMM/tree/v21.11) - 2021-12-29
 
 ## Features
