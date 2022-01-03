@@ -382,7 +382,7 @@ def install_jax(arguments=None):  # pragma: no cover
         "-f",
         "--force",
         action="store_true",
-        help="force install compatible versions of jax and jaxlib",
+        help=f"force install compatible versions of jax ({JAX_VERSION}) and jaxlib ({JAXLIB_VERSION})",  # noqa: E501
     )
 
     args = parser.parse_args(arguments)
@@ -395,12 +395,11 @@ def install_jax(arguments=None):  # pragma: no cover
     elif importlib.util.find_spec("jax") is not None:
         if not args.force and not is_jax_compatible():
             raise ValueError(
-                """
+                f"""
 Jax is already installed but the installed version of jax or jaxlib is not supported by PyBaMM.
 
-You can force install compatible versions of jax and jaxlib using the following command:
-pybamm_install_jax --force
-                """,  # noqa: E501
+You can force install compatible versions of jax ({JAX_VERSION}) and jaxlib ({JAXLIB_VERSION}) using the following command:
+pybamm_install_jax --force""",  # noqa: E501
             )
 
     subprocess.check_call(
