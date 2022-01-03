@@ -101,16 +101,17 @@ class TestMainReaction(unittest.TestCase):
         j0_p_diff = parameter_values.process_symbol(j0_p(c_e).diff(c_e))
 
         # Numerical
+        # This returns a Broadcast object so take the child
         j0_n_FD = parameter_values.process_symbol(
             (j0_n(c_e + h) - j0_n(c_e - h)) / (2 * h)
-        )
+        ).child
         np.testing.assert_almost_equal(
             j0_n_diff.evaluate(inputs={"c_e": 0.5}),
             j0_n_FD.evaluate(inputs={"c_e": 0.5}),
         )
         j0_p_FD = parameter_values.process_symbol(
             (j0_p(c_e + h) - j0_p(c_e - h)) / (2 * h)
-        )
+        ).child
         np.testing.assert_almost_equal(
             j0_p_diff.evaluate(inputs={"c_e": 0.5}),
             j0_p_FD.evaluate(inputs={"c_e": 0.5}),
