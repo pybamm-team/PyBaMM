@@ -218,6 +218,7 @@ class Discretisation(object):
         processed_events = []
         pybamm.logger.verbose("Discretise events for {}".format(model.name))
         for event in model.events:
+            pybamm.logger.debug("Discretise event '{}'".format(event.name))
             processed_event = pybamm.Event(
                 event.name, self.process_symbol(event.expression), event.event_type
             )

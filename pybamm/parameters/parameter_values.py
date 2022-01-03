@@ -683,16 +683,7 @@ class ParameterValues:
                     )
                 # If the "function" is provided is actually a scalar, return a Scalar
                 # object instead of throwing an error.
-                function = pybamm.Scalar(
-                    function_name, name=symbol.name
-                )  # * pybamm.ones_like(*new_children)
-            # elif isinstance(function_name, pybamm.InputParameter) or (
-            #     isinstance(function_name, pybamm.Symbol)
-            #     and function_name.size_for_testing == 1
-            # ):
-            #     # If the "function" provided is a pybamm scalar-like, use ones_like to
-            #     # get the right shape
-            #     function = function_name * pybamm.ones_like(*new_children)
+                function = pybamm.Scalar(function_name, name=symbol.name)
             elif callable(function_name):
                 # otherwise evaluate the function to create a new PyBaMM object
                 function = function_name(*new_children)
