@@ -2,9 +2,7 @@
 # Tests for the electrode-electrolyte interface equations for lead-acid models
 #
 import pybamm
-from pybamm.expression_tree.broadcasts import PrimaryBroadcast
 from tests import get_discretisation_for_testing
-import numpy as np
 import unittest
 
 
