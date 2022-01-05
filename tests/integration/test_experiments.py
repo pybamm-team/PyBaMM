@@ -79,8 +79,7 @@ class TestExperiments(unittest.TestCase):
         )
         sol = sim.solve()
         # this experiment fails during the third cycle (i.e. is infeasible)
-        # so we should just return the successful cycles (2 in this case)
-        self.assertEqual(len(sol.cycles), 2)
+        self.assertEqual(len(sol.cycles), 3)
 
 
 if __name__ == "__main__":
