@@ -924,6 +924,11 @@ class Simulation:
                         logs["error"] = e
                         callbacks.on_experiment_error(logs)
                         feasible = False
+                        # If none of the cycles worked, raise an error
+                        if cycle_num == 1 and step_num == 1:
+                            raise e
+                        # Otherwise, just stop this cycle
+                        break
                         break
 
                     steps.append(step_solution)
@@ -966,9 +971,9 @@ class Simulation:
                 if cycle_num == 1:
                     # Note capacity_start could be defined as
                     # self.parameter_values["Nominal cell capacity [A.h]"] instead
-                    capacity_start = all_summary_variables[0]["Capacity [A.h]"]
-                    logs["start capacity"] = capacity_start
                     if "capacity" in self.experiment.termination:
+                        capacity_start = all_summary_variables[0]["Capacity [A.h]"]
+                        logs["start capacity"] = capacity_start
                         value, typ = self.experiment.termination["capacity"]
                         if typ == "Ah":
                             capacity_stop = value

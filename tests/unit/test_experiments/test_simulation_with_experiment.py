@@ -88,7 +88,8 @@ class TestSimulationExperiment(unittest.TestCase):
         )
         model = pybamm.lithium_ion.DFN()
         sim = pybamm.Simulation(model, experiment=experiment)
-        sol = sim.solve()
+        # test the callback here
+        sol = sim.solve(callbacks=pybamm.callbacks.Callback())
         self.assertEqual(sol.termination, "final time")
         self.assertEqual(len(sol.cycles), 1)
 
@@ -202,7 +203,7 @@ class TestSimulationExperiment(unittest.TestCase):
         t_eval = [0, 1]
         sim.solve(t_eval, solver=pybamm.CasadiSolver())
         pybamm.set_logging_level("WARNING")
-        self.assertEqual(sim._solution, None)
+        self.assertEqual(sim._solution.termination, "event: Minimum voltage")
 
     def test_run_experiment_termination_capacity(self):
         # with percent

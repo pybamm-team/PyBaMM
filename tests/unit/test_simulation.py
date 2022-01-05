@@ -230,7 +230,7 @@ class TestSimulation(unittest.TestCase):
         drive_cycle = pd.read_csv(
             os.path.join("pybamm", "input", "drive_cycles", "US06.csv"),
             comment="#",
-            header=None
+            header=None,
         ).to_numpy()
         timescale = param.evaluate(model.timescale)
         current_interpolant = pybamm.Interpolant(

@@ -185,10 +185,10 @@ class LoggingCallback(Callback):
         pass
 
     def on_cycle_end(self, logs):
-        cap_now = logs["summary variables"]["Capacity [A.h]"]
-        cap_start = logs["start capacity"]
         cap_stop = logs["stopping conditions"]["capacity"]
         if cap_stop is not None:
+            cap_now = logs["summary variables"]["Capacity [A.h]"]
+            cap_start = logs["start capacity"]
             if np.isnan(cap_now) or cap_now > cap_stop:
                 self.logger.notice(
                     f"Capacity is now {cap_now:.3f} Ah (originally {cap_start:.3f} Ah, "
