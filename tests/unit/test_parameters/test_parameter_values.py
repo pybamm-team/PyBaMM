@@ -411,7 +411,7 @@ class TestParameterValues(unittest.TestCase):
         def my_func(x):
             return 2 * x
 
-        x = pybamm.standard_spatial_vars.x_n
+        x = pybamm.SpatialVariable("x", "negative electrode")
         func = pybamm.FunctionParameter("func", {"x": x})
 
         parameter_values = pybamm.ParameterValues({"func": my_func})

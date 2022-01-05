@@ -716,10 +716,7 @@ class ParameterValues:
             new_right = self.process_symbol(symbol.right)
             # make new symbol, ensure domain remains the same
             new_symbol = symbol._binary_new_copy(new_left, new_right)
-            try:
-                new_symbol.domain = symbol.domain
-            except pybamm.DomainError:
-                self._process_symbol(symbol.left)
+            new_symbol.domain = symbol.domain
             return new_symbol
 
         # Unary operators
