@@ -93,6 +93,10 @@ class BaseKinetics(BaseInterface):
                 j_tot = variables[
                     "Total negative electrode interfacial current density variable"
                 ]
+
+                # Override print_name
+                j_tot.print_name = 'j_tot'
+
                 eta_sei = -j_tot * L_sei * R_sei
             else:
                 eta_sei = pybamm.Scalar(0)
@@ -203,6 +207,10 @@ class BaseKinetics(BaseInterface):
                 + self.domain.lower()
                 + " electrode interfacial current density variable"
             ]
+
+            # Override print_name
+            j_tot_var.print_name = "j_tot"
+
             j_tot = variables[
                 "Sum of "
                 + self.domain.lower()
