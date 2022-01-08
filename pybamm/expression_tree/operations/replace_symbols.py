@@ -110,13 +110,13 @@ class SymbolReplacer(object):
         ]
 
         # Process timescale
-        model.timescale = self.process_symbol(unprocessed_model.timescale)
+        model._timescale = self.process_symbol(unprocessed_model.timescale)
 
         # Process length scales
         new_length_scales = {}
         for domain, scale in unprocessed_model.length_scales.items():
             new_length_scales[domain] = self.process_symbol(scale)
-        model.length_scales = new_length_scales
+        model._length_scales = new_length_scales
 
         pybamm.logger.info("Finish replacing symbols in {}".format(model.name))
 

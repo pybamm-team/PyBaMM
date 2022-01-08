@@ -39,7 +39,7 @@ class TestQuickPlot(unittest.TestCase):
                 c, "positive particle"
             ),
         }
-        model.timescale = pybamm.Scalar(1)
+        model._timescale = pybamm.Scalar(1)
 
         # ODEs only (don't use jacobian)
         model.use_jacobian = False

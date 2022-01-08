@@ -39,6 +39,7 @@ PRINT_OPTIONS_OUTPUT = """\
 'total interfacial current density as a state': 'false' (possible: ['false', 'true'])
 'working electrode': 'both' (possible: ['both', 'negative', 'positive'])
 'external submodels': []
+'timescale': 'default'
 """  # noqa: E501
 
 
@@ -85,6 +86,13 @@ class TestBaseBatteryModel(unittest.TestCase):
         self.assertEqual(model.summary_variables, ["var"])
         with self.assertRaisesRegex(KeyError, "No cycling variable defined"):
             model.summary_variables = ["bad var"]
+
+    def test_timescale_lengthscale_errors(self):
+        model = pybamm.BaseBatteryModel()
+        with self.assertRaisesRegex(NotImplementedError, "Timescale cannot be"):
+            model.timescale = 1
+        with self.assertRaisesRegex(NotImplementedError, "Length scales cannot be"):
+            model.length_scales = {}
 
     def test_default_geometry(self):
 
@@ -281,6 +289,10 @@ class TestBaseBatteryModel(unittest.TestCase):
         # hydrolysis
         with self.assertRaisesRegex(pybamm.OptionError, "surface formulation"):
             pybamm.lead_acid.LOQS({"hydrolysis": "true", "surface form": "false"})
+
+        # timescale
+        with self.assertRaisesRegex(pybamm.OptionError, "timescale"):
+            pybamm.BaseBatteryModel({"timescale": "bad timescale"})
 
     def test_build_twice(self):
         model = pybamm.lithium_ion.SPM()  # need to pick a model to set vars and build
