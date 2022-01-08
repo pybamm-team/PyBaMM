@@ -413,7 +413,8 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                     if option == "timescale":
                         if not (val == "default" or isinstance(val, numbers.Number)):
                             raise pybamm.OptionError(
-                                "'timescale' option must be either 'default' or a number"
+                                "'timescale' option must be either 'default' "
+                                "or a number"
                             )
                     elif val not in self.possible_options[option]:
                         if not (option == "operating mode" and callable(val)):
