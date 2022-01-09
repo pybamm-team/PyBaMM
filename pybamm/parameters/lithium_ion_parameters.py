@@ -653,7 +653,7 @@ class LithiumIonParameters(BaseParameters):
         self.C_th = self.tau_th_yz / self.timescale
 
         # Concentration ratios
-        self.gamma_e = self.c_e_typ / self.c_max
+        self.gamma_e = (self.tau_discharge / self.timescale) * self.c_e_typ / self.c_max
         # In most cases gamma_n will be equal to 1
         self.gamma_n = (self.tau_discharge / self.timescale) * self.c_n_max / self.c_max
         self.gamma_p = (self.tau_discharge / self.timescale) * self.c_p_max / self.c_max
