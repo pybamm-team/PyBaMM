@@ -601,7 +601,7 @@ class ProcessedVariable(object):
         start = 0
         # Sort the list of input names so that it aligns
         # with the sorting applied during solver setup
-        sorted_input_names = self.all_inputs[0].keys()
+        sorted_input_names = list(self.all_inputs[0].keys())
         sorted_input_names.sort()
         for name in sorted_input_names:
             inp = self.all_inputs[0][name]
