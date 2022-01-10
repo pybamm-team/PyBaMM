@@ -8,7 +8,7 @@
 
 ## Bug fixes
 
--   Fixed issue in extraction of sensitivites ([#1886](https://github.com/pybamm-team/PyBaMM/issues/1886))
+-   Fixed issue in extraction of sensitivites ([#1886](https://github.com/pybamm-team/PyBaMM/pull/1894/files))
 -   `PyBaMM` is now importable in `Linux` systems where `jax` is already installed ([#1874](https://github.com/pybamm-team/PyBaMM/pull/1874))
 -   Simulations with drive cycles now support `initial_soc` ([#1842](https://github.com/pybamm-team/PyBaMM/pull/1842))
 -   Fixed bug in expression tree simplification ([#1831](https://github.com/pybamm-team/PyBaMM/pull/1831))
