@@ -599,7 +599,12 @@ class ProcessedVariable(object):
 
         # Add the individual sensitivity
         start = 0
-        for name, inp in self.all_inputs[0].items():
+        # Sort the list of input names so that it aligns
+        # with the sorting applied during solver setup
+        sorted_input_names = self.all_inputs[0].keys()
+        sorted_input_names.sort()
+        for name in sorted_input_names:
+            inp = self.all_inputs[0][name]
             end = start + inp.shape[0]
             sensitivities[name] = S_var[:, start:end]
             start = end
