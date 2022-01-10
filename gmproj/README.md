@@ -6,3 +6,5 @@ Data files not included in this repo, please download from
  
 Ensure to paste the data in the corresponding subfolders.
 
+- Run [fast_sim](./fast_sim_clean.ipynb) to simulate Aging for C/5 cycling
+- Run [electrode_expansion](./electrode_expansion.ipynb) to simulate Voltage and Expansion for a particular cycle and compare the differential voltage and expansion signals 
