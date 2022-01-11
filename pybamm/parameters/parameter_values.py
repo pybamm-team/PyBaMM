@@ -495,12 +495,30 @@ class ParameterValues:
         ]
 
         # Process timescale
-        model._timescale = self.process_symbol(unprocessed_model.timescale)
+        new_timescale = self.process_symbol(unprocessed_model.timescale)
+        if isinstance(new_timescale, pybamm.Scalar):
+            model._timescale = new_timescale
+        else:
+            raise ValueError(
+                "model.timescale must be a Scalar after parameter processing "
+                "(cannot contain 'InputParameter's). "
+                "You have probably set one of the parameters used to calculate the "
+                "timescale to an InputParameter. To avoid this error, hardcode "
+                "model.timescale to a constant value by passing the option "
+                "{'timescale': value} to the model."
+            )
 
         # Process length scales
         new_length_scales = {}
         for domain, scale in unprocessed_model.length_scales.items():
-            new_length_scales[domain] = self.process_symbol(scale)
+            new_scale = self.process_symbol(scale)
+            if isinstance(new_scale, pybamm.Scalar):
+                new_length_scales[domain] = new_scale
+            else:
+                raise ValueError(
+                    "Length scales must be Scalars after parameter processing "
+                    "(cannot contain 'InputParameter's)."
+                )
         model._length_scales = new_length_scales
 
         pybamm.logger.info("Finish setting parameters for {}".format(model.name))
@@ -538,14 +556,6 @@ class ParameterValues:
                         raise KeyError(err)
 
         return new_boundary_conditions
-
-    def update_model(self, model, disc):
-        raise NotImplementedError(
-            """
-            update_model functionality has been deprecated.
-            Use pybamm.InputParameter to quickly change a parameter value instead
-            """
-        )
 
     def process_geometry(self, geometry):
         """
