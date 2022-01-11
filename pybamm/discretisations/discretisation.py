@@ -327,9 +327,7 @@ class Discretisation(object):
         else:
             size = 0
             spatial_method = self.spatial_methods[variable.domain[0]]
-            repeats = spatial_method._get_auxiliary_domain_repeats(
-                variable.auxiliary_domains
-            )
+            repeats = spatial_method._get_auxiliary_domain_repeats(variable.domains)
             for dom in variable.domain:
                 size += spatial_method.mesh[dom].npts_for_broadcast_to_nodes * repeats
             return size
@@ -836,7 +834,7 @@ class Discretisation(object):
             # Assign secondary mesh
             if "secondary" in symbol.auxiliary_domains:
                 discretised_symbol.secondary_mesh = self.mesh.combine_submeshes(
-                    *symbol.auxiliary_domains["secondary"]
+                    *symbol.domains["secondary"]
                 )
             else:
                 discretised_symbol.secondary_mesh = None

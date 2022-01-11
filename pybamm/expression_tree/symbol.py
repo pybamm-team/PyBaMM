@@ -151,7 +151,7 @@ def simplify_if_constant(symbol):
     scalar, vector or matrix
     """
     domain = symbol.domain
-    auxiliary_domains = symbol.auxiliary_domains
+    auxiliary_domains = symbol.auxiliary_domains_dict
     if symbol.is_constant():
         result = symbol.evaluate_ignoring_errors()
         if result is not None:
@@ -286,11 +286,11 @@ class Symbol(anytree.NodeMixin):
 
         elif isinstance(domain, str):
             domain = [domain]
-        if domain == [] and self.auxiliary_domains != {}:
+        if domain == [] and not all(k == "primary" for k in self.domains.keys()):
             raise pybamm.DomainError(
                 "Domain cannot be empty if auxiliary domains are not empty"
             )
-        if domain in self.auxiliary_domains.values():
+        if any((domain == v and k != "primary") for k, v in self.domains.items()):
             raise pybamm.DomainError("Domain cannot be the same as an auxiliary domain")
         try:
             iter(domain)
@@ -304,9 +304,13 @@ class Symbol(anytree.NodeMixin):
     @property
     def auxiliary_domains(self):
         """Returns auxiliary domains."""
-        return pybamm.DomainDict(
-            {k: v for k, v in self._domains.items() if k != "primary"}
+        raise NotImplementedError(
+            "symbol.auxiliary_domains has been deprecated, use symbol.domains instead"
         )
+
+    @property
+    def auxiliary_domains_dict(self):
+        return {k: v for k, v in self._domains.items() if k != "primary"}
 
     @auxiliary_domains.setter
     def auxiliary_domains(self, auxiliary_domains):
@@ -332,12 +336,12 @@ class Symbol(anytree.NodeMixin):
     @property
     def tertiary_domain(self):
         """Helper function to get the tertiary domain of a symbol."""
-        return self.auxiliary_domains["tertiary"]
+        return self._domains["tertiary"]
 
     @property
     def quaternary_domain(self):
         """Helper function to get the quaternary domain of a symbol."""
-        return self.auxiliary_domains["quaternary"]
+        return self._domains["quaternary"]
 
     def copy_domains(self, symbol):
         """Copy the domains from a given symbol, bypassing checks."""
@@ -349,26 +353,25 @@ class Symbol(anytree.NodeMixin):
         self._domains = pybamm.DomainDict({"primary": []})
         self.set_id()
 
-    def get_children_auxiliary_domains(self, children):
-        """Combine auxiliary domains from children, at all levels."""
-        aux_domains = {}
+    def get_children_domains(self, children):
+        """Combine domains from children, at all levels."""
+        domains = {}
         for child in children:
-            for level in child.auxiliary_domains.keys():
+            for level in child.domains.keys():
                 if (
-                    level not in aux_domains
-                    or aux_domains[level] == []
-                    or child.auxiliary_domains[level] == aux_domains[level]
+                    level not in domains
+                    or domains[level] == []
+                    or child.domains[level] == []
+                    or child.domains[level] == domains[level]
                 ):
-                    aux_domains[level] = child.auxiliary_domains[level]
+                    domains[level] = child.domains[level]
                 else:
                     raise pybamm.DomainError(
-                        """children must have same or empty auxiliary domains,
-                        not {!s} and {!s}""".format(
-                            aux_domains[level], child.auxiliary_domains[level]
-                        )
+                        "children must have same or empty domains,"
+                        f"not {domains[level]} and {child.domains[level]}"
                     )
 
-        return aux_domains
+        return domains
 
     @property
     def id(self):
@@ -388,8 +391,7 @@ class Symbol(anytree.NodeMixin):
         self._id = hash(
             (self.__class__, self.name)
             + tuple([child.id for child in self.children])
-            + tuple(self.domain)
-            + tuple([(k, tuple(v)) for k, v in self.auxiliary_domains.items()])
+            + tuple([(k, tuple(v)) for k, v in self.domains.items()])
         )
 
     @property

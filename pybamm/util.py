@@ -172,6 +172,12 @@ class DomainDict(dict):
         except KeyError:
             return []
 
+    def __copy__(self):
+        return DomainDict(self)
+
+    def copy(self):
+        return self.__copy__()
+
 
 class Timer(object):
     """

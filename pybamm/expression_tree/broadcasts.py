@@ -153,9 +153,9 @@ class PrimaryBroadcast(Broadcast):
 
         domain = broadcast_domain
         auxiliary_domains = {}
-        auxiliary_domains["secondary"] = child.domain
-        auxiliary_domains["tertiary"] = child.auxiliary_domains["secondary"]
-        auxiliary_domains["quaternary"] = child.auxiliary_domains["tertiary"]
+        domains["secondary"] = child.domain
+        domains["tertiary"] = child.domains["secondary"]
+        domains["quaternary"] = child.domains["tertiary"]
 
         return domain, auxiliary_domains
 
@@ -279,8 +279,8 @@ class SecondaryBroadcast(Broadcast):
         domain = child.domain
         auxiliary_domains = {"secondary": broadcast_domain}
         # Child's secondary domain becomes tertiary domain, tertiary becomes quaternary
-        auxiliary_domains["tertiary"] = child.domains["secondary"]
-        auxiliary_domains["quaternary"] = child.domains["tertiary"]
+        domains["tertiary"] = child.domains["secondary"]
+        domains["quaternary"] = child.domains["tertiary"]
 
         return domain, auxiliary_domains
 
@@ -294,9 +294,7 @@ class SecondaryBroadcast(Broadcast):
         See :meth:`pybamm.Symbol.evaluate_for_shape_using_domain()`
         """
         child_eval = self.children[0].evaluate_for_shape()
-        vec = pybamm.evaluate_for_shape_using_domain(
-            self.auxiliary_domains["secondary"]
-        )
+        vec = pybamm.evaluate_for_shape_using_domain(self.domains["secondary"])
         return np.outer(vec, child_eval).reshape(-1, 1)
 
     def reduce_one_dimension(self):
@@ -356,7 +354,7 @@ class TertiaryBroadcast(Broadcast):
             )
         # Can only do tertiary broadcast to a "higher dimension" than the
         # secondary domain of child
-        if child.auxiliary_domains["secondary"][0] in [
+        if child.domains["secondary"][0] in [
             "negative particle size",
             "positive particle size",
         ] and broadcast_domain[0] not in [
@@ -370,7 +368,7 @@ class TertiaryBroadcast(Broadcast):
                 domain must be to electrode, separator or current collector"""
             )
         if (
-            child.auxiliary_domains["secondary"][0]
+            child.domains["secondary"][0]
             in [
                 "negative electrode",
                 "separator",
@@ -382,7 +380,7 @@ class TertiaryBroadcast(Broadcast):
                 """Tertiary broadcast from a symbol with an electrode or
                 separator secondary domain must be to current collector"""
             )
-        if child.auxiliary_domains["secondary"] == ["current collector"]:
+        if child.domains["secondary"] == ["current collector"]:
             raise pybamm.DomainError(
                 """Cannot do tertiary broadcast for symbol with a current collector
                 secondary domain"""
@@ -391,9 +389,9 @@ class TertiaryBroadcast(Broadcast):
         # and broadcast domain is tertiary
         domain = child.domain
         auxiliary_domains = {
-            "secondary": child.auxiliary_domains["secondary"],
+            "secondary": child.domains["secondary"],
             "tertiary": broadcast_domain,
-            "quaternary": child.auxiliary_domains["tertiary"],
+            "quaternary": child.domains["tertiary"],
         }
 
         return domain, auxiliary_domains
@@ -478,17 +476,15 @@ class FullBroadcast(Broadcast):
         if self.auxiliary_domains == {}:
             return self.orphans[0]
         elif "tertiary" not in self.auxiliary_domains:
-            return PrimaryBroadcast(
-                self.orphans[0], self.auxiliary_domains["secondary"]
-            )
+            return PrimaryBroadcast(self.orphans[0], self.domains["secondary"])
         else:
             aux = {
-                "secondary": self.auxiliary_domains["tertiary"],
-                "tertiary": self.auxiliary_domains["quaternary"],
+                "secondary": self.domains["tertiary"],
+                "tertiary": self.domains["quaternary"],
             }
             return FullBroadcast(
                 self.orphans[0],
-                self.auxiliary_domains["secondary"],
+                self.domains["secondary"],
                 aux,
             )
 
@@ -512,14 +508,12 @@ class FullBroadcastToEdges(FullBroadcast):
         if self.auxiliary_domains == {}:
             return self.orphans[0]
         elif "tertiary" not in self.auxiliary_domains:
-            return PrimaryBroadcastToEdges(
-                self.orphans[0], self.auxiliary_domains["secondary"]
-            )
+            return PrimaryBroadcastToEdges(self.orphans[0], self.domains["secondary"])
         else:
             return FullBroadcastToEdges(
                 self.orphans[0],
-                self.auxiliary_domains["secondary"],
-                {"secondary": self.auxiliary_domains["tertiary"]},
+                self.domains["secondary"],
+                {"secondary": self.domains["tertiary"]},
             )
 
 

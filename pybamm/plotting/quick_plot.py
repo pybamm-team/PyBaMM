@@ -365,7 +365,7 @@ class QuickPlot(object):
             if variable.domain[0] == "current collector":
                 domain = "current collector"
             else:
-                domain = variable.auxiliary_domains["secondary"][0]
+                domain = variable.domains["secondary"][0]
 
         if domain == "current collector":
             domain += " {}".format(spatial_var_name)
@@ -574,7 +574,7 @@ class QuickPlot(object):
                         var,
                         vmin=vmin,
                         vmax=vmax,
-                        shading='auto',
+                        shading="auto",
                     )
                 else:
                     self.plots[key][0][0] = ax.contourf(
@@ -727,7 +727,7 @@ class QuickPlot(object):
                         var,
                         vmin=vmin,
                         vmax=vmax,
-                        shading='auto',
+                        shading="auto",
                     )
                 else:
                     self.plots[key][0][0] = ax.contourf(

@@ -38,8 +38,9 @@ class Concatenation(pybamm.Symbol):
         if name is None:
             name = "concatenation"
         if check_domain:
-            domain = self.get_children_domains(children)
-            auxiliary_domains = self.get_children_auxiliary_domains(children)
+            domains = self.get_children_domains(children)
+            domain = domains["primary"]
+            auxiliary_domains = {k: v for k, v in domains.items() if k != "primary"}
         else:
             domain = []
             auxiliary_domains = {}

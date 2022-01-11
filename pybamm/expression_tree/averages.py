@@ -137,8 +137,8 @@ def x_average(symbol):
             for dom in symbol.secondary_domain
         ):
             aux = {
-                "secondary": symbol.auxiliary_domains["tertiary"],
-                "tertiary": symbol.auxiliary_domains["quaternary"],
+                "secondary": symbol.domains["tertiary"],
+                "tertiary": symbol.domains["quaternary"],
             }
             return pybamm.FullBroadcast(symbol.orphans[0], symbol.broadcast_domain, aux)
         elif (
@@ -150,8 +150,8 @@ def x_average(symbol):
             )
         ):
             aux = {
-                "secondary": symbol.auxiliary_domains["secondary"],
-                "tertiary": symbol.auxiliary_domains["quaternary"],
+                "secondary": symbol.domains["secondary"],
+                "tertiary": symbol.domains["quaternary"],
             }
             return pybamm.FullBroadcast(symbol.orphans[0], symbol.broadcast_domain, aux)
         else:  # pragma: no cover
@@ -181,11 +181,11 @@ def x_average(symbol):
         elif child.auxiliary_domains == {}:
             return out
         else:
-            domain = child.auxiliary_domains["secondary"]
+            domain = child.domains["secondary"]
             if "tertiary" not in child.auxiliary_domains:
                 return pybamm.PrimaryBroadcast(out, domain)
             else:
-                auxiliary_domains = {"secondary": child.auxiliary_domains["tertiary"]}
+                auxiliary_domains = {"secondary": child.domains["tertiary"]}
                 return pybamm.FullBroadcast(out, domain, auxiliary_domains)
     # Otherwise, use Integral to calculate average value
     else:

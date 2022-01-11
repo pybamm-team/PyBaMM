@@ -560,34 +560,34 @@ class Integral(SpatialOperator):
 
         if self._integration_dimension == "primary":
             # integral of a child takes the domain from auxiliary domain of the child
-            domain = child.auxiliary_domains["secondary"]
+            domain = child.domains["secondary"]
             auxiliary_domains = {
-                "secondary": child.auxiliary_domains["tertiary"],
-                "tertiary": child.auxiliary_domains["quaternary"],
+                "secondary": child.domains["tertiary"],
+                "tertiary": child.domains["quaternary"],
             }
         elif self._integration_dimension == "secondary":
             # integral in the secondary dimension keeps the same domain, moves
             # quaternary to tertiary and tertiary to secondary domain
             domain = child.domain
             auxiliary_domains = {
-                "secondary": child.auxiliary_domains["tertiary"],
-                "tertiary": child.auxiliary_domains["quaternary"],
+                "secondary": child.domains["tertiary"],
+                "tertiary": child.domains["quaternary"],
             }
         elif self._integration_dimension == "tertiary":
             # integral in the tertiary dimension keeps the domain and secondary domain,
             # moves quaternary to tertiary
             domain = child.domain
             auxiliary_domains = {
-                "secondary": child.auxiliary_domains["secondary"],
-                "tertiary": child.auxiliary_domains["quaternary"],
+                "secondary": child.domains["secondary"],
+                "tertiary": child.domains["quaternary"],
             }
         elif self._integration_dimension == "quaternary":
             # integral in the quaternary dimension keeps the domain, secondary and
             # tertiary domains
             domain = child.domain
             auxiliary_domains = {
-                "secondary": child.auxiliary_domains["secondary"],
-                "tertiary": child.auxiliary_domains["tertiary"],
+                "secondary": child.domains["secondary"],
+                "tertiary": child.domains["tertiary"],
             }
         if any(isinstance(var, pybamm.SpatialVariable) for var in integration_variable):
             name += " {}".format(child.domain)

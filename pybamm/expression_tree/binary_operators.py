@@ -34,25 +34,6 @@ def preprocess_binary(left, right):
     return left, right
 
 
-def get_binary_children_domains(ldomain, rdomain):
-    """Combine domains from children in appropriate way."""
-    if ldomain == rdomain:
-        return ldomain
-    elif ldomain == []:
-        return rdomain
-    elif rdomain == []:
-        return ldomain
-    else:
-        raise pybamm.DomainError(
-            """
-            children must have same (or empty) domains, but left.domain is '{}'
-            and right.domain is '{}'
-            """.format(
-                ldomain, rdomain
-            )
-        )
-
-
 class BinaryOperator(pybamm.Symbol):
     """
     A node in the expression tree representing a binary operator (e.g. `+`, `*`)
@@ -75,8 +56,9 @@ class BinaryOperator(pybamm.Symbol):
     def __init__(self, name, left, right):
         left, right = preprocess_binary(left, right)
 
-        domain = get_binary_children_domains(left.domain, right.domain)
-        auxiliary_domains = self.get_children_auxiliary_domains([left, right])
+        domains = self.get_children_domains([left, right])
+        domain = domains["primary"]
+        auxiliary_domains = {k: v for k, v in domains.items() if k != "primary"}
         super().__init__(
             name,
             children=[left, right],

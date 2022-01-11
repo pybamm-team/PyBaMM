@@ -172,7 +172,7 @@ class TestBroadcasts(unittest.TestCase):
         a = pybamm.Symbol("a")
         broad_a = pybamm.FullBroadcast(a, ["negative electrode"], "current collector")
         self.assertEqual(broad_a.domain, ["negative electrode"])
-        self.assertEqual(broad_a.auxiliary_domains["secondary"], ["current collector"])
+        self.assertEqual(broad_a.domains["secondary"], ["current collector"])
         self.assertTrue(broad_a.broadcasts_to_nodes)
         self.assertEqual(
             broad_a.reduce_one_dimension().id,
@@ -292,7 +292,7 @@ class TestBroadcasts(unittest.TestCase):
             a, ["negative electrode"], "current collector"
         )
         self.assertEqual(broad_a.domain, ["negative electrode"])
-        self.assertEqual(broad_a.auxiliary_domains["secondary"], ["current collector"])
+        self.assertEqual(broad_a.domains["secondary"], ["current collector"])
         self.assertTrue(broad_a.evaluates_on_edges("primary"))
         self.assertFalse(broad_a.broadcasts_to_nodes)
         self.assertEqual(

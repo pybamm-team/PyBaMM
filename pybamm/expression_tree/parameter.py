@@ -93,8 +93,9 @@ class FunctionParameter(pybamm.Symbol):
             if isinstance(child, numbers.Number):
                 children_list[idx] = pybamm.Scalar(child)
 
-        domain = self.get_children_domains(children_list)
-        auxiliary_domains = self.get_children_auxiliary_domains(children_list)
+        domains = self.get_children_domains(children_list)
+        domain = domains["primary"]
+        auxiliary_domains = {k: v for k, v in domains.items() if k != "primary"}
         super().__init__(
             name,
             children=children_list,
@@ -157,27 +158,6 @@ class FunctionParameter(pybamm.Symbol):
             + tuple([child.id for child in self.children])
             + tuple(self.domain)
         )
-
-    def get_children_domains(self, children_list):
-        """
-        Obtains the unique domain of the children.
-        If the children have different domains then raise an error
-        """
-        domains = [child.domain for child in children_list if child.domain != []]
-
-        # check that there is one common domain amongst children
-        distinct_domains = set(tuple(dom) for dom in domains)
-
-        if len(distinct_domains) > 1:
-            raise pybamm.DomainError(
-                "Functions can only be applied to variables on the same domain"
-            )
-        elif len(distinct_domains) == 0:
-            domain = []
-        else:
-            domain = domains[0]
-
-        return domain
 
     def diff(self, variable):
         """See :meth:`pybamm.Symbol.diff()`."""
