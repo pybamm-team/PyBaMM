@@ -405,12 +405,7 @@ class Division(BinaryOperator):
         if issparse(left):
             return csr_matrix(left.multiply(1 / right))
         else:
-            if isinstance(right, numbers.Number) and right == 0:
-                # don't raise RuntimeWarning for NaNs
-                with np.errstate(invalid="ignore"):
-                    return left * np.inf
-            else:
-                return left / right
+            return left / right
 
 
 class Inner(BinaryOperator):
