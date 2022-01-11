@@ -1211,29 +1211,6 @@ class BaseSolver(object):
             del inputs["Power input [W]"]
         ext_and_inputs = {**external_variables, **inputs}
 
-        # Check that any inputs that may affect the scaling have not changed
-        # Set model timescale
-        temp_timescale_eval = model.timescale.evaluate(inputs=inputs)
-        # Set model lengthscales
-        temp_length_scales_eval = {
-            domain: scale.evaluate(inputs=inputs)
-            for domain, scale in model.length_scales.items()
-        }
-        if old_solution is not None:
-            if temp_timescale_eval != old_solution.timescale_eval:
-                raise pybamm.SolverError(
-                    "The model timescale is a function of an input parameter "
-                    "and the value has changed between steps!"
-                )
-            for domain in temp_length_scales_eval.keys():
-                old_dom_eval = old_solution.length_scales_eval[domain]
-                if temp_length_scales_eval[domain] != old_dom_eval:
-                    pybamm.logger.error(
-                        "The {} domain lengthscale is a function of an input "
-                        "parameter and the value has changed between "
-                        "steps!".format(domain)
-                    )
-
         if old_solution is None:
             # Run set up on first step
             pybamm.logger.verbose(

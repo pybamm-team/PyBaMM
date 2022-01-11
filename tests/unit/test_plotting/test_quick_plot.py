@@ -472,7 +472,9 @@ class TestQuickPlot(unittest.TestCase):
 
     def test_model_with_inputs(self):
         parameter_values = pybamm.ParameterValues("Chen2020")
-        model = pybamm.lithium_ion.SPMe()
+        # Pass the "timescale" option since we are making electrode height an input
+        timescale = parameter_values.evaluate(pybamm.LithiumIonParameters().timescale)
+        model = pybamm.lithium_ion.SPMe({"timescale": timescale})
         parameter_values.update({"Electrode height [m]": "[input]"})
         solver = pybamm.CasadiSolver(mode="safe")
         sim1 = pybamm.Simulation(

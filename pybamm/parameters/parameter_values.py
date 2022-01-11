@@ -512,13 +512,7 @@ class ParameterValues:
         new_length_scales = {}
         for domain, scale in unprocessed_model.length_scales.items():
             new_scale = self.process_symbol(scale)
-            if isinstance(new_scale, pybamm.Scalar):
-                new_length_scales[domain] = new_scale
-            else:
-                raise ValueError(
-                    "Length scales must be Scalars after parameter processing "
-                    "(cannot contain 'InputParameter's)."
-                )
+            new_length_scales[domain] = new_scale
         model._length_scales = new_length_scales
 
         pybamm.logger.info("Finish setting parameters for {}".format(model.name))
@@ -566,6 +560,17 @@ class ParameterValues:
         geometry : dict
             Geometry specs to assign parameter values to
         """
+
+        def process_and_check(sym):
+            if isinstance(sym, numbers.Number):
+                return pybamm.Scalar(sym)
+            new_sym = self.process_symbol(sym)
+            if not isinstance(new_sym, pybamm.Scalar):
+                raise ValueError(
+                    "Geometry parameters must be Scalars after parameter processing"
+                )
+            return new_sym
+
         for domain in geometry:
             for spatial_variable, spatial_limits in geometry[domain].items():
                 # process tab information if using 1 or 2D current collectors
@@ -574,15 +579,10 @@ class ParameterValues:
                         for position_size, sym in position_size.items():
                             geometry[domain]["tabs"][tab][
                                 position_size
-                            ] = self.process_symbol(sym)
+                            ] = process_and_check(sym)
                 else:
                     for lim, sym in spatial_limits.items():
-                        if isinstance(sym, pybamm.Symbol):
-                            geometry[domain][spatial_variable][
-                                lim
-                            ] = self.process_symbol(sym)
-                        elif isinstance(sym, numbers.Number):
-                            geometry[domain][spatial_variable][lim] = pybamm.Scalar(sym)
+                        geometry[domain][spatial_variable][lim] = process_and_check(sym)
 
     def process_symbol(self, symbol):
         """Walk through the symbol and replace any Parameter with a Value.
