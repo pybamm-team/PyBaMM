@@ -790,9 +790,7 @@ class Discretisation(object):
         for eqn_key, eqn in var_eqn_dict.items():
             # Broadcast if the equation evaluates to a number (e.g. Scalar)
             if np.prod(eqn.shape_for_testing) == 1 and not isinstance(eqn_key, str):
-                eqn = pybamm.FullBroadcast(
-                    eqn, eqn_key.domain, eqn_key.auxiliary_domains
-                )
+                eqn = pybamm.FullBroadcast(eqn, broadcast_domains=eqn_key.domains)
 
             # note we are sending in the key.id here so we don't have to
             # keep calling .id
@@ -832,7 +830,7 @@ class Discretisation(object):
             else:
                 discretised_symbol.mesh = None
             # Assign secondary mesh
-            if "secondary" in symbol.auxiliary_domains:
+            if symbol.domains["secondary"] != []:
                 discretised_symbol.secondary_mesh = self.mesh.combine_submeshes(
                     *symbol.domains["secondary"]
                 )
@@ -945,10 +943,7 @@ class Discretisation(object):
                     out = disc_child * pybamm.Vector([1])
                 else:
                     out = spatial_method.broadcast(
-                        disc_child,
-                        symbol.domain,
-                        symbol.auxiliary_domains,
-                        symbol.broadcast_type,
+                        disc_child, symbol.domains, symbol.broadcast_type
                     )
                 return out
 
@@ -984,8 +979,7 @@ class Discretisation(object):
         elif isinstance(symbol, pybamm.VariableDot):
             return pybamm.StateVectorDot(
                 *self.y_slices[symbol.get_variable().id],
-                domain=symbol.domain,
-                auxiliary_domains=symbol.auxiliary_domains,
+                domains=symbol.domains,
             )
 
         elif isinstance(symbol, pybamm.Variable):
@@ -1000,8 +994,7 @@ class Discretisation(object):
                     return pybamm.ExternalVariable(
                         symbol.name,
                         size=self._get_variable_size(symbol),
-                        domain=symbol.domain,
-                        auxiliary_domains=symbol.auxiliary_domains,
+                        domains=symbol.domains,
                     )
                 else:
                     # We have to use a special name since the concatenation doesn't have
@@ -1010,8 +1003,7 @@ class Discretisation(object):
                     ext = pybamm.ExternalVariable(
                         name,
                         size=self._get_variable_size(parent),
-                        domain=parent.domain,
-                        auxiliary_domains=parent.auxiliary_domains,
+                        domains=parent.domains,
                     )
                     out = pybamm.Index(ext, slice(start, end))
                     out.domain = symbol.domain
@@ -1033,18 +1025,18 @@ class Discretisation(object):
                             symbol.name
                         )
                     )
-                return pybamm.StateVector(
-                    *y_slices,
-                    domain=symbol.domain,
-                    auxiliary_domains=symbol.auxiliary_domains,
-                )
+                return pybamm.StateVector(*y_slices, domains=symbol.domains)
 
         elif isinstance(symbol, pybamm.SpatialVariable):
             return spatial_method.spatial_variable(symbol)
 
         elif isinstance(symbol, pybamm.Concatenation):
             new_children = [self.process_symbol(child) for child in symbol.children]
-            new_symbol = spatial_method.concatenation(new_children)
+            try:
+                new_symbol = spatial_method.concatenation(new_children)
+            except:
+                self._discretised_symbols = {}
+                self._process_symbol(symbol.children[1])
             return new_symbol
 
         elif isinstance(symbol, pybamm.InputParameter):

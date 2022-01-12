@@ -53,16 +53,12 @@ class Function(pybamm.Symbol):
             except AttributeError:
                 name = "function ({})".format(function.__class__)
         domains = self.get_children_domains(children)
-        domain = domains["primary"]
-        auxiliary_domains = {k: v for k, v in domains.items() if k != "primary"}
 
         self.function = function
         self.derivative = derivative
         self.differentiated_function = differentiated_function
 
-        super().__init__(
-            name, children=children, domain=domain, auxiliary_domains=auxiliary_domains
-        )
+        super().__init__(name, children=children, domains=domains)
 
     def __str__(self):
         """See :meth:`pybamm.Symbol.__str__()`."""

@@ -51,9 +51,7 @@ class InputParameter(pybamm.Symbol):
         See :meth:`pybamm.Symbol.evaluate_for_shape()`
         """
         if self._expected_size is None:
-            return pybamm.evaluate_for_shape_using_domain(
-                self.domain, self.auxiliary_domains
-            )
+            return pybamm.evaluate_for_shape_using_domain(self.domains)
         elif self._expected_size == 1:
             return np.nan
         else:

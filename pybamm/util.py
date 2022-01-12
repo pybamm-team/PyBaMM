@@ -146,22 +146,23 @@ class FuzzyDict(dict):
 
 
 class DomainDict(dict):
-    def __init__(self, d):
+    def __init__(self, domains):
         super().__init__()
-        self.update(d)
+        self.update(domains)
 
-    def update(self, dict_):
-        for level, dom in dict_.items():
-            if level not in ["primary", "secondary", "tertiary", "quaternary"]:
-                raise KeyError(
-                    "DomainDict keys must be 'primary', 'secondary', 'tertiary', "
-                    "or 'quaternary'"
-                )
+    def update(self, domains):
+        DOMAIN_LEVELS = ["primary", "secondary", "tertiary", "quaternary"]
+        for level, dom in domains.items():
+            if level not in DOMAIN_LEVELS:
+                raise KeyError(f"DomainDict keys must be one of '{DOMAIN_LEVELS}'")
             if isinstance(dom, str):
-                dict_[level] = [dom]
-        return super().update(
-            {k: v for k, v in dict_.items() if (k == "primary" or v != [])}
-        )
+                domains[level] = [dom]
+        for level, next_level in zip(DOMAIN_LEVELS[:-1], DOMAIN_LEVELS[1:]):
+            if (next_level in domains.keys() and domains[next_level] != []) and not (
+                level in domains.keys() and domains[level] != []
+            ):
+                raise KeyError
+        return super().update(domains)
 
     def __setitem__(self, key, value):
         self.update({key: value})
@@ -177,6 +178,11 @@ class DomainDict(dict):
 
     def copy(self):
         return self.__copy__()
+
+    def __eq__(self, other):
+        self_dict = {k: v for k, v in self.items() if v != []}
+        other_dict = {k: v for k, v in other.items() if v != []}
+        return self_dict == other_dict
 
 
 class Timer(object):

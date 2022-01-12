@@ -39,15 +39,10 @@ class Concatenation(pybamm.Symbol):
             name = "concatenation"
         if check_domain:
             domains = self.get_children_domains(children)
-            domain = domains["primary"]
-            auxiliary_domains = {k: v for k, v in domains.items() if k != "primary"}
         else:
-            domain = []
-            auxiliary_domains = {}
+            domains = {"primary": []}
         self.concatenation_function = concat_fun
-        super().__init__(
-            name, children, domain=domain, auxiliary_domains=auxiliary_domains
-        )
+        super().__init__(name, children, domains=domains)
 
     def __str__(self):
         """See :meth:`pybamm.Symbol.__str__()`."""
@@ -82,7 +77,10 @@ class Concatenation(pybamm.Symbol):
                 domain += child_domain
             else:
                 raise pybamm.DomainError("domain of children must be disjoint")
-        return domain
+
+        domains = {**children[0].domains, "primary": domain}
+
+        return domains
 
     def _concatenation_evaluate(self, children_eval):
         """See :meth:`Concatenation._concatenation_evaluate()`."""
@@ -266,7 +264,7 @@ class DomainConcatenation(Concatenation):
         """Helper method to read the 'auxiliary_domain' meshes."""
         mesh_pts = 1
         for level, dom in auxiliary_domains.items():
-            if level != "primary":
+            if level != "primary" and dom != []:
                 mesh_pts *= self.full_mesh.combine_submeshes(*dom).npts
         return mesh_pts
 
@@ -434,7 +432,7 @@ def simplified_concatenation(*children):
                 return pybamm.PrimaryBroadcast(unique_child, concat.domain)
             else:
                 return pybamm.FullBroadcast(
-                    unique_child, concat.domain, concat.auxiliary_domains
+                    unique_child, broadcast_domains=concat.domains
                 )
         else:
             return concat
@@ -487,9 +485,7 @@ def simplified_domain_concatenation(children, mesh, copy_this=None):
             sum(array for array in eval_arrays.values())[first_start:last_stop] == 1
         ):
             return pybamm.StateVector(
-                slice(first_start, last_stop),
-                domain=concat.domain,
-                auxiliary_domains=concat.auxiliary_domains,
+                slice(first_start, last_stop), domains=concat.domains
             )
 
     return pybamm.simplify_if_constant(concat)

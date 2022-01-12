@@ -50,19 +50,16 @@ def create_object_of_size(size, typ="vector"):
         return np.nan * np.ones((size, size))
 
 
-def evaluate_for_shape_using_domain(domain, auxiliary_domains=None, typ="vector"):
+def evaluate_for_shape_using_domain(domains, typ="vector"):
     """
-    Return a vector of the appropriate shape, based on the domain.
+    Return a vector of the appropriate shape, based on the domains.
     Domain 'sizes' can clash, but are unlikely to, and won't cause failures if they do.
     """
-    _domain_size = domain_size(domain)
-    if auxiliary_domains is None:
-        _auxiliary_domain_sizes = 1
+    if isinstance(domains, dict):
+        _domain_sizes = int(np.prod([domain_size(dom) for dom in domains.values()]))
     else:
-        _auxiliary_domain_sizes = int(
-            np.prod([domain_size(dom) for dom in auxiliary_domains.values()])
-        )
-    return create_object_of_size(_domain_size * _auxiliary_domain_sizes, typ)
+        _domain_sizes = domain_size(domains)
+    return create_object_of_size(_domain_sizes, typ)
 
 
 def is_constant(symbol):
@@ -150,8 +147,6 @@ def simplify_if_constant(symbol):
     Utility function to simplify an expression tree if it evalutes to a constant
     scalar, vector or matrix
     """
-    domain = symbol.domain
-    auxiliary_domains = symbol.auxiliary_domains_dict
     if symbol.is_constant():
         result = symbol.evaluate_ignoring_errors()
         if result is not None:
@@ -163,16 +158,12 @@ def simplify_if_constant(symbol):
                 return pybamm.Scalar(result)
             elif isinstance(result, np.ndarray) or issparse(result):
                 if result.ndim == 1 or result.shape[1] == 1:
-                    return pybamm.Vector(
-                        result, domain=domain, auxiliary_domains=auxiliary_domains
-                    )
+                    return pybamm.Vector(result, domains=symbol.domains)
                 else:
                     # Turn matrix of zeros into sparse matrix
                     if isinstance(result, np.ndarray) and np.all(result == 0):
                         result = csr_matrix(result)
-                    return pybamm.Matrix(
-                        result, domain=domain, auxiliary_domains=auxiliary_domains
-                    )
+                    return pybamm.Matrix(result, domains=symbol.domains)
 
     return symbol
 
@@ -199,9 +190,16 @@ class Symbol(anytree.NodeMixin):
         "separator" and tertiary domain "current collector" (`domain="negative
         particle", auxiliary_domains={"secondary": "separator", "tertiary": "current
         collector"}`).
+    domains : dict
+        A dictionary equivalent to {"primary": domain, **auxiliary_domains}. Either
+        'domain' and 'auxiliary_domains', or just 'domains', should be provided
+        (not both). In future, the 'domain' and 'auxiliary_domains' arguments may be
+        deprecated.
     """
 
-    def __init__(self, name, children=None, domain=None, auxiliary_domains=None):
+    def __init__(
+        self, name, children=None, domain=None, auxiliary_domains=None, domains=None
+    ):
         super(Symbol, self).__init__()
         self.name = name
 
@@ -221,11 +219,8 @@ class Symbol(anytree.NodeMixin):
         # cache children
         self.cached_children = super(Symbol, self).children
 
-        # Set auxiliary domains
-        self._domains = pybamm.DomainDict({"primary": None})
-        self.auxiliary_domains = auxiliary_domains
-        # Set domain (and hence id)
-        self.domain = domain
+        # Set domains (and hence id)
+        self.domains = self.read_domain_or_domains(domain, auxiliary_domains, domains)
 
         self._saved_evaluates_on_edges = {}
         self._print_name = None
@@ -277,29 +272,30 @@ class Symbol(anytree.NodeMixin):
 
     @domain.setter
     def domain(self, domain):
-        if domain is None:
-            domain = []
-        if domain != [] and isinstance(self, (pybamm.Scalar, pybamm.Parameter)):
-            raise pybamm.DomainError(
-                f"Symbol of type {type(self)} cannot have a domain."
-            )
+        self.domains = {**self.domains, "primary": domain}
+        # if domain is None:
+        #     domain = []
+        # if domain != [] and isinstance(self, (pybamm.Scalar, pybamm.Parameter)):
+        #     raise pybamm.DomainError(
+        #         f"Symbol of type {type(self)} cannot have a domain."
+        #     )
 
-        elif isinstance(domain, str):
-            domain = [domain]
-        if domain == [] and not all(k == "primary" for k in self.domains.keys()):
-            raise pybamm.DomainError(
-                "Domain cannot be empty if auxiliary domains are not empty"
-            )
-        if any((domain == v and k != "primary") for k, v in self.domains.items()):
-            raise pybamm.DomainError("Domain cannot be the same as an auxiliary domain")
-        try:
-            iter(domain)
-        except TypeError:
-            raise TypeError("Domain: argument domain is not iterable")
-        else:
-            self._domains["primary"] = domain
-            # Update id since domain has changed
-            self.set_id()
+        # elif isinstance(domain, str):
+        #     domain = [domain]
+        # if domain == [] and not all(k == "primary" for k in self.domains.keys()):
+        #     raise pybamm.DomainError(
+        #         "Domain cannot be empty if auxiliary domains are not empty"
+        #     )
+        # if any((domain == v and k != "primary") for k, v in self.domains.items()):
+        #     raise pybamm.DomainError("Domain cannot be the same as an auxiliary domain")
+        # try:
+        #     iter(domain)
+        # except TypeError:
+        #     raise TypeError("Domain: argument domain is not iterable")
+        # else:
+        #     self._domains["primary"] = domain
+        #     # Update id since domain has changed
+        #     self.set_id()
 
     @property
     def auxiliary_domains(self):
@@ -308,25 +304,21 @@ class Symbol(anytree.NodeMixin):
             "symbol.auxiliary_domains has been deprecated, use symbol.domains instead"
         )
 
-    @property
-    def auxiliary_domains_dict(self):
-        return {k: v for k, v in self._domains.items() if k != "primary"}
-
-    @auxiliary_domains.setter
-    def auxiliary_domains(self, auxiliary_domains):
+    @domains.setter
+    def domains(self, domains):
         # Turn dictionary into appropriate form
-        if auxiliary_domains is None:
-            auxiliary_domains = {}
-        auxiliary_domains = pybamm.DomainDict(auxiliary_domains)
+        if domains is None:
+            domains = pybamm.DomainDict({})
+        elif not isinstance(domains, pybamm.DomainDict):
+            domains = pybamm.DomainDict(domains)
 
         # Check domains don't clash
-        if self.domain in auxiliary_domains.values():
-            raise pybamm.DomainError("Domain cannot be the same as an auxiliary domain")
-        values = [tuple(val) for val in auxiliary_domains.values()]
+        values = [tuple(val) for val in domains.values() if val != []]
         if len(set(values)) != len(values):
-            raise pybamm.DomainError("All auxiliary domains must be different")
+            raise pybamm.DomainError("All domains must be different")
 
-        self._domains.update(auxiliary_domains)
+        self._domains = domains
+        self.set_id()
 
     @property
     def secondary_domain(self):
@@ -358,19 +350,35 @@ class Symbol(anytree.NodeMixin):
         domains = {}
         for child in children:
             for level in child.domains.keys():
-                if (
+                if child.domains[level] == []:
+                    pass
+                elif (
                     level not in domains
                     or domains[level] == []
-                    or child.domains[level] == []
                     or child.domains[level] == domains[level]
                 ):
                     domains[level] = child.domains[level]
                 else:
                     raise pybamm.DomainError(
-                        "children must have same or empty domains,"
+                        "children must have same or empty domains, "
                         f"not {domains[level]} and {child.domains[level]}"
                     )
 
+        return domains
+
+    def read_domain_or_domains(self, domain, auxiliary_domains, domains):
+        if domains is None:
+            domain = domain or []
+            auxiliary_domains = auxiliary_domains or {}
+
+            domains = {"primary": domain, **auxiliary_domains}
+        else:
+            if domain is not None:
+                raise ValueError("Only one of 'domain' or 'domains' should be provided")
+            if auxiliary_domains is not None:
+                raise ValueError(
+                    "Only one of 'domain' or 'auxiliary_domains' should be provided"
+                )
         return domains
 
     @property
@@ -494,15 +502,12 @@ class Symbol(anytree.NodeMixin):
 
     def __repr__(self):
         """returns the string `__class__(id, name, children, domain)`"""
-        return (
-            "{!s}({}, {!s}, children={!s}, domain={!s}, auxiliary_domains={!s})"
-        ).format(
+        return ("{!s}({}, {!s}, children={!s}, domains={!s})").format(
             self.__class__.__name__,
             hex(self.id),
             self._name,
             [str(child) for child in self.children],
-            [str(subdomain) for subdomain in self.domain],
-            {k: str(v) for k, v in self.auxiliary_domains.items()},
+            {k: str(v) for k, v in self.domains.items()},
         )
 
     def __add__(self, other):

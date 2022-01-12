@@ -94,14 +94,7 @@ class FunctionParameter(pybamm.Symbol):
                 children_list[idx] = pybamm.Scalar(child)
 
         domains = self.get_children_domains(children_list)
-        domain = domains["primary"]
-        auxiliary_domains = {k: v for k, v in domains.items() if k != "primary"}
-        super().__init__(
-            name,
-            children=children_list,
-            domain=domain,
-            auxiliary_domains=auxiliary_domains,
-        )
+        super().__init__(name, children=children_list, domains=domains)
 
         self.input_names = list(inputs.keys())
 

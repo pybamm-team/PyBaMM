@@ -28,16 +28,12 @@ class UnaryOperator(pybamm.Symbol):
         child node
     """
 
-    def __init__(self, name, child, domain=None, auxiliary_domains=None):
+    def __init__(self, name, child, domains=None):
         if isinstance(child, numbers.Number):
             child = pybamm.Scalar(child)
-        if domain is None:
-            domain = child.domain
-        if auxiliary_domains is None:
-            auxiliary_domains = child.auxiliary_domains
-        super().__init__(
-            name, children=[child], domain=domain, auxiliary_domains=auxiliary_domains
-        )
+        domains = domains or child.domains
+
+        super().__init__(name, children=[child], domains=domains)
         self.child = self.children[0]
 
     def __str__(self):
@@ -369,8 +365,8 @@ class SpatialOperator(UnaryOperator):
         child node
     """
 
-    def __init__(self, name, child, domain=None, auxiliary_domains=None):
-        super().__init__(name, child, domain, auxiliary_domains)
+    def __init__(self, name, child, domains=None):
+        super().__init__(name, child, domains)
 
     def diff(self, variable):
         """See :meth:`pybamm.Symbol.diff()`."""
@@ -492,7 +488,7 @@ class Mass(SpatialOperator):
         super().__init__("mass", child)
 
     def _evaluate_for_shape(self):
-        return pybamm.evaluate_for_shape_using_domain(self.domain, typ="matrix")
+        return pybamm.evaluate_for_shape_using_domain(self.domains, typ="matrix")
 
 
 class BoundaryMass(SpatialOperator):
@@ -507,7 +503,7 @@ class BoundaryMass(SpatialOperator):
         super().__init__("boundary mass", child)
 
     def _evaluate_for_shape(self):
-        return pybamm.evaluate_for_shape_using_domain(self.domain, typ="matrix")
+        return pybamm.evaluate_for_shape_using_domain(self.domains, typ="matrix")
 
 
 class Integral(SpatialOperator):
@@ -560,32 +556,32 @@ class Integral(SpatialOperator):
 
         if self._integration_dimension == "primary":
             # integral of a child takes the domain from auxiliary domain of the child
-            domain = child.domains["secondary"]
-            auxiliary_domains = {
+            domains = {
+                "primary": child.domains["secondary"],
                 "secondary": child.domains["tertiary"],
                 "tertiary": child.domains["quaternary"],
             }
         elif self._integration_dimension == "secondary":
             # integral in the secondary dimension keeps the same domain, moves
             # quaternary to tertiary and tertiary to secondary domain
-            domain = child.domain
-            auxiliary_domains = {
+            domains = {
+                "primary": child.domains["primary"],
                 "secondary": child.domains["tertiary"],
                 "tertiary": child.domains["quaternary"],
             }
         elif self._integration_dimension == "tertiary":
             # integral in the tertiary dimension keeps the domain and secondary domain,
             # moves quaternary to tertiary
-            domain = child.domain
-            auxiliary_domains = {
+            domains = {
+                "primary": child.domains["primary"],
                 "secondary": child.domains["secondary"],
                 "tertiary": child.domains["quaternary"],
             }
         elif self._integration_dimension == "quaternary":
             # integral in the quaternary dimension keeps the domain, secondary and
             # tertiary domains
-            domain = child.domain
-            auxiliary_domains = {
+            domains = {
+                "primary": child.domains["primary"],
                 "secondary": child.domains["secondary"],
                 "tertiary": child.domains["tertiary"],
             }
@@ -593,9 +589,7 @@ class Integral(SpatialOperator):
             name += " {}".format(child.domain)
 
         self._integration_variable = integration_variable
-        super().__init__(
-            name, child, domain=domain, auxiliary_domains=auxiliary_domains
-        )
+        super().__init__(name, child, domains)
 
     @property
     def integration_variable(self):
@@ -622,9 +616,7 @@ class Integral(SpatialOperator):
 
     def _evaluate_for_shape(self):
         """See :meth:`pybamm.Symbol.evaluate_for_shape_using_domain()`"""
-        return pybamm.evaluate_for_shape_using_domain(
-            self.domain, self.auxiliary_domains
-        )
+        return pybamm.evaluate_for_shape_using_domain(self.domains)
 
     def _evaluates_on_edges(self, dimension):
         """See :meth:`pybamm.Symbol._evaluates_on_edges()`."""
@@ -773,7 +765,7 @@ class DefiniteIntegralVector(SpatialOperator):
 
     def _evaluate_for_shape(self):
         """See :meth:`pybamm.Symbol.evaluate_for_shape_using_domain()`"""
-        return pybamm.evaluate_for_shape_using_domain(self.domain)
+        return pybamm.evaluate_for_shape_using_domain(self.domains)
 
 
 class BoundaryIntegral(SpatialOperator):
@@ -801,9 +793,8 @@ class BoundaryIntegral(SpatialOperator):
     """
 
     def __init__(self, child, region="entire"):
-        # boundary integral removes domain
-        domain = []
-        auxiliary_domains = {}
+        # boundary integral removes domains
+        domains = {}
 
         name = "boundary integral over "
         if region == "entire":
@@ -813,9 +804,7 @@ class BoundaryIntegral(SpatialOperator):
         elif region == "positive tab":
             name += "positive tab"
         self.region = region
-        super().__init__(
-            name, child, domain=domain, auxiliary_domains=auxiliary_domains
-        )
+        super().__init__(name, child, domains)
 
     def set_id(self):
         """See :meth:`pybamm.Symbol.set_id()`"""
@@ -830,7 +819,7 @@ class BoundaryIntegral(SpatialOperator):
 
     def _evaluate_for_shape(self):
         """See :meth:`pybamm.Symbol.evaluate_for_shape_using_domain()`"""
-        return pybamm.evaluate_for_shape_using_domain(self.domain)
+        return pybamm.evaluate_for_shape_using_domain(self.domains)
 
     def _evaluates_on_edges(self, dimension):
         """See :meth:`pybamm.Symbol._evaluates_on_edges()`."""
@@ -855,18 +844,16 @@ class DeltaFunction(SpatialOperator):
         self.side = side
         if domain is None:
             raise pybamm.DomainError("Delta function domain cannot be None")
+        domains = {"primary": domain}
         if child.domain != []:
-            auxiliary_domains = {"secondary": child.domain}
-        else:
-            auxiliary_domains = {}
-        super().__init__("delta_function", child, domain, auxiliary_domains)
+            domains["secondary"] = child.domain
+        super().__init__("delta_function", child, domains)
 
     def set_id(self):
         """See :meth:`pybamm.Symbol.set_id()`"""
         self._id = hash(
             (self.__class__, self.name, self.side, self.children[0].id)
-            + tuple(self.domain)
-            + tuple([(k, tuple(v)) for k, v in self.auxiliary_domains.items()])
+            + tuple([(k, tuple(v)) for k, v in self.domains.items()])
         )
 
     def _evaluates_on_edges(self, dimension):
@@ -880,7 +867,7 @@ class DeltaFunction(SpatialOperator):
     def evaluate_for_shape(self):
         """See :meth:`pybamm.Symbol.evaluate_for_shape_using_domain()`"""
         child_eval = self.children[0].evaluate_for_shape()
-        vec = pybamm.evaluate_for_shape_using_domain(self.domain)
+        vec = pybamm.evaluate_for_shape_using_domain(self.domains)
 
         return np.outer(child_eval, vec).reshape(-1, 1)
 
@@ -913,23 +900,21 @@ class BoundaryOperator(SpatialOperator):
                     )
                 )
         self.side = side
-        # boundary value of a child takes the domain from auxiliary domain of the child
-        domain = child.domains["secondary"]
+        # boundary value of a child takes the primary domain from secondary domain
+        # of the child
         # tertiary auxiliary domain shift down to secondary, quarternary to tertiary
-        auxiliary_domains = {
+        domains = {
+            "primary": child.domains["secondary"],
             "secondary": child.domains["tertiary"],
             "tertiary": child.domains["quaternary"],
         }
-        super().__init__(
-            name, child, domain=domain, auxiliary_domains=auxiliary_domains
-        )
+        super().__init__(name, child, domains)
 
     def set_id(self):
         """See :meth:`pybamm.Symbol.set_id()`"""
         self._id = hash(
             (self.__class__, self.name, self.side, self.children[0].id)
-            + tuple(self.domain)
-            + tuple([(k, tuple(v)) for k, v in self.auxiliary_domains.items()])
+            + tuple([(k, tuple(v)) for k, v in self.domains.items()])
         )
 
     def _unary_new_copy(self, child):
@@ -938,9 +923,7 @@ class BoundaryOperator(SpatialOperator):
 
     def _evaluate_for_shape(self):
         """See :meth:`pybamm.Symbol.evaluate_for_shape_using_domain()`"""
-        return pybamm.evaluate_for_shape_using_domain(
-            self.domain, self.auxiliary_domains
-        )
+        return pybamm.evaluate_for_shape_using_domain(self.domains)
 
 
 class BoundaryValue(BoundaryOperator):
@@ -1106,7 +1089,7 @@ def grad(symbol):
         new_child = pybamm.PrimaryBroadcast(0, symbol.child.domain)
         return pybamm.PrimaryBroadcastToEdges(new_child, symbol.domain)
     elif isinstance(symbol, pybamm.FullBroadcast):
-        return pybamm.FullBroadcastToEdges(0, symbol.domain, symbol.auxiliary_domains)
+        return pybamm.FullBroadcastToEdges(0, broadcast_domains=symbol.domains)
     else:
         return Gradient(symbol)
 

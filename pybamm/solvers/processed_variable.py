@@ -44,7 +44,7 @@ class ProcessedVariable(object):
 
         self.mesh = base_variables[0].mesh
         self.domain = base_variables[0].domain
-        self.auxiliary_domains = base_variables[0].auxiliary_domains
+        self.domains = base_variables[0].domains
         self.warn = warn
 
         self.symbolic_inputs = solution.has_symbolic_inputs
@@ -363,8 +363,7 @@ class ProcessedVariable(object):
             self.z_sol = second_dim_pts
         else:
             raise pybamm.DomainError(
-                "Cannot process 3D object with domain '{}' "
-                "and auxiliary_domains '{}'".format(self.domain, self.auxiliary_domains)
+                f"Cannot process 3D object with domains '{self.domains}'."
             )
 
         # assign attributes for reference

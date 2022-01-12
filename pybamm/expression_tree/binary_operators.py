@@ -57,14 +57,7 @@ class BinaryOperator(pybamm.Symbol):
         left, right = preprocess_binary(left, right)
 
         domains = self.get_children_domains([left, right])
-        domain = domains["primary"]
-        auxiliary_domains = {k: v for k, v in domains.items() if k != "primary"}
-        super().__init__(
-            name,
-            children=[left, right],
-            domain=domain,
-            auxiliary_domains=auxiliary_domains,
-        )
+        super().__init__(name, children=[left, right], domains=domains)
         self.left = self.children[0]
         self.right = self.children[1]
 

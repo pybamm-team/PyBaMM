@@ -63,9 +63,7 @@ class FiniteVolume(pybamm.SpatialMethod):
             entries = np.tile(symbol_mesh.edges, repeats)
         else:
             entries = np.tile(symbol_mesh.nodes, repeats)
-        return pybamm.Vector(
-            entries, domain=symbol.domain, auxiliary_domains=symbol.auxiliary_domains
-        )
+        return pybamm.Vector(entries, domains=symbol.domains)
 
     def preprocess_external_variables(self, var):
         """
@@ -110,7 +108,7 @@ class FiniteVolume(pybamm.SpatialMethod):
                 )
 
         # note in 1D cartesian, cylindrical and spherical grad are the same
-        gradient_matrix = self.gradient_matrix(domain, symbol.auxiliary_domains)
+        gradient_matrix = self.gradient_matrix(symbol.domains)
 
         # Multiply by gradient matrix
         out = gradient_matrix @ discretised_symbol
@@ -123,7 +121,7 @@ class FiniteVolume(pybamm.SpatialMethod):
 
         return out
 
-    def gradient_matrix(self, domain, auxiliary_domains):
+    def gradient_matrix(self, domains):
         """
         Gradient matrix for finite volumes in the appropriate domain.
         Equivalent to grad(y) = (y[1:] - y[:-1])/dx
@@ -131,17 +129,15 @@ class FiniteVolume(pybamm.SpatialMethod):
         Parameters
         ----------
         domains : list
-            The domain(s) in which to compute the gradient matrix, including ghost nodes
-        auxiliary_domains : dict
-            The auxiliary domains in which to compute the gradient matrix
+            The domain in which to compute the gradient matrix, including ghost nodes
 
         Returns
         -------
         :class:`pybamm.Matrix`
             The (sparse) finite volume gradient matrix for the domain
         """
-        # Create appropriate submesh by combining submeshes in domain
-        submesh = self.mesh.combine_submeshes(*domain)
+        # Create appropriate submesh by combining submeshes in primary domain
+        submesh = self.mesh.combine_submeshes(*domains["primary"])
 
         # Create 1D matrix using submesh
         n = submesh.npts
@@ -149,7 +145,7 @@ class FiniteVolume(pybamm.SpatialMethod):
         sub_matrix = diags([-e, e], [0, 1], shape=(n - 1, n))
 
         # number of repeats
-        second_dim_repeats = self._get_auxiliary_domain_repeats(auxiliary_domains)
+        second_dim_repeats = self._get_auxiliary_domain_repeats(domains)
 
         # generate full matrix from the submatrix
         # Convert to csr_matrix so that we can take the index (row-slicing), which is
@@ -765,9 +761,7 @@ class FiniteVolume(pybamm.SpatialMethod):
 
         # Prepare sizes and empty bcs_vector
         n = submesh.npts - 1
-        second_dim_repeats = self._get_auxiliary_domain_repeats(
-            symbol.auxiliary_domains
-        )
+        second_dim_repeats = self._get_auxiliary_domain_repeats(symbol.domains)
 
         lbc_value, lbc_type = bcs["left"]
         rbc_value, rbc_type = bcs["right"]
@@ -858,9 +852,7 @@ class FiniteVolume(pybamm.SpatialMethod):
         submesh = self.mesh.combine_submeshes(*discretised_child.domain)
 
         prim_pts = submesh.npts
-        repeats = self._get_auxiliary_domain_repeats(
-            discretised_child.auxiliary_domains
-        )
+        repeats = self._get_auxiliary_domain_repeats(discretised_child.domains)
 
         if bcs is None:
             bcs = {}
