@@ -15,10 +15,15 @@ import timeit
 import warnings
 from collections import defaultdict
 from platform import system
+import pkg_resources
 
 import numpy as np
 
 import pybamm
+
+# versions of jax and jaxlib compatible with PyBaMM
+JAX_VERSION = "0.2.12"
+JAXLIB_VERSION = "0.1.70"
 
 
 def root_dir():
@@ -362,20 +367,39 @@ def get_parameters_filepath(path):
 
 
 def have_jax():
-    """Check if jax and jaxlib are installed"""
-    return (importlib.util.find_spec("jax") is not None) and (
-        importlib.util.find_spec("jaxlib") is not None
+    """Check if jax and jaxlib are installed with the correct versions"""
+    return (
+        (importlib.util.find_spec("jax") is not None)
+        and (importlib.util.find_spec("jaxlib") is not None)
+        and is_jax_compatible()
     )
 
 
-def install_jax():
-    """Install jax, jaxlib"""
-    jax_version = "jax==0.2.12"
-    jaxlib_version = "jaxlib==0.1.70"
+def is_jax_compatible():
+    """Check if the available version of jax and jaxlib are compatible with PyBaMM"""
+    return (
+        pkg_resources.get_distribution("jax").version == JAX_VERSION
+        and pkg_resources.get_distribution("jaxlib").version == JAXLIB_VERSION
+    )
 
+
+def install_jax():  # pragma: no cover
+    """Install jax, jaxlib"""
     if system() == "Windows":
         raise NotImplementedError("Jax is not available on Windows")
+    elif importlib.util.find_spec("jax") is not None:
+        if not is_jax_compatible():
+            raise ValueError(
+                "Jax is already installed but the installed version of jax or jaxlib is not supported by PyBaMM",  # noqa: E501
+            )
     else:
         subprocess.check_call(
-            [sys.executable, "-m", "pip", "install", jax_version, jaxlib_version]
+            [
+                sys.executable,
+                "-m",
+                "pip",
+                "install",
+                f"jax=={JAX_VERSION}",
+                f"jaxlib=={JAXLIB_VERSION}",
+            ]
         )

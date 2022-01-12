@@ -168,12 +168,7 @@ class TestCitations(unittest.TestCase):
 
         citations._reset()
         self.assertNotIn("Reniers2019", citations._papers_to_cite)
-        pybamm.active_material.StressDriven(None, None, None, True)
-        self.assertIn("Reniers2019", citations._papers_to_cite)
-
-        citations._reset()
-        self.assertNotIn("Reniers2019", citations._papers_to_cite)
-        pybamm.active_material.ReactionDriven(None, None, None, True)
+        pybamm.active_material.LossActiveMaterial(None, None, None, True)
         self.assertIn("Reniers2019", citations._papers_to_cite)
 
     def test_mohtat_2019(self):

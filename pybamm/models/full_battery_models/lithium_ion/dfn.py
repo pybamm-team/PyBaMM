@@ -80,18 +80,10 @@ class DFN(BaseModel):
         )
 
     def set_particle_submodel(self):
-
-        if isinstance(self.options["particle"], str):
-            particle_left = self.options["particle"]
-            particle_right = self.options["particle"]
-        else:
-            particle_left, particle_right = self.options["particle"]
-        for particle_side, domain in [
-            [particle_left, "Negative"],
-            [particle_right, "Positive"],
-        ]:
+        for domain in ["Negative", "Positive"]:
+            particle = getattr(self.options, domain.lower())["particle"]
             if self.options["particle size"] == "single":
-                if particle_side == "Fickian diffusion":
+                if particle == "Fickian diffusion":
                     self.submodels[
                         domain.lower() + " particle"
                     ] = pybamm.particle.no_distribution.FickianDiffusion(
@@ -99,7 +91,7 @@ class DFN(BaseModel):
                         domain,
                         self.options,
                     )
-                elif particle_side in [
+                elif particle in [
                     "uniform profile",
                     "quadratic profile",
                     "quartic profile",
@@ -107,19 +99,16 @@ class DFN(BaseModel):
                     self.submodels[
                         domain.lower() + " particle"
                     ] = pybamm.particle.no_distribution.PolynomialProfile(
-                        self.param,
-                        domain,
-                        particle_side,
-                        self.options,
+                        self.param, domain, particle, self.options
                     )
             elif self.options["particle size"] == "distribution":
-                if particle_side == "Fickian diffusion":
+                if particle == "Fickian diffusion":
                     self.submodels[
                         domain.lower() + " particle"
                     ] = pybamm.particle.size_distribution.FickianDiffusion(
                         self.param, domain
                     )
-                elif particle_side == "uniform profile":
+                elif particle == "uniform profile":
                     self.submodels[
                         domain.lower() + " particle"
                     ] = pybamm.particle.size_distribution.UniformProfile(
