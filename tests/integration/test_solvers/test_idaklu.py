@@ -22,9 +22,10 @@ class TestIDAKLUSolver(unittest.TestCase):
     def test_on_spme_sensitivities(self):
         param_name = "Typical current [A]"
         param_value = 0.15652
-        model = pybamm.lithium_ion.SPMe()
+        param = pybamm.ParameterValues("Marquis2019")
+        timescale = param.evaluate(pybamm.LithiumIonParameters().timescale)
+        model = pybamm.lithium_ion.SPMe({"timescale": timescale})
         geometry = model.default_geometry
-        param = model.default_parameter_values
         param.update({param_name: "[input]"})
         inputs = {param_name: param_value}
         param.process_model(model)
