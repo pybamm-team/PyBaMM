@@ -864,6 +864,46 @@ class TestCasadiSolverODEsWithForwardSensitivityEquations(unittest.TestCase):
             solution["var squared"].data, np.exp(0.1 * solution.t) ** 2
         )
 
+    def test_solve_sensitivity_subset(self):
+        # Create model
+        model = pybamm.BaseModel()
+        var = pybamm.Variable("var")
+        p = pybamm.InputParameter("p")
+        q = pybamm.InputParameter("q")
+        r = pybamm.InputParameter("r")
+        model.rhs = {var: p * q}
+        model.initial_conditions = {var: r}
+
+        # only calculate the sensitivities of a subset of parameters
+        solver = pybamm.CasadiSolver(rtol=1e-10, atol=1e-10)
+        t_eval = np.linspace(0, 1, 80)
+        solution = solver.solve(
+            model,
+            t_eval,
+            inputs={"p": 0.1, "q": 2, "r": -1, "s": 0.5},
+            calculate_sensitivities=["p", "q"],
+        )
+        np.testing.assert_allclose(solution.y[0], -1 + 0.2 * solution.t)
+        np.testing.assert_allclose(
+            solution.sensitivities["p"],
+            (2 * solution.t)[:, np.newaxis],
+        )
+        np.testing.assert_allclose(
+            solution.sensitivities["q"],
+            (0.1 * solution.t)[:, np.newaxis],
+        )
+        self.assertTrue("r" not in solution.sensitivities)
+        self.assertTrue("s" not in solution.sensitivities)
+        np.testing.assert_allclose(
+            solution.sensitivities["all"],
+            np.hstack(
+                [
+                    solution.sensitivities["p"],
+                    solution.sensitivities["q"],
+                ]
+            ),
+        )
+
 
 class TestCasadiSolverDAEsWithForwardSensitivityEquations(unittest.TestCase):
     def test_solve_sensitivity_scalar_var_scalar_input(self):
@@ -936,6 +976,49 @@ class TestCasadiSolverDAEsWithForwardSensitivityEquations(unittest.TestCase):
             solution["var squared"].sensitivities["p"],
             (2 * 0.1 * solution.t ** 2).reshape(-1, 1),
             atol=1e-7,
+        )
+
+    def test_solve_sensitivity_subset(self):
+        # Create model
+        model = pybamm.BaseModel()
+        var = pybamm.Variable("var")
+        var2 = pybamm.Variable("var2")
+        p = pybamm.InputParameter("p")
+        q = pybamm.InputParameter("q")
+        r = pybamm.InputParameter("r")
+        model.rhs = {var: p * q}
+        model.algebraic = {var2: 2 * var - var2}
+        model.initial_conditions = {var: r, var2: 2 * r}
+
+        # only calculate the sensitivities of a subset of parameters
+        solver = pybamm.CasadiSolver(rtol=1e-10, atol=1e-10)
+        t_eval = np.linspace(0, 1, 80)
+        solution = solver.solve(
+            model,
+            t_eval,
+            inputs={"p": 0.1, "q": 2, "r": -1, "s": 0.5},
+            calculate_sensitivities=["p", "q"],
+        )
+        np.testing.assert_allclose(solution.y[0], -1 + 0.2 * solution.t)
+        np.testing.assert_allclose(solution.y[-1], 2 * (-1 + 0.2 * solution.t))
+        np.testing.assert_allclose(
+            solution.sensitivities["p"][::2],
+            (2 * solution.t)[:, np.newaxis],
+        )
+        np.testing.assert_allclose(
+            solution.sensitivities["q"][::2],
+            (0.1 * solution.t)[:, np.newaxis],
+        )
+        self.assertTrue("r" not in solution.sensitivities)
+        self.assertTrue("s" not in solution.sensitivities)
+        np.testing.assert_allclose(
+            solution.sensitivities["all"],
+            np.hstack(
+                [
+                    solution.sensitivities["p"],
+                    solution.sensitivities["q"],
+                ]
+            ),
         )
 
 
