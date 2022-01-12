@@ -196,6 +196,7 @@ setup(
         "jupyter",  # For example notebooks
         "pybtex",
         "sympy==1.9",
+        "csr @ git+https://github.com/lenskit/csr.git@v0.4.0",
         # Note: Matplotlib is loaded for debug plots, but to ensure pybamm runs
         # on systems without an attached display, it should never be imported
         # outside of plot() methods.
