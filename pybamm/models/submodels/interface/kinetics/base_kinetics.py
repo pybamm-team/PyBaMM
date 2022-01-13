@@ -95,7 +95,7 @@ class BaseKinetics(BaseInterface):
                 ]
 
                 # Override print_name
-                j_tot.print_name = 'j_tot'
+                j_tot.print_name = "j_tot"
 
                 eta_sei = -j_tot * L_sei * R_sei
             else:
