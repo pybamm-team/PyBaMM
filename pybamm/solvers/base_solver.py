@@ -237,7 +237,59 @@ class BaseSolver(object):
             else:
                 y_and_S = y_casadi
 
-        def process(func, name, use_jacobian=None):
+        # if we will change the equations to include the explicit sensitivity
+        # equations, then we also need to update the mass matrix and bounds
+        if calculate_sensitivities_explicit:
+            if model.len_rhs != 0:
+                n_inputs = model.len_rhs_sens // model.len_rhs
+            elif model.len_alg != 0:
+                n_inputs = model.len_alg_sens // model.len_alg
+            if model.bounds[0].shape[0] == model.len_rhs_and_alg:
+                model.bounds = (
+                    np.repeat(model.bounds[0], n_inputs + 1),
+                    np.repeat(model.bounds[1], n_inputs + 1),
+                )
+            if (
+                model.mass_matrix is not None
+                and model.mass_matrix.shape[0] == model.len_rhs_and_alg
+            ):
+
+                if model.mass_matrix_inv is not None:
+                    model.mass_matrix_inv = pybamm.Matrix(
+                        block_diag(
+                            [model.mass_matrix_inv.entries] * (n_inputs + 1),
+                            format="csr",
+                        )
+                    )
+                model.mass_matrix = pybamm.Matrix(
+                    block_diag(
+                        [model.mass_matrix.entries] * (n_inputs + 1), format="csr"
+                    )
+                )
+        else:
+            # take care if calculate_sensitivites used then not used
+            if model.bounds[0].shape[0] > model.len_rhs_and_alg:
+                model.bounds = (
+                    model.bounds[0][: model.len_rhs_and_alg],
+                    model.bounds[1][: model.len_rhs_and_alg],
+                )
+            if (
+                model.mass_matrix is not None
+                and model.mass_matrix.shape[0] > model.len_rhs_and_alg
+            ):
+                if model.mass_matrix_inv is not None:
+                    model.mass_matrix_inv = pybamm.Matrix(
+                        model.mass_matrix_inv.entries[
+                            : model.len_rhs, : model.len_rhs
+                        ]
+                    )
+                model.mass_matrix = pybamm.Matrix(
+                    model.mass_matrix.entries[
+                        : model.len_rhs_and_alg, : model.len_rhs_and_alg
+                    ]
+                )
+
+        def process(symbol, name, use_jacobian=None):
             def report(string):
                 # don't log event conversion
                 if "event" not in string:
@@ -248,7 +300,7 @@ class BaseSolver(object):
 
             if model.convert_to_format == "jax":
                 report(f"Converting {name} to jax")
-                func = pybamm.EvaluatorJax(func)
+                func = pybamm.EvaluatorJax(symbol)
                 jacp = None
                 if model.calculate_sensitivities:
                     report(
@@ -279,7 +331,7 @@ class BaseSolver(object):
                         )
                     )
                     jacp_dict = {
-                        p: func.diff(pybamm.InputParameter(p))
+                        p: symbol.diff(pybamm.InputParameter(p))
                         for p in model.calculate_sensitivities
                     }
                     if model.convert_to_format == "python":
@@ -300,7 +352,7 @@ class BaseSolver(object):
 
                 if use_jacobian:
                     report(f"Calculating jacobian for {name}")
-                    jac = jacobian.jac(func, y)
+                    jac = jacobian.jac(symbol, y)
                     if model.convert_to_format == "python":
                         report(f"Converting jacobian for {name} to python")
                         jac = pybamm.EvaluatorPython(jac)
@@ -310,14 +362,14 @@ class BaseSolver(object):
 
                 if model.convert_to_format == "python":
                     report(f"Converting {name} to python")
-                    func = pybamm.EvaluatorPython(func)
+                    func = pybamm.EvaluatorPython(symbol)
 
                 func = func.evaluate
 
             else:
                 # Process with CasADi
                 report(f"Converting {name} to CasADi")
-                func = func.to_casadi(t_casadi, y_casadi, inputs=p_casadi)
+                casadi_expression = symbol.to_casadi(t_casadi, y_casadi, inputs=p_casadi)
                 # Add sensitivity vectors to the rhs and algebraic equations
                 jacp = None
                 if calculate_sensitivities_explicit:
@@ -331,59 +383,59 @@ class BaseSolver(object):
                             "Creating explicit forward sensitivity equations "
                             "for rhs using CasADi"
                         )
-                        df_dx = casadi.jacobian(func, y_diff)
-                        df_dp = casadi.jacobian(func, pS_casadi_stacked)
+                        df_dx = casadi.jacobian(casadi_expression, y_diff)
+                        df_dp = casadi.jacobian(casadi_expression, pS_casadi_stacked)
                         S_x_mat = S_x.reshape(
                             (model.len_rhs, pS_casadi_stacked.shape[0])
                         )
                         if model.len_alg == 0:
                             S_rhs = (df_dx @ S_x_mat + df_dp).reshape((-1, 1))
                         else:
-                            df_dz = casadi.jacobian(func, y_alg)
+                            df_dz = casadi.jacobian(casadi_expression, y_alg)
                             S_z_mat = S_z.reshape(
                                 (model.len_alg, pS_casadi_stacked.shape[0])
                             )
                             S_rhs = (df_dx @ S_x_mat + df_dz @ S_z_mat + df_dp).reshape(
                                 (-1, 1)
                             )
-                        func = casadi.vertcat(func, S_rhs)
+                        casadi_expression = casadi.vertcat(casadi_expression, S_rhs)
                     if name == "algebraic" and model.len_alg > 0:
                         report(
                             "Creating explicit forward sensitivity equations "
                             "for algebraic using CasADi"
                         )
-                        dg_dz = casadi.jacobian(func, y_alg)
-                        dg_dp = casadi.jacobian(func, pS_casadi_stacked)
+                        dg_dz = casadi.jacobian(casadi_expression, y_alg)
+                        dg_dp = casadi.jacobian(casadi_expression, pS_casadi_stacked)
                         S_z_mat = S_z.reshape(
                             (model.len_alg, pS_casadi_stacked.shape[0])
                         )
                         if model.len_rhs == 0:
                             S_alg = (dg_dz @ S_z_mat + dg_dp).reshape((-1, 1))
                         else:
-                            dg_dx = casadi.jacobian(func, y_diff)
+                            dg_dx = casadi.jacobian(casadi_expression, y_diff)
                             S_x_mat = S_x.reshape(
                                 (model.len_rhs, pS_casadi_stacked.shape[0])
                             )
                             S_alg = (dg_dx @ S_x_mat + dg_dz @ S_z_mat + dg_dp).reshape(
                                 (-1, 1)
                             )
-                        func = casadi.vertcat(func, S_alg)
+                        casadi_expression = casadi.vertcat(casadi_expression, S_alg)
                     if name == "initial_conditions":
                         if model.len_rhs == 0 or model.len_alg == 0:
-                            S_0 = casadi.jacobian(func, pS_casadi_stacked).reshape(
+                            S_0 = casadi.jacobian(casadi_expression, pS_casadi_stacked).reshape(
                                 (-1, 1)
                             )
-                            func = casadi.vertcat(func, S_0)
+                            casadi_expression = casadi.vertcat(casadi_expression, S_0)
                         else:
-                            x0 = func[: model.len_rhs]
-                            z0 = func[model.len_rhs :]
+                            x0 = casadi_expression[: model.len_rhs]
+                            z0 = casadi_expression[model.len_rhs :]
                             Sx_0 = casadi.jacobian(x0, pS_casadi_stacked).reshape(
                                 (-1, 1)
                             )
                             Sz_0 = casadi.jacobian(z0, pS_casadi_stacked).reshape(
                                 (-1, 1)
                             )
-                            func = casadi.vertcat(x0, Sx_0, z0, Sz_0)
+                            casadi_expression = casadi.vertcat(x0, Sx_0, z0, Sz_0)
                 elif model.calculate_sensitivities:
                     report(
                         (
@@ -394,45 +446,36 @@ class BaseSolver(object):
                     )
                     jacp_dict = {}
                     for pname in model.calculate_sensitivities:
-                        p_diff = casadi.jacobian(func, p_casadi[pname])
-                        jacp_dict[pname] = casadi.Function(
+                        p_diff = casadi.jacobian(casadi_expression, p_casadi[pname])
+                        jacp_dict[pname] = casadi.casadi_expressiontion(
                             name, [t_casadi, y_casadi, p_casadi_stacked], [p_diff]
                         )
-                    # jacp should be a function that returns a dict of sensitivities
+                    # jacp should be a casadi_expressiontion that returns a dict of sensitivities
 
                     def jacp(*args, **kwargs):
                         return {k: v(*args, **kwargs) for k, v in jacp_dict.items()}
 
                 if use_jacobian:
                     report(f"Calculating jacobian for {name} using CasADi")
-                    jac_casadi = casadi.jacobian(func, y_and_S)
+                    jac_casadi = casadi.jacobian(casadi_expression, y_and_S)
                     jac = casadi.Function(
                         name, [t_casadi, y_and_S, p_casadi_stacked], [jac_casadi]
                     )
                 else:
                     jac = None
 
-                func = casadi.Function(
-                    name, [t_casadi, y_and_S, p_casadi_stacked], [func]
-                )
-            if name == "residuals":
-                func_call = Residuals(func, name, model)
-            else:
-                func_call = SolverCallable(func, name, model)
-            if jac is not None:
-                jac_call = SolverCallable(jac, name + "_jac", model)
-            else:
-                jac_call = None
-            if jacp is not None:
-                jacp_call = SensitivityCallable(
-                    jacp,
-                    name + "_sensitivity_wrt_inputs",
-                    model,
-                    model.convert_to_format,
-                )
-            else:
-                jacp_call = None
-            return func, func_call, jac_call, jacp_call
+                if name == "residuals":
+                    func = casadi.Function(
+                        name, [t_casadi, y_and_S, ydot_casadi, p_casadi_stacked],
+                        [func - model.mass_matrix @ ydot_casadi]
+                    )
+                else:
+                    func = casadi.Function(
+                        name, [t_casadi, y_and_S, p_casadi_stacked], [casadi_expression]
+                    )
+
+
+            return func, jac, jacp
 
         # Process initial conditions
         initial_conditions = process(
@@ -454,259 +497,254 @@ class BaseSolver(object):
         model.y0 = init_eval(inputs)
         model.init_eval = init_eval
 
-        if not ics_only:
-            # Check for heaviside and modulo functions in rhs and algebraic and add
-            # discontinuity events if these exist.
-            # Note: only checks for the case of t < X, t <= X, X < t, or X <= t,
-            # but also accounts for the fact that t might be dimensional
-            # Only do this for DAE models as ODE models can deal with discontinuities
-            # fine
-            if len(model.algebraic) > 0:
-                for symbol in itertools.chain(
-                    model.concatenated_rhs.pre_order(),
-                    model.concatenated_algebraic.pre_order(),
-                ):
-                    if isinstance(symbol, _Heaviside):
-                        found_t = False
-                        # Dimensionless
-                        if symbol.right.id == pybamm.t.id:
-                            expr = symbol.left
-                            found_t = True
-                        elif symbol.left.id == pybamm.t.id:
-                            expr = symbol.right
-                            found_t = True
-                        # Dimensional
-                        elif symbol.right.id == (pybamm.t * model.timescale_eval).id:
-                            expr = (
-                                symbol.left.new_copy() / symbol.right.right.new_copy()
-                            )
-                            found_t = True
-                        elif symbol.left.id == (pybamm.t * model.timescale_eval).id:
-                            expr = (
-                                symbol.right.new_copy() / symbol.left.right.new_copy()
-                            )
-                            found_t = True
+        if ics_only:
+            pybamm.logger.info("Finish solver set-up")
+            return
 
-                        # Update the events if the heaviside function depended on t
-                        if found_t:
+        # Check for heaviside and modulo functions in rhs and algebraic and add
+        # discontinuity events if these exist.
+        # Note: only checks for the case of t < X, t <= X, X < t, or X <= t,
+        # but also accounts for the fact that t might be dimensional
+        # Only do this for DAE models as ODE models can deal with discontinuities
+        # fine
+        if len(model.algebraic) > 0:
+            for symbol in itertools.chain(
+                model.concatenated_rhs.pre_order(),
+                model.concatenated_algebraic.pre_order(),
+            ):
+                if isinstance(symbol, _Heaviside):
+                    found_t = False
+                    # Dimensionless
+                    if symbol.right.id == pybamm.t.id:
+                        expr = symbol.left
+                        found_t = True
+                    elif symbol.left.id == pybamm.t.id:
+                        expr = symbol.right
+                        found_t = True
+                    # Dimensional
+                    elif symbol.right.id == (pybamm.t * model.timescale_eval).id:
+                        expr = (
+                            symbol.left.new_copy() / symbol.right.right.new_copy()
+                        )
+                        found_t = True
+                    elif symbol.left.id == (pybamm.t * model.timescale_eval).id:
+                        expr = (
+                            symbol.right.new_copy() / symbol.left.right.new_copy()
+                        )
+                        found_t = True
+
+                    # Update the events if the heaviside function depended on t
+                    if found_t:
+                        model.events.append(
+                            pybamm.Event(
+                                str(symbol),
+                                expr.new_copy(),
+                                pybamm.EventType.DISCONTINUITY,
+                            )
+                        )
+                elif isinstance(symbol, pybamm.Modulo):
+                    found_t = False
+                    # Dimensionless
+                    if symbol.left.id == pybamm.t.id:
+                        expr = symbol.right
+                        found_t = True
+                    # Dimensional
+                    elif symbol.left.id == (pybamm.t * model.timescale_eval).id:
+                        expr = (
+                            symbol.right.new_copy() / symbol.left.right.new_copy()
+                        )
+                        found_t = True
+
+                    # Update the events if the modulo function depended on t
+                    if found_t:
+                        if t_eval is None:
+                            N_events = 200
+                        else:
+                            N_events = t_eval[-1] // expr.value
+
+                        for i in np.arange(N_events):
                             model.events.append(
                                 pybamm.Event(
                                     str(symbol),
-                                    expr.new_copy(),
+                                    expr.new_copy() * pybamm.Scalar(i + 1),
                                     pybamm.EventType.DISCONTINUITY,
                                 )
                             )
-                    elif isinstance(symbol, pybamm.Modulo):
-                        found_t = False
-                        # Dimensionless
-                        if symbol.left.id == pybamm.t.id:
-                            expr = symbol.right
-                            found_t = True
-                        # Dimensional
-                        elif symbol.left.id == (pybamm.t * model.timescale_eval).id:
-                            expr = (
-                                symbol.right.new_copy() / symbol.left.right.new_copy()
-                            )
-                            found_t = True
 
-                        # Update the events if the modulo function depended on t
-                        if found_t:
-                            if t_eval is None:
-                                N_events = 200
-                            else:
-                                N_events = t_eval[-1] // expr.value
-
-                            for i in np.arange(N_events):
-                                model.events.append(
-                                    pybamm.Event(
-                                        str(symbol),
-                                        expr.new_copy() * pybamm.Scalar(i + 1),
-                                        pybamm.EventType.DISCONTINUITY,
-                                    )
-                                )
-
-            # Process rhs, algebraic and event expressions
-            rhs, rhs_eval, jac_rhs, jacp_rhs = process(model.concatenated_rhs, "RHS")
-            algebraic, algebraic_eval, jac_algebraic, jacp_algebraic = process(
-                model.concatenated_algebraic, "algebraic"
-            )
-            casadi_terminate_events = []
-            terminate_events_eval = []
-            interpolant_extrapolation_events_eval = []
-            discontinuity_events_eval = []
-            for n, event in enumerate(model.events):
-                if event.event_type == pybamm.EventType.DISCONTINUITY:
-                    # discontinuity events are evaluated before the solver is called,
-                    # so don't need to process them
-                    discontinuity_events_eval.append(event)
-                elif event.event_type == pybamm.EventType.SWITCH:
-                    if (
-                        isinstance(self, pybamm.CasadiSolver)
-                        and self.mode == "fast with events"
-                        and model.algebraic != {}
-                    ):
-                        # Save some events to casadi_terminate_events for the 'fast with
-                        # events' mode of the casadi solver
-                        # We only need to do this if the model is a DAE model
-                        # see #1082
-                        k = 20
-                        init_sign = float(
-                            np.sign(event.evaluate(0, model.y0.full(), inputs=inputs))
-                        )
-                        # We create a sigmoid for each event which will multiply the
-                        # rhs. Doing * 2 - 1 ensures that when the event is crossed,
-                        # the sigmoid is zero. Hence the rhs is zero and the solution
-                        # stays constant for the rest of the simulation period
-                        # We can then cut off the part after the event was crossed
-                        event_sigmoid = (
-                            pybamm.sigmoid(0, init_sign * event.expression, k) * 2 - 1
-                        )
-                        event_casadi = process(
-                            event_sigmoid, f"event_{n}", use_jacobian=False
-                        )[0]
-                        # use the actual casadi object as this will go into the rhs
-                        casadi_terminate_events.append(event_casadi)
-                else:
-                    # use the function call
-                    event_eval = process(
-                        event.expression, f"event_{n}", use_jacobian=False
-                    )[1]
-                    if event.event_type == pybamm.EventType.TERMINATION:
-                        terminate_events_eval.append(event_eval)
-                    elif event.event_type == pybamm.EventType.INTERPOLANT_EXTRAPOLATION:
-                        interpolant_extrapolation_events_eval.append(event_eval)
-
-            # Add the solver attributes
-            model.rhs_eval = rhs_eval
-            model.algebraic_eval = algebraic_eval
-            model.jac_algebraic_eval = jac_algebraic
-            model.casadi_terminate_events = casadi_terminate_events
-            model.terminate_events_eval = terminate_events_eval
-            model.discontinuity_events_eval = discontinuity_events_eval
-            model.interpolant_extrapolation_events_eval = (
-                interpolant_extrapolation_events_eval
-            )
-
-            # if we have changed the equations to include the explicit sensitivity
-            # equations, then we also need to update the mass matrix and bounds
-            if calculate_sensitivities_explicit:
-                if model.len_rhs != 0:
-                    n_inputs = model.len_rhs_sens // model.len_rhs
-                elif model.len_alg != 0:
-                    n_inputs = model.len_alg_sens // model.len_alg
-                if model.bounds[0].shape[0] == model.len_rhs_and_alg:
-                    model.bounds = (
-                        np.repeat(model.bounds[0], n_inputs + 1),
-                        np.repeat(model.bounds[1], n_inputs + 1),
-                    )
-                if (
-                    model.mass_matrix is not None
-                    and model.mass_matrix.shape[0] == model.len_rhs_and_alg
-                ):
-
-                    if model.mass_matrix_inv is not None:
-                        model.mass_matrix_inv = pybamm.Matrix(
-                            block_diag(
-                                [model.mass_matrix_inv.entries] * (n_inputs + 1),
-                                format="csr",
-                            )
-                        )
-                    model.mass_matrix = pybamm.Matrix(
-                        block_diag(
-                            [model.mass_matrix.entries] * (n_inputs + 1), format="csr"
-                        )
-                    )
+        def wrap_in_callables(func, jac_func, jacp_func, name, model):
+            func_eval = SolverCallable(func, name, model)
+            if jac_func is not None:
+                jac_func_eval = SolverCallable(jac_func, name + "_jac", model)
             else:
-                # take care if calculate_sensitivites used then not used
-                if model.bounds[0].shape[0] > model.len_rhs_and_alg:
-                    model.bounds = (
-                        model.bounds[0][: model.len_rhs_and_alg],
-                        model.bounds[1][: model.len_rhs_and_alg],
-                    )
-                if (
-                    model.mass_matrix is not None
-                    and model.mass_matrix.shape[0] > model.len_rhs_and_alg
-                ):
-                    if model.mass_matrix_inv is not None:
-                        model.mass_matrix_inv = pybamm.Matrix(
-                            model.mass_matrix_inv.entries[
-                                : model.len_rhs, : model.len_rhs
-                            ]
-                        )
-                    model.mass_matrix = pybamm.Matrix(
-                        model.mass_matrix.entries[
-                            : model.len_rhs_and_alg, : model.len_rhs_and_alg
-                        ]
-                    )
-
-            # Save CasADi functions for the CasADi solver
-            # Note: when we pass to casadi the ode part of the problem must be in
-            # explicit form so we pre-multiply by the inverse of the mass matrix
-            if isinstance(self.root_method, pybamm.CasadiAlgebraicSolver) or isinstance(
-                self, (pybamm.CasadiSolver, pybamm.CasadiAlgebraicSolver)
-            ):
-                # can use DAE solver to solve model with algebraic equations only
-                if len(model.rhs) > 0:
-                    mass_matrix_inv = casadi.MX(model.mass_matrix_inv.entries)
-                    explicit_rhs = mass_matrix_inv @ rhs(
-                        t_casadi, y_and_S, p_casadi_stacked
-                    )
-                    model.casadi_rhs = casadi.Function(
-                        "rhs", [t_casadi, y_and_S, p_casadi_stacked], [explicit_rhs]
-                    )
-                model.casadi_algebraic = algebraic
-                model.casadi_sensitivities_rhs = jacp_rhs
-                model.casadi_sensitivities_algebraic = jacp_algebraic
-            if len(model.rhs) == 0:
-                # No rhs equations: residuals is algebraic only
-                model.residuals_eval = Residuals(algebraic, "residuals", model)
-                model.jacobian_eval = jac_algebraic
-                model.sensitivities_eval = jacp_algebraic
-            elif len(model.algebraic) == 0:
-                # No algebraic equations: residuals is rhs only
-                model.residuals_eval = Residuals(rhs, "residuals", model)
-                model.jacobian_eval = jac_rhs
-                model.sensitivities_eval = jacp_rhs
-            # Calculate consistent initial conditions for the algebraic equations
-            else:
-                all_states = pybamm.NumpyConcatenation(
-                    model.concatenated_rhs, model.concatenated_algebraic
+                jac_func_eval = None
+            if jacp_func is not None:
+                jacp_func_eval = SensitivityCallable(
+                    jacp_func,
+                    name + "_sensitivity_wrt_inputs",
+                    model,
+                    model.convert_to_format,
                 )
-                # Process again, uses caching so should be quick
-                residuals_eval, jacobian_eval, jacobian_wrtp_eval = process(
-                    all_states, "residuals"
-                )[1:]
-                model.residuals_eval = residuals_eval
-                model.jacobian_eval = jacobian_eval
-                model.sensitivities_eval = jacobian_wrtp_eval
+            else:
+                jacp_func_eval = None
+            return func_eval, jac_func_eval, jacp_func_eval
 
-        pybamm.logger.info("Finish solver set-up")
 
-    def _set_initial_conditions(self, model, inputs, update_rhs):
-        """
-        Set initial conditions for the model. This is skipped if the solver is an
-        algebraic solver (since this would make the algebraic solver redundant), and if
-        the model doesn't have any algebraic equations (since there are no initial
-        conditions to be calculated in this case).
+        # Process rhs, algebraic, residual and event expressions
+        # and wrap in callables
+        rhs, jac_rhs, jacp_rhs = process(model.concatenated_rhs, "RHS")
+        rhs_eval, jac_rhs_eval, jacp_rhs_eval = wrap_in_callables(
+            rhs, jac_rhs, jacp_rhs, "RHS", model
+        )
 
-        Parameters
-        ----------
-        model : :class:`pybamm.BaseModel`
-            The model for which to calculate initial conditions.
-        inputs : dict
-            Any input parameters to pass to the model when solving
-        update_rhs : bool
-            Whether to update the rhs. True for 'solve', False for 'step'.
+        algebraic, jac_algebraic, jacp_algebraic = process(
+            model.concatenated_algebraic, "algebraic"
+        )
+        algebraic_eval, jac_algebraic_eval, jacp_algebraic_eval = wrap_in_callables(
+            algebraic, jac_algebraic, jacp_algebraic, "algebraic", model
+        )
 
-        """
 
-        if self.algebraic_solver is True:
-            # Don't update model.y0
-            return None
+        # combine rhs and algebraic functions
+        if len(model.rhs) == 0:
+            all_states = model.concatenated_rhs
         elif len(model.algebraic) == 0:
-            if update_rhs is True:
-                # Recalculate initial conditions for the rhs equations
-                y0 = model.init_eval(inputs)
+            all_states = model.concatenated_algebraic
+        else:
+            all_states = pybamm.NumpyConcatenation(
+                model.concatenated_rhs, model.concatenated_algebraic
+            )
+        residuals, jacobian, residuals_wrtp = process(
+            all_states, "residuals"
+        )
+        residuals_eval, jacobian_eval, residuals_wrtp_eval = wrap_in_callables(
+            residuals, jacobian, residuals_wrtp, "residuals", model
+        )
+
+        casadi_terminate_events = []
+        terminate_events = []
+        terminate_events_eval = []
+        interpolant_extrapolation_events_eval = []
+        discontinuity_events_eval = []
+        for n, event in enumerate(model.events):
+            if event.event_type == pybamm.EventType.DISCONTINUITY:
+                # discontinuity events are evaluated before the solver is called,
+                # so don't need to process them
+                discontinuity_events_eval.append(event)
+            elif event.event_type == pybamm.EventType.SWITCH:
+                if (
+                    isinstance(self, pybamm.CasadiSolver)
+                    and self.mode == "fast with events"
+                    and model.algebraic != {}
+                ):
+                    # Save some events to casadi_terminate_events for the 'fast with
+                    # events' mode of the casadi solver
+                    # We only need to do this if the model is a DAE model
+                    # see #1082
+                    k = 20
+                    init_sign = float(
+                        np.sign(event.evaluate(0, model.y0.full(), inputs=inputs))
+                    )
+                    # We create a sigmoid for each event which will multiply the
+                    # rhs. Doing * 2 - 1 ensures that when the event is crossed,
+                    # the sigmoid is zero. Hence the rhs is zero and the solution
+                    # stays constant for the rest of the simulation period
+                    # We can then cut off the part after the event was crossed
+                    event_sigmoid = (
+                        pybamm.sigmoid(0, init_sign * event.expression, k) * 2 - 1
+                    )
+                    event_casadi = process(
+                        event_sigmoid, f"event_{n}", use_jacobian=False
+                    )[0]
+                    # use the actual casadi object as this will go into the rhs
+                    casadi_terminate_events.append(event_casadi)
+            else:
+                # use the function call
+                event_call = process(
+                    event.expression, f"event_{n}", use_jacobian=False
+                )[0]
+                event_eval = SolverCallable(event, f"event_{n}", model)
+                if event.event_type == pybamm.EventType.TERMINATION:
+                    terminate_events.append(event_call)
+                    terminate_events_eval.append(event_eval)
+                elif event.event_type == pybamm.EventType.INTERPOLANT_EXTRAPOLATION:
+                    interpolant_extrapolation_events_eval.append(event_eval)
+
+        # Add the solver attributes
+        model.rhs_eval = rhs_eval
+        model.rhs = rhs
+
+        model.algebraic_eval = algebraic_eval
+        model.algebraic = algebraic
+
+        model.terminate_events_eval = terminate_events_eval
+        model.terminate_events = terminate_events
+
+        model.discontinuity_events_eval = discontinuity_events_eval
+        model.interpolant_extrapolation_events_eval = (
+            interpolant_extrapolation_events_eval
+        )
+
+        model.residuals = residuals
+        model.residuals_eval = residuals_eval
+
+        model.jacobian = jacobian
+        model.jacobian_eval = jacobian_eval
+
+        model.sensitivities = residuals_wrtp
+        model.sensitivities_eval = residuals_wrtp_eval
+
+        # Save CasADi functions for the CasADi solver
+        # Save CasADi functions for solvers that use CasADi
+        # Note: when we pass to casadi the ode part of the problem must be in
+        if isinstance(self.root_method, pybamm.CasadiAlgebraicSolver) or isinstance(
+            self, (pybamm.CasadiSolver, pybamm.CasadiAlgebraicSolver)
+        ):
+        i
+            # can use DAE solver to solve model with algebraic equations only
+            if len(model.rhs) > 0:
+                mass_matrix_inv = casadi.MX(model.mass_matrix_inv.entries)
+                explicit_rhs = mass_matrix_inv @ rhs(
+                    t_casadi, y_and_S, p_casadi_stacked
+                )
+                model.casadi_rhs = casadi.Function(
+                    "rhs", [t_casadi, y_and_S, p_casadi_stacked], [explicit_rhs]
+                )
+            model.casadi_terminate_events = casadi_terminate_events
+            model.casadi_algebraic = algebraic
+            model.casadi_residual = residuals
+            model.casadi_sensitivities = jacobian_wrtp_eval
+            model.casadi_sensitivities_rhs = jacp_rhs
+            model.casadi_sensitivities_algebraic = jacp_algebraic
+
+
+
+    pybamm.logger.info("Finish solver set-up")
+
+def _set_initial_conditions(self, model, inputs, update_rhs):
+    """
+    Set initial conditions for the model. This is skipped if the solver is an
+    algebraic solver (since this would make the algebraic solver redundant), and if
+    the model doesn't have any algebraic equations (since there are no initial
+    conditions to be calculated in this case).
+
+    Parameters
+    ----------
+    model : :class:`pybamm.BaseModel`
+        The model for which to calculate initial conditions.
+    inputs : dict
+        Any input parameters to pass to the model when solving
+    update_rhs : bool
+        Whether to update the rhs. True for 'solve', False for 'step'.
+
+    """
+
+    if self.algebraic_solver is True:
+        # Don't update model.y0
+        return None
+    elif len(model.algebraic) == 0:
+        if update_rhs is True:
+            # Recalculate initial conditions for the rhs equations
+            y0 = model.init_eval(inputs)
             else:
                 # Don't update model.y0
                 return None

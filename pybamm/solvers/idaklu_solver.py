@@ -5,6 +5,7 @@ import casadi
 import pybamm
 import numpy as np
 import scipy.sparse as sparse
+import numbers
 
 import importlib
 
@@ -195,8 +196,25 @@ class IDAKLUSolver(pybamm.BaseSolver):
             mass_matrix = model.mass_matrix.entries
 
         # construct residuals function by binding inputs
-        def resfn(t, y, ydot):
-            return model.residuals_eval(t, y, ydot, inputs)
+        if model.convert_to_format == "casadi":
+            y_casadi = casadi.MX.sym("y", model.len_rhs_and_alg)
+            ydot_casadi = casadi.MX.sym("ydot", model.len_rhs_and_alg)
+            t_casadi = casadi.MX.sym("t")
+            p_casadi = {}
+            for name, value in inputs.items():
+                if isinstance(value, numbers.Number):
+                    p_casadi[name] = casadi.MX.sym(name)
+                else:
+                    p_casadi[name] = casadi.MX.sym(name, value.shape[0])
+            resfn = casadi.Function(
+                [t_casadi, y_casadi, ydot_casadi],
+                [model.rhs_casadi(t_casadi, y_casadi, inputs) - mass_matrix @
+                 ydot_casadi]
+            )
+        else:
+            def resfn(t, y, ydot):
+                return model.residuals_eval(t, y, ydot, inputs)
+
 
         if model.jacobian_eval:
             jac_y0_t0 = model.jacobian_eval(t_eval[0], y0, inputs)
