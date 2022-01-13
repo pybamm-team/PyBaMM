@@ -1,3 +1,9 @@
+# [Unreleased](https://github.com/pybamm-team/PyBaMM/)
+
+## Bug fixes
+
+-   Fixed initial conditions for the EC SEI model ([#1895](https://github.com/pybamm-team/PyBaMM/pull/1895))
+
 # [v21.12](https://github.com/pybamm-team/PyBaMM/tree/v21.11) - 2021-12-29
 
 ## Features
