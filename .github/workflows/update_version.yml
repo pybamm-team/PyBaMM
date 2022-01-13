@@ -1,14 +1,13 @@
-name: Update vcpkg-configuration baseline
+name: Update version
 
 on:
+  workflow_dispatch:
   push:
     branches:
     - develop
-    paths:
-    - vcpkg-configuration.json
   schedule:
-    # Run at 3 am UTC on 20th every month
-    - cron: 0 3 20 * *
+    # Run at 10 am UTC on 28th every month
+    - cron: 0 10 28 * *
 
 jobs:
   build:
@@ -19,24 +18,31 @@ jobs:
 
     steps:
     - uses: actions/checkout@v2
+
     - name: Set up Python ${{ matrix.python-version }}
       uses: actions/setup-python@v2
       with:
         python-version: ${{ matrix.python-version }}
+
     - name: Install dependencies
       run: |
         pip install wheel
         pip install --editable .
-    - name: Update baseline
-      run: python scripts/update_vcpkg_baseline.py
+
+    - name: Get current date
+      id: version
+      run: echo "::set-output name=date::$(date +'v%y.%-m')"
+
+    - name: Update version
+      run: python scripts/update_version.py
+
     - name: Create Pull Request
       uses: peter-evans/create-pull-request@v3
       with:
         delete-branch: true
         branch-suffix: short-commit-hash
-        commit-message: update baseline
-        title: Update vcpkg-configuration.json baseline
+        commit-message: Update version to ${{ steps.date.outputs.version }}
+        title: Update to ${{ steps.date.outputs.version }}
         body: |
-            Update baseline of vcpkg-configuration.json with the latest commit id
-
-            Auto-generated pull request
+            [x] Update to ${{ steps.date.outputs.version }}
+            [ ] Check [release checklist](https://github.com/pybamm-team/PyBaMM/blob/develop/.github/release_checklist.md)
