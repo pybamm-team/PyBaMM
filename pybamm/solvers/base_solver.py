@@ -205,6 +205,9 @@ class BaseSolver(object):
                     num_parameters += len(inputs[name])
             model.len_rhs_sens = model.len_rhs * num_parameters
             model.len_alg_sens = model.len_alg * num_parameters
+        else:
+            model.len_rhs_sens = 0
+            model.len_alg_sens = 0
 
         if model.convert_to_format != "casadi":
             # Create Jacobian from concatenated rhs and algebraic
@@ -629,14 +632,7 @@ class BaseSolver(object):
         model.jac_rhs_algebraic_eval = jac_rhs_algebraic
         model.jacp_rhs_algebraic_eval = jacp_rhs_algebraic
 
-        # calculate initial conditions and add to model
-        if calculate_sensitivities_explicit:
-            y0_total_size = (
-                model.len_rhs + model.len_rhs_sens + model.len_alg + model.len_alg_sens
-            )
-            y_zero = np.zeros((y0_total_size, 1))
-        else:
-            y_zero = np.zeros((model.len_rhs_and_alg, 1))
+
 
         model.initial_conditions_eval = initial_conditions
 
@@ -683,20 +679,25 @@ class BaseSolver(object):
 
         """
 
+        y0_total_size = (
+            model.len_rhs + model.len_rhs_sens + model.len_alg + model.len_alg_sens
+        )
+        y_zero = np.zeros((y0_total_size, 1))
+
         if self.algebraic_solver is True:
             # Don't update model.y0
             return None
         elif len(model.algebraic) == 0:
             if update_rhs is True:
                 # Recalculate initial conditions for the rhs equations
-                y0 = model.initial_conditions_eval(0, model.y0, inputs)
+                y0 = model.initial_conditions_eval(0, y_zero, inputs)
             else:
                 # Don't update model.y0
                 return None
         else:
             if update_rhs is True:
                 # Recalculate initial conditions for the rhs equations
-                y0_from_inputs = model.initial_conditions_eval(0, model.y0, inputs)
+                y0_from_inputs = model.initial_conditions_eval(0, y_zero, inputs)
                 # Reuse old solution for algebraic equations
                 y0_from_model = model.y0
                 len_rhs = model.len_rhs
