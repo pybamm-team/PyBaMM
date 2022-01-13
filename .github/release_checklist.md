@@ -1,7 +1,14 @@
-- Increment version number in
-  - `pybamm/version`
-  - `docs/conf.py`
-  - `CITATION.cff`
-  - `vcpkg.json`
-- Update CHANGELOG.md with a summary of the release
+- Run `scripts/update_version.py` to
+  - Increment version number in
+    - `pybamm/version`
+    - `docs/conf.py`
+    - `CITATION.cff`
+    - `vcpkg.json`
+
+  - Update baseline of registries in `vcpkg-configuration.json` as the latest commit id from [pybamm-team/sundials-vcpkg-registry](https://github.com/pybamm-team/sundials-vcpkg-registry)
+
+  - Update `CHANGELOG.md` with a summary of the release
+
 - Update jax and jaxlib to latest version in `pybamm.util` and fix any bugs that arise
+
+- Update baseline of default-registry in `vcpkg-configuration.json`
