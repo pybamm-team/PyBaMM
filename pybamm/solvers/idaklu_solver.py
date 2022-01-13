@@ -208,7 +208,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
                     p_casadi[name] = casadi.MX.sym(name, value.shape[0])
             resfn = casadi.Function(
                 [t_casadi, y_casadi, ydot_casadi],
-                [model.rhs_casadi(t_casadi, y_casadi, inputs) - mass_matrix @
+                [model.residuals_eval(t_casadi, y_casadi, inputs) - mass_matrix @
                  ydot_casadi]
             )
         else:
