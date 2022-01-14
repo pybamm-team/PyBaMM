@@ -132,6 +132,11 @@ class TestCasadiConverter(unittest.TestCase):
                 pybamm.Function(np_fun, c).to_casadi(), casadi.MX(np_fun(3)), evalf=True
             )
 
+        # A workaround to fix the tests running on GitHub Actions -
+        # casadi.evalf(
+        #       pybamm.Function(np_fun, c).to_casadi()
+        # ) - casadi.evalf(casadi.MX(np_fun(3)))
+        # is not zero, but a small number of the order 10^-15 when np_func is np.cosh
         for np_fun in [
             np.cosh
         ]:
