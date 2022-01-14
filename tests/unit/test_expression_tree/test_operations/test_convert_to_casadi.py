@@ -12,6 +12,7 @@ from scipy import special
 class TestCasadiConverter(unittest.TestCase):
     def assert_casadi_equal(self, a, b, evalf=False):
         print(a, b)
+        print(casadi.evalf(a), casadi.evalf(b), casadi.evalf(a) - casadi.evalf(b))
         if evalf is True:
             self.assertTrue((casadi.evalf(a) - casadi.evalf(b)).is_zero())
         else:
