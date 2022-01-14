@@ -11,6 +11,7 @@ from scipy import special
 
 class TestCasadiConverter(unittest.TestCase):
     def assert_casadi_equal(self, a, b, evalf=False):
+        print(a, b)
         if evalf is True:
             self.assertTrue((casadi.evalf(a) - casadi.evalf(b)).is_zero())
         else:
@@ -129,6 +130,7 @@ class TestCasadiConverter(unittest.TestCase):
             np.arccosh,
             np.arcsinh,
         ]:
+            print(np_fun)
             self.assert_casadi_equal(
                 pybamm.Function(np_fun, c).to_casadi(), casadi.MX(np_fun(3)), evalf=True
             )
