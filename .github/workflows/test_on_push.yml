@@ -2,6 +2,7 @@ name: PyBaMM
 
 on:
   workflow_dispatch:
+  push:
   pull_request:
 
   # everyday at 3 am UTC
