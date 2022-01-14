@@ -7,6 +7,8 @@ import os
 import re
 from datetime import date, datetime
 
+import dateutil.relativedelta
+
 import pybamm
 
 
@@ -14,7 +16,6 @@ def update_version():
     """
     Opens file and updates the version number
     """
-
     current_year = datetime.now().strftime("%y")
     current_month = datetime.now().month
 
@@ -83,6 +84,35 @@ def update_version():
         file.truncate(0)
         file.seek(0)
         file.writelines(output_list)
+
+
+def get_changelog():
+    """
+    Opens CHANGELOG.md and overrides the changelog with the latest version.
+    Used in GitHub workflow to create the changelog for the GitHub release.
+    """
+    # This month
+    now = datetime.now()
+    current_year = now.strftime("%y")
+    current_month = now.month
+
+    # Previous month
+    previous_date = datetime.now() + dateutil.relativedelta.relativedelta(months=-1)
+    previous_year = previous_date.strftime("%y")
+    previous_month = previous_date.month
+
+    current_version = re.escape(f"# [v{current_year}.{current_month}]")
+    previous_version = re.escape(f"# [v{previous_year}.{previous_month}]")
+
+    # Open CHANGELOG.md and keep the relevant lines
+    with open(os.path.join(pybamm.root_dir(), "CHANGELOG.md"), "r+") as file:
+        output = file.read()
+        re_changelog = f"{current_version}.*?(##.*)(?={previous_version})"
+        release_changelog = re.findall(re_changelog, output, re.DOTALL)[0]
+        print(release_changelog)
+        file.truncate(0)
+        file.seek(0)
+        file.write(release_changelog)
 
 
 if __name__ == "__main__":
