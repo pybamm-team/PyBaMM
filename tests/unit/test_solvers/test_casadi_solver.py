@@ -880,8 +880,8 @@ class TestCasadiSolverODEsWithForwardSensitivityEquations(unittest.TestCase):
         solution = solver.solve(
             model,
             t_eval,
-            inputs={"p": 0.1, "q": 2, "r": -1, "s": 0.5},
-            calculate_sensitivities=["p", "q"],
+            inputs={"q": 2, "r": -1, "p": 0.1},
+            calculate_sensitivities=["q", "p"],
         )
         np.testing.assert_allclose(solution.y[0], -1 + 0.2 * solution.t)
         np.testing.assert_allclose(
@@ -893,13 +893,35 @@ class TestCasadiSolverODEsWithForwardSensitivityEquations(unittest.TestCase):
             (0.1 * solution.t)[:, np.newaxis],
         )
         self.assertTrue("r" not in solution.sensitivities)
-        self.assertTrue("s" not in solution.sensitivities)
         np.testing.assert_allclose(
             solution.sensitivities["all"],
             np.hstack(
                 [
                     solution.sensitivities["p"],
                     solution.sensitivities["q"],
+                ]
+            ),
+        )
+
+        solution = solver.solve(
+            model,
+            t_eval,
+            inputs={"q": 2, "r": -1, "p": 0.1},
+            calculate_sensitivities=["r"],
+        )
+        np.testing.assert_allclose(solution.y[0], -1 + 0.2 * solution.t)
+        np.testing.assert_allclose(
+            solution.sensitivities["r"],
+            (2 * solution.t)[:, np.newaxis],
+        )
+        self.assertTrue("p" not in solution.sensitivities)
+        self.assertTrue("q" not in solution.sensitivities)
+        np.testing.assert_allclose(solution.sensitivities["r"], 1)
+        np.testing.assert_allclose(
+            solution.sensitivities["all"],
+            np.hstack(
+                [
+                    solution.sensitivities["r"],
                 ]
             ),
         )
