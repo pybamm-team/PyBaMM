@@ -83,9 +83,9 @@ class ScipySolver(pybamm.BaseSolver):
         # check for user-supplied Jacobian
         implicit_methods = ["Radau", "BDF", "LSODA"]
         if np.any([self.method in implicit_methods]):
-            if model.jacobian_eval:
+            if model.jac_rhs_algebraic_eval:
                 extra_options.update(
-                    {"jac": lambda t, y: model.jacobian_eval(t, y, inputs)}
+                    {"jac": lambda t, y: model.jac_rhs_algebraic_eval(t, y, inputs)}
                 )
 
         # make events terminal so that the solver stops when they are reached

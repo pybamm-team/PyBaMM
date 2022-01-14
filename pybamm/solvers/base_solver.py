@@ -476,8 +476,6 @@ class BaseSolver(object):
             use_jacobian=False,
         )[0]
 
-
-
         if ics_only:
             pybamm.logger.info("Finish solver set-up")
             return
@@ -631,10 +629,8 @@ class BaseSolver(object):
         model.rhs_algebraic_eval = rhs_algebraic
         model.jac_rhs_algebraic_eval = jac_rhs_algebraic
         model.jacp_rhs_algebraic_eval = jacp_rhs_algebraic
-
-
-
         model.initial_conditions_eval = initial_conditions
+
 
         # Save CasADi functions for the CasADi solver
         # Save CasADi functions for solvers that use CasADi
@@ -661,7 +657,7 @@ class BaseSolver(object):
 
         pybamm.logger.info("Finish solver set-up")
 
-    def _set_initial_conditions(self, model, inputs, update_rhs):
+    def _set_initial_conditions(self, model, inputs_dict, update_rhs):
         """
         Set initial conditions for the model. This is skipped if the solver is an
         algebraic solver (since this would make the algebraic solver redundant), and if
@@ -672,7 +668,7 @@ class BaseSolver(object):
         ----------
         model : :class:`pybamm.BaseModel`
             The model for which to calculate initial conditions.
-        inputs : dict
+        inputs_dict : dict
             Any input parameters to pass to the model when solving
         update_rhs : bool
             Whether to update the rhs. True for 'solve', False for 'step'.
@@ -683,6 +679,12 @@ class BaseSolver(object):
             model.len_rhs + model.len_rhs_sens + model.len_alg + model.len_alg_sens
         )
         y_zero = np.zeros((y0_total_size, 1))
+
+        if model.convert_to_format == "casadi":
+            # stack inputs
+            inputs = casadi.vertcat(*[x for x in inputs_dict.values()])
+        else:
+            inputs = inputs_dict
 
         if self.algebraic_solver is True:
             # Don't update model.y0
