@@ -321,7 +321,6 @@ class BaseSolver(object):
                 else:
                     jac = None
 
-
             elif model.convert_to_format != "casadi":
                 # Process with pybamm functions, converting
                 # to python evaluator
@@ -367,7 +366,8 @@ class BaseSolver(object):
             else:
                 # Process with CasADi
                 report(f"Converting {name} to CasADi")
-                casadi_expression = symbol.to_casadi(t_casadi, y_casadi, inputs=p_casadi)
+                casadi_expression = symbol.to_casadi(
+                    t_casadi, y_casadi, inputs=p_casadi)
                 # Add sensitivity vectors to the rhs and algebraic equations
                 jacp = None
                 if calculate_sensitivities_explicit:
@@ -462,7 +462,6 @@ class BaseSolver(object):
                 else:
                     jac = None
 
-
                 func = casadi.Function(
                     name, [t_casadi, y_and_S, p_casadi_stacked], [casadi_expression]
                 )
@@ -475,6 +474,18 @@ class BaseSolver(object):
             "initial_conditions",
             use_jacobian=False,
         )[0]
+
+        # evaluate initial condition
+        y0_total_size = (
+            model.len_rhs + model.len_rhs_sens + model.len_alg + model.len_alg_sens
+        )
+        y_zero = np.zeros((y0_total_size, 1))
+        if model.convert_to_format == "casadi":
+            # stack inputs
+            inputs_casadi = casadi.vertcat(*[x for x in inputs.values()])
+            model.y0 = initial_conditions(0, y_zero, inputs_casadi)
+        else:
+            model.y0 = initial_conditions(0, y_zero, inputs)
 
         if ics_only:
             pybamm.logger.info("Finish solver set-up")
@@ -550,8 +561,6 @@ class BaseSolver(object):
                                 )
                             )
 
-
-
         # Process rhs, algebraic, residual and event expressions
         # and wrap in callables
         rhs, jac_rhs, jacp_rhs = process(model.concatenated_rhs, "RHS")
@@ -559,7 +568,6 @@ class BaseSolver(object):
         algebraic, jac_algebraic, jacp_algebraic = process(
             model.concatenated_algebraic, "algebraic"
         )
-
 
         # combine rhs and algebraic functions
         if len(model.rhs) == 0:
@@ -623,14 +631,21 @@ class BaseSolver(object):
         # Add the solver attributes
         model.rhs_eval = rhs
         model.algebraic_eval = algebraic
+        model.rhs_algebraic_eval = rhs_algebraic
+
         model.terminate_events_eval = terminate_events
         model.discontinuity_events_eval = discontinuity_events
         model.interpolant_extrapolation_events_eval = interpolant_extrapolation_events
-        model.rhs_algebraic_eval = rhs_algebraic
+
+        model.jac_rhs_eval = jac_rhs
+        model.jacp_rhs_eval = jacp_rhs
+
+        model.jacp_algebraic_eval = jacp_algebraic
+        model.jacp_algebraic_eval = jacp_algebraic
+
         model.jac_rhs_algebraic_eval = jac_rhs_algebraic
         model.jacp_rhs_algebraic_eval = jacp_rhs_algebraic
         model.initial_conditions_eval = initial_conditions
-
 
         # Save CasADi functions for the CasADi solver
         # Save CasADi functions for solvers that use CasADi
@@ -652,8 +667,6 @@ class BaseSolver(object):
             model.casadi_sensitivities = jacp_rhs_algebraic
             model.casadi_sensitivities_rhs = jacp_rhs
             model.casadi_sensitivities_algebraic = jacp_algebraic
-
-
 
         pybamm.logger.info("Finish solver set-up")
 
@@ -1448,6 +1461,7 @@ class BaseSolver(object):
         ext_and_inputs = {**external_variables, **inputs}
         return ext_and_inputs
 
+
 class SolverCallable:
     """A class that will be called by the solver when integrating"""
 
@@ -1483,6 +1497,7 @@ class SolverCallable:
                 return states_eval
         else:
             return self._function(t, y, inputs=inputs, known_evals={})[0]
+
 
 class InitialConditions(SolverCallable):
     """Returns initial conditions given inputs"""

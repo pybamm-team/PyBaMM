@@ -501,7 +501,7 @@ class EvaluatorPython:
 
         result = self._evaluate(self._constants, t, y, inputs)
 
-        return result.flatten()
+        return result
 
     def __getstate__(self):
         # Control the state of instances of EvaluatorPython

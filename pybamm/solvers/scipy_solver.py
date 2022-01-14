@@ -78,19 +78,29 @@ class ScipySolver(pybamm.BaseSolver):
         # Initial conditions
         y0 = model.y0
         if isinstance(y0, casadi.DM):
-            y0 = y0.full().flatten()
+            y0 = y0.full()
+        y0 = y0.flatten()
 
         # check for user-supplied Jacobian
         implicit_methods = ["Radau", "BDF", "LSODA"]
         if np.any([self.method in implicit_methods]):
-            if model.jac_rhs_algebraic_eval:
+            if model.jac_rhs_eval:
+                def jacobian(t, y):
+                    return model.jac_rhs_eval(t, y, inputs)
                 extra_options.update(
-                    {"jac": lambda t, y: model.jac_rhs_algebraic_eval(t, y, inputs)}
+                    {"jac": jacobian}
                 )
+
+        # rhs equation
+        def rhs(t, y):
+            return model.rhs_eval(t, y, inputs).reshape(-1)
+
+        if model.convert_to_format == 'casadi':
+            def rhs(t, y):
+                return model.rhs_eval(t, y, inputs).full().reshape(-1)
 
         # make events terminal so that the solver stops when they are reached
         if model.terminate_events_eval:
-
             def event_wrapper(event):
                 def event_fn(t, y):
                     return event(t, y, inputs)
@@ -103,7 +113,7 @@ class ScipySolver(pybamm.BaseSolver):
 
         timer = pybamm.Timer()
         sol = it.solve_ivp(
-            lambda t, y: model.rhs_eval(t, y, inputs),
+            rhs,
             (t_eval[0], t_eval[-1]),
             y0,
             t_eval=t_eval,
