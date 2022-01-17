@@ -154,14 +154,16 @@ class DomainDict(dict):
         DOMAIN_LEVELS = ["primary", "secondary", "tertiary", "quaternary"]
         for level, dom in domains.items():
             if level not in DOMAIN_LEVELS:
-                raise KeyError(f"DomainDict keys must be one of '{DOMAIN_LEVELS}'")
+                raise pybamm.DomainError(
+                    f"DomainDict keys must be one of '{DOMAIN_LEVELS}'"
+                )
             if isinstance(dom, str):
                 domains[level] = [dom]
         for level, next_level in zip(DOMAIN_LEVELS[:-1], DOMAIN_LEVELS[1:]):
             if (next_level in domains.keys() and domains[next_level] != []) and not (
                 level in domains.keys() and domains[level] != []
             ):
-                raise KeyError
+                raise pybamm.DomainError("Domain levels must be filled in order")
         return super().update(domains)
 
     def __setitem__(self, key, value):
@@ -337,7 +339,7 @@ def load_function(filename):
             root_path = root_path[1:]
     # If the function is not in the current working directory and the path provided is
     # absolute
-    elif os.path.isabs(filename) and not os.getcwd() in filename:   # pragma: no cover
+    elif os.path.isabs(filename) and not os.getcwd() in filename:  # pragma: no cover
         # Change directory to import the function
         dir_path = os.path.split(filename)[0]
         os.chdir(dir_path)

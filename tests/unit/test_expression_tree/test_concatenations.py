@@ -72,7 +72,13 @@ class TestConcatenations(unittest.TestCase):
             auxiliary_domains={"secondary": "current collector"},
         )
         conc = pybamm.concatenation(a, b)
-        self.assertEqual(conc.auxiliary_domains, {"secondary": ["current collector"]})
+        self.assertEqual(
+            conc.domains,
+            {
+                "primary": ["negative electrode", "separator", "positive electrode"],
+                "secondary": ["current collector"],
+            },
+        )
 
         # Can't concatenate nodes with overlapping domains
         c = pybamm.Symbol(
@@ -106,9 +112,12 @@ class TestConcatenations(unittest.TestCase):
         self.assertIsInstance(concat, pybamm.FullBroadcast)
         self.assertEqual(concat.orphans[0].id, pybamm.Scalar(0).id)
         self.assertEqual(
-            concat.domain, ["negative electrode", "separator", "positive electrode"]
+            concat.domains,
+            {
+                "primary": ["negative electrode", "separator", "positive electrode"],
+                "secondary": ["current collector"],
+            },
         )
-        self.assertEqual(concat.auxiliary_domains, {"secondary": ["current collector"]})
 
     def test_numpy_concatenation_vectors(self):
         # with entries

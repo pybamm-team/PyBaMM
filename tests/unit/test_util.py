@@ -126,7 +126,7 @@ class TestUtil(unittest.TestCase):
         d = pybamm.DomainDict({"primary": "test", "secondary": []})
         self.assertEqual(d, {"primary": ["test"]})
 
-        with self.assertRaisesRegex(KeyError, "DomainDict keys"):
+        with self.assertRaisesRegex(pybamm.DomainError, "DomainDict keys"):
             pybamm.DomainDict({"wrong key": "test"})
 
     def test_get_parameters_filepath(self):

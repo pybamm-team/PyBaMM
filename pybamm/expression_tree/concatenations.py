@@ -78,7 +78,16 @@ class Concatenation(pybamm.Symbol):
             else:
                 raise pybamm.DomainError("domain of children must be disjoint")
 
-        domains = {**children[0].domains, "primary": domain}
+        auxiliary_domains = children[0].domains
+        for level, dom in auxiliary_domains.items():
+            if level != "primary" and dom != []:
+                for child in children[1:]:
+                    if child.domains[level] not in [dom, []]:
+                        raise pybamm.DomainError(
+                            "children must have same or empty auxiliary domains"
+                        )
+
+        domains = {**auxiliary_domains, "primary": domain}
 
         return domains
 

@@ -111,8 +111,10 @@ class TestUnaryOperators(unittest.TestCase):
         )
         average_conc_broad = pybamm.x_average(conc_broad)
         self.assertIsInstance(average_conc_broad, pybamm.FullBroadcast)
-        self.assertEqual(average_conc_broad.domain, ["current collector"])
-        self.assertEqual(average_conc_broad.auxiliary_domains, {"secondary": ["test"]})
+        self.assertEqual(
+            average_conc_broad.domains,
+            {"primary": ["current collector"], "secondary": ["test"]},
+        )
 
         # x-average of broadcast
         for domain in [["negative electrode"], ["separator"], ["positive electrode"]]:

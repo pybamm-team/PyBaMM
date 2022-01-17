@@ -265,7 +265,7 @@ class BaseSizeDistribution(BaseParticle):
         the flux variable N_s from the distribution submodel.
         """
 
-        if [self.domain.lower() + " electrode"] in N_s.auxiliary_domains.values():
+        if [self.domain.lower() + " electrode"] in N_s.domains.values():
             # N_s depends on x
 
             N_s_distribution = N_s

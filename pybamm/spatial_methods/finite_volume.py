@@ -108,7 +108,7 @@ class FiniteVolume(pybamm.SpatialMethod):
                 )
 
         # note in 1D cartesian, cylindrical and spherical grad are the same
-        gradient_matrix = self.gradient_matrix(symbol.domains)
+        gradient_matrix = self.gradient_matrix(domain, symbol.domains)
 
         # Multiply by gradient matrix
         out = gradient_matrix @ discretised_symbol
@@ -121,7 +121,7 @@ class FiniteVolume(pybamm.SpatialMethod):
 
         return out
 
-    def gradient_matrix(self, domains):
+    def gradient_matrix(self, domain, domains):
         """
         Gradient matrix for finite volumes in the appropriate domain.
         Equivalent to grad(y) = (y[1:] - y[:-1])/dx
@@ -137,7 +137,7 @@ class FiniteVolume(pybamm.SpatialMethod):
             The (sparse) finite volume gradient matrix for the domain
         """
         # Create appropriate submesh by combining submeshes in primary domain
-        submesh = self.mesh.combine_submeshes(*domains["primary"])
+        submesh = self.mesh.combine_submeshes(*domain)
 
         # Create 1D matrix using submesh
         n = submesh.npts

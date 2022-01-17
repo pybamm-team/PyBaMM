@@ -51,14 +51,14 @@ class TestSymbol(unittest.TestCase):
             a = pybamm.Symbol("a", domain=1)
         with self.assertRaisesRegex(
             pybamm.DomainError,
-            "Domain cannot be empty if auxiliary domains are not empty",
+            "Domain levels must be filled in order",
         ):
             b = pybamm.Symbol("b", auxiliary_domains={"secondary": ["test sec"]})
         b = pybamm.Symbol(
             "b", domain="test", auxiliary_domains={"secondary": ["test sec"]}
         )
         with self.assertRaisesRegex(
-            pybamm.DomainError, "Domain cannot be the same as an auxiliary domain"
+            pybamm.DomainError, "All domains must be different"
         ):
             b.domain = "test sec"
 
@@ -73,10 +73,6 @@ class TestSymbol(unittest.TestCase):
             },
         )
         self.assertEqual(a.domain, ["test"])
-        self.assertEqual(
-            a.auxiliary_domains,
-            {"secondary": ["sec"], "tertiary": ["tert"], "quaternary": ["quat"]},
-        )
         self.assertEqual(a.secondary_domain, ["sec"])
         self.assertEqual(a.tertiary_domain, ["tert"])
         self.assertEqual(a.tertiary_domain, ["tert"])
@@ -97,11 +93,11 @@ class TestSymbol(unittest.TestCase):
             a = pybamm.Symbol("a", domain=1)
         b = pybamm.Symbol("b", domain="test sec")
         with self.assertRaisesRegex(
-            pybamm.DomainError, "Domain cannot be the same as an auxiliary domain"
+            pybamm.DomainError, "All domains must be different"
         ):
-            b.auxiliary_domains = {"secondary": "test sec"}
+            b.domains = {"primary": "test", "secondary": "test"}
         with self.assertRaisesRegex(
-            pybamm.DomainError, "All auxiliary domains must be different"
+            pybamm.DomainError, "All domains must be different"
         ):
             b = pybamm.Symbol(
                 "b",
@@ -347,46 +343,41 @@ class TestSymbol(unittest.TestCase):
         hex_regex = r"\-?0x[0-9,a-f]+"
         self.assertRegex(
             a.__repr__(),
-            r"Symbol\("
-            + hex_regex
-            + r", a, children\=\[\], domain\=\[\], auxiliary_domains\=\{\}\)",
+            r"Symbol\(" + hex_regex + r", a, children\=\[\], domains\=\{\}\)",
         )
         self.assertRegex(
             b.__repr__(),
-            r"Symbol\("
-            + hex_regex
-            + r", b, children\=\[\], domain\=\[\], auxiliary_domains\=\{\}\)",
+            r"Symbol\(" + hex_regex + r", b, children\=\[\], domains\=\{\}\)",
         )
         self.assertRegex(
             c.__repr__(),
             r"Symbol\("
             + hex_regex
-            + r", c, children\=\[\], domain\=\['test'\], auxiliary_domains\=\{\}\)",
+            + r", c, children\=\[\], domains\=\{'primary': \['test'\]\}\)",
         )
         self.assertRegex(
             d.__repr__(),
             r"Symbol\("
             + hex_regex
-            + r", d, children\=\[\], domain\=\['test'\]"
-            + r", auxiliary_domains\=\{'secondary': \"\['other test'\]\"\}\)",
+            + r", d, children\=\[\], domains\=\{'primary': \['test'\], "
+            + r"'secondary': \"\['other test'\]\"\}\)",
         )
         self.assertRegex(
             (a + b).__repr__(),
-            r"Addition\(" + hex_regex + r", \+, children\=\['a', 'b'\], domain=\[\]",
+            r"Addition\(" + hex_regex + r", \+, children\=\['a', 'b'\], domains=\{\}",
         )
         self.assertRegex(
             (a * d).__repr__(),
             r"Multiplication\("
             + hex_regex
-            + r", \*, children\=\['a', 'd'\], domain=\['test'\]"
-            + r", auxiliary_domains\=\{'secondary': \"\['other test'\]\"\}\)",
+            + r", \*, children\=\['a', 'd'\], domains\=\{'primary': \['test'\], "
+            + r"'secondary': \"\['other test'\]\"\}\)",
         )
         self.assertRegex(
             pybamm.grad(c).__repr__(),
             r"Gradient\("
             + hex_regex
-            + r", grad, children\=\['c'\], domain=\['test'\]"
-            + r", auxiliary_domains\=\{\}\)",
+            + r", grad, children\=\['c'\], domains\=\{'primary': \['test'\]}",
         )
 
     def test_symbol_visualise(self):

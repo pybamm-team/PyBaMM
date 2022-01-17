@@ -345,19 +345,13 @@ class TestFiniteVolume(unittest.TestCase):
         # Basic shape and type tests
         y = np.ones_like(mesh["negative electrode"].nodes[:, np.newaxis])
         # Left
-        self.assertEqual(delta_fn_left_disc.domain, delta_fn_left.domain)
-        self.assertEqual(
-            delta_fn_left_disc.auxiliary_domains, delta_fn_left.auxiliary_domains
-        )
+        self.assertEqual(delta_fn_left_disc.domains, delta_fn_left.domains)
         self.assertIsInstance(delta_fn_left_disc, pybamm.Multiplication)
         self.assertIsInstance(delta_fn_left_disc.left, pybamm.Matrix)
         np.testing.assert_array_equal(delta_fn_left_disc.left.evaluate()[:, 1:], 0)
         self.assertEqual(delta_fn_left_disc.shape, y.shape)
         # Right
-        self.assertEqual(delta_fn_right_disc.domain, delta_fn_right.domain)
-        self.assertEqual(
-            delta_fn_right_disc.auxiliary_domains, delta_fn_right.auxiliary_domains
-        )
+        self.assertEqual(delta_fn_right_disc.domains, delta_fn_right.domains)
         self.assertIsInstance(delta_fn_right_disc, pybamm.Multiplication)
         self.assertIsInstance(delta_fn_right_disc.left, pybamm.Matrix)
         np.testing.assert_array_equal(delta_fn_right_disc.left.evaluate()[:, :-1], 0)

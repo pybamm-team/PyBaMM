@@ -273,29 +273,6 @@ class Symbol(anytree.NodeMixin):
     @domain.setter
     def domain(self, domain):
         self.domains = {**self.domains, "primary": domain}
-        # if domain is None:
-        #     domain = []
-        # if domain != [] and isinstance(self, (pybamm.Scalar, pybamm.Parameter)):
-        #     raise pybamm.DomainError(
-        #         f"Symbol of type {type(self)} cannot have a domain."
-        #     )
-
-        # elif isinstance(domain, str):
-        #     domain = [domain]
-        # if domain == [] and not all(k == "primary" for k in self.domains.keys()):
-        #     raise pybamm.DomainError(
-        #         "Domain cannot be empty if auxiliary domains are not empty"
-        #     )
-        # if any((domain == v and k != "primary") for k, v in self.domains.items()):
-        #     raise pybamm.DomainError("Domain cannot be the same as an auxiliary domain")
-        # try:
-        #     iter(domain)
-        # except TypeError:
-        #     raise TypeError("Domain: argument domain is not iterable")
-        # else:
-        #     self._domains["primary"] = domain
-        #     # Update id since domain has changed
-        #     self.set_id()
 
     @property
     def auxiliary_domains(self):
@@ -311,6 +288,13 @@ class Symbol(anytree.NodeMixin):
             domains = pybamm.DomainDict({})
         elif not isinstance(domains, pybamm.DomainDict):
             domains = pybamm.DomainDict(domains)
+
+        if domains["primary"] != [] and isinstance(
+            self, (pybamm.Scalar, pybamm.Parameter)
+        ):
+            raise pybamm.DomainError(
+                f"Object of type '{self.__class__.__name__}'' cannot have a domain"
+            )
 
         # Check domains don't clash
         values = [tuple(val) for val in domains.values() if val != []]
@@ -368,7 +352,10 @@ class Symbol(anytree.NodeMixin):
 
     def read_domain_or_domains(self, domain, auxiliary_domains, domains):
         if domains is None:
-            domain = domain or []
+            if isinstance(domain, str):
+                domain = [domain]
+            elif domain is None:
+                domain = []
             auxiliary_domains = auxiliary_domains or {}
 
             domains = {"primary": domain, **auxiliary_domains}
@@ -399,7 +386,7 @@ class Symbol(anytree.NodeMixin):
         self._id = hash(
             (self.__class__, self.name)
             + tuple([child.id for child in self.children])
-            + tuple([(k, tuple(v)) for k, v in self.domains.items()])
+            + tuple([(k, tuple(v)) for k, v in self.domains.items() if v != []])
         )
 
     @property
@@ -507,7 +494,7 @@ class Symbol(anytree.NodeMixin):
             hex(self.id),
             self._name,
             [str(child) for child in self.children],
-            {k: str(v) for k, v in self.domains.items()},
+            {k: str(v) for k, v in self.domains.items() if v != []},
         )
 
     def __add__(self, other):
