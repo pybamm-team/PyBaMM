@@ -4,6 +4,7 @@
 
 -   Parameters can now be imported from any given path in `Windows` ([#1900](https://github.com/pybamm-team/PyBaMM/pull/1900))
 -   Fixed initial conditions for the EC SEI model ([#1895](https://github.com/pybamm-team/PyBaMM/pull/1895))
+-   Fixed issue in extraction of sensitivites ([#1894](https://github.com/pybamm-team/PyBaMM/pull/1894))
 
 # [v21.12](https://github.com/pybamm-team/PyBaMM/tree/v21.11) - 2021-12-29
 
@@ -14,7 +15,6 @@
 -   Added cylindrical geometry and finite volume method ([#1824](https://github.com/pybamm-team/PyBaMM/pull/1824))
 
 ## Bug fixes
-
 -   `PyBaMM` is now importable in `Linux` systems where `jax` is already installed ([#1874](https://github.com/pybamm-team/PyBaMM/pull/1874))
 -   Simulations with drive cycles now support `initial_soc` ([#1842](https://github.com/pybamm-team/PyBaMM/pull/1842))
 -   Fixed bug in expression tree simplification ([#1831](https://github.com/pybamm-team/PyBaMM/pull/1831))

@@ -589,9 +589,10 @@ class TestCasadiSolverODEsWithForwardSensitivityEquations(unittest.TestCase):
         solution = solver.solve(
             model,
             t_eval,
-            inputs={"p": 0.1, "q": 2, "r": -1, "s": 0.5},
+            inputs={"r": -1, "s": 0.5, "q": 2, "p": 0.1},
             calculate_sensitivities=True,
         )
+
         np.testing.assert_allclose(solution.y[0], -1 + 0.2 * solution.t)
         np.testing.assert_allclose(
             solution.sensitivities["p"],
