@@ -283,6 +283,8 @@ class Symbol(anytree.NodeMixin):
 
     @domains.setter
     def domains(self, domains):
+        if hasattr(self, "_domains") and domains == self.domains:
+            return  # no change
         # Turn dictionary into appropriate form
         if domains is None:
             domains = pybamm.DomainDict({})
@@ -321,12 +323,12 @@ class Symbol(anytree.NodeMixin):
 
     def copy_domains(self, symbol):
         """Copy the domains from a given symbol, bypassing checks."""
-        self._domains = pybamm.DomainDict(symbol.domains.copy())
+        self._domains = symbol.domains  # .copy()
         self.set_id()
 
     def clear_domains(self):
         """Clear domains, bypassing checks."""
-        self._domains = pybamm.DomainDict({"primary": []})
+        self._domains = {"primary": []}
         self.set_id()
 
     def get_children_domains(self, children):
