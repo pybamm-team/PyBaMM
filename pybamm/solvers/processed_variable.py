@@ -564,6 +564,7 @@ class ProcessedVariable(object):
             name: casadi.MX.sym(name, value.shape[0])
             for name, value in self.all_inputs[0].items()
         }
+
         p_casadi_stacked = casadi.vertcat(*[p for p in p_casadi.values()])
 
         # Convert variable to casadi format for differentiating

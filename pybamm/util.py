@@ -323,10 +323,24 @@ def load_function(filename):
     # Assign path to _ and filename to tail
     _, tail = os.path.split(filename)
 
+    # Store the current working directory
+    orig_dir = os.getcwd()
+
     # Strip absolute path to pybamm/input/example.py
     if "pybamm" in filename:
         root_path = filename[filename.rfind("pybamm") :]
+    # If the function is in the current working directory
     elif os.getcwd() in filename:
+        root_path = filename.replace(os.getcwd(), "")
+        # getcwd() returns "C:\\" when in the root drive and "C:\\a\\b\\c" otherwise
+        if root_path[0] == "\\" or root_path[0] == "/":
+            root_path = root_path[1:]
+    # If the function is not in the current working directory and the path provided is
+    # absolute
+    elif os.path.isabs(filename) and not os.getcwd() in filename:   # pragma: no cover
+        # Change directory to import the function
+        dir_path = os.path.split(filename)[0]
+        os.chdir(dir_path)
         root_path = filename.replace(os.getcwd(), "")
         root_path = root_path[1:]
     else:
@@ -334,8 +348,13 @@ def load_function(filename):
 
     path = root_path.replace("/", ".")
     path = path.replace("\\", ".")
+    pybamm.logger.debug(
+        f"Importing function '{tail}' from file '{filename}' via path '{path}'"
+    )
     module_object = importlib.import_module(path)
 
+    # Revert back current working directory if it was changed
+    os.chdir(orig_dir)
     return getattr(module_object, tail)
 
 
