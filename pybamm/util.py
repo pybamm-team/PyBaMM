@@ -161,7 +161,8 @@ class DomainDict(dict):
                 domains[level] = [dom]
         for level, next_level in zip(DOMAIN_LEVELS[:-1], DOMAIN_LEVELS[1:]):
             if (next_level in domains.keys() and domains[next_level] != []) and not (
-                level in domains.keys() and domains[level] != []
+                (level in domains.keys() and domains[level] != [])
+                or (level in self.keys() and self[level] != [])
             ):
                 raise pybamm.DomainError("Domain levels must be filled in order")
         return super().update(domains)
