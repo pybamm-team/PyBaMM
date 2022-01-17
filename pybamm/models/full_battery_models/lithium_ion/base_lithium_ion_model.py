@@ -294,7 +294,8 @@ class BaseModel(pybamm.BaseBatteryModel):
             self.submodels[
                 "counter electrode potential"
             ] = pybamm.electrode.ohm.LithiumMetalSurfaceForm(self.param, self.options)
-            self.submodels["counter electrode interface"] = self.intercalation_kinetics(
+            neg_intercalation_kinetics = self.get_intercalation_kinetics("Negative")
+            self.submodels["counter electrode interface"] = neg_intercalation_kinetics(
                 self.param, "Negative", "lithium metal plating", self.options
             )
 
