@@ -942,8 +942,13 @@ class ParameterValues:
         """Look for parameter file in the different locations
         in PARAMETER_PATH
         """
+        # Check for absolute path
+        if os.path.isfile(path) and os.path.isabs(path):
+            pybamm.logger.verbose(f"Using absolute path: '{path}'")
+            return path
         for location in pybamm.PARAMETER_PATH:
             trial_path = os.path.join(location, path)
             if os.path.isfile(trial_path):
+                pybamm.logger.verbose(f"Using path: '{location}' + '{path}'")
                 return trial_path
         raise FileNotFoundError("Could not find parameter {}".format(path))

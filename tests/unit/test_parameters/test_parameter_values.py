@@ -60,6 +60,18 @@ class TestParameterValues(unittest.TestCase):
         )
         self.assertEqual(param["Positive electrode porosity"], 0.3)
 
+        # from file, absolute path
+        param = pybamm.ParameterValues(
+            os.path.join(
+                pybamm.root_dir(),
+                "pybamm",
+                "input",
+                "parameters",
+                "lithium_ion/positive_electrodes/lico2_Marquis2019/parameters.csv",
+            )
+        )
+        self.assertEqual(param["Positive electrode porosity"], 0.3)
+
         # values vs chemistry
         with self.assertRaisesRegex(
             ValueError, "values and chemistry cannot both be None"
