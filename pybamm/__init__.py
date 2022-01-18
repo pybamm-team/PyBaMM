@@ -12,36 +12,10 @@ import os
 #
 # Version info
 #
-def _load_version_int():
-    try:
-        root = os.path.abspath(os.path.dirname(__file__))
-        with open(os.path.join(root, "version"), "r") as f:
-            version = f.read().strip().split(",")
-        year, month = [int(x) for x in version]
-        return year, month
-    except Exception as e:
-        raise RuntimeError("Unable to read version number (" + str(e) + ").")
+from pybamm.version import __version__
 
-
-__version_int__ = _load_version_int()
-__version__ = ".".join(["{:02d}".format(x) for x in __version_int__])
 if sys.version_info[0] < 3:
     del x  # Before Python3, list comprehension iterators leaked
-
-#
-# Expose PyBaMM version
-#
-def version(formatted=False):
-    """
-    Returns the version number, as a 2-part integer (year, month).
-    If ``formatted=True``, it returns a string formatted version (for example
-    "PyBaMM 21.08").
-    """
-    if formatted:
-        return "PyBaMM " + __version__
-    else:
-        return __version_int__
-
 
 #
 # Constants

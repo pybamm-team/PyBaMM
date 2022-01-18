@@ -19,21 +19,14 @@ def update_version():
     current_year = datetime.now().strftime("%y")
     current_month = datetime.now().month
 
-    release_version1 = f"{current_year}, {current_month}"
-    release_version2 = f"{current_year}.{current_month}"
+    release_version = f"{current_year}.{current_month}"
 
-    # pybamm/version
-    with open(os.path.join(pybamm.root_dir(), "pybamm", "version"), "r+") as file:
+    # pybamm/version.py
+    with open(os.path.join(pybamm.root_dir(), "pybamm", "version.py"), "r+") as file:
         output = file.read()
-        replace_version = output.replace(output, release_version1)
-        file.truncate(0)
-        file.seek(0)
-        file.write(replace_version)
-
-    # docs/conf.py
-    with open(os.path.join(pybamm.root_dir(), "docs", "conf.py"), "r+") as file:
-        output = file.read()
-        replace_version = re.sub('(?<=version = ")(.+)(?=")', release_version2, output)
+        replace_version = re.sub(
+            '(?<=__version__ = ")(.+)(?=")', release_version, output
+        )
         file.truncate(0)
         file.seek(0)
         file.write(replace_version)
@@ -41,7 +34,7 @@ def update_version():
     # CITATION.cff
     with open(os.path.join(pybamm.root_dir(), "CITATION.cff"), "r+") as file:
         output = file.read()
-        replace_version = re.sub('(?<=version: ")(.+)(?=")', release_version2, output)
+        replace_version = re.sub('(?<=version: ")(.+)(?=")', release_version, output)
         file.truncate(0)
         file.seek(0)
         file.write(replace_version)
@@ -50,7 +43,7 @@ def update_version():
     with open(os.path.join(pybamm.root_dir(), "vcpkg.json"), "r+") as file:
         output = file.read()
         json_version_string = json.loads(output)["version-string"]
-        replace_version = output.replace(json_version_string, release_version2)
+        replace_version = output.replace(json_version_string, release_version)
         file.truncate(0)
         file.seek(0)
         file.write(replace_version)
@@ -71,7 +64,7 @@ def update_version():
         file.write(replace_commit_id)
 
     changelog_line1 = "# [Unreleased](https://github.com/pybamm-team/PyBaMM/)\n"
-    changelog_line2 = f"# [v{release_version2}](https://github.com/pybamm-team/PyBaMM/tree/v{release_version2}) - {date.today()}\n\n"  # noqa: E501
+    changelog_line2 = f"# [v{release_version}](https://github.com/pybamm-team/PyBaMM/tree/v{release_version}) - {date.today()}\n\n"  # noqa: E501
 
     # CHANGELOG.md
     with open(os.path.join(pybamm.root_dir(), "CHANGELOG.md"), "r+") as file:
