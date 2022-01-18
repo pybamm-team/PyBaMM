@@ -34,12 +34,9 @@ def update_version():
     with open(os.path.join(pybamm.root_dir(), "docs", "conf.py"), "r+") as file:
         output = file.read()
         replace_version = re.sub('(?<=version = ")(.+)(?=")', release_version2, output)
-        replace_release = re.sub(
-            '(?<=release = ")(.+)(?=")', release_version2, replace_version
-        )
         file.truncate(0)
         file.seek(0)
-        file.write(replace_release)
+        file.write(replace_version)
 
     # CITATION.cff
     with open(os.path.join(pybamm.root_dir(), "CITATION.cff"), "r+") as file:

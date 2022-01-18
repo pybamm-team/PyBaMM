@@ -28,7 +28,7 @@ author = "The PyBaMM Team"
 # The short X.Y version
 version = "21.12"
 # The full version, including alpha/beta/rc tags
-release = "21.12"
+release = version
 
 
 # -- General configuration ---------------------------------------------------
