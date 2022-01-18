@@ -146,35 +146,14 @@ class FuzzyDict(dict):
 
 
 class DomainDict(dict):
-    def __init__(self, domains):
-        super().__init__()
-        self.update(domains)
-
-    def update(self, domains):
-        DOMAIN_LEVELS = ["primary", "secondary", "tertiary", "quaternary"]
-        for level, dom in domains.items():
-            if level not in DOMAIN_LEVELS:
-                raise pybamm.DomainError(
-                    f"DomainDict keys must be one of '{DOMAIN_LEVELS}'"
-                )
-            if isinstance(dom, str):
-                domains[level] = [dom]
-        for level, next_level in zip(DOMAIN_LEVELS[:-1], DOMAIN_LEVELS[1:]):
-            if (next_level in domains.keys() and domains[next_level] != []) and not (
-                (level in domains.keys() and domains[level] != [])
-                or (level in self.keys() and self[level] != [])
-            ):
-                raise pybamm.DomainError("Domain levels must be filled in order")
-        return super().update(domains)
-
-    def __setitem__(self, key, value):
-        self.update({key: value})
-
     def __getitem__(self, key):
         try:
             return super().__getitem__(key)
-        except KeyError:
-            return []
+        except KeyError as err:
+            if key in ["primary", "secondary", "tertiary", "quaternary"]:
+                return []
+            else:
+                raise err
 
     def __copy__(self):
         return DomainDict(self)

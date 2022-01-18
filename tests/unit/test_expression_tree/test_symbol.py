@@ -360,7 +360,7 @@ class TestSymbol(unittest.TestCase):
             r"Symbol\("
             + hex_regex
             + r", d, children\=\[\], domains\=\{'primary': \['test'\], "
-            + r"'secondary': \"\['other test'\]\"\}\)",
+            + r"'secondary': \['other test'\]\}\)",
         )
         self.assertRegex(
             (a + b).__repr__(),
@@ -371,7 +371,7 @@ class TestSymbol(unittest.TestCase):
             r"Multiplication\("
             + hex_regex
             + r", \*, children\=\['a', 'd'\], domains\=\{'primary': \['test'\], "
-            + r"'secondary': \"\['other test'\]\"\}\)",
+            + r"'secondary': \['other test'\]\}\)",
         )
         self.assertRegex(
             pybamm.grad(c).__repr__(),

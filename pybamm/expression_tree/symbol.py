@@ -284,24 +284,45 @@ class Symbol(anytree.NodeMixin):
     @domains.setter
     def domains(self, domains):
         if hasattr(self, "_domains") and domains == self.domains:
-            return  # no change
+            return None  # no change
         # Turn dictionary into appropriate form
-        if domains is None:
-            domains = pybamm.DomainDict({})
-        elif not isinstance(domains, pybamm.DomainDict):
-            domains = pybamm.DomainDict(domains)
+        domains = domains or {}
 
-        if domains["primary"] != [] and isinstance(
-            self, (pybamm.Scalar, pybamm.Parameter)
+        if (
+            "primary" in domains
+            and domains["primary"] != []
+            and isinstance(self, (pybamm.Scalar, pybamm.Parameter))
         ):
             raise pybamm.DomainError(
                 f"Object of type '{self.__class__.__name__}'' cannot have a domain"
             )
 
         # Check domains don't clash
+        DOMAIN_LEVELS = ["primary", "secondary", "tertiary", "quaternary"]
+        for level, dom in domains.items():
+            if level not in DOMAIN_LEVELS:
+                raise pybamm.DomainError(
+                    f"DomainDict keys must be one of '{DOMAIN_LEVELS}'"
+                )
+            if isinstance(dom, str):
+                domains[level] = [dom]
+        for level, next_level in zip(DOMAIN_LEVELS[:-1], DOMAIN_LEVELS[1:]):
+            if (next_level in domains.keys() and domains[next_level] != []) and not (
+                (level in domains.keys() and domains[level] != [])
+                or (
+                    hasattr(self, "_domains")
+                    and level in self._domains.keys()
+                    and self._domains[level] != []
+                )
+            ):
+                raise pybamm.DomainError("Domain levels must be filled in order")
+
         values = [tuple(val) for val in domains.values() if val != []]
         if len(set(values)) != len(values):
             raise pybamm.DomainError("All domains must be different")
+
+        if not isinstance(domains, pybamm.DomainDict):
+            domains = pybamm.DomainDict(domains)
 
         self._domains = domains
         self.set_id()
@@ -323,13 +344,16 @@ class Symbol(anytree.NodeMixin):
 
     def copy_domains(self, symbol):
         """Copy the domains from a given symbol, bypassing checks."""
-        self._domains = symbol.domains  # .copy()
-        self.set_id()
+        if self._domains != symbol.domains:
+            self._domains = symbol.domains.copy()
+            self.set_id()
 
     def clear_domains(self):
         """Clear domains, bypassing checks."""
-        self._domains = {"primary": []}
-        self.set_id()
+        domains = {"primary": []}
+        if self._domains != domains:
+            self._domains = domains
+            self.set_id()
 
     def get_children_domains(self, children):
         """Combine domains from children, at all levels."""
@@ -496,7 +520,7 @@ class Symbol(anytree.NodeMixin):
             hex(self.id),
             self._name,
             [str(child) for child in self.children],
-            {k: str(v) for k, v in self.domains.items() if v != []},
+            {k: v for k, v in self.domains.items() if v != []},
         )
 
     def __add__(self, other):

@@ -119,15 +119,9 @@ class TestUtil(unittest.TestCase):
     def test_domain_dict(self):
         d = pybamm.DomainDict({"primary": []})
         self.assertEqual(d, {"primary": []})
-
-        d = pybamm.DomainDict({"primary": "test"})
-        self.assertEqual(d, {"primary": ["test"]})
-
-        d = pybamm.DomainDict({"primary": "test", "secondary": []})
-        self.assertEqual(d, {"primary": ["test"]})
-
-        with self.assertRaisesRegex(pybamm.DomainError, "DomainDict keys"):
-            pybamm.DomainDict({"wrong key": "test"})
+        self.assertEqual(d["secondary"], [])
+        with self.assertRaisesRegex(KeyError, "wrong level"):
+            d["wrong level"]
 
     def test_get_parameters_filepath(self):
         tempfile_obj = tempfile.NamedTemporaryFile("w", dir=".")
