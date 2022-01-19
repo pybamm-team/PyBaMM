@@ -6,8 +6,6 @@ import sys
 import unittest
 import uuid
 
-from pybamm.parameters import parameter_values
-
 
 class TestSimulation(unittest.TestCase):
     def test_simple_model(self):
