@@ -63,7 +63,8 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                 positive electrodes.
             * "operating mode" : str
                 Sets the operating mode for the model. Can be "current" (default),
-                "voltage" or "power". Alternatively, the operating mode can be
+                "voltage", "power", "resistance", or "CCCV". 
+                Alternatively, the operating mode can be
                 controlled with an arbitrary function by passing the function directly
                 as the option. In this case the function must define the residual of
                 an algebraic equation. The applied current will be solved for such
@@ -180,7 +181,14 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                 "reaction-driven",
                 "stress and reaction-driven",
             ],
-            "operating mode": ["current", "voltage", "power", "CCCV"],
+            "operating mode": [
+                "current",
+                "voltage",
+                "power",
+                "explicit power",
+                "resistance",
+                "CCCV",
+            ],
             "particle": [
                 "Fickian diffusion",
                 "fast diffusion",
@@ -854,27 +862,22 @@ class BaseBatteryModel(pybamm.BaseModel):
         e.g. (not necessarily constant-) current, voltage, etc
         """
         if self.options["operating mode"] == "current":
-            self.submodels["external circuit"] = pybamm.external_circuit.CurrentControl(
-                self.param
-            )
+            model = pybamm.external_circuit.ExplicitCurrentControl(self.param)
         elif self.options["operating mode"] == "voltage":
-            self.submodels[
-                "external circuit"
-            ] = pybamm.external_circuit.VoltageFunctionControl(self.param)
+            model = pybamm.external_circuit.VoltageFunctionControl(self.param)
         elif self.options["operating mode"] == "power":
-            self.submodels[
-                "external circuit"
-            ] = pybamm.external_circuit.PowerFunctionControl(self.param)
+            model = pybamm.external_circuit.PowerFunctionControl(self.param)
+        elif self.options["operating mode"] == "explicit power":
+            model = pybamm.external_circuit.ExplicitPowerControl(self.param)
+        elif self.options["operating mode"] == "resistance":
+            model = pybamm.external_circuit.ResistanceFunctionControl(self.param)
         elif self.options["operating mode"] == "CCCV":
-            self.submodels[
-                "external circuit"
-            ] = pybamm.external_circuit.CCCVFunctionControl(self.param)
+            model = pybamm.external_circuit.CCCVFunctionControl(self.param)
         elif callable(self.options["operating mode"]):
-            self.submodels[
-                "external circuit"
-            ] = pybamm.external_circuit.FunctionControl(
+            model = pybamm.external_circuit.FunctionControl(
                 self.param, self.options["operating mode"]
             )
+        self.submodels["external circuit"] = model
 
     def set_tortuosity_submodels(self):
         self.submodels["electrolyte tortuosity"] = pybamm.tortuosity.Bruggeman(

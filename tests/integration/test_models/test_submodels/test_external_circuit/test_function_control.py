@@ -109,8 +109,52 @@ class TestFunctionControl(unittest.TestCase):
         # load parameter values and process models and geometry
         params = [model.default_parameter_values for model in models]
 
-        # First model: 4W charge
+        # First model: 4W discharge
         params[0].update({"Power function [W]": 4}, check_already_exists=False)
+
+        # set parameters and discretise models
+        for i, model in enumerate(models):
+            # create geometry
+            geometry = model.default_geometry
+            params[i].process_model(model)
+            params[i].process_geometry(geometry)
+            mesh = pybamm.Mesh(
+                geometry, model.default_submesh_types, model.default_var_pts
+            )
+            disc = pybamm.Discretisation(mesh, model.default_spatial_methods)
+            disc.process_model(model)
+
+        # solve model
+        solutions = [None] * len(models)
+        t_eval = np.linspace(0, 3600, 100)
+        for i, model in enumerate(models):
+            solutions[i] = model.default_solver.solve(model, t_eval)
+
+        V0 = solutions[0]["Terminal voltage [V]"].entries
+        V1 = solutions[1]["Terminal voltage [V]"].entries
+        np.testing.assert_array_almost_equal(V0, V1, decimal=12)
+
+        I0 = solutions[0]["Current [A]"].entries
+        I1 = solutions[1]["Current [A]"].entries
+        np.testing.assert_array_almost_equal(I0, I1, decimal=12)
+
+    def test_constant_resistance(self):
+        def constant_resistance(variables):
+            I = variables["Current [A]"]
+            V = variables["Terminal voltage [V]"]
+            return V / I - 2
+
+        # load models
+        models = [
+            pybamm.lithium_ion.SPM({"operating mode": "resistance"}),
+            pybamm.lithium_ion.SPM({"operating mode": constant_resistance}),
+        ]
+
+        # load parameter values and process models and geometry
+        params = [model.default_parameter_values for model in models]
+
+        # First model: 2 Ohm discharge
+        params[0].update({"Resistance function [Ohm]": 2}, check_already_exists=False)
 
         # set parameters and discretise models
         for i, model in enumerate(models):

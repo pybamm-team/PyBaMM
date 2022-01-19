@@ -100,9 +100,27 @@ class PowerFunctionControl(FunctionControl):
     def constant_power(self, variables):
         I = variables["Current [A]"]
         V = variables["Terminal voltage [V]"]
-        return I * V - pybamm.FunctionParameter(
+        P = V * I
+        P_applied = pybamm.FunctionParameter(
             "Power function [W]", {"Time [s]": pybamm.t * self.param.timescale}
         )
+        return P - P_applied
+
+
+class ResistanceFunctionControl(FunctionControl):
+    """External circuit with resistance control."""
+
+    def __init__(self, param):
+        super().__init__(param, self.constant_resistance, control="algebraic")
+
+    def constant_resistance(self, variables):
+        I = variables["Current [A]"]
+        V = variables["Terminal voltage [V]"]
+        R = V / I
+        R_applied = pybamm.FunctionParameter(
+            "Resistance function [Ohm]", {"Time [s]": pybamm.t * self.param.timescale}
+        )
+        return R - R_applied
 
 
 class CCCVFunctionControl(FunctionControl):
