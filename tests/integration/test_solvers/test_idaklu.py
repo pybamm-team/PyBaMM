@@ -33,7 +33,7 @@ class TestIDAKLUSolver(unittest.TestCase):
         mesh = pybamm.Mesh(geometry, model.default_submesh_types, model.default_var_pts)
         disc = pybamm.Discretisation(mesh, model.default_spatial_methods)
         disc.process_model(model)
-        t_eval = np.linspace(0, 3600, 100)
+        t_eval = np.linspace(0, 3500, 100)
         solver = pybamm.IDAKLUSolver(rtol=1e-10, atol=1e-10)
         solution = solver.solve(
             model,
