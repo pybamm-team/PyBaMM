@@ -14,9 +14,6 @@ import os
 #
 from pybamm.version import __version__
 
-if sys.version_info[0] < 3:
-    del x  # Before Python3, list comprehension iterators leaked
-
 #
 # Constants
 #
