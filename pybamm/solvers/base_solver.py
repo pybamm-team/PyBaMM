@@ -1436,7 +1436,12 @@ class BaseSolver(object):
                 inputs[name] = casadi.MX.sym(name, input_param._expected_size)
 
         external_variables = external_variables or {}
-        ext_and_inputs = {**external_variables, **inputs}
+
+        ordered_inputs_names = list(inputs.keys())
+        ordered_inputs_names.sort()
+        ordered_inputs = {name: inputs[name] for name in ordered_inputs_names}
+
+        ext_and_inputs = {**external_variables, **ordered_inputs}
         return ext_and_inputs
 
 
