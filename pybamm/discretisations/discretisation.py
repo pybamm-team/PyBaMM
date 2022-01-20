@@ -244,7 +244,7 @@ class Discretisation(object):
                 # Convert possible arrays of length 1 to scalars
                 new_scale = pybamm.Scalar(float(new_scale.evaluate()))
             new_length_scales[domain] = new_scale
-        model_disc.length_scales = new_length_scales
+        model_disc._length_scales = new_length_scales
 
         # Check that resulting model makes sense
         if check_model:

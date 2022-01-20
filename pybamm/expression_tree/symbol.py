@@ -13,6 +13,8 @@ from scipy.sparse import csr_matrix, issparse
 import pybamm
 from pybamm.expression_tree.printing.print_name import prettify_print_name
 
+DOMAIN_LEVELS = ["primary", "secondary", "tertiary", "quaternary"]
+
 
 def domain_size(domain):
     """
@@ -298,7 +300,6 @@ class Symbol(anytree.NodeMixin):
             )
 
         # Check domains don't clash
-        DOMAIN_LEVELS = ["primary", "secondary", "tertiary", "quaternary"]
         for level, dom in domains.items():
             if level not in DOMAIN_LEVELS:
                 raise pybamm.DomainError(
@@ -306,16 +307,15 @@ class Symbol(anytree.NodeMixin):
                 )
             if isinstance(dom, str):
                 domains[level] = [dom]
-        for level, next_level in zip(DOMAIN_LEVELS[:-1], DOMAIN_LEVELS[1:]):
-            if (next_level in domains.keys() and domains[next_level] != []) and not (
-                (level in domains.keys() and domains[level] != [])
-                or (
-                    hasattr(self, "_domains")
-                    and level in self._domains.keys()
-                    and self._domains[level] != []
-                )
-            ):
-                raise pybamm.DomainError("Domain levels must be filled in order")
+        for i, level in enumerate(DOMAIN_LEVELS[:-1]):
+            if level not in domains or domains[level] == []:
+                if (
+                    DOMAIN_LEVELS[i + 1] in domains
+                    and domains[DOMAIN_LEVELS[i + 1]] != []
+                ):
+                    raise pybamm.DomainError("Domain levels must be filled in order")
+                # don't test further if we have already found a missing domain
+                break
 
         values = [tuple(val) for val in domains.values() if val != []]
         if len(set(values)) != len(values):
