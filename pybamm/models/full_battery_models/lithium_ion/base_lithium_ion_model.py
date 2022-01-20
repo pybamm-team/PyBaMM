@@ -20,11 +20,11 @@ class BaseModel(pybamm.BaseBatteryModel):
         # Assess whether the submodel is a half-cell model
         self.half_cell = self.options["working electrode"] != "both"
 
-        # Default timescale is discharge timescale
-        self.timescale = self.param.tau_discharge
+        # Default timescale
+        self._timescale = self.param.timescale
 
         # Set default length scales
-        self.length_scales = {
+        self._length_scales = {
             "negative electrode": self.param.L_x,
             "separator": self.param.L_x,
             "positive electrode": self.param.L_x,

@@ -928,10 +928,32 @@ class TestParameterValues(unittest.TestCase):
         with self.assertRaises(KeyError):
             parameter_values.process_model(model)
 
-    def test_update_model(self):
+    def test_process_model_timescale_lengthscale_not_inputs(self):
+        model = pybamm.BaseModel()
+
+        v = pybamm.Variable("v")
+        model.rhs = {v: 1}
+        model.initial_conditions = {v: 0}
+
+        # Model defined with timescale as an input parameter
+        model.timescale = pybamm.InputParameter("a")
         param = pybamm.ParameterValues({})
-        with self.assertRaises(NotImplementedError):
-            param.update_model(None, None)
+        with self.assertRaisesRegex(ValueError, "model.timescale must be a Scalar"):
+            param.process_model(model)
+
+        # Input parameter in parameter values
+        model.timescale = pybamm.Parameter("a")
+        param = pybamm.ParameterValues({"a": "[input]"})
+        with self.assertRaisesRegex(ValueError, "model.timescale must be a Scalar"):
+            param.process_model(model)
+
+        # Geometry
+        geometry = geometry = {
+            "negative electrode": {"x_n": {"min": 0, "max": pybamm.Parameter("a")}}
+        }
+        parameter_values = pybamm.ParameterValues({"a": "[input]"})
+        with self.assertRaisesRegex(ValueError, "Geometry parameters must be Scalars"):
+            parameter_values.process_geometry(geometry)
 
     def test_inplace(self):
         model = pybamm.lithium_ion.SPM()

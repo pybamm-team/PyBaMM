@@ -249,6 +249,10 @@ class TestDimensionlessParameterValues(unittest.TestCase):
         values.evaluate(param.D_e(c_e_test, T_test))
         values.evaluate(param.kappa_e(c_e_test, T_test))
 
+    def test_timescale(self):
+        param = pybamm.LithiumIonParameters({"timescale": 2.5})
+        self.assertEqual(param.timescale.evaluate(), 2.5)
+
 
 if __name__ == "__main__":
     print("Add -v for more debug output")

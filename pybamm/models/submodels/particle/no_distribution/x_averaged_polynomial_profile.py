@@ -107,7 +107,7 @@ class XAveragedPolynomialProfile(BaseFickian):
             if self.domain == "Negative":
                 j_xav = i_boundary_cc / (a_av * self.param.l_n)
                 c_s_surf_xav = c_s_av - self.param.C_n * (
-                    j_xav / 5 / self.param.a_R_n / D_eff_av
+                    j_xav / 5 / self.param.a_R_n / self.param.gamma_n / D_eff_av
                 )
 
             if self.domain == "Positive":
@@ -127,7 +127,8 @@ class XAveragedPolynomialProfile(BaseFickian):
                 c_s_surf_xav = (
                     c_s_av
                     + 8 * q_s_av / 35
-                    - self.param.C_n * (j_xav / 35 / self.param.a_R_n / D_eff_av)
+                    - self.param.C_n
+                    * (j_xav / 35 / self.param.a_R_n / self.param.gamma_n / D_eff_av)
                 )
 
             if self.domain == "Positive":
@@ -283,7 +284,11 @@ class XAveragedPolynomialProfile(BaseFickian):
         ]
 
         if self.domain == "Negative":
-            self.rhs = {c_s_av: pybamm.source(-3 * j_xav / self.param.a_R_n, c_s_av)}
+            self.rhs = {
+                c_s_av: pybamm.source(
+                    -3 * j_xav / self.param.a_R_n / self.param.gamma_n, c_s_av
+                )
+            }
 
         elif self.domain == "Positive":
             self.rhs = {
@@ -306,7 +311,7 @@ class XAveragedPolynomialProfile(BaseFickian):
                     {
                         q_s_av: pybamm.source(
                             -30 * pybamm.surf(D_eff_xav) * q_s_av / self.param.C_n
-                            - 45 * j_xav / self.param.a_R_n / 2,
+                            - 45 * j_xav / self.param.a_R_n / self.param.gamma_n / 2,
                             q_s_av,
                         )
                     }
