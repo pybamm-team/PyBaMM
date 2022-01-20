@@ -57,7 +57,7 @@ useful to work through this
 provided by Ubuntu.
 
 Now head over and follow the installation instructions for PyBaMM for
-linux `here <INSTALL-LINUX-MAC.md>`__.
+linux `here <GNU-linux.html>`__.
 
 Use Visual Studio Code to run PyBaMM
 ------------------------------------
