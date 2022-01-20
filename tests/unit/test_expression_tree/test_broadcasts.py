@@ -126,6 +126,9 @@ class TestBroadcasts(unittest.TestCase):
         ):
             pybamm.SecondaryBroadcast(a, "electrode")
 
+        broad = pybamm.SecondaryBroadcast(1, "negative electrode")
+        self.assertIsInstance(broad.child, pybamm.Scalar)
+
     def test_tertiary_broadcast(self):
         a = pybamm.Symbol(
             "a",

@@ -14,26 +14,8 @@ geometry = model.default_geometry
 
 # load parameter values and process model and geometry
 param = model.default_parameter_values
-
-L_n = model.param.L_n
-L_p = model.param.L_p
-L = model.param.L_x
-
-
-def negative_radius(x):
-    return (1 + x / L_n) * 1e-5
-
-
-def positive_radius(x):
-    return (1 + (x - L_p) / (L - L_p)) * 1e-5
-
-
-param["Negative particle radius [m]"] = negative_radius
-param["Positive particle radius [m]"] = positive_radius
-
 param.process_geometry(geometry)
 param.process_model(model)
-
 
 # set mesh
 var = pybamm.standard_spatial_vars

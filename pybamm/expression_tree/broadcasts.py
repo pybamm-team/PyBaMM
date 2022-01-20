@@ -195,9 +195,6 @@ class SecondaryBroadcast(Broadcast):
     """
 
     def __init__(self, child, broadcast_domain, name=None):
-        # Convert child to scalar if it is a number
-        if isinstance(child, numbers.Number):
-            child = pybamm.Scalar(child)
         # Convert domain to list if it's a string
         if isinstance(broadcast_domain, str):
             broadcast_domain = [broadcast_domain]
@@ -328,9 +325,6 @@ class TertiaryBroadcast(Broadcast):
     """
 
     def __init__(self, child, broadcast_domain, name=None):
-        # Convert child to scalar if it is a number
-        if isinstance(child, numbers.Number):
-            child = pybamm.Scalar(child)
         # Convert domain to list if it's a string
         if isinstance(broadcast_domain, str):
             broadcast_domain = [broadcast_domain]

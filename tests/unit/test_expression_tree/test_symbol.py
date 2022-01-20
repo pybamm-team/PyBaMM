@@ -62,6 +62,19 @@ class TestSymbol(unittest.TestCase):
         ):
             b.domain = "test sec"
 
+        with self.assertRaisesRegex(pybamm.DomainError, "keys must be one of"):
+            b.domains = {"test": "test"}
+        with self.assertRaisesRegex(ValueError, "Only one of 'domain' or 'domains'"):
+            pybamm.Symbol("b", domain="test", domains={"primary": "test"})
+        with self.assertRaisesRegex(
+            ValueError, "Only one of 'auxiliary_domains' or 'domains'"
+        ):
+            pybamm.Symbol(
+                "b",
+                auxiliary_domains={"secondary": "other test"},
+                domains={"test": "test"},
+            )
+
     def test_symbol_auxiliary_domains(self):
         a = pybamm.Symbol(
             "a",
@@ -104,6 +117,9 @@ class TestSymbol(unittest.TestCase):
                 domain="test",
                 auxiliary_domains={"secondary": ["test sec"], "tertiary": ["test sec"]},
             )
+
+        with self.assertRaisesRegex(NotImplementedError, "auxiliary_domains"):
+            a.auxiliary_domains
 
     def test_symbol_methods(self):
         a = pybamm.Symbol("a")

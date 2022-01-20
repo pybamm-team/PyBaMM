@@ -390,7 +390,7 @@ class Symbol(anytree.NodeMixin):
                 raise ValueError("Only one of 'domain' or 'domains' should be provided")
             if auxiliary_domains is not None:
                 raise ValueError(
-                    "Only one of 'domain' or 'auxiliary_domains' should be provided"
+                    "Only one of 'auxiliary_domains' or 'domains' should be provided"
                 )
         return domains
 
