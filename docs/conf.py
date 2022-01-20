@@ -14,7 +14,9 @@
 #
 import os
 import sys
+
 import guzzle_sphinx_theme
+from pybamm.version import __version__
 
 sys.path.insert(0, os.path.abspath("../"))
 
@@ -26,9 +28,9 @@ copyright = "2021, The PyBaMM Team"
 author = "The PyBaMM Team"
 
 # The short X.Y version
-version = "21.12"
+version = __version__
 # The full version, including alpha/beta/rc tags
-release = "21.12"
+release = __version__
 
 
 # -- General configuration ---------------------------------------------------
