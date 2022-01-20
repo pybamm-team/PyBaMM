@@ -352,7 +352,7 @@ class Symbol(anytree.NodeMixin):
         """Clear domains, bypassing checks."""
         domains = {"primary": []}
         if self._domains != domains:
-            self._domains = domains
+            self._domains = pybamm.DomainDict(domains)
             self.set_id()
 
     def get_children_domains(self, children):

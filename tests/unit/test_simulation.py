@@ -230,7 +230,7 @@ class TestSimulation(unittest.TestCase):
         drive_cycle = pd.read_csv(
             os.path.join("pybamm", "input", "drive_cycles", "US06.csv"),
             comment="#",
-            header=None,
+            header=None
         ).to_numpy()
         timescale = param.evaluate(model.timescale)
         current_interpolant = pybamm.Interpolant(
@@ -476,15 +476,15 @@ class TestSimulation(unittest.TestCase):
         )
 
     def test_battery_model_with_input_height(self):
-        parameter_values = pybamm.ParameterValues("Marquis2019")
-        # Pass the "timescale" option since we are making electrode height an input
-        timescale = parameter_values.evaluate(pybamm.LithiumIonParameters().timescale)
-        model = pybamm.lithium_ion.SPM({"timescale": timescale})
-        parameter_values.update({"Electrode height [m]": "[input]"})
+        # load model
+        model = pybamm.lithium_ion.SPM()
+        # load parameter values and process model and geometry
+        param = model.default_parameter_values
+        param.update({"Electrode height [m]": "[input]"})
         # solve model for 1 minute
         t_eval = np.linspace(0, 60, 11)
         inputs = {"Electrode height [m]": 0.2}
-        sim = pybamm.Simulation(model=model, parameter_values=parameter_values)
+        sim = pybamm.Simulation(model=model, parameter_values=param)
         sim.solve(t_eval=t_eval, inputs=inputs)
 
 
