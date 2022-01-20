@@ -285,8 +285,6 @@ class BaseModel:
     @timescale.setter
     def timescale(self, value):
         """Set the timescale"""
-        if not isinstance(value, (numbers.Number, pybamm.Scalar)):
-            raise ValueError("model.timescale must be a scalar")
         self._timescale = value
 
     @property

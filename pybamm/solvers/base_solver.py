@@ -143,7 +143,10 @@ class BaseSolver(object):
         inputs = inputs or {}
 
         # Set model timescale
-        model.timescale_eval = model.timescale.evaluate(inputs=inputs)
+        if not isinstance(model.timescale, pybamm.Scalar):
+            raise ValueError("model.timescale must be a scalar")
+
+        model.timescale_eval = model.timescale.evaluate()
         # Set model lengthscales
         model.length_scales_eval = {
             domain: scale.evaluate(inputs=inputs)

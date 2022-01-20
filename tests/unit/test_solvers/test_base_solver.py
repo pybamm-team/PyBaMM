@@ -282,6 +282,18 @@ class TestBaseSolver(unittest.TestCase):
         self.assertEqual(model.convert_to_format, "casadi")
         pybamm.set_logging_level("WARNING")
 
+    def test_timescale_input_fail(self):
+        # Make sure timescale can't depend on inputs
+        model = pybamm.BaseModel()
+        v = pybamm.Variable("v")
+        model.rhs = {v: -1}
+        model.initial_conditions = {v: 1}
+        a = pybamm.InputParameter("a")
+        model.timescale = a
+        solver = pybamm.BaseSolver()
+        with self.assertRaisesRegex(ValueError, "model.timescale must be a scalar"):
+            solver.set_up(model)
+
     def test_inputs_step(self):
         # Make sure interpolant inputs are dropped
         model = pybamm.BaseModel()
