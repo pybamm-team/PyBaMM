@@ -62,13 +62,17 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                 A 2-tuple can be provided for different behaviour in negative and
                 positive electrodes.
             * "operating mode" : str
-                Sets the operating mode for the model. Can be "current" (default),
-                "voltage", "power", "resistance", or "CCCV". 
-                Alternatively, the operating mode can be
-                controlled with an arbitrary function by passing the function directly
-                as the option. In this case the function must define the residual of
-                an algebraic equation. The applied current will be solved for such
-                that the algebraic constraint is satisfied.
+                Sets the operating mode for the model. This determines how the current
+                is set. Can be:
+
+                - "current" (default) : the current is explicity supplied
+                - "voltage"/"power"/"resistance" : solve an algebraic equation for \
+                    current such that voltage/power/resistance is correct
+                - "explicit power"/"explicit resistance" : current is defined in terms \
+                    of the voltage such that power/resistance is correct
+                - callable : if a callable is given as this option, the function \
+                    defines the residual of an algebraic equation. The applied current \
+                    will be solved for such that the algebraic constraint is satisfied.
             * "particle" : str
                 Sets the submodel to use to describe behaviour within the particle.
                 Can be "Fickian diffusion" (default), "uniform profile",
@@ -187,6 +191,7 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                 "power",
                 "explicit power",
                 "resistance",
+                "explicit resistance",
                 "CCCV",
             ],
             "particle": [
@@ -871,6 +876,8 @@ class BaseBatteryModel(pybamm.BaseModel):
             model = pybamm.external_circuit.ExplicitPowerControl(self.param)
         elif self.options["operating mode"] == "resistance":
             model = pybamm.external_circuit.ResistanceFunctionControl(self.param)
+        elif self.options["operating mode"] == "explicit resistance":
+            model = pybamm.external_circuit.ExplicitResistanceControl(self.param)
         elif self.options["operating mode"] == "CCCV":
             model = pybamm.external_circuit.CCCVFunctionControl(self.param)
         elif callable(self.options["operating mode"]):
@@ -1151,9 +1158,15 @@ class BaseBatteryModel(pybamm.BaseModel):
             )
         )
 
-        # Power
+        # Power and resistance
         I_dim = self.variables["Current [A]"]
-        self.variables.update({"Terminal power [W]": I_dim * V_dim})
+        self.variables.update(
+            {
+                "Terminal power [W]": I_dim * V_dim,
+                "Power [W]": I_dim * V_dim,
+                "Resistance [Ohm]": V_dim / I_dim,
+            }
+        )
 
     def set_degradation_variables(self):
         """
