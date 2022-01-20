@@ -935,6 +935,13 @@ class TestBaseModel(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "not var"):
             model.variables = {"not var": var}
 
+    def test_timescale(self):
+        model = pybamm.BaseModel()
+        model.timescale = 2.5
+        self.assertEqual(model.timescale, 2.5)
+        with self.assertRaisesRegex(ValueError, "must be a scalar"):
+            model.timescale = pybamm.InputParameter("a")
+
 
 if __name__ == "__main__":
     print("Add -v for more debug output")
