@@ -10,7 +10,8 @@ import pybamm
 
 class Array(pybamm.Symbol):
     """
-    Node in the expression tree that holds an tensor type variable (e.g. :class:`numpy.array`)
+    Node in the expression tree that holds an tensor type variable
+    (e.g. :class:`numpy.array`)
 
     Parameters
     ----------
