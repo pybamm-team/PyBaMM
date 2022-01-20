@@ -90,7 +90,13 @@ class XAveragedFickianDiffusion(BaseFickian):
         ]
 
         if self.domain == "Negative":
-            rbc = -self.param.C_n * j_xav / self.param.a_R_n / pybamm.surf(D_eff_xav)
+            rbc = (
+                -self.param.C_n
+                * j_xav
+                / self.param.a_R_n
+                / self.param.gamma_n
+                / pybamm.surf(D_eff_xav)
+            )
 
         elif self.domain == "Positive":
             rbc = (

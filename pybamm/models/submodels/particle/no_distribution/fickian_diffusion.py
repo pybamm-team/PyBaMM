@@ -73,7 +73,14 @@ class FickianDiffusion(BaseFickian):
         R = variables[self.domain + " particle radius"]
 
         if self.domain == "Negative":
-            rbc = -self.param.C_n * j * R / self.param.a_R_n / pybamm.surf(D_eff)
+            rbc = (
+                -self.param.C_n
+                * j
+                * R
+                / self.param.a_R_n
+                / self.param.gamma_n
+                / pybamm.surf(D_eff)
+            )
 
         elif self.domain == "Positive":
             rbc = (

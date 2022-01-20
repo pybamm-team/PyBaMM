@@ -4,6 +4,7 @@
 # The code in this file is adapted from Pints
 # (see https://github.com/pints-team/pints)
 #
+import argparse
 import importlib.util
 import numbers
 import os
@@ -15,9 +16,9 @@ import timeit
 import warnings
 from collections import defaultdict
 from platform import system
-import pkg_resources
 
 import numpy as np
+import pkg_resources
 
 import pybamm
 
@@ -405,23 +406,50 @@ def is_jax_compatible():
     )
 
 
-def install_jax():  # pragma: no cover
-    """Install jax, jaxlib"""
+def install_jax(arguments=None):  # pragma: no cover
+    """
+    Install compatible versions of jax, jaxlib.
+
+    Command Line Interface:
+    -----------------------
+    >>> pybamm_install_jax
+
+    optional arguments:
+    -h, --help   show help message
+    -f, --force  force install compatible versions of jax and jaxlib
+    """
+    parser = argparse.ArgumentParser(description="Install jax and jaxlib")
+    parser.add_argument(
+        "-f",
+        "--force",
+        action="store_true",
+        help="force install compatible versions of"
+        f" jax ({JAX_VERSION}) and jaxlib ({JAXLIB_VERSION})",
+    )
+
+    args = parser.parse_args(arguments)
+
     if system() == "Windows":
         raise NotImplementedError("Jax is not available on Windows")
+
+    # Raise an error if jax and jaxlib are already installed, but incompatible
+    # and --force is not set
     elif importlib.util.find_spec("jax") is not None:
-        if not is_jax_compatible():
+        if not args.force and not is_jax_compatible():
             raise ValueError(
-                "Jax is already installed but the installed version of jax or jaxlib is not supported by PyBaMM",  # noqa: E501
+                "Jax is already installed but the installed version of jax or jaxlib is"
+                " not supported by PyBaMM. \nYou can force install compatible versions"
+                f" of jax ({JAX_VERSION}) and jaxlib ({JAXLIB_VERSION}) using the"
+                " following command: \npybamm_install_jax --force"
             )
-    else:
-        subprocess.check_call(
-            [
-                sys.executable,
-                "-m",
-                "pip",
-                "install",
-                f"jax=={JAX_VERSION}",
-                f"jaxlib=={JAXLIB_VERSION}",
-            ]
-        )
+
+    subprocess.check_call(
+        [
+            sys.executable,
+            "-m",
+            "pip",
+            "install",
+            f"jax=={JAX_VERSION}",
+            f"jaxlib=={JAXLIB_VERSION}",
+        ]
+    )

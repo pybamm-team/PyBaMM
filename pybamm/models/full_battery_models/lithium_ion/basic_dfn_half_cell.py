@@ -54,7 +54,7 @@ class BasicDFNHalfCell(BaseModel):
         R_w_typ = param.R_p_typ
 
         # Set default length scales
-        self.length_scales = {
+        self._length_scales = {
             "separator": param.L_x,
             "positive electrode": param.L_x,
             "positive particle": R_w_typ,
@@ -369,6 +369,6 @@ class BasicDFNHalfCell(BaseModel):
         new_model = self.__class__(name=self.name, options=self.options)
         new_model.use_jacobian = self.use_jacobian
         new_model.convert_to_format = self.convert_to_format
-        new_model.timescale = self.timescale
-        new_model.length_scales = self.length_scales
+        new_model._timescale = self.timescale
+        new_model._length_scales = self.length_scales
         return new_model

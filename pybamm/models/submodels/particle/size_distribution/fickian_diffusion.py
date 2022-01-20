@@ -162,6 +162,7 @@ class FickianDiffusion(BaseSizeDistribution):
                 * R
                 * j_distribution
                 / self.param.a_R_n
+                / self.param.gamma_n
                 / self.param.D_n(c_s_surf_distribution, T_k)
             )
         elif self.domain == "Positive":

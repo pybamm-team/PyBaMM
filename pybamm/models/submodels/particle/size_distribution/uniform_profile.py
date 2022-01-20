@@ -115,7 +115,11 @@ class UniformProfile(BaseSizeDistribution):
 
         if self.domain == "Negative":
             self.rhs = {
-                c_s_surf_distribution: -3 * j_distribution / self.param.a_R_n / R
+                c_s_surf_distribution: -3
+                * j_distribution
+                / self.param.a_R_n
+                / self.param.gamma_n
+                / R
             }
         elif self.domain == "Positive":
             self.rhs = {
