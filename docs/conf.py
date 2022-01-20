@@ -16,7 +16,7 @@ import os
 import sys
 
 import guzzle_sphinx_theme
-from pybamm.version import __version__
+from pybamm import __version__
 
 sys.path.insert(0, os.path.abspath("../"))
 
