@@ -31,7 +31,7 @@ class VariableBase(pybamm.Symbol):
         would be a Variable with domain 'negative particle', secondary domain
         'negative electrode' and tertiary domain 'current collector'
     domains : dict
-        A dictionary equivalent to {"primary": domain, **auxiliary_domains}. Either
+        A dictionary equivalent to {'primary': domain, auxiliary_domains}. Either
         'domain' and 'auxiliary_domains', or just 'domains', should be provided
         (not both). In future, the 'domain' and 'auxiliary_domains' arguments may be
         deprecated.
@@ -98,7 +98,7 @@ class Variable(VariableBase):
         would be a Variable with domain 'negative particle', secondary domain
         'negative electrode' and tertiary domain 'current collector'
     domains : dict
-        A dictionary equivalent to {"primary": domain, **auxiliary_domains}. Either
+        A dictionary equivalent to {'primary': domain, auxiliary_domains}. Either
         'domain' and 'auxiliary_domains', or just 'domains', should be provided
         (not both). In future, the 'domain' and 'auxiliary_domains' arguments may be
         deprecated.
@@ -151,7 +151,7 @@ class VariableDot(VariableBase):
         would be a Variable with domain 'negative particle', secondary domain
         'negative electrode' and tertiary domain 'current collector'
     domains : dict
-        A dictionary equivalent to {"primary": domain, **auxiliary_domains}. Either
+        A dictionary equivalent to {'primary': domain, auxiliary_domains}. Either
         'domain' and 'auxiliary_domains', or just 'domains', should be provided
         (not both). In future, the 'domain' and 'auxiliary_domains' arguments may be
         deprecated.
@@ -209,7 +209,7 @@ class ExternalVariable(Variable):
         would be a Variable with domain 'negative particle', secondary domain
         'negative electrode' and tertiary domain 'current collector'
     domains : dict
-        A dictionary equivalent to {"primary": domain, **auxiliary_domains}. Either
+        A dictionary equivalent to {'primary': domain, auxiliary_domains}. Either
         'domain' and 'auxiliary_domains', or just 'domains', should be provided
         (not both). In future, the 'domain' and 'auxiliary_domains' arguments may be
         deprecated.

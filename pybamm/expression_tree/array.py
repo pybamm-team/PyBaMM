@@ -10,8 +10,7 @@ import pybamm
 
 class Array(pybamm.Symbol):
     """
-    Node in the expression tree that holds an tensor type variable
-    (e.g. :class:`numpy.array`)
+    Node in the expression tree that holds an tensor type variable (e.g. :class:`numpy.array`)
 
     Parameters
     ----------
@@ -26,7 +25,7 @@ class Array(pybamm.Symbol):
     auxiliary_domainds : dict, optional
         dictionary of auxiliary domains, defaults to empty dict
     domains : dict
-        A dictionary equivalent to {"primary": domain, **auxiliary_domains}. Either
+        A dictionary equivalent to {'primary': domain, auxiliary_domains}. Either
         'domain' and 'auxiliary_domains', or just 'domains', should be provided
         (not both). In future, the 'domain' and 'auxiliary_domains' arguments may be
         deprecated.

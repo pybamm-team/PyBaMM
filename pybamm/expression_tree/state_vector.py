@@ -23,7 +23,7 @@ class StateVectorBase(pybamm.Symbol):
     auxiliary_domains : dict of str, optional
         dictionary of auxiliary domains
     domains : dict
-        A dictionary equivalent to {"primary": domain, **auxiliary_domains}. Either
+        A dictionary equivalent to {'primary': domain, auxiliary_domains}. Either
         'domain' and 'auxiliary_domains', or just 'domains', should be provided
         (not both). In future, the 'domain' and 'auxiliary_domains' arguments may be
         deprecated.
@@ -213,7 +213,7 @@ class StateVector(StateVectorBase):
     auxiliary_domains : dict of str, optional
         dictionary of auxiliary domains
     domains : dict
-        A dictionary equivalent to {"primary": domain, **auxiliary_domains}. Either
+        A dictionary equivalent to {'primary': domain, auxiliary_domains}. Either
         'domain' and 'auxiliary_domains', or just 'domains', should be provided
         (not both). In future, the 'domain' and 'auxiliary_domains' arguments may be
         deprecated.
@@ -293,7 +293,7 @@ class StateVectorDot(StateVectorBase):
     auxiliary_domains : dict of str, optional
         dictionary of auxiliary domains
     domains : dict
-        A dictionary equivalent to {"primary": domain, **auxiliary_domains}. Either
+        A dictionary equivalent to {'primary': domain, auxiliary_domains}. Either
         'domain' and 'auxiliary_domains', or just 'domains', should be provided
         (not both). In future, the 'domain' and 'auxiliary_domains' arguments may be
         deprecated.

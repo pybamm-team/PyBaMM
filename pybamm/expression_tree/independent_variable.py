@@ -23,7 +23,7 @@ class IndependentVariable(pybamm.Symbol):
     auxiliary_domainds : dict, optional
         dictionary of auxiliary domains, defaults to empty dict
     domains : dict
-        A dictionary equivalent to {"primary": domain, **auxiliary_domains}. Either
+        A dictionary equivalent to {'primary': domain, auxiliary_domains}. Either
         'domain' and 'auxiliary_domains', or just 'domains', should be provided
         (not both). In future, the 'domain' and 'auxiliary_domains' arguments may be
         deprecated.
@@ -98,7 +98,7 @@ class SpatialVariable(IndependentVariable):
     auxiliary_domainds : dict, optional
         dictionary of auxiliary domains, defaults to empty dict
     domains : dict
-        A dictionary equivalent to {"primary": domain, **auxiliary_domains}. Either
+        A dictionary equivalent to {'primary': domain, auxiliary_domains}. Either
         'domain' and 'auxiliary_domains', or just 'domains', should be provided
         (not both). In future, the 'domain' and 'auxiliary_domains' arguments may be
         deprecated.
@@ -154,7 +154,7 @@ class SpatialVariableEdge(SpatialVariable):
     auxiliary_domainds : dict, optional
         dictionary of auxiliary domains, defaults to empty dict
     domains : dict
-        A dictionary equivalent to {"primary": domain, **auxiliary_domains}. Either
+        A dictionary equivalent to {'primary': domain, auxiliary_domains}. Either
         'domain' and 'auxiliary_domains', or just 'domains', should be provided
         (not both). In future, the 'domain' and 'auxiliary_domains' arguments may be
         deprecated.
