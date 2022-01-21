@@ -1,0 +1,35 @@
+name: Update copyright year(s)
+
+on:
+  # Manual trigger
+  workflow_dispatch:
+  # Every January 1st at 3am GMT
+  schedule:
+    - cron: "0 3 1 1 *"
+
+jobs:
+  license:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+      with:
+        fetch-depth: 0
+    - name: Update year in license
+      uses: FantasticFiasco/action-update-license-year@v2
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+        path: LICENSE.txt
+
+  docs:
+    needs: license
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+      with:
+        fetch-depth: 0
+    - name: Update year in docs
+      uses: FantasticFiasco/action-update-license-year@v2
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+        path: docs/conf.py
+        transform: (?<=copyright = ")(?<from>\d{4})?-?(\d{4})?

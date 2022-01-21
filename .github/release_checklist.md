@@ -1,6 +1,7 @@
 - Run `scripts/update_version.py` to
   - Increment version number in
     - `pybamm/version.py`
+    - `docs/conf.py`
     - `CITATION.cff`
     - `vcpkg.json`
   - Update baseline of registries in `vcpkg-configuration.json` as the latest commit id from [pybamm-team/sundials-vcpkg-registry](https://github.com/pybamm-team/sundials-vcpkg-registry)
