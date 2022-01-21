@@ -150,13 +150,11 @@ class AbsoluteValue(UnaryOperator):
 
     def diff(self, variable):
         """See :meth:`pybamm.Symbol.diff()`."""
-        child = self.child.new_copy()
-        return sign(child) * child.diff(variable)
+        return sign(self.child) * self.child.diff(variable)
 
     def _unary_jac(self, child_jac):
         """See :meth:`pybamm.UnaryOperator._unary_jac()`."""
-        child = self.child.new_copy()
-        return sign(child) * child_jac
+        return sign(self.child) * child_jac
 
     def _unary_evaluate(self, child):
         """See :meth:`UnaryOperator._unary_evaluate()`."""
