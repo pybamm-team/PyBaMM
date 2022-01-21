@@ -122,8 +122,12 @@ class DFN(BaseModel):
             submod_n = pybamm.electrode.ohm.Full(self.param, "Negative", self.options)
             submod_p = pybamm.electrode.ohm.Full(self.param, "Positive", self.options)
         else:
-            submod_n = pybamm.electrode.ohm.SurfaceForm(self.param, "Negative")
-            submod_p = pybamm.electrode.ohm.SurfaceForm(self.param, "Positive")
+            submod_n = pybamm.electrode.ohm.SurfaceForm(
+                self.param, "Negative", self.options
+            )
+            submod_p = pybamm.electrode.ohm.SurfaceForm(
+                self.param, "Positive", self.options
+            )
 
         self.submodels["negative electrode potential"] = submod_n
         self.submodels["positive electrode potential"] = submod_p
