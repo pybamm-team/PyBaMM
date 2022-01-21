@@ -1,6 +1,7 @@
 #
 # Tests for the Solution class
 #
+import json
 import pybamm
 import unittest
 import numpy as np
@@ -267,11 +268,26 @@ class TestSolution(unittest.TestCase):
         ):
             solution.save_data("test.csv", to_format="csv")
         # only save "c" and "2c"
-        solution.save_data("test.csv", ["c", "2c"], to_format="csv")
+        csv_str = solution.save_data("test.csv", ["c", "2c"], to_format="csv")
+
+        # check string is the same as the file
+        self.assertEqual(csv_str, open('test.csv').read())
+
         # read csv
         df = pd.read_csv("test.csv")
         np.testing.assert_array_almost_equal(df["c"], solution.data["c"])
         np.testing.assert_array_almost_equal(df["2c"], solution.data["2c"])
+
+        # to json
+        json_str = solution.save_data("test.json", to_format="json")
+
+        # check string is the same as the file
+        self.assertEqual(json_str, open('test.json').read())
+
+        # check if string has the right values
+        json_data = json.loads(json_str)
+        np.testing.assert_array_almost_equal(json_data["c"], solution.data["c"])
+        np.testing.assert_array_almost_equal(json_data["d"], solution.data["d"])
 
         # raise error if format is unknown
         with self.assertRaisesRegex(ValueError, "format 'wrong_format' not recognised"):
@@ -283,6 +299,7 @@ class TestSolution(unittest.TestCase):
         self.assertEqual(solution.all_models[0].name, solution_load.all_models[0].name)
         np.testing.assert_array_equal(solution["c"].entries, solution_load["c"].entries)
         np.testing.assert_array_equal(solution["d"].entries, solution_load["d"].entries)
+
 
     def test_solution_evals_with_inputs(self):
         model = pybamm.lithium_ion.SPM()
