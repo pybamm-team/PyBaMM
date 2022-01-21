@@ -2,12 +2,25 @@
 # Solution class
 #
 import casadi
+import json
 import numbers
 import numpy as np
 import pickle
 import pybamm
 import pandas as pd
 from scipy.io import savemat
+
+
+class NumpyEncoder(json.JSONEncoder):
+    """
+    Numpy serialiser helper class that converts numpy arrays to a list
+    https://stackoverflow.com/questions/26646362/numpy-array-is-not-json-serializable
+    """
+
+    def default(self, obj):
+        if isinstance(obj, np.ndarray):
+            return obj.tolist()
+        return json.JSONEncoder.default(self, obj)
 
 
 class Solution(object):
@@ -543,7 +556,7 @@ class Solution(object):
         Parameters
         ----------
         filename : str
-            The name of the file to save data to
+            The name of the file to save data to. If None, then a str is returned
         variables : list, optional
             List of variables to save. If None, saves all of the variables that have
             been created so far
@@ -563,7 +576,7 @@ class Solution(object):
         Returns
         -------
         data : str, optional
-            if 'csv' or 'json' is chosen, then this string is returned, otherwise None
+            str if 'csv' or 'json' is chosen and filename is None, otherwise None
 
 
         """
@@ -595,9 +608,17 @@ class Solution(object):
                 data_short_names[name] = var
 
         if to_format == "pickle":
+            if filename is None:
+                raise ValueError(
+                    "pickle format must be written to a file"
+                )
             with open(filename, "wb") as f:
                 pickle.dump(data_short_names, f, pickle.HIGHEST_PROTOCOL)
         elif to_format == "matlab":
+            if filename is None:
+                raise ValueError(
+                    "matlab format must be written to a file"
+                )
             # Check all the variable names only contain a-z, A-Z or _ or numbers
             for name in data_short_names.keys():
                 # Check the string only contains the following ASCII:
@@ -632,7 +653,13 @@ class Solution(object):
                         )
                     )
             df = pd.DataFrame(data_short_names)
-            df.to_csv(filename, index=False)
+            return df.to_csv(filename, index=False)
+        elif to_format == "json":
+            if filename is None:
+                return json.dumps(data_short_names, cls=NumpyEncoder)
+            else:
+                with open(filename, "w") as outfile:
+                    json.dump(data_short_names, outfile, cls=NumpyEncoder)
         else:
             raise ValueError("format '{}' not recognised".format(to_format))
 
