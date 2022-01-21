@@ -3,6 +3,7 @@
 ## Features
 
 -   Added an option to force install compatible versions of jax and jaxlib if already installed using CLI ([#1881](https://github.com/pybamm-team/PyBaMM/pull/1881))
+-   Allow pybamm.Solution.save_data() to return a string if filename is None, and added json to_format option ([#1909](https://github.com/pybamm-team/PyBaMM/pull/1909)
 
 ## Optimizations
 
