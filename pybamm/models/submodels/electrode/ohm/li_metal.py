@@ -100,7 +100,7 @@ class LithiumMetalSurfaceForm(LithiumMetalBaseModel):
             self.rhs[delta_phi] = 1 / C_dl * (i_cc - sum_j)
 
     def set_algebraic(self, variables):
-        if self.options["surface form"] == "algebraic":
+        if self.options["surface form"] != "differential":  # also catches "false"
             j_pl = variables["Lithium metal plating current density"]
             j_sei = variables["SEI interfacial current density"]
             sum_j = j_pl + j_sei
