@@ -20,7 +20,8 @@ class NumpyEncoder(json.JSONEncoder):
     def default(self, obj):
         if isinstance(obj, np.ndarray):
             return obj.tolist()
-        return json.JSONEncoder.default(self, obj)
+        # won't be called since we only need to convert numpy arrays
+        return json.JSONEncoder.default(self, obj)  # pragma: no cover
 
 
 class Solution(object):
