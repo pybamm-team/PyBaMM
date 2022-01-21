@@ -179,7 +179,7 @@ def simplify_if_constant(symbol):
     return symbol
 
 
-class Symbol(anytree.NodeMixin):
+class Symbol:
     """
     Base node class for the expression tree.
 
@@ -210,18 +210,9 @@ class Symbol(anytree.NodeMixin):
         if children is None:
             children = []
 
-        # Store "orphans", which are separate from children as they do not have a
-        # parent node, so they do not cause tree corruption errors when used again
-        # in a different part of the tree
+        self._children = children
+        # Keep a separate "oprhans" attribute for backwards compatibility
         self._orphans = children
-
-        for child in children:
-            # copy child before adding
-            # this also adds copy.copy(child) to self.children
-            copy.copy(child).parent = self
-
-        # cache children
-        self.cached_children = super(Symbol, self).children
 
         # Set auxiliary domains
         self._domains = {"primary": None}
@@ -250,7 +241,7 @@ class Symbol(anytree.NodeMixin):
         Note: it is assumed that children of a node are not modified after initial
         creation
         """
-        return self.cached_children
+        return self._children
 
     @property
     def name(self):

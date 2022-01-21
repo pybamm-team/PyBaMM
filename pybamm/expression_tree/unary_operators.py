@@ -1273,9 +1273,7 @@ def boundary_value(symbol, side):
 
     # If symbol doesn't have a domain, its boundary value is itself
     if symbol.domain == []:
-        new_symbol = symbol.new_copy()
-        new_symbol.parent = None
-        return new_symbol
+        return symbol
     # If symbol is a primary or full broadcast, reduce by one dimension
     if isinstance(symbol, (pybamm.PrimaryBroadcast, pybamm.FullBroadcast)):
         return symbol.reduce_one_dimension()
