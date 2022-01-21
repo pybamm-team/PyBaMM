@@ -553,11 +553,18 @@ class Solution(object):
             - 'pickle' (default): creates a pickle file with the data dictionary
             - 'matlab': creates a .mat file, for loading in matlab
             - 'csv': creates a csv file (0D variables only)
+            - 'json': creates a json file
         short_names : dict, optional
             Dictionary of shortened names to use when saving. This may be necessary when
             saving to MATLAB, since no spaces or special characters are allowed in
             MATLAB variable names. Note that not all the variables need to be given
             a short name.
+
+        Returns
+        -------
+        data : str, optional
+            if 'csv' or 'json' is chosen, then this string is returned, otherwise None
+
 
         """
         if variables is None:
