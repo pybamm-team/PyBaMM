@@ -1,7 +1,6 @@
 #
 # Base Symbol Class for the expression tree
 #
-import copy
 import numbers
 
 import anytree

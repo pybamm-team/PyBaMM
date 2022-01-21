@@ -5,8 +5,6 @@ import numpy as np
 import pybamm
 import unittest
 
-from pybamm.expression_tree.functions import exp
-
 
 class TestInputParameter(unittest.TestCase):
     def test_input_parameter_init(self):

@@ -22,7 +22,6 @@ class TestSymbol(unittest.TestCase):
     def test_children(self):
         symc1 = pybamm.Symbol("child1")
         symc2 = pybamm.Symbol("child2")
-        symc3 = pybamm.Symbol("child3")
         symp = pybamm.Symbol("parent", children=[symc1, symc2])
 
         # test tuples of children for equality based on their name
