@@ -108,7 +108,11 @@ class BaseSolver(object):
         t_eval : numeric type, optional
             The times (in seconds) at which to compute the solution
         """
-        pybamm.logger.info("Start solver set-up")
+
+        if ics_only:
+            pybamm.logger.info("Start solver set-up, initial_conditions only")
+        else:
+            pybamm.logger.info("Start solver set-up")
 
         # Check model.algebraic for ode solvers
         if self.ode_solver is True and len(model.algebraic) > 0:
@@ -474,6 +478,7 @@ class BaseSolver(object):
             "initial_conditions",
             use_jacobian=False,
         )[0]
+        model.initial_conditions_eval = initial_conditions
 
         # evaluate initial condition
         y0_total_size = (
@@ -640,12 +645,11 @@ class BaseSolver(object):
         model.jac_rhs_eval = jac_rhs
         model.jacp_rhs_eval = jacp_rhs
 
-        model.jacp_algebraic_eval = jacp_algebraic
+        model.jac_algebraic_eval = jac_algebraic
         model.jacp_algebraic_eval = jacp_algebraic
 
         model.jac_rhs_algebraic_eval = jac_rhs_algebraic
         model.jacp_rhs_algebraic_eval = jacp_rhs_algebraic
-        model.initial_conditions_eval = initial_conditions
 
         # Save CasADi functions for the CasADi solver
         # Save CasADi functions for solvers that use CasADi
@@ -723,7 +727,7 @@ class BaseSolver(object):
                     model.y0 = casadi.vertcat(
                         y0_from_inputs[:len_rhs], y0_from_model[len_rhs:]
                     )
-            y0 = self.calculate_consistent_state(model, 0, inputs)
+            y0 = self.calculate_consistent_state(model, 0, inputs_dict)
         # Make y0 a function of inputs if doing symbolic with casadi
         model.y0 = y0
 
@@ -738,7 +742,7 @@ class BaseSolver(object):
             The model for which to calculate initial conditions.
         time : float
             The time at which to calculate the states
-        inputs_dict : dict, optional
+        inputs: dict, optional
             Any input parameters to pass to the model when solving
 
         Returns

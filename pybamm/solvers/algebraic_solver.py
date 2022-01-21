@@ -80,7 +80,14 @@ class AlgebraicSolver(pybamm.BaseSolver):
             len_rhs = model.rhs_eval(t_eval[0], y0, inputs).shape[0]
         y0_diff, y0_alg = np.split(y0, [len_rhs])
 
-        algebraic = model.algebraic_eval
+        if model.convert_to_format == 'casadi':
+            def algebraic(t, y):
+                result = model.algebraic_eval(t, y, inputs)
+                return result.full().flatten()
+        else:
+            def algebraic(t, y):
+                result = model.algebraic_eval(t, y, inputs)
+                return result.flatten()
 
         y_alg = np.empty((len(y0_alg), len(t_eval)))
 
@@ -91,7 +98,7 @@ class AlgebraicSolver(pybamm.BaseSolver):
             def root_fun(y_alg):
                 "Evaluates algebraic using y"
                 y = np.concatenate([y0_diff, y_alg])
-                out = algebraic(t, y, inputs)
+                out = algebraic(t, y)
                 pybamm.logger.debug(
                     "Evaluating algebraic equations at t={}, L2-norm is {}".format(
                         t * model.timescale_eval, np.linalg.norm(out)
