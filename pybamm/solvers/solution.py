@@ -549,13 +549,13 @@ class Solution(object):
         with open(filename, "wb") as f:
             pickle.dump(self, f, pickle.HIGHEST_PROTOCOL)
 
-    def save_data(self, filename, variables=None, to_format="pickle", short_names=None):
+    def save_data(self, filename=None, variables=None, to_format="pickle", short_names=None):
         """
         Save solution data only (raw arrays)
 
         Parameters
         ----------
-        filename : str
+        filename : str, optional
             The name of the file to save data to. If None, then a str is returned
         variables : list, optional
             List of variables to save. If None, saves all of the variables that have

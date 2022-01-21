@@ -242,7 +242,7 @@ class TestSolution(unittest.TestCase):
         # set variables first then save
         solution.update(["c", "d"])
         with self.assertRaisesRegex(ValueError, "pickle"):
-            solution.save_data(None, to_format="pickle")
+            solution.save_data(to_format="pickle")
         solution.save_data("test.pickle")
 
         data_load = pybamm.load("test.pickle")
@@ -256,7 +256,7 @@ class TestSolution(unittest.TestCase):
         np.testing.assert_array_equal(solution.data["d"], data_load["d"])
 
         with self.assertRaisesRegex(ValueError, "matlab"):
-            solution.save_data(None, to_format="matlab")
+            solution.save_data(to_format="matlab")
 
         # to matlab with bad variables name fails
         solution.update(["c + d"])
@@ -276,7 +276,7 @@ class TestSolution(unittest.TestCase):
             solution.save_data("test.csv", to_format="csv")
         # only save "c" and "2c"
         solution.save_data("test.csv", ["c", "2c"], to_format="csv")
-        csv_str = solution.save_data(None, ["c", "2c"], to_format="csv")
+        csv_str = solution.save_data(variables=["c", "2c"], to_format="csv")
 
         # check string is the same as the file
         with open('test.csv') as f:
@@ -289,7 +289,7 @@ class TestSolution(unittest.TestCase):
 
         # to json
         solution.save_data("test.json", to_format="json")
-        json_str = solution.save_data(None, to_format="json")
+        json_str = solution.save_data(to_format="json")
 
         # check string is the same as the file
         with open('test.json') as f:
