@@ -280,7 +280,10 @@ class TestSolution(unittest.TestCase):
 
         # check string is the same as the file
         with open('test.csv') as f:
-            self.assertEqual(csv_str, f.read())
+            # need to strip \r chars for windows
+            self.assertEqual(
+                csv_str.replace('\r', ''), f.read()
+            )
 
         # read csv
         df = pd.read_csv("test.csv")
@@ -293,7 +296,10 @@ class TestSolution(unittest.TestCase):
 
         # check string is the same as the file
         with open('test.json') as f:
-            self.assertEqual(json_str, f.read())
+            # need to strip \r chars for windows
+            self.assertEqual(
+                json_str.replace('\r', ''), f.read()
+            )
 
         # check if string has the right values
         json_data = json.loads(json_str)
