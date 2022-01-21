@@ -52,6 +52,8 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                 Model for intercalation kinetics. Can be "symmetric Butler-Volmer"
                 (default), "asymmetric Butler-Volmer", "linear", "Marcus", or
                 "Marcus-Hush-Chidsey" (which uses the asymptotic form from Zeng 2014).
+                A 2-tuple can be provided for different behaviour in negative and
+                positive electrodes.
             * "interface utilisation": str
                 Can be "full" (default), "constant", or "current-driven".
             * "lithium plating" : str
@@ -392,6 +394,7 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                         (
                             option
                             in [
+                                "intercalation kinetics",
                                 "interface utilisation",
                                 "loss of active material",
                                 "particle mechanics",
@@ -852,17 +855,17 @@ class BaseBatteryModel(pybamm.BaseModel):
     def set_summary_variables(self):
         self._summary_variables = []
 
-    @property
-    def intercalation_kinetics(self):
-        if self.options["intercalation kinetics"] == "symmetric Butler-Volmer":
+    def get_intercalation_kinetics(self, domain):
+        options = getattr(self.options, domain.lower())
+        if options["intercalation kinetics"] == "symmetric Butler-Volmer":
             return pybamm.kinetics.SymmetricButlerVolmer
-        elif self.options["intercalation kinetics"] == "asymmetric Butler-Volmer":
+        elif options["intercalation kinetics"] == "asymmetric Butler-Volmer":
             return pybamm.kinetics.AsymmetricButlerVolmer
-        elif self.options["intercalation kinetics"] == "linear":
+        elif options["intercalation kinetics"] == "linear":
             return pybamm.kinetics.Linear
-        elif self.options["intercalation kinetics"] == "Marcus":
+        elif options["intercalation kinetics"] == "Marcus":
             return pybamm.kinetics.Marcus
-        elif self.options["intercalation kinetics"] == "Marcus-Hush-Chidsey":
+        elif options["intercalation kinetics"] == "Marcus-Hush-Chidsey":
             return pybamm.kinetics.MarcusHushChidsey
 
     @property
