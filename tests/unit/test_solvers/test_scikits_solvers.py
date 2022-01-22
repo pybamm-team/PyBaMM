@@ -760,7 +760,7 @@ class TestScikitsSolvers(unittest.TestCase):
     def test_model_step_nonsmooth_events(self):
         # Create model
         model = pybamm.BaseModel()
-        model.timescale = pybamm.Scalar(1)
+        model.timescale = pybamm.Scalar(2)
         var1 = pybamm.Variable("var1")
         var2 = pybamm.Variable("var2")
         a = 0.6
