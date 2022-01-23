@@ -902,7 +902,9 @@ class BaseBatteryModel(pybamm.BaseModel):
         elif self.options["operating mode"] == "voltage":
             model = pybamm.external_circuit.VoltageFunctionControl(self.param)
         elif self.options["operating mode"] == "power":
-            model = pybamm.external_circuit.PowerFunctionControl(self.param)
+            model = pybamm.external_circuit.PowerFunctionControl(
+                self.param, "differential"
+            )
         elif self.options["operating mode"] == "explicit power":
             model = pybamm.external_circuit.ExplicitPowerControl(self.param)
         elif self.options["operating mode"] == "resistance":

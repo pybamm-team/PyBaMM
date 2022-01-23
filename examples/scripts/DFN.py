@@ -7,7 +7,7 @@ import numpy as np
 
 models = [
     pybamm.lithium_ion.DFN({"operating mode": "explicit power"}),
-    pybamm.lithium_ion.DFN({"operating mode": "power"}),
+    pybamm.lithium_ion.SPM({"operating mode": "power"}),
 ]
 
 # set parameters and discretise models
@@ -15,6 +15,7 @@ for i, model in enumerate(models):
     # create geometry
     params = model.default_parameter_values
     params.update({"Power function [W]": 4}, check_already_exists=False)
+    params.update({"Current function [A]": 3})
     geometry = model.default_geometry
     params.process_model(model)
     params.process_geometry(geometry)
@@ -30,5 +31,10 @@ for i, model in enumerate(models):
     print(solutions[i].solve_time)
     print(solutions[i].integration_time)
 pybamm.dynamic_plot(
-    solutions, ["Terminal voltage [V]", "Current [A]", "Terminal power [W]"]
+    solutions,
+    [
+        "Terminal voltage [V]",
+        "Current [A]",
+        "Terminal power [W]",
+    ],
 )

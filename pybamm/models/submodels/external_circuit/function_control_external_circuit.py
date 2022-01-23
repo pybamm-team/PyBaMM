@@ -94,8 +94,8 @@ class VoltageFunctionControl(FunctionControl):
 class PowerFunctionControl(FunctionControl):
     """External circuit with power control."""
 
-    def __init__(self, param):
-        super().__init__(param, self.constant_power, control="algebraic")
+    def __init__(self, param, control):
+        super().__init__(param, self.constant_power, control=control)
 
     def constant_power(self, variables):
         I = variables["Current [A]"]
@@ -104,7 +104,16 @@ class PowerFunctionControl(FunctionControl):
         P_applied = pybamm.FunctionParameter(
             "Power function [W]", {"Time [s]": pybamm.t * self.param.timescale}
         )
-        return P - P_applied
+        # Multiply by the time scale so that the votage overshoot only lasts a few
+        # seconds
+        K_aw = 1 * self.param.timescale  # anti-windup
+        K_V = 1 * self.param.timescale
+        i_var = variables["Current density variable"]
+        i_cell = variables["Total current density"]
+        V = variables["Terminal voltage [V]"]
+        V_CCCV = pybamm.Parameter("Voltage function [V]")
+        return -K_aw * (i_var - i_cell) + K_V * (P - P_applied)
+        # return P - P_applied
 
 
 class ResistanceFunctionControl(FunctionControl):
