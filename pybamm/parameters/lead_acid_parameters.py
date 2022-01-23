@@ -428,7 +428,7 @@ class LeadAcidParameters(BaseParameters):
         """Defines the dimensionless parameters"""
 
         # Timescale ratios
-        self.C_th = self.tau_th_yz / self.tau_discharge
+        self.C_th = self.tau_th_yz / self.timescale
 
         # Macroscale Geometry
         self.l_n = self.geo.l_n
@@ -469,7 +469,7 @@ class LeadAcidParameters(BaseParameters):
             / self.rho_typ
             * (1 - self.M_w * self.V_e / self.V_w * self.M_e)
         )
-        self.C_e = self.tau_diffusion_e / self.tau_discharge
+        self.C_e = self.tau_diffusion_e / self.timescale
         # Ratio of viscous pressure scale to osmotic pressure scale (electrolyte)
         self.pi_os_e = (
             self.mu_typ
@@ -534,13 +534,13 @@ class LeadAcidParameters(BaseParameters):
             self.C_dl_n_dimensional
             * self.potential_scale
             / self.j_scale_n
-            / self.tau_discharge
+            / self.timescale
         )
         self.C_dl_p = (
             self.C_dl_p_dimensional
             * self.potential_scale
             / self.j_scale_p
-            / self.tau_discharge
+            / self.timescale
         )
         self.ne_n = self.ne_n_S
         self.ne_p = self.ne_p_S

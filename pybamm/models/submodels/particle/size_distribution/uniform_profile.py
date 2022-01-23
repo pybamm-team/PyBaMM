@@ -81,9 +81,7 @@ class UniformProfile(BaseSizeDistribution):
             self.domain + " volume-weighted particle-size distribution"
         ]
         c_s_surf = pybamm.Integral(f_v_dist * c_s_surf_distribution, R)
-        c_s = pybamm.PrimaryBroadcast(
-            c_s_surf, [self.domain.lower() + " particle"]
-        )
+        c_s = pybamm.PrimaryBroadcast(c_s_surf, [self.domain.lower() + " particle"])
         c_s_xav = pybamm.x_average(c_s)
         variables.update(self._get_standard_concentration_variables(c_s, c_s_xav))
 
@@ -108,12 +106,10 @@ class UniformProfile(BaseSizeDistribution):
 
     def set_rhs(self, variables):
         c_s_surf_distribution = variables[
-            self.domain
-            + " particle surface concentration distribution"
+            self.domain + " particle surface concentration distribution"
         ]
         j_distribution = variables[
-            self.domain
-            + " electrode interfacial current density distribution"
+            self.domain + " electrode interfacial current density distribution"
         ]
         R = variables[self.domain + " particle sizes"]
 
@@ -122,6 +118,7 @@ class UniformProfile(BaseSizeDistribution):
                 c_s_surf_distribution: -3
                 * j_distribution
                 / self.param.a_R_n
+                / self.param.gamma_n
                 / R
             }
         elif self.domain == "Positive":
@@ -135,8 +132,7 @@ class UniformProfile(BaseSizeDistribution):
 
     def set_initial_conditions(self, variables):
         c_s_surf_distribution = variables[
-            self.domain
-            + " particle surface concentration distribution"
+            self.domain + " particle surface concentration distribution"
         ]
 
         if self.domain == "Negative":
