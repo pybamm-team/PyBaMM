@@ -110,9 +110,7 @@ def x_average(symbol):
         )
         for domain in symbol.domains.values()
     ):
-        new_symbol = symbol.new_copy()
-        new_symbol.parent = None
-        return new_symbol
+        return symbol
     # If symbol is a broadcast, reduce by one dimension
     if isinstance(
         symbol,
@@ -212,9 +210,7 @@ def z_average(symbol):
         )
     # If symbol doesn't have a domain, its average value is itself
     if symbol.domain == []:
-        new_symbol = symbol.new_copy()
-        new_symbol.parent = None
-        return new_symbol
+        return symbol
     # If symbol is a Broadcast, its average value is its child
     elif isinstance(symbol, pybamm.Broadcast):
         return symbol.reduce_one_dimension()
@@ -247,9 +243,7 @@ def yz_average(symbol):
         )
     # If symbol doesn't have a domain, its average value is itself
     if symbol.domain == []:
-        new_symbol = symbol.new_copy()
-        new_symbol.parent = None
-        return new_symbol
+        return symbol
     # If symbol is a Broadcast, its average value is its child
     elif isinstance(symbol, pybamm.Broadcast):
         return symbol.reduce_one_dimension()
@@ -282,9 +276,7 @@ def r_average(symbol):
     # Otherwise, if symbol doesn't have a particle domain,
     # its r-averaged value is itself
     elif symbol.domain not in [["positive particle"], ["negative particle"]]:
-        new_symbol = symbol.new_copy()
-        new_symbol.parent = None
-        return new_symbol
+        return symbol
     # If symbol is a secondary broadcast onto "negative electrode" or
     # "positive electrode", take the r-average of the child then broadcast back
     elif isinstance(symbol, pybamm.SecondaryBroadcast) and symbol.domains[
@@ -327,9 +319,7 @@ def size_average(symbol, f_a_dist=None):
         domain in [["negative particle size"], ["positive particle size"]]
         for domain in list(symbol.domains.values())
     ):
-        new_symbol = symbol.new_copy()
-        new_symbol.parent = None
-        return new_symbol
+        return symbol
 
     # If symbol is a primary broadcast to "particle size", take the orphan
     elif isinstance(symbol, pybamm.PrimaryBroadcast) and symbol.domain in [

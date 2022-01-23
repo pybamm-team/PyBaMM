@@ -294,11 +294,6 @@ class TestParameterValues(unittest.TestCase):
             processed_g.evaluate(y=np.ones(10)), np.ones((10, 1))
         )
 
-        # not implemented
-        sym = pybamm.Symbol("sym")
-        with self.assertRaises(NotImplementedError):
-            parameter_values.process_symbol(sym)
-
         # not found
         with self.assertRaises(KeyError):
             x = pybamm.Parameter("x")
@@ -380,7 +375,7 @@ class TestParameterValues(unittest.TestCase):
         # process constant function
         const = pybamm.FunctionParameter("const", {"a": a})
         processed_const = parameter_values.process_symbol(const)
-        self.assertIsInstance(processed_const, pybamm.Vector)
+        self.assertIsInstance(processed_const, pybamm.Scalar)
         self.assertEqual(processed_const.evaluate(), 254)
 
         # process case where parameter provided is a pybamm symbol

@@ -633,7 +633,7 @@ class ParameterValues:
                 ):
                     # Wrap with NotConstant to avoid simplification,
                     # which would stop symbolic diff from working properly
-                    new_child = pybamm.NotConstant(child.new_copy())
+                    new_child = pybamm.NotConstant(child)
                     new_children.append(self.process_symbol(new_child))
                 else:
                     new_children.append(self.process_symbol(child))
@@ -757,15 +757,8 @@ class ParameterValues:
             return symbol._concatenation_new_copy(new_children)
 
         else:
-            # Backup option: return new copy of the object
-            try:
-                return symbol.new_copy()
-            except NotImplementedError:
-                raise NotImplementedError(
-                    "Cannot process parameters for symbol of type '{}'".format(
-                        type(symbol)
-                    )
-                )
+            # Backup option: return the object
+            return symbol
 
     def evaluate(self, symbol):
         """

@@ -480,23 +480,17 @@ class BaseSolver(object):
                             found_t = True
                         # Dimensional
                         elif symbol.right.id == (pybamm.t * model.timescale_eval).id:
-                            expr = (
-                                symbol.left.new_copy() / symbol.right.right.new_copy()
-                            )
+                            expr = symbol.left / symbol.right.right
                             found_t = True
                         elif symbol.left.id == (pybamm.t * model.timescale_eval).id:
-                            expr = (
-                                symbol.right.new_copy() / symbol.left.right.new_copy()
-                            )
+                            expr = symbol.right / symbol.left.right
                             found_t = True
 
                         # Update the events if the heaviside function depended on t
                         if found_t:
                             model.events.append(
                                 pybamm.Event(
-                                    str(symbol),
-                                    expr.new_copy(),
-                                    pybamm.EventType.DISCONTINUITY,
+                                    str(symbol), expr, pybamm.EventType.DISCONTINUITY
                                 )
                             )
                     elif isinstance(symbol, pybamm.Modulo):
@@ -507,9 +501,7 @@ class BaseSolver(object):
                             found_t = True
                         # Dimensional
                         elif symbol.left.id == (pybamm.t * model.timescale_eval).id:
-                            expr = (
-                                symbol.right.new_copy() / symbol.left.right.new_copy()
-                            )
+                            expr = symbol.right / symbol.left.right
                             found_t = True
 
                         # Update the events if the modulo function depended on t
@@ -523,7 +515,7 @@ class BaseSolver(object):
                                 model.events.append(
                                     pybamm.Event(
                                         str(symbol),
-                                        expr.new_copy() * pybamm.Scalar(i + 1),
+                                        expr * pybamm.Scalar(i + 1),
                                         pybamm.EventType.DISCONTINUITY,
                                     )
                                 )

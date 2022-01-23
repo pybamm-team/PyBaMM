@@ -20,30 +20,26 @@ class InputParameter(pybamm.Symbol):
     domain : iterable of str, or str
         list of domains over which the node is valid (empty list indicates the symbol
         is valid over all domains)
+    expected_size : int
+        The size of the input parameter expected, defaults to 1 (scalar input)
     """
 
-    def __init__(self, name, domain=None):
+    def __init__(self, name, domain=None, expected_size=None):
         # Expected size defaults to 1 if no domain else None (gets set later)
-        if domain is None:
-            self._expected_size = 1
-        else:
-            self._expected_size = None
+        if expected_size is None:
+            if domain is None:
+                expected_size = 1
+            else:
+                expected_size = None
+        self._expected_size = expected_size
         super().__init__(name, domain=domain)
 
     def create_copy(self):
         """See :meth:`pybamm.Symbol.new_copy()`."""
-        new_input_parameter = InputParameter(self.name, self.domain)
-        new_input_parameter._expected_size = self._expected_size
+        new_input_parameter = InputParameter(
+            self.name, self.domain, expected_size=self._expected_size
+        )
         return new_input_parameter
-
-    def set_expected_size(self, size):
-        """Specify the size that the input parameter should be."""
-        self._expected_size = size
-
-        # We also need to update the saved size and shape
-        self._saved_size = size
-        self._saved_shape = (size, 1)
-        self._saved_evaluate_for_shape = self._evaluate_for_shape()
 
     def _evaluate_for_shape(self):
         """
