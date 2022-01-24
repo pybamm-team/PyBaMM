@@ -279,11 +279,12 @@ class Symbol:
             return None  # no change
         # Turn dictionary into appropriate form
         domains = domains or {}
+        # Set default domains
+        default_domains = {k: [] for k in DOMAIN_LEVELS}
+        domains = {**default_domains, **domains}
 
-        if (
-            "primary" in domains
-            and domains["primary"] != []
-            and isinstance(self, (pybamm.Scalar, pybamm.Parameter))
+        if domains["primary"] != [] and isinstance(
+            self, (pybamm.Scalar, pybamm.Parameter)
         ):
             raise pybamm.DomainError(
                 f"Object of type '{self.__class__.__name__}'' cannot have a domain"
@@ -298,11 +299,8 @@ class Symbol:
             if isinstance(dom, str):
                 domains[level] = [dom]
         for i, level in enumerate(DOMAIN_LEVELS[:-1]):
-            if level not in domains or domains[level] == []:
-                if (
-                    DOMAIN_LEVELS[i + 1] in domains
-                    and domains[DOMAIN_LEVELS[i + 1]] != []
-                ):
+            if domains[level] == []:
+                if domains[DOMAIN_LEVELS[i + 1]] != []:
                     raise pybamm.DomainError("Domain levels must be filled in order")
                 # don't test further if we have already found a missing domain
                 break
