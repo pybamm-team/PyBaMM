@@ -294,11 +294,6 @@ class TestParameterValues(unittest.TestCase):
             processed_g.evaluate(y=np.ones(10)), np.ones((10, 1))
         )
 
-        # not implemented
-        sym = pybamm.Symbol("sym")
-        with self.assertRaises(NotImplementedError):
-            parameter_values.process_symbol(sym)
-
         # not found
         with self.assertRaises(KeyError):
             x = pybamm.Parameter("x")
