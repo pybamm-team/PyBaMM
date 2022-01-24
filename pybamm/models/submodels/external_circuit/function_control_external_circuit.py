@@ -108,7 +108,7 @@ class PowerFunctionControl(FunctionControl):
             return P - P_applied
         else:
             # Multiply by the time scale so that the overshoot only lasts a few seconds
-            K_P = 1 * self.param.timescale
+            K_P = 0.01 * self.param.timescale
             return -K_P * (P - P_applied)
 
 
@@ -129,7 +129,7 @@ class ResistanceFunctionControl(FunctionControl):
             return R - R_applied
         else:
             # Multiply by the time scale so that the overshoot only lasts a few seconds
-            K_R = 1 * self.param.timescale
+            K_R = 0.01 * self.param.timescale
             return -K_R * (R - R_applied)
 
 
