@@ -58,7 +58,7 @@ class Concatenation(pybamm.Symbol):
 
     def _diff(self, variable):
         """See :meth:`pybamm.Symbol._diff()`."""
-        children_diffs = [child.diff(variable) for child in self.cached_children]
+        children_diffs = [child.diff(variable) for child in self.children]
         if len(children_diffs) == 1:
             diff = children_diffs[0]
         else:
@@ -92,7 +92,7 @@ class Concatenation(pybamm.Symbol):
 
     def evaluate(self, t=None, y=None, y_dot=None, inputs=None, known_evals=None):
         """See :meth:`pybamm.Symbol.evaluate()`."""
-        children = self.cached_children
+        children = self.children
         if known_evals is not None:
             if self.id not in known_evals:
                 children_eval = [None] * len(children)
@@ -189,7 +189,7 @@ class NumpyConcatenation(Concatenation):
 
     def _concatenation_jac(self, children_jacs):
         """See :meth:`pybamm.Concatenation.concatenation_jac()`."""
-        children = self.cached_children
+        children = self.children
         if len(children) == 0:
             return pybamm.Scalar(0)
         else:
@@ -252,7 +252,7 @@ class DomainConcatenation(Concatenation):
 
             # create disc of domain => slice for each child
             self._children_slices = [
-                self.create_slices(child) for child in self.cached_children
+                self.create_slices(child) for child in self.children
             ]
         else:
             self._full_mesh = copy.copy(copy_this._full_mesh)
