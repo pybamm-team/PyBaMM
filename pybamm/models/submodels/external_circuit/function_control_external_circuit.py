@@ -30,9 +30,9 @@ class FunctionControl(BaseModel):
         param = self.param
         # Current is a variable
         i_var = pybamm.Variable("Current density variable")
-        if self.control == "algebraic":
+        if self.control in ["algebraic", "differential without max"]:
             i_cell = i_var
-        elif self.control == "differential":
+        elif self.control == "differential with max":
             i_cell = pybamm.maximum(i_var, param.current_with_time)
 
         # Update derived variables
@@ -63,7 +63,7 @@ class FunctionControl(BaseModel):
         # External circuit submodels are always equations on the current
         # The external circuit function should provide an update law for the current
         # based on current/voltage/power/etc.
-        if self.control == "differential":
+        if "differential" in self.control:
             i_cell = variables["Current density variable"]
             self.rhs[i_cell] = self.external_circuit_function(variables)
 
@@ -104,22 +104,18 @@ class PowerFunctionControl(FunctionControl):
         P_applied = pybamm.FunctionParameter(
             "Power function [W]", {"Time [s]": pybamm.t * self.param.timescale}
         )
-        # Multiply by the time scale so that the votage overshoot only lasts a few
-        # seconds
-        K_aw = 1 * self.param.timescale  # anti-windup
-        K_V = 1 * self.param.timescale
-        i_var = variables["Current density variable"]
-        i_cell = variables["Total current density"]
-        V = variables["Terminal voltage [V]"]
-        V_CCCV = pybamm.Parameter("Voltage function [V]")
-        return -K_aw * (i_var - i_cell) + K_V * (P - P_applied)
-        # return P - P_applied
+        if self.control == "algebraic":
+            return P - P_applied
+        else:
+            # Multiply by the time scale so that the overshoot only lasts a few seconds
+            K_P = 1 * self.param.timescale
+            return -K_P * (P - P_applied)
 
 
 class ResistanceFunctionControl(FunctionControl):
     """External circuit with resistance control."""
 
-    def __init__(self, param):
+    def __init__(self, param, control):
         super().__init__(param, self.constant_resistance, control="algebraic")
 
     def constant_resistance(self, variables):
@@ -129,7 +125,12 @@ class ResistanceFunctionControl(FunctionControl):
         R_applied = pybamm.FunctionParameter(
             "Resistance function [Ohm]", {"Time [s]": pybamm.t * self.param.timescale}
         )
-        return R - R_applied
+        if self.control == "algebraic":
+            return R - R_applied
+        else:
+            # Multiply by the time scale so that the overshoot only lasts a few seconds
+            K_R = 1 * self.param.timescale
+            return -K_R * (R - R_applied)
 
 
 class CCCVFunctionControl(FunctionControl):
@@ -146,7 +147,7 @@ class CCCVFunctionControl(FunctionControl):
     """
 
     def __init__(self, param):
-        super().__init__(param, self.cccv, control="differential")
+        super().__init__(param, self.cccv, control="differential with max")
         pybamm.citations.register("Mohtat2021")
 
     def cccv(self, variables):

@@ -71,6 +71,8 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                 - "current" (default) : the current is explicity supplied
                 - "voltage"/"power"/"resistance" : solve an algebraic equation for \
                     current such that voltage/power/resistance is correct
+                - "differential power"/"differential resistance" : solve a \
+                    differential equation for the power or resistance
                 - "explicit power"/"explicit resistance" : current is defined in terms \
                     of the voltage such that power/resistance is correct
                 - callable : if a callable is given as this option, the function \
@@ -195,8 +197,10 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                 "current",
                 "voltage",
                 "power",
+                "differential power",
                 "explicit power",
                 "resistance",
+                "differential resistance",
                 "explicit resistance",
                 "CCCV",
             ],
@@ -903,12 +907,22 @@ class BaseBatteryModel(pybamm.BaseModel):
             model = pybamm.external_circuit.VoltageFunctionControl(self.param)
         elif self.options["operating mode"] == "power":
             model = pybamm.external_circuit.PowerFunctionControl(
-                self.param, "differential"
+                self.param, "algebraic"
+            )
+        elif self.options["operating mode"] == "differential power":
+            model = pybamm.external_circuit.PowerFunctionControl(
+                self.param, "differential without max"
             )
         elif self.options["operating mode"] == "explicit power":
             model = pybamm.external_circuit.ExplicitPowerControl(self.param)
         elif self.options["operating mode"] == "resistance":
-            model = pybamm.external_circuit.ResistanceFunctionControl(self.param)
+            model = pybamm.external_circuit.ResistanceFunctionControl(
+                self.param, "algebraic"
+            )
+        elif self.options["operating mode"] == "differential resistance":
+            model = pybamm.external_circuit.ResistanceFunctionControl(
+                self.param, "differential without max"
+            )
         elif self.options["operating mode"] == "explicit resistance":
             model = pybamm.external_circuit.ExplicitResistanceControl(self.param)
         elif self.options["operating mode"] == "CCCV":
@@ -1137,10 +1151,11 @@ class BaseBatteryModel(pybamm.BaseModel):
         # Hack to avoid division by zero if i_cc is exactly zero
         # If i_cc is zero, i_cc_not_zero becomes 1. But multiplying by sign(i_cc) makes
         # the local resistance 'zero' (really, it's not defined when i_cc is zero)
-        i_cc_not_zero = ((i_cc > 0) + (i_cc < 0)) * i_cc + (i_cc >= 0) * (i_cc <= 0)
-        i_cc_dim_not_zero = ((i_cc_dim > 0) + (i_cc_dim < 0)) * i_cc_dim + (
-            i_cc_dim >= 0
-        ) * (i_cc_dim <= 0)
+        def x_not_zero(x):
+            return ((x > 0) + (x < 0)) * x + (x >= 0) * (x <= 0)
+
+        i_cc_not_zero = x_not_zero(i_cc)
+        i_cc_dim_not_zero = x_not_zero(i_cc_dim)
 
         self.variables.update(
             {
@@ -1193,11 +1208,12 @@ class BaseBatteryModel(pybamm.BaseModel):
 
         # Power and resistance
         I_dim = self.variables["Current [A]"]
+        I_dim_not_zero = x_not_zero(I_dim)
         self.variables.update(
             {
                 "Terminal power [W]": I_dim * V_dim,
                 "Power [W]": I_dim * V_dim,
-                "Resistance [Ohm]": V_dim / I_dim,
+                "Resistance [Ohm]": pybamm.sign(I_dim) * V_dim / I_dim_not_zero,
             }
         )
 
