@@ -6,7 +6,7 @@ import sys
 import logging
 import subprocess
 
-from pybamm.util import root_dir as pybamm_dir
+from pybamm.util import root_dir
 
 try:
     # wget module is required to download SUNDIALS or SuiteSparse.
@@ -128,6 +128,8 @@ def main(arguments=None):
     default_install_dir = os.path.join(os.getenv("HOME"), ".local")
     parser.add_argument("--install-dir", type=str, default=default_install_dir)
     args = parser.parse_args(arguments)
+
+    pybamm_dir = root_dir()
     install_dir = (
         args.install_dir
         if os.path.isabs(args.install_dir)
@@ -151,7 +153,7 @@ def main(arguments=None):
 
     if not SUNDIALS_FOUND:
         logger.info("Could not find sundials libraries.")
-        logger.info("Installing sundials in {}".install_dir)
+        logger.info("Installing sundials in {}".format(install_dir))
         download_dir = os.path.join(pybamm_dir, "sundials")
         if not os.path.exists(download_dir):
             os.makedirs(download_dir)
