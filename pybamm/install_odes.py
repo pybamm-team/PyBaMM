@@ -41,8 +41,10 @@ def install_sundials(download_dir, install_dir):
         raise RuntimeError("CMake must be installed to build SUNDIALS.")
 
     url = (
-        "https://computing.llnl.gov/"
-        + "projects/sundials/download/sundials-{}.tar.gz".format(sundials_version)
+        "https://github.com/LLNL/"
+        + "sundials/releases/download/v{}/sundials-{}.tar.gz".format(
+            sundials_version, sundials_version
+        )
     )
     logger.info("Downloading sundials")
     download_extract_library(url, download_dir)
