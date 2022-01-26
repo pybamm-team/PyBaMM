@@ -288,7 +288,7 @@ def load_function(filename):
     orig_dir = os.getcwd()
 
     # Strip absolute path to pybamm/input/example.py
-    if "pybamm" in filename:
+    if "pybamm/input/parameters" in filename or "pybamm\\input\\parameters" in filename:
         root_path = filename[filename.rfind("pybamm") :]
     # If the function is in the current working directory
     elif os.getcwd() in filename:
@@ -298,7 +298,7 @@ def load_function(filename):
             root_path = root_path[1:]
     # If the function is not in the current working directory and the path provided is
     # absolute
-    elif os.path.isabs(filename) and not os.getcwd() in filename:   # pragma: no cover
+    elif os.path.isabs(filename) and not os.getcwd() in filename:  # pragma: no cover
         # Change directory to import the function
         dir_path = os.path.split(filename)[0]
         os.chdir(dir_path)
