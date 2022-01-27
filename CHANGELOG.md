@@ -13,7 +13,7 @@
 
 ## Bug fixes
 
--   Parameters can now be imported from any given path in `Windows` ([#1900](https://github.com/pybamm-team/PyBaMM/pull/1900))
+-   Parameters can now be imported from any given path ([#1900](https://github.com/pybamm-team/PyBaMM/pull/1900), [#1919](https://github.com/pybamm-team/PyBaMM/pull/1919))
 -   Fixed initial conditions for the EC SEI model ([#1895](https://github.com/pybamm-team/PyBaMM/pull/1895))
 -   Fixed issue in extraction of sensitivites ([#1894](https://github.com/pybamm-team/PyBaMM/pull/1894))
 
