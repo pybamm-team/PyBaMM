@@ -148,8 +148,8 @@ def main(arguments=None):
         SUNDIALS_FOUND = isfile(join(DIR, "lib", "libsundials_ida.so")) or isfile(
             join(DIR, "lib", "libsundials_ida.dylib")
         )
-        SUNDIALS_LIB_DIR = DIR if SUNDIALS_FOUND else ""
         if SUNDIALS_FOUND:
+            SUNDIALS_LIB_DIR = DIR
             logger.info("Found sundials at {}".format(SUNDIALS_LIB_DIR))
             break
 
@@ -160,6 +160,7 @@ def main(arguments=None):
         if not os.path.exists(download_dir):
             os.makedirs(download_dir)
         install_sundials(download_dir, install_dir)
+        SUNDIALS_LIB_DIR = install_dir
 
     update_LD_LIBRARY_PATH(SUNDIALS_LIB_DIR)
 
