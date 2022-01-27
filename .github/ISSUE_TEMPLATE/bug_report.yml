@@ -11,7 +11,7 @@ body:
     id: PyBaMM-version
     attributes:
       label: PyBaMM Version
-      description: What version of liionpack are you running?
+      description: What version of PyBaMM are you running?
       placeholder: PyBaMM version
     validations:
       required: true
