@@ -127,6 +127,7 @@ class TestUtil(unittest.TestCase):
         tempfile_obj = tempfile.NamedTemporaryFile("w", dir=package_dir)
         path = os.path.join(package_dir, tempfile_obj.name)
         self.assertTrue(pybamm.get_parameters_filepath(tempfile_obj.name) == path)
+        tempfile_obj.close()
 
     def test_is_jax_compatible(self):
         if pybamm.have_jax():
