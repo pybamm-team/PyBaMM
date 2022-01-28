@@ -1,5 +1,7 @@
 # [Unreleased](https://github.com/pybamm-team/PyBaMM/)
 
+# [v22.1](https://github.com/pybamm-team/PyBaMM/tree/v22.1) - 2022-01-28
+
 ## Features
 
 -   Half-cell models can now be run with "surface form" ([#1913](https://github.com/pybamm-team/PyBaMM/pull/1913))
