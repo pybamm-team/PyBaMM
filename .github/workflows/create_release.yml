@@ -7,7 +7,7 @@ on:
 
 jobs:
   create-release:
-    # This workflow is only of value to PyBaMM and would always fail in forks
+    # This workflow is only of value to PyBaMM and would always be skipped in forks
     if: github.repository_owner == 'pybamm-team'
     runs-on: ubuntu-latest
     permissions:
