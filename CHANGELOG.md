@@ -1,5 +1,8 @@
 # [Unreleased](https://github.com/pybamm-team/PyBaMM/)
 
+## Bug fixes
+-   Fixed a bug where thermal submodels could not be used with half-cells ([]())
+
 # [v22.1](https://github.com/pybamm-team/PyBaMM/tree/v22.1) - 2022-01-31
 
 ## Features

@@ -114,7 +114,11 @@ class EffectiveResistance(BaseEffectiveResistance):
     References
     ----------
     .. [1] R Timms, SG Marquis, V Sulzer, CP Please and SJ Chapman. “Asymptotic
-           Reduction of a Lithium-ion Pouch Cell Model”. Submitted, 2020.
+           Reduction of a Lithium-ion Pouch Cell Model”. SIAM Journal on Applied
+           Mathematics, 81(3), 765--788, 2021
+    .. [2] SG Marquis, R Timms, V Sulzer, CP Please and SJ Chapman. “A Suite of
+           Reduced-Order Models of a Single-Layer Lithium-ion Pouch Cell”. Journal
+           of The Electrochemical Society, 167(14):140513, 2020
 
     **Extends:** :class:`BaseEffectiveResistance`
     """
@@ -123,6 +127,9 @@ class EffectiveResistance(BaseEffectiveResistance):
         self, options=None, name="Effective resistance in current collector model"
     ):
         super().__init__(name)
+
+        pybamm.citations.register("Timms2021")
+
         self.options = options
         self.param = pybamm.LithiumIonParameters()
 
