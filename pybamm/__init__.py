@@ -35,7 +35,7 @@ PARAMETER_PATH = [
 #
 # Utility classes and methods
 #
-from .util import Timer, TimerTime, FuzzyDict, DomainDict
+from .util import Timer, TimerTime, FuzzyDict
 from .util import root_dir, load_function, rmse, get_infinite_nested_dict, load
 from .util import get_parameters_filepath, have_jax, install_jax, is_jax_compatible
 from .logger import logger, set_logging_level

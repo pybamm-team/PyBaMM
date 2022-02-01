@@ -13,7 +13,7 @@ import pybamm
 from pybamm.expression_tree.printing.print_name import prettify_print_name
 
 DOMAIN_LEVELS = ["primary", "secondary", "tertiary", "quaternary"]
-EMPTY_DOMAINS = pybamm.DomainDict({k: [] for k in DOMAIN_LEVELS})
+EMPTY_DOMAINS = {k: [] for k in DOMAIN_LEVELS}
 
 
 def domain_size(domain):
@@ -276,7 +276,7 @@ class Symbol:
             if any(v == domain for k, v in self._domains.items()):
                 raise pybamm.DomainError("All domains must be different")
             # Make new domains dictionary to avoid pass-by-reference issues
-            self._domains = pybamm.DomainDict({**self._domains, "primary": domain})
+            self._domains = {**self._domains, "primary": domain}
             self.set_id()
 
     @property
@@ -289,14 +289,18 @@ class Symbol:
     @domains.setter
     def domains(self, domains):
         try:
-            if self._domains == domains:
+            if (
+                self._domains == domains
+                # accounting for empty domains
+                or {k: v for k, v in self._domains.items() if v != []} == domains
+            ):
                 return None  # no change
         except AttributeError:
             # self._domains has not been set yet
             pass
 
         # Turn dictionary into appropriate form
-        if domains is None or domains == {"primary": []}:
+        if domains == {"primary": []}:
             self._domains = EMPTY_DOMAINS
             self.set_id()
             return None
@@ -308,7 +312,7 @@ class Symbol:
         for level, dom in domains.items():
             if level not in DOMAIN_LEVELS:
                 raise pybamm.DomainError(
-                    f"DomainDict keys must be one of '{DOMAIN_LEVELS}'"
+                    f"Domain keys must be one of '{DOMAIN_LEVELS}'"
                 )
             if isinstance(dom, str):
                 domains[level] = [dom]
@@ -323,9 +327,6 @@ class Symbol:
                     raise pybamm.DomainError("Domain levels must be filled in order")
                 # don't test further if we have already found a missing domain
                 break
-
-        if not isinstance(domains, pybamm.DomainDict):
-            domains = pybamm.DomainDict(domains)
 
         self._domains = domains
         self.set_id()
@@ -347,8 +348,8 @@ class Symbol:
 
     def copy_domains(self, symbol):
         """Copy the domains from a given symbol, bypassing checks."""
-        if self._domains != symbol.domains:
-            self._domains = symbol.domains
+        if self._domains != symbol._domains:
+            self._domains = symbol._domains
             self.set_id()
 
     def clear_domains(self):

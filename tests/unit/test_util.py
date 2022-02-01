@@ -116,13 +116,6 @@ class TestUtil(unittest.TestCase):
         ):
             d.__getitem__("negative electrode lithium plating current")
 
-    def test_domain_dict(self):
-        d = pybamm.DomainDict({"primary": []})
-        self.assertEqual(d, {"primary": []})
-        self.assertEqual(d["secondary"], [])
-        with self.assertRaisesRegex(KeyError, "wrong level"):
-            d["wrong level"]
-
     def test_get_parameters_filepath(self):
         tempfile_obj = tempfile.NamedTemporaryFile("w", dir=".")
         self.assertTrue(

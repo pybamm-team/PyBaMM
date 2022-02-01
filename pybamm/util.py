@@ -146,22 +146,6 @@ class FuzzyDict(dict):
             print("\n".join("{}".format(k) for k in results.keys()))
 
 
-class DomainDict(dict):
-    def __copy__(self):
-        return DomainDict(self)
-
-    def copy(self):
-        return self.__copy__()
-
-    def __eq__(self, other):
-        if self.items() == other.items():
-            return True
-        # Check ignoring [] entries
-        self_dict = {k: v for k, v in self.items() if v != []}
-        other_dict = {k: v for k, v in other.items() if v != []}
-        return self_dict == other_dict
-
-
 class Timer(object):
     """
     Provides accurate timing.
