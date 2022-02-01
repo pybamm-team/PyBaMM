@@ -13,6 +13,7 @@ import pybamm
 from pybamm.expression_tree.printing.print_name import prettify_print_name
 
 DOMAIN_LEVELS = ["primary", "secondary", "tertiary", "quaternary"]
+EMPTY_DOMAINS = pybamm.DomainDict({k: [] for k in DOMAIN_LEVELS})
 
 
 def domain_size(domain):
@@ -264,7 +265,19 @@ class Symbol:
 
     @domain.setter
     def domain(self, domain):
-        self.domains = {**self.domains, "primary": domain}
+        # Check if we need to update
+        # We could call the self.domains setter, but this performs some checks that are
+        # not necessary here
+        if self.domain != domain:
+            if isinstance(domain, str):
+                domain = [domain]
+            if domain == [] and self._domains["secondary"] == []:
+                raise pybamm.DomainError("Domain levels must be filled in order")
+            if any(v == domain for k, v in self._domains.items()):
+                raise pybamm.DomainError("All domains must be different")
+            # Make new domains dictionary to avoid pass-by-reference issues
+            self._domains = pybamm.DomainDict({**self._domains, "primary": domain})
+            self.set_id()
 
     @property
     def auxiliary_domains(self):
@@ -275,20 +288,21 @@ class Symbol:
 
     @domains.setter
     def domains(self, domains):
-        if hasattr(self, "_domains") and domains == self.domains:
-            return None  # no change
-        # Turn dictionary into appropriate form
-        domains = domains or {}
-        # Set default domains
-        default_domains = {k: [] for k in DOMAIN_LEVELS}
-        domains = {**default_domains, **domains}
+        try:
+            if self._domains == domains:
+                return None  # no change
+        except AttributeError:
+            # self._domains has not been set yet
+            pass
 
-        if domains["primary"] != [] and isinstance(
-            self, (pybamm.Scalar, pybamm.Parameter)
-        ):
-            raise pybamm.DomainError(
-                f"Object of type '{self.__class__.__name__}'' cannot have a domain"
-            )
+        # Turn dictionary into appropriate form
+        if domains is None or domains == {"primary": []}:
+            self._domains = EMPTY_DOMAINS
+            self.set_id()
+            return None
+
+        # Set default domains
+        domains = {**EMPTY_DOMAINS, **domains}
 
         # Check domains don't clash
         for level, dom in domains.items():
@@ -298,16 +312,17 @@ class Symbol:
                 )
             if isinstance(dom, str):
                 domains[level] = [dom]
+
+        values = [tuple(val) for val in domains.values() if val != []]
+        if len(set(values)) != len(values):
+            raise pybamm.DomainError("All domains must be different")
+
         for i, level in enumerate(DOMAIN_LEVELS[:-1]):
             if domains[level] == []:
                 if domains[DOMAIN_LEVELS[i + 1]] != []:
                     raise pybamm.DomainError("Domain levels must be filled in order")
                 # don't test further if we have already found a missing domain
                 break
-
-        values = [tuple(val) for val in domains.values() if val != []]
-        if len(set(values)) != len(values):
-            raise pybamm.DomainError("All domains must be different")
 
         if not isinstance(domains, pybamm.DomainDict):
             domains = pybamm.DomainDict(domains)
@@ -333,14 +348,13 @@ class Symbol:
     def copy_domains(self, symbol):
         """Copy the domains from a given symbol, bypassing checks."""
         if self._domains != symbol.domains:
-            self._domains = symbol.domains.copy()
+            self._domains = symbol.domains
             self.set_id()
 
     def clear_domains(self):
         """Clear domains, bypassing checks."""
-        domains = {"primary": []}
-        if self._domains != domains:
-            self._domains = pybamm.DomainDict(domains)
+        if self._domains != EMPTY_DOMAINS:
+            self._domains = EMPTY_DOMAINS
             self.set_id()
 
     def get_children_domains(self, children):

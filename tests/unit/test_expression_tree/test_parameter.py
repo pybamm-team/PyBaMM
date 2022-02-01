@@ -15,6 +15,11 @@ class TestParameter(unittest.TestCase):
         self.assertEqual(a.name, "a")
         self.assertEqual(a.domain, [])
 
+    def test_parameter_domain(self):
+        a = pybamm.Parameter("param")
+        with self.assertRaisesRegex(pybamm.DomainError, "Parameter"):
+            a.domain = "test"
+
     def test_evaluate_for_shape(self):
         a = pybamm.Parameter("a")
         self.assertIsInstance(a.evaluate_for_shape(), numbers.Number)

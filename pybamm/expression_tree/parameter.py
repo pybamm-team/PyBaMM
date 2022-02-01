@@ -14,7 +14,7 @@ class Parameter(pybamm.Symbol):
     """
     A node in the expression tree representing a parameter.
 
-    This node will be replaced by a :class:`.Scalar` node
+    This node will be replaced by a :class:`pybamm.Scalar` node
 
     Parameters
     ----------
@@ -25,6 +25,14 @@ class Parameter(pybamm.Symbol):
 
     def __init__(self, name):
         super().__init__(name)
+
+    @pybamm.Symbol.domains.setter
+    def domains(self, domains):
+        # Override the domains setter to ensure empty domain
+        if domains["primary"] != []:
+            raise pybamm.DomainError("Domain of 'Parameter' must be empty")
+        self._domains = pybamm.EMPTY_DOMAINS
+        self.set_id()
 
     def create_copy(self):
         """See :meth:`pybamm.Symbol.new_copy()`."""

@@ -147,15 +147,6 @@ class FuzzyDict(dict):
 
 
 class DomainDict(dict):
-    def __getitem__(self, key):
-        try:
-            return super().__getitem__(key)
-        except KeyError as err:
-            if key in ["primary", "secondary", "tertiary", "quaternary"]:
-                return []
-            else:
-                raise err
-
     def __copy__(self):
         return DomainDict(self)
 
@@ -163,6 +154,9 @@ class DomainDict(dict):
         return self.__copy__()
 
     def __eq__(self, other):
+        if self.items() == other.items():
+            return True
+        # Check ignoring [] entries
         self_dict = {k: v for k, v in self.items() if v != []}
         other_dict = {k: v for k, v in other.items() if v != []}
         return self_dict == other_dict
