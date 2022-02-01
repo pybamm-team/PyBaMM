@@ -71,14 +71,18 @@ class BaseModel(BaseElectrolyteConductivity):
 
             i_boundary_cc = variables["Current collector current density"]
             c_e_s = variables["Separator electrolyte concentration"]
-            phi_e_n = variables["Negative electrolyte potential"]
+            if self.half_cell:
+                phi_e_n_s = variables["Lithium metal interface electrolyte potential"]
+            else:
+                phi_e_n = variables["Negative electrolyte potential"]
+                phi_e_n_s = pybamm.boundary_value(phi_e_n, "right")
             tor_s = variables["Separator porosity"]
             T = variables["Separator temperature"]
 
             chi_e_s = param.chi(c_e_s, T)
             kappa_s_eff = param.kappa_e(c_e_s, T) * tor_s
 
-            phi_e = pybamm.boundary_value(phi_e_n, "right") + pybamm.IndefiniteIntegral(
+            phi_e = phi_e_n_s + pybamm.IndefiniteIntegral(
                 (1 + param.Theta * T) * chi_e_s / c_e_s * pybamm.grad(c_e_s)
                 - param.C_e * i_boundary_cc / kappa_s_eff,
                 x_s,

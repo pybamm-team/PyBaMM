@@ -324,9 +324,9 @@ class ParameterValues:
                     filename = os.path.join(path, value[9:] + ".json")
                     function_name = value[9:]
                     filename = pybamm.get_parameters_filepath(filename)
-                    with open(filename, 'r') as jsonfile:
+                    with open(filename, "r") as jsonfile:
                         json_data = json.load(jsonfile)
-                    data = json_data['data']
+                    data = json_data["data"]
                     data[0] = [np.array(el) for el in data[0]]
                     data[1] = np.array(data[1])
                     self._dict_items[name] = (function_name, data)
@@ -495,13 +495,25 @@ class ParameterValues:
         ]
 
         # Process timescale
-        model.timescale = self.process_symbol(unprocessed_model.timescale)
+        new_timescale = self.process_symbol(unprocessed_model.timescale)
+        if isinstance(new_timescale, pybamm.Scalar):
+            model._timescale = new_timescale
+        else:
+            raise ValueError(
+                "model.timescale must be a Scalar after parameter processing "
+                "(cannot contain 'InputParameter's). "
+                "You have probably set one of the parameters used to calculate the "
+                "timescale to an InputParameter. To avoid this error, hardcode "
+                "model.timescale to a constant value by passing the option "
+                "{'timescale': value} to the model."
+            )
 
         # Process length scales
         new_length_scales = {}
         for domain, scale in unprocessed_model.length_scales.items():
-            new_length_scales[domain] = self.process_symbol(scale)
-        model.length_scales = new_length_scales
+            new_scale = self.process_symbol(scale)
+            new_length_scales[domain] = new_scale
+        model._length_scales = new_length_scales
 
         pybamm.logger.info("Finish setting parameters for {}".format(model.name))
 
@@ -539,14 +551,6 @@ class ParameterValues:
 
         return new_boundary_conditions
 
-    def update_model(self, model, disc):
-        raise NotImplementedError(
-            """
-            update_model functionality has been deprecated.
-            Use pybamm.InputParameter to quickly change a parameter value instead
-            """
-        )
-
     def process_geometry(self, geometry):
         """
         Assign parameter values to a geometry (inplace).
@@ -556,6 +560,17 @@ class ParameterValues:
         geometry : dict
             Geometry specs to assign parameter values to
         """
+
+        def process_and_check(sym):
+            if isinstance(sym, numbers.Number):
+                return pybamm.Scalar(sym)
+            new_sym = self.process_symbol(sym)
+            if not isinstance(new_sym, pybamm.Scalar):
+                raise ValueError(
+                    "Geometry parameters must be Scalars after parameter processing"
+                )
+            return new_sym
+
         for domain in geometry:
             for spatial_variable, spatial_limits in geometry[domain].items():
                 # process tab information if using 1 or 2D current collectors
@@ -564,15 +579,10 @@ class ParameterValues:
                         for position_size, sym in position_size.items():
                             geometry[domain]["tabs"][tab][
                                 position_size
-                            ] = self.process_symbol(sym)
+                            ] = process_and_check(sym)
                 else:
                     for lim, sym in spatial_limits.items():
-                        if isinstance(sym, pybamm.Symbol):
-                            geometry[domain][spatial_variable][
-                                lim
-                            ] = self.process_symbol(sym)
-                        elif isinstance(sym, numbers.Number):
-                            geometry[domain][spatial_variable][lim] = pybamm.Scalar(sym)
+                        geometry[domain][spatial_variable][lim] = process_and_check(sym)
 
     def process_symbol(self, symbol):
         """Walk through the symbol and replace any Parameter with a Value.
@@ -624,7 +634,7 @@ class ParameterValues:
                 ):
                     # Wrap with NotConstant to avoid simplification,
                     # which would stop symbolic diff from working properly
-                    new_child = pybamm.NotConstant(child.new_copy())
+                    new_child = pybamm.NotConstant(child)
                     new_children.append(self.process_symbol(new_child))
                 else:
                     new_children.append(self.process_symbol(child))
@@ -655,23 +665,26 @@ class ParameterValues:
                         self.parameter_events.append(
                             pybamm.Event(
                                 "Interpolant {} lower bound".format(name),
-                                pybamm.min(new_children[data_index] -
-                                           min(data[0][data_index])),
+                                pybamm.min(
+                                    new_children[data_index] - min(data[0][data_index])
+                                ),
                                 pybamm.EventType.INTERPOLANT_EXTRAPOLATION,
                             )
                         )
                         self.parameter_events.append(
                             pybamm.Event(
                                 "Interpolant {} upper bound".format(name),
-                                pybamm.min(max(data[0][data_index]) -
-                                           new_children[data_index]),
+                                pybamm.min(
+                                    max(data[0][data_index]) - new_children[data_index]
+                                ),
                                 pybamm.EventType.INTERPOLANT_EXTRAPOLATION,
                             )
                         )
 
                 else:  # pragma: no cover
-                    raise ValueError("Invalid function name length: {0}"
-                                     .format(len(function_name)))
+                    raise ValueError(
+                        "Invalid function name length: {0}".format(len(function_name))
+                    )
 
             elif isinstance(function_name, numbers.Number):
                 # Check not NaN (parameter in csv file but no value given)
@@ -753,15 +766,8 @@ class ParameterValues:
             return symbol._concatenation_new_copy(new_children)
 
         else:
-            # Backup option: return new copy of the object
-            try:
-                return symbol.new_copy()
-            except NotImplementedError:
-                raise NotImplementedError(
-                    "Cannot process parameters for symbol of type '{}'".format(
-                        type(symbol)
-                    )
-                )
+            # Backup option: return the object
+            return symbol
 
     def evaluate(self, symbol):
         """
@@ -942,8 +948,13 @@ class ParameterValues:
         """Look for parameter file in the different locations
         in PARAMETER_PATH
         """
+        # Check for absolute path
+        if os.path.isfile(path) and os.path.isabs(path):
+            pybamm.logger.verbose(f"Using absolute path: '{path}'")
+            return path
         for location in pybamm.PARAMETER_PATH:
             trial_path = os.path.join(location, path)
             if os.path.isfile(trial_path):
+                pybamm.logger.verbose(f"Using path: '{location}' + '{path}'")
                 return trial_path
         raise FileNotFoundError("Could not find parameter {}".format(path))

@@ -351,10 +351,14 @@ class ProcessedVariable(object):
             self.second_dimension = "x"
             self.R_sol = first_dim_pts
             self.x_sol = second_dim_pts
-        elif self.domain[0] in [
-            "negative particle size",
-            "positive particle size",
-        ] and self.auxiliary_domains["secondary"] == ["current collector"]:
+        elif (
+            self.domain[0]
+            in [
+                "negative particle size",
+                "positive particle size",
+            ]
+            and self.auxiliary_domains["secondary"] == ["current collector"]
+        ):
             self.first_dimension = "R"
             self.second_dimension = "z"
             self.R_sol = first_dim_pts
@@ -563,6 +567,7 @@ class ProcessedVariable(object):
             name: casadi.MX.sym(name, value.shape[0])
             for name, value in self.all_inputs[0].items()
         }
+
         p_casadi_stacked = casadi.vertcat(*[p for p in p_casadi.values()])
 
         # Convert variable to casadi format for differentiating

@@ -123,7 +123,7 @@ class BasicDFN(BaseModel):
         # right side. This is also accessible via `boundary_value(x, "right")`, with
         # "left" providing the boundary value of the left side
         c_s_surf_n = pybamm.surf(c_s_n)
-        j0_n = param.j0_n(c_e_n, c_s_surf_n, T) / param.C_r_n
+        j0_n = param.gamma_n * param.j0_n(c_e_n, c_s_surf_n, T) / param.C_r_n
         j_n = (
             2
             * j0_n
@@ -167,7 +167,11 @@ class BasicDFN(BaseModel):
         self.boundary_conditions[c_s_n] = {
             "left": (pybamm.Scalar(0), "Neumann"),
             "right": (
-                -param.C_n * j_n / param.a_R_n / param.D_n(c_s_surf_n, T),
+                -param.C_n
+                * j_n
+                / param.a_R_n
+                / param.gamma_n
+                / param.D_n(c_s_surf_n, T),
                 "Neumann",
             ),
         }

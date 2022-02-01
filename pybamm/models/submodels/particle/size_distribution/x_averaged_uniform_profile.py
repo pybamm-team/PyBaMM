@@ -122,6 +122,7 @@ class XAveragedUniformProfile(BaseSizeDistribution):
                 c_s_surf_xav_distribution: -3
                 * j_xav_distribution
                 / self.param.a_R_n
+                / self.param.gamma_n
                 / R
             }
 

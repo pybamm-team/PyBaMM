@@ -1043,18 +1043,14 @@ class Discretisation(object):
             # Return a new copy of the input parameter, but set the expected size
             # according to the domain of the input parameter
             expected_size = self._get_variable_size(symbol)
-            new_input_parameter = symbol.new_copy()
-            new_input_parameter.set_expected_size(expected_size)
+            new_input_parameter = pybamm.InputParameter(
+                symbol.name, symbol.domain, expected_size
+            )
             return new_input_parameter
 
         else:
-            # Backup option: return new copy of the object
-            try:
-                return symbol.new_copy()
-            except NotImplementedError:
-                raise NotImplementedError(
-                    "Cannot discretise symbol of type '{}'".format(type(symbol))
-                )
+            # Backup option: return the object
+            return symbol
 
     def concatenate(self, *symbols, sparse=False):
         if sparse:
