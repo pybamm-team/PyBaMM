@@ -70,3 +70,7 @@ class BaseUnitTestLithiumIonHalfCell:
     def test_well_posed_ec_reaction_limited_sei(self):
         options = {"SEI": "ec reaction limited"}
         self.check_well_posedness(options)
+
+    def test_well_posed_lumped_thermal(self):
+        options = {"thermal": "lumped"}
+        self.check_well_posedness(options)

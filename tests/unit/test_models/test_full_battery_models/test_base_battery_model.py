@@ -294,6 +294,26 @@ class TestBaseBatteryModel(unittest.TestCase):
         with self.assertRaisesRegex(pybamm.OptionError, "timescale"):
             pybamm.BaseBatteryModel({"timescale": "bad timescale"})
 
+        # thermal x-lumped
+        with self.assertRaisesRegex(pybamm.OptionError, "x-lumped"):
+            pybamm.lithium_ion.BaseModel(
+                {"cell geometry": "arbitrary", "thermal": "x-lumped"}
+            )
+
+        # thermal half-cell
+        with self.assertRaisesRegex(pybamm.OptionError, "X-full"):
+            pybamm.BaseBatteryModel(
+                {"thermal": "x-full", "working electrode": "positive"}
+            )
+        with self.assertRaisesRegex(pybamm.OptionError, "X-lumped"):
+            pybamm.BaseBatteryModel(
+                {
+                    "dimensionality": 2,
+                    "thermal": "x-lumped",
+                    "working electrode": "positive",
+                }
+            )
+
     def test_build_twice(self):
         model = pybamm.lithium_ion.SPM()  # need to pick a model to set vars and build
         with self.assertRaisesRegex(pybamm.ModelError, "Model already built"):
