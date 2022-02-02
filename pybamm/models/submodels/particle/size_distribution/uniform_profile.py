@@ -136,17 +136,12 @@ class UniformProfile(BaseSizeDistribution):
         ]
 
         if self.domain == "Negative":
-            # Broadcast x_n to particle size domain
-            x_n = pybamm.PrimaryBroadcast(
-                pybamm.standard_spatial_vars.x_n, "negative particle size"
+            c_init = pybamm.PrimaryBroadcast(
+                pybamm.r_average(self.param.c_n_init), "negative particle size"
             )
-            c_init = self.param.c_n_init(x_n)
-
         elif self.domain == "Positive":
-            # Broadcast x_p to particle size domain
-            x_p = pybamm.PrimaryBroadcast(
-                pybamm.standard_spatial_vars.x_p, "positive particle size"
+            c_init = pybamm.PrimaryBroadcast(
+                pybamm.r_average(self.param.c_p_init), "positive particle size"
             )
-            c_init = self.param.c_p_init(x_p)
 
         self.initial_conditions = {c_s_surf_distribution: c_init}

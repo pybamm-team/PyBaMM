@@ -177,7 +177,7 @@ class BaseModel(BaseInterface):
         n_outer_av = pybamm.x_average(L_outer)
 
         n_SEI = n_inner + n_outer / v_bar  # SEI concentration
-        n_SEI_av = pybamm.x_average(n_SEI)
+        n_SEI_av = pybamm.yz_average(pybamm.x_average(n_SEI))
         delta_n_SEI = n_SEI_av - (L_inner_0 + L_outer_0 / v_bar)
 
         # Q_sei in mol

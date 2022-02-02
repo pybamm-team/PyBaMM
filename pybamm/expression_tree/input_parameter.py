@@ -2,9 +2,7 @@
 # Parameter classes
 #
 import numbers
-
 import numpy as np
-
 import pybamm
 
 
@@ -26,7 +24,13 @@ class InputParameter(pybamm.Symbol):
         The size of the input parameter expected, defaults to 1 (scalar input)
     """
 
-    def __init__(self, name, domain=None, expected_size=1):
+    def __init__(self, name, domain=None, expected_size=None):
+        # Expected size defaults to 1 if no domain else None (gets set later)
+        if expected_size is None:
+            if domain is None:
+                expected_size = 1
+            else:
+                expected_size = None
         self._expected_size = expected_size
         super().__init__(name, domain=domain)
 
@@ -42,7 +46,9 @@ class InputParameter(pybamm.Symbol):
         Returns the scalar 'NaN' to represent the shape of a parameter.
         See :meth:`pybamm.Symbol.evaluate_for_shape()`
         """
-        if self._expected_size == 1:
+        if self._expected_size is None:
+            return pybamm.evaluate_for_shape_using_domain(self.domains)
+        elif self._expected_size == 1:
             return np.nan
         else:
             return np.nan * np.ones((self._expected_size, 1))

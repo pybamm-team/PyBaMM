@@ -1383,6 +1383,18 @@ class TestDiscretise(unittest.TestCase):
         ):
             disc.check_model(model)
 
+    def test_length_scale_errors(self):
+        disc = pybamm.Discretisation()
+        model = pybamm.BaseModel()
+        var = pybamm.Variable("var")
+        model.rhs = {var: pybamm.Scalar(1)}
+        model.initial_conditions = {var: pybamm.Scalar(1)}
+        model.length_scales = {"negative electrode": pybamm.Vector([1])}
+        disc.process_model(model)
+        self.assertEqual(
+            model.length_scales["negative electrode"].id, pybamm.Scalar(1).id
+        )
+
 
 if __name__ == "__main__":
     print("Add -v for more debug output")

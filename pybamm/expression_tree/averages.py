@@ -75,12 +75,7 @@ class RAverage(_BaseAverage):
 
 class SizeAverage(_BaseAverage):
     def __init__(self, child, f_a_dist):
-        R = pybamm.SpatialVariable(
-            "R",
-            domain=child.domain,
-            auxiliary_domains=child.auxiliary_domains,
-            coord_sys="cartesian",
-        )
+        R = pybamm.SpatialVariable("R", domains=child.domains, coord_sys="cartesian")
         integration_variable = [R]
         super().__init__(child, "size-average", integration_variable)
         self.f_a_dist = f_a_dist
@@ -134,22 +129,22 @@ def x_average(symbol):
             dom in ["negative electrode", "separator", "positive electrode"]
             for dom in symbol.secondary_domain
         ):
-            aux = {}
-            if "tertiary" in symbol.auxiliary_domains:
-                aux["secondary"] = symbol.auxiliary_domains["tertiary"]
-            return pybamm.FullBroadcast(symbol.orphans[0], symbol.broadcast_domain, aux)
-        elif (
-            isinstance(symbol, pybamm.FullBroadcast)
-            and "tertiary" in symbol.auxiliary_domains
-            and all(
-                dom in ["negative electrode", "separator", "positive electrode"]
-                for dom in symbol.tertiary_domain
-            )
+            domains = {
+                "primary": symbol.domains["primary"],
+                "secondary": symbol.domains["tertiary"],
+                "tertiary": symbol.domains["quaternary"],
+            }
+            return pybamm.FullBroadcast(symbol.orphans[0], broadcast_domains=domains)
+        elif isinstance(symbol, pybamm.FullBroadcast) and all(
+            dom in ["negative electrode", "separator", "positive electrode"]
+            for dom in symbol.tertiary_domain
         ):
-            aux = {"secondary": symbol.auxiliary_domains["secondary"]}
-            if "quaternary" in symbol.auxiliary_domains:
-                aux["tertiary"] = symbol.auxiliary_domains["quaternary"]
-            return pybamm.FullBroadcast(symbol.orphans[0], symbol.broadcast_domain, aux)
+            domains = {
+                "primary": symbol.domains["primary"],
+                "secondary": symbol.domains["secondary"],
+                "tertiary": symbol.domains["quaternary"],
+            }
+            return pybamm.FullBroadcast(symbol.orphans[0], broadcast_domains=domains)
         else:  # pragma: no cover
             # It should be impossible to get here
             raise NotImplementedError
@@ -174,14 +169,14 @@ def x_average(symbol):
         if out.domain != []:
             return out
         # Otherwise we may need to broadcast it
-        elif child.auxiliary_domains == {}:
+        elif child.domains["secondary"] == []:
             return out
         else:
-            domain = child.auxiliary_domains["secondary"]
-            if "tertiary" not in child.auxiliary_domains:
+            domain = child.domains["secondary"]
+            if child.domains["tertiary"] == []:
                 return pybamm.PrimaryBroadcast(out, domain)
             else:
-                auxiliary_domains = {"secondary": child.auxiliary_domains["tertiary"]}
+                auxiliary_domains = {"secondary": child.domains["tertiary"]}
                 return pybamm.FullBroadcast(out, domain, auxiliary_domains)
     # Otherwise, use Integral to calculate average value
     else:
@@ -218,7 +213,7 @@ def z_average(symbol):
         return symbol
     # If symbol is a Broadcast, its average value is its child
     elif isinstance(symbol, pybamm.Broadcast):
-        return symbol.orphans[0]
+        return symbol.reduce_one_dimension()
     # Otherwise, define a ZAverage
     else:
         return ZAverage(symbol)
@@ -251,10 +246,14 @@ def yz_average(symbol):
         return symbol
     # If symbol is a Broadcast, its average value is its child
     elif isinstance(symbol, pybamm.Broadcast):
-        return symbol.orphans[0]
+        return symbol.reduce_one_dimension()
     # Otherwise, define a YZAverage
     else:
         return YZAverage(symbol)
+
+
+def xyz_average(symbol):
+    return yz_average(x_average(symbol))
 
 
 def r_average(symbol):
@@ -276,11 +275,7 @@ def r_average(symbol):
         raise ValueError("Can't take the r-average of a symbol that evaluates on edges")
     # Otherwise, if symbol doesn't have a particle domain,
     # its r-averaged value is itself
-    elif symbol.domain not in [
-        ["positive particle"],
-        ["negative particle"],
-        ["working particle"],
-    ]:
+    elif symbol.domain not in [["positive particle"], ["negative particle"]]:
         return symbol
     # If symbol is a secondary broadcast onto "negative electrode" or
     # "positive electrode", take the r-average of the child then broadcast back
@@ -291,12 +286,10 @@ def r_average(symbol):
         child_av = pybamm.r_average(child)
         return pybamm.PrimaryBroadcast(child_av, symbol.domains["secondary"])
     # If symbol is a Broadcast onto a particle domain, its average value is its child
-    elif isinstance(symbol, pybamm.PrimaryBroadcast) and symbol.domain in [
-        ["positive particle"],
-        ["negative particle"],
-        ["working particle"],
-    ]:
-        return symbol.orphans[0]
+    elif isinstance(
+        symbol, (pybamm.PrimaryBroadcast, pybamm.FullBroadcast)
+    ) and symbol.domain in [["positive particle"], ["negative particle"]]:
+        return symbol.reduce_one_dimension()
     else:
         return RAverage(symbol)
 
@@ -345,10 +338,7 @@ def size_average(symbol, f_a_dist=None):
         if f_a_dist is None:
             geo = pybamm.geometric_parameters
             R = pybamm.SpatialVariable(
-                "R",
-                domain=symbol.domain,
-                auxiliary_domains=symbol.auxiliary_domains,
-                coord_sys="cartesian",
+                "R", domains=symbol.domains, coord_sys="cartesian"
             )
             if ["negative particle size"] in symbol.domains.values():
                 f_a_dist = geo.f_a_dist_n(R)

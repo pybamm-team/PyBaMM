@@ -187,14 +187,14 @@ class TestEvaluate(unittest.TestCase):
         for i in range(len(y)):
             y[i] = i
 
-        # concatenate them the "wrong" way round to check they get reordered correctly
-        expr = pybamm.DomainConcatenation([b, a], mesh)
+        # concatenate
+        expr = pybamm.DomainConcatenation([a, b], mesh)
 
         constant_symbols = OrderedDict()
         variable_symbols = OrderedDict()
         pybamm.find_symbols(expr, constant_symbols, variable_symbols)
-        self.assertEqual(list(variable_symbols.keys())[0], b.id)
-        self.assertEqual(list(variable_symbols.keys())[1], a.id)
+        self.assertEqual(list(variable_symbols.keys())[0], a.id)
+        self.assertEqual(list(variable_symbols.keys())[1], b.id)
         self.assertEqual(list(variable_symbols.keys())[2], expr.id)
 
         var_a = pybamm.id_to_python_variable(a.id)
@@ -243,7 +243,7 @@ class TestEvaluate(unittest.TestCase):
         self.assertEqual(len(constant_symbols), 0)
         self.assertEqual(
             list(variable_symbols.values())[2],
-            "np.concatenate(({},{},{}))".format(b0_str, a0_str, b1_str),
+            "np.concatenate(({},{},{}))".format(a0_str, b0_str, b1_str),
         )
 
         evaluator = pybamm.EvaluatorPython(expr)

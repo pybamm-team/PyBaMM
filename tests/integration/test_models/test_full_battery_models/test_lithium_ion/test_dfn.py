@@ -3,7 +3,6 @@
 #
 import pybamm
 import tests
-
 import numpy as np
 import unittest
 from tests import BaseIntegrationTestLithiumIon
