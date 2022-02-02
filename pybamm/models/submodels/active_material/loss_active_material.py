@@ -152,11 +152,9 @@ class LossActiveMaterial(BaseModel):
     def set_initial_conditions(self, variables):
 
         if self.domain == "Negative":
-            x_n = pybamm.standard_spatial_vars.x_n
-            eps_solid_init = self.param.epsilon_s_n(x_n)
+            eps_solid_init = self.param.epsilon_s_n
         elif self.domain == "Positive":
-            x_p = pybamm.standard_spatial_vars.x_p
-            eps_solid_init = self.param.epsilon_s_p(x_p)
+            eps_solid_init = self.param.epsilon_s_p
 
         if self.x_average is True:
             eps_solid_xav = variables[

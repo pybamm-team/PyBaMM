@@ -118,7 +118,7 @@ class ScikitFiniteElement(pybamm.SpatialMethod):
         grad = pybamm.Concatenation(
             grad_y, grad_z, check_domain=False, concat_fun=np.hstack
         )
-        grad.domain = domain
+        grad.copy_domains(symbol)
 
         return grad
 
@@ -326,9 +326,7 @@ class ScikitFiniteElement(pybamm.SpatialMethod):
             The finite element integral vector for the domain
         """
         # get primary domain mesh
-        domain = child.domains["primary"]
-        if isinstance(domain, list):
-            domain = domain[0]
+        domain = child.domain[0]
         mesh = self.mesh[domain]
 
         # make form for the integral
@@ -356,9 +354,7 @@ class ScikitFiniteElement(pybamm.SpatialMethod):
         See :meth:`pybamm.SpatialMethod.boundary_integral`
         """
         # Calculate integration vector
-        integration_vector = self.boundary_integral_vector(
-            child.domain[0], region=region
-        )
+        integration_vector = self.boundary_integral_vector(child.domain, region=region)
 
         out = integration_vector @ discretised_child
         out.clear_domains()
@@ -391,9 +387,7 @@ class ScikitFiniteElement(pybamm.SpatialMethod):
             The finite element integral vector for the domain
         """
         # get primary domain mesh
-        if isinstance(domain, list):
-            domain = domain[0]
-        mesh = self.mesh[domain]
+        mesh = self.mesh[domain[0]]
 
         # make form for the boundary integral
         @skfem.LinearForm
@@ -428,7 +422,7 @@ class ScikitFiniteElement(pybamm.SpatialMethod):
                 region = "negative tab"
             elif symbol.side == "positive tab":
                 region = "positive tab"
-            domain = symbol.children[0].domain[0]
+            domain = symbol.children[0].domain
             integration_vector = self.boundary_integral_vector(domain, region=region)
 
             # divide integration weights by (numerical) tab width to give average value
@@ -442,7 +436,7 @@ class ScikitFiniteElement(pybamm.SpatialMethod):
         # Return boundary value with domain given by symbol
         boundary_value = boundary_val_vector @ discretised_child
 
-        boundary_value.domain = symbol.domain
+        boundary_value.copy_domains(symbol)
 
         return boundary_value
 

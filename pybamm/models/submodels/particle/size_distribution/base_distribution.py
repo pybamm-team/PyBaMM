@@ -67,7 +67,7 @@ class BaseSizeDistribution(BaseParticle):
         sd_v = pybamm.x_average(sd_v)
 
         # X-averaged distributions, or broadcast
-        if R.auxiliary_domains["secondary"] == [self.domain.lower() + " electrode"]:
+        if R.domains["secondary"] == [self.domain.lower() + " electrode"]:
             f_a_dist_xav = pybamm.x_average(f_a_dist)
             f_v_dist_xav = pybamm.x_average(f_v_dist)
             f_num_dist_xav = pybamm.x_average(f_num_dist)
@@ -90,55 +90,63 @@ class BaseSizeDistribution(BaseParticle):
         variables = {
             self.domain + " particle sizes": R,
             self.domain + " particle sizes [m]": R * R_typ,
-            self.domain + " area-weighted particle-size"
-            + " distribution": f_a_dist,
-            self.domain + " area-weighted particle-size"
+            self.domain + " area-weighted particle-size" + " distribution": f_a_dist,
+            self.domain
+            + " area-weighted particle-size"
             + " distribution [m-1]": f_a_dist / R_typ,
-            self.domain + " volume-weighted particle-size"
-            + " distribution": f_v_dist,
-            self.domain + " volume-weighted particle-size"
+            self.domain + " volume-weighted particle-size" + " distribution": f_v_dist,
+            self.domain
+            + " volume-weighted particle-size"
             + " distribution [m-1]": f_v_dist / R_typ,
-            self.domain + " number-based particle-size"
-            + " distribution": f_num_dist,
-            self.domain + " number-based particle-size"
+            self.domain + " number-based particle-size" + " distribution": f_num_dist,
+            self.domain
+            + " number-based particle-size"
             + " distribution [m-1]": f_num_dist / R_typ,
-            self.domain + " area-weighted"
-            + " mean particle radius": R_a_mean,
-            self.domain + " area-weighted"
+            self.domain + " area-weighted" + " mean particle radius": R_a_mean,
+            self.domain
+            + " area-weighted"
             + " mean particle radius [m]": R_a_mean * R_typ,
-            self.domain + " volume-weighted"
-            + " mean particle radius": R_v_mean,
-            self.domain + " volume-weighted"
+            self.domain + " volume-weighted" + " mean particle radius": R_v_mean,
+            self.domain
+            + " volume-weighted"
             + " mean particle radius [m]": R_v_mean * R_typ,
-            self.domain + " number-based"
-            + " mean particle radius": R_num_mean,
-            self.domain + " number-based"
+            self.domain + " number-based" + " mean particle radius": R_num_mean,
+            self.domain
+            + " number-based"
             + " mean particle radius [m]": R_num_mean * R_typ,
-            self.domain + " area-weighted particle-size"
-            + " standard deviation": sd_a,
-            self.domain + " area-weighted particle-size"
+            self.domain + " area-weighted particle-size" + " standard deviation": sd_a,
+            self.domain
+            + " area-weighted particle-size"
             + " standard deviation [m]": sd_a * R_typ,
-            self.domain + " volume-weighted particle-size"
+            self.domain
+            + " volume-weighted particle-size"
             + " standard deviation": sd_v,
-            self.domain + " volume-weighted particle-size"
+            self.domain
+            + " volume-weighted particle-size"
             + " standard deviation [m]": sd_v * R_typ,
-            self.domain + " number-based particle-size"
-            + " standard deviation": sd_num,
-            self.domain + " number-based particle-size"
+            self.domain + " number-based particle-size" + " standard deviation": sd_num,
+            self.domain
+            + " number-based particle-size"
             + " standard deviation [m]": sd_num * R_typ,
             # X-averaged distributions
-            "X-averaged " + self.domain.lower() +
-            " area-weighted particle-size distribution": f_a_dist_xav,
-            "X-averaged " + self.domain.lower() +
-            " area-weighted particle-size distribution [m-1]": f_a_dist_xav / R_typ,
-            "X-averaged " + self.domain.lower() +
-            " volume-weighted particle-size distribution": f_v_dist_xav,
-            "X-averaged " + self.domain.lower() +
-            " volume-weighted particle-size distribution [m-1]": f_v_dist_xav / R_typ,
-            "X-averaged " + self.domain.lower() +
-            " number-based particle-size distribution": f_num_dist_xav,
-            "X-averaged " + self.domain.lower() +
-            " number-based particle-size distribution [m-1]": f_num_dist_xav / R_typ,
+            "X-averaged "
+            + self.domain.lower()
+            + " area-weighted particle-size distribution": f_a_dist_xav,
+            "X-averaged "
+            + self.domain.lower()
+            + " area-weighted particle-size distribution [m-1]": f_a_dist_xav / R_typ,
+            "X-averaged "
+            + self.domain.lower()
+            + " volume-weighted particle-size distribution": f_v_dist_xav,
+            "X-averaged "
+            + self.domain.lower()
+            + " volume-weighted particle-size distribution [m-1]": f_v_dist_xav / R_typ,
+            "X-averaged "
+            + self.domain.lower()
+            + " number-based particle-size distribution": f_num_dist_xav,
+            "X-averaged "
+            + self.domain.lower()
+            + " number-based particle-size distribution [m-1]": f_num_dist_xav / R_typ,
         }
 
         return variables
@@ -154,11 +162,9 @@ class BaseSizeDistribution(BaseParticle):
             c_scale = self.param.c_p_max
 
         # Broadcast and x-average when necessary
-        if c_s.domain == [
-            self.domain.lower() + " particle size"
-        ] and c_s.auxiliary_domains["secondary"] != [
-            self.domain.lower() + " electrode"
-        ]:
+        if c_s.domain == [self.domain.lower() + " particle size"] and c_s.domains[
+            "secondary"
+        ] != [self.domain.lower() + " electrode"]:
             # X-avg concentration distribution
             c_s_xav_distribution = pybamm.PrimaryBroadcast(
                 c_s, [self.domain.lower() + " particle"]
@@ -175,7 +181,7 @@ class BaseSizeDistribution(BaseParticle):
                 c_s_surf_distribution, [self.domain.lower() + " particle"]
             )
         elif c_s.domain == [self.domain.lower() + " particle"] and (
-            c_s.auxiliary_domains["tertiary"] != [self.domain.lower() + " electrode"]
+            c_s.domains["tertiary"] != [self.domain.lower() + " electrode"]
         ):
             # X-avg concentration distribution
             c_s_xav_distribution = c_s
@@ -190,11 +196,9 @@ class BaseSizeDistribution(BaseParticle):
             c_s_distribution = pybamm.TertiaryBroadcast(
                 c_s_xav_distribution, [self.domain.lower() + " electrode"]
             )
-        elif c_s.domain == [
-            self.domain.lower() + " particle size"
-        ] and c_s.auxiliary_domains["secondary"] == [
-            self.domain.lower() + " electrode"
-        ]:
+        elif c_s.domain == [self.domain.lower() + " particle size"] and c_s.domains[
+            "secondary"
+        ] == [self.domain.lower() + " electrode"]:
             # Surface concentration distribution variables
             c_s_surf_distribution = c_s
             c_s_surf_xav_distribution = pybamm.x_average(c_s)
@@ -218,7 +222,7 @@ class BaseSizeDistribution(BaseParticle):
                 [self.domain.lower() + " particle"],
                 {
                     "secondary": self.domain.lower() + " particle size",
-                    "tertiary": "current collector"
+                    "tertiary": "current collector",
                 },
             )
 
@@ -227,8 +231,7 @@ class BaseSizeDistribution(BaseParticle):
             c_s_surf_xav_distribution = pybamm.x_average(c_s_surf_distribution)
 
         variables = {
-            self.domain
-            + " particle concentration distribution": c_s_distribution,
+            self.domain + " particle concentration distribution": c_s_distribution,
             self.domain
             + " particle concentration distribution "
             + "[mol.m-3]": c_scale * c_s_distribution,
@@ -262,7 +265,7 @@ class BaseSizeDistribution(BaseParticle):
         the flux variable N_s from the distribution submodel.
         """
 
-        if [self.domain.lower() + " electrode"] in N_s.auxiliary_domains.values():
+        if [self.domain.lower() + " electrode"] in N_s.domains.values():
             # N_s depends on x
 
             N_s_distribution = N_s
@@ -273,7 +276,7 @@ class BaseSizeDistribution(BaseParticle):
                 [self.domain.lower() + " particle"],
                 {
                     "secondary": self.domain.lower() + " particle size",
-                    "tertiary": "current collector"
+                    "tertiary": "current collector",
                 },
             )
         elif isinstance(N_s, pybamm.Scalar):
@@ -306,9 +309,7 @@ class BaseSizeDistribution(BaseParticle):
             "X-averaged "
             + self.domain.lower()
             + " particle flux distribution": N_s_xav_distribution,
-            self.domain
-            + " particle flux distribution": N_s_distribution,
+            self.domain + " particle flux distribution": N_s_distribution,
         }
 
         return variables
-
