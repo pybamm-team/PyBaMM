@@ -143,8 +143,8 @@ class TestFunction(unittest.TestCase):
         # Test Arctan
         self.assertEqual(pybamm.Arctan(a).to_equation(), sympy.atan(a))
 
-        # Test Exponential
-        self.assertEqual(pybamm.Exponential(a).to_equation(), sympy.exp(a))
+        # Test Exp
+        self.assertEqual(pybamm.Exp(a).to_equation(), sympy.exp(a))
 
         # Test log
         self.assertEqual(pybamm.Log(54.0).to_equation(), sympy.log(54.0))
@@ -243,7 +243,7 @@ class TestSpecificFunctions(unittest.TestCase):
     def test_exp(self):
         a = pybamm.InputParameter("a")
         fun = pybamm.exp(a)
-        self.assertIsInstance(fun, pybamm.Exponential)
+        self.assertIsInstance(fun, pybamm.Exp)
         self.assertEqual(fun.children[0].id, a.id)
         self.assertEqual(fun.evaluate(inputs={"a": 3}), np.exp(3))
         h = 0.0000001

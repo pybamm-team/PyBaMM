@@ -534,6 +534,8 @@ def get_julia_function(
     # calculate the final variable that will output the result
     if symbol.is_constant():
         result_var = id_to_julia_variable(symbol.id, "const")
+        if result_var in shorter_const_names:
+            result_var = shorter_const_names[result_var]
         result_value = symbol.evaluate()
         if isinstance(result_value, numbers.Number):
             var_str = var_str + "\n   dy .= " + str(result_value) + "\n"
