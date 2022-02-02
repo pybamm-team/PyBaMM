@@ -27,7 +27,7 @@ class BaseThermal(pybamm.BaseSubModel):
         """
         Note: here we explicitly pass in the averages for the temperature as computing
         the average temperature in `BaseThermal` using `self._x_average` requires a
-        messy hack to avoid raising a `ModelError` (as the key in the equation
+        workaround to avoid raising a `ModelError` (as the key in the equation
         dict gets modified).
 
         For more information about this method in general,

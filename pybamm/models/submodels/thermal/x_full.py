@@ -13,7 +13,7 @@ class OneDimensionalX(BaseThermal):
     in the current collectors, so that the contribution to the Ohmic heating
     from the current collectors is zero and the boundary conditions are applied
     at the edges of the electrodes (at x=0 and x=1, in non-dimensional coordinates).
-    For more information see [1]_.
+    For more information see [1]_ and [2]_.
 
     Parameters
     ----------
