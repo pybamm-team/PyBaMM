@@ -3,6 +3,7 @@
 
 ## Features
 
+-   Added new models for power control and resistance control ([#1917](https://github.com/pybamm-team/PyBaMM/pull/1917))
 -   Initial concentrations can now be provided as a function of `r` as well as `x` ([#1866](https://github.com/pybamm-team/PyBaMM/pull/1866))
 
 ## Breaking changes
