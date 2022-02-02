@@ -26,16 +26,11 @@ class NoPlating(BasePlating):
             pybamm.Scalar(0), "negative electrode", "current collector"
         )
         variables = self._get_standard_concentration_variables(zero)
+        variables.update(self._get_standard_overpotential_variables(zero))
         variables.update(self._get_standard_reaction_variables(zero))
         return variables
 
     def get_coupled_variables(self, variables):
-        zero = pybamm.FullBroadcast(
-            pybamm.Scalar(0), "negative electrode", "current collector"
-        )
-        variables.update(self._get_standard_overpotential_variables(zero))
-        variables.update(self._get_standard_reaction_variables(zero))
-
         # Update whole cell variables, which also updates the "sum of" variables
         variables.update(super().get_coupled_variables(variables))
 

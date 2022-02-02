@@ -110,7 +110,7 @@ class BaseInterface(pybamm.BaseSubModel):
             c_s_surf = pybamm.maximum(tol, pybamm.minimum(c_s_surf, 1 - tol))
 
             if self.domain == "Negative":
-                j0 = param.j0_n(c_e, c_s_surf, T) / param.C_r_n
+                j0 = param.gamma_n * param.j0_n(c_e, c_s_surf, T) / param.C_r_n
             elif self.domain == "Positive":
                 j0 = param.gamma_p * param.j0_p(c_e, c_s_surf, T) / param.C_r_p
 

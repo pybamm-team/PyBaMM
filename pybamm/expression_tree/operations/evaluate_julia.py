@@ -782,18 +782,9 @@ def get_julia_mtk_model(model, geometry=None, tspan=None):
                 variable_id_to_print_name[child.id] = print_name
 
     # Extract domain and auxiliary domains
-    all_domains = set([tuple(var.domain) for var in variables if var.domain != []])
-    for aux_dim in ["secondary", "tertiary"]:
-        all_domains.update(
-            set(
-                [
-                    tuple(var.auxiliary_domains[aux_dim])
-                    for var in variables
-                    if aux_dim in var.auxiliary_domains
-                    and var.auxiliary_domains[aux_dim] != []
-                ]
-            )
-        )
+    all_domains = set(
+        [tuple(dom) for var in variables for dom in var.domains.values() if dom != []]
+    )
     is_pde = bool(all_domains)
 
     # Check geometry and tspan have been provided if a PDE
@@ -808,7 +799,7 @@ def get_julia_mtk_model(model, geometry=None, tspan=None):
     long_domain_symbol_to_short = {}
     for dom in all_domains:
         # Read domain name from geometry
-        domain_symbol = list(geometry[dom[0]].keys())[0]
+        domain_symbol = list(geometry[dom[0]].keys())[0].name
         if len(dom) > 1:
             domain_symbol = domain_symbol[0]
             # For multi-domain variables keep only the first letter of the domain
@@ -822,7 +813,7 @@ def get_julia_mtk_model(model, geometry=None, tspan=None):
             domain_name_to_symbol[tuple(dom)] = domain_symbol
 
     # Read domain limits
-    domain_name_to_limits = {}
+    domain_name_to_limits = {(): None}
     for dom in all_domains:
         limits = list(geometry[dom[0]].values())[0].values()
         if len(limits) > 1:
@@ -857,8 +848,8 @@ def get_julia_mtk_model(model, geometry=None, tspan=None):
                     var_to_ind_vars[child.id] = f"(t, {domain_symbols})"
             aux_domain_symbols = ", ".join(
                 domain_name_to_symbol[tuple(dom)]
-                for dom in var.auxiliary_domains.values()
-                if domain_name_to_limits[tuple(dom)] is not None
+                for level, dom in var.domains.items()
+                if level != "primary" and domain_name_to_limits[tuple(dom)] is not None
             )
             if aux_domain_symbols != "":
                 aux_domain_symbols = ", " + aux_domain_symbols

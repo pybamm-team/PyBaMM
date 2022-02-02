@@ -4,6 +4,7 @@
 # The code in this file is adapted from Pints
 # (see https://github.com/pints-team/pints)
 #
+import argparse
 import importlib.util
 import numbers
 import os
@@ -17,8 +18,13 @@ from collections import defaultdict
 from platform import system
 
 import numpy as np
+import pkg_resources
 
 import pybamm
+
+# versions of jax and jaxlib compatible with PyBaMM
+JAX_VERSION = "0.2.12"
+JAXLIB_VERSION = "0.1.70"
 
 
 def root_dir():
@@ -278,10 +284,24 @@ def load_function(filename):
     # Assign path to _ and filename to tail
     _, tail = os.path.split(filename)
 
+    # Store the current working directory
+    orig_dir = os.getcwd()
+
     # Strip absolute path to pybamm/input/example.py
     if "pybamm" in filename:
         root_path = filename[filename.rfind("pybamm") :]
+    # If the function is in the current working directory
     elif os.getcwd() in filename:
+        root_path = filename.replace(os.getcwd(), "")
+        # getcwd() returns "C:\\" when in the root drive and "C:\\a\\b\\c" otherwise
+        if root_path[0] == "\\" or root_path[0] == "/":
+            root_path = root_path[1:]
+    # If the function is not in the current working directory and the path provided is
+    # absolute
+    elif os.path.isabs(filename) and not os.getcwd() in filename:  # pragma: no cover
+        # Change directory to import the function
+        dir_path = os.path.split(filename)[0]
+        os.chdir(dir_path)
         root_path = filename.replace(os.getcwd(), "")
         root_path = root_path[1:]
     else:
@@ -289,8 +309,13 @@ def load_function(filename):
 
     path = root_path.replace("/", ".")
     path = path.replace("\\", ".")
+    pybamm.logger.debug(
+        f"Importing function '{tail}' from file '{filename}' via path '{path}'"
+    )
     module_object = importlib.import_module(path)
 
+    # Revert back current working directory if it was changed
+    os.chdir(orig_dir)
     return getattr(module_object, tail)
 
 
@@ -358,20 +383,66 @@ def have_julia():
 
 
 def have_jax():
-    """Check if jax and jaxlib are installed"""
-    return (importlib.util.find_spec("jax") is not None) and (
-        importlib.util.find_spec("jaxlib") is not None
+    """Check if jax and jaxlib are installed with the correct versions"""
+    return (
+        (importlib.util.find_spec("jax") is not None)
+        and (importlib.util.find_spec("jaxlib") is not None)
+        and is_jax_compatible()
     )
 
 
-def install_jax():
-    """Install jax, jaxlib"""
-    jax_version = "jax==0.2.12"
-    jaxlib_version = "jaxlib==0.1.70"
+def is_jax_compatible():
+    """Check if the available version of jax and jaxlib are compatible with PyBaMM"""
+    return (
+        pkg_resources.get_distribution("jax").version == JAX_VERSION
+        and pkg_resources.get_distribution("jaxlib").version == JAXLIB_VERSION
+    )
+
+
+def install_jax(arguments=None):  # pragma: no cover
+    """
+    Install compatible versions of jax, jaxlib.
+
+    Command Line Interface:
+    -----------------------
+    >>> pybamm_install_jax
+
+    optional arguments:
+    -h, --help   show help message
+    -f, --force  force install compatible versions of jax and jaxlib
+    """
+    parser = argparse.ArgumentParser(description="Install jax and jaxlib")
+    parser.add_argument(
+        "-f",
+        "--force",
+        action="store_true",
+        help="force install compatible versions of"
+        f" jax ({JAX_VERSION}) and jaxlib ({JAXLIB_VERSION})",
+    )
+
+    args = parser.parse_args(arguments)
 
     if system() == "Windows":
         raise NotImplementedError("Jax is not available on Windows")
-    else:
-        subprocess.check_call(
-            [sys.executable, "-m", "pip", "install", jax_version, jaxlib_version]
-        )
+
+    # Raise an error if jax and jaxlib are already installed, but incompatible
+    # and --force is not set
+    elif importlib.util.find_spec("jax") is not None:
+        if not args.force and not is_jax_compatible():
+            raise ValueError(
+                "Jax is already installed but the installed version of jax or jaxlib is"
+                " not supported by PyBaMM. \nYou can force install compatible versions"
+                f" of jax ({JAX_VERSION}) and jaxlib ({JAXLIB_VERSION}) using the"
+                " following command: \npybamm_install_jax --force"
+            )
+
+    subprocess.check_call(
+        [
+            sys.executable,
+            "-m",
+            "pip",
+            "install",
+            f"jax=={JAX_VERSION}",
+            f"jaxlib=={JAXLIB_VERSION}",
+        ]
+    )

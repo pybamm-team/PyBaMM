@@ -20,11 +20,11 @@ class BaseModel(pybamm.BaseBatteryModel):
         # Assess whether the submodel is a half-cell model
         self.half_cell = self.options["working electrode"] != "both"
 
-        # Default timescale is discharge timescale
-        self.timescale = self.param.tau_discharge
+        # Default timescale
+        self._timescale = self.param.timescale
 
         # Set default length scales
-        self.length_scales = {
+        self._length_scales = {
             "negative electrode": self.param.L_x,
             "separator": self.param.L_x,
             "positive electrode": self.param.L_x,
@@ -225,21 +225,15 @@ class BaseModel(pybamm.BaseBatteryModel):
         )
 
     def set_crack_submodel(self):
-        # this option can either be a string (both sides the same) or a 2-tuple
-        # to indicate different options in negative and positive electrodes
-        if isinstance(self.options["particle mechanics"], str):
-            crack_left = self.options["particle mechanics"]
-            crack_right = self.options["particle mechanics"]
-        else:
-            crack_left, crack_right = self.options["particle mechanics"]
-        for crack_side, domain in [[crack_left, "Negative"], [crack_right, "Positive"]]:
-            if crack_side == "none":
+        for domain in ["Negative", "Positive"]:
+            crack = getattr(self.options, domain.lower())["particle mechanics"]
+            if crack == "none":
                 pass
-            elif crack_side == "swelling only":
+            elif crack == "swelling only":
                 self.submodels[
                     domain.lower() + " particle mechanics"
                 ] = pybamm.particle_mechanics.SwellingOnly(self.param, domain)
-            elif crack_side == "swelling and cracking":
+            elif crack == "swelling and cracking":
                 self.submodels[
                     domain.lower() + " particle mechanics"
                 ] = pybamm.particle_mechanics.CrackPropagation(
@@ -247,28 +241,16 @@ class BaseModel(pybamm.BaseBatteryModel):
                 )
 
     def set_active_material_submodel(self):
-        # this option can either be a string (both sides the same) or a 2-tuple
-        # to indicate different options in negative and positive electrodes
-        if isinstance(self.options["loss of active material"], str):
-            lam_left = self.options["loss of active material"]
-            lam_right = self.options["loss of active material"]
-        else:
-            lam_left, lam_right = self.options["loss of active material"]
-        for lam_side, domain in [[lam_left, "Negative"], [lam_right, "Positive"]]:
-            if lam_side == "none":
+        for domain in ["Negative", "Positive"]:
+            lam = getattr(self.options, domain.lower())["loss of active material"]
+            if lam == "none":
                 self.submodels[
                     domain.lower() + " active material"
                 ] = pybamm.active_material.Constant(self.param, domain, self.options)
-            elif lam_side == "stress-driven":
+            else:
                 self.submodels[
                     domain.lower() + " active material"
-                ] = pybamm.active_material.StressDriven(
-                    self.param, domain, self.options, self.x_average
-                )
-            elif lam_side == "reaction-driven":
-                self.submodels[
-                    domain.lower() + " active material"
-                ] = pybamm.active_material.ReactionDriven(
+                ] = pybamm.active_material.LossActiveMaterial(
                     self.param, domain, self.options, self.x_average
                 )
 
@@ -312,7 +294,8 @@ class BaseModel(pybamm.BaseBatteryModel):
             self.submodels[
                 "counter electrode potential"
             ] = pybamm.electrode.ohm.LithiumMetalSurfaceForm(self.param, self.options)
-            self.submodels["counter electrode interface"] = self.intercalation_kinetics(
+            neg_intercalation_kinetics = self.get_intercalation_kinetics("Negative")
+            self.submodels["counter electrode interface"] = neg_intercalation_kinetics(
                 self.param, "Negative", "lithium metal plating", self.options
             )
 

@@ -6,9 +6,8 @@ import pybamm
 from .base_active_material import BaseModel
 
 
-class StressDriven(BaseModel):
-    """Submodel for varying active material volume fraction, driven by stress, from
-    [1]_ and [2]_.
+class LossActiveMaterial(BaseModel):
+    """Submodel for varying active material volume fraction from [1]_ and [2]_.
 
     Parameters
     ----------
@@ -56,42 +55,76 @@ class StressDriven(BaseModel):
         return variables
 
     def get_coupled_variables(self, variables):
-        # obtain the rate of loss of active materials (LAM) by stress
-        # This is loss of active material model by mechanical effects
-        if self.x_average is True:
-            stress_t_surf = variables[
-                "X-averaged "
-                + self.domain.lower()
-                + " particle surface tangential stress"
-            ]
-            stress_r_surf = variables[
-                "X-averaged " + self.domain.lower() + " particle surface radial stress"
-            ]
-        else:
-            stress_t_surf = variables[
-                self.domain + " particle surface tangential stress"
-            ]
-            stress_r_surf = variables[self.domain + " particle surface radial stress"]
+        deps_solid_dt = 0
+        lam_option = getattr(self.options, self.domain.lower())[
+            "loss of active material"
+        ]
+        if "stress" in lam_option:
+            # obtain the rate of loss of active materials (LAM) by stress
+            # This is loss of active material model by mechanical effects
+            if self.x_average is True:
+                stress_t_surf = variables[
+                    "X-averaged "
+                    + self.domain.lower()
+                    + " particle surface tangential stress"
+                ]
+                stress_r_surf = variables[
+                    "X-averaged "
+                    + self.domain.lower()
+                    + " particle surface radial stress"
+                ]
+            else:
+                stress_t_surf = variables[
+                    self.domain + " particle surface tangential stress"
+                ]
+                stress_r_surf = variables[
+                    self.domain + " particle surface radial stress"
+                ]
 
-        if self.domain == "Negative":
-            beta_LAM = self.param.beta_LAM_n
-            stress_critical = self.param.stress_critical_n
-            m_LAM = self.param.m_LAM_n
-        else:
-            beta_LAM = self.param.beta_LAM_p
-            stress_critical = self.param.stress_critical_p
-            m_LAM = self.param.m_LAM_p
+            if self.domain == "Negative":
+                beta_LAM = self.param.beta_LAM_n
+                stress_critical = self.param.stress_critical_n
+                m_LAM = self.param.m_LAM_n
+            else:
+                beta_LAM = self.param.beta_LAM_p
+                stress_critical = self.param.stress_critical_p
+                m_LAM = self.param.m_LAM_p
 
-        stress_h_surf = (stress_r_surf + 2 * stress_t_surf) / 3
-        # compressive stress make no contribution
-        stress_h_surf *= stress_h_surf > 0
-        # assuming the minimum hydrostatic stress is zero for full cycles
-        stress_h_surf_min = stress_h_surf * 0
-        j_stress_LAM = (
-            -beta_LAM * ((stress_h_surf - stress_h_surf_min) / stress_critical) ** m_LAM
-        )
+            stress_h_surf = (stress_r_surf + 2 * stress_t_surf) / 3
+            # compressive stress make no contribution
+            stress_h_surf *= stress_h_surf > 0
+            # assuming the minimum hydrostatic stress is zero for full cycles
+            stress_h_surf_min = stress_h_surf * 0
+            j_stress_LAM = (
+                -beta_LAM
+                * ((stress_h_surf - stress_h_surf_min) / stress_critical) ** m_LAM
+            )
+            deps_solid_dt += j_stress_LAM
 
-        deps_solid_dt = j_stress_LAM
+        if "reaction" in lam_option:
+            if self.x_average is True:
+                a = variables[
+                    "X-averaged "
+                    + self.domain.lower()
+                    + " electrode surface area to volume ratio"
+                ]
+            else:
+                a = variables[self.domain + " electrode surface area to volume ratio"]
+
+            if self.domain == "Negative":
+                beta_LAM_sei = self.param.beta_LAM_sei_n
+                if self.x_average is True:
+                    j_sei = variables["X-averaged SEI interfacial current density"]
+                else:
+                    j_sei = variables["SEI interfacial current density"]
+            else:
+                # No SEI in the positive electrode so no reaction-driven LAM
+                # until other reactions are implemented
+                beta_LAM_sei = self.param.beta_LAM_sei_p
+                j_sei = 0
+
+            j_stress_reaction = beta_LAM_sei * a * j_sei
+            deps_solid_dt += j_stress_reaction
         variables.update(
             self._get_standard_active_material_change_variables(deps_solid_dt)
         )
@@ -119,11 +152,9 @@ class StressDriven(BaseModel):
     def set_initial_conditions(self, variables):
 
         if self.domain == "Negative":
-            x_n = pybamm.standard_spatial_vars.x_n
-            eps_solid_init = self.param.epsilon_s_n(x_n)
+            eps_solid_init = self.param.epsilon_s_n
         elif self.domain == "Positive":
-            x_p = pybamm.standard_spatial_vars.x_p
-            eps_solid_init = self.param.epsilon_s_p(x_p)
+            eps_solid_init = self.param.epsilon_s_p
 
         if self.x_average is True:
             eps_solid_xav = variables[

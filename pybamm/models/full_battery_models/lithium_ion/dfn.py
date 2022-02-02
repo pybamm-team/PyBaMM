@@ -71,27 +71,17 @@ class DFN(BaseModel):
         ] = pybamm.convection.through_cell.NoConvection(self.param, self.options)
 
     def set_intercalation_kinetics_submodel(self):
-
-        self.submodels["negative interface"] = self.intercalation_kinetics(
-            self.param, "Negative", "lithium-ion main", self.options
-        )
-        self.submodels["positive interface"] = self.intercalation_kinetics(
-            self.param, "Positive", "lithium-ion main", self.options
-        )
+        for domain in ["Negative", "Positive"]:
+            intercalation_kinetics = self.get_intercalation_kinetics(domain)
+            self.submodels[domain.lower() + " interface"] = intercalation_kinetics(
+                self.param, domain, "lithium-ion main", self.options
+            )
 
     def set_particle_submodel(self):
-
-        if isinstance(self.options["particle"], str):
-            particle_left = self.options["particle"]
-            particle_right = self.options["particle"]
-        else:
-            particle_left, particle_right = self.options["particle"]
-        for particle_side, domain in [
-            [particle_left, "Negative"],
-            [particle_right, "Positive"],
-        ]:
+        for domain in ["Negative", "Positive"]:
+            particle = getattr(self.options, domain.lower())["particle"]
             if self.options["particle size"] == "single":
-                if particle_side == "Fickian diffusion":
+                if particle == "Fickian diffusion":
                     self.submodels[
                         domain.lower() + " particle"
                     ] = pybamm.particle.no_distribution.FickianDiffusion(
@@ -99,7 +89,7 @@ class DFN(BaseModel):
                         domain,
                         self.options,
                     )
-                elif particle_side in [
+                elif particle in [
                     "uniform profile",
                     "quadratic profile",
                     "quartic profile",
@@ -107,19 +97,16 @@ class DFN(BaseModel):
                     self.submodels[
                         domain.lower() + " particle"
                     ] = pybamm.particle.no_distribution.PolynomialProfile(
-                        self.param,
-                        domain,
-                        particle_side,
-                        self.options,
+                        self.param, domain, particle, self.options
                     )
             elif self.options["particle size"] == "distribution":
-                if particle_side == "Fickian diffusion":
+                if particle == "Fickian diffusion":
                     self.submodels[
                         domain.lower() + " particle"
                     ] = pybamm.particle.size_distribution.FickianDiffusion(
                         self.param, domain
                     )
-                elif particle_side == "uniform profile":
+                elif particle == "uniform profile":
                     self.submodels[
                         domain.lower() + " particle"
                     ] = pybamm.particle.size_distribution.UniformProfile(
@@ -133,8 +120,12 @@ class DFN(BaseModel):
             submod_n = pybamm.electrode.ohm.Full(self.param, "Negative", self.options)
             submod_p = pybamm.electrode.ohm.Full(self.param, "Positive", self.options)
         else:
-            submod_n = pybamm.electrode.ohm.SurfaceForm(self.param, "Negative")
-            submod_p = pybamm.electrode.ohm.SurfaceForm(self.param, "Positive")
+            submod_n = pybamm.electrode.ohm.SurfaceForm(
+                self.param, "Negative", self.options
+            )
+            submod_p = pybamm.electrode.ohm.SurfaceForm(
+                self.param, "Positive", self.options
+            )
 
         self.submodels["negative electrode potential"] = submod_n
         self.submodels["positive electrode potential"] = submod_p

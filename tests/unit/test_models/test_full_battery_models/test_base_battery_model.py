@@ -24,7 +24,7 @@ PRINT_OPTIONS_OUTPUT = """\
 'interface utilisation': 'full' (possible: ['full', 'constant', 'current-driven'])
 'lithium plating': 'none' (possible: ['none', 'reversible', 'irreversible'])
 'lithium plating porosity change': 'false' (possible: ['false', 'true'])
-'loss of active material': 'stress-driven' (possible: ['none', 'stress-driven', 'reaction-driven'])
+'loss of active material': 'stress-driven' (possible: ['none', 'stress-driven', 'reaction-driven', 'stress and reaction-driven'])
 'operating mode': 'current' (possible: ['current', 'voltage', 'power', 'CCCV'])
 'particle': 'Fickian diffusion' (possible: ['Fickian diffusion', 'fast diffusion', 'uniform profile', 'quadratic profile', 'quartic profile'])
 'particle mechanics': 'swelling only' (possible: ['none', 'swelling only', 'swelling and cracking'])
@@ -33,12 +33,13 @@ PRINT_OPTIONS_OUTPUT = """\
 'SEI': 'none' (possible: ['none', 'constant', 'reaction limited', 'solvent-diffusion limited', 'electron-migration limited', 'interstitial-diffusion limited', 'ec reaction limited'])
 'SEI film resistance': 'none' (possible: ['none', 'distributed', 'average'])
 'SEI porosity change': 'false' (possible: ['false', 'true'])
-'stress-induced diffusion': 'false' (possible: ['false', 'true'])
+'stress-induced diffusion': 'true' (possible: ['false', 'true'])
 'surface form': 'differential' (possible: ['false', 'differential', 'algebraic'])
 'thermal': 'x-full' (possible: ['isothermal', 'lumped', 'x-lumped', 'x-full'])
 'total interfacial current density as a state': 'false' (possible: ['false', 'true'])
 'working electrode': 'both' (possible: ['both', 'negative', 'positive'])
 'external submodels': []
+'timescale': 'default'
 """  # noqa: E501
 
 
@@ -85,6 +86,13 @@ class TestBaseBatteryModel(unittest.TestCase):
         self.assertEqual(model.summary_variables, ["var"])
         with self.assertRaisesRegex(KeyError, "No cycling variable defined"):
             model.summary_variables = ["bad var"]
+
+    def test_timescale_lengthscale_errors(self):
+        model = pybamm.BaseBatteryModel()
+        with self.assertRaisesRegex(NotImplementedError, "Timescale cannot be"):
+            model.timescale = 1
+        with self.assertRaisesRegex(NotImplementedError, "Length scales cannot be"):
+            model.length_scales = {}
 
     def test_default_geometry(self):
 
@@ -250,6 +258,10 @@ class TestBaseBatteryModel(unittest.TestCase):
                     )
                 }
             )
+        # check default options change
+        model = pybamm.BaseBatteryModel({"loss of active material": "stress-driven"})
+        self.assertEqual(model.options["particle mechanics"], "swelling only")
+        self.assertEqual(model.options["stress-induced diffusion"], "true")
 
         # crack model
         with self.assertRaisesRegex(pybamm.OptionError, "particle mechanics"):
@@ -277,6 +289,10 @@ class TestBaseBatteryModel(unittest.TestCase):
         # hydrolysis
         with self.assertRaisesRegex(pybamm.OptionError, "surface formulation"):
             pybamm.lead_acid.LOQS({"hydrolysis": "true", "surface form": "false"})
+
+        # timescale
+        with self.assertRaisesRegex(pybamm.OptionError, "timescale"):
+            pybamm.BaseBatteryModel({"timescale": "bad timescale"})
 
     def test_build_twice(self):
         model = pybamm.lithium_ion.SPM()  # need to pick a model to set vars and build
@@ -317,6 +333,16 @@ class TestOptions(unittest.TestCase):
             BatteryModelOptions(OPTIONS_DICT).print_options()
             output = buffer.getvalue()
         self.assertEqual(output, PRINT_OPTIONS_OUTPUT)
+
+    def test_domain_options(self):
+        options = BatteryModelOptions(
+            {"particle": ("Fickian diffusion", "quadratic profile")}
+        )
+        self.assertEqual(options.negative["particle"], "Fickian diffusion")
+        self.assertEqual(options.positive["particle"], "quadratic profile")
+        # something that is the same in both domains
+        self.assertEqual(options.negative["thermal"], "isothermal")
+        self.assertEqual(options.positive["thermal"], "isothermal")
 
 
 if __name__ == "__main__":

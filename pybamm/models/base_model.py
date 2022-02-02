@@ -119,8 +119,8 @@ class BaseModel:
         self.y_slices = None
 
         # Default timescale is 1 second
-        self.timescale = pybamm.Scalar(1)
-        self.length_scales = {}
+        self._timescale = pybamm.Scalar(1)
+        self._length_scales = {}
 
     @property
     def name(self):
@@ -290,7 +290,7 @@ class BaseModel:
     @property
     def length_scales(self):
         "Length scales of model"
-        return self._length_scale
+        return self._length_scales
 
     @length_scales.setter
     def length_scales(self, values):
@@ -298,7 +298,7 @@ class BaseModel:
         for domain, scale in values.items():
             if isinstance(scale, numbers.Number):
                 values[domain] = pybamm.Scalar(scale)
-        self._length_scale = values
+        self._length_scales = values
 
     @property
     def parameters(self):
@@ -376,8 +376,8 @@ class BaseModel:
         new_model = self.__class__(name=self.name)
         new_model.use_jacobian = self.use_jacobian
         new_model.convert_to_format = self.convert_to_format
-        new_model.timescale = self.timescale
-        new_model.length_scales = self.length_scales
+        new_model._timescale = self.timescale
+        new_model._length_scales = self.length_scales
 
         # Variables from discretisation
         new_model.is_discretised = self.is_discretised
@@ -1102,21 +1102,14 @@ class EquationDict(dict):
         # Convert any numbers to a pybamm.Scalar
         for var, eqn in equations.items():
             if isinstance(eqn, numbers.Number):
-                equations[var] = pybamm.Scalar(eqn)
-
-        if not all(
-            [
-                variable.domain == equation.domain
-                or variable.domain == []
-                or equation.domain == []
-                for variable, equation in equations.items()
-            ]
-        ):
-            raise pybamm.DomainError(
-                "variable and equation in '{}' must have the same domain".format(
-                    self.name
+                eqn = pybamm.Scalar(eqn)
+                equations[var] = eqn
+            if not (var.domain == eqn.domain or var.domain == [] or eqn.domain == []):
+                raise pybamm.DomainError(
+                    "variable and equation in '{}' must have the same domain".format(
+                        self.name
+                    )
                 )
-            )
 
         # For initial conditions, check that the equation doesn't contain any
         # Variable objects

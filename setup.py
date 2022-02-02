@@ -86,17 +86,6 @@ class bdist_wheel(orig.bdist_wheel):
         orig.bdist_wheel.run(self)
 
 
-def load_version():
-    # Read version number from file
-    try:
-        root = os.path.abspath(os.path.dirname(__file__))
-        with open(os.path.join(root, "pybamm", "version"), "r") as f:
-            version = f.read().strip().split(",")
-        return ".".join(["{:02d}".format(int(x)) for x in version])
-    except Exception as e:
-        raise RuntimeError("Unable to read version number (" + str(e) + ").")
-
-
 def compile_KLU():
     # Return whether or not the KLU extension should be compiled.
     # Return True if:
@@ -154,7 +143,6 @@ for file_ext in ["*.csv", "*.py", "*.md", "*.txt"]:
     pybamm_data.extend(
         [os.path.join(*Path(filename).parts[1:]) for filename in list_of_files]
     )
-pybamm_data.append("./version")
 pybamm_data.append("./CITATIONS.txt")
 pybamm_data.append("./plotting/pybamm.mplstyle")
 pybamm_data.append("../CMakeBuild.py")
@@ -162,13 +150,18 @@ pybamm_data.append("../CMakeBuild.py")
 idaklu_ext = Extension("pybamm.solvers.idaklu", ["pybamm/solvers/c_solvers/idaklu.cpp"])
 ext_modules = [idaklu_ext] if compile_KLU() else []
 
+# Defines __version__
+root = os.path.abspath(os.path.dirname(__file__))
+with open(os.path.join(root, "pybamm", "version.py")) as f:
+    exec(f.read())
+
 # Load text for description and license
 with open("README.md", encoding="utf-8") as f:
     readme = f.read()
 
 setup(
     name="pybamm",
-    version=load_version(),
+    version=__version__,  # noqa: F821
     description="Python Battery Mathematical Modelling.",
     long_description=readme,
     long_description_content_type="text/markdown",

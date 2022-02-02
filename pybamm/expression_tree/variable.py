@@ -30,6 +30,11 @@ class VariableBase(pybamm.Symbol):
         auxiliary domain 'current collector'. For the DFN, the particle concentration
         would be a Variable with domain 'negative particle', secondary domain
         'negative electrode' and tertiary domain 'current collector'
+    domains : dict
+        A dictionary equivalent to {'primary': domain, auxiliary_domains}. Either
+        'domain' and 'auxiliary_domains', or just 'domains', should be provided
+        (not both). In future, the 'domain' and 'auxiliary_domains' arguments may be
+        deprecated.
     bounds : tuple, optional
         Physical bounds on the variable
     print_name : str, optional
@@ -39,13 +44,17 @@ class VariableBase(pybamm.Symbol):
     """
 
     def __init__(
-        self, name, domain=None, auxiliary_domains=None, bounds=None, print_name=None
+        self,
+        name,
+        domain=None,
+        auxiliary_domains=None,
+        domains=None,
+        bounds=None,
+        print_name=None,
     ):
-        if domain is None:
-            domain = []
-        if auxiliary_domains is None:
-            auxiliary_domains = {}
-        super().__init__(name, domain=domain, auxiliary_domains=auxiliary_domains)
+        super().__init__(
+            name, domain=domain, auxiliary_domains=auxiliary_domains, domains=domains
+        )
         if bounds is None:
             bounds = (-np.inf, np.inf)
         else:
@@ -59,20 +68,16 @@ class VariableBase(pybamm.Symbol):
 
     def create_copy(self):
         """See :meth:`pybamm.Symbol.new_copy()`."""
-
         return self.__class__(
             self.name,
-            self.domain,
-            self.auxiliary_domains,
-            self.bounds,
+            domains=self.domains,
+            bounds=self.bounds,
             print_name=self._raw_print_name,
         )
 
     def _evaluate_for_shape(self):
         """See :meth:`pybamm.Symbol.evaluate_for_shape_using_domain()`"""
-        return pybamm.evaluate_for_shape_using_domain(
-            self.domain, self.auxiliary_domains
-        )
+        return pybamm.evaluate_for_shape_using_domain(self.domains)
 
     def to_equation(self):
         """Convert the node and its subtree into a SymPy equation."""
@@ -103,6 +108,11 @@ class Variable(VariableBase):
         auxiliary domain 'current collector'. For the DFN, the particle concentration
         would be a Variable with domain 'negative particle', secondary domain
         'negative electrode' and tertiary domain 'current collector'
+    domains : dict
+        A dictionary equivalent to {'primary': domain, auxiliary_domains}. Either
+        'domain' and 'auxiliary_domains', or just 'domains', should be provided
+        (not both). In future, the 'domain' and 'auxiliary_domains' arguments may be
+        deprecated.
     bounds : tuple, optional
         Physical bounds on the variable
     print_name : str, optional
@@ -112,21 +122,28 @@ class Variable(VariableBase):
     """
 
     def __init__(
-        self, name, domain=None, auxiliary_domains=None, bounds=None, print_name=None
+        self,
+        name,
+        domain=None,
+        auxiliary_domains=None,
+        domains=None,
+        bounds=None,
+        print_name=None,
     ):
         super().__init__(
-            name, domain=domain, auxiliary_domains=auxiliary_domains, bounds=bounds
+            name,
+            domain=domain,
+            auxiliary_domains=auxiliary_domains,
+            domains=domains,
+            bounds=bounds,
+            print_name=print_name,
         )
 
     def diff(self, variable):
         if variable.id == self.id:
             return pybamm.Scalar(1)
         elif variable.id == pybamm.t.id:
-            return pybamm.VariableDot(
-                self.name + "'",
-                domain=self.domain,
-                auxiliary_domains=self.auxiliary_domains,
-            )
+            return pybamm.VariableDot(self.name + "'", domains=self.domains)
         else:
             return pybamm.Scalar(0)
 
@@ -153,6 +170,11 @@ class VariableDot(VariableBase):
         auxiliary domain 'current collector'. For the DFN, the particle concentration
         would be a Variable with domain 'negative particle', secondary domain
         'negative electrode' and tertiary domain 'current collector'
+    domains : dict
+        A dictionary equivalent to {'primary': domain, auxiliary_domains}. Either
+        'domain' and 'auxiliary_domains', or just 'domains', should be provided
+        (not both). In future, the 'domain' and 'auxiliary_domains' arguments may be
+        deprecated.
     bounds : tuple, optional
         Physical bounds on the variable. Included for compatibility with `VariableBase`,
         but ignored.
@@ -163,9 +185,22 @@ class VariableDot(VariableBase):
     """
 
     def __init__(
-        self, name, domain=None, auxiliary_domains=None, bounds=None, print_name=None
+        self,
+        name,
+        domain=None,
+        auxiliary_domains=None,
+        domains=None,
+        bounds=None,
+        print_name=None,
     ):
-        super().__init__(name, domain=domain, auxiliary_domains=auxiliary_domains)
+        super().__init__(
+            name,
+            domain=domain,
+            auxiliary_domains=auxiliary_domains,
+            domains=domains,
+            bounds=bounds,
+            print_name=print_name,
+        )
 
     def get_variable(self):
         """
@@ -174,9 +209,7 @@ class VariableDot(VariableBase):
         Note: Variable._jac adds a dash to the name of the corresponding VariableDot, so
         we remove this here
         """
-        return Variable(
-            self.name[:-1], domain=self.domain, auxiliary_domains=self.auxiliary_domains
-        )
+        return Variable(self.name[:-1], domains=self.domains)
 
     def diff(self, variable):
         if variable.id == self.id:
@@ -208,13 +241,18 @@ class ExternalVariable(Variable):
         auxiliary domain 'current collector'. For the DFN, the particle concentration
         would be a Variable with domain 'negative particle', secondary domain
         'negative electrode' and tertiary domain 'current collector'
+    domains : dict
+        A dictionary equivalent to {'primary': domain, auxiliary_domains}. Either
+        'domain' and 'auxiliary_domains', or just 'domains', should be provided
+        (not both). In future, the 'domain' and 'auxiliary_domains' arguments may be
+        deprecated.
 
     *Extends:* :class:`pybamm.Variable`
     """
 
-    def __init__(self, name, size, domain=None, auxiliary_domains=None):
+    def __init__(self, name, size, domain=None, auxiliary_domains=None, domains=None):
         self._size = size
-        super().__init__(name, domain, auxiliary_domains)
+        super().__init__(name, domain, auxiliary_domains, domains)
 
     @property
     def size(self):
@@ -222,9 +260,7 @@ class ExternalVariable(Variable):
 
     def create_copy(self):
         """See :meth:`pybamm.Symbol.new_copy()`."""
-        return ExternalVariable(
-            self.name, self.size, self.domain, self.auxiliary_domains
-        )
+        return ExternalVariable(self.name, self.size, domains=self.domains)
 
     def _evaluate_for_shape(self):
         """See :meth:`pybamm.Symbol.evaluate_for_shape_using_domain()`"""
