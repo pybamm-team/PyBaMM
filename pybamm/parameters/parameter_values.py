@@ -620,7 +620,7 @@ class ParameterValues:
                 return pybamm.Scalar(value, name=symbol.name)
             elif isinstance(value, pybamm.Symbol):
                 new_value = self.process_symbol(value)
-                new_value.domain = symbol.domain
+                new_value.copy_domains(symbol)
                 return new_value
             else:
                 raise TypeError("Cannot process parameter '{}'".format(value))
@@ -726,7 +726,7 @@ class ParameterValues:
             new_right = self.process_symbol(symbol.right)
             # make new symbol, ensure domain remains the same
             new_symbol = symbol._binary_new_copy(new_left, new_right)
-            new_symbol.domain = symbol.domain
+            new_symbol.copy_domains(symbol)
             return new_symbol
 
         # Unary operators
@@ -734,7 +734,7 @@ class ParameterValues:
             new_child = self.process_symbol(symbol.child)
             new_symbol = symbol._unary_new_copy(new_child)
             # ensure domain remains the same
-            new_symbol.domain = symbol.domain
+            new_symbol.copy_domains(symbol)
             # x_average can sometimes create a new symbol with electrode thickness
             # parameters, so we process again to make sure these parameters are set
             if isinstance(symbol, pybamm.XAverage) and not isinstance(

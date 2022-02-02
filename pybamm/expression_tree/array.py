@@ -23,7 +23,7 @@ class Array(pybamm.Symbol):
         the name of the node
     domain : iterable of str, optional
         list of domains the parameter is valid over, defaults to empty list
-    auxiliary_domainds : dict, optional
+    auxiliary_domains : dict, optional
         dictionary of auxiliary domains, defaults to empty dict
     domains : dict
         A dictionary equivalent to {'primary': domain, auxiliary_domains}. Either

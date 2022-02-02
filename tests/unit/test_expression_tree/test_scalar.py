@@ -17,11 +17,6 @@ class TestScalar(unittest.TestCase):
         # it's possible to provide a conflicting value of known_evals
         self.assertEqual(a.evaluate(known_evals={a.id: 15})[0], 15)
 
-    def test_scalar_domain(self):
-        a = pybamm.Scalar(3)
-        with self.assertRaisesRegex(pybamm.DomainError, "Scalar"):
-            a.domain = "test"
-
     def test_scalar_operations(self):
         a = pybamm.Scalar(5)
         b = pybamm.Scalar(6)

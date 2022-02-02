@@ -48,10 +48,6 @@ class TestSymbol(unittest.TestCase):
         b = pybamm.Symbol(
             "b", domain="test", auxiliary_domains={"secondary": ["test sec"]}
         )
-        with self.assertRaisesRegex(
-            pybamm.DomainError, "All domains must be different"
-        ):
-            b.domain = "test sec"
 
         with self.assertRaisesRegex(pybamm.DomainError, "keys must be one of"):
             b.domains = {"test": "test"}
@@ -65,6 +61,8 @@ class TestSymbol(unittest.TestCase):
                 auxiliary_domains={"secondary": "other test"},
                 domains={"test": "test"},
             )
+        with self.assertRaisesRegex(NotImplementedError, "Cannot set domain directly"):
+            b.domain = "test"
 
     def test_symbol_auxiliary_domains(self):
         a = pybamm.Symbol(

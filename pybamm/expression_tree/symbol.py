@@ -265,19 +265,9 @@ class Symbol:
 
     @domain.setter
     def domain(self, domain):
-        # Check if we need to update
-        # We could call the self.domains setter, but this performs some checks that are
-        # not necessary here
-        if self.domain != domain:
-            if isinstance(domain, str):
-                domain = [domain]
-            if domain == [] and self._domains["secondary"] == []:
-                raise pybamm.DomainError("Domain levels must be filled in order")
-            if any(v == domain for k, v in self._domains.items()):
-                raise pybamm.DomainError("All domains must be different")
-            # Make new domains dictionary to avoid pass-by-reference issues
-            self._domains = {**self._domains, "primary": domain}
-            self.set_id()
+        raise NotImplementedError(
+            "Cannot set domain directly, use domains={'primary': domain} instead"
+        )
 
     @property
     def auxiliary_domains(self):

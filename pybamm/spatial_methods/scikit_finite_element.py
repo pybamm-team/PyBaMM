@@ -118,7 +118,7 @@ class ScikitFiniteElement(pybamm.SpatialMethod):
         grad = pybamm.Concatenation(
             grad_y, grad_z, check_domain=False, concat_fun=np.hstack
         )
-        grad.domain = domain
+        grad.copy_domains(symbol)
 
         return grad
 
@@ -436,7 +436,7 @@ class ScikitFiniteElement(pybamm.SpatialMethod):
         # Return boundary value with domain given by symbol
         boundary_value = boundary_val_vector @ discretised_child
 
-        boundary_value.domain = symbol.domain
+        boundary_value.copy_domains(symbol)
 
         return boundary_value
 

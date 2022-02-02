@@ -276,7 +276,7 @@ class SpectralVolume(pybamm.FiniteVolume):
                 )
 
         # note in 1D cartesian, cylindrical and spherical grad are the same
-        gradient_matrix = self.gradient_matrix(symbol.domains)
+        gradient_matrix = self.gradient_matrix(symbol.domain, symbol.domains)
         penalty_matrix = self.penalty_matrix(symbol.domains)
 
         # Multiply by gradient matrix
@@ -292,7 +292,7 @@ class SpectralVolume(pybamm.FiniteVolume):
 
         return out
 
-    def gradient_matrix(self, domains):
+    def gradient_matrix(self, domain, domains):
         """
         Gradient matrix for Spectral Volume in the appropriate domain.
         Note that it contains the averaging of the duplicate SV edge
@@ -317,7 +317,7 @@ class SpectralVolume(pybamm.FiniteVolume):
             The (sparse) Spectral Volume gradient matrix for the domain
         """
         # Create appropriate submesh by combining submeshes in domain
-        submesh = self.mesh.combine_submeshes(*domains["primary"])
+        submesh = self.mesh.combine_submeshes(*domain)
 
         # Obtain the Chebyshev differentiation matrix.
         # Flip it, since it is defined for the Chebyshev

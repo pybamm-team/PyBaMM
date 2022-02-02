@@ -20,7 +20,7 @@ class IndependentVariable(pybamm.Symbol):
         name of the node
     domain : iterable of str
         list of domains that this variable is valid over
-    auxiliary_domainds : dict, optional
+    auxiliary_domains : dict, optional
         dictionary of auxiliary domains, defaults to empty dict
     domains : dict
         A dictionary equivalent to {'primary': domain, auxiliary_domains}. Either
@@ -95,7 +95,7 @@ class SpatialVariable(IndependentVariable):
     domain : iterable of str
         list of domains that this variable is valid over (e.g. "cartesian", "spherical
         polar")
-    auxiliary_domainds : dict, optional
+    auxiliary_domains : dict, optional
         dictionary of auxiliary domains, defaults to empty dict
     domains : dict
         A dictionary equivalent to {'primary': domain, auxiliary_domains}. Either
@@ -151,7 +151,7 @@ class SpatialVariableEdge(SpatialVariable):
     domain : iterable of str
         list of domains that this variable is valid over (e.g. "cartesian", "spherical
         polar")
-    auxiliary_domainds : dict, optional
+    auxiliary_domains : dict, optional
         dictionary of auxiliary domains, defaults to empty dict
     domains : dict
         A dictionary equivalent to {'primary': domain, auxiliary_domains}. Either

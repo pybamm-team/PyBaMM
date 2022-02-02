@@ -241,10 +241,6 @@ class DomainConcatenation(Concatenation):
         # Allow the base class to sort the domains into the correct order
         super().__init__(*children, name="domain_concatenation")
 
-        # ensure domain is sorted according to mesh keys
-        domain_dict = {d: full_mesh.domain_order.index(d) for d in self.domain}
-        self.domain = sorted(domain_dict, key=domain_dict.__getitem__)
-
         if copy_this is None:
             # store mesh
             self._full_mesh = full_mesh

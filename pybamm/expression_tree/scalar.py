@@ -41,14 +41,6 @@ class Scalar(pybamm.Symbol):
     def value(self, value):
         self._value = np.float64(value)
 
-    @pybamm.Symbol.domains.setter
-    def domains(self, domains):
-        # Override the domains setter to ensure empty domain
-        if domains["primary"] != []:
-            raise pybamm.DomainError("Domain of 'Scalar' must be empty")
-        self._domains = pybamm.EMPTY_DOMAINS
-        self.set_id()
-
     def set_id(self):
         """See :meth:`pybamm.Symbol.set_id()`."""
         # We must include the value in the hash, since different scalars can be

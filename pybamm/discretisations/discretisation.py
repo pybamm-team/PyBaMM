@@ -1006,7 +1006,7 @@ class Discretisation(object):
                         domains=parent.domains,
                     )
                     out = pybamm.Index(ext, slice(start, end))
-                    out.domain = symbol.domain
+                    out.copy_domains(symbol)
                     return out
 
             else:
