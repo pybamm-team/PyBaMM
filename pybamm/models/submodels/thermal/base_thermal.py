@@ -88,7 +88,6 @@ class BaseThermal(pybamm.BaseSubModel):
         return variables
 
     def _get_standard_coupled_variables(self, variables):
-
         param = self.param
 
         # Ohmic heating in solid
@@ -96,9 +95,6 @@ class BaseThermal(pybamm.BaseSubModel):
         phi_s_p = variables["Positive electrode potential"]
         Q_ohm_s_cn, Q_ohm_s_cp = self._current_collector_heating(variables)
         if self.half_cell:
-            # Note: half-cell model are currently only compatible with x-averaged
-            # thermal models, so T_n is independent of x so that the potential
-            # is linear in x, and we can compute the heat source as i^2*R.
             i_boundary_cc = variables["Current collector current density"]
             T_n = variables["Negative electrode temperature"]
             Q_ohm_s_n_av = i_boundary_cc ** 2 / param.sigma_n(T_n)
