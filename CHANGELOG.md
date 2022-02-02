@@ -1,7 +1,12 @@
 # [Unreleased](https://github.com/pybamm-team/PyBaMM/)
 
+## Features
+
+-   Isothermal models now compute heat source terms (but the temperature remains constant). The models now also account for current collector heating when `dimensionality=0` [#1929](https://github.com/pybamm-team/PyBaMM/pull/1929))
+
 ## Bug fixes
--   Fixed a bug where thermal submodels could not be used with half-cells ([]())
+
+-   Fixed a bug where thermal submodels could not be used with half-cells ([#1929](https://github.com/pybamm-team/PyBaMM/pull/1929))
 
 # [v22.1](https://github.com/pybamm-team/PyBaMM/tree/v22.1) - 2022-01-31
 

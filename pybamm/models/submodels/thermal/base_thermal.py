@@ -36,7 +36,7 @@ class BaseThermal(pybamm.BaseSubModel):
         param = self.param
 
         # The variable T is the concatenation of the temperature in the negative
-        # electrode, separator and positive electrode, for use the electrochemical
+        # electrode, separator and positive electrode, for use in the electrochemical
         # models
         T = pybamm.concatenation(T_n, T_s, T_p)
 
@@ -96,9 +96,13 @@ class BaseThermal(pybamm.BaseSubModel):
         phi_s_p = variables["Positive electrode potential"]
         Q_ohm_s_cn, Q_ohm_s_cp = self._current_collector_heating(variables)
         if self.half_cell:
-            # overwrite negative current collector Ohmic heating
-            Q_ohm_s_cn = None
-            Q_ohm_s_n = None
+            # Note: half-cell model are currently only compatible with x-averaged
+            # thermal models, so T_n is independent of x so that the potential
+            # is linear in x, and we can compute the heat source as i^2*R.
+            i_boundary_cc = variables["Current collector current density"]
+            T_n = variables["Negative electrode temperature"]
+            Q_ohm_s_n_av = i_boundary_cc ** 2 / param.sigma_n(T_n)
+            Q_ohm_s_n = pybamm.PrimaryBroadcast(Q_ohm_s_n_av, "negative electrode")
         else:
             i_s_n = variables["Negative electrode current density"]
             phi_s_n = variables["Negative electrode potential"]
@@ -114,19 +118,30 @@ class BaseThermal(pybamm.BaseSubModel):
         phi_e = variables["Electrolyte potential"]
         if isinstance(i_e, pybamm.Concatenation):
             # compute by domain if possible
-            i_e_n, i_e_s, i_e_p = i_e.orphans
-            if self.half_cell:
-                Q_ohm_e_n = None
-            else:
-                phi_e_n = variables["Negative electrolyte potential"]
-                Q_ohm_e_n = -pybamm.inner(i_e_n, pybamm.grad(phi_e_n))
             phi_e_s = variables["Separator electrolyte potential"]
             phi_e_p = variables["Positive electrolyte potential"]
+            if self.half_cell:
+                i_e_s, i_e_p = i_e.orphans
+                Q_ohm_e_n = pybamm.FullBroadcast(
+                    0, ["negative electrode"], "current collector"
+                )
+            else:
+                i_e_n, i_e_s, i_e_p = i_e.orphans
+                phi_e_n = variables["Negative electrolyte potential"]
+                Q_ohm_e_n = -pybamm.inner(i_e_n, pybamm.grad(phi_e_n))
             Q_ohm_e_s = -pybamm.inner(i_e_s, pybamm.grad(phi_e_s))
             Q_ohm_e_p = -pybamm.inner(i_e_p, pybamm.grad(phi_e_p))
             Q_ohm_e = pybamm.concatenation(Q_ohm_e_n, Q_ohm_e_s, Q_ohm_e_p)
         else:
-            Q_ohm_e = -pybamm.inner(i_e, pybamm.grad(phi_e))
+            # else compute using i_e across all domains
+            if self.half_cell:
+                Q_ohm_e_n = pybamm.FullBroadcast(
+                    0, ["negative electrode"], "current collector"
+                )
+                Q_ohm_e_s_p = -pybamm.inner(i_e, pybamm.grad(phi_e))
+                Q_ohm_e = pybamm.concatenation(Q_ohm_e_n, Q_ohm_e_s_p)
+            else:
+                Q_ohm_e = -pybamm.inner(i_e, pybamm.grad(phi_e))
 
         # Total Ohmic heating
         Q_ohm = Q_ohm_s + Q_ohm_e
@@ -136,7 +151,9 @@ class BaseThermal(pybamm.BaseSubModel):
         j_p = variables["Positive electrode interfacial current density"]
         eta_r_p = variables["Positive electrode reaction overpotential"]
         if self.half_cell:
-            Q_rxn_n = None
+            Q_rxn_n = pybamm.FullBroadcast(
+                0, ["negative electrode"], "current collector"
+            )
         else:
             a_n = variables["Negative electrode surface area to volume ratio"]
             j_n = variables["Negative electrode interfacial current density"]
@@ -155,7 +172,9 @@ class BaseThermal(pybamm.BaseSubModel):
         T_p = variables["Positive electrode temperature"]
         dUdT_p = variables["Positive electrode entropic change"]
         if self.half_cell:
-            Q_rev_n = None
+            Q_rev_n = pybamm.FullBroadcast(
+                0, ["negative electrode"], "current collector"
+            )
         else:
             T_n = variables["Negative electrode temperature"]
             dUdT_n = variables["Negative electrode entropic change"]
@@ -221,21 +240,21 @@ class BaseThermal(pybamm.BaseSubModel):
 
     def _current_collector_heating(self, variables):
         """Compute Ohmic heating in current collectors."""
-        # TODO: implement grad in 0D to return a scalar zero
-        # TODO: implement grad_squared in other spatial methods so that the if
-        # statement can be removed
-        # In the limit of infinitely large current collector conductivity (i.e.
-        # 0D current collectors), the Ohmic heating in the current collectors is
-        # zero
         cc_dimension = self.options["dimensionality"]
 
+        # Compute the Ohmic heating for 0D current collectors
         if cc_dimension == 0:
-            Q_s_cn = pybamm.Scalar(0)
-            Q_s_cp = pybamm.Scalar(0)
+            i_boundary_cc = variables["Current collector current density"]
+            Q_s_cn = i_boundary_cc ** 2 / self.param.sigma_cn
+            Q_s_cp = i_boundary_cc ** 2 / self.param.sigma_cp
         # Otherwise we compute the Ohmic heating for 1 or 2D current collectors
+        # In this limit the current flow is all in the y,z direction in the current
+        # collectors
         elif cc_dimension in [1, 2]:
             phi_s_cn = variables["Negative current collector potential"]
             phi_s_cp = variables["Positive current collector potential"]
+            # TODO: implement grad_squared in other spatial methods so that the
+            # if statement can be removed
             if cc_dimension == 1:
                 Q_s_cn = self.param.sigma_cn_prime * pybamm.inner(
                     pybamm.grad(phi_s_cn), pybamm.grad(phi_s_cn)
@@ -261,20 +280,11 @@ class BaseThermal(pybamm.BaseSubModel):
         assumed independent of x, so we do not make the distinction between negative
         and positive current collectors in the geometry).
         """
-        if self.half_cell:
-            # average is over separator, positive electrode, current collector
-            out = (
-                (self.param.l_s + self.param.l_p) * pybamm.x_average(var)
-                + self.param.l_cp * var_cp
-            ) / (self.param.l_s + self.param.l_p + self.param.l_cp)
-        else:
-            # average is over negative current collector, negative electrode,
-            # separator, positive electrode, current collector
-            out = (
-                self.param.l_cn * var_cn
-                + self.param.l_x * pybamm.x_average(var)
-                + self.param.l_cp * var_cp
-            ) / self.param.l
+        out = (
+            self.param.l_cn * var_cn
+            + self.param.l_x * pybamm.x_average(var)
+            + self.param.l_cp * var_cp
+        ) / self.param.l
         return out
 
     def _yz_average(self, var):
