@@ -12,6 +12,9 @@ from scipy.sparse import csr_matrix, issparse
 import pybamm
 from pybamm.expression_tree.printing.print_name import prettify_print_name
 
+DOMAIN_LEVELS = ["primary", "secondary", "tertiary", "quaternary"]
+EMPTY_DOMAINS = {k: [] for k in DOMAIN_LEVELS}
+
 
 def domain_size(domain):
     """
@@ -29,10 +32,8 @@ def domain_size(domain):
         "negative electrode": 11,
         "separator": 13,
         "positive electrode": 17,
-        "working electrode": 19,
-        "working particle": 23,
-        "negative particle size": 29,
-        "positive particle size": 31,
+        "negative particle size": 19,
+        "positive particle size": 23,
     }
     if domain in [[], None]:
         size = 1
@@ -51,19 +52,16 @@ def create_object_of_size(size, typ="vector"):
         return np.nan * np.ones((size, size))
 
 
-def evaluate_for_shape_using_domain(domain, auxiliary_domains=None, typ="vector"):
+def evaluate_for_shape_using_domain(domains, typ="vector"):
     """
-    Return a vector of the appropriate shape, based on the domain.
+    Return a vector of the appropriate shape, based on the domains.
     Domain 'sizes' can clash, but are unlikely to, and won't cause failures if they do.
     """
-    _domain_size = domain_size(domain)
-    if auxiliary_domains is None:
-        _auxiliary_domain_sizes = 1
+    if isinstance(domains, dict):
+        _domain_sizes = int(np.prod([domain_size(dom) for dom in domains.values()]))
     else:
-        _auxiliary_domain_sizes = int(
-            np.prod([domain_size(dom) for dom in auxiliary_domains.values()])
-        )
-    return create_object_of_size(_domain_size * _auxiliary_domain_sizes, typ)
+        _domain_sizes = domain_size(domains)
+    return create_object_of_size(_domain_sizes, typ)
 
 
 def is_constant(symbol):
@@ -151,8 +149,6 @@ def simplify_if_constant(symbol):
     Utility function to simplify an expression tree if it evalutes to a constant
     scalar, vector or matrix
     """
-    domain = symbol.domain
-    auxiliary_domains = symbol.auxiliary_domains
     if symbol.is_constant():
         result = symbol.evaluate_ignoring_errors()
         if result is not None:
@@ -164,16 +160,12 @@ def simplify_if_constant(symbol):
                 return pybamm.Scalar(result)
             elif isinstance(result, np.ndarray) or issparse(result):
                 if result.ndim == 1 or result.shape[1] == 1:
-                    return pybamm.Vector(
-                        result, domain=domain, auxiliary_domains=auxiliary_domains
-                    )
+                    return pybamm.Vector(result, domains=symbol.domains)
                 else:
                     # Turn matrix of zeros into sparse matrix
                     if isinstance(result, np.ndarray) and np.all(result == 0):
                         result = csr_matrix(result)
-                    return pybamm.Matrix(
-                        result, domain=domain, auxiliary_domains=auxiliary_domains
-                    )
+                    return pybamm.Matrix(result, domains=symbol.domains)
 
     return symbol
 
@@ -200,9 +192,16 @@ class Symbol:
         "separator" and tertiary domain "current collector" (`domain="negative
         particle", auxiliary_domains={"secondary": "separator", "tertiary": "current
         collector"}`).
+    domains : dict
+        A dictionary equivalent to {'primary': domain, auxiliary_domains}. Either
+        'domain' and 'auxiliary_domains', or just 'domains', should be provided
+        (not both). In future, the 'domain' and 'auxiliary_domains' arguments may be
+        deprecated.
     """
 
-    def __init__(self, name, children=None, domain=None, auxiliary_domains=None):
+    def __init__(
+        self, name, children=None, domain=None, auxiliary_domains=None, domains=None
+    ):
         super(Symbol, self).__init__()
         self.name = name
 
@@ -213,11 +212,8 @@ class Symbol:
         # Keep a separate "oprhans" attribute for backwards compatibility
         self._orphans = children
 
-        # Set auxiliary domains
-        self._domains = {"primary": None}
-        self.auxiliary_domains = auxiliary_domains
-        # Set domain (and hence id)
-        self.domain = domain
+        # Set domains (and hence id)
+        self.domains = self.read_domain_or_domains(domain, auxiliary_domains, domains)
 
         self._saved_evaluates_on_edges = {}
         self._print_name = None
@@ -269,98 +265,127 @@ class Symbol:
 
     @domain.setter
     def domain(self, domain):
-        if domain is None:
-            domain = []
-        elif isinstance(domain, str):
-            domain = [domain]
-        if domain == [] and self.auxiliary_domains != {}:
-            raise pybamm.DomainError(
-                "Domain cannot be empty if auxiliary domains are not empty"
-            )
-        if domain in self.auxiliary_domains.values():
-            raise pybamm.DomainError("Domain cannot be the same as an auxiliary domain")
-        try:
-            iter(domain)
-        except TypeError:
-            raise TypeError("Domain: argument domain is not iterable")
-        else:
-            self._domains["primary"] = domain
-            # Update id since domain has changed
-            self.set_id()
+        raise NotImplementedError(
+            "Cannot set domain directly, use domains={'primary': domain} instead"
+        )
 
     @property
     def auxiliary_domains(self):
         """Returns auxiliary domains."""
-        return self._auxiliary_domains
+        raise NotImplementedError(
+            "symbol.auxiliary_domains has been deprecated, use symbol.domains instead"
+        )
 
-    @auxiliary_domains.setter
-    def auxiliary_domains(self, auxiliary_domains):
+    @domains.setter
+    def domains(self, domains):
+        try:
+            if (
+                self._domains == domains
+                # accounting for empty domains
+                or {k: v for k, v in self._domains.items() if v != []} == domains
+            ):
+                return None  # no change
+        except AttributeError:
+            # self._domains has not been set yet
+            pass
+
         # Turn dictionary into appropriate form
-        if auxiliary_domains is None:
-            auxiliary_domains = {}
-        for level, dom in auxiliary_domains.items():
-            if isinstance(dom, str):
-                auxiliary_domains[level] = [dom]
+        if domains == {"primary": []}:
+            self._domains = EMPTY_DOMAINS
+            self.set_id()
+            return None
+
+        # Set default domains
+        domains = {**EMPTY_DOMAINS, **domains}
 
         # Check domains don't clash
-        if self.domain in auxiliary_domains.values():
-            raise pybamm.DomainError("Domain cannot be the same as an auxiliary domain")
-        values = [tuple(val) for val in auxiliary_domains.values()]
-        if len(set(values)) != len(values):
-            raise pybamm.DomainError("All auxiliary domains must be different")
+        for level, dom in domains.items():
+            if level not in DOMAIN_LEVELS:
+                raise pybamm.DomainError(
+                    f"Domain keys must be one of '{DOMAIN_LEVELS}'"
+                )
+            if isinstance(dom, str):
+                domains[level] = [dom]
 
-        self._auxiliary_domains = auxiliary_domains.copy()
-        self._domains.update(auxiliary_domains)
+        values = [tuple(val) for val in domains.values() if val != []]
+        if len(set(values)) != len(values):
+            raise pybamm.DomainError("All domains must be different")
+
+        for i, level in enumerate(DOMAIN_LEVELS[:-1]):
+            if domains[level] == []:
+                if domains[DOMAIN_LEVELS[i + 1]] != []:
+                    raise pybamm.DomainError("Domain levels must be filled in order")
+                # don't test further if we have already found a missing domain
+                break
+
+        self._domains = domains
+        self.set_id()
 
     @property
     def secondary_domain(self):
         """Helper function to get the secondary domain of a symbol."""
-        return self.auxiliary_domains["secondary"]
+        return self._domains["secondary"]
 
     @property
     def tertiary_domain(self):
         """Helper function to get the tertiary domain of a symbol."""
-        return self.auxiliary_domains["tertiary"]
+        return self._domains["tertiary"]
 
     @property
     def quaternary_domain(self):
         """Helper function to get the quaternary domain of a symbol."""
-        return self.auxiliary_domains["quaternary"]
+        return self._domains["quaternary"]
 
     def copy_domains(self, symbol):
         """Copy the domains from a given symbol, bypassing checks."""
-        self._domains = symbol.domains.copy()
-        self._auxiliary_domains = {
-            k: v for k, v in self._domains.items() if k != "primary"
-        }
-        self.set_id()
+        if self._domains != symbol._domains:
+            self._domains = symbol._domains
+            self.set_id()
 
     def clear_domains(self):
         """Clear domains, bypassing checks."""
-        self._domains = {"primary": []}
-        self._auxiliary_domains = {}
-        self.set_id()
+        if self._domains != EMPTY_DOMAINS:
+            self._domains = EMPTY_DOMAINS
+            self.set_id()
 
-    def get_children_auxiliary_domains(self, children):
-        """Combine auxiliary domains from children, at all levels."""
-        aux_domains = {}
+    def get_children_domains(self, children):
+        """Combine domains from children, at all levels."""
+        domains = {}
         for child in children:
-            for level in child.auxiliary_domains.keys():
-                if (
-                    level not in aux_domains
-                    or aux_domains[level] == []
-                    or child.auxiliary_domains[level] == aux_domains[level]
+            for level in child.domains.keys():
+                if child.domains[level] == []:
+                    pass
+                elif (
+                    level not in domains
+                    or domains[level] == []
+                    or child.domains[level] == domains[level]
                 ):
-                    aux_domains[level] = child.auxiliary_domains[level]
+                    domains[level] = child.domains[level]
                 else:
                     raise pybamm.DomainError(
-                        """children must have same or empty auxiliary domains,
-                        not {!s} and {!s}""".format(
-                            aux_domains[level], child.auxiliary_domains[level]
-                        )
+                        "children must have same or empty domains, "
+                        f"not {domains[level]} and {child.domains[level]}"
                     )
 
-        return aux_domains
+        return domains
+
+    def read_domain_or_domains(self, domain, auxiliary_domains, domains):
+        if domains is None:
+            if isinstance(domain, str):
+                domain = [domain]
+            elif domain is None:
+                domain = []
+            auxiliary_domains = auxiliary_domains or {}
+
+            domains = {"primary": domain, **auxiliary_domains}
+        else:
+            if domain is not None:
+                raise ValueError("Only one of 'domain' or 'domains' should be provided")
+            if auxiliary_domains is not None:
+                raise ValueError(
+                    "Only one of 'auxiliary_domains' or 'domains' should be provided"
+                )
+        return domains
 
     @property
     def id(self):
@@ -380,8 +405,7 @@ class Symbol:
         self._id = hash(
             (self.__class__, self.name)
             + tuple([child.id for child in self.children])
-            + tuple(self.domain)
-            + tuple([(k, tuple(v)) for k, v in self.auxiliary_domains.items()])
+            + tuple([(k, tuple(v)) for k, v in self.domains.items() if v != []])
         )
 
     @property
@@ -484,15 +508,12 @@ class Symbol:
 
     def __repr__(self):
         """returns the string `__class__(id, name, children, domain)`"""
-        return (
-            "{!s}({}, {!s}, children={!s}, domain={!s}, auxiliary_domains={!s})"
-        ).format(
+        return ("{!s}({}, {!s}, children={!s}, domains={!s})").format(
             self.__class__.__name__,
             hex(self.id),
             self._name,
             [str(child) for child in self.children],
-            [str(subdomain) for subdomain in self.domain],
-            {k: str(v) for k, v in self.auxiliary_domains.items()},
+            {k: v for k, v in self.domains.items() if v != []},
         )
 
     def __add__(self, other):
@@ -699,10 +720,8 @@ class Symbol:
             (default None)
         """
         raise NotImplementedError(
-            """method self.evaluate() not implemented
-               for symbol {!s} of type {}""".format(
-                self, type(self)
-            )
+            "method self.evaluate() not implemented for symbol "
+            "{!s} of type {}".format(self, type(self))
         )
 
     def evaluate(self, t=None, y=None, y_dot=None, inputs=None, known_evals=None):

@@ -82,8 +82,8 @@ class BaseOutputTest(object):
         self.x_edge = disc.mesh.combine_submeshes(*whole_cell).edges * L_x
 
         if isinstance(self.model, pybamm.lithium_ion.BaseModel):
-            R_n_typ = param.evaluate(model.param.R_n_typ)
-            R_p_typ = param.evaluate(model.param.R_p_typ)
+            R_n_typ = model.length_scales["negative particle"].evaluate()
+            R_p_typ = model.length_scales["positive particle"].evaluate()
             self.r_n = disc.mesh["negative particle"].nodes * R_n_typ
             self.r_p = disc.mesh["positive particle"].nodes * R_p_typ
             self.r_n_edge = disc.mesh["negative particle"].edges * R_n_typ
@@ -144,8 +144,8 @@ class VoltageTests(BaseOutputTest):
             np.testing.assert_array_less(self.eta_r_n(t, x_n), tol)
             np.testing.assert_array_less(-self.eta_r_p(t, x_p), tol)
         elif self.operating_condition == "off":
-            np.testing.assert_array_equal(self.eta_r_n(t, x_n), 0)
-            np.testing.assert_array_equal(-self.eta_r_p(t, x_p), 0)
+            np.testing.assert_array_almost_equal(self.eta_r_n(t, x_n), 0)
+            np.testing.assert_array_almost_equal(-self.eta_r_p(t, x_p), 0)
 
     def test_overpotentials(self):
         """Testing that all are:
@@ -164,8 +164,8 @@ class VoltageTests(BaseOutputTest):
             np.testing.assert_array_less(-self.delta_phi_s_av(self.t), tol)
 
         elif self.operating_condition == "off":
-            np.testing.assert_array_equal(self.eta_r_av(self.t), 0)
-            np.testing.assert_array_almost_equal(self.eta_e_av(self.t), 0, decimal=30)
+            np.testing.assert_array_almost_equal(self.eta_r_av(self.t), 0)
+            np.testing.assert_array_almost_equal(self.eta_e_av(self.t), 0, decimal=16)
             # For some reason SPM gives delta_phi_s_av ~ 1e-17
             np.testing.assert_array_almost_equal(
                 self.delta_phi_s_av(self.t), 0, decimal=16

@@ -44,7 +44,7 @@ class ProcessedVariable(object):
 
         self.mesh = base_variables[0].mesh
         self.domain = base_variables[0].domain
-        self.auxiliary_domains = base_variables[0].auxiliary_domains
+        self.domains = base_variables[0].domains
         self.warn = warn
 
         self.symbolic_inputs = solution.has_symbolic_inputs
@@ -306,11 +306,9 @@ class ProcessedVariable(object):
         if self.domain[0] in [
             "negative particle",
             "positive particle",
-            "working particle",
-        ] and self.auxiliary_domains["secondary"][0] in [
+        ] and self.domains["secondary"][0] in [
             "negative electrode",
             "positive electrode",
-            "working electrode",
         ]:
             self.first_dimension = "r"
             self.second_dimension = "x"
@@ -323,7 +321,7 @@ class ProcessedVariable(object):
                 "separator",
                 "positive electrode",
             ]
-            and self.auxiliary_domains["secondary"] == ["current collector"]
+            and self.domains["secondary"] == ["current collector"]
         ):
             self.first_dimension = "x"
             self.second_dimension = "z"
@@ -332,7 +330,7 @@ class ProcessedVariable(object):
         elif self.domain[0] in [
             "negative particle",
             "positive particle",
-        ] and self.auxiliary_domains["secondary"][0] in [
+        ] and self.domains["secondary"][0] in [
             "negative particle size",
             "positive particle size",
         ]:
@@ -343,7 +341,7 @@ class ProcessedVariable(object):
         elif self.domain[0] in [
             "negative particle size",
             "positive particle size",
-        ] and self.auxiliary_domains["secondary"][0] in [
+        ] and self.domains["secondary"][0] in [
             "negative electrode",
             "positive electrode",
         ]:
@@ -357,7 +355,7 @@ class ProcessedVariable(object):
                 "negative particle size",
                 "positive particle size",
             ]
-            and self.auxiliary_domains["secondary"] == ["current collector"]
+            and self.domains["secondary"] == ["current collector"]
         ):
             self.first_dimension = "R"
             self.second_dimension = "z"
@@ -365,8 +363,7 @@ class ProcessedVariable(object):
             self.z_sol = second_dim_pts
         else:
             raise pybamm.DomainError(
-                "Cannot process 3D object with domain '{}' "
-                "and auxiliary_domains '{}'".format(self.domain, self.auxiliary_domains)
+                f"Cannot process 3D object with domains '{self.domains}'."
             )
 
         # assign attributes for reference
@@ -383,7 +380,7 @@ class ProcessedVariable(object):
         first_dim_pts_for_interp = first_dim_pts * first_length_scale
 
         second_length_scale = self.get_spatial_scale(
-            self.second_dimension, self.auxiliary_domains["secondary"][0]
+            self.second_dimension, self.domains["secondary"][0]
         )
         second_dim_pts_for_interp = second_dim_pts * second_length_scale
 

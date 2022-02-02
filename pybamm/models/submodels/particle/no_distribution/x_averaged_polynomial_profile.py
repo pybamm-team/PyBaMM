@@ -330,16 +330,14 @@ class XAveragedPolynomialProfile(BaseFickian):
     def set_initial_conditions(self, variables):
         """
         For single or x-averaged particle models, initial conditions can't depend on x
-        so we arbitrarily evaluate them at x=0 in the negative electrode and x=1 in the
-        positive electrode (they will usually be constant)
+        or r so we take the r- and x-average of the initial conditions.
         """
         c_s_av = variables["Average " + self.domain.lower() + " particle concentration"]
 
         if self.domain == "Negative":
-            c_init = self.param.c_n_init(0)
-
+            c_init = pybamm.x_average(pybamm.r_average(self.param.c_n_init))
         elif self.domain == "Positive":
-            c_init = self.param.c_p_init(1)
+            c_init = pybamm.x_average(pybamm.r_average(self.param.c_p_init))
 
         self.initial_conditions = {c_s_av: c_init}
         if self.name == "quartic profile":

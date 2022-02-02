@@ -1118,7 +1118,7 @@ class BaseBatteryModel(pybamm.BaseModel):
         )
         # Variables for calculating the equivalent circuit model (ECM) resistance
         # Need to compare OCV to initial value to capture this as an overpotential
-        ocv_init = self.param.U_p_init - self.param.U_n_init
+        ocv_init = self.param.ocv_init
         ocv_init_dim = (
             self.param.U_p_ref
             - self.param.U_n_ref
