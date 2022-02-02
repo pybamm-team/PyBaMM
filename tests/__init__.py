@@ -37,3 +37,4 @@ from .shared import (
     get_unit_2p1D_mesh_for_testing,
     get_cylindrical_discretisation_for_testing,
 )
+from .testcase import TestCase

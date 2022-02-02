@@ -236,9 +236,13 @@ class XAveragedFickianDiffusion(BaseSizeDistribution):
         ]
 
         if self.domain == "Negative":
-            c_init = self.param.c_n_init(0)
+            c_init = pybamm.SecondaryBroadcast(
+                pybamm.x_average(self.param.c_n_init), "negative particle size"
+            )
 
         elif self.domain == "Positive":
-            c_init = self.param.c_p_init(1)
+            c_init = pybamm.SecondaryBroadcast(
+                pybamm.x_average(self.param.c_p_init), "positive particle size"
+            )
 
         self.initial_conditions = {c_s_xav_distribution: c_init}

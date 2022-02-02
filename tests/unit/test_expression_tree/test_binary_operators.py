@@ -408,7 +408,7 @@ class TestBinaryOperators(unittest.TestCase):
         pybamm.settings.max_smoothing = "exact"
 
     def test_binary_simplifications(self):
-        a = pybamm.Scalar(0, domain="domain")
+        a = pybamm.Scalar(0)
         b = pybamm.Scalar(1)
         c = pybamm.Parameter("c")
         v = pybamm.Vector(np.zeros((10, 1)))
@@ -422,9 +422,9 @@ class TestBinaryOperators(unittest.TestCase):
         broad2_edge = pybamm.PrimaryBroadcastToEdges(2, "domain")
 
         # power
-        self.assertEqual((c ** a).id, pybamm.Scalar(1).id)
+        self.assertEqual((c ** 0).id, pybamm.Scalar(1).id)
         self.assertEqual((0 ** c).id, pybamm.Scalar(0).id)
-        self.assertEqual((c ** b).id, c.id)
+        self.assertEqual((c ** 1).id, c.id)
         # power with broadcasts
         self.assertEqual((c ** broad2).id, pybamm.PrimaryBroadcast(c ** 2, "domain").id)
         self.assertEqual((broad2 ** c).id, pybamm.PrimaryBroadcast(2 ** c, "domain").id)
@@ -446,17 +446,17 @@ class TestBinaryOperators(unittest.TestCase):
         self.assertEqual((b + a).evaluate(), 1)
         self.assertIsInstance((0 + b), pybamm.Scalar)
         self.assertEqual((0 + b).evaluate(), 1)
-        self.assertIsInstance((a + c), pybamm.Parameter)
-        self.assertIsInstance((c + a), pybamm.Parameter)
-        self.assertIsInstance((c + b), pybamm.Addition)
-        self.assertIsInstance((b + c), pybamm.Addition)
+        self.assertIsInstance((0 + c), pybamm.Parameter)
+        self.assertIsInstance((c + 0), pybamm.Parameter)
+        self.assertIsInstance((c + 1), pybamm.Addition)
+        self.assertIsInstance((1 + c), pybamm.Addition)
         # addition with broadcast zero
-        self.assertIsInstance((b + broad0), pybamm.PrimaryBroadcast)
-        np.testing.assert_array_equal((b + broad0).child.evaluate(), 1)
-        np.testing.assert_array_equal((b + broad0).domain, "domain")
-        self.assertIsInstance((broad0 + b), pybamm.PrimaryBroadcast)
-        np.testing.assert_array_equal((broad0 + b).child.evaluate(), 1)
-        np.testing.assert_array_equal((broad0 + b).domain, "domain")
+        self.assertIsInstance((1 + broad0), pybamm.PrimaryBroadcast)
+        np.testing.assert_array_equal((1 + broad0).child.evaluate(), 1)
+        np.testing.assert_array_equal((1 + broad0).domain, "domain")
+        self.assertIsInstance((broad0 + 1), pybamm.PrimaryBroadcast)
+        np.testing.assert_array_equal((broad0 + 1).child.evaluate(), 1)
+        np.testing.assert_array_equal((broad0 + 1).domain, "domain")
         # addition with broadcasts
         self.assertEqual((c + broad2).id, pybamm.PrimaryBroadcast(c + 2, "domain").id)
         self.assertEqual((broad2 + c).id, pybamm.PrimaryBroadcast(2 + c, "domain").id)
