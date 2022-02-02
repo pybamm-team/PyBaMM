@@ -65,29 +65,27 @@ class BaseMechanics(pybamm.BaseSubModel):
             cell_thickness_change = variables["Cell thickness change [m]"]
 
         if self.domain == "Negative":
-            x = pybamm.standard_spatial_vars.x_n
             Omega = self.param.Omega_n
-            R0 = self.param.R_n(x)
+            R0 = self.param.R_n
             c_scale = self.param.c_n_max
             c_0 = self.param.c_n_0
             E0 = self.param.E_n
             nu = self.param.nu_n
             L0 = self.param.L_n
-            c_init = self.param.c_n_init(1)
+            c_init = pybamm.r_average(self.param.c_n_init)
             v_change = pybamm.x_average(
                 eps_s * self.param.t_n_change(c_s_rav)
             ) - pybamm.x_average(eps_s * self.param.t_n_change(c_init))
 
         elif self.domain == "Positive":
-            x = pybamm.standard_spatial_vars.x_p
             Omega = self.param.Omega_p
-            R0 = self.param.R_p(x)
+            R0 = self.param.R_p
             c_scale = self.param.c_p_max
             c_0 = self.param.c_p_0
             E0 = self.param.E_p
             nu = self.param.nu_p
             L0 = self.param.L_p
-            c_init = self.param.c_p_init(0)
+            c_init = pybamm.r_average(self.param.c_p_init)
             v_change = pybamm.x_average(
                 eps_s * self.param.t_p_change(c_s_rav)
             ) - pybamm.x_average(eps_s * self.param.t_p_change(c_init))
@@ -149,12 +147,10 @@ class BaseMechanics(pybamm.BaseSubModel):
         l_cr = variables[self.domain + " particle crack length"]
         a0 = variables[self.domain + " electrode surface area to volume ratio"]
         if self.domain == "Negative":
-            x = pybamm.standard_spatial_vars.x_n
-            R0 = self.param.R_n(x)
+            R0 = self.param.R_n
             rho_cr = self.param.rho_cr_n
         elif self.domain == "Positive":
-            x = pybamm.standard_spatial_vars.x_p
-            R0 = self.param.R_p(x)
+            R0 = self.param.R_p
             rho_cr = self.param.rho_cr_p
         roughness = l_cr * 2 * rho_cr + 1  # the ratio of cracks to normal surface
         a_cr = (roughness - 1) * a0  # normalised crack surface area

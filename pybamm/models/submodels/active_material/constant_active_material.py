@@ -23,14 +23,12 @@ class Constant(BaseModel):
 
     def get_fundamental_variables(self):
         if self.domain == "Negative":
-            x_n = pybamm.standard_spatial_vars.x_n
-            eps_solid = self.param.epsilon_s_n(x_n)
+            eps_solid = self.param.epsilon_s_n
             deps_solid_dt = pybamm.FullBroadcast(
                 0, "negative electrode", "current collector"
             )
         elif self.domain == "Positive":
-            x_p = pybamm.standard_spatial_vars.x_p
-            eps_solid = self.param.epsilon_s_p(x_p)
+            eps_solid = self.param.epsilon_s_p
             deps_solid_dt = pybamm.FullBroadcast(
                 0, "positive electrode", "current collector"
             )

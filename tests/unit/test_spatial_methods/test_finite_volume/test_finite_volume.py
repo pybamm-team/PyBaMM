@@ -259,7 +259,9 @@ class TestFiniteVolume(unittest.TestCase):
         eqn_disc = disc.process_symbol(eqn)
         eqn_jac = eqn_disc.jac(y)
         jacobian = eqn_jac.evaluate(y=y_test)
-        grad_matrix = spatial_method.gradient_matrix(whole_cell, {}).entries
+        grad_matrix = spatial_method.gradient_matrix(
+            whole_cell, {"primary": whole_cell}
+        ).entries
         np.testing.assert_array_equal(jacobian.toarray()[1:-1], grad_matrix.toarray())
         np.testing.assert_array_equal(
             jacobian.toarray()[0, 0], grad_matrix.toarray()[0][0] * -2
@@ -309,22 +311,22 @@ class TestFiniteVolume(unittest.TestCase):
         }
         disc = pybamm.Discretisation(mesh, spatial_methods)
 
-        c_s_n = pybamm.Variable("c_s_n", domain=["negative particle"])
-        c_s_p = pybamm.Variable("c_s_p", domain=["positive particle"])
+        c_s_n = pybamm.Variable(
+            "c_s_n",
+            domain=["negative particle"],
+            auxiliary_domains={"secondary": ["negative electrode"]},
+        )
+        c_s_p = pybamm.Variable(
+            "c_s_p",
+            domain=["positive particle"],
+            auxiliary_domains={"secondary": ["positive electrode"]},
+        )
 
         disc.set_variable_slices([c_s_n, c_s_p])
 
         # surface values
         c_s_n_surf = pybamm.surf(c_s_n)
         c_s_p_surf = pybamm.surf(c_s_p)
-
-        # domain for boundary values must now be explicitly set
-        c_s_n_surf_disc = disc.process_symbol(c_s_n_surf)
-        c_s_p_surf_disc = disc.process_symbol(c_s_p_surf)
-        self.assertEqual(c_s_n_surf_disc.domain, [])
-        self.assertEqual(c_s_p_surf_disc.domain, [])
-        c_s_n_surf.domain = ["negative electrode"]
-        c_s_p_surf.domain = ["positive electrode"]
         c_s_n_surf_disc = disc.process_symbol(c_s_n_surf)
         c_s_p_surf_disc = disc.process_symbol(c_s_p_surf)
         self.assertEqual(c_s_n_surf_disc.domain, ["negative electrode"])
@@ -345,19 +347,13 @@ class TestFiniteVolume(unittest.TestCase):
         # Basic shape and type tests
         y = np.ones_like(mesh["negative electrode"].nodes[:, np.newaxis])
         # Left
-        self.assertEqual(delta_fn_left_disc.domain, delta_fn_left.domain)
-        self.assertEqual(
-            delta_fn_left_disc.auxiliary_domains, delta_fn_left.auxiliary_domains
-        )
+        self.assertEqual(delta_fn_left_disc.domains, delta_fn_left.domains)
         self.assertIsInstance(delta_fn_left_disc, pybamm.Multiplication)
         self.assertIsInstance(delta_fn_left_disc.left, pybamm.Matrix)
         np.testing.assert_array_equal(delta_fn_left_disc.left.evaluate()[:, 1:], 0)
         self.assertEqual(delta_fn_left_disc.shape, y.shape)
         # Right
-        self.assertEqual(delta_fn_right_disc.domain, delta_fn_right.domain)
-        self.assertEqual(
-            delta_fn_right_disc.auxiliary_domains, delta_fn_right.auxiliary_domains
-        )
+        self.assertEqual(delta_fn_right_disc.domains, delta_fn_right.domains)
         self.assertIsInstance(delta_fn_right_disc, pybamm.Multiplication)
         self.assertIsInstance(delta_fn_right_disc.left, pybamm.Matrix)
         np.testing.assert_array_equal(delta_fn_right_disc.left.evaluate()[:, :-1], 0)
