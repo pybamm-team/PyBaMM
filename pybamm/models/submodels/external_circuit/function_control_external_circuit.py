@@ -116,7 +116,7 @@ class ResistanceFunctionControl(FunctionControl):
     """External circuit with resistance control."""
 
     def __init__(self, param, control):
-        super().__init__(param, self.constant_resistance, control="algebraic")
+        super().__init__(param, self.constant_resistance, control=control)
 
     def constant_resistance(self, variables):
         I = variables["Current [A]"]
