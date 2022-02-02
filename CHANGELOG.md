@@ -9,6 +9,10 @@
 
 -   The `domain` setter and `auxiliary_domains` getter have been deprecated, `domains` setter/getter should be used instead. The `domain` getter is still active. We now recommend creating symbols with `domains={...}` instead of `domain=..., auxiliary_domains={...}`, but the latter is not yet deprecated ([#1866](https://github.com/pybamm-team/PyBaMM/pull/1866))
 
+## Bug fixes
+
+-  Parameters can now be imported from a directory having "pybamm" in its name ([#1919](https://github.com/pybamm-team/PyBaMM/pull/1919))
+
 # [v22.1](https://github.com/pybamm-team/PyBaMM/tree/v22.1) - 2022-01-31
 
 ## Features
@@ -24,7 +28,7 @@
 
 ## Bug fixes
 
--   Parameters can now be imported from any given path ([#1900](https://github.com/pybamm-team/PyBaMM/pull/1900), [#1919](https://github.com/pybamm-team/PyBaMM/pull/1919))
+-   Parameters can now be imported from any given path in `Windows` ([#1900](https://github.com/pybamm-team/PyBaMM/pull/1900))
 -   Fixed initial conditions for the EC SEI model ([#1895](https://github.com/pybamm-team/PyBaMM/pull/1895))
 -   Fixed issue in extraction of sensitivites ([#1894](https://github.com/pybamm-team/PyBaMM/pull/1894))
 
