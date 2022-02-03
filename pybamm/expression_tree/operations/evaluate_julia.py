@@ -76,6 +76,7 @@ def find_symbols(symbol, constant_symbols, variable_symbols, variable_symbol_siz
             if scipy.sparse.issparse(value):
                 # Create Julia SparseArray
                 row, col, data = scipy.sparse.find(value)
+                data = np.round(data, 12)
                 m, n = value.shape
                 # Set print options large enough to avoid ellipsis
                 # at least as big is len(row) = len(col) = len(data)
@@ -801,7 +802,7 @@ def get_julia_mtk_model(model, geometry=None, tspan=None):
     long_domain_symbol_to_short = {}
     for dom in all_domains:
         # Read domain name from geometry
-        domain_symbol = list(geometry[dom[0]].keys())[0].name
+        domain_symbol = list(geometry[dom[0]].keys())[0]
         if len(dom) > 1:
             domain_symbol = domain_symbol[0]
             # For multi-domain variables keep only the first letter of the domain

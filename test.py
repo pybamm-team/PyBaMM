@@ -17,7 +17,7 @@ parameter_values = model.default_parameter_values
 parameter_values._replace_callable_function_parameters = True
 
 var = pybamm.standard_spatial_vars
-var_pts = {var.x_n: 10, var.x_s: 10, var.x_p: 10, var.r_n: 10, var.r_p: 10}
+var_pts = {"x_n": 10, "x_s": 10, "x_p": 10, "r_n": 10, "r_p": 10}
 
 sim = pybamm.Simulation(model, var_pts=var_pts, parameter_values=parameter_values)
 sim.set_parameters()

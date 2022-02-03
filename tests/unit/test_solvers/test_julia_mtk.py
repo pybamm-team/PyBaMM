@@ -121,8 +121,7 @@ class TestCreateSolveMTKModel(unittest.TestCase):
             var: {"left": (1, "Dirichlet"), "right": (1, "Dirichlet")}
         }
 
-        x = pybamm.SpatialVariable("x", domain="line", coord_sys="cartesian")
-        geometry = {"line": {x: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)}}}
+        geometry = {"line": {"x": {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)}}}
 
         pybamm.get_julia_mtk_model(model, geometry=geometry, tspan=(0.0, 10.0))
 
@@ -158,10 +157,9 @@ class TestCreateSolveMTKModel(unittest.TestCase):
             var: {"left": (1, "Dirichlet"), "right": (1, "Dirichlet")}
         }
 
-        r = pybamm.SpatialVariable(
-            "r_n", domain="negative particle", coord_sys="spherical polar"
-        )
-        geometry = {"particle": {r: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)}}}
+        geometry = {
+            "particle": {"r_n": {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)}}
+        }
 
         pybamm.get_julia_mtk_model(model, geometry=geometry, tspan=(0.0, 10.0))
 
