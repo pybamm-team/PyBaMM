@@ -57,7 +57,7 @@ jobs:
         python-version: ${{ matrix.python-version }}
   
     - name: Set up Julia
-      if: matrix.os == 'ubuntu-latest' && matrix.python-version != 3.9
+      if: matrix.os == 'ubuntu-latest'
       uses: julia-actions/setup-julia@v1
       with:
         version: 1.6
@@ -94,8 +94,7 @@ jobs:
       run: tox -e pybamm-requires
 
     - name: Install Julia
-      # Julia 1.6 doesn't work with python 3.9
-      if: matrix.os == 'ubuntu-latest' && matrix.python-version != 3.9
+      if: matrix.os == 'ubuntu-latest'
       run: tox -e julia
 
     - name: Run unit tests for GNU/Linux with Python 3.7 and 3.8
