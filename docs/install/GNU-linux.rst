@@ -24,7 +24,7 @@ On Fedora or CentOS, you can use DNF or Yum. For example
    sudo dnf install python3
 
 On Mac OS distributions, you can use ``homebrew``. First `install
-``brew`` <https://docs.python-guide.org/starting/install3/osx/>`__:
+brew <https://docs.python-guide.org/starting/install3/osx/>`__:
 
 .. code:: bash
 
@@ -105,7 +105,7 @@ GNU/Linux
 .. code:: bash
 
 	  apt install libopenblas-dev
-	  pybamm_install_odes --install-sundials
+	  pybamm_install_odes
 
 The ``pybamm_install_odes`` command is installed with PyBaMM. It automatically downloads and installs the SUNDIALS library on your
 system (under ``~/.local``), before installing ``sckits.odes`` (by running ``pip install scikits.odes``).
