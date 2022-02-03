@@ -259,7 +259,7 @@ class TestEvaluate(unittest.TestCase):
             Main.y = y_test
             Main.eval("f!(dy,y,0,0)")
             np.testing.assert_almost_equal(
-                Main.dy, expr.evaluate(y=y_test).flatten(), decimal=15
+                Main.dy, expr.evaluate(y=y_test).flatten(), decimal=14
             )
 
         for function in [
