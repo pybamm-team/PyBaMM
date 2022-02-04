@@ -36,7 +36,13 @@ def is_constant_and_can_evaluate(symbol):
         return False
 
 
-def find_symbols(symbol, constant_symbols, variable_symbols, variable_symbol_sizes):
+def find_symbols(
+    symbol,
+    constant_symbols,
+    variable_symbols,
+    variable_symbol_sizes,
+    round_constants=True,
+):
     """
     This function converts an expression tree to a dictionary of node id's and strings
     specifying valid julia code to calculate that nodes value, given y and t.
@@ -72,11 +78,14 @@ def find_symbols(symbol, constant_symbols, variable_symbols, variable_symbol_siz
         symbol = symbol.child
     if is_constant_and_can_evaluate(symbol):
         value = symbol.evaluate()
+        if round_constants:
+            value = np.round(value, decimals=11)
         if not isinstance(value, numbers.Number):
             if scipy.sparse.issparse(value):
                 # Create Julia SparseArray
                 row, col, data = scipy.sparse.find(value)
-                data = np.round(data, 12)
+                if round_constants:
+                    data = np.round(data, decimals=11)
                 m, n = value.shape
                 # Set print options large enough to avoid ellipsis
                 # at least as big is len(row) = len(col) = len(data)
@@ -118,7 +127,13 @@ def find_symbols(symbol, constant_symbols, variable_symbols, variable_symbol_siz
 
     # process children recursively
     for child in symbol.children:
-        find_symbols(child, constant_symbols, variable_symbols, variable_symbol_sizes)
+        find_symbols(
+            child,
+            constant_symbols,
+            variable_symbols,
+            variable_symbol_sizes,
+            round_constants=round_constants,
+        )
 
     # calculate the variable names that will hold the result of calculating the
     # children variables
@@ -316,7 +331,7 @@ def find_symbols(symbol, constant_symbols, variable_symbols, variable_symbol_siz
         pass
 
 
-def to_julia(symbol):
+def to_julia(symbol, round_constants=True):
     """
     This function converts an expression tree into a dict of constant input values, and
     valid julia code that acts like the tree's :func:`pybamm.Symbol.evaluate` function
@@ -339,13 +354,24 @@ def to_julia(symbol):
     constant_values = OrderedDict()
     variable_symbols = OrderedDict()
     variable_symbol_sizes = OrderedDict()
-    find_symbols(symbol, constant_values, variable_symbols, variable_symbol_sizes)
+    find_symbols(
+        symbol,
+        constant_values,
+        variable_symbols,
+        variable_symbol_sizes,
+        round_constants=round_constants,
+    )
 
     return constant_values, variable_symbols, variable_symbol_sizes
 
 
 def get_julia_function(
-    symbol, funcname="f", input_parameter_order=None, len_rhs=None, preallocate=True
+    symbol,
+    funcname="f",
+    input_parameter_order=None,
+    len_rhs=None,
+    preallocate=True,
+    round_constants=True,
 ):
     """
     Converts a pybamm expression tree into pure julia code that will calculate the
@@ -394,7 +420,9 @@ def get_julia_function(
             else:
                 symbol_minus_dy.append(child)
         symbol = pybamm.numpy_concatenation(*symbol_minus_dy)
-    constants, var_symbols, var_symbol_sizes = to_julia(symbol)
+    constants, var_symbols, var_symbol_sizes = to_julia(
+        symbol, round_constants=round_constants
+    )
 
     # extract constants in generated function
     const_and_cache_str = "cs = (\n"
