@@ -362,6 +362,13 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                     "cannot have transverse convection in 0D model"
                 )
 
+        if (
+            options["thermal"] in ["x-lumped", "x-full"]
+            and options["cell geometry"] != "pouch"
+        ):
+            raise pybamm.OptionError(
+                options["thermal"] + " model must have pouch geometry."
+            )
         if options["thermal"] == "x-full" and options["dimensionality"] != 0:
             n = options["dimensionality"]
             raise pybamm.OptionError(
@@ -376,6 +383,18 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                 raise pybamm.OptionError(
                     "cannot have stress-induced diffusion without a particle "
                     "mechanics model"
+                )
+
+        if options["working electrode"] != "both":
+            if options["thermal"] == "x-full":
+                raise pybamm.OptionError(
+                    "X-full thermal submodel is not compatible with half-cell models"
+                )
+            elif options["thermal"] == "x-lumped" and options["dimensionality"] != 0:
+                n = options["dimensionality"]
+                raise pybamm.OptionError(
+                    f"X-lumped thermal submodels do not yet support {n}D "
+                    "current collectors in a half-cell configuration"
                 )
 
         # Check options are valid
@@ -577,13 +596,6 @@ class BaseBatteryModel(pybamm.BaseModel):
             if options["convection"] != "none":
                 raise pybamm.OptionError(
                     "convection not implemented for lithium-ion models"
-                )
-            if (
-                options["thermal"] in ["x-lumped", "x-full"]
-                and options["cell geometry"] != "pouch"
-            ):
-                raise pybamm.OptionError(
-                    options["thermal"] + " model must have pouch geometry."
                 )
         if isinstance(self, pybamm.lithium_ion.SPMe):
             if options["electrolyte conductivity"] not in [
@@ -925,25 +937,27 @@ class BaseBatteryModel(pybamm.BaseModel):
         elif self.options["thermal"] == "lumped":
             thermal_submodel = pybamm.thermal.Lumped(
                 self.param,
-                cc_dimension=self.options["dimensionality"],
-                geometry=self.options["cell geometry"],
+                self.options,
             )
 
         elif self.options["thermal"] == "x-lumped":
             if self.options["dimensionality"] == 0:
-                # With 0D current collectors x-lumped is equivalent to lumped pouch
-                thermal_submodel = pybamm.thermal.Lumped(self.param, geometry="pouch")
+                thermal_submodel = pybamm.thermal.Lumped(self.param, self.options)
             elif self.options["dimensionality"] == 1:
                 thermal_submodel = pybamm.thermal.pouch_cell.CurrentCollector1D(
-                    self.param
+                    self.param,
+                    self.options,
                 )
             elif self.options["dimensionality"] == 2:
                 thermal_submodel = pybamm.thermal.pouch_cell.CurrentCollector2D(
-                    self.param
+                    self.param,
+                    self.options,
                 )
         elif self.options["thermal"] == "x-full":
             if self.options["dimensionality"] == 0:
-                thermal_submodel = pybamm.thermal.OneDimensionalX(self.param)
+                thermal_submodel = pybamm.thermal.OneDimensionalX(
+                    self.param, self.options
+                )
 
         self.submodels["thermal"] = thermal_submodel
 
