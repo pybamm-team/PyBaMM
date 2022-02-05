@@ -291,7 +291,7 @@ class TestQuickPlot(unittest.TestCase):
         quick_plot.plot(0)
 
         # test creating a GIF
-        quick_plot.create_gif(number_of_images=5, duration=3)
+        quick_plot.create_gif(number_of_images=3, duration=3)
         assert not os.path.exists("plot*.png")
         assert os.path.exists("plot.gif")
         os.remove("plot.gif")
