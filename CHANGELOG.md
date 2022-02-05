@@ -8,14 +8,12 @@
 ## Bug fixes
 
 -   Fixed a bug where thermal submodels could not be used with half-cells ([#1929](https://github.com/pybamm-team/PyBaMM/pull/1929))
+-   Parameters can now be imported from a directory having "pybamm" in its name ([#1919](https://github.com/pybamm-team/PyBaMM/pull/1919))
+-   `scikit.odes` and `SUNDIALS` can now be installed using `pybamm_install_odes` ([#1916](https://github.com/pybamm-team/PyBaMM/pull/1916))
 
 ## Breaking changes
 
 -   The `domain` setter and `auxiliary_domains` getter have been deprecated, `domains` setter/getter should be used instead. The `domain` getter is still active. We now recommend creating symbols with `domains={...}` instead of `domain=..., auxiliary_domains={...}`, but the latter is not yet deprecated ([#1866](https://github.com/pybamm-team/PyBaMM/pull/1866))
-
-## Bug fixes
-
--   `scikit.odes` and `SUNDIALS` can now be installed using `pybamm_install_odes` ([#1916](https://github.com/pybamm-team/PyBaMM/pull/1916))
 
 # [v22.1](https://github.com/pybamm-team/PyBaMM/tree/v22.1) - 2022-01-31
 

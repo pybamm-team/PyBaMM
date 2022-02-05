@@ -288,14 +288,11 @@ def load_function(filename):
     orig_dir = os.getcwd()
 
     # Strip absolute path to pybamm/input/example.py
-    if "pybamm" in filename:
+    if "pybamm/input/parameters" in filename or "pybamm\\input\\parameters" in filename:
         root_path = filename[filename.rfind("pybamm") :]
     # If the function is in the current working directory
     elif os.getcwd() in filename:
         root_path = filename.replace(os.getcwd(), "")
-        # getcwd() returns "C:\\" when in the root drive and "C:\\a\\b\\c" otherwise
-        if root_path[0] == "\\" or root_path[0] == "/":
-            root_path = root_path[1:]
     # If the function is not in the current working directory and the path provided is
     # absolute
     elif os.path.isabs(filename) and not os.getcwd() in filename:  # pragma: no cover
@@ -303,9 +300,12 @@ def load_function(filename):
         dir_path = os.path.split(filename)[0]
         os.chdir(dir_path)
         root_path = filename.replace(os.getcwd(), "")
-        root_path = root_path[1:]
     else:
         root_path = filename
+
+    # getcwd() returns "C:\\" when in the root drive and "C:\\a\\b\\c" otherwise
+    if root_path[0] == "\\" or root_path[0] == "/":
+        root_path = root_path[1:]
 
     path = root_path.replace("/", ".")
     path = path.replace("\\", ".")
