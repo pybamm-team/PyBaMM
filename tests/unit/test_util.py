@@ -88,7 +88,8 @@ class TestUtil(unittest.TestCase):
         # create a new lithium_ion folder in the root PyBaMM directory
         subprocess.run(["pybamm_edit_parameter", "lithium_ion"])
 
-        # path for a function in the created directory -> x/y/z/PyBaMM/lithium_ion/negative_electrode/ ....
+        # path for a function in the created directory ->
+        # x/y/z/PyBaMM/lithium_ion/negative_electrode/ ....
         test_path = os.path.join(
             os.getcwd(),
             "lithium_ion",
@@ -100,10 +101,10 @@ class TestUtil(unittest.TestCase):
         # load the function
         func = pybamm.load_function(test_path)
 
-        # cannot directly do - lithium_ion.negative_electrodes.graphite_Chen2020 as lithium_ion is not a
-        # python module
+        # cannot directly do - lithium_ion.negative_electrodes.graphite_Chen2020 as
+        # lithium_ion is not a python module
         module_object = importlib.import_module(
-            "lithium_ion.negative_electrodes.graphite_Chen2020.graphite_LGM50_electrolyte_exchange_current_density_Chen2020"
+            "lithium_ion.negative_electrodes.graphite_Chen2020.graphite_LGM50_electrolyte_exchange_current_density_Chen2020"  # noqa
         )
         self.assertEqual(
             func,
