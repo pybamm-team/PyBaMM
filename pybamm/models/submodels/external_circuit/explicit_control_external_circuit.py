@@ -70,7 +70,7 @@ class ExplicitResistanceControl(BaseModel):
     def get_coupled_variables(self, variables):
         param = self.param
 
-        # Current is given as applied power divided by voltage
+        # Current is given as applied voltage divided by resistance
         V = variables["Terminal voltage [V]"]
         R = pybamm.FunctionParameter(
             "Resistance function [Ohm]", {"Time [s]": pybamm.t * self.param.timescale}

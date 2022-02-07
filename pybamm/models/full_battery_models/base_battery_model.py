@@ -75,6 +75,8 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                     differential equation for the power or resistance
                 - "explicit power"/"explicit resistance" : current is defined in terms \
                     of the voltage such that power/resistance is correct
+                - "CCCV": a special implementation of the common constant-current \
+                    constant-voltage charging protocol, via an ODE for the current
                 - callable : if a callable is given as this option, the function \
                     defines the residual of an algebraic equation. The applied current \
                     will be solved for such that the algebraic constraint is satisfied.

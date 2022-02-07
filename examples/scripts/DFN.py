@@ -5,41 +5,46 @@
 import pybamm
 import numpy as np
 
-models = [
-    pybamm.lithium_ion.DFN()  # {"operating mode": "explicit power"}),
-    # pybamm.lithium_ion.DFN({"operating mode": "power"}),
-    # pybamm.lithium_ion.DFN({"operating mode": "differential power"}),
-]
+pybamm.set_logging_level("INFO")
 
-# set parameters and discretise models
-for i, model in enumerate(models):
-    # create geometry
-    params = model.default_parameter_values
-    # params.update({"Power function [W]": 4}, check_already_exists=False)
-    params.update({"Current function [A]": 0})
-    geometry = model.default_geometry
-    params.process_model(model)
-    params.process_geometry(geometry)
-    mesh = pybamm.Mesh(geometry, model.default_submesh_types, model.default_var_pts)
-    disc = pybamm.Discretisation(mesh, model.default_spatial_methods)
-    disc.process_model(model)
+# load model
+model = pybamm.lithium_ion.DFN()
+# create geometry
+geometry = model.default_geometry
+
+# load parameter values and process model and geometry
+param = model.default_parameter_values
+param.process_geometry(geometry)
+param.process_model(model)
+
+# set mesh
+var = pybamm.standard_spatial_vars
+var_pts = {var.x_n: 30, var.x_s: 30, var.x_p: 30, var.r_n: 10, var.r_p: 10}
+mesh = pybamm.Mesh(geometry, model.default_submesh_types, var_pts)
+
+# discretise model
+disc = pybamm.Discretisation(mesh, model.default_spatial_methods)
+disc.process_model(model)
 
 # solve model
-# pybamm.set_logging_level("DEBUG")
-solutions = [None] * len(models)
 t_eval = np.linspace(0, 3600, 100)
-for i, model in enumerate(models):
-    print(model.name)
-    # solver = pybamm.ScipySolver()
-    solver = pybamm.CasadiSolver()
-    solutions[i] = solver.solve(model, t_eval)
-    # print(solutions[i].solve_time)
-    # print(solutions[i].integration_time)
-pybamm.dynamic_plot(
-    solutions,
+solver = pybamm.CasadiSolver(mode="safe", atol=1e-6, rtol=1e-3)
+solution = solver.solve(model, t_eval)
+
+# plot
+plot = pybamm.QuickPlot(
+    solution,
     [
-        "Terminal voltage [V]",
+        "Negative particle concentration [mol.m-3]",
+        "Electrolyte concentration [mol.m-3]",
+        "Positive particle concentration [mol.m-3]",
         "Current [A]",
-        "Terminal power [W]",
+        "Negative electrode potential [V]",
+        "Electrolyte potential [V]",
+        "Positive electrode potential [V]",
+        "Terminal voltage [V]",
     ],
+    time_unit="seconds",
+    spatial_unit="um",
 )
+plot.dynamic_plot()
