@@ -6,7 +6,7 @@ import sys
 import logging
 import subprocess
 
-from pybamm.util import root_dir as pybamm_dir
+from pybamm.util import root_dir
 
 try:
     # wget module is required to download SUNDIALS or SuiteSparse.
@@ -41,8 +41,10 @@ def install_sundials(download_dir, install_dir):
         raise RuntimeError("CMake must be installed to build SUNDIALS.")
 
     url = (
-        "https://computing.llnl.gov/"
-        + "projects/sundials/download/sundials-{}.tar.gz".format(sundials_version)
+        "https://github.com/LLNL/"
+        + "sundials/releases/download/v{}/sundials-{}.tar.gz".format(
+            sundials_version, sundials_version
+        )
     )
     logger.info("Downloading sundials")
     download_extract_library(url, download_dir)
@@ -128,6 +130,8 @@ def main(arguments=None):
     default_install_dir = os.path.join(os.getenv("HOME"), ".local")
     parser.add_argument("--install-dir", type=str, default=default_install_dir)
     args = parser.parse_args(arguments)
+
+    pybamm_dir = root_dir()
     install_dir = (
         args.install_dir
         if os.path.isabs(args.install_dir)
@@ -144,18 +148,19 @@ def main(arguments=None):
         SUNDIALS_FOUND = isfile(join(DIR, "lib", "libsundials_ida.so")) or isfile(
             join(DIR, "lib", "libsundials_ida.dylib")
         )
-        SUNDIALS_LIB_DIR = DIR if SUNDIALS_FOUND else ""
         if SUNDIALS_FOUND:
+            SUNDIALS_LIB_DIR = DIR
             logger.info("Found sundials at {}".format(SUNDIALS_LIB_DIR))
             break
 
     if not SUNDIALS_FOUND:
         logger.info("Could not find sundials libraries.")
-        logger.info("Installing sundials in {}".install_dir)
+        logger.info("Installing sundials in {}".format(install_dir))
         download_dir = os.path.join(pybamm_dir, "sundials")
         if not os.path.exists(download_dir):
             os.makedirs(download_dir)
         install_sundials(download_dir, install_dir)
+        SUNDIALS_LIB_DIR = install_dir
 
     update_LD_LIBRARY_PATH(SUNDIALS_LIB_DIR)
 

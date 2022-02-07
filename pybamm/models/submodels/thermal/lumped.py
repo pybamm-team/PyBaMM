@@ -7,29 +7,30 @@ from .base_thermal import BaseThermal
 
 
 class Lumped(BaseThermal):
-    """Class for lumped thermal submodel. For more information see [1]_.
+    """
+    Class for lumped thermal submodel. For more information see [1]_ and [2]_.
 
     Parameters
     ----------
     param : parameter class
         The parameters to use for this submodel
-    cc_dimension: int, optional
-        The dimension of the current collectors. Can be 0 (default), 1 or 2.
-    geometry: string, optional
-        The geometry for the lumped thermal submodel. Can be "arbitrary" (default) or
-        pouch.
+    options : dict, optional
+        A dictionary of options to be passed to the model.
 
     References
     ----------
     .. [1] R Timms, SG Marquis, V Sulzer, CP Please and SJ Chapman. “Asymptotic
-           Reduction of a Lithium-ion Pouch Cell Model”. In preparation, 2020.
+           Reduction of a Lithium-ion Pouch Cell Model”. SIAM Journal on Applied
+           Mathematics, 81(3), 765--788, 2021
+    .. [2] SG Marquis, R Timms, V Sulzer, CP Please and SJ Chapman. “A Suite of
+           Reduced-Order Models of a Single-Layer Lithium-ion Pouch Cell”. Journal
+           of The Electrochemical Society, 167(14):140513, 2020
 
     **Extends:** :class:`pybamm.thermal.BaseThermal`
     """
 
-    def __init__(self, param, cc_dimension=0, geometry="arbitrary"):
-        self.geometry = geometry
-        super().__init__(param, cc_dimension=cc_dimension)
+    def __init__(self, param, options=None):
+        super().__init__(param, options=options)
         pybamm.citations.register("Timms2021")
 
     def get_fundamental_variables(self):
@@ -38,7 +39,10 @@ class Lumped(BaseThermal):
         T_x_av = pybamm.PrimaryBroadcast(T_vol_av, ["current collector"])
 
         T_cn = T_x_av
-        T_n = pybamm.PrimaryBroadcast(T_x_av, "negative electrode")
+        if self.half_cell:
+            T_n = None
+        else:
+            T_n = pybamm.PrimaryBroadcast(T_x_av, "negative electrode")
         T_s = pybamm.PrimaryBroadcast(T_x_av, "separator")
         T_p = pybamm.PrimaryBroadcast(T_x_av, "positive electrode")
         T_cp = T_x_av
@@ -60,7 +64,7 @@ class Lumped(BaseThermal):
 
         # Account for surface area to volume ratio in cooling coefficient
         # The factor 1/delta^2 comes from the choice of non-dimensionalisation.
-        if self.geometry == "pouch":
+        if self.options["cell geometry"] == "pouch":
             cell_volume = self.param.l * self.param.l_y * self.param.l_z
 
             yz_cell_surface_area = self.param.l_y * self.param.l_z
@@ -97,7 +101,7 @@ class Lumped(BaseThermal):
                 + positive_tab_cooling_coefficient
                 + edge_cooling_coefficient
             )
-        elif self.geometry == "arbitrary":
+        elif self.options["cell geometry"] == "arbitrary":
             cell_surface_area = self.param.a_cooling
             cell_volume = self.param.v_cell
             total_cooling_coefficient = (
