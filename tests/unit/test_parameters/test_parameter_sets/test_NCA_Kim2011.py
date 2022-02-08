@@ -41,8 +41,7 @@ class TestKim(unittest.TestCase):
 
     def test_standard_lithium_parameters(self):
 
-        chemistry = pybamm.parameter_sets.NCA_Kim2011
-        parameter_values = pybamm.ParameterValues(chemistry=chemistry)
+        parameter_values = pybamm.ParameterValues("NCA_Kim2011")
 
         model = pybamm.lithium_ion.DFN()
         sim = pybamm.Simulation(model, parameter_values=parameter_values)

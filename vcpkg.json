@@ -1,11 +1,13 @@
 {
   "name": "pybamm",
-  "version-string": "0.4.0",
+  "version-string": "22.1",
   "dependencies": [
     {
       "name": "sundials",
       "default-features": false,
-      "features": [ "klu" ]
+      "features": [
+        "klu"
+      ]
     }
   ]
 }

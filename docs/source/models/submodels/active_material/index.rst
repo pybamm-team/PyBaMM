@@ -8,6 +8,5 @@ Submodels for (loss of) active material
 
   base_active_material
   constant_active_material
-  reaction_driven_active_material
-  stress_driven_active_material
+  loss_active_material
 

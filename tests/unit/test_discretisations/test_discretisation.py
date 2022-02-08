@@ -119,7 +119,7 @@ class TestDiscretise(unittest.TestCase):
         x = pybamm.SpatialVariable("x", domain="test", coord_sys="cartesian")
         geometry = {"test": {x: {"min": pybamm.Scalar(0), "max": pybamm.Scalar(1)}}}
 
-        submesh_types = {"test": pybamm.MeshGenerator(pybamm.Uniform1DSubMesh)}
+        submesh_types = {"test": pybamm.Uniform1DSubMesh}
         var_pts = {x: 10}
         mesh = pybamm.Mesh(geometry, submesh_types, var_pts)
 
@@ -150,8 +150,8 @@ class TestDiscretise(unittest.TestCase):
         model = pybamm.BaseModel()
 
         a = pybamm.Variable("a", domain=["test", "test1"])
-        b1 = pybamm.Variable("b", domain=["test"])
-        b2 = pybamm.Variable("c", domain=["test1"])
+        b1 = pybamm.Variable("b1", domain=["test"])
+        b2 = pybamm.Variable("b2", domain=["test1"])
         b = pybamm.concatenation(b1, b2)
 
         model.rhs = {a: a * b}
@@ -178,8 +178,8 @@ class TestDiscretise(unittest.TestCase):
         }
 
         submesh_types = {
-            "test": pybamm.MeshGenerator(pybamm.Uniform1DSubMesh),
-            "test1": pybamm.MeshGenerator(pybamm.Uniform1DSubMesh),
+            "test": pybamm.Uniform1DSubMesh,
+            "test1": pybamm.Uniform1DSubMesh,
         }
         var_pts = {x1: 10, x2: 5}
         mesh = pybamm.Mesh(geometry, submesh_types, var_pts)
@@ -429,11 +429,7 @@ class TestDiscretise(unittest.TestCase):
     def test_process_complex_expression(self):
         var1 = pybamm.Variable("var1")
         var2 = pybamm.Variable("var2")
-        scal1 = pybamm.Scalar(5)
-        scal2 = pybamm.Scalar(2)
-        scal3 = pybamm.Scalar(3)
-        scal4 = pybamm.Scalar(4)
-        expression = (scal1 * (scal3 ** var2)) / ((var1 - scal4) + scal2)
+        expression = (5 * (3 ** var2)) / ((var1 - 4) + var2)
 
         # create discretisation
         disc = get_discretisation_for_testing()
@@ -442,35 +438,25 @@ class TestDiscretise(unittest.TestCase):
         exp_disc = disc.process_symbol(expression)
         self.assertIsInstance(exp_disc, pybamm.Division)
         # left side
-        self.assertIsInstance(exp_disc.children[0], pybamm.Multiplication)
-        self.assertIsInstance(exp_disc.children[0].children[0], pybamm.Scalar)
-        self.assertIsInstance(exp_disc.children[0].children[1], pybamm.Power)
-        self.assertTrue(
-            isinstance(exp_disc.children[0].children[1].children[0], pybamm.Scalar)
-        )
-        self.assertTrue(
-            isinstance(exp_disc.children[0].children[1].children[1], pybamm.StateVector)
-        )
+        self.assertIsInstance(exp_disc.left, pybamm.Multiplication)
+        self.assertIsInstance(exp_disc.left.left, pybamm.Scalar)
+        self.assertIsInstance(exp_disc.left.right, pybamm.Power)
+        self.assertIsInstance(exp_disc.left.right.left, pybamm.Scalar)
+        self.assertIsInstance(exp_disc.left.right.right, pybamm.StateVector)
         self.assertEqual(
-            exp_disc.children[0].children[1].children[1].y_slices[0],
+            exp_disc.left.right.right.y_slices[0],
             disc.y_slices[var2.id][0],
         )
         # right side
-        self.assertIsInstance(exp_disc.children[1], pybamm.Addition)
-        self.assertTrue(
-            isinstance(exp_disc.children[1].children[0], pybamm.Subtraction)
-        )
-        self.assertTrue(
-            isinstance(exp_disc.children[1].children[0].children[0], pybamm.StateVector)
-        )
+        self.assertIsInstance(exp_disc.right, pybamm.Addition)
+        self.assertIsInstance(exp_disc.right.left, pybamm.Subtraction)
+        self.assertIsInstance(exp_disc.right.left.left, pybamm.StateVector)
         self.assertEqual(
-            exp_disc.children[1].children[0].children[0].y_slices[0],
+            exp_disc.right.left.left.y_slices[0],
             disc.y_slices[var1.id][0],
         )
-        self.assertTrue(
-            isinstance(exp_disc.children[1].children[0].children[1], pybamm.Scalar)
-        )
-        self.assertIsInstance(exp_disc.children[1].children[1], pybamm.Scalar)
+        self.assertIsInstance(exp_disc.right.left.right, pybamm.Scalar)
+        self.assertIsInstance(exp_disc.right.right, pybamm.StateVector)
 
     def test_discretise_spatial_operator(self):
         # create discretisation
@@ -511,6 +497,26 @@ class TestDiscretise(unittest.TestCase):
             np.testing.assert_array_equal(
                 eqn_disc.evaluate(None, y), var_disc.evaluate(None, y) ** 2
             )
+
+    def test_discretise_average(self):
+        var = pybamm.Variable("var", domain="negative particle size")
+        R = pybamm.SpatialVariable("R", "negative particle size")
+        f_a_dist = (R * 2) ** 2 * 2
+        var_av = pybamm.SizeAverage(var, f_a_dist)
+
+        geometry = {"negative particle size": {"R_n": {"min": 0.5, "max": 1.5}}}
+        var_pts = {"R_n": 10}
+        submesh_types = {"negative particle size": pybamm.Uniform1DSubMesh}
+        spatial_methods = {"negative particle size": pybamm.FiniteVolume()}
+
+        mesh = pybamm.Mesh(geometry, submesh_types, var_pts)
+        disc = pybamm.Discretisation(mesh, spatial_methods)
+
+        disc.set_variable_slices([var])
+        var_av_proc = disc.process_symbol(var_av)
+
+        self.assertIsInstance(var_av_proc, pybamm.MatrixMultiplication)
+        self.assertIsInstance(var_av_proc.right.right, pybamm.StateVector)
 
     def test_process_dict(self):
         # one equation
@@ -1048,7 +1054,7 @@ class TestDiscretise(unittest.TestCase):
         var = pybamm.Variable(
             "var",
             domain=["negative particle"],
-            auxiliary_domains={"secondary": "negative electrode"}
+            auxiliary_domains={"secondary": "negative electrode"},
         )
         broad = pybamm.TertiaryBroadcast(var, "current collector")
 
@@ -1063,7 +1069,7 @@ class TestDiscretise(unittest.TestCase):
                 mesh["negative particle"].npts
                 * mesh["negative electrode"].npts
                 * mesh["current collector"].npts,
-                1
+                1,
             ),
         )
 
@@ -1080,7 +1086,7 @@ class TestDiscretise(unittest.TestCase):
                 mesh["negative particle"].npts
                 * mesh["negative electrode"].npts
                 * (mesh["current collector"].npts + 1),
-                1
+                1,
             ),
         )
 
@@ -1324,9 +1330,7 @@ class TestDiscretise(unittest.TestCase):
         }
 
         # mesh
-        submesh_types = {
-            "negative particle": pybamm.MeshGenerator(pybamm.Uniform1DSubMesh)
-        }
+        submesh_types = {"negative particle": pybamm.Uniform1DSubMesh}
         var_pts = {r: 20}
         mesh = pybamm.Mesh(geometry, submesh_types, var_pts)
 
@@ -1378,6 +1382,18 @@ class TestDiscretise(unittest.TestCase):
             "algebraic and initial conditions must have the same shape",
         ):
             disc.check_model(model)
+
+    def test_length_scale_errors(self):
+        disc = pybamm.Discretisation()
+        model = pybamm.BaseModel()
+        var = pybamm.Variable("var")
+        model.rhs = {var: pybamm.Scalar(1)}
+        model.initial_conditions = {var: pybamm.Scalar(1)}
+        model.length_scales = {"negative electrode": pybamm.Vector([1])}
+        disc.process_model(model)
+        self.assertEqual(
+            model.length_scales["negative electrode"].id, pybamm.Scalar(1).id
+        )
 
 
 if __name__ == "__main__":

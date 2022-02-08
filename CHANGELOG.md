@@ -1,3 +1,109 @@
+# [Unreleased](https://github.com/pybamm-team/PyBaMM/)
+
+## Features
+
+-   Isothermal models now compute heat source terms (but the temperature remains constant). The models now also account for current collector heating when `dimensionality=0` [#1929](https://github.com/pybamm-team/PyBaMM/pull/1929))
+-   Initial concentrations can now be provided as a function of `r` as well as `x` ([#1866](https://github.com/pybamm-team/PyBaMM/pull/1866))
+
+## Bug fixes
+
+-   Fixed a bug where thermal submodels could not be used with half-cells ([#1929](https://github.com/pybamm-team/PyBaMM/pull/1929))
+-   Parameters can now be imported from a directory having "pybamm" in its name ([#1919](https://github.com/pybamm-team/PyBaMM/pull/1919))
+-   `scikit.odes` and `SUNDIALS` can now be installed using `pybamm_install_odes` ([#1916](https://github.com/pybamm-team/PyBaMM/pull/1916))
+
+## Breaking changes
+
+-   The `domain` setter and `auxiliary_domains` getter have been deprecated, `domains` setter/getter should be used instead. The `domain` getter is still active. We now recommend creating symbols with `domains={...}` instead of `domain=..., auxiliary_domains={...}`, but the latter is not yet deprecated ([#1866](https://github.com/pybamm-team/PyBaMM/pull/1866))
+
+# [v22.1](https://github.com/pybamm-team/PyBaMM/tree/v22.1) - 2022-01-31
+
+## Features
+
+-   Half-cell models can now be run with "surface form" ([#1913](https://github.com/pybamm-team/PyBaMM/pull/1913))
+-   Added option for different kinetics on anode and cathode ([#1913](https://github.com/pybamm-team/PyBaMM/pull/1913))
+-   Allow `pybamm.Solution.save_data()` to return a string if filename is None, and added json to_format option ([#1909](https://github.com/pybamm-team/PyBaMM/pull/1909))
+-   Added an option to force install compatible versions of jax and jaxlib if already installed using CLI ([#1881](https://github.com/pybamm-team/PyBaMM/pull/1881))
+
+## Optimizations
+
+-   The `Symbol` nodes no longer subclasses `anytree.NodeMixIn`. This removes some checks that were not really needed ([#1912](https://github.com/pybamm-team/PyBaMM/pull/1912))
+
+## Bug fixes
+
+-   Parameters can now be imported from any given path in `Windows` ([#1900](https://github.com/pybamm-team/PyBaMM/pull/1900))
+-   Fixed initial conditions for the EC SEI model ([#1895](https://github.com/pybamm-team/PyBaMM/pull/1895))
+-   Fixed issue in extraction of sensitivites ([#1894](https://github.com/pybamm-team/PyBaMM/pull/1894))
+
+# [v21.12](https://github.com/pybamm-team/PyBaMM/tree/v21.11) - 2021-12-29
+
+## Features
+
+-   Added new kinetics models for asymmetric Butler-Volmer, linear kinetics, and Marcus-Hush-Chidsey ([#1858](https://github.com/pybamm-team/PyBaMM/pull/1858))
+-   Experiments can be set to terminate when a voltage is reached (across all steps) ([#1832](https://github.com/pybamm-team/PyBaMM/pull/1832))
+-   Added cylindrical geometry and finite volume method ([#1824](https://github.com/pybamm-team/PyBaMM/pull/1824))
+
+## Bug fixes
+-   `PyBaMM` is now importable in `Linux` systems where `jax` is already installed ([#1874](https://github.com/pybamm-team/PyBaMM/pull/1874))
+-   Simulations with drive cycles now support `initial_soc` ([#1842](https://github.com/pybamm-team/PyBaMM/pull/1842))
+-   Fixed bug in expression tree simplification ([#1831](https://github.com/pybamm-team/PyBaMM/pull/1831))
+-   Solid tortuosity is now correctly calculated with Bruggeman coefficient of the respective electrode ([#1773](https://github.com/pybamm-team/PyBaMM/pull/1773))
+
+# [v21.11](https://github.com/pybamm-team/PyBaMM/tree/v21.11) - 2021-11-30
+
+## Features
+
+-   The name of a parameter set can be passed to `ParameterValues` as a string, e.g. `ParameterValues("Chen2020")` ([#1822](https://github.com/pybamm-team/PyBaMM/pull/1822))
+-   Added submodels for interface utilisation ([#1821](https://github.com/pybamm-team/PyBaMM/pull/1821))
+-   Reformatted SEI growth models into a single submodel with conditionals ([#1808](https://github.com/pybamm-team/PyBaMM/pull/1808))
+-   Stress-induced diffusion is now a separate model option instead of being automatically included when using the particle mechanics submodels ([#1797](https://github.com/pybamm-team/PyBaMM/pull/1797))
+-   `Experiment`s with drive cycles can be solved ([#1793](https://github.com/pybamm-team/PyBaMM/pull/1793))
+-   Added surface area to volume ratio as a factor to the SEI equations ([#1790](https://github.com/pybamm-team/PyBaMM/pull/1790))
+-   Half-cell SPM and SPMe have been implemented ([#1731](https://github.com/pybamm-team/PyBaMM/pull/1731))
+
+## Bug fixes
+
+-   Fixed `sympy` operators for `Arctan` and `Exponential` ([#1786](https://github.com/pybamm-team/PyBaMM/pull/1786))
+-   Fixed finite volume discretization in spherical polar coordinates ([#1782](https://github.com/pybamm-team/PyBaMM/pull/1782))
+-   Fixed bug when using `Experiment` with a pouch cell model ([#1707](https://github.com/pybamm-team/PyBaMM/pull/1707))
+-   Fixed bug when using `Experiment` with a plating model ([#1707](https://github.com/pybamm-team/PyBaMM/pull/1707))
+-   Fixed hack for potentials in the SPMe model ([#1707](https://github.com/pybamm-team/PyBaMM/pull/1707))
+
+## Breaking changes
+
+-   The `chemistry` keyword argument in `ParameterValues` has been deprecated. Use `ParameterValues(chem)` instead of `ParameterValues(chemistry=chem)` ([#1822](https://github.com/pybamm-team/PyBaMM/pull/1822))
+-   Raise error when trying to convert an `Interpolant` with the "pchip" interpolator to CasADI ([#1791](https://github.com/pybamm-team/PyBaMM/pull/1791))
+-   Raise error if `Concatenation` is used directly with `Variable` objects (`concatenation` should be used instead) ([#1789](https://github.com/pybamm-team/PyBaMM/pull/1789))
+-   Made jax, jaxlib and the PyBaMM JaxSolver optional ([#1767](https://github.com/pybamm-team/PyBaMM/pull/1767), [#1803](https://github.com/pybamm-team/PyBaMM/pull/1803))
+
+# [v21.10](https://github.com/pybamm-team/PyBaMM/tree/v21.10) - 2021-10-31
+
+## Features
+
+-   Summary variables can now be user-determined ([#1760](https://github.com/pybamm-team/PyBaMM/pull/1760))
+-   Added `all_first_states` to the `Solution` object for a simulation with experiment ([#1759](https://github.com/pybamm-team/PyBaMM/pull/1759))
+-   Added a new method (`create_gif`) in `QuickPlot`, `Simulation` and `BatchStudy` to create a GIF of a simulation ([#1754](https://github.com/pybamm-team/PyBaMM/pull/1754))
+-   Added more examples for the `BatchStudy` class ([#1747](https://github.com/pybamm-team/PyBaMM/pull/1747))
+-   SEI models can now be included in the half-cell model ([#1705](https://github.com/pybamm-team/PyBaMM/pull/1705))
+
+## Bug fixes
+
+-   Half-cell model and lead-acid models can now be simulated with `Experiment`s ([#1759](https://github.com/pybamm-team/PyBaMM/pull/1759))
+-   Removed in-place modification of the solution objects by `QuickPlot` ([#1747](https://github.com/pybamm-team/PyBaMM/pull/1747))
+-   Fixed vector-vector multiplication bug that was causing errors in the SPM with constant voltage or power ([#1735](https://github.com/pybamm-team/PyBaMM/pull/1735))
+
+# [v21.9](https://github.com/pybamm-team/PyBaMM/tree/v21.9) - 2021-09-30
+
+## Features
+
+-   Added thermal parameters (thermal conductivity, specific heat, etc.) to the `Ecker2015` parameter set from Zhao et al. (2018) and Hales et al. (2019) ([#1683](https://github.com/pybamm-team/PyBaMM/pull/1683))
+-   Added `plot_summary_variables` to plot and compare summary variables ([#1678](https://github.com/pybamm-team/PyBaMM/pull/1678))
+-   The DFN model can now be used directly (instead of `BasicDFNHalfCell`) to simulate a half-cell ([#1600](https://github.com/pybamm-team/PyBaMM/pull/1600))
+
+## Breaking changes
+
+-   Dropped support for Python 3.6 ([#1696](https://github.com/pybamm-team/PyBaMM/pull/1696))
+-   The substring 'negative electrode' has been removed from variables related to SEI and lithium plating (e.g. 'Total negative electrode SEI thickness [m]' replaced by 'Total SEI thickness [m]') ([#1654](https://github.com/pybamm-team/PyBaMM/pull/1654))
+
 # [v21.08](https://github.com/pybamm-team/PyBaMM/tree/v21.08) - 2021-08-26
 
 This release introduces:
@@ -15,7 +121,7 @@ example notebook ([#1602](https://github.com/pybamm-team/PyBaMM/pull/1602))
 -   Added LG M50 (NMC811 and graphite + SiOx) parameter set from O'Regan 2021 ([#1594](https://github.com/pybamm-team/PyBaMM/pull/1594))
 -   `pybamm.base_solver.solve` function can take a list of input parameters to calculate the sensitivities of the solution with respect to. Alternatively, it can be set  to `True` to calculate the sensitivities for all input parameters ([#1552](https://github.com/pybamm-team/PyBaMM/pull/1552))
 -   Added capability for `quaternary` domains (in addition to `primary`, `secondary` and `tertiary`), increasing the maximum number of domains that a `Symbol` can have to 4. ([#1580](https://github.com/pybamm-team/PyBaMM/pull/1580))
--   Tabs can now be placed at the bottom of the cell in 1+1D thermal models ([#1581](https://github.com/pybamm-team/PyBaMM/pull/1581)) 
+-   Tabs can now be placed at the bottom of the cell in 1+1D thermal models ([#1581](https://github.com/pybamm-team/PyBaMM/pull/1581))
 -   Added temperature dependence on electrode electronic conductivity ([#1570](https://github.com/pybamm-team/PyBaMM/pull/1570))
 -   `pybamm.base_solver.solve` function can take a list of input parameters to calculate the sensitivities of the solution with respect to. Alternatively, it can be set  to `True` to calculate the sensitivities for all input parameters ([#1552](https://github.com/pybamm-team/PyBaMM/pull/1552))
 -   Added a new lithium-ion model `MPM` or Many-Particle Model, with a distribution of particle sizes in each electrode. ([#1529](https://github.com/pybamm-team/PyBaMM/pull/1529))
@@ -46,6 +152,7 @@ example notebook ([#1602](https://github.com/pybamm-team/PyBaMM/pull/1602))
 
 ## Bug fixes
 
+-   Fixed bug with `load_function` ([#1675](https://github.com/pybamm-team/PyBaMM/pull/1675))
 -   Updated documentation to include some previously missing functions, such as `erf` and `tanh` ([#1628](https://github.com/pybamm-team/PyBaMM/pull/1628))
 -   Fixed reading citation file without closing ([#1620](https://github.com/pybamm-team/PyBaMM/pull/1620))
 -   Porosity variation for SEI and plating models is calculated from the film thickness rather than from a separate ODE ([#1617](https://github.com/pybamm-team/PyBaMM/pull/1617))
@@ -56,6 +163,7 @@ example notebook ([#1602](https://github.com/pybamm-team/PyBaMM/pull/1602))
 -   Made parameters importable through pybamm ([#1475](https://github.com/pybamm-team/PyBaMM/pull/1475))
 
 ## Breaking changes
+
 -   Refactored the `particle` submodel module, with the models having no size distribution now found in `particle.no_distribution`, and those with a size distribution in `particle.size_distribution`. Renamed submodels to indicate the transport model (Fickian diffusion, polynomial profile) and if they are "x-averaged". E.g., `FickianManyParticles` and `FickianSingleParticle` are now `no_distribution.FickianDiffusion` and `no_distribution.XAveragedFickianDiffusion` ([#1602](https://github.com/pybamm-team/PyBaMM/pull/1602))
 -   Changed sensitivity API. Removed `ProcessedSymbolicVariable`, all sensitivity now handled within the solvers and `ProcessedVariable` ()  ([#1552](https://github.com/pybamm-team/PyBaMM/pull/1552))
 -   The `Yang2017` parameter set has been removed as the complete parameter set is not publicly available in the literature ([#1577](https://github.com/pybamm-team/PyBaMM/pull/1577))

@@ -83,6 +83,10 @@ class ScikitSubMesh2D(SubMesh):
         # get spatial variables
         spatial_vars = list(lims.keys())
 
+        for i, var in enumerate(spatial_vars):
+            if isinstance(var, str):
+                spatial_vars[i] = getattr(pybamm.standard_spatial_vars, var)
+
         # check coordinate system agrees
         if spatial_vars[0].coord_sys != spatial_vars[1].coord_sys:
             raise pybamm.DomainError(
@@ -172,7 +176,7 @@ class ScikitUniform2DSubMesh(ScikitSubMesh2D):
                 )
             else:
                 edges[var.name] = np.linspace(
-                    lims[var]["min"], lims[var]["max"], npts[var.id]
+                    lims[var.name]["min"], lims[var.name]["max"], npts[var.name]
                 )
 
         super().__init__(edges, coord_sys, tabs)
@@ -233,14 +237,14 @@ class ScikitExponential2DSubMesh(ScikitSubMesh2D):
                 )
             elif var.name == "y":
                 edges[var.name] = np.linspace(
-                    lims[var]["min"], lims[var]["max"], npts[var.id]
+                    lims[var.name]["min"], lims[var.name]["max"], npts[var.name]
                 )
             elif var.name == "z":
-                ii = np.array(range(0, npts[var.id]))
-                a = lims[var]["min"]
-                b = lims[var]["max"]
+                ii = np.array(range(0, npts[var.name]))
+                a = lims[var.name]["min"]
+                b = lims[var.name]["max"]
                 edges[var.name] = (b - a) * (
-                    np.exp(-stretch * ii / (npts[var.id] - 1)) - 1
+                    np.exp(-stretch * ii / (npts[var.name] - 1)) - 1
                 ) / (np.exp(-stretch) - 1) + a
 
         super().__init__(edges, coord_sys, tabs)
@@ -289,10 +293,10 @@ class ScikitChebyshev2DSubMesh(ScikitSubMesh2D):
                 )
             else:
                 # Create N Chebyshev nodes in the interval (a,b)
-                N = npts[var.id] - 2
+                N = npts[var.name] - 2
                 ii = np.array(range(1, N + 1))
-                a = lims[var]["min"]
-                b = lims[var]["max"]
+                a = lims[var.name]["min"]
+                b = lims[var.name]["max"]
                 x_cheb = (a + b) / 2 + (b - a) / 2 * np.cos(
                     (2 * ii - 1) * np.pi / 2 / N
                 )
@@ -344,28 +348,28 @@ class UserSupplied2DSubMesh(ScikitSubMesh2D):
         for var in spatial_vars:
 
             # check that npts equals number of user-supplied edges
-            if npts[var.id] != len(edges[var.name]):
+            if npts[var.name] != len(edges[var.name]):
                 raise pybamm.GeometryError(
                     """User-suppled edges has should have length npts but has length {}.
                      Number of points (npts) for variable {} in
                      domain {} is {}.""".format(
-                        len(edges[var.name]), var.name, var.domain, npts[var.id]
+                        len(edges[var.name]), var.name, var.domain, npts[var.name]
                     )
                 )
 
             # check end points of edges agree with spatial_lims
-            if edges[var.name][0] != lims[var]["min"]:
+            if edges[var.name][0] != lims[var.name]["min"]:
                 raise pybamm.GeometryError(
                     """First entry of edges is {}, but should be equal to {}
                      for variable {} in domain {}.""".format(
-                        edges[var.name][0], lims[var]["min"], var.name, var.domain
+                        edges[var.name][0], lims[var.name]["min"], var.name, var.domain
                     )
                 )
-            if edges[var.name][-1] != lims[var]["max"]:
+            if edges[var.name][-1] != lims[var.name]["max"]:
                 raise pybamm.GeometryError(
                     """Last entry of edges is {}, but should be equal to {}
                     for variable {} in domain {}.""".format(
-                        edges[var.name][-1], lims[var]["max"], var.name, var.domain
+                        edges[var.name][-1], lims[var.name]["max"], var.name, var.domain
                     )
                 )
 

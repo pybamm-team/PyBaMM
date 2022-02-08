@@ -14,6 +14,7 @@
 #
 import os
 import sys
+
 import guzzle_sphinx_theme
 
 sys.path.insert(0, os.path.abspath("../"))
@@ -22,13 +23,13 @@ sys.path.insert(0, os.path.abspath("../"))
 # -- Project information -----------------------------------------------------
 
 project = "PyBaMM"
-copyright = "2021, The PyBaMM Team"
+copyright = "2018-2022, The PyBaMM Team"
 author = "The PyBaMM Team"
 
 # The short X.Y version
-version = "21.08"
+version = "22.1"
 # The full version, including alpha/beta/rc tags
-release = "21.08"
+release = version
 
 
 # -- General configuration ---------------------------------------------------

@@ -3,10 +3,10 @@
 #
 import pybamm
 
-from ..base_particle import BaseParticle
+from .base_fickian import BaseFickian
 
 
-class XAveragedFickianDiffusion(BaseParticle):
+class XAveragedFickianDiffusion(BaseFickian):
     """
     Class for molar conservation in a single x-averaged particle, employing Fick's
     law. I.e., the concentration varies with r (internal spherical coordinate)
@@ -18,12 +18,15 @@ class XAveragedFickianDiffusion(BaseParticle):
         The parameters to use for this submodel
     domain : str
         The domain of the model either 'Negative' or 'Positive'
+    options: dict
+        A dictionary of options to be passed to the model.
+        See :class:`pybamm.BaseBatteryModel`
 
     **Extends:** :class:`pybamm.particle.BaseParticle`
     """
 
-    def __init__(self, param, domain):
-        super().__init__(param, domain)
+    def __init__(self, param, domain, options):
+        super().__init__(param, domain, options)
 
     def get_fundamental_variables(self):
         if self.domain == "Negative":
@@ -47,15 +50,16 @@ class XAveragedFickianDiffusion(BaseParticle):
             [self.domain.lower() + " particle"],
         )
 
-        if self.domain == "Negative":
-            N_s_xav = -self.param.D_n(c_s_xav, T_xav) * pybamm.grad(c_s_xav)
+        D_eff_xav = self._get_effective_diffusivity(c_s_xav, T_xav)
+        N_s_xav = -D_eff_xav * pybamm.grad(c_s_xav)
 
-        elif self.domain == "Positive":
-            N_s_xav = -self.param.D_p(c_s_xav, T_xav) * pybamm.grad(c_s_xav)
-
+        D_eff = pybamm.SecondaryBroadcast(
+            D_eff_xav, [self._domain.lower() + " electrode"]
+        )
         N_s = pybamm.SecondaryBroadcast(N_s_xav, [self._domain.lower() + " electrode"])
 
         variables.update(self._get_standard_flux_variables(N_s, N_s_xav))
+        variables.update(self._get_standard_diffusivity_variables(D_eff))
         variables.update(self._get_total_concentration_variables(variables))
 
         return variables
@@ -76,10 +80,9 @@ class XAveragedFickianDiffusion(BaseParticle):
         c_s_xav = variables[
             "X-averaged " + self.domain.lower() + " particle concentration"
         ]
-        T_xav = pybamm.PrimaryBroadcast(
-            variables["X-averaged " + self.domain.lower() + " electrode temperature"],
-            c_s_xav.domain[0],
-        )
+        D_eff_xav = variables[
+            "X-averaged " + self.domain.lower() + " effective diffusivity"
+        ]
         j_xav = variables[
             "X-averaged "
             + self.domain.lower()
@@ -91,7 +94,8 @@ class XAveragedFickianDiffusion(BaseParticle):
                 -self.param.C_n
                 * j_xav
                 / self.param.a_R_n
-                / pybamm.surf(self.param.D_n(c_s_xav, T_xav))
+                / self.param.gamma_n
+                / pybamm.surf(D_eff_xav)
             )
 
         elif self.domain == "Positive":
@@ -100,7 +104,7 @@ class XAveragedFickianDiffusion(BaseParticle):
                 * j_xav
                 / self.param.a_R_p
                 / self.param.gamma_p
-                / pybamm.surf(self.param.D_p(c_s_xav, T_xav))
+                / pybamm.surf(D_eff_xav)
             )
 
         self.boundary_conditions = {
@@ -110,19 +114,15 @@ class XAveragedFickianDiffusion(BaseParticle):
     def set_initial_conditions(self, variables):
         """
         For single or x-averaged particle models, initial conditions can't depend on x
-        so we arbitrarily set the initial values of the single particles to be given
-        by the values at x=0 in the negative electrode and x=1 in the
-        positive electrode. Typically, supplied initial conditions are uniform
-        x.
+        so we take the x-average of the supplied initial conditions.
         """
         c_s_xav = variables[
             "X-averaged " + self.domain.lower() + " particle concentration"
         ]
 
         if self.domain == "Negative":
-            c_init = self.param.c_n_init(0)
-
+            c_init = pybamm.x_average(self.param.c_n_init)
         elif self.domain == "Positive":
-            c_init = self.param.c_p_init(1)
+            c_init = pybamm.x_average(self.param.c_p_init)
 
         self.initial_conditions = {c_s_xav: c_init}

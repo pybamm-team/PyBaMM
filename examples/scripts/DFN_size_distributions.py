@@ -10,17 +10,17 @@ pybamm.set_logging_level("INFO")
 models = [
     pybamm.lithium_ion.DFN(options={"particle size": "distribution"}, name="MP-DFN"),
     pybamm.lithium_ion.MPM(name="MPM"),
-    pybamm.lithium_ion.DFN(name="DFN")
+    pybamm.lithium_ion.DFN(name="DFN"),
 ]
 
 # parameter set
-params = pybamm.ParameterValues(chemistry=pybamm.parameter_sets.Marquis2019)
+params = pybamm.ParameterValues("Marquis2019")
 
 # add distribution params (lognormals) with custom standard deviations
 params = pybamm.get_size_distribution_parameters(params, sd_n=0.2, sd_p=0.4)
 
 # discharge and relaxation: define current function
-t_cutoff = 3450   # [s]
+t_cutoff = 3450  # [s]
 t_rest = 3600  # [s]
 I_typ = params["Typical current [A]"]  # current for 1C
 
@@ -36,11 +36,7 @@ t_eval = [0, t_cutoff + t_rest]
 solver = pybamm.CasadiSolver(mode="fast")
 sims = []
 for model in models:
-    sim = pybamm.Simulation(
-        model,
-        parameter_values=params,
-        solver=solver
-    )
+    sim = pybamm.Simulation(model, parameter_values=params, solver=solver)
     sims.append(sim)
 
 for sim in sims:

@@ -15,15 +15,23 @@ class SymbolReplacer(object):
         Map of which symbols should be replaced by which.
     processed_symbols: dict {variable ids -> :class:`pybamm.Symbol`}, optional
         cached replaced symbols
+    process_initial_conditions: bool, optional
+        Whether to process initial conditions, default is True
     """
 
-    def __init__(self, symbol_replacement_map, processed_symbols=None):
+    def __init__(
+        self,
+        symbol_replacement_map,
+        processed_symbols=None,
+        process_initial_conditions=True,
+    ):
         self._symbol_replacement_map = symbol_replacement_map
         self._symbol_replacement_map_ids = {
             symbol_in.id: symbol_out
             for symbol_in, symbol_out in symbol_replacement_map.items()
         }
         self._processed_symbols = processed_symbols or {}
+        self.process_initial_conditions = process_initial_conditions
 
     def process_model(self, unprocessed_model, inplace=True):
         """Replace all instances of a symbol in a model.
@@ -51,13 +59,13 @@ class SymbolReplacer(object):
 
         new_rhs = {}
         for variable, equation in unprocessed_model.rhs.items():
-            pybamm.logger.debug("Replacing symbols in {!r} (rhs)".format(variable))
+            pybamm.logger.verbose("Replacing symbols in {!r} (rhs)".format(variable))
             new_rhs[self.process_symbol(variable)] = self.process_symbol(equation)
         model.rhs = new_rhs
 
         new_algebraic = {}
         for variable, equation in unprocessed_model.algebraic.items():
-            pybamm.logger.debug(
+            pybamm.logger.verbose(
                 "Replacing symbols in {!r} (algebraic)".format(variable)
             )
             new_algebraic[self.process_symbol(variable)] = self.process_symbol(equation)
@@ -65,19 +73,22 @@ class SymbolReplacer(object):
 
         new_initial_conditions = {}
         for variable, equation in unprocessed_model.initial_conditions.items():
-            pybamm.logger.debug(
+            pybamm.logger.verbose(
                 "Replacing symbols in {!r} (initial conditions)".format(variable)
             )
-            new_initial_conditions[self.process_symbol(variable)] = self.process_symbol(
-                equation
-            )
+            if self.process_initial_conditions:
+                new_initial_conditions[
+                    self.process_symbol(variable)
+                ] = self.process_symbol(equation)
+            else:
+                new_initial_conditions[self.process_symbol(variable)] = equation
         model.initial_conditions = new_initial_conditions
 
         model.boundary_conditions = self.process_boundary_conditions(unprocessed_model)
 
         new_variables = {}
         for variable, equation in unprocessed_model.variables.items():
-            pybamm.logger.debug(
+            pybamm.logger.verbose(
                 "Replacing symbols in {!r} (variables)".format(variable)
             )
             new_variables[variable] = self.process_symbol(equation)
@@ -85,7 +96,7 @@ class SymbolReplacer(object):
 
         new_events = []
         for event in unprocessed_model.events:
-            pybamm.logger.debug("Replacing symbols in event'{}''".format(event.name))
+            pybamm.logger.verbose("Replacing symbols in event'{}''".format(event.name))
             new_events.append(
                 pybamm.Event(
                     event.name, self.process_symbol(event.expression), event.event_type
@@ -99,13 +110,13 @@ class SymbolReplacer(object):
         ]
 
         # Process timescale
-        model.timescale = self.process_symbol(unprocessed_model.timescale)
+        model._timescale = self.process_symbol(unprocessed_model.timescale)
 
         # Process length scales
         new_length_scales = {}
         for domain, scale in unprocessed_model.length_scales.items():
             new_length_scales[domain] = self.process_symbol(scale)
-        model.length_scales = new_length_scales
+        model._length_scales = new_length_scales
 
         pybamm.logger.info("Finish replacing symbols in {}".format(model.name))
 
@@ -127,7 +138,7 @@ class SymbolReplacer(object):
             for side in sides:
                 try:
                     bc, typ = bcs[side]
-                    pybamm.logger.debug(
+                    pybamm.logger.verbose(
                         "Replacing symbols in {!r} ({} bc)".format(variable, side)
                     )
                     processed_bc = (self.process_symbol(bc), typ)
@@ -169,7 +180,7 @@ class SymbolReplacer(object):
             return replaced_symbol
 
     def _process_symbol(self, symbol):
-        """ See :meth:`Simplification.process_symbol()`. """
+        """See :meth:`Simplification.process_symbol()`."""
         if symbol.id in self._symbol_replacement_map_ids.keys():
             return self._symbol_replacement_map_ids[symbol.id]
 
@@ -199,6 +210,5 @@ class SymbolReplacer(object):
         else:
             # Only other option is that the symbol is a leaf (doesn't have children)
             # In this case, since we have already ruled out that the symbol is one of
-            # the symbols that needs to be replaced, we can just return a new copy of
-            # the symbol
-            return symbol.new_copy()
+            # the symbols that needs to be replaced, we can just return the symbol
+            return symbol

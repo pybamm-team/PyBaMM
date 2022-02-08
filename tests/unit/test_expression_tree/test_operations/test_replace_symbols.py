@@ -90,14 +90,10 @@ class TestSymbolReplacer(unittest.TestCase):
         # variables
         self.assertEqual(model.variables["var1"].id, var1.id)
         self.assertIsInstance(model.variables["grad_var1"], pybamm.Gradient)
-        self.assertTrue(
-            isinstance(model.variables["grad_var1"].children[0], pybamm.Variable)
-        )
+        self.assertIsInstance(model.variables["grad_var1"].children[0], pybamm.Variable)
         self.assertEqual(model.variables["d_var1"].id, (pybamm.Scalar(42) * var1).id)
         self.assertIsInstance(model.variables["d_var1"].children[0], pybamm.Scalar)
-        self.assertTrue(
-            isinstance(model.variables["d_var1"].children[1], pybamm.Variable)
-        )
+        self.assertIsInstance(model.variables["d_var1"].children[1], pybamm.Variable)
         # timescale and length scales
         self.assertEqual(model.timescale.evaluate(), 2)
         self.assertEqual(model.length_scales["test"].evaluate(), 3)

@@ -3,6 +3,7 @@
 #
 
 import numpy as np
+import warnings
 
 examples = """
 
@@ -75,6 +76,22 @@ class Experiment:
         if cccv_handling not in ["two-step", "ode"]:
             raise ValueError("cccv_handling should be either 'two-step' or 'ode'")
         self.cccv_handling = cccv_handling
+        # Deprecations
+        if parameters is not None:
+            warnings.simplefilter("always", DeprecationWarning)
+            warnings.warn(
+                "'parameters' as an input to the Experiment class will soon be "
+                "deprecated. Please open an issue if you are using this feature.",
+                DeprecationWarning,
+            )
+        if use_simulation_setup_type == "old":
+            warnings.simplefilter("always", DeprecationWarning)
+            warnings.warn(
+                "'old' simulation setup type for the Experiment class will soon be "
+                "deprecated. Use 'new' instead. Please open an issue if this gives an "
+                "error or unexpected results.",
+                DeprecationWarning,
+            )
 
         self.period = self.convert_time_to_seconds(period.split())
         operating_conditions_cycles = []
@@ -125,6 +142,7 @@ class Experiment:
         operating_conditions = [
             cond for cycle in operating_conditions_cycles for cond in cycle
         ]
+        self.operating_conditions_cycles = operating_conditions_cycles
         self.operating_conditions_strings = operating_conditions
         self.operating_conditions, self.events = self.read_operating_conditions(
             operating_conditions, drive_cycles
@@ -135,6 +153,7 @@ class Experiment:
         else:
             raise TypeError("experimental parameters should be a dictionary")
 
+        self.termination_string = termination
         self.termination = self.read_termination(termination)
         self.use_simulation_setup_type = use_simulation_setup_type
 
@@ -193,6 +212,7 @@ class Experiment:
                 "electric": op_CC["electric"] + op_CV["electric"],
                 "time": op_CV["time"],
                 "period": op_CV["period"],
+                "dc_data": None,
             }, event_CV
         # Read period
         if " period)" in cond:
@@ -221,26 +241,29 @@ class Experiment:
                     drive_cycles[cond_list[1]], end_time
                 )
                 # Drive cycle as numpy array
+                dc_name = cond_list[1] + "_ext_{}".format(end_time)
                 dc_data = ext_drive_cycle
                 # Find the type of drive cycle ("A", "V", or "W")
                 typ = cond_list[2][1]
-                electric = (dc_data, typ)
+                electric = (dc_name, typ)
                 time = ext_drive_cycle[:, 0][-1]
                 period = np.min(np.diff(ext_drive_cycle[:, 0]))
                 events = None
             else:
                 # e.g. Run US06
                 # Drive cycle as numpy array
+                dc_name = cond_list[1]
                 dc_data = drive_cycles[cond_list[1]]
                 # Find the type of drive cycle ("A", "V", or "W")
                 typ = cond_list[2][1]
-                electric = (dc_data, typ)
+                electric = (dc_name, typ)
                 # Set time and period to 1 second for first step and
                 # then calculate the difference in consecutive time steps
                 time = drive_cycles[cond_list[1]][:, 0][-1]
                 period = np.min(np.diff(drive_cycles[cond_list[1]][:, 0]))
                 events = None
         else:
+            dc_data = None
             if "for" in cond and "or until" in cond:
                 # e.g. for 3 hours or until 4.2 V
                 cond_list = cond.split()
@@ -271,7 +294,12 @@ class Experiment:
                     )
                 )
 
-        return {"electric": electric, "time": time, "period": period}, events
+        return {
+            "electric": electric,
+            "time": time,
+            "period": period,
+            "dc_data": dc_data,
+        }, events
 
     def extend_drive_cycle(self, drive_cycle, end_time):
         "Extends the drive cycle to enable for event"
@@ -431,10 +459,13 @@ class Experiment:
                         "Capacity termination must be given in the form "
                         "'80%', '4Ah', or '4A.h'"
                     )
+            elif term.endswith("V"):
+                end_discharge_V = term.split("V")[0]
+                termination_dict["voltage"] = (float(end_discharge_V), "V")
             else:
                 raise ValueError(
-                    "Only capacity can be provided as a termination reason, "
-                    "e.g. '80% capacity' or '4 Ah capacity'"
+                    "Only capacity or voltage can be provided as a termination reason, "
+                    "e.g. '80% capacity', '4 Ah capacity', or '2.5 V'"
                 )
         return termination_dict
 

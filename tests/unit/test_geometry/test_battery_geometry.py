@@ -10,30 +10,29 @@ class TestBatteryGeometry(unittest.TestCase):
         for cc_dimension in [0, 1, 2]:
             geometry = pybamm.battery_geometry(
                 options={"particle size": "distribution"},
-                current_collector_dimension=cc_dimension
+                current_collector_dimension=cc_dimension,
             )
             for domain_geoms in geometry.values():
                 all(
-                    self.assertIsInstance(spatial_var, pybamm.SpatialVariable)
+                    self.assertIsInstance(spatial_var, str)
                     for spatial_var in domain_geoms.keys()
                 )
         geometry.print_parameter_info()
 
     def test_geometry(self):
-        var = pybamm.standard_spatial_vars
         geo = pybamm.geometric_parameters
         for cc_dimension in [0, 1, 2]:
             geometry = pybamm.battery_geometry(
                 options={"particle size": "distribution"},
-                current_collector_dimension=cc_dimension
+                current_collector_dimension=cc_dimension,
             )
             self.assertIsInstance(geometry, pybamm.Geometry)
             self.assertIn("negative electrode", geometry)
             self.assertIn("negative particle", geometry)
             self.assertIn("negative particle size", geometry)
-            self.assertEqual(geometry["negative electrode"][var.x_n]["min"], 0)
+            self.assertEqual(geometry["negative electrode"]["x_n"]["min"], 0)
             self.assertEqual(
-                geometry["negative electrode"][var.x_n]["max"].id, geo.l_n.id
+                geometry["negative electrode"]["x_n"]["max"].id, geo.l_n.id
             )
             if cc_dimension == 1:
                 self.assertIn("tabs", geometry["current collector"])
@@ -44,9 +43,26 @@ class TestBatteryGeometry(unittest.TestCase):
         geometry = pybamm.battery_geometry()
         self.assertNotIn("negative particle size", geometry)
 
+        geometry = pybamm.battery_geometry(form_factor="cylindrical")
+        self.assertEqual(geometry["current collector"]["r_macro"]["position"], 1)
+
+        geometry = pybamm.battery_geometry(
+            form_factor="cylindrical", current_collector_dimension=1
+        )
+        self.assertEqual(
+            geometry["current collector"]["r_macro"]["min"].id, geo.r_inner.id
+        )
+        self.assertEqual(geometry["current collector"]["r_macro"]["max"], 1)
+
     def test_geometry_error(self):
         with self.assertRaisesRegex(pybamm.GeometryError, "Invalid current"):
             pybamm.battery_geometry(current_collector_dimension=4)
+        with self.assertRaisesRegex(pybamm.GeometryError, "Invalid current"):
+            pybamm.battery_geometry(
+                form_factor="cylindrical", current_collector_dimension=2
+            )
+        with self.assertRaisesRegex(pybamm.GeometryError, "Invalid form"):
+            pybamm.battery_geometry(form_factor="triangle")
 
 
 class TestReadParameters(unittest.TestCase):

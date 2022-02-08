@@ -70,8 +70,7 @@ class TestFunctionControl(unittest.TestCase):
         params[0].update({"Voltage function [V]": 4.08}, check_already_exists=False)
 
         # set parameters and discretise models
-        var = pybamm.standard_spatial_vars
-        var_pts = {var.x_n: 5, var.x_s: 5, var.x_p: 30, var.r_n: 10, var.r_p: 10}
+        var_pts = {"x_n": 5, "x_s": 5, "x_p": 30, "r_n": 10, "r_p": 10}
         for i, model in enumerate(models):
             # create geometry
             geometry = model.default_geometry

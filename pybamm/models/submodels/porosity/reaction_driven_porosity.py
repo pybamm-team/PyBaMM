@@ -1,7 +1,6 @@
 #
 # Class for reaction driven porosity changes as a multiple of SEI/plating thicknesses
 #
-import pybamm
 from .base_porosity import BaseModel
 
 
@@ -25,9 +24,9 @@ class ReactionDriven(BaseModel):
         self.x_average = x_average
 
     def get_coupled_variables(self, variables):
-        L_sei_n = variables["Total negative electrode SEI thickness [m]"]
+        L_sei_n = variables["Total SEI thickness [m]"]
         L_sei_0 = self.param.L_inner_0_dim + self.param.L_outer_0_dim
-        L_pl_n = variables["Negative electrode lithium plating thickness [m]"]
+        L_pl_n = variables["Lithium plating thickness [m]"]
 
         L_tot = (L_sei_n - L_sei_0) + L_pl_n
 
@@ -39,13 +38,10 @@ class ReactionDriven(BaseModel):
         delta_eps_n = -a_n * L_tot
 
         eps_n = self.param.epsilon_n_init + delta_eps_n
-        eps_s = pybamm.FullBroadcast(
-            self.param.epsilon_s_init, "separator", "current collector"
-        )
+        eps_s = self.param.epsilon_s_init
         # no SEI or plating in the positive electrode
-        eps_p = pybamm.FullBroadcast(
-            self.param.epsilon_p_init, "positive electrode", "current collector"
-        )
+        eps_p = self.param.epsilon_p_init
+
         variables = self._get_standard_porosity_variables(eps_n, eps_s, eps_p)
 
         return variables

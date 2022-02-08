@@ -19,7 +19,7 @@ def compute_discretisation(model, param):
 
 class TimeBuildSPM:
     def __init__(self):
-        self.param = pybamm.ParameterValues(chemistry=pybamm.parameter_sets.Marquis2019)
+        self.param = pybamm.ParameterValues("Marquis2019")
 
     def time_setup_SPM(self):
         self.model = pybamm.lithium_ion.SPM()
@@ -29,7 +29,7 @@ class TimeBuildSPM:
 
 class TimeBuildSPMe:
     def __init__(self):
-        self.param = pybamm.ParameterValues(chemistry=pybamm.parameter_sets.Marquis2019)
+        self.param = pybamm.ParameterValues("Marquis2019")
 
     def time_setup_SPMe(self):
         self.model = pybamm.lithium_ion.SPMe()
@@ -39,7 +39,7 @@ class TimeBuildSPMe:
 
 class TimeBuildDFN:
     def __init__(self):
-        self.param = pybamm.ParameterValues(chemistry=pybamm.parameter_sets.Marquis2019)
+        self.param = pybamm.ParameterValues("Marquis2019")
 
     def time_setup_DFN(self):
         self.model = pybamm.lithium_ion.DFN()
@@ -52,7 +52,7 @@ class TimeBuildSPMSimulation:
     params = [False, True]
 
     def __init__(self):
-        self.param = pybamm.ParameterValues(chemistry=pybamm.parameter_sets.Marquis2019)
+        self.param = pybamm.ParameterValues("Marquis2019")
 
     def time_setup_SPM_simulation(self, with_experiment):
         self.model = pybamm.lithium_ion.SPM()
@@ -72,7 +72,7 @@ class TimeBuildSPMeSimulation:
     params = [False, True]
 
     def __init__(self):
-        self.param = pybamm.ParameterValues(chemistry=pybamm.parameter_sets.Marquis2019)
+        self.param = pybamm.ParameterValues("Marquis2019")
 
     def time_setup_SPMe_simulation(self, with_experiment):
         self.model = pybamm.lithium_ion.SPMe()
@@ -92,7 +92,7 @@ class TimeBuildDFNSimulation:
     params = [False, True]
 
     def __init__(self):
-        self.param = pybamm.ParameterValues(chemistry=pybamm.parameter_sets.Marquis2019)
+        self.param = pybamm.ParameterValues("Marquis2019")
 
     def time_setup_DFN_simulation(self, with_experiment):
         self.model = pybamm.lithium_ion.DFN()

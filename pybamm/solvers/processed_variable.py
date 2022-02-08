@@ -44,7 +44,7 @@ class ProcessedVariable(object):
 
         self.mesh = base_variables[0].mesh
         self.domain = base_variables[0].domain
-        self.auxiliary_domains = base_variables[0].auxiliary_domains
+        self.domains = base_variables[0].domains
         self.warn = warn
 
         self.symbolic_inputs = solution.has_symbolic_inputs
@@ -289,6 +289,7 @@ class ProcessedVariable(object):
             axis=1,
         )
 
+<<<<<<< HEAD
         # Set spatial variable names
         first_spatial_variable_names = self.mesh.spatial_variable_names
         if len(first_spatial_variable_names) != 1:
@@ -307,6 +308,71 @@ class ProcessedVariable(object):
             second_spatial_variable = second_spatial_variable_names[0]
             self.second_dimension = second_spatial_variable
             setattr(self, second_spatial_variable + "_sol", second_dim_pts)
+=======
+        # Process r-x, x-z, r-R, R-x, or R-z
+        if self.domain[0] in [
+            "negative particle",
+            "positive particle",
+        ] and self.domains["secondary"][0] in [
+            "negative electrode",
+            "positive electrode",
+        ]:
+            self.first_dimension = "r"
+            self.second_dimension = "x"
+            self.r_sol = first_dim_pts
+            self.x_sol = second_dim_pts
+        elif (
+            self.domain[0]
+            in [
+                "negative electrode",
+                "separator",
+                "positive electrode",
+            ]
+            and self.domains["secondary"] == ["current collector"]
+        ):
+            self.first_dimension = "x"
+            self.second_dimension = "z"
+            self.x_sol = first_dim_pts
+            self.z_sol = second_dim_pts
+        elif self.domain[0] in [
+            "negative particle",
+            "positive particle",
+        ] and self.domains["secondary"][0] in [
+            "negative particle size",
+            "positive particle size",
+        ]:
+            self.first_dimension = "r"
+            self.second_dimension = "R"
+            self.r_sol = first_dim_pts
+            self.R_sol = second_dim_pts
+        elif self.domain[0] in [
+            "negative particle size",
+            "positive particle size",
+        ] and self.domains["secondary"][0] in [
+            "negative electrode",
+            "positive electrode",
+        ]:
+            self.first_dimension = "R"
+            self.second_dimension = "x"
+            self.R_sol = first_dim_pts
+            self.x_sol = second_dim_pts
+        elif (
+            self.domain[0]
+            in [
+                "negative particle size",
+                "positive particle size",
+            ]
+            and self.domains["secondary"] == ["current collector"]
+        ):
+            self.first_dimension = "R"
+            self.second_dimension = "z"
+            self.R_sol = first_dim_pts
+            self.z_sol = second_dim_pts
+        else:
+            raise pybamm.DomainError(
+                f"Cannot process 3D object with domains '{self.domains}'."
+            )
+>>>>>>> develop
 
         # assign attributes for reference
         self.entries = entries
@@ -322,7 +388,7 @@ class ProcessedVariable(object):
         first_dim_pts_for_interp = first_dim_pts * first_length_scale
 
         second_length_scale = self.get_spatial_scale(
-            self.second_dimension, self.auxiliary_domains["secondary"][0]
+            self.second_dimension, self.domains["secondary"][0]
         )
         second_dim_pts_for_interp = second_dim_pts * second_length_scale
 
@@ -488,9 +554,10 @@ class ProcessedVariable(object):
                 self.initialise_sensitivity_explicit_forward()
             else:
                 raise ValueError(
-                    "Cannot compute sensitivities. The 'sensitivities' argument of the "
-                    "solver.solve should be changed from 'None' to allow sensitivities "
-                    "calculations. Check solver documentation for details."
+                    "Cannot compute sensitivities. The 'calculate_sensitivities' "
+                    "argument of the solver.solve should be changed from 'None' to "
+                    "allow sensitivities calculations. Check solver documentation for "
+                    "details."
                 )
         return self._sensitivities
 
@@ -505,6 +572,7 @@ class ProcessedVariable(object):
             name: casadi.MX.sym(name, value.shape[0])
             for name, value in self.all_inputs[0].items()
         }
+
         p_casadi_stacked = casadi.vertcat(*[p for p in p_casadi.values()])
 
         # Convert variable to casadi format for differentiating

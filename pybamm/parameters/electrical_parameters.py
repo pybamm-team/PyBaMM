@@ -61,9 +61,7 @@ class ElectricalParameters(BaseParameters):
         """Defines the dimensionless parameters."""
 
         self.current_with_time = (
-            self.dimensional_current_with_time
-            / self.I_typ
-            * pybamm.Function(np.sign, self.I_typ)
+            self.dimensional_current_with_time / self.I_typ * pybamm.sign(self.I_typ)
         )
 
 

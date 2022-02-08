@@ -20,11 +20,12 @@ class TestIDAKLUSolver(unittest.TestCase):
         np.testing.assert_array_less(1, solution.t.size)
 
     def test_on_spme_sensitivities(self):
-        param_name = 'Typical current [A]'
+        param_name = "Typical current [A]"
         param_value = 0.15652
-        model = pybamm.lithium_ion.SPMe()
+        param = pybamm.ParameterValues("Marquis2019")
+        timescale = param.evaluate(pybamm.LithiumIonParameters().timescale)
+        model = pybamm.lithium_ion.SPMe({"timescale": timescale})
         geometry = model.default_geometry
-        param = model.default_parameter_values
         param.update({param_name: "[input]"})
         inputs = {param_name: param_value}
         param.process_model(model)
@@ -32,10 +33,11 @@ class TestIDAKLUSolver(unittest.TestCase):
         mesh = pybamm.Mesh(geometry, model.default_submesh_types, model.default_var_pts)
         disc = pybamm.Discretisation(mesh, model.default_spatial_methods)
         disc.process_model(model)
-        t_eval = np.linspace(0, 3600, 100)
+        t_eval = np.linspace(0, 3500, 100)
         solver = pybamm.IDAKLUSolver(rtol=1e-10, atol=1e-10)
         solution = solver.solve(
-            model, t_eval,
+            model,
+            t_eval,
             inputs=inputs,
             calculate_sensitivities=True,
         )
@@ -47,19 +49,19 @@ class TestIDAKLUSolver(unittest.TestCase):
         # evaluate the sensitivities using finite difference
         h = 1e-6
         sol_plus = solver.solve(
-            model, t_eval,
-            inputs={param_name: param_value + 0.5 * h}
+            model, t_eval, inputs={param_name: param_value + 0.5 * h}
         )
         sol_neg = solver.solve(
-            model, t_eval,
-            inputs={param_name: param_value - 0.5 * h}
+            model, t_eval, inputs={param_name: param_value - 0.5 * h}
         )
         dyda_fd = (sol_plus.y - sol_neg.y) / h
         dyda_fd = dyda_fd.transpose().reshape(-1, 1)
 
         np.testing.assert_allclose(
-            dyda_ida, dyda_fd,
-            rtol=1e-2, atol=1e-3,
+            dyda_ida,
+            dyda_fd,
+            rtol=1e-2,
+            atol=1e-3,
         )
 
     def test_set_tol_by_variable(self):
@@ -92,13 +94,11 @@ class TestIDAKLUSolver(unittest.TestCase):
         param.process_geometry(geometry)
 
         # Calculate time for each solver and each number of grid points
-        var = pybamm.standard_spatial_vars
         t_eval = np.linspace(0, 3600, 100)
         for npts in [100, 200]:
             # discretise
             var_pts = {
-                spatial_var: npts
-                for spatial_var in [var.x_n, var.x_s, var.x_p, var.r_n, var.r_p]
+                spatial_var: npts for spatial_var in ["x_n", "x_s", "x_p", "r_n", "r_p"]
             }
             mesh = pybamm.Mesh(geometry, model.default_submesh_types, var_pts)
             disc = pybamm.Discretisation(mesh, model.default_spatial_methods)

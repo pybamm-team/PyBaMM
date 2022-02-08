@@ -15,15 +15,18 @@ class BaseModel(BaseElectrode):
         The parameters to use for this submodel
     domain : str
         Either 'Negative' or 'Positive'
-
+    options : dict, optional
+        A dictionary of options to be passed to the model.
 
     **Extends:** :class:`pybamm.electrode.BaseElectrode`
     """
 
-    def __init__(self, param, domain, set_positive_potential=True):
-        super().__init__(param, domain, set_positive_potential)
+    def __init__(self, param, domain, options=None, set_positive_potential=True):
+        super().__init__(param, domain, options, set_positive_potential)
 
     def set_boundary_conditions(self, variables):
+        if self.half_cell:
+            return
 
         if self.domain == "Negative":
             phi_s_cn = variables["Negative current collector potential"]

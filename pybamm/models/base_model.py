@@ -119,8 +119,8 @@ class BaseModel:
         self.y_slices = None
 
         # Default timescale is 1 second
-        self.timescale = pybamm.Scalar(1)
-        self.length_scales = {}
+        self._timescale = pybamm.Scalar(1)
+        self._length_scales = {}
 
     @property
     def name(self):
@@ -170,6 +170,20 @@ class BaseModel:
 
     @variables.setter
     def variables(self, variables):
+        for name, var in variables.items():
+            if (
+                isinstance(var, pybamm.Variable)
+                and var.name != name
+                # Exception if the variable is also there under its own name
+                and not (var.name in variables and variables[var.name].id == var.id)
+                # Exception for the key "Leading-order"
+                and "leading-order" not in var.name.lower()
+                and "leading-order" not in name.lower()
+            ):
+                raise ValueError(
+                    f"Variable with name '{var.name}' is in variables dictionary with "
+                    f"name '{name}'. Names must match."
+                )
         self._variables = pybamm.FuzzyDict(variables)
 
     def variable_names(self):
@@ -276,7 +290,7 @@ class BaseModel:
     @property
     def length_scales(self):
         "Length scales of model"
-        return self._length_scale
+        return self._length_scales
 
     @length_scales.setter
     def length_scales(self, values):
@@ -284,7 +298,7 @@ class BaseModel:
         for domain, scale in values.items():
             if isinstance(scale, numbers.Number):
                 values[domain] = pybamm.Scalar(scale)
-        self._length_scale = values
+        self._length_scales = values
 
     @property
     def parameters(self):
@@ -348,6 +362,10 @@ class BaseModel:
     def __getitem__(self, key):
         return self.rhs[key]
 
+    @property
+    def default_quick_plot_variables(self):
+        return None
+
     def new_empty_copy(self):
         """
         Create an empty copy of the model with the same name and "parameters"
@@ -358,8 +376,8 @@ class BaseModel:
         new_model = self.__class__(name=self.name)
         new_model.use_jacobian = self.use_jacobian
         new_model.convert_to_format = self.convert_to_format
-        new_model.timescale = self.timescale
-        new_model.length_scales = self.length_scales
+        new_model._timescale = self.timescale
+        new_model._length_scales = self.length_scales
 
         # Variables from discretisation
         new_model.is_discretised = self.is_discretised

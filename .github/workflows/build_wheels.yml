@@ -14,6 +14,7 @@ jobs:
     name: Build wheels on ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
     strategy:
+      fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
     steps:
@@ -39,6 +40,16 @@ jobs:
         env:
           CIBW_BEFORE_ALL_LINUX: "bash build_manylinux_wheels/install_sundials.sh 5.8.1 5.7.0"
           CIBW_BEFORE_BUILD_LINUX: "python -m pip install cmake"
+
+      # see https://github.com/pybamm-team/PyBaMM/pull/1930
+      - name: Install the latest version of vcpkg on windows
+        if: matrix.os == 'windows-latest'
+        run: |
+          cd C:\
+          rm -r -fo 'C:\vcpkg'
+          git clone https://github.com/microsoft/vcpkg
+          cd vcpkg
+          .\bootstrap-vcpkg.bat
 
       - name: Cache packages installed through vcpkg on windows
         if: matrix.os == 'windows-latest'
@@ -75,12 +86,15 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Download wheels
-        uses: actions/download-artifact@v1
+        uses: actions/download-artifact@v2
         with:
           name: wheels
+          path: wheels
 
       - name: Publish wheels on PyPI
-        if: github.event.inputs.target == 'pypi'
+        if: |
+          github.event.inputs.target == 'pypi' ||
+          (github.event_name == 'push' && github.ref == 'refs/heads/main')
         uses: pypa/gh-action-pypi-publish@master
         with:
           user: __token__

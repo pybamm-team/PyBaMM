@@ -37,14 +37,18 @@ class GeometricParameters(BaseParameters):
             self.L_n + self.L_s + self.L_p
         )  # Total distance between current collectors
         self.L = self.L_cn + self.L_x + self.L_cp  # Total cell thickness
-        self.L_y = pybamm.Parameter("Electrode width [m]")
-        self.L_z = pybamm.Parameter("Electrode height [m]")
         self.L_Li = pybamm.Parameter("Lithium counter electrode thickness [m]")
-        self.A_cc = self.L_y * self.L_z  # Area of current collector
+        self.L_y = pybamm.Parameter(
+            "Electrode width [m]"
+        )  # For a cylindrical cell L_y is the "unwound" length of the electrode
+        self.L_z = pybamm.Parameter("Electrode height [m]")
+        self.r_inner_dimensional = pybamm.Parameter("Inner cell radius [m]")
+        self.r_outer_dimensional = pybamm.Parameter("Outer cell radius [m]")
+        self.A_cc = self.L_y * self.L_z  # Current collector cross sectional area
         self.A_cooling = pybamm.Parameter("Cell cooling surface area [m2]")
         self.V_cell = pybamm.Parameter("Cell volume [m3]")
 
-        # Tab geometry
+        # Tab geometry (for pouch cells)
         self.L_tab_n = pybamm.Parameter("Negative tab width [m]")
         self.Centre_y_tab_n = pybamm.Parameter("Negative tab centre y-coordinate [m]")
         self.Centre_z_tab_n = pybamm.Parameter("Negative tab centre z-coordinate [m]")
@@ -90,15 +94,16 @@ class GeometricParameters(BaseParameters):
             "Positive area-weighted particle-size standard deviation [m]"
         )
 
-    def R_n_dimensional(self, x):
-        """Negative particle radius as a function of through-cell distance"""
-        inputs = {"Through-cell distance (x_n) [m]": x}
-        return pybamm.FunctionParameter("Negative particle radius [m]", inputs)
-
-    def R_p_dimensional(self, x):
-        """Positive particle radius as a function of through-cell distance"""
-        inputs = {"Through-cell distance (x_p) [m]": x}
-        return pybamm.FunctionParameter("Positive particle radius [m]", inputs)
+        x_n = pybamm.standard_spatial_vars.x_n
+        x_p = pybamm.standard_spatial_vars.x_p
+        self.R_n_dimensional = pybamm.FunctionParameter(
+            "Negative particle radius [m]",
+            {"Through-cell distance (x_n) [m]": x_n * self.L_x},
+        )
+        self.R_p_dimensional = pybamm.FunctionParameter(
+            "Positive particle radius [m]",
+            {"Through-cell distance (x_p) [m]": x_p * self.L_x},
+        )
 
     def f_a_dist_n_dimensional(self, R):
         """
@@ -108,7 +113,8 @@ class GeometricParameters(BaseParameters):
             "Negative particle-size variable [m]": R,
         }
         return pybamm.FunctionParameter(
-            "Negative area-weighted particle-size distribution [m-1]", inputs,
+            "Negative area-weighted particle-size distribution [m-1]",
+            inputs,
         )
 
     def f_a_dist_p_dimensional(self, R):
@@ -119,7 +125,8 @@ class GeometricParameters(BaseParameters):
             "Positive particle-size variable [m]": R,
         }
         return pybamm.FunctionParameter(
-            "Positive area-weighted particle-size distribution [m-1]", inputs,
+            "Positive area-weighted particle-size distribution [m-1]",
+            inputs,
         )
 
     def _set_scales(self):
@@ -128,9 +135,8 @@ class GeometricParameters(BaseParameters):
         # Microscale geometry
         # Note: these scales are necessary here to non-dimensionalise the
         # particle size distributions.
-        # Use typical values at electrode/current collector interface.
-        self.R_n_typ = self.R_n_dimensional(0)
-        self.R_p_typ = self.R_p_dimensional(self.L_x)
+        self.R_n_typ = pybamm.xyz_average(self.R_n_dimensional)
+        self.R_p_typ = pybamm.xyz_average(self.R_p_dimensional)
 
     def _set_dimensionless_parameters(self):
         """Defines the dimensionless parameters."""
@@ -142,17 +148,19 @@ class GeometricParameters(BaseParameters):
         self.l_p = self.L_p / self.L_x
         self.l_cp = self.L_cp / self.L_x
         self.l_x = self.L_x / self.L_x
+        self.l_Li = self.L_Li / self.L_x
         self.l_y = self.L_y / self.L_z
         self.l_z = self.L_z / self.L_z
-        self.l_Li = self.L_Li / self.L_x
+        self.r_inner = self.r_inner_dimensional / self.r_outer_dimensional
+        self.r_outer = self.r_outer_dimensional / self.r_outer_dimensional
         self.a_cc = self.l_y * self.l_z
         self.a_cooling = self.A_cooling / (self.L_z ** 2)
         self.v_cell = self.V_cell / (self.L_x * self.L_z ** 2)
 
         self.l = self.L / self.L_x
-        self.delta = self.L_x / self.L_z  # Aspect ratio
+        self.delta = self.L_x / self.L_z  # Pouch cell aspect ratio
 
-        # Tab geometry
+        # Tab geometry (for pouch cells)
         self.l_tab_n = self.L_tab_n / self.L_z
         self.centre_y_tab_n = self.Centre_y_tab_n / self.L_z
         self.centre_z_tab_n = self.Centre_z_tab_n / self.L_z
@@ -168,21 +176,9 @@ class GeometricParameters(BaseParameters):
         self.sd_a_n = self.sd_a_n_dim / self.R_n_typ
         self.sd_a_p = self.sd_a_p_dim / self.R_p_typ
 
-    def R_n(self, x):
-        """
-        Dimensionless negative particle radius as a function of dimensionless
-        position x
-        """
-        x_dim = x * self.L_x
-        return self.R_n_dimensional(x_dim) / self.R_n_typ
-
-    def R_p(self, x):
-        """
-        Dimensionless positive particle radius as a function of dimensionless
-        position x
-        """
-        x_dim = x * self.L_x
-        return self.R_p_dimensional(x_dim) / self.R_p_typ
+        # Particle radius
+        self.R_n = self.R_n_dimensional / self.R_n_typ
+        self.R_p = self.R_p_dimensional / self.R_p_typ
 
     def f_a_dist_n(self, R):
         """

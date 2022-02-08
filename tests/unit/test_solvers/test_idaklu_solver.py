@@ -46,6 +46,7 @@ class TestIDAKLUSolver(unittest.TestCase):
             true_solution = 0.1 * solution.t
             np.testing.assert_array_almost_equal(solution.y[0, :], true_solution)
 
+    @unittest.skipIf(not pybamm.have_jax(), "jax or jaxlib is not installed")
     def test_ida_roberts_klu_sensitivities(self):
         # this test implements a python version of the ida Roberts
         # example provided in sundials

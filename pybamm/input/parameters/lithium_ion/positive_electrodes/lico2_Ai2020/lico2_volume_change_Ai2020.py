@@ -7,11 +7,11 @@ def lico2_volume_change_Ai2020(sto):
 
     References
     ----------
-     .. [1] > Ai, W., Kraft, L., Sturm, J., Jossen, A., & Wu, B. (2020).
+     .. [1] Ai, W., Kraft, L., Sturm, J., Jossen, A., & Wu, B. (2020).
      Electrochemical Thermal-Mechanical Modelling of Stress Inhomogeneity in
      Lithium-Ion Pouch Cells. Journal of The Electrochemical Society, 167(1), 013512
       DOI: 10.1149/2.0122001JES.
-     .. [2] > Rieger, B., Erhard, S. V., Rumpf, K., & Jossen, A. (2016).
+     .. [2] Rieger, B., Erhard, S. V., Rumpf, K., & Jossen, A. (2016).
      A new method to model the thickness change of a commercial pouch cell
      during discharge. Journal of The Electrochemical Society, 163(8), A1566-A1575.
 

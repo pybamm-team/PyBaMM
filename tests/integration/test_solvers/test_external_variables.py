@@ -15,11 +15,8 @@ class TestExternalVariables(unittest.TestCase):
         geometry = model.default_geometry
         param = model.default_parameter_values
         param.update({"Negative electrode conductivity [S.m-1]": "[input]"})
-        param.process_model(model)
-        param.process_geometry(geometry)
         inputs = {"Negative electrode conductivity [S.m-1]": e_height}
-        var = pybamm.standard_spatial_vars
-        var_pts = {var.x_n: 5, var.x_s: 5, var.x_p: 5, var.r_n: 10, var.r_p: 10}
+        var_pts = {"x_n": 5, "x_s": 5, "x_p": 5, "r_n": 10, "r_p": 10}
         spatial_methods = model.default_spatial_methods
 
         solver = pybamm.CasadiSolver()

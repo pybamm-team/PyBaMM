@@ -24,6 +24,12 @@ class BaseModel(pybamm.BaseSubModel):
 
     def _get_standard_active_material_variables(self, eps_solid):
         param = self.param
+        if eps_solid.domain == []:
+            eps_solid = pybamm.PrimaryBroadcast(eps_solid, "current collector")
+        if eps_solid.domain == ["current collector"]:
+            eps_solid = pybamm.PrimaryBroadcast(
+                eps_solid, self.domain.lower() + " electrode"
+            )
         eps_solid_av = pybamm.x_average(eps_solid)
 
         variables = {
@@ -37,21 +43,22 @@ class BaseModel(pybamm.BaseSubModel):
         # some models (e.g. lead-acid) do not have particles
         if self.options["particle shape"] == "no particles":
             if self.domain == "Negative":
-                x = pybamm.standard_spatial_vars.x_n
-                a = self.param.a_n(x)
+                a = self.param.a_n
                 a_typ = self.param.a_n_typ
             elif self.domain == "Positive":
-                x = pybamm.standard_spatial_vars.x_p
-                a = self.param.a_p(x)
+                a = self.param.a_p
                 a_typ = self.param.a_p_typ
             variables.update(
                 {
                     self.domain + " electrode surface area to volume ratio": a,
                     self.domain
                     + " electrode surface area to volume ratio [m-1]": a * a_typ,
-                    "X-averaged " + self.domain.lower() +
-                    " electrode surface area to volume ratio": pybamm.x_average(a),
-                    "X-averaged " + self.domain.lower() + " electrode surface area"
+                    "X-averaged "
+                    + self.domain.lower()
+                    + " electrode surface area to volume ratio": pybamm.x_average(a),
+                    "X-averaged "
+                    + self.domain.lower()
+                    + " electrode surface area"
                     + " to volume ratio [m-1]": pybamm.x_average(a) * a_typ,
                 }
             )
@@ -82,9 +89,8 @@ class BaseModel(pybamm.BaseSubModel):
             # calculated the same way
             if self.domain == "Negative":
                 if self.options["particle size"] == "single":
-                    x = pybamm.standard_spatial_vars.x_n
-                    R = self.param.R_n(x)
-                    R_dim = self.param.R_n_dimensional(x * self.param.L_x)
+                    R = self.param.R_n
+                    R_dim = self.param.R_n_dimensional
                 elif self.options["particle size"] == "distribution":
                     R_n = pybamm.standard_spatial_vars.R_n
                     R = pybamm.size_average(R_n)
@@ -92,9 +98,8 @@ class BaseModel(pybamm.BaseSubModel):
                 a_typ = self.param.a_n_typ
             elif self.domain == "Positive":
                 if self.options["particle size"] == "single":
-                    x = pybamm.standard_spatial_vars.x_p
-                    R = self.param.R_p(x)
-                    R_dim = self.param.R_p_dimensional(x * self.param.L_x)
+                    R = self.param.R_p
+                    R_dim = self.param.R_p_dimensional
                 elif self.options["particle size"] == "distribution":
                     R_p = pybamm.standard_spatial_vars.R_p
                     R = pybamm.size_average(R_p)
@@ -107,20 +112,6 @@ class BaseModel(pybamm.BaseSubModel):
             if self.options["particle shape"] == "spherical":
                 a_dim = 3 * eps_solid / R_dim
                 a_dim_av = 3 * eps_solid_av / R_dim_av
-            elif self.options["particle shape"] == "user":
-                if self.domain == "Negative":
-                    # give dimensional x as an input
-                    inputs = {"Through-cell distance (x_n) [m]": x * self.param.L_x}
-                    a_dim = pybamm.FunctionParameter(
-                        "Negative electrode surface area to volume ratio [m-1]", inputs
-                    )
-                if self.domain == "Positive":
-                    # give dimensional x as an input
-                    inputs = {"Through-cell distance (x_p) [m]": x * self.param.L_x}
-                    a_dim = pybamm.FunctionParameter(
-                        "Positive electrode surface area to volume ratio [m-1]", inputs
-                    )
-                a_dim_av = pybamm.x_average(a_dim)
 
             # Surface area to volume ratio is scaled with a_typ, so that it is equal to
             # 1 when eps_solid and R are uniform in space and time

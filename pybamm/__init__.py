@@ -7,41 +7,12 @@
 #
 import sys
 import os
-import platform
+
 
 #
 # Version info
 #
-def _load_version_int():
-    try:
-        root = os.path.abspath(os.path.dirname(__file__))
-        with open(os.path.join(root, "version"), "r") as f:
-            version = f.read().strip().split(",")
-        year, month = [int(x) for x in version]
-        return year, month
-    except Exception as e:
-        raise RuntimeError("Unable to read version number (" + str(e) + ").")
-
-
-__version_int__ = _load_version_int()
-__version__ = ".".join(["{:02d}".format(x) for x in __version_int__])
-if sys.version_info[0] < 3:
-    del x  # Before Python3, list comprehension iterators leaked
-
-#
-# Expose PyBaMM version
-#
-def version(formatted=False):
-    """
-    Returns the version number, as a 2-part integer (year, month).
-    If ``formatted=True``, it returns a string formatted version (for example
-    "PyBaMM 21.08").
-    """
-    if formatted:
-        return "PyBaMM " + __version__
-    else:
-        return __version_int__
-
+from pybamm.version import __version__
 
 #
 # Constants
@@ -61,12 +32,13 @@ PARAMETER_PATH = [
     os.path.join(root_dir(), "pybamm", "input", "parameters"),
 ]
 
+
 #
 # Utility classes and methods
 #
 from .util import Timer, TimerTime, FuzzyDict
 from .util import root_dir, load_function, rmse, get_infinite_nested_dict, load
-from .util import get_parameters_filepath
+from .util import get_parameters_filepath, have_jax, install_jax, is_jax_compatible
 from .logger import logger, set_logging_level
 from .settings import settings
 from .citations import Citations, citations, print_citations
@@ -80,11 +52,13 @@ from .expression_tree.concatenations import *
 from .expression_tree.array import Array, linspace, meshgrid
 from .expression_tree.matrix import Matrix
 from .expression_tree.unary_operators import *
+from .expression_tree.averages import *
+from .expression_tree.averages import _BaseAverage
+from .expression_tree.broadcasts import *
 from .expression_tree.functions import *
 from .expression_tree.interpolant import Interpolant
 from .expression_tree.input_parameter import InputParameter
 from .expression_tree.parameter import Parameter, FunctionParameter
-from .expression_tree.broadcasts import *
 from .expression_tree.scalar import Scalar
 from .expression_tree.variable import *
 from .expression_tree.independent_variable import *
@@ -102,12 +76,8 @@ from .expression_tree.operations.evaluate_python import (
     EvaluatorPython,
 )
 
-if not (
-    platform.system() == "Windows"
-    or (platform.system() == "Darwin" and "ARM64" in platform.version())
-):
-    from .expression_tree.operations.evaluate_python import EvaluatorJax
-    from .expression_tree.operations.evaluate_python import JaxCooMatrix
+from .expression_tree.operations.evaluate_python import EvaluatorJax
+from .expression_tree.operations.evaluate_python import JaxCooMatrix
 
 from .expression_tree.operations.jacobian import Jacobian
 from .expression_tree.operations.convert_to_casadi import CasadiConverter
@@ -149,10 +119,12 @@ from .models.submodels import (
     porosity,
     thermal,
     tortuosity,
-    particle_cracking,
+    particle_mechanics,
 )
+from .models.submodels.interface import kinetics
 from .models.submodels.interface import sei
 from .models.submodels.interface import lithium_plating
+from .models.submodels.interface import interface_utilisation
 
 #
 # Geometry
@@ -226,13 +198,8 @@ from .solvers.scikits_dae_solver import ScikitsDaeSolver
 from .solvers.scikits_ode_solver import ScikitsOdeSolver, have_scikits_odes
 from .solvers.scipy_solver import ScipySolver
 
-# Jax not supported under windows
-if not (
-    platform.system() == "Windows"
-    or (platform.system() == "Darwin" and "ARM64" in platform.version())
-):
-    from .solvers.jax_solver import JaxSolver
-    from .solvers.jax_bdf_solver import jax_bdf_integrate
+from .solvers.jax_solver import JaxSolver
+from .solvers.jax_bdf_solver import jax_bdf_integrate
 
 from .solvers.idaklu_solver import IDAKLUSolver, have_idaklu
 
@@ -249,6 +216,7 @@ from .plotting.quick_plot import QuickPlot, close_plots, split_long_string
 from .plotting.plot import plot
 from .plotting.plot2D import plot2D
 from .plotting.plot_voltage_components import plot_voltage_components
+from .plotting.plot_summary_variables import plot_summary_variables
 from .plotting.dynamic_plot import dynamic_plot
 
 #

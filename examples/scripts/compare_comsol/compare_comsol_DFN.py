@@ -45,8 +45,7 @@ param.process_model(pybamm_model)
 param.process_geometry(geometry)
 
 # create mesh
-var = pybamm.standard_spatial_vars
-var_pts = {var.x_n: 31, var.x_s: 11, var.x_p: 31, var.r_n: 11, var.r_p: 11}
+var_pts = {"x_n": 31, "x_s": 11, "x_p": 31, "r_n": 11, "r_p": 11}
 mesh = pybamm.Mesh(geometry, pybamm_model.default_submesh_types, var_pts)
 
 # discretise model
@@ -88,7 +87,7 @@ def get_interp_fun(variable_name, domain):
         pybamm.t * pybamm_model.timescale.evaluate(),
     )
 
-    fun.domain = domain
+    fun.domains = {"primary": domain}
     fun.mesh = mesh.combine_submeshes(*domain)
     fun.secondary_mesh = None
     return fun

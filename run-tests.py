@@ -104,35 +104,20 @@ def run_doc_tests():
         sys.exit(ret)
 
 
-def run_notebook_and_scripts(skip_slow_books=False, executable="python"):
+def run_notebook_and_scripts(executable="python"):
     """
     Runs Jupyter notebook tests. Exits if they fail.
     """
-    # Ignore slow books?
-    ignore_list = []
-    if skip_slow_books and os.path.isfile(".slow-books"):
-        with open(".slow-books", "r") as f:
-            for line in f.readlines():
-                line = line.strip()
-                if not line or line[:1] == "#":
-                    continue
-                if not line.startswith("examples/"):
-                    line = "examples/" + line
-                if not line.endswith(".ipynb"):
-                    line = line + ".ipynb"
-                if not os.path.isfile(line):
-                    raise Exception("Slow notebook note found: " + line)
-                ignore_list.append(line)
 
     # Scan and run
     print("Testing notebooks and scripts with executable `" + str(executable) + "`")
-    if not scan_for_nb_and_scripts("examples", True, executable, ignore_list):
+    if not scan_for_nb_and_scripts("examples", True, executable):
         print("\nErrors encountered in notebooks")
         sys.exit(1)
     print("\nOK")
 
 
-def scan_for_nb_and_scripts(root, recursive=True, executable="python", ignore_list=[]):
+def scan_for_nb_and_scripts(root, recursive=True, executable="python"):
     """
     Scans for, and tests, all notebooks and scripts in a directory.
     """
@@ -142,9 +127,6 @@ def scan_for_nb_and_scripts(root, recursive=True, executable="python", ignore_li
     # Scan path
     for filename in os.listdir(root):
         path = os.path.join(root, filename)
-        if path in ignore_list:
-            print("Skipping slow book: " + path)
-            continue
 
         # Recurse into subdirectories
         if recursive and os.path.isdir(path):
@@ -354,11 +336,6 @@ if __name__ == "__main__":
     parser.add_argument(
         "--examples",
         action="store_true",
-        help="Test only the fast Jupyter notebooks and scripts in `examples`.",
-    )
-    parser.add_argument(
-        "--allexamples",
-        action="store_true",
         help="Test all Jupyter notebooks and scripts in `examples`.",
     )
     parser.add_argument(
@@ -416,12 +393,9 @@ if __name__ == "__main__":
         has_run = True
         run_doc_tests()
     # Notebook tests
-    if args.allexamples:
-        has_run = True
-        run_notebook_and_scripts(executable=interpreter)
     elif args.examples:
         has_run = True
-        run_notebook_and_scripts(True, interpreter)
+        run_notebook_and_scripts(interpreter)
     if args.debook:
         has_run = True
         export_notebook(*args.debook)

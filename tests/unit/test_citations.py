@@ -3,7 +3,6 @@
 #
 import pybamm
 import unittest
-from platform import system, version
 
 
 class TestCitations(unittest.TestCase):
@@ -124,14 +123,14 @@ class TestCitations(unittest.TestCase):
         citations._reset()
         self.assertNotIn("Subramanian2005", citations._papers_to_cite)
         pybamm.particle.no_distribution.XAveragedPolynomialProfile(
-            None, "Negative", "quadratic profile"
+            None, "Negative", "quadratic profile", None
         )
         self.assertIn("Subramanian2005", citations._papers_to_cite)
 
         citations._reset()
         self.assertNotIn("Subramanian2005", citations._papers_to_cite)
         pybamm.particle.no_distribution.PolynomialProfile(
-            None, "Negative", "quadratic profile"
+            None, "Negative", "quadratic profile", None
         )
         self.assertIn("Subramanian2005", citations._papers_to_cite)
 
@@ -169,12 +168,7 @@ class TestCitations(unittest.TestCase):
 
         citations._reset()
         self.assertNotIn("Reniers2019", citations._papers_to_cite)
-        pybamm.active_material.StressDriven(None, None, None, True)
-        self.assertIn("Reniers2019", citations._papers_to_cite)
-
-        citations._reset()
-        self.assertNotIn("Reniers2019", citations._papers_to_cite)
-        pybamm.active_material.ReactionDriven(None, None, None, True)
+        pybamm.active_material.LossActiveMaterial(None, None, None, True)
         self.assertIn("Reniers2019", citations._papers_to_cite)
 
     def test_mohtat_2019(self):
@@ -185,33 +179,56 @@ class TestCitations(unittest.TestCase):
         pybamm.lithium_ion.ElectrodeSOH()
         self.assertIn("Mohtat2019", citations._papers_to_cite)
 
+    def test_mohtat_2021(self):
+        citations = pybamm.citations
+
+        citations._reset()
+        self.assertNotIn("Mohtat2021", citations._papers_to_cite)
+        pybamm.external_circuit.CCCVFunctionControl(None)
+        self.assertIn("Mohtat2021", citations._papers_to_cite)
+
+    def test_sripad_2020(self):
+        citations = pybamm.citations
+
+        citations._reset()
+        self.assertNotIn("Sripad2020", citations._papers_to_cite)
+        pybamm.kinetics.Marcus(None, None, None, None)
+        self.assertIn("Sripad2020", citations._papers_to_cite)
+
+        citations._reset()
+        self.assertNotIn("Sripad2020", citations._papers_to_cite)
+        pybamm.kinetics.MarcusHushChidsey(None, None, None, None)
+        self.assertIn("Sripad2020", citations._papers_to_cite)
+
     def test_parameter_citations(self):
         citations = pybamm.citations
 
         citations._reset()
-        pybamm.ParameterValues(chemistry=pybamm.parameter_sets.Chen2020)
+        pybamm.ParameterValues("Chen2020")
         self.assertIn("Chen2020", citations._papers_to_cite)
 
         citations._reset()
-        pybamm.ParameterValues(chemistry=pybamm.parameter_sets.NCA_Kim2011)
+        pybamm.ParameterValues("NCA_Kim2011")
         self.assertIn("Kim2011", citations._papers_to_cite)
 
         citations._reset()
-        pybamm.ParameterValues(chemistry=pybamm.parameter_sets.Marquis2019)
+        pybamm.ParameterValues("Marquis2019")
         self.assertIn("Marquis2019", citations._papers_to_cite)
 
         citations._reset()
-        pybamm.ParameterValues(chemistry=pybamm.parameter_sets.Sulzer2019)
+        pybamm.ParameterValues("Sulzer2019")
         self.assertIn("Sulzer2019physical", citations._papers_to_cite)
 
         citations._reset()
-        pybamm.ParameterValues(chemistry=pybamm.parameter_sets.Ecker2015)
+        pybamm.ParameterValues("Ecker2015")
         self.assertIn("Ecker2015i", citations._papers_to_cite)
         self.assertIn("Ecker2015ii", citations._papers_to_cite)
+        self.assertIn("Zhao2018", citations._papers_to_cite)
+        self.assertIn("Hales2019", citations._papers_to_cite)
         self.assertIn("Richardson2020", citations._papers_to_cite)
 
         citations._reset()
-        pybamm.ParameterValues(chemistry=pybamm.parameter_sets.ORegan2021)
+        pybamm.ParameterValues("ORegan2021")
         self.assertIn("ORegan2021", citations._papers_to_cite)
 
     def test_solver_citations(self):
@@ -245,10 +262,7 @@ class TestCitations(unittest.TestCase):
             pybamm.IDAKLUSolver()
             self.assertIn("Hindmarsh2005", citations._papers_to_cite)
 
-    @unittest.skipIf(
-        system() == "Windows" or (system() == "Darwin" and "ARM64" in version()),
-        "JAX not supported on windows or Mac M1",
-    )
+    @unittest.skipIf(not pybamm.have_jax(), "jax or jaxlib is not installed")
     def test_jax_citations(self):
         citations = pybamm.citations
         citations._reset()

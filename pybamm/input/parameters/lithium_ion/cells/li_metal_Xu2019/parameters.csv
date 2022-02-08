@@ -9,6 +9,6 @@ Electrode height [m],0.01,,guess to get correct area
 Electrode width [m],0.0154,,guess to get correct area
 ,,,
 # Electrical,,,
-Nominal cell capacity [A.h],0.024,,C/4 is I=0.6 mA
-Typical current [A],0.024,,1C current
-Current function [A],0.024,,1C current
+Nominal cell capacity [A.h],0.0024,,C/4 is I=0.6 mA
+Typical current [A],0.0024,,1C current
+Current function [A],0.0024,,1C current

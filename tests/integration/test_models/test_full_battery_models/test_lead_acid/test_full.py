@@ -20,8 +20,7 @@ class TestLeadAcidFull(unittest.TestCase):
     def test_basic_processing_with_convection(self):
         options = {"thermal": "isothermal", "convection": "uniform transverse"}
         model = pybamm.lead_acid.Full(options)
-        var = pybamm.standard_spatial_vars
-        var_pts = {var.x_n: 10, var.x_s: 10, var.x_p: 10}
+        var_pts = {"x_n": 10, "x_s": 10, "x_p": 10}
         modeltest = tests.StandardModelTest(model, var_pts=var_pts)
         modeltest.test_all(t_eval=np.linspace(0, 3600 * 10))
 
@@ -46,8 +45,7 @@ class TestLeadAcidFull(unittest.TestCase):
     def test_basic_processing_1plus1D(self):
         options = {"current collector": "potential pair", "dimensionality": 1}
         model = pybamm.lead_acid.Full(options)
-        var = pybamm.standard_spatial_vars
-        var_pts = {var.x_n: 5, var.x_s: 5, var.x_p: 5, var.y: 5, var.z: 5}
+        var_pts = {"x_n": 5, "x_s": 5, "x_p": 5, "y": 5, "z": 5}
         modeltest = tests.StandardModelTest(model, var_pts=var_pts)
         modeltest.test_all(skip_output_tests=True)
 

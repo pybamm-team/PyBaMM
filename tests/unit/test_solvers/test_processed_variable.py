@@ -113,12 +113,12 @@ class TestProcessedVariable(unittest.TestCase):
         # with parameter
         t = pybamm.t
         y = pybamm.StateVector(slice(0, 1))
-        a = pybamm.InputParameter('a')
+        a = pybamm.InputParameter("a")
         var = t * y * a
         var.mesh = None
         t_sol = np.linspace(0, 1)
         y_sol = np.array([np.linspace(0, 5)])
-        inputs = {'a': np.array([1.0])}
+        inputs = {"a": np.array([1.0])}
         var_casadi = to_casadi(var, y_sol, inputs=inputs)
         processed_var = pybamm.ProcessedVariable(
             [var],
@@ -128,7 +128,7 @@ class TestProcessedVariable(unittest.TestCase):
         )
 
         # test no sensitivity raises error
-        with self.assertRaisesRegex(ValueError, 'Cannot compute sensitivities'):
+        with self.assertRaisesRegex(ValueError, "Cannot compute sensitivities"):
             print(processed_var.sensitivities)
 
     def test_processed_variable_1D(self):
@@ -551,8 +551,7 @@ class TestProcessedVariable(unittest.TestCase):
 
         # On size domain
         R_n = pybamm.Matrix(
-            disc.mesh["negative particle size"].nodes,
-            domain="negative particle size"
+            disc.mesh["negative particle size"].nodes, domain="negative particle size"
         )
         R_n.mesh = disc.mesh["negative particle size"]
         R_n_casadi = to_casadi(R_n, y_sol)
@@ -850,57 +849,6 @@ class TestProcessedVariable(unittest.TestCase):
         np.testing.assert_array_equal(processed_var(y=y_sol, z=0.5).shape, (15,))
         # 2 scalars
         np.testing.assert_array_equal(processed_var(t=None, y=0.2, z=0.2).shape, ())
-
-    def test_processed_variable_ode_pde_solution(self):
-        # without space
-        model = pybamm.BaseBatteryModel()
-        c = pybamm.Variable("conc")
-        model.rhs = {c: -c}
-        model.initial_conditions = {c: 1}
-        model.variables = {"c": c}
-        modeltest = tests.StandardModelTest(model)
-        modeltest.test_all()
-        sol = modeltest.solution
-        np.testing.assert_array_almost_equal(sol["c"](sol.t), np.exp(-sol.t))
-
-        # with space
-        # set up and solve model
-        whole_cell = ["negative electrode", "separator", "positive electrode"]
-        model = pybamm.BaseBatteryModel()
-        model.length_scales = {
-            "negative electrode": pybamm.Scalar(1),
-            "separator": pybamm.Scalar(1),
-            "positive electrode": pybamm.Scalar(1),
-        }
-        c = pybamm.Variable("conc", domain=whole_cell)
-        c_s = pybamm.Variable(
-            "particle conc",
-            domain="negative particle",
-            auxiliary_domains={"secondary": ["negative electrode"]},
-        )
-        model.rhs = {c: -c, c_s: 1 - c_s}
-        model.initial_conditions = {c: 1, c_s: 0.5}
-        model.boundary_conditions = {
-            c: {"left": (0, "Neumann"), "right": (0, "Neumann")},
-            c_s: {"left": (0, "Neumann"), "right": (0, "Neumann")},
-        }
-        model.variables = {
-            "c": c,
-            "N": pybamm.grad(c),
-            "c_s": c_s,
-            "N_s": pybamm.grad(c_s),
-        }
-        modeltest = tests.StandardModelTest(model)
-        modeltest.test_all()
-        # set up testing
-        sol = modeltest.solution
-        x = pybamm.SpatialVariable("x", domain=whole_cell)
-        x_sol = modeltest.disc.process_symbol(x).entries[:, 0]
-
-        # test
-        np.testing.assert_array_almost_equal(
-            sol["c"](sol.t, x_sol), np.ones_like(x_sol)[:, np.newaxis] * np.exp(-sol.t)
-        )
 
     def test_call_failure(self):
         # x domain

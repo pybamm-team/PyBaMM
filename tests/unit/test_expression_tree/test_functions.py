@@ -140,6 +140,12 @@ class TestFunction(unittest.TestCase):
         # Test Arcsinh
         self.assertEqual(pybamm.Arcsinh(a).to_equation(), sympy.asinh(a))
 
+        # Test Arctan
+        self.assertEqual(pybamm.Arctan(a).to_equation(), sympy.atan(a))
+
+        # Test Exponential
+        self.assertEqual(pybamm.Exponential(a).to_equation(), sympy.exp(a))
+
         # Test log
         self.assertEqual(pybamm.Log(54.0).to_equation(), sympy.log(54.0))
 

@@ -86,7 +86,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
         """
 
         size = model.concatenated_initial_conditions.size
-        atol = self._check_atol_type(self._atol, size)
+        atol = self._check_atol_type(self.atol, size)
         for var, tol in variables_with_tols.items():
             variable = model.variables[var]
             if isinstance(variable, pybamm.StateVector):
@@ -99,7 +99,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
     def set_state_vec_tol(self, atol, state_vec, tol):
         """
         A method to set the tolerances in the atol vector of a specific
-        state variable. This method modifies self._atol
+        state variable. This method modifies self.atol
 
         Parameters
         ----------
@@ -140,7 +140,9 @@ class IDAKLUSolver(pybamm.BaseSolver):
         if atol.size != size:
             raise pybamm.SolverError(
                 """Absolute tolerances must be either a scalar or a numpy arrray
-                of the same shape as y0 ({})""".format(size)
+                of the same shape as y0 ({})""".format(
+                    size
+                )
             )
 
         return atol
@@ -178,13 +180,13 @@ class IDAKLUSolver(pybamm.BaseSolver):
         try:
             atol = model.atol
         except AttributeError:
-            atol = self._atol
+            atol = self.atol
 
         y0 = model.y0
         if isinstance(y0, casadi.DM):
             y0 = y0.full().flatten()
 
-        rtol = self._rtol
+        rtol = self.rtol
         atol = self._check_atol_type(atol, y0.size)
 
         if model.convert_to_format == "jax":

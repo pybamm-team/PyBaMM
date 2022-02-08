@@ -175,13 +175,13 @@ class StandardVariables:
             auxiliary_domains={"secondary": "current collector"},
             bounds=(0, 1),
         )
-        self.c_s_n_rxav = pybamm.Variable(
-            "R-X-averaged negative particle concentration",
+        self.c_s_n_av = pybamm.Variable(
+            "Average negative particle concentration",
             domain="current collector",
             bounds=(0, 1),
         )
-        self.c_s_p_rxav = pybamm.Variable(
-            "R-X-averaged positive particle concentration",
+        self.c_s_p_av = pybamm.Variable(
+            "Average positive particle concentration",
             domain="current collector",
             bounds=(0, 1),
         )
@@ -220,12 +220,12 @@ class StandardVariables:
             domain="positive electrode",
             auxiliary_domains={"secondary": "current collector"},
         )
-        self.q_s_n_rxav = pybamm.Variable(
-            "R-X-averaged negative particle concentration gradient",
+        self.q_s_n_av = pybamm.Variable(
+            "Average negative particle concentration gradient",
             domain="current collector",
         )
-        self.q_s_p_rxav = pybamm.Variable(
-            "R-X-averaged positive particle concentration gradient",
+        self.q_s_p_av = pybamm.Variable(
+            "Average positive particle concentration gradient",
             domain="current collector",
         )
 
@@ -293,22 +293,51 @@ class StandardVariables:
 
         # SEI variables
         self.L_inner_av = pybamm.Variable(
-            "X-averaged inner negative electrode SEI thickness",
+            "X-averaged inner SEI thickness",
             domain="current collector",
         )
         self.L_inner = pybamm.Variable(
-            "Inner negative electrode SEI thickness",
+            "Inner SEI thickness",
             domain=["negative electrode"],
             auxiliary_domains={"secondary": "current collector"},
         )
         self.L_outer_av = pybamm.Variable(
-            "X-averaged outer negative electrode SEI thickness",
+            "X-averaged outer SEI thickness",
             domain="current collector",
         )
         self.L_outer = pybamm.Variable(
-            "Outer negative electrode SEI thickness",
+            "Outer SEI thickness",
             domain=["negative electrode"],
             auxiliary_domains={"secondary": "current collector"},
+        )
+        # For SEI reaction at the li metal/separator interface in a li metal model
+        self.L_inner_interface = pybamm.Variable(
+            "Inner SEI thickness",
+            domain=["current collector"],
+        )
+        self.L_outer_interface = pybamm.Variable(
+            "Outer SEI thickness",
+            domain=["current collector"],
+        )
+
+        # Interface utilisation
+        self.u_n = pybamm.Variable(
+            "Negative electrode interface utilisation",
+            domain="negative electrode",
+            auxiliary_domains={"secondary": "current collector"},
+        )
+        self.u_p = pybamm.Variable(
+            "Positive electrode interface utilisation",
+            domain="positive electrode",
+            auxiliary_domains={"secondary": "current collector"},
+        )
+        self.u_n_xav = pybamm.Variable(
+            "X-averaged negative electrode interface utilisation",
+            domain="current collector",
+        )
+        self.u_p_xav = pybamm.Variable(
+            "X-averaged positive electrode interface utilisation",
+            domain="current collector",
         )
 
     def __setattr__(self, name, value):

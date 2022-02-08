@@ -647,18 +647,17 @@ class TestBaseModel(unittest.TestCase):
         self.assertEqual(model.initial_conditions[var_concat].value, 1)
 
         # Discretise
-        var = pybamm.standard_spatial_vars
         geometry = {
-            "negative electrode": {var.x_n: {"min": 0, "max": 1}},
-            "separator": {var.x_s: {"min": 1, "max": 2}},
-            "negative particle": {var.r_n: {"min": 0, "max": 1}},
+            "negative electrode": {"x_n": {"min": 0, "max": 1}},
+            "separator": {"x_s": {"min": 1, "max": 2}},
+            "negative particle": {"r_n": {"min": 0, "max": 1}},
         }
         submeshes = {
-            "negative electrode": pybamm.MeshGenerator(pybamm.Uniform1DSubMesh),
-            "separator": pybamm.MeshGenerator(pybamm.Uniform1DSubMesh),
-            "negative particle": pybamm.MeshGenerator(pybamm.Uniform1DSubMesh),
+            "negative electrode": pybamm.Uniform1DSubMesh,
+            "separator": pybamm.Uniform1DSubMesh,
+            "negative particle": pybamm.Uniform1DSubMesh,
         }
-        var_pts = {var.x_n: 10, var.x_s: 10, var.r_n: 5}
+        var_pts = {"x_n": 10, "x_s": 10, "r_n": 5}
         mesh = pybamm.Mesh(geometry, submeshes, var_pts)
         spatial_methods = {
             "negative electrode": pybamm.FiniteVolume(),
@@ -929,6 +928,12 @@ class TestBaseModel(unittest.TestCase):
         model.initial_conditions = {var: pybamm.Scalar(1)}
         with self.assertRaisesRegex(pybamm.ModelError, "must appear in the solution"):
             model.set_initial_conditions_from({"wrong var": 2})
+
+    def test_set_variables_error(self):
+        var = pybamm.Variable("var")
+        model = pybamm.BaseModel()
+        with self.assertRaisesRegex(ValueError, "not var"):
+            model.variables = {"not var": var}
 
 
 if __name__ == "__main__":

@@ -7,28 +7,35 @@ from .base_thermal import BaseThermal
 
 
 class OneDimensionalX(BaseThermal):
-    """Class for one-dimensional (x-direction) thermal submodel.
+    """
+    Class for one-dimensional (x-direction) thermal submodel.
     Note: this model assumes infinitely large electrical and thermal conductivity
     in the current collectors, so that the contribution to the Ohmic heating
     from the current collectors is zero and the boundary conditions are applied
     at the edges of the electrodes (at x=0 and x=1, in non-dimensional coordinates).
-    For more information see [1]_.
+    For more information see [1]_ and [2]_.
 
     Parameters
     ----------
     param : parameter class
         The parameters to use for this submodel
+    options : dict, optional
+        A dictionary of options to be passed to the model.
 
     References
     ----------
     .. [1] R Timms, SG Marquis, V Sulzer, CP Please and SJ Chapman. “Asymptotic
-           Reduction of a Lithium-ion Pouch Cell Model”. In preparation, 2020.
+           Reduction of a Lithium-ion Pouch Cell Model”. SIAM Journal on Applied
+           Mathematics, 81(3), 765--788, 2021
+    .. [2] SG Marquis, R Timms, V Sulzer, CP Please and SJ Chapman. “A Suite of
+           Reduced-Order Models of a Single-Layer Lithium-ion Pouch Cell”. Journal
+           of The Electrochemical Society, 167(14):140513, 2020
 
     **Extends:** :class:`pybamm.thermal.BaseThermal`
     """
 
-    def __init__(self, param):
-        super().__init__(param)
+    def __init__(self, param, options=None):
+        super().__init__(param, options=options)
         pybamm.citations.register("Timms2021")
 
     def get_fundamental_variables(self):

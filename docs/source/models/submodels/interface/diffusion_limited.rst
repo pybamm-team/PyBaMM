@@ -1,5 +1,5 @@
 Diffusion-limited
 =================
 
-.. autoclass:: pybamm.interface.DiffusionLimited
+.. autoclass:: pybamm.kinetics.DiffusionLimited
     :members:

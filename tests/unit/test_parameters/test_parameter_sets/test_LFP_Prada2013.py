@@ -26,8 +26,7 @@ class TestLFPPrada2013(unittest.TestCase):
 
     def test_standard_lithium_parameters(self):
 
-        chemistry = pybamm.parameter_sets.Prada2013
-        parameter_values = pybamm.ParameterValues(chemistry=chemistry)
+        parameter_values = pybamm.ParameterValues("Prada2013")
 
         model = pybamm.lithium_ion.DFN()
         sim = pybamm.Simulation(model, parameter_values=parameter_values)

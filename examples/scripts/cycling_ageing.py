@@ -11,7 +11,7 @@ model = pb.lithium_ion.DFN(
     }
 )
 
-param = pb.ParameterValues(chemistry=pb.parameter_sets.Mohtat2020)
+param = pb.ParameterValues("Mohtat2020")
 
 experiment = pb.Experiment(
     [
@@ -66,14 +66,14 @@ sim.plot(
         "Discharge capacity [A.h]",
         "Electrolyte potential [V]",
         "Electrolyte concentration [mol.m-3]",
-        "Total negative electrode SEI thickness",
+        "Total SEI thickness",
         "Negative electrode porosity",
         "X-averaged negative electrode porosity",
-        "Negative electrode SEI interfacial current density [A.m-2]",
-        "X-averaged total negative electrode SEI thickness [m]",
+        "SEI interfacial current density [A.m-2]",
+        "X-averaged total SEI thickness [m]",
         [
             "Total lithium lost [mol]",
-            "Loss of lithium to negative electrode SEI [mol]",
+            "Loss of lithium to SEI [mol]",
         ],
     ]
 )

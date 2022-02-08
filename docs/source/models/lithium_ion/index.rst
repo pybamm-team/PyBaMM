@@ -10,3 +10,4 @@ Lithium-ion Models
   dfn
   newman_tobias
   yang2017
+  electrode_soh

@@ -51,8 +51,6 @@ class TestIndependentVariable(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "domain must be"):
             pybamm.SpatialVariable("x", [])
         with self.assertRaises(pybamm.DomainError):
-            pybamm.SpatialVariable("r", ["negative electrode"])
-        with self.assertRaises(pybamm.DomainError):
             pybamm.SpatialVariable("r_n", ["positive particle"])
         with self.assertRaises(pybamm.DomainError):
             pybamm.SpatialVariable("r_p", ["negative particle"])

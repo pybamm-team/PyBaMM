@@ -2,12 +2,26 @@
 # Solution class
 #
 import casadi
+import json
 import numbers
 import numpy as np
 import pickle
 import pybamm
 import pandas as pd
 from scipy.io import savemat
+
+
+class NumpyEncoder(json.JSONEncoder):
+    """
+    Numpy serialiser helper class that converts numpy arrays to a list
+    https://stackoverflow.com/questions/26646362/numpy-array-is-not-json-serializable
+    """
+
+    def default(self, obj):
+        if isinstance(obj, np.ndarray):
+            return obj.tolist()
+        # won't be called since we only need to convert numpy arrays
+        return json.JSONEncoder.default(self, obj)  # pragma: no cover
 
 
 class Solution(object):
@@ -58,7 +72,7 @@ class Solution(object):
         t_event=None,
         y_event=None,
         termination="final time",
-        sensitivities=False
+        sensitivities=False,
     ):
         if not isinstance(all_ts, list):
             all_ts = [all_ts]
@@ -109,6 +123,7 @@ class Solution(object):
         self._t_event = t_event
         self._y_event = y_event
         self._termination = termination
+        self.closest_event_idx = None
 
         # Initialize times
         self.set_up_time = None
@@ -136,19 +151,16 @@ class Solution(object):
         self.set_y()
 
         # extract sensitivities from full y solution
-        self._y, self._sensitivities = \
-            self._extract_explicit_sensitivities(
-                self.all_models[0], self.y, self.t, self.all_inputs[0]
-            )
+        self._y, self._sensitivities = self._extract_explicit_sensitivities(
+            self.all_models[0], self.y, self.t, self.all_inputs[0]
+        )
 
         # make sure we remove all sensitivities from all_ys
         for index, (model, ys, ts, inputs) in enumerate(
-            zip(self.all_models, self.all_ys, self.all_ts,
-                self.all_inputs)
+            zip(self.all_models, self.all_ys, self.all_ts, self.all_inputs)
         ):
-            self._all_ys[index], _ = \
-                self._extract_explicit_sensitivities(
-                    model, ys, ts, inputs
+            self._all_ys[index], _ = self._extract_explicit_sensitivities(
+                model, ys, ts, inputs
             )
 
     def _extract_explicit_sensitivities(self, model, y, t_eval, inputs):
@@ -212,9 +224,7 @@ class Solution(object):
         else:
             y_full = y
         ode_sens = y_full[n_rhs:len_rhs_and_sens, :].reshape(n_p, n_rhs, n_t)
-        alg_sens = y_full[len_rhs_and_sens + n_alg :, :].reshape(
-            n_p, n_alg, n_t
-        )
+        alg_sens = y_full[len_rhs_and_sens + n_alg :, :].reshape(n_p, n_alg, n_t)
         # 2. Concatenate into a single 3D matrix with shape (n_p, n_states, n_t)
         # i.e. along first axis
         full_sens_matrix = np.concatenate([ode_sens, alg_sens], axis=1)
@@ -287,7 +297,7 @@ class Solution(object):
         """Updates the sensitivity"""
         # sensitivities must be a dict or bool
         if not isinstance(value, (bool, dict)):
-            raise TypeError('sensitivities arg needs to be a bool or dict')
+            raise TypeError("sensitivities arg needs to be a bool or dict")
         self._sensitivities = value
 
     def set_y(self):
@@ -532,32 +542,25 @@ class Solution(object):
         """
         return pybamm.dynamic_plot(self, output_variables=output_variables, **kwargs)
 
-    def clear_casadi_attributes(self):
-        """Remove casadi objects for pickling, will be computed again automatically"""
-        # t_MX = None
-        # y_MX = None
-        # symbolic_inputs = None
-        # symbolic_inputs_dict = None
-        pass
-
     def save(self, filename):
         """Save the whole solution using pickle"""
         # No warning here if len(self.data)==0 as solution can be loaded
         # and used to process new variables
 
-        self.clear_casadi_attributes()
-        # Pickle
         with open(filename, "wb") as f:
             pickle.dump(self, f, pickle.HIGHEST_PROTOCOL)
 
-    def save_data(self, filename, variables=None, to_format="pickle", short_names=None):
+    def save_data(
+            self, filename=None, variables=None,
+            to_format="pickle", short_names=None
+    ):
         """
         Save solution data only (raw arrays)
 
         Parameters
         ----------
-        filename : str
-            The name of the file to save data to
+        filename : str, optional
+            The name of the file to save data to. If None, then a str is returned
         variables : list, optional
             List of variables to save. If None, saves all of the variables that have
             been created so far
@@ -567,11 +570,18 @@ class Solution(object):
             - 'pickle' (default): creates a pickle file with the data dictionary
             - 'matlab': creates a .mat file, for loading in matlab
             - 'csv': creates a csv file (0D variables only)
+            - 'json': creates a json file
         short_names : dict, optional
             Dictionary of shortened names to use when saving. This may be necessary when
             saving to MATLAB, since no spaces or special characters are allowed in
             MATLAB variable names. Note that not all the variables need to be given
             a short name.
+
+        Returns
+        -------
+        data : str, optional
+            str if 'csv' or 'json' is chosen and filename is None, otherwise None
+
 
         """
         if variables is None:
@@ -602,9 +612,17 @@ class Solution(object):
                 data_short_names[name] = var
 
         if to_format == "pickle":
+            if filename is None:
+                raise ValueError(
+                    "pickle format must be written to a file"
+                )
             with open(filename, "wb") as f:
                 pickle.dump(data_short_names, f, pickle.HIGHEST_PROTOCOL)
         elif to_format == "matlab":
+            if filename is None:
+                raise ValueError(
+                    "matlab format must be written to a file"
+                )
             # Check all the variable names only contain a-z, A-Z or _ or numbers
             for name in data_short_names.keys():
                 # Check the string only contains the following ASCII:
@@ -639,7 +657,13 @@ class Solution(object):
                         )
                     )
             df = pd.DataFrame(data_short_names)
-            df.to_csv(filename, index=False)
+            return df.to_csv(filename, index=False)
+        elif to_format == "json":
+            if filename is None:
+                return json.dumps(data_short_names, cls=NumpyEncoder)
+            else:
+                with open(filename, "w") as outfile:
+                    json.dump(data_short_names, outfile, cls=NumpyEncoder)
         else:
             raise ValueError("format '{}' not recognised".format(to_format))
 
@@ -651,7 +675,7 @@ class Solution(object):
         return self._sub_solutions
 
     def __add__(self, other):
-        """ Adds two solutions together, e.g. when stepping """
+        """Adds two solutions together, e.g. when stepping"""
         if not isinstance(other, Solution):
             raise pybamm.SolverError(
                 "Only a Solution or None can be added to a Solution"
@@ -687,8 +711,10 @@ class Solution(object):
             other.t_event,
             other.y_event,
             other.termination,
+            bool(self.sensitivities),
         )
 
+        new_sol.closest_event_idx = other.closest_event_idx
         new_sol._all_inputs_casadi = self.all_inputs_casadi + other.all_inputs_casadi
 
         # Set solution time
@@ -724,6 +750,7 @@ class Solution(object):
         )
         new_sol._all_inputs_casadi = self.all_inputs_casadi
         new_sol._sub_solutions = self.sub_solutions
+        new_sol.closest_event_idx = self.closest_event_idx
 
         new_sol.solve_time = self.solve_time
         new_sol.integration_time = self.integration_time
@@ -787,58 +814,36 @@ def make_cycle_solution(step_solutions, esoh_sim=None, save_this_cycle=True):
 
     cycle_summary_variables = get_cycle_summary_variables(cycle_solution, esoh_sim)
 
+    cycle_first_state = cycle_solution.first_state
+
     if save_this_cycle:
         cycle_solution.cycle_summary_variables = cycle_summary_variables
     else:
         cycle_solution = None
 
-    return cycle_solution, cycle_summary_variables
+    return cycle_solution, cycle_summary_variables, cycle_first_state
 
 
 def get_cycle_summary_variables(cycle_solution, esoh_sim):
-    Q = cycle_solution["Discharge capacity [A.h]"].data
-    min_Q = np.min(Q)
-    max_Q = np.max(Q)
+    model = cycle_solution.all_models[0]
+    cycle_summary_variables = pybamm.FuzzyDict({})
 
-    cycle_summary_variables = pybamm.FuzzyDict(
-        {
-            "Minimum measured discharge capacity [A.h]": min_Q,
-            "Maximum measured discharge capacity [A.h]": max_Q,
-            "Measured capacity [A.h]": max_Q - min_Q,
-        }
-    )
+    # Measured capacity variables
+    if "Discharge capacity [A.h]" in model.variables:
+        Q = cycle_solution["Discharge capacity [A.h]"].data
+        min_Q = np.min(Q)
+        max_Q = np.max(Q)
 
-    degradation_variables = [
-        "Negative electrode capacity [A.h]",
-        "Positive electrode capacity [A.h]",
-        # LAM, LLI
-        "Loss of active material in negative electrode [%]",
-        "Loss of active material in positive electrode [%]",
-        "Loss of lithium inventory [%]",
-        "Loss of lithium inventory, including electrolyte [%]",
-        # Total lithium
-        "Total lithium [mol]",
-        "Total lithium in electrolyte [mol]",
-        "Total lithium in positive electrode [mol]",
-        "Total lithium in negative electrode [mol]",
-        "Total lithium in particles [mol]",
-        # Lithium lost
-        "Total lithium lost [mol]",
-        "Total lithium lost from particles [mol]",
-        "Total lithium lost from electrolyte [mol]",
-        "Loss of lithium to negative electrode SEI [mol]",
-        "Loss of lithium to positive electrode SEI [mol]",
-        "Loss of lithium to negative electrode lithium plating [mol]",
-        "Loss of lithium to positive electrode lithium plating [mol]",
-        "Loss of capacity to negative electrode SEI [A.h]",
-        "Loss of capacity to positive electrode SEI [A.h]",
-        "Loss of capacity to negative electrode lithium plating [A.h]",
-        "Loss of capacity to positive electrode lithium plating [A.h]",
-        "Total lithium lost to side reactions [mol]",
-        "Total capacity lost to side reactions [A.h]",
-        # Resistance
-        "Local ECM resistance [Ohm]",
-    ]
+        cycle_summary_variables.update(
+            {
+                "Minimum measured discharge capacity [A.h]": min_Q,
+                "Maximum measured discharge capacity [A.h]": max_Q,
+                "Measured capacity [A.h]": max_Q - min_Q,
+            }
+        )
+
+    # Degradation variables
+    degradation_variables = model.summary_variables
     first_state = cycle_solution.first_state
     last_state = cycle_solution.last_state
     for var in degradation_variables:
@@ -850,7 +855,12 @@ def get_cycle_summary_variables(cycle_solution, esoh_sim):
             data_last[0] - data_first[0]
         )
 
-    if esoh_sim is not None:
+    # eSOH variables (full-cell lithium-ion model only, for now)
+    if (
+        esoh_sim is not None
+        and isinstance(model, pybamm.lithium_ion.BaseModel)
+        and model.half_cell is False
+    ):
         V_min = esoh_sim.parameter_values["Lower voltage cut-off [V]"]
         V_max = esoh_sim.parameter_values["Upper voltage cut-off [V]"]
         C_n = last_state["Negative electrode capacity [A.h]"].data[0]
@@ -891,19 +901,16 @@ def get_cycle_summary_variables(cycle_solution, esoh_sim):
             esoh_sim.built_model.set_initial_conditions_from(
                 {"x_100": x_100_init, "C": C_init}
             )
+        inputs = {
+            "V_min": V_min,
+            "V_max": V_max,
+            "C_n": C_n,
+            "C_p": C_p,
+            "n_Li": n_Li,
+        }
 
         try:
-            esoh_sol = esoh_sim.solve(
-                [0],
-                inputs={
-                    "V_min": V_min,
-                    "V_max": V_max,
-                    "C_n": C_n,
-                    "C_p": C_p,
-                    "n_Li": n_Li,
-                },
-                solver=solver,
-            )
+            esoh_sol = esoh_sim.solve([0], inputs=inputs, solver=solver)
         except pybamm.SolverError:  # pragma: no cover
             raise pybamm.SolverError(
                 "Could not solve for summary variables, run "

@@ -9,7 +9,7 @@ If you're already familiar with our workflow, maybe have a quick look at the [pr
 Before you commit any code, please perform the following checks:
 
 - [No style issues](#coding-style-guidelines): `$ flake8`
-- [All tests pass](#testing): `$ tox -e quick` (GNU/Linux and MacOS), `$ python -m tox -e windows-quick` (Windows)
+- [All tests pass](#testing): `$ tox -e unit` (GNU/Linux and MacOS), `$ python -m tox -e windows-unit` (Windows)
 - [The documentation builds](#building-the-documentation): `$ python -m tox -e docs`
 
 ## Workflow
@@ -122,12 +122,12 @@ This allows people to (1) use PyBaMM without ever importing Matplotlib and (2) c
 
 All code requires testing. We use the [unittest](https://docs.python.org/3.3/library/unittest.html) package for our tests. (These tests typically just check that the code runs without error, and so, are more _debugging_ than _testing_ in a strict sense. Nevertheless, they are very useful to have!)
 
-If you have tox installed, to run quick tests, type
+If you have tox installed, to run unit tests, type
 
 ```bash
-tox -e quick # (GNU/Linux and MacOS)
+tox -e unit # (GNU/Linux and MacOS)
 #
-python -m tox -e windows-quick # (Windows)
+python -m tox -e windows-unit # (Windows)
 ```
 else, type
 ```bash
@@ -280,7 +280,7 @@ Major PyBaMM features are showcased in [Jupyter notebooks](https://jupyter.org/)
 
 All example notebooks should be listed in [examples/README.md](https://github.com/pybamm-team/PyBaMM/blob/develop/examples/notebooks/README.md). Please follow the (naming and writing) style of existing notebooks where possible.
 
-Where possible, notebooks are tested daily. A list of slow notebooks (which time-out and fail tests) is maintained in `.slow-books`, these notebooks will be excluded from daily testing.
+All the notebooks are tested daily.
 
 ## Citations
 

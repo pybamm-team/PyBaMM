@@ -106,10 +106,21 @@ class PowerFunctionControl(FunctionControl):
 
 
 class CCCVFunctionControl(FunctionControl):
-    """External circuit with constant-current constant-voltage control."""
+    """
+    External circuit with constant-current constant-voltage control, as implemented in
+    [1]_
+
+    References
+    ----------
+    .. [1] Mohtat, P., Pannala, S., Sulzer, V., Siegel, J. B., & Stefanopoulou, A. G.
+           (2021). An Algorithmic Safety VEST For Li-ion Batteries During Fast Charging.
+           arXiv preprint arXiv:2108.07833.
+
+    """
 
     def __init__(self, param):
         super().__init__(param, self.cccv, control="differential")
+        pybamm.citations.register("Mohtat2021")
 
     def cccv(self, variables):
         # Multiply by the time scale so that the votage overshoot only lasts a few

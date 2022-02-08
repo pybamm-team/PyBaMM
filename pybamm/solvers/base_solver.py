@@ -50,9 +50,9 @@ class BaseSolver(object):
         extrap_tol=0,
         max_steps="deprecated",
     ):
-        self._method = method
-        self._rtol = rtol
-        self._atol = atol
+        self.method = method
+        self.rtol = rtol
+        self.atol = atol
         self.root_tol = root_tol
         self.root_method = root_method
         self.extrap_tol = extrap_tol
@@ -67,30 +67,6 @@ class BaseSolver(object):
         self.name = "Base solver"
         self.ode_solver = False
         self.algebraic_solver = False
-
-    @property
-    def method(self):
-        return self._method
-
-    @method.setter
-    def method(self, value):
-        self._method = value
-
-    @property
-    def rtol(self):
-        return self._rtol
-
-    @rtol.setter
-    def rtol(self, value):
-        self._rtol = value
-
-    @property
-    def atol(self):
-        return self._atol
-
-    @atol.setter
-    def atol(self, value):
-        self._atol = value
 
     @property
     def root_method(self):
@@ -111,14 +87,6 @@ class BaseSolver(object):
         ):
             raise pybamm.SolverError("Root method must be an algebraic solver")
         self._root_method = method
-
-    @property
-    def root_tol(self):
-        return self._root_tol
-
-    @root_tol.setter
-    def root_tol(self, tol):
-        self._root_tol = tol
 
     def copy(self):
         """Returns a copy of the solver"""
@@ -175,7 +143,10 @@ class BaseSolver(object):
         inputs = inputs or {}
 
         # Set model timescale
-        model.timescale_eval = model.timescale.evaluate(inputs=inputs)
+        if not isinstance(model.timescale, pybamm.Scalar):
+            raise ValueError("model.timescale must be a scalar")
+
+        model.timescale_eval = model.timescale.evaluate()
         # Set model lengthscales
         model.length_scales_eval = {
             domain: scale.evaluate(inputs=inputs)
@@ -203,16 +174,21 @@ class BaseSolver(object):
 
         # find all the input parameters in the model
         input_parameters = {}
-        for equation in [model.concatenated_rhs,
-                         model.concatenated_algebraic,
-                         model.concatenated_initial_conditions]:
-            input_parameters.update({
-                symbol._id: symbol for symbol in equation.pre_order()
-                if isinstance(symbol, pybamm.InputParameter)
-            })
+        for equation in [
+            model.concatenated_rhs,
+            model.concatenated_algebraic,
+            model.concatenated_initial_conditions,
+        ]:
+            input_parameters.update(
+                {
+                    symbol._id: symbol
+                    for symbol in equation.pre_order()
+                    if isinstance(symbol, pybamm.InputParameter)
+                }
+            )
 
         # set default calculate sensitivities on model
-        if not hasattr(model, 'calculate_sensitivities'):
+        if not hasattr(model, "calculate_sensitivities"):
             model.calculate_sensitivities = []
 
         # see if we need to form the explicit sensitivity equations
@@ -278,10 +254,12 @@ class BaseSolver(object):
                 func = pybamm.EvaluatorJax(func)
                 jacp = None
                 if model.calculate_sensitivities:
-                    report((
-                        f"Calculating sensitivities for {name} with respect "
-                        f"to parameters {model.calculate_sensitivities} using jax"
-                    ))
+                    report(
+                        (
+                            f"Calculating sensitivities for {name} with respect "
+                            f"to parameters {model.calculate_sensitivities} using jax"
+                        )
+                    )
                     jacp = func.get_sensitivities()
                     jacp = jacp.evaluate
                 if use_jacobian:
@@ -297,10 +275,12 @@ class BaseSolver(object):
                 # Process with pybamm functions, optionally converting
                 # to python evaluator
                 if model.calculate_sensitivities:
-                    report((
-                        f"Calculating sensitivities for {name} with respect "
-                        f"to parameters {model.calculate_sensitivities}"
-                    ))
+                    report(
+                        (
+                            f"Calculating sensitivities for {name} with respect "
+                            f"to parameters {model.calculate_sensitivities}"
+                        )
+                    )
                     jacp_dict = {
                         p: func.diff(pybamm.InputParameter(p))
                         for p in model.calculate_sensitivities
@@ -314,8 +294,10 @@ class BaseSolver(object):
 
                     # jacp should be a function that returns a dict of sensitivities
                     def jacp(*args, **kwargs):
-                        return {k: v.evaluate(*args, **kwargs)
-                                for k, v in jacp_dict.items()}
+                        return {
+                            k: v.evaluate(*args, **kwargs) for k, v in jacp_dict.items()
+                        }
+
                 else:
                     jacp = None
 
@@ -406,22 +388,23 @@ class BaseSolver(object):
                             )
                             func = casadi.vertcat(x0, Sx_0, z0, Sz_0)
                 elif model.calculate_sensitivities:
-                    report((
-                        f"Calculating sensitivities for {name} with respect "
-                        f"to parameters {model.calculate_sensitivities} using CasADi"
-                    ))
+                    report(
+                        (
+                            f"Calculating sensitivities for {name} with respect "
+                            f"to parameters {model.calculate_sensitivities} using "
+                            "CasADi"
+                        )
+                    )
                     jacp_dict = {}
                     for pname in model.calculate_sensitivities:
                         p_diff = casadi.jacobian(func, p_casadi[pname])
                         jacp_dict[pname] = casadi.Function(
-                            name, [t_casadi, y_casadi, p_casadi_stacked],
-                            [p_diff]
+                            name, [t_casadi, y_casadi, p_casadi_stacked], [p_diff]
                         )
                     # jacp should be a function that returns a dict of sensitivities
 
                     def jacp(*args, **kwargs):
-                        return {k: v(*args, **kwargs)
-                                for k, v in jacp_dict.items()}
+                        return {k: v(*args, **kwargs) for k, v in jacp_dict.items()}
 
                 if use_jacobian:
                     report(f"Calculating jacobian for {name} using CasADi")
@@ -445,8 +428,10 @@ class BaseSolver(object):
                 jac_call = None
             if jacp is not None:
                 jacp_call = SensitivityCallable(
-                    jacp, name + "_sensitivity_wrt_inputs", model,
-                    model.convert_to_format
+                    jacp,
+                    name + "_sensitivity_wrt_inputs",
+                    model,
+                    model.convert_to_format,
                 )
             else:
                 jacp_call = None
@@ -462,8 +447,7 @@ class BaseSolver(object):
 
         if calculate_sensitivities_explicit:
             y0_total_size = (
-                model.len_rhs + model.len_rhs_sens
-                + model.len_alg + model.len_alg_sens
+                model.len_rhs + model.len_rhs_sens + model.len_alg + model.len_alg_sens
             )
             init_eval.y_dummy = np.zeros((y0_total_size, 1))
         else:
@@ -496,23 +480,17 @@ class BaseSolver(object):
                             found_t = True
                         # Dimensional
                         elif symbol.right.id == (pybamm.t * model.timescale_eval).id:
-                            expr = (
-                                symbol.left.new_copy() / symbol.right.right.new_copy()
-                            )
+                            expr = symbol.left / symbol.right.right
                             found_t = True
                         elif symbol.left.id == (pybamm.t * model.timescale_eval).id:
-                            expr = (
-                                symbol.right.new_copy() / symbol.left.right.new_copy()
-                            )
+                            expr = symbol.right / symbol.left.right
                             found_t = True
 
                         # Update the events if the heaviside function depended on t
                         if found_t:
                             model.events.append(
                                 pybamm.Event(
-                                    str(symbol),
-                                    expr.new_copy(),
-                                    pybamm.EventType.DISCONTINUITY,
+                                    str(symbol), expr, pybamm.EventType.DISCONTINUITY
                                 )
                             )
                     elif isinstance(symbol, pybamm.Modulo):
@@ -523,9 +501,7 @@ class BaseSolver(object):
                             found_t = True
                         # Dimensional
                         elif symbol.left.id == (pybamm.t * model.timescale_eval).id:
-                            expr = (
-                                symbol.right.new_copy() / symbol.left.right.new_copy()
-                            )
+                            expr = symbol.right / symbol.left.right
                             found_t = True
 
                         # Update the events if the modulo function depended on t
@@ -539,7 +515,7 @@ class BaseSolver(object):
                                 model.events.append(
                                     pybamm.Event(
                                         str(symbol),
-                                        expr.new_copy() * pybamm.Scalar(i + 1),
+                                        expr * pybamm.Scalar(i + 1),
                                         pybamm.EventType.DISCONTINUITY,
                                     )
                                 )
@@ -618,14 +594,16 @@ class BaseSolver(object):
                         np.repeat(model.bounds[0], n_inputs + 1),
                         np.repeat(model.bounds[1], n_inputs + 1),
                     )
-                if (model.mass_matrix is not None
-                        and model.mass_matrix.shape[0] == model.len_rhs_and_alg):
+                if (
+                    model.mass_matrix is not None
+                    and model.mass_matrix.shape[0] == model.len_rhs_and_alg
+                ):
 
                     if model.mass_matrix_inv is not None:
                         model.mass_matrix_inv = pybamm.Matrix(
                             block_diag(
                                 [model.mass_matrix_inv.entries] * (n_inputs + 1),
-                                format="csr"
+                                format="csr",
                             )
                         )
                     model.mass_matrix = pybamm.Matrix(
@@ -637,19 +615,23 @@ class BaseSolver(object):
                 # take care if calculate_sensitivites used then not used
                 if model.bounds[0].shape[0] > model.len_rhs_and_alg:
                     model.bounds = (
-                        model.bounds[0][:model.len_rhs_and_alg],
-                        model.bounds[1][:model.len_rhs_and_alg],
+                        model.bounds[0][: model.len_rhs_and_alg],
+                        model.bounds[1][: model.len_rhs_and_alg],
                     )
-                if (model.mass_matrix is not None and
-                        model.mass_matrix.shape[0] > model.len_rhs_and_alg):
+                if (
+                    model.mass_matrix is not None
+                    and model.mass_matrix.shape[0] > model.len_rhs_and_alg
+                ):
                     if model.mass_matrix_inv is not None:
                         model.mass_matrix_inv = pybamm.Matrix(
-                            model.mass_matrix_inv.entries[:model.len_rhs,
-                                                          :model.len_rhs]
+                            model.mass_matrix_inv.entries[
+                                : model.len_rhs, : model.len_rhs
+                            ]
                         )
                     model.mass_matrix = pybamm.Matrix(
-                        model.mass_matrix.entries[:model.len_rhs_and_alg,
-                                                  :model.len_rhs_and_alg]
+                        model.mass_matrix.entries[
+                            : model.len_rhs_and_alg, : model.len_rhs_and_alg
+                        ]
                     )
 
             # Save CasADi functions for the CasADi solver
@@ -786,7 +768,7 @@ class BaseSolver(object):
         inputs=None,
         initial_conditions=None,
         nproc=None,
-        calculate_sensitivities=False
+        calculate_sensitivities=False,
     ):
         """
         Execute the solver setup and calculate the solution of the model at
@@ -882,8 +864,9 @@ class BaseSolver(object):
         # If "inputs" is a single dict, "inputs_list" is a list of only one dict.
         inputs_list = inputs if isinstance(inputs, list) else [inputs]
         ext_and_inputs_list = [
-            self._set_up_ext_and_inputs(model, external_variables, inputs,
-                                        calculate_sensitivities_list)
+            self._set_up_ext_and_inputs(
+                model, external_variables, inputs, calculate_sensitivities_list
+            )
             for inputs in inputs_list
         ]
 
@@ -896,10 +879,10 @@ class BaseSolver(object):
 
         # Check that calculate_sensitivites have not been updated
         calculate_sensitivities_list.sort()
-        if not hasattr(model, 'calculate_sensitivities'):
+        if not hasattr(model, "calculate_sensitivities"):
             model.calculate_sensitivities = []
         model.calculate_sensitivities.sort()
-        if (calculate_sensitivities_list != model.calculate_sensitivities):
+        if calculate_sensitivities_list != model.calculate_sensitivities:
             self.models_set_up.pop(model, None)
             # CasadiSolver caches its integrators using model, so delete this too
             if isinstance(self, pybamm.CasadiSolver):
@@ -1172,7 +1155,7 @@ class BaseSolver(object):
         external_variables : dict
             A dictionary of external variables and their corresponding
             values at the current time
-        inputs_dict : dict, optional
+        inputs : dict, optional
             Any input parameters to pass to the model when solving
         save : bool
             Turn on to store the solution of all previous timesteps
@@ -1213,30 +1196,15 @@ class BaseSolver(object):
         # Set up external variables and inputs
         external_variables = external_variables or {}
         inputs = inputs or {}
-        ext_and_inputs = {**external_variables, **inputs}
 
-        # Check that any inputs that may affect the scaling have not changed
-        # Set model timescale
-        temp_timescale_eval = model.timescale.evaluate(inputs=inputs)
-        # Set model lengthscales
-        temp_length_scales_eval = {
-            domain: scale.evaluate(inputs=inputs)
-            for domain, scale in model.length_scales.items()
-        }
-        if old_solution is not None:
-            if temp_timescale_eval != old_solution.timescale_eval:
-                raise pybamm.SolverError(
-                    "The model timescale is a function of an input parameter "
-                    "and the value has changed between steps!"
-                )
-            for domain in temp_length_scales_eval.keys():
-                old_dom_eval = old_solution.length_scales_eval[domain]
-                if temp_length_scales_eval[domain] != old_dom_eval:
-                    pybamm.logger.error(
-                        "The {} domain lengthscale is a function of an input "
-                        "parameter and the value has changed between "
-                        "steps!".format(domain)
-                    )
+        # Remove interpolant inputs as Casadi can't handle them
+        if isinstance(inputs.get("Current input [A]"), pybamm.Interpolant):
+            del inputs["Current input [A]"]
+        elif isinstance(inputs.get("Voltage input [V]"), pybamm.Interpolant):
+            del inputs["Voltage input [V]"]
+        elif isinstance(inputs.get("Power input [W]"), pybamm.Interpolant):
+            del inputs["Power input [W]"]
+        ext_and_inputs = {**external_variables, **inputs}
 
         if old_solution is None:
             # Run set up on first step
@@ -1341,6 +1309,9 @@ class BaseSolver(object):
         events : dict
             Dictionary of events
         """
+        termination_events = [
+            x for x in events if x.event_type == pybamm.EventType.TERMINATION
+        ]
         if solution.termination == "final time":
             return (
                 solution,
@@ -1348,11 +1319,15 @@ class BaseSolver(object):
             )
         elif solution.termination == "event":
             pybamm.logger.debug("Start post-processing events")
-            # Get final event value
-            final_event_values = {}
+            if solution.closest_event_idx is not None:
+                solution.termination = (
+                    f"event: {termination_events[solution.closest_event_idx].name}"
+                )
+            else:
+                # Get final event value
+                final_event_values = {}
 
-            for event in events:
-                if event.event_type == pybamm.EventType.TERMINATION:
+                for event in termination_events:
                     final_event_values[event.name] = abs(
                         event.expression.evaluate(
                             solution.t_event,
@@ -1360,17 +1335,17 @@ class BaseSolver(object):
                             inputs=solution.all_inputs[-1],
                         )
                     )
-            termination_event = min(final_event_values, key=final_event_values.get)
+                termination_event = min(final_event_values, key=final_event_values.get)
 
-            # Check that it's actually an event
-            if abs(final_event_values[termination_event]) > 0.1:  # pragma: no cover
-                # Hard to test this
-                raise pybamm.SolverError(
-                    "Could not determine which event was triggered "
-                    "(possibly due to NaNs)"
-                )
-            # Add the event to the solution object
-            solution.termination = "event: {}".format(termination_event)
+                # Check that it's actually an event
+                if abs(final_event_values[termination_event]) > 0.1:  # pragma: no cover
+                    # Hard to test this
+                    raise pybamm.SolverError(
+                        "Could not determine which event was triggered "
+                        "(possibly due to NaNs)"
+                    )
+                # Add the event to the solution object
+                solution.termination = "event: {}".format(termination_event)
             # Update t, y and inputs to include event time and state
             # Note: if the final entry of t is equal to the event time we skip
             # this (having duplicate entries causes an error later in ProcessedVariable)
@@ -1433,8 +1408,9 @@ class BaseSolver(object):
 
         return [k for k, v in extrap_events.items() if v]
 
-    def _set_up_ext_and_inputs(self, model, external_variables, inputs,
-                               calculate_sensitivities):
+    def _set_up_ext_and_inputs(
+        self, model, external_variables, inputs, calculate_sensitivities
+    ):
         """Set up external variables and input parameters"""
         inputs = inputs or {}
 
@@ -1455,7 +1431,12 @@ class BaseSolver(object):
                 inputs[name] = casadi.MX.sym(name, input_param._expected_size)
 
         external_variables = external_variables or {}
-        ext_and_inputs = {**external_variables, **inputs}
+
+        ordered_inputs_names = list(inputs.keys())
+        ordered_inputs_names.sort()
+        ordered_inputs = {name: inputs[name] for name in ordered_inputs_names}
+
+        ext_and_inputs = {**external_variables, **ordered_inputs}
         return ext_and_inputs
 
 
@@ -1520,8 +1501,7 @@ class SensitivityCallable:
         elif self.form == "jax":
             return self._function(t, y, inputs=inputs)
         else:
-            ret_with_known_evals = \
-                self._function(t, y, inputs=inputs, known_evals={})
+            ret_with_known_evals = self._function(t, y, inputs=inputs, known_evals={})
             return {k: v[0] for k, v in ret_with_known_evals.items()}
 
 

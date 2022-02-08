@@ -70,11 +70,12 @@
         "example",
         "ideas",
         "review",
-        "test"
+        "test",
+        "tutorial"
       ]
     },
     {
-      "login": "ferranbrosa",
+      "login": "brosaplanella",
       "name": "Ferran Brosa Planella",
       "avatar_url": "https://avatars3.githubusercontent.com/u/28443643?v=4",
       "profile": "https://www.brosaplanella.com",
@@ -103,7 +104,8 @@
         "example",
         "ideas",
         "review",
-        "test"
+        "test",
+        "tutorial"
       ]
     },
     {
@@ -227,6 +229,26 @@
       ]
     },
     {
+      "login": "cwmonroe",
+      "name": "cwmonroe",
+      "avatar_url": "https://avatars.githubusercontent.com/u/92099819?v=4",
+      "profile": "https://github.com/cwmonroe",
+      "contributions": [
+        "ideas",
+        "fundingFinding"
+      ]
+    },
+    {
+      "login": "gjo97",
+      "name": "Greg",
+      "avatar_url": "https://avatars.githubusercontent.com/u/18349157?v=4",
+      "profile": "https://github.com/gjo97",
+      "contributions": [
+        "ideas",
+        "fundingFinding"
+      ]
+    },
+    {
       "login": "FaradayInstitution",
       "name": "Faraday Institution",
       "avatar_url": "https://avatars2.githubusercontent.com/u/42166506?v=4",
@@ -293,7 +315,10 @@
       "contributions": [
         "test",
         "code",
-        "bug"
+        "bug",
+        "review",
+        "maintenance",
+        "tutorial"
       ]
     },
     {
@@ -305,7 +330,8 @@
         "code",
         "example",
         "doc",
-        "test"
+        "test",
+        "tutorial"
       ]
     },
     {
@@ -316,7 +342,10 @@
       "contributions": [
         "code",
         "test",
-        "doc"
+        "doc",
+        "tutorial",
+        "review",
+        "maintenance"
       ]
     },
     {
@@ -385,7 +414,8 @@
       "contributions": [
         "ideas",
         "code",
-        "test"
+        "test",
+        "tutorial"
       ]
     },
     {
@@ -405,6 +435,35 @@
       "profile": "https://github.com/partben",
       "contributions": [
         "doc"
+      ]
+    },
+    {
+      "login": "wigging",
+      "name": "Gavin Wiggins",
+      "avatar_url": "https://avatars.githubusercontent.com/u/6828967?v=4",
+      "profile": "https://gavinw.me",
+      "contributions": [
+        "bug",
+        "code"
+      ]
+    },
+    {
+      "login": "dion-w",
+      "name": "Dion Wilde",
+      "avatar_url": "https://avatars.githubusercontent.com/u/91852142?v=4",
+      "profile": "https://github.com/dion-w",
+      "contributions": [
+        "bug",
+        "code"
+      ]
+    },
+    {
+      "login": "ehtec",
+      "name": "Elias Hohl",
+      "avatar_url": "https://avatars.githubusercontent.com/u/48386220?v=4",
+      "profile": "https://www.ehtec.co",
+      "contributions": [
+        "code"
       ]
     }
   ],

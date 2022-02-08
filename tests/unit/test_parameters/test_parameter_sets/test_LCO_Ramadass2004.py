@@ -38,13 +38,12 @@ class TestRamadass2004(unittest.TestCase):
             )
         )
         self.assertAlmostEqual(
-            cell["Negative current collector thickness [m]"],
-            1.7E-05
+            cell["Negative current collector thickness [m]"], 1.7e-05
         )
 
     def test_functions(self):
         root = pybamm.root_dir()
-        param = pybamm.ParameterValues(chemistry=pybamm.parameter_sets.Ramadass2004)
+        param = pybamm.ParameterValues("Ramadass2004")
         sto = pybamm.Scalar(0.5)
         T = pybamm.Scalar(298.15)
 
@@ -91,8 +90,7 @@ class TestRamadass2004(unittest.TestCase):
             self.assertAlmostEqual(param.evaluate(fun(*value[0])), value[1], places=4)
 
     def test_standard_lithium_parameters(self):
-        chemistry = pybamm.parameter_sets.Ramadass2004
-        parameter_values = pybamm.ParameterValues(chemistry=chemistry)
+        parameter_values = pybamm.ParameterValues("Ramadass2004")
         model = pybamm.lithium_ion.DFN()
         sim = pybamm.Simulation(model, parameter_values=parameter_values)
         sim.set_parameters()

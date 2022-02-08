@@ -4,10 +4,19 @@
 import numpy as np
 import os
 import pybamm
+import shutil
 import tempfile
 import unittest
+import importlib
+import subprocess
 from unittest.mock import patch
 from io import StringIO
+
+# Insert .../x/y/z/PyBaMM in sys.path when running this file individually
+import sys
+
+if os.getcwd() not in sys.path:
+    sys.path.insert(0, os.getcwd())
 
 
 class TestUtil(unittest.TestCase):
@@ -75,6 +84,38 @@ class TestUtil(unittest.TestCase):
             pybamm.input.parameters.lithium_ion.negative_electrodes.graphite_Chen2020.graphite_LGM50_electrolyte_exchange_current_density_Chen2020.graphite_LGM50_electrolyte_exchange_current_density_Chen2020,  # noqa
         )
 
+        # Test function load for parameters in a directory having "pybamm" in its name
+        # create a new lithium_ion folder in the root PyBaMM directory
+        subprocess.run(["pybamm_edit_parameter", "lithium_ion"])
+
+        # path for a function in the created directory ->
+        # x/y/z/PyBaMM/lithium_ion/negative_electrode/ ....
+        test_path = os.path.join(
+            os.getcwd(),
+            "lithium_ion",
+            "negative_electrodes",
+            "graphite_Chen2020",
+            "graphite_LGM50_electrolyte_exchange_current_density_Chen2020.py",
+        )
+
+        # load the function
+        func = pybamm.load_function(test_path)
+
+        # cannot directly do - lithium_ion.negative_electrodes.graphite_Chen2020 as
+        # lithium_ion is not a python module
+        module_object = importlib.import_module(
+            "lithium_ion.negative_electrodes.graphite_Chen2020.graphite_LGM50_electrolyte_exchange_current_density_Chen2020"  # noqa
+        )
+        self.assertEqual(
+            func,
+            getattr(
+                module_object,
+                "graphite_LGM50_electrolyte_exchange_current_density_Chen2020",
+            ),
+        )
+
+        shutil.rmtree("lithium_ion")
+
     def test_rmse(self):
         self.assertEqual(pybamm.rmse(np.ones(5), np.zeros(5)), 1)
         self.assertEqual(pybamm.rmse(2 * np.ones(5), np.zeros(5)), 2)
@@ -94,10 +135,27 @@ class TestUtil(unittest.TestCase):
         self.assertEqual(d[4][5], "y")
 
     def test_fuzzy_dict(self):
-        d = pybamm.FuzzyDict({"test": 1, "test2": 2})
+        d = pybamm.FuzzyDict(
+            {
+                "test": 1,
+                "test2": 2,
+                "SEI current": 3,
+                "Lithium plating current": 4,
+            }
+        )
         self.assertEqual(d["test"], 1)
         with self.assertRaisesRegex(KeyError, "'test3' not found. Best matches are "):
-            d["test3"]
+            d.__getitem__("test3")
+        with self.assertRaisesRegex(
+            KeyError, "'negative electrode SEI current' not found. All SEI parameters"
+        ):
+            d.__getitem__("negative electrode SEI current")
+        with self.assertRaisesRegex(
+            KeyError,
+            "'negative electrode lithium plating current' not found. "
+            "All lithium plating parameters",
+        ):
+            d.__getitem__("negative electrode lithium plating current")
 
     def test_get_parameters_filepath(self):
         tempfile_obj = tempfile.NamedTemporaryFile("w", dir=".")
@@ -110,6 +168,12 @@ class TestUtil(unittest.TestCase):
         tempfile_obj = tempfile.NamedTemporaryFile("w", dir=package_dir)
         path = os.path.join(package_dir, tempfile_obj.name)
         self.assertTrue(pybamm.get_parameters_filepath(tempfile_obj.name) == path)
+        tempfile_obj.close()
+
+    def test_is_jax_compatible(self):
+        if pybamm.have_jax():
+            compatible = pybamm.is_jax_compatible()
+            self.assertTrue(compatible)
 
 
 class TestSearch(unittest.TestCase):

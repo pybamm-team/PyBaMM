@@ -20,15 +20,15 @@ from your local PyBaMM repository or used online through [Google Colab](https://
 The easiest way to start with PyBaMM is by running and comparing some of the inbuilt models:
 - [Run the Single Particle Model (SPM)](./models/SPM.ipynb)
 - [Compare models](./models/lead-acid.ipynb)
-- [Comparison with COMSOL](./compare-comsol-discharge-curve.ipynb)
+- [Comparison with COMSOL](./models/compare-comsol-discharge-curve.ipynb)
 
 It is also easy to add new models or change the setting that are used:
 - [Add a model (documentation)](https://pybamm.readthedocs.io/en/latest/tutorials/add-model.html)
 - [Add a model (example)](./create-model.ipynb)
-- [Change model options](./using-model-options_thermal-example.ipynb)
+- [Change model options](./models/using-model-options_thermal-example.ipynb)
 - [Using submodels](./using-submodels.ipynb)
 - [Change the settings](./change-settings.ipynb) (parameters, spatial method or solver)
-- [Change the applied current](./change-input-current.ipynb)
+- [Change the applied current](./parameterization/change-input-current.ipynb)
 
 For more advanced usage, new sets of parameters, spatial methods and solvers can be added:
 - [Add parameters](https://pybamm.readthedocs.io/en/latest/tutorials/add-parameter-values.html)

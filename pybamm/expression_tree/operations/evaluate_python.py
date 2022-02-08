@@ -1,113 +1,110 @@
 #
 # Write a symbol to python
 #
-import pybamm
+import numbers
+from collections import OrderedDict
 
 import numpy as np
 import scipy.sparse
-from collections import OrderedDict
 
-import numbers
-from platform import system, version
+import pybamm
 
-if not (system() == "Windows" or (system() == "Darwin" and "ARM64" in version())):
+if pybamm.have_jax():
     import jax
-
     from jax.config import config
 
     config.update("jax_enable_x64", True)
 
-    class JaxCooMatrix:
-        """
-        A sparse matrix in COO format, with internal arrays using jax device arrays
 
-        This matrix only has two operations supported, a multiply with a scalar, and a
-        dot product with a dense vector. It can also be converted to a dense 2D jax
-        device array
+class JaxCooMatrix:
+    """
+    A sparse matrix in COO format, with internal arrays using jax device arrays
 
-        Parameters
-        ----------
+    This matrix only has two operations supported, a multiply with a scalar, and a
+    dot product with a dense vector. It can also be converted to a dense 2D jax
+    device array
 
-        row: arraylike
-            1D array holding row indices of non-zero entries
-        col: arraylike
-            1D array holding col indices of non-zero entries
-        data: arraylike
-            1D array holding non-zero entries
-        shape: 2-element tuple (x, y)
-            where x is the number of rows, and y the number of columns of the matrix
-        """
+    Parameters
+    ----------
 
-        def __init__(self, row, col, data, shape):
-            self.row = jax.numpy.array(row)
-            self.col = jax.numpy.array(col)
-            self.data = jax.numpy.array(data)
-            self.shape = shape
-            self.nnz = len(self.data)
+    row: arraylike
+        1D array holding row indices of non-zero entries
+    col: arraylike
+        1D array holding col indices of non-zero entries
+    data: arraylike
+        1D array holding non-zero entries
+    shape: 2-element tuple (x, y)
+        where x is the number of rows, and y the number of columns of the matrix
+    """
 
-        def toarray(self):
-            """convert sparse matrix to a dense 2D array"""
-            result = jax.numpy.zeros(self.shape, dtype=self.data.dtype)
-            return result.at[self.row, self.col].add(self.data)
-
-        def dot_product(self, b):
-            """
-            dot product of matrix with a dense column vector b
-
-            Parameters
-            ----------
-            b: jax device array
-                must have shape (n, 1)
-            """
-            # assume b is a column vector
-            result = jax.numpy.zeros((self.shape[0], 1), dtype=b.dtype)
-            return result.at[self.row].add(self.data.reshape(-1, 1) * b[self.col])
-
-        def scalar_multiply(self, b):
-            """
-            multiply of matrix with a scalar b
-
-            Parameters
-            ----------
-            b: Number or 1 element jax device array
-                scalar value to multiply
-            """
-            # assume b is a scalar or ndarray with 1 element
-            return JaxCooMatrix(
-                self.row, self.col, (self.data * b).reshape(-1), self.shape
+    def __init__(self, row, col, data, shape):
+        if not pybamm.have_jax():
+            raise ModuleNotFoundError(
+                "Jax or jaxlib is not installed, please see https://pybamm.readthedocs.io/en/latest/install/GNU-linux.html#optional-jaxsolver"  # noqa: E501
             )
 
-        def multiply(self, b):
-            """
-            general matrix multiply not supported
-            """
-            raise NotImplementedError
+        self.row = jax.numpy.array(row)
+        self.col = jax.numpy.array(col)
+        self.data = jax.numpy.array(data)
+        self.shape = shape
+        self.nnz = len(self.data)
 
-        def __matmul__(self, b):
-            """see self.dot_product"""
-            return self.dot_product(b)
+    def toarray(self):
+        """convert sparse matrix to a dense 2D array"""
+        result = jax.numpy.zeros(self.shape, dtype=self.data.dtype)
+        return result.at[self.row, self.col].add(self.data)
 
-    def create_jax_coo_matrix(value):
+    def dot_product(self, b):
         """
-        Creates a JaxCooMatrix from a scipy.sparse matrix
+        dot product of matrix with a dense column vector b
 
         Parameters
         ----------
-
-        value: scipy.sparse matrix
-            the sparse matrix to be converted
+        b: jax device array
+            must have shape (n, 1)
         """
-        scipy_coo = value.tocoo()
-        row = jax.numpy.asarray(scipy_coo.row)
-        col = jax.numpy.asarray(scipy_coo.col)
-        data = jax.numpy.asarray(scipy_coo.data)
-        return JaxCooMatrix(row, col, data, value.shape)
+        # assume b is a column vector
+        result = jax.numpy.zeros((self.shape[0], 1), dtype=b.dtype)
+        return result.at[self.row].add(self.data.reshape(-1, 1) * b[self.col])
+
+    def scalar_multiply(self, b):
+        """
+        multiply of matrix with a scalar b
+
+        Parameters
+        ----------
+        b: Number or 1 element jax device array
+            scalar value to multiply
+        """
+        # assume b is a scalar or ndarray with 1 element
+        return JaxCooMatrix(self.row, self.col, (self.data * b).reshape(-1), self.shape)
+
+    def multiply(self, b):
+        """
+        general matrix multiply not supported
+        """
+        raise NotImplementedError
+
+    def __matmul__(self, b):
+        """see self.dot_product"""
+        return self.dot_product(b)
 
 
-else:
+def create_jax_coo_matrix(value):
+    """
+    Creates a JaxCooMatrix from a scipy.sparse matrix
 
-    def create_jax_coo_matrix(value):  # pragma: no cover
-        raise NotImplementedError("Jax is not available on Windows")
+    Parameters
+    ----------
+
+    value: scipy.sparse matrix
+        the sparse matrix to be converted
+    """
+    scipy_coo = value.tocoo()
+    row = jax.numpy.asarray(scipy_coo.row)
+    col = jax.numpy.asarray(scipy_coo.col)
+    data = jax.numpy.asarray(scipy_coo.data)
+    return JaxCooMatrix(row, col, data, value.shape)
 
 
 def id_to_python_variable(symbol_id, constant=False):
@@ -548,6 +545,11 @@ class EvaluatorJax:
     """
 
     def __init__(self, symbol):
+        if not pybamm.have_jax():
+            raise ModuleNotFoundError(
+                "Jax or jaxlib is not installed, please see https://pybamm.readthedocs.io/en/latest/install/GNU-linux.html#optional-jaxsolver"  # noqa: E501
+            )
+
         constants, python_str = pybamm.to_python(symbol, debug=False, output_jax=True)
 
         # replace numpy function calls to jax numpy calls
@@ -582,9 +584,7 @@ class EvaluatorJax:
         args = "t=None, y=None, y_dot=None, inputs=None, known_evals=None"
         if self._arg_list:
             args = ",".join(self._arg_list) + ", " + args
-        python_str = (
-            "def evaluate_jax({}):\n".format(args) + python_str
-        )
+        python_str = "def evaluate_jax({}):\n".format(args) + python_str
 
         # calculate the final variable that will output the result of calling `evaluate`
         # on `symbol`
@@ -609,8 +609,9 @@ class EvaluatorJax:
         exec(compiled_function)
 
         self._static_argnums = tuple(static_argnums)
-        self._jit_evaluate = jax.jit(self._evaluate_jax,
-                                     static_argnums=self._static_argnums)
+        self._jit_evaluate = jax.jit(
+            self._evaluate_jax, static_argnums=self._static_argnums
+        )
 
     def get_jacobian(self):
         n = len(self._arg_list)
@@ -618,8 +619,9 @@ class EvaluatorJax:
         # forward mode autodiff  wrt y, which is argument 1 after arg_list
         jacobian_evaluate = jax.jacfwd(self._evaluate_jax, argnums=1 + n)
 
-        self._jac_evaluate = jax.jit(jacobian_evaluate,
-                                     static_argnums=self._static_argnums)
+        self._jac_evaluate = jax.jit(
+            jacobian_evaluate, static_argnums=self._static_argnums
+        )
 
         return EvaluatorJaxJacobian(self._jac_evaluate, self._constants)
 
@@ -629,8 +631,9 @@ class EvaluatorJax:
         # forward mode autodiff wrt inputs, which is argument 3 after arg_list
         jacobian_evaluate = jax.jacfwd(self._evaluate_jax, argnums=3 + n)
 
-        self._sens_evaluate = jax.jit(jacobian_evaluate,
-                                      static_argnums=self._static_argnums)
+        self._sens_evaluate = jax.jit(
+            jacobian_evaluate, static_argnums=self._static_argnums
+        )
 
         return EvaluatorJaxSensitivities(self._sens_evaluate, self._constants)
 

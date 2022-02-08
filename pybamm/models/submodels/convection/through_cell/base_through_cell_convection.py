@@ -12,12 +12,14 @@ class BaseThroughCellModel(BaseModel):
     ----------
     param : parameter class
         The parameters to use for this submodel
+    options : dict, optional
+        A dictionary of options to be passed to the model.
 
     **Extends:** :class:`pybamm.convection.BaseModel`
     """
 
-    def __init__(self, param):
-        super().__init__(param)
+    def __init__(self, param, options=None):
+        super().__init__(param, options=options)
 
     def _get_standard_sep_velocity_variables(self, v_box_s, div_v_box_s):
         """Volume-averaged velocity in the separator"""
@@ -43,11 +45,17 @@ class BaseThroughCellModel(BaseModel):
         vel_scale = self.param.velocity_scale
 
         variables = {
-            "Negative electrode volume-averaged velocity": v_box_n,
             "Positive electrode volume-averaged velocity": v_box_p,
-            "Negative electrode volume-averaged velocity [m.s-1]": vel_scale * v_box_n,
             "Positive electrode volume-averaged velocity [m.s-1]": vel_scale * v_box_p,
         }
+        if not self.half_cell:
+            variables.update(
+                {
+                    "Negative electrode volume-averaged velocity": v_box_n,
+                    "Negative electrode volume-averaged velocity [m.s-1]": vel_scale
+                    * v_box_n,
+                }
+            )
 
         return variables
 
@@ -56,25 +64,32 @@ class BaseThroughCellModel(BaseModel):
 
         acc_scale = self.param.velocity_scale / self.param.L_x
 
-        div_v_box_n_av = pybamm.x_average(div_v_box_n)
+        if not self.half_cell:
+            div_v_box_n_av = pybamm.x_average(div_v_box_n)
         div_v_box_p_av = pybamm.x_average(div_v_box_p)
 
         variables = {
-            "Negative electrode volume-averaged acceleration": div_v_box_n,
             "Positive electrode volume-averaged acceleration": div_v_box_p,
-            "Negative electrode volume-averaged acceleration [m.s-1]": acc_scale
-            * div_v_box_n,
             "Positive electrode volume-averaged acceleration [m.s-1]": acc_scale
             * div_v_box_p,
-            "X-averaged negative electrode volume-averaged acceleration"
-            + "": div_v_box_n_av,
             "X-averaged positive electrode volume-averaged acceleration"
             + "": div_v_box_p_av,
-            "X-averaged negative electrode volume-averaged acceleration "
-            + "[m.s-1]": acc_scale * div_v_box_n_av,
             "X-averaged positive electrode volume-averaged acceleration "
             + "[m.s-1]": acc_scale * div_v_box_p_av,
         }
+
+        if not self.half_cell:
+            variables.update(
+                {
+                    "Negative electrode volume-averaged acceleration": div_v_box_n,
+                    "Negative electrode volume-averaged acceleration [m.s-1]": acc_scale
+                    * div_v_box_n,
+                    "X-averaged negative electrode volume-averaged acceleration"
+                    + "": div_v_box_n_av,
+                    "X-averaged negative electrode volume-averaged acceleration "
+                    + "[m.s-1]": acc_scale * div_v_box_n_av,
+                }
+            )
 
         return variables
 
@@ -82,10 +97,16 @@ class BaseThroughCellModel(BaseModel):
         """Pressure in the electrodes"""
 
         variables = {
-            "Negative electrode pressure": p_n,
             "Positive electrode pressure": p_p,
-            "X-averaged negative electrode pressure": pybamm.x_average(p_n),
             "X-averaged positive electrode pressure": pybamm.x_average(p_p),
         }
+
+        if not self.half_cell:
+            variables.update(
+                {
+                    "Negative electrode pressure": p_n,
+                    "X-averaged negative electrode pressure": pybamm.x_average(p_n),
+                }
+            )
 
         return variables
