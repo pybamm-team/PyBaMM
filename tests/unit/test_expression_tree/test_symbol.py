@@ -15,6 +15,7 @@ from pybamm.expression_tree.binary_operators import _Heaviside
 
 class TestSymbol(unittest.TestCase):
     def test_symbol_init(self):
+        self.assertEqual(1, 0)
         sym = pybamm.Symbol("a symbol")
         self.assertEqual(sym.name, "a symbol")
         self.assertEqual(str(sym), "a symbol")
