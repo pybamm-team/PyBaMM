@@ -289,26 +289,24 @@ class ProcessedVariable(object):
             axis=1,
         )
 
-<<<<<<< HEAD
-        # Set spatial variable names
-        first_spatial_variable_names = self.mesh.spatial_variable_names
-        if len(first_spatial_variable_names) != 1:
-            raise ValueError("Found too many spatial variables for a 1D variable")
-        else:
-            first_spatial_variable = first_spatial_variable_names[0]
-            self.first_dimension = first_spatial_variable
-            setattr(self, first_spatial_variable + "_sol", first_dim_pts)
+        # # Set spatial variable names
+        # first_spatial_variable_names = self.mesh.spatial_variable_names
+        # if len(first_spatial_variable_names) != 1:
+        #     raise ValueError("Found too many spatial variables for a 1D variable")
+        # else:
+        #     first_spatial_variable = first_spatial_variable_names[0]
+        #     self.first_dimension = first_spatial_variable
+        #     setattr(self, first_spatial_variable + "_sol", first_dim_pts)
 
-        second_spatial_variable_names = self.base_variables[
-            0
-        ].secondary_mesh.spatial_variable_names
-        if len(second_spatial_variable_names) != 1:
-            raise ValueError("Found too many spatial variables for a 1D variable")
-        else:
-            second_spatial_variable = second_spatial_variable_names[0]
-            self.second_dimension = second_spatial_variable
-            setattr(self, second_spatial_variable + "_sol", second_dim_pts)
-=======
+        # second_spatial_variable_names = self.base_variables[
+        #     0
+        # ].secondary_mesh.spatial_variable_names
+        # if len(second_spatial_variable_names) != 1:
+        #     raise ValueError("Found too many spatial variables for a 1D variable")
+        # else:
+        #     second_spatial_variable = second_spatial_variable_names[0]
+        #     self.second_dimension = second_spatial_variable
+        #     setattr(self, second_spatial_variable + "_sol", second_dim_pts)
         # Process r-x, x-z, r-R, R-x, or R-z
         if self.domain[0] in [
             "negative particle",
@@ -372,7 +370,6 @@ class ProcessedVariable(object):
             raise pybamm.DomainError(
                 f"Cannot process 3D object with domains '{self.domains}'."
             )
->>>>>>> develop
 
         # assign attributes for reference
         self.entries = entries
