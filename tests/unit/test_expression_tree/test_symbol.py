@@ -5,9 +5,8 @@ import os
 import unittest
 
 import numpy as np
-from scipy.sparse.csr import csr_matrix
+from scipy.sparse import csr_matrix, coo_matrix
 import sympy
-from scipy.sparse import coo_matrix
 
 import pybamm
 from pybamm.expression_tree.binary_operators import _Heaviside
@@ -15,7 +14,6 @@ from pybamm.expression_tree.binary_operators import _Heaviside
 
 class TestSymbol(unittest.TestCase):
     def test_symbol_init(self):
-        self.assertEqual(1, 0)
         sym = pybamm.Symbol("a symbol")
         self.assertEqual(sym.name, "a symbol")
         self.assertEqual(str(sym), "a symbol")
