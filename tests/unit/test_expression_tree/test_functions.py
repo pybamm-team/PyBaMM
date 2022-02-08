@@ -6,7 +6,6 @@ import unittest
 import numpy as np
 import sympy
 from scipy import special
-from scipy.interpolate import interp1d
 
 import pybamm
 
