@@ -465,6 +465,15 @@
       "contributions": [
         "code"
       ]
+    },
+    {
+      "login": "KAschad",
+      "name": "KAschad",
+      "avatar_url": "https://avatars.githubusercontent.com/u/93784399?v=4",
+      "profile": "https://github.com/KAschad",
+      "contributions": [
+        "bug"
+      ]
     }
   ],
   "contributorsPerLine": 7,
