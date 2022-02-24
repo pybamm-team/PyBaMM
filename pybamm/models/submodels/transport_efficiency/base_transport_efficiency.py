@@ -1,11 +1,11 @@
 #
-# Base class for tortuosity
+# Base class for transport_efficiency
 #
 import pybamm
 
 
 class BaseModel(pybamm.BaseSubModel):
-    """Base class for tortuosity
+    """Base class for transport_efficiency
 
     Parameters
     ----------
@@ -23,34 +23,34 @@ class BaseModel(pybamm.BaseSubModel):
         super().__init__(param, options=options)
         self.phase = phase
 
-    def _get_standard_tortuosity_variables(
+    def _get_standard_transport_efficiency_variables(
         self, tor_n, tor_s, tor_p, set_leading_order=False
     ):
         tor = pybamm.concatenation(tor_n, tor_s, tor_p)
 
         variables = {
-            self.phase + " tortuosity": tor,
-            "Positive " + self.phase.lower() + " tortuosity": tor_p,
+            self.phase + " transport_efficiency": tor,
+            "Positive " + self.phase.lower() + " transport_efficiency": tor_p,
             "X-averaged positive "
             + self.phase.lower()
-            + " tortuosity": pybamm.x_average(tor_p),
+            + " transport_efficiency": pybamm.x_average(tor_p),
         }
 
         if not self.half_cell:
             variables.update(
                 {
-                    "Negative " + self.phase.lower() + " tortuosity": tor_n,
+                    "Negative " + self.phase.lower() + " transport_efficiency": tor_n,
                     "X-averaged negative "
                     + self.phase.lower()
-                    + " tortuosity": pybamm.x_average(tor_n),
+                    + " transport_efficiency": pybamm.x_average(tor_n),
                 }
             )
 
         if self.phase == "Electrolyte":
             variables.update(
                 {
-                    "Separator tortuosity": tor_s,
-                    "X-averaged separator tortuosity": pybamm.x_average(tor_s),
+                    "Separator transport_efficiency": tor_s,
+                    "X-averaged separator transport_efficiency": pybamm.x_average(tor_s),
                 }
             )
 

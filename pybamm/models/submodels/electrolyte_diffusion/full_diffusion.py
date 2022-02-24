@@ -60,7 +60,7 @@ class Full(BaseElectrolyteDiffusion):
 
         eps_c_e = variables["Porosity times concentration"]
         c_e = variables["Electrolyte concentration"]
-        tor = variables["Electrolyte tortuosity"]
+        tor = variables["Electrolyte transport_efficiency"]
         i_e = variables["Electrolyte current density"]
         v_box = variables["Volume-averaged velocity"]
         T = variables["Cell temperature"]
@@ -111,7 +111,7 @@ class Full(BaseElectrolyteDiffusion):
             # left bc at anode/separator interface
             # assuming v_box = 0 for now
             T = variables["Cell temperature"]
-            tor = variables["Electrolyte tortuosity"]
+            tor = variables["Electrolyte transport_efficiency"]
             i_boundary_cc = variables["Current collector current density"]
             dce_dx = (
                 -(1 - param.t_plus(c_e, T))

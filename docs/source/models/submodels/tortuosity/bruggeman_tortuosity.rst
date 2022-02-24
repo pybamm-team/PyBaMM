@@ -1,7 +1,7 @@
 Bruggeman Model 
 ===============
 
-.. autoclass:: pybamm.tortuosity.Bruggeman
+.. autoclass:: pybamm.transport_efficiency.Bruggeman
     :members:
 
 

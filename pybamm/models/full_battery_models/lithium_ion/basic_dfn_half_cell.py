@@ -120,7 +120,7 @@ class BasicDFNHalfCell(BaseModel):
         # working electrode
 
         if working_electrode == "negative":
-            # Porosity and Tortuosity
+            # Porosity and transport_efficiency
             # Primary broadcasts are used to broadcast scalar quantities across a domain
             # into a vector of the right shape, for multiplying with other vectors
             eps_s = pybamm.PrimaryBroadcast(
@@ -158,7 +158,7 @@ class BasicDFNHalfCell(BaseModel):
             L_w = param.L_n
 
         else:
-            # Porosity and Tortuosity
+            # Porosity and transport_efficiency
             eps_s = pybamm.PrimaryBroadcast(
                 pybamm.Parameter("Separator porosity"), "separator"
             )

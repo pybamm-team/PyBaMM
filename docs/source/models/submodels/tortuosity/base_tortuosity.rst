@@ -1,6 +1,6 @@
 Base Model
 ===========
 
-.. autoclass:: pybamm.tortuosity.BaseModel
+.. autoclass:: pybamm.transport_efficiency.BaseModel
     :members:
 

@@ -1,9 +1,9 @@
-Tortuosity
+transport_efficiency
 ==========
 
 .. toctree::
   :maxdepth: 1
 
-  base_tortuosity
-  bruggeman_tortuosity
+  base_transport_efficiency
+  bruggeman_transport_efficiency
 
