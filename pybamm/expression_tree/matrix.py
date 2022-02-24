@@ -20,6 +20,7 @@ class Matrix(pybamm.Array):
         name=None,
         domain=None,
         auxiliary_domains=None,
+        domains=None,
         entries_string=None,
     ):
         if isinstance(entries, list):
@@ -31,4 +32,6 @@ class Matrix(pybamm.Array):
         # Convert all sparse matrices to csr
         if issparse(entries) and not isinstance(entries, csr_matrix):
             entries = csr_matrix(entries)
-        super().__init__(entries, name, domain, auxiliary_domains, entries_string)
+        super().__init__(
+            entries, name, domain, auxiliary_domains, domains, entries_string
+        )

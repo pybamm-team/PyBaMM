@@ -9,6 +9,8 @@ on:
 
 jobs:
   license:
+    # This workflow is only of value to PyBaMM and would always be skipped in forks
+    if: github.repository_owner == 'pybamm-team'
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v2
@@ -21,6 +23,8 @@ jobs:
         path: LICENSE.txt
 
   docs:
+    # This workflow is only of value to PyBaMM and would always be skipped in forks
+    if: github.repository_owner == 'pybamm-team'
     needs: license
     runs-on: ubuntu-latest
     steps:

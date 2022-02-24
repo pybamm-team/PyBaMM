@@ -102,6 +102,6 @@ class Full(BaseModel):
         if self.domain == "Negative":
             phi_s_init = pybamm.Scalar(0)
         elif self.domain == "Positive":
-            phi_s_init = self.param.U_p_init - self.param.U_n_init
+            phi_s_init = self.param.ocv_init
 
         self.initial_conditions[phi_s] = phi_s_init

@@ -108,10 +108,10 @@ class BasicSPM(BaseModel):
                 "Neumann",
             ),
         }
-        # c_n_init and c_p_init are functions, but for the SPM we evaluate them at x=0
-        # and x=1 since there is no x-dependence in the particles
-        self.initial_conditions[c_s_n] = param.c_n_init(0)
-        self.initial_conditions[c_s_p] = param.c_p_init(1)
+        # c_n_init and c_p_init are functions of r and x, but for the SPM we
+        # take the x-averaged value since there is no x-dependence in the particles
+        self.initial_conditions[c_s_n] = pybamm.x_average(param.c_n_init)
+        self.initial_conditions[c_s_p] = pybamm.x_average(param.c_p_init)
         # Events specify points at which a solution should terminate
         self.events += [
             pybamm.Event(

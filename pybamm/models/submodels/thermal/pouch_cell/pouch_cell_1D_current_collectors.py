@@ -16,20 +16,23 @@ class CurrentCollector1D(BaseThermal):
     ----------
     param : parameter class
         The parameters to use for this submodel
+    options : dict, optional
+        A dictionary of options to be passed to the model.
 
     References
     ----------
     .. [1] R Timms, SG Marquis, V Sulzer, CP Please and SJ Chapman. “Asymptotic
-           Reduction of a Lithium-ion Pouch Cell Model”. In preparation, 2020.
+           Reduction of a Lithium-ion Pouch Cell Model”. SIAM Journal on Applied
+           Mathematics, 81(3), 765--788, 2021
     .. [2] SG Marquis, R Timms, V Sulzer, CP Please and SJ Chapman. “A Suite of
-           Reduced-Order Models of a Single-Layer Lithium-ion Pouch Cell”. In
-           preparation, 2020.
+           Reduced-Order Models of a Single-Layer Lithium-ion Pouch Cell”. Journal
+           of The Electrochemical Society, 167(14):140513, 2020
 
     **Extends:** :class:`pybamm.thermal.BaseThermal`
     """
 
-    def __init__(self, param):
-        super().__init__(param, cc_dimension=1)
+    def __init__(self, param, options=None):
+        super().__init__(param, options=options)
         pybamm.citations.register("Timms2021")
 
     def get_fundamental_variables(self):

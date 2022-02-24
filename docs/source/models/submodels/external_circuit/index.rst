@@ -11,5 +11,5 @@ variable to be constant.
 .. toctree::
   :maxdepth: 1
 
-  current_control_external_circuit
+  explicit_control_external_circuit
   function_control_external_circuit

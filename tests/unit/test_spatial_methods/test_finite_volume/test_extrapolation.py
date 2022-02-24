@@ -446,11 +446,6 @@ class TestExtrapolation(unittest.TestCase):
         disc.set_variable_slices([var])
         extrap_right_disc = disc.process_symbol(extrap_right)
         self.assertEqual(extrap_right_disc.domain, ["negative electrode"])
-        # domain for boundary values must now be explicitly set
-        extrap_right.domain = ["negative electrode"]
-        disc.set_variable_slices([var])
-        extrap_right_disc = disc.process_symbol(extrap_right)
-        self.assertEqual(extrap_right_disc.domain, ["negative electrode"])
         # evaluate
         y_macro = mesh["negative electrode"].nodes
         y_micro = mesh["negative particle"].nodes
@@ -465,11 +460,6 @@ class TestExtrapolation(unittest.TestCase):
         disc.set_variable_slices([var])
         extrap_right_disc = disc.process_symbol(extrap_right)
         self.assertEqual(extrap_right_disc.domain, [])
-        # domain for boundary values must now be explicitly set
-        extrap_right.domain = ["positive electrode"]
-        disc.set_variable_slices([var])
-        extrap_right_disc = disc.process_symbol(extrap_right)
-        self.assertEqual(extrap_right_disc.domain, ["positive electrode"])
 
         # 2d macroscale
         mesh = get_1p1d_mesh_for_testing()

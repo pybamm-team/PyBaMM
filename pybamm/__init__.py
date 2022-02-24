@@ -32,6 +32,7 @@ PARAMETER_PATH = [
     os.path.join(root_dir(), "pybamm", "input", "parameters"),
 ]
 
+
 #
 # Utility classes and methods
 #

@@ -113,13 +113,15 @@ class Full(BaseElectrolyteDiffusion):
             T = variables["Cell temperature"]
             tor = variables["Electrolyte transport_efficiency"]
             i_boundary_cc = variables["Current collector current density"]
-            dce_dx = (
-                -(1 - param.t_plus(c_e, T))
+            lbc = (
+                pybamm.boundary_value(
+                    -(1 - param.t_plus(c_e, T))
+                    / (tor * param.gamma_e * param.D_e(c_e, T)),
+                    "left",
+                )
                 * i_boundary_cc
                 * param.C_e
-                / (tor * param.gamma_e * param.D_e(c_e, T))
             )
-            lbc = pybamm.boundary_value(dce_dx, "left")
         else:
             # left bc at anode/current collector interface
             lbc = pybamm.Scalar(0)
