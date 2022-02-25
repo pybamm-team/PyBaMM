@@ -387,6 +387,13 @@ class LithiumIonParameters(BaseParameters):
         self.stress_critical_p_dim = pybamm.Parameter(
             "Positive electrode critical stress [Pa]"
         )
+        self.beta_LAM_sei_n_dimensional = pybamm.Parameter(
+            "Negative electrode reaction-driven LAM factor [m3.mol-1]"
+        )
+        self.beta_LAM_sei_p_dimensional = pybamm.Parameter(
+            "Positive electrode reaction-driven LAM factor [m3.mol-1]"
+        )
+
         # composite particle
         self.c_n_p1_max = pybamm.Parameter(
             "Maximum concentration in negative electrode of phase 1 [mol.m-3]"
@@ -406,30 +413,6 @@ class LithiumIonParameters(BaseParameters):
         )
         self.n_p1_name = pybamm.Parameter("Name of negative electrode phase 1")
         self.n_p2_name = pybamm.Parameter("Name of negative electrode phase 2")
-        self.c_p_p1_max = pybamm.Parameter(
-            "Maximum concentration in positive electrode of phase 1 [mol.m-3]"
-        )
-        self.c_p_p2_max = pybamm.Parameter(
-            "Maximum concentration in positive electrode of phase 2 [mol.m-3]"
-        )
-        self.m_p_p1 = pybamm.Parameter("Positive electrode mass fraction of phase 1")
-        self.m_p_p2 = pybamm.Parameter("Positive electrode mass fraction of phase 2")
-        self.r_p_p1 = pybamm.Parameter("Positive particle radius of phase 1 [m]")
-        self.r_p_p2 = pybamm.Parameter("Positive particle radius of phase 2 [m]")
-        self.rho_p_p1 = pybamm.Parameter(
-            "Positive electrode density of phase 1 [kg.m-3]"
-        )
-        self.rho_p_p2 = pybamm.Parameter(
-            "Positive electrode density of phase 2 [kg.m-3]"
-        )
-        self.p_p1_name = pybamm.Parameter("Name of positive electrode phase 1")
-        self.p_p2_name = pybamm.Parameter("Name of positive electrode phase 2")
-        self.beta_LAM_sei_n_dimensional = pybamm.Parameter(
-            "Negative electrode reaction-driven LAM factor [m3.mol-1]"
-        )
-        self.beta_LAM_sei_p_dimensional = pybamm.Parameter(
-            "Positive electrode reaction-driven LAM factor [m3.mol-1]"
-        )
 
         # Reference OCP based on initial concentration
         self.T_init_dim = self.therm.T_init_dim
@@ -495,7 +478,7 @@ class LithiumIonParameters(BaseParameters):
         else:
             p_name = ""
         return pybamm.FunctionParameter(
-                f"Negative electrode diffusivity{p_name} [m2.s-1]", inputs
+            f"Negative electrode diffusivity{p_name} [m2.s-1]", inputs
         )
 
     def D_p_dimensional(self, sto, T, phase=None):
@@ -509,7 +492,7 @@ class LithiumIonParameters(BaseParameters):
         else:
             p_name = ""
         return pybamm.FunctionParameter(
-                f"Positive electrode diffusivity{p_name} [m2.s-1]", inputs
+            f"Positive electrode diffusivity{p_name} [m2.s-1]", inputs
         )
 
     def j0_n_dimensional(self, c_e, c_s_surf, T, phase=None):
@@ -630,7 +613,6 @@ class LithiumIonParameters(BaseParameters):
             f"Positive electrode OCP entropic change{p_name} [V.K-1]", inputs
         )
 
-<<<<<<< HEAD
     def R_n_dimensional(self, x, phase=None):
         """Negative particle radius as a function of through-cell distance"""
         if phase == "phase 1":
@@ -653,21 +635,7 @@ class LithiumIonParameters(BaseParameters):
         inputs = {"Through-cell distance (x_p) [m]": x}
         return pybamm.FunctionParameter(f"Positive particle radius{p_name} [m]", inputs)
 
-    def epsilon_s_n(self, x):
-        """Negative electrode active material volume fraction"""
-        inputs = {"Through-cell distance (x_n) [m]": x * self.L_x}
-        return pybamm.FunctionParameter(
-            "Negative electrode active material volume fraction", inputs
-        )
-
-    def epsilon_s_p(self, x):
-        """Positive electrode active material volume fraction"""
-        inputs = {"Through-cell distance (x_p) [m]": x * self.L_x}
-        return pybamm.FunctionParameter(
-            "Positive electrode active material volume fraction", inputs
-        )
-
-    def c_n_init_dimensional(self, x, phase=None):
+    def c_n_init_comp_dimensional(self, x, phase=None):
         """Initial concentration as a function of dimensionless position x"""
         inputs = {"Dimensionless through-cell position (x_n)": x}
         if phase == "phase 1":
@@ -680,7 +648,7 @@ class LithiumIonParameters(BaseParameters):
             f"Initial concentration in negative electrode{p_name} [mol.m-3]", inputs
         )
 
-    def c_p_init_dimensional(self, x, phase=None):
+    def c_p_init_comp_dimensional(self, x, phase=None):
         """Initial concentration as a function of dimensionless position x"""
         inputs = {"Dimensionless through-cell position (x_p)": x}
         if phase == "phase 1":
@@ -693,8 +661,6 @@ class LithiumIonParameters(BaseParameters):
             f"Initial concentration in positive electrode{p_name} [mol.m-3]", inputs
         )
 
-=======
->>>>>>> develop
     def _set_scales(self):
         """Define the scales used in the non-dimensionalisation scheme"""
 
@@ -1049,6 +1015,18 @@ class LithiumIonParameters(BaseParameters):
             * self.timescale
         ) / self.F
 
+        # dimensionless composite particle parameters
+        self.C_n_p1 = self.C_n / self.R_n_typ ** 2 * self.R_n_typ_p1 ** 2
+        self.C_n_p2 = self.C_n / self.R_n_typ ** 2 * self.R_n_typ_p2 ** 2
+        self.V_n_p1 = self.m_n_p1
+        self.V_n_p2 = self.m_n_p2
+        self.a_R_n_p1 = self.V_n_p1 * self.a_R_n
+        self.a_R_n_p2 = self.V_n_p2 * self.a_R_n
+        self.a_p1_a_n = self.V_n_p1 * self.R_n_typ / self.R_n_typ_p1
+        self.a_p2_a_n = self.V_n_p2 * self.R_n_typ / self.R_n_typ_p2
+        self.gamma_n_p1 = self.c_n_p1_max / self.c_n_max
+        self.gamma_n_p2 = self.c_n_p2_max / self.c_n_max
+
     def sigma_n(self, T):
         """Dimensionless negative electrode electrical conductivity"""
         T_dim = self.Delta_T * T + self.T_ref
@@ -1076,26 +1054,6 @@ class LithiumIonParameters(BaseParameters):
     def sigma_p_prime(self, T):
         """Rescaled dimensionless positive electrode electrical conductivity"""
         return self.sigma_p(T) * self.delta
-
-        # composite particle
-        self.C_n_p1 = self.C_n / self.R_n_typ ** 2 * self.R_n_typ_p1 ** 2
-        self.C_n_p2 = self.C_n / self.R_n_typ ** 2 * self.R_n_typ_p2 ** 2
-        self.V_n_p1 = (
-            self.m_n_p1
-            # / self.rho_n_p1
-            # / (self.m_n_p1 / self.rho_n_p1 + self.m_n_p2 / self.rho_n_p2)
-        )
-        self.V_n_p2 = (
-            self.m_n_p2
-            # / self.rho_n_p2
-            # / (self.m_n_p1 / self.rho_n_p1 + self.m_n_p2 / self.rho_n_p2)
-        )
-        self.a_R_n_p1 = self.V_n_p1 * self.a_R_n
-        self.a_R_n_p2 = self.V_n_p2 * self.a_R_n
-        self.a_p1_a_n = self.V_n_p1 * self.R_n_typ / self.R_n_typ_p1
-        self.a_p2_a_n = self.V_n_p2 * self.R_n_typ / self.R_n_typ_p2
-        self.gamma_n_p1 = self.c_n_p1_max / self.c_n_max
-        self.gamma_n_p2 = self.c_n_p2_max / self.c_n_max
 
     def chi(self, c_e, T):
         """
@@ -1217,7 +1175,6 @@ class LithiumIonParameters(BaseParameters):
         sto = c_s_p
         return self.dUdT_p_dimensional(sto, phase) * self.Delta_T / self.potential_scale
 
-<<<<<<< HEAD
     def R_n(self, x, phase=None):
         """
         Dimensionless negative particle radius as a function of dimensionless
@@ -1236,7 +1193,7 @@ class LithiumIonParameters(BaseParameters):
             self.L_x, phase
         )
 
-    def c_n_init(self, x, phase=None):
+    def c_n_init_comp(self, x, phase=None):
         """Dimensionless initial concentration as a function of dimensionless position x"""
         if phase == "phase 1":
             c_max = self.c_n_p1_max
@@ -1244,9 +1201,9 @@ class LithiumIonParameters(BaseParameters):
             c_max = self.c_n_p2_max
         else:
             c_max = self.c_n_max
-        return self.c_n_init_dimensional(x, phase) / c_max
+        return self.c_n_init_comp_dimensional(x, phase) / c_max
 
-    def c_p_init(self, x, phase=None):
+    def c_p_init_comp(self, x, phase=None):
         """Dimensionless initial concentration as a function of dimensionless position x"""
         if phase == "phase 1":
             c_max = self.c_p_p1_max
@@ -1254,10 +1211,8 @@ class LithiumIonParameters(BaseParameters):
             c_max = self.c_p_p2_max
         else:
             c_max = self.c_p_max
-        return self.c_p_init_dimensional(x, phase) / c_max
+        return self.c_p_init_comp_dimensional(x, phase) / c_max
 
-=======
->>>>>>> develop
     def rho(self, T):
         """Dimensionless effective volumetric heat capacity"""
         return (

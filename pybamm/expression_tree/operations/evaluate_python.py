@@ -69,15 +69,15 @@ class JaxCooMatrix:
 
     def scalar_multiply(self, b):
         """
-        multiply of matrix with a scalar b
+                multiply of matrix with a scalar b
 
-<<<<<<< HEAD:pybamm/expression_tree/operations/evaluate.py
-else:
-=======
-        Parameters
-        ----------
-        b: Number or 1 element jax device array
-            scalar value to multiply
+        <<<<<<< HEAD:pybamm/expression_tree/operations/evaluate.py
+        else:
+        =======
+                Parameters
+                ----------
+                b: Number or 1 element jax device array
+                    scalar value to multiply
         """
         # assume b is a scalar or ndarray with 1 element
         return JaxCooMatrix(self.row, self.col, (self.data * b).reshape(-1), self.shape)
@@ -95,14 +95,14 @@ else:
 
 def create_jax_coo_matrix(value):
     """
-    Creates a JaxCooMatrix from a scipy.sparse matrix
+        Creates a JaxCooMatrix from a scipy.sparse matrix
 
-    Parameters
-    ----------
->>>>>>> develop:pybamm/expression_tree/operations/evaluate_python.py
+        Parameters
+        ----------
+    >>>>>>> develop:pybamm/expression_tree/operations/evaluate_python.py
 
-    value: scipy.sparse matrix
-        the sparse matrix to be converted
+        value: scipy.sparse matrix
+            the sparse matrix to be converted
     """
     scipy_coo = value.tocoo()
     row = jax.numpy.asarray(scipy_coo.row)

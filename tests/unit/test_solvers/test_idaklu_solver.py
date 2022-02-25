@@ -72,13 +72,13 @@ class TestIDAKLUSolver(unittest.TestCase):
 
             # solve first without sensitivities
             sol = solver.solve(
-                model, t_eval, inputs={"a": a_value},
+                model,
+                t_eval,
+                inputs={"a": a_value},
             )
 
             # test that y[1] remains constant
-            np.testing.assert_array_almost_equal(
-                sol.y[1, :], np.ones(sol.t.shape)
-            )
+            np.testing.assert_array_almost_equal(sol.y[1, :], np.ones(sol.t.shape))
 
             # test that y[0] = to true solution
             true_solution = a_value * sol.t
@@ -90,14 +90,11 @@ class TestIDAKLUSolver(unittest.TestCase):
 
             # now solve with sensitivities (this should cause set_up to be run again)
             sol = solver.solve(
-                model, t_eval, inputs={"a": a_value},
-                calculate_sensitivities=True
+                model, t_eval, inputs={"a": a_value}, calculate_sensitivities=True
             )
 
             # test that y[1] remains constant
-            np.testing.assert_array_almost_equal(
-                sol.y[1, :], np.ones(sol.t.shape)
-            )
+            np.testing.assert_array_almost_equal(sol.y[1, :], np.ones(sol.t.shape))
 
             # test that y[0] = to true solution
             true_solution = a_value * sol.t
@@ -113,9 +110,7 @@ class TestIDAKLUSolver(unittest.TestCase):
             dyda_fd = (sol_plus.y - sol_neg.y) / h
             dyda_fd = dyda_fd.transpose().reshape(-1, 1)
 
-            np.testing.assert_array_almost_equal(
-                dyda_ida, dyda_fd
-            )
+            np.testing.assert_array_almost_equal(dyda_ida, dyda_fd)
 
     def test_set_atol(self):
         model = pybamm.lithium_ion.DFN()
@@ -153,7 +148,7 @@ class TestIDAKLUSolver(unittest.TestCase):
         # wrong size (should fail)
         atol = [1, 2]
         solver = pybamm.IDAKLUSolver(root_method="lm", atol=atol)
-        with self.assertRaisesRegex(pybamm.SolverError, 'Absolute tolerances'):
+        with self.assertRaisesRegex(pybamm.SolverError, "Absolute tolerances"):
             solver.solve(model, t_eval)
 
     def test_failures(self):
@@ -188,7 +183,7 @@ class TestIDAKLUSolver(unittest.TestCase):
         # will give solver error
         t_eval = np.linspace(0, -3, 100)
         with self.assertRaisesRegex(
-            pybamm.SolverError, 't_eval must increase monotonically'
+            pybamm.SolverError, "t_eval must increase monotonically"
         ):
             solver.solve(model, t_eval)
 

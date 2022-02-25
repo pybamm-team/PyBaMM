@@ -6,9 +6,6 @@ from .base_external_circuit import BaseModel, LeadingOrderBaseModel
 
 
 class FunctionControl(BaseModel):
-<<<<<<< HEAD
-    """External circuit with an arbitrary function."""
-=======
     """
     External circuit with an arbitrary function, implemented as a control on the current
     either via an algebraic equation, or a differential equation.
@@ -23,7 +20,6 @@ class FunctionControl(BaseModel):
         The type of control to use. Must be one of 'algebraic' (default)
         or 'differential'.
     """
->>>>>>> develop
 
     def __init__(self, param, external_circuit_function, control="algebraic"):
         super().__init__(param)

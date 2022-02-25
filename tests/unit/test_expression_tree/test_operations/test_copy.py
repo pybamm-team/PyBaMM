@@ -15,7 +15,7 @@ class TestCopy(unittest.TestCase):
         v_n_2D = pybamm.Variable(
             "v",
             domain="negative particle",
-            auxiliary_domains={"secondary": "negative electrode"}
+            auxiliary_domains={"secondary": "negative electrode"},
         )
         x_n = pybamm.standard_spatial_vars.x_n
         v_s = pybamm.Variable("v", "separator")

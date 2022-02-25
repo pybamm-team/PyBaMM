@@ -100,11 +100,7 @@ class Concatenation(pybamm.Symbol):
 
     def evaluate(self, t=None, y=None, y_dot=None, inputs=None, known_evals=None):
         """See :meth:`pybamm.Symbol.evaluate()`."""
-<<<<<<< HEAD
-        children = self.cached_children
-=======
         children = self.children
->>>>>>> develop
         if known_evals is not None:
             if self.id not in known_evals:
                 children_eval = [None] * len(children)
@@ -120,29 +116,17 @@ class Concatenation(pybamm.Symbol):
                 children_eval[idx] = child.evaluate(t, y, y_dot, inputs)
             return self._concatenation_evaluate(children_eval)
 
-<<<<<<< HEAD
-    def new_copy(self):
-=======
     def create_copy(self):
->>>>>>> develop
         """See :meth:`pybamm.Symbol.new_copy()`."""
         new_children = [child.new_copy() for child in self.children]
         return self._concatenation_new_copy(new_children)
 
     def _concatenation_new_copy(self, children):
         """See :meth:`pybamm.Symbol.new_copy()`."""
-<<<<<<< HEAD
-        new_symbol = self.__class__(*children)
-        return new_symbol
-
-    def _concatenation_jac(self, children_jacs):
-        """Calculate the jacobian of a concatenation"""
-=======
         return concatenation(*children)
 
     def _concatenation_jac(self, children_jacs):
         """Calculate the jacobian of a concatenation."""
->>>>>>> develop
         return NotImplementedError
 
     def _evaluate_for_shape(self):
@@ -213,11 +197,7 @@ class NumpyConcatenation(Concatenation):
 
     def _concatenation_jac(self, children_jacs):
         """See :meth:`pybamm.Concatenation.concatenation_jac()`."""
-<<<<<<< HEAD
-        children = self.cached_children
-=======
         children = self.children
->>>>>>> develop
         if len(children) == 0:
             return pybamm.Scalar(0)
         else:
@@ -470,11 +450,7 @@ def concatenation(*children):
 
 
 def simplified_numpy_concatenation(*children):
-<<<<<<< HEAD
-    """Perform simplifications on a numpy concatenation"""
-=======
     """Perform simplifications on a numpy concatenation."""
->>>>>>> develop
     # Turn a concatenation of concatenations into a single concatenation
     new_children = []
     for child in children:
@@ -487,21 +463,13 @@ def simplified_numpy_concatenation(*children):
 
 
 def numpy_concatenation(*children):
-<<<<<<< HEAD
-    """Helper function to create numpy concatenations"""
-=======
     """Helper function to create numpy concatenations."""
->>>>>>> develop
     # TODO: add option to turn off simplifications
     return simplified_numpy_concatenation(*children)
 
 
 def simplified_domain_concatenation(children, mesh, copy_this=None):
-<<<<<<< HEAD
-    """Perform simplifications on a domain concatenation"""
-=======
     """Perform simplifications on a domain concatenation."""
->>>>>>> develop
     # Create the DomainConcatenation to read domain and child domain
     concat = DomainConcatenation(children, mesh, copy_this=copy_this)
     # Simplify Concatenation of StateVectors to a single StateVector
@@ -529,10 +497,6 @@ def simplified_domain_concatenation(children, mesh, copy_this=None):
 
 
 def domain_concatenation(children, mesh):
-<<<<<<< HEAD
-    """Helper function to create domain concatenations"""
-=======
     """Helper function to create domain concatenations."""
->>>>>>> develop
     # TODO: add option to turn off simplifications
     return simplified_domain_concatenation(children, mesh)

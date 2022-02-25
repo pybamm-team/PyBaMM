@@ -187,7 +187,9 @@ class BaseInterface(pybamm.BaseSubModel):
                     T = T.orphans[0]
                 T = pybamm.PrimaryBroadcast(T, [self.domain.lower() + " particle size"])
             else:
-                c_s_surf = variables[self.domain + " particle surface concentration{p_name}"]
+                c_s_surf = variables[
+                    self.domain + " particle surface concentration{p_name}"
+                ]
 
                 # If variable was broadcast, take only the orphan
                 if isinstance(c_s_surf, pybamm.Broadcast) and isinstance(

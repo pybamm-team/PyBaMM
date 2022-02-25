@@ -19,26 +19,14 @@ class TestSizeDistributionParameters(unittest.TestCase):
         # check dimensionless parameters
 
         # min and max radii
-        np.testing.assert_almost_equal(
-            values.evaluate(param.R_min_n), 0.0, 3
-        )
-        np.testing.assert_almost_equal(
-            values.evaluate(param.R_min_p), 0.0, 3
-        )
-        np.testing.assert_almost_equal(
-            values.evaluate(param.R_max_n), 2.5, 3
-        )
-        np.testing.assert_almost_equal(
-            values.evaluate(param.R_max_p), 2.5, 3
-        )
+        np.testing.assert_almost_equal(values.evaluate(param.R_min_n), 0.0, 3)
+        np.testing.assert_almost_equal(values.evaluate(param.R_min_p), 0.0, 3)
+        np.testing.assert_almost_equal(values.evaluate(param.R_max_n), 2.5, 3)
+        np.testing.assert_almost_equal(values.evaluate(param.R_max_p), 2.5, 3)
 
         # standard deviations
-        np.testing.assert_almost_equal(
-            values.evaluate(param.sd_a_n), 0.3, 3
-        )
-        np.testing.assert_almost_equal(
-            values.evaluate(param.sd_a_p), 0.3, 3
-        )
+        np.testing.assert_almost_equal(values.evaluate(param.sd_a_n), 0.3, 3)
+        np.testing.assert_almost_equal(values.evaluate(param.sd_a_p), 0.3, 3)
 
         # check function parameters (size distributions) evaluate
         R_test = pybamm.Scalar(1.0)

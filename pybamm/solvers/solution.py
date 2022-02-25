@@ -551,8 +551,7 @@ class Solution(object):
             pickle.dump(self, f, pickle.HIGHEST_PROTOCOL)
 
     def save_data(
-            self, filename=None, variables=None,
-            to_format="pickle", short_names=None
+        self, filename=None, variables=None, to_format="pickle", short_names=None
     ):
         """
         Save solution data only (raw arrays)
@@ -613,16 +612,12 @@ class Solution(object):
 
         if to_format == "pickle":
             if filename is None:
-                raise ValueError(
-                    "pickle format must be written to a file"
-                )
+                raise ValueError("pickle format must be written to a file")
             with open(filename, "wb") as f:
                 pickle.dump(data_short_names, f, pickle.HIGHEST_PROTOCOL)
         elif to_format == "matlab":
             if filename is None:
-                raise ValueError(
-                    "matlab format must be written to a file"
-                )
+                raise ValueError("matlab format must be written to a file")
             # Check all the variable names only contain a-z, A-Z or _ or numbers
             for name in data_short_names.keys():
                 # Check the string only contains the following ASCII:

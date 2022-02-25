@@ -163,18 +163,12 @@ class FunctionParameter(pybamm.Symbol):
 
         return FunctionParameter(self.name, input_dict, diff_variable=variable)
 
-<<<<<<< HEAD
-    def new_copy(self):
-        """See :meth:`pybamm.Symbol.new_copy()`."""
-        return self._function_parameter_new_copy(self._input_names, self.orphans)
-=======
     def create_copy(self):
         """See :meth:`pybamm.Symbol.new_copy()`."""
         out = self._function_parameter_new_copy(
             self._input_names, self.orphans, print_name=self.print_name
         )
         return out
->>>>>>> develop
 
     def _function_parameter_new_copy(
         self, input_names, children, print_name="calculate"

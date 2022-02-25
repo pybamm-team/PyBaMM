@@ -211,8 +211,12 @@ class CasadiAlgebraicSolver(pybamm.BaseSolver):
             explicit_sensitivities = False
 
         sol = pybamm.Solution(
-            [t_eval], y_sol, model, inputs_dict, termination="success",
-            sensitivities=explicit_sensitivities
+            [t_eval],
+            y_sol,
+            model,
+            inputs_dict,
+            termination="success",
+            sensitivities=explicit_sensitivities,
         )
         sol.integration_time = integration_time
         return sol

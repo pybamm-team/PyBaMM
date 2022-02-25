@@ -38,13 +38,7 @@ class IndependentVariable(pybamm.Symbol):
 
     def _evaluate_for_shape(self):
         """See :meth:`pybamm.Symbol.evaluate_for_shape_using_domain()`"""
-<<<<<<< HEAD
-        return pybamm.evaluate_for_shape_using_domain(
-            self.domain, self.auxiliary_domains
-        )
-=======
         return pybamm.evaluate_for_shape_using_domain(self.domains)
->>>>>>> develop
 
     def _jac(self, variable):
         """See :meth:`pybamm.Symbol._jac()`."""
@@ -68,11 +62,7 @@ class Time(IndependentVariable):
     def __init__(self):
         super().__init__("time")
 
-<<<<<<< HEAD
-    def new_copy(self):
-=======
     def create_copy(self):
->>>>>>> develop
         """See :meth:`pybamm.Symbol.new_copy()`."""
         return Time()
 
@@ -144,17 +134,9 @@ class SpatialVariable(IndependentVariable):
                 "domain cannot be particle if name is '{}'".format(name)
             )
 
-<<<<<<< HEAD
-    def new_copy(self):
-        """See :meth:`pybamm.Symbol.new_copy()`."""
-        return self.__class__(
-            self.name, self.domain, self.auxiliary_domains, self.coord_sys
-        )
-=======
     def create_copy(self):
         """See :meth:`pybamm.Symbol.new_copy()`."""
         return self.__class__(self.name, domains=self.domains, coord_sys=self.coord_sys)
->>>>>>> develop
 
 
 class SpatialVariableEdge(SpatialVariable):

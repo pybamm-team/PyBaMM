@@ -21,13 +21,16 @@ class BasicDFNComposite(BaseModel):
 
     References
     ----------
-    .. current project
+    ..  W. Ai, N. Kirkaldy, Y. Jiang, G. Offer, H. Wang, B. Wu (2022).
+        A composite electrode model for lithium-ion battery with a
+        silicon/graphite negative electrode. Journal of Power Sources. 527, 231142.
 
     **Extends:** :class:`pybamm.lithium_ion.BaseModel`
     """
 
     def __init__(self, name="Doyle-Fuller-Newman model"):
         super().__init__({}, name)
+        pybamm.citations.register("Ai2022")
         # `param` is a class containing all the relevant parameters and functions for
         # this model. These are purely symbolic at this stage, and will be set by the
         # `ParameterValues` class when the model is processed.
@@ -50,7 +53,7 @@ class BasicDFNComposite(BaseModel):
         )
         # Concatenations combine several variables into a single variable, to simplify
         # implementing equations that hold over several domains
-        c_e = pybamm.Concatenation(c_e_n, c_e_s, c_e_p)
+        c_e = pybamm.concatenation(c_e_n, c_e_s, c_e_p)
 
         # Electrolyte potential
         phi_e_n = pybamm.Variable(
@@ -60,7 +63,7 @@ class BasicDFNComposite(BaseModel):
         phi_e_p = pybamm.Variable(
             "Positive electrolyte potential", domain="positive electrode"
         )
-        phi_e = pybamm.Concatenation(phi_e_n, phi_e_s, phi_e_p)
+        phi_e = pybamm.concatenation(phi_e_n, phi_e_s, phi_e_p)
 
         # Electrode potential
         phi_s_n = pybamm.Variable(
@@ -110,14 +113,14 @@ class BasicDFNComposite(BaseModel):
         eps_p = pybamm.PrimaryBroadcast(
             pybamm.Parameter("Positive electrode porosity"), "positive electrode"
         )
-        eps = pybamm.Concatenation(eps_n, eps_s, eps_p)
+        eps = pybamm.concatenation(eps_n, eps_s, eps_p)
 
         # Active material volume fraction (eps + eps_s + eps_inactive = 1)
         eps_s_n = pybamm.Parameter("Negative electrode active material volume fraction")
         eps_s_p = pybamm.Parameter("Positive electrode active material volume fraction")
 
         # Tortuosity
-        tor = pybamm.Concatenation(
+        tor = pybamm.concatenation(
             eps_n ** param.b_e_n, eps_s ** param.b_e_s, eps_p ** param.b_e_p
         )
 
@@ -157,7 +160,7 @@ class BasicDFNComposite(BaseModel):
                 param.ne_p / 2 * (phi_s_p - phi_e_p - param.U_p(c_s_surf_p, T))
             )
         )
-        j = pybamm.Concatenation(j_n, j_s, j_p)
+        j = pybamm.concatenation(j_n, j_s, j_p)
 
         ######################
         # State of Charge
@@ -220,12 +223,12 @@ class BasicDFNComposite(BaseModel):
         x_n = pybamm.PrimaryBroadcast(
             pybamm.standard_spatial_vars.x_n, "negative particle"
         )
-        self.initial_conditions[c_s_n_p1] = param.c_n_init(x_n, "phase 1")
-        self.initial_conditions[c_s_n_p2] = param.c_n_init(x_n, "phase 2")
+        self.initial_conditions[c_s_n_p1] = param.c_n_init_comp(x_n, "phase 1")
+        self.initial_conditions[c_s_n_p2] = param.c_n_init_comp(x_n, "phase 2")
         x_p = pybamm.PrimaryBroadcast(
             pybamm.standard_spatial_vars.x_p, "positive particle"
         )
-        self.initial_conditions[c_s_p] = param.c_p_init(x_p)
+        self.initial_conditions[c_s_p] = param.c_p_init
         # Events specify points at which a solution should terminate
         tolerance = 0.0000001
         self.events += [
@@ -257,9 +260,9 @@ class BasicDFNComposite(BaseModel):
         ######################
         # Current in the solid
         ######################
-        sigma_eff_n = param.sigma_n * eps_s_n ** param.b_s_n
+        sigma_eff_n = param.sigma_n(T) * eps_s_n ** param.b_s_n
         i_s_n = -sigma_eff_n * pybamm.grad(phi_s_n)
-        sigma_eff_p = param.sigma_p * eps_s_p ** param.b_s_p
+        sigma_eff_p = param.sigma_p(T) * eps_s_p ** param.b_s_p
         i_s_p = -sigma_eff_p * pybamm.grad(phi_s_p)
         # The `algebraic` dictionary contains differential equations, with the key being
         # the main scalar variable of interest in the equation
@@ -279,9 +282,7 @@ class BasicDFNComposite(BaseModel):
         # We evaluate c_n_init at x=0 and c_p_init at x=1 (this is just an initial
         # guess so actual value is not too important)
         self.initial_conditions[phi_s_n] = pybamm.Scalar(0)
-        self.initial_conditions[phi_s_p] = param.U_p(
-            param.c_p_init(1), param.T_init
-        ) - param.U_n(param.c_n_init(0), param.T_init)
+        self.initial_conditions[phi_s_p] = param.ocv_init
 
         ######################
         # Current in the electrolyte
@@ -294,7 +295,7 @@ class BasicDFNComposite(BaseModel):
             "left": (pybamm.Scalar(0), "Neumann"),
             "right": (pybamm.Scalar(0), "Neumann"),
         }
-        self.initial_conditions[phi_e] = -param.U_n(param.c_n_init(0), param.T_init)
+        self.initial_conditions[phi_e] = -param.U_n_init
 
         ######################
         # Electrolyte concentration
