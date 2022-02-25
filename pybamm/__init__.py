@@ -120,7 +120,6 @@ from .models.submodels import (
     thermal,
     tortuosity,
     particle_mechanics,
-    particle_composite,
 )
 from .models.submodels.interface import kinetics
 from .models.submodels.interface import sei

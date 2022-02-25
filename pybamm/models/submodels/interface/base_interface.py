@@ -165,19 +165,13 @@ class BaseInterface(pybamm.BaseSubModel):
         """
 
         if self.reaction == "lithium-ion main":
-            if phase == "phase 1":
-                p_name = " of phase 1"
-            elif phase == "phase 2":
-                p_name = " of phase 2"
-            else:
-                p_name = ""
 
             T = variables[self.domain + " electrode temperature"]
             # For "particle-size distribution" models, take distribution version
             # of c_s_surf that depends on particle size.
             if self.options["particle size"] == "distribution":
                 c_s_surf = variables[
-                    self.domain + " particle surface concentration distribution{p_name}"
+                    self.domain + " particle surface concentration distribution"
                 ]
                 # If variable was broadcast, take only the orphan
                 if isinstance(c_s_surf, pybamm.Broadcast) and isinstance(
@@ -187,9 +181,7 @@ class BaseInterface(pybamm.BaseSubModel):
                     T = T.orphans[0]
                 T = pybamm.PrimaryBroadcast(T, [self.domain.lower() + " particle size"])
             else:
-                c_s_surf = variables[
-                    self.domain + " particle surface concentration{p_name}"
-                ]
+                c_s_surf = variables[self.domain + " particle surface concentration"]
 
                 # If variable was broadcast, take only the orphan
                 if isinstance(c_s_surf, pybamm.Broadcast) and isinstance(

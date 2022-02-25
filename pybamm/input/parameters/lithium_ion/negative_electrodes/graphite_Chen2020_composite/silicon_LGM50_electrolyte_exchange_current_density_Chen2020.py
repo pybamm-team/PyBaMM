@@ -35,7 +35,7 @@ def silicon_LGM50_electrolyte_exchange_current_density_Chen2020(c_e, c_s_surf, T
     arrhenius = exp(E_r / constants.R * (1 / 298.15 - 1 / T))
 
     c_n_max = Parameter(
-        f"Maximum concentration in negative electrode of phase 2 [mol.m-3]"
+        "Maximum concentration in negative electrode of phase 2 [mol.m-3]"
     )
 
     return (

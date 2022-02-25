@@ -1194,7 +1194,9 @@ class LithiumIonParameters(BaseParameters):
         )
 
     def c_n_init_comp(self, x, phase=None):
-        """Dimensionless initial concentration as a function of dimensionless position x"""
+        """
+        Dimensionless initial concentration as a function of dimensionless position x
+        """
         if phase == "phase 1":
             c_max = self.c_n_p1_max
         elif phase == "phase 2":
@@ -1204,7 +1206,9 @@ class LithiumIonParameters(BaseParameters):
         return self.c_n_init_comp_dimensional(x, phase) / c_max
 
     def c_p_init_comp(self, x, phase=None):
-        """Dimensionless initial concentration as a function of dimensionless position x"""
+        """
+        Dimensionless initial concentration as a function of dimensionless position x
+        """
         if phase == "phase 1":
             c_max = self.c_p_p1_max
         elif phase == "phase 2":
