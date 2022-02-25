@@ -53,7 +53,7 @@ class Jacobian(object):
             return jac
 
     def _jac(self, symbol, variable):
-        """ See :meth:`Jacobian.jac()`. """
+        """See :meth:`Jacobian.jac()`."""
 
         if isinstance(symbol, pybamm.BinaryOperator):
             left, right = symbol.children

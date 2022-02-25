@@ -651,7 +651,7 @@ class BaseBatteryModel(pybamm.BaseModel):
         pybamm.logger.info("Finish building {}".format(self.name))
 
     def new_empty_copy(self):
-        """ See :meth:`pybamm.BaseModel.new_empty_copy()` """
+        """See :meth:`pybamm.BaseModel.new_empty_copy()`"""
         new_model = self.__class__(name=self.name, options=self.options, build=False)
         new_model.use_jacobian = self.use_jacobian
         new_model.convert_to_format = self.convert_to_format

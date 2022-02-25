@@ -230,7 +230,7 @@ class FiniteVolume(pybamm.SpatialMethod):
         return self.divergence(grad, grad, boundary_conditions)
 
     def integral(self, child, discretised_child, integration_dimension):
-        """Vector-vector dot product to implement the integral operator. """
+        """Vector-vector dot product to implement the integral operator."""
         integration_vector = self.definite_integral_matrix(
             child, integration_dimension=integration_dimension
         )
@@ -326,7 +326,7 @@ class FiniteVolume(pybamm.SpatialMethod):
         return pybamm.Matrix(csr_matrix(matrix))
 
     def indefinite_integral(self, child, discretised_child, direction):
-        """Implementation of the indefinite integral operator. """
+        """Implementation of the indefinite integral operator."""
 
         # Different integral matrix depending on whether the integrand evaluates on
         # edges or nodes

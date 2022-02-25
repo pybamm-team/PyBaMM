@@ -25,7 +25,7 @@ class Parameter(pybamm.Symbol):
         super().__init__(name, domain=domain)
 
     def new_copy(self):
-        """ See :meth:`pybamm.Symbol.new_copy()`. """
+        """See :meth:`pybamm.Symbol.new_copy()`."""
         return Parameter(self.name, self.domain)
 
     def _evaluate_for_shape(self):
@@ -36,7 +36,7 @@ class Parameter(pybamm.Symbol):
         return np.nan
 
     def is_constant(self):
-        """ See :meth:`pybamm.Symbol.is_constant()`. """
+        """See :meth:`pybamm.Symbol.is_constant()`."""
         # Parameter is not constant since it can become an InputParameter
         return False
 
@@ -120,7 +120,7 @@ class FunctionParameter(pybamm.Symbol):
         self._input_names = inp
 
     def set_id(self):
-        """See :meth:`pybamm.Symbol.set_id` """
+        """See :meth:`pybamm.Symbol.set_id`"""
         self._id = hash(
             (self.__class__, self.name, self.diff_variable)
             + tuple([child.id for child in self.children])
@@ -147,7 +147,7 @@ class FunctionParameter(pybamm.Symbol):
         return domain
 
     def diff(self, variable):
-        """ See :meth:`pybamm.Symbol.diff()`. """
+        """See :meth:`pybamm.Symbol.diff()`."""
         # return a new FunctionParameter, that knows it will need to be differentiated
         # when the parameters are set
         children_list = self.orphans
@@ -158,7 +158,7 @@ class FunctionParameter(pybamm.Symbol):
         return FunctionParameter(self.name, input_dict, diff_variable=variable)
 
     def new_copy(self):
-        """ See :meth:`pybamm.Symbol.new_copy()`. """
+        """See :meth:`pybamm.Symbol.new_copy()`."""
         return self._function_parameter_new_copy(self._input_names, self.orphans)
 
     def _function_parameter_new_copy(self, input_names, children):

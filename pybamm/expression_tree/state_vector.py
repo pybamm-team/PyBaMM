@@ -100,7 +100,7 @@ class StateVectorBase(pybamm.Symbol):
             self._evaluation_array = [bool(x) for x in array]
 
     def set_id(self):
-        """ See :meth:`pybamm.Symbol.set_id()` """
+        """See :meth:`pybamm.Symbol.set_id()`"""
         self._id = hash(
             (self.__class__, self.name, tuple(self.evaluation_array))
             + tuple(self.domain)
@@ -175,7 +175,7 @@ class StateVectorBase(pybamm.Symbol):
         return pybamm.Matrix(jac)
 
     def new_copy(self):
-        """ See :meth:`pybamm.Symbol.new_copy()`. """
+        """See :meth:`pybamm.Symbol.new_copy()`."""
         return StateVector(
             *self.y_slices,
             name=self.name,
@@ -233,7 +233,7 @@ class StateVector(StateVectorBase):
         )
 
     def _base_evaluate(self, t=None, y=None, y_dot=None, inputs=None):
-        """ See :meth:`pybamm.Symbol._base_evaluate()`. """
+        """See :meth:`pybamm.Symbol._base_evaluate()`."""
         if y is None:
             raise TypeError("StateVector cannot evaluate input 'y=None'")
         if y.shape[0] < len(self.evaluation_array):
@@ -307,7 +307,7 @@ class StateVectorDot(StateVectorBase):
         )
 
     def _base_evaluate(self, t=None, y=None, y_dot=None, inputs=None):
-        """ See :meth:`pybamm.Symbol._base_evaluate()`. """
+        """See :meth:`pybamm.Symbol._base_evaluate()`."""
         if y_dot is None:
             raise TypeError("StateVectorDot cannot evaluate input 'y_dot=None'")
         if y_dot.shape[0] < len(self.evaluation_array):

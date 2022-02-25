@@ -47,7 +47,7 @@ class CasadiConverter(object):
             return casadi_symbol
 
     def _convert(self, symbol, t, y, y_dot, inputs):
-        """ See :meth:`CasadiConverter.convert()`. """
+        """See :meth:`CasadiConverter.convert()`."""
         if isinstance(
             symbol,
             (

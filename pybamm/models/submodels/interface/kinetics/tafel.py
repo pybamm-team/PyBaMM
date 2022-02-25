@@ -34,7 +34,7 @@ class ForwardTafel(BaseKinetics):
         return j0 * pybamm.exp((ne / (2 * (1 + self.param.Theta * T))) * eta_r)
 
     def _get_dj_dc(self, variables):
-        """ See :meth:`pybamm.interface.kinetics.BaseKinetics._get_dj_dc` """
+        """See :meth:`pybamm.interface.kinetics.BaseKinetics._get_dj_dc`"""
         c_e, delta_phi, j0, ne, ocp, T = self._get_interface_variables_for_first_order(
             variables
         )
@@ -46,7 +46,7 @@ class ForwardTafel(BaseKinetics):
         )
 
     def _get_dj_ddeltaphi(self, variables):
-        """ See :meth:`pybamm.interface.kinetics.BaseKinetics._get_dj_ddeltaphi` """
+        """See :meth:`pybamm.interface.kinetics.BaseKinetics._get_dj_ddeltaphi`"""
         _, delta_phi, j0, ne, ocp, T = self._get_interface_variables_for_first_order(
             variables
         )

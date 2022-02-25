@@ -53,12 +53,12 @@ class Array(pybamm.Symbol):
 
     @property
     def ndim(self):
-        """ returns the number of dimensions of the tensor"""
+        """returns the number of dimensions of the tensor"""
         return self._entries.ndim
 
     @property
     def shape(self):
-        """ returns the number of entries along each dimension"""
+        """returns the number of entries along each dimension"""
         return self._entries.shape
 
     @property
@@ -80,19 +80,19 @@ class Array(pybamm.Symbol):
                 self._entries_string = entries.tobytes()
 
     def set_id(self):
-        """ See :meth:`pybamm.Symbol.set_id()`. """
+        """See :meth:`pybamm.Symbol.set_id()`."""
         self._id = hash(
             (self.__class__, self.name, self.entries_string) + tuple(self.domain)
         )
 
     def _jac(self, variable):
-        """ See :meth:`pybamm.Symbol._jac()`. """
+        """See :meth:`pybamm.Symbol._jac()`."""
         # Return zeros of correct size
         jac = csr_matrix((self.size, variable.evaluation_array.count(True)))
         return pybamm.Matrix(jac)
 
     def new_copy(self):
-        """ See :meth:`pybamm.Symbol.new_copy()`. """
+        """See :meth:`pybamm.Symbol.new_copy()`."""
         return self.__class__(
             self.entries,
             self.name,
@@ -102,11 +102,11 @@ class Array(pybamm.Symbol):
         )
 
     def _base_evaluate(self, t=None, y=None, y_dot=None, inputs=None):
-        """ See :meth:`pybamm.Symbol._base_evaluate()`. """
+        """See :meth:`pybamm.Symbol._base_evaluate()`."""
         return self._entries
 
     def is_constant(self):
-        """ See :meth:`pybamm.Symbol.is_constant()`. """
+        """See :meth:`pybamm.Symbol.is_constant()`."""
         return True
 
 

@@ -8,7 +8,7 @@ import numpy as np
 
 
 class StandardModelTest(object):
-    """ Basic processing test for the models. """
+    """Basic processing test for the models."""
 
     def __init__(
         self,
@@ -107,7 +107,7 @@ class StandardModelTest(object):
 
 
 class OptimisationsTest(object):
-    """ Test that the optimised models give the same result as the original model. """
+    """Test that the optimised models give the same result as the original model."""
 
     def __init__(self, model, parameter_values=None, disc=None):
         # Set parameter values

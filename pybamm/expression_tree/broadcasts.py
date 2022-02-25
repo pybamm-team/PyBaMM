@@ -130,7 +130,7 @@ class PrimaryBroadcast(Broadcast):
         return domain, auxiliary_domains
 
     def _unary_new_copy(self, child):
-        """ See :meth:`pybamm.UnaryOperator._unary_new_copy()`. """
+        """See :meth:`pybamm.UnaryOperator._unary_new_copy()`."""
         return self.__class__(child, self.broadcast_domain)
 
     def _evaluate_for_shape(self):
@@ -184,7 +184,7 @@ class SecondaryBroadcast(Broadcast):
     def check_and_set_domains(
         self, child, broadcast_type, broadcast_domain, broadcast_auxiliary_domains
     ):
-        """ See :meth:`Broadcast.check_and_set_domains` """
+        """See :meth:`Broadcast.check_and_set_domains`"""
         if child.domain == []:
             raise TypeError(
                 "Cannot take SecondaryBroadcast of an object with empty domain. "
@@ -232,7 +232,7 @@ class SecondaryBroadcast(Broadcast):
         return domain, auxiliary_domains
 
     def _unary_new_copy(self, child):
-        """ See :meth:`pybamm.UnaryOperator._unary_new_copy()`. """
+        """See :meth:`pybamm.UnaryOperator._unary_new_copy()`."""
         return SecondaryBroadcast(child, self.broadcast_domain)
 
     def _evaluate_for_shape(self):
@@ -274,7 +274,7 @@ class FullBroadcast(Broadcast):
     def check_and_set_domains(
         self, child, broadcast_type, broadcast_domain, broadcast_auxiliary_domains
     ):
-        """ See :meth:`Broadcast.check_and_set_domains` """
+        """See :meth:`Broadcast.check_and_set_domains`"""
 
         # Variables on the current collector can only be broadcast to 'primary'
         if child.domain == ["current collector"]:
@@ -287,7 +287,7 @@ class FullBroadcast(Broadcast):
         return domain, auxiliary_domains
 
     def _unary_new_copy(self, child):
-        """ See :meth:`pybamm.UnaryOperator._unary_new_copy()`. """
+        """See :meth:`pybamm.UnaryOperator._unary_new_copy()`."""
         return FullBroadcast(child, self.broadcast_domain, self.auxiliary_domains)
 
     def _evaluate_for_shape(self):

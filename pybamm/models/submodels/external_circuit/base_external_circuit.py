@@ -5,7 +5,7 @@ import pybamm
 
 
 class BaseModel(pybamm.BaseSubModel):
-    """Model to represent the behaviour of the external circuit. """
+    """Model to represent the behaviour of the external circuit."""
 
     def __init__(self, param):
         super().__init__(param)
@@ -27,7 +27,7 @@ class BaseModel(pybamm.BaseSubModel):
 
 
 class LeadingOrderBaseModel(BaseModel):
-    """Model to represent the behaviour of the external circuit, at leading order. """
+    """Model to represent the behaviour of the external circuit, at leading order."""
 
     def __init__(self, param):
         super().__init__(param)

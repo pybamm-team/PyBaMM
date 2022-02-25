@@ -881,16 +881,8 @@ class LithiumIonParameters:
         self.stress_critical_p = self.stress_critical_p_dim / self.E_p
 
         # composite particle
-        self.C_n_p1 = (
-            self.C_n
-            / self.R_n_typ ** 2
-            * self.R_n_typ_p1 ** 2
-        )
-        self.C_n_p2 = (
-            self.C_n
-            / self.R_n_typ ** 2
-            * self.R_n_typ_p2 ** 2
-        )
+        self.C_n_p1 = self.C_n / self.R_n_typ ** 2 * self.R_n_typ_p1 ** 2
+        self.C_n_p2 = self.C_n / self.R_n_typ ** 2 * self.R_n_typ_p2 ** 2
         self.V_n_p1 = (
             self.m_n_p1
             # / self.rho_n_p1

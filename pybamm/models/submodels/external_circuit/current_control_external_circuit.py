@@ -5,7 +5,7 @@ from .base_external_circuit import BaseModel, LeadingOrderBaseModel
 
 
 class CurrentControl(BaseModel):
-    """External circuit with current control. """
+    """External circuit with current control."""
 
     def __init__(self, param):
         super().__init__(param)
@@ -30,7 +30,7 @@ class CurrentControl(BaseModel):
 
 
 class LeadingOrderCurrentControl(CurrentControl, LeadingOrderBaseModel):
-    """External circuit with current control, for leading order models. """
+    """External circuit with current control, for leading order models."""
 
     def __init__(self, param):
         super().__init__(param)

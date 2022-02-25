@@ -103,7 +103,6 @@ if system() != "Windows":
         data = jax.numpy.asarray(scipy_coo.data)
         return JaxCooMatrix(row, col, data, value.shape)
 
-
 else:
 
     def create_jax_coo_matrix(value):  # pragma: no cover

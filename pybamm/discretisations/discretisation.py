@@ -843,7 +843,7 @@ class Discretisation(object):
             return discretised_symbol
 
     def _process_symbol(self, symbol):
-        """ See :meth:`Discretisation.process_symbol()`. """
+        """See :meth:`Discretisation.process_symbol()`."""
 
         if symbol.domain != []:
             spatial_method = self.spatial_methods[symbol.domain[0]]
@@ -1126,7 +1126,7 @@ class Discretisation(object):
         return self.concatenate(*sorted_equations, sparse=sparse)
 
     def check_model(self, model):
-        """ Perform some basic checks to make sure the discretised model makes sense."""
+        """Perform some basic checks to make sure the discretised model makes sense."""
         self.check_initial_conditions(model)
         self.check_variables(model)
 

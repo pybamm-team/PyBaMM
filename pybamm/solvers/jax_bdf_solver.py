@@ -9,7 +9,12 @@ from jax import dtypes
 from jax.util import safe_map, cache, split_list
 from jax.api_util import flatten_fun_nokwargs
 from jax.flatten_util import ravel_pytree
-from jax.tree_util import tree_map, tree_flatten, tree_unflatten, tree_multimap#, partial
+from jax.tree_util import (
+    tree_map,
+    tree_flatten,
+    tree_unflatten,
+    tree_multimap,
+)  # , partial
 from jax.interpreters import partial_eval as pe
 from jax import linear_util as lu
 from jax.config import config

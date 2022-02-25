@@ -49,14 +49,14 @@ class VariableBase(pybamm.Symbol):
         self.bounds = bounds
 
     def new_copy(self):
-        """ See :meth:`pybamm.Symbol.new_copy()`. """
+        """See :meth:`pybamm.Symbol.new_copy()`."""
 
         return self.__class__(
             self.name, self.domain, self.auxiliary_domains, self.bounds
         )
 
     def _evaluate_for_shape(self):
-        """ See :meth:`pybamm.Symbol.evaluate_for_shape_using_domain()` """
+        """See :meth:`pybamm.Symbol.evaluate_for_shape_using_domain()`"""
         return pybamm.evaluate_for_shape_using_domain(
             self.domain, self.auxiliary_domains
         )
@@ -190,13 +190,13 @@ class ExternalVariable(Variable):
         return self._size
 
     def new_copy(self):
-        """ See :meth:`pybamm.Symbol.new_copy()`. """
+        """See :meth:`pybamm.Symbol.new_copy()`."""
         return ExternalVariable(
             self.name, self.size, self.domain, self.auxiliary_domains
         )
 
     def _evaluate_for_shape(self):
-        """ See :meth:`pybamm.Symbol.evaluate_for_shape_using_domain()` """
+        """See :meth:`pybamm.Symbol.evaluate_for_shape_using_domain()`"""
         return np.nan * np.ones((self.size, 1))
 
     def _base_evaluate(self, t=None, y=None, y_dot=None, inputs=None):

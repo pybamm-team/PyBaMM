@@ -445,7 +445,7 @@ class Solution(object):
         return self._sub_solutions
 
     def __add__(self, other):
-        """ Adds two solutions together, e.g. when stepping """
+        """Adds two solutions together, e.g. when stepping"""
         if not isinstance(other, Solution):
             raise pybamm.SolverError(
                 "Only a Solution or None can be added to a Solution"

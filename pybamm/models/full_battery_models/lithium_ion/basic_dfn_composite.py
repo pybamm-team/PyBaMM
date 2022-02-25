@@ -126,13 +126,21 @@ class BasicDFNComposite(BaseModel):
         # right side. This is also accessible via `boundary_value(x, "right")`, with
         # "left" providing the boundary value of the left side
         c_s_surf_n_p1 = pybamm.surf(c_s_n_p1)
-        j0_n_p1 = param.j0_n(c_e_n, c_s_surf_n_p1, T, "phase 1") / param.C_r_n * param.a_p1_a_n 
+        j0_n_p1 = (
+            param.j0_n(c_e_n, c_s_surf_n_p1, T, "phase 1")
+            / param.C_r_n
+            * param.a_p1_a_n
+        )
         ocp_n_p1 = param.U_n(c_s_surf_n_p1, T, "phase 1")
         j_n_p1 = (
             2 * j0_n_p1 * pybamm.sinh(param.ne_n / 2 * (phi_s_n - phi_e_n - ocp_n_p1))
         )
         c_s_surf_n_p2 = pybamm.surf(c_s_n_p2)
-        j0_n_p2 = param.j0_n(c_e_n, c_s_surf_n_p2, T, "phase 2") / param.C_r_n * param.a_p2_a_n 
+        j0_n_p2 = (
+            param.j0_n(c_e_n, c_s_surf_n_p2, T, "phase 2")
+            / param.C_r_n
+            * param.a_p2_a_n
+        )
         ocp_n_p2 = param.U_n(c_s_surf_n_p2, T, "phase 2")
         j_n_p2 = (
             2 * j0_n_p2 * pybamm.sinh(param.ne_n / 2 * (phi_s_n - phi_e_n - ocp_n_p2))
@@ -351,9 +359,10 @@ class BasicDFNComposite(BaseModel):
             "Electrolyte concentration": c_e,
             "Positive particle surface concentration": c_s_surf_p,
             "Negative electrode potential [V]": param.potential_scale * phi_s_n,
-            "Electrolyte potential [V]":  -param.U_n_ref + param.potential_scale * phi_e,
+            "Electrolyte potential [V]": -param.U_n_ref + param.potential_scale * phi_e,
             "Positive electrode potential [V]": param.U_p_ref
-            - param.U_n_ref + param.potential_scale * phi_s_p,
+            - param.U_n_ref
+            + param.potential_scale * phi_s_p,
             "Negative electrolyte potential": phi_e_n,
             "Separator electrolyte potential": phi_e_s,
             "Positive electrolyte potential": phi_e_p,
@@ -364,7 +373,7 @@ class BasicDFNComposite(BaseModel):
             "Negative electrode potential": phi_s_n,
             "Terminal voltage": voltage,
             "Current [A]": I,
-            "Discharge capacity [A.h]":Q,
+            "Discharge capacity [A.h]": Q,
             "Time [s]": pybamm.t * param.timescale,
             "Terminal voltage [V]": voltage_dim,
             "Negative electrode open circuit potential of phase 1 [V]": ocp_n_p1_dim,
@@ -383,8 +392,10 @@ class BasicDFNComposite(BaseModel):
             "Averaged negative electrode concentration of phase 2 [mol.m-3]": c_s_xrav_n_p2_dim,
             "Negative electrode concentration of phase 1": c_s_n_p1,
             "Negative electrode concentration of phase 2": c_s_n_p2,
-            "Negative electrode concentration of phase 1 [mol.m-3]": c_s_n_p1 * param.c_n_p1_max,
-            "Negative electrode concentration of phase 2 [mol.m-3]": c_s_n_p2 * param.c_n_p2_max,
+            "Negative electrode concentration of phase 1 [mol.m-3]": c_s_n_p1
+            * param.c_n_p1_max,
+            "Negative electrode concentration of phase 2 [mol.m-3]": c_s_n_p2
+            * param.c_n_p2_max,
             "Averaged positive electrode concentration": c_s_xrav_p,
             "Averaged positive electrode concentration [mol.m-3]": c_s_xrav_p_dim,
             "Negative electrode interfacial current density of phase 1 [A.m-2]": j_n_p1_dim,

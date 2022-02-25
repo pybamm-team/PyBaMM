@@ -65,7 +65,7 @@ class SymbolUnpacker(object):
             return unpacked
 
     def _unpack(self, symbol):
-        """ See :meth:`SymbolUnpacker.unpack()`. """
+        """See :meth:`SymbolUnpacker.unpack()`."""
 
         children = symbol.children
 

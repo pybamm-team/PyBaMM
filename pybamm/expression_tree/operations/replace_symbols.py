@@ -169,7 +169,7 @@ class SymbolReplacer(object):
             return replaced_symbol
 
     def _process_symbol(self, symbol):
-        """ See :meth:`Simplification.process_symbol()`. """
+        """See :meth:`Simplification.process_symbol()`."""
         if symbol.id in self._symbol_replacement_map_ids.keys():
             return self._symbol_replacement_map_ids[symbol.id]
 

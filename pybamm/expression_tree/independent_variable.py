@@ -25,13 +25,13 @@ class IndependentVariable(pybamm.Symbol):
         super().__init__(name, domain=domain, auxiliary_domains=auxiliary_domains)
 
     def _evaluate_for_shape(self):
-        """ See :meth:`pybamm.Symbol.evaluate_for_shape_using_domain()` """
+        """See :meth:`pybamm.Symbol.evaluate_for_shape_using_domain()`"""
         return pybamm.evaluate_for_shape_using_domain(
             self.domain, self.auxiliary_domains
         )
 
     def _jac(self, variable):
-        """ See :meth:`pybamm.Symbol._jac()`. """
+        """See :meth:`pybamm.Symbol._jac()`."""
         return pybamm.Scalar(0)
 
 
@@ -45,11 +45,11 @@ class Time(IndependentVariable):
         super().__init__("time")
 
     def new_copy(self):
-        """ See :meth:`pybamm.Symbol.new_copy()`. """
+        """See :meth:`pybamm.Symbol.new_copy()`."""
         return Time()
 
     def _base_evaluate(self, t=None, y=None, y_dot=None, inputs=None):
-        """ See :meth:`pybamm.Symbol._base_evaluate()`. """
+        """See :meth:`pybamm.Symbol._base_evaluate()`."""
         if t is None:
             raise ValueError("t must be provided")
         return t
@@ -103,7 +103,7 @@ class SpatialVariable(IndependentVariable):
             )
 
     def new_copy(self):
-        """ See :meth:`pybamm.Symbol.new_copy()`. """
+        """See :meth:`pybamm.Symbol.new_copy()`."""
         return self.__class__(
             self.name, self.domain, self.auxiliary_domains, self.coord_sys
         )

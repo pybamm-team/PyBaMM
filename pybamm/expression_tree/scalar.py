@@ -41,7 +41,7 @@ class Scalar(pybamm.Symbol):
         self._value = np.float64(value)
 
     def set_id(self):
-        """ See :meth:`pybamm.Symbol.set_id()`. """
+        """See :meth:`pybamm.Symbol.set_id()`."""
         # We must include the value in the hash, since different scalars can be
         # indistinguishable by class, name and domain alone
         self._id = hash(
@@ -49,17 +49,17 @@ class Scalar(pybamm.Symbol):
         )
 
     def _base_evaluate(self, t=None, y=None, y_dot=None, inputs=None):
-        """ See :meth:`pybamm.Symbol._base_evaluate()`. """
+        """See :meth:`pybamm.Symbol._base_evaluate()`."""
         return self._value
 
     def _jac(self, variable):
-        """ See :meth:`pybamm.Symbol._jac()`. """
+        """See :meth:`pybamm.Symbol._jac()`."""
         return pybamm.Scalar(0)
 
     def new_copy(self):
-        """ See :meth:`pybamm.Symbol.new_copy()`. """
+        """See :meth:`pybamm.Symbol.new_copy()`."""
         return Scalar(self.value, self.name, self.domain)
 
     def is_constant(self):
-        """ See :meth:`pybamm.Symbol.is_constant()`. """
+        """See :meth:`pybamm.Symbol.is_constant()`."""
         return True

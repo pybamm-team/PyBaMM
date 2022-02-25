@@ -17,7 +17,7 @@ from collections import defaultdict
 
 
 def root_dir():
-    """ return the root directory of the PyBaMM install directory """
+    """return the root directory of the PyBaMM install directory"""
     return str(pathlib.Path(pybamm.__path__[0]).parent)
 
 
