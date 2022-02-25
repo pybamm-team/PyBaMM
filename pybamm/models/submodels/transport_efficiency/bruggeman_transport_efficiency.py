@@ -1,5 +1,5 @@
 #
-# Class for Bruggemantransport_efficiency 
+# Class for Bruggemantransport_efficiency
 #
 import pybamm
 

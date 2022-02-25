@@ -50,7 +50,9 @@ class BaseModel(pybamm.BaseSubModel):
             variables.update(
                 {
                     "Separator transport_efficiency": tor_s,
-                    "X-averaged separator transport_efficiency": pybamm.x_average(tor_s),
+                    "X-averaged separator transport_efficiency": pybamm.x_average(
+                        tor_s
+                    ),
                 }
             )
 

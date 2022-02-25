@@ -74,10 +74,14 @@ class SPMe(SPM):
         ] = pybamm.convection.transverse.NoConvection(self.param, self.options)
 
     def set_transport_efficiency_submodels(self):
-        self.submodels["electrolyte transport_efficiency"] = pybamm.transport_efficiency.Bruggeman(
+        self.submodels[
+            "electrolyte transport_efficiency"
+        ] = pybamm.transport_efficiency.Bruggeman(
             self.param, "Electrolyte", self.options, True
         )
-        self.submodels["electrode transport_efficiency"] = pybamm.transport_efficiency.Bruggeman(
+        self.submodels[
+            "electrode transport_efficiency"
+        ] = pybamm.transport_efficiency.Bruggeman(
             self.param, "Electrode", self.options, True
         )
 
