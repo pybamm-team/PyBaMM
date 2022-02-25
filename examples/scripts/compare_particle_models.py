@@ -20,7 +20,7 @@ models = [
 ]
 
 # pick parameter values
-parameter_values = pybamm.ParameterValues(chemistry=pybamm.parameter_sets.Ecker2015)
+parameter_values = pybamm.ParameterValues("Ecker2015")
 
 # create and solve simulations
 sims = []

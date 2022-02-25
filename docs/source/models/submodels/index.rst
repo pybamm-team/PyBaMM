@@ -5,6 +5,7 @@ Submodels
     :maxdepth: 1
 
     base_submodel
+    active_material/index
     current_collector/index
     convection/index
     electrode/index
@@ -14,7 +15,7 @@ Submodels
     interface/index
     oxygen_diffusion/index
     particle/index
-    particle_cracking/index
+    particle_mechanics/index
     porosity/index
     thermal/index
     tortuosity/index

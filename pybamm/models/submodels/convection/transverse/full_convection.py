@@ -22,7 +22,9 @@ class Full(BaseTransverseModel):
 
     def get_fundamental_variables(self):
 
-        p_s = pybamm.Variable("Separator pressure", domain="current collector")
+        p_s = pybamm.Variable(
+            "X-averaged separator pressure", domain="current collector"
+        )
         variables = self._get_standard_separator_pressure_variables(p_s)
 
         # TODO: put in permeability and viscosity

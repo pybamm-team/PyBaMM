@@ -1,15 +1,16 @@
 #
 # Class for quick plotting of variables from models
 #
+import os
 import numpy as np
 import pybamm
 from collections import defaultdict
 
 
 class LoopList(list):
-    """
-    A list which loops over itself when accessing an index so that it never runs out
-    """
+
+    """A list which loops over itself when accessing an
+    index so that it never runs out"""
 
     def __getitem__(self, i):
         # implement looping by calling "(i) modulo (length of list)"
@@ -19,19 +20,15 @@ class LoopList(list):
 def ax_min(data):
     """Calculate appropriate minimum axis value for plotting"""
     data_min = np.nanmin(data)
-    if data_min <= 0:
-        return 1.04 * data_min
-    else:
-        return 0.96 * data_min
+    data_max = np.nanmax(data)
+    return data_max - 1.05 * (data_max - data_min)
 
 
 def ax_max(data):
     """Calculate appropriate maximum axis value for plotting"""
+    data_min = np.nanmin(data)
     data_max = np.nanmax(data)
-    if data_max <= 0:
-        return 0.96 * data_max
-    else:
-        return 1.04 * data_max
+    return data_min + 1.05 * (data_max - data_min)
 
 
 def split_long_string(title, max_words=None):
@@ -106,19 +103,21 @@ class QuickPlot(object):
         spatial_unit="um",
         variable_limits="fixed",
     ):
-        if isinstance(solutions, (pybamm.Solution, pybamm.Simulation)):
-            solutions = [solutions]
-        elif not isinstance(solutions, list):
+        input_solutions = solutions
+        solutions = []
+        if not isinstance(input_solutions, (pybamm.Solution, pybamm.Simulation, list)):
             raise TypeError(
                 "solutions must be 'pybamm.Solution' or 'pybamm.Simulation' or list"
             )
-
-        # Extract solution from any simulations
-        for idx, sol in enumerate(solutions):
-            if isinstance(sol, pybamm.Simulation):
-                # 'sol' is actually a 'Simulation' object here so it has a 'Solution'
-                # attribute
-                solutions[idx] = sol.solution
+        elif not isinstance(input_solutions, list):
+            input_solutions = [input_solutions]
+        for sim_or_sol in input_solutions:
+            if isinstance(sim_or_sol, pybamm.Simulation):
+                # 'sim_or_sol' is actually a 'Simulation' object here so it has a
+                # 'Solution' attribute
+                solutions.append(sim_or_sol.solution)
+            elif isinstance(sim_or_sol, pybamm.Solution):
+                solutions.append(sim_or_sol)
 
         models = [solution.all_models[0] for solution in solutions]
 
@@ -137,33 +136,19 @@ class QuickPlot(object):
         # Set colors, linestyles, figsize, axis limits
         # call LoopList to make sure list index never runs out
         if colors is None:
-            self.colors = LoopList([None])
+            self.colors = LoopList(colors or ["r", "b", "k", "g", "m", "c"])
         else:
             self.colors = LoopList(colors)
         self.linestyles = LoopList(linestyles or ["-", ":", "--", "-."])
 
         # Default output variables for lead-acid and lithium-ion
         if output_variables is None:
-            if isinstance(models[0], pybamm.lithium_ion.BaseModel):
-                output_variables = [
-                    "Negative particle surface concentration [mol.m-3]",
-                    "Electrolyte concentration [mol.m-3]",
-                    "Positive particle surface concentration [mol.m-3]",
-                    "Current [A]",
-                    "Negative electrode potential [V]",
-                    "Electrolyte potential [V]",
-                    "Positive electrode potential [V]",
-                    "Terminal voltage [V]",
-                ]
-            elif isinstance(models[0], pybamm.lead_acid.BaseModel):
-                output_variables = [
-                    "Interfacial current density [A.m-2]",
-                    "Electrolyte concentration [mol.m-3]",
-                    "Current [A]",
-                    "Porosity",
-                    "Electrolyte potential [V]",
-                    "Terminal voltage [V]",
-                ]
+            output_variables = models[0].default_quick_plot_variables
+            # raise error if still None
+            if output_variables is None:
+                raise ValueError(
+                    f"No default output variables provided for {models[0].name}"
+                )
 
         self.n_rows = n_rows or int(
             len(output_variables) // np.sqrt(len(output_variables))
@@ -183,7 +168,7 @@ class QuickPlot(object):
             self.spatial_unit = "mm"
         elif spatial_unit == "um":  # micrometers
             self.spatial_factor = 1e6
-            self.spatial_unit = "$\mu m$"
+            self.spatial_unit = "$\mu$m"
         else:
             raise ValueError("spatial unit '{}' not recognized".format(spatial_unit))
 
@@ -261,7 +246,7 @@ class QuickPlot(object):
         self.spatial_variable_dict = {}
         self.first_dimensional_spatial_variable = {}
         self.second_dimensional_spatial_variable = {}
-        self.is_x_r = {}
+        self.x_first_and_y_second = {}
         self.is_y_z = {}
 
         # Calculate subplot positions based on number of variables supplied
@@ -343,16 +328,21 @@ class QuickPlot(object):
                     self.second_dimensional_spatial_variable[variable_tuple] = (
                         second_spatial_var_value * self.spatial_factor
                     )
-                    if first_spatial_var_name == "r" and second_spatial_var_name == "x":
-                        self.is_x_r[variable_tuple] = True
+                    # different order based on whether the domains
+                    # are x-r, x-z or y-z, etc
+                    if (
+                        first_spatial_var_name in ("r", "R")
+                        and second_spatial_var_name == "x"
+                    ):
+                        self.x_first_and_y_second[variable_tuple] = False
                         self.is_y_z[variable_tuple] = False
                     elif (
                         first_spatial_var_name == "y" and second_spatial_var_name == "z"
                     ):
-                        self.is_x_r[variable_tuple] = False
+                        self.x_first_and_y_second[variable_tuple] = True
                         self.is_y_z[variable_tuple] = True
                     else:
-                        self.is_x_r[variable_tuple] = False
+                        self.x_first_and_y_second[variable_tuple] = True
                         self.is_y_z[variable_tuple] = False
 
             # Store variables and subplot position
@@ -375,7 +365,7 @@ class QuickPlot(object):
             if variable.domain[0] == "current collector":
                 domain = "current collector"
             else:
-                domain = variable.auxiliary_domains["secondary"][0]
+                domain = variable.domains["secondary"][0]
 
         if domain == "current collector":
             domain += " {}".format(spatial_var_name)
@@ -397,8 +387,8 @@ class QuickPlot(object):
                 x_min = self.first_dimensional_spatial_variable[key][0]
                 x_max = self.first_dimensional_spatial_variable[key][-1]
             elif variable_lists[0][0].dimensions == 2:
-                # different order based on whether the domains are x-r, x-z or y-z
-                if self.is_x_r[key] is True:
+                # different order based on whether the domains are x-r, x-z or y-z, etc
+                if self.x_first_and_y_second[key] is False:
                     x_min = self.second_dimensional_spatial_variable[key][0]
                     x_max = self.second_dimensional_spatial_variable[key][-1]
                     y_min = self.first_dimensional_spatial_variable[key][0]
@@ -430,6 +420,11 @@ class QuickPlot(object):
                         for var in variable_list
                     ]
                 )
+                if np.isnan(var_min) or np.isnan(var_max):
+                    raise ValueError(
+                        "The variable limits are set to 'fixed' but the min and max "
+                        "values are NaN"
+                    )
                 if var_min == var_max:
                     var_min -= 1
                     var_max += 1
@@ -503,7 +498,7 @@ class QuickPlot(object):
                         (self.plots[key][i][j],) = ax.plot(
                             full_t / self.time_scaling_factor,
                             variable(full_t, warn=False),
-                            # color=self.colors[i],
+                            color=self.colors[i],
                             linestyle=linestyle,
                         )
                         variable_handles.append(self.plots[key][0][j])
@@ -539,7 +534,7 @@ class QuickPlot(object):
                         (self.plots[key][i][j],) = ax.plot(
                             self.first_dimensional_spatial_variable[key],
                             variable(t_in_seconds, **spatial_vars, warn=False),
-                            # color=self.colors[i],
+                            color=self.colors[i],
                             linestyle=linestyle,
                             zorder=10,
                         )
@@ -554,8 +549,8 @@ class QuickPlot(object):
                 spatial_vars = self.spatial_variable_dict[key]
                 # there can only be one entry in the variable list
                 variable = variable_lists[0][0]
-                # different order based on whether the domains are x-r, x-z or y-z
-                if self.is_x_r[key] is True:
+                # different order based on whether the domains are x-r, x-z or y-z, etc
+                if self.x_first_and_y_second[key] is False:
                     x_name = list(spatial_vars.keys())[1][0]
                     y_name = list(spatial_vars.keys())[0][0]
                     x = self.second_dimensional_spatial_variable[key]
@@ -566,11 +561,7 @@ class QuickPlot(object):
                     y_name = list(spatial_vars.keys())[1][0]
                     x = self.first_dimensional_spatial_variable[key]
                     y = self.second_dimensional_spatial_variable[key]
-                    # need to transpose if domain is x-z
-                    if self.is_y_z[key] is True:
-                        var = variable(t_in_seconds, **spatial_vars, warn=False)
-                    else:
-                        var = variable(t_in_seconds, **spatial_vars, warn=False).T
+                    var = variable(t_in_seconds, **spatial_vars, warn=False).T
                 ax.set_xlabel("{} [{}]".format(x_name, self.spatial_unit))
                 ax.set_ylabel("{} [{}]".format(y_name, self.spatial_unit))
                 vmin, vmax = self.variable_limits[key]
@@ -583,6 +574,7 @@ class QuickPlot(object):
                         var,
                         vmin=vmin,
                         vmax=vmax,
+                        shading="auto",
                     )
                 else:
                     self.plots[key][0][0] = ax.contourf(
@@ -599,7 +591,7 @@ class QuickPlot(object):
             # Set either y label or legend entries
             if len(key) == 1:
                 title = split_long_string(key[0])
-                ax.set_title(title)
+                ax.set_title(title, fontsize="medium")
             else:
                 ax.legend(
                     variable_handles,
@@ -656,24 +648,26 @@ class QuickPlot(object):
             step = step or self.max_t / 100
             widgets.interact(
                 lambda t: self.plot(t, dynamic=False),
-                t=widgets.FloatSlider(min=0, max=self.max_t, step=step, value=0),
+                t=widgets.FloatSlider(
+                    min=self.min_t, max=self.max_t, step=step, value=self.min_t
+                ),
                 continuous_update=False,
             )
         else:
             import matplotlib.pyplot as plt
             from matplotlib.widgets import Slider
 
-            # create an initial plot at time 0
-            self.plot(0, dynamic=True)
+            # create an initial plot at time self.min_t
+            self.plot(self.min_t, dynamic=True)
 
             axcolor = "lightgoldenrodyellow"
             ax_slider = plt.axes([0.315, 0.02, 0.37, 0.03], facecolor=axcolor)
             self.slider = Slider(
                 ax_slider,
                 "Time [{}]".format(self.time_unit),
-                0,
+                self.min_t,
                 self.max_t,
-                valinit=0,
+                valinit=self.min_t,
                 color="#1f77b4",
             )
             self.slider.on_changed(self.slider_update)
@@ -703,13 +697,12 @@ class QuickPlot(object):
                             warn=False,
                         )
                         plot[i][j].set_ydata(var)
-                        var_min = min(var_min, np.nanmin(var))
-                        var_max = max(var_max, np.nanmax(var))
+                        var_min = min(var_min, ax_min(var))
+                        var_max = max(var_max, ax_max(var))
                 # update boundaries between subdomains
                 y_min, y_max = self.axis_limits[key][2:]
                 if y_min is None and y_max is None:
-                    y_min, y_max = ax_min(var_min), ax_max(var_max)
-                    ax.set_ylim(y_min, y_max)
+                    ax.set_ylim(var_min, var_max)
             elif self.variables[key][0][0].dimensions == 2:
                 # 2D plot: plot as a function of x and y at time t
                 # Read dictionary of spatial variables
@@ -717,18 +710,14 @@ class QuickPlot(object):
                 # there can only be one entry in the variable list
                 variable = self.variables[key][0][0]
                 vmin, vmax = self.variable_limits[key]
-                if self.is_x_r[key] is True:
+                if self.x_first_and_y_second[key] is False:
                     x = self.second_dimensional_spatial_variable[key]
                     y = self.first_dimensional_spatial_variable[key]
                     var = variable(time_in_seconds, **spatial_vars, warn=False)
                 else:
                     x = self.first_dimensional_spatial_variable[key]
                     y = self.second_dimensional_spatial_variable[key]
-                    # need to transpose if domain is x-z
-                    if self.is_y_z[key] is True:
-                        var = variable(time_in_seconds, **spatial_vars, warn=False)
-                    else:
-                        var = variable(time_in_seconds, **spatial_vars, warn=False).T
+                    var = variable(time_in_seconds, **spatial_vars, warn=False).T
                 # store the plot and the var data (for testing) as cant access
                 # z data from QuadMesh or QuadContourSet object
                 if self.is_y_z[key] is True:
@@ -738,6 +727,7 @@ class QuickPlot(object):
                         var,
                         vmin=vmin,
                         vmax=vmax,
+                        shading="auto",
                     )
                 else:
                     self.plots[key][0][0] = ax.contourf(
@@ -753,3 +743,41 @@ class QuickPlot(object):
                     )
 
         self.fig.canvas.draw_idle()
+
+    def create_gif(self, number_of_images=80, duration=0.1, output_filename="plot.gif"):
+        """
+        Generates x plots over a time span of max_t - min_t and compiles them to create
+        a GIF.
+
+        Parameters
+        ----------
+        number_of_images : int (optional)
+            Number of images/plots to be compiled for a GIF.
+        duration : float (optional)
+            Duration of visibility of a single image/plot in the created GIF.
+        output_filename : str (optional)
+            Name of the generated GIF file.
+
+        """
+        import imageio
+        import matplotlib.pyplot as plt
+
+        # time stamps at which the images/plots will be created
+        time_array = np.linspace(self.min_t, self.max_t, num=number_of_images)
+        images = []
+
+        # create images/plots
+        for val in time_array:
+            self.plot(val)
+            images.append("plot" + str(val) + ".png")
+            self.fig.savefig("plot" + str(val) + ".png", dpi=300)
+            plt.close()
+
+        # compile the images/plots to create a GIF
+        with imageio.get_writer(output_filename, mode="I", duration=duration) as writer:
+            for image in images:
+                writer.append_data(imageio.imread(image))
+
+        # remove the generated images
+        for image in images:
+            os.remove(image)

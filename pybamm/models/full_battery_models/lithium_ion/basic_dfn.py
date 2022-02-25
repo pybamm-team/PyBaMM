@@ -52,7 +52,7 @@ class BasicDFN(BaseModel):
         )
         # Concatenations combine several variables into a single variable, to simplify
         # implementing equations that hold over several domains
-        c_e = pybamm.Concatenation(c_e_n, c_e_s, c_e_p)
+        c_e = pybamm.concatenation(c_e_n, c_e_s, c_e_p)
 
         # Electrolyte potential
         phi_e_n = pybamm.Variable(
@@ -62,7 +62,7 @@ class BasicDFN(BaseModel):
         phi_e_p = pybamm.Variable(
             "Positive electrolyte potential", domain="positive electrode"
         )
-        phi_e = pybamm.Concatenation(phi_e_n, phi_e_s, phi_e_p)
+        phi_e = pybamm.concatenation(phi_e_n, phi_e_s, phi_e_p)
 
         # Electrode potential
         phi_s_n = pybamm.Variable(
@@ -107,14 +107,14 @@ class BasicDFN(BaseModel):
         eps_p = pybamm.PrimaryBroadcast(
             pybamm.Parameter("Positive electrode porosity"), "positive electrode"
         )
-        eps = pybamm.Concatenation(eps_n, eps_s, eps_p)
+        eps = pybamm.concatenation(eps_n, eps_s, eps_p)
 
         # Active material volume fraction (eps + eps_s + eps_inactive = 1)
         eps_s_n = pybamm.Parameter("Negative electrode active material volume fraction")
         eps_s_p = pybamm.Parameter("Positive electrode active material volume fraction")
 
         # Tortuosity
-        tor = pybamm.Concatenation(
+        tor = pybamm.concatenation(
             eps_n ** param.b_e_n, eps_s ** param.b_e_s, eps_p ** param.b_e_p
         )
 
@@ -123,7 +123,7 @@ class BasicDFN(BaseModel):
         # right side. This is also accessible via `boundary_value(x, "right")`, with
         # "left" providing the boundary value of the left side
         c_s_surf_n = pybamm.surf(c_s_n)
-        j0_n = param.j0_n(c_e_n, c_s_surf_n, T) / param.C_r_n
+        j0_n = param.gamma_n * param.j0_n(c_e_n, c_s_surf_n, T) / param.C_r_n
         j_n = (
             2
             * j0_n
@@ -142,7 +142,7 @@ class BasicDFN(BaseModel):
                 param.ne_p / 2 * (phi_s_p - phi_e_p - param.U_p(c_s_surf_p, T))
             )
         )
-        j = pybamm.Concatenation(j_n, j_s, j_p)
+        j = pybamm.concatenation(j_n, j_s, j_p)
 
         ######################
         # State of Charge
@@ -168,7 +168,11 @@ class BasicDFN(BaseModel):
         self.boundary_conditions[c_s_n] = {
             "left": (pybamm.Scalar(0), "Neumann"),
             "right": (
-                -param.C_n * j_n / param.a_R_n / param.D_n(c_s_surf_n, T),
+                -param.C_n
+                * j_n
+                / param.a_R_n
+                / param.gamma_n
+                / param.D_n(c_s_surf_n, T),
                 "Neumann",
             ),
         }
@@ -183,16 +187,8 @@ class BasicDFN(BaseModel):
                 "Neumann",
             ),
         }
-        # c_n_init and c_p_init can in general be functions of x
-        # Note the broadcasting, for domains
-        x_n = pybamm.PrimaryBroadcast(
-            pybamm.standard_spatial_vars.x_n, "negative particle"
-        )
-        self.initial_conditions[c_s_n] = param.c_n_init(x_n)
-        x_p = pybamm.PrimaryBroadcast(
-            pybamm.standard_spatial_vars.x_p, "positive particle"
-        )
-        self.initial_conditions[c_s_p] = param.c_p_init(x_p)
+        self.initial_conditions[c_s_n] = param.c_n_init
+        self.initial_conditions[c_s_p] = param.c_p_init
         # Events specify points at which a solution should terminate
         self.events += [
             pybamm.Event(
@@ -215,9 +211,9 @@ class BasicDFN(BaseModel):
         ######################
         # Current in the solid
         ######################
-        sigma_eff_n = param.sigma_n * eps_s_n ** param.b_s_n
+        sigma_eff_n = param.sigma_n(T) * eps_s_n ** param.b_s_n
         i_s_n = -sigma_eff_n * pybamm.grad(phi_s_n)
-        sigma_eff_p = param.sigma_p * eps_s_p ** param.b_s_p
+        sigma_eff_p = param.sigma_p(T) * eps_s_p ** param.b_s_p
         i_s_p = -sigma_eff_p * pybamm.grad(phi_s_p)
         # The `algebraic` dictionary contains differential equations, with the key being
         # the main scalar variable of interest in the equation
@@ -234,12 +230,10 @@ class BasicDFN(BaseModel):
         # Initial conditions must also be provided for algebraic equations, as an
         # initial guess for a root-finding algorithm which calculates consistent initial
         # conditions
-        # We evaluate c_n_init at x=0 and c_p_init at x=1 (this is just an initial
-        # guess so actual value is not too important)
+        # We evaluate c_n_init at r=0, x=0 and c_p_init at r=0, x=1
+        # (this is just an initial guess so actual value is not too important)
         self.initial_conditions[phi_s_n] = pybamm.Scalar(0)
-        self.initial_conditions[phi_s_p] = param.U_p(
-            param.c_p_init(1), param.T_init
-        ) - param.U_n(param.c_n_init(0), param.T_init)
+        self.initial_conditions[phi_s_p] = param.ocv_init
 
         ######################
         # Current in the electrolyte
@@ -252,7 +246,7 @@ class BasicDFN(BaseModel):
             "left": (pybamm.Scalar(0), "Neumann"),
             "right": (pybamm.Scalar(0), "Neumann"),
         }
-        self.initial_conditions[phi_e] = -param.U_n(param.c_n_init(0), param.T_init)
+        self.initial_conditions[phi_e] = -param.U_n_init
 
         ######################
         # Electrolyte concentration

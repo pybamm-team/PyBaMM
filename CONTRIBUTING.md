@@ -9,7 +9,7 @@ If you're already familiar with our workflow, maybe have a quick look at the [pr
 Before you commit any code, please perform the following checks:
 
 - [No style issues](#coding-style-guidelines): `$ flake8`
-- [All tests pass](#testing): `$ tox -e quick` (GNU/Linux and MacOS), `$ python -m tox -e windows-quick` (Windows)
+- [All tests pass](#testing): `$ tox -e unit` (GNU/Linux and MacOS), `$ python -m tox -e windows-unit` (Windows)
 - [The documentation builds](#building-the-documentation): `$ python -m tox -e docs`
 
 ## Workflow
@@ -21,84 +21,28 @@ We use [GIT](https://en.wikipedia.org/wiki/Git) and [GitHub](https://en.wikipedi
 1. Create an [issue](https://guides.github.com/features/issues/) where new proposals can be discussed before any coding is done.
 2. Create a [branch](https://help.github.com/articles/creating-and-deleting-branches-within-your-repository/) of this repo (ideally on your own [fork](https://help.github.com/articles/fork-a-repo/)), where all changes will be made
 3. Download the source code onto your local system, by [cloning](https://help.github.com/articles/cloning-a-repository/) the repository (or your fork of the repository).
-4. [Install](#installation) PyBaMM with the developer options.
+4. [Install](https://pybamm.readthedocs.io/en/latest/install/install-from-source.html) PyBaMM with the developer options.
 5. [Test](#testing) if your installation worked, using the test script: `$ python run-tests.py --unit`.
 
 You now have everything you need to start making changes!
 
 ### B. Writing your code
 
-5. PyBaMM is developed in [Python](https://en.wikipedia.org/wiki/Python_(programming_language)), and makes heavy use of [NumPy](https://en.wikipedia.org/wiki/NumPy) (see also [NumPy for MatLab users](https://numpy.org/doc/stable/user/numpy-for-matlab-users.html) and [Python for R users](http://blog.hackerearth.com/how-can-r-users-learn-python-for-data-science)).
-6. Make sure to follow our [coding style guidelines](#coding-style-guidelines).
-7. Commit your changes to your branch with [useful, descriptive commit messages](https://chris.beams.io/posts/git-commit/): Remember these are publicly visible and should still make sense a few months ahead in time. While developing, you can keep using the GitHub issue you're working on as a place for discussion. [Refer to your commits](https://stackoverflow.com/questions/8910271/how-can-i-reference-a-commit-in-an-issue-comment-on-github) when discussing specific lines of code.
-8. If you want to add a dependency on another library, or re-use code you found somewhere else, have a look at [these guidelines](#dependencies-and-reusing-code).
+6. PyBaMM is developed in [Python](https://en.wikipedia.org/wiki/Python_(programming_language)), and makes heavy use of [NumPy](https://en.wikipedia.org/wiki/NumPy) (see also [NumPy for MatLab users](https://numpy.org/doc/stable/user/numpy-for-matlab-users.html) and [Python for R users](http://blog.hackerearth.com/how-can-r-users-learn-python-for-data-science)).
+7. Make sure to follow our [coding style guidelines](#coding-style-guidelines).
+8. Commit your changes to your branch with [useful, descriptive commit messages](https://chris.beams.io/posts/git-commit/): Remember these are publicly visible and should still make sense a few months ahead in time. While developing, you can keep using the GitHub issue you're working on as a place for discussion. [Refer to your commits](https://stackoverflow.com/questions/8910271/how-can-i-reference-a-commit-in-an-issue-comment-on-github) when discussing specific lines of code.
+9. If you want to add a dependency on another library, or re-use code you found somewhere else, have a look at [these guidelines](#dependencies-and-reusing-code).
 
 ### C. Merging your changes with PyBaMM
 
-9. [Test your code!](#testing)
-10. PyBaMM has online documentation at http://pybamm.readthedocs.io/. To make sure any new methods or classes you added show up there, please read the [documentation](#documentation) section.
-11. If you added a major new feature, perhaps it should be showcased in an [example notebook](#example-notebooks).
-12. When you feel your code is finished, or at least warrants serious discussion, run the [pre-commit checks](#pre-commit-checks) and then create a [pull request](https://help.github.com/articles/about-pull-requests/) (PR) on [PyBaMM's GitHub page](https://github.com/pybamm-team/PyBaMM).
-13. Once a PR has been created, it will be reviewed by any member of the community. Changes might be suggested which you can make by simply adding new commits to the branch. When everything's finished, someone with the right GitHub permissions will merge your changes into PyBaMM master repository.
+10. [Test your code!](#testing)
+11. PyBaMM has online documentation at http://pybamm.readthedocs.io/. To make sure any new methods or classes you added show up there, please read the [documentation](#documentation) section.
+12. If you added a major new feature, perhaps it should be showcased in an [example notebook](#example-notebooks).
+13. When you feel your code is finished, or at least warrants serious discussion, run the [pre-commit checks](#pre-commit-checks) and then create a [pull request](https://help.github.com/articles/about-pull-requests/) (PR) on [PyBaMM's GitHub page](https://github.com/pybamm-team/PyBaMM).
+14. Once a PR has been created, it will be reviewed by any member of the community. Changes might be suggested which you can make by simply adding new commits to the branch. When everything's finished, someone with the right GitHub permissions will merge your changes into PyBaMM main repository.
 
 Finally, if you really, really, _really_ love developing PyBaMM, have a look at the current [project infrastructure](#infrastructure).
 
-
-## Installation
-
-To install PyBaMM with all developer options follow the steps below:
-
-
-1. Install tox using the commands below:
-```bash
-pip install tox # (Using this, you will need to additionally install tox in your virtual environment as decribed below)
-# or
-pip install pipx # (For installing pipx)
-pipx install tox # (Using this, tox can automatically be accessed in your virtual environment)
-```
-You can also explore and install pipx from their [GitHub repository](https://github.com/pipxproject/pipx)
-
-2. Install sundials using the command below:
-```bash
-# (Skip this step for Windows installation)
-brew install sundials # (MacOS)
-#
-tox -e pybamm-requires # (GNU/Linux)
-```
-3. Installing PyBaMM
-
-This can be achieved by forking the repository and cloning it in your machine.
-
-4. Navigate to the cloned repository and create a virtual environment using the commands below:
-```bash
-tox -e dev # (GNU/Linux and MacOS)
-#
-python -m tox -e windows-dev # (Windows)
-```
-
-This will
-
-a. Create a virtual environment located at `.tox/dev`.
-
-b. Install all the dependencies for PyBaMM, including the ones for documentation and development.
-
-c. Tell Python to use your local pybamm files when you use `import pybamm` anywhere on your system.
-
-5. Finally, activate your environment.
-
-
-```bash
-source .tox/dev/bin/activate # (GNU/Linux and MacOS)
-#
-.tox\windows-dev\Scripts\activate.bat # (Windows)
-```
-6. Inside the virtual environment, type:
-```bash
-pip install tox # (Skip this step if you used pipx above)
-```
-
-
-Full documentation with an installation guide can be found [here](https://pybamm.readthedocs.io/en/latest/install/install-from-source.html)
 
 ## Coding style guidelines
 
@@ -126,7 +70,7 @@ We use [black](https://black.readthedocs.io/en/stable/) to automatically configu
 black {source_file_or_directory}
 ```
 
-2. Editor: black can be [configured](https://black.readthedocs.io/en/stable/editor_integration.html) to automatically reformat a python script each time the script is saved in an editor.
+2. Editor: black can be [configured](https://test-black.readthedocs.io/en/latest/editor_integration.html) to automatically reformat a python script each time the script is saved in an editor.
 
 If you want to use black in your editor, you may need to change the max line length in your editor settings.
 
@@ -178,12 +122,12 @@ This allows people to (1) use PyBaMM without ever importing Matplotlib and (2) c
 
 All code requires testing. We use the [unittest](https://docs.python.org/3.3/library/unittest.html) package for our tests. (These tests typically just check that the code runs without error, and so, are more _debugging_ than _testing_ in a strict sense. Nevertheless, they are very useful to have!)
 
-If you have tox installed, to run quick tests, type
+If you have tox installed, to run unit tests, type
 
 ```bash
-tox -e quick # (GNU/Linux and MacOS)
+tox -e unit # (GNU/Linux and MacOS)
 #
-python -m tox -e windows-quick # (Windows)
+python -m tox -e windows-unit # (Windows)
 ```
 else, type
 ```bash
@@ -272,7 +216,7 @@ Figuring out where to start the debugger is the real challenge. Some good ways t
   warnings.simplefilter("error")
   ```
   Then you can use a try-except block, as in a., but with, for example, `RuntimeWarning` instead of `ValueError`.
-  c. Stepping through the expression tree. Most calls in PyBaMM are operations on [expression trees](https://github.com/pybamm-team/PyBaMM/blob/master/examples/notebooks/expression_tree/expression-tree.ipynb). To view an expression tree in ipython, you can use the `render` command:
+  c. Stepping through the expression tree. Most calls in PyBaMM are operations on [expression trees](https://github.com/pybamm-team/PyBaMM/blob/develop/examples/notebooks/expression_tree/expression-tree.ipynb). To view an expression tree in ipython, you can use the `render` command:
   ```python
   expression_tree.render()
   ```
@@ -336,7 +280,7 @@ Major PyBaMM features are showcased in [Jupyter notebooks](https://jupyter.org/)
 
 All example notebooks should be listed in [examples/README.md](https://github.com/pybamm-team/PyBaMM/blob/develop/examples/notebooks/README.md). Please follow the (naming and writing) style of existing notebooks where possible.
 
-Where possible, notebooks are tested daily. A list of slow notebooks (which time-out and fail tests) is maintained in `.slow-books`, these notebooks will be excluded from daily testing.
+All the notebooks are tested daily.
 
 ## Citations
 
@@ -484,7 +428,7 @@ Documentation is built using https://readthedocs.org/ and published on http://py
 
 ### Google Colab
 
-Editable notebooks are made available using [Google Colab](https://colab.research.google.com/notebooks/intro.ipynb) [here](https://colab.research.google.com/github/pybamm-team/PyBaMM/blob/master/).
+Editable notebooks are made available using [Google Colab](https://colab.research.google.com/notebooks/intro.ipynb) [here](https://colab.research.google.com/github/pybamm-team/PyBaMM/blob/develop/).
 
 ### GitHub
 

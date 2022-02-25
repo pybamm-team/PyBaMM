@@ -10,7 +10,7 @@ class TestSubMesh0D(unittest.TestCase):
 
     def test_init(self):
         position = {"x": {"position": 1}}
-        generator = pybamm.MeshGenerator(pybamm.SubMesh0D)
+        generator = pybamm.SubMesh0D
         mesh = generator(position, None)
         mesh.add_ghost_meshes()
 

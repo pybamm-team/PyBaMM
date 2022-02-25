@@ -1,10 +1,12 @@
 #
 # Tests for the Variable class
 #
-import pybamm
-import numpy as np
-
 import unittest
+
+import numpy as np
+import sympy
+
+import pybamm
 
 
 class TestVariable(unittest.TestCase):
@@ -44,6 +46,15 @@ class TestVariable(unittest.TestCase):
             pybamm.Variable("var", bounds=(1, 0))
         with self.assertRaisesRegex(ValueError, "Invalid bounds"):
             pybamm.Variable("var", bounds=(1, 1))
+
+    def test_to_equation(self):
+        # Test print_name
+        func = pybamm.Variable("test_string")
+        func.print_name = "test"
+        self.assertEqual(func.to_equation(), sympy.Symbol("test"))
+
+        # Test name
+        self.assertEqual(pybamm.Variable("name").to_equation(), "name")
 
 
 class TestVariableDot(unittest.TestCase):

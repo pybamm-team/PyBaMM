@@ -3,7 +3,6 @@
 #
 import pybamm
 from tests import get_discretisation_for_testing
-import numpy as np
 import unittest
 
 
@@ -12,11 +11,11 @@ class TestMainReaction(unittest.TestCase):
         c_e_n = pybamm.Variable("concentration", domain=["negative electrode"])
         c_e_s = pybamm.Variable("concentration", domain=["separator"])
         c_e_p = pybamm.Variable("concentration", domain=["positive electrode"])
-        self.c_e = pybamm.Concatenation(c_e_n, c_e_s, c_e_p)
+        self.c_e = pybamm.concatenation(c_e_n, c_e_s, c_e_p)
         T_n = pybamm.Variable("temperature", domain=["negative electrode"])
         T_s = pybamm.Variable("temperature", domain=["separator"])
         T_p = pybamm.Variable("temperature", domain=["positive electrode"])
-        self.T = pybamm.Concatenation(T_n, T_s, T_p)
+        self.T = pybamm.concatenation(T_n, T_s, T_p)
         self.variables = {
             "Negative electrolyte concentration": c_e_n,
             "Positive electrolyte concentration": c_e_p,
@@ -77,44 +76,6 @@ class TestMainReaction(unittest.TestCase):
         # should evaluate to vectors with the right shape
         self.assertEqual(j0_n.evaluate(y=y).shape, (mesh["negative electrode"].npts, 1))
         self.assertEqual(j0_p.evaluate(y=y).shape, (mesh["positive electrode"].npts, 1))
-
-    def test_diff_main_reaction(self):
-        # With intercalation
-        param = pybamm.LeadAcidParameters()
-        model_n = pybamm.interface.BaseInterface(param, "Negative", "lead-acid main")
-        model_p = pybamm.interface.BaseInterface(param, "Positive", "lead-acid main")
-        parameter_values = pybamm.lead_acid.BaseModel().default_parameter_values
-
-        def j0_n(c_e):
-            variables = {**self.variables, "Negative electrolyte concentration": c_e}
-            return model_n._get_exchange_current_density(variables)
-
-        def j0_p(c_e):
-            variables = {**self.variables, "Positive electrolyte concentration": c_e}
-            return model_p._get_exchange_current_density(variables)
-
-        c_e = pybamm.InputParameter("c_e")
-        h = pybamm.Scalar(0.00001)
-
-        # Analytical
-        j0_n_diff = parameter_values.process_symbol(j0_n(c_e).diff(c_e))
-        j0_p_diff = parameter_values.process_symbol(j0_p(c_e).diff(c_e))
-
-        # Numerical
-        j0_n_FD = parameter_values.process_symbol(
-            (j0_n(c_e + h) - j0_n(c_e - h)) / (2 * h)
-        )
-        np.testing.assert_almost_equal(
-            j0_n_diff.evaluate(inputs={"c_e": 0.5}),
-            j0_n_FD.evaluate(inputs={"c_e": 0.5}),
-        )
-        j0_p_FD = parameter_values.process_symbol(
-            (j0_p(c_e + h) - j0_p(c_e - h)) / (2 * h)
-        )
-        np.testing.assert_almost_equal(
-            j0_p_diff.evaluate(inputs={"c_e": 0.5}),
-            j0_p_FD.evaluate(inputs={"c_e": 0.5}),
-        )
 
 
 if __name__ == "__main__":

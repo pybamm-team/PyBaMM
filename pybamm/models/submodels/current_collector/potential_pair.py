@@ -17,10 +17,11 @@ class BasePotentialPair(BaseModel):
     References
     ----------
     .. [1] R Timms, SG Marquis, V Sulzer, CP Please and SJ Chapman. “Asymptotic
-           Reduction of a Lithium-ion Pouch Cell Model”. Submitted, 2020.
+           Reduction of a Lithium-ion Pouch Cell Model”. SIAM Journal on Applied
+           Mathematics, 81(3), 765--788, 2021
     .. [2] SG Marquis, R Timms, V Sulzer, CP Please and SJ Chapman. “A Suite of
-           Reduced-Order Models of a Single-Layer Lithium-ion Pouch Cell”. In
-           preparation, 2020.
+           Reduced-Order Models of a Single-Layer Lithium-ion Pouch Cell”. Journal
+           of The Electrochemical Society, 167(14):140513, 2020
 
     **Extends:** :class:`pybamm.current_collector.BaseModel`
     """
@@ -28,7 +29,7 @@ class BasePotentialPair(BaseModel):
     def __init__(self, param):
         super().__init__(param)
 
-        pybamm.citations.register("Timms2020")
+        pybamm.citations.register("Timms2021")
 
     def get_fundamental_variables(self):
 

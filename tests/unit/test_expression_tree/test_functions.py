@@ -1,12 +1,13 @@
 #
 # Tests for the Function classes
 #
-import pybamm
-
 import unittest
+
 import numpy as np
-from scipy.interpolate import interp1d
+import sympy
 from scipy import special
+
+import pybamm
 
 
 def test_function(arg):
@@ -119,13 +120,34 @@ class TestFunction(unittest.TestCase):
             pybamm.Function(test_multi_var_function, a, b)
 
     def test_function_unnamed(self):
-        t = np.linspace(0, 1)
-        entries = 2 * t
-        interpfun = interp1d(t, entries)
-        fun = pybamm.Function(interpfun, pybamm.t)
-        self.assertEqual(
-            fun.name, "function (<class 'scipy.interpolate.interpolate.interp1d'>)"
-        )
+        fun = pybamm.Function(np.cos, pybamm.t)
+        self.assertEqual(fun.name, "function (cos)")
+
+    def test_to_equation(self):
+        a = pybamm.Symbol("a", domain="test")
+
+        # Test print_name
+        func = pybamm.Arcsinh(a)
+        func.print_name = "test"
+        self.assertEqual(func.to_equation(), sympy.Symbol("test"))
+
+        # Test Arcsinh
+        self.assertEqual(pybamm.Arcsinh(a).to_equation(), sympy.asinh(a))
+
+        # Test Arctan
+        self.assertEqual(pybamm.Arctan(a).to_equation(), sympy.atan(a))
+
+        # Test Exponential
+        self.assertEqual(pybamm.Exponential(a).to_equation(), sympy.exp(a))
+
+        # Test log
+        self.assertEqual(pybamm.Log(54.0).to_equation(), sympy.log(54.0))
+
+        # Test sinh
+        self.assertEqual(pybamm.Sinh(a).to_equation(), sympy.sinh(a))
+
+        # Test Function
+        self.assertEqual(pybamm.Function(np.log, 10).to_equation(), 10.0)
 
 
 class TestSpecificFunctions(unittest.TestCase):
@@ -143,6 +165,23 @@ class TestSpecificFunctions(unittest.TestCase):
             )
             / h,
             places=5,
+        )
+
+        # Test broadcast gets switched
+        broad_a = pybamm.PrimaryBroadcast(a, "test")
+        fun_broad = pybamm.arcsinh(broad_a)
+        self.assertEqual(fun_broad.id, pybamm.PrimaryBroadcast(fun, "test").id)
+
+        broad_a = pybamm.FullBroadcast(a, "test", "test2")
+        fun_broad = pybamm.arcsinh(broad_a)
+        self.assertEqual(fun_broad.id, pybamm.FullBroadcast(fun, "test", "test2").id)
+
+        # Test recursion
+        broad_a = pybamm.PrimaryBroadcast(pybamm.PrimaryBroadcast(a, "test"), "test2")
+        fun_broad = pybamm.arcsinh(broad_a)
+        self.assertEqual(
+            fun_broad.id,
+            pybamm.PrimaryBroadcast(pybamm.PrimaryBroadcast(fun, "test"), "test2").id,
         )
 
     def test_arctan(self):

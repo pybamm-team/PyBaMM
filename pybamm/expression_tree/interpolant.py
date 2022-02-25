@@ -1,9 +1,10 @@
 #
 # Interpolating class
 #
-import pybamm
 import numpy as np
 from scipy import interpolate
+
+import pybamm
 
 
 class Interpolant(pybamm.Function):
@@ -23,9 +24,7 @@ class Interpolant(pybamm.Function):
         Name of the interpolant. Default is None, in which case the name "interpolating
         function" is given.
     interpolator : str, optional
-        Which interpolator to use ("pchip" or "cubic spline"). Note that whichever
-        interpolator is used must be differentiable (for ``Interpolator._diff``).
-        Default is "cubic spline". Note that "pchip" may give slow results.
+        Which interpolator to use ("linear", "pchip", or "cubic spline").
     extrapolate : bool, optional
         Whether to extrapolate for points that are outside of the parametrisation
         range, or return NaN (following default behaviour from scipy). Default is True.
@@ -43,6 +42,10 @@ class Interpolant(pybamm.Function):
         extrapolate=True,
         entries_string=None,
     ):
+
+        # set default dimension value
+        self.dimension = 1
+
         if isinstance(x, (tuple, list)) and len(x) == 2:
             interpolator = interpolator or "linear"
             if interpolator != "linear":
@@ -60,6 +63,7 @@ class Interpolant(pybamm.Function):
                 x1 = x
                 x = [x]
             x2 = None
+
         if x1.shape[0] != y.shape[0]:
             raise ValueError(
                 "len(x1) should equal y=shape[0], "
@@ -85,6 +89,7 @@ class Interpolant(pybamm.Function):
 
         if interpolator == "linear":
             if len(x) == 1:
+                self.dimension = 1
                 if extrapolate is False:
                     interpolating_function = interpolate.interp1d(
                         x1, y.T, bounds_error=False, fill_value=np.nan
@@ -94,7 +99,10 @@ class Interpolant(pybamm.Function):
                         x1, y.T, bounds_error=False, fill_value="extrapolate"
                     )
             elif len(x) == 2:
+                self.dimension = 2
                 interpolating_function = interpolate.interp2d(x1, x2, y)
+            else:
+                raise ValueError("Invalid dimension of x: {0}".format(len(x)))
         elif interpolator == "pchip":
             interpolating_function = interpolate.PchipInterpolator(
                 x1, y, extrapolate=extrapolate
@@ -106,10 +114,8 @@ class Interpolant(pybamm.Function):
         else:
             raise ValueError("interpolator '{}' not recognised".format(interpolator))
         # Set name
-        if name is not None and not name.startswith("interpolating function"):
-            name = "interpolating function ({})".format(name)
-        else:
-            name = "interpolating function"
+        if name is None:
+            name = "interpolating_function"
         self.x = x
         self.y = y
         self.entries_string = entries_string
@@ -140,7 +146,9 @@ class Interpolant(pybamm.Function):
     def set_id(self):
         """See :meth:`pybamm.Symbol.set_id()`."""
         self._id = hash(
-            (self.__class__, self.name, self.entries_string) + tuple(self.domain)
+            (self.__class__, self.name, self.entries_string)
+            + tuple([child.id for child in self.children])
+            + tuple(self.domain)
         )
 
     def _function_new_copy(self, children):
@@ -162,5 +170,16 @@ class Interpolant(pybamm.Function):
                 children_eval_flat.append(child.flatten())
             else:
                 children_eval_flat.append(child)
+        if self.dimension == 1:
+            return self.function(*children_eval_flat).flatten()[:, np.newaxis]
+        elif self.dimension == 2:
+            res = self.function(*children_eval_flat)
+            if res.ndim > 1:
+                return np.diagonal(res)[:, np.newaxis]
+            else:
+                # raise ValueError("Invalid children dimension: {0}".format(res.ndim))
+                return res[:, np.newaxis]
+        else:  # pragma: no cover
+            raise ValueError("Invalid dimension: {0}".format(self.dimension))
 
-        return self.function(*children_eval_flat).flatten()[:, np.newaxis]
+

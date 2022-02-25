@@ -4,21 +4,19 @@
 
 
 class DomainError(Exception):
-    """Domain error: an operation was attempted on nodes with un-matched domains"""
+    """Domain error: an operation was attempted on nodes with un-matched domains."""
 
     pass
 
 
 class OptionError(Exception):
-    """Option error: an unknown option was given"""
+    """Option error: an unknown option was given."""
 
     pass
 
 
 class GeometryError(Exception):
-    """
-    Geometry error: Raised if the an unimplemented geometry is used.
-    """
+    """Geometry error: Raised if the an unimplemented geometry is used."""
 
     pass
 
@@ -38,17 +36,13 @@ class SolverError(Exception):
 
 
 class SolverWarning(UserWarning):
-    """
-    Solver warning: the chosen solver settings may not give the desired output
-    """
+    """Solver warning: the chosen solver settings may not give the desired output."""
 
     pass
 
 
 class ShapeError(Exception):
-    """
-    Shape error: cannot evaluate an object to find its shape
-    """
+    """Shape error: cannot evaluate an object to find its shape."""
 
     pass
 
@@ -62,16 +56,12 @@ class ModelWarning(UserWarning):
 
 
 class InputError(Exception):
-    """
-    An external variable has been input incorrectly into PyBaMM
-    """
+    """An external variable has been input incorrectly into PyBaMM."""
 
     pass
 
 
 class DiscretisationError(Exception):
-    """
-    A model could not be discretised
-    """
+    """A model could not be discretised."""
 
     pass

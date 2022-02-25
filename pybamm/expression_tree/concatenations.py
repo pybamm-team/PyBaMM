@@ -2,14 +2,18 @@
 # Concatenation classes
 #
 import copy
-import numpy as np
-import pybamm
-from scipy.sparse import vstack, issparse
 from collections import defaultdict
+
+import numpy as np
+import sympy
+from scipy.sparse import issparse, vstack
+
+import pybamm
 
 
 class Concatenation(pybamm.Symbol):
-    """A node in the expression tree representing a concatenation of symbols
+    """
+    A node in the expression tree representing a concatenation of symbols.
 
     **Extends**: :class:`pybamm.Symbol`
 
@@ -17,22 +21,28 @@ class Concatenation(pybamm.Symbol):
     ----------
     children : iterable of :class:`pybamm.Symbol`
         The symbols to concatenate
-
     """
 
     def __init__(self, *children, name=None, check_domain=True, concat_fun=None):
+        # The second condition checks whether this is the base Concatenation class
+        # or a subclass of Concatenation
+        # (ConcatenationVariable, NumpyConcatenation, ...)
+        if all(isinstance(child, pybamm.Variable) for child in children) and issubclass(
+            Concatenation, type(self)
+        ):
+            raise TypeError(
+                "'ConcatenationVariable' should be used for concatenating 'Variable' "
+                "objects. We recommend using the 'concatenation' function, which will "
+                "automatically choose the best form."
+            )
         if name is None:
             name = "concatenation"
         if check_domain:
-            domain = self.get_children_domains(children)
-            auxiliary_domains = self.get_children_auxiliary_domains(children)
+            domains = self.get_children_domains(children)
         else:
-            domain = []
-            auxiliary_domains = {}
+            domains = {"primary": []}
         self.concatenation_function = concat_fun
-        super().__init__(
-            name, children, domain=domain, auxiliary_domains=auxiliary_domains
-        )
+        super().__init__(name, children, domains=domains)
 
     def __str__(self):
         """See :meth:`pybamm.Symbol.__str__()`."""
@@ -41,6 +51,16 @@ class Concatenation(pybamm.Symbol):
             out += "{!s}, ".format(child)
         out = out[:-2] + ")"
         return out
+
+    def _diff(self, variable):
+        """See :meth:`pybamm.Symbol._diff()`."""
+        children_diffs = [child.diff(variable) for child in self.children]
+        if len(children_diffs) == 1:
+            diff = children_diffs[0]
+        else:
+            diff = self.__class__(*children_diffs)
+
+        return diff
 
     def get_children_domains(self, children):
         # combine domains from children
@@ -57,7 +77,19 @@ class Concatenation(pybamm.Symbol):
                 domain += child_domain
             else:
                 raise pybamm.DomainError("domain of children must be disjoint")
-        return domain
+
+        auxiliary_domains = children[0].domains
+        for level, dom in auxiliary_domains.items():
+            if level != "primary" and dom != []:
+                for child in children[1:]:
+                    if child.domains[level] not in [dom, []]:
+                        raise pybamm.DomainError(
+                            "children must have same or empty auxiliary domains"
+                        )
+
+        domains = {**auxiliary_domains, "primary": domain}
+
+        return domains
 
     def _concatenation_evaluate(self, children_eval):
         """See :meth:`Concatenation._concatenation_evaluate()`."""
@@ -68,7 +100,11 @@ class Concatenation(pybamm.Symbol):
 
     def evaluate(self, t=None, y=None, y_dot=None, inputs=None, known_evals=None):
         """See :meth:`pybamm.Symbol.evaluate()`."""
+<<<<<<< HEAD
         children = self.cached_children
+=======
+        children = self.children
+>>>>>>> develop
         if known_evals is not None:
             if self.id not in known_evals:
                 children_eval = [None] * len(children)
@@ -84,18 +120,29 @@ class Concatenation(pybamm.Symbol):
                 children_eval[idx] = child.evaluate(t, y, y_dot, inputs)
             return self._concatenation_evaluate(children_eval)
 
+<<<<<<< HEAD
     def new_copy(self):
+=======
+    def create_copy(self):
+>>>>>>> develop
         """See :meth:`pybamm.Symbol.new_copy()`."""
         new_children = [child.new_copy() for child in self.children]
         return self._concatenation_new_copy(new_children)
 
     def _concatenation_new_copy(self, children):
         """See :meth:`pybamm.Symbol.new_copy()`."""
+<<<<<<< HEAD
         new_symbol = self.__class__(*children)
         return new_symbol
 
     def _concatenation_jac(self, children_jacs):
         """Calculate the jacobian of a concatenation"""
+=======
+        return concatenation(*children)
+
+    def _concatenation_jac(self, children_jacs):
+        """Calculate the jacobian of a concatenation."""
+>>>>>>> develop
         return NotImplementedError
 
     def _evaluate_for_shape(self):
@@ -113,9 +160,29 @@ class Concatenation(pybamm.Symbol):
         """See :meth:`pybamm.Symbol.is_constant()`."""
         return all(child.is_constant() for child in self.children)
 
+    def _sympy_operator(self, *children):
+        """Apply appropriate SymPy operators."""
+        self.concat_latex = tuple(map(sympy.latex, children))
+
+        if self.print_name is not None:
+            return sympy.Symbol(self.print_name)
+        else:
+            concat_str = r"\\".join(self.concat_latex)
+            concat_sym = sympy.Symbol(r"\begin{cases}" + concat_str + r"\end{cases}")
+            return concat_sym
+
+    def to_equation(self):
+        """Convert the node and its subtree into a SymPy equation."""
+        eq_list = []
+        for child in self.children:
+            eq = child.to_equation()
+            eq_list.append(eq)
+        return self._sympy_operator(*eq_list)
+
 
 class NumpyConcatenation(Concatenation):
-    """A node in the expression tree representing a concatenation of equations, when we
+    """
+    A node in the expression tree representing a concatenation of equations, when we
     *don't* care about domains. The class :class:`pybamm.DomainConcatenation`, which
     *is* careful about domains and uses broadcasting where appropriate, should be used
     whenever possible instead.
@@ -128,7 +195,6 @@ class NumpyConcatenation(Concatenation):
     ----------
     children : iterable of :class:`pybamm.Symbol`
         The equations to concatenate
-
     """
 
     def __init__(self, *children):
@@ -147,15 +213,24 @@ class NumpyConcatenation(Concatenation):
 
     def _concatenation_jac(self, children_jacs):
         """See :meth:`pybamm.Concatenation.concatenation_jac()`."""
+<<<<<<< HEAD
         children = self.cached_children
+=======
+        children = self.children
+>>>>>>> develop
         if len(children) == 0:
             return pybamm.Scalar(0)
         else:
             return SparseStack(*children_jacs)
 
+    def _concatenation_new_copy(self, children):
+        """See :meth:`pybamm.Symbol.new_copy()`."""
+        return numpy_concatenation(*children)
+
 
 class DomainConcatenation(Concatenation):
-    """A node in the expression tree representing a concatenation of symbols, being
+    """
+    A node in the expression tree representing a concatenation of symbols, being
     careful about domains.
 
     It is assumed that each child has a domain, and the final concatenated vector will
@@ -176,7 +251,6 @@ class DomainConcatenation(Concatenation):
     copy_this : :class:`pybamm.DomainConcatenation` (optional)
         if provided, this class is initialised by copying everything except the children
         from `copy_this`. `mesh` is not used in this case
-
     """
 
     def __init__(self, children, full_mesh, copy_this=None):
@@ -186,10 +260,6 @@ class DomainConcatenation(Concatenation):
 
         # Allow the base class to sort the domains into the correct order
         super().__init__(*children, name="domain_concatenation")
-
-        # ensure domain is sorted according to mesh keys
-        domain_dict = {d: full_mesh.domain_order.index(d) for d in self.domain}
-        self.domain = sorted(domain_dict, key=domain_dict.__getitem__)
 
         if copy_this is None:
             # store mesh
@@ -206,7 +276,7 @@ class DomainConcatenation(Concatenation):
 
             # create disc of domain => slice for each child
             self._children_slices = [
-                self.create_slices(child) for child in self.cached_children
+                self.create_slices(child) for child in self.children
             ]
         else:
             self._full_mesh = copy.copy(copy_this._full_mesh)
@@ -216,22 +286,12 @@ class DomainConcatenation(Concatenation):
             self.secondary_dimensions_npts = copy_this.secondary_dimensions_npts
 
     def _get_auxiliary_domain_repeats(self, auxiliary_domains):
-        """
-        Helper method to read the 'auxiliary_domain' meshes
-        """
-        if "secondary" in auxiliary_domains:
-            sec_mesh_npts = self.full_mesh.combine_submeshes(
-                *auxiliary_domains["secondary"]
-            ).npts
-        else:
-            sec_mesh_npts = 1
-        if "tertiary" in auxiliary_domains:
-            tert_mesh_npts = self.full_mesh.combine_submeshes(
-                *auxiliary_domains["tertiary"]
-            ).npts
-        else:
-            tert_mesh_npts = 1
-        return sec_mesh_npts * tert_mesh_npts
+        """Helper method to read the 'auxiliary_domain' meshes."""
+        mesh_pts = 1
+        for level, dom in auxiliary_domains.items():
+            if level != "primary" and dom != []:
+                mesh_pts *= self.full_mesh.combine_submeshes(*dom).npts
+        return mesh_pts
 
     @property
     def full_mesh(self):
@@ -292,7 +352,8 @@ class DomainConcatenation(Concatenation):
 
 
 class SparseStack(Concatenation):
-    """A node in the expression tree representing a concatenation of sparse
+    """
+    A node in the expression tree representing a concatenation of sparse
     matrices. As with NumpyConcatenation, we *don't* care about domains.
     The class :class:`pybamm.DomainConcatenation`, which *is* careful about
     domains and uses broadcasting where appropriate, should be used whenever
@@ -304,7 +365,6 @@ class SparseStack(Concatenation):
     ----------
     children : iterable of :class:`Concatenation`
         The equations to concatenate
-
     """
 
     def __init__(self, *children):
@@ -320,9 +380,101 @@ class SparseStack(Concatenation):
             concat_fun=concatenation_function
         )
 
+    def _concatenation_new_copy(self, children):
+        """See :meth:`pybamm.Symbol.new_copy()`."""
+        return SparseStack(*children)
+
+
+class ConcatenationVariable(Concatenation):
+    """A Variable representing a concatenation of variables."""
+
+    def __init__(self, *children):
+        # Name is the intersection of the children names (should usually make sense
+        # if the children have been named consistently)
+        name = intersect(children[0].name, children[1].name)
+        for child in children[2:]:
+            name = intersect(name, child.name)
+        name = name.capitalize()
+        if name == "":
+            name = None
+        super().__init__(*children, name=name)
+        # Overly tight bounds, can edit later if required
+        self.bounds = (
+            np.max([child.bounds[0] for child in children]),
+            np.min([child.bounds[1] for child in children]),
+        )
+
+        if not any(c.print_name is None for c in children):
+            print_name = intersect(children[0].print_name, children[1].print_name)
+            for child in children[2:]:
+                print_name = intersect(print_name, child.print_name)
+            if print_name.endswith("_"):
+                print_name = print_name[:-1]
+        else:
+            print_name = None
+        self.print_name = print_name
+
+
+def substrings(s):
+    for i in range(len(s)):
+        for j in range(i, len(s)):
+            yield s[i : j + 1]
+
+
+def intersect(s1, s2):
+    # find all the common strings between two strings
+    all_intersects = set(substrings(s1)) & set(substrings(s2))
+    # intersect is the longest such intercept
+    if len(all_intersects) == 0:
+        return ""
+    intersect = max(all_intersects, key=len)
+    # remove leading and trailing white space
+    return intersect.lstrip().rstrip()
+
+
+def simplified_concatenation(*children):
+    """Perform simplifications on a concatenation."""
+    # remove children that are None
+    children = list(filter(lambda x: x is not None, children))
+    # Simplify concatenation of broadcasts all with the same child to a single
+    # broadcast across all domains
+    if len(children) == 0:
+        raise ValueError("Cannot create empty concatenation")
+    elif len(children) == 1:
+        return children[0]
+    elif all(isinstance(child, pybamm.Variable) for child in children):
+        return pybamm.ConcatenationVariable(*children)
+    else:
+        # Create Concatenation to easily read domains
+        concat = Concatenation(*children)
+        if all(
+            isinstance(child, pybamm.Broadcast)
+            and child.child.id == children[0].child.id
+            for child in children
+        ):
+            unique_child = children[0].orphans[0]
+            if isinstance(children[0], pybamm.PrimaryBroadcast):
+                return pybamm.PrimaryBroadcast(unique_child, concat.domain)
+            else:
+                return pybamm.FullBroadcast(
+                    unique_child, broadcast_domains=concat.domains
+                )
+        else:
+            return concat
+
+
+def concatenation(*children):
+    """Helper function to create concatenations."""
+    # TODO: add option to turn off simplifications
+    return simplified_concatenation(*children)
+
 
 def simplified_numpy_concatenation(*children):
+<<<<<<< HEAD
     """Perform simplifications on a numpy concatenation"""
+=======
+    """Perform simplifications on a numpy concatenation."""
+>>>>>>> develop
     # Turn a concatenation of concatenations into a single concatenation
     new_children = []
     for child in children:
@@ -335,18 +487,26 @@ def simplified_numpy_concatenation(*children):
 
 
 def numpy_concatenation(*children):
+<<<<<<< HEAD
     """Helper function to create numpy concatenations"""
+=======
+    """Helper function to create numpy concatenations."""
+>>>>>>> develop
     # TODO: add option to turn off simplifications
     return simplified_numpy_concatenation(*children)
 
 
 def simplified_domain_concatenation(children, mesh, copy_this=None):
+<<<<<<< HEAD
     """Perform simplifications on a domain concatenation"""
+=======
+    """Perform simplifications on a domain concatenation."""
+>>>>>>> develop
     # Create the DomainConcatenation to read domain and child domain
     concat = DomainConcatenation(children, mesh, copy_this=copy_this)
     # Simplify Concatenation of StateVectors to a single StateVector
     # The sum of the evalation arrays of the StateVectors must be exactly 1
-    if all([isinstance(child, pybamm.StateVector) for child in children]):
+    if all(isinstance(child, pybamm.StateVector) for child in children):
         longest_eval_array = len(children[-1]._evaluation_array)
         eval_arrays = {}
         for child in children:
@@ -362,15 +522,17 @@ def simplified_domain_concatenation(children, mesh, copy_this=None):
             sum(array for array in eval_arrays.values())[first_start:last_stop] == 1
         ):
             return pybamm.StateVector(
-                slice(first_start, last_stop),
-                domain=concat.domain,
-                auxiliary_domains=concat.auxiliary_domains,
+                slice(first_start, last_stop), domains=concat.domains
             )
 
     return pybamm.simplify_if_constant(concat)
 
 
 def domain_concatenation(children, mesh):
+<<<<<<< HEAD
     """Helper function to create domain concatenations"""
+=======
+    """Helper function to create domain concatenations."""
+>>>>>>> develop
     # TODO: add option to turn off simplifications
     return simplified_domain_concatenation(children, mesh)

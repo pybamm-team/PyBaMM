@@ -8,10 +8,13 @@ import scipy.sparse as sparse
 
 import importlib
 
-idaklu_spec = importlib.util.find_spec("idaklu")
+idaklu_spec = importlib.util.find_spec("pybamm.solvers.idaklu")
 if idaklu_spec is not None:
-    idaklu = importlib.util.module_from_spec(idaklu_spec)
-    idaklu_spec.loader.exec_module(idaklu)
+    try:
+        idaklu = importlib.util.module_from_spec(idaklu_spec)
+        idaklu_spec.loader.exec_module(idaklu)
+    except ImportError:  # pragma: no cover
+        idaklu_spec = None
 
 
 def have_idaklu():
@@ -50,11 +53,17 @@ class IDAKLUSolver(pybamm.BaseSolver):
         max_steps="deprecated",
     ):
 
-        if idaklu_spec is None:
+        if idaklu_spec is None:  # pragma: no cover
             raise ImportError("KLU is not installed")
 
         super().__init__(
-            "ida", rtol, atol, root_method, root_tol, extrap_tol, max_steps
+            "ida",
+            rtol,
+            atol,
+            root_method,
+            root_tol,
+            extrap_tol,
+            max_steps,
         )
         self.name = "IDA KLU solver"
 
@@ -77,7 +86,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
         """
 
         size = model.concatenated_initial_conditions.size
-        atol = self._check_atol_type(self._atol, size)
+        atol = self._check_atol_type(self.atol, size)
         for var, tol in variables_with_tols.items():
             variable = model.variables[var]
             if isinstance(variable, pybamm.StateVector):
@@ -90,7 +99,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
     def set_state_vec_tol(self, atol, state_vec, tol):
         """
         A method to set the tolerances in the atol vector of a specific
-        state variable. This method modifies self._atol
+        state variable. This method modifies self.atol
 
         Parameters
         ----------
@@ -131,7 +140,9 @@ class IDAKLUSolver(pybamm.BaseSolver):
         if atol.size != size:
             raise pybamm.SolverError(
                 """Absolute tolerances must be either a scalar or a numpy arrray
-                of the same shape at y0"""
+                of the same shape as y0 ({})""".format(
+                    size
+                )
             )
 
         return atol
@@ -149,9 +160,17 @@ class IDAKLUSolver(pybamm.BaseSolver):
         inputs_dict : dict, optional
             Any external variables or input parameters to pass to the model when solving
         """
+        inputs_dict = inputs_dict or {}
         if model.rhs_eval.form == "casadi":
             # stack inputs
             inputs = casadi.vertcat(*[x for x in inputs_dict.values()])
+            # raise warning about casadi format being slow
+            pybamm.logger.warning(
+                "Using casadi form for the IDA KLU solver is slow. "
+                "Set `model.convert_to_format='python'` for better performance. "
+                "For DAE models, this may also require changing the root method to "
+                "'lm'."
+            )
         else:
             inputs = inputs_dict
 
@@ -161,16 +180,23 @@ class IDAKLUSolver(pybamm.BaseSolver):
         try:
             atol = model.atol
         except AttributeError:
-            atol = self._atol
+            atol = self.atol
 
         y0 = model.y0
         if isinstance(y0, casadi.DM):
             y0 = y0.full().flatten()
 
-        rtol = self._rtol
+        rtol = self.rtol
         atol = self._check_atol_type(atol, y0.size)
 
-        mass_matrix = model.mass_matrix.entries
+        if model.convert_to_format == "jax":
+            mass_matrix = model.mass_matrix.entries.toarray()
+        else:
+            mass_matrix = model.mass_matrix.entries
+
+        # construct residuals function by binding inputs
+        def resfn(t, y, ydot):
+            return model.residuals_eval(t, y, ydot, inputs)
 
         if model.jacobian_eval:
             jac_y0_t0 = model.jacobian_eval(t_eval[0], y0, inputs)
@@ -226,9 +252,48 @@ class IDAKLUSolver(pybamm.BaseSolver):
             return return_root
 
         # get ids of rhs and algebraic variables
-        rhs_ids = np.ones(model.rhs_eval(0, y0, inputs).shape)
+        rhs_ids = np.ones(model.rhs_eval(0, y0, inputs).shape[0])
         alg_ids = np.zeros(len(y0) - len(rhs_ids))
         ids = np.concatenate((rhs_ids, alg_ids))
+
+        number_of_sensitivity_parameters = 0
+        if model.sensitivities_eval is not None:
+            sens0 = model.sensitivities_eval(t=0, y=y0, inputs=inputs)
+            number_of_sensitivity_parameters = len(sens0.keys())
+
+        def sensfn(resvalS, t, y, yp, yS, ypS):
+            """
+            this function evaluates the sensitivity equations required by IDAS,
+            returning them in resvalS, which is preallocated as a numpy array of size
+            (np, n), where n is the number of states and np is the number of parameters
+
+            The equations returned are:
+
+             dF/dy * s_i + dF/dyd * sd_i + dFdp_i for i in range(np)
+
+            Parameters
+            ----------
+            resvalS: ndarray of shape (np, n)
+                returns the sensitivity equations in this preallocated array
+            t: number
+                time value
+            y: ndarray of shape (n)
+                current state vector
+            yp: list (np) of ndarray of shape (n)
+                current time derivative of state vector
+            yS: list (np) of ndarray of shape (n)
+                current state vector of sensitivity equations
+            ypS: list (np) of ndarray of shape (n)
+                current time derivative of state vector of sensitivity equations
+
+            """
+
+            dFdy = model.jacobian_eval(t, y, inputs)
+            dFdyd = mass_matrix
+            dFdp = model.sensitivities_eval(t, y, inputs)
+
+            for i, dFdp_i in enumerate(dFdp.values()):
+                resvalS[i][:] = dFdy @ yS[i] - dFdyd @ ypS[i] + dFdp_i
 
         # solve
         timer = pybamm.Timer()
@@ -236,8 +301,9 @@ class IDAKLUSolver(pybamm.BaseSolver):
             t_eval,
             y0,
             ydot0,
-            lambda t, y, ydot: model.residuals_eval(t, y, ydot, inputs),
+            resfn,
             jac_class.jac_res,
+            sensfn,
             jac_class.get_jac_data,
             jac_class.get_jac_row_vals,
             jac_class.get_jac_col_ptrs,
@@ -248,6 +314,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
             ids,
             atol,
             rtol,
+            number_of_sensitivity_parameters,
         )
         integration_time = timer.time()
 
@@ -256,7 +323,14 @@ class IDAKLUSolver(pybamm.BaseSolver):
         number_of_states = y0.size
         y_out = sol.y.reshape((number_of_timesteps, number_of_states))
 
-        # return solution, we need to tranpose y to match scipy's interface
+        # return sensitivity solution, we need to flatten yS to
+        # (#timesteps * #states,) to match format used by Solution
+        if number_of_sensitivity_parameters != 0:
+            yS_out = {
+                name: sol.yS[i].reshape(-1, 1) for i, name in enumerate(sens0.keys())
+            }
+        else:
+            yS_out = False
         if sol.flag in [0, 2]:
             # 0 = solved for all t_eval
             if sol.flag == 0:
@@ -273,6 +347,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
                 t[-1],
                 np.transpose(y_out[-1])[:, np.newaxis],
                 termination,
+                sensitivities=yS_out,
             )
             sol.integration_time = integration_time
             return sol

@@ -52,6 +52,10 @@ class TestButlerVolmer(unittest.TestCase):
             "Positive electrode temperature": 0,
             "Negative electrode surface area to volume ratio": 1 + 0 * self.c_e_n,
             "Positive electrode surface area to volume ratio": 1 + 0 * self.c_e_p,
+            "X-averaged negative electrode surface area to volume ratio": 1,
+            "X-averaged positive electrode surface area to volume ratio": 1,
+            "Negative electrode interface utilisation": 1,
+            "Positive electrode interface utilisation": 1,
             "Sum of electrolyte reaction source terms": pybamm.Scalar(1),
             "Sum of interfacial current densities": pybamm.Scalar(1),
             "Sum of negative electrode interfacial current densities": pybamm.Scalar(1),
@@ -75,25 +79,27 @@ class TestButlerVolmer(unittest.TestCase):
 
     def test_creation(self):
         param = pybamm.LithiumIonParameters()
-        model_n = pybamm.interface.ButlerVolmer(
+        model_n = pybamm.kinetics.SymmetricButlerVolmer(
             param,
             "Negative",
             "lithium-ion main",
             {
                 "SEI film resistance": "none",
                 "total interfacial current density as a state": "false",
+                "particle size": "single",
             },
         )
         j_n = model_n.get_coupled_variables(self.variables)[
             "Negative electrode interfacial current density"
         ]
-        model_p = pybamm.interface.ButlerVolmer(
+        model_p = pybamm.kinetics.SymmetricButlerVolmer(
             param,
             "Positive",
             "lithium-ion main",
             {
                 "SEI film resistance": "none",
                 "total interfacial current density as a state": "false",
+                "particle size": "single",
             },
         )
         j_p = model_p.get_coupled_variables(self.variables)[
@@ -110,25 +116,27 @@ class TestButlerVolmer(unittest.TestCase):
 
     def test_set_parameters(self):
         param = pybamm.LithiumIonParameters()
-        model_n = pybamm.interface.ButlerVolmer(
+        model_n = pybamm.kinetics.SymmetricButlerVolmer(
             param,
             "Negative",
             "lithium-ion main",
             {
                 "SEI film resistance": "none",
                 "total interfacial current density as a state": "false",
+                "particle size": "single",
             },
         )
         j_n = model_n.get_coupled_variables(self.variables)[
             "Negative electrode interfacial current density"
         ]
-        model_p = pybamm.interface.ButlerVolmer(
+        model_p = pybamm.kinetics.SymmetricButlerVolmer(
             param,
             "Positive",
             "lithium-ion main",
             {
                 "SEI film resistance": "none",
                 "total interfacial current density as a state": "false",
+                "particle size": "single",
             },
         )
         j_p = model_p.get_coupled_variables(self.variables)[
@@ -148,31 +156,33 @@ class TestButlerVolmer(unittest.TestCase):
 
     def test_discretisation(self):
         param = pybamm.LithiumIonParameters()
-        model_n = pybamm.interface.ButlerVolmer(
+        model_n = pybamm.kinetics.SymmetricButlerVolmer(
             param,
             "Negative",
             "lithium-ion main",
             {
                 "SEI film resistance": "none",
                 "total interfacial current density as a state": "false",
+                "particle size": "single",
             },
         )
         j_n = model_n.get_coupled_variables(self.variables)[
             "Negative electrode interfacial current density"
         ]
-        model_p = pybamm.interface.ButlerVolmer(
+        model_p = pybamm.kinetics.SymmetricButlerVolmer(
             param,
             "Positive",
             "lithium-ion main",
             {
                 "SEI film resistance": "none",
                 "total interfacial current density as a state": "false",
+                "particle size": "single",
             },
         )
         j_p = model_p.get_coupled_variables(self.variables)[
             "Positive electrode interfacial current density"
         ]
-        j = pybamm.Concatenation(j_n, pybamm.PrimaryBroadcast(0, ["separator"]), j_p)
+        j = pybamm.concatenation(j_n, pybamm.PrimaryBroadcast(0, ["separator"]), j_p)
 
         # Process parameters and discretise
         parameter_values = pybamm.lithium_ion.BaseModel().default_parameter_values
@@ -214,7 +224,7 @@ class TestButlerVolmer(unittest.TestCase):
 
         # With intercalation
         param = pybamm.LeadAcidParameters()
-        model_n = pybamm.interface.ButlerVolmer(
+        model_n = pybamm.kinetics.SymmetricButlerVolmer(
             param,
             "Negative",
             "lead-acid main",
@@ -223,7 +233,7 @@ class TestButlerVolmer(unittest.TestCase):
                 "total interfacial current density as a state": "false",
             },
         )
-        model_p = pybamm.interface.ButlerVolmer(
+        model_p = pybamm.kinetics.SymmetricButlerVolmer(
             param,
             "Positive",
             "lead-acid main",
@@ -283,7 +293,7 @@ class TestButlerVolmer(unittest.TestCase):
 
         # With intercalation
         param = pybamm.LeadAcidParameters()
-        model_n = pybamm.interface.ButlerVolmer(
+        model_n = pybamm.kinetics.SymmetricButlerVolmer(
             param,
             "Negative",
             "lead-acid main",
@@ -292,7 +302,7 @@ class TestButlerVolmer(unittest.TestCase):
                 "total interfacial current density as a state": "false",
             },
         )
-        model_p = pybamm.interface.ButlerVolmer(
+        model_p = pybamm.kinetics.SymmetricButlerVolmer(
             param,
             "Positive",
             "lead-acid main",

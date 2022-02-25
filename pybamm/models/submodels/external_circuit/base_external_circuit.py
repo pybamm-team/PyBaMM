@@ -11,7 +11,7 @@ class BaseModel(pybamm.BaseSubModel):
         super().__init__(param)
 
     def get_fundamental_variables(self):
-        Q = pybamm.Variable("Discharge capacity [A.h]")
+        Q = pybamm.standard_variables.Q
         variables = {"Discharge capacity [A.h]": Q}
         return variables
 

@@ -12,12 +12,14 @@ class BaseTransverseModel(BaseModel):
     ----------
     param : parameter class
         The parameters to use for this submodel
+    options : dict, optional
+        A dictionary of options to be passed to the model.
 
     **Extends:** :class:`pybamm.convection.BaseModel`
     """
 
-    def __init__(self, param):
-        super().__init__(param)
+    def __init__(self, param, options=None):
+        super().__init__(param, options=options)
 
     def _get_standard_separator_pressure_variables(self, p_s):
         """Pressure in the separator"""
@@ -36,30 +38,27 @@ class BaseTransverseModel(BaseModel):
         elif typ == "acceleration":
             scale = self.param.velocity_scale / self.param.L_z
 
-        var_n_av = pybamm.PrimaryBroadcast(0, "current collector")
+        if self.half_cell:
+            var_n_av = None
+            var_n = None
+        else:
+            var_n_av = pybamm.PrimaryBroadcast(0, "current collector")
+            var_n = pybamm.PrimaryBroadcast(var_n_av, "negative electrode")
+
         var_p_av = pybamm.PrimaryBroadcast(0, "current collector")
-        var_n = pybamm.PrimaryBroadcast(var_n_av, "negative electrode")
         var_s = pybamm.PrimaryBroadcast(var_s_av, "separator")
         var_p = pybamm.PrimaryBroadcast(var_p_av, "positive electrode")
-        var = pybamm.Concatenation(var_n, var_s, var_p)
+        var = pybamm.concatenation(var_n, var_s, var_p)
 
         variables = {
-            "Negative electrode transverse volume-averaged " + typ: var_n,
             "Separator transverse volume-averaged " + typ: var_s,
             "Positive electrode transverse volume-averaged " + typ: var_p,
-            "Negative electrode transverse volume-averaged "
-            + typ
-            + " [m.s-2]": scale * var_n,
             "Separator transverse volume-averaged " + typ + " [m.s-2]": scale * var_s,
             "Positive electrode transverse volume-averaged "
             + typ
             + " [m.s-2]": scale * var_p,
-            "X-averaged negative electrode transverse volume-averaged " + typ: var_n_av,
             "X-averaged separator transverse volume-averaged " + typ: var_s_av,
             "X-averaged positive electrode transverse volume-averaged " + typ: var_p_av,
-            "X-averaged negative electrode transverse volume-averaged "
-            + typ
-            + " [m.s-2]": scale * var_n_av,
             "X-averaged separator transverse volume-averaged "
             + typ
             + " [m.s-2]": scale * var_s_av,
@@ -69,5 +68,20 @@ class BaseTransverseModel(BaseModel):
             "Transverse volume-averaged " + typ: var,
             "Transverse volume-averaged " + typ + " [m.s-2]": scale * var,
         }
+
+        if not self.half_cell:
+            variables.update(
+                {
+                    "Negative electrode transverse volume-averaged " + typ: var_n,
+                    "Negative electrode transverse volume-averaged "
+                    + typ
+                    + " [m.s-2]": scale * var_n,
+                    "X-averaged negative electrode transverse volume-averaged "
+                    + typ: var_n_av,
+                    "X-averaged negative electrode transverse volume-averaged "
+                    + typ
+                    + " [m.s-2]": scale * var_n_av,
+                }
+            )
 
         return variables

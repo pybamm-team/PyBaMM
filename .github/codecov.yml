@@ -1,0 +1,3 @@
+ignore:
+  - pybamm/parameters_cli.py
+  - pybamm/install_odes.py

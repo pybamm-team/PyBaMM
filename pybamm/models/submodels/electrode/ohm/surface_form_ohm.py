@@ -16,13 +16,15 @@ class SurfaceForm(BaseModel):
         The parameters to use for this submodel
     domain : str
         Either 'Negative' or 'Positive'
+    options : dict, optional
+        A dictionary of options to be passed to the model.
 
 
     **Extends:** :class:`pybamm.electrode.ohm.BaseModel`
     """
 
-    def __init__(self, param, domain):
-        super().__init__(param, domain)
+    def __init__(self, param, domain, options=None):
+        super().__init__(param, domain, options=options)
 
     def get_coupled_variables(self, variables):
 
@@ -33,11 +35,12 @@ class SurfaceForm(BaseModel):
         i_e = variables[self.domain + " electrolyte current density"]
         tor = variables[self.domain + " electrode tortuosity"]
         phi_s_cn = variables["Negative current collector potential"]
+        T = variables[self.domain + " electrode temperature"]
 
         i_s = i_boundary_cc - i_e
 
         if self.domain == "Negative":
-            conductivity = param.sigma_n * tor
+            conductivity = param.sigma_n(T) * tor
             phi_s = phi_s_cn - pybamm.IndefiniteIntegral(i_s / conductivity, x_n)
 
         elif self.domain == "Positive":
@@ -45,7 +48,7 @@ class SurfaceForm(BaseModel):
             phi_e_s = variables["Separator electrolyte potential"]
             delta_phi_p = variables["Positive electrode surface potential difference"]
 
-            conductivity = param.sigma_p * tor
+            conductivity = param.sigma_p(T) * tor
             phi_s = -pybamm.IndefiniteIntegral(i_s / conductivity, x_p) + (
                 pybamm.boundary_value(phi_e_s, "right")
                 + pybamm.boundary_value(delta_phi_p, "left")
@@ -55,9 +58,8 @@ class SurfaceForm(BaseModel):
         variables.update(self._get_standard_current_variables(i_s))
 
         if (
-            "Negative electrode current density" in variables
-            and "Positive electrode current density" in variables
-        ):
+            self.half_cell or "Negative electrode current density" in variables
+        ) and "Positive electrode current density" in variables:
             variables.update(self._get_standard_whole_cell_variables(variables))
 
         return variables

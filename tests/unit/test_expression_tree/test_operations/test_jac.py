@@ -306,6 +306,14 @@ class TestJacobian(unittest.TestCase):
             ((a < y) * y ** 2).jac(y).evaluate(y=-5 * np.ones(5)).toarray(), 0
         )
 
+    def test_jac_of_equality(self):
+        a = pybamm.Scalar(1)
+        y = pybamm.StateVector(slice(0, 1))
+        np.testing.assert_array_equal(
+            (pybamm.Equality(a, y)).jac(y).evaluate(),
+            0,
+        )
+
     def test_jac_of_modulo(self):
         a = pybamm.Scalar(3)
         y = pybamm.StateVector(slice(0, 5))

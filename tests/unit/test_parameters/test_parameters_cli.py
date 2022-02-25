@@ -19,7 +19,7 @@ class TestParametersCLI(unittest.TestCase):
         param_pkg_dir = os.path.join(pybamm.__path__[0], "input", "parameters")
         param_filename = os.path.join(
             param_pkg_dir,
-            "lithium-ion",
+            "lithium_ion",
             "negative_electrodes",
             "graphite_mcmb2528_Marquis2019",
             "parameters.csv",
@@ -46,7 +46,7 @@ class TestParametersCLI(unittest.TestCase):
             "pybamm_add_parameter",
             "-f",
             tempdir.name,
-            "lithium-ion",
+            "lithium_ion",
             "negative_electrodes",
         ]
         subprocess.run(cmd, check=True)
@@ -55,7 +55,7 @@ class TestParametersCLI(unittest.TestCase):
         # and that content is correct
         new_parameter_filename = os.path.join(
             param_pkg_dir,
-            "lithium-ion",
+            "lithium_ion",
             "negative_electrodes",
             os.path.basename(tempdir.name),
             "parameters.csv",
@@ -72,7 +72,7 @@ class TestParametersCLI(unittest.TestCase):
             "pybamm_rm_parameter",
             "-f",
             tempdir.name,
-            "lithium-ion",
+            "lithium_ion",
             "negative_electrodes",
         ]
         subprocess.run(cmd, check=True)
@@ -83,9 +83,9 @@ class TestParametersCLI(unittest.TestCase):
 
     def test_edit_param(self):
         negative_electrodes_dir = os.path.join(
-            "input", "parameters", "lithium-ion", "negative_electrodes"
+            "input", "parameters", "lithium_ion", "negative_electrodes"
         )
-        chemistry = "lithium-ion"
+        chemistry = "lithium_ion"
         # Write dummy parameters.csv file in temporary directory
         # in package input dir
         tempdir = tempfile.TemporaryDirectory(

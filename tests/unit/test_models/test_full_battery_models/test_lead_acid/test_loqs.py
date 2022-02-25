@@ -21,15 +21,13 @@ class TestLeadAcidLOQS(unittest.TestCase):
         model = pybamm.lead_acid.LOQS(options)
         self.assertNotIn("negative particle", model.default_geometry)
         self.assertIsInstance(model.default_spatial_methods, dict)
-        self.assertTrue(
-            isinstance(
-                model.default_spatial_methods["current collector"],
-                pybamm.ZeroDimensionalSpatialMethod,
-            )
+        self.assertIsInstance(
+            model.default_spatial_methods["current collector"],
+            pybamm.ZeroDimensionalSpatialMethod,
         )
         self.assertTrue(
             issubclass(
-                model.default_submesh_types["current collector"].submesh_type,
+                model.default_submesh_types["current collector"],
                 pybamm.SubMesh0D,
             )
         )
@@ -51,14 +49,12 @@ class TestLeadAcidLOQS(unittest.TestCase):
         }
         model = pybamm.lead_acid.LOQS(options)
         model.check_well_posedness()
-        self.assertTrue(
-            isinstance(
-                model.default_spatial_methods["current collector"], pybamm.FiniteVolume
-            )
+        self.assertIsInstance(
+            model.default_spatial_methods["current collector"], pybamm.FiniteVolume
         )
         self.assertTrue(
             issubclass(
-                model.default_submesh_types["current collector"].submesh_type,
+                model.default_submesh_types["current collector"],
                 pybamm.Uniform1DSubMesh,
             )
         )
@@ -71,15 +67,13 @@ class TestLeadAcidLOQS(unittest.TestCase):
         }
         model = pybamm.lead_acid.LOQS(options)
         model.check_well_posedness()
-        self.assertTrue(
-            isinstance(
-                model.default_spatial_methods["current collector"],
-                pybamm.ScikitFiniteElement,
-            )
+        self.assertIsInstance(
+            model.default_spatial_methods["current collector"],
+            pybamm.ScikitFiniteElement,
         )
         self.assertTrue(
             issubclass(
-                model.default_submesh_types["current collector"].submesh_type,
+                model.default_submesh_types["current collector"],
                 pybamm.ScikitUniform2DSubMesh,
             )
         )
@@ -87,19 +81,14 @@ class TestLeadAcidLOQS(unittest.TestCase):
 
 class TestLeadAcidLOQSWithSideReactions(unittest.TestCase):
     def test_well_posed_differential(self):
-        options = {"surface form": "differential", "side reactions": ["oxygen"]}
+        options = {"surface form": "differential", "hydrolysis": "true"}
         model = pybamm.lead_acid.LOQS(options)
         model.check_well_posedness()
 
     def test_well_posed_algebraic(self):
-        options = {"surface form": "algebraic", "side reactions": ["oxygen"]}
+        options = {"surface form": "algebraic", "hydrolysis": "true"}
         model = pybamm.lead_acid.LOQS(options)
         model.check_well_posedness()
-
-    def test_incompatible_options(self):
-        options = {"side reactions": ["something"]}
-        with self.assertRaises(pybamm.OptionError):
-            pybamm.lead_acid.LOQS(options)
 
 
 class TestLeadAcidLOQSSurfaceForm(unittest.TestCase):

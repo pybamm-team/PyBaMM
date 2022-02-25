@@ -2,12 +2,15 @@
 # NumpyArray class
 #
 import numpy as np
+import sympy
+from scipy.sparse import csr_matrix, issparse
+
 import pybamm
-from scipy.sparse import issparse, csr_matrix
 
 
 class Array(pybamm.Symbol):
-    """node in the expression tree that holds an tensor type variable
+    """
+    Node in the expression tree that holds an tensor type variable
     (e.g. :class:`numpy.array`)
 
     Parameters
@@ -20,8 +23,13 @@ class Array(pybamm.Symbol):
         the name of the node
     domain : iterable of str, optional
         list of domains the parameter is valid over, defaults to empty list
-    auxiliary_domainds : dict, optional
+    auxiliary_domains : dict, optional
         dictionary of auxiliary domains, defaults to empty dict
+    domains : dict
+        A dictionary equivalent to {'primary': domain, auxiliary_domains}. Either
+        'domain' and 'auxiliary_domains', or just 'domains', should be provided
+        (not both). In future, the 'domain' and 'auxiliary_domains' arguments may be
+        deprecated.
     entries_string : str
         String representing the entries (slow to recalculate when copying)
 
@@ -34,18 +42,22 @@ class Array(pybamm.Symbol):
         name=None,
         domain=None,
         auxiliary_domains=None,
+        domains=None,
         entries_string=None,
     ):
+        # if
         if isinstance(entries, list):
             entries = np.array(entries)
         if entries.ndim == 1:
             entries = entries[:, np.newaxis]
         if name is None:
             name = "Array of shape {!s}".format(entries.shape)
-        self._entries = entries
+        self._entries = entries.astype(float)
         # Use known entries string to avoid re-hashing, where possible
         self.entries_string = entries_string
-        super().__init__(name, domain=domain, auxiliary_domains=auxiliary_domains)
+        super().__init__(
+            name, domain=domain, auxiliary_domains=auxiliary_domains, domains=domains
+        )
 
     @property
     def entries(self):
@@ -53,12 +65,12 @@ class Array(pybamm.Symbol):
 
     @property
     def ndim(self):
-        """returns the number of dimensions of the tensor"""
+        """returns the number of dimensions of the tensor."""
         return self._entries.ndim
 
     @property
     def shape(self):
-        """returns the number of entries along each dimension"""
+        """returns the number of entries along each dimension."""
         return self._entries.shape
 
     @property
@@ -75,14 +87,19 @@ class Array(pybamm.Symbol):
         else:
             entries = self._entries
             if issparse(entries):
-                self._entries_string = str(entries.__dict__)
+                dct = entries.__dict__
+                self._entries_string = ["shape", str(dct["_shape"])]
+                for key in ["data", "indices", "indptr"]:
+                    self._entries_string += [key, dct[key].tobytes()]
+                self._entries_string = tuple(self._entries_string)
+                # self._entries_string = str(entries.__dict__)
             else:
-                self._entries_string = entries.tobytes()
+                self._entries_string = (entries.tobytes(),)
 
     def set_id(self):
         """See :meth:`pybamm.Symbol.set_id()`."""
         self._id = hash(
-            (self.__class__, self.name, self.entries_string) + tuple(self.domain)
+            (self.__class__, self.name) + self.entries_string + tuple(self.domain)
         )
 
     def _jac(self, variable):
@@ -91,14 +108,13 @@ class Array(pybamm.Symbol):
         jac = csr_matrix((self.size, variable.evaluation_array.count(True)))
         return pybamm.Matrix(jac)
 
-    def new_copy(self):
+    def create_copy(self):
         """See :meth:`pybamm.Symbol.new_copy()`."""
         return self.__class__(
             self.entries,
             self.name,
-            self.domain,
-            self.auxiliary_domains,
-            self.entries_string,
+            domains=self.domains,
+            entries_string=self.entries_string,
         )
 
     def _base_evaluate(self, t=None, y=None, y_dot=None, inputs=None):
@@ -108,6 +124,11 @@ class Array(pybamm.Symbol):
     def is_constant(self):
         """See :meth:`pybamm.Symbol.is_constant()`."""
         return True
+
+    def to_equation(self):
+        """Returns the value returned by the node when evaluated."""
+        entries_list = self.entries.tolist()
+        return sympy.Array(entries_list)
 
 
 def linspace(start, stop, num=50, **kwargs):

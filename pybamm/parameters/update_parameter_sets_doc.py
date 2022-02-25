@@ -51,7 +51,7 @@ def generate_ps_doc(parameter_set_dict):
     for ps_chemistry in sorted(parameter_set_dict.keys()):
         output_list.append("")
         ps_citations = parameter_set_dict[ps_chemistry]
-        chem_name = ps_chemistry.capitalize() + " " + "parameter sets"
+        chem_name = ps_chemistry.capitalize().replace("_", "-") + " " + "parameter sets"
         output_list.append(chem_name)
         dashes = "-" * len(ps_chemistry) + "-" * 15
         output_list.append(dashes)

@@ -14,6 +14,7 @@
 #
 import os
 import sys
+
 import guzzle_sphinx_theme
 
 sys.path.insert(0, os.path.abspath("../"))
@@ -22,13 +23,13 @@ sys.path.insert(0, os.path.abspath("../"))
 # -- Project information -----------------------------------------------------
 
 project = "PyBaMM"
-copyright = "2020, The PyBaMM Team"
+copyright = "2018-2022, The PyBaMM Team"
 author = "The PyBaMM Team"
 
 # The short X.Y version
-version = "0.3"
+version = "22.1"
 # The full version, including alpha/beta/rc tags
-release = "0.3.0-beta"
+release = version
 
 
 # -- General configuration ---------------------------------------------------
@@ -154,9 +155,7 @@ latex_elements = {
 # Grouping the document tree into LaTeX files. List of tuples
 # (source start file, target name, title,
 #  author, documentclass [howto, manual, or own class]).
-latex_documents = [
-    (master_doc, "PyBaMM.tex", "PyBaMM Documentation", "Valentin Sulzer", "manual")
-]
+latex_documents = [(master_doc, "PyBaMM.tex", "PyBaMM Documentation", author, "manual")]
 
 
 # -- Options for manual page output ------------------------------------------
@@ -208,9 +207,9 @@ epub_exclude_files = ["search.html"]
 
 # Example configuration for intersphinx: refer to the Python standard library.
 intersphinx_mapping = {
-    "python": ("https://docs.python.org/", None),
-    "sphinx": ("http://www.sphinx-doc.org/en/stable/", None),
-    "numpy": ("http://docs.scipy.org/doc/numpy/", None),
-    "scipy": ("http://docs.scipy.org/doc/scipy/reference", None),
-    "matplotlib": ("http://matplotlib.org", None),
+    "python": ("https://docs.python.org/3/", None),
+    "sphinx": ("https://www.sphinx-doc.org/en/master/", None),
+    "numpy": ("https://numpy.org/doc/stable", None),
+    # "scipy": ("http://docs.scipy.org/doc/scipy/reference", None),
+    "matplotlib": ("https://matplotlib.org", None),
 }

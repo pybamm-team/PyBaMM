@@ -1,11 +1,13 @@
 #
 # Binary operator classes
 #
-import pybamm
+import numbers
 
 import numpy as np
-import numbers
-from scipy.sparse import issparse, csr_matrix
+import sympy
+from scipy.sparse import csr_matrix, issparse
+
+import pybamm
 
 
 def preprocess_binary(left, right):
@@ -23,44 +25,18 @@ def preprocess_binary(left, right):
         )
 
     # Do some broadcasting in special cases, to avoid having to do this manually
-    if left.domain != [] and right.domain != []:
-        if (
-            left.domain != right.domain
-            and "secondary" in right.auxiliary_domains
-            and left.domain == right.auxiliary_domains["secondary"]
-        ):
+    if left.domain != [] and right.domain != [] and left.domain != right.domain:
+        if left.domain == right.secondary_domain:
             left = pybamm.PrimaryBroadcast(left, right.domain)
-        if (
-            right.domain != left.domain
-            and "secondary" in left.auxiliary_domains
-            and right.domain == left.auxiliary_domains["secondary"]
-        ):
+        elif right.domain == left.secondary_domain:
             right = pybamm.PrimaryBroadcast(right, left.domain)
 
     return left, right
 
 
-def get_binary_children_domains(ldomain, rdomain):
-    """Combine domains from children in appropriate way."""
-    if ldomain == rdomain:
-        return ldomain
-    elif ldomain == []:
-        return rdomain
-    elif rdomain == []:
-        return ldomain
-    else:
-        raise pybamm.DomainError(
-            """
-            children must have same (or empty) domains, but left.domain is '{}'
-            and right.domain is '{}'
-            """.format(
-                ldomain, rdomain
-            )
-        )
-
-
 class BinaryOperator(pybamm.Symbol):
-    """A node in the expression tree representing a binary operator (e.g. `+`, `*`)
+    """
+    A node in the expression tree representing a binary operator (e.g. `+`, `*`)
 
     Derived classes will specify the particular operator
 
@@ -75,20 +51,13 @@ class BinaryOperator(pybamm.Symbol):
         lhs child node (converted to :class:`Scalar` if Number)
     right : :class:`Symbol` or :class:`Number`
         rhs child node (converted to :class:`Scalar` if Number)
-
     """
 
     def __init__(self, name, left, right):
         left, right = preprocess_binary(left, right)
 
-        domain = get_binary_children_domains(left.domain, right.domain)
-        auxiliary_domains = self.get_children_auxiliary_domains([left, right])
-        super().__init__(
-            name,
-            children=[left, right],
-            domain=domain,
-            auxiliary_domains=auxiliary_domains,
-        )
+        domains = self.get_children_domains([left, right])
+        super().__init__(name, children=[left, right], domains=domains)
         self.left = self.children[0]
         self.right = self.children[1]
 
@@ -112,7 +81,7 @@ class BinaryOperator(pybamm.Symbol):
             right_str = "{!s}".format(self.right)
         return "{} {} {}".format(left_str, self.name, right_str)
 
-    def new_copy(self):
+    def create_copy(self):
         """See :meth:`pybamm.Symbol.new_copy()`."""
 
         # process children
@@ -164,7 +133,9 @@ class BinaryOperator(pybamm.Symbol):
 
     def _binary_evaluate(self, left, right):
         """Perform binary operation on nodes 'left' and 'right'."""
-        raise NotImplementedError
+        raise NotImplementedError(
+            f"{self.__class__} does not implement _binary_evaluate."
+        )
 
     def _evaluates_on_edges(self, dimension):
         """See :meth:`pybamm.Symbol._evaluates_on_edges()`."""
@@ -176,9 +147,24 @@ class BinaryOperator(pybamm.Symbol):
         """See :meth:`pybamm.Symbol.is_constant()`."""
         return self.left.is_constant() and self.right.is_constant()
 
+    def _sympy_operator(self, left, right):
+        """Apply appropriate SymPy operators."""
+        return self._binary_evaluate(left, right)
+
+    def to_equation(self):
+        """Convert the node and its subtree into a SymPy equation."""
+        if self.print_name is not None:
+            return sympy.Symbol(self.print_name)
+        else:
+            child1, child2 = self.children
+            eq1 = child1.to_equation()
+            eq2 = child2.to_equation()
+            return self._sympy_operator(eq1, eq2)
+
 
 class Power(BinaryOperator):
-    """A node in the expression tree representing a `**` power operator
+    """
+    A node in the expression tree representing a `**` power operator.
 
     **Extends:** :class:`BinaryOperator`
     """
@@ -220,7 +206,8 @@ class Power(BinaryOperator):
 
 
 class Addition(BinaryOperator):
-    """A node in the expression tree representing an addition operator
+    """
+    A node in the expression tree representing an addition operator.
 
     **Extends:** :class:`BinaryOperator`
     """
@@ -243,7 +230,8 @@ class Addition(BinaryOperator):
 
 
 class Subtraction(BinaryOperator):
-    """A node in the expression tree representing a subtraction operator
+    """
+    A node in the expression tree representing a subtraction operator.
 
     **Extends:** :class:`BinaryOperator`
     """
@@ -310,7 +298,8 @@ class Multiplication(BinaryOperator):
 
 
 class MatrixMultiplication(BinaryOperator):
-    """A node in the expression tree representing a matrix multiplication operator
+    """
+    A node in the expression tree representing a matrix multiplication operator.
 
     **Extends:** :class:`BinaryOperator`
     """
@@ -350,9 +339,16 @@ class MatrixMultiplication(BinaryOperator):
         """See :meth:`pybamm.BinaryOperator._binary_evaluate()`."""
         return left @ right
 
+    def _sympy_operator(self, left, right):
+        """Override :meth:`pybamm.BinaryOperator._sympy_operator`"""
+        left = sympy.Matrix(left)
+        right = sympy.Matrix(right)
+        return left * right
+
 
 class Division(BinaryOperator):
-    """A node in the expression tree representing a division operator
+    """
+    A node in the expression tree representing a division operator.
 
     **Extends:** :class:`BinaryOperator`
     """
@@ -384,12 +380,7 @@ class Division(BinaryOperator):
         if issparse(left):
             return csr_matrix(left.multiply(1 / right))
         else:
-            if isinstance(right, numbers.Number) and right == 0:
-                # don't raise RuntimeWarning for NaNs
-                with np.errstate(invalid="ignore"):
-                    return left * np.inf
-            else:
-                return left / right
+            return left / right
 
 
 class Inner(BinaryOperator):
@@ -473,8 +464,43 @@ def inner(left, right):
     return pybamm.simplify_if_constant(pybamm.Inner(left, right))
 
 
-class Heaviside(BinaryOperator):
-    """A node in the expression tree representing a heaviside step function.
+class Equality(BinaryOperator):
+    """
+    A node in the expression tree representing an equality comparison between two
+    nodes. Returns 1 if the two nodes evaluate to the same thing and 0 otherwise.
+    **Extends:** :class:`BinaryOperator`
+    """
+
+    def __init__(self, left, right):
+        """See :meth:`pybamm.BinaryOperator.__init__()`."""
+        super().__init__("==", left, right)
+
+    def diff(self, variable):
+        """See :meth:`pybamm.Symbol.diff()`."""
+        # Equality should always be multiplied by something else so hopefully don't
+        # need to worry about shape
+        return pybamm.Scalar(0)
+
+    def _binary_jac(self, left_jac, right_jac):
+        """See :meth:`pybamm.BinaryOperator._binary_jac()`."""
+        # Equality should always be multiplied by something else so hopefully don't
+        # need to worry about shape
+        return pybamm.Scalar(0)
+
+    def _binary_evaluate(self, left, right):
+        """See :meth:`pybamm.BinaryOperator._binary_evaluate()`."""
+        return int(left == right)
+
+    def _binary_new_copy(self, left, right):
+        """See :meth:`pybamm.BinaryOperator._binary_new_copy()`."""
+        return pybamm.Equality(left, right)
+
+
+class _Heaviside(BinaryOperator):
+    """
+    A node in the expression tree representing a heaviside step function.
+    This class is semi-private and should not be called directly, use `EqualHeaviside`
+    or `NotEqualHeaviside` instead, or `<` or `<=`.
 
     Adding this operation to the rhs or algebraic equations in a model can often cause a
     discontinuity in the solution. For the specific cases listed below, this will be
@@ -506,7 +532,7 @@ class Heaviside(BinaryOperator):
         return pybamm.Scalar(0)
 
 
-class EqualHeaviside(Heaviside):
+class EqualHeaviside(_Heaviside):
     """A heaviside function with equality (return 1 when left = right)"""
 
     def __init__(self, left, right):
@@ -524,7 +550,7 @@ class EqualHeaviside(Heaviside):
             return left <= right
 
 
-class NotEqualHeaviside(Heaviside):
+class NotEqualHeaviside(_Heaviside):
     """A heaviside function without equality (return 0 when left = right)"""
 
     def __init__(self, left, right):
@@ -607,12 +633,12 @@ class Minimum(BinaryOperator):
         return np.minimum(left, right)
 
     def _binary_new_copy(self, left, right):
-        "See :meth:`pybamm.BinaryOperator._binary_new_copy()`."
+        """See :meth:`pybamm.BinaryOperator._binary_new_copy()`."""
         return pybamm.minimum(left, right)
 
 
 class Maximum(BinaryOperator):
-    """Returns the smaller of two objects."""
+    """Returns the greater of two objects."""
 
     def __init__(self, left, right):
         super().__init__("maximum", left, right)
@@ -639,35 +665,93 @@ class Maximum(BinaryOperator):
         return np.maximum(left, right)
 
     def _binary_new_copy(self, left, right):
-        "See :meth:`pybamm.BinaryOperator._binary_new_copy()`."
+        """See :meth:`pybamm.BinaryOperator._binary_new_copy()`."""
         return pybamm.maximum(left, right)
 
 
 def simplify_elementwise_binary_broadcasts(left, right):
     left, right = preprocess_binary(left, right)
 
+    def unpack_broadcast_recursive(symbol):
+        if isinstance(symbol, pybamm.Broadcast):
+            if symbol.child.domain == []:
+                return symbol.orphans[0]
+            elif (
+                isinstance(symbol.child, pybamm.Broadcast)
+                and symbol.child.broadcasts_to_nodes
+            ):
+                out = unpack_broadcast_recursive(symbol.orphans[0])
+                if out.domain == []:
+                    return out
+        return symbol
+
     # No need to broadcast if the other symbol already has the shape that is being
     # broadcasted to
-    if left.domains == right.domains and all(
-        left.evaluates_on_edges(dim) == right.evaluates_on_edges(dim)
-        for dim in ["primary", "secondary", "tertiary"]
-    ):
-        if isinstance(left, pybamm.Broadcast) and left.child.domain == []:
-            left = left.orphans[0]
-        elif isinstance(right, pybamm.Broadcast) and right.child.domain == []:
-            right = right.orphans[0]
+    # Do this recursively
+    if left.domains == right.domains:
+        if isinstance(left, pybamm.Broadcast) and left.broadcasts_to_nodes:
+            left = unpack_broadcast_recursive(left)
+        elif isinstance(right, pybamm.Broadcast) and right.broadcasts_to_nodes:
+            right = unpack_broadcast_recursive(right)
 
     return left, right
+
+
+def simplified_binary_broadcast_concatenation(left, right, operator):
+    """
+    Check if there are concatenations or broadcasts that we can commute the operator
+    with
+    """
+    # Broadcast commutes with elementwise operators
+    if isinstance(left, pybamm.Broadcast) and right.domain == []:
+        return left._unary_new_copy(operator(left.orphans[0], right))
+    elif isinstance(right, pybamm.Broadcast) and left.domain == []:
+        return right._unary_new_copy(operator(left, right.orphans[0]))
+
+    # Concatenation commutes with elementwise operators
+    # If one of the sides is constant then commute concatenation with the operator
+    # Don't do this for ConcatenationVariable objects as these will
+    # be simplified differently later on
+    if isinstance(left, pybamm.Concatenation) and not isinstance(
+        left, pybamm.ConcatenationVariable
+    ):
+        if right.evaluates_to_constant_number():
+            return left._concatenation_new_copy(
+                [operator(child, right) for child in left.orphans]
+            )
+        elif (
+            isinstance(right, pybamm.Concatenation)
+            and not any(
+                isinstance(child, (pybamm.Variable, pybamm.StateVector))
+                for child in right.children
+            )
+            and (
+                all(child.is_constant() for child in left.children)
+                or all(child.is_constant() for child in right.children)
+            )
+        ):
+            return left._concatenation_new_copy(
+                [
+                    operator(left_child, right_child)
+                    for left_child, right_child in zip(left.orphans, right.orphans)
+                ]
+            )
+    if isinstance(right, pybamm.Concatenation) and not isinstance(
+        right, pybamm.ConcatenationVariable
+    ):
+        if left.evaluates_to_constant_number():
+            return right._concatenation_new_copy(
+                [operator(left, child) for child in right.orphans]
+            )
 
 
 def simplified_power(left, right):
     left, right = simplify_elementwise_binary_broadcasts(left, right)
 
-    # Broadcast commutes with power operator
-    if isinstance(left, pybamm.Broadcast) and right.domain == []:
-        return left._unary_new_copy(left.orphans[0] ** right)
-    elif isinstance(right, pybamm.Broadcast) and left.domain == []:
-        return right._unary_new_copy(left ** right.orphans[0])
+    # Check for Concatenations and Broadcasts
+    out = simplified_binary_broadcast_concatenation(left, right, simplified_power)
+    if out is not None:
+        return out
 
     # anything to the power of zero is one
     if pybamm.is_scalar_zero(right):
@@ -713,11 +797,10 @@ def simplified_addition(left, right):
     """
     left, right = simplify_elementwise_binary_broadcasts(left, right)
 
-    # Broadcast commutes with addition operator
-    if isinstance(left, pybamm.Broadcast) and right.domain == []:
-        return left._unary_new_copy(left.orphans[0] + right)
-    elif isinstance(right, pybamm.Broadcast) and left.domain == []:
-        return right._unary_new_copy(left + right.orphans[0])
+    # Check for Concatenations and Broadcasts
+    out = simplified_binary_broadcast_concatenation(left, right, simplified_addition)
+    if out is not None:
+        return out
 
     # anything added by a scalar zero returns the other child
     elif pybamm.is_scalar_zero(left):
@@ -730,7 +813,8 @@ def simplified_addition(left, right):
             return right * pybamm.ones_like(left)
         # If left object is zero and has size smaller than or equal to right object in
         # all dimensions, we can safely return the right object. For example, adding a
-        # zero vector a matrix, we can just return the matrix
+        # zero vector a matrix, we can just return the matrix.
+        # When checking evaluation on edges, check dimensions of left object only
         elif all(
             left_dim_size <= right_dim_size
             for left_dim_size, right_dim_size in zip(
@@ -738,7 +822,7 @@ def simplified_addition(left, right):
             )
         ) and all(
             left.evaluates_on_edges(dim) == right.evaluates_on_edges(dim)
-            for dim in ["primary", "secondary", "tertiary"]
+            for dim in left.domains.keys()
         ):
             return right
     elif pybamm.is_matrix_zero(right):
@@ -752,9 +836,13 @@ def simplified_addition(left, right):
             )
         ) and all(
             left.evaluates_on_edges(dim) == right.evaluates_on_edges(dim)
-            for dim in ["primary", "secondary", "tertiary"]
+            for dim in left.domains.keys()
         ):
             return left
+
+    # Return constant if both sides are constant
+    if left.is_constant() and right.is_constant():
+        return pybamm.simplify_if_constant(pybamm.Addition(left, right))
 
     # Simplify A @ c + B @ c to (A + B) @ c if (A + B) is constant
     # This is a common construction that appears from discretisation of spatial
@@ -772,12 +860,49 @@ def simplified_addition(left, right):
             new_sum.copy_domains(pybamm.Addition(left, right))
             return new_sum
 
+    if isinstance(right, pybamm.Addition) and left.is_constant():
+        # Simplify a + (b + c) to (a + b) + c if (a + b) is constant
+        if right.left.is_constant():
+            r_left, r_right = right.orphans
+            return (left + r_left) + r_right
+        # Simplify a + (b + c) to (a + c) + b if (a + c) is constant
+        elif right.right.is_constant():
+            r_left, r_right = right.orphans
+            return (left + r_right) + r_left
+    elif isinstance(right, pybamm.Subtraction) and left.is_constant():
+        # Simplify a + (b - c) to (a + b) - c if (a + b) is constant
+        if right.left.is_constant():
+            r_left, r_right = right.orphans
+            return (left + r_left) - r_right
+        # Simplify a + (b - c) to (a - c) + b if (a - c) is constant
+        elif right.right.is_constant():
+            r_left, r_right = right.orphans
+            return (left - r_right) + r_left
+    if isinstance(left, pybamm.Addition) and right.is_constant():
+        # Simplify (a + b) + c to a + (b + c) if (b + c) is constant
+        if left.right.is_constant():
+            l_left, l_right = left.orphans
+            return l_left + (l_right + right)
+        # Simplify (a + b) + c to (a + c) + b if (a + c) is constant
+        elif left.left.is_constant():
+            l_left, l_right = left.orphans
+            return (l_left + right) + l_right
+    elif isinstance(left, pybamm.Subtraction) and right.is_constant():
+        # Simplify (a - b) + c to a + (c - b) if (c - b) is constant
+        if left.right.is_constant():
+            l_left, l_right = left.orphans
+            return l_left + (right - l_right)
+        # Simplify (a - b) + c to (a + c) - b if (a + c) is constant
+        elif left.left.is_constant():
+            l_left, l_right = left.orphans
+            return (l_left + right) - l_right
+
     return pybamm.simplify_if_constant(pybamm.Addition(left, right))
 
 
 def simplified_subtraction(left, right):
     """
-     Note
+    Note
     ----
     We check for scalars first, then matrices. This is because
     (Zero Matrix) - (Zero Scalar)
@@ -785,11 +910,10 @@ def simplified_subtraction(left, right):
     """
     left, right = simplify_elementwise_binary_broadcasts(left, right)
 
-    # Broadcast commutes with subtraction operator
-    if isinstance(left, pybamm.Broadcast) and right.domain == []:
-        return left._unary_new_copy(left.orphans[0] - right)
-    elif isinstance(right, pybamm.Broadcast) and left.domain == []:
-        return right._unary_new_copy(left - right.orphans[0])
+    # Check for Concatenations and Broadcasts
+    out = simplified_binary_broadcast_concatenation(left, right, simplified_subtraction)
+    if out is not None:
+        return out
 
     # anything added by a scalar zero returns the other child
     if pybamm.is_scalar_zero(left):
@@ -808,7 +932,7 @@ def simplified_subtraction(left, right):
             )
         ) and all(
             left.evaluates_on_edges(dim) == right.evaluates_on_edges(dim)
-            for dim in ["primary", "secondary", "tertiary"]
+            for dim in left.domains.keys()
         ):
             return -right
     if pybamm.is_matrix_zero(right):
@@ -822,13 +946,54 @@ def simplified_subtraction(left, right):
             )
         ) and all(
             left.evaluates_on_edges(dim) == right.evaluates_on_edges(dim)
-            for dim in ["primary", "secondary", "tertiary"]
+            for dim in left.domains.keys()
         ):
             return left
+
+    # Return constant if both sides are constant
+    if left.is_constant() and right.is_constant():
+        return pybamm.simplify_if_constant(Subtraction(left, right))
 
     # a symbol minus itself is 0s of the same shape
     if left.id == right.id:
         return pybamm.zeros_like(left)
+
+    if isinstance(right, pybamm.Addition) and left.is_constant():
+        # Simplify a - (b + c) to (a - b) - c if (a - b) is constant
+        if right.left.is_constant():
+            r_left, r_right = right.orphans
+            return (left - r_left) - r_right
+        # Simplify a - (b + c) to (a - c) - b if (a - c) is constant
+        elif right.right.is_constant():
+            r_left, r_right = right.orphans
+            return (left - r_right) - r_left
+    elif isinstance(right, pybamm.Subtraction) and left.is_constant():
+        # Simplify a - (b - c) to (a - b) + c if (a - b) is constant
+        if right.left.is_constant():
+            r_left, r_right = right.orphans
+            return (left - r_left) + r_right
+        # Simplify a - (b - c) to (a + c) - b if (a + c) is constant
+        elif right.right.is_constant():
+            r_left, r_right = right.orphans
+            return (left + r_right) - r_left
+    if isinstance(left, pybamm.Addition) and right.is_constant():
+        # Simplify (a + b) - c to a + (b - c) if (b - c) is constant
+        if left.right.is_constant():
+            l_left, l_right = left.orphans
+            return l_left + (l_right - right)
+        # Simplify (a + b) - c to (a - c) + b if (a - c) is constant
+        elif left.left.is_constant():
+            l_left, l_right = left.orphans
+            return (l_left - right) + l_right
+    elif isinstance(left, pybamm.Subtraction) and right.is_constant():
+        # Simplify (a - b) - c to a - (c + b) if (c + b) is constant
+        if left.right.is_constant():
+            l_left, l_right = left.orphans
+            return l_left - (right + l_right)
+        # Simplify (a - b) - c to (a - c) - b if (a - c) is constant
+        elif left.left.is_constant():
+            l_left, l_right = left.orphans
+            return (l_left - right) - l_right
 
     return pybamm.simplify_if_constant(pybamm.Subtraction(left, right))
 
@@ -836,11 +1001,12 @@ def simplified_subtraction(left, right):
 def simplified_multiplication(left, right):
     left, right = simplify_elementwise_binary_broadcasts(left, right)
 
-    # Broadcast commutes with multiplication operator
-    if isinstance(left, pybamm.Broadcast) and right.domain == []:
-        return left._unary_new_copy(left.orphans[0] * right)
-    elif isinstance(right, pybamm.Broadcast) and left.domain == []:
-        return right._unary_new_copy(left * right.orphans[0])
+    # Check for Concatenations and Broadcasts
+    out = simplified_binary_broadcast_concatenation(
+        left, right, simplified_multiplication
+    )
+    if out is not None:
+        return out
 
     # simplify multiply by scalar zero, being careful about shape
     if pybamm.is_scalar_zero(left):
@@ -858,6 +1024,16 @@ def simplified_multiplication(left, right):
     if pybamm.is_scalar_one(right):
         return left
 
+    # anything multiplied by a scalar negative one returns negative itself
+    if pybamm.is_scalar_minus_one(left):
+        return -right
+    if pybamm.is_scalar_minus_one(right):
+        return -left
+
+    # Return constant if both sides are constant
+    if left.is_constant() and right.is_constant():
+        return pybamm.simplify_if_constant(pybamm.Multiplication(left, right))
+
     # anything multiplied by a matrix one returns itself if
     # - the shapes are the same
     # - both left and right evaluate on edges, or both evaluate on nodes, in all
@@ -866,26 +1042,29 @@ def simplified_multiplication(left, right):
     try:
         if left.shape_for_testing == right.shape_for_testing and all(
             left.evaluates_on_edges(dim) == right.evaluates_on_edges(dim)
-            for dim in ["primary", "secondary", "tertiary"]
+            for dim in left.domains.keys()
         ):
             if pybamm.is_matrix_one(left):
                 return right
             elif pybamm.is_matrix_one(right):
                 return left
+            # also check for negative one
+            if pybamm.is_matrix_minus_one(left):
+                return -right
+            elif pybamm.is_matrix_minus_one(right):
+                return -left
+
     except NotImplementedError:
         pass
-
-    # Return constant if both sides are constant
-    if left.is_constant() and right.is_constant():
-        return pybamm.simplify_if_constant(pybamm.Multiplication(left, right))
 
     # Simplify (B @ c) * a to (a * B) @ c if (a * B) is constant
     # This is a common construction that appears from discretisation of spatial
     # operators
     if (
         isinstance(left, MatrixMultiplication)
-        and right.is_constant()
         and left.left.is_constant()
+        and right.is_constant()
+        and not (right.ndim_for_testing == 2 and right.shape_for_testing[1] > 1)
     ):
         l_left, l_right = left.orphans
         new_left = right * l_left
@@ -900,25 +1079,23 @@ def simplified_multiplication(left, right):
         # Simplify (a * b) * c to (a * c) * b if (a * c) is constant
         if left.left.is_constant():
             l_left, l_right = left.orphans
-            new_left = l_left * right
-            return new_left * l_right
+            return (l_left * right) * l_right
         # Simplify (a * b) * c to a * (b * c) if (b * c) is constant
         elif left.right.is_constant():
             l_left, l_right = left.orphans
-            new_right = l_right * right
-            return l_left * new_right
+            return l_left * (l_right * right)
     elif isinstance(left, Division) and right.is_constant():
         # Simplify (a / b) * c to a * (c / b) if (c / b) is constant
         if left.right.is_constant():
             l_left, l_right = left.orphans
-            new_right = right / l_right
-            return l_left * new_right
+            return l_left * (right / l_right)
 
     # Simplify a * (B @ c) to (a * B) @ c if (a * B) is constant
     if (
         isinstance(right, MatrixMultiplication)
-        and left.is_constant()
         and right.left.is_constant()
+        and left.is_constant()
+        and not (left.ndim_for_testing == 2 and left.shape_for_testing[1] > 1)
     ):
         r_left, r_right = right.orphans
         new_left = left * r_left
@@ -933,19 +1110,52 @@ def simplified_multiplication(left, right):
         # Simplify a * (b * c) to (a * b) * c if (a * b) is constant
         if right.left.is_constant():
             r_left, r_right = right.orphans
-            new_left = left * r_left
-            return new_left * r_right
+            return (left * r_left) * r_right
         # Simplify a * (b * c) to (a * c) * b if (a * c) is constant
         elif right.right.is_constant():
             r_left, r_right = right.orphans
-            new_left = left * r_right
-            return new_left * r_left
+            return (left * r_right) * r_left
     elif isinstance(right, Division) and left.is_constant():
         # Simplify a * (b / c) to (a / c) * b if (a / c) is constant
         if right.right.is_constant():
             r_left, r_right = right.orphans
-            new_left = left / r_right
-            return new_left * r_left
+            return (left / r_right) * r_left
+
+    # Simplify a * (b + c) to (a * b) + (a * c) if (a * b) or (a * c) is constant
+    # This is a common construction that appears from discretisation of spatial
+    # operators
+    # Also do this for cases like a * (b @ c + d) where (a * b) is constant
+    elif isinstance(right, (Addition, Subtraction)):
+        mul_classes = (
+            pybamm.Multiplication,
+            pybamm.MatrixMultiplication,
+            pybamm.Division,
+        )
+        if (
+            right.left.is_constant()
+            or right.right.is_constant()
+            or (isinstance(right.left, mul_classes) and right.left.left.is_constant())
+            or (isinstance(right.right, mul_classes) and right.right.left.is_constant())
+        ):
+            r_left, r_right = right.orphans
+            if (r_left.domain == right.domain or r_left.domain == []) and (
+                r_right.domain == right.domain or r_right.domain == []
+            ):
+                if isinstance(right, Addition):
+                    return (left * r_left) + (left * r_right)
+                elif isinstance(right, Subtraction):
+                    return (left * r_left) - (left * r_right)
+
+    # Negation simplifications
+    if isinstance(left, pybamm.Negate) and isinstance(right, pybamm.Negate):
+        # Double negation cancels out
+        return left.orphans[0] * right.orphans[0]
+    elif isinstance(left, pybamm.Negate) and right.is_constant():
+        # Simplify (-a) * b to a * (-b) if (-b) is constant
+        return left.orphans[0] * (-right)
+    elif isinstance(right, pybamm.Negate) and left.is_constant():
+        # Simplify a * (-b) to (-a) * b if (-a) is constant
+        return (-left) * right.orphans[0]
 
     return pybamm.Multiplication(left, right)
 
@@ -953,11 +1163,10 @@ def simplified_multiplication(left, right):
 def simplified_division(left, right):
     left, right = simplify_elementwise_binary_broadcasts(left, right)
 
-    # Broadcast commutes with division operator
-    if isinstance(left, pybamm.Broadcast) and right.domain == []:
-        return left._unary_new_copy(left.orphans[0] / right)
-    elif isinstance(right, pybamm.Broadcast) and left.domain == []:
-        return right._unary_new_copy(left / right.orphans[0])
+    # Check for Concatenations and Broadcasts
+    out = simplified_binary_broadcast_concatenation(left, right, simplified_division)
+    if out is not None:
+        return out
 
     # zero divided by anything returns zero (being careful about shape)
     if pybamm.is_scalar_zero(left):
@@ -979,6 +1188,29 @@ def simplified_division(left, right):
     if left.id == right.id:
         return pybamm.ones_like(left)
 
+    # anything multiplied by a matrix one returns itself if
+    # - the shapes are the same
+    # - both left and right evaluate on edges, or both evaluate on nodes, in all
+    # dimensions
+    # (and possibly more generally, but not implemented here)
+    try:
+        if left.shape_for_testing == right.shape_for_testing and all(
+            left.evaluates_on_edges(dim) == right.evaluates_on_edges(dim)
+            for dim in left.domains.keys()
+        ):
+            if pybamm.is_matrix_one(right):
+                return left
+            # also check for negative one
+            if pybamm.is_matrix_minus_one(right):
+                return -left
+
+    except NotImplementedError:
+        pass
+
+    # Return constant if both sides are constant
+    if left.is_constant() and right.is_constant():
+        return pybamm.simplify_if_constant(pybamm.Division(left, right))
+
     # Simplify (B @ c) / a to (B / a) @ c if (B / a) is constant
     # This is a common construction that appears from discretisation of averages
     elif isinstance(left, MatrixMultiplication) and right.is_constant():
@@ -992,19 +1224,54 @@ def simplified_division(left, right):
             new_division.copy_domains(left)
             return new_division
 
-    if isinstance(left, Multiplication):
+    if isinstance(left, Multiplication) and right.is_constant():
         # Simplify (a * b) / c to (a / c) * b if (a / c) is constant
         if left.left.is_constant():
             l_left, l_right = left.orphans
-            new_left = l_left / right
-            if new_left.is_constant():
-                return new_left * l_right
+            return (l_left / right) * l_right
         # Simplify (a * b) / c to a * (b / c) if (b / c) is constant
         elif left.right.is_constant():
             l_left, l_right = left.orphans
-            new_right = l_right / right
-            if new_right.is_constant():
-                return l_left * new_right
+            return l_left * (l_right / right)
+    elif isinstance(left, Division) and right.is_constant():
+        # Simplify (a / b) / c to (a / c) / b if (a / c) is constant
+        if left.left.is_constant():
+            l_left, l_right = left.orphans
+            return (l_left / right) / l_right
+        # Simplify (a / b) / c to a / (b * c) if (b * c) is constant
+        elif left.right.is_constant():
+            l_left, l_right = left.orphans
+            return l_left / (l_right * right)
+
+    if isinstance(right, Multiplication) and left.is_constant():
+        # Simplify a / (b * c) to (a / b) / c if (a / b) is constant
+        if right.left.is_constant():
+            r_left, r_right = right.orphans
+            return (left / r_left) / r_right
+        # Simplify a / (b * c) to (a / c) / b if (a / c) is constant
+        elif right.right.is_constant():
+            r_left, r_right = right.orphans
+            return (left / r_right) / r_left
+    elif isinstance(right, Division) and left.is_constant():
+        # Simplify a / (b / c) to (a / b) * c if (a / b) is constant
+        if right.left.is_constant():
+            r_left, r_right = right.orphans
+            return (left / r_left) * r_right
+        # Simplify a / (b / c) to (a * c) / b if (a * c) is constant
+        elif right.right.is_constant():
+            r_left, r_right = right.orphans
+            return (left * r_right) / r_left
+
+    # Negation simplifications
+    if isinstance(left, pybamm.Negate) and isinstance(right, pybamm.Negate):
+        # Double negation cancels out
+        return left.orphans[0] / right.orphans[0]
+    elif isinstance(left, pybamm.Negate) and right.is_constant():
+        # Simplify (-a) / b to a / (-b) if (-b) is constant
+        return left.orphans[0] / (-right)
+    elif isinstance(right, pybamm.Negate) and left.is_constant():
+        # Simplify a / (-b) to (-a) / b if (-a) is constant
+        return (-left) / right.orphans[0]
 
     return pybamm.simplify_if_constant(pybamm.Division(left, right))
 
@@ -1018,19 +1285,16 @@ def simplified_matrix_multiplication(left, right):
         # Simplify A @ (b * c) to (A * b) @ c if (A * b) is constant
         if right.left.evaluates_to_constant_number():
             r_left, r_right = right.orphans
-            new_left = left * r_left
-            return new_left @ r_right
+            return (left * r_left) @ r_right
         # Simplify A @ (b * c) to (A * c) @ b if (A * c) is constant
         elif right.right.evaluates_to_constant_number():
             r_left, r_right = right.orphans
-            new_left = left * r_right
-            return new_left @ r_left
+            return (left * r_right) @ r_left
     elif isinstance(right, Division) and left.is_constant():
         # Simplify A @ (b / c) to (A / c) @ b if (A / c) is constant
         if right.right.evaluates_to_constant_number():
             r_left, r_right = right.orphans
-            new_left = left / r_right
-            return new_left @ r_left
+            return (left / r_right) @ r_left
 
     # Simplify A @ (B @ c) to (A @ B) @ c if (A @ B) is constant
     # This is a common construction that appears from discretisation of spatial
@@ -1120,7 +1384,8 @@ def sigmoid(left, right, k):
 
 
 def source(left, right, boundary=False):
-    """A convenience function for creating (part of) an expression tree representing
+    """
+    A convenience function for creating (part of) an expression tree representing
     a source term. This is necessary for spatial methods where the mass matrix
     is not the identity (e.g. finite element formulation with piecwise linear
     basis functions). The left child is the symbol representing the source term
@@ -1144,7 +1409,6 @@ def source(left, right, boundary=False):
         corresponding to a source term which only acts on the boundary of the
         domain. If False (default), the matrix is assembled over the entire domain,
         corresponding to a source term in the bulk.
-
     """
     # Broadcast if left is number
     if isinstance(left, numbers.Number):

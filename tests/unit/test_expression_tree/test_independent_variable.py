@@ -1,9 +1,11 @@
 #
 # Tests for the Parameter class
 #
-import pybamm
-
 import unittest
+
+import sympy
+
+import pybamm
 
 
 class TestIndependentVariable(unittest.TestCase):
@@ -49,8 +51,6 @@ class TestIndependentVariable(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "domain must be"):
             pybamm.SpatialVariable("x", [])
         with self.assertRaises(pybamm.DomainError):
-            pybamm.SpatialVariable("r", ["negative electrode"])
-        with self.assertRaises(pybamm.DomainError):
             pybamm.SpatialVariable("r_n", ["positive particle"])
         with self.assertRaises(pybamm.DomainError):
             pybamm.SpatialVariable("r_p", ["negative particle"])
@@ -61,6 +61,19 @@ class TestIndependentVariable(unittest.TestCase):
         x = pybamm.SpatialVariableEdge("x", "negative electrode")
         self.assertEqual(x.name, "x")
         self.assertTrue(x.evaluates_on_edges("primary"))
+
+    def test_to_equation(self):
+        # Test print_name
+        func = pybamm.IndependentVariable("a")
+        func.print_name = "test"
+        self.assertEqual(func.to_equation(), sympy.Symbol("test"))
+
+        self.assertEqual(
+            pybamm.IndependentVariable("a").to_equation(), sympy.Symbol("a")
+        )
+
+        # Test time
+        self.assertEqual(pybamm.t.to_equation(), sympy.Symbol("t"))
 
 
 if __name__ == "__main__":

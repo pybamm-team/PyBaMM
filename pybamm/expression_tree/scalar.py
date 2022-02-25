@@ -1,39 +1,40 @@
 #
 # Scalar class
 #
-import pybamm
 import numpy as np
+import sympy
+
+import pybamm
 
 
 class Scalar(pybamm.Symbol):
-    """A node in the expression tree representing a scalar value
-
-    **Extends:** :class:`Symbol`
+    """
+    A node in the expression tree representing a scalar value.
 
     Parameters
     ----------
-
     value : numeric
         the value returned by the node when evaluated
     name : str, optional
-        the name of the node. Defaulted to ``str(value)``
-        if not provided
-    domain : iterable of str, optional
-        list of domains the parameter is valid over, defaults to empty list
+        the name of the node. Defaulted to ``str(value)`` if not provided
 
+    **Extends:** :class:`Symbol`
     """
 
-    def __init__(self, value, name=None, domain=[]):
+    def __init__(self, value, name=None):
         # set default name if not provided
         self.value = value
         if name is None:
             name = str(self.value)
 
-        super().__init__(name, domain=domain)
+        super().__init__(name)
+
+    def __str__(self):
+        return str(self.value)
 
     @property
     def value(self):
-        """the value returned by the node when evaluated"""
+        """The value returned by the node when evaluated."""
         return self._value
 
     @value.setter
@@ -43,10 +44,8 @@ class Scalar(pybamm.Symbol):
     def set_id(self):
         """See :meth:`pybamm.Symbol.set_id()`."""
         # We must include the value in the hash, since different scalars can be
-        # indistinguishable by class, name and domain alone
-        self._id = hash(
-            (self.__class__, self.name) + tuple(self.domain) + tuple(str(self._value))
-        )
+        # indistinguishable by class and name alone
+        self._id = hash((self.__class__, self.name) + tuple(str(self._value)))
 
     def _base_evaluate(self, t=None, y=None, y_dot=None, inputs=None):
         """See :meth:`pybamm.Symbol._base_evaluate()`."""
@@ -56,10 +55,17 @@ class Scalar(pybamm.Symbol):
         """See :meth:`pybamm.Symbol._jac()`."""
         return pybamm.Scalar(0)
 
-    def new_copy(self):
+    def create_copy(self):
         """See :meth:`pybamm.Symbol.new_copy()`."""
-        return Scalar(self.value, self.name, self.domain)
+        return Scalar(self.value, self.name)
 
     def is_constant(self):
         """See :meth:`pybamm.Symbol.is_constant()`."""
         return True
+
+    def to_equation(self):
+        """Returns the value returned by the node when evaluated."""
+        if self.print_name is not None:
+            return sympy.Symbol(self.print_name)
+        else:
+            return self.value

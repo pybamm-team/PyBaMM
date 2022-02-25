@@ -58,44 +58,12 @@ class FiniteVolume(pybamm.SpatialMethod):
             Contains the discretised spatial variable
         """
         symbol_mesh = self.mesh.combine_submeshes(*symbol.domain)
-        repeats = self._get_auxiliary_domain_repeats(symbol.auxiliary_domains)
+        repeats = self._get_auxiliary_domain_repeats(symbol.domains)
         if symbol.evaluates_on_edges("primary"):
             entries = np.tile(symbol_mesh.edges, repeats)
         else:
             entries = np.tile(symbol_mesh.nodes, repeats)
-        return pybamm.Vector(
-            entries, domain=symbol.domain, auxiliary_domains=symbol.auxiliary_domains
-        )
-
-    def gradient(self, symbol, discretised_symbol, boundary_conditions):
-        """Matrix-vector multiplication to implement the gradient operator.
-        See :meth:`pybamm.SpatialMethod.gradient`
-        """
-        # Discretise symbol
-        domain = symbol.domain
-
-        # Add Dirichlet boundary conditions, if defined
-        if symbol.id in boundary_conditions:
-            bcs = boundary_conditions[symbol.id]
-            if any(bc[1] == "Dirichlet" for bc in bcs.values()):
-                # add ghost nodes and update domain
-                discretised_symbol, domain = self.add_ghost_nodes(
-                    symbol, discretised_symbol, bcs
-                )
-
-        # note in 1D spherical grad and normal grad are the same
-        gradient_matrix = self.gradient_matrix(domain, symbol.auxiliary_domains)
-
-        # Multiply by gradient matrix
-        out = gradient_matrix @ discretised_symbol
-
-        # Add Neumann boundary conditions, if defined
-        if symbol.id in boundary_conditions:
-            bcs = boundary_conditions[symbol.id]
-            if any(bc[1] == "Neumann" for bc in bcs.values()):
-                out = self.add_neumann_values(symbol, out, bcs, domain)
-
-        return out
+        return pybamm.Vector(entries, domains=symbol.domains)
 
     def preprocess_external_variables(self, var):
         """
@@ -123,7 +91,37 @@ class FiniteVolume(pybamm.SpatialMethod):
 
         return new_bcs
 
-    def gradient_matrix(self, domain, auxiliary_domains):
+    def gradient(self, symbol, discretised_symbol, boundary_conditions):
+        """Matrix-vector multiplication to implement the gradient operator.
+        See :meth:`pybamm.SpatialMethod.gradient`
+        """
+        # Discretise symbol
+        domain = symbol.domain
+
+        # Add Dirichlet boundary conditions, if defined
+        if symbol.id in boundary_conditions:
+            bcs = boundary_conditions[symbol.id]
+            if any(bc[1] == "Dirichlet" for bc in bcs.values()):
+                # add ghost nodes and update domain
+                discretised_symbol, domain = self.add_ghost_nodes(
+                    symbol, discretised_symbol, bcs
+                )
+
+        # note in 1D cartesian, cylindrical and spherical grad are the same
+        gradient_matrix = self.gradient_matrix(domain, symbol.domains)
+
+        # Multiply by gradient matrix
+        out = gradient_matrix @ discretised_symbol
+
+        # Add Neumann boundary conditions, if defined
+        if symbol.id in boundary_conditions:
+            bcs = boundary_conditions[symbol.id]
+            if any(bc[1] == "Neumann" for bc in bcs.values()):
+                out = self.add_neumann_values(symbol, out, bcs, domain)
+
+        return out
+
+    def gradient_matrix(self, domain, domains):
         """
         Gradient matrix for finite volumes in the appropriate domain.
         Equivalent to grad(y) = (y[1:] - y[:-1])/dx
@@ -131,16 +129,14 @@ class FiniteVolume(pybamm.SpatialMethod):
         Parameters
         ----------
         domains : list
-            The domain(s) in which to compute the gradient matrix, including ghost nodes
-        auxiliary_domains : dict
-            The auxiliary domains in which to compute the gradient matrix
+            The domain in which to compute the gradient matrix, including ghost nodes
 
         Returns
         -------
         :class:`pybamm.Matrix`
             The (sparse) finite volume gradient matrix for the domain
         """
-        # Create appropriate submesh by combining submeshes in domain
+        # Create appropriate submesh by combining submeshes in primary domain
         submesh = self.mesh.combine_submeshes(*domain)
 
         # Create 1D matrix using submesh
@@ -149,7 +145,7 @@ class FiniteVolume(pybamm.SpatialMethod):
         sub_matrix = diags([-e, e], [0, 1], shape=(n - 1, n))
 
         # number of repeats
-        second_dim_repeats = self._get_auxiliary_domain_repeats(auxiliary_domains)
+        second_dim_repeats = self._get_auxiliary_domain_repeats(domains)
 
         # generate full matrix from the submatrix
         # Convert to csr_matrix so that we can take the index (row-slicing), which is
@@ -168,21 +164,16 @@ class FiniteVolume(pybamm.SpatialMethod):
 
         divergence_matrix = self.divergence_matrix(symbol.domains)
 
-        # check for particle domain
-        if submesh.coord_sys == "spherical polar":
+        # check coordinate system
+        if submesh.coord_sys in ["cylindrical polar", "spherical polar"]:
             second_dim_repeats = self._get_auxiliary_domain_repeats(symbol.domains)
-            edges = submesh.edges
-
-            # create np.array of repeated submesh.nodes
-            r_numpy = np.kron(np.ones(second_dim_repeats), submesh.nodes)
-            r_edges_numpy = np.kron(np.ones(second_dim_repeats), edges)
-
-            r = pybamm.Vector(r_numpy)
+            # create np.array of repeated submesh.edges
+            r_edges_numpy = np.kron(np.ones(second_dim_repeats), submesh.edges)
             r_edges = pybamm.Vector(r_edges_numpy)
-
-            out = (1 / (r ** 2)) * (
-                divergence_matrix @ ((r_edges ** 2) * discretised_symbol)
-            )
+            if submesh.coord_sys == "spherical polar":
+                out = divergence_matrix @ ((r_edges ** 2) * discretised_symbol)
+            elif submesh.coord_sys == "cylindrical polar":
+                out = divergence_matrix @ (r_edges * discretised_symbol)
         else:
             out = divergence_matrix @ discretised_symbol
 
@@ -205,7 +196,19 @@ class FiniteVolume(pybamm.SpatialMethod):
         """
         # Create appropriate submesh by combining submeshes in domain
         submesh = self.mesh.combine_submeshes(*domains["primary"])
-        e = 1 / submesh.d_edges
+
+        # check coordinate system
+        if submesh.coord_sys in ["cylindrical polar", "spherical polar"]:
+            r_edges_left = submesh.edges[:-1]
+            r_edges_right = submesh.edges[1:]
+            if submesh.coord_sys == "spherical polar":
+                d_edges = (r_edges_right ** 3 - r_edges_left ** 3) / 3
+            elif submesh.coord_sys == "cylindrical polar":
+                d_edges = (r_edges_right ** 2 - r_edges_left ** 2) / 2
+        else:
+            d_edges = submesh.d_edges
+
+        e = 1 / d_edges
 
         # Create matrix using submesh
         n = submesh.npts + 1
@@ -234,17 +237,7 @@ class FiniteVolume(pybamm.SpatialMethod):
         integration_vector = self.definite_integral_matrix(
             child, integration_dimension=integration_dimension
         )
-
-        # Check for spherical domains
-        domain = child.domains[integration_dimension]
-        submesh = self.mesh.combine_submeshes(*domain)
-        if submesh.coord_sys == "spherical polar":
-            second_dim_repeats = self._get_auxiliary_domain_repeats(child.domains)
-            r_numpy = np.kron(np.ones(second_dim_repeats), submesh.nodes)
-            r = pybamm.Vector(r_numpy)
-            out = 4 * np.pi * integration_vector @ (discretised_child * r ** 2)
-        else:
-            out = integration_vector @ discretised_child
+        out = integration_vector @ discretised_child
 
         return out
 
@@ -277,33 +270,45 @@ class FiniteVolume(pybamm.SpatialMethod):
             The finite volume integral matrix for the domain
         """
         domains = child.domains
+        if vector_type != "row" and integration_dimension == "secondary":
+            raise NotImplementedError(
+                "Integral in secondary vector only implemented in 'row' form"
+            )
+
+        domain = child.domains[integration_dimension]
+        submesh = self.mesh.combine_submeshes(*domain)
+
+        # check coordinate system
+        if submesh.coord_sys in ["cylindrical polar", "spherical polar"]:
+            r_edges_left = submesh.edges[:-1]
+            r_edges_right = submesh.edges[1:]
+            if submesh.coord_sys == "spherical polar":
+                d_edges = 4 * np.pi * (r_edges_right ** 3 - r_edges_left ** 3) / 3
+            elif submesh.coord_sys == "cylindrical polar":
+                d_edges = 2 * np.pi * (r_edges_right ** 2 - r_edges_left ** 2) / 2
+        else:
+            d_edges = submesh.d_edges
+
         if integration_dimension == "primary":
             # Create appropriate submesh by combining submeshes in domain
             submesh = self.mesh.combine_submeshes(*domains["primary"])
 
             # Create vector of ones for primary domain submesh
-            vector = submesh.d_edges
 
             if vector_type == "row":
-                vector = vector[np.newaxis, :]
+                d_edges = d_edges[np.newaxis, :]
             elif vector_type == "column":
-                vector = vector[:, np.newaxis]
+                d_edges = d_edges[:, np.newaxis]
 
             # repeat matrix for each node in secondary dimensions
             second_dim_repeats = self._get_auxiliary_domain_repeats(domains)
             # generate full matrix from the submatrix
-            matrix = kron(eye(second_dim_repeats), vector)
+            matrix = kron(eye(second_dim_repeats), d_edges)
         elif integration_dimension == "secondary":
-            if vector_type != "row":
-                raise NotImplementedError(
-                    "Integral in secondary vector only implemented in 'row' form"
-                )
             # Create appropriate submesh by combining submeshes in domain
             primary_submesh = self.mesh.combine_submeshes(*domains["primary"])
-            secondary_submesh = self.mesh.combine_submeshes(*domains["secondary"])
 
             # Create matrix which integrates in the secondary dimension
-            d_edges = secondary_submesh.d_edges
             # Different number of edges depending on whether child evaluates on edges
             # in the primary dimensions
             if child.evaluates_on_edges("primary"):
@@ -312,9 +317,13 @@ class FiniteVolume(pybamm.SpatialMethod):
                 n_primary_pts = primary_submesh.npts
             int_matrix = hstack([d_edge * eye(n_primary_pts) for d_edge in d_edges])
 
-            # repeat matrix for each node in secondary dimensions
+            # repeat matrix for each node in higher dimensions
             third_dim_repeats = self._get_auxiliary_domain_repeats(
-                domains, tertiary_only=True
+                {
+                    k: v
+                    for k, v in domains.items()
+                    if (k == "tertiary" or k == "quaternary")
+                }
             )
             # generate full matrix from the submatrix
             matrix = kron(eye(third_dim_repeats), int_matrix)
@@ -335,21 +344,22 @@ class FiniteVolume(pybamm.SpatialMethod):
                 child.domains, direction
             )
         else:
-            # Check coordinate system is not spherical polar for the case where child
-            # evaluates on edges
+            # Check coordinate system is not cylindrical or spherical polar for
+            # the case where child evaluates on edges
             # If it becomes necessary to implement this, will need to think about what
-            # the spherical polar indefinite integral should be
+            # the cylindrical/spherical polar indefinite integral should be
             submesh = self.mesh.combine_submeshes(*child.domain)
-            if submesh.coord_sys == "spherical polar":
+            if submesh.coord_sys in ["cylindrical polar", "spherical polar"]:
                 raise NotImplementedError(
-                    "Indefinite integral on a spherical polar domain is not implemented"
+                    f"Indefinite integral on a {submesh.coord_sys} domain is not "
+                    "implemented"
                 )
             integration_matrix = self.indefinite_integral_matrix_nodes(
                 child.domains, direction
             )
 
-        # Don't need to check for spherical domains as we have ruled out spherical
-        # polars in the case that involves integrating a divergence
+        # Don't need to check for cylindrical/spherical domains as we have ruled
+        # these out in the case that involves integrating a divergence
         # (child evaluates on nodes)
         out = integration_matrix @ discretised_child
 
@@ -405,7 +415,7 @@ class FiniteVolume(pybamm.SpatialMethod):
         **Backward integral**
 
         .. math::
-            F(x) = \\int_x^end\\!f(u)\\,du
+            F(x) = \\int_x^{end}\\!f(u)\\,du
 
         The indefinite integral must satisfy the following conditions:
 
@@ -582,25 +592,15 @@ class FiniteVolume(pybamm.SpatialMethod):
             csr_matrix(kron(eye(second_dim_repeats), right_sub_matrix))
         )
 
-        # Remove domains to avoid clash
-        left_domain = left_symbol_disc.domain
-        right_domain = right_symbol_disc.domain
-        left_auxiliary_domains = left_symbol_disc.auxiliary_domains
-        right_auxiliary_domains = right_symbol_disc.auxiliary_domains
-        left_symbol_disc.clear_domains()
-        right_symbol_disc.clear_domains()
-
         # Finite volume derivative
-        dy = right_matrix @ right_symbol_disc - left_matrix @ left_symbol_disc
+        # Remove domains to avoid clash
         dx = right_mesh.nodes[0] - left_mesh.nodes[-1]
+        dy_r = (right_matrix / dx) @ right_symbol_disc
+        dy_r.clear_domains()
+        dy_l = (left_matrix / dx) @ left_symbol_disc
+        dy_l.clear_domains()
 
-        # Change domains back
-        left_symbol_disc.domain = left_domain
-        right_symbol_disc.domain = right_domain
-        left_symbol_disc.auxiliary_domains = left_auxiliary_domains
-        right_symbol_disc.auxiliary_domains = right_auxiliary_domains
-
-        return dy / dx
+        return dy_r - dy_l
 
     def add_ghost_nodes(self, symbol, discretised_symbol, bcs):
         """
@@ -761,9 +761,7 @@ class FiniteVolume(pybamm.SpatialMethod):
 
         # Prepare sizes and empty bcs_vector
         n = submesh.npts - 1
-        second_dim_repeats = self._get_auxiliary_domain_repeats(
-            symbol.auxiliary_domains
-        )
+        second_dim_repeats = self._get_auxiliary_domain_repeats(symbol.domains)
 
         lbc_value, lbc_type = bcs["left"]
         rbc_value, rbc_type = bcs["right"]
@@ -815,13 +813,12 @@ class FiniteVolume(pybamm.SpatialMethod):
         # Need to match the domain. E.g. in the case of the boundary condition
         # on the particle, the gradient has domain particle but the bcs_vector
         # has domain electrode, since it is a function of the macroscopic variables
-        bcs_vector.domain = discretised_gradient.domain
-        bcs_vector.auxiliary_domains = discretised_gradient.auxiliary_domains
+        bcs_vector.copy_domains(discretised_gradient)
 
         # Make matrix which makes "gaps" in the the discretised gradient into
         # which the known Neumann values will be added. E.g. in 1D if the left
         # boundary condition is Dirichlet and the right Neumann, this matrix will
-        # act to append a zero to the end of the discretsied gradient
+        # act to append a zero to the end of the discretised gradient
         if lbc_type == "Neumann":
             left_vector = csr_matrix((1, n))
         else:
@@ -855,9 +852,7 @@ class FiniteVolume(pybamm.SpatialMethod):
         submesh = self.mesh.combine_submeshes(*discretised_child.domain)
 
         prim_pts = submesh.npts
-        repeats = self._get_auxiliary_domain_repeats(
-            discretised_child.auxiliary_domains
-        )
+        repeats = self._get_auxiliary_domain_repeats(discretised_child.domains)
 
         if bcs is None:
             bcs = {}
@@ -1129,7 +1124,9 @@ class FiniteVolume(pybamm.SpatialMethod):
                 method = "arithmetic"
             disc_left = self.node_to_edge(disc_left, method=method)
         # Return new binary operator with appropriate class
-        out = pybamm.simplify_if_constant(bin_op.__class__(disc_left, disc_right))
+        out = pybamm.simplify_if_constant(
+            bin_op._binary_new_copy(disc_left, disc_right)
+        )
 
         return out
 
@@ -1151,10 +1148,8 @@ class FiniteVolume(pybamm.SpatialMethod):
                     disc_children[idx] = self.edge_to_node(child)
                 else:
                     raise pybamm.ShapeError(
-                        """
-                        child must have size n_nodes (number of nodes in the mesh)
-                        or n_edges (number of edges in the mesh)
-                        """
+                        "child must have size n_nodes (number of nodes in the mesh) "
+                        "or n_edges (number of edges in the mesh)"
                     )
         return pybamm.domain_concatenation(disc_children, self.mesh)
 
@@ -1374,7 +1369,7 @@ class FiniteVolume(pybamm.SpatialMethod):
                 raise ValueError("shift key '{}' not recognised".format(shift_key))
 
         # If discretised_symbol evaluates to number there is no need to average
-        if discretised_symbol.evaluates_to_number():
+        if discretised_symbol.size == 1:
             out = discretised_symbol
         elif method == "arithmetic":
             out = arithmetic_mean(discretised_symbol)

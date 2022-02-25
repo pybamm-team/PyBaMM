@@ -1,0 +1,17 @@
+Name [units],Value,Reference,Notes
+# Empty rows and rows starting with ‘#’ will be ignored,,,
+,,,
+# Electrode properties,,,
+Negative electrode OCP [V],0,lithium metal,
+Negative electrode conductivity [S.m-1],1.0776e7,li metal conductivity not provided by Xu2019
+,,,
+# Thermal parameters,,,
+Negative electrode OCP entropic change [V.K-1],0,,
+,,,
+# Interfacial reactions,,,
+Negative electrode cation signed stoichiometry,-1,,
+Negative electrode electrons in reaction,1,,
+Typical plated lithium concentration [mol.m-3],76900,,
+Exchange-current density for plating [A.m-2],[function]li_metal_electrolyte_exchange_current_density_Xu2019,,
+Negative electrode charge transfer coefficient,0.5,,
+Negative electrode double-layer capacity [F.m-2],0.2,,

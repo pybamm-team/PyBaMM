@@ -46,7 +46,10 @@ PyBaMM is available as a conda package through the conda-forge channel.
 
 Optional solvers
 -----------------
-On GNU/Linux and MacOS, an optional `scikits.odes <https://scikits-odes.readthedocs.io/en/latest/>`_ -based solver is available, see :ref:`scikits.odes-label`.
+Following GNU/Linux and macOS solvers are optionally available:
+
+*  `scikits.odes <https://scikits-odes.readthedocs.io/en/latest/>`_ -based solver, see `Optional - scikits.odes solver <https://pybamm.readthedocs.io/en/latest/install/GNU-linux.html#optional-scikits-odes-solver>`_.
+*  `jax <https://jax.readthedocs.io/en/latest/notebooks/quickstart.html>`_ -based solver, see `Optional - JaxSolver <https://pybamm.readthedocs.io/en/latest/install/GNU-linux.html#optional-jaxsolver>`_.
 
 Installation
 ============
@@ -80,14 +83,15 @@ API documentation
    source/util
    source/citations
    source/parameters_cli
+   source/batch_study
 
 Examples
 ========
 
 Detailed examples can be viewed on the
-`GitHub examples page <https://github.com/pybamm-team/PyBaMM/tree/master/examples/notebooks>`_,
+`GitHub examples page <https://github.com/pybamm-team/PyBaMM/tree/develop/examples/notebooks>`_,
 and run locally using ``jupyter notebook``, or online through
-`Google Colab <https://colab.research.google.com/github/pybamm-team/PyBaMM/blob/master/>`_.
+`Google Colab <https://colab.research.google.com/github/pybamm-team/PyBaMM/blob/develop/>`_.
 
 Contributing
 ============
@@ -102,4 +106,4 @@ There are many ways to contribute to PyBaMM:
     tutorials/add-spatial-method
     tutorials/add-solver
 
-Before contributing, please read the `Contribution Guidelines <https://github.com/pybamm-team/PyBaMM/blob/master/CONTRIBUTING.md>`_.
+Before contributing, please read the `Contribution Guidelines <https://github.com/pybamm-team/PyBaMM/blob/develop/CONTRIBUTING.md>`_.

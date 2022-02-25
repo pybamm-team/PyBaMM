@@ -34,16 +34,7 @@ for model in models:
 for model in models:
     geometry = model.default_geometry
     param.process_geometry(geometry)
-    var = pybamm.standard_spatial_vars
-    var_pts = {
-        var.x_n: 10,
-        var.x_s: 10,
-        var.x_p: 10,
-        var.r_n: 10,
-        var.r_p: 10,
-        var.y: 10,
-        var.z: 10,
-    }
+    var_pts = {"x_n": 10, "x_s": 10, "x_p": 10, "r_n": 10, "r_p": 10, "y": 10, "z": 10}
     mesh = pybamm.Mesh(geometry, model.default_submesh_types, var_pts)
     disc = pybamm.Discretisation(mesh, model.default_spatial_methods)
     disc.process_model(model)

@@ -1,13 +1,16 @@
 #
 # IndependentVariable class
 #
+import sympy
+
 import pybamm
 
-KNOWN_COORD_SYS = ["cartesian", "spherical polar"]
+KNOWN_COORD_SYS = ["cartesian", "cylindrical polar", "spherical polar"]
 
 
 class IndependentVariable(pybamm.Symbol):
-    """A node in the expression tree representing an independent variable
+    """
+    A node in the expression tree representing an independent variable.
 
     Used for expressing functions depending on a spatial variable or time
 
@@ -17,26 +20,47 @@ class IndependentVariable(pybamm.Symbol):
         name of the node
     domain : iterable of str
         list of domains that this variable is valid over
+    auxiliary_domains : dict, optional
+        dictionary of auxiliary domains, defaults to empty dict
+    domains : dict
+        A dictionary equivalent to {'primary': domain, auxiliary_domains}. Either
+        'domain' and 'auxiliary_domains', or just 'domains', should be provided
+        (not both). In future, the 'domain' and 'auxiliary_domains' arguments may be
+        deprecated.
 
     *Extends:* :class:`Symbol`
     """
 
-    def __init__(self, name, domain=None, auxiliary_domains=None):
-        super().__init__(name, domain=domain, auxiliary_domains=auxiliary_domains)
+    def __init__(self, name, domain=None, auxiliary_domains=None, domains=None):
+        super().__init__(
+            name, domain=domain, auxiliary_domains=auxiliary_domains, domains=domains
+        )
 
     def _evaluate_for_shape(self):
         """See :meth:`pybamm.Symbol.evaluate_for_shape_using_domain()`"""
+<<<<<<< HEAD
         return pybamm.evaluate_for_shape_using_domain(
             self.domain, self.auxiliary_domains
         )
+=======
+        return pybamm.evaluate_for_shape_using_domain(self.domains)
+>>>>>>> develop
 
     def _jac(self, variable):
         """See :meth:`pybamm.Symbol._jac()`."""
         return pybamm.Scalar(0)
 
+    def to_equation(self):
+        """Convert the node and its subtree into a SymPy equation."""
+        if self.print_name is not None:
+            return sympy.Symbol(self.print_name)
+        else:
+            return sympy.Symbol(self.name)
+
 
 class Time(IndependentVariable):
-    """A node in the expression tree representing time
+    """
+    A node in the expression tree representing time.
 
     *Extends:* :class:`Symbol`
     """
@@ -44,7 +68,11 @@ class Time(IndependentVariable):
     def __init__(self):
         super().__init__("time")
 
+<<<<<<< HEAD
     def new_copy(self):
+=======
+    def create_copy(self):
+>>>>>>> develop
         """See :meth:`pybamm.Symbol.new_copy()`."""
         return Time()
 
@@ -61,9 +89,14 @@ class Time(IndependentVariable):
         """
         return 0
 
+    def to_equation(self):
+        """Convert the node and its subtree into a SymPy equation."""
+        return sympy.Symbol("t")
+
 
 class SpatialVariable(IndependentVariable):
-    """A node in the expression tree representing a spatial variable
+    """
+    A node in the expression tree representing a spatial variable.
 
     Parameters
     ----------
@@ -72,22 +105,31 @@ class SpatialVariable(IndependentVariable):
     domain : iterable of str
         list of domains that this variable is valid over (e.g. "cartesian", "spherical
         polar")
+    auxiliary_domains : dict, optional
+        dictionary of auxiliary domains, defaults to empty dict
+    domains : dict
+        A dictionary equivalent to {'primary': domain, auxiliary_domains}. Either
+        'domain' and 'auxiliary_domains', or just 'domains', should be provided
+        (not both). In future, the 'domain' and 'auxiliary_domains' arguments may be
+        deprecated.
 
     *Extends:* :class:`Symbol`
     """
 
-    def __init__(self, name, domain=None, auxiliary_domains=None, coord_sys=None):
+    def __init__(
+        self, name, domain=None, auxiliary_domains=None, domains=None, coord_sys=None
+    ):
         self.coord_sys = coord_sys
-        super().__init__(name, domain=domain, auxiliary_domains=auxiliary_domains)
+        super().__init__(
+            name, domain=domain, auxiliary_domains=auxiliary_domains, domains=domains
+        )
         domain = self.domain
 
         if domain == []:
             raise ValueError("domain must be provided")
 
         # Check symbol name vs domain name
-        if name == "r" and not (len(domain) == 1 and "particle" in domain[0]):
-            raise pybamm.DomainError("domain must be particle if name is 'r'")
-        elif name == "r_n" and domain != ["negative particle"]:
+        if name == "r_n" and domain != ["negative particle"]:
             raise pybamm.DomainError(
                 "domain must be negative particle if name is 'r_n'"
             )
@@ -102,15 +144,22 @@ class SpatialVariable(IndependentVariable):
                 "domain cannot be particle if name is '{}'".format(name)
             )
 
+<<<<<<< HEAD
     def new_copy(self):
         """See :meth:`pybamm.Symbol.new_copy()`."""
         return self.__class__(
             self.name, self.domain, self.auxiliary_domains, self.coord_sys
         )
+=======
+    def create_copy(self):
+        """See :meth:`pybamm.Symbol.new_copy()`."""
+        return self.__class__(self.name, domains=self.domains, coord_sys=self.coord_sys)
+>>>>>>> develop
 
 
 class SpatialVariableEdge(SpatialVariable):
-    """A node in the expression tree representing a spatial variable, which evaluates
+    """
+    A node in the expression tree representing a spatial variable, which evaluates
     on the edges
 
     Parameters
@@ -120,12 +169,21 @@ class SpatialVariableEdge(SpatialVariable):
     domain : iterable of str
         list of domains that this variable is valid over (e.g. "cartesian", "spherical
         polar")
+    auxiliary_domains : dict, optional
+        dictionary of auxiliary domains, defaults to empty dict
+    domains : dict
+        A dictionary equivalent to {'primary': domain, auxiliary_domains}. Either
+        'domain' and 'auxiliary_domains', or just 'domains', should be provided
+        (not both). In future, the 'domain' and 'auxiliary_domains' arguments may be
+        deprecated.
 
     *Extends:* :class:`Symbol`
     """
 
-    def __init__(self, name, domain=None, auxiliary_domains=None, coord_sys=None):
-        super().__init__(name, domain, auxiliary_domains, coord_sys)
+    def __init__(
+        self, name, domain=None, auxiliary_domains=None, domains=None, coord_sys=None
+    ):
+        super().__init__(name, domain, auxiliary_domains, domains, coord_sys)
 
     def _evaluates_on_edges(self, dimension):
         return True

@@ -1,15 +1,19 @@
 #
 # Function classes and methods
 #
-import autograd
 import numbers
+
+import autograd
 import numpy as np
+import sympy
 from scipy import special
+
 import pybamm
 
 
 class Function(pybamm.Symbol):
-    """A node in the expression tree representing an arbitrary function
+    """
+    A node in the expression tree representing an arbitrary function.
 
     Parameters
     ----------
@@ -48,16 +52,13 @@ class Function(pybamm.Symbol):
                 name = "function ({})".format(function.__name__)
             except AttributeError:
                 name = "function ({})".format(function.__class__)
-        domain = self.get_children_domains(children)
-        auxiliary_domains = self.get_children_auxiliary_domains(children)
+        domains = self.get_children_domains(children)
 
         self.function = function
         self.derivative = derivative
         self.differentiated_function = differentiated_function
 
-        super().__init__(
-            name, children=children, domain=domain, auxiliary_domains=auxiliary_domains
-        )
+        super().__init__(name, children=children, domains=domains)
 
     def __str__(self):
         """See :meth:`pybamm.Symbol.__str__()`."""
@@ -66,26 +67,6 @@ class Function(pybamm.Symbol):
             out += "{!s}, ".format(child)
         out = out[:-2] + ")"
         return out
-
-    def get_children_domains(self, children_list):
-        """Obtains the unique domain of the children. If the
-        children have different domains then raise an error"""
-
-        domains = [child.domain for child in children_list if child.domain != []]
-
-        # check that there is one common domain amongst children
-        distinct_domains = set(tuple(dom) for dom in domains)
-
-        if len(distinct_domains) > 1:
-            raise pybamm.DomainError(
-                "Functions can only be applied to variables on the same domain"
-            )
-        elif len(distinct_domains) == 0:
-            domain = []
-        else:
-            domain = domains[0]
-
-        return domain
 
     def diff(self, variable):
         """See :meth:`pybamm.Symbol.diff()`."""
@@ -197,13 +178,14 @@ class Function(pybamm.Symbol):
     def _function_evaluate(self, evaluated_children):
         return self.function(*evaluated_children)
 
-    def new_copy(self):
+    def create_copy(self):
         """See :meth:`pybamm.Symbol.new_copy()`."""
         children_copy = [child.new_copy() for child in self.children]
         return self._function_new_copy(children_copy)
 
     def _function_new_copy(self, children):
-        """Returns a new copy of the function.
+        """
+        Returns a new copy of the function.
 
         Inputs
         ------
@@ -222,8 +204,39 @@ class Function(pybamm.Symbol):
                 name=self.name,
                 derivative=self.derivative,
                 differentiated_function=self.differentiated_function
-            ),
+            )
         )
+
+    def _sympy_operator(self, child):
+        """Apply appropriate SymPy operators."""
+        return child
+
+    def to_equation(self):
+        """Convert the node and its subtree into a SymPy equation."""
+        if self.print_name is not None:
+            return sympy.Symbol(self.print_name)
+        else:
+            eq_list = []
+            for child in self.children:
+                eq = child.to_equation()
+                eq_list.append(eq)
+            return self._sympy_operator(*eq_list)
+
+
+def simplified_function(func_class, child):
+    """
+    Simplifications implemented before applying the function.
+    Currently only implemented for one-child functions.
+    """
+    if isinstance(child, pybamm.Broadcast):
+        # Move the function inside the broadcast
+        # Apply recursively
+        func_child_not_broad = pybamm.simplify_if_constant(
+            simplified_function(func_class, child.orphans[0])
+        )
+        return child._unary_new_copy(func_child_not_broad)
+    else:
+        return pybamm.simplify_if_constant(func_class(child))
 
 
 class SpecificFunction(Function):
@@ -237,7 +250,6 @@ class SpecificFunction(Function):
         Function to be applied to child
     child : :class:`pybamm.Symbol`
         The child to apply the function to
-
     """
 
     def __init__(self, function, child):
@@ -246,6 +258,12 @@ class SpecificFunction(Function):
     def _function_new_copy(self, children):
         """See :meth:`pybamm.Function._function_new_copy()`"""
         return pybamm.simplify_if_constant(self.__class__(*children))
+
+    def _sympy_operator(self, child):
+        """Apply appropriate SymPy operators."""
+        class_name = self.__class__.__name__.lower()
+        sympy_function = getattr(sympy, class_name)
+        return sympy_function(child)
 
 
 class Arcsinh(SpecificFunction):
@@ -258,10 +276,34 @@ class Arcsinh(SpecificFunction):
         """See :meth:`pybamm.Symbol._function_diff()`."""
         return 1 / Sqrt(children[0] ** 2 + 1)
 
+    def _sympy_operator(self, child):
+        """Override :meth:`pybamm.Function._sympy_operator`"""
+        return sympy.asinh(child)
+
 
 def arcsinh(child):
     """Returns arcsinh function of child."""
-    return pybamm.simplify_if_constant(Arcsinh(child))
+    return simplified_function(Arcsinh, child)
+
+
+class Arctan(SpecificFunction):
+    """Arctan function."""
+
+    def __init__(self, child):
+        super().__init__(np.arctan, child)
+
+    def _function_diff(self, children, idx):
+        """See :meth:`pybamm.Function._function_diff()`."""
+        return 1 / (children[0] ** 2 + 1)
+
+    def _sympy_operator(self, child):
+        """Override :meth:`pybamm.Function._sympy_operator`"""
+        return sympy.atan(child)
+
+
+def arctan(child):
+    """Returns hyperbolic tan function of child."""
+    return simplified_function(Arctan, child)
 
 
 class Cos(SpecificFunction):
@@ -277,7 +319,7 @@ class Cos(SpecificFunction):
 
 def cos(child):
     """Returns cosine function of child."""
-    return pybamm.simplify_if_constant(Cos(child))
+    return simplified_function(Cos, child)
 
 
 class Cosh(SpecificFunction):
@@ -293,7 +335,28 @@ class Cosh(SpecificFunction):
 
 def cosh(child):
     """Returns hyperbolic cosine function of child."""
-    return pybamm.simplify_if_constant(Cosh(child))
+    return simplified_function(Cosh, child)
+
+
+class Erf(SpecificFunction):
+    """Error function."""
+
+    def __init__(self, child):
+        super().__init__(special.erf, child)
+
+    def _function_diff(self, children, idx):
+        """See :meth:`pybamm.Function._function_diff()`."""
+        return 2 / np.sqrt(np.pi) * Exponential(-children[0] ** 2)
+
+
+def erf(child):
+    """Returns error function of child."""
+    return simplified_function(Erf, child)
+
+
+def erfc(child):
+    """Returns complementary error function of child."""
+    return 1 - simplified_function(Erf, child)
 
 
 class Exponential(SpecificFunction):
@@ -306,10 +369,14 @@ class Exponential(SpecificFunction):
         """See :meth:`pybamm.Function._function_diff()`."""
         return Exponential(children[0])
 
+    def _sympy_operator(self, child):
+        """Override :meth:`pybamm.Function._sympy_operator`"""
+        return sympy.exp(child)
+
 
 def exp(child):
     """Returns exponential function of child."""
-    return pybamm.simplify_if_constant(Exponential(child))
+    return simplified_function(Exponential, child)
 
 
 class Log(SpecificFunction):
@@ -330,10 +397,11 @@ class Log(SpecificFunction):
 
 def log(child, base="e"):
     """Returns logarithmic function of child (any base, default 'e')."""
+    log_child = simplified_function(Log, child)
     if base == "e":
-        return pybamm.simplify_if_constant(Log(child))
+        return log_child
     else:
-        return Log(child) / np.log(base)
+        return log_child / np.log(base)
 
 
 def log10(child):
@@ -341,12 +409,26 @@ def log10(child):
     return log(child, base=10)
 
 
+class Max(SpecificFunction):
+    """Max function."""
+
+    def __init__(self, child):
+        super().__init__(np.max, child)
+
+
 def max(child):
     """
     Returns max function of child. Not to be confused with :meth:`pybamm.maximum`, which
     returns the larger of two objects.
     """
-    return pybamm.simplify_if_constant(Function(np.max, child))
+    return pybamm.simplify_if_constant(Max(child))
+
+
+class Min(SpecificFunction):
+    """Min function."""
+
+    def __init__(self, child):
+        super().__init__(np.min, child)
 
 
 def min(child):
@@ -354,12 +436,12 @@ def min(child):
     Returns min function of child. Not to be confused with :meth:`pybamm.minimum`, which
     returns the smaller of two objects.
     """
-    return pybamm.simplify_if_constant(Function(np.min, child))
+    return pybamm.simplify_if_constant(Min(child))
 
 
 def sech(child):
     """Returns hyperbolic sec function of child."""
-    return pybamm.simplify_if_constant(1 / Cosh(child))
+    return 1 / simplified_function(Cosh, child)
 
 
 class Sin(SpecificFunction):
@@ -375,7 +457,7 @@ class Sin(SpecificFunction):
 
 def sin(child):
     """Returns sine function of child."""
-    return pybamm.simplify_if_constant(Sin(child))
+    return simplified_function(Sin, child)
 
 
 class Sinh(SpecificFunction):
@@ -391,7 +473,7 @@ class Sinh(SpecificFunction):
 
 def sinh(child):
     """Returns hyperbolic sine function of child."""
-    return pybamm.simplify_if_constant(Sinh(child))
+    return simplified_function(Sinh, child)
 
 
 class Sqrt(SpecificFunction):
@@ -412,7 +494,7 @@ class Sqrt(SpecificFunction):
 
 def sqrt(child):
     """Returns square root function of child."""
-    return pybamm.simplify_if_constant(Sqrt(child))
+    return simplified_function(Sqrt, child)
 
 
 class Tanh(SpecificFunction):
@@ -428,6 +510,7 @@ class Tanh(SpecificFunction):
 
 def tanh(child):
     """Returns hyperbolic tan function of child."""
+<<<<<<< HEAD
     return pybamm.simplify_if_constant(Tanh(child))
 
 
@@ -466,3 +549,6 @@ def erf(child):
 def erfc(child):
     """Returns complementary error function of child."""
     return pybamm.simplify_if_constant(1 - Erf(child))
+=======
+    return simplified_function(Tanh, child)
+>>>>>>> develop

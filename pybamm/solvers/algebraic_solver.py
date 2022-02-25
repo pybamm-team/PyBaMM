@@ -122,15 +122,12 @@ class AlgebraicSolver(pybamm.BaseSolver):
             else:
                 jac_fn = None
 
-            # Evaluate algebraic with new t and previous y0, if it's already close
-            # enough then keep it
-            if np.all(abs(algebraic(t, y0, inputs)) < self.tol):
-                pybamm.logger.debug("Keeping same solution at t={}".format(t))
-                y_alg[:, idx] = y0_alg
-            # Otherwise calculate new y0
-            else:
-                # Methods which use least-squares are specified as either "lsq", which
-                # uses the default method, or with "lsq__methodname"
+            itr = 0
+            maxiter = 2
+            success = False
+            while not success:
+                # Methods which use least-squares are specified as either "lsq",
+                # which uses the default method, or with "lsq__methodname"
                 if self.method.startswith("lsq"):
 
                     if self.method == "lsq":
@@ -150,8 +147,8 @@ class AlgebraicSolver(pybamm.BaseSolver):
                         **self.extra_options,
                     )
                     integration_time += timer.time()
-                # Methods which use minimize are specified as either "minimize", which
-                # uses the default method, or with "minimize__methodname"
+                # Methods which use minimize are specified as either "minimize",
+                # which uses the default method, or with "minimize__methodname"
                 elif self.method.startswith("minimize"):
                     # Adapt the root function for minimize
                     def root_norm(y):
@@ -203,18 +200,22 @@ class AlgebraicSolver(pybamm.BaseSolver):
                     y0_alg = sol.x
                     # update solution array
                     y_alg[:, idx] = y0_alg
+                    success = True
                 elif not sol.success:
                     raise pybamm.SolverError(
                         "Could not find acceptable solution: {}".format(sol.message)
                     )
                 else:
-                    raise pybamm.SolverError(
-                        "Could not find acceptable solution: solver terminated "
-                        "successfully, but maximum solution error "
-                        "({}) above tolerance ({})".format(
-                            np.max(abs(sol.fun)), self.tol
+                    y0_alg = sol.x
+                    if itr > maxiter:
+                        raise pybamm.SolverError(
+                            "Could not find acceptable solution: solver terminated "
+                            "successfully, but maximum solution error "
+                            "({}) above tolerance ({})".format(
+                                np.max(abs(sol.fun)), self.tol
+                            )
                         )
-                    )
+                itr += 1
 
         # Concatenate differential part
         y_diff = np.r_[[y0_diff] * len(t_eval)].T

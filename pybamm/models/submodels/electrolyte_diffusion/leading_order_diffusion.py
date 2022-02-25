@@ -15,8 +15,7 @@ class LeadingOrder(BaseElectrolyteDiffusion):
     ----------
     param : parameter class
         The parameters to use for this submodel
-    reactions : dict
-        Dictionary of reaction terms
+
 
     **Extends:** :class:`pybamm.electrolyte_diffusion.BaseElectrolyteDiffusion`
     """
@@ -43,14 +42,14 @@ class LeadingOrder(BaseElectrolyteDiffusion):
         variables.update(self._get_standard_flux_variables(N_e))
 
         c_e_av = pybamm.standard_variables.c_e_av
-        c_e = pybamm.Concatenation(
+        c_e = pybamm.concatenation(
             pybamm.PrimaryBroadcast(c_e_av, ["negative electrode"]),
             pybamm.PrimaryBroadcast(c_e_av, ["separator"]),
             pybamm.PrimaryBroadcast(c_e_av, ["positive electrode"]),
         )
         eps = variables["Porosity"]
 
-        variables.update(self._get_total_concentration_electrolyte(c_e, eps))
+        variables.update(self._get_total_concentration_electrolyte(eps * c_e))
 
         return variables
 

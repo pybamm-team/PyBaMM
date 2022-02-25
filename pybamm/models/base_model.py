@@ -1,20 +1,23 @@
 #
 # Base model class
 #
-import casadi
-import numpy as np
 import numbers
-import pybamm
 import warnings
 from collections import OrderedDict
 
+import casadi
+import numpy as np
 
-class BaseModel(object):
-    """Base model class for other models to extend.
+import pybamm
+from pybamm.expression_tree.operations.latexify import Latexify
+
+
+class BaseModel:
+    """
+    Base model class for other models to extend.
 
     Attributes
     ----------
-
     name: str
         A string giving the name of the model
     options: dict
@@ -81,12 +84,11 @@ class BaseModel(object):
         algorithm to calculate the Jacobian.
 
         Default is "casadi".
-
     """
 
     def __init__(self, name="Unnamed model"):
         self.name = name
-        self.options = {}
+        self._options = {}
 
         # Initialise empty model
         self._rhs = {}
@@ -105,6 +107,7 @@ class BaseModel(object):
         self.external_variables = []
         self._parameters = None
         self._input_parameters = None
+        self._parameter_info = None
         self._variables_casadi = {}
 
         # Default behaviour is to use the jacobian
@@ -116,8 +119,8 @@ class BaseModel(object):
         self.y_slices = None
 
         # Default timescale is 1 second
-        self.timescale = pybamm.Scalar(1)
-        self.length_scales = {}
+        self._timescale = pybamm.Scalar(1)
+        self._length_scales = {}
 
     @property
     def name(self):
@@ -167,6 +170,20 @@ class BaseModel(object):
 
     @variables.setter
     def variables(self, variables):
+        for name, var in variables.items():
+            if (
+                isinstance(var, pybamm.Variable)
+                and var.name != name
+                # Exception if the variable is also there under its own name
+                and not (var.name in variables and variables[var.name].id == var.id)
+                # Exception for the key "Leading-order"
+                and "leading-order" not in var.name.lower()
+                and "leading-order" not in name.lower()
+            ):
+                raise ValueError(
+                    f"Variable with name '{var.name}' is in variables dictionary with "
+                    f"name '{name}'. Names must match."
+                )
         self._variables = pybamm.FuzzyDict(variables)
 
     def variable_names(self):
@@ -271,45 +288,83 @@ class BaseModel(object):
         self._timescale = value
 
     @property
+    def length_scales(self):
+        "Length scales of model"
+        return self._length_scales
+
+    @length_scales.setter
+    def length_scales(self, values):
+        "Set the length scale, converting any numbers to pybamm.Scalar"
+        for domain, scale in values.items():
+            if isinstance(scale, numbers.Number):
+                values[domain] = pybamm.Scalar(scale)
+        self._length_scales = values
+
+    @property
     def parameters(self):
         """Returns all the parameters in the model"""
-        if self._parameters is None:
-            self._parameters = self._find_parameters()
-        return self._parameters
-
-    def _find_parameters(self):
-        """Find all the parameters in the model"""
-        unpacker = pybamm.SymbolUnpacker((pybamm.Parameter, pybamm.InputParameter))
-        all_parameters = unpacker.unpack_list_of_symbols(
-            list(self.rhs.values())
-            + list(self.algebraic.values())
-            + list(self.initial_conditions.values())
-            + list(self.variables.values())
-            + [event.expression for event in self.events]
+        self._parameters = self._find_symbols(
+            (pybamm.Parameter, pybamm.InputParameter, pybamm.FunctionParameter)
         )
-        return list(all_parameters.values())
+        return self._parameters
 
     @property
     def input_parameters(self):
         """Returns all the input parameters in the model"""
         if self._input_parameters is None:
-            self._input_parameters = self._find_input_parameters()
+            self._input_parameters = self._find_symbols(pybamm.InputParameter)
         return self._input_parameters
 
-    def _find_input_parameters(self):
-        """Find all the input parameters in the model"""
-        unpacker = pybamm.SymbolUnpacker(pybamm.InputParameter)
+    def print_parameter_info(self):
+        self._parameter_info = ""
+        parameters = self._find_symbols(pybamm.Parameter)
+        for param in parameters:
+            self._parameter_info += f"{param.name} (Parameter)\n"
+        input_parameters = self._find_symbols(pybamm.InputParameter)
+        for input_param in input_parameters:
+            if input_param.domain == []:
+                self._parameter_info += f"{input_param.name} (InputParameter)\n"
+            else:
+                self._parameter_info += (
+                    f"{input_param.name} (InputParameter in {input_param.domain})\n"
+                )
+        function_parameters = self._find_symbols(pybamm.FunctionParameter)
+        for func_param in function_parameters:
+            # don't double count function parameters
+            if func_param.name not in self._parameter_info:
+                input_names = "'" + "', '".join(func_param.input_names) + "'"
+                self._parameter_info += (
+                    f"{func_param.name} (FunctionParameter "
+                    f"with input(s) {input_names})\n"
+                )
+
+        print(self._parameter_info)
+
+    def _find_symbols(self, typ):
+        """Find all the instances of `typ` in the model"""
+        unpacker = pybamm.SymbolUnpacker(typ)
         all_input_parameters = unpacker.unpack_list_of_symbols(
             list(self.rhs.values())
             + list(self.algebraic.values())
             + list(self.initial_conditions.values())
+            + [
+                x[side][0]
+                for x in self.boundary_conditions.values()
+                for side in x.keys()
+            ]
             + list(self.variables.values())
             + [event.expression for event in self.events]
+            + [self.timescale]
+            + list(self.length_scales.values())
         )
         return list(all_input_parameters.values())
 
     def __getitem__(self, key):
         return self.rhs[key]
+
+    @property
+    def default_quick_plot_variables(self):
+        return None
 
     def new_empty_copy(self):
         """
@@ -321,8 +376,8 @@ class BaseModel(object):
         new_model = self.__class__(name=self.name)
         new_model.use_jacobian = self.use_jacobian
         new_model.convert_to_format = self.convert_to_format
-        new_model.timescale = self.timescale
-        new_model.length_scales = self.length_scales
+        new_model._timescale = self.timescale
+        new_model._length_scales = self.length_scales
 
         # Variables from discretisation
         new_model.is_discretised = self.is_discretised
@@ -380,11 +435,17 @@ class BaseModel(object):
         if inplace is True:
             model = self
         else:
-            model = self.new_copy()
+            model = self.new_empty_copy()
+            model.rhs = self.rhs.copy()
+            model.algebraic = self.algebraic.copy()
+            model.initial_conditions = self.initial_conditions.copy()
+            model.boundary_conditions = self.boundary_conditions.copy()
+            model.variables = self.variables.copy()
+            model.events = self.events.copy()
 
         if isinstance(solution, pybamm.Solution):
             solution = solution.last_state
-        for var, equation in model.initial_conditions.items():
+        for var in self.initial_conditions:
             if isinstance(var, pybamm.Variable):
                 try:
                     final_state = solution[var.name]
@@ -397,7 +458,9 @@ class BaseModel(object):
                     )
                 if isinstance(solution, pybamm.Solution):
                     final_state = final_state.data
-                if final_state.ndim == 1:
+                if final_state.ndim == 0:
+                    final_state_eval = np.array([final_state])
+                elif final_state.ndim == 1:
                     final_state_eval = final_state[-1:]
                 elif final_state.ndim == 2:
                     final_state_eval = final_state[:, -1]
@@ -436,11 +499,11 @@ class BaseModel(object):
 
         # Also update the concatenated initial conditions if the model is already
         # discretised
-        if model.is_discretised:
+        if self.is_discretised:
             # Unpack slices for sorting
-            y_slices = {var.id: slce for var, slce in model.y_slices.items()}
+            y_slices = {var.id: slce for var, slce in self.y_slices.items()}
             slices = []
-            for symbol in model.initial_conditions.keys():
+            for symbol in self.initial_conditions.keys():
                 if isinstance(symbol, pybamm.Concatenation):
                     # must append the slice for the whole concatenation, so that
                     # equations get sorted correctly
@@ -609,40 +672,20 @@ class BaseModel(object):
 
     def check_algebraic_equations(self, post_discretisation):
         """
-        Check that the algebraic equations are well-posed.
-        Before discretisation, each algebraic equation key must appear in the equation
-        After discretisation, there must be at least one StateVector in each algebraic
-        equation
+        Check that the algebraic equations are well-posed. After discretisation,
+        there must be at least one StateVector in each algebraic equation.
         """
-        vars_in_bcs = set()
-        unpacker = pybamm.SymbolUnpacker(pybamm.Variable)
-        for side_eqn in self.boundary_conditions.values():
-            all_vars = unpacker.unpack_list_of_symbols(
-                [eqn for eqn, _ in side_eqn.values()]
-            )
-            vars_in_bcs.update(all_vars.keys())
-        if not post_discretisation:
-            # After the model has been defined, each algebraic equation key should
-            # appear in that algebraic equation, or in the boundary conditions
-            # this has been relaxed for concatenations for now
-            for var, eqn in self.algebraic.items():
-                if not (
-                    any(x.id == var.id for x in eqn.pre_order())
-                    or var.id in vars_in_bcs
-                    or isinstance(var, pybamm.Concatenation)
-                ):
-                    raise pybamm.ModelError(
-                        "each variable in the algebraic eqn keys must appear in the eqn"
-                    )
-        else:
-            # variables in keys don't get discretised so they will no longer match
-            # with the state vectors in the algebraic equations. Instead, we check
-            # that each algebraic equation contains some StateVector
+        if post_discretisation:
+            # Check that each algebraic equation contains some StateVector
             for eqn in self.algebraic.values():
                 if not eqn.has_symbol_of_classes(pybamm.StateVector):
                     raise pybamm.ModelError(
                         "each algebraic equation must contain at least one StateVector"
                     )
+        else:
+            # We do not perfom any checks before discretisation (most problematic
+            # cases should be caught by `check_well_determined`)
+            pass
 
     def check_ics_bcs(self):
         """Check that the initial and boundary conditions are well-posed."""
@@ -652,25 +695,6 @@ class BaseModel(object):
                 raise pybamm.ModelError(
                     """no initial condition given for variable '{}'""".format(var)
                 )
-
-        # Boundary conditions
-        for var, eqn in {**self.rhs, **self.algebraic}.items():
-            if eqn.has_symbol_of_classes(
-                (pybamm.Gradient, pybamm.Divergence)
-            ) and not eqn.has_symbol_of_classes(pybamm.Integral):
-                # I have relaxed this check for now so that the lumped temperature
-                # equation doesn't raise errors (this has and average in it)
-
-                # Variable must be in the boundary conditions
-                if not any(
-                    var.id == x.id
-                    for symbol in self.boundary_conditions.keys()
-                    for x in symbol.pre_order()
-                ):
-                    raise pybamm.ModelError(
-                        "no boundary condition given for "
-                        "variable '{}' with equation '{}'.".format(var, eqn)
-                    )
 
     def check_default_variables_dictionaries(self):
         """Check that the right variables are provided."""
@@ -763,6 +787,22 @@ class BaseModel(object):
 
         print(div)
 
+    def check_discretised_or_discretise_inplace_if_0D(self):
+        """
+        Discretise model if it isn't already discretised
+        This only works with purely 0D models, as otherwise the mesh and spatial
+        method should be specified by the user
+        """
+        if self.is_discretised is False:
+            try:
+                disc = pybamm.Discretisation()
+                disc.process_model(self)
+            except pybamm.DiscretisationError as e:
+                raise pybamm.DiscretisationError(
+                    "Cannot automatically discretise model, model should be "
+                    "discretised before exporting casadi functions ({})".format(e)
+                )
+
     def export_casadi_objects(self, variable_names, input_parameter_order=None):
         """
         Export the constituent parts of the model (rhs, algebraic, initial conditions,
@@ -782,18 +822,7 @@ class BaseModel(object):
             Dictionary of {str: casadi object} pairs representing the model in casadi
             format
         """
-        # Discretise model if it isn't already discretised
-        # This only works with purely 0D models, as otherwise the mesh and spatial
-        # method should be specified by the user
-        if self.is_discretised is False:
-            try:
-                disc = pybamm.Discretisation()
-                disc.process_model(self)
-            except pybamm.DiscretisationError as e:
-                raise pybamm.DiscretisationError(
-                    "Cannot automatically discretise model, model should be "
-                    "discretised before exporting casadi functions ({})".format(e)
-                )
+        self.check_discretised_or_discretise_inplace_if_0D()
 
         # Create casadi functions for the model
         t_casadi = casadi.MX.sym("t")
@@ -934,8 +963,18 @@ class BaseModel(object):
 
     @property
     def default_solver(self):
-        """Return default solver based on whether model is ODE model or DAE model."""
-        return pybamm.CasadiSolver(mode="safe")
+        """Return default solver based on whether model is ODE/DAE or algebraic"""
+        if len(self.rhs) == 0 and len(self.algebraic) != 0:
+            return pybamm.CasadiAlgebraicSolver()
+        else:
+            return pybamm.CasadiSolver(mode="safe")
+
+    def latexify(self, filename=None, newline=True):
+        # For docstring, see pybamm.expression_tree.operations.latexify.Latexify
+        return Latexify(self, filename, newline).latexify()
+
+    # Set :meth:`latexify` docstring from :class:`Latexify`
+    latexify.__doc__ = Latexify.__doc__
 
 
 # helper functions for finding symbols
@@ -986,21 +1025,14 @@ class EquationDict(dict):
         # Convert any numbers to a pybamm.Scalar
         for var, eqn in equations.items():
             if isinstance(eqn, numbers.Number):
-                equations[var] = pybamm.Scalar(eqn)
-
-        if not all(
-            [
-                variable.domain == equation.domain
-                or variable.domain == []
-                or equation.domain == []
-                for variable, equation in equations.items()
-            ]
-        ):
-            raise pybamm.DomainError(
-                "variable and equation in '{}' must have the same domain".format(
-                    self.name
+                eqn = pybamm.Scalar(eqn)
+                equations[var] = eqn
+            if not (var.domain == eqn.domain or var.domain == [] or eqn.domain == []):
+                raise pybamm.DomainError(
+                    "variable and equation in '{}' must have the same domain".format(
+                        self.name
+                    )
                 )
-            )
 
         # For initial conditions, check that the equation doesn't contain any
         # Variable objects

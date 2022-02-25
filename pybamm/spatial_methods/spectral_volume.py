@@ -142,7 +142,7 @@ class SpectralVolume(pybamm.FiniteVolume):
 
         return c
 
-    def cv_boundary_reconstruction_matrix(self, domain, auxiliary_domains):
+    def cv_boundary_reconstruction_matrix(self, domains):
         """
         "Broadcasts" the basic edge value reconstruction matrix to the
         actual shape of the discretised symbols. Note that the product
@@ -152,11 +152,8 @@ class SpectralVolume(pybamm.FiniteVolume):
 
         Parameters
         ----------
-        domain : list
-            The domain(s) in which to compute the gradient matrix
-        auxiliary_domains : dict
-            The auxiliary domains in which to compute the gradient
-            matrix
+        domains : dict
+            The domains in which to compute the gradient matrix
 
         Returns
         -------
@@ -164,7 +161,7 @@ class SpectralVolume(pybamm.FiniteVolume):
             The (sparse) CV reconstruction matrix for the domain
         """
         # Create appropriate submesh by combining submeshes in domain
-        submesh = self.mesh.combine_submeshes(*domain)
+        submesh = self.mesh.combine_submeshes(*domains["primary"])
 
         # Obtain the basic reconstruction matrix.
         recon_sub_matrix = self.cv_boundary_reconstruction_sub_matrix()
@@ -175,7 +172,7 @@ class SpectralVolume(pybamm.FiniteVolume):
         sub_matrix = csr_matrix(kron(eye(n), recon_sub_matrix))
 
         # number of repeats
-        second_dim_repeats = self._get_auxiliary_domain_repeats(auxiliary_domains)
+        second_dim_repeats = self._get_auxiliary_domain_repeats(domains)
 
         # generate full matrix from the submatrix
         # Convert to csr_matrix so that we can take the index
@@ -264,13 +261,9 @@ class SpectralVolume(pybamm.FiniteVolume):
         """Matrix-vector multiplication to implement the gradient
         operator. See :meth:`pybamm.SpatialMethod.gradient`
         """
-        # Discretise symbol
-        domain = symbol.domain
-
         # Reconstruct edge values from node values.
         reconstructed_symbol = (
-            self.cv_boundary_reconstruction_matrix(domain, symbol.auxiliary_domains)
-            @ discretised_symbol
+            self.cv_boundary_reconstruction_matrix(symbol.domains) @ discretised_symbol
         )
 
         # Add Dirichlet boundary conditions, if defined
@@ -282,9 +275,9 @@ class SpectralVolume(pybamm.FiniteVolume):
                     symbol, reconstructed_symbol, bcs
                 )
 
-        # note in 1D spherical grad and normal grad are the same
-        gradient_matrix = self.gradient_matrix(domain, symbol.auxiliary_domains)
-        penalty_matrix = self.penalty_matrix(domain, symbol.auxiliary_domains)
+        # note in 1D cartesian, cylindrical and spherical grad are the same
+        gradient_matrix = self.gradient_matrix(symbol.domain, symbol.domains)
+        penalty_matrix = self.penalty_matrix(symbol.domains)
 
         # Multiply by gradient matrix
         out = (
@@ -299,7 +292,7 @@ class SpectralVolume(pybamm.FiniteVolume):
 
         return out
 
-    def gradient_matrix(self, domain, auxiliary_domains):
+    def gradient_matrix(self, domain, domains):
         """
         Gradient matrix for Spectral Volume in the appropriate domain.
         Note that it contains the averaging of the duplicate SV edge
@@ -315,11 +308,8 @@ class SpectralVolume(pybamm.FiniteVolume):
 
         Parameters
         ----------
-        domain : list
-            The domain(s) in which to compute the gradient matrix
-        auxiliary_domains : dict
-            The auxiliary domains in which to compute the gradient
-            matrix
+        domains : dict
+            The domains in which to compute the gradient matrix
 
         Returns
         -------
@@ -382,7 +372,7 @@ class SpectralVolume(pybamm.FiniteVolume):
             sub_matrix[-d:, -d - 1 :] = sub_matrix_raw[-d:, -d - 1 :]
 
         # number of repeats
-        second_dim_repeats = self._get_auxiliary_domain_repeats(auxiliary_domains)
+        second_dim_repeats = self._get_auxiliary_domain_repeats(domains)
 
         # generate full matrix from the submatrix
         # Convert to csr_matrix so that we can take the index
@@ -393,7 +383,7 @@ class SpectralVolume(pybamm.FiniteVolume):
 
         return pybamm.Matrix(matrix)
 
-    def penalty_matrix(self, domain, auxiliary_domains):
+    def penalty_matrix(self, domains):
         """
         Penalty matrix for Spectral Volume in the appropriate domain.
         This works the same as the "gradient_matrix" of FiniteVolume
@@ -402,11 +392,8 @@ class SpectralVolume(pybamm.FiniteVolume):
 
         Parameters
         ----------
-        domain : list
-            The domain(s) in which to compute the gradient matrix
-        auxiliary_domains : dict
-            The auxiliary domains in which to compute the gradient
-            matrix
+        domains : dict
+            The domains in which to compute the gradient matrix
 
         Returns
         -------
@@ -414,7 +401,7 @@ class SpectralVolume(pybamm.FiniteVolume):
             The (sparse) Spectral Volume penalty matrix for the domain
         """
         # Create appropriate submesh by combining submeshes in domain
-        submesh = self.mesh.combine_submeshes(*domain)
+        submesh = self.mesh.combine_submeshes(*domains["primary"])
 
         # Create 1D matrix using submesh
         n = submesh.npts
@@ -426,7 +413,7 @@ class SpectralVolume(pybamm.FiniteVolume):
         )
 
         # number of repeats
-        second_dim_repeats = self._get_auxiliary_domain_repeats(auxiliary_domains)
+        second_dim_repeats = self._get_auxiliary_domain_repeats(domains)
 
         # generate full matrix from the submatrix
         # Convert to csr_matrix so that we can take the index

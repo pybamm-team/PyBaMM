@@ -4,13 +4,12 @@ from tests import get_mesh_for_testing
 import sys
 import time
 import numpy as np
-from platform import system
 
-if system() != "Windows":
+if pybamm.have_jax():
     import jax
 
 
-@unittest.skipIf(system() == "Windows", "JAX not supported on windows")
+@unittest.skipIf(not pybamm.have_jax(), "jax or jaxlib is not installed")
 class TestJaxSolver(unittest.TestCase):
     def test_model_solver(self):
         # Create model

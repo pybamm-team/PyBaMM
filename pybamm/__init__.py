@@ -7,41 +7,12 @@
 #
 import sys
 import os
-from platform import system
+
 
 #
 # Version info
 #
-def _load_version_int():
-    try:
-        root = os.path.abspath(os.path.dirname(__file__))
-        with open(os.path.join(root, "version"), "r") as f:
-            version = f.read().strip().split(",")
-        major, minor, revision = [int(x) for x in version]
-        return major, minor, revision
-    except Exception as e:
-        raise RuntimeError("Unable to read version number (" + str(e) + ").")
-
-
-__version_int__ = _load_version_int()
-__version__ = ".".join([str(x) for x in __version_int__])
-if sys.version_info[0] < 3:
-    del x  # Before Python3, list comprehension iterators leaked
-
-#
-# Expose PyBaMM version
-#
-def version(formatted=False):
-    """
-    Returns the version number, as a 3-part integer (major, minor, revision).
-    If ``formatted=True``, it returns a string formatted version (for example
-    "PyBaMM 1.0.0").
-    """
-    if formatted:
-        return "PyBaMM " + __version__
-    else:
-        return __version_int__
-
+from pybamm.version import __version__
 
 #
 # Constants
@@ -61,12 +32,13 @@ PARAMETER_PATH = [
     os.path.join(root_dir(), "pybamm", "input", "parameters"),
 ]
 
+
 #
 # Utility classes and methods
 #
 from .util import Timer, TimerTime, FuzzyDict
 from .util import root_dir, load_function, rmse, get_infinite_nested_dict, load
-from .util import get_parameters_filepath
+from .util import get_parameters_filepath, have_jax, install_jax, is_jax_compatible
 from .logger import logger, set_logging_level
 from .settings import settings
 from .citations import Citations, citations, print_citations
@@ -80,14 +52,15 @@ from .expression_tree.concatenations import *
 from .expression_tree.array import Array, linspace, meshgrid
 from .expression_tree.matrix import Matrix
 from .expression_tree.unary_operators import *
+from .expression_tree.averages import *
+from .expression_tree.averages import _BaseAverage
+from .expression_tree.broadcasts import *
 from .expression_tree.functions import *
 from .expression_tree.interpolant import Interpolant
 from .expression_tree.input_parameter import InputParameter
 from .expression_tree.parameter import Parameter, FunctionParameter
-from .expression_tree.broadcasts import *
 from .expression_tree.scalar import Scalar
-from .expression_tree.variable import Variable, ExternalVariable, VariableDot
-from .expression_tree.variable import VariableBase
+from .expression_tree.variable import *
 from .expression_tree.independent_variable import *
 from .expression_tree.independent_variable import t
 from .expression_tree.vector import Vector
@@ -96,16 +69,15 @@ from .expression_tree.state_vector import StateVectorBase, StateVector, StateVec
 from .expression_tree.exceptions import *
 
 # Operations
-from .expression_tree.operations.evaluate import (
+from .expression_tree.operations.evaluate_python import (
     find_symbols,
     id_to_python_variable,
     to_python,
     EvaluatorPython,
 )
 
-if system() != "Windows":
-    from .expression_tree.operations.evaluate import EvaluatorJax
-    from .expression_tree.operations.evaluate import JaxCooMatrix
+from .expression_tree.operations.evaluate_python import EvaluatorJax
+from .expression_tree.operations.evaluate_python import JaxCooMatrix
 
 from .expression_tree.operations.jacobian import Jacobian
 from .expression_tree.operations.convert_to_casadi import CasadiConverter
@@ -116,12 +88,15 @@ from .expression_tree.operations.replace_symbols import SymbolReplacer
 # Model classes
 #
 from .models.base_model import BaseModel
-from .models import standard_variables
+from .models.standard_variables import standard_variables
 from .models.event import Event
 from .models.event import EventType
 
 # Battery models
-from .models.full_battery_models.base_battery_model import BaseBatteryModel
+from .models.full_battery_models.base_battery_model import (
+    BaseBatteryModel,
+    BatteryModelOptions,
+)
 from .models.full_battery_models import lead_acid
 from .models.full_battery_models import lithium_ion
 
@@ -144,11 +119,13 @@ from .models.submodels import (
     porosity,
     thermal,
     tortuosity,
-    particle_cracking,
+    particle_mechanics,
     particle_composite,
 )
+from .models.submodels.interface import kinetics
 from .models.submodels.interface import sei
 from .models.submodels.interface import lithium_plating
+from .models.submodels.interface import interface_utilisation
 
 #
 # Geometry
@@ -172,6 +149,7 @@ from .parameters.electrical_parameters import (
 from .parameters.thermal_parameters import thermal_parameters, ThermalParameters
 from .parameters.lithium_ion_parameters import LithiumIonParameters
 from .parameters.lead_acid_parameters import LeadAcidParameters
+from .parameters.size_distribution_parameters import *
 from .parameters import parameter_sets
 
 #
@@ -209,7 +187,7 @@ from .spatial_methods.scikit_finite_element import ScikitFiniteElement
 #
 # Solver classes
 #
-from .solvers.solution import Solution
+from .solvers.solution import Solution, make_cycle_solution
 from .solvers.processed_variable import ProcessedVariable
 from .solvers.processed_symbolic_variable import ProcessedSymbolicVariable
 from .solvers.base_solver import BaseSolver
@@ -221,10 +199,8 @@ from .solvers.scikits_dae_solver import ScikitsDaeSolver
 from .solvers.scikits_ode_solver import ScikitsOdeSolver, have_scikits_odes
 from .solvers.scipy_solver import ScipySolver
 
-# Jax not supported under windows
-if system() != "Windows":
-    from .solvers.jax_solver import JaxSolver
-    from .solvers.jax_bdf_solver import jax_bdf_integrate
+from .solvers.jax_solver import JaxSolver
+from .solvers.jax_bdf_solver import jax_bdf_integrate
 
 from .solvers.idaklu_solver import IDAKLUSolver, have_idaklu
 
@@ -241,18 +217,18 @@ from .plotting.quick_plot import QuickPlot, close_plots
 from .plotting.plot import plot
 from .plotting.plot2D import plot2D
 from .plotting.plot_voltage_components import plot_voltage_components
+from .plotting.plot_summary_variables import plot_summary_variables
 from .plotting.dynamic_plot import dynamic_plot
 
-# Define the plot-style string and set the default plotting style (can be overwritten
-# in a specific script)
-default_plot_style = os.path.join(root_dir(), "pybamm/plotting/pybamm.mplstyle")
-import matplotlib.pyplot as plt
-
-plt.style.use(default_plot_style)
 #
 # Simulation
 #
 from .simulation import Simulation, load_sim, is_notebook
+
+#
+# Batch Study
+#
+from .batch_study import BatchStudy
 
 #
 # Remove any imported modules, so we don't expose them as part of pybamm

@@ -5,8 +5,8 @@ on:
     branches:
     - develop
     paths:
-    - 'pybamm/parameters/parameter_sets.py'
-    - 'pybamm/parameters/CITATIONS.txt'
+    - pybamm/parameters/parameter_sets.py
+    - pybamm/CITATIONS.txt
 
 jobs:
   build:

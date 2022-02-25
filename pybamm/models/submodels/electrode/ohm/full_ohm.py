@@ -14,13 +14,14 @@ class Full(BaseModel):
         The parameters to use for this submodel
     domain : str
         Either 'Negative' or 'Positive'
-
+    options : dict, optional
+        A dictionary of options to be passed to the model.
 
     **Extends:** :class:`pybamm.electrode.ohm.BaseModel`
     """
 
-    def __init__(self, param, domain):
-        super().__init__(param, domain)
+    def __init__(self, param, domain, options=None):
+        super().__init__(param, domain, options=options)
 
     def get_fundamental_variables(self):
 
@@ -37,11 +38,12 @@ class Full(BaseModel):
 
         phi_s = variables[self.domain + " electrode potential"]
         tor = variables[self.domain + " electrode tortuosity"]
+        T = variables[self.domain + " electrode temperature"]
 
         if self.domain == "Negative":
-            sigma = self.param.sigma_n
+            sigma = self.param.sigma_n(T)
         elif self.domain == "Positive":
-            sigma = self.param.sigma_p
+            sigma = self.param.sigma_p(T)
 
         sigma_eff = sigma * tor
         i_s = -sigma_eff * pybamm.grad(phi_s)
@@ -76,6 +78,7 @@ class Full(BaseModel):
         phi_s = variables[self.domain + " electrode potential"]
         phi_s_cn = variables["Negative current collector potential"]
         tor = variables[self.domain + " electrode tortuosity"]
+        T = variables[self.domain + " electrode temperature"]
 
         if self.domain == "Negative":
             lbc = (phi_s_cn, "Dirichlet")
@@ -83,7 +86,7 @@ class Full(BaseModel):
 
         elif self.domain == "Positive":
             lbc = (pybamm.Scalar(0), "Neumann")
-            sigma_eff = self.param.sigma_p * tor
+            sigma_eff = self.param.sigma_p(T) * tor
             i_boundary_cc = variables["Current collector current density"]
             rbc = (
                 i_boundary_cc / pybamm.boundary_value(-sigma_eff, "right"),
@@ -95,13 +98,10 @@ class Full(BaseModel):
     def set_initial_conditions(self, variables):
 
         phi_s = variables[self.domain + " electrode potential"]
-        T_init = self.param.T_init
 
         if self.domain == "Negative":
             phi_s_init = pybamm.Scalar(0)
         elif self.domain == "Positive":
-            phi_s_init = self.param.U_p(
-                self.param.c_p_init(1), T_init
-            ) - self.param.U_n(self.param.c_n_init(0), T_init)
+            phi_s_init = self.param.ocv_init
 
         self.initial_conditions[phi_s] = phi_s_init

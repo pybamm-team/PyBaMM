@@ -60,7 +60,7 @@ jobs:
       - name: Checkout pybamm-bench repo
         uses: actions/checkout@v2
         with:
-          repository: tlestang/pybamm-bench
+          repository: pybamm-team/pybamm-bench
           token: ${{ secrets.BENCH_PAT }}
       - name: Download results artifact
         uses: actions/download-artifact@v2
@@ -68,10 +68,13 @@ jobs:
           name: asv_new_results
           path: new_results
       - name: Copy new results and push to pybamm-bench repo
+        env:
+          PUSH_BENCH_EMAIL: ${{ secrets.PUSH_BENCH_EMAIL }}
+          PUSH_BENCH_NAME: ${{ secrets.PUSH_BENCH_NAME }}
         run: |
           cp -vr new_results/* results
-          git config --global user.email "thibault.lestang@cs.ox.ac.uk"
-          git config --global user.name "Thibault Lestang"
+          git config --global user.email "$PUSH_BENCH_EMAIL"
+          git config --global user.name "$PUSH_BENCH_NAME"
           git add results
           git commit -am "Add new results"
           git push

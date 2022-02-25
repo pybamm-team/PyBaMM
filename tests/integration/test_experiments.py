@@ -36,9 +36,7 @@ class TestExperiments(unittest.TestCase):
             ["Rest for 5 minutes", "Discharge at 0.1C until 3V", "Rest for 30 minutes"],
             period="1 minute",
         )
-        parameter_values = pybamm.ParameterValues(
-            chemistry=pybamm.parameter_sets.Chen2020
-        )
+        parameter_values = pybamm.ParameterValues("Chen2020")
         model = pybamm.lithium_ion.DFN()
         sim = pybamm.Simulation(
             model,

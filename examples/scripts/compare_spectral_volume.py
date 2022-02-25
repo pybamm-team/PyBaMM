@@ -23,8 +23,7 @@ for m, p, g in zip(models, params, geometries):
     p.process_geometry(g)
 
 # set mesh
-var = pybamm.standard_spatial_vars
-var_pts = {var.x_n: 1, var.x_s: 1, var.x_p: 1, var.r_n: 1, var.r_p: 1}
+var_pts = {"x_n": 1, "x_s": 1, "x_p": 1, "r_n": 1, "r_p": 1}
 # the Finite Volume method also works on spectral meshes
 meshes = [
     pybamm.Mesh(

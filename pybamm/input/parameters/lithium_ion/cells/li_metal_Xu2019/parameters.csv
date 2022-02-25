@@ -1,0 +1,14 @@
+Name [units],Value,Reference,Notes
+# Empty rows and rows starting with ‘#’ will be ignored,,,
+,,,
+# Macroscale geometry,,,
+Negative electrode thickness [m],700E-06,,
+Separator thickness [m],25E-06,,
+Positive electrode thickness [m],42E-06,,
+Electrode height [m],0.01,,guess to get correct area
+Electrode width [m],0.0154,,guess to get correct area
+,,,
+# Electrical,,,
+Nominal cell capacity [A.h],0.0024,,C/4 is I=0.6 mA
+Typical current [A],0.0024,,1C current
+Current function [A],0.0024,,1C current

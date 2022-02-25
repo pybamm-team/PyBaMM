@@ -1,0 +1,19 @@
+# Entropic term data for LG M50 graphite negative electrode
+# sto,dUdT
+# extra point to avoid extrapolation
+0,0.0004
+# experimentally measured data
+0.0791,0.0003797
+0.0903,0.0003625
+0.1051,0.0003431
+0.2000,0.0000229
+0.2723,0
+0.3721,-0.0000461
+0.4719,-0.0002032
+0.5717,-0.0002130
+0.6715,-0.0000417
+0.7713,-0.0000595
+0.8711,-0.0000655
+0.9709,-0.0000817
+# extra point to avoid extrapolation
+1,-0.0000864

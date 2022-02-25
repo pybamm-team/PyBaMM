@@ -1,14 +1,19 @@
 #
 # Base Symbol Class for the expression tree
 #
-import pybamm
+import numbers
 
 import anytree
-import numbers
-import copy
 import numpy as np
+import sympy
 from anytree.exporter import DotExporter
-from scipy.sparse import issparse, csr_matrix
+from scipy.sparse import csr_matrix, issparse
+
+import pybamm
+from pybamm.expression_tree.printing.print_name import prettify_print_name
+
+DOMAIN_LEVELS = ["primary", "secondary", "tertiary", "quaternary"]
+EMPTY_DOMAINS = {k: [] for k in DOMAIN_LEVELS}
 
 
 def domain_size(domain):
@@ -27,11 +32,9 @@ def domain_size(domain):
         "negative electrode": 11,
         "separator": 13,
         "positive electrode": 17,
-        "working electrode": 19,
-        "working particle": 23,
+        "negative particle size": 19,
+        "positive particle size": 23,
     }
-    if isinstance(domain, str):
-        domain = [domain]
     if domain in [[], None]:
         size = 1
     elif all(dom in fixed_domain_sizes for dom in domain):
@@ -49,32 +52,73 @@ def create_object_of_size(size, typ="vector"):
         return np.nan * np.ones((size, size))
 
 
-def evaluate_for_shape_using_domain(domain, auxiliary_domains=None, typ="vector"):
+def evaluate_for_shape_using_domain(domains, typ="vector"):
     """
-    Return a vector of the appropriate shape, based on the domain.
+    Return a vector of the appropriate shape, based on the domains.
     Domain 'sizes' can clash, but are unlikely to, and won't cause failures if they do.
     """
-    _domain_size = domain_size(domain)
-    if auxiliary_domains is None:
-        _auxiliary_domain_sizes = 1
+    if isinstance(domains, dict):
+        _domain_sizes = int(np.prod([domain_size(dom) for dom in domains.values()]))
     else:
-        _auxiliary_domain_sizes = int(
-            np.prod([domain_size(dom) for dom in auxiliary_domains.values()])
-        )
-    return create_object_of_size(_domain_size * _auxiliary_domain_sizes, typ)
+        _domain_sizes = domain_size(domains)
+    return create_object_of_size(_domain_sizes, typ)
 
 
 def is_constant(symbol):
     return isinstance(symbol, numbers.Number) or symbol.is_constant()
 
 
+def is_scalar_x(expr, x):
+    """
+    Utility function to test if an expression evaluates to a constant scalar value
+    """
+    if is_constant(expr):
+        result = expr.evaluate_ignoring_errors(t=None)
+        return isinstance(result, numbers.Number) and result == x
+    else:
+        return False
+
+
 def is_scalar_zero(expr):
     """
     Utility function to test if an expression evaluates to a constant scalar zero
     """
+    return is_scalar_x(expr, 0)
+
+
+def is_scalar_one(expr):
+    """
+    Utility function to test if an expression evaluates to a constant scalar one
+    """
+    return is_scalar_x(expr, 1)
+
+
+def is_scalar_minus_one(expr):
+    """
+    Utility function to test if an expression evaluates to a constant scalar minus one
+    """
+    return is_scalar_x(expr, -1)
+
+
+def is_matrix_x(expr, x):
+    """
+    Utility function to test if an expression evaluates to a constant matrix value
+    """
+    if isinstance(expr, pybamm.Broadcast):
+        return is_scalar_x(expr.child, x) or is_matrix_x(expr.child, x)
+
     if is_constant(expr):
         result = expr.evaluate_ignoring_errors(t=None)
-        return isinstance(result, numbers.Number) and result == 0
+        return (
+            issparse(result)
+            and (
+                (x == 0 and np.prod(len(result.__dict__["data"])) == 0)
+                or (
+                    len(result.__dict__["data"]) == np.prod(result.shape)
+                    and np.all(result.__dict__["data"] == x)
+                )
+            )
+        ) or (isinstance(result, np.ndarray) and np.all(result == x))
     else:
         return False
 
@@ -83,43 +127,21 @@ def is_matrix_zero(expr):
     """
     Utility function to test if an expression evaluates to a constant matrix zero
     """
-    if isinstance(expr, pybamm.Broadcast):
-        return is_scalar_zero(expr.child) or is_matrix_zero(expr.child)
-
-    if is_constant(expr):
-        result = expr.evaluate_ignoring_errors(t=None)
-        return (issparse(result) and result.count_nonzero() == 0) or (
-            isinstance(result, np.ndarray) and np.all(result == 0)
-        )
-    else:
-        return False
-
-
-def is_scalar_one(expr):
-    """
-    Utility function to test if an expression evaluates to a constant scalar one
-    """
-    if is_constant(expr):
-        result = expr.evaluate_ignoring_errors(t=None)
-        return isinstance(result, numbers.Number) and result == 1
-    else:
-        return False
+    return is_matrix_x(expr, 0)
 
 
 def is_matrix_one(expr):
     """
     Utility function to test if an expression evaluates to a constant matrix one
     """
-    if isinstance(expr, pybamm.Broadcast):
-        return is_scalar_one(expr.child) or is_matrix_one(expr.child)
+    return is_matrix_x(expr, 1)
 
-    if is_constant(expr):
-        result = expr.evaluate_ignoring_errors(t=None)
-        return (issparse(result) and np.all(result.toarray() == 1)) or (
-            isinstance(result, np.ndarray) and np.all(result == 1)
-        )
-    else:
-        return False
+
+def is_matrix_minus_one(expr):
+    """
+    Utility function to test if an expression evaluates to a constant matrix minus one
+    """
+    return is_matrix_x(expr, -1)
 
 
 def simplify_if_constant(symbol):
@@ -127,8 +149,6 @@ def simplify_if_constant(symbol):
     Utility function to simplify an expression tree if it evalutes to a constant
     scalar, vector or matrix
     """
-    domain = symbol.domain
-    auxiliary_domains = symbol.auxiliary_domains
     if symbol.is_constant():
         result = symbol.evaluate_ignoring_errors()
         if result is not None:
@@ -140,22 +160,19 @@ def simplify_if_constant(symbol):
                 return pybamm.Scalar(result)
             elif isinstance(result, np.ndarray) or issparse(result):
                 if result.ndim == 1 or result.shape[1] == 1:
-                    return pybamm.Vector(
-                        result, domain=domain, auxiliary_domains=auxiliary_domains
-                    )
+                    return pybamm.Vector(result, domains=symbol.domains)
                 else:
                     # Turn matrix of zeros into sparse matrix
                     if isinstance(result, np.ndarray) and np.all(result == 0):
                         result = csr_matrix(result)
-                    return pybamm.Matrix(
-                        result, domain=domain, auxiliary_domains=auxiliary_domains
-                    )
+                    return pybamm.Matrix(result, domains=symbol.domains)
 
     return symbol
 
 
-class Symbol(anytree.NodeMixin):
-    """Base node class for the expression tree
+class Symbol:
+    """
+    Base node class for the expression tree.
 
     Parameters
     ----------
@@ -169,42 +186,37 @@ class Symbol(anytree.NodeMixin):
         is valid over all domains)
     auxiliary_domains : dict of str
         dictionary of auxiliary domains over which the node is valid (empty dictionary
-        indicates no auxiliary domains). Keys can be "secondary" or "tertiary". The
-        symbol is broadcast over its auxiliary domains.
+        indicates no auxiliary domains). Keys can be "secondary", "tertiary" or
+        "quaternary". The symbol is broadcast over its auxiliary domains.
         For example, a symbol might have domain "negative particle", secondary domain
         "separator" and tertiary domain "current collector" (`domain="negative
         particle", auxiliary_domains={"secondary": "separator", "tertiary": "current
         collector"}`).
-
+    domains : dict
+        A dictionary equivalent to {'primary': domain, auxiliary_domains}. Either
+        'domain' and 'auxiliary_domains', or just 'domains', should be provided
+        (not both). In future, the 'domain' and 'auxiliary_domains' arguments may be
+        deprecated.
     """
 
-    def __init__(self, name, children=None, domain=None, auxiliary_domains=None):
+    def __init__(
+        self, name, children=None, domain=None, auxiliary_domains=None, domains=None
+    ):
         super(Symbol, self).__init__()
         self.name = name
 
         if children is None:
             children = []
 
-        # Store "orphans", which are separate from children as they do not have a
-        # parent node, so they do not cause tree corruption errors when used again
-        # in a different part of the tree
+        self._children = children
+        # Keep a separate "oprhans" attribute for backwards compatibility
         self._orphans = children
 
-        for child in children:
-            # copy child before adding
-            # this also adds copy.copy(child) to self.children
-            copy.copy(child).parent = self
-
-        # cache children
-        self.cached_children = super(Symbol, self).children
-
-        # Set auxiliary domains
-        self._domains = {"primary": None}
-        self.auxiliary_domains = auxiliary_domains
-        # Set domain (and hence id)
-        self.domain = domain
+        # Set domains (and hence id)
+        self.domains = self.read_domain_or_domains(domain, auxiliary_domains, domains)
 
         self._saved_evaluates_on_edges = {}
+        self._print_name = None
 
         # Test shape on everything but nodes that contain the base Symbol class or
         # the base BinaryOperator class
@@ -223,13 +235,12 @@ class Symbol(anytree.NodeMixin):
 
         Note: it is assumed that children of a node are not modified after initial
         creation
-
         """
-        return self.cached_children
+        return self._children
 
     @property
     def name(self):
-        """name of the node"""
+        """name of the node."""
         return self._name
 
     @name.setter
@@ -243,7 +254,8 @@ class Symbol(anytree.NodeMixin):
 
     @property
     def domain(self):
-        """list of applicable domains
+        """
+        list of applicable domains.
 
         Returns
         -------
@@ -253,90 +265,127 @@ class Symbol(anytree.NodeMixin):
 
     @domain.setter
     def domain(self, domain):
-        if domain is None:
-            domain = []
-        elif isinstance(domain, str):
-            domain = [domain]
-        if domain == [] and self.auxiliary_domains != {}:
-            raise pybamm.DomainError(
-                "Domain cannot be empty if auxiliary domains are not empty"
-            )
-        if domain in self.auxiliary_domains.values():
-            raise pybamm.DomainError("Domain cannot be the same as an auxiliary domain")
-        try:
-            iter(domain)
-        except TypeError:
-            raise TypeError("Domain: argument domain is not iterable")
-        else:
-            self._domains["primary"] = domain
-            # Update id since domain has changed
-            self.set_id()
+        raise NotImplementedError(
+            "Cannot set domain directly, use domains={'primary': domain} instead"
+        )
 
     @property
     def auxiliary_domains(self):
-        """Returns auxiliary domains"""
-        return self._auxiliary_domains
+        """Returns auxiliary domains."""
+        raise NotImplementedError(
+            "symbol.auxiliary_domains has been deprecated, use symbol.domains instead"
+        )
 
-    @auxiliary_domains.setter
-    def auxiliary_domains(self, auxiliary_domains):
+    @domains.setter
+    def domains(self, domains):
+        try:
+            if (
+                self._domains == domains
+                # accounting for empty domains
+                or {k: v for k, v in self._domains.items() if v != []} == domains
+            ):
+                return None  # no change
+        except AttributeError:
+            # self._domains has not been set yet
+            pass
+
         # Turn dictionary into appropriate form
-        if auxiliary_domains is None:
-            auxiliary_domains = {}
-        for level, dom in auxiliary_domains.items():
-            if isinstance(dom, str):
-                auxiliary_domains[level] = [dom]
+        if domains == {"primary": []}:
+            self._domains = EMPTY_DOMAINS
+            self.set_id()
+            return None
+
+        # Set default domains
+        domains = {**EMPTY_DOMAINS, **domains}
 
         # Check domains don't clash
-        if self.domain in auxiliary_domains.values():
-            raise pybamm.DomainError("Domain cannot be the same as an auxiliary domain")
-        values = [tuple(val) for val in auxiliary_domains.values()]
-        if len(set(values)) != len(values):
-            raise pybamm.DomainError("All auxiliary domains must be different")
+        for level, dom in domains.items():
+            if level not in DOMAIN_LEVELS:
+                raise pybamm.DomainError(
+                    f"Domain keys must be one of '{DOMAIN_LEVELS}'"
+                )
+            if isinstance(dom, str):
+                domains[level] = [dom]
 
-        self._auxiliary_domains = auxiliary_domains.copy()
-        self._domains.update(auxiliary_domains)
+        values = [tuple(val) for val in domains.values() if val != []]
+        if len(set(values)) != len(values):
+            raise pybamm.DomainError("All domains must be different")
+
+        for i, level in enumerate(DOMAIN_LEVELS[:-1]):
+            if domains[level] == []:
+                if domains[DOMAIN_LEVELS[i + 1]] != []:
+                    raise pybamm.DomainError("Domain levels must be filled in order")
+                # don't test further if we have already found a missing domain
+                break
+
+        self._domains = domains
+        self.set_id()
 
     @property
     def secondary_domain(self):
-        """Helper function to get the secondary domain of a symbol"""
-        return self.auxiliary_domains["secondary"]
+        """Helper function to get the secondary domain of a symbol."""
+        return self._domains["secondary"]
+
+    @property
+    def tertiary_domain(self):
+        """Helper function to get the tertiary domain of a symbol."""
+        return self._domains["tertiary"]
+
+    @property
+    def quaternary_domain(self):
+        """Helper function to get the quaternary domain of a symbol."""
+        return self._domains["quaternary"]
 
     def copy_domains(self, symbol):
-        """Copy the domains from a given symbol, bypassing checks"""
-        self._domains = symbol.domains.copy()
-        self._domain = self._domains["primary"]
-        self._auxiliary_domains = {
-            k: v for k, v in self._domains.items() if k != "primary"
-        }
-        self.set_id()
+        """Copy the domains from a given symbol, bypassing checks."""
+        if self._domains != symbol._domains:
+            self._domains = symbol._domains
+            self.set_id()
 
     def clear_domains(self):
-        """Clear domains, bypassing checks"""
-        self._domains = {"primary": []}
-        self._domain = []
-        self._auxiliary_domains = {}
-        self.set_id()
+        """Clear domains, bypassing checks."""
+        if self._domains != EMPTY_DOMAINS:
+            self._domains = EMPTY_DOMAINS
+            self.set_id()
 
-    def get_children_auxiliary_domains(self, children):
-        """Combine auxiliary domains from children, at all levels"""
-        aux_domains = {}
+    def get_children_domains(self, children):
+        """Combine domains from children, at all levels."""
+        domains = {}
         for child in children:
-            for level in child.auxiliary_domains.keys():
-                if (
-                    level not in aux_domains
-                    or aux_domains[level] == []
-                    or child.auxiliary_domains[level] == aux_domains[level]
+            for level in child.domains.keys():
+                if child.domains[level] == []:
+                    pass
+                elif (
+                    level not in domains
+                    or domains[level] == []
+                    or child.domains[level] == domains[level]
                 ):
-                    aux_domains[level] = child.auxiliary_domains[level]
+                    domains[level] = child.domains[level]
                 else:
                     raise pybamm.DomainError(
-                        """children must have same or empty auxiliary domains,
-                        not {!s} and {!s}""".format(
-                            aux_domains[level], child.auxiliary_domains[level]
-                        )
+                        "children must have same or empty domains, "
+                        f"not {domains[level]} and {child.domains[level]}"
                     )
 
-        return aux_domains
+        return domains
+
+    def read_domain_or_domains(self, domain, auxiliary_domains, domains):
+        if domains is None:
+            if isinstance(domain, str):
+                domain = [domain]
+            elif domain is None:
+                domain = []
+            auxiliary_domains = auxiliary_domains or {}
+
+            domains = {"primary": domain, **auxiliary_domains}
+        else:
+            if domain is not None:
+                raise ValueError("Only one of 'domain' or 'domains' should be provided")
+            if auxiliary_domains is not None:
+                raise ValueError(
+                    "Only one of 'auxiliary_domains' or 'domains' should be provided"
+                )
+        return domains
 
     @property
     def id(self):
@@ -356,8 +405,7 @@ class Symbol(anytree.NodeMixin):
         self._id = hash(
             (self.__class__, self.name)
             + tuple([child.id for child in self.children])
-            + tuple(self.domain)
-            + tuple([(k, tuple(v)) for k, v in self.auxiliary_domains.items()])
+            + tuple([(k, tuple(v)) for k, v in self.domains.items() if v != []])
         )
 
     @property
@@ -369,8 +417,8 @@ class Symbol(anytree.NodeMixin):
         return self._orphans
 
     def render(self):  # pragma: no cover
-        """print out a visual representation of the tree (this node and its
-        children)
+        """
+        Print out a visual representation of the tree (this node and its children)
         """
         for pre, _, node in anytree.RenderTree(self):
             if isinstance(node, pybamm.Scalar) and node.name != str(node.value):
@@ -388,7 +436,6 @@ class Symbol(anytree.NodeMixin):
 
         filename : str
             filename to output, must end in ".png"
-
         """
 
         # check that filename ends in .png.
@@ -406,7 +453,8 @@ class Symbol(anytree.NodeMixin):
             pybamm.logger.error("Please install graphviz>=2.42.2 to use dot exporter")
 
     def relabel_tree(self, symbol, counter):
-        """Finds all children of a symbol and assigns them a new id so that they can be
+        """
+        Finds all children of a symbol and assigns them a new id so that they can be
         visualised properly using the graphviz output
         """
         name = symbol.name
@@ -424,8 +472,6 @@ class Symbol(anytree.NodeMixin):
             name = "&#43;"
         elif name == "**":
             name = "^"
-        elif name == "epsilon_s":
-            name = "&#603;"
 
         new_node = anytree.Node(str(counter), label=name)
         counter += 1
@@ -439,8 +485,8 @@ class Symbol(anytree.NodeMixin):
         return new_node, counter
 
     def pre_order(self):
-        """returns an iterable that steps through the tree in pre-order
-        fashion
+        """
+        returns an iterable that steps through the tree in pre-order fashion.
 
         Examples
         --------
@@ -453,77 +499,73 @@ class Symbol(anytree.NodeMixin):
         *
         a
         b
-
         """
         return anytree.PreOrderIter(self)
 
     def __str__(self):
-        """return a string representation of the node and its children"""
+        """return a string representation of the node and its children."""
         return self._name
 
     def __repr__(self):
         """returns the string `__class__(id, name, children, domain)`"""
-        return (
-            "{!s}({}, {!s}, children={!s}, domain={!s}, auxiliary_domains={!s})"
-        ).format(
+        return ("{!s}({}, {!s}, children={!s}, domains={!s})").format(
             self.__class__.__name__,
             hex(self.id),
             self._name,
             [str(child) for child in self.children],
-            [str(subdomain) for subdomain in self.domain],
-            {k: str(v) for k, v in self.auxiliary_domains.items()},
+            {k: v for k, v in self.domains.items() if v != []},
         )
 
     def __add__(self, other):
-        """return an :class:`Addition` object"""
+        """return an :class:`Addition` object."""
         return pybamm.simplified_addition(self, other)
 
     def __radd__(self, other):
-        """return an :class:`Addition` object"""
+        """return an :class:`Addition` object."""
         return pybamm.simplified_addition(other, self)
 
     def __sub__(self, other):
-        """return a :class:`Subtraction` object"""
+        """return a :class:`Subtraction` object."""
         return pybamm.simplified_subtraction(self, other)
 
     def __rsub__(self, other):
-        """return a :class:`Subtraction` object"""
+        """return a :class:`Subtraction` object."""
         return pybamm.simplified_subtraction(other, self)
 
     def __mul__(self, other):
-        """return a :class:`Multiplication` object"""
+        """return a :class:`Multiplication` object."""
         return pybamm.simplified_multiplication(self, other)
 
     def __rmul__(self, other):
-        """return a :class:`Multiplication` object"""
+        """return a :class:`Multiplication` object."""
         return pybamm.simplified_multiplication(other, self)
 
     def __matmul__(self, other):
-        """return a :class:`MatrixMultiplication` object"""
+        """return a :class:`MatrixMultiplication` object."""
         return pybamm.simplified_matrix_multiplication(self, other)
 
     def __rmatmul__(self, other):
-        """return a :class:`MatrixMultiplication` object"""
+        """return a :class:`MatrixMultiplication` object."""
         return pybamm.simplified_matrix_multiplication(other, self)
 
     def __truediv__(self, other):
-        """return a :class:`Division` object"""
+        """return a :class:`Division` object."""
         return pybamm.simplified_division(self, other)
 
     def __rtruediv__(self, other):
-        """return a :class:`Division` object"""
+        """return a :class:`Division` object."""
         return pybamm.simplified_division(other, self)
 
     def __pow__(self, other):
-        """return a :class:`Power` object"""
+        """return a :class:`Power` object."""
         return pybamm.simplified_power(self, other)
 
     def __rpow__(self, other):
-        """return a :class:`Power` object"""
+        """return a :class:`Power` object."""
         return pybamm.simplified_power(other, self)
 
     def __lt__(self, other):
-        """return a :class:`NotEqualHeaviside` object, or a smooth approximation"""
+        """return a :class:`NotEqualHeaviside` object, or a smooth approximation."""
         k = pybamm.settings.heaviside_smoothing
         # Return exact approximation if that is the setting or the outcome is a constant
         # (i.e. no need for smoothing)
@@ -534,7 +576,7 @@ class Symbol(anytree.NodeMixin):
         return pybamm.simplify_if_constant(out)
 
     def __le__(self, other):
-        """return a :class:`EqualHeaviside` object, or a smooth approximation"""
+        """return a :class:`EqualHeaviside` object, or a smooth approximation."""
         k = pybamm.settings.heaviside_smoothing
         # Return exact approximation if that is the setting or the outcome is a constant
         # (i.e. no need for smoothing)
@@ -545,7 +587,7 @@ class Symbol(anytree.NodeMixin):
         return pybamm.simplify_if_constant(out)
 
     def __gt__(self, other):
-        """return a :class:`NotEqualHeaviside` object, or a smooth approximation"""
+        """return a :class:`NotEqualHeaviside` object, or a smooth approximation."""
         k = pybamm.settings.heaviside_smoothing
         # Return exact approximation if that is the setting or the outcome is a constant
         # (i.e. no need for smoothing)
@@ -556,7 +598,7 @@ class Symbol(anytree.NodeMixin):
         return pybamm.simplify_if_constant(out)
 
     def __ge__(self, other):
-        """return a :class:`EqualHeaviside` object, or a smooth approximation"""
+        """return a :class:`EqualHeaviside` object, or a smooth approximation."""
         k = pybamm.settings.heaviside_smoothing
         # Return exact approximation if that is the setting or the outcome is a constant
         # (i.e. no need for smoothing)
@@ -567,22 +609,43 @@ class Symbol(anytree.NodeMixin):
         return pybamm.simplify_if_constant(out)
 
     def __neg__(self):
-        """return a :class:`Negate` object"""
-        return pybamm.simplify_if_constant(pybamm.Negate(self))
+        """return a :class:`Negate` object."""
+        if isinstance(self, pybamm.Negate):
+            # Double negative is a positive
+            return self.orphans[0]
+        elif isinstance(self, pybamm.Broadcast):
+            # Move negation inside the broadcast
+            # Apply recursively
+            return self._unary_new_copy(-self.orphans[0])
+        elif isinstance(self, pybamm.Concatenation) and all(
+            child.is_constant() for child in self.children
+        ):
+            return pybamm.concatenation(*[-child for child in self.orphans])
+        else:
+            return pybamm.simplify_if_constant(pybamm.Negate(self))
 
     def __abs__(self):
-        """return an :class:`AbsoluteValue` object, or a smooth approximation"""
-        k = pybamm.settings.abs_smoothing
-        # Return exact approximation if that is the setting or the outcome is a constant
-        # (i.e. no need for smoothing)
-        if k == "exact" or is_constant(self):
-            out = pybamm.AbsoluteValue(self)
+        """return an :class:`AbsoluteValue` object, or a smooth approximation."""
+        if isinstance(self, pybamm.AbsoluteValue):
+            # No need to apply abs a second time
+            return self
+        elif isinstance(self, pybamm.Broadcast):
+            # Move absolute value inside the broadcast
+            # Apply recursively
+            abs_self_not_broad = pybamm.simplify_if_constant(abs(self.orphans[0]))
+            return self._unary_new_copy(abs_self_not_broad)
         else:
-            out = pybamm.smooth_absolute_value(self, k)
-        return pybamm.simplify_if_constant(out)
+            k = pybamm.settings.abs_smoothing
+            # Return exact approximation if that is the setting or the outcome is a
+            # constant (i.e. no need for smoothing)
+            if k == "exact" or is_constant(self):
+                out = pybamm.AbsoluteValue(self)
+            else:
+                out = pybamm.smooth_absolute_value(self, k)
+            return pybamm.simplify_if_constant(out)
 
     def __mod__(self, other):
-        """return an :class:`Modulo` object"""
+        """return an :class:`Modulo` object."""
         return pybamm.simplify_if_constant(pybamm.Modulo(self, other))
 
     def diff(self, variable):
@@ -596,7 +659,6 @@ class Symbol(anytree.NodeMixin):
         ----------
         variable : :class:`pybamm.Symbol`
             The variable with respect to which to differentiate
-
         """
         if variable.id == self.id:
             return pybamm.Scalar(1)
@@ -610,7 +672,9 @@ class Symbol(anytree.NodeMixin):
             return pybamm.Scalar(0)
 
     def _diff(self, variable):
-        """Default behaviour for differentiation, overriden by Binary and Unary Operators"""
+        """
+        Default behaviour for differentiation, overriden by Binary and Unary Operators
+        """
         raise NotImplementedError
 
     def jac(self, variable, known_jacs=None, clear_domain=True):
@@ -635,7 +699,8 @@ class Symbol(anytree.NodeMixin):
         raise NotImplementedError
 
     def _base_evaluate(self, t=None, y=None, y_dot=None, inputs=None):
-        """evaluate expression tree
+        """
+        evaluate expression tree.
 
         will raise a ``NotImplementedError`` if this member function has not
         been defined for the node. For example, :class:`Scalar` returns its
@@ -653,13 +718,10 @@ class Symbol(anytree.NodeMixin):
         y_dot : numpy.array, optional
             array with time derivatives of state values to evaluate when solving
             (default None)
-
         """
         raise NotImplementedError(
-            """method self.evaluate() not implemented
-               for symbol {!s} of type {}""".format(
-                self, type(self)
-            )
+            "method self.evaluate() not implemented for symbol "
+            "{!s} of type {}".format(self, type(self))
         )
 
     def evaluate(self, t=None, y=None, y_dot=None, inputs=None, known_evals=None):
@@ -697,10 +759,12 @@ class Symbol(anytree.NodeMixin):
             return self._base_evaluate(t, y, y_dot, inputs)
 
     def evaluate_for_shape(self):
-        """Evaluate expression tree to find its shape. For symbols that cannot be
-        evaluated directly (e.g. `Variable` or `Parameter`), a vector of the appropriate
-        shape is returned instead, using the symbol's domain.
-        See :meth:`pybamm.Symbol.evaluate()`
+        """
+        Evaluate expression tree to find its shape.
+
+        For symbols that cannot be evaluated directly (e.g. `Variable` or `Parameter`),
+        a vector of the appropriate shape is returned instead, using the symbol's
+        domain. See :meth:`pybamm.Symbol.evaluate()`
         """
         try:
             return self._saved_evaluate_for_shape
@@ -709,17 +773,17 @@ class Symbol(anytree.NodeMixin):
             return self._saved_evaluate_for_shape
 
     def _evaluate_for_shape(self):
-        "See :meth:`Symbol.evaluate_for_shape`"
+        """See :meth:`Symbol.evaluate_for_shape`"""
         return self.evaluate()
 
     def is_constant(self):
-        """returns true if evaluating the expression is not dependent on `t` or `y`
+        """
+        returns true if evaluating the expression is not dependent on `t` or `y`
         or `inputs`
 
         See Also
         --------
         evaluate : evaluate the expression
-
         """
         # Default behaviour is False
         return False
@@ -731,11 +795,9 @@ class Symbol(anytree.NodeMixin):
         is returned. If there is an InputParameter in the tree then a 1 is returned.
         Otherwise the result of the evaluation is given.
 
-
         See Also
         --------
         evaluate : evaluate the expression
-
         """
         try:
             result = self.evaluate(t=t, inputs="shape test")
@@ -770,7 +832,6 @@ class Symbol(anytree.NodeMixin):
         See Also
         --------
         evaluate : evaluate the expression
-
         """
         return self.shape_for_testing == ()
 
@@ -781,7 +842,7 @@ class Symbol(anytree.NodeMixin):
         """
         Returns True if a symbol evaluates on an edge, i.e. symbol contains a gradient
         operator, but not a divergence operator, and is not an IndefiniteIntegral.
-        Caches the solution for faster results
+        Caches the solution for faster results.
 
         Parameters
         ----------
@@ -807,7 +868,8 @@ class Symbol(anytree.NodeMixin):
         return False
 
     def has_symbol_of_classes(self, symbol_classes):
-        """Returns True if equation has a term of the class(es) `symbol_class`.
+        """
+        Returns True if equation has a term of the class(es) `symbol_class`.
 
         Parameters
         ----------
@@ -827,7 +889,7 @@ class Symbol(anytree.NodeMixin):
         """
         return pybamm.CasadiConverter(casadi_symbols).convert(self, t, y, y_dot, inputs)
 
-    def new_copy(self):
+    def create_copy(self):
         """
         Make a new copy of a symbol, to avoid Tree corruption errors while bypassing
         copy.deepcopy(), which is slow.
@@ -838,6 +900,14 @@ class Symbol(anytree.NodeMixin):
                 self, type(self)
             )
         )
+
+    def new_copy(self):
+        """
+        Returns `create_copy` with added attributes
+        """
+        obj = self.create_copy()
+        obj._print_name = self.print_name
+        return obj
 
     @property
     def size(self):
@@ -884,9 +954,7 @@ class Symbol(anytree.NodeMixin):
 
     @property
     def size_for_testing(self):
-        """
-        Size of an object, based on shape for testing
-        """
+        """Size of an object, based on shape for testing."""
         return np.prod(self.shape_for_testing)
 
     @property
@@ -902,9 +970,17 @@ class Symbol(anytree.NodeMixin):
         else:
             return evaluated_self.shape
 
+    @property
+    def ndim_for_testing(self):
+        """
+        Number of dimensions of an object,
+        found by evaluating it with appropriate t and y
+        """
+        return len(self.shape_for_testing)
+
     def test_shape(self):
         """
-        Check that the discretised self has a pybamm `shape`, i.e. can be evaluated
+        Check that the discretised self has a pybamm `shape`, i.e. can be evaluated.
 
         Raises
         ------
@@ -915,3 +991,17 @@ class Symbol(anytree.NodeMixin):
             self.shape_for_testing
         except ValueError as e:
             raise pybamm.ShapeError("Cannot find shape (original error: {})".format(e))
+
+    @property
+    def print_name(self):
+        return self._print_name
+
+    @print_name.setter
+    def print_name(self, name):
+        if name is None:
+            self._print_name = name
+        else:
+            self._print_name = prettify_print_name(name)
+
+    def to_equation(self):
+        return sympy.Symbol(str(self.name))

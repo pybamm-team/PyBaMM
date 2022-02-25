@@ -86,17 +86,6 @@ class bdist_wheel(orig.bdist_wheel):
         orig.bdist_wheel.run(self)
 
 
-def load_version():
-    # Read version number from file
-    try:
-        root = os.path.abspath(os.path.dirname(__file__))
-        with open(os.path.join(root, "pybamm", "version"), "r") as f:
-            version = f.read().strip().split(",")
-        return ".".join([str(int(x)) for x in version])
-    except Exception as e:
-        raise RuntimeError("Unable to read version number (" + str(e) + ").")
-
-
 def compile_KLU():
     # Return whether or not the KLU extension should be compiled.
     # Return True if:
@@ -130,7 +119,7 @@ def compile_KLU():
         )
         logger.info(msg)
 
-    return CMakeFound and PyBind11Found and (not windows)
+    return CMakeFound and PyBind11Found
 
 
 # Build the list of package data files to be included in the PyBaMM package.
@@ -154,19 +143,17 @@ for file_ext in ["*.csv", "*.py", "*.md", "*.txt"]:
     pybamm_data.extend(
         [os.path.join(*Path(filename).parts[1:]) for filename in list_of_files]
     )
-pybamm_data.append("./version")
 pybamm_data.append("./CITATIONS.txt")
+pybamm_data.append("./plotting/pybamm.mplstyle")
+pybamm_data.append("../CMakeBuild.py")
 
-idaklu_ext = Extension("idaklu", ["pybamm/solvers/c_solvers/idaklu.cpp"])
+idaklu_ext = Extension("pybamm.solvers.idaklu", ["pybamm/solvers/c_solvers/idaklu.cpp"])
 ext_modules = [idaklu_ext] if compile_KLU() else []
 
-jax_dependencies = []
-if system() != "Windows":
-    jax_dependencies = [
-        "jax==0.2.5",
-        "jaxlib==0.1.57",
-    ]
-
+# Defines __version__
+root = os.path.abspath(os.path.dirname(__file__))
+with open(os.path.join(root, "pybamm", "version.py")) as f:
+    exec(f.read())
 
 # Load text for description and license
 with open("README.md", encoding="utf-8") as f:
@@ -174,7 +161,7 @@ with open("README.md", encoding="utf-8") as f:
 
 setup(
     name="pybamm",
-    version=load_version() + "-beta",
+    version=__version__,  # noqa: F821
     description="Python Battery Mathematical Modelling.",
     long_description=readme,
     long_description_content_type="text/markdown",
@@ -188,7 +175,7 @@ setup(
     },
     package_data={"pybamm": pybamm_data},
     # Python version
-    python_requires=">=3.6,<3.10",
+    python_requires=">=3.7,<3.10",
     # List of dependencies
     install_requires=[
         "numpy>=1.16",
@@ -198,9 +185,10 @@ setup(
         "autograd>=1.2",
         "scikit-fem>=0.2.0",
         "casadi>=3.5.0",
-        *jax_dependencies,
+        "imageio>=2.9.0",
         "jupyter",  # For example notebooks
         "pybtex",
+        "sympy==1.9",
         # Note: Matplotlib is loaded for debug plots, but to ensure pybamm runs
         # on systems without an attached display, it should never be imported
         # outside of plot() methods.
@@ -220,6 +208,7 @@ setup(
             "pybamm_add_parameter = pybamm.parameters_cli:add_parameter",
             "pybamm_rm_parameter = pybamm.parameters_cli:remove_parameter",
             "pybamm_install_odes = pybamm.install_odes:main",
+            "pybamm_install_jax = pybamm.util:install_jax",
         ]
     },
 )

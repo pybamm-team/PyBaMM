@@ -3,16 +3,30 @@
 #
 import pybamm
 import unittest
+import os
 
 
 class TestBaseLithiumIonModel(unittest.TestCase):
     def test_incompatible_options(self):
         with self.assertRaisesRegex(pybamm.OptionError, "convection not implemented"):
             pybamm.lithium_ion.BaseModel({"convection": "uniform transverse"})
-        with self.assertRaisesRegex(pybamm.OptionError, "x-lumped"):
-            pybamm.lithium_ion.BaseModel(
-                {"cell geometry": "arbitrary", "thermal": "x-lumped"}
-            )
+
+    def test_default_parameters(self):
+        # check parameters are read in ok
+        model = pybamm.lithium_ion.BaseModel()
+        self.assertEqual(
+            model.default_parameter_values["Reference temperature [K]"], 298.15
+        )
+
+        # change path and try again
+
+        cwd = os.getcwd()
+        os.chdir("..")
+        model = pybamm.lithium_ion.BaseModel()
+        self.assertEqual(
+            model.default_parameter_values["Reference temperature [K]"], 298.15
+        )
+        os.chdir(cwd)
 
 
 if __name__ == "__main__":

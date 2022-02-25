@@ -7,29 +7,36 @@ from .base_thermal import BaseThermal
 
 
 class OneDimensionalX(BaseThermal):
-    """Class for one-dimensional (x-direction) thermal submodel.
+    """
+    Class for one-dimensional (x-direction) thermal submodel.
     Note: this model assumes infinitely large electrical and thermal conductivity
     in the current collectors, so that the contribution to the Ohmic heating
     from the current collectors is zero and the boundary conditions are applied
     at the edges of the electrodes (at x=0 and x=1, in non-dimensional coordinates).
-    For more information see [1]_.
+    For more information see [1]_ and [2]_.
 
     Parameters
     ----------
     param : parameter class
         The parameters to use for this submodel
+    options : dict, optional
+        A dictionary of options to be passed to the model.
 
     References
     ----------
     .. [1] R Timms, SG Marquis, V Sulzer, CP Please and SJ Chapman. “Asymptotic
-           Reduction of a Lithium-ion Pouch Cell Model”. In preparation, 2020.
+           Reduction of a Lithium-ion Pouch Cell Model”. SIAM Journal on Applied
+           Mathematics, 81(3), 765--788, 2021
+    .. [2] SG Marquis, R Timms, V Sulzer, CP Please and SJ Chapman. “A Suite of
+           Reduced-Order Models of a Single-Layer Lithium-ion Pouch Cell”. Journal
+           of The Electrochemical Society, 167(14):140513, 2020
 
     **Extends:** :class:`pybamm.thermal.BaseThermal`
     """
 
-    def __init__(self, param):
-        super().__init__(param)
-        pybamm.citations.register("Timms2020")
+    def __init__(self, param, options=None):
+        super().__init__(param, options=options)
+        pybamm.citations.register("Timms2021")
 
     def get_fundamental_variables(self):
         T_n = pybamm.standard_variables.T_n
@@ -38,7 +45,7 @@ class OneDimensionalX(BaseThermal):
         T_cn = pybamm.BoundaryValue(T_n, "left")
         T_cp = pybamm.BoundaryValue(T_p, "right")
 
-        T = pybamm.Concatenation(T_n, T_s, T_p)
+        T = pybamm.concatenation(T_n, T_s, T_p)
         T_x_av = self._x_average(T, T_cn, T_cp)
         T_vol_av = self._yz_average(T_x_av)
 
@@ -53,19 +60,21 @@ class OneDimensionalX(BaseThermal):
 
     def set_rhs(self, variables):
         T = variables["Cell temperature"]
-        T_n, T_s, T_p = T.orphans
+        T_n = variables["Negative electrode temperature"]
+        T_s = variables["Separator temperature"]
+        T_p = variables["Positive electrode temperature"]
 
         Q = variables["Total heating"]
 
         # Define volumetric heat capacity
-        rho_k = pybamm.Concatenation(
+        rho_k = pybamm.concatenation(
             self.param.rho_n(T_n),
             self.param.rho_s(T_s),
             self.param.rho_p(T_p),
         )
 
         # Devine thermal conductivity
-        lambda_k = pybamm.Concatenation(
+        lambda_k = pybamm.concatenation(
             self.param.lambda_n(T_n),
             self.param.lambda_s(T_s),
             self.param.lambda_p(T_p),

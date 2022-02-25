@@ -4,16 +4,27 @@
 # The code in this file is adapted from Pints
 # (see https://github.com/pints-team/pints)
 #
-import importlib
-import numpy as np
+import argparse
+import importlib.util
+import numbers
 import os
-import sys
-import timeit
 import pathlib
 import pickle
-import pybamm
-import numbers
+import subprocess
+import sys
+import timeit
+import warnings
 from collections import defaultdict
+from platform import system
+
+import numpy as np
+import pkg_resources
+
+import pybamm
+
+# versions of jax and jaxlib compatible with PyBaMM
+JAX_VERSION = "0.2.12"
+JAXLIB_VERSION = "0.1.70"
 
 
 def root_dir():
@@ -89,6 +100,17 @@ class FuzzyDict(dict):
         try:
             return super().__getitem__(key)
         except KeyError:
+            if "negative electrode sei" in key.lower():
+                raise KeyError(
+                    f"'{key}' not found. All SEI parameters have been "
+                    "renamed from '...negative electrode SEI...' to '...SEI...'"
+                )
+            if "negative electrode lithium plating" in key.lower():
+                raise KeyError(
+                    f"'{key}' not found. All lithium plating parameters have been "
+                    "renamed from '...negative electrode lithium plating...' "
+                    "to '...lithium plating...'"
+                )
             best_matches = self.get_best_matches(key)
             raise KeyError(f"'{key}' not found. Best matches are {best_matches}")
 
@@ -226,86 +248,81 @@ class TimerTime:
 
 def load_function(filename):
     """
-    Load a python function from a file "function_name.py" called "function_name".
-    The filename might either be an absolute path, in which case that specific file will
-    be used, or the file will be searched for relative to PyBaMM root.
+    Load a python function from an absolute or relative path using `importlib`.
+    Example - pybamm.load_function("pybamm/input/example.py")
 
     Arguments
     ---------
     filename : str
-        The name of the file containing the function of the same name.
+        The path of the file containing the function.
 
     Returns
     -------
     function
         The python function loaded from the file.
     """
+    # Remove `.py` from the file name
+    if filename.endswith(".py"):
+        filename = filename.replace(".py", "")
 
-    if not filename.endswith(".py"):
-        raise ValueError("Expected filename.py, but got {}".format(filename))
-
-    # If it's an absolute path, find that exact file
-    if os.path.isabs(filename):
-        if not os.path.isfile(filename):
-            raise ValueError(
-                "{} is an absolute path, but the file is not found".format(filename)
-            )
-
-        valid_filename = filename
-
-    # Else, search in the whole PyBaMM directory for matches
-    else:
-        search_path = pybamm.root_dir()
-
-        head, tail = os.path.split(filename)
-
-        matching_files = []
-
-        for root, _, files in os.walk(search_path):
-            for file in files:
-                if file == tail:
-                    full_path = os.path.join(root, file)
-                    if full_path.endswith(filename):
-                        matching_files.append(full_path)
-
-        if len(matching_files) == 0:
-            raise ValueError(
-                "{} cannot be found in the PyBaMM directory".format(filename)
-            )
-        elif len(matching_files) > 1:
-            raise ValueError(
-                "{} found multiple times in the PyBaMM directory."
-                "Consider using absolute file path.".format(filename)
-            )
-
-        valid_filename = matching_files[0]
-
-    # Now: we have some /path/to/valid/filename.py
-    # Add "/path/to/vaid" to the python path, and load the module "filename".
-    # Then, check "filename" module contains "filename" function.  If it does, return
-    # that function object, or raise an exception
-
-    valid_path, valid_leaf = os.path.split(valid_filename)
-    sys.path.append(valid_path)
-
-    # Load the module, which must be the leaf of filename, minus the .py extension
-    valid_module = valid_leaf.replace(".py", "")
-    module_object = importlib.import_module(valid_module)
-
-    # Check that a function of the same name exists in the loaded module
-    if valid_module not in dir(module_object):
-        raise ValueError(
-            "No function {} found in module {}".format(valid_module, valid_module)
+    # Replace `lead-acid` with `lead_acid`
+    if "lead-acid" in filename:
+        warnings.simplefilter("always", DeprecationWarning)
+        warnings.warn(
+            "lead-acid is deprecated, use lead_acid instead", DeprecationWarning
         )
+        filename = filename.replace("lead-acid", "lead_acid")
 
-    # Remove valid_path from sys_path to avoid clashes down the line
-    sys.path.remove(valid_path)
+    # Replace `lithium-ion` with `lithium_ion`
+    if "lithium-ion" in filename:
+        warnings.simplefilter("always", DeprecationWarning)
+        warnings.warn(
+            "lithium-ion is deprecated, use lithium_ion instead", DeprecationWarning
+        )
+        filename = filename.replace("lithium-ion", "lithium_ion")
 
-    return getattr(module_object, valid_module)
+    # Assign path to _ and filename to tail
+    _, tail = os.path.split(filename)
+
+    # Store the current working directory
+    orig_dir = os.getcwd()
+
+    # Strip absolute path to pybamm/input/example.py
+    if "pybamm/input/parameters" in filename or "pybamm\\input\\parameters" in filename:
+        root_path = filename[filename.rfind("pybamm") :]
+    # If the function is in the current working directory
+    elif os.getcwd() in filename:
+        root_path = filename.replace(os.getcwd(), "")
+    # If the function is not in the current working directory and the path provided is
+    # absolute
+    elif os.path.isabs(filename) and not os.getcwd() in filename:  # pragma: no cover
+        # Change directory to import the function
+        dir_path = os.path.split(filename)[0]
+        os.chdir(dir_path)
+        root_path = filename.replace(os.getcwd(), "")
+    else:
+        root_path = filename
+
+    # getcwd() returns "C:\\" when in the root drive and "C:\\a\\b\\c" otherwise
+    if root_path[0] == "\\" or root_path[0] == "/":
+        root_path = root_path[1:]
+
+    path = root_path.replace("/", ".")
+    path = path.replace("\\", ".")
+    pybamm.logger.debug(
+        f"Importing function '{tail}' from file '{filename}' via path '{path}'"
+    )
+    module_object = importlib.import_module(path)
+
+    # Revert back current working directory if it was changed
+    os.chdir(orig_dir)
+    return getattr(module_object, tail)
 
 
 def rmse(x, y):
-    """Calculate the root-mean-square-error between two vectors x and y, ignoring NaNs"""
+    """
+    Calculate the root-mean-square-error between two vectors x and y, ignoring NaNs
+    """
     # Check lengths
     if len(x) != len(y):
         raise ValueError("Vectors must have the same length")
@@ -348,3 +365,69 @@ def get_parameters_filepath(path):
         return path
     else:
         return os.path.join(pybamm.__path__[0], path)
+
+
+def have_jax():
+    """Check if jax and jaxlib are installed with the correct versions"""
+    return (
+        (importlib.util.find_spec("jax") is not None)
+        and (importlib.util.find_spec("jaxlib") is not None)
+        and is_jax_compatible()
+    )
+
+
+def is_jax_compatible():
+    """Check if the available version of jax and jaxlib are compatible with PyBaMM"""
+    return (
+        pkg_resources.get_distribution("jax").version == JAX_VERSION
+        and pkg_resources.get_distribution("jaxlib").version == JAXLIB_VERSION
+    )
+
+
+def install_jax(arguments=None):  # pragma: no cover
+    """
+    Install compatible versions of jax, jaxlib.
+
+    Command Line Interface:
+    -----------------------
+    >>> pybamm_install_jax
+
+    optional arguments:
+    -h, --help   show help message
+    -f, --force  force install compatible versions of jax and jaxlib
+    """
+    parser = argparse.ArgumentParser(description="Install jax and jaxlib")
+    parser.add_argument(
+        "-f",
+        "--force",
+        action="store_true",
+        help="force install compatible versions of"
+        f" jax ({JAX_VERSION}) and jaxlib ({JAXLIB_VERSION})",
+    )
+
+    args = parser.parse_args(arguments)
+
+    if system() == "Windows":
+        raise NotImplementedError("Jax is not available on Windows")
+
+    # Raise an error if jax and jaxlib are already installed, but incompatible
+    # and --force is not set
+    elif importlib.util.find_spec("jax") is not None:
+        if not args.force and not is_jax_compatible():
+            raise ValueError(
+                "Jax is already installed but the installed version of jax or jaxlib is"
+                " not supported by PyBaMM. \nYou can force install compatible versions"
+                f" of jax ({JAX_VERSION}) and jaxlib ({JAXLIB_VERSION}) using the"
+                " following command: \npybamm_install_jax --force"
+            )
+
+    subprocess.check_call(
+        [
+            sys.executable,
+            "-m",
+            "pip",
+            "install",
+            f"jax=={JAX_VERSION}",
+            f"jaxlib=={JAXLIB_VERSION}",
+        ]
+    )

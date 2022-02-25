@@ -3,9 +3,10 @@
 #
 import pybamm
 import numpy as np
+from .base_parameters import BaseParameters
 
 
-class ElectricalParameters:
+class ElectricalParameters(BaseParameters):
     """
     Standard electrical parameters
 
@@ -60,9 +61,7 @@ class ElectricalParameters:
         """Defines the dimensionless parameters."""
 
         self.current_with_time = (
-            self.dimensional_current_with_time
-            / self.I_typ
-            * pybamm.Function(np.sign, self.I_typ)
+            self.dimensional_current_with_time / self.I_typ * pybamm.sign(self.I_typ)
         )
 
 
