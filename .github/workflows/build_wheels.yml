@@ -62,7 +62,10 @@ jobs:
 
       - name: Build 32 bits wheels on Windows
         if: matrix.os == 'windows-latest'
-        run: python -m cibuildwheel --output-dir wheelhouse
+        run: |
+          vcpkg install visualstudio2019community
+          vcpkg install visualstudio2019-workload-nativedesktop
+          python -m cibuildwheel --output-dir wheelhouse
         env:
           CIBW_ENVIRONMENT: "PYBAMM_USE_VCPKG=ON VCPKG_ROOT_DIR=$VCPKG_INSTALLATION_ROOT VCPKG_DEFAULT_TRIPLET=x86-windows-static VCPKG_FEATURE_FLAGS=manifests,registries CMAKE_GENERATOR=\"Visual Studio 16 2019\" CMAKE_GENERATOR_PLATFORM=Win32"
           CIBW_ARCHS: "x86"
