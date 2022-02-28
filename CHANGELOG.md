@@ -1,5 +1,7 @@
 # [Unreleased](https://github.com/pybamm-team/PyBaMM/)
 
+# [v22.2](https://github.com/pybamm-team/PyBaMM/tree/v22.2) - 2022-02-28
+
 ## Features
 
 -   Isothermal models now compute heat source terms (but the temperature remains constant). The models now also account for current collector heating when `dimensionality=0` [#1929](https://github.com/pybamm-team/PyBaMM/pull/1929))
