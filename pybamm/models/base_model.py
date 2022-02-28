@@ -1025,21 +1025,14 @@ class EquationDict(dict):
         # Convert any numbers to a pybamm.Scalar
         for var, eqn in equations.items():
             if isinstance(eqn, numbers.Number):
-                equations[var] = pybamm.Scalar(eqn)
-
-        if not all(
-            [
-                variable.domain == equation.domain
-                or variable.domain == []
-                or equation.domain == []
-                for variable, equation in equations.items()
-            ]
-        ):
-            raise pybamm.DomainError(
-                "variable and equation in '{}' must have the same domain".format(
-                    self.name
+                eqn = pybamm.Scalar(eqn)
+                equations[var] = eqn
+            if not (var.domain == eqn.domain or var.domain == [] or eqn.domain == []):
+                raise pybamm.DomainError(
+                    "variable and equation in '{}' must have the same domain".format(
+                        self.name
+                    )
                 )
-            )
 
         # For initial conditions, check that the equation doesn't contain any
         # Variable objects

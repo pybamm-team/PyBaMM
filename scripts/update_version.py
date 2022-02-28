@@ -7,7 +7,7 @@ import os
 import re
 from datetime import date, datetime
 
-import dateutil.relativedelta
+from dateutil.relativedelta import relativedelta
 
 import pybamm
 
@@ -20,6 +20,7 @@ def update_version():
     current_month = datetime.now().month
 
     release_version = f"{current_year}.{current_month}"
+    last_day_of_month = date.today() + relativedelta(day=31)
 
     # pybamm/version.py
     with open(os.path.join(pybamm.root_dir(), "pybamm", "version.py"), "r+") as file:
@@ -72,7 +73,7 @@ def update_version():
         file.write(replace_commit_id)
 
     changelog_line1 = "# [Unreleased](https://github.com/pybamm-team/PyBaMM/)\n"
-    changelog_line2 = f"# [v{release_version}](https://github.com/pybamm-team/PyBaMM/tree/v{release_version}) - {date.today()}\n\n"  # noqa: E501
+    changelog_line2 = f"# [v{release_version}](https://github.com/pybamm-team/PyBaMM/tree/v{release_version}) - {last_day_of_month}\n\n"  # noqa: E501
 
     # CHANGELOG.md
     with open(os.path.join(pybamm.root_dir(), "CHANGELOG.md"), "r+") as file:
@@ -95,7 +96,7 @@ def get_changelog():
     current_month = now.month
 
     # Previous month
-    previous_date = datetime.now() + dateutil.relativedelta.relativedelta(months=-1)
+    previous_date = datetime.now() + relativedelta(months=-1)
     previous_year = previous_date.strftime("%y")
     previous_month = previous_date.month
 

@@ -220,6 +220,18 @@ class BaseUnitTestLithiumIon:
         options = {"operating mode": "power"}
         self.check_well_posedness(options)
 
+    def test_well_posed_external_circuit_differential_power(self):
+        options = {"operating mode": "differential power"}
+        self.check_well_posedness(options)
+
+    def test_well_posed_external_circuit_resistance(self):
+        options = {"operating mode": "resistance"}
+        self.check_well_posedness(options)
+
+    def test_well_posed_external_circuit_differential_resistance(self):
+        options = {"operating mode": "differential resistance"}
+        self.check_well_posedness(options)
+
     def test_well_posed_external_circuit_cccv(self):
         options = {"operating mode": "CCCV"}
         self.check_well_posedness(options)

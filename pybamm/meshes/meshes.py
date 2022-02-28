@@ -81,17 +81,6 @@ class Mesh(dict):
                         submesh_pts[domain][var.name] = var_name_pts[var.name]
         self.submesh_pts = submesh_pts
 
-        # Input domain order manually
-        self.domain_order = []
-        # First the macroscale domains, whose order we care about
-        for domain in ["negative electrode", "separator", "positive electrode"]:
-            if domain in geometry:
-                self.domain_order.append(domain)
-        # Then the remaining domains
-        for domain in geometry:
-            if domain not in ["negative electrode", "separator", "positive electrode"]:
-                self.domain_order.append(domain)
-
         # evaluate any expressions in geometry
         for domain in geometry:
             for spatial_variable, spatial_limits in geometry[domain].items():
