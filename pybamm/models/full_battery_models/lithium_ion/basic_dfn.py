@@ -307,7 +307,7 @@ class BasicDFN(BaseModel):
             "Averaged positive electrode concentration": c_s_xrav_p,
             "Averaged positive electrode concentration [mol.m-3]": c_s_xrav_p_dim,
             "Negative electrode interfacial current density [A.m-2]": j_n_dim,
-            "X-averaged negative electrode interfacial current density [A.m-2]": j_n_av_dim,
+            "X-averaged negative electrode interfacial current density [A.m-2]": j_n_av_dim,  # noqa: E501
         }
         self.events += [
             pybamm.Event("Minimum voltage", voltage - param.voltage_low_cut),
