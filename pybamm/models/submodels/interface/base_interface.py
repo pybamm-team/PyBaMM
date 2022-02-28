@@ -44,9 +44,6 @@ class BaseInterface(pybamm.BaseSubModel):
         elif reaction == "lithium plating":
             self.reaction_name = " lithium plating"
             self.Reaction_icd = "Lithium plating interfacial current density"
-        elif reaction == "composite particle":
-            self.reaction_name = " composite particle"
-            self.Reaction_icd = "Composite particle interfacial current density"
         self.reaction = reaction
 
     def _get_exchange_current_density(self, variables):
@@ -194,8 +191,8 @@ class BaseInterface(pybamm.BaseSubModel):
                 ocp = self.param.U_n(c_s_surf, T, phase)
                 dUdT = self.param.dUdT_n(c_s_surf, phase)
             elif self.domain == "Positive":
-                ocp = self.param.U_p(c_s_surf, T, phase)
-                dUdT = self.param.dUdT_p(c_s_surf, phase)
+                ocp = self.param.U_p(c_s_surf, T)
+                dUdT = self.param.dUdT_p(c_s_surf)
         elif self.reaction == "lithium metal plating":
             T = variables[self.domain + " electrode temperature"]
             ocp = self.param.U_n_ref
