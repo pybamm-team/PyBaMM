@@ -12,6 +12,13 @@ class TestBasicModels(unittest.TestCase):
 
         copy = model.new_copy()
         copy.check_well_posedness()
+        
+    def test_dfn_composite_well_posed(self):
+        model = pybamm.lithium_ion.BasicDFNComposite()
+        model.check_well_posedness()
+
+        copy = model.new_copy()
+        copy.check_well_posedness()
 
     def test_spm_well_posed(self):
         model = pybamm.lithium_ion.BasicSPM()
