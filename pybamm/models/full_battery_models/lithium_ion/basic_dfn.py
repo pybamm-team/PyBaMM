@@ -298,7 +298,7 @@ class BasicDFN(BaseModel):
             "Terminal voltage": voltage,
             "Terminal voltage [V]": voltage_dim,
             "Time [s]": pybamm.t * self.param.timescale,
-            "Negative electrode open circuit potential of [V]": ocp_n_dim,
+            "Negative electrode open circuit potential [V]": ocp_n_dim,
             "X-averaged negative electrode open circuit potential [V]": ocp_av_n_dim,
             "R-averaged negative particle concentration": c_s_rav_n,
             "R-averaged negative particle concentration [mol.m-3]": c_s_rav_n_dim,
