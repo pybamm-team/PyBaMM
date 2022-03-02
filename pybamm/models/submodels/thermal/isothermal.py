@@ -42,3 +42,7 @@ class Isothermal(BaseThermal):
         )
 
         return variables
+
+    def get_coupled_variables(self, variables):
+        variables.update(self._get_standard_coupled_variables(variables))
+        return variables
