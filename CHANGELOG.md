@@ -1,6 +1,6 @@
 # [Unreleased](https://github.com/pybamm-team/PyBaMM/)
 
-## Bug fixes 
+## Bug fixes
 
 -   Fixed a bug where isothermal models did not compute any heat source terms ([#1958](https://github.com/pybamm-team/PyBaMM/pull/1958))
 
