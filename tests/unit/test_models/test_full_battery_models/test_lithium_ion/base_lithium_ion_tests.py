@@ -13,6 +13,13 @@ class BaseUnitTestLithiumIon:
         options = {"thermal": "isothermal"}
         self.check_well_posedness(options)
 
+    def test_well_posed_isothermal_heat_source(self):
+        options = {
+            "compute heat source for isothermal models": "true",
+            "thermal": "isothermal",
+        }
+        self.check_well_posedness(options)
+
     def test_well_posed_2plus1D(self):
         options = {"current collector": "potential pair", "dimensionality": 1}
         self.check_well_posedness(options)
