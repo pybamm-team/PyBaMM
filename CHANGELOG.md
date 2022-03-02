@@ -1,10 +1,14 @@
 # [Unreleased](https://github.com/pybamm-team/PyBaMM/)
 
+## Bug fixes 
+
+-   Fixed a bug where isothermal models did not compute any heat source terms ([#1958](https://github.com/pybamm-team/PyBaMM/pull/1958))
+
 # [v22.2](https://github.com/pybamm-team/PyBaMM/tree/v22.2) - 2022-02-28
 
 ## Features
 
--   Isothermal models now compute heat source terms (but the temperature remains constant). The models now also account for current collector heating when `dimensionality=0` [#1929](https://github.com/pybamm-team/PyBaMM/pull/1929))
+-   Isothermal models now compute heat source terms (but the temperature remains constant). The models now also account for current collector heating when `dimensionality=0` ([#1929](https://github.com/pybamm-team/PyBaMM/pull/1929))
 -   Added new models for power control and resistance control ([#1917](https://github.com/pybamm-team/PyBaMM/pull/1917))
 -   Initial concentrations can now be provided as a function of `r` as well as `x` ([#1866](https://github.com/pybamm-team/PyBaMM/pull/1866))
 
