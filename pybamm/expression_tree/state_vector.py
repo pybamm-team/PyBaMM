@@ -22,6 +22,11 @@ class StateVectorBase(pybamm.Symbol):
         list of domains the parameter is valid over, defaults to empty list
     auxiliary_domains : dict of str, optional
         dictionary of auxiliary domains
+    domains : dict
+        A dictionary equivalent to {'primary': domain, auxiliary_domains}. Either
+        'domain' and 'auxiliary_domains', or just 'domains', should be provided
+        (not both). In future, the 'domain' and 'auxiliary_domains' arguments may be
+        deprecated.
     evaluation_array : list, optional
         List of boolean arrays representing slices. Default is None, in which case the
         evaluation_array is computed from y_slices.
@@ -36,6 +41,7 @@ class StateVectorBase(pybamm.Symbol):
         name=None,
         domain=None,
         auxiliary_domains=None,
+        domains=None,
         evaluation_array=None,
     ):
         for y_slice in y_slices:
@@ -58,15 +64,16 @@ class StateVectorBase(pybamm.Symbol):
                     name += "]"
             else:
                 name += "]"
-        if domain is None:
-            domain = []
-        if auxiliary_domains is None:
-            auxiliary_domains = {}
         self._y_slices = y_slices
         self._first_point = y_slices[0].start
         self._last_point = y_slices[-1].stop
         self.set_evaluation_array(y_slices, evaluation_array)
-        super().__init__(name=name, domain=domain, auxiliary_domains=auxiliary_domains)
+        super().__init__(
+            name=name,
+            domain=domain,
+            auxiliary_domains=auxiliary_domains,
+            domains=domains,
+        )
 
     @property
     def y_slices(self):
@@ -177,8 +184,7 @@ class StateVectorBase(pybamm.Symbol):
         return StateVector(
             *self.y_slices,
             name=self.name,
-            domain=self.domain,
-            auxiliary_domains=self.auxiliary_domains,
+            domains=self.domains,
             evaluation_array=self.evaluation_array,
         )
 
@@ -206,6 +212,11 @@ class StateVector(StateVectorBase):
         list of domains the parameter is valid over, defaults to empty list
     auxiliary_domains : dict of str, optional
         dictionary of auxiliary domains
+    domains : dict
+        A dictionary equivalent to {'primary': domain, auxiliary_domains}. Either
+        'domain' and 'auxiliary_domains', or just 'domains', should be provided
+        (not both). In future, the 'domain' and 'auxiliary_domains' arguments may be
+        deprecated.
     evaluation_array : list, optional
         List of boolean arrays representing slices. Default is None, in which case the
         evaluation_array is computed from y_slices.
@@ -219,6 +230,7 @@ class StateVector(StateVectorBase):
         name=None,
         domain=None,
         auxiliary_domains=None,
+        domains=None,
         evaluation_array=None,
     ):
         super().__init__(
@@ -227,6 +239,7 @@ class StateVector(StateVectorBase):
             name=name,
             domain=domain,
             auxiliary_domains=auxiliary_domains,
+            domains=domains,
             evaluation_array=evaluation_array,
         )
 
@@ -251,8 +264,7 @@ class StateVector(StateVectorBase):
             return StateVectorDot(
                 *self._y_slices,
                 name=self.name + "'",
-                domain=self.domain,
-                auxiliary_domains=self.auxiliary_domains,
+                domains=self.domains,
                 evaluation_array=self.evaluation_array,
             )
         else:
@@ -280,6 +292,11 @@ class StateVectorDot(StateVectorBase):
         list of domains the parameter is valid over, defaults to empty list
     auxiliary_domains : dict of str, optional
         dictionary of auxiliary domains
+    domains : dict
+        A dictionary equivalent to {'primary': domain, auxiliary_domains}. Either
+        'domain' and 'auxiliary_domains', or just 'domains', should be provided
+        (not both). In future, the 'domain' and 'auxiliary_domains' arguments may be
+        deprecated.
     evaluation_array : list, optional
         List of boolean arrays representing slices. Default is None, in which case the
         evaluation_array is computed from y_slices.
@@ -293,6 +310,7 @@ class StateVectorDot(StateVectorBase):
         name=None,
         domain=None,
         auxiliary_domains=None,
+        domains=None,
         evaluation_array=None,
     ):
         super().__init__(
@@ -301,6 +319,7 @@ class StateVectorDot(StateVectorBase):
             name=name,
             domain=domain,
             auxiliary_domains=auxiliary_domains,
+            domains=domains,
             evaluation_array=evaluation_array,
         )
 

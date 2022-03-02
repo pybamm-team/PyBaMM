@@ -110,13 +110,13 @@ class SymbolReplacer(object):
         ]
 
         # Process timescale
-        model.timescale = self.process_symbol(unprocessed_model.timescale)
+        model._timescale = self.process_symbol(unprocessed_model.timescale)
 
         # Process length scales
         new_length_scales = {}
         for domain, scale in unprocessed_model.length_scales.items():
             new_length_scales[domain] = self.process_symbol(scale)
-        model.length_scales = new_length_scales
+        model._length_scales = new_length_scales
 
         pybamm.logger.info("Finish replacing symbols in {}".format(model.name))
 
@@ -210,6 +210,5 @@ class SymbolReplacer(object):
         else:
             # Only other option is that the symbol is a leaf (doesn't have children)
             # In this case, since we have already ruled out that the symbol is one of
-            # the symbols that needs to be replaced, we can just return a new copy of
-            # the symbol
-            return symbol.new_copy()
+            # the symbols that needs to be replaced, we can just return the symbol
+            return symbol

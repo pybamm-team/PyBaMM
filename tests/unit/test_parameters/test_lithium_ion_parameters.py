@@ -28,7 +28,7 @@ class TestDimensionlessParameterValues(unittest.TestCase):
 
         c_rate = param.i_typ / 24  # roughly for the numbers I used before
 
-        "particle geometry"
+        # particle geometry
         # Note: in general these can be functions, but are constant for this
         # set, so we just arbitrarily evaluate at 0
 
@@ -38,7 +38,7 @@ class TestDimensionlessParameterValues(unittest.TestCase):
         )
         # R_n dimensional
         np.testing.assert_almost_equal(
-            values.evaluate(param.R_n_dimensional(0)), 1 * 10 ** (-5), 2
+            values.evaluate(param.R_n_typ), 1 * 10 ** (-5), 2
         )
 
         # a_R_n = a_n_typ * R_n_typ
@@ -51,7 +51,7 @@ class TestDimensionlessParameterValues(unittest.TestCase):
 
         # R_p dimensional
         np.testing.assert_almost_equal(
-            values.evaluate(param.R_n_dimensional(0)), 1 * 10 ** (-5), 2
+            values.evaluate(param.R_p_typ), 1 * 10 ** (-5), 2
         )
 
         # a_p = a_p_typ * R_p_typ
@@ -84,10 +84,14 @@ class TestDimensionlessParameterValues(unittest.TestCase):
             values.evaluate(param.gamma_p / param.C_r_p * c_rate), 1.366, 3
         )
 
-        "particle dynamics"
+        # particle dynamics
         # neg diffusion coefficient
         np.testing.assert_almost_equal(
-            values.evaluate(param.D_n_dimensional(param.c_n_init(0), param.T_ref)),
+            values.evaluate(
+                pybamm.xyz_average(
+                    pybamm.r_average(param.D_n_dimensional(param.c_n_init, param.T_ref))
+                )
+            ),
             3.9 * 10 ** (-14),
             2,
         )
@@ -102,7 +106,11 @@ class TestDimensionlessParameterValues(unittest.TestCase):
 
         # pos diffusion coefficient
         np.testing.assert_almost_equal(
-            values.evaluate(param.D_p_dimensional(param.c_p_init(1), param.T_ref)),
+            values.evaluate(
+                pybamm.xyz_average(
+                    pybamm.r_average(param.D_p_dimensional(param.c_p_init, param.T_ref))
+                )
+            ),
             1 * 10 ** (-13),
             2,
         )
@@ -115,7 +123,7 @@ class TestDimensionlessParameterValues(unittest.TestCase):
         # tau_p / tau_d (1/gamma_p in Scott's transfer)
         np.testing.assert_almost_equal(values.evaluate(param.C_p / c_rate), 0.044249, 3)
 
-        "electrolyte dynamics"
+        # electrolyte dynamics
         # typical diffusion coefficient (we should change the typ value in paper to
         # match this one. We take this parameter excluding the exp(-0.65) in the
         # paper at the moment
@@ -141,14 +149,14 @@ class TestDimensionlessParameterValues(unittest.TestCase):
             3,
         )
 
-        "potential scale"
+        # potential scale
         # F R / T (should be equal to old 1 / Lambda)
         old_Lambda = 38
         np.testing.assert_almost_equal(
             values.evaluate(param.potential_scale), 1 / old_Lambda, 3
         )
 
-        "electrode conductivities"
+        # electrode conductivities
         # neg dimensional
         np.testing.assert_almost_equal(
             values.evaluate(param.sigma_n_dimensional(param.T_ref)), 100, 3
@@ -234,20 +242,15 @@ class TestDimensionlessParameterValues(unittest.TestCase):
         values = pybamm.lithium_ion.BaseModel().default_parameter_values
         param = pybamm.LithiumIonParameters()
 
-        c_test = pybamm.Scalar(0.5)
         T_test = pybamm.Scalar(0)
-
-        values.evaluate(param.U_n(c_test, T_test))
-        values.evaluate(param.U_p(c_test, T_test))
-        values.evaluate(param.dUdT_n(c_test))
-        values.evaluate(param.dUdT_p(c_test))
-
-        values.evaluate(param.D_p(c_test, T_test))
-        values.evaluate(param.D_n(c_test, T_test))
 
         c_e_test = pybamm.Scalar(1)
         values.evaluate(param.D_e(c_e_test, T_test))
         values.evaluate(param.kappa_e(c_e_test, T_test))
+
+    def test_timescale(self):
+        param = pybamm.LithiumIonParameters({"timescale": 2.5})
+        self.assertEqual(param.timescale.evaluate(), 2.5)
 
 
 if __name__ == "__main__":

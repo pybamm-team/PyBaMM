@@ -290,11 +290,9 @@ class TestBaseSolver(unittest.TestCase):
         model.initial_conditions = {v: 1}
         a = pybamm.InputParameter("a")
         model.timescale = a
-        solver = pybamm.CasadiSolver()
-        solver.set_up(model, inputs={"a": 10})
-        sol = solver.step(old_solution=None, model=model, dt=1.0, inputs={"a": 10})
-        with self.assertRaisesRegex(pybamm.SolverError, "The model timescale"):
-            sol = solver.step(old_solution=sol, model=model, dt=1.0, inputs={"a": 20})
+        solver = pybamm.BaseSolver()
+        with self.assertRaisesRegex(ValueError, "model.timescale must be a scalar"):
+            solver.set_up(model)
 
     def test_inputs_step(self):
         # Make sure interpolant inputs are dropped

@@ -107,7 +107,7 @@ class XAveragedPolynomialProfile(BaseFickian):
             if self.domain == "Negative":
                 j_xav = i_boundary_cc / (a_av * self.param.l_n)
                 c_s_surf_xav = c_s_av - self.param.C_n * (
-                    j_xav / 5 / self.param.a_R_n / D_eff_av
+                    j_xav / 5 / self.param.a_R_n / self.param.gamma_n / D_eff_av
                 )
 
             if self.domain == "Positive":
@@ -127,7 +127,8 @@ class XAveragedPolynomialProfile(BaseFickian):
                 c_s_surf_xav = (
                     c_s_av
                     + 8 * q_s_av / 35
-                    - self.param.C_n * (j_xav / 35 / self.param.a_R_n / D_eff_av)
+                    - self.param.C_n
+                    * (j_xav / 35 / self.param.a_R_n / self.param.gamma_n / D_eff_av)
                 )
 
             if self.domain == "Positive":
@@ -283,7 +284,11 @@ class XAveragedPolynomialProfile(BaseFickian):
         ]
 
         if self.domain == "Negative":
-            self.rhs = {c_s_av: pybamm.source(-3 * j_xav / self.param.a_R_n, c_s_av)}
+            self.rhs = {
+                c_s_av: pybamm.source(
+                    -3 * j_xav / self.param.a_R_n / self.param.gamma_n, c_s_av
+                )
+            }
 
         elif self.domain == "Positive":
             self.rhs = {
@@ -306,7 +311,7 @@ class XAveragedPolynomialProfile(BaseFickian):
                     {
                         q_s_av: pybamm.source(
                             -30 * pybamm.surf(D_eff_xav) * q_s_av / self.param.C_n
-                            - 45 * j_xav / self.param.a_R_n / 2,
+                            - 45 * j_xav / self.param.a_R_n / self.param.gamma_n / 2,
                             q_s_av,
                         )
                     }
@@ -325,16 +330,14 @@ class XAveragedPolynomialProfile(BaseFickian):
     def set_initial_conditions(self, variables):
         """
         For single or x-averaged particle models, initial conditions can't depend on x
-        so we arbitrarily evaluate them at x=0 in the negative electrode and x=1 in the
-        positive electrode (they will usually be constant)
+        or r so we take the r- and x-average of the initial conditions.
         """
         c_s_av = variables["Average " + self.domain.lower() + " particle concentration"]
 
         if self.domain == "Negative":
-            c_init = self.param.c_n_init(0)
-
+            c_init = pybamm.x_average(pybamm.r_average(self.param.c_n_init))
         elif self.domain == "Positive":
-            c_init = self.param.c_p_init(1)
+            c_init = pybamm.x_average(pybamm.r_average(self.param.c_p_init))
 
         self.initial_conditions = {c_s_av: c_init}
         if self.name == "quartic profile":

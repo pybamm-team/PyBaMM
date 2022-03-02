@@ -147,7 +147,10 @@ class BaseSolver(object):
         inputs = inputs or {}
 
         # Set model timescale
-        model.timescale_eval = model.timescale.evaluate(inputs=inputs)
+        if not isinstance(model.timescale, pybamm.Scalar):
+            raise ValueError("model.timescale must be a scalar")
+
+        model.timescale_eval = model.timescale.evaluate()
         # Set model lengthscales
         model.length_scales_eval = {
             domain: scale.evaluate(inputs=inputs)
@@ -518,14 +521,10 @@ class BaseSolver(object):
                         found_t = True
                     # Dimensional
                     elif symbol.right.id == (pybamm.t * model.timescale_eval).id:
-                        expr = (
-                            symbol.left.new_copy() / symbol.right.right.new_copy()
-                        )
+                        expr = symbol.left / symbol.right.right
                         found_t = True
                     elif symbol.left.id == (pybamm.t * model.timescale_eval).id:
-                        expr = (
-                            symbol.right.new_copy() / symbol.left.right.new_copy()
-                        )
+                        expr = symbol.right / symbol.left.right
                         found_t = True
 
                     # Update the events if the heaviside function depended on t
@@ -545,10 +544,9 @@ class BaseSolver(object):
                         found_t = True
                     # Dimensional
                     elif symbol.left.id == (pybamm.t * model.timescale_eval).id:
-                        expr = (
-                            symbol.right.new_copy() / symbol.left.right.new_copy()
-                        )
+                        expr = symbol.right / symbol.left.right
                         found_t = True
+
 
                     # Update the events if the modulo function depended on t
                     if found_t:
@@ -560,11 +558,10 @@ class BaseSolver(object):
                         for i in np.arange(N_events):
                             model.events.append(
                                 pybamm.Event(
-                                    str(symbol),
-                                    expr.new_copy() * pybamm.Scalar(i + 1),
-                                    pybamm.EventType.DISCONTINUITY,
+                                    str(symbol), expr, pybamm.EventType.DISCONTINUITY
                                 )
                             )
+
 
         # Process rhs, algebraic, residual and event expressions
         # and wrap in callables
@@ -1214,29 +1211,6 @@ class BaseSolver(object):
             del inputs["Power input [W]"]
         ext_and_inputs = {**external_variables, **inputs}
 
-        # Check that any inputs that may affect the scaling have not changed
-        # Set model timescale
-        temp_timescale_eval = model.timescale.evaluate(inputs=inputs)
-        # Set model lengthscales
-        temp_length_scales_eval = {
-            domain: scale.evaluate(inputs=inputs)
-            for domain, scale in model.length_scales.items()
-        }
-        if old_solution is not None:
-            if temp_timescale_eval != old_solution.timescale_eval:
-                raise pybamm.SolverError(
-                    "The model timescale is a function of an input parameter "
-                    "and the value has changed between steps!"
-                )
-            for domain in temp_length_scales_eval.keys():
-                old_dom_eval = old_solution.length_scales_eval[domain]
-                if temp_length_scales_eval[domain] != old_dom_eval:
-                    pybamm.logger.error(
-                        "The {} domain lengthscale is a function of an input "
-                        "parameter and the value has changed between "
-                        "steps!".format(domain)
-                    )
-
         if old_solution is None:
             # Run set up on first step
             pybamm.logger.verbose(
@@ -1462,7 +1436,12 @@ class BaseSolver(object):
                 inputs[name] = casadi.MX.sym(name, input_param._expected_size)
 
         external_variables = external_variables or {}
-        ext_and_inputs = {**external_variables, **inputs}
+
+        ordered_inputs_names = list(inputs.keys())
+        ordered_inputs_names.sort()
+        ordered_inputs = {name: inputs[name] for name in ordered_inputs_names}
+
+        ext_and_inputs = {**external_variables, **ordered_inputs}
         return ext_and_inputs
 
 

@@ -10,10 +10,6 @@ class TestBaseLithiumIonModel(unittest.TestCase):
     def test_incompatible_options(self):
         with self.assertRaisesRegex(pybamm.OptionError, "convection not implemented"):
             pybamm.lithium_ion.BaseModel({"convection": "uniform transverse"})
-        with self.assertRaisesRegex(pybamm.OptionError, "x-lumped"):
-            pybamm.lithium_ion.BaseModel(
-                {"cell geometry": "arbitrary", "thermal": "x-lumped"}
-            )
 
     def test_default_parameters(self):
         # check parameters are read in ok

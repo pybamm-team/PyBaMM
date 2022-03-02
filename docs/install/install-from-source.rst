@@ -180,9 +180,9 @@ Is is often sufficient to run the unit tests only. To do so, use
 
    .. code:: bash
 
-      tox -e quick # (GNU/Linux and MacOS)
+      tox -e unit # (GNU/Linux and MacOS)
       #
-      python -m tox -e windows-quick # (Windows)
+      python -m tox -e windows-unit # (Windows)
 
 
 Using the test runner 
@@ -237,7 +237,7 @@ Note for Windows users
 If you are running Windows, the following tox commands must be prefixed by ``windows-``:
 
 - ``tests``
-- ``quick``
+- ``unit``
 - ``examples``
 - ``doctests``
 - ``dev``
