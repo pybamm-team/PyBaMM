@@ -92,12 +92,12 @@ class ScipySolver(pybamm.BaseSolver):
                 )
 
         # rhs equation
-        def rhs(t, y):
-            return model.rhs_eval(t, y, inputs).reshape(-1)
-
         if model.convert_to_format == 'casadi':
             def rhs(t, y):
                 return model.rhs_eval(t, y, inputs).full().reshape(-1)
+        else:
+            def rhs(t, y):
+                return model.rhs_eval(t, y, inputs).reshape(-1)
 
         # make events terminal so that the solver stops when they are reached
         if model.terminate_events_eval:

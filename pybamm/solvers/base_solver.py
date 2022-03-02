@@ -427,9 +427,9 @@ class BaseSolver(object):
                         casadi_expression = casadi.vertcat(casadi_expression, S_alg)
                     if name == "initial_conditions":
                         if model.len_rhs == 0 or model.len_alg == 0:
-                            S_0 = casadi.jacobian(casadi_expression, pS_casadi_stacked).reshape(
-                                (-1, 1)
-                            )
+                            S_0 = casadi.jacobian(
+                                casadi_expression, pS_casadi_stacked
+                            ).reshape((-1, 1))
                             casadi_expression = casadi.vertcat(casadi_expression, S_0)
                         else:
                             x0 = casadi_expression[: model.len_rhs]
@@ -455,8 +455,9 @@ class BaseSolver(object):
                         jacp_dict[pname] = casadi.casadi_expressiontion(
                             name, [t_casadi, y_casadi, p_casadi_stacked], [p_diff]
                         )
-                    # jacp should be a casadi_expressiontion that returns a dict of sensitivities
 
+                    # jacp should be a casadi_expressiontion that returns
+                    # a dict of sensitivities
                     def jacp(*args, **kwargs):
                         return {k: v(*args, **kwargs) for k, v in jacp_dict.items()}
 
@@ -547,7 +548,6 @@ class BaseSolver(object):
                         expr = symbol.right / symbol.left.right
                         found_t = True
 
-
                     # Update the events if the modulo function depended on t
                     if found_t:
                         if t_eval is None:
@@ -561,7 +561,6 @@ class BaseSolver(object):
                                     str(symbol), expr, pybamm.EventType.DISCONTINUITY
                                 )
                             )
-
 
         # Process rhs, algebraic, residual and event expressions
         # and wrap in callables

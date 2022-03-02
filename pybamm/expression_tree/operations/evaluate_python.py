@@ -658,17 +658,15 @@ class EvaluatorJax:
         if y is not None and y.ndim == 1:
             y = y.reshape(-1, 1)
 
-        result = self._jit_evaluate(*self._constants, t, y, y_dot, inputs)
+        result = self._jit_evaluate(*self._constants, t, y, inputs)
 
         return result.flatten()
-
 
 
 class EvaluatorJaxJacobian:
     def __init__(self, jac_evaluate, constants):
         self._jac_evaluate = jac_evaluate
         self._constants = constants
-
 
     def __call__(self, t=None, y=None, inputs=None):
         """

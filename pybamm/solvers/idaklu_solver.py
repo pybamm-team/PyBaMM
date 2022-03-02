@@ -215,7 +215,6 @@ class IDAKLUSolver(pybamm.BaseSolver):
             def resfn(t, y, ydot):
                 return model.residuals_eval(t, y, ydot, inputs)
 
-
         if model.jacobian_eval:
             jac_y0_t0 = model.jacobian_eval(t_eval[0], y0, inputs)
             if sparse.issparse(jac_y0_t0):
