@@ -375,7 +375,8 @@ class TestBaseSolver(unittest.TestCase):
                 else:
                     use_inputs = inputs
 
-                sens = model.sensitivities_eval(t, y, use_inputs)
+                sens = model.jacp_rhs_algebraic_eval(t, y, use_inputs)
+
                 np.testing.assert_allclose(
                     sens["a"], exact_diff_a(y, inputs["a"], inputs["b"])
                 )

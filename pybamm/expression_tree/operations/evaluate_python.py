@@ -624,8 +624,8 @@ class EvaluatorJax:
     def get_sensitivities(self):
         n = len(self._arg_list)
 
-        # forward mode autodiff wrt inputs, which is argument 3 after arg_list
-        jacobian_evaluate = jax.jacfwd(self._evaluate_jax, argnums=3 + n)
+        # forward mode autodiff wrt inputs, which is argument 2 after arg_list
+        jacobian_evaluate = jax.jacfwd(self._evaluate_jax, argnums=2 + n)
 
         self._sens_evaluate = jax.jit(
             jacobian_evaluate, static_argnums=self._static_argnums

@@ -320,11 +320,9 @@ class BaseSolver(object):
                         )
                     )
                     jacp = func.get_sensitivities()
-                    jacp = jacp.evaluate
                 if use_jacobian:
                     report(f"Calculating jacobian for {name} using jax")
                     jac = func.get_jacobian()
-                    jac = jac.evaluate
                 else:
                     jac = None
 
@@ -342,17 +340,17 @@ class BaseSolver(object):
                         p: symbol.diff(pybamm.InputParameter(p))
                         for p in model.calculate_sensitivities
                     }
-                    if model.convert_to_format == "python":
-                        report(f"Converting sensitivities for {name} to python")
-                        jacp_dict = {
-                            p: pybamm.EvaluatorPython(jacp)
-                            for p, jacp in jacp_dict.items()
-                        }
+
+                    report(f"Converting sensitivities for {name} to python")
+                    jacp_dict = {
+                        p: pybamm.EvaluatorPython(jacp)
+                        for p, jacp in jacp_dict.items()
+                    }
 
                     # jacp should be a function that returns a dict of sensitivities
                     def jacp(*args, **kwargs):
                         return {
-                            k: v.evaluate(*args, **kwargs) for k, v in jacp_dict.items()
+                            k: v(*args, **kwargs) for k, v in jacp_dict.items()
                         }
 
                 else:
@@ -452,8 +450,8 @@ class BaseSolver(object):
                     jacp_dict = {}
                     for pname in model.calculate_sensitivities:
                         p_diff = casadi.jacobian(casadi_expression, p_casadi[pname])
-                        jacp_dict[pname] = casadi.casadi_expressiontion(
-                            name, [t_casadi, y_casadi, p_casadi_stacked], [p_diff]
+                        jacp_dict[pname] = casadi.Function(
+                            name, [t_casadi, y_and_S, p_casadi_stacked], [p_diff]
                         )
 
                     # jacp should be a casadi_expressiontion that returns
