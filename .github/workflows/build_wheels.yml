@@ -41,6 +41,16 @@ jobs:
           CIBW_BEFORE_ALL_LINUX: "bash build_manylinux_wheels/install_sundials.sh 5.8.1 5.7.0"
           CIBW_BEFORE_BUILD_LINUX: "python -m pip install cmake"
 
+      # see https://github.com/pybamm-team/PyBaMM/pull/1930
+      - name: Install the latest version of vcpkg on windows
+        if: matrix.os == 'windows-latest'
+        run: |
+          cd C:\
+          rm -r -fo 'C:\vcpkg'
+          git clone https://github.com/microsoft/vcpkg
+          cd vcpkg
+          .\bootstrap-vcpkg.bat
+
       - name: Cache packages installed through vcpkg on windows
         if: matrix.os == 'windows-latest'
         uses: actions/cache@v2
@@ -52,7 +62,10 @@ jobs:
 
       - name: Build 32 bits wheels on Windows
         if: matrix.os == 'windows-latest'
-        run: python -m cibuildwheel --output-dir wheelhouse
+        run: |
+          choco install --yes visualstudio2019community
+          choco install --yes visualstudio2019-workload-nativedesktop
+          python -m cibuildwheel --output-dir wheelhouse
         env:
           CIBW_ENVIRONMENT: "PYBAMM_USE_VCPKG=ON VCPKG_ROOT_DIR=$VCPKG_INSTALLATION_ROOT VCPKG_DEFAULT_TRIPLET=x86-windows-static VCPKG_FEATURE_FLAGS=manifests,registries CMAKE_GENERATOR=\"Visual Studio 16 2019\" CMAKE_GENERATOR_PLATFORM=Win32"
           CIBW_ARCHS: "x86"

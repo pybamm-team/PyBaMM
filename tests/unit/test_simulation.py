@@ -374,15 +374,14 @@ class TestSimulation(unittest.TestCase):
 
     def test_create_gif(self):
         sim = pybamm.Simulation(pybamm.lithium_ion.SPM())
-        t_eval = np.linspace(0, 100, 5)
-        sim.solve(t_eval=t_eval)
+        sim.solve(t_eval=[0, 10])
 
         # create a GIF without calling the plot method
-        sim.create_gif(number_of_images=5, duration=1)
+        sim.create_gif(number_of_images=3, duration=1)
 
         # call the plot method before creating the GIF
         sim.plot(testing=True)
-        sim.create_gif(number_of_images=5, duration=1)
+        sim.create_gif(number_of_images=3, duration=1)
 
         os.remove("plot.gif")
 

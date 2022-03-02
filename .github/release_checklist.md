@@ -8,4 +8,4 @@
   - Update `CHANGELOG.md` with a summary of the release
 
 - Update jax and jaxlib to latest version in `pybamm.util` and fix any bugs that arise
-- Update baseline of default-registry in `vcpkg-configuration.json`
+- If building wheels on Windows gives a `vcpkg` related error - revert the baseline of default-registry to a stable commit in `vcpkg-configuration.json` 

@@ -5,9 +5,8 @@ import os
 import unittest
 
 import numpy as np
-from scipy.sparse.csr import csr_matrix
+from scipy.sparse import csr_matrix, coo_matrix
 import sympy
-from scipy.sparse import coo_matrix
 
 import pybamm
 from pybamm.expression_tree.binary_operators import _Heaviside
