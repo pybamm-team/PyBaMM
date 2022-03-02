@@ -80,7 +80,9 @@ class AlgebraicSolver(pybamm.BaseSolver):
             len_rhs = model.rhs_eval(t_eval[0], y0, inputs).shape[0]
         y0_diff, y0_alg = np.split(y0, [len_rhs])
 
-        if model.convert_to_format == 'casadi':
+        test_result = model.algebraic_eval(0, y0, inputs)
+
+        if isinstance(test_result, casadi.DM):
             def algebraic(t, y):
                 result = model.algebraic_eval(t, y, inputs)
                 return result.full().flatten()
