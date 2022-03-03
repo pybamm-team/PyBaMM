@@ -5,7 +5,6 @@ import casadi
 import pybamm
 import numpy as np
 import scipy.sparse as sparse
-import numbers
 
 import importlib
 
@@ -193,28 +192,22 @@ class IDAKLUSolver(pybamm.BaseSolver):
 
         if model.convert_to_format == "jax":
             mass_matrix = model.mass_matrix.entries.toarray()
-        elif model.convert_to_format == "casadi":
-            #mass_matrix = casadi.DM(model.mass_matrix.entries)
-            mass_matrix = model.mass_matrix.entries
         else:
             mass_matrix = model.mass_matrix.entries
 
         # construct residuals function by binding inputs
         if model.convert_to_format == "casadi":
-            #y_casadi = casadi.MX.sym("y", model.len_rhs_and_alg)
-            #ydot_casadi = casadi.MX.sym("ydot", model.len_rhs_and_alg)
-            #t_casadi = casadi.MX.sym("t")
-            #casadi_resfn = casadi.Function(
-            #    "residuals",
-            #    [t_casadi, y_casadi, ydot_casadi],
-            #    [model.rhs_algebraic_eval(t_casadi, y_casadi, inputs) - mass_matrix @
-            #     ydot_casadi]
-            #)
             def resfn(t, y, ydot):
-                return model.rhs_algebraic_eval(t, y, inputs).full().flatten() - mass_matrix @ ydot
+                return (
+                    model.rhs_algebraic_eval(t, y, inputs).full().flatten()
+                    - mass_matrix @ ydot
+                )
         else:
             def resfn(t, y, ydot):
-                return model.rhs_algebraic_eval(t, y, inputs).flatten() - mass_matrix @ ydot
+                return (
+                    model.rhs_algebraic_eval(t, y, inputs).flatten()
+                    - mass_matrix @ ydot
+                )
 
         jac_y0_t0 = model.jac_rhs_algebraic_eval(t_eval[0], y0, inputs)
         if sparse.issparse(jac_y0_t0):

@@ -94,11 +94,12 @@ class ScikitsDaeSolver(pybamm.BaseSolver):
 
         y0 = model.y0
         if isinstance(y0, casadi.DM):
-            y0 = y0.full().flatten()
+            y0 = y0.full()
+        y0 = y0.flatten()
 
-        residuals = model.residuals_eval
+        residuals = model.rhs_algebraic_eval
         events = model.terminate_events_eval
-        jacobian = model.jacobian_eval
+        jacobian = model.jac_rhs_algebraic_eval
         mass_matrix = model.mass_matrix.entries
 
         def eqsres(t, y, ydot, return_residuals):
