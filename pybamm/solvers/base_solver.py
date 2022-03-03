@@ -570,9 +570,9 @@ class BaseSolver(object):
 
         # combine rhs and algebraic functions
         if len(model.rhs) == 0:
-            rhs_algebraic = model.concatenated_rhs
-        elif len(model.algebraic) == 0:
             rhs_algebraic = model.concatenated_algebraic
+        elif len(model.algebraic) == 0:
+            rhs_algebraic = model.concatenated_rhs
         else:
             rhs_algebraic = pybamm.NumpyConcatenation(
                 model.concatenated_rhs, model.concatenated_algebraic

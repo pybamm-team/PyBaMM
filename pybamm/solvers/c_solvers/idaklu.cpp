@@ -316,6 +316,7 @@ Solution solve(np_array t_np, np_array y0_np, np_array yp0_np,
                int number_of_events, int use_jacobian, np_array rhs_alg_id,
                np_array atol_np, double rel_tol, int number_of_parameters)
 {
+  std::cout << "testing if we get to solve" << std::endl;
   auto t = t_np.unchecked<1>();
   auto y0 = y0_np.unchecked<1>();
   auto yp0 = yp0_np.unchecked<1>();
