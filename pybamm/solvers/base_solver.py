@@ -530,9 +530,7 @@ class BaseSolver(object):
                     if found_t:
                         model.events.append(
                             pybamm.Event(
-                                str(symbol),
-                                expr.new_copy(),
-                                pybamm.EventType.DISCONTINUITY,
+                                str(symbol), expr, pybamm.EventType.DISCONTINUITY,
                             )
                         )
                 elif isinstance(symbol, pybamm.Modulo):
@@ -556,7 +554,8 @@ class BaseSolver(object):
                         for i in np.arange(N_events):
                             model.events.append(
                                 pybamm.Event(
-                                    str(symbol), expr, pybamm.EventType.DISCONTINUITY
+                                    str(symbol), expr * pybamm.Scalar(i + 1),
+                                    pybamm.EventType.DISCONTINUITY
                                 )
                             )
 
