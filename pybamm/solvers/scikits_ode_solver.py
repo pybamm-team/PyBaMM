@@ -98,8 +98,12 @@ class ScikitsOdeSolver(pybamm.BaseSolver):
         events = model.terminate_events_eval
         jacobian = model.jac_rhs_eval
 
-        def eqsydot(t, y, return_ydot):
-            return_ydot[:] = derivs(t, y, inputs)
+        if model.convert_to_format == "casadi":
+            def eqsydot(t, y, return_ydot):
+                return_ydot[:] = derivs(t, y, inputs).full().flatten()
+        else:
+            def eqsydot(t, y, return_ydot):
+                return_ydot[:] = derivs(t, y, inputs).flatten()
 
         def rootfn(t, y, return_root):
             return_root[:] = [event(t, y, inputs) for event in events]

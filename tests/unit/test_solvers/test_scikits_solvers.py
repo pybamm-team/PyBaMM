@@ -49,10 +49,10 @@ class TestScikitsSolvers(unittest.TestCase):
             length_scales = {}
             convert_to_format = "python"
 
-            def residuals_eval(self, t, y, ydot, inputs):
-                return np.array([0.5 * np.ones_like(y[0]) - ydot[0], 2 * y[0] - y[1]])
+            def rhs_algebraic_eval(self, t, y, inputs):
+                return np.array([0.5 * np.ones_like(y[0]), 2 * y[0] - y[1]])
 
-            def jacobian_eval(self, t, y, inputs):
+            def jac_rhs_algebraic_eval(self, t, y, inputs):
                 return np.array([[0.0, 0.0], [2.0, -1.0]])
 
         model = Model()
@@ -101,12 +101,12 @@ class TestScikitsSolvers(unittest.TestCase):
             convert_to_format = "python"
             len_rhs_and_alg = 2
 
-            def residuals_eval(self, t, y, ydot, inputs):
+            def rhs_algebraic_eval(self, t, y, inputs):
                 return np.array(
-                    [0.5 * np.ones_like(y[0]) - 4 * ydot[0], 2.0 * y[0] - y[1]]
+                    [0.5 * np.ones_like(y[0]), 2.0 * y[0] - y[1]]
                 )
 
-            def jacobian_eval(self, t, y, inputs):
+            def jac_rhs_algebraic_eval(self, t, y, inputs):
                 return np.array([[0.0, 0.0], [2.0, -1.0]])
 
         model = Model()
