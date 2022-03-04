@@ -2,7 +2,7 @@
 
 ## Breaking changes
 
--   Dropped support for Windows 32-bit architecture ([#1696](https://github.com/pybamm-team/PyBaMM/pull/1696))
+-   Dropped support for Windows 32-bit architecture ([#1964](https://github.com/pybamm-team/PyBaMM/pull/1964))
 
 # [v22.2](https://github.com/pybamm-team/PyBaMM/tree/v22.2) - 2022-02-28
 
