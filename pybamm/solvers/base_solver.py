@@ -761,8 +761,6 @@ class BaseSolver(object):
         pybamm.logger.debug("Found consistent states")
 
         y0 = root_sol.all_ys[0]
-        if isinstance(y0, np.ndarray):
-            y0 = y0.flatten()
         return y0
 
     def solve(
@@ -1239,7 +1237,6 @@ class BaseSolver(object):
                 model.y0 = (
                     model.set_initial_conditions_from(old_solution)
                     .concatenated_initial_conditions.evaluate(0, inputs=ext_and_inputs)
-                    .flatten()
                 )
         set_up_time = timer.time()
 
