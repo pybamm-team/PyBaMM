@@ -716,9 +716,13 @@ class BaseSolver(object):
                 # update model.y0, which is used for initialising the algebraic solver
                 if len_rhs == 0:
                     model.y0 = y0_from_model
-                else:
+                elif isinstance(y0_from_inputs, casadi.DM):
                     model.y0 = casadi.vertcat(
                         y0_from_inputs[:len_rhs], y0_from_model[len_rhs:]
+                    )
+                else:
+                    model.y0 = np.vstack(
+                        (y0_from_inputs[:len_rhs], y0_from_model[len_rhs:])
                     )
             y0 = self.calculate_consistent_state(model, 0, inputs_dict)
         # Make y0 a function of inputs if doing symbolic with casadi

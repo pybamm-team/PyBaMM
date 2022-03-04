@@ -660,7 +660,7 @@ class EvaluatorJax:
 
         result = self._jit_evaluate(*self._constants, t, y, inputs)
 
-        return result.flatten()
+        return result
 
 
 class EvaluatorJaxJacobian:
