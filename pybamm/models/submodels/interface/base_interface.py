@@ -141,7 +141,7 @@ class BaseInterface(pybamm.BaseSubModel):
 
         return j0
 
-    def _get_open_circuit_potential(self, variables, phase=None):
+    def _get_open_circuit_potential(self, variables):
         """
         A private function to obtain the open circuit potential and entropic change
 
@@ -149,9 +149,6 @@ class BaseInterface(pybamm.BaseSubModel):
         ----------
         variables: dict
             The variables in the full model.
-        phase : string
-            phase 1 or phase 2 in the composite particle,
-            the default is None
         Returns
         -------
         ocp : :class:`pybamm.Symbol`
@@ -188,8 +185,8 @@ class BaseInterface(pybamm.BaseSubModel):
                     T = T.orphans[0]
 
             if self.domain == "Negative":
-                ocp = self.param.U_n(c_s_surf, T, phase)
-                dUdT = self.param.dUdT_n(c_s_surf, phase)
+                ocp = self.param.U_n(c_s_surf, T)
+                dUdT = self.param.dUdT_n(c_s_surf)
             elif self.domain == "Positive":
                 ocp = self.param.U_p(c_s_surf, T)
                 dUdT = self.param.dUdT_p(c_s_surf)
