@@ -653,7 +653,7 @@ class TestEvaluate(unittest.TestCase):
     def test_evaluator_jax_debug(self):
         a = pybamm.StateVector(slice(0, 1))
         expr = a ** 2
-        y_test = np.array([[2.0], [3.0]])
+        y_test = np.array([2.0, 3.0])
         evaluator = pybamm.EvaluatorJax(expr)
         evaluator.debug(y=y_test)
 
