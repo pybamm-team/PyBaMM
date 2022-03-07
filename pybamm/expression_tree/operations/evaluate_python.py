@@ -633,14 +633,14 @@ class EvaluatorJax:
 
         return EvaluatorJaxSensitivities(self._sens_evaluate, self._constants)
 
-    def debug(self, t=None, y=None, y_dot=None, inputs=None):
+    def debug(self, t=None, y=None, inputs=None):
         # generated code assumes y is a column vector
         if y is not None and y.ndim == 1:
             y = y.reshape(-1, 1)
 
         # execute code
         jaxpr = jax.make_jaxpr(self._evaluate_jax)(
-            *self._constants, t, y, y_dot, input
+            *self._constants, t, y, inputs
         ).jaxpr
         print("invars:", jaxpr.invars)
         print("outvars:", jaxpr.outvars)

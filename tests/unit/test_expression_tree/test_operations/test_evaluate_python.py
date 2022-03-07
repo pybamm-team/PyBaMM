@@ -645,8 +645,8 @@ class TestEvaluate(unittest.TestCase):
         evaluator_jac_test = evaluator.get_jacobian()
         evaluator_jac = pybamm.EvaluatorJax(expr_jac)
         for y in y_tests:
-            result_test = evaluator_jac_test.evaluate(t=None, y=y)
-            result_true = evaluator_jac.evaluate(t=None, y=y)
+            result_test = evaluator_jac_test(t=None, y=y)
+            result_true = evaluator_jac(t=None, y=y)
             np.testing.assert_allclose(result_test, result_true)
 
     @unittest.skipIf(not pybamm.have_jax(), "jax or jaxlib is not installed")
