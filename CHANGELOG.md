@@ -1,5 +1,9 @@
 # [Unreleased](https://github.com/pybamm-team/PyBaMM/)
 
+## Features
+
+-   Added an option "compute heat source for isothermal models" to choose whether or not the heat generation terms are computed when running models with the option `thermal="isothermal"`  ([#1958](https://github.com/pybamm-team/PyBaMM/pull/1958))
+
 ## Bug fixes
 
 -   Fixed a bug where isothermal models did not compute any heat source terms ([#1958](https://github.com/pybamm-team/PyBaMM/pull/1958))

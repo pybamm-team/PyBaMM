@@ -1,0 +1,3 @@
+2022-03-04 15:15:46,487 - scikits.odes setup - INFO - Starting scikits.odes setup
+2022-03-04 15:15:46,488 - scikits.odes setup - INFO - Looking for sundials at /home/user/.local
+2022-03-04 15:15:46,488 - scikits.odes setup - INFO - Found sundials at /home/user/.local
