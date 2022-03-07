@@ -193,26 +193,27 @@ class TestScikitsSolvers(unittest.TestCase):
             np.ones((N, T.size)) * (T[np.newaxis, :] - np.exp(T[np.newaxis, :])),
         )
 
-    def test_model_solver_dae_python(self):
-        model = pybamm.BaseModel()
-        model.convert_to_format = "python"
-        whole_cell = ["negative electrode", "separator", "positive electrode"]
-        var1 = pybamm.Variable("var1", domain=whole_cell)
-        var2 = pybamm.Variable("var2", domain=whole_cell)
-        model.rhs = {var1: 0.1 * var1}
-        model.algebraic = {var2: 2 * var1 - var2}
-        model.initial_conditions = {var1: 1, var2: 2}
-        model.use_jacobian = False
-        disc = get_discretisation_for_testing()
-        disc.process_model(model)
+    def test_model_solver_dae_python_jax(self):
+        for convert_to_format in ["python", "jax"]:
+            model = pybamm.BaseModel()
+            model.convert_to_format = convert_to_format
+            whole_cell = ["negative electrode", "separator", "positive electrode"]
+            var1 = pybamm.Variable("var1", domain=whole_cell)
+            var2 = pybamm.Variable("var2", domain=whole_cell)
+            model.rhs = {var1: 0.1 * var1}
+            model.algebraic = {var2: 2 * var1 - var2}
+            model.initial_conditions = {var1: 1, var2: 2}
+            model.use_jacobian = False
+            disc = get_discretisation_for_testing()
+            disc.process_model(model)
 
-        # Solve
-        solver = pybamm.ScikitsDaeSolver(rtol=1e-8, atol=1e-8, root_method="lm")
-        t_eval = np.linspace(0, 1, 100)
-        solution = solver.solve(model, t_eval)
-        np.testing.assert_array_equal(solution.t, t_eval)
-        np.testing.assert_allclose(solution.y[0], np.exp(0.1 * solution.t))
-        np.testing.assert_allclose(solution.y[-1], 2 * np.exp(0.1 * solution.t))
+            # Solve
+            solver = pybamm.ScikitsDaeSolver(rtol=1e-8, atol=1e-8, root_method="lm")
+            t_eval = np.linspace(0, 1, 100)
+            solution = solver.solve(model, t_eval)
+            np.testing.assert_array_equal(solution.t, t_eval)
+            np.testing.assert_allclose(solution.y[0], np.exp(0.1 * solution.t))
+            np.testing.assert_allclose(solution.y[-1], 2 * np.exp(0.1 * solution.t))
 
     def test_model_solver_dae_bad_ics_python(self):
         model = pybamm.BaseModel()
