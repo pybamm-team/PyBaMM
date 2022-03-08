@@ -11,19 +11,26 @@ class BaseModel(pybamm.BaseSubModel):
         super().__init__(param)
 
     def get_fundamental_variables(self):
-        Q = pybamm.standard_variables.Q
-        variables = {"Discharge capacity [A.h]": Q}
+        Q_Ah = pybamm.standard_variables.Q_Ah
+        Q_Wh = pybamm.standard_variables.Q_Wh
+        variables = {"Discharge capacity [A.h]": Q_Ah, "Discharge energy [W.h]": Q_Wh}
         return variables
 
     def set_initial_conditions(self, variables):
-        Q = variables["Discharge capacity [A.h]"]
-        self.initial_conditions[Q] = pybamm.Scalar(0)
+        Q_Ah = variables["Discharge capacity [A.h]"]
+        Q_Wh = variables["Discharge energy [W.h]"]
+        self.initial_conditions[Q_Ah] = pybamm.Scalar(0)
+        self.initial_conditions[Q_Wh] = pybamm.Scalar(0)
 
     def set_rhs(self, variables):
         # ODE for discharge capacity
-        Q = variables["Discharge capacity [A.h]"]
+        Q_Ah = variables["Discharge capacity [A.h]"]
+        Q_Wh = variables["Discharge energy [W.h]"]
         I = variables["Current [A]"]
-        self.rhs[Q] = I * self.param.timescale / 3600
+        V = variables["Terminal voltage [V]"]
+
+        self.rhs[Q_Ah] = I * self.param.timescale / 3600
+        self.rhs[Q_Wh] = I * V * self.param.timescale / 3600
 
 
 class LeadingOrderBaseModel(BaseModel):
@@ -33,6 +40,7 @@ class LeadingOrderBaseModel(BaseModel):
         super().__init__(param)
 
     def get_fundamental_variables(self):
-        Q = pybamm.Variable("Leading-order discharge capacity [A.h]")
-        variables = {"Discharge capacity [A.h]": Q}
+        Q_Ah = pybamm.Variable("Leading-order discharge capacity [A.h]")
+        Q_Wh = pybamm.Variable("Leading-order discharge energy [W.h]")
+        variables = {"Discharge capacity [A.h]": Q_Ah, "Discharge energy [W.h]": Q_Wh}
         return variables

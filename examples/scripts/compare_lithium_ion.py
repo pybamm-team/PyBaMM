@@ -21,4 +21,4 @@ for model in models:
     sims.append(sim)
 
 # plot
-pybamm.dynamic_plot(sims)
+pybamm.dynamic_plot(sims, ["Discharge energy [W.h]"])

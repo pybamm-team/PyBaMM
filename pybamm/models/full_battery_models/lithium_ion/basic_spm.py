@@ -39,7 +39,8 @@ class BasicSPM(BaseModel):
         # Variables
         ######################
         # Variables that depend on time only are created without a domain
-        Q = pybamm.Variable("Discharge capacity [A.h]")
+        Q_Ah = pybamm.Variable("Discharge capacity [A.h]")
+        Q_Wh = pybamm.Variable("Discharge energy [W.h]")
         # Variables that vary spatially are created with a domain
         c_s_n = pybamm.Variable(
             "X-averaged negative particle concentration", domain="negative particle"
@@ -47,6 +48,11 @@ class BasicSPM(BaseModel):
         c_s_p = pybamm.Variable(
             "X-averaged positive particle concentration", domain="positive particle"
         )
+        # Surf takes the surface value of a variable, i.e. its boundary value on the
+        # right side. This is also accessible via `boundary_value(x, "right")`, with
+        # "left" providing the boundary value of the left side
+        c_s_surf_n = pybamm.surf(c_s_n)
+        c_s_surf_p = pybamm.surf(c_s_p)
 
         # Constant temperature
         T = param.T_init
@@ -60,15 +66,31 @@ class BasicSPM(BaseModel):
         j_n = i_cell / param.l_n
         j_p = -i_cell / param.l_p
 
+        # Interfacial reactions
+        j0_n = param.gamma_n * param.j0_n(1, c_s_surf_n, T) / param.C_r_n
+        j0_p = param.gamma_p * param.j0_p(1, c_s_surf_p, T) / param.C_r_p
+        eta_n = (2 / param.ne_n) * pybamm.arcsinh(j_n / (2 * j0_n))
+        eta_p = (2 / param.ne_p) * pybamm.arcsinh(j_p / (2 * j0_p))
+        phi_s_n = 0
+        phi_e = -eta_n - param.U_n(c_s_surf_n, T)
+        phi_s_p = eta_p + phi_e + param.U_p(c_s_surf_p, T)
+        V = phi_s_p
+
+        pot_scale = self.param.potential_scale
+        U_ref = self.param.U_p_ref - self.param.U_n_ref
+        V_dim = U_ref + pot_scale * V
+
         ######################
         # State of Charge
         ######################
         I = param.dimensional_current_with_time
         # The `rhs` dictionary contains differential equations, with the key being the
         # variable in the d/dt
-        self.rhs[Q] = I * param.timescale / 3600
+        self.rhs[Q_Ah] = I * param.timescale / 3600
+        self.rhs[Q_Wh] = I * V_dim * param.timescale / 3600
         # Initial conditions must be provided for the ODEs
-        self.initial_conditions[Q] = pybamm.Scalar(0)
+        self.initial_conditions[Q_Ah] = pybamm.Scalar(0)
+        self.initial_conditions[Q_Wh] = pybamm.Scalar(0)
 
         ######################
         # Particles
@@ -80,11 +102,7 @@ class BasicSPM(BaseModel):
         N_s_p = -param.D_p(c_s_p, T) * pybamm.grad(c_s_p)
         self.rhs[c_s_n] = -(1 / param.C_n) * pybamm.div(N_s_n)
         self.rhs[c_s_p] = -(1 / param.C_p) * pybamm.div(N_s_p)
-        # Surf takes the surface value of a variable, i.e. its boundary value on the
-        # right side. This is also accessible via `boundary_value(x, "right")`, with
-        # "left" providing the boundary value of the left side
-        c_s_surf_n = pybamm.surf(c_s_n)
-        c_s_surf_p = pybamm.surf(c_s_p)
+
         # Boundary conditions must be provided for equations with spatial derivatives
         self.boundary_conditions[c_s_n] = {
             "left": (pybamm.Scalar(0), "Neumann"),
@@ -138,27 +156,14 @@ class BasicSPM(BaseModel):
         ######################
         # (Some) variables
         ######################
-        # Interfacial reactions
-        j0_n = param.gamma_n * param.j0_n(1, c_s_surf_n, T) / param.C_r_n
-        j0_p = param.gamma_p * param.j0_p(1, c_s_surf_p, T) / param.C_r_p
-        eta_n = (2 / param.ne_n) * pybamm.arcsinh(j_n / (2 * j0_n))
-        eta_p = (2 / param.ne_p) * pybamm.arcsinh(j_p / (2 * j0_p))
-        phi_s_n = 0
-        phi_e = -eta_n - param.U_n(c_s_surf_n, T)
-        phi_s_p = eta_p + phi_e + param.U_p(c_s_surf_p, T)
-        V = phi_s_p
-
-        pot_scale = self.param.potential_scale
-        U_ref = self.param.U_p_ref - self.param.U_n_ref
-        V_dim = U_ref + pot_scale * V
-
         whole_cell = ["negative electrode", "separator", "positive electrode"]
         # The `variables` dictionary contains all variables that might be useful for
         # visualising the solution of the model
         # Primary broadcasts are used to broadcast scalar quantities across a domain
         # into a vector of the right shape, for multiplying with other vectors
         self.variables = {
-            "Discharge capacity [A.h]": Q,
+            "Discharge capacity [A.h]": Q_Ah,
+            "Discharge energy [W.h]": Q_Wh,
             "Negative particle surface concentration": pybamm.PrimaryBroadcast(
                 c_s_surf_n, "negative electrode"
             ),

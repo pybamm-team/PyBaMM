@@ -39,7 +39,8 @@ class BasicDFN(BaseModel):
         # Variables
         ######################
         # Variables that depend on time only are created without a domain
-        Q = pybamm.Variable("Discharge capacity [A.h]")
+        Q_Ah = pybamm.Variable("Discharge capacity [A.h]")
+        Q_Wh = pybamm.Variable("Discharge energy [W.h]")
         # Variables that vary spatially are created with a domain
         c_e_n = pybamm.Variable(
             "Negative electrolyte concentration", domain="negative electrode"
@@ -71,6 +72,11 @@ class BasicDFN(BaseModel):
         phi_s_p = pybamm.Variable(
             "Positive electrode potential", domain="positive electrode"
         )
+        V = pybamm.boundary_value(phi_s_p, "right")
+        pot_scale = self.param.potential_scale
+        U_ref = self.param.U_p_ref - self.param.U_n_ref
+        V_dim = U_ref + pot_scale * V
+
         # Particle concentrations are variables on the particle domain, but also vary in
         # the x-direction (electrode domain) and so must be provided with auxiliary
         # domains
@@ -149,9 +155,11 @@ class BasicDFN(BaseModel):
         I = param.dimensional_current_with_time
         # The `rhs` dictionary contains differential equations, with the key being the
         # variable in the d/dt
-        self.rhs[Q] = I * param.timescale / 3600
+        self.rhs[Q_Ah] = I * param.timescale / 3600
+        self.rhs[Q_Wh] = I * V_dim * param.timescale / 3600
         # Initial conditions must be provided for the ODEs
-        self.initial_conditions[Q] = pybamm.Scalar(0)
+        self.initial_conditions[Q_Ah] = pybamm.Scalar(0)
+        self.initial_conditions[Q_Wh] = pybamm.Scalar(0)
 
         ######################
         # Particles
@@ -269,10 +277,11 @@ class BasicDFN(BaseModel):
         ######################
         # (Some) variables
         ######################
-        voltage = pybamm.boundary_value(phi_s_p, "right")
         # The `variables` dictionary contains all variables that might be useful for
         # visualising the solution of the model
         self.variables = {
+            "Discharge capacity [A.h]": Q_Ah,
+            "Discharge energy [W.h]": Q_Wh,
             "Negative particle surface concentration": c_s_surf_n,
             "Electrolyte concentration": c_e,
             "Positive particle surface concentration": c_s_surf_p,
@@ -280,11 +289,12 @@ class BasicDFN(BaseModel):
             "Negative electrode potential": phi_s_n,
             "Electrolyte potential": phi_e,
             "Positive electrode potential": phi_s_p,
-            "Terminal voltage": voltage,
+            "Terminal voltage": V,
+            "Terminal voltage [V]": V_dim,
         }
         self.events += [
-            pybamm.Event("Minimum voltage", voltage - param.voltage_low_cut),
-            pybamm.Event("Maximum voltage", voltage - param.voltage_high_cut),
+            pybamm.Event("Minimum voltage", V - param.voltage_low_cut),
+            pybamm.Event("Maximum voltage", V - param.voltage_high_cut),
         ]
 
     def new_empty_copy(self):
