@@ -378,7 +378,7 @@ def have_julia():
     try:
         subprocess.call(["julia", "--version"], stdout=FNULL, stderr=subprocess.STDOUT)
         return True
-    except subprocess.CalledProcessError:
+    except subprocess.CalledProcessError:  # pragma: no cover
         return False
 
 

@@ -596,14 +596,13 @@ def get_julia_function(
     else:
         func_def = f"{funcname}_with_consts!"
 
-    # add function def and sparse arrays to first line
-    imports = "begin\n\n"  # using SparseArrays, LinearAlgebra\n\n"
+    # add function def
     if typ == "ode":
         function_def = f"\nfunction {func_def}(dy, y, p, t)\n"
     elif typ == "dae":
         function_def = f"\nfunction {func_def}(out, dy, y, p, t)\n"
     julia_str = (
-        imports
+        "begin\n"
         + const_and_cache_str
         + function_def
         + input_parameter_extraction

@@ -16,6 +16,9 @@ if have_julia and system() != "Windows":
     Julia(compiled_modules=False)
     from julia import Main
 
+    # load julia libraries required for evaluating the strings
+    Main.eval("using SparseArrays, LinearAlgebra")
+
 
 @unittest.skipIf(not have_julia, "Julia not installed")
 @unittest.skipIf(system() == "Windows", "Julia not supported on windows")

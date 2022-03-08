@@ -945,7 +945,7 @@ class BaseModel:
         self,
         input_parameter_order=None,
         get_consistent_ics_solver=None,
-        dae_type="implicit",
+        dae_type="semi-explicit",
         **kwargs,
     ):
         """
@@ -960,7 +960,7 @@ class BaseModel:
             Solver to use to get consistent initial conditions. If None, the initial
             guesses for boundary conditions (non-consistent) are used.
         dae_type : str, optional
-            How to write the DAEs. Options are "explicit" or "implicit".
+            How to write the DAEs. Options are "semi-explicit" (default) or "implicit".
 
         Returns
         -------
@@ -984,7 +984,7 @@ class BaseModel:
                 **kwargs,
             )
         else:
-            if dae_type == "explicit":
+            if dae_type == "semi-explicit":
                 len_rhs = None
             else:
                 len_rhs = self.concatenated_rhs.size
