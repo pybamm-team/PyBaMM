@@ -819,6 +819,7 @@ def get_julia_mtk_model(model, geometry=None, tspan=None):
 
     # Check geometry and tspan have been provided if a PDE
     if is_pde:
+        geometry = geometry or model.default_geometry
         if geometry is None:
             raise ValueError("must provide geometry if the model is a PDE model")
         if tspan is None:

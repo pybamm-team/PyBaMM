@@ -22,6 +22,13 @@ have_julia = pybamm.have_julia()
 @unittest.skipIf(not have_julia, "Julia not installed")
 @unittest.skipIf(system() == "Windows", "Julia not supported on windows")
 class TestCreateSolveMTKModel(unittest.TestCase):
+    """
+    These tests just make sure there are no errors when calling
+    pybamm.get_julia_mtk_model. TODO: add (comment out) tests that run and solve the
+    model. This needs (i) faster import of diffeqpy, (ii) working PDE discretisations
+    in Julia.
+    """
+
     def test_exponential_decay_model(self):
         model = pybamm.BaseModel()
         v = pybamm.Variable("v")
@@ -184,6 +191,30 @@ class TestCreateSolveMTKModel(unittest.TestCase):
         # # Check everything is equal to 1
         # # Just a simple test for now to get started
         # np.testing.assert_equal(y_sol_julia, 1)
+
+    def test_spm(self):
+        model = pybamm.lithium_ion.SPM()
+        sim = pybamm.Simulation(model)
+        sim.set_parameters()
+        pybamm.get_julia_mtk_model(
+            sim._model_with_set_params, geometry=sim.geometry, tspan=(0, 3600)
+        )
+
+    def test_spme(self):
+        model = pybamm.lithium_ion.SPMe()
+        sim = pybamm.Simulation(model)
+        sim.set_parameters()
+        pybamm.get_julia_mtk_model(
+            sim._model_with_set_params, geometry=sim.geometry, tspan=(0, 3600)
+        )
+
+    def test_dfn(self):
+        model = pybamm.lithium_ion.DFN()
+        sim = pybamm.Simulation(model)
+        sim.set_parameters()
+        pybamm.get_julia_mtk_model(
+            sim._model_with_set_params, geometry=sim.geometry, tspan=(0, 3600)
+        )
 
 
 if __name__ == "__main__":
