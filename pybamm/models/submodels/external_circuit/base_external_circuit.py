@@ -45,6 +45,8 @@ class LeadingOrderBaseModel(BaseModel):
 
     def get_fundamental_variables(self):
         Q_Ah = pybamm.Variable("Leading-order discharge capacity [A.h]")
-        Q_Wh = pybamm.Variable("Leading-order discharge energy [W.h]")
-        variables = {"Discharge capacity [A.h]": Q_Ah, "Discharge energy [W.h]": Q_Wh}
+        variables = {"Discharge capacity [A.h]": Q_Ah}
+        if self.options["calculate discharge energy"] == "true":
+            Q_Wh = pybamm.Variable("Leading-order discharge energy [W.h]")
+            variables.update({"Discharge energy [W.h]": Q_Wh})
         return variables

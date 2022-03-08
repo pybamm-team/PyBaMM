@@ -84,7 +84,7 @@ class VoltageFunctionControl(FunctionControl):
     """
 
     def __init__(self, param, options):
-        super().__init__(param, options, self.constant_voltage, control="algebraic")
+        super().__init__(param, self.constant_voltage, options, control="algebraic")
 
     def constant_voltage(self, variables):
         V = variables["Terminal voltage [V]"]
@@ -96,7 +96,7 @@ class VoltageFunctionControl(FunctionControl):
 class PowerFunctionControl(FunctionControl):
     """External circuit with power control."""
 
-    def __init__(self, param, control, options):
+    def __init__(self, param, options, control):
         super().__init__(param, self.constant_power, options, control=control)
 
     def constant_power(self, variables):
@@ -117,7 +117,7 @@ class PowerFunctionControl(FunctionControl):
 class ResistanceFunctionControl(FunctionControl):
     """External circuit with resistance control."""
 
-    def __init__(self, param, control, options):
+    def __init__(self, param, options, control):
         super().__init__(param, self.constant_resistance, options, control=control)
 
     def constant_resistance(self, variables):
@@ -167,8 +167,8 @@ class CCCVFunctionControl(FunctionControl):
 class LeadingOrderFunctionControl(FunctionControl, LeadingOrderBaseModel):
     """External circuit with an arbitrary function, at leading order."""
 
-    def __init__(self, param, external_circuit_class, options, control="algebraic"):
-        super().__init__(param, external_circuit_class, options, control=control)
+    def __init__(self, param, external_circuit_function, options, control="algebraic"):
+        super().__init__(param, external_circuit_function, options, control=control)
 
     def _get_current_variable(self):
         return pybamm.Variable("Leading-order total current density")
