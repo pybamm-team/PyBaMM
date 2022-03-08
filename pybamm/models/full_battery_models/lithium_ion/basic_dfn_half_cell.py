@@ -163,6 +163,17 @@ class BasicDFNHalfCell(BaseModel):
         ######################
         # (Some) variables
         ######################
+        # dimensionless reference potential so that dimensional reference potential
+        # is zero (phi_dim = U_n_ref + pot_scale * phi)
+        l_Li = param.l_p
+        sigma_Li = param.sigma_p
+        j_Li = param.j0_plating(pybamm.boundary_value(c_e, "left"), 1, T)
+        eta_Li = 2 * (1 + param.Theta * T) * pybamm.arcsinh(i_cell / (2 * j_Li))
+
+        phi_s_cn = 0
+        delta_phi = eta_Li + U_Li_ref
+        delta_phis_Li = l_Li * i_cell / sigma_Li(T)
+        ref_potential = phi_s_cn - delta_phis_Li - delta_phi
         vdrop_cell = pybamm.boundary_value(phi_s_w, "right") - ref_potential
         vdrop_Li = -eta_Li - delta_phis_Li
         voltage = vdrop_cell + vdrop_Li
@@ -267,18 +278,6 @@ class BasicDFNHalfCell(BaseModel):
             param.chi(c_e, T) * pybamm.grad(c_e) / c_e - pybamm.grad(phi_e)
         )
         self.algebraic[phi_e] = pybamm.div(i_e) - j
-
-        # dimensionless reference potential so that dimensional reference potential
-        # is zero (phi_dim = U_n_ref + pot_scale * phi)
-        l_Li = param.l_p
-        sigma_Li = param.sigma_p
-        j_Li = param.j0_plating(pybamm.boundary_value(c_e, "left"), 1, T)
-        eta_Li = 2 * (1 + param.Theta * T) * pybamm.arcsinh(i_cell / (2 * j_Li))
-
-        phi_s_cn = 0
-        delta_phi = eta_Li + U_Li_ref
-        delta_phis_Li = l_Li * i_cell / sigma_Li(T)
-        ref_potential = phi_s_cn - delta_phis_Li - delta_phi
 
         self.boundary_conditions[phi_e] = {
             "left": (ref_potential, "Dirichlet"),
