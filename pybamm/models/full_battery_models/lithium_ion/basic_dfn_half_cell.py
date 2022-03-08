@@ -66,8 +66,7 @@ class BasicDFNHalfCell(BaseModel):
         # Variables
         ######################
         # Variables that depend on time only are created without a domain
-        Q_Ah = pybamm.Variable("Discharge capacity [A.h]")
-        Q_Wh = pybamm.Variable("Discharge energy [W.h]")
+        Q = pybamm.Variable("Discharge capacity [A.h]")
 
         # Define some useful scalings
         pot_scale = param.potential_scale
@@ -161,40 +160,14 @@ class BasicDFNHalfCell(BaseModel):
         j = pybamm.concatenation(j_s, j_w)
 
         ######################
-        # (Some) variables
-        ######################
-        # dimensionless reference potential so that dimensional reference potential
-        # is zero (phi_dim = U_n_ref + pot_scale * phi)
-        l_Li = param.l_p
-        sigma_Li = param.sigma_p
-        j_Li = param.j0_plating(pybamm.boundary_value(c_e, "left"), 1, T)
-        eta_Li = 2 * (1 + param.Theta * T) * pybamm.arcsinh(i_cell / (2 * j_Li))
-
-        phi_s_cn = 0
-        delta_phi = eta_Li + U_Li_ref
-        delta_phis_Li = l_Li * i_cell / sigma_Li(T)
-        ref_potential = phi_s_cn - delta_phis_Li - delta_phi
-        vdrop_cell = pybamm.boundary_value(phi_s_w, "right") - ref_potential
-        vdrop_Li = -eta_Li - delta_phis_Li
-        voltage = vdrop_cell + vdrop_Li
-        voltage_dim = U_w_ref - U_Li_ref + pot_scale * voltage
-        c_e_total = pybamm.x_average(eps * c_e)
-        c_s_surf_w_av = pybamm.x_average(c_s_surf_w)
-
-        c_s_rav = pybamm.r_average(c_s_w)
-        c_s_vol_av = pybamm.x_average(eps_s_w * c_s_rav)
-
-        ######################
         # State of Charge
         ######################
         I = param.dimensional_current_with_time
         # The `rhs` dictionary contains differential equations, with the key being the
         # variable in the d/dt
-        self.rhs[Q_Ah] = I * self.timescale / 3600
-        self.rhs[Q_Wh] = I * voltage_dim * self.timescale / 3600
+        self.rhs[Q] = I * self.timescale / 3600
         # Initial conditions must be provided for the ODEs
-        self.initial_conditions[Q_Ah] = pybamm.Scalar(0)
-        self.initial_conditions[Q_Wh] = pybamm.Scalar(0)
+        self.initial_conditions[Q] = pybamm.Scalar(0)
 
         ######################
         # Particles
@@ -279,12 +252,37 @@ class BasicDFNHalfCell(BaseModel):
         )
         self.algebraic[phi_e] = pybamm.div(i_e) - j
 
+        # dimensionless reference potential so that dimensional reference potential
+        # is zero (phi_dim = U_n_ref + pot_scale * phi)
+        l_Li = param.l_p
+        sigma_Li = param.sigma_p
+        j_Li = param.j0_plating(pybamm.boundary_value(c_e, "left"), 1, T)
+        eta_Li = 2 * (1 + param.Theta * T) * pybamm.arcsinh(i_cell / (2 * j_Li))
+
+        phi_s_cn = 0
+        delta_phi = eta_Li + U_Li_ref
+        delta_phis_Li = l_Li * i_cell / sigma_Li(T)
+        ref_potential = phi_s_cn - delta_phis_Li - delta_phi
+
         self.boundary_conditions[phi_e] = {
             "left": (ref_potential, "Dirichlet"),
             "right": (pybamm.Scalar(0), "Neumann"),
         }
 
         self.initial_conditions[phi_e] = param.U_n_ref / pot_scale
+
+        ######################
+        # (Some) variables
+        ######################
+        vdrop_cell = pybamm.boundary_value(phi_s_w, "right") - ref_potential
+        vdrop_Li = -eta_Li - delta_phis_Li
+        voltage = vdrop_cell + vdrop_Li
+        voltage_dim = U_w_ref - U_Li_ref + pot_scale * voltage
+        c_e_total = pybamm.x_average(eps * c_e)
+        c_s_surf_w_av = pybamm.x_average(c_s_surf_w)
+
+        c_s_rav = pybamm.r_average(c_s_w)
+        c_s_vol_av = pybamm.x_average(eps_s_w * c_s_rav)
 
         # Cut-off voltage
         self.events.append(
@@ -324,8 +322,6 @@ class BasicDFNHalfCell(BaseModel):
         # visualising the solution of the model
         self.variables = {
             "Time [s]": self.timescale * pybamm.t,
-            "Discharge capacity [A.h]": Q_Ah,
-            "Discharge capacity [W.h]": Q_Wh,
             "Positive particle surface concentration": c_s_surf_w,
             "X-averaged positive particle surface concentration": c_s_surf_w_av,
             "Positive particle concentration": c_s_w,

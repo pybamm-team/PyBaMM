@@ -39,8 +39,7 @@ class BasicFull(BaseModel):
         # Variables
         ######################
         # Variables that depend on time only are created without a domain
-        Q_Ah = pybamm.Variable("Discharge capacity [A.h]")
-        Q_Wh = pybamm.Variable("Discharge energy [W.h]")
+        Q = pybamm.Variable("Discharge capacity [A.h]")
         # Variables that vary spatially are created with a domain
         c_e_n = pybamm.Variable(
             "Negative electrolyte concentration", domain="negative electrode"
@@ -122,21 +121,15 @@ class BasicFull(BaseModel):
         )
         j = pybamm.concatenation(j_n, j_s, j_p)
 
-        V = pybamm.boundary_value(phi_s_p, "right")
-        pot = param.potential_scale
-        V_dim = param.U_p_ref - param.U_n_ref + pot * V
-
         ######################
         # State of Charge
         ######################
         I = param.dimensional_current_with_time
         # The `rhs` dictionary contains differential equations, with the key being the
         # variable in the d/dt
-        self.rhs[Q_Ah] = I * param.timescale / 3600
-        self.rhs[Q_Wh] = I * V_dim * param.timescale / 3600
+        self.rhs[Q] = I * param.timescale / 3600
         # Initial conditions must be provided for the ODEs
-        self.initial_conditions[Q_Ah] = pybamm.Scalar(0)
-        self.initial_conditions[Q_Wh] = pybamm.Scalar(0)
+        self.initial_conditions[Q] = pybamm.Scalar(0)
 
         ######################
         # Convection
@@ -277,8 +270,10 @@ class BasicFull(BaseModel):
         ######################
         # (Some) variables
         ######################
+        voltage = pybamm.boundary_value(phi_s_p, "right")
         # The `variables` dictionary contains all variables that might be useful for
         # visualising the solution of the model
+        pot = param.potential_scale
 
         self.variables = {
             "Electrolyte concentration": c_e,
@@ -288,15 +283,15 @@ class BasicFull(BaseModel):
             "Positive electrode potential [V]": param.U_p_ref
             - param.U_n_ref
             + pot * phi_s_p,
-            "Terminal voltage [V]": V_dim,
+            "Terminal voltage [V]": param.U_p_ref - param.U_n_ref + pot * voltage,
             "Porosity": eps,
             "Volume-averaged velocity": v,
             "X-averaged separator transverse volume-averaged velocity": div_V_s,
         }
         self.events.extend(
             [
-                pybamm.Event("Minimum voltage", V - param.voltage_low_cut),
-                pybamm.Event("Maximum voltage", V - param.voltage_high_cut),
+                pybamm.Event("Minimum voltage", voltage - param.voltage_low_cut),
+                pybamm.Event("Maximum voltage", voltage - param.voltage_high_cut),
             ]
         )
 

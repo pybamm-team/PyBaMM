@@ -16,13 +16,15 @@ class FunctionControl(BaseModel):
         The parameters to use for this submodel
     external_circuit_function : callable
         The function that controls the current
+    options : dict
+        Dictionary of options to use for the submodel
     control : str, optional
         The type of control to use. Must be one of 'algebraic' (default)
         or 'differential'.
     """
 
-    def __init__(self, param, external_circuit_function, control="algebraic"):
-        super().__init__(param)
+    def __init__(self, param, external_circuit_function, options, control="algebraic"):
+        super().__init__(param, options)
         self.external_circuit_function = external_circuit_function
         self.control = control
 
@@ -81,8 +83,8 @@ class VoltageFunctionControl(FunctionControl):
     External circuit with voltage control, implemented as an extra algebraic equation.
     """
 
-    def __init__(self, param):
-        super().__init__(param, self.constant_voltage, control="algebraic")
+    def __init__(self, param, options):
+        super().__init__(param, options, self.constant_voltage, control="algebraic")
 
     def constant_voltage(self, variables):
         V = variables["Terminal voltage [V]"]
@@ -94,8 +96,8 @@ class VoltageFunctionControl(FunctionControl):
 class PowerFunctionControl(FunctionControl):
     """External circuit with power control."""
 
-    def __init__(self, param, control):
-        super().__init__(param, self.constant_power, control=control)
+    def __init__(self, param, control, options):
+        super().__init__(param, self.constant_power, options, control=control)
 
     def constant_power(self, variables):
         I = variables["Current [A]"]
@@ -115,8 +117,8 @@ class PowerFunctionControl(FunctionControl):
 class ResistanceFunctionControl(FunctionControl):
     """External circuit with resistance control."""
 
-    def __init__(self, param, control):
-        super().__init__(param, self.constant_resistance, control=control)
+    def __init__(self, param, control, options):
+        super().__init__(param, self.constant_resistance, options, control=control)
 
     def constant_resistance(self, variables):
         I = variables["Current [A]"]
@@ -146,8 +148,8 @@ class CCCVFunctionControl(FunctionControl):
 
     """
 
-    def __init__(self, param):
-        super().__init__(param, self.cccv, control="differential with max")
+    def __init__(self, param, options):
+        super().__init__(param, self.cccv, options, control="differential with max")
         pybamm.citations.register("Mohtat2021")
 
     def cccv(self, variables):
@@ -165,8 +167,8 @@ class CCCVFunctionControl(FunctionControl):
 class LeadingOrderFunctionControl(FunctionControl, LeadingOrderBaseModel):
     """External circuit with an arbitrary function, at leading order."""
 
-    def __init__(self, param, external_circuit_class, control="algebraic"):
-        super().__init__(param, external_circuit_class, control=control)
+    def __init__(self, param, external_circuit_class, options, control="algebraic"):
+        super().__init__(param, external_circuit_class, options, control=control)
 
     def _get_current_variable(self):
         return pybamm.Variable("Leading-order total current density")
@@ -178,8 +180,8 @@ class LeadingOrderVoltageFunctionControl(LeadingOrderFunctionControl):
     at leading order.
     """
 
-    def __init__(self, param):
-        super().__init__(param, self.constant_voltage, control="algebraic")
+    def __init__(self, param, options):
+        super().__init__(param, self.constant_voltage, options, control="algebraic")
 
     def constant_voltage(self, variables):
         V = variables["Terminal voltage [V]"]
@@ -191,8 +193,8 @@ class LeadingOrderVoltageFunctionControl(LeadingOrderFunctionControl):
 class LeadingOrderPowerFunctionControl(LeadingOrderFunctionControl):
     """External circuit with power control, at leading order."""
 
-    def __init__(self, param):
-        super().__init__(param, self.constant_power, control="algebraic")
+    def __init__(self, param, options):
+        super().__init__(param, self.constant_power, options, control="algebraic")
 
     def constant_power(self, variables):
         I = variables["Current [A]"]
