@@ -27,19 +27,6 @@ def is_notebook():
         return False  # Probably standard Python interpreter
 
 
-def constant_current_constant_voltage_constant_power(variables):
-    I = variables["Current [A]"]
-    V = variables["Battery voltage [V]"]
-    s_I = pybamm.InputParameter("Current switch")
-    s_V = pybamm.InputParameter("Voltage switch")
-    s_P = pybamm.InputParameter("Power switch")
-    return (
-        s_I * (I - pybamm.InputParameter("Current input [A]"))
-        + s_V * (V - pybamm.InputParameter("Voltage input [V]"))
-        + s_P * (V * I - pybamm.InputParameter("Power input [W]"))
-    )
-
-
 class Simulation:
     """A Simulation class for easy building and running of PyBaMM simulations.
 
@@ -86,8 +73,7 @@ class Simulation:
         if isinstance(model, pybamm.lithium_ion.BasicDFNHalfCell):
             if experiment is not None:
                 raise NotImplementedError(
-                    "BasicDFNHalfCell is not compatible "
-                    "with experiment simulations yet."
+                    "BasicDFNHalfCell is not compatible with experiment simulations."
                 )
 
         if experiment is None:
@@ -156,8 +142,6 @@ class Simulation:
 
         # Save the experiment
         self.experiment = experiment
-        # Update parameter values with experiment parameters
-        self._parameter_values.update(experiment.parameters)
         # Create a new submodel for each set of operating conditions and update
         # parameters and events accordingly
         self._experiment_inputs = []
@@ -172,7 +156,7 @@ class Simulation:
                 "Voltage input [V]": 0,
                 "Power input [W]": 0,
             }
-            op_control = op["electric"][1]
+            op_units = op["electric"][1]
             if op["dc_data"] is not None:
                 # If operating condition includes a drive cycle, define the interpolant
                 timescale = self._parameter_values.evaluate(model.timescale)
@@ -181,28 +165,28 @@ class Simulation:
                     op["dc_data"][:, 1],
                     timescale * (pybamm.t - pybamm.InputParameter("start time")),
                 )
-                if op_control == "A":
+                if op_units == "A":
                     operating_inputs.update(
                         {
                             "Current switch": 1,
                             "Current input [A]": drive_cycle_interpolant,
                         }
                     )
-                if op_control == "V":
+                if op_units == "V":
                     operating_inputs.update(
                         {
                             "Voltage switch": 1,
                             "Voltage input [V]": drive_cycle_interpolant,
                         }
                     )
-                if op_control == "W":
+                if op_units == "W":
                     operating_inputs.update(
                         {"Power switch": 1, "Power input [W]": drive_cycle_interpolant}
                     )
             else:
-                if op_control in ["A", "C"]:
+                if op_units in ["A", "C"]:
                     capacity = self._parameter_values["Nominal cell capacity [A.h]"]
-                    if op_control == "A":
+                    if op_units == "A":
                         I = op["electric"][0]
                         Crate = I / capacity
                     else:
@@ -211,7 +195,7 @@ class Simulation:
                         I = Crate * capacity
                     if len(op["electric"]) == 4:
                         # Update inputs for CCCV
-                        op_control = "CCCV"  # change to CCCV
+                        op_units = "CCCV"  # change to CCCV
                         V = op["electric"][2]
                         operating_inputs.update(
                             {
@@ -225,13 +209,13 @@ class Simulation:
                         operating_inputs.update(
                             {"Current switch": 1, "Current input [A]": I}
                         )
-                elif op_control == "V":
+                elif op_units == "V":
                     # Update inputs for constant voltage
                     V = op["electric"][0]
                     operating_inputs.update(
                         {"Voltage switch": 1, "Voltage input [V]": V}
                     )
-                elif op_control == "W":
+                elif op_units == "W":
                     # Update inputs for constant power
                     P = op["electric"][0]
                     operating_inputs.update({"Power switch": 1, "Power input [W]": P})
@@ -267,11 +251,11 @@ class Simulation:
             # Add time to the experiment times
             dt = op["time"]
             if dt is None:
-                if op_control in ["A", "C", "CCCV"]:
+                if op_units in ["A", "C", "CCCV"]:
                     # Current control: max simulation time: 3 * max simulation time
                     # based on C-rate
                     dt = 3 / abs(Crate) * 3600  # seconds
-                    if op_control == "CCCV":
+                    if op_units == "CCCV":
                         dt *= 5  # 5x longer for CCCV
                 else:
                     # max simulation time: 1 day
@@ -279,90 +263,9 @@ class Simulation:
             self._experiment_times.append(dt)
 
         # Set up model for experiment
-        if experiment.use_simulation_setup_type == "old":
-            self.set_up_model_for_experiment_old(model)
-        elif experiment.use_simulation_setup_type == "new":
-            self.set_up_model_for_experiment_new(model)
+        self.set_up_model_for_experiment(model)
 
-    def set_up_model_for_experiment_old(self, model):
-        """
-        Set up self.model to be able to run the experiment (old version).
-        In this version, a single model is created which can then be called with
-        different inputs for current-control, voltage-control, or power-control.
-
-        This reduces set-up time since only one model needs to be processed, but
-        increases simulation time since the model formulation is inefficient
-        """
-        # Create a new model where the current density is now a variable
-        # To do so, we replace all instances of the current density in the
-        # model with a current density variable, which is obtained from the
-        # FunctionControl submodel
-        # create the FunctionControl submodel and extract variables
-        external_circuit_variables = pybamm.external_circuit.FunctionControl(
-            model.param, None
-        ).get_fundamental_variables()
-
-        # Perform the replacement
-        symbol_replacement_map = {
-            model.variables[name]: variable
-            for name, variable in external_circuit_variables.items()
-        }
-        replacer = pybamm.SymbolReplacer(symbol_replacement_map)
-        new_model = replacer.process_model(model, inplace=False)
-
-        # Update the algebraic equation and initial conditions for FunctionControl
-        # This creates an algebraic equation for the current to allow current, voltage,
-        # or power control, together with the appropriate guess for the
-        # initial condition.
-        # External circuit submodels are always equations on the current
-        # The external circuit function should fix either the current, or the voltage,
-        # or a combination (e.g. I*V for power control)
-        i_cell = new_model.variables["Total current density"]
-        new_model.initial_conditions[i_cell] = new_model.param.current_with_time
-        new_model.algebraic[i_cell] = constant_current_constant_voltage_constant_power(
-            new_model.variables
-        )
-
-        # Remove upper and lower voltage cut-offs that are *not* part of the experiment
-        new_model.events = [
-            event
-            for event in model.events
-            if event.name not in ["Minimum voltage", "Maximum voltage"]
-        ]
-        # add current and voltage events to the model
-        # current events both negative and positive to catch specification
-        new_model.events.extend(
-            [
-                pybamm.Event(
-                    "Current cut-off (positive) [A] [experiment]",
-                    new_model.variables["Current [A]"]
-                    - abs(pybamm.InputParameter("Current cut-off [A]")),
-                ),
-                pybamm.Event(
-                    "Current cut-off (negative) [A] [experiment]",
-                    new_model.variables["Current [A]"]
-                    + abs(pybamm.InputParameter("Current cut-off [A]")),
-                ),
-                pybamm.Event(
-                    "Voltage cut-off [V] [experiment]",
-                    new_model.variables["Battery voltage [V]"]
-                    - pybamm.InputParameter("Voltage cut-off [V]"),
-                ),
-            ]
-        )
-
-        self.model = new_model
-
-        operating_conditions = set(
-            x["electric"] + (x["time"],) + (x["period"],)
-            for x in self.experiment.operating_conditions
-        )
-        self.op_conds_to_model_and_param = {
-            op_cond[:2]: (new_model, self.parameter_values)
-            for op_cond in operating_conditions
-        }
-
-    def set_up_model_for_experiment_new(self, model):
+    def set_up_model_for_experiment(self, model):
         """
         Set up self.model to be able to run the experiment (new version).
         In this version, a new model is created for each step.
@@ -1204,23 +1107,6 @@ class Simulation:
     @property
     def solution(self):
         return self._solution
-
-    def specs(
-        self,
-        geometry=None,
-        parameter_values=None,
-        submesh_types=None,
-        var_pts=None,
-        spatial_methods=None,
-        solver=None,
-        output_variables=None,
-        C_rate=None,
-    ):
-        "Deprecated method for setting specs"
-        raise NotImplementedError(
-            "The 'specs' method has been deprecated. "
-            "Create a new simulation for each different case instead."
-        )
 
     def save(self, filename):
         """Save simulation using pickle"""

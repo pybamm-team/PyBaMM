@@ -54,12 +54,6 @@ class TestSimulation(unittest.TestCase):
             if val.size > 1:
                 self.assertTrue(val.has_symbol_of_classes(pybamm.Matrix))
 
-    def test_specs_deprecated(self):
-        model = pybamm.lithium_ion.SPM()
-        sim = pybamm.Simulation(model)
-        with self.assertRaisesRegex(NotImplementedError, "specs"):
-            sim.specs()
-
     def test_solve(self):
 
         sim = pybamm.Simulation(pybamm.lithium_ion.SPM())
