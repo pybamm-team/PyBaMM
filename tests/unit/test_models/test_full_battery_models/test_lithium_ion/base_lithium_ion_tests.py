@@ -15,7 +15,7 @@ class BaseUnitTestLithiumIon:
 
     def test_well_posed_isothermal_heat_source(self):
         options = {
-            "compute heat source for isothermal models": "true",
+            "calculate heat source for isothermal models": "true",
             "thermal": "isothermal",
         }
         self.check_well_posedness(options)

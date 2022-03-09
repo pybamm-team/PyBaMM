@@ -44,7 +44,7 @@ class Isothermal(BaseThermal):
         return variables
 
     def get_coupled_variables(self, variables):
-        if self.options["compute heat source for isothermal models"] == "true":
+        if self.options["calculate heat source for isothermal models"] == "true":
             variables.update(self._get_standard_coupled_variables(variables))
         else:
             ieh = "irreversible electrochemical heating"

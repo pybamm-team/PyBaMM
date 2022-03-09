@@ -26,7 +26,7 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                 model with prescribed cell volume and cross-sectional area, and
                 (if thermal effects are included) solves a lumped thermal model
                 with prescribed surface area for cooling.
-            * "compute heat source for isothermal models" : str
+            * "calculate heat source for isothermal models" : str
                 Whether to compute the heat source terms during isothermal operation.
                 Can be "true" or "false". If "false", the heat source terms are set
                 to zero. Default is "false" since this option may require additional
@@ -169,7 +169,7 @@ class BatteryModelOptions(pybamm.FuzzyDict):
     def __init__(self, extra_options):
         self.possible_options = {
             "cell geometry": ["arbitrary", "pouch"],
-            "compute heat source for isothermal models": ["false", "true"],
+            "calculate heat source for isothermal models": ["false", "true"],
             "convection": ["none", "uniform transverse", "full transverse"],
             "current collector": [
                 "uniform",

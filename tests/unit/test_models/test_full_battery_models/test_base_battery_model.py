@@ -15,7 +15,7 @@ OPTIONS_DICT = {
 
 PRINT_OPTIONS_OUTPUT = """\
 'cell geometry': 'pouch' (possible: ['arbitrary', 'pouch'])
-'compute heat source for isothermal models': 'false' (possible: ['false', 'true'])
+'calculate heat source for isothermal models': 'false' (possible: ['false', 'true'])
 'convection': 'none' (possible: ['none', 'uniform transverse', 'full transverse'])
 'current collector': 'uniform' (possible: ['uniform', 'potential pair', 'potential pair quite conductive'])
 'dimensionality': 0 (possible: [0, 1, 2])
