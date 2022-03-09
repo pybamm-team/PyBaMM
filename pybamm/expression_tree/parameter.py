@@ -14,23 +14,21 @@ class Parameter(pybamm.Symbol):
     """
     A node in the expression tree representing a parameter.
 
-    This node will be replaced by a :class:`.Scalar` node
+    This node will be replaced by a :class:`pybamm.Scalar` node
 
     Parameters
     ----------
 
     name : str
         name of the node
-    domain : iterable of str, optional
-        list of domains the parameter is valid over, defaults to empty list
     """
 
-    def __init__(self, name, domain=[]):
-        super().__init__(name, domain=domain)
+    def __init__(self, name):
+        super().__init__(name)
 
     def create_copy(self):
         """See :meth:`pybamm.Symbol.new_copy()`."""
-        return Parameter(self.name, self.domain)
+        return Parameter(self.name)
 
     def _evaluate_for_shape(self):
         """
@@ -95,14 +93,8 @@ class FunctionParameter(pybamm.Symbol):
             if isinstance(child, numbers.Number):
                 children_list[idx] = pybamm.Scalar(child)
 
-        domain = self.get_children_domains(children_list)
-        auxiliary_domains = self.get_children_auxiliary_domains(children_list)
-        super().__init__(
-            name,
-            children=children_list,
-            domain=domain,
-            auxiliary_domains=auxiliary_domains,
-        )
+        domains = self.get_children_domains(children_list)
+        super().__init__(name, children=children_list, domains=domains)
 
         self.input_names = list(inputs.keys())
 
@@ -159,27 +151,6 @@ class FunctionParameter(pybamm.Symbol):
             + tuple([child.id for child in self.children])
             + tuple(self.domain)
         )
-
-    def get_children_domains(self, children_list):
-        """
-        Obtains the unique domain of the children.
-        If the children have different domains then raise an error
-        """
-        domains = [child.domain for child in children_list if child.domain != []]
-
-        # check that there is one common domain amongst children
-        distinct_domains = set(tuple(dom) for dom in domains)
-
-        if len(distinct_domains) > 1:
-            raise pybamm.DomainError(
-                "Functions can only be applied to variables on the same domain"
-            )
-        elif len(distinct_domains) == 0:
-            domain = []
-        else:
-            domain = domains[0]
-
-        return domain
 
     def diff(self, variable):
         """See :meth:`pybamm.Symbol.diff()`."""

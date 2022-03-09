@@ -13,6 +13,13 @@ class BaseUnitTestLithiumIon:
         options = {"thermal": "isothermal"}
         self.check_well_posedness(options)
 
+    def test_well_posed_isothermal_heat_source(self):
+        options = {
+            "calculate heat source for isothermal models": "true",
+            "thermal": "isothermal",
+        }
+        self.check_well_posedness(options)
+
     def test_well_posed_2plus1D(self):
         options = {"current collector": "potential pair", "dimensionality": 1}
         self.check_well_posedness(options)
@@ -218,6 +225,18 @@ class BaseUnitTestLithiumIon:
 
     def test_well_posed_external_circuit_power(self):
         options = {"operating mode": "power"}
+        self.check_well_posedness(options)
+
+    def test_well_posed_external_circuit_differential_power(self):
+        options = {"operating mode": "differential power"}
+        self.check_well_posedness(options)
+
+    def test_well_posed_external_circuit_resistance(self):
+        options = {"operating mode": "resistance"}
+        self.check_well_posedness(options)
+
+    def test_well_posed_external_circuit_differential_resistance(self):
+        options = {"operating mode": "differential resistance"}
         self.check_well_posedness(options)
 
     def test_well_posed_external_circuit_cccv(self):

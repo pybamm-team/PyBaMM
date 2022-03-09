@@ -15,6 +15,7 @@ OPTIONS_DICT = {
 
 PRINT_OPTIONS_OUTPUT = """\
 'cell geometry': 'pouch' (possible: ['arbitrary', 'pouch'])
+'calculate heat source for isothermal models': 'false' (possible: ['false', 'true'])
 'convection': 'none' (possible: ['none', 'uniform transverse', 'full transverse'])
 'current collector': 'uniform' (possible: ['uniform', 'potential pair', 'potential pair quite conductive'])
 'dimensionality': 0 (possible: [0, 1, 2])
@@ -25,7 +26,7 @@ PRINT_OPTIONS_OUTPUT = """\
 'lithium plating': 'none' (possible: ['none', 'reversible', 'irreversible'])
 'lithium plating porosity change': 'false' (possible: ['false', 'true'])
 'loss of active material': 'stress-driven' (possible: ['none', 'stress-driven', 'reaction-driven', 'stress and reaction-driven'])
-'operating mode': 'current' (possible: ['current', 'voltage', 'power', 'CCCV'])
+'operating mode': 'current' (possible: ['current', 'voltage', 'power', 'differential power', 'explicit power', 'resistance', 'differential resistance', 'explicit resistance', 'CCCV'])
 'particle': 'Fickian diffusion' (possible: ['Fickian diffusion', 'fast diffusion', 'uniform profile', 'quadratic profile', 'quartic profile'])
 'particle mechanics': 'swelling only' (possible: ['none', 'swelling only', 'swelling and cracking'])
 'particle shape': 'spherical' (possible: ['spherical', 'no particles'])
@@ -39,6 +40,7 @@ PRINT_OPTIONS_OUTPUT = """\
 'total interfacial current density as a state': 'false' (possible: ['false', 'true'])
 'working electrode': 'both' (possible: ['both', 'negative', 'positive'])
 'external submodels': []
+'timescale': 'default'
 """  # noqa: E501
 
 
@@ -85,6 +87,13 @@ class TestBaseBatteryModel(unittest.TestCase):
         self.assertEqual(model.summary_variables, ["var"])
         with self.assertRaisesRegex(KeyError, "No cycling variable defined"):
             model.summary_variables = ["bad var"]
+
+    def test_timescale_lengthscale_errors(self):
+        model = pybamm.BaseBatteryModel()
+        with self.assertRaisesRegex(NotImplementedError, "Timescale cannot be"):
+            model.timescale = 1
+        with self.assertRaisesRegex(NotImplementedError, "Length scales cannot be"):
+            model.length_scales = {}
 
     def test_default_geometry(self):
 
@@ -281,6 +290,30 @@ class TestBaseBatteryModel(unittest.TestCase):
         # hydrolysis
         with self.assertRaisesRegex(pybamm.OptionError, "surface formulation"):
             pybamm.lead_acid.LOQS({"hydrolysis": "true", "surface form": "false"})
+
+        # timescale
+        with self.assertRaisesRegex(pybamm.OptionError, "timescale"):
+            pybamm.BaseBatteryModel({"timescale": "bad timescale"})
+
+        # thermal x-lumped
+        with self.assertRaisesRegex(pybamm.OptionError, "x-lumped"):
+            pybamm.lithium_ion.BaseModel(
+                {"cell geometry": "arbitrary", "thermal": "x-lumped"}
+            )
+
+        # thermal half-cell
+        with self.assertRaisesRegex(pybamm.OptionError, "X-full"):
+            pybamm.BaseBatteryModel(
+                {"thermal": "x-full", "working electrode": "positive"}
+            )
+        with self.assertRaisesRegex(pybamm.OptionError, "X-lumped"):
+            pybamm.BaseBatteryModel(
+                {
+                    "dimensionality": 2,
+                    "thermal": "x-lumped",
+                    "working electrode": "positive",
+                }
+            )
 
     def test_build_twice(self):
         model = pybamm.lithium_ion.SPM()  # need to pick a model to set vars and build

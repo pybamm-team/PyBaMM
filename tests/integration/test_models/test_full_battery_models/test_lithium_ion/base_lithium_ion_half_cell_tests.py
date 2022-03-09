@@ -96,3 +96,11 @@ class BaseIntegrationTestLithiumIonHalfCell:
             check_already_exists=False,
         )
         self.run_basic_processing_test(options, parameter_values=parameter_values)
+
+    def test_surface_form_differential(self):
+        options = {"surface form": "differential"}
+        self.run_basic_processing_test(options)
+
+    def test_surface_form_algebraic(self):
+        options = {"surface form": "algebraic"}
+        self.run_basic_processing_test(options)

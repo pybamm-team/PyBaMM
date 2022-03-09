@@ -194,7 +194,7 @@ class PolynomialProfile(BaseFickian):
         R = variables[self.domain + " particle radius"]
 
         if self.domain == "Negative":
-            self.rhs = {c_s_rav: -3 * j / self.param.a_R_n / R}
+            self.rhs = {c_s_rav: -3 * j / self.param.a_R_n / self.param.gamma_n / R}
 
         elif self.domain == "Positive":
             self.rhs = {c_s_rav: -3 * j / self.param.a_R_p / self.param.gamma_p / R}
@@ -216,7 +216,7 @@ class PolynomialProfile(BaseFickian):
                         * pybamm.r_average(D_eff)
                         * q_s_rav
                         / self.param.C_n
-                        - 45 * j / self.param.a_R_n / 2
+                        - 45 * j / self.param.a_R_n / self.param.gamma_n / 2
                     }
                 )
             elif self.domain == "Positive":
@@ -247,7 +247,8 @@ class PolynomialProfile(BaseFickian):
             if self.domain == "Negative":
                 self.algebraic = {
                     c_s_surf: pybamm.surf(D_eff) * (c_s_surf - c_s_rav)
-                    + self.param.C_n * (j * R / self.param.a_R_n / 5)
+                    + self.param.C_n
+                    * (j * R / self.param.a_R_n / self.param.gamma_n / 5)
                 }
 
             elif self.domain == "Positive":
@@ -266,7 +267,7 @@ class PolynomialProfile(BaseFickian):
                 self.algebraic = {
                     c_s_surf: pybamm.surf(D_eff)
                     * (35 * (c_s_surf - c_s_rav) - 8 * q_s_rav)
-                    + self.param.C_n * (j * R / self.param.a_R_n)
+                    + self.param.C_n * (j * R / self.param.a_R_n / self.param.gamma_n)
                 }
 
             elif self.domain == "Positive":
@@ -282,12 +283,9 @@ class PolynomialProfile(BaseFickian):
         ]
 
         if self.domain == "Negative":
-            x_n = pybamm.standard_spatial_vars.x_n
-            c_init = self.param.c_n_init(x_n)
-
+            c_init = pybamm.r_average(self.param.c_n_init)
         elif self.domain == "Positive":
-            x_p = pybamm.standard_spatial_vars.x_p
-            c_init = self.param.c_p_init(x_p)
+            c_init = pybamm.r_average(self.param.c_p_init)
 
         self.initial_conditions = {c_s_rav: c_init}
 

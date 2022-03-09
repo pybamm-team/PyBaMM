@@ -23,6 +23,14 @@ class BaseUnitTestLithiumIonHalfCell:
         options = {"interface utilisation": "current-driven"}
         self.check_well_posedness(options)
 
+    def test_well_posed_surface_form_differential(self):
+        options = {"surface form": "differential"}
+        self.check_well_posedness(options)
+
+    def test_well_posed_surface_form_algebraic(self):
+        options = {"surface form": "algebraic"}
+        self.check_well_posedness(options)
+
     def test_well_posed_kinetics_asymmetric_butler_volmer(self):
         options = {"intercalation kinetics": "asymmetric Butler-Volmer"}
         self.check_well_posedness(options)
@@ -61,4 +69,8 @@ class BaseUnitTestLithiumIonHalfCell:
 
     def test_well_posed_ec_reaction_limited_sei(self):
         options = {"SEI": "ec reaction limited"}
+        self.check_well_posedness(options)
+
+    def test_well_posed_lumped_thermal(self):
+        options = {"thermal": "lumped"}
         self.check_well_posedness(options)

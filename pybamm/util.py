@@ -4,6 +4,7 @@
 # The code in this file is adapted from Pints
 # (see https://github.com/pints-team/pints)
 #
+import argparse
 import importlib.util
 import numbers
 import os
@@ -15,9 +16,9 @@ import timeit
 import warnings
 from collections import defaultdict
 from platform import system
-import pkg_resources
 
 import numpy as np
+import pkg_resources
 
 import pybamm
 
@@ -286,19 +287,38 @@ def load_function(filename):
     # Assign path to _ and filename to tail
     _, tail = os.path.split(filename)
 
+    # Store the current working directory
+    orig_dir = os.getcwd()
+
     # Strip absolute path to pybamm/input/example.py
-    if "pybamm" in filename:
+    if "pybamm/input/parameters" in filename or "pybamm\\input\\parameters" in filename:
         root_path = filename[filename.rfind("pybamm") :]
+    # If the function is in the current working directory
     elif os.getcwd() in filename:
         root_path = filename.replace(os.getcwd(), "")
-        root_path = root_path[1:]
+    # If the function is not in the current working directory and the path provided is
+    # absolute
+    elif os.path.isabs(filename) and not os.getcwd() in filename:  # pragma: no cover
+        # Change directory to import the function
+        dir_path = os.path.split(filename)[0]
+        os.chdir(dir_path)
+        root_path = filename.replace(os.getcwd(), "")
     else:
         root_path = filename
 
+    # getcwd() returns "C:\\" when in the root drive and "C:\\a\\b\\c" otherwise
+    if root_path[0] == "\\" or root_path[0] == "/":
+        root_path = root_path[1:]
+
     path = root_path.replace("/", ".")
     path = path.replace("\\", ".")
+    pybamm.logger.debug(
+        f"Importing function '{tail}' from file '{filename}' via path '{path}'"
+    )
     module_object = importlib.import_module(path)
 
+    # Revert back current working directory if it was changed
+    os.chdir(orig_dir)
     return getattr(module_object, tail)
 
 
@@ -367,23 +387,50 @@ def is_jax_compatible():
     )
 
 
-def install_jax():  # pragma: no cover
-    """Install jax, jaxlib"""
+def install_jax(arguments=None):  # pragma: no cover
+    """
+    Install compatible versions of jax, jaxlib.
+
+    Command Line Interface:
+    -----------------------
+    >>> pybamm_install_jax
+
+    optional arguments:
+    -h, --help   show help message
+    -f, --force  force install compatible versions of jax and jaxlib
+    """
+    parser = argparse.ArgumentParser(description="Install jax and jaxlib")
+    parser.add_argument(
+        "-f",
+        "--force",
+        action="store_true",
+        help="force install compatible versions of"
+        f" jax ({JAX_VERSION}) and jaxlib ({JAXLIB_VERSION})",
+    )
+
+    args = parser.parse_args(arguments)
+
     if system() == "Windows":
         raise NotImplementedError("Jax is not available on Windows")
+
+    # Raise an error if jax and jaxlib are already installed, but incompatible
+    # and --force is not set
     elif importlib.util.find_spec("jax") is not None:
-        if not is_jax_compatible():
+        if not args.force and not is_jax_compatible():
             raise ValueError(
-                "Jax is already installed but the installed version of jax or jaxlib is not supported by PyBaMM",  # noqa: E501
+                "Jax is already installed but the installed version of jax or jaxlib is"
+                " not supported by PyBaMM. \nYou can force install compatible versions"
+                f" of jax ({JAX_VERSION}) and jaxlib ({JAXLIB_VERSION}) using the"
+                " following command: \npybamm_install_jax --force"
             )
-    else:
-        subprocess.check_call(
-            [
-                sys.executable,
-                "-m",
-                "pip",
-                "install",
-                f"jax=={JAX_VERSION}",
-                f"jaxlib=={JAXLIB_VERSION}",
-            ]
-        )
+
+    subprocess.check_call(
+        [
+            sys.executable,
+            "-m",
+            "pip",
+            "install",
+            f"jax=={JAX_VERSION}",
+            f"jaxlib=={JAXLIB_VERSION}",
+        ]
+    )

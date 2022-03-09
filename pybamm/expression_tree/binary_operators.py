@@ -25,40 +25,13 @@ def preprocess_binary(left, right):
         )
 
     # Do some broadcasting in special cases, to avoid having to do this manually
-    if left.domain != [] and right.domain != []:
-        if (
-            left.domain != right.domain
-            and "secondary" in right.auxiliary_domains
-            and left.domain == right.auxiliary_domains["secondary"]
-        ):
+    if left.domain != [] and right.domain != [] and left.domain != right.domain:
+        if left.domain == right.secondary_domain:
             left = pybamm.PrimaryBroadcast(left, right.domain)
-        if (
-            right.domain != left.domain
-            and "secondary" in left.auxiliary_domains
-            and right.domain == left.auxiliary_domains["secondary"]
-        ):
+        elif right.domain == left.secondary_domain:
             right = pybamm.PrimaryBroadcast(right, left.domain)
 
     return left, right
-
-
-def get_binary_children_domains(ldomain, rdomain):
-    """Combine domains from children in appropriate way."""
-    if ldomain == rdomain:
-        return ldomain
-    elif ldomain == []:
-        return rdomain
-    elif rdomain == []:
-        return ldomain
-    else:
-        raise pybamm.DomainError(
-            """
-            children must have same (or empty) domains, but left.domain is '{}'
-            and right.domain is '{}'
-            """.format(
-                ldomain, rdomain
-            )
-        )
 
 
 class BinaryOperator(pybamm.Symbol):
@@ -83,14 +56,8 @@ class BinaryOperator(pybamm.Symbol):
     def __init__(self, name, left, right):
         left, right = preprocess_binary(left, right)
 
-        domain = get_binary_children_domains(left.domain, right.domain)
-        auxiliary_domains = self.get_children_auxiliary_domains([left, right])
-        super().__init__(
-            name,
-            children=[left, right],
-            domain=domain,
-            auxiliary_domains=auxiliary_domains,
-        )
+        domains = self.get_children_domains([left, right])
+        super().__init__(name, children=[left, right], domains=domains)
         self.left = self.children[0]
         self.right = self.children[1]
 
@@ -413,12 +380,7 @@ class Division(BinaryOperator):
         if issparse(left):
             return csr_matrix(left.multiply(1 / right))
         else:
-            if isinstance(right, numbers.Number) and right == 0:
-                # don't raise RuntimeWarning for NaNs
-                with np.errstate(invalid="ignore"):
-                    return left * np.inf
-            else:
-                return left / right
+            return left / right
 
 
 class Inner(BinaryOperator):
@@ -987,6 +949,10 @@ def simplified_subtraction(left, right):
             for dim in left.domains.keys()
         ):
             return left
+
+    # Return constant if both sides are constant
+    if left.is_constant() and right.is_constant():
+        return pybamm.simplify_if_constant(Subtraction(left, right))
 
     # a symbol minus itself is 0s of the same shape
     if left.id == right.id:

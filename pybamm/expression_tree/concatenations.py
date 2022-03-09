@@ -38,15 +38,11 @@ class Concatenation(pybamm.Symbol):
         if name is None:
             name = "concatenation"
         if check_domain:
-            domain = self.get_children_domains(children)
-            auxiliary_domains = self.get_children_auxiliary_domains(children)
+            domains = self.get_children_domains(children)
         else:
-            domain = []
-            auxiliary_domains = {}
+            domains = {"primary": []}
         self.concatenation_function = concat_fun
-        super().__init__(
-            name, children, domain=domain, auxiliary_domains=auxiliary_domains
-        )
+        super().__init__(name, children, domains=domains)
 
     def __str__(self):
         """See :meth:`pybamm.Symbol.__str__()`."""
@@ -58,7 +54,7 @@ class Concatenation(pybamm.Symbol):
 
     def _diff(self, variable):
         """See :meth:`pybamm.Symbol._diff()`."""
-        children_diffs = [child.diff(variable) for child in self.cached_children]
+        children_diffs = [child.diff(variable) for child in self.children]
         if len(children_diffs) == 1:
             diff = children_diffs[0]
         else:
@@ -81,7 +77,19 @@ class Concatenation(pybamm.Symbol):
                 domain += child_domain
             else:
                 raise pybamm.DomainError("domain of children must be disjoint")
-        return domain
+
+        auxiliary_domains = children[0].domains
+        for level, dom in auxiliary_domains.items():
+            if level != "primary" and dom != []:
+                for child in children[1:]:
+                    if child.domains[level] not in [dom, []]:
+                        raise pybamm.DomainError(
+                            "children must have same or empty auxiliary domains"
+                        )
+
+        domains = {**auxiliary_domains, "primary": domain}
+
+        return domains
 
     def _concatenation_evaluate(self, children_eval):
         """See :meth:`Concatenation._concatenation_evaluate()`."""
@@ -92,7 +100,7 @@ class Concatenation(pybamm.Symbol):
 
     def evaluate(self, t=None, y=None, y_dot=None, inputs=None, known_evals=None):
         """See :meth:`pybamm.Symbol.evaluate()`."""
-        children = self.cached_children
+        children = self.children
         if known_evals is not None:
             if self.id not in known_evals:
                 children_eval = [None] * len(children)
@@ -189,7 +197,7 @@ class NumpyConcatenation(Concatenation):
 
     def _concatenation_jac(self, children_jacs):
         """See :meth:`pybamm.Concatenation.concatenation_jac()`."""
-        children = self.cached_children
+        children = self.children
         if len(children) == 0:
             return pybamm.Scalar(0)
         else:
@@ -233,10 +241,6 @@ class DomainConcatenation(Concatenation):
         # Allow the base class to sort the domains into the correct order
         super().__init__(*children, name="domain_concatenation")
 
-        # ensure domain is sorted according to mesh keys
-        domain_dict = {d: full_mesh.domain_order.index(d) for d in self.domain}
-        self.domain = sorted(domain_dict, key=domain_dict.__getitem__)
-
         if copy_this is None:
             # store mesh
             self._full_mesh = full_mesh
@@ -252,7 +256,7 @@ class DomainConcatenation(Concatenation):
 
             # create disc of domain => slice for each child
             self._children_slices = [
-                self.create_slices(child) for child in self.cached_children
+                self.create_slices(child) for child in self.children
             ]
         else:
             self._full_mesh = copy.copy(copy_this._full_mesh)
@@ -263,19 +267,11 @@ class DomainConcatenation(Concatenation):
 
     def _get_auxiliary_domain_repeats(self, auxiliary_domains):
         """Helper method to read the 'auxiliary_domain' meshes."""
-        if "secondary" in auxiliary_domains:
-            sec_mesh_npts = self.full_mesh.combine_submeshes(
-                *auxiliary_domains["secondary"]
-            ).npts
-        else:
-            sec_mesh_npts = 1
-        if "tertiary" in auxiliary_domains:
-            tert_mesh_npts = self.full_mesh.combine_submeshes(
-                *auxiliary_domains["tertiary"]
-            ).npts
-        else:
-            tert_mesh_npts = 1
-        return sec_mesh_npts * tert_mesh_npts
+        mesh_pts = 1
+        for level, dom in auxiliary_domains.items():
+            if level != "primary" and dom != []:
+                mesh_pts *= self.full_mesh.combine_submeshes(*dom).npts
+        return mesh_pts
 
     @property
     def full_mesh(self):
@@ -441,7 +437,7 @@ def simplified_concatenation(*children):
                 return pybamm.PrimaryBroadcast(unique_child, concat.domain)
             else:
                 return pybamm.FullBroadcast(
-                    unique_child, concat.domain, concat.auxiliary_domains
+                    unique_child, broadcast_domains=concat.domains
                 )
         else:
             return concat
@@ -494,9 +490,7 @@ def simplified_domain_concatenation(children, mesh, copy_this=None):
             sum(array for array in eval_arrays.values())[first_start:last_stop] == 1
         ):
             return pybamm.StateVector(
-                slice(first_start, last_stop),
-                domain=concat.domain,
-                auxiliary_domains=concat.auxiliary_domains,
+                slice(first_start, last_stop), domains=concat.domains
             )
 
     return pybamm.simplify_if_constant(concat)

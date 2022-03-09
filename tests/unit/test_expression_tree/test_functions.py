@@ -6,7 +6,6 @@ import unittest
 import numpy as np
 import sympy
 from scipy import special
-from scipy.interpolate import interp1d
 
 import pybamm
 
@@ -121,13 +120,8 @@ class TestFunction(unittest.TestCase):
             pybamm.Function(test_multi_var_function, a, b)
 
     def test_function_unnamed(self):
-        t = np.linspace(0, 1)
-        entries = 2 * t
-        interpfun = interp1d(t, entries)
-        fun = pybamm.Function(interpfun, pybamm.t)
-        self.assertEqual(
-            fun.name, "function (<class 'scipy.interpolate.interpolate.interp1d'>)"
-        )
+        fun = pybamm.Function(np.cos, pybamm.t)
+        self.assertEqual(fun.name, "function (cos)")
 
     def test_to_equation(self):
         a = pybamm.Symbol("a", domain="test")

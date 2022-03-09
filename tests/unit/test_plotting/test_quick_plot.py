@@ -39,7 +39,7 @@ class TestQuickPlot(unittest.TestCase):
                 c, "positive particle"
             ),
         }
-        model.timescale = pybamm.Scalar(1)
+        model._timescale = pybamm.Scalar(1)
 
         # ODEs only (don't use jacobian)
         model.use_jacobian = False
@@ -291,7 +291,7 @@ class TestQuickPlot(unittest.TestCase):
         quick_plot.plot(0)
 
         # test creating a GIF
-        quick_plot.create_gif(number_of_images=5, duration=3)
+        quick_plot.create_gif(number_of_images=3, duration=3)
         assert not os.path.exists("plot*.png")
         assert os.path.exists("plot.gif")
         os.remove("plot.gif")
@@ -472,7 +472,9 @@ class TestQuickPlot(unittest.TestCase):
 
     def test_model_with_inputs(self):
         parameter_values = pybamm.ParameterValues("Chen2020")
-        model = pybamm.lithium_ion.SPMe()
+        # Pass the "timescale" option since we are making electrode height an input
+        timescale = parameter_values.evaluate(pybamm.LithiumIonParameters().timescale)
+        model = pybamm.lithium_ion.SPMe({"timescale": timescale})
         parameter_values.update({"Electrode height [m]": "[input]"})
         solver = pybamm.CasadiSolver(mode="safe")
         sim1 = pybamm.Simulation(

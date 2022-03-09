@@ -390,7 +390,7 @@ class Simulation:
                     # check which kind of external circuit model we need (differential
                     # or algebraic)
                     if op_inputs["CCCV switch"] == 1:
-                        control = "differential"
+                        control = "differential with max"
                     else:
                         control = "algebraic"
                     # create the FunctionControl submodel and extract variables
@@ -478,7 +478,7 @@ class Simulation:
                         new_model.algebraic[
                             i_cell
                         ] = pybamm.external_circuit.PowerFunctionControl(
-                            new_model.param
+                            new_model.param, control="algebraic"
                         ).constant_power(
                             new_model.variables
                         )

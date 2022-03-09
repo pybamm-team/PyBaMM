@@ -23,8 +23,13 @@ class Array(pybamm.Symbol):
         the name of the node
     domain : iterable of str, optional
         list of domains the parameter is valid over, defaults to empty list
-    auxiliary_domainds : dict, optional
+    auxiliary_domains : dict, optional
         dictionary of auxiliary domains, defaults to empty dict
+    domains : dict
+        A dictionary equivalent to {'primary': domain, auxiliary_domains}. Either
+        'domain' and 'auxiliary_domains', or just 'domains', should be provided
+        (not both). In future, the 'domain' and 'auxiliary_domains' arguments may be
+        deprecated.
     entries_string : str
         String representing the entries (slow to recalculate when copying)
 
@@ -37,6 +42,7 @@ class Array(pybamm.Symbol):
         name=None,
         domain=None,
         auxiliary_domains=None,
+        domains=None,
         entries_string=None,
     ):
         # if
@@ -49,7 +55,9 @@ class Array(pybamm.Symbol):
         self._entries = entries.astype(float)
         # Use known entries string to avoid re-hashing, where possible
         self.entries_string = entries_string
-        super().__init__(name, domain=domain, auxiliary_domains=auxiliary_domains)
+        super().__init__(
+            name, domain=domain, auxiliary_domains=auxiliary_domains, domains=domains
+        )
 
     @property
     def entries(self):
@@ -105,9 +113,8 @@ class Array(pybamm.Symbol):
         return self.__class__(
             self.entries,
             self.name,
-            self.domain,
-            self.auxiliary_domains,
-            self.entries_string,
+            domains=self.domains,
+            entries_string=self.entries_string,
         )
 
     def _base_evaluate(self, t=None, y=None, y_dot=None, inputs=None):

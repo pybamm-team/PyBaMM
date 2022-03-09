@@ -87,7 +87,7 @@ def get_interp_fun(variable_name, domain):
         pybamm.t * pybamm_model.timescale.evaluate(),
     )
 
-    fun.domain = domain
+    fun.domains = {"primary": domain}
     fun.mesh = mesh.combine_submeshes(*domain)
     fun.secondary_mesh = None
     return fun
