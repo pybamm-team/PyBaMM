@@ -27,7 +27,7 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                 (if thermal effects are included) solves a lumped thermal model
                 with prescribed surface area for cooling.
             * "calculate heat source for isothermal models" : str
-                Whether to compute the heat source terms during isothermal operation.
+                Whether to calculate the heat source terms during isothermal operation.
                 Can be "true" or "false". If "false", the heat source terms are set
                 to zero. Default is "false" since this option may require additional
                 parameters not needed by the electrochemical model.
