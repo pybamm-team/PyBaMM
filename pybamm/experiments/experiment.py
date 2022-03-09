@@ -3,7 +3,6 @@
 #
 
 import numpy as np
-import warnings
 
 examples = """
 
