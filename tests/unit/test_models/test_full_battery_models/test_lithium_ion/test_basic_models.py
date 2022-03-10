@@ -43,7 +43,7 @@ class TestBasicModels(unittest.TestCase):
         )
         with self.assertRaisesRegex(
             NotImplementedError,
-            "BasicDFNHalfCell is not compatible with experiment simulations yet.",
+            "BasicDFNHalfCell is not compatible with experiment simulations.",
         ):
             pybamm.Simulation(model, experiment=experiment)
 

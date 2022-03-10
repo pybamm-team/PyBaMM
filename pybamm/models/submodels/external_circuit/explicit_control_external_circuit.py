@@ -8,8 +8,8 @@ from .base_external_circuit import BaseModel, LeadingOrderBaseModel
 class ExplicitCurrentControl(BaseModel):
     """External circuit with current control."""
 
-    def __init__(self, param):
-        super().__init__(param)
+    def __init__(self, param, options):
+        super().__init__(param, options)
 
     def get_fundamental_variables(self):
         # Current is given as a function of time
@@ -34,8 +34,8 @@ class ExplicitCurrentControl(BaseModel):
 class ExplicitPowerControl(BaseModel):
     """External circuit with current set explicitly to hit target power."""
 
-    def __init__(self, param):
-        super().__init__(param)
+    def __init__(self, param, options):
+        super().__init__(param, options)
 
     def get_coupled_variables(self, variables):
         param = self.param
@@ -64,8 +64,8 @@ class ExplicitPowerControl(BaseModel):
 class ExplicitResistanceControl(BaseModel):
     """External circuit with current set explicitly to hit target resistance."""
 
-    def __init__(self, param):
-        super().__init__(param)
+    def __init__(self, param, options):
+        super().__init__(param, options)
 
     def get_coupled_variables(self, variables):
         param = self.param
@@ -94,5 +94,5 @@ class ExplicitResistanceControl(BaseModel):
 class LeadingOrderExplicitCurrentControl(ExplicitCurrentControl, LeadingOrderBaseModel):
     """External circuit with current control, for leading order models."""
 
-    def __init__(self, param):
-        super().__init__(param)
+    def __init__(self, param, options):
+        super().__init__(param, options)

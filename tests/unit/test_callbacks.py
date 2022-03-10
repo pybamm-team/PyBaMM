@@ -12,7 +12,7 @@ class DummyCallback(callbacks.Callback):
         self.name = name
         self.logs = logs
 
-    def on_experiment_end(self, *args):
+    def on_experiment_end(self, logs):
         with open(self.logs, "w") as f:
             print(self.name, file=f)
 
@@ -52,7 +52,7 @@ class TestCallbacks(unittest.TestCase):
         "Tests multiple callbacks in a list"
         # Should work with empty callback list (does nothiing)
         callbacks = pybamm.callbacks.CallbackList([])
-        callbacks.on_experiment_end()
+        callbacks.on_experiment_end(None)
 
         # Should work with multiple callbacks
         callback = pybamm.callbacks.CallbackList(

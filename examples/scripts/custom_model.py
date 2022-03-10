@@ -12,7 +12,7 @@ model = pybamm.lithium_ion.BaseModel(name="my li-ion model")
 
 # set choice of submodels
 model.submodels["external circuit"] = pybamm.external_circuit.ExplicitCurrentControl(
-    model.param
+    model.param, model.options
 )
 model.submodels["current collector"] = pybamm.current_collector.Uniform(model.param)
 model.submodels["thermal"] = pybamm.thermal.isothermal.Isothermal(model.param)

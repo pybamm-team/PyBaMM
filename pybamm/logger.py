@@ -48,7 +48,8 @@ def _get_new_logger(name, filename=None):
 
 # Only the function for getting a new logger with filename not None is exposed
 def get_new_logger(name, filename):
-    assert filename is not None
+    if filename is None:
+        raise ValueError("filename must be specified")
     return _get_new_logger(name, filename)
 
 
