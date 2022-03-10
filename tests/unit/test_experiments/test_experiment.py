@@ -38,7 +38,6 @@ class TestExperiment(unittest.TestCase):
                 "Run US06 (V) for 5 minutes",
                 "Run US06 (W) for 0.5 hours",
             ],
-            {"test": "test"},
             drive_cycles={"US06": drive_cycle},
             period="20 seconds",
         )
@@ -135,7 +134,6 @@ class TestExperiment(unittest.TestCase):
                 None,
             ],
         )
-        self.assertEqual(experiment.parameters, {"test": "test"})
         self.assertEqual(experiment.period, 20)
 
     def test_read_strings_cccv_combined(self):
@@ -326,10 +324,6 @@ class TestExperiment(unittest.TestCase):
             pybamm.Experiment(["Discharge at 1 B for 2 hours"])
         with self.assertRaisesRegex(ValueError, "time units must be"):
             pybamm.Experiment(["Discharge at 1 A for 2 years"])
-        with self.assertRaisesRegex(
-            TypeError, "experimental parameters should be a dictionary"
-        ):
-            pybamm.Experiment([], "not a dictionary")
 
     def test_termination(self):
         experiment = pybamm.Experiment(["Discharge at 1 C for 20 seconds"])
