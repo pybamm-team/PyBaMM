@@ -782,13 +782,13 @@ class TestScikitsSolvers(unittest.TestCase):
     def test_model_step_nonsmooth_events(self):
         # Create model
         model = pybamm.BaseModel()
-        model.timescale = pybamm.Scalar(1)
+        model.timescale_eval = pybamm.Scalar(1)
         var1 = pybamm.Variable("var1")
         var2 = pybamm.Variable("var2")
         a = 0.6
         discontinuities = (np.arange(3) + 1) * a
 
-        model.rhs = {var1: pybamm.Modulo(pybamm.t * model.timescale, a)}
+        model.rhs = {var1: pybamm.Modulo(pybamm.t * model.timescale_eval, a)}
         model.algebraic = {var2: 2 * var1 - var2}
         model.initial_conditions = {var1: 0, var2: 0}
         model.events = [
