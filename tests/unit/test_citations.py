@@ -184,7 +184,7 @@ class TestCitations(unittest.TestCase):
 
         citations._reset()
         self.assertNotIn("Mohtat2021", citations._papers_to_cite)
-        pybamm.external_circuit.CCCVFunctionControl(None)
+        pybamm.external_circuit.CCCVFunctionControl(None, None)
         self.assertIn("Mohtat2021", citations._papers_to_cite)
 
     def test_sripad_2020(self):

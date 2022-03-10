@@ -64,20 +64,26 @@ class LOQS(BaseModel):
         if self.options["operating mode"] == "current":
             self.submodels[
                 "leading order external circuit"
-            ] = pybamm.external_circuit.LeadingOrderExplicitCurrentControl(self.param)
+            ] = pybamm.external_circuit.LeadingOrderExplicitCurrentControl(
+                self.param, self.options
+            )
         elif self.options["operating mode"] == "voltage":
             self.submodels[
                 "leading order external circuit"
-            ] = pybamm.external_circuit.LeadingOrderVoltageFunctionControl(self.param)
+            ] = pybamm.external_circuit.LeadingOrderVoltageFunctionControl(
+                self.param, self.options
+            )
         elif self.options["operating mode"] == "power":
             self.submodels[
                 "leading order external circuit"
-            ] = pybamm.external_circuit.LeadingOrderPowerFunctionControl(self.param)
+            ] = pybamm.external_circuit.LeadingOrderPowerFunctionControl(
+                self.param, self.options
+            )
         elif callable(self.options["operating mode"]):
             self.submodels[
                 "leading order external circuit"
             ] = pybamm.external_circuit.LeadingOrderFunctionControl(
-                self.param, self.options["operating mode"]
+                self.param, self.options["operating mode"], self.options
             )
 
     def set_current_collector_submodel(self):

@@ -7,8 +7,9 @@ import numpy as np
 
 class StandardVariables:
     def __init__(self):
-        # Discharge capacity
-        self.Q = pybamm.Variable("Discharge capacity [A.h]")
+        # Discharge capacity and energy
+        self.Q_Ah = pybamm.Variable("Discharge capacity [A.h]")
+        self.Q_Wh = pybamm.Variable("Discharge energy [W.h]")
 
         # Electrolyte concentration
         self.c_e_n = pybamm.Variable(

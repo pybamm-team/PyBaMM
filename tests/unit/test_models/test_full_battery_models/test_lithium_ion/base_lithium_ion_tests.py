@@ -219,6 +219,10 @@ class BaseUnitTestLithiumIon:
         }
         self.check_well_posedness(options)
 
+    def test_well_posed_discharge_energy(self):
+        options = {"calculate discharge energy": "true"}
+        self.check_well_posedness(options)
+
     def test_well_posed_external_circuit_voltage(self):
         options = {"operating mode": "voltage"}
         self.check_well_posedness(options)
