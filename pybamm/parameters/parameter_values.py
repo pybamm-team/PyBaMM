@@ -337,9 +337,9 @@ class ParameterValues:
                 # If data is provided as a 2-column array (1D data),
                 # convert to two arrays for compatibility with 2D data
                 # see #1805
-                name, data = value
+                func_name, data = value
                 data = ([data[:, 0]], data[:, 1])
-                self._dict_items[name] = (name, data)
+                self._dict_items[name] = (func_name, data)
             else:
                 self._dict_items[name] = value
         # reset processed symbols
