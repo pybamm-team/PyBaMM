@@ -289,9 +289,7 @@ class BaseSolver(object):
             ):
                 if model.mass_matrix_inv is not None:
                     model.mass_matrix_inv = pybamm.Matrix(
-                        model.mass_matrix_inv.entries[
-                            : model.len_rhs, : model.len_rhs
-                        ]
+                        model.mass_matrix_inv.entries[: model.len_rhs, : model.len_rhs]
                     )
                 model.mass_matrix = pybamm.Matrix(
                     model.mass_matrix.entries[
@@ -343,15 +341,12 @@ class BaseSolver(object):
 
                     report(f"Converting sensitivities for {name} to python")
                     jacp_dict = {
-                        p: pybamm.EvaluatorPython(jacp)
-                        for p, jacp in jacp_dict.items()
+                        p: pybamm.EvaluatorPython(jacp) for p, jacp in jacp_dict.items()
                     }
 
                     # jacp should be a function that returns a dict of sensitivities
                     def jacp(*args, **kwargs):
-                        return {
-                            k: v(*args, **kwargs) for k, v in jacp_dict.items()
-                        }
+                        return {k: v(*args, **kwargs) for k, v in jacp_dict.items()}
 
                 else:
                     jacp = None
@@ -372,7 +367,8 @@ class BaseSolver(object):
                 # Process with CasADi
                 report(f"Converting {name} to CasADi")
                 casadi_expression = symbol.to_casadi(
-                    t_casadi, y_casadi, inputs=p_casadi)
+                    t_casadi, y_casadi, inputs=p_casadi
+                )
                 # Add sensitivity vectors to the rhs and algebraic equations
                 jacp = None
                 if calculate_sensitivities_explicit:
@@ -512,17 +508,17 @@ class BaseSolver(object):
                 if isinstance(symbol, _Heaviside):
                     found_t = False
                     # Dimensionless
-                    if symbol.right.id == pybamm.t.id:
+                    if symbol.right == pybamm.t:
                         expr = symbol.left
                         found_t = True
-                    elif symbol.left.id == pybamm.t.id:
+                    elif symbol.left == pybamm.t:
                         expr = symbol.right
                         found_t = True
                     # Dimensional
-                    elif symbol.right.id == (pybamm.t * model.timescale_eval).id:
+                    elif symbol.right == (pybamm.t * model.timescale_eval):
                         expr = symbol.left / symbol.right.right
                         found_t = True
-                    elif symbol.left.id == (pybamm.t * model.timescale_eval).id:
+                    elif symbol.left == (pybamm.t * model.timescale_eval):
                         expr = symbol.right / symbol.left.right
                         found_t = True
 
@@ -530,17 +526,19 @@ class BaseSolver(object):
                     if found_t:
                         model.events.append(
                             pybamm.Event(
-                                str(symbol), expr, pybamm.EventType.DISCONTINUITY,
+                                str(symbol),
+                                expr,
+                                pybamm.EventType.DISCONTINUITY,
                             )
                         )
                 elif isinstance(symbol, pybamm.Modulo):
                     found_t = False
                     # Dimensionless
-                    if symbol.left.id == pybamm.t.id:
+                    if symbol.left == pybamm.t:
                         expr = symbol.right
                         found_t = True
                     # Dimensional
-                    elif symbol.left.id == (pybamm.t * model.timescale_eval).id:
+                    elif symbol.left == (pybamm.t * model.timescale_eval):
                         expr = symbol.right / symbol.left.right
                         found_t = True
 
@@ -554,8 +552,9 @@ class BaseSolver(object):
                         for i in np.arange(N_events):
                             model.events.append(
                                 pybamm.Event(
-                                    str(symbol), expr * pybamm.Scalar(i + 1),
-                                    pybamm.EventType.DISCONTINUITY
+                                    str(symbol),
+                                    expr * pybamm.Scalar(i + 1),
+                                    pybamm.EventType.DISCONTINUITY,
                                 )
                             )
 
@@ -910,7 +909,7 @@ class BaseSolver(object):
         else:
             ics_set_up = self.models_set_up[model]["initial conditions"]
             # Check that initial conditions have not been updated
-            if ics_set_up.id != model.concatenated_initial_conditions.id:
+            if ics_set_up != model.concatenated_initial_conditions:
                 # If the new initial conditions are different, set up again
                 self.set_up(model, ext_and_inputs_list[0], t_eval, ics_only=True)
                 self.models_set_up[model][
@@ -1234,10 +1233,9 @@ class BaseSolver(object):
                 # initialize with old solution
                 model.y0 = old_solution.all_ys[-1][:, -1]
             else:
-                model.y0 = (
-                    model.set_initial_conditions_from(old_solution)
-                    .concatenated_initial_conditions.evaluate(0, inputs=ext_and_inputs)
-                )
+                model.y0 = model.set_initial_conditions_from(
+                    old_solution
+                ).concatenated_initial_conditions.evaluate(0, inputs=ext_and_inputs)
         set_up_time = timer.time()
 
         # (Re-)calculate consistent initial conditions

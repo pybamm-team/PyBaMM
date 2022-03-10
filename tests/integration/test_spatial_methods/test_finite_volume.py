@@ -39,7 +39,7 @@ class TestFiniteVolumeConvergence(unittest.TestCase):
         var = pybamm.Variable("var", domain=whole_cell)
         grad_eqn = pybamm.grad(var)
         boundary_conditions = {
-            var.id: {
+            var: {
                 "left": (pybamm.Scalar(0), "Dirichlet"),
                 "right": (pybamm.Scalar(np.sin(1) ** 2), "Dirichlet"),
             }

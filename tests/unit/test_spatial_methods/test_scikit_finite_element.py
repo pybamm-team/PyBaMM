@@ -34,7 +34,7 @@ class TestScikitFiniteElement(unittest.TestCase):
         y_test = np.ones(mesh["current collector"].npts)
         unit_source = pybamm.PrimaryBroadcast(1, "current collector")
         disc.bcs = {
-            var.id: {
+            var: {
                 "negative tab": (pybamm.Scalar(0), "Neumann"),
                 "positive tab": (pybamm.Scalar(0), "Neumann"),
             }
@@ -56,7 +56,7 @@ class TestScikitFiniteElement(unittest.TestCase):
             # Check that equation can be evaluated in each case
             # Dirichlet
             disc.bcs = {
-                var.id: {
+                var: {
                     "negative tab": (pybamm.Scalar(0), "Dirichlet"),
                     "positive tab": (pybamm.Scalar(1), "Dirichlet"),
                 }
@@ -65,7 +65,7 @@ class TestScikitFiniteElement(unittest.TestCase):
             eqn_disc.evaluate(None, y_test)
             # Neumann
             disc.bcs = {
-                var.id: {
+                var: {
                     "negative tab": (pybamm.Scalar(0), "Neumann"),
                     "positive tab": (pybamm.Scalar(1), "Neumann"),
                 }
@@ -74,7 +74,7 @@ class TestScikitFiniteElement(unittest.TestCase):
             eqn_disc.evaluate(None, y_test)
             # One of each
             disc.bcs = {
-                var.id: {
+                var: {
                     "negative tab": (pybamm.Scalar(0), "Neumann"),
                     "positive tab": (pybamm.Scalar(1), "Dirichlet"),
                 }
@@ -83,7 +83,7 @@ class TestScikitFiniteElement(unittest.TestCase):
             eqn_disc.evaluate(None, y_test)
             # One of each
             disc.bcs = {
-                var.id: {
+                var: {
                     "negative tab": (pybamm.Scalar(0), "Dirichlet"),
                     "positive tab": (pybamm.Scalar(1), "Neumann"),
                 }
@@ -94,7 +94,7 @@ class TestScikitFiniteElement(unittest.TestCase):
         # check  ValueError raised for non Dirichlet or Neumann BCs
         eqn = pybamm.laplacian(var) - pybamm.source(unit_source, var)
         disc.bcs = {
-            var.id: {
+            var: {
                 "negative tab": (pybamm.Scalar(0), "Dirichlet"),
                 "positive tab": (pybamm.Scalar(1), "Other BC"),
             }
@@ -102,7 +102,7 @@ class TestScikitFiniteElement(unittest.TestCase):
         with self.assertRaises(ValueError):
             eqn_disc = disc.process_symbol(eqn)
         disc.bcs = {
-            var.id: {
+            var: {
                 "negative tab": (pybamm.Scalar(0), "Other BC"),
                 "positive tab": (pybamm.Scalar(1), "Neumann"),
             }
@@ -191,7 +191,7 @@ class TestScikitFiniteElement(unittest.TestCase):
         # set boundary conditions ("negative tab" = bottom of unit square,
         # "positive tab" = top of unit square, elsewhere normal derivative is zero)
         disc.bcs = {
-            var.id: {
+            var: {
                 "negative tab": (pybamm.Scalar(0), "Dirichlet"),
                 "positive tab": (pybamm.Scalar(0), "Dirichlet"),
             }
@@ -213,7 +213,7 @@ class TestScikitFiniteElement(unittest.TestCase):
         # set boundary conditions ("negative tab" = bottom of unit square,
         # "positive tab" = top of unit square, elsewhere normal derivative is zero)
         disc.bcs = {
-            var.id: {
+            var: {
                 "negative tab": (pybamm.Scalar(0), "Dirichlet"),
                 "positive tab": (pybamm.Scalar(0), "Dirichlet"),
             }
@@ -274,7 +274,7 @@ class TestScikitFiniteElement(unittest.TestCase):
         # set boundary conditions ("negative tab" = bottom of unit square,
         # "positive tab" = top of unit square, elsewhere normal derivative is zero)
         disc.bcs = {
-            var.id: {
+            var: {
                 "negative tab": (pybamm.Scalar(0), "Dirichlet"),
                 "positive tab": (pybamm.Scalar(0), "Dirichlet"),
             }
@@ -337,7 +337,7 @@ class TestScikitFiniteElement(unittest.TestCase):
         # set boundary conditions ("negative tab" = bottom of unit square,
         # "positive tab" = top of unit square, elsewhere normal derivative is zero)
         disc.bcs = {
-            var.id: {
+            var: {
                 "negative tab": (pybamm.Scalar(0), "Dirichlet"),
                 "positive tab": (pybamm.Scalar(0), "Dirichlet"),
             }

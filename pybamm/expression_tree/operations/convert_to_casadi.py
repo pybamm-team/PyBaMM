@@ -37,12 +37,12 @@ class CasadiConverter(object):
             The converted symbol
         """
         try:
-            return self._casadi_symbols[symbol.id]
+            return self._casadi_symbols[symbol]
         except KeyError:
             # Change inputs to empty dictionary if it's None
             inputs = inputs or {}
             casadi_symbol = self._convert(symbol, t, y, y_dot, inputs)
-            self._casadi_symbols[symbol.id] = casadi_symbol
+            self._casadi_symbols[symbol] = casadi_symbol
 
             return casadi_symbol
 
@@ -144,8 +144,9 @@ class CasadiConverter(object):
                         "and use a non-CasADi solver. "
                     )
                 else:  # pragma: no cover
-                    raise NotImplementedError("Unknown interpolator: {0}"
-                                              .format(symbol.interpolator))
+                    raise NotImplementedError(
+                        "Unknown interpolator: {0}".format(symbol.interpolator)
+                    )
 
                 if len(converted_children) == 1:
                     return casadi.interpolant(
@@ -153,13 +154,16 @@ class CasadiConverter(object):
                     )(*converted_children)
                 elif len(converted_children) == 2:
                     LUT = casadi.interpolant(
-                        "LUT", solver, symbol.x, symbol.y.ravel(order='F')
+                        "LUT", solver, symbol.x, symbol.y.ravel(order="F")
                     )
                     res = LUT(casadi.hcat(converted_children).T).T
                     return res
                 else:  # pragma: no cover
-                    raise ValueError("Invalid converted_children count: {0}"
-                                     .format(len(converted_children)))
+                    raise ValueError(
+                        "Invalid converted_children count: {0}".format(
+                            len(converted_children)
+                        )
+                    )
 
             elif symbol.function.__name__.startswith("elementwise_grad_of_"):
                 differentiating_child_idx = int(symbol.function.__name__[-1])

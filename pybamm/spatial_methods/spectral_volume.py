@@ -267,8 +267,8 @@ class SpectralVolume(pybamm.FiniteVolume):
         )
 
         # Add Dirichlet boundary conditions, if defined
-        if symbol.id in boundary_conditions:
-            bcs = boundary_conditions[symbol.id]
+        if symbol in boundary_conditions:
+            bcs = boundary_conditions[symbol]
             if any(bc[1] == "Dirichlet" for bc in bcs.values()):
                 # add ghost nodes and update domain
                 reconstructed_symbol = self.replace_dirichlet_values(
@@ -285,8 +285,8 @@ class SpectralVolume(pybamm.FiniteVolume):
         )
 
         # Add Neumann boundary conditions, if defined
-        if symbol.id in boundary_conditions:
-            bcs = boundary_conditions[symbol.id]
+        if symbol in boundary_conditions:
+            bcs = boundary_conditions[symbol]
             if any(bc[1] == "Neumann" for bc in bcs.values()):
                 out = self.replace_neumann_values(symbol, out, bcs)
 

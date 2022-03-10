@@ -36,7 +36,7 @@ class TestFunctionParameter(unittest.TestCase):
         var = pybamm.Variable("var")
         func = pybamm.FunctionParameter("func", {"var": var})
         self.assertEqual(func.name, "func")
-        self.assertEqual(func.children[0].id, var.id)
+        self.assertEqual(func.children[0], var)
         self.assertEqual(func.domain, [])
         self.assertEqual(func.diff_variable, None)
 

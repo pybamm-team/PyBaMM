@@ -199,7 +199,7 @@ class TestParameterValues(unittest.TestCase):
         self.assertIsInstance(processed_integ, pybamm.Integral)
         self.assertIsInstance(processed_integ.children[0], pybamm.PrimaryBroadcast)
         self.assertEqual(processed_integ.children[0].child.value, 4)
-        self.assertEqual(processed_integ.integration_variable[0].id, x.id)
+        self.assertEqual(processed_integ.integration_variable[0], x)
 
         # process unary operation
         v = pybamm.Variable("v", domain="test")
@@ -228,7 +228,7 @@ class TestParameterValues(unittest.TestCase):
         processed_x = processed_boundary_op.children[0].children[1]
         self.assertIsInstance(processed_a, pybamm.Scalar)
         self.assertEqual(processed_a.value, 4)
-        self.assertEqual(processed_x.id, x.id)
+        self.assertEqual(processed_x, x)
 
         # process broadcast
         whole_cell = ["negative electrode", "separator", "positive electrode"]
@@ -670,7 +670,7 @@ class TestParameterValues(unittest.TestCase):
         param = pybamm.ParameterValues({"func": 2})
         func_proc = param.process_symbol(func)
 
-        self.assertEqual(func_proc.id, pybamm.Scalar(2, name="func").id)
+        self.assertEqual(func_proc, pybamm.Scalar(2, name="func"))
 
         # test with auxiliary domains
 
@@ -686,10 +686,8 @@ class TestParameterValues(unittest.TestCase):
         func_proc = param.process_symbol(func)
 
         self.assertEqual(
-            func_proc.id,
-            pybamm.PrimaryBroadcast(
-                pybamm.Scalar(2, name="func"), "current collector"
-            ).id,
+            func_proc,
+            pybamm.PrimaryBroadcast(pybamm.Scalar(2, name="func"), "current collector"),
         )
 
         # secondary and tertiary
@@ -707,10 +705,10 @@ class TestParameterValues(unittest.TestCase):
         func_proc = param.process_symbol(func)
 
         self.assertEqual(
-            func_proc.id,
+            func_proc,
             pybamm.FullBroadcast(
                 pybamm.Scalar(2, name="func"), "negative particle", "current collector"
-            ).id,
+            ),
         )
 
         # secondary, tertiary and quaternary
@@ -729,7 +727,7 @@ class TestParameterValues(unittest.TestCase):
         func_proc = param.process_symbol(func)
 
         self.assertEqual(
-            func_proc.id,
+            func_proc,
             pybamm.FullBroadcast(
                 pybamm.Scalar(2, name="func"),
                 "negative particle",
@@ -737,7 +735,7 @@ class TestParameterValues(unittest.TestCase):
                     "secondary": "negative particle size",
                     "tertiary": "current collector",
                 },
-            ).id,
+            ),
         )
 
         # special case for integral of concatenations of broadcasts
@@ -761,7 +759,7 @@ class TestParameterValues(unittest.TestCase):
         )
         func_proc = param.process_symbol(func)
 
-        self.assertEqual(func_proc.id, pybamm.Scalar(3).id)
+        self.assertEqual(func_proc, pybamm.Scalar(3))
 
         # with auxiliary domains
         var_n = pybamm.Variable(
@@ -797,8 +795,8 @@ class TestParameterValues(unittest.TestCase):
         func_proc = param.process_symbol(func)
 
         self.assertEqual(
-            func_proc.id,
-            pybamm.PrimaryBroadcast(pybamm.Scalar(3), "current collector").id,
+            func_proc,
+            pybamm.PrimaryBroadcast(pybamm.Scalar(3), "current collector"),
         )
 
     def test_process_size_average(self):
@@ -822,7 +820,7 @@ class TestParameterValues(unittest.TestCase):
 
         self.assertIsInstance(var_av_proc, pybamm.SizeAverage)
         R = pybamm.SpatialVariable("R", "negative particle size")
-        self.assertEqual(var_av_proc.f_a_dist.id, ((R * 2) ** 2 * 2).id)
+        self.assertEqual(var_av_proc.f_a_dist, ((R * 2) ** 2 * 2))
 
     def test_process_not_constant(self):
         param = pybamm.ParameterValues({"a": 4})
@@ -900,11 +898,11 @@ class TestParameterValues(unittest.TestCase):
         self.assertIsInstance(bc_value["right"][0], pybamm.Scalar)
         self.assertEqual(bc_value["right"][0].value, 42)
         # variables
-        self.assertEqual(model.variables["var1"].id, var1.id)
+        self.assertEqual(model.variables["var1"], var1)
         self.assertIsInstance(model.variables["grad_var1"], pybamm.Gradient)
         self.assertIsInstance(model.variables["grad_var1"].children[0], pybamm.Variable)
         self.assertEqual(
-            model.variables["d_var1"].id, (pybamm.Scalar(42, name="d") * var1).id
+            model.variables["d_var1"], (pybamm.Scalar(42, name="d") * var1)
         )
         self.assertIsInstance(model.variables["d_var1"].children[0], pybamm.Scalar)
         self.assertIsInstance(model.variables["d_var1"].children[1], pybamm.Variable)

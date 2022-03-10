@@ -277,23 +277,15 @@ class TestBaseModel(unittest.TestCase):
         self.assertEqual(new_model.name, model.name)
         self.assertEqual(new_model.use_jacobian, model.use_jacobian)
         self.assertEqual(new_model.convert_to_format, model.convert_to_format)
-        self.assertEqual(new_model.timescale.id, model.timescale.id)
+        self.assertEqual(new_model.timescale, model.timescale)
 
     def test_check_no_repeated_keys(self):
         model = pybamm.BaseModel()
 
-        # rhs twice
         var = pybamm.Variable("var")
         model.rhs = {var: -1}
         var = pybamm.Variable("var")
-        model.rhs.update({var: -1})
-        with self.assertRaisesRegex(pybamm.ModelError, "Multiple equations specified"):
-            model.check_no_repeated_keys()
-
-        # rhs and algebraic
-        model.rhs = {var: -1}
-        var = pybamm.Variable("var")
-        model.algebraic.update({var: var})
+        model.algebraic = {var: var}
         with self.assertRaisesRegex(pybamm.ModelError, "Multiple equations specified"):
             model.check_no_repeated_keys()
 
@@ -598,7 +590,7 @@ class TestBaseModel(unittest.TestCase):
         var_fn = casadi.external("variables", "./test.so")
 
         # Test that function values are as expected
-        self.assertEqual(x0_fn([0, 5]), 5)
+        self.assertEqual(x0_fn([2, 5]), 5)
         self.assertEqual(z0_fn([0, 0]), 1)
         self.assertEqual(rhs_fn(0, 3, 2, [7, 2]), -21)
         self.assertEqual(alg_fn(0, 3, 2, [7, 2]), 1)
