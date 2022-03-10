@@ -91,6 +91,7 @@ class Callback:
         pass
 
 
+########################################################################################
 class CallbackList(Callback):
     """
     Container abstracting a list of callbacks, so that they can be called in a
@@ -133,6 +134,8 @@ for name, func in inspect.getmembers(CallbackList, inspect.isfunction):
     if name.startswith("on_"):
         # Replaces each function with the decorated version
         setattr(CallbackList, name, callback_loop_decorator(func))
+
+########################################################################################
 
 
 class LoggingCallback(Callback):
@@ -226,10 +229,15 @@ class LoggingCallback(Callback):
         cycle_num = logs["cycle number"][0]
         step_num = logs["step number"][0]
         operating_conditions = logs["step operating conditions"]
+        if step_num == 1:
+            cycle_num -= 1
+            up_to_step = ""
+        else:
+            up_to_step = f", up to step {step_num-1}"
         self.logger.warning(
             f"\n\n\tExperiment is infeasible: '{termination}' was "
             f"triggered during '{operating_conditions}'. The returned solution only "
-            f"contains the first {cycle_num-1} cycles, up to step {step_num-1}. "
+            f"contains the first {cycle_num} cycles{up_to_step}. "
             "Try reducing the current, shortening the time interval, or reducing the "
             "period.\n\n"
         )

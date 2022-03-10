@@ -22,7 +22,11 @@ class TestCallbacks(unittest.TestCase):
         # Remove any test log files that were created, even if the test fails
         for logfile in ["test_callback.log", "test_callback_2.log"]:
             if os.path.exists(logfile):
-                os.remove(logfile)
+                try:
+                    os.remove(logfile)
+                except PermissionError:
+                    # Just skip this if it doesn't work (Windows doesn't allow)
+                    pass
 
     def test_setup_callbacks(self):
         # No callbacks, LoggingCallback should be added

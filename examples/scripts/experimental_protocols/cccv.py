@@ -6,23 +6,19 @@ import matplotlib.pyplot as plt
 
 pybamm.set_logging_level("NOTICE")
 experiment = pybamm.Experiment(
-    [
-        (
-            "Discharge at C/5 for 10 hours or until 3.3 V",
-            "Rest for 1 hour",
-            "Charge at 1 A until 4.1 V",
-            "Hold at 4.1 V until 10 mA",
-            "Rest for 1 hour",
-        ),
-    ]
-    * 3
+    [("Rest for 10 minutes", "Discharge at 10 C for 1 hour")]
 )
 model = pybamm.lithium_ion.DFN()
 
+parameter_values = pybamm.ParameterValues("Chen2020")
 sim = pybamm.Simulation(
-    model, experiment=experiment, solver=pybamm.CasadiSolver("fast with events")
+    model,
+    experiment=experiment,
+    solver=pybamm.CasadiSolver("fast with events"),
+    parameter_values=parameter_values,
 )
 sim.solve()
+sim.plot()
 
 # Plot voltages from the discharge segments only
 fig, ax = plt.subplots()

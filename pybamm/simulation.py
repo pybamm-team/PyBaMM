@@ -929,7 +929,6 @@ class Simulation:
                             raise e
                         # Otherwise, just stop this cycle
                         break
-                        break
 
                     steps.append(step_solution)
                     current_solution = step_solution
@@ -955,17 +954,18 @@ class Simulation:
                     self._solution = self._solution + cycle_solution
 
                 # At the final step of the inner loop we save the cycle
-                cycle_sol = pybamm.make_cycle_solution(
-                    steps,
-                    esoh_sim,
-                    save_this_cycle=save_this_cycle,
-                )
-                cycle_solution, cycle_sum_vars, cycle_first_state = cycle_sol
-                all_cycle_solutions.append(cycle_solution)
-                all_summary_variables.append(cycle_sum_vars)
-                all_first_states.append(cycle_first_state)
+                if len(steps) > 0:
+                    cycle_sol = pybamm.make_cycle_solution(
+                        steps,
+                        esoh_sim,
+                        save_this_cycle=save_this_cycle,
+                    )
+                    cycle_solution, cycle_sum_vars, cycle_first_state = cycle_sol
+                    all_cycle_solutions.append(cycle_solution)
+                    all_summary_variables.append(cycle_sum_vars)
+                    all_first_states.append(cycle_first_state)
 
-                logs["summary variables"] = cycle_sum_vars
+                    logs["summary variables"] = cycle_sum_vars
 
                 # Calculate capacity_start using the first cycle
                 if cycle_num == 1:
