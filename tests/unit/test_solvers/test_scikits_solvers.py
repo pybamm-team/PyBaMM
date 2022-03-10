@@ -782,9 +782,12 @@ class TestScikitsSolvers(unittest.TestCase):
     def test_model_step_nonsmooth_events(self):
         # Create model
         model = pybamm.BaseModel()
-        model.timescale_eval = pybamm.Scalar(1)
         var1 = pybamm.Variable("var1")
         var2 = pybamm.Variable("var2")
+
+        # make this an input parameter so the timescale isn't optimised out
+        # (covering Modulo -> Event code in base_solver.py)
+        model.timescale_eval = pybamm.InputParameter("timescale")
         a = 0.6
         discontinuities = (np.arange(3) + 1) * a
 
@@ -809,7 +812,10 @@ class TestScikitsSolvers(unittest.TestCase):
         end_time = 3
         step_solution = None
         while time < end_time:
-            step_solution = step_solver.step(step_solution, model, dt=dt, npts=10)
+            step_solution = step_solver.step(
+                step_solution, model, dt=dt, npts=10,
+                inputs={"timescale": 1}
+            )
             time += dt
         np.testing.assert_array_less(step_solution.y[0, :-1], 0.55)
         np.testing.assert_array_less(step_solution.y[-1, :-1], 1.2)
