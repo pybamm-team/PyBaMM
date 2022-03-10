@@ -785,13 +785,12 @@ class TestScikitsSolvers(unittest.TestCase):
         var1 = pybamm.Variable("var1")
         var2 = pybamm.Variable("var2")
 
-        # make this an input parameter so the timescale isn't optimised out
-        # (covering Modulo -> Event code in base_solver.py)
-        model.timescale_eval = pybamm.InputParameter("timescale")
+        # if this is 1 it gets simplified out
+        model.timescale = pybamm.Scalar(1.000001)
         a = 0.6
         discontinuities = (np.arange(3) + 1) * a
 
-        model.rhs = {var1: pybamm.Modulo(pybamm.t * model.timescale_eval, a)}
+        model.rhs = {var1: pybamm.Modulo(pybamm.t * model.timescale, a)}
         model.algebraic = {var2: 2 * var1 - var2}
         model.initial_conditions = {var1: 0, var2: 0}
         model.events = [
@@ -813,8 +812,7 @@ class TestScikitsSolvers(unittest.TestCase):
         step_solution = None
         while time < end_time:
             step_solution = step_solver.step(
-                step_solution, model, dt=dt, npts=10,
-                inputs={"timescale": 1}
+                step_solution, model, dt=dt, npts=10
             )
             time += dt
         np.testing.assert_array_less(step_solution.y[0, :-1], 0.55)
