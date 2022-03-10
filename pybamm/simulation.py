@@ -299,7 +299,7 @@ class Simulation:
                     # create the FunctionControl submodel and extract variables
                     external_circuit_variables = (
                         pybamm.external_circuit.FunctionControl(
-                            model.param, None, control=control
+                            model.param, None, model.options, control=control
                         ).get_fundamental_variables()
                     )
 
@@ -373,7 +373,7 @@ class Simulation:
                         new_model.algebraic[
                             i_cell
                         ] = pybamm.external_circuit.VoltageFunctionControl(
-                            new_model.param
+                            new_model.param, model.options
                         ).constant_voltage(
                             new_model.variables
                         )
@@ -381,7 +381,7 @@ class Simulation:
                         new_model.algebraic[
                             i_cell
                         ] = pybamm.external_circuit.PowerFunctionControl(
-                            new_model.param, control="algebraic"
+                            new_model.param, new_model.options, control="algebraic"
                         ).constant_power(
                             new_model.variables
                         )
@@ -389,7 +389,7 @@ class Simulation:
                         new_model.rhs[
                             i_cell
                         ] = pybamm.external_circuit.CCCVFunctionControl(
-                            new_model.param
+                            new_model.param, new_model.options
                         ).cccv(
                             new_model.variables
                         )
