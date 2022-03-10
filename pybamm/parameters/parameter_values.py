@@ -422,8 +422,8 @@ class ParameterValues:
             # since they point to the same object
             model = unprocessed_model
         else:
-            # create a blank model of the same class
-            model = unprocessed_model.new_empty_copy()
+            # create a copy of the model
+            model = unprocessed_model.new_copy()
 
         if (
             len(unprocessed_model.rhs) == 0
