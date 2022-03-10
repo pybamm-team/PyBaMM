@@ -515,19 +515,16 @@ class Simulation:
                 unbuilt_model,
                 parameter_values,
             ) in self.op_conds_to_model_and_param.items():
-                if unbuilt_model in processed_models:
-                    built_model = processed_models[unbuilt_model]
-                else:
-                    # It's ok to modify the models in-place as they are not accessible
-                    # from outside the simulation
-                    model_with_set_params = parameter_values.process_model(
-                        unbuilt_model, inplace=True
-                    )
-                    built_model = self._disc.process_model(
-                        model_with_set_params, inplace=True, check_model=check_model
-                    )
-                    processed_models[unbuilt_model] = built_model
+                # It's ok to modify the models in-place as they are not accessible
+                # from outside the simulation
+                model_with_set_params = parameter_values.process_model(
+                    unbuilt_model, inplace=True
+                )
+                built_model = self._disc.process_model(
+                    model_with_set_params, inplace=True, check_model=check_model
+                )
 
+                processed_models[unbuilt_model] = built_model
                 self.op_conds_to_built_models[op_cond] = built_model
 
     def solve(
