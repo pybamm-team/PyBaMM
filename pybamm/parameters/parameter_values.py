@@ -299,7 +299,6 @@ class ParameterValues:
                 if value.startswith("[function]"):
                     loaded_value = pybamm.load_function(os.path.join(path, value[10:]))
                     self._dict_items[name] = loaded_value
-                    values[name] = loaded_value
                 # Data is flagged with the string "[data]" or "[current data]"
                 elif value.startswith("[current data]") or value.startswith("[data]"):
                     if value.startswith("[current data]"):
@@ -317,8 +316,6 @@ class ParameterValues:
                     ).to_numpy()
                     # Save name and data
                     self._dict_items[name] = (function_name, ([data[:, 0]], data[:, 1]))
-                    values[name] = (function_name, ([data[:, 0]], data[:, 1]))
-
                 # parse 2D parameter data
                 elif value.startswith("[2D data]"):
                     filename = os.path.join(path, value[9:] + ".json")
@@ -330,14 +327,19 @@ class ParameterValues:
                     data[0] = [np.array(el) for el in data[0]]
                     data[1] = np.array(data[1])
                     self._dict_items[name] = (function_name, data)
-                    values[name] = (function_name, data)
 
                 elif value == "[input]":
                     self._dict_items[name] = pybamm.InputParameter(name)
                 # Anything else should be a converted to a float
                 else:
                     self._dict_items[name] = float(value)
-                    values[name] = float(value)
+            elif isinstance(value, tuple) and isinstance(value[1], np.ndarray):
+                # If data is provided as a 2-column array (1D data),
+                # convert to two arrays for compatibility with 2D data
+                # see #1805
+                name, data = value
+                data = ([data[:, 0]], data[:, 1])
+                self._dict_items[name] = (name, data)
             else:
                 self._dict_items[name] = value
         # reset processed symbols
@@ -644,9 +646,6 @@ class ParameterValues:
                 if len(function_name) == 2:  # CSV or JSON parsed data
                     # to create an Interpolant
                     name, data = function_name
-
-                    if isinstance(data, np.ndarray):
-                        data = [data[:, 0]], data[:, 1]
 
                     if len(data[0]) == 1:
                         input_data = data[0][0], data[1]
