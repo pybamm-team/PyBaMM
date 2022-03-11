@@ -183,7 +183,7 @@ class BasicFull(BaseModel):
             "left": (pybamm.Scalar(0), "Neumann"),
             "right": (pybamm.Scalar(0), "Neumann"),
         }
-        self.initial_conditions[phi_e] = -param.U_n(param.c_e_init, param.T_init)
+        self.initial_conditions[phi_e] = -param.U_n_init
 
         ######################
         # Current in the solid
@@ -207,9 +207,7 @@ class BasicFull(BaseModel):
         # initial guess for a root-finding algorithm which calculates consistent initial
         # conditions
         self.initial_conditions[phi_s_n] = pybamm.Scalar(0)
-        self.initial_conditions[phi_s_p] = param.U_p(
-            param.c_e_init, param.T_init
-        ) - param.U_n(param.c_e_init, param.T_init)
+        self.initial_conditions[phi_s_p] = param.ocv_init
 
         ######################
         # Porosity
@@ -296,6 +294,3 @@ class BasicFull(BaseModel):
                 pybamm.Event("Maximum voltage", voltage - param.voltage_high_cut),
             ]
         )
-
-    def new_empty_copy(self):
-        return pybamm.BaseModel.new_empty_copy(self)

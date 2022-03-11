@@ -175,7 +175,7 @@ class TestBaseSolver(unittest.TestCase):
 
         model = VectorModel()
         init_cond = solver.calculate_consistent_state(model)
-        np.testing.assert_array_almost_equal(init_cond, vec)
+        np.testing.assert_array_almost_equal(init_cond.flatten(), vec)
         # with casadi
         init_cond = solver_with_casadi.calculate_consistent_state(model)
         np.testing.assert_array_almost_equal(init_cond.full().flatten(), vec)
@@ -186,7 +186,7 @@ class TestBaseSolver(unittest.TestCase):
 
         model.jac_algebraic_eval = jac_dense
         init_cond = solver.calculate_consistent_state(model)
-        np.testing.assert_array_almost_equal(init_cond, vec)
+        np.testing.assert_array_almost_equal(init_cond.flatten(), vec)
 
         # With sparse jacobian
         def jac_sparse(t, y, inputs):
@@ -196,7 +196,7 @@ class TestBaseSolver(unittest.TestCase):
 
         model.jac_algebraic_eval = jac_sparse
         init_cond = solver.calculate_consistent_state(model)
-        np.testing.assert_array_almost_equal(init_cond, vec)
+        np.testing.assert_array_almost_equal(init_cond.flatten(), vec)
 
     def test_fail_consistent_initial_conditions(self):
         class Model:
@@ -290,11 +290,9 @@ class TestBaseSolver(unittest.TestCase):
         model.initial_conditions = {v: 1}
         a = pybamm.InputParameter("a")
         model.timescale = a
-        solver = pybamm.CasadiSolver()
-        solver.set_up(model, inputs={"a": 10})
-        sol = solver.step(old_solution=None, model=model, dt=1.0, inputs={"a": 10})
-        with self.assertRaisesRegex(pybamm.SolverError, "The model timescale"):
-            sol = solver.step(old_solution=sol, model=model, dt=1.0, inputs={"a": 20})
+        solver = pybamm.BaseSolver()
+        with self.assertRaisesRegex(ValueError, "model.timescale must be a scalar"):
+            solver.set_up(model)
 
     def test_inputs_step(self):
         # Make sure interpolant inputs are dropped
@@ -377,7 +375,8 @@ class TestBaseSolver(unittest.TestCase):
                 else:
                     use_inputs = inputs
 
-                sens = model.sensitivities_eval(t, y, use_inputs)
+                sens = model.jacp_rhs_algebraic_eval(t, y, use_inputs)
+
                 np.testing.assert_allclose(
                     sens["a"], exact_diff_a(y, inputs["a"], inputs["b"])
                 )

@@ -119,7 +119,6 @@ class TestCasadiConverter(unittest.TestCase):
         for np_fun in [
             np.sqrt,
             np.tanh,
-            np.cosh,
             np.sinh,
             np.exp,
             np.log,
@@ -131,6 +130,21 @@ class TestCasadiConverter(unittest.TestCase):
         ]:
             self.assert_casadi_equal(
                 pybamm.Function(np_fun, c).to_casadi(), casadi.MX(np_fun(3)), evalf=True
+            )
+
+        # A workaround to fix the tests running on GitHub Actions -
+        # casadi.evalf(
+        #       pybamm.Function(np_fun, c).to_casadi()
+        # ) - casadi.evalf(casadi.MX(np_fun(3)))
+        # is not zero, but a small number of the order 10^-15 when np_func is np.cosh
+        for np_fun in [
+            np.cosh
+        ]:
+            self.assert_casadi_almost_equal(
+                pybamm.Function(np_fun, c).to_casadi(),
+                casadi.MX(np_fun(3)),
+                decimal=14,
+                evalf=True,
             )
 
         # test functions with assert_casadi_almost_equal

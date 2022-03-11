@@ -98,13 +98,11 @@ class SPM(BaseModel):
                 self.param, "Positive", "lithium-ion main", self.options
             )
         else:
-            self.submodels["negative interface"] = self.intercalation_kinetics(
-                self.param, "Negative", "lithium-ion main", self.options
-            )
-
-            self.submodels["positive interface"] = self.intercalation_kinetics(
-                self.param, "Positive", "lithium-ion main", self.options
-            )
+            for domain in ["Negative", "Positive"]:
+                intercalation_kinetics = self.get_intercalation_kinetics(domain)
+                self.submodels[domain.lower() + " interface"] = intercalation_kinetics(
+                    self.param, domain, "lithium-ion main", self.options
+                )
 
     def set_particle_submodel(self):
         for domain in ["Negative", "Positive"]:

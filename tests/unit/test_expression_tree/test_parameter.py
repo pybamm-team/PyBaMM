@@ -14,8 +14,6 @@ class TestParameter(unittest.TestCase):
         a = pybamm.Parameter("a")
         self.assertEqual(a.name, "a")
         self.assertEqual(a.domain, [])
-        c = pybamm.Parameter("c", domain=["test"])
-        self.assertEqual(c.domain[0], "test")
 
     def test_evaluate_for_shape(self):
         a = pybamm.Parameter("a")

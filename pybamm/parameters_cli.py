@@ -143,7 +143,7 @@ def edit_parameter(arguments=None):
 
     .. code::
 
-      edit_param(["lithium_ion"])
+      edit_parameter(["lithium_ion"])
 
     will create the directory structure::
 

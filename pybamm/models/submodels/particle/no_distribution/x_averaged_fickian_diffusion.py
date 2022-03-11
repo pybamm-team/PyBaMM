@@ -90,7 +90,13 @@ class XAveragedFickianDiffusion(BaseFickian):
         ]
 
         if self.domain == "Negative":
-            rbc = -self.param.C_n * j_xav / self.param.a_R_n / pybamm.surf(D_eff_xav)
+            rbc = (
+                -self.param.C_n
+                * j_xav
+                / self.param.a_R_n
+                / self.param.gamma_n
+                / pybamm.surf(D_eff_xav)
+            )
 
         elif self.domain == "Positive":
             rbc = (
@@ -108,19 +114,15 @@ class XAveragedFickianDiffusion(BaseFickian):
     def set_initial_conditions(self, variables):
         """
         For single or x-averaged particle models, initial conditions can't depend on x
-        so we arbitrarily set the initial values of the single particles to be given
-        by the values at x=0 in the negative electrode and x=1 in the
-        positive electrode. Typically, supplied initial conditions are uniform
-        x.
+        so we take the x-average of the supplied initial conditions.
         """
         c_s_xav = variables[
             "X-averaged " + self.domain.lower() + " particle concentration"
         ]
 
         if self.domain == "Negative":
-            c_init = self.param.c_n_init(0)
-
+            c_init = pybamm.x_average(self.param.c_n_init)
         elif self.domain == "Positive":
-            c_init = self.param.c_p_init(1)
+            c_init = pybamm.x_average(self.param.c_p_init)
 
         self.initial_conditions = {c_s_xav: c_init}

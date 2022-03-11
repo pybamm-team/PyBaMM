@@ -433,7 +433,12 @@ class CasadiSolver(pybamm.BaseSolver):
 
         y0 = coarse_solution.y[:, event_idx_lower]
         dense_step_sol = self._run_integrator(
-            model, y0, inputs_dict, inputs, t_window_event_dense, use_grid=use_grid,
+            model,
+            y0,
+            inputs_dict,
+            inputs,
+            t_window_event_dense,
+            use_grid=use_grid,
             extract_sensitivities_in_solution=False,
         )
 
@@ -477,7 +482,7 @@ class CasadiSolver(pybamm.BaseSolver):
         if model.interpolant_extrapolation_events_eval:
             inputs = casadi.vertcat(*[x for x in solution.all_inputs[-1].values()])
             extrap_event = [
-                event(solution.t[-1], solution.y[:, -1], inputs=inputs)
+                event(solution.t[-1], solution.y[:, -1], inputs)
                 for event in model.interpolant_extrapolation_events_eval
             ]
 
@@ -649,7 +654,7 @@ class CasadiSolver(pybamm.BaseSolver):
             Setting to True or False will override this behaviour, forcing the
             sensitivities to be extracted or not (it is up to the caller to determine if
             the sensitivities are in fact present)
-       """
+        """
 
         pybamm.logger.debug("Running CasADi integrator")
 

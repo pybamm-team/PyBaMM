@@ -2,12 +2,26 @@
 # Solution class
 #
 import casadi
+import json
 import numbers
 import numpy as np
 import pickle
 import pybamm
 import pandas as pd
 from scipy.io import savemat
+
+
+class NumpyEncoder(json.JSONEncoder):
+    """
+    Numpy serialiser helper class that converts numpy arrays to a list
+    https://stackoverflow.com/questions/26646362/numpy-array-is-not-json-serializable
+    """
+
+    def default(self, obj):
+        if isinstance(obj, np.ndarray):
+            return obj.tolist()
+        # won't be called since we only need to convert numpy arrays
+        return json.JSONEncoder.default(self, obj)  # pragma: no cover
 
 
 class Solution(object):
@@ -536,14 +550,16 @@ class Solution(object):
         with open(filename, "wb") as f:
             pickle.dump(self, f, pickle.HIGHEST_PROTOCOL)
 
-    def save_data(self, filename, variables=None, to_format="pickle", short_names=None):
+    def save_data(
+        self, filename=None, variables=None, to_format="pickle", short_names=None
+    ):
         """
         Save solution data only (raw arrays)
 
         Parameters
         ----------
-        filename : str
-            The name of the file to save data to
+        filename : str, optional
+            The name of the file to save data to. If None, then a str is returned
         variables : list, optional
             List of variables to save. If None, saves all of the variables that have
             been created so far
@@ -553,11 +569,18 @@ class Solution(object):
             - 'pickle' (default): creates a pickle file with the data dictionary
             - 'matlab': creates a .mat file, for loading in matlab
             - 'csv': creates a csv file (0D variables only)
+            - 'json': creates a json file
         short_names : dict, optional
             Dictionary of shortened names to use when saving. This may be necessary when
             saving to MATLAB, since no spaces or special characters are allowed in
             MATLAB variable names. Note that not all the variables need to be given
             a short name.
+
+        Returns
+        -------
+        data : str, optional
+            str if 'csv' or 'json' is chosen and filename is None, otherwise None
+
 
         """
         if variables is None:
@@ -588,9 +611,13 @@ class Solution(object):
                 data_short_names[name] = var
 
         if to_format == "pickle":
+            if filename is None:
+                raise ValueError("pickle format must be written to a file")
             with open(filename, "wb") as f:
                 pickle.dump(data_short_names, f, pickle.HIGHEST_PROTOCOL)
         elif to_format == "matlab":
+            if filename is None:
+                raise ValueError("matlab format must be written to a file")
             # Check all the variable names only contain a-z, A-Z or _ or numbers
             for name in data_short_names.keys():
                 # Check the string only contains the following ASCII:
@@ -625,7 +652,13 @@ class Solution(object):
                         )
                     )
             df = pd.DataFrame(data_short_names)
-            df.to_csv(filename, index=False)
+            return df.to_csv(filename, index=False)
+        elif to_format == "json":
+            if filename is None:
+                return json.dumps(data_short_names, cls=NumpyEncoder)
+            else:
+                with open(filename, "w") as outfile:
+                    json.dump(data_short_names, outfile, cls=NumpyEncoder)
         else:
             raise ValueError("format '{}' not recognised".format(to_format))
 
@@ -850,7 +883,7 @@ def get_cycle_summary_variables(cycle_solution, esoh_sim):
                     esoh_sim.parameter_values["Positive electrode OCP [V]"], tuple
                 ):
                     y_100_min = np.min(
-                        esoh_sim.parameter_values["Positive electrode OCP [V]"][1][:, 0]
+                        esoh_sim.parameter_values["Positive electrode OCP [V]"][1][0][0]
                     )
                     x_100_max = (
                         n_Li * pybamm.constants.F.value / 3600 - y_100_min * C_p

@@ -2,11 +2,12 @@
 # Tests for the Unary Operator classes
 #
 import unittest
+from tests import TestCase
 import numpy as np
 import pybamm
 
 
-class TestUnaryOperators(unittest.TestCase):
+class TestUnaryOperators(TestCase):
     def test_x_average(self):
         a = pybamm.Scalar(4)
         average_a = pybamm.x_average(a)
@@ -111,8 +112,10 @@ class TestUnaryOperators(unittest.TestCase):
         )
         average_conc_broad = pybamm.x_average(conc_broad)
         self.assertIsInstance(average_conc_broad, pybamm.FullBroadcast)
-        self.assertEqual(average_conc_broad.domain, ["current collector"])
-        self.assertEqual(average_conc_broad.auxiliary_domains, {"secondary": ["test"]})
+        self.assertDomainEqual(
+            average_conc_broad.domains,
+            {"primary": ["current collector"], "secondary": ["test"]},
+        )
 
         # x-average of broadcast
         for domain in [["negative electrode"], ["separator"], ["positive electrode"]]:
@@ -228,7 +231,7 @@ class TestUnaryOperators(unittest.TestCase):
 
         # r-average of a symbol that is broadcast to x
         # takes the average of the child then broadcasts it
-        a = pybamm.Scalar(1, domain="positive particle")
+        a = pybamm.PrimaryBroadcast(1, "positive particle")
         broad_a = pybamm.SecondaryBroadcast(a, "positive electrode")
         average_broad_a = pybamm.r_average(broad_a)
         self.assertIsInstance(average_broad_a, pybamm.PrimaryBroadcast)

@@ -89,7 +89,11 @@ class BasicSPM(BaseModel):
         self.boundary_conditions[c_s_n] = {
             "left": (pybamm.Scalar(0), "Neumann"),
             "right": (
-                -param.C_n * j_n / param.a_R_n / param.D_n(c_s_surf_n, T),
+                -param.C_n
+                * j_n
+                / param.a_R_n
+                / param.gamma_n
+                / param.D_n(c_s_surf_n, T),
                 "Neumann",
             ),
         }
@@ -104,10 +108,10 @@ class BasicSPM(BaseModel):
                 "Neumann",
             ),
         }
-        # c_n_init and c_p_init are functions, but for the SPM we evaluate them at x=0
-        # and x=1 since there is no x-dependence in the particles
-        self.initial_conditions[c_s_n] = param.c_n_init(0)
-        self.initial_conditions[c_s_p] = param.c_p_init(1)
+        # c_n_init and c_p_init are functions of r and x, but for the SPM we
+        # take the x-averaged value since there is no x-dependence in the particles
+        self.initial_conditions[c_s_n] = pybamm.x_average(param.c_n_init)
+        self.initial_conditions[c_s_p] = pybamm.x_average(param.c_p_init)
         # Events specify points at which a solution should terminate
         self.events += [
             pybamm.Event(
@@ -135,7 +139,7 @@ class BasicSPM(BaseModel):
         # (Some) variables
         ######################
         # Interfacial reactions
-        j0_n = param.j0_n(1, c_s_surf_n, T) / param.C_r_n
+        j0_n = param.gamma_n * param.j0_n(1, c_s_surf_n, T) / param.C_r_n
         j0_p = param.gamma_p * param.j0_p(1, c_s_surf_p, T) / param.C_r_p
         eta_n = (2 / param.ne_n) * pybamm.arcsinh(j_n / (2 * j0_n))
         eta_p = (2 / param.ne_p) * pybamm.arcsinh(j_p / (2 * j0_p))
@@ -144,12 +148,17 @@ class BasicSPM(BaseModel):
         phi_s_p = eta_p + phi_e + param.U_p(c_s_surf_p, T)
         V = phi_s_p
 
+        pot_scale = self.param.potential_scale
+        U_ref = self.param.U_p_ref - self.param.U_n_ref
+        V_dim = U_ref + pot_scale * V
+
         whole_cell = ["negative electrode", "separator", "positive electrode"]
         # The `variables` dictionary contains all variables that might be useful for
         # visualising the solution of the model
         # Primary broadcasts are used to broadcast scalar quantities across a domain
         # into a vector of the right shape, for multiplying with other vectors
         self.variables = {
+            "Discharge capacity [A.h]": Q,
             "Negative particle surface concentration": pybamm.PrimaryBroadcast(
                 c_s_surf_n, "negative electrode"
             ),
@@ -166,11 +175,10 @@ class BasicSPM(BaseModel):
                 phi_s_p, "positive electrode"
             ),
             "Terminal voltage": V,
+            "Terminal voltage [V]": V_dim,
         }
         self.events += [
             pybamm.Event("Minimum voltage", V - param.voltage_low_cut),
             pybamm.Event("Maximum voltage", V - param.voltage_high_cut),
         ]
 
-    def new_empty_copy(self):
-        return pybamm.BaseModel.new_empty_copy(self)

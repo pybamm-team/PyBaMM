@@ -5,6 +5,7 @@ import numbers
 import warnings
 from collections import OrderedDict
 
+import copy
 import casadi
 import numpy as np
 
@@ -119,8 +120,8 @@ class BaseModel:
         self.y_slices = None
 
         # Default timescale is 1 second
-        self.timescale = pybamm.Scalar(1)
-        self.length_scales = {}
+        self._timescale = pybamm.Scalar(1)
+        self._length_scales = {}
 
     @property
     def name(self):
@@ -290,7 +291,7 @@ class BaseModel:
     @property
     def length_scales(self):
         "Length scales of model"
-        return self._length_scale
+        return self._length_scales
 
     @length_scales.setter
     def length_scales(self, values):
@@ -298,7 +299,7 @@ class BaseModel:
         for domain, scale in values.items():
             if isinstance(scale, numbers.Number):
                 values[domain] = pybamm.Scalar(scale)
-        self._length_scale = values
+        self._length_scales = values
 
     @property
     def parameters(self):
@@ -366,35 +367,21 @@ class BaseModel:
     def default_quick_plot_variables(self):
         return None
 
-    def new_empty_copy(self):
-        """
-        Create an empty copy of the model with the same name and "parameters"
-        (convert_to_format, etc), but empty equations and variables.
-        This is usually then called by :class:`pybamm.ParameterValues`,
-        :class:`pybamm.Discretisation`, or :class:`pybamm.SymbolReplacer`.
-        """
-        new_model = self.__class__(name=self.name)
-        new_model.use_jacobian = self.use_jacobian
-        new_model.convert_to_format = self.convert_to_format
-        new_model.timescale = self.timescale
-        new_model.length_scales = self.length_scales
-
-        # Variables from discretisation
-        new_model.is_discretised = self.is_discretised
-        new_model.y_slices = self.y_slices
-        new_model.concatenated_rhs = self.concatenated_rhs
-        new_model.concatenated_algebraic = self.concatenated_algebraic
-        new_model.concatenated_initial_conditions = self.concatenated_initial_conditions
-
-        return new_model
-
     def new_copy(self):
         """
-        Creates an identical copy of the model, using the functionality of
-        :class:`pybamm.SymbolReplacer` but without performing any replacements
+        Creates a copy of the model, explicitly copying all the mutable attributes
+        to avoid issues with shared objects.
         """
-        replacer = pybamm.SymbolReplacer({})
-        return replacer.process_model(self, inplace=False)
+        new_model = copy.copy(self)
+        new_model._rhs = self.rhs.copy()
+        new_model._algebraic = self.algebraic.copy()
+        new_model._initial_conditions = self.initial_conditions.copy()
+        new_model._boundary_conditions = self.boundary_conditions.copy()
+        new_model._variables = self.variables.copy()
+        new_model._events = self.events.copy()
+        new_model.external_variables = self.external_variables.copy()
+        new_model._variables_casadi = self._variables_casadi.copy()
+        return new_model
 
     def update(self, *submodels):
         """
@@ -435,13 +422,7 @@ class BaseModel:
         if inplace is True:
             model = self
         else:
-            model = self.new_empty_copy()
-            model.rhs = self.rhs.copy()
-            model.algebraic = self.algebraic.copy()
-            model.initial_conditions = self.initial_conditions.copy()
-            model.boundary_conditions = self.boundary_conditions.copy()
-            model.variables = self.variables.copy()
-            model.events = self.events.copy()
+            model = self.new_copy()
 
         if isinstance(solution, pybamm.Solution):
             solution = solution.last_state
@@ -1025,21 +1006,14 @@ class EquationDict(dict):
         # Convert any numbers to a pybamm.Scalar
         for var, eqn in equations.items():
             if isinstance(eqn, numbers.Number):
-                equations[var] = pybamm.Scalar(eqn)
-
-        if not all(
-            [
-                variable.domain == equation.domain
-                or variable.domain == []
-                or equation.domain == []
-                for variable, equation in equations.items()
-            ]
-        ):
-            raise pybamm.DomainError(
-                "variable and equation in '{}' must have the same domain".format(
-                    self.name
+                eqn = pybamm.Scalar(eqn)
+                equations[var] = eqn
+            if not (var.domain == eqn.domain or var.domain == [] or eqn.domain == []):
+                raise pybamm.DomainError(
+                    "variable and equation in '{}' must have the same domain".format(
+                        self.name
+                    )
                 )
-            )
 
         # For initial conditions, check that the equation doesn't contain any
         # Variable objects
