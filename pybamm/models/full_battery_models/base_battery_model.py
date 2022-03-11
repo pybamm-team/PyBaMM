@@ -864,15 +864,6 @@ class BaseBatteryModel(pybamm.BaseModel):
         self._built = True
         pybamm.logger.info("Finish building {}".format(self.name))
 
-    def new_empty_copy(self):
-        """See :meth:`pybamm.BaseModel.new_empty_copy()`"""
-        new_model = self.__class__(name=self.name, options=self.options)
-        new_model.use_jacobian = self.use_jacobian
-        new_model.convert_to_format = self.convert_to_format
-        new_model._timescale = self.timescale
-        new_model._length_scales = self.length_scales
-        return new_model
-
     @property
     def summary_variables(self):
         return self._summary_variables

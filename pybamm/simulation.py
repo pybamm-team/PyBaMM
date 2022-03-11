@@ -515,11 +515,11 @@ class Simulation:
                 unbuilt_model,
                 parameter_values,
             ) in self.op_conds_to_model_and_param.items():
-                # It's ok to modify the models in-place as they are not accessible
-                # from outside the simulation
                 model_with_set_params = parameter_values.process_model(
-                    unbuilt_model, inplace=True
+                    unbuilt_model, inplace=False
                 )
+                # It's ok to modify the model with set parameters in place as it's
+                # not returned anywhere
                 built_model = self._disc.process_model(
                     model_with_set_params, inplace=True, check_model=check_model
                 )
