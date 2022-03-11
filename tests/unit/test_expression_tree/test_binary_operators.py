@@ -143,7 +143,7 @@ class TestBinaryOperators(unittest.TestCase):
         self.assertEqual(str((a * b) / (c + d)), "a * b / (c + d)")
         self.assertEqual(str(a * (b / (c + d))), "a * b / (c + d)")
 
-    def test_equality(self):
+    def test_eq(self):
         a = pybamm.Scalar(4)
         b = pybamm.Scalar(5)
         bin1 = pybamm.BinaryOperator("test", a, b)

@@ -5,7 +5,6 @@ import pybamm
 import tests
 
 import unittest
-import numpy as np
 
 
 class TestLeadAcidCompositeSideReactions(unittest.TestCase):
