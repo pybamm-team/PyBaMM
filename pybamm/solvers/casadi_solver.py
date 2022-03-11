@@ -482,7 +482,7 @@ class CasadiSolver(pybamm.BaseSolver):
         if model.interpolant_extrapolation_events_eval:
             inputs = casadi.vertcat(*[x for x in solution.all_inputs[-1].values()])
             extrap_event = [
-                event(solution.t[-1], solution.y[:, -1], inputs=inputs)
+                event(solution.t[-1], solution.y[:, -1], inputs)
                 for event in model.interpolant_extrapolation_events_eval
             ]
 

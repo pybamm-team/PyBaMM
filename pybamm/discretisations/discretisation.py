@@ -182,8 +182,8 @@ class Discretisation(object):
             # since they point to the same object
             model_disc = model
         else:
-            # create an empty copy of the original model
-            model_disc = model.new_empty_copy()
+            # create a copy of the original model
+            model_disc = model.new_copy()
 
         # Keep a record of y_slices in the model
         model_disc.y_slices = self.y_slices_explicit

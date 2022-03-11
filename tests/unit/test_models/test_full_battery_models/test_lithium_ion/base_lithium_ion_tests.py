@@ -13,6 +13,13 @@ class BaseUnitTestLithiumIon:
         options = {"thermal": "isothermal"}
         self.check_well_posedness(options)
 
+    def test_well_posed_isothermal_heat_source(self):
+        options = {
+            "calculate heat source for isothermal models": "true",
+            "thermal": "isothermal",
+        }
+        self.check_well_posedness(options)
+
     def test_well_posed_2plus1D(self):
         options = {"current collector": "potential pair", "dimensionality": 1}
         self.check_well_posedness(options)
@@ -210,6 +217,10 @@ class BaseUnitTestLithiumIon:
             "lithium plating": "irreversible",
             "lithium plating porosity change": "true",
         }
+        self.check_well_posedness(options)
+
+    def test_well_posed_discharge_energy(self):
+        options = {"calculate discharge energy": "true"}
         self.check_well_posedness(options)
 
     def test_well_posed_external_circuit_voltage(self):

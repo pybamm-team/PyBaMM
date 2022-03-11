@@ -42,3 +42,39 @@ class Isothermal(BaseThermal):
         )
 
         return variables
+
+    def get_coupled_variables(self, variables):
+        if self.options["calculate heat source for isothermal models"] == "true":
+            variables.update(self._get_standard_coupled_variables(variables))
+        else:
+            ieh = "irreversible electrochemical heating"
+            variables.update(
+                {
+                    "Ohmic heating": pybamm.Scalar(0),
+                    "Ohmic heating [W.m-3]": pybamm.Scalar(0),
+                    "X-averaged Ohmic heating": pybamm.Scalar(0),
+                    "X-averaged Ohmic heating [W.m-3]": pybamm.Scalar(0),
+                    "Volume-averaged Ohmic heating": pybamm.Scalar(0),
+                    "Volume-averaged Ohmic heating [W.m-3]": pybamm.Scalar(0),
+                    "Irreversible electrochemical heating": pybamm.Scalar(0),
+                    "Irreversible electrochemical heating [W.m-3]": pybamm.Scalar(0),
+                    "X-averaged " + ieh: pybamm.Scalar(0),
+                    "X-averaged " + ieh + " [W.m-3]": pybamm.Scalar(0),
+                    "Volume-averaged " + ieh: pybamm.Scalar(0),
+                    "Volume-averaged " + ieh + "[W.m-3]": pybamm.Scalar(0),
+                    "Reversible heating": pybamm.Scalar(0),
+                    "Reversible heating [W.m-3]": pybamm.Scalar(0),
+                    "X-averaged reversible heating": pybamm.Scalar(0),
+                    "X-averaged reversible heating [W.m-3]": pybamm.Scalar(0),
+                    "Volume-averaged reversible heating": pybamm.Scalar(0),
+                    "Volume-averaged reversible heating [W.m-3]": pybamm.Scalar(0),
+                    "Total heating": pybamm.Scalar(0),
+                    "Total heating [W.m-3]": pybamm.Scalar(0),
+                    "X-averaged total heating": pybamm.Scalar(0),
+                    "X-averaged total heating [W.m-3]": pybamm.Scalar(0),
+                    "Volume-averaged total heating": pybamm.Scalar(0),
+                    "Volume-averaged total heating [W.m-3]": pybamm.Scalar(0),
+                }
+            )
+
+        return variables

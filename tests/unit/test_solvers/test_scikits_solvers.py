@@ -49,10 +49,10 @@ class TestScikitsSolvers(unittest.TestCase):
             length_scales = {}
             convert_to_format = "python"
 
-            def residuals_eval(self, t, y, ydot, inputs):
-                return np.array([0.5 * np.ones_like(y[0]) - ydot[0], 2 * y[0] - y[1]])
+            def rhs_algebraic_eval(self, t, y, inputs):
+                return np.array([0.5 * np.ones_like(y[0]), 2 * y[0] - y[1]])
 
-            def jacobian_eval(self, t, y, inputs):
+            def jac_rhs_algebraic_eval(self, t, y, inputs):
                 return np.array([[0.0, 0.0], [2.0, -1.0]])
 
         model = Model()
@@ -101,12 +101,12 @@ class TestScikitsSolvers(unittest.TestCase):
             convert_to_format = "python"
             len_rhs_and_alg = 2
 
-            def residuals_eval(self, t, y, ydot, inputs):
+            def rhs_algebraic_eval(self, t, y, inputs):
                 return np.array(
-                    [0.5 * np.ones_like(y[0]) - 4 * ydot[0], 2.0 * y[0] - y[1]]
+                    [0.5 * np.ones_like(y[0]), 2.0 * y[0] - y[1]]
                 )
 
-            def jacobian_eval(self, t, y, inputs):
+            def jac_rhs_algebraic_eval(self, t, y, inputs):
                 return np.array([[0.0, 0.0], [2.0, -1.0]])
 
         model = Model()
@@ -196,6 +196,28 @@ class TestScikitsSolvers(unittest.TestCase):
     def test_model_solver_dae_python(self):
         model = pybamm.BaseModel()
         model.convert_to_format = "python"
+        whole_cell = ["negative electrode", "separator", "positive electrode"]
+        var1 = pybamm.Variable("var1", domain=whole_cell)
+        var2 = pybamm.Variable("var2", domain=whole_cell)
+        model.rhs = {var1: 0.1 * var1}
+        model.algebraic = {var2: 2 * var1 - var2}
+        model.initial_conditions = {var1: 1, var2: 2}
+        model.use_jacobian = False
+        disc = get_discretisation_for_testing()
+        disc.process_model(model)
+
+        # Solve
+        solver = pybamm.ScikitsDaeSolver(rtol=1e-8, atol=1e-8, root_method="lm")
+        t_eval = np.linspace(0, 1, 100)
+        solution = solver.solve(model, t_eval)
+        np.testing.assert_array_equal(solution.t, t_eval)
+        np.testing.assert_allclose(solution.y[0], np.exp(0.1 * solution.t))
+        np.testing.assert_allclose(solution.y[-1], 2 * np.exp(0.1 * solution.t))
+
+    @unittest.skipIf(not pybamm.have_jax(), "jax or jaxlib is not installed")
+    def test_model_solver_dae_jax(self):
+        model = pybamm.BaseModel()
+        model.convert_to_format = "jax"
         whole_cell = ["negative electrode", "separator", "positive electrode"]
         var1 = pybamm.Variable("var1", domain=whole_cell)
         var2 = pybamm.Variable("var2", domain=whole_cell)
@@ -760,9 +782,11 @@ class TestScikitsSolvers(unittest.TestCase):
     def test_model_step_nonsmooth_events(self):
         # Create model
         model = pybamm.BaseModel()
-        model.timescale = pybamm.Scalar(1)
         var1 = pybamm.Variable("var1")
         var2 = pybamm.Variable("var2")
+
+        # if this is 1 it gets simplified out
+        model.timescale = pybamm.Scalar(1.000001)
         a = 0.6
         discontinuities = (np.arange(3) + 1) * a
 
@@ -787,7 +811,9 @@ class TestScikitsSolvers(unittest.TestCase):
         end_time = 3
         step_solution = None
         while time < end_time:
-            step_solution = step_solver.step(step_solution, model, dt=dt, npts=10)
+            step_solution = step_solver.step(
+                step_solution, model, dt=dt, npts=10
+            )
             time += dt
         np.testing.assert_array_less(step_solution.y[0, :-1], 0.55)
         np.testing.assert_array_less(step_solution.y[-1, :-1], 1.2)

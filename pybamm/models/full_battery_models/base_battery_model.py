@@ -20,12 +20,21 @@ class BatteryModelOptions(pybamm.FuzzyDict):
         where a 2-tuple of strings can be provided instead to indicate a different
         option for the negative and positive electrodes.
 
+            * "calculate discharge energy": str
+                Whether to calculate the discharge energy. Must be one of "true" or
+                "false". "false" is the default, since calculating the discharge
+                energy can be computationally expensive for simple models like SPM.
             * "cell geometry" : str
                 Sets the geometry of the cell. Can be "pouch" (default) or
                 "arbitrary". The arbitrary geometry option solves a 1D electrochemical
                 model with prescribed cell volume and cross-sectional area, and
                 (if thermal effects are included) solves a lumped thermal model
                 with prescribed surface area for cooling.
+            * "calculate heat source for isothermal models" : str
+                Whether to calculate the heat source terms during isothermal operation.
+                Can be "true" or "false". If "false", the heat source terms are set
+                to zero. Default is "false" since this option may require additional
+                parameters not needed by the electrochemical model.
             * "convection" : str
                 Whether to include the effects of convection in the model. Can be
                 "none" (default), "uniform transverse" or "full transverse".
@@ -163,7 +172,9 @@ class BatteryModelOptions(pybamm.FuzzyDict):
 
     def __init__(self, extra_options):
         self.possible_options = {
+            "calculate discharge energy": ["false", "true"],
             "cell geometry": ["arbitrary", "pouch"],
+            "calculate heat source for isothermal models": ["false", "true"],
             "convection": ["none", "uniform transverse", "full transverse"],
             "current collector": [
                 "uniform",
@@ -853,15 +864,6 @@ class BaseBatteryModel(pybamm.BaseModel):
         self._built = True
         pybamm.logger.info("Finish building {}".format(self.name))
 
-    def new_empty_copy(self):
-        """See :meth:`pybamm.BaseModel.new_empty_copy()`"""
-        new_model = self.__class__(name=self.name, options=self.options)
-        new_model.use_jacobian = self.use_jacobian
-        new_model.convert_to_format = self.convert_to_format
-        new_model._timescale = self.timescale
-        new_model._length_scales = self.length_scales
-        return new_model
-
     @property
     def summary_variables(self):
         return self._summary_variables
@@ -916,34 +918,44 @@ class BaseBatteryModel(pybamm.BaseModel):
         e.g. (not necessarily constant-) current, voltage, etc
         """
         if self.options["operating mode"] == "current":
-            model = pybamm.external_circuit.ExplicitCurrentControl(self.param)
+            model = pybamm.external_circuit.ExplicitCurrentControl(
+                self.param, self.options
+            )
         elif self.options["operating mode"] == "voltage":
-            model = pybamm.external_circuit.VoltageFunctionControl(self.param)
+            model = pybamm.external_circuit.VoltageFunctionControl(
+                self.param, self.options
+            )
         elif self.options["operating mode"] == "power":
             model = pybamm.external_circuit.PowerFunctionControl(
-                self.param, "algebraic"
+                self.param, self.options, "algebraic"
             )
         elif self.options["operating mode"] == "differential power":
             model = pybamm.external_circuit.PowerFunctionControl(
-                self.param, "differential without max"
+                self.param, self.options, "differential without max"
             )
         elif self.options["operating mode"] == "explicit power":
-            model = pybamm.external_circuit.ExplicitPowerControl(self.param)
+            model = pybamm.external_circuit.ExplicitPowerControl(
+                self.param, self.options
+            )
         elif self.options["operating mode"] == "resistance":
             model = pybamm.external_circuit.ResistanceFunctionControl(
-                self.param, "algebraic"
+                self.param, self.options, "algebraic"
             )
         elif self.options["operating mode"] == "differential resistance":
             model = pybamm.external_circuit.ResistanceFunctionControl(
-                self.param, "differential without max"
+                self.param, self.options, "differential without max"
             )
         elif self.options["operating mode"] == "explicit resistance":
-            model = pybamm.external_circuit.ExplicitResistanceControl(self.param)
+            model = pybamm.external_circuit.ExplicitResistanceControl(
+                self.param, self.options
+            )
         elif self.options["operating mode"] == "CCCV":
-            model = pybamm.external_circuit.CCCVFunctionControl(self.param)
+            model = pybamm.external_circuit.CCCVFunctionControl(
+                self.param, self.options
+            )
         elif callable(self.options["operating mode"]):
             model = pybamm.external_circuit.FunctionControl(
-                self.param, self.options["operating mode"]
+                self.param, self.options["operating mode"], self.options
             )
         self.submodels["external circuit"] = model
 

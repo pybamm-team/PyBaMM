@@ -75,7 +75,3 @@ class ElectrodeSOHHalfCell(pybamm.BaseModel):
     def default_solver(self):
         # Use AlgebraicSolver as CasadiAlgebraicSolver gives unnecessary warnings
         return pybamm.AlgebraicSolver()
-
-    def new_empty_copy(self):
-        new_model = ElectrodeSOHHalfCell(self.working_electrode, name=self.name)
-        return new_model
