@@ -194,7 +194,9 @@ class TestCreateSolveMTKModel(unittest.TestCase):
 
     def test_spm(self):
         model = pybamm.lithium_ion.SPM()
-        sim = pybamm.Simulation(model)
+        parameter_values = model.default_parameter_values
+        parameter_values._replace_callable_function_parameters = False
+        sim = pybamm.Simulation(model, parameter_values=parameter_values)
         sim.set_parameters()
         pybamm.get_julia_mtk_model(
             sim._model_with_set_params, geometry=sim.geometry, tspan=(0, 3600)
@@ -202,7 +204,9 @@ class TestCreateSolveMTKModel(unittest.TestCase):
 
     def test_spme(self):
         model = pybamm.lithium_ion.SPMe()
-        sim = pybamm.Simulation(model)
+        parameter_values = model.default_parameter_values
+        parameter_values._replace_callable_function_parameters = False
+        sim = pybamm.Simulation(model, parameter_values=parameter_values)
         sim.set_parameters()
         pybamm.get_julia_mtk_model(
             sim._model_with_set_params, geometry=sim.geometry, tspan=(0, 3600)
@@ -210,11 +214,28 @@ class TestCreateSolveMTKModel(unittest.TestCase):
 
     def test_dfn(self):
         model = pybamm.lithium_ion.DFN()
-        sim = pybamm.Simulation(model)
+        parameter_values = model.default_parameter_values
+        parameter_values._replace_callable_function_parameters = False
+        sim = pybamm.Simulation(model, parameter_values=parameter_values)
         sim.set_parameters()
         pybamm.get_julia_mtk_model(
             sim._model_with_set_params, geometry=sim.geometry, tspan=(0, 3600)
         )
+
+    def test_exceptions(self):
+        model = pybamm.lithium_ion.SPM()
+        parameter_values = model.default_parameter_values
+        parameter_values._replace_callable_function_parameters = False
+        sim = pybamm.Simulation(model, parameter_values=parameter_values)
+        sim.set_parameters()
+        with self.assertRaisesRegex(ValueError, "must provide geometry"):
+            pybamm.get_julia_mtk_model(
+                sim._model_with_set_params, geometry=None, tspan=(0, 3600)
+            )
+        with self.assertRaisesRegex(ValueError, "must provide tspan"):
+            pybamm.get_julia_mtk_model(
+                sim._model_with_set_params, geometry=sim.geometry, tspan=None
+            )
 
 
 if __name__ == "__main__":

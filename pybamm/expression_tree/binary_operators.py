@@ -1262,20 +1262,6 @@ def simplified_division(left, right):
             r_left, r_right = right.orphans
             return (left * r_right) / r_left
 
-    elif isinstance(left, Division):
-        # Simplify (a / b) / c to a / (b * c) if (b * c) is constant
-        if left.right.is_constant():
-            l_left, l_right = left.orphans
-            new_right = l_right * right
-            if new_right.is_constant():
-                return l_left / new_right
-        # Simplify (a / b) / c to (a / c) / b if (a / c) is constant
-        elif left.left.is_constant():
-            l_left, l_right = left.orphans
-            new_left = l_left / right
-            if new_left.is_constant():
-                return new_left / l_right
-
     # Negation simplifications
     if isinstance(left, pybamm.Negate) and isinstance(right, pybamm.Negate):
         # Double negation cancels out

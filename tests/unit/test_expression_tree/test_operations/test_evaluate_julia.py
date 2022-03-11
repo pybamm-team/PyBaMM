@@ -281,7 +281,7 @@ class TestEvaluate(unittest.TestCase):
         c_n = pybamm.Variable("c_n", domain="negative electrode")
         c_s = pybamm.Variable("c_s", domain="separator")
         c_p = pybamm.Variable("c_p", domain="positive electrode")
-        c = pybamm.concatenation(c_n, c_s, c_p)
+        c = pybamm.concatenation(c_n / 2, c_s / 3, c_p / 4)
         # create discretisation
         mesh = get_mesh_for_testing()
         spatial_methods = {
@@ -295,7 +295,7 @@ class TestEvaluate(unittest.TestCase):
         y_tests = [nodes ** 2 + 1, np.cos(nodes)]
 
         # discretise and evaluate the variable
-        disc.set_variable_slices([c])
+        disc.set_variable_slices([c_n, c_s, c_p])
         c_disc = disc.process_symbol(c)
 
         evaluator_str = pybamm.get_julia_function(c_disc)
@@ -323,7 +323,7 @@ class TestEvaluate(unittest.TestCase):
             domain="positive electrode",
             auxiliary_domains={"secondary": "current collector"},
         )
-        c = pybamm.concatenation(c_n, c_s, c_p)
+        c = pybamm.concatenation(c_n / 2, c_s / 3, c_p / 4)
         # create discretisation
         mesh = get_1p1d_mesh_for_testing()
         spatial_methods = {"macroscale": pybamm.FiniteVolume()}
@@ -336,7 +336,7 @@ class TestEvaluate(unittest.TestCase):
         y_tests = [nodes ** 2 + 1, np.cos(nodes)]
 
         # discretise and evaluate the variable
-        disc.set_variable_slices([c])
+        disc.set_variable_slices([c_n, c_s, c_p])
         c_disc = disc.process_symbol(c)
 
         evaluator_str = pybamm.get_julia_function(c_disc)
@@ -382,6 +382,19 @@ class TestEvaluate(unittest.TestCase):
 
         for i, expr in enumerate([grad_eqn_disc, div_eqn_disc]):
             evaluator_str = pybamm.get_julia_function(expr, funcname=f"f{i}")
+            Main.eval(evaluator_str)
+            for y_test in y_tests:
+                pybamm_eval = expr.evaluate(y=y_test).flatten()
+                Main.dy = np.zeros_like(pybamm_eval)
+                Main.y = y_test
+                Main.eval(f"f{i}!(dy,y,0,0)")
+                np.testing.assert_almost_equal(Main.dy, pybamm_eval, decimal=7)
+
+        # Test without preallocation
+        for i, expr in enumerate([grad_eqn_disc, div_eqn_disc]):
+            evaluator_str = pybamm.get_julia_function(
+                expr, funcname=f"f{i+10}", preallocate=False
+            )
             Main.eval(evaluator_str)
             for y_test in y_tests:
                 pybamm_eval = expr.evaluate(y=y_test).flatten()

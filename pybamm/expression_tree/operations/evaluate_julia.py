@@ -199,22 +199,21 @@ def find_symbols(
         return
 
     elif isinstance(symbol, pybamm.Concatenation):
+        if len(children_vars) == 1:
+            symbol_str = children_vars[0]
 
         # don't bother to concatenate if there is only a single child
-        if isinstance(symbol, (pybamm.NumpyConcatenation, pybamm.SparseStack)):
-            if len(children_vars) == 1:
-                symbol_str = children_vars[0]
-            else:
-                # return a list of the children variables, which will be converted to a
-                # line by line assignment
-                # return this as a string so that other functionality still works
-                # also save sizes
-                symbol_str = "["
-                for child in children_vars:
-                    child_id = child[6:].replace("m", "-")
-                    size = variable_symbol_sizes[int(child_id)]
-                    symbol_str += "{}::{}, ".format(size, child)
-                symbol_str = symbol_str[:-2] + "]"
+        elif isinstance(symbol, (pybamm.NumpyConcatenation, pybamm.SparseStack)):
+            # return a list of the children variables, which will be converted to a
+            # line by line assignment
+            # return this as a string so that other functionality still works
+            # also save sizes
+            symbol_str = "["
+            for child in children_vars:
+                child_id = child[6:].replace("m", "-")
+                size = variable_symbol_sizes[int(child_id)]
+                symbol_str += "{}::{}, ".format(size, child)
+            symbol_str = symbol_str[:-2] + "]"
 
         # DomainConcatenation specifies a particular ordering for the concatenation,
         # which we must follow
@@ -254,17 +253,14 @@ def find_symbols(
                     all_child_sizes.extend(
                         [v for _, v in sorted(zip(slice_starts, child_sizes))]
                     )
-            if len(children_vars) > 1 or symbol.secondary_dimensions_npts > 1:
-                # return a list of the children variables, which will be converted to a
-                # line by line assignment
-                # return this as a string so that other functionality still works
-                # also save sizes
-                symbol_str = "["
-                for child, size in zip(all_child_vectors, all_child_sizes):
-                    symbol_str += "{}::{}, ".format(size, child)
-                symbol_str = symbol_str[:-2] + "]"
-            else:
-                raise NotImplementedError
+            # return a list of the children variables, which will be converted to a
+            # line by line assignment
+            # return this as a string so that other functionality still works
+            # also save sizes
+            symbol_str = "["
+            for child, size in zip(all_child_vectors, all_child_sizes):
+                symbol_str += "{}::{}, ".format(size, child)
+            symbol_str = symbol_str[:-2] + "]"
 
         else:
             # A regular Concatenation for the MTK model
@@ -819,7 +815,6 @@ def get_julia_mtk_model(model, geometry=None, tspan=None):
 
     # Check geometry and tspan have been provided if a PDE
     if is_pde:
-        geometry = geometry or model.default_geometry
         if geometry is None:
             raise ValueError("must provide geometry if the model is a PDE model")
         if tspan is None:
