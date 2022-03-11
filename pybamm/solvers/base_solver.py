@@ -248,7 +248,32 @@ class BaseSolver(object):
                 y_and_S = y_casadi
 
         # if we will change the equations to include the explicit sensitivity
-        # equations, then we also need to update the mass matrix and bounds
+        # equations, then we also need to update the mass matrix and bounds.
+        # First, we reset the mass matrix and bounds back to their original form
+        # if they have been extended
+        if model.bounds[0].shape[0] > model.len_rhs_and_alg:
+            model.bounds = (
+                model.bounds[0][: model.len_rhs_and_alg],
+                model.bounds[1][: model.len_rhs_and_alg],
+            )
+        if (
+            model.mass_matrix is not None
+            and model.mass_matrix.shape[0] > model.len_rhs_and_alg
+        ):
+            if model.mass_matrix_inv is not None:
+                model.mass_matrix_inv = pybamm.Matrix(
+                    model.mass_matrix_inv.entries[
+                        : model.len_rhs, : model.len_rhs
+                    ]
+                )
+            model.mass_matrix = pybamm.Matrix(
+                model.mass_matrix.entries[
+                    : model.len_rhs_and_alg, : model.len_rhs_and_alg
+                ]
+            )
+
+        # now we can extend them by the number of sensitivity parameters
+        # if needed
         if calculate_sensitivities_explicit:
             if model.len_rhs != 0:
                 n_inputs = model.len_rhs_sens // model.len_rhs
@@ -275,28 +300,6 @@ class BaseSolver(object):
                     block_diag(
                         [model.mass_matrix.entries] * (n_inputs + 1), format="csr"
                     )
-                )
-        else:
-            # take care if calculate_sensitivites used then not used
-            if model.bounds[0].shape[0] > model.len_rhs_and_alg:
-                model.bounds = (
-                    model.bounds[0][: model.len_rhs_and_alg],
-                    model.bounds[1][: model.len_rhs_and_alg],
-                )
-            if (
-                model.mass_matrix is not None
-                and model.mass_matrix.shape[0] > model.len_rhs_and_alg
-            ):
-                if model.mass_matrix_inv is not None:
-                    model.mass_matrix_inv = pybamm.Matrix(
-                        model.mass_matrix_inv.entries[
-                            : model.len_rhs, : model.len_rhs
-                        ]
-                    )
-                model.mass_matrix = pybamm.Matrix(
-                    model.mass_matrix.entries[
-                        : model.len_rhs_and_alg, : model.len_rhs_and_alg
-                    ]
                 )
 
         def process(symbol, name, use_jacobian=None):

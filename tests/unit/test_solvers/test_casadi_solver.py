@@ -911,10 +911,6 @@ class TestCasadiSolverODEsWithForwardSensitivityEquations(unittest.TestCase):
             calculate_sensitivities=["r"],
         )
         np.testing.assert_allclose(solution.y[0], -1 + 0.2 * solution.t)
-        np.testing.assert_allclose(
-            solution.sensitivities["r"],
-            (2 * solution.t)[:, np.newaxis],
-        )
         self.assertTrue("p" not in solution.sensitivities)
         self.assertTrue("q" not in solution.sensitivities)
         np.testing.assert_allclose(solution.sensitivities["r"], 1)
