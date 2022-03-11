@@ -175,7 +175,7 @@ class TestBaseSolver(unittest.TestCase):
 
         model = VectorModel()
         init_cond = solver.calculate_consistent_state(model)
-        np.testing.assert_array_almost_equal(init_cond, vec)
+        np.testing.assert_array_almost_equal(init_cond.flatten(), vec)
         # with casadi
         init_cond = solver_with_casadi.calculate_consistent_state(model)
         np.testing.assert_array_almost_equal(init_cond.full().flatten(), vec)
@@ -186,7 +186,7 @@ class TestBaseSolver(unittest.TestCase):
 
         model.jac_algebraic_eval = jac_dense
         init_cond = solver.calculate_consistent_state(model)
-        np.testing.assert_array_almost_equal(init_cond, vec)
+        np.testing.assert_array_almost_equal(init_cond.flatten(), vec)
 
         # With sparse jacobian
         def jac_sparse(t, y, inputs):
@@ -196,7 +196,7 @@ class TestBaseSolver(unittest.TestCase):
 
         model.jac_algebraic_eval = jac_sparse
         init_cond = solver.calculate_consistent_state(model)
-        np.testing.assert_array_almost_equal(init_cond, vec)
+        np.testing.assert_array_almost_equal(init_cond.flatten(), vec)
 
     def test_fail_consistent_initial_conditions(self):
         class Model:
@@ -375,7 +375,8 @@ class TestBaseSolver(unittest.TestCase):
                 else:
                     use_inputs = inputs
 
-                sens = model.sensitivities_eval(t, y, use_inputs)
+                sens = model.jacp_rhs_algebraic_eval(t, y, use_inputs)
+
                 np.testing.assert_allclose(
                     sens["a"], exact_diff_a(y, inputs["a"], inputs["b"])
                 )

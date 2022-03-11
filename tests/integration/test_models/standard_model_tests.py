@@ -191,10 +191,10 @@ class OptimisationsTest(object):
                 eqn_eval, known_evals = eqn.evaluate(0, y, known_evals={})
             elif to_python:
                 evaluator = pybamm.EvaluatorPython(eqn)
-                eqn_eval = evaluator.evaluate(0, y)
+                eqn_eval = evaluator(0, y)
             elif to_jax:
                 evaluator = pybamm.EvaluatorJax(eqn)
-                eqn_eval = evaluator.evaluate(0, y)
+                eqn_eval = evaluator(0, y)
             else:
                 eqn_eval = eqn.evaluate(0, y)
 
