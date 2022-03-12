@@ -29,28 +29,28 @@ class BaseModel(pybamm.BaseSubModel):
         tor = pybamm.concatenation(tor_n, tor_s, tor_p)
 
         variables = {
-            self.phase + " transport_efficiency": tor,
-            "Positive " + self.phase.lower() + " transport_efficiency": tor_p,
+            self.phase + " transport efficiency": tor,
+            "Positive " + self.phase.lower() + " transport efficiency": tor_p,
             "X-averaged positive "
             + self.phase.lower()
-            + " transport_efficiency": pybamm.x_average(tor_p),
+            + " transport efficiency": pybamm.x_average(tor_p),
         }
 
         if not self.half_cell:
             variables.update(
                 {
-                    "Negative " + self.phase.lower() + " transport_efficiency": tor_n,
+                    "Negative " + self.phase.lower() + " transport efficiency": tor_n,
                     "X-averaged negative "
                     + self.phase.lower()
-                    + " transport_efficiency": pybamm.x_average(tor_n),
+                    + " transport efficiency": pybamm.x_average(tor_n),
                 }
             )
 
         if self.phase == "Electrolyte":
             variables.update(
                 {
-                    "Separator transport_efficiency": tor_s,
-                    "X-averaged separator transport_efficiency": pybamm.x_average(
+                    "Separator transport efficiency": tor_s,
+                    "X-averaged separator transport efficiency": pybamm.x_average(
                         tor_s
                     ),
                 }

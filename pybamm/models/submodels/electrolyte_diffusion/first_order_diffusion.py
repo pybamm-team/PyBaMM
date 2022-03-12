@@ -40,11 +40,11 @@ class FirstOrder(BaseElectrolyteDiffusion):
         eps_s_0 = variables["Leading-order x-averaged separator porosity"]
         eps_p_0 = variables["Leading-order x-averaged positive electrode porosity"]
         tor_n_0 = variables[
-            "Leading-order x-averaged negative electrolyte transport_efficiency"
+            "Leading-order x-averaged negative electrolyte transport efficiency"
         ]
-        tor_s_0 = variables["Leading-order x-averaged separator transport_efficiency"]
+        tor_s_0 = variables["Leading-order x-averaged separator transport efficiency"]
         tor_p_0 = variables[
-            "Leading-order x-averaged positive electrolyte transport_efficiency"
+            "Leading-order x-averaged positive electrolyte transport efficiency"
         ]
         deps_n_0_dt = variables[
             "Leading-order x-averaged negative electrode porosity change"

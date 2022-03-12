@@ -949,12 +949,12 @@ class BaseBatteryModel(pybamm.BaseModel):
 
     def set_transport_efficiency_submodels(self):
         self.submodels[
-            "electrolyte transport_efficiency"
+            "electrolyte transport efficiency"
         ] = pybamm.transport_efficiency.Bruggeman(
             self.param, "Electrolyte", self.options
         )
         self.submodels[
-            "electrode transport_efficiency"
+            "electrode transport efficiency"
         ] = pybamm.transport_efficiency.Bruggeman(self.param, "Electrode", self.options)
 
     def set_thermal_submodel(self):

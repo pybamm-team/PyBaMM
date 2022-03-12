@@ -75,12 +75,12 @@ class SPMe(SPM):
 
     def set_transport_efficiency_submodels(self):
         self.submodels[
-            "electrolyte transport_efficiency"
+            "electrolyte transport efficiency"
         ] = pybamm.transport_efficiency.Bruggeman(
             self.param, "Electrolyte", self.options, True
         )
         self.submodels[
-            "electrode transport_efficiency"
+            "electrode transport efficiency"
         ] = pybamm.transport_efficiency.Bruggeman(
             self.param, "Electrode", self.options, True
         )

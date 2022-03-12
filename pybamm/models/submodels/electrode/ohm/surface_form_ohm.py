@@ -33,7 +33,7 @@ class SurfaceForm(BaseModel):
         x_p = pybamm.standard_spatial_vars.x_p
         i_boundary_cc = variables["Current collector current density"]
         i_e = variables[self.domain + " electrolyte current density"]
-        tor = variables[self.domain + " electrode transport_efficiency"]
+        tor = variables[self.domain + " electrode transport efficiency"]
         phi_s_cn = variables["Negative current collector potential"]
         T = variables[self.domain + " electrode temperature"]
 

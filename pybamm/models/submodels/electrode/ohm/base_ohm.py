@@ -39,7 +39,7 @@ class BaseModel(BaseElectrode):
             T_p = variables["Positive electrode temperature"]
             sigma_eff = (
                 self.param.sigma_p(T_p)
-                * variables["Positive electrode transport_efficiency"]
+                * variables["Positive electrode transport efficiency"]
             )
             rbc = (
                 i_boundary_cc / pybamm.boundary_value(-sigma_eff, "right"),
