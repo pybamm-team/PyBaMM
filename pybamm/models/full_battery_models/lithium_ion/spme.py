@@ -43,7 +43,7 @@ class SPMe(SPM):
         self.set_interface_utilisation_submodel()
         self.set_crack_submodel()
         self.set_active_material_submodel()
-        self.set_tortuosity_submodels()
+        self.set_transport_efficiency_submodels()
         self.set_convection_submodel()
         self.set_intercalation_kinetics_submodel()
         self.set_other_reaction_submodels_to_zero()
@@ -73,11 +73,15 @@ class SPMe(SPM):
             "transverse convection"
         ] = pybamm.convection.transverse.NoConvection(self.param, self.options)
 
-    def set_tortuosity_submodels(self):
-        self.submodels["electrolyte tortuosity"] = pybamm.tortuosity.Bruggeman(
+    def set_transport_efficiency_submodels(self):
+        self.submodels[
+            "electrolyte transport efficiency"
+        ] = pybamm.transport_efficiency.Bruggeman(
             self.param, "Electrolyte", self.options, True
         )
-        self.submodels["electrode tortuosity"] = pybamm.tortuosity.Bruggeman(
+        self.submodels[
+            "electrode transport efficiency"
+        ] = pybamm.transport_efficiency.Bruggeman(
             self.param, "Electrode", self.options, True
         )
 

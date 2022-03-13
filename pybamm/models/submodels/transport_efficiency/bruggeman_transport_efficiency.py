@@ -1,13 +1,13 @@
 #
-# Class for Bruggeman tortuosity
+# Class for Bruggemantransport_efficiency
 #
 import pybamm
 
-from .base_tortuosity import BaseModel
+from .base_transport_efficiency import BaseModel
 
 
 class Bruggeman(BaseModel):
-    """Submodel for Bruggeman tortuosity
+    """Submodel for Bruggeman transport_efficiency
 
     Parameters
     ----------
@@ -18,7 +18,7 @@ class Bruggeman(BaseModel):
     options : dict, optional
         A dictionary of options to be passed to the model.
 
-    **Extends:** :class:`pybamm.tortuosity.BaseModel`
+    **Extends:** :class:`pybamm.transport_efficiency.BaseModel`
     """
 
     def __init__(self, param, phase, options=None, set_leading_order=False):
@@ -51,7 +51,7 @@ class Bruggeman(BaseModel):
             tor_p = eps_p ** param.b_s_p
 
         variables.update(
-            self._get_standard_tortuosity_variables(
+            self._get_standard_transport_efficiency_variables(
                 tor_n, tor_s, tor_p, self.set_leading_order
             )
         )

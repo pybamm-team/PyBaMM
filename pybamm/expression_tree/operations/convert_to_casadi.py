@@ -144,8 +144,9 @@ class CasadiConverter(object):
                         "and use a non-CasADi solver. "
                     )
                 else:  # pragma: no cover
-                    raise NotImplementedError("Unknown interpolator: {0}"
-                                              .format(symbol.interpolator))
+                    raise NotImplementedError(
+                        "Unknown interpolator: {0}".format(symbol.interpolator)
+                    )
 
                 if len(converted_children) == 1:
                     return casadi.interpolant(
@@ -153,13 +154,16 @@ class CasadiConverter(object):
                     )(*converted_children)
                 elif len(converted_children) == 2:
                     LUT = casadi.interpolant(
-                        "LUT", solver, symbol.x, symbol.y.ravel(order='F')
+                        "LUT", solver, symbol.x, symbol.y.ravel(order="F")
                     )
                     res = LUT(casadi.hcat(converted_children).T).T
                     return res
                 else:  # pragma: no cover
-                    raise ValueError("Invalid converted_children count: {0}"
-                                     .format(len(converted_children)))
+                    raise ValueError(
+                        "Invalid converted_children count: {0}".format(
+                            len(converted_children)
+                        )
+                    )
 
             elif symbol.function.__name__.startswith("elementwise_grad_of_"):
                 differentiating_child_idx = int(symbol.function.__name__[-1])

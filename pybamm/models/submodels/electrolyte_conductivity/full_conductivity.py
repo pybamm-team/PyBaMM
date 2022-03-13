@@ -38,7 +38,7 @@ class Full(BaseElectrolyteConductivity):
     def get_coupled_variables(self, variables):
         param = self.param
         T = variables["Cell temperature"]
-        tor = variables["Electrolyte tortuosity"]
+        tor = variables["Electrolyte transport efficiency"]
         c_e = variables["Electrolyte concentration"]
         phi_e = variables["Electrolyte potential"]
 
