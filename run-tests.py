@@ -352,7 +352,7 @@ if __name__ == "__main__":
     )
     # Doctests
     parser.add_argument(
-        "--doctest",
+        "--doctests",
         action="store_true",
         help="Run any doctests, check if docs can be built",
     )
@@ -391,7 +391,7 @@ if __name__ == "__main__":
         has_run = True
         run_flake8()
     # Doctests
-    if args.doctest:
+    if args.doctests:
         has_run = True
         run_doc_tests()
     # Notebook tests
