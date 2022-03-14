@@ -11,7 +11,7 @@
 [![release](https://img.shields.io/github/v/release/pybamm-team/PyBaMM?color=yellow)](https://github.com/pybamm-team/PyBaMM/releases)
 [![black code style](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/ambv/black)
 <!-- ALL-CONTRIBUTORS-BADGE:START - Do not remove or modify this section -->
-[![All Contributors](https://img.shields.io/badge/all_contributors-41-orange.svg)](#-contributors)
+[![All Contributors](https://img.shields.io/badge/all_contributors-42-orange.svg)](#-contributors)
 <!-- ALL-CONTRIBUTORS-BADGE:END -->
 
 </div>
@@ -194,6 +194,7 @@ Thanks goes to these wonderful people ([emoji key](https://allcontributors.org/d
     <td align="center"><a href="https://github.com/dion-w"><img src="https://avatars.githubusercontent.com/u/91852142?v=4?s=100" width="100px;" alt=""/><br /><sub><b>Dion Wilde</b></sub></a><br /><a href="https://github.com/pybamm-team/PyBaMM/issues?q=author%3Adion-w" title="Bug reports">🐛</a> <a href="https://github.com/pybamm-team/PyBaMM/commits?author=dion-w" title="Code">💻</a></td>
     <td align="center"><a href="https://www.ehtec.co"><img src="https://avatars.githubusercontent.com/u/48386220?v=4?s=100" width="100px;" alt=""/><br /><sub><b>Elias Hohl</b></sub></a><br /><a href="https://github.com/pybamm-team/PyBaMM/commits?author=ehtec" title="Code">💻</a></td>
     <td align="center"><a href="https://github.com/KAschad"><img src="https://avatars.githubusercontent.com/u/93784399?v=4?s=100" width="100px;" alt=""/><br /><sub><b>KAschad</b></sub></a><br /><a href="https://github.com/pybamm-team/PyBaMM/issues?q=author%3AKAschad" title="Bug reports">🐛</a></td>
+    <td align="center"><a href="https://github.com/Vaibhav-Chopra-GT"><img src="https://avatars.githubusercontent.com/u/92637595?v=4?s=100" width="100px;" alt=""/><br /><sub><b>Vaibhav-Chopra-GT</b></sub></a><br /><a href="https://github.com/pybamm-team/PyBaMM/commits?author=Vaibhav-Chopra-GT" title="Code">💻</a></td>
   </tr>
 </table>
 

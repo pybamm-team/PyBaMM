@@ -39,7 +39,7 @@ class LOQS(BaseModel):
         self.set_convection_submodel()
         self.set_porosity_submodel()
         self.set_active_material_submodel()
-        self.set_tortuosity_submodels()
+        self.set_transport_efficiency_submodels()
         self.set_electrolyte_submodel()
         self.set_electrode_submodels()
         self.set_thermal_submodel()
@@ -106,13 +106,13 @@ class LOQS(BaseModel):
             self.param, self.options, True
         )
 
-    def set_tortuosity_submodels(self):
+    def set_transport_efficiency_submodels(self):
         self.submodels[
-            "leading-order electrolyte tortuosity"
-        ] = pybamm.tortuosity.Bruggeman(self.param, "Electrolyte")
+            "leading-order electrolyte transport efficiency"
+        ] = pybamm.transport_efficiency.Bruggeman(self.param, "Electrolyte")
         self.submodels[
-            "leading-order electrode tortuosity"
-        ] = pybamm.tortuosity.Bruggeman(self.param, "Electrode")
+            "leading-order electrode transport efficiency"
+        ] = pybamm.transport_efficiency.Bruggeman(self.param, "Electrode")
 
     def set_convection_submodel(self):
 

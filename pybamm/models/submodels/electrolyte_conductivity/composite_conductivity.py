@@ -50,14 +50,16 @@ class Composite(BaseElectrolyteConductivity):
             ]
             phi_s_n_av = variables["X-averaged negative electrode potential"]
             tor_n_av = variables[
-                "Leading-order x-averaged negative electrolyte tortuosity"
+                "Leading-order x-averaged negative electrolyte transport efficiency"
             ]
 
         c_e_s = variables["Separator electrolyte concentration"]
         c_e_p = variables["Positive electrolyte concentration"]
 
-        tor_s_av = variables["Leading-order x-averaged separator tortuosity"]
-        tor_p_av = variables["Leading-order x-averaged positive electrolyte tortuosity"]
+        tor_s_av = variables["Leading-order x-averaged separator transport efficiency"]
+        tor_p_av = variables[
+            "Leading-order x-averaged positive electrolyte transport efficiency"
+        ]
 
         T_av = variables["X-averaged cell temperature"]
         T_av_s = pybamm.PrimaryBroadcast(T_av, "separator")

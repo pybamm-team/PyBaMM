@@ -100,7 +100,7 @@ class BasicFull(BaseModel):
         # Current density
         i_cell = param.current_with_time
 
-        # Tortuosity
+        # transport_efficiency
         tor = pybamm.concatenation(
             eps_n ** param.b_e_n, eps_s ** param.b_e_s, eps_p ** param.b_e_p
         )

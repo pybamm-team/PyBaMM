@@ -38,7 +38,9 @@ class Composite(BaseModel):
         x_p = pybamm.standard_spatial_vars.x_p
 
         tor_0 = variables[
-            "Leading-order x-averaged " + self.domain.lower() + " electrode tortuosity"
+            "Leading-order x-averaged "
+            + self.domain.lower()
+            + " electrode transport efficiency"
         ]
         phi_s_cn = variables["Negative current collector potential"]
         T = variables["X-averaged " + self.domain.lower() + " electrode temperature"]
@@ -81,7 +83,9 @@ class Composite(BaseModel):
 
         phi_s = variables[self.domain + " electrode potential"]
         tor_0 = variables[
-            "Leading-order x-averaged " + self.domain.lower() + " electrode tortuosity"
+            "Leading-order x-averaged "
+            + self.domain.lower()
+            + " electrode transport efficiency"
         ]
         i_boundary_cc_0 = variables["Leading-order current collector current density"]
         T = variables["X-averaged " + self.domain.lower() + " electrode temperature"]
