@@ -161,7 +161,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
             Any external variables or input parameters to pass to the model when solving
         """
         inputs_dict = inputs_dict or {}
-        if model.rhs_eval.form == "casadi":
+        if model.convert_to_format == "casadi":
             # stack inputs
             inputs = casadi.vertcat(*[x for x in inputs_dict.values()])
             # raise warning about casadi format being slow
@@ -174,7 +174,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
         else:
             inputs = inputs_dict
 
-        if model.jacobian_eval is None:
+        if model.jac_rhs_algebraic_eval is None:
             raise pybamm.SolverError("KLU requires the Jacobian to be provided")
 
         try:
@@ -184,7 +184,8 @@ class IDAKLUSolver(pybamm.BaseSolver):
 
         y0 = model.y0
         if isinstance(y0, casadi.DM):
-            y0 = y0.full().flatten()
+            y0 = y0.full()
+        y0 = y0.flatten()
 
         rtol = self.rtol
         atol = self._check_atol_type(atol, y0.size)
@@ -195,22 +196,28 @@ class IDAKLUSolver(pybamm.BaseSolver):
             mass_matrix = model.mass_matrix.entries
 
         # construct residuals function by binding inputs
-        def resfn(t, y, ydot):
-            return model.residuals_eval(t, y, ydot, inputs)
+        if model.convert_to_format == "casadi":
+            def resfn(t, y, ydot):
+                return (
+                    model.rhs_algebraic_eval(t, y, inputs).full().flatten()
+                    - mass_matrix @ ydot
+                )
+        else:
+            def resfn(t, y, ydot):
+                return (
+                    model.rhs_algebraic_eval(t, y, inputs).flatten()
+                    - mass_matrix @ ydot
+                )
 
-        if model.jacobian_eval:
-            jac_y0_t0 = model.jacobian_eval(t_eval[0], y0, inputs)
-            if sparse.issparse(jac_y0_t0):
-
-                def jacfn(t, y, cj):
-                    j = model.jacobian_eval(t, y, inputs) - cj * mass_matrix
-                    return j
-
-            else:
-
-                def jacfn(t, y, cj):
-                    jac_eval = model.jacobian_eval(t, y, inputs) - cj * mass_matrix
-                    return sparse.csr_matrix(jac_eval)
+        jac_y0_t0 = model.jac_rhs_algebraic_eval(t_eval[0], y0, inputs)
+        if sparse.issparse(jac_y0_t0):
+            def jacfn(t, y, cj):
+                j = model.jac_rhs_algebraic_eval(t, y, inputs) - cj * mass_matrix
+                return j
+        else:
+            def jacfn(t, y, cj):
+                jac_eval = model.jac_rhs_algebraic_eval(t, y, inputs) - cj * mass_matrix
+                return sparse.csr_matrix(jac_eval)
 
         class SundialsJacobian:
             def __init__(self):
@@ -257,8 +264,8 @@ class IDAKLUSolver(pybamm.BaseSolver):
         ids = np.concatenate((rhs_ids, alg_ids))
 
         number_of_sensitivity_parameters = 0
-        if model.sensitivities_eval is not None:
-            sens0 = model.sensitivities_eval(t=0, y=y0, inputs=inputs)
+        if model.jacp_rhs_algebraic_eval is not None:
+            sens0 = model.jacp_rhs_algebraic_eval(0, y0, inputs)
             number_of_sensitivity_parameters = len(sens0.keys())
 
         def sensfn(resvalS, t, y, yp, yS, ypS):
@@ -288,9 +295,9 @@ class IDAKLUSolver(pybamm.BaseSolver):
 
             """
 
-            dFdy = model.jacobian_eval(t, y, inputs)
+            dFdy = model.jac_rhs_algebraic_eval(t, y, inputs)
             dFdyd = mass_matrix
-            dFdp = model.sensitivities_eval(t, y, inputs)
+            dFdp = model.jacp_rhs_algebraic_eval(t, y, inputs)
 
             for i, dFdp_i in enumerate(dFdp.values()):
                 resvalS[i][:] = dFdy @ yS[i] - dFdyd @ ypS[i] + dFdp_i

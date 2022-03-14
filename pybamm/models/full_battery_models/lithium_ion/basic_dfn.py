@@ -113,7 +113,7 @@ class BasicDFN(BaseModel):
         eps_s_n = pybamm.Parameter("Negative electrode active material volume fraction")
         eps_s_p = pybamm.Parameter("Positive electrode active material volume fraction")
 
-        # Tortuosity
+        # transport_efficiency
         tor = pybamm.concatenation(
             eps_n ** param.b_e_n, eps_s ** param.b_e_s, eps_p ** param.b_e_p
         )
@@ -313,6 +313,3 @@ class BasicDFN(BaseModel):
             pybamm.Event("Minimum voltage", voltage - param.voltage_low_cut),
             pybamm.Event("Maximum voltage", voltage - param.voltage_high_cut),
         ]
-
-    def new_empty_copy(self):
-        return pybamm.BaseModel.new_empty_copy(self)
