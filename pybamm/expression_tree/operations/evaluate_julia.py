@@ -637,7 +637,7 @@ def convert_var_and_eqn_to_str(var, eqn, all_constants_str, all_variables_str, t
         # ignore broadcasts for now
         eqn = eqn.child
 
-    constants, var_symbols = to_julia(eqn)[:2]
+    var_symbols = to_julia(eqn)[1]
 
     # var_str = ""
     # for symbol_id, symbol_line in var_symbols.items():
