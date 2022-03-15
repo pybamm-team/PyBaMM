@@ -203,7 +203,7 @@ You can also use the test runner to run the doctests:
 
 .. code:: bash
 
-	  python run-tests.py --doctests
+	  python run-tests.py --doctest
 
 There is more to the PyBaMM test runner. To see a list of all options, type
 
