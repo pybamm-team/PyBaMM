@@ -683,12 +683,6 @@ def convert_var_and_eqn_to_str(var, eqn, all_constants_str, all_variables_str, t
         else:
             var_str += "{} = {}\n".format(julia_var, symbol_line)
 
-    # extract constants in generated function
-    for eqn_id, const_value in constants.items():
-        const_name = id_to_julia_variable(eqn_id, "const")
-        all_constants_str += "{} = {}\n".format(const_name, const_value)
-        # TODO: avoid repeated constants definitions
-
     # If we have created a concatenation we need to define it
     # Hardcoded to the negative electrode, separator, positive electrode case for now
     if "concatenation" in var_str and "function concatenation" not in all_variables_str:
