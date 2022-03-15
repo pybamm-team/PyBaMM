@@ -23,6 +23,11 @@ if have_julia and system() != "Windows":
 @unittest.skipIf(not have_julia, "Julia not installed")
 @unittest.skipIf(system() == "Windows", "Julia not supported on windows")
 class TestEvaluate(unittest.TestCase):
+    def test_exceptions(self):
+        a = pybamm.Symbol("a")
+        with self.assertRaisesRegex(NotImplementedError, "Conversion to Julia"):
+            pybamm.get_julia_function(a)
+
     def test_evaluator_julia(self):
         a = pybamm.StateVector(slice(0, 1))
         b = pybamm.StateVector(slice(1, 2))
@@ -302,6 +307,17 @@ class TestEvaluate(unittest.TestCase):
         Main.eval(evaluator_str)
         for y_test in y_tests:
             pybamm_eval = c_disc.evaluate(y=y_test).flatten()
+            Main.dy = np.zeros_like(pybamm_eval)
+            Main.y = y_test
+            Main.eval("f!(dy,y,0,0)")
+            np.testing.assert_equal(Main.dy, pybamm_eval)
+
+        # test without preallocation
+        expr = c_disc * c_disc
+        evaluator_str = pybamm.get_julia_function(expr, preallocate=False)
+        Main.eval(evaluator_str)
+        for y_test in y_tests:
+            pybamm_eval = expr.evaluate(y=y_test).flatten()
             Main.dy = np.zeros_like(pybamm_eval)
             Main.y = y_test
             Main.eval("f!(dy,y,0,0)")

@@ -199,11 +199,7 @@ def find_symbols(
         return
 
     elif isinstance(symbol, pybamm.Concatenation):
-        if len(children_vars) == 1:
-            symbol_str = children_vars[0]
-
-        # don't bother to concatenate if there is only a single child
-        elif isinstance(symbol, (pybamm.NumpyConcatenation, pybamm.SparseStack)):
+        if isinstance(symbol, (pybamm.NumpyConcatenation, pybamm.SparseStack)):
             # return a list of the children variables, which will be converted to a
             # line by line assignment
             # return this as a string so that other functionality still works
@@ -276,23 +272,11 @@ def find_symbols(
         indices = np.argwhere(symbol.evaluation_array).reshape(-1).astype(np.int32)
         # add 1 since julia uses 1-indexing
         indices += 1
-        consecutive = np.all(indices[1:] - indices[:-1] == 1)
         if len(indices) == 1:
             symbol_str = "{}[{}]".format(name, indices[0])
-        elif consecutive:
+        else:
             # julia does include the final value
             symbol_str = "{}[{}:{}]".format(name, indices[0], indices[-1])
-        else:
-            indices_array = pybamm.Array(indices)
-            # Save the indices as constant by printing to a string
-            # Set print options large enough to avoid ellipsis
-            # at least as big as len(row) = len(col) = len(data)
-            np.set_printoptions(
-                threshold=max(np.get_printoptions()["threshold"], indices.shape[0] + 10)
-            )
-            constant_symbols[indices_array.id] = np.array2string(indices, separator=",")
-            index_name = id_to_julia_variable(indices_array.id, "const")
-            symbol_str = "{}[{}]".format(name, index_name)
 
     elif isinstance(symbol, pybamm.Time):
         symbol_str = "t"
@@ -319,10 +303,8 @@ def find_symbols(
     try:
         if symbol.shape == ():
             variable_symbol_sizes[symbol.id] = 1
-        elif symbol.shape[1] == 1:
-            variable_symbol_sizes[symbol.id] = symbol.shape[0]
         else:
-            raise ValueError("expected scalar or column vector")
+            variable_symbol_sizes[symbol.id] = symbol.shape[0]
     except NotImplementedError:
         pass
 
@@ -685,14 +667,9 @@ def convert_var_and_eqn_to_str(var, eqn, all_constants_str, all_variables_str, t
                         julia_var, symbol_line
                     )
                 elif next_symbol_line.startswith("concatenation"):
-                    if len(symbol_line) < 20:
-                        var_symbols[next_var_id] = next_symbol_line.replace(
-                            julia_var, symbol_line
-                        )
-                    else:
-                        var_symbols[next_var_id] = next_symbol_line.replace(
-                            julia_var, f"\n   {symbol_line}\n"
-                        )
+                    var_symbols[next_var_id] = next_symbol_line.replace(
+                        julia_var, f"\n   {symbol_line}\n"
+                    )
                 else:
                     # add brackets so that the order of operations is maintained
                     var_symbols[next_var_id] = next_symbol_line.replace(
