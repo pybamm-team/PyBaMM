@@ -453,6 +453,8 @@ def get_julia_function(
         # find input parameters
         elif symbol_line.startswith("inputs"):
             input_parameters[julia_var] = symbol_line[8:-2]
+        elif "minimum" in symbol_line or "maximum" in symbol_line:
+            var_str += "{} .= {}\n".format(julia_var, symbol_line)
         else:
             # don't replace the matrix multiplication cases (which will be
             # turned into a mul!), since it is faster to assign to a cache array
@@ -461,10 +463,15 @@ def get_julia_function(
             # unless it is a @view in which case we don't
             # need to cache
             # e.g. mul!(cs.cache_1, cs.cache_2, @view y[1:10])
-            any_matmuls = any(
+            # also don't replace the minimum() or maximum() cases as we can't
+            # broadcast them
+            any_matmul_min_max = any(
                 julia_var in next_symbol_line
                 and (
-                    (" @ " in next_symbol_line or "mul!" in next_symbol_line)
+                    any(
+                        x in next_symbol_line
+                        for x in [" @ ", "mul!", "minimum", "maximum"]
+                    )
                     and not symbol_line.startswith("@view")
                 )
                 for next_symbol_line in var_symbols.values()
@@ -472,7 +479,7 @@ def get_julia_function(
             # inline operation if it can be inlined
             if (
                 any(x in symbol_line for x in inlineable_symbols) or symbol_line == "t"
-            ) and not any_matmuls:
+            ) and not any_matmul_min_max:
                 found_replacement = False
                 # replace all other occurrences of the variable
                 # in the dictionary with the symbol line
@@ -490,10 +497,7 @@ def get_julia_function(
                             )
                         found_replacement = True
                 if not found_replacement:
-                    if "minimum" in symbol_line or "maximum" in symbol_line:
-                        var_str += "{} .= {}\n".format(julia_var, symbol_line)
-                    else:
-                        var_str += "@. {} = {}\n".format(julia_var, symbol_line)
+                    var_str += "@. {} = {}\n".format(julia_var, symbol_line)
 
             # otherwise assign
             else:

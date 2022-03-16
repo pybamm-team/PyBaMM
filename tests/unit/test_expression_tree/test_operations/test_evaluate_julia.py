@@ -23,6 +23,27 @@ if have_julia and system() != "Windows":
 @unittest.skipIf(not have_julia, "Julia not installed")
 @unittest.skipIf(system() == "Windows", "Julia not supported on windows")
 class TestEvaluate(unittest.TestCase):
+    def evaluate_and_test_equal(
+        self, expr, y_tests, t_tests=0.0, p_tests=0.0, dy=None, funcname="f"
+    ):
+        if not isinstance(y_tests, list):
+            y_tests = [y_tests]
+        if not isinstance(p_tests, list):
+            p_tests = [p_tests]
+        if not isinstance(t_tests, list):
+            t_tests = [t_tests]
+        if dy is None:
+            dy = np.zeros_like(y_tests[0])
+        evaluator_str = pybamm.get_julia_function(expr, funcname=funcname)
+        Main.eval(evaluator_str)
+        Main.dy = dy
+        for t_test, y_test, p_test in zip(t_tests, y_tests, p_tests):
+            Main.y = y_test
+            Main.p = p_test
+            Main.t = t_test
+            Main.eval(f"{funcname}!(dy,y,p,t)")
+            self.assertEqual(Main.dy, expr.evaluate(t=t_test, y=y_test).flatten())
+
     def test_exceptions(self):
         a = pybamm.Symbol("a")
         with self.assertRaisesRegex(NotImplementedError, "Conversion to Julia"):
@@ -37,16 +58,8 @@ class TestEvaluate(unittest.TestCase):
 
         # test a * b
         expr = a * b
-        evaluator_str = pybamm.get_julia_function(expr)
-        Main.eval(evaluator_str)
-        Main.dy = [0.0]
-        Main.y = np.array([2.0, 3.0])
-        Main.eval("f!(dy,y,0,0)")
-        self.assertEqual(Main.dy, 6)
-        Main.dy = [0.0]
-        Main.y = np.array([1.0, 3.0])
-        Main.eval("f!(dy,y,0,0)")
-        self.assertEqual(Main.dy, 3)
+        self.evaluate_and_test_equal(expr, np.array([2.0, 3.0]), dy=[0.0])
+        self.evaluate_and_test_equal(expr, np.array([1.0, 3.0]), dy=[0.0])
 
         # test function(a*b)
         expr = pybamm.cos(a * b)
@@ -281,6 +294,24 @@ class TestEvaluate(unittest.TestCase):
             Main.y = y_test
             Main.eval("f!(dy,y,0,0)")
             np.testing.assert_equal(Main.dy, expr.evaluate(y=y_test).flatten())
+
+        # More advanced tests for min
+        b = pybamm.StateVector(slice(3, 6))
+        concat = pybamm.NumpyConcatenation(2 * a, 3 * b)
+        expr = pybamm.min(concat)
+        self.evaluate_and_test_equal(
+            expr, np.array([1, 2, 3, 4, 5, 6]), dy=[0.0], funcname="h1"
+        )
+
+        v = pybamm.Vector([1, 2, 3])
+        expr = pybamm.min(v * a)
+        evaluator_str = pybamm.get_julia_function(expr, funcname="h2")
+        print(evaluator_str)
+        Main.eval(evaluator_str)
+        Main.dy = [0.0]
+        Main.y = y_test
+        Main.eval("h2!(dy,y,0,0)")
+        np.testing.assert_equal(Main.dy, expr.evaluate(y=y_test).flatten())
 
     def test_evaluator_julia_domain_concatenation(self):
         c_n = pybamm.Variable("c_n", domain="negative electrode")
