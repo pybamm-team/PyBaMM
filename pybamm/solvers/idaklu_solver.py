@@ -164,13 +164,6 @@ class IDAKLUSolver(pybamm.BaseSolver):
         if model.convert_to_format == "casadi":
             # stack inputs
             inputs = casadi.vertcat(*[x for x in inputs_dict.values()])
-            # raise warning about casadi format being slow
-            pybamm.logger.warning(
-                "Using casadi form for the IDA KLU solver is slow. "
-                "Set `model.convert_to_format='python'` for better performance. "
-                "For DAE models, this may also require changing the root method to "
-                "'lm'."
-            )
         else:
             inputs = inputs_dict
 
@@ -192,32 +185,63 @@ class IDAKLUSolver(pybamm.BaseSolver):
 
         if model.convert_to_format == "jax":
             mass_matrix = model.mass_matrix.entries.toarray()
+        elif model.convert_to_format == "casadi":
+            mass_matrix = casadi.MX(model.mass_matrix.entries)
         else:
             mass_matrix = model.mass_matrix.entries
 
         # construct residuals function by binding inputs
-        if model.convert_to_format == "casadi":
-            def resfn(t, y, ydot):
-                return (
-                    model.rhs_algebraic_eval(t, y, inputs).full().flatten()
-                    - mass_matrix @ ydot
-                )
-        else:
+        if model.convert_to_format != "casadi":
             def resfn(t, y, ydot):
                 return (
                     model.rhs_algebraic_eval(t, y, inputs).flatten()
                     - mass_matrix @ ydot
                 )
 
-        jac_y0_t0 = model.jac_rhs_algebraic_eval(t_eval[0], y0, inputs)
-        if sparse.issparse(jac_y0_t0):
-            def jacfn(t, y, cj):
-                j = model.jac_rhs_algebraic_eval(t, y, inputs) - cj * mass_matrix
-                return j
+        # need to provide jacobian_rhs_alg - cj * mass_matrix
+        if model.convert_to_format == "casadi":
+            t_casadi = casadi.MX.sym("t")
+            cj_casadi = casadi.MX.sym("cj")
+            y_casadi = casadi.MX.sym("y", model.len_rhs_and_alg)
+            jac_times_cjmass = casadi.Function(
+                "jac_times_cjmass", [t_casadi, y_casadi, cj_casadi], [
+                    model.jac_rhs_algebraic_eval(t_casadi, y_casadi, inputs) -
+                    cj_casadi * mass_matrix
+                ]
+            )
+            jac_y0_t0 = sparse.csr_matrix(jac_times_cjmass(t_eval[0], y0, 1.))
+            jac_times_cjmass_nnz = jac_y0_t0.nnz
+            jac_times_cjmass_rowvals = jac_y0_t0.indices
+            jac_times_cjmass_colptrs = jac_y0_t0.indptr
+
+            v_casadi = casadi.MX.sym("v", model.len_rhs_and_alg)
+
+            mass_action = casadi.Function(
+                "mass_action", [v_casadi], [
+                    mass_matrix * v_casadi
+                ]
+            )
+
+            jac_casadi = casadi.jacobian(casadi_expression, y_and_S)
+                    jac = casadi.Function(
+                        name, [t_casadi, y_and_S, p_casadi_stacked], [jac_casadi]
+                    )
+            jac_action = casadi.Function(
+                "jac_times_cjmass", [t_casadi, y_casadi, cj_casadi], [
+                    model.jac_rhs_algebraic_eval(t_casadi, y_casadi, inputs) -
+                    cj_casadi * mass_matrix
+                ]
+            )
         else:
-            def jacfn(t, y, cj):
-                jac_eval = model.jac_rhs_algebraic_eval(t, y, inputs) - cj * mass_matrix
-                return sparse.csr_matrix(jac_eval)
+            jac_y0_t0 = model.jac_rhs_algebraic_eval(t_eval[0], y0, inputs)
+            if sparse.issparse(jac_y0_t0):
+                def jacfn(t, y, cj):
+                    j = model.jac_rhs_algebraic_eval(t, y, inputs) - cj * mass_matrix
+                    return j
+            else:
+                def jacfn(t, y, cj):
+                    jac_eval = model.jac_rhs_algebraic_eval(t, y, inputs) - cj * mass_matrix
+                    return sparse.csr_matrix(jac_eval)
 
         class SundialsJacobian:
             def __init__(self):
@@ -304,25 +328,45 @@ class IDAKLUSolver(pybamm.BaseSolver):
 
         # solve
         timer = pybamm.Timer()
-        sol = idaklu.solve(
-            t_eval,
-            y0,
-            ydot0,
-            resfn,
-            jac_class.jac_res,
-            sensfn,
-            jac_class.get_jac_data,
-            jac_class.get_jac_row_vals,
-            jac_class.get_jac_col_ptrs,
-            jac_class.nnz,
-            rootfn,
-            num_of_events,
-            use_jac,
-            ids,
-            atol,
-            rtol,
-            number_of_sensitivity_parameters,
-        )
+
+        if model.convert_to_format == "casadi":
+            sol = idaklu.solve_casadi(
+                t_eval, y0, ydot0,
+                model.rhs_algebraic_eval,
+                jac_times_cjmass,
+                jac_times_cjmass_rowvals,
+                jac_times_cjmass_colptrs,
+                jac_times_cjmass_nnz,
+                jac_action,
+                mass_action,
+                sens,
+                events,
+                num_of_events,
+                use_jac,
+                ids,
+                atol, rtol,
+                number_of_sensitivity_parameters
+            )
+        else:
+            sol = idaklu.solve_python(
+                t_eval,
+                y0,
+                ydot0,
+                resfn,
+                jac_class.jac_res,
+                sensfn,
+                jac_class.get_jac_data,
+                jac_class.get_jac_row_vals,
+                jac_class.get_jac_col_ptrs,
+                jac_class.nnz,
+                rootfn,
+                num_of_events,
+                use_jac,
+                ids,
+                atol,
+                rtol,
+                number_of_sensitivity_parameters,
+            )
         integration_time = timer.time()
 
         t = sol.t

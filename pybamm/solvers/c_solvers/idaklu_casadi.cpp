@@ -49,7 +49,6 @@ public:
   const np_array &jac_times_cjmass_rowvals;
   const np_array &jac_times_cjmass_colptrs;
   CasadiFunction jac_action;
-  CasadiFunction jacp_action;
   CasadiFunction mass_action;
   CasadiFunction events;
 
@@ -58,7 +57,6 @@ public:
                   const np_array &jac_times_cjmass_rowvals,
                   const np_array &jac_times_cjmass_colptrs,
                   const Function &jac_action,
-                  const Function &jacp_action,
                   const Function &mass_action,
                   const Function &sens,
                   const Function &events, 
@@ -70,7 +68,6 @@ public:
         jac_times_cjmass_rowvals(jac_times_cjmass_rowvals), 
         jac_times_cjmass_colptrs(jac_times_cjmass_colptrs), 
         jac_action(jac_action),
-        jacp_action(jacp_action),
         mass_action(mass_action),
         sens(sens),
         events(events),
@@ -301,7 +298,6 @@ Solution solve_casadi(np_array t_np, np_array y0_np, np_array yp0_np,
                const np_array &jac_times_cjmass_colptrs, 
                const int jac_times_cjmass_nnz,
                const Function &jac_action, 
-               const Function &jacp_action, 
                const Function &mass_action, 
                const Function &sens, 
                const Function &events, 
@@ -379,7 +375,7 @@ Solution solve_casadi(np_array t_np, np_array y0_np, np_array yp0_np,
       jac_times_cjmass, 
       jac_times_cjmass_rowvals,
       jac_times_cjmass_colptrs, 
-      jac_action, jacp_action, mass_action, 
+      jac_action, mass_action, 
       sens, events,
       number_of_states, number_of_events,
       number_of_parameters);
