@@ -17,7 +17,10 @@ endif()
 
 project(idaklu)
 
-set (CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
+set(CMAKE_EXPORT_COMPILE_COMMANDS 1)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
 if(NOT PYBIND11_DIR)
@@ -25,12 +28,22 @@ if(NOT PYBIND11_DIR)
 endif()
 
 add_subdirectory(${PYBIND11_DIR})
-pybind11_add_module(idaklu pybamm/solvers/c_solvers/idaklu.cpp)
+pybind11_add_module(idaklu 
+  pybamm/solvers/c_solvers/idaklu_python.cpp
+  pybamm/solvers/c_solvers/idaklu_python.hpp
+  pybamm/solvers/c_solvers/idaklu.cpp
+  pybamm/solvers/c_solvers/idaklu.hpp
+  pybamm/solvers/c_solvers/idaklu_casadi.cpp
+  pybamm/solvers/c_solvers/idaklu_casadi.hpp
+  pybamm/solvers/c_solvers/solution.cpp
+  pybamm/solvers/c_solvers/solution.hpp
+)
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${PROJECT_SOURCE_DIR})
 # Sundials
 find_package(SUNDIALS)
-target_include_directories(idaklu PRIVATE ${SUNDIALS_INCLUDE_DIR})
+target_include_directories(idaklu PRIVATE ${SUNDIALS_INCLUDE_DIR}
+  "~/local/include")
 target_link_libraries(idaklu PRIVATE ${SUNDIALS_LIBRARIES})
 
 # link suitesparse

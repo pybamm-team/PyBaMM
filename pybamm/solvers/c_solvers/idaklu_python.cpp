@@ -1,11 +1,17 @@
 
-#include "idaklu_python.hpp" 
 #include "idaklu.hpp" 
-#include "idaklu_casadi.hpp" 
 
-#include <pybind11/pybind11.h>
+#include "idaklu_casadi.hpp" 
+#include "idaklu_python.hpp" 
+
 #include <pybind11/stl_bind.h>
 #include <pybind11/functional.h>
+#include <pybind11/numpy.h>
+#include <pybind11/pybind11.h>
+
+#include <vector>
+
+namespace py = pybind11;
 
 PYBIND11_MAKE_OPAQUE(std::vector<np_array>);
 

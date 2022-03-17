@@ -3,9 +3,9 @@
 #define PYBAMM_IDAKLU_CASADI_HPP
 
 #include "solution.hpp"
-#include <casadi.hpp>
+#include <casadi/casadi.hpp>
 
-using Function = casadi::Function
+using Function = casadi::Function;
 
 Solution solve_casadi(np_array t_np, np_array y0_np, np_array yp0_np,
                const Function &rhs_alg, 
@@ -21,7 +21,7 @@ Solution solve_casadi(np_array t_np, np_array y0_np, np_array yp0_np,
                const int number_of_events, 
                int use_jacobian, 
                np_array rhs_alg_id,
-               np_array atol_np, double rel_tol, int number_of_parameters)
+               np_array atol_np, double rel_tol, int number_of_parameters);
 
 
 #endif // PYBAMM_IDAKLU_CASADI_HPP

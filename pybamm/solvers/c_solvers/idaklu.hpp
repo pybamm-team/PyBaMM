@@ -1,7 +1,25 @@
 #ifndef PYBAMM_IDAKLU_HPP
 #define PYBAMM_IDAKLU_HPP
 
+#include "idaklu_python.hpp"
 #include "solution.hpp"
+#include <functional>
+
+using residual_type = std::function<np_array(realtype, np_array, np_array)>;
+using sensitivities_type = std::function<void(
+    std::vector<np_array>&, realtype, const np_array&, 
+    const np_array&, const std::vector<np_array>&, 
+    const std::vector<np_array>&
+  )>;
+using jacobian_type = std::function<np_array(realtype, np_array, realtype)>;
+
+using event_type =
+    std::function<np_array(realtype, np_array)>;
+
+
+using jac_get_type = std::function<np_array()>;
+
+
 
 Solution solve_python(np_array t_np, np_array y0_np, np_array yp0_np,
                residual_type res, jacobian_type jac, 

@@ -1,19 +1,19 @@
-
+#include "idaklu_casadi.hpp"
 #include "idaklu_python.hpp"
 
 #include <vector>
 
 //#include <iostream>
-using casadi_int = casadi::casadi_int
-using casadi_axpy = casadi::casadi_axpy
+using casadi::casadi_axpy;
 
 class CasadiFunction {
-  CasadiFunction(const Function &f):func(f) {
+public:
+  CasadiFunction(const Function &f):m_func(f) {
     size_t sz_arg;
     size_t sz_res;
     size_t sz_iw;
     size_t sz_w;
-    func.sz_work(&sz_arg, &sz_res, &sz_iw, &sz_w);
+    m_func.sz_work(sz_arg, sz_res, sz_iw, sz_w);
     m_arg.resize(sz_arg);
     m_res.resize(sz_res);
     m_iw.resize(sz_iw);
@@ -22,20 +22,20 @@ class CasadiFunction {
 
   // only call this once m_arg and m_res have been set appropriatelly
   void operator()() {
-    int mem = func.checkout();
-    eval(m_arg.data(), m_res.data(), m_iw.data(), m_w.data(), mem);
-    func.release(mem)
+    int mem = m_func.checkout();
+    m_func(m_arg.data(), m_res.data(), m_iw.data(), m_w.data(), mem);
+    m_func.release(mem);
   }
 
-  public:
-    std::vector<double *> m_arg;
-    std::vector<double *> m_res;
+public:
+  std::vector<const double *> m_arg;
+  std::vector<double *> m_res;
 
-  private:
-    Function func;
-    std::vector<casadi_int> m_iw;
-    std::vector<double> m_iw;
-}
+private:
+  Function m_func;
+  std::vector<casadi_int> m_iw;
+  std::vector<double> m_w;
+};
 
 
 class PybammFunctions {
@@ -46,12 +46,12 @@ public:
   CasadiFunction rhs_alg;
   CasadiFunction sens;
   CasadiFunction jac_times_cjmass;
-  const np_array &jac_times_cjmass_rowvals,
-  const np_array &jac_times_cjmass_colptrs,
+  const np_array &jac_times_cjmass_rowvals;
+  const np_array &jac_times_cjmass_colptrs;
   CasadiFunction jac_action;
   CasadiFunction jacp_action;
   CasadiFunction mass_action;
-  CasadiFunction event;
+  CasadiFunction events;
 
   PybammFunctions(const Function &rhs_alg, 
                   const Function &jac_times_cjmass,
@@ -61,7 +61,7 @@ public:
                   const Function &jacp_action,
                   const Function &mass_action,
                   const Function &sens,
-                  const Function &event, 
+                  const Function &events, 
                   const int n_s, int n_e, const int n_p)
       : number_of_states(n_s), number_of_events(n_e), 
         number_of_parameters(n_p),
@@ -69,16 +69,16 @@ public:
         jac_times_cjmass(jac_times_cjmass), 
         jac_times_cjmass_rowvals(jac_times_cjmass_rowvals), 
         jac_times_cjmass_colptrs(jac_times_cjmass_colptrs), 
-        jac_action(jac_times),
+        jac_action(jac_action),
         jacp_action(jacp_action),
         mass_action(mass_action),
         sens(sens),
-        event(event),
+        events(events),
         tmp(number_of_states)
   {}
 
   realtype *get_tmp() {
-    return tmp.data()
+    return tmp.data();
   }
 
 private:
@@ -86,7 +86,7 @@ private:
 
 };
 
-int residual(realtype tres, N_Vector yy, N_Vector yp, N_Vector rr,
+int residual_casadi(realtype tres, N_Vector yy, N_Vector yp, N_Vector rr,
              void *user_data)
 {
   PybammFunctions *p_python_functions =
@@ -97,14 +97,14 @@ int residual(realtype tres, N_Vector yy, N_Vector yp, N_Vector rr,
   p_python_functions->rhs_alg.m_res[0] = NV_DATA_S(rr);
   p_python_functions->rhs_alg();
 
-  realtype *tmp = p_python_functions->get_tmp()
+  realtype *tmp = p_python_functions->get_tmp();
   // args is yp, put result in tmp
   p_python_functions->mass_action.m_arg[0] = NV_DATA_S(yp);
-  p_python_functions->res.m_res[0] = tmp;
-  p_python_functions->res();
+  p_python_functions->mass_action.m_res[0] = tmp;
+  p_python_functions->mass_action();
 
   // AXPY: y <- a*x + y
-  const ns = p_python_functions->number_of_states;
+  const int ns = p_python_functions->number_of_states;
   casadi_axpy(ns, -1., tmp, NV_DATA_S(rr));
 
   // now rr has rhs_alg(t, y) - mass_matrix * yp
@@ -128,14 +128,14 @@ int residual(realtype tres, N_Vector yy, N_Vector yp, N_Vector rr,
 //     tmp1
 //     tmp2 are pointers to memory allocated for variables of type N Vector which can
 //        be used by IDALsJacTimesVecFn as temporary storage or work space.
-int jtimes(realtype tt, N_Vector yy, N_Vector yp, N_Vector rr,
-           N_Vector v, N_Vector Jv, realtype cj, void *user data,
+int jtimes_casadi(realtype tt, N_Vector yy, N_Vector yp, N_Vector rr,
+           N_Vector v, N_Vector Jv, realtype cj, void *user_data,
            N_Vector tmp1, N_Vector tmp2) {
   PybammFunctions *p_python_functions =
       static_cast<PybammFunctions *>(user_data);
 
   // rr has ∂F/∂y v
-  p_python_functions->jac_action.m_arg[0] = &tres;
+  p_python_functions->jac_action.m_arg[0] = &tt;
   p_python_functions->jac_action.m_arg[1] = NV_DATA_S(yy);
   p_python_functions->jac_action.m_arg[2] = &cj;
   p_python_functions->jac_action.m_arg[3] = NV_DATA_S(v);
@@ -149,7 +149,7 @@ int jtimes(realtype tt, N_Vector yy, N_Vector yp, N_Vector rr,
 
   // AXPY: y <- a*x + y
   // rr has ∂F/∂y v + cj ∂F/∂y˙ v
-  const ns = p_python_functions->number_of_states;
+  const int ns = p_python_functions->number_of_states;
   casadi_axpy(ns, -cj, NV_DATA_S(tmp1), NV_DATA_S(rr));
 
   return 0;
@@ -170,7 +170,7 @@ int jtimes(realtype tt, N_Vector yy, N_Vector yp, N_Vector rr,
 //   tmp2
 //   tmp3 are pointers to memory allocated for variables of type N Vector which can
 //     be used by IDALsJacFn function as temporary storage or work space.
-int jacobian(realtype tt, realtype cj, N_Vector yy, N_Vector yp,
+int jacobian_casadi(realtype tt, realtype cj, N_Vector yy, N_Vector yp,
              N_Vector resvec, SUNMatrix JJ, void *user_data, N_Vector tempv1,
              N_Vector tempv2, N_Vector tempv3) {
 
@@ -187,26 +187,26 @@ int jacobian(realtype tt, realtype cj, N_Vector yy, N_Vector yp,
   p_python_functions->jac_times_cjmass.m_arg[1] = NV_DATA_S(yy);
   p_python_functions->jac_times_cjmass.m_arg[2] = &cj;
   p_python_functions->jac_times_cjmass.m_res[0] = jac_data; 
-  p_python_functions->jac();
+  p_python_functions->jac_times_cjmass();
 
   // row vals and col ptrs
-  const np_array &jac_times_cjmass_rowvals = python_functions.jac_times_cjmass_rowvals;
+  const np_array &jac_times_cjmass_rowvals = p_python_functions->jac_times_cjmass_rowvals;
   const int n_row_vals = jac_times_cjmass_rowvals.request().size;
   auto p_jac_times_cjmass_rowvals = jac_times_cjmass_rowvals.unchecked<1>();
 
   // just copy across row vals (do I need to do this every time?)
   // (or just in the setup?)
-  for (i = 0; i < n_row_vals; i++) {
+  for (int i = 0; i < n_row_vals; i++) {
     std::cout << "check row vals " << jac_rowvals[i] << " " << p_jac_times_cjmass_rowvals[i] << std::endl;
     jac_rowvals[i] = p_jac_times_cjmass_rowvals[i];
   }
 
-  const np_array &jac_times_cjmass_colptrs = python_functions.jac_times_cjmass_colptrs;
+  const np_array &jac_times_cjmass_colptrs = p_python_functions->jac_times_cjmass_colptrs;
   const int n_col_ptrs = jac_times_cjmass_colptrs.request().size;
   auto p_jac_times_cjmass_colptrs = jac_times_cjmass_colptrs.unchecked<1>();
 
   // just copy across col ptrs (do I need to do this every time?)
-  for (i = 0; i < n_col_ptrs; i++) {
+  for (int i = 0; i < n_col_ptrs; i++) {
     std::cout << "check col ptrs " << jac_colptrs[i] << " " << p_jac_times_cjmass_colptrs[i] << std::endl;
     jac_colptrs[i] = p_jac_times_cjmass_colptrs[i];
   }
@@ -214,14 +214,14 @@ int jacobian(realtype tt, realtype cj, N_Vector yy, N_Vector yp,
   return (0);
 }
 
-int events(realtype t, N_Vector yy, N_Vector yp, realtype *events_ptr,
+int events_casadi(realtype t, N_Vector yy, N_Vector yp, realtype *events_ptr,
            void *user_data)
 {
   PybammFunctions *p_python_functions =
       static_cast<PybammFunctions *>(user_data);
 
   // args are t, y, put result in events_ptr
-  p_python_functions->events.m_arg[0] = &tres ;
+  p_python_functions->events.m_arg[0] = &t;
   p_python_functions->events.m_arg[1] = NV_DATA_S(yy);
   p_python_functions->events.m_res[0] = events_ptr; 
   p_python_functions->events();
@@ -250,7 +250,7 @@ int events(realtype t, N_Vector yy, N_Vector yp, realtype *events_ptr,
 // occurred (in which case idas will attempt to correct), 
 // or a negative value if it failed unrecoverably (in which case the integration is halted and IDA SRES FAIL is returned)
 //
-int sensitivities(int Ns, realtype t, N_Vector yy, N_Vector yp, 
+int sensitivities_casadi(int Ns, realtype t, N_Vector yy, N_Vector yp, 
     N_Vector resval, N_Vector *yS, N_Vector *ypS, N_Vector *resvalS, 
     void *user_data, N_Vector tmp1, N_Vector tmp2, N_Vector tmp3) {
 
@@ -258,7 +258,7 @@ int sensitivities(int Ns, realtype t, N_Vector yy, N_Vector yp,
       static_cast<PybammFunctions *>(user_data);
 
   // args are t, y put result in rr
-  p_python_functions->sens.m_arg[0] = &tres;
+  p_python_functions->sens.m_arg[0] = &t;
   p_python_functions->sens.m_arg[1] = NV_DATA_S(yy);
   const int np = p_python_functions->number_of_parameters;
   for (int i = 0; i < np; i++) {
@@ -269,7 +269,7 @@ int sensitivities(int Ns, realtype t, N_Vector yy, N_Vector yp,
 
   for (int i = 0; i < np; i++) {
     // put (∂F/∂y)s i (t) in tmp1
-    p_python_functions->jac_action.m_arg[0] = &tres;
+    p_python_functions->jac_action.m_arg[0] = &t;
     p_python_functions->jac_action.m_arg[1] = NV_DATA_S(yy);
     p_python_functions->jac_action.m_arg[2] = NV_DATA_S(yS[i]);
     p_python_functions->jac_action.m_res[1] = NV_DATA_S(tmp1);
@@ -282,9 +282,9 @@ int sensitivities(int Ns, realtype t, N_Vector yy, N_Vector yp,
 
     // (∂F/∂y)s i (t)+(∂F/∂ ẏ) ṡ i (t)+(∂F/∂p i ) 
     // AXPY: y <- a*x + y
-    const ns = p_python_functions->number_of_states;
-    casadi_axpy(ns, 1., NV_DATA_S(tmp1), NV_DATA_S(resvalsS[i]));
-    casadi_axpy(ns, -1., NV_DATA_S(tmp2), NV_DATA_S(resvalsS[i]));
+    const int ns = p_python_functions->number_of_states;
+    casadi_axpy(ns, 1., NV_DATA_S(tmp1), NV_DATA_S(resvalS[i]));
+    casadi_axpy(ns, -1., NV_DATA_S(tmp2), NV_DATA_S(resvalS[i]));
   }
 
   return 0;
@@ -304,7 +304,7 @@ Solution solve_casadi(np_array t_np, np_array y0_np, np_array yp0_np,
                const Function &jacp_action, 
                const Function &mass_action, 
                const Function &sens, 
-               const Function &event, 
+               const Function &events, 
                const int number_of_events, 
                int use_jacobian, 
                np_array rhs_alg_id,
@@ -363,7 +363,7 @@ Solution solve_casadi(np_array t_np, np_array y0_np, np_array yp0_np,
 
   // initialise solver
   realtype t0 = RCONST(t(0));
-  IDAInit(ida_mem, residual, t0, yy, yp);
+  IDAInit(ida_mem, residual_casadi, t0, yy, yp);
 
   // set tolerances
   rtol = RCONST(rel_tol);
@@ -371,7 +371,7 @@ Solution solve_casadi(np_array t_np, np_array y0_np, np_array yp0_np,
   IDASVtolerances(ida_mem, rtol, avtol);
 
   // set events
-  IDARootInit(ida_mem, number_of_events, events);
+  IDARootInit(ida_mem, number_of_events, events_casadi);
 
   // set pybamm functions by passing pointer to it
   PybammFunctions pybamm_functions(
@@ -380,7 +380,7 @@ Solution solve_casadi(np_array t_np, np_array y0_np, np_array yp0_np,
       jac_times_cjmass_rowvals,
       jac_times_cjmass_colptrs, 
       jac_action, jacp_action, mass_action, 
-      sens, event,
+      sens, events,
       number_of_states, number_of_events,
       number_of_parameters);
 
@@ -388,7 +388,7 @@ Solution solve_casadi(np_array t_np, np_array y0_np, np_array yp0_np,
   IDASetUserData(ida_mem, user_data);
 
   // set linear solver
-  J = SUNSparseMatrix(number_of_states, number_of_states, nnz, CSR_MAT);
+  J = SUNSparseMatrix(number_of_states, number_of_states, jac_times_cjmass_nnz, CSR_MAT);
 
   // copy across row vals and col ptrs
   const int n_row_vals = jac_times_cjmass_rowvals.request().size;
@@ -399,7 +399,6 @@ Solution solve_casadi(np_array t_np, np_array y0_np, np_array yp0_np,
     jac_rowvals[i] = p_jac_times_cjmass_rowvals[i];
   }
 
-  const np_array &jac_times_cjmass_colptrs = python_functions.jac_times_cjmass_colptrs;
   const int n_col_ptrs = jac_times_cjmass_colptrs.request().size;
   auto p_jac_times_cjmass_colptrs = jac_times_cjmass_colptrs.unchecked<1>();
 
@@ -413,13 +412,13 @@ Solution solve_casadi(np_array t_np, np_array y0_np, np_array yp0_np,
 
   if (use_jacobian == 1)
   {
-    IDASetJacFn(ida_mem, jacobian);
+    IDASetJacFn(ida_mem, jacobian_casadi);
   }
 
   if (number_of_parameters > 0)
   {
     IDASensInit(ida_mem, number_of_parameters, 
-                IDA_SIMULTANEOUS, sensitivities, yyS, ypS);
+                IDA_SIMULTANEOUS, sensitivities_casadi, yyS, ypS);
     IDASensEEtolerances(ida_mem);
   }
 
