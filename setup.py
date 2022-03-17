@@ -147,7 +147,11 @@ pybamm_data.append("./CITATIONS.txt")
 pybamm_data.append("./plotting/pybamm.mplstyle")
 pybamm_data.append("../CMakeBuild.py")
 
-idaklu_ext = Extension("pybamm.solvers.idaklu", ["pybamm/solvers/c_solvers/idaklu.cpp"])
+idaklu_ext = Extension("pybamm.solvers.idaklu", [
+    "pybamm/solvers/c_solvers/idaklu.cpp"
+    "pybamm/solvers/c_solvers/idaklu_casadi.cpp"
+    "pybamm/solvers/c_solvers/idaklu_python.cpp"
+])
 ext_modules = [idaklu_ext] if compile_KLU() else []
 
 # Defines __version__
