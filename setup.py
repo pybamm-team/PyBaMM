@@ -149,8 +149,13 @@ pybamm_data.append("../CMakeBuild.py")
 
 idaklu_ext = Extension("pybamm.solvers.idaklu", [
     "pybamm/solvers/c_solvers/idaklu.cpp"
+    "pybamm/solvers/c_solvers/idaklu.hpp"
     "pybamm/solvers/c_solvers/idaklu_casadi.cpp"
+    "pybamm/solvers/c_solvers/idaklu_casadi.hpp"
     "pybamm/solvers/c_solvers/idaklu_python.cpp"
+    "pybamm/solvers/c_solvers/idaklu_python.hpp"
+    "pybamm/solvers/c_solvers/solution.cpp"
+    "pybamm/solvers/c_solvers/solution.hpp"
 ])
 ext_modules = [idaklu_ext] if compile_KLU() else []
 

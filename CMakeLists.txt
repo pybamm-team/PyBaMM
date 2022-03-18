@@ -43,7 +43,7 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${PROJECT_SOURCE_DIR})
 # Sundials
 find_package(SUNDIALS)
 target_include_directories(idaklu PRIVATE ${SUNDIALS_INCLUDE_DIR}
-  "~/local/include")
+  "~/local/include" "~/.local/include")
 target_link_libraries(idaklu PRIVATE ${SUNDIALS_LIBRARIES})
 
 # link suitesparse

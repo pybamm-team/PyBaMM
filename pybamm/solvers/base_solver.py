@@ -199,6 +199,7 @@ class BaseSolver(object):
         calculate_sensitivities_explicit = False
         if model.calculate_sensitivities and not isinstance(self, pybamm.IDAKLUSolver):
             calculate_sensitivities_explicit = True
+        print('calculate_sensitivities_explicit', calculate_sensitivities_explicit)
 
         # if we are calculating sensitivities explicitly then the number of
         # equations will change
@@ -453,17 +454,15 @@ class BaseSolver(object):
                             "CasADi"
                         )
                     )
-                    jacp_dict = {}
-                    for pname in model.calculate_sensitivities:
-                        p_diff = casadi.jacobian(casadi_expression, p_casadi[pname])
-                        jacp_dict[pname] = casadi.Function(
-                            name, [t_casadi, y_and_S, p_casadi_stacked], [p_diff]
-                        )
-
-                    # jacp should be a casadi_expressiontion that returns
-                    # a dict of sensitivities
-                    def jacp(*args, **kwargs):
-                        return {k: v(*args, **kwargs) for k, v in jacp_dict.items()}
+                    # WARNING, jacp for convert_to_format=casadi does not return a dict
+                    # instead it returns multiple return values, one for each param
+                    # TODO: would it be faster to do the jacobian wrt pS_casadi_stacked?
+                    jacp = casadi.Function(
+                        name, [t_casadi, y_and_S, p_casadi_stacked], [
+                            casadi.jacobian(casadi_expression, p_casadi[pname])
+                            for pname in model.calculate_sensitivities
+                        ]
+                    )
 
                 if use_jacobian:
                     report(f"Calculating jacobian for {name} using CasADi")

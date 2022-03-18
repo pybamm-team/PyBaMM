@@ -13,7 +13,7 @@ if idaklu_spec is not None:
     try:
         idaklu = importlib.util.module_from_spec(idaklu_spec)
         idaklu_spec.loader.exec_module(idaklu)
-    except ImportError:  # pragma: no cover
+    except ImportError as e:  # pragma: no cover
         idaklu_spec = None
 
 
@@ -216,22 +216,13 @@ class IDAKLUSolver(pybamm.BaseSolver):
 
             v_casadi = casadi.MX.sym("v", model.len_rhs_and_alg)
 
+            # also need the action of the mass matrix on a vector
             mass_action = casadi.Function(
                 "mass_action", [v_casadi], [
                     mass_matrix * v_casadi
                 ]
             )
 
-            jac_casadi = casadi.jacobian(casadi_expression, y_and_S)
-                    jac = casadi.Function(
-                        name, [t_casadi, y_and_S, p_casadi_stacked], [jac_casadi]
-                    )
-            jac_action = casadi.Function(
-                "jac_times_cjmass", [t_casadi, y_casadi, cj_casadi], [
-                    model.jac_rhs_algebraic_eval(t_casadi, y_casadi, inputs) -
-                    cj_casadi * mass_matrix
-                ]
-            )
         else:
             jac_y0_t0 = model.jac_rhs_algebraic_eval(t_eval[0], y0, inputs)
             if sparse.issparse(jac_y0_t0):
@@ -243,44 +234,56 @@ class IDAKLUSolver(pybamm.BaseSolver):
                     jac_eval = model.jac_rhs_algebraic_eval(t, y, inputs) - cj * mass_matrix
                     return sparse.csr_matrix(jac_eval)
 
-        class SundialsJacobian:
-            def __init__(self):
-                self.J = None
+            class SundialsJacobian:
+                def __init__(self):
+                    self.J = None
 
-                random = np.random.random(size=y0.size)
-                J = jacfn(10, random, 20)
-                self.nnz = J.nnz  # hoping nnz remains constant...
+                    random = np.random.random(size=y0.size)
+                    J = jacfn(10, random, 20)
+                    self.nnz = J.nnz  # hoping nnz remains constant...
 
-            def jac_res(self, t, y, cj):
-                # must be of form j_res = (dr/dy) - (cj) (dr/dy')
-                # cj is just the input parameter
-                # see p68 of the ida_guide.pdf for more details
-                self.J = jacfn(t, y, cj)
+                def jac_res(self, t, y, cj):
+                    # must be of form j_res = (dr/dy) - (cj) (dr/dy')
+                    # cj is just the input parameter
+                    # see p68 of the ida_guide.pdf for more details
+                    self.J = jacfn(t, y, cj)
 
-            def get_jac_data(self):
-                return self.J.data
+                def get_jac_data(self):
+                    return self.J.data
 
-            def get_jac_row_vals(self):
-                return self.J.indices
+                def get_jac_row_vals(self):
+                    return self.J.indices
 
-            def get_jac_col_ptrs(self):
-                return self.J.indptr
+                def get_jac_col_ptrs(self):
+                    return self.J.indptr
+
+            jac_class = SundialsJacobian()
 
         # solver works with ydot0 set to zero
         ydot0 = np.zeros_like(y0)
 
-        jac_class = SundialsJacobian()
-
         num_of_events = len(model.terminate_events_eval)
         use_jac = 1
 
-        def rootfn(t, y):
-            return_root = np.ones((num_of_events,))
-            return_root[:] = [
-                event(t, y, inputs) for event in model.terminate_events_eval
-            ]
+        # rootfn needs to return an array of length num_of_events
+        if model.convert_to_format == "casadi":
+            rootfn = casadi.Function(
+                "rootfn", [t_casadi, y_casadi],
+                [
+                    casadi.vertcat(
+                        *[event(t_casadi, y_casadi, inputs)
+                          for event in model.terminate_events_eval]
+                    )
+                ]
+            )
+        else:
+            def rootfn(t, y):
+                return_root = np.ones((num_of_events,))
+                return_root[:] = [
+                    event(t, y, inputs) for event in model.terminate_events_eval
+                ]
 
-            return return_root
+                return return_root
 
         # get ids of rhs and algebraic variables
         rhs_ids = np.ones(model.rhs_eval(0, y0, inputs).shape[0])
@@ -292,55 +295,73 @@ class IDAKLUSolver(pybamm.BaseSolver):
             sens0 = model.jacp_rhs_algebraic_eval(0, y0, inputs)
             number_of_sensitivity_parameters = len(sens0.keys())
 
-        def sensfn(resvalS, t, y, yp, yS, ypS):
-            """
-            this function evaluates the sensitivity equations required by IDAS,
-            returning them in resvalS, which is preallocated as a numpy array of size
-            (np, n), where n is the number of states and np is the number of parameters
+        if model.convert_to_format == "casadi":
+            # for the casadi solver we just give it dFdp_i
+            if model.jacp_rhs_algebraic_eval is None:
+                sensfn = casadi.Function(
+                    "sensfn", [], []
+                )
+            else:
+                sensfn = model.jacp_rhs_algebraic_eval
+        else:
+            # for the python solver we give it the full sensitivity equations
+            # required by IDAS
+            def sensfn(resvalS, t, y, yp, yS, ypS):
+                """
+                this function evaluates the sensitivity equations required by IDAS,
+                returning them in resvalS, which is preallocated as a numpy array of size
+                (np, n), where n is the number of states and np is the number of parameters
 
-            The equations returned are:
+                The equations returned are:
 
-             dF/dy * s_i + dF/dyd * sd_i + dFdp_i for i in range(np)
+                 dF/dy * s_i + dF/dyd * sd_i + dFdp_i for i in range(np)
 
-            Parameters
-            ----------
-            resvalS: ndarray of shape (np, n)
-                returns the sensitivity equations in this preallocated array
-            t: number
-                time value
-            y: ndarray of shape (n)
-                current state vector
-            yp: list (np) of ndarray of shape (n)
-                current time derivative of state vector
-            yS: list (np) of ndarray of shape (n)
-                current state vector of sensitivity equations
-            ypS: list (np) of ndarray of shape (n)
-                current time derivative of state vector of sensitivity equations
+                Parameters
+                ----------
+                resvalS: ndarray of shape (np, n)
+                    returns the sensitivity equations in this preallocated array
+                t: number
+                    time value
+                y: ndarray of shape (n)
+                    current state vector
+                yp: list (np) of ndarray of shape (n)
+                    current time derivative of state vector
+                yS: list (np) of ndarray of shape (n)
+                    current state vector of sensitivity equations
+                ypS: list (np) of ndarray of shape (n)
+                    current time derivative of state vector of sensitivity equations
 
-            """
+                """
 
-            dFdy = model.jac_rhs_algebraic_eval(t, y, inputs)
-            dFdyd = mass_matrix
-            dFdp = model.jacp_rhs_algebraic_eval(t, y, inputs)
+                dFdy = model.jac_rhs_algebraic_eval(t, y, inputs)
+                dFdyd = mass_matrix
+                dFdp = model.jacp_rhs_algebraic_eval(t, y, inputs)
 
-            for i, dFdp_i in enumerate(dFdp.values()):
-                resvalS[i][:] = dFdy @ yS[i] - dFdyd @ ypS[i] + dFdp_i
+                for i, dFdp_i in enumerate(dFdp.values()):
+                    resvalS[i][:] = dFdy @ yS[i] - dFdyd @ ypS[i] + dFdp_i
 
         # solve
         timer = pybamm.Timer()
 
         if model.convert_to_format == "casadi":
+            rhs_algebraic_str = model.rhs_algebraic_eval.serialize()
+            jac_times_cjmass_str = jac_times_cjmass.serialize()
+            jac_rhs_algebraic_action_str = \
+                model.jac_rhs_algebraic_action_eval.serialize()
+            rootfn_str = rootfn.serialize()
+            mass_action_str = mass_action.serialize()
+            sensfn_str = sensfn.serialize()
             sol = idaklu.solve_casadi(
                 t_eval, y0, ydot0,
-                model.rhs_algebraic_eval,
-                jac_times_cjmass,
+                rhs_algebraic_str,
+                jac_times_cjmass_str,
                 jac_times_cjmass_rowvals,
                 jac_times_cjmass_colptrs,
                 jac_times_cjmass_nnz,
-                jac_action,
-                mass_action,
-                sens,
-                events,
+                jac_rhs_algebraic_action_str,
+                mass_action_str,
+                sensfn_str,
+                rootfn_str,
                 num_of_events,
                 use_jac,
                 ids,

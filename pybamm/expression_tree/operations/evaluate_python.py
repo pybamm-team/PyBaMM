@@ -624,7 +624,7 @@ class EvaluatorJax:
     def get_jacobian_action(self):
         return self.jvp
 
-    def get_sensitivities(self):
+    def get_sensitivities(self, input_names):
         n = len(self._arg_list)
 
         # forward mode autodiff wrt inputs, which is argument 2 after arg_list
