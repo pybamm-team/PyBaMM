@@ -619,7 +619,10 @@ class EvaluatorJax:
             jacobian_evaluate, static_argnums=self._static_argnums
         )
 
-        return EvaluatorJaxJacobian(self._jac_evaluate, self._constants)
+        return EvaluatorJaxWrapper(self._jac_evaluate, self._constants)
+
+    def get_jacobian_action(self):
+        return self.jvp
 
     def get_sensitivities(self):
         n = len(self._arg_list)
@@ -631,7 +634,7 @@ class EvaluatorJax:
             jacobian_evaluate, static_argnums=self._static_argnums
         )
 
-        return EvaluatorJaxSensitivities(self._sens_evaluate, self._constants)
+        return EvaluatorJaxWrapper(self._sens_evaluate, self._constants)
 
     def debug(self, t=None, y=None, inputs=None):
         # generated code assumes y is a column vector
@@ -659,6 +662,41 @@ class EvaluatorJax:
             y = y.reshape(-1, 1)
 
         result = self._jit_evaluate(*self._constants, t, y, inputs)
+
+        return result
+
+    def jvp(self, t=None, y=None, v=None, inputs=None):
+        """
+        evaluate jacobian vector product of function
+        """
+
+        # generated code assumes y is a column vector
+        if y is not None and y.ndim == 1:
+            y = y.reshape(-1, 1)
+        if v is not None and v.ndim == 1:
+            v = v.reshape(-1, 1)
+
+        def bind_t_and_inputs(the_y):
+            return self._jit_evaluate(*self._constants, t, the_y, inputs)
+
+        return jax.jvp(bind_t_and_inputs, (y,), (v,))
+
+
+class EvaluatorJaxWrapper:
+    def __init__(self, jac_evaluate, constants):
+        self._jac_evaluate = jac_evaluate
+        self._constants = constants
+
+    def __call__(self, t=None, y=None, inputs=None):
+        """
+        evaluate function
+        """
+        # generated code assumes y is a column vector
+        if y is not None and y.ndim == 1:
+            y = y.reshape(-1, 1)
+
+        # execute code
+        result = self._jac_evaluate(*self._constants, t, y, inputs)
 
         return result
 
@@ -690,7 +728,7 @@ class EvaluatorJaxSensitivities:
 
     def __call__(self, t=None, y=None, inputs=None):
         """
-        Acts as a drop-in replacement for :func:`pybamm.Symbol.evaluate`
+        evaluate function
         """
         # generated code assumes y is a column vector
         if y is not None and y.ndim == 1:
