@@ -15,6 +15,7 @@ if have_julia and system() != "Windows":
 
     Julia(compiled_modules=False)
     from julia import Main
+    from julia.core import JuliaError
 
     # load julia libraries required for evaluating the strings
     Main.eval("using SparseArrays, LinearAlgebra")
@@ -24,25 +25,56 @@ if have_julia and system() != "Windows":
 @unittest.skipIf(system() == "Windows", "Julia not supported on windows")
 class TestEvaluate(unittest.TestCase):
     def evaluate_and_test_equal(
-        self, expr, y_tests, t_tests=0.0, p_tests=0.0, dy=None, funcname="f"
+        self, expr, y_tests, t_tests=0.0, inputs=None, decimal=14, **kwargs
     ):
         if not isinstance(y_tests, list):
             y_tests = [y_tests]
-        if not isinstance(p_tests, list):
-            p_tests = [p_tests]
         if not isinstance(t_tests, list):
             t_tests = [t_tests]
-        if dy is None:
-            dy = np.zeros_like(y_tests[0])
-        evaluator_str = pybamm.get_julia_function(expr, funcname=funcname)
-        Main.eval(evaluator_str)
-        Main.dy = dy
-        for t_test, y_test, p_test in zip(t_tests, y_tests, p_tests):
-            Main.y = y_test
-            Main.p = p_test
-            Main.t = t_test
-            Main.eval(f"{funcname}!(dy,y,p,t)")
-            self.assertEqual(Main.dy, expr.evaluate(t=t_test, y=y_test).flatten())
+        if inputs is None:
+            input_parameter_order = None
+            p = 0.0
+        else:
+            input_parameter_order = list(inputs.keys())
+            p = list(inputs.values())
+
+        pybamm_eval = expr.evaluate(t=t_tests[0], y=y_tests[0], inputs=inputs).flatten()
+        for preallocate in [True, False]:
+            kwargs["funcname"] = (
+                kwargs.get("funcname", "f") + "_" + str(int(preallocate))
+            )
+            evaluator_str = pybamm.get_julia_function(
+                expr,
+                input_parameter_order=input_parameter_order,
+                preallocate=preallocate,
+                **kwargs,
+            )
+            Main.eval(evaluator_str)
+            funcname = kwargs.get("funcname", "f")
+            Main.p = p
+            for t_test, y_test in zip(t_tests, y_tests):
+                Main.dy = np.zeros_like(pybamm_eval)
+                Main.y = y_test
+                Main.t = t_test
+                try:
+                    Main.eval(f"{funcname}!(dy,y,p,t)")
+                except JuliaError as e:
+                    # debugging
+                    print(Main.dy, y_test, p, t_test)
+                    print(evaluator_str)
+                    raise e
+                pybamm_eval = expr.evaluate(t=t_test, y=y_test, inputs=inputs).flatten()
+                try:
+                    np.testing.assert_array_almost_equal(
+                        Main.dy.flatten(),
+                        pybamm_eval,
+                        decimal=decimal,
+                    )
+                except AssertionError as e:
+                    # debugging
+                    print(Main.dy, y_test, p, t_test)
+                    print(evaluator_str)
+                    raise e
 
     def test_exceptions(self):
         a = pybamm.Symbol("a")
@@ -58,77 +90,37 @@ class TestEvaluate(unittest.TestCase):
 
         # test a * b
         expr = a * b
-        self.evaluate_and_test_equal(expr, np.array([2.0, 3.0]), dy=[0.0])
-        self.evaluate_and_test_equal(expr, np.array([1.0, 3.0]), dy=[0.0])
+        self.evaluate_and_test_equal(expr, np.array([2.0, 3.0]))
+        self.evaluate_and_test_equal(expr, np.array([1.0, 3.0]))
 
         # test function(a*b)
         expr = pybamm.cos(a * b)
-        evaluator_str = pybamm.get_julia_function(expr, funcname="g")
-        Main.eval(evaluator_str)
-        Main.dy = [0.0]
-        Main.y = np.array([2.0, 3.0])
-        Main.eval("g!(dy,y,0,0)")
-        self.assertAlmostEqual(Main.dy[0], np.cos(6), places=15)
+        self.evaluate_and_test_equal(expr, np.array([1.0, 3.0]), funcname="g")
 
         # test a constant expression
         expr = pybamm.Multiplication(pybamm.Scalar(2), pybamm.Scalar(3))
-        evaluator_str = pybamm.get_julia_function(expr)
-        Main.eval(evaluator_str)
-        Main.dy = [0.0]
-        Main.eval("f!(dy,y,0,0)")
-        self.assertEqual(Main.dy, 6)
+        self.evaluate_and_test_equal(expr, 0.0)
 
         expr = pybamm.Multiplication(pybamm.Scalar(2), pybamm.Vector([1, 2, 3]))
-        evaluator_str = pybamm.get_julia_function(expr, funcname="g2")
-        Main.eval(evaluator_str)
-        Main.dy = [0.0] * 3
-        Main.eval("g2!(dy,y,0,0)")
-        np.testing.assert_array_equal(Main.dy, [2, 4, 6])
+        self.evaluate_and_test_equal(expr, None, funcname="g2")
 
         # test a larger expression
         expr = a * b + b + a ** 2 / b + 2 * a + b / 2 + 4
-        evaluator_str = pybamm.get_julia_function(expr)
-        Main.eval(evaluator_str)
-        for y in y_tests:
-            Main.dy = [0.0]
-            Main.y = y
-            Main.eval("f!(dy,y,0,0)")
-            self.assertEqual(Main.dy, expr.evaluate(t=None, y=y))
+        self.evaluate_and_test_equal(expr, y_tests)
 
         # test something with time
         expr = a * pybamm.t
-        evaluator_str = pybamm.get_julia_function(expr)
-        Main.eval(evaluator_str)
-        for t, y in zip(t_tests, y_tests):
-            Main.dy = [0.0]
-            Main.y = y
-            Main.t = t
-            Main.eval("f!(dy,y,0,t)")
-            self.assertEqual(Main.dy, expr.evaluate(t=t, y=y))
+        self.evaluate_and_test_equal(expr, y_tests, t_tests=t_tests)
 
         # test something with a matrix multiplication
         A = pybamm.Matrix([[1, 2], [3, 4]])
         expr = A @ pybamm.StateVector(slice(0, 2))
-        evaluator_str = pybamm.get_julia_function(expr, funcname="g3")
-        Main.eval(evaluator_str)
-        for y in y_tests:
-            Main.dy = [0.0, 0.0]
-            Main.y = y
-            Main.eval("g3!(dy,y,0,0)")
-            # note 1D arrays are flattened in Julia
-            np.testing.assert_array_equal(Main.dy, expr.evaluate(y=y).flatten())
+        self.evaluate_and_test_equal(expr, y_tests, funcname="g3")
 
         # test something with a heaviside
         a = pybamm.Vector([1, 2])
         expr = a <= pybamm.StateVector(slice(0, 2))
-        evaluator_str = pybamm.get_julia_function(expr, funcname="g4")
-        Main.eval(evaluator_str)
-        for y in y_tests:
-            Main.dy = [0.0, 0.0]
-            Main.y = y
-            Main.eval("g4!(dy,y,0,0)")
-            # note 1D arrays are flattened in Julia
-            np.testing.assert_array_equal(Main.dy, expr.evaluate(y=y).flatten())
+        self.evaluate_and_test_equal(expr, y_tests, funcname="g4")
 
         # test something with a minimum or maximum
         a = pybamm.Vector([1, 2])
@@ -136,46 +128,24 @@ class TestEvaluate(unittest.TestCase):
             pybamm.minimum(a, pybamm.StateVector(slice(0, 2))),
             pybamm.maximum(a, pybamm.StateVector(slice(0, 2))),
         ]:
-            evaluator_str = pybamm.get_julia_function(expr, funcname="g5")
-            Main.eval(evaluator_str)
-            for y in y_tests:
-                Main.dy = [0.0, 0.0]
-                Main.y = y
-                Main.eval("g5!(dy,y,0,0)")
-                np.testing.assert_array_equal(Main.dy, expr.evaluate(y=y).flatten())
+            self.evaluate_and_test_equal(expr, y_tests, funcname="g5")
 
         # test something with an index
         expr = pybamm.Index(A @ pybamm.StateVector(slice(0, 2)), 0)
-        evaluator_str = pybamm.get_julia_function(expr, funcname="g6")
-        Main.eval(evaluator_str)
-        for y in y_tests:
-            Main.dy = [0.0]
-            Main.y = y
-            Main.eval("g6!(dy,y,0,0)")
-            np.testing.assert_array_equal(Main.dy, expr.evaluate(y=y).flatten())
+        self.evaluate_and_test_equal(expr, y_tests, funcname="g6")
 
         # test something with a sparse matrix multiplication
         A = pybamm.Matrix([[1, 2], [3, 4]])
         B = pybamm.Matrix(scipy.sparse.csr_matrix(np.array([[1, 0], [0, 4]])))
         expr = A @ B @ pybamm.StateVector(slice(0, 2))
-        evaluator_str = pybamm.get_julia_function(expr, funcname="g7")
-        Main.eval(evaluator_str)
-        for y in y_tests:
-            Main.dy = [0.0, 0.0]
-            Main.y = y
-            Main.eval("g7!(dy,y,0,0)")
-            # note 1D arrays are flattened in Julia
-            np.testing.assert_array_equal(Main.dy, expr.evaluate(y=y).flatten())
+        self.evaluate_and_test_equal(expr, y_tests, funcname="g7")
 
         expr = B @ pybamm.StateVector(slice(0, 2))
-        evaluator_str = pybamm.get_julia_function(expr, funcname="g8")
-        Main.eval(evaluator_str)
-        for y in y_tests:
-            Main.dy = [0.0, 0.0]
-            Main.y = y
-            Main.eval("g8!(dy,y,0,0)")
-            # note 1D arrays are flattened in Julia
-            np.testing.assert_array_equal(Main.dy, expr.evaluate(y=y).flatten())
+        self.evaluate_and_test_equal(expr, y_tests, funcname="g8")
+
+        # test Inner
+        expr = pybamm.Inner(pybamm.Vector([1, 2]), pybamm.StateVector(slice(0, 2)))
+        self.evaluate_and_test_equal(expr, y_tests, funcname="g12")
 
         # test numpy concatenation
         a = pybamm.StateVector(slice(0, 3))
@@ -183,50 +153,19 @@ class TestEvaluate(unittest.TestCase):
         c = pybamm.Vector([5])
 
         y_tests = [np.array([[2], [3], [4]]), np.array([[1], [3], [2]])]
-        t_tests = [1, 2]
 
         expr = pybamm.NumpyConcatenation(a, b, c)
-        evaluator_str = pybamm.get_julia_function(expr, funcname="g9")
-        Main.eval(evaluator_str)
-        for y in y_tests:
-            Main.dy = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
-            Main.y = y
-            Main.eval("g9!(dy,y,0,0)")
-            # note 1D arrays are flattened in Julia
-            np.testing.assert_array_equal(Main.dy, expr.evaluate(y=y).flatten())
+        self.evaluate_and_test_equal(expr, y_tests, funcname="g9")
 
         expr = pybamm.NumpyConcatenation(a, c)
-        evaluator_str = pybamm.get_julia_function(expr, funcname="g10")
-        Main.eval(evaluator_str)
-        for y in y_tests:
-            Main.dy = [0.0, 0.0, 0.0, 0.0]
-            Main.y = y
-            Main.eval("g10!(dy,y,0,0)")
-            # note 1D arrays are flattened in Julia
-            np.testing.assert_array_equal(Main.dy, expr.evaluate(y=y).flatten())
+        self.evaluate_and_test_equal(expr, y_tests, funcname="g10")
 
         # test sparse stack
         A = pybamm.Matrix(scipy.sparse.csr_matrix(np.array([[1, 0], [0, 4]])))
         B = pybamm.Matrix(scipy.sparse.csr_matrix(np.array([[2, 0], [5, 0]])))
         c = pybamm.StateVector(slice(0, 2))
         expr = pybamm.SparseStack(A, B) @ c
-        evaluator_str = pybamm.get_julia_function(expr, funcname="g11")
-        Main.eval(evaluator_str)
-        for y in y_tests:
-            Main.dy = [0.0, 0.0, 0.0, 0.0]
-            Main.y = y
-            Main.eval("g11!(dy,y,0,0)")
-            np.testing.assert_array_equal(Main.dy, expr.evaluate(y=y).flatten())
-
-        # test Inner
-        expr = pybamm.Inner(pybamm.Vector([1, 2]), pybamm.StateVector(slice(0, 2)))
-        evaluator_str = pybamm.get_julia_function(expr, funcname="g12")
-        Main.eval(evaluator_str)
-        for y in y_tests:
-            Main.dy = [0.0, 0.0]
-            Main.y = y
-            Main.eval("g12!(dy,y,0,0)")
-            np.testing.assert_array_equal(Main.dy, expr.evaluate(y=y).flatten())
+        self.evaluate_and_test_equal(expr, y_tests, funcname="g11")
 
     def test_evaluator_julia_input_parameters(self):
         a = pybamm.StateVector(slice(0, 1))
@@ -234,27 +173,15 @@ class TestEvaluate(unittest.TestCase):
         c = pybamm.InputParameter("c")
         d = pybamm.InputParameter("d")
 
-        # test one input parameter: a * c
+        # test one input parameter
         expr = a * c
-        evaluator_str = pybamm.get_julia_function(expr, input_parameter_order=["c"])
-        Main.eval(evaluator_str)
-        Main.dy = [0.0]
-        Main.y = np.array([2.0, 3.0])
-        Main.p = [5]
-        Main.eval("f!(dy,y,p,0)")
-        self.assertEqual(Main.dy, 10)
+        self.evaluate_and_test_equal(expr, np.array([2.0, 3.0]), inputs={"c": 5})
 
-        # test several input parameters: a * c + b * d
+        # test several input parameters
         expr = a * c + b * d
-        evaluator_str = pybamm.get_julia_function(
-            expr, input_parameter_order=["c", "d"]
+        self.evaluate_and_test_equal(
+            expr, np.array([2.0, 3.0]), inputs={"c": 5, "d": 6}
         )
-        Main.eval(evaluator_str)
-        Main.dy = [0.0]
-        Main.y = np.array([2.0, 3.0])
-        Main.p = [5, 6]
-        Main.eval("f!(dy,y,p,0)")
-        self.assertEqual(Main.dy, 28)
 
     def test_evaluator_julia_all_functions(self):
         a = pybamm.StateVector(slice(0, 3))
@@ -274,44 +201,24 @@ class TestEvaluate(unittest.TestCase):
             pybamm.arctan,
         ]:
             expr = function(a)
-            evaluator_str = pybamm.get_julia_function(expr)
-            Main.eval(evaluator_str)
-            Main.dy = 0.0 * y_test
-            Main.y = y_test
-            Main.eval("f!(dy,y,0,0)")
-            np.testing.assert_almost_equal(
-                Main.dy, expr.evaluate(y=y_test).flatten(), decimal=14
-            )
+            self.evaluate_and_test_equal(expr, y_test)
 
         for function in [
             pybamm.min,
             pybamm.max,
         ]:
             expr = function(a)
-            evaluator_str = pybamm.get_julia_function(expr)
-            Main.eval(evaluator_str)
-            Main.dy = [0.0]
-            Main.y = y_test
-            Main.eval("f!(dy,y,0,0)")
-            np.testing.assert_equal(Main.dy, expr.evaluate(y=y_test).flatten())
+            self.evaluate_and_test_equal(expr, y_test)
 
         # More advanced tests for min
         b = pybamm.StateVector(slice(3, 6))
         concat = pybamm.NumpyConcatenation(2 * a, 3 * b)
         expr = pybamm.min(concat)
-        self.evaluate_and_test_equal(
-            expr, np.array([1, 2, 3, 4, 5, 6]), dy=[0.0], funcname="h1"
-        )
+        self.evaluate_and_test_equal(expr, np.array([1, 2, 3, 4, 5, 6]), funcname="h1")
 
         v = pybamm.Vector([1, 2, 3])
         expr = pybamm.min(v * a)
-        evaluator_str = pybamm.get_julia_function(expr, funcname="h2")
-        print(evaluator_str)
-        Main.eval(evaluator_str)
-        Main.dy = [0.0]
-        Main.y = y_test
-        Main.eval("h2!(dy,y,0,0)")
-        np.testing.assert_equal(Main.dy, expr.evaluate(y=y_test).flatten())
+        self.evaluate_and_test_equal(expr, y_test, funcname="h2")
 
     def test_evaluator_julia_domain_concatenation(self):
         c_n = pybamm.Variable("c_n", domain="negative electrode")
@@ -333,26 +240,11 @@ class TestEvaluate(unittest.TestCase):
         # discretise and evaluate the variable
         disc.set_variable_slices([c_n, c_s, c_p])
         c_disc = disc.process_symbol(c)
+        self.evaluate_and_test_equal(c_disc, y_tests)
 
-        evaluator_str = pybamm.get_julia_function(c_disc)
-        Main.eval(evaluator_str)
-        for y_test in y_tests:
-            pybamm_eval = c_disc.evaluate(y=y_test).flatten()
-            Main.dy = np.zeros_like(pybamm_eval)
-            Main.y = y_test
-            Main.eval("f!(dy,y,0,0)")
-            np.testing.assert_equal(Main.dy, pybamm_eval)
-
-        # test without preallocation
-        expr = c_disc * c_disc
-        evaluator_str = pybamm.get_julia_function(expr, preallocate=False)
-        Main.eval(evaluator_str)
-        for y_test in y_tests:
-            pybamm_eval = expr.evaluate(y=y_test).flatten()
-            Main.dy = np.zeros_like(pybamm_eval)
-            Main.y = y_test
-            Main.eval("f!(dy,y,0,0)")
-            np.testing.assert_equal(Main.dy, pybamm_eval)
+        # # test without preallocation
+        # expr = c_disc * c_disc
+        # self.evaluate_and_test_equal(expr, y_tests, preallocate=False)
 
     def test_evaluator_julia_domain_concatenation_2D(self):
         c_n = pybamm.Variable(
@@ -386,14 +278,7 @@ class TestEvaluate(unittest.TestCase):
         disc.set_variable_slices([c_n, c_s, c_p])
         c_disc = disc.process_symbol(c)
 
-        evaluator_str = pybamm.get_julia_function(c_disc)
-        Main.eval(evaluator_str)
-        for y_test in y_tests:
-            pybamm_eval = c_disc.evaluate(y=y_test).flatten()
-            Main.dy = np.zeros_like(pybamm_eval)
-            Main.y = y_test
-            Main.eval("f!(dy,y,0,0)")
-            np.testing.assert_equal(Main.dy, pybamm_eval)
+        self.evaluate_and_test_equal(c_disc, y_tests)
 
     def test_evaluator_julia_discretised_operators(self):
         whole_cell = ["negative electrode", "separator", "positive electrode"]
@@ -404,9 +289,7 @@ class TestEvaluate(unittest.TestCase):
 
         combined_submesh = mesh.combine_submeshes(*whole_cell)
 
-        # grad
         var = pybamm.Variable("var", domain=whole_cell)
-        grad_eqn = pybamm.grad(var)
         boundary_conditions = {
             var.id: {
                 "left": (pybamm.Scalar(1), "Dirichlet"),
@@ -414,13 +297,14 @@ class TestEvaluate(unittest.TestCase):
             }
         }
         disc.bcs = boundary_conditions
-
         disc.set_variable_slices([var])
+
+        # grad
+        grad_eqn = pybamm.grad(var)
         grad_eqn_disc = disc.process_symbol(grad_eqn)
 
-        # div: test on linear y (should have laplacian zero) so change bcs
+        # div
         div_eqn = pybamm.div(var * grad_eqn)
-
         div_eqn_disc = disc.process_symbol(div_eqn)
 
         # test
@@ -428,27 +312,7 @@ class TestEvaluate(unittest.TestCase):
         y_tests = [nodes ** 2 + 1, np.cos(nodes)]
 
         for i, expr in enumerate([grad_eqn_disc, div_eqn_disc]):
-            evaluator_str = pybamm.get_julia_function(expr, funcname=f"f{i}")
-            Main.eval(evaluator_str)
-            for y_test in y_tests:
-                pybamm_eval = expr.evaluate(y=y_test).flatten()
-                Main.dy = np.zeros_like(pybamm_eval)
-                Main.y = y_test
-                Main.eval(f"f{i}!(dy,y,0,0)")
-                np.testing.assert_almost_equal(Main.dy, pybamm_eval, decimal=7)
-
-        # Test without preallocation
-        for i, expr in enumerate([grad_eqn_disc, div_eqn_disc]):
-            evaluator_str = pybamm.get_julia_function(
-                expr, funcname=f"f{i+10}", preallocate=False
-            )
-            Main.eval(evaluator_str)
-            for y_test in y_tests:
-                pybamm_eval = expr.evaluate(y=y_test).flatten()
-                Main.dy = np.zeros_like(pybamm_eval)
-                Main.y = y_test
-                Main.eval(f"f{i}!(dy,y,0,0)")
-                np.testing.assert_almost_equal(Main.dy, pybamm_eval, decimal=7)
+            self.evaluate_and_test_equal(expr, y_tests, funcname=f"f{i}", decimal=10)
 
     def test_evaluator_julia_discretised_microscale(self):
         # create discretisation
@@ -493,14 +357,7 @@ class TestEvaluate(unittest.TestCase):
         y_tests = [np.linspace(0, 1, total_npts) ** 2]
 
         for i, expr in enumerate([grad_eqn_disc, div_eqn_disc]):
-            evaluator_str = pybamm.get_julia_function(expr, funcname=f"f{i}")
-            Main.eval(evaluator_str)
-            for y_test in y_tests:
-                pybamm_eval = expr.evaluate(y=y_test).flatten()
-                Main.dy = np.zeros_like(pybamm_eval)
-                Main.y = y_test
-                Main.eval(f"f{i}!(dy,y,0,0)")
-                np.testing.assert_almost_equal(Main.dy, pybamm_eval, decimal=7)
+            self.evaluate_and_test_equal(expr, y_tests, funcname=f"f{i}", decimal=11)
 
 
 if __name__ == "__main__":
