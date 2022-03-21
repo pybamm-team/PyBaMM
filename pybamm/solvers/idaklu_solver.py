@@ -13,7 +13,7 @@ if idaklu_spec is not None:
     try:
         idaklu = importlib.util.module_from_spec(idaklu_spec)
         idaklu_spec.loader.exec_module(idaklu)
-    except ImportError as e:  # pragma: no cover
+    except ImportError:  # pragma: no cover
         idaklu_spec = None
 
 
@@ -191,7 +191,15 @@ class IDAKLUSolver(pybamm.BaseSolver):
             mass_matrix = model.mass_matrix.entries
 
         # construct residuals function by binding inputs
-        if model.convert_to_format != "casadi":
+        if model.convert_to_format == "casadi":
+            t_casadi = casadi.MX.sym("t")
+            y_casadi = casadi.MX.sym("y", model.len_rhs_and_alg)
+            rhs_algebraic = casadi.Function(
+                "rhs_algebraic", [t_casadi, y_casadi], [
+                    model.rhs_algebraic_eval(t_casadi, y_casadi, inputs)
+                ]
+            )
+        else:
             def resfn(t, y, ydot):
                 return (
                     model.rhs_algebraic_eval(t, y, inputs).flatten()
@@ -200,9 +208,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
 
         # need to provide jacobian_rhs_alg - cj * mass_matrix
         if model.convert_to_format == "casadi":
-            t_casadi = casadi.MX.sym("t")
             cj_casadi = casadi.MX.sym("cj")
-            y_casadi = casadi.MX.sym("y", model.len_rhs_and_alg)
             jac_times_cjmass = casadi.Function(
                 "jac_times_cjmass", [t_casadi, y_casadi, cj_casadi], [
                     model.jac_rhs_algebraic_eval(t_casadi, y_casadi, inputs) -
@@ -215,6 +221,13 @@ class IDAKLUSolver(pybamm.BaseSolver):
             jac_times_cjmass_colptrs = jac_y0_t0.indptr
 
             v_casadi = casadi.MX.sym("v", model.len_rhs_and_alg)
+
+            jac_rhs_algebraic_action = casadi.Function(
+                "jac_rhs_algebraic_action", [t_casadi, y_casadi, v_casadi], [
+                    model.jac_rhs_algebraic_action_eval(t_casadi, y_casadi, inputs,
+                                                        v_casadi)
+                ]
+            )
 
             # also need the action of the mass matrix on a vector
             mass_action = casadi.Function(
@@ -231,7 +244,9 @@ class IDAKLUSolver(pybamm.BaseSolver):
                     return j
             else:
                 def jacfn(t, y, cj):
-                    jac_eval = model.jac_rhs_algebraic_eval(t, y, inputs) - cj * mass_matrix
+                    jac_eval = (
+                        model.jac_rhs_algebraic_eval(t, y, inputs) - cj * mass_matrix
+                    )
                     return sparse.csr_matrix(jac_eval)
 
             class SundialsJacobian:
@@ -292,8 +307,13 @@ class IDAKLUSolver(pybamm.BaseSolver):
 
         number_of_sensitivity_parameters = 0
         if model.jacp_rhs_algebraic_eval is not None:
-            sens0 = model.jacp_rhs_algebraic_eval(0, y0, inputs)
-            number_of_sensitivity_parameters = len(sens0.keys())
+            sensitivity_names = model.calculate_sensitivities
+            if model.convert_to_format == "casadi":
+                number_of_sensitivity_parameters = model.jacp_rhs_algebraic_eval.n_out()
+            else:
+                number_of_sensitivity_parameters = len(sensitivity_names)
+            print('number_of_sensitivity_parameters = ',
+                  number_of_sensitivity_parameters)
 
         if model.convert_to_format == "casadi":
             # for the casadi solver we just give it dFdp_i
@@ -302,15 +322,21 @@ class IDAKLUSolver(pybamm.BaseSolver):
                     "sensfn", [], []
                 )
             else:
-                sensfn = model.jacp_rhs_algebraic_eval
+                sensfn = casadi.Function(
+                    "sensfn", [t_casadi, y_casadi],
+                    [
+                        model.jacp_rhs_algebraic_eval(t_casadi, y_casadi, inputs)
+                    ]
+                )
         else:
             # for the python solver we give it the full sensitivity equations
             # required by IDAS
             def sensfn(resvalS, t, y, yp, yS, ypS):
                 """
                 this function evaluates the sensitivity equations required by IDAS,
-                returning them in resvalS, which is preallocated as a numpy array of size
-                (np, n), where n is the number of states and np is the number of parameters
+                returning them in resvalS, which is preallocated as a numpy array of
+                size (np, n), where n is the number of states and np is the number of
+                parameters
 
                 The equations returned are:
 
@@ -344,10 +370,9 @@ class IDAKLUSolver(pybamm.BaseSolver):
         timer = pybamm.Timer()
 
         if model.convert_to_format == "casadi":
-            rhs_algebraic_str = model.rhs_algebraic_eval.serialize()
+            rhs_algebraic_str = rhs_algebraic.serialize()
             jac_times_cjmass_str = jac_times_cjmass.serialize()
-            jac_rhs_algebraic_action_str = \
-                model.jac_rhs_algebraic_action_eval.serialize()
+            jac_rhs_algebraic_action_str = jac_rhs_algebraic_action.serialize()
             rootfn_str = rootfn.serialize()
             mass_action_str = mass_action.serialize()
             sensfn_str = sensfn.serialize()
@@ -390,6 +415,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
             )
         integration_time = timer.time()
 
+        print('finished solve, back in python')
         t = sol.t
         number_of_timesteps = t.size
         number_of_states = y0.size
@@ -399,7 +425,8 @@ class IDAKLUSolver(pybamm.BaseSolver):
         # (#timesteps * #states,) to match format used by Solution
         if number_of_sensitivity_parameters != 0:
             yS_out = {
-                name: sol.yS[i].reshape(-1, 1) for i, name in enumerate(sens0.keys())
+                name: sol.yS[i].reshape(-1, 1)
+                for i, name in enumerate(sensitivity_names)
             }
         else:
             yS_out = False

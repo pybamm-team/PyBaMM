@@ -51,7 +51,8 @@ class TestIDAKLUSolver(unittest.TestCase):
         # this test implements a python version of the ida Roberts
         # example provided in sundials
         # see sundials ida examples pdf
-        for form in ["python", "casadi", "jax"]:
+        # for form in ["python", "casadi", "jax"]:
+        for form in ["casadi"]:
             print(form)
             model = pybamm.BaseModel()
             model.convert_to_format = form
@@ -214,4 +215,5 @@ if __name__ == "__main__":
     if "-v" in sys.argv:
         debug = True
     pybamm.settings.debug_mode = True
+
     unittest.main()

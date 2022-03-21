@@ -45,6 +45,8 @@ Solution solve_casadi_wrapper(np_array t_np, np_array y0_np, np_array yp0_np,
                       rhs_alg_id,
                       atol_np, rel_tol, number_of_parameters);
 
+  std::cout << "exiting wrapper" << std::endl;
+
 }
 
 namespace py = pybind11;

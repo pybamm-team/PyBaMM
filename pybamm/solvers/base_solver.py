@@ -458,7 +458,7 @@ class BaseSolver(object):
                     # instead it returns multiple return values, one for each param
                     # TODO: would it be faster to do the jacobian wrt pS_casadi_stacked?
                     jacp = casadi.Function(
-                        name, [t_casadi, y_and_S, p_casadi_stacked], [
+                        name + "_jacp", [t_casadi, y_and_S, p_casadi_stacked], [
                             casadi.jacobian(casadi_expression, p_casadi[pname])
                             for pname in model.calculate_sensitivities
                         ]
@@ -468,14 +468,15 @@ class BaseSolver(object):
                     report(f"Calculating jacobian for {name} using CasADi")
                     jac_casadi = casadi.jacobian(casadi_expression, y_and_S)
                     jac = casadi.Function(
-                        name, [t_casadi, y_and_S, p_casadi_stacked], [jac_casadi]
+                        name + "_jac", [t_casadi, y_and_S, p_casadi_stacked],
+                        [jac_casadi]
                     )
 
                     v = casadi.MX.sym("v", model.len_rhs_and_alg + model.len_rhs_sens +
                                       model.len_alg_sens)
                     jac_action_casadi = casadi.jtimes(casadi_expression, y_and_S, v)
                     jac_action = casadi.Function(
-                        name, [t_casadi, y_and_S, p_casadi_stacked, v],
+                        name + "_jac_action", [t_casadi, y_and_S, p_casadi_stacked, v],
                         [jac_action_casadi]
                     )
                 else:

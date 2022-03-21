@@ -1,4 +1,5 @@
 #include "idaklu_python.hpp"
+#include <iostream>
 
 using residual_type = std::function<np_array(realtype, np_array, np_array)>;
 using sensitivities_type = std::function<void(
@@ -474,6 +475,8 @@ Solution solve_python(np_array t_np, np_array y0_np, np_array yp0_np,
       );
 
   Solution sol(retval, t_ret, y_ret, yS_ret);
+
+  std::cout << "finished idaklu solve" <<std::endl;
 
   return sol;
 }
