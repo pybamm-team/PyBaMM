@@ -465,6 +465,24 @@
       "contributions": [
         "code"
       ]
+    },
+    {
+      "login": "KAschad",
+      "name": "KAschad",
+      "avatar_url": "https://avatars.githubusercontent.com/u/93784399?v=4",
+      "profile": "https://github.com/KAschad",
+      "contributions": [
+        "bug"
+      ]
+    },
+    {
+      "login": "Vaibhav-Chopra-GT",
+      "name": "Vaibhav-Chopra-GT",
+      "avatar_url": "https://avatars.githubusercontent.com/u/92637595?v=4",
+      "profile": "https://github.com/Vaibhav-Chopra-GT",
+      "contributions": [
+        "code"
+      ]
     }
   ],
   "contributorsPerLine": 7,

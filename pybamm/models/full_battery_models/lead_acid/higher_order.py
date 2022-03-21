@@ -51,7 +51,7 @@ class BaseHigherOrderModel(BaseModel):
         self.set_full_convection_submodel()
         self.set_full_porosity_submodel()
         self.set_active_material_submodel()
-        self.set_tortuosity_submodels()
+        self.set_transport_efficiency_submodels()
         self.set_thermal_submodel()
         self.set_current_collector_submodel()
         self.set_sei_submodel()

@@ -84,21 +84,26 @@ class ScikitsOdeSolver(pybamm.BaseSolver):
 
         """
         inputs_dict = inputs_dict or {}
-        if model.rhs_eval.form == "casadi":
+        if model.convert_to_format == "casadi":
             inputs = casadi.vertcat(*[x for x in inputs_dict.values()])
         else:
             inputs = inputs_dict
 
         y0 = model.y0
         if isinstance(y0, casadi.DM):
-            y0 = y0.full().flatten()
+            y0 = y0.full()
+        y0 = y0.flatten()
 
         derivs = model.rhs_eval
         events = model.terminate_events_eval
-        jacobian = model.jacobian_eval
+        jacobian = model.jac_rhs_eval
 
-        def eqsydot(t, y, return_ydot):
-            return_ydot[:] = derivs(t, y, inputs)
+        if model.convert_to_format == "casadi":
+            def eqsydot(t, y, return_ydot):
+                return_ydot[:] = derivs(t, y, inputs).full().flatten()
+        else:
+            def eqsydot(t, y, return_ydot):
+                return_ydot[:] = derivs(t, y, inputs).flatten()
 
         def rootfn(t, y, return_root):
             return_root[:] = [event(t, y, inputs) for event in events]

@@ -33,7 +33,7 @@ class TestJaxBDFSolver(unittest.TestCase):
         rhs = pybamm.EvaluatorJax(model.concatenated_rhs)
 
         def fun(y, t):
-            return rhs.evaluate(t=t, y=y).reshape(-1)
+            return rhs(t=t, y=y).reshape(-1)
 
         t0 = time.perf_counter()
         y = pybamm.jax_bdf_integrate(fun, y0, t_eval, rtol=1e-8, atol=1e-8)
@@ -105,7 +105,7 @@ class TestJaxBDFSolver(unittest.TestCase):
         rhs = pybamm.EvaluatorJax(model.concatenated_rhs)
 
         def fun(y, t, inputs):
-            return rhs.evaluate(t=t, y=y, inputs=inputs).reshape(-1)
+            return rhs(t=t, y=y, inputs=inputs).reshape(-1)
 
         h = 0.0001
         rate = 0.1
@@ -183,7 +183,7 @@ class TestJaxBDFSolver(unittest.TestCase):
         rhs = pybamm.EvaluatorJax(model.concatenated_rhs)
 
         def fun(y, t, inputs):
-            return rhs.evaluate(t=t, y=y, inputs=inputs).reshape(-1)
+            return rhs(t=t, y=y, inputs=inputs).reshape(-1)
 
         y = pybamm.jax_bdf_integrate(
             fun, y0, t_eval, {"rate": 0.1}, rtol=1e-9, atol=1e-9

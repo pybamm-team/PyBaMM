@@ -14,7 +14,9 @@ OPTIONS_DICT = {
 }
 
 PRINT_OPTIONS_OUTPUT = """\
+'calculate discharge energy': 'false' (possible: ['false', 'true'])
 'cell geometry': 'pouch' (possible: ['arbitrary', 'pouch'])
+'calculate heat source for isothermal models': 'false' (possible: ['false', 'true'])
 'convection': 'none' (possible: ['none', 'uniform transverse', 'full transverse'])
 'current collector': 'uniform' (possible: ['uniform', 'potential pair', 'potential pair quite conductive'])
 'dimensionality': 0 (possible: [0, 1, 2])
@@ -25,7 +27,7 @@ PRINT_OPTIONS_OUTPUT = """\
 'lithium plating': 'none' (possible: ['none', 'reversible', 'irreversible'])
 'lithium plating porosity change': 'false' (possible: ['false', 'true'])
 'loss of active material': 'stress-driven' (possible: ['none', 'stress-driven', 'reaction-driven', 'stress and reaction-driven'])
-'operating mode': 'current' (possible: ['current', 'voltage', 'power', 'CCCV'])
+'operating mode': 'current' (possible: ['current', 'voltage', 'power', 'differential power', 'explicit power', 'resistance', 'differential resistance', 'explicit resistance', 'CCCV'])
 'particle': 'Fickian diffusion' (possible: ['Fickian diffusion', 'fast diffusion', 'uniform profile', 'quadratic profile', 'quartic profile'])
 'particle mechanics': 'swelling only' (possible: ['none', 'swelling only', 'swelling and cracking'])
 'particle shape': 'spherical' (possible: ['spherical', 'no particles'])
