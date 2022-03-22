@@ -185,6 +185,7 @@ class BaseModel(pybamm.BaseBatteryModel):
                 "Total lithium in negative electrode [mol]",
                 "Loss of lithium to lithium plating [mol]",
                 "Loss of capacity to lithium plating [A.h]",
+                "X-averaged SEI thickness [m]",
             ]
 
         self.summary_variables = summary_variables
