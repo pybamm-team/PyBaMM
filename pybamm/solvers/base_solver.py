@@ -199,7 +199,6 @@ class BaseSolver(object):
         calculate_sensitivities_explicit = False
         if model.calculate_sensitivities and not isinstance(self, pybamm.IDAKLUSolver):
             calculate_sensitivities_explicit = True
-        print('calculate_sensitivities_explicit', calculate_sensitivities_explicit)
 
         # if we are calculating sensitivities explicitly then the number of
         # equations will change

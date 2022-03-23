@@ -17,5 +17,4 @@ public:
   np_array yS;
 };
 
-
 #endif // PYBAMM_SOLUTION_HPP

@@ -4,6 +4,7 @@
 import pybamm
 import numpy as np
 import unittest
+from tests import get_discretisation_for_testing
 
 
 @unittest.skipIf(not pybamm.have_idaklu(), "idaklu solver is not installed")
@@ -45,6 +46,76 @@ class TestIDAKLUSolver(unittest.TestCase):
             # test that y[0] = to true solution
             true_solution = 0.1 * solution.t
             np.testing.assert_array_almost_equal(solution.y[0, :], true_solution)
+
+    def test_model_events(self):
+        # Create model
+        model = pybamm.BaseModel()
+        var = pybamm.Variable("var")
+        model.rhs = {var: 0.1 * var}
+        model.initial_conditions = {var: 1}
+
+        # create discretisation
+        disc = pybamm.Discretisation()
+        model_disc = disc.process_model(model, inplace=False)
+        # Solve
+        solver = pybamm.IDAKLUSolver(rtol=1e-8, atol=1e-8)
+        t_eval = np.linspace(0, 1, 100)
+        solution = solver.solve(model_disc, t_eval)
+        np.testing.assert_array_equal(solution.t, t_eval)
+        np.testing.assert_array_almost_equal(
+            solution.y[0], np.exp(0.1 * solution.t), decimal=5
+        )
+
+        # enforce events that won't be triggered
+        model.events = [pybamm.Event("an event", var + 1)]
+        model_disc = disc.process_model(model, inplace=False)
+        solver = pybamm.IDAKLUSolver(rtol=1e-8, atol=1e-8)
+        solution = solver.solve(model_disc, t_eval)
+        np.testing.assert_array_equal(solution.t, t_eval)
+        np.testing.assert_array_almost_equal(
+            solution.y[0], np.exp(0.1 * solution.t), decimal=5
+        )
+
+        # enforce events that will be triggered
+        model.events = [pybamm.Event("an event", var - 1.01)]
+        model_disc = disc.process_model(model, inplace=False)
+        solver = pybamm.IDAKLUSolver(rtol=1e-8, atol=1e-8)
+        solution = solver.solve(model_disc, t_eval)
+        self.assertLess(len(solution.t), len(t_eval))
+        np.testing.assert_array_almost_equal(
+            solution.y[0], np.exp(0.1 * solution.t), decimal=5
+        )
+
+        # bigger dae model with multiple events
+        model = pybamm.BaseModel()
+        whole_cell = ["negative electrode", "separator", "positive electrode"]
+        var1 = pybamm.Variable("var1", domain=whole_cell)
+        var2 = pybamm.Variable("var2", domain=whole_cell)
+        model.rhs = {var1: 0.1 * var1}
+        model.algebraic = {var2: 2 * var1 - var2}
+        model.initial_conditions = {var1: 1, var2: 2}
+        model.events = [
+            pybamm.Event("var1 = 1.5", pybamm.min(var1 - 1.5)),
+            pybamm.Event("var2 = 2.5", pybamm.min(var2 - 2.5)),
+        ]
+        disc = get_discretisation_for_testing()
+        disc.process_model(model)
+
+        solver = pybamm.IDAKLUSolver(rtol=1e-8, atol=1e-8)
+        t_eval = np.linspace(0, 5, 100)
+        solution = solver.solve(model, t_eval)
+        np.testing.assert_array_less(solution.y[0, :-1], 1.5)
+        np.testing.assert_array_less(solution.y[-1, :-1], 2.5)
+        np.testing.assert_equal(solution.t_event[0], solution.t[-1])
+        np.testing.assert_array_equal(solution.y_event[:, 0], solution.y[:, -1])
+        np.testing.assert_array_almost_equal(
+            solution.y[0], np.exp(0.1 * solution.t), decimal=5
+        )
+        np.testing.assert_array_almost_equal(
+            solution.y[-1], 2 * np.exp(0.1 * solution.t), decimal=5
+        )
+
+
 
     @unittest.skipIf(not pybamm.have_jax(), "jax or jaxlib is not installed")
     def test_ida_roberts_klu_sensitivities(self):

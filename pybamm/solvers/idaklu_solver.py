@@ -216,9 +216,12 @@ class IDAKLUSolver(pybamm.BaseSolver):
                 ]
             )
             jac_y0_t0 = sparse.csr_matrix(jac_times_cjmass(t_eval[0], y0, 1.))
-            jac_times_cjmass_nnz = jac_y0_t0.nnz
-            jac_times_cjmass_rowvals = jac_y0_t0.indices
-            jac_times_cjmass_colptrs = jac_y0_t0.indptr
+            jac_times_cjmass_sparsity = jac_times_cjmass.sparsity_out(0)
+            jac_times_cjmass_nnz = jac_times_cjmass_sparsity.nnz()
+            jac_times_cjmass_colptrs = np.array(jac_times_cjmass_sparsity.colind(),
+                                                dtype=np.int64)
+            jac_times_cjmass_rowvals = np.array(jac_times_cjmass_sparsity.row(),
+                                                dtype=np.int64)
 
             v_casadi = casadi.MX.sym("v", model.len_rhs_and_alg)
 
@@ -312,8 +315,6 @@ class IDAKLUSolver(pybamm.BaseSolver):
                 number_of_sensitivity_parameters = model.jacp_rhs_algebraic_eval.n_out()
             else:
                 number_of_sensitivity_parameters = len(sensitivity_names)
-            print('number_of_sensitivity_parameters = ',
-                  number_of_sensitivity_parameters)
 
         if model.convert_to_format == "casadi":
             # for the casadi solver we just give it dFdp_i
@@ -380,8 +381,8 @@ class IDAKLUSolver(pybamm.BaseSolver):
                 t_eval, y0, ydot0,
                 rhs_algebraic_str,
                 jac_times_cjmass_str,
-                jac_times_cjmass_rowvals,
                 jac_times_cjmass_colptrs,
+                jac_times_cjmass_rowvals,
                 jac_times_cjmass_nnz,
                 jac_rhs_algebraic_action_str,
                 mass_action_str,
@@ -415,7 +416,6 @@ class IDAKLUSolver(pybamm.BaseSolver):
             )
         integration_time = timer.time()
 
-        print('finished solve, back in python')
         t = sol.t
         number_of_timesteps = t.size
         number_of_states = y0.size
@@ -443,12 +443,13 @@ class IDAKLUSolver(pybamm.BaseSolver):
                 np.transpose(y_out),
                 model,
                 inputs_dict,
-                t[-1],
+                np.array([t[-1]]),
                 np.transpose(y_out[-1])[:, np.newaxis],
                 termination,
                 sensitivities=yS_out,
             )
             sol.integration_time = integration_time
+            print('glasdkfg')
             return sol
         else:
-            raise pybamm.SolverError(sol.message)
+            raise pybamm.SolverError("idaklu solver failed")

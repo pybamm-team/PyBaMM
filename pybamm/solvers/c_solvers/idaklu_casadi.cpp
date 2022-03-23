@@ -5,6 +5,7 @@
 
 #include <iostream>
 using casadi::casadi_axpy;
+using Sparsity = casadi::Sparsity;
 
 class CasadiFunction {
 public:
@@ -14,7 +15,15 @@ public:
     size_t sz_iw;
     size_t sz_w;
     m_func.sz_work(sz_arg, sz_res, sz_iw, sz_w);
-    // std::cout << "name = "<< m_func.name() << " arg = " << sz_arg << " res = " << sz_res << " iw = " << sz_iw << " w = " << sz_w << std::endl;
+    //std::cout << "name = "<< m_func.name() << " arg = " << sz_arg << " res = " << sz_res << " iw = " << sz_iw << " w = " << sz_w << std::endl;
+    //for (int i = 0; i < sz_arg; i++) {
+    //  std::cout << "Sparsity for input " << i << std::endl;
+    //  const Sparsity& sparsity = m_func.sparsity_in(i);
+    //}
+    //for (int i = 0; i < sz_res; i++) {
+    //  std::cout << "Sparsity for output " << i << std::endl;
+    //  const Sparsity& sparsity = m_func.sparsity_out(i);
+    //}
     m_arg.resize(sz_arg);
     m_res.resize(sz_res);
     m_iw.resize(sz_iw);
@@ -44,19 +53,21 @@ public:
   int number_of_states;
   int number_of_parameters;
   int number_of_events;
+  int number_of_nnz;
   CasadiFunction rhs_alg;
   CasadiFunction sens;
   CasadiFunction jac_times_cjmass;
-  const np_array &jac_times_cjmass_rowvals;
-  const np_array &jac_times_cjmass_colptrs;
+  const np_array_int &jac_times_cjmass_rowvals;
+  const np_array_int &jac_times_cjmass_colptrs;
   CasadiFunction jac_action;
   CasadiFunction mass_action;
   CasadiFunction events;
 
   PybammFunctions(const Function &rhs_alg, 
                   const Function &jac_times_cjmass,
-                  const np_array &jac_times_cjmass_rowvals,
-                  const np_array &jac_times_cjmass_colptrs,
+                  const int jac_times_cjmass_nnz,
+                  const np_array_int &jac_times_cjmass_rowvals,
+                  const np_array_int &jac_times_cjmass_colptrs,
                   const Function &jac_action,
                   const Function &mass_action,
                   const Function &sens,
@@ -64,6 +75,7 @@ public:
                   const int n_s, int n_e, const int n_p)
       : number_of_states(n_s), number_of_events(n_e), 
         number_of_parameters(n_p),
+        number_of_nnz(jac_times_cjmass_nnz),
         rhs_alg(rhs_alg), 
         jac_times_cjmass(jac_times_cjmass), 
         jac_times_cjmass_rowvals(jac_times_cjmass_rowvals), 
@@ -167,15 +179,16 @@ int jtimes_casadi(realtype tt, N_Vector yy, N_Vector yp, N_Vector rr,
   p_python_functions->jac_action.m_res[0] = NV_DATA_S(rr);
   p_python_functions->jac_action();
 
-  // tmp1 has -∂F/∂y˙ v
+  // tmp has -∂F/∂y˙ v
+  realtype *tmp = p_python_functions->get_tmp();
   p_python_functions->mass_action.m_arg[0] = NV_DATA_S(v);
-  p_python_functions->mass_action.m_res[0] = NV_DATA_S(tmp1);
+  p_python_functions->mass_action.m_res[0] = tmp;
   p_python_functions->mass_action();
 
   // AXPY: y <- a*x + y
   // rr has ∂F/∂y v + cj ∂F/∂y˙ v
   const int ns = p_python_functions->number_of_states;
-  casadi_axpy(ns, -cj, NV_DATA_S(tmp1), NV_DATA_S(rr));
+  casadi_axpy(ns, -cj, tmp, NV_DATA_S(rr));
 
   return 0;
 }
@@ -214,15 +227,13 @@ int jacobian_casadi(realtype tt, realtype cj, N_Vector yy, N_Vector yp,
   p_python_functions->jac_times_cjmass.m_res[0] = jac_data; 
   p_python_functions->jac_times_cjmass();
 
-
-
   // row vals and col ptrs
   const np_array &jac_times_cjmass_rowvals = p_python_functions->jac_times_cjmass_rowvals;
   const int n_row_vals = jac_times_cjmass_rowvals.request().size;
   auto p_jac_times_cjmass_rowvals = jac_times_cjmass_rowvals.unchecked<1>();
 
   //std::cout << "jac_data = [";
-  //for (int i = 0; i < n_row_vals; i++) {
+  //for (int i = 0; i < p_python_functions->number_of_nnz; i++) {
   //  std::cout << jac_data[i] << " ";
   //}
   //std::cout << "]" << std::endl;
@@ -394,8 +405,8 @@ int sensitivities_casadi(int Ns, realtype t, N_Vector yy, N_Vector yp,
 Solution solve_casadi(np_array t_np, np_array y0_np, np_array yp0_np,
                const Function &rhs_alg, 
                const Function &jac_times_cjmass, 
-               const np_array &jac_times_cjmass_rowvals, 
-               const np_array &jac_times_cjmass_colptrs, 
+               const np_array_int &jac_times_cjmass_colptrs, 
+               const np_array_int &jac_times_cjmass_rowvals, 
                const int jac_times_cjmass_nnz,
                const Function &jac_action, 
                const Function &mass_action, 
@@ -471,6 +482,7 @@ Solution solve_casadi(np_array t_np, np_array y0_np, np_array yp0_np,
   PybammFunctions* p_pybamm_functions = new PybammFunctions(
       rhs_alg, 
       jac_times_cjmass, 
+      jac_times_cjmass_nnz,
       jac_times_cjmass_rowvals,
       jac_times_cjmass_colptrs, 
       jac_action, mass_action, 
@@ -483,42 +495,28 @@ Solution solve_casadi(np_array t_np, np_array y0_np, np_array yp0_np,
   IDASetUserData(ida_mem, user_data);
 
   // set linear solver
-  J = SUNSparseMatrix(number_of_states, number_of_states, jac_times_cjmass_nnz, CSR_MAT);
-
-  // copy across row vals and col ptrs
-  const int n_row_vals = jac_times_cjmass_rowvals.request().size;
-  auto p_jac_times_cjmass_rowvals = jac_times_cjmass_rowvals.unchecked<1>();
-
-  sunindextype *jac_rowvals = SUNSparseMatrix_IndexValues(J);
-  for (i = 0; i < n_row_vals; i++) {
-    jac_rowvals[i] = p_jac_times_cjmass_rowvals[i];
+  if (use_jacobian == 1) {
+    J = SUNSparseMatrix(number_of_states, number_of_states, jac_times_cjmass_nnz, CSC_MAT);
+    LS = SUNLinSol_KLU(yy, J);
+  } else {
+    J = SUNDenseMatrix(number_of_states, number_of_states);
+    LS = SUNLinSol_Dense(yy, J);
   }
 
-  const int n_col_ptrs = jac_times_cjmass_colptrs.request().size;
-  auto p_jac_times_cjmass_colptrs = jac_times_cjmass_colptrs.unchecked<1>();
-
-  sunindextype *jac_colptrs = SUNSparseMatrix_IndexPointers(J);
-  for (i = 0; i < n_col_ptrs; i++) {
-    jac_colptrs[i] = p_jac_times_cjmass_colptrs[i];
-  }
-
-  //std::cout << "setting up jacobian nnz = "<< jac_times_cjmass_nnz 
-  //  << " rowvals = " << n_row_vals << " colptrs = " << n_col_ptrs << std::endl; 
-
-  LS = SUNLinSol_KLU(yy, J);
   IDASetLinearSolver(ida_mem, LS, J);
 
-  if (use_jacobian == 1)
-  {
+  if (use_jacobian == 1) {
     IDASetJacFn(ida_mem, jacobian_casadi);
   }
 
-  if (number_of_parameters > 0)
-  {
+
+  if (number_of_parameters > 0) {
     IDASensInit(ida_mem, number_of_parameters, 
                 IDA_SIMULTANEOUS, sensitivities_casadi, yyS, ypS);
     IDASensEEtolerances(ida_mem);
   }
+
+  SUNLinSolInitialize(LS);
 
   int t_i = 1;
   realtype tret;
@@ -526,9 +524,23 @@ Solution solve_casadi(np_array t_np, np_array y0_np, np_array yp0_np,
   realtype t_final = t(number_of_timesteps - 1);
 
   // set return vectors
-  std::vector<double> t_return(number_of_timesteps);
-  std::vector<double> y_return(number_of_timesteps * number_of_states);
-  std::vector<double> yS_return(number_of_parameters * number_of_timesteps * number_of_states);
+  realtype* t_return = new realtype[number_of_timesteps];
+  realtype* y_return = new realtype[number_of_timesteps * number_of_states];
+  realtype* yS_return = new realtype[number_of_parameters * number_of_timesteps * number_of_states];
+
+  py::capsule free_t_when_done(t_return, [](void *f) {
+            realtype *vect = reinterpret_cast<realtype *>(f);
+            std::cout << "Freeing t" << std::endl;
+            delete[] vect;
+        });
+  py::capsule free_y_when_done(y_return, [](void *f) {
+            realtype *vect = reinterpret_cast<realtype *>(f);
+            delete[] vect;
+        });
+  py::capsule free_yS_when_done(yS_return, [](void *f) {
+            realtype *vect = reinterpret_cast<realtype *>(f);
+            delete[] vect;
+        });
 
   t_return[0] = t(0);
   for (int j = 0; j < number_of_states; j++)
@@ -555,8 +567,8 @@ Solution solve_casadi(np_array t_np, np_array y0_np, np_array yp0_np,
     id_val[ii] = id_np_val[ii];
   }
 
-  IDASetId(ida_mem, id);
-  IDACalcIC(ida_mem, IDA_YA_YDP_INIT, t(1));
+  // IDASetId(ida_mem, id);
+  // IDACalcIC(ida_mem, IDA_YA_YDP_INIT, t(1));
 
   while (true)
   {
@@ -585,19 +597,62 @@ Solution solve_casadi(np_array t_np, np_array y0_np, np_array yp0_np,
       if (retval == IDA_SUCCESS || retval == IDA_ROOT_RETURN) {
         break;
       }
-
     } else {
       // failed
       break;
     }
   }
 
+  np_array t_ret = np_array(t_i, &t_return[0], free_t_when_done);
+  np_array y_ret = np_array(t_i * number_of_states, &y_return[0], free_y_when_done);
+  np_array yS_ret = np_array(
+      std::vector<ptrdiff_t>{number_of_parameters, t_i, number_of_states},
+      &yS_return[0], free_yS_when_done 
+      );
+
+  Solution sol(retval, t_ret, y_ret, yS_ret);
+
+  long nsteps, nrevals, nlinsetups, netfails;
+  int klast, kcur;
+  realtype hinused, hlast, hcur, tcur;
+
+  IDAGetIntegratorStats(ida_mem, 
+      &nsteps,
+      &nrevals,
+      &nlinsetups,
+      &netfails,
+      &klast,
+      &kcur,
+      &hinused,
+      &hlast,
+      &hcur,
+      &tcur
+  );
+
+  long nniters, nncfails;
+  IDAGetNonlinSolvStats(ida_mem, &nniters, &nncfails);
+
+  std::cout << "Solver Stats: \n"
+            << "  Number of steps = " << nsteps << "\n"
+            << "  Number of calls to residual function = " << nrevals << "\n"
+            << "  Number of linear solver setup calls = " << nlinsetups << "\n"
+            << "  Number of error test failures = " << netfails << "\n"
+            << "  Method order used on last step = " << klast << "\n"
+            << "  Method order used on next step = " << kcur << "\n"
+            << "  Initial step size = " << hinused << "\n"
+            << "  Step size on last step = " << hlast << "\n"
+            << "  Step size on next step = " << hcur << "\n"
+            << "  Current internal time reached = " << tcur << "\n"
+            << "  Number of nonlinear iterations performed = " << nniters << "\n"
+            << "  Number of nonlinear convergence failures = " << nncfails << "\n"
+            << std::endl;
+
+                          
 
   /* Free memory */
   if (number_of_parameters > 0) {
     IDASensFree(ida_mem);
   }
-  IDAFree(&ida_mem);
   SUNLinSolFree(LS);
   SUNMatDestroy(J);
   N_VDestroy(avtol);
@@ -609,14 +664,7 @@ Solution solve_casadi(np_array t_np, np_array y0_np, np_array yp0_np,
     N_VDestroyVectorArray(ypS, number_of_parameters);
   }
 
-  np_array t_ret = np_array(t_i, &t_return[0]);
-  np_array y_ret = np_array(t_i * number_of_states, &y_return[0]);
-  np_array yS_ret = np_array(
-      std::vector<ptrdiff_t>{number_of_parameters, t_i, number_of_states},
-      &yS_return[0] 
-      );
-
-  Solution sol(retval, t_ret, y_ret, yS_ret);
+  IDAFree(&ida_mem);
 
   //std::cout << "finished solving 9" << std::endl;
   // Why does this bus error?
