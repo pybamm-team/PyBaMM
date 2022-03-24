@@ -7,6 +7,9 @@ import numpy as np
 
 
 class TestExternalThermalModels(unittest.TestCase):
+    def __repr__(self):
+        return super().__repr__()
+       
     def test_external_lumped_temperature(self):
         model_options = {"thermal": "lumped", "external submodels": ["thermal"]}
         model = pybamm.lithium_ion.SPMe(model_options)
@@ -22,6 +25,10 @@ class TestExternalThermalModels(unittest.TestCase):
             T_av += 1
             sim.step(dt, external_variables=external_variables)
 
+        rep = repr(model)
+        return rep;
+   
+   
     def test_external_temperature(self):
 
         model_options = {"thermal": "x-full", "external submodels": ["thermal"]}
