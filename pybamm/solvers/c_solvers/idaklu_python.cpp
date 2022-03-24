@@ -69,7 +69,7 @@ PYBIND11_MODULE(idaklu, m)
         py::arg("number_of_sensitivity_parameters"),
         py::return_value_policy::take_ownership);
 
-  m.def("solve_casadi", &solve_casadi_wrapper, "The solve function for casadi evaluators", 
+  m.def("solve_casadi", &solve_casadi, "The solve function for casadi evaluators", 
         py::arg("t"), py::arg("y0"), py::arg("yp0"), 
         py::arg("rhs_alg"), 
         py::arg("jac_times_cjmass"), 
@@ -84,6 +84,10 @@ PYBIND11_MODULE(idaklu, m)
         py::arg("rhs_alg_id"),
         py::arg("atol"), py::arg("rtol"),
         py::arg("number_of_sensitivity_parameters"),
+        py::return_value_policy::take_ownership);
+
+  m.def("generate_function", &generate_function, "Generate a casadi function", 
+        py::arg("string"),
         py::return_value_policy::take_ownership);
 
   py::class_<Function>(m, "Function");

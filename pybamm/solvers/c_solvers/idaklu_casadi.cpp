@@ -518,6 +518,37 @@ Solution solve_casadi(np_array t_np, np_array y0_np, np_array yp0_np,
 
   SUNLinSolInitialize(LS);
 
+  //std::cout << "number of jacobian nz = " << jac_times_cjmass_nnz << std::endl;
+  //N_Vector rr, tmp1, tmp2, tmp3;
+  //rr = N_VNew_Serial(number_of_states);
+  //tmp1 = N_VNew_Serial(number_of_states);
+  //tmp2 = N_VNew_Serial(number_of_states);
+  //tmp3 = N_VNew_Serial(number_of_states);
+  //std::vector<realtype> events_vect(number_of_events);
+  //auto start = std::chrono::high_resolution_clock::now();
+  //for (int i = 0; i < 10; i++) {
+  //  residual_casadi(0, yy, yp, rr, user_data);
+  //}
+  //auto end = std::chrono::high_resolution_clock::now();
+  //std::chrono::duration<double> diff = end - start;
+  //std::cout << "Time to call residual " << diff.count() << " s\n";
+
+  //start = std::chrono::high_resolution_clock::now();
+  //for (int i = 0; i < 10; i++) {
+  //  events_casadi(0, yy, yp, events_vect.data(), user_data);
+  //}
+  //end = std::chrono::high_resolution_clock::now();
+  //diff = end - start;
+  //std::cout << "Time to call events " << diff.count() << " s\n";
+
+  //start = std::chrono::high_resolution_clock::now();
+  //for (int i = 0; i < 10; i++) {
+  //  jacobian_casadi(0, 1, yy, yp, rr, J, user_data, tmp1, tmp2, tmp3);
+  //}
+  //end = std::chrono::high_resolution_clock::now();
+  //diff = end - start;
+  //std::cout << "Time to call jacobian " << diff.count() << " s\n";
+
   int t_i = 1;
   realtype tret;
   realtype t_next;

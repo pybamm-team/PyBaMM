@@ -147,46 +147,26 @@ class IDAKLUSolver(pybamm.BaseSolver):
 
         return atol
 
-    def _integrate(self, model, t_eval, inputs_dict=None):
-        """
-        Solve a DAE model defined by residuals with initial conditions y0.
-
-        Parameters
-        ----------
-        model : :class:`pybamm.BaseModel`
-            The model whose solution to calculate.
-        t_eval : numeric type
-            The times at which to compute the solution
-        inputs_dict : dict, optional
-            Any external variables or input parameters to pass to the model when solving
-        """
-        inputs_dict = inputs_dict or {}
-        if model.convert_to_format == "casadi":
-            # stack inputs
-            inputs = casadi.vertcat(*[x for x in inputs_dict.values()])
-        else:
-            inputs = inputs_dict
-
-        if model.jac_rhs_algebraic_eval is None:
-            raise pybamm.SolverError("KLU requires the Jacobian to be provided")
-
-        try:
-            atol = model.atol
-        except AttributeError:
-            atol = self.atol
+    def set_up(self, model, inputs=None, t_eval=None, ics_only=False):
+        base_set_up_return = super().set_up(model, inputs, t_eval, ics_only)
 
         y0 = model.y0
         if isinstance(y0, casadi.DM):
             y0 = y0.full()
         y0 = y0.flatten()
 
-        rtol = self.rtol
-        atol = self._check_atol_type(atol, y0.size)
+        # solver works with ydot0 set to zero
+        ydot0 = np.zeros_like(y0)
+
+        if ics_only:
+            self._setup['y0'] = y0
+            self._setup['ydot0'] = ydot0
+            return base_set_up_return
 
         if model.convert_to_format == "jax":
             mass_matrix = model.mass_matrix.entries.toarray()
         elif model.convert_to_format == "casadi":
-            mass_matrix = casadi.MX(model.mass_matrix.entries)
+            mass_matrix = casadi.DM(model.mass_matrix.entries)
         else:
             mass_matrix = model.mass_matrix.entries
 
@@ -194,11 +174,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
         if model.convert_to_format == "casadi":
             t_casadi = casadi.MX.sym("t")
             y_casadi = casadi.MX.sym("y", model.len_rhs_and_alg)
-            rhs_algebraic = casadi.Function(
-                "rhs_algebraic", [t_casadi, y_casadi], [
-                    model.rhs_algebraic_eval(t_casadi, y_casadi, inputs)
-                ]
-            )
+            rhs_algebraic = model.rhs_algebraic_eval
         else:
             def resfn(t, y, ydot):
                 return (
@@ -215,7 +191,6 @@ class IDAKLUSolver(pybamm.BaseSolver):
                     cj_casadi * mass_matrix
                 ]
             )
-            jac_y0_t0 = sparse.csr_matrix(jac_times_cjmass(t_eval[0], y0, 1.))
             jac_times_cjmass_sparsity = jac_times_cjmass.sparsity_out(0)
             jac_times_cjmass_nnz = jac_times_cjmass_sparsity.nnz()
             jac_times_cjmass_colptrs = np.array(jac_times_cjmass_sparsity.colind(),
@@ -235,7 +210,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
             # also need the action of the mass matrix on a vector
             mass_action = casadi.Function(
                 "mass_action", [v_casadi], [
-                    mass_matrix * v_casadi
+                    mass_matrix @ v_casadi
                 ]
             )
 
@@ -276,9 +251,6 @@ class IDAKLUSolver(pybamm.BaseSolver):
                     return self.J.indptr
 
             jac_class = SundialsJacobian()
-
-        # solver works with ydot0 set to zero
-        ydot0 = np.zeros_like(y0)
 
         num_of_events = len(model.terminate_events_eval)
         use_jac = 1
@@ -367,55 +339,130 @@ class IDAKLUSolver(pybamm.BaseSolver):
                 for i, dFdp_i in enumerate(dFdp.values()):
                     resvalS[i][:] = dFdy @ yS[i] - dFdyd @ ypS[i] + dFdp_i
 
-        # solve
-        timer = pybamm.Timer()
-
         if model.convert_to_format == "casadi":
-            rhs_algebraic_str = rhs_algebraic.serialize()
-            jac_times_cjmass_str = jac_times_cjmass.serialize()
-            jac_rhs_algebraic_action_str = jac_rhs_algebraic_action.serialize()
-            rootfn_str = rootfn.serialize()
-            mass_action_str = mass_action.serialize()
-            sensfn_str = sensfn.serialize()
+            rhs_algebraic = idaklu.generate_function(rhs_algebraic.serialize())
+            jac_times_cjmass = idaklu.generate_function(
+                jac_times_cjmass.serialize()
+            )
+            jac_rhs_algebraic_action = idaklu.generate_function(
+                jac_rhs_algebraic_action.serialize()
+            )
+            rootfn = idaklu.generate_function(rootfn.serialize())
+            mass_action = idaklu.generate_function(mass_action.serialize())
+            sensfn = idaklu.generate_function(sensfn.serialize())
+            self._setup = {
+                't_eval': t_eval,
+                'y0': y0,
+                'ydot0': ydot0,
+                'rhs_algebraic': rhs_algebraic,
+                'jac_times_cjmass': jac_times_cjmass,
+                'jac_times_cjmass_colptrs': jac_times_cjmass_colptrs,
+                'jac_times_cjmass_rowvals': jac_times_cjmass_rowvals,
+                'jac_times_cjmass_nnz': jac_times_cjmass_nnz,
+                'jac_rhs_algebraic_action': jac_rhs_algebraic_action,
+                'mass_action': mass_action,
+                'sensfn': sensfn,
+                'rootfn': rootfn,
+                'num_of_events': num_of_events,
+                'use_jac': use_jac,
+                'ids': ids,
+                'sensitivity_names': sensitivity_names,
+                'number_of_sensitivity_parameters': number_of_sensitivity_parameters,
+            }
+        else:
+            self._setup = {
+                't_eval': t_eval,
+                'y0': y0,
+                'ydot0': ydot0,
+                'resfn': rhs_algebraic,
+                'jac_class': jac_class,
+                'sensfn': sensfn,
+                'rootfn': rootfn,
+                'num_of_events': num_of_events,
+                'use_jac': use_jac,
+                'ids': ids,
+                'sensitivity_names': sensitivity_names,
+                'number_of_sensitivity_parameters': number_of_sensitivity_parameters,
+            }
+
+        return base_set_up_return
+
+    def _integrate(self, model, t_eval, inputs_dict=None):
+        """
+        Solve a DAE model defined by residuals with initial conditions y0.
+
+        Parameters
+        ----------
+        model : :class:`pybamm.BaseModel`
+            The model whose solution to calculate.
+        t_eval : numeric type
+            The times at which to compute the solution
+        inputs_dict : dict, optional
+            Any external variables or input parameters to pass to the model when solving
+        """
+        inputs_dict = inputs_dict or {}
+        if model.convert_to_format == "casadi":
+            # stack inputs
+            inputs = casadi.vertcat(*[x for x in inputs_dict.values()])
+        else:
+            inputs = inputs_dict
+
+        if model.jac_rhs_algebraic_eval is None:
+            raise pybamm.SolverError("KLU requires the Jacobian to be provided")
+
+        try:
+            atol = model.atol
+        except AttributeError:
+            atol = self.atol
+
+        rtol = self.rtol
+        atol = self._check_atol_type(atol, self._setup['y0'].size)
+
+        timer = pybamm.Timer()
+        if model.convert_to_format == "casadi":
             sol = idaklu.solve_casadi(
-                t_eval, y0, ydot0,
-                rhs_algebraic_str,
-                jac_times_cjmass_str,
-                jac_times_cjmass_colptrs,
-                jac_times_cjmass_rowvals,
-                jac_times_cjmass_nnz,
-                jac_rhs_algebraic_action_str,
-                mass_action_str,
-                sensfn_str,
-                rootfn_str,
-                num_of_events,
-                use_jac,
-                ids,
-                atol, rtol,
-                number_of_sensitivity_parameters
+                self._setup['t_eval'], self._setup['y0'],
+                self._setup['ydot0'],
+                self._setup['rhs_algebraic'],
+                self._setup['jac_times_cjmass'],
+                self._setup['jac_times_cjmass_colptrs'],
+                self._setup['jac_times_cjmass_rowvals'],
+                self._setup['jac_times_cjmass_nnz'],
+                self._setup['jac_rhs_algebraic_action'],
+                self._setup['mass_action'],
+                self._setup['sensfn'],
+                self._setup['rootfn'],
+                self._setup['num_of_events'],
+                self._setup['use_jac'],
+                self._setup['ids'],
+                atol, rtol, inputs,
+                self._setup['number_of_sensitivity_parameters']
             )
         else:
             sol = idaklu.solve_python(
-                t_eval,
-                y0,
-                ydot0,
-                resfn,
-                jac_class.jac_res,
-                sensfn,
-                jac_class.get_jac_data,
-                jac_class.get_jac_row_vals,
-                jac_class.get_jac_col_ptrs,
-                jac_class.nnz,
-                rootfn,
-                num_of_events,
-                use_jac,
-                ids,
-                atol,
-                rtol,
-                number_of_sensitivity_parameters,
+                self._setup['t_eval'],
+                self._setup['y0'],
+                self._setup['ydot0'],
+                self._setup['resfn'],
+                self._setup['jac_class.jac_res'],
+                self._setup['sensfn'],
+                self._setup['jac_class.get_jac_data'],
+                self._setup['jac_class.get_jac_row_vals'],
+                self._setup['jac_class.get_jac_col_ptrs'],
+                self._setup['jac_class.nnz'],
+                self._setup['rootfn'],
+                self._setup['num_of_events'],
+                self._setup['use_jac'],
+                self._setup['ids'],
+                atol, rtol, inputs,
+                self._setup['number_of_sensitivity_parameters'],
             )
         integration_time = timer.time()
 
+        y0 = self._setup['y0']
+        number_of_sensitivity_parameters = \
+            self._setup['number_of_sensitivity_parameters']
+        sensitivity_names = self._setup['sensitivity_names']
         t = sol.t
         number_of_timesteps = t.size
         number_of_states = y0.size
@@ -449,7 +496,6 @@ class IDAKLUSolver(pybamm.BaseSolver):
                 sensitivities=yS_out,
             )
             sol.integration_time = integration_time
-            print('glasdkfg')
             return sol
         else:
             raise pybamm.SolverError("idaklu solver failed")
