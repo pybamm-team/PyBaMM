@@ -578,7 +578,6 @@ Solution solve_casadi(np_array t_np, np_array y0_np, np_array yp0_np,
 
   py::capsule free_t_when_done(t_return, [](void *f) {
             realtype *vect = reinterpret_cast<realtype *>(f);
-            std::cout << "Freeing t" << std::endl;
             delete[] vect;
         });
   py::capsule free_y_when_done(y_return, [](void *f) {
