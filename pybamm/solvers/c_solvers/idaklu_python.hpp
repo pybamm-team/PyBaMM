@@ -14,6 +14,7 @@
 
 namespace py = pybind11;
 using np_array = py::array_t<realtype>;
+using np_array_dense = py::array_t<realtype, py::array::c_style | py::array::forcecast>;
 using np_array_int = py::array_t<int64_t>;
 
 

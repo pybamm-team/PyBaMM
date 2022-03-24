@@ -4,6 +4,7 @@
 import casadi
 import pybamm
 import numpy as np
+import numbers
 import scipy.sparse as sparse
 
 import importlib
@@ -151,22 +152,20 @@ class IDAKLUSolver(pybamm.BaseSolver):
         base_set_up_return = super().set_up(model, inputs, t_eval, ics_only)
 
         inputs_dict = inputs or {}
-        if model.convert_to_format == "casadi":
-            inputs = casadi.vertcat(*[x for x in inputs_dict.values()])
+        # stack inputs
+        if inputs_dict:
+            inputs = np.hstack((
+                np.array(x).reshape(-1) for x in inputs_dict.values()
+            ))
         else:
-            inputs = np.vstack((x for x in inputs_dict.values()))
+            inputs = np.array([])
 
         y0 = model.y0
         if isinstance(y0, casadi.DM):
             y0 = y0.full()
         y0 = y0.flatten()
 
-        # solver works with ydot0 set to zero
-        ydot0 = np.zeros_like(y0)
-
         if ics_only:
-            self._setup['y0'] = y0
-            self._setup['ydot0'] = ydot0
             return base_set_up_return
 
         if model.convert_to_format == "jax":
@@ -191,9 +190,17 @@ class IDAKLUSolver(pybamm.BaseSolver):
             t_casadi = casadi.MX.sym("t")
             y_casadi = casadi.MX.sym("y", model.len_rhs_and_alg)
             cj_casadi = casadi.MX.sym("cj")
+            p_casadi = {}
+            for name, value in inputs_dict.items():
+                if isinstance(value, numbers.Number):
+                    p_casadi[name] = casadi.MX.sym(name)
+                else:
+                    p_casadi[name] = casadi.MX.sym(name, value.shape[0])
+            p_casadi_stacked = casadi.vertcat(*[p for p in p_casadi.values()])
+
             jac_times_cjmass = casadi.Function(
-                "jac_times_cjmass", [t_casadi, y_casadi, inputs, cj_casadi], [
-                    model.jac_rhs_algebraic_eval(t_casadi, y_casadi, inputs) -
+                "jac_times_cjmass", [t_casadi, y_casadi, p_casadi_stacked, cj_casadi], [
+                    model.jac_rhs_algebraic_eval(t_casadi, y_casadi, p_casadi_stacked) -
                     cj_casadi * mass_matrix
                 ]
             )
@@ -233,7 +240,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
                     self.J = None
 
                     random = np.random.random(size=y0.size)
-                    J = jacfn(10, random, 20)
+                    J = jacfn(10, random, inputs, 20)
                     self.nnz = J.nnz  # hoping nnz remains constant...
 
                 def jac_res(self, t, y, inputs, cj):
@@ -259,10 +266,10 @@ class IDAKLUSolver(pybamm.BaseSolver):
         # rootfn needs to return an array of length num_of_events
         if model.convert_to_format == "casadi":
             rootfn = casadi.Function(
-                "rootfn", [t_casadi, y_casadi, inputs],
+                "rootfn", [t_casadi, y_casadi, p_casadi_stacked],
                 [
                     casadi.vertcat(
-                        *[event(t_casadi, y_casadi, inputs)
+                        *[event(t_casadi, y_casadi, p_casadi_stacked)
                           for event in model.terminate_events_eval]
                     )
                 ]
@@ -288,6 +295,8 @@ class IDAKLUSolver(pybamm.BaseSolver):
                 number_of_sensitivity_parameters = model.jacp_rhs_algebraic_eval.n_out()
             else:
                 number_of_sensitivity_parameters = len(sensitivity_names)
+        else:
+            sensitivity_names = []
 
         if model.convert_to_format == "casadi":
             # for the casadi solver we just give it dFdp_i
@@ -348,9 +357,6 @@ class IDAKLUSolver(pybamm.BaseSolver):
             mass_action = idaklu.generate_function(mass_action.serialize())
             sensfn = idaklu.generate_function(sensfn.serialize())
             self._setup = {
-                't_eval': t_eval,
-                'y0': y0,
-                'ydot0': ydot0,
                 'rhs_algebraic': rhs_algebraic,
                 'jac_times_cjmass': jac_times_cjmass,
                 'jac_times_cjmass_colptrs': jac_times_cjmass_colptrs,
@@ -368,10 +374,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
             }
         else:
             self._setup = {
-                't_eval': t_eval,
-                'y0': y0,
-                'ydot0': ydot0,
-                'resfn': rhs_algebraic,
+                'resfn': resfn,
                 'jac_class': jac_class,
                 'sensfn': sensfn,
                 'rootfn': rootfn,
@@ -399,7 +402,21 @@ class IDAKLUSolver(pybamm.BaseSolver):
         """
         inputs_dict = inputs_dict or {}
         # stack inputs
-        inputs = np.vstack((x for x in inputs_dict.values()))
+        if inputs_dict:
+            inputs = np.hstack((
+                np.array(x).reshape(-1) for x in inputs_dict.values()
+            ))
+        else:
+            inputs = np.array([])
+
+        # do this here cause y0 is set after set_up (calc consistent conditions)
+        y0 = model.y0
+        if isinstance(y0, casadi.DM):
+            y0 = y0.full()
+        y0 = y0.flatten()
+
+        # solver works with ydot0 set to zero
+        ydot0 = np.zeros_like(y0)
 
         try:
             atol = model.atol
@@ -407,13 +424,15 @@ class IDAKLUSolver(pybamm.BaseSolver):
             atol = self.atol
 
         rtol = self.rtol
-        atol = self._check_atol_type(atol, self._setup['y0'].size)
+        atol = self._check_atol_type(atol, y0.size)
+
 
         timer = pybamm.Timer()
         if model.convert_to_format == "casadi":
             sol = idaklu.solve_casadi(
-                self._setup['t_eval'], self._setup['y0'],
-                self._setup['ydot0'],
+                t_eval,
+                y0,
+                ydot0,
                 self._setup['rhs_algebraic'],
                 self._setup['jac_times_cjmass'],
                 self._setup['jac_times_cjmass_colptrs'],
@@ -431,16 +450,16 @@ class IDAKLUSolver(pybamm.BaseSolver):
             )
         else:
             sol = idaklu.solve_python(
-                self._setup['t_eval'],
-                self._setup['y0'],
-                self._setup['ydot0'],
+                t_eval,
+                y0,
+                ydot0,
                 self._setup['resfn'],
-                self._setup['jac_class.jac_res'],
+                self._setup['jac_class'].jac_res,
                 self._setup['sensfn'],
-                self._setup['jac_class.get_jac_data'],
-                self._setup['jac_class.get_jac_row_vals'],
-                self._setup['jac_class.get_jac_col_ptrs'],
-                self._setup['jac_class.nnz'],
+                self._setup['jac_class'].get_jac_data,
+                self._setup['jac_class'].get_jac_row_vals,
+                self._setup['jac_class'].get_jac_col_ptrs,
+                self._setup['jac_class'].nnz,
                 self._setup['rootfn'],
                 self._setup['num_of_events'],
                 self._setup['use_jac'],
@@ -450,7 +469,6 @@ class IDAKLUSolver(pybamm.BaseSolver):
             )
         integration_time = timer.time()
 
-        y0 = self._setup['y0']
         number_of_sensitivity_parameters = \
             self._setup['number_of_sensitivity_parameters']
         sensitivity_names = self._setup['sensitivity_names']
