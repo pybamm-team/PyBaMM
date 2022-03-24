@@ -150,6 +150,12 @@ class IDAKLUSolver(pybamm.BaseSolver):
     def set_up(self, model, inputs=None, t_eval=None, ics_only=False):
         base_set_up_return = super().set_up(model, inputs, t_eval, ics_only)
 
+        inputs_dict = inputs or {}
+        if model.convert_to_format == "casadi":
+            inputs = casadi.vertcat(*[x for x in inputs_dict.values()])
+        else:
+            inputs = np.vstack((x for x in inputs_dict.values()))
+
         y0 = model.y0
         if isinstance(y0, casadi.DM):
             y0 = y0.full()
@@ -172,11 +178,9 @@ class IDAKLUSolver(pybamm.BaseSolver):
 
         # construct residuals function by binding inputs
         if model.convert_to_format == "casadi":
-            t_casadi = casadi.MX.sym("t")
-            y_casadi = casadi.MX.sym("y", model.len_rhs_and_alg)
             rhs_algebraic = model.rhs_algebraic_eval
         else:
-            def resfn(t, y, ydot):
+            def resfn(t, y, inputs, ydot):
                 return (
                     model.rhs_algebraic_eval(t, y, inputs).flatten()
                     - mass_matrix @ ydot
@@ -184,9 +188,11 @@ class IDAKLUSolver(pybamm.BaseSolver):
 
         # need to provide jacobian_rhs_alg - cj * mass_matrix
         if model.convert_to_format == "casadi":
+            t_casadi = casadi.MX.sym("t")
+            y_casadi = casadi.MX.sym("y", model.len_rhs_and_alg)
             cj_casadi = casadi.MX.sym("cj")
             jac_times_cjmass = casadi.Function(
-                "jac_times_cjmass", [t_casadi, y_casadi, cj_casadi], [
+                "jac_times_cjmass", [t_casadi, y_casadi, inputs, cj_casadi], [
                     model.jac_rhs_algebraic_eval(t_casadi, y_casadi, inputs) -
                     cj_casadi * mass_matrix
                 ]
@@ -200,12 +206,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
 
             v_casadi = casadi.MX.sym("v", model.len_rhs_and_alg)
 
-            jac_rhs_algebraic_action = casadi.Function(
-                "jac_rhs_algebraic_action", [t_casadi, y_casadi, v_casadi], [
-                    model.jac_rhs_algebraic_action_eval(t_casadi, y_casadi, inputs,
-                                                        v_casadi)
-                ]
-            )
+            jac_rhs_algebraic_action = model.jac_rhs_algebraic_action_eval
 
             # also need the action of the mass matrix on a vector
             mass_action = casadi.Function(
@@ -217,11 +218,11 @@ class IDAKLUSolver(pybamm.BaseSolver):
         else:
             jac_y0_t0 = model.jac_rhs_algebraic_eval(t_eval[0], y0, inputs)
             if sparse.issparse(jac_y0_t0):
-                def jacfn(t, y, cj):
+                def jacfn(t, y, inputs, cj):
                     j = model.jac_rhs_algebraic_eval(t, y, inputs) - cj * mass_matrix
                     return j
             else:
-                def jacfn(t, y, cj):
+                def jacfn(t, y, inputs, cj):
                     jac_eval = (
                         model.jac_rhs_algebraic_eval(t, y, inputs) - cj * mass_matrix
                     )
@@ -235,11 +236,11 @@ class IDAKLUSolver(pybamm.BaseSolver):
                     J = jacfn(10, random, 20)
                     self.nnz = J.nnz  # hoping nnz remains constant...
 
-                def jac_res(self, t, y, cj):
+                def jac_res(self, t, y, inputs, cj):
                     # must be of form j_res = (dr/dy) - (cj) (dr/dy')
                     # cj is just the input parameter
                     # see p68 of the ida_guide.pdf for more details
-                    self.J = jacfn(t, y, cj)
+                    self.J = jacfn(t, y, inputs, cj)
 
                 def get_jac_data(self):
                     return self.J.data
@@ -258,7 +259,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
         # rootfn needs to return an array of length num_of_events
         if model.convert_to_format == "casadi":
             rootfn = casadi.Function(
-                "rootfn", [t_casadi, y_casadi],
+                "rootfn", [t_casadi, y_casadi, inputs],
                 [
                     casadi.vertcat(
                         *[event(t_casadi, y_casadi, inputs)
@@ -267,7 +268,7 @@ class IDAKLUSolver(pybamm.BaseSolver):
                 ]
             )
         else:
-            def rootfn(t, y):
+            def rootfn(t, y, inputs):
                 return_root = np.ones((num_of_events,))
                 return_root[:] = [
                     event(t, y, inputs) for event in model.terminate_events_eval
@@ -295,16 +296,12 @@ class IDAKLUSolver(pybamm.BaseSolver):
                     "sensfn", [], []
                 )
             else:
-                sensfn = casadi.Function(
-                    "sensfn", [t_casadi, y_casadi],
-                    [
-                        model.jacp_rhs_algebraic_eval(t_casadi, y_casadi, inputs)
-                    ]
-                )
+                sensfn = model.jacp_rhs_algebraic_eval
+
         else:
             # for the python solver we give it the full sensitivity equations
             # required by IDAS
-            def sensfn(resvalS, t, y, yp, yS, ypS):
+            def sensfn(resvalS, t, y, inputs, yp, yS, ypS):
                 """
                 this function evaluates the sensitivity equations required by IDAS,
                 returning them in resvalS, which is preallocated as a numpy array of
@@ -401,14 +398,8 @@ class IDAKLUSolver(pybamm.BaseSolver):
             Any external variables or input parameters to pass to the model when solving
         """
         inputs_dict = inputs_dict or {}
-        if model.convert_to_format == "casadi":
-            # stack inputs
-            inputs = casadi.vertcat(*[x for x in inputs_dict.values()])
-        else:
-            inputs = inputs_dict
-
-        if model.jac_rhs_algebraic_eval is None:
-            raise pybamm.SolverError("KLU requires the Jacobian to be provided")
+        # stack inputs
+        inputs = np.vstack((x for x in inputs_dict.values()))
 
         try:
             atol = model.atol

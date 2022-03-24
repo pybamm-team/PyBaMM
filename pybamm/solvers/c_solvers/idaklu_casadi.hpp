@@ -20,7 +20,7 @@ Solution solve_casadi(np_array t_np, np_array y0_np, np_array yp0_np,
                const Function &event, 
                const int number_of_events, 
                int use_jacobian, 
-               np_array rhs_alg_id,
+               np_array rhs_alg_id, np_array inputs,
                np_array atol_np, double rel_tol, int number_of_parameters);
 
 

@@ -415,7 +415,9 @@ Solution solve_casadi(np_array t_np, np_array y0_np, np_array yp0_np,
                const int number_of_events, 
                int use_jacobian, 
                np_array rhs_alg_id,
-               np_array atol_np, double rel_tol, int number_of_parameters)
+               np_array atol_np, double rel_tol, 
+               np_array inputs_np,
+               int number_of_parameters)
 {
   
   auto t = t_np.unchecked<1>();

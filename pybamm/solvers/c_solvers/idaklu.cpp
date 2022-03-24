@@ -296,7 +296,8 @@ Solution solve_python(np_array t_np, np_array y0_np, np_array yp0_np,
                jac_get_type gjd, jac_get_type gjrv, jac_get_type gjcp, 
                int nnz, event_type event,
                int number_of_events, int use_jacobian, np_array rhs_alg_id,
-               np_array atol_np, double rel_tol, int number_of_parameters)
+               np_array atol_np, double rel_tol, np_array inputs, 
+               int number_of_parameters)
 {
   auto t = t_np.unchecked<1>();
   auto y0 = y0_np.unchecked<1>();
