@@ -1,5 +1,7 @@
-
 # [Unreleased](https://github.com/pybamm-team/PyBaMM/)
+# [Unreleased](https://github.com/pybamm-team/PyBaMM/)
+# [v22.3](https://github.com/pybamm-team/PyBaMM/tree/v22.3) - 2022-03-31
+
 
 ## Features
 
