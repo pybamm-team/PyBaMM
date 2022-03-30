@@ -54,8 +54,8 @@ class SymbolReplacer(object):
             # since they point to the same object
             model = unprocessed_model
         else:
-            # create a blank model of the same class
-            model = unprocessed_model.new_empty_copy()
+            # create a copy of the model
+            model = unprocessed_model.new_copy()
 
         new_rhs = {}
         for variable, equation in unprocessed_model.rhs.items():

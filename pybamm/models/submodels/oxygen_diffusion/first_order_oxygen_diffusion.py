@@ -36,9 +36,11 @@ class FirstOrder(BaseModel):
         x_p = pybamm.standard_spatial_vars.x_p
 
         # Unpack
-        tor_s_0_av = variables["Leading-order x-averaged separator tortuosity"]
+        tor_s_0_av = variables[
+            "Leading-order x-averaged separator transport efficiency"
+        ]
         tor_p_0_av = variables[
-            "Leading-order x-averaged positive electrolyte tortuosity"
+            "Leading-order x-averaged positive electrolyte transport efficiency"
         ]
 
         # Diffusivities
