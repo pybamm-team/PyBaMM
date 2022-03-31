@@ -27,6 +27,10 @@ if(NOT PYBIND11_DIR)
   set(PYBIND11_DIR pybind11)
 endif()
 
+if(NOT CASADI_DIR)
+  set(CASADI_DIR casadi-headers)
+endif()
+
 add_subdirectory(${PYBIND11_DIR})
 pybind11_add_module(idaklu 
   pybamm/solvers/c_solvers/idaklu_python.cpp
@@ -43,7 +47,7 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${PROJECT_SOURCE_DIR})
 # Sundials
 find_package(SUNDIALS)
 target_include_directories(idaklu PRIVATE ${SUNDIALS_INCLUDE_DIR}
-  "~/local/include" "~/.local/include")
+  ${CASADI_DIR})
 target_link_libraries(idaklu PRIVATE ${SUNDIALS_LIBRARIES})
 
 # link suitesparse
