@@ -129,6 +129,11 @@ int residual_casadi(realtype tres, N_Vector yy, N_Vector yp, N_Vector rr,
   //std::cout << "]" << std::endl;
 
   realtype *tmp = p_python_functions->get_tmp();
+  //std::cout << "tmp before = [";
+  //for (int i = 0; i < p_python_functions->number_of_states; i++) {
+  //  std::cout << tmp[i] << " ";
+  //}
+  //std::cout << "]" << std::endl;
   // args is yp, put result in tmp
   p_python_functions->mass_action.m_arg[0] = NV_DATA_S(yp);
   p_python_functions->mass_action.m_res[0] = tmp;
@@ -348,6 +353,14 @@ int sensitivities_casadi(int Ns, realtype t, N_Vector yy, N_Vector yp,
   //  std::cout << NV_DATA_S(ypS[0])[i] << " ";
   //}
   //std::cout << "]" << std::endl;
+
+  //for (int i = 0; i < np; i++) {
+  //  std::cout << "dF/dp before = [" << i << "] = [";
+  //  for (int j = 0; j < p_python_functions->number_of_states; j++) {
+  //    std::cout << NV_DATA_S(resvalS[i])[j] << " ";
+  //  }
+  //  std::cout << "]" << std::endl;
+  //}
 
   // args are t, y put result in rr
   py::buffer_info input_buf = p_python_functions->inputs.request();
@@ -659,40 +672,44 @@ Solution solve_casadi(np_array t_np, np_array y0_np, np_array yp0_np,
 
   Solution sol(retval, t_ret, y_ret, yS_ret);
 
-  long nsteps, nrevals, nlinsetups, netfails;
-  int klast, kcur;
-  realtype hinused, hlast, hcur, tcur;
+  // TODO config input to choose stuff like this
+  const bool print_stats = false;
+  if (print_stats) {
+    long nsteps, nrevals, nlinsetups, netfails;
+    int klast, kcur;
+    realtype hinused, hlast, hcur, tcur;
 
-  IDAGetIntegratorStats(ida_mem, 
-      &nsteps,
-      &nrevals,
-      &nlinsetups,
-      &netfails,
-      &klast,
-      &kcur,
-      &hinused,
-      &hlast,
-      &hcur,
-      &tcur
-  );
+    IDAGetIntegratorStats(ida_mem, 
+        &nsteps,
+        &nrevals,
+        &nlinsetups,
+        &netfails,
+        &klast,
+        &kcur,
+        &hinused,
+        &hlast,
+        &hcur,
+        &tcur
+    );
 
-  long nniters, nncfails;
-  IDAGetNonlinSolvStats(ida_mem, &nniters, &nncfails);
+    long nniters, nncfails;
+    IDAGetNonlinSolvStats(ida_mem, &nniters, &nncfails);
 
-  std::cout << "Solver Stats: \n"
-            << "  Number of steps = " << nsteps << "\n"
-            << "  Number of calls to residual function = " << nrevals << "\n"
-            << "  Number of linear solver setup calls = " << nlinsetups << "\n"
-            << "  Number of error test failures = " << netfails << "\n"
-            << "  Method order used on last step = " << klast << "\n"
-            << "  Method order used on next step = " << kcur << "\n"
-            << "  Initial step size = " << hinused << "\n"
-            << "  Step size on last step = " << hlast << "\n"
-            << "  Step size on next step = " << hcur << "\n"
-            << "  Current internal time reached = " << tcur << "\n"
-            << "  Number of nonlinear iterations performed = " << nniters << "\n"
-            << "  Number of nonlinear convergence failures = " << nncfails << "\n"
-            << std::endl;
+    std::cout << "Solver Stats: \n"
+              << "  Number of steps = " << nsteps << "\n"
+              << "  Number of calls to residual function = " << nrevals << "\n"
+              << "  Number of linear solver setup calls = " << nlinsetups << "\n"
+              << "  Number of error test failures = " << netfails << "\n"
+              << "  Method order used on last step = " << klast << "\n"
+              << "  Method order used on next step = " << kcur << "\n"
+              << "  Initial step size = " << hinused << "\n"
+              << "  Step size on last step = " << hlast << "\n"
+              << "  Step size on next step = " << hcur << "\n"
+              << "  Current internal time reached = " << tcur << "\n"
+              << "  Number of nonlinear iterations performed = " << nniters << "\n"
+              << "  Number of nonlinear convergence failures = " << nncfails << "\n"
+              << std::endl;
+  }
 
                           
 

@@ -154,11 +154,23 @@ class IDAKLUSolver(pybamm.BaseSolver):
         inputs_dict = inputs or {}
         # stack inputs
         if inputs_dict:
-            inputs = np.hstack((
+            arrays_to_stack = [
                 np.array(x).reshape(-1) for x in inputs_dict.values()
-            ))
+            ]
+            inputs_sizes = [
+                len(array) for array in arrays_to_stack
+            ]
+            inputs = np.hstack(arrays_to_stack)
         else:
+            inputs_sizes = []
             inputs = np.array([])
+
+        def inputs_to_dict(inputs):
+            index = 0
+            for n, key in zip(inputs_sizes, inputs_dict.keys()):
+                inputs_dict[key] = inputs[index:(index + n)]
+                index += n
+            return inputs_dict
 
         y0 = model.y0
         if isinstance(y0, casadi.DM):
@@ -177,13 +189,18 @@ class IDAKLUSolver(pybamm.BaseSolver):
 
         # construct residuals function by binding inputs
         if model.convert_to_format == "casadi":
+            # TODO: do we need densify here?
             rhs_algebraic = model.rhs_algebraic_eval
         else:
             def resfn(t, y, inputs, ydot):
                 return (
-                    model.rhs_algebraic_eval(t, y, inputs).flatten()
+                    model.rhs_algebraic_eval(t, y, inputs_to_dict(inputs)).flatten()
                     - mass_matrix @ ydot
                 )
+
+        if not model.use_jacobian:
+            raise pybamm.SolverError("KLU requires the Jacobian")
+        use_jac = 1
 
         # need to provide jacobian_rhs_alg - cj * mass_matrix
         if model.convert_to_format == "casadi":
@@ -218,20 +235,24 @@ class IDAKLUSolver(pybamm.BaseSolver):
             # also need the action of the mass matrix on a vector
             mass_action = casadi.Function(
                 "mass_action", [v_casadi], [
-                    mass_matrix @ v_casadi
+                    casadi.densify(mass_matrix @ v_casadi)
                 ]
             )
 
         else:
-            jac_y0_t0 = model.jac_rhs_algebraic_eval(t_eval[0], y0, inputs)
+            jac_y0_t0 = model.jac_rhs_algebraic_eval(t_eval[0], y0, inputs_dict)
             if sparse.issparse(jac_y0_t0):
                 def jacfn(t, y, inputs, cj):
-                    j = model.jac_rhs_algebraic_eval(t, y, inputs) - cj * mass_matrix
+                    j = (
+                        model.jac_rhs_algebraic_eval(t, y, inputs_to_dict(inputs))
+                        - cj * mass_matrix
+                    )
                     return j
             else:
                 def jacfn(t, y, inputs, cj):
                     jac_eval = (
-                        model.jac_rhs_algebraic_eval(t, y, inputs) - cj * mass_matrix
+                        model.jac_rhs_algebraic_eval(t, y, inputs_to_dict(inputs))
+                        - cj * mass_matrix
                     )
                     return sparse.csr_matrix(jac_eval)
 
@@ -261,7 +282,6 @@ class IDAKLUSolver(pybamm.BaseSolver):
             jac_class = SundialsJacobian()
 
         num_of_events = len(model.terminate_events_eval)
-        use_jac = 1
 
         # rootfn needs to return an array of length num_of_events
         if model.convert_to_format == "casadi":
@@ -276,15 +296,18 @@ class IDAKLUSolver(pybamm.BaseSolver):
             )
         else:
             def rootfn(t, y, inputs):
-                return_root = np.ones((num_of_events,))
-                return_root[:] = [
-                    event(t, y, inputs) for event in model.terminate_events_eval
-                ]
+                new_inputs = inputs_to_dict(inputs)
+                return_root = np.array([
+                    event(t, y, new_inputs) for event in model.terminate_events_eval
+                ]).reshape(-1)
 
                 return return_root
 
         # get ids of rhs and algebraic variables
-        rhs_ids = np.ones(model.rhs_eval(0, y0, inputs).shape[0])
+        if model.convert_to_format == "casadi":
+            rhs_ids = np.ones(model.rhs_eval(0, y0, inputs).shape[0])
+        else:
+            rhs_ids = np.ones(model.rhs_eval(0, y0, inputs_dict).shape[0])
         alg_ids = np.zeros(len(y0) - len(rhs_ids))
         ids = np.concatenate((rhs_ids, alg_ids))
 
@@ -338,9 +361,10 @@ class IDAKLUSolver(pybamm.BaseSolver):
 
                 """
 
-                dFdy = model.jac_rhs_algebraic_eval(t, y, inputs)
+                new_inputs = inputs_to_dict(inputs)
+                dFdy = model.jac_rhs_algebraic_eval(t, y, new_inputs)
                 dFdyd = mass_matrix
-                dFdp = model.jacp_rhs_algebraic_eval(t, y, inputs)
+                dFdp = model.jacp_rhs_algebraic_eval(t, y, new_inputs)
 
                 for i, dFdp_i in enumerate(dFdp.values()):
                     resvalS[i][:] = dFdy @ yS[i] - dFdyd @ ypS[i] + dFdp_i
@@ -403,9 +427,10 @@ class IDAKLUSolver(pybamm.BaseSolver):
         inputs_dict = inputs_dict or {}
         # stack inputs
         if inputs_dict:
-            inputs = np.hstack((
+            arrays_to_stack = [
                 np.array(x).reshape(-1) for x in inputs_dict.values()
-            ))
+            ]
+            inputs = np.hstack(arrays_to_stack)
         else:
             inputs = np.array([])
 
@@ -425,7 +450,6 @@ class IDAKLUSolver(pybamm.BaseSolver):
 
         rtol = self.rtol
         atol = self._check_atol_type(atol, y0.size)
-
 
         timer = pybamm.Timer()
         if model.convert_to_format == "casadi":

@@ -13,7 +13,13 @@ class TestIDAKLUSolver(unittest.TestCase):
         # this test implements a python version of the ida Roberts
         # example provided in sundials
         # see sundials ida examples pdf
-        for form in ["casadi"]:
+        for form in ["python", "casadi", "jax"]:
+            if not form == "jax" and not pybamm.have_jax():
+                continue
+            if form == "casadi":
+                root_method = "casadi"
+            else:
+                root_method = "lm"
             model = pybamm.BaseModel()
             model.convert_to_format = form
             u = pybamm.Variable("u")
@@ -26,7 +32,7 @@ class TestIDAKLUSolver(unittest.TestCase):
             disc = pybamm.Discretisation()
             disc.process_model(model)
 
-            solver = pybamm.IDAKLUSolver(root_method="lm")
+            solver = pybamm.IDAKLUSolver(root_method=root_method)
 
             t_eval = np.linspace(0, 3, 100)
             solution = solver.solve(model, t_eval)
@@ -48,83 +54,100 @@ class TestIDAKLUSolver(unittest.TestCase):
             np.testing.assert_array_almost_equal(solution.y[0, :], true_solution)
 
     def test_model_events(self):
-        # Create model
-        model = pybamm.BaseModel()
-        var = pybamm.Variable("var")
-        model.rhs = {var: 0.1 * var}
-        model.initial_conditions = {var: 1}
+        for form in ["python", "casadi", "jax"]:
+            if not form == "jax" and not pybamm.have_jax():
+                continue
+            if form == "casadi":
+                root_method = "casadi"
+            else:
+                root_method = "lm"
+            # Create model
+            model = pybamm.BaseModel()
+            model.convert_to_format = form
+            var = pybamm.Variable("var")
+            model.rhs = {var: 0.1 * var}
+            model.initial_conditions = {var: 1}
 
-        # create discretisation
-        disc = pybamm.Discretisation()
-        model_disc = disc.process_model(model, inplace=False)
-        # Solve
-        solver = pybamm.IDAKLUSolver(rtol=1e-8, atol=1e-8)
-        t_eval = np.linspace(0, 1, 100)
-        solution = solver.solve(model_disc, t_eval)
-        np.testing.assert_array_equal(solution.t, t_eval)
-        np.testing.assert_array_almost_equal(
-            solution.y[0], np.exp(0.1 * solution.t), decimal=5
-        )
+            # create discretisation
+            disc = pybamm.Discretisation()
+            model_disc = disc.process_model(model, inplace=False)
+            # Solve
+            solver = pybamm.IDAKLUSolver(
+                rtol=1e-8, atol=1e-8, root_method=root_method
+            )
+            t_eval = np.linspace(0, 1, 100)
+            solution = solver.solve(model_disc, t_eval)
+            np.testing.assert_array_equal(solution.t, t_eval)
+            np.testing.assert_array_almost_equal(
+                solution.y[0], np.exp(0.1 * solution.t), decimal=5
+            )
 
-        # enforce events that won't be triggered
-        model.events = [pybamm.Event("an event", var + 1)]
-        model_disc = disc.process_model(model, inplace=False)
-        solver = pybamm.IDAKLUSolver(rtol=1e-8, atol=1e-8)
-        solution = solver.solve(model_disc, t_eval)
-        np.testing.assert_array_equal(solution.t, t_eval)
-        np.testing.assert_array_almost_equal(
-            solution.y[0], np.exp(0.1 * solution.t), decimal=5
-        )
+            # enforce events that won't be triggered
+            model.events = [pybamm.Event("an event", var + 1)]
+            model_disc = disc.process_model(model, inplace=False)
+            solver = pybamm.IDAKLUSolver(
+                rtol=1e-8, atol=1e-8, root_method=root_method
+            )
+            solution = solver.solve(model_disc, t_eval)
+            np.testing.assert_array_equal(solution.t, t_eval)
+            np.testing.assert_array_almost_equal(
+                solution.y[0], np.exp(0.1 * solution.t), decimal=5
+            )
 
-        # enforce events that will be triggered
-        model.events = [pybamm.Event("an event", var - 1.01)]
-        model_disc = disc.process_model(model, inplace=False)
-        solver = pybamm.IDAKLUSolver(rtol=1e-8, atol=1e-8)
-        solution = solver.solve(model_disc, t_eval)
-        self.assertLess(len(solution.t), len(t_eval))
-        np.testing.assert_array_almost_equal(
-            solution.y[0], np.exp(0.1 * solution.t), decimal=5
-        )
+            # enforce events that will be triggered
+            model.events = [pybamm.Event("an event", var - 1.01)]
+            model_disc = disc.process_model(model, inplace=False)
+            solver = pybamm.IDAKLUSolver(
+                rtol=1e-8, atol=1e-8, root_method=root_method
+            )
+            solution = solver.solve(model_disc, t_eval)
+            self.assertLess(len(solution.t), len(t_eval))
+            np.testing.assert_array_almost_equal(
+                solution.y[0], np.exp(0.1 * solution.t), decimal=5
+            )
 
-        # bigger dae model with multiple events
-        model = pybamm.BaseModel()
-        whole_cell = ["negative electrode", "separator", "positive electrode"]
-        var1 = pybamm.Variable("var1", domain=whole_cell)
-        var2 = pybamm.Variable("var2", domain=whole_cell)
-        model.rhs = {var1: 0.1 * var1}
-        model.algebraic = {var2: 2 * var1 - var2}
-        model.initial_conditions = {var1: 1, var2: 2}
-        model.events = [
-            pybamm.Event("var1 = 1.5", pybamm.min(var1 - 1.5)),
-            pybamm.Event("var2 = 2.5", pybamm.min(var2 - 2.5)),
-        ]
-        disc = get_discretisation_for_testing()
-        disc.process_model(model)
+            # bigger dae model with multiple events
+            model = pybamm.BaseModel()
+            whole_cell = ["negative electrode", "separator", "positive electrode"]
+            var1 = pybamm.Variable("var1", domain=whole_cell)
+            var2 = pybamm.Variable("var2", domain=whole_cell)
+            model.rhs = {var1: 0.1 * var1}
+            model.algebraic = {var2: 2 * var1 - var2}
+            model.initial_conditions = {var1: 1, var2: 2}
+            model.events = [
+                pybamm.Event("var1 = 1.5", pybamm.min(var1 - 1.5)),
+                pybamm.Event("var2 = 2.5", pybamm.min(var2 - 2.5)),
+            ]
+            disc = get_discretisation_for_testing()
+            disc.process_model(model)
 
-        solver = pybamm.IDAKLUSolver(rtol=1e-8, atol=1e-8)
-        t_eval = np.linspace(0, 5, 100)
-        solution = solver.solve(model, t_eval)
-        np.testing.assert_array_less(solution.y[0, :-1], 1.5)
-        np.testing.assert_array_less(solution.y[-1, :-1], 2.5)
-        np.testing.assert_equal(solution.t_event[0], solution.t[-1])
-        np.testing.assert_array_equal(solution.y_event[:, 0], solution.y[:, -1])
-        np.testing.assert_array_almost_equal(
-            solution.y[0], np.exp(0.1 * solution.t), decimal=5
-        )
-        np.testing.assert_array_almost_equal(
-            solution.y[-1], 2 * np.exp(0.1 * solution.t), decimal=5
-        )
+            solver = pybamm.IDAKLUSolver(
+                rtol=1e-8, atol=1e-8, root_method=root_method
+            )
+            t_eval = np.linspace(0, 5, 100)
+            solution = solver.solve(model, t_eval)
+            np.testing.assert_array_less(solution.y[0, :-1], 1.5)
+            np.testing.assert_array_less(solution.y[-1, :-1], 2.5)
+            np.testing.assert_equal(solution.t_event[0], solution.t[-1])
+            np.testing.assert_array_equal(solution.y_event[:, 0], solution.y[:, -1])
+            np.testing.assert_array_almost_equal(
+                solution.y[0], np.exp(0.1 * solution.t), decimal=5
+            )
+            np.testing.assert_array_almost_equal(
+                solution.y[-1], 2 * np.exp(0.1 * solution.t), decimal=5
+            )
 
-
-
-    @unittest.skipIf(not pybamm.have_jax(), "jax or jaxlib is not installed")
     def test_ida_roberts_klu_sensitivities(self):
         # this test implements a python version of the ida Roberts
         # example provided in sundials
         # see sundials ida examples pdf
-        # for form in ["python", "casadi", "jax"]:
-        for form in ["casadi"]:
-            print(form)
+        for form in ["python", "casadi", "jax"]:
+            if not form == "jax" and not pybamm.have_jax():
+                continue
+            if form == "casadi":
+                root_method = "casadi"
+            else:
+                root_method = "lm"
             model = pybamm.BaseModel()
             model.convert_to_format = form
             u = pybamm.Variable("u")
@@ -137,7 +160,7 @@ class TestIDAKLUSolver(unittest.TestCase):
             disc = pybamm.Discretisation()
             disc.process_model(model)
 
-            solver = pybamm.IDAKLUSolver(root_method="lm")
+            solver = pybamm.IDAKLUSolver(root_method=root_method)
 
             t_eval = np.linspace(0, 3, 100)
             a_value = 0.1
@@ -198,7 +221,7 @@ class TestIDAKLUSolver(unittest.TestCase):
         mesh = pybamm.Mesh(geometry, model.default_submesh_types, model.default_var_pts)
         disc = pybamm.Discretisation(mesh, model.default_spatial_methods)
         disc.process_model(model)
-        solver = pybamm.IDAKLUSolver(root_method="lm")
+        solver = pybamm.IDAKLUSolver()
 
         variable_tols = {"Porosity times concentration": 1e-3}
         solver.set_atol_by_variable(variable_tols, model)
@@ -214,17 +237,17 @@ class TestIDAKLUSolver(unittest.TestCase):
 
         # numpy array atol
         atol = np.zeros(1)
-        solver = pybamm.IDAKLUSolver(root_method="lm", atol=atol)
+        solver = pybamm.IDAKLUSolver(atol=atol)
         solver.solve(model, t_eval)
 
         # list atol
         atol = [1]
-        solver = pybamm.IDAKLUSolver(root_method="lm", atol=atol)
+        solver = pybamm.IDAKLUSolver(atol=atol)
         solver.solve(model, t_eval)
 
         # wrong size (should fail)
         atol = [1, 2]
-        solver = pybamm.IDAKLUSolver(root_method="lm", atol=atol)
+        solver = pybamm.IDAKLUSolver(atol=atol)
         with self.assertRaisesRegex(pybamm.SolverError, 'Absolute tolerances'):
             solver.solve(model, t_eval)
 
@@ -241,7 +264,7 @@ class TestIDAKLUSolver(unittest.TestCase):
         disc = pybamm.Discretisation()
         disc.process_model(model)
 
-        solver = pybamm.IDAKLUSolver(root_method="lm")
+        solver = pybamm.IDAKLUSolver()
 
         t_eval = np.linspace(0, 3, 100)
         with self.assertRaisesRegex(pybamm.SolverError, "KLU requires the Jacobian"):
@@ -255,7 +278,7 @@ class TestIDAKLUSolver(unittest.TestCase):
         disc = pybamm.Discretisation()
         disc.process_model(model)
 
-        solver = pybamm.IDAKLUSolver(root_method="lm")
+        solver = pybamm.IDAKLUSolver()
 
         # will give solver error
         t_eval = np.linspace(0, -3, 100)
@@ -265,18 +288,26 @@ class TestIDAKLUSolver(unittest.TestCase):
             solver.solve(model, t_eval)
 
     def test_dae_solver_algebraic_model(self):
-        model = pybamm.BaseModel()
-        var = pybamm.Variable("var")
-        model.algebraic = {var: var + 1}
-        model.initial_conditions = {var: 0}
+        for form in ["python", "casadi", "jax"]:
+            if not form == "jax" and not pybamm.have_jax():
+                continue
+            if form == "casadi":
+                root_method = "casadi"
+            else:
+                root_method = "lm"
+            model = pybamm.BaseModel()
+            model.convert_to_format = form
+            var = pybamm.Variable("var")
+            model.algebraic = {var: var + 1}
+            model.initial_conditions = {var: 0}
 
-        disc = pybamm.Discretisation()
-        disc.process_model(model)
+            disc = pybamm.Discretisation()
+            disc.process_model(model)
 
-        solver = pybamm.IDAKLUSolver()
-        t_eval = np.linspace(0, 1)
-        solution = solver.solve(model, t_eval)
-        np.testing.assert_array_equal(solution.y, -1)
+            solver = pybamm.IDAKLUSolver(root_method=root_method)
+            t_eval = np.linspace(0, 1)
+            solution = solver.solve(model, t_eval)
+            np.testing.assert_array_equal(solution.y, -1)
 
 
 if __name__ == "__main__":

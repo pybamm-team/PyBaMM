@@ -5,17 +5,19 @@
 #include "solution.hpp"
 #include <functional>
 
-using residual_type = std::function<np_array(realtype, np_array, np_array)>;
+using residual_type = std::function<
+    np_array(realtype, np_array, np_array, np_array)
+  >;
 using sensitivities_type = std::function<void(
     std::vector<np_array>&, realtype, const np_array&, 
+    const np_array&,
     const np_array&, const std::vector<np_array>&, 
     const std::vector<np_array>&
   )>;
-using jacobian_type = std::function<np_array(realtype, np_array, realtype)>;
+using jacobian_type = std::function<np_array(realtype, np_array, np_array, realtype)>;
 
 using event_type =
-    std::function<np_array(realtype, np_array)>;
-
+    std::function<np_array(realtype, np_array, np_array)>;
 
 using jac_get_type = std::function<np_array()>;
 

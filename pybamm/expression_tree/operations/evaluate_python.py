@@ -619,12 +619,12 @@ class EvaluatorJax:
             jacobian_evaluate, static_argnums=self._static_argnums
         )
 
-        return EvaluatorJaxWrapper(self._jac_evaluate, self._constants)
+        return EvaluatorJaxJacobian(self._jac_evaluate, self._constants)
 
     def get_jacobian_action(self):
         return self.jvp
 
-    def get_sensitivities(self, input_names):
+    def get_sensitivities(self):
         n = len(self._arg_list)
 
         # forward mode autodiff wrt inputs, which is argument 2 after arg_list
@@ -634,7 +634,7 @@ class EvaluatorJax:
             jacobian_evaluate, static_argnums=self._static_argnums
         )
 
-        return EvaluatorJaxWrapper(self._sens_evaluate, self._constants)
+        return EvaluatorJaxSensitivities(self._sens_evaluate, self._constants)
 
     def debug(self, t=None, y=None, inputs=None):
         # generated code assumes y is a column vector
@@ -736,5 +736,9 @@ class EvaluatorJaxSensitivities:
 
         # execute code
         result = self._jac_evaluate(*self._constants, t, y, inputs)
+        result = {
+            key: value.reshape(value.shape[0], -1)
+            for key, value in result.items()
+        }
 
         return result

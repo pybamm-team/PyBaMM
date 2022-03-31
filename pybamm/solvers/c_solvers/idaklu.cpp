@@ -1,18 +1,5 @@
-#include "idaklu_python.hpp"
+#include "idaklu.hpp"
 #include <iostream>
-
-using residual_type = std::function<np_array(realtype, np_array, np_array)>;
-using sensitivities_type = std::function<void(
-    std::vector<np_array>&, realtype, const np_array&, 
-    const np_array&, const std::vector<np_array>&, 
-    const std::vector<np_array>&
-  )>;
-using jacobian_type = std::function<np_array(realtype, np_array, realtype)>;
-
-using event_type =
-    std::function<np_array(realtype, np_array)>;
-
-using jac_get_type = std::function<np_array()>;
 
 class PybammFunctions
 {
@@ -27,35 +14,35 @@ public:
                   const jac_get_type &get_jac_row_vals_in,
                   const jac_get_type &get_jac_col_ptrs_in,
                   const event_type &event, 
-                  const int n_s, int n_e, const int n_p)
+                  const int n_s, int n_e, const int n_p,
+                  const np_array &inputs)
       : number_of_states(n_s), number_of_events(n_e), 
         number_of_parameters(n_p),
         py_res(res), py_jac(jac),
         py_sens(sens),
         py_event(event), py_get_jac_data(get_jac_data_in),
         py_get_jac_row_vals(get_jac_row_vals_in),
-        py_get_jac_col_ptrs(get_jac_col_ptrs_in)
+        py_get_jac_col_ptrs(get_jac_col_ptrs_in),
+        inputs(inputs)
   {
   }
 
-  py::array_t<double> operator()(double t, py::array_t<double> y,
-                                 py::array_t<double> yp)
+  np_array operator()(double t, np_array y, np_array yp)
   {
-    return py_res(t, y, yp);
+    return py_res(t, y, inputs, yp);
   }
 
-  py::array_t<double> res(double t, py::array_t<double> y,
-                          py::array_t<double> yp)
+  np_array res(double t, np_array y, np_array yp)
   {
-    return py_res(t, y, yp);
+    return py_res(t, y, inputs, yp);
   }
 
-  void jac(double t, py::array_t<double> y, double cj)
+  void jac(double t, np_array y, double cj)
   {
     // this function evaluates the jacobian and sets it to be the attribute
     // of a python class which can then be called by get_jac_data,
     // get_jac_col_ptr, etc
-    py_jac(t, y, cj);
+    py_jac(t, y, inputs, cj);
   }
 
   void sensitivities(
@@ -71,7 +58,7 @@ public:
     // yS and ypS are also shape (np, n), y and yp are shape (n)
     //
     // dF/dy * s_i + dF/dyd * sd + dFdp_i for i in range(np)
-    py_sens(resvalS, t, y, yp, yS, ypS);
+    py_sens(resvalS, t, y, inputs, yp, yS, ypS);
   }
 
   np_array get_jac_data() { return py_get_jac_data(); }
@@ -80,7 +67,7 @@ public:
 
   np_array get_jac_col_ptrs() { return py_get_jac_col_ptrs(); }
 
-  np_array events(double t, np_array y) { return py_event(t, y); }
+  np_array events(double t, np_array y) { return py_event(t, y, inputs); }
 
 private:
   residual_type py_res;
@@ -90,6 +77,7 @@ private:
   jac_get_type py_get_jac_data;
   jac_get_type py_get_jac_row_vals;
   jac_get_type py_get_jac_col_ptrs;
+  const np_array &inputs;
 };
 
 int residual(realtype tres, N_Vector yy, N_Vector yp, N_Vector rr,
@@ -275,20 +263,6 @@ int sensitivities(int Ns, realtype t, N_Vector yy, N_Vector yp,
   return 0;
 }
 
-class Solution
-{
-public:
-  Solution(int retval, np_array t_np, np_array y_np, np_array yS_np)
-      : flag(retval), t(t_np), y(y_np), yS(yS_np)
-  {
-  }
-
-  int flag;
-  np_array t;
-  np_array y;
-  np_array yS;
-};
-
 /* main program */
 Solution solve_python(np_array t_np, np_array y0_np, np_array yp0_np,
                residual_type res, jacobian_type jac, 
@@ -362,7 +336,7 @@ Solution solve_python(np_array t_np, np_array y0_np, np_array yp0_np,
   // set pybamm functions by passing pointer to it
   PybammFunctions pybamm_functions(res, jac, sens, gjd, gjrv, gjcp, event,
                                    number_of_states, number_of_events,
-                                   number_of_parameters);
+                                   number_of_parameters, inputs);
   void *user_data = &pybamm_functions;
   IDASetUserData(ida_mem, user_data);
 
@@ -476,8 +450,6 @@ Solution solve_python(np_array t_np, np_array y0_np, np_array yp0_np,
       );
 
   Solution sol(retval, t_ret, y_ret, yS_ret);
-
-  std::cout << "finished idaklu solve" <<std::endl;
 
   return sol;
 }

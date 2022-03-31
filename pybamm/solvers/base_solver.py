@@ -329,6 +329,7 @@ class BaseSolver(object):
                     jac_action = func.get_jacobian_action()
                 else:
                     jac = None
+                    jac_action = None
 
             elif model.convert_to_format != "casadi":
                 # Process with pybamm functions, converting
@@ -458,7 +459,9 @@ class BaseSolver(object):
                     # TODO: would it be faster to do the jacobian wrt pS_casadi_stacked?
                     jacp = casadi.Function(
                         name + "_jacp", [t_casadi, y_and_S, p_casadi_stacked], [
-                            casadi.jacobian(casadi_expression, p_casadi[pname])
+                            casadi.densify(
+                                casadi.jacobian(casadi_expression, p_casadi[pname])
+                            )
                             for pname in model.calculate_sensitivities
                         ]
                     )
@@ -473,7 +476,9 @@ class BaseSolver(object):
 
                     v = casadi.MX.sym("v", model.len_rhs_and_alg + model.len_rhs_sens +
                                       model.len_alg_sens)
-                    jac_action_casadi = casadi.jtimes(casadi_expression, y_and_S, v)
+                    jac_action_casadi = casadi.densify(
+                        casadi.jtimes(casadi_expression, y_and_S, v)
+                    )
                     jac_action = casadi.Function(
                         name + "_jac_action", [t_casadi, y_and_S, p_casadi_stacked, v],
                         [jac_action_casadi]
