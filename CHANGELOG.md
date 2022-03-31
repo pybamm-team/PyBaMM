@@ -1,5 +1,8 @@
 # [Unreleased](https://github.com/pybamm-team/PyBaMM/)
 
+## Features
+-   Added a casadi version of the IDKLU solver, which is used for `model.convert_to_format = "casadi"` ([#2002](https://github.com/pybamm-team/PyBaMM/pull/2002))
+
 # [v22.3](https://github.com/pybamm-team/PyBaMM/tree/v22.3) - 2022-03-31
 
 ## Features
