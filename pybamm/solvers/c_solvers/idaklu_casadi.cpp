@@ -9,7 +9,7 @@ using Sparsity = casadi::Sparsity;
 
 class CasadiFunction {
 public:
-  CasadiFunction(const Function &f):m_func(f) {
+  explicit CasadiFunction(const Function &f):m_func(f) {
     size_t sz_arg;
     size_t sz_res;
     size_t sz_iw;
