@@ -240,7 +240,8 @@ class IDAKLUSolver(pybamm.BaseSolver):
             )
 
         else:
-            jac_y0_t0 = model.jac_rhs_algebraic_eval(t_eval[0], y0, inputs_dict)
+            t0 = 0 if t_eval is None else t_eval[0]
+            jac_y0_t0 = model.jac_rhs_algebraic_eval(t0, y0, inputs_dict)
             if sparse.issparse(jac_y0_t0):
                 def jacfn(t, y, inputs, cj):
                     j = (
