@@ -27,10 +27,6 @@ if(NOT PYBIND11_DIR)
   set(PYBIND11_DIR pybind11)
 endif()
 
-if(NOT CASADI_DIR)
-  set(CASADI_DIR casadi-headers)
-endif()
-
 add_subdirectory(${PYBIND11_DIR})
 pybind11_add_module(idaklu 
   pybamm/solvers/c_solvers/idaklu_python.cpp
@@ -43,12 +39,20 @@ pybind11_add_module(idaklu
   pybamm/solvers/c_solvers/solution.hpp
 )
 
+if(NOT CASADI_DIR)
+  execute_process(
+    COMMAND "${PYTHON_EXECUTABLE}" -c 
+    "import casadi as _; print(_.__path__[0])"
+    OUTPUT_VARIABLE CASADI_DIR
+    OUTPUT_STRIP_TRAILING_WHITESPACE)
+endif()
+find_package(casadi CONFIG PATHS ${CASADI_DIR} REQUIRED)
+
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${PROJECT_SOURCE_DIR})
 # Sundials
 find_package(SUNDIALS)
-target_include_directories(idaklu PRIVATE ${SUNDIALS_INCLUDE_DIR}
-  ${CASADI_DIR})
-target_link_libraries(idaklu PRIVATE ${SUNDIALS_LIBRARIES})
+target_include_directories(idaklu PRIVATE ${SUNDIALS_INCLUDE_DIR})
+target_link_libraries(idaklu PRIVATE ${SUNDIALS_LIBRARIES} casadi)
 
 # link suitesparse
 # if using vcpkg, use config mode to

@@ -95,7 +95,6 @@ def compile_KLU():
     #   in the PyBaMM project directory
     CMakeFound = True
     PyBind11Found = True
-    CasadiFound = True
     windows = (not system()) or system() == "Windows"
 
     msg = "Running on Windows" if windows else "Not running on windows"
@@ -121,19 +120,7 @@ def compile_KLU():
         )
         logger.info(msg)
 
-    casadi_dir = os.path.join(pybamm_project_dir, "casadi-headers")
-    try:
-        open(os.path.join(casadi_dir, "casadi", "casadi.hpp"))
-        logger.info("Found casadi directory ({})".format(casadi_dir))
-    except FileNotFoundError:
-        CasadiFound = False
-        msg = (
-            "Could not find casadi directory ({})."
-            " Skipping compilation of KLU module.".format(casadi_dir)
-        )
-        logger.info(msg)
-
-    return CMakeFound and PyBind11Found and CasadiFound
+    return CMakeFound and PyBind11Found
 
 
 # Build the list of package data files to be included in the PyBaMM package.
