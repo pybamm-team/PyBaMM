@@ -682,25 +682,6 @@ class EvaluatorJax:
         return jax.jvp(bind_t_and_inputs, (y,), (v,))
 
 
-class EvaluatorJaxWrapper:
-    def __init__(self, jac_evaluate, constants):
-        self._jac_evaluate = jac_evaluate
-        self._constants = constants
-
-    def __call__(self, t=None, y=None, inputs=None):
-        """
-        evaluate function
-        """
-        # generated code assumes y is a column vector
-        if y is not None and y.ndim == 1:
-            y = y.reshape(-1, 1)
-
-        # execute code
-        result = self._jac_evaluate(*self._constants, t, y, inputs)
-
-        return result
-
-
 class EvaluatorJaxJacobian:
     def __init__(self, jac_evaluate, constants):
         self._jac_evaluate = jac_evaluate
