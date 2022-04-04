@@ -48,7 +48,7 @@ private:
 };
 
 
-class PybammFunctions {
+class CasadiFunctions {
 public:
   int number_of_states;
   int number_of_parameters;
@@ -64,7 +64,7 @@ public:
   CasadiFunction mass_action;
   CasadiFunction events;
 
-  PybammFunctions(const Function &rhs_alg, 
+  CasadiFunctions(const Function &rhs_alg, 
                   const Function &jac_times_cjmass,
                   const int jac_times_cjmass_nnz,
                   const np_array_int &jac_times_cjmass_rowvals,
@@ -101,8 +101,8 @@ private:
 int residual_casadi(realtype tres, N_Vector yy, N_Vector yp, N_Vector rr,
              void *user_data)
 {
-  PybammFunctions *p_python_functions =
-      static_cast<PybammFunctions *>(user_data);
+  CasadiFunctions *p_python_functions =
+      static_cast<CasadiFunctions *>(user_data);
 
   //std::cout << "RESIDUAL t = " << tres << " y = [";
   //for (int i = 0; i < p_python_functions->number_of_states; i++) {
@@ -179,8 +179,8 @@ int residual_casadi(realtype tres, N_Vector yy, N_Vector yp, N_Vector rr,
 int jtimes_casadi(realtype tt, N_Vector yy, N_Vector yp, N_Vector rr,
            N_Vector v, N_Vector Jv, realtype cj, void *user_data,
            N_Vector tmp1, N_Vector tmp2) {
-  PybammFunctions *p_python_functions =
-      static_cast<PybammFunctions *>(user_data);
+  CasadiFunctions *p_python_functions =
+      static_cast<CasadiFunctions *>(user_data);
 
   // rr has ∂F/∂y v
   py::buffer_info input_buf = p_python_functions->inputs.request();
@@ -224,8 +224,8 @@ int jacobian_casadi(realtype tt, realtype cj, N_Vector yy, N_Vector yp,
              N_Vector resvec, SUNMatrix JJ, void *user_data, N_Vector tempv1,
              N_Vector tempv2, N_Vector tempv3) {
 
-  PybammFunctions *p_python_functions =
-      static_cast<PybammFunctions *>(user_data);
+  CasadiFunctions *p_python_functions =
+      static_cast<CasadiFunctions *>(user_data);
 
   // create pointer to jac data, column pointers, and row values
   sunindextype *jac_colptrs = SUNSparseMatrix_IndexPointers(JJ);
@@ -275,8 +275,8 @@ int jacobian_casadi(realtype tt, realtype cj, N_Vector yy, N_Vector yp,
 int events_casadi(realtype t, N_Vector yy, N_Vector yp, realtype *events_ptr,
            void *user_data)
 {
-  PybammFunctions *p_python_functions =
-      static_cast<PybammFunctions *>(user_data);
+  CasadiFunctions *p_python_functions =
+      static_cast<CasadiFunctions *>(user_data);
 
   //std::cout << "EVENTS" << std::endl;
   //std::cout << "t = " << t << " y = [";
@@ -331,8 +331,8 @@ int sensitivities_casadi(int Ns, realtype t, N_Vector yy, N_Vector yp,
     N_Vector resval, N_Vector *yS, N_Vector *ypS, N_Vector *resvalS, 
     void *user_data, N_Vector tmp1, N_Vector tmp2, N_Vector tmp3) {
 
-  PybammFunctions *p_python_functions =
-      static_cast<PybammFunctions *>(user_data);
+  CasadiFunctions *p_python_functions =
+      static_cast<CasadiFunctions *>(user_data);
 
   const int np = p_python_functions->number_of_parameters;
 
@@ -508,7 +508,7 @@ Solution solve_casadi(np_array t_np, np_array y0_np, np_array yp0_np,
   IDARootInit(ida_mem, number_of_events, events_casadi);
 
   // set pybamm functions by passing pointer to it
-  PybammFunctions* p_pybamm_functions = new PybammFunctions(
+  CasadiFunctions pybamm_functions = CasadiFunctions(
       rhs_alg, 
       jac_times_cjmass, 
       jac_times_cjmass_nnz,
@@ -519,7 +519,6 @@ Solution solve_casadi(np_array t_np, np_array y0_np, np_array yp0_np,
       sens, events,
       number_of_states, number_of_events,
       number_of_parameters);
-  PybammFunctions &pybamm_functions = *p_pybamm_functions;
 
   void *user_data = &pybamm_functions;
   IDASetUserData(ida_mem, user_data);
@@ -731,8 +730,6 @@ Solution solve_casadi(np_array t_np, np_array y0_np, np_array yp0_np,
   IDAFree(&ida_mem);
 
   //std::cout << "finished solving 9" << std::endl;
-  // Why does this bus error?
-  // delete p_pybamm_functions;
 
   //std::cout << "finished solving 10" << std::endl;
 
