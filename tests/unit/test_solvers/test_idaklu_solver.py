@@ -14,7 +14,7 @@ class TestIDAKLUSolver(unittest.TestCase):
         # example provided in sundials
         # see sundials ida examples pdf
         for form in ["python", "casadi", "jax"]:
-            if not form == "jax" and not pybamm.have_jax():
+            if form == "jax" and not pybamm.have_jax():
                 continue
             if form == "casadi":
                 root_method = "casadi"
@@ -55,7 +55,7 @@ class TestIDAKLUSolver(unittest.TestCase):
 
     def test_model_events(self):
         for form in ["python", "casadi", "jax"]:
-            if not form == "jax" and not pybamm.have_jax():
+            if form == "jax" and not pybamm.have_jax():
                 continue
             if form == "casadi":
                 root_method = "casadi"
@@ -142,7 +142,7 @@ class TestIDAKLUSolver(unittest.TestCase):
         # example provided in sundials
         # see sundials ida examples pdf
         for form in ["python", "casadi", "jax"]:
-            if not form == "jax" and not pybamm.have_jax():
+            if form == "jax" and not pybamm.have_jax():
                 continue
             if form == "casadi":
                 root_method = "casadi"
@@ -289,7 +289,7 @@ class TestIDAKLUSolver(unittest.TestCase):
 
     def test_dae_solver_algebraic_model(self):
         for form in ["python", "casadi", "jax"]:
-            if not form == "jax" and not pybamm.have_jax():
+            if form == "jax" and not pybamm.have_jax():
                 continue
             if form == "casadi":
                 root_method = "casadi"
