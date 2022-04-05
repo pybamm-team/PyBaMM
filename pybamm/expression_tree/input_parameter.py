@@ -25,6 +25,7 @@ class InputParameter(pybamm.Symbol):
     """
 
     def __init__(self, name, domain=None, expected_size=None):
+        print('creating InputParameter with expected_size', expected_size)
         # Expected size defaults to 1 if no domain else None (gets set later)
         if expected_size is None:
             if domain is None:
@@ -36,6 +37,7 @@ class InputParameter(pybamm.Symbol):
 
     def create_copy(self):
         """See :meth:`pybamm.Symbol.new_copy()`."""
+        print('create_copy', self._expected_size)
         new_input_parameter = InputParameter(
             self.name, self.domain, expected_size=self._expected_size
         )
@@ -46,6 +48,7 @@ class InputParameter(pybamm.Symbol):
         Returns the scalar 'NaN' to represent the shape of a parameter.
         See :meth:`pybamm.Symbol.evaluate_for_shape()`
         """
+        print('evaluate_for_shape', self, self._expected_size)
         if self._expected_size is None:
             return pybamm.evaluate_for_shape_using_domain(self.domains)
         elif self._expected_size == 1:

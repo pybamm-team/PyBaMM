@@ -335,6 +335,7 @@ class Index(UnaryOperator):
         return new_index
 
     def _evaluate_for_shape(self):
+        print('evaluate_for_shape', self.children, self.children[0].evaluate_for_shape())
         return self._unary_evaluate(self.children[0].evaluate_for_shape())
 
     def _evaluates_on_edges(self, dimension):

@@ -137,6 +137,53 @@ class TestIDAKLUSolver(unittest.TestCase):
                 solution.y[-1], 2 * np.exp(0.1 * solution.t), decimal=5
             )
 
+    def test_input_params(self):
+        # test a mix of scalar and vector input params
+        for form in ["python", "casadi", "jax"]:
+            if form == "jax" and not pybamm.have_jax():
+                continue
+            if form == "casadi":
+                root_method = "casadi"
+            else:
+                root_method = "lm"
+            model = pybamm.BaseModel()
+            model.convert_to_format = form
+            u1 = pybamm.Variable("u1")
+            u2 = pybamm.Variable("u2")
+            u3 = pybamm.Variable("u3")
+            v = pybamm.Variable("v")
+            a = pybamm.InputParameter("a")
+            b = pybamm.InputParameter("b", expected_size=2)
+            model.rhs = {u1: a * v, u2: pybamm.Index(b, 0), u3: pybamm.Index(b, 1)}
+            model.algebraic = {v: 1 - v}
+            model.initial_conditions = {u1: 0, u2: 0, u3: 0, v: 1}
+
+            disc = pybamm.Discretisation()
+            disc.process_model(model)
+
+            solver = pybamm.IDAKLUSolver(root_method=root_method)
+
+            t_eval = np.linspace(0, 3, 100)
+            a_value = 0.1
+            b_value = np.array([[0.2], [0.3]])
+
+            sol = solver.solve(
+                model, t_eval, inputs={"a": a_value, "b": b_value},
+            )
+
+            # test that y[3] remains constant
+            np.testing.assert_array_almost_equal(
+                sol.y[3, :], np.ones(sol.t.shape)
+            )
+
+            # test that y[0] = to true solution
+            true_solution = a_value * sol.t
+            np.testing.assert_array_almost_equal(sol.y[0, :], true_solution)
+
+            # test that y[1:2] = to true solution
+            true_solution = b_value * sol.t
+            np.testing.assert_array_almost_equal(sol.y[1:2, :], true_solution)
+
     def test_ida_roberts_klu_sensitivities(self):
         # this test implements a python version of the ida Roberts
         # example provided in sundials
