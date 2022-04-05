@@ -1036,7 +1036,10 @@ class Discretisation(object):
             return new_symbol
 
         elif isinstance(symbol, pybamm.InputParameter):
-            expected_size = self._get_variable_size(symbol)
+            if symbol.domain != []:
+                expected_size = self._get_variable_size(symbol)
+            else:
+                expected_size = None
             return symbol.create_copy(expected_size=expected_size)
         else:
             # Backup option: return the object
