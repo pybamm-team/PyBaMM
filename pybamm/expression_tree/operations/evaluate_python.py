@@ -679,7 +679,7 @@ class EvaluatorJax:
         def bind_t_and_inputs(the_y):
             return self._jit_evaluate(*self._constants, t, the_y, inputs)
 
-        return jax.jvp(bind_t_and_inputs, (y,), (v,))
+        return jax.jvp(bind_t_and_inputs, (y,), (v,))[1]
 
 
 class EvaluatorJaxJacobian:
