@@ -155,15 +155,15 @@ class IDAKLUSolver(pybamm.BaseSolver):
         # stack inputs
         if inputs_dict:
             arrays_to_stack = [
-                np.array(x).reshape(-1) for x in inputs_dict.values()
+                np.array(x).reshape(-1, 1) for x in inputs_dict.values()
             ]
             inputs_sizes = [
                 len(array) for array in arrays_to_stack
             ]
-            inputs = np.hstack(arrays_to_stack)
+            inputs = np.vstack(arrays_to_stack)
         else:
             inputs_sizes = []
-            inputs = np.array([])
+            inputs = np.array([[]])
 
         def inputs_to_dict(inputs):
             index = 0
@@ -429,11 +429,11 @@ class IDAKLUSolver(pybamm.BaseSolver):
         # stack inputs
         if inputs_dict:
             arrays_to_stack = [
-                np.array(x).reshape(-1) for x in inputs_dict.values()
+                np.array(x).reshape(-1, 1) for x in inputs_dict.values()
             ]
-            inputs = np.hstack(arrays_to_stack)
+            inputs = np.vstack(arrays_to_stack)
         else:
-            inputs = np.array([])
+            inputs = np.array([[]])
 
         # do this here cause y0 is set after set_up (calc consistent conditions)
         y0 = model.y0

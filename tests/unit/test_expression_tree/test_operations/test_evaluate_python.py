@@ -669,7 +669,6 @@ class TestEvaluate(unittest.TestCase):
             np.testing.assert_allclose(result_test, result_true)
             np.testing.assert_allclose(result_test_times_v, result_true_times_v)
 
-
     @unittest.skipIf(not pybamm.have_jax(), "jax or jaxlib is not installed")
     def test_evaluator_jax_debug(self):
         a = pybamm.StateVector(slice(0, 1))

@@ -180,9 +180,9 @@ class TestIDAKLUSolver(unittest.TestCase):
             true_solution = a_value * sol.t
             np.testing.assert_array_almost_equal(sol.y[0, :], true_solution)
 
-            # test that y[1:2] = to true solution
+            # test that y[1:3] = to true solution
             true_solution = b_value * sol.t
-            np.testing.assert_array_almost_equal(sol.y[1:2, :], true_solution)
+            np.testing.assert_array_almost_equal(sol.y[1:3, :], true_solution)
 
     def test_ida_roberts_klu_sensitivities(self):
         # this test implements a python version of the ida Roberts

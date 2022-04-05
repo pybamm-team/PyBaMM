@@ -369,7 +369,7 @@ def find_symbols(symbol, constant_symbols, variable_symbols, output_jax=False):
         symbol_str = "t"
 
     elif isinstance(symbol, pybamm.InputParameter):
-        symbol_str = "inputs['{}']".format(symbol.name)
+        symbol_str = 'inputs["{}"]'.format(symbol.name)
 
     else:
         raise NotImplementedError(

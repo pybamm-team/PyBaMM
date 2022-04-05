@@ -136,8 +136,6 @@ class Concatenation(pybamm.Symbol):
         else:
             # Default: use np.concatenate
             concatenation_function = self.concatenation_function or np.concatenate
-            print('concatenate', [child.evaluate_for_shape() for child in
-                                  self.children])
             return concatenation_function(
                 [child.evaluate_for_shape() for child in self.children]
             )
