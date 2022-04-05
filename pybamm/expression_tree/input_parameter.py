@@ -35,12 +35,10 @@ class InputParameter(pybamm.Symbol):
         self._expected_size = expected_size
         super().__init__(name, domain=domain)
 
-    def create_copy(self, expected_size=None):
+    def create_copy(self):
         """See :meth:`pybamm.Symbol.new_copy()`."""
-        if expected_size is None:
-            expected_size = self._expected_size
         new_input_parameter = InputParameter(
-            self.name, self.domain, expected_size=expected_size
+            self.name, self.domain, expected_size=self._expected_size
         )
         return new_input_parameter
 
