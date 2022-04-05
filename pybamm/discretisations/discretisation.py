@@ -1040,7 +1040,7 @@ class Discretisation(object):
                 expected_size = self._get_variable_size(symbol)
             else:
                 expected_size = None
-            symbol.expected_size = expected_size
+            symbol._expected_size = expected_size
             return symbol.create_copy()
         else:
             # Backup option: return the object
