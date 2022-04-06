@@ -334,6 +334,23 @@ class TestIDAKLUSolver(unittest.TestCase):
         ):
             solver.solve(model, t_eval)
 
+        # try and solve model with numerical issues so the solver fails
+        model = pybamm.BaseModel()
+        u = pybamm.Variable("u")
+        model.rhs = {u: -0.1 / u}
+        model.initial_conditions = {u: 0}
+
+        disc = pybamm.Discretisation()
+        disc.process_model(model)
+
+        solver = pybamm.IDAKLUSolver()
+
+        t_eval = np.linspace(0, 3, 100)
+        with self.assertRaisesRegex(
+            pybamm.SolverError, 'idaklu solver failed'
+        ):
+            solver.solve(model, t_eval)
+
     def test_dae_solver_algebraic_model(self):
         for form in ["python", "casadi", "jax"]:
             if form == "jax" and not pybamm.have_jax():
@@ -353,6 +370,11 @@ class TestIDAKLUSolver(unittest.TestCase):
 
             solver = pybamm.IDAKLUSolver(root_method=root_method)
             t_eval = np.linspace(0, 1)
+            solution = solver.solve(model, t_eval)
+            np.testing.assert_array_equal(solution.y, -1)
+
+            # change initial_conditions and re-solve (to test if ics_only works)
+            model.concatenated_initial_conditions = pybamm.Vector(np.array([[1]]))
             solution = solver.solve(model, t_eval)
             np.testing.assert_array_equal(solution.y, -1)
 
