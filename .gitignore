@@ -6,6 +6,7 @@ gmproj/extra/
 *.pdf
 *.tmp
 *.png
+*.jpg
 /local/
 *.DS_Store
 *.mat
