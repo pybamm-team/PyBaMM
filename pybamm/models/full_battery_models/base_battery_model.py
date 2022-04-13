@@ -186,6 +186,7 @@ class BatteryModelOptions(pybamm.FuzzyDict):
             "particle mechanics": ["none", "swelling only", "swelling and cracking"],
             "particle shape": ["spherical", "no particles"],
             "particle size": ["single", "distribution"],
+            "pressure driven porosity": ["false", "true"],
             "SEI": [
                 "none",
                 "constant",

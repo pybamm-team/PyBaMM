@@ -275,6 +275,12 @@ class BaseModel(pybamm.BaseBatteryModel):
 
     def set_porosity_submodel(self):
         if (
+            self.options["pressure driven porosity"] == "true"
+        ):
+            self.submodels["porosity"] = pybamm.porosity.PressureDriven(
+                self.param, self.options, self.x_average
+            )
+        elif (
             self.options["SEI porosity change"] == "false"
             and self.options["lithium plating porosity change"] == "false"
         ):
@@ -288,6 +294,8 @@ class BaseModel(pybamm.BaseBatteryModel):
             self.submodels["porosity"] = pybamm.porosity.ReactionDriven(
                 self.param, self.options, self.x_average
             )
+        
+
 
     def set_li_metal_counter_electrode_submodels(self):
         if (
