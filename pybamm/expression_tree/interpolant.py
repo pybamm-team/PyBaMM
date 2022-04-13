@@ -24,7 +24,7 @@ class Interpolant(pybamm.Function):
         Name of the interpolant. Default is None, in which case the name "interpolating
         function" is given.
     interpolator : str, optional
-        Which interpolator to use ("linear", "pchip", or "cubic spline").
+        Which interpolator to use ("linear", "pchip", "cubic" or "cubic spline").
     extrapolate : bool, optional
         Whether to extrapolate for points that are outside of the parametrisation
         range, or return NaN (following default behaviour from scipy). Default is True.
@@ -48,9 +48,9 @@ class Interpolant(pybamm.Function):
 
         if isinstance(x, (tuple, list)) and len(x) == 2:
             interpolator = interpolator or "linear"
-            if interpolator != "linear":
+            if interpolator not in  ["linear", "cubic"]:
                 raise ValueError(
-                    "interpolator should be 'linear' if x is two-dimensional"
+                    "interpolator should be 'linear' or 'cubic' if x is two-dimensional"
                 )
             x1, x2 = x
             if y.ndim != 2:
@@ -107,10 +107,18 @@ class Interpolant(pybamm.Function):
             interpolating_function = interpolate.PchipInterpolator(
                 x1, y, extrapolate=extrapolate
             )
-        elif interpolator == "cubic spline":
-            interpolating_function = interpolate.CubicSpline(
-                x1, y, extrapolate=extrapolate
-            )
+        elif "cubic" in interpolator:
+            if len(x) == 1:
+                self.dimension = 1
+                interpolating_function = interpolate.CubicSpline(
+                    x1, y, extrapolate=extrapolate
+                )
+            elif len(x) == 2:
+                self.dimension = 2
+                interpolating_function = interpolate.interp2d(x1, x2, y,
+                                                              kind='cubic')
+            else:
+                raise ValueError("Invalid dimension of x: {0}".format(len(x)))
         else:
             raise ValueError("interpolator '{}' not recognised".format(interpolator))
         # Set name

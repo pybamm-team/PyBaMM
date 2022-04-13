@@ -134,7 +134,7 @@ class CasadiConverter(object):
             elif isinstance(symbol, pybamm.Interpolant):
                 if symbol.interpolator == "linear":
                     solver = "linear"
-                elif symbol.interpolator == "cubic spline":
+                elif "cubic" in symbol.interpolator:
                     solver = "bspline"
                 elif symbol.interpolator == "pchip":
                     raise NotImplementedError(
