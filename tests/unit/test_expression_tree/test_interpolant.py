@@ -87,6 +87,11 @@ class TestInterpolant(unittest.TestCase):
         np.testing.assert_array_almost_equal(
             interp.evaluate(y=np.array([0, 0])), 0, decimal=3
         )
+        # cubic
+        interp = pybamm.Interpolant(x, z, (var1, var2), interpolator="cubic")
+        np.testing.assert_array_almost_equal(
+            interp.evaluate(y=np.array([0, 0])), 0, decimal=3
+        )
 
     def test_name(self):
         a = pybamm.Symbol("a")
