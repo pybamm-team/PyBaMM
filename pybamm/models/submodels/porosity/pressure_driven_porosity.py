@@ -47,7 +47,7 @@ class PressureDriven(BaseModel):
         if self.x_average is True:
             j_n = variables["X-averaged negative electrode interfacial current density"]
             j_p = variables["X-averaged positive electrode interfacial current density"]
-            #eps_n = variables["X-averaged negative electrode porosity"]
+            eps_n = variables["X-averaged negative electrode porosity"]
             #eps_n_av = variables["X-averaged negative electrode porosity"]
            # eps_s_av = variables["X-averaged separator porosity"]
            # eps_p_av = variables["X-averaged positive electrode porosity"]
@@ -58,7 +58,7 @@ class PressureDriven(BaseModel):
         else:
             j_n = variables["Negative electrode interfacial current density"]
             j_p = variables["Positive electrode interfacial current density"]
-           # eps_n = variables["Negative electrode porosity"]
+            eps_n = variables["Negative electrode porosity"]
           #  eps_s = variables["Separator porosity"]
           #  eps_p = variables["Positive electrode porosity"]
             deps_s_dt = pybamm.FullBroadcast(
@@ -74,9 +74,9 @@ class PressureDriven(BaseModel):
 
 
 
-        #deps_n_dt = -3*(1-eps_n)/2.5e-06/28746.0*0.01*j_n/self.param.F #we have to also multiply by the correct value of jn
-        deps_n_dt = -j_n# 3*(1-eps_n)/2.5e-06/28746.0*0.01*j_n/self.param.F #we have to also multiply by the correct value of jn
-        deps_p_dt =  j_p
+        deps_n_dt = -3*(1-eps_n)/2.5e-06/28746.0*0.001*j_n/self.param.F #we have to also multiply by the correct value of jn
+        #deps_n_dt = -j_n# 3*(1-eps_n)/2.5e-06/28746.0*0.01*j_n/self.param.F #we have to also multiply by the correct value of jn
+        deps_p_dt =  j_p*0
         #deps_p_dt = 0*eps_p
         #deps_s_dt = 0*eps_s
         # delta_eps_p = -3*(1-eps_p)/3.5e-06/35380.0*0.01
@@ -106,9 +106,9 @@ class PressureDriven(BaseModel):
             eps_p_av = variables["X-averaged positive electrode porosity"]
 
             self.initial_conditions = {
-                eps_n_av: self.param.epsilon_n_init,
-                eps_s_av: self.param.epsilon_s_init,
-                eps_p_av: self.param.epsilon_p_init,
+                eps_n_av: pybamm.x_average(self.param.epsilon_n_init),
+                eps_s_av: pybamm.x_average(self.param.epsilon_s_init),
+                eps_p_av: pybamm.x_average(self.param.epsilon_p_init),
             }
         else:
             eps = variables["Porosity"]
