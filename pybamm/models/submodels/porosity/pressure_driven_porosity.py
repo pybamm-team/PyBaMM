@@ -62,8 +62,8 @@ class PressureDriven(BaseModel):
         eps_n = variables["Negative electrode porosity"]
         eps_s = variables["Separator porosity"]
         eps_p = variables["Positive electrode porosity"]
-
-        deps_n_dt = -3*(1-eps_n)/2.5e-06/28746.0*0.01 #we have to also multiply by the correct value of jn
+        j_n = variables["Negative electrode interfacial current density [A.m-2]"]
+        deps_n_dt = -3*(1-eps_n)/2.5e-06/28746.0*0.01*j_n/self.param.F #we have to also multiply by the correct value of jn
         deps_p_dt = 0*eps_p
         deps_s_dt = 0*eps_s
         # delta_eps_p = -3*(1-eps_p)/3.5e-06/35380.0*0.01
