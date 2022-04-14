@@ -44,34 +44,49 @@ class PressureDriven(BaseModel):
     
     def get_coupled_variables(self, variables):
 
-        # if self.x_average is True:
-        #     j_n = variables["X-averaged negative electrode interfacial current density"]
-        #     j_p = variables["X-averaged positive electrode interfacial current density"]
-        #     deps_s_dt = pybamm.PrimaryBroadcast(0, "current collector")
-        # else:
-        #     j_n = variables["Negative electrode interfacial current density"]
-        #     j_p = variables["Positive electrode interfacial current density"]
-        #     deps_s_dt = pybamm.FullBroadcast(
-        #         0, "separator", auxiliary_domains={"secondary": "current collector"}
-        #     )
+        if self.x_average is True:
+            j_n = variables["X-averaged negative electrode interfacial current density"]
+            j_p = variables["X-averaged positive electrode interfacial current density"]
+            #eps_n = variables["X-averaged negative electrode porosity"]
+            #eps_n_av = variables["X-averaged negative electrode porosity"]
+           # eps_s_av = variables["X-averaged separator porosity"]
+           # eps_p_av = variables["X-averaged positive electrode porosity"]
+          #  eps_s = variables["X-averaged separator porosity"]
+          #  eps_p = variables["X-averaged positive electrode porosity"]
+            deps_s_dt = pybamm.PrimaryBroadcast(0, "current collector")
+            #deps_p_dt = pybamm.PrimaryBroadcast(0, "current collector")
+        else:
+            j_n = variables["Negative electrode interfacial current density"]
+            j_p = variables["Positive electrode interfacial current density"]
+           # eps_n = variables["Negative electrode porosity"]
+          #  eps_s = variables["Separator porosity"]
+          #  eps_p = variables["Positive electrode porosity"]
+            deps_s_dt = pybamm.FullBroadcast(
+                0, "separator", auxiliary_domains={"secondary": "current collector"}
+            )
+            #deps_p_dt = pybamm.FullBroadcast(
+            #    0, "positive", auxiliary_domains={"secondary": "current collector"}
+            #)
         # deps_s_dt = pybamm.PrimaryBroadcast(0, "seperator")
         # deps_s_dt = pybamm.PrimaryBroadcast(0, "current collector")
         # deps_n_dt = -self.param.beta_surf_n * j_n
         # deps_p_dt = -self.param.beta_surf_p * j_p*0
 
-        eps_n = variables["Negative electrode porosity"]
-        eps_s = variables["Separator porosity"]
-        eps_p = variables["Positive electrode porosity"]
-        j_n = variables["Negative electrode interfacial current density [A.m-2]"]
-        deps_n_dt = -3*(1-eps_n)/2.5e-06/28746.0*0.01*j_n/self.param.F #we have to also multiply by the correct value of jn
-        deps_p_dt = 0*eps_p
-        deps_s_dt = 0*eps_s
+
+
+        #deps_n_dt = -3*(1-eps_n)/2.5e-06/28746.0*0.01*j_n/self.param.F #we have to also multiply by the correct value of jn
+        deps_n_dt = -j_n# 3*(1-eps_n)/2.5e-06/28746.0*0.01*j_n/self.param.F #we have to also multiply by the correct value of jn
+        deps_p_dt =  j_p
+        #deps_p_dt = 0*eps_p
+        #deps_s_dt = 0*eps_s
         # delta_eps_p = -3*(1-eps_p)/3.5e-06/35380.0*0.01
         variables.update(
             self._get_standard_porosity_change_variables(
                 deps_n_dt, deps_s_dt, deps_p_dt
             )
         )
+
+        return variables
 
     def set_rhs(self, variables):
         if self.x_average is True:
