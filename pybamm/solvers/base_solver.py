@@ -48,7 +48,6 @@ class BaseSolver(object):
         root_method=None,
         root_tol=1e-6,
         extrap_tol=0,
-        max_steps="deprecated",
     ):
         self.method = method
         self.rtol = rtol
@@ -56,11 +55,6 @@ class BaseSolver(object):
         self.root_tol = root_tol
         self.root_method = root_method
         self.extrap_tol = extrap_tol
-        if max_steps != "deprecated":
-            raise ValueError(
-                "max_steps has been deprecated, and should be set using the "
-                "solver-specific extra-options dictionaries instead"
-            )
         self.models_set_up = {}
 
         # Defaults, can be overwritten by specific solver
