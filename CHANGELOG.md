@@ -1,5 +1,13 @@
 # [Unreleased](https://github.com/pybamm-team/PyBaMM/)
 
+## Features
+
+## Bug fixes
+
+-   Remove old deprecation errors, including those in `parameter_values.py` that caused the simulation if, for example, the reaction rate is re-introduced manually ([#2022](https://github.com/pybamm-team/PyBaMM/pull/2022))
+
+## Breaking changes
+
 # [v22.3](https://github.com/pybamm-team/PyBaMM/tree/v22.3) - 2022-03-31
 
 ## Features

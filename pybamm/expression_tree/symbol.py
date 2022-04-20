@@ -878,10 +878,6 @@ class Symbol:
         """
         return any(isinstance(symbol, symbol_classes) for symbol in self.pre_order())
 
-    def simplify(self, simplified_symbols=None, clear_domains=True):
-        """`simplify()` has now been removed."""
-        raise pybamm.ModelError("simplify is deprecated as it now has no effect")
-
     def to_casadi(self, t=None, y=None, y_dot=None, inputs=None, casadi_symbols=None):
         """
         Convert the expression tree to a CasADi expression tree.

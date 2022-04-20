@@ -13,7 +13,6 @@ import pickle
 import subprocess
 import sys
 import timeit
-import warnings
 from collections import defaultdict
 from platform import system
 
@@ -264,22 +263,6 @@ def load_function(filename):
     # Remove `.py` from the file name
     if filename.endswith(".py"):
         filename = filename.replace(".py", "")
-
-    # Replace `lead-acid` with `lead_acid`
-    if "lead-acid" in filename:
-        warnings.simplefilter("always", DeprecationWarning)
-        warnings.warn(
-            "lead-acid is deprecated, use lead_acid instead", DeprecationWarning
-        )
-        filename = filename.replace("lead-acid", "lead_acid")
-
-    # Replace `lithium-ion` with `lithium_ion`
-    if "lithium-ion" in filename:
-        warnings.simplefilter("always", DeprecationWarning)
-        warnings.warn(
-            "lithium-ion is deprecated, use lithium_ion instead", DeprecationWarning
-        )
-        filename = filename.replace("lithium-ion", "lithium_ion")
 
     # Assign path to _ and filename to tail
     _, tail = os.path.split(filename)

@@ -137,26 +137,9 @@ class TestParameterValues(unittest.TestCase):
             param.update({"b": 1})
 
     def test_check_parameter_values(self):
-        # Cell capacity [A.h] deprecated
-        with self.assertRaisesRegex(ValueError, "Cell capacity"):
-            pybamm.ParameterValues({"Cell capacity [A.h]": 1})
         # Can't provide a current density of 0, as this will cause a ZeroDivision error
         with self.assertRaisesRegex(ValueError, "Typical current"):
             pybamm.ParameterValues({"Typical current [A]": 0})
-        with self.assertRaisesRegex(
-            ValueError, "The 'C-rate' parameter has been deprecated"
-        ):
-            pybamm.ParameterValues({"C-rate": 0})
-        with self.assertRaisesRegex(ValueError, "surface area density"):
-            pybamm.ParameterValues({"Negative surface area density": 1})
-        with self.assertRaisesRegex(ValueError, "reaction rate"):
-            pybamm.ParameterValues({"Negative reaction rate": 1})
-        with self.assertRaisesRegex(ValueError, "particle distribution"):
-            pybamm.ParameterValues({"Negative particle distribution in x": 1})
-        with self.assertRaisesRegex(ValueError, "surface area to volume ratio"):
-            pybamm.ParameterValues(
-                {"Negative electrode surface area to volume ratio distribution in x": 1}
-            )
         with self.assertRaisesRegex(ValueError, "propotional term"):
             pybamm.ParameterValues(
                 {"Negative electrode LAM constant propotional term": 1}
@@ -1001,17 +984,6 @@ class TestParameterValues(unittest.TestCase):
         self.assertEqual(df[1]["a"], "0.1")
         self.assertEqual(df[1]["b"], "[function]some_function")
         self.assertEqual(df[1]["c"], "[data]some_data")
-
-    def test_deprecate_anode_cathode(self):
-        chemistry = pybamm.parameter_sets.Ecker2015.copy()
-        chemistry["anode"] = chemistry.pop("negative electrode")
-        with self.assertRaisesRegex(KeyError, "anode"):
-            pybamm.ParameterValues(chemistry)
-
-        chemistry = pybamm.parameter_sets.Ecker2015.copy()
-        chemistry["cathode"] = chemistry.pop("positive electrode")
-        with self.assertRaisesRegex(KeyError, "cathode"):
-            pybamm.ParameterValues(chemistry)
 
 
 if __name__ == "__main__":
