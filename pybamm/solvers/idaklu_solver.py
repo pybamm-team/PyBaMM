@@ -51,7 +51,6 @@ class IDAKLUSolver(pybamm.BaseSolver):
         root_method="casadi",
         root_tol=1e-6,
         extrap_tol=0,
-        max_steps="deprecated",
     ):
 
         if idaklu_spec is None:  # pragma: no cover
@@ -64,7 +63,6 @@ class IDAKLUSolver(pybamm.BaseSolver):
             root_method,
             root_tol,
             extrap_tol,
-            max_steps,
         )
         self.name = "IDA KLU solver"
 
