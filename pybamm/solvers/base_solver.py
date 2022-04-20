@@ -303,6 +303,43 @@ class BaseSolver(object):
                 )
 
         def process(symbol, name, use_jacobian=None):
+            """
+            Parameters
+            ----------
+            symbol: :class:`pybamm.Symbol`
+                expression tree to convert
+            name: str
+                function evaluators created will have this base name
+            use_jacobian: bool, optional
+                wether to return jacobian functions
+
+            Returns
+            -------
+            func: :class:`pybamm.EvaluatorPython` or
+                  :class:`pybamm.EvaluatorJax` or
+                  :class:`casadi.Function`
+                evaluator for the function $f(y, t, p)$ given by `symbol`
+
+            jac: :class:`pybamm.EvaluatorPython` or
+                  :class:`pybamm.EvaluatorJaxJacobian` or
+                  :class:`casadi.Function`
+                evaluator for the jacobian $\frac{\partial f}{\partial y}$
+                of the function given by `symbol`
+
+            jacp: :class:`pybamm.EvaluatorPython` or
+                  :class:`pybamm.EvaluatorJaxSensitivities` or
+                  :class:`casadi.Function`
+                evaluator for the parameter sensitivities
+                $\frac{\partial f}{\partial p}$
+                of the function given by `symbol`
+
+            jac_action: :class:`pybamm.EvaluatorPython` or
+                  :class:`pybamm.EvaluatorJax` or
+                  :class:`casadi.Function`
+                evaluator for product of the jacobian with a vector $v$,
+                i.e. $\frac{\partial f}{\partial y} * v$
+            """
+
             def report(string):
                 # don't log event conversion
                 if "event" not in string:
