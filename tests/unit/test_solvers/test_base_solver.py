@@ -373,11 +373,18 @@ class TestBaseSolver(unittest.TestCase):
 
                 sens = model.jacp_rhs_algebraic_eval(t, y, use_inputs)
 
+                if convert_to_format == "casadi":
+                    sens_a = sens[0]
+                    sens_b = sens[1]
+                else:
+                    sens_a = sens["a"]
+                    sens_b = sens["b"]
+
                 np.testing.assert_allclose(
-                    sens["a"], exact_diff_a(y, inputs["a"], inputs["b"])
+                    sens_a, exact_diff_a(y, inputs["a"], inputs["b"])
                 )
                 np.testing.assert_allclose(
-                    sens["b"], exact_diff_b(y, inputs["a"], inputs["b"])
+                    sens_b, exact_diff_b(y, inputs["a"], inputs["b"])
                 )
 
 

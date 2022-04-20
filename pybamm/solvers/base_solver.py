@@ -297,6 +297,43 @@ class BaseSolver(object):
                 )
 
         def process(symbol, name, use_jacobian=None):
+            """
+            Parameters
+            ----------
+            symbol: :class:`pybamm.Symbol`
+                expression tree to convert
+            name: str
+                function evaluators created will have this base name
+            use_jacobian: bool, optional
+                wether to return jacobian functions
+
+            Returns
+            -------
+            func: :class:`pybamm.EvaluatorPython` or
+                  :class:`pybamm.EvaluatorJax` or
+                  :class:`casadi.Function`
+                evaluator for the function $f(y, t, p)$ given by `symbol`
+
+            jac: :class:`pybamm.EvaluatorPython` or
+                  :class:`pybamm.EvaluatorJaxJacobian` or
+                  :class:`casadi.Function`
+                evaluator for the jacobian $\frac{\partial f}{\partial y}$
+                of the function given by `symbol`
+
+            jacp: :class:`pybamm.EvaluatorPython` or
+                  :class:`pybamm.EvaluatorJaxSensitivities` or
+                  :class:`casadi.Function`
+                evaluator for the parameter sensitivities
+                $\frac{\partial f}{\partial p}$
+                of the function given by `symbol`
+
+            jac_action: :class:`pybamm.EvaluatorPython` or
+                  :class:`pybamm.EvaluatorJax` or
+                  :class:`casadi.Function`
+                evaluator for product of the jacobian with a vector $v$,
+                i.e. $\frac{\partial f}{\partial y} * v$
+            """
+
             def report(string):
                 # don't log event conversion
                 if "event" not in string:
@@ -320,8 +357,10 @@ class BaseSolver(object):
                 if use_jacobian:
                     report(f"Calculating jacobian for {name} using jax")
                     jac = func.get_jacobian()
+                    jac_action = func.get_jacobian_action()
                 else:
                     jac = None
+                    jac_action = None
 
             elif model.convert_to_format != "casadi":
                 # Process with pybamm functions, converting
@@ -356,11 +395,13 @@ class BaseSolver(object):
                 if use_jacobian:
                     report(f"Calculating jacobian for {name}")
                     jac = jacobian.jac(symbol, y)
-                    if model.convert_to_format == "python":
-                        report(f"Converting jacobian for {name} to python")
-                        jac = pybamm.EvaluatorPython(jac)
+                    report(f"Converting jacobian for {name} to python")
+                    jac = pybamm.EvaluatorPython(jac)
+                    # cannot do jacobian action efficiently for now
+                    jac_action = None
                 else:
                     jac = None
+                    jac_action = None
 
                 report(f"Converting {name} to python")
                 func = pybamm.EvaluatorPython(symbol)
@@ -444,32 +485,44 @@ class BaseSolver(object):
                             "CasADi"
                         )
                     )
-                    jacp_dict = {}
-                    for pname in model.calculate_sensitivities:
-                        p_diff = casadi.jacobian(casadi_expression, p_casadi[pname])
-                        jacp_dict[pname] = casadi.Function(
-                            name, [t_casadi, y_and_S, p_casadi_stacked], [p_diff]
-                        )
-
-                    # jacp should be a casadi_expressiontion that returns
-                    # a dict of sensitivities
-                    def jacp(*args, **kwargs):
-                        return {k: v(*args, **kwargs) for k, v in jacp_dict.items()}
+                    # WARNING, jacp for convert_to_format=casadi does not return a dict
+                    # instead it returns multiple return values, one for each param
+                    # TODO: would it be faster to do the jacobian wrt pS_casadi_stacked?
+                    jacp = casadi.Function(
+                        name + "_jacp", [t_casadi, y_and_S, p_casadi_stacked], [
+                            casadi.densify(
+                                casadi.jacobian(casadi_expression, p_casadi[pname])
+                            )
+                            for pname in model.calculate_sensitivities
+                        ]
+                    )
 
                 if use_jacobian:
                     report(f"Calculating jacobian for {name} using CasADi")
                     jac_casadi = casadi.jacobian(casadi_expression, y_and_S)
                     jac = casadi.Function(
-                        name, [t_casadi, y_and_S, p_casadi_stacked], [jac_casadi]
+                        name + "_jac", [t_casadi, y_and_S, p_casadi_stacked],
+                        [jac_casadi]
+                    )
+
+                    v = casadi.MX.sym("v", model.len_rhs_and_alg + model.len_rhs_sens +
+                                      model.len_alg_sens)
+                    jac_action_casadi = casadi.densify(
+                        casadi.jtimes(casadi_expression, y_and_S, v)
+                    )
+                    jac_action = casadi.Function(
+                        name + "_jac_action", [t_casadi, y_and_S, p_casadi_stacked, v],
+                        [jac_action_casadi]
                     )
                 else:
                     jac = None
+                    jac_action = None
 
                 func = casadi.Function(
                     name, [t_casadi, y_and_S, p_casadi_stacked], [casadi_expression]
                 )
 
-            return func, jac, jacp
+            return func, jac, jacp, jac_action
 
         # Process initial conditions
         initial_conditions = process(
@@ -558,9 +611,9 @@ class BaseSolver(object):
 
         # Process rhs, algebraic, residual and event expressions
         # and wrap in callables
-        rhs, jac_rhs, jacp_rhs = process(model.concatenated_rhs, "RHS")
+        rhs, jac_rhs, jacp_rhs, jac_rhs_action = process(model.concatenated_rhs, "RHS")
 
-        algebraic, jac_algebraic, jacp_algebraic = process(
+        algebraic, jac_algebraic, jacp_algebraic, jac_algebraic_action = process(
             model.concatenated_algebraic, "algebraic"
         )
 
@@ -573,7 +626,10 @@ class BaseSolver(object):
             rhs_algebraic = pybamm.NumpyConcatenation(
                 model.concatenated_rhs, model.concatenated_algebraic
             )
-        rhs_algebraic, jac_rhs_algebraic, jacp_rhs_algebraic = process(
+
+        (rhs_algebraic,
+         jac_rhs_algebraic,
+         jacp_rhs_algebraic, jac_rhs_algebraic_action) = process(
             rhs_algebraic, "rhs_algebraic"
         )
 
@@ -633,12 +689,15 @@ class BaseSolver(object):
         model.interpolant_extrapolation_events_eval = interpolant_extrapolation_events
 
         model.jac_rhs_eval = jac_rhs
+        model.jac_rhs_action_eval = jac_rhs_action
         model.jacp_rhs_eval = jacp_rhs
 
         model.jac_algebraic_eval = jac_algebraic
+        model.jac_algebraic_action_eval = jac_algebraic_action
         model.jacp_algebraic_eval = jacp_algebraic
 
         model.jac_rhs_algebraic_eval = jac_rhs_algebraic
+        model.jac_rhs_algebraic_action_eval = jac_rhs_algebraic_action
         model.jacp_rhs_algebraic_eval = jacp_rhs_algebraic
 
         # Save CasADi functions for the CasADi solver

@@ -85,7 +85,7 @@ If you are using MacOS, an alternative to the above is to get the required SUNDI
 
 	  brew install sundials
 
-Next, clone the pybind11 repository:
+Next, clone the pybind11 and casadi-headers repositories:
 
 .. code:: bash
 
@@ -103,6 +103,7 @@ If you'd rather do things yourself,
 2. Compile and install SuiteSparse (PyBaMM only requires the ``KLU`` component).
 3. Compile and install SUNDIALS.
 4. Clone the pybind11 repository in the ``PyBaMM/`` directory (make sure the directory is named ``pybind11``).
+	 
 
 PyBaMM ships with a python script that automates points 2. and 3. You can run it with
 
