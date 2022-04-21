@@ -25,7 +25,7 @@ class NoPlating(BasePlating):
         zero = pybamm.FullBroadcast(
             pybamm.Scalar(0), "negative electrode", "current collector"
         )
-        variables = self._get_standard_concentration_variables(zero)
+        variables = self._get_standard_concentration_variables(zero,zero)
         variables.update(self._get_standard_overpotential_variables(zero))
         variables.update(self._get_standard_reaction_variables(zero))
         return variables

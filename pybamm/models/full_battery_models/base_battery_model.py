@@ -67,7 +67,7 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                 Can be "full" (default), "constant", or "current-driven".
             * "lithium plating" : str
                 Sets the model for lithium plating. Can be "none" (default),
-                "reversible" or "irreversible".
+                "reversible", "partially reversible", or "irreversible".
             * "loss of active material" : str
                 Sets the model for loss of active material. Can be "none" (default),
                 "stress-driven", "reaction-driven", or "stress and reaction-driven".
@@ -198,7 +198,7 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                 "Marcus-Hush-Chidsey",
             ],
             "interface utilisation": ["full", "constant", "current-driven"],
-            "lithium plating": ["none", "reversible", "irreversible"],
+            "lithium plating": ["none", "reversible", "partially reversible", "irreversible"],
             "lithium plating porosity change": ["false", "true"],
             "loss of active material": [
                 "none",

@@ -10,7 +10,7 @@ class BaseModel(pybamm.BaseBatteryModel):
     lithium-ion models
 
     **Extends:** :class:`pybamm.BaseBatteryModel`
-
+    
     """
 
     def __init__(self, options=None, name="Unnamed lithium-ion model", build=False):
