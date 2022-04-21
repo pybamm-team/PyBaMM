@@ -25,7 +25,7 @@ def SEI_limited_dead_lithium_OKane2022(L_sei):
             pybamm.Scalar(0), "negative electrode", "current collector"
         )
 
-    if L_sei == zero:
+    if L_sei.id == zero.id:
         gamma = gamma_0
     else:
         L_inner_0 = Parameter("Initial inner SEI thickness [m]")
