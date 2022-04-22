@@ -17,7 +17,6 @@ if have_julia and platform.system() != "Windows":
 
 
 @unittest.skipIf(not have_julia, "Julia not installed")
-@unittest.skipIf(platform.system() == "Windows", "Skipped for Windows")
 class TestBaseModelGenerateJuliaDiffEq(unittest.TestCase):
     def test_generate_ode(self):
         # ODE model with no input parameters

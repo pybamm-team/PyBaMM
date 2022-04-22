@@ -354,8 +354,6 @@ def have_julia():
     """
     Checks whether the Julia programming language has been installed
     """
-    import subprocess
-
     # Try reading the julia version quietly to see whether julia is installed
     FNULL = open(os.devnull, "w")
     try:

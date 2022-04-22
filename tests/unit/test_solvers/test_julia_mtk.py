@@ -6,17 +6,9 @@ import pybamm
 import unittest
 from platform import system
 
-# import numpy as np
 
 # julia imports
 have_julia = pybamm.have_julia()
-# if have_julia and system() != "Windows":
-#     from julia import Main
-
-# from julia import Pkg
-# from diffeqpy import de
-
-# Pkg.activate(".")
 
 
 @unittest.skipIf(not have_julia, "Julia not installed")

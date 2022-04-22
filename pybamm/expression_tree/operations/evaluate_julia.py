@@ -151,7 +151,6 @@ def find_symbols(
             children_vars.append(id_to_julia_variable(child.id, "cache"))
 
     if isinstance(symbol, pybamm.BinaryOperator):
-        # Multiplication and Division need special handling for scipy sparse matrices
         # TODO: we can pass through a dummy y and t to get the type and then hardcode
         # the right line, avoiding these checks
         if isinstance(symbol, pybamm.MatrixMultiplication):
@@ -165,7 +164,7 @@ def find_symbols(
         elif isinstance(symbol, pybamm.Power):
             # julia uses ^ instead of ** for power
             # include dot for elementwise operations
-            symbol_str = children_vars[0] + " ^ " + children_vars[1]
+            symbol_str = children_vars[0] + " .^ " + children_vars[1]
         else:
             # all other operations use the same symbol
             symbol_str = children_vars[0] + " " + symbol.name + " " + children_vars[1]
