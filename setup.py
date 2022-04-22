@@ -91,7 +91,8 @@ def compile_KLU():
     # Return True if:
     # - Not running on Windows AND
     # - CMake is found AND
-    # - The pybind11 directory is found in the PyBaMM project directory
+    # - The pybind11 and casadi-headers directories are found
+    #   in the PyBaMM project directory
     CMakeFound = True
     PyBind11Found = True
     windows = (not system()) or system() == "Windows"
@@ -147,7 +148,16 @@ pybamm_data.append("./CITATIONS.txt")
 pybamm_data.append("./plotting/pybamm.mplstyle")
 pybamm_data.append("../CMakeBuild.py")
 
-idaklu_ext = Extension("pybamm.solvers.idaklu", ["pybamm/solvers/c_solvers/idaklu.cpp"])
+idaklu_ext = Extension("pybamm.solvers.idaklu", [
+    "pybamm/solvers/c_solvers/idaklu.cpp"
+    "pybamm/solvers/c_solvers/idaklu.hpp"
+    "pybamm/solvers/c_solvers/idaklu_casadi.cpp"
+    "pybamm/solvers/c_solvers/idaklu_casadi.hpp"
+    "pybamm/solvers/c_solvers/idaklu_python.cpp"
+    "pybamm/solvers/c_solvers/idaklu_python.hpp"
+    "pybamm/solvers/c_solvers/solution.cpp"
+    "pybamm/solvers/c_solvers/solution.hpp"
+])
 ext_modules = [idaklu_ext] if compile_KLU() else []
 
 # Defines __version__

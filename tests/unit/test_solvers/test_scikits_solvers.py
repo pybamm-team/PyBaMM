@@ -11,11 +11,6 @@ import sys
 
 @unittest.skipIf(not pybamm.have_scikits_odes(), "scikits.odes not installed")
 class TestScikitsSolvers(unittest.TestCase):
-    def test_init(self):
-        # linsolver deprecated
-        with self.assertRaisesRegex(ValueError, "linsolver has been deprecated"):
-            pybamm.ScikitsOdeSolver(linsolver="lapackdense")
-
     def test_model_ode_integrate_failure(self):
         # Turn off warnings to ignore sqrt error
         warnings.simplefilter("ignore")
