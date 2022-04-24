@@ -221,11 +221,15 @@ class CasadiSolver(pybamm.BaseSolver):
                 dt_max = 0.01
             dt_eval_max = np.max(np.diff(t_eval)) * 1.01
             dt_max = np.max([dt_max, dt_eval_max])
+            termination_due_to_small_dt = False
+            first_ts_solved = False
             while t < t_f:
                 # Step
                 solved = False
                 count = 0
                 dt = dt_max
+                if termination_due_to_small_dt:
+                    solved = True
                 while not solved:
                     # Get window of time to integrate over (so that we return
                     # all the points in t_eval, not just t and t+dt)
@@ -253,21 +257,28 @@ class CasadiSolver(pybamm.BaseSolver):
                             use_grid=use_grid,
                             extract_sensitivities_in_solution=False,
                         )
+                        first_ts_solved = True
                         solved = True
-                    except pybamm.SolverError:
+                    except pybamm.SolverError or pybamm.expression_tree.exceptions.SolverError:
                         dt /= 2
-                        # also reduce maximum step size for future global steps
-                        dt_max = dt
-                    count += 1
+                        # also reduce maximum step size for future global steps, but skip them in the beginning
+                        if first_ts_solved:
+                            dt_max = dt
+                    # sometimes, for the first integrator smaller timesteps are neeeded, but this won't affect the
+                    # global timesteps. The global timestep will only be reduced after the first timestep.
+                    if first_ts_solved:
+                        count += 1
                     if count >= self.max_step_decrease_count:
-                        raise pybamm.SolverError(
-                            "Maximum number of decreased steps occurred at t={}. Try "
-                            "solving the model up to this time only or reducing dt_max "
-                            "(currently, dt_max={})."
+                        warnings.warn(
+                            "Maximum number of decreased steps occurred at t={}. Terminating the solver now "
+                            "and creating solution object. For more timesteps try solving the model up to "
+                            "this time only or reducing dt_max (currently, dt_max={})."
                             "".format(
                                 t * model.timescale_eval, dt_max * model.timescale_eval
-                            )
+                            ), pybamm.SolverWarning
                         )
+                        termination_due_to_small_dt = True
+                        break
                 # Check if the sign of an event changes, if so find an accurate
                 # termination point and exit
                 current_step_sol = self._solve_for_event(
@@ -277,7 +288,7 @@ class CasadiSolver(pybamm.BaseSolver):
                 current_step_sol.solve_time = np.nan
                 # append solution from the current step to solution
                 solution = solution + current_step_sol
-                if current_step_sol.termination == "event":
+                if current_step_sol.termination == "event" or termination_due_to_small_dt:
                     break
                 else:
                     # update time
