@@ -259,7 +259,7 @@ class CasadiSolver(pybamm.BaseSolver):
                         )
                         first_ts_solved = True
                         solved = True
-                    except pybamm.SolverError or pybamm.expression_tree.exceptions.SolverError:
+                    except pybamm.SolverError:
                         dt /= 2
                         # also reduce maximum step size for future global steps, but skip them in the beginning
                         if first_ts_solved:
