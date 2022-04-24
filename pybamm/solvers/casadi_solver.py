@@ -4,6 +4,7 @@
 import casadi
 import pybamm
 import numpy as np
+import warnings
 from scipy.interpolate import interp1d
 
 
