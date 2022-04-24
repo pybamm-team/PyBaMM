@@ -261,19 +261,21 @@ class CasadiSolver(pybamm.BaseSolver):
                         solved = True
                     except pybamm.SolverError:
                         dt /= 2
-                        # also reduce maximum step size for future global steps, but skip them in the beginning
+                        # also reduce maximum step size for future global steps,
+                        # but skip them in the beginning
                         if first_ts_solved:
                             dt_max = dt
-                    # sometimes, for the first integrator smaller timesteps are neeeded, but this won't affect the
-                    # global timesteps. The global timestep will only be reduced after the first timestep.
+                    # sometimes, for the first integrator smaller timesteps are neeeded,
+                    # but this won't affect the global timesteps. The global timestep
+                    # will only be reduced after the first timestep.
                     if first_ts_solved:
                         count += 1
                     if count >= self.max_step_decrease_count:
                         warnings.warn(
-                            "Maximum number of decreased steps occurred at t={}. Terminating the solver now "
-                            "and creating solution object. For more timesteps try solving the model up to "
-                            "this time only or reducing dt_max (currently, dt_max={})."
-                            "".format(
+                            "Maximum number of decreased steps occurred at t={}. "
+                            "Terminating the solver now and creating solution object. "
+                            "For more timesteps try solving the model up to this time "
+                            "only or reducing dt_max (currently, dt_max={}).".format(
                                 t * model.timescale_eval, dt_max * model.timescale_eval
                             ), pybamm.SolverWarning
                         )
@@ -288,12 +290,15 @@ class CasadiSolver(pybamm.BaseSolver):
                 current_step_sol.solve_time = np.nan
                 # append solution from the current step to solution
                 solution = solution + current_step_sol
-                if current_step_sol.termination == "event" or termination_due_to_small_dt:
+                if current_step_sol.termination == "event" \
+                        or termination_due_to_small_dt:
                     break
                 else:
-                    # update time
+                    # update time as time
+                    # from which to start the new casadi integrator
                     t = t_window[-1]
-                    # update y0
+                    # update y0 as initial_values 
+                    # from which to start the new casadi integrator
                     y0 = solution.all_ys[-1][:, -1]
 
             # now we extract sensitivities from the solution
