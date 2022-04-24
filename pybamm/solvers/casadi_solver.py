@@ -298,7 +298,7 @@ class CasadiSolver(pybamm.BaseSolver):
                     # update time as time
                     # from which to start the new casadi integrator
                     t = t_window[-1]
-                    # update y0 as initial_values 
+                    # update y0 as initial_values
                     # from which to start the new casadi integrator
                     y0 = solution.all_ys[-1][:, -1]
 
