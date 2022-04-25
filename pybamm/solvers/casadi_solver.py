@@ -264,13 +264,14 @@ class CasadiSolver(pybamm.BaseSolver):
                         dt /= 2
                         # also reduce maximum step size for future global steps,
                         # but skip them in the beginning
-                        if first_ts_solved:
-                            dt_max = dt
+                        # if first_ts_solved:
+                        dt_max = dt
                     # sometimes, for the first integrator smaller timesteps are neeeded,
                     # but this won't affect the global timesteps. The global timestep
-                    # will only be reduced after the first timestep.
-                    if first_ts_solved:
-                        count += 1
+                    # will only be reduced after the first timestep. To test this a
+                    # new unit test is needed. Until now, it's just a comment.
+                    # if first_ts_solved:
+                    count += 1
                     if count >= self.max_step_decrease_count:
                         warnings.warn(
                             "Maximum number of decreased steps occurred at t={}. "
@@ -282,25 +283,27 @@ class CasadiSolver(pybamm.BaseSolver):
                         )
                         termination_due_to_small_dt = True
                         break
-                # Check if the sign of an event changes, if so find an accurate
-                # termination point and exit
-                current_step_sol = self._solve_for_event(
-                    current_step_sol, init_event_signs
-                )
-                # assign temporary solve time
-                current_step_sol.solve_time = np.nan
-                # append solution from the current step to solution
-                solution = solution + current_step_sol
-                if current_step_sol.termination == "event" \
-                        or termination_due_to_small_dt:
+                if first_ts_solved:
+                    # Check if the sign of an event changes, if so find an accurate
+                    # termination point and exit
+                    current_step_sol = self._solve_for_event(
+                        current_step_sol, init_event_signs
+                    )
+                    # assign temporary solve time
+                    current_step_sol.solve_time = np.nan
+                    # append solution from the current step to solution
+                    solution = solution + current_step_sol
+                    if current_step_sol.termination == "event":
+                        break
+                    else:
+                        # update time as time
+                        # from which to start the new casadi integrator
+                        t = t_window[-1]
+                        # update y0 as initial_values
+                        # from which to start the new casadi integrator
+                        y0 = solution.all_ys[-1][:, -1]
+                elif termination_due_to_small_dt and not first_ts_solved:
                     break
-                else:
-                    # update time as time
-                    # from which to start the new casadi integrator
-                    t = t_window[-1]
-                    # update y0 as initial_values
-                    # from which to start the new casadi integrator
-                    y0 = solution.all_ys[-1][:, -1]
 
             # now we extract sensitivities from the solution
             if bool(model.calculate_sensitivities):
