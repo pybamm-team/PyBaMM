@@ -100,13 +100,13 @@ class TestCasadiSolver(unittest.TestCase):
         solver = pybamm.CasadiSolver(extra_options_call={"regularity_check": False})
         # Solve with failure at t=2
         t_eval = np.linspace(0, 20, 100)
-        with self.assertRaises(pybamm.SolverError):
+        with self.assertWarns(pybamm.SolverError):
             solver.solve(model_disc, t_eval)
         # Solve with failure at t=0
         model.initial_conditions = {var: 0}
         model_disc = disc.process_model(model, inplace=False)
         t_eval = np.linspace(0, 20, 100)
-        with self.assertRaises(pybamm.SolverError):
+        with self.assertWarns(pybamm.SolverError):
             solver.solve(model_disc, t_eval)
 
     def test_model_solver_events(self):
