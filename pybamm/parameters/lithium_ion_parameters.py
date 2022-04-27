@@ -1033,9 +1033,9 @@ class LithiumIonParameters(BaseParameters):
 
         return self.j0_plating_dimensional(c_e_dim, c_Li_dim, T_dim) / self.j_scale_n
 
-    def dead_lithium_decay_rate(self, L_inner, L_outer):
+    def dead_lithium_decay_rate(self, L_sei):
         """Dimensionless exchange-current density for stripping"""
-        L_sei_dim = (L_inner + L_outer) * L_sei_0_dim
+        L_sei_dim = L_sei * self.L_sei_0_dim
 
         return self.dead_lithium_decay_rate_dimensional(L_sei_dim) * self.timescale
 

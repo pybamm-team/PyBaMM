@@ -107,18 +107,18 @@ class Plating(BasePlating):
             j_stripping = variables[
                 "X-averaged lithium plating interfacial current density"
             ]
-            # Note a is dimensionless (has a constant value of 1 if the surface
-            # area does not change)
             a = variables["X-averaged negative electrode surface area to volume ratio"]
+            L_sei = variables["X-averaged total SEI thickness"]
         else:
             c_plated_Li = variables["Lithium plating concentration"]
             c_dead_Li = variables["Dead lithium concentration"]
             j_stripping = variables["Lithium plating interfacial current density"]
             a = variables["Negative electrode surface area to volume ratio"]
+            L_sei = variables["Total SEI thickness"]
 
         Gamma_plating = self.param.Gamma_plating
         if self.options["lithium plating"] == "partially reversible":
-            dead_lithium_decay_rate = self.param.dead_lithium_decay_rate
+            dead_lithium_decay_rate = self.param.dead_lithium_decay_rate(L_sei)
             coupling_term = dead_lithium_decay_rate * c_plated_Li
         elif self.options["lithium plating"] in ["reversible","irreversible"]:
             zero = pybamm.Scalar(0)

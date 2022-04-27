@@ -21,8 +21,8 @@ def SEI_limited_dead_lithium_OKane2022(L_sei):
     """
 
     gamma_0 = Parameter("Dead lithium decay constant [s-1]")
-    zero = pybamm.FullBroadcast(
-            pybamm.Scalar(0), "negative electrode", "current collector"
+    zero = FullBroadcast(
+            Scalar(0), "negative electrode", "current collector"
         )
 
     if L_sei.id == zero.id:
