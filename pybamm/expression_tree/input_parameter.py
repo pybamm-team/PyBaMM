@@ -3,6 +3,7 @@
 #
 import numbers
 import numpy as np
+import scipy.sparse
 import pybamm
 
 
@@ -55,7 +56,16 @@ class InputParameter(pybamm.Symbol):
 
     def _jac(self, variable):
         """See :meth:`pybamm.Symbol._jac()`."""
-        return pybamm.Scalar(0)
+        n_variable = variable.evaluation_array.count(True)
+        nan_vector = self._evaluate_for_shape()
+        if isinstance(nan_vector, numbers.Number):
+            n_self = 1
+        else:
+            n_self = nan_vector.shape[0]
+        zero_matrix = scipy.sparse.csr_matrix(
+            (n_self, n_variable)
+        )
+        return pybamm.Matrix(zero_matrix)
 
     def _base_evaluate(self, t=None, y=None, y_dot=None, inputs=None):
         # inputs should be a dictionary

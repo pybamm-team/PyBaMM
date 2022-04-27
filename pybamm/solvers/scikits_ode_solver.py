@@ -49,7 +49,6 @@ class ScikitsOdeSolver(pybamm.BaseSolver):
         rtol=1e-6,
         atol=1e-6,
         extrap_tol=0,
-        linsolver="deprecated",
         extra_options=None,
     ):
         if scikits_odes_spec is None:
@@ -57,11 +56,6 @@ class ScikitsOdeSolver(pybamm.BaseSolver):
 
         super().__init__(method, rtol, atol, extrap_tol=extrap_tol)
         self.extra_options = extra_options or {}
-        if linsolver != "deprecated":
-            raise ValueError(
-                "linsolver has been deprecated. Pass 'linsolver' to extra_options "
-                "dictionary instead"
-            )
         self.ode_solver = True
         self.name = "Scikits ODE solver ({})".format(method)
 

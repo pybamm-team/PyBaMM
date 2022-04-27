@@ -369,7 +369,7 @@ def find_symbols(symbol, constant_symbols, variable_symbols, output_jax=False):
         symbol_str = "t"
 
     elif isinstance(symbol, pybamm.InputParameter):
-        symbol_str = "inputs['{}']".format(symbol.name)
+        symbol_str = 'inputs["{}"]'.format(symbol.name)
 
     else:
         raise NotImplementedError(
@@ -621,6 +621,9 @@ class EvaluatorJax:
 
         return EvaluatorJaxJacobian(self._jac_evaluate, self._constants)
 
+    def get_jacobian_action(self):
+        return self.jvp
+
     def get_sensitivities(self):
         n = len(self._arg_list)
 
@@ -662,6 +665,22 @@ class EvaluatorJax:
 
         return result
 
+    def jvp(self, t=None, y=None, v=None, inputs=None):
+        """
+        evaluate jacobian vector product of function
+        """
+
+        # generated code assumes y is a column vector
+        if y is not None and y.ndim == 1:
+            y = y.reshape(-1, 1)
+        if v is not None and v.ndim == 1:
+            v = v.reshape(-1, 1)
+
+        def bind_t_and_inputs(the_y):
+            return self._jit_evaluate(*self._constants, t, the_y, inputs)
+
+        return jax.jvp(bind_t_and_inputs, (y,), (v,))[1]
+
 
 class EvaluatorJaxJacobian:
     def __init__(self, jac_evaluate, constants):
@@ -690,7 +709,7 @@ class EvaluatorJaxSensitivities:
 
     def __call__(self, t=None, y=None, inputs=None):
         """
-        Acts as a drop-in replacement for :func:`pybamm.Symbol.evaluate`
+        evaluate function
         """
         # generated code assumes y is a column vector
         if y is not None and y.ndim == 1:
@@ -698,5 +717,9 @@ class EvaluatorJaxSensitivities:
 
         # execute code
         result = self._jac_evaluate(*self._constants, t, y, inputs)
+        result = {
+            key: value.reshape(value.shape[0], -1)
+            for key, value in result.items()
+        }
 
         return result
