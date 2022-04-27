@@ -6,9 +6,9 @@ def SEI_limited_dead_lithium_OKane2022(L_sei):
     Decay rate for dead lithium formation [s-1].
     References
     ----------
-    .. [1] Simon E. J. O'Kane, Weilong Ai, Ganesh Madabattula, Diega Alonso-Alvarez, 
+    .. [1] Simon E. J. O'Kane, Weilong Ai, Ganesh Madabattula, Diega Alonso-Alvarez,
     Robert Timms, Valentin Sulzer, Jaqueline Sophie Edge, Billy Wu, Gregory J. Offer
-    and Monica Marinescu. "Lithium-ion battery degradation: how to model it." 
+    and Monica Marinescu. "Lithium-ion battery degradation: how to model it."
     Physical Chemistry: Chemical Physics 24, no. 13 (2022): 7909-7922.
     Parameters
     ----------
@@ -22,8 +22,8 @@ def SEI_limited_dead_lithium_OKane2022(L_sei):
 
     gamma_0 = Parameter("Dead lithium decay constant [s-1]")
     zero = FullBroadcast(
-            Scalar(0), "negative electrode", "current collector"
-        )
+        Scalar(0), "negative electrode", "current collector"
+    )
 
     if L_sei.id == zero.id:
         gamma = gamma_0

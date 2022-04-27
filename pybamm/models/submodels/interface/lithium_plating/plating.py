@@ -60,7 +60,7 @@ class Plating(BasePlating):
                 auxiliary_domains={"secondary": "current collector"},
             )
 
-        variables = self._get_standard_concentration_variables(c_plated_Li,c_dead_Li)
+        variables = self._get_standard_concentration_variables(c_plated_Li, c_dead_Li)
 
         return variables
 
@@ -81,7 +81,7 @@ class Plating(BasePlating):
         alpha_stripping = self.param.alpha_stripping
         alpha_plating = self.param.alpha_stripping
 
-        if self.options["lithium plating"] in ["reversible","partially reversible"]:
+        if self.options["lithium plating"] in ["reversible", "partially reversible"]:
             j_stripping = j0_stripping * pybamm.exp(
                 prefactor * alpha_stripping * eta_stripping
             ) - j0_plating * pybamm.exp(prefactor * alpha_plating * eta_plating)
@@ -120,7 +120,7 @@ class Plating(BasePlating):
         if self.options["lithium plating"] == "partially reversible":
             dead_lithium_decay_rate = self.param.dead_lithium_decay_rate(L_sei)
             coupling_term = dead_lithium_decay_rate * c_plated_Li
-        elif self.options["lithium plating"] in ["reversible","irreversible"]:
+        else:
             zero = pybamm.Scalar(0)
             coupling_term = zero
 

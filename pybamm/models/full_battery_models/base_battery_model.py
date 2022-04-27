@@ -198,7 +198,12 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                 "Marcus-Hush-Chidsey",
             ],
             "interface utilisation": ["full", "constant", "current-driven"],
-            "lithium plating": ["none", "reversible", "partially reversible", "irreversible"],
+            "lithium plating": [
+                "none",
+                "reversible",
+                "partially reversible",
+                "irreversible",
+            ],
             "lithium plating porosity change": ["false", "true"],
             "loss of active material": [
                 "none",

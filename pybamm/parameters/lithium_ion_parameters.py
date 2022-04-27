@@ -509,7 +509,7 @@ class LithiumIonParameters(BaseParameters):
         return pybamm.FunctionParameter(
             "Exchange-current density for plating [A.m-2]", inputs
         )
-    
+
     def dead_lithium_decay_rate_dimensional(self, L_sei):
         """Dimensional dead lithium decay rate [s-1]"""
         inputs = {"Total SEI thickness [m]": L_sei}

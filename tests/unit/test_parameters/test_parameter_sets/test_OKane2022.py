@@ -6,11 +6,11 @@ import unittest
 import os
 
 
-class TestOKane2020(unittest.TestCase):
+class TestOKane2022(unittest.TestCase):
     def test_load_params(self):
         Li_plating = pybamm.ParameterValues({}).read_parameters_csv(
             pybamm.get_parameters_filepath(
-                "input/parameters/lithium_ion/lithium_platings/okane2020_Li_plating/"
+                "input/parameters/lithium_ion/lithium_platings/okane2022_Li_plating/"
                 "parameters.csv"
             )
         )
@@ -21,18 +21,18 @@ class TestOKane2020(unittest.TestCase):
     def test_functions(self):
         root = pybamm.root_dir()
         param = pybamm.ParameterValues("Chen2020_plating")
-        param.update({"Lithium plating kinetic rate constant [m.s-1]": 1E-10})
         T = pybamm.Scalar(298.15)
 
-        p = "pybamm/input/parameters/lithium_ion/lithium_platings/okane2020_Li_plating/"
+        p = "pybamm/input/parameters/lithium_ion/lithium_platings/okane2022_Li_plating/"
         k_path = os.path.join(root, p)
 
         fun_test = {
-            "plating_exchange_current_density_OKane2020.py": ([1e3, 1e4, T], 9.6485e-3),
+            "plating_exchange_current_density_OKane2020.py": ([1e3, 1e4, T], 9.6485e-2),
             "stripping_exchange_current_density_OKane2020.py": (
                 [1e3, 1e4, T],
-                9.6485e-2,
+                9.6485e-1,
             ),
+            "SEI_limited_dead_lithium_OKane2022.py": ([1e-8], 5e-7)
         }
 
         for name, value in fun_test.items():
