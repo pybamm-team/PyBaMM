@@ -143,6 +143,9 @@ class BatteryModelOptions(pybamm.FuzzyDict):
             * "SEI porosity change" : str
                 Whether to include porosity change due to SEI formation, can be "false"
                 (default) or "true".
+            * "SEI on cracks" : str
+                Whether to include SEI growth on particle cracks, can be "false"
+                (default) or "true".
             * "stress-induced diffusion" : str
                 Whether to include stress-induced diffusion, can be "false" or "true".
                 The default is "false" if "particle mechanics" is "none" and "true"
@@ -238,6 +241,7 @@ class BatteryModelOptions(pybamm.FuzzyDict):
             ],
             "SEI film resistance": ["none", "distributed", "average"],
             "SEI porosity change": ["false", "true"],
+            "SEI on cracks": ["false", "true"],
             "stress-induced diffusion": ["false", "true"],
             "surface form": ["false", "differential", "algebraic"],
             "thermal": ["isothermal", "lumped", "x-lumped", "x-full"],

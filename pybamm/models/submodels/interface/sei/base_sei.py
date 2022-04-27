@@ -100,6 +100,49 @@ class BaseModel(BaseInterface):
 
         return variables
 
+    def _get_standard_thickness_variables_cracks(self, L_inner_cr, L_outer_cr):
+        """
+        A private function to obtain the standard variables which
+        can be derived from the local SEI thickness on cracks.
+
+        Parameters
+        ----------
+        L_inner_cr : :class:`pybamm.Symbol`
+            The inner SEI thickness on cracks.
+        L_outer_cr : :class:`pybamm.Symbol`
+            The outer SEI thickness on cracks.
+
+        Returns
+        -------
+        variables : dict
+            The variables which can be derived from the SEI thicknesses.
+        """
+        param = self.param
+        L_scale = param.L_sei_0_dim
+
+        variables = {
+            "Inner SEI thickness on cracks": L_inner_cr,
+            "Inner SEI thickness on cracks [m]": L_inner_cr * L_scale,
+            "Outer SEI thickness on cracks": L_outer_cr,
+            "Outer SEI thickness on cracks [m]": L_outer_cr * L_scale,
+        }
+
+        L_inner_cr_av = pybamm.x_average(L_inner_cr)
+        L_outer_cr_av = pybamm.x_average(L_outer_cr)
+        variables.update(
+            {
+                "X-averaged inner SEI thickness on cracks": L_inner_cr_av,
+                "X-averaged inner SEI thickness on cracks [m]": L_inner_cr_av * L_scale,
+                "X-averaged outer SEI thickness on cracks": L_outer_cr_av,
+                "X-averaged outer SEI thickness on cracks [m]": L_outer_cr_av * L_scale,
+            }
+        )
+        # Get variables related to the total thickness
+        L_sei_cr = L_inner_cr + L_outer_cr
+        variables.update(self._get_standard_total_thickness_variables_cracks(L_sei_cr))
+
+        return variables
+
     def _get_standard_total_thickness_variables(self, L_sei):
         """Update variables related to total SEI thickness."""
         if isinstance(self, pybamm.sei.NoSEI):
@@ -128,6 +171,28 @@ class BaseModel(BaseInterface):
                     + " electrode resistance [Ohm.m2]": L_sei_av * L_scale * R_sei_dim,
                 }
             )
+        return variables
+
+    def _get_standard_total_thickness_variables_cracks(self, L_sei_cr):
+        """Update variables related to total SEI thickness on cracks."""
+        L_scale = self.param.L_sei_0_dim
+        R_sei_dim = self.param.R_sei_dimensional
+
+        variables = {
+            "SEI thickness on cracks": L_sei_cr,
+            "SEI thickness on cracks [m]": L_sei_cr * L_scale,
+            "Total SEI thickness on cracks": L_sei_cr,
+            "Total SEI thickness on cracks [m]": L_sei_cr * L_scale,
+        }
+        L_sei_cr_av = pybamm.x_average(L_sei_cr)
+        variables.update(
+            {
+                "X-averaged SEI thickness on cracks": L_sei_cr_av,
+                "X-averaged SEI thickness on cracks [m]": L_sei_cr_av * L_scale,
+                "X-averaged total SEI thickness on cracks": L_sei_cr_av,
+                "X-averaged total SEI thickness on cracks [m]": L_sei_cr_av * L_scale,
+            }
+        )
         return variables
 
     def _get_standard_concentration_variables(self, variables):
@@ -170,15 +235,30 @@ class BaseModel(BaseInterface):
         L_inner = variables["Inner SEI thickness"]
         L_outer = variables["Outer SEI thickness"]
 
-        n_inner = L_inner  # inner SEI concentration
-        n_outer = L_outer  # outer SEI concentration
+        if self.options["SEI on cracks"] == True:
+            L_inner_cr = variables["Inner SEI thickness on cracks"]
+            L_outer_cr = variables["Outer SEI thickness on cracks"]
+        else:
+            L_inner_cr = 0 * L_inner
+            L_outer_cr = 0 * L_outer
 
-        n_inner_av = pybamm.x_average(L_inner)
-        n_outer_av = pybamm.x_average(L_outer)
+        n_inner = (L_inner + L_inner_cr)  # inner SEI concentration
+        n_outer = (L_outer + L_outer_cr)  # outer SEI concentration
+
+        n_inner_av = pybamm.x_average(n_inner)
+        n_outer_av = pybamm.x_average(n_outer)
 
         n_SEI = n_inner + n_outer / v_bar  # SEI concentration
         n_SEI_av = pybamm.yz_average(pybamm.x_average(n_SEI))
-        delta_n_SEI = n_SEI_av - (L_inner_0 + L_outer_0 / v_bar)
+
+        # Calculate change in SEI concentration with respect to initial state
+        if self.options["SEI on cracks"] == True:
+            rho_cr = param.rho_cr_n
+            n_SEI_init = L_inner_0 + L_outer_0 / v_bar
+            n_SEI_cr_init = 2 * rho_cr * (L_inner_0 + L_outer_0 / v_bar) / 10000
+            delta_n_SEI = n_SEI_av - n_SEI_init - n_SEI_cr_init
+        else:
+            delta_n_SEI = n_SEI_av - (L_inner_0 + L_outer_0 / v_bar)
 
         # Q_sei in mol
         if self.reaction_loc == "interface":
