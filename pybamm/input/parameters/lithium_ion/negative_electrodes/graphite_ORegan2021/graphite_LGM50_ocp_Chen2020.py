@@ -30,6 +30,7 @@ def graphite_LGM50_ocp_Chen2020(sto):
         - 0.0909 * tanh(29.8538 * (sto - 0.1234))
         - 0.04478 * tanh(14.9159 * (sto - 0.2769))
         - 0.0205 * tanh(30.4444 * (sto - 0.6103))
+        - 0.00901753 * tanh(40 * (sto - 1))
     )
 
     return U
