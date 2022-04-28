@@ -73,11 +73,13 @@ class Plating(BasePlating):
         c_plated_Li = variables["Lithium plating concentration"]
         j0_stripping = param.j0_stripping(c_e_n, c_plated_Li, T)
         j0_plating = param.j0_plating(c_e_n, c_plated_Li, T)
+        # phi_ref is part of the de-dimensionalization used in PyBaMM
         phi_ref = param.U_n_ref / param.potential_scale
 
         eta_stripping = delta_phi + phi_ref + eta_sei
         eta_plating = -eta_stripping
         prefactor = 1 / (1 + self.param.Theta * T)
+        # NEW: transfer coefficients can be set by the user
         alpha_stripping = self.param.alpha_stripping
         alpha_plating = self.param.alpha_stripping
 
@@ -117,6 +119,8 @@ class Plating(BasePlating):
             L_sei = variables["Total SEI thickness"]
 
         Gamma_plating = self.param.Gamma_plating
+        # In the partially reversible plating model, coupling term turns reversible 
+        # lithium into dead lithium. In other plating models, it is zero.
         if self.options["lithium plating"] == "partially reversible":
             dead_lithium_decay_rate = self.param.dead_lithium_decay_rate(L_sei)
             coupling_term = dead_lithium_decay_rate * c_plated_Li

@@ -26,9 +26,11 @@ class ReactionDriven(BaseModel):
     def get_coupled_variables(self, variables):
         L_sei_n = variables["Total SEI thickness [m]"]
         L_sei_0 = self.param.L_inner_0_dim + self.param.L_outer_0_dim
+        L_pl_0 = self.param.c_plated_Li_0_dim
         L_pl_n = variables["Lithium plating thickness [m]"]
+        L_dead_n = variable["Dead lithium thickness [m]"]
 
-        L_tot = (L_sei_n - L_sei_0) + L_pl_n
+        L_tot = (L_sei_n - L_sei_0) + (L_pl_n - L_pl_0) + L_dead_n
 
         a_n = variables["Negative electrode surface area to volume ratio [m-1]"]
 
