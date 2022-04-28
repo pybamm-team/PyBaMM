@@ -119,7 +119,7 @@ class Plating(BasePlating):
             L_sei = variables["Total SEI thickness"]
 
         Gamma_plating = self.param.Gamma_plating
-        # In the partially reversible plating model, coupling term turns reversible 
+        # In the partially reversible plating model, coupling term turns reversible
         # lithium into dead lithium. In other plating models, it is zero.
         if self.options["lithium plating"] == "partially reversible":
             dead_lithium_decay_rate = self.param.dead_lithium_decay_rate(L_sei)
