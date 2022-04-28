@@ -22,59 +22,60 @@ class SEIGrowth(BaseModel):
     **Extends:** :class:`pybamm.sei.BaseModel`
     """
 
-    def __init__(self, param, reaction_loc, options=None):
-        super().__init__(param, options=options)
+    def __init__(self, param, reaction_loc, cracks=False, options=None):
+        super().__init__(param, cracks, options=options)
         self.reaction_loc = reaction_loc
 
     def get_fundamental_variables(self):
-        if self.reaction_loc == "x-average":
-            L_inner_av = pybamm.standard_variables.L_inner_av
-            L_outer_av = pybamm.standard_variables.L_outer_av
-            L_inner = pybamm.PrimaryBroadcast(L_inner_av, "negative electrode")
-            L_outer = pybamm.PrimaryBroadcast(L_outer_av, "negative electrode")
-        elif self.reaction_loc == "full electrode":
-            L_inner = pybamm.standard_variables.L_inner
-            L_outer = pybamm.standard_variables.L_outer
-        elif self.reaction_loc == "interface":
-            L_inner = pybamm.standard_variables.L_inner_interface
-            L_outer = pybamm.standard_variables.L_outer_interface
-
-        if self.options["SEI on cracks"] == True:
+        if self.cracks == True:
             if self.reaction_loc == "x-average":
-            L_inner_cr_av = pybamm.Variable(
-                "X-averaged inner SEI thickness on cracks",
-                domain="current collector",
-            )
-            L_inner_cr = pybamm.PrimaryBroadcast(
-                L_inner_cr_av, "negative electrode"
-            )
-            L_outer_cr_av = pybamm.Variable(
-                "X-averaged outer SEI thickness on cracks",
-                domain="current collector",
-            )
-            L_outer_cr = pybamm.PrimaryBroadcast(
-                L_outer_cr_av, "negative electrode"
-            )
+                L_inner_av = pybamm.Variable(
+                    "X-averaged inner SEI on cracks thickness",
+                    domain="current collector",
+                )
+                L_inner = pybamm.PrimaryBroadcast(
+                    L_inner_av, "negative electrode"
+                )
+                L_outer_av = pybamm.Variable(
+                    "X-averaged outer SEI on cracks thickness",
+                    domain="current collector",
+                )
+                L_outer = pybamm.PrimaryBroadcast(
+                    L_outer_av, "negative electrode"
+                )
             elif self.reaction_loc == "full electrode":
-            L_inner_cr = pybamm.Variable(
-                "Inner SEI thickness on cracks",
-                domain="negative electrode",
-                auxiliary_domains={"secondary": "current collector"},
-            )
+                L_inner = pybamm.Variable(
+                    "Inner SEI on cracks thickness",
+                    domain="negative electrode",
+                    auxiliary_domains={"secondary": "current collector"},
+                )
+                L_outer = pybamm.Variable(
+                    "Outer SEI on cracks thickness",
+                    domain="negative electrode",
+                    auxiliary_domains={"secondary": "current collector"},
+                )
+        else:
+            if self.reaction_loc == "x-average":
+                L_inner_av = pybamm.standard_variables.L_inner_av
+                L_outer_av = pybamm.standard_variables.L_outer_av
+                L_inner = pybamm.PrimaryBroadcast(L_inner_av, "negative electrode")
+                L_outer = pybamm.PrimaryBroadcast(L_outer_av, "negative electrode")
+            elif self.reaction_loc == "full electrode":
+                L_inner = pybamm.standard_variables.L_inner
+                L_outer = pybamm.standard_variables.L_outer
+            elif self.reaction_loc == "interface":
+                L_inner = pybamm.standard_variables.L_inner_interface
+                L_outer = pybamm.standard_variables.L_outer_interface
 
         if self.options["SEI"] == "ec reaction limited":
             L_inner = 0 * L_inner  # Set L_inner to zero, copying domains
-            if self.options["SEI on cracks"] == True:
-                L_inner_cr = 0 * L_inner_cr
 
-        variables = self._get_standard_thickness_variables(L_inner, L_outer)
-
-        if self.options["SEI on cracks"] == True:
-            variables.update(
-                self._get_standard_thickness_variables_cracks(L_inner_cr,L_outer_cr)
-            )
-
-        variables.update(self._get_standard_concentration_variables(variables))
+        if self.cracks == True:
+            variables = self._get_standard_thickness_variables_cracks(L_inner, L_outer)
+            variables.update(self._get_standard_concentration_variables_cracks(variables))
+        else:
+            variables = self._get_standard_thickness_variables(L_inner, L_outer)
+            variables.update(self._get_standard_concentration_variables(variables))
 
         return variables
 
@@ -106,40 +107,38 @@ class SEIGrowth(BaseModel):
                 + " electrode total interfacial current density"
             ]
 
-        L_sei_inner = variables["Inner SEI thickness"]
-        L_sei_outer = variables["Outer SEI thickness"]
-        L_sei = variables["Total SEI thickness"]
-
+        if self.cracks == True:
+            L_sei_inner = variables["Inner SEI on cracks thickness"]
+            L_sei_outer = variables["Outer SEI on cracks thickness"]
+            L_sei = variables["Total SEI on cracks thickness"]
+        else:
+            L_sei_inner = variables["Inner SEI thickness"]
+            L_sei_outer = variables["Outer SEI thickness"]
+            L_sei = variables["Total SEI thickness"]
+        
+        T = variables["Negative electrode temperature"]
         R_sei = self.param.R_sei
+        # thermal prefactor for reaction, interstitial and EC models
+        prefactor = -1 / (2 * (1 + self.param.Theta * T))
 
         if self.options["SEI"] == "reaction limited":
             # alpha = param.alpha
             C_sei = param.C_sei_reaction
-
-            # need to revise for thermal case
-            j_sei = -(1 / C_sei) * pybamm.exp(-0.5 * (delta_phi - j * L_sei * R_sei))
-
-            if self.options["SEI on cracks"] == True:
-                j_sei_cr = j_sei
+            eta_SEI = delta_phi - j * L_sei * R_sei
+            j_sei = -(1 / C_sei) * pybamm.exp(prefactor * eta_SEI)
 
         elif self.options["SEI"] == "electron-migration limited":
             U_inner = self.param.U_inner_electron
             C_sei = self.param.C_sei_electron
             j_sei = (phi_s_n - U_inner) / (C_sei * L_sei_inner)
-            if self.options["SEI on cracks"] == True:
-                j_sei_cr = (phi_s_n - U_inner) / (C_sei * L_sei_cr_inner)
 
         elif self.options["SEI"] == "interstitial-diffusion limited":
             C_sei = self.param.C_sei_inter
-            j_sei = -pybamm.exp(-delta_phi) / (C_sei * L_sei_inner)
-            if self.options["SEI on cracks"] == True:
-                j_sei_cr = -pybamm.exp(-delta_phi) / (C_sei * L_sei_cr_inner)
+            j_sei = -pybamm.exp(2 * prefactor * delta_phi) / (C_sei * L_sei_inner)
 
         elif self.options["SEI"] == "solvent-diffusion limited":
             C_sei = self.param.C_sei_solvent
             j_sei = -1 / (C_sei * L_sei_outer)
-            if self.options["SEI on cracks"] == True:
-                j_sei_cr = -1 / (C_sei * L_sei_cr_outer)
 
         elif self.options["SEI"] == "ec reaction limited":
             C_sei_ec = self.param.C_sei_ec
@@ -153,41 +152,31 @@ class SEIGrowth(BaseModel):
             # so
             #  j_sei = -C_sei_ec * exp() / (1 + L_sei * C_ec * C_sei_ec * exp())
             #  c_ec = 1 / (1 + L_sei * C_ec * C_sei_ec * exp())
-            # need to revise for thermal case
-            C_sei_exp = C_sei_ec * pybamm.exp(-0.5 * (delta_phi - j * L_sei * R_sei))
+            C_sei_exp = C_sei_ec * pybamm.exp(prefactor * eta_SEI)
             j_sei = -C_sei_exp / (1 + L_sei * C_ec * C_sei_exp)
             c_ec = 1 / (1 + L_sei * C_ec * C_sei_exp)
-            if self.options["SEI on cracks"] == True:
-                j_sei_cr = -C_sei_exp / (1 + L_sei_cr * C_ec * C_sei_exp)
-                c_ec_cr = 1 / (1 + L_sei_cr * C_ec * C_sei_exp)
 
             # Get variables related to the concentration
             c_ec_av = pybamm.x_average(c_ec)
             c_ec_scale = self.param.c_ec_0_dim
 
-            variables.update(
-                {
-                    "EC surface concentration": c_ec,
-                    "EC surface concentration [mol.m-3]": c_ec * c_ec_scale,
-                    "X-averaged EC surface concentration": c_ec_av,
-                    "X-averaged EC surface concentration [mol.m-3]": c_ec_av
-                    * c_ec_scale,
-                    "EC concentration on cracks": c_ec_cr,
-                    "EC concentration on cracks [mol.m-3]": c_ec_cr * c_ec_scale,
-                    "X-averaged EC concentration on cracks": c_ec_cr_av,
-                    "X-averaged EC concentration on cracks [mol.m-3]": c_ec_cr_av
-                    * c_ec_scale,
-                }
-            )
-
-            if self.options["SEI on cracks"] == True:
-                c_ec_cr_av = pybamm.x_average(c_ec_cr)
+            if self.cracks == True:
                 variables.update(
                     {
-                        "EC concentration on cracks": c_ec_cr,
-                        "EC concentration on cracks [mol.m-3]": c_ec_cr * c_ec_scale,
-                        "X-averaged EC concentration on cracks": c_ec_cr_av,
-                        "X-averaged EC concentration on cracks [mol.m-3]": c_ec_cr_av
+                        "EC concentration on cracks": c_ec,
+                        "EC concentration on cracks [mol.m-3]": c_ec * c_ec_scale,
+                        "X-averaged EC concentration on cracks": c_ec_av,
+                        "X-averaged EC concentration on cracks [mol.m-3]": c_ec_av
+                        * c_ec_scale,
+                    }
+                )
+            else:
+                variables.update(
+                    {
+                        "EC surface concentration": c_ec,
+                        "EC surface concentration [mol.m-3]": c_ec * c_ec_scale,
+                        "X-averaged EC surface concentration": c_ec_av,
+                        "X-averaged EC surface concentration [mol.m-3]": c_ec_av
                         * c_ec_scale,
                     }
                 )
@@ -199,16 +188,16 @@ class SEIGrowth(BaseModel):
 
         j_inner = alpha * j_sei
         j_outer = (1 - alpha) * j_sei
-        variables.update(self._get_standard_reaction_variables(j_inner, j_outer))
-        if self.options["SEI on cracks"] == True:
-            j_inner_cr = alpha * j_sei_cr
-            j_outer_cr = (1 - alpha) * j_sei_cr
+
+        if cracks == True:
             variables.update(
-                self._get_standard_reaction_variables_cracks(j_inner_cr,j_outer_cr)
+                self._get_standard_reaction_variables_cracks(j_inner, j_outer)
             )
+        else:
+            variables.update(self._get_standard_reaction_variables(j_inner, j_outer))
 
         # Update whole cell variables, which also updates the "sum of" variables
-        variables.update(super().get_coupled_variables(variables))
+        variables.update(super().get_coupled_variables(variables, cracks))
 
         return variables
 

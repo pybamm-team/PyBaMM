@@ -137,11 +137,13 @@ class BaseModel(pybamm.BaseBatteryModel):
         # Different way of measuring LLI but should give same value
         LLI_sei = self.variables["Loss of lithium to SEI [mol]"]
         if self.half_cell:
+            LLI_sei_cracks = pybamm.Scalar(0)
             LLI_pl = pybamm.Scalar(0)
         else:
+            LLI_sei_cracks = self.variable["Loss of lithium to SEI on cracks [mol]"]
             LLI_pl = self.variables["Loss of lithium to lithium plating [mol]"]
 
-        LLI_reactions = LLI_sei + LLI_pl
+        LLI_reactions = LLI_sei + LLI_sei_cracks + LLI_pl
         self.variables.update(
             {
                 "Total lithium lost to side reactions [mol]": LLI_reactions,
@@ -203,8 +205,13 @@ class BaseModel(pybamm.BaseBatteryModel):
             self.submodels["sei"] = pybamm.sei.ConstantSEI(self.param, self.options)
         else:
             self.submodels["sei"] = pybamm.sei.SEIGrowth(
-                self.param, reaction_loc, self.options
+                self.param, reaction_loc, cracks=False, self.options
             )
+            # Run SEI growth model again, this time on cracks
+            if self.options["SEI on cracks"] == "true":
+                self.submodels["sei on cracks"] = pybamm.sei.SEIGrowth(
+                    self.param, reaction_loc, cracks=True, self.options
+                )
 
     def set_lithium_plating_submodel(self):
         if self.options["lithium plating"] == "none":

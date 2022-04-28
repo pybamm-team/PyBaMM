@@ -41,6 +41,9 @@ class BaseInterface(pybamm.BaseSubModel):
         elif reaction == "SEI":
             self.reaction_name = " SEI"
             self.Reaction_icd = "SEI interfacial current density"
+        elif reaction == "SEI on cracks":
+            self.reaction_name = " SEI on cracks"
+            self.Reaction_icd = "SEI on cracks interfacial current density"
         elif reaction == "lithium plating":
             self.reaction_name = " lithium plating"
             self.Reaction_icd = "Lithium plating interfacial current density"
