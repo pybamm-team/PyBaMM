@@ -41,6 +41,7 @@ jobs:
           CIBW_BEFORE_ALL_LINUX: "bash build_manylinux_wheels/install_sundials.sh 5.8.1 5.7.0"
           CIBW_BEFORE_BUILD: "python -m pip install casadi numpy"
           CIBW_BEFORE_BUILD_LINUX: "python -m pip install cmake"
+          CIBW_SKIP: pp*
 
       # see https://github.com/pybamm-team/PyBaMM/pull/1930
       - name: Install the latest version of vcpkg on windows
