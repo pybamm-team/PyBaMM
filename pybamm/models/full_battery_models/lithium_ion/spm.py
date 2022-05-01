@@ -19,6 +19,12 @@ class SPM(BaseModel):
         option to False allows users to change any number of the submodels before
         building the complete model (submodels cannot be changed after the model is
         built).
+    Examples
+    --------
+    >>> import pybamm
+    >>> model = pybamm.lithium_ion.SPM()
+    >>> model.name
+    'Single Particle Model'
 
     References
     ----------
