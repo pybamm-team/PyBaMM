@@ -61,7 +61,7 @@ jobs:
           cache-name: vckpg_binary_cache
         with:
           path: C:\Users\runneradmin\AppData\Local\vcpkg\archives
-          key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ hashFiles('vcpkg.json') }}
+          key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ hashFiles('vcpkg*.json') }}
 
       - name: Build 64 bits wheels on Windows
         if: matrix.os == 'windows-latest'
