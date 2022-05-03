@@ -47,7 +47,7 @@ class TestIDAKLUSolver(unittest.TestCase):
         dyda_ida = solution.sensitivities[param_name]
 
         # evaluate the sensitivities using finite difference
-        h = 1e-6
+        h = 1e-5
         sol_plus = solver.solve(
             model, t_eval, inputs={param_name: param_value + 0.5 * h}
         )
