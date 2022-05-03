@@ -21,11 +21,11 @@ def SEI_limited_dead_lithium_OKane2022(L_sei):
     """
 
     gamma_0 = Parameter("Dead lithium decay constant [s-1]")
-    zero = FullBroadcast(
-        Scalar(0), "negative electrode", "current collector"
-    )
+    L_inner_0 = Parameter("Initial inner SEI thickness [m]")
+    L_outer_0 = Parameter("Initial outer SEI thickness [m]")
+    L_sei_0 = L_inner_0 + L_outer_0
 
-    if L_sei.id == zero.id:
+    if L_sei < L_sei_0:
         gamma = gamma_0
     else:
         L_inner_0 = Parameter("Initial inner SEI thickness [m]")
