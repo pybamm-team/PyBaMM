@@ -8,3 +8,4 @@ Exchange-current density for plating [A.m-2],[function]plating_exchange_current_
 Exchange-current density for stripping [A.m-2],[function]stripping_exchange_current_density_OKane2020,,
 Initial plated lithium concentration [mol.m-3],0.00E+00,,
 Typical plated lithium concentration [mol.m-3],1000,1 molar,
+Lithium plating transfer coefficient,0.5,,

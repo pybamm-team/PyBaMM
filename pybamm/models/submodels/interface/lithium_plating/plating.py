@@ -81,7 +81,7 @@ class Plating(BasePlating):
         prefactor = 1 / (1 + self.param.Theta * T)
         # NEW: transfer coefficients can be set by the user
         alpha_stripping = self.param.alpha_stripping
-        alpha_plating = self.param.alpha_stripping
+        alpha_plating = self.param.alpha_plating
 
         if self.options["lithium plating"] in ["reversible", "partially reversible"]:
             j_stripping = j0_stripping * pybamm.exp(
@@ -125,8 +125,7 @@ class Plating(BasePlating):
             dead_lithium_decay_rate = self.param.dead_lithium_decay_rate(L_sei)
             coupling_term = dead_lithium_decay_rate * c_plated_Li
         else:
-            zero = pybamm.Scalar(0)
-            coupling_term = zero
+            coupling_term = pybamm.Scalar(0)
 
         self.rhs = {
             c_plated_Li: -Gamma_plating * a * j_stripping - coupling_term,

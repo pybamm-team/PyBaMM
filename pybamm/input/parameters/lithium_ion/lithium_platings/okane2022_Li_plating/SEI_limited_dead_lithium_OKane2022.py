@@ -1,4 +1,4 @@
-from pybamm import FullBroadcast, Parameter, Scalar
+from pybamm import Parameter
 
 
 def SEI_limited_dead_lithium_OKane2022(L_sei):
@@ -25,12 +25,6 @@ def SEI_limited_dead_lithium_OKane2022(L_sei):
     L_outer_0 = Parameter("Initial outer SEI thickness [m]")
     L_sei_0 = L_inner_0 + L_outer_0
 
-    if L_sei < L_sei_0:
-        gamma = gamma_0
-    else:
-        L_inner_0 = Parameter("Initial inner SEI thickness [m]")
-        L_outer_0 = Parameter("Initial outer SEI thickness [m]")
-        L_sei_0 = L_inner_0 + L_outer_0
-        gamma = gamma_0 * L_sei_0 / L_sei
+    gamma = gamma_0 * L_sei_0 / L_sei
 
     return gamma

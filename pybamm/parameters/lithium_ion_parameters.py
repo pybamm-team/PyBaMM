@@ -853,12 +853,10 @@ class LithiumIonParameters(BaseParameters):
         # lithium plating parameters
         self.c_plated_Li_0 = self.c_plated_Li_0_dim / self.c_Li_typ
 
-        self.alpha_stripping = pybamm.Parameter(
-            "Lithium stripping transfer coefficient"
-        )
         self.alpha_plating = pybamm.Parameter(
             "Lithium plating transfer coefficient"
         )
+        self.alpha_stripping = 1 - self.alpha_plating
 
         # ratio of lithium plating reaction scaled to intercalation reaction
         self.Gamma_plating = (self.a_n_typ * self.j_scale_n * self.timescale) / (
