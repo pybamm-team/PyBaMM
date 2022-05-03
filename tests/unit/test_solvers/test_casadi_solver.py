@@ -100,7 +100,7 @@ class TestCasadiSolver(unittest.TestCase):
         solver = pybamm.CasadiSolver(
             extra_options_call={"regularity_check": False}, dt_max=1e-3
         )
-        # By reducing dt_max, this one should pass. You need to add a check that the 
+        # By reducing dt_max, this one should pass. You need to add a check that the
         # final solution does indeed stop before t=20
         # Solve with failure at t=2
         t_eval = np.linspace(0, 20, 100)
