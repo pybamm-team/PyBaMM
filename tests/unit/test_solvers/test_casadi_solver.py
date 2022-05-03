@@ -84,6 +84,10 @@ class TestCasadiSolver(unittest.TestCase):
         pybamm.set_logging_level("WARNING")
 
     def test_model_solver_failure(self):
+
+See extra comments added with ####
+
+def test_model_solver_failure(self):
         # Create model
         model = pybamm.BaseModel()
         var = pybamm.Variable("var")
@@ -97,7 +101,11 @@ class TestCasadiSolver(unittest.TestCase):
         disc = pybamm.Discretisation()
         model_disc = disc.process_model(model, inplace=False)
 
-        solver = pybamm.CasadiSolver(extra_options_call={"regularity_check": False})
+        solver = pybamm.CasadiSolver(
+            extra_options_call={"regularity_check": False}, dt_max=1e-3
+        )
+        #### By reducing dt_max, this one should pass. You need to add a check that the final solution 
+        #### does indeed stop before t=20
         # Solve with failure at t=2
         t_eval = np.linspace(0, 20, 100)
         with self.assertWarns(pybamm.SolverWarning):
@@ -106,8 +114,11 @@ class TestCasadiSolver(unittest.TestCase):
         model.initial_conditions = {var: 0}
         model_disc = disc.process_model(model, inplace=False)
         t_eval = np.linspace(0, 20, 100)
+        #### This one should fail immediately and throw a `SolverError`
+        #### since no progress can be made from the first timestep
         with self.assertWarns(pybamm.SolverWarning):
             solver.solve(model_disc, t_eval)
+
 
     def test_model_solver_events(self):
         # Create model
