@@ -84,10 +84,6 @@ class TestCasadiSolver(unittest.TestCase):
         pybamm.set_logging_level("WARNING")
 
     def test_model_solver_failure(self):
-
-See extra comments added with ####
-
-def test_model_solver_failure(self):
         # Create model
         model = pybamm.BaseModel()
         var = pybamm.Variable("var")
@@ -118,7 +114,6 @@ def test_model_solver_failure(self):
         #### since no progress can be made from the first timestep
         with self.assertWarns(pybamm.SolverWarning):
             solver.solve(model_disc, t_eval)
-
 
     def test_model_solver_events(self):
         # Create model
