@@ -71,6 +71,7 @@ jobs:
           python -m cibuildwheel --output-dir wheelhouse
         env:
           CIBW_ENVIRONMENT: "PYBAMM_USE_VCPKG=ON VCPKG_ROOT_DIR=$cd/vcpkg VCPKG_DEFAULT_TRIPLET=x64-windows-static VCPKG_FEATURE_FLAGS=manifests,registries CMAKE_GENERATOR=\"Visual Studio 16 2019\" CMAKE_GENERATOR_PLATFORM=x64"
+          CIBW_BEFORE_BUILD: "python -m pip install casadi numpy"
           CIBW_ARCHS: "AMD64"
 
       - uses: actions/upload-artifact@v2
