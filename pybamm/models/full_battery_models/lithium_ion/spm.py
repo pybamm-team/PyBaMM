@@ -107,22 +107,23 @@ class SPM(BaseModel):
     def set_particle_submodel(self):
         for domain in ["Negative", "Positive"]:
             particle = getattr(self.options, domain.lower())["particle"]
-            if particle == "Fickian diffusion":
-                self.submodels[
-                    domain.lower() + " particle"
-                ] = pybamm.particle.no_distribution.XAveragedFickianDiffusion(
-                    self.param, domain, self.options
-                )
-            elif particle in [
-                "uniform profile",
-                "quadratic profile",
-                "quartic profile",
-            ]:
-                self.submodels[
-                    domain.lower() + " particle"
-                ] = pybamm.particle.no_distribution.XAveragedPolynomialProfile(
-                    self.param, domain, particle, self.options
-                )
+            for phase in self.options["negative particle phases"]:
+                if particle == "Fickian diffusion":
+                    self.submodels[
+                        domain.lower() + phase + " particle"
+                    ] = pybamm.particle.no_distribution.XAveragedFickianDiffusion(
+                        self.param, domain, self.options, phase
+                    )
+                elif particle in [
+                    "uniform profile",
+                    "quadratic profile",
+                    "quartic profile",
+                ]:
+                    self.submodels[
+                        domain.lower() + phase + " particle"
+                    ] = pybamm.particle.no_distribution.XAveragedPolynomialProfile(
+                        self.param, domain, particle, self.options, phase
+                    )
 
     def set_solid_submodel(self):
 

@@ -8,12 +8,12 @@ import numpy as np
 pybamm.set_logging_level("INFO")
 
 # load model
-model = pybamm.lithium_ion.DFN()
+model = pybamm.lithium_ion.SPM({"negative particle phases": ["graphite", "silicon"]})
 # create geometry
 geometry = model.default_geometry
 
 # load parameter values and process model and geometry
-param = model.default_parameter_values
+param = pybamm.ParameterValues("Chen2020_composite")
 param.process_geometry(geometry)
 param.process_model(model)
 
@@ -35,13 +35,13 @@ solution = solver.solve(model, t_eval)
 plot = pybamm.QuickPlot(
     solution,
     [
-        "Negative particle concentration [mol.m-3]",
-        "Electrolyte concentration [mol.m-3]",
-        "Positive particle concentration [mol.m-3]",
-        "Current [A]",
-        "Negative electrode potential [V]",
-        "Electrolyte potential [V]",
-        "Positive electrode potential [V]",
+        # "Negative particle concentration [mol.m-3]",
+        # "Electrolyte concentration [mol.m-3]",
+        # "Positive particle concentration [mol.m-3]",
+        # "Current [A]",
+        # "Negative electrode potential [V]",
+        # "Electrolyte potential [V]",
+        # "Positive electrode potential [V]",
         "Terminal voltage [V]",
     ],
     time_unit="seconds",

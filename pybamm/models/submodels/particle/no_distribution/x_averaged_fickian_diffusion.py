@@ -21,22 +21,24 @@ class XAveragedFickianDiffusion(BaseFickian):
     options: dict
         A dictionary of options to be passed to the model.
         See :class:`pybamm.BaseBatteryModel`
+    phase : str
+        Phase of the particle
 
     **Extends:** :class:`pybamm.particle.BaseParticle`
     """
 
-    def __init__(self, param, domain, options):
-        super().__init__(param, domain, options)
+    def __init__(self, param, domain, options, phase):
+        super().__init__(param, domain, options, phase)
 
     def get_fundamental_variables(self):
-        if self.domain == "Negative":
-            c_s_xav = pybamm.standard_variables.c_s_n_xav
-            c_s = pybamm.SecondaryBroadcast(c_s_xav, ["negative electrode"])
-
-        elif self.domain == "Positive":
-            c_s_xav = pybamm.standard_variables.c_s_p_xav
-            c_s = pybamm.SecondaryBroadcast(c_s_xav, ["positive electrode"])
-
+        domain = self.domain.lower()
+        c_s_xav = pybamm.Variable(
+            f"X-averaged {domain} {self.phase} particle concentration",
+            domain=f"{domain} particle",
+            auxiliary_domains={"secondary": "current collector"},
+            bounds=(0, 1),
+        )
+        c_s = pybamm.SecondaryBroadcast(c_s_xav, [f"{domain} electrode"])
         variables = self._get_standard_concentration_variables(c_s, c_s_xav=c_s_xav)
 
         return variables
@@ -65,10 +67,9 @@ class XAveragedFickianDiffusion(BaseFickian):
         return variables
 
     def set_rhs(self, variables):
-        c_s_xav = variables[
-            "X-averaged " + self.domain.lower() + " particle concentration"
-        ]
-        N_s_xav = variables["X-averaged " + self.domain.lower() + " particle flux"]
+        domain_phase = self.domain.lower() + " " + self.phase
+        c_s_xav = variables[f"X-averaged {domain_phase} particle concentration"]
+        N_s_xav = variables[f"X-averaged {domain_phase} particle flux"]
 
         if self.domain == "Negative":
             self.rhs = {c_s_xav: -(1 / self.param.C_n) * pybamm.div(N_s_xav)}
@@ -77,9 +78,8 @@ class XAveragedFickianDiffusion(BaseFickian):
             self.rhs = {c_s_xav: -(1 / self.param.C_p) * pybamm.div(N_s_xav)}
 
     def set_boundary_conditions(self, variables):
-        c_s_xav = variables[
-            "X-averaged " + self.domain.lower() + " particle concentration"
-        ]
+        domain_phase = self.domain.lower() + " " + self.phase
+        c_s_xav = variables[f"X-averaged {domain_phase} particle concentration"]
         D_eff_xav = variables[
             "X-averaged " + self.domain.lower() + " effective diffusivity"
         ]
@@ -117,7 +117,7 @@ class XAveragedFickianDiffusion(BaseFickian):
         so we take the x-average of the supplied initial conditions.
         """
         c_s_xav = variables[
-            "X-averaged " + self.domain.lower() + " particle concentration"
+            f"X-averaged {self.domain.lower()} {self.phase} particle concentration"
         ]
 
         if self.domain == "Negative":

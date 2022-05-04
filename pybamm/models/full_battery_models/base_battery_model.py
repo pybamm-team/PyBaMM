@@ -73,6 +73,12 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                 "stress-driven", "reaction-driven", or "stress and reaction-driven".
                 A 2-tuple can be provided for different behaviour in negative and
                 positive electrodes.
+            * "negative particle phases": list
+                A list of the phases that are present in the negative electrode.
+                Defaults (automaticallt assigned if "default" is passed in) are
+
+                - ["graphite"] for lithium-ion models
+                - [] for lead-acid models (no particles)
             * "operating mode" : str
                 Sets the operating mode for the model. This determines how the current
                 is set. Can be:
@@ -250,6 +256,7 @@ class BatteryModelOptions(pybamm.FuzzyDict):
         }
         default_options["external submodels"] = []
         default_options["timescale"] = "default"
+        default_options["negative particle phases"] = "default"
 
         # Change the default for cell geometry based on which thermal option is provided
         extra_options = extra_options or {}
@@ -429,8 +436,15 @@ class BatteryModelOptions(pybamm.FuzzyDict):
 
         # Check options are valid
         for option, value in options.items():
-            if option == "external submodels" or option == "working electrode":
+            if option in ["external submodels", "working electrode"]:
                 pass
+            elif option == "negative particle phases":
+                # This option can be "default" or a list of any length
+                if not (value == "default" or isinstance(value, list)):
+                    raise pybamm.OptionError(
+                        "'negative particle phases' must be 'default' or a list of "
+                        "phases"
+                    )
             else:
                 if isinstance(value, str) or option in [
                     "dimensionality",
@@ -619,6 +633,12 @@ class BaseBatteryModel(pybamm.BaseModel):
 
     @options.setter
     def options(self, extra_options):
+        neg_phases = extra_options.get("negative particle phases", "default")
+        if neg_phases == "default":
+            if isinstance(self, pybamm.lithium_ion.BaseModel):
+                extra_options["negative particle phases"] = ["graphite"]
+            elif isinstance(self, pybamm.lead_acid.BaseModel):
+                extra_options["negative particle phases"] = []
         options = BatteryModelOptions(extra_options)
 
         # Options that are incompatible with models

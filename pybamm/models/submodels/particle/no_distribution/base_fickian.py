@@ -18,12 +18,14 @@ class BaseFickian(BaseParticle):
     options: dict
         A dictionary of options to be passed to the model.
         See :class:`pybamm.BaseBatteryModel`
+    phase : str
+        Phase of the particle
 
     **Extends:** :class:`pybamm.particle.BaseParticle`
     """
 
-    def __init__(self, param, domain, options):
-        super().__init__(param, domain, options)
+    def __init__(self, param, domain, options, phase):
+        super().__init__(param, domain, options, phase)
 
     def _get_effective_diffusivity(self, c, T):
         param = self.param
