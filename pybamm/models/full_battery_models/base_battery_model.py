@@ -110,8 +110,8 @@ class BatteryModelOptions(pybamm.FuzzyDict):
             * "SEI" : str
                 Set the SEI submodel to be used. Options are:
 
-                - "constant": :class:`pybamm.sei.Constant` (constant SEI thickness)
                 - "none": :class:`pybamm.sei.NoSEI` (no SEI growth)
+                - "constant": :class:`pybamm.sei.Constant` (constant SEI thickness)
                 - "reaction limited", "solvent-diffusion limited",\
                     "electron-migration limited", "interstitial-diffusion limited", \
                     or "ec reaction limited": :class:`pybamm.sei.SEIGrowth`
@@ -233,8 +233,8 @@ class BatteryModelOptions(pybamm.FuzzyDict):
             "particle shape": ["spherical", "no particles"],
             "particle size": ["single", "distribution"],
             "SEI": [
-                "constant",
                 "none",
+                "constant",
                 "reaction limited",
                 "solvent-diffusion limited",
                 "electron-migration limited",
