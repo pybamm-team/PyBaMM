@@ -33,6 +33,7 @@ jobs:
         run: |
           brew update
           brew install gcc
+          which gfortran
           python -m pip install cmake wget
           python scripts/install_KLU_Sundials.py
 
