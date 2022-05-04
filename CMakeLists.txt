@@ -50,6 +50,8 @@ if(NOT CASADI_DIR)
     OUTPUT_STRIP_TRAILING_WHITESPACE)
     file(TO_CMAKE_PATH ${CASADI_DIR} CASADI_DIR)
     message("Found casadi path: ${CASADI_DIR}")
+    FILE(GLOB children RELATIVE ${CASADI_DIR} ${CASADI_DIR}/*)
+    message("Contents of casadi path: ${children}")
 endif()
 find_package(casadi CONFIG PATHS ${CASADI_DIR} REQUIRED)
 
