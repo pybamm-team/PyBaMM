@@ -4,7 +4,8 @@ from pybamm import exp, tanh
 def graphite_LGM50_ocp_Chen2020(sto):
     """
     LG M50 graphite open circuit potential as a function of stochiometry, fit taken
-    from [1].
+    from [1]  with an extra term added by Simon O'Kane to capture behaviour in 
+    the high stoichiometry range.
 
     References
     ----------
