@@ -1,4 +1,5 @@
-cmake_minimum_required(VERSION 3.10)
+cmake_minimum_required(VERSION 3.13)
+cmake_policy(SET CMP0074 NEW)
 
 if(DEFINED ENV{VCPKG_ROOT_DIR} AND NOT DEFINED VCPKG_ROOT_DIR)
   set(VCPKG_ROOT_DIR "$ENV{VCPKG_ROOT_DIR}"
@@ -50,8 +51,6 @@ if(NOT CASADI_DIR)
     OUTPUT_STRIP_TRAILING_WHITESPACE)
     file(TO_CMAKE_PATH ${CASADI_DIR} CASADI_DIR)
     message("Found casadi path: ${CASADI_DIR}")
-    FILE(GLOB children RELATIVE ${CASADI_DIR} ${CASADI_DIR}/*)
-    message("Contents of casadi path: ${children}")
 endif()
 find_package(casadi CONFIG PATHS ${CASADI_DIR} REQUIRED)
 
