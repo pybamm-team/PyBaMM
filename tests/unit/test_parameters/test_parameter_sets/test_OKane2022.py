@@ -20,7 +20,7 @@ class TestOKane2022(unittest.TestCase):
 
     def test_functions(self):
         root = pybamm.root_dir()
-        param = pybamm.ParameterValues("Chen2020_plating")
+        param = pybamm.ParameterValues("OKane2022")
         T = pybamm.Scalar(298.15)
 
         p = "pybamm/input/parameters/lithium_ion/lithium_platings/okane2022_Li_plating/"

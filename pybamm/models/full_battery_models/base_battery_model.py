@@ -305,6 +305,15 @@ class BatteryModelOptions(pybamm.FuzzyDict):
         # The "stress-induced diffusion" option will still be overridden by
         # extra_options if provided
 
+        # Change default SEI model based on which lithium plating option is provided
+        # return "none" if option not given
+        plating_option = extra_options.get("lithium plating", "none")
+        if plating_option == "partially reversible":
+            default_options["SEI"] = "constant"
+        else:
+            default_options["SEI"] = "none"
+        # The "SEI" option will still be overridden by extra_options if provided
+
         options = pybamm.FuzzyDict(default_options)
         # any extra options overwrite the default options
         for name, opt in extra_options.items():
