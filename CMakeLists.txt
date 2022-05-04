@@ -48,8 +48,10 @@ if(NOT CASADI_DIR)
     "import casadi as _; print(_.__path__[0])"
     OUTPUT_VARIABLE CASADI_DIR
     OUTPUT_STRIP_TRAILING_WHITESPACE)
+    file(TO_CMAKE_PATH ${CASADI_DIR} CASADI_DIR)
+    message("Found casadi path: ${CASADI_DIR}")
 endif()
-find_package(casadi CONFIG PATHS "${CASADI_DIR}" REQUIRED)
+find_package(casadi CONFIG PATHS ${CASADI_DIR} REQUIRED)
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${PROJECT_SOURCE_DIR})
 # Sundials
