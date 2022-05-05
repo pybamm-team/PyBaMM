@@ -31,9 +31,9 @@ jobs:
       - name: Install sundials on macOS
         if: matrix.os == 'macos-latest'
         run: |
+          # https://github.com/actions/virtual-environments/issues/1280
           brew update
-          brew install gcc
-          which gfortran
+          brew reinstall gcc
           python -m pip install cmake wget
           python scripts/install_KLU_Sundials.py
 
