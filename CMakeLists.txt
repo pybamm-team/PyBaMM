@@ -53,6 +53,7 @@ if(NOT CASADI_DIR)
     OUTPUT_STRIP_TRAILING_WHITESPACE)
   file(TO_CMAKE_PATH ${CASADI_DIR} CASADI_DIR)
   message("Found casadi path: ${CASADI_DIR}")
+endif()
 
 find_package(casadi CONFIG PATHS ${CASADI_DIR} REQUIRED)
 
