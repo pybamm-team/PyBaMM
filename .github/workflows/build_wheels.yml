@@ -97,10 +97,11 @@ jobs:
 
       - name: Build 64 bits wheels on Windows
         if: matrix.os == 'windows-latest'
+        shell: msys2 {0}
         run: |
           python -m cibuildwheel --output-dir wheelhouse
         env:
-          CIBW_ENVIRONMENT: "PYBAMM_USE_VCPKG=ON VCPKG_ROOT_DIR=$cd/vcpkg VCPKG_DEFAULT_TRIPLET=x64-mingw-static VCPKG_FEATURE_FLAGS=manifests,registries CMAKE_GENERATOR=\"MinGW Makefiles\" CMAKE_CXX_COMPILER=g++.exe CMAKE_C_COMPILER=gcc.exe"
+          CIBW_ENVIRONMENT: "PYBAMM_USE_VCPKG=ON VCPKG_ROOT_DIR=$cd/vcpkg VCPKG_DEFAULT_TRIPLET=x64-mingw-static VCPKG_FEATURE_FLAGS=manifests,registries CMAKE_GENERATOR=\"Ninja\""
           CIBW_BEFORE_BUILD: "python -m pip install casadi numpy"
           CIBW_ARCHS: "AMD64"
 
