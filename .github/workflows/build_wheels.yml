@@ -27,8 +27,7 @@ jobs:
             git
             base-devel
             mingw-w64-x86_64-toolchain
-
-      - uses: actions/setup-python@v2
+            python-pip
 
       - name: Install cibuildwheel
         run: python -m pip install cibuildwheel==1.9.0
@@ -55,7 +54,7 @@ jobs:
           rm -r -fo vcpkg
           git clone https://github.com/microsoft/vcpkg
           cd vcpkg
-          .\bootstrap-vcpkg.bat
+          ./bootstrap-vcpkg.bat
 
       - name: Build 64 bits wheels on Windows
         run: |
