@@ -45,6 +45,11 @@ jobs:
           CIBW_BEFORE_BUILD: "python -m pip install cmake casadi numpy"
           CIBW_SKIP: pp*
 
+
+      - name: Install mingw on windows
+        uses: msys2/setup-msys2@v2
+        if: matrix.os == 'windows-latest'
+
       # see https://github.com/pybamm-team/PyBaMM/pull/1930
       - name: Install the latest version of vcpkg on windows
         if: matrix.os == 'windows-latest'
