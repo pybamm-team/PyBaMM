@@ -54,9 +54,14 @@ if(NOT CASADI_DIR)
     file(TO_CMAKE_PATH ${CASADI_DIR} CASADI_DIR)
     message("Found casadi path: ${CASADI_DIR}")
 
-set(CMAKE_IMPORT_LIBRARY_SUFFIX ".dll.a")
+# casadi is build with mingw which uses .dll.a rather than .lib
+if (WIN32)
+  set(CMAKE_IMPORT_LIBRARY_SUFFIX ".dll.a")
+endif()
 find_package(casadi CONFIG PATHS ${CASADI_DIR} REQUIRED)
-set(CMAKE_IMPORT_LIBRARY_SUFFIX ".lib")
+if (WIN32)
+  set(CMAKE_IMPORT_LIBRARY_SUFFIX ".lib")
+endif()
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${PROJECT_SOURCE_DIR})
 # Sundials
