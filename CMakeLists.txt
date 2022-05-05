@@ -25,6 +25,7 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_EXPORT_COMPILE_COMMANDS 1)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
+
 # casadi seems to compile without the newer versions of std::string
 add_compile_definitions(_GLIBCXX_USE_CXX11_ABI=0)
 
@@ -52,10 +53,10 @@ if(NOT CASADI_DIR)
     OUTPUT_STRIP_TRAILING_WHITESPACE)
     file(TO_CMAKE_PATH ${CASADI_DIR} CASADI_DIR)
     message("Found casadi path: ${CASADI_DIR}")
-    if(EXISTS "${CASADI_DIR}/casadi.lib")
-      configure_file(${CASADI_DIR}/casadi.lib ${CASADI_DIR}/libcasadi.lib COPYONLY)
-    endif()
+
+set(CMAKE_IMPORT_LIBRARY_SUFFIX ".dll.a")
 find_package(casadi CONFIG PATHS ${CASADI_DIR} REQUIRED)
+set(CMAKE_IMPORT_LIBRARY_SUFFIX ".lib")
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${PROJECT_SOURCE_DIR})
 # Sundials
