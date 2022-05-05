@@ -27,7 +27,7 @@ jobs:
             git
             base-devel
             mingw-w64-x86_64-toolchain
-            python-pip
+            mingw-w64-x86_64-python3-pip
 
       - name: test
         run: |
@@ -36,7 +36,7 @@ jobs:
           python --version
 
       - name: Install cibuildwheel
-        run: pip install cibuildwheel==1.9.0
+        run: python -m pip install cibuildwheel==1.9.0
 
       - name: Clone pybind11 repo (no history)
         run: git clone --depth 1 --branch v2.6.2 https://github.com/pybind/pybind11.git
@@ -67,7 +67,7 @@ jobs:
           python -m cibuildwheel --output-dir wheelhouse
         env:
           CIBW_ENVIRONMENT: "PYBAMM_USE_VCPKG=ON VCPKG_ROOT_DIR=$cd/vcpkg VCPKG_DEFAULT_TRIPLET=x64-mingw-dynamic VCPKG_DEFAULT_HOST_TRIPLET=x64-mingw-dynamic VCPKG_FEATURE_FLAGS=manifests,registries CMAKE_GENERATOR=\"MinGW Makefiles\""
-          CIBW_BEFORE_BUILD: "pip install casadi numpy"
+          CIBW_BEFORE_BUILD: "python -m pip install casadi numpy"
           CIBW_ARCHS: "AMD64"
           CIBW_BUILD_VERBOSITY: 1
 
