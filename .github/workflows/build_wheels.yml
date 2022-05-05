@@ -100,7 +100,7 @@ jobs:
         run: |
           python -m cibuildwheel --output-dir wheelhouse
         env:
-          CIBW_ENVIRONMENT: "PYBAMM_USE_VCPKG=ON VCPKG_ROOT_DIR=$cd/vcpkg VCPKG_DEFAULT_TRIPLET=x64-mingw-static VCPKG_FEATURE_FLAGS=manifests,registries CMAKE_GENERATOR=\"Ninja\""
+          CIBW_ENVIRONMENT: "PYBAMM_USE_VCPKG=ON VCPKG_ROOT_DIR=$cd/vcpkg VCPKG_DEFAULT_TRIPLET=x64-mingw-static VCPKG_DEFAULT_HOST_TRIPLET=x64-mingw-dynamic VCPKG_FEATURE_FLAGS=manifests,registries CMAKE_GENERATOR=\"Ninja\""
           CIBW_BEFORE_BUILD: "python -m pip install casadi numpy"
           CIBW_ARCHS: "AMD64"
 
