@@ -47,12 +47,32 @@ jobs:
 
 
       - name: Install mingw on windows
-        uses: msys2/setup-msys2@v2
         if: matrix.os == 'windows-latest'
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: MINGW64
+          update: true
+          install: >-
+            git
+            base-devel
+            mingw-w64-x86_64-toolchain
+
+      - name: check gcc compiler
+        if: matrix.os == 'windows-latest'
+        shell: msys2 {0}
+        run: |
+          gcc.exe --version
+
+      - name: check g++ compiler
+        if: matrix.os == 'windows-latest'
+        shell: msys2 {0}
+        run: |
+          g++.exe --version
 
       # see https://github.com/pybamm-team/PyBaMM/pull/1930
       - name: Install the latest version of vcpkg on windows
         if: matrix.os == 'windows-latest'
+        shell: msys2 {0}
         run: |
           cd C:\
           rm -r -fo 'C:\vcpkg'
