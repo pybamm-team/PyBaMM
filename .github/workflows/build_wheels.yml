@@ -29,6 +29,12 @@ jobs:
             mingw-w64-x86_64-toolchain
             python-pip
 
+      - name: test
+        run: |
+          which python
+          which pip
+          python --version
+
       - name: Install cibuildwheel
         run: pip install cibuildwheel==1.9.0
 
