@@ -57,22 +57,29 @@ jobs:
             base-devel
             mingw-w64-x86_64-toolchain
 
+      - name: Add mingw64 to path
+        if: matrix.os == 'windows-latest'
+      - run: echo "D:/a/_temp/msys/msys64/mingw64/bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+
       - name: check gcc compiler
         if: matrix.os == 'windows-latest'
-        shell: msys2 {0}
+        shell:
         run: |
           gcc.exe --version
 
       - name: check g++ compiler
         if: matrix.os == 'windows-latest'
-        shell: msys2 {0}
         run: |
           g++.exe --version
+
+      - name: check gfortran compiler
+        if: matrix.os == 'windows-latest'
+        run: |
+          gfortran.exe --version
 
       # see https://github.com/pybamm-team/PyBaMM/pull/1930
       - name: Install the latest version of vcpkg on windows
         if: matrix.os == 'windows-latest'
-        shell: msys2 {0}
         run: |
           cd C:\
           rm -r -fo 'C:\vcpkg'
