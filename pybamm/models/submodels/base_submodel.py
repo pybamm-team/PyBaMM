@@ -61,6 +61,10 @@ class BaseSubModel(pybamm.BaseModel):
     ):
         super().__init__(name)
         self.param = param
+        if domain == "Negative":
+            self.domain_param = param.n
+        elif domain == "Positive":
+            self.domain_param = param.p
 
         self.domain = domain
         self.set_domain_for_broadcast()
