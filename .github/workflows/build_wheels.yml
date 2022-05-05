@@ -61,6 +61,10 @@ jobs:
         if: matrix.os == 'windows-latest'
         run: echo "D:/a/_temp/msys/msys64/mingw64/bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
 
+      - name: print path
+        if: matrix.os == 'windows-latest'
+        run: echo $env:GITHUB_PATH
+
       - name: check gcc compiler
         if: matrix.os == 'windows-latest'
         run: |
