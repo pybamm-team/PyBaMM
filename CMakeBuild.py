@@ -110,10 +110,12 @@ class CMakeBuild(build_ext):
             (
                 vcpkg_root_dir,
                 vcpkg_default_triplet,
+                vcpkg_default_host_triplet,
                 vcpkg_feature_flags,
             ) = set_vcpkg_environment_variables()
             build_env["vcpkg_root_dir"] = vcpkg_root_dir
             build_env["vcpkg_default_triplet"] = vcpkg_default_triplet
+            build_env["vcpkg_default_host_triplet"] = vcpkg_default_triplet
             build_env["vcpkg_feature_flags"] = vcpkg_feature_flags
 
         cmake_list_dir = os.path.abspath(os.path.dirname(__file__))
