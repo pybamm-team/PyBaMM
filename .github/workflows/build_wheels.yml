@@ -63,7 +63,6 @@ jobs:
 
       - name: check gcc compiler
         if: matrix.os == 'windows-latest'
-        shell:
         run: |
           gcc.exe --version
 
