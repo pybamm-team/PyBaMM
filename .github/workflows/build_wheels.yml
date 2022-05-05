@@ -27,7 +27,7 @@ jobs:
             git
             base-devel
             mingw-w64-x86_64-toolchain
-            mingw-w64-x86_64-python3-pip
+            mingw-w64-x86_64-python-pip
 
       - name: test
         run: |
