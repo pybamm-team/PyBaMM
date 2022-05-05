@@ -51,7 +51,7 @@ jobs:
       - name: Install the latest version of vcpkg on windows
         run: |
           cd /c
-          rm -r -fo vcpkg
+          rm -rf vcpkg
           git clone https://github.com/microsoft/vcpkg
           cd vcpkg
           ./bootstrap-vcpkg.bat
