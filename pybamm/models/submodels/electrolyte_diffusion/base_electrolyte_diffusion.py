@@ -20,19 +20,15 @@ class BaseElectrolyteDiffusion(pybamm.BaseSubModel):
     def __init__(self, param, options=None):
         super().__init__(param, options=options)
 
-    def _get_standard_concentration_variables(self, c_e_n, c_e_s, c_e_p):
+    def _get_standard_concentration_variables(self, c_e_list):
         """
         A private function to obtain the standard variables which
         can be derived from the concentration in the electrolyte.
 
         Parameters
         ----------
-        c_e_n : :class:`pybamm.Symbol`
-            The electrolyte concentration in the negative electrode.
-        c_e_s : :class:`pybamm.Symbol`
-            The electrolyte concentration in the separator.
-        c_e_p : :class:`pybamm.Symbol`
-            The electrolyte concentration in the positive electrode.
+        c_e_list : list of :class:`pybamm.Symbol`
+            Electrolyte concentrations in the various domains
 
         Returns
         -------
@@ -42,16 +38,11 @@ class BaseElectrolyteDiffusion(pybamm.BaseSubModel):
         """
 
         c_e_typ = self.param.c_e_typ
-        c_e = pybamm.concatenation(c_e_n, c_e_s, c_e_p)
+        c_e = pybamm.concatenation(*c_e_list)
+        # Override print_name
+        c_e.print_name = "c_e"
 
-        if self.half_cell:
-            # overwrite c_e_n to be the boundary value of c_e_s
-            c_e_n = pybamm.boundary_value(c_e_s, "left")
-
-        c_e_n_av = pybamm.x_average(c_e_n)
         c_e_av = pybamm.x_average(c_e)
-        c_e_s_av = pybamm.x_average(c_e_s)
-        c_e_p_av = pybamm.x_average(c_e_p)
 
         variables = {
             "Electrolyte concentration": c_e,
@@ -60,46 +51,34 @@ class BaseElectrolyteDiffusion(pybamm.BaseSubModel):
             "X-averaged electrolyte concentration": c_e_av,
             "X-averaged electrolyte concentration [mol.m-3]": c_e_typ * c_e_av,
             "X-averaged electrolyte concentration [Molar]": c_e_typ * c_e_av / 1000,
-            "Negative electrolyte concentration": c_e_n,
-            "Negative electrolyte concentration [mol.m-3]": c_e_typ * c_e_n,
-            "Negative electrolyte concentration [Molar]": c_e_typ * c_e_n / 1000,
-            "Separator electrolyte concentration": c_e_s,
-            "Separator electrolyte concentration [mol.m-3]": c_e_typ * c_e_s,
-            "Separator electrolyte concentration [Molar]": c_e_typ * c_e_s / 1000,
-            "Positive electrolyte concentration": c_e_p,
-            "Positive electrolyte concentration [mol.m-3]": c_e_typ * c_e_p,
-            "Positive electrolyte concentration [Molar]": c_e_typ * c_e_p / 1000,
-            "X-averaged negative electrolyte concentration": c_e_n_av,
-            "X-averaged negative electrolyte concentration [mol.m-3]": c_e_typ
-            * c_e_n_av,
-            "X-averaged separator electrolyte concentration": c_e_s_av,
-            "X-averaged separator electrolyte concentration [mol.m-3]": c_e_typ
-            * c_e_s_av,
-            "X-averaged positive electrolyte concentration": c_e_p_av,
-            "X-averaged positive electrolyte concentration [mol.m-3]": c_e_typ
-            * c_e_p_av,
         }
+        # if self.half_cell:
+        #     # overwrite c_e_n to be the boundary value of c_e_s
+        #     c_e_n = pybamm.boundary_value(c_e_s, "left")
 
-        # Override print_name
-        c_e.print_name = "c_e"
+        for dom, c_e_dom in zip(self.domains, c_e_list):
+            name = dom.split(" ")[0] + " electrolyte concentration"
+            Name = name.capitalize()
+            c_e_dom_av = pybamm.x_average(c_e_dom)
+            variables.update(
+                {
+                    f"{Name}": c_e_dom,
+                    f"{Name} [mol.m-3]": c_e_typ * c_e_dom,
+                    f"{Name} [Molar]": c_e_typ * c_e_dom / 1000,
+                    f"X-averaged {name}": c_e_dom_av,
+                    f"X-averaged {name} [mol.m-3]": c_e_typ * c_e_dom_av,
+                }
+            )
 
         return variables
 
-    def _get_standard_porosity_times_concentration_variables(
-        self, eps_c_e_n, eps_c_e_s, eps_c_e_p
-    ):
-        eps_c_e = pybamm.concatenation(eps_c_e_n, eps_c_e_s, eps_c_e_p)
+    def _get_standard_porosity_times_concentration_variables(self, eps_c_e_list):
+        eps_c_e = pybamm.concatenation(*eps_c_e_list)
+        variables = {"Porosity times concentration": eps_c_e}
 
-        variables = {
-            "Porosity times concentration": eps_c_e,
-            "Separator porosity times concentration": eps_c_e_s,
-            "Positive electrode porosity times concentration": eps_c_e_p,
-        }
+        for dom, eps_c_e_dom in zip(self.domains, eps_c_e_list):
+            variables[f"{dom} porosity times concentration"] = eps_c_e_dom
 
-        if not self.half_cell:
-            variables.update(
-                {"Negative electrode porosity times concentration": eps_c_e_n}
-            )
         return variables
 
     def _get_standard_flux_variables(self, N_e):
