@@ -99,7 +99,6 @@ jobs:
         if: matrix.os == 'windows-latest'
         shell: msys2 {0}
         run: |
-          source shell mingw64
           python -m venv env
           source env/bin/activate
           pip install cibuildwheel==1.9.0
