@@ -21,11 +21,6 @@ def set_vcpkg_environment_variables():
         raise EnvironmentError(
             "Environment variable 'VCPKG_DEFAULT_TRIPLET' is undefined."
         )
-    if not os.getenv("VCPKG_DEFAULT_HOST_TRIPLET"):
-        raise EnvironmentError(
-            "Environment variable 'VCPKG_DEFAULT_HOST_TRIPLET' is undefined."
-        )
-
     if not os.getenv("VCPKG_FEATURE_FLAGS"):
         raise EnvironmentError(
             "Environment variable 'VCPKG_FEATURE_FLAGS' is undefined."
@@ -33,7 +28,6 @@ def set_vcpkg_environment_variables():
     return (
         os.getenv("VCPKG_ROOT_DIR"),
         os.getenv("VCPKG_DEFAULT_TRIPLET"),
-        os.getenv("VCPKG_DEFAULT_HOST_TRIPLET"),
         os.getenv("VCPKG_FEATURE_FLAGS"),
     )
 
@@ -110,12 +104,10 @@ class CMakeBuild(build_ext):
             (
                 vcpkg_root_dir,
                 vcpkg_default_triplet,
-                vcpkg_default_host_triplet,
                 vcpkg_feature_flags,
             ) = set_vcpkg_environment_variables()
             build_env["vcpkg_root_dir"] = vcpkg_root_dir
             build_env["vcpkg_default_triplet"] = vcpkg_default_triplet
-            build_env["vcpkg_default_host_triplet"] = vcpkg_default_host_triplet
             build_env["vcpkg_feature_flags"] = vcpkg_feature_flags
 
         cmake_list_dir = os.path.abspath(os.path.dirname(__file__))
