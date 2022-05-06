@@ -39,7 +39,6 @@ jobs:
           key: ${{ runner.os }}-build-${{ env.cache-name }}-v1-${{ hashFiles('vcpkg*.json') }}
 
       - name: Build 64 bits wheels on Windows
-        if: matrix.os == 'windows-latest'
         run: |
           choco install --yes visualstudio2019community
           choco install --yes visualstudio2019-workload-nativedesktop
