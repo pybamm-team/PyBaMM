@@ -10,10 +10,9 @@ on:
         default: 'pypi'
 
 jobs:
-    build_windows_wheels:
+  build_windows_wheels:
     runs-on: windows-latest
     steps:
-
       - uses: actions/setup-python@v2
 
       - name: Install cibuildwheel
@@ -53,7 +52,6 @@ jobs:
         with:
           name: wheels
           path: ./wheelhouse/*.whl
-      - uses: actions/checkout@v2
 
   build_windows_wheels_msys:
     runs-on: windows-latest
