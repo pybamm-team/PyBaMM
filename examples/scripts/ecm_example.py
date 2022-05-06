@@ -166,3 +166,17 @@ sol2 = solver2.solve(model, t_eval)
 
 plot = pybamm.QuickPlot(solutions=[sol, sol2], output_variables=output_variables)
 plot.dynamic_plot()
+
+# set all print names
+t.print_name = "t"
+z.print_name = "z"
+i.print_name = "i"
+ocv.print_name = "ocv"
+v.print_name = "v"
+iR_1.print_name = "i_{R1}"
+iR_2.print_name = "i_{R2}"
+eta_0.print_name = "\eta_0"
+eta_1.print_name = "\eta_1"
+eta_2.print_name = "\eta_2"
+
+model.latexify()
