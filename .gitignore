@@ -13,6 +13,7 @@
 !CMakeLists.txt
 !pybamm/CITATIONS.txt
 !pybamm/input/**/*.csv
+!examples/**/*.csv
 
 # running files
 *.pyc
