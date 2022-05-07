@@ -45,7 +45,11 @@ pybind11_add_module(idaklu
   pybamm/solvers/c_solvers/solution.hpp
 )
 
-if(NOT CASADI_DIR)
+if (NOT USE_PYTHON_CASADI)
+  set(USE_PYTHON_CASADI TRUE)
+endif()
+
+if(${USE_PYTHON_CASADI})
   execute_process(
     COMMAND "${PYTHON_EXECUTABLE}" -c 
     "import casadi as _; print(_.__path__[0])"
@@ -53,9 +57,10 @@ if(NOT CASADI_DIR)
     OUTPUT_STRIP_TRAILING_WHITESPACE)
   file(TO_CMAKE_PATH ${CASADI_DIR} CASADI_DIR)
   message("Found casadi path: ${CASADI_DIR}")
+  find_package(casadi CONFIG PATHS ${CASADI_DIR} REQUIRED)
+else()
+  find_package(casadi CONFIG REQUIRED)
 endif()
-
-find_package(casadi CONFIG PATHS ${CASADI_DIR} REQUIRED)
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${PROJECT_SOURCE_DIR})
 # Sundials
