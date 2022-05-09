@@ -118,7 +118,7 @@ class TestStandardParametersLeadAcid(unittest.TestCase):
         self.assertAlmostEqual(values.evaluate(param.s.rho(T)), 0.7053, places=2)
         self.assertAlmostEqual(values.evaluate(param.p.rho(T)), 1.4393, places=2)
         self.assertAlmostEqual(values.evaluate(param.p.rho_cc(T)), 1.4393, places=2)
-        self.assertAlmostEqual(values.evaluate(param.rho(T)), 1.7102, places=2)
+        self.assertAlmostEqual(values.evaluate(param.rho(T)), 1, places=2)
 
         # Thermal conductivity
         self.assertAlmostEqual(values.evaluate(param.n.lambda_cc(T)), 1.6963, places=2)
