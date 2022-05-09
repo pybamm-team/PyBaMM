@@ -54,7 +54,10 @@ execute_process(
     "import casadi as _; print(_.__path__[0])"
     OUTPUT_VARIABLE CASADI_DIR
     OUTPUT_STRIP_TRAILING_WHITESPACE)
-file(TO_CMAKE_PATH ${CASADI_DIR} CASADI_DIR)
+
+if (CASADI_DIR)
+  file(TO_CMAKE_PATH ${CASADI_DIR} CASADI_DIR)
+endif()
 message("Found python casadi path: ${CASADI_DIR}")
 
 if(${USE_PYTHON_CASADI})
