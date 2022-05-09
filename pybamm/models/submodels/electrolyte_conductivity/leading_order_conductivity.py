@@ -39,8 +39,8 @@ class LeadingOrder(BaseElectrolyteConductivity):
         i_boundary_cc = variables["Current collector current density"]
 
         param = self.param
-        l_n = param.l_n
-        l_p = param.l_p
+        l_n = param.n.l
+        l_p = param.p.l
         x_n = pybamm.standard_spatial_vars.x_n
         x_p = pybamm.standard_spatial_vars.x_p
 

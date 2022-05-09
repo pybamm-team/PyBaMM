@@ -117,10 +117,7 @@ class BaseParticle(pybamm.BaseSubModel):
         eps_s_av = pybamm.x_average(eps_s)
         c_s_vol_av = pybamm.x_average(eps_s * c_s_rav) / eps_s_av
         c_scale = self.domain_param.c_max
-        if self.domain == "Negative":
-            L = self.param.L_n
-        elif self.domain == "Positive":
-            L = self.param.L_p
+        L = self.domain_param.L
         A = self.param.A_cc
 
         variables.update(

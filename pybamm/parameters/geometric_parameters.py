@@ -18,6 +18,10 @@ class GeometricParameters(BaseParameters):
     """
 
     def __init__(self):
+        self.n = DomainGeometricParameters("Negative", self)
+        self.s = DomainGeometricParameters("Separator", self)
+        self.p = DomainGeometricParameters("Positive", self)
+        self.domain_params = [self.n, self.s, self.p]
 
         # Set parameters and scales
         self._set_dimensional_parameters()
@@ -26,17 +30,14 @@ class GeometricParameters(BaseParameters):
 
     def _set_dimensional_parameters(self):
         """Defines the dimensional parameters."""
+        for domain in self.domain_params:
+            domain._set_dimensional_parameters()
 
         # Macroscale geometry
-        self.L_cn = pybamm.Parameter("Negative current collector thickness [m]")
-        self.L_n = pybamm.Parameter("Negative electrode thickness [m]")
-        self.L_s = pybamm.Parameter("Separator thickness [m]")
-        self.L_p = pybamm.Parameter("Positive electrode thickness [m]")
-        self.L_cp = pybamm.Parameter("Positive current collector thickness [m]")
         self.L_x = (
-            self.L_n + self.L_s + self.L_p
+            self.n.L + self.s.L + self.p.L
         )  # Total distance between current collectors
-        self.L = self.L_cn + self.L_x + self.L_cp  # Total cell thickness
+        self.L = self.n.L_cc + self.L_x + self.p.L_cc  # Total cell thickness
         self.L_Li = pybamm.Parameter("Lithium counter electrode thickness [m]")
         self.L_y = pybamm.Parameter(
             "Electrode width [m]"
@@ -48,105 +49,17 @@ class GeometricParameters(BaseParameters):
         self.A_cooling = pybamm.Parameter("Cell cooling surface area [m2]")
         self.V_cell = pybamm.Parameter("Cell volume [m3]")
 
-        # Tab geometry (for pouch cells)
-        self.L_tab_n = pybamm.Parameter("Negative tab width [m]")
-        self.Centre_y_tab_n = pybamm.Parameter("Negative tab centre y-coordinate [m]")
-        self.Centre_z_tab_n = pybamm.Parameter("Negative tab centre z-coordinate [m]")
-        self.L_tab_p = pybamm.Parameter("Positive tab width [m]")
-        self.Centre_y_tab_p = pybamm.Parameter("Positive tab centre y-coordinate [m]")
-        self.Centre_z_tab_p = pybamm.Parameter("Positive tab centre z-coordinate [m]")
-        self.A_tab_n = self.L_tab_n * self.L_cn  # Area of negative tab
-        self.A_tab_p = self.L_tab_p * self.L_cp  # Area of negative tab
-
-        # Microscale geometry
-        # Note: for li-ion cells, the definition of the surface area to
-        # volume ratio is overwritten in lithium_ion_parameters.py to be computed
-        # based on the assumed particle shape
-        self.a_n_dim = pybamm.Parameter(
-            "Negative electrode surface area to volume ratio [m-1]"
-        )
-        self.a_p_dim = pybamm.Parameter(
-            "Positive electrode surface area to volume ratio [m-1]"
-        )
-        self.b_e_n = pybamm.Parameter(
-            "Negative electrode Bruggeman coefficient (electrolyte)"
-        )
-        self.b_e_s = pybamm.Parameter("Separator Bruggeman coefficient (electrolyte)")
-        self.b_e_p = pybamm.Parameter(
-            "Positive electrode Bruggeman coefficient (electrolyte)"
-        )
-        self.b_s_n = pybamm.Parameter(
-            "Negative electrode Bruggeman coefficient (electrode)"
-        )
-        self.b_s_p = pybamm.Parameter(
-            "Positive electrode Bruggeman coefficient (electrode)"
-        )
-
-        # Particle-size distribution geometry
-        self.R_min_n_dim = pybamm.Parameter("Negative minimum particle radius [m]")
-        self.R_min_p_dim = pybamm.Parameter("Positive minimum particle radius [m]")
-        self.R_max_n_dim = pybamm.Parameter("Negative maximum particle radius [m]")
-        self.R_max_p_dim = pybamm.Parameter("Positive maximum particle radius [m]")
-        self.sd_a_n_dim = pybamm.Parameter(
-            "Negative area-weighted particle-size standard deviation [m]"
-        )
-        self.sd_a_p_dim = pybamm.Parameter(
-            "Positive area-weighted particle-size standard deviation [m]"
-        )
-
-        x_n = pybamm.standard_spatial_vars.x_n
-        x_p = pybamm.standard_spatial_vars.x_p
-        self.R_n_dimensional = pybamm.FunctionParameter(
-            "Negative particle radius [m]",
-            {"Through-cell distance (x_n) [m]": x_n * self.L_x},
-        )
-        self.R_p_dimensional = pybamm.FunctionParameter(
-            "Positive particle radius [m]",
-            {"Through-cell distance (x_p) [m]": x_p * self.L_x},
-        )
-
-    def f_a_dist_n_dimensional(self, R):
-        """
-        Dimensional negative electrode area-weighted particle-size distribution
-        """
-        inputs = {
-            "Negative particle-size variable [m]": R,
-        }
-        return pybamm.FunctionParameter(
-            "Negative area-weighted particle-size distribution [m-1]",
-            inputs,
-        )
-
-    def f_a_dist_p_dimensional(self, R):
-        """
-        Dimensional positive electrode area-weighted particle-size distribution
-        """
-        inputs = {
-            "Positive particle-size variable [m]": R,
-        }
-        return pybamm.FunctionParameter(
-            "Positive area-weighted particle-size distribution [m-1]",
-            inputs,
-        )
-
     def _set_scales(self):
         """Define the scales used in the non-dimensionalisation scheme"""
-
-        # Microscale geometry
-        # Note: these scales are necessary here to non-dimensionalise the
-        # particle size distributions.
-        self.R_n_typ = pybamm.xyz_average(self.R_n_dimensional)
-        self.R_p_typ = pybamm.xyz_average(self.R_p_dimensional)
+        for domain in self.domain_params:
+            domain._set_scales()
 
     def _set_dimensionless_parameters(self):
         """Defines the dimensionless parameters."""
+        for domain in self.domain_params:
+            domain._set_dimensionless_parameters()
 
         # Macroscale Geometry
-        self.l_cn = self.L_cn / self.L_x
-        self.l_n = self.L_n / self.L_x
-        self.l_s = self.L_s / self.L_x
-        self.l_p = self.L_p / self.L_x
-        self.l_cp = self.L_cp / self.L_x
         self.l_x = self.L_x / self.L_x
         self.l_Li = self.L_Li / self.L_x
         self.l_y = self.L_y / self.L_z
@@ -160,39 +73,112 @@ class GeometricParameters(BaseParameters):
         self.l = self.L / self.L_x
         self.delta = self.L_x / self.L_z  # Pouch cell aspect ratio
 
+
+class DomainGeometricParameters(BaseParameters):
+    def __init__(self, domain, main_param):
+        self.domain = domain
+        self.main_param = main_param
+
+    def _set_dimensional_parameters(self):
+        """Defines the dimensional parameters."""
+        Domain = self.domain
+
+        if self.domain == "Separator":
+            self.L = pybamm.Parameter("Separator thickness [m]")
+            self.b_e = pybamm.Parameter("Separator Bruggeman coefficient (electrolyte)")
+            return
+
+        # Macroscale geometry
+        self.L_cc = pybamm.Parameter(f"{Domain} current collector thickness [m]")
+        self.L = pybamm.Parameter(f"{Domain} electrode thickness [m]")
+
         # Tab geometry (for pouch cells)
-        self.l_tab_n = self.L_tab_n / self.L_z
-        self.centre_y_tab_n = self.Centre_y_tab_n / self.L_z
-        self.centre_z_tab_n = self.Centre_z_tab_n / self.L_z
-        self.l_tab_p = self.L_tab_p / self.L_z
-        self.centre_y_tab_p = self.Centre_y_tab_p / self.L_z
-        self.centre_z_tab_p = self.Centre_z_tab_p / self.L_z
+        self.L_tab = pybamm.Parameter(f"{Domain} tab width [m]")
+        self.Centre_y_tab = pybamm.Parameter(f"{Domain} tab centre y-coordinate [m]")
+        self.Centre_z_tab = pybamm.Parameter(f"{Domain} tab centre z-coordinate [m]")
+        self.A_tab = self.L_tab * self.L_cc  # Area of tab
+
+        # Microscale geometry
+        # Note: for li-ion cells, the definition of the surface area to
+        # volume ratio is overwritten in lithium_ion_parameters.py to be computed
+        # based on the assumed particle shape
+        self.a_dim = pybamm.Parameter(
+            f"{Domain} electrode surface area to volume ratio [m-1]"
+        )
+        self.b_e = pybamm.Parameter(
+            f"{Domain} electrode Bruggeman coefficient (electrolyte)"
+        )
+        self.b_s = pybamm.Parameter(
+            f"{Domain} electrode Bruggeman coefficient (electrode)"
+        )
 
         # Particle-size distribution geometry
-        self.R_min_n = self.R_min_n_dim / self.R_n_typ
-        self.R_min_p = self.R_min_p_dim / self.R_p_typ
-        self.R_max_n = self.R_max_n_dim / self.R_n_typ
-        self.R_max_p = self.R_max_p_dim / self.R_p_typ
-        self.sd_a_n = self.sd_a_n_dim / self.R_n_typ
-        self.sd_a_p = self.sd_a_p_dim / self.R_p_typ
+        self.R_min_dim = pybamm.Parameter(f"{Domain} minimum particle radius [m]")
+        self.R_max_dim = pybamm.Parameter(f"{Domain} maximum particle radius [m]")
+        self.sd_a_dim = pybamm.Parameter(
+            f"{Domain} area-weighted particle-size standard deviation [m]"
+        )
+
+    @property
+    def R_dimensional(self):
+        if self.domain == "Negative":
+            x = pybamm.standard_spatial_vars.x_n
+        elif self.domain == "Positive":
+            x = pybamm.standard_spatial_vars.x_p
+
+        return pybamm.FunctionParameter(
+            f"{self.domain} particle radius [m]",
+            {"Through-cell distance (x) [m]": x * self.main_param.L_x},
+        )
+
+    def f_a_dist_dimensional(self, R):
+        """
+        Dimensional electrode area-weighted particle-size distribution
+        """
+        inputs = {f"{self.domain} particle-size variable [m]": R}
+        return pybamm.FunctionParameter(
+            f"{self.domain} area-weighted particle-size distribution [m-1]", inputs
+        )
+
+    def _set_scales(self):
+        """Define the scales used in the non-dimensionalisation scheme"""
+        if self.domain == "Separator":
+            return
+        # Microscale geometry
+        # Note: these scales are necessary here to non-dimensionalise the
+        # particle size distributions.
+        self.R_typ = pybamm.xyz_average(self.R_dimensional)
+
+    def _set_dimensionless_parameters(self):
+        """Defines the dimensionless parameters."""
+        main = self.main_param
+
+        # Macroscale Geometry
+        self.l = self.L / main.L_x
+        if self.domain == "Separator":
+            return
+
+        self.l_cc = self.L_cc / main.L_x
+
+        # Tab geometry (for pouch cells)
+        self.l_tab = self.L_tab / main.L_z
+        self.centre_y_tab = self.Centre_y_tab / main.L_z
+        self.centre_z_tab = self.Centre_z_tab / main.L_z
+
+        # Particle-size distribution geometry
+        self.R_min = self.R_min_dim / self.R_typ
+        self.R_max = self.R_max_dim / self.R_typ
+        self.sd_a = self.sd_a_dim / self.R_typ
 
         # Particle radius
-        self.R_n = self.R_n_dimensional / self.R_n_typ
-        self.R_p = self.R_p_dimensional / self.R_p_typ
+        self.R = self.R_dimensional / self.R_typ
 
-    def f_a_dist_n(self, R):
+    def f_a_dist(self, R):
         """
-        Dimensionless negative electrode area-weighted particle-size distribution
+        Dimensionless electrode area-weighted particle-size distribution
         """
-        R_dim = R * self.R_n_typ
-        return self.f_a_dist_n_dimensional(R_dim) * self.R_n_typ
-
-    def f_a_dist_p(self, R):
-        """
-        Dimensionless positive electrode area-weighted particle-size distribution
-        """
-        R_dim = R * self.R_p_typ
-        return self.f_a_dist_p_dimensional(R_dim) * self.R_p_typ
+        R_dim = R * self.R_typ
+        return self.f_a_dist_dimensional(R_dim) * self.R_typ
 
 
 geometric_parameters = GeometricParameters()
