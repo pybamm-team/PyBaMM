@@ -45,20 +45,24 @@ pybind11_add_module(idaklu
   pybamm/solvers/c_solvers/solution.hpp
 )
 
-if (NOT USE_PYTHON_CASADI)
+if (NOT DEFINED USE_PYTHON_CASADI)
   set(USE_PYTHON_CASADI TRUE)
 endif()
 
-if(${USE_PYTHON_CASADI})
-  execute_process(
+execute_process(
     COMMAND "${PYTHON_EXECUTABLE}" -c 
     "import casadi as _; print(_.__path__[0])"
     OUTPUT_VARIABLE CASADI_DIR
     OUTPUT_STRIP_TRAILING_WHITESPACE)
-  file(TO_CMAKE_PATH ${CASADI_DIR} CASADI_DIR)
-  message("Found casadi path: ${CASADI_DIR}")
+file(TO_CMAKE_PATH ${CASADI_DIR} CASADI_DIR)
+message("Found python casadi path: ${CASADI_DIR}")
+
+if(${USE_PYTHON_CASADI})
+  message("Trying to link against python casadi package")   
   find_package(casadi CONFIG PATHS ${CASADI_DIR} REQUIRED)
 else()
+  message("Trying to link against any casadi package apart from the python one")
+  set(CMAKE_IGNORE_PATH "${CASADI_DIR}/cmake")
   find_package(casadi CONFIG REQUIRED)
 endif()
 
