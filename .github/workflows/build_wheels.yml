@@ -11,6 +11,7 @@ on:
 
 jobs:
   build_windows_wheels:
+    name: Build wheels on windows-latest
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v2
@@ -52,67 +53,6 @@ jobs:
         with:
           name: wheels
           path: ./wheelhouse/*.whl
-
-  build_windows_wheels_msys:
-    runs-on: windows-latest
-    defaults:
-      run:
-        shell: msys2 {0}
-    steps:
-      - uses: actions/checkout@v2
-
-      - name: Install mingw on windows
-        uses: msys2/setup-msys2@v2
-        with:
-          msystem: MINGW64
-          update: true
-          install: >-
-            git
-            base-devel
-            mingw-w64-x86_64-toolchain
-            mingw-w64-x86_64-python-pip
-
-      - name: test
-        run: |
-          which python
-          which pip
-          python --version
-
-      - name: Install cibuildwheel
-        run: python -m pip install cibuildwheel==1.9.0
-
-      - name: Clone pybind11 repo (no history)
-        run: git clone --depth 1 --branch v2.6.2 https://github.com/pybind/pybind11.git
-
-      - name: check gcc compiler
-        run: |
-          gcc --version
-
-      - name: check g++ compiler
-        run: |
-          g++ --version
-
-      - name: check gfortran compiler
-        run: |
-          gfortran --version
-
-      # see https://github.com/pybamm-team/PyBaMM/pull/1930
-      - name: Install the latest version of vcpkg on windows
-        run: |
-          cd /c
-          rm -rf vcpkg
-          git clone https://github.com/microsoft/vcpkg
-          cd vcpkg
-          ./bootstrap-vcpkg.bat
-
-      - name: Build 64 bits wheels on Windows
-        run: |
-          python -m cibuildwheel --output-dir wheelhouse
-        env:
-          CIBW_ENVIRONMENT: "PYBAMM_USE_VCPKG=ON VCPKG_ROOT_DIR=$cd/vcpkg VCPKG_DEFAULT_TRIPLET=x64-mingw-dynamic VCPKG_DEFAULT_HOST_TRIPLET=x64-mingw-dynamic VCPKG_FEATURE_FLAGS=manifests,registries CMAKE_GENERATOR=\"MinGW Makefiles\""
-          CIBW_BEFORE_BUILD: "python -m pip install casadi numpy"
-          CIBW_ARCHS: "AMD64"
-          CIBW_BUILD_VERBOSITY: 1
 
   build_wheels:
     name: Build wheels on ${{ matrix.os }}
