@@ -23,6 +23,13 @@ jobs:
       - name: Clone pybind11 repo (no history)
         run: git clone --depth 1 --branch v2.6.2 https://github.com/pybind/pybind11.git
 
+      - name: Get latest CMake and ninja
+        # Using 'latest' branch, the most recent CMake and ninja are installed.
+        uses: lukka/get-cmake@latest    
+
+      - name: Add msbuild to PATH
+        uses: microsoft/setup-msbuild@v1.1
+
       # see https://github.com/pybamm-team/PyBaMM/pull/1930
       - name: Install the latest version of vcpkg on windows
         run: |
@@ -42,8 +49,6 @@ jobs:
 
       - name: Build 64 bits wheels on Windows
         run: |
-          choco install --yes visualstudio2019community
-          choco install --yes visualstudio2019-workload-nativedesktop
           python -m cibuildwheel --output-dir wheelhouse
         env:
           CIBW_ENVIRONMENT: "PYBAMM_USE_VCPKG=ON VCPKG_ROOT_DIR=$cd/vcpkg VCPKG_DEFAULT_TRIPLET=x64-windows-static VCPKG_FEATURE_FLAGS=manifests,registries CMAKE_GENERATOR=\"Visual Studio 16 2019\" CMAKE_GENERATOR_PLATFORM=x64"
