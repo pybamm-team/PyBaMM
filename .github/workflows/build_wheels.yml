@@ -23,22 +23,6 @@ jobs:
       - name: Clone pybind11 repo (no history)
         run: git clone --depth 1 --branch v2.6.2 https://github.com/pybind/pybind11.git
 
-      - name: Get latest CMake and ninja
-        # Using 'latest' branch, the most recent CMake and ninja are installed.
-        uses: lukka/get-cmake@latest    
-
-      - name: Add msbuild to PATH
-        uses: microsoft/setup-msbuild@v1.1
-
-      # see https://github.com/pybamm-team/PyBaMM/pull/1930
-      - name: Install the latest version of vcpkg on windows
-        run: |
-          cd C:\
-          rm -r -fo 'C:\vcpkg'
-          git clone https://github.com/microsoft/vcpkg
-          cd vcpkg
-          .\bootstrap-vcpkg.bat
-
       - name: Cache packages installed through vcpkg on windows
         uses: actions/cache@v2
         env:
@@ -51,7 +35,7 @@ jobs:
         run: |
           python -m cibuildwheel --output-dir wheelhouse
         env:
-          CIBW_ENVIRONMENT: "PYBAMM_USE_VCPKG=ON VCPKG_ROOT_DIR=$cd/vcpkg VCPKG_DEFAULT_TRIPLET=x64-windows-static VCPKG_FEATURE_FLAGS=manifests,registries CMAKE_GENERATOR=\"Visual Studio 16 2019\" CMAKE_GENERATOR_PLATFORM=x64"
+          CIBW_ENVIRONMENT: "PYBAMM_USE_VCPKG=ON VCPKG_ROOT_DIR=$cd/vcpkg VCPKG_DEFAULT_TRIPLET=x64-windows-static VCPKG_FEATURE_FLAGS=manifests,registries CMAKE_GENERATOR=\"Visual Studio 17 2022\" CMAKE_GENERATOR_PLATFORM=x64"
           CIBW_ARCHS: "AMD64"
 
       - uses: actions/upload-artifact@v2
