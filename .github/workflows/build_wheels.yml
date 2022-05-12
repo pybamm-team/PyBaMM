@@ -74,7 +74,8 @@ jobs:
         run: python -m cibuildwheel --output-dir wheelhouse
         env:
           CIBW_BEFORE_ALL_LINUX: "bash build_manylinux_wheels/install_sundials.sh 5.8.1 5.7.0"
-          CIBW_BEFORE_BUILD: "python -m pip install cmake casadi numpy"
+          CIBW_BEFORE_BUILD_LINUX: "python -m pip install cmake casadi numpy"
+          CIBW_BEFORE_BUILD_MACOS: "python -m pip install cmake casadi numpy && python scripts/fix_casadi_rpath_mac.py"
           CIBW_SKIP: pp*
 
       - uses: actions/upload-artifact@v2
