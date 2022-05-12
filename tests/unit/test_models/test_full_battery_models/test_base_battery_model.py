@@ -34,6 +34,7 @@ PRINT_OPTIONS_OUTPUT = """\
 'particle size': 'single' (possible: ['single', 'distribution'])
 'SEI': 'none' (possible: ['none', 'constant', 'reaction limited', 'solvent-diffusion limited', 'electron-migration limited', 'interstitial-diffusion limited', 'ec reaction limited'])
 'SEI film resistance': 'none' (possible: ['none', 'distributed', 'average'])
+'SEI on cracks': 'false' (possible: ['false', 'true'])
 'SEI porosity change': 'false' (possible: ['false', 'true'])
 'stress-induced diffusion': 'true' (possible: ['false', 'true'])
 'surface form': 'differential' (possible: ['false', 'differential', 'algebraic'])
