@@ -20,13 +20,17 @@ install_name_tool_args = [
     os.path.join(casadi_dir, libcpp_name),
     os.path.join(casadi_dir, libcasadi_name),
 ]
+subprocess.run(["otool"] + ["-L", os.path.join(casadi_dir, libcasadi_name)])
 print(' '.join(["install_name_tool"] + install_name_tool_args))
 subprocess.run(["install_name_tool"] + install_name_tool_args)
+subprocess.run(["otool"] + ["-L", os.path.join(casadi_dir, libcasadi_name)])
 install_name_tool_args = [
     "-change",
     os.path.join("@rpath", libcppabi_name),
     os.path.join(casadi_dir, libcppabi_name),
     os.path.join(casadi_dir, libcpp_name),
 ]
+subprocess.run(["otool"] + ["-L", os.path.join(casadi_dir, libcpp_name)])
 print(' '.join(["install_name_tool"] + install_name_tool_args))
 subprocess.run(["install_name_tool"] + install_name_tool_args)
+subprocess.run(["otool"] + ["-L", os.path.join(casadi_dir, libcpp_name)])
