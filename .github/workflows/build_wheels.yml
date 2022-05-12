@@ -37,7 +37,6 @@ jobs:
         env:
           CIBW_ENVIRONMENT: "PYBAMM_USE_VCPKG=ON VCPKG_ROOT_DIR=$cd/vcpkg VCPKG_DEFAULT_TRIPLET=x64-windows-static-md VCPKG_FEATURE_FLAGS=manifests,registries CMAKE_GENERATOR=\"Visual Studio 17 2022\" CMAKE_GENERATOR_PLATFORM=x64"
           CIBW_ARCHS: "AMD64"
-          CIBW_BUILD_VERBOSITY: 1
 
       - uses: actions/upload-artifact@v2
         with:
