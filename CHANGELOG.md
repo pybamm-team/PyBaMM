@@ -8,6 +8,7 @@
 
 ## Bug fixes
 
+-   Corrected legend order in "plot_voltage_components.py", so each entry refers to the correct overpotential. (https://github.com/pybamm-team/PyBaMM/pull/2061)
 -   Remove old deprecation errors, including those in `parameter_values.py` that caused the simulation if, for example, the reaction rate is re-introduced manually ([#2022](https://github.com/pybamm-team/PyBaMM/pull/2022))
 
 ## Breaking changes
