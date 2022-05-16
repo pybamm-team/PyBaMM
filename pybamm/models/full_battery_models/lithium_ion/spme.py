@@ -20,6 +20,12 @@ class SPMe(SPM):
         option to False allows users to change any number of the submodels before
         building the complete model (submodels cannot be changed after the model is
         built).
+    Examples
+    --------
+    >>> import pybamm
+    >>> model = pybamm.lithium_ion.SPMe()
+    >>> model.name
+    'Single Particle Model with electrolyte'
 
     References
     ----------
