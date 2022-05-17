@@ -218,7 +218,7 @@ class XAveragedFickianDiffusion(BaseSizeDistribution):
         ]
 
         c_init = pybamm.SecondaryBroadcast(
-            pybamm.x_average(self.param.n.c_init),
+            pybamm.x_average(self.domain_param.c_init),
             f"{self.domain.lower()} particle size",
         )
 
