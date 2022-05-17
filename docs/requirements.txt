@@ -17,4 +17,4 @@ matplotlib >= 2.0
 #
 guzzle-sphinx-theme
 sphinx>4.0
-sympy==1.9
+sympy >= 1.8
