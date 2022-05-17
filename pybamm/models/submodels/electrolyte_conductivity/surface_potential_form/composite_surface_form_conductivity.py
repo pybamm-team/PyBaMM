@@ -94,8 +94,6 @@ class CompositeDifferential(BaseModel):
         super().__init__(param, domain)
 
     def set_rhs(self, variables):
-        param = self.param
-
         sum_j = variables[
             "Sum of x-averaged "
             + self.domain.lower()

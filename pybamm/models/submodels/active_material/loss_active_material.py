@@ -106,8 +106,8 @@ class LossActiveMaterial(BaseModel):
             else:
                 a = variables[self.domain + " electrode surface area to volume ratio"]
 
+            beta_LAM_sei = self.domain_param.beta_LAM_sei
             if self.domain == "Negative":
-                beta_LAM_sei = self.param.n.beta_LAM_sei
                 if self.x_average is True:
                     j_sei = variables["X-averaged SEI interfacial current density"]
                 else:
@@ -115,7 +115,6 @@ class LossActiveMaterial(BaseModel):
             else:
                 # No SEI in the positive electrode so no reaction-driven LAM
                 # until other reactions are implemented
-                beta_LAM_sei = self.param.p.beta_LAM_sei
                 j_sei = 0
 
             j_stress_reaction = beta_LAM_sei * a * j_sei
