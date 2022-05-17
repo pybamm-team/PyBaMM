@@ -650,6 +650,26 @@ class TestEvaluate(unittest.TestCase):
             np.testing.assert_allclose(result_test, result_true)
 
     @unittest.skipIf(not pybamm.have_jax(), "jax or jaxlib is not installed")
+    def test_evaluator_jax_jvp(self):
+        a = pybamm.StateVector(slice(0, 1))
+        y_tests = [np.array([[2.0]]), np.array([[1.0]]), np.array([1.0])]
+        v_tests = [np.array([[2.9]]), np.array([[0.9]]), np.array([1.3])]
+
+        expr = a ** 2
+        expr_jac = 2 * a
+        evaluator = pybamm.EvaluatorJax(expr)
+        evaluator_jac_test = evaluator.get_jacobian()
+        evaluator_jac_action_test = evaluator.get_jacobian_action()
+        evaluator_jac = pybamm.EvaluatorJax(expr_jac)
+        for y, v in zip(y_tests, v_tests):
+            result_test = evaluator_jac_test(t=None, y=y)
+            result_test_times_v = evaluator_jac_action_test(t=None, y=y, v=v)
+            result_true = evaluator_jac(t=None, y=y)
+            result_true_times_v = evaluator_jac(t=None, y=y) @ v.reshape(-1, 1)
+            np.testing.assert_allclose(result_test, result_true)
+            np.testing.assert_allclose(result_test_times_v, result_true_times_v)
+
+    @unittest.skipIf(not pybamm.have_jax(), "jax or jaxlib is not installed")
     def test_evaluator_jax_debug(self):
         a = pybamm.StateVector(slice(0, 1))
         expr = a ** 2

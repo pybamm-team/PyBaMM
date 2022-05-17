@@ -19,6 +19,12 @@ class DFN(BaseModel):
         option to False allows users to change any number of the submodels before
         building the complete model (submodels cannot be changed after the model is
         built).
+    Examples
+    --------
+    >>> import pybamm
+    >>> model = pybamm.lithium_ion.DFN()
+    >>> model.name
+    'Doyle-Fuller-Newman model'
 
     References
     ----------

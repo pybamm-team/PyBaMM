@@ -32,7 +32,7 @@ class TestBatteryGeometry(unittest.TestCase):
             self.assertIn("negative particle size", geometry)
             self.assertEqual(geometry["negative electrode"]["x_n"]["min"], 0)
             self.assertEqual(
-                geometry["negative electrode"]["x_n"]["max"].id, geo.l_n.id
+                geometry["negative electrode"]["x_n"]["max"].id, geo.n.l.id
             )
             if cc_dimension == 1:
                 self.assertIn("tabs", geometry["current collector"])
@@ -70,17 +70,17 @@ class TestReadParameters(unittest.TestCase):
     # all returned for the deepest dict
     def test_read_parameters(self):
         geo = pybamm.geometric_parameters
-        L_n = geo.L_n
-        L_s = geo.L_s
-        L_p = geo.L_p
+        L_n = geo.n.L
+        L_s = geo.s.L
+        L_p = geo.p.L
         L_y = geo.L_y
         L_z = geo.L_z
-        tab_n_y = geo.Centre_y_tab_n
-        tab_n_z = geo.Centre_z_tab_n
-        L_tab_n = geo.L_tab_n
-        tab_p_y = geo.Centre_y_tab_p
-        tab_p_z = geo.Centre_z_tab_p
-        L_tab_p = geo.L_tab_p
+        tab_n_y = geo.n.Centre_y_tab
+        tab_n_z = geo.n.Centre_z_tab
+        L_tab_n = geo.n.L_tab
+        tab_p_y = geo.p.Centre_y_tab
+        tab_p_z = geo.p.Centre_z_tab
+        L_tab_p = geo.p.L_tab
 
         geometry = pybamm.battery_geometry(current_collector_dimension=2)
 

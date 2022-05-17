@@ -69,20 +69,20 @@ class Lumped(BaseThermal):
 
             yz_cell_surface_area = self.param.l_y * self.param.l_z
             yz_surface_cooling_coefficient = (
-                -(self.param.h_cn + self.param.h_cp)
+                -(self.param.n.h_cc + self.param.p.h_cc)
                 * yz_cell_surface_area
                 / cell_volume
                 / (self.param.delta ** 2)
             )
 
-            negative_tab_area = self.param.l_tab_n * self.param.l_cn
+            negative_tab_area = self.param.n.l_tab * self.param.n.l_cc
             negative_tab_cooling_coefficient = (
-                -self.param.h_tab_n * negative_tab_area / cell_volume / self.param.delta
+                -self.param.n.h_tab * negative_tab_area / cell_volume / self.param.delta
             )
 
-            positive_tab_area = self.param.l_tab_p * self.param.l_cp
+            positive_tab_area = self.param.p.l_tab * self.param.p.l_cc
             positive_tab_cooling_coefficient = (
-                -self.param.h_tab_p * positive_tab_area / cell_volume / self.param.delta
+                -self.param.p.h_tab * positive_tab_area / cell_volume / self.param.delta
             )
 
             edge_area = (

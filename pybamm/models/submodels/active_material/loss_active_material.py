@@ -81,14 +81,9 @@ class LossActiveMaterial(BaseModel):
                     self.domain + " particle surface radial stress"
                 ]
 
-            if self.domain == "Negative":
-                beta_LAM = self.param.beta_LAM_n
-                stress_critical = self.param.stress_critical_n
-                m_LAM = self.param.m_LAM_n
-            else:
-                beta_LAM = self.param.beta_LAM_p
-                stress_critical = self.param.stress_critical_p
-                m_LAM = self.param.m_LAM_p
+            beta_LAM = self.domain_param.beta_LAM
+            stress_critical = self.domain_param.stress_critical
+            m_LAM = self.domain_param.m_LAM
 
             stress_h_surf = (stress_r_surf + 2 * stress_t_surf) / 3
             # compressive stress make no contribution
@@ -111,8 +106,8 @@ class LossActiveMaterial(BaseModel):
             else:
                 a = variables[self.domain + " electrode surface area to volume ratio"]
 
+            beta_LAM_sei = self.domain_param.beta_LAM_sei
             if self.domain == "Negative":
-                beta_LAM_sei = self.param.beta_LAM_sei_n
                 if self.x_average is True:
                     j_sei = variables["X-averaged SEI interfacial current density"]
                 else:
@@ -120,7 +115,6 @@ class LossActiveMaterial(BaseModel):
             else:
                 # No SEI in the positive electrode so no reaction-driven LAM
                 # until other reactions are implemented
-                beta_LAM_sei = self.param.beta_LAM_sei_p
                 j_sei = 0
 
             j_stress_reaction = beta_LAM_sei * a * j_sei
@@ -151,10 +145,7 @@ class LossActiveMaterial(BaseModel):
 
     def set_initial_conditions(self, variables):
 
-        if self.domain == "Negative":
-            eps_solid_init = self.param.epsilon_s_n
-        elif self.domain == "Positive":
-            eps_solid_init = self.param.epsilon_s_p
+        eps_solid_init = self.domain_param.epsilon_s
 
         if self.x_average is True:
             eps_solid_xav = variables[

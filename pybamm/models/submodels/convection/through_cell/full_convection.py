@@ -56,7 +56,7 @@ class Full(BaseThroughCellModel):
 
         # Set up
         param = self.param
-        l_n = param.l_n
+        l_n = param.n.l
         x_s = pybamm.standard_spatial_vars.x_s
 
         # Transverse velocity in the separator determines through-cell velocity
@@ -64,7 +64,7 @@ class Full(BaseThroughCellModel):
             "X-averaged separator transverse volume-averaged acceleration"
         ]
         i_boundary_cc = variables["Current collector current density"]
-        v_box_n_right = param.beta_n * i_boundary_cc
+        v_box_n_right = param.n.beta * i_boundary_cc
         div_v_box_s_av = -div_Vbox_s
         div_v_box_s = pybamm.PrimaryBroadcast(div_v_box_s_av, "separator")
 
@@ -94,8 +94,8 @@ class Full(BaseThroughCellModel):
 
         # Problems in the x-direction for p_n and p_p
         self.algebraic = {
-            p_n: pybamm.div(v_box_n) - self.param.beta_n * j_n,
-            p_p: pybamm.div(v_box_p) - self.param.beta_p * j_p,
+            p_n: pybamm.div(v_box_n) - self.param.n.beta * j_n,
+            p_p: pybamm.div(v_box_p) - self.param.p.beta * j_p,
         }
 
     def set_boundary_conditions(self, variables):

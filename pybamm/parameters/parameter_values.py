@@ -177,18 +177,6 @@ class ParameterValues:
         if "lithium plating" in chemistry:
             component_groups += ["lithium plating"]
 
-        if "anode" in chemistry.keys():
-            raise KeyError(
-                "The 'anode' notation has been deprecated, "
-                "'negative electrode' should be used instead."
-            )
-
-        if "cathode" in chemistry.keys():
-            raise KeyError(
-                "The 'cathode' notation has been deprecated, "
-                "'positive electrode' should be used instead."
-            )
-
         for component_group in component_groups:
             # Make sure component is provided
             try:
@@ -352,43 +340,9 @@ class ParameterValues:
                 "'Typical current [A]' cannot be zero. A possible alternative is to "
                 "set 'Current function [A]' to `0` instead."
             )
-        if "C-rate" in values:
-            raise ValueError(
-                "The 'C-rate' parameter has been deprecated, "
-                "use 'Current function [A]' instead. The Nominal "
-                "cell capacity can be accessed as 'Nominal cell "
-                "capacity [A.h]', and used to calculate current from C-rate."
-            )
-        if "Cell capacity [A.h]" in values:
-            raise ValueError(
-                "The 'Cell capacity [A.h]' parameter has been deprecated, "
-                "'Nominal cell capacity [A.h]' should be used instead."
-            )
+
         for param in values:
-            if "surface area density" in param:
-                raise ValueError(
-                    "Parameters involving 'surface area density' have been renamed to "
-                    "'surface area to volume ratio' ('{}' found)".format(param)
-                )
-            elif "reaction rate" in param:
-                raise ValueError(
-                    "Parameters involving 'reaction rate' have been replaced with "
-                    "'exchange-current density' ('{}' found)".format(param)
-                )
-            elif "particle distribution in x" in param:
-                raise ValueError(
-                    "The parameter '{}' has been deprecated".format(param)
-                    + "The particle radius is now set as a function of x directly "
-                    "instead of providing a reference value and a distribution."
-                )
-            elif "surface area to volume ratio distribution in x" in param:
-                raise ValueError(
-                    "The parameter '{}' has been deprecated".format(param)
-                    + "The surface area to volume ratio is now set as a function "
-                    "of x directly instead of providing a reference value and a "
-                    "distribution."
-                )
-            elif "propotional term" in param:
+            if "propotional term" in param:
                 raise ValueError(
                     f"The parameter '{param}' has been renamed to "
                     "'... proportional term [s-1]', and its value should now be divided"
@@ -848,13 +802,25 @@ class ParameterValues:
             "elec",
             "therm",
             "half_cell",
+            "x",
+            "r",
         ]
 
         # If 'parameters' is a class, extract the dict
         if not isinstance(parameters, dict):
-            parameters = {
+            parameters_dict = {
                 k: v for k, v in parameters.__dict__.items() if k not in ignore
             }
+            for domain in ["n", "s", "p"]:
+                domain_param = getattr(parameters, domain)
+                parameters_dict.update(
+                    {
+                        f"{domain}.{k}": v
+                        for k, v in domain_param.__dict__.items()
+                        if k not in ignore
+                    }
+                )
+            parameters = parameters_dict
 
         evaluated_parameters = defaultdict(list)
         # Calculate parameters for each C-rate
@@ -871,7 +837,7 @@ class ParameterValues:
             self._dict_items = dict(self._dict_items)
 
             for name, symbol in parameters.items():
-                if not callable(symbol):
+                if isinstance(symbol, pybamm.Symbol):
                     try:
                         proc_symbol = self.process_symbol(symbol)
                     except KeyError:

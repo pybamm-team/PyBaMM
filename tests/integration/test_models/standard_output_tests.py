@@ -93,8 +93,8 @@ class BaseOutputTest(object):
                 self.R_p = disc.mesh["positive particle size"].nodes * R_p_typ
 
         # Useful parameters
-        self.l_n = param.evaluate(geo.l_n)
-        self.l_p = param.evaluate(geo.l_p)
+        self.l_n = param.evaluate(geo.n.l)
+        self.l_p = param.evaluate(geo.p.l)
 
         current_param = self.model.param.current_with_time
 
@@ -668,7 +668,7 @@ class CurrentTests(BaseOutputTest):
                 * (self.j_n(self.t, self.x_n) + self.j_n_sei(self.t, self.x_n)),
                 axis=0,
             ),
-            self.i_cell / self.l_n,
+            self.i_cell / self.n.l,
             decimal=3,
         )
         np.testing.assert_array_almost_equal(
@@ -676,7 +676,7 @@ class CurrentTests(BaseOutputTest):
                 self.a_p(self.t, self.x_p) * self.j_p(self.t, self.x_p),
                 axis=0,
             ),
-            -self.i_cell / self.l_p,
+            -self.i_cell / self.p.l,
             decimal=4,
         )
 

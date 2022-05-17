@@ -49,15 +49,9 @@ class BaseParticle(pybamm.BaseSubModel):
         c_s_surf_av = pybamm.x_average(c_s_surf)
 
         if phase == "graphite":
-            if self.domain == "Negative":
-                c_scale = self.param.c_n_max
-            elif self.domain == "Positive":
-                c_scale = self.param.c_p_max
+            c_scale = self.domain_param.c_max
         elif phase == "silicon":
-            if self.domain == "Negative":
-                c_scale = self.param.c_n_max_si
-            elif self.domain == "Positive":
-                c_scale = self.param.c_p_max_si
+            c_scale = self.domain_param.c_max_si
         # Get average concentration(s) if not provided as fundamental variable to
         # solve for
         c_s_xav = c_s_xav or pybamm.x_average(c_s)
@@ -112,12 +106,8 @@ class BaseParticle(pybamm.BaseSubModel):
         eps_s = variables[f"{Domain} electrode {phase} active material volume fraction"]
         eps_s_av = pybamm.x_average(eps_s)
         c_s_vol_av = pybamm.x_average(eps_s * c_s_rav) / eps_s_av
-        if self.domain == "Negative":
-            c_scale = self.param.c_n_max
-            L = self.param.L_n
-        elif self.domain == "Positive":
-            c_scale = self.param.c_p_max
-            L = self.param.L_p
+        c_scale = self.domain_param.c_max
+        L = self.domain_param.L
         A = self.param.A_cc
 
         variables.update(
