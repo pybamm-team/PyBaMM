@@ -19,14 +19,14 @@ params = [models[0].default_parameter_values, models[1].default_parameter_values
 def negative_radius(x):
     "Negative particle radius as a function of through-cell position (x_n [m])"
     R_n_0 = params[0]["Negative particle radius [m]"]
-    grading = 1 + 2 * x / models[1].param.L_n
+    grading = 1 + 2 * x / models[1].param.n.L
     return grading * R_n_0
 
 
 def positive_radius(x):
     "Positive particle radius as a function of through-cell position (x_p [m])"
     R_p_0 = params[0]["Positive particle radius [m]"]
-    grading = 1 + 2 * (models[1].param.L_x - x) / models[1].param.L_p
+    grading = 1 + 2 * (models[1].param.L_x - x) / models[1].param.p.L
     return grading * R_p_0
 
 

@@ -668,7 +668,7 @@ class CurrentTests(BaseOutputTest):
                 * (self.j_n(self.t, self.x_n) + self.j_n_sei(self.t, self.x_n)),
                 axis=0,
             ),
-            self.i_cell / self.n.l,
+            self.i_cell / self.l_n,
             decimal=3,
         )
         np.testing.assert_array_almost_equal(
@@ -676,7 +676,7 @@ class CurrentTests(BaseOutputTest):
                 self.a_p(self.t, self.x_p) * self.j_p(self.t, self.x_p),
                 axis=0,
             ),
-            -self.i_cell / self.p.l,
+            -self.i_cell / self.l_p,
             decimal=4,
         )
 
@@ -745,9 +745,9 @@ class VelocityTests(BaseOutputTest):
         """Test the boundary values of the current densities"""
         t, x_n, x_p = self.t, self.x_n, self.x_p
 
-        beta_n = self.model.param.beta_n
+        beta_n = self.model.param.n.beta
         beta_n = self.param.evaluate(beta_n)
-        beta_p = self.model.param.beta_p
+        beta_p = self.model.param.p.beta
         beta_p = self.param.evaluate(beta_p)
 
         np.testing.assert_array_almost_equal(
