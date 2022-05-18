@@ -674,28 +674,6 @@ class DomainLithiumIonParameters(BaseParameters):
             f"{self.domain} electrode exchange-current density [A.m-2]", inputs
         )
 
-    def j0_stripping_dimensional(self, c_e, c_Li, T):
-        """Dimensional exchange-current density for stripping [A.m-2]"""
-        inputs = {
-            "Electrolyte concentration [mol.m-3]": c_e,
-            "Plated lithium concentration [mol.m-3]": c_Li,
-            "Temperature [K]": T,
-        }
-        return pybamm.FunctionParameter(
-            "Exchange-current density for stripping [A.m-2]", inputs
-        )
-
-    def j0_plating_dimensional(self, c_e, c_Li, T):
-        """Dimensional exchange-current density for plating [A.m-2]"""
-        inputs = {
-            "Electrolyte concentration [mol.m-3]": c_e,
-            "Plated lithium concentration [mol.m-3]": c_Li,
-            "Temperature [K]": T,
-        }
-        return pybamm.FunctionParameter(
-            "Exchange-current density for plating [A.m-2]", inputs
-        )
-
     def U_dimensional(self, sto, T):
         """Dimensional open-circuit potential [V]"""
         inputs = {f"{self.domain} particle stoichiometry": sto}
