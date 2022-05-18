@@ -73,12 +73,10 @@ class SEIGrowth(BaseModel):
 
         if self.cracks is True:
             variables = self._get_standard_thickness_variables_cracks(L_inner, L_outer)
-            variables.update(
-                self._get_standard_concentration_variables_cracks(variables)
-            )
         else:
             variables = self._get_standard_thickness_variables(L_inner, L_outer)
-            variables.update(self._get_standard_concentration_variables(variables))
+        
+        variables.update(self._get_standard_concentration_variables(variables))
 
         return variables
 
@@ -121,13 +119,13 @@ class SEIGrowth(BaseModel):
 
         T = variables["Negative electrode temperature"]
         R_sei = self.param.R_sei
+        eta_SEI = delta_phi - j * L_sei * R_sei
         # thermal prefactor for reaction, interstitial and EC models
         prefactor = -1 / (2 * (1 + self.param.Theta * T))
 
         if self.options["SEI"] == "reaction limited":
             # alpha = param.alpha
             C_sei = param.C_sei_reaction
-            eta_SEI = delta_phi - j * L_sei * R_sei
             j_sei = -(1 / C_sei) * pybamm.exp(prefactor * eta_SEI)
 
         elif self.options["SEI"] == "electron-migration limited":

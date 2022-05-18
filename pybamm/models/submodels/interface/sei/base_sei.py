@@ -305,77 +305,61 @@ class BaseModel(BaseInterface):
             }
         )
 
-        return variables
+        if self.options["SEI on cracks"] == "true":
+            L_inner_cr = variables["Inner SEI on cracks thickness"]
+            L_outer_cr = variables["Outer SEI on cracks thickness"]
+            roughness = variables["Negative electrode roughness ratio"]
 
-    def _get_standard_concentration_variables_cracks(self, variables):
-        """Update variables related to the SEI on cracks concentration."""
-        param = self.param
+            n_inner_cr = L_inner_cr * (roughness - 1)  # inner SEI cracks concentration
+            n_outer_cr = L_outer_cr * (roughness - 1)  # outer SEI cracks concentration
 
-        if self.reaction_loc == "interface":
-            # scales in mol/m2 (n is an interfacial quantity)
-            n_scale = param.L_sei_0_dim / param.V_bar_inner_dimensional
-            n_outer_scale = param.L_sei_0_dim / param.V_bar_outer_dimensional
-        else:
-            # scales in mol/m3 (n is a bulk quantity)
-            n_scale = param.L_sei_0_dim * param.a_n_typ / param.V_bar_inner_dimensional
-            n_outer_scale = (
-                param.L_sei_0_dim * param.a_n_typ / param.V_bar_outer_dimensional
+            n_inner_cr_av = pybamm.x_average(n_inner)
+            n_outer_cr_av = pybamm.x_average(n_outer)
+
+            n_SEI_cr = n_inner_cr + n_outer_cr / v_bar  # SEI on cracks concentration
+            n_SEI_cr_av = pybamm.yz_average(pybamm.x_average(n_SEI))
+
+            # Calculate change in SEI cracks concentration with respect to initial state
+            rho_cr = param.rho_cr_n
+            n_SEI_cr_init = 2 * rho_cr * (L_inner_0 + L_outer_0 / v_bar) / 10000
+            delta_n_SEI_cr = n_SEI_cr_av - n_SEI_cr_init
+
+            # Q_sei_cr in mol
+            Q_sei_cr = (
+                li_mols_per_sei_mols
+                * delta_n_SEI_cr
+                * n_scale
+                * self.param.L_n
+                * self.param.L_y
+                * self.param.L_z
             )
 
-        v_bar = param.v_bar
-        # Set scales for the "EC Reaction Limited" model
-        if self.options["SEI"] == "ec reaction limited":
-            L_inner_0 = 0
-            L_outer_0 = 1
-            li_mols_per_sei_mols = 2
+            variables.update(
+                {
+                    "Inner SEI on cracks concentration [mol.m-3]": n_inner_cr * n_scale,
+                    "X-averaged inner SEI on cracks concentration [mol.m-3]":
+                    n_inner_cr_av * n_scale,
+                    "Outer SEI on cracks concentration [mol.m-3]": n_outer_cr
+                    * n_outer_scale,
+                    "X-averaged outer SEI on cracks concentration [mol.m-3]":
+                    n_outer_cr_av * n_outer_scale,
+                    "SEI on cracks concentration [mol.m-3]": n_SEI_cr * n_scale,
+                    "X-averaged SEI on cracks concentration [mol.m-3]": n_SEI_cr_av
+                    * n_scale,
+                    "Loss of lithium to SEI on cracks [mol]": Q_sei_cr,
+                    "Loss of capacity to SEI on cracks [A.h]": Q_sei_cr
+                    * self.param.F / 3600,
+                }
+            )
         else:
-            L_inner_0 = param.L_inner_0
-            L_outer_0 = param.L_outer_0
-            li_mols_per_sei_mols = 1
-
-        L_inner = variables["Inner SEI on cracks thickness"]
-        L_outer = variables["Outer SEI on cracks thickness"]
-        roughness = variables["Negative electrode roughness ratio"]
-
-        n_inner = L_inner * (roughness - 1)  # inner SEI concentration
-        n_outer = L_outer * (roughness - 1)  # outer SEI concentration
-
-        n_inner_av = pybamm.x_average(n_inner)
-        n_outer_av = pybamm.x_average(n_outer)
-
-        n_SEI = n_inner + n_outer / v_bar  # SEI concentration
-        n_SEI_av = pybamm.yz_average(pybamm.x_average(n_SEI))
-
-        # Calculate change in SEI concentration with respect to initial state
-        rho_cr = param.rho_cr_n
-        n_SEI_init = L_inner_0 + L_outer_0 / v_bar
-        n_SEI_cr_init = 2 * rho_cr * (L_inner_0 + L_outer_0 / v_bar) / 10000
-        delta_n_SEI = n_SEI_av - n_SEI_init - n_SEI_cr_init
-
-        # Q_sei in mol
-        Q_sei = (
-            li_mols_per_sei_mols
-            * delta_n_SEI
-            * n_scale
-            * self.param.L_n
-            * self.param.L_y
-            * self.param.L_z
-        )
-
-        variables.update(
-            {
-                "Inner SEI on cracks concentration [mol.m-3]": n_inner * n_scale,
-                "X-averaged inner SEI on cracks concentration [mol.m-3]": n_inner_av
-                * n_scale,
-                "Outer SEI on cracks concentration [mol.m-3]": n_outer * n_outer_scale,
-                "X-averaged outer SEI on cracks concentration [mol.m-3]": n_outer_av
-                * n_outer_scale,
-                "SEI on cracks concentration [mol.m-3]": n_SEI * n_scale,
-                "X-averaged SEI on cracks concentration [mol.m-3]": n_SEI_av * n_scale,
-                "Loss of lithium to SEI on cracks [mol]": Q_sei,
-                "Loss of capacity to SEI on cracks [A.h]": Q_sei * self.param.F / 3600,
-            }
-        )
+            zero = pybamm.Scalar(0)
+            # Degradation variables are required even if SEI on cracks is turned off
+            variables.update(
+                {
+                    "Loss of lithium to SEI on cracks [mol]": zero,
+                    "loss of capacity to SEI on cracks [A.h]": zero,
+                }
+            )
 
         return variables
 
