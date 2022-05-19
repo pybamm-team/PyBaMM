@@ -73,12 +73,11 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                 "stress-driven", "reaction-driven", or "stress and reaction-driven".
                 A 2-tuple can be provided for different behaviour in negative and
                 positive electrodes.
-            * "negative particle phases": list
-                A list of the phases that are present in the negative electrode.
-                Defaults (automaticallt assigned if "default" is passed in) are
-
-                - ["graphite"] for lithium-ion models
-                - [] for lead-acid models (no particles)
+            * "particle phases": str
+                Number of phases present in the electrode. A 2-tuple can be provided for
+                different behaviour in negative and positive electrodes.
+                For example, set to ("2", "1") for a negative electrode with 2 phases,
+                e.g. graphite and silicon.
             * "operating mode" : str
                 Sets the operating mode for the model. This determines how the current
                 is set. Can be:
@@ -231,6 +230,7 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                 "quartic profile",
             ],
             "particle mechanics": ["none", "swelling only", "swelling and cracking"],
+            "particle phases": ["1", "2"],
             "particle shape": ["spherical", "no particles"],
             "particle size": ["single", "distribution"],
             "SEI": [
@@ -256,7 +256,6 @@ class BatteryModelOptions(pybamm.FuzzyDict):
         }
         default_options["external submodels"] = []
         default_options["timescale"] = "default"
-        default_options["negative particle phases"] = "default"
 
         # Change the default for cell geometry based on which thermal option is provided
         extra_options = extra_options or {}
@@ -305,6 +304,17 @@ class BatteryModelOptions(pybamm.FuzzyDict):
         else:
             default_options["stress-induced diffusion"] = "true"
         # The "stress-induced diffusion" option will still be overridden by
+        # extra_options if provided
+
+        # Change the default for surface form based on which particle
+        # phases option is provided.
+        # return "1" if option not given
+        phases_option = extra_options.get("particle phases", "1")
+        if phases_option == "1":
+            default_options["surface form"] = "false"
+        else:
+            default_options["surface form"] = "algebraic"
+        # The "surface form" option will still be overridden by
         # extra_options if provided
 
         options = pybamm.FuzzyDict(default_options)
@@ -434,17 +444,27 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                     "current collectors in a half-cell configuration"
                 )
 
+        if options["particle phases"] != "1":
+            if not (
+                options["surface form"] != "false"
+                and options["particle size"] == "single"
+                and options["SEI"] == "none"
+                and options["particle mechanics"] == "none"
+                and options["loss of active material"] == "none"
+                and options["lithium plating"] == "none"
+            ):
+                raise pybamm.OptionError(
+                    "If there are multiple particle phases: 'surface form' cannot be "
+                    "'false', 'particle size' must be 'false', 'particle' must be "
+                    "'Fickian diffusion'. Also the following must "
+                    "be 'none': 'SEI', 'particle mechanics', "
+                    "'loss of active material', 'lithium plating'"
+                )
+
         # Check options are valid
         for option, value in options.items():
             if option in ["external submodels", "working electrode"]:
                 pass
-            elif option == "negative particle phases":
-                # This option can be "default" or a list of any length
-                if not (value == "default" or isinstance(value, list)):
-                    raise pybamm.OptionError(
-                        "'negative particle phases' must be 'default' or a list of "
-                        "phases"
-                    )
             else:
                 if isinstance(value, str) or option in [
                     "dimensionality",
@@ -462,6 +482,7 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                                 "loss of active material",
                                 "particle mechanics",
                                 "particle",
+                                "particle phases",
                                 "stress-induced diffusion",
                             ]
                             and isinstance(value, tuple)
@@ -490,6 +511,16 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                             )
 
         super().__init__(options.items())
+
+    def phase_number_to_names(self, number):
+        """
+        Converts number of phases to a list ["primary", "secondary", ...]
+        """
+        number = int(number)
+        phases = ["primary"]
+        if number >= 2:
+            phases.append("secondary")
+        return phases
 
     def print_options(self):
         """
@@ -633,12 +664,6 @@ class BaseBatteryModel(pybamm.BaseModel):
 
     @options.setter
     def options(self, extra_options):
-        neg_phases = extra_options.get("negative particle phases", "default")
-        if neg_phases == "default":
-            if isinstance(self, pybamm.lithium_ion.BaseModel):
-                extra_options["negative particle phases"] = ["graphite"]
-            elif isinstance(self, pybamm.lead_acid.BaseModel):
-                extra_options["negative particle phases"] = []
         options = BatteryModelOptions(extra_options)
 
         # Options that are incompatible with models
@@ -716,33 +741,6 @@ class BaseBatteryModel(pybamm.BaseModel):
             # Note: both y and z are scaled with L_z
             self.variables.update(
                 {"y": var.y, "y [m]": var.y * L_z, "z": var.z, "z [m]": var.z * L_z}
-            )
-
-        # Initialize "total reaction" variables
-        # These will get populated by the "get_coupled_variables" methods, and then used
-        # later by "set_rhs" or "set_algebraic", which ensures that we always have
-        # added all the necessary variables by the time the sum is used
-        self.variables.update(
-            {
-                "Sum of electrolyte reaction source terms": 0,
-                "Sum of positive electrode electrolyte reaction source terms": 0,
-                "Sum of x-averaged positive electrode "
-                "electrolyte reaction source terms": 0,
-                "Sum of interfacial current densities": 0,
-                "Sum of positive electrode interfacial current densities": 0,
-                "Sum of x-averaged positive electrode interfacial current densities": 0,
-            }
-        )
-        if not self.half_cell:
-            self.variables.update(
-                {
-                    "Sum of negative electrode electrolyte reaction source terms": 0,
-                    "Sum of x-averaged negative electrode "
-                    "electrolyte reaction source terms": 0,
-                    "Sum of negative electrode interfacial current densities": 0,
-                    "Sum of x-averaged negative electrode interfacial current densities"
-                    "": 0,
-                }
             )
 
     def build_fundamental_and_external(self):
@@ -1181,11 +1179,7 @@ class BaseBatteryModel(pybamm.BaseModel):
         # Variables for calculating the equivalent circuit model (ECM) resistance
         # Need to compare OCV to initial value to capture this as an overpotential
         ocv_init = self.param.ocv_init
-        ocv_init_dim = (
-            self.param.p.U_ref
-            - self.param.n.U_ref
-            + self.param.potential_scale * ocv_init
-        )
+        ocv_init_dim = self.param.ocv_ref + self.param.potential_scale * ocv_init
         eta_ocv = ocv - ocv_init
         eta_ocv_dim = ocv_dim - ocv_init_dim
         # Current collector current density for working out euiqvalent resistance

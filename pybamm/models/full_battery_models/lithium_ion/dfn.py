@@ -57,6 +57,7 @@ class DFN(BaseModel):
         self.set_current_collector_submodel()
         self.set_sei_submodel()
         self.set_lithium_plating_submodel()
+        self.set_total_kinetics_submodel()
 
         if self.half_cell:
             # This also removes "negative electrode" submodels, so should be done last
@@ -79,46 +80,53 @@ class DFN(BaseModel):
     def set_intercalation_kinetics_submodel(self):
         for domain in ["Negative", "Positive"]:
             intercalation_kinetics = self.get_intercalation_kinetics(domain)
-            self.submodels[domain.lower() + " interface"] = intercalation_kinetics(
-                self.param, domain, "lithium-ion main", self.options
+            phases = self.options.phase_number_to_names(
+                getattr(self.options, domain.lower())["particle phases"]
             )
+            for phase in ["primary", "secondary"]:
+                # Add kinetics for each phase included in the options
+                # If a phase is not included, add "NoReaction"
+                if phase in phases:
+                    submod = intercalation_kinetics(
+                        self.param, domain, "lithium-ion main", self.options, phase
+                    )
+                else:
+                    submod = pybamm.kinetics.NoReaction(
+                        self.param, domain, "lithium-ion main", phase
+                    )
+
+                self.submodels[f"{domain.lower()} {phase} interface"] = submod
 
     def set_particle_submodel(self):
-        for domain in ["Negative", "Positive"]:
-            particle = getattr(self.options, domain.lower())["particle"]
-            if self.options["particle size"] == "single":
-                if particle == "Fickian diffusion":
-                    self.submodels[
-                        domain.lower() + " particle"
-                    ] = pybamm.particle.no_distribution.FickianDiffusion(
-                        self.param,
-                        domain,
-                        self.options,
-                    )
-                elif particle in [
-                    "uniform profile",
-                    "quadratic profile",
-                    "quartic profile",
-                ]:
-                    self.submodels[
-                        domain.lower() + " particle"
-                    ] = pybamm.particle.no_distribution.PolynomialProfile(
-                        self.param, domain, particle, self.options
-                    )
-            elif self.options["particle size"] == "distribution":
-                if particle == "Fickian diffusion":
-                    self.submodels[
-                        domain.lower() + " particle"
-                    ] = pybamm.particle.size_distribution.FickianDiffusion(
-                        self.param, domain
-                    )
-                elif particle == "uniform profile":
-                    self.submodels[
-                        domain.lower() + " particle"
-                    ] = pybamm.particle.size_distribution.UniformProfile(
-                        self.param,
-                        domain,
-                    )
+        for domain in ["negative", "positive"]:
+            particle = getattr(self.options, domain)["particle"]
+            phases = self.options.phase_number_to_names(
+                getattr(self.options, domain)["particle phases"]
+            )
+            for phase in phases:
+                if self.options["particle size"] == "single":
+                    if particle == "Fickian diffusion":
+                        submod = pybamm.particle.no_distribution.FickianDiffusion(
+                            self.param, domain, self.options, phase
+                        )
+                    elif particle in [
+                        "uniform profile",
+                        "quadratic profile",
+                        "quartic profile",
+                    ]:
+                        submod = pybamm.particle.no_distribution.PolynomialProfile(
+                            self.param, domain, particle, self.options, phase
+                        )
+                elif self.options["particle size"] == "distribution":
+                    if particle == "Fickian diffusion":
+                        submod = pybamm.particle.size_distribution.FickianDiffusion(
+                            self.param, domain, phase
+                        )
+                    elif particle == "uniform profile":
+                        submod = pybamm.particle.size_distribution.UniformProfile(
+                            self.param, domain, phase
+                        )
+                self.submodels[f"{domain} {phase} particle"] = submod
 
     def set_solid_submodel(self):
 

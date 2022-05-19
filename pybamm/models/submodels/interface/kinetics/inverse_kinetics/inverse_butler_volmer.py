@@ -139,9 +139,8 @@ class CurrentForInverseButlerVolmer(BaseInterface):
 
     def get_coupled_variables(self, variables):
         j_tot = variables[
-            "X-averaged "
-            + self.domain.lower()
-            + " electrode total interfacial current density"
+            f"X-averaged {self.domain.lower()} electrode "
+            "total interfacial current density"
         ]
         if self.domain == "Negative":
             j_sei = variables["SEI interfacial current density"]
@@ -151,27 +150,6 @@ class CurrentForInverseButlerVolmer(BaseInterface):
             j = j_tot
 
         variables.update(self._get_standard_interfacial_current_variables(j))
-
-        if (
-            self.half_cell
-            or (
-                "Negative electrode"
-                + self.reaction_name
-                + " interfacial current density"
-                in variables
-            )
-            and "Positive electrode"
-            + self.reaction_name
-            + " interfacial current density"
-            in variables
-            and self.Reaction_icd not in variables
-        ):
-            variables.update(
-                self._get_standard_whole_cell_interfacial_current_variables(variables)
-            )
-            variables.update(
-                self._get_standard_whole_cell_exchange_current_variables(variables)
-            )
 
         return variables
 

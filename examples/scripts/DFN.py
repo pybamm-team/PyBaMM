@@ -8,7 +8,7 @@ import numpy as np
 pybamm.set_logging_level("INFO")
 
 # load model
-model = pybamm.lithium_ion.SPM({"negative particle phases": ["graphite", "silicon"]})
+model = pybamm.lithium_ion.DFN({"particle phases": ("2", "1")})
 # create geometry
 geometry = model.default_geometry
 

@@ -33,8 +33,8 @@ class XAveragedFickianDiffusion(BaseFickian):
     def get_fundamental_variables(self):
         domain = self.domain.lower()
         c_s_xav = pybamm.Variable(
-            f"X-averaged {domain} {self.phase} particle concentration",
-            domain=f"{domain} particle",
+            f"X-averaged {domain} {self.phase_name}particle concentration",
+            domain=f"{domain} {self.phase_name}particle",
             auxiliary_domains={"secondary": "current collector"},
             bounds=(0, 1),
         )
@@ -44,21 +44,20 @@ class XAveragedFickianDiffusion(BaseFickian):
         return variables
 
     def get_coupled_variables(self, variables):
-        c_s_xav = variables[
-            "X-averaged " + self.domain.lower() + " particle concentration"
-        ]
+        domain = self.domain.lower()
+        phase_name = self.phase_name
+
+        c_s_xav = variables[f"X-averaged {domain} {phase_name}particle concentration"]
         T_xav = pybamm.PrimaryBroadcast(
-            variables["X-averaged " + self.domain.lower() + " electrode temperature"],
-            [self.domain.lower() + " particle"],
+            variables[f"X-averaged {domain} electrode temperature"],
+            [f"{domain} {phase_name}particle"],
         )
 
         D_eff_xav = self._get_effective_diffusivity(c_s_xav, T_xav)
         N_s_xav = -D_eff_xav * pybamm.grad(c_s_xav)
 
-        D_eff = pybamm.SecondaryBroadcast(
-            D_eff_xav, [self._domain.lower() + " electrode"]
-        )
-        N_s = pybamm.SecondaryBroadcast(N_s_xav, [self._domain.lower() + " electrode"])
+        D_eff = pybamm.SecondaryBroadcast(D_eff_xav, [f"{domain} electrode"])
+        N_s = pybamm.SecondaryBroadcast(N_s_xav, [f"{domain} electrode"])
 
         variables.update(self._get_standard_flux_variables(N_s, N_s_xav))
         variables.update(self._get_standard_diffusivity_variables(D_eff))
@@ -67,30 +66,28 @@ class XAveragedFickianDiffusion(BaseFickian):
         return variables
 
     def set_rhs(self, variables):
-        domain_phase = self.domain.lower() + " " + self.phase
-        c_s_xav = variables[f"X-averaged {domain_phase} particle concentration"]
-        N_s_xav = variables[f"X-averaged {domain_phase} particle flux"]
+        domain = self.domain.lower()
+        phase_name = self.phase_name
+        c_s_xav = variables[f"X-averaged {domain} {phase_name}particle concentration"]
+        N_s_xav = variables[f"X-averaged {domain} {phase_name}particle flux"]
 
-        self.rhs = {c_s_xav: -(1 / self.domain_param.C_diff) * pybamm.div(N_s_xav)}
+        self.rhs = {c_s_xav: -(1 / self.phase_param.C_diff) * pybamm.div(N_s_xav)}
 
     def set_boundary_conditions(self, variables):
-        domain_param = self.domain_param
-        domain_phase = self.domain.lower() + " " + self.phase
-        c_s_xav = variables[f"X-averaged {domain_phase} particle concentration"]
-        D_eff_xav = variables[
-            "X-averaged " + self.domain.lower() + " effective diffusivity"
-        ]
+        phase_param = self.phase_param
+        domain = self.domain.lower()
+        phase_name = self.phase_name
+        c_s_xav = variables[f"X-averaged {domain} {phase_name}particle concentration"]
+        D_eff_xav = variables[f"X-averaged {domain} {phase_name}effective diffusivity"]
         j_xav = variables[
-            "X-averaged "
-            + self.domain.lower()
-            + " electrode interfacial current density"
+            f"X-averaged {domain} electrode {phase_name}interfacial current density"
         ]
 
         rbc = (
-            -domain_param.C_diff
+            -phase_param.C_diff
             * j_xav
-            / domain_param.a_R
-            / domain_param.gamma
+            / phase_param.a_R
+            / phase_param.gamma
             / pybamm.surf(D_eff_xav)
         )
 
@@ -103,10 +100,11 @@ class XAveragedFickianDiffusion(BaseFickian):
         For single or x-averaged particle models, initial conditions can't depend on x
         so we take the x-average of the supplied initial conditions.
         """
-        c_s_xav = variables[
-            f"X-averaged {self.domain.lower()} {self.phase} particle concentration"
-        ]
+        domain = self.domain.lower()
+        phase_name = self.phase_name
 
-        c_init = pybamm.x_average(self.domain_param.c_init)
+        c_s_xav = variables[f"X-averaged {domain} {phase_name}particle concentration"]
+
+        c_init = pybamm.x_average(self.phase_param.c_init)
 
         self.initial_conditions = {c_s_xav: c_init}

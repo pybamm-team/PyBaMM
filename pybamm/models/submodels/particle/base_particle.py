@@ -24,8 +24,7 @@ class BaseParticle(pybamm.BaseSubModel):
     """
 
     def __init__(self, param, domain, options=None, phase=None):
-        super().__init__(param, domain, options=options)
-        self.phase = phase
+        super().__init__(param, domain, options=options, phase=phase)
 
     def _get_standard_concentration_variables(
         self, c_s, c_s_xav=None, c_s_rav=None, c_s_av=None, c_s_surf=None
@@ -41,17 +40,15 @@ class BaseParticle(pybamm.BaseSubModel):
         """
         Domain = self.domain
         domain = Domain.lower()
-        phase = self.phase
+        phase_name = self.phase_name
 
         # Get surface concentration if not provided as fundamental variable to
         # solve for
         c_s_surf = c_s_surf or pybamm.surf(c_s)
         c_s_surf_av = pybamm.x_average(c_s_surf)
 
-        if phase == "graphite":
-            c_scale = self.domain_param.c_max
-        elif phase == "silicon":
-            c_scale = self.domain_param.c_max_si
+        c_scale = self.phase_param.c_max
+
         # Get average concentration(s) if not provided as fundamental variable to
         # solve for
         c_s_xav = c_s_xav or pybamm.x_average(c_s)
@@ -59,40 +56,40 @@ class BaseParticle(pybamm.BaseSubModel):
         c_s_av = c_s_av or pybamm.r_average(c_s_xav)
 
         variables = {
-            f"{Domain} {phase} particle concentration": c_s,
-            f"{Domain} {phase} particle concentration [mol.m-3]": c_s * c_scale,
-            f"{Domain} {phase} particle concentration [mol.m-3]": c_s * c_scale,
-            f"X-averaged {domain} {phase} particle concentration": c_s_xav,
-            f"X-averaged {domain} {phase} particle concentration [mol.m-3]": c_s_xav
+            f"{Domain} {phase_name}particle concentration": c_s,
+            f"{Domain} {phase_name}particle concentration [mol.m-3]": c_s * c_scale,
+            f"{Domain} {phase_name}particle concentration [mol.m-3]": c_s * c_scale,
+            f"X-averaged {domain} {phase_name}particle concentration": c_s_xav,
+            f"X-averaged {domain} {phase_name}particle concentration [mol.m-3]": c_s_xav
             * c_scale,
-            f"R-averaged {domain} {phase} particle concentration": c_s_rav,
-            f"R-averaged {domain} {phase} particle concentration [mol.m-3]": c_s_rav
+            f"R-averaged {domain} {phase_name}particle concentration": c_s_rav,
+            f"R-averaged {domain} {phase_name}particle concentration [mol.m-3]": c_s_rav
             * c_scale,
-            f"Average {domain} {phase} particle concentration": c_s_av,
-            f"Average {domain} {phase} particle concentration [mol.m-3]": c_s_av
+            f"Average {domain} {phase_name}particle concentration": c_s_av,
+            f"Average {domain} {phase_name}particle concentration [mol.m-3]": c_s_av
             * c_scale,
-            f"{Domain} {phase} particle surface concentration": c_s_surf,
-            self.domain
-            + " particle surface concentration [mol.m-3]": c_scale * c_s_surf,
-            f"X-averaged {domain} {phase} particle surface concentration": c_s_surf_av,
-            f"X-averaged {domain} {phase} particle surface concentration [mol.m-3]"
-            "": c_scale * c_s_surf_av,
+            f"{Domain} {phase_name}particle " "surface concentration": c_s_surf,
+            f"{Domain} particle surface concentration [mol.m-3]": c_scale * c_s_surf,
+            f"X-averaged {domain} {phase_name}particle "
+            "surface concentration": c_s_surf_av,
+            f"X-averaged {domain} {phase_name}particle "
+            "surface concentration [mol.m-3]": c_scale * c_s_surf_av,
             f"{Domain} electrode extent of lithiation": c_s_rav,
             f"X-averaged {domain} electrode extent of lithiation": c_s_av,
-            f"Minimum {domain} {phase} particle concentration": pybamm.min(c_s),
-            f"Maximum {domain} {phase} particle concentration": pybamm.max(c_s),
-            f"Minimum {domain} {phase} particle concentration [mol.m-3]"
+            f"Minimum {domain} {phase_name}particle concentration": pybamm.min(c_s),
+            f"Maximum {domain} {phase_name}particle concentration": pybamm.max(c_s),
+            f"Minimum {domain} {phase_name}particle concentration [mol.m-3]"
             "": pybamm.min(c_s) * c_scale,
-            f"Maximum {domain} {phase} particle concentration [mol.m-3]"
+            f"Maximum {domain} {phase_name}particle concentration [mol.m-3]"
             "": pybamm.max(c_s) * c_scale,
-            f"Minimum {domain} {phase} particle surface concentration"
-            "": pybamm.min(c_s_surf),
-            f"Maximum {domain} {phase} particle surface concentration"
-            "": pybamm.max(c_s_surf),
-            f"Minimum {domain} {phase} particle surface concentration [mol.m-3]"
-            "": pybamm.min(c_s_surf) * c_scale,
-            f"Maximum {domain} {phase} particle surface concentration [mol.m-3]"
-            "": pybamm.max(c_s_surf) * c_scale,
+            f"Minimum {domain} {phase_name}particle "
+            "surface concentration": pybamm.min(c_s_surf),
+            f"Maximum {domain} {phase_name}particle "
+            "surface concentration": pybamm.max(c_s_surf),
+            f"Minimum {domain} {phase_name}particle "
+            "surface concentration [mol.m-3]": pybamm.min(c_s_surf) * c_scale,
+            f"Maximum {domain} {phase_name}particle "
+            "surface concentration [mol.m-3]": pybamm.max(c_s_surf) * c_scale,
         }
 
         return variables
@@ -101,22 +98,24 @@ class BaseParticle(pybamm.BaseSubModel):
         Domain = self.domain
         domain = Domain.lower()
         phase = self.phase
+        phase_name = self.phase_name
 
-        c_s_rav = variables[f"R-averaged {domain} {phase} particle concentration"]
+        c_s_rav = variables[f"R-averaged {domain} {phase_name}particle concentration"]
         eps_s = variables[f"{Domain} electrode {phase} active material volume fraction"]
         eps_s_av = pybamm.x_average(eps_s)
         c_s_vol_av = pybamm.x_average(eps_s * c_s_rav) / eps_s_av
-        c_scale = self.domain_param.c_max
+        c_scale = self.phase_param.c_max
         L = self.domain_param.L
         A = self.param.A_cc
 
         variables.update(
             {
-                f"{Domain} electrode {phase} SOC": c_s_vol_av,
-                f"{Domain} electrode {phase} volume-averaged concentration": c_s_vol_av,
-                f"{Domain} electrode {phase} volume-averaged concentration [mol.m-3]"
-                "": c_s_vol_av * c_scale,
-                f"Total lithium in {phase} in {domain} electrode [mol]"
+                f"{Domain} electrode {phase_name}SOC": c_s_vol_av,
+                f"{Domain} electrode {phase_name}volume-averaged "
+                "concentration": c_s_vol_av,
+                f"{Domain} electrode {phase_name}volume-averaged "
+                "concentration [mol.m-3]": c_s_vol_av * c_scale,
+                f"Total lithium in {phase} phase in {domain} electrode [mol]"
                 "": pybamm.yz_average(c_s_vol_av * eps_s_av) * c_scale * L * A,
             }
         )
@@ -125,11 +124,11 @@ class BaseParticle(pybamm.BaseSubModel):
     def _get_standard_flux_variables(self, N_s, N_s_xav):
         Domain = self.domain
         domain = Domain.lower()
-        phase = self.phase
+        phase_name = self.phase_name
 
         variables = {
-            f"{Domain} {phase} particle flux": N_s,
-            f"X-averaged {domain} {phase} particle flux": N_s_xav,
+            f"{Domain} {phase_name}particle flux": N_s,
+            f"X-averaged {domain} {phase_name}particle flux": N_s_xav,
         }
 
         return variables

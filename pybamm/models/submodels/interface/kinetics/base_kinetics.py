@@ -20,12 +20,14 @@ class BaseKinetics(BaseInterface):
     options: dict
         A dictionary of options to be passed to the model.
         See :class:`pybamm.BaseBatteryModel`
+    phase : str
+        Phase of the particle
 
     **Extends:** :class:`pybamm.interface.BaseInterface`
     """
 
-    def __init__(self, param, domain, reaction, options):
-        super().__init__(param, domain, reaction, options=options)
+    def __init__(self, param, domain, reaction, options, phase="primary"):
+        super().__init__(param, domain, reaction, options=options, phase=phase)
 
     def get_fundamental_variables(self):
         if (
@@ -168,31 +170,6 @@ class BaseKinetics(BaseInterface):
         ]:
             variables.update(
                 self._get_standard_sei_film_overpotential_variables(eta_sei)
-            )
-
-        if (
-            (
-                self.half_cell
-                or (
-                    "Negative electrode"
-                    + self.reaction_name
-                    + " interfacial current density"
-                )
-                in variables
-            )
-            and (
-                "Positive electrode"
-                + self.reaction_name
-                + " interfacial current density"
-            )
-            in variables
-            and self.Reaction_icd not in variables
-        ):
-            variables.update(
-                self._get_standard_whole_cell_interfacial_current_variables(variables)
-            )
-            variables.update(
-                self._get_standard_whole_cell_exchange_current_variables(variables)
             )
 
         return variables

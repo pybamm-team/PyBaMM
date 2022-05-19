@@ -21,15 +21,9 @@ class _BaseAverage(pybamm.Integral):
 
 class XAverage(_BaseAverage):
     def __init__(self, child):
-        if child.domain in [
-            ["negative particle"],
-            ["negative particle size"],
-        ]:
+        if all(n in child.domain[0] for n in ["negative", "particle"]):
             x = pybamm.standard_spatial_vars.x_n
-        elif child.domain in [
-            ["positive particle"],
-            ["positive particle size"],
-        ]:
+        elif all(n in child.domain[0] for n in ["positive", "particle"]):
             x = pybamm.standard_spatial_vars.x_p
         else:
             x = pybamm.SpatialVariable("x", domain=child.domain)
@@ -270,12 +264,15 @@ def r_average(symbol):
     :class:`Symbol`
         the new averaged symbol
     """
+    has_particle_domain = (
+        "particle" in symbol.domain[0] and "size" not in symbol.domain[0]
+    )
     # Can't take average if the symbol evaluates on edges
     if symbol.evaluates_on_edges("primary"):
         raise ValueError("Can't take the r-average of a symbol that evaluates on edges")
     # Otherwise, if symbol doesn't have a particle domain,
     # its r-averaged value is itself
-    elif symbol.domain not in [["positive particle"], ["negative particle"]]:
+    elif not has_particle_domain:
         return symbol
     # If symbol is a secondary broadcast onto "negative electrode" or
     # "positive electrode", take the r-average of the child then broadcast back
@@ -286,9 +283,10 @@ def r_average(symbol):
         child_av = pybamm.r_average(child)
         return pybamm.PrimaryBroadcast(child_av, symbol.domains["secondary"])
     # If symbol is a Broadcast onto a particle domain, its average value is its child
-    elif isinstance(
-        symbol, (pybamm.PrimaryBroadcast, pybamm.FullBroadcast)
-    ) and symbol.domain in [["positive particle"], ["negative particle"]]:
+    elif (
+        isinstance(symbol, (pybamm.PrimaryBroadcast, pybamm.FullBroadcast))
+        and has_particle_domain
+    ):
         return symbol.reduce_one_dimension()
     else:
         return RAverage(symbol)

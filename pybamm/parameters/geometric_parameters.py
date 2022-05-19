@@ -79,14 +79,24 @@ class DomainGeometricParameters(BaseParameters):
         self.domain = domain
         self.main_param = main_param
 
+        if self.domain != "Separator":
+            self.prim = ParticleGeometricParameters(domain, "primary", main_param)
+            self.sec = ParticleGeometricParameters(domain, "secondary", main_param)
+            self.phases = [self.prim, self.sec]
+        else:
+            self.phases = []
+
     def _set_dimensional_parameters(self):
         """Defines the dimensional parameters."""
-        Domain = self.domain
+        for phase in self.phases:
+            phase._set_dimensional_parameters()
 
         if self.domain == "Separator":
             self.L = pybamm.Parameter("Separator thickness [m]")
             self.b_e = pybamm.Parameter("Separator Bruggeman coefficient (electrolyte)")
             return
+
+        Domain = self.domain
 
         # Macroscale geometry
         self.L_cc = pybamm.Parameter(f"{Domain} current collector thickness [m]")
@@ -99,17 +109,53 @@ class DomainGeometricParameters(BaseParameters):
         self.A_tab = self.L_tab * self.L_cc  # Area of tab
 
         # Microscale geometry
-        # Note: for li-ion cells, the definition of the surface area to
-        # volume ratio is overwritten in lithium_ion_parameters.py to be computed
-        # based on the assumed particle shape
-        self.a_dim = pybamm.Parameter(
-            f"{Domain} electrode surface area to volume ratio [m-1]"
-        )
         self.b_e = pybamm.Parameter(
             f"{Domain} electrode Bruggeman coefficient (electrolyte)"
         )
         self.b_s = pybamm.Parameter(
             f"{Domain} electrode Bruggeman coefficient (electrode)"
+        )
+
+    def _set_scales(self):
+        """Define the scales used in the non-dimensionalisation scheme"""
+        for phase in self.phases:
+            phase._set_scales()
+
+    def _set_dimensionless_parameters(self):
+        """Defines the dimensionless parameters."""
+        for phase in self.phases:
+            phase._set_dimensionless_parameters()
+        main = self.main_param
+
+        # Macroscale Geometry
+        self.l = self.L / main.L_x
+        if self.domain == "Separator":
+            return
+
+        self.l_cc = self.L_cc / main.L_x
+
+        # Tab geometry (for pouch cells)
+        self.l_tab = self.L_tab / main.L_z
+        self.centre_y_tab = self.Centre_y_tab / main.L_z
+        self.centre_z_tab = self.Centre_z_tab / main.L_z
+
+
+class ParticleGeometricParameters(BaseParameters):
+    def __init__(self, domain, phase, main_param):
+        self.domain = domain
+        self.phase = phase
+        self.main_param = main_param
+
+    def _set_dimensional_parameters(self):
+        """Defines the dimensional parameters."""
+        Domain = self.domain
+
+        # Microscale geometry
+        # Note: for li-ion cells, the definition of the surface area to
+        # volume ratio is overwritten in lithium_ion_parameters.py to be computed
+        # based on the assumed particle shape
+        self.a_dim = pybamm.Parameter(
+            f"{Domain} electrode surface area to volume ratio [m-1]"
         )
 
         # Particle-size distribution geometry
@@ -142,8 +188,6 @@ class DomainGeometricParameters(BaseParameters):
 
     def _set_scales(self):
         """Define the scales used in the non-dimensionalisation scheme"""
-        if self.domain == "Separator":
-            return
         # Microscale geometry
         # Note: these scales are necessary here to non-dimensionalise the
         # particle size distributions.
@@ -151,20 +195,6 @@ class DomainGeometricParameters(BaseParameters):
 
     def _set_dimensionless_parameters(self):
         """Defines the dimensionless parameters."""
-        main = self.main_param
-
-        # Macroscale Geometry
-        self.l = self.L / main.L_x
-        if self.domain == "Separator":
-            return
-
-        self.l_cc = self.L_cc / main.L_x
-
-        # Tab geometry (for pouch cells)
-        self.l_tab = self.L_tab / main.L_z
-        self.centre_y_tab = self.Centre_y_tab / main.L_z
-        self.centre_z_tab = self.Centre_z_tab / main.L_z
-
         # Particle-size distribution geometry
         self.R_min = self.R_min_dim / self.R_typ
         self.R_max = self.R_max_dim / self.R_typ

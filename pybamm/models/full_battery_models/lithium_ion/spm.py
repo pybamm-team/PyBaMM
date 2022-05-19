@@ -64,6 +64,7 @@ class SPM(BaseModel):
 
         self.set_sei_submodel()
         self.set_lithium_plating_submodel()
+        self.set_total_kinetics_submodel()
 
         if self.half_cell:
             # This also removes "negative electrode" submodels, so should be done last
@@ -86,38 +87,46 @@ class SPM(BaseModel):
 
     def set_intercalation_kinetics_submodel(self):
 
-        if self.options["surface form"] == "false":
-            self.submodels["negative interface"] = self.inverse_intercalation_kinetics(
-                self.param, "Negative", "lithium-ion main", self.options
-            )
-            self.submodels["positive interface"] = self.inverse_intercalation_kinetics(
-                self.param, "Positive", "lithium-ion main", self.options
-            )
-            self.submodels[
-                "negative interface current"
-            ] = pybamm.kinetics.CurrentForInverseButlerVolmer(
-                self.param, "Negative", "lithium-ion main", self.options
-            )
-            self.submodels[
-                "positive interface current"
-            ] = pybamm.kinetics.CurrentForInverseButlerVolmer(
-                self.param, "Positive", "lithium-ion main", self.options
-            )
-        else:
-            for domain in ["Negative", "Positive"]:
-                intercalation_kinetics = self.get_intercalation_kinetics(domain)
-                self.submodels[domain.lower() + " interface"] = intercalation_kinetics(
+        for domain in ["negative", "positive"]:
+            if self.options["surface form"] == "false":
+                self.submodels[
+                    f"{domain} interface"
+                ] = self.inverse_intercalation_kinetics(
                     self.param, domain, "lithium-ion main", self.options
                 )
+                self.submodels[
+                    f"{domain} interface current"
+                ] = pybamm.kinetics.CurrentForInverseButlerVolmer(
+                    self.param, domain, "lithium-ion main", self.options
+                )
+            else:
+                intercalation_kinetics = self.get_intercalation_kinetics(domain)
+                phases = self.options.phase_number_to_names(
+                    getattr(self.options, domain)["particle phases"]
+                )
+                for phase in ["primary", "secondary"]:
+                    # Add kinetics for each phase included in the options
+                    # If a phase is not included, add "NoReaction"
+                    if phase in phases:
+                        submod = intercalation_kinetics(
+                            self.param, domain, "lithium-ion main", self.options, phase
+                        )
+                    else:
+                        submod = pybamm.kinetics.NoReaction(
+                            self.param, domain, "lithium-ion main", phase
+                        )
+
+                    self.submodels[f"{domain} {phase} interface"] = submod
 
     def set_particle_submodel(self):
-        for domain in ["Negative", "Positive"]:
-            particle = getattr(self.options, domain.lower())["particle"]
-            for phase in self.options["negative particle phases"]:
+        for domain in ["negative", "positive"]:
+            particle = getattr(self.options, domain)["particle"]
+            phases = self.options.phase_number_to_names(
+                getattr(self.options, domain)["particle phases"]
+            )
+            for phase in phases:
                 if particle == "Fickian diffusion":
-                    self.submodels[
-                        domain.lower() + phase + " particle"
-                    ] = pybamm.particle.no_distribution.XAveragedFickianDiffusion(
+                    submod = pybamm.particle.no_distribution.XAveragedFickianDiffusion(
                         self.param, domain, self.options, phase
                     )
                 elif particle in [
@@ -125,11 +134,10 @@ class SPM(BaseModel):
                     "quadratic profile",
                     "quartic profile",
                 ]:
-                    self.submodels[
-                        domain.lower() + phase + " particle"
-                    ] = pybamm.particle.no_distribution.XAveragedPolynomialProfile(
+                    submod = pybamm.particle.no_distribution.XAveragedPolynomialProfile(
                         self.param, domain, particle, self.options, phase
                     )
+                self.submodels[f"{domain} {phase} particle"] = submod
 
     def set_solid_submodel(self):
 

@@ -52,8 +52,8 @@ class BaseElectrode(pybamm.BaseSubModel):
             delta_phi_s = phi_s
 
         elif self.domain == "Positive":
-            phi_s_dim = param.p.U_ref - param.n.U_ref + pot * phi_s
-            phi_s_av_dim = param.p.U_ref - param.n.U_ref + pot * phi_s_av
+            phi_s_dim = param.ocv_ref + pot * phi_s
+            phi_s_av_dim = param.ocv_ref + pot * phi_s_av
 
             v = pybamm.boundary_value(phi_s, "right")
             delta_phi_s = v - phi_s
@@ -136,8 +136,7 @@ class BaseElectrode(pybamm.BaseSubModel):
         """
 
         pot_scale = self.param.potential_scale
-        U_ref = self.param.p.U_ref - self.param.n.U_ref
-        phi_s_cp_dim = U_ref + phi_s_cp * pot_scale
+        phi_s_cp_dim = self.param.ocv_ref + phi_s_cp * pot_scale
 
         # Local potential difference
         V_cc = phi_s_cp - phi_s_cn
@@ -156,7 +155,7 @@ class BaseElectrode(pybamm.BaseSubModel):
             "Positive current collector potential": phi_s_cp,
             "Positive current collector potential [V]": phi_s_cp_dim,
             "Local voltage": V_cc,
-            "Local voltage [V]": U_ref + V_cc * pot_scale,
+            "Local voltage [V]": self.param.ocv_ref + V_cc * pot_scale,
             "Terminal voltage": V,
             "Terminal voltage [V]": V_dim,
         }

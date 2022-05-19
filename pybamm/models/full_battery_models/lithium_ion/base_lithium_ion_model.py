@@ -28,8 +28,9 @@ class BaseModel(pybamm.BaseBatteryModel):
             "negative electrode": self.param.L_x,
             "separator": self.param.L_x,
             "positive electrode": self.param.L_x,
-            "positive particle": self.param.p.R_typ,
-            "positive particle size": self.param.p.R_typ,
+            "positive particle": self.param.p.prim.R_typ,
+            "positive secondary particle": self.param.p.sec.R_typ,
+            "positive particle size": self.param.p.prim.R_typ,
             "current collector y": self.param.L_z,
             "current collector z": self.param.L_z,
         }
@@ -38,8 +39,9 @@ class BaseModel(pybamm.BaseBatteryModel):
         if not self.half_cell:
             self.length_scales.update(
                 {
-                    "negative particle": self.param.n.R_typ,
-                    "negative particle size": self.param.n.R_typ,
+                    "negative particle": self.param.n.prim.R_typ,
+                    "negative secondary particle": self.param.n.sec.R_typ,
+                    "negative particle size": self.param.n.prim.R_typ,
                 }
             )
         self.set_standard_output_variables()
@@ -79,15 +81,28 @@ class BaseModel(pybamm.BaseBatteryModel):
 
         # Particle concentration position
         var = pybamm.standard_spatial_vars
-        self.variables.update({"r_p": var.r_p, "r_p [m]": var.r_p * self.param.p.R_typ})
+        self.variables.update(
+            {"r_p": var.r_p, "r_p [m]": var.r_p * self.param.p.prim.R_typ}
+        )
         if not self.half_cell:
             self.variables.update(
-                {"r_n": var.r_n, "r_n [m]": var.r_n * self.param.n.R_typ}
+                {"r_n": var.r_n, "r_n [m]": var.r_n * self.param.n.prim.R_typ}
             )
 
     def set_degradation_variables(self):
         """Sets variables that quantify degradation (LAM, LLI, etc)"""
         param = self.param
+
+        for domain in ["negative", "positive"]:
+            phases = self.options.phase_number_to_names(
+                getattr(self.options, domain)["particle phases"]
+            )
+            self.variables[f"Total lithium in {domain} electrode [mol]"] = sum(
+                self.variables[
+                    f"Total lithium in {phase} phase in {domain} electrode [mol]"
+                ]
+                for phase in phases
+            )
 
         # LAM
         if self.half_cell:
@@ -216,12 +231,18 @@ class BaseModel(pybamm.BaseBatteryModel):
                 self.param, self.x_average, self.options
             )
 
+    def set_total_kinetics_submodel(self):
+        for domain in ["negative", "positive"]:
+            self.submodels[f"{domain} total interface"] = pybamm.kinetics.TotalKinetics(
+                self.param, "lithium-ion", self.options
+            )
+
     def set_other_reaction_submodels_to_zero(self):
         self.submodels["negative oxygen interface"] = pybamm.kinetics.NoReaction(
-            self.param, "Negative", "lithium-ion oxygen"
+            self.param, "Negative", "lithium-ion oxygen", "primary"
         )
         self.submodels["positive oxygen interface"] = pybamm.kinetics.NoReaction(
-            self.param, "Positive", "lithium-ion oxygen"
+            self.param, "Positive", "lithium-ion oxygen", "primary"
         )
 
     def set_crack_submodel(self):
@@ -241,18 +262,28 @@ class BaseModel(pybamm.BaseBatteryModel):
                 )
 
     def set_active_material_submodel(self):
-        for domain in ["Negative", "Positive"]:
-            lam = getattr(self.options, domain.lower())["loss of active material"]
-            if lam == "none":
-                self.submodels[
-                    domain.lower() + " active material"
-                ] = pybamm.active_material.Constant(self.param, domain, self.options)
-            else:
-                self.submodels[
-                    domain.lower() + " active material"
-                ] = pybamm.active_material.LossActiveMaterial(
-                    self.param, domain, self.options, self.x_average
-                )
+        for domain in ["negative", "positive"]:
+            lam = getattr(self.options, domain)["loss of active material"]
+            phases = self.options.phase_number_to_names(
+                getattr(self.options, domain)["particle phases"]
+            )
+            for phase in phases:
+                if lam == "none":
+                    submod = pybamm.active_material.Constant(
+                        self.param, domain.capitalize(), self.options, phase
+                    )
+                else:
+                    submod = pybamm.active_material.LossActiveMaterial(
+                        self.param, domain.capitalize(), self.options, self.x_average
+                    )
+                self.submodels[f"{domain} {phase} active material"] = submod
+
+            # Submodel for the total active material, summing up each phase
+            self.submodels[
+                f"{domain} total active material"
+            ] = pybamm.active_material.Total(
+                self.param, domain.capitalize(), self.options
+            )
 
     def set_porosity_submodel(self):
         if (

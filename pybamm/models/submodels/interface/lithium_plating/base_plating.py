@@ -47,9 +47,6 @@ class BasePlating(BaseInterface):
                 "Positive electrode lithium plating interfacial current density": zero,
             }
         )
-        variables.update(
-            self._get_standard_whole_cell_interfacial_current_variables(variables)
-        )
 
         return variables
 
@@ -75,7 +72,7 @@ class BasePlating(BaseInterface):
             L_scale = 1
         else:
             c_scale = param.c_Li_typ
-            L_scale = param.V_bar_plated_Li * c_scale / param.n.a_typ
+            L_scale = param.V_bar_plated_Li * c_scale / param.n.prim.a_typ
 
         c_plated_Li_av = pybamm.x_average(c_plated_Li)
         L_plated_Li = c_plated_Li  # plated Li thickness
@@ -116,7 +113,7 @@ class BasePlating(BaseInterface):
         # Set scales to one for the "no plating" model so that they are not required
         # by parameter values in general
         param = self.param
-        j_scale = param.n.j_scale
+        j_scale = param.n.prim.j_scale
         j_stripping_av = pybamm.x_average(j_stripping)
 
         variables = {
