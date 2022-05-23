@@ -5,12 +5,14 @@ def silicon_ocp_Mark2016(sto):
     """
     silicon Open Circuit Potential (OCP) as a a function of the
     stochiometry. The fit is taken from the Enertech cell [1], which is only accurate
-       for 0 < sto < 1.
-        References
-        ----------
-        .. [1] Verbrugge M, Baker D, Xiao X. Formulation for the treatment of multiple
-        electrochemical reactions and associated speciation for the Lithium-Silicon
-        electrode[J]. Journal of The Electrochemical Society, 2015, 163(2): A262.
+    for 0 < sto < 1.
+
+    References
+    ----------
+    .. [1] Verbrugge M, Baker D, Xiao X. Formulation for the treatment of multiple
+    electrochemical reactions and associated speciation for the Lithium-Silicon
+    electrode[J]. Journal of The Electrochemical Society, 2015, 163(2): A262.
+
     Parameters
     ----------
     sto: double

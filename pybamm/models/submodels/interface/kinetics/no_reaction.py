@@ -3,10 +3,10 @@
 #
 
 import pybamm
-from .base_kinetics import BaseKinetics
+from ..base_interface import BaseInterface
 
 
-class NoReaction(BaseKinetics):
+class NoReaction(BaseInterface):
     """
     Base submodel for when no reaction occurs
 
@@ -31,5 +31,8 @@ class NoReaction(BaseKinetics):
         }
         super().__init__(param, domain, reaction, options, phase)
 
-    def _get_kinetics(self, j0, ne, eta_r, T, u):
-        return pybamm.Scalar(0)
+    def get_fundamental_variables(self):
+        zero = pybamm.Scalar(0)
+        variables = self._get_standard_interfacial_current_variables(zero)
+        variables.update(self._get_standard_exchange_current_variables(zero))
+        return variables

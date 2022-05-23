@@ -1,7 +1,9 @@
-from pybamm import exp, constants, Parameter, AbsoluteValue
+from pybamm import exp, constants
 
 
-def silicon_LGM50_electrolyte_exchange_current_density_Chen2020(c_e, c_s_surf, T):
+def silicon_LGM50_electrolyte_exchange_current_density_Chen2020(
+    c_e, c_s_surf, T, c_s_max
+):
     """
     Exchange-current density for Butler-Volmer reactions between silicon and LiPF6 in
     EC:DMC.
@@ -21,6 +23,8 @@ def silicon_LGM50_electrolyte_exchange_current_density_Chen2020(c_e, c_s_surf, T
         Particle concentration [mol.m-3]
     T : :class:`pybamm.Symbol`
         Temperature [K]
+    c_s_max : :class:`pybamm.Symbol`
+        Maximum particle concentration [mol.m-3]
 
     Returns
     -------
@@ -34,14 +38,6 @@ def silicon_LGM50_electrolyte_exchange_current_density_Chen2020(c_e, c_s_surf, T
     E_r = 35000
     arrhenius = exp(E_r / constants.R * (1 / 298.15 - 1 / T))
 
-    c_n_max = Parameter(
-        "Maximum concentration in negative electrode of phase 2 [mol.m-3]"
-    )
-
     return (
-        m_ref
-        * arrhenius
-        * c_e ** 0.5
-        * AbsoluteValue(c_s_surf) ** 0.5
-        * AbsoluteValue(c_n_max - c_s_surf) ** 0.5
+        m_ref * arrhenius * c_e ** 0.5 * c_s_surf ** 0.5 * (c_s_max - c_s_surf) ** 0.5
     )

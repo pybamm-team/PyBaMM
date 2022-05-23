@@ -2,6 +2,7 @@
 # Dimensional and dimensionless parameter values, and scales
 #
 import numpy as np
+from regex import P
 import pybamm
 import pandas as pd
 import os
@@ -170,12 +171,9 @@ class ParameterValues:
         ]
 
         # add SEI parameters if provided
-        if "sei" in chemistry:
-            component_groups += ["sei"]
-
-        # add lithium plating parameters if provided
-        if "lithium plating" in chemistry:
-            component_groups += ["lithium plating"]
+        for extra_group in ["sei", "lithium plating", "negative electrode secondary"]:
+            if extra_group in chemistry:
+                component_groups += [extra_group]
 
         for component_group in component_groups:
             # Make sure component is provided
@@ -188,6 +186,11 @@ class ParameterValues:
                     )
                 )
             # Create path to component and load values
+            if component_group == "negative electrode secondary":
+                component_group = "negative electrode"
+                prefactor = "Secondary: "
+            else:
+                prefactor = ""
             component_path = os.path.join(
                 base_chemistry, component_group.replace(" ", "_") + "s", component
             )
@@ -195,6 +198,9 @@ class ParameterValues:
                 os.path.join(component_path, "parameters.csv")
             )
             component_params = self.read_parameters_csv(file_path)
+
+            # Add prefactor to distinguish e.g. secondary particles
+            component_params = {prefactor + k: v for k, v in component_params.items()}
 
             # Update parameters, making sure to check any conflicts
             self.update(

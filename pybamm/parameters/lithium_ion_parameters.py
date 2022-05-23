@@ -754,8 +754,10 @@ class ParticleLithiumIonParameters(BaseParameters):
         self.phase = phase
         if phase == "primary":
             self.phase_name = ""  # empty phase name for primary phase
+            self.phase_prefactor = ""
         elif phase == "secondary":
-            self.phase_name = " secondary"
+            self.phase_name = "secondary "
+            self.phase_prefactor = "Secondary: "
 
         self.domain_param = domain_param
         self.domain = domain_param.domain
@@ -770,6 +772,7 @@ class ParticleLithiumIonParameters(BaseParameters):
         Domain = self.domain
         domain = Domain.lower()
         phase_name = self.phase_name
+        pref = self.phase_prefactor
 
         x = pybamm.SpatialVariable(
             f"x_{domain[0]}",
@@ -779,7 +782,7 @@ class ParticleLithiumIonParameters(BaseParameters):
         )
         r = pybamm.SpatialVariable(
             f"r_{domain[0]}",
-            domain=[f"{domain}{self.phase_name} particle"],
+            domain=[f"{domain} {self.phase_name}particle"],
             auxiliary_domains={
                 "secondary": f"{domain} electrode",
                 "tertiary": "current collector",
@@ -795,7 +798,7 @@ class ParticleLithiumIonParameters(BaseParameters):
 
         # Particle properties
         self.c_max = pybamm.Parameter(
-            f"Maximum concentration in {domain} electrode [mol.m-3]"
+            f"{pref}Maximum concentration in {domain} electrode [mol.m-3]"
         )
 
         # Particle-size distribution parameters
@@ -805,17 +808,17 @@ class ParticleLithiumIonParameters(BaseParameters):
         self.f_a_dist_dimensional = self.geo.f_a_dist_dimensional
 
         # Electrochemical reactions
-        self.ne = pybamm.Parameter(f"{Domain} electrode electrons in reaction")
+        self.ne = pybamm.Parameter(f"{pref}{Domain} electrode electrons in reaction")
         self.C_dl_dimensional = pybamm.Parameter(
-            f"{Domain} electrode double-layer capacity [F.m-2]"
+            f"{pref}{Domain} electrode double-layer capacity [F.m-2]"
         )
 
         # Intercalation kinetics
         self.mhc_lambda_dimensional = pybamm.Parameter(
-            f"{Domain} electrode reorganization energy [eV]"
+            f"{pref}{Domain} electrode reorganization energy [eV]"
         )
         self.alpha_bv = pybamm.Parameter(
-            f"{Domain} electrode Butler-Volmer transfer coefficient"
+            f"{pref}{Domain} electrode Butler-Volmer transfer coefficient"
         )
 
         if self.main_param.half_cell and self.domain == "Negative":
@@ -824,16 +827,16 @@ class ParticleLithiumIonParameters(BaseParameters):
             self.U_init_dim = pybamm.Scalar(0)
         else:
             self.epsilon_s = pybamm.FunctionParameter(
-                f"{Domain} electrode{phase_name} active material volume fraction",
+                f"{pref}{Domain} electrode active material volume fraction",
                 {"Through-cell distance (x) [m]": x},
             )
             self.c_init = (
                 pybamm.FunctionParameter(
-                    f"Initial concentration in {domain} electrode [mol.m-3]",
+                    f"{pref}Initial concentration in {domain} electrode [mol.m-3]",
                     {
                         "Radial distance (r) [m]": r,
                         "Through-cell distance (x) [m]": pybamm.PrimaryBroadcast(
-                            x, f"{domain}{phase_name} particle"
+                            x, f"{domain} {phase_name}particle"
                         ),
                     },
                 )
@@ -859,26 +862,37 @@ class ParticleLithiumIonParameters(BaseParameters):
     def D_dimensional(self, sto, T):
         """Dimensional diffusivity in particle. Note this is defined as a
         function of stochiometry"""
-        inputs = {f"{self.domain} particle stoichiometry": sto, "Temperature [K]": T}
+        inputs = {
+            f"{self.phase_prefactor}{self.domain} particle stoichiometry": sto,
+            "Temperature [K]": T,
+        }
         return pybamm.FunctionParameter(
-            f"{self.domain} electrode diffusivity [m2.s-1]", inputs
+            f"{self.phase_prefactor}{self.domain} electrode diffusivity [m2.s-1]",
+            inputs,
         )
 
     def j0_dimensional(self, c_e, c_s_surf, T):
         """Dimensional exchange-current density [A.m-2]"""
         inputs = {
             "Electrolyte concentration [mol.m-3]": c_e,
-            f"{self.domain} particle surface concentration [mol.m-3]": c_s_surf,
+            f"{self.phase_prefactor}{self.domain} particle "
+            "surface concentration [mol.m-3]": c_s_surf,
             "Temperature [K]": T,
+            f"{self.phase_prefactor}Maximum {self.domain.lower()} particle "
+            "surface concentration [mol.m-3]": self.c_max,
         }
         return pybamm.FunctionParameter(
-            f"{self.domain} electrode exchange-current density [A.m-2]", inputs
+            f"{self.phase_prefactor}{self.domain} electrode "
+            "exchange-current density [A.m-2]",
+            inputs,
         )
 
     def U_dimensional(self, sto, T):
         """Dimensional open-circuit potential [V]"""
-        inputs = {f"{self.domain} particle stoichiometry": sto}
-        u_ref = pybamm.FunctionParameter(f"{self.domain} electrode OCP [V]", inputs)
+        inputs = {f"{self.phase_prefactor}{self.domain} particle stoichiometry": sto}
+        u_ref = pybamm.FunctionParameter(
+            f"{self.phase_prefactor}{self.domain} electrode OCP [V]", inputs
+        )
         # add a term to ensure that the OCP goes to infinity at 0 and -infinity at 1
         # this will not affect the OCP for most values of sto
         # see #1435
@@ -892,9 +906,11 @@ class ParticleLithiumIonParameters(BaseParameters):
         """
         Dimensional entropic change of the open-circuit potential [V.K-1]
         """
-        inputs = {f"{self.domain} particle stoichiometry": sto}
+        inputs = {f"{self.phase_prefactor}{self.domain} particle stoichiometry": sto}
         return pybamm.FunctionParameter(
-            f"{self.domain} electrode OCP entropic change [V.K-1]", inputs
+            f"{self.phase_prefactor}{self.domain} electrode "
+            "OCP entropic change [V.K-1]",
+            inputs,
         )
 
     def _set_scales(self):
