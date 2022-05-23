@@ -23,6 +23,8 @@ class XAveragedPolynomialProfile(BaseFickian):
     options: dict
         A dictionary of options to be passed to the model.
         See :class:`pybamm.BaseBatteryModel`
+    phase : str
+        Phase of the particle
 
     References
     ----------
@@ -33,8 +35,8 @@ class XAveragedPolynomialProfile(BaseFickian):
     **Extends:** :class:`pybamm.particle.BaseParticle`
     """
 
-    def __init__(self, param, domain, name, options):
-        super().__init__(param, domain, options)
+    def __init__(self, param, domain, name, options, phase):
+        super().__init__(param, domain, options, phase)
         self.name = name
 
         pybamm.citations.register("Subramanian2005")

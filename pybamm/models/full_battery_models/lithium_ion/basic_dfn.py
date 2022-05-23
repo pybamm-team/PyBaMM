@@ -123,23 +123,35 @@ class BasicDFN(BaseModel):
         # right side. This is also accessible via `boundary_value(x, "right")`, with
         # "left" providing the boundary value of the left side
         c_s_surf_n = pybamm.surf(c_s_n)
-        j0_n = param.n.gamma * param.n.j0(c_e_n, c_s_surf_n, T) / param.n.C_r
+        j0_n = (
+            param.n.prim.gamma
+            * param.n.prim.j0(c_e_n, c_s_surf_n, T)
+            / param.n.prim.C_r
+        )
         j_n = (
             2
             * j0_n
             * pybamm.sinh(
-                param.n.ne / 2 * (phi_s_n - phi_e_n - param.n.U(c_s_surf_n, T))
+                param.n.prim.ne
+                / 2
+                * (phi_s_n - phi_e_n - param.n.prim.U(c_s_surf_n, T))
             )
         )
-        ocp_n = param.U_n(c_s_surf_n, T)
+        ocp_n = param.n.prim.U(c_s_surf_n, T)
         c_s_surf_p = pybamm.surf(c_s_p)
-        j0_p = param.p.gamma * param.p.j0(c_e_p, c_s_surf_p, T) / param.p.C_r
+        j0_p = (
+            param.p.prim.gamma
+            * param.p.prim.j0(c_e_p, c_s_surf_p, T)
+            / param.p.prim.C_r
+        )
         j_s = pybamm.PrimaryBroadcast(0, "separator")
         j_p = (
             2
             * j0_p
             * pybamm.sinh(
-                param.p.ne / 2 * (phi_s_p - phi_e_p - param.p.U(c_s_surf_p, T))
+                param.p.prim.ne
+                / 2
+                * (phi_s_p - phi_e_p - param.p.prim.U(c_s_surf_p, T))
             )
         )
         j = pybamm.concatenation(j_n, j_s, j_p)
@@ -160,35 +172,35 @@ class BasicDFN(BaseModel):
 
         # The div and grad operators will be converted to the appropriate matrix
         # multiplication at the discretisation stage
-        N_s_n = -param.n.D(c_s_n, T) * pybamm.grad(c_s_n)
-        N_s_p = -param.p.D(c_s_p, T) * pybamm.grad(c_s_p)
-        self.rhs[c_s_n] = -(1 / param.n.C_diff) * pybamm.div(N_s_n)
-        self.rhs[c_s_p] = -(1 / param.p.C_diff) * pybamm.div(N_s_p)
+        N_s_n = -param.n.prim.D(c_s_n, T) * pybamm.grad(c_s_n)
+        N_s_p = -param.p.prim.D(c_s_p, T) * pybamm.grad(c_s_p)
+        self.rhs[c_s_n] = -(1 / param.n.prim.C_diff) * pybamm.div(N_s_n)
+        self.rhs[c_s_p] = -(1 / param.p.prim.C_diff) * pybamm.div(N_s_p)
         # Boundary conditions must be provided for equations with spatial derivatives
         self.boundary_conditions[c_s_n] = {
             "left": (pybamm.Scalar(0), "Neumann"),
             "right": (
-                -param.n.C_diff
+                -param.n.prim.C_diff
                 * j_n
-                / param.n.a_R
-                / param.n.gamma
-                / param.n.D(c_s_surf_n, T),
+                / param.n.prim.a_R
+                / param.n.prim.gamma
+                / param.n.prim.D(c_s_surf_n, T),
                 "Neumann",
             ),
         }
         self.boundary_conditions[c_s_p] = {
             "left": (pybamm.Scalar(0), "Neumann"),
             "right": (
-                -param.p.C_diff
+                -param.p.prim.C_diff
                 * j_p
-                / param.p.a_R
-                / param.p.gamma
-                / param.p.D(c_s_surf_p, T),
+                / param.p.prim.a_R
+                / param.p.prim.gamma
+                / param.p.prim.D(c_s_surf_p, T),
                 "Neumann",
             ),
         }
-        self.initial_conditions[c_s_n] = param.n.c_init
-        self.initial_conditions[c_s_p] = param.p.c_init
+        self.initial_conditions[c_s_n] = param.n.prim.c_init
+        self.initial_conditions[c_s_p] = param.p.prim.c_init
         # Events specify points at which a solution should terminate
         self.events += [
             pybamm.Event(
@@ -246,7 +258,7 @@ class BasicDFN(BaseModel):
             "left": (pybamm.Scalar(0), "Neumann"),
             "right": (pybamm.Scalar(0), "Neumann"),
         }
-        self.initial_conditions[phi_e] = -param.n.U_init
+        self.initial_conditions[phi_e] = -param.n.prim.U_init
 
         ######################
         # Electrolyte concentration
@@ -272,19 +284,8 @@ class BasicDFN(BaseModel):
         ######################
         voltage = pybamm.boundary_value(phi_s_p, "right")
         pot_scale = param.potential_scale
-        U_ref = param.U_p_ref - param.U_n_ref
+        U_ref = param.ocv_ref
         voltage_dim = U_ref + voltage * pot_scale
-        ocp_n_dim = param.U_n_ref + param.potential_scale * ocp_n
-        ocp_av_n_dim = pybamm.x_average(ocp_n_dim)
-        c_s_rav_n = pybamm.r_average(c_s_n)
-        c_s_rav_n_dim = c_s_rav_n * param.c_n_max
-        c_s_xrav_n = pybamm.x_average(c_s_rav_n)
-        c_s_xrav_n_dim = c_s_xrav_n * param.c_n_max
-        c_s_rav_p = pybamm.r_average(c_s_p)
-        c_s_xrav_p = pybamm.x_average(c_s_rav_p)
-        c_s_xrav_p_dim = c_s_xrav_p * param.c_p_max
-        j_n_dim = j_n * param.j_scale_n
-        j_n_av_dim = pybamm.x_average(j_n_dim)
         # The `variables` dictionary contains all variables that might be useful for
         # visualising the solution of the model
         self.variables = {
@@ -298,16 +299,6 @@ class BasicDFN(BaseModel):
             "Terminal voltage": voltage,
             "Terminal voltage [V]": voltage_dim,
             "Time [s]": pybamm.t * self.param.timescale,
-            "Negative electrode open circuit potential [V]": ocp_n_dim,
-            "X-averaged negative electrode open circuit potential [V]": ocp_av_n_dim,
-            "R-averaged negative particle concentration": c_s_rav_n,
-            "R-averaged negative particle concentration [mol.m-3]": c_s_rav_n_dim,
-            "Averaged negative electrode concentration": c_s_xrav_n,
-            "Averaged negative electrode concentration [mol.m-3]": c_s_xrav_n_dim,
-            "Averaged positive electrode concentration": c_s_xrav_p,
-            "Averaged positive electrode concentration [mol.m-3]": c_s_xrav_p_dim,
-            "Negative electrode interfacial current density [A.m-2]": j_n_dim,
-            "X-averaged negative electrode interfacial current density [A.m-2]": j_n_av_dim,  # noqa: E501
         }
         self.events += [
             pybamm.Event("Minimum voltage", voltage - param.voltage_low_cut),

@@ -44,7 +44,7 @@ class BaseModel(pybamm.BaseSubModel):
                 }
             )
 
-        if self.phase == "Electrolyte":
+        if self.component == "Electrolyte":
             variables.update(
                 {
                     "Separator transport efficiency": tor_s,
