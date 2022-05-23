@@ -34,10 +34,10 @@ axes[1][2].plot(exp_z, exp_R2)
 model = pybamm.BaseModel(name='ECM')
 
 # Time
-t = pybamm.Variable("t")
-t_init = 0.0
-dtdt = 1.0
-
+# t = pybamm.Variable("t")
+# t_init = 0.0
+# dtdt = 1.0
+t = pybamm.t
 # Current Mode
 mode = 'step'
 
@@ -114,23 +114,36 @@ diR_2dt = -alpha_2 * iR_2 + alpha_2 * i
 
 if mode in ["cc", "sin"]:
     # Current is a time-dependent variable
-    model.rhs = {t: dtdt, z: dzdt, i: didt, iR_1: diR_1dt, iR_2: diR_2dt}
+    model.rhs = {
+        # t: dtdt,
+        z: dzdt,
+        i: didt,
+        iR_1: diR_1dt,
+        iR_2: diR_2dt
+        }
     
-    model.initial_conditions = {t: pybamm.Scalar(t_init),
-                                z: pybamm.Scalar(z_init),
-                                i: pybamm.Scalar(i_init),
-                                iR_1: pybamm.Scalar(iR_1_init),
-                                iR_2: pybamm.Scalar(iR_2_init),
-                                }
+    model.initial_conditions = {
+        # t: pybamm.Scalar(t_init),
+        z: pybamm.Scalar(z_init),
+        i: pybamm.Scalar(i_init),
+        iR_1: pybamm.Scalar(iR_1_init),
+        iR_2: pybamm.Scalar(iR_2_init),
+        }
 elif mode in ["step", "data"]:
     # Current is interpolated
-    model.rhs = {t: dtdt, z: dzdt, iR_1: diR_1dt, iR_2: diR_2dt}
+    model.rhs = {
+        # t: dtdt,
+        z: dzdt,
+        iR_1: diR_1dt,
+        iR_2: diR_2dt
+        }
     
-    model.initial_conditions = {t: pybamm.Scalar(t_init),
-                                z: pybamm.Scalar(z_init),
-                                iR_1: pybamm.Scalar(iR_1_init),
-                                iR_2: pybamm.Scalar(iR_2_init),
-                                }
+    model.initial_conditions = {
+        # t: pybamm.Scalar(t_init),
+        z: pybamm.Scalar(z_init),
+        iR_1: pybamm.Scalar(iR_1_init),
+        iR_2: pybamm.Scalar(iR_2_init),
+        }
 
 
 # Overpotentials and cell voltage
@@ -139,17 +152,18 @@ eta_1 = iR_1 * R1
 eta_2 = iR_2 * R2
 v = ocv - eta_0 - eta_1 - eta_2
 
-model.variables = {"t": t,
-                   "z": z,
-                   "i": i,
-                   "ocv":ocv,
-                   "v": v,
-                   "iR_1":iR_1,
-                   "iR_2":iR_2,
-                   "eta_0": eta_0,
-                   "eta_1": eta_1,
-                   "eta_2": eta_2,
-                   }
+model.variables = {
+    "t": t,
+    "z": z,
+    "i": i,
+    "ocv":ocv,
+    "v": v,
+    "iR_1":iR_1,
+    "iR_2":iR_2,
+    "eta_0": eta_0,
+    "eta_1": eta_1,
+    "eta_2": eta_2,
+    }
 
 disc = pybamm.Discretisation()
 disc.process_model(model)
@@ -173,10 +187,15 @@ z.print_name = "z"
 i.print_name = "i"
 ocv.print_name = "ocv"
 v.print_name = "v"
+R0.print_name = "R_0"
+R1.print_name = "R_1"
+R2.print_name = "R_2"
 iR_1.print_name = "i_{R1}"
 iR_2.print_name = "i_{R2}"
 eta_0.print_name = "\eta_0"
 eta_1.print_name = "\eta_1"
 eta_2.print_name = "\eta_2"
+C1.print_name = "C_1"
+C2.print_name = "C_2"
 
 model.latexify()

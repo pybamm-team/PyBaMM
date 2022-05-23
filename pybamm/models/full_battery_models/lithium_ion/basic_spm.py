@@ -44,10 +44,11 @@ class BasicSPM(BaseModel):
         c_s_n = pybamm.Variable(
             "X-averaged negative particle concentration", domain="negative particle"
         )
+        c_s_n.print_name = r"\bar{c}_{sn}"
         c_s_p = pybamm.Variable(
             "X-averaged positive particle concentration", domain="positive particle"
         )
-
+        c_s_p.print_name = r"\bar{c}_{sp}"
         # Constant temperature
         T = param.T_init
 
@@ -176,9 +177,10 @@ class BasicSPM(BaseModel):
             ),
             "Terminal voltage": V,
             "Terminal voltage [V]": V_dim,
+            "Battery voltage [V]": V,
         }
         self.events += [
             pybamm.Event("Minimum voltage", V - param.voltage_low_cut),
             pybamm.Event("Maximum voltage", V - param.voltage_high_cut),
         ]
-
+        self.summary_variables = []
