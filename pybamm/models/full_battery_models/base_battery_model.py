@@ -608,6 +608,8 @@ class BaseBatteryModel(pybamm.BaseModel):
             "x_p": 20,
             "r_n": 20,
             "r_p": 20,
+            "r_n_sec": 20,
+            "r_p_sec": 20,
             "y": 10,
             "z": 10,
             "R_n": 30,
@@ -626,6 +628,8 @@ class BaseBatteryModel(pybamm.BaseModel):
             "positive electrode": pybamm.Uniform1DSubMesh,
             "negative particle": pybamm.Uniform1DSubMesh,
             "positive particle": pybamm.Uniform1DSubMesh,
+            "negative secondary particle": pybamm.Uniform1DSubMesh,
+            "positive secondary particle": pybamm.Uniform1DSubMesh,
             "negative particle size": pybamm.Uniform1DSubMesh,
             "positive particle size": pybamm.Uniform1DSubMesh,
         }
@@ -644,6 +648,8 @@ class BaseBatteryModel(pybamm.BaseModel):
             "macroscale": pybamm.FiniteVolume(),
             "negative particle": pybamm.FiniteVolume(),
             "positive particle": pybamm.FiniteVolume(),
+            "negative secondary particle": pybamm.FiniteVolume(),
+            "positive secondary particle": pybamm.FiniteVolume(),
             "negative particle size": pybamm.FiniteVolume(),
             "positive particle size": pybamm.FiniteVolume(),
         }

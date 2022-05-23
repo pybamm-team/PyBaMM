@@ -29,7 +29,8 @@ class BasicDFNComposite(BaseModel):
     """
 
     def __init__(self, name="Doyle-Fuller-Newman model"):
-        super().__init__({}, name)
+        options = {"particle phases": ("2", "1")}
+        super().__init__(options, name)
         pybamm.citations.register("Ai2022")
         # `param` is a class containing all the relevant parameters and functions for
         # this model. These are purely symbolic at this stage, and will be set by the
@@ -82,7 +83,7 @@ class BasicDFNComposite(BaseModel):
         )
         c_s_n_p2 = pybamm.Variable(
             "Negative particle concentration of phase 2",
-            domain="negative particle",
+            domain="negative secondary particle",
             auxiliary_domains={"secondary": "negative electrode"},
         )
         c_s_p = pybamm.Variable(
@@ -121,7 +122,7 @@ class BasicDFNComposite(BaseModel):
 
         # Tortuosity
         tor = pybamm.concatenation(
-            eps_n ** param.b_e_n, eps_s ** param.b_e_s, eps_p ** param.b_e_p
+            eps_n ** param.n.b_e, eps_s ** param.s.b_e, eps_p ** param.p.b_e
         )
 
         # Interfacial reactions
@@ -130,34 +131,44 @@ class BasicDFNComposite(BaseModel):
         # "left" providing the boundary value of the left side
         c_s_surf_n_p1 = pybamm.surf(c_s_n_p1)
         j0_n_p1 = (
-            param.j0_n(c_e_n, c_s_surf_n_p1, T, "phase 1")
-            / param.C_r_n
-            * param.a_p1_a_n
+            param.n.prim.gamma
+            * param.n.prim.j0(c_e_n, c_s_surf_n_p1, T)
+            / param.n.prim.C_r
         )
-        ocp_n_p1 = param.U_n(c_s_surf_n_p1, T, "phase 1")
+        ocp_n_p1 = param.n.prim.U(c_s_surf_n_p1, T)
         j_n_p1 = (
-            2 * j0_n_p1 * pybamm.sinh(param.ne_n / 2 * (phi_s_n - phi_e_n - ocp_n_p1))
+            2
+            * j0_n_p1
+            * pybamm.sinh(param.n.prim.ne / 2 * (phi_s_n - phi_e_n - ocp_n_p1))
         )
         c_s_surf_n_p2 = pybamm.surf(c_s_n_p2)
         j0_n_p2 = (
-            param.j0_n(c_e_n, c_s_surf_n_p2, T, "phase 2")
-            / param.C_r_n
-            * param.a_p2_a_n
+            param.n.sec.gamma
+            * param.n.sec.j0(c_e_n, c_s_surf_n_p2, T)
+            / param.n.sec.C_r
         )
-        ocp_n_p2 = param.U_n(c_s_surf_n_p2, T, "phase 2")
+        ocp_n_p2 = param.n.sec.U(c_s_surf_n_p2, T)
         j_n_p2 = (
-            2 * j0_n_p2 * pybamm.sinh(param.ne_n / 2 * (phi_s_n - phi_e_n - ocp_n_p2))
+            2
+            * j0_n_p2
+            * pybamm.sinh(param.n.sec.ne / 2 * (phi_s_n - phi_e_n - ocp_n_p2))
         )
         j_n = j_n_p1 + j_n_p2
         c_s_surf_p = pybamm.surf(c_s_p)
-        j0_p = param.gamma_p * param.j0_p(c_e_p, c_s_surf_p, T) / param.C_r_p
+        j0_p = (
+            param.p.prim.gamma
+            * param.p.prim.j0(c_e_p, c_s_surf_p, T)
+            / param.p.prim.C_r
+        )
         j_s = pybamm.PrimaryBroadcast(0, "separator")
-        ocp_p = param.U_p(c_s_surf_p, T)
+        ocp_p = param.p.prim.U(c_s_surf_p, T)
         j_p = (
             2
             * j0_p
             * pybamm.sinh(
-                param.ne_p / 2 * (phi_s_p - phi_e_p - param.U_p(c_s_surf_p, T))
+                param.p.prim.ne
+                / 2
+                * (phi_s_p - phi_e_p - param.p.prim.U(c_s_surf_p, T))
             )
         )
         j = pybamm.concatenation(j_n, j_s, j_p)
@@ -178,43 +189,43 @@ class BasicDFNComposite(BaseModel):
 
         # The div and grad operators will be converted to the appropriate matrix
         # multiplication at the discretisation stage
-        N_s_n_p1 = -param.D_n(c_s_n_p1, T, "phase 1") * pybamm.grad(c_s_n_p1)
-        N_s_n_p2 = -param.D_n(c_s_n_p2, T, "phase 2") * pybamm.grad(c_s_n_p2)
-        N_s_p = -param.D_p(c_s_p, T) * pybamm.grad(c_s_p)
-        self.rhs[c_s_n_p1] = -(1 / param.C_n_p1) * pybamm.div(N_s_n_p1)
-        self.rhs[c_s_n_p2] = -(1 / param.C_n_p2) * pybamm.div(N_s_n_p2)
-        self.rhs[c_s_p] = -(1 / param.C_p) * pybamm.div(N_s_p)
+        N_s_n_p1 = -param.n.prim.D(c_s_n_p1, T) * pybamm.grad(c_s_n_p1)
+        N_s_n_p2 = -param.n.sec.D(c_s_n_p2, T) * pybamm.grad(c_s_n_p2)
+        N_s_p = -param.p.prim.D(c_s_p, T) * pybamm.grad(c_s_p)
+        self.rhs[c_s_n_p1] = -(1 / param.n.prim.C_diff) * pybamm.div(N_s_n_p1)
+        self.rhs[c_s_n_p2] = -(1 / param.n.sec.C_diff) * pybamm.div(N_s_n_p2)
+        self.rhs[c_s_p] = -(1 / param.p.prim.C_diff) * pybamm.div(N_s_p)
         # Boundary conditions must be provided for equations with spatial derivatives
         self.boundary_conditions[c_s_n_p1] = {
             "left": (pybamm.Scalar(0), "Neumann"),
             "right": (
-                -param.C_n_p1
+                -param.n.prim.C_diff
                 * j_n_p1
-                / pybamm.maximum(param.a_R_n_p1, 0.0000001)
-                / param.gamma_n_p1
-                / param.D_n(c_s_surf_n_p1, T, "phase 1"),
+                / param.n.prim.a_R
+                / param.n.prim.gamma
+                / param.n.prim.D(c_s_surf_n_p1, T),
                 "Neumann",
             ),
         }
         self.boundary_conditions[c_s_n_p2] = {
             "left": (pybamm.Scalar(0), "Neumann"),
             "right": (
-                -param.C_n_p2
+                -param.n.sec.C_diff
                 * j_n_p2
-                / pybamm.maximum(param.a_R_n_p2, 0.0000001)
-                / param.gamma_n_p2
-                / param.D_n(c_s_surf_n_p2, T, "phase 2"),
+                / param.n.sec.a_R
+                / param.n.sec.gamma
+                / param.n.sec.D(c_s_surf_n_p2, T),
                 "Neumann",
             ),
         }
         self.boundary_conditions[c_s_p] = {
             "left": (pybamm.Scalar(0), "Neumann"),
             "right": (
-                -param.C_p
+                -param.p.prim.C_diff
                 * j_p
-                / param.a_R_p
-                / param.gamma_p
-                / param.D_p(c_s_surf_p, T),
+                / param.p.prim.a_R
+                / param.p.prim.gamma
+                / param.p.prim.D(c_s_surf_p, T),
                 "Neumann",
             ),
         }
@@ -223,9 +234,9 @@ class BasicDFNComposite(BaseModel):
         x_n = pybamm.PrimaryBroadcast(
             pybamm.standard_spatial_vars.x_n, "negative particle"
         )
-        self.initial_conditions[c_s_n_p1] = param.c_n_init_comp(x_n, "phase 1")
-        self.initial_conditions[c_s_n_p2] = param.c_n_init_comp(x_n, "phase 2")
-        self.initial_conditions[c_s_p] = param.c_p_init
+        self.initial_conditions[c_s_n_p1] = param.n.prim.c_init
+        self.initial_conditions[c_s_n_p2] = param.n.sec.c_init
+        self.initial_conditions[c_s_p] = param.p.prim.c_init
         # Events specify points at which a solution should terminate
         tolerance = 0.0000001
         self.events += [
@@ -257,9 +268,9 @@ class BasicDFNComposite(BaseModel):
         ######################
         # Current in the solid
         ######################
-        sigma_eff_n = param.sigma_n(T) * eps_s_n ** param.b_s_n
+        sigma_eff_n = param.n.sigma(T) * eps_s_n ** param.n.b_s
         i_s_n = -sigma_eff_n * pybamm.grad(phi_s_n)
-        sigma_eff_p = param.sigma_p(T) * eps_s_p ** param.b_s_p
+        sigma_eff_p = param.p.sigma(T) * eps_s_p ** param.p.b_s
         i_s_p = -sigma_eff_p * pybamm.grad(phi_s_p)
         # The `algebraic` dictionary contains differential equations, with the key being
         # the main scalar variable of interest in the equation
@@ -292,7 +303,7 @@ class BasicDFNComposite(BaseModel):
             "left": (pybamm.Scalar(0), "Neumann"),
             "right": (pybamm.Scalar(0), "Neumann"),
         }
-        self.initial_conditions[phi_e] = -param.U_n_init
+        self.initial_conditions[phi_e] = -param.n.prim.U_init
 
         ######################
         # Electrolyte concentration
@@ -318,27 +329,27 @@ class BasicDFNComposite(BaseModel):
         ######################
         voltage = pybamm.boundary_value(phi_s_p, "right")
         pot_scale = param.potential_scale
-        U_ref = param.U_p_ref - param.U_n_ref
+        U_ref = param.ocv_ref
         voltage_dim = U_ref + voltage * pot_scale
-        ocp_n_p1_dim = param.U_n_ref + param.potential_scale * ocp_n_p1
+        ocp_n_p1_dim = param.n.prim.U_ref + param.potential_scale * ocp_n_p1
         ocp_av_n_p1_dim = pybamm.x_average(ocp_n_p1_dim)
-        ocp_n_p2_dim = param.U_n_ref + param.potential_scale * ocp_n_p2
+        ocp_n_p2_dim = param.n.prim.U_ref + param.potential_scale * ocp_n_p2
         ocp_av_n_p2_dim = pybamm.x_average(ocp_n_p2_dim)
-        ocp_p_dim = param.U_p_ref + param.potential_scale * ocp_p
+        ocp_p_dim = param.p.prim.U_ref + param.potential_scale * ocp_p
         ocp_av_p_dim = pybamm.x_average(ocp_p_dim)
         c_s_rav_n_p1 = pybamm.r_average(c_s_n_p1)
-        c_s_rav_n_p1_dim = c_s_rav_n_p1 * param.c_n_p1_max
+        c_s_rav_n_p1_dim = c_s_rav_n_p1 * param.n.prim.c_max
         c_s_rav_n_p2 = pybamm.r_average(c_s_n_p2)
-        c_s_rav_n_p2_dim = c_s_rav_n_p2 * param.c_n_p2_max
+        c_s_rav_n_p2_dim = c_s_rav_n_p2 * param.n.sec.c_max
         c_s_xrav_n_p1 = pybamm.x_average(c_s_rav_n_p1)
-        c_s_xrav_n_p1_dim = c_s_xrav_n_p1 * param.c_n_p1_max
+        c_s_xrav_n_p1_dim = c_s_xrav_n_p1 * param.n.prim.c_max
         c_s_xrav_n_p2 = pybamm.x_average(c_s_rav_n_p2)
-        c_s_xrav_n_p2_dim = c_s_xrav_n_p2 * param.c_n_p2_max
+        c_s_xrav_n_p2_dim = c_s_xrav_n_p2 * param.n.sec.c_max
         c_s_rav_p = pybamm.r_average(c_s_p)
         c_s_xrav_p = pybamm.x_average(c_s_rav_p)
-        c_s_xrav_p_dim = c_s_xrav_p * param.c_p_max
-        j_n_p1_dim = j_n_p1 * param.j_scale_n / pybamm.maximum(param.a_p1_a_n, 0.000001)
-        j_n_p2_dim = j_n_p2 * param.j_scale_n / pybamm.maximum(param.a_p2_a_n, 0.000001)
+        c_s_xrav_p_dim = c_s_xrav_p * param.p.prim.c_max
+        j_n_p1_dim = j_n_p1 * param.n.prim.j_scale / param.n.prim.a_typ
+        j_n_p2_dim = j_n_p2 * param.n.sec.j_scale / param.n.sec.a_typ
         j_n_p1_av_dim = pybamm.x_average(j_n_p1_dim)
         j_n_p2_av_dim = pybamm.x_average(j_n_p2_dim)
         j_n_p1_v_dim = j_n_p1 * param.i_typ / param.L_x
@@ -357,9 +368,10 @@ class BasicDFNComposite(BaseModel):
             "Electrolyte concentration": c_e,
             "Positive particle surface concentration": c_s_surf_p,
             "Negative electrode potential [V]": param.potential_scale * phi_s_n,
-            "Electrolyte potential [V]": -param.U_n_ref + param.potential_scale * phi_e,
-            "Positive electrode potential [V]": param.U_p_ref
-            - param.U_n_ref
+            "Electrolyte potential [V]": -param.n.prim.U_ref
+            + param.potential_scale * phi_e,
+            "Positive electrode potential [V]": param.p.prim.U_ref
+            - param.n.prim.U_ref
             + param.potential_scale * phi_s_p,
             "Negative electrolyte potential": phi_e_n,
             "Separator electrolyte potential": phi_e_s,
@@ -397,9 +409,9 @@ class BasicDFNComposite(BaseModel):
             "Negative electrode concentration of phase 1": c_s_n_p1,
             "Negative electrode concentration of phase 2": c_s_n_p2,
             "Negative electrode concentration of phase 1 [mol.m-3]": c_s_n_p1
-            * param.c_n_p1_max,
+            * param.n.prim.c_max,
             "Negative electrode concentration of phase 2 [mol.m-3]": c_s_n_p2
-            * param.c_n_p2_max,
+            * param.n.sec.c_max,
             "Averaged positive electrode concentration": c_s_xrav_p,
             "Averaged positive electrode concentration [mol.m-3]": c_s_xrav_p_dim,
             "Negative electrode interfacial current density "

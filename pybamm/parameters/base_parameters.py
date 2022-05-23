@@ -22,10 +22,18 @@ class BaseParameters:
                     name_without_domain = name.replace(f"_{domain}_", "_").replace(
                         f"_{domain}", ""
                     )
-                    raise AttributeError(
-                        f"param.{name} does not exist. It may have been renamed to "
-                        f"param.{domain}.{name_without_domain}"
-                    )
+                    if hasattr(getattr(self, domain), name_without_domain):
+                        raise AttributeError(
+                            f"param.{name} does not exist. It has been renamed to "
+                            f"param.{domain}.{name_without_domain}"
+                        )
+                    elif hasattr(getattr(self, domain).prim, name_without_domain):
+                        raise AttributeError(
+                            f"param.{name} does not exist. It has been renamed to "
+                            f"param.{domain}.prim.{name_without_domain}"
+                        )
+                    else:
+                        raise e
             raise e
 
     def __setattr__(self, name, value):
@@ -37,3 +45,18 @@ class BaseParameters:
         if isinstance(value, pybamm.Symbol):
             value.print_name = print_name
         super().__setattr__(name, value)
+
+
+class NullParameters:
+    def __getattr__(self, name):
+        "Returns 0 for every parameter that wasn't found by __getattribute__"
+        return pybamm.Scalar(0)
+
+    def _set_dimensional_parameters(self):
+        pass
+
+    def _set_scales(self):
+        pass
+
+    def _set_dimensionless_parameters(self):
+        pass

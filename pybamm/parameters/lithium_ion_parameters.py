@@ -2,7 +2,7 @@
 # Standard parameters for lithium-ion battery models
 #
 import pybamm
-from .base_parameters import BaseParameters
+from .base_parameters import BaseParameters, NullParameters
 
 
 class LithiumIonParameters(BaseParameters):
@@ -500,10 +500,18 @@ class DomainLithiumIonParameters(BaseParameters):
 
         if domain != "Separator":
             self.prim = ParticleLithiumIonParameters("primary", self)
-            self.sec = ParticleLithiumIonParameters("secondary", self)
-            self.phases = [self.prim, self.sec]
+            phases_option = int(
+                getattr(main_param.options, domain.lower())["particle phases"]
+            )
+            if phases_option >= 2:
+                self.sec = ParticleLithiumIonParameters("secondary", self)
+            else:
+                self.sec = NullParameters()
         else:
-            self.phases = []
+            self.prim = NullParameters()
+            self.sec = NullParameters()
+
+        self.phases = [self.prim, self.sec]
 
     def _set_dimensional_parameters(self):
         main = self.main_param

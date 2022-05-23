@@ -8,32 +8,45 @@ import numpy as np
 pybamm.set_logging_level("INFO")
 
 # load model
-model = pybamm.lithium_ion.DFN({"particle phases": ("2", "1")})
-# create geometry
-geometry = model.default_geometry
+models = [
+    pybamm.lithium_ion.DFN({"particle phases": ("2", "1")}),
+    pybamm.lithium_ion.BasicDFNComposite(),
+]
 
-# load parameter values and process model and geometry
-param = pybamm.ParameterValues("Chen2020_composite")
-param.process_geometry(geometry)
-param.process_model(model)
+sols = []
+for model in models:
+    # create geometry
+    geometry = model.default_geometry
 
-# set mesh
-var = pybamm.standard_spatial_vars
-var_pts = {var.x_n: 30, var.x_s: 30, var.x_p: 30, var.r_n: 10, var.r_p: 10}
-mesh = pybamm.Mesh(geometry, model.default_submesh_types, var_pts)
+    # load parameter values and process model and geometry
+    param = pybamm.ParameterValues("Chen2020_composite")
+    param.process_geometry(geometry)
+    param.process_model(model)
 
-# discretise model
-disc = pybamm.Discretisation(mesh, model.default_spatial_methods)
-disc.process_model(model)
+    # set mesh
+    var = pybamm.standard_spatial_vars
+    var_pts = {
+        var.x_n: 30,
+        var.x_s: 30,
+        var.x_p: 30,
+        var.r_n: 10,
+        var.r_p: 10,
+        var.r_n_sec: 10,
+    }
+    mesh = pybamm.Mesh(geometry, model.default_submesh_types, var_pts)
 
-# solve model
-t_eval = np.linspace(0, 3600, 100)
-solver = pybamm.CasadiSolver(mode="safe", atol=1e-6, rtol=1e-3)
-solution = solver.solve(model, t_eval)
+    # discretise model
+    disc = pybamm.Discretisation(mesh, model.default_spatial_methods)
+    disc.process_model(model)
 
+    # solve model
+    t_eval = np.linspace(0, 3600, 100)
+    solver = pybamm.CasadiSolver(mode="safe", atol=1e-6, rtol=1e-3)
+    solution = solver.solve(model, t_eval)
+    sols.append(solution)
 # plot
 plot = pybamm.QuickPlot(
-    solution,
+    sols,
     [
         # "Negative particle concentration [mol.m-3]",
         # "Electrolyte concentration [mol.m-3]",

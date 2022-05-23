@@ -29,7 +29,6 @@ class BaseModel(pybamm.BaseBatteryModel):
             "separator": self.param.L_x,
             "positive electrode": self.param.L_x,
             "positive particle": self.param.p.prim.R_typ,
-            "positive secondary particle": self.param.p.sec.R_typ,
             "positive particle size": self.param.p.prim.R_typ,
             "current collector y": self.param.L_z,
             "current collector z": self.param.L_z,
@@ -44,6 +43,15 @@ class BaseModel(pybamm.BaseBatteryModel):
                     "negative particle size": self.param.n.prim.R_typ,
                 }
             )
+
+        # Add relevant secondary length scales
+        phases_p = int(getattr(self.options, "positive")["particle phases"])
+        if phases_p >= 2:
+            self._length_scales["positive secondary particle"] = self.param.p.sec.R_typ
+        phases_n = int(getattr(self.options, "negative")["particle phases"])
+        if not self.half_cell and phases_n >= 2:
+            self._length_scales["negative secondary particle"] = self.param.n.sec.R_typ
+
         self.set_standard_output_variables()
 
     @property
