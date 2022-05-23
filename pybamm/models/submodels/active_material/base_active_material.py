@@ -46,8 +46,8 @@ class BaseModel(pybamm.BaseSubModel):
         # Update other microstructure variables
         # some models (e.g. lead-acid) do not have particles
         if self.options["particle shape"] == "no particles":
-            a = self.domain_param.a
-            a_typ = self.domain_param.a_typ
+            a = self.phase_param.a
+            a_typ = self.phase_param.a_typ
             variables.update(
                 {
                     f"{Domain} electrode surface area to volume ratio": a,

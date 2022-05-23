@@ -22,16 +22,22 @@ class BaseParameters:
                     name_without_domain = name.replace(f"_{domain}_", "_").replace(
                         f"_{domain}", ""
                     )
-                    if hasattr(getattr(self, domain), name_without_domain):
-                        raise AttributeError(
-                            f"param.{name} does not exist. It has been renamed to "
-                            f"param.{domain}.{name_without_domain}"
-                        )
-                    elif hasattr(getattr(self, domain).prim, name_without_domain):
-                        raise AttributeError(
-                            f"param.{name} does not exist. It has been renamed to "
-                            f"param.{domain}.prim.{name_without_domain}"
-                        )
+                    if hasattr(self, domain):
+                        self_domain = getattr(self, domain)
+                        if hasattr(self_domain, name_without_domain):
+                            raise AttributeError(
+                                f"param.{name} does not exist. It has been renamed to "
+                                f"param.{domain}.{name_without_domain}"
+                            )
+                        elif hasattr(self_domain, "prim") and hasattr(
+                            self_domain.prim, name_without_domain
+                        ):
+                            raise AttributeError(
+                                f"param.{name} does not exist. It has been renamed to "
+                                f"param.{domain}.prim.{name_without_domain}"
+                            )
+                        else:
+                            raise e
                     else:
                         raise e
             raise e

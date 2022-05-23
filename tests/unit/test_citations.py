@@ -123,14 +123,14 @@ class TestCitations(unittest.TestCase):
         citations._reset()
         self.assertNotIn("Subramanian2005", citations._papers_to_cite)
         pybamm.particle.no_distribution.XAveragedPolynomialProfile(
-            None, "Negative", "quadratic profile", None
+            None, "Negative", "quadratic profile", None, "primary"
         )
         self.assertIn("Subramanian2005", citations._papers_to_cite)
 
         citations._reset()
         self.assertNotIn("Subramanian2005", citations._papers_to_cite)
         pybamm.particle.no_distribution.PolynomialProfile(
-            None, "Negative", "quadratic profile", None
+            None, "Negative", "quadratic profile", None, "primary"
         )
         self.assertIn("Subramanian2005", citations._papers_to_cite)
 
@@ -192,12 +192,12 @@ class TestCitations(unittest.TestCase):
 
         citations._reset()
         self.assertNotIn("Sripad2020", citations._papers_to_cite)
-        pybamm.kinetics.Marcus(None, None, None, None)
+        pybamm.kinetics.Marcus(None, None, None, None, None)
         self.assertIn("Sripad2020", citations._papers_to_cite)
 
         citations._reset()
         self.assertNotIn("Sripad2020", citations._papers_to_cite)
-        pybamm.kinetics.MarcusHushChidsey(None, None, None, None)
+        pybamm.kinetics.MarcusHushChidsey(None, None, None, None, None)
         self.assertIn("Sripad2020", citations._papers_to_cite)
 
     def test_parameter_citations(self):

@@ -60,7 +60,6 @@ class BaseInterface(pybamm.BaseSubModel):
             The exchange current density.
         """
         param = self.param
-        domain_param = self.domain_param
         phase_param = self.phase_param
         Domain = self.domain
         domain = Domain.lower()
@@ -124,7 +123,7 @@ class BaseInterface(pybamm.BaseSubModel):
             if isinstance(c_e, pybamm.Broadcast) and isinstance(T, pybamm.Broadcast):
                 c_e = c_e.orphans[0]
                 T = T.orphans[0]
-            j0 = domain_param.j0(c_e, T)
+            j0 = phase_param.j0(c_e, T)
 
         elif self.reaction == "lead-acid oxygen":
             # If variable was broadcast, take only the orphan
@@ -134,7 +133,7 @@ class BaseInterface(pybamm.BaseSubModel):
             if self.domain == "Negative":
                 j0 = pybamm.Scalar(0)
             elif self.domain == "Positive":
-                j0 = param.p.j0_Ox(c_e, T)
+                j0 = param.p.prim.j0_Ox(c_e, T)
         else:
             j0 = pybamm.Scalar(0)
 
@@ -201,7 +200,7 @@ class BaseInterface(pybamm.BaseSubModel):
             # If c_e was broadcast, take only the orphan
             if isinstance(c_e, pybamm.Broadcast):
                 c_e = c_e.orphans[0]
-            ocp = self.domain_param.U(c_e, self.param.T_init)
+            ocp = self.phase_param.U(c_e, self.param.T_init)
             dUdT = pybamm.Scalar(0)
 
         elif self.reaction == "lead-acid oxygen":
@@ -222,7 +221,7 @@ class BaseInterface(pybamm.BaseSubModel):
         ]:
             return self.phase_param.ne
         elif self.reaction == "lead-acid main":
-            return self.domain_param.ne
+            return self.phase_param.ne
         elif self.reaction == "lead-acid oxygen":
             return self.param.ne_Ox
         else:
@@ -472,14 +471,10 @@ class BaseInterface(pybamm.BaseSubModel):
 
     def _get_standard_surface_potential_difference_variables(self, delta_phi):
 
-        if self.domain == "Negative":
-            ocp_ref = self.param.n.U_ref
-        elif self.domain == "Positive":
-            ocp_ref = self.param.p.U_ref
-        pot_scale = self.param.potential_scale
+        ocp_ref = self.phase_param.U_ref
 
         # Broadcast if necessary
-        delta_phi_dim = ocp_ref + delta_phi * pot_scale
+        delta_phi_dim = ocp_ref + delta_phi * self.param.potential_scale
         if delta_phi.domain == ["current collector"]:
             delta_phi = pybamm.PrimaryBroadcast(delta_phi, self.domain_for_broadcast)
             delta_phi_dim = pybamm.PrimaryBroadcast(
@@ -581,7 +576,7 @@ class BaseInterface(pybamm.BaseSubModel):
         # j scale
         i_typ = self.param.i_typ
         L_x = self.param.L_x
-        j_scale = i_typ / (self.domain_param.a_typ * L_x)
+        j_scale = i_typ / (self.phase_param.a_typ * L_x)
 
         variables = {
             f"{Domain} electrode {reaction_name}"
@@ -605,7 +600,7 @@ class BaseInterface(pybamm.BaseSubModel):
         reaction_name = self.reaction_name
         i_typ = self.param.i_typ
         L_x = self.param.L_x
-        j_scale = i_typ / (self.domain_param.a_typ * L_x)
+        j_scale = i_typ / (self.phase_param.a_typ * L_x)
 
         # X-average or broadcast to electrode if necessary
         if j0.domains["secondary"] != [f"{domain} electrode"]:
@@ -684,12 +679,8 @@ class BaseInterface(pybamm.BaseSubModel):
             dUdT_av = pybamm.x_average(dUdT)
 
         pot_scale = self.param.potential_scale
-        if self.domain == "Negative":
-            ocp_dim = self.param.n.U_ref + pot_scale * ocp
-            ocp_av_dim = self.param.n.U_ref + pot_scale * ocp_av
-        elif self.domain == "Positive":
-            ocp_dim = self.param.p.U_ref + pot_scale * ocp
-            ocp_av_dim = self.param.p.U_ref + pot_scale * ocp_av
+        ocp_dim = self.phase_param.U_ref + pot_scale * ocp
+        ocp_av_dim = self.phase_param.U_ref + pot_scale * ocp_av
 
         variables = {
             f"{Domain} electrode {reaction_name}"

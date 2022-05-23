@@ -74,7 +74,7 @@ class XAveragedPolynomialProfile(BaseFickian):
         return variables
 
     def get_coupled_variables(self, variables):
-        domain_param = self.domain_param
+        phase_param = self.phase_param
 
         c_s_av = variables["Average " + self.domain.lower() + " particle concentration"]
         T_av = variables["X-averaged " + self.domain.lower() + " electrode temperature"]
@@ -111,8 +111,8 @@ class XAveragedPolynomialProfile(BaseFickian):
             # an extra algebraic equation to solve. For now, using the average c is an
             # ok approximation and means the SPM(e) still gives a system of ODEs rather
             # than DAEs.
-            c_s_surf_xav = c_s_av - domain_param.C_diff * (
-                j_xav / 5 / domain_param.a_R / domain_param.gamma / D_eff_av
+            c_s_surf_xav = c_s_av - phase_param.C_diff * (
+                j_xav / 5 / phase_param.a_R / phase_param.gamma / D_eff_av
             )
         elif self.name == "quartic profile":
             # The surface concentration is computed from the average concentration,
@@ -124,8 +124,8 @@ class XAveragedPolynomialProfile(BaseFickian):
             c_s_surf_xav = (
                 c_s_av
                 + 8 * q_s_av / 35
-                - domain_param.C_diff
-                * (j_xav / 35 / domain_param.a_R / domain_param.gamma / D_eff_av)
+                - phase_param.C_diff
+                * (j_xav / 35 / phase_param.a_R / phase_param.gamma / D_eff_av)
             )
 
         # Set concentration depending on polynomial order
@@ -217,7 +217,7 @@ class XAveragedPolynomialProfile(BaseFickian):
         # the scalar source term gets multplied by the correct mass matrix when
         # using this model with 2D current collectors with the finite element
         # method (see #1399)
-        domain_param = self.domain_param
+        phase_param = self.phase_param
 
         c_s_av = variables["Average " + self.domain.lower() + " particle concentration"]
         j_xav = variables[
@@ -228,7 +228,7 @@ class XAveragedPolynomialProfile(BaseFickian):
 
         self.rhs = {
             c_s_av: pybamm.source(
-                -3 * j_xav / domain_param.a_R / domain_param.gamma, c_s_av
+                -3 * j_xav / phase_param.a_R / phase_param.gamma, c_s_av
             )
         }
 
@@ -244,8 +244,8 @@ class XAveragedPolynomialProfile(BaseFickian):
             self.rhs.update(
                 {
                     q_s_av: pybamm.source(
-                        -30 * pybamm.surf(D_eff_xav) * q_s_av / domain_param.C_diff
-                        - 45 * j_xav / domain_param.a_R / domain_param.gamma / 2,
+                        -30 * pybamm.surf(D_eff_xav) * q_s_av / phase_param.C_diff
+                        - 45 * j_xav / phase_param.a_R / phase_param.gamma / 2,
                         q_s_av,
                     )
                 }
@@ -258,7 +258,7 @@ class XAveragedPolynomialProfile(BaseFickian):
         """
         c_s_av = variables["Average " + self.domain.lower() + " particle concentration"]
 
-        c_init = pybamm.x_average(pybamm.r_average(self.domain_param.c_init))
+        c_init = pybamm.x_average(pybamm.r_average(self.phase_param.c_init))
 
         self.initial_conditions = {c_s_av: c_init}
         if self.name == "quartic profile":

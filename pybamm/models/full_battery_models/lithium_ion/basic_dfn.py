@@ -137,7 +137,6 @@ class BasicDFN(BaseModel):
                 * (phi_s_n - phi_e_n - param.n.prim.U(c_s_surf_n, T))
             )
         )
-        ocp_n = param.n.prim.U(c_s_surf_n, T)
         c_s_surf_p = pybamm.surf(c_s_p)
         j0_p = (
             param.p.prim.gamma

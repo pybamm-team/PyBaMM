@@ -33,7 +33,7 @@ class Marcus(BaseKinetics):
         pybamm.citations.register("Sripad2020")
 
     def _get_kinetics(self, j0, ne, eta_r, T, u):
-        mhc_lambda = self.domain_param.mhc_lambda
+        mhc_lambda = self.phase_param.mhc_lambda
         kT = 1 + self.param.Theta * T  # dimensionless
 
         exp_arg_ox = -((mhc_lambda + eta_r) ** 2) / (4 * mhc_lambda * kT)
@@ -75,7 +75,7 @@ class MarcusHushChidsey(BaseKinetics):
         pybamm.citations.register("Sripad2020")
 
     def _get_kinetics(self, j0, ne, eta_r, T, u):
-        mhc_lambda = self.domain_param.mhc_lambda
+        mhc_lambda = self.phase_param.mhc_lambda
         kT = 1 + self.param.Theta * T  # dimensionless
 
         lambda_T = mhc_lambda / kT

@@ -39,11 +39,19 @@ class TotalKinetics(pybamm.BaseSubModel):
         L_x = param.L_x
 
         if self.chemistry == "lithium-ion":
-            reaction_names = ["", "SEI ", "lithium plating "]
-            phase_names = [""] * 3  # primary phases
+            reaction_names = ["", "SEI "]
+            phase_names = [""] * 2  # primary phases
+            if not self.half_cell:
+                # no separate plating reaction in a half-cell, since plating is the main
+                # reaction
+                reaction_names.append("lithium plating ")
+                phase_names.append("")
             if self.options["particle phases"] != "1":
                 reaction_names.append("secondary ")
                 phase_names.append("secondary ")
+        elif self.chemistry == "lead-acid":
+            reaction_names = ["", "oxygen "]
+            phase_names = [""] * 3
 
         # Create separate 'new_variables' so that variables only get updated once
         # everything is computed
@@ -152,12 +160,11 @@ class TotalKinetics(pybamm.BaseSubModel):
                 # Both the main reaction current contribute to the electrolyte reaction
                 # current
                 s_n, s_p = 1, 1
-            # elif self.reaction == "lead-acid main":
-            #     s_n, s_p = self.param.n.s_plus_S, self.param.p.s_plus_S
-            # elif self.reaction == "lead-acid oxygen":
-            #     s_n, s_p = self.param.s_plus_Ox, self.param.s_plus_Ox
-            # else:
-            #     s_n, s_p = 0, 0
+            elif self.chemistry == "lead-acid":
+                if reaction_name == "":  # main reaction
+                    s_n, s_p = self.param.n.prim.s_plus_S, self.param.p.prim.s_plus_S
+                elif reaction_name == "oxygen ":
+                    s_n, s_p = self.param.s_plus_Ox, self.param.s_plus_Ox
             if self.half_cell:
                 a_n = pybamm.Scalar(1)
                 a = pybamm.concatenation(zero_s, a_p)

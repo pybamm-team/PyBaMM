@@ -101,7 +101,11 @@ class BaseModel(pybamm.BaseBatteryModel):
         """Sets variables that quantify degradation (LAM, LLI, etc)"""
         param = self.param
 
-        for domain in ["negative", "positive"]:
+        if self.half_cell:
+            domains = ["positive"]
+        else:
+            domains = ["negative", "positive"]
+        for domain in domains:
             phases = self.options.phase_number_to_names(
                 getattr(self.options, domain)["particle phases"]
             )
@@ -278,20 +282,18 @@ class BaseModel(pybamm.BaseBatteryModel):
             for phase in phases:
                 if lam == "none":
                     submod = pybamm.active_material.Constant(
-                        self.param, domain.capitalize(), self.options, phase
+                        self.param, domain, self.options, phase
                     )
                 else:
                     submod = pybamm.active_material.LossActiveMaterial(
-                        self.param, domain.capitalize(), self.options, self.x_average
+                        self.param, domain, self.options, self.x_average
                     )
                 self.submodels[f"{domain} {phase} active material"] = submod
 
             # Submodel for the total active material, summing up each phase
             self.submodels[
                 f"{domain} total active material"
-            ] = pybamm.active_material.Total(
-                self.param, domain.capitalize(), self.options
-            )
+            ] = pybamm.active_material.Total(self.param, domain, self.options)
 
     def set_porosity_submodel(self):
         if (
@@ -335,7 +337,7 @@ class BaseModel(pybamm.BaseBatteryModel):
             ] = pybamm.electrode.ohm.LithiumMetalSurfaceForm(self.param, self.options)
             neg_intercalation_kinetics = self.get_intercalation_kinetics("Negative")
             self.submodels["counter electrode interface"] = neg_intercalation_kinetics(
-                self.param, "Negative", "lithium metal plating", self.options
+                self.param, "Negative", "lithium metal plating", self.options, "primary"
             )
 
         # For half-cell models, remove negative electrode submodels

@@ -2,7 +2,6 @@
 # Dimensional and dimensionless parameter values, and scales
 #
 import numpy as np
-from regex import P
 import pybamm
 import pandas as pd
 import os

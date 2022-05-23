@@ -36,3 +36,12 @@ class NoReaction(BaseInterface):
         variables = self._get_standard_interfacial_current_variables(zero)
         variables.update(self._get_standard_exchange_current_variables(zero))
         return variables
+
+    def _get_dj_dc(self, variables):
+        return pybamm.Scalar(0)
+
+    def _get_dj_ddeltaphi(self, variables):
+        return pybamm.Scalar(0)
+
+    def _get_j_diffusion_limited_first_order(self, variables):
+        return pybamm.Scalar(0)

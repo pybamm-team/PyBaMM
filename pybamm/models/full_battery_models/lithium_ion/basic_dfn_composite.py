@@ -229,11 +229,6 @@ class BasicDFNComposite(BaseModel):
                 "Neumann",
             ),
         }
-        # c_n_init and c_p_init can in general be functions of x
-        # Note the broadcasting, for domains
-        x_n = pybamm.PrimaryBroadcast(
-            pybamm.standard_spatial_vars.x_n, "negative particle"
-        )
         self.initial_conditions[c_s_n_p1] = param.n.prim.c_init
         self.initial_conditions[c_s_n_p2] = param.n.sec.c_init
         self.initial_conditions[c_s_p] = param.p.prim.c_init

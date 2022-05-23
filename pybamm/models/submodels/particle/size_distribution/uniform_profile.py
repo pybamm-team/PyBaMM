@@ -105,8 +105,8 @@ class UniformProfile(BaseSizeDistribution):
         self.rhs = {
             c_s_surf_distribution: -3
             * j_distribution
-            / self.domain_param.a_R
-            / self.domain_param.gamma
+            / self.phase_param.a_R
+            / self.phase_param.gamma
             / R
         }
 
@@ -116,7 +116,7 @@ class UniformProfile(BaseSizeDistribution):
         ]
 
         c_init = pybamm.PrimaryBroadcast(
-            pybamm.r_average(self.domain_param.c_init),
+            pybamm.r_average(self.phase_param.c_init),
             f"{self.domain.lower()} particle size",
         )
 

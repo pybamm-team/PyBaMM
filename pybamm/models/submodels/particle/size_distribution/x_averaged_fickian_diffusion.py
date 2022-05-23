@@ -110,14 +110,9 @@ class XAveragedFickianDiffusion(BaseSizeDistribution):
             [self.domain.lower() + " particle"],
         )
 
-        if self.domain == "Negative":
-            N_s_xav_distribution = -self.param.n.D(
-                c_s_xav_distribution, T_k_xav
-            ) * pybamm.grad(c_s_xav_distribution)
-        elif self.domain == "Positive":
-            N_s_xav_distribution = -self.param.p.D(
-                c_s_xav_distribution, T_k_xav
-            ) * pybamm.grad(c_s_xav_distribution)
+        N_s_xav_distribution = -self.phase_param.D(
+            c_s_xav_distribution, T_k_xav
+        ) * pybamm.grad(c_s_xav_distribution)
 
         # Size-dependent flux variables
         variables.update(
@@ -158,7 +153,7 @@ class XAveragedFickianDiffusion(BaseSizeDistribution):
             [self.domain.lower() + " particle"],
         )
         self.rhs = {
-            c_s_xav_distribution: -(1 / self.domain_param.C_diff)
+            c_s_xav_distribution: -(1 / self.phase_param.C_diff)
             * pybamm.div(N_s_xav_distribution)
             / R ** 2
         }
@@ -190,12 +185,12 @@ class XAveragedFickianDiffusion(BaseSizeDistribution):
 
         # Set surface Neumann boundary values
         rbc = (
-            -self.domain_param.C_diff
+            -self.phase_param.C_diff
             * R
             * j_xav_distribution
-            / self.domain_param.a_R
-            / self.domain_param.gamma
-            / self.domain_param.D(c_s_surf_xav_distribution, T_k_xav)
+            / self.phase_param.a_R
+            / self.phase_param.gamma
+            / self.phase_param.D(c_s_surf_xav_distribution, T_k_xav)
         )
 
         self.boundary_conditions = {
@@ -218,7 +213,7 @@ class XAveragedFickianDiffusion(BaseSizeDistribution):
         ]
 
         c_init = pybamm.SecondaryBroadcast(
-            pybamm.x_average(self.domain_param.c_init),
+            pybamm.x_average(self.phase_param.c_init),
             f"{self.domain.lower()} particle size",
         )
 

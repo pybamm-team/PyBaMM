@@ -82,12 +82,15 @@ class BaseModel(pybamm.BaseBatteryModel):
             self.initial_conditions[fci] = self.param.q_init * 100
 
     def set_active_material_submodel(self):
-        self.submodels["negative active material"] = pybamm.active_material.Constant(
-            self.param, "Negative", self.options
-        )
-        self.submodels["positive active material"] = pybamm.active_material.Constant(
-            self.param, "Positive", self.options
-        )
+        for domain in ["negative", "positive"]:
+            self.submodels[
+                f"{domain} active material"
+            ] = pybamm.active_material.Constant(
+                self.param, domain, self.options, "primary"
+            )
+            self.submodels[
+                f"{domain} total active material"
+            ] = pybamm.active_material.Total(self.param, domain, self.options)
 
     def set_sei_submodel(self):
 
@@ -96,3 +99,9 @@ class BaseModel(pybamm.BaseBatteryModel):
     def set_lithium_plating_submodel(self):
 
         self.submodels["lithium plating"] = pybamm.lithium_plating.NoPlating(self.param)
+
+    def set_total_kinetics_submodel(self):
+        for domain in ["negative", "positive"]:
+            self.submodels[f"{domain} total interface"] = pybamm.kinetics.TotalKinetics(
+                self.param, "lead-acid", self.options
+            )

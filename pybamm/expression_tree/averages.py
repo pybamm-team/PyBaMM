@@ -265,7 +265,9 @@ def r_average(symbol):
         the new averaged symbol
     """
     has_particle_domain = (
-        "particle" in symbol.domain[0] and "size" not in symbol.domain[0]
+        symbol.domain != []
+        and "particle" in symbol.domain[0]
+        and "size" not in symbol.domain[0]
     )
     # Can't take average if the symbol evaluates on edges
     if symbol.evaluates_on_edges("primary"):
@@ -339,7 +341,7 @@ def size_average(symbol, f_a_dist=None):
                 "R", domains=symbol.domains, coord_sys="cartesian"
             )
             if ["negative particle size"] in symbol.domains.values():
-                f_a_dist = geo.n.f_a_dist(R)
+                f_a_dist = geo.n.prim.f_a_dist(R)
             elif ["positive particle size"] in symbol.domains.values():
-                f_a_dist = geo.p.f_a_dist(R)
+                f_a_dist = geo.p.prim.f_a_dist(R)
         return SizeAverage(symbol, f_a_dist)

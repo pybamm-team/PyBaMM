@@ -120,11 +120,11 @@ class DFN(BaseModel):
                 elif self.options["particle size"] == "distribution":
                     if particle == "Fickian diffusion":
                         submod = pybamm.particle.size_distribution.FickianDiffusion(
-                            self.param, domain, phase
+                            self.param, domain
                         )
                     elif particle == "uniform profile":
                         submod = pybamm.particle.size_distribution.UniformProfile(
-                            self.param, domain, phase
+                            self.param, domain
                         )
                 self.submodels[f"{domain} {phase} particle"] = submod
 

@@ -8,53 +8,40 @@ import numpy as np
 pybamm.set_logging_level("INFO")
 
 # load model
-models = [
-    pybamm.lithium_ion.DFN({"particle phases": ("2", "1")}),
-    pybamm.lithium_ion.BasicDFNComposite(),
-]
+model = pybamm.lithium_ion.DFN()
+# create geometry
+geometry = model.default_geometry
 
-sols = []
-for model in models:
-    # create geometry
-    geometry = model.default_geometry
+# load parameter values and process model and geometry
+param = model.default_parameter_values
+param.process_geometry(geometry)
+param.process_model(model)
 
-    # load parameter values and process model and geometry
-    param = pybamm.ParameterValues("Chen2020_composite")
-    param.process_geometry(geometry)
-    param.process_model(model)
+# set mesh
+var = pybamm.standard_spatial_vars
+var_pts = {var.x_n: 30, var.x_s: 30, var.x_p: 30, var.r_n: 10, var.r_p: 10}
+mesh = pybamm.Mesh(geometry, model.default_submesh_types, var_pts)
 
-    # set mesh
-    var = pybamm.standard_spatial_vars
-    var_pts = {
-        var.x_n: 30,
-        var.x_s: 30,
-        var.x_p: 30,
-        var.r_n: 10,
-        var.r_p: 10,
-        var.r_n_sec: 10,
-    }
-    mesh = pybamm.Mesh(geometry, model.default_submesh_types, var_pts)
+# discretise model
+disc = pybamm.Discretisation(mesh, model.default_spatial_methods)
+disc.process_model(model)
 
-    # discretise model
-    disc = pybamm.Discretisation(mesh, model.default_spatial_methods)
-    disc.process_model(model)
+# solve model
+t_eval = np.linspace(0, 3600, 100)
+solver = pybamm.CasadiSolver(mode="safe", atol=1e-6, rtol=1e-3)
+solution = solver.solve(model, t_eval)
 
-    # solve model
-    t_eval = np.linspace(0, 3600, 100)
-    solver = pybamm.CasadiSolver(mode="safe", atol=1e-6, rtol=1e-3)
-    solution = solver.solve(model, t_eval)
-    sols.append(solution)
 # plot
 plot = pybamm.QuickPlot(
-    sols,
+    solution,
     [
-        # "Negative particle concentration [mol.m-3]",
-        # "Electrolyte concentration [mol.m-3]",
-        # "Positive particle concentration [mol.m-3]",
-        # "Current [A]",
-        # "Negative electrode potential [V]",
-        # "Electrolyte potential [V]",
-        # "Positive electrode potential [V]",
+        "Negative particle concentration [mol.m-3]",
+        "Electrolyte concentration [mol.m-3]",
+        "Positive particle concentration [mol.m-3]",
+        "Current [A]",
+        "Negative electrode potential [V]",
+        "Electrolyte potential [V]",
+        "Positive electrode potential [V]",
         "Terminal voltage [V]",
     ],
     time_unit="seconds",

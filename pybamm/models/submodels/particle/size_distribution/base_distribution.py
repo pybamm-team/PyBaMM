@@ -21,7 +21,7 @@ class BaseSizeDistribution(BaseParticle):
     """
 
     def __init__(self, param, domain):
-        super().__init__(param, domain)
+        super().__init__(param, domain, phase="primary")
 
     def _get_distribution_variables(self, R):
         """
@@ -29,9 +29,9 @@ class BaseSizeDistribution(BaseParticle):
         R. The domains of R will be different depending on the submodel, e.g. for the
         `SingleSizeDistribution` classes R does not have an "electrode" domain.
         """
-        R_typ = self.domain_param.R_typ
+        R_typ = self.phase_param.R_typ
         # Particle-size distribution (area-weighted)
-        f_a_dist = self.domain_param.f_a_dist(R)
+        f_a_dist = self.phase_param.f_a_dist(R)
 
         # Ensure the distribution is normalised, irrespective of discretisation
         # or user input
@@ -151,7 +151,7 @@ class BaseSizeDistribution(BaseParticle):
         Forms standard concentration variables that depend on particle size R given
         the fundamental concentration distribution variable c_s from the submodel.
         """
-        c_scale = self.domain_param.c_max
+        c_scale = self.phase_param.c_max
         # Broadcast and x-average when necessary
         if c_s.domain == [self.domain.lower() + " particle size"] and c_s.domains[
             "secondary"

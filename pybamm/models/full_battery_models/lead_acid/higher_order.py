@@ -56,6 +56,7 @@ class BaseHigherOrderModel(BaseModel):
         self.set_current_collector_submodel()
         self.set_sei_submodel()
         self.set_lithium_plating_submodel()
+        self.set_total_kinetics_submodel()
 
         if build:
             self.build_model()
@@ -156,14 +157,14 @@ class BaseHigherOrderModel(BaseModel):
             self.param,
             "Negative",
             pybamm.kinetics.SymmetricButlerVolmer(
-                self.param, "Negative", "lead-acid main", self.options
+                self.param, "Negative", "lead-acid main", self.options, "primary"
             ),
         )
         self.submodels["positive interface"] = pybamm.kinetics.FirstOrderKinetics(
             self.param,
             "Positive",
             pybamm.kinetics.SymmetricButlerVolmer(
-                self.param, "Positive", "lead-acid main", self.options
+                self.param, "Positive", "lead-acid main", self.options, "primary"
             ),
         )
 
@@ -175,7 +176,7 @@ class BaseHigherOrderModel(BaseModel):
                 self.param,
                 "Positive",
                 pybamm.kinetics.ForwardTafel(
-                    self.param, "Positive", "lead-acid oxygen", self.options
+                    self.param, "Positive", "lead-acid oxygen", self.options, "primary"
                 ),
             )
             self.submodels[
