@@ -149,7 +149,7 @@ class BasicSPM(BaseModel):
         V = phi_s_p
 
         pot_scale = self.param.potential_scale
-        U_ref = self.param.p.U_ref - self.param.n.U_ref
+        U_ref = self.param.ocv_ref
         V_dim = U_ref + pot_scale * V
 
         whole_cell = ["negative electrode", "separator", "positive electrode"]

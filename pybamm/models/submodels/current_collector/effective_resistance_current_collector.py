@@ -254,7 +254,7 @@ class EffectiveResistance(BaseEffectiveResistance):
         """
         param = self.param
         pot_scale = param_values.evaluate(param.potential_scale)
-        U_ref = param_values.evaluate(param.p.U_ref - param.n.U_ref)
+        U_ref = param_values.evaluate(param.ocv_ref)
 
         # Process resistances
         R_cn = solution["Negative current collector resistance"]
@@ -418,7 +418,7 @@ class AlternativeEffectiveResistance2D(BaseEffectiveResistance):
         sigma_cn_dbl_prime = param_values.evaluate(param.n.sigma_cc_dbl_prime)
         sigma_cp_dbl_prime = param_values.evaluate(param.p.sigma_cc_dbl_prime)
         pot_scale = param_values.evaluate(param.potential_scale)
-        U_ref = param_values.evaluate(param.p.U_ref - param.n.U_ref)
+        U_ref = param_values.evaluate(param.ocv_ref)
 
         # Process unit solutions
         f_n = solution["Unit solution in negative current collector"]

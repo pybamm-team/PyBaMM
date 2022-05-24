@@ -634,10 +634,7 @@ class BaseInterface(pybamm.BaseSubModel):
     def _get_standard_average_surface_potential_difference_variables(
         self, delta_phi_av
     ):
-        if self.domain == "Negative":
-            ocp_ref = self.param.n.U_ref
-        elif self.domain == "Positive":
-            ocp_ref = self.param.p.U_ref
+        ocp_ref = self.domain_param.U_ref
 
         delta_phi_av_dim = ocp_ref + delta_phi_av * self.param.potential_scale
 
@@ -661,10 +658,7 @@ class BaseInterface(pybamm.BaseSubModel):
 
     def _get_standard_surface_potential_difference_variables(self, delta_phi):
 
-        if self.domain == "Negative":
-            ocp_ref = self.param.n.U_ref
-        elif self.domain == "Positive":
-            ocp_ref = self.param.p.U_ref
+        ocp_ref = self.domain_param.U_ref
         pot_scale = self.param.potential_scale
 
         # Broadcast if necessary
@@ -721,12 +715,8 @@ class BaseInterface(pybamm.BaseSubModel):
             ocp = pybamm.PrimaryBroadcast(ocp, self.domain_for_broadcast)
 
         pot_scale = self.param.potential_scale
-        if self.domain == "Negative":
-            ocp_dim = self.param.n.U_ref + pot_scale * ocp
-            ocp_av_dim = self.param.n.U_ref + pot_scale * ocp_av
-        elif self.domain == "Positive":
-            ocp_dim = self.param.p.U_ref + pot_scale * ocp
-            ocp_av_dim = self.param.p.U_ref + pot_scale * ocp_av
+        ocp_dim = self.domain_param.U_ref + pot_scale * ocp
+        ocp_av_dim = self.domain_param.U_ref + pot_scale * ocp_av
 
         variables = {
             self.domain
@@ -909,12 +899,8 @@ class BaseInterface(pybamm.BaseSubModel):
             dUdT_av = pybamm.x_average(dUdT)
 
         pot_scale = self.param.potential_scale
-        if self.domain == "Negative":
-            ocp_dim = self.param.n.U_ref + pot_scale * ocp
-            ocp_av_dim = self.param.n.U_ref + pot_scale * ocp_av
-        elif self.domain == "Positive":
-            ocp_dim = self.param.p.U_ref + pot_scale * ocp
-            ocp_av_dim = self.param.p.U_ref + pot_scale * ocp_av
+        ocp_dim = self.domain_param.U_ref + pot_scale * ocp
+        ocp_av_dim = self.domain_param.U_ref + pot_scale * ocp_av
 
         variables = {
             self.domain

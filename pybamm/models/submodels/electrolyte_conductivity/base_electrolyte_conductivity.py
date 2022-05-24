@@ -218,10 +218,7 @@ class BaseElectrolyteConductivity(pybamm.BaseSubModel):
             The variables which can be derived from the surface potential difference.
         """
 
-        if self.domain == "Negative":
-            ocp_ref = self.param.n.U_ref
-        elif self.domain == "Positive":
-            ocp_ref = self.param.p.U_ref
+        ocp_ref = self.domain_param.U_ref
 
         # Broadcast if necessary
         if delta_phi.domain == []:
