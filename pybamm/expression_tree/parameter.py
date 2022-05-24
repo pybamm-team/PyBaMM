@@ -109,11 +109,16 @@ class FunctionParameter(pybamm.Symbol):
                 self.print_name = None
             else:
                 if print_name.endswith("_dimensional"):
-                    self.print_name = print_name[: -len("_dimensional")]
+                    print_name = print_name[: -len("_dimensional")]
                 elif print_name.endswith("_dim"):
-                    self.print_name = print_name[: -len("_dim")]
-                else:
-                    self.print_name = print_name
+                    print_name = print_name[: -len("_dim")]
+                parent_param = frame.f_locals["self"]
+                if hasattr(parent_param, "domain"):
+                    # add "_n" or "_s" or "_p" if this comes from a Parameter class with
+                    # a domain
+                    d = getattr(parent_param, "domain").lower()[0]
+                    print_name += f"_{d}"
+                self.print_name = print_name
 
     @property
     def input_names(self):

@@ -25,7 +25,7 @@ class TestPrintName(unittest.TestCase):
         self.assertEqual(
             param.n.prim.j0_ref_dimensional.print_name, r"\hat{j0}_{n}^{ref}"
         )
-        self.assertEqual(param.n.prim.C_dl_dimensional.print_name, r"\hat{C}_{dl\,n}")
+        self.assertEqual(param.n.C_dl_dimensional.print_name, r"\hat{C}_{dl\,n}")
 
         # Test bar
         self.assertEqual(param1.c_s_n_xav.print_name, r"\bar{c}_{s\,n}")
@@ -34,8 +34,7 @@ class TestPrintName(unittest.TestCase):
         self.assertEqual(param2.delta.print_name, r"\delta")
 
         # Test new_copy()
-        x_n = pybamm.standard_spatial_vars.x_n
-        a_n = param2.n.prim.a(x_n)
+        a_n = param2.n.prim.a
         a_n.new_copy()
 
         # Test eps

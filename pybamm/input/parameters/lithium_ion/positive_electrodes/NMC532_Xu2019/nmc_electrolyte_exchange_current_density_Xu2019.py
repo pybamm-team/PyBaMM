@@ -23,6 +23,7 @@ def nmc_electrolyte_exchange_current_density_Xu2019(c_e, c_s_surf, T, c_s_max):
         Temperature [K]
     c_s_max : :class:`pybamm.Symbol`
         Maximum particle concentration [mol.m-3]
+
     Returns
     -------
     :class:`pybamm.Symbol`

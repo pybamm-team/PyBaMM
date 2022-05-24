@@ -54,9 +54,12 @@ class BaseParameters:
 
 
 class NullParameters:
-    def __getattr__(self, name):
-        "Returns 0 for every parameter that wasn't found by __getattribute__"
-        return pybamm.Scalar(0)
+    def __getattribute__(self, name):
+        "Returns 0 for some parameters that aren't found by __getattribute__"
+        if name in ["epsilon_s", "cap_init", "n_Li_init", "R_typ", "j_scale"]:
+            return pybamm.Scalar(0)
+        else:
+            return super().__getattribute__(name)
 
     def _set_dimensional_parameters(self):
         pass

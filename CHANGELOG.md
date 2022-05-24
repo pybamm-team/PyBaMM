@@ -4,6 +4,8 @@
 
 ## Features
 
+-   Reformated submodel structure to allow composite electrodes, with an example for graphite/silicon. Composite positive electrode is now also possible. With current implementation, electrodes can have at most two phases.
+-   Added "Chen2020_composite" parameter set for a composite graphite/silicon electrode. Silicon parameters are added as a standard negative electrode parameter set, specified as the "negative electrode secondary" set, which automatically adds "Secondary:" to the start of each parameter name. Primary (graphite) parameter names are unchanged.
 -   Added a casadi version of the IDKLU solver, which is used for `model.convert_to_format = "casadi"` ([#2002](https://github.com/pybamm-team/PyBaMM/pull/2002))
 
 ## Bug fixes
@@ -13,7 +15,8 @@
 
 ## Breaking changes
 
--   Changed domain-specific parameter names to a nested attribute, e.g. `param.c_n_max` is now `param.n.c_max` ([#2063](https://github.com/pybamm-team/PyBaMM/pull/2063))
+-   Exchange-current density functions now take a fourth argument, the maximum particle concentration for that phase
+-   Changed domain-specific parameter names to a nested attribute. `param.l_n` is now `param.n.l`. Parameters specific to a (primary/secondary) phase in a domain are doubly nested. e.g. `param.c_n_max` is now `param.n.prim.c_max` ([#2063](https://github.com/pybamm-team/PyBaMM/pull/2063))
 
 # [v22.3](https://github.com/pybamm-team/PyBaMM/tree/v22.3) - 2022-03-31
 

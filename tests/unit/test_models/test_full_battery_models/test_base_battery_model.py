@@ -73,7 +73,7 @@ class TestBaseBatteryModel(unittest.TestCase):
             model.variables["X-averaged negative electrode temperature"],
             ["negative particle"],
         )
-        D = model.param.n.D(c_n, T)
+        D = model.param.n.prim.D(c_n, T)
         N = -D * pybamm.grad(c_n)
 
         flux_1 = model.process_parameters_and_discretise(N, parameter_values, disc)
