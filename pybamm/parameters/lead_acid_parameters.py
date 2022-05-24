@@ -335,6 +335,7 @@ class LeadAcidParameters(BaseParameters):
         )
 
         # Electrical
+        self.ocv_ref = self.p.U_ref - self.n.U_ref
         self.voltage_low_cut = (
             self.voltage_low_cut_dimensional - self.ocv_ref
         ) / self.potential_scale
