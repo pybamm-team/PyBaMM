@@ -37,7 +37,7 @@ class Full(BaseModel):
     def get_coupled_variables(self, variables):
 
         phi_s = variables[self.domain + " electrode potential"]
-        tor = variables[self.domain + " electrode tortuosity"]
+        tor = variables[self.domain + " electrode transport efficiency"]
         T = variables[self.domain + " electrode temperature"]
 
         if self.domain == "Negative":
@@ -77,7 +77,7 @@ class Full(BaseModel):
 
         phi_s = variables[self.domain + " electrode potential"]
         phi_s_cn = variables["Negative current collector potential"]
-        tor = variables[self.domain + " electrode tortuosity"]
+        tor = variables[self.domain + " electrode transport efficiency"]
         T = variables[self.domain + " electrode temperature"]
 
         if self.domain == "Negative":

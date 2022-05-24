@@ -20,6 +20,12 @@ class MPM(SPM):
         option to False allows users to change any number of the submodels before
         building the complete model (submodels cannot be changed after the model is
         built).
+    Examples
+    --------
+    >>> import pybamm
+    >>> model = pybamm.lithium_ion.MPM()
+    >>> model.name
+    'Many-Particle Model'
 
     References
     ----------
@@ -31,28 +37,17 @@ class MPM(SPM):
     **Extends:** :class:`pybamm.lithium_ion.SPM`
     """
 
-    def __init__(
-        self, options=None, name="Many-Particle Model", build=True
-    ):
+    def __init__(self, options=None, name="Many-Particle Model", build=True):
         # Necessary options
         if options is None:
-            options = {
-                "particle size": "distribution",
-                "surface form": "algebraic"
-            }
-        elif (
-            "particle size" in options and
-            options["particle size"] != "distribution"
-        ):
+            options = {"particle size": "distribution", "surface form": "algebraic"}
+        elif "particle size" in options and options["particle size"] != "distribution":
             raise pybamm.OptionError(
                 "particle size must be 'distribution' for MPM not '{}'".format(
                     options["particle size"]
                 )
             )
-        elif (
-            "surface form" in options and
-            options["surface form"] != "algebraic"
-        ):
+        elif "surface form" in options and options["surface form"] != "algebraic":
             raise pybamm.OptionError(
                 "surface form must be 'algebraic' for MPM not '{}'".format(
                     options["surface form"]
@@ -90,5 +85,3 @@ class MPM(SPM):
         default_params = super().default_parameter_values
         default_params = pybamm.get_size_distribution_parameters(default_params)
         return default_params
-
-

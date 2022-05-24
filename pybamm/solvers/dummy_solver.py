@@ -6,7 +6,7 @@ import numpy as np
 
 
 class DummySolver(pybamm.BaseSolver):
-    """Dummy solver class for empty models. """
+    """Dummy solver class for empty models."""
 
     def __init__(self):
         super().__init__()

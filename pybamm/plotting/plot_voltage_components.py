@@ -57,12 +57,12 @@ def plot_voltage_components(
     ax.plot(time, V, "k--")
     if show_legend:
         labels = [
-            "Voltage",
             "Open-circuit voltage",
             "Reaction overpotential",
             "Concentration overpotential",
             "Ohmic electrolyte overpotential",
             "Ohmic electrode overpotential",
+            "Voltage",
         ]
         leg = ax.legend(labels, loc="lower left", frameon=True)
         leg.get_frame().set_edgecolor("k")

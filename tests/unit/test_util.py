@@ -25,32 +25,6 @@ class TestUtil(unittest.TestCase):
     """
 
     def test_load_function(self):
-        # Test replace function and deprecation warning for lithium-ion
-        with self.assertWarns(Warning):
-            warn_path = os.path.join(
-                "pybamm",
-                "input",
-                "parameters",
-                "lithium-ion",
-                "negative_electrodes",
-                "graphite_Chen2020",
-                "graphite_LGM50_electrolyte_exchange_current_density_Chen2020.py",
-            )
-            pybamm.load_function(warn_path)
-
-        # Test replace function and deprecation warning for lead-acid
-        with self.assertWarns(Warning):
-            warn_path = os.path.join(
-                "pybamm",
-                "input",
-                "parameters",
-                "lead-acid",
-                "negative_electrodes",
-                "lead_Sulzer2019",
-                "lead_exchange_current_density_Sulzer2019.py",
-            )
-            pybamm.load_function(warn_path)
-
         # Test function load with absolute path
         abs_test_path = os.path.join(
             pybamm.root_dir(),

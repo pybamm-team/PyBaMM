@@ -25,7 +25,7 @@ jobs:
         echo "TODAY=$(date +'%d')" >> $GITHUB_ENV
 
     - name: Fail the job if date < 20
-      if: ${{ env.TODAY }} < 20
+      if: env.TODAY < 20
       uses: actions/github-script@v5
       with:
         script: core.setFailed('This workflow should be triggered only at the end of the month, or else it will create a release for the wrong month.')

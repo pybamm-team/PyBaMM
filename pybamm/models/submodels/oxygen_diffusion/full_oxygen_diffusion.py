@@ -50,8 +50,8 @@ class Full(BaseModel):
 
     def get_coupled_variables(self, variables):
 
-        tor_s = variables["Separator tortuosity"]
-        tor_p = variables["Positive electrode tortuosity"]
+        tor_s = variables["Separator transport efficiency"]
+        tor_p = variables["Positive electrode transport efficiency"]
         tor = pybamm.concatenation(tor_s, tor_p)
 
         c_ox = variables["Separator and positive electrode oxygen concentration"]

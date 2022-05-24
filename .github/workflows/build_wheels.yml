@@ -10,13 +10,46 @@ on:
         default: 'pypi'
 
 jobs:
+  build_windows_wheels:
+    name: Build wheels on windows-latest
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-python@v2
+
+      - name: Install cibuildwheel
+        run: python -m pip install cibuildwheel==1.9.0
+
+      - name: Clone pybind11 repo (no history)
+        run: git clone --depth 1 --branch v2.6.2 https://github.com/pybind/pybind11.git
+
+      - name: Cache packages installed through vcpkg on windows
+        uses: actions/cache@v2
+        env:
+          cache-name: vckpg_binary_cache
+        with:
+          path: C:\Users\runneradmin\AppData\Local\vcpkg\archives
+          key: ${{ runner.os }}-build-VS2022-${{ env.cache-name }}-${{ hashFiles('vcpkg*.json') }}
+
+      - name: Build 64 bits wheels on Windows
+        run: |
+          python -m cibuildwheel --output-dir wheelhouse
+        env:
+          CIBW_ENVIRONMENT: "PYBAMM_USE_VCPKG=ON VCPKG_ROOT_DIR=$cd/vcpkg VCPKG_DEFAULT_TRIPLET=x64-windows-static-md VCPKG_FEATURE_FLAGS=manifests,registries CMAKE_GENERATOR=\"Visual Studio 17 2022\" CMAKE_GENERATOR_PLATFORM=x64"
+          CIBW_ARCHS: "AMD64"
+
+      - uses: actions/upload-artifact@v2
+        with:
+          name: wheels
+          path: ./wheelhouse/*.whl
+
   build_wheels:
     name: Build wheels on ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
+        os: [ubuntu-latest, macos-latest]
     steps:
       - uses: actions/checkout@v2
 
@@ -31,44 +64,22 @@ jobs:
       - name: Install sundials on macOS
         if: matrix.os == 'macos-latest'
         run: |
+          # https://github.com/actions/virtual-environments/issues/1280
           brew update
-          brew install sundials
+          brew reinstall gcc
+          python -m pip install cmake wget
+          python scripts/install_KLU_Sundials.py
 
       - name: Build wheels on Linux and MacOS
-        if: matrix.os != 'windows-latest'
         run: python -m cibuildwheel --output-dir wheelhouse
         env:
           CIBW_BEFORE_ALL_LINUX: "bash build_manylinux_wheels/install_sundials.sh 5.8.1 5.7.0"
-          CIBW_BEFORE_BUILD_LINUX: "python -m pip install cmake"
-
-      # see https://github.com/pybamm-team/PyBaMM/pull/1930
-      - name: Install the latest version of vcpkg on windows
-        if: matrix.os == 'windows-latest'
-        run: |
-          cd C:\
-          rm -r -fo 'C:\vcpkg'
-          git clone https://github.com/microsoft/vcpkg
-          cd vcpkg
-          .\bootstrap-vcpkg.bat
-
-      - name: Cache packages installed through vcpkg on windows
-        if: matrix.os == 'windows-latest'
-        uses: actions/cache@v2
-        env:
-          cache-name: vckpg_binary_cache
-        with:
-          path: C:\Users\runneradmin\AppData\Local\vcpkg\archives
-          key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ hashFiles('vcpkg.json') }}
-
-      - name: Build 64 bits wheels on Windows
-        if: matrix.os == 'windows-latest'
-        run: |
-          choco install --yes visualstudio2019community
-          choco install --yes visualstudio2019-workload-nativedesktop
-          python -m cibuildwheel --output-dir wheelhouse
-        env:
-          CIBW_ENVIRONMENT: "PYBAMM_USE_VCPKG=ON VCPKG_ROOT_DIR=$cd/vcpkg VCPKG_DEFAULT_TRIPLET=x64-windows-static VCPKG_FEATURE_FLAGS=manifests,registries CMAKE_GENERATOR=\"Visual Studio 16 2019\" CMAKE_GENERATOR_PLATFORM=x64"
-          CIBW_ARCHS: "AMD64"
+          CIBW_BEFORE_BUILD_LINUX: "python -m pip install cmake casadi numpy"
+          CIBW_BEFORE_BUILD_MACOS: "python -m pip install cmake casadi numpy && python scripts/fix_casadi_rpath_mac.py"
+          # got error "re.error: multiple repeat at position 104" on python 3.7 when --require-archs added, so remove
+          # it for mac
+          CIBW_REPAIR_WHEEL_COMMAND_MACOS: "delocate-listdeps {wheel} && delocate-wheel -v -w {dest_dir} {wheel}"
+          CIBW_SKIP: pp*
 
       - uses: actions/upload-artifact@v2
         with:
@@ -78,7 +89,7 @@ jobs:
 
   publish-pypi:
     name: Upload wheels to PyPI
-    needs: build_wheels
+    needs: [build_wheels, build_windows_wheels]
     runs-on: ubuntu-latest
     steps:
       - name: Download wheels

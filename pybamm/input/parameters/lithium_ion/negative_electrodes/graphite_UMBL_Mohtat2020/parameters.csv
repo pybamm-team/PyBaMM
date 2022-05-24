@@ -14,7 +14,7 @@ Negative electrode active material volume fraction,0.61,Peyman MPM,rest is binde
 Negative particle radius [m],2.5E-06,Peyman MPM,
 Negative electrode Bruggeman coefficient (electrode),1.5,Peyman MPM,
 Negative electrode Bruggeman coefficient (electrolyte),1.5,Peyman MPM,
-Negative electrode tortuosity, 0.16,
+Negative electrode transport efficiency, 0.16,
 ,,,
 # Interfacial reactions,,,
 Negative electrode cation signed stoichiometry,-1,,no info from Peyman MPM
