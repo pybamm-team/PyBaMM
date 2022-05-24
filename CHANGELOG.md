@@ -13,6 +13,8 @@
 
 ## Breaking changes
 
+-   Changed domain-specific parameter names to a nested attribute, e.g. `param.c_n_max` is now `param.n.c_max` ([#2063](https://github.com/pybamm-team/PyBaMM/pull/2063))
+
 # [v22.3](https://github.com/pybamm-team/PyBaMM/tree/v22.3) - 2022-03-31
 
 ## Features
