@@ -280,9 +280,7 @@ class BasicFull(BaseModel):
             "Current [A]": I,
             "Negative electrode potential [V]": pot * phi_s_n,
             "Electrolyte potential [V]": -param.n.prim.U_ref + pot * phi_e,
-            "Positive electrode potential [V]": param.p.prim.U_ref
-            - param.n.prim.U_ref
-            + pot * phi_s_p,
+            "Positive electrode potential [V]": param.ocv_ref + pot * phi_s_p,
             "Terminal voltage [V]": param.ocv_ref + pot * voltage,
             "Porosity": eps,
             "Volume-averaged velocity": v,

@@ -333,10 +333,10 @@ class LeadAcidParameters(BaseParameters):
         # Electrical
         self.ocv_ref = self.p.prim.U_ref - self.n.prim.U_ref
         self.voltage_low_cut = (
-            self.voltage_low_cut_dimensional - (self.ocv_ref)
+            self.voltage_low_cut_dimensional - self.ocv_ref
         ) / self.potential_scale
         self.voltage_high_cut = (
-            self.voltage_high_cut_dimensional - (self.ocv_ref)
+            self.voltage_high_cut_dimensional - self.ocv_ref
         ) / self.potential_scale
 
         # Thermal
