@@ -59,38 +59,24 @@ class FickianDiffusion(BaseFickian):
         N_s = variables[self.domain + " particle flux"]
         R = variables[self.domain + " particle radius"]
 
-        if self.domain == "Negative":
-            self.rhs = {c_s: -(1 / (R ** 2 * self.param.C_n)) * pybamm.div(N_s)}
-
-        elif self.domain == "Positive":
-            self.rhs = {c_s: -(1 / (R ** 2 * self.param.C_p)) * pybamm.div(N_s)}
+        self.rhs = {c_s: -(1 / (R ** 2 * self.domain_param.C_diff)) * pybamm.div(N_s)}
 
     def set_boundary_conditions(self, variables):
+        domain_param = self.domain_param
 
         c_s = variables[self.domain + " particle concentration"]
         D_eff = variables[self.domain + " effective diffusivity"]
         j = variables[self.domain + " electrode interfacial current density"]
         R = variables[self.domain + " particle radius"]
 
-        if self.domain == "Negative":
-            rbc = (
-                -self.param.C_n
-                * j
-                * R
-                / self.param.a_R_n
-                / self.param.gamma_n
-                / pybamm.surf(D_eff)
-            )
-
-        elif self.domain == "Positive":
-            rbc = (
-                -self.param.C_p
-                * j
-                * R
-                / self.param.a_R_p
-                / self.param.gamma_p
-                / pybamm.surf(D_eff)
-            )
+        rbc = (
+            -domain_param.C_diff
+            * j
+            * R
+            / domain_param.a_R
+            / domain_param.gamma
+            / pybamm.surf(D_eff)
+        )
 
         self.boundary_conditions = {
             c_s: {"left": (pybamm.Scalar(0), "Neumann"), "right": (rbc, "Neumann")}
@@ -98,8 +84,5 @@ class FickianDiffusion(BaseFickian):
 
     def set_initial_conditions(self, variables):
         c_s = variables[self.domain + " particle concentration"]
-        if self.domain == "Negative":
-            c_init = self.param.c_n_init
-        elif self.domain == "Positive":
-            c_init = self.param.c_p_init
+        c_init = self.domain_param.c_init
         self.initial_conditions = {c_s: c_init}

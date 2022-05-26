@@ -43,8 +43,8 @@ class LeadingOrder(BaseModel):
         phi_s_cn = variables["Negative current collector potential"]
 
         # import parameters and spatial variables
-        l_n = param.l_n
-        l_p = param.l_p
+        l_n = param.n.l
+        l_p = param.p.l
         x_n = pybamm.standard_spatial_vars.x_n
         x_p = pybamm.standard_spatial_vars.x_p
 

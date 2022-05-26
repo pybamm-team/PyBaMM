@@ -56,10 +56,7 @@ class BaseLeadingOrderSurfaceForm(LeadingOrder):
             + self.domain.lower()
             + " electrode surface potential difference"
         ]
-        if self.domain == "Negative":
-            delta_phi_init = self.param.U_n_init
-        elif self.domain == "Positive":
-            delta_phi_init = self.param.U_p_init
+        delta_phi_init = self.domain_param.U_init
 
         self.initial_conditions = {delta_phi: delta_phi_init}
 
@@ -94,8 +91,6 @@ class LeadingOrderDifferential(BaseLeadingOrderSurfaceForm):
         super().__init__(param, domain, options)
 
     def set_rhs(self, variables):
-        param = self.param
-
         sum_j = variables[
             "Sum of x-averaged "
             + self.domain.lower()
@@ -113,10 +108,7 @@ class LeadingOrderDifferential(BaseLeadingOrderSurfaceForm):
             + " electrode surface potential difference"
         ]
 
-        if self.domain == "Negative":
-            C_dl = param.C_dl_n
-        elif self.domain == "Positive":
-            C_dl = param.C_dl_p
+        C_dl = self.domain_param.C_dl
 
         self.rhs[delta_phi] = 1 / C_dl * (sum_j_av - sum_j)
 

@@ -85,17 +85,17 @@ class LeadingOrder(BaseElectrolyteDiffusion):
             "Sum of x-averaged positive electrode electrolyte reaction source terms"
         ]
         source_terms = (
-            param.l_n * (sum_s_j_n_0 - param.t_plus(c_e_av, T_av) * sum_j_n_0)
-            + param.l_p * (sum_s_j_p_0 - param.t_plus(c_e_av, T_av) * sum_j_p_0)
+            param.n.l * (sum_s_j_n_0 - param.t_plus(c_e_av, T_av) * sum_j_n_0)
+            + param.p.l * (sum_s_j_p_0 - param.t_plus(c_e_av, T_av) * sum_j_p_0)
         ) / param.gamma_e
 
         self.rhs = {
             c_e_av: 1
-            / (param.l_n * eps_n_av + param.l_s * eps_s_av + param.l_p * eps_p_av)
+            / (param.n.l * eps_n_av + param.s.l * eps_s_av + param.p.l * eps_p_av)
             * (
                 source_terms
-                - c_e_av * (param.l_n * deps_n_dt_av + param.l_p * deps_p_dt_av)
-                - c_e_av * param.l_s * div_Vbox_s_av
+                - c_e_av * (param.n.l * deps_n_dt_av + param.p.l * deps_p_dt_av)
+                - c_e_av * param.s.l * div_Vbox_s_av
             )
         }
 
