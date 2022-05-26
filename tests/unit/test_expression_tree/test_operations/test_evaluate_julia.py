@@ -39,7 +39,7 @@ class TestEvaluate(unittest.TestCase):
             p = list(inputs.values())
 
         pybamm_eval = expr.evaluate(t=t_tests[0], y=y_tests[0], inputs=inputs).flatten()
-        for preallocate in [False]:  # [True, False]:
+        for preallocate in [True, False]:
             kwargs["funcname"] = (
                 kwargs.get("funcname", "f") + "_" + str(int(preallocate))
             )
