@@ -994,10 +994,8 @@ class Symbol:
 
     @print_name.setter
     def print_name(self, name):
-        if name is None:
-            self._print_name = name
-        else:
-            self._print_name = prettify_print_name(name)
+        self._raw_print_name = name
+        self._print_name = prettify_print_name(name)
 
     def to_equation(self):
         return sympy.Symbol(str(self.name))

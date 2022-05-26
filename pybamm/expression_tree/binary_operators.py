@@ -1269,7 +1269,8 @@ def simplified_division(left, right):
     elif isinstance(left, pybamm.Negate) and right.is_constant():
         # Simplify (-a) / b to a / (-b) if (-b) is constant
         return left.orphans[0] / (-right)
-    elif isinstance(right, pybamm.Negate) and left.is_constant():
+
+    if isinstance(right, pybamm.Negate) and left.is_constant():
         # Simplify a / (-b) to (-a) / b if (-a) is constant
         return (-left) / right.orphans[0]
 
