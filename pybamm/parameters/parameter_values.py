@@ -835,13 +835,25 @@ class ParameterValues:
             "elec",
             "therm",
             "half_cell",
+            "x",
+            "r",
         ]
 
         # If 'parameters' is a class, extract the dict
         if not isinstance(parameters, dict):
-            parameters = {
+            parameters_dict = {
                 k: v for k, v in parameters.__dict__.items() if k not in ignore
             }
+            for domain in ["n", "s", "p"]:
+                domain_param = getattr(parameters, domain)
+                parameters_dict.update(
+                    {
+                        f"{domain}.{k}": v
+                        for k, v in domain_param.__dict__.items()
+                        if k not in ignore
+                    }
+                )
+            parameters = parameters_dict
 
         evaluated_parameters = defaultdict(list)
         # Calculate parameters for each C-rate
@@ -858,7 +870,7 @@ class ParameterValues:
             self._dict_items = dict(self._dict_items)
 
             for name, symbol in parameters.items():
-                if not callable(symbol):
+                if isinstance(symbol, pybamm.Symbol):
                     try:
                         proc_symbol = self.process_symbol(symbol)
                     except KeyError:

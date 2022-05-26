@@ -57,8 +57,8 @@ class BasicSPM(BaseModel):
 
         # Current density
         i_cell = param.current_with_time
-        j_n = i_cell / param.l_n
-        j_p = -i_cell / param.l_p
+        j_n = i_cell / param.n.l
+        j_p = -i_cell / param.p.l
 
         ######################
         # State of Charge
@@ -76,10 +76,10 @@ class BasicSPM(BaseModel):
 
         # The div and grad operators will be converted to the appropriate matrix
         # multiplication at the discretisation stage
-        N_s_n = -param.D_n(c_s_n, T) * pybamm.grad(c_s_n)
-        N_s_p = -param.D_p(c_s_p, T) * pybamm.grad(c_s_p)
-        self.rhs[c_s_n] = -(1 / param.C_n) * pybamm.div(N_s_n)
-        self.rhs[c_s_p] = -(1 / param.C_p) * pybamm.div(N_s_p)
+        N_s_n = -param.n.D(c_s_n, T) * pybamm.grad(c_s_n)
+        N_s_p = -param.p.D(c_s_p, T) * pybamm.grad(c_s_p)
+        self.rhs[c_s_n] = -(1 / param.n.C_diff) * pybamm.div(N_s_n)
+        self.rhs[c_s_p] = -(1 / param.p.C_diff) * pybamm.div(N_s_p)
         # Surf takes the surface value of a variable, i.e. its boundary value on the
         # right side. This is also accessible via `boundary_value(x, "right")`, with
         # "left" providing the boundary value of the left side
@@ -89,29 +89,29 @@ class BasicSPM(BaseModel):
         self.boundary_conditions[c_s_n] = {
             "left": (pybamm.Scalar(0), "Neumann"),
             "right": (
-                -param.C_n
+                -param.n.C_diff
                 * j_n
-                / param.a_R_n
-                / param.gamma_n
-                / param.D_n(c_s_surf_n, T),
+                / param.n.a_R
+                / param.n.gamma
+                / param.n.D(c_s_surf_n, T),
                 "Neumann",
             ),
         }
         self.boundary_conditions[c_s_p] = {
             "left": (pybamm.Scalar(0), "Neumann"),
             "right": (
-                -param.C_p
+                -param.p.C_diff
                 * j_p
-                / param.a_R_p
-                / param.gamma_p
-                / param.D_p(c_s_surf_p, T),
+                / param.p.a_R
+                / param.p.gamma
+                / param.p.D(c_s_surf_p, T),
                 "Neumann",
             ),
         }
         # c_n_init and c_p_init are functions of r and x, but for the SPM we
         # take the x-averaged value since there is no x-dependence in the particles
-        self.initial_conditions[c_s_n] = pybamm.x_average(param.c_n_init)
-        self.initial_conditions[c_s_p] = pybamm.x_average(param.c_p_init)
+        self.initial_conditions[c_s_n] = pybamm.x_average(param.n.c_init)
+        self.initial_conditions[c_s_p] = pybamm.x_average(param.p.c_init)
         # Events specify points at which a solution should terminate
         self.events += [
             pybamm.Event(
@@ -139,17 +139,17 @@ class BasicSPM(BaseModel):
         # (Some) variables
         ######################
         # Interfacial reactions
-        j0_n = param.gamma_n * param.j0_n(1, c_s_surf_n, T) / param.C_r_n
-        j0_p = param.gamma_p * param.j0_p(1, c_s_surf_p, T) / param.C_r_p
-        eta_n = (2 / param.ne_n) * pybamm.arcsinh(j_n / (2 * j0_n))
-        eta_p = (2 / param.ne_p) * pybamm.arcsinh(j_p / (2 * j0_p))
+        j0_n = param.n.gamma * param.n.j0(1, c_s_surf_n, T) / param.n.C_r
+        j0_p = param.p.gamma * param.p.j0(1, c_s_surf_p, T) / param.p.C_r
+        eta_n = (2 / param.n.ne) * pybamm.arcsinh(j_n / (2 * j0_n))
+        eta_p = (2 / param.p.ne) * pybamm.arcsinh(j_p / (2 * j0_p))
         phi_s_n = 0
-        phi_e = -eta_n - param.U_n(c_s_surf_n, T)
-        phi_s_p = eta_p + phi_e + param.U_p(c_s_surf_p, T)
+        phi_e = -eta_n - param.n.U(c_s_surf_n, T)
+        phi_s_p = eta_p + phi_e + param.p.U(c_s_surf_p, T)
         V = phi_s_p
 
         pot_scale = self.param.potential_scale
-        U_ref = self.param.U_p_ref - self.param.U_n_ref
+        U_ref = self.param.ocv_ref
         V_dim = U_ref + pot_scale * V
 
         whole_cell = ["negative electrode", "separator", "positive electrode"]
@@ -181,4 +181,3 @@ class BasicSPM(BaseModel):
             pybamm.Event("Minimum voltage", V - param.voltage_low_cut),
             pybamm.Event("Maximum voltage", V - param.voltage_high_cut),
         ]
-

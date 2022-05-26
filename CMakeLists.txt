@@ -1,4 +1,6 @@
-cmake_minimum_required(VERSION 3.10)
+cmake_minimum_required(VERSION 3.13)
+cmake_policy(SET CMP0074 NEW)
+set(CMAKE_VERBOSE_MAKEFILE ON)
 
 if(DEFINED ENV{VCPKG_ROOT_DIR} AND NOT DEFINED VCPKG_ROOT_DIR)
   set(VCPKG_ROOT_DIR "$ENV{VCPKG_ROOT_DIR}"
@@ -23,6 +25,7 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_EXPORT_COMPILE_COMMANDS 1)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
+
 # casadi seems to compile without the newer versions of std::string
 add_compile_definitions(_GLIBCXX_USE_CXX11_ABI=0)
 
@@ -42,18 +45,34 @@ pybind11_add_module(idaklu
   pybamm/solvers/c_solvers/solution.hpp
 )
 
-if(NOT CASADI_DIR)
-  execute_process(
+if (NOT DEFINED USE_PYTHON_CASADI)
+  set(USE_PYTHON_CASADI TRUE)
+endif()
+
+execute_process(
     COMMAND "${PYTHON_EXECUTABLE}" -c 
     "import casadi as _; print(_.__path__[0])"
     OUTPUT_VARIABLE CASADI_DIR
     OUTPUT_STRIP_TRAILING_WHITESPACE)
+
+if (CASADI_DIR)
+  file(TO_CMAKE_PATH ${CASADI_DIR} CASADI_DIR)
 endif()
-find_package(casadi CONFIG PATHS ${CASADI_DIR} REQUIRED)
+message("Found python casadi path: ${CASADI_DIR}")
+
+if(${USE_PYTHON_CASADI})
+  message("Trying to link against python casadi package")   
+  find_package(casadi CONFIG PATHS ${CASADI_DIR} REQUIRED)
+else()
+  message("Trying to link against any casadi package apart from the python one")
+  set(CMAKE_IGNORE_PATH "${CASADI_DIR}/cmake")
+  find_package(casadi CONFIG REQUIRED)
+endif()
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${PROJECT_SOURCE_DIR})
 # Sundials
-find_package(SUNDIALS)
+find_package(SUNDIALS REQUIRED)
+message("sundials ${SUNDIALS_INCLUDE_DIR} ${SUNDIALS_LIBRARIES}") 
 target_include_directories(idaklu PRIVATE ${SUNDIALS_INCLUDE_DIR})
 target_link_libraries(idaklu PRIVATE ${SUNDIALS_LIBRARIES} casadi)
 

@@ -602,8 +602,8 @@ class Simulation:
                 "Initial concentration in positive electrode [mol.m-3]"
             ]
             param = pybamm.LithiumIonParameters()
-            c_n_max = self.parameter_values.evaluate(param.c_n_max)
-            c_p_max = self.parameter_values.evaluate(param.c_p_max)
+            c_n_max = self.parameter_values.evaluate(param.n.c_max)
+            c_p_max = self.parameter_values.evaluate(param.p.c_max)
             x, y = pybamm.lithium_ion.get_initial_stoichiometries(
                 initial_soc, self.parameter_values
             )

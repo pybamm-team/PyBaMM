@@ -37,10 +37,10 @@ class ReactionDriven(BaseModel):
         # 3 / (3 * R_n ** 2))) but it is not clear if it is relevant or not.
         delta_eps_n = -a_n * L_tot
 
-        eps_n = self.param.epsilon_n_init + delta_eps_n
-        eps_s = self.param.epsilon_s_init
+        eps_n = self.param.n.epsilon_init + delta_eps_n
+        eps_s = self.param.s.epsilon_init
         # no SEI or plating in the positive electrode
-        eps_p = self.param.epsilon_p_init
+        eps_p = self.param.p.epsilon_init
 
         variables = self._get_standard_porosity_variables(eps_n, eps_s, eps_p)
 

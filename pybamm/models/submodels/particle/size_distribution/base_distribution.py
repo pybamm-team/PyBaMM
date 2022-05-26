@@ -29,14 +29,9 @@ class BaseSizeDistribution(BaseParticle):
         R. The domains of R will be different depending on the submodel, e.g. for the
         `SingleSizeDistribution` classes R does not have an "electrode" domain.
         """
-        if self.domain == "Negative":
-            R_typ = self.param.R_n_typ
-            # Particle-size distribution (area-weighted)
-            f_a_dist = self.param.f_a_dist_n(R)
-        elif self.domain == "Positive":
-            R_typ = self.param.R_p_typ
-            # Particle-size distribution (area-weighted)
-            f_a_dist = self.param.f_a_dist_p(R)
+        R_typ = self.domain_param.R_typ
+        # Particle-size distribution (area-weighted)
+        f_a_dist = self.domain_param.f_a_dist(R)
 
         # Ensure the distribution is normalised, irrespective of discretisation
         # or user input
@@ -156,11 +151,7 @@ class BaseSizeDistribution(BaseParticle):
         Forms standard concentration variables that depend on particle size R given
         the fundamental concentration distribution variable c_s from the submodel.
         """
-        if self.domain == "Negative":
-            c_scale = self.param.c_n_max
-        elif self.domain == "Positive":
-            c_scale = self.param.c_p_max
-
+        c_scale = self.domain_param.c_max
         # Broadcast and x-average when necessary
         if c_s.domain == [self.domain.lower() + " particle size"] and c_s.domains[
             "secondary"

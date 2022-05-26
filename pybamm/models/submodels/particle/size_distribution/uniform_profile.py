@@ -34,30 +34,19 @@ class UniformProfile(BaseSizeDistribution):
         # The concentration is uniform throughout each particle, so we
         # can just use the surface value.
 
+        # distribution variables
+        c_s_surf_distribution = pybamm.Variable(
+            f"{self.domain} particle surface concentration distribution",
+            domain=f"{self.domain.lower()} particle size",
+            auxiliary_domains={
+                "secondary": f"{self.domain.lower()} electrode",
+                "tertiary": "current collector",
+            },
+            bounds=(0, 1),
+        )
         if self.domain == "Negative":
-            # distribution variables
-            c_s_surf_distribution = pybamm.Variable(
-                "Negative particle surface concentration distribution",
-                domain="negative particle size",
-                auxiliary_domains={
-                    "secondary": "negative electrode",
-                    "tertiary": "current collector",
-                },
-                bounds=(0, 1),
-            )
             R = pybamm.standard_spatial_vars.R_n
-
         elif self.domain == "Positive":
-            # distribution variables
-            c_s_surf_distribution = pybamm.Variable(
-                "Positive particle surface concentration distribution",
-                domain="positive particle size",
-                auxiliary_domains={
-                    "secondary": "positive electrode",
-                    "tertiary": "current collector",
-                },
-                bounds=(0, 1),
-            )
             R = pybamm.standard_spatial_vars.R_p
 
         variables = self._get_distribution_variables(R)
@@ -113,35 +102,22 @@ class UniformProfile(BaseSizeDistribution):
         ]
         R = variables[self.domain + " particle sizes"]
 
-        if self.domain == "Negative":
-            self.rhs = {
-                c_s_surf_distribution: -3
-                * j_distribution
-                / self.param.a_R_n
-                / self.param.gamma_n
-                / R
-            }
-        elif self.domain == "Positive":
-            self.rhs = {
-                c_s_surf_distribution: -3
-                * j_distribution
-                / self.param.a_R_p
-                / self.param.gamma_p
-                / R
-            }
+        self.rhs = {
+            c_s_surf_distribution: -3
+            * j_distribution
+            / self.domain_param.a_R
+            / self.domain_param.gamma
+            / R
+        }
 
     def set_initial_conditions(self, variables):
         c_s_surf_distribution = variables[
-            self.domain + " particle surface concentration distribution"
+            f"{self.domain} particle surface concentration distribution"
         ]
 
-        if self.domain == "Negative":
-            c_init = pybamm.PrimaryBroadcast(
-                pybamm.r_average(self.param.c_n_init), "negative particle size"
-            )
-        elif self.domain == "Positive":
-            c_init = pybamm.PrimaryBroadcast(
-                pybamm.r_average(self.param.c_p_init), "positive particle size"
-            )
+        c_init = pybamm.PrimaryBroadcast(
+            pybamm.r_average(self.domain_param.c_init),
+            f"{self.domain.lower()} particle size",
+        )
 
         self.initial_conditions = {c_s_surf_distribution: c_init}

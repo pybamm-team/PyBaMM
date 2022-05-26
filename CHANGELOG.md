@@ -1,14 +1,19 @@
 # [Unreleased](https://github.com/pybamm-team/PyBaMM/)
 
+# [v22.4](https://github.com/pybamm-team/PyBaMM/tree/v22.4) - 2022-04-30
+
 ## Features
 
 -   Added a casadi version of the IDKLU solver, which is used for `model.convert_to_format = "casadi"` ([#2002](https://github.com/pybamm-team/PyBaMM/pull/2002))
 
 ## Bug fixes
 
+-   Corrected legend order in "plot_voltage_components.py", so each entry refers to the correct overpotential. ([#2061](https://github.com/pybamm-team/PyBaMM/pull/2061))
 -   Remove old deprecation errors, including those in `parameter_values.py` that caused the simulation if, for example, the reaction rate is re-introduced manually ([#2022](https://github.com/pybamm-team/PyBaMM/pull/2022))
 
 ## Breaking changes
+
+-   Changed domain-specific parameter names to a nested attribute, e.g. `param.c_n_max` is now `param.n.c_max` ([#2063](https://github.com/pybamm-team/PyBaMM/pull/2063))
 
 # [v22.3](https://github.com/pybamm-team/PyBaMM/tree/v22.3) - 2022-03-31
 
