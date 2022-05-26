@@ -21,29 +21,24 @@ class ThermalParameters(BaseParameters):
         # Get geometric parameters
         self.geo = pybamm.geometric_parameters
 
+        self.n = DomainThermalParameters("Negative", self)
+        self.s = DomainThermalParameters("Separator", self)
+        self.p = DomainThermalParameters("Positive", self)
+        self.domain_params = [self.n, self.s, self.p]
+
         # Set parameters
         self._set_dimensional_parameters()
         self._set_dimensionless_parameters()
 
     def _set_dimensional_parameters(self):
         """Defines the dimensional parameters"""
+        for domain in self.domain_params:
+            domain._set_dimensional_parameters()
 
         # Reference temperature
         self.T_ref = pybamm.Parameter("Reference temperature [K]")
 
         # Cooling coefficient
-        self.h_cn_dim = pybamm.Parameter(
-            "Negative current collector surface heat transfer coefficient [W.m-2.K-1]"
-        )
-        self.h_cp_dim = pybamm.Parameter(
-            "Positive current collector surface heat transfer coefficient [W.m-2.K-1]"
-        )
-        self.h_tab_n_dim = pybamm.Parameter(
-            "Negative tab heat transfer coefficient [W.m-2.K-1]"
-        )
-        self.h_tab_p_dim = pybamm.Parameter(
-            "Positive tab heat transfer coefficient [W.m-2.K-1]"
-        )
         self.h_edge_dim = pybamm.Parameter("Edge heat transfer coefficient [W.m-2.K-1]")
         self.h_total_dim = pybamm.Parameter(
             "Total heat transfer coefficient [W.m-2.K-1]"
@@ -55,220 +50,165 @@ class ThermalParameters(BaseParameters):
         # Initial temperature
         self.T_init_dim = pybamm.Parameter("Initial temperature [K]")
 
+        # References
+        self.rho_eff_dim_ref = self.rho_eff_dim(self.T_ref)
+        self.lambda_eff_dim_ref = self.lambda_eff_dim(self.T_ref)
+
         # Planar (y,z) thermal diffusion timescale
         self.tau_th_yz = (
-            self.rho_eff_dim(self.T_ref)
-            * (self.geo.L_z ** 2)
-            / self.lambda_eff_dim(self.T_ref)
+            self.rho_eff_dim_ref * (self.geo.L_z ** 2) / self.lambda_eff_dim_ref
         )
 
     def T_amb_dim(self, t):
         """Dimensional ambient temperature"""
         return pybamm.FunctionParameter("Ambient temperature [K]", {"Time [s]": t})
 
-    def rho_cn_dim(self, T):
-        """Negative current collector density [kg.m-3]"""
-        inputs = {"Temperature [K]": T}
-        return pybamm.FunctionParameter(
-            "Negative current collector density [kg.m-3]", inputs
-        )
-
-    def rho_n_dim(self, T):
-        """Negative electrode density [kg.m-3]"""
-        inputs = {"Temperature [K]": T}
-        return pybamm.FunctionParameter("Negative electrode density [kg.m-3]", inputs)
-
-    def rho_s_dim(self, T):
-        """Separator density [kg.m-3]"""
-        inputs = {"Temperature [K]": T}
-        return pybamm.FunctionParameter("Separator density [kg.m-3]", inputs)
-
-    def rho_p_dim(self, T):
-        """Positive electrode density [kg.m-3]"""
-        inputs = {"Temperature [K]": T}
-        return pybamm.FunctionParameter("Positive electrode density [kg.m-3]", inputs)
-
-    def rho_cp_dim(self, T):
-        """Positive current collector density [kg.m-3]"""
-        inputs = {"Temperature [K]": T}
-        return pybamm.FunctionParameter(
-            "Positive current collector density [kg.m-3]", inputs
-        )
-
     def rho_eff_dim(self, T):
         """Effective volumetric heat capacity [J.m-3.K-1]"""
         return (
-            self.rho_cn_dim(T) * self.c_p_cn_dim(T) * self.geo.L_cn
-            + self.rho_n_dim(T) * self.c_p_n_dim(T) * self.geo.L_n
-            + self.rho_s_dim(T) * self.c_p_s_dim(T) * self.geo.L_s
-            + self.rho_p_dim(T) * self.c_p_p_dim(T) * self.geo.L_p
-            + self.rho_cp_dim(T) * self.c_p_cp_dim(T) * self.geo.L_cp
+            self.n.rho_cc_dim(T) * self.n.c_p_cc_dim(T) * self.geo.n.L_cc
+            + self.n.rho_dim(T) * self.n.c_p_dim(T) * self.geo.n.L
+            + self.s.rho_dim(T) * self.s.c_p_dim(T) * self.geo.s.L
+            + self.p.rho_dim(T) * self.p.c_p_dim(T) * self.geo.p.L
+            + self.p.rho_cc_dim(T) * self.p.c_p_cc_dim(T) * self.geo.p.L_cc
         ) / self.geo.L
-
-    def c_p_cn_dim(self, T):
-        """Negative current collector specific heat capacity [J.kg-1.K-1]"""
-        inputs = {"Temperature [K]": T}
-        return pybamm.FunctionParameter(
-            "Negative current collector specific heat capacity [J.kg-1.K-1]", inputs
-        )
-
-    def c_p_n_dim(self, T):
-        """Negative electrode specific heat capacity [J.kg-1.K-1]"""
-        inputs = {"Temperature [K]": T}
-        return pybamm.FunctionParameter(
-            "Negative electrode specific heat capacity [J.kg-1.K-1]", inputs
-        )
-
-    def c_p_s_dim(self, T):
-        """Separator specific heat capacity [J.kg-1.K-1]"""
-        inputs = {"Temperature [K]": T}
-        return pybamm.FunctionParameter(
-            "Separator specific heat capacity [J.kg-1.K-1]", inputs
-        )
-
-    def c_p_p_dim(self, T):
-        """Positive electrode specific heat capacity [J.kg-1.K-1]"""
-        inputs = {"Temperature [K]": T}
-        return pybamm.FunctionParameter(
-            "Positive electrode specific heat capacity [J.kg-1.K-1]", inputs
-        )
-
-    def c_p_cp_dim(self, T):
-        """Positive current collector specific heat capacity [J.kg-1.K-1]"""
-        inputs = {"Temperature [K]": T}
-        return pybamm.FunctionParameter(
-            "Positive current collector specific heat capacity [J.kg-1.K-1]", inputs
-        )
-
-    def lambda_cn_dim(self, T):
-        """Negative current collector thermal conductivity [W.m-1.K-1]"""
-        inputs = {"Temperature [K]": T}
-        return pybamm.FunctionParameter(
-            "Negative current collector thermal conductivity [W.m-1.K-1]", inputs
-        )
-
-    def lambda_n_dim(self, T):
-        """Negative electrode thermal conductivity [W.m-1.K-1]"""
-        inputs = {"Temperature [K]": T}
-        return pybamm.FunctionParameter(
-            "Negative electrode thermal conductivity [W.m-1.K-1]", inputs
-        )
-
-    def lambda_s_dim(self, T):
-        """Separator thermal conductivity [W.m-1.K-1]"""
-        inputs = {"Temperature [K]": T}
-        return pybamm.FunctionParameter(
-            "Separator thermal conductivity [W.m-1.K-1]", inputs
-        )
-
-    def lambda_p_dim(self, T):
-        """Positive electrode thermal conductivity [W.m-1.K-1]"""
-        inputs = {"Temperature [K]": T}
-        return pybamm.FunctionParameter(
-            "Positive electrode thermal conductivity [W.m-1.K-1]", inputs
-        )
-
-    def lambda_cp_dim(self, T):
-        """Positive current collector thermal conductivity [W.m-1.K-1]"""
-        inputs = {"Temperature [K]": T}
-        return pybamm.FunctionParameter(
-            "Positive current collector thermal conductivity [W.m-1.K-1]", inputs
-        )
 
     def lambda_eff_dim(self, T):
         """Effective thermal conductivity [W.m-1.K-1]"""
         return (
-            self.lambda_cn_dim(T) * self.geo.L_cn
-            + self.lambda_n_dim(T) * self.geo.L_n
-            + self.lambda_s_dim(T) * self.geo.L_s
-            + self.lambda_p_dim(T) * self.geo.L_p
-            + self.lambda_cp_dim(T) * self.geo.L_cp
+            self.n.lambda_cc_dim(T) * self.geo.n.L_cc
+            + self.n.lambda_dim(T) * self.geo.n.L
+            + self.s.lambda_dim(T) * self.geo.s.L
+            + self.p.lambda_dim(T) * self.geo.p.L
+            + self.p.lambda_cc_dim(T) * self.geo.p.L_cc
         ) / self.geo.L
 
     def _set_dimensionless_parameters(self):
         """Defines the dimensionless parameters"""
+        for domain in self.domain_params:
+            domain._set_dimensionless_parameters()
 
         # Relative temperature rise
         self.Theta = self.Delta_T / self.T_ref
 
         # Cooling coefficient
-        self.h_cn = self.h_cn_dim * self.geo.L_x / self.lambda_eff_dim(self.T_ref)
-        self.h_cp = self.h_cp_dim * self.geo.L_x / self.lambda_eff_dim(self.T_ref)
-        self.h_tab_n = self.h_tab_n_dim * self.geo.L_x / self.lambda_eff_dim(self.T_ref)
-        self.h_tab_p = self.h_tab_p_dim * self.geo.L_x / self.lambda_eff_dim(self.T_ref)
-        self.h_edge = self.h_edge_dim * self.geo.L_x / self.lambda_eff_dim(self.T_ref)
-        self.h_total = self.h_total_dim * self.geo.L_x / self.lambda_eff_dim(self.T_ref)
+        self.h_edge = self.h_edge_dim * self.geo.L_x / self.lambda_eff_dim_ref
+        self.h_total = self.h_total_dim * self.geo.L_x / self.lambda_eff_dim_ref
 
         # Initial temperature
         self.T_init = (self.T_init_dim - self.T_ref) / self.Delta_T
+
+    def rho(self, T):
+        """
+        Dimensionless effective density, not to be confused with rho_eff_dim,
+        which is the dimensional effective volumetric heat capacity
+        """
+        return (
+            self.n.rho_cc(T) * self.geo.n.l_cc
+            + self.n.rho(T) * self.geo.n.l
+            + self.s.rho(T) * self.geo.s.l
+            + self.p.rho(T) * self.geo.p.l
+            + self.p.rho_cc(T) * self.geo.p.l_cc
+        ) / self.geo.l
 
     def T_amb(self, t):
         """Dimensionless ambient temperature"""
         return (self.T_amb_dim(t) - self.T_ref) / self.Delta_T
 
-    def rho_cn(self, T):
-        """Dimensionless negative current collector density"""
-        T_dim = self.Delta_T * T + self.T_ref
-        return (
-            self.rho_cn_dim(T_dim)
-            * self.c_p_cn_dim(T_dim)
-            / self.rho_eff_dim(self.T_ref)
+
+class DomainThermalParameters(BaseParameters):
+    def __init__(self, domain, main_param):
+        self.domain = domain
+        self.main_param = main_param
+
+    def _set_dimensional_parameters(self):
+        self.h_cc_dim = pybamm.Parameter(
+            f"{self.domain} current collector surface heat transfer coefficient "
+            "[W.m-2.K-1]"
+        )
+        self.h_tab_dim = pybamm.Parameter(
+            f"{self.domain} tab heat transfer coefficient [W.m-2.K-1]"
         )
 
-    def rho_n(self, T):
-        """Dimensionless negative electrode density"""
-        T_dim = self.Delta_T * T + self.T_ref
-        return (
-            self.rho_n_dim(T_dim) * self.c_p_n_dim(T_dim) / self.rho_eff_dim(self.T_ref)
+    def c_p_dim(self, T):
+        """Electrode specific heat capacity [J.kg-1.K-1]"""
+        inputs = {"Temperature [K]": T}
+        if self.domain == "Separator":
+            name = "Separator specific heat capacity [J.kg-1.K-1]"
+        else:
+            name = f"{self.domain} electrode specific heat capacity [J.kg-1.K-1]"
+        return pybamm.FunctionParameter(name, inputs)
+
+    def c_p_cc_dim(self, T):
+        """Current collector specific heat capacity [J.kg-1.K-1]"""
+        inputs = {"Temperature [K]": T}
+        return pybamm.FunctionParameter(
+            f"{self.domain} current collector specific heat capacity [J.kg-1.K-1]",
+            inputs,
         )
 
-    def rho_s(self, T):
-        """Dimensionless separator density"""
-        T_dim = self.Delta_T * T + self.T_ref
-        return (
-            self.rho_s_dim(T_dim) * self.c_p_s_dim(T_dim) / self.rho_eff_dim(self.T_ref)
+    def lambda_dim(self, T):
+        """Electrode thermal conductivity [W.m-1.K-1]"""
+        inputs = {"Temperature [K]": T}
+        if self.domain == "Separator":
+            name = "Separator thermal conductivity [W.m-1.K-1]"
+        else:
+            name = f"{self.domain} electrode thermal conductivity [W.m-1.K-1]"
+        return pybamm.FunctionParameter(name, inputs)
+
+    def lambda_cc_dim(self, T):
+        """Current collector thermal conductivity [W.m-1.K-1]"""
+        inputs = {"Temperature [K]": T}
+        return pybamm.FunctionParameter(
+            f"{self.domain} current collector thermal conductivity [W.m-1.K-1]", inputs
         )
 
-    def rho_p(self, T):
-        """Dimensionless positive electrode density"""
-        T_dim = self.Delta_T * T + self.T_ref
-        return (
-            self.rho_p_dim(T_dim) * self.c_p_p_dim(T_dim) / self.rho_eff_dim(self.T_ref)
+    def rho_dim(self, T):
+        """Electrode density [kg.m-3]"""
+        inputs = {"Temperature [K]": T}
+        if self.domain == "Separator":
+            name = "Separator density [kg.m-3]"
+        else:
+            name = f"{self.domain} electrode density [kg.m-3]"
+        return pybamm.FunctionParameter(name, inputs)
+
+    def rho_cc_dim(self, T):
+        """Current collector density [kg.m-3]"""
+        inputs = {"Temperature [K]": T}
+        return pybamm.FunctionParameter(
+            f"{self.domain} current collector density [kg.m-3]", inputs
         )
 
-    def rho_cp(self, T):
-        """Dimensionless positive current collector density"""
-        T_dim = self.Delta_T * T + self.T_ref
+    def _set_dimensionless_parameters(self):
+        main = self.main_param
+        self.h_cc = self.h_cc_dim * main.geo.L_x / main.lambda_eff_dim_ref
+        self.h_tab = self.h_tab_dim * main.geo.L_x / main.lambda_eff_dim_ref
+
+    def rho(self, T):
+        """Dimensionless electrode density"""
+        T_dim = self.main_param.Delta_T * T + self.main_param.T_ref
         return (
-            self.rho_cp_dim(T_dim)
-            * self.c_p_cp_dim(T_dim)
-            / self.rho_eff_dim(self.T_ref)
+            self.rho_dim(T_dim) * self.c_p_dim(T_dim) / self.main_param.rho_eff_dim_ref
         )
 
-    def lambda_cn(self, T):
-        """Dimensionless negative current collector thermal conductivity"""
-        T_dim = self.Delta_T * T + self.T_ref
-        return self.lambda_cn_dim(T_dim) / self.lambda_eff_dim(self.T_ref)
+    def rho_cc(self, T):
+        """Dimensionless current collector density"""
+        T_dim = self.main_param.Delta_T * T + self.main_param.T_ref
+        return (
+            self.rho_cc_dim(T_dim)
+            * self.c_p_cc_dim(T_dim)
+            / self.main_param.rho_eff_dim_ref
+        )
 
-    def lambda_n(self, T):
-        """Dimensionless negative electrode thermal conductivity"""
-        T_dim = self.Delta_T * T + self.T_ref
-        return self.lambda_n_dim(T_dim) / self.lambda_eff_dim(self.T_ref)
+    def lambda_(self, T):  # cannot call a function "lambda"
+        """Dimensionless electrode thermal conductivity"""
+        T_dim = self.main_param.Delta_T * T + self.main_param.T_ref
+        return self.lambda_dim(T_dim) / self.main_param.lambda_eff_dim_ref
 
-    def lambda_s(self, T):
-        """Dimensionless separator thermal conductivity"""
-        T_dim = self.Delta_T * T + self.T_ref
-        return self.lambda_s_dim(T_dim) / self.lambda_eff_dim(self.T_ref)
-
-    def lambda_p(self, T):
-        """Dimensionless positive electrode thermal conductivity"""
-        T_dim = self.Delta_T * T + self.T_ref
-        return self.lambda_p_dim(T_dim) / self.lambda_eff_dim(self.T_ref)
-
-    def lambda_cp(self, T):
-        """Dimensionless positive current collector thermal conductivity"""
-        T_dim = self.Delta_T * T + self.T_ref
-        return self.lambda_cp_dim(T_dim) / self.lambda_eff_dim(self.T_ref)
+    def lambda_cc(self, T):
+        """Dimensionless current collector thermal conductivity"""
+        T_dim = self.main_param.Delta_T * T + self.main_param.T_ref
+        return self.lambda_cc_dim(T_dim) / self.main_param.lambda_eff_dim_ref
 
 
 thermal_parameters = ThermalParameters()

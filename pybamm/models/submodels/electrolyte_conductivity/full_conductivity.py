@@ -38,7 +38,7 @@ class Full(BaseElectrolyteConductivity):
     def get_coupled_variables(self, variables):
         param = self.param
         T = variables["Cell temperature"]
-        tor = variables["Electrolyte tortuosity"]
+        tor = variables["Electrolyte transport efficiency"]
         c_e = variables["Electrolyte concentration"]
         phi_e = variables["Electrolyte potential"]
 
@@ -83,4 +83,4 @@ class Full(BaseElectrolyteConductivity):
 
     def set_initial_conditions(self, variables):
         phi_e = variables["Electrolyte potential"]
-        self.initial_conditions = {phi_e: -self.param.U_n_init}
+        self.initial_conditions = {phi_e: -self.param.n.U_init}

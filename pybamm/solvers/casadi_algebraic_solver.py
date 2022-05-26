@@ -83,7 +83,7 @@ class CasadiAlgebraicSolver(pybamm.BaseSolver):
             if model.len_rhs_and_alg == y0.shape[0]:
                 len_rhs = model.len_rhs
             else:
-                len_rhs = model.len_rhs * (inputs.shape[0] + 1)
+                len_rhs = model.len_rhs + model.len_rhs_sens
             y0_diff = y0[:len_rhs]
             y0_alg = y0[len_rhs:]
 
@@ -211,8 +211,12 @@ class CasadiAlgebraicSolver(pybamm.BaseSolver):
             explicit_sensitivities = False
 
         sol = pybamm.Solution(
-            [t_eval], y_sol, model, inputs_dict, termination="success",
-            sensitivities=explicit_sensitivities
+            [t_eval],
+            y_sol,
+            model,
+            inputs_dict,
+            termination="success",
+            sensitivities=explicit_sensitivities,
         )
         sol.integration_time = integration_time
         return sol

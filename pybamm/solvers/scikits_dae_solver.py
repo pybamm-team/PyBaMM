@@ -56,13 +56,12 @@ class ScikitsDaeSolver(pybamm.BaseSolver):
         root_tol=1e-6,
         extrap_tol=0,
         extra_options=None,
-        max_steps="deprecated",
     ):
         if scikits_odes_spec is None:
             raise ImportError("scikits.odes is not installed")
 
         super().__init__(
-            method, rtol, atol, root_method, root_tol, extrap_tol, max_steps
+            method, rtol, atol, root_method, root_tol, extrap_tol
         )
         self.name = "Scikits DAE solver ({})".format(method)
 
@@ -94,15 +93,29 @@ class ScikitsDaeSolver(pybamm.BaseSolver):
 
         y0 = model.y0
         if isinstance(y0, casadi.DM):
-            y0 = y0.full().flatten()
+            y0 = y0.full()
+        y0 = y0.flatten()
 
-        residuals = model.residuals_eval
+        rhs_algebraic_eval = model.rhs_algebraic_eval
         events = model.terminate_events_eval
-        jacobian = model.jacobian_eval
-        mass_matrix = model.mass_matrix.entries
+        jacobian = model.jac_rhs_algebraic_eval
+        if model.convert_to_format == "jax":
+            mass_matrix = model.mass_matrix.entries.toarray()
+        else:
+            mass_matrix = model.mass_matrix.entries
 
-        def eqsres(t, y, ydot, return_residuals):
-            return_residuals[:] = residuals(t, y, ydot, inputs)
+        if model.convert_to_format == "casadi":
+            def eqsres(t, y, ydot, return_residuals):
+                return_residuals[:] = (
+                    rhs_algebraic_eval(t, y, inputs).full().flatten()
+                    - mass_matrix @ ydot
+                )
+        else:
+            def eqsres(t, y, ydot, return_residuals):
+                return_residuals[:] = (
+                    rhs_algebraic_eval(t, y, inputs).flatten()
+                    - mass_matrix @ ydot
+                )
 
         def rootfn(t, y, ydot, return_root):
             return_root[:] = [event(t, y, inputs) for event in events]
@@ -117,13 +130,10 @@ class ScikitsDaeSolver(pybamm.BaseSolver):
         if jacobian:
             jac_y0_t0 = jacobian(t_eval[0], y0, inputs)
             if sparse.issparse(jac_y0_t0):
-
                 def jacfn(t, y, ydot, residuals, cj, J):
                     jac_eval = jacobian(t, y, inputs) - cj * mass_matrix
                     J[:][:] = jac_eval.toarray()
-
             else:
-
                 def jacfn(t, y, ydot, residuals, cj, J):
                     jac_eval = jacobian(t, y, inputs) - cj * mass_matrix
                     J[:][:] = jac_eval

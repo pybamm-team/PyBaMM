@@ -236,10 +236,9 @@ class BaseKinetics(BaseInterface):
                 / param.I_typ
                 * pybamm.sign(param.I_typ)
             )
-            if self.domain == "Negative":
-                j_tot_av_init = current_at_0 / param.l_n
-            elif self.domain == "Positive":
-                j_tot_av_init = -current_at_0 / param.l_p
+            sgn = 1 if self.domain == "Negative" else -1
+            # i / (a*l), assuming a=1 initially
+            j_tot_av_init = sgn * current_at_0 / self.domain_param.l
 
             self.initial_conditions[j_tot_var] = j_tot_av_init
 

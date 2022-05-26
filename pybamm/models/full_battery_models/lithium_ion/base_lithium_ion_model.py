@@ -28,8 +28,8 @@ class BaseModel(pybamm.BaseBatteryModel):
             "negative electrode": self.param.L_x,
             "separator": self.param.L_x,
             "positive electrode": self.param.L_x,
-            "positive particle": self.param.R_p_typ,
-            "positive particle size": self.param.R_p_typ,
+            "positive particle": self.param.p.R_typ,
+            "positive particle size": self.param.p.R_typ,
             "current collector y": self.param.L_z,
             "current collector z": self.param.L_z,
         }
@@ -38,8 +38,8 @@ class BaseModel(pybamm.BaseBatteryModel):
         if not self.half_cell:
             self.length_scales.update(
                 {
-                    "negative particle": self.param.R_n_typ,
-                    "negative particle size": self.param.R_n_typ,
+                    "negative particle": self.param.n.R_typ,
+                    "negative particle size": self.param.n.R_typ,
                 }
             )
         self.set_standard_output_variables()
@@ -79,10 +79,10 @@ class BaseModel(pybamm.BaseBatteryModel):
 
         # Particle concentration position
         var = pybamm.standard_spatial_vars
-        self.variables.update({"r_p": var.r_p, "r_p [m]": var.r_p * self.param.R_p_typ})
+        self.variables.update({"r_p": var.r_p, "r_p [m]": var.r_p * self.param.p.R_typ})
         if not self.half_cell:
             self.variables.update(
-                {"r_n": var.r_n, "r_n [m]": var.r_n * self.param.R_n_typ}
+                {"r_n": var.r_n, "r_n [m]": var.r_n * self.param.n.R_typ}
             )
 
     def set_degradation_variables(self):
@@ -96,11 +96,11 @@ class BaseModel(pybamm.BaseBatteryModel):
         else:
             C_n = self.variables["Negative electrode capacity [A.h]"]
             n_Li_n = self.variables["Total lithium in negative electrode [mol]"]
-            LAM_ne = (1 - C_n / param.C_n_init) * 100
+            LAM_ne = (1 - C_n / param.n.cap_init) * 100
 
         C_p = self.variables["Positive electrode capacity [A.h]"]
 
-        LAM_pe = (1 - C_p / param.C_p_init) * 100
+        LAM_pe = (1 - C_p / param.p.cap_init) * 100
 
         # LLI
         n_Li_e = self.variables["Total lithium in electrolyte [mol]"]

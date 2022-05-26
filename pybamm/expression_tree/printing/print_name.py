@@ -56,8 +56,9 @@ def prettify_print_name(name):
     # Superscripts with comma separated (U_n_ref --> U_{n}^{ref})
     sup_re = re.search(r"^[\da-zA-Z]+_?(.*?)_?((?:init|ref|typ|max|0))", name)
     if sup_re:
-        sup_str = (r"{" + sup_re.group(1).replace("_", "\,") + r"}^{" +
-                   sup_re.group(2) + r"}")
+        sup_str = (
+            r"{" + sup_re.group(1).replace("_", "\,") + r"}^{" + sup_re.group(2) + r"}"
+        )
         sup_var = sup_re.group(1) + "_" + sup_re.group(2)
         name = name.replace(sup_var, sup_str)
 
@@ -71,17 +72,28 @@ def prettify_print_name(name):
     dim_re = re.search(r"([\da-zA-Z]+)_?(.*?)_?(?:dim|dimensional)", name)
     if dim_re:
         if "^" in name:
-            name = (r"\hat{" + dim_re.group(1) + r"}_" +
-                    dim_re.group(2).replace("_", "\,"))
+            name = (
+                r"\hat{" + dim_re.group(1) + r"}_" + dim_re.group(2).replace("_", "\,")
+            )
         else:
-            name = (r"\hat{" + dim_re.group(1) + r"}_{" +
-                    dim_re.group(2).replace("_", "\,") + r"}")
+            name = (
+                r"\hat{"
+                + dim_re.group(1)
+                + r"}_{"
+                + dim_re.group(2).replace("_", "\,")
+                + r"}"
+            )
 
     # Bar with comma separated (c_s_n_xav --> \bar{c}_{s\,n})
     bar_re = re.search(r"^([a-zA-Z]+)_*(\w*?)_(?:av|xav)", name)
     if bar_re:
-        name = (r"\bar{" + bar_re.group(1) + r"}_{" +
-                bar_re.group(2).replace("_", "\,") + r"}")
+        name = (
+            r"\bar{"
+            + bar_re.group(1)
+            + r"}_{"
+            + bar_re.group(2).replace("_", "\,")
+            + r"}"
+        )
 
     # Replace eps with epsilon (eps_n --> epsilon_n)
     name = re.sub(r"(eps)(?![0-9a-zA-Z])", "epsilon", name)

@@ -515,11 +515,11 @@ class Simulation:
                 unbuilt_model,
                 parameter_values,
             ) in self.op_conds_to_model_and_param.items():
-                # It's ok to modify the models in-place as they are not accessible
-                # from outside the simulation
                 model_with_set_params = parameter_values.process_model(
-                    unbuilt_model, inplace=True
+                    unbuilt_model, inplace=False
                 )
+                # It's ok to modify the model with set parameters in place as it's
+                # not returned anywhere
                 built_model = self._disc.process_model(
                     model_with_set_params, inplace=True, check_model=check_model
                 )
@@ -609,8 +609,8 @@ class Simulation:
                 "Initial concentration in positive electrode [mol.m-3]"
             ]
             param = pybamm.LithiumIonParameters()
-            c_n_max = self.parameter_values.evaluate(param.c_n_max)
-            c_p_max = self.parameter_values.evaluate(param.c_p_max)
+            c_n_max = self.parameter_values.evaluate(param.n.c_max)
+            c_p_max = self.parameter_values.evaluate(param.p.c_max)
             x, y = pybamm.lithium_ion.get_initial_stoichiometries(
                 initial_soc, self.parameter_values
             )
@@ -960,7 +960,7 @@ class Simulation:
 
         return self.solution
 
-    def plot(self, output_variables=None, quick_plot_vars=None, **kwargs):
+    def plot(self, output_variables=None, **kwargs):
         """
         A method to quickly plot the outputs of the simulation. Creates a
         :class:`pybamm.QuickPlot` object (with keyword arguments 'kwargs') and
@@ -970,18 +970,11 @@ class Simulation:
         ----------
         output_variables: list, optional
             A list of the variables to plot.
-        quick_plot_vars: list, optional
-            A list of the variables to plot. Deprecated, use output_variables instead.
         **kwargs
             Additional keyword arguments passed to
             :meth:`pybamm.QuickPlot.dynamic_plot`.
             For a list of all possible keyword arguments see :class:`pybamm.QuickPlot`.
         """
-
-        if quick_plot_vars is not None:
-            raise NotImplementedError(
-                "'quick_plot_vars' has been deprecated. Use 'output_variables' instead."
-            )
 
         if self._solution is None:
             raise ValueError(

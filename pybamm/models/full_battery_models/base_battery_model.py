@@ -864,15 +864,6 @@ class BaseBatteryModel(pybamm.BaseModel):
         self._built = True
         pybamm.logger.info("Finish building {}".format(self.name))
 
-    def new_empty_copy(self):
-        """See :meth:`pybamm.BaseModel.new_empty_copy()`"""
-        new_model = self.__class__(name=self.name, options=self.options)
-        new_model.use_jacobian = self.use_jacobian
-        new_model.convert_to_format = self.convert_to_format
-        new_model._timescale = self.timescale
-        new_model._length_scales = self.length_scales
-        return new_model
-
     @property
     def summary_variables(self):
         return self._summary_variables
@@ -968,13 +959,15 @@ class BaseBatteryModel(pybamm.BaseModel):
             )
         self.submodels["external circuit"] = model
 
-    def set_tortuosity_submodels(self):
-        self.submodels["electrolyte tortuosity"] = pybamm.tortuosity.Bruggeman(
+    def set_transport_efficiency_submodels(self):
+        self.submodels[
+            "electrolyte transport efficiency"
+        ] = pybamm.transport_efficiency.Bruggeman(
             self.param, "Electrolyte", self.options
         )
-        self.submodels["electrode tortuosity"] = pybamm.tortuosity.Bruggeman(
-            self.param, "Electrode", self.options
-        )
+        self.submodels[
+            "electrode transport efficiency"
+        ] = pybamm.transport_efficiency.Bruggeman(self.param, "Electrode", self.options)
 
     def set_thermal_submodel(self):
 
@@ -1168,11 +1161,7 @@ class BaseBatteryModel(pybamm.BaseModel):
         # Variables for calculating the equivalent circuit model (ECM) resistance
         # Need to compare OCV to initial value to capture this as an overpotential
         ocv_init = self.param.ocv_init
-        ocv_init_dim = (
-            self.param.U_p_ref
-            - self.param.U_n_ref
-            + self.param.potential_scale * ocv_init
-        )
+        ocv_init_dim = self.param.ocv_ref + self.param.potential_scale * ocv_init
         eta_ocv = ocv - ocv_init
         eta_ocv_dim = ocv_dim - ocv_init_dim
         # Current collector current density for working out euiqvalent resistance

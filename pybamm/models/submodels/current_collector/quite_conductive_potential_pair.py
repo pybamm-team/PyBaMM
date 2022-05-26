@@ -60,10 +60,10 @@ class BaseQuiteConductivePotentialPair(BasePotentialPair):
         # Note that the second argument of 'source' must be the same as the argument
         # in the laplacian (the variable to which the boundary conditions are applied)
         self.algebraic = {
-            phi_s_cn: (param.sigma_cn * param.delta ** 2 * param.l_cn)
+            phi_s_cn: (param.n.sigma_cc * param.delta ** 2 * param.n.l_cc)
             * pybamm.laplacian(phi_s_cn)
             - pybamm.source(i_boundary_cc_0, phi_s_cn),
-            i_boundary_cc: (param.sigma_cp * param.delta ** 2 * param.l_cp)
+            i_boundary_cc: (param.p.sigma_cc * param.delta ** 2 * param.p.l_cc)
             * pybamm.laplacian(phi_s_cp)
             + pybamm.source(i_boundary_cc_0, phi_s_cp)
             + c * pybamm.PrimaryBroadcast(cc_area, "current collector"),

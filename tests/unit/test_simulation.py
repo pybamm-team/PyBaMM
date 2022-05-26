@@ -362,10 +362,6 @@ class TestSimulation(unittest.TestCase):
         sim.solve(t_eval=t_eval)
         sim.plot(testing=True)
 
-        # test quick_plot_vars deprecation error
-        with self.assertRaisesRegex(NotImplementedError, "'quick_plot_vars'"):
-            sim.plot(quick_plot_vars=["var"])
-
     def test_create_gif(self):
         sim = pybamm.Simulation(pybamm.lithium_ion.SPM())
         sim.solve(t_eval=[0, 10])

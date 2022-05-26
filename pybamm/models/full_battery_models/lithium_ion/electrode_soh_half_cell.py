@@ -42,7 +42,7 @@ class ElectrodeSOHHalfCell(pybamm.BaseModel):
         if working_electrode == "negative":  # pragma: no cover
             raise NotImplementedError
         elif working_electrode == "positive":
-            Uw = param.U_p_dimensional
+            Uw = param.p.U_dimensional
             x_0 = x_100 + C / Cw
 
         V_max = pybamm.InputParameter("V_max")
@@ -75,7 +75,3 @@ class ElectrodeSOHHalfCell(pybamm.BaseModel):
     def default_solver(self):
         # Use AlgebraicSolver as CasadiAlgebraicSolver gives unnecessary warnings
         return pybamm.AlgebraicSolver()
-
-    def new_empty_copy(self):
-        new_model = ElectrodeSOHHalfCell(self.working_electrode, name=self.name)
-        return new_model

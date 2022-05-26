@@ -50,9 +50,9 @@ class Integrated(BaseElectrolyteConductivity):
         ]
         phi_s_n_av = variables["X-averaged negative electrode potential"]
 
-        tor_n = variables["Negative electrolyte tortuosity"]
-        tor_s = variables["Separator tortuosity"]
-        tor_p = variables["Positive electrolyte tortuosity"]
+        tor_n = variables["Negative electrolyte transport efficiency"]
+        tor_s = variables["Separator transport efficiency"]
+        tor_p = variables["Positive electrolyte transport efficiency"]
 
         T_av = variables["X-averaged cell temperature"]
         T_av_n = pybamm.PrimaryBroadcast(T_av, "negative electrode")
@@ -60,8 +60,8 @@ class Integrated(BaseElectrolyteConductivity):
         T_av_p = pybamm.PrimaryBroadcast(T_av, "positive electrode")
 
         param = self.param
-        l_n = param.l_n
-        l_p = param.l_p
+        l_n = param.n.l
+        l_p = param.p.l
         x_n = pybamm.standard_spatial_vars.x_n
         x_s = pybamm.standard_spatial_vars.x_s
         x_p = pybamm.standard_spatial_vars.x_p

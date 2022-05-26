@@ -177,18 +177,6 @@ class ParameterValues:
         if "lithium plating" in chemistry:
             component_groups += ["lithium plating"]
 
-        if "anode" in chemistry.keys():
-            raise KeyError(
-                "The 'anode' notation has been deprecated, "
-                "'negative electrode' should be used instead."
-            )
-
-        if "cathode" in chemistry.keys():
-            raise KeyError(
-                "The 'cathode' notation has been deprecated, "
-                "'positive electrode' should be used instead."
-            )
-
         for component_group in component_groups:
             # Make sure component is provided
             try:
@@ -299,7 +287,6 @@ class ParameterValues:
                 if value.startswith("[function]"):
                     loaded_value = pybamm.load_function(os.path.join(path, value[10:]))
                     self._dict_items[name] = loaded_value
-                    values[name] = loaded_value
                 # Data is flagged with the string "[data]" or "[current data]"
                 elif value.startswith("[current data]") or value.startswith("[data]"):
                     if value.startswith("[current data]"):
@@ -317,8 +304,6 @@ class ParameterValues:
                     ).to_numpy()
                     # Save name and data
                     self._dict_items[name] = (function_name, ([data[:, 0]], data[:, 1]))
-                    values[name] = (function_name, ([data[:, 0]], data[:, 1]))
-
                 # parse 2D parameter data
                 elif value.startswith("[2D data]"):
                     filename = os.path.join(path, value[9:] + ".json")
@@ -330,14 +315,19 @@ class ParameterValues:
                     data[0] = [np.array(el) for el in data[0]]
                     data[1] = np.array(data[1])
                     self._dict_items[name] = (function_name, data)
-                    values[name] = (function_name, data)
 
                 elif value == "[input]":
                     self._dict_items[name] = pybamm.InputParameter(name)
                 # Anything else should be a converted to a float
                 else:
                     self._dict_items[name] = float(value)
-                    values[name] = float(value)
+            elif isinstance(value, tuple) and isinstance(value[1], np.ndarray):
+                # If data is provided as a 2-column array (1D data),
+                # convert to two arrays for compatibility with 2D data
+                # see #1805
+                func_name, data = value
+                data = ([data[:, 0]], data[:, 1])
+                self._dict_items[name] = (func_name, data)
             else:
                 self._dict_items[name] = value
         # reset processed symbols
@@ -350,43 +340,9 @@ class ParameterValues:
                 "'Typical current [A]' cannot be zero. A possible alternative is to "
                 "set 'Current function [A]' to `0` instead."
             )
-        if "C-rate" in values:
-            raise ValueError(
-                "The 'C-rate' parameter has been deprecated, "
-                "use 'Current function [A]' instead. The Nominal "
-                "cell capacity can be accessed as 'Nominal cell "
-                "capacity [A.h]', and used to calculate current from C-rate."
-            )
-        if "Cell capacity [A.h]" in values:
-            raise ValueError(
-                "The 'Cell capacity [A.h]' parameter has been deprecated, "
-                "'Nominal cell capacity [A.h]' should be used instead."
-            )
+
         for param in values:
-            if "surface area density" in param:
-                raise ValueError(
-                    "Parameters involving 'surface area density' have been renamed to "
-                    "'surface area to volume ratio' ('{}' found)".format(param)
-                )
-            elif "reaction rate" in param:
-                raise ValueError(
-                    "Parameters involving 'reaction rate' have been replaced with "
-                    "'exchange-current density' ('{}' found)".format(param)
-                )
-            elif "particle distribution in x" in param:
-                raise ValueError(
-                    "The parameter '{}' has been deprecated".format(param)
-                    + "The particle radius is now set as a function of x directly "
-                    "instead of providing a reference value and a distribution."
-                )
-            elif "surface area to volume ratio distribution in x" in param:
-                raise ValueError(
-                    "The parameter '{}' has been deprecated".format(param)
-                    + "The surface area to volume ratio is now set as a function "
-                    "of x directly instead of providing a reference value and a "
-                    "distribution."
-                )
-            elif "propotional term" in param:
+            if "propotional term" in param:
                 raise ValueError(
                     f"The parameter '{param}' has been renamed to "
                     "'... proportional term [s-1]', and its value should now be divided"
@@ -422,8 +378,8 @@ class ParameterValues:
             # since they point to the same object
             model = unprocessed_model
         else:
-            # create a blank model of the same class
-            model = unprocessed_model.new_empty_copy()
+            # create a copy of the model
+            model = unprocessed_model.new_copy()
 
         if (
             len(unprocessed_model.rhs) == 0
@@ -645,9 +601,6 @@ class ParameterValues:
                     # to create an Interpolant
                     name, data = function_name
 
-                    if isinstance(data, np.ndarray):
-                        data = [data[:, 0]], data[:, 1]
-
                     if len(data[0]) == 1:
                         input_data = data[0][0], data[1]
 
@@ -849,13 +802,25 @@ class ParameterValues:
             "elec",
             "therm",
             "half_cell",
+            "x",
+            "r",
         ]
 
         # If 'parameters' is a class, extract the dict
         if not isinstance(parameters, dict):
-            parameters = {
+            parameters_dict = {
                 k: v for k, v in parameters.__dict__.items() if k not in ignore
             }
+            for domain in ["n", "s", "p"]:
+                domain_param = getattr(parameters, domain)
+                parameters_dict.update(
+                    {
+                        f"{domain}.{k}": v
+                        for k, v in domain_param.__dict__.items()
+                        if k not in ignore
+                    }
+                )
+            parameters = parameters_dict
 
         evaluated_parameters = defaultdict(list)
         # Calculate parameters for each C-rate
@@ -872,7 +837,7 @@ class ParameterValues:
             self._dict_items = dict(self._dict_items)
 
             for name, symbol in parameters.items():
-                if not callable(symbol):
+                if isinstance(symbol, pybamm.Symbol):
                     try:
                         proc_symbol = self.process_symbol(symbol)
                     except KeyError:
