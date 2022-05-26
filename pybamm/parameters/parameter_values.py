@@ -170,7 +170,12 @@ class ParameterValues:
         ]
 
         # add SEI parameters if provided
-        for extra_group in ["sei", "lithium plating", "negative electrode secondary"]:
+        for extra_group in [
+            "sei",
+            "lithium plating",
+            "negative primary particle",
+            "negative secondary particle",
+        ]:
             if extra_group in chemistry:
                 component_groups += [extra_group]
 
@@ -185,11 +190,12 @@ class ParameterValues:
                     )
                 )
             # Create path to component and load values
-            if component_group == "negative electrode secondary":
-                component_group = "negative electrode"
-                prefactor = "Secondary: "
-            else:
-                prefactor = ""
+            prefactor = ""
+            for phase in ["primary", "secondary"]:
+                if component_group.endswith(phase + " particle"):
+                    component_group = "negative electrode"
+                    prefactor = phase.capitalize() + ": "
+                    break
             component_path = os.path.join(
                 base_chemistry, component_group.replace(" ", "_") + "s", component
             )

@@ -609,6 +609,8 @@ class BaseBatteryModel(pybamm.BaseModel):
             "x_p": 20,
             "r_n": 20,
             "r_p": 20,
+            "r_n_prim": 20,
+            "r_p_prim": 20,
             "r_n_sec": 20,
             "r_p_sec": 20,
             "y": 10,
@@ -629,6 +631,8 @@ class BaseBatteryModel(pybamm.BaseModel):
             "positive electrode": pybamm.Uniform1DSubMesh,
             "negative particle": pybamm.Uniform1DSubMesh,
             "positive particle": pybamm.Uniform1DSubMesh,
+            "negative primary particle": pybamm.Uniform1DSubMesh,
+            "positive primary particle": pybamm.Uniform1DSubMesh,
             "negative secondary particle": pybamm.Uniform1DSubMesh,
             "positive secondary particle": pybamm.Uniform1DSubMesh,
             "negative particle size": pybamm.Uniform1DSubMesh,
@@ -649,6 +653,8 @@ class BaseBatteryModel(pybamm.BaseModel):
             "macroscale": pybamm.FiniteVolume(),
             "negative particle": pybamm.FiniteVolume(),
             "positive particle": pybamm.FiniteVolume(),
+            "negative primary particle": pybamm.FiniteVolume(),
+            "positive primary particle": pybamm.FiniteVolume(),
             "negative secondary particle": pybamm.FiniteVolume(),
             "positive secondary particle": pybamm.FiniteVolume(),
             "negative particle size": pybamm.FiniteVolume(),
@@ -1069,23 +1075,38 @@ class BaseBatteryModel(pybamm.BaseModel):
                 )
 
     def set_voltage_variables(self):
-
-        ocp_n = self.variables["Negative electrode open circuit potential"]
-        ocp_p = self.variables["Positive electrode open circuit potential"]
+        if self.options.negative["particle phases"] == "1":
+            # Only one phase, no need to distinguish between
+            # "primary" and "secondary"
+            phase_n = ""
+        else:
+            # add a space so that we can use "" or (e.g.) "primary " interchangeably
+            # when naming variables
+            phase_n = "primary "
+        if self.options.positive["particle phases"] == "1":
+            phase_p = ""
+        else:
+            phase_p = "primary "
+        ocp_n = self.variables[f"Negative electrode {phase_n}open circuit potential"]
+        ocp_p = self.variables[f"Positive electrode {phase_p}open circuit potential"]
         ocp_n_av = self.variables[
-            "X-averaged negative electrode open circuit potential"
+            f"X-averaged negative electrode {phase_n}open circuit potential"
         ]
         ocp_p_av = self.variables[
-            "X-averaged positive electrode open circuit potential"
+            f"X-averaged positive electrode {phase_p}open circuit potential"
         ]
 
-        ocp_n_dim = self.variables["Negative electrode open circuit potential [V]"]
-        ocp_p_dim = self.variables["Positive electrode open circuit potential [V]"]
+        ocp_n_dim = self.variables[
+            f"Negative electrode {phase_n}open circuit potential [V]"
+        ]
+        ocp_p_dim = self.variables[
+            f"Positive electrode {phase_p}open circuit potential [V]"
+        ]
         ocp_n_av_dim = self.variables[
-            "X-averaged negative electrode open circuit potential [V]"
+            f"X-averaged negative electrode {phase_n}open circuit potential [V]"
         ]
         ocp_p_av_dim = self.variables[
-            "X-averaged positive electrode open circuit potential [V]"
+            f"X-averaged positive electrode {phase_p}open circuit potential [V]"
         ]
 
         ocp_n_left = pybamm.boundary_value(ocp_n, "left")
@@ -1108,16 +1129,16 @@ class BaseBatteryModel(pybamm.BaseModel):
             ]
         else:
             eta_r_n_av = self.variables[
-                "X-averaged negative electrode reaction overpotential"
+                f"X-averaged negative electrode {phase_n}reaction overpotential"
             ]
             eta_r_n_av_dim = self.variables[
-                "X-averaged negative electrode reaction overpotential [V]"
+                f"X-averaged negative electrode {phase_n}reaction overpotential [V]"
             ]
         eta_r_p_av = self.variables[
-            "X-averaged positive electrode reaction overpotential"
+            f"X-averaged positive electrode {phase_p}reaction overpotential"
         ]
         eta_r_p_av_dim = self.variables[
-            "X-averaged positive electrode reaction overpotential [V]"
+            f"X-averaged positive electrode {phase_p}reaction overpotential [V]"
         ]
 
         delta_phi_s_n_av = self.variables["X-averaged negative electrode ohmic losses"]

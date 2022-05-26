@@ -47,23 +47,23 @@ def battery_geometry(
     }
     # Add particle domains
     if include_particles is True:
+        zero_one = {"min": 0, "max": 1}
         geometry.update(
             {
-                "negative particle": {"r_n": {"min": 0, "max": 1}},
-                "positive particle": {"r_p": {"min": 0, "max": 1}},
+                "negative particle": {"r_n": zero_one},
+                "positive particle": {"r_p": zero_one},
             }
         )
         if isinstance(options, pybamm.BatteryModelOptions):
-            phases_n = int(getattr(options, "negative")["particle phases"])
-            if phases_n >= 2:
-                geometry["negative secondary particle"] = {
-                    "r_n_sec": {"min": 0, "max": 1}
-                }
-            phases_p = int(getattr(options, "positive")["particle phases"])
-            if phases_p >= 2:
-                geometry["positive secondary particle"] = {
-                    "r_p_sec": {"min": 0, "max": 1}
-                }
+            for domain in ["negative", "positive"]:
+                phases = int(getattr(options, domain)["particle phases"])
+                if phases >= 2:
+                    geometry.update(
+                        {
+                            f"{domain} primary particle": {"r_n_prim": zero_one},
+                            f"{domain} secondary particle": {"r_n_sec": zero_one},
+                        }
+                    )
     # Add particle size domains
     if options is not None and options["particle size"] == "distribution":
         R_min_n = geo.n.prim.R_min
