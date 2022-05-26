@@ -219,7 +219,7 @@ class TestSimulationExperiment(unittest.TestCase):
         self.assertEqual(len(sol.cycles), 1)
         self.assertEqual(len(sol.cycles[0].steps), 1)
 
-        # Different callback
+        # Different callback - this is for coverage on the `Callback` class
         sol = sim.solve(callbacks=pybamm.callbacks.Callback())
 
     def test_run_experiment_termination_capacity(self):
