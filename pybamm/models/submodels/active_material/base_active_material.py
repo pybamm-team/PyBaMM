@@ -26,7 +26,6 @@ class BaseModel(pybamm.BaseSubModel):
 
     def _get_standard_active_material_variables(self, eps_solid):
         param = self.param
-        phase = self.phase
         phase_name = self.phase_name
         Domain = self.domain
         domain = Domain.lower()
@@ -38,8 +37,8 @@ class BaseModel(pybamm.BaseSubModel):
         eps_solid_av = pybamm.x_average(eps_solid)
 
         variables = {
-            f"{Domain} electrode {phase} active material volume fraction": eps_solid,
-            f"X-averaged {domain} electrode {phase} active material volume fraction"
+            f"{Domain} electrode {phase_name}active material volume fraction": eps_solid,
+            f"X-averaged {domain} electrode {phase_name}active material volume fraction"
             "": eps_solid_av,
         }
 
@@ -76,7 +75,12 @@ class BaseModel(pybamm.BaseSubModel):
                 * param.F
                 / 3600
             )
-            variables.update({f"{Domain} electrode {phase} phase capacity [A.h]": C})
+            if phase_name == "":
+                variables.update({f"{Domain} electrode capacity [A.h]": C})
+            else:
+                variables.update(
+                    {f"{Domain} electrode {phase_name}phase capacity [A.h]": C}
+                )
 
             # If a single particle size at every x, use the parameters
             # R_n, R_p. For a size distribution, calculate the area-weighted

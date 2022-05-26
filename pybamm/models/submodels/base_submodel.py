@@ -70,6 +70,18 @@ class BaseSubModel(pybamm.BaseModel):
         super().__init__(name)
         if domain is not None:
             domain = domain.capitalize()
+
+        self.domain = domain
+        self.set_domain_for_broadcast()
+        self.name = name
+
+        self.external = external
+        self.options = pybamm.BatteryModelOptions(options or {})
+
+        # Save whether the submodel is a half-cell submodel
+        we = self.options["working electrode"]
+        self.half_cell = we != "both"
+
         self.param = param
         if param is None:
             self.domain_param = None
@@ -86,21 +98,17 @@ class BaseSubModel(pybamm.BaseModel):
                     self.phase_param = self.domain_param.sec
 
         self.phase = phase
-        if phase == "primary":
+        if phase is None or (
+            phase == "primary"
+            and getattr(self.options, domain.lower())["particle phases"] == "1"
+        ):
+            # Only one phase, no need to distinguish between
+            # "primary" and "secondary"
             self.phase_name = ""
-        elif phase == "secondary":
-            self.phase_name = "secondary "
-
-        self.domain = domain
-        self.set_domain_for_broadcast()
-        self.name = name
-
-        self.external = external
-        self.options = pybamm.BatteryModelOptions(options or {})
-
-        # Save whether the submodel is a half-cell submodel
-        we = self.options["working electrode"]
-        self.half_cell = we != "both"
+        else:
+            # add a space so that we can use "" or (e.g.) "primary " interchangeably
+            # when naming variables
+            self.phase_name = phase + " "
 
     @property
     def domain(self):

@@ -101,7 +101,9 @@ class BaseParticle(pybamm.BaseSubModel):
         phase_name = self.phase_name
 
         c_s_rav = variables[f"R-averaged {domain} {phase_name}particle concentration"]
-        eps_s = variables[f"{Domain} electrode {phase} active material volume fraction"]
+        eps_s = variables[
+            f"{Domain} electrode {phase_name}active material volume fraction"
+        ]
         eps_s_av = pybamm.x_average(eps_s)
         c_s_vol_av = pybamm.x_average(eps_s * c_s_rav) / eps_s_av
         c_scale = self.phase_param.c_max

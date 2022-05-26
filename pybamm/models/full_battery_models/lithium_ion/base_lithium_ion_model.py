@@ -29,6 +29,7 @@ class BaseModel(pybamm.BaseBatteryModel):
             "separator": self.param.L_x,
             "positive electrode": self.param.L_x,
             "positive particle": self.param.p.prim.R_typ,
+            "positive primary particle": self.param.p.prim.R_typ,
             "positive particle size": self.param.p.prim.R_typ,
             "current collector y": self.param.L_z,
             "current collector z": self.param.L_z,
@@ -39,7 +40,7 @@ class BaseModel(pybamm.BaseBatteryModel):
             self.length_scales.update(
                 {
                     "negative particle": self.param.n.prim.R_typ,
-                    "negative secondary particle": self.param.n.sec.R_typ,
+                    "negative primary particle": self.param.n.prim.R_typ,
                     "negative particle size": self.param.n.prim.R_typ,
                 }
             )
@@ -244,10 +245,9 @@ class BaseModel(pybamm.BaseBatteryModel):
             )
 
     def set_total_kinetics_submodel(self):
-        for domain in ["negative", "positive"]:
-            self.submodels[f"{domain} total interface"] = pybamm.kinetics.TotalKinetics(
-                self.param, "lithium-ion", self.options
-            )
+        self.submodels["total interface"] = pybamm.kinetics.TotalKinetics(
+            self.param, "lithium-ion", self.options
+        )
 
     def set_other_reaction_submodels_to_zero(self):
         self.submodels["negative oxygen interface"] = pybamm.kinetics.NoReaction(
@@ -291,9 +291,10 @@ class BaseModel(pybamm.BaseBatteryModel):
                 self.submodels[f"{domain} {phase} active material"] = submod
 
             # Submodel for the total active material, summing up each phase
-            self.submodels[
-                f"{domain} total active material"
-            ] = pybamm.active_material.Total(self.param, domain, self.options)
+            if len(phases) > 1:
+                self.submodels[
+                    f"{domain} total active material"
+                ] = pybamm.active_material.Total(self.param, domain, self.options)
 
     def set_porosity_submodel(self):
         if (

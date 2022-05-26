@@ -760,21 +760,28 @@ class DomainLithiumIonParameters(BaseParameters):
 
 class ParticleLithiumIonParameters(BaseParameters):
     def __init__(self, phase, domain_param):
-        self.phase = phase
-        if phase == "primary":
-            self.phase_name = ""  # empty phase name for primary phase
-            self.phase_prefactor = ""
-        elif phase == "secondary":
-            self.phase_name = "secondary "
-            self.phase_prefactor = "Secondary: "
-
         self.domain_param = domain_param
         self.domain = domain_param.domain
         self.main_param = domain_param.main_param
+        self.phase = phase
         if self.phase == "primary":
             self.geo = domain_param.geo.prim
         elif self.phase == "secondary":
             self.geo = domain_param.geo.sec
+        if (
+            phase == "primary"
+            and getattr(self.main_param.options, self.domain.lower())["particle phases"]
+            == "1"
+        ):
+            # Only one phase, no need to distinguish between
+            # "primary" and "secondary"
+            self.phase_name = ""
+            self.phase_prefactor = ""
+        else:
+            # add a space so that we can use "" or (e.g.) "primary " interchangeably
+            # when naming variables
+            self.phase_name = phase + " "
+            self.phase_prefactor = phase.capitalize() + ": "
 
     def _set_dimensional_parameters(self):
         main = self.main_param

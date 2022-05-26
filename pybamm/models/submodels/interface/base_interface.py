@@ -29,7 +29,8 @@ class BaseInterface(pybamm.BaseSubModel):
     def __init__(self, param, domain, reaction, options=None, phase="primary"):
         super().__init__(param, domain, options=options, phase=phase)
         if reaction in ["lithium-ion main", "lithium metal plating"]:
-            self.reaction_name = ""  # empty reaction name for the main reaction
+            self.reaction_name = self.phase_name
+            # can be "" or "primary " or "secondary "
         elif reaction == "lead-acid main":
             self.reaction_name = ""  # empty reaction name for the main reaction
         elif reaction == "lead-acid oxygen":
@@ -41,8 +42,6 @@ class BaseInterface(pybamm.BaseSubModel):
         elif reaction == "lithium plating":
             self.reaction_name = "lithium plating "
 
-        if phase == "secondary":
-            self.reaction_name += "secondary "
         self.reaction = reaction
 
     def _get_exchange_current_density(self, variables):
@@ -253,7 +252,8 @@ class BaseInterface(pybamm.BaseSubModel):
             j_total_average = i_boundary_cc
         else:
             a_av = variables[
-                f"X-averaged {domain} electrode surface area to volume ratio"
+                f"X-averaged {domain} electrode {self.phase_name}"
+                "surface area to volume ratio"
             ]
             sgn = 1 if self.domain == "Negative" else -1
 
@@ -291,7 +291,7 @@ class BaseInterface(pybamm.BaseSubModel):
             j = pybamm.PrimaryBroadcast(j, self.domain_for_broadcast)
 
         variables = {
-            f"{Domain} electrode {reaction_name}" "interfacial current density": j,
+            f"{Domain} electrode {reaction_name}interfacial current density": j,
             f"X-averaged {domain} electrode {reaction_name}"
             "interfacial current density": j_av,
             f"{Domain} electrode {reaction_name}"
