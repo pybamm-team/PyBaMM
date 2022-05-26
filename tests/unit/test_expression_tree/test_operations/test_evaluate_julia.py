@@ -39,7 +39,7 @@ class TestEvaluate(unittest.TestCase):
             p = list(inputs.values())
 
         pybamm_eval = expr.evaluate(t=t_tests[0], y=y_tests[0], inputs=inputs).flatten()
-        for preallocate in [True, False]:
+        for preallocate in [False]:  # [True, False]:
             kwargs["funcname"] = (
                 kwargs.get("funcname", "f") + "_" + str(int(preallocate))
             )
@@ -241,10 +241,6 @@ class TestEvaluate(unittest.TestCase):
         disc.set_variable_slices([c_n, c_s, c_p])
         c_disc = disc.process_symbol(c)
         self.evaluate_and_test_equal(c_disc, y_tests)
-
-        # # test without preallocation
-        # expr = c_disc * c_disc
-        # self.evaluate_and_test_equal(expr, y_tests, preallocate=False)
 
     def test_evaluator_julia_domain_concatenation_2D(self):
         c_n = pybamm.Variable(

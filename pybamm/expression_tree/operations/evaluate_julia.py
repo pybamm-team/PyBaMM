@@ -554,9 +554,14 @@ def get_julia_function(
     else:
         result_var = id_to_julia_variable(symbol.id, "cache")
         if typ == "ode":
-            var_str = var_str.replace(result_var, "dy")
+            out = "dy"
         elif typ == "dae":
-            var_str = var_str.replace(result_var, "out")
+            out = "out"
+        # replace "cache_123 = ..." with "dy .= ..." (ensure we allocate to the
+        # variable that was passed in)
+        var_str = var_str.replace(f"   {result_var} =", f"   {out} .=")
+        # catch other cases for dy
+        var_str = var_str.replace(result_var, out)
 
     # add "cs." to cache names
     if preallocate is True:
