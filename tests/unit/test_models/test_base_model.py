@@ -496,7 +496,7 @@ class TestBaseModel(unittest.TestCase):
         model.initial_conditions = {a: q, b: 1}
         model.variables = {"a+b": a + b - t}
 
-        out = model.export_casadi_objects(["a+b"])
+        out = model.export_casadi_objects(["a+b"], input_parameter_order=["p", "q"])
 
         # Try making a function from the outputs
         t, x, z, p = out["t"], out["x"], out["z"], out["inputs"]
@@ -575,7 +575,7 @@ class TestBaseModel(unittest.TestCase):
         model.variables = {"a+b": a + b - t}
 
         # Generate C code
-        model.generate("test.c", ["a+b"])
+        model.generate("test.c", ["a+b"], input_parameter_order=["p", "q"])
 
         # Compile
         subprocess.run(["gcc", "-fPIC", "-shared", "-o", "test.so", "test.c"])  # nosec
