@@ -37,7 +37,7 @@ class Function(pybamm.Symbol):
         *children,
         name=None,
         derivative="autograd",
-        differentiated_function=None
+        differentiated_function=None,
     ):
         # Turn numbers into scalars
         children = list(children)
@@ -102,7 +102,7 @@ class Function(pybamm.Symbol):
             return Function(
                 autograd.elementwise_grad(self.function, idx),
                 *children,
-                differentiated_function=self.function
+                differentiated_function=self.function,
             )
         elif self.derivative == "derivative":
             if len(children) > 1:
@@ -118,7 +118,7 @@ class Function(pybamm.Symbol):
                     self.function.derivative(),
                     *children,
                     derivative="derivative",
-                    differentiated_function=self.function
+                    differentiated_function=self.function,
                 )
 
     def _function_jac(self, children_jacs):
@@ -193,13 +193,20 @@ class Function(pybamm.Symbol):
                 *children,
                 name=self.name,
                 derivative=self.derivative,
-                differentiated_function=self.differentiated_function
+                differentiated_function=self.differentiated_function,
             )
         )
 
     def _sympy_operator(self, child):
         """Apply appropriate SymPy operators."""
         return child
+
+    @property
+    def julia_name(self):
+        "Return the name of the equivalent Julia function, for generating Julia code"
+        raise NotImplementedError(
+            "No julia name defined for function {}".format(self.function)
+        )
 
     def to_equation(self):
         """Convert the node and its subtree into a SymPy equation."""
@@ -249,6 +256,14 @@ class SpecificFunction(Function):
         """See :meth:`pybamm.Function._function_new_copy()`"""
         return pybamm.simplify_if_constant(self.__class__(*children))
 
+    @property
+    def julia_name(self):
+        """See :meth:`pybamm.Function.julia_name`"""
+        # By default, the julia name for a specific function is the class name
+        # in lowercase
+        # Some functions may overwrite this
+        return self.__class__.__name__.lower()
+
     def _sympy_operator(self, child):
         """Apply appropriate SymPy operators."""
         class_name = self.__class__.__name__.lower()
@@ -264,7 +279,12 @@ class Arcsinh(SpecificFunction):
 
     def _function_diff(self, children, idx):
         """See :meth:`pybamm.Symbol._function_diff()`."""
-        return 1 / Sqrt(children[0] ** 2 + 1)
+        return 1 / sqrt(children[0] ** 2 + 1)
+
+    @property
+    def julia_name(self):
+        """See :meth:`pybamm.Function.julia_name`"""
+        return "asinh"
 
     def _sympy_operator(self, child):
         """Override :meth:`pybamm.Function._sympy_operator`"""
@@ -286,6 +306,11 @@ class Arctan(SpecificFunction):
         """See :meth:`pybamm.Function._function_diff()`."""
         return 1 / (children[0] ** 2 + 1)
 
+    @property
+    def julia_name(self):
+        """See :meth:`pybamm.Function.julia_name`"""
+        return "atan"
+
     def _sympy_operator(self, child):
         """Override :meth:`pybamm.Function._sympy_operator`"""
         return sympy.atan(child)
@@ -304,7 +329,7 @@ class Cos(SpecificFunction):
 
     def _function_diff(self, children, idx):
         """See :meth:`pybamm.Symbol._function_diff()`."""
-        return -Sin(children[0])
+        return -sin(children[0])
 
 
 def cos(child):
@@ -320,7 +345,7 @@ class Cosh(SpecificFunction):
 
     def _function_diff(self, children, idx):
         """See :meth:`pybamm.Function._function_diff()`."""
-        return Sinh(children[0])
+        return sinh(children[0])
 
 
 def cosh(child):
@@ -336,7 +361,7 @@ class Erf(SpecificFunction):
 
     def _function_diff(self, children, idx):
         """See :meth:`pybamm.Function._function_diff()`."""
-        return 2 / np.sqrt(np.pi) * Exponential(-children[0] ** 2)
+        return 2 / np.sqrt(np.pi) * exp(-children[0] ** 2)
 
 
 def erf(child):
@@ -349,7 +374,7 @@ def erfc(child):
     return 1 - simplified_function(Erf, child)
 
 
-class Exponential(SpecificFunction):
+class Exp(SpecificFunction):
     """Exponential function."""
 
     def __init__(self, child):
@@ -357,16 +382,12 @@ class Exponential(SpecificFunction):
 
     def _function_diff(self, children, idx):
         """See :meth:`pybamm.Function._function_diff()`."""
-        return Exponential(children[0])
-
-    def _sympy_operator(self, child):
-        """Override :meth:`pybamm.Function._sympy_operator`"""
-        return sympy.exp(child)
+        return exp(children[0])
 
 
 def exp(child):
     """Returns exponential function of child."""
-    return simplified_function(Exponential, child)
+    return simplified_function(Exp, child)
 
 
 class Log(SpecificFunction):
@@ -405,6 +426,11 @@ class Max(SpecificFunction):
     def __init__(self, child):
         super().__init__(np.max, child)
 
+    @property
+    def julia_name(self):
+        """See :meth:`pybamm.Function.julia_name`"""
+        return "maximum"
+
 
 def max(child):
     """
@@ -419,6 +445,11 @@ class Min(SpecificFunction):
 
     def __init__(self, child):
         super().__init__(np.min, child)
+
+    @property
+    def julia_name(self):
+        """See :meth:`pybamm.Function.julia_name`"""
+        return "minimum"
 
 
 def min(child):
@@ -442,7 +473,7 @@ class Sin(SpecificFunction):
 
     def _function_diff(self, children, idx):
         """See :meth:`pybamm.Function._function_diff()`."""
-        return Cos(children[0])
+        return cos(children[0])
 
 
 def sin(child):
@@ -458,7 +489,7 @@ class Sinh(SpecificFunction):
 
     def _function_diff(self, children, idx):
         """See :meth:`pybamm.Function._function_diff()`."""
-        return Cosh(children[0])
+        return cosh(children[0])
 
 
 def sinh(child):
@@ -479,7 +510,7 @@ class Sqrt(SpecificFunction):
 
     def _function_diff(self, children, idx):
         """See :meth:`pybamm.Function._function_diff()`."""
-        return 1 / (2 * Sqrt(children[0]))
+        return 1 / (2 * sqrt(children[0]))
 
 
 def sqrt(child):

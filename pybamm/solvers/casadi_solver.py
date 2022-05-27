@@ -660,15 +660,16 @@ class CasadiSolver(pybamm.BaseSolver):
 
         # are we solving explicit forward equations?
         explicit_sensitivities = bool(model.calculate_sensitivities)
-
         # by default we extract sensitivities in the solution if we
         # are calculating the sensitivities
         if extract_sensitivities_in_solution is None:
             extract_sensitivities_in_solution = explicit_sensitivities
 
         if use_grid is True:
+            pybamm.logger.spam("Calculating t_eval_shifted")
             t_eval_shifted = t_eval - t_eval[0]
             t_eval_shifted_rounded = np.round(t_eval_shifted, decimals=12).tobytes()
+            pybamm.logger.spam("Finished calculating t_eval_shifted")
             integrator = self.integrators[model][t_eval_shifted_rounded]
         else:
             integrator = self.integrators[model]["no grid"]
@@ -682,6 +683,8 @@ class CasadiSolver(pybamm.BaseSolver):
 
         y0_diff = y0[:len_rhs]
         y0_alg = y0[len_rhs:]
+        pybamm.logger.spam("Finished preliminary setup for integrator run")
+
         # Solve
         try:
             # Try solving
