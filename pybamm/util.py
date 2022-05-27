@@ -203,6 +203,9 @@ class TimerTime:
         output.append("1 second" if time == 1 else str(time) + " seconds")
         return ", ".join(output)
 
+    def __repr__(self):
+        return f"pybamm.TimerTime({self.value})"
+
     def __add__(self, other):
         if isinstance(other, numbers.Number):
             return TimerTime(self.value + other)

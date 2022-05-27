@@ -46,6 +46,7 @@ from .util import (
     have_julia,
 )
 from .logger import logger, set_logging_level
+from .logger import logger, set_logging_level, get_new_logger
 from .settings import settings
 from .citations import Citations, citations, print_citations
 
@@ -238,6 +239,11 @@ from .simulation import Simulation, load_sim, is_notebook
 # Batch Study
 #
 from .batch_study import BatchStudy
+
+#
+# Callbacks
+#
+from . import callbacks
 
 #
 # Remove any imported modules, so we don't expose them as part of pybamm
