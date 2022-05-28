@@ -84,9 +84,15 @@ class SEIGrowth(BaseModel):
         if self.options["SEI"] == "reaction limited":
             # alpha = param.alpha
             C_sei = param.C_sei_reaction
+            T = variables["Negative electrode temperature"]
 
             # need to revise for thermal case
-            j_sei = -(1 / C_sei) * pybamm.exp(-0.5 * (delta_phi - j * L_sei * R_sei))
+            j_sei = (
+                -(1 / C_sei)
+                * pybamm.exp(-0.5 * (delta_phi - j * L_sei * R_sei))
+                * 1
+                / (1 + self.param.Theta * T)
+            )
 
         elif self.options["SEI"] == "electron-migration limited":
             U_inner = self.param.U_inner_electron
@@ -95,7 +101,13 @@ class SEIGrowth(BaseModel):
 
         elif self.options["SEI"] == "interstitial-diffusion limited":
             C_sei = self.param.C_sei_inter
-            j_sei = -pybamm.exp(-delta_phi) / (C_sei * L_sei_inner)
+            T = variables["Negative electrode temperature"]
+            j_sei = (
+                -pybamm.exp(-delta_phi)
+                / (C_sei * L_sei_inner)
+                * 1
+                / (1 + self.param.Theta * T)
+            )
 
         elif self.options["SEI"] == "solvent-diffusion limited":
             C_sei = self.param.C_sei_solvent
@@ -104,6 +116,7 @@ class SEIGrowth(BaseModel):
         elif self.options["SEI"] == "ec reaction limited":
             C_sei_ec = self.param.C_sei_ec
             C_ec = self.param.C_ec
+            T = variables["Negative electrode temperature"]
 
             # we have a linear system for j_sei and c_ec
             #  c_ec = 1 + j_sei * L_sei * C_ec
@@ -114,7 +127,12 @@ class SEIGrowth(BaseModel):
             #  j_sei = -C_sei_ec * exp() / (1 + L_sei * C_ec * C_sei_ec * exp())
             #  c_ec = 1 / (1 + L_sei * C_ec * C_sei_ec * exp())
             # need to revise for thermal case
-            C_sei_exp = C_sei_ec * pybamm.exp(-0.5 * (delta_phi - j * L_sei * R_sei))
+            C_sei_exp = (
+                C_sei_ec
+                * pybamm.exp(-0.5 * (delta_phi - j * L_sei * R_sei))
+                * 1
+                / (1 + self.param.Theta * T)
+            )
             j_sei = -C_sei_exp / (1 + L_sei * C_ec * C_sei_exp)
             c_ec = 1 / (1 + L_sei * C_ec * C_sei_exp)
 
