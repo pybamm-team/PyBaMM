@@ -68,7 +68,7 @@ class CurrentCollector1D(BaseThermal):
 
         yz_surface_area = self.param.l_y * self.param.l_z
         yz_surface_cooling_coefficient = (
-            -(self.param.h_cn + self.param.h_cp)
+            -(self.param.n.h_cc + self.param.p.h_cc)
             * yz_surface_area
             / cell_volume
             / (self.param.delta ** 2)
@@ -101,16 +101,16 @@ class CurrentCollector1D(BaseThermal):
 
         # find tab locations (top vs bottom)
         l_z = param.l_z
-        neg_tab_z = param.centre_z_tab_n
-        pos_tab_z = param.centre_z_tab_p
+        neg_tab_z = param.n.centre_z_tab
+        pos_tab_z = param.p.centre_z_tab
         neg_tab_top_bool = pybamm.Equality(neg_tab_z, l_z)
         neg_tab_bottom_bool = pybamm.Equality(neg_tab_z, 0)
         pos_tab_top_bool = pybamm.Equality(pos_tab_z, l_z)
         pos_tab_bottom_bool = pybamm.Equality(pos_tab_z, 0)
 
         # calculate tab vs non-tab area on top and bottom
-        neg_tab_area = param.l_tab_n * param.l_cn
-        pos_tab_area = param.l_tab_p * param.l_cp
+        neg_tab_area = param.n.l_tab * param.n.l_cc
+        pos_tab_area = param.p.l_tab * param.p.l_cc
         total_area = param.l * param.l_y
 
         non_tab_top_area = (
@@ -127,8 +127,8 @@ class CurrentCollector1D(BaseThermal):
         # calculate effective cooling coefficients
         top_cooling_coefficient = (
             (
-                param.h_tab_n * neg_tab_area * neg_tab_top_bool
-                + param.h_tab_p * pos_tab_area * pos_tab_top_bool
+                param.n.h_tab * neg_tab_area * neg_tab_top_bool
+                + param.p.h_tab * pos_tab_area * pos_tab_top_bool
                 + param.h_edge * non_tab_top_area
             )
             / param.delta
@@ -136,8 +136,8 @@ class CurrentCollector1D(BaseThermal):
         )
         bottom_cooling_coefficient = (
             (
-                param.h_tab_n * neg_tab_area * neg_tab_bottom_bool
-                + param.h_tab_p * pos_tab_area * pos_tab_bottom_bool
+                param.n.h_tab * neg_tab_area * neg_tab_bottom_bool
+                + param.p.h_tab * pos_tab_area * pos_tab_bottom_bool
                 + param.h_edge * non_tab_bottom_area
             )
             / param.delta

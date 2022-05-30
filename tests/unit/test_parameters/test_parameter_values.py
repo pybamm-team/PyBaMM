@@ -462,6 +462,25 @@ class TestParameterValues(unittest.TestCase):
         processed_func = parameter_values.process_symbol(func)
         self.assertEqual(processed_func.evaluate(), 3)
 
+    def test_function_parameter_replace_callable(self):
+        # This functionality is used for generating a model in Julia's MTK
+        def D(a, b):
+            return a * pybamm.exp(b)
+
+        parameter_values = pybamm.ParameterValues({"a": 3, "Diffusivity": D})
+        parameter_values._replace_callable_function_parameters = False
+
+        a = pybamm.Parameter("a")
+        b = pybamm.Variable("b")
+        func = pybamm.FunctionParameter("Diffusivity", {"a": a, "b": b})
+        func.print_name = "D"
+
+        processed_func = parameter_values.process_symbol(func)
+        self.assertIsInstance(processed_func, pybamm.FunctionParameter)
+        self.assertEqual(processed_func.name, "D")
+        self.assertEqual(processed_func.arg_names, ["a", "b"])
+        self.assertIsInstance(processed_func.callable, pybamm.Multiplication)
+
     def test_process_interpolant(self):
         x = np.linspace(0, 10)[:, np.newaxis]
         data = np.hstack([x, 2 * x])

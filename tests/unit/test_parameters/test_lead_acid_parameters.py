@@ -20,7 +20,7 @@ class TestStandardParametersLeadAcid(unittest.TestCase):
         parameter_values.print_parameters(parameters, output_file)
         # test print_parameters with dict and without C-rate
         del parameter_values["Nominal cell capacity [A.h]"]
-        parameters = {"C_e": parameters.C_e, "sigma_n": parameters.sigma_n}
+        parameters = {"C_e": parameters.C_e, "sigma_n": parameters.n.sigma}
         parameter_values.print_parameters(parameters)
 
     def test_parameters_defaults_lead_acid(self):
@@ -35,26 +35,26 @@ class TestStandardParametersLeadAcid(unittest.TestCase):
 
         # Dimensionless electrode conductivities should be large
         self.assertGreater(
-            parameter_values.evaluate(parameters.sigma_n(parameters.T_ref)), 10
+            parameter_values.evaluate(parameters.n.sigma(parameters.T_ref)), 10
         )
         self.assertGreater(
-            parameter_values.evaluate(parameters.sigma_p(parameters.T_ref)), 10
+            parameter_values.evaluate(parameters.p.sigma(parameters.T_ref)), 10
         )
 
         # Rescaled dimensionless electrode conductivities should still be large
         self.assertGreater(
-            parameter_values.evaluate(parameters.sigma_n_prime(parameters.T_ref)), 10
+            parameter_values.evaluate(parameters.n.sigma_prime(parameters.T_ref)), 10
         )
         self.assertGreater(
-            parameter_values.evaluate(parameters.sigma_p_prime(parameters.T_ref)), 10
+            parameter_values.evaluate(parameters.p.sigma_prime(parameters.T_ref)), 10
         )
         # Dimensionless double-layer capacity should be small
-        self.assertLess(param_eval["C_dl_n"], 1e-3)
-        self.assertLess(param_eval["C_dl_p"], 1e-3)
+        self.assertLess(param_eval["n.C_dl"], 1e-3)
+        self.assertLess(param_eval["p.C_dl"], 1e-3)
         # Volume change positive in negative electrode and negative in positive
         # electrode
-        self.assertLess(param_eval["DeltaVsurf_n"], 0)
-        self.assertGreater(param_eval["DeltaVsurf_p"], 0)
+        self.assertLess(param_eval["n.DeltaVsurf"], 0)
+        self.assertGreater(param_eval["p.DeltaVsurf"], 0)
 
     def test_concatenated_parameters(self):
         # create
@@ -113,19 +113,19 @@ class TestStandardParametersLeadAcid(unittest.TestCase):
         T = 1  # dummy temperature as the values are constant
 
         # Density
-        self.assertAlmostEqual(values.evaluate(param.rho_cn(T)), 0.8810, places=2)
-        self.assertAlmostEqual(values.evaluate(param.rho_n(T)), 0.8810, places=2)
-        self.assertAlmostEqual(values.evaluate(param.rho_s(T)), 0.7053, places=2)
-        self.assertAlmostEqual(values.evaluate(param.rho_p(T)), 1.4393, places=2)
-        self.assertAlmostEqual(values.evaluate(param.rho_cp(T)), 1.4393, places=2)
-        self.assertAlmostEqual(values.evaluate(param.rho(T)), 1.7102, places=2)
+        self.assertAlmostEqual(values.evaluate(param.n.rho_cc(T)), 0.8810, places=2)
+        self.assertAlmostEqual(values.evaluate(param.n.rho(T)), 0.8810, places=2)
+        self.assertAlmostEqual(values.evaluate(param.s.rho(T)), 0.7053, places=2)
+        self.assertAlmostEqual(values.evaluate(param.p.rho(T)), 1.4393, places=2)
+        self.assertAlmostEqual(values.evaluate(param.p.rho_cc(T)), 1.4393, places=2)
+        self.assertAlmostEqual(values.evaluate(param.rho(T)), 1, places=2)
 
         # Thermal conductivity
-        self.assertAlmostEqual(values.evaluate(param.lambda_cn(T)), 1.6963, places=2)
-        self.assertAlmostEqual(values.evaluate(param.lambda_n(T)), 1.6963, places=2)
-        self.assertAlmostEqual(values.evaluate(param.lambda_s(T)), 0.0019, places=2)
-        self.assertAlmostEqual(values.evaluate(param.lambda_p(T)), 1.6963, places=2)
-        self.assertAlmostEqual(values.evaluate(param.lambda_cp(T)), 1.6963, places=2)
+        self.assertAlmostEqual(values.evaluate(param.n.lambda_cc(T)), 1.6963, places=2)
+        self.assertAlmostEqual(values.evaluate(param.n.lambda_(T)), 1.6963, places=2)
+        self.assertAlmostEqual(values.evaluate(param.s.lambda_(T)), 0.0019, places=2)
+        self.assertAlmostEqual(values.evaluate(param.p.lambda_(T)), 1.6963, places=2)
+        self.assertAlmostEqual(values.evaluate(param.p.lambda_cc(T)), 1.6963, places=2)
 
     def test_functions_lead_acid(self):
         # Load parameters to be tested
@@ -135,10 +135,10 @@ class TestStandardParametersLeadAcid(unittest.TestCase):
             "kappa_e_0": param.kappa_e(pybamm.Scalar(0), pybamm.Scalar(0)),
             "chi_1": param.chi(pybamm.Scalar(1), pybamm.Scalar(0)),
             "chi_0.5": param.chi(pybamm.Scalar(0.5), pybamm.Scalar(0)),
-            "U_n_1": param.U_n(pybamm.Scalar(1), pybamm.Scalar(0)),
-            "U_n_0.5": param.U_n(pybamm.Scalar(0.5), pybamm.Scalar(0)),
-            "U_p_1": param.U_p(pybamm.Scalar(1), pybamm.Scalar(0)),
-            "U_p_0.5": param.U_p(pybamm.Scalar(0.5), pybamm.Scalar(0)),
+            "U_n_1": param.n.U(pybamm.Scalar(1), pybamm.Scalar(0)),
+            "U_n_0.5": param.n.U(pybamm.Scalar(0.5), pybamm.Scalar(0)),
+            "U_p_1": param.p.U(pybamm.Scalar(1), pybamm.Scalar(0)),
+            "U_p_0.5": param.p.U(pybamm.Scalar(0.5), pybamm.Scalar(0)),
         }
         # Process
         parameter_values = pybamm.ParameterValues("Sulzer2019")
@@ -169,19 +169,19 @@ class TestStandardParametersLeadAcid(unittest.TestCase):
         self.assertLess(param_eval_update["q_init"], param_eval["q_init"])
         self.assertLess(param_eval_update["c_e_init"], param_eval["c_e_init"])
         self.assertLess(
-            param_eval_update["epsilon_n_init"], param_eval["epsilon_n_init"]
+            param_eval_update["n.epsilon_init"], param_eval["n.epsilon_init"]
         )
         self.assertEqual(
-            param_eval_update["epsilon_s_init"], param_eval["epsilon_s_init"]
+            param_eval_update["s.epsilon_init"], param_eval["s.epsilon_init"]
         )
         self.assertLess(
-            param_eval_update["epsilon_p_init"], param_eval["epsilon_p_init"]
+            param_eval_update["p.epsilon_init"], param_eval["p.epsilon_init"]
         )
         self.assertGreater(
-            param_eval_update["curlyU_n_init"], param_eval["curlyU_n_init"]
+            param_eval_update["n.curlyU_init"], param_eval["n.curlyU_init"]
         )
         self.assertGreater(
-            param_eval_update["curlyU_p_init"], param_eval["curlyU_p_init"]
+            param_eval_update["p.curlyU_init"], param_eval["p.curlyU_init"]
         )
 
 

@@ -154,9 +154,9 @@ def x_average(symbol):
         isinstance(child, pybamm.Broadcast) for child in symbol.children
     ):
         geo = pybamm.geometric_parameters
-        l_n = geo.l_n
-        l_s = geo.l_s
-        l_p = geo.l_p
+        l_n = geo.n.l
+        l_s = geo.s.l
+        l_p = geo.p.l
         if symbol.domain == ["negative electrode", "separator", "positive electrode"]:
             a, b, c = [orp.orphans[0] for orp in symbol.orphans]
             out = (l_n * a + l_s * b + l_p * c) / (l_n + l_s + l_p)
@@ -341,7 +341,7 @@ def size_average(symbol, f_a_dist=None):
                 "R", domains=symbol.domains, coord_sys="cartesian"
             )
             if ["negative particle size"] in symbol.domains.values():
-                f_a_dist = geo.f_a_dist_n(R)
+                f_a_dist = geo.n.f_a_dist(R)
             elif ["positive particle size"] in symbol.domains.values():
-                f_a_dist = geo.f_a_dist_p(R)
+                f_a_dist = geo.p.f_a_dist(R)
         return SizeAverage(symbol, f_a_dist)

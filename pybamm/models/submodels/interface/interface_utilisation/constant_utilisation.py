@@ -22,10 +22,7 @@ class Constant(BaseModel):
     """
 
     def get_fundamental_variables(self):
-        if self.domain == "Negative":
-            u_av = self.param.u_n_init
-        else:
-            u_av = self.param.u_p_init
+        u_av = self.domain_param.u_init
         u = pybamm.FullBroadcast(
             u_av, self.domain.lower() + " electrode", "current collector"
         )

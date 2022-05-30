@@ -34,7 +34,7 @@ Functions
 
 .. autofunction:: pybamm.erfc
 
-.. autoclass:: pybamm.Exponential
+.. autoclass:: pybamm.Exp
   :members:
 
 .. autofunction:: pybamm.exp

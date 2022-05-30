@@ -17,8 +17,8 @@ class BaseEffectiveResistance(pybamm.BaseModel):
             geometry["current collector"] = {
                 "z": {"min": 0, "max": 1},
                 "tabs": {
-                    "negative": {"z_centre": param.centre_z_tab_n},
-                    "positive": {"z_centre": param.centre_z_tab_p},
+                    "negative": {"z_centre": param.n.centre_z_tab},
+                    "positive": {"z_centre": param.p.centre_z_tab},
                 },
             }
         elif self.options["dimensionality"] == 2:
@@ -27,14 +27,14 @@ class BaseEffectiveResistance(pybamm.BaseModel):
                 "z": {"min": 0, "max": param.l_z},
                 "tabs": {
                     "negative": {
-                        "y_centre": param.centre_y_tab_n,
-                        "z_centre": param.centre_z_tab_n,
-                        "width": param.l_tab_n,
+                        "y_centre": param.n.centre_y_tab,
+                        "z_centre": param.n.centre_z_tab,
+                        "width": param.n.l_tab,
                     },
                     "positive": {
-                        "y_centre": param.centre_y_tab_p,
-                        "z_centre": param.centre_z_tab_p,
-                        "width": param.l_tab_p,
+                        "y_centre": param.p.centre_y_tab,
+                        "z_centre": param.p.centre_z_tab,
+                        "width": param.p.l_tab,
                     },
                 },
             }
@@ -146,10 +146,10 @@ class EffectiveResistance(BaseEffectiveResistance):
     def get_fundamental_variables(self):
         # Get necessary parameters
         param = self.param
-        l_cn = param.l_cn
-        l_cp = param.l_cp
-        sigma_cn_dbl_prime = param.sigma_cn_dbl_prime
-        sigma_cp_dbl_prime = param.sigma_cp_dbl_prime
+        l_cn = param.n.l_cc
+        l_cp = param.p.l_cc
+        sigma_cn_dbl_prime = param.n.sigma_cc_dbl_prime
+        sigma_cp_dbl_prime = param.p.sigma_cc_dbl_prime
         delta = param.delta  # aspect ratio
 
         # Set model variables: Note: we solve using a scaled version that is
@@ -254,7 +254,7 @@ class EffectiveResistance(BaseEffectiveResistance):
         """
         param = self.param
         pot_scale = param_values.evaluate(param.potential_scale)
-        U_ref = param_values.evaluate(param.U_p_ref - param.U_n_ref)
+        U_ref = param_values.evaluate(param.ocv_ref)
 
         # Process resistances
         R_cn = solution["Negative current collector resistance"]
@@ -325,12 +325,12 @@ class AlternativeEffectiveResistance2D(BaseEffectiveResistance):
 
         # Get necessary parameters
         param = self.param
-        l_cn = param.l_cn
-        l_cp = param.l_cp
-        l_tab_p = param.l_tab_p
+        l_cn = param.n.l_cc
+        l_cp = param.p.l_cc
+        l_tab_p = param.p.l_tab
         A_tab_p = l_cp * l_tab_p
-        sigma_cn_dbl_prime = param.sigma_cn_dbl_prime
-        sigma_cp_dbl_prime = param.sigma_cp_dbl_prime
+        sigma_cn_dbl_prime = param.n.sigma_cc_dbl_prime
+        sigma_cp_dbl_prime = param.p.sigma_cc_dbl_prime
         delta = param.delta
 
         # Set model variables -- we solve a auxilliary problem in each current collector
@@ -413,12 +413,12 @@ class AlternativeEffectiveResistance2D(BaseEffectiveResistance):
         # Get evaluated parameters
         param = self.param
         delta = param_values.evaluate(param.delta)
-        l_cn = param_values.evaluate(param.l_cn)
-        l_cp = param_values.evaluate(param.l_cp)
-        sigma_cn_dbl_prime = param_values.evaluate(param.sigma_cn_dbl_prime)
-        sigma_cp_dbl_prime = param_values.evaluate(param.sigma_cp_dbl_prime)
+        l_cn = param_values.evaluate(param.n.l_cc)
+        l_cp = param_values.evaluate(param.p.l_cc)
+        sigma_cn_dbl_prime = param_values.evaluate(param.n.sigma_cc_dbl_prime)
+        sigma_cp_dbl_prime = param_values.evaluate(param.p.sigma_cc_dbl_prime)
         pot_scale = param_values.evaluate(param.potential_scale)
-        U_ref = param_values.evaluate(param.U_p_ref - param.U_n_ref)
+        U_ref = param_values.evaluate(param.ocv_ref)
 
         # Process unit solutions
         f_n = solution["Unit solution in negative current collector"]
