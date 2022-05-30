@@ -861,12 +861,10 @@ def get_julia_mtk_model(model, geometry=None, tspan=None):
 
             limits = domain_name_to_limits[tuple(var.domain)]
             # left bc e.g. (t, 0) or (t, 0, xn)
-            var_to_ind_vars_left_boundary[
-                var.id
-            ] = f"(t, {limits[0]}{aux_domain_symbols})"
+            var_to_ind_vars_left_boundary[var] = f"(t, {limits[0]}{aux_domain_symbols})"
             # right bc e.g. (t, 1) or (t, 1, xn)
             var_to_ind_vars_right_boundary[
-                var.id
+                var
             ] = f"(t, {limits[1]}{aux_domain_symbols})"
 
     mtk_str = "begin\n"
@@ -1020,9 +1018,9 @@ def get_julia_mtk_model(model, geometry=None, tspan=None):
                     )
 
                     if side == "left":
-                        limit = var_to_ind_vars_left_boundary[var.id]
+                        limit = var_to_ind_vars_left_boundary[var]
                     elif side == "right":
-                        limit = var_to_ind_vars_right_boundary[var.id]
+                        limit = var_to_ind_vars_right_boundary[var]
 
                     bc = f"{variable_id_to_print_name[var.id]}{limit}"
                     if typ == "Dirichlet":
