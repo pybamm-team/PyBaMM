@@ -18,20 +18,22 @@ class SEIGrowth(BaseModel):
         "full electrode" (full DFN), or "interface" (half-cell model)
     options : dict, optional
         A dictionary of options to be passed to the model.
+    phase : str
+        Phase of the particle
 
     **Extends:** :class:`pybamm.sei.BaseModel`
     """
 
-    def __init__(self, param, reaction_loc, options=None):
-        super().__init__(param, options=options)
+    def __init__(self, param, reaction_loc, options=None, phase):
+        super().__init__(param, options=options, phase)
         self.reaction_loc = reaction_loc
 
     def get_fundamental_variables(self):
         if self.reaction_loc == "x-average":
             L_inner_av = pybamm.standard_variables.L_inner_av
             L_outer_av = pybamm.standard_variables.L_outer_av
-            L_inner = pybamm.PrimaryBroadcast(L_inner_av, "negative electrode")
-            L_outer = pybamm.PrimaryBroadcast(L_outer_av, "negative electrode")
+            L_inner = pybamm.PrimaryBroadcast(L_inner_av, [f"negative {self.phase_name}electrode"])
+            L_outer = pybamm.PrimaryBroadcast(L_outer_av, [f"negative {self.phase_name}electrode"])
         elif self.reaction_loc == "full electrode":
             L_inner = pybamm.standard_variables.L_inner
             L_outer = pybamm.standard_variables.L_outer
