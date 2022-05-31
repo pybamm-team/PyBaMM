@@ -26,6 +26,7 @@ class TimeBuildSPMMarquis2019:
         self.param.process_model(self.model)
         compute_discretisation(self.model, self.param).process_model(self.model)
 
+
 class TimeBuildSPMORegan2019:
     def __init__(self):
         self.param = pybamm.ParameterValues("ORegan2021")
@@ -34,6 +35,7 @@ class TimeBuildSPMORegan2019:
         self.model = pybamm.lithium_ion.SPM()
         self.param.process_model(self.model)
         compute_discretisation(self.model, self.param).process_model(self.model)
+
 
 class TimeBuildSPMNCA_Kim2011:
     def __init__(self):
@@ -44,6 +46,7 @@ class TimeBuildSPMNCA_Kim2011:
         self.param.process_model(self.model)
         compute_discretisation(self.model, self.param).process_model(self.model)
 
+
 class TimeBuildSPMPrada2013:
     def __init__(self):
         self.param = pybamm.ParameterValues("Prada2013")
@@ -52,6 +55,7 @@ class TimeBuildSPMPrada2013:
         self.model = pybamm.lithium_ion.SPM()
         self.param.process_model(self.model)
         compute_discretisation(self.model, self.param).process_model(self.model)
+
 
 class TimeBuildSPMAi2020:
     def __init__(self):
@@ -62,6 +66,7 @@ class TimeBuildSPMAi2020:
         self.param.process_model(self.model)
         compute_discretisation(self.model, self.param).process_model(self.model)
 
+
 class TimeBuildSPMRamadass2004:
     def __init__(self):
         self.param = pybamm.ParameterValues("Ramadass2004")
@@ -70,6 +75,7 @@ class TimeBuildSPMRamadass2004:
         self.model = pybamm.lithium_ion.SPM()
         self.param.process_model(self.model)
         compute_discretisation(self.model, self.param).process_model(self.model)
+
 
 class TimeBuildSPMMohtat2020:
     def __init__(self):
@@ -80,6 +86,7 @@ class TimeBuildSPMMohtat2020:
         self.param.process_model(self.model)
         compute_discretisation(self.model, self.param).process_model(self.model)
 
+
 class TimeBuildSPMChen2020:
     def __init__(self):
         self.param = pybamm.ParameterValues("Chen2020")
@@ -89,6 +96,7 @@ class TimeBuildSPMChen2020:
         self.param.process_model(self.model)
         compute_discretisation(self.model, self.param).process_model(self.model)
 
+
 class TimeBuildSPMChen2020_plating:
     def __init__(self):
         self.param = pybamm.ParameterValues("Chen2020_plating")
@@ -97,6 +105,7 @@ class TimeBuildSPMChen2020_plating:
         self.model = pybamm.lithium_ion.SPM()
         self.param.process_model(self.model)
         compute_discretisation(self.model, self.param).process_model(self.model)
+
 
 class TimeBuildSPMEcker2015:
     def __init__(self):
@@ -117,6 +126,7 @@ class TimeBuildSPMeMarquis2019:
         self.param.process_model(self.model)
         compute_discretisation(self.model, self.param).process_model(self.model)
 
+
 class TimeBuildSPMeORegan2021:
     def __init__(self):
         self.param = pybamm.ParameterValues("ORegan2021")
@@ -125,6 +135,7 @@ class TimeBuildSPMeORegan2021:
         self.model = pybamm.lithium_ion.SPMe()
         self.param.process_model(self.model)
         compute_discretisation(self.model, self.param).process_model(self.model)
+
 
 class TimeBuildSPMeNCA_Kim2011:
     def __init__(self):
@@ -135,6 +146,7 @@ class TimeBuildSPMeNCA_Kim2011:
         self.param.process_model(self.model)
         compute_discretisation(self.model, self.param).process_model(self.model)
 
+
 class TimeBuildSPMePrada2013:
     def __init__(self):
         self.param = pybamm.ParameterValues("Prada2013")
@@ -143,6 +155,7 @@ class TimeBuildSPMePrada2013:
         self.model = pybamm.lithium_ion.SPMe()
         self.param.process_model(self.model)
         compute_discretisation(self.model, self.param).process_model(self.model)
+
 
 class TimeBuildSPMeAi2020:
     def __init__(self):
@@ -153,6 +166,7 @@ class TimeBuildSPMeAi2020:
         self.param.process_model(self.model)
         compute_discretisation(self.model, self.param).process_model(self.model)
 
+
 class TimeBuildSPMeRamadass2004:
     def __init__(self):
         self.param = pybamm.ParameterValues("Ramadass2004")
@@ -161,6 +175,7 @@ class TimeBuildSPMeRamadass2004:
         self.model = pybamm.lithium_ion.SPMe()
         self.param.process_model(self.model)
         compute_discretisation(self.model, self.param).process_model(self.model)
+
 
 class TimeBuildSPMeMohtat2020:
     def __init__(self):
@@ -171,6 +186,7 @@ class TimeBuildSPMeMohtat2020:
         self.param.process_model(self.model)
         compute_discretisation(self.model, self.param).process_model(self.model)
 
+
 class TimeBuildSPMeChen2020:
     def __init__(self):
         self.param = pybamm.ParameterValues("Chen2020")
@@ -179,6 +195,7 @@ class TimeBuildSPMeChen2020:
         self.model = pybamm.lithium_ion.SPMe()
         self.param.process_model(self.model)
         compute_discretisation(self.model, self.param).process_model(self.model)
+
 
 class TimeBuildSPMeChen2020_plating:
     def __init__(self):
@@ -189,6 +206,7 @@ class TimeBuildSPMeChen2020_plating:
         self.param.process_model(self.model)
         compute_discretisation(self.model, self.param).process_model(self.model)
 
+
 class TimeBuildSPMeEcker2015:
     def __init__(self):
         self.param = pybamm.ParameterValues("Ecker2015")
@@ -197,6 +215,7 @@ class TimeBuildSPMeEcker2015:
         self.model = pybamm.lithium_ion.SPMe()
         self.param.process_model(self.model)
         compute_discretisation(self.model, self.param).process_model(self.model)
+
 
 class TimeBuildDFNMarquis2019:
     def __init__(self):
@@ -207,6 +226,7 @@ class TimeBuildDFNMarquis2019:
         self.param.process_model(self.model)
         compute_discretisation(self.model, self.param).process_model(self.model)
 
+
 class TimeBuildDFNORegan2021:
     def __init__(self):
         self.param = pybamm.ParameterValues("ORegan2021")
@@ -215,6 +235,7 @@ class TimeBuildDFNORegan2021:
         self.model = pybamm.lithium_ion.DFN()
         self.param.process_model(self.model)
         compute_discretisation(self.model, self.param).process_model(self.model)
+
 
 class TimeBuildDFNNCA_Kim2011:
     def __init__(self):
@@ -225,6 +246,7 @@ class TimeBuildDFNNCA_Kim2011:
         self.param.process_model(self.model)
         compute_discretisation(self.model, self.param).process_model(self.model)
 
+
 class TimeBuildDFNPrada2013:
     def __init__(self):
         self.param = pybamm.ParameterValues("Prada2013")
@@ -233,6 +255,7 @@ class TimeBuildDFNPrada2013:
         self.model = pybamm.lithium_ion.DFN()
         self.param.process_model(self.model)
         compute_discretisation(self.model, self.param).process_model(self.model)
+
 
 class TimeBuildDFNAi2020:
     def __init__(self):
@@ -243,6 +266,7 @@ class TimeBuildDFNAi2020:
         self.param.process_model(self.model)
         compute_discretisation(self.model, self.param).process_model(self.model)
 
+
 class TimeBuildDFNRamadass2004:
     def __init__(self):
         self.param = pybamm.ParameterValues("Ramadass2004")
@@ -251,6 +275,7 @@ class TimeBuildDFNRamadass2004:
         self.model = pybamm.lithium_ion.DFN()
         self.param.process_model(self.model)
         compute_discretisation(self.model, self.param).process_model(self.model)
+
 
 class TimeBuildDFNMohtat2020:
     def __init__(self):
@@ -261,6 +286,7 @@ class TimeBuildDFNMohtat2020:
         self.param.process_model(self.model)
         compute_discretisation(self.model, self.param).process_model(self.model)
 
+
 class TimeBuildDFNChen2020:
     def __init__(self):
         self.param = pybamm.ParameterValues("Chen2020")
@@ -269,6 +295,7 @@ class TimeBuildDFNChen2020:
         self.model = pybamm.lithium_ion.DFN()
         self.param.process_model(self.model)
         compute_discretisation(self.model, self.param).process_model(self.model)
+
 
 class TimeBuildDFNChen2020_plating:
     def __init__(self):
@@ -279,6 +306,7 @@ class TimeBuildDFNChen2020_plating:
         self.param.process_model(self.model)
         compute_discretisation(self.model, self.param).process_model(self.model)
 
+
 class TimeBuildDFNEcker2015:
     def __init__(self):
         self.param = pybamm.ParameterValues("Ecker2015")
@@ -287,6 +315,7 @@ class TimeBuildDFNEcker2015:
         self.model = pybamm.lithium_ion.DFN()
         self.param.process_model(self.model)
         compute_discretisation(self.model, self.param).process_model(self.model)
+
 
 class TimeBuildSPMSimulationMarquis2019:
     # with_experiment
@@ -307,6 +336,7 @@ class TimeBuildSPMSimulationMarquis2019:
         else:
             pybamm.Simulation(self.model, parameter_values=self.param, C_rate=1)
 
+
 class TimeBuildSPMSimulationORegan2021:
     # with_experiment
     params = [False, True]
@@ -325,6 +355,7 @@ class TimeBuildSPMSimulationORegan2021:
             pybamm.Simulation(self.model, parameter_values=self.param, experiment=exp)
         else:
             pybamm.Simulation(self.model, parameter_values=self.param, C_rate=1)
+
 
 class TimeBuildSPMSimulationNCA_Kim2011:
     # with_experiment
@@ -345,6 +376,7 @@ class TimeBuildSPMSimulationNCA_Kim2011:
         else:
             pybamm.Simulation(self.model, parameter_values=self.param, C_rate=1)
 
+
 class TimeBuildSPMSimulationPrada2013:
     # with_experiment
     params = [False, True]
@@ -363,6 +395,7 @@ class TimeBuildSPMSimulationPrada2013:
             pybamm.Simulation(self.model, parameter_values=self.param, experiment=exp)
         else:
             pybamm.Simulation(self.model, parameter_values=self.param, C_rate=1)
+
 
 class TimeBuildSPMSimulationAi2020:
     # with_experiment
@@ -383,6 +416,7 @@ class TimeBuildSPMSimulationAi2020:
         else:
             pybamm.Simulation(self.model, parameter_values=self.param, C_rate=1)
 
+
 class TimeBuildSPMSimulationRamadass2004:
     # with_experiment
     params = [False, True]
@@ -401,6 +435,7 @@ class TimeBuildSPMSimulationRamadass2004:
             pybamm.Simulation(self.model, parameter_values=self.param, experiment=exp)
         else:
             pybamm.Simulation(self.model, parameter_values=self.param, C_rate=1)
+
 
 class TimeBuildSPMSimulationMohtat2020:
     # with_experiment
@@ -421,6 +456,7 @@ class TimeBuildSPMSimulationMohtat2020:
         else:
             pybamm.Simulation(self.model, parameter_values=self.param, C_rate=1)
 
+
 class TimeBuildSPMSimulationChen2020:
     # with_experiment
     params = [False, True]
@@ -439,6 +475,7 @@ class TimeBuildSPMSimulationChen2020:
             pybamm.Simulation(self.model, parameter_values=self.param, experiment=exp)
         else:
             pybamm.Simulation(self.model, parameter_values=self.param, C_rate=1)
+
 
 class TimeBuildSPMSimulationChen2020_plating:
     # with_experiment
@@ -459,6 +496,7 @@ class TimeBuildSPMSimulationChen2020_plating:
         else:
             pybamm.Simulation(self.model, parameter_values=self.param, C_rate=1)
 
+
 class TimeBuildSPMSimulationEcker2015:
     # with_experiment
     params = [False, True]
@@ -477,6 +515,7 @@ class TimeBuildSPMSimulationEcker2015:
             pybamm.Simulation(self.model, parameter_values=self.param, experiment=exp)
         else:
             pybamm.Simulation(self.model, parameter_values=self.param, C_rate=1)
+
 
 class TimeBuildSPMeSimulationMarquis2019:
     # with_experiment
@@ -497,6 +536,7 @@ class TimeBuildSPMeSimulationMarquis2019:
         else:
             pybamm.Simulation(self.model, parameter_values=self.param, C_rate=1)
 
+
 class TimeBuildSPMeSimulationORegan2021:
     # with_experiment
     params = [False, True]
@@ -515,6 +555,7 @@ class TimeBuildSPMeSimulationORegan2021:
             pybamm.Simulation(self.model, parameter_values=self.param, experiment=exp)
         else:
             pybamm.Simulation(self.model, parameter_values=self.param, C_rate=1)
+
 
 class TimeBuildSPMeSimulationNCA_Kim2011:
     # with_experiment
@@ -535,6 +576,7 @@ class TimeBuildSPMeSimulationNCA_Kim2011:
         else:
             pybamm.Simulation(self.model, parameter_values=self.param, C_rate=1)
 
+
 class TimeBuildSPMeSimulationPrada2013:
     # with_experiment
     params = [False, True]
@@ -553,6 +595,7 @@ class TimeBuildSPMeSimulationPrada2013:
             pybamm.Simulation(self.model, parameter_values=self.param, experiment=exp)
         else:
             pybamm.Simulation(self.model, parameter_values=self.param, C_rate=1)
+
 
 class TimeBuildSPMeSimulationAi2020:
     # with_experiment
@@ -573,6 +616,7 @@ class TimeBuildSPMeSimulationAi2020:
         else:
             pybamm.Simulation(self.model, parameter_values=self.param, C_rate=1)
 
+
 class TimeBuildSPMeSimulationRamadass2004:
     # with_experiment
     params = [False, True]
@@ -591,6 +635,7 @@ class TimeBuildSPMeSimulationRamadass2004:
             pybamm.Simulation(self.model, parameter_values=self.param, experiment=exp)
         else:
             pybamm.Simulation(self.model, parameter_values=self.param, C_rate=1)
+
 
 class TimeBuildSPMeSimulationMohtat2020:
     # with_experiment
@@ -611,6 +656,7 @@ class TimeBuildSPMeSimulationMohtat2020:
         else:
             pybamm.Simulation(self.model, parameter_values=self.param, C_rate=1)
 
+
 class TimeBuildSPMeSimulationChen2020:
     # with_experiment
     params = [False, True]
@@ -629,6 +675,7 @@ class TimeBuildSPMeSimulationChen2020:
             pybamm.Simulation(self.model, parameter_values=self.param, experiment=exp)
         else:
             pybamm.Simulation(self.model, parameter_values=self.param, C_rate=1)
+
 
 class TimeBuildSPMeSimulationChen2020_plating:
     # with_experiment
@@ -649,6 +696,7 @@ class TimeBuildSPMeSimulationChen2020_plating:
         else:
             pybamm.Simulation(self.model, parameter_values=self.param, C_rate=1)
 
+
 class TimeBuildSPMeSimulationEcker2015:
     # with_experiment
     params = [False, True]
@@ -667,6 +715,7 @@ class TimeBuildSPMeSimulationEcker2015:
             pybamm.Simulation(self.model, parameter_values=self.param, experiment=exp)
         else:
             pybamm.Simulation(self.model, parameter_values=self.param, C_rate=1)
+
 
 class TimeBuildDFNSimulationMarquis2019:
     # with_experiment
@@ -687,6 +736,7 @@ class TimeBuildDFNSimulationMarquis2019:
         else:
             pybamm.Simulation(self.model, parameter_values=self.param, C_rate=1)
 
+
 class TimeBuildDFNSimulationORegan2021:
     # with_experiment
     params = [False, True]
@@ -705,6 +755,7 @@ class TimeBuildDFNSimulationORegan2021:
             pybamm.Simulation(self.model, parameter_values=self.param, experiment=exp)
         else:
             pybamm.Simulation(self.model, parameter_values=self.param, C_rate=1)
+
 
 class TimeBuildDFNSimulationNCA_Kim2011:
     # with_experiment
@@ -725,6 +776,7 @@ class TimeBuildDFNSimulationNCA_Kim2011:
         else:
             pybamm.Simulation(self.model, parameter_values=self.param, C_rate=1)
 
+
 class TimeBuildDFNSimulationPrada2013:
     # with_experiment
     params = [False, True]
@@ -743,6 +795,7 @@ class TimeBuildDFNSimulationPrada2013:
             pybamm.Simulation(self.model, parameter_values=self.param, experiment=exp)
         else:
             pybamm.Simulation(self.model, parameter_values=self.param, C_rate=1)
+
 
 class TimeBuildDFNSimulationAi2020:
     # with_experiment
@@ -763,6 +816,7 @@ class TimeBuildDFNSimulationAi2020:
         else:
             pybamm.Simulation(self.model, parameter_values=self.param, C_rate=1)
 
+
 class TimeBuildDFNSimulationRamadass2004:
     # with_experiment
     params = [False, True]
@@ -781,6 +835,7 @@ class TimeBuildDFNSimulationRamadass2004:
             pybamm.Simulation(self.model, parameter_values=self.param, experiment=exp)
         else:
             pybamm.Simulation(self.model, parameter_values=self.param, C_rate=1)
+
 
 class TimeBuildDFNSimulationMohtat2020:
     # with_experiment
@@ -801,6 +856,7 @@ class TimeBuildDFNSimulationMohtat2020:
         else:
             pybamm.Simulation(self.model, parameter_values=self.param, C_rate=1)
 
+
 class TimeBuildDFNSimulationChen2020:
     # with_experiment
     params = [False, True]
@@ -819,6 +875,7 @@ class TimeBuildDFNSimulationChen2020:
             pybamm.Simulation(self.model, parameter_values=self.param, experiment=exp)
         else:
             pybamm.Simulation(self.model, parameter_values=self.param, C_rate=1)
+
 
 class TimeBuildDFNSimulationChen2020_plating:
     # with_experiment
@@ -839,6 +896,7 @@ class TimeBuildDFNSimulationChen2020_plating:
         else:
             pybamm.Simulation(self.model, parameter_values=self.param, C_rate=1)
 
+
 class TimeBuildDFNSimulationEcker2015:
     # with_experiment
     params = [False, True]
@@ -857,4 +915,3 @@ class TimeBuildDFNSimulationEcker2015:
             pybamm.Simulation(self.model, parameter_values=self.param, experiment=exp)
         else:
             pybamm.Simulation(self.model, parameter_values=self.param, C_rate=1)
-

@@ -21,6 +21,7 @@ def prepare_model_Marquis2019(model):
     disc = pybamm.Discretisation(mesh, model.default_spatial_methods)
     disc.process_model(model)
 
+
 def prepare_model_ORegan2021(model):
     geometry = model.default_geometry
 
@@ -36,6 +37,7 @@ def prepare_model_ORegan2021(model):
     # discretise model
     disc = pybamm.Discretisation(mesh, model.default_spatial_methods)
     disc.process_model(model)
+
 
 def prepare_model_NCA_Kim2011(model):
     geometry = model.default_geometry
@@ -53,6 +55,7 @@ def prepare_model_NCA_Kim2011(model):
     disc = pybamm.Discretisation(mesh, model.default_spatial_methods)
     disc.process_model(model)
 
+
 def prepare_model_Prada2013(model):
     geometry = model.default_geometry
 
@@ -68,6 +71,7 @@ def prepare_model_Prada2013(model):
     # discretise model
     disc = pybamm.Discretisation(mesh, model.default_spatial_methods)
     disc.process_model(model)
+
 
 def prepare_model_Ai2020(model):
     geometry = model.default_geometry
@@ -85,6 +89,7 @@ def prepare_model_Ai2020(model):
     disc = pybamm.Discretisation(mesh, model.default_spatial_methods)
     disc.process_model(model)
 
+
 def prepare_model_Ramadass2004(model):
     geometry = model.default_geometry
 
@@ -100,6 +105,7 @@ def prepare_model_Ramadass2004(model):
     # discretise model
     disc = pybamm.Discretisation(mesh, model.default_spatial_methods)
     disc.process_model(model)
+
 
 def prepare_model_Mohtat2020(model):
     geometry = model.default_geometry
@@ -117,6 +123,7 @@ def prepare_model_Mohtat2020(model):
     disc = pybamm.Discretisation(mesh, model.default_spatial_methods)
     disc.process_model(model)
 
+
 def prepare_model_Chen2020(model):
     geometry = model.default_geometry
 
@@ -133,6 +140,7 @@ def prepare_model_Chen2020(model):
     disc = pybamm.Discretisation(mesh, model.default_spatial_methods)
     disc.process_model(model)
 
+
 def prepare_model_Chen2020_plating(model):
     geometry = model.default_geometry
 
@@ -148,6 +156,7 @@ def prepare_model_Chen2020_plating(model):
     # discretise model
     disc = pybamm.Discretisation(mesh, model.default_spatial_methods)
     disc.process_model(model)
+
 
 def prepare_model_Ecker2015(model):
     geometry = model.default_geometry
@@ -187,6 +196,7 @@ class TimeSolveSPMMarquis2019:
     def time_solve_model(self, solve_first):
         TimeSolveSPMMarquis2019.solver.solve(self.model, t_eval=self.t_eval)
 
+
 class TimeSolveSPMORegan2021:
     params = [True, False]
     solver = pybamm.CasadiSolver()
@@ -203,6 +213,7 @@ class TimeSolveSPMORegan2021:
 
     def time_solve_model(self, solve_first):
         TimeSolveSPMORegan2021.solver.solve(self.model, t_eval=self.t_eval)
+
 
 class TimeSolveSPMNCA_Kim2011:
     params = [True, False]
@@ -221,6 +232,7 @@ class TimeSolveSPMNCA_Kim2011:
     def time_solve_model(self, solve_first):
         TimeSolveSPMNCA_Kim2011.solver.solve(self.model, t_eval=self.t_eval)
 
+
 class TimeSolveSPMPrada2013:
     params = [True, False]
     solver = pybamm.CasadiSolver()
@@ -237,6 +249,7 @@ class TimeSolveSPMPrada2013:
 
     def time_solve_model(self, solve_first):
         TimeSolveSPMPrada2013.solver.solve(self.model, t_eval=self.t_eval)
+
 
 class TimeSolveSPMAi2020:
     params = [True, False]
@@ -255,6 +268,7 @@ class TimeSolveSPMAi2020:
     def time_solve_model(self, solve_first):
         TimeSolveSPMAi2020.solver.solve(self.model, t_eval=self.t_eval)
 
+
 class TimeSolveSPMRamadass2004:
     params = [True, False]
     solver = pybamm.CasadiSolver()
@@ -271,6 +285,7 @@ class TimeSolveSPMRamadass2004:
 
     def time_solve_model(self, solve_first):
         TimeSolveSPMRamadass2004.solver.solve(self.model, t_eval=self.t_eval)
+
 
 class TimeSolveSPMMohtat2020:
     params = [True, False]
@@ -289,6 +304,7 @@ class TimeSolveSPMMohtat2020:
     def time_solve_model(self, solve_first):
         TimeSolveSPMMohtat2020.solver.solve(self.model, t_eval=self.t_eval)
 
+
 class TimeSolveSPMChen2020:
     params = [True, False]
     solver = pybamm.CasadiSolver()
@@ -306,6 +322,7 @@ class TimeSolveSPMChen2020:
     def time_solve_model(self, solve_first):
         TimeSolveSPMChen2020.solver.solve(self.model, t_eval=self.t_eval)
 
+
 class TimeSolveSPMChen2020_plating:
     params = [True, False]
     solver = pybamm.CasadiSolver()
@@ -318,10 +335,13 @@ class TimeSolveSPMChen2020_plating:
         self.t_eval = np.linspace(0, tmax, nb_points)
         prepare_model_Chen2020_plating(self.model)
         if solve_first:
-            solve_model_once(self.model, TimeSolveSPMChen2020_plating.solver, self.t_eval)
+            solve_model_once(
+                self.model, TimeSolveSPMChen2020_plating.solver, self.t_eval
+            )
 
     def time_solve_model(self, solve_first):
         TimeSolveSPMChen2020_plating.solver.solve(self.model, t_eval=self.t_eval)
+
 
 class TimeSolveSPMEcker2015:
     params = [True, False]
@@ -358,6 +378,7 @@ class TimeSolveSPMeMarquis2019:
     def time_solve_model(self, solve_first):
         TimeSolveSPMeMarquis2019.solver.solve(self.model, t_eval=self.t_eval)
 
+
 class TimeSolveSPMeORegan2021:
     params = [True, False]
     solver = pybamm.CasadiSolver()
@@ -374,6 +395,7 @@ class TimeSolveSPMeORegan2021:
 
     def time_solve_model(self, solve_first):
         TimeSolveSPMeORegan2021.solver.solve(self.model, t_eval=self.t_eval)
+
 
 class TimeSolveSPMeNCA_Kim2011:
     params = [True, False]
@@ -392,6 +414,7 @@ class TimeSolveSPMeNCA_Kim2011:
     def time_solve_model(self, solve_first):
         TimeSolveSPMeNCA_Kim2011.solver.solve(self.model, t_eval=self.t_eval)
 
+
 class TimeSolveSPMePrada2013:
     params = [True, False]
     solver = pybamm.CasadiSolver()
@@ -409,6 +432,7 @@ class TimeSolveSPMePrada2013:
     def time_solve_model(self, solve_first):
         TimeSolveSPMePrada2013.solver.solve(self.model, t_eval=self.t_eval)
 
+
 class TimeSolveSPMeAi2020:
     params = [True, False]
     solver = pybamm.ScikitsDaeSolver()
@@ -424,7 +448,10 @@ class TimeSolveSPMeAi2020:
             solve_model_once(self.model, TimeSolveSPMeAi2020.solver, self.t_eval)
 
     def time_solve_model(self, solve_first):
-        TimeSolveSPMeAi2020.solver.solve(self.model, t_eval=self.t_eval, calc_esoh=False)
+        TimeSolveSPMeAi2020.solver.solve(
+            self.model, t_eval=self.t_eval, calc_esoh=False
+        )
+
 
 class TimeSolveSPMeRamadass2004:
     params = [True, False]
@@ -443,6 +470,7 @@ class TimeSolveSPMeRamadass2004:
     def time_solve_model(self, solve_first):
         TimeSolveSPMeRamadass2004.solver.solve(self.model, t_eval=self.t_eval)
 
+
 class TimeSolveSPMeMohtat2020:
     params = [True, False]
     solver = pybamm.CasadiSolver()
@@ -459,6 +487,7 @@ class TimeSolveSPMeMohtat2020:
 
     def time_solve_model(self, solve_first):
         TimeSolveSPMeMohtat2020.solver.solve(self.model, t_eval=self.t_eval)
+
 
 class TimeSolveSPMeChen2020:
     params = [True, False]
@@ -477,6 +506,7 @@ class TimeSolveSPMeChen2020:
     def time_solve_model(self, solve_first):
         TimeSolveSPMeChen2020.solver.solve(self.model, t_eval=self.t_eval)
 
+
 class TimeSolveSPMeChen2020_plating:
     params = [True, False]
     solver = pybamm.CasadiSolver()
@@ -489,10 +519,13 @@ class TimeSolveSPMeChen2020_plating:
         self.t_eval = np.linspace(0, tmax, nb_points)
         prepare_model_Chen2020_plating(self.model)
         if solve_first:
-            solve_model_once(self.model, TimeSolveSPMeChen2020_plating.solver, self.t_eval)
+            solve_model_once(
+                self.model, TimeSolveSPMeChen2020_plating.solver, self.t_eval
+            )
 
     def time_solve_model(self, solve_first):
         TimeSolveSPMeChen2020_plating.solver.solve(self.model, t_eval=self.t_eval)
+
 
 class TimeSolveSPMeEcker2015:
     params = [True, False]
@@ -511,6 +544,7 @@ class TimeSolveSPMeEcker2015:
     def time_solve_model(self, solve_first):
         TimeSolveSPMeEcker2015.solver.solve(self.model, t_eval=self.t_eval)
 
+
 class TimeSolveDFNMarquis2019:
     params = [True, False]
     solver = pybamm.CasadiSolver()
@@ -527,6 +561,7 @@ class TimeSolveDFNMarquis2019:
 
     def time_solve_model(self, solve_first):
         TimeSolveDFNMarquis2019.solver.solve(self.model, t_eval=self.t_eval)
+
 
 class TimeSolveDFNORegan2021:
     params = [True, False]
@@ -545,6 +580,7 @@ class TimeSolveDFNORegan2021:
     def time_solve_model(self, solve_first):
         TimeSolveDFNORegan2021.solver.solve(self.model, t_eval=self.t_eval)
 
+
 class TimeSolveDFNNCA_Kim2011:
     params = [True, False]
     solver = pybamm.ScikitsDaeSolver()
@@ -561,6 +597,7 @@ class TimeSolveDFNNCA_Kim2011:
 
     def time_solve_model(self, solve_first):
         TimeSolveDFNNCA_Kim2011.solver.solve(self.model, t_eval=self.t_eval)
+
 
 class TimeSolveDFNPrada2013:
     params = [True, False]
@@ -579,6 +616,7 @@ class TimeSolveDFNPrada2013:
     def time_solve_model(self, solve_first):
         TimeSolveDFNPrada2013.solver.solve(self.model, t_eval=self.t_eval)
 
+
 class TimeSolveDFNAi2020:
     params = [True, False]
     solver = pybamm.CasadiSolver()
@@ -595,6 +633,7 @@ class TimeSolveDFNAi2020:
 
     def time_solve_model(self, solve_first):
         TimeSolveDFNAi2020.solver.solve(self.model, t_eval=self.t_eval)
+
 
 class TimeSolveDFNRamadass2004:
     params = [True, False]
@@ -613,6 +652,7 @@ class TimeSolveDFNRamadass2004:
     def time_solve_model(self, solve_first):
         TimeSolveDFNRamadass2004.solver.solve(self.model, t_eval=self.t_eval)
 
+
 # class TimeSolveDFNMohtat2020:
 #     params = [True, False]
 #     solver = pybamm.CasadiSolver()
@@ -629,6 +669,7 @@ class TimeSolveDFNRamadass2004:
 
 #     def time_solve_model(self, solve_first):
 #         TimeSolveDFNMohtat2020.solver.solve(self.model, t_eval=self.t_eval)
+
 
 class TimeSolveDFNChen2020:
     params = [True, False]
@@ -647,6 +688,7 @@ class TimeSolveDFNChen2020:
     def time_solve_model(self, solve_first):
         TimeSolveDFNChen2020.solver.solve(self.model, t_eval=self.t_eval)
 
+
 class TimeSolveDFNChen2020_plating:
     params = [True, False]
     solver = pybamm.CasadiSolver()
@@ -659,10 +701,13 @@ class TimeSolveDFNChen2020_plating:
         self.t_eval = np.linspace(0, tmax, nb_points)
         prepare_model_Chen2020_plating(self.model)
         if solve_first:
-            solve_model_once(self.model, TimeSolveDFNChen2020_plating.solver, self.t_eval)
+            solve_model_once(
+                self.model, TimeSolveDFNChen2020_plating.solver, self.t_eval
+            )
 
     def time_solve_model(self, solve_first):
         TimeSolveDFNChen2020_plating.solver.solve(self.model, t_eval=self.t_eval)
+
 
 class TimeSolveDFNEcker2015:
     params = [True, False]
