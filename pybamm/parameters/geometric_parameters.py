@@ -43,9 +43,12 @@ class GeometricParameters(BaseParameters):
             "Electrode width [m]"
         )  # For a cylindrical cell L_y is the "unwound" length of the electrode
         self.L_z = pybamm.Parameter("Electrode height [m]")
+        self.L_y_init = pybamm.Parameter("Initial Electrode width [m]")   # Mark Ruihe Li modify
+        self.L_z_init = pybamm.Parameter("Initial Electrode height [m]")  # Mark Ruihe Li modify
         self.r_inner_dimensional = pybamm.Parameter("Inner cell radius [m]")
         self.r_outer_dimensional = pybamm.Parameter("Outer cell radius [m]")
         self.A_cc = self.L_y * self.L_z  # Current collector cross sectional area
+        self.A_cc_init = self.L_y_init * self.L_z_init  # Mark Ruihe Li modify Area of current collector
         self.A_cooling = pybamm.Parameter("Cell cooling surface area [m2]")
         self.V_cell = pybamm.Parameter("Cell volume [m3]")
 
@@ -64,6 +67,9 @@ class GeometricParameters(BaseParameters):
         self.l_Li = self.L_Li / self.L_x
         self.l_y = self.L_y / self.L_z
         self.l_z = self.L_z / self.L_z
+        self.l_y_init = self.L_y_init / self.L_z_init   # Mark Ruihe Li modify
+        self.l_z_init = self.L_z_init / self.L_z_init   # Mark Ruihe Li modify
+        self.a_cc_init = self.l_y_init * self.l_z_init   # Mark Ruihe Li modify
         self.r_inner = self.r_inner_dimensional / self.r_outer_dimensional
         self.r_outer = self.r_outer_dimensional / self.r_outer_dimensional
         self.a_cc = self.l_y * self.l_z

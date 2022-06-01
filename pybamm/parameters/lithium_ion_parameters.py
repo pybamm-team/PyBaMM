@@ -83,9 +83,12 @@ class LithiumIonParameters(BaseParameters):
         self.L = self.geo.L
         self.L_y = self.geo.L_y
         self.L_z = self.geo.L_z
+        self.L_y_init = self.geo.L_y_init     # Mark Ruihe Li modify
+        self.L_z_init = self.geo.L_z_init     # Mark Ruihe Li modify
         self.r_inner_dimensional = self.geo.r_inner_dimensional
         self.r_outer_dimensional = self.geo.r_outer_dimensional
         self.A_cc = self.geo.A_cc
+        self.A_cc_init = self.geo.A_cc_init # Mark Ruihe Li modify
         self.A_cooling = self.geo.A_cooling
         self.V_cell = self.geo.V_cell
 
@@ -98,6 +101,11 @@ class LithiumIonParameters(BaseParameters):
         self.i_typ = self.elec.i_typ
         self.voltage_low_cut_dimensional = self.elec.voltage_low_cut_dimensional
         self.voltage_high_cut_dimensional = self.elec.voltage_high_cut_dimensional
+        self.Ratio_Li_SolConsumed = self.elec.Ratio_Li_SolConsumed # Mark Ruihe Li modify
+        self.Int_ElelyExces_Ratio = self.elec.Int_ElelyExces_Ratio # Mark Ruihe Li modify
+        self.Ratio_Elely_Dryout   = self.elec.Ratio_Elely_Dryout   # Mark Ruihe Li modify
+        self.Vol_Elely_JR         = self.elec.Vol_Elely_JR         # Mark Ruihe Li modify
+        self.Vol_Elely_Tot        = self.elec.Vol_Elely_Tot        # Mark Ruihe Li modify
 
         # Domain parameters
         for domain in self.domain_params:

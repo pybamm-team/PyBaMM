@@ -21,8 +21,11 @@ def electrolyte_diffusivity_Nyman2008(c_e, T):
     :class:`pybamm.Symbol`
         Solid diffusivity
     """
+    if c_e < 2000:
+        D_c_e = 8.794e-11 * (c_e / 1000) ** 2 - 3.972e-10 * (c_e / 1000) + 4.862e-10
+    else:
+        D_c_e = 8.794e-11 * (2000 / 1000) ** 2 - 3.972e-10 * (2000 / 1000) + 4.862e-10 
 
-    D_c_e = 8.794e-11 * (c_e / 1000) ** 2 - 3.972e-10 * (c_e / 1000) + 4.862e-10
 
     # Nyman et al. (2008) does not provide temperature dependence
 
