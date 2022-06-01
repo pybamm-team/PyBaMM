@@ -32,10 +32,14 @@ class SEIGrowth(BaseModel):
         if self.reaction_loc == "x-average":
             L_inner_av = pybamm.standard_variables.L_inner_av
             L_outer_av = pybamm.standard_variables.L_outer_av
-            L_inner = pybamm.PrimaryBroadcast(L_inner_av, [f"negative {self.phase_name}electrode"])
-            L_outer = pybamm.PrimaryBroadcast(L_outer_av, [f"negative {self.phase_name}electrode"])
+            L_inner = pybamm.PrimaryBroadcast(L_inner_av, ["negative electrode"])
+            L_outer = pybamm.PrimaryBroadcast(L_outer_av, ["negative electrode"])
         elif self.reaction_loc == "full electrode":
-            L_inner = pybamm.standard_variables.L_inner
+            L_inner = pybamm.Variable(
+            f"Inner {self.phase_name}SEI thickness",
+            domain=["negative electrode"],
+            auxiliary_domains={"secondary": "current collector"},
+        )
             L_outer = pybamm.standard_variables.L_outer
         elif self.reaction_loc == "interface":
             L_inner = pybamm.standard_variables.L_inner_interface
