@@ -850,7 +850,7 @@ def get_julia_mtk_model(model, geometry=None, tspan=None):
             var_to_ind_vars[var] = f"(t, {domain_symbols})"
             if isinstance(var, pybamm.ConcatenationVariable):
                 for child in var.children:
-                    var_to_ind_vars[child.id] = f"(t, {domain_symbols})"
+                    var_to_ind_vars[child] = f"(t, {domain_symbols})"
             aux_domain_symbols = ", ".join(
                 domain_name_to_symbol[tuple(dom)]
                 for level, dom in var.domains.items()
@@ -994,9 +994,7 @@ def get_julia_mtk_model(model, geometry=None, tspan=None):
             else:
                 doms = ", " + domain_name_to_symbol[tuple(var.domain)]
 
-            all_ic_bc_str += (
-                f"   {variable_to_print_name[var]}(0{doms}) ~ {eqn_str},\n"
-            )
+            all_ic_bc_str += f"   {variable_to_print_name[var]}(0{doms}) ~ {eqn_str},\n"
     # Boundary conditions
     if is_pde:
         all_ic_bc_str += "   # boundary conditions\n"
