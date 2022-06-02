@@ -10,6 +10,7 @@ def solve_model_once(model, solver, t_eval):
 
 
 class TimeSolveSPM:
+    param_names = ['solve first', 'parameter']
     params = (
         [False, True],
         [
@@ -17,7 +18,7 @@ class TimeSolveSPM:
             "ORegan2021",
             "NCA_Kim2011",
             "Prada2013",
-            "Ai2020",
+            # "Ai2020",
             "Ramadass2004",
             "Mohtat2020",
             "Chen2020",
@@ -63,6 +64,7 @@ class TimeSolveSPM:
 
 
 class TimeSolveSPMe:
+    param_names = ['solve first', 'parameter']
     params = (
         [False, True],
         [
@@ -70,7 +72,7 @@ class TimeSolveSPMe:
             "ORegan2021",
             "NCA_Kim2011",
             "Prada2013",
-            "Ai2020",
+            # "Ai2020",
             "Ramadass2004",
             "Mohtat2020",
             "Chen2020",
@@ -116,16 +118,17 @@ class TimeSolveSPMe:
 
 
 class TimeSolveDFN:
+    param_names = ['solve first', 'parameter']
     params = (
         [False, True],
         [
             "Marquis2019",
             "ORegan2021",
-            "NCA_Kim2011",
+            # "NCA_Kim2011",
             "Prada2013",
             "Ai2020",
             "Ramadass2004",
-            "Mohtat2020",
+            # "Mohtat2020",
             "Chen2020",
             "Chen2020_plating",
             "Ecker2015",

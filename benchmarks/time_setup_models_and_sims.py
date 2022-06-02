@@ -18,7 +18,7 @@ def compute_discretisation(model, param):
 
 
 class TimeBuildSPM:
-
+    param_names = ['parameter']
     params = [
         "Marquis2019",
         "ORegan2021",
@@ -40,7 +40,7 @@ class TimeBuildSPM:
 
 
 class TimeBuildSPMe:
-
+    param_names = ['parameter']
     params = [
         "Marquis2019",
         "ORegan2021",
@@ -62,7 +62,7 @@ class TimeBuildSPMe:
 
 
 class TimeBuildDFN:
-
+    param_names = ['parameter']
     params = [
         "Marquis2019",
         "ORegan2021",
@@ -84,7 +84,7 @@ class TimeBuildDFN:
 
 
 class TimeBuildSPMSimulation:
-    # with_experiment
+    param_names = ['with experiment', 'parameter']
     params = (
         [False, True],
         [
@@ -116,7 +116,7 @@ class TimeBuildSPMSimulation:
 
 
 class TimeBuildSPMeSimulation:
-    # with_experiment
+    param_names = ['with experiment', 'parameter']
     params = (
         [False, True],
         [
@@ -148,7 +148,7 @@ class TimeBuildSPMeSimulation:
 
 
 class TimeBuildDFNSimulation:
-    # with_experiment
+    param_names = ['with experiment', 'parameter']
     params = (
         [False, True],
         [
