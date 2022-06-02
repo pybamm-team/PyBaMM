@@ -14,16 +14,22 @@ class BaseModel(BaseInterface):
         The parameters to use for this submodel
     options : dict, optional
         A dictionary of options to be passed to the model.
+    phase : str
+        Phase of the particle
 
     **Extends:** :class:`pybamm.interface.BaseInterface`
     """
 
-    def __init__(self, param, options=None):
+    def __init__(self, param, options=None,phase="primary"):
         reaction = "SEI"
         domain = "Negative"
-        super().__init__(param, domain, reaction, options=options)
+        super().__init__(param, domain, reaction, options=options,phase=phase)
 
     def get_coupled_variables(self, variables):
+        Domain = self.domain
+        domain = Domain.lower()
+        phase_name = self.phase_name
+        
         # Update some common variables
         zero_av = pybamm.PrimaryBroadcast(0, "current collector")
         zero = pybamm.FullBroadcast(0, "positive electrode", "current collector")
@@ -31,12 +37,12 @@ class BaseModel(BaseInterface):
         if self.reaction_loc != "interface":
             variables.update(
                 {
-                    "X-averaged negative electrode SEI interfacial current "
+                    f"X-averaged {domain} {phase_name}electrode SEI interfacial current "
                     "density": variables["X-averaged SEI interfacial current density"],
-                    "Negative electrode SEI interfacial current "
+                    f"{Domain} {phase_name}electrode SEI interfacial current "
                     "density": variables["SEI interfacial current density"],
                 }
-            )
+            ) # Jason-whether should the value name be modified as well?
         variables.update(
             {
                 "X-averaged positive electrode SEI interfacial current "
@@ -65,6 +71,9 @@ class BaseModel(BaseInterface):
             The variables which can be derived from the SEI thicknesses.
         """
         param = self.param
+        # Domain = self.domain
+        # domain = Domain.lower()
+        phase_name = self.phase_name
 
         # Set length scale to one for the "no SEI" model so that it is not
         # required by parameter values in general
@@ -74,10 +83,10 @@ class BaseModel(BaseInterface):
             L_scale = param.L_sei_0_dim
 
         variables = {
-            "Inner SEI thickness": L_inner,
-            "Inner SEI thickness [m]": L_inner * L_scale,
-            "Outer SEI thickness": L_outer,
-            "Outer SEI thickness [m]": L_outer * L_scale,
+            f"Inner {phase_name}SEI thickness": L_inner,
+            f"Inner {phase_name}SEI thickness [m]": L_inner * L_scale,
+            f"Outer {phase_name}SEI thickness": L_outer,
+            f"Outer {phase_name}SEI thickness [m]": L_outer * L_scale,
         }
 
         if self.reaction_loc != "interface":
@@ -85,10 +94,10 @@ class BaseModel(BaseInterface):
             L_outer_av = pybamm.x_average(L_outer)
             variables.update(
                 {
-                    "X-averaged inner SEI thickness": L_inner_av,
-                    "X-averaged inner SEI thickness [m]": L_inner_av * L_scale,
-                    "X-averaged outer SEI thickness": L_outer_av,
-                    "X-averaged outer SEI thickness [m]": L_outer_av * L_scale,
+                    f"X-averaged inner {phase_name}SEI thickness": L_inner_av,
+                    f"X-averaged inner {phase_name}SEI thickness [m]": L_inner_av * L_scale,
+                    f"X-averaged outer {phase_name}SEI thickness": L_outer_av,
+                    f"X-averaged outer {phase_name}SEI thickness [m]": L_outer_av * L_scale,
                 }
             )
         # Get variables related to the total thickness
@@ -99,6 +108,10 @@ class BaseModel(BaseInterface):
 
     def _get_standard_total_thickness_variables(self, L_sei):
         """Update variables related to total SEI thickness."""
+        Domain = self.domain
+        domain = Domain.lower()
+        phase_name = self.phase_name
+        
         if isinstance(self, pybamm.sei.NoSEI):
             L_scale = 1
             R_sei_dim = 1
@@ -107,22 +120,20 @@ class BaseModel(BaseInterface):
             R_sei_dim = self.param.R_sei_dimensional
 
         variables = {
-            "SEI thickness": L_sei,
-            "SEI thickness [m]": L_sei * L_scale,
-            "Total SEI thickness": L_sei,
-            "Total SEI thickness [m]": L_sei * L_scale,
+            f"{phase_name}SEI thickness": L_sei,
+            f"{phase_name}SEI thickness [m]": L_sei * L_scale,
+            f"Total {phase_name}SEI thickness": L_sei,
+            f"Total {phase_name}SEI thickness [m]": L_sei * L_scale,
         }
         if self.reaction_loc != "interface":
             L_sei_av = pybamm.x_average(L_sei)
             variables.update(
                 {
-                    "X-averaged SEI thickness": L_sei_av,
-                    "X-averaged SEI thickness [m]": L_sei_av * L_scale,
-                    "X-averaged total SEI thickness": L_sei_av,
-                    "X-averaged total SEI thickness [m]": L_sei_av * L_scale,
-                    "X-averaged "
-                    + self.domain.lower()
-                    + " electrode resistance [Ohm.m2]": L_sei_av * L_scale * R_sei_dim,
+                    f"X-averaged {phase_name}SEI thickness": L_sei_av,
+                    f"X-averaged {phase_name}SEI thickness [m]": L_sei_av * L_scale,
+                    f"X-averaged total {phase_name}SEI thickness": L_sei_av,
+                    f"X-averaged total {phase_name}SEI thickness [m]": L_sei_av * L_scale,
+                    f"X-averaged {domain} {phase_name}electrode resistance [Ohm.m2]": L_sei_av * L_scale * R_sei_dim,
                 }
             )
         return variables
@@ -130,6 +141,9 @@ class BaseModel(BaseInterface):
     def _get_standard_concentration_variables(self, variables):
         """Update variables related to the SEI concentration."""
         param = self.param
+        # Domain = self.domain
+        # domain = Domain.lower()
+        phase_name = self.phase_name
 
         # Set scales to one for the "no SEI" model so that they are not required
         # by parameter values in general
@@ -168,8 +182,8 @@ class BaseModel(BaseInterface):
                 L_outer_0 = param.L_outer_0
                 li_mols_per_sei_mols = 1
 
-        L_inner = variables["Inner SEI thickness"]
-        L_outer = variables["Outer SEI thickness"]
+        L_inner = variables[f"Inner {phase_name}SEI thickness"]
+        L_outer = variables[f"Outer {phase_name}SEI thickness"]
 
         n_inner = L_inner  # inner SEI concentration
         n_outer = L_outer  # outer SEI concentration
@@ -198,15 +212,15 @@ class BaseModel(BaseInterface):
 
         variables.update(
             {
-                "Inner SEI concentration [mol.m-3]": n_inner * n_scale,
-                "X-averaged inner SEI concentration [mol.m-3]": n_inner_av * n_scale,
-                "Outer SEI concentration [mol.m-3]": n_outer * n_outer_scale,
-                "X-averaged outer SEI concentration [mol.m-3]": n_outer_av
+                f"Inner {phase_name}SEI concentration [mol.m-3]": n_inner * n_scale,
+                f"X-averaged inner {phase_name}SEI concentration [mol.m-3]": n_inner_av * n_scale,
+                f"Outer {phase_name}SEI concentration [mol.m-3]": n_outer * n_outer_scale,
+                f"X-averaged outer {phase_name}SEI concentration [mol.m-3]": n_outer_av
                 * n_outer_scale,
-                "SEI concentration [mol.m-3]": n_SEI * n_scale,
-                "X-averaged SEI concentration [mol.m-3]": n_SEI_av * n_scale,
-                "Loss of lithium to SEI [mol]": Q_sei,
-                "Loss of capacity to SEI [A.h]": Q_sei * self.param.F / 3600,
+                f"{phase_name}SEI concentration [mol.m-3]": n_SEI * n_scale,
+                f"X-averaged {phase_name}SEI concentration [mol.m-3]": n_SEI_av * n_scale,
+                f"Loss of lithium to {phase_name}SEI [mol]": Q_sei,
+                f"Loss of capacity to {phase_name}SEI [A.h]": Q_sei * self.param.F / 3600,
             }
         )
 
@@ -229,20 +243,24 @@ class BaseModel(BaseInterface):
         variables : dict
             The variables which can be derived from the SEI thicknesses.
         """
+        # Domain = self.domain
+        # domain = Domain.lower()
+        phase_name = self.phase_name
+        
         j_scale = self.param.n.prim.j_scale
         j_i_av = pybamm.x_average(j_inner)
         j_o_av = pybamm.x_average(j_outer)
 
         variables = {
-            "Inner SEI interfacial current density": j_inner,
-            "Inner SEI interfacial current density [A.m-2]": j_inner * j_scale,
-            "X-averaged inner SEI interfacial current density": j_i_av,
-            "X-averaged inner SEI interfacial current density [A.m-2]": j_i_av
+            f"Inner {phase_name}SEI interfacial current density": j_inner,
+            f"Inner {phase_name}SEI interfacial current density [A.m-2]": j_inner * j_scale,
+            f"X-averaged inner {phase_name}SEI interfacial current density": j_i_av,
+            f"X-averaged inner {phase_name}SEI interfacial current density [A.m-2]": j_i_av
             * j_scale,
-            "Outer SEI interfacial current density": j_outer,
-            "Outer SEI interfacial current density [A.m-2]": j_outer * j_scale,
-            "X-averaged outer SEI interfacial current density": j_o_av,
-            "X-averaged outer SEI interfacial current density [A.m-2]": j_o_av
+            f"Outer {phase_name}SEI interfacial current density": j_outer,
+            f"Outer {phase_name}SEI interfacial current density [A.m-2]": j_outer * j_scale,
+            f"X-averaged outer {phase_name}SEI interfacial current density": j_o_av,
+            f"X-averaged outer {phase_name}SEI interfacial current density [A.m-2]": j_o_av
             * j_scale,
         }
 
@@ -253,19 +271,23 @@ class BaseModel(BaseInterface):
 
     def _get_standard_total_reaction_variables(self, j_sei):
         """Update variables related to total SEI interfacial current density."""
+        # Domain = self.domain
+        # domain = Domain.lower()
+        phase_name = self.phase_name
+        
         j_scale = self.param.n.prim.j_scale
 
         variables = {
-            "SEI interfacial current density": j_sei,
-            "SEI interfacial current density [A.m-2]": j_sei * j_scale,
-        }
+            f"{phase_name}SEI interfacial current density": j_sei,
+            f"{phase_name}SEI interfacial current density [A.m-2]": j_sei * j_scale,
+        }# Jason-should the phase_name be changed with a capital letter
 
         if self.reaction_loc != "interface":
             j_sei_av = pybamm.x_average(j_sei)
             variables.update(
                 {
-                    "X-averaged SEI interfacial current density": j_sei_av,
-                    "X-averaged SEI interfacial current density [A.m-2]": j_sei_av
+                    f"X-averaged {phase_name}SEI interfacial current density": j_sei_av,
+                    f"X-averaged {phase_name}SEI interfacial current density [A.m-2]": j_sei_av
                     * j_scale,
                 }
             )
