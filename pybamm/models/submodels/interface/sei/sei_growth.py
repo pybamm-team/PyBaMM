@@ -32,18 +32,32 @@ class SEIGrowth(BaseModel):
         if self.reaction_loc == "x-average":
             L_inner_av = pybamm.standard_variables.L_inner_av
             L_outer_av = pybamm.standard_variables.L_outer_av
-            L_inner = pybamm.PrimaryBroadcast(L_inner_av, ["negative electrode"])
+            L_inner = pybamm.PrimaryBroadcast(L_inner_av, ["negative electrode"])#Jason-do we need to broadcast this averaged value to both phases in negative electrode? and how?
             L_outer = pybamm.PrimaryBroadcast(L_outer_av, ["negative electrode"])
+            
         elif self.reaction_loc == "full electrode":
             L_inner = pybamm.Variable(
-            f"Inner {self.phase_name}SEI thickness",
-            domain=["negative electrode"],
-            auxiliary_domains={"secondary": "current collector"},
-        )
-            L_outer = pybamm.standard_variables.L_outer
+                f"Inner {self.phase_name}SEI thickness",
+                domain = ["negative electrode"],
+                auxiliary_domains = {"secondary": "current collector"},
+                )
+            L_outer = pybamm.Variable(
+                f"Outer {self.phase_name}SEI thickness",
+                domain = ["negative electrode"],
+                auxiliary_domains = {"secondary": "current collector"},
+                )
+
         elif self.reaction_loc == "interface":
-            L_inner = pybamm.standard_variables.L_inner_interface
-            L_outer = pybamm.standard_variables.L_outer_interface
+            L_inner = pybamm.Variable(
+                f"Inner {self.phase_name}SEI thickness",
+                domain = ["current collector"],
+                ) # Jason-here the domain is consistent with that in the standard_variables
+             L_outer = pybamm.Variable(
+                f"Outer {self.phase_name}SEI thickness",
+                domain = ["current collector"],
+                )           
+            # L_inner = pybamm.standard_variables.L_inner_interface
+            # L_outer = pybamm.standard_variables.L_outer_interface
 
         if self.options["SEI"] == "ec reaction limited":
             L_inner = 0 * L_inner  # Set L_inner to zero, copying domains
