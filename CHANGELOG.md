@@ -1,23 +1,36 @@
 # [Unreleased](https://github.com/pybamm-team/PyBaMM/)
 
-# [v22.4](https://github.com/pybamm-team/PyBaMM/tree/v22.4) - 2022-04-30
+## Features
+
+-   Reformated submodel structure to allow composite electrodes, with an example for graphite/silicon. Composite positive electrode is now also possible. With current implementation, electrodes can have at most two phases. ([#2073](https://github.com/pybamm-team/PyBaMM/pull/2073))
+-   Added "Chen2020_composite" parameter set for a composite graphite/silicon electrode. Silicon parameters are added as a standard negative electrode parameter set, specified as the "negative electrode secondary" set, which automatically adds "Secondary:" to the start of each parameter name. Primary (graphite) parameter names are unchanged. ([#2073](https://github.com/pybamm-team/PyBaMM/pull/2073))
+
+# [v22.5](https://github.com/pybamm-team/PyBaMM/tree/v22.5) - 2022-05-31
 
 ## Features
 
--   Reformated submodel structure to allow composite electrodes, with an example for graphite/silicon. Composite positive electrode is now also possible. With current implementation, electrodes can have at most two phases.
--   Added "Chen2020_composite" parameter set for a composite graphite/silicon electrode. Silicon parameters are added as a standard negative electrode parameter set, specified as the "negative electrode secondary" set, which automatically adds "Secondary:" to the start of each parameter name. Primary (graphite) parameter names are unchanged.
 -   Added a casadi version of the IDKLU solver, which is used for `model.convert_to_format = "casadi"` ([#2002](https://github.com/pybamm-team/PyBaMM/pull/2002))
 -   Added functionality to generate Julia expressions from a model. See [PyBaMM.jl](https://github.com/tinosulzer/PyBaMM.jl) for how to use these ([#1942](https://github.com/pybamm-team/PyBaMM/pull/1942)))
+-   Added basic callbacks to the Simulation class, and a LoggingCallback ([#1880](https://github.com/pybamm-team/PyBaMM/pull/1880)))
 
 ## Bug fixes
 
 -   Corrected legend order in "plot_voltage_components.py", so each entry refers to the correct overpotential. ([#2061](https://github.com/pybamm-team/PyBaMM/pull/2061))
--   Remove old deprecation errors, including those in `parameter_values.py` that caused the simulation if, for example, the reaction rate is re-introduced manually ([#2022](https://github.com/pybamm-team/PyBaMM/pull/2022))
 
 ## Breaking changes
 
 -   Exchange-current density functions now take a fourth argument, the maximum particle concentration for that phase
 -   Changed domain-specific parameter names to a nested attribute. `param.l_n` is now `param.n.l`. Parameters specific to a (primary/secondary) phase in a domain are doubly nested. e.g. `param.c_n_max` is now `param.n.prim.c_max` ([#2063](https://github.com/pybamm-team/PyBaMM/pull/2063))
+
+# [v22.4](https://github.com/pybamm-team/PyBaMM/tree/v22.4) - 2022-04-30
+
+## Features
+
+-   Added a casadi version of the IDKLU solver, which is used for `model.convert_to_format = "casadi"` ([#2002](https://github.com/pybamm-team/PyBaMM/pull/2002))
+
+## Bug fixes
+
+-   Remove old deprecation errors, including those in `parameter_values.py` that caused the simulation if, for example, the reaction rate is re-introduced manually ([#2022](https://github.com/pybamm-team/PyBaMM/pull/2022))
 
 # [v22.3](https://github.com/pybamm-team/PyBaMM/tree/v22.3) - 2022-03-31
 

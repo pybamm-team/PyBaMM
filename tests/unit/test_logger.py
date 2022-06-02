@@ -30,6 +30,10 @@ class TestLogger(unittest.TestCase):
         # reset
         pybamm.set_logging_level("WARNING")
 
+    def test_exceptions(self):
+        with self.assertRaises(ValueError):
+            pybamm.get_new_logger("test", None)
+
 
 if __name__ == "__main__":
     print("Add -v for more debug output")
