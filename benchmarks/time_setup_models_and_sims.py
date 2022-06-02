@@ -1,5 +1,18 @@
 import pybamm
 
+parameters = [
+    "Marquis2019",
+    "ORegan2021",
+    "NCA_Kim2011",
+    "Prada2013",
+    "Ai2020",
+    "Ramadass2004",
+    "Mohtat2020",
+    "Chen2020",
+    "Chen2020_plating",
+    "Ecker2015",
+]
+
 
 def compute_discretisation(model, param):
     var_pts = {
@@ -18,19 +31,8 @@ def compute_discretisation(model, param):
 
 
 class TimeBuildSPM:
-    param_names = ['parameter']
-    params = [
-        "Marquis2019",
-        "ORegan2021",
-        "NCA_Kim2011",
-        "Prada2013",
-        "Ai2020",
-        "Ramadass2004",
-        "Mohtat2020",
-        "Chen2020",
-        "Chen2020_plating",
-        "Ecker2015",
-    ]
+    param_names = ["parameter"]
+    params = parameters
 
     def time_setup_SPM(self, parameters):
         self.param = pybamm.ParameterValues(parameters)
@@ -40,19 +42,8 @@ class TimeBuildSPM:
 
 
 class TimeBuildSPMe:
-    param_names = ['parameter']
-    params = [
-        "Marquis2019",
-        "ORegan2021",
-        "NCA_Kim2011",
-        "Prada2013",
-        "Ai2020",
-        "Ramadass2004",
-        "Mohtat2020",
-        "Chen2020",
-        "Chen2020_plating",
-        "Ecker2015",
-    ]
+    param_names = ["parameter"]
+    params = parameters
 
     def time_setup_SPMe(self, parameters):
         self.param = pybamm.ParameterValues(parameters)
@@ -62,19 +53,8 @@ class TimeBuildSPMe:
 
 
 class TimeBuildDFN:
-    param_names = ['parameter']
-    params = [
-        "Marquis2019",
-        "ORegan2021",
-        "NCA_Kim2011",
-        "Prada2013",
-        "Ai2020",
-        "Ramadass2004",
-        "Mohtat2020",
-        "Chen2020",
-        "Chen2020_plating",
-        "Ecker2015",
-    ]
+    param_names = ["parameter"]
+    params = parameters
 
     def time_setup_DFN(self, parameters):
         self.param = pybamm.ParameterValues(parameters)
@@ -84,22 +64,8 @@ class TimeBuildDFN:
 
 
 class TimeBuildSPMSimulation:
-    param_names = ['with experiment', 'parameter']
-    params = (
-        [False, True],
-        [
-            "Marquis2019",
-            "ORegan2021",
-            "NCA_Kim2011",
-            "Prada2013",
-            "Ai2020",
-            "Ramadass2004",
-            "Mohtat2020",
-            "Chen2020",
-            "Chen2020_plating",
-            "Ecker2015",
-        ],
-    )
+    param_names = ["with experiment", "parameter"]
+    params = ([False, True], parameters)
 
     def time_setup_SPM_simulation(self, with_experiment, parameters):
         self.param = pybamm.ParameterValues(parameters)
@@ -116,22 +82,8 @@ class TimeBuildSPMSimulation:
 
 
 class TimeBuildSPMeSimulation:
-    param_names = ['with experiment', 'parameter']
-    params = (
-        [False, True],
-        [
-            "Marquis2019",
-            "ORegan2021",
-            "NCA_Kim2011",
-            "Prada2013",
-            "Ai2020",
-            "Ramadass2004",
-            "Mohtat2020",
-            "Chen2020",
-            "Chen2020_plating",
-            "Ecker2015",
-        ],
-    )
+    param_names = ["with experiment", "parameter"]
+    params = ([False, True], parameters)
 
     def time_setup_SPMe_simulation(self, with_experiment, parameters):
         self.param = pybamm.ParameterValues(parameters)
@@ -148,22 +100,8 @@ class TimeBuildSPMeSimulation:
 
 
 class TimeBuildDFNSimulation:
-    param_names = ['with experiment', 'parameter']
-    params = (
-        [False, True],
-        [
-            "Marquis2019",
-            "ORegan2021",
-            "NCA_Kim2011",
-            "Prada2013",
-            "Ai2020",
-            "Ramadass2004",
-            "Mohtat2020",
-            "Chen2020",
-            "Chen2020_plating",
-            "Ecker2015",
-        ],
-    )
+    param_names = ["with experiment", "parameter"]
+    params = ([False, True], parameters)
 
     def time_setup_DFN_simulation(self, with_experiment, parameters):
         self.param = pybamm.ParameterValues(parameters)
