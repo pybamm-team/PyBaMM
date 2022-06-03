@@ -8,7 +8,7 @@ def nco_electrolyte_exchange_current_density_Ecker2015(c_e, c_s_surf, T, c_s_max
 
     References
     ----------
-       .. [1] Ecker, Madeleine, et al. "Parameterization of a physico-chemical model of
+    .. [1] Ecker, Madeleine, et al. "Parameterization of a physico-chemical model of
     a lithium-ion battery i. determination of parameters." Journal of the
     Electrochemical Society 162.9 (2015): A1836-A1848.
     .. [2] Ecker, Madeleine, et al. "Parameterization of a physico-chemical model of

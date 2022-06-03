@@ -6,7 +6,7 @@ def nca_electrolyte_exchange_current_density_Kim2011(c_e, c_s_surf, T, c_s_max):
     Exchange-current density for Butler-Volmer reactions between NCA and LiPF6 in EC:DMC
     [1].
 
-     References
+    References
     ----------
     .. [1] Kim, G. H., Smith, K., Lee, K. J., Santhanagopalan, S., & Pesaran, A.
     (2011). Multi-domain modeling of lithium-ion batteries encompassing

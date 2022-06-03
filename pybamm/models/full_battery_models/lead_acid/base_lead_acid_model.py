@@ -88,9 +88,6 @@ class BaseModel(pybamm.BaseBatteryModel):
             ] = pybamm.active_material.Constant(
                 self.param, domain, self.options, "primary"
             )
-            self.submodels[
-                f"{domain} total active material"
-            ] = pybamm.active_material.Total(self.param, domain, self.options)
 
     def set_sei_submodel(self):
 

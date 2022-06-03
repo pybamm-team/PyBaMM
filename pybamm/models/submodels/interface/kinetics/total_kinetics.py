@@ -59,9 +59,9 @@ class TotalKinetics(pybamm.BaseSubModel):
             if self.options["particle phases"] != "1":
                 reaction_names.append("secondary ")
                 phase_names.append(["secondary ", "secondary "])
-            # elif self.chemistry == "lead-acid":
-            #     both_reaction_names[domain] = ["", "oxygen "]
-            # both_phase_names[domain] = [""] * 3
+        elif self.chemistry == "lead-acid":
+            reaction_names = ["", "oxygen "]
+            phase_names = [["", ""]] * 2
 
         # Create separate 'new_variables' so that variables only get updated once
         # everything is computed

@@ -166,7 +166,12 @@ class FunctionParameter(pybamm.Symbol):
 
         input_dict = {input_names[i]: children_list[i] for i in range(len(input_names))}
 
-        return FunctionParameter(self.name, input_dict, diff_variable=variable)
+        return FunctionParameter(
+            self.name,
+            input_dict,
+            diff_variable=variable,
+            print_name=self.print_name + "'",
+        )
 
     def create_copy(self):
         """See :meth:`pybamm.Symbol.new_copy()`."""

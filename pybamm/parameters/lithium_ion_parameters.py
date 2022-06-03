@@ -897,8 +897,6 @@ class ParticleLithiumIonParameters(BaseParameters):
             f"{self.phase_prefactor}{self.domain} particle "
             "surface concentration [mol.m-3]": c_s_surf,
             "Temperature [K]": T,
-            f"{self.phase_prefactor}Maximum {self.domain.lower()} particle "
-            "surface concentration [mol.m-3]": self.c_max,
         }
         return pybamm.FunctionParameter(
             f"{self.phase_prefactor}{self.domain} electrode "
@@ -925,7 +923,9 @@ class ParticleLithiumIonParameters(BaseParameters):
         """
         Dimensional entropic change of the open-circuit potential [V.K-1]
         """
-        inputs = {f"{self.phase_prefactor}{self.domain} particle stoichiometry": sto}
+        inputs = {
+            f"{self.phase_prefactor}{self.domain} particle stoichiometry": sto,
+        }
         return pybamm.FunctionParameter(
             f"{self.phase_prefactor}{self.domain} electrode "
             "OCP entropic change [V.K-1]",

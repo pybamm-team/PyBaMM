@@ -1,7 +1,7 @@
 from pybamm import Parameter
 
 
-def lico2_volume_change_Ai2020(sto):
+def lico2_volume_change_Ai2020(sto, c_s_max):
     """
     lico2 particle volume change as a function of stochiometry [1, 2].
 
@@ -20,12 +20,12 @@ def lico2_volume_change_Ai2020(sto):
     sto: :class:`pybamm.Symbol`
         Electrode stochiometry, dimensionless
         should be R-averaged particle concentration
+
     Returns
     -------
     t_change:class:`pybamm.Symbol`
         volume change, dimensionless, normalised by particle volume
     """
     omega = Parameter("Positive electrode partial molar volume [m3.mol-1]")
-    c_p_max = Parameter("Maximum concentration in positive electrode [mol.m-3]")
-    t_change = omega * c_p_max * sto
+    t_change = omega * c_s_max * sto
     return t_change
