@@ -41,7 +41,7 @@ class LithiumIonParameters(BaseParameters):
         self.half_cell = self.options["working electrode"] != "both"
 
         # Get geometric, electrical and thermal parameters
-        self.geo = pybamm.geometric_parameters
+        self.geo = pybamm.GeometricParameters(options)
         self.elec = pybamm.electrical_parameters
         self.therm = pybamm.thermal_parameters
 
@@ -481,14 +481,6 @@ class LithiumIonParameters(BaseParameters):
             self.dimensional_current_with_time / self.I_typ * pybamm.sign(self.I_typ)
         )
 
-    @property
-    def options(self):
-        return self._options
-
-    @options.setter
-    def options(self, extra_options):
-        self._options = pybamm.BatteryModelOptions(extra_options)
-
 
 class DomainLithiumIonParameters(BaseParameters):
     def __init__(self, domain, main_param):
@@ -764,24 +756,11 @@ class ParticleLithiumIonParameters(BaseParameters):
         self.domain = domain_param.domain
         self.main_param = domain_param.main_param
         self.phase = phase
+        self.set_phase_name()
         if self.phase == "primary":
             self.geo = domain_param.geo.prim
         elif self.phase == "secondary":
             self.geo = domain_param.geo.sec
-        if (
-            phase == "primary"
-            and getattr(self.main_param.options, self.domain.lower())["particle phases"]
-            == "1"
-        ):
-            # Only one phase, no need to distinguish between
-            # "primary" and "secondary"
-            self.phase_name = ""
-            self.phase_prefactor = ""
-        else:
-            # add a space so that we can use "" or (e.g.) "primary " interchangeably
-            # when naming variables
-            self.phase_name = phase + " "
-            self.phase_prefactor = phase.capitalize() + ": "
 
     def _set_dimensional_parameters(self):
         main = self.main_param
@@ -897,6 +876,8 @@ class ParticleLithiumIonParameters(BaseParameters):
             f"{self.phase_prefactor}{self.domain} particle "
             "surface concentration [mol.m-3]": c_s_surf,
             "Temperature [K]": T,
+            f"{self.phase_prefactor}Maximum {self.domain.lower()} particle "
+            "surface concentration [mol.m-3]": self.c_max,
         }
         return pybamm.FunctionParameter(
             f"{self.phase_prefactor}{self.domain} electrode "
@@ -925,6 +906,8 @@ class ParticleLithiumIonParameters(BaseParameters):
         """
         inputs = {
             f"{self.phase_prefactor}{self.domain} particle stoichiometry": sto,
+            f"{self.phase_prefactor}Maximum {self.domain.lower()} particle "
+            "surface concentration [mol.m-3]": self.c_max,
         }
         return pybamm.FunctionParameter(
             f"{self.phase_prefactor}{self.domain} electrode "

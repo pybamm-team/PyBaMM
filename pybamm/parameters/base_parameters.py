@@ -52,6 +52,30 @@ class BaseParameters:
             value.print_name = print_name
         super().__setattr__(name, value)
 
+    @property
+    def options(self):
+        return self._options
+
+    @options.setter
+    def options(self, extra_options):
+        self._options = pybamm.BatteryModelOptions(extra_options)
+
+    def set_phase_name(self):
+        if (
+            self.phase == "primary"
+            and getattr(self.main_param.options, self.domain.lower())["particle phases"]
+            == "1"
+        ):
+            # Only one phase, no need to distinguish between
+            # "primary" and "secondary"
+            self.phase_name = ""
+            self.phase_prefactor = ""
+        else:
+            # add a space so that we can use "" or (e.g.) "primary " interchangeably
+            # when naming variables
+            self.phase_name = self.phase + " "
+            self.phase_prefactor = self.phase.capitalize() + ": "
+
 
 class NullParameters:
     def __getattribute__(self, name):

@@ -182,11 +182,12 @@ class ParameterValues:
         for extra_group in [
             "sei",
             "lithium plating",
-            "negative primary particle",
             "negative secondary particle",
         ]:
             if extra_group in chemistry:
-                component_groups += [extra_group]
+                # do extra groups first, as later we will check whether a parameter
+                # appears with "Secondary:" (in which case we change it to "Primary:")
+                component_groups = [extra_group] + component_groups
 
         for component_group in component_groups:
             # Make sure component is provided
@@ -200,21 +201,26 @@ class ParameterValues:
                 )
             # Create path to component and load values
             prefactor = ""
-            for phase in ["primary", "secondary"]:
-                if component_group.endswith(phase + " particle"):
-                    component_group = "negative electrode"
-                    prefactor = phase.capitalize() + ": "
-                    break
+            if component_group == "negative secondary particle":
+                component_group = "negative electrode"
+                prefactor = "Secondary: "
             component_path = os.path.join(
                 base_chemistry, component_group.replace(" ", "_") + "s", component
             )
             file_path = self.find_parameter(
                 os.path.join(component_path, "parameters.csv")
             )
-            component_params = self.read_parameters_csv(file_path)
+            component_params_tmp = self.read_parameters_csv(file_path)
 
-            # Add prefactor to distinguish e.g. secondary particles
-            component_params = {prefactor + k: v for k, v in component_params.items()}
+            component_params = {}
+            for k, v in component_params_tmp.items():
+                # If a parameter is already present as a secondary parameter, we
+                # distinguish it by adding "Primary:" to the given name
+                if "Secondary: " + k in self._dict_items:
+                    component_params["Primary: " + k] = v
+                else:
+                    # Add prefactor to distinguish e.g. secondary particles
+                    component_params[prefactor + k] = v
 
             # Update parameters, making sure to check any conflicts
             self.update(

@@ -4,7 +4,6 @@ Name [units],Value,Reference,Notes
 # Electrode properties,,,
 Positive electrode conductivity [S.m-1],10,Ai 2020,lithium cobalt oxide
 Maximum concentration in positive electrode [mol.m-3],49943,Ai 2020,
-Initial concentration in positive electrode [mol.m-3],21725,Ai 2020,
 Positive electrode diffusivity [m2.s-1],[function]lico2_diffusivity_Dualfoil1998,,
 Positive electrode OCP [V],[data]lico2_ocp_Ai2020,,
 ,,,

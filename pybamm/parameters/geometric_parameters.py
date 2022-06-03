@@ -17,7 +17,8 @@ class GeometricParameters(BaseParameters):
         5. Dimensionless Functions
     """
 
-    def __init__(self):
+    def __init__(self, options=None):
+        self.options = options
         self.n = DomainGeometricParameters("Negative", self)
         self.s = DomainGeometricParameters("Separator", self)
         self.p = DomainGeometricParameters("Positive", self)
@@ -145,24 +146,26 @@ class ParticleGeometricParameters(BaseParameters):
         self.domain = domain
         self.phase = phase
         self.main_param = main_param
+        self.set_phase_name()
 
     def _set_dimensional_parameters(self):
         """Defines the dimensional parameters."""
         Domain = self.domain
+        pref = self.phase_prefactor
 
         # Microscale geometry
         # Note: for li-ion cells, the definition of the surface area to
         # volume ratio is overwritten in lithium_ion_parameters.py to be computed
         # based on the assumed particle shape
         self.a_dim = pybamm.Parameter(
-            f"{Domain} electrode surface area to volume ratio [m-1]"
+            f"{pref}{Domain} electrode surface area to volume ratio [m-1]"
         )
 
         # Particle-size distribution geometry
-        self.R_min_dim = pybamm.Parameter(f"{Domain} minimum particle radius [m]")
-        self.R_max_dim = pybamm.Parameter(f"{Domain} maximum particle radius [m]")
+        self.R_min_dim = pybamm.Parameter(f"{pref}{Domain} minimum particle radius [m]")
+        self.R_max_dim = pybamm.Parameter(f"{pref}{Domain} maximum particle radius [m]")
         self.sd_a_dim = pybamm.Parameter(
-            f"{Domain} area-weighted particle-size standard deviation [m]"
+            f"{pref}{Domain} area-weighted particle-size standard deviation [m]"
         )
 
     @property
@@ -172,18 +175,19 @@ class ParticleGeometricParameters(BaseParameters):
         elif self.domain == "Positive":
             x = pybamm.standard_spatial_vars.x_p
 
+        inputs = {"Through-cell distance (x) [m]": x * self.main_param.L_x}
         return pybamm.FunctionParameter(
-            f"{self.domain} particle radius [m]",
-            {"Through-cell distance (x) [m]": x * self.main_param.L_x},
+            f"{self.phase_prefactor}{self.domain} particle radius [m]", inputs
         )
 
     def f_a_dist_dimensional(self, R):
         """
         Dimensional electrode area-weighted particle-size distribution
         """
-        inputs = {f"{self.domain} particle-size variable [m]": R}
+        inputs = {f"{self.phase_prefactor}{self.domain} particle-size variable [m]": R}
         return pybamm.FunctionParameter(
-            f"{self.domain} area-weighted particle-size distribution [m-1]", inputs
+            f"{self.phase_prefactor}{self.domain} area-weighted particle-size distribution [m-1]",
+            inputs,
         )
 
     def _set_scales(self):

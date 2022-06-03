@@ -4,7 +4,6 @@ Name [units],Value,Reference,Notes
 # Electrode properties,,,
 Positive electrode conductivity [S.m-1],0.33795074,"Calculation, consistant with Hosseinzadeh 2018",
 Maximum concentration in positive electrode [mol.m-3],22806,Prada Thermal Aging,
-Initial concentration in positive electrode [mol.m-3],35.3766672,Minimized to Severson Data,
 Positive electrode diffusivity [m2.s-1],5.90E-18,Prada Fast Charging,
 Positive electrode OCP [V],[function]LFP_ocp_ashfar2017,,
 ,,,
