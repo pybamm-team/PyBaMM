@@ -136,6 +136,7 @@ from .models.submodels.interface import kinetics
 from .models.submodels.interface import sei
 from .models.submodels.interface import lithium_plating
 from .models.submodels.interface import interface_utilisation
+from .models.submodels.interface import open_circuit_potential
 
 #
 # Geometry
