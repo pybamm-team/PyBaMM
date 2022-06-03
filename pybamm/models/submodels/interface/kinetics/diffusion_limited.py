@@ -29,6 +29,9 @@ class DiffusionLimited(BaseInterface):
         self.order = order
 
     def get_coupled_variables(self, variables):
+        Domain = self.domain
+        rxn = self.reaction_name
+
         delta_phi_s = variables[self.domain + " electrode surface potential difference"]
         # If delta_phi_s was broadcast, take only the orphan
         if isinstance(delta_phi_s, pybamm.Broadcast):
@@ -37,7 +40,12 @@ class DiffusionLimited(BaseInterface):
         # Get exchange-current density
         j0 = self._get_exchange_current_density(variables)
         # Get open-circuit potential variables and reaction overpotential
-        ocp, dUdT = self._get_open_circuit_potential(variables)
+        if self.options["particle size"] == "distribution":
+            ocp = variables[
+                f"{Domain} electrode{rxn} open circuit potential distribution"
+            ]
+        else:
+            ocp = variables[f"{Domain} electrode{rxn} open circuit potential"]
         eta_r = delta_phi_s - ocp
 
         # Get interfacial current densities
@@ -50,7 +58,6 @@ class DiffusionLimited(BaseInterface):
         )
         variables.update(self._get_standard_exchange_current_variables(j0))
         variables.update(self._get_standard_overpotential_variables(eta_r))
-        variables.update(self._get_standard_ocp_variables(ocp, dUdT))
 
         # No SEI film resistance in this model
         eta_sei = pybamm.Scalar(0)
