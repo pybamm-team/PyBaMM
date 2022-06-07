@@ -19,12 +19,14 @@ class ConstantSEI(BaseModel):
         The parameters to use for this submodel
     options : dict, optional
         A dictionary of options to be passed to the model.
-
+    phase : str
+        Phase of the particle
+        
     **Extends:** :class:`pybamm.sei.BaseModel`
     """
 
-    def __init__(self, param, options=None):
-        super().__init__(param, options=options)
+    def __init__(self, param, options=None, phase):
+        super().__init__(param, options=options, phase)
         if self.half_cell:
             self.reaction_loc = "interface"
         else:
