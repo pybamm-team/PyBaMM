@@ -165,7 +165,7 @@ class BaseModel(BaseInterface):
                     param.L_sei_0_dim
                     * param.n.prim.a_typ
                     / param.V_bar_inner_dimensional
-                )
+                )# Jason - does n.prim needs modification?
                 n_outer_scale = (
                     param.L_sei_0_dim
                     * param.n.prim.a_typ
