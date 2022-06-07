@@ -24,8 +24,8 @@ class SEIGrowth(BaseModel):
     **Extends:** :class:`pybamm.sei.BaseModel`
     """
 
-    def __init__(self, param, reaction_loc, options=None, phase):
-        super().__init__(param, options=options, phase)
+    def __init__(self, param, reaction_loc, options=None, phase="primary"):# Jason - needs default argument?
+        super().__init__(param, options=options, phase=phase)
         self.reaction_loc = reaction_loc
 
     def get_fundamental_variables(self):
@@ -52,7 +52,7 @@ class SEIGrowth(BaseModel):
                 f"Inner {self.phase_name}SEI thickness",
                 domain = ["current collector"],
                 ) # Jason-here the domain is consistent with that in the standard_variables
-             L_outer = pybamm.Variable(
+            L_outer = pybamm.Variable(
                 f"Outer {self.phase_name}SEI thickness",
                 domain = ["current collector"],
                 )           

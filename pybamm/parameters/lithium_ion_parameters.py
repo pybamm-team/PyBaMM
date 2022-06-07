@@ -335,14 +335,14 @@ class LithiumIonParameters(BaseParameters):
         self.c_Li_typ = pybamm.Parameter(
             "Typical plated lithium concentration [mol.m-3]"
         )
-        self.c_plated_Li_0 = self.c_plated_Li_0_dim / self.c_Li_typ
+        self.c_plated_Li_0 = self.n.prim.c_plated_Li_0_dim / self.c_Li_typ
 
         # ratio of lithium plating reaction scaled to intercalation reaction
         self.Gamma_plating = (
             self.n.prim.a_typ * self.n.prim.j_scale * self.timescale
         ) / (self.F * self.c_Li_typ)
 
-        self.beta_plating = self.Gamma_plating * self.V_bar_plated_Li * self.c_Li_typ
+        self.beta_plating = self.Gamma_plating * self.n.prim.V_bar_plated_Li * self.c_Li_typ
 
         # Initial conditions
         self.c_e_init = self.c_e_init_dimensional / self.c_e_typ
@@ -995,45 +995,45 @@ class ParticleLithiumIonParameters(BaseParameters):
         
         # SEI parameters
         self.C_sei_reaction = (
-            self.n.prim.j_scale / self.m_sei_dimensional
-        ) * pybamm.exp(-(self.F * self.n.prim.U_ref / (2 * self.R * self.T_ref)))
+            self.j_scale / self.m_sei_dimensional
+        ) * pybamm.exp(-(main.F * self.U_ref / (2 * self.R * main.T_ref)))
 
         self.C_sei_solvent = (
-            self.n.prim.j_scale
+            self.j_scale
             * self.L_sei_0_dim
-            / (self.c_sol_dimensional * self.F * self.D_sol_dimensional)
+            / (self.c_sol_dimensional * main.F * self.D_sol_dimensional)
         )
 
         self.C_sei_electron = (
-            self.n.prim.j_scale
-            * self.F
+            self.j_scale
+            * main.F
             * self.L_sei_0_dim
-            / (self.kappa_inner_dimensional * self.R * self.T_ref)
+            / (self.kappa_inner_dimensional * self.R * main.T_ref)
         )
 
         self.C_sei_inter = (
-            self.n.prim.j_scale
+            self.j_scale
             * self.L_sei_0_dim
-            / (self.D_li_dimensional * self.c_li_0_dimensional * self.F)
+            / (self.D_li_dimensional * self.c_li_0_dimensional * main.F)
         )
 
-        self.U_inner_electron = self.F * self.U_inner_dimensional / self.R / self.T_ref
+        self.U_inner_electron = main.F * self.U_inner_dimensional / self.R / main.T_ref
 
         self.R_sei = (
-            self.F
-            * self.n.prim.j_scale
+            main.F
+            * self.j_scale
             * self.R_sei_dimensional
             * self.L_sei_0_dim
             / self.R
-            / self.T_ref
+            / main.T_ref
         )
 
         self.v_bar = self.V_bar_outer_dimensional / self.V_bar_inner_dimensional
         self.c_sei_scale = (
-            self.L_sei_0_dim * self.n.prim.a_typ / self.V_bar_inner_dimensional
+            self.L_sei_0_dim * self.a_typ / self.V_bar_inner_dimensional
         )
         self.c_sei_outer_scale = (
-            self.L_sei_0_dim * self.n.prim.a_typ / self.V_bar_outer_dimensional
+            self.L_sei_0_dim * self.a_typ / self.V_bar_outer_dimensional
         )
 
         self.L_inner_0 = self.L_inner_0_dim / self.L_sei_0_dim
@@ -1041,31 +1041,31 @@ class ParticleLithiumIonParameters(BaseParameters):
 
         # ratio of SEI reaction scale to intercalation reaction
         self.Gamma_SEI = (
-            self.V_bar_inner_dimensional * self.n.prim.j_scale * self.timescale
-        ) / (self.F * self.L_sei_0_dim)
+            self.V_bar_inner_dimensional * self.j_scale * main.timescale
+        ) / (main.F * self.L_sei_0_dim)
         
         # EC reaction
         self.C_ec = (
             self.L_sei_0_dim
-            * self.n.prim.j_scale
-            / (self.F * self.c_ec_0_dim * self.D_ec_dim)
+            * self.j_scale
+            / (main.F * self.c_ec_0_dim * self.D_ec_dim)
         )
         self.C_sei_ec = (
-            self.F
+            main.F
             * self.k_sei_dim
             * self.c_ec_0_dim
-            / self.n.prim.j_scale
+            / self.j_scale
             * (
                 pybamm.exp(
                     -(
-                        self.F
-                        * (self.n.prim.U_ref - self.U_sei_dim)
-                        / (2 * self.R * self.T_ref)
+                        main.F
+                        * (self.U_ref - self.U_sei_dim)
+                        / (2 * self.R * main.T_ref)
                     )
                 )
             )
         )
-        self.beta_sei = self.n.prim.a_typ * self.L_sei_0_dim * self.Gamma_SEI
+        self.beta_sei = self.a_typ * self.L_sei_0_dim * self.Gamma_SEI
         self.c_sei_init = self.c_ec_0_dim / self.c_sei_outer_scale
 
         # Initial conditions

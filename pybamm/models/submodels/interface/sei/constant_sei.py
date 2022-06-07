@@ -25,8 +25,8 @@ class ConstantSEI(BaseModel):
     **Extends:** :class:`pybamm.sei.BaseModel`
     """
 
-    def __init__(self, param, options=None, phase):
-        super().__init__(param, options=options, phase)
+    def __init__(self, param, options=None, phase="primary"):
+        super().__init__(param, options=options, phase=phase)
         if self.half_cell:
             self.reaction_loc = "interface"
         else:
