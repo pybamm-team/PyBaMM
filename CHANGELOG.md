@@ -2,6 +2,12 @@
 ## Features
 
 -   Added `__eq__` and `__hash__` methods for `Symbol` objects, using `.id` ([#1978](https://github.com/pybamm-team/PyBaMM/pull/1978))
+
+
+## Optimizations
+
+-   Stoichiometry inputs to OCP functions are now bounded between 1e-10 and 1-1e-10, with singularities at 0 and 1 so that OCP goes to +- infinity ([#2095](https://github.com/pybamm-team/PyBaMM/pull/2095))
+
 ## Breaking changes
 
 -   Changed some dictionary keys to `Symbol` instead of `Symbol.id` (internal change only, should not affect external facing functions) ([#1978](https://github.com/pybamm-team/PyBaMM/pull/1978))
