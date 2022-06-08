@@ -24,7 +24,6 @@ class TestUnaryOperators(TestCase):
         a = pybamm.InputParameter("a")
         absval = pybamm.AbsoluteValue(-a)
         self.assertEqual(absval.evaluate(inputs={"a": 10}), 10)
-        self.assertEqual(absval.evaluate(inputs={"a": 10}, known_evals={})[0], 10)
 
     def test_negation(self):
         a = pybamm.Symbol("a")
@@ -39,18 +38,18 @@ class TestUnaryOperators(TestCase):
         # Test broadcast gets switched
         broad_a = pybamm.PrimaryBroadcast(a, "test")
         neg_broad = -broad_a
-        self.assertEqual(neg_broad.id, pybamm.PrimaryBroadcast(nega, "test").id)
+        self.assertEqual(neg_broad, pybamm.PrimaryBroadcast(nega, "test"))
 
         broad_a = pybamm.FullBroadcast(a, "test", "test2")
         neg_broad = -broad_a
-        self.assertEqual(neg_broad.id, pybamm.FullBroadcast(nega, "test", "test2").id)
+        self.assertEqual(neg_broad, pybamm.FullBroadcast(nega, "test", "test2"))
 
         # Test recursion
         broad_a = pybamm.PrimaryBroadcast(pybamm.PrimaryBroadcast(a, "test"), "test2")
         neg_broad = -broad_a
         self.assertEqual(
-            neg_broad.id,
-            pybamm.PrimaryBroadcast(pybamm.PrimaryBroadcast(nega, "test"), "test2").id,
+            neg_broad,
+            pybamm.PrimaryBroadcast(pybamm.PrimaryBroadcast(nega, "test"), "test2"),
         )
 
     def test_absolute(self):
@@ -66,18 +65,18 @@ class TestUnaryOperators(TestCase):
         # Test broadcast gets switched
         broad_a = pybamm.PrimaryBroadcast(a, "test")
         abs_broad = abs(broad_a)
-        self.assertEqual(abs_broad.id, pybamm.PrimaryBroadcast(absa, "test").id)
+        self.assertEqual(abs_broad, pybamm.PrimaryBroadcast(absa, "test"))
 
         broad_a = pybamm.FullBroadcast(a, "test", "test2")
         abs_broad = abs(broad_a)
-        self.assertEqual(abs_broad.id, pybamm.FullBroadcast(absa, "test", "test2").id)
+        self.assertEqual(abs_broad, pybamm.FullBroadcast(absa, "test", "test2"))
 
         # Test recursion
         broad_a = pybamm.PrimaryBroadcast(pybamm.PrimaryBroadcast(a, "test"), "test2")
         abs_broad = abs(broad_a)
         self.assertEqual(
-            abs_broad.id,
-            pybamm.PrimaryBroadcast(pybamm.PrimaryBroadcast(absa, "test"), "test2").id,
+            abs_broad,
+            pybamm.PrimaryBroadcast(pybamm.PrimaryBroadcast(absa, "test"), "test2"),
         )
 
     def test_smooth_absolute_value(self):
@@ -189,13 +188,13 @@ class TestUnaryOperators(TestCase):
         # check div commutes with negation
         a = pybamm.Symbol("a", domain="test domain")
         div = pybamm.div(-pybamm.Gradient(a))
-        self.assertEqual(div.id, (-pybamm.Divergence(pybamm.Gradient(a))).id)
+        self.assertEqual(div, (-pybamm.Divergence(pybamm.Gradient(a))))
 
         div = pybamm.div(-a * pybamm.Gradient(a))
-        self.assertEqual(div.id, (-pybamm.Divergence(a * pybamm.Gradient(a))).id)
+        self.assertEqual(div, (-pybamm.Divergence(a * pybamm.Gradient(a))))
 
         # div = pybamm.div(a * -pybamm.Gradient(a))
-        # self.assertEqual(div.id, (-pybamm.Divergence(a * pybamm.Gradient(a))).id)
+        # self.assertEqual(div, (-pybamm.Divergence(a * pybamm.Gradient(a))))
 
     def test_integral(self):
         # space integral
@@ -441,25 +440,25 @@ class TestUnaryOperators(TestCase):
         self.assertEqual(grad.name, "grad")
         self.assertEqual(str(grad), "grad(a)")
 
-    def test_id(self):
+    def test_eq(self):
         a = pybamm.Scalar(4)
         un1 = pybamm.UnaryOperator("test", a)
         un2 = pybamm.UnaryOperator("test", a)
         un3 = pybamm.UnaryOperator("new test", a)
-        self.assertEqual(un1.id, un2.id)
-        self.assertNotEqual(un1.id, un3.id)
+        self.assertEqual(un1, un2)
+        self.assertNotEqual(un1, un3)
         a = pybamm.Scalar(4)
         un4 = pybamm.UnaryOperator("test", a)
-        self.assertEqual(un1.id, un4.id)
+        self.assertEqual(un1, un4)
         d = pybamm.Scalar(42)
         un5 = pybamm.UnaryOperator("test", d)
-        self.assertNotEqual(un1.id, un5.id)
+        self.assertNotEqual(un1, un5)
 
     def test_delta_function(self):
         a = pybamm.Symbol("a")
         delta_a = pybamm.DeltaFunction(a, "right", "some domain")
         self.assertEqual(delta_a.side, "right")
-        self.assertEqual(delta_a.child.id, a.id)
+        self.assertEqual(delta_a.child, a)
         self.assertEqual(delta_a.domain, ["some domain"])
         self.assertFalse(delta_a.evaluates_on_edges("primary"))
 
@@ -480,7 +479,7 @@ class TestUnaryOperators(TestCase):
         a = pybamm.Symbol("a", domain="some domain")
         boundary_a = pybamm.BoundaryOperator("boundary", a, "right")
         self.assertEqual(boundary_a.side, "right")
-        self.assertEqual(boundary_a.child.id, a.id)
+        self.assertEqual(boundary_a.child, a)
 
     def test_evaluates_on_edges(self):
         a = pybamm.StateVector(slice(0, 10), domain="test")
@@ -494,7 +493,7 @@ class TestUnaryOperators(TestCase):
     def test_boundary_value(self):
         a = pybamm.Scalar(1)
         boundary_a = pybamm.boundary_value(a, "right")
-        self.assertEqual(boundary_a.id, a.id)
+        self.assertEqual(boundary_a, a)
 
         boundary_broad_a = pybamm.boundary_value(
             pybamm.PrimaryBroadcast(a, ["negative electrode"]), "left"

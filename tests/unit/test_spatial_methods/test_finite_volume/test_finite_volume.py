@@ -108,7 +108,7 @@ class TestFiniteVolume(unittest.TestCase):
             # of boundary conditions
             # Dirichlet
             disc.bcs = {
-                var.id: {
+                var: {
                     "left": (pybamm.Scalar(0), "Dirichlet"),
                     "right": (pybamm.Scalar(1), "Dirichlet"),
                 }
@@ -117,7 +117,7 @@ class TestFiniteVolume(unittest.TestCase):
             eqn_disc.evaluate(None, y_test)
             # Neumann
             disc.bcs = {
-                var.id: {
+                var: {
                     "left": (pybamm.Scalar(0), "Neumann"),
                     "right": (pybamm.Scalar(1), "Neumann"),
                 }
@@ -126,7 +126,7 @@ class TestFiniteVolume(unittest.TestCase):
             eqn_disc.evaluate(None, y_test)
             # One of each
             disc.bcs = {
-                var.id: {
+                var: {
                     "left": (pybamm.Scalar(0), "Dirichlet"),
                     "right": (pybamm.Scalar(1), "Neumann"),
                 }
@@ -134,7 +134,7 @@ class TestFiniteVolume(unittest.TestCase):
             eqn_disc = disc.process_symbol(eqn)
             eqn_disc.evaluate(None, y_test)
             disc.bcs = {
-                var.id: {
+                var: {
                     "left": (pybamm.Scalar(0), "Neumann"),
                     "right": (pybamm.Scalar(1), "Dirichlet"),
                 }
@@ -251,7 +251,7 @@ class TestFiniteVolume(unittest.TestCase):
         # grad
         eqn = pybamm.grad(var)
         disc.bcs = {
-            var.id: {
+            var: {
                 "left": (pybamm.Scalar(1), "Dirichlet"),
                 "right": (pybamm.Scalar(2), "Dirichlet"),
             }
@@ -280,7 +280,7 @@ class TestFiniteVolume(unittest.TestCase):
         flux = pybamm.grad(var)
         eqn = pybamm.div(flux)
         disc.bcs = {
-            var.id: {
+            var: {
                 "left": (pybamm.Scalar(1), "Neumann"),
                 "right": (pybamm.Scalar(2), "Neumann"),
             }
@@ -293,7 +293,7 @@ class TestFiniteVolume(unittest.TestCase):
         flux = var * pybamm.grad(var)
         eqn = pybamm.div(flux)
         disc.bcs = {
-            var.id: {
+            var: {
                 "left": (pybamm.Scalar(1), "Neumann"),
                 "right": (pybamm.Scalar(2), "Neumann"),
             }
@@ -396,7 +396,7 @@ class TestFiniteVolume(unittest.TestCase):
         downwind = pybamm.downwind(var)
 
         disc.bcs = {
-            var.id: {
+            var: {
                 "left": (pybamm.Scalar(5), "Dirichlet"),
                 "right": (pybamm.Scalar(3), "Dirichlet"),
             }
@@ -427,7 +427,7 @@ class TestFiniteVolume(unittest.TestCase):
 
         # Set wrong boundary conditions and check error is raised
         disc.bcs = {
-            var.id: {
+            var: {
                 "left": (pybamm.Scalar(5), "Neumann"),
                 "right": (pybamm.Scalar(3), "Neumann"),
             }
@@ -460,7 +460,7 @@ class TestFiniteVolume(unittest.TestCase):
 
         # bcs (on each tab)
         boundary_conditions = {
-            var.id: {
+            var: {
                 "negative tab": (pybamm.Scalar(1), "Dirichlet"),
                 "positive tab": (pybamm.Scalar(0), "Neumann"),
             }
@@ -473,7 +473,7 @@ class TestFiniteVolume(unittest.TestCase):
 
         # bcs (one pos, one not tab)
         boundary_conditions = {
-            var.id: {
+            var: {
                 "no tab": (pybamm.Scalar(1), "Dirichlet"),
                 "positive tab": (pybamm.Scalar(0), "Dirichlet"),
             }
@@ -486,7 +486,7 @@ class TestFiniteVolume(unittest.TestCase):
 
         # bcs (one neg, one not tab)
         boundary_conditions = {
-            var.id: {
+            var: {
                 "negative tab": (pybamm.Scalar(1), "Neumann"),
                 "no tab": (pybamm.Scalar(0), "Neumann"),
             }
@@ -516,7 +516,7 @@ class TestFiniteVolume(unittest.TestCase):
 
         # bcs (on each tab)
         boundary_conditions = {
-            var.id: {
+            var: {
                 "negative tab": (pybamm.Scalar(1), "Dirichlet"),
                 "positive tab": (pybamm.Scalar(0), "Neumann"),
                 "no tab": (pybamm.Scalar(8), "Dirichlet"),
@@ -527,10 +527,10 @@ class TestFiniteVolume(unittest.TestCase):
         # check after disc that negative tab goes to left and positive tab goes
         # to right
         disc.process_symbol(grad_eqn)
-        self.assertEqual(disc.bcs[var.id]["left"][0].id, pybamm.Scalar(1).id)
-        self.assertEqual(disc.bcs[var.id]["left"][1], "Dirichlet")
-        self.assertEqual(disc.bcs[var.id]["right"][0].id, pybamm.Scalar(0).id)
-        self.assertEqual(disc.bcs[var.id]["right"][1], "Neumann")
+        self.assertEqual(disc.bcs[var]["left"][0], pybamm.Scalar(1))
+        self.assertEqual(disc.bcs[var]["left"][1], "Dirichlet")
+        self.assertEqual(disc.bcs[var]["right"][0], pybamm.Scalar(0))
+        self.assertEqual(disc.bcs[var]["right"][1], "Neumann")
 
 
 if __name__ == "__main__":

@@ -565,10 +565,10 @@ class ParameterValues:
 
         """
         try:
-            return self._processed_symbols[symbol.id]
+            return self._processed_symbols[symbol]
         except KeyError:
             processed_symbol = self._process_symbol(symbol)
-            self._processed_symbols[symbol.id] = processed_symbol
+            self._processed_symbols[symbol] = processed_symbol
 
             return processed_symbol
 
@@ -594,7 +594,7 @@ class ParameterValues:
             new_children = []
             for child in symbol.children:
                 if symbol.diff_variable is not None and any(
-                    x.id == symbol.diff_variable.id for x in child.pre_order()
+                    x == symbol.diff_variable for x in child.pre_order()
                 ):
                     # Wrap with NotConstant to avoid simplification,
                     # which would stop symbolic diff from working properly

@@ -153,7 +153,7 @@ class SpatialMethod:
 
         boundary_conditions : dict
             The boundary conditions of the model
-            ({symbol.id: {"left": left bc, "right": right bc}})
+            ({symbol: {"left": left bc, "right": right bc}})
 
         Returns
         -------
@@ -175,7 +175,7 @@ class SpatialMethod:
             The discretised symbol of the correct size
         boundary_conditions : dict
             The boundary conditions of the model
-            ({symbol.id: {"left": left bc, "right": right bc}})
+            ({symbol: {"left": left bc, "right": right bc}})
 
         Returns
         -------
@@ -197,7 +197,7 @@ class SpatialMethod:
             The discretised symbol of the correct size
         boundary_conditions : dict
             The boundary conditions of the model
-            ({symbol.id: {"left": left bc, "right": right bc}})
+            ({symbol: {"left": left bc, "right": right bc}})
 
         Returns
         -------
@@ -219,7 +219,7 @@ class SpatialMethod:
             The discretised symbol of the correct size
         boundary_conditions : dict
             The boundary conditions of the model
-            ({symbol.id: {"left": left bc, "right": right bc}})
+            ({symbol: {"left": left bc, "right": right bc}})
 
         Returns
         -------
@@ -392,7 +392,7 @@ class SpatialMethod:
             calculating the mass matrix.
         boundary_conditions : dict
             The boundary conditions of the model
-            ({symbol.id: {"left": left bc, "right": right bc}})
+            ({symbol: {"left": left bc, "right": right bc}})
 
         Returns
         -------

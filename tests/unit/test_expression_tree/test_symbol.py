@@ -145,17 +145,17 @@ class TestSymbol(unittest.TestCase):
 
         # binary - number and symbol
         self.assertIsInstance(3 + b, pybamm.Addition)
-        self.assertEqual((3 + b).children[1].id, b.id)
+        self.assertEqual((3 + b).children[1], b)
         self.assertIsInstance(3 - b, pybamm.Subtraction)
-        self.assertEqual((3 - b).children[1].id, b.id)
+        self.assertEqual((3 - b).children[1], b)
         self.assertIsInstance(3 * b, pybamm.Multiplication)
-        self.assertEqual((3 * b).children[1].id, b.id)
+        self.assertEqual((3 * b).children[1], b)
         self.assertIsInstance(3 @ b, pybamm.MatrixMultiplication)
-        self.assertEqual((3 @ b).children[1].id, b.id)
+        self.assertEqual((3 @ b).children[1], b)
         self.assertIsInstance(3 / b, pybamm.Division)
-        self.assertEqual((3 / b).children[1].id, b.id)
+        self.assertEqual((3 / b).children[1], b)
         self.assertIsInstance(3 ** b, pybamm.Power)
-        self.assertEqual((3 ** b).children[1].id, b.id)
+        self.assertEqual((3 ** b).children[1], b)
 
         # error raising
         with self.assertRaisesRegex(
@@ -405,8 +405,8 @@ class TestSymbol(unittest.TestCase):
         summ = a + b
 
         a_orp, b_orp = summ.orphans
-        self.assertEqual(a.id, a_orp.id)
-        self.assertEqual(b.id, b_orp.id)
+        self.assertEqual(a, a_orp)
+        self.assertEqual(b, b_orp)
 
     def test_shape(self):
         scal = pybamm.Scalar(1)

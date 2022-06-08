@@ -30,9 +30,7 @@ class TestLeadAcidFull(unittest.TestCase):
         optimtest = tests.OptimisationsTest(model)
 
         original = optimtest.evaluate_model()
-        using_known_evals = optimtest.evaluate_model(use_known_evals=True)
         to_python = optimtest.evaluate_model(to_python=True)
-        np.testing.assert_array_almost_equal(original, using_known_evals)
         np.testing.assert_array_almost_equal(original, to_python)
 
     def test_set_up(self):
@@ -71,15 +69,6 @@ class TestLeadAcidFullSurfaceForm(unittest.TestCase):
         model = pybamm.lead_acid.Full(options)
         modeltest = tests.StandardModelTest(model)
         modeltest.test_all()
-
-    def test_optimisations(self):
-        options = {"surface form": "differential"}
-        model = pybamm.lead_acid.Full(options)
-        optimtest = tests.OptimisationsTest(model)
-
-        original = optimtest.evaluate_model()
-        using_known_evals = optimtest.evaluate_model(use_known_evals=True)
-        np.testing.assert_array_almost_equal(original, using_known_evals)
 
     def test_set_up(self):
         options = {"surface form": "differential"}

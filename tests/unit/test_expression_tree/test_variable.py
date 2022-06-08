@@ -26,14 +26,14 @@ class TestVariable(unittest.TestCase):
         self.assertIsInstance(a.diff(b), pybamm.Scalar)
         self.assertEqual(a.diff(b).evaluate(), 0)
 
-    def test_variable_id(self):
+    def test_variable_eq(self):
         a1 = pybamm.Variable("a", domain=["negative electrode"])
         a2 = pybamm.Variable("a", domain=["negative electrode"])
-        self.assertEqual(a1.id, a2.id)
+        self.assertEqual(a1, a2)
         a3 = pybamm.Variable("b", domain=["negative electrode"])
         a4 = pybamm.Variable("a", domain=["positive electrode"])
-        self.assertNotEqual(a1.id, a3.id)
-        self.assertNotEqual(a1.id, a4.id)
+        self.assertNotEqual(a1, a3)
+        self.assertNotEqual(a1, a4)
 
     def test_variable_bounds(self):
         var = pybamm.Variable("var")
@@ -69,11 +69,11 @@ class TestVariableDot(unittest.TestCase):
     def test_variable_id(self):
         a1 = pybamm.VariableDot("a", domain=["negative electrode"])
         a2 = pybamm.VariableDot("a", domain=["negative electrode"])
-        self.assertEqual(a1.id, a2.id)
+        self.assertEqual(a1, a2)
         a3 = pybamm.VariableDot("b", domain=["negative electrode"])
         a4 = pybamm.VariableDot("a", domain=["positive electrode"])
-        self.assertNotEqual(a1.id, a3.id)
-        self.assertNotEqual(a1.id, a4.id)
+        self.assertNotEqual(a1, a3)
+        self.assertNotEqual(a1, a4)
 
     def test_variable_diff(self):
         a = pybamm.VariableDot("a")
