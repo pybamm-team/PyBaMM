@@ -6,10 +6,15 @@ import pybamm
 pybamm.set_logging_level("INFO")
 
 # load models
+options = {
+    "particle phases": ("2", "1"),
+    "open circuit potential": (("single", "current sigmoid"), "single"),
+}
 models = [
-    pybamm.lithium_ion.SPM({"particle phases": ("2", "1")}),
-    pybamm.lithium_ion.SPMe({"particle phases": ("2", "1")}),
-    pybamm.lithium_ion.DFN({"particle phases": ("2", "1")}),
+    # pybamm.lithium_ion.SPM(options),
+    # pybamm.lithium_ion.SPMe(options),
+    pybamm.lithium_ion.BasicDFNComposite(),
+    pybamm.lithium_ion.DFN(options),
     # pybamm.lithium_ion.NewmanTobias(),
 ]
 
@@ -23,4 +28,4 @@ for model in models:
     sims.append(sim)
 
 # plot
-pybamm.dynamic_plot(sims)
+pybamm.dynamic_plot(sims, ["Terminal voltage [V]"])

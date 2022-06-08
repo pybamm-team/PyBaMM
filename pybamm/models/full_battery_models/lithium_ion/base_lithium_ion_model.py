@@ -55,32 +55,33 @@ class BaseModel(pybamm.BaseBatteryModel):
 
         self.set_standard_output_variables()
 
-        self.set_external_circuit_submodel()
-        self.set_porosity_submodel()
-        self.set_interface_utilisation_submodel()
-        self.set_crack_submodel()
-        self.set_active_material_submodel()
-        self.set_transport_efficiency_submodels()
-        self.set_convection_submodel()
-        self.set_open_circuit_potential_submodel()
-        self.set_intercalation_kinetics_submodel()
-        self.set_other_reaction_submodels_to_zero()
-        self.set_particle_submodel()
-        self.set_solid_submodel()
-        self.set_electrolyte_submodel()
-        self.set_thermal_submodel()
-        self.set_current_collector_submodel()
+        if not isinstance(self, (pybamm.lithium_ion.BasicDFNComposite)):
+            self.set_external_circuit_submodel()
+            self.set_porosity_submodel()
+            self.set_interface_utilisation_submodel()
+            self.set_crack_submodel()
+            self.set_active_material_submodel()
+            self.set_transport_efficiency_submodels()
+            self.set_convection_submodel()
+            self.set_open_circuit_potential_submodel()
+            self.set_intercalation_kinetics_submodel()
+            self.set_other_reaction_submodels_to_zero()
+            self.set_particle_submodel()
+            self.set_solid_submodel()
+            self.set_electrolyte_submodel()
+            self.set_thermal_submodel()
+            self.set_current_collector_submodel()
 
-        self.set_sei_submodel()
-        self.set_lithium_plating_submodel()
-        self.set_total_kinetics_submodel()
+            self.set_sei_submodel()
+            self.set_lithium_plating_submodel()
+            self.set_total_kinetics_submodel()
 
-        if self.half_cell:
-            # This also removes "negative electrode" submodels, so should be done last
-            self.set_li_metal_counter_electrode_submodels()
+            if self.half_cell:
+                # This also removes "negative electrode" submodels, so should be done last
+                self.set_li_metal_counter_electrode_submodels()
 
-        if build:
-            self.build_model()
+            if build:
+                self.build_model()
 
     @property
     def default_parameter_values(self):
@@ -245,12 +246,22 @@ class BaseModel(pybamm.BaseBatteryModel):
         self.summary_variables = summary_variables
 
     def set_open_circuit_potential_submodel(self):
-        for domain in ["Negative", "Positive"]:
-            self.submodels[
-                f"{domain.lower()} open circuit potential"
-            ] = pybamm.open_circuit_potential.SingleOpenCircuitPotential(
-                self.param, domain, "lithium-ion main", self.options
+        for domain in ["negative", "positive"]:
+            phases = self.options.phase_number_to_names(
+                getattr(self.options, domain)["particle phases"]
             )
+            domain_options = getattr(self.options, domain)
+            for phase in phases:
+                ocp_option = getattr(domain_options, phase)["open circuit potential"]
+                if ocp_option == "single":
+                    ocp_model = pybamm.open_circuit_potential.SingleOpenCircuitPotential
+                elif ocp_option == "current sigmoid":
+                    ocp_model = (
+                        pybamm.open_circuit_potential.CurrentSigmoidOpenCircuitPotential
+                    )
+                self.submodels[f"{domain} {phase} open circuit potential"] = ocp_model(
+                    self.param, domain, "lithium-ion main", self.options, phase
+                )
 
     def set_sei_submodel(self):
         if self.half_cell:
@@ -294,7 +305,7 @@ class BaseModel(pybamm.BaseBatteryModel):
             self.submodels[
                 f"{domain.lower()} oxygen open circuit potential"
             ] = pybamm.open_circuit_potential.SingleOpenCircuitPotential(
-                self.param, domain, "lithium-ion oxygen", self.options
+                self.param, domain, "lithium-ion oxygen", self.options, "primary"
             )
 
     def set_crack_submodel(self):

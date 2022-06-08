@@ -5,7 +5,9 @@ Name [units],Value,Reference,Notes
 Maximum concentration in negative electrode [mol.m-3],278000,,
 Initial concentration in negative electrode [mol.m-3],275220,,
 Negative electrode diffusivity [m2.s-1],1.67E-14,,
-Negative electrode OCP [V],[function]silicon_ocp_Mark2016,,
+Negative electrode OCP [V],0,,include this so that the graphite OCP is labeled "Primary"
+Negative electrode lithiation OCP [V],[function]silicon_ocp_lithiation_Mark2016,,
+Negative electrode delithiation OCP [V],[function]silicon_ocp_delithiation_Mark2016,,
 ,,,
 # Microstructure,,,
 Negative electrode active material volume fraction,0.015,,0.75*0.02

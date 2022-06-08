@@ -78,7 +78,7 @@ class BasicDFNComposite(BaseModel):
         # domains
         c_s_n_p1 = pybamm.Variable(
             "Negative particle concentration of phase 1",
-            domain="negative particle",
+            domain="negative primary particle",
             auxiliary_domains={"secondary": "negative electrode"},
         )
         c_s_n_p2 = pybamm.Variable(
@@ -117,7 +117,11 @@ class BasicDFNComposite(BaseModel):
         eps = pybamm.concatenation(eps_n, eps_s, eps_p)
 
         # Active material volume fraction (eps + eps_s + eps_inactive = 1)
-        eps_s_n = pybamm.Parameter("Negative electrode active material volume fraction")
+        eps_s_n = pybamm.Parameter(
+            "Primary: Negative electrode active material volume fraction"
+        ) + pybamm.Parameter(
+            "Secondary: Negative electrode active material volume fraction"
+        )
         eps_s_p = pybamm.Parameter("Positive electrode active material volume fraction")
 
         # Tortuosity
@@ -125,23 +129,35 @@ class BasicDFNComposite(BaseModel):
             eps_n ** param.n.b_e, eps_s ** param.s.b_e, eps_p ** param.p.b_e
         )
 
+        # Open circuit potentials
+        c_s_surf_n_p1 = pybamm.surf(c_s_n_p1)
+        ocp_n_p1 = param.n.prim.U(c_s_surf_n_p1, T)
+
+        c_s_surf_n_p2 = pybamm.surf(c_s_n_p2)
+        k = 100
+        m_lith = pybamm.sigmoid(i_cell, 0, k)  # for lithation (current < 0)
+        m_delith = 1 - m_lith  # for delithiation (current > 0)
+        U_lith = self.param.n.sec.U(c_s_surf_n_p2, T, "lithiation")
+        U_delith = self.param.n.sec.U(c_s_surf_n_p2, T, "delithiation")
+        ocp_n_p2 = m_lith * U_lith + m_delith * U_delith
+
+        c_s_surf_p = pybamm.surf(c_s_p)
+        ocp_p = param.p.prim.U(c_s_surf_p, T)
+
         # Interfacial reactions
         # Surf takes the surface value of a variable, i.e. its boundary value on the
         # right side. This is also accessible via `boundary_value(x, "right")`, with
         # "left" providing the boundary value of the left side
-        c_s_surf_n_p1 = pybamm.surf(c_s_n_p1)
         j0_n_p1 = (
             param.n.prim.gamma
             * param.n.prim.j0(c_e_n, c_s_surf_n_p1, T)
             / param.n.prim.C_r
         )
-        ocp_n_p1 = param.n.prim.U(c_s_surf_n_p1, T)
         j_n_p1 = (
             2
             * j0_n_p1
             * pybamm.sinh(param.n.prim.ne / 2 * (phi_s_n - phi_e_n - ocp_n_p1))
         )
-        c_s_surf_n_p2 = pybamm.surf(c_s_n_p2)
         j0_n_p2 = (
             param.n.sec.gamma
             * param.n.sec.j0(c_e_n, c_s_surf_n_p2, T)
@@ -154,14 +170,12 @@ class BasicDFNComposite(BaseModel):
             * pybamm.sinh(param.n.sec.ne / 2 * (phi_s_n - phi_e_n - ocp_n_p2))
         )
         j_n = j_n_p1 + j_n_p2
-        c_s_surf_p = pybamm.surf(c_s_p)
         j0_p = (
             param.p.prim.gamma
             * param.p.prim.j0(c_e_p, c_s_surf_p, T)
             / param.p.prim.C_r
         )
         j_s = pybamm.PrimaryBroadcast(0, "separator")
-        ocp_p = param.p.prim.U(c_s_surf_p, T)
         j_p = (
             2
             * j0_p

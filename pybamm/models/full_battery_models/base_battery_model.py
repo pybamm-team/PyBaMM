@@ -211,6 +211,7 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                 "reaction-driven",
                 "stress and reaction-driven",
             ],
+            "open circuit potential": ["single", "current sigmoid"],
             "operating mode": [
                 "current",
                 "voltage",
@@ -481,6 +482,7 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                                 "intercalation kinetics",
                                 "interface utilisation",
                                 "loss of active material",
+                                "open circuit potential",
                                 "particle mechanics",
                                 "particle",
                                 "particle phases",
@@ -497,7 +499,14 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                             "Values must be strings or (in some cases) "
                             "2-tuples of strings"
                         )
+                # flatten value
+                value_list = []
                 for val in value:
+                    if isinstance(val, tuple):
+                        value_list.extend(val)
+                    else:
+                        value_list.append(val)
+                for val in value_list:
                     if option == "timescale":
                         if not (val == "default" or isinstance(val, numbers.Number)):
                             raise pybamm.OptionError(
@@ -563,6 +572,29 @@ class BatteryModelDomainOptions(dict):
             return options
         else:
             # 2-tuple, first is negative domain, second is positive domain
+            return options[self.index]
+
+    @property
+    def primary(self):
+        return BatteryModelPhaseOptions(self, 0)
+
+    @property
+    def secondary(self):
+        return BatteryModelPhaseOptions(self, 1)
+
+
+class BatteryModelPhaseOptions(dict):
+    def __init__(self, domain_options, index):
+        super().__init__(domain_options.items())
+        self.domain_options = domain_options
+        self.index = index
+
+    def __getitem__(self, key):
+        options = self.domain_options.__getitem__(key)
+        if isinstance(options, str):
+            return options
+        else:
+            # 2-tuple, first is primary phase, second is secondary phase
             return options[self.index]
 
 
