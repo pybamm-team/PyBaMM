@@ -72,6 +72,7 @@ class SEIGrowth(BaseModel):
         Domain = self.domain
         domain = Domain.lower()
         phase_name = self.phase_name
+        pre = self.phase_prefactor
         # delta_phi = phi_s - phi_e
         if self.reaction_loc == "interface":
             delta_phi = variables[
@@ -145,8 +146,8 @@ class SEIGrowth(BaseModel):
 
             variables.update(
                 {
-                    f"{phase_name.capitalize()}EC surface concentration": c_ec,
-                    f"{phase_name.capitalize()}EC surface concentration [mol.m-3]": c_ec * c_ec_scale,
+                    f"{pre}EC surface concentration": c_ec,
+                    f"{pre}EC surface concentration [mol.m-3]": c_ec * c_ec_scale,
                     f"X-averaged {phase_name}EC surface concentration": c_ec_av,
                     f"X-averaged {phase_name}EC surface concentration [mol.m-3]": c_ec_av
                     * c_ec_scale,
