@@ -1,13 +1,11 @@
 import pybamm
 import numpy as np
 
-R = 1e-5
-
 
 def time_create_expression():
     global model
     model = pybamm.BaseModel()
-
+    global R
     R = pybamm.Parameter("Particle radius [m]")
     D = pybamm.Parameter("Diffusion coefficient [m2.s-1]")
     j = pybamm.Parameter("Interfacial current density [A.m-2]")
