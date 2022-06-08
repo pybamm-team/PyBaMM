@@ -225,14 +225,30 @@ class BaseModel(pybamm.BaseBatteryModel):
         else:
             reaction_loc = "full electrode"
 
-        if self.options["SEI"] == "none":
-            self.submodels["sei"] = pybamm.sei.NoSEI(self.param, self.options)
-        elif self.options["SEI"] == "constant":
-            self.submodels["sei"] = pybamm.sei.ConstantSEI(self.param, self.options)
-        else:
-            self.submodels["sei"] = pybamm.sei.SEIGrowth(
-                self.param, reaction_loc, self.options
-            )
+        # if self.options["SEI"] == "none":
+        #     self.submodels["sei"] = pybamm.sei.NoSEI(self.param, self.options)
+        # elif self.options["SEI"] == "constant":
+        #     self.submodels["sei"] = pybamm.sei.ConstantSEI(self.param, self.options)
+        # else:
+        #     self.submodels["sei"] = pybamm.sei.SEIGrowth(
+        #         self.param, reaction_loc, self.options
+        #     )
+            
+        phases = self.options.phase_number_to_names(
+            getattr(self.options, domain)["particle phases"]
+        )
+        pref = self.phase_prefactor
+        
+        for phase in phases:
+            if self.options["SEI"] == "none":
+                submod = pybamm.sei.NoSEI(self.param, self.options, phase)
+            elif self.options["SEI"] == "constant":
+                submod = pybamm.sei.ConstantSEI(self.param, self.options, phase)
+            else:
+                submod = pybamm.sei.SEIGrowth(
+                    self.param, reaction_loc, self.options, phase
+                )
+            self.submodels[f"{pref}sei"] = submod #Jason-where is the definition of submodels
 
     def set_lithium_plating_submodel(self):
         if self.options["lithium plating"] == "none":
