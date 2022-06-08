@@ -102,24 +102,11 @@ class BinaryOperator(pybamm.Symbol):
         """
         return self._binary_evaluate(left, right)
 
-    def evaluate(self, t=None, y=None, y_dot=None, inputs=None, known_evals=None):
+    def evaluate(self, t=None, y=None, y_dot=None, inputs=None):
         """See :meth:`pybamm.Symbol.evaluate()`."""
-        if known_evals is not None:
-            id = self.id
-            try:
-                return known_evals[id], known_evals
-            except KeyError:
-                left, known_evals = self.left.evaluate(t, y, y_dot, inputs, known_evals)
-                right, known_evals = self.right.evaluate(
-                    t, y, y_dot, inputs, known_evals
-                )
-                value = self._binary_evaluate(left, right)
-                known_evals[id] = value
-                return value, known_evals
-        else:
-            left = self.left.evaluate(t, y, y_dot, inputs)
-            right = self.right.evaluate(t, y, y_dot, inputs)
-            return self._binary_evaluate(left, right)
+        left = self.left.evaluate(t, y, y_dot, inputs)
+        right = self.right.evaluate(t, y, y_dot, inputs)
+        return self._binary_evaluate(left, right)
 
     def _evaluate_for_shape(self):
         """See :meth:`pybamm.Symbol.evaluate_for_shape()`."""
@@ -181,7 +168,7 @@ class Power(BinaryOperator):
         diff = exponent * (base ** (exponent - 1)) * base.diff(variable)
         # derivative if variable is in the exponent (rare, check separately to avoid
         # unecessarily big tree)
-        if any(variable.id == x.id for x in exponent.pre_order()):
+        if any(variable == x for x in exponent.pre_order()):
             diff += (base ** exponent) * pybamm.log(base) * exponent.diff(variable)
         return diff
 
@@ -581,7 +568,7 @@ class Modulo(BinaryOperator):
         diff = left.diff(variable)
         # derivative if variable is in the right term (rare, check separately to avoid
         # unecessarily big tree)
-        if any(variable.id == x.id for x in right.pre_order()):
+        if any(variable == x for x in right.pre_order()):
             diff += -pybamm.Floor(left / right) * right.diff(variable)
         return diff
 
@@ -850,7 +837,7 @@ def simplified_addition(left, right):
     elif (
         isinstance(left, MatrixMultiplication)
         and isinstance(right, MatrixMultiplication)
-        and left.right.id == right.right.id
+        and left.right == right.right
     ):
         l_left, l_right = left.orphans
         r_left = right.orphans[0]
@@ -955,7 +942,7 @@ def simplified_subtraction(left, right):
         return pybamm.simplify_if_constant(Subtraction(left, right))
 
     # a symbol minus itself is 0s of the same shape
-    if left.id == right.id:
+    if left == right:
         return pybamm.zeros_like(left)
 
     if isinstance(right, pybamm.Addition) and left.is_constant():
@@ -1185,7 +1172,7 @@ def simplified_division(left, right):
         return left
 
     # a symbol divided by itself is 1s of the same shape
-    if left.id == right.id:
+    if left == right:
         return pybamm.ones_like(left)
 
     # anything multiplied by a matrix one returns itself if

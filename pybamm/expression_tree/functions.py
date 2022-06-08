@@ -70,7 +70,7 @@ class Function(pybamm.Symbol):
 
     def diff(self, variable):
         """See :meth:`pybamm.Symbol.diff()`."""
-        if variable.id == self.id:
+        if variable == self:
             return pybamm.Scalar(1)
         else:
             children = self.orphans
@@ -78,7 +78,7 @@ class Function(pybamm.Symbol):
             for i, child in enumerate(self.children):
                 # if variable appears in the function, differentiate
                 # function, and apply chain rule
-                if variable.id in [symbol.id for symbol in child.pre_order()]:
+                if variable in child.pre_order():
                     partial_derivatives[i] = self._function_diff(
                         children, i
                     ) * child.diff(variable)
@@ -142,22 +142,12 @@ class Function(pybamm.Symbol):
 
         return jacobian
 
-    def evaluate(self, t=None, y=None, y_dot=None, inputs=None, known_evals=None):
+    def evaluate(self, t=None, y=None, y_dot=None, inputs=None):
         """See :meth:`pybamm.Symbol.evaluate()`."""
-        if known_evals is not None:
-            if self.id not in known_evals:
-                evaluated_children = [None] * len(self.children)
-                for i, child in enumerate(self.children):
-                    evaluated_children[i], known_evals = child.evaluate(
-                        t, y, y_dot, inputs, known_evals=known_evals
-                    )
-                known_evals[self.id] = self._function_evaluate(evaluated_children)
-            return known_evals[self.id], known_evals
-        else:
-            evaluated_children = [
-                child.evaluate(t, y, y_dot, inputs) for child in self.children
-            ]
-            return self._function_evaluate(evaluated_children)
+        evaluated_children = [
+            child.evaluate(t, y, y_dot, inputs) for child in self.children
+        ]
+        return self._function_evaluate(evaluated_children)
 
     def _evaluates_on_edges(self, dimension):
         """See :meth:`pybamm.Symbol._evaluates_on_edges()`."""
