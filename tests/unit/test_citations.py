@@ -149,28 +149,28 @@ class TestCitations(unittest.TestCase):
 
         citations._reset()
         self.assertNotIn("BrosaPlanella2022", citations._papers_to_cite)
-        pybamm.lithium_ion.SPM(build=False, options={"sei": "none"})
-        pybamm.lithium_ion.SPM(build=False, options={"sei": "constant"})
-        pybamm.lithium_ion.SPMe(build=False, options={"sei": "none"})
-        pybamm.lithium_ion.SPMe(build=False, options={"sei": "constant"})
+        pybamm.lithium_ion.SPM(build=False, options={"SEI": "none"})
+        pybamm.lithium_ion.SPM(build=False, options={"SEI": "constant"})
+        pybamm.lithium_ion.SPMe(build=False, options={"SEI": "none"})
+        pybamm.lithium_ion.SPMe(build=False, options={"SEI": "constant"})
         self.assertNotIn("BrosaPlanella2022", citations._papers_to_cite)
 
-        pybamm.lithium_ion.SPM(build=False, options={"sei": "ec reaction limited"})
-        self.assertIn("BrosaPlanella2021", citations._papers_to_cite)
+        pybamm.lithium_ion.SPM(build=False, options={"SEI": "ec reaction limited"})
+        self.assertIn("BrosaPlanella2022", citations._papers_to_cite)
         citations._reset()
 
-        pybamm.lithium_ion.SPMe(build=False, options={"sei": "ec reaction limited"})
-        self.assertIn("BrosaPlanella2021", citations._papers_to_cite)
+        pybamm.lithium_ion.SPMe(build=False, options={"SEI": "ec reaction limited"})
+        self.assertIn("BrosaPlanella2022", citations._papers_to_cite)
         citations._reset()
 
         pybamm.lithium_ion.SPM(build=False, options={"lithium plating": "irreversible"})
-        self.assertIn("BrosaPlanella2021", citations._papers_to_cite)
+        self.assertIn("BrosaPlanella2022", citations._papers_to_cite)
         citations._reset()
 
         pybamm.lithium_ion.SPMe(
             build=False, options={"lithium plating": "irreversible"}
         )
-        self.assertIn("BrosaPlanella2021", citations._papers_to_cite)
+        self.assertIn("BrosaPlanella2022", citations._papers_to_cite)
         citations._reset()
 
     def test_newman_tobias(self):
