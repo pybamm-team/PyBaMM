@@ -47,7 +47,6 @@
   doi = {},
 }
 
-
 @article{Chen2020,
   author = {Chen, Chang-Hui and Brosa Planella, Ferran and O'Regan, Kieran and Gastol, Dominika and Widanage, W. Dhammika and Kendrick, Emma},
   title = {{Development of Experimental Techniques for Parameterization of Multi-scale Lithium-ion Battery Models}},
