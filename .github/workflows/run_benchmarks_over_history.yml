@@ -33,6 +33,7 @@ jobs:
         # Not required when worklow trigerred
         # on develop, but useful when
         # experimenting/developing on another branch.
+        if: github.ref != 'refs/heads/develop'
         run: |
           git fetch origin develop:develop
       - name: Run benchmarks
