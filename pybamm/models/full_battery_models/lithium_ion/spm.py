@@ -75,6 +75,12 @@ class SPM(BaseModel):
         if self.__class__ != "MPM":
             pybamm.citations.register("Marquis2019")
 
+        if (
+            options["sei"] not in ["none", "constant"]
+            or options["lithium plating"] != "none"
+        ):
+            pybamm.citations.register("BrosaPlanella2022")
+
     def set_convection_submodel(self):
 
         self.submodels[
