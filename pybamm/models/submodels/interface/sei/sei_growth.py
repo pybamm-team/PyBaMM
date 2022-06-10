@@ -72,7 +72,7 @@ class SEIGrowth(BaseModel):
         Domain = self.domain
         domain = Domain.lower()
         phase_name = self.phase_name
-        pre = self.phase_prefactor
+        # pre = self.phase_prefactor
         # delta_phi = phi_s - phi_e
         if self.reaction_loc == "interface":
             delta_phi = variables[

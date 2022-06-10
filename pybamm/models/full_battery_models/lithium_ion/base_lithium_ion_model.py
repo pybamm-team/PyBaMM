@@ -52,7 +52,7 @@ class BaseModel(pybamm.BaseBatteryModel):
         phases_n = int(getattr(self.options, "negative")["particle phases"])
         if not self.half_cell and phases_n >= 2:
             self._length_scales["negative secondary particle"] = self.param.n.sec.R_typ
-
+            
         self.set_standard_output_variables()
 
     @property
@@ -233,13 +233,25 @@ class BaseModel(pybamm.BaseBatteryModel):
         #     self.submodels["sei"] = pybamm.sei.SEIGrowth(
         #         self.param, reaction_loc, self.options
         #     )
-            
         phases = self.options.phase_number_to_names(
-            getattr(self.options, domain)["particle phases"]
-        )
-        pref = self.phase_prefactor
+            getattr(self.options, "negative")["particle phases"]
+            )
         
         for phase in phases:
+            if (
+                phase == "primary" and getattr(self.options, "negative")["particle phases"]
+                == "1"
+            ):
+                # Only one phase, no need to distinguish between
+                # "primary" and "secondary"
+                self.phase_prefactor = ""
+            else:
+                # add a space so that we can use "" or (e.g.) "primary " interchangeably
+                # when naming variables
+                self.phase_prefactor = phase.capitalize() + ": "
+                
+            pref = self.phase_prefactor
+            
             if self.options["SEI"] == "none":
                 submod = pybamm.sei.NoSEI(self.param, self.options, phase)
             elif self.options["SEI"] == "constant":
