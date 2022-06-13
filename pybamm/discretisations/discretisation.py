@@ -10,8 +10,8 @@ from scipy.sparse.linalg import inv
 
 def has_bc_of_form(symbol, side, bcs, form):
 
-    if symbol.id in bcs:
-        if bcs[symbol.id][side][1] == form:
+    if symbol in bcs:
+        if bcs[symbol][side][1] == form:
             return True
         else:
             return False
@@ -292,7 +292,7 @@ class Discretisation(object):
                         for domain_mesh in mesh:
                             end += domain_mesh.npts_for_broadcast_to_nodes
                         # Add to slices
-                        y_slices[child.id].append(slice(start_, end))
+                        y_slices[child].append(slice(start_, end))
                         y_slices_explicit[child].append(slice(start_, end))
                         # Increment start_
                         start_ = end
@@ -300,7 +300,7 @@ class Discretisation(object):
                 end += self._get_variable_size(variable)
 
             # Add to slices
-            y_slices[variable.id].append(slice(start, end))
+            y_slices[variable].append(slice(start, end))
             y_slices_explicit[variable].append(slice(start, end))
             # Add to bounds
             lower_bounds.extend([variable.bounds[0]] * (end - start))
@@ -363,7 +363,7 @@ class Discretisation(object):
             # Find the name in the model variables
             # Look up dictionary key based on value
             try:
-                idx = [x.id for x in model.variables.values()].index(var.id)
+                idx = list(model.variables.values()).index(var)
             except ValueError:
                 raise ValueError(
                     """
@@ -423,8 +423,7 @@ class Discretisation(object):
                 left_symbol_disc, right_symbol_disc, left_mesh, right_mesh
             )
 
-        # bc_key_ids = [key.id for key in list(model.boundary_conditions.keys())]
-        bc_key_ids = list(self.bcs.keys())
+        bc_keys = list(self.bcs.keys())
 
         internal_bcs = {}
         for var in model.boundary_conditions.keys():
@@ -434,24 +433,24 @@ class Discretisation(object):
                 first_child = children[0]
                 next_child = children[1]
 
-                lbc = self.bcs[var.id]["left"]
+                lbc = self.bcs[var]["left"]
                 rbc = (boundary_gradient(first_child, next_child), "Neumann")
 
-                if first_child.id not in bc_key_ids:
-                    internal_bcs.update({first_child.id: {"left": lbc, "right": rbc}})
+                if first_child not in bc_keys:
+                    internal_bcs.update({first_child: {"left": lbc, "right": rbc}})
 
                 for current_child, next_child in zip(children[1:-1], children[2:]):
                     lbc = rbc
                     rbc = (boundary_gradient(current_child, next_child), "Neumann")
-                    if current_child.id not in bc_key_ids:
+                    if current_child not in bc_keys:
                         internal_bcs.update(
-                            {current_child.id: {"left": lbc, "right": rbc}}
+                            {current_child: {"left": lbc, "right": rbc}}
                         )
 
                 lbc = rbc
-                rbc = self.bcs[var.id]["right"]
-                if children[-1].id not in bc_key_ids:
-                    internal_bcs.update({children[-1].id: {"left": lbc, "right": rbc}})
+                rbc = self.bcs[var]["right"]
+                if children[-1] not in bc_keys:
+                    internal_bcs.update({children[-1]: {"left": lbc, "right": rbc}})
 
         self.bcs.update(internal_bcs)
 
@@ -504,7 +503,7 @@ class Discretisation(object):
         # process and set pybamm.variables first incase required
         # in discrisation of other boundary conditions
         for key, bcs in model.boundary_conditions.items():
-            processed_bcs[key.id] = {}
+            processed_bcs[key] = {}
 
             # check if the boundary condition at the origin for sphere domains is other
             # than no flux
@@ -528,7 +527,7 @@ class Discretisation(object):
                 eqn, typ = bc
                 pybamm.logger.debug("Discretise {} ({} bc)".format(key, side))
                 processed_eqn = self.process_symbol(eqn)
-                processed_bcs[key.id][side] = (processed_eqn, typ)
+                processed_bcs[key][side] = (processed_eqn, typ)
 
         return processed_bcs
 
@@ -661,7 +660,7 @@ class Discretisation(object):
         model_variables = model.rhs.keys()
         model_slices = []
         for v in model_variables:
-            model_slices.append(self.y_slices[v.id][0])
+            model_slices.append(self.y_slices[v][0])
         sorted_model_variables = [
             v for _, v in sorted(zip(model_slices, model_variables))
         ]
@@ -792,8 +791,6 @@ class Discretisation(object):
             if np.prod(eqn.shape_for_testing) == 1 and not isinstance(eqn_key, str):
                 eqn = pybamm.FullBroadcast(eqn, broadcast_domains=eqn_key.domains)
 
-            # note we are sending in the key.id here so we don't have to
-            # keep calling .id
             pybamm.logger.debug("Discretise {!r}".format(eqn_key))
 
             processed_eqn = self.process_symbol(eqn)
@@ -818,10 +815,10 @@ class Discretisation(object):
 
         """
         try:
-            return self._discretised_symbols[symbol.id]
+            return self._discretised_symbols[symbol]
         except KeyError:
             discretised_symbol = self._process_symbol(symbol)
-            self._discretised_symbols[symbol.id] = discretised_symbol
+            self._discretised_symbols[symbol] = discretised_symbol
             discretised_symbol.test_shape()
 
             # Assign mesh as an attribute to the processed variable
@@ -978,15 +975,15 @@ class Discretisation(object):
 
         elif isinstance(symbol, pybamm.VariableDot):
             return pybamm.StateVectorDot(
-                *self.y_slices[symbol.get_variable().id],
+                *self.y_slices[symbol.get_variable()],
                 domains=symbol.domains,
             )
 
         elif isinstance(symbol, pybamm.Variable):
             # Check if variable is a standard variable or an external variable
-            if any(symbol.id == var.id for var in self.external_variables.values()):
+            if any(symbol == var for var in self.external_variables.values()):
                 # Look up dictionary key based on value
-                idx = [x.id for x in self.external_variables.values()].index(symbol.id)
+                idx = list(self.external_variables.values()).index(symbol)
                 name, parent_and_slice = list(self.external_variables.keys())[idx]
                 if parent_and_slice is None:
                     # Variable didn't come from a concatenation so we can just create a
@@ -1014,7 +1011,7 @@ class Discretisation(object):
                 # can't be found. This should usually be caught earlier by
                 # model.check_well_posedness, but won't be if debug_mode is False
                 try:
-                    y_slices = self.y_slices[symbol.id]
+                    y_slices = self.y_slices[symbol]
                 except KeyError:
                     raise pybamm.ModelError(
                         """
@@ -1088,19 +1085,19 @@ class Discretisation(object):
                 unpacked_variables.extend([symbol] + [var for var in symbol.children])
             else:
                 unpacked_variables.append(symbol)
-            slices.append(self.y_slices[symbol.id][0])
+            slices.append(self.y_slices[symbol][0])
 
         if check_complete:
             # Check keys from the given var_eqn_dict against self.y_slices
-            ids = {v.id for v in unpacked_variables}
-            external_id = {v.id for v in self.external_variables.values()}
+            unpacked_variables_set = set(unpacked_variables)
+            external_vars = set(self.external_variables.values())
             for var in self.external_variables.values():
-                child_ids = {child.id for child in var.children}
-                external_id = external_id.union(child_ids)
+                child_vars = set(var.children)
+                external_vars = external_vars.union(child_vars)
             y_slices_with_external_removed = set(self.y_slices.keys()).difference(
-                external_id
+                external_vars
             )
-            if ids != y_slices_with_external_removed:
+            if unpacked_variables_set != y_slices_with_external_removed:
                 given_variable_names = [v.name for v in var_eqn_dict.keys()]
                 raise pybamm.ModelError(
                     "Initial conditions are insufficient. Only "

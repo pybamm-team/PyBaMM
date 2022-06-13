@@ -393,7 +393,7 @@ class TestJacobian(unittest.TestCase):
         np.testing.assert_array_equal(jacobian, dfunc_dy.toarray())
 
         # One child
-        self.assertEqual(u.jac(u).id, pybamm.NumpyConcatenation(u).jac(u).id)
+        self.assertEqual(u.jac(u), pybamm.NumpyConcatenation(u).jac(u))
 
     def test_jac_of_domain_concatenation(self):
         # create mesh

@@ -79,7 +79,7 @@ class TestBaseBatteryModel(unittest.TestCase):
         flux_2 = model.variables["X-averaged negative particle flux"]
         param_flux_2 = parameter_values.process_symbol(flux_2)
         disc_flux_2 = disc.process_symbol(param_flux_2)
-        self.assertEqual(flux_1.id, disc_flux_2.id)
+        self.assertEqual(flux_1, disc_flux_2)
 
     def test_summary_variables(self):
         model = pybamm.BaseBatteryModel()

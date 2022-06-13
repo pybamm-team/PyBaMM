@@ -98,23 +98,13 @@ class Concatenation(pybamm.Symbol):
         else:
             return self.concatenation_function(children_eval)
 
-    def evaluate(self, t=None, y=None, y_dot=None, inputs=None, known_evals=None):
+    def evaluate(self, t=None, y=None, y_dot=None, inputs=None):
         """See :meth:`pybamm.Symbol.evaluate()`."""
         children = self.children
-        if known_evals is not None:
-            if self.id not in known_evals:
-                children_eval = [None] * len(children)
-                for idx, child in enumerate(children):
-                    children_eval[idx], known_evals = child.evaluate(
-                        t, y, y_dot, inputs, known_evals
-                    )
-                known_evals[self.id] = self._concatenation_evaluate(children_eval)
-            return known_evals[self.id], known_evals
-        else:
-            children_eval = [None] * len(children)
-            for idx, child in enumerate(children):
-                children_eval[idx] = child.evaluate(t, y, y_dot, inputs)
-            return self._concatenation_evaluate(children_eval)
+        children_eval = [None] * len(children)
+        for idx, child in enumerate(children):
+            children_eval[idx] = child.evaluate(t, y, y_dot, inputs)
+        return self._concatenation_evaluate(children_eval)
 
     def create_copy(self):
         """See :meth:`pybamm.Symbol.new_copy()`."""
@@ -430,8 +420,7 @@ def simplified_concatenation(*children):
         # Create Concatenation to easily read domains
         concat = Concatenation(*children)
         if all(
-            isinstance(child, pybamm.Broadcast)
-            and child.child.id == children[0].child.id
+            isinstance(child, pybamm.Broadcast) and child.child == children[0].child
             for child in children
         ):
             unique_child = children[0].orphans[0]
