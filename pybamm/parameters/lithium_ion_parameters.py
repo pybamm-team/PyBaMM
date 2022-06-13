@@ -676,6 +676,11 @@ class DomainLithiumIonParameters(BaseParameters):
 
     def U_dimensional(self, sto, T):
         """Dimensional open-circuit potential [V]"""
+        # bound stoichiometry between tol and 1-tol. Adding 1/sto + 1/(sto-1) later
+        # will ensure that ocp goes to +- infinity if sto goes into that region
+        # anyway
+        tol = 1e-10
+        sto = pybamm.maximum(pybamm.minimum(sto, 1 - tol), tol)
         inputs = {f"{self.domain} particle stoichiometry": sto}
         u_ref = pybamm.FunctionParameter(f"{self.domain} electrode OCP [V]", inputs)
         # add a term to ensure that the OCP goes to infinity at 0 and -infinity at 1

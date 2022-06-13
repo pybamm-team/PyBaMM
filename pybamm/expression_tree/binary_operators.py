@@ -623,6 +623,10 @@ class Minimum(BinaryOperator):
         """See :meth:`pybamm.BinaryOperator._binary_new_copy()`."""
         return pybamm.minimum(left, right)
 
+    def _sympy_operator(self, left, right):
+        """Override :meth:`pybamm.BinaryOperator._sympy_operator`"""
+        return sympy.Min(left, right)
+
 
 class Maximum(BinaryOperator):
     """Returns the greater of two objects."""
@@ -654,6 +658,10 @@ class Maximum(BinaryOperator):
     def _binary_new_copy(self, left, right):
         """See :meth:`pybamm.BinaryOperator._binary_new_copy()`."""
         return pybamm.maximum(left, right)
+
+    def _sympy_operator(self, left, right):
+        """Override :meth:`pybamm.BinaryOperator._sympy_operator`"""
+        return sympy.Max(left, right)
 
 
 def simplify_elementwise_binary_broadcasts(left, right):
