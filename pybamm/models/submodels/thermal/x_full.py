@@ -68,16 +68,16 @@ class OneDimensionalX(BaseThermal):
 
         # Define volumetric heat capacity
         rho_k = pybamm.concatenation(
-            self.param.rho_n(T_n),
-            self.param.rho_s(T_s),
-            self.param.rho_p(T_p),
+            self.param.n.rho(T_n),
+            self.param.s.rho(T_s),
+            self.param.p.rho(T_p),
         )
 
         # Devine thermal conductivity
         lambda_k = pybamm.concatenation(
-            self.param.lambda_n(T_n),
-            self.param.lambda_s(T_s),
-            self.param.lambda_p(T_p),
+            self.param.n.lambda_(T_n),
+            self.param.s.lambda_(T_s),
+            self.param.p.lambda_(T_p),
         )
 
         # Fourier's law for heat flux
@@ -100,15 +100,15 @@ class OneDimensionalX(BaseThermal):
         self.boundary_conditions = {
             T: {
                 "left": (
-                    self.param.h_cn
+                    self.param.n.h_cc
                     * (T_n_left - T_amb)
-                    / self.param.lambda_n(T_n_left),
+                    / self.param.n.lambda_(T_n_left),
                     "Neumann",
                 ),
                 "right": (
-                    -self.param.h_cp
+                    -self.param.p.h_cc
                     * (T_p_right - T_amb)
-                    / self.param.lambda_p(T_p_right),
+                    / self.param.p.lambda_(T_p_right),
                     "Neumann",
                 ),
             }

@@ -111,7 +111,7 @@ class TestConcatenations(TestCase):
 
         concat = pybamm.concatenation(a, b, c)
         self.assertIsInstance(concat, pybamm.FullBroadcast)
-        self.assertEqual(concat.orphans[0].id, pybamm.Scalar(0).id)
+        self.assertEqual(concat.orphans[0], pybamm.Scalar(0))
         self.assertDomainEqual(
             concat.domains,
             {
@@ -189,10 +189,10 @@ class TestConcatenations(TestCase):
         self.assertIsInstance(4 - c_new, pybamm.Subtraction)
 
         # ids should stay the same
-        self.assertEqual(a.id, a_new.id)
-        self.assertEqual(b.id, b_new.id)
-        self.assertEqual(c.id, c_new.id)
-        self.assertEqual(conc.id, pybamm.concatenation(a_new, b_new, c_new).id)
+        self.assertEqual(a, a_new)
+        self.assertEqual(b, b_new)
+        self.assertEqual(c, c_new)
+        self.assertEqual(conc, pybamm.concatenation(a_new, b_new, c_new))
 
     def test_broadcast_and_concatenate(self):
         # create discretisation
@@ -313,8 +313,8 @@ class TestConcatenations(TestCase):
         b = pybamm.Variable("b")
         c = pybamm.Variable("c")
         self.assertEqual(
-            pybamm.numpy_concatenation(pybamm.numpy_concatenation(a, b), c).id,
-            pybamm.NumpyConcatenation(a, b, c).id,
+            pybamm.numpy_concatenation(pybamm.numpy_concatenation(a, b), c),
+            pybamm.NumpyConcatenation(a, b, c),
         )
 
     def test_to_equation(self):

@@ -97,7 +97,7 @@ class BaseThermal(pybamm.BaseSubModel):
         if self.half_cell:
             i_boundary_cc = variables["Current collector current density"]
             T_n = variables["Negative electrode temperature"]
-            Q_ohm_s_n_av = i_boundary_cc ** 2 / param.sigma_n(T_n)
+            Q_ohm_s_n_av = i_boundary_cc ** 2 / param.n.sigma(T_n)
             Q_ohm_s_n = pybamm.PrimaryBroadcast(Q_ohm_s_n_av, "negative electrode")
         else:
             i_s_n = variables["Negative electrode current density"]
@@ -241,8 +241,8 @@ class BaseThermal(pybamm.BaseSubModel):
         # Compute the Ohmic heating for 0D current collectors
         if cc_dimension == 0:
             i_boundary_cc = variables["Current collector current density"]
-            Q_s_cn = i_boundary_cc ** 2 / self.param.sigma_cn
-            Q_s_cp = i_boundary_cc ** 2 / self.param.sigma_cp
+            Q_s_cn = i_boundary_cc ** 2 / self.param.n.sigma_cc
+            Q_s_cp = i_boundary_cc ** 2 / self.param.p.sigma_cc
         # Otherwise we compute the Ohmic heating for 1 or 2D current collectors
         # In this limit the current flow is all in the y,z direction in the current
         # collectors
@@ -252,16 +252,16 @@ class BaseThermal(pybamm.BaseSubModel):
             # TODO: implement grad_squared in other spatial methods so that the
             # if statement can be removed
             if cc_dimension == 1:
-                Q_s_cn = self.param.sigma_cn_prime * pybamm.inner(
+                Q_s_cn = self.param.n.sigma_cc_prime * pybamm.inner(
                     pybamm.grad(phi_s_cn), pybamm.grad(phi_s_cn)
                 )
-                Q_s_cp = self.param.sigma_cp_prime * pybamm.inner(
+                Q_s_cp = self.param.p.sigma_cc_prime * pybamm.inner(
                     pybamm.grad(phi_s_cp), pybamm.grad(phi_s_cp)
                 )
             elif cc_dimension == 2:
                 # Inner not implemented in 2D -- have to call grad_squared directly
-                Q_s_cn = self.param.sigma_cn_prime * pybamm.grad_squared(phi_s_cn)
-                Q_s_cp = self.param.sigma_cp_prime * pybamm.grad_squared(phi_s_cp)
+                Q_s_cn = self.param.n.sigma_cc_prime * pybamm.grad_squared(phi_s_cn)
+                Q_s_cp = self.param.p.sigma_cc_prime * pybamm.grad_squared(phi_s_cp)
         return Q_s_cn, Q_s_cp
 
     def _x_average(self, var, var_cn, var_cp):
@@ -277,9 +277,9 @@ class BaseThermal(pybamm.BaseSubModel):
         and positive current collectors in the geometry).
         """
         out = (
-            self.param.l_cn * var_cn
+            self.param.n.l_cc * var_cn
             + self.param.l_x * pybamm.x_average(var)
-            + self.param.l_cp * var_cp
+            + self.param.p.l_cc * var_cp
         ) / self.param.l
         return out
 

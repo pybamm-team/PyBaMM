@@ -258,9 +258,9 @@ class StateVector(StateVectorBase):
         return out
 
     def diff(self, variable):
-        if variable.id == self.id:
+        if variable == self:
             return pybamm.Scalar(1)
-        if variable.id == pybamm.t.id:
+        if variable == pybamm.t:
             return StateVectorDot(
                 *self._y_slices,
                 name=self.name + "'",
@@ -338,9 +338,9 @@ class StateVectorDot(StateVectorBase):
         return out
 
     def diff(self, variable):
-        if variable.id == self.id:
+        if variable == self:
             return pybamm.Scalar(1)
-        elif variable.id == pybamm.t.id:
+        elif variable == pybamm.t:
             raise pybamm.ModelError(
                 "cannot take second time derivative of a state vector"
             )

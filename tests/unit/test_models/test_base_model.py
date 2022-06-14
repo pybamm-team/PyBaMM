@@ -277,23 +277,15 @@ class TestBaseModel(unittest.TestCase):
         self.assertEqual(new_model.name, model.name)
         self.assertEqual(new_model.use_jacobian, model.use_jacobian)
         self.assertEqual(new_model.convert_to_format, model.convert_to_format)
-        self.assertEqual(new_model.timescale.id, model.timescale.id)
+        self.assertEqual(new_model.timescale, model.timescale)
 
     def test_check_no_repeated_keys(self):
         model = pybamm.BaseModel()
 
-        # rhs twice
         var = pybamm.Variable("var")
         model.rhs = {var: -1}
         var = pybamm.Variable("var")
-        model.rhs.update({var: -1})
-        with self.assertRaisesRegex(pybamm.ModelError, "Multiple equations specified"):
-            model.check_no_repeated_keys()
-
-        # rhs and algebraic
-        model.rhs = {var: -1}
-        var = pybamm.Variable("var")
-        model.algebraic.update({var: var})
+        model.algebraic = {var: var}
         with self.assertRaisesRegex(pybamm.ModelError, "Multiple equations specified"):
             model.check_no_repeated_keys()
 
@@ -504,7 +496,7 @@ class TestBaseModel(unittest.TestCase):
         model.initial_conditions = {a: q, b: 1}
         model.variables = {"a+b": a + b - t}
 
-        out = model.export_casadi_objects(["a+b"])
+        out = model.export_casadi_objects(["a+b"], input_parameter_order=["p", "q"])
 
         # Try making a function from the outputs
         t, x, z, p = out["t"], out["x"], out["z"], out["inputs"]
@@ -583,7 +575,7 @@ class TestBaseModel(unittest.TestCase):
         model.variables = {"a+b": a + b - t}
 
         # Generate C code
-        model.generate("test.c", ["a+b"])
+        model.generate("test.c", ["a+b"], input_parameter_order=["p", "q"])
 
         # Compile
         subprocess.run(["gcc", "-fPIC", "-shared", "-o", "test.so", "test.c"])  # nosec
@@ -598,7 +590,7 @@ class TestBaseModel(unittest.TestCase):
         var_fn = casadi.external("variables", "./test.so")
 
         # Test that function values are as expected
-        self.assertEqual(x0_fn([0, 5]), 5)
+        self.assertEqual(x0_fn([2, 5]), 5)
         self.assertEqual(z0_fn([0, 0]), 1)
         self.assertEqual(rhs_fn(0, 3, 2, [7, 2]), -21)
         self.assertEqual(alg_fn(0, 3, 2, [7, 2]), 1)
@@ -609,6 +601,42 @@ class TestBaseModel(unittest.TestCase):
         # Remove generated files.
         os.remove("test.c")
         os.remove("test.so")
+
+    @unittest.skipIf(platform.system() == "Windows", "Skipped for Windows")
+    def test_generate_julia_diffeq(self):
+        # ODE model with no input parameters
+        model = pybamm.BaseModel(name="ode test model")
+        a = pybamm.Variable("a")
+        b = pybamm.Variable("b")
+        model.rhs = {a: -a, b: a - b}
+        model.initial_conditions = {a: 1, b: 2}
+
+        # Generate rhs and ics for the Julia model
+        rhs_str, ics_str = model.generate_julia_diffeq()
+        self.assertIsInstance(rhs_str, str)
+        self.assertIn("ode_test_model", rhs_str)
+        self.assertIsInstance(ics_str, str)
+        self.assertIn("ode_test_model_u0", ics_str)
+        self.assertIn("(u0, p)", ics_str)
+
+        # ODE model with input parameters
+        model = pybamm.BaseModel(name="ode test model 2")
+        a = pybamm.Variable("a")
+        b = pybamm.Variable("b")
+        p = pybamm.InputParameter("p")
+        q = pybamm.InputParameter("q")
+        model.rhs = {a: -a * p, b: a - b}
+        model.initial_conditions = {a: q, b: 2}
+
+        # Generate rhs and ics for the Julia model
+        rhs_str, ics_str = model.generate_julia_diffeq(input_parameter_order=["p", "q"])
+        self.assertIsInstance(rhs_str, str)
+        self.assertIn("ode_test_model_2", rhs_str)
+        self.assertIn("p, q = p", rhs_str)
+
+        self.assertIsInstance(ics_str, str)
+        self.assertIn("ode_test_model_2_u0", ics_str)
+        self.assertIn("p, q = p", ics_str)
 
     def test_set_initial_conditions(self):
         # Set up model

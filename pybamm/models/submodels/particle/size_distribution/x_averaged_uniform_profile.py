@@ -117,23 +117,13 @@ class XAveragedUniformProfile(BaseSizeDistribution):
         ]
         R = variables[self.domain + " particle sizes"]
 
-        if self.domain == "Negative":
-            self.rhs = {
-                c_s_surf_xav_distribution: -3
-                * j_xav_distribution
-                / self.param.a_R_n
-                / self.param.gamma_n
-                / R
-            }
-
-        elif self.domain == "Positive":
-            self.rhs = {
-                c_s_surf_xav_distribution: -3
-                * j_xav_distribution
-                / self.param.a_R_p
-                / self.param.gamma_p
-                / R
-            }
+        self.rhs = {
+            c_s_surf_xav_distribution: -3
+            * j_xav_distribution
+            / self.domain_param.a_R
+            / self.domain_param.gamma
+            / R
+        }
 
     def set_initial_conditions(self, variables):
         """
@@ -149,15 +139,9 @@ class XAveragedUniformProfile(BaseSizeDistribution):
             + " particle surface concentration distribution"
         ]
 
-        if self.domain == "Negative":
-            c_init = pybamm.PrimaryBroadcast(
-                pybamm.x_average(pybamm.r_average(self.param.c_n_init)),
-                "negative particle size",
-            )
-        elif self.domain == "Positive":
-            c_init = pybamm.PrimaryBroadcast(
-                pybamm.x_average(pybamm.r_average(self.param.c_p_init)),
-                "positive particle size",
-            )
+        c_init = pybamm.PrimaryBroadcast(
+            pybamm.x_average(pybamm.r_average(self.domain_param.c_init)),
+            f"{self.domain.lower()} particle size",
+        )
 
         self.initial_conditions = {c_s_surf_xav_distribution: c_init}

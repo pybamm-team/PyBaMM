@@ -45,15 +45,6 @@ class TestLeadAcidFullSideReactions(unittest.TestCase):
         modeltest = tests.StandardModelTest(model, parameter_values=parameter_values)
         modeltest.test_all(skip_output_tests=True)
 
-    def test_optimisations(self):
-        options = {"hydrolysis": "true", "surface form": "differential"}
-        model = pybamm.lead_acid.Full(options)
-        optimtest = tests.OptimisationsTest(model)
-
-        original = optimtest.evaluate_model()
-        using_known_evals = optimtest.evaluate_model(use_known_evals=True)
-        np.testing.assert_array_almost_equal(original, using_known_evals)
-
 
 if __name__ == "__main__":
     print("Add -v for more debug output")
