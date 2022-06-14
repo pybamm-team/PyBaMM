@@ -88,7 +88,7 @@ class BasePlating(BaseInterface):
         c_dead_Li_av = pybamm.x_average(c_dead_Li)
         L_dead_Li = c_dead_Li  # dead Li "thickness", required by porosity submodel
         L_dead_Li_av = pybamm.x_average(L_dead_Li)
-        Q_dead_Li = c_dead_Li_av * param.L_n * param.L_y * param.L_z
+        Q_dead_Li = c_dead_Li_av * param.n.L * param.L_y * param.L_z
 
         variables = {
             "Lithium plating concentration": c_plated_Li,
