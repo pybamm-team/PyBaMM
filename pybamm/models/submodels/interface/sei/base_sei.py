@@ -26,54 +26,29 @@ class BaseModel(BaseInterface):
         domain = "Negative"
         super().__init__(param, domain, reaction, options=options)
 
-    def get_coupled_variables(self, variables, cracks=False):
+    def get_coupled_variables(self, variables):
         # Update some common variables
         zero_av = pybamm.PrimaryBroadcast(0, "current collector")
         zero = pybamm.FullBroadcast(0, "positive electrode", "current collector")
 
         if self.reaction_loc != "interface":
-            if cracks is True:
-                variables.update(
-                    {
-                        "X-averaged negative electrode SEI on cracks interfacial "
-                        "current density": variables[
-                            "X-averaged SEI on cracks interfacial current density"
-                        ],
-                        "Negative electrode SEI on cracks interfacial "
-                        "current density": variables[
-                            "SEI on cracks interfacial current density"
-                        ],
-                    }
-                )
-            else:
-                variables.update(
-                    {
-                        "X-averaged negative electrode SEI interfacial "
-                        "current density": variables[
-                            "X-averaged SEI interfacial current density"
-                        ],
-                        "Negative electrode SEI interfacial current density": variables[
-                            "SEI interfacial current density"
-                        ],
-                    }
-                )
-        if cracks is True:
             variables.update(
                 {
-                    "X-averaged positive electrode SEI on cracks interfacial "
-                    "current density": zero_av,
-                    "Positive electrode SEI on cracks interfacial "
-                    "current density": zero,
+                    f"X-averaged negative electrode {self.reaction} interfacial "
+                    "current density": variables[
+                    f"X-averaged {self.reaction} interfacial current density"
+                    ],
+                    f"Negative electrode {self.reaction} interfacial current "
+                    "density": variables[f"{self.reaction} interfacial current density"],
                 }
             )
-        else:
-            variables.update(
-                {
-                    "X-averaged positive electrode SEI interfacial "
-                    "current density": zero_av,
-                    "Positive electrode SEI interfacial current density": zero,
-                }
-            )
+        variables.update(
+            {
+                f"X-averaged positive electrode {self.reaction} interfacial "
+                "current density": zero_av,
+                f"Positive electrode {self.reaction} interfacial current density": zero,
+            }
+        )
         variables.update(
             self._get_standard_whole_cell_interfacial_current_variables(variables)
         )
@@ -107,10 +82,10 @@ class BaseModel(BaseInterface):
             L_scale = param.L_sei_0_dim
 
         variables = {
-            "Inner SEI thickness": L_inner,
-            "Inner SEI thickness [m]": L_inner * L_scale,
-            "Outer SEI thickness": L_outer,
-            "Outer SEI thickness [m]": L_outer * L_scale,
+            f"Inner {self.reaction} thickness": L_inner,
+            f"Inner {self.reaction} thickness [m]": L_inner * L_scale,
+            f"Outer {self.reaction} thickness": L_outer,
+            f"Outer {self.reaction} thickness [m]": L_outer * L_scale,
         }
 
         if self.reaction_loc != "interface":
@@ -118,58 +93,17 @@ class BaseModel(BaseInterface):
             L_outer_av = pybamm.x_average(L_outer)
             variables.update(
                 {
-                    "X-averaged inner SEI thickness": L_inner_av,
-                    "X-averaged inner SEI thickness [m]": L_inner_av * L_scale,
-                    "X-averaged outer SEI thickness": L_outer_av,
-                    "X-averaged outer SEI thickness [m]": L_outer_av * L_scale,
+                    f"X-averaged inner {self.reaction} thickness": L_inner_av,
+                    f"X-averaged inner {self.reaction} thickness [m]": L_inner_av
+                    * L_scale,
+                    f"X-averaged outer {self.reaction} thickness": L_outer_av,
+                    f"X-averaged outer {self.reaction} thickness [m]": L_outer_av
+                    * L_scale,
                 }
             )
         # Get variables related to the total thickness
         L_sei = L_inner + L_outer
         variables.update(self._get_standard_total_thickness_variables(L_sei))
-
-        return variables
-
-    def _get_standard_thickness_variables_cracks(self, L_inner, L_outer):
-        """
-        A private function to obtain the standard variables which
-        can be derived from the local SEI on cracks thickness.
-
-        Parameters
-        ----------
-        L_inner : :class:`pybamm.Symbol`
-            The inner SEI on cracks thickness.
-        L_outer : :class:`pybamm.Symbol`
-            The outer SEI on cracks thickness.
-
-        Returns
-        -------
-        variables : dict
-            The variables which can be derived from the SEI on cracks thicknesses.
-        """
-        param = self.param
-        L_scale = param.L_sei_0_dim
-
-        variables = {
-            "Inner SEI on cracks thickness": L_inner,
-            "Inner SEI on cracks thickness [m]": L_inner * L_scale,
-            "Outer SEI on cracks thickness": L_outer,
-            "Outer SEI on cracks thickness [m]": L_outer * L_scale,
-        }
-
-        L_inner_av = pybamm.x_average(L_inner)
-        L_outer_av = pybamm.x_average(L_outer)
-        variables.update(
-            {
-                "X-averaged inner SEI on cracks thickness": L_inner_av,
-                "X-averaged inner SEI on cracks thickness [m]": L_inner_av * L_scale,
-                "X-averaged outer SEI on cracks thickness": L_outer_av,
-                "X-averaged outer SEI on cracks thickness [m]": L_outer_av * L_scale,
-            }
-        )
-        # Get variables related to the total thickness
-        L_sei = L_inner + L_outer
-        variables.update(self._get_standard_total_thickness_variables_cracks(L_sei))
 
         return variables
 
@@ -183,45 +117,28 @@ class BaseModel(BaseInterface):
             R_sei_dim = self.param.R_sei_dimensional
 
         variables = {
-            "SEI thickness": L_sei,
-            "SEI thickness [m]": L_sei * L_scale,
-            "Total SEI thickness": L_sei,
-            "Total SEI thickness [m]": L_sei * L_scale,
+            f"{self.reaction} thickness": L_sei,
+            f"{self.reaction} [m]": L_sei * L_scale,
+            f"Total {self.reaction} thickness": L_sei,
+            f"Total {self.reaction} thickness [m]": L_sei * L_scale,
         }
         if self.reaction_loc != "interface":
             L_sei_av = pybamm.x_average(L_sei)
             variables.update(
                 {
-                    "X-averaged SEI thickness": L_sei_av,
-                    "X-averaged SEI thickness [m]": L_sei_av * L_scale,
-                    "X-averaged total SEI thickness": L_sei_av,
-                    "X-averaged total SEI thickness [m]": L_sei_av * L_scale,
-                    "X-averaged "
-                    + self.domain.lower()
-                    + " electrode resistance [Ohm.m2]": L_sei_av * L_scale * R_sei_dim,
+                    f"X-averaged {self.reaction} thickness": L_sei_av,
+                    f"X-averaged {self.reaction} thickness [m]": L_sei_av * L_scale,
+                    f"X-averaged total {self.reaction} thickness": L_sei_av,
+                    f"X-averaged total {self.reaction} thickness [m]": L_sei_av * L_scale,
                 }
             )
-        return variables
-
-    def _get_standard_total_thickness_variables_cracks(self, L_sei):
-        """Update variables related to total SEI on cracks thickness."""
-        L_scale = self.param.L_sei_0_dim
-
-        variables = {
-            "SEI on cracks thickness": L_sei,
-            "SEI on cracks thickness [m]": L_sei * L_scale,
-            "Total SEI on cracks thickness": L_sei,
-            "Total SEI on cracks thickness [m]": L_sei * L_scale,
-        }
-        L_sei_av = pybamm.x_average(L_sei)
-        variables.update(
-            {
-                "X-averaged SEI on cracks thickness": L_sei_av,
-                "X-averaged SEI on cracksthickness [m]": L_sei_av * L_scale,
-                "X-averaged total SEI on cracks thickness": L_sei_av,
-                "X-averaged total SEI on cracks thickness [m]": L_sei_av * L_scale,
-            }
-        )
+            if self.reaction == "SEI":
+                variables.update(
+                    {
+                        f"X-averaged {self.domain.lower()} electrode resistance "
+                        "[Ohm.m2]": L_sei_av * L_scale * R_sei_dim,
+                    }
+                )
         return variables
 
     def _get_standard_concentration_variables(self, variables):
@@ -261,54 +178,57 @@ class BaseModel(BaseInterface):
                 L_outer_0 = param.L_outer_0
                 li_mols_per_sei_mols = 1
 
-        L_inner = variables["Inner SEI thickness"]
-        L_outer = variables["Outer SEI thickness"]
+        if self.reaction == "SEI":
+            L_inner = variables["Inner SEI thickness"]
+            L_outer = variables["Outer SEI thickness"]
 
-        n_inner = L_inner  # inner SEI concentration
-        n_outer = L_outer  # outer SEI concentration
+            n_inner = L_inner  # inner SEI concentration
+            n_outer = L_outer  # outer SEI concentration
 
-        n_inner_av = pybamm.x_average(n_inner)
-        n_outer_av = pybamm.x_average(n_outer)
+            n_inner_av = pybamm.x_average(n_inner)
+            n_outer_av = pybamm.x_average(n_outer)
 
-        n_SEI = n_inner + n_outer / v_bar  # SEI concentration
-        n_SEI_av = pybamm.yz_average(pybamm.x_average(n_SEI))
+            n_SEI = n_inner + n_outer / v_bar  # SEI concentration
+            n_SEI_av = pybamm.yz_average(pybamm.x_average(n_SEI))
 
-        # Calculate change in SEI concentration with respect to initial state
-        delta_n_SEI = n_SEI_av - (L_inner_0 + L_outer_0 / v_bar)
+            # Calculate change in SEI concentration with respect to initial state
+            delta_n_SEI = n_SEI_av - (L_inner_0 + L_outer_0 / v_bar)
 
-        # Q_sei in mol
-        if self.reaction_loc == "interface":
-            L_n = 1
-        else:
-            L_n = self.param.L_n
+            # Q_sei in mol
+            if self.reaction_loc == "interface":
+                L_n = 1
+            else:
+                L_n = self.param.L_n
 
-        Q_sei = (
-            li_mols_per_sei_mols
-            * delta_n_SEI
-            * n_scale
-            * L_n
-            * self.param.L_y
-            * self.param.L_z
-        )
+            Q_sei = (
+                li_mols_per_sei_mols
+                * delta_n_SEI
+                * n_scale
+                * L_n
+                * self.param.L_y
+                * self.param.L_z
+            )
 
-        variables.update(
-            {
-                "Inner SEI concentration [mol.m-3]": n_inner * n_scale,
-                "X-averaged inner SEI concentration [mol.m-3]": n_inner_av * n_scale,
-                "Outer SEI concentration [mol.m-3]": n_outer * n_outer_scale,
-                "X-averaged outer SEI concentration [mol.m-3]": n_outer_av
-                * n_outer_scale,
-                "SEI concentration [mol.m-3]": n_SEI * n_scale,
-                "X-averaged SEI concentration [mol.m-3]": n_SEI_av * n_scale,
-                "Loss of lithium to SEI [mol]": Q_sei,
-                "Loss of capacity to SEI [A.h]": Q_sei * self.param.F / 3600,
-            }
-        )
+            variables.update(
+                {
+                    "Inner SEI concentration [mol.m-3]": n_inner * n_scale,
+                    "X-averaged inner SEI concentration [mol.m-3]": n_inner_av
+                    * n_scale,
+                    "Outer SEI concentration [mol.m-3]": n_outer * n_outer_scale,
+                    "X-averaged outer SEI concentration [mol.m-3]": n_outer_av
+                    * n_outer_scale,
+                    "SEI concentration [mol.m-3]": n_SEI * n_scale,
+                    "X-averaged SEI concentration [mol.m-3]": n_SEI_av * n_scale,
+                    "Loss of lithium to SEI [mol]": Q_sei,
+                    "Loss of capacity to SEI [A.h]": Q_sei * self.param.F / 3600,
+                }
+            )
 
-        if self.options["SEI on cracks"] == "true":
+        # Concentration variables are handled slightly differently for SEI on cracks
+        if self.reaction == "SEI on cracks":
             L_inner_cr = variables["Inner SEI on cracks thickness"]
             L_outer_cr = variables["Outer SEI on cracks thickness"]
-            roughness = variables["Negative electrode roughness ratio"]
+            roughness = variables[self.domain + " electrode roughness ratio"]
 
             n_inner_cr = L_inner_cr * (roughness - 1)  # inner SEI cracks concentration
             n_outer_cr = L_outer_cr * (roughness - 1)  # outer SEI cracks concentration
@@ -385,61 +305,22 @@ class BaseModel(BaseInterface):
         j_o_av = pybamm.x_average(j_outer)
 
         variables = {
-            "Inner SEI interfacial current density": j_inner,
-            "Inner SEI interfacial current density [A.m-2]": j_inner * j_scale,
-            "X-averaged inner SEI interfacial current density": j_i_av,
-            "X-averaged inner SEI interfacial current density [A.m-2]": j_i_av
+            f"Inner {self.reaction} interfacial current density": j_inner,
+            f"Inner {self.reaction} interfacial current density [A.m-2]": j_inner
             * j_scale,
-            "Outer SEI interfacial current density": j_outer,
-            "Outer SEI interfacial current density [A.m-2]": j_outer * j_scale,
-            "X-averaged outer SEI interfacial current density": j_o_av,
-            "X-averaged outer SEI interfacial current density [A.m-2]": j_o_av
+            f"X-averaged inner {self.reaction} interfacial current density": j_i_av,
+            f"X-averaged inner {self.reaction} interfacial current density [A.m-2]":
+            j_i_av * j_scale,
+            f"Outer {self.reaction} interfacial current density": j_outer,
+            f"Outer {self.reaction} interfacial current density [A.m-2]": j_outer
             * j_scale,
+            f"X-averaged outer {self.reaction} interfacial current density": j_o_av,
+            f"X-averaged outer {self.reaction} interfacial current density [A.m-2]":
+            j_o_av * j_scale,
         }
 
         j_sei = j_inner + j_outer
         variables.update(self._get_standard_total_reaction_variables(j_sei))
-
-        return variables
-
-    def _get_standard_reaction_variables_cracks(self, j_inner, j_outer):
-        """
-        A private function to obtain the standard variables which
-        can be derived from the SEI on cracks interfacial reaction current
-
-        Parameters
-        ----------
-        j_inner : :class:`pybamm.Symbol`
-            The inner SEI on cracks interfacial reaction current.
-        j_outer : :class:`pybamm.Symbol`
-            The outer SEI on cracks interfacial reaction current.
-
-        Returns
-        -------
-        variables : dict
-            The variables which can be derived from the SEI on cracks currents.
-        """
-        j_scale = self.param.j_scale_n
-        j_i_av = pybamm.x_average(j_inner)
-        j_o_av = pybamm.x_average(j_outer)
-
-        variables = {
-            "Inner SEI on cracks interfacial current density": j_inner,
-            "Inner SEI on cracks interfacial current density [A.m-2]": j_inner
-            * j_scale,
-            "X-averaged inner SEI on cracks interfacial current density": j_i_av,
-            "X-averaged inner SEI on cracks interfacial current density [A.m-2]": j_i_av
-            * j_scale,
-            "Outer SEI on cracks interfacial current density": j_outer,
-            "Outer SEI on cracks interfacial current density [A.m-2]": j_outer
-            * j_scale,
-            "X-averaged outer SEI on cracks interfacial current density": j_o_av,
-            "X-averaged outer SEI on cracks interfacial current density [A.m-2]": j_o_av
-            * j_scale,
-        }
-
-        j_sei = j_inner + j_outer
-        variables.update(self._get_standard_total_reaction_variables_cracks(j_sei))
 
         return variables
 
@@ -448,38 +329,18 @@ class BaseModel(BaseInterface):
         j_scale = self.param.j_scale_n
 
         variables = {
-            "SEI interfacial current density": j_sei,
-            "SEI interfacial current density [A.m-2]": j_sei * j_scale,
+            f"{self.reaction} interfacial current density": j_sei,
+            f"{self.reaction} interfacial current density [A.m-2]": j_sei * j_scale,
         }
 
         if self.reaction_loc != "interface":
             j_sei_av = pybamm.x_average(j_sei)
             variables.update(
                 {
-                    "X-averaged SEI interfacial current density": j_sei_av,
-                    "X-averaged SEI interfacial current density [A.m-2]": j_sei_av
-                    * j_scale,
+                    f"X-averaged {self.reaction} interfacial current density": j_sei_av,
+                    f"X-averaged {self.reaction} interfacial current density [A.m-2]":
+                    j_sei_av * j_scale,
                 }
             )
-
-        return variables
-
-    def _get_standard_total_reaction_variables_cracks(self, j_sei):
-        """Update variables related to total SEI on cracks current density."""
-        j_scale = self.param.j_scale_n
-
-        variables = {
-            "SEI on cracks interfacial current density": j_sei,
-            "SEI on cracks interfacial current density [A.m-2]": j_sei * j_scale,
-        }
-
-        j_sei_av = pybamm.x_average(j_sei)
-        variables.update(
-            {
-                "X-averaged SEI on cracks interfacial current density": j_sei_av,
-                "X-averaged SEI on cracks interfacial current density [A.m-2]": j_sei_av
-                * j_scale,
-            }
-        )
 
         return variables

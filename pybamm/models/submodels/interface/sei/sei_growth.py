@@ -25,10 +25,9 @@ class SEIGrowth(BaseModel):
     def __init__(self, param, reaction_loc, options=None, cracks=False):
         super().__init__(param, options=options, cracks=cracks)
         self.reaction_loc = reaction_loc
-        self.cracks = cracks
 
     def get_fundamental_variables(self):
-        if self.cracks is True:
+        if self.reaction == "SEI on cracks":
             if self.reaction_loc == "x-average":
                 L_inner_av = pybamm.Variable(
                     "X-averaged inner SEI on cracks thickness",
@@ -71,11 +70,7 @@ class SEIGrowth(BaseModel):
         if self.options["SEI"] == "ec reaction limited":
             L_inner = 0 * L_inner  # Set L_inner to zero, copying domains
 
-        if self.cracks is True:
-            variables = self._get_standard_thickness_variables_cracks(L_inner, L_outer)
-        else:
-            variables = self._get_standard_thickness_variables(L_inner, L_outer)
-        
+        variables = self._get_standard_thickness_variables(L_inner, L_outer)
         variables.update(self._get_standard_concentration_variables(variables))
 
         return variables
@@ -108,14 +103,9 @@ class SEIGrowth(BaseModel):
                 + " electrode total interfacial current density"
             ]
 
-        if self.cracks is True:
-            L_sei_inner = variables["Inner SEI on cracks thickness"]
-            L_sei_outer = variables["Outer SEI on cracks thickness"]
-            L_sei = variables["Total SEI on cracks thickness"]
-        else:
-            L_sei_inner = variables["Inner SEI thickness"]
-            L_sei_outer = variables["Outer SEI thickness"]
-            L_sei = variables["Total SEI thickness"]
+        L_sei_inner = variables[f"Inner {self.reaction} thickness"]
+        L_sei_outer = variables[f"Outer {self.reaction} thickness"]
+        L_sei = variables[f"Total {self.reaction} thickness"]
 
         T = variables["Negative electrode temperature"]
         R_sei = self.param.R_sei
@@ -161,7 +151,7 @@ class SEIGrowth(BaseModel):
             c_ec_av = pybamm.x_average(c_ec)
             c_ec_scale = self.param.c_ec_0_dim
 
-            if self.cracks is True:
+            if self.reaction == "SEI on cracks":
                 variables.update(
                     {
                         "EC concentration on cracks": c_ec,
@@ -190,113 +180,81 @@ class SEIGrowth(BaseModel):
         j_inner = alpha * j_sei
         j_outer = (1 - alpha) * j_sei
 
-        if self.cracks is True:
-            variables.update(
-                self._get_standard_reaction_variables_cracks(j_inner, j_outer)
-            )
-        else:
-            variables.update(self._get_standard_reaction_variables(j_inner, j_outer))
+        variables.update(self._get_standard_reaction_variables(j_inner, j_outer))
 
         # Update whole cell variables, which also updates the "sum of" variables
-        variables.update(super().get_coupled_variables(variables, self.cracks))
+        variables.update(super().get_coupled_variables(variables))
 
         return variables
 
     def set_rhs(self, variables):
-        if self.cracks is True:
+        if self.reaction_loc == "x-average":
+            L_inner = variables[f"X-averaged inner {self.reaction} thickness"]
+            L_outer = variables[f"X-averaged outer {self.reaction} thickness"]
+            j_inner = variables[
+                f"X-averaged inner {self.reaction} interfacial current density"
+            ]
+            j_outer = variables[
+                f"X-averaged outer {self.reaction} interfacial current density"
+                ]
+            # Note a is dimensionless (has a constant value of 1 if the surface
+            # area does not change)
+            a = variables[
+                "X-averaged negative electrode surface area to volume ratio"
+            ]
+        else:
+            L_inner = variables[f"Inner {self.reaction} thickness"]
+            L_outer = variables[f"Outer {self.reaction} thickness"]
+            j_inner = variables[f"Inner {self.reaction} interfacial current density"]
+            j_outer = variables[f"Outer {self.reaction} interfacial current density"]
+            if self.reaction_loc == "interface":
+                a = 1
+            else:
+                a = variables["Negative electrode surface area to volume ratio"]
+        
+        # Get variables specific to cracks
+        if self.reaction == "SEI on cracks":
             if self.reaction_loc == "x-average":
-                L_inner = variables["X-averaged inner SEI on cracks thickness"]
-                L_outer = variables["X-averaged outer SEI on cracks thickness"]
-                j_inner = variables[
-                    "X-averaged inner SEI on cracks interfacial current density"
-                ]
-                j_outer = variables[
-                    "X-averaged outer SEI on cracks interfacial current density"
-                ]
-                a = variables[
-                    "X-averaged negative electrode surface area to volume ratio"
-                ]
                 l_cr = variables["X-averaged negative particle crack length"]
                 dl_cr = variables["X-averaged negative particle cracking rate"]
             else:
-                L_inner = variables["Inner SEI on cracks thickness"]
-                L_outer = variables["Outer SEI on cracks thickness"]
-                j_inner = variables["Inner SEI on cracks interfacial current density"]
-                j_outer = variables["Outer SEI on cracks interfacial current density"]
-                a = variables["Negative electrode surface area to volume ratio"]
                 l_cr = variables["Negative particle crack length"]
                 dl_cr = variables["Negative particle cracking rate"]
             spreading_outer = dl_cr / l_cr * (self.param.L_outer_0 / 10000 - L_outer)
             spreading_inner = dl_cr / l_cr * (self.param.L_inner_0 / 10000 - L_inner)
         else:
-            if self.reaction_loc == "x-average":
-                L_inner = variables["X-averaged inner SEI thickness"]
-                L_outer = variables["X-averaged outer SEI thickness"]
-                j_inner = variables["X-averaged inner SEI interfacial current density"]
-                j_outer = variables["X-averaged outer SEI interfacial current density"]
-                # Note a is dimensionless (has a constant value of 1 if the surface
-                # area does not change)
-                a = variables[
-                    "X-averaged negative electrode surface area to volume ratio"
-                ]
-            else:
-                L_inner = variables["Inner SEI thickness"]
-                L_outer = variables["Outer SEI thickness"]
-                j_inner = variables["Inner SEI interfacial current density"]
-                j_outer = variables["Outer SEI interfacial current density"]
-                if self.reaction_loc == "interface":
-                    a = 1
-                else:
-                    a = variables["Negative electrode surface area to volume ratio"]
+            spreading_outer = 0
+            spreading_inner = 0
 
         Gamma_SEI = self.param.Gamma_SEI
 
         if self.options["SEI"] == "ec reaction limited":
-            if self.cracks is True:
-                self.rhs = {
-                    L_outer: -Gamma_SEI * a * j_outer / 2 + spreading_outer,
-                }
-            else:
-                self.rhs = {L_outer: -Gamma_SEI * a * j_outer / 2}
+            self.rhs = {L_outer: -Gamma_SEI * a * j_outer / 2 + spreading_outer}
         else:
             v_bar = self.param.v_bar
-            if self.cracks is True:
-                self.rhs = {
-                    L_inner: -Gamma_SEI * a * j_inner + spreading_inner,
-                    L_outer: -v_bar * Gamma_SEI * a * j_outer + spreading_outer,
-                }
-            else:
-                self.rhs = {
-                    L_inner: -Gamma_SEI * a * j_inner,
-                    L_outer: -v_bar * Gamma_SEI * a * j_outer,
-                }
+            self.rhs = {
+                L_inner: -Gamma_SEI * a * j_inner + spreading_inner,
+                L_outer: -v_bar * Gamma_SEI * a * j_outer + spreading_outer,
+            }
 
     def set_initial_conditions(self, variables):
-        if self.cracks is True:
-            if self.reaction_loc == "x-average":
-                L_inner = variables["X-averaged inner SEI on cracks thickness"]
-                L_outer = variables["X-averaged outer SEI on cracks thickness"]
-            else:
-                L_inner = variables["Inner SEI on cracks thickness"]
-                L_outer = variables["Outer SEI on cracks thickness"]
+        if self.reaction_loc == "x-average":
+            L_inner = variables[f"X-averaged inner {self.reaction} thickness"]
+            L_outer = variables[f"X-averaged outer {self.reaction} thickness"]
         else:
-            if self.reaction_loc == "x-average":
-                L_inner = variables["X-averaged inner SEI thickness"]
-                L_outer = variables["X-averaged outer SEI thickness"]
-            else:
-                L_inner = variables["Inner SEI thickness"]
-                L_outer = variables["Outer SEI thickness"]
+            L_inner = variables[f"Inner {self.reaction} thickness"]
+            L_outer = variables[f"Outer {self.reaction} thickness"]
 
         L_inner_0 = self.param.L_inner_0
         L_outer_0 = self.param.L_outer_0
 
         if self.options["SEI"] == "ec reaction limited":
-            if self.cracks is True:
+            if self.reaction == "SEI on cracks":
                 self.initial_conditions = {L_outer: (L_inner_0 + L_outer_0) / 10000}
             else:
                 self.initial_conditions = {L_outer: L_inner_0 + L_outer_0}
         else:
-            if self.cracks is True:
+            if self.reaction == "SEI on cracks":
                 self.initial_conditions = {
                     L_inner: L_inner_0 / 10000,
                     L_outer: L_outer_0 / 10000,
