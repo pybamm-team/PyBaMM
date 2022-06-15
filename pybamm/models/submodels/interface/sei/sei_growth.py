@@ -94,12 +94,12 @@ class SEIGrowth(BaseModel):
             j = variables["Lithium metal total interfacial current density"]# Jason - needs to add phase_name here?
         else:
             j = variables[
-                f"X-averaged {domain} {phase_name}electrode total interfacial current density"
+                f"X-averaged {domain} electrode {phase_name}total interfacial current density"
             ]
 
-        L_sei_inner = variables["Inner {phase_name}SEI thickness"]
-        L_sei_outer = variables["Outer {phase_name}SEI thickness"]
-        L_sei = variables["Total {phase_name}SEI thickness"]
+        L_sei_inner = variables[f"Inner {phase_name}SEI thickness"]
+        L_sei_outer = variables[f"Outer {phase_name}SEI thickness"]
+        L_sei = variables[f"Total {phase_name}SEI thickness"]
 
         R_sei = self.param.R_sei
 
@@ -179,14 +179,14 @@ class SEIGrowth(BaseModel):
             # area does not change)
             a = variables[f"X-averaged {domain} {phase_name}electrode surface area to volume ratio"]
         else:
-            L_inner = variables["Inner {phase_name}SEI thickness"]
-            L_outer = variables["Outer {phase_name}SEI thickness"]
-            j_inner = variables["Inner {phase_name}SEI interfacial current density"]
-            j_outer = variables["Outer {phase_name}SEI interfacial current density"]
+            L_inner = variables[f"Inner {phase_name}SEI thickness"]
+            L_outer = variables[f"Outer {phase_name}SEI thickness"]
+            j_inner = variables[f"Inner {phase_name}SEI interfacial current density"]
+            j_outer = variables[f"Outer {phase_name}SEI interfacial current density"]
             if self.reaction_loc == "interface":
                 a = 1
             else:
-                a = variables["{Domain} {phase_name}electrode surface area to volume ratio"]
+                a = variables[f"{Domain} electrode {phase_name}surface area to volume ratio"]
 
         Gamma_SEI = self.param.Gamma_SEI
 
@@ -201,11 +201,11 @@ class SEIGrowth(BaseModel):
 
     def set_initial_conditions(self, variables):
         if self.reaction_loc == "x-average":
-            L_inner = variables["X-averaged {phase_name}inner SEI thickness"]
-            L_outer = variables["X-averaged {phase_name}outer SEI thickness"]
+            L_inner = variables[f"X-averaged {phase_name}inner SEI thickness"]
+            L_outer = variables[f"X-averaged {phase_name}outer SEI thickness"]
         else:
-            L_inner = variables["Inner {phase_name}SEI thickness"]
-            L_outer = variables["Outer {phase_name}SEI thickness"]
+            L_inner = variables[f"Inner {phase_name}SEI thickness"]
+            L_outer = variables[f"Outer {phase_name}SEI thickness"]
 
         L_inner_0 = self.param.L_inner_0
         L_outer_0 = self.param.L_outer_0

@@ -144,6 +144,7 @@ class CurrentForInverseButlerVolmer(BaseInterface):
         ]
         if self.domain == "Negative":
             j_sei = variables["SEI interfacial current density"]
+            # j_sei = variables[f"{phase_name}SEI interfacial current density"]
             j_stripping = variables["Lithium plating interfacial current density"]
             j = j_tot - j_sei - j_stripping
         else:

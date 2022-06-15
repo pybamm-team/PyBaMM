@@ -302,7 +302,7 @@ class BaseInterface(pybamm.BaseSubModel):
             "interfacial current density per volume [A.m-3]": i_typ / L_x * j,
             f"X-averaged {domain} electrode {reaction_name}"
             "interfacial current density per volume [A.m-3]": i_typ / L_x * j_av,
-        }
+        } # Jason - reaction_name should be expanded with "primary SEI" and "secondary SEI"
 
         return variables
 

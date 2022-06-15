@@ -38,11 +38,11 @@ class BaseModel(BaseInterface):
         if self.reaction_loc != "interface":
             variables.update(
                 {
-                    f"X-averaged {domain} {phase_name}electrode SEI interfacial current "
+                    f"X-averaged {domain} electrode {phase_name}SEI interfacial current "
                     "density": variables[f"X-averaged {phase_name}SEI interfacial current density"],
                     # f"{Domain} {phase_name}electrode SEI interfacial current "
                     # "density": variables[f"{pre}SEI interfacial current density"],
-                    f"{Domain} {phase_name}electrode SEI interfacial current "
+                    f"{Domain} electrode {phase_name}SEI interfacial current "
                     "density": variables[f"{phase_name}SEI interfacial current density"],
                 }
             ) # Jason-whether should the value name be modified as well?
@@ -139,7 +139,7 @@ class BaseModel(BaseInterface):
                     f"X-averaged {phase_name}SEI thickness [m]": L_sei_av * L_scale,
                     f"X-averaged total {phase_name}SEI thickness": L_sei_av,
                     f"X-averaged total {phase_name}SEI thickness [m]": L_sei_av * L_scale,
-                    f"X-averaged {domain} {phase_name}electrode resistance [Ohm.m2]": L_sei_av * L_scale * R_sei_dim,
+                    f"X-averaged {domain} electrode {phase_name}resistance [Ohm.m2]": L_sei_av * L_scale * R_sei_dim,
                 }
             )
         return variables

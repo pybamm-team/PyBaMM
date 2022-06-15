@@ -106,6 +106,7 @@ class TotalKinetics(pybamm.BaseSubModel):
             phase_n, phase_p = phase_name
             if reaction_name == "":
                 reaction_n = phase_n
+                # reaction_n = "" # Jason - reaction_n is nothing
                 reaction_p = phase_p
                 reaction_tot = ""
             else:
@@ -131,6 +132,7 @@ class TotalKinetics(pybamm.BaseSubModel):
                 j = pybamm.concatenation(zero_s, j_p)
                 j_dim = pybamm.concatenation(zero_s, j_p_scale * j_p)
             else:
+                # if reaction_name == ["SEI "]: # Jason - only SEI applies to multiple phases, ignore the lithium plating for multiple phases temporarily
                 j_n_av = variables[
                     f"X-averaged negative electrode {reaction_n}"
                     "interfacial current density"
