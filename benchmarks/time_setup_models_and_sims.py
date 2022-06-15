@@ -1,5 +1,18 @@
 import pybamm
 
+parameters = [
+    "Marquis2019",
+    "ORegan2021",
+    "NCA_Kim2011",
+    "Prada2013",
+    "Ai2020",
+    "Ramadass2004",
+    "Mohtat2020",
+    "Chen2020",
+    "Chen2020_plating",
+    "Ecker2015",
+]
+
 
 def compute_discretisation(model, param):
     var_pts = {
@@ -18,43 +31,44 @@ def compute_discretisation(model, param):
 
 
 class TimeBuildSPM:
-    def __init__(self):
-        self.param = pybamm.ParameterValues("Marquis2019")
+    param_names = ["parameter"]
+    params = parameters
 
-    def time_setup_SPM(self):
+    def time_setup_SPM(self, parameters):
+        self.param = pybamm.ParameterValues(parameters)
         self.model = pybamm.lithium_ion.SPM()
         self.param.process_model(self.model)
         compute_discretisation(self.model, self.param).process_model(self.model)
 
 
 class TimeBuildSPMe:
-    def __init__(self):
-        self.param = pybamm.ParameterValues("Marquis2019")
+    param_names = ["parameter"]
+    params = parameters
 
-    def time_setup_SPMe(self):
+    def time_setup_SPMe(self, parameters):
+        self.param = pybamm.ParameterValues(parameters)
         self.model = pybamm.lithium_ion.SPMe()
         self.param.process_model(self.model)
         compute_discretisation(self.model, self.param).process_model(self.model)
 
 
 class TimeBuildDFN:
-    def __init__(self):
-        self.param = pybamm.ParameterValues("Marquis2019")
+    param_names = ["parameter"]
+    params = parameters
 
-    def time_setup_DFN(self):
+    def time_setup_DFN(self, parameters):
+        self.param = pybamm.ParameterValues(parameters)
         self.model = pybamm.lithium_ion.DFN()
         self.param.process_model(self.model)
         compute_discretisation(self.model, self.param).process_model(self.model)
 
 
 class TimeBuildSPMSimulation:
-    # with_experiment
-    params = [False, True]
+    param_names = ["with experiment", "parameter"]
+    params = ([False, True], parameters)
 
-    def __init__(self):
-        self.param = pybamm.ParameterValues("Marquis2019")
-
-    def time_setup_SPM_simulation(self, with_experiment):
+    def time_setup_SPM_simulation(self, with_experiment, parameters):
+        self.param = pybamm.ParameterValues(parameters)
         self.model = pybamm.lithium_ion.SPM()
         if with_experiment:
             exp = pybamm.Experiment(
@@ -68,13 +82,11 @@ class TimeBuildSPMSimulation:
 
 
 class TimeBuildSPMeSimulation:
-    # with_experiment
-    params = [False, True]
+    param_names = ["with experiment", "parameter"]
+    params = ([False, True], parameters)
 
-    def __init__(self):
-        self.param = pybamm.ParameterValues("Marquis2019")
-
-    def time_setup_SPMe_simulation(self, with_experiment):
+    def time_setup_SPMe_simulation(self, with_experiment, parameters):
+        self.param = pybamm.ParameterValues(parameters)
         self.model = pybamm.lithium_ion.SPMe()
         if with_experiment:
             exp = pybamm.Experiment(
@@ -88,13 +100,11 @@ class TimeBuildSPMeSimulation:
 
 
 class TimeBuildDFNSimulation:
-    # with_experiment
-    params = [False, True]
+    param_names = ["with experiment", "parameter"]
+    params = ([False, True], parameters)
 
-    def __init__(self):
-        self.param = pybamm.ParameterValues("Marquis2019")
-
-    def time_setup_DFN_simulation(self, with_experiment):
+    def time_setup_DFN_simulation(self, with_experiment, parameters):
+        self.param = pybamm.ParameterValues(parameters)
         self.model = pybamm.lithium_ion.DFN()
         if with_experiment:
             exp = pybamm.Experiment(

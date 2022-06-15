@@ -106,6 +106,8 @@ cmake_args = [
     "-DKLU_INCLUDE_DIR={}".format(KLU_INCLUDE_DIR),
     "-DKLU_LIBRARY_DIR={}".format(KLU_LIBRARY_DIR),
     "-DCMAKE_INSTALL_PREFIX=" + install_dir,
+    # on mac use fixed paths rather than rpath
+    "-DCMAKE_INSTALL_NAME_DIR=" + KLU_LIBRARY_DIR,
 ]
 
 # SUNDIALS are built within download_dir 'build_sundials' in the PyBaMM root

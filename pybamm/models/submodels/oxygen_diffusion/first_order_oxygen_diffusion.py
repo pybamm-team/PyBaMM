@@ -29,9 +29,9 @@ class FirstOrder(BaseModel):
     def get_coupled_variables(self, variables):
 
         param = self.param
-        l_n = param.l_n
-        l_s = param.l_s
-        l_p = param.l_p
+        l_n = param.n.l
+        l_s = param.s.l
+        l_p = param.p.l
         x_s = pybamm.standard_spatial_vars.x_s
         x_p = pybamm.standard_spatial_vars.x_p
 

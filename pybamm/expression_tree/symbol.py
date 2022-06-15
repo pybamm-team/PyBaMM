@@ -395,10 +395,6 @@ class Symbol:
         """
         Set the immutable "identity" of a variable (e.g. for identifying y_slices).
 
-        This is identical to what we'd put in a __hash__ function
-        However, implementing __hash__ requires also implementing __eq__,
-        which would then mess with loop-checking in the anytree module.
-
         Hashing can be slow, so we set the id when we create the node, and hence only
         need to hash once.
         """
@@ -407,6 +403,18 @@ class Symbol:
             + tuple([child.id for child in self.children])
             + tuple([(k, tuple(v)) for k, v in self.domains.items() if v != []])
         )
+
+    def __eq__(self, other):
+        try:
+            return self._id == other._id
+        except AttributeError:
+            if isinstance(other, numbers.Number):
+                return self._id == pybamm.Scalar(other)._id
+            else:
+                return False
+
+    def __hash__(self):
+        return self._id
 
     @property
     def orphans(self):
@@ -660,11 +668,11 @@ class Symbol:
         variable : :class:`pybamm.Symbol`
             The variable with respect to which to differentiate
         """
-        if variable.id == self.id:
+        if variable == self:
             return pybamm.Scalar(1)
-        elif any(variable.id == x.id for x in self.pre_order()):
+        elif any(variable == x for x in self.pre_order()):
             return self._diff(variable)
-        elif variable.id == pybamm.t.id and self.has_symbol_of_classes(
+        elif variable == pybamm.t and self.has_symbol_of_classes(
             (pybamm.VariableBase, pybamm.StateVectorBase)
         ):
             return self._diff(variable)
@@ -724,11 +732,8 @@ class Symbol:
             "{!s} of type {}".format(self, type(self))
         )
 
-    def evaluate(self, t=None, y=None, y_dot=None, inputs=None, known_evals=None):
+    def evaluate(self, t=None, y=None, y_dot=None, inputs=None):
         """Evaluate expression tree (wrapper to allow using dict of known values).
-        If the dict 'known_evals' is provided, the dict is searched for self.id; if
-        self.id is in the keys, return that value; otherwise, evaluate using
-        :meth:`_base_evaluate()` and add that value to known_evals
 
         Parameters
         ----------
@@ -741,22 +746,13 @@ class Symbol:
             (default None)
         inputs : dict, optional
             dictionary of inputs to use when solving (default None)
-        known_evals : dict, optional
-            dictionary containing known values (default None)
 
         Returns
         -------
         number or array
             the node evaluated at (t,y)
-        known_evals (if known_evals input is not None) : dict
-            the dictionary of known values
         """
-        if known_evals is not None:
-            if self.id not in known_evals:
-                known_evals[self.id] = self._base_evaluate(t, y, y_dot, inputs)
-            return known_evals[self.id], known_evals
-        else:
-            return self._base_evaluate(t, y, y_dot, inputs)
+        return self._base_evaluate(t, y, y_dot, inputs)
 
     def evaluate_for_shape(self):
         """
@@ -932,7 +928,7 @@ class Symbol:
             # If that fails, fall back to calculating how big y should really be
             except ValueError:
                 unpacker = pybamm.SymbolUnpacker(pybamm.StateVector)
-                state_vectors_in_node = unpacker.unpack_symbol(self).values()
+                state_vectors_in_node = unpacker.unpack_symbol(self)
                 min_y_size = max(
                     max(len(x._evaluation_array) for x in state_vectors_in_node), 1
                 )
@@ -994,10 +990,8 @@ class Symbol:
 
     @print_name.setter
     def print_name(self, name):
-        if name is None:
-            self._print_name = name
-        else:
-            self._print_name = prettify_print_name(name)
+        self._raw_print_name = name
+        self._print_name = prettify_print_name(name)
 
     def to_equation(self):
         return sympy.Symbol(str(self.name))

@@ -54,8 +54,8 @@ class ReactionDrivenODE(BaseModel):
                 0, "separator", auxiliary_domains={"secondary": "current collector"}
             )
 
-        deps_n_dt = -self.param.beta_surf_n * j_n
-        deps_p_dt = -self.param.beta_surf_p * j_p
+        deps_n_dt = -self.param.n.beta_surf * j_n
+        deps_p_dt = -self.param.p.beta_surf * j_p
 
         variables.update(
             self._get_standard_porosity_change_variables(
@@ -83,9 +83,9 @@ class ReactionDrivenODE(BaseModel):
             eps_p_av = variables["X-averaged positive electrode porosity"]
 
             self.initial_conditions = {
-                eps_n_av: self.param.epsilon_n_init,
-                eps_s_av: self.param.epsilon_s_init,
-                eps_p_av: self.param.epsilon_p_init,
+                eps_n_av: self.param.n.epsilon_init,
+                eps_s_av: self.param.s.epsilon_init,
+                eps_p_av: self.param.p.epsilon_init,
             }
         else:
             eps = variables["Porosity"]

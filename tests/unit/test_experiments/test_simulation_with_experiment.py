@@ -88,7 +88,8 @@ class TestSimulationExperiment(unittest.TestCase):
         )
         model = pybamm.lithium_ion.DFN()
         sim = pybamm.Simulation(model, experiment=experiment)
-        sol = sim.solve()
+        # test the callback here
+        sol = sim.solve(callbacks=pybamm.callbacks.Callback())
         self.assertEqual(sol.termination, "final time")
         self.assertEqual(len(sol.cycles), 1)
 
@@ -176,16 +177,50 @@ class TestSimulationExperiment(unittest.TestCase):
         self.assertIn(("drive_cycle", "V"), sim.op_conds_to_model_and_param)
         self.assertIn(("drive_cycle", "W"), sim.op_conds_to_model_and_param)
 
-    def test_run_experiment_breaks_early(self):
+    def test_run_experiment_breaks_early_infeasible(self):
         experiment = pybamm.Experiment(["Discharge at 2 C for 1 hour"])
         model = pybamm.lithium_ion.SPM()
         sim = pybamm.Simulation(model, experiment=experiment)
         pybamm.set_logging_level("ERROR")
         # giving the time, should get ignored
         t_eval = [0, 1]
-        sim.solve(t_eval, solver=pybamm.CasadiSolver())
+        sim.solve(
+            t_eval, solver=pybamm.CasadiSolver(), callbacks=pybamm.callbacks.Callback()
+        )
         pybamm.set_logging_level("WARNING")
-        self.assertEqual(sim._solution, None)
+        self.assertEqual(sim._solution.termination, "event: Minimum voltage")
+
+    def test_run_experiment_breaks_early_error(self):
+        experiment = pybamm.Experiment(
+            [("Rest for 10 minutes", "Discharge at 10 C for 1 minute")]
+        )
+        model = pybamm.lithium_ion.DFN()
+
+        parameter_values = pybamm.ParameterValues("Chen2020")
+        sim = pybamm.Simulation(
+            model,
+            experiment=experiment,
+            parameter_values=parameter_values,
+        )
+        sol = sim.solve()
+        self.assertEqual(len(sol.cycles), 1)
+        self.assertEqual(len(sol.cycles[0].steps), 1)
+
+        # Different experiment setup style
+        experiment = pybamm.Experiment(
+            ["Rest for 10 minutes", "Discharge at 10 C for 1 minute"]
+        )
+        sim = pybamm.Simulation(
+            model,
+            experiment=experiment,
+            parameter_values=parameter_values,
+        )
+        sol = sim.solve()
+        self.assertEqual(len(sol.cycles), 1)
+        self.assertEqual(len(sol.cycles[0].steps), 1)
+
+        # Different callback - this is for coverage on the `Callback` class
+        sol = sim.solve(callbacks=pybamm.callbacks.Callback())
 
     def test_run_experiment_termination_capacity(self):
         # with percent
@@ -242,7 +277,8 @@ class TestSimulationExperiment(unittest.TestCase):
         model = pybamm.lithium_ion.SPM()
         param = pybamm.ParameterValues("Chen2020")
         sim = pybamm.Simulation(model, experiment=experiment, parameter_values=param)
-        sol = sim.solve()
+        # Test with calc_esoh=False here
+        sol = sim.solve(calc_esoh=False)
         # Only two cycles should be completed, only 2nd cycle should go below 4V
         np.testing.assert_array_less(
             4, np.min(sol.cycles[0]["Terminal voltage [V]"].data)

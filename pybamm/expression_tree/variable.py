@@ -37,12 +37,20 @@ class VariableBase(pybamm.Symbol):
         deprecated.
     bounds : tuple, optional
         Physical bounds on the variable
+    print_name : str, optional
+        The name to use for printing. Default is None, in which case self.name is used.
 
     *Extends:* :class:`Symbol`
     """
 
     def __init__(
-        self, name, domain=None, auxiliary_domains=None, domains=None, bounds=None
+        self,
+        name,
+        domain=None,
+        auxiliary_domains=None,
+        domains=None,
+        bounds=None,
+        print_name=None,
     ):
         super().__init__(
             name, domain=domain, auxiliary_domains=auxiliary_domains, domains=domains
@@ -56,13 +64,16 @@ class VariableBase(pybamm.Symbol):
                     + "Lower bound should be strictly less than upper bound."
                 )
         self.bounds = bounds
-        self.print_name = None
+        self.print_name = print_name
 
     def create_copy(self):
         """See :meth:`pybamm.Symbol.new_copy()`."""
-
-        out = self.__class__(self.name, domains=self.domains, bounds=self.bounds)
-        return out
+        return self.__class__(
+            self.name,
+            domains=self.domains,
+            bounds=self.bounds,
+            print_name=self._raw_print_name,
+        )
 
     def _evaluate_for_shape(self):
         """See :meth:`pybamm.Symbol.evaluate_for_shape_using_domain()`"""
@@ -104,12 +115,20 @@ class Variable(VariableBase):
         deprecated.
     bounds : tuple, optional
         Physical bounds on the variable
+    print_name : str, optional
+        The name to use for printing. Default is None, in which case self.name is used.
 
-    *Extends:* :class:`Symbol`
+    *Extends:* :class:`VariableBase`
     """
 
     def __init__(
-        self, name, domain=None, auxiliary_domains=None, domains=None, bounds=None
+        self,
+        name,
+        domain=None,
+        auxiliary_domains=None,
+        domains=None,
+        bounds=None,
+        print_name=None,
     ):
         super().__init__(
             name,
@@ -117,12 +136,13 @@ class Variable(VariableBase):
             auxiliary_domains=auxiliary_domains,
             domains=domains,
             bounds=bounds,
+            print_name=print_name,
         )
 
     def diff(self, variable):
-        if variable.id == self.id:
+        if variable == self:
             return pybamm.Scalar(1)
-        elif variable.id == pybamm.t.id:
+        elif variable == pybamm.t:
             return pybamm.VariableDot(self.name + "'", domains=self.domains)
         else:
             return pybamm.Scalar(0)
@@ -158,15 +178,28 @@ class VariableDot(VariableBase):
     bounds : tuple, optional
         Physical bounds on the variable. Included for compatibility with `VariableBase`,
         but ignored.
+    print_name : str, optional
+        The name to use for printing. Default is None, in which case self.name is used.
 
-    *Extends:* :class:`Symbol`
+    *Extends:* :class:`VariableBase`
     """
 
     def __init__(
-        self, name, domain=None, auxiliary_domains=None, domains=None, bounds=None
+        self,
+        name,
+        domain=None,
+        auxiliary_domains=None,
+        domains=None,
+        bounds=None,
+        print_name=None,
     ):
         super().__init__(
-            name, domain=domain, auxiliary_domains=auxiliary_domains, domains=domains
+            name,
+            domain=domain,
+            auxiliary_domains=auxiliary_domains,
+            domains=domains,
+            bounds=bounds,
+            print_name=print_name,
         )
 
     def get_variable(self):
@@ -179,9 +212,9 @@ class VariableDot(VariableBase):
         return Variable(self.name[:-1], domains=self.domains)
 
     def diff(self, variable):
-        if variable.id == self.id:
+        if variable == self:
             return pybamm.Scalar(1)
-        elif variable.id == pybamm.t.id:
+        elif variable == pybamm.t:
             raise pybamm.ModelError("cannot take second time derivative of a Variable")
         else:
             return pybamm.Scalar(0)
@@ -262,9 +295,9 @@ class ExternalVariable(Variable):
             raise KeyError("External variable '{}' not found".format(self.name))
 
     def diff(self, variable):
-        if variable.id == self.id:
+        if variable == self:
             return pybamm.Scalar(1)
-        elif variable.id == pybamm.t.id:
+        elif variable == pybamm.t:
             raise pybamm.ModelError(
                 "cannot take time derivative of an external variable"
             )

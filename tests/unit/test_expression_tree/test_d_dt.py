@@ -18,7 +18,7 @@ class TestDDT(unittest.TestCase):
         self.assertEqual(a.value, 1)
 
         a = (pybamm.t ** 2).diff(pybamm.t)
-        self.assertEqual(a.id, (2 * pybamm.t ** 1 * 1).id)
+        self.assertEqual(a, (2 * pybamm.t ** 1 * 1))
         self.assertEqual(a.evaluate(t=1), 2)
 
         a = (2 + pybamm.t ** 2).diff(pybamm.t)

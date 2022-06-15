@@ -176,7 +176,7 @@ class BaseModel:
                 isinstance(var, pybamm.Variable)
                 and var.name != name
                 # Exception if the variable is also there under its own name
-                and not (var.name in variables and variables[var.name].id == var.id)
+                and not (var.name in variables and variables[var.name] == var)
                 # Exception for the key "Leading-order"
                 and "leading-order" not in var.name.lower()
                 and "leading-order" not in name.lower()
@@ -358,7 +358,7 @@ class BaseModel:
             + [self.timescale]
             + list(self.length_scales.values())
         )
-        return list(all_input_parameters.values())
+        return list(all_input_parameters)
 
     def __getitem__(self, key):
         return self.rhs[key]
@@ -482,7 +482,7 @@ class BaseModel:
         # discretised
         if self.is_discretised:
             # Unpack slices for sorting
-            y_slices = {var.id: slce for var, slce in self.y_slices.items()}
+            y_slices = {var: slce for var, slce in self.y_slices.items()}
             slices = []
             for symbol in self.initial_conditions.keys():
                 if isinstance(symbol, pybamm.Concatenation):
@@ -490,12 +490,12 @@ class BaseModel:
                     # equations get sorted correctly
                     slices.append(
                         slice(
-                            y_slices[symbol.children[0].id][0].start,
-                            y_slices[symbol.children[-1].id][0].stop,
+                            y_slices[symbol.children[0]][0].start,
+                            y_slices[symbol.children[-1]][0].stop,
                         )
                     )
                 else:
-                    slices.append(y_slices[symbol.id][0])
+                    slices.append(y_slices[symbol][0])
             equations = list(model.initial_conditions.values())
             # sort equations according to slices
             sorted_equations = [eq for _, eq in sorted(zip(slices, equations))]
@@ -507,10 +507,10 @@ class BaseModel:
 
     def check_and_combine_dict(self, dict1, dict2):
         # check that the key ids are distinct
-        ids1 = set(x.id for x in dict1.keys())
-        ids2 = set(x.id for x in dict2.keys())
+        ids1 = set(x for x in dict1.keys())
+        ids2 = set(x for x in dict2.keys())
         if len(ids1.intersection(ids2)) != 0:
-            variables = [x for x in dict1.keys() if x.id in ids1.intersection(ids2)]
+            variables = ids1.intersection(ids2)
             raise pybamm.ModelError(
                 "Submodel incompatible: duplicate variables '{}'".format(variables)
             )
@@ -577,9 +577,9 @@ class BaseModel:
         """Check that the model is not under- or over-determined."""
         # Equations (differential and algebraic)
         # Get all the variables from differential and algebraic equations
-        vars_in_rhs_keys = set()
-        vars_in_algebraic_keys = set()
-        vars_in_eqns = set()
+        all_vars_in_rhs_keys = set()
+        all_vars_in_algebraic_keys = set()
+        all_vars_in_eqns = set()
         # Get all variables ids from rhs and algebraic keys and equations, and
         # from boundary conditions
         # For equations we look through the whole expression tree.
@@ -589,64 +589,59 @@ class BaseModel:
 
         for var, eqn in self.rhs.items():
             # Find all variables and variabledot objects
-            vars_in_rhs_keys_dict = unpacker.unpack_symbol(var)
-            vars_in_eqns_dict = unpacker.unpack_symbol(eqn)
+            vars_in_rhs_keys = unpacker.unpack_symbol(var)
+            vars_in_eqns = unpacker.unpack_symbol(eqn)
 
-            # Store ids only
             # Look only for Variable (not VariableDot) in rhs keys
-            vars_in_rhs_keys.update(
-                [
-                    var_id
-                    for var_id, var in vars_in_rhs_keys_dict.items()
-                    if isinstance(var, pybamm.Variable)
-                ]
+            all_vars_in_rhs_keys.update(
+                [var for var in vars_in_rhs_keys if isinstance(var, pybamm.Variable)]
             )
-            vars_in_eqns.update(vars_in_eqns_dict.keys())
+            all_vars_in_eqns.update(vars_in_eqns)
         for var, eqn in self.algebraic.items():
             # Find all variables and variabledot objects
-            vars_in_algebraic_keys_dict = unpacker.unpack_symbol(var)
-            vars_in_eqns_dict = unpacker.unpack_symbol(eqn)
+            vars_in_algebraic_keys = unpacker.unpack_symbol(var)
+            vars_in_eqns = unpacker.unpack_symbol(eqn)
 
             # Store ids only
             # Look only for Variable (not VariableDot) in algebraic keys
-            vars_in_algebraic_keys.update(
+            all_vars_in_algebraic_keys.update(
                 [
-                    var_id
-                    for var_id, var in vars_in_algebraic_keys_dict.items()
+                    var
+                    for var in vars_in_algebraic_keys
                     if isinstance(var, pybamm.Variable)
                 ]
             )
-            vars_in_eqns.update(vars_in_eqns_dict.keys())
+            all_vars_in_eqns.update(vars_in_eqns)
         for var, side_eqn in self.boundary_conditions.items():
             for side, (eqn, typ) in side_eqn.items():
-                vars_in_eqns_dict = unpacker.unpack_symbol(eqn)
-                vars_in_eqns.update(vars_in_eqns_dict.keys())
+                vars_in_eqns = unpacker.unpack_symbol(eqn)
+                all_vars_in_eqns.update(vars_in_eqns)
 
         # If any keys are repeated between rhs and algebraic then the model is
         # overdetermined
-        if not set(vars_in_rhs_keys).isdisjoint(vars_in_algebraic_keys):
+        if not set(all_vars_in_rhs_keys).isdisjoint(all_vars_in_algebraic_keys):
             raise pybamm.ModelError("model is overdetermined (repeated keys)")
         # If any algebraic keys don't appear in the eqns (or bcs) then the model is
         # overdetermined (but rhs keys can be absent from the eqns, e.g. dcdt = -1 is
         # fine)
         # Skip this step after discretisation, as any variables in the equations will
         # have been discretised to slices but keys will still be variables
-        extra_algebraic_keys = vars_in_algebraic_keys.difference(vars_in_eqns)
+        extra_algebraic_keys = all_vars_in_algebraic_keys.difference(all_vars_in_eqns)
         if extra_algebraic_keys and not post_discretisation:
             raise pybamm.ModelError("model is overdetermined (extra algebraic keys)")
         # If any variables in the equations don't appear in the keys then the model is
         # underdetermined
-        vars_in_keys = vars_in_rhs_keys.union(vars_in_algebraic_keys)
-        extra_variables_in_equations = vars_in_eqns.difference(vars_in_keys)
+        all_vars_in_keys = all_vars_in_rhs_keys.union(all_vars_in_algebraic_keys)
+        extra_variables_in_equations = all_vars_in_eqns.difference(all_vars_in_keys)
 
-        # get ids of external variables
-        external_ids = {var.id for var in self.external_variables}
+        # get external variables
+        external_vars = set(self.external_variables)
         for var in self.external_variables:
             if isinstance(var, pybamm.Concatenation):
-                child_ids = {child.id for child in var.children}
-                external_ids = external_ids.union(child_ids)
+                child_vars = set(var.children)
+                external_vars = external_vars.union(child_vars)
 
-        extra_variables = extra_variables_in_equations.difference(external_ids)
+        extra_variables = extra_variables_in_equations.difference(external_vars)
 
         if extra_variables:
             raise pybamm.ModelError("model is underdetermined (too many variables)")
@@ -700,7 +695,7 @@ class BaseModel:
         unpacker = pybamm.SymbolUnpacker(pybamm.Variable)
         all_vars = unpacker.unpack_list_of_symbols(self.variables.values())
 
-        var_ids_in_keys = set()
+        vars_in_keys = set()
 
         model_and_external_variables = (
             list(self.rhs.keys())
@@ -710,13 +705,13 @@ class BaseModel:
 
         for var in model_and_external_variables:
             if isinstance(var, pybamm.Variable):
-                var_ids_in_keys.add(var.id)
+                vars_in_keys.add(var)
             # Key can be a concatenation
             elif isinstance(var, pybamm.Concatenation):
-                var_ids_in_keys.update([child.id for child in var.children])
+                vars_in_keys.update(var.children)
 
-        for var_id, var in all_vars.items():
-            if var_id not in var_ids_in_keys:
+        for var in all_vars:
+            if var not in vars_in_keys:
                 raise pybamm.ModelError(
                     """
                     No key set for variable '{}'. Make sure it is included in either
@@ -729,18 +724,15 @@ class BaseModel:
 
     def check_no_repeated_keys(self):
         """Check that no equation keys are repeated."""
-        rhs_alg = {**self.rhs, **self.algebraic}
-        rhs_alg_keys = []
+        rhs_keys = set(self.rhs.keys())
+        alg_keys = set(self.algebraic.keys())
 
-        for var in rhs_alg.keys():
-            # Check the variable has not already been defined
-            if var.id in rhs_alg_keys:
-                raise pybamm.ModelError(
-                    "Multiple equations specified for variable {!r}".format(var)
+        if not rhs_keys.isdisjoint(alg_keys):
+            raise pybamm.ModelError(
+                "Multiple equations specified for variables {}".format(
+                    rhs_keys.intersection(alg_keys)
                 )
-            # Update list of variables
-            else:
-                rhs_alg_keys.append(var.id)
+            )
 
     def info(self, symbol_name):
         """
@@ -922,6 +914,83 @@ class BaseModel:
         C.add(variables_fn)
         C.generate()
 
+    def generate_julia_diffeq(
+        self,
+        input_parameter_order=None,
+        get_consistent_ics_solver=None,
+        dae_type="semi-explicit",
+        **kwargs,
+    ):
+        """
+        Generate a Julia representation of the model, ready to be solved by Julia's
+        DifferentialEquations library.
+
+        Parameters
+        ----------
+        input_parameter_order : list, optional
+            Order in which input parameters will be provided when solving the model
+        get_consistent_ics_solver : pybamm solver, optional
+            Solver to use to get consistent initial conditions. If None, the initial
+            guesses for boundary conditions (non-consistent) are used.
+        dae_type : str, optional
+            How to write the DAEs. Options are "semi-explicit" (default) or "implicit".
+
+        Returns
+        -------
+        eqn_str : str
+            The Julia-compatible equations for the model in string format,
+            to be evaluated by eval(Meta.parse(...))
+        ics_str : str
+            The Julia-compatible initial conditions for the model in string format,
+            to be evaluated by eval(Meta.parse(...))
+        """
+        self.check_discretised_or_discretise_inplace_if_0D()
+
+        name = self.name.replace(" ", "_")
+
+        if self.algebraic == {}:
+            # ODE model: form dy[] = ...
+            eqn_str = pybamm.get_julia_function(
+                self.concatenated_rhs,
+                funcname=name,
+                input_parameter_order=input_parameter_order,
+                **kwargs,
+            )
+        else:
+            if dae_type == "semi-explicit":
+                len_rhs = None
+            else:
+                len_rhs = self.concatenated_rhs.size
+            # DAE model: form out[] = ... - dy[]
+            eqn_str = pybamm.get_julia_function(
+                pybamm.numpy_concatenation(
+                    self.concatenated_rhs, self.concatenated_algebraic
+                ),
+                funcname=name,
+                input_parameter_order=input_parameter_order,
+                len_rhs=len_rhs,
+                **kwargs,
+            )
+
+        if get_consistent_ics_solver is None or self.algebraic == {}:
+            ics = self.concatenated_initial_conditions
+        else:
+            get_consistent_ics_solver.set_up(self)
+            get_consistent_ics_solver._set_initial_conditions(self, {}, False)
+            ics = pybamm.Vector(self.y0.full())
+
+        ics_str = pybamm.get_julia_function(
+            ics,
+            funcname=name + "_u0",
+            input_parameter_order=input_parameter_order,
+            **kwargs,
+        )
+        # Change the string to a form for u0
+        ics_str = ics_str.replace("(dy, y, p, t)", "(u0, p)")
+        ics_str = ics_str.replace("dy", "u0")
+
+        return eqn_str, ics_str
+
     @property
     def default_parameter_values(self):
         return pybamm.ParameterValues({})
@@ -1023,7 +1092,7 @@ class EquationDict(dict):
             for var, eqn in equations.items():
                 if eqn.has_symbol_of_classes(pybamm.Variable):
                     unpacker = pybamm.SymbolUnpacker(pybamm.Variable)
-                    variable_in_equation = list(unpacker.unpack_symbol(eqn).values())[0]
+                    variable_in_equation = list(unpacker.unpack_symbol(eqn))[0]
                     raise TypeError(
                         "Initial conditions cannot contain 'Variable' objects, "
                         "but '{!r}' found in initial conditions for '{}'".format(

@@ -111,11 +111,11 @@ class XAveragedFickianDiffusion(BaseSizeDistribution):
         )
 
         if self.domain == "Negative":
-            N_s_xav_distribution = -self.param.D_n(
+            N_s_xav_distribution = -self.param.n.D(
                 c_s_xav_distribution, T_k_xav
             ) * pybamm.grad(c_s_xav_distribution)
         elif self.domain == "Positive":
-            N_s_xav_distribution = -self.param.D_p(
+            N_s_xav_distribution = -self.param.p.D(
                 c_s_xav_distribution, T_k_xav
             ) * pybamm.grad(c_s_xav_distribution)
 
@@ -157,18 +157,11 @@ class XAveragedFickianDiffusion(BaseSizeDistribution):
             R_spatial_variable,
             [self.domain.lower() + " particle"],
         )
-        if self.domain == "Negative":
-            self.rhs = {
-                c_s_xav_distribution: -(1 / self.param.C_n)
-                * pybamm.div(N_s_xav_distribution)
-                / R ** 2
-            }
-        elif self.domain == "Positive":
-            self.rhs = {
-                c_s_xav_distribution: -(1 / self.param.C_p)
-                * pybamm.div(N_s_xav_distribution)
-                / R ** 2
-            }
+        self.rhs = {
+            c_s_xav_distribution: -(1 / self.domain_param.C_diff)
+            * pybamm.div(N_s_xav_distribution)
+            / R ** 2
+        }
 
     def set_boundary_conditions(self, variables):
         # Extract x-av variables
@@ -196,25 +189,14 @@ class XAveragedFickianDiffusion(BaseSizeDistribution):
         )
 
         # Set surface Neumann boundary values
-        if self.domain == "Negative":
-            rbc = (
-                -self.param.C_n
-                * R
-                * j_xav_distribution
-                / self.param.a_R_n
-                / self.param.gamma_n
-                / self.param.D_n(c_s_surf_xav_distribution, T_k_xav)
-            )
-
-        elif self.domain == "Positive":
-            rbc = (
-                -self.param.C_p
-                * R
-                * j_xav_distribution
-                / self.param.a_R_p
-                / self.param.gamma_p
-                / self.param.D_p(c_s_surf_xav_distribution, T_k_xav)
-            )
+        rbc = (
+            -self.domain_param.C_diff
+            * R
+            * j_xav_distribution
+            / self.domain_param.a_R
+            / self.domain_param.gamma
+            / self.domain_param.D(c_s_surf_xav_distribution, T_k_xav)
+        )
 
         self.boundary_conditions = {
             c_s_xav_distribution: {
@@ -235,14 +217,9 @@ class XAveragedFickianDiffusion(BaseSizeDistribution):
             "X-averaged " + self.domain.lower() + " particle concentration distribution"
         ]
 
-        if self.domain == "Negative":
-            c_init = pybamm.SecondaryBroadcast(
-                pybamm.x_average(self.param.c_n_init), "negative particle size"
-            )
-
-        elif self.domain == "Positive":
-            c_init = pybamm.SecondaryBroadcast(
-                pybamm.x_average(self.param.c_p_init), "positive particle size"
-            )
+        c_init = pybamm.SecondaryBroadcast(
+            pybamm.x_average(self.domain_param.c_init),
+            f"{self.domain.lower()} particle size",
+        )
 
         self.initial_conditions = {c_s_xav_distribution: c_init}

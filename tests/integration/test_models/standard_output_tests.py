@@ -93,8 +93,8 @@ class BaseOutputTest(object):
                 self.R_p = disc.mesh["positive particle size"].nodes * R_p_typ
 
         # Useful parameters
-        self.l_n = param.evaluate(geo.l_n)
-        self.l_p = param.evaluate(geo.l_p)
+        self.l_n = param.evaluate(geo.n.l)
+        self.l_p = param.evaluate(geo.p.l)
 
         current_param = self.model.param.current_with_time
 
@@ -745,9 +745,9 @@ class VelocityTests(BaseOutputTest):
         """Test the boundary values of the current densities"""
         t, x_n, x_p = self.t, self.x_n, self.x_p
 
-        beta_n = self.model.param.beta_n
+        beta_n = self.model.param.n.beta
         beta_n = self.param.evaluate(beta_n)
-        beta_p = self.model.param.beta_p
+        beta_p = self.model.param.p.beta
         beta_p = self.param.evaluate(beta_p)
 
         np.testing.assert_array_almost_equal(

@@ -70,13 +70,11 @@ class XAveragedFickianDiffusion(BaseFickian):
         ]
         N_s_xav = variables["X-averaged " + self.domain.lower() + " particle flux"]
 
-        if self.domain == "Negative":
-            self.rhs = {c_s_xav: -(1 / self.param.C_n) * pybamm.div(N_s_xav)}
-
-        elif self.domain == "Positive":
-            self.rhs = {c_s_xav: -(1 / self.param.C_p) * pybamm.div(N_s_xav)}
+        self.rhs = {c_s_xav: -(1 / self.domain_param.C_diff) * pybamm.div(N_s_xav)}
 
     def set_boundary_conditions(self, variables):
+        domain_param = self.domain_param
+
         c_s_xav = variables[
             "X-averaged " + self.domain.lower() + " particle concentration"
         ]
@@ -89,23 +87,13 @@ class XAveragedFickianDiffusion(BaseFickian):
             + " electrode interfacial current density"
         ]
 
-        if self.domain == "Negative":
-            rbc = (
-                -self.param.C_n
-                * j_xav
-                / self.param.a_R_n
-                / self.param.gamma_n
-                / pybamm.surf(D_eff_xav)
-            )
-
-        elif self.domain == "Positive":
-            rbc = (
-                -self.param.C_p
-                * j_xav
-                / self.param.a_R_p
-                / self.param.gamma_p
-                / pybamm.surf(D_eff_xav)
-            )
+        rbc = (
+            -domain_param.C_diff
+            * j_xav
+            / domain_param.a_R
+            / domain_param.gamma
+            / pybamm.surf(D_eff_xav)
+        )
 
         self.boundary_conditions = {
             c_s_xav: {"left": (pybamm.Scalar(0), "Neumann"), "right": (rbc, "Neumann")}
@@ -120,9 +108,6 @@ class XAveragedFickianDiffusion(BaseFickian):
             "X-averaged " + self.domain.lower() + " particle concentration"
         ]
 
-        if self.domain == "Negative":
-            c_init = pybamm.x_average(self.param.c_n_init)
-        elif self.domain == "Positive":
-            c_init = pybamm.x_average(self.param.c_p_init)
+        c_init = pybamm.x_average(self.domain_param.c_init)
 
         self.initial_conditions = {c_s_xav: c_init}

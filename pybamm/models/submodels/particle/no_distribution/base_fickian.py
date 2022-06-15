@@ -27,12 +27,10 @@ class BaseFickian(BaseParticle):
 
     def _get_effective_diffusivity(self, c, T):
         param = self.param
+        domain_param = self.domain_param
 
         # Get diffusivity
-        if self.domain == "Negative":
-            D = param.D_n(c, T)
-        elif self.domain == "Positive":
-            D = param.D_p(c, T)
+        D = domain_param.D(c, T)
 
         # Account for stress-induced diffusion by defining a multiplicative
         # "stress factor"
@@ -41,24 +39,16 @@ class BaseFickian(BaseParticle):
         ]
 
         if stress_option == "true":
-            if self.domain == "Negative":
-                stress_factor = 1 + param.theta_n * (c - param.c_n_0) / (
-                    1 + param.Theta * T
-                )
-            elif self.domain == "Positive":
-                stress_factor = 1 + param.theta_p * (c - param.c_p_0) / (
-                    1 + param.Theta * T
-                )
+            stress_factor = 1 + domain_param.theta * (c - domain_param.c_0) / (
+                1 + param.Theta * T
+            )
         else:
             stress_factor = 1
 
         return D * stress_factor
 
     def _get_standard_diffusivity_variables(self, D_eff):
-        if self.domain == "Negative":
-            D_scale = self.param.D_n_typ_dim
-        elif self.domain == "Positive":
-            D_scale = self.param.D_p_typ_dim
+        D_scale = self.domain_param.D_typ_dim
 
         variables = {
             self.domain + " effective diffusivity": D_eff,

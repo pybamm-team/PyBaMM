@@ -9,6 +9,7 @@ import numbers
 import warnings
 from pprint import pformat
 from collections import defaultdict
+import inspect
 import json
 
 
@@ -101,6 +102,10 @@ class ParameterValues:
         self._processed_symbols = {}
         self.parameter_events = []
 
+        # Don't touch this parameter unless you know what you are doing
+        # This is for the conversion to Julia (ModelingToolkit)
+        self._replace_callable_function_parameters = True
+
     def __getitem__(self, key):
         return self._dict_items[key]
 
@@ -139,7 +144,11 @@ class ParameterValues:
     def copy(self):
         """Returns a copy of the parameter values. Makes sure to copy the internal
         dictionary."""
-        return ParameterValues(self._dict_items.copy())
+        new_copy = ParameterValues(self._dict_items.copy())
+        new_copy._replace_callable_function_parameters = (
+            self._replace_callable_function_parameters
+        )
+        return new_copy
 
     def search(self, key, print_values=True):
         """
@@ -556,10 +565,10 @@ class ParameterValues:
 
         """
         try:
-            return self._processed_symbols[symbol.id]
+            return self._processed_symbols[symbol]
         except KeyError:
             processed_symbol = self._process_symbol(symbol)
-            self._processed_symbols[symbol.id] = processed_symbol
+            self._processed_symbols[symbol] = processed_symbol
 
             return processed_symbol
 
@@ -585,7 +594,7 @@ class ParameterValues:
             new_children = []
             for child in symbol.children:
                 if symbol.diff_variable is not None and any(
-                    x.id == symbol.diff_variable.id for x in child.pre_order()
+                    x == symbol.diff_variable for x in child.pre_order()
                 ):
                     # Wrap with NotConstant to avoid simplification,
                     # which would stop symbolic diff from working properly
@@ -650,6 +659,30 @@ class ParameterValues:
             elif callable(function_name):
                 # otherwise evaluate the function to create a new PyBaMM object
                 function = function_name(*new_children)
+                if (
+                    self._replace_callable_function_parameters is False
+                    and not isinstance(
+                        self.process_symbol(function), (pybamm.Scalar, pybamm.Broadcast)
+                    )
+                    and symbol.print_name is not None
+                    and symbol.diff_variable is None
+                ):
+                    # Special trick for printing in Julia ModelingToolkit format
+                    out = pybamm.FunctionParameter(
+                        symbol.print_name, dict(zip(symbol.input_names, new_children))
+                    )
+
+                    out.arg_names = inspect.getfullargspec(function_name)[0]
+                    out.callable = self.process_symbol(
+                        function_name(
+                            *[
+                                pybamm.Variable(arg_name, domains=child.domains)
+                                for arg_name, child in zip(out.arg_names, new_children)
+                            ]
+                        )
+                    )
+
+                    return out
             elif isinstance(
                 function_name, (pybamm.Interpolant, pybamm.InputParameter)
             ) or (
@@ -802,13 +835,25 @@ class ParameterValues:
             "elec",
             "therm",
             "half_cell",
+            "x",
+            "r",
         ]
 
         # If 'parameters' is a class, extract the dict
         if not isinstance(parameters, dict):
-            parameters = {
+            parameters_dict = {
                 k: v for k, v in parameters.__dict__.items() if k not in ignore
             }
+            for domain in ["n", "s", "p"]:
+                domain_param = getattr(parameters, domain)
+                parameters_dict.update(
+                    {
+                        f"{domain}.{k}": v
+                        for k, v in domain_param.__dict__.items()
+                        if k not in ignore
+                    }
+                )
+            parameters = parameters_dict
 
         evaluated_parameters = defaultdict(list)
         # Calculate parameters for each C-rate
@@ -825,7 +870,7 @@ class ParameterValues:
             self._dict_items = dict(self._dict_items)
 
             for name, symbol in parameters.items():
-                if not callable(symbol):
+                if isinstance(symbol, pybamm.Symbol):
                     try:
                         proc_symbol = self.process_symbol(symbol)
                     except KeyError:

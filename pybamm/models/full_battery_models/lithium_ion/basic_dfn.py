@@ -115,7 +115,7 @@ class BasicDFN(BaseModel):
 
         # transport_efficiency
         tor = pybamm.concatenation(
-            eps_n ** param.b_e_n, eps_s ** param.b_e_s, eps_p ** param.b_e_p
+            eps_n ** param.n.b_e, eps_s ** param.s.b_e, eps_p ** param.p.b_e
         )
 
         # Interfacial reactions
@@ -123,22 +123,22 @@ class BasicDFN(BaseModel):
         # right side. This is also accessible via `boundary_value(x, "right")`, with
         # "left" providing the boundary value of the left side
         c_s_surf_n = pybamm.surf(c_s_n)
-        j0_n = param.gamma_n * param.j0_n(c_e_n, c_s_surf_n, T) / param.C_r_n
+        j0_n = param.n.gamma * param.n.j0(c_e_n, c_s_surf_n, T) / param.n.C_r
         j_n = (
             2
             * j0_n
             * pybamm.sinh(
-                param.ne_n / 2 * (phi_s_n - phi_e_n - param.U_n(c_s_surf_n, T))
+                param.n.ne / 2 * (phi_s_n - phi_e_n - param.n.U(c_s_surf_n, T))
             )
         )
         c_s_surf_p = pybamm.surf(c_s_p)
-        j0_p = param.gamma_p * param.j0_p(c_e_p, c_s_surf_p, T) / param.C_r_p
+        j0_p = param.p.gamma * param.p.j0(c_e_p, c_s_surf_p, T) / param.p.C_r
         j_s = pybamm.PrimaryBroadcast(0, "separator")
         j_p = (
             2
             * j0_p
             * pybamm.sinh(
-                param.ne_p / 2 * (phi_s_p - phi_e_p - param.U_p(c_s_surf_p, T))
+                param.p.ne / 2 * (phi_s_p - phi_e_p - param.p.U(c_s_surf_p, T))
             )
         )
         j = pybamm.concatenation(j_n, j_s, j_p)
@@ -159,35 +159,35 @@ class BasicDFN(BaseModel):
 
         # The div and grad operators will be converted to the appropriate matrix
         # multiplication at the discretisation stage
-        N_s_n = -param.D_n(c_s_n, T) * pybamm.grad(c_s_n)
-        N_s_p = -param.D_p(c_s_p, T) * pybamm.grad(c_s_p)
-        self.rhs[c_s_n] = -(1 / param.C_n) * pybamm.div(N_s_n)
-        self.rhs[c_s_p] = -(1 / param.C_p) * pybamm.div(N_s_p)
+        N_s_n = -param.n.D(c_s_n, T) * pybamm.grad(c_s_n)
+        N_s_p = -param.p.D(c_s_p, T) * pybamm.grad(c_s_p)
+        self.rhs[c_s_n] = -(1 / param.n.C_diff) * pybamm.div(N_s_n)
+        self.rhs[c_s_p] = -(1 / param.p.C_diff) * pybamm.div(N_s_p)
         # Boundary conditions must be provided for equations with spatial derivatives
         self.boundary_conditions[c_s_n] = {
             "left": (pybamm.Scalar(0), "Neumann"),
             "right": (
-                -param.C_n
+                -param.n.C_diff
                 * j_n
-                / param.a_R_n
-                / param.gamma_n
-                / param.D_n(c_s_surf_n, T),
+                / param.n.a_R
+                / param.n.gamma
+                / param.n.D(c_s_surf_n, T),
                 "Neumann",
             ),
         }
         self.boundary_conditions[c_s_p] = {
             "left": (pybamm.Scalar(0), "Neumann"),
             "right": (
-                -param.C_p
+                -param.p.C_diff
                 * j_p
-                / param.a_R_p
-                / param.gamma_p
-                / param.D_p(c_s_surf_p, T),
+                / param.p.a_R
+                / param.p.gamma
+                / param.p.D(c_s_surf_p, T),
                 "Neumann",
             ),
         }
-        self.initial_conditions[c_s_n] = param.c_n_init
-        self.initial_conditions[c_s_p] = param.c_p_init
+        self.initial_conditions[c_s_n] = param.n.c_init
+        self.initial_conditions[c_s_p] = param.p.c_init
         # Events specify points at which a solution should terminate
         self.events += [
             pybamm.Event(
@@ -210,9 +210,9 @@ class BasicDFN(BaseModel):
         ######################
         # Current in the solid
         ######################
-        sigma_eff_n = param.sigma_n(T) * eps_s_n ** param.b_s_n
+        sigma_eff_n = param.n.sigma(T) * eps_s_n ** param.n.b_s
         i_s_n = -sigma_eff_n * pybamm.grad(phi_s_n)
-        sigma_eff_p = param.sigma_p(T) * eps_s_p ** param.b_s_p
+        sigma_eff_p = param.p.sigma(T) * eps_s_p ** param.p.b_s
         i_s_p = -sigma_eff_p * pybamm.grad(phi_s_p)
         # The `algebraic` dictionary contains differential equations, with the key being
         # the main scalar variable of interest in the equation
@@ -245,7 +245,7 @@ class BasicDFN(BaseModel):
             "left": (pybamm.Scalar(0), "Neumann"),
             "right": (pybamm.Scalar(0), "Neumann"),
         }
-        self.initial_conditions[phi_e] = -param.U_n_init
+        self.initial_conditions[phi_e] = -param.n.U_init
 
         ######################
         # Electrolyte concentration
