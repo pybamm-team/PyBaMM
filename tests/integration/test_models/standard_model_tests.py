@@ -182,14 +182,12 @@ class OptimisationsTest(object):
 
         self.model = model
 
-    def evaluate_model(self, use_known_evals=False, to_python=False, to_jax=False):
+    def evaluate_model(self, to_python=False, to_jax=False):
         result = np.empty((0, 1))
         for eqn in [self.model.concatenated_rhs, self.model.concatenated_algebraic]:
 
             y = self.model.concatenated_initial_conditions.evaluate(t=0)
-            if use_known_evals:
-                eqn_eval, known_evals = eqn.evaluate(0, y, known_evals={})
-            elif to_python:
+            if to_python:
                 evaluator = pybamm.EvaluatorPython(eqn)
                 eqn_eval = evaluator(0, y)
             elif to_jax:

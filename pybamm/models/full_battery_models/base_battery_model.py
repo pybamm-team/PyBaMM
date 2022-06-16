@@ -67,7 +67,7 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                 Can be "full" (default), "constant", or "current-driven".
             * "lithium plating" : str
                 Sets the model for lithium plating. Can be "none" (default),
-                "reversible" or "irreversible".
+                "reversible", "partially reversible", or "irreversible".
             * "loss of active material" : str
                 Sets the model for loss of active material. Can be "none" (default),
                 "stress-driven", "reaction-driven", or "stress and reaction-driven".
@@ -198,7 +198,12 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                 "Marcus-Hush-Chidsey",
             ],
             "interface utilisation": ["full", "constant", "current-driven"],
-            "lithium plating": ["none", "reversible", "irreversible"],
+            "lithium plating": [
+                "none",
+                "reversible",
+                "partially reversible",
+                "irreversible",
+            ],
             "lithium plating porosity change": ["false", "true"],
             "loss of active material": [
                 "none",
@@ -299,6 +304,15 @@ class BatteryModelOptions(pybamm.FuzzyDict):
             default_options["stress-induced diffusion"] = "true"
         # The "stress-induced diffusion" option will still be overridden by
         # extra_options if provided
+
+        # Change default SEI model based on which lithium plating option is provided
+        # return "none" if option not given
+        plating_option = extra_options.get("lithium plating", "none")
+        if plating_option == "partially reversible":
+            default_options["SEI"] = "constant"
+        else:
+            default_options["SEI"] = "none"
+        # The "SEI" option will still be overridden by extra_options if provided
 
         options = pybamm.FuzzyDict(default_options)
         # any extra options overwrite the default options
@@ -1161,11 +1175,7 @@ class BaseBatteryModel(pybamm.BaseModel):
         # Variables for calculating the equivalent circuit model (ECM) resistance
         # Need to compare OCV to initial value to capture this as an overpotential
         ocv_init = self.param.ocv_init
-        ocv_init_dim = (
-            self.param.U_p_ref
-            - self.param.U_n_ref
-            + self.param.potential_scale * ocv_init
-        )
+        ocv_init_dim = self.param.ocv_ref + self.param.potential_scale * ocv_init
         eta_ocv = ocv - ocv_init
         eta_ocv_dim = ocv_dim - ocv_init_dim
         # Current collector current density for working out euiqvalent resistance

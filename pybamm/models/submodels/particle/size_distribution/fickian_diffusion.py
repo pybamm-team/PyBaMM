@@ -29,30 +29,19 @@ class FickianDiffusion(BaseSizeDistribution):
         pybamm.citations.register("Kirk2021")
 
     def get_fundamental_variables(self):
+        c_s_distribution = pybamm.Variable(
+            f"{self.domain} particle concentration distribution",
+            domain=f"{self.domain.lower()} particle",
+            auxiliary_domains={
+                "secondary": f"{self.domain.lower()} particle size",
+                "tertiary": f"{self.domain.lower()} electrode",
+                "quaternary": "current collector",
+            },
+            bounds=(0, 1),
+        )
         if self.domain == "Negative":
-            c_s_distribution = pybamm.Variable(
-                "Negative particle concentration distribution",
-                domain="negative particle",
-                auxiliary_domains={
-                    "secondary": "negative particle size",
-                    "tertiary": "negative electrode",
-                    "quaternary": "current collector",
-                },
-                bounds=(0, 1),
-            )
             R = pybamm.standard_spatial_vars.R_n
-
         elif self.domain == "Positive":
-            c_s_distribution = pybamm.Variable(
-                "Positive particle concentration distribution",
-                domain="positive particle",
-                auxiliary_domains={
-                    "secondary": "positive particle size",
-                    "tertiary": "positive electrode",
-                    "quaternary": "current collector",
-                },
-                bounds=(0, 1),
-            )
             R = pybamm.standard_spatial_vars.R_p
 
         variables = self._get_distribution_variables(R)
@@ -91,16 +80,10 @@ class FickianDiffusion(BaseSizeDistribution):
             [self.domain.lower() + " particle"],
         )
 
-        if self.domain == "Negative":
-            N_s_distribution = -self.param.D_n(c_s_distribution, T_k) * pybamm.grad(
-                c_s_distribution
-            )
-            f_a_dist = self.param.f_a_dist_n(R)
-        elif self.domain == "Positive":
-            N_s_distribution = -self.param.D_p(c_s_distribution, T_k) * pybamm.grad(
-                c_s_distribution
-            )
-            f_a_dist = self.param.f_a_dist_p(R)
+        N_s_distribution = -self.domain_param.D(c_s_distribution, T_k) * pybamm.grad(
+            c_s_distribution
+        )
+        f_a_dist = self.domain_param.f_a_dist(R)
 
         # Size-dependent flux variables
         variables.update(
@@ -125,18 +108,11 @@ class FickianDiffusion(BaseSizeDistribution):
             [self.domain.lower() + " particle"],
         )
 
-        if self.domain == "Negative":
-            self.rhs = {
-                c_s_distribution: -(1 / self.param.C_n)
-                * pybamm.div(N_s_distribution)
-                / R ** 2
-            }
-        elif self.domain == "Positive":
-            self.rhs = {
-                c_s_distribution: -(1 / self.param.C_p)
-                * pybamm.div(N_s_distribution)
-                / R ** 2
-            }
+        self.rhs = {
+            c_s_distribution: -(1 / self.domain_param.C_diff)
+            * pybamm.div(N_s_distribution)
+            / R ** 2
+        }
 
     def set_boundary_conditions(self, variables):
         # Extract variables
@@ -156,24 +132,14 @@ class FickianDiffusion(BaseSizeDistribution):
         )
 
         # Set surface Neumann boundary values
-        if self.domain == "Negative":
-            rbc = (
-                -self.param.C_n
-                * R
-                * j_distribution
-                / self.param.a_R_n
-                / self.param.gamma_n
-                / self.param.D_n(c_s_surf_distribution, T_k)
-            )
-        elif self.domain == "Positive":
-            rbc = (
-                -self.param.C_p
-                * R
-                * j_distribution
-                / self.param.a_R_p
-                / self.param.gamma_p
-                / self.param.D_p(c_s_surf_distribution, T_k)
-            )
+        rbc = (
+            -self.domain_param.C_diff
+            * R
+            * j_distribution
+            / self.domain_param.a_R
+            / self.domain_param.gamma
+            / self.domain_param.D(c_s_surf_distribution, T_k)
+        )
         self.boundary_conditions = {
             c_s_distribution: {
                 "left": (pybamm.Scalar(0), "Neumann"),
@@ -186,13 +152,8 @@ class FickianDiffusion(BaseSizeDistribution):
             self.domain + " particle concentration distribution"
         ]
 
-        if self.domain == "Negative":
-            c_init = pybamm.SecondaryBroadcast(
-                self.param.c_n_init, "negative particle size"
-            )
-        elif self.domain == "Positive":
-            c_init = pybamm.SecondaryBroadcast(
-                self.param.c_p_init, "positive particle size"
-            )
+        c_init = pybamm.SecondaryBroadcast(
+            self.domain_param.c_init, f"{self.domain.lower()} particle size"
+        )
 
         self.initial_conditions = {c_s_distribution: c_init}

@@ -127,10 +127,7 @@ class BaseModel(BaseElectrolyteConductivity):
         tor_s = variables[self.domain + " electrode transport efficiency"]
         c_e = variables[self.domain + " electrolyte concentration"]
         T = variables[self.domain + " electrode temperature"]
-        if self.domain == "Negative":
-            sigma = param.sigma_n(T)
-        elif self.domain == "Positive":
-            sigma = param.sigma_p(T)
+        sigma = self.domain_param.sigma(T)
 
         kappa_eff = param.kappa_e(c_e, T) * tor_e
         sigma_eff = sigma * tor_s
@@ -143,10 +140,7 @@ class BaseModel(BaseElectrolyteConductivity):
             return
 
         delta_phi_e = variables[self.domain + " electrode surface potential difference"]
-        if self.domain == "Negative":
-            delta_phi_e_init = self.param.U_n_init
-        elif self.domain == "Positive":
-            delta_phi_e_init = self.param.U_p_init
+        delta_phi_e_init = self.domain_param.U_init
 
         self.initial_conditions = {delta_phi_e: delta_phi_e_init}
 
@@ -275,10 +269,7 @@ class FullDifferential(BaseModel):
         if self.domain == "Separator":
             return
 
-        if self.domain == "Negative":
-            C_dl = self.param.C_dl_n
-        elif self.domain == "Positive":
-            C_dl = self.param.C_dl_p
+        C_dl = self.domain_param.C_dl
 
         delta_phi = variables[self.domain + " electrode surface potential difference"]
         i_e = variables[self.domain + " electrolyte current density"]

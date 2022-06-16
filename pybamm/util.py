@@ -203,6 +203,9 @@ class TimerTime:
         output.append("1 second" if time == 1 else str(time) + " seconds")
         return ", ".join(output)
 
+    def __repr__(self):
+        return f"pybamm.TimerTime({self.value})"
+
     def __add__(self, other):
         if isinstance(other, numbers.Number):
             return TimerTime(self.value + other)
@@ -348,6 +351,19 @@ def get_parameters_filepath(path):
         return path
     else:
         return os.path.join(pybamm.__path__[0], path)
+
+
+def have_julia():
+    """
+    Checks whether the Julia programming language has been installed
+    """
+    # Try reading the julia version quietly to see whether julia is installed
+    FNULL = open(os.devnull, "w")
+    try:
+        subprocess.call(["julia", "--version"], stdout=FNULL, stderr=subprocess.STDOUT)
+        return True
+    except subprocess.CalledProcessError:  # pragma: no cover
+        return False
 
 
 def have_jax():

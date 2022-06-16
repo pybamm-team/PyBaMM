@@ -66,8 +66,8 @@ class Composite(BaseElectrolyteConductivity):
         T_av_p = pybamm.PrimaryBroadcast(T_av, "positive electrode")
 
         param = self.param
-        l_n = param.l_n
-        l_p = param.l_p
+        l_n = param.n.l
+        l_p = param.p.l
         x_s = pybamm.standard_spatial_vars.x_s
         x_p = pybamm.standard_spatial_vars.x_p
 
@@ -168,13 +168,13 @@ class Composite(BaseElectrolyteConductivity):
             macinnes_c_e_n = pybamm.x_average(
                 self._higher_order_macinnes_function(c_e_n / c_e_av)
             )
-            ohmic_n = param.l_n / (3 * kappa_n_av)
+            ohmic_n = param.n.l / (3 * kappa_n_av)
 
         eta_c_av = chi_av * (1 + param.Theta * T_av) * (macinnes_c_e_p - macinnes_c_e_n)
 
         # average electrolyte ohmic losses
         delta_phi_e_av = -(param.C_e * i_boundary_cc_0 / param.gamma_e) * (
-            ohmic_n + param.l_s / (kappa_s_av) + param.l_p / (3 * kappa_p_av)
+            ohmic_n + param.s.l / (kappa_s_av) + param.p.l / (3 * kappa_p_av)
         )
 
         variables.update(

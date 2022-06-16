@@ -5,7 +5,6 @@ import pybamm
 import tests
 
 import unittest
-import numpy as np
 
 
 class TestLeadAcidCompositeSideReactions(unittest.TestCase):
@@ -44,15 +43,6 @@ class TestLeadAcidCompositeSideReactions(unittest.TestCase):
         model = pybamm.lead_acid.CompositeExtended(options)
         modeltest = tests.StandardModelTest(model)
         modeltest.test_all(skip_output_tests=True)
-
-    def test_optimisations(self):
-        options = {"hydrolysis": "true", "surface form": "differential"}
-        model = pybamm.lead_acid.Composite(options)
-        optimtest = tests.OptimisationsTest(model)
-
-        original = optimtest.evaluate_model()
-        using_known_evals = optimtest.evaluate_model(use_known_evals=True)
-        np.testing.assert_array_almost_equal(original, using_known_evals)
 
 
 if __name__ == "__main__":

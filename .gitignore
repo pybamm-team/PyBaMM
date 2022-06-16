@@ -116,3 +116,7 @@ Manifest.toml
 
 # vcpkg
 vcpkg_installed/
+
+# benchmarks
+html/
+results/

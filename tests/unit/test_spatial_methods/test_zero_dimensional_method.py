@@ -18,9 +18,7 @@ class TestZeroDimensionalSpatialMethod(unittest.TestCase):
         self.assertEqual(a, spatial_method.integral(None, a, "primary"))
         self.assertEqual(a, spatial_method.indefinite_integral(None, a, "forward"))
         self.assertEqual(a, spatial_method.boundary_value_or_flux(None, a))
-        self.assertEqual(
-            (-a).id, spatial_method.indefinite_integral(None, a, "backward").id
-        )
+        self.assertEqual((-a), spatial_method.indefinite_integral(None, a, "backward"))
 
         mass_matrix = spatial_method.mass_matrix(None, None)
         self.assertIsInstance(mass_matrix, pybamm.Matrix)

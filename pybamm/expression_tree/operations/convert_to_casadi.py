@@ -37,12 +37,12 @@ class CasadiConverter(object):
             The converted symbol
         """
         try:
-            return self._casadi_symbols[symbol.id]
+            return self._casadi_symbols[symbol]
         except KeyError:
             # Change inputs to empty dictionary if it's None
             inputs = inputs or {}
             casadi_symbol = self._convert(symbol, t, y, y_dot, inputs)
-            self._casadi_symbols[symbol.id] = casadi_symbol
+            self._casadi_symbols[symbol] = casadi_symbol
 
             return casadi_symbol
 

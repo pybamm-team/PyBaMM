@@ -175,8 +175,8 @@ def get_initial_stoichiometries(initial_soc, parameter_values):
 
     V_min = parameter_values.evaluate(param.voltage_low_cut_dimensional)
     V_max = parameter_values.evaluate(param.voltage_high_cut_dimensional)
-    C_n = parameter_values.evaluate(param.C_n_init)
-    C_p = parameter_values.evaluate(param.C_p_init)
+    C_n = parameter_values.evaluate(param.n.cap_init)
+    C_p = parameter_values.evaluate(param.p.cap_init)
     n_Li = parameter_values.evaluate(param.n_Li_particles_init)
 
     # Solve the model and check outputs

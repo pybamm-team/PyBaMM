@@ -12,7 +12,7 @@ class SymbolUnpacker(object):
     ----------
     classes_to_find : list of pybamm classes
         Classes to identify in the equations
-    unpacked_symbols: dict {variable ids -> :class:`pybamm.Symbol`}, optional
+    unpacked_symbols: set, optional
         cached unpacked equations
     """
 
@@ -32,9 +32,9 @@ class SymbolUnpacker(object):
         Returns
         -------
         list of :class:`pybamm.Symbol`
-            List of unpacked symbols with class in `self.classes_to_find`
+            Set of unpacked symbols with class in `self.classes_to_find`
         """
-        all_instances = {}
+        all_instances = set()
         for symbol in list_of_symbols:
             new_instances = self.unpack_symbol(symbol)
             all_instances.update(new_instances)
@@ -58,26 +58,26 @@ class SymbolUnpacker(object):
         """
 
         try:
-            return self._unpacked_symbols[symbol.id]
+            return self._unpacked_symbols[symbol]
         except KeyError:
             unpacked = self._unpack(symbol)
-            self._unpacked_symbols[symbol.id] = unpacked
+            self._unpacked_symbols[symbol] = unpacked
             return unpacked
 
     def _unpack(self, symbol):
         """See :meth:`SymbolUnpacker.unpack()`."""
         # found a symbol of the right class -> return it
         if isinstance(symbol, self.classes_to_find):
-            return {symbol.id: symbol}
+            return set([symbol])
 
         children = symbol.children
 
         if len(children) == 0:
             # not the right class and no children so the class to find doesn't appear
-            return {}
+            return set()
         else:
             # iterate over all children
-            found_vars = {}
+            found_vars = set()
             for child in children:
                 # call back unpack_symbol to cache values
                 child_vars = self.unpack_symbol(child)

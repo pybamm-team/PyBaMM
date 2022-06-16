@@ -24,7 +24,7 @@ PRINT_OPTIONS_OUTPUT = """\
 'hydrolysis': 'false' (possible: ['false', 'true'])
 'intercalation kinetics': 'symmetric Butler-Volmer' (possible: ['symmetric Butler-Volmer', 'asymmetric Butler-Volmer', 'linear', 'Marcus', 'Marcus-Hush-Chidsey'])
 'interface utilisation': 'full' (possible: ['full', 'constant', 'current-driven'])
-'lithium plating': 'none' (possible: ['none', 'reversible', 'irreversible'])
+'lithium plating': 'none' (possible: ['none', 'reversible', 'partially reversible', 'irreversible'])
 'lithium plating porosity change': 'false' (possible: ['false', 'true'])
 'loss of active material': 'stress-driven' (possible: ['none', 'stress-driven', 'reaction-driven', 'stress and reaction-driven'])
 'operating mode': 'current' (possible: ['current', 'voltage', 'power', 'differential power', 'explicit power', 'resistance', 'differential resistance', 'explicit resistance', 'CCCV'])
@@ -72,14 +72,14 @@ class TestBaseBatteryModel(unittest.TestCase):
             model.variables["X-averaged negative electrode temperature"],
             ["negative particle"],
         )
-        D = model.param.D_n(c_n, T)
+        D = model.param.n.D(c_n, T)
         N = -D * pybamm.grad(c_n)
 
         flux_1 = model.process_parameters_and_discretise(N, parameter_values, disc)
         flux_2 = model.variables["X-averaged negative particle flux"]
         param_flux_2 = parameter_values.process_symbol(flux_2)
         disc_flux_2 = disc.process_symbol(param_flux_2)
-        self.assertEqual(flux_1.id, disc_flux_2.id)
+        self.assertEqual(flux_1, disc_flux_2)
 
     def test_summary_variables(self):
         model = pybamm.BaseBatteryModel()

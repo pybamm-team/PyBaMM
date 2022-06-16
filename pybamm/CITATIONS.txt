@@ -296,6 +296,20 @@
   journal = {Journal of The Electrochemical Society}
 }
 
+@article{OKane2022,
+  author ="O{'}Kane, Simon E. J. and Ai, Weilong and Madabattula, Ganesh and Alonso-Alvarez, Diego and Timms, Robert and Sulzer, Valentin and Edge, Jacqueline Sophie and Wu, Billy and Offer, Gregory J. and Marinescu, Monica",
+  title  ="Lithium-ion battery degradation: how to model it",
+  journal  ="Phys. Chem. Chem. Phys.",
+  year  ="2022",
+  volume  ="24",
+  issue  ="13",
+  pages  ="7909-7922",
+  publisher  ="The Royal Society of Chemistry",
+  doi  ="10.1039/D2CP00417H",
+  url  ="http://dx.doi.org/10.1039/D2CP00417H",
+}
+
+
 @article{ORegan2021,
   author = {O'Regan, Kieran and Brosa Planella, Ferran and Widanage, W. Dhammika and Kendrick, Emma},
   title = {{Thermal-electrochemical parametrisation of a lithium-ion battery: mapping Li concentration and temperature dependencies}},

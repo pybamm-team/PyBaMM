@@ -9,56 +9,50 @@
 import logging
 
 
+def get_log_level_func(value):
+    def func(self, message, *args, **kws):
+        if self.isEnabledFor(value):
+            self._log(value, message, args, **kws)
+
+    return func
+
+
+# Additional levels inspired by verboselogs
+new_levels = {"SPAM": 5, "VERBOSE": 15, "NOTICE": 25, "SUCCESS": 35}
+for level, value in new_levels.items():
+    logging.addLevelName(value, level)
+    setattr(logging.Logger, level.lower(), get_log_level_func(value))
+
+
+FORMAT = (
+    "%(asctime)s.%(msecs)03d - [%(levelname)s] %(module)s.%(funcName)s(%(lineno)d): "
+    "%(message)s"
+)
+LOG_FORMATTER = logging.Formatter(datefmt="%Y-%m-%d %H:%M:%S", fmt=FORMAT)
+
+
 def set_logging_level(level):
     logger.setLevel(level)
 
 
-format = (
-    "%(asctime)s - [%(levelname)s] %(module)s.%(funcName)s(%(lineno)d): "
-    + "%(message)s"
-)
-logging.basicConfig(format=format)
-logging.Formatter(datefmt="%Y-%m-%d %H:%M:%S", fmt="%(asctime)s.%(msecs)03d")
-
-# Additional levels inspired by verboselogs
-SPAM_LEVEL_NUM = 5
-logging.addLevelName(SPAM_LEVEL_NUM, "SPAM")
-
-VERBOSE_LEVEL_NUM = 15
-logging.addLevelName(VERBOSE_LEVEL_NUM, "VERBOSE")
-
-NOTICE_LEVEL_NUM = 25
-logging.addLevelName(NOTICE_LEVEL_NUM, "NOTICE")
-
-SUCCESS_LEVEL_NUM = 35
-logging.addLevelName(SUCCESS_LEVEL_NUM, "SUCCESS")
+def _get_new_logger(name, filename=None):
+    new_logger = logging.getLogger(name)
+    if filename is None:
+        handler = logging.StreamHandler()
+    else:
+        handler = logging.FileHandler(filename)
+    handler.setFormatter(LOG_FORMATTER)
+    new_logger.addHandler(handler)
+    return new_logger
 
 
-def spam(self, message, *args, **kws):
-    if self.isEnabledFor(SPAM_LEVEL_NUM):
-        self._log(SPAM_LEVEL_NUM, message, args, **kws)
+# Only the function for getting a new logger with filename not None is exposed
+def get_new_logger(name, filename):
+    if filename is None:
+        raise ValueError("filename must be specified")
+    return _get_new_logger(name, filename)
 
-
-def verbose(self, message, *args, **kws):
-    if self.isEnabledFor(VERBOSE_LEVEL_NUM):
-        self._log(VERBOSE_LEVEL_NUM, message, args, **kws)
-
-
-def notice(self, message, *args, **kws):
-    if self.isEnabledFor(NOTICE_LEVEL_NUM):
-        self._log(NOTICE_LEVEL_NUM, message, args, **kws)
-
-
-def success(self, message, *args, **kws):
-    if self.isEnabledFor(SUCCESS_LEVEL_NUM):
-        self._log(SUCCESS_LEVEL_NUM, message, args, **kws)
-
-
-logging.Logger.spam = spam
-logging.Logger.verbose = verbose
-logging.Logger.notice = notice
-logging.Logger.success = success
 
 # Create a custom logger
-logger = logging.getLogger(__name__)
+logger = _get_new_logger(__name__)
 set_logging_level("WARNING")

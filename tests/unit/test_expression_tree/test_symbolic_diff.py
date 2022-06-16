@@ -57,14 +57,14 @@ class TestSymbolicDifferentiation(unittest.TestCase):
         a = pybamm.StateVector(slice(0, 1))
         b = pybamm.StateVector(slice(1, 2))
         func = (a * 2 + 5 * (-a)) / (a * a)
-        self.assertEqual(func.diff(b).id, pybamm.Scalar(0).id)
-        self.assertNotEqual(func.diff(a).id, pybamm.Scalar(0).id)
+        self.assertEqual(func.diff(b), pybamm.Scalar(0))
+        self.assertNotEqual(func.diff(a), pybamm.Scalar(0))
 
     def test_diff_state_vector_dot(self):
         a = pybamm.StateVectorDot(slice(0, 1))
         b = pybamm.StateVector(slice(1, 2))
-        self.assertEqual(a.diff(a).id, pybamm.Scalar(1).id)
-        self.assertEqual(a.diff(b).id, pybamm.Scalar(0).id)
+        self.assertEqual(a.diff(a), pybamm.Scalar(1))
+        self.assertEqual(a.diff(b), pybamm.Scalar(0))
 
     def test_diff_heaviside(self):
         a = pybamm.Scalar(1)

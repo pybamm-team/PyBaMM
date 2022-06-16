@@ -104,7 +104,7 @@ class DiffusionLimited(BaseInterface):
                     + self.reaction_name
                     + " interfacial current density"
                 ]
-                j = -self.param.l_p * j_p / self.param.l_n
+                j = -self.param.p.l * j_p / self.param.n.l
             elif self.order in ["composite", "full"]:
                 tor_s = variables["Separator transport efficiency"]
                 c_ox_s = variables["Separator oxygen concentration"]
@@ -115,7 +115,7 @@ class DiffusionLimited(BaseInterface):
                 )
                 N_ox_neg_sep_interface.domains = {"primary": "current collector"}
 
-                j = -N_ox_neg_sep_interface / param.C_e / -param.s_ox_Ox / param.l_n
+                j = -N_ox_neg_sep_interface / param.C_e / -param.s_ox_Ox / param.n.l
 
         return j
 
@@ -144,7 +144,7 @@ class DiffusionLimited(BaseInterface):
                 N_ox_s_p = variables["Oxygen flux"].orphans[1]
                 N_ox_neg_sep_interface = pybamm.Index(N_ox_s_p, slice(0, 1))
 
-                j = -N_ox_neg_sep_interface / param.C_e / -param.s_ox_Ox / param.l_n
+                j = -N_ox_neg_sep_interface / param.C_e / -param.s_ox_Ox / param.n.l
 
             return (j - j_leading_order) / param.C_e
         else:

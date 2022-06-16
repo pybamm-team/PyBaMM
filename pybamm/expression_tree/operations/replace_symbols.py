@@ -13,7 +13,7 @@ class SymbolReplacer(object):
     ----------
     symbol_replacement_map : dict {:class:`pybamm.Symbol` -> :class:`pybamm.Symbol`}
         Map of which symbols should be replaced by which.
-    processed_symbols: dict {variable ids -> :class:`pybamm.Symbol`}, optional
+    processed_symbols: dict {:class:`pybamm.Symbol` -> :class:`pybamm.Symbol`}, optional
         cached replaced symbols
     process_initial_conditions: bool, optional
         Whether to process initial conditions, default is True
@@ -26,10 +26,6 @@ class SymbolReplacer(object):
         process_initial_conditions=True,
     ):
         self._symbol_replacement_map = symbol_replacement_map
-        self._symbol_replacement_map_ids = {
-            symbol_in.id: symbol_out
-            for symbol_in, symbol_out in symbol_replacement_map.items()
-        }
         self._processed_symbols = processed_symbols or {}
         self.process_initial_conditions = process_initial_conditions
 
@@ -171,18 +167,18 @@ class SymbolReplacer(object):
         """
 
         try:
-            return self._processed_symbols[symbol.id]
+            return self._processed_symbols[symbol]
         except KeyError:
             replaced_symbol = self._process_symbol(symbol)
 
-            self._processed_symbols[symbol.id] = replaced_symbol
+            self._processed_symbols[symbol] = replaced_symbol
 
             return replaced_symbol
 
     def _process_symbol(self, symbol):
         """See :meth:`Simplification.process_symbol()`."""
-        if symbol.id in self._symbol_replacement_map_ids.keys():
-            return self._symbol_replacement_map_ids[symbol.id]
+        if symbol in self._symbol_replacement_map.keys():
+            return self._symbol_replacement_map[symbol]
 
         elif isinstance(symbol, pybamm.BinaryOperator):
             left, right = symbol.children

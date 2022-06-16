@@ -42,12 +42,8 @@ class BaseModel(pybamm.BaseSubModel):
         # Update other microstructure variables
         # some models (e.g. lead-acid) do not have particles
         if self.options["particle shape"] == "no particles":
-            if self.domain == "Negative":
-                a = self.param.a_n
-                a_typ = self.param.a_n_typ
-            elif self.domain == "Positive":
-                a = self.param.a_p
-                a_typ = self.param.a_p_typ
+            a = self.domain_param.a
+            a_typ = self.domain_param.a_typ
             variables.update(
                 {
                     self.domain + " electrode surface area to volume ratio": a,
@@ -66,12 +62,8 @@ class BaseModel(pybamm.BaseSubModel):
 
         else:
             # Update electrode capacity variables
-            if self.domain == "Negative":
-                L = param.L_n
-                c_s_max = param.c_n_max
-            elif self.domain == "Positive":
-                L = param.L_p
-                c_s_max = param.c_p_max
+            L = self.domain_param.L
+            c_s_max = self.domain_param.c_max
 
             C = (
                 pybamm.yz_average(eps_solid_av)
@@ -87,24 +79,17 @@ class BaseModel(pybamm.BaseSubModel):
             # R_n, R_p. For a size distribution, calculate the area-weighted
             # mean using the distribution instead. Then the surface area is
             # calculated the same way
-            if self.domain == "Negative":
-                if self.options["particle size"] == "single":
-                    R = self.param.R_n
-                    R_dim = self.param.R_n_dimensional
-                elif self.options["particle size"] == "distribution":
-                    R_n = pybamm.standard_spatial_vars.R_n
-                    R = pybamm.size_average(R_n)
-                    R_dim = R * self.param.R_n_typ
-                a_typ = self.param.a_n_typ
-            elif self.domain == "Positive":
-                if self.options["particle size"] == "single":
-                    R = self.param.R_p
-                    R_dim = self.param.R_p_dimensional
-                elif self.options["particle size"] == "distribution":
-                    R_p = pybamm.standard_spatial_vars.R_p
-                    R = pybamm.size_average(R_p)
-                    R_dim = R * self.param.R_p_typ
-                a_typ = self.param.a_p_typ
+            if self.options["particle size"] == "single":
+                R = self.domain_param.R
+                R_dim = self.domain_param.R_dimensional
+            elif self.options["particle size"] == "distribution":
+                if self.domain == "Negative":
+                    R_ = pybamm.standard_spatial_vars.R_n
+                elif self.domain == "Positive":
+                    R_ = pybamm.standard_spatial_vars.R_p
+                R = pybamm.size_average(R_)
+                R_dim = R * self.domain_param.R_typ
+            a_typ = self.domain_param.a_typ
 
             R_dim_av = pybamm.x_average(R_dim)
 

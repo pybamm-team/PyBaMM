@@ -67,7 +67,7 @@ class CurrentCollector2D(BaseThermal):
         yz_surface_area = self.param.l_y * self.param.l_z
         cell_volume = self.param.l * self.param.l_y * self.param.l_z
         yz_surface_cooling_coefficient = (
-            -(self.param.h_cn + self.param.h_cp)
+            -(self.param.n.h_cc + self.param.p.h_cc)
             * yz_surface_area
             / cell_volume
             / (self.param.delta ** 2)
@@ -102,13 +102,13 @@ class CurrentCollector2D(BaseThermal):
         # the (l_cn / l) and (l_cp / l) prefactors.
         # We also still have edge cooling on the region: x in (0, 1)
         h_tab_n_corrected = (
-            (self.param.l_cn / self.param.l)
-            * (self.param.h_tab_n - self.param.h_edge)
+            (self.param.n.l_cc / self.param.l)
+            * (self.param.n.h_tab - self.param.h_edge)
             / self.param.delta
         )
         h_tab_p_corrected = (
-            (self.param.l_cp / self.param.l)
-            * (self.param.h_tab_p - self.param.h_edge)
+            (self.param.p.l_cc / self.param.l)
+            * (self.param.p.h_tab - self.param.h_edge)
             / self.param.delta
         )
 
