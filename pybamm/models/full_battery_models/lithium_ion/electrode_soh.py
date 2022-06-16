@@ -30,68 +30,120 @@ class ElectrodeSOH(pybamm.BaseModel):
     **Extends:** :class:`pybamm.BaseModel`
     """
 
-    def __init__(self, name="Electrode-specific SOH model"):
+    # TODO: not pass in parameter values?
+    def __init__(self, parameter_values, name="Electrode-specific SOH model"):
         pybamm.citations.register("Mohtat2019")
         super().__init__(name)
+
         param = pybamm.LithiumIonParameters()
 
-        Un = param.U_n_dimensional
-        Up = param.U_p_dimensional
+        Un = param.n.U_dimensional
+        Up = param.p.U_dimensional
         T_ref = param.T_ref
 
-        x_100 = pybamm.Variable("x_100", bounds=(0, 1))
-        C = pybamm.Variable("C", bounds=(0, np.inf))
-
-        V_max = pybamm.InputParameter("V_max")
         V_min = pybamm.InputParameter("V_min")
-        C_n = pybamm.InputParameter("C_n")
-        C_p = pybamm.InputParameter("C_p")
-        n_Li = pybamm.InputParameter("n_Li")
+        Cn = pybamm.InputParameter("C_n")
+        Cp = pybamm.InputParameter("C_p")
 
-        y_100 = (n_Li * param.F / 3600 - x_100 * C_n) / C_p
-        x_0 = x_100 - C / C_n
-        y_0 = y_100 + C / C_p
+        x_100, y_100 = self.solve_initial_state(parameter_values)
+
+        C = pybamm.Variable("C")
+        x_0 = x_100 - C / Cn
+        y_0 = y_100 + C / Cp
 
         self.algebraic = {
-            x_100: Up(y_100, T_ref) - Un(x_100, T_ref) - V_max,
-            C: Up(y_0, T_ref) - Un(x_0, T_ref) - V_min,
+            C: Up(y_0, T_ref) - Un(x_0, T_ref) - V_min
         }
 
-        # initial guess must be chosen such that 0 < x_0, y_0, x_100, y_100 < 1
-        # First guess for x_100
-        x_100_init = 0.85
-        # Make sure x_0 = x_100 - C/C_n > 0
-        C_init = param.Q
-        C_init = pybamm.minimum(C_n * x_100_init - 0.1, C_init)
-        # Make sure y_100 > 0
-        # x_100_init = pybamm.minimum(n_Li * param.F / 3600 / C_n - 0.01, x_100_init)
-        self.initial_conditions = {x_100: x_100_init, C: C_init}
+        self.initial_conditions = {C: Cp}
 
         self.variables = {
-            "x_100": x_100,
-            "y_100": y_100,
             "C": C,
             "x_0": x_0,
             "y_0": y_0,
-            "Un(x_100)": Un(x_100, T_ref),
             "Un(x_0)": Un(x_0, T_ref),
-            "Up(y_100)": Up(y_100, T_ref),
             "Up(y_0)": Up(y_0, T_ref),
-            "Up(y_100) - Un(x_100)": Up(y_100, T_ref) - Un(x_100, T_ref),
             "Up(y_0) - Un(x_0)": Up(y_0, T_ref) - Un(x_0, T_ref),
-            "n_Li_100": 3600 / param.F * (y_100 * C_p + x_100 * C_n),
-            "n_Li_0": 3600 / param.F * (y_0 * C_p + x_0 * C_n),
-            "n_Li": n_Li,
-            "C_n": C_n,
-            "C_p": C_p,
-            "C_n * (x_100 - x_0)": C_n * (x_100 - x_0),
-            "C_p * (y_100 - y_0)": C_p * (y_0 - y_100),
+            "n_Li_0": 3600 / param.F * (y_0 * Cp + x_0 * Cn),
+            "n_Li": pybamm.Scalar(n_Li),
+            "x_100": pybamm.Scalar(x_100),
+            "y_100": pybamm.Scalar(y_100),
+            "C_n": Cn,
+            "C_p": Cp,
+            "C_n * (x_100 - x_0)": Cn * (x_100 - x_0),
+            "C_p * (y_100 - y_0)": Cp * (y_0 - y_100),
         }
 
     @property
     def default_solver(self):
         # Use AlgebraicSolver as CasadiAlgebraicSolver gives unnecessary warnings
         return pybamm.AlgebraicSolver()
+
+    def solve_initial_state(self, parameter_values):
+
+        param = pybamm.LithiumIonParameters()
+
+        Vmax = min(parameter_values["Upper voltage cut-off [V]"], 4.2)
+
+        Cn = parameter_values.evaluate(param.n.cap_init)
+        Cp = parameter_values.evaluate(param.p.cap_init)
+        n_Li = parameter_values.evaluate(param.n_Li_particles_init)
+
+        Un = param.n.U_dimensional
+        Up = param.p.U_dimensional
+        T_ref = param.T_ref
+
+        model = pybamm.BaseModel()
+
+        x_100 = pybamm.Variable("x_100")
+        y_100 = (n_Li * param.F / 3600 - x_100 * Cn) / Cp
+
+        y_100_min = 1e-10
+        x_100_upper_limit = min(((n_Li * param.F) / 3600 - y_100_min * Cp) / Cn, 1 - 1e-10)
+
+        Vmax_init = parameter_values.evaluate(Up(y_100_min, T_ref)) - parameter_values.evaluate(Un(x_100_upper_limit,
+                                                                                                   T_ref))
+        Vmin_init = parameter_values.evaluate(Up(y_100_min + 1, T_ref)) - parameter_values.evaluate(
+            Un(x_100_upper_limit - Cp / Cn, T_ref))
+
+        if isinstance(parameter_values["Positive electrode OCP [V]"], tuple):
+            y_100_min = np.min(parameter_values["Positive electrode OCP [V]"][1][1])
+            x_100_upper_limit = (n_Li * pybamm.constants.F.value / 3600 - y_100_min * Cp) / Cn
+
+            V_lower_bound = min(parameter_values["Positive electrode OCP [V]"][1][1]) - parameter_values[
+                "Negative electrode OCP [V]"](x_100_upper_limit).evaluate()
+            V_upper_bound = max(parameter_values["Positive electrode OCP [V]"][1][1]) - parameter_values[
+                "Negative electrode OCP [V]"](x_100_upper_limit).evaluate()
+
+            if Vmin_init[0][0] < V_lower_bound:
+                raise (ValueError(
+                    "Initial values are outside bounds of OCP data in parameter set."))
+
+            if Vmax_init[0][0] > V_upper_bound:
+                raise (ValueError(
+                    "Initial values are outside bounds of OCP data in parameter set."))
+
+        model.algebraic = {
+            x_100: Up(y_100, T_ref) - Un(x_100, T_ref) - Vmax + 1e5 * (y_100 < 0) + 1e5 * (x_100 > 1),
+        }
+
+        model.initial_conditions = {
+            x_100: x_100_upper_limit
+        }
+
+        model.variables = {
+            "x_100": x_100,
+            "y_100": y_100
+        }
+
+        sim = pybamm.Simulation(model, parameter_values=parameter_values)
+
+        inital_sol = sim.solve([0])
+
+        x_100 = inital_sol["x_100"].data[0]
+        y_100 = inital_sol["y_100"].data[0]
+
+        return x_100, y_100
 
 
 def get_initial_stoichiometries(initial_soc, parameter_values):
