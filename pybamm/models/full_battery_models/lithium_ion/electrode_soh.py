@@ -40,6 +40,7 @@ class ElectrodeSOH(pybamm.BaseModel):
         Un = param.n.U_dimensional
         Up = param.p.U_dimensional
         T_ref = param.T_ref
+        n_Li = parameter_values.evaluate(param.n_Li_particles_init)
 
         V_min = pybamm.InputParameter("V_min")
         Cn = pybamm.InputParameter("C_n")
