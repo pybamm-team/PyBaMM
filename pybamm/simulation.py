@@ -737,7 +737,7 @@ class Simulation:
 
             # Set up eSOH model (for summary variables)
             if calc_esoh is True:
-                esoh_model = pybamm.lithium_ion.ElectrodeSOH()
+                esoh_model = pybamm.lithium_ion.ElectrodeSOH(self.parameter_values)
                 esoh_sim = pybamm.Simulation(
                     esoh_model, parameter_values=self.parameter_values
                 )
