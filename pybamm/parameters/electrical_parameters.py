@@ -29,11 +29,6 @@ class ElectricalParameters(BaseParameters):
 
         self.I_typ = pybamm.Parameter("Typical current [A]")
         self.Q = pybamm.Parameter("Nominal cell capacity [A.h]")
-        self.Ratio_Li_SolConsumed = pybamm.Parameter("Ratio of Li-ion concentration change in electrolyte consider solvent consumption") # Mark Ruihe modify
-        self.Int_ElelyExces_Ratio = pybamm.Parameter("Initial electrolyte excessive amount ratio")          # Mark Ruihe modify
-        self.Ratio_Elely_Dryout   = pybamm.Parameter("Ratio of electrolyte dry out in jelly roll")          # Mark Ruihe modify
-        self.Vol_Elely_JR         = pybamm.Parameter("Current total electrolyte volume in jelly roll [m3]") # Mark Ruihe modify
-        self.Vol_Elely_Tot        = pybamm.Parameter("Current total electrolyte volume in whole cell [m3]") # Mark Ruihe modify
         self.C_rate = pybamm.AbsoluteValue(self.I_typ / self.Q)
         self.n_electrodes_parallel = pybamm.Parameter(
             "Number of electrodes connected in parallel to make a cell"
