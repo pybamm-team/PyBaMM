@@ -223,9 +223,8 @@ class BaseModel(BaseInterface):
                     "Loss of capacity to SEI [A.h]": Q_sei * self.param.F / 3600,
                 }
             )
-
         # Concentration variables are handled slightly differently for SEI on cracks
-        if self.reaction == "SEI on cracks":
+        elif self.reaction == "SEI on cracks":
             L_inner_cr = variables["Inner SEI on cracks thickness"]
             L_outer_cr = variables["Outer SEI on cracks thickness"]
             roughness = variables[self.domain + " electrode roughness ratio"]
@@ -233,14 +232,14 @@ class BaseModel(BaseInterface):
             n_inner_cr = L_inner_cr * (roughness - 1)  # inner SEI cracks concentration
             n_outer_cr = L_outer_cr * (roughness - 1)  # outer SEI cracks concentration
 
-            n_inner_cr_av = pybamm.x_average(n_inner)
-            n_outer_cr_av = pybamm.x_average(n_outer)
+            n_inner_cr_av = pybamm.x_average(n_inner_cr)
+            n_outer_cr_av = pybamm.x_average(n_outer_cr)
 
             n_SEI_cr = n_inner_cr + n_outer_cr / v_bar  # SEI on cracks concentration
-            n_SEI_cr_av = pybamm.yz_average(pybamm.x_average(n_SEI))
+            n_SEI_cr_av = pybamm.yz_average(pybamm.x_average(n_SEI_cr))
 
             # Calculate change in SEI cracks concentration with respect to initial state
-            rho_cr = param.rho_cr_n
+            rho_cr = param.n.rho_cr
             n_SEI_cr_init = 2 * rho_cr * (L_inner_0 + L_outer_0 / v_bar) / 10000
             delta_n_SEI_cr = n_SEI_cr_av - n_SEI_cr_init
 
@@ -269,15 +268,6 @@ class BaseModel(BaseInterface):
                     "Loss of lithium to SEI on cracks [mol]": Q_sei_cr,
                     "Loss of capacity to SEI on cracks [A.h]": Q_sei_cr
                     * self.param.F / 3600,
-                }
-            )
-        else:
-            zero = pybamm.Scalar(0)
-            # Degradation variables are required even if SEI on cracks is turned off
-            variables.update(
-                {
-                    "Loss of lithium to SEI on cracks [mol]": zero,
-                    "loss of capacity to SEI on cracks [A.h]": zero,
                 }
             )
 

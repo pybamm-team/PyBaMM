@@ -71,7 +71,6 @@ class SEIGrowth(BaseModel):
             L_inner = 0 * L_inner  # Set L_inner to zero, copying domains
 
         variables = self._get_standard_thickness_variables(L_inner, L_outer)
-        variables.update(self._get_standard_concentration_variables(variables))
 
         return variables
 
@@ -180,6 +179,7 @@ class SEIGrowth(BaseModel):
         j_inner = alpha * j_sei
         j_outer = (1 - alpha) * j_sei
 
+        variables.update(self._get_standard_concentration_variables(variables))
         variables.update(self._get_standard_reaction_variables(j_inner, j_outer))
 
         # Update whole cell variables, which also updates the "sum of" variables

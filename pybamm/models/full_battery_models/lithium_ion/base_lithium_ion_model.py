@@ -201,16 +201,25 @@ class BaseModel(pybamm.BaseBatteryModel):
 
         if self.options["SEI"] == "none":
             self.submodels["sei"] = pybamm.sei.NoSEI(self.param, self.options)
+            self.submodels["sei on cracks"] = pybamm.sei.NoSEI(
+                self.param, self.options, cracks=True
+            )
         elif self.options["SEI"] == "constant":
             self.submodels["sei"] = pybamm.sei.ConstantSEI(self.param, self.options)
+            self.submodels["sei on cracks"] = pybamm.sei.NoSEI(
+                self.param, self.options, cracks=True
+            )
         else:
             self.submodels["sei"] = pybamm.sei.SEIGrowth(
                 self.param, reaction_loc, self.options, cracks=False
             )
-            # Run SEI growth model again, this time on cracks
             if self.options["SEI on cracks"] == "true":
                 self.submodels["sei on cracks"] = pybamm.sei.SEIGrowth(
                     self.param, reaction_loc, self.options, cracks=True
+                )
+            else:
+                self.submodels["sei on cracks"] = pybamm.sei.NoSEI(
+                    self.param, self.options, cracks=True
                 )
 
     def set_lithium_plating_submodel(self):
@@ -235,7 +244,9 @@ class BaseModel(pybamm.BaseBatteryModel):
         for domain in ["Negative", "Positive"]:
             crack = getattr(self.options, domain.lower())["particle mechanics"]
             if crack == "none":
-                pass
+                self.submodels[
+                    domain.lower() + " particle mechanics"
+                ] = pybamm.particle_mechanics.NoMechanics(self.param, domain)
             elif crack == "swelling only":
                 self.submodels[
                     domain.lower() + " particle mechanics"

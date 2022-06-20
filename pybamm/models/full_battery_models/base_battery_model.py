@@ -336,6 +336,17 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                     "current density as a state' must be 'true'"
                 )
 
+        if options["SEI on cracks"] == "true":
+            if options["particle mechanics"] != "swelling and cracking":
+                raise pybamm.OptionError(
+                    "To model SEI on cracks, 'particle mechanics' must be set to "
+                    "'swelling and cracking'."
+                )
+            elif options["working electrode"] == "positive":
+                raise NotImplementedError(
+                    "SEI on cracks not yet implemented for lithium metal eleectrode."
+                )
+
         # Options not yet compatible with particle-size distributions
         if options["particle size"] == "distribution":
             if options["lithium plating"] != "none":
