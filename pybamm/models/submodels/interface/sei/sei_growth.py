@@ -196,7 +196,7 @@ class SEIGrowth(BaseModel):
             ]
             j_outer = variables[
                 f"X-averaged outer {self.reaction} interfacial current density"
-                ]
+            ]
             # Note a is dimensionless (has a constant value of 1 if the surface
             # area does not change)
             a = variables[
@@ -211,7 +211,7 @@ class SEIGrowth(BaseModel):
                 a = 1
             else:
                 a = variables["Negative electrode surface area to volume ratio"]
-        
+
         # Get variables specific to cracks
         if self.reaction == "SEI on cracks":
             if self.reaction_loc == "x-average":

@@ -36,10 +36,12 @@ class BaseModel(BaseInterface):
                 {
                     f"X-averaged negative electrode {self.reaction} interfacial "
                     "current density": variables[
-                    f"X-averaged {self.reaction} interfacial current density"
+                        f"X-averaged {self.reaction} interfacial current density"
                     ],
                     f"Negative electrode {self.reaction} interfacial current "
-                    "density": variables[f"{self.reaction} interfacial current density"],
+                    "density": variables[
+                        f"{self.reaction} interfacial current density"
+                    ],
                 }
             )
         variables.update(
@@ -129,7 +131,8 @@ class BaseModel(BaseInterface):
                     f"X-averaged {self.reaction} thickness": L_sei_av,
                     f"X-averaged {self.reaction} thickness [m]": L_sei_av * L_scale,
                     f"X-averaged total {self.reaction} thickness": L_sei_av,
-                    f"X-averaged total {self.reaction} thickness [m]": L_sei_av * L_scale,
+                    f"X-averaged total {self.reaction} thickness [m]": L_sei_av
+                    * L_scale,
                 }
             )
             if self.reaction == "SEI":
