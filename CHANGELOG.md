@@ -1,3 +1,6 @@
+## New feature
+-   Add a new solvent consumption submodel as an independent notebook in examples\notebooks\Solvent consumption model - RHL - Imperial.ipynb, based on this paper:  R. Li, S. O’Kane, M. Marinescu, G.J. Offer, Modelling solvent consumption from SEI layer growth in lithium-ion batteries, J. Electrochem. Soc. 169 (2022) 060516. https://doi.org/10.1149/ 1945-7111/ac6f84.
+
 # [Unreleased](https://github.com/pybamm-team/PyBaMM/)
 
 # [v22.5](https://github.com/pybamm-team/PyBaMM/tree/v22.5) - 2022-05-31
