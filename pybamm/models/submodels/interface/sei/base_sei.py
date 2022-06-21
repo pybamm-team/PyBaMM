@@ -230,7 +230,10 @@ class BaseModel(BaseInterface):
         elif self.reaction == "SEI on cracks":
             L_inner_cr = variables["Inner SEI on cracks thickness"]
             L_outer_cr = variables["Outer SEI on cracks thickness"]
-            roughness = variables[self.domain + " electrode roughness ratio"]
+            if self.domain + " electrode roughness ratio" in variables:
+                roughness = variables[self.domain + " electrode roughness ratio"]
+            else:
+                roughness = 1
 
             n_inner_cr = L_inner_cr * (roughness - 1)  # inner SEI cracks concentration
             n_outer_cr = L_outer_cr * (roughness - 1)  # outer SEI cracks concentration
