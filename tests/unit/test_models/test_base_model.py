@@ -119,14 +119,6 @@ class TestBaseModel(unittest.TestCase):
         model.jacobian = "test"
         self.assertEqual(model.jacobian, "test")
 
-    def test_model_dict_behaviour(self):
-        model = pybamm.BaseModel()
-        key = pybamm.Symbol("c")
-        rhs = {key: pybamm.Symbol("alpha")}
-        model.rhs = rhs
-        self.assertEqual(model[key], rhs[key])
-        self.assertEqual(model[key], model.rhs[key])
-
     def test_read_parameters(self):
         # Read parameters from different parts of the model
         model = pybamm.BaseModel()
