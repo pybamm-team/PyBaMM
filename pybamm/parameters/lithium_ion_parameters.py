@@ -164,9 +164,12 @@ class LithiumIonParameters(BaseParameters):
         self.k_sei_dim = pybamm.Parameter("SEI kinetic rate constant [m.s-1]")
         self.U_sei_dim = pybamm.Parameter("SEI open-circuit potential [V]")
 
-        # Li plating parameters
+        # Lithium plating parameters
         self.V_bar_plated_Li = pybamm.Parameter(
             "Lithium metal partial molar volume [m3.mol-1]"
+        )
+        self.c_Li_typ = pybamm.Parameter(
+            "Typical plated lithium concentration [mol.m-3]"
         )
         self.c_plated_Li_0_dim = pybamm.Parameter(
             "Initial plated lithium concentration [mol.m-3]"
@@ -225,6 +228,11 @@ class LithiumIonParameters(BaseParameters):
         return pybamm.FunctionParameter(
             "Exchange-current density for plating [A.m-2]", inputs
         )
+
+    def dead_lithium_decay_rate_dimensional(self, L_sei):
+        """Dimensional dead lithium decay rate [s-1]"""
+        inputs = {"Total SEI thickness [m]": L_sei}
+        return pybamm.FunctionParameter("Dead lithium decay rate [s-1]", inputs)
 
     def _set_scales(self):
         """Define the scales used in the non-dimensionalisation scheme"""
@@ -397,10 +405,12 @@ class LithiumIonParameters(BaseParameters):
         self.c_sei_init = self.c_ec_0_dim / self.c_sei_outer_scale
 
         # lithium plating parameters
-        self.c_Li_typ = pybamm.Parameter(
-            "Typical plated lithium concentration [mol.m-3]"
-        )
         self.c_plated_Li_0 = self.c_plated_Li_0_dim / self.c_Li_typ
+
+        self.alpha_plating = pybamm.Parameter(
+            "Lithium plating transfer coefficient"
+        )
+        self.alpha_stripping = 1 - self.alpha_plating
 
         # ratio of lithium plating reaction scaled to intercalation reaction
         self.Gamma_plating = (self.n.a_typ * self.n.j_scale * self.timescale) / (
@@ -469,6 +479,12 @@ class LithiumIonParameters(BaseParameters):
         T_dim = self.Delta_T * T + self.T_ref
 
         return self.j0_plating_dimensional(c_e_dim, c_Li_dim, T_dim) / self.n.j_scale
+
+    def dead_lithium_decay_rate(self, L_sei):
+        """Dimensionless exchange-current density for stripping"""
+        L_sei_dim = L_sei * self.L_sei_0_dim
+
+        return self.dead_lithium_decay_rate_dimensional(L_sei_dim) * self.timescale
 
     def _set_input_current(self):
         """Set the input current"""
