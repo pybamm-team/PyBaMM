@@ -108,31 +108,3 @@ There are many ways to contribute to PyBaMM:
     tutorials/add-solver
 
 Before contributing, please read the `Contribution Guidelines <https://github.com/pybamm-team/PyBaMM/blob/develop/CONTRIBUTING.md>`_.
-
-Benchmarking
-============
-
-PyBaMM uses `asv <https://asv.readthedocs.io/en/stable/index.html>`_ for benchmarking performance.
-
-Installing asv
---------------
-
-.. code:: bash
-
-   pip install asv
-
-Running Benchmarks
-------------------
-
-.. code:: bash
-
-   asv run
-
-Viewing results
----------------
-
-.. code:: bash
-
-   asv publish && asv preview
-   
-
