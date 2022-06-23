@@ -256,7 +256,7 @@ OKane2022 = {
     "cell": "LGM50_Chen2020",
     "negative electrode": "graphite_Chen2020_plating",
     "separator": "separator_Chen2020",
-    "positive electrode": "nmc_Chen2020",
+    "positive electrode": "nmc_OKane2022",
     "electrolyte": "lipf6_Nyman2008",
     "experiment": "1C_discharge_from_full_Chen2020",
     "sei": "example",
