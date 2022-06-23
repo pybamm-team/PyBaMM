@@ -5,7 +5,7 @@ Name [units],Value,Reference,Notes
 Negative electrode conductivity [S.m-1],215,Chen 2020,graphite
 Maximum concentration in negative electrode [mol.m-3],33133,Chen 2020,tuned for 1C
 Negative electrode diffusivity [m2.s-1],[function]graphite_LGM50_diffusivity_Chen2020,Chen 2020,tuned for 1C
-Negative electrode OCP [V],[data]graphite_LGM50_ocp_Chen2020,Chen 2020,
+Negative electrode OCP [V],[function]graphite_LGM50_ocp_Chen2020,Chen 2020,
 ,,,
 # Microstructure,,,
 Negative electrode porosity,0.25,Chen 2020,

@@ -205,6 +205,10 @@ class BaseUnitTestLithiumIon:
         options = {"lithium plating": "irreversible"}
         self.check_well_posedness(options)
 
+    def test_well_posed_partially_reversible_plating(self):
+        options = {"lithium plating": "partially reversible"}
+        self.check_well_posedness(options)
+
     def test_well_posed_reversible_plating_with_porosity(self):
         options = {
             "lithium plating": "reversible",
@@ -215,6 +219,13 @@ class BaseUnitTestLithiumIon:
     def test_well_posed_irreversible_plating_with_porosity(self):
         options = {
             "lithium plating": "irreversible",
+            "lithium plating porosity change": "true",
+        }
+        self.check_well_posedness(options)
+
+    def test_well_posed_partially_reversible_plating_with_porosity(self):
+        options = {
+            "lithium plating": "partially reversible",
             "lithium plating porosity change": "true",
         }
         self.check_well_posedness(options)
