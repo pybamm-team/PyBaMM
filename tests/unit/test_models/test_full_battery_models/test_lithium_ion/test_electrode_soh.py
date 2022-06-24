@@ -19,8 +19,11 @@ class TestElectrodeSOH(unittest.TestCase):
         V_min = 3
         V_max = 4.2
         n_Li = parameter_values.evaluate(param.n_Li_particles_init)
+        Cn = parameter_values.evaluate(param.n.cap_init)
+        Cp = parameter_values.evaluate(param.p.cap_init)
+        n_Li = parameter_values.evaluate(param.n_Li_particles_init)
 
-        inputs = {'V_max': V_max, 'V_min': V_min}
+        inputs = {'V_max': Vmax, 'V_min': Vmin, "n_Li": n_Li, "C_n": Cn, "C_p": Cp}
         # Solve the model and check outputs
         sol = solve_electrode_soh(x100_sim, C_sim, inputs, parameter_values)
 

@@ -67,24 +67,20 @@ class ElectrodeSOHC(pybamm.BaseModel):
         self.initial_conditions = {C: pybamm.minimum(Cn * x_100 - 0.1, param.Q)}
 
         self.variables = {
-            "x_100": x_100,
-            "y_100": y_100,
             "C": C,
             "x_0": x_0,
             "y_0": y_0,
-            "Un(x_100)": Un(x_100, T_ref),
             "Un(x_0)": Un(x_0, T_ref),
-            "Up(y_100)": Up(y_100, T_ref),
             "Up(y_0)": Up(y_0, T_ref),
-            "Up(y_100) - Un(x_100)": Up(y_100, T_ref) - Un(x_100, T_ref),
             "Up(y_0) - Un(x_0)": Up(y_0, T_ref) - Un(x_0, T_ref),
-            "n_Li_100": 3600 / param.F * (y_100 * C_p + x_100 * C_n),
-            "n_Li_0": 3600 / param.F * (y_0 * C_p + x_0 * C_n),
+            "n_Li_0": 3600 / param.F * (y_0 * Cp + x_0 * Cn),
             "n_Li": n_Li,
-            "C_n": C_n,
-            "C_p": C_p,
-            "C_n * (x_100 - x_0)": C_n * (x_100 - x_0),
-            "C_p * (y_100 - y_0)": C_p * (y_0 - y_100),
+            "x_100": x_100,
+            "y_100": y_100,
+            "C_n": Cn,
+            "C_p": Cp,
+            "C_n * (x_100 - x_0)": Cn * (x_100 - x_0),
+            "C_p * (y_100 - y_0)": Cp * (y_0 - y_100),
         }
 
     @property
@@ -98,14 +94,9 @@ def solve_electrode_soh(x100_sim, C_sim, inputs, parameter_values):
 
     Vmax = inputs["V_max"]
     Vmin = inputs["V_min"]
-
-    Cn = parameter_values.evaluate(param.n.cap_init)
-    Cp = parameter_values.evaluate(param.p.cap_init)
-    n_Li = parameter_values.evaluate(param.n_Li_particles_init)
-
-    Un = param.n.U_dimensional
-    Up = param.p.U_dimensional
-    T_ref = param.T_ref
+    Cp = inputs["C_p"]
+    Cn = inputs["C_n"]
+    n_Li = inputs["n_Li"]
 
     y_100_min = 1e-6
     x_100_upper_limit = ((n_Li * param.F) / 3600 - y_100_min * Cp) / Cn
@@ -163,14 +154,7 @@ def solve_electrode_soh(x100_sim, C_sim, inputs, parameter_values):
                 )
             )
 
-    inputs.update(
-        {
-            "n_Li": n_Li,
-            "C_n": Cn,
-            "C_p": Cp,
-            "x_100_init": min(x_100_upper_limit, 1 - 1e-6),
-        }
-    )
+    inputs.update({"x_100_init": min(x_100_upper_limit, 1 - 1e-6)})
 
     x100_sol = x100_sim.solve([0], inputs=inputs)
     inputs["x_100"] = x100_sol["x_100"].data[0]
