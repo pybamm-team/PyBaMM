@@ -7,29 +7,23 @@ import unittest
 
 class TestElectrodeSOH(unittest.TestCase):
     def test_known_solution(self):
-        model = pybamm.lithium_ion.ElectrodeSOH()
 
         param = pybamm.LithiumIonParameters()
         parameter_values = pybamm.ParameterValues("Mohtat2020")
-        sim = pybamm.Simulation(model, parameter_values=parameter_values)
+
+        x100_model = ElectrodeSOHx100()
+        x100_sim = pybamm.Simulation(x100_model, parameter_values=parameter_values)
+        C_model = ElectrodeSOHC()
+        C_sim = pybamm.Simulation(C_model, parameter_values=parameter_values)
 
         V_min = 3
         V_max = 4.2
-        C_n = parameter_values.evaluate(param.n.cap_init)
-        C_p = parameter_values.evaluate(param.p.cap_init)
         n_Li = parameter_values.evaluate(param.n_Li_particles_init)
 
+        inputs = {'V_max': V_max, 'V_min': V_min}
         # Solve the model and check outputs
-        sol = sim.solve(
-            [0],
-            inputs={
-                "V_min": V_min,
-                "V_max": V_max,
-                "C_n": C_n,
-                "C_p": C_p,
-                "n_Li": n_Li,
-            },
-        )
+        sol = solve_electrode_soh(x100_sim, C_sim, inputs, parameter_values)
+
         self.assertAlmostEqual(sol["Up(y_100) - Un(x_100)"].data[0], V_max, places=5)
         self.assertAlmostEqual(sol["Up(y_0) - Un(x_0)"].data[0], V_min, places=5)
         self.assertAlmostEqual(sol["n_Li_100"].data[0], n_Li, places=5)

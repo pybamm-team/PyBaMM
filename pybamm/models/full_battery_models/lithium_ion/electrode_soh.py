@@ -67,20 +67,24 @@ class ElectrodeSOHC(pybamm.BaseModel):
         self.initial_conditions = {C: pybamm.minimum(Cn * x_100 - 0.1, param.Q)}
 
         self.variables = {
+            "x_100": x_100,
+            "y_100": y_100,
             "C": C,
             "x_0": x_0,
             "y_0": y_0,
+            "Un(x_100)": Un(x_100, T_ref),
             "Un(x_0)": Un(x_0, T_ref),
+            "Up(y_100)": Up(y_100, T_ref),
             "Up(y_0)": Up(y_0, T_ref),
+            "Up(y_100) - Un(x_100)": Up(y_100, T_ref) - Un(x_100, T_ref),
             "Up(y_0) - Un(x_0)": Up(y_0, T_ref) - Un(x_0, T_ref),
-            "n_Li_0": 3600 / param.F * (y_0 * Cp + x_0 * Cn),
+            "n_Li_100": 3600 / param.F * (y_100 * C_p + x_100 * C_n),
+            "n_Li_0": 3600 / param.F * (y_0 * C_p + x_0 * C_n),
             "n_Li": n_Li,
-            "x_100": x_100,
-            "y_100": y_100,
-            "C_n": Cn,
-            "C_p": Cp,
-            "C_n * (x_100 - x_0)": Cn * (x_100 - x_0),
-            "C_p * (y_100 - y_0)": Cp * (y_0 - y_100),
+            "C_n": C_n,
+            "C_p": C_p,
+            "C_n * (x_100 - x_0)": C_n * (x_100 - x_0),
+            "C_p * (y_100 - y_0)": C_p * (y_0 - y_100),
         }
 
     @property
