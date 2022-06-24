@@ -136,9 +136,9 @@ class BaseModel(pybamm.BaseSubModel):
             deps_solid_dt_av = pybamm.x_average(deps_solid_dt)
 
         variables = {
-            f"{self.domain} electrode {self.phase} "
+            f"{self.domain} electrode {self.phase_name}"
             "active material volume fraction change": deps_solid_dt,
-            f"X-averaged {self.domain.lower()} electrode {self.phase} "
+            f"X-averaged {self.domain.lower()} electrode {self.phase_name}"
             "active material volume fraction change": deps_solid_dt_av,
         }
 
