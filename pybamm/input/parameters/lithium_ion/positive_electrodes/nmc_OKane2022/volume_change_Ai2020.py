@@ -4,6 +4,7 @@ from pybamm import Parameter
 def volume_change_Ai2020(sto):
     """
     Particle volume change as a function of stochiometry [1, 2].
+
     References
     ----------
      .. [1] > Ai, W., Kraft, L., Sturm, J., Jossen, A., & Wu, B. (2020).
@@ -13,6 +14,7 @@ def volume_change_Ai2020(sto):
      .. [2] > Rieger, B., Erhard, S. V., Rumpf, K., & Jossen, A. (2016).
      A new method to model the thickness change of a commercial pouch cell
      during discharge. Journal of The Electrochemical Society, 163(8), A1566-A1575.
+
     Parameters
     ----------
     sto: :class:`pybamm.Symbol`

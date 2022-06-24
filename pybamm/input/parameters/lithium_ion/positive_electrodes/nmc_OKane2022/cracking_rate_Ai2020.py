@@ -4,6 +4,7 @@ from pybamm import Parameter, constants, exp
 def cracking_rate_Ai2020(T_dim):
     """
     Particle cracking rate as a function of temperature [1, 2].
+
     References
     ----------
      .. [1] > Ai, W., Kraft, L., Sturm, J., Jossen, A., & Wu, B. (2020).
@@ -13,10 +14,12 @@ def cracking_rate_Ai2020(T_dim):
      .. [2] > Deshpande, R., Verbrugge, M., Cheng, Y. T., Wang, J., & Liu, P. (2012).
      Battery cycle life prediction with coupled chemical degradation and fatigue
      mechanics. Journal of the Electrochemical Society, 159(10), A1730.
+
     Parameters
     ----------
     T: :class:`pybamm.Symbol`
         temperature, [K]
+
     Returns
     -------
     k_cr: :class:`pybamm.Symbol`
