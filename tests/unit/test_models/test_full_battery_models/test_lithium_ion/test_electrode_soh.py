@@ -18,7 +18,6 @@ class TestElectrodeSOH(unittest.TestCase):
 
         V_min = 3
         V_max = 4.2
-        n_Li = parameter_values.evaluate(param.n_Li_particles_init)
         Cn = parameter_values.evaluate(param.n.cap_init)
         Cp = parameter_values.evaluate(param.p.cap_init)
         n_Li = parameter_values.evaluate(param.n_Li_particles_init)
