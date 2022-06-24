@@ -66,7 +66,7 @@ class TestCopy(unittest.TestCase):
             pybamm.SparseStack(mat, mat),
             pybamm.Equality(a, b),
         ]:
-            self.assertEqual(symbol.id, symbol.new_copy().id)
+            self.assertEqual(symbol, symbol.new_copy())
 
 
 if __name__ == "__main__":

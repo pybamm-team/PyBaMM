@@ -46,10 +46,10 @@ class Jacobian(object):
         """
 
         try:
-            return self._known_jacs[symbol.id]
+            return self._known_jacs[symbol]
         except KeyError:
             jac = self._jac(symbol, variable)
-            self._known_jacs[symbol.id] = jac
+            self._known_jacs[symbol] = jac
             return jac
 
     def _jac(self, symbol, variable):

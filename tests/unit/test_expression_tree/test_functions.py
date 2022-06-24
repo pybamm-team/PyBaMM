@@ -55,11 +55,6 @@ class TestFunction(unittest.TestCase):
         logvar = pybamm.Function(np.log1p, var)
         np.testing.assert_array_equal(logvar.evaluate(y=y), np.log1p(y))
 
-        # use known_evals
-        np.testing.assert_array_equal(
-            logvar.evaluate(y=y, known_evals={})[0], np.log1p(y)
-        )
-
     def test_diff(self):
         a = pybamm.StateVector(slice(0, 1))
         b = pybamm.StateVector(slice(1, 2))
@@ -174,18 +169,18 @@ class TestSpecificFunctions(unittest.TestCase):
         # Test broadcast gets switched
         broad_a = pybamm.PrimaryBroadcast(a, "test")
         fun_broad = pybamm.arcsinh(broad_a)
-        self.assertEqual(fun_broad.id, pybamm.PrimaryBroadcast(fun, "test").id)
+        self.assertEqual(fun_broad, pybamm.PrimaryBroadcast(fun, "test"))
 
         broad_a = pybamm.FullBroadcast(a, "test", "test2")
         fun_broad = pybamm.arcsinh(broad_a)
-        self.assertEqual(fun_broad.id, pybamm.FullBroadcast(fun, "test", "test2").id)
+        self.assertEqual(fun_broad, pybamm.FullBroadcast(fun, "test", "test2"))
 
         # Test recursion
         broad_a = pybamm.PrimaryBroadcast(pybamm.PrimaryBroadcast(a, "test"), "test2")
         fun_broad = pybamm.arcsinh(broad_a)
         self.assertEqual(
-            fun_broad.id,
-            pybamm.PrimaryBroadcast(pybamm.PrimaryBroadcast(fun, "test"), "test2").id,
+            fun_broad,
+            pybamm.PrimaryBroadcast(pybamm.PrimaryBroadcast(fun, "test"), "test2"),
         )
 
     def test_arctan(self):
@@ -208,7 +203,7 @@ class TestSpecificFunctions(unittest.TestCase):
         a = pybamm.InputParameter("a")
         fun = pybamm.cos(a)
         self.assertIsInstance(fun, pybamm.Cos)
-        self.assertEqual(fun.children[0].id, a.id)
+        self.assertEqual(fun.children[0], a)
         self.assertEqual(fun.evaluate(inputs={"a": 3}), np.cos(3))
         h = 0.0000001
         self.assertAlmostEqual(
@@ -225,7 +220,7 @@ class TestSpecificFunctions(unittest.TestCase):
         a = pybamm.InputParameter("a")
         fun = pybamm.cosh(a)
         self.assertIsInstance(fun, pybamm.Cosh)
-        self.assertEqual(fun.children[0].id, a.id)
+        self.assertEqual(fun.children[0], a)
         self.assertEqual(fun.evaluate(inputs={"a": 3}), np.cosh(3))
         h = 0.0000001
         self.assertAlmostEqual(
@@ -242,7 +237,7 @@ class TestSpecificFunctions(unittest.TestCase):
         a = pybamm.InputParameter("a")
         fun = pybamm.exp(a)
         self.assertIsInstance(fun, pybamm.Exp)
-        self.assertEqual(fun.children[0].id, a.id)
+        self.assertEqual(fun.children[0], a)
         self.assertEqual(fun.evaluate(inputs={"a": 3}), np.exp(3))
         h = 0.0000001
         self.assertAlmostEqual(
@@ -302,7 +297,7 @@ class TestSpecificFunctions(unittest.TestCase):
         a = pybamm.InputParameter("a")
         fun = pybamm.sin(a)
         self.assertIsInstance(fun, pybamm.Sin)
-        self.assertEqual(fun.children[0].id, a.id)
+        self.assertEqual(fun.children[0], a)
         self.assertEqual(fun.evaluate(inputs={"a": 3}), np.sin(3))
         h = 0.0000001
         self.assertAlmostEqual(
@@ -319,7 +314,7 @@ class TestSpecificFunctions(unittest.TestCase):
         a = pybamm.InputParameter("a")
         fun = pybamm.sinh(a)
         self.assertIsInstance(fun, pybamm.Sinh)
-        self.assertEqual(fun.children[0].id, a.id)
+        self.assertEqual(fun.children[0], a)
         self.assertEqual(fun.evaluate(inputs={"a": 3}), np.sinh(3))
         h = 0.0000001
         self.assertAlmostEqual(

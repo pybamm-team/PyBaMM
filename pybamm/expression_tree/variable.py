@@ -140,9 +140,9 @@ class Variable(VariableBase):
         )
 
     def diff(self, variable):
-        if variable.id == self.id:
+        if variable == self:
             return pybamm.Scalar(1)
-        elif variable.id == pybamm.t.id:
+        elif variable == pybamm.t:
             return pybamm.VariableDot(self.name + "'", domains=self.domains)
         else:
             return pybamm.Scalar(0)
@@ -212,9 +212,9 @@ class VariableDot(VariableBase):
         return Variable(self.name[:-1], domains=self.domains)
 
     def diff(self, variable):
-        if variable.id == self.id:
+        if variable == self:
             return pybamm.Scalar(1)
-        elif variable.id == pybamm.t.id:
+        elif variable == pybamm.t:
             raise pybamm.ModelError("cannot take second time derivative of a Variable")
         else:
             return pybamm.Scalar(0)
@@ -295,9 +295,9 @@ class ExternalVariable(Variable):
             raise KeyError("External variable '{}' not found".format(self.name))
 
     def diff(self, variable):
-        if variable.id == self.id:
+        if variable == self:
             return pybamm.Scalar(1)
-        elif variable.id == pybamm.t.id:
+        elif variable == pybamm.t:
             raise pybamm.ModelError(
                 "cannot take time derivative of an external variable"
             )

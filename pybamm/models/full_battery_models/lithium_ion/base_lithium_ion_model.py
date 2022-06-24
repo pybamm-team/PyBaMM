@@ -53,6 +53,26 @@ class BaseModel(pybamm.BaseBatteryModel):
         if not self.half_cell and phases_n >= 2:
             self._length_scales["negative secondary particle"] = self.param.n.sec.R_typ
 
+    def set_submodels(self, build):
+        self.set_external_circuit_submodel()
+        self.set_porosity_submodel()
+        self.set_interface_utilisation_submodel()
+        self.set_crack_submodel()
+        self.set_active_material_submodel()
+        self.set_transport_efficiency_submodels()
+        self.set_convection_submodel()
+        self.set_open_circuit_potential_submodel()
+        self.set_intercalation_kinetics_submodel()
+        self.set_other_reaction_submodels_to_zero()
+        self.set_particle_submodel()
+        self.set_solid_submodel()
+        self.set_electrolyte_submodel()
+        self.set_thermal_submodel()
+        self.set_current_collector_submodel()
+
+        self.set_sei_submodel()
+        self.set_lithium_plating_submodel()
+
         self.set_standard_output_variables()
 
         if not isinstance(self, (pybamm.lithium_ion.BasicDFNComposite)):
@@ -364,6 +384,12 @@ class BaseModel(pybamm.BaseBatteryModel):
             )
 
     def set_li_metal_counter_electrode_submodels(self):
+        self.submodels[
+            "counter electrode open circuit potential"
+        ] = pybamm.open_circuit_potential.SingleOpenCircuitPotential(
+            self.param, "Negative", "lithium metal plating", self.options
+        )
+
         if (
             self.options["SEI"] in ["none", "constant"]
             and self.options["intercalation kinetics"] == "symmetric Butler-Volmer"

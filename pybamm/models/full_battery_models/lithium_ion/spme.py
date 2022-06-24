@@ -43,11 +43,8 @@ class SPMe(SPM):
         # reduced-order model with uniform current density in the electrodes
         self.x_average = True
 
-        # Initialize with the SPM but don't build yet
-        super().__init__(options, name, build=False)
-
-        if build:
-            self.build_model()
+        # Initialize with the SPM
+        super().__init__(options, name)
 
     def set_convection_submodel(self):
 

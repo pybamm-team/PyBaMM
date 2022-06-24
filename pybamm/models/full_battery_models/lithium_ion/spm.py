@@ -47,7 +47,9 @@ class SPM(BaseModel):
         # reduced-order model with uniform current density in the electrodes
         self.x_average = True
 
-        super().__init__(options, name, build=build)
+        super().__init__(options, name)
+
+        self.set_submodels(build)
 
         if self.__class__ != "MPM":
             pybamm.citations.register("Marquis2019")

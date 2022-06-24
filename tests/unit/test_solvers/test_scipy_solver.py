@@ -128,7 +128,7 @@ class TestScipySolver(unittest.TestCase):
         # construct jacobian in order of model.rhs
         J = []
         for var in model.rhs.keys():
-            if var.id == var1.id:
+            if var == var1:
                 J.append([np.eye(N), np.zeros((N, N))])
             else:
                 J.append([-1.0 * np.eye(N), np.zeros((N, N))])

@@ -287,7 +287,7 @@ class TestEvaluate(unittest.TestCase):
 
         var = pybamm.Variable("var", domain=whole_cell)
         boundary_conditions = {
-            var.id: {
+            var: {
                 "left": (pybamm.Scalar(1), "Dirichlet"),
                 "right": (pybamm.Scalar(2), "Neumann"),
             }
@@ -332,7 +332,7 @@ class TestEvaluate(unittest.TestCase):
         div_eqn = pybamm.div(var * grad_eqn)
 
         boundary_conditions = {
-            var.id: {
+            var: {
                 "left": (pybamm.Scalar(1), "Dirichlet"),
                 "right": (pybamm.Scalar(2), "Neumann"),
             }

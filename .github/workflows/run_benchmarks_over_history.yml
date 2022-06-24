@@ -22,9 +22,9 @@ jobs:
   benchmarks:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - name: Set up Python 3.8
-        uses: actions/setup-python@v2
+        uses: actions/setup-python@v3
         with:
           python-version: 3.8
       - name: Install tox and asv
@@ -33,6 +33,7 @@ jobs:
         # Not required when worklow trigerred
         # on develop, but useful when
         # experimenting/developing on another branch.
+        if: github.ref != 'refs/heads/develop'
         run: |
           git fetch origin develop:develop
       - name: Run benchmarks
@@ -41,7 +42,7 @@ jobs:
           asv run -m "GitHubRunner" -s ${{ github.event.inputs.ncommits }} \
           ${{ github.event.inputs.commit_start }}..${{ github.event.inputs.commit_end }}
       - name: Upload results as artifact
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: asv_new_results
           path: results
@@ -52,18 +53,18 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Set up Python 3.8
-        uses: actions/setup-python@v2
+        uses: actions/setup-python@v3
         with:
           python-version: 3.8
       - name: Install asv
         run: pip install asv
       - name: Checkout pybamm-bench repo
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           repository: pybamm-team/pybamm-bench
           token: ${{ secrets.BENCH_PAT }}
       - name: Download results artifact
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v3
         with:
           name: asv_new_results
           path: new_results

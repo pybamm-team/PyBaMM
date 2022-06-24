@@ -11,23 +11,23 @@ class TestUnaryOperators(TestCase):
     def test_x_average(self):
         a = pybamm.Scalar(4)
         average_a = pybamm.x_average(a)
-        self.assertEqual(average_a.id, a.id)
+        self.assertEqual(average_a, a)
 
         # average of a broadcast is the child
         average_broad_a = pybamm.x_average(
             pybamm.PrimaryBroadcast(a, ["negative electrode"])
         )
-        self.assertEqual(average_broad_a.id, pybamm.Scalar(4).id)
+        self.assertEqual(average_broad_a, pybamm.Scalar(4))
 
         # average of a number times a broadcast is the number times the child
         average_two_broad_a = pybamm.x_average(
             2 * pybamm.PrimaryBroadcast(a, ["negative electrode"])
         )
-        self.assertEqual(average_two_broad_a.id, pybamm.Scalar(8).id)
+        self.assertEqual(average_two_broad_a, pybamm.Scalar(8))
         average_t_broad_a = pybamm.x_average(
             pybamm.t * pybamm.PrimaryBroadcast(a, ["negative electrode"])
         )
-        self.assertEqual(average_t_broad_a.id, (pybamm.t * pybamm.Scalar(4)).id)
+        self.assertEqual(average_t_broad_a, (pybamm.t * pybamm.Scalar(4)))
 
         # full broadcasts
         average_broad_a = pybamm.x_average(
@@ -46,7 +46,7 @@ class TestUnaryOperators(TestCase):
             ["negative particle"],
             {"secondary": "negative particle size", "tertiary": "current collector"},
         )
-        self.assertEqual(average_broad_a.id, average_broad_a_simp.id)
+        self.assertEqual(average_broad_a, average_broad_a_simp)
 
         # x-average of concatenation of broadcasts
         conc_broad = pybamm.concatenation(
@@ -137,7 +137,7 @@ class TestUnaryOperators(TestCase):
 
         a = pybamm.Variable("a", domain="new domain")
         av_a = pybamm.x_average(a)
-        self.assertEqual(av_a.id, a.id)
+        self.assertEqual(av_a, a)
 
         # x-average of symbol that evaluates on edges raises error
         symbol_on_edges = pybamm.PrimaryBroadcastToEdges(1, "domain")
@@ -170,7 +170,7 @@ class TestUnaryOperators(TestCase):
         # no domain
         a = pybamm.Scalar(1)
         average_a = pybamm.size_average(a)
-        self.assertEqual(average_a.id, a.id)
+        self.assertEqual(average_a, a)
 
         b = pybamm.FullBroadcast(
             1,
@@ -179,7 +179,7 @@ class TestUnaryOperators(TestCase):
         )
         # no "particle size" domain
         average_b = pybamm.size_average(b)
-        self.assertEqual(average_b.id, b.id)
+        self.assertEqual(average_b, b)
 
         # primary or secondary broadcast to "particle size" domain
         average_a = pybamm.size_average(
@@ -191,7 +191,7 @@ class TestUnaryOperators(TestCase):
         average_a = pybamm.size_average(
             pybamm.SecondaryBroadcast(a, "negative particle size")
         )
-        self.assertEqual(average_a.id, a.id)
+        self.assertEqual(average_a, a)
 
         for domain in [["negative particle size"], ["positive particle size"]]:
             a = pybamm.Symbol("a", domain=domain)
@@ -213,7 +213,7 @@ class TestUnaryOperators(TestCase):
     def test_r_average(self):
         a = pybamm.Scalar(1)
         average_a = pybamm.r_average(a)
-        self.assertEqual(average_a.id, a.id)
+        self.assertEqual(average_a, a)
 
         average_broad_a = pybamm.r_average(
             pybamm.PrimaryBroadcast(a, ["negative particle"])
@@ -236,7 +236,7 @@ class TestUnaryOperators(TestCase):
         average_broad_a = pybamm.r_average(broad_a)
         self.assertIsInstance(average_broad_a, pybamm.PrimaryBroadcast)
         self.assertEqual(average_broad_a.domain, ["positive electrode"])
-        self.assertEqual(average_broad_a.children[0].id, pybamm.r_average(a).id)
+        self.assertEqual(average_broad_a.children[0], pybamm.r_average(a))
 
         # r-average of symbol that evaluates on edges raises error
         symbol_on_edges = pybamm.PrimaryBroadcastToEdges(1, "domain")
@@ -249,8 +249,8 @@ class TestUnaryOperators(TestCase):
         a = pybamm.Scalar(1)
         z_average_a = pybamm.z_average(a)
         yz_average_a = pybamm.yz_average(a)
-        self.assertEqual(z_average_a.id, a.id)
-        self.assertEqual(yz_average_a.id, a.id)
+        self.assertEqual(z_average_a, a)
+        self.assertEqual(yz_average_a, a)
 
         z_average_broad_a = pybamm.z_average(
             pybamm.PrimaryBroadcast(a, ["current collector"])
