@@ -37,6 +37,17 @@ particle_p = pybamm.particle.no_distribution.XAveragedPolynomialProfile(
     model.param, "Positive", "uniform profile", options=model.options
 )
 model.submodels["positive particle"] = particle_p
+
+model.submodels[
+    "negative open circuit potential"
+] = pybamm.open_circuit_potential.SingleOpenCircuitPotential(
+    model.param, "Negative", "lithium-ion main", options=model.options
+)
+model.submodels[
+    "positive open circuit potential"
+] = pybamm.open_circuit_potential.SingleOpenCircuitPotential(
+    model.param, "Positive", "lithium-ion main", options=model.options
+)
 model.submodels["negative interface"] = pybamm.kinetics.InverseButlerVolmer(
     model.param, "Negative", "lithium-ion main", options=model.options
 )

@@ -39,7 +39,9 @@ class DFN(BaseModel):
     def __init__(self, options=None, name="Doyle-Fuller-Newman model", build=True):
         # For degradation models we use the full form since this is a full-order model
         self.x_average = False
-        super().__init__(options, name, build=build)
+        super().__init__(options, name)
+
+        self.set_submodels(build)
 
         pybamm.citations.register("Doyle1993")
 

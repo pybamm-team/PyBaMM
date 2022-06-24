@@ -44,6 +44,7 @@ class BaseModel(pybamm.BaseBatteryModel):
             )
         self.set_standard_output_variables()
 
+    def set_submodels(self, build):
         self.set_external_circuit_submodel()
         self.set_porosity_submodel()
         self.set_interface_utilisation_submodel()
@@ -308,6 +309,12 @@ class BaseModel(pybamm.BaseBatteryModel):
             )
 
     def set_li_metal_counter_electrode_submodels(self):
+        self.submodels[
+            "counter electrode open circuit potential"
+        ] = pybamm.open_circuit_potential.SingleOpenCircuitPotential(
+            self.param, "Negative", "lithium metal plating", self.options
+        )
+
         if (
             self.options["SEI"] in ["none", "constant"]
             and self.options["intercalation kinetics"] == "symmetric Butler-Volmer"

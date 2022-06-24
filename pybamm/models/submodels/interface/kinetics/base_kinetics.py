@@ -77,6 +77,10 @@ class BaseKinetics(BaseInterface):
             ]
         else:
             ocp = variables[f"{Domain} electrode{rxn} open circuit potential"]
+        # If ocp was broadcast, take only the orphan.
+        if isinstance(ocp, pybamm.Broadcast):
+            ocp = ocp.orphans[0]
+
         eta_r = delta_phi - ocp
 
         # Get average interfacial current density
