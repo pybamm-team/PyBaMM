@@ -3,7 +3,7 @@
 #
 import pybamm
 
-pybamm.set_logging_level("INFO")
+pybamm.set_logging_level("DEBUG")
 
 # load models
 models = [

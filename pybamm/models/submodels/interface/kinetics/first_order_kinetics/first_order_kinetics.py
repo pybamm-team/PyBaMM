@@ -71,7 +71,12 @@ class FirstOrderKinetics(BaseInterface):
         # Get exchange-current density
         j0 = self._get_exchange_current_density(variables)
         # Get open-circuit potential variables and reaction overpotential
-        ocp = variables[f"{Domain} electrode{rxn} open circuit potential"]
+        if self.options["particle size"] == "distribution":
+            ocp = variables[
+                f"{Domain} electrode{rxn} open circuit potential distribution"
+            ]
+        else:
+            ocp = variables[f"{Domain} electrode{rxn} open circuit potential"]
         eta_r = delta_phi - ocp
 
         variables.update(self._get_standard_interfacial_current_variables(j))
@@ -96,13 +101,5 @@ class FirstOrderKinetics(BaseInterface):
                 + " interfacial current density": j_1_bar
             }
         )
-
-        if self.domain == "Positive":
-            variables.update(
-                self._get_standard_whole_cell_interfacial_current_variables(variables)
-            )
-            variables.update(
-                self._get_standard_whole_cell_exchange_current_variables(variables)
-            )
 
         return variables

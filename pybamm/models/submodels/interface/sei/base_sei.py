@@ -44,9 +44,6 @@ class BaseModel(BaseInterface):
                 "Positive electrode SEI interfacial current density": zero,
             }
         )
-        variables.update(
-            self._get_standard_whole_cell_interfacial_current_variables(variables)
-        )
 
         return variables
 
@@ -151,10 +148,14 @@ class BaseModel(BaseInterface):
             else:
                 # scales in mol/m3 (n is a bulk quantity)
                 n_scale = (
-                    param.L_sei_0_dim * param.n.a_typ / param.V_bar_inner_dimensional
+                    param.L_sei_0_dim
+                    * param.n.prim.a_typ
+                    / param.V_bar_inner_dimensional
                 )
                 n_outer_scale = (
-                    param.L_sei_0_dim * param.n.a_typ / param.V_bar_outer_dimensional
+                    param.L_sei_0_dim
+                    * param.n.prim.a_typ
+                    / param.V_bar_outer_dimensional
                 )
             v_bar = param.v_bar
             # Set scales for the "EC Reaction Limited" model
@@ -228,7 +229,7 @@ class BaseModel(BaseInterface):
         variables : dict
             The variables which can be derived from the SEI thicknesses.
         """
-        j_scale = self.param.n.j_scale
+        j_scale = self.param.n.prim.j_scale
         j_i_av = pybamm.x_average(j_inner)
         j_o_av = pybamm.x_average(j_outer)
 
@@ -252,7 +253,7 @@ class BaseModel(BaseInterface):
 
     def _get_standard_total_reaction_variables(self, j_sei):
         """Update variables related to total SEI interfacial current density."""
-        j_scale = self.param.n.j_scale
+        j_scale = self.param.n.prim.j_scale
 
         variables = {
             "SEI interfacial current density": j_sei,

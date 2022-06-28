@@ -279,11 +279,9 @@ class TestSolution(unittest.TestCase):
         csv_str = solution.save_data(variables=["c", "2c"], to_format="csv")
 
         # check string is the same as the file
-        with open('test.csv') as f:
+        with open("test.csv") as f:
             # need to strip \r chars for windows
-            self.assertEqual(
-                csv_str.replace('\r', ''), f.read()
-            )
+            self.assertEqual(csv_str.replace("\r", ""), f.read())
 
         # read csv
         df = pd.read_csv("test.csv")
@@ -295,11 +293,9 @@ class TestSolution(unittest.TestCase):
         json_str = solution.save_data(to_format="json")
 
         # check string is the same as the file
-        with open('test.json') as f:
+        with open("test.json") as f:
             # need to strip \r chars for windows
-            self.assertEqual(
-                json_str.replace('\r', ''), f.read()
-            )
+            self.assertEqual(json_str.replace("\r", ""), f.read())
 
         # check if string has the right values
         json_data = json.loads(json_str)

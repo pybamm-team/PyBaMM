@@ -40,7 +40,12 @@ class DiffusionLimited(BaseInterface):
         # Get exchange-current density
         j0 = self._get_exchange_current_density(variables)
         # Get open-circuit potential variables and reaction overpotential
-        ocp = variables[f"{Domain} electrode{rxn} open circuit potential"]
+        if self.options["particle size"] == "distribution":
+            ocp = variables[
+                f"{Domain} electrode{rxn} open circuit potential distribution"
+            ]
+        else:
+            ocp = variables[f"{Domain} electrode{rxn} open circuit potential"]
         eta_r = delta_phi_s - ocp
 
         # Get interfacial current densities
@@ -57,21 +62,6 @@ class DiffusionLimited(BaseInterface):
         # No SEI film resistance in this model
         eta_sei = pybamm.Scalar(0)
         variables.update(self._get_standard_sei_film_overpotential_variables(eta_sei))
-
-        if (
-            "Negative electrode" + self.reaction_name + " interfacial current density"
-            in variables
-            and "Positive electrode"
-            + self.reaction_name
-            + " interfacial current density"
-            in variables
-        ):
-            variables.update(
-                self._get_standard_whole_cell_interfacial_current_variables(variables)
-            )
-            variables.update(
-                self._get_standard_whole_cell_exchange_current_variables(variables)
-            )
 
         if self.order == "composite":
             # For the composite model, adds the first-order x-averaged interfacial

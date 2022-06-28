@@ -49,11 +49,12 @@ class TestAi2020(unittest.TestCase):
         p = "pybamm/input/parameters/lithium_ion/positive_electrodes/lico2_Ai2020/"
         k_path = os.path.join(root, p)
 
+        c_p_max = param["Maximum concentration in positive electrode [mol.m-3]"]
         fun_test = {
             "lico2_cracking_rate_Ai2020": ([T], 3.9e-20),
             "lico2_diffusivity_Dualfoil1998": ([sto, T], 5.387e-15),
             "lico2_electrolyte_exchange_current_density_Dualfoil1998": (
-                [1e3, 1e4, T],
+                [1e3, 1e4, T, c_p_max],
                 0.6098,
             ),
             "lico2_entropic_change_Ai2020_function": ([sto], -2.1373e-4),
@@ -69,11 +70,12 @@ class TestAi2020(unittest.TestCase):
         p = "pybamm/input/parameters/lithium_ion/negative_electrodes/graphite_Ai2020/"
         k_path = os.path.join(root, p)
 
+        c_n_max = param["Maximum concentration in negative electrode [mol.m-3]"]
         fun_test = {
             "graphite_cracking_rate_Ai2020.py": ([T], 3.9e-20),
             "graphite_diffusivity_Dualfoil1998.py": ([sto, T], 3.9e-14),
             "graphite_electrolyte_exchange_current_density_Dualfoil1998.py": (
-                [1e3, 1e4, T],
+                [1e3, 1e4, T, c_n_max],
                 0.4172,
             ),
             "graphite_entropy_Enertech_Ai2020_function.py": ([sto], -1.1033e-4),

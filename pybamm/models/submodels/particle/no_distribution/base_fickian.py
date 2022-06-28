@@ -18,19 +18,22 @@ class BaseFickian(BaseParticle):
     options: dict
         A dictionary of options to be passed to the model.
         See :class:`pybamm.BaseBatteryModel`
+    phase : str
+        Phase of the particle
 
     **Extends:** :class:`pybamm.particle.BaseParticle`
     """
 
-    def __init__(self, param, domain, options):
-        super().__init__(param, domain, options)
+    def __init__(self, param, domain, options, phase):
+        super().__init__(param, domain, options, phase)
 
     def _get_effective_diffusivity(self, c, T):
         param = self.param
         domain_param = self.domain_param
+        phase_param = self.phase_param
 
         # Get diffusivity
-        D = domain_param.D(c, T)
+        D = phase_param.D(c, T)
 
         # Account for stress-induced diffusion by defining a multiplicative
         # "stress factor"
@@ -48,17 +51,18 @@ class BaseFickian(BaseParticle):
         return D * stress_factor
 
     def _get_standard_diffusivity_variables(self, D_eff):
-        D_scale = self.domain_param.D_typ_dim
+        Domain = self.domain
+        domain = Domain.lower()
+        phase_name = self.phase_name
 
+        D_scale = self.phase_param.D_typ_dim
         variables = {
-            self.domain + " effective diffusivity": D_eff,
-            self.domain + " effective diffusivity [m2.s-1]": D_eff * D_scale,
-            "X-averaged "
-            + self.domain.lower()
-            + " effective diffusivity": pybamm.x_average(D_eff),
-            "X-averaged "
-            + self.domain.lower()
-            + " effective diffusivity [m2.s-1]": pybamm.x_average(D_eff * D_scale),
+            f"{Domain} {phase_name}effective diffusivity": D_eff,
+            f"{Domain} {phase_name}effective diffusivity [m2.s-1]": D_eff * D_scale,
+            f"X-averaged {domain} {phase_name}effective "
+            "diffusivity": pybamm.x_average(D_eff),
+            f"X-averaged {domain} {phase_name}effective "
+            "diffusivity [m2.s-1]": pybamm.x_average(D_eff * D_scale),
         }
 
         return variables

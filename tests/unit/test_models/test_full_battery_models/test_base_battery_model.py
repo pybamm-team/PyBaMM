@@ -30,6 +30,7 @@ PRINT_OPTIONS_OUTPUT = """\
 'operating mode': 'current' (possible: ['current', 'voltage', 'power', 'differential power', 'explicit power', 'resistance', 'differential resistance', 'explicit resistance', 'CCCV'])
 'particle': 'Fickian diffusion' (possible: ['Fickian diffusion', 'fast diffusion', 'uniform profile', 'quadratic profile', 'quartic profile'])
 'particle mechanics': 'swelling only' (possible: ['none', 'swelling only', 'swelling and cracking'])
+'particle phases': '1' (possible: ['1', '2'])
 'particle shape': 'spherical' (possible: ['spherical', 'no particles'])
 'particle size': 'single' (possible: ['single', 'distribution'])
 'SEI': 'none' (possible: ['none', 'constant', 'reaction limited', 'solvent-diffusion limited', 'electron-migration limited', 'interstitial-diffusion limited', 'ec reaction limited'])
@@ -72,7 +73,7 @@ class TestBaseBatteryModel(unittest.TestCase):
             model.variables["X-averaged negative electrode temperature"],
             ["negative particle"],
         )
-        D = model.param.n.D(c_n, T)
+        D = model.param.n.prim.D(c_n, T)
         N = -D * pybamm.grad(c_n)
 
         flux_1 = model.process_parameters_and_discretise(N, parameter_values, disc)
@@ -136,7 +137,11 @@ class TestBaseBatteryModel(unittest.TestCase):
             "x_s": 20,
             "x_p": 20,
             "r_n": 20,
+            "r_n_prim": 20,
+            "r_n_sec": 20,
             "r_p": 20,
+            "r_p_prim": 20,
+            "r_p_sec": 20,
             "y": 10,
             "z": 10,
             "R_n": 30,

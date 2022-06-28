@@ -513,12 +513,11 @@ class TestScipySolverWithSensitivity(unittest.TestCase):
 
         # Solve
         # Make sure that passing in extra options works
-        solver = pybamm.ScipySolver(
-            rtol=1e-10, atol=1e-10
-        )
+        solver = pybamm.ScipySolver(rtol=1e-10, atol=1e-10)
         t_eval = np.linspace(0, 1, 80)
-        solution = solver.solve(model, t_eval, inputs={"p": 0.1},
-                                calculate_sensitivities=True)
+        solution = solver.solve(
+            model, t_eval, inputs={"p": 0.1}, calculate_sensitivities=True
+        )
         np.testing.assert_array_equal(solution.t, t_eval)
         np.testing.assert_allclose(solution.y[0], np.exp(0.1 * solution.t))
         np.testing.assert_allclose(
@@ -549,13 +548,13 @@ class TestScipySolverWithSensitivity(unittest.TestCase):
 
         # Solve
         # Make sure that passing in extra options works
-        solver = pybamm.ScipySolver(
-            rtol=1e-10, atol=1e-10
-        )
+        solver = pybamm.ScipySolver(rtol=1e-10, atol=1e-10)
         t_eval = np.linspace(0, 1, 80)
         solution = solver.solve(
-            model, t_eval, inputs={"p": 0.1, "q": 2, "r": -1, "s": 0.5},
-            calculate_sensitivities=True
+            model,
+            t_eval,
+            inputs={"p": 0.1, "q": 2, "r": -1, "s": 0.5},
+            calculate_sensitivities=True,
         )
         np.testing.assert_allclose(solution.y[0], -1 + 0.2 * solution.t)
         np.testing.assert_allclose(
@@ -625,8 +624,9 @@ class TestScipySolverWithSensitivity(unittest.TestCase):
         # Solve - scalar input
         solver = pybamm.ScipySolver()
         t_eval = np.linspace(0, 1)
-        solution = solver.solve(model, t_eval, inputs={"param": 7},
-                                calculate_sensitivities=True)
+        solution = solver.solve(
+            model, t_eval, inputs={"param": 7}, calculate_sensitivities=True
+        )
         np.testing.assert_array_almost_equal(
             solution["var"].data,
             np.tile(2 * np.exp(-7 * t_eval), (n, 1)),
@@ -657,13 +657,13 @@ class TestScipySolverWithSensitivity(unittest.TestCase):
 
         # Solve
         # Make sure that passing in extra options works
-        solver = pybamm.ScipySolver(
-            rtol=1e-10, atol=1e-10
-        )
+        solver = pybamm.ScipySolver(rtol=1e-10, atol=1e-10)
         t_eval = np.linspace(0, 1, 80)
         solution = solver.solve(
-            model, t_eval, inputs={"p": 0.1, "q": 2, "r": -1, "s": 0.5},
-            calculate_sensitivities=True
+            model,
+            t_eval,
+            inputs={"p": 0.1, "q": 2, "r": -1, "s": 0.5},
+            calculate_sensitivities=True,
         )
         np.testing.assert_allclose(solution.y, np.tile(-1 + 0.2 * solution.t, (n, 1)))
         np.testing.assert_allclose(
@@ -737,12 +737,14 @@ class TestScipySolverWithSensitivity(unittest.TestCase):
         n = disc.mesh["negative electrode"].npts
 
         # Solve - constant input
-        solver = pybamm.ScipySolver(
-            rtol=1e-10, atol=1e-10
-        )
+        solver = pybamm.ScipySolver(rtol=1e-10, atol=1e-10)
         t_eval = np.linspace(0, 1)
-        solution = solver.solve(model, t_eval, inputs={"param": 7 * np.ones(n)},
-                                calculate_sensitivities=True)
+        solution = solver.solve(
+            model,
+            t_eval,
+            inputs={"param": 7 * np.ones(n)},
+            calculate_sensitivities=True,
+        )
         l_n = mesh["negative electrode"].edges[-1]
         np.testing.assert_array_almost_equal(
             solution["var"].data,
@@ -765,13 +767,12 @@ class TestScipySolverWithSensitivity(unittest.TestCase):
         )
 
         # Solve - linspace input
-        solver = pybamm.ScipySolver(
-            rtol=1e-10, atol=1e-10
-        )
+        solver = pybamm.ScipySolver(rtol=1e-10, atol=1e-10)
         t_eval = np.linspace(0, 1)
         p_eval = np.linspace(1, 2, n)
-        solution = solver.solve(model, t_eval, inputs={"param": p_eval},
-                                calculate_sensitivities=True)
+        solution = solver.solve(
+            model, t_eval, inputs={"param": p_eval}, calculate_sensitivities=True
+        )
         l_n = mesh["negative electrode"].edges[-1]
         np.testing.assert_array_almost_equal(
             solution["var"].data, 2 * np.exp(-p_eval[:, np.newaxis] * t_eval), decimal=4

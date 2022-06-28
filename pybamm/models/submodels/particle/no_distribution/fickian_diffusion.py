@@ -20,29 +20,37 @@ class FickianDiffusion(BaseFickian):
     options: dict
         A dictionary of options to be passed to the model.
         See :class:`pybamm.BaseBatteryModel`
+    phase : str
+        Phase of the particle
 
     **Extends:** :class:`pybamm.particle.BaseParticle`
     """
 
-    def __init__(self, param, domain, options):
-        super().__init__(param, domain, options)
+    def __init__(self, param, domain, options, phase):
+        super().__init__(param, domain, options, phase)
 
     def get_fundamental_variables(self):
-        if self.domain == "Negative":
-            c_s = pybamm.standard_variables.c_s_n
+        domain = self.domain.lower()
 
-        elif self.domain == "Positive":
-            c_s = pybamm.standard_variables.c_s_p
+        c_s = pybamm.Variable(
+            f"{self.domain} {self.phase_name}particle concentration",
+            domain=f"{domain} {self.phase_name}particle",
+            auxiliary_domains={
+                "secondary": f"{domain} electrode",
+                "tertiary": "current collector",
+            },
+            bounds=(0, 1),
+        )
 
         variables = self._get_standard_concentration_variables(c_s)
 
         return variables
 
     def get_coupled_variables(self, variables):
-        c_s = variables[self.domain + " particle concentration"]
+        c_s = variables[f"{self.domain} {self.phase_name}particle concentration"]
         T = pybamm.PrimaryBroadcast(
-            variables[self.domain + " electrode temperature"],
-            [self.domain.lower() + " particle"],
+            variables[f"{self.domain} electrode temperature"],
+            [f"{self.domain.lower()} {self.phase_name}particle"],
         )
 
         D_eff = self._get_effective_diffusivity(c_s, T)
@@ -55,26 +63,28 @@ class FickianDiffusion(BaseFickian):
         return variables
 
     def set_rhs(self, variables):
-        c_s = variables[self.domain + " particle concentration"]
-        N_s = variables[self.domain + " particle flux"]
-        R = variables[self.domain + " particle radius"]
+        c_s = variables[f"{self.domain} {self.phase_name}particle concentration"]
+        N_s = variables[f"{self.domain} {self.phase_name}particle flux"]
+        R = variables[f"{self.domain} {self.phase_name}particle radius"]
 
-        self.rhs = {c_s: -(1 / (R ** 2 * self.domain_param.C_diff)) * pybamm.div(N_s)}
+        self.rhs = {c_s: -(1 / (R ** 2 * self.phase_param.C_diff)) * pybamm.div(N_s)}
 
     def set_boundary_conditions(self, variables):
-        domain_param = self.domain_param
+        phase_param = self.phase_param
 
-        c_s = variables[self.domain + " particle concentration"]
-        D_eff = variables[self.domain + " effective diffusivity"]
-        j = variables[self.domain + " electrode interfacial current density"]
-        R = variables[self.domain + " particle radius"]
+        c_s = variables[f"{self.domain} {self.phase_name}particle concentration"]
+        D_eff = variables[f"{self.domain} {self.phase_name}effective diffusivity"]
+        j = variables[
+            f"{self.domain} electrode {self.phase_name}interfacial current density"
+        ]
+        R = variables[f"{self.domain} {self.phase_name}particle radius"]
 
         rbc = (
-            -domain_param.C_diff
+            -phase_param.C_diff
             * j
             * R
-            / domain_param.a_R
-            / domain_param.gamma
+            / phase_param.a_R
+            / phase_param.gamma
             / pybamm.surf(D_eff)
         )
 
@@ -83,6 +93,6 @@ class FickianDiffusion(BaseFickian):
         }
 
     def set_initial_conditions(self, variables):
-        c_s = variables[self.domain + " particle concentration"]
-        c_init = self.domain_param.c_init
+        c_s = variables[f"{self.domain} {self.phase_name}particle concentration"]
+        c_init = self.phase_param.c_init
         self.initial_conditions = {c_s: c_init}
