@@ -191,7 +191,7 @@ setup(
     python_requires=">=3.7,<3.10",
     # List of dependencies
     install_requires=[
-        "numpy>=1.16",
+        "numpy==1.22",  # change back to numpy>=1.16 once scikit.odes is fixed
         "scipy>=1.3",
         "pandas>=0.24",
         "anytree>=2.4.3",
