@@ -228,7 +228,7 @@ class LOQS(BaseModel):
             self.submodels[
                 "leading-order positive oxygen interface"
             ] = pybamm.kinetics.ForwardTafel(
-                self.param, "Positive", "lead-acid oxygen", self.options
+                self.param, "Positive", "lead-acid oxygen", self.options, "primary"
             )
             self.submodels[
                 "leading-order negative oxygen interface"

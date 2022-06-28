@@ -56,7 +56,7 @@ class SingleOpenCircuitPotential(BaseOpenCircuitPotential):
             dUdT = pybamm.Scalar(0)
 
         elif self.reaction == "lead-acid oxygen":
-            ocp = self.domain_param.U_Ox
+            ocp = self.phase_param.U_Ox
             dUdT = pybamm.Scalar(0)
 
         else:

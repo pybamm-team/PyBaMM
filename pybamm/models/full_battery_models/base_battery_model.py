@@ -216,7 +216,6 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                 "reaction-driven",
                 "stress and reaction-driven",
             ],
-            "open circuit potential": ["single", "current sigmoid"],
             "operating mode": [
                 "current",
                 "voltage",
@@ -495,7 +494,6 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                                 "intercalation kinetics",
                                 "interface utilisation",
                                 "loss of active material",
-                                "open circuit potential",
                                 "particle mechanics",
                                 "particle",
                                 "particle phases",

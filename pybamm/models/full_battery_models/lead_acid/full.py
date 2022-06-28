@@ -129,7 +129,7 @@ class Full(BaseModel):
                 self.param
             )
             self.submodels["positive oxygen interface"] = pybamm.kinetics.ForwardTafel(
-                self.param, "Positive", "lead-acid oxygen", self.options
+                self.param, "Positive", "lead-acid oxygen", self.options, "primary"
             )
             self.submodels[
                 "negative oxygen interface"

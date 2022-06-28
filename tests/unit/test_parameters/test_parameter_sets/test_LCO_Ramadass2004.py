@@ -61,7 +61,7 @@ class TestRamadass2004(unittest.TestCase):
                 [1e3, 1e4, T, c_p_max],
                 1.4517,
             ),
-            "lico2_entropic_change_Moura2016.py": ([sto], -3.4664e-5),
+            "lico2_entropic_change_Moura2016.py": ([sto, c_p_max], -3.4664e-5),
             "lico2_ocp_Ramadass2004.py": ([sto], 4.1249),
         }
 
@@ -83,7 +83,7 @@ class TestRamadass2004(unittest.TestCase):
                 [1e3, 1e4, T, c_n_max],
                 2.2007,
             ),
-            "graphite_entropic_change_Moura2016.py": ([sto], -1.5079e-5),
+            "graphite_entropic_change_Moura2016.py": ([sto, c_n_max], -1.5079e-5),
             "graphite_ocp_Ramadass2004.py": ([sto], 0.1215),
         }
 

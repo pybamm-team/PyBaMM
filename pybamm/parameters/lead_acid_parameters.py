@@ -567,11 +567,6 @@ class DomainLeadAcidParameters(BaseParameters):
         self.Q_max = self.Q_max_dimensional / (main.c_e_typ * main.F)
         self.beta_U = 1 / self.Q_max
 
-        # Electrochemical reactions
-        # Oxygen
-        self.U_Ox = (main.U_Ox_dim - self.prim.U_ref) / main.potential_scale
-        self.U_Hy = (main.U_Hy_dim - self.prim.U_ref) / main.potential_scale
-
         # Electrolyte properties
         self.beta_surf = (
             -main.c_e_typ * self.DeltaVsurf / self.prim.ne_S
@@ -716,6 +711,11 @@ class PhaseLeadAcidParameters(BaseParameters):
         # Initial conditions
         self.c_init = main.c_e_init
         self.U_init = self.U(main.c_e_init, main.T_init)
+
+        # Electrochemical reactions
+        # Oxygen
+        self.U_Ox = (main.U_Ox_dim - self.U_ref) / main.potential_scale
+        self.U_Hy = (main.U_Hy_dim - self.U_ref) / main.potential_scale
 
     def U(self, c_e, T):
         """Dimensionless open-circuit voltage in the negative electrode"""

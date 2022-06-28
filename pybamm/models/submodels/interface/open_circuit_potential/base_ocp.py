@@ -76,14 +76,17 @@ class BaseOpenCircuitPotential(BaseInterface):
         ocp_dim = self.phase_param.U_ref + pot_scale * ocp
         ocp_av_dim = self.phase_param.U_ref + pot_scale * ocp_av
 
-        variables = {
-            f"{Domain} electrode {reaction_name}open circuit potential": ocp,
-            f"{Domain} electrode {reaction_name}" "open circuit potential [V]": ocp_dim,
-            f"X-averaged {domain} electrode {reaction_name}"
-            "open circuit potential": ocp_av,
-            f"X-averaged {domain} electrode {reaction_name}"
-            "open circuit potential [V]": ocp_av_dim,
-        }
+        variables.update(
+            {
+                f"{Domain} electrode {reaction_name}open circuit potential": ocp,
+                f"{Domain} electrode {reaction_name}"
+                "open circuit potential [V]": ocp_dim,
+                f"X-averaged {domain} electrode {reaction_name}"
+                "open circuit potential": ocp_av,
+                f"X-averaged {domain} electrode {reaction_name}"
+                "open circuit potential [V]": ocp_av_dim,
+            }
+        )
         if self.reaction in ["lithium-ion main", "lead-acid main"]:
             variables.update(
                 {
