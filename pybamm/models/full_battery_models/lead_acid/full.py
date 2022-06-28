@@ -35,6 +35,7 @@ class Full(BaseModel):
         super().__init__(options, name)
 
         self.set_external_circuit_submodel()
+        self.set_open_circuit_potential_submodel()
         self.set_intercalation_kinetics_submodel()
         self.set_interface_utilisation_submodel()
         self.set_porosity_submodel()
