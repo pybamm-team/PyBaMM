@@ -2,6 +2,8 @@
 ## Features
 
 -   Added open-circuit potential as a separate submodel ([#2094](https://github.com/pybamm-team/PyBaMM/pull/2094))
+-   Reformated submodel structure to allow composite electrodes, with an example for graphite/silicon. Composite positive electrode is now also possible. With current implementation, electrodes can have at most two phases. ([#2073](https://github.com/pybamm-team/PyBaMM/pull/2073))
+-   Added "Chen2020_composite" parameter set for a composite graphite/silicon electrode. Silicon parameters are added as a standard negative electrode parameter set, specified as the "negative electrode secondary" set, which automatically adds "Secondary:" to the start of each parameter name. Primary (graphite) parameter names are unchanged. ([#2073](https://github.com/pybamm-team/PyBaMM/pull/2073))
 -   Added partially reversible lithium plating model and new `OKane2022` parameter set to go with it ([#2043](https://github.com/pybamm-team/PyBaMM/pull/2043))
 -   Added `__eq__` and `__hash__` methods for `Symbol` objects, using `.id` ([#1978](https://github.com/pybamm-team/PyBaMM/pull/1978))
 
