@@ -60,18 +60,10 @@ class UnaryOperator(pybamm.Symbol):
             f"{self.__class__} does not implement _unary_evaluate."
         )
 
-    def evaluate(self, t=None, y=None, y_dot=None, inputs=None, known_evals=None):
+    def evaluate(self, t=None, y=None, y_dot=None, inputs=None):
         """See :meth:`pybamm.Symbol.evaluate()`."""
-        if known_evals is not None:
-            if self.id not in known_evals:
-                child, known_evals = self.child.evaluate(
-                    t, y, y_dot, inputs, known_evals
-                )
-                known_evals[self.id] = self._unary_evaluate(child)
-            return known_evals[self.id], known_evals
-        else:
-            child = self.child.evaluate(t, y, y_dot, inputs)
-            return self._unary_evaluate(child)
+        child = self.child.evaluate(t, y, y_dot, inputs)
+        return self._unary_evaluate(child)
 
     def _evaluate_for_shape(self):
         """

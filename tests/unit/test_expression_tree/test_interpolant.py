@@ -124,7 +124,7 @@ class TestInterpolant(unittest.TestCase):
         y = pybamm.StateVector(slice(0, 2))
         interp = pybamm.Interpolant(x, 2 * x, y)
 
-        self.assertEqual(interp.id, interp.new_copy().id)
+        self.assertEqual(interp, interp.new_copy())
 
 
 if __name__ == "__main__":

@@ -464,8 +464,7 @@ class EvaluatorPython:
 
         # add function def to first line
         python_str = (
-            "def evaluate(constants, t=None, y=None, "
-            "inputs=None):\n" + python_str
+            "def evaluate(constants, t=None, y=None, " "inputs=None):\n" + python_str
         )
 
         # calculate the final variable that will output the result of calling `evaluate`
@@ -642,9 +641,7 @@ class EvaluatorJax:
             y = y.reshape(-1, 1)
 
         # execute code
-        jaxpr = jax.make_jaxpr(self._evaluate_jax)(
-            *self._constants, t, y, inputs
-        ).jaxpr
+        jaxpr = jax.make_jaxpr(self._evaluate_jax)(*self._constants, t, y, inputs).jaxpr
         print("invars:", jaxpr.invars)
         print("outvars:", jaxpr.outvars)
         print("constvars:", jaxpr.constvars)

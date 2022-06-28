@@ -775,16 +775,16 @@ def get_julia_mtk_model(model, geometry=None, tspan=None):
     """
     # Extract variables
     variables = {**model.rhs, **model.algebraic}.keys()
-    variable_id_to_print_name = {}
+    variable_to_print_name = {}
     for i, var in enumerate(variables):
         if var.print_name is not None:
             print_name = var._raw_print_name
         else:
             print_name = f"u{i+1}"
-        variable_id_to_print_name[var.id] = print_name
+        variable_to_print_name[var] = print_name
         if isinstance(var, pybamm.ConcatenationVariable):
             for child in var.children:
-                variable_id_to_print_name[child.id] = print_name
+                variable_to_print_name[child] = print_name
 
     # Extract domain and auxiliary domains
     all_domains = set(
@@ -839,7 +839,7 @@ def get_julia_mtk_model(model, geometry=None, tspan=None):
     var_to_ind_vars_right_boundary = {}
     for var in variables:
         if var.domain in [[], ["current collector"]]:
-            var_to_ind_vars[var.id] = "(t)"
+            var_to_ind_vars[var] = "(t)"
         else:
             # all independent variables e.g. (t, x) or (t, rn, xn)
             domain_symbols = ", ".join(
@@ -847,10 +847,10 @@ def get_julia_mtk_model(model, geometry=None, tspan=None):
                 for dom in var.domains.values()
                 if domain_name_to_limits[tuple(dom)] is not None
             )
-            var_to_ind_vars[var.id] = f"(t, {domain_symbols})"
+            var_to_ind_vars[var] = f"(t, {domain_symbols})"
             if isinstance(var, pybamm.ConcatenationVariable):
                 for child in var.children:
-                    var_to_ind_vars[child.id] = f"(t, {domain_symbols})"
+                    var_to_ind_vars[child] = f"(t, {domain_symbols})"
             aux_domain_symbols = ", ".join(
                 domain_name_to_symbol[tuple(dom)]
                 for level, dom in var.domains.items()
@@ -861,12 +861,10 @@ def get_julia_mtk_model(model, geometry=None, tspan=None):
 
             limits = domain_name_to_limits[tuple(var.domain)]
             # left bc e.g. (t, 0) or (t, 0, xn)
-            var_to_ind_vars_left_boundary[
-                var.id
-            ] = f"(t, {limits[0]}{aux_domain_symbols})"
+            var_to_ind_vars_left_boundary[var] = f"(t, {limits[0]}{aux_domain_symbols})"
             # right bc e.g. (t, 1) or (t, 1, xn)
             var_to_ind_vars_right_boundary[
-                var.id
+                var
             ] = f"(t, {limits[1]}{aux_domain_symbols})"
 
     mtk_str = "begin\n"
@@ -889,13 +887,13 @@ def get_julia_mtk_model(model, geometry=None, tspan=None):
 
     # Add a comment with the variable names
     for var in variables:
-        mtk_str += f"# '{var.name}' -> {variable_id_to_print_name[var.id]}\n"
+        mtk_str += f"# '{var.name}' -> {variable_to_print_name[var]}\n"
     # Makes a line of the form '@variables u1(t) u2(t)'
     dep_vars = []
     mtk_str += "@variables"
     for var in variables:
-        mtk_str += f" {variable_id_to_print_name[var.id]}(..)"
-        dep_var = variable_id_to_print_name[var.id] + var_to_ind_vars[var.id]
+        mtk_str += f" {variable_to_print_name[var]}(..)"
+        dep_var = variable_to_print_name[var] + var_to_ind_vars[var]
         dep_vars.append(dep_var)
     mtk_str += "\n"
 
@@ -915,7 +913,7 @@ def get_julia_mtk_model(model, geometry=None, tspan=None):
 
         if var in model.rhs:
             all_eqns_str += (
-                f"   Dt({variable_id_to_print_name[var.id]}{var_to_ind_vars[var.id]}) "
+                f"   Dt({variable_to_print_name[var]}{var_to_ind_vars[var]}) "
                 + f"~ {eqn_str},\n"
             )
         elif var in model.algebraic:
@@ -929,17 +927,17 @@ def get_julia_mtk_model(model, geometry=None, tspan=None):
 
     # Replace variables in the julia strings that correspond to pybamm variables with
     # their julia equivalent
-    for var_id, julia_id in variable_id_to_print_name.items():
+    for var, julia_id in variable_to_print_name.items():
         # e.g. boundary_value_right(cache_123456789) gets replaced with u1(t, 1)
-        cache_var_id = id_to_julia_variable(var_id, "cache")
+        cache_var_id = id_to_julia_variable(var.id, "cache")
         if f"boundary_value_right({cache_var_id})" in all_julia_str:
             all_julia_str = all_julia_str.replace(
                 f"boundary_value_right({cache_var_id})",
-                julia_id + var_to_ind_vars_right_boundary[var_id],
+                julia_id + var_to_ind_vars_right_boundary[var],
             )
         # e.g. cache_123456789 gets replaced with u1(t, x)
         all_julia_str = all_julia_str.replace(
-            cache_var_id, julia_id + var_to_ind_vars[var_id]
+            cache_var_id, julia_id + var_to_ind_vars[var]
         )
 
     # Replace independent variables (domain names) in julia strings with the
@@ -989,18 +987,14 @@ def get_julia_mtk_model(model, geometry=None, tspan=None):
         )
 
         if not is_pde:
-            all_ic_bc_str += (
-                f"   {variable_id_to_print_name[var.id]}(t) => {eqn_str},\n"
-            )
+            all_ic_bc_str += f"   {variable_to_print_name[var]}(t) => {eqn_str},\n"
         else:
             if var.domain == []:
                 doms = ""
             else:
                 doms = ", " + domain_name_to_symbol[tuple(var.domain)]
 
-            all_ic_bc_str += (
-                f"   {variable_id_to_print_name[var.id]}(0{doms}) ~ {eqn_str},\n"
-            )
+            all_ic_bc_str += f"   {variable_to_print_name[var]}(0{doms}) ~ {eqn_str},\n"
     # Boundary conditions
     if is_pde:
         all_ic_bc_str += "   # boundary conditions\n"
@@ -1020,11 +1014,11 @@ def get_julia_mtk_model(model, geometry=None, tspan=None):
                     )
 
                     if side == "left":
-                        limit = var_to_ind_vars_left_boundary[var.id]
+                        limit = var_to_ind_vars_left_boundary[var]
                     elif side == "right":
-                        limit = var_to_ind_vars_right_boundary[var.id]
+                        limit = var_to_ind_vars_right_boundary[var]
 
-                    bc = f"{variable_id_to_print_name[var.id]}{limit}"
+                    bc = f"{variable_to_print_name[var]}{limit}"
                     if typ == "Dirichlet":
                         bc = bc
                     elif typ == "Neumann":
@@ -1033,17 +1027,17 @@ def get_julia_mtk_model(model, geometry=None, tspan=None):
 
     # Replace variables in the julia strings that correspond to pybamm variables with
     # their julia equivalent
-    for var_id, julia_id in variable_id_to_print_name.items():
+    for var, julia_id in variable_to_print_name.items():
         # e.g. boundary_value_right(cache_123456789) gets replaced with u1(t, 1)
-        cache_var_id = id_to_julia_variable(var_id, "cache")
+        cache_var_id = id_to_julia_variable(var.id, "cache")
         if f"boundary_value_right({cache_var_id})" in all_ic_bc_julia_str:
             all_ic_bc_julia_str = all_ic_bc_julia_str.replace(
                 f"boundary_value_right({cache_var_id})",
-                julia_id + var_to_ind_vars_right_boundary[var_id],
+                julia_id + var_to_ind_vars_right_boundary[var],
             )
         # e.g. cache_123456789 gets replaced with u1(t, x)
         all_ic_bc_julia_str = all_ic_bc_julia_str.replace(
-            cache_var_id, julia_id + var_to_ind_vars[var_id]
+            cache_var_id, julia_id + var_to_ind_vars[var]
         )
 
     ####################################################################################

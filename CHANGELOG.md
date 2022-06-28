@@ -1,4 +1,19 @@
 # [Unreleased](https://github.com/pybamm-team/PyBaMM/)
+## Features
+
+-   Added partially reversible lithium plating model and new `OKane2022` parameter set to go with it ([#2043](https://github.com/pybamm-team/PyBaMM/pull/2043))
+
+-   Added `__eq__` and `__hash__` methods for `Symbol` objects, using `.id` ([#1978](https://github.com/pybamm-team/PyBaMM/pull/1978))
+
+## Optimizations
+
+-   Stoichiometry inputs to OCP functions are now bounded between 1e-10 and 1-1e-10, with singularities at 0 and 1 so that OCP goes to +- infinity ([#2095](https://github.com/pybamm-team/PyBaMM/pull/2095))
+
+## Breaking changes
+
+-   Changed some dictionary keys to `Symbol` instead of `Symbol.id` (internal change only, should not affect external facing functions) ([#1978](https://github.com/pybamm-team/PyBaMM/pull/1978))
+
+# [v22.5](https://github.com/pybamm-team/PyBaMM/tree/v22.5) - 2022-05-31
 
 ## Features
 
@@ -30,6 +45,10 @@
 -   Added "Discharge energy [W.h]", which is the integral of the power in Watts, as an optional output. Set the option "calculate discharge energy" to "true" to get this output ("false" by default, since it can slow down some of the simple models) ([#1969](https://github.com/pybamm-team/PyBaMM/pull/1969)))
 -   Added an option "calculate heat source for isothermal models" to choose whether or not the heat generation terms are computed when running models with the option `thermal="isothermal"`  ([#1958](https://github.com/pybamm-team/PyBaMM/pull/1958))
 
+## Optimizations
+
+-   Simplified `model.new_copy()` ([#1977](https://github.com/pybamm-team/PyBaMM/pull/1977))
+
 ## Bug fixes
 
 -   Fix bug where sensitivity calculation failed if len of `calculate_sensitivities` was less than `inputs` ([#1897](https://github.com/pybamm-team/PyBaMM/pull/1897))
@@ -38,6 +57,7 @@
 
 ## Breaking changes
 
+-   Removed `model.new_empty_copy()` (use `model.new_copy()` instead) ([#1977](https://github.com/pybamm-team/PyBaMM/pull/1977))
 -   Dropped support for Windows 32-bit architecture ([#1964](https://github.com/pybamm-team/PyBaMM/pull/1964))
 
 # [v22.2](https://github.com/pybamm-team/PyBaMM/tree/v22.2) - 2022-02-28
