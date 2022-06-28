@@ -21,8 +21,8 @@ jobs:
         # Choose whether to include file with no URLs in the prints.
         print_all: false
 
-        # Timeout in 20 seconds if url is not reached
-        timeout: 20
+        # Timeout in 30 seconds if url is not reached
+        timeout: 30
 
         # How many times to retry a failed request (each is logged, defaults to 1)
         retry_count: 5
