@@ -65,7 +65,7 @@ class TestORegan2021(unittest.TestCase):
             "nmc_LGM50_heat_capacity_ORegan2021.py": ([298.15], 902.6502),
             "nmc_LGM50_diffusivity_ORegan2021.py": ([0.5, 298.15], 7.2627e-15),
             "nmc_LGM50_electrolyte_exchange_current_density_ORegan2021.py": (
-                [1e3, 1e4, 298.15, c_p_max],
+                [1e3, 1e4, c_p_max, 298.15],
                 2.1939,
             ),
             "nmc_LGM50_ocp_Chen2020.py": ([0.5], 3.9720),
@@ -93,7 +93,7 @@ class TestORegan2021(unittest.TestCase):
             "graphite_LGM50_heat_capacity_ORegan2021.py": ([298.15], 847.7155),
             "graphite_LGM50_diffusivity_ORegan2021.py": ([0.5, 298.15], 2.8655e-16),
             "graphite_LGM50_electrolyte_exchange_current_density_ORegan2021.py": (
-                [1e3, 1e4, 298.15, c_n_max],
+                [1e3, 1e4, c_n_max, 298.15],
                 1.0372,
             ),
             "graphite_LGM50_ocp_Chen2020.py": ([0.5], 0.1331),
