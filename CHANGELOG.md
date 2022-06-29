@@ -11,6 +11,7 @@
 
 ## Breaking changes
 
+-   Exchange-current density functions (and some other functions) now take an additional argument, the maximum particle concentration for that phase ([#2134](https://github.com/pybamm-team/PyBaMM/pull/2134))
 -   Changed some dictionary keys to `Symbol` instead of `Symbol.id` (internal change only, should not affect external facing functions) ([#1978](https://github.com/pybamm-team/PyBaMM/pull/1978))
 
 # [v22.5](https://github.com/pybamm-team/PyBaMM/tree/v22.5) - 2022-05-31
