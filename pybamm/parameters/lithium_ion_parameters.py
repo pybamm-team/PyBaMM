@@ -155,6 +155,9 @@ class LithiumIonParameters(BaseParameters):
         self.L_inner_0_dim = pybamm.Parameter("Initial inner SEI thickness [m]")
         self.L_outer_0_dim = pybamm.Parameter("Initial outer SEI thickness [m]")
         self.L_sei_0_dim = self.L_inner_0_dim + self.L_outer_0_dim
+        self.E_sei_dimensional = pybamm.Parameter(
+            "SEI growth activation energy [J.mol-1]"
+        )
 
         # EC reaction
         self.c_ec_0_dim = pybamm.Parameter(
@@ -328,7 +331,9 @@ class LithiumIonParameters(BaseParameters):
         )
 
         # SEI parameters
-        self.alpha_SEI = pybamm.Parameter("Inner SEI reaction proportion")  # was 0.5
+        self.alpha_sei = pybamm.Parameter("Inner SEI reaction proportion")  # was 0.5
+
+        self.E_over_RT_sei = self.E_sei_dimensional / self.R / self.T_ref
 
         self.C_sei_reaction = (self.n.j_scale / self.m_sei_dimensional) * pybamm.exp(
             -(self.F * self.n.U_ref / (2 * self.R * self.T_ref))

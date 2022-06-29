@@ -107,32 +107,31 @@ class SEIGrowth(BaseModel):
         L_sei = variables[f"Total {self.reaction} thickness"]
 
         T = variables["Negative electrode temperature"]
-        R_sei = self.param.R_sei
+        R_sei = param.R_sei
         eta_SEI = delta_phi - j * L_sei * R_sei
-        # thermal prefactor for reaction, interstitial and EC models
-        prefactor = -1 / (2 * (1 + self.param.Theta * T))
+        # Thermal prefactor for reaction, interstitial and EC models
+        prefactor = 1 / (1 + param.Theta * T)
 
         if self.options["SEI"] == "reaction limited":
-            # alpha = param.alpha
             C_sei = param.C_sei_reaction
-            j_sei = -(1 / C_sei) * pybamm.exp(prefactor * eta_SEI)
+            j_sei = -(1 / C_sei) * pybamm.exp(-0.5 * prefactor * eta_SEI)
 
         elif self.options["SEI"] == "electron-migration limited":
-            U_inner = self.param.U_inner_electron
-            C_sei = self.param.C_sei_electron
+            U_inner = param.U_inner_electron
+            C_sei = param.C_sei_electron
             j_sei = (phi_s_n - U_inner) / (C_sei * L_sei_inner)
 
         elif self.options["SEI"] == "interstitial-diffusion limited":
-            C_sei = self.param.C_sei_inter
-            j_sei = -pybamm.exp(2 * prefactor * delta_phi) / (C_sei * L_sei_inner)
+            C_sei = param.C_sei_inter
+            j_sei = -pybamm.exp(-(prefactor * delta_phi) / (C_sei * L_sei_inner))
 
         elif self.options["SEI"] == "solvent-diffusion limited":
-            C_sei = self.param.C_sei_solvent
+            C_sei = param.C_sei_solvent
             j_sei = -1 / (C_sei * L_sei_outer)
 
         elif self.options["SEI"] == "ec reaction limited":
-            C_sei_ec = self.param.C_sei_ec
-            C_ec = self.param.C_ec
+            C_sei_ec = param.C_sei_ec
+            C_ec = param.C_ec
 
             # we have a linear system for j_sei and c_ec
             #  c_ec = 1 + j_sei * L_sei * C_ec
@@ -142,13 +141,13 @@ class SEIGrowth(BaseModel):
             # so
             #  j_sei = -C_sei_ec * exp() / (1 + L_sei * C_ec * C_sei_ec * exp())
             #  c_ec = 1 / (1 + L_sei * C_ec * C_sei_ec * exp())
-            C_sei_exp = C_sei_ec * pybamm.exp(prefactor * eta_SEI)
+            C_sei_exp = C_sei_ec * pybamm.exp(-0.5 * prefactor * eta_SEI)
             j_sei = -C_sei_exp / (1 + L_sei * C_ec * C_sei_exp)
             c_ec = 1 / (1 + L_sei * C_ec * C_sei_exp)
 
             # Get variables related to the concentration
             c_ec_av = pybamm.x_average(c_ec)
-            c_ec_scale = self.param.c_ec_0_dim
+            c_ec_scale = param.c_ec_0_dim
 
             if self.reaction == "SEI on cracks":
                 variables.update(
@@ -174,10 +173,13 @@ class SEIGrowth(BaseModel):
         if self.options["SEI"] == "ec reaction limited":
             alpha = 0
         else:
-            alpha = self.param.alpha_SEI
+            alpha = param.alpha_sei
 
-        j_inner = alpha * j_sei
-        j_outer = (1 - alpha) * j_sei
+        # All SEI growth mechanisms assumed to have Arrhenius dependence 
+        Arrhenius = pybamm.exp(param.E_over_RT_sei * (1 - prefactor))
+
+        j_inner = alpha * Arrhenius * j_sei
+        j_outer = (1 - alpha) * Arrhenius * j_sei
 
         variables.update(self._get_standard_concentration_variables(variables))
         variables.update(self._get_standard_reaction_variables(j_inner, j_outer))
