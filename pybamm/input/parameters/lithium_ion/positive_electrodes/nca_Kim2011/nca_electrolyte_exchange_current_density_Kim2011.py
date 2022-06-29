@@ -1,7 +1,7 @@
 from pybamm import exp, constants, Parameter
 
 
-def nca_electrolyte_exchange_current_density_Kim2011(c_e, c_s_surf, T, c_s_max):
+def nca_electrolyte_exchange_current_density_Kim2011(c_e, c_s_surf, c_s_max, T):
     """
     Exchange-current density for Butler-Volmer reactions between NCA and LiPF6 in EC:DMC
     [1].
@@ -19,10 +19,10 @@ def nca_electrolyte_exchange_current_density_Kim2011(c_e, c_s_surf, T, c_s_max):
         Electrolyte concentration [mol.m-3]
     c_s_surf : :class:`pybamm.Symbol`
         Particle concentration [mol.m-3]
-    T : :class:`pybamm.Symbol`
-        Temperature [K]
     c_s_max : :class:`pybamm.Symbol`
         Maximum particle concentration [mol.m-3]
+    T : :class:`pybamm.Symbol`
+        Temperature [K]
 
     Returns
     -------

@@ -682,8 +682,8 @@ class DomainLithiumIonParameters(BaseParameters):
         inputs = {
             "Electrolyte concentration [mol.m-3]": c_e,
             f"{self.domain} particle surface concentration [mol.m-3]": c_s_surf,
-            "Temperature [K]": T,
             f"{self.domain} particle maximum concentration [mol.m-3]": self.c_max,
+            "Temperature [K]": T,
         }
         return pybamm.FunctionParameter(
             f"{self.domain} electrode exchange-current density [A.m-2]", inputs
