@@ -22,7 +22,7 @@ def solve_model_once(model, solver, t_eval):
     solver.solve(model, t_eval=t_eval)
 
 
-class TimeBuildModel:
+class TimeBuildModelLossActiveMaterial:
     param_names = ["model", "model option"]
     params = (
         [pybamm.lithium_ion.SPM, pybamm.lithium_ion.DFN],
@@ -36,7 +36,7 @@ class TimeBuildModel:
         compute_discretisation(self.model, self.param).process_model(self.model)
 
 
-class TimeBuildSimulation:
+class TimeBuildSimulationLossActiveMaterial:
     param_names = ["model", "with experiment", "model option"]
     params = (
         [pybamm.lithium_ion.SPM, pybamm.lithium_ion.DFN],
@@ -58,7 +58,7 @@ class TimeBuildSimulation:
             pybamm.Simulation(self.model, parameter_values=self.param, C_rate=1)
 
 
-class TimeSolve:
+class TimeSolveLossActiveMaterial:
     param_names = ["model", "solve first", "model option"]
     params = (
         [pybamm.lithium_ion.SPM, pybamm.lithium_ion.DFN],
@@ -97,13 +97,13 @@ class TimeSolve:
         disc = pybamm.Discretisation(mesh, self.model.default_spatial_methods)
         disc.process_model(self.model)
         if solve_first:
-            solve_model_once(self.model, TimeSolve.solver, self.t_eval)
+            solve_model_once(self.model, TimeSolveLossActiveMaterial.solver, self.t_eval)
 
     def time_solve_model(self, model, solve_first, params):
-        TimeSolve.solver.solve(self.model, t_eval=self.t_eval)
+        TimeSolveLossActiveMaterial.solver.solve(self.model, t_eval=self.t_eval)
 
 
-class TimeBuildModel2:
+class TimeBuildModelLithiumPlating:
     param_names = ["model", "model option"]
     params = (
         [pybamm.lithium_ion.SPM, pybamm.lithium_ion.DFN],
@@ -117,7 +117,7 @@ class TimeBuildModel2:
         compute_discretisation(self.model, self.param).process_model(self.model)
 
 
-class TimeBuildSimulation2:
+class TimeBuildSimulationLithiumPlating:
     param_names = ["model", "with experiment", "model option"]
     params = (
         [pybamm.lithium_ion.SPM, pybamm.lithium_ion.DFN],
@@ -139,7 +139,7 @@ class TimeBuildSimulation2:
             pybamm.Simulation(self.model, parameter_values=self.param, C_rate=1)
 
 
-class TimeSolve2:
+class TimeSolveLithiumPlating:
     param_names = ["model", "solve first", "model option"]
     params = (
         [pybamm.lithium_ion.SPM, pybamm.lithium_ion.DFN],
@@ -178,13 +178,13 @@ class TimeSolve2:
         disc = pybamm.Discretisation(mesh, self.model.default_spatial_methods)
         disc.process_model(self.model)
         if solve_first:
-            solve_model_once(self.model, TimeSolve2.solver, self.t_eval)
+            solve_model_once(self.model, TimeSolveLithiumPlating.solver, self.t_eval)
 
     def time_solve_model(self, model, solve_first, params):
-        TimeSolve2.solver.solve(self.model, t_eval=self.t_eval)
+        TimeSolveLithiumPlating.solver.solve(self.model, t_eval=self.t_eval)
 
 
-class TimeBuildModel3:
+class TimeBuildModelSEI:
     param_names = ["model", "model option"]
     params = (
         [pybamm.lithium_ion.SPM, pybamm.lithium_ion.DFN],
@@ -206,7 +206,7 @@ class TimeBuildModel3:
         compute_discretisation(self.model, self.param).process_model(self.model)
 
 
-class TimeBuildSimulation3:
+class TimeBuildSimulationSEI:
     param_names = ["model", "with experiment", "model option"]
     params = (
         [pybamm.lithium_ion.SPM, pybamm.lithium_ion.DFN],
@@ -236,7 +236,7 @@ class TimeBuildSimulation3:
             pybamm.Simulation(self.model, parameter_values=self.param, C_rate=1)
 
 
-class TimeSolve3:
+class TimeSolveSEI:
     param_names = ["model", "solve first", "model option"]
     params = (
         [pybamm.lithium_ion.SPM, pybamm.lithium_ion.DFN],
@@ -283,13 +283,13 @@ class TimeSolve3:
         disc = pybamm.Discretisation(mesh, self.model.default_spatial_methods)
         disc.process_model(self.model)
         if solve_first:
-            solve_model_once(self.model, TimeSolve3.solver, self.t_eval)
+            solve_model_once(self.model, TimeSolveSEI.solver, self.t_eval)
 
     def time_solve_model(self, model, solve_first, params):
-        TimeSolve3.solver.solve(self.model, t_eval=self.t_eval)
+        TimeSolveSEI.solver.solve(self.model, t_eval=self.t_eval)
 
 
-class TimeBuildModel4:
+class TimeBuildModelParticle:
     param_names = ["model", "model option"]
     params = (
         [pybamm.lithium_ion.SPM, pybamm.lithium_ion.DFN],
@@ -308,7 +308,7 @@ class TimeBuildModel4:
         compute_discretisation(self.model, self.param).process_model(self.model)
 
 
-class TimeBuildSimulation4:
+class TimeBuildSimulationParticle:
     param_names = ["model", "with experiment", "model option"]
     params = (
         [pybamm.lithium_ion.SPM, pybamm.lithium_ion.DFN],
@@ -335,7 +335,7 @@ class TimeBuildSimulation4:
             pybamm.Simulation(self.model, parameter_values=self.param, C_rate=1)
 
 
-class TimeSolve4:
+class TimeSolveParticle:
     param_names = ["model", "solve first", "model option"]
     params = (
         [pybamm.lithium_ion.SPM, pybamm.lithium_ion.DFN],
@@ -379,13 +379,13 @@ class TimeSolve4:
         disc = pybamm.Discretisation(mesh, self.model.default_spatial_methods)
         disc.process_model(self.model)
         if solve_first:
-            solve_model_once(self.model, TimeSolve4.solver, self.t_eval)
+            solve_model_once(self.model, TimeSolveParticle.solver, self.t_eval)
 
     def time_solve_model(self, model, solve_first, params):
-        TimeSolve4.solver.solve(self.model, t_eval=self.t_eval)
+        TimeSolveParticle.solver.solve(self.model, t_eval=self.t_eval)
 
 
-class TimeBuildModel5:
+class TimeBuildModelThermal:
     param_names = ["model", "model option"]
     params = (
         [pybamm.lithium_ion.SPM, pybamm.lithium_ion.DFN],
@@ -399,7 +399,7 @@ class TimeBuildModel5:
         compute_discretisation(self.model, self.param).process_model(self.model)
 
 
-class TimeBuildSimulation5:
+class TimeBuildSimulationThermal:
     param_names = ["model", "with experiment", "model option"]
     params = (
         [pybamm.lithium_ion.SPM, pybamm.lithium_ion.DFN],
@@ -421,7 +421,7 @@ class TimeBuildSimulation5:
             pybamm.Simulation(self.model, parameter_values=self.param, C_rate=1)
 
 
-class TimeSolve5:
+class TimeSolveThermal:
     param_names = ["model", "solve first", "model option"]
     params = (
         [pybamm.lithium_ion.SPM, pybamm.lithium_ion.DFN],
@@ -460,13 +460,13 @@ class TimeSolve5:
         disc = pybamm.Discretisation(mesh, self.model.default_spatial_methods)
         disc.process_model(self.model)
         if solve_first:
-            solve_model_once(self.model, TimeSolve5.solver, self.t_eval)
+            solve_model_once(self.model, TimeSolveThermal.solver, self.t_eval)
 
     def time_solve_model(self, model, solve_first, params):
-        TimeSolve5.solver.solve(self.model, t_eval=self.t_eval)
+        TimeSolveThermal.solver.solve(self.model, t_eval=self.t_eval)
 
 
-class TimeBuildModel6:
+class TimeBuildModelSurfaceForm:
     param_names = ["model", "model option"]
     params = (
         [pybamm.lithium_ion.SPM, pybamm.lithium_ion.DFN],
@@ -480,7 +480,7 @@ class TimeBuildModel6:
         compute_discretisation(self.model, self.param).process_model(self.model)
 
 
-class TimeBuildSimulation6:
+class TimeBuildSimulationSurfaceForm:
     param_names = ["model", "with experiment", "model option"]
     params = (
         [pybamm.lithium_ion.SPM, pybamm.lithium_ion.DFN],
@@ -502,7 +502,7 @@ class TimeBuildSimulation6:
             pybamm.Simulation(self.model, parameter_values=self.param, C_rate=1)
 
 
-class TimeSolve6:
+class TimeSolveSurfaceForm:
     param_names = ["model", "solve first", "model option"]
     params = (
         [pybamm.lithium_ion.SPM, pybamm.lithium_ion.DFN],
@@ -541,7 +541,7 @@ class TimeSolve6:
         disc = pybamm.Discretisation(mesh, self.model.default_spatial_methods)
         disc.process_model(self.model)
         if solve_first:
-            solve_model_once(self.model, TimeSolve6.solver, self.t_eval)
+            solve_model_once(self.model, TimeSolveSurfaceForm.solver, self.t_eval)
 
     def time_solve_model(self, model, solve_first, params):
-        TimeSolve6.solver.solve(self.model, t_eval=self.t_eval)
+        TimeSolveSurfaceForm.solver.solve(self.model, t_eval=self.t_eval)
