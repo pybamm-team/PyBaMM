@@ -26,6 +26,9 @@ class FirstOrderKinetics(BaseInterface):
         self.leading_order_model = leading_order_model
 
     def get_coupled_variables(self, variables):
+        Domain = self.domain
+        rxn = self.reaction_name
+
         # Unpack
         c_e_0 = variables[
             "Leading-order " + self.domain.lower() + " electrolyte concentration"
@@ -68,13 +71,12 @@ class FirstOrderKinetics(BaseInterface):
         # Get exchange-current density
         j0 = self._get_exchange_current_density(variables)
         # Get open-circuit potential variables and reaction overpotential
-        ocp, dUdT = self._get_open_circuit_potential(variables)
+        ocp = variables[f"{Domain} electrode{rxn} open circuit potential"]
         eta_r = delta_phi - ocp
 
         variables.update(self._get_standard_interfacial_current_variables(j))
         variables.update(self._get_standard_exchange_current_variables(j0))
         variables.update(self._get_standard_overpotential_variables(eta_r))
-        variables.update(self._get_standard_ocp_variables(ocp, dUdT))
 
         # SEI film resistance not implemented in this model
         eta_sei = pybamm.Scalar(0)

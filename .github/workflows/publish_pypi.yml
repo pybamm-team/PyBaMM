@@ -1,4 +1,4 @@
-name: "Build and publish Python wheels"
+name: Build and publish package to PyPI
 
 on:
   push:
@@ -38,10 +38,13 @@ jobs:
           CIBW_ENVIRONMENT: "PYBAMM_USE_VCPKG=ON VCPKG_ROOT_DIR=$cd/vcpkg VCPKG_DEFAULT_TRIPLET=x64-windows-static-md VCPKG_FEATURE_FLAGS=manifests,registries CMAKE_GENERATOR=\"Visual Studio 17 2022\" CMAKE_GENERATOR_PLATFORM=x64"
           CIBW_ARCHS: "AMD64"
 
-      - uses: actions/upload-artifact@v2
+      - name: Upload windows wheels
+        uses: actions/upload-artifact@v3
         with:
-          name: wheels
+          name: windows_wheels
           path: ./wheelhouse/*.whl
+          if-no-files-found: error
+
 
   build_wheels:
     name: Build wheels on ${{ matrix.os }}
@@ -52,7 +55,6 @@ jobs:
         os: [ubuntu-latest, macos-latest]
     steps:
       - uses: actions/checkout@v2
-
       - uses: actions/setup-python@v2
 
       - name: Install cibuildwheel
@@ -81,24 +83,53 @@ jobs:
           CIBW_REPAIR_WHEEL_COMMAND_MACOS: "delocate-listdeps {wheel} && delocate-wheel -v -w {dest_dir} {wheel}"
           CIBW_SKIP: pp*
 
-      - uses: actions/upload-artifact@v2
+      - name: Upload wheels
+        uses: actions/upload-artifact@v3
         with:
           name: wheels
           path: ./wheelhouse/*.whl
+          if-no-files-found: error
 
 
-  publish-pypi:
-    name: Upload wheels to PyPI
-    needs: [build_wheels, build_windows_wheels]
+  build_sdist:
+    name: Build sdist
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: [3.8]
+
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-python@v2
+
+      - name: Install dependencies
+        run: pip install wheel
+
+      - name: Build sdist
+        run: python setup.py sdist --formats=gztar
+
+      - name: Upload sdist
+        uses: actions/upload-artifact@v3
+        with:
+          name: sdist
+          path: ./dist/*.tar.gz
+          if-no-files-found: error
+
+
+  publish_pypi:
+    name: Upload package to PyPI
+    needs: [build_wheels, build_windows_wheels, build_sdist]
     runs-on: ubuntu-latest
     steps:
-      - name: Download wheels
-        uses: actions/download-artifact@v2
-        with:
-          name: wheels
-          path: wheels
+      - name: Download all artifacts
+        uses: actions/download-artifact@v3
 
-      - name: Publish wheels on PyPI
+      - name: Move all package files to files/
+        run: |
+          mkdir files
+          mv windows_wheels/* wheels/* sdist/* files/
+
+      - name: Publish on PyPI
         if: |
           github.event.inputs.target == 'pypi' ||
           (github.event_name == 'push' && github.ref == 'refs/heads/main')
@@ -106,13 +137,13 @@ jobs:
         with:
           user: __token__
           password: ${{ secrets.PYPI_TOKEN }}
-          packages_dir: wheels/
+          packages_dir: files/
 
-      - name: Publish wheels on TestPyPI
+      - name: Publish on TestPyPI
         if: github.event.inputs.target == 'testpypi'
         uses: pypa/gh-action-pypi-publish@master
         with:
           user: __token__
           password: ${{ secrets.TESTPYPI_TOKEN }}
-          packages_dir: wheels/
+          packages_dir: files/
           repository_url: https://test.pypi.org/legacy/
