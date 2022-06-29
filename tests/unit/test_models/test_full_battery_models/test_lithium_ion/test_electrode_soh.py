@@ -22,7 +22,7 @@ class TestElectrodeSOH(unittest.TestCase):
         Cp = parameter_values.evaluate(param.p.cap_init)
         n_Li = parameter_values.evaluate(param.n_Li_particles_init)
 
-        inputs = {'V_max': Vmax, 'V_min': Vmin, "n_Li": n_Li, "C_n": Cn, "C_p": Cp}
+        inputs = {"V_max": Vmax, "V_min": Vmin, "n_Li": n_Li, "C_n": Cn, "C_p": Cp}
         # Solve the model and check outputs
         sol = solve_electrode_soh(x100_sim, C_sim, inputs, parameter_values)
 

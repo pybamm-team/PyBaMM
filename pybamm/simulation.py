@@ -56,17 +56,17 @@ class Simulation:
     """
 
     def __init__(
-        self,
-        model,
-        experiment=None,
-        geometry=None,
-        parameter_values=None,
-        submesh_types=None,
-        var_pts=None,
-        spatial_methods=None,
-        solver=None,
-        output_variables=None,
-        C_rate=None,
+            self,
+            model,
+            experiment=None,
+            geometry=None,
+            parameter_values=None,
+            submesh_types=None,
+            var_pts=None,
+            spatial_methods=None,
+            solver=None,
+            output_variables=None,
+            C_rate=None,
     ):
         self.parameter_values = parameter_values or model.default_parameter_values
 
@@ -93,7 +93,7 @@ class Simulation:
                     self._parameter_values.update(
                         {
                             "Current function [A]": self.C_rate
-                            * self._parameter_values["Nominal cell capacity [A.h]"]
+                                                    * self._parameter_values["Nominal cell capacity [A.h]"]
                         }
                     )
 
@@ -275,7 +275,7 @@ class Simulation:
         """
         self.op_conds_to_model_and_param = {}
         for op_cond, op_inputs in zip(
-            self.experiment.operating_conditions, self._experiment_inputs
+                self.experiment.operating_conditions, self._experiment_inputs
         ):
             # Create model for this operating condition if it has not already been seen
             # before
@@ -344,11 +344,11 @@ class Simulation:
                                 + abs(pybamm.InputParameter("Current cut-off [A]"))
                                 - 1e4
                                 * (
-                                    new_model.variables["Battery voltage [V]"]
-                                    < (
-                                        pybamm.InputParameter("Voltage input [V]")
-                                        - 1e-4
-                                    )
+                                        new_model.variables["Battery voltage [V]"]
+                                        < (
+                                                pybamm.InputParameter("Voltage input [V]")
+                                                - 1e-4
+                                        )
                                 ),
                             )
                         )
@@ -423,7 +423,7 @@ class Simulation:
                     new_parameter_values.update(
                         {
                             "Voltage function [V]": op_inputs["Voltage input [V]"]
-                            / model.param.n_cells
+                                                    / model.param.n_cells
                         },
                         check_already_exists=False,
                     )
@@ -437,7 +437,7 @@ class Simulation:
                         {
                             "Current function [A]": op_inputs["Current input [A]"],
                             "Voltage function [V]": op_inputs["Voltage input [V]"]
-                            / model.param.n_cells,
+                                                    / model.param.n_cells,
                         },
                         check_already_exists=False,
                     )
@@ -512,8 +512,8 @@ class Simulation:
             self.op_conds_to_built_models = {}
             processed_models = {}
             for op_cond, (
-                unbuilt_model,
-                parameter_values,
+                    unbuilt_model,
+                    parameter_values,
             ) in self.op_conds_to_model_and_param.items():
                 model_with_set_params = parameter_values.process_model(
                     unbuilt_model, inplace=False
@@ -528,16 +528,16 @@ class Simulation:
                 self.op_conds_to_built_models[op_cond] = built_model
 
     def solve(
-        self,
-        t_eval=None,
-        solver=None,
-        check_model=True,
-        save_at_cycles=None,
-        calc_esoh=True,
-        starting_solution=None,
-        initial_soc=None,
-        callbacks=None,
-        **kwargs,
+            self,
+            t_eval=None,
+            solver=None,
+            check_model=True,
+            save_at_cycles=None,
+            calc_esoh=True,
+            starting_solution=None,
+            initial_soc=None,
+            callbacks=None,
+            **kwargs,
     ):
         """
         A method to solve the model. This method will automatically build
@@ -617,9 +617,9 @@ class Simulation:
             self.parameter_values.update(
                 {
                     "Initial concentration in negative electrode [mol.m-3]": x
-                    * c_n_max,
+                                                                             * c_n_max,
                     "Initial concentration in positive electrode [mol.m-3]": y
-                    * c_p_max,
+                                                                             * c_p_max,
                 }
             )
             # For experiments also update the following
@@ -628,9 +628,9 @@ class Simulation:
                     param.update(
                         {
                             "Initial concentration in negative electrode [mol.m-3]": x
-                            * c_n_max,
+                                                                                     * c_n_max,
                             "Initial concentration in positive electrode [mol.m-3]": y
-                            * c_p_max,
+                                                                                     * c_p_max,
                         }
                     )
             # Save solved initial SOC in case we need to re-build the model
@@ -648,9 +648,9 @@ class Simulation:
                     "starting_solution can only be provided if simulating an Experiment"
                 )
             if (
-                self.operating_mode == "without experiment"
-                or isinstance(self.model, pybamm.lithium_ion.ElectrodeSOHx100)
-                or isinstance(self.model, pybamm.lithium_ion.ElectrodeSOHC)
+                    self.operating_mode == "without experiment"
+                    or isinstance(self.model, pybamm.lithium_ion.ElectrodeSOHx100)
+                    or isinstance(self.model, pybamm.lithium_ion.ElectrodeSOHC)
             ):
                 if t_eval is None:
                     raise pybamm.SolverError(
@@ -682,7 +682,7 @@ class Simulation:
                 # We only raise a warning here as users may genuinely only want
                 # the solution returned at some specified points.
                 elif (
-                    set(np.round(time_data, 12)).issubset(set(np.round(t_eval, 12)))
+                        set(np.round(time_data, 12)).issubset(set(np.round(t_eval, 12)))
                 ) is False:
                     warnings.warn(
                         """
@@ -746,11 +746,11 @@ class Simulation:
 
             # Set up eSOH model (for summary variables)
             if calc_esoh is True:
-                x100_model = ElectrodeSOHx100()
+                x100_model = pybamm.lithium_ion.ElectrodeSOHx100()
                 x100_sim = pybamm.Simulation(
                     x100_model, parameter_values=self.parameter_values
                 )
-                C_model = ElectrodeSOHC()
+                C_model = pybamm.lithium_ion.ElectrodeSOHC()
                 C_sim = pybamm.Simulation(
                     C_model, parameter_values=self.parameter_values
                 )
@@ -765,7 +765,7 @@ class Simulation:
             num_cycles = len(self.experiment.cycle_lengths)
             feasible = True  # simulation will stop if experiment is infeasible
             for cycle_num, cycle_length in enumerate(
-                self.experiment.cycle_lengths, start=1
+                    self.experiment.cycle_lengths, start=1
             ):
                 logs["cycle number"] = (
                     cycle_num + cycle_offset,
@@ -780,19 +780,19 @@ class Simulation:
                 # Decide whether we should save this cycle
                 save_this_cycle = (
                     # always save cycle 1
-                    cycle_num == 1
-                    # None: save all cycles
-                    or save_at_cycles is None
-                    # list: save all cycles in the list
-                    or (
-                        isinstance(save_at_cycles, list)
-                        and cycle_num + cycle_offset in save_at_cycles
-                    )
-                    # int: save all multiples
-                    or (
-                        isinstance(save_at_cycles, int)
-                        and (cycle_num + cycle_offset) % save_at_cycles == 0
-                    )
+                        cycle_num == 1
+                        # None: save all cycles
+                        or save_at_cycles is None
+                        # list: save all cycles in the list
+                        or (
+                                isinstance(save_at_cycles, list)
+                                and cycle_num + cycle_offset in save_at_cycles
+                        )
+                        # int: save all multiples
+                        or (
+                                isinstance(save_at_cycles, int)
+                                and (cycle_num + cycle_offset) % save_at_cycles == 0
+                        )
                 )
                 for step_num in range(1, cycle_length + 1):
                     # Use 1-indexing for printing cycle number as it is more
@@ -847,9 +847,9 @@ class Simulation:
                     logs["termination"] = step_solution.termination
                     # Only allow events specified by experiment
                     if not (
-                        step_solution is None
-                        or step_solution.termination == "final time"
-                        or "[experiment]" in step_solution.termination
+                            step_solution is None
+                            or step_solution.termination == "final time"
+                            or "[experiment]" in step_solution.termination
                     ):
                         feasible = False
                         break
@@ -928,7 +928,7 @@ class Simulation:
         return self.solution
 
     def step(
-        self, dt, solver=None, npts=2, save=True, starting_solution=None, **kwargs
+            self, dt, solver=None, npts=2, save=True, starting_solution=None, **kwargs
     ):
         """
         A method to step the model forward one timestep. This method will
@@ -1114,8 +1114,8 @@ class Simulation:
             )
         # Clear solver problem (not pickle-able, will automatically be recomputed)
         if (
-            isinstance(self._solver, pybamm.CasadiSolver)
-            and self._solver.integrator_specs != {}
+                isinstance(self._solver, pybamm.CasadiSolver)
+                and self._solver.integrator_specs != {}
         ):
             self._solver.integrator_specs = {}
         with open(filename, "wb") as f:
