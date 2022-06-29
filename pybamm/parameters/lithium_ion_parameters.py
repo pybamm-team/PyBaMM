@@ -405,9 +405,7 @@ class LithiumIonParameters(BaseParameters):
         # lithium plating parameters
         self.c_plated_Li_0 = self.c_plated_Li_0_dim / self.c_Li_typ
 
-        self.alpha_plating = pybamm.Parameter(
-            "Lithium plating transfer coefficient"
-        )
+        self.alpha_plating = pybamm.Parameter("Lithium plating transfer coefficient")
         self.alpha_stripping = 1 - self.alpha_plating
 
         # ratio of lithium plating reaction scaled to intercalation reaction
@@ -685,6 +683,7 @@ class DomainLithiumIonParameters(BaseParameters):
             "Electrolyte concentration [mol.m-3]": c_e,
             f"{self.domain} particle surface concentration [mol.m-3]": c_s_surf,
             "Temperature [K]": T,
+            f"{self.domain} particle maximum concentration [mol.m-3]": self.c_max,
         }
         return pybamm.FunctionParameter(
             f"{self.domain} electrode exchange-current density [A.m-2]", inputs
@@ -712,7 +711,10 @@ class DomainLithiumIonParameters(BaseParameters):
         """
         Dimensional entropic change of the open-circuit potential [V.K-1]
         """
-        inputs = {f"{self.domain} particle stoichiometry": sto}
+        inputs = {
+            f"{self.domain} particle stoichiometry": sto,
+            f"{self.domain} particle maximum concentration [mol.m-3]": self.c_max,
+        }
         return pybamm.FunctionParameter(
             f"{self.domain} electrode OCP entropic change [V.K-1]", inputs
         )
@@ -886,8 +888,12 @@ class DomainLithiumIonParameters(BaseParameters):
         Dimensionless volume change for the electrode;
         sto should be R-averaged
         """
+        inputs = {
+            f"{self.domain} particle stoichiometry": sto,
+            f"{self.domain} particle maximum concentration [mol.m-3]": self.c_max,
+        }
         return pybamm.FunctionParameter(
-            f"{self.domain} electrode volume change", {"Particle stoichiometry": sto}
+            f"{self.domain} electrode volume change", inputs
         )
 
     def k_cr(self, T):

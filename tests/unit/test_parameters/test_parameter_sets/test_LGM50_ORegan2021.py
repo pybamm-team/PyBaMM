@@ -59,12 +59,13 @@ class TestORegan2021(unittest.TestCase):
         p = "pybamm/input/parameters/lithium_ion/positive_electrodes/nmc_ORegan2021/"
         k_path = os.path.join(root, p)
 
+        c_p_max = param["Maximum concentration in positive electrode [mol.m-3]"]
         fun_test = {
-            "nmc_LGM50_entropic_change_ORegan2021.py": ([0.5], -9.7940e-07),
+            "nmc_LGM50_entropic_change_ORegan2021.py": ([0.5, c_p_max], -9.7940e-07),
             "nmc_LGM50_heat_capacity_ORegan2021.py": ([298.15], 902.6502),
             "nmc_LGM50_diffusivity_ORegan2021.py": ([0.5, 298.15], 7.2627e-15),
             "nmc_LGM50_electrolyte_exchange_current_density_ORegan2021.py": (
-                [1e3, 1e4, 298.15],
+                [1e3, 1e4, 298.15, c_p_max],
                 2.1939,
             ),
             "nmc_LGM50_ocp_Chen2020.py": ([0.5], 3.9720),
@@ -83,12 +84,16 @@ class TestORegan2021(unittest.TestCase):
         )
         k_path = os.path.join(root, p)
 
+        c_n_max = param["Maximum concentration in negative electrode [mol.m-3]"]
         fun_test = {
-            "graphite_LGM50_entropic_change_ORegan2021.py": ([0.5], -2.6460e-07),
+            "graphite_LGM50_entropic_change_ORegan2021.py": (
+                [0.5, c_n_max],
+                -2.6460e-07,
+            ),
             "graphite_LGM50_heat_capacity_ORegan2021.py": ([298.15], 847.7155),
             "graphite_LGM50_diffusivity_ORegan2021.py": ([0.5, 298.15], 2.8655e-16),
             "graphite_LGM50_electrolyte_exchange_current_density_ORegan2021.py": (
-                [1e3, 1e4, 298.15],
+                [1e3, 1e4, 298.15, c_n_max],
                 1.0372,
             ),
             "graphite_LGM50_ocp_Chen2020.py": ([0.5], 0.1331),
