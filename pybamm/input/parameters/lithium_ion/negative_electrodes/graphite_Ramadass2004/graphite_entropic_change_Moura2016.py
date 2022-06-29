@@ -1,4 +1,4 @@
-from pybamm import exp, cosh, Parameter
+from pybamm import exp, cosh
 
 
 def graphite_entropic_change_Moura2016(sto, c_s_max):

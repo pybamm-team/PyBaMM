@@ -37,9 +37,10 @@ class BaseModel(pybamm.BaseSubModel):
         eps_solid_av = pybamm.x_average(eps_solid)
 
         variables = {
-            f"{Domain} electrode {phase_name}active material volume fraction": eps_solid,
-            f"X-averaged {domain} electrode {phase_name}active material volume fraction"
-            "": eps_solid_av,
+            f"{Domain} electrode {phase_name}"
+            "active material volume fraction": eps_solid,
+            f"X-averaged {domain} electrode {phase_name}"
+            "active material volume fraction": eps_solid_av,
         }
 
         # Update other microstructure variables

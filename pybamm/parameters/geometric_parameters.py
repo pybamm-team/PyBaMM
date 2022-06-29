@@ -186,7 +186,8 @@ class ParticleGeometricParameters(BaseParameters):
         """
         inputs = {f"{self.phase_prefactor}{self.domain} particle-size variable [m]": R}
         return pybamm.FunctionParameter(
-            f"{self.phase_prefactor}{self.domain} area-weighted particle-size distribution [m-1]",
+            f"{self.phase_prefactor}{self.domain} "
+            "area-weighted particle-size distribution [m-1]",
             inputs,
         )
 
