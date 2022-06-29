@@ -97,7 +97,9 @@ class TimeSolveLossActiveMaterial:
         disc = pybamm.Discretisation(mesh, self.model.default_spatial_methods)
         disc.process_model(self.model)
         if solve_first:
-            solve_model_once(self.model, TimeSolveLossActiveMaterial.solver, self.t_eval)
+            solve_model_once(
+                self.model, TimeSolveLossActiveMaterial.solver, self.t_eval
+            )
 
     def time_solve_model(self, model, solve_first, params):
         TimeSolveLossActiveMaterial.solver.solve(self.model, t_eval=self.t_eval)
