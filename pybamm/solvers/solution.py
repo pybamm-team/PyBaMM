@@ -85,6 +85,9 @@ class Solution(object):
         self._all_ys_and_sens = all_ys
         self._all_models = all_models
 
+        # Check no ys are too large
+        self.check_ys_are_not_too_large()
+
         # Set up inputs
         if not isinstance(all_inputs, list):
             all_inputs_copy = dict(all_inputs)
@@ -311,6 +314,22 @@ class Solution(object):
                 "The solution is made up from different models, so `y` cannot be "
                 "computed explicitly."
             )
+
+    def check_ys_are_not_too_large(self):
+        for y, model in zip(self.all_ys, self.all_models):
+            if np.any(y > pybamm.settings.max_y_size):
+                for var in [*model.rhs.keys(), *model.algebraic.keys()]:
+                    y_var = y[model.variables[var.name].y_slices[0], :]
+                    if np.any(y_var > pybamm.settings.max_y_size):
+                        pybamm.logger.error(
+                            f"Solution for '{var}' exceeds the maximum allowed value of "
+                            f"{pybamm.settings.max_y_size}. This could be due to "
+                            "incorrect nondimensionalisation, model formulation, or "
+                            "parameter values. The maximum allowed value is set by "
+                            "'pybammm.settings.max_y_size'."
+                        )
+                # found one so stop checking
+                break
 
     @property
     def all_ts(self):

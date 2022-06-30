@@ -11,6 +11,8 @@ class Settings(object):
     _heaviside_smoothing = "exact"
     _abs_smoothing = "exact"
     max_words_in_line = 4
+    max_y_size = 1e2
+    min_y_size = 1e-5
 
     @property
     def debug_mode(self):
