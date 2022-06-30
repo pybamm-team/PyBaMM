@@ -1,8 +1,8 @@
 # [Unreleased](https://github.com/pybamm-team/PyBaMM/)
 ## Features
 
+-   Added open-circuit potential as a separate submodel ([#2094](https://github.com/pybamm-team/PyBaMM/pull/2094))
 -   Added partially reversible lithium plating model and new `OKane2022` parameter set to go with it ([#2043](https://github.com/pybamm-team/PyBaMM/pull/2043))
-
 -   Added `__eq__` and `__hash__` methods for `Symbol` objects, using `.id` ([#1978](https://github.com/pybamm-team/PyBaMM/pull/1978))
 
 ## Optimizations
