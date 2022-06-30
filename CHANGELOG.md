@@ -1,4 +1,7 @@
 # [Unreleased](https://github.com/pybamm-team/PyBaMM/)
+
+# [v22.6](https://github.com/pybamm-team/PyBaMM/tree/v22.6) - 2022-06-30
+
 ## Features
 
 -   Added open-circuit potential as a separate submodel ([#2094](https://github.com/pybamm-team/PyBaMM/pull/2094))
