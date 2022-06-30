@@ -81,6 +81,19 @@ class BaseModel(pybamm.BaseBatteryModel):
             self.rhs[fci] = -self.variables["Total current density"] * 100
             self.initial_conditions[fci] = self.param.q_init * 100
 
+    def set_open_circuit_potential_submodel(self):
+        for domain in ["Negative", "Positive"]:
+            self.submodels[
+                f"{domain.lower()} open circuit potential"
+            ] = pybamm.open_circuit_potential.SingleOpenCircuitPotential(
+                self.param, domain, "lead-acid main", self.options
+            )
+            self.submodels[
+                f"{domain.lower()} oxygen open circuit potential"
+            ] = pybamm.open_circuit_potential.SingleOpenCircuitPotential(
+                self.param, domain, "lead-acid oxygen", self.options
+            )
+
     def set_active_material_submodel(self):
         self.submodels["negative active material"] = pybamm.active_material.Constant(
             self.param, "Negative", self.options

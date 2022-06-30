@@ -97,7 +97,7 @@ class TestSpectralVolume(unittest.TestCase):
         whole_cell = ["negative electrode", "separator", "positive electrode"]
         var = pybamm.Variable("var", domain=whole_cell)
         disc.set_variable_slices([var])
-        discretised_symbol = pybamm.StateVector(*disc.y_slices[var.id])
+        discretised_symbol = pybamm.StateVector(*disc.y_slices[var])
         sp_meth.build(mesh)
 
         bcs = {"left": (pybamm.Scalar(0), "x"), "right": (pybamm.Scalar(3), "Neumann")}
@@ -129,7 +129,7 @@ class TestSpectralVolume(unittest.TestCase):
         var = pybamm.Variable("var", domain=whole_cell)
         grad_eqn = pybamm.grad(var)
         boundary_conditions = {
-            var.id: {
+            var: {
                 "left": (pybamm.Scalar(1), "Dirichlet"),
                 "right": (pybamm.Scalar(1), "Dirichlet"),
             }
@@ -147,7 +147,7 @@ class TestSpectralVolume(unittest.TestCase):
         N = pybamm.grad(var)
         div_eqn = pybamm.div(N)
         boundary_conditions = {
-            var.id: {
+            var: {
                 "left": (pybamm.Scalar(0), "Dirichlet"),
                 "right": (pybamm.Scalar(1), "Dirichlet"),
             }
@@ -194,7 +194,7 @@ class TestSpectralVolume(unittest.TestCase):
         # grad(1) = 0
         constant_y = np.ones((total_npts, 1))
         boundary_conditions = {
-            var.id: {
+            var: {
                 "left": (pybamm.Scalar(1), "Dirichlet"),
                 "right": (pybamm.Scalar(1), "Dirichlet"),
             }
@@ -211,7 +211,7 @@ class TestSpectralVolume(unittest.TestCase):
             mesh["negative electrode"].npts * mesh["current collector"].npts,
         )
         boundary_conditions = {
-            var.id: {
+            var: {
                 "left": (pybamm.Scalar(0), "Dirichlet"),
                 "right": (pybamm.Scalar(1), "Dirichlet"),
             }
@@ -231,7 +231,7 @@ class TestSpectralVolume(unittest.TestCase):
         N = pybamm.grad(var)
         div_eqn = pybamm.div(N)
         boundary_conditions = {
-            var.id: {
+            var: {
                 "left": (pybamm.Scalar(0), "Dirichlet"),
                 "right": (pybamm.Scalar(1), "Dirichlet"),
             }
@@ -270,7 +270,7 @@ class TestSpectralVolume(unittest.TestCase):
         )
         grad_eqn = pybamm.grad(var)
         boundary_conditions = {
-            var.id: {
+            var: {
                 "left": (pybamm.Scalar(1), "Dirichlet"),
                 "right": (pybamm.Scalar(1), "Dirichlet"),
             }
@@ -290,7 +290,7 @@ class TestSpectralVolume(unittest.TestCase):
         N = pybamm.grad(var)
         div_eqn = pybamm.div(N)
         boundary_conditions = {
-            var.id: {
+            var: {
                 "left": (pybamm.Scalar(0), "Dirichlet"),
                 "right": (pybamm.Scalar(1), "Dirichlet"),
             }
@@ -320,7 +320,7 @@ class TestSpectralVolume(unittest.TestCase):
         var = pybamm.Variable("var", domain=whole_cell)
         grad_eqn = pybamm.grad(var)
         boundary_conditions = {
-            var.id: {
+            var: {
                 "left": (pybamm.Scalar(0), "Neumann"),
                 "right": (pybamm.Scalar(0), "Neumann"),
             }
@@ -338,7 +338,7 @@ class TestSpectralVolume(unittest.TestCase):
         N = pybamm.grad(var)
         div_eqn = pybamm.div(N)
         boundary_conditions = {
-            var.id: {
+            var: {
                 "left": (pybamm.Scalar(1), "Neumann"),
                 "right": (pybamm.Scalar(1), "Neumann"),
             }
@@ -376,7 +376,7 @@ class TestSpectralVolume(unittest.TestCase):
         N = pybamm.grad(var)
         div_eqn = pybamm.div(N)
         boundary_conditions = {
-            var.id: {
+            var: {
                 "left": (pybamm.Scalar(1), "Dirichlet"),
                 "right": (pybamm.Scalar(0), "Neumann"),
             }
@@ -399,7 +399,7 @@ class TestSpectralVolume(unittest.TestCase):
         # Test gradient and divergence of linear x
         linear_y = combined_submesh.nodes
         boundary_conditions = {
-            var.id: {
+            var: {
                 "left": (pybamm.Scalar(1), "Neumann"),
                 "right": (pybamm.Scalar(1), "Dirichlet"),
             }
@@ -435,7 +435,7 @@ class TestSpectralVolume(unittest.TestCase):
         # grad(1) = 0
         constant_y = np.ones_like(combined_submesh.nodes[:, np.newaxis])
         boundary_conditions = {
-            var.id: {
+            var: {
                 "left": (pybamm.Scalar(0), "Neumann"),
                 "right": (pybamm.Scalar(0), "Neumann"),
             }
@@ -450,7 +450,7 @@ class TestSpectralVolume(unittest.TestCase):
         # grad(r) == 1
         linear_y = combined_submesh.nodes
         boundary_conditions = {
-            var.id: {
+            var: {
                 "left": (pybamm.Scalar(1), "Neumann"),
                 "right": (pybamm.Scalar(1), "Neumann"),
             }
@@ -468,7 +468,7 @@ class TestSpectralVolume(unittest.TestCase):
         N = pybamm.grad(var)
         div_eqn = pybamm.div(N)
         boundary_conditions = {
-            var.id: {
+            var: {
                 "left": (pybamm.Scalar(0), "Neumann"),
                 "right": (pybamm.Scalar(2), "Neumann"),
             }
@@ -502,7 +502,7 @@ class TestSpectralVolume(unittest.TestCase):
         )
         grad_eqn = pybamm.grad(var)
         boundary_conditions = {
-            var.id: {
+            var: {
                 "left": (pybamm.Scalar(0), "Neumann"),
                 "right": (pybamm.Scalar(0), "Neumann"),
             }
@@ -520,7 +520,7 @@ class TestSpectralVolume(unittest.TestCase):
         N = pybamm.grad(var)
         div_eqn = pybamm.div(N)
         boundary_conditions = {
-            var.id: {
+            var: {
                 "left": (pybamm.Scalar(0), "Neumann"),
                 "right": (pybamm.Scalar(2), "Neumann"),
             }
@@ -545,7 +545,7 @@ class TestSpectralVolume(unittest.TestCase):
         var = pybamm.Variable("var", domain=["negative electrode", "separator"])
         grad_eqn = pybamm.grad(var)
         boundary_conditions = {
-            var.id: {
+            var: {
                 "left": (pybamm.Scalar(1), "Dirichlet"),
                 "right": (pybamm.Scalar(1), "Dirichlet"),
             }
@@ -563,7 +563,7 @@ class TestSpectralVolume(unittest.TestCase):
         N = pybamm.grad(var)
         div_eqn = pybamm.div(N)
         boundary_conditions = {
-            var.id: {
+            var: {
                 "left": (pybamm.Scalar(0), "Dirichlet"),
                 "right": (pybamm.Scalar(combined_submesh.edges[-1]), "Dirichlet"),
             }
@@ -604,7 +604,7 @@ class TestSpectralVolume(unittest.TestCase):
         )
         var = pybamm.concatenation(a, b, c)
         boundary_conditions = {
-            var.id: {
+            var: {
                 "left": (pybamm.Vector(np.linspace(0, 1, 15)), "Neumann"),
                 "right": (pybamm.Vector(np.linspace(0, 1, 15)), "Neumann"),
             }

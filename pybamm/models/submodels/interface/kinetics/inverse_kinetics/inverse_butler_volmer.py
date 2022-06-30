@@ -30,7 +30,10 @@ class InverseButlerVolmer(BaseInterface):
         super().__init__(param, domain, reaction, options=options)
 
     def get_coupled_variables(self, variables):
-        ocp, dUdT = self._get_open_circuit_potential(variables)
+        Domain = self.domain
+        rxn = self.reaction_name
+
+        ocp = variables[f"{Domain} electrode{rxn} open circuit potential"]
 
         j0 = self._get_exchange_current_density(variables)
         # Broadcast to match j0's domain
@@ -93,7 +96,6 @@ class InverseButlerVolmer(BaseInterface):
                 pybamm.x_average(delta_phi)
             )
         )
-        variables.update(self._get_standard_ocp_variables(ocp, dUdT))
 
         return variables
 

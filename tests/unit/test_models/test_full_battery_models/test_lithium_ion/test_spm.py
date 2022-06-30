@@ -28,11 +28,11 @@ class TestSPM(BaseUnitTestLithiumIon, unittest.TestCase):
         new_model = model.new_copy()
         model_T_eqn = model.rhs[model.variables["Cell temperature"]]
         new_model_T_eqn = new_model.rhs[new_model.variables["Cell temperature"]]
-        self.assertEqual(new_model_T_eqn.id, model_T_eqn.id)
+        self.assertEqual(new_model_T_eqn, model_T_eqn)
         self.assertEqual(new_model.name, model.name)
         self.assertEqual(new_model.use_jacobian, model.use_jacobian)
         self.assertEqual(new_model.convert_to_format, model.convert_to_format)
-        self.assertEqual(new_model.timescale.id, model.timescale.id)
+        self.assertEqual(new_model.timescale, model.timescale)
 
         # with custom submodels
         options = {"stress-induced diffusion": "false", "thermal": "x-full"}
@@ -45,7 +45,7 @@ class TestSPM(BaseUnitTestLithiumIon, unittest.TestCase):
         new_model = model.new_copy()
         new_model_cs_eqn = list(new_model.rhs.values())[1]
         model_cs_eqn = list(model.rhs.values())[1]
-        self.assertEqual(new_model_cs_eqn.id, model_cs_eqn.id)
+        self.assertEqual(new_model_cs_eqn, model_cs_eqn)
 
 
 if __name__ == "__main__":
