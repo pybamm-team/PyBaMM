@@ -1,4 +1,4 @@
-def lico2_entropic_change_Ai2020_function(sto):
+def lico2_entropic_change_Ai2020_function(sto, c_s_max):
     """
     Lithium Cobalt Oxide (LiCO2) entropic change in open circuit potential (OCP) at
     a temperature of 298.15K as a function of the stochiometry. The fit is taken

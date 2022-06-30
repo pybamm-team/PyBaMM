@@ -1,7 +1,7 @@
 from pybamm import exp, tanh
 
 
-def graphite_LGM50_entropic_change_ORegan2021(sto):
+def graphite_LGM50_entropic_change_ORegan2021(sto, c_s_max):
     """
     LG M50 Graphite entropic change in open circuit potential (OCP) at a temperature of
     298.15K as a function of the stochiometry. The fit is taken from [1].
