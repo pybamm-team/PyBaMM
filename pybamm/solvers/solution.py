@@ -64,15 +64,15 @@ class Solution(object):
     """
 
     def __init__(
-            self,
-            all_ts,
-            all_ys,
-            all_models,
-            all_inputs,
-            t_event=None,
-            y_event=None,
-            termination="final time",
-            sensitivities=False,
+        self,
+        all_ts,
+        all_ys,
+        all_models,
+        all_inputs,
+        t_event=None,
+        y_event=None,
+        termination="final time",
+        sensitivities=False,
     ):
         if not isinstance(all_ts, list):
             all_ts = [all_ts]
@@ -157,7 +157,7 @@ class Solution(object):
 
         # make sure we remove all sensitivities from all_ys
         for index, (model, ys, ts, inputs) in enumerate(
-                zip(self.all_models, self.all_ys, self.all_ts, self.all_inputs)
+            zip(self.all_models, self.all_ys, self.all_ts, self.all_inputs)
         ):
             self._all_ys[index], _ = self._extract_explicit_sensitivities(
                 model, ys, ts, inputs
@@ -224,7 +224,7 @@ class Solution(object):
         else:
             y_full = y
         ode_sens = y_full[n_rhs:len_rhs_and_sens, :].reshape(n_p, n_rhs, n_t)
-        alg_sens = y_full[len_rhs_and_sens + n_alg:, :].reshape(n_p, n_alg, n_t)
+        alg_sens = y_full[len_rhs_and_sens + n_alg :, :].reshape(n_p, n_alg, n_t)
         # 2. Concatenate into a single 3D matrix with shape (n_p, n_states, n_t)
         # i.e. along first axis
         full_sens_matrix = np.concatenate([ode_sens, alg_sens], axis=1)
@@ -249,7 +249,7 @@ class Solution(object):
         y_dae = np.vstack(
             [
                 y[: model.len_rhs, :],
-                y[len_rhs_and_sens: len_rhs_and_sens + model.len_alg, :],
+                y[len_rhs_and_sens : len_rhs_and_sens + model.len_alg, :],
             ]
         )
         return y_dae, sensitivity
@@ -468,7 +468,7 @@ class Solution(object):
                 # therefore only get set up once
                 vars_casadi = []
                 for model, ys, inputs, var_pybamm in zip(
-                        self.all_models, self.all_ys, self.all_inputs, vars_pybamm
+                    self.all_models, self.all_ys, self.all_inputs, vars_pybamm
                 ):
                     if key in model._variables_casadi:
                         var_casadi = model._variables_casadi[key]
@@ -551,7 +551,7 @@ class Solution(object):
             pickle.dump(self, f, pickle.HIGHEST_PROTOCOL)
 
     def save_data(
-            self, filename=None, variables=None, to_format="pickle", short_names=None
+        self, filename=None, variables=None, to_format="pickle", short_names=None
     ):
         """
         Save solution data only (raw arrays)
@@ -627,20 +627,20 @@ class Solution(object):
                 # 0-9 (48-57) but not in the first position
                 for i, s in enumerate(name):
                     if not (
-                            97 <= ord(s) <= 122
-                            or 65 <= ord(s) <= 90
-                            or ord(s) == 95
-                            or (i > 0 and 48 <= ord(s) <= 57)
+                        97 <= ord(s) <= 122
+                        or 65 <= ord(s) <= 90
+                        or ord(s) == 95
+                        or (i > 0 and 48 <= ord(s) <= 57)
                     ):
                         raise ValueError(
                             "Invalid character '{}' found in '{}'. ".format(s, name)
                             + "MATLAB variable names must only contain a-z, A-Z, _, "
-                              "or 0-9 (except the first position). "
-                              "Use the 'short_names' argument to pass an alternative "
-                              "variable name, e.g. \n\n"
-                              "\tsolution.save_data(filename, "
-                              "['Electrolyte concentration'], to_format='matlab, "
-                              "short_names={'Electrolyte concentration': 'c_e'})"
+                            "or 0-9 (except the first position). "
+                            "Use the 'short_names' argument to pass an alternative "
+                            "variable name, e.g. \n\n"
+                            "\tsolution.save_data(filename, "
+                            "['Electrolyte concentration'], to_format='matlab, "
+                            "short_names={'Electrolyte concentration': 'c_e'})"
                         )
             savemat(filename, data_short_names)
         elif to_format == "csv":
@@ -680,9 +680,9 @@ class Solution(object):
         # Special case: new solution only has one timestep and it is already in the
         # existing solution. In this case, return a copy of the existing solution
         if (
-                len(other.all_ts) == 1
-                and len(other.all_ts[0]) == 1
-                and other.all_ts[0][0] == self.all_ts[-1][-1]
+            len(other.all_ts) == 1
+            and len(other.all_ts[0]) == 1
+            and other.all_ts[0][0] == self.all_ts[-1][-1]
         ):
             new_sol = self.copy()
             # Update termination using the latter solution
@@ -765,9 +765,10 @@ def make_cycle_solution(step_solutions, esoh_sims=None, save_this_cycle=True):
     step_solutions : list of :class:`Solution`
         Step solutions that form the entire cycle
     esoh_sims : list of :class:`pybamm.Simulation`, optional
-        List containing :class:`pybamm.lithium_ion.ElectrodeSOHx100` and `pybamm.lithium_ion.ElectrodeSOHC`
-        simulations, which are used to calculate some of the summary variables. If `None`
-        (default) then only summary variables that do not require the eSOH calculation
+        List containing :class:`pybamm.lithium_ion.ElectrodeSOHx100` and
+        `pybamm.lithium_ion.ElectrodeSOHC`simulations, which are used to
+        calculate some of the summary variables. If `None` (default)
+        then only summary variables that do not require the eSOH calculation
         are calculated. See [1] for more details on eSOH variables.
     save_this_cycle : bool, optional
         Whether to save the entire cycle variables or just the summary variables.
@@ -857,14 +858,14 @@ def get_cycle_summary_variables(cycle_solution, esoh_sims):
         cycle_summary_variables[var] = data_last[0]
         var_lowercase = var[0].lower() + var[1:]
         cycle_summary_variables["Change in " + var_lowercase] = (
-                data_last[0] - data_first[0]
+            data_last[0] - data_first[0]
         )
 
     # eSOH variables (full-cell lithium-ion model only, for now)
     if (
-            esoh_sims is not None
-            and isinstance(model, pybamm.lithium_ion.BaseModel)
-            and model.half_cell is False
+        esoh_sims is not None
+        and isinstance(model, pybamm.lithium_ion.BaseModel)
+        and model.half_cell is False
     ):
         x100_sim = esoh_sims[0]
         C_sim = esoh_sims[1]
@@ -883,7 +884,9 @@ def get_cycle_summary_variables(cycle_solution, esoh_sims):
         }
 
         try:
-            esoh_sol = pybamm.lithium_ion.solve_electrode_soh(x100_sim, C_sim, inputs, C_sim.parameter_values)
+            esoh_sol = pybamm.lithium_ion.solve_electrode_soh(
+                x100_sim, C_sim, inputs, C_sim.parameter_values
+            )
 
         except pybamm.SolverError:  # pragma: no cover
             raise pybamm.SolverError(

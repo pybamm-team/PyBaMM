@@ -73,7 +73,7 @@ class ElectrodeSOHC(pybamm.BaseModel):
             "Un(x_0)": Un(x_0, T_ref),
             "Up(y_0)": Up(y_0, T_ref),
             "Up(y_0) - Un(x_0)": Up(y_0, T_ref) - Un(x_0, T_ref),
-            "Up(y_100) - Un(x_100)" : Up(y_100, T_ref) - Un(x_100, T_ref),
+            "Up(y_100) - Un(x_100)": Up(y_100, T_ref) - Un(x_100, T_ref),
             "n_Li_100": 3600 / param.F * (y_100 * Cp + x_100 * Cn),
             "n_Li_0": 3600 / param.F * (y_0 * Cp + x_0 * Cn),
             "n_Li": n_Li,
