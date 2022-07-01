@@ -20,8 +20,6 @@ def lico2_electrolyte_exchange_current_density_Dualfoil1998(c_e, c_s_surf, c_s_m
         Maximum particle concentration [mol.m-3]
     T : :class:`pybamm.Symbol`
         Temperature [K]
-    c_s_max : :class:`pybamm.Symbol`
-        Maximum particle concentration [mol.m-3]
 
     Returns
     -------

@@ -25,8 +25,6 @@ def nmc_LGM50_electrolyte_exchange_current_density_ORegan2021(
         Maximum particle concentration [mol.m-3]
     T : :class:`pybamm.Symbol`
         Temperature [K]
-    c_s_max : :class:`pybamm.Symbol`
-        Maximum particle concentration [mol.m-3]
 
     Returns
     -------

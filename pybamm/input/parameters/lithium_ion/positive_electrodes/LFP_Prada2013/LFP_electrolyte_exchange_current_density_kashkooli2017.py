@@ -22,8 +22,6 @@ def LFP_electrolyte_exchange_current_density_kashkooli2017(c_e, c_s_surf, c_s_ma
         Maximum particle concentration [mol.m-3]
     T : :class:`pybamm.Symbol`
         Temperature [K]
-    c_s_max : :class:`pybamm.Symbol`
-        Maximum particle concentration [mol.m-3]
 
     Returns
     -------
