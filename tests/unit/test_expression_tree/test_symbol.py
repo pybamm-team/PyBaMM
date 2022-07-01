@@ -495,6 +495,15 @@ class TestIsZero(unittest.TestCase):
         self.assertFalse(pybamm.is_matrix_zero(b))
         self.assertFalse(pybamm.is_matrix_zero(c))
 
+    def test_bool(self):
+        a = pybamm.Symbol("a")
+        with self.assertRaisesRegex(NotImplementedError, "Boolean"):
+            bool(a)
+        # if statement calls Boolean
+        with self.assertRaisesRegex(NotImplementedError, "Boolean"):
+            if a > 1:
+                print("a is greater than 1")
+
 
 if __name__ == "__main__":
     print("Add -v for more debug output")

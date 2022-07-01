@@ -656,6 +656,9 @@ class Symbol:
         """return an :class:`Modulo` object."""
         return pybamm.simplify_if_constant(pybamm.Modulo(self, other))
 
+    def __bool__(self):
+        raise NotImplementedError("Boolean operator not defined for Symbols.")
+
     def diff(self, variable):
         """
         Differentiate a symbol with respect to a variable. For any symbol that can be
