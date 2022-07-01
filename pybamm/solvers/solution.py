@@ -85,9 +85,6 @@ class Solution(object):
         self._all_ys_and_sens = all_ys
         self._all_models = all_models
 
-        # Check no ys are too large
-        self.check_ys_are_not_too_large()
-
         # Set up inputs
         if not isinstance(all_inputs, list):
             all_inputs_copy = dict(all_inputs)
@@ -107,6 +104,10 @@ class Solution(object):
         self.has_symbolic_inputs = any(
             isinstance(v, casadi.MX) for v in self.all_inputs[0].values()
         )
+
+        # Check no ys are too large
+        if not self.has_symbolic_inputs:
+            self.check_ys_are_not_too_large()
 
         # Copy the timescale_eval and lengthscale_evals if they exist
         if hasattr(all_models[0], "timescale_eval"):
@@ -321,7 +322,7 @@ class Solution(object):
         y = y[:, -1]
         if np.any(y > pybamm.settings.max_y_size):
             for var in [*model.rhs.keys(), *model.algebraic.keys()]:
-                y_var = y[model.variables[var.name].y_slices[0], :]
+                y_var = y[model.variables[var.name].y_slices[0]]
                 if np.any(y_var > pybamm.settings.max_y_size):
                     pybamm.logger.error(
                         f"Solution for '{var}' exceeds the maximum allowed value "
