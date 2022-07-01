@@ -67,10 +67,6 @@ class CrackPropagation(BaseMechanics):
                 + " particle cracking rate": pybamm.x_average(dl_cr),
             }
         )
-        l_cr = variables[f"X-averaged {self.domain.lower()} particle crack length [m]"]
-        variables.update(
-            {"test" + self.domain: pybamm.max(l_cr) - self.domain_param.R_typ}
-        )
         return variables
 
     def set_rhs(self, variables):
