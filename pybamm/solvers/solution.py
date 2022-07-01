@@ -73,6 +73,7 @@ class Solution(object):
         y_event=None,
         termination="final time",
         sensitivities=False,
+        check_solution=True,
     ):
         if not isinstance(all_ts, list):
             all_ts = [all_ts]
@@ -106,7 +107,7 @@ class Solution(object):
         )
 
         # Check no ys are too large
-        if not self.has_symbolic_inputs:
+        if check_solution and not self.has_symbolic_inputs:
             self.check_ys_are_not_too_large()
 
         # Copy the timescale_eval and lengthscale_evals if they exist
@@ -318,6 +319,8 @@ class Solution(object):
 
     def check_ys_are_not_too_large(self):
         # Only check last one so that it doesn't take too long
+        # We only care about the cases where y is growing too large without any
+        # restraint, so if y gets large in the middle then comes back down that is ok
         y, model = self.all_ys[-1], self.all_models[-1]
         y = y[:, -1]
         if np.any(y > pybamm.settings.max_y_value):
