@@ -86,7 +86,7 @@ class Solution(object):
         self._all_models = all_models
 
         # Check no ys are too large
-        self.check_ys_are_not_too_large()
+        # self.check_ys_are_not_too_large()
 
         # Set up inputs
         if not isinstance(all_inputs, list):
@@ -322,8 +322,8 @@ class Solution(object):
                     y_var = y[model.variables[var.name].y_slices[0], :]
                     if np.any(y_var > pybamm.settings.max_y_size):
                         pybamm.logger.error(
-                            f"Solution for '{var}' exceeds the maximum allowed value of "
-                            f"{pybamm.settings.max_y_size}. This could be due to "
+                            f"Solution for '{var}' exceeds the maximum allowed value "
+                            f"of `{pybamm.settings.max_y_size}. This could be due to "
                             "incorrect nondimensionalisation, model formulation, or "
                             "parameter values. The maximum allowed value is set by "
                             "'pybammm.settings.max_y_size'."
