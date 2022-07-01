@@ -887,8 +887,8 @@ class ParticleLithiumIonParameters(BaseParameters):
         """Dimensional exchange-current density [A.m-2]"""
         inputs = {
             "Electrolyte concentration [mol.m-3]": c_e,
-            f"{self.phase_prefactor}{self.domain} particle "
-            "surface concentration [mol.m-3]": c_s_surf,
+            f"{self.domain} particle surface concentration [mol.m-3]": c_s_surf,
+            f"{self.domain} particle maximum concentration [mol.m-3]": self.c_max,
             "Temperature [K]": T,
             f"{self.phase_prefactor}Maximum {self.domain.lower()} particle "
             "surface concentration [mol.m-3]": self.c_max,
@@ -928,9 +928,8 @@ class ParticleLithiumIonParameters(BaseParameters):
         Dimensional entropic change of the open-circuit potential [V.K-1]
         """
         inputs = {
-            f"{self.phase_prefactor}{self.domain} particle stoichiometry": sto,
-            f"{self.phase_prefactor}Maximum {self.domain.lower()} particle "
-            "surface concentration [mol.m-3]": self.c_max,
+            f"{self.domain} particle stoichiometry": sto,
+            f"{self.domain} particle maximum concentration [mol.m-3]": self.c_max,
         }
         return pybamm.FunctionParameter(
             f"{self.phase_prefactor}{self.domain} electrode "
@@ -1034,3 +1033,29 @@ class ParticleLithiumIonParameters(BaseParameters):
         main = self.main_param
         sto = c_s
         return self.dUdT_dimensional(sto) * main.Delta_T / main.potential_scale
+
+    def t_change(self, sto):
+        """
+        Dimensionless volume change for the electrode;
+        sto should be R-averaged
+        """
+        inputs = {
+            f"{self.domain} particle stoichiometry": sto,
+            f"{self.domain} particle maximum concentration [mol.m-3]": self.c_max,
+        }
+        return pybamm.FunctionParameter(
+            f"{self.domain} electrode volume change", inputs
+        )
+
+    def k_cr(self, T):
+        """
+        Dimensionless cracking rate for the electrode;
+        """
+        T_dim = self.main_param.Delta_T * T + self.main_param.T_ref
+        delta_k_cr = self.E ** self.m_cr * self.l_cr_0 ** (self.m_cr / 2 - 1)
+        return (
+            pybamm.FunctionParameter(
+                f"{self.domain} electrode cracking rate", {"Temperature [K]": T_dim}
+            )
+            * delta_k_cr
+        )

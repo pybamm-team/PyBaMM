@@ -759,7 +759,7 @@ class QuickPlot(object):
             Name of the generated GIF file.
 
         """
-        import imageio
+        import imageio.v2 as imageio
         import matplotlib.pyplot as plt
 
         # time stamps at which the images/plots will be created

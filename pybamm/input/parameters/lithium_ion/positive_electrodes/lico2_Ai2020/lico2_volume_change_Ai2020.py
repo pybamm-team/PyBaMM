@@ -20,6 +20,8 @@ def lico2_volume_change_Ai2020(sto, c_s_max):
     sto: :class:`pybamm.Symbol`
         Electrode stochiometry, dimensionless
         should be R-averaged particle concentration
+    c_s_max : :class:`pybamm.Symbol`
+        Maximum particle concentration [mol.m-3]
 
     Returns
     -------
