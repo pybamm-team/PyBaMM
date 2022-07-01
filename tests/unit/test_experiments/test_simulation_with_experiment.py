@@ -109,6 +109,12 @@ class TestSimulationExperiment(unittest.TestCase):
         self.assertGreater(sol2.t[-1], sol.t[-1])
         self.assertEqual(sol2.cycles[0], sol.cycles[0])
         self.assertEqual(len(sol2.cycles), 2)
+        # Solve again starting from solution but only inputting the cycle
+        sol2 = sim.solve(starting_solution=sol.cycles[-1])
+        self.assertEqual(sol2.termination, "final time")
+        self.assertGreater(sol2.t[-1], sol.t[-1])
+        self.assertEqual(len(sol2.cycles), 2)
+
         # Check starting solution is unchanged
         self.assertEqual(len(sol.cycles), 1)
 
