@@ -320,16 +320,16 @@ class Solution(object):
         # Only check last one so that it doesn't take too long
         y, model = self.all_ys[-1], self.all_models[-1]
         y = y[:, -1]
-        if np.any(y > pybamm.settings.max_y_size):
+        if np.any(y > pybamm.settings.max_y_value):
             for var in [*model.rhs.keys(), *model.algebraic.keys()]:
                 y_var = y[model.variables[var.name].y_slices[0]]
-                if np.any(y_var > pybamm.settings.max_y_size):
+                if np.any(y_var > pybamm.settings.max_y_value):
                     pybamm.logger.error(
                         f"Solution for '{var}' exceeds the maximum allowed value "
-                        f"of `{pybamm.settings.max_y_size}. This could be due to "
+                        f"of `{pybamm.settings.max_y_value}. This could be due to "
                         "incorrect nondimensionalisation, model formulation, or "
                         "parameter values. The maximum allowed value is set by "
-                        "'pybammm.settings.max_y_size'."
+                        "'pybammm.settings.max_y_value'."
                     )
 
     @property

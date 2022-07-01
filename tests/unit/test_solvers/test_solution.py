@@ -40,7 +40,7 @@ class TestSolution(unittest.TestCase):
             sol.set_t()
 
         ts = [np.array([1, 2, 3])]
-        bad_ys = [(pybamm.settings.max_y_size + 1) * np.ones((1, 3))]
+        bad_ys = [(pybamm.settings.max_y_value + 1) * np.ones((1, 3))]
         model = pybamm.BaseModel()
         var = pybamm.StateVector(slice(0, 1))
         model.rhs = {var: 0}
