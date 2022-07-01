@@ -15,5 +15,4 @@ Upper voltage cut-off [V],4.4,,
 # Initial conditions
 Initial concentration in negative electrode [mol.m-3],28866,Chen 2020,
 Initial concentration in positive electrode [mol.m-3],13975,Chen 2020,
-Initial concentration in electrolyte [mol.m-3],1000,Chen 2020,
 Initial temperature [K],298.15,,

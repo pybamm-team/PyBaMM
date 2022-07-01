@@ -54,13 +54,14 @@ class TestRamadass2004(unittest.TestCase):
         )
         k_path = os.path.join(root, p)
 
+        c_p_max = param["Maximum concentration in positive electrode [mol.m-3]"]
         fun_test = {
             "lico2_diffusivity_Ramadass2004.py": ([sto, T], 1e-14),
             "lico2_electrolyte_exchange_current_density_Ramadass2004.py": (
-                [1e3, 1e4, T],
+                [1e3, 1e4, c_p_max, T],
                 1.4517,
             ),
-            "lico2_entropic_change_Moura2016.py": ([sto], -3.4664e-5),
+            "lico2_entropic_change_Moura2016.py": ([sto, c_p_max], -3.4664e-5),
             "lico2_ocp_Ramadass2004.py": ([sto], 4.1249),
         }
 
@@ -75,13 +76,14 @@ class TestRamadass2004(unittest.TestCase):
         )
         k_path = os.path.join(root, p)
 
+        c_n_max = param["Maximum concentration in negative electrode [mol.m-3]"]
         fun_test = {
             "graphite_mcmb2528_diffusivity_Dualfoil1998.py": ([sto, T], 3.9e-14),
             "graphite_electrolyte_exchange_current_density_Ramadass2004.py": (
-                [1e3, 1e4, T],
+                [1e3, 1e4, c_n_max, T],
                 2.2007,
             ),
-            "graphite_entropic_change_Moura2016.py": ([sto], -1.5079e-5),
+            "graphite_entropic_change_Moura2016.py": ([sto, c_n_max], -1.5079e-5),
             "graphite_ocp_Ramadass2004.py": ([sto], 0.1215),
         }
 
