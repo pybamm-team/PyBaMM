@@ -86,7 +86,7 @@ class Solution(object):
         self._all_models = all_models
 
         # Check no ys are too large
-        # self.check_ys_are_not_too_large()
+        self.check_ys_are_not_too_large()
 
         # Set up inputs
         if not isinstance(all_inputs, list):
@@ -316,20 +316,20 @@ class Solution(object):
             )
 
     def check_ys_are_not_too_large(self):
-        for y, model in zip(self.all_ys, self.all_models):
-            if np.any(y > pybamm.settings.max_y_size):
-                for var in [*model.rhs.keys(), *model.algebraic.keys()]:
-                    y_var = y[model.variables[var.name].y_slices[0], :]
-                    if np.any(y_var > pybamm.settings.max_y_size):
-                        pybamm.logger.error(
-                            f"Solution for '{var}' exceeds the maximum allowed value "
-                            f"of `{pybamm.settings.max_y_size}. This could be due to "
-                            "incorrect nondimensionalisation, model formulation, or "
-                            "parameter values. The maximum allowed value is set by "
-                            "'pybammm.settings.max_y_size'."
-                        )
-                # found one so stop checking
-                break
+        # Only check last one so that it doesn't take too long
+        y, model = self.all_ys[-1], self.all_models[-1]
+        y = y[:, -1]
+        if np.any(y > pybamm.settings.max_y_size):
+            for var in [*model.rhs.keys(), *model.algebraic.keys()]:
+                y_var = y[model.variables[var.name].y_slices[0], :]
+                if np.any(y_var > pybamm.settings.max_y_size):
+                    pybamm.logger.error(
+                        f"Solution for '{var}' exceeds the maximum allowed value "
+                        f"of `{pybamm.settings.max_y_size}. This could be due to "
+                        "incorrect nondimensionalisation, model formulation, or "
+                        "parameter values. The maximum allowed value is set by "
+                        "'pybammm.settings.max_y_size'."
+                    )
 
     @property
     def all_ts(self):
