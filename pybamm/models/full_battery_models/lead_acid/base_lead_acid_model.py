@@ -112,5 +112,5 @@ class BaseModel(pybamm.BaseBatteryModel):
 
     def set_total_kinetics_submodel(self):
         self.submodels["total interface"] = pybamm.kinetics.TotalKinetics(
-            self.param, "lithium-ion", self.options
+            self.param, "lead-acid", self.options
         )

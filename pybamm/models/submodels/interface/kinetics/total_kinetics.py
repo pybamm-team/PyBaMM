@@ -159,7 +159,7 @@ class TotalKinetics(pybamm.BaseSubModel):
                 s_n, s_p = 1, 1
             elif self.chemistry == "lead-acid":
                 if reaction_name == "":  # main reaction
-                    s_n, s_p = self.param.n.prim.s_plus_S, self.param.p.prim.s_plus_S
+                    s_n, s_p = self.param.n.s_plus_S, self.param.p.s_plus_S
                 elif reaction_name == "oxygen ":
                     s_n, s_p = self.param.s_plus_Ox, self.param.s_plus_Ox
             if self.half_cell:
