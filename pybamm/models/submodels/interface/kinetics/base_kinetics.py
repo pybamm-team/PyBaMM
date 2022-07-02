@@ -166,7 +166,6 @@ class BaseKinetics(BaseInterface):
                 self._get_standard_sei_film_overpotential_variables(eta_sei)
             )
 
-
         return variables
 
     def set_algebraic(self, variables):
