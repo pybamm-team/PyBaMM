@@ -44,9 +44,6 @@ class BaseModel(BaseInterface):
                 "Positive electrode SEI interfacial current density": zero,
             }
         )
-        variables.update(
-            self._get_standard_whole_cell_interfacial_current_variables(variables)
-        )
 
         return variables
 

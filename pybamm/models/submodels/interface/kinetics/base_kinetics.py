@@ -166,30 +166,6 @@ class BaseKinetics(BaseInterface):
                 self._get_standard_sei_film_overpotential_variables(eta_sei)
             )
 
-        if (
-            (
-                self.half_cell
-                or (
-                    "Negative electrode"
-                    + self.reaction_name
-                    + " interfacial current density"
-                )
-                in variables
-            )
-            and (
-                "Positive electrode"
-                + self.reaction_name
-                + " interfacial current density"
-            )
-            in variables
-            and self.Reaction_icd not in variables
-        ):
-            variables.update(
-                self._get_standard_whole_cell_interfacial_current_variables(variables)
-            )
-            variables.update(
-                self._get_standard_whole_cell_exchange_current_variables(variables)
-            )
 
         return variables
 

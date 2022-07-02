@@ -50,9 +50,6 @@ class BasePlating(BaseInterface):
                 "Positive electrode lithium plating interfacial current density": zero,
             }
         )
-        variables.update(
-            self._get_standard_whole_cell_interfacial_current_variables(variables)
-        )
 
         return variables
 
@@ -109,8 +106,10 @@ class BasePlating(BaseInterface):
             "X-averaged dead lithium thickness [m]": L_dead_Li_av * L_scale,
             "Loss of lithium to lithium plating [mol]": (Q_plated_Li + Q_dead_Li)
             * c_scale,
-            "Loss of capacity to lithium plating [A.h]":
-            (Q_plated_Li + Q_dead_Li) * c_scale * param.F / 3600,
+            "Loss of capacity to lithium plating [A.h]": (Q_plated_Li + Q_dead_Li)
+            * c_scale
+            * param.F
+            / 3600,
         }
 
         return variables
