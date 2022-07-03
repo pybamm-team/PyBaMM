@@ -217,3 +217,68 @@ def solve_electrode_soh(x100_sim, C_sim, inputs, parameter_values):
 #     y = y_0 - initial_soc * C / C_p
 #
 #     return x, y
+
+
+def check_esoh_feasible(parameter_values, inputs):
+    param = pybamm.LithiumIonParameters()
+
+    Vmax = inputs["V_max"]
+    Vmin = inputs["V_min"]
+    Cp = inputs["C_p"]
+    Cn = inputs["C_n"]
+    n_Li = inputs["n_Li"]
+
+    OCPp_data = isinstance(parameter_values["Positive electrode OCP [V]"], tuple)
+    OCPn_data = isinstance(parameter_values["Negative electrode OCP [V]"], tuple)
+
+    if OCPp_data:
+        y100_min = np.min(parameter_values["Positive electrode OCP [V]"][1][1])
+        y0_max = np.max(parameter_values["Positive electrode OCP [V]"][1][1])
+    else:
+        y100_min = 1e-4
+        y0_max = 1 - 1e-4
+
+    if OCPn_data:
+        x0_min = np.min(parameter_values["Negative electrode OCP [V]"][1][1])
+        x100_max = np.max(parameter_values["Negative electrode OCP [V]"][1][1])
+    else:
+        x0_min = 1e-4
+        x100_max = 1 - 1e-4
+
+    F = pybamm.constants.F.value
+    x100_max_from_y100_min = (n_Li * F / 3600 - y100_min * Cp) / Cn
+    x0_min_from_y0_max = (n_Li * F / 3600 - y0_max * Cp) / Cn
+    y100_min_from_x100_max = (n_Li * F / 3600 - x100_max * Cn) / Cp
+    y0_max_from_x0_min = (n_Li * F / 3600 - x0_min * Cn) / Cp
+
+    x100_max = min(x100_max_from_y100_min, x100_max)
+    x0_min = max(x0_min_from_y0_max, x0_min)
+    y100_min = max(y100_min_from_x100_max, y100_min)
+    y0_max = min(y0_max_from_x0_min, y0_max)
+
+    T = parameter_values["Reference temperature [K]"]
+    V_lower_bound = parameter_values.evaluate(
+        param.p.U_dimensional(y0_max, T) - param.n.U_dimensional(x0_min, T)
+    )
+    V_upper_bound = parameter_values.evaluate(
+        param.p.U_dimensional(y100_min, T) - param.n.U_dimensional(x100_max, T)
+    )
+
+    if V_lower_bound > Vmin:
+        raise (
+            ValueError(
+                f"The lower bound of the voltage, {V_lower_bound:.4f}V, "
+                f"is greater than the target minimum voltage, {Vmin:.4f}V. "
+                f"Stoichiometry limits are x:[{x0_min:.4f}, {x100_max:.4f}], "
+                f"y:[{y100_min:.4f}, {y0_max:.4f}]."
+            )
+        )
+    if V_upper_bound < Vmax:
+        raise (
+            ValueError(
+                f"The upper bound of the voltage, {V_upper_bound:.4f}V, "
+                f"is less than the target maximum voltage, {Vmax:.4f}V. "
+                f"Stoichiometry limits are x:[{x0_min:.4f}, {x100_max:.4f}], "
+                f"y:[{y100_min:.4f}, {y0_max:.4f}]."
+            )
+        )
