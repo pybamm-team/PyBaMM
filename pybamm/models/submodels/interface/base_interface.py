@@ -153,24 +153,6 @@ class BaseInterface(pybamm.BaseSubModel):
         else:
             return pybamm.Scalar(0)
 
-    def _get_electrolyte_reaction_signed_stoichiometry(self):
-        """Returns the number of electrons in the reaction."""
-        if self.reaction in [
-            "lithium-ion main",
-            "SEI",
-            "lithium plating",
-            "lithium metal plating",
-        ]:
-            # Both the main reaction current contribute to the electrolyte reaction
-            # current
-            return pybamm.Scalar(1), pybamm.Scalar(1)
-        elif self.reaction == "lead-acid main":
-            return self.param.n.s_plus_S, self.param.p.s_plus_S
-        elif self.reaction == "lead-acid oxygen":
-            return self.param.s_plus_Ox, self.param.s_plus_Ox
-        else:
-            return pybamm.Scalar(0), pybamm.Scalar(0)
-
     def _get_average_total_interfacial_current_density(self, variables):
         """
         Method to obtain the average total interfacial current density.
