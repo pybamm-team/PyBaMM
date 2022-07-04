@@ -22,6 +22,65 @@ def solve_model_once(model, solver, t_eval):
     solver.solve(model, t_eval=t_eval)
 
 
+def build_model(parameter, model_, option, value):
+    param = pybamm.ParameterValues(parameter)
+    model = model_({option: value})
+    param.process_model(model)
+    compute_discretisation(model, param).process_model(model)
+
+
+def simulate_model(parameter, model_, with_experiment, option, value):
+    param = pybamm.ParameterValues(parameter)
+    model = model_({option: value})
+    if with_experiment:
+        exp = pybamm.Experiment(
+            [
+                "Discharge at 0.1C until 3.105 V",
+            ]
+        )
+        pybamm.Simulation(model, parameter_values=param, experiment=exp)
+    else:
+        pybamm.Simulation(model, parameter_values=param, C_rate=1)
+
+
+class SolveModel:
+    solver = pybamm.CasadiSolver()
+
+    def solve_setup(self, parameter, model_, solve_first, option, value):
+        self.model = model_({option: value})
+        c_rate = 1
+        tmax = 4000 / c_rate
+        nb_points = 500
+        self.t_eval = np.linspace(0, tmax, nb_points)
+        geometry = self.model.default_geometry
+
+        # load parameter values and process model and geometry
+        param = pybamm.ParameterValues(parameter)
+        param.process_model(self.model)
+        param.process_geometry(geometry)
+
+        # set mesh
+        var_pts = {
+            "x_n": 20,
+            "x_s": 20,
+            "x_p": 20,
+            "r_n": 30,
+            "r_p": 30,
+            "y": 10,
+            "z": 10,
+        }
+        mesh = pybamm.Mesh(geometry, self.model.default_submesh_types, var_pts)
+
+        # discretise model
+        disc = pybamm.Discretisation(mesh, self.model.default_spatial_methods)
+        disc.process_model(self.model)
+        if solve_first:
+            solve_model_once(self.model, SolveModel.solver, self.t_eval)
+
+    def solve_model(self, model, solve_first, params):
+        SolveModel.solver.solve(self.model, t_eval=self.t_eval)
+
+
 class TimeBuildModelLossActiveMaterial:
     param_names = ["model", "model option"]
     params = (
@@ -30,10 +89,8 @@ class TimeBuildModelLossActiveMaterial:
     )
 
     def time_setup_model(self, model, params):
-        self.param = pybamm.ParameterValues("Ai2020")
-        self.model = model({"loss of active material": params})
-        self.param.process_model(self.model)
-        compute_discretisation(self.model, self.param).process_model(self.model)
+
+        build_model("Ai2020", model, "loss of active material", params)
 
 
 class TimeBuildSimulationLossActiveMaterial:
@@ -45,17 +102,10 @@ class TimeBuildSimulationLossActiveMaterial:
     )
 
     def time_setup_simulation(self, model, with_experiment, params):
-        self.param = pybamm.ParameterValues("Ai2020")
-        self.model = model({"loss of active material": params})
-        if with_experiment:
-            exp = pybamm.Experiment(
-                [
-                    "Discharge at 0.1C until 3.105 V",
-                ]
-            )
-            pybamm.Simulation(self.model, parameter_values=self.param, experiment=exp)
-        else:
-            pybamm.Simulation(self.model, parameter_values=self.param, C_rate=1)
+
+        simulate_model(
+            "Ai2020", model, with_experiment, "loss of active material", params
+        )
 
 
 class TimeSolveLossActiveMaterial:
@@ -66,43 +116,13 @@ class TimeSolveLossActiveMaterial:
         ["none", "stress-driven", "reaction-driven", "stress and reaction-driven"],
     )
 
-    solver = pybamm.CasadiSolver()
-
     def setup(self, model, solve_first, params):
-        self.model = model({"loss of active material": params})
-        c_rate = 1
-        tmax = 4000 / c_rate
-        nb_points = 500
-        self.t_eval = np.linspace(0, tmax, nb_points)
-        geometry = self.model.default_geometry
-
-        # load parameter values and process model and geometry
-        param = pybamm.ParameterValues("Ai2020")
-        param.process_model(self.model)
-        param.process_geometry(geometry)
-
-        # set mesh
-        var_pts = {
-            "x_n": 20,
-            "x_s": 20,
-            "x_p": 20,
-            "r_n": 30,
-            "r_p": 30,
-            "y": 10,
-            "z": 10,
-        }
-        mesh = pybamm.Mesh(geometry, self.model.default_submesh_types, var_pts)
-
-        # discretise model
-        disc = pybamm.Discretisation(mesh, self.model.default_spatial_methods)
-        disc.process_model(self.model)
-        if solve_first:
-            solve_model_once(
-                self.model, TimeSolveLossActiveMaterial.solver, self.t_eval
-            )
+        SolveModel.solve_setup(
+            self, "Ai2020", model, solve_first, "loss of active material", params
+        )
 
     def time_solve_model(self, model, solve_first, params):
-        TimeSolveLossActiveMaterial.solver.solve(self.model, t_eval=self.t_eval)
+        SolveModel.solver.solve(self.model, t_eval=self.t_eval)
 
 
 class TimeBuildModelLithiumPlating:
@@ -113,10 +133,7 @@ class TimeBuildModelLithiumPlating:
     )
 
     def time_setup_model(self, model, params):
-        self.param = pybamm.ParameterValues("OKane2022")
-        self.model = model({"lithium plating": params})
-        self.param.process_model(self.model)
-        compute_discretisation(self.model, self.param).process_model(self.model)
+        build_model("OKane2022", model, "lithium plating", params)
 
 
 class TimeBuildSimulationLithiumPlating:
@@ -128,17 +145,7 @@ class TimeBuildSimulationLithiumPlating:
     )
 
     def time_setup_simulation(self, model, with_experiment, params):
-        self.param = pybamm.ParameterValues("OKane2022")
-        self.model = model({"lithium plating": params})
-        if with_experiment:
-            exp = pybamm.Experiment(
-                [
-                    "Discharge at 0.1C until 3.105 V",
-                ]
-            )
-            pybamm.Simulation(self.model, parameter_values=self.param, experiment=exp)
-        else:
-            pybamm.Simulation(self.model, parameter_values=self.param, C_rate=1)
+        simulate_model("OKane2020", model, with_experiment, "lithium plating", params)
 
 
 class TimeSolveLithiumPlating:
@@ -149,41 +156,13 @@ class TimeSolveLithiumPlating:
         ["none", "irreversible", "reversible", "partially reversible"],
     )
 
-    solver = pybamm.CasadiSolver()
-
     def setup(self, model, solve_first, params):
-        self.model = model({"lithium plating": params})
-        c_rate = 1
-        tmax = 4000 / c_rate
-        nb_points = 500
-        self.t_eval = np.linspace(0, tmax, nb_points)
-        geometry = self.model.default_geometry
-
-        # load parameter values and process model and geometry
-        param = pybamm.ParameterValues("OKane2022")
-        param.process_model(self.model)
-        param.process_geometry(geometry)
-
-        # set mesh
-        var_pts = {
-            "x_n": 20,
-            "x_s": 20,
-            "x_p": 20,
-            "r_n": 30,
-            "r_p": 30,
-            "y": 10,
-            "z": 10,
-        }
-        mesh = pybamm.Mesh(geometry, self.model.default_submesh_types, var_pts)
-
-        # discretise model
-        disc = pybamm.Discretisation(mesh, self.model.default_spatial_methods)
-        disc.process_model(self.model)
-        if solve_first:
-            solve_model_once(self.model, TimeSolveLithiumPlating.solver, self.t_eval)
+        SolveModel.solve_setup(
+            self, "OKane2020", model, solve_first, "lithium plating", params
+        )
 
     def time_solve_model(self, model, solve_first, params):
-        TimeSolveLithiumPlating.solver.solve(self.model, t_eval=self.t_eval)
+        SolveModel.solver.solve(self.model, t_eval=self.t_eval)
 
 
 class TimeBuildModelSEI:
@@ -202,10 +181,7 @@ class TimeBuildModelSEI:
     )
 
     def time_setup_model(self, model, params):
-        self.param = pybamm.ParameterValues("Marquis2019")
-        self.model = model({"SEI": params})
-        self.param.process_model(self.model)
-        compute_discretisation(self.model, self.param).process_model(self.model)
+        build_model("Marquis2019", model, "SEI", params)
 
 
 class TimeBuildSimulationSEI:
@@ -225,17 +201,7 @@ class TimeBuildSimulationSEI:
     )
 
     def time_setup_simulation(self, model, with_experiment, params):
-        self.param = pybamm.ParameterValues("Marquis2019")
-        self.model = model({"SEI": params})
-        if with_experiment:
-            exp = pybamm.Experiment(
-                [
-                    "Discharge at 0.1C until 3.105 V",
-                ]
-            )
-            pybamm.Simulation(self.model, parameter_values=self.param, experiment=exp)
-        else:
-            pybamm.Simulation(self.model, parameter_values=self.param, C_rate=1)
+        simulate_model("Marquis2019", model, with_experiment, "SEI", params)
 
 
 class TimeSolveSEI:
@@ -254,41 +220,11 @@ class TimeSolveSEI:
         ],
     )
 
-    solver = pybamm.CasadiSolver()
-
     def setup(self, model, solve_first, params):
-        self.model = model({"SEI": params})
-        c_rate = 1
-        tmax = 4000 / c_rate
-        nb_points = 500
-        self.t_eval = np.linspace(0, tmax, nb_points)
-        geometry = self.model.default_geometry
-
-        # load parameter values and process model and geometry
-        param = pybamm.ParameterValues("Marquis2019")
-        param.process_model(self.model)
-        param.process_geometry(geometry)
-
-        # set mesh
-        var_pts = {
-            "x_n": 20,
-            "x_s": 20,
-            "x_p": 20,
-            "r_n": 30,
-            "r_p": 30,
-            "y": 10,
-            "z": 10,
-        }
-        mesh = pybamm.Mesh(geometry, self.model.default_submesh_types, var_pts)
-
-        # discretise model
-        disc = pybamm.Discretisation(mesh, self.model.default_spatial_methods)
-        disc.process_model(self.model)
-        if solve_first:
-            solve_model_once(self.model, TimeSolveSEI.solver, self.t_eval)
+        SolveModel.solve_setup(self, "Marquis2019", model, solve_first, "SEI", params)
 
     def time_solve_model(self, model, solve_first, params):
-        TimeSolveSEI.solver.solve(self.model, t_eval=self.t_eval)
+        SolveModel.solver.solve(self.model, t_eval=self.t_eval)
 
 
 class TimeBuildModelParticle:
@@ -304,10 +240,7 @@ class TimeBuildModelParticle:
     )
 
     def time_setup_model(self, model, params):
-        self.param = pybamm.ParameterValues("Marquis2019")
-        self.model = model({"particle": params})
-        self.param.process_model(self.model)
-        compute_discretisation(self.model, self.param).process_model(self.model)
+        build_model("Marquis2019", model, "particle", params)
 
 
 class TimeBuildSimulationParticle:
@@ -324,17 +257,7 @@ class TimeBuildSimulationParticle:
     )
 
     def time_setup_simulation(self, model, with_experiment, params):
-        self.param = pybamm.ParameterValues("Marquis2019")
-        self.model = model({"particle": params})
-        if with_experiment:
-            exp = pybamm.Experiment(
-                [
-                    "Discharge at 0.1C until 3.105 V",
-                ]
-            )
-            pybamm.Simulation(self.model, parameter_values=self.param, experiment=exp)
-        else:
-            pybamm.Simulation(self.model, parameter_values=self.param, C_rate=1)
+        simulate_model("Marquis2019", model, with_experiment, "particle", params)
 
 
 class TimeSolveParticle:
@@ -350,41 +273,13 @@ class TimeSolveParticle:
         ],
     )
 
-    solver = pybamm.CasadiSolver()
-
     def setup(self, model, solve_first, params):
-        self.model = model({"particle": params})
-        c_rate = 1
-        tmax = 4000 / c_rate
-        nb_points = 500
-        self.t_eval = np.linspace(0, tmax, nb_points)
-        geometry = self.model.default_geometry
-
-        # load parameter values and process model and geometry
-        param = pybamm.ParameterValues("Marquis2019")
-        param.process_model(self.model)
-        param.process_geometry(geometry)
-
-        # set mesh
-        var_pts = {
-            "x_n": 20,
-            "x_s": 20,
-            "x_p": 20,
-            "r_n": 30,
-            "r_p": 30,
-            "y": 10,
-            "z": 10,
-        }
-        mesh = pybamm.Mesh(geometry, self.model.default_submesh_types, var_pts)
-
-        # discretise model
-        disc = pybamm.Discretisation(mesh, self.model.default_spatial_methods)
-        disc.process_model(self.model)
-        if solve_first:
-            solve_model_once(self.model, TimeSolveParticle.solver, self.t_eval)
+        SolveModel.solve_setup(
+            self, "Marquis2019", model, solve_first, "particle", params
+        )
 
     def time_solve_model(self, model, solve_first, params):
-        TimeSolveParticle.solver.solve(self.model, t_eval=self.t_eval)
+        SolveModel.solver.solve(self.model, t_eval=self.t_eval)
 
 
 class TimeBuildModelThermal:
@@ -395,10 +290,7 @@ class TimeBuildModelThermal:
     )
 
     def time_setup_model(self, model, params):
-        self.param = pybamm.ParameterValues("Marquis2019")
-        self.model = model({"thermal": params})
-        self.param.process_model(self.model)
-        compute_discretisation(self.model, self.param).process_model(self.model)
+        build_model("Marquis2019", model, "thermal", params)
 
 
 class TimeBuildSimulationThermal:
@@ -410,17 +302,7 @@ class TimeBuildSimulationThermal:
     )
 
     def time_setup_simulation(self, model, with_experiment, params):
-        self.param = pybamm.ParameterValues("Marquis2019")
-        self.model = model({"thermal": params})
-        if with_experiment:
-            exp = pybamm.Experiment(
-                [
-                    "Discharge at 0.1C until 3.105 V",
-                ]
-            )
-            pybamm.Simulation(self.model, parameter_values=self.param, experiment=exp)
-        else:
-            pybamm.Simulation(self.model, parameter_values=self.param, C_rate=1)
+        simulate_model("Marquis2019", model, with_experiment, "thermal", params)
 
 
 class TimeSolveThermal:
@@ -431,41 +313,13 @@ class TimeSolveThermal:
         ["isothermal", "lumped", "x-lumped", "x-full"],
     )
 
-    solver = pybamm.CasadiSolver()
-
     def setup(self, model, solve_first, params):
-        self.model = model({"thermal": params})
-        c_rate = 1
-        tmax = 4000 / c_rate
-        nb_points = 500
-        self.t_eval = np.linspace(0, tmax, nb_points)
-        geometry = self.model.default_geometry
-
-        # load parameter values and process model and geometry
-        param = pybamm.ParameterValues("Marquis2019")
-        param.process_model(self.model)
-        param.process_geometry(geometry)
-
-        # set mesh
-        var_pts = {
-            "x_n": 20,
-            "x_s": 20,
-            "x_p": 20,
-            "r_n": 30,
-            "r_p": 30,
-            "y": 10,
-            "z": 10,
-        }
-        mesh = pybamm.Mesh(geometry, self.model.default_submesh_types, var_pts)
-
-        # discretise model
-        disc = pybamm.Discretisation(mesh, self.model.default_spatial_methods)
-        disc.process_model(self.model)
-        if solve_first:
-            solve_model_once(self.model, TimeSolveThermal.solver, self.t_eval)
+        SolveModel.solve_setup(
+            self, "Marquis2019", model, solve_first, "thermal", params
+        )
 
     def time_solve_model(self, model, solve_first, params):
-        TimeSolveThermal.solver.solve(self.model, t_eval=self.t_eval)
+        SolveModel.solver.solve(self.model, t_eval=self.t_eval)
 
 
 class TimeBuildModelSurfaceForm:
@@ -476,10 +330,7 @@ class TimeBuildModelSurfaceForm:
     )
 
     def time_setup_model(self, model, params):
-        self.param = pybamm.ParameterValues("Marquis2019")
-        self.model = model({"surface form": params})
-        self.param.process_model(self.model)
-        compute_discretisation(self.model, self.param).process_model(self.model)
+        build_model("Marquis2019", model, "surface form", params)
 
 
 class TimeBuildSimulationSurfaceForm:
@@ -491,17 +342,7 @@ class TimeBuildSimulationSurfaceForm:
     )
 
     def time_setup_simulation(self, model, with_experiment, params):
-        self.param = pybamm.ParameterValues("Marquis2019")
-        self.model = model({"surface form": params})
-        if with_experiment:
-            exp = pybamm.Experiment(
-                [
-                    "Discharge at 0.1C until 3.105 V",
-                ]
-            )
-            pybamm.Simulation(self.model, parameter_values=self.param, experiment=exp)
-        else:
-            pybamm.Simulation(self.model, parameter_values=self.param, C_rate=1)
+        simulate_model("Marquis2019", model, with_experiment, "surface form", params)
 
 
 class TimeSolveSurfaceForm:
@@ -512,38 +353,10 @@ class TimeSolveSurfaceForm:
         ["false", "differential", "algebraic"],
     )
 
-    solver = pybamm.CasadiSolver()
-
     def setup(self, model, solve_first, params):
-        self.model = model({"surface form": params})
-        c_rate = 1
-        tmax = 4000 / c_rate
-        nb_points = 500
-        self.t_eval = np.linspace(0, tmax, nb_points)
-        geometry = self.model.default_geometry
-
-        # load parameter values and process model and geometry
-        param = pybamm.ParameterValues("Marquis2019")
-        param.process_model(self.model)
-        param.process_geometry(geometry)
-
-        # set mesh
-        var_pts = {
-            "x_n": 20,
-            "x_s": 20,
-            "x_p": 20,
-            "r_n": 30,
-            "r_p": 30,
-            "y": 10,
-            "z": 10,
-        }
-        mesh = pybamm.Mesh(geometry, self.model.default_submesh_types, var_pts)
-
-        # discretise model
-        disc = pybamm.Discretisation(mesh, self.model.default_spatial_methods)
-        disc.process_model(self.model)
-        if solve_first:
-            solve_model_once(self.model, TimeSolveSurfaceForm.solver, self.t_eval)
+        SolveModel.solve_setup(
+            self, "Marquis2019", model, solve_first, "surface form", params
+        )
 
     def time_solve_model(self, model, solve_first, params):
-        TimeSolveSurfaceForm.solver.solve(self.model, t_eval=self.t_eval)
+        SolveModel.solver.solve(self.model, t_eval=self.t_eval)
