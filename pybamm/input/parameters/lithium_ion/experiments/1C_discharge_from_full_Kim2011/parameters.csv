@@ -21,5 +21,4 @@ Upper voltage cut-off [V],4.2,,
 # Initial conditions
 Initial concentration in negative electrode [mol.m-3],18081,0.63*2.84E4,
 Initial concentration in positive electrode [mol.m-3],20090,0.41*4.9E4,
-Initial concentration in electrolyte [mol.m-3],1200,,
 Initial temperature [K],298.15,,
