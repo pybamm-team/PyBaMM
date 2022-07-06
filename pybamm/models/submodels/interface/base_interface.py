@@ -190,7 +190,6 @@ class BaseInterface(pybamm.BaseSubModel):
         return j_total_average
 
     def _get_standard_interfacial_current_variables(self, j):
-        param = self.param
         j_scale = self.domain_param.j_scale
 
         if self.reaction == "lithium metal plating":
@@ -200,9 +199,6 @@ class BaseInterface(pybamm.BaseSubModel):
                 "Lithium metal plating current density [A.m-2]": j_scale * j,
             }
             return variables
-
-        i_typ = param.i_typ
-        L_x = param.L_x
 
         # Size average. For j variables that depend on particle size, see
         # "_get_standard_size_distribution_interfacial_current_variables"
@@ -240,8 +236,6 @@ class BaseInterface(pybamm.BaseSubModel):
 
     def _get_standard_total_interfacial_current_variables(self, j_tot_av):
 
-        i_typ = self.param.i_typ
-        L_x = self.param.L_x
         j_scale = self.domain_param.j_scale
 
         if self.half_cell and self.domain == "Negative":
@@ -259,14 +253,11 @@ class BaseInterface(pybamm.BaseSubModel):
                 + self.domain.lower()
                 + " electrode total interfacial current density [A.m-2]": j_scale
                 * j_tot_av,
-                "X-averaged " + self.domain.lower() + " electrode total interfacial "
-                "current density per volume [A.m-3]": i_typ / L_x * j_tot_av,
             }
 
         return variables
 
     def _get_standard_exchange_current_variables(self, j0):
-        param = self.param
         j_scale = self.domain_param.j_scale
 
         if self.reaction == "lithium metal plating":
@@ -278,8 +269,6 @@ class BaseInterface(pybamm.BaseSubModel):
             }
             return variables
 
-        i_typ = param.i_typ
-        L_x = param.L_x
         # Size average. For j0 variables that depend on particle size, see
         # "_get_standard_size_distribution_exchange_current_variables"
         if j0.domain in [["negative particle size"], ["positive particle size"]]:
@@ -469,9 +458,7 @@ class BaseInterface(pybamm.BaseSubModel):
             j = pybamm.SecondaryBroadcast(j_xav, [self.domain.lower() + " electrode"])
 
         # j scale
-        i_typ = self.param.i_typ
-        L_x = self.param.L_x
-        j_scale = i_typ / (self.domain_param.a_typ * L_x)
+        j_scale = self.domain_param.j_scale
 
         variables = {
             self.domain
@@ -502,9 +489,7 @@ class BaseInterface(pybamm.BaseSubModel):
         """
         Exchange current variables that depend on particle size.
         """
-        i_typ = self.param.i_typ
-        L_x = self.param.L_x
-        j_scale = i_typ / (self.domain_param.a_typ * L_x)
+        j_scale = self.domain_param.j_scale
 
         # X-average or broadcast to electrode if necessary
         if j0.domains["secondary"] != [self.domain.lower() + " electrode"]:
@@ -532,17 +517,6 @@ class BaseInterface(pybamm.BaseSubModel):
             + " electrode"
             + self.reaction_name
             + " exchange current density distribution [A.m-2]": j_scale * j0_av,
-            self.domain
-            + " electrode"
-            + self.reaction_name
-            + " exchange current density distribution"
-            + " per volume [A.m-3]": i_typ / L_x * j0,
-            "X-averaged "
-            + self.domain.lower()
-            + " electrode"
-            + self.reaction_name
-            + " exchange current density distribution"
-            + " per volume [A.m-3]": i_typ / L_x * j0_av,
         }
 
         return variables
