@@ -908,7 +908,6 @@ def get_cycle_summary_variables(cycle_solution, esoh_sims):
 
         try:
             esoh_sol = pybamm.lithium_ion.solve_electrode_soh(x100_sim, C_sim, inputs)
-
         except pybamm.SolverError:  # pragma: no cover
             raise pybamm.SolverError(
                 "Could not solve for summary variables, run "

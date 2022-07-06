@@ -5,6 +5,7 @@ from .base_lithium_ion_model import BaseModel
 from .electrode_soh import (
     ElectrodeSOHx100,
     ElectrodeSOHC,
+    create_electrode_soh_sims,
     solve_electrode_soh,
     check_esoh_feasible,
 )

@@ -92,15 +92,32 @@ class ElectrodeSOHC(pybamm.BaseModel):
         return pybamm.AlgebraicSolver()
 
 
-def solve_electrode_soh(x100_sim, C_sim, inputs):
-    _, x100_max, _, _ = check_esoh_feasible(C_sim.parameter_values, inputs)
+def create_electrode_soh_sims(parameter_values):
+    x100_model = pybamm.lithium_ion.ElectrodeSOHx100()
+    x100_sim = pybamm.Simulation(x100_model, parameter_values=parameter_values)
+    C_model = pybamm.lithium_ion.ElectrodeSOHC()
+    C_sim = pybamm.Simulation(C_model, parameter_values=parameter_values)
+    return [x100_sim, C_sim]
 
-    inputs.update({"x_100_init": x100_max})
+
+def solve_electrode_soh(x100_sim, C_sim, inputs):
+    x0_min, x100_max, _, _ = check_esoh_feasible(C_sim.parameter_values, inputs)
+
+    x100_init = x100_max
+    if x100_sim.solution is not None:
+        x100_init_sol = x100_sim.solution["x_100"].data[0]
+        if x0_min < x100_init_sol < x0_min:
+            x100_init = x100_init_sol
+
+    inputs.update({"x_100_init": x100_init})
 
     x100_sol = x100_sim.solve([0], inputs=inputs)
     inputs["x_100"] = x100_sol["x_100"].data[0]
     inputs["y_100"] = x100_sol["y_100"].data[0]
     C_sol = C_sim.solve([0], inputs=inputs)
+
+    # print(inputs)
+    # print({k: C_sol[k].data[0] for k in ["x_0", "y_0", "x_100", "y_100", "C"]})
     return C_sol
 
 
@@ -174,15 +191,15 @@ def check_esoh_feasible(parameter_values, inputs):
         y100_min = np.min(parameter_values["Positive electrode OCP [V]"][1][1])
         y0_max = np.max(parameter_values["Positive electrode OCP [V]"][1][1])
     else:
-        y100_min = 1e-4
-        y0_max = 1 - 1e-4
+        y100_min = 1e-6
+        y0_max = 1 - 1e-6
 
     if OCPn_data:
         x0_min = np.min(parameter_values["Negative electrode OCP [V]"][1][1])
         x100_max = np.max(parameter_values["Negative electrode OCP [V]"][1][1])
     else:
-        x0_min = 1e-4
-        x100_max = 1 - 1e-4
+        x0_min = 1e-6
+        x100_max = 1 - 1e-6
 
     F = pybamm.constants.F.value
     x100_max_from_y100_min = (n_Li * F / 3600 - y100_min * Cp) / Cn
