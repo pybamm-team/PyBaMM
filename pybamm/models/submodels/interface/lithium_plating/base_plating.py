@@ -39,23 +39,26 @@ class BasePlating(BaseInterface):
 
         variables.update(
             {
-                "X-averaged negative electrode lithium plating interfacial current "
-                "density": variables[
+                "X-averaged negative electrode lithium plating "
+                "interfacial current density": variables[
                     "X-averaged lithium plating interfacial current density"
                 ],
-                "X-averaged positive electrode lithium plating interfacial current "
-                "density": zero_av,
+                "X-averaged positive electrode lithium plating "
+                "interfacial current density": zero_av,
                 "X-averaged positive electrode lithium plating volumetric "
                 "interfacial current density": zero_av,
-                "Negative electrode lithium plating interfacial current "
-                "density": variables["Lithium plating interfacial current density"],
+                "Negative electrode lithium plating "
+                "interfacial current density": variables[
+                    "Lithium plating interfacial current density"
+                ],
                 "Negative electrode lithium plating interfacial current "
                 "density [A.m-2]": variables[
                     "Lithium plating interfacial current density [A.m-2]"
                 ],
                 "Positive electrode lithium plating "
                 "interfacial current density": zero,
-                "Positive electrode lithium plating interfacial current density [A.m-2]": zero,
+                "Positive electrode lithium plating "
+                "interfacial current density [A.m-2]": zero,
                 "Positive electrode lithium plating volumetric "
                 "interfacial current density": zero,
             }
