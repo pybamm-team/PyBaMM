@@ -80,10 +80,10 @@ class FickianDiffusion(BaseSizeDistribution):
             [self.domain.lower() + " particle"],
         )
 
-        N_s_distribution = -self.domain_param.D(c_s_distribution, T_k) * pybamm.grad(
+        N_s_distribution = -self.phase_param.D(c_s_distribution, T_k) * pybamm.grad(
             c_s_distribution
         )
-        f_a_dist = self.domain_param.f_a_dist(R)
+        f_a_dist = self.phase_param.f_a_dist(R)
 
         # Size-dependent flux variables
         variables.update(
@@ -109,7 +109,7 @@ class FickianDiffusion(BaseSizeDistribution):
         )
 
         self.rhs = {
-            c_s_distribution: -(1 / self.domain_param.C_diff)
+            c_s_distribution: -(1 / self.phase_param.C_diff)
             * pybamm.div(N_s_distribution)
             / R ** 2
         }
@@ -133,12 +133,12 @@ class FickianDiffusion(BaseSizeDistribution):
 
         # Set surface Neumann boundary values
         rbc = (
-            -self.domain_param.C_diff
+            -self.phase_param.C_diff
             * R
             * j_distribution
-            / self.domain_param.a_R
-            / self.domain_param.gamma
-            / self.domain_param.D(c_s_surf_distribution, T_k)
+            / self.phase_param.a_R
+            / self.phase_param.gamma
+            / self.phase_param.D(c_s_surf_distribution, T_k)
         )
         self.boundary_conditions = {
             c_s_distribution: {
@@ -153,7 +153,7 @@ class FickianDiffusion(BaseSizeDistribution):
         ]
 
         c_init = pybamm.SecondaryBroadcast(
-            self.domain_param.c_init, f"{self.domain.lower()} particle size"
+            self.phase_param.c_init, f"{self.domain.lower()} particle size"
         )
 
         self.initial_conditions = {c_s_distribution: c_init}

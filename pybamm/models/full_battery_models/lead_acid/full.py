@@ -49,6 +49,7 @@ class Full(BaseModel):
         self.set_current_collector_submodel()
         self.set_sei_submodel()
         self.set_lithium_plating_submodel()
+        self.set_total_kinetics_submodel()
 
         if build:
             self.build_model()
@@ -85,7 +86,7 @@ class Full(BaseModel):
         for domain in ["Negative", "Positive"]:
             intercalation_kinetics = self.get_intercalation_kinetics(domain)
             self.submodels[domain.lower() + " interface"] = intercalation_kinetics(
-                self.param, domain, "lead-acid main", self.options
+                self.param, domain, "lead-acid main", self.options, "primary"
             )
 
     def set_solid_submodel(self):
@@ -128,7 +129,7 @@ class Full(BaseModel):
                 self.param
             )
             self.submodels["positive oxygen interface"] = pybamm.kinetics.ForwardTafel(
-                self.param, "Positive", "lead-acid oxygen", self.options
+                self.param, "Positive", "lead-acid oxygen", self.options, "primary"
             )
             self.submodels[
                 "negative oxygen interface"
@@ -140,8 +141,8 @@ class Full(BaseModel):
                 self.param
             )
             self.submodels["positive oxygen interface"] = pybamm.kinetics.NoReaction(
-                self.param, "Positive", "lead-acid oxygen"
+                self.param, "Positive", "lead-acid oxygen", "primary"
             )
             self.submodels["negative oxygen interface"] = pybamm.kinetics.NoReaction(
-                self.param, "Negative", "lead-acid oxygen"
+                self.param, "Negative", "lead-acid oxygen", "primary"
             )

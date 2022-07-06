@@ -26,6 +26,8 @@ class BaseSubModel(pybamm.BaseModel):
     options: dict
         A dictionary of options to be passed to the model.
         See :class:`pybamm.BaseBatteryModel`
+    phase : str
+        Phase of the particle
 
     Attributes
     ----------
@@ -57,17 +59,17 @@ class BaseSubModel(pybamm.BaseModel):
     """
 
     def __init__(
-        self, param, domain=None, name="Unnamed submodel", external=False, options=None
+        self,
+        param,
+        domain=None,
+        name="Unnamed submodel",
+        external=False,
+        options=None,
+        phase=None,
     ):
         super().__init__(name)
-        self.param = param
-        if param is None:
-            self.domain_param = None
-        else:
-            if domain == "Negative":
-                self.domain_param = param.n
-            elif domain == "Positive":
-                self.domain_param = param.p
+        if domain is not None:
+            domain = domain.capitalize()
 
         self.domain = domain
         self.set_domain_for_broadcast()
@@ -79,6 +81,24 @@ class BaseSubModel(pybamm.BaseModel):
         # Save whether the submodel is a half-cell submodel
         we = self.options["working electrode"]
         self.half_cell = we != "both"
+
+        self.param = param
+        if param is None:
+            self.domain_param = None
+        else:
+            if domain == "Negative":
+                self.domain_param = param.n
+            elif domain == "Positive":
+                self.domain_param = param.p
+
+            if phase is not None:
+                if phase == "primary":
+                    self.phase_param = self.domain_param.prim
+                elif phase == "secondary":
+                    self.phase_param = self.domain_param.sec
+
+        self.phase = phase
+        self.phase_name = ""
 
     @property
     def domain(self):

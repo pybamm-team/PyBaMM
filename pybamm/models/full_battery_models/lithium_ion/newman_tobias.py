@@ -55,26 +55,6 @@ class NewmanTobias(DFN):
         pybamm.citations.register("Newman1962")
         pybamm.citations.register("Chu2020")
 
-    def set_particle_submodel(self):
-        for domain in ["Negative", "Positive"]:
-            particle = getattr(self.options, domain.lower())["particle"]
-            if particle == "Fickian diffusion":
-                self.submodels[
-                    domain.lower() + " particle"
-                ] = pybamm.particle.no_distribution.XAveragedFickianDiffusion(
-                    self.param, domain, self.options
-                )
-            elif particle in [
-                "uniform profile",
-                "quadratic profile",
-                "quartic profile",
-            ]:
-                self.submodels[
-                    domain.lower() + " particle"
-                ] = pybamm.particle.no_distribution.XAveragedPolynomialProfile(
-                    self.param, domain, particle, self.options
-                )
-
     def set_electrolyte_submodel(self):
 
         surf_form = pybamm.electrolyte_conductivity.surface_potential_form

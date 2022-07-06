@@ -35,10 +35,9 @@ class TestSPM(BaseUnitTestLithiumIon, unittest.TestCase):
         self.assertEqual(new_model.timescale, model.timescale)
 
         # with custom submodels
-        options = {"stress-induced diffusion": "false", "thermal": "x-full"}
-        model = pybamm.lithium_ion.SPM(options, build=False)
+        model = pybamm.lithium_ion.SPM({"thermal": "x-full"}, build=False)
         particle_n = pybamm.particle.no_distribution.XAveragedPolynomialProfile(
-            model.param, "Negative", "quadratic profile", options
+            model.param, "Negative", "quadratic profile", model.options, "primary"
         )
         model.submodels["negative particle"] = particle_n
         model.build_model()

@@ -22,16 +22,18 @@ class Marcus(BaseKinetics):
     options: dict
         A dictionary of options to be passed to the model.
         See :class:`pybamm.BaseBatteryModel`
+    phase : str
+        Phase of the particle
 
     **Extends:** :class:`pybamm.interface.kinetics.BaseKinetics`
     """
 
-    def __init__(self, param, domain, reaction, options):
-        super().__init__(param, domain, reaction, options)
+    def __init__(self, param, domain, reaction, options, phase):
+        super().__init__(param, domain, reaction, options, phase)
         pybamm.citations.register("Sripad2020")
 
     def _get_kinetics(self, j0, ne, eta_r, T, u):
-        mhc_lambda = self.domain_param.mhc_lambda
+        mhc_lambda = self.phase_param.mhc_lambda
         kT = 1 + self.param.Theta * T  # dimensionless
 
         exp_arg_ox = -((mhc_lambda + eta_r) ** 2) / (4 * mhc_lambda * kT)
@@ -62,16 +64,18 @@ class MarcusHushChidsey(BaseKinetics):
     options: dict
         A dictionary of options to be passed to the model.
         See :class:`pybamm.BaseBatteryModel`
+    phase : str
+        Phase of the particle
 
     **Extends:** :class:`pybamm.interface.kinetics.BaseKinetics`
     """
 
-    def __init__(self, param, domain, reaction, options):
-        super().__init__(param, domain, reaction, options)
+    def __init__(self, param, domain, reaction, options, phase):
+        super().__init__(param, domain, reaction, options, phase)
         pybamm.citations.register("Sripad2020")
 
     def _get_kinetics(self, j0, ne, eta_r, T, u):
-        mhc_lambda = self.domain_param.mhc_lambda
+        mhc_lambda = self.phase_param.mhc_lambda
         kT = 1 + self.param.Theta * T  # dimensionless
 
         lambda_T = mhc_lambda / kT

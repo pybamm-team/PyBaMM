@@ -135,10 +135,10 @@ class TestStandardParametersLeadAcid(unittest.TestCase):
             "kappa_e_0": param.kappa_e(pybamm.Scalar(0), pybamm.Scalar(0)),
             "chi_1": param.chi(pybamm.Scalar(1), pybamm.Scalar(0)),
             "chi_0.5": param.chi(pybamm.Scalar(0.5), pybamm.Scalar(0)),
-            "U_n_1": param.n.U(pybamm.Scalar(1), pybamm.Scalar(0)),
-            "U_n_0.5": param.n.U(pybamm.Scalar(0.5), pybamm.Scalar(0)),
-            "U_p_1": param.p.U(pybamm.Scalar(1), pybamm.Scalar(0)),
-            "U_p_0.5": param.p.U(pybamm.Scalar(0.5), pybamm.Scalar(0)),
+            "U_n_1": param.n.prim.U(pybamm.Scalar(1), pybamm.Scalar(0)),
+            "U_n_0.5": param.n.prim.U(pybamm.Scalar(0.5), pybamm.Scalar(0)),
+            "U_p_1": param.p.prim.U(pybamm.Scalar(1), pybamm.Scalar(0)),
+            "U_p_0.5": param.p.prim.U(pybamm.Scalar(0.5), pybamm.Scalar(0)),
         }
         # Process
         parameter_values = pybamm.ParameterValues("Sulzer2019")

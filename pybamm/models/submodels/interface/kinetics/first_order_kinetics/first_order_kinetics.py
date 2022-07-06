@@ -27,12 +27,11 @@ class FirstOrderKinetics(BaseInterface):
 
     def get_coupled_variables(self, variables):
         Domain = self.domain
+        domain = Domain.lower()
         rxn = self.reaction_name
 
         # Unpack
-        c_e_0 = variables[
-            "Leading-order " + self.domain.lower() + " electrolyte concentration"
-        ]
+        c_e_0 = variables[f"Leading-order {domain} electrolyte concentration"]
         c_e = variables[self.domain + " electrolyte concentration"]
         c_e_1 = (c_e - c_e_0) / self.param.C_e
 
@@ -53,25 +52,24 @@ class FirstOrderKinetics(BaseInterface):
         )
 
         delta_phi_0 = variables[
-            "Leading-order "
-            + self.domain.lower()
-            + " electrode surface potential difference"
+            f"Leading-order {domain} electrode surface potential difference"
         ]
         delta_phi_1 = (delta_phi - delta_phi_0) / self.param.C_e
 
         j_0 = variables[
-            "Leading-order "
-            + self.domain.lower()
-            + " electrode"
-            + self.reaction_name
-            + " interfacial current density"
+            f"Leading-order {domain} electrode {rxn}interfacial current density"
         ]
         j_1 = dj_dc_0 * c_e_1 + dj_ddeltaphi_0 * delta_phi_1
         j = j_0 + self.param.C_e * j_1
         # Get exchange-current density
         j0 = self._get_exchange_current_density(variables)
         # Get open-circuit potential variables and reaction overpotential
-        ocp = variables[f"{Domain} electrode{rxn} open circuit potential"]
+        if self.options["particle size"] == "distribution":
+            ocp = variables[
+                f"{Domain} electrode {rxn}open circuit potential distribution"
+            ]
+        else:
+            ocp = variables[f"{Domain} electrode {rxn}open circuit potential"]
         eta_r = delta_phi - ocp
 
         variables.update(self._get_standard_interfacial_current_variables(j))
@@ -96,13 +94,5 @@ class FirstOrderKinetics(BaseInterface):
                 + " interfacial current density": j_1_bar
             }
         )
-
-        if self.domain == "Positive":
-            variables.update(
-                self._get_standard_whole_cell_interfacial_current_variables(variables)
-            )
-            variables.update(
-                self._get_standard_whole_cell_exchange_current_variables(variables)
-            )
 
         return variables

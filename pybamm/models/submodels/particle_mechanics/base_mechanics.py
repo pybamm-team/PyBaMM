@@ -64,13 +64,13 @@ class BaseMechanics(pybamm.BaseSubModel):
             cell_thickness_change = variables["Cell thickness change [m]"]
 
         Omega = domain_param.Omega
-        R0 = domain_param.R
-        c_scale = domain_param.c_max
+        R0 = domain_param.prim.R
+        c_scale = domain_param.prim.c_max
         c_0 = domain_param.c_0
         E0 = domain_param.E
         nu = domain_param.nu
         L0 = domain_param.L
-        c_init = pybamm.r_average(domain_param.c_init)
+        c_init = pybamm.r_average(domain_param.prim.c_init)
         v_change = pybamm.x_average(
             eps_s * domain_param.t_change(c_s_rav)
         ) - pybamm.x_average(eps_s * domain_param.t_change(c_init))
@@ -131,7 +131,7 @@ class BaseMechanics(pybamm.BaseSubModel):
         """
         l_cr = variables[self.domain + " particle crack length"]
         a0 = variables[self.domain + " electrode surface area to volume ratio"]
-        R0 = self.domain_param.R
+        R0 = self.domain_param.prim.R
         rho_cr = self.domain_param.rho_cr
         roughness = l_cr * 2 * rho_cr + 1  # the ratio of cracks to normal surface
         a_cr = (roughness - 1) * a0  # normalised crack surface area

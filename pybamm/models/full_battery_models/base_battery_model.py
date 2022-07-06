@@ -305,6 +305,8 @@ class BatteryModelOptions(pybamm.FuzzyDict):
         # The "stress-induced diffusion" option will still be overridden by
         # extra_options if provided
 
+        # The "surface form" option will still be overridden by
+        # extra_options if provided
         # Change default SEI model based on which lithium plating option is provided
         # return "none" if option not given
         plating_option = extra_options.get("lithium plating", "none")
@@ -443,7 +445,7 @@ class BatteryModelOptions(pybamm.FuzzyDict):
 
         # Check options are valid
         for option, value in options.items():
-            if option == "external submodels" or option == "working electrode":
+            if option in ["external submodels", "working electrode"]:
                 pass
             else:
                 if isinstance(value, str) or option in [
@@ -475,7 +477,14 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                             "Values must be strings or (in some cases) "
                             "2-tuples of strings"
                         )
+                # flatten value
+                value_list = []
                 for val in value:
+                    if isinstance(val, tuple):
+                        value_list.extend(val)
+                    else:
+                        value_list.append(val)
+                for val in value_list:
                     if option == "timescale":
                         if not (val == "default" or isinstance(val, numbers.Number)):
                             raise pybamm.OptionError(
@@ -490,6 +499,16 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                             )
 
         super().__init__(options.items())
+
+    def phase_number_to_names(self, number):
+        """
+        Converts number of phases to a list ["primary", "secondary", ...]
+        """
+        number = int(number)
+        phases = ["primary"]
+        if number >= 2:
+            phases.append("secondary")
+        return phases
 
     def print_options(self):
         """
@@ -531,6 +550,29 @@ class BatteryModelDomainOptions(dict):
             return options
         else:
             # 2-tuple, first is negative domain, second is positive domain
+            return options[self.index]
+
+    @property
+    def primary(self):
+        return BatteryModelPhaseOptions(self, 0)
+
+    @property
+    def secondary(self):
+        return BatteryModelPhaseOptions(self, 1)
+
+
+class BatteryModelPhaseOptions(dict):
+    def __init__(self, domain_options, index):
+        super().__init__(domain_options.items())
+        self.domain_options = domain_options
+        self.index = index
+
+    def __getitem__(self, key):
+        options = self.domain_options.__getitem__(key)
+        if isinstance(options, str):
+            return options
+        else:
+            # 2-tuple, first is primary phase, second is secondary phase
             return options[self.index]
 
 
@@ -710,33 +752,6 @@ class BaseBatteryModel(pybamm.BaseModel):
             # Note: both y and z are scaled with L_z
             self.variables.update(
                 {"y": var.y, "y [m]": var.y * L_z, "z": var.z, "z [m]": var.z * L_z}
-            )
-
-        # Initialize "total reaction" variables
-        # These will get populated by the "get_coupled_variables" methods, and then used
-        # later by "set_rhs" or "set_algebraic", which ensures that we always have
-        # added all the necessary variables by the time the sum is used
-        self.variables.update(
-            {
-                "Sum of electrolyte reaction source terms": 0,
-                "Sum of positive electrode electrolyte reaction source terms": 0,
-                "Sum of x-averaged positive electrode "
-                "electrolyte reaction source terms": 0,
-                "Sum of interfacial current densities": 0,
-                "Sum of positive electrode interfacial current densities": 0,
-                "Sum of x-averaged positive electrode interfacial current densities": 0,
-            }
-        )
-        if not self.half_cell:
-            self.variables.update(
-                {
-                    "Sum of negative electrode electrolyte reaction source terms": 0,
-                    "Sum of x-averaged negative electrode "
-                    "electrolyte reaction source terms": 0,
-                    "Sum of negative electrode interfacial current densities": 0,
-                    "Sum of x-averaged negative electrode interfacial current densities"
-                    "": 0,
-                }
             )
 
     def build_fundamental_and_external(self):
@@ -1058,23 +1073,28 @@ class BaseBatteryModel(pybamm.BaseModel):
                 )
 
     def set_voltage_variables(self):
-
-        ocp_n = self.variables["Negative electrode open circuit potential"]
-        ocp_p = self.variables["Positive electrode open circuit potential"]
+        phase_n = ""
+        phase_p = ""
+        ocp_n = self.variables[f"Negative electrode {phase_n}open circuit potential"]
+        ocp_p = self.variables[f"Positive electrode {phase_p}open circuit potential"]
         ocp_n_av = self.variables[
-            "X-averaged negative electrode open circuit potential"
+            f"X-averaged negative electrode {phase_n}open circuit potential"
         ]
         ocp_p_av = self.variables[
-            "X-averaged positive electrode open circuit potential"
+            f"X-averaged positive electrode {phase_p}open circuit potential"
         ]
 
-        ocp_n_dim = self.variables["Negative electrode open circuit potential [V]"]
-        ocp_p_dim = self.variables["Positive electrode open circuit potential [V]"]
+        ocp_n_dim = self.variables[
+            f"Negative electrode {phase_n}open circuit potential [V]"
+        ]
+        ocp_p_dim = self.variables[
+            f"Positive electrode {phase_p}open circuit potential [V]"
+        ]
         ocp_n_av_dim = self.variables[
-            "X-averaged negative electrode open circuit potential [V]"
+            f"X-averaged negative electrode {phase_n}open circuit potential [V]"
         ]
         ocp_p_av_dim = self.variables[
-            "X-averaged positive electrode open circuit potential [V]"
+            f"X-averaged positive electrode {phase_p}open circuit potential [V]"
         ]
 
         ocp_n_left = pybamm.boundary_value(ocp_n, "left")
@@ -1097,16 +1117,16 @@ class BaseBatteryModel(pybamm.BaseModel):
             ]
         else:
             eta_r_n_av = self.variables[
-                "X-averaged negative electrode reaction overpotential"
+                f"X-averaged negative electrode {phase_n}reaction overpotential"
             ]
             eta_r_n_av_dim = self.variables[
-                "X-averaged negative electrode reaction overpotential [V]"
+                f"X-averaged negative electrode {phase_n}reaction overpotential [V]"
             ]
         eta_r_p_av = self.variables[
-            "X-averaged positive electrode reaction overpotential"
+            f"X-averaged positive electrode {phase_p}reaction overpotential"
         ]
         eta_r_p_av_dim = self.variables[
-            "X-averaged positive electrode reaction overpotential [V]"
+            f"X-averaged positive electrode {phase_p}reaction overpotential [V]"
         ]
 
         delta_phi_s_n_av = self.variables["X-averaged negative electrode ohmic losses"]

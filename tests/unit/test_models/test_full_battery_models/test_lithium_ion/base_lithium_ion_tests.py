@@ -262,7 +262,13 @@ class BaseUnitTestLithiumIon:
         def external_circuit_function(variables):
             I = variables["Current [A]"]
             V = variables["Terminal voltage [V]"]
-            return V + I - pybamm.FunctionParameter("Function", {"Time [s]": pybamm.t})
+            return (
+                V
+                + I
+                - pybamm.FunctionParameter(
+                    "Function", {"Time [s]": pybamm.t}, print_name="test_fun"
+                )
+            )
 
         options = {"operating mode": external_circuit_function}
         self.check_well_posedness(options)

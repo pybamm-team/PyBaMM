@@ -35,8 +35,8 @@ class ElectrodeSOH(pybamm.BaseModel):
         super().__init__(name)
         param = pybamm.LithiumIonParameters()
 
-        Un = param.n.U_dimensional
-        Up = param.p.U_dimensional
+        Un = param.n.prim.U_dimensional
+        Up = param.p.prim.U_dimensional
         T_ref = param.T_ref
 
         x_100 = pybamm.Variable("x_100", bounds=(0, 1))

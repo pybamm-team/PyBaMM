@@ -1,4 +1,5 @@
 from .base_kinetics import BaseKinetics
+from .total_kinetics import TotalKinetics
 from .butler_volmer import SymmetricButlerVolmer, AsymmetricButlerVolmer
 from .linear import Linear
 from .marcus import Marcus, MarcusHushChidsey
@@ -13,3 +14,5 @@ from .inverse_kinetics.inverse_butler_volmer import (
 )
 from .first_order_kinetics.first_order_kinetics import FirstOrderKinetics
 from .first_order_kinetics.inverse_first_order_kinetics import InverseFirstOrderKinetics
+
+from .total_kinetics import TotalKinetics

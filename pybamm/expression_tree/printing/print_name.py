@@ -54,10 +54,10 @@ def prettify_print_name(name):
         return PRINT_NAME_OVERRIDES[name]
 
     # Superscripts with comma separated (U_n_ref --> U_{n}^{ref})
-    sup_re = re.search(r"^[\da-zA-Z]+_?(.*?)_?((?:init|ref|typ|max|0))", name)
+    sup_re = re.search(r"^[\da-zA-Z]+_?((?:init|ref|typ|max|0))_?((?:n|s|p))", name)
     if sup_re:
         sup_str = (
-            r"{" + sup_re.group(1).replace("_", "\,") + r"}^{" + sup_re.group(2) + r"}"
+            r"{" + sup_re.group(2).replace("_", "\,") + r"}^{" + sup_re.group(1) + r"}"
         )
         sup_var = sup_re.group(1) + "_" + sup_re.group(2)
         name = name.replace(sup_var, sup_str)
