@@ -27,7 +27,7 @@ jobs:
       with:
         delete-branch: true
         branch-suffix: short-commit-hash
-        commit-message: Work precision sets for version ${{ env.VERSION }}
-        title: Work precision sets for version ${{ env.VERSION }}
+        commit-message: Work precision sets for PyBaMM version ${{ env.VERSION }}
+        title: Work precision sets for PyBaMM version ${{ env.VERSION }}
         body: |
-            Update Work precision sets for version ${{ env.VERSION }} in release_work_precision_sets.md
+            Update work precision sets for PyBaMM version ${{ env.VERSION }} in `release_work_precision_sets.md`

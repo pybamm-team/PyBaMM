@@ -73,16 +73,7 @@ for params in parameters:
 
 
 plt.gca().legend(
-    (
-        "Marquis2019",
-        "NCA_Kim2011",
-        "Prada2013",
-        "Ramadass2004",
-        "Mohtat2020",
-        "Chen2020",
-        "Chen2020_plating",
-        "Ecker2015",
-    ),
+    parameters,
     loc="upper right",
 )
 plt.title("Work Precision Sets")
@@ -93,9 +84,9 @@ plt.ylabel("time(s)")
 plt.savefig(f"benchmarks/benchmark_images/time_vs_abstols_{pybamm.__version__}.png")
 
 
-x = f"## PyBaMM {pybamm.__version__}\n<img src='./benchmark_images/time_vs_abstols_{pybamm.__version__}.png'>"
+content = f"## PyBaMM {pybamm.__version__}\n<img src='./benchmark_images/time_vs_abstols_{pybamm.__version__}.png'>"
 
 with open("./benchmarks/release_work_precision_sets.md", "r") as original:
     data = original.read()
 with open("./benchmarks/release_work_precision_sets.md", "w") as modified:
-    modified.write(f"{x}\n{data}")
+    modified.write(f"{content}\n{data}")
