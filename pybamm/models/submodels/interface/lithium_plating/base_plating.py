@@ -49,7 +49,13 @@ class BasePlating(BaseInterface):
                 "interfacial current density": zero_av,
                 "Negative electrode lithium plating interfacial current "
                 "density": variables["Lithium plating interfacial current density"],
-                "Positive electrode lithium plating interfacial current density": zero,
+                "Negative electrode lithium plating interfacial current "
+                "density [A.m-2]": variables[
+                    "Lithium plating interfacial current density [A.m-2]"
+                ],
+                "Positive electrode lithium plating "
+                "interfacial current density": zero,
+                "Positive electrode lithium plating interfacial current density [A.m-2]": zero,
                 "Positive electrode lithium plating volumetric "
                 "interfacial current density": zero,
             }
