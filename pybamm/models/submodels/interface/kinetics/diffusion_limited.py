@@ -54,6 +54,10 @@ class DiffusionLimited(BaseInterface):
         variables.update(self._get_standard_exchange_current_variables(j0))
         variables.update(self._get_standard_overpotential_variables(eta_r))
 
+        variables.update(
+            self._get_standard_volumetric_current_density_variables(variables)
+        )
+
         # No SEI film resistance in this model
         eta_sei = pybamm.Scalar(0)
         variables.update(self._get_standard_sei_film_overpotential_variables(eta_sei))
