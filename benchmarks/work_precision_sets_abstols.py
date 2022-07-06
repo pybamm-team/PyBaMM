@@ -90,10 +90,10 @@ plt.xlabel("abstols")
 plt.xscale("log")
 plt.xticks(abstols)
 plt.ylabel("time(s)")
-plt.savefig("benchmarks/time_vs_abstols")
+plt.savefig(f"benchmarks/benchmark_images/time_vs_abstols_{pybamm.__version__}.png")
 
 
-x = f"## PyBaMM {pybamm.__version__}\n<img src = './time_vs_abstols.png'>"
+x = f"## PyBaMM {pybamm.__version__}\n<img src='./benchmark_images/time_vs_abstols_{pybamm.__version__}.png'>"
 
 with open("./benchmarks/release_work_precision_sets.md", "r") as original:
     data = original.read()
