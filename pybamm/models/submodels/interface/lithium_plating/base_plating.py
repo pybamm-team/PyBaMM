@@ -45,10 +45,18 @@ class BasePlating(BaseInterface):
                 ],
                 "X-averaged positive electrode lithium plating interfacial current "
                 "density": zero_av,
+                "X-averaged positive electrode lithium plating volumetric "
+                "interfacial current density": zero_av,
                 "Negative electrode lithium plating interfacial current "
                 "density": variables["Lithium plating interfacial current density"],
                 "Positive electrode lithium plating interfacial current density": zero,
+                "Positive electrode lithium plating volumetric "
+                "interfacial current density": zero,
             }
+        )
+
+        variables.update(
+            self._get_standard_volumetric_current_density_variables(variables)
         )
 
         return variables

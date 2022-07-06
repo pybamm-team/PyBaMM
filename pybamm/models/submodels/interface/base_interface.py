@@ -234,15 +234,6 @@ class BaseInterface(pybamm.BaseSubModel):
             + " electrode"
             + self.reaction_name
             + " interfacial current density [A.m-2]": j_scale * j_av,
-            self.domain
-            + " electrode"
-            + self.reaction_name
-            + " interfacial current density per volume [A.m-3]": i_typ / L_x * j,
-            "X-averaged "
-            + self.domain.lower()
-            + " electrode"
-            + self.reaction_name
-            + " interfacial current density per volume [A.m-3]": i_typ / L_x * j_av,
         }
 
         return variables
@@ -323,17 +314,35 @@ class BaseInterface(pybamm.BaseSubModel):
             + " electrode"
             + self.reaction_name
             + " exchange current density [A.m-2]": j_scale * j0_av,
-            self.domain
-            + " electrode"
-            + self.reaction_name
-            + " exchange current density per volume [A.m-3]": i_typ / L_x * j0,
-            "X-averaged "
-            + self.domain.lower()
-            + " electrode"
-            + self.reaction_name
-            + " exchange current density per volume [A.m-3]": i_typ / L_x * j0_av,
         }
 
+        return variables
+
+    def _get_standard_volumetric_current_density_variables(self, variables):
+        Domain = self.domain
+        domain = Domain.lower()
+        reaction_name = self.reaction_name
+
+        a = variables[f"{Domain} electrode surface area to volume ratio"]
+        a_av = variables[f"X-averaged {domain} electrode surface area to volume ratio"]
+        j = variables[f"{Domain} electrode{reaction_name} interfacial current density"]
+        j_av = variables[
+            f"X-averaged {domain} electrode{reaction_name} interfacial current density"
+        ]
+        scale = self.param.i_typ / self.param.L_x
+
+        variables.update(
+            {
+                f"{Domain} electrode{reaction_name} volumetric "
+                "interfacial current density": a * j,
+                f"X-averaged {domain} electrode{reaction_name} volumetric "
+                "interfacial current density": a_av * j_av,
+                f"{Domain} electrode{reaction_name} volumetric "
+                "interfacial current density [A.m-3]": scale * a * j,
+                f"X-averaged {domain} electrode{reaction_name} volumetric "
+                "interfacial current density [A.m-3]": scale * a_av * j_av,
+            }
+        )
         return variables
 
     def _get_standard_overpotential_variables(self, eta_r):
