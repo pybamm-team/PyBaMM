@@ -16,9 +16,9 @@ jobs:
       with:
         python-version: 3.9
     - name: Get current date
-      run: echo "VERSION=$(date +'v%y.%-m')" >> $GITHUB_ENV
+      run: echo "VERSION=$(date +'%y.%-m')" >> $GITHUB_ENV
     - name: Install PyBaMM
-      run: python -m pip install pybamm==22.6
+      run: python -m pip install pybamm==${{ env.VERSION }}
     - name: Run Solve time vs abstols
       run: |
         python benchmarks/work_precision_sets_abstols.py
