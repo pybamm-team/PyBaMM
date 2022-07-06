@@ -308,6 +308,9 @@ class BaseInterface(pybamm.BaseSubModel):
         return variables
 
     def _get_standard_volumetric_current_density_variables(self, variables):
+        if self.half_cell and self.domain == "Negative":
+            return variables
+
         Domain = self.domain
         domain = Domain.lower()
         reaction_name = self.reaction_name
