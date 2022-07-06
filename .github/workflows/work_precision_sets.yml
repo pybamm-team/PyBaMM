@@ -14,7 +14,7 @@ jobs:
     - name: Setup python
       uses: actions/setup-python@v4
       with:
-        python-version: 3.
+        python-version: 3.9
     - name: Get current date
       run: echo "VERSION=$(date +'v%y.%-m')" >> $GITHUB_ENV
     - name: Install PyBaMM
