@@ -84,7 +84,7 @@ plt.ylabel("time(s)")
 plt.savefig(f"benchmarks/benchmark_images/time_vs_abstols_{pybamm.__version__}.png")
 
 
-content = f"## PyBaMM {pybamm.__version__}\n<img src='./benchmark_images/time_vs_abstols_{pybamm.__version__}.png'>"
+content = f"## PyBaMM {pybamm.__version__}\n<img src='./benchmark_images/time_vs_abstols_{pybamm.__version__}.png'>"    # noqa
 
 with open("./benchmarks/release_work_precision_sets.md", "r") as original:
     data = original.read()
