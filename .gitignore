@@ -74,6 +74,7 @@ lib64
 share/
 pyvenv.cfg
 .vscode
+jason/
 
 # sundials
 sundials
