@@ -163,7 +163,17 @@ class BaseModel(pybamm.BaseBatteryModel):
 
         # Lithium lost to side reactions
         # Different way of measuring LLI but should give same value
-        LLI_sei = self.variables["Loss of lithium to SEI [mol]"]
+        phases_n = self.options.phase_number_to_names(
+            getattr(self.options, "negative")["particle phases"]
+        )
+
+        LLI_sei = sum(
+            self.variables[f"Loss of lithium to {phase_n} SEI [mol]"]
+            for phase_n in phases_n
+        )
+        self.variables["Loss of lithium to SEI [mol]"] = LLI_sei # Jason-added a new variable here
+        self.variables["Loss of capacity to SEI [A.h]"] = LLI_sei * param.F / 3600 
+
         if self.half_cell:
             LLI_pl = pybamm.Scalar(0)
         else:
@@ -261,6 +271,10 @@ class BaseModel(pybamm.BaseBatteryModel):
                     self.param, reaction_loc, self.options, phase
                 )
             self.submodels[f"{pref}sei"] = submod #Jason-where is the definition of submodels
+
+        # Submodel for the total sei, summing up each phase
+        if len(phases) > 1: # Jason-Positive has no sei, so do not use {domain} total sei here.
+            self.submodels["Negative total sei"] = pybamm.sei.Total(self.param, self.options)
 
     def set_lithium_plating_submodel(self):
         if self.options["lithium plating"] == "none":

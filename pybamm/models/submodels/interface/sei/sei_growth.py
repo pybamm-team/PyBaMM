@@ -201,8 +201,8 @@ class SEIGrowth(BaseModel):
 
     def set_initial_conditions(self, variables):
         if self.reaction_loc == "x-average":
-            L_inner = variables[f"X-averaged {phase_name}inner SEI thickness"]
-            L_outer = variables[f"X-averaged {phase_name}outer SEI thickness"]
+            L_inner = variables[f"X-averaged inner {phase_name}SEI thickness"]
+            L_outer = variables[f"X-averaged outer {phase_name}SEI thickness"]
         else:
             L_inner = variables[f"Inner {phase_name}SEI thickness"]
             L_outer = variables[f"Outer {phase_name}SEI thickness"]
