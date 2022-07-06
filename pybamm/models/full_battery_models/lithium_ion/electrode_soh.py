@@ -1,6 +1,7 @@
 #
 # A model to calculate electrode-specific SOH
 #
+from tabnanny import check
 import pybamm
 import numpy as np
 
@@ -91,72 +92,10 @@ class ElectrodeSOHC(pybamm.BaseModel):
         return pybamm.AlgebraicSolver()
 
 
-def solve_electrode_soh(x100_sim, C_sim, inputs, parameter_values):
-    param = pybamm.LithiumIonParameters()
+def solve_electrode_soh(x100_sim, C_sim, inputs):
+    _, x100_max, _, _ = check_esoh_feasible(C_sim.parameter_values, inputs)
 
-    Vmax = inputs["V_max"]
-    Vmin = inputs["V_min"]
-    Cp = inputs["C_p"]
-    Cn = inputs["C_n"]
-    n_Li = inputs["n_Li"]
-
-    y_100_min = 1e-6
-    x_100_upper_limit = ((n_Li * param.F) / 3600 - y_100_min * Cp) / Cn
-
-    OCPp_data = isinstance(parameter_values["Positive electrode OCP [V]"], tuple)
-    OCPn_data = isinstance(parameter_values["Negative electrode OCP [V]"], tuple)
-
-    if OCPp_data:
-        y_100_min = np.min(parameter_values["Positive electrode OCP [V]"][1][1])
-        x_100_upper_limit = (
-            n_Li * pybamm.constants.F.value / 3600 - y_100_min * Cp
-        ) / Cn
-
-        V_lower_bound = (
-            min(parameter_values["Positive electrode OCP [V]"][1][1])
-            - parameter_values["Negative electrode OCP [V]"](
-                x_100_upper_limit
-            ).evaluate()
-        )
-
-        V_upper_bound = (
-            max(parameter_values["Positive electrode OCP [V]"][1][1])
-            - parameter_values["Negative electrode OCP [V]"](
-                x_100_upper_limit
-            ).evaluate()
-        )
-
-    if OCPn_data:
-        x_100_min = np.min(parameter_values["Negative electrode OCP [V]"][1][1])
-        y_100_upper_limit = (
-            n_Li * pybamm.constants.F.value / 3600 - x_100_min * Cp
-        ) / Cn
-
-        V_lower_bound = parameter_values["Positive electrode OCP [V]"](
-            y_100_upper_limit
-        ).evaluate() - min(parameter_values["Negative electrode OCP [V]"][1][1])
-
-        V_upper_bound = max(
-            parameter_values["Positive electrode OCP [V]"](y_100_upper_limit).evaluate()
-        ) - min(parameter_values["Negative electrode OCP [V]"][1][1])
-
-    if OCPp_data or OCPn_data:
-
-        if V_lower_bound > Vmin:
-            raise (
-                ValueError(
-                    "Initial values are outside bounds of OCP data in parameters."
-                )
-            )
-
-        if V_upper_bound < Vmax:
-            raise (
-                ValueError(
-                    "Initial values are outside bounds of OCP data in parameters."
-                )
-            )
-
-    inputs.update({"x_100_init": min(x_100_upper_limit, 1 - 1e-6)})
+    inputs.update({"x_100_init": x100_max})
 
     x100_sol = x100_sim.solve([0], inputs=inputs)
     inputs["x_100"] = x100_sol["x_100"].data[0]
@@ -282,3 +221,5 @@ def check_esoh_feasible(parameter_values, inputs):
                 f"y:[{y100_min:.4f}, {y0_max:.4f}]."
             )
         )
+
+    return (x0_min, x100_max, y100_min, y0_max)

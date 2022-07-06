@@ -17,7 +17,7 @@ jobs:
         python-version: [3.8]
 
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
 
     - name: Get current date
       run: |
@@ -31,7 +31,7 @@ jobs:
         script: core.setFailed('This workflow should be triggered only at the end of the month, or else it will create a release for the wrong month.')
 
     - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v2
+      uses: actions/setup-python@v4
       with:
         python-version: ${{ matrix.python-version }}
 

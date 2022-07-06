@@ -73,6 +73,7 @@ class Solution(object):
         y_event=None,
         termination="final time",
         sensitivities=False,
+        check_solution=True,
     ):
         if not isinstance(all_ts, list):
             all_ts = [all_ts]
@@ -104,6 +105,10 @@ class Solution(object):
         self.has_symbolic_inputs = any(
             isinstance(v, casadi.MX) for v in self.all_inputs[0].values()
         )
+
+        # Check no ys are too large
+        if check_solution and not self.has_symbolic_inputs:
+            self.check_ys_are_not_too_large()
 
         # Copy the timescale_eval and lengthscale_evals if they exist
         if hasattr(all_models[0], "timescale_eval"):
@@ -311,6 +316,24 @@ class Solution(object):
                 "The solution is made up from different models, so `y` cannot be "
                 "computed explicitly."
             )
+
+    def check_ys_are_not_too_large(self):
+        # Only check last one so that it doesn't take too long
+        # We only care about the cases where y is growing too large without any
+        # restraint, so if y gets large in the middle then comes back down that is ok
+        y, model = self.all_ys[-1], self.all_models[-1]
+        y = y[:, -1]
+        if np.any(y > pybamm.settings.max_y_value):
+            for var in [*model.rhs.keys(), *model.algebraic.keys()]:
+                y_var = y[model.variables[var.name].y_slices[0]]
+                if np.any(y_var > pybamm.settings.max_y_value):
+                    pybamm.logger.error(
+                        f"Solution for '{var}' exceeds the maximum allowed value "
+                        f"of `{pybamm.settings.max_y_value}. This could be due to "
+                        "incorrect nondimensionalisation, model formulation, or "
+                        "parameter values. The maximum allowed value is set by "
+                        "'pybammm.settings.max_y_value'."
+                    )
 
     @property
     def all_ts(self):
@@ -884,9 +907,7 @@ def get_cycle_summary_variables(cycle_solution, esoh_sims):
         }
 
         try:
-            esoh_sol = pybamm.lithium_ion.solve_electrode_soh(
-                x100_sim, C_sim, inputs, C_sim.parameter_values
-            )
+            esoh_sol = pybamm.lithium_ion.solve_electrode_soh(x100_sim, C_sim, inputs)
 
         except pybamm.SolverError:  # pragma: no cover
             raise pybamm.SolverError(
