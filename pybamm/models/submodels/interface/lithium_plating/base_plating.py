@@ -45,10 +45,18 @@ class BasePlating(BaseInterface):
                 ],
                 "X-averaged positive electrode lithium plating interfacial current "
                 "density": zero_av,
+                "X-averaged positive electrode lithium plating volumetric "
+                "interfacial current density": zero_av,
                 "Negative electrode lithium plating interfacial current "
                 "density": variables["Lithium plating interfacial current density"],
                 "Positive electrode lithium plating interfacial current density": zero,
+                "Positive electrode lithium plating volumetric "
+                "interfacial current density": zero,
             }
+        )
+
+        variables.update(
+            self._get_standard_volumetric_current_density_variables(variables)
         )
 
         return variables
@@ -106,8 +114,10 @@ class BasePlating(BaseInterface):
             "X-averaged dead lithium thickness [m]": L_dead_Li_av * L_scale,
             "Loss of lithium to lithium plating [mol]": (Q_plated_Li + Q_dead_Li)
             * c_scale,
-            "Loss of capacity to lithium plating [A.h]":
-            (Q_plated_Li + Q_dead_Li) * c_scale * param.F / 3600,
+            "Loss of capacity to lithium plating [A.h]": (Q_plated_Li + Q_dead_Li)
+            * c_scale
+            * param.F
+            / 3600,
         }
 
         return variables

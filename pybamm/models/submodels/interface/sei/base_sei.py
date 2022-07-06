@@ -37,11 +37,18 @@ class BaseModel(BaseInterface):
                     "density": variables["SEI interfacial current density"],
                 }
             )
+            variables.update(
+                self._get_standard_volumetric_current_density_variables(variables)
+            )
+
         variables.update(
             {
                 "X-averaged positive electrode SEI interfacial current "
                 "density": zero_av,
                 "Positive electrode SEI interfacial current density": zero,
+                "X-averaged positive electrode SEI volumetric interfacial current "
+                "density": zero_av,
+                "Positive electrode SEI volumetric interfacial current density": zero,
             }
         )
 
