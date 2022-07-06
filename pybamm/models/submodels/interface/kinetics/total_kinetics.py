@@ -31,11 +31,6 @@ class TotalKinetics(pybamm.BaseSubModel):
         This function also creates the "total source term" variables by summing all
         the reactions
         """
-        param = self.param
-
-        i_typ = param.i_typ
-        L_x = param.L_x
-
         if self.chemistry == "lithium-ion":
             reaction_names = ["", "SEI "]
             if not self.half_cell:
@@ -84,9 +79,6 @@ class TotalKinetics(pybamm.BaseSubModel):
                 }
             )
         for reaction_name in reaction_names:
-            j_n_scale = param.n.prim.j_scale
-            j_p_scale = param.p.prim.j_scale
-
             j_p_av = variables[
                 f"X-averaged positive electrode {reaction_name}"
                 "interfacial current density"
@@ -96,10 +88,13 @@ class TotalKinetics(pybamm.BaseSubModel):
             j_p = variables[
                 f"Positive electrode {reaction_name}interfacial current density"
             ]
+            j_p_dim = variables[
+                f"Positive electrode {reaction_name}interfacial current density [A.m-2]"
+            ]
 
             if self.half_cell:
                 j = pybamm.concatenation(zero_s, j_p)
-                j_dim = pybamm.concatenation(zero_s, j_p_scale * j_p)
+                j_dim = pybamm.concatenation(zero_s, j_p_dim)
             else:
                 j_n_av = variables[
                     f"X-averaged negative electrode {reaction_name}"
@@ -108,25 +103,35 @@ class TotalKinetics(pybamm.BaseSubModel):
                 j_n = variables[
                     f"Negative electrode {reaction_name}interfacial current density"
                 ]
+                j_n_dim = variables[
+                    f"Negative electrode {reaction_name}"
+                    "interfacial current density [A.m-2]"
+                ]
                 j = pybamm.concatenation(j_n, zero_s, j_p)
-                j_dim = pybamm.concatenation(j_n_scale * j_n, zero_s, j_p_scale * j_p)
+                j_dim = pybamm.concatenation(j_n_dim, zero_s, j_p_dim)
 
             if reaction_name not in ["SEI ", "lithium plating "]:
                 j0_p = variables[
                     f"Positive electrode {reaction_name}exchange current density"
                 ]
+                j0_p_dim = variables[
+                    f"Positive electrode {reaction_name}"
+                    "exchange current density [A.m-2]"
+                ]
 
                 if self.half_cell:
                     j0 = pybamm.concatenation(zero_s, j0_p)
-                    j0_dim = pybamm.concatenation(zero_s, j_p_scale * j0_p)
+                    j0_dim = pybamm.concatenation(zero_s, j0_p_dim)
                 else:
                     j0_n = variables[
                         f"Negative electrode {reaction_name}exchange current density"
                     ]
+                    j0_n_dim = variables[
+                        f"Negative electrode {reaction_name}"
+                        "exchange current density [A.m-2]"
+                    ]
                     j0 = pybamm.concatenation(j0_n, zero_s, j0_p)
-                    j0_dim = pybamm.concatenation(
-                        j_n_scale * j0_n, zero_s, j_p_scale * j0_p
-                    )
+                    j0_dim = pybamm.concatenation(j0_n_dim, zero_s, j0_p_dim)
                 new_variables.update(
                     {
                         f"{reaction_name}interfacial ".capitalize()
