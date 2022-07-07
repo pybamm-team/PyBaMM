@@ -58,8 +58,8 @@ class TotalKinetics(pybamm.BaseSubModel):
                 "Sum of volumetric interfacial current densities": 0,
                 "Sum of positive electrode interfacial current densities": 0,
                 "Sum of x-averaged positive electrode interfacial current densities": 0,
-                "Sum of volumetric positive electrode interfacial current densities": 0,
-                "Sum of x-averaged volumetric positive electrode "
+                "Sum of positive electrode volumetric interfacial current densities": 0,
+                "Sum of x-averaged positive electrode volumetric "
                 "interfacial current densities": 0,
             }
         )
@@ -72,9 +72,9 @@ class TotalKinetics(pybamm.BaseSubModel):
                     "Sum of negative electrode interfacial current densities": 0,
                     "Sum of x-averaged negative electrode "
                     "interfacial current densities": 0,
-                    "Sum of volumetric negative electrode "
+                    "Sum of negative electrode volumetric "
                     "interfacial current densities": 0,
-                    "Sum of x-averaged volumetric negative electrode "
+                    "Sum of x-averaged negative electrode volumetric "
                     "interfacial current densities": 0,
                 }
             )
@@ -206,10 +206,10 @@ class TotalKinetics(pybamm.BaseSubModel):
                 "Sum of x-averaged positive electrode interfacial current densities"
             ] += j_p_av
             new_variables[
-                "Sum of volumetric positive electrode interfacial current densities"
+                "Sum of positive electrode volumetric interfacial current densities"
             ] += a_j_p
             new_variables[
-                "Sum of x-averaged volumetric positive electrode"
+                "Sum of x-averaged positive electrode volumetric "
                 " interfacial current densities"
             ] += pybamm.x_average(a_j_p)
 
@@ -229,11 +229,11 @@ class TotalKinetics(pybamm.BaseSubModel):
                     "Sum of x-averaged negative electrode interfacial current densities"
                 ] += j_n_av
                 new_variables[
-                    "Sum of volumetric negative electrode "
+                    "Sum of negative electrode volumetric "
                     "interfacial current densities"
                 ] += a_j_n
                 new_variables[
-                    "Sum of x-averaged volumetric negative electrode "
+                    "Sum of x-averaged negative electrode volumetric "
                     "interfacial current densities"
                 ] += pybamm.x_average(a_j_n)
 
