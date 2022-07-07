@@ -35,9 +35,6 @@ class BaseInterface(pybamm.BaseSubModel):
         elif reaction == "lead-acid oxygen":
             self.reaction_name = " oxygen"
             self.Reaction_icd = "Oxygen interfacial current density"
-        elif reaction == "lithium-ion oxygen":
-            self.reaction_name = " oxygen"
-            self.Reaction_icd = "Oxygen interfacial current density"
         elif reaction == "SEI":
             self.reaction_name = " SEI"
             self.Reaction_icd = "SEI interfacial current density"
@@ -135,8 +132,6 @@ class BaseInterface(pybamm.BaseSubModel):
                 j0 = pybamm.Scalar(0)
             elif self.domain == "Positive":
                 j0 = param.p.j0_Ox(c_e, T)
-        else:
-            j0 = pybamm.Scalar(0)
 
         return j0
 
@@ -150,8 +145,6 @@ class BaseInterface(pybamm.BaseSubModel):
             return self.domain_param.ne
         elif self.reaction == "lead-acid oxygen":
             return self.param.ne_Ox
-        else:
-            return pybamm.Scalar(0)
 
     def _get_average_total_interfacial_current_density(self, variables):
         """
