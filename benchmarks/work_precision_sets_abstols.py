@@ -62,11 +62,12 @@ for params in parameters:
         disc = pybamm.Discretisation(mesh, model.default_spatial_methods)
         disc.process_model(model)
         time = 0
-        for k in range(0, 20):
+        runs = 20
+        for k in range(0, runs):
 
             solution = solver.solve(model, t_eval=t_eval)
             time += solution.solve_time.value
-        time = time / 20
+        time = time / runs
 
         time_points.append(time)
     plt.plot(abstols, time_points)
@@ -84,7 +85,7 @@ plt.ylabel("time(s)")
 plt.savefig(f"benchmarks/benchmark_images/time_vs_abstols_{pybamm.__version__}.png")
 
 
-content = f"## PyBaMM {pybamm.__version__}\n<img src='./benchmark_images/time_vs_abstols_{pybamm.__version__}.png'>"    # noqa
+content = f"## PyBaMM {pybamm.__version__}\n<img src='./benchmark_images/time_vs_abstols_{pybamm.__version__}.png'>"  # noqa
 
 with open("./benchmarks/release_work_precision_sets.md", "r") as original:
     data = original.read()
