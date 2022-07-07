@@ -425,6 +425,7 @@ class BaseInterface(pybamm.BaseSubModel):
                 + " electrode surface potential difference [V]": delta_phi_av_dim,
             }
 
+        print("interface")
         return variables
 
     def _get_standard_surface_potential_difference_variables(self, delta_phi):
