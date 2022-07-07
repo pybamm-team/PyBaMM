@@ -35,8 +35,6 @@ class BaseInterface(pybamm.BaseSubModel):
             self.reaction_name = ""  # empty reaction name for the main reaction
         elif reaction == "lead-acid oxygen":
             self.reaction_name = "oxygen "
-        elif reaction == "lithium-ion oxygen":
-            self.reaction_name = "oxygen "
         elif reaction == "SEI":
             self.reaction_name = "SEI "
         elif reaction == "lithium plating":
@@ -133,8 +131,6 @@ class BaseInterface(pybamm.BaseSubModel):
                 j0 = pybamm.Scalar(0)
             elif self.domain == "Positive":
                 j0 = param.p.prim.j0_Ox(c_e, T)
-        else:
-            j0 = pybamm.Scalar(0)
 
         return j0
 
@@ -149,8 +145,6 @@ class BaseInterface(pybamm.BaseSubModel):
             return self.phase_param.ne
         elif self.reaction == "lead-acid oxygen":
             return self.param.ne_Ox
-        else:
-            return pybamm.Scalar(0)
 
     def _get_average_total_interfacial_current_density(self, variables):
         """
@@ -290,6 +284,9 @@ class BaseInterface(pybamm.BaseSubModel):
         return variables
 
     def _get_standard_volumetric_current_density_variables(self, variables):
+        if self.half_cell and self.domain == "Negative":
+            return variables
+
         Domain = self.domain
         domain = Domain.lower()
         reaction_name = self.reaction_name

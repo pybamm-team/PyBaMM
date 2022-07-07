@@ -102,10 +102,6 @@ class InverseButlerVolmer(BaseInterface):
             )
         )
 
-        variables.update(
-            self._get_standard_volumetric_current_density_variables(variables)
-        )
-
         return variables
 
     def _get_overpotential(self, j, j0, ne, T, u):
@@ -161,6 +157,9 @@ class CurrentForInverseButlerVolmer(BaseInterface):
             j = j_tot
 
         variables.update(self._get_standard_interfacial_current_variables(j))
+        variables.update(
+            self._get_standard_volumetric_current_density_variables(variables)
+        )
 
         return variables
 
