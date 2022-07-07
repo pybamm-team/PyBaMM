@@ -109,3 +109,8 @@ class BaseModel(pybamm.BaseBatteryModel):
     def set_lithium_plating_submodel(self):
 
         self.submodels["lithium plating"] = pybamm.lithium_plating.NoPlating(self.param)
+
+    def set_total_kinetics_submodel(self):
+        self.submodels["total interface"] = pybamm.kinetics.TotalKinetics(
+            self.param, "lead-acid", self.options
+        )

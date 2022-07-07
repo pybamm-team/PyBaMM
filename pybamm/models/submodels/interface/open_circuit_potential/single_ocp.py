@@ -51,9 +51,5 @@ class SingleOpenCircuitPotential(BaseOpenCircuitPotential):
             ocp = self.domain_param.U_Ox
             dUdT = pybamm.Scalar(0)
 
-        else:
-            ocp = pybamm.Scalar(0)
-            dUdT = pybamm.Scalar(0)
-
         variables.update(self._get_standard_ocp_variables(ocp, dUdT))
         return variables
