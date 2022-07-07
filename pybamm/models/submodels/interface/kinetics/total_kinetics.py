@@ -210,7 +210,7 @@ class TotalKinetics(pybamm.BaseSubModel):
             ] += a_j_p
             new_variables[
                 "Sum of x-averaged positive electrode volumetric "
-                " interfacial current densities"
+                "interfacial current densities"
             ] += pybamm.x_average(a_j_p)
 
             if not self.half_cell:
