@@ -60,7 +60,7 @@ class Full(BaseElectrolyteConductivity):
         i_e = variables["Electrolyte current density"]
 
         # Variable summing all of the interfacial current densities
-        sum_a_j = variables["Sum of area-weighted interfacial current densities"]
+        sum_a_j = variables["Sum of volumetric interfacial current densities"]
 
         # Override print_name
         sum_a_j.print_name = "aj"

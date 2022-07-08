@@ -72,8 +72,8 @@ class BaseMechanics(pybamm.BaseSubModel):
         L0 = domain_param.L
         c_init = pybamm.r_average(domain_param.prim.c_init)
         v_change = pybamm.x_average(
-            eps_s * domain_param.t_change(c_s_rav)
-        ) - pybamm.x_average(eps_s * domain_param.t_change(c_init))
+            eps_s * domain_param.prim.t_change(c_s_rav)
+        ) - pybamm.x_average(eps_s * domain_param.prim.t_change(c_init))
 
         cell_thickness_change += self.param.n_electrodes_parallel * v_change * L0
         disp_surf_dim = Omega * R0 / 3 * (c_s_rav - c_0) * c_scale

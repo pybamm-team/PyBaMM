@@ -12,6 +12,7 @@
 
 ## Breaking changes
 
+-   Parameters specific to a (primary/secondary) phase in a domain are doubly nested. e.g. `param.c_n_max` is now `param.n.prim.c_max` ([#2166](https://github.com/pybamm-team/PyBaMM/pull/2166))
 -   Exchange-current density functions (and some other functions) now take an additional argument, the maximum particle concentration for that phase ([#2134](https://github.com/pybamm-team/PyBaMM/pull/2134))
 
 # [v22.6](https://github.com/pybamm-team/PyBaMM/tree/v22.6) - 2022-06-30
@@ -47,7 +48,7 @@
 ## Breaking changes
 
 -   Exchange-current density functions now take a fourth argument, the maximum particle concentration for that phase
--   Changed domain-specific parameter names to a nested attribute. `param.l_n` is now `param.n.l`. Parameters specific to a (primary/secondary) phase in a domain are doubly nested. e.g. `param.c_n_max` is now `param.n.prim.c_max` ([#2063](https://github.com/pybamm-team/PyBaMM/pull/2063))
+-   Changed domain-specific parameter names to a nested attribute. `param.l_n` is now `param.n.l` ([#2063](https://github.com/pybamm-team/PyBaMM/pull/2063))
 
 # [v22.4](https://github.com/pybamm-team/PyBaMM/tree/v22.4) - 2022-04-30
 

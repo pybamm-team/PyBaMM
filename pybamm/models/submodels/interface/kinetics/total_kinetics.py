@@ -31,11 +31,6 @@ class TotalKinetics(pybamm.BaseSubModel):
         This function also creates the "total source term" variables by summing all
         the reactions
         """
-        param = self.param
-
-        i_typ = param.i_typ
-        L_x = param.L_x
-
         if self.chemistry == "lithium-ion":
             reaction_names = ["", "SEI "]
             if not self.half_cell:
@@ -63,8 +58,8 @@ class TotalKinetics(pybamm.BaseSubModel):
                 "Sum of volumetric interfacial current densities": 0,
                 "Sum of positive electrode interfacial current densities": 0,
                 "Sum of x-averaged positive electrode interfacial current densities": 0,
-                "Sum of volumetric positive electrode interfacial current densities": 0,
-                "Sum of x-averaged volumetric positive electrode "
+                "Sum of positive electrode volumetric interfacial current densities": 0,
+                "Sum of x-averaged positive electrode volumetric "
                 "interfacial current densities": 0,
             }
         )
@@ -77,16 +72,13 @@ class TotalKinetics(pybamm.BaseSubModel):
                     "Sum of negative electrode interfacial current densities": 0,
                     "Sum of x-averaged negative electrode "
                     "interfacial current densities": 0,
-                    "Sum of volumetric negative electrode "
+                    "Sum of negative electrode volumetric "
                     "interfacial current densities": 0,
-                    "Sum of x-averaged volumetric negative electrode "
+                    "Sum of x-averaged negative electrode volumetric "
                     "interfacial current densities": 0,
                 }
             )
         for reaction_name in reaction_names:
-            j_n_scale = param.n.j_scale
-            j_p_scale = param.p.j_scale
-
             j_p_av = variables[
                 f"X-averaged positive electrode {reaction_name}"
                 "interfacial current density"
@@ -96,10 +88,13 @@ class TotalKinetics(pybamm.BaseSubModel):
             j_p = variables[
                 f"Positive electrode {reaction_name}interfacial current density"
             ]
+            j_p_dim = variables[
+                f"Positive electrode {reaction_name}interfacial current density [A.m-2]"
+            ]
 
             if self.half_cell:
                 j = pybamm.concatenation(zero_s, j_p)
-                j_dim = pybamm.concatenation(zero_s, j_p_scale * j_p)
+                j_dim = pybamm.concatenation(zero_s, j_p_dim)
             else:
                 j_n_av = variables[
                     f"X-averaged negative electrode {reaction_name}"
@@ -108,8 +103,12 @@ class TotalKinetics(pybamm.BaseSubModel):
                 j_n = variables[
                     f"Negative electrode {reaction_name}interfacial current density"
                 ]
+                j_n_dim = variables[
+                    f"Negative electrode {reaction_name}"
+                    "interfacial current density [A.m-2]"
+                ]
                 j = pybamm.concatenation(j_n, zero_s, j_p)
-                j_dim = pybamm.concatenation(j_n_scale * j_n, zero_s, j_p_scale * j_p)
+                j_dim = pybamm.concatenation(j_n_dim, zero_s, j_p_dim)
 
             if reaction_name not in ["SEI ", "lithium plating "]:
                 j0_p = variables[
@@ -119,18 +118,24 @@ class TotalKinetics(pybamm.BaseSubModel):
                     f"Positive electrode {reaction_name}exchange current density"
 >>>>>>> issue-2026-total-reaction
                 ]
+                j0_p_dim = variables[
+                    f"Positive electrode {reaction_name}"
+                    "exchange current density [A.m-2]"
+                ]
 
                 if self.half_cell:
                     j0 = pybamm.concatenation(zero_s, j0_p)
-                    j0_dim = pybamm.concatenation(zero_s, j_p_scale * j0_p)
+                    j0_dim = pybamm.concatenation(zero_s, j0_p_dim)
                 else:
                     j0_n = variables[
                         f"Negative electrode {reaction_name}exchange current density"
                     ]
+                    j0_n_dim = variables[
+                        f"Negative electrode {reaction_name}"
+                        "exchange current density [A.m-2]"
+                    ]
                     j0 = pybamm.concatenation(j0_n, zero_s, j0_p)
-                    j0_dim = pybamm.concatenation(
-                        j_n_scale * j0_n, zero_s, j_p_scale * j0_p
-                    )
+                    j0_dim = pybamm.concatenation(j0_n_dim, zero_s, j0_p_dim)
                 new_variables.update(
                     {
                         f"{reaction_name}interfacial ".capitalize()
@@ -156,7 +161,7 @@ class TotalKinetics(pybamm.BaseSubModel):
                 s_n, s_p = 1, 1
             elif self.chemistry == "lead-acid":
                 if reaction_name == "":  # main reaction
-                    s_n, s_p = self.param.n.s_plus_S, self.param.p.s_plus_S
+                    s_n, s_p = self.param.n.prim.s_plus_S, self.param.p.prim.s_plus_S
                 elif reaction_name == "oxygen ":
                     s_n, s_p = self.param.s_plus_Ox, self.param.s_plus_Ox
             if self.half_cell:
@@ -205,11 +210,11 @@ class TotalKinetics(pybamm.BaseSubModel):
                 "Sum of x-averaged positive electrode interfacial current densities"
             ] += j_p_av
             new_variables[
-                "Sum of volumetric positive electrode interfacial current densities"
+                "Sum of positive electrode volumetric interfacial current densities"
             ] += a_j_p
             new_variables[
-                "Sum of x-averaged volumetric positive electrode"
-                " interfacial current densities"
+                "Sum of x-averaged positive electrode volumetric "
+                "interfacial current densities"
             ] += pybamm.x_average(a_j_p)
 
             if not self.half_cell:
@@ -228,11 +233,11 @@ class TotalKinetics(pybamm.BaseSubModel):
                     "Sum of x-averaged negative electrode interfacial current densities"
                 ] += j_n_av
                 new_variables[
-                    "Sum of volumetric negative electrode "
+                    "Sum of negative electrode volumetric "
                     "interfacial current densities"
                 ] += a_j_n
                 new_variables[
-                    "Sum of x-averaged volumetric negative electrode "
+                    "Sum of x-averaged negative electrode volumetric "
                     "interfacial current densities"
                 ] += pybamm.x_average(a_j_n)
 

@@ -72,11 +72,8 @@ class BaseModel(pybamm.BaseBatteryModel):
         self.set_sei_submodel()
         self.set_lithium_plating_submodel()
         self.set_total_kinetics_submodel()
-<<<<<<< HEAD
 
         self.set_standard_output_variables()
-=======
->>>>>>> issue-2026-total-reaction
 
         if self.half_cell:
             # This also removes "negative electrode" submodels, so should be done last

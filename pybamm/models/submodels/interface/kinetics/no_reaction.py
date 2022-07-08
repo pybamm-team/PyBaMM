@@ -37,6 +37,12 @@ class NoReaction(BaseInterface):
         variables.update(self._get_standard_exchange_current_variables(zero))
         return variables
 
+    def get_coupled_variables(self, variables):
+        variables.update(
+            self._get_standard_volumetric_current_density_variables(variables)
+        )
+        return variables
+
     def _get_dj_dc(self, variables):
         return pybamm.Scalar(0)
 
