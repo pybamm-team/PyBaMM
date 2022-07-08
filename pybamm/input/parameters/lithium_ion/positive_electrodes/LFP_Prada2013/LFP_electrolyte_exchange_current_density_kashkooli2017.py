@@ -1,7 +1,7 @@
-from pybamm import exp, constants, Parameter
+from pybamm import exp, constants
 
 
-def LFP_electrolyte_exchange_current_density_kashkooli2017(c_e, c_s_surf, T):  # , 1
+def LFP_electrolyte_exchange_current_density_kashkooli2017(c_e, c_s_surf, c_s_max, T):
     """
     Exchange-current density for Butler-Volmer reactions between LFP and electrolyte
 
@@ -18,6 +18,8 @@ def LFP_electrolyte_exchange_current_density_kashkooli2017(c_e, c_s_surf, T):  #
         Electrolyte concentration [mol.m-3]
     c_s_surf : :class:`pybamm.Symbol`
         Particle concentration [mol.m-3]
+    c_s_max : :class:`pybamm.Symbol`
+        Maximum particle concentration [mol.m-3]
     T : :class:`pybamm.Symbol`
         Temperature [K]
 
@@ -30,8 +32,7 @@ def LFP_electrolyte_exchange_current_density_kashkooli2017(c_e, c_s_surf, T):  #
     m_ref = 6 * 10 ** (-7)  # (A/m2)(mol/m3)**1.5 - includes ref concentrations
     E_r = 39570
     arrhenius = exp(E_r / constants.R * (1 / 298.15 - 1 / T))
-    c_p_max = Parameter("Maximum concentration in positive electrode [mol.m-3]")
 
     return (
-        m_ref * arrhenius * c_e ** 0.5 * c_s_surf ** 0.5 * (c_p_max - c_s_surf) ** 0.5
+        m_ref * arrhenius * c_e ** 0.5 * c_s_surf ** 0.5 * (c_s_max - c_s_surf) ** 0.5
     )

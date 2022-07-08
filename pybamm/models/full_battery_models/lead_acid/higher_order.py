@@ -41,6 +41,7 @@ class BaseHigherOrderModel(BaseModel):
         self.set_electrolyte_diffusion_submodel()
         self.set_other_species_diffusion_submodels()
         # Average interface submodel to get average first-order potential differences
+        self.set_open_circuit_potential_submodel()
         self.set_average_interfacial_submodel()
         # Electrolyte and solid submodels to get full first-order potentials
         self.set_negative_electrode_submodel()
@@ -56,6 +57,7 @@ class BaseHigherOrderModel(BaseModel):
         self.set_current_collector_submodel()
         self.set_sei_submodel()
         self.set_lithium_plating_submodel()
+        self.set_total_kinetics_submodel()
 
         if build:
             self.build_model()

@@ -37,33 +37,11 @@ class DFN(BaseModel):
     """
 
     def __init__(self, options=None, name="Doyle-Fuller-Newman model", build=True):
-        super().__init__(options, name)
         # For degradation models we use the full form since this is a full-order model
         self.x_average = False
+        super().__init__(options, name)
 
-        self.set_external_circuit_submodel()
-        self.set_porosity_submodel()
-        self.set_interface_utilisation_submodel()
-        self.set_crack_submodel()
-        self.set_active_material_submodel()
-        self.set_transport_efficiency_submodels()
-        self.set_convection_submodel()
-        self.set_intercalation_kinetics_submodel()
-        self.set_other_reaction_submodels_to_zero()
-        self.set_particle_submodel()
-        self.set_solid_submodel()
-        self.set_electrolyte_submodel()
-        self.set_thermal_submodel()
-        self.set_current_collector_submodel()
-        self.set_sei_submodel()
-        self.set_lithium_plating_submodel()
-
-        if self.half_cell:
-            # This also removes "negative electrode" submodels, so should be done last
-            self.set_li_metal_counter_electrode_submodels()
-
-        if build:
-            self.build_model()
+        self.set_submodels(build)
 
         pybamm.citations.register("Doyle1993")
 

@@ -16,7 +16,7 @@ class TestQuickPlot(unittest.TestCase):
         c = pybamm.Variable("c", domain=[])
 
         # Simple ODEs
-        model.rhs = {a: pybamm.Scalar(2), b: pybamm.Scalar(0), c: -c}
+        model.rhs = {a: pybamm.Scalar(0.2), b: pybamm.Scalar(0), c: -c}
 
         # Simple initial conditions
         model.initial_conditions = {
@@ -28,6 +28,7 @@ class TestQuickPlot(unittest.TestCase):
         # Broadcast some of the variables
         model.variables = {
             "a": a,
+            "b": b,
             "b broadcasted": pybamm.FullBroadcast(b, whole_cell, "current collector"),
             "c broadcasted": pybamm.FullBroadcast(
                 c, ["negative electrode", "separator"], "current collector"
@@ -146,7 +147,7 @@ class TestQuickPlot(unittest.TestCase):
             quick_plot.plots[("a",)][0][0].get_xdata(), t_eval
         )
         np.testing.assert_array_almost_equal(
-            quick_plot.plots[("a",)][0][0].get_ydata(), 2 * t_eval
+            quick_plot.plots[("a",)][0][0].get_ydata(), 0.2 * t_eval
         )
         quick_plot = pybamm.QuickPlot(solution, ["a"], time_unit="minutes")
         quick_plot.plot(0)
@@ -155,7 +156,7 @@ class TestQuickPlot(unittest.TestCase):
             quick_plot.plots[("a",)][0][0].get_xdata(), t_eval / 60
         )
         np.testing.assert_array_almost_equal(
-            quick_plot.plots[("a",)][0][0].get_ydata(), 2 * t_eval
+            quick_plot.plots[("a",)][0][0].get_ydata(), 0.2 * t_eval
         )
         quick_plot = pybamm.QuickPlot(solution, ["a"], time_unit="hours")
         quick_plot.plot(0)
@@ -164,7 +165,7 @@ class TestQuickPlot(unittest.TestCase):
             quick_plot.plots[("a",)][0][0].get_xdata(), t_eval / 3600
         )
         np.testing.assert_array_almost_equal(
-            quick_plot.plots[("a",)][0][0].get_ydata(), 2 * t_eval
+            quick_plot.plots[("a",)][0][0].get_ydata(), 0.2 * t_eval
         )
         with self.assertRaisesRegex(ValueError, "time unit"):
             pybamm.QuickPlot(solution, ["a"], time_unit="bad unit")

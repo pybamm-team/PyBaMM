@@ -902,7 +902,7 @@ class BaseModel:
         div = "-----------------------------------------"
         symbol = find_symbol_in_model(self, symbol_name)
 
-        if not symbol:
+        if symbol is None:
             return None
 
         print(div)
@@ -1202,14 +1202,14 @@ def find_symbol_in_tree(tree, name):
     elif len(tree.children) > 0:
         for child in tree.children:
             child_return = find_symbol_in_tree(child, name)
-            if child_return:
+            if child_return is not None:
                 return child_return
 
 
 def find_symbol_in_dict(dic, name):
     for tree in dic.values():
         tree_return = find_symbol_in_tree(tree, name)
-        if tree_return:
+        if tree_return is not None:
             return tree_return
 
 
@@ -1217,7 +1217,7 @@ def find_symbol_in_model(model, name):
     dics = [model.rhs, model.algebraic, model.variables]
     for dic in dics:
         dic_return = find_symbol_in_dict(dic, name)
-        if dic_return:
+        if dic_return is not None:
             return dic_return
 
 
