@@ -477,14 +477,7 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                             "Values must be strings or (in some cases) "
                             "2-tuples of strings"
                         )
-                # flatten value
-                value_list = []
                 for val in value:
-                    if isinstance(val, tuple):
-                        value_list.extend(val)
-                    else:
-                        value_list.append(val)
-                for val in value_list:
                     if option == "timescale":
                         if not (val == "default" or isinstance(val, numbers.Number)):
                             raise pybamm.OptionError(
@@ -541,14 +534,6 @@ class BatteryModelDomainOptions(dict):
         else:
             # 2-tuple, first is negative domain, second is positive domain
             return options[self.index]
-
-    @property
-    def primary(self):
-        return BatteryModelPhaseOptions(self, 0)
-
-    @property
-    def secondary(self):
-        return BatteryModelPhaseOptions(self, 1)
 
 
 class BaseBatteryModel(pybamm.BaseModel):
