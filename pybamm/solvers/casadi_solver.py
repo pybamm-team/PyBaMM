@@ -180,6 +180,7 @@ class CasadiSolver(pybamm.BaseSolver):
             # Check if the sign of an event changes, if so find an accurate
             # termination point and exit
             solution = self._solve_for_event(solution, init_event_signs)
+            solution.check_ys_are_not_too_large()
             return solution
         elif self.mode in ["safe", "safe without grid"]:
             y0 = model.y0
@@ -289,6 +290,7 @@ class CasadiSolver(pybamm.BaseSolver):
             if bool(model.calculate_sensitivities):
                 solution.sensitivities = True
 
+            solution.check_ys_are_not_too_large()
             return solution
 
     def _solve_for_event(self, coarse_solution, init_event_signs):
@@ -704,6 +706,7 @@ class CasadiSolver(pybamm.BaseSolver):
                     model,
                     inputs_dict,
                     sensitivities=extract_sensitivities_in_solution,
+                    check_solution=False,
                 )
                 sol.integration_time = integration_time
                 return sol
@@ -738,6 +741,7 @@ class CasadiSolver(pybamm.BaseSolver):
                 model,
                 inputs_dict,
                 sensitivities=extract_sensitivities_in_solution,
+                check_solution=False,
             )
             sol.integration_time = integration_time
             return sol

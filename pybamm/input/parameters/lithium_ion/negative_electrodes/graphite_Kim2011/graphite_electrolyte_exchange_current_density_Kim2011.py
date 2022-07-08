@@ -1,7 +1,7 @@
 from pybamm import exp, constants, Parameter
 
 
-def graphite_electrolyte_exchange_current_density_Kim2011(c_e, c_s_surf, T):
+def graphite_electrolyte_exchange_current_density_Kim2011(c_e, c_s_surf, c_s_max, T):
     """
     Exchange-current density for Butler-Volmer reactions between graphite and LiPF6 in
     EC:DMC
@@ -20,6 +20,8 @@ def graphite_electrolyte_exchange_current_density_Kim2011(c_e, c_s_surf, T):
         Electrolyte concentration [mol.m-3]
     c_s_surf : :class:`pybamm.Symbol`
         Particle concentration [mol.m-3]
+    c_s_max : :class:`pybamm.Symbol`
+        Maximum particle concentration [mol.m-3]
     T : :class:`pybamm.Symbol`
         Temperature [K]
 
@@ -31,13 +33,12 @@ def graphite_electrolyte_exchange_current_density_Kim2011(c_e, c_s_surf, T):
 
     i0_ref = 36  # reference exchange current density at 100% SOC
     sto = 0.36  # stochiometry at 100% SOC
-    c_s_n_max = Parameter("Maximum concentration in negative electrode [mol.m-3]")
-    c_s_n_ref = sto * c_s_n_max  # reference electrode concentration
+    c_s_n_ref = sto * c_s_max  # reference electrode concentration
     c_e_ref = Parameter("Typical electrolyte concentration [mol.m-3]")
     alpha = 0.5  # charge transfer coefficient
 
     m_ref = i0_ref / (
-        c_e_ref ** alpha * (c_s_n_max - c_s_n_ref) ** alpha * c_s_n_ref ** alpha
+        c_e_ref ** alpha * (c_s_max - c_s_n_ref) ** alpha * c_s_n_ref ** alpha
     )
 
     E_r = 3e4
@@ -48,5 +49,5 @@ def graphite_electrolyte_exchange_current_density_Kim2011(c_e, c_s_surf, T):
         * arrhenius
         * c_e ** alpha
         * c_s_surf ** alpha
-        * (c_s_n_max - c_s_surf) ** alpha
+        * (c_s_max - c_s_surf) ** alpha
     )

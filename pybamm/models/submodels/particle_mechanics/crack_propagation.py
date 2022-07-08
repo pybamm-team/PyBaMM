@@ -92,3 +92,17 @@ class CrackPropagation(BaseMechanics):
             l_cr = variables[self.domain + " particle crack length"]
             l0 = pybamm.PrimaryBroadcast(1, self.domain.lower() + " electrode")
         self.initial_conditions = {l_cr: l0}
+
+    def set_events(self, variables):
+        domain = self.domain.lower()
+        if self.x_average is True:
+            l_cr = variables[f"X-averaged {domain} particle crack length"]
+        else:
+            l_cr = variables[self.domain + " particle crack length"]
+        self.events.append(
+            pybamm.Event(
+                f"{domain} particle crack length larger than particle radius",
+                pybamm.max(l_cr) - self.domain_param.R_typ / self.domain_param.l_cr_0,
+                pybamm.EventType.TERMINATION,
+            )
+        )
