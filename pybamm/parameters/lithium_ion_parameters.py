@@ -733,15 +733,6 @@ class DomainLithiumIonParameters(BaseParameters):
         """Rescaled dimensionless electrode electrical conductivity"""
         return self.sigma(T) * self.main_param.delta
 
-    def t_change(self, sto):
-        """
-        Dimensionless volume change for the electrode;
-        sto should be R-averaged
-        """
-        return pybamm.FunctionParameter(
-            f"{self.domain} electrode volume change", {"Particle stoichiometry": sto}
-        )
-
     def k_cr(self, T):
         """
         Dimensionless cracking rate for the electrode;
@@ -763,10 +754,7 @@ class ParticleLithiumIonParameters(BaseParameters):
         self.main_param = domain_param.main_param
         self.phase = phase
         self.set_phase_name()
-        if self.phase == "primary":
-            self.geo = domain_param.geo.prim
-        elif self.phase == "secondary":
-            self.geo = domain_param.geo.sec
+        self.geo = domain_param.geo.prim
 
     def _set_dimensional_parameters(self):
         main = self.main_param
@@ -1031,24 +1019,11 @@ class ParticleLithiumIonParameters(BaseParameters):
         Dimensionless volume change for the electrode;
         sto should be R-averaged
         """
-        inputs = {
-            f"{self.domain} particle stoichiometry": sto,
-            f"{self.phase_prefactor}Maximum {self.domain.lower()} particle "
-            "surface concentration [mol.m-3]": self.c_max,
-        }
         return pybamm.FunctionParameter(
-            f"{self.domain} electrode volume change", inputs
-        )
-
-    def k_cr(self, T):
-        """
-        Dimensionless cracking rate for the electrode;
-        """
-        T_dim = self.main_param.Delta_T * T + self.main_param.T_ref
-        delta_k_cr = self.E ** self.m_cr * self.l_cr_0 ** (self.m_cr / 2 - 1)
-        return (
-            pybamm.FunctionParameter(
-                f"{self.domain} electrode cracking rate", {"Temperature [K]": T_dim}
-            )
-            * delta_k_cr
+            f"{self.domain} electrode volume change",
+            {
+                "Particle stoichiometry": sto,
+                f"{self.phase_prefactor}Maximum {self.domain.lower()} particle "
+                "surface concentration [mol.m-3]": self.c_max,
+            },
         )

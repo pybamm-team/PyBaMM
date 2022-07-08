@@ -500,16 +500,6 @@ class BatteryModelOptions(pybamm.FuzzyDict):
 
         super().__init__(options.items())
 
-    def phase_number_to_names(self, number):
-        """
-        Converts number of phases to a list ["primary", "secondary", ...]
-        """
-        number = int(number)
-        phases = ["primary"]
-        if number >= 2:
-            phases.append("secondary")
-        return phases
-
     def print_options(self):
         """
         Print the possible options with the ones currently selected
@@ -559,21 +549,6 @@ class BatteryModelDomainOptions(dict):
     @property
     def secondary(self):
         return BatteryModelPhaseOptions(self, 1)
-
-
-class BatteryModelPhaseOptions(dict):
-    def __init__(self, domain_options, index):
-        super().__init__(domain_options.items())
-        self.domain_options = domain_options
-        self.index = index
-
-    def __getitem__(self, key):
-        options = self.domain_options.__getitem__(key)
-        if isinstance(options, str):
-            return options
-        else:
-            # 2-tuple, first is primary phase, second is secondary phase
-            return options[self.index]
 
 
 class BaseBatteryModel(pybamm.BaseModel):
