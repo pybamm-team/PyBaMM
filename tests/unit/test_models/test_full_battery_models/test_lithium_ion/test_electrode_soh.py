@@ -24,7 +24,9 @@ class TestElectrodeSOH(unittest.TestCase):
 
         inputs = {"V_max": Vmax, "V_min": Vmin, "n_Li": n_Li, "C_n": Cn, "C_p": Cp}
         # Solve the model and check outputs
-        sol = pybamm.lithium_ion.solve_electrode_soh(x100_sim, C_sim, inputs, parameter_values)
+        sol = pybamm.lithium_ion.solve_electrode_soh(
+            x100_sim, C_sim, inputs, parameter_values
+        )
 
         self.assertAlmostEqual(sol["Up(y_100) - Un(x_100)"].data[0], Vmax, places=5)
         self.assertAlmostEqual(sol["Up(y_0) - Un(x_0)"].data[0], Vmin, places=5)
@@ -71,7 +73,9 @@ class TestSetInitialSOC(unittest.TestCase):
         inputs = {"V_min": V_min, "V_max": V_max, "C_n": C_n, "C_p": C_p, "n_Li": n_Li}
 
         # Solve the model and check outputs
-        esoh_sol = pybamm.lithium_ion.solve_electrode_soh(x100_sim, C_sim, inputs, parameter_values)
+        esoh_sol = pybamm.lithium_ion.solve_electrode_soh(
+            x100_sim, C_sim, inputs, parameter_values
+        )
 
         x, y = pybamm.lithium_ion.get_initial_stoichiometries(1, parameter_values)
         self.assertAlmostEqual(x, esoh_sol["x_100"].data[0])
