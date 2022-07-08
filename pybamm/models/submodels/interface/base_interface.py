@@ -185,7 +185,6 @@ class BaseInterface(pybamm.BaseSubModel):
         Domain = self.domain
         domain = Domain.lower()
         reaction_name = self.reaction_name
-        param = self.param
         j_scale = self.phase_param.j_scale
 
         if self.reaction == "lithium metal plating":
@@ -244,7 +243,6 @@ class BaseInterface(pybamm.BaseSubModel):
         Domain = self.domain
         domain = Domain.lower()
         reaction_name = self.reaction_name
-        param = self.param
         j_scale = self.phase_param.j_scale
 
         if self.reaction == "lithium metal plating":
