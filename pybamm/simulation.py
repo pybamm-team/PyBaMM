@@ -731,12 +731,17 @@ class Simulation:
 
             # Set up eSOH model (for summary variables)
             if calc_esoh is True:
-                esoh_model = pybamm.lithium_ion.ElectrodeSOH()
-                esoh_sim = pybamm.Simulation(
-                    esoh_model, parameter_values=self.parameter_values
+                x100_model = pybamm.lithium_ion.ElectrodeSOHx100()
+                x100_sim = pybamm.Simulation(
+                    x100_model, parameter_values=self.parameter_values
                 )
+                C_model = pybamm.lithium_ion.ElectrodeSOHC()
+                C_sim = pybamm.Simulation(
+                    C_model, parameter_values=self.parameter_values
+                )
+                esoh_sims = [x100_sim, C_sim]
             else:
-                esoh_sim = None
+                esoh_sims = None
 
             if starting_solution is None:
                 starting_solution_cycles = []
@@ -747,7 +752,7 @@ class Simulation:
                     cycle_solution,
                     cycle_sum_vars,
                     cycle_first_state,
-                ) = pybamm.make_cycle_solution(starting_solution.steps, esoh_sim, True)
+                ) = pybamm.make_cycle_solution(starting_solution.steps, esoh_sims, True)
                 starting_solution_cycles = [cycle_solution]
                 starting_solution_summary_variables = [cycle_sum_vars]
                 starting_solution_first_states = [cycle_first_state]
@@ -765,20 +770,6 @@ class Simulation:
             all_summary_variables = starting_solution_summary_variables
             all_first_states = starting_solution_first_states
             current_solution = starting_solution
-
-            # Set up eSOH model (for summary variables)
-            if calc_esoh is True:
-                x100_model = pybamm.lithium_ion.ElectrodeSOHx100()
-                x100_sim = pybamm.Simulation(
-                    x100_model, parameter_values=self.parameter_values
-                )
-                C_model = pybamm.lithium_ion.ElectrodeSOHC()
-                C_sim = pybamm.Simulation(
-                    C_model, parameter_values=self.parameter_values
-                )
-                esoh_sims = [x100_sim, C_sim]
-            else:
-                esoh_sims = None
 
             voltage_stop = self.experiment.termination.get("voltage")
             logs["stopping conditions"] = {"voltage": voltage_stop}
