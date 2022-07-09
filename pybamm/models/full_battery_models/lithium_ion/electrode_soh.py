@@ -112,19 +112,33 @@ def solve_electrode_soh(x100_sim, C_sim, inputs, parameter_values):
             n_Li * pybamm.constants.F.value / 3600 - y_100_min * Cp
         ) / Cn
 
-        V_lower_bound = (
-            min(parameter_values["Positive electrode OCP [V]"][1][1])
-            - parameter_values["Negative electrode OCP [V]"](
-                x_100_upper_limit
-            ).evaluate()
-        )
+        if OCPn_data:
 
-        V_upper_bound = (
-            max(parameter_values["Positive electrode OCP [V]"][1][1])
-            - parameter_values["Negative electrode OCP [V]"](
-                x_100_upper_limit
-            ).evaluate()
-        )
+            V_lower_bound = (
+                min(parameter_values["Positive electrode OCP [V]"][1][1])
+                - parameter_values["Negative electrode OCP [V]"](
+                    x_100_upper_limit
+                ).evaluate()
+            )
+
+            V_upper_bound = (
+                max(parameter_values["Positive electrode OCP [V]"][1][1])
+                - parameter_values["Negative electrode OCP [V]"](
+                    x_100_upper_limit
+                ).evaluate()
+            )
+
+        else:
+            V_lower_bound = min(
+                parameter_values["Positive electrode OCP [V]"][1][1]
+            ) - min(parameter_values["Negative electrode OCP [V]"][1][1])
+
+            V_upper_bound = (
+                max(parameter_values["Positive electrode OCP [V]"][1][1])
+                - parameter_values["Negative electrode OCP [V]"](
+                    x_100_upper_limit
+                ).evaluate()
+            )
 
     if OCPn_data:
         x_100_min = np.min(parameter_values["Negative electrode OCP [V]"][1][1])
@@ -134,7 +148,7 @@ def solve_electrode_soh(x100_sim, C_sim, inputs, parameter_values):
 
         V_lower_bound = parameter_values["Positive electrode OCP [V]"](
             y_100_upper_limit
-        ).evaluate() - min(parameter_values["Negative electrode OCP [V]"][1][1])
+        ).evaluate() - max(parameter_values["Negative electrode OCP [V]"][1][1])
 
         V_upper_bound = max(
             parameter_values["Positive electrode OCP [V]"](y_100_upper_limit).evaluate()
@@ -187,10 +201,7 @@ def get_initial_stoichiometries(initial_soc, parameter_values):
     if initial_soc < 0 or initial_soc > 1:
         raise ValueError("Initial SOC should be between 0 and 1")
 
-    model = pybamm.lithium_ion.ElectrodeSOH()
-
     param = pybamm.LithiumIonParameters()
-    sim = pybamm.Simulation(model, parameter_values=parameter_values)
 
     V_min = parameter_values.evaluate(param.voltage_low_cut_dimensional)
     V_max = parameter_values.evaluate(param.voltage_high_cut_dimensional)
@@ -198,17 +209,22 @@ def get_initial_stoichiometries(initial_soc, parameter_values):
     C_p = parameter_values.evaluate(param.p.cap_init)
     n_Li = parameter_values.evaluate(param.n_Li_particles_init)
 
+    model_x100 = ElectrodeSOHx100()
+    model_C = ElectrodeSOHx100()
+
+    x100_sim = pybamm.Simulation(model_x100, parameter_values)
+    C_sim = pybamm.Simulation(model_C, parameter_values)
+
+    inputs = {
+        "V_min": V_min,
+        "V_max": V_max,
+        "C_n": C_n,
+        "C_p": C_p,
+        "n_Li": n_Li,
+    }
+
     # Solve the model and check outputs
-    sol = sim.solve(
-        [0],
-        inputs={
-            "V_min": V_min,
-            "V_max": V_max,
-            "C_n": C_n,
-            "C_p": C_p,
-            "n_Li": n_Li,
-        },
-    )
+    sol = solve_electrode_soh(x100_sim, C_sim, inputs, parameter_values)
 
     x_0 = sol["x_0"].data[0]
     y_0 = sol["y_0"].data[0]
