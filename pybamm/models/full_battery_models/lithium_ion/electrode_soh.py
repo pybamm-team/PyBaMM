@@ -218,7 +218,7 @@ def get_initial_stoichiometries(initial_soc, parameter_values):
     n_Li = parameter_values.evaluate(param.n_Li_particles_init)
 
     model_x100 = ElectrodeSOHx100()
-    model_C = ElectrodeSOHx100()
+    model_C = ElectrodeSOHC()
 
     x100_sim = pybamm.Simulation(model_x100, parameter_values=parameter_values)
     C_sim = pybamm.Simulation(model_C, parameter_values=parameter_values)
