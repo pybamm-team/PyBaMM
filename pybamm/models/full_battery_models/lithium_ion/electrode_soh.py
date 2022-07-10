@@ -115,7 +115,7 @@ def solve_electrode_soh(x100_sim, C_sim, inputs, parameter_values):
         ) / Cn
 
         x_100_lower_limit = (
-            n_Li * pybamm.constants.F.value / 3600 - y_100_min * Cp
+            n_Li * pybamm.constants.F.value / 3600 - y_100_max * Cp
         ) / Cn
 
         if OCPn_data:
