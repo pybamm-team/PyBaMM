@@ -107,22 +107,25 @@ def solve_electrode_soh(x100_sim, C_sim, inputs, parameter_values):
     OCPn_data = isinstance(parameter_values["Negative electrode OCP [V]"], tuple)
 
     if OCPp_data:
-        y_100_min = np.min(parameter_values["Positive electrode OCP [V]"][1][1])
+        y_100_min = np.min(parameter_values["Positive electrode OCP [V]"][1][0])
+        y_100_max = np.min(parameter_values["Positive electrode OCP [V]"][1][0])
+
         x_100_upper_limit = (
+            n_Li * pybamm.constants.F.value / 3600 - y_100_min * Cp
+        ) / Cn
+
+        x_100_lower_limit = (
             n_Li * pybamm.constants.F.value / 3600 - y_100_min * Cp
         ) / Cn
 
         if OCPn_data:
             V_lower_bound = min(
                 parameter_values["Positive electrode OCP [V]"][1][1]
-            ) - min(parameter_values["Negative electrode OCP [V]"][1][1])
+            ) - max(parameter_values["Negative electrode OCP [V]"][1][1])
 
-            V_upper_bound = (
-                max(parameter_values["Positive electrode OCP [V]"][1][1])
-                - parameter_values["Negative electrode OCP [V]"](
-                    x_100_upper_limit
-                ).evaluate()
-            )
+            V_upper_bound = max(
+                parameter_values["Positive electrode OCP [V]"][1][1]
+            ) - min(parameter_values["Negative electrode OCP [V]"][1][1])
         else:
 
             V_lower_bound = (
@@ -135,23 +138,29 @@ def solve_electrode_soh(x100_sim, C_sim, inputs, parameter_values):
             V_upper_bound = (
                 max(parameter_values["Positive electrode OCP [V]"][1][1])
                 - parameter_values["Negative electrode OCP [V]"](
-                    x_100_upper_limit
+                    x_100_lower_limit
                 ).evaluate()
             )
 
     if OCPn_data:
-        x_100_min = np.min(parameter_values["Negative electrode OCP [V]"][1][1])
+        x_100_min = np.min(parameter_values["Negative electrode OCP [V]"][1][0])
+        x_100_max = np.max(parameter_values["Negative electrode OCP [V]"][1][0])
+
         y_100_upper_limit = (
             n_Li * pybamm.constants.F.value / 3600 - x_100_min * Cp
         ) / Cn
 
+        y_100_lower_limit = (
+            n_Li * pybamm.constants.F.value / 3600 - x_100_max * Cp
+        ) / Cn
+
         V_lower_bound = parameter_values["Positive electrode OCP [V]"](
-            y_100_upper_limit
+            y_100_lower_limit
         ).evaluate() - max(parameter_values["Negative electrode OCP [V]"][1][1])
 
-        V_upper_bound = max(
-            parameter_values["Positive electrode OCP [V]"](y_100_upper_limit).evaluate()
-        ) - min(parameter_values["Negative electrode OCP [V]"][1][1])
+        V_upper_bound = parameter_values["Positive electrode OCP [V]"](
+            y_100_upper_limit
+        ).evaluate() - min(parameter_values["Negative electrode OCP [V]"][1][1])
 
     if OCPp_data or OCPn_data:
 
