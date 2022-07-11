@@ -108,7 +108,7 @@ def solve_electrode_soh(x100_sim, C_sim, inputs, parameter_values):
 
     if OCPp_data:
         y_100_min = np.min(parameter_values["Positive electrode OCP [V]"][1][0])
-        y_100_max = np.min(parameter_values["Positive electrode OCP [V]"][1][0])
+        y_100_max = np.max(parameter_values["Positive electrode OCP [V]"][1][0])
 
         x_100_upper_limit = (
             n_Li * pybamm.constants.F.value / 3600 - y_100_min * Cp
@@ -142,7 +142,7 @@ def solve_electrode_soh(x100_sim, C_sim, inputs, parameter_values):
                 ).evaluate()
             )
 
-    if OCPn_data:
+    elif OCPn_data:
         x_100_min = np.min(parameter_values["Negative electrode OCP [V]"][1][0])
         x_100_max = np.max(parameter_values["Negative electrode OCP [V]"][1][0])
 
