@@ -261,7 +261,7 @@ class LithiumIonParameters(BaseParameters):
 
         # Electrolyte diffusion timescale
         self.D_e_typ = self.D_e_dimensional(self.c_e_typ, self.T_ref)
-        self.tau_diffusion_e = self.L_x ** 2 / self.D_e_typ
+        self.tau_diffusion_e = self.L_x**2 / self.D_e_typ
 
         # Thermal diffusion timescale
         self.tau_th_yz = self.therm.tau_th_yz
@@ -456,7 +456,7 @@ class LithiumIonParameters(BaseParameters):
     def kappa_e(self, c_e, T):
         """Dimensionless electrolyte conductivity"""
         c_e_dimensional = c_e * self.c_e_typ
-        kappa_scale = self.F ** 2 * self.D_e_typ * self.c_e_typ / (self.R * self.T_ref)
+        kappa_scale = self.F**2 * self.D_e_typ * self.c_e_typ / (self.R * self.T_ref)
         T_dim = self.Delta_T * T + self.T_ref
         return self.kappa_e_dimensional(c_e_dimensional, T_dim) / kappa_scale
 
@@ -753,7 +753,7 @@ class DomainLithiumIonParameters(BaseParameters):
         self.tau_r = main.F * self.c_max / (self.j0_ref_dimensional * self.a_typ)
         # Particle diffusion timescales
         self.D_typ_dim = self.D_dimensional(pybamm.Scalar(1), main.T_ref)
-        self.tau_diffusion = self.R_typ ** 2 / self.D_typ_dim
+        self.tau_diffusion = self.R_typ**2 / self.D_typ_dim
 
     def _set_dimensionless_parameters(self):
         main = self.main_param
@@ -803,7 +803,7 @@ class DomainLithiumIonParameters(BaseParameters):
         self.sigma_cc = (
             self.sigma_cc_dimensional * main.potential_scale / main.i_typ / main.L_x
         )
-        self.sigma_cc_prime = self.sigma_cc * main.delta ** 2
+        self.sigma_cc_prime = self.sigma_cc * main.delta**2
         self.sigma_cc_dbl_prime = self.sigma_cc_prime * main.delta
 
         # Electrolyte Properties
@@ -901,7 +901,7 @@ class DomainLithiumIonParameters(BaseParameters):
         Dimensionless cracking rate for the electrode;
         """
         T_dim = self.main_param.Delta_T * T + self.main_param.T_ref
-        delta_k_cr = self.E ** self.m_cr * self.l_cr_0 ** (self.m_cr / 2 - 1)
+        delta_k_cr = self.E**self.m_cr * self.l_cr_0 ** (self.m_cr / 2 - 1)
         return (
             pybamm.FunctionParameter(
                 f"{self.domain} electrode cracking rate", {"Temperature [K]": T_dim}

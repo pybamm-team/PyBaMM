@@ -822,7 +822,7 @@ class BaseBatteryModel(pybamm.BaseModel):
         # Build model variables and equations
         self._build_model()
 
-        # Set battery speceific variables
+        # Set battery specific variables
         pybamm.logger.debug("Setting voltage variables ({})".format(self.name))
         self.set_voltage_variables()
 
