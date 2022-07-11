@@ -152,6 +152,10 @@ class TestBaseModel(unittest.TestCase):
             v: {"left": (0, "Dirichlet"), "right": (h, "Neumann")},
         }
 
+        # Test variables_and_events
+        self.assertIn("v+f+i", model.variables_and_events)
+        self.assertIn("Event: u=e", model.variables_and_events)
+
         self.assertEqual(
             set([x.name for x in model.parameters]),
             set([x.name for x in [a, b, c, d, e, f, g, h, i]]),

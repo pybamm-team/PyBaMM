@@ -88,3 +88,7 @@ class ConstantConcentration(BaseElectrolyteDiffusion):
                 "right": (pybamm.Scalar(0), "Neumann"),
             }
         }
+
+    def set_events(self, variables):
+        # No event since the concentration is constant
+        pass
