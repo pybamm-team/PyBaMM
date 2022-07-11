@@ -39,16 +39,20 @@ class BaseParticle(pybamm.BaseSubModel):
 
         # Get surface concentration if not provided as fundamental variable to
         # solve for
-        c_s_surf = c_s_surf or pybamm.surf(c_s)
+        if c_s_surf is None:
+            c_s_surf = pybamm.surf(c_s)
         c_s_surf_av = pybamm.x_average(c_s_surf)
 
         c_scale = self.domain_param.c_max
 
         # Get average concentration(s) if not provided as fundamental variable to
         # solve for
-        c_s_xav = c_s_xav or pybamm.x_average(c_s)
-        c_s_rav = c_s_rav or pybamm.r_average(c_s)
-        c_s_av = c_s_av or pybamm.r_average(c_s_xav)
+        if c_s_xav is None:
+            c_s_xav = pybamm.x_average(c_s)
+        if c_s_rav is None:
+            c_s_rav = pybamm.r_average(c_s)
+        if c_s_av is None:
+            c_s_av = pybamm.r_average(c_s_xav)
 
         variables = {
             self.domain + " particle concentration": c_s,
