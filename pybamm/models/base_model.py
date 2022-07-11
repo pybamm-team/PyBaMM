@@ -545,6 +545,8 @@ class BaseModel:
 
     def build_model(self):
         self._build_model()
+        self._built = True
+        pybamm.logger.info("Finish building {}".format(self.name))
 
     def _build_model(self):
         # Check if already built

@@ -955,6 +955,42 @@ class TestBaseModel(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "not var"):
             model.variables = {"not var": var}
 
+    def test_build(self):
+        class Submodel(pybamm.BaseSubModel):
+            def __init__(self, param, domain, options=None):
+                super().__init__(param, domain, options=options)
+
+            def get_fundamental_variables(self):
+                u = pybamm.Variable("u")
+                v = pybamm.Variable("v")
+                return {"u": u, "v": v}
+
+            def get_coupled_variables(self, variables):
+                return variables
+
+            def set_rhs(self, variables):
+                u = variables["u"]
+                self.rhs = {u: 2}
+
+            def set_algebraic(self, variables):
+                v = variables["v"]
+                self.algebraic = {v: v - 1}
+
+            def set_initial_conditions(self, variables):
+                u = variables["u"]
+                v = variables["v"]
+                self.initial_conditions = {u: 0, v: 0}
+
+        model = pybamm.BaseModel()
+        model.submodels = {"submodel": Submodel(None, "Negative")}
+        self.assertFalse(model._built)
+        model.build_model()
+        self.assertTrue(model._built)
+        u = model.variables["u"]
+        v = model.variables["v"]
+        self.assertEqual(model.rhs[u].value, 2)
+        self.assertIsInstance(model.algebraic[v], pybamm.Subtraction)
+
 
 if __name__ == "__main__":
     print("Add -v for more debug output")

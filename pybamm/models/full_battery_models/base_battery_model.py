@@ -833,9 +833,6 @@ class BaseBatteryModel(pybamm.BaseModel):
         self.set_degradation_variables()
         self.set_summary_variables()
 
-        self._built = True
-        pybamm.logger.info("Finish building {}".format(self.name))
-
     @property
     def summary_variables(self):
         return self._summary_variables
