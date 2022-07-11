@@ -91,7 +91,7 @@ class BaseModel:
 
     def __init__(self, name="Unnamed model"):
         self.name = name
-        self._options = {}
+        self._options = {"external submodels": []}
         self._built = False
         self._built_fundamental_and_external = False
 
@@ -542,6 +542,9 @@ class BaseModel:
                 )
                 self.update(submodel)
                 self.check_no_repeated_keys()
+
+    def build_model(self):
+        self._build_model()
 
     def _build_model(self):
         # Check if already built

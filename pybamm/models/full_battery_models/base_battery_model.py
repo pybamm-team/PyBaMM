@@ -1228,5 +1228,3 @@ class BaseBatteryModel(pybamm.BaseModel):
         This function is overriden by the base battery models
         """
         pass
-
-

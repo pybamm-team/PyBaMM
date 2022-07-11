@@ -46,7 +46,7 @@ class SPMe(SPM):
         self.x_average = True
 
         # Initialize with the SPM
-        super().__init__(options, name)
+        super().__init__(options, name, build)
 
     def set_convection_submodel(self):
 
