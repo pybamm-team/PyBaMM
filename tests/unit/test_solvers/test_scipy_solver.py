@@ -102,6 +102,9 @@ class TestScipySolver(unittest.TestCase):
         np.testing.assert_equal(solution.t_event[0], solution.t[-1])
         np.testing.assert_array_equal(solution.y_event[:, 0], solution.y[:, -1])
 
+        # Test event in solution variables_and_events
+        np.testing.assert_array_almost_equal(solution["Event: var=0.5"].data[-1], 0)
+
     def test_model_solver_ode_with_jacobian_python(self):
         # Create model
         model = pybamm.BaseModel()

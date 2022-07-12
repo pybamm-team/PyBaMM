@@ -6,13 +6,15 @@ from .base_lead_acid_model import BaseModel
 
 
 class BaseHigherOrderModel(BaseModel):
-    """Base model for higher-order models for lead-acid, from [1]_.
+    """
+    Base model for higher-order models for lead-acid, from [1]_.
     Uses leading-order model from :class:`pybamm.lead_acid.LOQS`
 
     Parameters
     ----------
     options : dict, optional
-        A dictionary of options to be passed to the model.
+        A dictionary of options to be passed to the model. For a detailed list of
+        options see :class:`~pybamm.BatteryModelOptions`.
     name : str, optional
         The name of the model.
     build :  bool, optional
@@ -207,13 +209,15 @@ class BaseHigherOrderModel(BaseModel):
 
 
 class FOQS(BaseHigherOrderModel):
-    """First-order quasi-static model for lead-acid, from [1]_.
+    """
+    First-order quasi-static model for lead-acid, from [1]_.
     Uses leading-order model from :class:`pybamm.lead_acid.LOQS`
 
     Parameters
     ----------
     options : dict, optional
-        A dictionary of options to be passed to the model.
+        A dictionary of options to be passed to the model. For a detailed list of
+        options see :class:`~pybamm.BatteryModelOptions`.
     name : str, optional
         The name of the model.
     build :  bool, optional
@@ -249,7 +253,8 @@ class FOQS(BaseHigherOrderModel):
 
 
 class Composite(BaseHigherOrderModel):
-    """Composite model for lead-acid, from [1]_.
+    """
+    Composite model for lead-acid, from [1]_.
     Uses leading-order model from :class:`pybamm.lead_acid.LOQS`
 
     **Extends:** :class:`pybamm.lead_acid.BaseHigherOrderModel`
@@ -280,13 +285,15 @@ class Composite(BaseHigherOrderModel):
 
 
 class CompositeExtended(Composite):
-    """Extended composite model for lead-acid.
+    """
+    Extended composite model for lead-acid.
     Uses leading-order model from :class:`pybamm.lead_acid.LOQS`
 
     Parameters
     ----------
     options : dict, optional
-        A dictionary of options to be passed to the model.
+        A dictionary of options to be passed to the model. For a detailed list of
+        options see :class:`~pybamm.BatteryModelOptions`.
     name : str, optional
         The name of the model.
     build :  bool, optional
@@ -317,7 +324,8 @@ class CompositeExtended(Composite):
 
 
 class CompositeAverageCorrection(Composite):
-    """Extended composite model for lead-acid.
+    """
+    Extended composite model for lead-acid.
     Uses leading-order model from :class:`pybamm.lead_acid.LOQS`
 
     **Extends:** :class:`pybamm.lead_acid.BaseHigherOrderModel`

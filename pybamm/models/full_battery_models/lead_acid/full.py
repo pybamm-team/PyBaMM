@@ -6,13 +6,15 @@ from .base_lead_acid_model import BaseModel
 
 
 class Full(BaseModel):
-    """Porous electrode model for lead-acid, from [1]_, based on the Newman-Tiedemann
+    """
+    Porous electrode model for lead-acid, from [1]_, based on the Newman-Tiedemann
     model.
 
     Parameters
     ----------
     options : dict, optional
-        A dictionary of options to be passed to the model.
+        A dictionary of options to be passed to the model. For a detailed list of
+        options see :class:`~pybamm.BatteryModelOptions`.
     name : str, optional
         The name of the model.
     build :  bool, optional
