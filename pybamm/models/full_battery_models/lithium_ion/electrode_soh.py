@@ -178,7 +178,10 @@ def solve_electrode_soh(x100_sim, C_sim, inputs, parameter_values):
                 )
             )
 
-    inputs.update({"x_100_init": min(0.99 * (x_100_upper_limit.value), 1 - 1e-6)})
+    if not isinstance(x_100_upper_limit, float):
+        x_100_upper_limit = x_100_upper_limit.value
+
+    inputs.update({"x_100_init": min(0.99 * x_100_upper_limit, 1 - 1e-6)})
 
     x100_sol = x100_sim.solve([0], inputs=inputs)
     inputs["x_100"] = x100_sol["x_100"].data[0]
