@@ -44,3 +44,7 @@ class Constant(BaseModel):
         )
 
         return variables
+
+    def set_events(self, variables):
+        # No events since porosity is constant
+        pass

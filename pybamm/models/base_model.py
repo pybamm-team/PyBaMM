@@ -196,6 +196,20 @@ class BaseModel:
         return list(self._variables.keys())
 
     @property
+    def variables_and_events(self):
+        """
+        Returns variables and events in a single dictionary
+        """
+        try:
+            return self._variables_and_events
+        except AttributeError:
+            self._variables_and_events = self.variables.copy()
+            self._variables_and_events.update(
+                {f"Event: {event.name}": event.expression for event in self.events}
+            )
+            return self._variables_and_events
+
+    @property
     def events(self):
         return self._events
 

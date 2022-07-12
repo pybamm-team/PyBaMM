@@ -144,6 +144,10 @@ class TestBaseModel(unittest.TestCase):
             v: {"left": (0, "Dirichlet"), "right": (h, "Neumann")},
         }
 
+        # Test variables_and_events
+        self.assertIn("v+f+i", model.variables_and_events)
+        self.assertIn("Event: u=e", model.variables_and_events)
+
         self.assertEqual(
             set([x.name for x in model.parameters]),
             set([x.name for x in [a, b, c, d, e, f, g, h, i]]),
@@ -955,8 +959,8 @@ class TestBaseModel(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "not var"):
             model.variables = {"not var": var}
 
-    def test_build(self):
-        class Submodel(pybamm.BaseSubModel):
+    def test_build_submodels(self):
+        class Submodel1(pybamm.BaseSubModel):
             def __init__(self, param, domain, options=None):
                 super().__init__(param, domain, options=options)
 
@@ -981,8 +985,30 @@ class TestBaseModel(unittest.TestCase):
                 v = variables["v"]
                 self.initial_conditions = {u: 0, v: 0}
 
+            def set_events(self, variables):
+                u = variables["u"]
+                self.events.append(
+                    pybamm.Event(
+                        "Large u",
+                        u - 200,
+                        pybamm.EventType.TERMINATION,
+                    )
+                )
+
+        class Submodel2(pybamm.BaseSubModel):
+            def __init__(self, param, domain, options=None):
+                super().__init__(param, domain, options=options)
+
+            def get_coupled_variables(self, variables):
+                u = variables["u"]
+                variables.update({"w": 2 * u})
+                return variables
+
         model = pybamm.BaseModel()
-        model.submodels = {"submodel": Submodel(None, "Negative")}
+        model.submodels = {
+            "submodel 1": Submodel1(None, "Negative"),
+            "submodel 2": Submodel2(None, "Negative"),
+        }
         self.assertFalse(model._built)
         model.build_model()
         self.assertTrue(model._built)

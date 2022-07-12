@@ -39,6 +39,11 @@ class TestQuickPlot(unittest.TestCase):
             "c broadcasted positive electrode": pybamm.PrimaryBroadcast(
                 c, "positive particle"
             ),
+            "Variable with a very long name": a,
+            "2D variable": pybamm.FullBroadcast(
+                1, "negative particle", {"secondary": "negative electrode"}
+            ),
+            "NaN variable": pybamm.Scalar(np.nan),
         }
         model._timescale = pybamm.Scalar(1)
 
@@ -116,7 +121,6 @@ class TestQuickPlot(unittest.TestCase):
         quick_plot.slider_update(0.01)
 
         # Test longer name
-        model.variables["Variable with a very long name"] = model.variables["a"]
         quick_plot = pybamm.QuickPlot(solution, ["Variable with a very long name"])
         quick_plot.plot(0)
 
@@ -187,11 +191,6 @@ class TestQuickPlot(unittest.TestCase):
             pybamm.QuickPlot(solution, ["a"], spatial_unit="bad unit")
 
         # Test 2D variables
-        model.variables["2D variable"] = disc.process_symbol(
-            pybamm.FullBroadcast(
-                1, "negative particle", {"secondary": "negative electrode"}
-            )
-        )
         quick_plot = pybamm.QuickPlot(solution, ["2D variable"])
         quick_plot.plot(0)
         quick_plot.dynamic_plot(testing=True)
@@ -256,7 +255,6 @@ class TestQuickPlot(unittest.TestCase):
             )
 
         # No variable can be NaN
-        model.variables["NaN variable"] = disc.process_symbol(pybamm.Scalar(np.nan))
         with self.assertRaisesRegex(
             ValueError, "All-NaN variable 'NaN variable' provided"
         ):
