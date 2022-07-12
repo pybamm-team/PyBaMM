@@ -543,9 +543,6 @@ class BaseBatteryModel(pybamm.BaseModel):
     def __init__(self, options=None, name="Unnamed battery model"):
         super().__init__(name)
         self.options = options
-        self.submodels = {}
-        self._built = False
-        self._built_fundamental_and_external = False
 
     @pybamm.BaseModel.timescale.setter
     def timescale(self, value):
@@ -822,22 +819,10 @@ class BaseBatteryModel(pybamm.BaseModel):
 
     def build_model(self):
 
-        # Check if already built
-        if self._built:
-            raise pybamm.ModelError(
-                """Model already built. If you are adding a new submodel, try using
-                `model.update` instead."""
-            )
+        # Build model variables and equations
+        self._build_model()
 
-        pybamm.logger.info("Start building {}".format(self.name))
-
-        if self._built_fundamental_and_external is False:
-            self.build_fundamental_and_external()
-
-        self.build_coupled_variables()
-
-        self.build_model_equations()
-
+        # Set battery specific variables
         pybamm.logger.debug("Setting voltage variables ({})".format(self.name))
         self.set_voltage_variables()
 
@@ -1243,43 +1228,3 @@ class BaseBatteryModel(pybamm.BaseModel):
         This function is overriden by the base battery models
         """
         pass
-
-    def process_parameters_and_discretise(self, symbol, parameter_values, disc):
-        """
-        Process parameters and discretise a symbol using supplied parameter values
-        and discretisation. Note: care should be taken if using spatial operators
-        on dimensional symbols. Operators in pybamm are written in non-dimensional
-        form, so may need to be scaled by the appropriate length scale. It is
-        recommended to use this method on non-dimensional symbols.
-
-        Parameters
-        ----------
-        symbol : :class:`pybamm.Symbol`
-            Symbol to be processed
-        parameter_values : :class:`pybamm.ParameterValues`
-            The parameter values to use during processing
-        disc : :class:`pybamm.Discretisation`
-            The discrisation to use
-
-        Returns
-        -------
-        :class:`pybamm.Symbol`
-            Processed symbol
-        """
-        # Set y slices
-        if disc.y_slices == {}:
-            variables = list(self.rhs.keys()) + list(self.algebraic.keys())
-            disc.set_variable_slices(variables)
-
-        # Set boundary conditions (also requires setting parameter values)
-        if disc.bcs == {}:
-            self.boundary_conditions = parameter_values.process_boundary_conditions(
-                self
-            )
-            disc.bcs = disc.process_boundary_conditions(self)
-
-        # Process
-        param_symbol = parameter_values.process_symbol(symbol)
-        disc_symbol = disc.process_symbol(param_symbol)
-
-        return disc_symbol

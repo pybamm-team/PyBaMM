@@ -6,7 +6,8 @@ from .base_lead_acid_model import BaseModel
 
 
 class BasicFull(BaseModel):
-    """Porous electrode model for lead-acid, from [2]_.
+    """
+    Porous electrode model for lead-acid, from [2]_.
 
     This class differs from the :class:`pybamm.lead_acid.Full` model class in that it
     shows the whole model in a single class. This comes at the cost of flexibility in
@@ -102,7 +103,7 @@ class BasicFull(BaseModel):
 
         # transport_efficiency
         tor = pybamm.concatenation(
-            eps_n ** param.n.b_e, eps_s ** param.s.b_e, eps_p ** param.p.b_e
+            eps_n**param.n.b_e, eps_s**param.s.b_e, eps_p**param.p.b_e
         )
 
         # Interfacial reactions
