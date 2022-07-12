@@ -8,6 +8,7 @@ from .electrode_soh import (
     create_electrode_soh_sims,
     solve_electrode_soh,
     check_esoh_feasible,
+    get_initial_stoichiometries,
 )
 from .electrode_soh_half_cell import ElectrodeSOHHalfCell
 from .spm import SPM
