@@ -5,12 +5,10 @@ import matplotlib.pyplot as plt
 
 parameters = [
     "Marquis2019",
-    "NCA_Kim2011",
     "Prada2013",
     "Ramadass2004",
     "Mohtat2020",
     "Chen2020",
-    "Chen2020_plating",
     "Ecker2015",
 ]
 abstols = [
@@ -31,38 +29,41 @@ abstols = [
 for params in parameters:
     time_points = []
 
+    model = pybamm.lithium_ion.SPM()
+    c_rate = 1 / 10
+    tmax = 4000 / c_rate
+    nb_points = 500
+    t_eval = np.linspace(0, tmax, nb_points)
+    geometry = model.default_geometry
+
+    # load parameter values and process model and geometry
+    param = pybamm.ParameterValues(params)
+    param.process_model(model)
+    param.process_geometry(geometry)
+
+    # set mesh
+    var_pts = {
+        "x_n": 20,
+        "x_s": 20,
+        "x_p": 20,
+        "r_n": 30,
+        "r_p": 30,
+        "y": 10,
+        "z": 10,
+    }
+    mesh = pybamm.Mesh(geometry, model.default_submesh_types, var_pts)
+
+    # discretise model
+    disc = pybamm.Discretisation(mesh, model.default_spatial_methods)
+    disc.process_model(model)
+
     for tol in abstols:
 
-        solver = pybamm.CasadiSolver(atol=tol)
-        model = pybamm.lithium_ion.SPM()
-        c_rate = 1
-        tmax = 4000 / c_rate
-        nb_points = 500
-        t_eval = np.linspace(0, tmax, nb_points)
-        geometry = model.default_geometry
-
-        # load parameter values and process model and geometry
-        param = pybamm.ParameterValues(params)
-        param.process_model(model)
-        param.process_geometry(geometry)
-
-        # set mesh
-        var_pts = {
-            "x_n": 20,
-            "x_s": 20,
-            "x_p": 20,
-            "r_n": 30,
-            "r_p": 30,
-            "y": 10,
-            "z": 10,
-        }
-        mesh = pybamm.Mesh(geometry, model.default_submesh_types, var_pts)
-
-        # discretise model
-        disc = pybamm.Discretisation(mesh, model.default_spatial_methods)
-        disc.process_model(model)
+        solver = pybamm.IDAKLUSolver(atol=tol)
+        # solve first
+        solver.solve(model, t_eval=t_eval)
         time = 0
-        runs = 20
+        runs = 100
         for k in range(0, runs):
 
             solution = solver.solve(model, t_eval=t_eval)
@@ -80,8 +81,10 @@ plt.gca().legend(
 plt.title("Work Precision Sets")
 plt.xlabel("abstols")
 plt.xscale("log")
+plt.yscale("log")
 plt.xticks(abstols)
 plt.ylabel("time(s)")
+
 plt.savefig(f"benchmarks/benchmark_images/time_vs_abstols_{pybamm.__version__}.png")
 
 
