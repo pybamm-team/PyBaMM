@@ -21,4 +21,4 @@ EC initial concentration in electrolyte [mol.m-3], 4.541e3, Safari paper,
 EC diffusivity [m2.s-1], 2e-18, adjusted parameter in Yang paper,
 SEI kinetic rate constant [m.s-1], 1e-12, adjusted parameter in Yang paper,
 SEI open-circuit potential [V], 0, Estimated,
-
+SEI growth activation energy [J.mol-1], 0,,
