@@ -74,6 +74,7 @@ class BaseModel(BaseInterface):
             The variables which can be derived from the SEI thicknesses.
         """
         param = self.param
+        phase_param = self.phase_param
         # Domain = self.domain
         # domain = Domain.lower()
         phase_name = self.phase_name
@@ -83,7 +84,7 @@ class BaseModel(BaseInterface):
         if isinstance(self, pybamm.sei.NoSEI):
             L_scale = 1
         else:
-            L_scale = param.L_sei_0_dim
+            L_scale = phase_param.L_sei_0_dim
 
         variables = {
             f"Inner {phase_name}SEI thickness": L_inner,
@@ -114,14 +115,16 @@ class BaseModel(BaseInterface):
         Domain = self.domain
         domain = Domain.lower()
         phase_name = self.phase_name
+        phase_param = self.phase_param
+
         # pre = self.phase_prefactor
         
         if isinstance(self, pybamm.sei.NoSEI):
             L_scale = 1
             R_sei_dim = 1
         else:
-            L_scale = self.param.L_sei_0_dim
-            R_sei_dim = self.param.R_sei_dimensional
+            L_scale = self.phase_param.L_sei_0_dim
+            R_sei_dim = self.phase_param.R_sei_dimensional
 
         variables = {
             # f"{pre}SEI thickness": L_sei,
@@ -150,6 +153,7 @@ class BaseModel(BaseInterface):
         # Domain = self.domain
         # domain = Domain.lower()
         phase_name = self.phase_name
+        phase_param = self.phase_param
 
         # Set scales to one for the "no SEI" model so that they are not required
         # by parameter values in general
@@ -163,29 +167,29 @@ class BaseModel(BaseInterface):
         else:
             if self.reaction_loc == "interface":
                 # scales in mol/m2 (n is an interfacial quantity)
-                n_scale = param.L_sei_0_dim / param.V_bar_inner_dimensional
-                n_outer_scale = param.L_sei_0_dim / param.V_bar_outer_dimensional
+                n_scale = phase_param.L_sei_0_dim / phase_param.V_bar_inner_dimensional
+                n_outer_scale = phase_param.L_sei_0_dim / phase_param.V_bar_outer_dimensional
             else:
                 # scales in mol/m3 (n is a bulk quantity)
                 n_scale = (
-                    param.L_sei_0_dim
+                    phase_param.L_sei_0_dim
                     * param.n.prim.a_typ
-                    / param.V_bar_inner_dimensional
+                    / phase_param.V_bar_inner_dimensional
                 )# Jason - does n.prim needs modification?
                 n_outer_scale = (
-                    param.L_sei_0_dim
+                    phase_param.L_sei_0_dim
                     * param.n.prim.a_typ
-                    / param.V_bar_outer_dimensional
+                    / phase_param.V_bar_outer_dimensional
                 )
-            v_bar = param.v_bar
+            v_bar = phase_param.v_bar
             # Set scales for the "EC Reaction Limited" model
             if self.options["SEI"] == "ec reaction limited":
                 L_inner_0 = 0
                 L_outer_0 = 1
                 li_mols_per_sei_mols = 2
             else:
-                L_inner_0 = param.L_inner_0
-                L_outer_0 = param.L_outer_0
+                L_inner_0 = phase_param.L_inner_0
+                L_outer_0 = phase_param.L_outer_0
                 li_mols_per_sei_mols = 1
 
         L_inner = variables[f"Inner {phase_name}SEI thickness"]

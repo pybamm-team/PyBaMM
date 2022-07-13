@@ -163,17 +163,18 @@ class BaseModel(pybamm.BaseBatteryModel):
 
         # Lithium lost to side reactions
         # Different way of measuring LLI but should give same value
-        phases_n = self.options.phase_number_to_names(
-            getattr(self.options, "negative")["particle phases"]
-        )
+        
+        # phases_n = self.options.phase_number_to_names(
+        #     getattr(self.options, "negative")["particle phases"]
+        # )
 
-        LLI_sei = sum(
-            self.variables[f"Loss of lithium to {phase_n} SEI [mol]"]
-            for phase_n in phases_n
-        )
-        self.variables["Loss of lithium to SEI [mol]"] = LLI_sei # Jason-added a new variable here
-        self.variables["Loss of capacity to SEI [A.h]"] = LLI_sei * param.F / 3600 
-
+        # LLI_sei = sum(
+        #     self.variables[f"Loss of lithium to {phase_n} SEI [mol]"]
+        #     for phase_n in phases_n
+        # )
+        # self.variables["Loss of lithium to SEI [mol]"] = LLI_sei # Jason-added a new variable here
+        # self.variables["Loss of capacity to SEI [A.h]"] = LLI_sei * param.F / 3600 
+        LLI_sei = self.variables["Loss of lithium to SEI [mol]"]
         if self.half_cell:
             LLI_pl = pybamm.Scalar(0)
         else:

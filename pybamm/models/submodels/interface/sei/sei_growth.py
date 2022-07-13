@@ -72,6 +72,7 @@ class SEIGrowth(BaseModel):
         Domain = self.domain
         domain = Domain.lower()
         phase_name = self.phase_name
+        phase_param = self.phase_param
         # pre = self.phase_prefactor
         # delta_phi = phi_s - phi_e
         if self.reaction_loc == "interface":
@@ -88,8 +89,8 @@ class SEIGrowth(BaseModel):
         # it's ok to fall back on the total interfacial current density, j_tot
         # This should only happen when the interface submodel is "InverseButlerVolmer"
         # in which case j = j_tot (uniform) anyway
-        if "Negative electrode interfacial current density" in variables:
-            j = variables["Negative electrode interfacial current density"]
+        if f"Negative electrode {phase_name}interfacial current density" in variables:
+            j = variables[f"Negative electrode {phase_name}interfacial current density"]
         elif self.reaction_loc == "interface":
             j = variables["Lithium metal total interfacial current density"]# Jason - needs to add phase_name here?
         else:
@@ -101,31 +102,31 @@ class SEIGrowth(BaseModel):
         L_sei_outer = variables[f"Outer {phase_name}SEI thickness"]
         L_sei = variables[f"Total {phase_name}SEI thickness"]
 
-        R_sei = self.param.R_sei
+        R_sei = self.phase_param.R_sei
 
         if self.options["SEI"] == "reaction limited":
             # alpha = param.alpha
-            C_sei = param.C_sei_reaction
+            C_sei = phase_param.C_sei_reaction
 
             # need to revise for thermal case
             j_sei = -(1 / C_sei) * pybamm.exp(-0.5 * (delta_phi - j * L_sei * R_sei))
 
         elif self.options["SEI"] == "electron-migration limited":
-            U_inner = self.param.U_inner_electron # Jason - "param" class needs to be replaced?
-            C_sei = self.param.C_sei_electron
+            U_inner = self.phase_param.U_inner_electron # Jason - "param" class needs to be replaced?
+            C_sei = self.phase_param.C_sei_electron
             j_sei = (phi_s_n - U_inner) / (C_sei * L_sei_inner)
 
         elif self.options["SEI"] == "interstitial-diffusion limited":
-            C_sei = self.param.C_sei_inter
+            C_sei = self.phase_param.C_sei_inter
             j_sei = -pybamm.exp(-delta_phi) / (C_sei * L_sei_inner)
 
         elif self.options["SEI"] == "solvent-diffusion limited":
-            C_sei = self.param.C_sei_solvent
+            C_sei = self.phase_param.C_sei_solvent
             j_sei = -1 / (C_sei * L_sei_outer)
 
         elif self.options["SEI"] == "ec reaction limited":
-            C_sei_ec = self.param.C_sei_ec
-            C_ec = self.param.C_ec
+            C_sei_ec = self.phase_param.C_sei_ec
+            C_ec = self.phase_param.C_ec
 
             # we have a linear system for j_sei and c_ec
             #  c_ec = 1 + j_sei * L_sei * C_ec
@@ -142,7 +143,7 @@ class SEIGrowth(BaseModel):
 
             # Get variables related to the concentration
             c_ec_av = pybamm.x_average(c_ec)
-            c_ec_scale = self.param.c_ec_0_dim
+            c_ec_scale = self.phase_param.c_ec_0_dim
 
             variables.update(
                 {
@@ -170,6 +171,7 @@ class SEIGrowth(BaseModel):
         return variables
 
     def set_rhs(self, variables):
+        phase_name = self.phase_name
         if self.reaction_loc == "x-average":
             L_inner = variables[f"X-averaged inner {phase_name}SEI thickness"]
             L_outer = variables[f"X-averaged outer {phase_name}SEI thickness"]
@@ -177,7 +179,7 @@ class SEIGrowth(BaseModel):
             j_outer = variables[f"X-averaged outer {phase_name}SEI interfacial current density"]
             # Note a is dimensionless (has a constant value of 1 if the surface
             # area does not change)
-            a = variables[f"X-averaged {domain} {phase_name}electrode surface area to volume ratio"]
+            a = variables[f"X-averaged negative electrode {phase_name}surface area to volume ratio"]
         else:
             L_inner = variables[f"Inner {phase_name}SEI thickness"]
             L_outer = variables[f"Outer {phase_name}SEI thickness"]
@@ -186,20 +188,21 @@ class SEIGrowth(BaseModel):
             if self.reaction_loc == "interface":
                 a = 1
             else:
-                a = variables[f"{Domain} electrode {phase_name}surface area to volume ratio"]
+                a = variables[f"Negative electrode {phase_name}surface area to volume ratio"]
 
-        Gamma_SEI = self.param.Gamma_SEI
+        Gamma_SEI = self.phase_param.Gamma_SEI
 
         if self.options["SEI"] == "ec reaction limited":
             self.rhs = {L_outer: -Gamma_SEI * a * j_outer / 2}
         else:
-            v_bar = self.param.v_bar
+            v_bar = self.phase_param.v_bar
             self.rhs = {
                 L_inner: -Gamma_SEI * a * j_inner,
                 L_outer: -v_bar * Gamma_SEI * a * j_outer,
             }
 
     def set_initial_conditions(self, variables):
+        phase_name = self.phase_name
         if self.reaction_loc == "x-average":
             L_inner = variables[f"X-averaged inner {phase_name}SEI thickness"]
             L_outer = variables[f"X-averaged outer {phase_name}SEI thickness"]
@@ -207,8 +210,8 @@ class SEIGrowth(BaseModel):
             L_inner = variables[f"Inner {phase_name}SEI thickness"]
             L_outer = variables[f"Outer {phase_name}SEI thickness"]
 
-        L_inner_0 = self.param.L_inner_0
-        L_outer_0 = self.param.L_outer_0
+        L_inner_0 = self.phase_param.L_inner_0
+        L_outer_0 = self.phase_param.L_outer_0
         if self.options["SEI"] == "ec reaction limited":
             self.initial_conditions = {L_outer: L_inner_0 + L_outer_0}
         else:

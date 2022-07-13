@@ -30,6 +30,7 @@ class BaseKinetics(BaseInterface):
         super().__init__(param, domain, reaction, options=options, phase=phase)
 
     def get_fundamental_variables(self):
+        phase_name = self.phase_name
         if (
             self.options["total interfacial current density as a state"] == "true"
             and "main" in self.reaction
@@ -37,7 +38,7 @@ class BaseKinetics(BaseInterface):
             j = pybamm.Variable(
                 "Total "
                 + self.domain.lower()
-                + " electrode interfacial current density variable",
+                + f" electrode {phase_name}interfacial current density variable",
                 domain=self.domain.lower() + " electrode",
                 auxiliary_domains={"secondary": "current collector"},
             )
@@ -45,13 +46,14 @@ class BaseKinetics(BaseInterface):
             variables = {
                 "Total "
                 + self.domain.lower()
-                + " electrode interfacial current density variable": j
+                + f" electrode {phase_name}interfacial current density variable": j
             }
             return variables
         else:
             return {}
 
     def get_coupled_variables(self, variables):
+        phase_name = self.phase_name
         if self.reaction == "lithium metal plating":  # li metal electrode (half-cell)
             delta_phi = variables[
                 "Lithium metal interface surface potential difference"
@@ -86,14 +88,14 @@ class BaseKinetics(BaseInterface):
         # Add SEI resistance in the negative electrode
         if self.domain == "Negative":
             if self.half_cell or self.options["SEI film resistance"] == "average":
-                R_sei = self.param.R_sei
-                L_sei = variables["Total SEI thickness"]
+                R_sei = self.phase_param.R_sei
+                L_sei = variables[f"Total {phase_name}SEI thickness"]
                 eta_sei = -j_tot_av * L_sei * R_sei
             elif self.options["SEI film resistance"] == "distributed":
-                R_sei = self.param.R_sei
-                L_sei = variables["Total SEI thickness"]
+                R_sei = self.phase_param.R_sei
+                L_sei = variables[f"Total {phase_name}SEI thickness"]
                 j_tot = variables[
-                    "Total negative electrode interfacial current density variable"
+                    f"Total negative electrode {phase_name}interfacial current density variable" # Jason - {phase_name}
                 ]
 
                 # Override print_name
@@ -121,7 +123,7 @@ class BaseKinetics(BaseInterface):
                 u = variables[
                     "X-averaged "
                     + self.domain.lower()
-                    + " electrode interface utilisation"
+                    + " electrode interface utilisation" # Jason - {phase_name}
                 ]
             else:
                 T = variables[self.domain + " electrode temperature"]
@@ -175,6 +177,7 @@ class BaseKinetics(BaseInterface):
         return variables
 
     def set_algebraic(self, variables):
+        phase_name = self.phase_name
         if (
             self.options["total interfacial current density as a state"] == "true"
             and "main" in self.reaction
@@ -182,7 +185,7 @@ class BaseKinetics(BaseInterface):
             j_tot_var = variables[
                 "Total "
                 + self.domain.lower()
-                + " electrode interfacial current density variable"
+                + f" electrode {phase_name}interfacial current density variable"
             ]
 
             # Override print_name
@@ -191,13 +194,14 @@ class BaseKinetics(BaseInterface):
             j_tot = variables[
                 "Sum of "
                 + self.domain.lower()
-                + " electrode interfacial current densities"
+                + f" electrode interfacial current densities"
             ]
             # Algebraic equation to set the variable j_tot_var
             # equal to the sum of currents j_tot
             self.algebraic[j_tot_var] = j_tot_var - j_tot
 
     def set_initial_conditions(self, variables):
+        phase_name = self.phase_name
         if (
             self.options["total interfacial current density as a state"] == "true"
             and "main" in self.reaction
@@ -206,7 +210,7 @@ class BaseKinetics(BaseInterface):
             j_tot_var = variables[
                 "Total "
                 + self.domain.lower()
-                + " electrode interfacial current density variable"
+                + f" electrode {phase_name}interfacial current density variable"
             ]
             current_at_0 = (
                 pybamm.FunctionParameter("Current function [A]", {"Time [s]": 0})

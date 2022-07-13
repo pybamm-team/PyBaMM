@@ -449,7 +449,7 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                 options["surface form"] != "false"
                 and options["particle size"] == "single"
                 and options["particle"] == "Fickian diffusion"
-                # and options["SEI"] == "none"
+                # and options["SEI"] == "none"  # Jason-romove?
                 and options["particle mechanics"] == "none"
                 and options["loss of active material"] == "none"
                 and options["lithium plating"] == "none"
