@@ -62,8 +62,8 @@ class NewmanTobias(DFN):
             if particle == "Fickian diffusion":
                 self.submodels[
                     domain.lower() + " particle"
-                ] = pybamm.particle.no_distribution.XAveragedFickianDiffusion(
-                    self.param, domain, self.options
+                ] = pybamm.particle.FickianDiffusion(
+                    self.param, domain, self.options, x_average=True
                 )
             elif particle in [
                 "uniform profile",
@@ -72,8 +72,8 @@ class NewmanTobias(DFN):
             ]:
                 self.submodels[
                     domain.lower() + " particle"
-                ] = pybamm.particle.no_distribution.XAveragedPolynomialProfile(
-                    self.param, domain, particle, self.options
+                ] = pybamm.particle.XAveragedPolynomialProfile(
+                    self.param, domain, self.options
                 )
 
     def set_electrolyte_submodel(self):
