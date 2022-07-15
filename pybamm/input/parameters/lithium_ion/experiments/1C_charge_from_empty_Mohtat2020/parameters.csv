@@ -20,5 +20,4 @@ Upper voltage cut-off [V],4.2,,
 # Initial conditions
 Initial concentration in negative electrode [mol.m-3],48.8682,Peyman MPM, x0 (0.0017) * Csmax_n
 Initial concentration in positive electrode [mol.m-3],31513.0,Peyman MPM, y0 (0.8907) * Csmax_p
-Initial concentration in electrolyte [mol.m-3],1000,Peyman MPM,
 Initial temperature [K],298.15,,

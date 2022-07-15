@@ -54,7 +54,6 @@ class BaseModel(pybamm.BaseBatteryModel):
         self.set_convection_submodel()
         self.set_open_circuit_potential_submodel()
         self.set_intercalation_kinetics_submodel()
-        self.set_other_reaction_submodels_to_zero()
         self.set_particle_submodel()
         self.set_solid_submodel()
         self.set_electrolyte_submodel()
@@ -63,6 +62,7 @@ class BaseModel(pybamm.BaseBatteryModel):
 
         self.set_sei_submodel()
         self.set_lithium_plating_submodel()
+        self.set_total_kinetics_submodel()
 
         if self.half_cell:
             # This also removes "negative electrode" submodels, so should be done last
@@ -267,16 +267,10 @@ class BaseModel(pybamm.BaseBatteryModel):
                 self.param, self.x_average, self.options
             )
 
-    def set_other_reaction_submodels_to_zero(self):
-        for domain in ["Negative", "Positive"]:
-            self.submodels[
-                f"{domain.lower()} oxygen interface"
-            ] = pybamm.kinetics.NoReaction(self.param, domain, "lithium-ion oxygen")
-            self.submodels[
-                f"{domain.lower()} oxygen open circuit potential"
-            ] = pybamm.open_circuit_potential.SingleOpenCircuitPotential(
-                self.param, domain, "lithium-ion oxygen", self.options
-            )
+    def set_total_kinetics_submodel(self):
+        self.submodels["total interface"] = pybamm.kinetics.TotalKinetics(
+            self.param, "lithium-ion", self.options
+        )
 
     def set_crack_submodel(self):
         for domain in ["Negative", "Positive"]:

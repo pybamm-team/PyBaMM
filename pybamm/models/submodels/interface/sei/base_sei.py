@@ -42,17 +42,28 @@ class BaseModel(BaseInterface):
                     "density": variables[
                         f"{self.reaction} interfacial current density"
                     ],
+                    f"Negative electrode {self.reaction} interfacial current "
+                    "density [A.m-2]": variables[
+                        f"{self.reaction} interfacial current density [A.m-2]"
+                    ],
                 }
             )
+            variables.update(
+                self._get_standard_volumetric_current_density_variables(variables)
+            )
+
         variables.update(
             {
-                f"X-averaged positive electrode {self.reaction} interfacial "
-                "current density": zero_av,
+                f"X-averaged positive electrode {self.reaction} interfacial current "
+                "density": zero_av,
                 f"Positive electrode {self.reaction} interfacial current density": zero,
+                f"Positive electrode {self.reaction} interfacial current density "
+                "[A.m-2]": zero,
+                f"X-averaged positive electrode {self.reaction} volumetric interfacial "
+                "current density": zero_av,
+                f"Positive electrode {self.reaction} volumetric interfacial current "
+                "density": zero,
             }
-        )
-        variables.update(
-            self._get_standard_whole_cell_interfacial_current_variables(variables)
         )
 
         return variables
