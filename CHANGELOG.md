@@ -5,6 +5,9 @@
 
 -   Moved general code about submodels to `BaseModel` instead of `BaseBatteryModel`, making it easier to build custom models from submodels. ([#2169](https://github.com/pybamm-team/PyBaMM/pull/2169))
 -   Events can now be plotted as a regular variable (under the name "Event: event_name", e.g. "Event: Minimum voltage [V]") ([#2158](https://github.com/pybamm-team/PyBaMM/pull/2158))
+-   Added SEI growth on cracks ([#2104](https://github.com/pybamm-team/PyBaMM/pull/2104))
+-   Added Arrhenius temperature dependence of SEI growth ([#2104](https://github.com/pybamm-team/PyBaMM/pull/2104))
+-   The "Inner SEI reaction proportion" parameter actually gets used now ([#2104](https://github.com/pybamm-team/PyBaMM/pull/2104))
 
 ## Optimizations
 
