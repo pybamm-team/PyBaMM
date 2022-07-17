@@ -107,26 +107,15 @@ class XAveragedPolynomialProfile(PolynomialProfile):
         c_s_av = variables[f"Average {domain} particle concentration"]
         T_av = variables[f"X-averaged {domain} electrode temperature"]
 
-        if self.size_distribution is True and self.name == "uniform profile":
-            # We only need to update the concentration variables
-            # no fluxes
-            c_s_xav = pybamm.PrimaryBroadcast(c_s_av, [f"{domain} particle"])
-            c_s = pybamm.SecondaryBroadcast(c_s_xav, [f"{domain} electrode"])
-            c_s_surf = pybamm.PrimaryBroadcast(c_s_av, [f"{domain} electrode"])
-            variables.update(
-                self._get_standard_concentration_variables(
-                    c_s, c_s_av=c_s_av, c_s_surf=c_s_surf
-                )
-            )
-            variables.update(self._get_total_concentration_variables(variables))
-            return variables
+        if self.name != "uniform profile":
+            D_eff_av = self._get_effective_diffusivity(c_s_av, T_av)
+            i_boundary_cc = variables["Current collector current density"]
+            a_av = variables[
+                f"X-averaged {domain} electrode surface area to volume ratio"
+            ]
+            sgn = 1 if self.domain == "Negative" else -1
 
-        D_eff_av = self._get_effective_diffusivity(c_s_av, T_av)
-        i_boundary_cc = variables["Current collector current density"]
-        a_av = variables[f"X-averaged {domain} electrode surface area to volume ratio"]
-        sgn = 1 if self.domain == "Negative" else -1
-
-        j_xav = sgn * i_boundary_cc / (a_av * self.domain_param.l)
+            j_xav = sgn * i_boundary_cc / (a_av * self.domain_param.l)
 
         # Set surface concentration based on polynomial order
         if self.name == "uniform profile":
@@ -198,9 +187,11 @@ class XAveragedPolynomialProfile(PolynomialProfile):
         c_s_surf = pybamm.PrimaryBroadcast(c_s_surf_xav, [f"{domain} electrode"])
 
         # Set flux based on polynomial order
-        T_xav = pybamm.PrimaryBroadcast(T_av, [f"{domain} particle"])
-        D_eff_xav = self._get_effective_diffusivity(c_s_xav, T_xav)
-
+        if self.name != "uniform profile":
+            T_xav = pybamm.PrimaryBroadcast(T_av, [f"{domain} particle"])
+            D_eff_xav = self._get_effective_diffusivity(c_s_xav, T_xav)
+            D_eff = pybamm.SecondaryBroadcast(D_eff_xav, [f"{domain} electrode"])
+            variables.update(self._get_standard_diffusivity_variables(D_eff))
         if self.name == "uniform profile":
             # The flux is zero since there is no concentration gradient
             N_s_xav = pybamm.FullBroadcastToEdges(
@@ -217,7 +208,6 @@ class XAveragedPolynomialProfile(PolynomialProfile):
                 + (105 * c_s_surf_xav - 28 * q_s_av - 105 * c_s_av) * r ** 3
             )
 
-        D_eff = pybamm.SecondaryBroadcast(D_eff_xav, [f"{domain} electrode"])
         N_s = pybamm.SecondaryBroadcast(N_s_xav, [f"{domain} electrode"])
 
         variables.update(
@@ -226,7 +216,6 @@ class XAveragedPolynomialProfile(PolynomialProfile):
             )
         )
         variables.update(self._get_standard_flux_variables(N_s))
-        variables.update(self._get_standard_diffusivity_variables(D_eff))
         variables.update(self._get_total_concentration_variables(variables))
 
         return variables
