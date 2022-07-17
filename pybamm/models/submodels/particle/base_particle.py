@@ -375,26 +375,6 @@ class BaseParticle(pybamm.BaseSubModel):
                     "tertiary": "current collector",
                 },
             )
-        elif isinstance(N_s, pybamm.Scalar):
-            # N_s is a constant (zero), as in "fast" submodels
-
-            N_s_distribution = pybamm.FullBroadcastToEdges(
-                0,
-                [f"{domain} particle"],
-                auxiliary_domains={
-                    "secondary": f"{domain} particle size",
-                    "tertiary": f"{domain} electrode",
-                    "quaternary": "current collector",
-                },
-            )
-            N_s_xav_distribution = pybamm.FullBroadcastToEdges(
-                0,
-                [f"{domain} particle"],
-                auxiliary_domains={
-                    "secondary": f"{domain} particle size",
-                    "tertiary": "current collector",
-                },
-            )
         else:
             N_s_xav_distribution = N_s
             N_s_distribution = pybamm.TertiaryBroadcast(N_s, [f"{domain} electrode"])

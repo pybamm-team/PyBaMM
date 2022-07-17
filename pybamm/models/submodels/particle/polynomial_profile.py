@@ -34,12 +34,10 @@ class PolynomialProfile(BaseParticle):
     def __init__(self, param, domain, options):
         super().__init__(param, domain, options)
         self.name = getattr(self.options, domain.lower())["particle"]
-        if self.name is None:
-            raise ValueError("No particle type specified in options")
-
-        if self.size_distribution is True and self.name != "uniform profile":
-            raise NotImplementedError(
-                "Only uniform profile is implemented with size distribution"
+        if self.name == "Fickian diffusion":
+            raise ValueError(
+                "Particle type must be 'uniform profile', "
+                "'quadratic profile' or 'quartic profile'"
             )
 
         pybamm.citations.register("Subramanian2005")
