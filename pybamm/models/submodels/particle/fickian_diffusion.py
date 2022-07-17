@@ -52,8 +52,8 @@ class FickianDiffusion(BaseParticle):
                     auxiliary_domains={"secondary": "current collector"},
                     bounds=(0, 1),
                 )
+                c_s_xav.print_name = f"c_s_{domain[0]}_xav"
                 c_s = pybamm.SecondaryBroadcast(c_s_xav, f"{domain} electrode")
-                c_s.print_name = f"c_s_{domain[0]}_xav"
         else:
             if self.x_average is False:
                 c_s_distribution = pybamm.Variable(
