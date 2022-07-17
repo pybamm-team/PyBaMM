@@ -106,6 +106,7 @@ def solve_electrode_soh(x100_sim, C_sim, inputs):
     x100_init = x100_max
     if x100_sim.solution is not None:
         x100_init_sol = x100_sim.solution["x_100"].data[0]
+        # Update the initial condition if it is valid
         if x0_min < x100_init_sol < x0_min:
             x100_init = x100_init_sol
 
