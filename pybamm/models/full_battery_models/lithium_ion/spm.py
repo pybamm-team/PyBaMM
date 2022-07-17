@@ -94,16 +94,16 @@ class SPM(BaseModel):
             phases = ["primary"]
             for phase in phases:
                 if particle == "Fickian diffusion":
-                    submod = pybamm.particle.no_distribution.XAveragedFickianDiffusion(
-                        self.param, domain, self.options, phase
+                    submod = pybamm.particle.FickianDiffusion(
+                        self.param, domain, self.options, phase=phase, x_average=True
                     )
                 elif particle in [
                     "uniform profile",
                     "quadratic profile",
                     "quartic profile",
                 ]:
-                    submod = pybamm.particle.no_distribution.XAveragedPolynomialProfile(
-                        self.param, domain, particle, self.options, phase
+                    submod = pybamm.particle.XAveragedPolynomialProfile(
+                        self.param, domain, self.options, phase=phase
                     )
                 self.submodels[f"{domain} {phase} particle"] = submod
 

@@ -122,15 +122,15 @@ class TestCitations(unittest.TestCase):
 
         citations._reset()
         self.assertNotIn("Subramanian2005", citations._papers_to_cite)
-        pybamm.particle.no_distribution.XAveragedPolynomialProfile(
-            None, "Negative", "quadratic profile", None, "primary"
+        pybamm.particle.XAveragedPolynomialProfile(
+            None, "Negative", {"particle": "quadratic profile"}, "primary"
         )
         self.assertIn("Subramanian2005", citations._papers_to_cite)
 
         citations._reset()
         self.assertNotIn("Subramanian2005", citations._papers_to_cite)
-        pybamm.particle.no_distribution.PolynomialProfile(
-            None, "Negative", "quadratic profile", None, "primary"
+        pybamm.particle.PolynomialProfile(
+            None, "Negative", {"particle": "quadratic profile"}, "primary"
         )
         self.assertIn("Subramanian2005", citations._papers_to_cite)
 

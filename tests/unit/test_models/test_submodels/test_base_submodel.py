@@ -12,9 +12,9 @@ class TestBaseSubModel(unittest.TestCase):
         submodel = pybamm.BaseSubModel(None, "Negative")
         self.assertEqual(submodel.domain, "Negative")
 
-        # None (accepted but can't be called as an attribute)
+        # None
         submodel = pybamm.BaseSubModel(None, None)
-        self.assertFalse(hasattr(submodel, "_domain"))
+        self.assertEqual(submodel.domain, None)
 
         # bad string
         with self.assertRaises(pybamm.DomainError):
