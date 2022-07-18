@@ -1,7 +1,6 @@
 #
 # A model to calculate electrode-specific SOH
 #
-from tabnanny import check
 import pybamm
 import numpy as np
 
@@ -107,7 +106,7 @@ def solve_electrode_soh(x100_sim, C_sim, inputs):
     if x100_sim.solution is not None:
         x100_init_sol = x100_sim.solution["x_100"].data[0]
         # Update the initial condition if it is valid
-        if x0_min < x100_init_sol < x0_min:
+        if x0_min < x100_init_sol < x100_max:
             x100_init = x100_init_sol
 
     inputs.update({"x_100_init": x100_init})
@@ -117,8 +116,6 @@ def solve_electrode_soh(x100_sim, C_sim, inputs):
     inputs["y_100"] = x100_sol["y_100"].data[0]
     C_sol = C_sim.solve([0], inputs=inputs)
 
-    # print(inputs)
-    # print({k: C_sol[k].data[0] for k in ["x_0", "y_0", "x_100", "y_100", "C"]})
     return C_sol
 
 
@@ -144,10 +141,7 @@ def get_initial_stoichiometries(initial_soc, parameter_values):
     if initial_soc < 0 or initial_soc > 1:
         raise ValueError("Initial SOC should be between 0 and 1")
 
-    model = pybamm.lithium_ion.ElectrodeSOH()
-
     param = pybamm.LithiumIonParameters()
-    sim = pybamm.Simulation(model, parameter_values=parameter_values)
 
     V_min = parameter_values.evaluate(param.voltage_low_cut_dimensional)
     V_max = parameter_values.evaluate(param.voltage_high_cut_dimensional)
@@ -155,17 +149,22 @@ def get_initial_stoichiometries(initial_soc, parameter_values):
     C_p = parameter_values.evaluate(param.p.cap_init)
     n_Li = parameter_values.evaluate(param.n_Li_particles_init)
 
+    model_x100 = ElectrodeSOHx100()
+    model_C = ElectrodeSOHC()
+
+    x100_sim = pybamm.Simulation(model_x100, parameter_values=parameter_values)
+    C_sim = pybamm.Simulation(model_C, parameter_values=parameter_values)
+
+    inputs = {
+        "V_min": V_min,
+        "V_max": V_max,
+        "C_n": C_n,
+        "C_p": C_p,
+        "n_Li": n_Li,
+    }
+
     # Solve the model and check outputs
-    sol = sim.solve(
-        [0],
-        inputs={
-            "V_min": V_min,
-            "V_max": V_max,
-            "C_n": C_n,
-            "C_p": C_p,
-            "n_Li": n_Li,
-        },
-    )
+    sol = solve_electrode_soh(x100_sim, C_sim, inputs)
 
     x_0 = sol["x_0"].data[0]
     y_0 = sol["y_0"].data[0]
@@ -185,9 +184,11 @@ def check_esoh_feasible(parameter_values, inputs):
     Cn = inputs["C_n"]
     n_Li = inputs["n_Li"]
 
+    # Check whether each electrode OCP is a function (False) or data (True)
     OCPp_data = isinstance(parameter_values["Positive electrode OCP [V]"], tuple)
     OCPn_data = isinstance(parameter_values["Negative electrode OCP [V]"], tuple)
 
+    # Calculate stoich limits for the open circuit potentials
     if OCPp_data:
         Up_sto = parameter_values["Positive electrode OCP [V]"][1][0]
         y100_min = max(np.min(Up_sto), 0) + 1e-6
@@ -204,6 +205,8 @@ def check_esoh_feasible(parameter_values, inputs):
         x0_min = 1e-6
         x100_max = 1 - 1e-6
 
+    # Update (tighten) stoich limits based on total lithium content and electrode
+    # capacities
     F = pybamm.constants.F.value
     x100_max_from_y100_min = (n_Li * F / 3600 - y100_min * Cp) / Cn
     x0_min_from_y0_max = (n_Li * F / 3600 - y0_max * Cp) / Cn
@@ -214,10 +217,15 @@ def check_esoh_feasible(parameter_values, inputs):
     x0_min = max(x0_min_from_y0_max, x0_min)
     y100_min = max(y100_min_from_x100_max, y100_min)
     y0_max = min(y0_max_from_x0_min, y0_max)
-    for x in [x0_min, x100_max, y100_min, y0_max]:
-        if not 0 < x < 1:
-            raise ValueError
 
+    # Check stoich limits are between 0 and 1
+    for x in ["x0_min", "x100_max", "y100_min", "y0_max"]:
+        xval = eval(x)
+        if not 0 < xval < 1:  # pragma: no cover
+            raise ValueError(f"'{x}' should be between 0 and 1, but is {xval:.4f}")
+
+    # Check that the min and max achievable voltages span wider than the desired
+    # voltage range
     T = parameter_values["Reference temperature [K]"]
     V_lower_bound = float(
         parameter_values.evaluate(

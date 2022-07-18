@@ -729,17 +729,11 @@ class Simulation:
             inputs = kwargs.get("inputs", {})
             timer = pybamm.Timer()
 
-            # Set up eSOH model (for summary variables)
+            # Set up eSOH sims (for summary variables)
             if calc_esoh is True:
-                x100_model = pybamm.lithium_ion.ElectrodeSOHx100()
-                x100_sim = pybamm.Simulation(
-                    x100_model, parameter_values=self.parameter_values
+                esoh_sims = pybamm.lithium_ion.create_electrode_soh_sims(
+                    self.parameter_values
                 )
-                C_model = pybamm.lithium_ion.ElectrodeSOHC()
-                C_sim = pybamm.Simulation(
-                    C_model, parameter_values=self.parameter_values
-                )
-                esoh_sims = [x100_sim, C_sim]
             else:
                 esoh_sims = None
 
