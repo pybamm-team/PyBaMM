@@ -189,15 +189,17 @@ def check_esoh_feasible(parameter_values, inputs):
     OCPn_data = isinstance(parameter_values["Negative electrode OCP [V]"], tuple)
 
     if OCPp_data:
-        y100_min = np.min(parameter_values["Positive electrode OCP [V]"][1][1])
-        y0_max = np.max(parameter_values["Positive electrode OCP [V]"][1][1])
+        Up_sto = parameter_values["Positive electrode OCP [V]"][1][0]
+        y100_min = max(np.min(Up_sto), 0) + 1e-6
+        y0_max = min(np.max(Up_sto), 1) - 1e-6
     else:
         y100_min = 1e-6
         y0_max = 1 - 1e-6
 
     if OCPn_data:
-        x0_min = np.min(parameter_values["Negative electrode OCP [V]"][1][1])
-        x100_max = np.max(parameter_values["Negative electrode OCP [V]"][1][1])
+        Un_sto = parameter_values["Negative electrode OCP [V]"][1][0]
+        x0_min = max(np.min(Un_sto), 0) + 1e-6
+        x100_max = min(np.max(Un_sto), 1) - 1e-6
     else:
         x0_min = 1e-6
         x100_max = 1 - 1e-6
@@ -212,13 +214,20 @@ def check_esoh_feasible(parameter_values, inputs):
     x0_min = max(x0_min_from_y0_max, x0_min)
     y100_min = max(y100_min_from_x100_max, y100_min)
     y0_max = min(y0_max_from_x0_min, y0_max)
+    for x in [x0_min, x100_max, y100_min, y0_max]:
+        if not 0 < x < 1:
+            raise ValueError
 
     T = parameter_values["Reference temperature [K]"]
-    V_lower_bound = parameter_values.evaluate(
-        param.p.U_dimensional(y0_max, T) - param.n.U_dimensional(x0_min, T)
+    V_lower_bound = float(
+        parameter_values.evaluate(
+            param.p.U_dimensional(y0_max, T) - param.n.U_dimensional(x0_min, T)
+        )
     )
-    V_upper_bound = parameter_values.evaluate(
-        param.p.U_dimensional(y100_min, T) - param.n.U_dimensional(x100_max, T)
+    V_upper_bound = float(
+        parameter_values.evaluate(
+            param.p.U_dimensional(y100_min, T) - param.n.U_dimensional(x100_max, T)
+        )
     )
 
     if V_lower_bound > Vmin:
