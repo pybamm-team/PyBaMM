@@ -654,7 +654,7 @@ class Simulation:
             if (
                 self.operating_mode == "without experiment"
                 or isinstance(self.model, pybamm.lithium_ion.ElectrodeSOHx100)
-                or isinstance(self.model, pybamm.lithium_ion.ElectrodeSOHC)
+                or isinstance(self.model, pybamm.lithium_ion.ElectrodeSOHx0)
             ):
                 if t_eval is None:
                     raise pybamm.SolverError(

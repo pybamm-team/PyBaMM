@@ -789,7 +789,7 @@ def make_cycle_solution(step_solutions, esoh_sims=None, save_this_cycle=True):
         Step solutions that form the entire cycle
     esoh_sims : list of :class:`pybamm.Simulation`, optional
         List containing :class:`pybamm.lithium_ion.ElectrodeSOHx100` and
-        `pybamm.lithium_ion.ElectrodeSOHC`simulations, which are used to
+        `pybamm.lithium_ion.ElectrodeSOHx0`simulations, which are used to
         calculate some of the summary variables. If `None` (default)
         then only summary variables that do not require the eSOH calculation
         are calculated. See [1] for more details on eSOH variables.
@@ -891,9 +891,9 @@ def get_cycle_summary_variables(cycle_solution, esoh_sims):
         and model.half_cell is False
     ):
         x100_sim = esoh_sims[0]
-        C_sim = esoh_sims[1]
-        V_min = C_sim.parameter_values["Lower voltage cut-off [V]"]
-        V_max = C_sim.parameter_values["Upper voltage cut-off [V]"]
+        x0_sim = esoh_sims[1]
+        V_min = x0_sim.parameter_values["Lower voltage cut-off [V]"]
+        V_max = x0_sim.parameter_values["Upper voltage cut-off [V]"]
         C_n = last_state["Negative electrode capacity [A.h]"].data[0]
         C_p = last_state["Positive electrode capacity [A.h]"].data[0]
         n_Li = last_state["Total lithium in particles [mol]"].data[0]
@@ -907,14 +907,14 @@ def get_cycle_summary_variables(cycle_solution, esoh_sims):
         }
 
         try:
-            esoh_sol = pybamm.lithium_ion.solve_electrode_soh(x100_sim, C_sim, inputs)
+            esoh_sol = pybamm.lithium_ion.solve_electrode_soh(x100_sim, x0_sim, inputs)
         except pybamm.SolverError:  # pragma: no cover
             raise pybamm.SolverError(
                 "Could not solve for summary variables, run "
                 "`sim.solve(calc_esoh=False)` to skip this step"
             )
 
-        for var in C_sim.built_model.variables:
+        for var in x0_sim.built_model.variables:
             cycle_summary_variables[var] = esoh_sol[var].data[0]
 
         cycle_summary_variables["Capacity [A.h]"] = cycle_summary_variables["C"]
