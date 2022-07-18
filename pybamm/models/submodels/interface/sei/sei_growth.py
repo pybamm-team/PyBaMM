@@ -175,7 +175,7 @@ class SEIGrowth(BaseModel):
         else:
             alpha = param.alpha_sei
 
-        # All SEI growth mechanisms assumed to have Arrhenius dependence 
+        # All SEI growth mechanisms assumed to have Arrhenius dependence
         Arrhenius = pybamm.exp(param.E_over_RT_sei * (1 - prefactor))
 
         j_inner = alpha * Arrhenius * j_sei

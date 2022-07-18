@@ -1,4 +1,4 @@
-def graphite_volume_change_Ai2020(sto):
+def graphite_volume_change_Ai2020(sto, c_s_max):
     """
     Graphite particle volume change as a function of stochiometry [1, 2].
 
