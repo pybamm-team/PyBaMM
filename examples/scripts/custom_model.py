@@ -30,11 +30,11 @@ model.submodels["positive electrode potential"] = pybamm.electrode.ohm.LeadingOr
     model.param, "Positive"
 )
 particle_n = pybamm.particle.PolynomialProfile(
-    model.param, "Negative", options=model.options
+    model.param, "Negative", options={**model.options, "particle": "uniform profile"}
 )
 model.submodels["negative particle"] = particle_n
 particle_p = pybamm.particle.PolynomialProfile(
-    model.param, "Positive", options=model.options
+    model.param, "Positive", options={**model.options, "particle": "uniform profile"}
 )
 model.submodels["positive particle"] = particle_p
 
