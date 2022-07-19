@@ -39,4 +39,6 @@ class NoSEI(BaseModel):
 
     def get_coupled_variables(self, variables):
         variables.update(self._get_standard_concentration_variables(variables))
+        # Update whole cell variables, which also updates the "sum of" variables
+        variables.update(super().get_coupled_variables(variables))
         return variables
