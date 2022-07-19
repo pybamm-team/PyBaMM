@@ -236,7 +236,7 @@ class BaseModel(pybamm.BaseBatteryModel):
         else:
             reaction_loc = "full electrode"
 
-        # Do not set "sei on cracks" submodel for half-cells        
+        # Do not set "sei on cracks" submodel for half-cells
         if reaction_loc == "interface":
             if self.options["SEI"] == "none":
                 self.submodels["sei"] = pybamm.sei.NoSEI(self.param, self.options)
