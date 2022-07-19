@@ -33,7 +33,7 @@ class TestInterpolant(unittest.TestCase):
             )
         with self.assertRaisesRegex(ValueError, "should equal"):
             pybamm.Interpolant(
-                (np.ones(10), np.ones(12)), np.ones((10, 12)), pybamm.Symbol("a")
+                (np.ones(12), np.ones(10)), np.ones((10, 12)), pybamm.Symbol("a")
             )
         with self.assertRaisesRegex(ValueError, "interpolator should be 'linear'"):
             pybamm.Interpolant(
