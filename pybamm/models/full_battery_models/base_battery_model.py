@@ -358,7 +358,7 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                 )
             elif options["working electrode"] == "positive":
                 raise NotImplementedError(
-                    "SEI on cracks not yet implemented for lithium metal eleectrode."
+                    "SEI on cracks not yet implemented for lithium metal electrode."
                 )
 
         # Options not yet compatible with particle-size distributions
