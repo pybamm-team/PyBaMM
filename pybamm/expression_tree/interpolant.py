@@ -62,7 +62,7 @@ class Interpolant(pybamm.Function):
                 )
             if x2 is not None and x2.shape[0] != y.shape[0]:
                 raise ValueError(
-                    "len(x2) should equal y=shape[2], "
+                    "len(x2) should equal y=shape[0], "
                     f"but x2.shape={x2.shape} and y.shape={y.shape}"
                 )
         else:
