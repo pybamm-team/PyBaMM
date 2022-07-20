@@ -12,6 +12,7 @@
 
 ## Bug fixes
 
+-   Fixed 2D intepolant ([#2180](https://github.com/pybamm-team/PyBaMM/pull/2180))
 -   Fixes a bug where the SPMe always builds even when `build=False` ([#2169](https://github.com/pybamm-team/PyBaMM/pull/2169))
 -   Some events have been removed in the case where they are constant, i.e. can never be reached ([#2158](https://github.com/pybamm-team/PyBaMM/pull/2158))
 -   Raise explicit `NotImplementedError` if trying to call `bool()` on a pybamm Symbol (e.g. in an if statement condition) ([#2141](https://github.com/pybamm-team/PyBaMM/pull/2141))
