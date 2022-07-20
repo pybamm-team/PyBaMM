@@ -40,31 +40,31 @@ def plot_voltage_components(
         "X-averaged battery electrolyte ohmic losses [V]",
         "X-averaged battery solid phase ohmic losses [V]",
     ]
+    labels = [
+        "Reaction overpotential",
+        "Concentration overpotential",
+        "Ohmic electrolyte overpotential",
+        "Ohmic electrode overpotential",
+    ]
 
     # Plot
     # Initialise
     time = solution["Time [h]"].entries
     initial_ocv = solution["X-averaged battery open circuit voltage [V]"](0)
     ocv = solution["X-averaged battery open circuit voltage [V]"].entries
-    ax.fill_between(time, ocv, initial_ocv, **kwargs_fill)
+    ax.fill_between(time, ocv, initial_ocv, **kwargs_fill, label="Open-circuit voltage")
     top = ocv
     # Plot components
-    for overpotential in overpotentials:
+    for overpotential, label in zip(overpotentials, labels):
         bottom = top + solution[overpotential].entries
-        ax.fill_between(time, bottom, top, **kwargs_fill)
+        ax.fill_between(time, bottom, top, **kwargs_fill, label=label)
         top = bottom
+
     V = solution["Battery voltage [V]"].entries
-    ax.plot(time, V, "k--")
+    ax.plot(time, V, "k--", label="Voltage")
+
     if show_legend:
-        labels = [
-            "Open-circuit voltage",
-            "Reaction overpotential",
-            "Concentration overpotential",
-            "Ohmic electrolyte overpotential",
-            "Ohmic electrode overpotential",
-            "Voltage",
-        ]
-        leg = ax.legend(labels, loc="lower left", frameon=True)
+        leg = ax.legend(loc="lower left", frameon=True)
         leg.get_frame().set_edgecolor("k")
 
     # Labels
