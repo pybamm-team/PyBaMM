@@ -55,6 +55,16 @@ class Interpolant(pybamm.Function):
             x1, x2 = x
             if y.ndim != 2:
                 raise ValueError("y should be two-dimensional if len(x)=2")
+            if x1.shape[0] != y.shape[1]:
+                raise ValueError(
+                    "len(x1) should equal y=shape[1], "
+                    f"but x1.shape={x1.shape} and y.shape={y.shape}"
+                )
+            if x2 is not None and x2.shape[0] != y.shape[0]:
+                raise ValueError(
+                    "len(x2) should equal y=shape[0], "
+                    f"but x2.shape={x2.shape} and y.shape={y.shape}"
+                )
         else:
             interpolator = interpolator or "cubic spline"
             if isinstance(x, (tuple, list)):
@@ -63,17 +73,12 @@ class Interpolant(pybamm.Function):
                 x1 = x
                 x = [x]
             x2 = None
+            if x1.shape[0] != y.shape[0]:
+                raise ValueError(
+                    "len(x1) should equal y=shape[0], "
+                    f"but x1.shape={x1.shape} and y.shape={y.shape}"
+                )
 
-        if x1.shape[0] != y.shape[0]:
-            raise ValueError(
-                "len(x1) should equal y=shape[0], "
-                "but x1.shape={} and y.shape={}".format(x1.shape, y.shape)
-            )
-        if x2 is not None and x2.shape[0] != y.shape[1]:
-            raise ValueError(
-                "len(x2) should equal y=shape[1], "
-                "but x2.shape={} and y.shape={}".format(x2.shape, y.shape)
-            )
         if isinstance(children, pybamm.Symbol):
             children = [children]
         # Either a single x is provided and there is one child
