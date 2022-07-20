@@ -171,7 +171,8 @@ class ParameterValues:
 
         # add SEI parameters if provided
         for extra_group in [
-            "sei",
+            "primary sei",
+            "secondary sei", # Jason - replace sei with "primary sei" and "secondary sei"
             "lithium plating",
             "negative primary particle",
             "negative secondary particle",
@@ -195,7 +196,11 @@ class ParameterValues:
                 if component_group.endswith(phase + " particle"):
                     component_group = "negative electrode"
                     prefactor = phase.capitalize() + ": "
-                    break
+                    # break
+                if component_group.startswith(phase):  # Jason - add primary/secondary to sei in component_group
+                    component_group = "sei"
+                    prefactor = phase.capitalize() + ": "
+                    # break
             component_path = os.path.join(
                 base_chemistry, component_group.replace(" ", "_") + "s", component
             )

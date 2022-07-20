@@ -157,6 +157,20 @@ Chen2020 = {
     "citation": "Chen2020",
 }
 
+# Chen2020_composite = {
+#     "chemistry": "lithium_ion",
+#     "cell": "LGM50_Chen2020",
+#     "negative electrode": "graphite_Chen2020",
+#     "negative primary particle": "graphite_Chen2020",
+#     "negative secondary particle": "silicon_Ai2022",
+#     "separator": "separator_Chen2020",
+#     "positive electrode": "nmc_Chen2020",
+#     "electrolyte": "lipf6_Nyman2008",
+#     "experiment": "1C_discharge_from_full_Chen2020",
+#     "sei": "example",
+#     "citation": ["Chen2020", "Ai2022"],
+# }
+
 Chen2020_composite = {
     "chemistry": "lithium_ion",
     "cell": "LGM50_Chen2020",
@@ -167,7 +181,8 @@ Chen2020_composite = {
     "positive electrode": "nmc_Chen2020",
     "electrolyte": "lipf6_Nyman2008",
     "experiment": "1C_discharge_from_full_Chen2020",
-    "sei": "example",
+    "primary sei": "example",
+    "secondary sei": "example",
     "citation": ["Chen2020", "Ai2022"],
 }
 

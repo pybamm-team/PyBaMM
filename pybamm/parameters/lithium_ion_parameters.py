@@ -823,52 +823,52 @@ class ParticleLithiumIonParameters(BaseParameters):
             
         # SEI parameters
         self.V_bar_inner_dimensional = pybamm.Parameter(
-            f"{pref}{Domain} inner SEI partial molar volume [m3.mol-1]"
+            f"{pref}Inner SEI partial molar volume [m3.mol-1]"
         )
         self.V_bar_outer_dimensional = pybamm.Parameter(
-            f"{pref}{Domain} outer SEI partial molar volume [m3.mol-1]"
+            f"{pref}Outer SEI partial molar volume [m3.mol-1]"
         )
 
         self.m_sei_dimensional = pybamm.Parameter(
-            f"{pref}{Domain} SEI reaction exchange current density [A.m-2]"
+            f"{pref}SEI reaction exchange current density [A.m-2]"
         )
 
-        self.R_sei_dimensional = pybamm.Parameter(f"{pref}{Domain} SEI resistivity [Ohm.m]")
+        self.R_sei_dimensional = pybamm.Parameter(f"{pref}SEI resistivity [Ohm.m]")
         self.D_sol_dimensional = pybamm.Parameter(
-            f"{pref}{Domain} outer SEI solvent diffusivity [m2.s-1]"
+            f"{pref}Outer SEI solvent diffusivity [m2.s-1]"
         )
         self.c_sol_dimensional = pybamm.Parameter(
-            f"{pref}{Domain} bulk solvent concentration [mol.m-3]"
+            f"{pref}Bulk solvent concentration [mol.m-3]"
         ) # Jason-does the bulk solvent concentration needs to be modified?
         self.m_ratio = pybamm.Parameter(
-            f"{pref}{Domain} ratio of inner and outer SEI exchange current densities"
+            f"{pref}Ratio of inner and outer SEI exchange current densities"
         )
         self.U_inner_dimensional = pybamm.Parameter(
-            f"{pref}{Domain} inner SEI open-circuit potential [V]"
+            f"{pref}Inner SEI open-circuit potential [V]"
         )
         self.U_outer_dimensional = pybamm.Parameter(
-            f"{pref}{Domain} outer SEI open-circuit potential [V]"
+            f"{pref}Outer SEI open-circuit potential [V]"
         )
         self.kappa_inner_dimensional = pybamm.Parameter(
-            f"{pref}{Domain} inner SEI electron conductivity [S.m-1]"
+            f"{pref}Inner SEI electron conductivity [S.m-1]"
         )
         self.D_li_dimensional = pybamm.Parameter(
-            f"{pref}{Domain} inner SEI lithium interstitial diffusivity [m2.s-1]"
+            f"{pref}Inner SEI lithium interstitial diffusivity [m2.s-1]"
         )
         self.c_li_0_dimensional = pybamm.Parameter(
-            f"{pref}{Domain} lithium interstitial reference concentration [mol.m-3]"
+            "Lithium interstitial reference concentration [mol.m-3]"
         ) # Jason-needs modified?
-        self.L_inner_0_dim = pybamm.Parameter(f"{pref}{Domain} initial inner SEI thickness [m]")
-        self.L_outer_0_dim = pybamm.Parameter(f"{pref}{Domain} initial outer SEI thickness [m]")
+        self.L_inner_0_dim = pybamm.Parameter(f"{pref}Initial inner SEI thickness [m]")
+        self.L_outer_0_dim = pybamm.Parameter(f"{pref}Initial outer SEI thickness [m]")
         self.L_sei_0_dim = self.L_inner_0_dim + self.L_outer_0_dim
         
         # EC reaction
         self.c_ec_0_dim = pybamm.Parameter(
-            f"{pref}{Domain} EC initial concentration in electrolyte [mol.m-3]"
+            f"{pref}EC initial concentration in electrolyte [mol.m-3]"
         ) # Jason-modified?
-        self.D_ec_dim = pybamm.Parameter(f"{pref}{Domain} EC diffusivity [m2.s-1]") # Jason-modified?
-        self.k_sei_dim = pybamm.Parameter(f"{pref}{Domain} SEI kinetic rate constant [m.s-1]")
-        self.U_sei_dim = pybamm.Parameter(f"{pref}{Domain} SEI open-circuit potential [V]")
+        self.D_ec_dim = pybamm.Parameter(f"{pref}EC diffusivity [m2.s-1]") # Jason-modified?
+        self.k_sei_dim = pybamm.Parameter(f"{pref}SEI kinetic rate constant [m.s-1]")
+        self.U_sei_dim = pybamm.Parameter(f"{pref}SEI open-circuit potential [V]")
 
         # Li plating parameters
         self.V_bar_plated_Li = pybamm.Parameter(
