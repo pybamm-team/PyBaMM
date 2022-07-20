@@ -87,8 +87,8 @@ model.submodels[
     model.param, "Positive"
 )
 model.submodels["sei"] = pybamm.sei.NoSEI(model.param)
-model.submodels["sei on cracks"] = pybamm.sei.NoSEI(model.param)
-model.submodels["lithium plating"] = pybamm.lithium_plating.NoPlating(model.param, cracks=True)
+model.submodels["sei on cracks"] = pybamm.sei.NoSEI(model.param, cracks=True)
+model.submodels["lithium plating"] = pybamm.lithium_plating.NoPlating(model.param)
 
 # build model
 model.build_model()

@@ -213,7 +213,7 @@ class BaseUnitTestLithiumIon:
         }
         self.check_well_posedness(options)
 
-    def test_well_posed_sei_electron_migration_limited(self):
+    def test_well_posed_sei_electron_migration_limited_on_cracks(self):
         options = {
             "SEI": "electron-migration limited",
             "SEI on cracks": "true",
@@ -221,7 +221,7 @@ class BaseUnitTestLithiumIon:
         }
         self.check_well_posedness(options)
 
-    def test_well_posed_sei_interstitial_diffusion_limited(self):
+    def test_well_posed_sei_interstitial_diffusion_limited_on_cracks(self):
         options = {
             "SEI": "interstitial-diffusion limited",
             "SEI on cracks": "true",
@@ -229,7 +229,7 @@ class BaseUnitTestLithiumIon:
         }
         self.check_well_posedness(options)
 
-    def test_well_posed_sei_ec_reaction_limited(self):
+    def test_well_posed_sei_ec_reaction_limited_on_cracks(self):
         options = {
             "SEI": "ec reaction limited",
             "SEI porosity change": "true",
