@@ -48,14 +48,14 @@ class TestOKane2022(unittest.TestCase):
         k_path = os.path.join(root, p)
 
         fun_test = {
-            #"graphite_LGM50_diffusivity_Chen2020.py": ([0.9, T], 3.3e-14),
+            "graphite_LGM50_diffusivity_Chen2020.py": ([0.9, T], 3.3e-14),
             "graphite_LGM50_electrolyte_exchange_current_density_Chen2020.py": (
                 [1000, 16566.5, 33133, T],
                 0.33947,
             ),
-            #"graphite_LGM50_ocp_Chen2020.py": ([0.9], 0.0861),
-            #"graphite_cracking_rate_Ai2020.py": ([T], 3.9e-20),
-            #"graphite_volume_change_Ai2020.py": ([0, 33133], -4.955e-5),
+            "graphite_LGM50_ocp_Chen2020.py": ([0.9], 0.0861),
+            "graphite_cracking_rate_Ai2020.py": ([T], 3.9e-20),
+            #"graphite_volume_change_Ai2020.py": ([0.9, 33133], 0.0897),
         }
 
         for name, value in fun_test.items():
