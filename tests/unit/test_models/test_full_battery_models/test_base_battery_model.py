@@ -265,6 +265,9 @@ class TestBaseBatteryModel(unittest.TestCase):
         model = pybamm.BaseBatteryModel({"loss of active material": "stress-driven"})
         self.assertEqual(model.options["particle mechanics"], "swelling only")
         self.assertEqual(model.options["stress-induced diffusion"], "true")
+        model = pybamm.BaseBatteryModel({"SEI on cracks": "true"})
+        self.assertEqual(model.options["particle mechanics"], "swelling and cracking")
+        self.assertEqual(model.options["stress-induced diffusion"], "true")
 
         # crack model
         with self.assertRaisesRegex(pybamm.OptionError, "particle mechanics"):
@@ -275,11 +278,6 @@ class TestBaseBatteryModel(unittest.TestCase):
         # SEI on cracks
         with self.assertRaisesRegex(pybamm.OptionError, "SEI on cracks"):
             pybamm.BaseBatteryModel({"SEI on cracks": "bad SEI on cracks"})
-        with self.assertRaisesRegex(pybamm.OptionError, "To model SEI on cracks"):
-            pybamm.BaseBatteryModel({
-                "SEI on cracks": "true",
-                "particle mechanics": "swelling only",
-            })
         with self.assertRaisesRegex(NotImplementedError, "SEI on cracks not yet"):
             pybamm.BaseBatteryModel({
                 "SEI on cracks": "true",

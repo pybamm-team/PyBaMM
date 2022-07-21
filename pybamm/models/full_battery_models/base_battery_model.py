@@ -282,14 +282,21 @@ class BatteryModelOptions(pybamm.FuzzyDict):
         # The "SEI film resistance" option will still be overridden by extra_options if
         # provided
 
-        # Change the default for particle mechanics based on which LAM option is
-        # provided
-        # return "none" if option not given
-        lam_option = extra_options.get("loss of active material", "none")
-        if "stress-driven" in lam_option or "stress and reaction-driven" in lam_option:
-            default_options["particle mechanics"] = "swelling only"
+        # Change the default for particle mechanics based on which SEI on cracks option
+        # is provided
+        # return "false" if option not given
+        SEI_cracks_option = extra_options.get("SEI on cracks", "false")
+        if SEI_cracks_option == "true":
+            default_options["particle mechanics"] = "swelling and cracking"
         else:
-            default_options["particle mechanics"] = "none"
+            # Change the default for particle mechanics based on which LAM option is 
+            # provided
+            # return "none" if option not given
+            LAM_opt = extra_options.get("loss of active material", "none")
+            if "stress-driven" in LAM_opt or "stress and reaction-driven" in LAM_opt:
+                default_options["particle mechanics"] = "swelling only"
+            else:
+                default_options["particle mechanics"] = "none"
         # The "particle mechanics" option will still be overridden by extra_options if
         # provided
 
@@ -348,17 +355,6 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                 raise pybamm.OptionError(
                     "If 'sei film resistance' is 'distributed' then 'total interfacial "
                     "current density as a state' must be 'true'"
-                )
-
-        if options["SEI on cracks"] == "true":
-            if options["particle mechanics"] != "swelling and cracking":
-                raise pybamm.OptionError(
-                    "To model SEI on cracks, 'particle mechanics' must be set to "
-                    "'swelling and cracking'."
-                )
-            elif options["working electrode"] == "positive":
-                raise NotImplementedError(
-                    "SEI on cracks not yet implemented for lithium metal electrode."
                 )
 
         # Options not yet compatible with particle-size distributions
@@ -454,6 +450,10 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                 raise pybamm.OptionError(
                     f"X-lumped thermal submodels do not yet support {n}D "
                     "current collectors in a half-cell configuration"
+                )
+            elif options ["SEI on cracks"] == "true":
+                raise NotImplementedError(
+                    "SEI on cracks not yet implemented for half-cell models"
                 )
 
         # Check options are valid
