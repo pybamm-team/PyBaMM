@@ -4,19 +4,18 @@ import matplotlib.pyplot as plt
 
 
 parameters = [
-    "Marquis2019",
-    # "NCA_Kim2011",
-    # # "Prada2013",
-    # "Ramadass2004",
-    # "Mohtat2020",
-    # "Chen2020",
-    # # "Chen2020_plating",
+    # "Marquis2019",
+    "NCA_Kim2011",
+    # "Prada2013",-
+    "Ramadass2004",
+    # "Mohtat2020",-
+    # "Chen2020",-
+    # "Chen2020_plating",
     # "Ecker2015",
 ]
 
-# dt_max = [18,20,22,24,50,80]
-dt_max = [1.e-8,1.0e-7,1.0e-6,1.0e-5,1.0e-4,1.0e-3,0.01,0.1,1,10,100,1000,1.0e4,1.0e5,1.0e6,1.0e7,1.0e15]
-models = ["SPM", "DFN"]
+dt_max = [1.0e-6,1.0e-5,1.0e-4,1.0e-3,0.01,0.1,1,10,100,1000,1.0e4,1.0e5,1.0e6,1.0e7,1.0e9,1.0e10,1.0e11,1.0e12]
+models = [ "DFN"]
 
 for model_ in models:
     if model_ == "SPM":
@@ -86,4 +85,13 @@ plt.gca().legend(
 )
 
 plt.tight_layout()
-plt.show()
+# plt.show()
+plt.savefig(f"benchmarks/benchmark_images/time_vs_dt_max_{pybamm.__version__}.png")
+
+
+content = f"<img src='./benchmark_images/time_vs_dt_max_{pybamm.__version__}.png'>"
+
+with open("./benchmarks/release_work_precision_sets.md", "r") as original:
+    data = original.read()
+with open("./benchmarks/release_work_precision_sets.md", "w") as modified:
+    modified.write(f"{content}\n{data}")

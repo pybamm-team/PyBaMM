@@ -7,11 +7,11 @@ parameters = [
     "Marquis2019",
     "Prada2013",
     "Ramadass2004",
-    "Mohtat2020",
+    # "Mohtat2020",
     "Chen2020",
     "Ecker2015",
 ]
-models = [pybamm.lithium_ion.SPM(), pybamm.lithium_ion.DFN()]
+models = ["SPM", "DFN"]
 abstols = [
     0.001,
     0.0001,
@@ -27,15 +27,18 @@ abstols = [
 ]
 
 for model_ in models:
-    if model_ == pybamm.lithium_ion.SPM():
+    if model_ == "SPM":
         x = 1
     else:
         x = 2
     for params in parameters:
         print(params)
         time_points = []
-
-        model = model_
+        if model_ == "SPM":
+            model = pybamm.lithium_ion.SPM()
+        else:
+            model = pybamm.lithium_ion.DFN()
+        
         c_rate = 1 / 10
         tmax = 4000 / c_rate
         nb_points = 500
@@ -79,18 +82,18 @@ for model_ in models:
             time_points.append(time)
         plt.subplot(1, 2, x)
         plt.plot(abstols, time_points)
-
+        plt.title(f"Work Precision Sets for {model_}")
+        plt.xlabel("abstols")
+        plt.xticks(abstols)
+        plt.xscale("log")
+        plt.yscale("log")
+        plt.ylabel("time(s)")
 
 plt.gca().legend(
     parameters,
     loc="upper right",
 )
-plt.title("Work Precision Sets")
-plt.xlabel("abstols")
-plt.xscale("log")
-plt.yscale("log")
-plt.xticks(abstols)
-plt.ylabel("time(s)")
+plt.tight_layout()
 plt.show()
 # plt.savefig(f"benchmarks/benchmark_images/time_vs_abstols_{pybamm.__version__}.png")
 
