@@ -3,10 +3,10 @@
 #
 import pybamm
 
-from .base_fickian import BaseFickian
+from .polynomial_profile import PolynomialProfile
 
 
-class XAveragedPolynomialProfile(BaseFickian):
+class XAveragedPolynomialProfile(PolynomialProfile):
     """
     Class for molar conservation in a single x-averaged particle employing Fick's law,
     with an assumed polynomial concentration profile in r. Model equations from [1]_.
@@ -17,9 +17,6 @@ class XAveragedPolynomialProfile(BaseFickian):
         The parameters to use for this submodel
     domain : str
         The domain of the model either 'Negative' or 'Positive'
-    name : str
-        The name of the polynomial approximation to be used. Can be "uniform
-        profile", "quadratic profile" or "quartic profile".
     options: dict
         A dictionary of options to be passed to the model.
         See :class:`pybamm.BaseBatteryModel`
@@ -30,26 +27,59 @@ class XAveragedPolynomialProfile(BaseFickian):
            Coupled Modeling of Batteries”. Journal of The Electrochemical Society,
            152(10):A2002-A2008, 2005
 
-    **Extends:** :class:`pybamm.particle.BaseParticle`
+    **Extends:** :class:`pybamm.particle.PolynomialProfile`
     """
 
-    def __init__(self, param, domain, name, options):
+    def __init__(self, param, domain, options):
         super().__init__(param, domain, options)
-        self.name = name
-
-        pybamm.citations.register("Subramanian2005")
 
     def get_fundamental_variables(self):
+        Domain = self.domain
+        domain = Domain.lower()
+
+        variables = {}
         # For all orders we solve an equation for the average concentration
-        if self.domain == "Negative":
-            c_s_av = pybamm.standard_variables.c_s_n_av
+        if self.size_distribution is False:
+            c_s_av = pybamm.Variable(
+                f"Average {domain} particle concentration",
+                domain="current collector",
+                bounds=(0, 1),
+            )
+        else:
+            c_s_av_distribution = pybamm.Variable(
+                f"Average {domain} particle concentration distribution",
+                domain=f"{domain} particle size",
+                auxiliary_domains={"secondary": "current collector"},
+                bounds=(0, 1),
+            )
+            # Since concentration does not depend on "x", need a particle-size
+            # spatial variable R with only "current collector" as secondary
+            # domain
+            R = pybamm.SpatialVariable(
+                f"R_{domain[0]}",
+                domain=[f"{domain} particle size"],
+                auxiliary_domains={"secondary": "current collector"},
+                coord_sys="cartesian",
+            )
+            variables = self._get_distribution_variables(R)
 
-        elif self.domain == "Positive":
-            c_s_av = pybamm.standard_variables.c_s_p_av
+            # Standard distribution variables (size-dependent)
+            variables.update(
+                self._get_standard_concentration_distribution_variables(
+                    c_s_av_distribution
+                )
+            )
 
-        variables = {
-            "Average " + self.domain.lower() + " particle concentration": c_s_av
-        }
+            # Standard size-averaged variables. Average concentrations using
+            # the volume-weighted distribution since they are volume-based
+            # quantities. Necessary for output variables "Total lithium in
+            # negative electrode [mol]", etc, to be calculated correctly
+            f_v_dist = variables[
+                f"X-averaged {domain} volume-weighted particle-size distribution"
+            ]
+            c_s_av = pybamm.Integral(f_v_dist * c_s_av_distribution, R)
+
+        variables.update({f"Average {domain} particle concentration": c_s_av})
 
         # For the fourth order polynomial approximation we also solve an
         # equation for the average concentration gradient. Note: in the original
@@ -57,36 +87,32 @@ class XAveragedPolynomialProfile(BaseFickian):
         # distinction between the flux defined as N = -D*dc/dr and the concentration
         # gradient q = dc/dr
         if self.name == "quartic profile":
-            if self.domain == "Negative":
-                q_s_av = pybamm.standard_variables.q_s_n_av
-            elif self.domain == "Positive":
-                q_s_av = pybamm.standard_variables.q_s_p_av
+            q_s_av = pybamm.Variable(
+                f"Average {domain} particle concentration gradient",
+                domain="current collector",
+            )
             variables.update(
-                {
-                    "Average "
-                    + self.domain.lower()
-                    + " particle concentration gradient": q_s_av
-                }
+                {f"Average {domain} particle concentration gradient": q_s_av}
             )
 
         return variables
 
     def get_coupled_variables(self, variables):
+        domain = self.domain.lower()
         domain_param = self.domain_param
 
-        c_s_av = variables["Average " + self.domain.lower() + " particle concentration"]
-        T_av = variables["X-averaged " + self.domain.lower() + " electrode temperature"]
+        c_s_av = variables[f"Average {domain} particle concentration"]
+        T_av = variables[f"X-averaged {domain} electrode temperature"]
 
-        D_eff_av = self._get_effective_diffusivity(c_s_av, T_av)
-        i_boundary_cc = variables["Current collector current density"]
-        a_av = variables[
-            "X-averaged "
-            + self.domain.lower()
-            + " electrode surface area to volume ratio"
-        ]
-        sgn = 1 if self.domain == "Negative" else -1
+        if self.name != "uniform profile":
+            D_eff_av = self._get_effective_diffusivity(c_s_av, T_av)
+            i_boundary_cc = variables["Current collector current density"]
+            a_av = variables[
+                f"X-averaged {domain} electrode surface area to volume ratio"
+            ]
+            sgn = 1 if self.domain == "Negative" else -1
 
-        j_xav = sgn * i_boundary_cc / (a_av * self.domain_param.l)
+            j_xav = sgn * i_boundary_cc / (a_av * self.domain_param.l)
 
         # Set surface concentration based on polynomial order
         if self.name == "uniform profile":
@@ -116,9 +142,7 @@ class XAveragedPolynomialProfile(BaseFickian):
             # The surface concentration is computed from the average concentration,
             # the average concentration gradient and the boundary flux (see notes
             # for the quadratic profile)
-            q_s_av = variables[
-                "Average " + self.domain.lower() + " particle concentration gradient"
-            ]
+            q_s_av = variables[f"Average {domain} particle concentration gradient"]
             c_s_surf_xav = (
                 c_s_av
                 + 8 * q_s_av / 35
@@ -131,81 +155,64 @@ class XAveragedPolynomialProfile(BaseFickian):
         # variable r which only has "... particle" and "current
         # collector" as domains
         r = pybamm.SpatialVariable(
-            "r_" + self.domain.lower()[0],
-            domain=[f"{self.domain.lower()} particle"],
+            f"r_{domain[0]}",
+            domain=[f"{domain} particle"],
             auxiliary_domains={"secondary": "current collector"},
             coord_sys="spherical polar",
         )
         if self.name == "uniform profile":
             # The concentration is uniform
-            A = pybamm.PrimaryBroadcast(c_s_av, [self.domain.lower() + " particle"])
-            B = 0
-            C = 0
+            A = c_s_av
+            B = pybamm.PrimaryBroadcast(0, "current collector")
+            C = pybamm.PrimaryBroadcast(0, "current collector")
         elif self.name == "quadratic profile":
             # The concentration is given by c = A + B*r**2
-            A = pybamm.PrimaryBroadcast(
-                (1 / 2) * (5 * c_s_av - 3 * c_s_surf_xav),
-                [self.domain.lower() + " particle"],
-            )
-            B = pybamm.PrimaryBroadcast(
-                (5 / 2) * (c_s_surf_xav - c_s_av), [self.domain.lower() + " particle"]
-            )
-            C = 0
+            A = (1 / 2) * (5 * c_s_av - 3 * c_s_surf_xav)
+            B = (5 / 2) * (c_s_surf_xav - c_s_av)
+            C = pybamm.PrimaryBroadcast(0, "current collector")
         elif self.name == "quartic profile":
             # The concentration is given by c = A + B*r**2 + C*r**4
-            A = pybamm.PrimaryBroadcast(
-                39 * c_s_surf_xav / 4 - 3 * q_s_av - 35 * c_s_av / 4,
-                [self.domain.lower() + " particle"],
-            )
-            B = pybamm.PrimaryBroadcast(
-                -35 * c_s_surf_xav + 10 * q_s_av + 35 * c_s_av,
-                [self.domain.lower() + " particle"],
-            )
-            C = pybamm.PrimaryBroadcast(
-                105 * c_s_surf_xav / 4 - 7 * q_s_av - 105 * c_s_av / 4,
-                [self.domain.lower() + " particle"],
-            )
+            A = 39 * c_s_surf_xav / 4 - 3 * q_s_av - 35 * c_s_av / 4
+            B = -35 * c_s_surf_xav + 10 * q_s_av + 35 * c_s_av
+            C = 105 * c_s_surf_xav / 4 - 7 * q_s_av - 105 * c_s_av / 4
 
+        A = pybamm.PrimaryBroadcast(A, [f"{domain} particle"])
+        B = pybamm.PrimaryBroadcast(B, [f"{domain} particle"])
+        C = pybamm.PrimaryBroadcast(C, [f"{domain} particle"])
         c_s_xav = A + B * r ** 2 + C * r ** 4
-        c_s = pybamm.SecondaryBroadcast(c_s_xav, [self.domain.lower() + " electrode"])
-        c_s_surf = pybamm.PrimaryBroadcast(
-            c_s_surf_xav, [self.domain.lower() + " electrode"]
-        )
+        c_s = pybamm.SecondaryBroadcast(c_s_xav, [f"{domain} electrode"])
+        c_s_surf = pybamm.PrimaryBroadcast(c_s_surf_xav, [f"{domain} electrode"])
 
         # Set flux based on polynomial order
-        T_xav = pybamm.PrimaryBroadcast(T_av, [self.domain.lower() + " particle"])
-        D_eff_xav = self._get_effective_diffusivity(c_s_xav, T_xav)
-
+        if self.name != "uniform profile":
+            T_xav = pybamm.PrimaryBroadcast(T_av, [f"{domain} particle"])
+            D_eff_xav = self._get_effective_diffusivity(c_s_xav, T_xav)
+            D_eff = pybamm.SecondaryBroadcast(D_eff_xav, [f"{domain} electrode"])
+            variables.update(self._get_standard_diffusivity_variables(D_eff))
         if self.name == "uniform profile":
             # The flux is zero since there is no concentration gradient
             N_s_xav = pybamm.FullBroadcastToEdges(
-                0, self.domain.lower() + " particle", "current collector"
+                0, f"{domain} particle", "current collector"
             )
         elif self.name == "quadratic profile":
             # The flux may be computed directly from the polynomial for c
             N_s_xav = -D_eff_xav * 5 * (c_s_surf_xav - c_s_av) * r
         elif self.name == "quartic profile":
-            q_s_av = variables[
-                "Average " + self.domain.lower() + " particle concentration gradient"
-            ]
+            q_s_av = variables[f"Average {domain} particle concentration gradient"]
             # The flux may be computed directly from the polynomial for c
             N_s_xav = -D_eff_xav * (
                 (-70 * c_s_surf_xav + 20 * q_s_av + 70 * c_s_av) * r
                 + (105 * c_s_surf_xav - 28 * q_s_av - 105 * c_s_av) * r ** 3
             )
 
-        D_eff = pybamm.SecondaryBroadcast(
-            D_eff_xav, [self._domain.lower() + " electrode"]
-        )
-        N_s = pybamm.SecondaryBroadcast(N_s_xav, [self._domain.lower() + " electrode"])
+        N_s = pybamm.SecondaryBroadcast(N_s_xav, [f"{domain} electrode"])
 
         variables.update(
             self._get_standard_concentration_variables(
                 c_s, c_s_av=c_s_av, c_s_surf=c_s_surf
             )
         )
-        variables.update(self._get_standard_flux_variables(N_s, N_s_xav))
-        variables.update(self._get_standard_diffusivity_variables(D_eff))
+        variables.update(self._get_standard_flux_variables(N_s))
         variables.update(self._get_total_concentration_variables(variables))
 
         return variables
@@ -215,29 +222,32 @@ class XAveragedPolynomialProfile(BaseFickian):
         # the scalar source term gets multplied by the correct mass matrix when
         # using this model with 2D current collectors with the finite element
         # method (see #1399)
+        domain = self.domain.lower()
         domain_param = self.domain_param
 
-        c_s_av = variables["Average " + self.domain.lower() + " particle concentration"]
-        j_xav = variables[
-            "X-averaged "
-            + self.domain.lower()
-            + " electrode interfacial current density"
-        ]
+        if self.size_distribution is False:
+            c_s_av = variables[f"Average {domain} particle concentration"]
+            j_xav = variables[
+                f"X-averaged {domain} electrode interfacial current density"
+            ]
+        else:
+            c_s_av = variables[f"Average {domain} particle concentration distribution"]
+            j_xav = variables[
+                f"X-averaged {domain} electrode interfacial "
+                "current density distribution"
+            ]
 
-        self.rhs = {
-            c_s_av: pybamm.source(
-                -3 * j_xav / domain_param.a_R / domain_param.gamma, c_s_av
-            )
-        }
+        dcdt = -3 * j_xav / domain_param.a_R / domain_param.gamma
+
+        if self.size_distribution is False:
+            self.rhs = {c_s_av: pybamm.source(dcdt, c_s_av)}
+        else:
+            self.rhs = {c_s_av: dcdt}
 
         if self.name == "quartic profile":
             # We solve an extra ODE for the average particle concentration gradient
-            q_s_av = variables[
-                "Average " + self.domain.lower() + " particle concentration gradient"
-            ]
-            D_eff_xav = variables[
-                "X-averaged " + self.domain.lower() + " effective diffusivity"
-            ]
+            q_s_av = variables[f"Average {domain} particle concentration gradient"]
+            D_eff_xav = variables[f"X-averaged {domain} effective diffusivity"]
 
             self.rhs.update(
                 {
@@ -249,20 +259,26 @@ class XAveragedPolynomialProfile(BaseFickian):
                 }
             )
 
+    def set_algebraic(self, variables):
+        pass
+
     def set_initial_conditions(self, variables):
         """
         For single or x-averaged particle models, initial conditions can't depend on x
         or r so we take the r- and x-average of the initial conditions.
         """
-        c_s_av = variables["Average " + self.domain.lower() + " particle concentration"]
-
+        domain = self.domain.lower()
         c_init = pybamm.x_average(pybamm.r_average(self.domain_param.c_init))
+
+        if self.size_distribution is False:
+            c_s_av = variables[f"Average {domain} particle concentration"]
+        else:
+            c_s_av = variables[f"Average {domain} particle concentration distribution"]
+            c_init = c_init = pybamm.PrimaryBroadcast(c_init, f"{domain} particle size")
 
         self.initial_conditions = {c_s_av: c_init}
         if self.name == "quartic profile":
             # We also need to provide an initial condition for the average
             # concentration gradient
-            q_s_av = variables[
-                "Average " + self.domain.lower() + " particle concentration gradient"
-            ]
+            q_s_av = variables[f"Average {domain} particle concentration gradient"]
             self.initial_conditions.update({q_s_av: 0})
