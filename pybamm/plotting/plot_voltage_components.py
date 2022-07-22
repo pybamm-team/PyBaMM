@@ -30,9 +30,10 @@ def plot_voltage_components(
     kwargs_fill = {"alpha": 0.6, **kwargs_fill}
 
     if ax is not None:
+        fig = None
         testing = True
     else:
-        _, ax = plt.subplots()
+        fig, ax = plt.subplots()
 
     overpotentials = [
         "X-averaged battery reaction overpotential [V]",
@@ -71,10 +72,12 @@ def plot_voltage_components(
     ax.set_xlim([time[0], time[-1]])
     ax.set_xlabel("Time [h]")
 
-    y_min, y_max = 0.98 * np.nanmin(V), 1.02 * np.nanmax(V)
+    y_min, y_max = 0.98 * min(np.nanmin(V), np.nanmin(ocv)), 1.02 * (
+        max(np.nanmax(V), np.nanmax(ocv))
+    )
     ax.set_ylim([y_min, y_max])
 
     if not testing:  # pragma: no cover
         plt.show()
 
-    return ax
+    return fig, ax
