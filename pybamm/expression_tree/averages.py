@@ -99,8 +99,10 @@ def x_average(symbol):
     :class:`Symbol`
         the new averaged symbol
     """
-    # Can't take average if the symbol evaluates on edges
-    if symbol.evaluates_on_edges("primary"):
+    # Can't take average if the symbol evaluates on edges (unless it's broadcasted)
+    if symbol.evaluates_on_edges("primary") and not isinstance(
+        symbol, pybamm.Broadcast
+    ):
         raise ValueError("Can't take the x-average of a symbol that evaluates on edges")
     # If symbol doesn't have an electrode domain, its x-averaged value is itself
     if not any(

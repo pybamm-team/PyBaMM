@@ -29,12 +29,12 @@ model.submodels["negative electrode potential"] = pybamm.electrode.ohm.LeadingOr
 model.submodels["positive electrode potential"] = pybamm.electrode.ohm.LeadingOrder(
     model.param, "Positive"
 )
-particle_n = pybamm.particle.no_distribution.XAveragedPolynomialProfile(
-    model.param, "Negative", "uniform profile", options=model.options
+particle_n = pybamm.particle.PolynomialProfile(
+    model.param, "Negative", options={**model.options, "particle": "uniform profile"}
 )
 model.submodels["negative particle"] = particle_n
-particle_p = pybamm.particle.no_distribution.XAveragedPolynomialProfile(
-    model.param, "Positive", "uniform profile", options=model.options
+particle_p = pybamm.particle.PolynomialProfile(
+    model.param, "Positive", options={**model.options, "particle": "uniform profile"}
 )
 model.submodels["positive particle"] = particle_p
 
