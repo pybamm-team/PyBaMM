@@ -266,15 +266,21 @@ class FullDifferential(BaseModel):
         if self.domain == "Separator":
             return
 
+        Domain = self.domain
+        domain = Domain.lower()
+        phase_name = self.phase_name
+
         C_dl = self.domain_param.C_dl
 
-        delta_phi = variables[self.domain + " electrode surface potential difference"]
-        i_e = variables[self.domain + " electrolyte current density"]
+        delta_phi = variables[f"{Domain} electrode surface potential difference"]
+        i_e = variables[f"{Domain} electrolyte current density"]
 
         # Variable summing all of the interfacial current densities
         sum_a_j = variables[
-            f"Sum of {self.domain.lower()} electrode volumetric "
-            "interfacial current densities"
+            f"Sum of {domain} electrode volumetric " "interfacial current densities"
+        ]
+        a = variables[
+            f"{Domain} electrode {phase_name}surface area to volume ratio [m-1]"
         ]
 
-        self.rhs[delta_phi] = 1 / C_dl * (pybamm.div(i_e) - sum_a_j)
+        self.rhs[delta_phi] = 1 / (a * C_dl) * (pybamm.div(i_e) - sum_a_j)

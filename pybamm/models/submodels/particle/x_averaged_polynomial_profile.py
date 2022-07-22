@@ -32,7 +32,7 @@ class XAveragedPolynomialProfile(PolynomialProfile):
     **Extends:** :class:`pybamm.particle.PolynomialProfile`
     """
 
-    def __init__(self, param, domain, options, phase):
+    def __init__(self, param, domain, options, phase=None):
         super().__init__(param, domain, options, phase)
 
     def get_fundamental_variables(self):

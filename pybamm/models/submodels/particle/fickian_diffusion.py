@@ -18,14 +18,16 @@ class FickianDiffusion(BaseParticle):
     options: dict
         A dictionary of options to be passed to the model.
         See :class:`pybamm.BaseBatteryModel`
+    phase : str
+        Phase of the particle
     x_average : bool
         Whether the particle concentration is averaged over the x-direction
 
     **Extends:** :class:`pybamm.particle.BaseParticle`
     """
 
-    def __init__(self, param, domain, options, x_average):
-        super().__init__(param, domain, options)
+    def __init__(self, param, domain, options, phase=None, x_average=False):
+        super().__init__(param, domain, options, phase)
         self.x_average = x_average
 
     def get_fundamental_variables(self):
@@ -245,7 +247,7 @@ class FickianDiffusion(BaseParticle):
             if self.x_average is False:
                 c_s = variables[f"{Domain} {phase_name}particle concentration"]
                 D_eff = variables[
-                    f"{Domain} effective {phase_name} particle diffusivity"
+                    f"{Domain} {phase_name}particle effective diffusivity"
                 ]
                 j = variables[f"{Domain} electrode interfacial current density"]
                 R = variables[f"{Domain} {phase_name}particle radius"]
@@ -254,7 +256,7 @@ class FickianDiffusion(BaseParticle):
                     f"X-averaged {domain} {phase_name}particle concentration"
                 ]
                 D_eff = variables[
-                    f"X-averaged {domain} effective {phase_name} particle diffusivity"
+                    f"X-averaged {domain} {phase_name}particle effective diffusivity"
                 ]
                 j = variables[
                     f"X-averaged {domain} electrode interfacial current density"
@@ -266,7 +268,7 @@ class FickianDiffusion(BaseParticle):
                     f"{Domain} {phase_name}particle concentration distribution"
                 ]
                 D_eff = variables[
-                    f"{Domain} effective {phase_name} particle diffusivity distribution"
+                    f"{Domain} {phase_name}particle effective diffusivity distribution"
                 ]
                 j = variables[
                     f"{Domain} electrode interfacial current density distribution"
@@ -277,7 +279,7 @@ class FickianDiffusion(BaseParticle):
                     "concentration distribution"
                 ]
                 D_eff = variables[
-                    f"X-averaged {domain} effective {phase_name} particle "
+                    f"X-averaged {domain} {phase_name}particle effective "
                     "diffusivity distribution"
                 ]
                 j = variables[
