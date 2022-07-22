@@ -289,7 +289,7 @@ class BatteryModelOptions(pybamm.FuzzyDict):
         if SEI_cracks_option == "true":
             default_options["particle mechanics"] = "swelling and cracking"
         else:
-            # Change the default for particle mechanics based on which LAM option is 
+            # Change the default for particle mechanics based on which LAM option is
             # provided
             # return "none" if option not given
             LAM_opt = extra_options.get("loss of active material", "none")
@@ -451,7 +451,7 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                     f"X-lumped thermal submodels do not yet support {n}D "
                     "current collectors in a half-cell configuration"
                 )
-            elif options ["SEI on cracks"] == "true":
+            elif options["SEI on cracks"] == "true":
                 raise NotImplementedError(
                     "SEI on cracks not yet implemented for half-cell models"
                 )
