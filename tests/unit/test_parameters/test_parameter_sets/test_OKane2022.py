@@ -21,6 +21,7 @@ class TestOKane2022(unittest.TestCase):
     def test_functions(self):
         root = pybamm.root_dir()
         param = pybamm.ParameterValues("OKane2022")
+        sto = pybamm.Scalar(0.9)
         T = pybamm.Scalar(298.15)
 
         # Lithium plating
@@ -48,14 +49,14 @@ class TestOKane2022(unittest.TestCase):
         k_path = os.path.join(root, p)
 
         fun_test = {
-            "graphite_LGM50_diffusivity_Chen2020.py": ([0.9, T], 3.3e-14),
+            "graphite_LGM50_diffusivity_Chen2020.py": ([sto, T], 3.3e-14),
             "graphite_LGM50_electrolyte_exchange_current_density_Chen2020.py": (
                 [1000, 16566.5, 33133, T],
                 0.33947,
             ),
-            "graphite_LGM50_ocp_Chen2020.py": ([0.9], 0.0861),
+            "graphite_LGM50_ocp_Chen2020.py": ([sto], 0.0861),
             "graphite_cracking_rate_Ai2020.py": ([T], 3.9e-20),
-            #"graphite_volume_change_Ai2020.py": ([0.9, 33133], 0.0897),
+            "graphite_volume_change_Ai2020.py": ([sto, 33133], 0.0897),
         }
 
         for name, value in fun_test.items():
@@ -67,14 +68,14 @@ class TestOKane2022(unittest.TestCase):
         k_path = os.path.join(root, p)
 
         fun_test = {
-            "nmc_LGM50_diffusivity_Chen2020.py": ([0.9, T], 4e-15),
+            "nmc_LGM50_diffusivity_Chen2020.py": ([sto, T], 4e-15),
             "nmc_LGM50_electrolyte_exchange_current_density_Chen2020.py": (
                 [1000, 31552, 63104, T],
                 3.4123,
             ),
-            "nmc_LGM50_ocp_Chen2020.py": ([0.9], 3.5682),
+            "nmc_LGM50_ocp_Chen2020.py": ([sto], 3.5682),
             "cracking_rate_Ai2020.py": ([T], 3.9e-20),
-            "volume_change_Ai2020.py": ([0.9, 63104], 0.70992),
+            "volume_change_Ai2020.py": ([sto, 63104], 0.70992),
         }
 
         for name, value in fun_test.items():
