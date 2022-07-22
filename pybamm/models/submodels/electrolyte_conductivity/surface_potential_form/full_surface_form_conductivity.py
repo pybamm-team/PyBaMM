@@ -283,4 +283,4 @@ class FullDifferential(BaseModel):
             "Sum of " + self.domain.lower() + " electrode interfacial current densities"
         ]
 
-        self.rhs[delta_phi] = 1 / C_dl * (pybamm.div(i_e) - a * sum_j)
+        self.rhs[delta_phi] = 1 / (a * C_dl) * (pybamm.div(i_e) - a * sum_j)
