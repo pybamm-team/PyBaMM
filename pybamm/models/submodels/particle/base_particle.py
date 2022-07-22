@@ -37,7 +37,7 @@ class BaseParticle(pybamm.BaseSubModel):
         # Get diffusivity
         D = phase_param.D(c, T)
 
-        # Account for stress-induced diffusion by defining a multiplicative
+        # Account for stress-induced difftusion by defining a multiplicative
         # "stress factor"
         stress_option = getattr(self.options, domain)["stress-induced diffusion"]
 

@@ -43,7 +43,7 @@ class TestSPM(BaseUnitTestLithiumIon, unittest.TestCase):
             {**options, "particle": "quadratic profile"},
             "primary",
         )
-        model.submodels["negative particle"] = particle_n
+        model.submodels["negative primary particle"] = particle_n
         model.build_model()
         new_model = model.new_copy()
         new_model_cs_eqn = list(new_model.rhs.values())[1]

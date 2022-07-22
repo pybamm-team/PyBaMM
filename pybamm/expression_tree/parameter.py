@@ -116,10 +116,10 @@ class FunctionParameter(pybamm.Symbol):
                     parent_param = frame.f_locals["self"]
                 except KeyError:
                     parent_param = None
-                if hasattr(parent_param, "domain"):
+                if hasattr(parent_param, "domain") and parent_param.domain != None:
                     # add "_n" or "_s" or "_p" if this comes from a Parameter class with
                     # a domain
-                    d = getattr(parent_param, "domain").lower()[0]
+                    d = parent_param.domain.lower()[0]
                     print_name += f"_{d}"
                 self.print_name = print_name
 

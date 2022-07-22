@@ -237,7 +237,7 @@ class PolynomialProfile(BaseParticle):
             # We solve an extra ODE for the average particle flux
             q_s_rav = variables[f"R-averaged {domain} particle concentration gradient"]
             c_s_rav = variables[f"R-averaged {domain} particle concentration"]
-            D_eff = variables[f"{Domain} effective diffusivity"]
+            D_eff = variables[f"{Domain} particle effective diffusivity"]
 
             self.rhs.update(
                 {
@@ -260,7 +260,7 @@ class PolynomialProfile(BaseParticle):
 
         c_s_surf = variables[f"{Domain} particle surface concentration"]
         c_s_rav = variables[f"R-averaged {domain} particle concentration"]
-        D_eff = variables[f"{Domain} effective diffusivity"]
+        D_eff = variables[f"{Domain} particle effective diffusivity"]
         j = variables[f"{Domain} electrode interfacial current density"]
         R = variables[f"{Domain} particle radius"]
 

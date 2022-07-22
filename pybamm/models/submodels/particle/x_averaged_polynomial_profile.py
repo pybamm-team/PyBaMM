@@ -251,7 +251,7 @@ class XAveragedPolynomialProfile(PolynomialProfile):
         if self.name == "quartic profile":
             # We solve an extra ODE for the average particle concentration gradient
             q_s_av = variables[f"Average {domain} particle concentration gradient"]
-            D_eff_xav = variables[f"X-averaged {domain} effective diffusivity"]
+            D_eff_xav = variables[f"X-averaged {domain} particle effective diffusivity"]
 
             self.rhs.update(
                 {
