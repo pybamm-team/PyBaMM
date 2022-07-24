@@ -13,7 +13,7 @@ jobs:
     - name: Checkout
       uses: actions/checkout@v3
     - name: URLs-checker
-      uses: urlstechie/urlchecker-python@test-release-31-drivers
+      uses: urlstechie/urlchecker-action@test-release-31-drivers
       with:
         # A comma-separated list of file types to cover in the URL checks
         file_types: .rst,.md,.py,.ipynb
