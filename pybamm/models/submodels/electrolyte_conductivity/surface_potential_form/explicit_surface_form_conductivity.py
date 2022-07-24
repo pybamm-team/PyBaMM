@@ -40,18 +40,13 @@ class Explicit(BaseElectrolyteConductivity):
         variables.update(
             self._get_standard_surface_potential_difference_variables(delta_phi)
         )
-        if (
-            "X-averaged"
-            + self.domain.lower()
-            + "electrode surface potential difference"
-            not in variables
-        ):
-            delta_phi_av = pybamm.x_average(delta_phi)
-            variables.update(
-                self._get_standard_average_surface_potential_difference_variables(
-                    delta_phi_av
-                )
+
+        delta_phi_av = pybamm.x_average(delta_phi)
+        variables.update(
+            self._get_standard_average_surface_potential_difference_variables(
+                delta_phi_av
             )
+        )
         return variables
 
     def set_boundary_conditions(self, variables):

@@ -6,12 +6,14 @@ from .base_lithium_ion_model import BaseModel
 
 
 class SPM(BaseModel):
-    """Single Particle Model (SPM) of a lithium-ion battery, from [1]_.
+    """
+    Single Particle Model (SPM) of a lithium-ion battery, from [1]_.
 
     Parameters
     ----------
     options : dict, optional
-        A dictionary of options to be passed to the model.
+        A dictionary of options to be passed to the model. For a detailed list of
+        options see :class:`~pybamm.BatteryModelOptions`.
     name : str, optional
         The name of the model.
     build :  bool, optional
@@ -95,8 +97,8 @@ class SPM(BaseModel):
             if particle == "Fickian diffusion":
                 self.submodels[
                     domain.lower() + " particle"
-                ] = pybamm.particle.no_distribution.XAveragedFickianDiffusion(
-                    self.param, domain, self.options
+                ] = pybamm.particle.FickianDiffusion(
+                    self.param, domain, self.options, x_average=True
                 )
             elif particle in [
                 "uniform profile",
@@ -105,8 +107,8 @@ class SPM(BaseModel):
             ]:
                 self.submodels[
                     domain.lower() + " particle"
-                ] = pybamm.particle.no_distribution.XAveragedPolynomialProfile(
-                    self.param, domain, particle, self.options
+                ] = pybamm.particle.XAveragedPolynomialProfile(
+                    self.param, domain, self.options
                 )
 
     def set_solid_submodel(self):

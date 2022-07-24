@@ -97,12 +97,4 @@ class FirstOrderKinetics(BaseInterface):
             }
         )
 
-        if self.domain == "Positive":
-            variables.update(
-                self._get_standard_whole_cell_interfacial_current_variables(variables)
-            )
-            variables.update(
-                self._get_standard_whole_cell_exchange_current_variables(variables)
-            )
-
         return variables

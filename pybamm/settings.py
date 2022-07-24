@@ -11,6 +11,7 @@ class Settings(object):
     _heaviside_smoothing = "exact"
     _abs_smoothing = "exact"
     max_words_in_line = 4
+    max_y_value = 1e5
 
     @property
     def debug_mode(self):
@@ -37,16 +38,19 @@ class Settings(object):
         self.heaviside_smoothing = k
         self.abs_smoothing = k
 
+    def check_k(self, k):
+        if k != "exact" and k <= 0:
+            raise ValueError(
+                "smoothing parameter must be 'exact' or a strictly positive number"
+            )
+
     @property
     def min_smoothing(self):
         return self._min_smoothing
 
     @min_smoothing.setter
     def min_smoothing(self, k):
-        if k != "exact" and k <= 0:
-            raise ValueError(
-                "smoothing parameter must be 'exact' or a strictly positive number"
-            )
+        self.check_k(k)
         self._min_smoothing = k
 
     @property
@@ -55,10 +59,7 @@ class Settings(object):
 
     @max_smoothing.setter
     def max_smoothing(self, k):
-        if k != "exact" and k <= 0:
-            raise ValueError(
-                "smoothing parameter must be 'exact' or a strictly positive number"
-            )
+        self.check_k(k)
         self._max_smoothing = k
 
     @property
@@ -67,10 +68,7 @@ class Settings(object):
 
     @heaviside_smoothing.setter
     def heaviside_smoothing(self, k):
-        if k != "exact" and k <= 0:
-            raise ValueError(
-                "smoothing parameter must be 'exact' or a strictly positive number"
-            )
+        self.check_k(k)
         self._heaviside_smoothing = k
 
     @property
@@ -79,10 +77,7 @@ class Settings(object):
 
     @abs_smoothing.setter
     def abs_smoothing(self, k):
-        if k != "exact" and k <= 0:
-            raise ValueError(
-                "smoothing parameter must be 'exact' or a strictly positive number"
-            )
+        self.check_k(k)
         self._abs_smoothing = k
 
 

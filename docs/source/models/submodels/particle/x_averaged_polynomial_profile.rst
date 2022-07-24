@@ -1,5 +1,5 @@
 X-averaged Polynomial Profile
 =============================
 
-.. autoclass:: pybamm.particle.no_distribution.XAveragedPolynomialProfile
+.. autoclass:: pybamm.particle.XAveragedPolynomialProfile
     :members:
