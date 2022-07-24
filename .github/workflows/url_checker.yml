@@ -13,7 +13,7 @@ jobs:
     - name: Checkout
       uses: actions/checkout@v3
     - name: URLs-checker
-      uses: urlstechie/urlchecker-action@0.0.25
+      uses: urlstechie/urlchecker-python@a9bf156
       with:
         # A comma-separated list of file types to cover in the URL checks
         file_types: .rst,.md,.py,.ipynb
@@ -21,11 +21,11 @@ jobs:
         # Choose whether to include file with no URLs in the prints.
         print_all: false
 
-        # Timeout in 60 seconds if url is not reached
-        timeout: 60
+        # Timeout in 10 seconds if url is not reached
+        timeout: 10
 
         # How many times to retry a failed request (each is logged, defaults to 1)
-        retry_count: 10
+        retry_count: 5
 
         # A comma separated patterns to exclude during URL checks
         exclude_patterns: https://www.datacamp.com/community/tutorials/fuzzy-string-python,http://127.0.0.1,https://github.com/pybamm-team/PyBaMM/tree/v,https::/doi.org,https::/www.sciencedirect.com
