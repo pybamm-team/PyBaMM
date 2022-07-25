@@ -258,8 +258,8 @@ class TestCitations(unittest.TestCase):
         self.assertIn("Richardson2020", citations._papers_to_cite)
 
         citations._reset()
-        pybamm.ParameterValues("ORegan2021")
-        self.assertIn("ORegan2021", citations._papers_to_cite)
+        pybamm.ParameterValues("ORegan2022")
+        self.assertIn("ORegan2022", citations._papers_to_cite)
 
     def test_solver_citations(self):
         # Test that solving each solver adds the right citations

@@ -1,7 +1,7 @@
 from pybamm import exp, constants
 
 
-def nmc_LGM50_electronic_conductivity_ORegan2021(T):
+def nmc_LGM50_electronic_conductivity_ORegan2022(T):
     """
     Positive electrode electronic conductivity as a function of the temperature from
     [1].
@@ -9,9 +9,8 @@ def nmc_LGM50_electronic_conductivity_ORegan2021(T):
     References
     ----------
     .. [1] Kieran O’Regan, Ferran Brosa Planella, W. Dhammika Widanage, and Emma
-    Kendrick. "Thermal-electrochemical parametrisation of a lithium-ion battery:
-    mapping Li concentration and temperature dependencies." Journal of the
-    Electrochemical Society, submitted (2021).
+    Kendrick. "Thermal-electrochemical parameters of a high energy lithium-ion
+    cylindrical battery." Electrochimica Acta 425 (2022): 140700
 
     Parameters
     ----------
