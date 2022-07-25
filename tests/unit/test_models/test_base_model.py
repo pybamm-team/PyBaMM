@@ -119,14 +119,6 @@ class TestBaseModel(unittest.TestCase):
         model.jacobian = "test"
         self.assertEqual(model.jacobian, "test")
 
-    def test_model_dict_behaviour(self):
-        model = pybamm.BaseModel()
-        key = pybamm.Symbol("c")
-        rhs = {key: pybamm.Symbol("alpha")}
-        model.rhs = rhs
-        self.assertEqual(model[key], rhs[key])
-        self.assertEqual(model[key], model.rhs[key])
-
     def test_read_parameters(self):
         # Read parameters from different parts of the model
         model = pybamm.BaseModel()
@@ -151,6 +143,10 @@ class TestBaseModel(unittest.TestCase):
             u: {"left": (g, "Dirichlet"), "right": (0, "Neumann")},
             v: {"left": (0, "Dirichlet"), "right": (h, "Neumann")},
         }
+
+        # Test variables_and_events
+        self.assertIn("v+f+i", model.variables_and_events)
+        self.assertIn("Event: u=e", model.variables_and_events)
 
         self.assertEqual(
             set([x.name for x in model.parameters]),
@@ -962,6 +958,64 @@ class TestBaseModel(unittest.TestCase):
         model = pybamm.BaseModel()
         with self.assertRaisesRegex(ValueError, "not var"):
             model.variables = {"not var": var}
+
+    def test_build_submodels(self):
+        class Submodel1(pybamm.BaseSubModel):
+            def __init__(self, param, domain, options=None):
+                super().__init__(param, domain, options=options)
+
+            def get_fundamental_variables(self):
+                u = pybamm.Variable("u")
+                v = pybamm.Variable("v")
+                return {"u": u, "v": v}
+
+            def get_coupled_variables(self, variables):
+                return variables
+
+            def set_rhs(self, variables):
+                u = variables["u"]
+                self.rhs = {u: 2}
+
+            def set_algebraic(self, variables):
+                v = variables["v"]
+                self.algebraic = {v: v - 1}
+
+            def set_initial_conditions(self, variables):
+                u = variables["u"]
+                v = variables["v"]
+                self.initial_conditions = {u: 0, v: 0}
+
+            def set_events(self, variables):
+                u = variables["u"]
+                self.events.append(
+                    pybamm.Event(
+                        "Large u",
+                        u - 200,
+                        pybamm.EventType.TERMINATION,
+                    )
+                )
+
+        class Submodel2(pybamm.BaseSubModel):
+            def __init__(self, param, domain, options=None):
+                super().__init__(param, domain, options=options)
+
+            def get_coupled_variables(self, variables):
+                u = variables["u"]
+                variables.update({"w": 2 * u})
+                return variables
+
+        model = pybamm.BaseModel()
+        model.submodels = {
+            "submodel 1": Submodel1(None, "Negative"),
+            "submodel 2": Submodel2(None, "Negative"),
+        }
+        self.assertFalse(model._built)
+        model.build_model()
+        self.assertTrue(model._built)
+        u = model.variables["u"]
+        v = model.variables["v"]
+        self.assertEqual(model.rhs[u].value, 2)
+        self.assertIsInstance(model.algebraic[v], pybamm.Subtraction)
 
 
 if __name__ == "__main__":

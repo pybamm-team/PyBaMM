@@ -483,6 +483,16 @@
       "contributions": [
         "code"
       ]
+    },
+    {
+      "login": "bardsleypt",
+      "name": "bardsleypt",
+      "avatar_url": "https://avatars.githubusercontent.com/u/54084289?v=4",
+      "profile": "https://github.com/bardsleypt",
+      "contributions": [
+        "bug",
+        "code"
+      ]
     }
   ],
   "contributorsPerLine": 7,

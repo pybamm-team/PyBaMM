@@ -6,14 +6,16 @@ from ..lithium_ion.dfn import DFN as LithiumIonDFN
 
 
 class DFN(LithiumIonDFN):
-    """Doyle-Fuller-Newman (DFN) model of a lithium-metal battery. This model reuses the
+    """
+    Doyle-Fuller-Newman (DFN) model of a lithium-metal battery. This model reuses the
     submodels from the lithium-ion DFN, and adds some submodels specific to
     lithium-metal.
 
     Parameters
     ----------
     options : dict, optional
-        A dictionary of options to be passed to the model.
+        A dictionary of options to be passed to the model. For a detailed list of
+        options see :class:`~pybamm.BatteryModelOptions`.
     name : str, optional
         The name of the model.
     build :  bool, optional

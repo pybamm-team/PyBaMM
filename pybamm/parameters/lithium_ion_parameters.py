@@ -164,9 +164,12 @@ class LithiumIonParameters(BaseParameters):
         self.k_sei_dim = pybamm.Parameter("SEI kinetic rate constant [m.s-1]")
         self.U_sei_dim = pybamm.Parameter("SEI open-circuit potential [V]")
 
-        # Li plating parameters
+        # Lithium plating parameters
         self.V_bar_plated_Li = pybamm.Parameter(
             "Lithium metal partial molar volume [m3.mol-1]"
+        )
+        self.c_Li_typ = pybamm.Parameter(
+            "Typical plated lithium concentration [mol.m-3]"
         )
         self.c_plated_Li_0_dim = pybamm.Parameter(
             "Initial plated lithium concentration [mol.m-3]"
@@ -226,6 +229,11 @@ class LithiumIonParameters(BaseParameters):
             "Exchange-current density for plating [A.m-2]", inputs
         )
 
+    def dead_lithium_decay_rate_dimensional(self, L_sei):
+        """Dimensional dead lithium decay rate [s-1]"""
+        inputs = {"Total SEI thickness [m]": L_sei}
+        return pybamm.FunctionParameter("Dead lithium decay rate [s-1]", inputs)
+
     def _set_scales(self):
         """Define the scales used in the non-dimensionalisation scheme"""
         # Concentration
@@ -253,7 +261,7 @@ class LithiumIonParameters(BaseParameters):
 
         # Electrolyte diffusion timescale
         self.D_e_typ = self.D_e_dimensional(self.c_e_typ, self.T_ref)
-        self.tau_diffusion_e = self.L_x ** 2 / self.D_e_typ
+        self.tau_diffusion_e = self.L_x**2 / self.D_e_typ
 
         # Thermal diffusion timescale
         self.tau_th_yz = self.therm.tau_th_yz
@@ -395,10 +403,10 @@ class LithiumIonParameters(BaseParameters):
         self.c_sei_init = self.c_ec_0_dim / self.c_sei_outer_scale
 
         # lithium plating parameters
-        self.c_Li_typ = pybamm.Parameter(
-            "Typical plated lithium concentration [mol.m-3]"
-        )
         self.c_plated_Li_0 = self.c_plated_Li_0_dim / self.c_Li_typ
+
+        self.alpha_plating = pybamm.Parameter("Lithium plating transfer coefficient")
+        self.alpha_stripping = 1 - self.alpha_plating
 
         # ratio of lithium plating reaction scaled to intercalation reaction
         self.Gamma_plating = (self.n.a_typ * self.n.j_scale * self.timescale) / (
@@ -448,7 +456,7 @@ class LithiumIonParameters(BaseParameters):
     def kappa_e(self, c_e, T):
         """Dimensionless electrolyte conductivity"""
         c_e_dimensional = c_e * self.c_e_typ
-        kappa_scale = self.F ** 2 * self.D_e_typ * self.c_e_typ / (self.R * self.T_ref)
+        kappa_scale = self.F**2 * self.D_e_typ * self.c_e_typ / (self.R * self.T_ref)
         T_dim = self.Delta_T * T + self.T_ref
         return self.kappa_e_dimensional(c_e_dimensional, T_dim) / kappa_scale
 
@@ -467,6 +475,12 @@ class LithiumIonParameters(BaseParameters):
         T_dim = self.Delta_T * T + self.T_ref
 
         return self.j0_plating_dimensional(c_e_dim, c_Li_dim, T_dim) / self.n.j_scale
+
+    def dead_lithium_decay_rate(self, L_sei):
+        """Dimensionless exchange-current density for stripping"""
+        L_sei_dim = L_sei * self.L_sei_0_dim
+
+        return self.dead_lithium_decay_rate_dimensional(L_sei_dim) * self.timescale
 
     def _set_input_current(self):
         """Set the input current"""
@@ -668,6 +682,7 @@ class DomainLithiumIonParameters(BaseParameters):
         inputs = {
             "Electrolyte concentration [mol.m-3]": c_e,
             f"{self.domain} particle surface concentration [mol.m-3]": c_s_surf,
+            f"{self.domain} particle maximum concentration [mol.m-3]": self.c_max,
             "Temperature [K]": T,
         }
         return pybamm.FunctionParameter(
@@ -676,6 +691,11 @@ class DomainLithiumIonParameters(BaseParameters):
 
     def U_dimensional(self, sto, T):
         """Dimensional open-circuit potential [V]"""
+        # bound stoichiometry between tol and 1-tol. Adding 1/sto + 1/(sto-1) later
+        # will ensure that ocp goes to +- infinity if sto goes into that region
+        # anyway
+        tol = 1e-10
+        sto = pybamm.maximum(pybamm.minimum(sto, 1 - tol), tol)
         inputs = {f"{self.domain} particle stoichiometry": sto}
         u_ref = pybamm.FunctionParameter(f"{self.domain} electrode OCP [V]", inputs)
         # add a term to ensure that the OCP goes to infinity at 0 and -infinity at 1
@@ -691,7 +711,10 @@ class DomainLithiumIonParameters(BaseParameters):
         """
         Dimensional entropic change of the open-circuit potential [V.K-1]
         """
-        inputs = {f"{self.domain} particle stoichiometry": sto}
+        inputs = {
+            f"{self.domain} particle stoichiometry": sto,
+            f"{self.domain} particle maximum concentration [mol.m-3]": self.c_max,
+        }
         return pybamm.FunctionParameter(
             f"{self.domain} electrode OCP entropic change [V.K-1]", inputs
         )
@@ -730,7 +753,7 @@ class DomainLithiumIonParameters(BaseParameters):
         self.tau_r = main.F * self.c_max / (self.j0_ref_dimensional * self.a_typ)
         # Particle diffusion timescales
         self.D_typ_dim = self.D_dimensional(pybamm.Scalar(1), main.T_ref)
-        self.tau_diffusion = self.R_typ ** 2 / self.D_typ_dim
+        self.tau_diffusion = self.R_typ**2 / self.D_typ_dim
 
     def _set_dimensionless_parameters(self):
         main = self.main_param
@@ -780,7 +803,7 @@ class DomainLithiumIonParameters(BaseParameters):
         self.sigma_cc = (
             self.sigma_cc_dimensional * main.potential_scale / main.i_typ / main.L_x
         )
-        self.sigma_cc_prime = self.sigma_cc * main.delta ** 2
+        self.sigma_cc_prime = self.sigma_cc * main.delta**2
         self.sigma_cc_dbl_prime = self.sigma_cc_prime * main.delta
 
         # Electrolyte Properties
@@ -865,8 +888,12 @@ class DomainLithiumIonParameters(BaseParameters):
         Dimensionless volume change for the electrode;
         sto should be R-averaged
         """
+        inputs = {
+            f"{self.domain} particle stoichiometry": sto,
+            f"{self.domain} particle maximum concentration [mol.m-3]": self.c_max,
+        }
         return pybamm.FunctionParameter(
-            f"{self.domain} electrode volume change", {"Particle stoichiometry": sto}
+            f"{self.domain} electrode volume change", inputs
         )
 
     def k_cr(self, T):
@@ -874,7 +901,7 @@ class DomainLithiumIonParameters(BaseParameters):
         Dimensionless cracking rate for the electrode;
         """
         T_dim = self.main_param.Delta_T * T + self.main_param.T_ref
-        delta_k_cr = self.E ** self.m_cr * self.l_cr_0 ** (self.m_cr / 2 - 1)
+        delta_k_cr = self.E**self.m_cr * self.l_cr_0 ** (self.m_cr / 2 - 1)
         return (
             pybamm.FunctionParameter(
                 f"{self.domain} electrode cracking rate", {"Temperature [K]": T_dim}

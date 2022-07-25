@@ -67,7 +67,7 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                 Can be "full" (default), "constant", or "current-driven".
             * "lithium plating" : str
                 Sets the model for lithium plating. Can be "none" (default),
-                "reversible" or "irreversible".
+                "reversible", "partially reversible", or "irreversible".
             * "loss of active material" : str
                 Sets the model for loss of active material. Can be "none" (default),
                 "stress-driven", "reaction-driven", or "stress and reaction-driven".
@@ -198,7 +198,12 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                 "Marcus-Hush-Chidsey",
             ],
             "interface utilisation": ["full", "constant", "current-driven"],
-            "lithium plating": ["none", "reversible", "irreversible"],
+            "lithium plating": [
+                "none",
+                "reversible",
+                "partially reversible",
+                "irreversible",
+            ],
             "lithium plating porosity change": ["false", "true"],
             "loss of active material": [
                 "none",
@@ -299,6 +304,15 @@ class BatteryModelOptions(pybamm.FuzzyDict):
             default_options["stress-induced diffusion"] = "true"
         # The "stress-induced diffusion" option will still be overridden by
         # extra_options if provided
+
+        # Change default SEI model based on which lithium plating option is provided
+        # return "none" if option not given
+        plating_option = extra_options.get("lithium plating", "none")
+        if plating_option == "partially reversible":
+            default_options["SEI"] = "constant"
+        else:
+            default_options["SEI"] = "none"
+        # The "SEI" option will still be overridden by extra_options if provided
 
         options = pybamm.FuzzyDict(default_options)
         # any extra options overwrite the default options
@@ -529,9 +543,6 @@ class BaseBatteryModel(pybamm.BaseModel):
     def __init__(self, options=None, name="Unnamed battery model"):
         super().__init__(name)
         self.options = options
-        self.submodels = {}
-        self._built = False
-        self._built_fundamental_and_external = False
 
     @pybamm.BaseModel.timescale.setter
     def timescale(self, value):
@@ -698,33 +709,6 @@ class BaseBatteryModel(pybamm.BaseModel):
                 {"y": var.y, "y [m]": var.y * L_z, "z": var.z, "z [m]": var.z * L_z}
             )
 
-        # Initialize "total reaction" variables
-        # These will get populated by the "get_coupled_variables" methods, and then used
-        # later by "set_rhs" or "set_algebraic", which ensures that we always have
-        # added all the necessary variables by the time the sum is used
-        self.variables.update(
-            {
-                "Sum of electrolyte reaction source terms": 0,
-                "Sum of positive electrode electrolyte reaction source terms": 0,
-                "Sum of x-averaged positive electrode "
-                "electrolyte reaction source terms": 0,
-                "Sum of interfacial current densities": 0,
-                "Sum of positive electrode interfacial current densities": 0,
-                "Sum of x-averaged positive electrode interfacial current densities": 0,
-            }
-        )
-        if not self.half_cell:
-            self.variables.update(
-                {
-                    "Sum of negative electrode electrolyte reaction source terms": 0,
-                    "Sum of x-averaged negative electrode "
-                    "electrolyte reaction source terms": 0,
-                    "Sum of negative electrode interfacial current densities": 0,
-                    "Sum of x-averaged negative electrode interfacial current densities"
-                    "": 0,
-                }
-            )
-
     def build_fundamental_and_external(self):
         # Get the fundamental variables
         for submodel_name, submodel in self.submodels.items():
@@ -835,22 +819,10 @@ class BaseBatteryModel(pybamm.BaseModel):
 
     def build_model(self):
 
-        # Check if already built
-        if self._built:
-            raise pybamm.ModelError(
-                """Model already built. If you are adding a new submodel, try using
-                `model.update` instead."""
-            )
+        # Build model variables and equations
+        self._build_model()
 
-        pybamm.logger.info("Start building {}".format(self.name))
-
-        if self._built_fundamental_and_external is False:
-            self.build_fundamental_and_external()
-
-        self.build_coupled_variables()
-
-        self.build_model_equations()
-
+        # Set battery specific variables
         pybamm.logger.debug("Setting voltage variables ({})".format(self.name))
         self.set_voltage_variables()
 
@@ -1256,43 +1228,3 @@ class BaseBatteryModel(pybamm.BaseModel):
         This function is overriden by the base battery models
         """
         pass
-
-    def process_parameters_and_discretise(self, symbol, parameter_values, disc):
-        """
-        Process parameters and discretise a symbol using supplied parameter values
-        and discretisation. Note: care should be taken if using spatial operators
-        on dimensional symbols. Operators in pybamm are written in non-dimensional
-        form, so may need to be scaled by the appropriate length scale. It is
-        recommended to use this method on non-dimensional symbols.
-
-        Parameters
-        ----------
-        symbol : :class:`pybamm.Symbol`
-            Symbol to be processed
-        parameter_values : :class:`pybamm.ParameterValues`
-            The parameter values to use during processing
-        disc : :class:`pybamm.Discretisation`
-            The discrisation to use
-
-        Returns
-        -------
-        :class:`pybamm.Symbol`
-            Processed symbol
-        """
-        # Set y slices
-        if disc.y_slices == {}:
-            variables = list(self.rhs.keys()) + list(self.algebraic.keys())
-            disc.set_variable_slices(variables)
-
-        # Set boundary conditions (also requires setting parameter values)
-        if disc.bcs == {}:
-            self.boundary_conditions = parameter_values.process_boundary_conditions(
-                self
-            )
-            disc.bcs = disc.process_boundary_conditions(self)
-
-        # Process
-        param_symbol = parameter_values.process_symbol(symbol)
-        disc_symbol = disc.process_symbol(param_symbol)
-
-        return disc_symbol

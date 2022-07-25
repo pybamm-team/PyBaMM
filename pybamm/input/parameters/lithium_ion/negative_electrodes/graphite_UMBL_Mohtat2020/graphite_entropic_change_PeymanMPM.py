@@ -1,4 +1,4 @@
-def graphite_entropic_change_PeymanMPM(sto):
+def graphite_entropic_change_PeymanMPM(sto, c_s_max):
     """
     Graphite entropic change in open circuit potential (OCP) at a temperature of
     298.15K as a function of the stochiometry taken from [1]

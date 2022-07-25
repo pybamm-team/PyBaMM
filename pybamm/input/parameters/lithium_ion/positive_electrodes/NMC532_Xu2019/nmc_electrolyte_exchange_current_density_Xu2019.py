@@ -1,7 +1,7 @@
-from pybamm import constants, Parameter
+from pybamm import constants
 
 
-def nmc_electrolyte_exchange_current_density_Xu2019(c_e, c_s_surf, T):
+def nmc_electrolyte_exchange_current_density_Xu2019(c_e, c_s_surf, c_s_max, T):
     """
     Exchange-current density for Butler-Volmer reactions between NMC and LiPF6 in
     EC:DMC.
@@ -19,6 +19,8 @@ def nmc_electrolyte_exchange_current_density_Xu2019(c_e, c_s_surf, T):
         Electrolyte concentration [mol.m-3]
     c_s_surf : :class:`pybamm.Symbol`
         Particle concentration [mol.m-3]
+    c_s_max : :class:`pybamm.Symbol`
+        Maximum particle concentration [mol.m-3]
     T : :class:`pybamm.Symbol`
         Temperature [K]
 
@@ -29,6 +31,5 @@ def nmc_electrolyte_exchange_current_density_Xu2019(c_e, c_s_surf, T):
     """
     # assuming implicit correction of incorrect units from the paper
     m_ref = 5.76e-11 * constants.F  # (A/m2)(mol/m3)**1.5 - includes ref concentrations
-    c_p_max = Parameter("Maximum concentration in positive electrode [mol.m-3]")
 
-    return m_ref * c_e ** 0.5 * c_s_surf ** 0.5 * (c_p_max - c_s_surf) ** 0.5
+    return m_ref * c_e ** 0.5 * c_s_surf ** 0.5 * (c_s_max - c_s_surf) ** 0.5
