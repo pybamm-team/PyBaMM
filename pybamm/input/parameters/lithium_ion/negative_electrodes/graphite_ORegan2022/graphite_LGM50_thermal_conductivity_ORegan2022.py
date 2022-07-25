@@ -8,7 +8,7 @@ def graphite_LGM50_thermal_conductivity_ORegan2022(T):
     .. [1] Kieran O’Regan, Ferran Brosa Planella, W. Dhammika Widanage, and Emma
     Kendrick. "Thermal-electrochemical parameters of a high energy lithium-ion
     cylindrical battery." Electrochimica Acta 425 (2022): 140700
-    
+
     Parameters
     ----------
     T: :class:`pybamm.Symbol`
