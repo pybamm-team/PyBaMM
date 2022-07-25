@@ -1,4 +1,5 @@
 import sys
+import os
 from io import StringIO
 import pybamm
 import numpy as np
@@ -54,20 +55,14 @@ for params in parameters:
     for t in dt_max:
         print("a======================================================")
         
-        stdout_backup = sys.stdout
-        sys.stdout = string_buffer = StringIO()
+        
         solver = pybamm.CasadiSolver(dt_max = t,
         extra_options_setup = 
         {"print_stats": True}
         
         # extra_options_call = {"print_stats": True}
         )
-        sys.stdout = stdout_backup  # restore old sys.stdout
-
-        string_buffer.seek(0)
-        sys.stdout=open("solver_stats.txt","w")
-        print (string_buffer.read())
-        sys.stdout.close()
+        
         
         
         
