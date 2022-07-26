@@ -480,12 +480,14 @@ class Solution(object):
             # ProcessedSymbolicVariable
             if self.has_symbolic_inputs is True:
                 var = pybamm.ProcessedSymbolicVariable(
-                    self.all_models[0].variables[key], self
+                    self.all_models[0].variables_and_events[key], self
                 )
 
             # Otherwise a standard ProcessedVariable is ok
             else:
-                vars_pybamm = [model.variables[key] for model in self.all_models]
+                vars_pybamm = [
+                    model.variables_and_events[key] for model in self.all_models
+                ]
 
                 # Iterate through all models, some may be in the list several times and
                 # therefore only get set up once

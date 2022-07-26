@@ -13,7 +13,7 @@ jobs:
     - name: Checkout
       uses: actions/checkout@v3
     - name: URLs-checker
-      uses: urlstechie/urlchecker-action@master
+      uses: urlstechie/urlchecker-action@0.0.31
       with:
         # A comma-separated list of file types to cover in the URL checks
         file_types: .rst,.md,.py,.ipynb
@@ -28,7 +28,7 @@ jobs:
         retry_count: 5
 
         # A comma separated patterns to exclude during URL checks
-        exclude_patterns: https://www.datacamp.com/community/tutorials/fuzzy-string-python,http://127.0.0.1,https://github.com/pybamm-team/PyBaMM/tree/v
+        exclude_patterns: https://www.datacamp.com/community/tutorials/fuzzy-string-python,http://127.0.0.1,https://github.com/pybamm-team/PyBaMM/tree/v,https::/doi.org,https::/www.sciencedirect.com
 
         # A comma separated list of file patterns (direct paths work as well) to exclude
         exclude_files: CHANGELOG.md
