@@ -13,6 +13,7 @@
 
 ## Bug fixes
 
+-   Improved event handling with casadi safe mode ([#2190](https://github.com/pybamm-team/PyBaMM/pull/2190))
 -   Fixed 2D intepolant ([#2180](https://github.com/pybamm-team/PyBaMM/pull/2180))
 -   Fixes a bug where the SPMe always builds even when `build=False` ([#2169](https://github.com/pybamm-team/PyBaMM/pull/2169))
 -   Some events have been removed in the case where they are constant, i.e. can never be reached ([#2158](https://github.com/pybamm-team/PyBaMM/pull/2158))
