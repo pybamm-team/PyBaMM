@@ -424,7 +424,7 @@ class CasadiSolver(pybamm.BaseSolver):
         t_window_event_dense = np.linspace(
             coarse_solution.t[event_idx_lower],
             coarse_solution.t[event_idx_lower + 1],
-            100,
+            10000,
         )
 
         if self.mode == "safe without grid":

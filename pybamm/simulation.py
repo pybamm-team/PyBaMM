@@ -857,6 +857,7 @@ class Simulation:
                         or step_solution.termination == "final time"
                         or "[experiment]" in step_solution.termination
                     ):
+                        callbacks.on_experiment_infeasible(logs)
                         feasible = False
                         break
 
@@ -912,7 +913,6 @@ class Simulation:
 
                 # Break if the experiment is infeasible (or errored)
                 if feasible is False:
-                    callbacks.on_experiment_infeasible(logs)
                     break
 
             if self.solution is not None and len(all_cycle_solutions) > 0:

@@ -1399,16 +1399,15 @@ class BaseSolver(object):
                         )
                     )
                 termination_event = min(final_event_values, key=final_event_values.get)
-
                 # Check that it's actually an event
                 if abs(final_event_values[termination_event]) > 0.1:  # pragma: no cover
                     # Hard to test this
                     raise pybamm.SolverError(
-                        "Could not determine which event was triggered "
-                        "(possibly due to NaNs)"
+                        "Could not determine which event was triggered."
                     )
                 # Add the event to the solution object
                 solution.termination = "event: {}".format(termination_event)
+                print(final_event_values[termination_event])
             # Update t, y and inputs to include event time and state
             # Note: if the final entry of t is equal to the event time we skip
             # this (having duplicate entries causes an error later in ProcessedVariable)
