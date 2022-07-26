@@ -55,12 +55,12 @@ class Solution(object):
         the event happens.
     termination : str
         String to indicate why the solution terminated
-
-    sensitivities: bool or dict
+    sensitivities: bool or dict, optional
         True if sensitivities included as the solution of the explicit forwards
         equations.  False if no sensitivities included/wanted. Dict if sensitivities are
         provided as a dict of {parameter: sensitivities} pairs.
-
+    check_solution : bool, optional
+        Whether to perform checks on the solution object.
     """
 
     def __init__(
@@ -734,6 +734,7 @@ class Solution(object):
             other.y_event,
             other.termination,
             bool(self.sensitivities),
+            check_solution=False,  # no need to check again
         )
 
         new_sol.closest_event_idx = other.closest_event_idx

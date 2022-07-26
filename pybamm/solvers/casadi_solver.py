@@ -307,27 +307,30 @@ class CasadiSolver(pybamm.BaseSolver):
         model = coarse_solution.all_models[-1]
         inputs_dict = coarse_solution.all_inputs[-1]
         inputs = casadi.vertcat(*[x for x in inputs_dict.values()])
+        init_event_signs = casadi.DM(init_event_signs)
+        events_all_ones = casadi.DM.ones(init_event_signs.shape)
 
         def find_t_event(sol, typ):
 
             # Check most recent y to see if any events have been crossed
             if model.terminate_events_eval:
                 y_last = sol.all_ys[-1][:, -1]
-                crossed_events = np.sign(
+                t_last = sol.all_ts[-1][-1]
+                crossed_events = casadi.sign(
                     init_event_signs
-                    * np.concatenate(
+                    * casadi.vcat(
                         [
-                            event(sol.t[-1], y_last, inputs)
+                            event(t_last, y_last, inputs)
                             for event in model.terminate_events_eval
                         ]
                     )
                     - 1e-5
                 )
             else:
-                crossed_events = np.sign([])
+                crossed_events = casadi.sign([])
 
             # Return None if no events have been triggered
-            if (crossed_events == 1).all():
+            if casadi.is_equal(crossed_events, events_all_ones):
                 return None, None, None
 
             # get the index of the events that have been crossed
@@ -469,6 +472,7 @@ class CasadiSolver(pybamm.BaseSolver):
             y_event[:, np.newaxis],
             "event",
             sensitivities=bool(model.calculate_sensitivities),
+            check_solution=False,
         )
         solution.integration_time = (
             coarse_solution.integration_time + dense_step_sol.integration_time
