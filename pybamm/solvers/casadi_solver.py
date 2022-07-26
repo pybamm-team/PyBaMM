@@ -133,21 +133,16 @@ class CasadiSolver(pybamm.BaseSolver):
         inputs = casadi.vertcat(*[x for x in inputs_dict.values()])
 
         # Calculate initial event signs needed for some of the modes
-        if (
-            has_symbolic_inputs is False
-            and self.mode != "fast"
-            and model.terminate_events_eval
-        ):
-            init_event_signs = np.sign(
-                np.concatenate(
-                    [
-                        event(t_eval[0], model.y0, inputs)
-                        for event in model.terminate_events_eval
-                    ]
+        if has_symbolic_inputs is False and model.events != []:
+            t0 = t_eval[0]
+            y0 = model.y0
+            init_event_signs = casadi.sign(
+                casadi.vcat(
+                    [event(t0, y0, inputs) for event in model.terminate_events_eval]
                 )
             )
         else:
-            init_event_signs = np.sign([])
+            init_event_signs = casadi.sign([])
 
         if has_symbolic_inputs:
             # Create integrator without grid to avoid having to create several times
@@ -161,7 +156,7 @@ class CasadiSolver(pybamm.BaseSolver):
                 use_grid=False,
             )
 
-        if self.mode in ["fast", "fast with events"] or not model.events:
+        if self.mode in ["fast", "fast with events"] or model.events == []:
             if not model.events:
                 pybamm.logger.info("No events found, running fast mode")
             if self.mode == "fast with events":
