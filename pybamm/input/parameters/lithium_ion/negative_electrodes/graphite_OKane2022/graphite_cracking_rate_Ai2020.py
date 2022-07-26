@@ -1,4 +1,4 @@
-from pybamm import Parameter, constants, exp
+from pybamm import constants, exp
 
 
 def graphite_cracking_rate_Ai2020(T_dim):
@@ -27,8 +27,6 @@ def graphite_cracking_rate_Ai2020(T_dim):
         where m_cr is another Paris' law constant
     """
     k_cr = 3.9e-20
-    Eac_cr = Parameter(
-        "Negative electrode activation energy for cracking rate [J.mol-1]"
-    )
+    Eac_cr = 0  # to be implemented
     arrhenius = exp(Eac_cr / constants.R * (1 / T_dim - 1 / 298.15))
     return k_cr * arrhenius
