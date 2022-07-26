@@ -20,7 +20,6 @@ class ElectrodeSOHx100(pybamm.BaseModel):
         V_max = pybamm.InputParameter("V_max")
         Cn = pybamm.InputParameter("C_n")
         Cp = pybamm.InputParameter("C_p")
-        x_100_init = pybamm.InputParameter("x_100_init")
 
         x_100 = pybamm.Variable("x_100")
 
@@ -30,7 +29,7 @@ class ElectrodeSOHx100(pybamm.BaseModel):
             x_100: Up(y_100, T_ref) - Un(x_100, T_ref) - V_max,
         }
 
-        self.initial_conditions = {x_100: x_100_init}
+        self.initial_conditions = {x_100: pybamm.Scalar(0.9)}
 
         self.variables = {"x_100": x_100, "y_100": y_100}
 
@@ -64,7 +63,7 @@ class ElectrodeSOHx0(pybamm.BaseModel):
 
         self.algebraic = {x_0: Up(y_0, T_ref) - Un(x_0, T_ref) - V_min}
 
-        self.initial_conditions = {x_0: pybamm.InputParameter("x_0_init")}
+        self.initial_conditions = {x_0: pybamm.Scalar(0.1)}
 
         self.variables = {
             "C": C,
@@ -115,15 +114,17 @@ def solve_electrode_soh(x100_sim, x0_sim, inputs):
         if x0_min < x0_init_sol < x100_max:
             x0_init = x0_init_sol
 
-    inputs.update({"x_100_init": x100_init})
-    inputs.update({"x_0_init": x0_init})
-
+    x100_sim.build()
+    x100_sim.built_model.set_initial_conditions_from({"x_100": np.array(x100_init)})
     x100_sol = x100_sim.solve([0], inputs=inputs)
+
     inputs["x_100"] = x100_sol["x_100"].data[0]
     inputs["y_100"] = x100_sol["y_100"].data[0]
-    C_sol = x0_sim.solve([0], inputs=inputs)
+    x0_sim.build()
+    x0_sim.built_model.set_initial_conditions_from({"x_0": np.array(x0_init)})
+    x0_sol = x0_sim.solve([0], inputs=inputs)
 
-    return C_sol
+    return x0_sol
 
 
 def get_initial_stoichiometries(initial_soc, parameter_values):
