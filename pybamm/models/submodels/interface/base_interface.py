@@ -39,6 +39,8 @@ class BaseInterface(pybamm.BaseSubModel):
             self.reaction_name = "oxygen "
         elif reaction == "SEI": # Jason-SEI for "primary" or "secondary"?
             self.reaction_name = "SEI "
+            # print("Jason-1")
+            # self.reaction_name = f"{self.phase_name}SEI " # primary SEI or secondary SEI
         elif reaction == "lithium plating":
             self.reaction_name = "lithium plating "
 
@@ -303,7 +305,7 @@ class BaseInterface(pybamm.BaseSubModel):
             f"X-averaged {domain} electrode {reaction_name}"
             "interfacial current density per volume [A.m-3]": i_typ / L_x * j_av,
         } # Jason - reaction_name should be expanded with "primary SEI" and "secondary SEI"
-
+        # print(f"{reaction_name}")
         return variables
 
     def _get_standard_total_interfacial_current_variables(self, j_tot_av):
@@ -377,7 +379,7 @@ class BaseInterface(pybamm.BaseSubModel):
             f"X-averaged {domain} electrode {reaction_name}"
             "exchange current density per volume [A.m-3]": i_typ / L_x * j0_av,
         }
-
+        # print(f"Jason - X-averaged {domain} electrode {reaction_name}exchange current density per volume [A.m-3]")
         return variables
 
     def _get_standard_overpotential_variables(self, eta_r):
@@ -418,15 +420,15 @@ class BaseInterface(pybamm.BaseSubModel):
 
         phase_name = self.phase_name
         pot_scale = self.param.potential_scale
-        # pref = self.phase_prefactor
+        pref = phase_name.capitalize()
 
         if self.half_cell:
             # half-cell domain
             variables = {
-                # f"{pref}SEI film overpotential": eta_sei,
-                # f"{pref}SEI film overpotential [V]": eta_sei * pot_scale,
-                f"{phase_name}SEI film overpotential": eta_sei,
-                f"{phase_name}SEI film overpotential [V]": eta_sei * pot_scale,
+                f"{pref}SEI film overpotential": eta_sei,
+                f"{pref}SEI film overpotential [V]": eta_sei * pot_scale,
+                # f"{phase_name}SEI film overpotential": eta_sei,
+                # f"{phase_name}SEI film overpotential [V]": eta_sei * pot_scale,
             }
             return variables # Jason-does these variables modified properly
 
@@ -440,11 +442,11 @@ class BaseInterface(pybamm.BaseSubModel):
             eta_sei = pybamm.PrimaryBroadcast(eta_sei, self.domain_for_broadcast)
 
         variables = {
-            # f"{pref}SEI film overpotential": eta_sei,
-            f"{phase_name}SEI film overpotential": eta_sei,
+            f"{pref}SEI film overpotential": eta_sei,
+            # f"{phase_name}SEI film overpotential": eta_sei,
             f"X-averaged {phase_name}SEI film overpotential": eta_sei_av,
-            # f"{pref}SEI film overpotential [V]": eta_sei * pot_scale,
-            f"{phase_name}SEI film overpotential [V]": eta_sei * pot_scale,
+            f"{pref}SEI film overpotential [V]": eta_sei * pot_scale,
+            # f"{phase_name}SEI film overpotential [V]": eta_sei * pot_scale,
             f"X-averaged {phase_name}SEI film overpotential [V]": eta_sei_av * pot_scale,
         }
 

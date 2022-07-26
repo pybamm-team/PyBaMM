@@ -115,7 +115,7 @@ class BaseModel(pybamm.BaseBatteryModel):
                     f"Total lithium in {phase} phase in {domain} electrode [mol]"
                 ]
                 for phase in phases
-            )
+            ) # Jason - need to be calculated correctly
 
         # LAM
         if self.half_cell:
@@ -259,7 +259,9 @@ class BaseModel(pybamm.BaseBatteryModel):
             else:
                 # add a space so that we can use "" or (e.g.) "primary " interchangeably
                 # when naming variables
+                # self.phase_prefactor = phase.capitalize() + " "
                 self.phase_prefactor = phase.capitalize() + ": "
+
                 
             pref = self.phase_prefactor
             
