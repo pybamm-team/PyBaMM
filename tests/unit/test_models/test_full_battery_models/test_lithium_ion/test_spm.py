@@ -22,7 +22,7 @@ class TestSPM(BaseUnitTestLithiumIon, unittest.TestCase):
         }
         with self.assertRaisesRegex(pybamm.OptionError, "Inverse kinetics"):
             pybamm.lithium_ion.SPM(options)
-    
+
     def test_x_average_options(self):
         # Check model with x-averaged side reactions
         options = {
