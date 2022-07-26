@@ -41,11 +41,9 @@ class SPMe(SPM):
     def __init__(
         self, options=None, name="Single Particle Model with electrolyte", build=True
     ):
-        # # Set self.x_average based on "x-average side reactions"
-        # if options.get("x-average side reactions") == "true":
-        #     self.x_average = True
-        # else:
-        #     self.x_average = False
+        # For degradation models we use the "x-average", note that for side reactions
+        # this is overwritten by "x-average side reactions"
+        self.x_average = True
 
         # Initialize with the SPM
         super().__init__(options, name, build)

@@ -45,11 +45,9 @@ class SPM(BaseModel):
         if kinetics is not None and surface_form is None:
             options["surface form"] = "algebraic"
 
-        # Set self.x_average based on "x-average side reactions"
-        if options.get("x-average side reactions") == "true":
-            self.x_average = True
-        else:
-            self.x_average = False
+        # For degradation models we use the "x-average", note that for side reactions
+        # this is overwritten by "x-average side reactions"
+        self.x_average = True
 
         super().__init__(options, name)
 

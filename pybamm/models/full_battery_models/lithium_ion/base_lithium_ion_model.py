@@ -227,7 +227,7 @@ class BaseModel(pybamm.BaseBatteryModel):
     def set_sei_submodel(self):
         if self.half_cell:
             reaction_loc = "interface"
-        elif self.x_average:
+        elif self.x_average or self.options["x-average side reactions"] == "true":
             reaction_loc = "x-average"
         else:
             reaction_loc = "full electrode"
@@ -247,8 +247,9 @@ class BaseModel(pybamm.BaseBatteryModel):
                 self.param, self.options
             )
         else:
+            x_average = (self.options["x-average side reactions"] == "true")
             self.submodels["lithium plating"] = pybamm.lithium_plating.Plating(
-                self.param, self.x_average, self.options
+                self.param, x_average, self.options
             )
 
     def set_total_kinetics_submodel(self):
@@ -298,8 +299,9 @@ class BaseModel(pybamm.BaseBatteryModel):
             self.options["SEI porosity change"] == "true"
             or self.options["lithium plating porosity change"] == "true"
         ):
+            x_average = (self.options["x-average side reactions"] == "true")
             self.submodels["porosity"] = pybamm.porosity.ReactionDriven(
-                self.param, self.options, self.x_average
+                self.param, self.options, x_average
             )
 
     def set_li_metal_counter_electrode_submodels(self):
