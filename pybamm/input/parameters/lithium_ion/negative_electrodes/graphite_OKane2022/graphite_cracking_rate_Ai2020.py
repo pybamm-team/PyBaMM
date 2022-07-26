@@ -3,7 +3,7 @@ from pybamm import Parameter, constants, exp
 
 def graphite_cracking_rate_Ai2020(T_dim):
     """
-    graphite particle cracking rate as a function of temperature [1, 2].
+    Graphite particle cracking rate as a function of temperature [1, 2].
 
     References
     ----------
@@ -27,9 +27,8 @@ def graphite_cracking_rate_Ai2020(T_dim):
         where m_cr is another Paris' law constant
     """
     k_cr = 3.9e-20
-    T_ref = Parameter("Reference temperature [K]")
     Eac_cr = Parameter(
         "Negative electrode activation energy for cracking rate [J.mol-1]"
     )
-    arrhenius = exp(Eac_cr / constants.R * (1 / T_dim - 1 / T_ref))
+    arrhenius = exp(Eac_cr / constants.R * (1 / T_dim - 1 / 298.15))
     return k_cr * arrhenius

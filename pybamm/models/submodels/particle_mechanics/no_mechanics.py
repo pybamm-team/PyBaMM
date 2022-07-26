@@ -7,7 +7,7 @@ from .base_mechanics import BaseMechanics
 
 class NoMechanics(BaseMechanics):
     """
-    Class for swelling only (no cracking)
+    Class for no particle mechanics.
 
     Parameters
     ----------

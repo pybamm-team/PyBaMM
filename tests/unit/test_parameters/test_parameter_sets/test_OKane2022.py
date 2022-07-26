@@ -44,7 +44,7 @@ class TestOKane2022(unittest.TestCase):
         # Negative electrode
         p = (
             "pybamm/input/parameters/lithium_ion/negative_electrodes/"
-            "graphite_Chen2020_plating/"
+            "graphite_OKane2022/"
         )
         k_path = os.path.join(root, p)
 

@@ -27,9 +27,8 @@ def cracking_rate_Ai2020(T_dim):
         where m_cr is another Paris' law constant
     """
     k_cr = 3.9e-20
-    T_ref = Parameter("Reference temperature [K]")
     Eac_cr = Parameter(
         "Positive electrode activation energy for cracking rate [J.mol-1]"
     )
-    arrhenius = exp(Eac_cr / constants.R * (1 / T_dim - 1 / T_ref))
+    arrhenius = exp(Eac_cr / constants.R * (1 / T_dim - 1 / 298.15))
     return k_cr * arrhenius

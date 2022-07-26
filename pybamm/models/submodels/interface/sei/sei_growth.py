@@ -54,7 +54,7 @@ class SEIGrowth(BaseModel):
                     domain="negative electrode",
                     auxiliary_domains={"secondary": "current collector"},
                 )
-        else:
+        elif self.reaction == "SEI":
             if self.reaction_loc == "x-average":
                 L_inner_av = pybamm.standard_variables.L_inner_av
                 L_outer_av = pybamm.standard_variables.L_outer_av

@@ -167,19 +167,6 @@ Chen2020 = {
     "citation": "Chen2020",
 }
 
-Chen2020_plating = {
-    "chemistry": "lithium_ion",
-    "cell": "LGM50_Chen2020",
-    "negative electrode": "graphite_Chen2020_plating",
-    "separator": "separator_Chen2020",
-    "positive electrode": "nmc_Chen2020",
-    "electrolyte": "lipf6_Nyman2008",
-    "experiment": "1C_discharge_from_full_Chen2020",
-    "sei": "example",
-    "lithium plating": "okane2020_Li_plating",
-    "citation": "Chen2020",
-}
-
 Mohtat2020 = {
     "chemistry": "lithium_ion",
     "cell": "UMBL_Mohtat2020",
@@ -254,7 +241,7 @@ ORegan2021 = {
 OKane2022 = {
     "chemistry": "lithium_ion",
     "cell": "LGM50_Chen2020",
-    "negative electrode": "graphite_Chen2020_plating",
+    "negative electrode": "graphite_OKane2022",
     "separator": "separator_Chen2020",
     "positive electrode": "nmc_OKane2022",
     "electrolyte": "lipf6_Nyman2008",

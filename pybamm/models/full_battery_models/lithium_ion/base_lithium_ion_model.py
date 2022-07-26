@@ -236,40 +236,28 @@ class BaseModel(pybamm.BaseBatteryModel):
         else:
             reaction_loc = "full electrode"
 
-        # Do not set "sei on cracks" submodel for half-cells
-        if reaction_loc == "interface":
-            if self.options["SEI"] == "none":
-                self.submodels["sei"] = pybamm.sei.NoSEI(self.param, self.options)
-            elif self.options["SEI"] == "constant":
-                self.submodels["sei"] = pybamm.sei.ConstantSEI(self.param, self.options)
-            else:
-                self.submodels["sei"] = pybamm.sei.SEIGrowth(
-                    self.param, reaction_loc, self.options, cracks=False
-                )
-        # For full cells, "sei on cracks" submodel must be set, even if it is zero
+        if self.options["SEI"] == "none":
+            self.submodels["sei"] = pybamm.sei.NoSEI(self.param, self.options)
+        elif self.options["SEI"] == "constant":
+            self.submodels["sei"] = pybamm.sei.ConstantSEI(self.param, self.options)
         else:
-            if self.options["SEI"] == "none":
-                self.submodels["sei"] = pybamm.sei.NoSEI(self.param, self.options)
-                self.submodels["sei on cracks"] = pybamm.sei.NoSEI(
-                    self.param, self.options, cracks=True
-                )
-            elif self.options["SEI"] == "constant":
-                self.submodels["sei"] = pybamm.sei.ConstantSEI(self.param, self.options)
+            self.submodels["sei"] = pybamm.sei.SEIGrowth(
+                self.param, reaction_loc, self.options, cracks=False
+            )
+        # Do not set "sei on cracks" submodel for half-cells
+        # For full cells, "sei on cracks" submodel must be set, even if it is zero
+        if reaction_loc != "interface":
+            if (
+                self.options["SEI"] in ["none", "constant"]
+                or self.options["SEI on cracks"] == "false"
+            ):
                 self.submodels["sei on cracks"] = pybamm.sei.NoSEI(
                     self.param, self.options, cracks=True
                 )
             else:
-                self.submodels["sei"] = pybamm.sei.SEIGrowth(
-                    self.param, reaction_loc, self.options, cracks=False
+                self.submodels["sei on cracks"] = pybamm.sei.SEIGrowth(
+                    self.param, reaction_loc, self.options, cracks=True
                 )
-                if self.options["SEI on cracks"] == "true":
-                    self.submodels["sei on cracks"] = pybamm.sei.SEIGrowth(
-                        self.param, reaction_loc, self.options, cracks=True
-                    )
-                else:
-                    self.submodels["sei on cracks"] = pybamm.sei.NoSEI(
-                        self.param, self.options, cracks=True
-                    )
 
     def set_lithium_plating_submodel(self):
         if self.options["lithium plating"] == "none":

@@ -134,9 +134,6 @@ class LithiumIonParameters(BaseParameters):
         self.c_sol_dimensional = pybamm.Parameter(
             "Bulk solvent concentration [mol.m-3]"
         )
-        self.m_ratio = pybamm.Parameter(
-            "Ratio of inner and outer SEI exchange current densities"
-        )
         self.U_inner_dimensional = pybamm.Parameter(
             "Inner SEI open-circuit potential [V]"
         )

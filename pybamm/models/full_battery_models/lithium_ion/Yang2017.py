@@ -16,4 +16,4 @@ class Yang2017(DFN):
 
     @property
     def default_parameter_values(self):
-        return pybamm.ParameterValues("Chen2020_plating")
+        return pybamm.ParameterValues("OKane2022")

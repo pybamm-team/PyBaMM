@@ -344,8 +344,8 @@ class TestSimulationExperiment(unittest.TestCase):
         )
         model = pybamm.lithium_ion.SPM()
 
-        # Chen 2020 plating: pos = function, neg = data
-        param = pybamm.ParameterValues("Chen2020_plating")
+        # O'Kane 2022: pos = function, neg = data
+        param = pybamm.ParameterValues("OKane2022")
         sim = pybamm.Simulation(model, experiment=experiment, parameter_values=param)
         sim.solve(solver=pybamm.CasadiSolver("fast with events"), save_at_cycles=2)
 
