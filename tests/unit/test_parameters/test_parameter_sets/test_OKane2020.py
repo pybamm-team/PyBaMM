@@ -20,7 +20,7 @@ class TestOKane2020(unittest.TestCase):
 
     def test_functions(self):
         root = pybamm.root_dir()
-        param = pybamm.ParameterValues(chemistry={
+        param = pybamm.ParameterValues({
             "chemistry": "lithium_ion",
             "cell": "LGM50_Chen2020",
             "negative electrode": "graphite_Chen2020",

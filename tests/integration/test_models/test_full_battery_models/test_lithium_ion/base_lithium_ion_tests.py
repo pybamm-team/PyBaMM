@@ -162,7 +162,7 @@ class BaseIntegrationTestLithiumIon:
             "lithium plating": "irreversible",
             "lithium plating porosity change": "true",
         }
-        param = pybamm.ParameterValues("Chen2020_plating")
+        param = pybamm.ParameterValues("OKane2022")
         self.run_basic_processing_test(options, parameter_values=param)
 
     def test_sei_reaction_limited(self):
