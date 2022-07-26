@@ -83,6 +83,20 @@ class TestSetInitialSOC(unittest.TestCase):
         ):
             pybamm.lithium_ion.get_initial_stoichiometries(2, None)
 
+        parameter_values = pybamm.ParameterValues("Chen2020")
+        param = pybamm.LithiumIonParameters()
+
+        C_n = parameter_values.evaluate(param.n.cap_init)
+        C_p = parameter_values.evaluate(param.p.cap_init)
+        n_Li = parameter_values.evaluate(param.n_Li_particles_init)
+
+        inputs = {"V_min": 0, "V_max": 6, "C_n": C_n, "C_p": C_p, "n_Li": n_Li}
+        with self.assertRaisesRegex(ValueError, "lower bound of the voltage"):
+            pybamm.lithium_ion.check_esoh_feasible(parameter_values, inputs)
+        inputs = {"V_min": 3, "V_max": 6, "C_n": C_n, "C_p": C_p, "n_Li": n_Li}
+        with self.assertRaisesRegex(ValueError, "upper bound of the voltage"):
+            pybamm.lithium_ion.check_esoh_feasible(parameter_values, inputs)
+
 
 if __name__ == "__main__":
     print("Add -v for more debug output")
