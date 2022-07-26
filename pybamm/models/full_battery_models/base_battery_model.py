@@ -68,6 +68,9 @@ class BatteryModelOptions(pybamm.FuzzyDict):
             * "lithium plating" : str
                 Sets the model for lithium plating. Can be "none" (default),
                 "reversible", "partially reversible", or "irreversible".
+            * "lithium plating porosity change" : str
+                Whether to include porosity change due to lithium plating, can be
+                "false" (default) or "true".
             * "loss of active material" : str
                 Sets the model for loss of active material. Can be "none" (default),
                 "stress-driven", "reaction-driven", or "stress and reaction-driven".
@@ -166,6 +169,10 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                 Which electrode(s) intercalates and which is counter. If "both"
                 (default), the model is a standard battery. Otherwise can be "negative"
                 or "positive" to indicate a half-cell model.
+            * "x-average side reactions": str
+                Whether to average the side reactions (SEI growth, lithium plating and
+                the respective porosity change) over the x-axis in Single Particle
+                Models, can be "false" (default) or "true".
 
     **Extends:** :class:`dict`
     """
@@ -248,6 +255,7 @@ class BatteryModelOptions(pybamm.FuzzyDict):
             "thermal": ["isothermal", "lumped", "x-lumped", "x-full"],
             "total interfacial current density as a state": ["false", "true"],
             "working electrode": ["both", "negative", "positive"],
+            "x-average side reactions": ["false", "true"],
         }
 
         default_options = {

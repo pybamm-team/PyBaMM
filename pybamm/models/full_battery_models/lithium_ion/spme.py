@@ -41,9 +41,11 @@ class SPMe(SPM):
     def __init__(
         self, options=None, name="Single Particle Model with electrolyte", build=True
     ):
-        # For degradation models we use the "x-average" form since this is a
-        # reduced-order model with uniform current density in the electrodes
-        self.x_average = True
+        # # Set self.x_average based on "x-average side reactions"
+        # if options.get("x-average side reactions") == "true":
+        #     self.x_average = True
+        # else:
+        #     self.x_average = False
 
         # Initialize with the SPM
         super().__init__(options, name, build)
