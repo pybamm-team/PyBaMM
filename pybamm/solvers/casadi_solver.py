@@ -179,7 +179,8 @@ class CasadiSolver(pybamm.BaseSolver):
             )
             # Check if the sign of an event changes, if so find an accurate
             # termination point and exit
-            solution = self._solve_for_event(solution, init_event_signs)
+            if model.events != []:
+                solution = self._solve_for_event(solution, init_event_signs)
             solution.check_ys_are_not_too_large()
             return solution
         elif self.mode in ["safe", "safe without grid"]:
