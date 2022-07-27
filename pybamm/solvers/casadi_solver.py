@@ -347,11 +347,14 @@ class CasadiSolver(pybamm.BaseSolver):
         t0 = sol_t[0]
         dt = sol_t[1] - sol_t[0]
         for i, event in enumerate(active_events):
+            init_event_sign = init_event_signs[crossed_event_idx[i]]
 
             def rootfun(t_scaled):
                 # scale time between 0 and 1 for more accurate root finding
                 t = t0 + dt * t_scaled
-                return event(t, y_interp(t), inputs).full().flatten() - 1e-5
+                return (
+                    init_event_sign * event(t, y_interp(t), inputs)
+                ).full().flatten() - 1e-5
 
             pybamm.logger.verbose(f"Start rootfind for event {i}")
             rootsol = root(rootfun, 0)
