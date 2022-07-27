@@ -1,7 +1,7 @@
 from pybamm import exp, constants
 
 
-def graphite_LGM50_diffusivity_ORegan2021(sto, T):
+def graphite_LGM50_diffusivity_ORegan2022(sto, T):
     """
     LG M50 Graphite diffusivity as a function of stochiometry, in this case the
     diffusivity is taken to be a constant. The value is taken from [1].
@@ -9,9 +9,8 @@ def graphite_LGM50_diffusivity_ORegan2021(sto, T):
     References
     ----------
     .. [1] Kieran O’Regan, Ferran Brosa Planella, W. Dhammika Widanage, and Emma
-    Kendrick. "Thermal-electrochemical parametrisation of a lithium-ion battery:
-    mapping Li concentration and temperature dependencies." Journal of the
-    Electrochemical Society, submitted (2021).
+    Kendrick. "Thermal-electrochemical parameters of a high energy lithium-ion
+    cylindrical battery." Electrochimica Acta 425 (2022): 140700
 
     Parameters
     ----------
