@@ -134,9 +134,6 @@ class LithiumIonParameters(BaseParameters):
         self.c_sol_dimensional = pybamm.Parameter(
             "Bulk solvent concentration [mol.m-3]"
         )
-        self.m_ratio = pybamm.Parameter(
-            "Ratio of inner and outer SEI exchange current densities"
-        )
         self.U_inner_dimensional = pybamm.Parameter(
             "Inner SEI open-circuit potential [V]"
         )
@@ -155,6 +152,9 @@ class LithiumIonParameters(BaseParameters):
         self.L_inner_0_dim = pybamm.Parameter("Initial inner SEI thickness [m]")
         self.L_outer_0_dim = pybamm.Parameter("Initial outer SEI thickness [m]")
         self.L_sei_0_dim = self.L_inner_0_dim + self.L_outer_0_dim
+        self.E_sei_dimensional = pybamm.Parameter(
+            "SEI growth activation energy [J.mol-1]"
+        )
 
         # EC reaction
         self.c_ec_0_dim = pybamm.Parameter(
@@ -328,6 +328,10 @@ class LithiumIonParameters(BaseParameters):
         )
 
         # SEI parameters
+        self.alpha_sei = pybamm.Parameter("Inner SEI reaction proportion")  # was 0.5
+
+        self.E_over_RT_sei = self.E_sei_dimensional / self.R / self.T_ref
+
         self.C_sei_reaction = (self.n.j_scale / self.m_sei_dimensional) * pybamm.exp(
             -(self.F * self.n.U_ref / (2 * self.R * self.T_ref))
         )
@@ -420,7 +424,7 @@ class LithiumIonParameters(BaseParameters):
         self.ocv_init = (self.ocv_init_dim - self.ocv_ref) / self.potential_scale
 
         # Dimensionless mechanical parameters
-        self.t0_cr = 3600 / self.C_rate / self.timescale
+        self.t0_cr = 3600 / (self.C_rate * self.timescale)
 
     def chi(self, c_e, T):
         """
