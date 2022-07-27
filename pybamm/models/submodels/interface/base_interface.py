@@ -38,9 +38,11 @@ class BaseInterface(pybamm.BaseSubModel):
         elif reaction == "lithium-ion oxygen":
             self.reaction_name = "oxygen "
         elif reaction == "SEI": # Jason-SEI for "primary" or "secondary"?
-            self.reaction_name = "SEI "
+            # self.reaction_name = "SEI "
             # print("Jason-1")
-            # self.reaction_name = f"{self.phase_name}SEI " # primary SEI or secondary SEI
+            self.reaction_name = f"{self.phase_name}SEI " # primary SEI or secondary SEI
+            print("reaction_name")
+
         elif reaction == "lithium plating":
             self.reaction_name = "lithium plating "
 
@@ -550,6 +552,8 @@ class BaseInterface(pybamm.BaseSubModel):
             f"X-averaged {domain} electrode {reaction_name}"
             "open circuit potential [V]": ocp_av_dim,
         }
+        print(f"Jason-{Domain} electrode {reaction_name}open circuit potential") # SEI has no open circuit potential?
+
         if self.reaction in ["lithium-ion main", "lead-acid main"]:
             variables.update(
                 {

@@ -185,7 +185,7 @@ class BaseKinetics(BaseInterface):
             j_tot_var = variables[
                 "Total "
                 + self.domain.lower()
-                + f" electrode {phase_name}interfacial current density variable"  # Jason-{phase_name}?
+                + f" electrode interfacial current density variable"  # Jason-{phase_name}?
             ]
 
             # Override print_name
@@ -210,7 +210,7 @@ class BaseKinetics(BaseInterface):
             j_tot_var = variables[
                 "Total "
                 + self.domain.lower()
-                + f" electrode {phase_name}interfacial current density variable" # Jason - {phase_name}
+                + f" electrode interfacial current density variable" # Jason - {phase_name}
             ]
             current_at_0 = (
                 pybamm.FunctionParameter("Current function [A]", {"Time [s]": 0})

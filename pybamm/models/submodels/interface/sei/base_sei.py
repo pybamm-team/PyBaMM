@@ -124,8 +124,8 @@ class BaseModel(BaseInterface):
             L_scale = 1
             R_sei_dim = 1
         else:
-            L_scale = self.phase_param.L_sei_0_dim
-            R_sei_dim = self.phase_param.R_sei_dimensional
+            L_scale = phase_param.L_sei_0_dim
+            R_sei_dim = phase_param.R_sei_dimensional
 
         variables = {
             f"{pre}SEI thickness": L_sei,
@@ -175,12 +175,12 @@ class BaseModel(BaseInterface):
                 # scales in mol/m3 (n is a bulk quantity)
                 n_scale = (
                     phase_param.L_sei_0_dim
-                    * param.n.prim.a_typ
+                    * phase_param.a_typ
                     / phase_param.V_bar_inner_dimensional
                 )# Jason - does n.prim needs modification?
                 n_outer_scale = (
                     phase_param.L_sei_0_dim
-                    * param.n.prim.a_typ
+                    * phase_param.a_typ # change prim.a_typ to phase_param
                     / phase_param.V_bar_outer_dimensional
                 )
             v_bar = phase_param.v_bar
@@ -260,7 +260,7 @@ class BaseModel(BaseInterface):
         # domain = Domain.lower()
         phase_name = self.phase_name
         
-        j_scale = self.param.n.prim.j_scale
+        j_scale = self.phase_param.j_scale
         j_i_av = pybamm.x_average(j_inner)
         j_o_av = pybamm.x_average(j_outer)
 
@@ -289,7 +289,7 @@ class BaseModel(BaseInterface):
         phase_name = self.phase_name
         pre = phase_name.capitalize()
         
-        j_scale = self.param.n.prim.j_scale
+        j_scale = self.phase_param.j_scale
 
         variables = {
             f"{pre}SEI interfacial current density": j_sei,
