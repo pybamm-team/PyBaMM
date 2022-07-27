@@ -76,15 +76,15 @@ Lithium-ion parameter sets
          Offer, and Monica Marinescu. Lithium-ion battery degradation: how to model it.
          Phys. Chem. Chem. Phys., 24:7909-7922, 2022. URL:
          http://dx.doi.org/10.1039/D2CP00417H, doi:10.1039/D2CP00417H.
-    * ORegan2021 :
+    * ORegan2022 :
        - Chang-Hui Chen, Ferran Brosa Planella, Kieran O'Regan, Dominika Gastol, W.
          Dhammika Widanage, and Emma Kendrick. Development of Experimental Techniques
          for Parameterization of Multi-scale Lithium-ion Battery Models. Journal of The
          Electrochemical Society, 167(8):080534, 2020. doi:10.1149/1945-7111/ab9050.
        - Kieran O'Regan, Ferran Brosa Planella, W. Dhammika Widanage, and Emma Kendrick.
-         Thermal-electrochemical parametrisation of a lithium-ion battery: mapping Li
-         concentration and temperature dependencies. Journal of The Electrochemical
-         Society, ():, 2021. doi:.
+         Thermal-electrochemical parameters of a high energy lithium-ion cylindrical
+         battery. Electrochimica Acta, 425:140700, 2022.
+         doi:10.1016/j.electacta.2022.140700.
     * Prada2013 :
        - Chang-Hui Chen, Ferran Brosa Planella, Kieran O'Regan, Dominika Gastol, W.
          Dhammika Widanage, and Emma Kendrick. Development of Experimental Techniques
@@ -240,15 +240,15 @@ Xu2019 = {
     "citation": "Xu2019",
 }
 
-ORegan2021 = {
+ORegan2022 = {
     "chemistry": "lithium_ion",
-    "cell": "LGM50_ORegan2021",
-    "negative electrode": "graphite_ORegan2021",
-    "separator": "separator_ORegan2021",
-    "positive electrode": "nmc_ORegan2021",
+    "cell": "LGM50_ORegan2022",
+    "negative electrode": "graphite_ORegan2022",
+    "separator": "separator_ORegan2022",
+    "positive electrode": "nmc_ORegan2022",
     "electrolyte": "lipf6_EC_EMC_3_7_Landesfeind2019",
-    "experiment": "1C_discharge_from_full_ORegan2021",
-    "citation": ["ORegan2021", "Chen2020"],
+    "experiment": "1C_discharge_from_full_ORegan2022",
+    "citation": ["ORegan2022", "Chen2020"],
 }
 
 OKane2022 = {

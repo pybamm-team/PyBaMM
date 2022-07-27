@@ -1,7 +1,7 @@
 from pybamm import exp, tanh
 
 
-def graphite_LGM50_entropic_change_ORegan2021(sto, c_s_max):
+def graphite_LGM50_entropic_change_ORegan2022(sto, c_s_max):
     """
     LG M50 Graphite entropic change in open circuit potential (OCP) at a temperature of
     298.15K as a function of the stochiometry. The fit is taken from [1].
@@ -9,9 +9,8 @@ def graphite_LGM50_entropic_change_ORegan2021(sto, c_s_max):
     References
     ----------
     .. [1] Kieran O’Regan, Ferran Brosa Planella, W. Dhammika Widanage, and Emma
-    Kendrick. "Thermal-electrochemical parametrisation of a lithium-ion battery:
-    mapping Li concentration and temperature dependencies." Journal of the
-    Electrochemical Society, submitted (2021).
+    Kendrick. "Thermal-electrochemical parameters of a high energy lithium-ion
+    cylindrical battery." Electrochimica Acta 425 (2022): 140700
 
     Parameters
     ----------

@@ -40,6 +40,7 @@ PRINT_OPTIONS_OUTPUT = """\
 'thermal': 'x-full' (possible: ['isothermal', 'lumped', 'x-lumped', 'x-full'])
 'total interfacial current density as a state': 'false' (possible: ['false', 'true'])
 'working electrode': 'both' (possible: ['both', 'negative', 'positive'])
+'x-average side reactions': 'false' (possible: ['false', 'true'])
 'external submodels': []
 'timescale': 'default'
 """  # noqa: E501

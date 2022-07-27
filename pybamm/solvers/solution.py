@@ -135,7 +135,7 @@ class Solution(object):
         self.solve_time = None
         self.integration_time = None
 
-        # initiaize empty variables and data
+        # initialize empty variables and data
         self._variables = pybamm.FuzzyDict()
         self.data = pybamm.FuzzyDict()
 
@@ -152,7 +152,7 @@ class Solution(object):
         pybamm.citations.register("Andersson2019")
 
     def extract_explicit_sensitivities(self):
-        # if we got here, we havn't set y yet
+        # if we got here, we haven't set y yet
         self.set_y()
 
         # extract sensitivities from full y solution
@@ -783,7 +783,7 @@ class Solution(object):
         return new_sol
 
 
-def make_cycle_solution(step_solutions, esoh_sim=None, save_this_cycle=True):
+def make_cycle_solution(step_solutions, esoh_sims=None, save_this_cycle=True):
     """
     Function to create a Solution for an entire cycle, and associated summary variables
 
@@ -791,10 +791,11 @@ def make_cycle_solution(step_solutions, esoh_sim=None, save_this_cycle=True):
     ----------
     step_solutions : list of :class:`Solution`
         Step solutions that form the entire cycle
-    esoh_sim : :class:`pybamm.Simulation`, optional
-        A simulation, whose model should be a :class:`pybamm.lithium_ion.ElectrodeSOH`
-        model, which is used to calculate some of the summary variables. If `None`
-        (default) then only summary variables that do not require the eSOH calculation
+    esoh_sims : list of :class:`pybamm.Simulation`, optional
+        List containing :class:`pybamm.lithium_ion.ElectrodeSOHx100` and
+        `pybamm.lithium_ion.ElectrodeSOHx0`simulations, which are used to
+        calculate some of the summary variables. If `None` (default)
+        then only summary variables that do not require the eSOH calculation
         are calculated. See [1] for more details on eSOH variables.
     save_this_cycle : bool, optional
         Whether to save the entire cycle variables or just the summary variables.
@@ -836,7 +837,7 @@ def make_cycle_solution(step_solutions, esoh_sim=None, save_this_cycle=True):
 
     cycle_solution.steps = step_solutions
 
-    cycle_summary_variables = get_cycle_summary_variables(cycle_solution, esoh_sim)
+    cycle_summary_variables = get_cycle_summary_variables(cycle_solution, esoh_sims)
 
     cycle_first_state = cycle_solution.first_state
 
@@ -848,7 +849,7 @@ def make_cycle_solution(step_solutions, esoh_sim=None, save_this_cycle=True):
     return cycle_solution, cycle_summary_variables, cycle_first_state
 
 
-def get_cycle_summary_variables(cycle_solution, esoh_sim):
+def get_cycle_summary_variables(cycle_solution, esoh_sims):
     model = cycle_solution.all_models[0]
     cycle_summary_variables = pybamm.FuzzyDict({})
 
@@ -889,50 +890,18 @@ def get_cycle_summary_variables(cycle_solution, esoh_sim):
 
     # eSOH variables (full-cell lithium-ion model only, for now)
     if (
-        esoh_sim is not None
+        esoh_sims is not None
         and isinstance(model, pybamm.lithium_ion.BaseModel)
         and model.half_cell is False
     ):
-        V_min = esoh_sim.parameter_values["Lower voltage cut-off [V]"]
-        V_max = esoh_sim.parameter_values["Upper voltage cut-off [V]"]
+        x100_sim = esoh_sims[0]
+        x0_sim = esoh_sims[1]
+        V_min = x0_sim.parameter_values["Lower voltage cut-off [V]"]
+        V_max = x0_sim.parameter_values["Upper voltage cut-off [V]"]
         C_n = last_state["Negative electrode capacity [A.h]"].data[0]
         C_p = last_state["Positive electrode capacity [A.h]"].data[0]
         n_Li = last_state["Total lithium in particles [mol]"].data[0]
-        if esoh_sim.solution is not None:
-            # initialize with previous solution if it is available
-            esoh_sim.built_model.set_initial_conditions_from(esoh_sim.solution)
-            solver = None
-        else:
-            x_100_init = np.max(cycle_solution["Negative electrode SOC"].data)
-            # make sure x_0 > 0
-            C_init = np.minimum(0.95 * (C_n * x_100_init), max_Q - min_Q)
 
-            # Solve the esoh model and add outputs to the summary variables
-            # use CasadiAlgebraicSolver if there are interpolants
-            if isinstance(
-                esoh_sim.parameter_values["Negative electrode OCP [V]"], tuple
-            ) or isinstance(
-                esoh_sim.parameter_values["Positive electrode OCP [V]"], tuple
-            ):
-                solver = pybamm.CasadiAlgebraicSolver()
-                # Choose x_100_init so as not to violate the interpolation limits
-                if isinstance(
-                    esoh_sim.parameter_values["Positive electrode OCP [V]"], tuple
-                ):
-                    y_100_min = np.min(
-                        esoh_sim.parameter_values["Positive electrode OCP [V]"][1][0][0]
-                    )
-                    x_100_max = (
-                        n_Li * pybamm.constants.F.value / 3600 - y_100_min * C_p
-                    ) / C_n
-                    x_100_init = np.minimum(x_100_init, 0.99 * x_100_max)
-            else:
-                solver = None
-            # Update initial conditions using the cycle solution
-            esoh_sim.build()
-            esoh_sim.built_model.set_initial_conditions_from(
-                {"x_100": x_100_init, "C": C_init}
-            )
         inputs = {
             "V_min": V_min,
             "V_max": V_max,
@@ -942,13 +911,14 @@ def get_cycle_summary_variables(cycle_solution, esoh_sim):
         }
 
         try:
-            esoh_sol = esoh_sim.solve([0], inputs=inputs, solver=solver)
+            esoh_sol = pybamm.lithium_ion.solve_electrode_soh(x100_sim, x0_sim, inputs)
         except pybamm.SolverError:  # pragma: no cover
             raise pybamm.SolverError(
                 "Could not solve for summary variables, run "
                 "`sim.solve(calc_esoh=False)` to skip this step"
             )
-        for var in esoh_sim.built_model.variables:
+
+        for var in x0_sim.built_model.variables:
             cycle_summary_variables[var] = esoh_sol[var].data[0]
 
         cycle_summary_variables["Capacity [A.h]"] = cycle_summary_variables["C"]

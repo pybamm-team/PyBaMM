@@ -651,8 +651,10 @@ class Simulation:
                 raise ValueError(
                     "starting_solution can only be provided if simulating an Experiment"
                 )
-            if self.operating_mode == "without experiment" or isinstance(
-                self.model, pybamm.lithium_ion.ElectrodeSOH
+            if (
+                self.operating_mode == "without experiment"
+                or isinstance(self.model, pybamm.lithium_ion.ElectrodeSOHx100)
+                or isinstance(self.model, pybamm.lithium_ion.ElectrodeSOHx0)
             ):
                 if t_eval is None:
                     raise pybamm.SolverError(
@@ -727,14 +729,13 @@ class Simulation:
             inputs = kwargs.get("inputs", {})
             timer = pybamm.Timer()
 
-            # Set up eSOH model (for summary variables)
+            # Set up eSOH sims (for summary variables)
             if calc_esoh is True:
-                esoh_model = pybamm.lithium_ion.ElectrodeSOH()
-                esoh_sim = pybamm.Simulation(
-                    esoh_model, parameter_values=self.parameter_values
+                esoh_sims = pybamm.lithium_ion.create_electrode_soh_sims(
+                    self.parameter_values
                 )
             else:
-                esoh_sim = None
+                esoh_sims = None
 
             if starting_solution is None:
                 starting_solution_cycles = []
@@ -745,7 +746,7 @@ class Simulation:
                     cycle_solution,
                     cycle_sum_vars,
                     cycle_first_state,
-                ) = pybamm.make_cycle_solution(starting_solution.steps, esoh_sim, True)
+                ) = pybamm.make_cycle_solution(starting_solution.steps, esoh_sims, True)
                 starting_solution_cycles = [cycle_solution]
                 starting_solution_summary_variables = [cycle_sum_vars]
                 starting_solution_first_states = [cycle_first_state]
@@ -871,7 +872,7 @@ class Simulation:
                 if len(steps) > 0:
                     cycle_sol = pybamm.make_cycle_solution(
                         steps,
-                        esoh_sim,
+                        esoh_sims,
                         save_this_cycle=save_this_cycle,
                     )
                     cycle_solution, cycle_sum_vars, cycle_first_state = cycle_sol
