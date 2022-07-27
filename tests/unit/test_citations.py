@@ -143,6 +143,36 @@ class TestCitations(unittest.TestCase):
         pybamm.electrolyte_conductivity.Integrated(None)
         self.assertIn("BrosaPlanella2021", citations._papers_to_cite)
 
+    def test_brosaplanella_2022(self):
+        # Test that calling relevant bits of code adds the right paper to citations
+        citations = pybamm.citations
+
+        citations._reset()
+        self.assertNotIn("BrosaPlanella2022", citations._papers_to_cite)
+        pybamm.lithium_ion.SPM(build=False, options={"SEI": "none"})
+        pybamm.lithium_ion.SPM(build=False, options={"SEI": "constant"})
+        pybamm.lithium_ion.SPMe(build=False, options={"SEI": "none"})
+        pybamm.lithium_ion.SPMe(build=False, options={"SEI": "constant"})
+        self.assertNotIn("BrosaPlanella2022", citations._papers_to_cite)
+
+        pybamm.lithium_ion.SPM(build=False, options={"SEI": "ec reaction limited"})
+        self.assertIn("BrosaPlanella2022", citations._papers_to_cite)
+        citations._reset()
+
+        pybamm.lithium_ion.SPMe(build=False, options={"SEI": "ec reaction limited"})
+        self.assertIn("BrosaPlanella2022", citations._papers_to_cite)
+        citations._reset()
+
+        pybamm.lithium_ion.SPM(build=False, options={"lithium plating": "irreversible"})
+        self.assertIn("BrosaPlanella2022", citations._papers_to_cite)
+        citations._reset()
+
+        pybamm.lithium_ion.SPMe(
+            build=False, options={"lithium plating": "irreversible"}
+        )
+        self.assertIn("BrosaPlanella2022", citations._papers_to_cite)
+        citations._reset()
+
     def test_newman_tobias(self):
         # Test that calling relevant bits of code adds the right paper to citations
         citations = pybamm.citations
@@ -228,8 +258,8 @@ class TestCitations(unittest.TestCase):
         self.assertIn("Richardson2020", citations._papers_to_cite)
 
         citations._reset()
-        pybamm.ParameterValues("ORegan2021")
-        self.assertIn("ORegan2021", citations._papers_to_cite)
+        pybamm.ParameterValues("ORegan2022")
+        self.assertIn("ORegan2022", citations._papers_to_cite)
 
     def test_solver_citations(self):
         # Test that solving each solver adds the right citations

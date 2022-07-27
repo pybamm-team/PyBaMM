@@ -68,6 +68,9 @@ class BatteryModelOptions(pybamm.FuzzyDict):
             * "lithium plating" : str
                 Sets the model for lithium plating. Can be "none" (default),
                 "reversible", "partially reversible", or "irreversible".
+            * "lithium plating porosity change" : str
+                Whether to include porosity change due to lithium plating, can be
+                "false" (default) or "true".
             * "loss of active material" : str
                 Sets the model for loss of active material. Can be "none" (default),
                 "stress-driven", "reaction-driven", or "stress and reaction-driven".
@@ -166,6 +169,11 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                 Which electrode(s) intercalates and which is counter. If "both"
                 (default), the model is a standard battery. Otherwise can be "negative"
                 or "positive" to indicate a half-cell model.
+            * "x-average side reactions": str
+                Whether to average the side reactions (SEI growth, lithium plating and
+                the respective porosity change) over the x-axis in Single Particle
+                Models, can be "false" or "true". Default is "false" for SPMe and
+                "true" for SPM.
 
     **Extends:** :class:`dict`
     """
@@ -248,6 +256,7 @@ class BatteryModelOptions(pybamm.FuzzyDict):
             "thermal": ["isothermal", "lumped", "x-lumped", "x-full"],
             "total interfacial current density as a state": ["false", "true"],
             "working electrode": ["both", "negative", "positive"],
+            "x-average side reactions": ["false", "true"],
         }
 
         default_options = {
@@ -648,6 +657,13 @@ class BaseBatteryModel(pybamm.BaseModel):
                     "electrolyte conductivity '{}' not suitable for SPMe".format(
                         options["electrolyte conductivity"]
                     )
+                )
+        if isinstance(self, pybamm.lithium_ion.SPM) and not isinstance(
+            self, pybamm.lithium_ion.SPMe
+        ):
+            if options["x-average side reactions"] == "false":
+                raise pybamm.OptionError(
+                    "x-average side reactions cannot be 'false' for SPM models"
                 )
         if isinstance(self, pybamm.lead_acid.BaseModel):
             if options["thermal"] != "isothermal" and options["dimensionality"] != 0:
