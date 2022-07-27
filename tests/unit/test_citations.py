@@ -206,7 +206,12 @@ class TestCitations(unittest.TestCase):
 
         citations._reset()
         self.assertNotIn("Mohtat2019", citations._papers_to_cite)
-        pybamm.lithium_ion.ElectrodeSOH()
+        pybamm.lithium_ion.ElectrodeSOHx100()
+        self.assertIn("Mohtat2019", citations._papers_to_cite)
+
+        citations._reset()
+        self.assertNotIn("Mohtat2019", citations._papers_to_cite)
+        pybamm.lithium_ion.ElectrodeSOHx0()
         self.assertIn("Mohtat2019", citations._papers_to_cite)
 
     def test_mohtat_2021(self):
