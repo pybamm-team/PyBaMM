@@ -9,6 +9,7 @@ class ElectrodeSOHx100(pybamm.BaseModel):
     """Model to calculate electrode-specific SOH for x_100 and y_100, from [1]_.
     This model is mainly for internal use, to calculate summary variables in a
     simulation.
+
     .. math::
         n_{Li} = \\frac{3600}{F}(y_{100}C_p + x_{100}C_n),
     .. math::
@@ -60,18 +61,13 @@ class ElectrodeSOHx0(pybamm.BaseModel):
     """Model to calculate electrode-specific SOH for x_0 and y_0, from [1]_.
     This model is mainly for internal use, to calculate summary variables in a
     simulation.
+
     .. math::
         V_{min} = U_p(y_{0}) - U_n(x_{0}),
     .. math::
         x_0 = x_{100} - \\frac{C}{C_n},
     .. math::
         y_0 = y_{100} + \\frac{C}{C_p}.
-
-    References
-    ----------
-    .. [1] Mohtat, P., Lee, S., Siegel, J. B., & Stefanopoulou, A. G. (2019). Towards
-           better estimability of electrode-specific state of health: Decoding the cell
-           expansion. Journal of Power Sources, 427, 101-111.
 
     **Extends:** :class:`pybamm.BaseModel`
     """
