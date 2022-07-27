@@ -26,11 +26,6 @@ Lithium-ion parameter sets
          Dhammika Widanage, and Emma Kendrick. Development of Experimental Techniques
          for Parameterization of Multi-scale Lithium-ion Battery Models. Journal of The
          Electrochemical Society, 167(8):080534, 2020. doi:10.1149/1945-7111/ab9050.
-    * Chen2020_plating :
-       - Chang-Hui Chen, Ferran Brosa Planella, Kieran O'Regan, Dominika Gastol, W.
-         Dhammika Widanage, and Emma Kendrick. Development of Experimental Techniques
-         for Parameterization of Multi-scale Lithium-ion Battery Models. Journal of The
-         Electrochemical Society, 167(8):080534, 2020. doi:10.1149/1945-7111/ab9050.
     * Ecker2015 :
        - Madeleine Ecker, Stefan Käbitz, Izaro Laresgoiti, and Dirk Uwe Sauer.
          Parameterization of a Physico-Chemical Model of a Lithium-Ion Battery: II.
