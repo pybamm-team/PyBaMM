@@ -83,8 +83,8 @@ Lithium-ion parameter sets
          Electrochemical Society, 167(8):080534, 2020. doi:10.1149/1945-7111/ab9050.
        - Kieran O'Regan, Ferran Brosa Planella, W. Dhammika Widanage, and Emma Kendrick.
          Thermal-electrochemical parameters of a high energy lithium-ion cylindrical
-         battery. Electrochimica Acta, 425: 140700, 2022.
-         doi: 10.1016/j.electacta.2022.140700.
+         battery. Electrochimica Acta, 425:140700, 2022.
+         doi:10.1016/j.electacta.2022.140700.
     * Prada2013 :
        - Chang-Hui Chen, Ferran Brosa Planella, Kieran O'Regan, Dominika Gastol, W.
          Dhammika Widanage, and Emma Kendrick. Development of Experimental Techniques
