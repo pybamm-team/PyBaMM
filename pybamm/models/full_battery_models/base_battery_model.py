@@ -172,7 +172,8 @@ class BatteryModelOptions(pybamm.FuzzyDict):
             * "x-average side reactions": str
                 Whether to average the side reactions (SEI growth, lithium plating and
                 the respective porosity change) over the x-axis in Single Particle
-                Models, can be "false" (default) or "true".
+                Models, can be "false" or "true". Default is "false" for SPMe and
+                "true" for SPM.
 
     **Extends:** :class:`dict`
     """
@@ -656,6 +657,13 @@ class BaseBatteryModel(pybamm.BaseModel):
                     "electrolyte conductivity '{}' not suitable for SPMe".format(
                         options["electrolyte conductivity"]
                     )
+                )
+        if isinstance(self, pybamm.lithium_ion.SPM) and not isinstance(
+            self, pybamm.lithium_ion.SPMe
+        ):
+            if options["x-average side reactions"] == "false":
+                raise pybamm.OptionError(
+                    "x-average side reactions cannot be 'false' for SPM models"
                 )
         if isinstance(self, pybamm.lead_acid.BaseModel):
             if options["thermal"] != "isothermal" and options["dimensionality"] != 0:

@@ -34,9 +34,10 @@ class TestSPM(BaseUnitTestLithiumIon, unittest.TestCase):
         }
         self.check_well_posedness(options)
 
-        # Check model with distributed side reactions
+        # Check model with distributed side reactions throws an error
         options["x-average side reactions"] = "false"
-        self.check_well_posedness(options)
+        with self.assertRaisesRegex(pybamm.OptionError, "cannot be 'false' for SPM"):
+            pybamm.lithium_ion.SPM(options)
 
     def test_new_model(self):
         model = pybamm.lithium_ion.SPM({"thermal": "x-full"})

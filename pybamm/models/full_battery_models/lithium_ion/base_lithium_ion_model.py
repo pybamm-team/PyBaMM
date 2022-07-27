@@ -227,7 +227,7 @@ class BaseModel(pybamm.BaseBatteryModel):
     def set_sei_submodel(self):
         if self.half_cell:
             reaction_loc = "interface"
-        elif self.x_average or self.options["x-average side reactions"] == "true":
+        elif self.options["x-average side reactions"] == "true":
             reaction_loc = "x-average"
         else:
             reaction_loc = "full electrode"

@@ -46,8 +46,16 @@ class SPM(BaseModel):
             options["surface form"] = "algebraic"
 
         # For degradation models we use the "x-average", note that for side reactions
-        # this is overwritten by "x-average side reactions"
+        # this is set by "x-average side reactions"
         self.x_average = True
+
+        # Set "x-average side reactions" to "true" if the model is SPM
+        x_average_side_reactions = options.get("x-average side reactions")
+        if (
+            x_average_side_reactions is None
+            and self.__class__ == pybamm.lithium_ion.SPM
+        ):
+            options["x-average side reactions"] = "true"
 
         super().__init__(options, name)
 
