@@ -362,7 +362,7 @@ class CasadiSolver(pybamm.BaseSolver):
             pybamm.logger.verbose(
                 f"End rootfind for event {i}; event value is {rootsol.fun}"
             )
-            if rootsol.success == False and abs(rootsol.fun) > 1e-4:  # pragma: no cover
+            if rootsol.success is False and abs(rootsol.fun) > 1e-4:  # pragma: no cover
                 raise pybamm.SolverError("The root-finding algorithm for events failed")
             t_events[i] = t
 
