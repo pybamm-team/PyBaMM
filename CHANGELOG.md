@@ -5,6 +5,7 @@
 
 -   Moved general code about submodels to `BaseModel` instead of `BaseBatteryModel`, making it easier to build custom models from submodels. ([#2169](https://github.com/pybamm-team/PyBaMM/pull/2169))
 -   Events can now be plotted as a regular variable (under the name "Event: event_name", e.g. "Event: Minimum voltage [V]") ([#2158](https://github.com/pybamm-team/PyBaMM/pull/2158))
+-   SEI growth, lithium plating and porosity change can now be set to distributed in `SPMe`. There is an additional option called `x-average side reactions` which allows to set this (note that for `SPM` it is always x-averaged). ([#2099](https://github.com/pybamm-team/PyBaMM/pull/2099))
 
 ## Optimizations
 
