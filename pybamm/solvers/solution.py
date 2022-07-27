@@ -714,6 +714,7 @@ class Solution(object):
             new_sol._termination = other.termination
             new_sol._t_event = other._t_event
             new_sol._y_event = other._y_event
+            new_sol.closest_event_idx = other.closest_event_idx
             return new_sol
 
         # Update list of sub-solutions

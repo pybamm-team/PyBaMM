@@ -17,7 +17,7 @@ models = [
 sims = []
 for model in models:
     sim = pybamm.Simulation(model)
-    sim.solve([0, 3600])
+    sim.solve([0, 4000])
     sims.append(sim)
 
 # plot
