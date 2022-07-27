@@ -30,9 +30,10 @@ def plot_voltage_components(
     kwargs_fill = {"alpha": 0.6, **kwargs_fill}
 
     if ax is not None:
+        fig = None
         testing = True
     else:
-        _, ax = plt.subplots()
+        fig, ax = plt.subplots()
 
     overpotentials = [
         "X-averaged battery reaction overpotential [V]",
@@ -40,41 +41,43 @@ def plot_voltage_components(
         "X-averaged battery electrolyte ohmic losses [V]",
         "X-averaged battery solid phase ohmic losses [V]",
     ]
+    labels = [
+        "Reaction overpotential",
+        "Concentration overpotential",
+        "Ohmic electrolyte overpotential",
+        "Ohmic electrode overpotential",
+    ]
 
     # Plot
     # Initialise
     time = solution["Time [h]"].entries
     initial_ocv = solution["X-averaged battery open circuit voltage [V]"](0)
     ocv = solution["X-averaged battery open circuit voltage [V]"].entries
-    ax.fill_between(time, ocv, initial_ocv, **kwargs_fill)
+    ax.fill_between(time, ocv, initial_ocv, **kwargs_fill, label="Open-circuit voltage")
     top = ocv
     # Plot components
-    for overpotential in overpotentials:
+    for overpotential, label in zip(overpotentials, labels):
         bottom = top + solution[overpotential].entries
-        ax.fill_between(time, bottom, top, **kwargs_fill)
+        ax.fill_between(time, bottom, top, **kwargs_fill, label=label)
         top = bottom
+
     V = solution["Battery voltage [V]"].entries
-    ax.plot(time, V, "k--")
+    ax.plot(time, V, "k--", label="Voltage")
+
     if show_legend:
-        labels = [
-            "Open-circuit voltage",
-            "Reaction overpotential",
-            "Concentration overpotential",
-            "Ohmic electrolyte overpotential",
-            "Ohmic electrode overpotential",
-            "Voltage",
-        ]
-        leg = ax.legend(labels, loc="lower left", frameon=True)
+        leg = ax.legend(loc="lower left", frameon=True)
         leg.get_frame().set_edgecolor("k")
 
     # Labels
     ax.set_xlim([time[0], time[-1]])
     ax.set_xlabel("Time [h]")
 
-    y_min, y_max = 0.98 * np.nanmin(V), 1.02 * np.nanmax(initial_ocv)
+    y_min, y_max = 0.98 * min(np.nanmin(V), np.nanmin(ocv)), 1.02 * (
+        max(np.nanmax(V), np.nanmax(ocv))
+    )
     ax.set_ylim([y_min, y_max])
 
     if not testing:  # pragma: no cover
         plt.show()
 
-    return ax
+    return fig, ax
