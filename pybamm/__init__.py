@@ -209,11 +209,13 @@ from .solvers.casadi_algebraic_solver import CasadiAlgebraicSolver
 from .solvers.scikits_dae_solver import ScikitsDaeSolver
 from .solvers.scikits_ode_solver import ScikitsOdeSolver, have_scikits_odes
 from .solvers.scipy_solver import ScipySolver
+from .solvers.solver_utils import NoMemAllocVertcat
 
 from .solvers.jax_solver import JaxSolver
 from .solvers.jax_bdf_solver import jax_bdf_integrate
 
 from .solvers.idaklu_solver import IDAKLUSolver, have_idaklu
+
 
 #
 # Experiments

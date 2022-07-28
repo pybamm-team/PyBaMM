@@ -80,7 +80,7 @@ class StandardModelTest(object):
         if Crate == 0:
             Crate = 1
         if t_eval is None:
-            t_eval = np.linspace(0, 3600 / Crate, 100)
+            t_eval = np.linspace(0, 3600 / Crate, 1000)
 
         self.solution = self.solver.solve(
             self.model,

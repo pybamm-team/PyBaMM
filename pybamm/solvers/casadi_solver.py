@@ -699,17 +699,10 @@ class CasadiSolver(pybamm.BaseSolver):
                     x0=y0_diff, z0=y0_alg, p=inputs_with_tmin, **self.extra_options_call
                 )
                 integration_time = timer.time()
-                y_sol = casadi.vertcat(casadi_sol["xf"], casadi_sol["zf"])
-                sol = pybamm.Solution(
-                    t_eval,
-                    y_sol,
-                    model,
-                    inputs_dict,
-                    sensitivities=extract_sensitivities_in_solution,
-                    check_solution=False,
-                )
-                sol.integration_time = integration_time
-                return sol
+                if casadi_sol["zf"].is_empty():
+                    y_sol = casadi_sol["xf"]
+                else:
+                    y_sol = pybamm.NoMemAllocVertcat(casadi_sol["xf"], casadi_sol["zf"])
             else:
                 # Repeated calls to the integrator
                 x = y0_diff
@@ -733,7 +726,7 @@ class CasadiSolver(pybamm.BaseSolver):
                 if z.is_empty():
                     y_sol = y_diff
                 else:
-                    y_sol = casadi.vertcat(y_diff, y_alg)
+                    y_sol = pybamm.NoMemAllocVertcat(y_diff, y_alg)
 
             sol = pybamm.Solution(
                 t_eval,
