@@ -321,8 +321,7 @@ class Solution(object):
         # Only check last one so that it doesn't take too long
         # We only care about the cases where y is growing too large without any
         # restraint, so if y gets large in the middle then comes back down that is ok
-        y, model = self.all_ys[-1], self.all_models[-1]
-        y = y[:, -1]
+        y, model = self.y_last, self.all_models[-1]
         if np.any(y > pybamm.settings.max_y_value):
             for var in [*model.rhs.keys(), *model.algebraic.keys()]:
                 y_var = y[model.variables[var.name].y_slices[0]]
@@ -357,6 +356,15 @@ class Solution(object):
                 casadi.vertcat(*inp.values()) for inp in self.all_inputs
             ]
             return self._all_inputs_casadi
+
+    @property
+    def y_last(self):
+        """Last value of the solution"""
+        try:
+            return self._y_last
+        except AttributeError:
+            self._y_last = self.all_ys[-1][:, -1]
+            return self._y_last
 
     @property
     def t_event(self):
@@ -419,7 +427,7 @@ class Solution(object):
         except AttributeError:
             new_sol = Solution(
                 self.all_ts[-1][-1:],
-                self.all_ys[-1][:, -1:],
+                self.y_last,
                 self.all_models[-1:],
                 self.all_inputs[-1:],
                 self.t_event,
@@ -738,6 +746,7 @@ class Solution(object):
             check_solution=False,  # no need to check again
         )
 
+        new_sol._y_last = other.y_last
         new_sol.closest_event_idx = other.closest_event_idx
         new_sol._all_inputs_casadi = self.all_inputs_casadi + other.all_inputs_casadi
 
@@ -774,6 +783,7 @@ class Solution(object):
         )
         new_sol._all_inputs_casadi = self.all_inputs_casadi
         new_sol._sub_solutions = self.sub_solutions
+        new_sol._y_last = self.y_last
         new_sol.closest_event_idx = self.closest_event_idx
 
         new_sol.solve_time = self.solve_time

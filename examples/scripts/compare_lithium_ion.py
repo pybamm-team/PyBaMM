@@ -7,10 +7,10 @@ pybamm.set_logging_level("INFO")
 
 # load models
 models = [
-    pybamm.lithium_ion.SPM(),
-    pybamm.lithium_ion.SPMe(),
-    pybamm.lithium_ion.DFN(),
-    pybamm.lithium_ion.NewmanTobias(),
+    pybamm.lithium_ion.SPM({"intercalation kinetics": "linear"}),
+    pybamm.lithium_ion.SPMe({"intercalation kinetics": "linear"}),
+    pybamm.lithium_ion.DFN({"intercalation kinetics": "linear"}),
+    #     pybamm.lithium_ion.NewmanTobias(),
 ]
 
 # create and run simulations

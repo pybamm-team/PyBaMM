@@ -178,6 +178,7 @@ class CasadiSolver(pybamm.BaseSolver):
             if model.events != []:
                 solution = self._solve_for_event(solution, init_event_signs)
             solution.check_ys_are_not_too_large()
+            self.check_interpolant_extrapolation(model, solution)
             return solution
         elif self.mode in ["safe", "safe without grid"]:
             y0 = model.y0
@@ -271,6 +272,7 @@ class CasadiSolver(pybamm.BaseSolver):
                 current_step_sol = self._solve_for_event(
                     current_step_sol, init_event_signs
                 )
+                self.check_interpolant_extrapolation(model, current_step_sol)
                 # assign temporary solve time
                 current_step_sol.solve_time = np.nan
                 # append solution from the current step to solution
@@ -281,14 +283,13 @@ class CasadiSolver(pybamm.BaseSolver):
                     # update time
                     t = t_window[-1]
                     # update y0
-                    y0 = solution.all_ys[-1][:, -1]
+                    y0 = solution.y_last
 
             # now we extract sensitivities from the solution
             if bool(model.calculate_sensitivities):
                 solution.sensitivities = True
 
             solution.check_ys_are_not_too_large()
-            self.check_interpolant_extrapolation(model, solution)
             return solution
 
     def _solve_for_event(self, solution, init_event_signs):
@@ -312,7 +313,7 @@ class CasadiSolver(pybamm.BaseSolver):
 
         # Check most recent y to see if any events have been crossed
         if model.terminate_events_eval:
-            y_last = sol_y[:, -1]
+            y_last = solution.y_last
             t_last = sol_t[-1]
             crossed_events = casadi.sign(
                 init_event_signs
@@ -387,7 +388,8 @@ class CasadiSolver(pybamm.BaseSolver):
         if model.interpolant_extrapolation_events_eval:
             inputs = casadi.vertcat(*[x for x in solution.all_inputs[-1].values()])
             t_last = solution.all_ts[-1][-1]
-            y_last = solution.all_ys[-1][:, -1]
+            y_last = solution.y_last
+            y_last_full = y_last.full()
             extrap_event = [
                 event(t_last, y_last, inputs)
                 for event in model.interpolant_extrapolation_events_eval
@@ -402,7 +404,7 @@ class CasadiSolver(pybamm.BaseSolver):
                             == pybamm.EventType.INTERPOLANT_EXTRAPOLATION
                             and (
                                 event.expression.evaluate(
-                                    t_last, y_last.full(), inputs=inputs
+                                    t_last, y_last_full, inputs=inputs
                                 )
                                 < self.extrap_tol
                             ).any()
