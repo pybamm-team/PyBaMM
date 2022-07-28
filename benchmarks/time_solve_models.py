@@ -22,7 +22,7 @@ class TimeSolveSPM:
             "Ramadass2004",
             "Mohtat2020",
             "Chen2020",
-            "Chen2020_plating",
+            "OKane2022",
             "Ecker2015",
         ],
     )
@@ -76,7 +76,7 @@ class TimeSolveSPMe:
             "Ramadass2004",
             "Mohtat2020",
             "Chen2020",
-            "Chen2020_plating",
+            "OKan",
             "Ecker2015",
         ],
     )
@@ -130,7 +130,7 @@ class TimeSolveDFN:
             "Ramadass2004",
             # "Mohtat2020",
             "Chen2020",
-            "Chen2020_plating",
+            "OKan",
             "Ecker2015",
         ],
     )
