@@ -26,11 +26,6 @@ Lithium-ion parameter sets
          Dhammika Widanage, and Emma Kendrick. Development of Experimental Techniques
          for Parameterization of Multi-scale Lithium-ion Battery Models. Journal of The
          Electrochemical Society, 167(8):080534, 2020. doi:10.1149/1945-7111/ab9050.
-    * Chen2020_plating :
-       - Chang-Hui Chen, Ferran Brosa Planella, Kieran O'Regan, Dominika Gastol, W.
-         Dhammika Widanage, and Emma Kendrick. Development of Experimental Techniques
-         for Parameterization of Multi-scale Lithium-ion Battery Models. Journal of The
-         Electrochemical Society, 167(8):080534, 2020. doi:10.1149/1945-7111/ab9050.
     * Ecker2015 :
        - Madeleine Ecker, Stefan Käbitz, Izaro Laresgoiti, and Dirk Uwe Sauer.
          Parameterization of a Physico-Chemical Model of a Lithium-Ion Battery: II.
@@ -167,19 +162,6 @@ Chen2020 = {
     "citation": "Chen2020",
 }
 
-Chen2020_plating = {
-    "chemistry": "lithium_ion",
-    "cell": "LGM50_Chen2020",
-    "negative electrode": "graphite_Chen2020_plating",
-    "separator": "separator_Chen2020",
-    "positive electrode": "nmc_Chen2020",
-    "electrolyte": "lipf6_Nyman2008",
-    "experiment": "1C_discharge_from_full_Chen2020",
-    "sei": "example",
-    "lithium plating": "okane2020_Li_plating",
-    "citation": "Chen2020",
-}
-
 Mohtat2020 = {
     "chemistry": "lithium_ion",
     "cell": "UMBL_Mohtat2020",
@@ -254,12 +236,12 @@ ORegan2022 = {
 OKane2022 = {
     "chemistry": "lithium_ion",
     "cell": "LGM50_Chen2020",
-    "negative electrode": "graphite_Chen2020_plating",
+    "negative electrode": "graphite_OKane2022",
     "separator": "separator_Chen2020",
-    "positive electrode": "nmc_Chen2020",
+    "positive electrode": "nmc_OKane2022",
     "electrolyte": "lipf6_Nyman2008",
     "experiment": "1C_discharge_from_full_Chen2020",
-    "sei": "example",
+    "sei": "OKane2022",
     "lithium plating": "okane2022_Li_plating",
     "citation": ["OKane2022", "Chen2020"],
 }
