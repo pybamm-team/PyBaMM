@@ -1,7 +1,7 @@
 #
 # Utility functions and classes for solvers
 #
-import numpy as np
+import casadi
 
 
 class NoMemAllocVertcat:
@@ -9,21 +9,35 @@ class NoMemAllocVertcat:
     Acts like a vertcat, but does not allocate new memory.
     """
 
-    def __init__(self, a, b):
-        arrays = [a, b]
-        self.arrays = arrays
-        self.len_a = a.shape[0]
-        self.len_b = b.shape[0]
-        self.len = self.len_a + self.len_b
-        self._shape = (self.len, 1)
+    def __init__(self, xs, ys, len_x=None, len_y=None, items=None):
+        self.xs = xs
+        self.ys = ys
+        self.len_x = len_x or xs[0].shape[0]
+        self.len_y = len_y or ys[0].shape[0]
+        len_items = len(xs)
+        self.shape = (self.len_x + self.len_y, len_items)
 
-    @property
-    def shape(self):
-        return self._shape
+        if items is None:
+            items = [None] * len_items
+        self.items = items
 
-    def get_value(self, out=None):
-        if out is None:
-            out = np.empty((self.len, 1))
-        out[: self.len_a] = self.arrays[0]
-        out[self.len_a :] = self.arrays[1]
-        return out
+    def __getitem__(self, idx):
+        if idx[0] != slice(None):
+            raise NotImplementedError(
+                "Only full slices are supported in the first entry of the index"
+            )
+        idx = idx[1]
+        if isinstance(idx, slice):
+            return NoMemAllocVertcat(
+                self.xs[idx], self.ys[idx], self.len_x, self.len_y, self.items[idx]
+            )
+        else:
+            item = self.items[idx]
+            if item is not None:
+                return item
+            else:
+                out = casadi.DM.zeros((self.shape[0], 1))
+                out[: self.len_x] = self.xs[idx]
+                out[self.len_x :] = self.ys[idx]
+                self.items[idx] = out
+                return out

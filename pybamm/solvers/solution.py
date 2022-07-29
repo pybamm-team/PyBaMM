@@ -97,25 +97,6 @@ class Solution(object):
         else:
             self.all_inputs = all_inputs
 
-        if not (
-            len(self.all_ts) == len(self.all_ys)
-            or len(self.all_ts) == 1
-            or len(self.all_ys) == 1
-        ):
-            raise ValueError("all_ts and all_ys must be the same length")
-        if not (
-            len(self.all_ts) == len(self.all_models)
-            or len(self.all_ts) == 1
-            or len(self.all_models) == 1
-        ):
-            raise ValueError("all_ts and all_models must be the same length")
-        if not (
-            len(self.all_ts) == len(self.all_inputs)
-            or len(self.all_ts) == 1
-            or len(self.all_inputs) == 1
-        ):
-            raise ValueError("all_ts and all_inputs must be the same length")
-
         self.sensitivities = sensitivities
 
         self._t_event = t_event
@@ -383,7 +364,7 @@ class Solution(object):
         except AttributeError:
             all_ys_last = self.all_ys[-1]
             if isinstance(all_ys_last, pybamm.NoMemAllocVertcat):
-                self._y_last = all_ys_last.get_value()
+                self._y_last = all_ys_last[:, -1]
             elif all_ys_last.shape[1] == 1:
                 self._y_last = all_ys_last
             else:
@@ -751,19 +732,13 @@ class Solution(object):
         # Update list of sub-solutions
         if other.all_ts[0][0] == self.all_ts[-1][-1]:
             # Skip first time step if it is repeated
-            if len(other.all_ts[0]) == 1:
-                all_ts = self.all_ts + other.all_ts[1:]
-                all_ys = self.all_ys + other.all_ys[1:]
-                all_models = self.all_models + other.all_models[1:]
-                all_inputs = self.all_inputs + other.all_inputs[1:]
-            else:
-                all_ts = self.all_ts + [other.all_ts[0][1:]] + other.all_ts[1:]
-                all_ys = self.all_ys + [other.all_ys[0][:, 1:]] + other.all_ys[1:]
-                all_models = (self.all_models + other.all_models,)
-                all_inputs = (self.all_inputs + other.all_inputs,)
+            all_ts = self.all_ts + [other.all_ts[0][1:]] + other.all_ts[1:]
+            all_ys = self.all_ys + [other.all_ys[0][:, 1:]] + other.all_ys[1:]
         else:
             all_ts = self.all_ts + other.all_ts
             all_ys = self.all_ys + other.all_ys
+            all_models = self.all_models + other.all_models
+            all_inputs = self.all_inputs + other.all_inputs
 
         new_sol = Solution(
             all_ts,

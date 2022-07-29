@@ -68,7 +68,7 @@ class ProcessedVariable(object):
         # Evaluate base variable at final time
         self.base_eval = self.base_variables_casadi[0](
             self.all_ts[-1][-1], self.y_last, self.all_inputs_casadi[-1]
-        ).full()
+        ).toarray()
 
         # handle 2D (in space) finite element variables differently
         if (
@@ -119,8 +119,8 @@ class ProcessedVariable(object):
         ):
             for inner_idx, t in enumerate(ts):
                 t = ts[inner_idx]
-                y = self.getitem(ys, idx, self.out)
-                entries[idx] = base_var_casadi(t, y, inputs).full()[0, 0]
+                y = ys[:, inner_idx]
+                entries[idx] = float(base_var_casadi(t, y, inputs))
                 idx += 1
 
         # set up interpolation
@@ -151,8 +151,8 @@ class ProcessedVariable(object):
         ):
             for inner_idx, t in enumerate(ts):
                 t = ts[inner_idx]
-                y = self.getitem(ys, idx, self.out)
-                entries[:, idx] = base_var_casadi(t, y, inputs).full()[:, 0]
+                y = ys[:, inner_idx]
+                entries[:, idx] = np.array(base_var_casadi(t, y, inputs).elements())
                 idx += 1
 
         # Get node and edge values
@@ -252,9 +252,9 @@ class ProcessedVariable(object):
         ):
             for inner_idx, t in enumerate(ts):
                 t = ts[inner_idx]
-                y = self.getitem(ys, idx, self.out)
+                y = ys[:, inner_idx]
                 entries[:, :, idx] = np.reshape(
-                    base_var_casadi(t, y, inputs).full(),
+                    np.array(base_var_casadi(t, y, inputs).elements()),
                     [first_dim_size, second_dim_size],
                     order="F",
                 )
@@ -424,9 +424,9 @@ class ProcessedVariable(object):
         ):
             for inner_idx, t in enumerate(ts):
                 t = ts[inner_idx]
-                y = self.getitem(ys, idx, self.out)
+                y = ys[:, inner_idx]
                 entries[:, :, idx] = np.reshape(
-                    base_var_casadi(t, y, inputs).full(),
+                    base_var_casadi(t, y, inputs).toarray(),
                     [len_y, len_z],
                     order="C",
                 )
@@ -458,13 +458,6 @@ class ProcessedVariable(object):
                 fill_value=np.nan,
                 bounds_error=False,
             )
-
-    def getitem(self, ys, idx, out):
-        if self.uses_no_mem_alloc:
-            ys.get_value(out)
-            return out
-        else:
-            return ys[:, idx]
 
     def __call__(self, t=None, x=None, r=None, y=None, z=None, R=None, warn=True):
         """
@@ -595,7 +588,7 @@ class ProcessedVariable(object):
         )
         for index, (ts, ys) in enumerate(zip(self.all_ts, self.all_ys)):
             for idx, t in enumerate(ts):
-                u = ys[:, idx]
+                u = ys[:, inner_idx]
                 next_dvar_dy_eval = dvar_dy_func(t, u, inputs_stacked)
                 next_dvar_dp_eval = dvar_dp_func(t, u, inputs_stacked)
                 if index == 0 and idx == 0:
