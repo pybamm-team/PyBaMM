@@ -737,8 +737,8 @@ class Solution(object):
         else:
             all_ts = self.all_ts + other.all_ts
             all_ys = self.all_ys + other.all_ys
-            all_models = self.all_models + other.all_models
-            all_inputs = self.all_inputs + other.all_inputs
+        all_models = self.all_models + other.all_models
+        all_inputs = self.all_inputs + other.all_inputs
 
         new_sol = Solution(
             all_ts,
