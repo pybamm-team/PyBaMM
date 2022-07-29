@@ -35,6 +35,18 @@
   doi = {10.1016/j.electacta.2021.138524},
 }
 
+@article{BrosaPlanella2022,
+  author = {Brosa Planella, Ferran and Widanage, W. Dhammika},
+  title = {{Systematic derivation of a Single Particle Model with Electrolyte and Side Reactions (SPMe+SR) for degradation of lithium-ion batteries}},
+  journal = {Submitted for publication},
+  volume = {},
+  number = {},
+  pages = {},
+  year = {2022},
+  publisher = {},
+  doi = {},
+}
+
 @article{Chen2020,
   author = {Chen, Chang-Hui and Brosa Planella, Ferran and O'Regan, Kieran and Gastol, Dominika and Widanage, W. Dhammika and Kendrick, Emma},
   title = {{Development of Experimental Techniques for Parameterization of Multi-scale Lithium-ion Battery Models}},
@@ -309,17 +321,15 @@
   url  ="http://dx.doi.org/10.1039/D2CP00417H",
 }
 
-
-@article{ORegan2021,
+@article{ORegan2022,
   author = {O'Regan, Kieran and Brosa Planella, Ferran and Widanage, W. Dhammika and Kendrick, Emma},
-  title = {{Thermal-electrochemical parametrisation of a lithium-ion battery: mapping Li concentration and temperature dependencies}},
-  journal = {Journal of The Electrochemical Society},
-  volume = {},
-  number = {},
-  pages = {},
-  year = {2021},
-  publisher = {The Electrochemical Society},
-  doi = {},
+  title = {{Thermal-electrochemical parameters of a high energy lithium-ion cylindrical battery}},
+  journal = {{Electrochimica Acta}},
+  volume = {425},
+  pages = {140700},
+  year = {2022},
+  publisher = {Elsevier},
+  doi = {10.1016/j.electacta.2022.140700},
 }
 
 @article{Prada2013,

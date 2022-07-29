@@ -34,12 +34,14 @@ PRINT_OPTIONS_OUTPUT = """\
 'particle size': 'single' (possible: ['single', 'distribution'])
 'SEI': 'none' (possible: ['none', 'constant', 'reaction limited', 'solvent-diffusion limited', 'electron-migration limited', 'interstitial-diffusion limited', 'ec reaction limited'])
 'SEI film resistance': 'none' (possible: ['none', 'distributed', 'average'])
+'SEI on cracks': 'false' (possible: ['false', 'true'])
 'SEI porosity change': 'false' (possible: ['false', 'true'])
 'stress-induced diffusion': 'true' (possible: ['false', 'true'])
 'surface form': 'differential' (possible: ['false', 'differential', 'algebraic'])
 'thermal': 'x-full' (possible: ['isothermal', 'lumped', 'x-lumped', 'x-full'])
 'total interfacial current density as a state': 'false' (possible: ['false', 'true'])
 'working electrode': 'both' (possible: ['both', 'negative', 'positive'])
+'x-average side reactions': 'false' (possible: ['false', 'true'])
 'external submodels': []
 'timescale': 'default'
 """  # noqa: E501
@@ -264,12 +266,24 @@ class TestBaseBatteryModel(unittest.TestCase):
         model = pybamm.BaseBatteryModel({"loss of active material": "stress-driven"})
         self.assertEqual(model.options["particle mechanics"], "swelling only")
         self.assertEqual(model.options["stress-induced diffusion"], "true")
+        model = pybamm.BaseBatteryModel({"SEI on cracks": "true"})
+        self.assertEqual(model.options["particle mechanics"], "swelling and cracking")
+        self.assertEqual(model.options["stress-induced diffusion"], "true")
 
         # crack model
         with self.assertRaisesRegex(pybamm.OptionError, "particle mechanics"):
             pybamm.BaseBatteryModel({"particle mechanics": "bad particle cracking"})
         with self.assertRaisesRegex(pybamm.OptionError, "particle cracking"):
             pybamm.BaseBatteryModel({"particle cracking": "bad particle cracking"})
+
+        # SEI on cracks
+        with self.assertRaisesRegex(pybamm.OptionError, "SEI on cracks"):
+            pybamm.BaseBatteryModel({"SEI on cracks": "bad SEI on cracks"})
+        with self.assertRaisesRegex(NotImplementedError, "SEI on cracks not yet"):
+            pybamm.BaseBatteryModel({
+                "SEI on cracks": "true",
+                "working electrode": "positive",
+            })
 
         # plating model
         with self.assertRaisesRegex(pybamm.OptionError, "lithium plating"):

@@ -68,6 +68,9 @@ class BatteryModelOptions(pybamm.FuzzyDict):
             * "lithium plating" : str
                 Sets the model for lithium plating. Can be "none" (default),
                 "reversible", "partially reversible", or "irreversible".
+            * "lithium plating porosity change" : str
+                Whether to include porosity change due to lithium plating, can be
+                "false" (default) or "true".
             * "loss of active material" : str
                 Sets the model for loss of active material. Can be "none" (default),
                 "stress-driven", "reaction-driven", or "stress and reaction-driven".
@@ -140,6 +143,9 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                     .. math::
                         \\eta_r = \\frac{F}{RT}
                         * (\\phi_s - \\phi_e - U - R_{sei} * L_{sei} * \\frac{I}{aL})
+            * "SEI on cracks" : str
+                Whether to include SEI growth on particle cracks, can be "false"
+                (default) or "true".
             * "SEI porosity change" : str
                 Whether to include porosity change due to SEI formation, can be "false"
                 (default) or "true".
@@ -166,6 +172,11 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                 Which electrode(s) intercalates and which is counter. If "both"
                 (default), the model is a standard battery. Otherwise can be "negative"
                 or "positive" to indicate a half-cell model.
+            * "x-average side reactions": str
+                Whether to average the side reactions (SEI growth, lithium plating and
+                the respective porosity change) over the x-axis in Single Particle
+                Models, can be "false" or "true". Default is "false" for SPMe and
+                "true" for SPM.
 
     **Extends:** :class:`dict`
     """
@@ -242,12 +253,14 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                 "ec reaction limited",
             ],
             "SEI film resistance": ["none", "distributed", "average"],
+            "SEI on cracks": ["false", "true"],
             "SEI porosity change": ["false", "true"],
             "stress-induced diffusion": ["false", "true"],
             "surface form": ["false", "differential", "algebraic"],
             "thermal": ["isothermal", "lumped", "x-lumped", "x-full"],
             "total interfacial current density as a state": ["false", "true"],
             "working electrode": ["both", "negative", "positive"],
+            "x-average side reactions": ["false", "true"],
         }
 
         default_options = {
@@ -278,14 +291,21 @@ class BatteryModelOptions(pybamm.FuzzyDict):
         # The "SEI film resistance" option will still be overridden by extra_options if
         # provided
 
-        # Change the default for particle mechanics based on which LAM option is
-        # provided
-        # return "none" if option not given
-        lam_option = extra_options.get("loss of active material", "none")
-        if "stress-driven" in lam_option or "stress and reaction-driven" in lam_option:
-            default_options["particle mechanics"] = "swelling only"
+        # Change the default for particle mechanics based on which SEI on cracks option
+        # is provided
+        # return "false" if option not given
+        SEI_cracks_option = extra_options.get("SEI on cracks", "false")
+        if SEI_cracks_option == "true":
+            default_options["particle mechanics"] = "swelling and cracking"
         else:
-            default_options["particle mechanics"] = "none"
+            # Change the default for particle mechanics based on which LAM option is
+            # provided
+            # return "none" if option not given
+            LAM_opt = extra_options.get("loss of active material", "none")
+            if "stress-driven" in LAM_opt or "stress and reaction-driven" in LAM_opt:
+                default_options["particle mechanics"] = "swelling only"
+            else:
+                default_options["particle mechanics"] = "none"
         # The "particle mechanics" option will still be overridden by extra_options if
         # provided
 
@@ -441,6 +461,10 @@ class BatteryModelOptions(pybamm.FuzzyDict):
                 raise pybamm.OptionError(
                     f"X-lumped thermal submodels do not yet support {n}D "
                     "current collectors in a half-cell configuration"
+                )
+            elif options["SEI on cracks"] == "true":
+                raise NotImplementedError(
+                    "SEI on cracks not yet implemented for half-cell models"
                 )
 
         # Check options are valid
@@ -650,6 +674,13 @@ class BaseBatteryModel(pybamm.BaseModel):
                     "electrolyte conductivity '{}' not suitable for SPMe".format(
                         options["electrolyte conductivity"]
                     )
+                )
+        if isinstance(self, pybamm.lithium_ion.SPM) and not isinstance(
+            self, pybamm.lithium_ion.SPMe
+        ):
+            if options["x-average side reactions"] == "false":
+                raise pybamm.OptionError(
+                    "x-average side reactions cannot be 'false' for SPM models"
                 )
         if isinstance(self, pybamm.lead_acid.BaseModel):
             if options["thermal"] != "isothermal" and options["dimensionality"] != 0:

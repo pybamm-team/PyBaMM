@@ -19,8 +19,8 @@ class NoSEI(BaseModel):
     **Extends:** :class:`pybamm.sei.BaseModel`
     """
 
-    def __init__(self, param, options=None):
-        super().__init__(param, options=options)
+    def __init__(self, param, options=None, cracks=False):
+        super().__init__(param, options=options, cracks=cracks)
         if self.half_cell:
             self.reaction_loc = "interface"
         else:
@@ -34,6 +34,11 @@ class NoSEI(BaseModel):
                 pybamm.Scalar(0), "negative electrode", "current collector"
             )
         variables = self._get_standard_thickness_variables(zero, zero)
-        variables.update(self._get_standard_concentration_variables(variables))
         variables.update(self._get_standard_reaction_variables(zero, zero))
+        return variables
+
+    def get_coupled_variables(self, variables):
+        variables.update(self._get_standard_concentration_variables(variables))
+        # Update whole cell variables, which also updates the "sum of" variables
+        variables.update(super().get_coupled_variables(variables))
         return variables

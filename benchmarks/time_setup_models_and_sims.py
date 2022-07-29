@@ -2,7 +2,7 @@ import pybamm
 
 parameters = [
     "Marquis2019",
-    "ORegan2021",
+    "ORegan2022",
     "NCA_Kim2011",
     "Prada2013",
     "Ai2020",

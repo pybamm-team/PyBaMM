@@ -35,10 +35,8 @@ class BaseInterface(pybamm.BaseSubModel):
             self.reaction_name = ""  # empty reaction name for the main reaction
         elif reaction == "lead-acid oxygen":
             self.reaction_name = "oxygen "
-        elif reaction == "SEI":
-            self.reaction_name = "SEI "
-        elif reaction == "lithium plating":
-            self.reaction_name = "lithium plating "
+        elif reaction in ["SEI", "SEI on cracks", "lithium plating"]:
+            self.reaction_name = reaction + " "
 
         self.reaction = reaction
 

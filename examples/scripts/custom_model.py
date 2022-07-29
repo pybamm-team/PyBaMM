@@ -86,7 +86,14 @@ model.submodels[
 ] = pybamm.electrolyte_conductivity.surface_potential_form.Explicit(
     model.param, "Positive"
 )
+model.submodels[
+    "Negative particle mechanics"
+] = pybamm.particle_mechanics.NoMechanics(model.param, "Negative")
+model.submodels[
+    "Positive particle mechanics"
+] = pybamm.particle_mechanics.NoMechanics(model.param, "Positive")
 model.submodels["sei"] = pybamm.sei.NoSEI(model.param)
+model.submodels["sei on cracks"] = pybamm.sei.NoSEI(model.param, cracks=True)
 model.submodels["lithium plating"] = pybamm.lithium_plating.NoPlating(model.param)
 
 # build model

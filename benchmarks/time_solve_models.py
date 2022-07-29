@@ -15,7 +15,7 @@ class TimeSolveSPM:
         [False, True],
         [
             "Marquis2019",
-            "ORegan2021",
+            "ORegan2022",
             "NCA_Kim2011",
             "Prada2013",
             # "Ai2020",
@@ -69,7 +69,7 @@ class TimeSolveSPMe:
         [False, True],
         [
             "Marquis2019",
-            "ORegan2021",
+            "ORegan2022",
             "NCA_Kim2011",
             "Prada2013",
             # "Ai2020",
@@ -123,7 +123,7 @@ class TimeSolveDFN:
         [False, True],
         [
             "Marquis2019",
-            "ORegan2021",
+            "ORegan2022",
             # "NCA_Kim2011",
             "Prada2013",
             "Ai2020",
