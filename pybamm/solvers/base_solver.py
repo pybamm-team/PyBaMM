@@ -1294,7 +1294,7 @@ class BaseSolver(object):
             t = old_solution.all_ts[-1][-1]
             if old_solution.all_models[-1] == model:
                 # initialize with old solution
-                model.y0 = old_solution.all_ys[-1][:, -1]
+                model.y0 = old_solution.y_last
             else:
                 model.y0 = model.set_initial_conditions_from(
                     old_solution

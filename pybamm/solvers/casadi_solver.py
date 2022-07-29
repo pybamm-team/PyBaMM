@@ -284,7 +284,7 @@ class CasadiSolver(pybamm.BaseSolver):
                     # update time
                     t = t_window[-1]
                     # update y0
-                    y0 = solution.all_ys[-1][:, -1]
+                    y0 = solution.y_last
 
             # now we extract sensitivities from the solution
             if bool(model.calculate_sensitivities):
@@ -312,7 +312,7 @@ class CasadiSolver(pybamm.BaseSolver):
 
             # Check most recent y to see if any events have been crossed
             if model.terminate_events_eval:
-                y_last = sol.all_ys[-1][:, -1]
+                y_last = sol.y_last
                 crossed_events = np.sign(
                     init_event_signs
                     * np.concatenate(
@@ -676,7 +676,8 @@ class CasadiSolver(pybamm.BaseSolver):
         else:
             integrator = self.integrators[model]["no grid"]
 
-        len_rhs = model.concatenated_rhs.size
+        len_rhs = model.len_rhs
+        len_t = len(t_eval)
 
         # Check y0 to see if it includes sensitivities
         if explicit_sensitivities:
@@ -699,17 +700,20 @@ class CasadiSolver(pybamm.BaseSolver):
                     x0=y0_diff, z0=y0_alg, p=inputs_with_tmin, **self.extra_options_call
                 )
                 integration_time = timer.time()
+                x_sols = casadi.horzsplit(casadi_sol["xf"])
                 if casadi_sol["zf"].is_empty():
-                    y_sol = casadi_sol["xf"]
+                    y_sols = x_sols
                 else:
-                    y_sol = pybamm.NoMemAllocVertcat(casadi_sol["xf"], casadi_sol["zf"])
+                    z_sols = casadi.horzsplit(casadi_sol["zf"])
+                    y_sols = [
+                        pybamm.NoMemAllocVertcat(x, z) for x, z in zip(x_sols, z_sols)
+                    ]
             else:
                 # Repeated calls to the integrator
+                y_sols = [y0]
                 x = y0_diff
                 z = y0_alg
-                y_diff = x
-                y_alg = z
-                for i in range(len(t_eval) - 1):
+                for i in range(len_t - 1):
                     t_min = t_eval[i]
                     t_max = t_eval[i + 1]
                     inputs_with_tlims = casadi.vertcat(inputs, t_min, t_max)
@@ -720,19 +724,16 @@ class CasadiSolver(pybamm.BaseSolver):
                     integration_time = timer.time()
                     x = casadi_sol["xf"]
                     z = casadi_sol["zf"]
-                    y_diff = casadi.horzcat(y_diff, x)
-                    if not z.is_empty():
-                        y_alg = casadi.horzcat(y_alg, z)
-                if z.is_empty():
-                    y_sol = y_diff
-                else:
-                    y_sol = pybamm.NoMemAllocVertcat(y_diff, y_alg)
+                    if z.is_empty():
+                        y_sols.append(x)
+                    else:
+                        y_sols.append(pybamm.NoMemAllocVertcat(x, z))
 
             sol = pybamm.Solution(
-                t_eval,
-                y_sol,
-                model,
-                inputs_dict,
+                np.array_split(t_eval, len_t),
+                y_sols,
+                [model] * len_t,
+                [inputs_dict] * len_t,
                 sensitivities=extract_sensitivities_in_solution,
                 check_solution=False,
             )

@@ -39,8 +39,13 @@ class ProcessedVariable(object):
 
         self.all_ts = solution.all_ts
         self.all_ys = solution.all_ys
+        self.y_last = solution.y_last
         self.all_inputs = solution.all_inputs
         self.all_inputs_casadi = solution.all_inputs_casadi
+
+        # utilities for no_mem_alloc
+        self.uses_no_mem_alloc = isinstance(self.all_ys[0], pybamm.NoMemAllocVertcat)
+        self.out = casadi.DM.zeros(self.all_ys[0].shape)
 
         self.mesh = base_variables[0].mesh
         self.domain = base_variables[0].domain
@@ -60,9 +65,9 @@ class ProcessedVariable(object):
         # Store length scales
         self.length_scales = solution.length_scales_eval
 
-        # Evaluate base variable at initial time
+        # Evaluate base variable at final time
         self.base_eval = self.base_variables_casadi[0](
-            self.all_ts[0][0], self.all_ys[0][:, 0], self.all_inputs_casadi[0]
+            self.all_ts[-1][-1], self.y_last, self.all_inputs_casadi[-1]
         ).full()
 
         # handle 2D (in space) finite element variables differently
@@ -114,7 +119,7 @@ class ProcessedVariable(object):
         ):
             for inner_idx, t in enumerate(ts):
                 t = ts[inner_idx]
-                y = ys[:, inner_idx]
+                y = self.getitem(ys, idx, self.out)
                 entries[idx] = base_var_casadi(t, y, inputs).full()[0, 0]
                 idx += 1
 
@@ -146,7 +151,7 @@ class ProcessedVariable(object):
         ):
             for inner_idx, t in enumerate(ts):
                 t = ts[inner_idx]
-                y = ys[:, inner_idx]
+                y = self.getitem(ys, idx, self.out)
                 entries[:, idx] = base_var_casadi(t, y, inputs).full()[:, 0]
                 idx += 1
 
@@ -247,7 +252,7 @@ class ProcessedVariable(object):
         ):
             for inner_idx, t in enumerate(ts):
                 t = ts[inner_idx]
-                y = ys[:, inner_idx]
+                y = self.getitem(ys, idx, self.out)
                 entries[:, :, idx] = np.reshape(
                     base_var_casadi(t, y, inputs).full(),
                     [first_dim_size, second_dim_size],
@@ -419,7 +424,7 @@ class ProcessedVariable(object):
         ):
             for inner_idx, t in enumerate(ts):
                 t = ts[inner_idx]
-                y = ys[:, inner_idx]
+                y = self.getitem(ys, idx, self.out)
                 entries[:, :, idx] = np.reshape(
                     base_var_casadi(t, y, inputs).full(),
                     [len_y, len_z],
@@ -453,6 +458,13 @@ class ProcessedVariable(object):
                 fill_value=np.nan,
                 bounds_error=False,
             )
+
+    def getitem(self, ys, idx, out):
+        if self.uses_no_mem_alloc:
+            ys.get_value(out)
+            return out
+        else:
+            return ys[:, idx]
 
     def __call__(self, t=None, x=None, r=None, y=None, z=None, R=None, warn=True):
         """

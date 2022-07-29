@@ -81,6 +81,7 @@ class Solution(object):
             all_ys = [all_ys]
         if not isinstance(all_models, list):
             all_models = [all_models]
+
         self._all_ts = all_ts
         self._all_ys = all_ys
         self._all_ys_and_sens = all_ys
@@ -96,6 +97,25 @@ class Solution(object):
         else:
             self.all_inputs = all_inputs
 
+        if not (
+            len(self.all_ts) == len(self.all_ys)
+            or len(self.all_ts) == 1
+            or len(self.all_ys) == 1
+        ):
+            raise ValueError("all_ts and all_ys must be the same length")
+        if not (
+            len(self.all_ts) == len(self.all_models)
+            or len(self.all_ts) == 1
+            or len(self.all_models) == 1
+        ):
+            raise ValueError("all_ts and all_models must be the same length")
+        if not (
+            len(self.all_ts) == len(self.all_inputs)
+            or len(self.all_ts) == 1
+            or len(self.all_inputs) == 1
+        ):
+            raise ValueError("all_ts and all_inputs must be the same length")
+
         self.sensitivities = sensitivities
 
         self._t_event = t_event
@@ -106,7 +126,6 @@ class Solution(object):
             isinstance(v, casadi.MX) for v in self.all_inputs[0].values()
         )
 
-        # Check no ys are too large
         if check_solution and not self.has_symbolic_inputs:
             self.check_ys_are_not_too_large()
 
@@ -321,8 +340,7 @@ class Solution(object):
         # Only check last one so that it doesn't take too long
         # We only care about the cases where y is growing too large without any
         # restraint, so if y gets large in the middle then comes back down that is ok
-        y, model = self.all_ys[-1], self.all_models[-1]
-        y = y[:, -1]
+        y, model = self.y_last, self.all_models[-1]
         if np.any(y > pybamm.settings.max_y_value):
             for var in [*model.rhs.keys(), *model.algebraic.keys()]:
                 y_var = y[model.variables[var.name].y_slices[0]]
@@ -357,6 +375,20 @@ class Solution(object):
                 casadi.vertcat(*inp.values()) for inp in self.all_inputs
             ]
             return self._all_inputs_casadi
+
+    @property
+    def y_last(self):
+        try:
+            return self._y_last
+        except AttributeError:
+            all_ys_last = self.all_ys[-1]
+            if isinstance(all_ys_last, pybamm.NoMemAllocVertcat):
+                self._y_last = all_ys_last.get_value()
+            elif all_ys_last.shape[1] == 1:
+                self._y_last = all_ys_last
+            else:
+                self._y_last = all_ys_last[:, -1]
+            return self._y_last
 
     @property
     def t_event(self):
@@ -719,8 +751,16 @@ class Solution(object):
         # Update list of sub-solutions
         if other.all_ts[0][0] == self.all_ts[-1][-1]:
             # Skip first time step if it is repeated
-            all_ts = self.all_ts + [other.all_ts[0][1:]] + other.all_ts[1:]
-            all_ys = self.all_ys + [other.all_ys[0][:, 1:]] + other.all_ys[1:]
+            if len(other.all_ts[0]) == 1:
+                all_ts = self.all_ts + other.all_ts[1:]
+                all_ys = self.all_ys + other.all_ys[1:]
+                all_models = self.all_models + other.all_models[1:]
+                all_inputs = self.all_inputs + other.all_inputs[1:]
+            else:
+                all_ts = self.all_ts + [other.all_ts[0][1:]] + other.all_ts[1:]
+                all_ys = self.all_ys + [other.all_ys[0][:, 1:]] + other.all_ys[1:]
+                all_models = (self.all_models + other.all_models,)
+                all_inputs = (self.all_inputs + other.all_inputs,)
         else:
             all_ts = self.all_ts + other.all_ts
             all_ys = self.all_ys + other.all_ys
@@ -728,12 +768,13 @@ class Solution(object):
         new_sol = Solution(
             all_ts,
             all_ys,
-            self.all_models + other.all_models,
-            self.all_inputs + other.all_inputs,
+            all_models,
+            all_inputs,
             other.t_event,
             other.y_event,
             other.termination,
             bool(self.sensitivities),
+            check_solution=False,
         )
 
         new_sol.closest_event_idx = other.closest_event_idx
@@ -769,6 +810,7 @@ class Solution(object):
             self.t_event,
             self.y_event,
             self.termination,
+            check_solution=False,
         )
         new_sol._all_inputs_casadi = self.all_inputs_casadi
         new_sol._sub_solutions = self.sub_solutions
