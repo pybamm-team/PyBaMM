@@ -32,11 +32,12 @@ class TotalKinetics(pybamm.BaseSubModel):
         the reactions
         """
         if self.chemistry == "lithium-ion":
-            reaction_names = ["", "SEI ", "SEI on cracks "]
+            reaction_names = ["", "SEI "]
             if not self.half_cell:
                 # no separate plating reaction in a half-cell,
                 # since plating is the main reaction
-                reaction_names.append("lithium plating ")
+                # no SEI on cracks with half-cell model
+                reaction_names.extend(["lithium plating ", "SEI on cracks "])
         elif self.chemistry == "lead-acid":
             reaction_names = ["", "oxygen "]
 
