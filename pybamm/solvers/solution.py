@@ -862,7 +862,7 @@ def get_cycle_summary_variables(cycle_solution, esoh_solver):
             }
         )
 
-    # # Voltage variables
+    # Voltage variables
     if "Battery voltage [V]" in model.variables:
         V = cycle_solution["Battery voltage [V]"].data
         min_V, max_V = np.min(V), np.max(V)
