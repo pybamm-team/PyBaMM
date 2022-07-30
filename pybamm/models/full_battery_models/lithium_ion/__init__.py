@@ -3,7 +3,7 @@
 #
 from .base_lithium_ion_model import BaseModel
 from .electrode_soh import (
-    ElectrodeSOHFull,
+    ElectrodeSOH,
     ElectrodeSOHx100,
     ElectrodeSOHx0,
     ElectrodeSOHSolver,

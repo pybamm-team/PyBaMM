@@ -654,7 +654,7 @@ class Simulation:
             if self.operating_mode == "without experiment" or isinstance(
                 self.model,
                 (
-                    pybamm.lithium_ion.ElectrodeSOHFull,
+                    pybamm.lithium_ion.ElectrodeSOH,
                     pybamm.lithium_ion.ElectrodeSOHx0,
                     pybamm.lithium_ion.ElectrodeSOHx0,
                 ),
