@@ -26,7 +26,6 @@ jobs:
         run: git clone --depth 1 --branch v2.6.2 https://github.com/pybind/pybind11.git
 
       - name: Install the latest version of vcpkg on windows
-        if: matrix.os == 'windows-latest'
         run: |
           cd C:\
           rm -r -fo 'C:\vcpkg'
