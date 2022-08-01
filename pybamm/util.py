@@ -61,7 +61,8 @@ class FuzzyDict(dict):
         both the keys and values will be printed. Otherwise just the values will
         be printed. If no results are found, the best matches are printed.
         """
-        key = key.lower()
+        key_in = key
+        key = key_in.lower()
 
         # Sort the keys so results are stored in alphabetical order
         keys = list(self.keys())
@@ -77,7 +78,8 @@ class FuzzyDict(dict):
             # If no results, return best matches
             best_matches = self.get_best_matches(key)
             print(
-                f"No results for search using '{key}'. Best matches are {best_matches}"
+                f"No results for search using '{key_in}'. "
+                f"Best matches are {best_matches}"
             )
         elif print_values:
             # Else print results, including dict items
