@@ -19,7 +19,7 @@ for option_name, option_list in all_options.items():
         ]:  # skip the first one since that's the default
             options = {option_name: option_value}
             try:
-                model = pybamm.lithium_ion.SPM(options)
+                model = pybamm.lithium_ion.SPM(options.copy())
             except pybamm.OptionError as e:
                 print(f"Cannot create model with {options}. (OptionError: {str(e)})")
             except pybamm.ModelError as e:
