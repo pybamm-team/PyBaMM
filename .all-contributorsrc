@@ -493,6 +493,25 @@
         "bug",
         "code"
       ]
+    },
+    {
+      "login": "ndrewwang",
+      "name": "ndrewwang",
+      "avatar_url": "https://avatars.githubusercontent.com/u/56122552?v=4",
+      "profile": "https://github.com/ndrewwang",
+      "contributions": [
+        "bug",
+        "code"
+      ]
+    },
+    {
+      "login": "MichaPhilipp",
+      "name": "MichaPhilipp",
+      "avatar_url": "https://avatars.githubusercontent.com/u/58085966?v=4",
+      "profile": "https://github.com/MichaPhilipp",
+      "contributions": [
+        "bug"
+      ]
     }
   ],
   "contributorsPerLine": 7,
